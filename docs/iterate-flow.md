@@ -84,7 +84,7 @@ Before a READY sweep reaches this step, `runCheck` performs one fresh REST merge
 
 If `readyState.shouldCancel`, iterate emits `action: 'merge'` when `--merge` is enabled; otherwise it emits `action: 'cancel'` with `reason: "ready-delay-elapsed"`.
 
-Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/ready-since.txt` (Unix timestamp, seconds). A future timestamp (clock skew) is reset to now. Default delay is 10 minutes (`watch.readyDelayMinutes` or `--ready-delay`).
+Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/ready-since.txt` (Unix timestamp, seconds). A future timestamp (clock skew) is reset to now. Default delay is 10 minutes (`watch.readyDelayMinutes` or `--ready-delay`).
 
 | Event                                       | Effect on `ready-since.txt`          |
 | ------------------------------------------- | ------------------------------------ |
@@ -155,11 +155,12 @@ A draft native stack layer this session cannot promote carries `stackDraftHold`.
 
 Applied to ordinary `wait` and `fix_code` after those actions are chosen — not before actionable work, and not on active merge waits, stack drafts held by a named lower layer, `merge`, `cancel`, `mark_ready`, or `escalate`.
 
-Fingerprint: PR head SHA from GitHub (not the local checkout), action, `status`, `mergeStateStatus`, `state`, `isDraft`, sorted failing-check names + conclusions, sorted actionable thread/comment/review IDs, sorted review-summary minimize IDs. Stored at `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/iterate-stall.json`.
+Fingerprint: PR head SHA from GitHub (not the local checkout), action, `status`, `mergeStateStatus`, `state`, `isDraft`, sorted failing-check names + conclusions, sorted actionable thread/comment/review IDs, sorted review-summary minimize IDs. Stored at `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/iterate-stall.json`.
 
 - Fingerprint matches and `now − firstSeenAt ≥ stallTimeoutSeconds` → `escalate` with trigger `stall-timeout`.
 - Fingerprint matches but within threshold → preserve `firstSeenAt`, keep the original action.
 - Fingerprint differs or no stored state → write new state.
+- The timeout is enabled and the timer cannot be read or written → `escalate` with trigger `stall-state-unavailable`. A missing file is a first sighting. `--stall-timeout 0` keeps the original action.
 
 `wait` also inspects in-progress CI for a start stall (queued/requested checks that never start).
 

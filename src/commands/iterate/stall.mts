@@ -139,13 +139,27 @@ export async function applyStallGuard(
     reviewSummaryIds,
   );
 
-  const stored = await readStallState(stallKey);
+  const read = await readStallState(stallKey);
+  if (!read.ok) {
+    if (stallTimeoutSeconds <= 0) return prospectiveResult;
+    return stallStateUnavailable(base, prReference, prospectiveResult, read.reason);
+  }
+  const stored = read.state;
+
+  const persistTimer = async (): Promise<IterateResult | undefined> => {
+    const wrote = await writeStallState(stallKey, { fingerprint, firstSeenAt: nowSeconds });
+    if (!wrote.ok && stallTimeoutSeconds > 0) {
+      return stallStateUnavailable(base, prReference, prospectiveResult, wrote.reason);
+    }
+    return undefined;
+  };
 
   if (stored && stored.fingerprint === fingerprint) {
     const ageSeconds = nowSeconds - stored.firstSeenAt;
     if (ageSeconds < 0) {
       // Clock skew: stored timestamp is in the future. Reset to avoid perpetually negative age.
-      await writeStallState(stallKey, { fingerprint, firstSeenAt: nowSeconds });
+      const failed = await persistTimer();
+      if (failed) return failed;
     } else if (stallTimeoutSeconds <= 0) {
       // Stall detection disabled: refresh so re-enabling starts a fresh timer.
       await writeStallState(stallKey, { fingerprint, firstSeenAt: nowSeconds });
@@ -177,8 +191,35 @@ export async function applyStallGuard(
   }
 
   // Fingerprint changed or no prior state — reset the stall timer.
-  await writeStallState(stallKey, { fingerprint, firstSeenAt: nowSeconds });
+  const failed = await persistTimer();
+  if (failed) return failed;
   return prospectiveResult;
+}
+
+function stallStateUnavailable(
+  base: IterateResultBase,
+  prReference: string,
+  prospectiveResult: IterateResult,
+  reason: string,
+): IterateResult {
+  const pending = pendingReviewCommandsFromResult(prospectiveResult);
+  const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
+    triggers: ["stall-state-unavailable"],
+    unresolvedThreads: [],
+    ambiguousComments: [],
+    changesRequestedReviews: [],
+    ...surfacedSummariesFromResult(prospectiveResult),
+    ...(pending && { pendingReviewCommands: pending }),
+    suggestion: buildEscalateSuggestion(["stall-state-unavailable"], reason),
+  };
+  return {
+    ...base,
+    action: "escalate",
+    escalate: {
+      ...escalateBase,
+      humanMessage: buildEscalateHumanMessage(escalateBase, prReference),
+    },
+  };
 }
 
 function findCiStartStalledChecks(

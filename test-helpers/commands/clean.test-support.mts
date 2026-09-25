@@ -43,7 +43,7 @@ export function registerHooks() {
 }
 
 export async function seedPrDir(dir: string, pr: number) {
-  const prDir = join(dir, "acme-widgets", String(pr));
+  const prDir = join(dir, "acme", "widgets", String(pr));
   await mkdir(join(prDir, "seen"), { recursive: true });
   await writeFile(join(prDir, "fix-attempts.json"), "{}", "utf8");
   return prDir;

@@ -25,10 +25,6 @@ vi.mock("node:fs/promises", async (importOriginal) => {
   };
 });
 
-vi.mock("./base.mts", () => ({
-  resolveStateBase: () => testState.base,
-}));
-
 vi.mock("../util/worktree.mts", () => ({
   getWorktreeKey: async () =>
     worktreeState.failGetWorktreeKey
@@ -46,7 +42,7 @@ const repoKey = { owner: "acme", repo: "repo" };
 const stateFile = "fixture-worktree-graphql-quota-warnings.json";
 
 function statePath() {
-  return join(testState.base, "acme-repo", "worktrees", stateFile);
+  return join(testState.base, "acme", "repo", "worktrees", stateFile);
 }
 
 function sample(remaining: number, used = 5000 - remaining): GraphqlApiUsage {
@@ -69,9 +65,11 @@ beforeEach(async () => {
   fsState.fail = false;
   worktreeState.failGetWorktreeKey = false;
   testState.base = await mkdtemp(join(tmpdir(), "pr-shepherd-quota-warning-"));
+  process.env["PR_SHEPHERD_STATE_DIR"] = testState.base;
 });
 
 afterEach(async () => {
+  delete process.env["PR_SHEPHERD_STATE_DIR"];
   await rm(testState.base, { recursive: true, force: true });
 });
 
@@ -112,7 +110,9 @@ describe("evaluateWorktreeGraphqlQuotaWarning", () => {
   });
 
   it("ignores malformed persisted state", async () => {
-    await mkdir(join(testState.base, "acme-repo", "worktrees"), { recursive: true });
+    await mkdir(join(testState.base, repoKey.owner, repoKey.repo, "worktrees"), {
+      recursive: true,
+    });
     await writeFile(statePath(), JSON.stringify({ resource: "graphql" }), "utf8");
 
     const warning = await evaluateWorktreeGraphqlQuotaWarning(repoKey, bands, sample(1400), false);
@@ -128,13 +128,14 @@ describe("evaluateWorktreeGraphqlQuotaWarning", () => {
         sample(1400),
         false,
       ),
-    ).rejects.toThrow("Invalid repo key segments: ../unsafe/repo");
+    ).rejects.toThrow('Invalid state key segment "owner": ../unsafe');
   });
 
   it("keeps warning evaluation best-effort when state cannot be written", async () => {
     const blockedBase = join(testState.base, "blocked");
     await writeFile(blockedBase, "not a directory", "utf8");
     testState.base = blockedBase;
+    process.env["PR_SHEPHERD_STATE_DIR"] = blockedBase;
 
     const warning = await evaluateWorktreeGraphqlQuotaWarning(repoKey, bands, sample(1400), true);
 

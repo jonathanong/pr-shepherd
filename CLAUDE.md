@@ -103,13 +103,13 @@ To avoid re-surfacing items on every fetch, a per-item "seen" marker is
 written after first display. Markers live at:
 
 ```
-$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/seen/<id>.json
+$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/seen/<id>.json
 ```
 
 The per-worktree debug log lives as a peer at:
 
 ```
-$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/worktrees/<basename>-<sha8>.md
+$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/worktrees/<basename>-<sha8>.md
 ```
 
 Print the path with `npx pr-shepherd log-file`. Disable with `PR_SHEPHERD_LOG_DISABLED=1`.

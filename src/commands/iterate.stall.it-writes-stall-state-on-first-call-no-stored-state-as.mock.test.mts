@@ -22,7 +22,7 @@ registerIterateHooks();
 describe("runIterate — stall-timeout guard", () => {
   it("writes stall state on first call (no stored state)", async () => {
     mockRunCheck.mockResolvedValue(makeReport());
-    mockReadStallState.mockResolvedValue(null);
+    mockReadStallState.mockResolvedValue({ ok: true, state: null });
 
     const result = await runIterate(makeOpts30mStall());
 

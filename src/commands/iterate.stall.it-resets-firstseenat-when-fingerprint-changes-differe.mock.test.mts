@@ -35,7 +35,7 @@ describe("runIterate — stall-timeout guard", () => {
         ruleAutoResolveReviewSummaryIds: ["summary-2", "summary-1"],
       }),
     );
-    mockReadStallState.mockResolvedValue(null);
+    mockReadStallState.mockResolvedValue({ ok: true, state: null });
     await runIterate(makeOpts30mStall());
     const fp1 = (mockWriteStallState.mock.calls[0]![1] as StallState).fingerprint;
 
@@ -52,7 +52,10 @@ describe("runIterate — stall-timeout guard", () => {
         },
       }),
     );
-    mockReadStallState.mockResolvedValue({ fingerprint: fp1, firstSeenAt: NOW - STALL_TIMEOUT_S });
+    mockReadStallState.mockResolvedValue({
+      ok: true,
+      state: { fingerprint: fp1, firstSeenAt: NOW - STALL_TIMEOUT_S },
+    });
 
     const result = await runIterate(makeOpts30mStall());
 
@@ -65,7 +68,7 @@ describe("runIterate — stall-timeout guard", () => {
   it("resets firstSeenAt when fingerprint changes (different failing checks)", async () => {
     // First call: passing report.
     mockRunCheck.mockResolvedValue(makeReport());
-    mockReadStallState.mockResolvedValue(null);
+    mockReadStallState.mockResolvedValue({ ok: true, state: null });
     await runIterate(makeOpts30mStall());
     const fp1 = (mockWriteStallState.mock.calls[0]![1] as StallState).fingerprint;
 
@@ -97,7 +100,10 @@ describe("runIterate — stall-timeout guard", () => {
       }),
     );
     // Stored state has the old fingerprint.
-    mockReadStallState.mockResolvedValue({ fingerprint: fp1, firstSeenAt: NOW - STALL_TIMEOUT_S });
+    mockReadStallState.mockResolvedValue({
+      ok: true,
+      state: { fingerprint: fp1, firstSeenAt: NOW - STALL_TIMEOUT_S },
+    });
 
     const result = await runIterate(makeOpts30mStall());
 
@@ -153,15 +159,18 @@ describe("runIterate — stall-timeout guard", () => {
       });
 
     mockRunCheck.mockResolvedValue(makeAttemptReport(1));
-    mockReadStallState.mockResolvedValue(null);
+    mockReadStallState.mockResolvedValue({ ok: true, state: null });
     await runIterate(makeOpts30mStall());
     const firstFingerprint = (mockWriteStallState.mock.calls[0]![1] as StallState).fingerprint;
 
     mockWriteStallState.mockClear();
     mockRunCheck.mockResolvedValue(makeAttemptReport(2));
     mockReadStallState.mockResolvedValue({
-      fingerprint: firstFingerprint,
-      firstSeenAt: NOW - STALL_TIMEOUT_S,
+      ok: true,
+      state: {
+        fingerprint: firstFingerprint,
+        firstSeenAt: NOW - STALL_TIMEOUT_S,
+      },
     });
 
     const result = await runIterate(makeOpts30mStall());

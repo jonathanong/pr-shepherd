@@ -32,7 +32,7 @@ export function resolveStateBase(): string {
 }
 
 /**
- * `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/...parts`.
+ * `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/...parts`.
  * Owner, repo, PR number, and each extra part must be a safe path segment.
  */
 export function resolvePrStatePath(
@@ -43,7 +43,7 @@ export function resolvePrStatePath(
 }
 
 /**
- * `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/stack-<number>/...parts`, beside the per-PR directories.
+ * `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/stack-<number>/...parts`, beside the per-PR directories.
  * Owner, repo, stack number, and each extra part must be a safe path segment.
  */
 export function resolveStackStatePath(
@@ -51,6 +51,15 @@ export function resolveStackStatePath(
   ...parts: string[]
 ): string {
   return resolveRepoStatePath(key, `stack-${numberSegment("stack", key.stack)}`, parts);
+}
+
+/**
+ * `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>`.
+ * Owner and repo are separate segments so names that contain hyphens cannot collide.
+ */
+export function resolveRepoStateDir(key: { owner: string; repo: string }): string {
+  assertOwnerRepo(key);
+  return join(resolveStateBase(), key.owner, key.repo);
 }
 
 function numberSegment(name: string, value: number): string {
@@ -61,21 +70,28 @@ function numberSegment(name: string, value: number): string {
   return segment;
 }
 
+function assertRepoSegment(name: "owner" | "repo", value: string): void {
+  // `.` and `..` match SAFE_SEGMENT, but they are real path segments here and would escape the base.
+  if (!SAFE_SEGMENT.test(value) || value === "." || value === "..") {
+    throw new Error(`Invalid state key segment "${name}": ${value}`);
+  }
+}
+
+function assertOwnerRepo(key: { owner: string; repo: string }): void {
+  assertRepoSegment("owner", key.owner);
+  assertRepoSegment("repo", key.repo);
+}
+
 function resolveRepoStatePath(
   key: { owner: string; repo: string },
   entry: string,
   parts: string[],
 ): string {
-  if (!SAFE_SEGMENT.test(key.owner)) {
-    throw new Error(`Invalid state key segment "owner": ${key.owner}`);
-  }
-  if (!SAFE_SEGMENT.test(key.repo)) {
-    throw new Error(`Invalid state key segment "repo": ${key.repo}`);
-  }
+  assertOwnerRepo(key);
   for (const part of parts) {
-    if (!SAFE_SEGMENT.test(part)) {
+    if (!SAFE_SEGMENT.test(part) || part === "." || part === "..") {
       throw new Error(`Invalid state key segment: ${part}`);
     }
   }
-  return join(resolveStateBase(), `${key.owner}-${key.repo}`, entry, ...parts);
+  return join(resolveRepoStateDir(key), entry, ...parts);
 }

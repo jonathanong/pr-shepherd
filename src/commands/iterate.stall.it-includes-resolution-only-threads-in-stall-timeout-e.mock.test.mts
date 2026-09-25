@@ -35,14 +35,17 @@ describe("runIterate — stall-timeout guard", () => {
     });
     mockRunCheck.mockResolvedValue(report);
 
-    mockReadStallState.mockResolvedValue(null);
+    mockReadStallState.mockResolvedValue({ ok: true, state: null });
     await runIterate(makeOpts30mStall());
     const realFingerprint = (mockWriteStallState.mock.calls[0]![1] as StallState).fingerprint;
 
     mockWriteStallState.mockClear();
     mockReadStallState.mockResolvedValue({
-      fingerprint: realFingerprint,
-      firstSeenAt: NOW - STALL_TIMEOUT_S,
+      ok: true,
+      state: {
+        fingerprint: realFingerprint,
+        firstSeenAt: NOW - STALL_TIMEOUT_S,
+      },
     });
 
     const result = await runIterate(makeOpts30mStall());

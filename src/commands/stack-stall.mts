@@ -11,7 +11,8 @@ import { describeIdleLayers } from "./stack-drain.mts";
 /**
  * A `--stack` plan that can only wait never reruns its layers' one-PR sessions, so their own
  * stall guards cannot fire. Escalate `stall-timeout` once that idle plan's fingerprint stays
- * unchanged for `stallTimeoutSeconds`; any other plan, or `0`, clears the timer.
+ * unchanged for `stallTimeoutSeconds`; any other plan, or `0`, clears the timer. When the enabled
+ * timer cannot be read or written, escalate `stall-state-unavailable` instead of restarting it.
  */
 export async function applyStackStallGuard(
   planned: { result: PollSummaryResult; idle?: PollSummaryItem[] },
@@ -28,9 +29,12 @@ export async function applyStackStallGuard(
 
   const fingerprint = stackStallFingerprint(result);
   const nowSeconds = Math.floor(Date.now() / 1000);
-  const stored = await readStackStallState(key);
+  const read = await readStackStallState(key);
+  if (!read.ok) return stackStateUnavailable(result, read.reason);
+  const stored = read.state;
   if (!stored || stored.fingerprint !== fingerprint || stored.firstSeenAt > nowSeconds) {
-    await writeStackStallState(key, { fingerprint, firstSeenAt: nowSeconds });
+    const wrote = await writeStackStallState(key, { fingerprint, firstSeenAt: nowSeconds });
+    if (!wrote.ok) return stackStateUnavailable(result, wrote.reason);
     return result;
   }
   const ageSeconds = nowSeconds - stored.firstSeenAt;
@@ -42,6 +46,18 @@ export async function applyStackStallGuard(
     stackMergeable: false,
     instructions: [
       `1. \`stall-timeout\`: the stack has not changed for ${formatDurationApprox(ageSeconds)} while no one-PR session could advance it: ${describeIdleLayers(idle)}. Stop and ask a human to unblock the waiting layers.`,
+    ],
+  };
+}
+
+function stackStateUnavailable(result: PollSummaryResult, reason: string): PollSummaryResult {
+  return {
+    ...result,
+    reason: "actionable",
+    nextAction: "escalate",
+    stackMergeable: false,
+    instructions: [
+      `1. \`stall-state-unavailable\`: the stack stall timer could not be saved (${reason}). Stop and ask a human to fix the state directory before resuming.`,
     ],
   };
 }

@@ -39,7 +39,7 @@ the SHA-256 hash of the item's id, not the id itself, so it stays filesystem-saf
 case-collision-free regardless of what GitHub's ID looks like:
 
 ```
-$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/seen/<sha256-of-id>.json
+$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/seen/<sha256-of-id>.json
 ```
 
 The marker's JSON body is intentionally minimal and intentionally open-ended, and carries

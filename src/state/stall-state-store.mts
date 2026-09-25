@@ -9,18 +9,28 @@ interface StallState {
   firstSeenAt: number;
 }
 
+/** A missing or unreadable-as-JSON file is `state: null`. Any other I/O or key error is `ok: false`. */
+type StallReadResult =
+  | { ok: true; state: StallState | null }
+  | { ok: false; reason: string };
+
+type StallWriteResult = { ok: true } | { ok: false; reason: string };
+
 export interface StallStateStore<Key> {
-  /** Read the current stall state. Returns null on miss, corrupt data, invalid shape, or unsafe key. */
-  read(key: Key): Promise<StallState | null>;
-  /** Write stall state (fire-and-forget — never throws). */
-  write(key: Key, state: StallState): Promise<void>;
+  /** Read the current stall state. Does not throw. */
+  read(key: Key): Promise<StallReadResult>;
+  /** Write stall state. Does not throw; `ok: false` means the timer was not saved. */
+  write(key: Key, state: StallState): Promise<StallWriteResult>;
   /** Clear stall state so the next invocation starts a fresh timer (fire-and-forget — never throws). */
   clear(key: Key): Promise<void>;
 }
 
 /**
- * Best-effort `{fingerprint, firstSeenAt}` files behind the one-PR and `--stack` stall guards.
- * `resolvePath` may throw for an unsafe key; every operation treats that like a missing file.
+ * `{fingerprint, firstSeenAt}` files behind the one-PR and `--stack` stall guards.
+ * A missing file is a miss. An unwritable directory or an unsafe key is a persistence failure
+ * so the caller can hand off instead of treating every tick as the first sighting.
+ * `ENOENT` is the only read error treated as a miss. Corrupt JSON is also a miss, so one
+ * successful rewrite can start the timer again.
  */
 export function stallStateStore<Key>(resolvePath: (key: Key) => string): StallStateStore<Key> {
   return {
@@ -33,11 +43,13 @@ export function stallStateStore<Key>(resolvePath: (key: Key) => string): StallSt
           typeof (parsed as Record<string, unknown>)["fingerprint"] !== "string" ||
           !Number.isFinite((parsed as Record<string, unknown>)["firstSeenAt"])
         ) {
-          return null;
+          return { ok: true, state: null };
         }
-        return parsed as StallState;
-      } catch {
-        return null;
+        return { ok: true, state: parsed as StallState };
+      } catch (error) {
+        // A missing file and corrupt JSON are both misses. One successful rewrite can start the timer.
+        if (isEnoent(error) || error instanceof SyntaxError) return { ok: true, state: null };
+        return { ok: false, reason: errorReason(error) };
       }
     },
 
@@ -50,8 +62,9 @@ export function stallStateStore<Key>(resolvePath: (key: Key) => string): StallSt
         await writeFile(tmp, JSON.stringify(state), "utf8");
         await rename(tmp, path);
         tmp = undefined;
-      } catch {
-        // Best-effort.
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, reason: errorReason(error) };
       } finally {
         if (tmp !== undefined) {
           try {
@@ -67,8 +80,21 @@ export function stallStateStore<Key>(resolvePath: (key: Key) => string): StallSt
       try {
         await unlink(resolvePath(key));
       } catch {
-        // Best-effort — file may not exist.
+        // Best-effort — file may not exist. A leftover file can only make a later timer escalate sooner.
       }
     },
   };
+}
+
+function isEnoent(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error as { code?: unknown }).code === "ENOENT"
+  );
+}
+
+function errorReason(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }

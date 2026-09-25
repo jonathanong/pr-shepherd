@@ -27,7 +27,7 @@ describe("readFixAttempts — miss", () => {
 
 describe("readFixAttempts — invalid JSON", () => {
   it("returns null instead of throwing", async () => {
-    const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr));
+    const dir = join(testStateDir, testKey.owner, testKey.repo, String(testKey.pr));
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, "fix-attempts.json"), "not json", "utf8");
     const result = await readFixAttempts(testKey);

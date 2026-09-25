@@ -1,13 +1,12 @@
 import { rm, readdir, realpath, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { resolveStateBase } from "../state/base.mts";
+import { resolveRepoStateDir, resolveStateBase } from "../state/base.mts";
 import {
   getRepoInfo,
   getCurrentPrNumber,
   getCurrentBranch,
   getPrNumberForBranch,
 } from "../github/client.mts";
-import { SAFE_SEGMENT } from "../util/path-segment.mts";
 
 export type CleanVariant = "pr" | "branch" | "current" | "repo" | "all";
 
@@ -142,17 +141,10 @@ async function resolveTarget(base: string, opts: CleanOptions): Promise<string> 
 
   const repo = await getRepoInfo();
   const { owner, name } = repo;
-
-  for (const [field, val] of [
-    ["owner", owner],
-    ["repo", name],
-  ] as const) {
-    if (!SAFE_SEGMENT.test(val)) {
-      throw new Error(`Invalid repository segment "${field}": ${val}`);
-    }
-  }
-
-  const ownerRepo = `${owner}-${name}`;
+  // Same segment rules as every other state path. The directory itself stays under
+  // `base`, which runClean has already realpath'd.
+  resolveRepoStateDir({ owner, repo: name });
+  const repoDir = join(base, owner, name);
 
   if (variant === "repo") {
     if (value !== undefined) {
@@ -160,7 +152,7 @@ async function resolveTarget(base: string, opts: CleanOptions): Promise<string> 
         `"clean repo" does not accept a positional argument; got "${value}". Did you mean "clean pr" or "clean branch"?`,
       );
     }
-    return join(base, ownerRepo);
+    return repoDir;
   }
 
   let prNumber: number;
@@ -193,5 +185,5 @@ async function resolveTarget(base: string, opts: CleanOptions): Promise<string> 
     prNumber = n;
   }
 
-  return join(base, ownerRepo, String(prNumber));
+  return join(repoDir, String(prNumber));
 }

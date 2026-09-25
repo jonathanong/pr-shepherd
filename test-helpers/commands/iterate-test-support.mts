@@ -35,8 +35,8 @@ vi.mock("../../src/state/fix-attempts.mts", () => ({
   writeFixAttempts: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../src/state/iterate-stall.mts", () => ({
-  readStallState: vi.fn().mockResolvedValue(null),
-  writeStallState: vi.fn().mockResolvedValue(undefined),
+  readStallState: vi.fn().mockResolvedValue({ ok: true, state: null }),
+  writeStallState: vi.fn().mockResolvedValue({ ok: true }),
   clearStallState: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../src/comments/resolve.mts", async (importOriginal) => ({
@@ -268,8 +268,8 @@ function registerIterateHooks(config = defaultConfig): void {
     mockUpdateReadyDelay.mockResolvedValue(READY_STATE_DEFAULT);
     mockReadFixAttempts.mockResolvedValue(null);
     mockWriteFixAttempts.mockResolvedValue(undefined);
-    mockReadStallState.mockResolvedValue(null);
-    mockWriteStallState.mockResolvedValue(undefined);
+    mockReadStallState.mockResolvedValue({ ok: true, state: null });
+    mockWriteStallState.mockResolvedValue({ ok: true });
     mockClearStallState.mockResolvedValue(undefined);
   });
   afterEach(() => vi.useRealTimers());

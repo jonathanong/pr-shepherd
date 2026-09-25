@@ -21,7 +21,7 @@ describe("clean branch", () => {
     await seedPrDir(sd(), 55);
     const result = await runClean({ variant: "branch", value: "feature/foo" });
     expect(result.ok).toBe(true);
-    expect(await pathExists(join(sd(), "acme-widgets", "55"))).toBe(false);
+    expect(await pathExists(join(sd(), "acme", "widgets", "55"))).toBe(false);
   });
 
   it("errors when no open PR found for the branch", async () => {
@@ -37,7 +37,7 @@ describe("clean branch", () => {
     await seedPrDir(sd(), 77);
     const result = await runClean({ variant: "branch" });
     expect(result.ok).toBe(true);
-    expect(await pathExists(join(sd(), "acme-widgets", "77"))).toBe(false);
+    expect(await pathExists(join(sd(), "acme", "widgets", "77"))).toBe(false);
   });
 
   it("errors on detached HEAD when no value provided", async () => {
@@ -55,7 +55,7 @@ describe("clean current", () => {
     await seedPrDir(sd(), 33);
     const result = await runClean({ variant: "current" });
     expect(result.ok).toBe(true);
-    expect(await pathExists(join(sd(), "acme-widgets", "33"))).toBe(false);
+    expect(await pathExists(join(sd(), "acme", "widgets", "33"))).toBe(false);
   });
 
   it("result variant is 'current'", async () => {
@@ -79,13 +79,13 @@ describe("path safety", () => {
     mockGetRepoInfo.mockResolvedValueOnce({ owner: "../evil", name: "widgets" });
     const result = await runClean({ variant: "repo" });
     expect(result.ok).toBe(false);
-    expect(result.error).toMatch(/Invalid repository segment/);
+    expect(result.error).toMatch(/Invalid state key segment/);
   });
 
   it("errors when git repo name contains invalid characters", async () => {
     mockGetRepoInfo.mockResolvedValueOnce({ owner: "acme", name: "../../etc" });
     const result = await runClean({ variant: "repo" });
     expect(result.ok).toBe(false);
-    expect(result.error).toMatch(/Invalid repository segment/);
+    expect(result.error).toMatch(/Invalid state key segment/);
   });
 });

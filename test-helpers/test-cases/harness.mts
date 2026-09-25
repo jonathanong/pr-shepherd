@@ -86,13 +86,13 @@ vi.mock("../../src/commands/ready-delay.mts", () => ({
   clearReadyDelay: vi.fn(),
 }));
 vi.mock("../../src/state/iterate-stall.mts", () => ({
-  readStallState: vi.fn().mockResolvedValue(null),
-  writeStallState: vi.fn().mockResolvedValue(undefined),
+  readStallState: vi.fn().mockResolvedValue({ ok: true, state: null }),
+  writeStallState: vi.fn().mockResolvedValue({ ok: true }),
   clearStallState: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../src/state/stack-stall.mts", () => ({
-  readStackStallState: vi.fn().mockResolvedValue(null),
-  writeStackStallState: vi.fn().mockResolvedValue(undefined),
+  readStackStallState: vi.fn().mockResolvedValue({ ok: true, state: null }),
+  writeStackStallState: vi.fn().mockResolvedValue({ ok: true }),
   clearStackStallState: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../src/state/fix-attempts.mts", () => ({
@@ -433,8 +433,8 @@ export function applyFixture(fixture: Fixture): void {
 
   mockUpdateReadyDelay.mockResolvedValue(fixture.readyDelayState ?? DEFAULT_READY_STATE);
 
-  mockReadStallState.mockResolvedValue(null);
-  mockWriteStallState.mockResolvedValue(undefined);
+  mockReadStallState.mockResolvedValue({ ok: true, state: null });
+  mockWriteStallState.mockResolvedValue({ ok: true });
   mockClearStallState.mockResolvedValue(undefined);
 
   mockReadFixAttempts.mockResolvedValue(fixture.fixAttempts ?? null);
@@ -530,9 +530,15 @@ export async function captureTwoTickStallRun(fixture: Fixture): Promise<RunResul
   const { fingerprint } = writeCalls[writeCalls.length - 1][1];
 
   // Tick 2: readStallState returns old state so escalation fires
-  mockReadStallState.mockResolvedValue({ fingerprint, firstSeenAt: NOW - 9999 });
+  mockReadStallState.mockResolvedValue({
+    ok: true,
+    state: { fingerprint, firstSeenAt: NOW - 9999 },
+  });
   const { out: textOut, exitCode } = await runMain(args);
-  mockReadStallState.mockResolvedValue({ fingerprint, firstSeenAt: NOW - 9999 });
+  mockReadStallState.mockResolvedValue({
+    ok: true,
+    state: { fingerprint, firstSeenAt: NOW - 9999 },
+  });
   const { out: jsonOut, exitCode: jsonExitCode } = await runMain([...args, "--format=json"]);
 
   return { textOut, jsonOut, exitCode, jsonExitCode };

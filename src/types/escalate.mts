@@ -7,6 +7,7 @@ export type EscalateTrigger =
   | "fix-thrash"
   | "base-branch-unknown"
   | "stall-timeout"
+  | "stall-state-unavailable"
   | "check-follow-up-unavailable"
   | "authorization-required"
   | "merge-queue-removed";

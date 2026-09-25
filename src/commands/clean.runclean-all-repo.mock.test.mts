@@ -16,7 +16,7 @@ const sd = () => stateDirRef as unknown as string;
 
 describe("clean all", () => {
   it("deletes the entire state base", async () => {
-    await mkdir(join(sd(), "acme-widgets", "42"), { recursive: true });
+    await mkdir(join(sd(), "acme", "widgets", "42"), { recursive: true });
     const result = await runClean({ variant: "all" });
     expect(result.ok).toBe(true);
     expect(result.deleted).toHaveLength(1);
@@ -32,7 +32,7 @@ describe("clean all", () => {
   });
 
   it("dry-run lists entries without deleting", async () => {
-    await mkdir(join(sd(), "acme-widgets", "42"), { recursive: true });
+    await mkdir(join(sd(), "acme", "widgets", "42"), { recursive: true });
     const result = await runClean({ variant: "all", dryRun: true });
     expect(result.ok).toBe(true);
     expect(result.dryRun).toBe(true);
@@ -66,12 +66,12 @@ describe("clean all — extra positional rejected", () => {
 });
 
 describe("clean repo", () => {
-  it("deletes the owner-repo directory", async () => {
+  it("deletes the owner/repo directory", async () => {
     await seedPrDir(sd(), 42);
     const result = await runClean({ variant: "repo" });
     expect(result.ok).toBe(true);
     expect(result.deleted.length).toBeGreaterThan(0);
-    expect(await pathExists(join(sd(), "acme-widgets"))).toBe(false);
+    expect(await pathExists(join(sd(), "acme", "widgets"))).toBe(false);
   });
 
   it("returns skipped when repo dir does not exist", async () => {
@@ -86,12 +86,12 @@ describe("clean repo", () => {
     const result = await runClean({ variant: "repo", dryRun: true });
     expect(result.dryRun).toBe(true);
     expect(result.deleted.length).toBeGreaterThan(0);
-    expect(await pathExists(join(sd(), "acme-widgets"))).toBe(true);
+    expect(await pathExists(join(sd(), "acme", "widgets"))).toBe(true);
   });
 
-  it("target is set to base/owner-repo", async () => {
+  it("target is set to base/owner/repo", async () => {
     const result = await runClean({ variant: "repo" });
-    expect(result.target).toBe(join(sd(), "acme-widgets"));
+    expect(result.target).toBe(join(sd(), "acme", "widgets"));
   });
 
   it("errors when a positional argument is provided to 'repo'", async () => {
