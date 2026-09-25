@@ -101,6 +101,22 @@ describe("routePollSummary", () => {
     expect(normalizePollSummaryState("FUTURE")).toBe("UNKNOWN");
   });
 
+  it.each([
+    ["an explicit selection waits for the human transition", {}, "wait"],
+    ["a stack selection escalates the agent transition", { stackPrNumber: 42 }, "escalate"],
+  ] as const)("routes a disabled draft the viewer cannot update: %s", (_case, opts, action) => {
+    const routed = route(
+      { isDraft: true, viewerCanUpdate: false },
+      {},
+      {},
+      {
+        noAutoMarkReady: true,
+        ...opts,
+      },
+    );
+    expect(routed.action).toBe(action);
+  });
+
   it("honors configured auto-mark-ready disablement", () => {
     mockLoadConfig.mockReturnValue({ actions: { autoMarkReady: false, workWhileQueued: false } });
     expect(route({ isDraft: true })).toEqual({

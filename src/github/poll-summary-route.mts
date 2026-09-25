@@ -39,12 +39,15 @@ export function routePollSummary(
     return { action: "wait", reasons: ["pending-or-unknown"] };
   }
   if (raw.isDraft) {
-    if (opts.noAutoMarkReady || actions.autoMarkReady === false) {
-      return { action: "wait", reasons: ["draft-auto-mark-ready-disabled"] };
+    const autoMarkReadyDisabled = opts.noAutoMarkReady || actions.autoMarkReady === false;
+    // The stack selector asks the agent to mark a disabled draft ready, so
+    // that transition needs the same capability as the automatic one.
+    if (!raw.viewerCanUpdate && (!autoMarkReadyDisabled || opts.stackPrNumber !== undefined)) {
+      return { action: "escalate", reasons: ["mark-ready-authorization-required"] };
     }
-    return raw.viewerCanUpdate
-      ? { action: "mark_ready", reasons: ["draft-appears-ready"] }
-      : { action: "escalate", reasons: ["mark-ready-authorization-required"] };
+    return autoMarkReadyDisabled
+      ? { action: "wait", reasons: ["draft-auto-mark-ready-disabled"] }
+      : { action: "mark_ready", reasons: ["draft-appears-ready"] };
   }
   if (opts.merge && raw.isInMergeQueue) {
     return { action: "wait", reasons: ["already-in-merge-queue"] };

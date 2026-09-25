@@ -341,7 +341,7 @@ This applies only to explicit classification-rule auto-resolve matches. Ordinary
 
 When `true`, shepherd converts a draft PR to ready-for-review once all checks pass, no Shepherd-visible work remains, no configured blocking review is in progress, and the ready-delay has not yet elapsed. After the ready-delay elapses, the loop emits `cancel` instead.
 
-Disable if your team uses the draft state as a deliberate gate that requires a human to promote.
+Disabling stops only the poll loop's own transition. A `--stack` selection then lists a clean, unblocked draft layer's `gh pr ready` step for the agent after that layer's bounded probe; see [actions.md](actions.md).
 
 ### `actions.neverCancelRuns` — default `[]`
 

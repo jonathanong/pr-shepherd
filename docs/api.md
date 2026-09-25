@@ -51,7 +51,7 @@ For a singular programmatic API call, `pr` is an optional positive number, repos
 reference must resolve to one repository. Aggregate calls perform one compact, read-only summary
 tick and return `PollSummaryResult`; they do not mark review items seen, maintain ready-delay state,
 or perform GitHub mutations. Native-stack aggregate actions are stack-level `SHEPHERD` for autonomous
-unready layers, `WAIT` for queued stacks, and `CANCEL` for terminal READY or merged state. An unready layer
+unready layers, `WAIT` for queued stacks or layers that can only wait, and `CANCEL` for terminal READY or merged state. An unready layer
 produces one-PR Shepherd instructions; `blockedByPr` identifies the lowest unready ancestor of an
 upper layer. Closed or unverified topology produces `ESCALATE` for human direction only once no
 one-PR Shepherd session remains; a mixed state returns `SHEPHERD` and surfaces the human blocker. With `--stack

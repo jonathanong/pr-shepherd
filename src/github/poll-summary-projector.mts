@@ -32,7 +32,11 @@ export async function summarizePollSummaryPr(
   const removalEvent = currentQueueRemovalEvent(raw);
   let { action, reasons } = routePollSummary(raw, checks, review, opts);
   let remainingSeconds: number | undefined;
-  if (raw.isDraft && blockingReviewerInProgress && action === "mark_ready") {
+  if (
+    raw.isDraft &&
+    blockingReviewerInProgress &&
+    (action === "mark_ready" || reasons.includes("draft-auto-mark-ready-disabled"))
+  ) {
     action = "wait";
     reasons = ["blocking-reviewer-in-progress"];
   }
@@ -117,9 +121,7 @@ export async function summarizePollSummaryPr(
     ...((opts.stackPrNumber !== undefined && raw.state === "OPEN") ||
     (!["wait", "cancel"].includes(action) &&
       !(opts.stackPrNumber !== undefined && raw.stack && action === "merge"))
-      ? {
-          pollCommand: buildPollCommand(repoName, raw.number, raw.isDraft, opts),
-        }
+      ? pollCommandFields(repoName, raw.number, raw.isDraft, opts)
       : {}),
   };
 }
@@ -152,12 +154,12 @@ function detectBlockingReviewer(raw: RawSummaryPr): boolean {
   );
 }
 
-function buildPollCommand(
+function pollCommandFields(
   repo: string,
   pr: number,
   isDraft: boolean,
   opts: PollSummaryCommandOptions,
-): string {
+): Pick<PollSummaryItem, "pollCommand" | "pollProbe"> {
   const autoMarkReadyDisabled =
     opts.noAutoMarkReady || loadConfig().actions.autoMarkReady === false;
   const boundedDraft = isDraft && autoMarkReadyDisabled;
@@ -171,5 +173,6 @@ function buildPollCommand(
     args.push("--stall-timeout", `${opts.stallTimeoutSeconds}s`);
   }
   if (opts.noAutoMarkReady && !boundedDraft) args.push("--no-auto-mark-ready");
-  return buildPrShepherdCommand(args).text;
+  const pollCommand = buildPrShepherdCommand(args).text;
+  return boundedDraft ? { pollCommand, pollProbe: true } : { pollCommand };
 }

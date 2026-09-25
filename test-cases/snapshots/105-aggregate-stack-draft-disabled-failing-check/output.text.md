@@ -9,7 +9,7 @@
   - head `draft-failing` at `4311111111111111111111111111111111111111` · base `main`
   - checks: 1 failing
   - reasons: `failing-checks`
-  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/431 --timeout 1s --debounce 0s --no-auto-mark-ready`
+  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/431 --timeout 1s --debounce 0s --no-auto-mark-ready` · bounded probe
 
 ## Instructions
 

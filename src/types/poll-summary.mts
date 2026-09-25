@@ -63,6 +63,11 @@ export interface PollSummaryItem {
   review?: PollSummaryReview;
   stack?: PollSummaryStack;
   pollCommand?: string;
+  /**
+   * `pollCommand` is one bounded tick without automatic mark-ready: it surfaces and routes review
+   * or CI work but cannot advance this draft, so repeating it for a waiting layer changes nothing.
+   */
+  pollProbe?: true;
   /** A current one-PR READY-after-delay completion was verified. */
   readyReceipt?: true;
   /** Lowest unready ancestor that prevents this layer from being stack-mergeable. */

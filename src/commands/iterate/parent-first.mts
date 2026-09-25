@@ -70,12 +70,12 @@ export function stackDraftHold(
   parentBlock: ParentMarkReadyBlock | undefined,
 ): StackDraftHold | undefined {
   if (!report.mergeStatus.mergeRequirements?.stack || !report.mergeStatus.isDraft) return undefined;
-  // A named lower layer outranks the session flag: even with automatic
-  // mark-ready enabled, this draft cannot advance until that layer does.
-  if (parentBlock && parentBlock !== "unverifiable")
-    return { kind: "lower-layer-not-ready", lowerLayer: parentBlock };
-  if (!autoMarkReady) return { kind: "auto-mark-ready-disabled" };
-  return parentBlock ? { kind: "lower-layer-not-ready" } : undefined;
+  // Any lower-layer block outranks the session flag: even with automatic
+  // mark-ready enabled, this draft cannot advance until that layer does, and a
+  // lower-layer read that failed must not hide behind the flag.
+  if (parentBlock === "unverifiable") return { kind: "lower-layer-not-ready" };
+  if (parentBlock) return { kind: "lower-layer-not-ready", lowerLayer: parentBlock };
+  return autoMarkReady ? undefined : { kind: "auto-mark-ready-disabled" };
 }
 
 /**

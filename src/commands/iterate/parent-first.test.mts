@@ -171,7 +171,7 @@ describe("stackDraftHold", () => {
 
   it.each([
     [false, undefined, { kind: "auto-mark-ready-disabled" }],
-    [false, "unverifiable", { kind: "auto-mark-ready-disabled" }],
+    [false, "unverifiable", { kind: "lower-layer-not-ready" }],
     [true, "unverifiable", { kind: "lower-layer-not-ready" }],
     [true, undefined, undefined],
   ] as const)(

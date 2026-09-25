@@ -68,7 +68,9 @@ function formatItem(item: PollSummaryItem): string {
         ]
       : []),
     `  - reasons: ${item.reasons.map((reason) => `\`${reason}\``).join(", ")}`,
-    ...(item.pollCommand ? [`  - pollCommand: \`${item.pollCommand}\``] : []),
+    ...(item.pollCommand
+      ? [`  - pollCommand: \`${item.pollCommand}\`${item.pollProbe ? " · bounded probe" : ""}`]
+      : []),
   ].join("\n");
 }
 

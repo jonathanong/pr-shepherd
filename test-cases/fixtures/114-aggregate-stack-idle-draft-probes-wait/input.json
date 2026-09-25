@@ -1,0 +1,79 @@
+{
+  "description": "When every remaining layer is a disabled draft whose bounded probe could only report waiting, the selector waits at the polling cadence instead of repeating one-PR sessions that cannot change the stack.",
+  "mode": "aggregate",
+  "args": [
+    "--stack",
+    "https://github.com/owner/repo/pull/442",
+    "--no-auto-mark-ready",
+    "--timeout",
+    "1s",
+    "--interval",
+    "2s"
+  ],
+  "expectedReason": "timeout",
+  "expectedExitCode": 10,
+  "expectedNextAction": "wait",
+  "aggregateSummary": {
+    "selection": {
+      "kind": "stack",
+      "anchor": 442,
+      "stackNumber": 44,
+      "stackSize": 2
+    },
+    "prs": [
+      {
+        "pr": 441,
+        "repo": "owner/repo",
+        "title": "Draft with pending CI",
+        "url": "https://github.com/owner/repo/pull/441",
+        "action": "wait",
+        "reasons": [
+          "pending-or-unknown"
+        ],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "UNSTABLE",
+        "headRefName": "draft-pending",
+        "headRefOid": "4411111111111111111111111111111111111111",
+        "baseRefName": "main",
+        "isDraft": true,
+        "stack": {
+          "number": 44,
+          "size": 2,
+          "position": 1,
+          "baseRefName": "main"
+        },
+        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/441 --timeout 1s --debounce 0s --no-auto-mark-ready",
+        "pollProbe": true,
+        "checks": {
+          "inProgress": 1
+        }
+      },
+      {
+        "pr": 442,
+        "repo": "owner/repo",
+        "title": "Upper draft",
+        "url": "https://github.com/owner/repo/pull/442",
+        "action": "wait",
+        "reasons": [
+          "draft-auto-mark-ready-disabled"
+        ],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "draft-upper",
+        "headRefOid": "4421111111111111111111111111111111111111",
+        "baseRefName": "draft-pending",
+        "isDraft": true,
+        "stack": {
+          "number": 44,
+          "size": 2,
+          "position": 2,
+          "baseRefName": "main"
+        },
+        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/442 --timeout 1s --debounce 0s --no-auto-mark-ready",
+        "pollProbe": true
+      }
+    ]
+  }
+}
