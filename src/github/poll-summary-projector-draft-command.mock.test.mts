@@ -63,8 +63,38 @@ describe("draft stack poll commands", () => {
 
     const item = await summarizePollSummaryPr(draft(), repo, { stackPrNumber: 42, ...opts });
 
-    expect(item).toMatchObject({ action: "wait", reasons: ["draft-auto-mark-ready-disabled"] });
+    expect(item).toMatchObject({
+      action: "wait",
+      reasons: ["draft-auto-mark-ready-disabled"],
+      pollProbe: true,
+    });
     expect(item.pollCommand).toContain("--timeout 1s --debounce 0s --no-auto-mark-ready");
     expect(item.pollCommand).not.toContain("--until-terminal");
+  });
+
+  it("keeps a full session without the probe flag when automatic mark-ready is on", async () => {
+    const item = await summarizePollSummaryPr(draft(), repo, { stackPrNumber: 42 });
+
+    expect(item.pollCommand).toContain("--until-terminal");
+    expect(item.pollProbe).toBeUndefined();
+  });
+
+  it("holds a disabled draft while a configured reviewer is pending", async () => {
+    mockLoadConfig.mockReturnValue({
+      cliCommand: ["pr-shepherd"],
+      actions: { autoMarkReady: false, workWhileQueued: false },
+      botUsernames: [],
+      ignoreChecks: [],
+      checks: { ciTriggerEvents: ["pull_request"] },
+      mergeStatus: { blockingReviewerLogins: ["copilot"] },
+    });
+    const raw = {
+      ...draft(),
+      latestReviews: { nodes: [{ state: "PENDING", author: { login: "copilot-reviewer" } }] },
+    } as RawSummaryPr;
+
+    const item = await summarizePollSummaryPr(raw, repo, { stackPrNumber: 42 });
+
+    expect(item).toMatchObject({ action: "wait", reasons: ["blocking-reviewer-in-progress"] });
   });
 });

@@ -312,25 +312,6 @@ describe("native-stack reconciliation", () => {
     expect(result.instructions?.join("\n")).toContain("PR #3");
   });
 
-  it("routes a clean draft with auto-ready disabled without a human escalation", () => {
-    const result = withPollSummaryInstructions(
-      stack([
-        row(1, 1, {
-          action: "wait",
-          reasons: ["draft-auto-mark-ready-disabled"],
-          isDraft: true,
-          pollCommand:
-            "pr-shepherd https://github.com/acme/widgets/pull/1 --timeout 1s --debounce 0s --no-auto-mark-ready",
-        }),
-      ]),
-      true,
-    );
-    expect(result).toMatchObject({ nextAction: "shepherd", stackMergeable: false });
-    expect(result.prs[0]?.action).toBe("wait");
-    expect(result.instructions?.join("\n")).toContain("pull/1 --timeout 1s");
-    expect(result.instructions?.join("\n")).not.toContain("human action");
-  });
-
   it("does not convert a quota warning into a third stack nextAction", () => {
     const result = withPollSummaryInstructions(
       {

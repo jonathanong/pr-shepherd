@@ -21,6 +21,7 @@ state, bounded check and review counts (including ignored and superseded checks 
 merge-queue commit checks), and incomplete flags. Aggregate API and MCP calls return one summary
 tick without recurrence. The summary path never mutates GitHub, writes seen markers, or maintains
 ready-delay state; one-PR sessions remain authoritative for those mutations and full review context.
+Its only local state is a `--stack` selection's [stall timer](escalations.md#stall-timeout).
 
 For a native stack, `stackMergeable` is true only when every open layer has a current one-PR Shepherd
 READY receipt (`readyReceipt: true`) and every adjacent open boundary is linear. The aggregate view
@@ -39,8 +40,26 @@ reconciliation. The stack returns `ESCALATE` for the remaining human handoff onl
 shepherdable layers have been handled. A closed
 dependency and a stale-but-otherwise-ready child are first reprojected to effective `ESCALATE` and
 `FIX_CODE` respectively at the row level, so an all-`CANCEL` stack truly has no remaining layer work.
-A clean draft whose automatic mark-ready transition is disabled receives a bounded one-PR session,
-not a human handoff; drafts with actionable review or CI also route that work through one-PR sessions.
+
+When `--no-auto-mark-ready` or `actions.autoMarkReady: false` applies, each draft layer's
+`pollCommand` is a bounded probe (`--timeout 1s --debounce 0s --no-auto-mark-ready`, flagged
+`pollProbe: true`) that surfaces and routes review and CI work but never promotes the draft; an
+upper draft held by `blockedByPr` gets the same probe. A probe whose row still has work is listed
+as a one-PR session. A clean draft that no lower layer blocks becomes the agent's ready-for-review
+step: run the probe first. Only when it returns `[WAIT]` held by the disabled setting (the
+`auto-mark-ready-disabled` hold below) is the draft still clean with no lower blocker, so the agent
+runs `gh pr ready <N> -R <owner/repo>`; otherwise it completes the probe's instructions and leaves
+the draft for the next round. Neither the poll loop
+nor a human performs that transition. Because the agent does, such a draft escalates with
+`mark-ready-authorization-required` when its `viewerCanUpdate` is not `true`, and it waits with
+`blocking-reviewer-in-progress` while a configured blocking reviewer is pending. Rerunning a probe
+that can only report waiting — on CI, merge state, a blocking review, or a lower layer — cannot
+change the stack. When no other agent work remains, the selector returns `ESCALATE` for any human
+handoff, or otherwise `WAIT` with reason `waiting`, which `--until-terminal` rechecks at its polling
+cadence and a bounded poll returns at timeout. Because nothing reruns those probes, their own stall
+guards cannot fire, so the selector keeps a stack-level timer: once that `WAIT` stays unchanged for
+the stall timeout, it returns `ESCALATE` with `stall-timeout` naming each waiting layer
+([`stall-timeout`](escalations.md#stall-timeout)).
 
 When `--merge` is requested, the lowest open layer is READY, every layer below it has merged, and
 GitHub has retargeted it onto the stack base, the read-only summary returns `MERGE` with
@@ -187,8 +206,8 @@ The body line (`WAIT: …`) varies with the merge state — `branch is behind ba
 
 **Held native stack drafts:** a draft native stack layer that this one-PR session cannot promote carries `stackDraftHold` in JSON:
 
-- `{ "kind": "lower-layer-not-ready", "lowerLayer": { "pr": 41, "reason": "draft" } }` — a `READY` upper draft whose lowest open lower layer is not yet ready. `reason` is one of `closed`, `draft`, `conflicting`, `queue-removal`, `failing-checks`, `review-work`, `checks-in-progress`, `merge-state`, `no-ready-receipt`, or `stale-ancestry`. The aggregate `--stack` selector uses the same readiness rules for `blockedByPr`, so both name the same layer. A named lower layer takes precedence over a disabled mark-ready setting.
-- `{ "kind": "auto-mark-ready-disabled" }` — the session or configuration disables automatic mark-ready, as in the stack selector's bounded draft probes.
+- `{ "kind": "lower-layer-not-ready", "lowerLayer": { "pr": 41, "reason": "draft" } }` — a `READY` upper draft whose lowest open lower layer is not yet ready. `reason` is one of `closed`, `draft`, `conflicting`, `queue-removal`, `failing-checks`, `review-work`, `checks-in-progress`, `merge-state`, `no-ready-receipt`, or `stale-ancestry`. The aggregate `--stack` selector uses the same readiness rules for `blockedByPr`, so both name the same layer. Any lower-layer hold, named or not, takes precedence over a disabled mark-ready setting.
+- `{ "kind": "auto-mark-ready-disabled" }` — the session or configuration disables automatic mark-ready, as in the stack selector's bounded draft probes. Only this `READY` hold confirms the `--stack` selector's ready-for-review step for the agent.
 - `{ "kind": "lower-layer-not-ready" }` — the lower layers could not be read or attributed, so the draft stays held without naming one.
 
 Repeating the same one-PR session cannot advance a held draft, so the single instruction replaces "iterate immediately" with a stack handoff (quota cadence advice is appended when a warning applies). A named lower layer is the one to advance first:
@@ -569,7 +588,7 @@ Ambiguous state that requires human judgement — iteration stops and surfaces d
 
 **Trigger:** Any of:
 
-- **`stall-timeout`** — the iterate result has not materially changed for `config.iterate.stallTimeoutMinutes` minutes (default 60), or a relevant CI check/status context has stayed pending without starting for that long. Catches loops where the same failing test, transient error, or pending state repeats indefinitely without progress. The generic timer resets whenever the HEAD SHA, failing-check set, or actionable item IDs change. Override with `--stall-timeout <duration>` — a bare number is minutes (e.g. `--stall-timeout 90`), or use an explicit `s`/`m`/`h` suffix (e.g. `--stall-timeout 90s`, `--stall-timeout 1h`); `--stall-timeout 0` disables. The escalation message renders the elapsed time in whatever unit reads best (seconds, minutes, or hours), independent of the flag's input unit.
+- **`stall-timeout`** — the iterate result has not materially changed for `config.iterate.stallTimeoutMinutes` minutes (default 60), or a relevant CI check/status context has stayed pending without starting for that long. Catches loops where the same failing test, transient error, or pending state repeats indefinitely without progress. The generic timer resets whenever the HEAD SHA, failing-check set, or actionable item IDs change. A `--stack` selection whose layers can only wait keeps its own stack-level timer with the same threshold ([`stall-timeout`](escalations.md#stall-timeout)). Override with `--stall-timeout <duration>` — a bare number is minutes (e.g. `--stall-timeout 90`), or use an explicit `s`/`m`/`h` suffix (e.g. `--stall-timeout 90s`, `--stall-timeout 1h`); `--stall-timeout 0` disables. The escalation message renders the elapsed time in whatever unit reads best (seconds, minutes, or hours), independent of the flag's input unit.
 - **`fix-thrash`** — the same retryable, located active thread body remains unchanged and unresolved after being returned in `config.iterate.fixAttemptsPerThread` caller-visible `FIX_CODE` results (default 3). Those results each repeat the pending review commands; the following unchanged tick escalates and retains the commands. Internal debounce ticks do not count. Threads suppressed by seen markers, location-independent outdated-bot resolutions, other threads without a path/line, and threads with unauthorized required mutations do not count; edited thread bodies reset the per-thread attempt count.
 - **`base-branch-unknown`** — the GraphQL batch did not yield a usable base branch name: the derived value was empty or contained unsafe characters. Preempts any `[FIX_CODE]` that would require a push, since rebasing onto the wrong base is worse than pausing iteration.
 

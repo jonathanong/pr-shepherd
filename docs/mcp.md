@@ -176,7 +176,7 @@ Hosts namespace tool names with the server name (`pr-shepherd__iterate` in Grok,
 | `prs`                    | qualified PR array              | selector | Non-empty explicit set from one repository.             |
 | `stack`                  | GitHub PR URL or `owner/repo#N` | selector | Anchor selecting its complete native GitHub stack.      |
 | `readyDelaySeconds`      | non-negative number             | no       | Override the ready-delay window.                        |
-| `stallTimeoutSeconds`    | non-negative number             | no       | Override the stall timeout.                             |
+| `stallTimeoutSeconds`    | non-negative number             | no       | Override the one-PR or `stack` stall timeout.           |
 | `noAutoMarkReady`        | boolean                         | no       | Disable automatic draft → ready.                        |
 | `noAutoCancelActionable` | boolean                         | no       | Deprecated no-op; Shepherd never cancels workflow runs. |
 | `merge`                  | boolean                         | no       | Shepherd to readiness and emit merge/queue commands.    |
@@ -186,7 +186,7 @@ Supply exactly one of `pr`, `prs`, or `stack`. `prs` is a non-empty list of qual
 from one repository; `stack` is one qualified anchor whose complete native GitHub stack is selected.
 Aggregate selectors return one compact, read-only summary tick. Markdown and `structuredContent`
 surface equivalent per-PR raw state, bounded check/review counts, routing hints, and `pollCommand`s.
-For native stacks they also surface `stackMergeable`, `readyReceipt`, `blockedByPr`, and raw ancestry
+For native stacks they also surface `stackMergeable`, `readyReceipt`, `blockedByPr`, `pollProbe`, and raw ancestry
 mismatches. The compact tick reuses singular check/review classification but does not maintain
 ready-delay state; bounded overflow is surfaced as incomplete context without becoming a permanent
 action by itself.

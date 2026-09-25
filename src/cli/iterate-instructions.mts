@@ -3,6 +3,7 @@ import { renderMergeCommand } from "../commands/iterate/merge.mts";
 import { inlineCode } from "../util/markdown.mts";
 import { buildQuotaAwareContinuation } from "../quota-warning.mts";
 import { formatPrUrl } from "../pr-reference.mts";
+import { AUTO_MARK_READY_DISABLED_HOLD } from "../commands/stack-work.mts";
 import { buildPrShepherdCommand } from "./runner.mts";
 
 const STACK_LAYER_BLOCK_REASONS: Record<StackLayerBlockReason, string> = {
@@ -107,7 +108,7 @@ function buildStackDraftHoldInstruction(
 
 function holdReason(hold: StackDraftHold): string {
   return hold.kind === "auto-mark-ready-disabled"
-    ? "automatic mark-ready is disabled for this session"
+    ? AUTO_MARK_READY_DISABLED_HOLD
     : "its lower stack layers could not be verified";
 }
 

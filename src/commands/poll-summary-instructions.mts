@@ -6,20 +6,30 @@ import {
   appendAutonomousInstructions,
   appendHumanHandoffInstructions,
   findHumanHandoffs,
+  idleWaitPlan,
   isStackLayerReady,
   planBottomDrain,
   retargetWaitPlan,
   stackPosition,
   type StackPlan,
 } from "./stack-drain.mts";
+import { appendMarkReadyInstructions, splitStackWork } from "./stack-work.mts";
 
 /** Keep aggregate JSON, Markdown, and MCP instructions on one projection. */
 export function withPollSummaryInstructions(
   result: PollSummaryResult,
   mergeRequested: boolean,
 ): PollSummaryResult {
+  return planPollSummary(result, mergeRequested).result;
+}
+
+/** The projected summary, plus the idle layers when the stack plan can only wait on them. */
+export function planPollSummary(
+  result: PollSummaryResult,
+  mergeRequested: boolean,
+): { result: PollSummaryResult; idle?: PollSummaryItem[] } {
   if (result.selection.kind !== "stack") {
-    return { ...result, instructions: explicitInstructions(result) };
+    return { result: { ...result, instructions: explicitInstructions(result) } };
   }
 
   const prs = [...result.prs].sort((left, right) => stackPosition(left) - stackPosition(right));
@@ -41,6 +51,7 @@ export function withPollSummaryInstructions(
               pollCommand:
                 item.pollCommand.replace(" --until-terminal", " --timeout 1s --debounce 0s") +
                 (item.pollCommand.includes("--no-auto-mark-ready") ? "" : " --no-auto-mark-ready"),
+              pollProbe: true as const,
             }),
         }
       : item.state === "OPEN" &&
@@ -94,31 +105,39 @@ export function withPollSummaryInstructions(
     );
   }
   return {
-    ...projected,
-    reason:
-      planned.action === "cancel"
-        ? "all_terminal"
-        : planned.waiting
-          ? result.reason === "timeout"
-            ? "timeout"
-            : "waiting"
-          : "actionable",
-    stackMergeable: planned.stackMergeable,
-    nextAction: planned.action,
-    instructions,
+    result: {
+      ...projected,
+      reason:
+        planned.action === "cancel"
+          ? "all_terminal"
+          : planned.waiting
+            ? result.reason === "timeout"
+              ? "timeout"
+              : "waiting"
+            : "actionable",
+      stackMergeable: planned.stackMergeable,
+      nextAction: planned.action,
+      instructions,
+    },
+    ...(planned.idle && { idle: planned.idle }),
   };
 }
 
 function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPlan {
   const open = result.prs.filter((item) => item.state === "OPEN");
   const gaps = result.stackAncestry ?? [];
+  const staleChildren = new Set(gaps.map((gap) => gap.childPr));
   const stackMergeable = gaps.length === 0 && open.every(isStackLayerReady);
-  const candidates = open.filter(
-    (item) => !isStackLayerReady(item) || gaps.some((gap) => gap.childPr === item.pr),
+  const work = splitStackWork(
+    open.filter(
+      (item) =>
+        (!isStackLayerReady(item) || staleChildren.has(item.pr)) && item.action !== "escalate",
+    ),
+    staleChildren,
   );
-  const autonomousCandidates = candidates.filter((item) => item.action !== "escalate");
-  const runnableCandidates = autonomousCandidates.filter((item) => item.pollCommand);
-  const missingCommands = autonomousCandidates.filter((item) => !item.pollCommand);
+  const runnableCandidates = work.sessions.filter((item) => item.pollCommand);
+  const missingCommands = work.sessions.filter((item) => !item.pollCommand);
+  const agentWork = runnableCandidates.length > 0 || work.markReady.length > 0;
   const drain = planBottomDrain(result, mergeRequested);
   if (drain) return drain;
 
@@ -126,14 +145,15 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
   if (handoffs) {
     const instructions: string[] = [];
     appendAutonomousInstructions(instructions, runnableCandidates);
-    const stop = runnableCandidates.length === 0;
+    appendMarkReadyInstructions(instructions, work.markReady);
+    const stop = !agentWork;
     appendHumanHandoffInstructions(instructions, handoffs, stop);
     for (const item of missingCommands) {
       instructions.push(
         `${instructions.length + 1}. PR #${item.pr} needs a one-PR session, but Shepherd could not produce its command. Ask for direction.`,
       );
     }
-    if (runnableCandidates.length > 0) {
+    if (agentWork) {
       instructions.push(
         `${instructions.length + 1}. After the listed one-PR sessions, rerun this same \`--stack\` selector. Stop for the human handoff only when no autonomous shepherding remains.`,
       );
@@ -153,24 +173,23 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
     if (missingCommands.length > 0) {
       const instructions: string[] = [];
       appendAutonomousInstructions(instructions, runnableCandidates);
+      appendMarkReadyInstructions(instructions, work.markReady);
       for (const item of missingCommands) {
         instructions.push(
-          `${instructions.length + 1}. PR #${item.pr} needs a one-PR session, but Shepherd could not produce its command. ${runnableCandidates.length === 0 ? "Stop and ask" : "After autonomous shepherding, ask"} for direction.`,
+          `${instructions.length + 1}. PR #${item.pr} needs a one-PR session, but Shepherd could not produce its command. ${agentWork ? "After autonomous shepherding, ask" : "Stop and ask"} for direction.`,
         );
       }
-      if (runnableCandidates.length > 0) {
+      if (agentWork) {
         instructions.push(
           `${instructions.length + 1}. After the listed one-PR sessions, rerun this same \`--stack\` selector. Stop for the human handoff only when no autonomous shepherding remains.`,
         );
       }
-      return {
-        action: runnableCandidates.length > 0 ? "shepherd" : "escalate",
-        stackMergeable: false,
-        instructions,
-      };
+      return { action: agentWork ? "shepherd" : "escalate", stackMergeable: false, instructions };
     }
+    if (!agentWork) return idleWaitPlan(work.idle);
     const instructions: string[] = [];
-    appendAutonomousInstructions(instructions, autonomousCandidates);
+    appendAutonomousInstructions(instructions, work.sessions);
+    appendMarkReadyInstructions(instructions, work.markReady);
     instructions.push(
       `${instructions.length + 1}. After the selected one-PR sessions, rerun this same \`--stack\` selector.`,
     );

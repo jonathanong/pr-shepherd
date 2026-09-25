@@ -15,7 +15,7 @@ an agent-run merge command for that layer.
 | `fix-thrash`                  | A retryable, located review thread remains unchanged and unresolved after appearing in `iterate.fixAttemptsPerThread` caller-visible `FIX_CODE` results; the following unchanged tick escalates.     |
 | `base-branch-unknown`         | The GraphQL base branch is empty or unsafe and the current tick has work that could require a push, so Shepherd cannot name a safe rebase target.                                                    |
 | `merge-queue-removed`         | Merge mode is enabled, GitHub reports a queue removal, the head has not changed since removal, no queue/auto-merge state remains, and no earlier branch found an actionable failure or concrete fix. |
-| `stall-timeout`               | An enabled timeout expires for CI that never starts or for an unchanged `WAIT`/`FIX_CODE` state fingerprint.                                                                                         |
+| `stall-timeout`               | An enabled timeout expires for CI that never starts, an unchanged `WAIT`/`FIX_CODE` state fingerprint, or a `--stack` selection whose layers can only wait.                                          |
 
 ## Complete predicates
 
@@ -88,6 +88,8 @@ There are two paths:
 - Stable-state path: the timeout is enabled, the prospective result is `WAIT` or `FIX_CODE`, the stored fingerprint is unchanged, its age is nonnegative, and that age reaches the threshold. The fingerprint covers the action, the PR head commit GitHub reports (not the local checkout's `HEAD`), PR/merge/draft state, failing and in-progress checks, actionable item IDs, and actionable annotations.
 
 A changed fingerprint resets the timer. Disabling the timeout refreshes state and never escalates. A native stack draft whose `WAIT` names the lower layer holding it ([held native stack drafts](actions.md#wait)) never reaches either path: its stall state is cleared on every such tick, so its timer restarts only after that lower layer releases it.
+
+A `--stack` selection has a third path. When every remaining layer's bounded probe can only report waiting ([the idle `WAIT`](actions.md#shepherd-actions)), no one-PR session runs, so the selector keeps its own timer in `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/stack-<number>/stack-stall.json`. It fingerprints the summary status plus each layer's head commit, draft state, READY receipt, reasons, and `blockedByPr`. Every aggregate tick shares that timer, whether it comes from `--until-terminal`, a bounded poll, or MCP. A changed fingerprint resets it, and any other stack plan or a disabled timeout clears it. Once an unchanged idle `WAIT` reaches the threshold, the selector returns `ESCALATE` with a `stall-timeout` instruction that names each waiting layer and why it waits.
 
 ## Non-escalating outcomes
 

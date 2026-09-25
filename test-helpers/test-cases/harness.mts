@@ -90,6 +90,11 @@ vi.mock("../../src/state/iterate-stall.mts", () => ({
   writeStallState: vi.fn().mockResolvedValue(undefined),
   clearStallState: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("../../src/state/stack-stall.mts", () => ({
+  readStackStallState: vi.fn().mockResolvedValue(null),
+  writeStackStallState: vi.fn().mockResolvedValue(undefined),
+  clearStackStallState: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("../../src/state/fix-attempts.mts", () => ({
   readFixAttempts: vi.fn().mockResolvedValue(null),
   writeFixAttempts: vi.fn().mockResolvedValue(undefined),

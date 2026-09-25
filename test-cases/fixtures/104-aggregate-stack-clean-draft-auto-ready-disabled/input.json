@@ -1,5 +1,5 @@
 {
-  "description": "A clean draft whose automatic transition is disabled receives a bounded one-PR route, without claiming a human decision is required.",
+  "description": "A clean draft whose automatic transition is disabled becomes the agent's ready-for-review step: run the bounded probe, then mark the draft ready when it reports WAIT. No human decision is required.",
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/421", "--no-auto-mark-ready", "--debounce", "0s"],
   "expectedExitCode": 16,
@@ -13,7 +13,7 @@
         "action": "wait", "reasons": ["draft-auto-mark-ready-disabled"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
         "headRefName": "draft", "headRefOid": "4211111111111111111111111111111111111111", "baseRefName": "main", "isDraft": true,
         "stack": { "number": 42, "size": 1, "position": 1, "baseRefName": "main" },
-        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/421 --timeout 1s --debounce 0s --no-auto-mark-ready"
+        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/421 --timeout 1s --debounce 0s --no-auto-mark-ready", "pollProbe": true
       }
     ]
   }

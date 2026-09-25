@@ -1,10 +1,13 @@
 import type { PollSummaryItem, PollSummaryResult, StackNextAction } from "../types.mts";
 import { stackLayerBlockReason } from "./stack-layer-readiness.mts";
+import { appendMarkReadyInstructions, splitStackWork } from "./stack-work.mts";
 
 export interface StackPlan {
   action: StackNextAction;
   stackMergeable: boolean;
   waiting?: boolean;
+  /** Set only by {@link idleWaitPlan}: the layers whose one-PR probes could only report waiting. */
+  idle?: PollSummaryItem[];
   instructions: string[];
 }
 
@@ -39,17 +42,22 @@ export function planBottomDrain(
   const bottom = drainableBottom(result);
   if (!bottom) return undefined;
   const gaps = result.stackAncestry ?? [];
+  const staleChildren = new Set(gaps.map((gap) => gap.childPr));
   const open = result.prs.filter((item) => item.state === "OPEN");
-  const uppers = open.filter(
-    (item) =>
-      item.pr !== bottom.pr &&
-      item.action !== "escalate" &&
-      (!isStackLayerReady(item) || gaps.some((gap) => gap.childPr === item.pr)),
+  const uppers = splitStackWork(
+    open.filter(
+      (item) =>
+        item.pr !== bottom.pr &&
+        item.action !== "escalate" &&
+        (!isStackLayerReady(item) || staleChildren.has(item.pr)),
+    ),
+    staleChildren,
   );
   const instructions = [
     `1. PR #${bottom.pr} is the bottom open layer of stack #${bottom.stack.number} in \`${result.repo}\` and is ready. Run \`GH_REPO=${result.repo} gh stack merge ${bottom.pr} --yes --squash\` to merge that layer alone, or to enqueue it when the base uses a merge queue. If \`gh stack\` is an unknown command, run \`gh extension install github/gh-stack\` first.`,
   ];
-  appendAutonomousInstructions(instructions, uppers);
+  appendAutonomousInstructions(instructions, uppers.sessions);
+  appendMarkReadyInstructions(instructions, uppers.markReady);
   const handoffs = findHumanHandoffs(result);
   if (handoffs) appendHumanHandoffInstructions(instructions, handoffs, false);
   instructions.push(
@@ -75,6 +83,28 @@ export function retargetWaitPlan(first: PollSummaryItem): StackPlan {
       `1. PR #${first.pr} still targets \`${first.baseRefName}\` rather than \`${first.stack?.baseRefName}\`; wait for GitHub to retarget it before merging. Recheck at the configured polling cadence.`,
     ],
   };
+}
+
+/** Every remaining layer only waits: on CI or merge state, or on a lower layer that does. */
+export function idleWaitPlan(idle: PollSummaryItem[]): StackPlan {
+  return {
+    action: "wait",
+    stackMergeable: false,
+    waiting: true,
+    idle,
+    instructions: [
+      `1. No one-PR session can advance the stack yet: ${describeIdleLayers(idle)}. Recheck at the configured polling cadence.`,
+    ],
+  };
+}
+
+export function describeIdleLayers(idle: PollSummaryItem[]): string {
+  return idle
+    .map(
+      (item) =>
+        `PR #${item.pr} (${item.blockedByPr ? `stack-blocked by PR #${item.blockedByPr}` : item.reasons.join(", ")})`,
+    )
+    .join("; ");
 }
 
 export function appendAutonomousInstructions(

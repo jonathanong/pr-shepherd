@@ -26,7 +26,11 @@ describe("bottom-layer stack drain", () => {
 
   it("merges a ready bottom while shepherding unready upper layers", () => {
     const result = withPollSummaryInstructions(
-      stack([row(1, 1, ready), row(2, 2), row(3, 3, { isDraft: true })]),
+      stack([
+        row(1, 1, ready),
+        row(2, 2),
+        row(3, 3, { isDraft: true, action: "fix_code", reasons: ["review-work"] }),
+      ]),
       true,
     );
     expect(result).toMatchObject({ nextAction: "merge", stackMergeable: false });

@@ -177,6 +177,8 @@ The same timeout also applies to CI that has not started: relevant queued/reques
 
 The stall timer resets automatically whenever the fingerprint changes (new commit, resolved thread, different CI failure, etc.).
 
+A `--stack` selection whose remaining layers can only wait uses the same threshold for its own stack-level timer; see [`stall-timeout`](escalations.md#stall-timeout).
+
 Override per-invocation with `--stall-timeout <duration>` (e.g. `--stall-timeout 1h`, `--stall-timeout 90s`, `--stall-timeout 0` to disable). A bare number is minutes; an explicit `s`/`m`/`h` suffix always works.
 
 - **Raise** for workflows where CI can legitimately take longer than 60 minutes without any state change.
@@ -341,7 +343,7 @@ This applies only to explicit classification-rule auto-resolve matches. Ordinary
 
 When `true`, shepherd converts a draft PR to ready-for-review once all checks pass, no Shepherd-visible work remains, no configured blocking review is in progress, and the ready-delay has not yet elapsed. After the ready-delay elapses, the loop emits `cancel` instead.
 
-Disable if your team uses the draft state as a deliberate gate that requires a human to promote.
+Disabling stops only the poll loop's own transition. A `--stack` selection then lists a clean, unblocked draft layer's `gh pr ready` step for the agent after that layer's bounded probe; see [actions.md](actions.md).
 
 ### `actions.neverCancelRuns` — default `[]`
 
