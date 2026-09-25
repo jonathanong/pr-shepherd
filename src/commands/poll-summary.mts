@@ -215,16 +215,9 @@ function presentProbedCancel(
   result: PollSummaryResult,
   merge: boolean | undefined,
 ): PollSummaryResult {
-  const planned = attachUsage({ ...result, reason: "all_terminal" }, merge);
-  if (planned.selection.kind !== "stack" || planned.nextAction === "cancel") return planned;
-  return {
-    ...planned,
-    prs: result.prs,
-    reason: "all_terminal",
-    nextAction: "cancel",
-    stackMergeable: true,
-    instructions: ["1. Stop — every stack layer is terminal."],
-  };
+  // The stack planner already cancels an all-merged stack and escalates a
+  // closed-unmerged layer. Do not rewrite that into a successful stop.
+  return attachUsage({ ...result, reason: "all_terminal" }, merge);
 }
 
 function isMissingStack(error: unknown): boolean {

@@ -144,7 +144,7 @@ describe("aggregate rate-limit sleep probe", () => {
     expect(rest).not.toHaveBeenCalled();
   });
 
-  it("returns stack CANCEL when every tracked layer closes during the sleep", async () => {
+  it("escalates when every tracked layer closes without merging during the sleep", async () => {
     vi.mocked(rest).mockResolvedValue({ merged: false, state: "closed" });
     vi.mocked(fetchPollSummary)
       .mockResolvedValueOnce({
@@ -174,15 +174,12 @@ describe("aggregate rate-limit sleep probe", () => {
     await vi.advanceTimersByTimeAsync(60_000);
     await vi.advanceTimersByTimeAsync(60_000);
     const result = await pending;
-    expect(result).toMatchObject({
-      reason: "all_terminal",
-      nextAction: "cancel",
-      instructions: ["1. Stop — every stack layer is terminal."],
-    });
+    expect(result.nextAction).toBe("escalate");
+    expect(result.stackMergeable).toBe(false);
     expect(result.prs.map((item) => item.state)).toEqual(["CLOSED", "CLOSED"]);
-    expect(result.prs.every((item) => item.action === "cancel")).toBe(true);
     const text = formatPollSummaryResult(result);
-    expect(text).toContain("**next action** `cancel`");
-    expect(text).toContain("1. Stop — every stack layer is terminal.");
+    expect(text).toContain("**next action** `escalate`");
+    expect(text).toContain("state `CLOSED`");
+    expect(text).not.toContain("every stack layer is merged");
   });
 });
