@@ -6,6 +6,7 @@ import {
   GET_PR_BODY_QUERY,
   PR_NUMBER_BY_BRANCH_QUERY,
   CHECK_RUN_ANNOTATIONS_QUERY,
+  CHECK_RUN_ANNOTATIONS_BATCH_QUERY,
   COMMIT_CHECK_CONTEXTS_QUERY,
   REVIEW_THREAD_COMMENTS_QUERY,
   SUGGESTION_THREADS_QUERY,
@@ -110,6 +111,13 @@ describe("queries — GQL constants load at import time", () => {
     expect(SUGGESTION_THREADS_QUERY).toContain("pullRequest");
   });
 
+  it("batches check-run annotation bodies by node id", () => {
+    expect(CHECK_RUN_ANNOTATIONS_BATCH_QUERY).toContain("nodes(ids: $ids)");
+    expect(CHECK_RUN_ANNOTATIONS_BATCH_QUERY).toContain("annotations(first: 100)");
+    expect(CHECK_RUN_ANNOTATIONS_BATCH_QUERY).toContain("fullDatabaseId");
+    expect(CHECK_RUN_ANNOTATIONS_QUERY).toContain("after: $cursor");
+  });
+
   it("selects exact GraphQL query cost telemetry on static query documents", () => {
     for (const query of [
       BATCH_PR_QUERY,
@@ -118,6 +126,7 @@ describe("queries — GQL constants load at import time", () => {
       GET_PR_BODY_QUERY,
       PR_NUMBER_BY_BRANCH_QUERY,
       CHECK_RUN_ANNOTATIONS_QUERY,
+      CHECK_RUN_ANNOTATIONS_BATCH_QUERY,
       COMMIT_CHECK_CONTEXTS_QUERY,
       REVIEW_THREAD_COMMENTS_QUERY,
       SUGGESTION_THREADS_QUERY,
