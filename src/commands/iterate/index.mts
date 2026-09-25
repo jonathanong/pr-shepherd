@@ -68,9 +68,11 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     );
   }
   const stallKey = { owner: repoOwner, repo: repoName, pr: prNumber };
+  const receiptKey = { owner: repoOwner, repo: repoName, pr: report.pr };
 
   if (report.mergeStatus.state !== "OPEN") {
-    await updateReadyDelay(report.pr, false, readyDelaySeconds, repoOwner, repoName);
+    await clearReadyDelay(report.pr, repoOwner, repoName);
+    await clearReadyReceipt(receiptKey);
     await clearStallState(stallKey);
     return buildTerminalCancelResult(report);
   }
@@ -101,20 +103,23 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     const unminimized = selfMinimizeIds.filter((id) => !minimizedIds.has(id));
     if (unminimized.length > 0) reviewSummaryIds = [...reviewSummaryIds, ...unminimized];
   }
-  const hasActionableWork =
+  // Hidden PR comments surface once so the agent can acknowledge them, but
+  // they are not readiness evidence: bots keep editing hidden notices after a
+  // PR settles. They never restart the ready-delay or void a READY receipt.
+  const hasReadinessWork =
     report.threads.actionable.length > 0 ||
     report.threads.resolutionOnly.length > 0 ||
     report.threads.firstLook.length > 0 ||
     (report.threads.ruleAutoResolveIds?.length ?? 0) > 0 ||
     report.comments.actionable.length > 0 ||
     (report.comments.minimizeIds?.length ?? 0) > 0 ||
-    report.comments.firstLook.length > 0 ||
     report.changesRequestedReviews.length > 0 ||
     hasCheckDrivenActionableWork(report.checks, report.mergeStatus.status) ||
     reviewSummaryIds.length > 0 ||
     firstLookSummaries.length > 0 ||
     editedSummaries.length > 0 ||
     (config.iterate.minimizeApprovals && surfacedApprovals.length > 0);
+  const hasActionableWork = hasReadinessWork || report.comments.firstLook.length > 0;
 
   const activeMerge = Boolean(
     opts.merge && (report.mergeQueue?.inQueue || report.mergeQueue?.autoMergeRequest),
@@ -126,33 +131,25 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   const isCleanReadyState =
     report.status === "READY" &&
     !report.mergeStatus.isDraft &&
-    !hasActionableWork &&
+    !hasReadinessWork &&
     !activeMerge &&
     staleAncestry === null;
-  const needsStackReceipt = report.mergeStatus.mergeRequirements?.stack !== undefined;
-  const receiptCurrent =
-    needsStackReceipt &&
-    (await revalidateReadyReceipt(
-      { owner: repoOwner, repo: repoName, pr: report.pr },
-      report,
-      hasActionableWork,
-    ));
-  // A native-stack layer keeps its elapsed marker until its READY receipt is
-  // written, so a failed receipt write retries next tick instead of restarting
-  // the whole delay. A receipt that is still current already proves the delay
-  // elapsed for this exact head, base, and readiness evidence.
+  const receiptCurrent = await revalidateReadyReceipt(receiptKey, report, hasReadinessWork);
+  const headSha = report.headSha ?? "unknown";
+  // The elapsed marker survives a hidden-comment acknowledgement tick and is
+  // consumed only when this tick cancels or merges. A receipt that is still
+  // current already proves the delay elapsed for this exact head, base, and
+  // readiness evidence, so a rerun (e.g. with --merge) does not wait again.
   const readyState = await updateReadyDelay(
     report.pr,
     isCleanReadyState,
     readyDelaySeconds,
     repoOwner,
     repoName,
-    { retainElapsed: needsStackReceipt, alreadyElapsed: receiptCurrent },
+    { headSha, alreadyElapsed: receiptCurrent },
   );
 
   const base = buildIterateBase(report, readyState);
-
-  const headSha = report.headSha ?? "unknown";
 
   // Checks (including merge-queue synthetic-commit checks) and hard conflicts are signals
   // GitHub itself is already acting on — the queue will eject the PR for these regardless of
@@ -240,11 +237,11 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   if (markReadyResult) return markReadyResult;
 
   if (readyState.shouldCancel && !report.mergeStatus.isDraft) {
-    const receiptWritten =
-      !needsStackReceipt ||
-      receiptCurrent ||
-      (await recordReadyReceipt({ owner: repoOwner, repo: repoName, pr: report.pr }, report));
-    if (!receiptWritten) {
+    const receiptWritten = receiptCurrent || (await recordReadyReceipt(receiptKey, report));
+    // Aggregate --stack routing trusts only a layer's receipt, so an unwritten
+    // one keeps the elapsed marker and retries next tick. A one-PR receipt
+    // only lets a rerun skip the wait, so its failure never changes the action.
+    if (!receiptWritten && report.mergeStatus.mergeRequirements?.stack !== undefined) {
       const receiptWait: IterateResult = {
         ...base,
         action: "wait",
@@ -262,7 +259,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
         reviewSummaryIds,
       );
     }
-    if (needsStackReceipt) await clearReadyDelay(report.pr, repoOwner, repoName);
+    await clearReadyDelay(report.pr, repoOwner, repoName);
     await clearStallState(stallKey);
     const mergeResult = buildReadyMergeOutcome(opts.merge, true, base, report);
     if (mergeResult) return mergeResult;
@@ -356,7 +353,7 @@ async function recordReadyReceipt(
 async function revalidateReadyReceipt(
   key: { owner: string; repo: string; pr: number },
   report: Awaited<ReturnType<typeof runCheck>>,
-  hasActionableWork: boolean,
+  hasReadinessWork: boolean,
 ): Promise<boolean> {
   const receipt = await readReadyReceipt(key);
   if (!receipt) return false;
@@ -370,7 +367,7 @@ async function revalidateReadyReceipt(
     report.mergeStatus.isDraft ||
     !report.headSha ||
     !report.baseRefOid ||
-    (!retainQueuedReceipt && (report.status !== "READY" || hasActionableWork))
+    (!retainQueuedReceipt && (report.status !== "READY" || hasReadinessWork))
   ) {
     await clearReadyReceipt(key);
     return false;

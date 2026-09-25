@@ -58,7 +58,7 @@ Every review item must be surfaced to the agent **at least once**, even if it is
 
 After first display, a per-item seen-marker file is written under `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/seen/<id>.json`. Subsequent fetches check the marker and suppress items already seen.
 
-First-look items appear in `iterate fix_code` output as a `## First-look items` section in text and `firstLookThreads` / `firstLookComments` arrays in JSON.
+First-look items appear in `iterate fix_code` output as a `## First-look items` section in text and `firstLookThreads` / `firstLookComments` arrays in JSON. Hidden PR comments in `firstLookComments` are acknowledge-only: bots keep editing hidden notices after a PR settles, so they never restart the [ready-delay](iterate-flow.md#2-ready-delay) or void a READY receipt.
 
 First-look items are for acknowledging status before acting. If a first-look thread also appears in `resolutionOnly` or `actionable`, its ID is already in the generated mutation when routing authorizes it. Otherwise, do not pass first-look-only IDs to mutation flags.
 

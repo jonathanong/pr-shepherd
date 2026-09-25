@@ -73,27 +73,31 @@ The shipped skill runs `pr-shepherd [PR] --until-terminal`, not `pr-shepherd ite
 
 **What:** `updateReadyDelay(pr, isCleanReadyState, readyDelaySeconds, owner, repo, options)` reads/writes `ready-since.txt`.
 
-A clean ready state means `status === "READY"`, `hasActionableWork` is false, and no active auto-merge or merge-queue state is being handled. That includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending).
+A clean ready state means `status === "READY"`, `hasReadinessWork` is false, and no active auto-merge or merge-queue state is being handled. `hasReadinessWork` is every [step 3](#3-actionable-work) category except hidden PR comments (`report.comments.firstLook`): those still route to `fix_code` so the agent can acknowledge them, but bots keep editing hidden notices after a PR settles, so they never restart the countdown or void a READY receipt. A clean ready state includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending).
 
-- On the first clean ready sweep: creates the file with the current timestamp.
-- On subsequent clean ready sweeps: checks if `now − readySince >= readyDelaySeconds`. If so, `shouldCancel: true`.
-- On any unclean sweep: deletes the file (resets the countdown). This includes non-READY status, failing CI, conflicts, unresolved comments, review-summary minimization, and first-look items.
-- On a native-stack layer whose READY receipt is still current (same head, base, and readiness evidence): the receipt already proves the delay elapsed, so a clean sweep returns `shouldCancel: true` without a marker (`alreadyElapsed`). Re-polling a READY layer therefore does not restart its countdown. When the head, base, or evidence moved, the receipt is cleared first and the countdown restarts.
+- On the first clean ready sweep: creates the file with the current timestamp and PR head.
+- On subsequent clean ready sweeps on the same head: checks if `now − readySince >= readyDelaySeconds`. If so, `shouldCancel: true`. The elapsed marker stays until the `cancel` or `merge` path consumes it, so a hidden-comment acknowledgement tick does not restart the wait.
+- On a clean ready sweep on a different head: restarts the countdown on that head.
+- On any unclean sweep: deletes the file (resets the countdown). This includes non-READY status, failing CI, conflicts, unresolved comments, review-summary minimization, and first-look threads and summaries.
+- On a PR whose READY receipt is still current (same head, base, and readiness evidence): the receipt already proves the delay elapsed, so a clean sweep returns `shouldCancel: true` without a marker (`alreadyElapsed`). Re-polling a READY PR — for example rerunning with `--merge` after a `ready-delay-elapsed` cancel — therefore does not restart its countdown. When the head, base, or evidence moved, the receipt is cleared first and the countdown restarts. Edits to hidden comment and review bodies are not readiness evidence.
 
 Before a READY sweep reaches this step, `runCheck` performs one fresh REST mergeability read unless the UNKNOWN fallback already did so. If the refreshed mergeability reports `CONFLICTING`/`DIRTY`, the sweep becomes `FAILING`/`CONFLICTS`, resets the marker, and routes to `fix_code`.
 
 If `readyState.shouldCancel`, iterate emits `action: 'merge'` when `--merge` is enabled; otherwise it emits `action: 'cancel'` with `reason: "ready-delay-elapsed"`.
 
-Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/ready-since.txt` (Unix timestamp, seconds). A future timestamp (clock skew) is reset to now. Default delay is 10 minutes (`watch.readyDelayMinutes` or `--ready-delay`).
+Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/ready-since.txt` (`<unix seconds> <head SHA>`). A future timestamp (clock skew), another head, or a marker without a head is reset to now. Default delay is 10 minutes (`watch.readyDelayMinutes` or `--ready-delay`).
 
 | Event                                       | Effect on `ready-since.txt`          |
 | ------------------------------------------- | ------------------------------------ |
 | First clean ready sweep                     | Created with current timestamp       |
 | Subsequent clean ready sweep (delay active) | Read; `remainingSeconds` decremented |
-| Clean ready state, delay elapsed            | `shouldCancel: true`; file deleted   |
-| Clean stack layer with a current receipt    | `shouldCancel: true`; no file needed |
-| Non-READY, or READY with actionable work    | Deleted (countdown resets)           |
-| PR merged/closed (step 1.5)                 | Deleted before `cancel`              |
+| Clean ready sweep on a different head       | Rewritten for that head (resets)     |
+| Clean ready state, delay elapsed            | `shouldCancel: true`; file retained  |
+| Elapsed delay consumed (`cancel`/`merge`)   | Deleted                              |
+| Clean PR with a current receipt             | `shouldCancel: true`; no file needed |
+| Hidden PR comment only                      | Unchanged (acknowledged, no reset)   |
+| Non-READY, or READY with readiness work     | Deleted (countdown resets)           |
+| PR merged/closed (step 1.5)                 | Deleted with the receipt             |
 
 ---
 
@@ -107,7 +111,7 @@ Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/ready-since.txt` (Unix 
 - `report.threads.ruleAutoResolveIds` is non-empty
 - `report.comments.actionable.length > 0`
 - `report.comments.minimizeIds` is non-empty
-- `report.comments.firstLook.length > 0`
+- `report.comments.firstLook.length > 0` (hidden PR comments; acknowledge-only — excluded from `hasReadinessWork`, see [step 2](#2-ready-delay))
 - `report.changesRequestedReviews.length > 0`
 - `report.checks.failing.length > 0`
 - `report.mergeStatus.status === 'CONFLICTS'`

@@ -253,7 +253,7 @@ These settings affect `pr-shepherd [PR]` and `pr-shepherd poll`. Single-tick `it
 
 After the PR first reaches a clean READY state (checks green, no Shepherd-visible work, no blocking bot review pending), Shepherd continues to loop for this many minutes before cancelling. This settle window gives reviewers time to request changes or for a configured blocking reviewer to finish.
 
-The ready-delay countdown resets if the PR drops out of that ready state at any tick. Lifecycle: [iterate-flow.md](iterate-flow.md#2-ready-delay).
+The ready-delay countdown resets if the PR drops out of that ready state or its head changes at any tick. A newly surfaced hidden PR comment is acknowledged without resetting it. Lifecycle: [iterate-flow.md](iterate-flow.md#2-ready-delay).
 
 ### `watch.graphqlQuotaWarnings`
 

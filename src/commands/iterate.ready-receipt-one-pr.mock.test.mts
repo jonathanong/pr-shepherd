@@ -30,6 +30,7 @@ import {
   mockClearReadyDelay,
   mockUpdateReadyDelay,
 } from "../../test-helpers/commands/iterate-test-support.mts";
+import { makeThread } from "../../test-helpers/commands/iterate-thread-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
 
 registerIterateHooks();
@@ -45,22 +46,19 @@ const receipt = {
   readinessFingerprint: "fingerprint-1",
   recordedAtUnix: 1_700_000_000,
 };
+const hiddenNotice = {
+  id: "comment-1",
+  author: "summary-bot",
+  authorType: "Bot" as const,
+  body: "<!-- generated summary -->",
+  createdAtUnix: 0,
+  url: "",
+  isMinimized: true,
+  firstLookStatus: "minimized" as const,
+};
 
-function stackReport(overrides: Parameters<typeof makeReport>[0] = {}) {
-  return makeReport({
-    status: "READY",
-    headSha: "head-1",
-    baseRefOid: "base-1",
-    mergeStatus: {
-      ...makeReport().mergeStatus,
-      mergeRequirements: {
-        approvals: { current: 1, requiredCount: 1 },
-        conversationsResolved: { resolved: true, unresolvedCount: 0, required: true },
-        stack: { number: 7, size: 2, position: 1, baseRefName: "main" },
-      },
-    },
-    ...overrides,
-  });
+function onePrReport(overrides: Parameters<typeof makeReport>[0] = {}) {
+  return makeReport({ status: "READY", headSha: "head-1", baseRefOid: "base-1", ...overrides });
 }
 
 beforeEach(() => {
@@ -93,41 +91,58 @@ beforeEach(() => {
   );
 });
 
-describe("runIterate — current stack READY receipt", () => {
-  it("cancels a re-polled layer without restarting the ready-delay", async () => {
-    mockRunCheck.mockResolvedValue(stackReport());
+describe("runIterate — one-PR READY receipt", () => {
+  it("merges a --merge rerun from a current receipt without waiting again", async () => {
+    mockRunCheck.mockResolvedValue(onePrReport());
 
-    const result = await runIterate(makeOpts());
+    const result = await runIterate(makeOpts({ merge: true }));
 
-    expect(result).toMatchObject({ action: "cancel", reason: "ready-delay-elapsed" });
+    expect(result.action).toBe("merge");
     expect(mockUpdateReadyDelay).toHaveBeenCalledExactlyOnceWith(42, true, 600, "owner", "repo", {
       headSha: "head-1",
       alreadyElapsed: true,
     });
-    expect(mockClearReadyReceipt).not.toHaveBeenCalled();
     expect(mockWriteReadyReceipt).not.toHaveBeenCalled();
     expect(mockClearReadyDelay).toHaveBeenCalledWith(42, "owner", "repo");
   });
 
-  it("restarts the ready-delay when the head or base moved since the receipt", async () => {
-    mockRunCheck.mockResolvedValue(stackReport({ baseRefOid: "base-2" }));
-    mockFetchRawSummaryPr.mockResolvedValue({
-      state: "OPEN",
-      isDraft: false,
-      headRefOid: "head-1",
-      baseRefOid: "base-2",
-    });
-    mockIsReadyReceiptCurrent.mockReturnValue(false);
+  it("keeps the countdown and the receipt while a hidden comment is acknowledged", async () => {
+    mockRunCheck.mockResolvedValue(
+      onePrReport({ comments: { actionable: [], firstLook: [hiddenNotice] } }),
+    );
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("wait");
-    expect(result.remainingSeconds).toBe(600);
-    expect(mockClearReadyReceipt).toHaveBeenCalledWith(key);
+    expect(result.action).toBe("fix_code");
     expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, true, 600, "owner", "repo", {
+      headSha: "head-1",
+      alreadyElapsed: true,
+    });
+    expect(mockClearReadyReceipt).not.toHaveBeenCalled();
+    expect(mockClearReadyDelay).not.toHaveBeenCalled();
+  });
+
+  it("restarts the countdown for new activity on a resolved thread", async () => {
+    const thread = { ...makeThread(), firstLookStatus: "resolved" as const };
+    mockRunCheck.mockResolvedValue(
+      onePrReport({
+        threads: {
+          actionable: [],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [thread],
+        },
+      }),
+    );
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    expect(mockClearReadyReceipt).toHaveBeenCalledWith(key);
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
       headSha: "head-1",
       alreadyElapsed: false,
     });
-    expect(mockWriteReadyReceipt).not.toHaveBeenCalled();
   });
 });

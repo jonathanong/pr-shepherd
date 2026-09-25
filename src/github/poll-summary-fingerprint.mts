@@ -20,10 +20,27 @@ export function fingerprintRawSummaryPr(raw: RawSummaryPr): string | null {
     reviewDecision: raw.reviewDecision,
     reviewRequests: raw.reviewRequests,
     latestReviews: raw.latestReviews,
-    comments: raw.comments,
-    reviews: raw.reviews,
-    reviewThreads: raw.reviewThreads,
+    comments: hideBodies(raw.comments),
+    reviews: hideBodies(raw.reviews),
+    reviewThreads: {
+      ...raw.reviewThreads,
+      nodes: raw.reviewThreads.nodes.map((thread) => ({
+        ...thread,
+        rootComments: thread.rootComments && hideBodies(thread.rootComments),
+        comments: hideBodies(thread.comments),
+      })),
+    },
     commits: raw.commits,
   };
   return createHash("sha256").update(JSON.stringify(evidence)).digest("hex");
+}
+
+/** Hidden bodies are not readiness evidence: bots keep editing hidden notices after a PR settles. */
+function hideBodies<C extends { nodes: Array<{ isMinimized: boolean; body: string }> }>(
+  connection: C,
+) {
+  return {
+    ...connection,
+    nodes: connection.nodes.map((node) => (node.isMinimized ? { ...node, body: undefined } : node)),
+  };
 }
