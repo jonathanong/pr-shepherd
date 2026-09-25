@@ -45,8 +45,10 @@ When `--no-auto-mark-ready` or `actions.autoMarkReady: false` applies, each draf
 `pollProbe: true`) that surfaces and routes review and CI work but never promotes the draft; an
 upper draft held by `blockedByPr` gets the same probe. A probe whose row still has work is listed
 as a one-PR session. A clean draft that no lower layer blocks becomes the agent's ready-for-review
-step: run the probe first; when it returns `[WAIT]`, run `gh pr ready <N> -R <owner/repo>`,
-otherwise complete its instructions and leave the draft for the next round. Neither the poll loop
+step: run the probe first. Only when it returns `[WAIT]` held by the disabled setting (the
+`auto-mark-ready-disabled` hold below) is the draft still clean with no lower blocker, so the agent
+runs `gh pr ready <N> -R <owner/repo>`; otherwise it completes the probe's instructions and leaves
+the draft for the next round. Neither the poll loop
 nor a human performs that transition. Because the agent does, such a draft escalates with
 `mark-ready-authorization-required` when its `viewerCanUpdate` is not `true`, and it waits with
 `blocking-reviewer-in-progress` while a configured blocking reviewer is pending. Rerunning a probe
@@ -201,7 +203,7 @@ The body line (`WAIT: …`) varies with the merge state — `branch is behind ba
 **Held native stack drafts:** a draft native stack layer that this one-PR session cannot promote carries `stackDraftHold` in JSON:
 
 - `{ "kind": "lower-layer-not-ready", "lowerLayer": { "pr": 41, "reason": "draft" } }` — a `READY` upper draft whose lowest open lower layer is not yet ready. `reason` is one of `closed`, `draft`, `conflicting`, `queue-removal`, `failing-checks`, `review-work`, `checks-in-progress`, `merge-state`, `no-ready-receipt`, or `stale-ancestry`. The aggregate `--stack` selector uses the same readiness rules for `blockedByPr`, so both name the same layer. Any lower-layer hold, named or not, takes precedence over a disabled mark-ready setting.
-- `{ "kind": "auto-mark-ready-disabled" }` — the session or configuration disables automatic mark-ready, as in the stack selector's bounded draft probes. The selector lists the agent's ready-for-review step for such a draft once no lower layer blocks it.
+- `{ "kind": "auto-mark-ready-disabled" }` — the session or configuration disables automatic mark-ready, as in the stack selector's bounded draft probes. Only this `READY` hold confirms the `--stack` selector's ready-for-review step for the agent.
 - `{ "kind": "lower-layer-not-ready" }` — the lower layers could not be read or attributed, so the draft stays held without naming one.
 
 Repeating the same one-PR session cannot advance a held draft, so the single instruction replaces "iterate immediately" with a stack handoff (quota cadence advice is appended when a warning applies). A named lower layer is the one to advance first:

@@ -37,7 +37,7 @@ describe("stack selector agent work", () => {
     expect(result).toMatchObject({ nextAction: "shepherd", reason: "actionable" });
     expect(text(result)).toContain(`Run \`${probe(1)}\` first.`);
     expect(text(result)).toContain(
-      "If it returns `[WAIT]`, run `gh pr ready 1 -R acme/widgets`; otherwise complete its instructions and leave PR #1 in draft this round.",
+      "If it returns `[WAIT]` saying PR #1 stays in draft because automatic mark-ready is disabled for this session, run `gh pr ready 1 -R acme/widgets`; otherwise complete its instructions and leave PR #1 in draft this round.",
     );
     expect(text(result)).not.toContain("pull/2");
     expect(text(result)).not.toContain("human action");

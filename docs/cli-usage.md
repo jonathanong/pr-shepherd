@@ -60,7 +60,8 @@ and its instructions name the affected one-PR Shepherd sessions. The first unrea
 causes each higher open layer to carry `blockedByPr`; review and CI work can proceed concurrently on
 independent layers, but an upper draft must remain draft until every lower layer has a READY receipt.
 With automatic mark-ready disabled, draft layers get bounded probe commands (`pollProbe`), and
-the agent marks a clean, unblocked draft ready with `gh pr ready` after its probe returns `[WAIT]`;
+the agent marks a clean, unblocked draft ready with `gh pr ready` after its probe confirms the
+disabled setting is the only hold;
 see [actions.md](actions.md). A queued stack, or one whose remaining layers can only wait on CI,
 merge state, a blocking review, or a lower layer, returns `WAIT`; a terminal READY or fully merged
 stack returns `CANCEL`. Closed or
