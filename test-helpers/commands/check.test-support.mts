@@ -16,8 +16,11 @@ vi.mock("../../src/checks/triage.mts", () => ({
   triageFailingChecks: vi.fn((checks: unknown[]) => Promise.resolve(checks)),
   fetchStartupFailureChecks: vi.fn().mockResolvedValue([]),
 }));
-vi.mock("../../src/github/check-annotations.mts", () => ({
-  fetchCheckRunAnnotations: vi.fn().mockResolvedValue([]),
+vi.mock("../../src/github/check-annotations-batch.mts", () => ({
+  fetchCheckRunAnnotationsBatch: vi.fn().mockResolvedValue({
+    annotations: new Map(),
+    failures: [],
+  }),
 }));
 vi.mock("../../src/comments/resolve.mts", () => ({
   autoResolveOutdated: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
@@ -40,14 +43,20 @@ import "../../src/commands/check.mts";
 import { fetchPrBatch } from "../../src/github/batch.mts";
 import { getCurrentPrNumber, getMergeableState } from "../../src/github/client.mts";
 import { fetchStartupFailureChecks, triageFailingChecks } from "../../src/checks/triage.mts";
-import { fetchCheckRunAnnotations } from "../../src/github/check-annotations.mts";
+import { fetchCheckRunAnnotationsBatch } from "../../src/github/check-annotations-batch.mts";
 import { loadSeenMap, markSeen, markReviewInlineThreads } from "../../src/state/seen-comments.mts";
 import {
   autoResolveOutdated,
   autoResolveThreads,
   autoMinimizeComments,
 } from "../../src/comments/resolve.mts";
-import type { BatchPrData, ClassifiedCheck, ReviewThread, PrComment } from "../../src/types.mts";
+import type {
+  BatchPrData,
+  CheckAnnotation,
+  ClassifiedCheck,
+  ReviewThread,
+  PrComment,
+} from "../../src/types.mts";
 import { testFingerprint } from "../github/fingerprint-fixture.mts";
 
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);
@@ -55,7 +64,14 @@ const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockGetMergeableState = vi.mocked(getMergeableState);
 const mockTriageFailingChecks = vi.mocked(triageFailingChecks);
 const mockFetchStartupFailureChecks = vi.mocked(fetchStartupFailureChecks);
-const mockFetchCheckRunAnnotations = vi.mocked(fetchCheckRunAnnotations);
+const mockFetchCheckRunAnnotationsBatch = vi.mocked(fetchCheckRunAnnotationsBatch);
+
+function annotationBatch(id: string, items: CheckAnnotation[]) {
+  return {
+    annotations: new Map([[id, items]]),
+    failures: [] as { checkRunId: string; error: unknown }[],
+  };
+}
 const mockLoadSeenMap = vi.mocked(loadSeenMap);
 const mockMarkSeen = vi.mocked(markSeen);
 const mockMarkReviewInlineThreads = vi.mocked(markReviewInlineThreads);
@@ -201,7 +217,7 @@ export function registerHooks(): void {
     });
     mockGetMergeableState.mockResolvedValue({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" });
     mockFetchStartupFailureChecks.mockResolvedValue([]);
-    mockFetchCheckRunAnnotations.mockResolvedValue([]);
+    mockFetchCheckRunAnnotationsBatch.mockResolvedValue({ annotations: new Map(), failures: [] });
     mockLoadSeenMap.mockResolvedValue(new Map());
   });
 }
@@ -218,7 +234,8 @@ export {
   mockAutoMinimizeComments,
   mockFetchPrBatch,
   mockFetchStartupFailureChecks,
-  mockFetchCheckRunAnnotations,
+  annotationBatch,
+  mockFetchCheckRunAnnotationsBatch,
   mockGetCurrentPrNumber,
   mockGetMergeableState,
   mockLoadConfig,

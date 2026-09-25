@@ -1,148 +1,29 @@
-import { createHash } from "node:crypto";
-
-import { graphql } from "./client.mts";
-import { CHECK_RUN_ANNOTATIONS_QUERY } from "./queries.mts";
-import { loadDerived, storeDerived, type StateKey } from "../state/rest-cache.mts";
+import {
+  readFreshCheckAnnotations,
+  storeCheckAnnotations,
+  type AnnotationCacheOptions,
+} from "./check-annotation-cache.mts";
+import { collectAnnotations, type AnnotationPage } from "./check-annotation-pages.mts";
 import type { CheckAnnotation } from "../types.mts";
 
-export interface AnnotationCacheOptions {
-  stateKey: StateKey;
-  headSha?: string;
-}
-
-const ANNOTATIONS_PER_PAGE = 100;
-const MAX_ANNOTATION_PAGES = 10;
-const ANNOTATION_TEXT_MAX_CHARS = 4_000;
-const TRUNCATED_SUFFIX = "\n[truncated]";
 /**
- * Some Checks-API publishers (e.g. SonarCloud) PATCH additional annotations
- * onto an already-COMPLETED check run without minting a new check-run node
- * ID, so "COMPLETED" is not a reliable immutability signal on its own. Bound
- * the cache instead of trusting it forever, so a long-running poll session
- * eventually revalidates.
- */
-const ANNOTATION_CACHE_MAX_AGE_MS = 60 * 60 * 1000;
-
-interface RawCheckRunAnnotationsResponse {
-  node: {
-    __typename: string;
-    annotations?: {
-      pageInfo: { hasNextPage: boolean; endCursor: string | null };
-      nodes: RawCheckAnnotation[];
-    };
-  } | null;
-}
-
-interface RawCheckAnnotation {
-  fullDatabaseId: string | null;
-  path: string;
-  annotationLevel: string;
-  title: string | null;
-  message: string;
-  rawDetails: string | null;
-  blobUrl: string | null;
-  location: {
-    start: { line: number | null; column: number | null };
-    end: { line: number | null; column: number | null };
-  } | null;
-}
-
-/**
- * Fetches all inline annotations for a check run.
+ * Fetches all inline annotations for one check run.
  *
- * When `cacheOpts` is provided, the result is cached by `checkRunId` — safe
- * because callers only pass `cacheOpts` for COMPLETED check runs (a re-run
- * mints a new check-run node id, so a COMPLETED run's annotations are
- * immutable once fetched).
+ * When `cacheOpts` is provided, the result is cached by `checkRunId`. Callers
+ * only pass `cacheOpts` for COMPLETED runs (a re-run mints a new node id).
+ * Prefer `fetchCheckRunAnnotationsBatch` when attaching many checks at once;
+ * this single-node query remains for direct callers and follow-up pages.
  */
 export async function fetchCheckRunAnnotations(
   checkRunId: string,
   cacheOpts?: AnnotationCacheOptions,
+  initialPage?: AnnotationPage,
 ): Promise<CheckAnnotation[]> {
-  const cacheName = `annotations-${checkRunId}`;
-  if (cacheOpts) {
-    const cached = await loadDerived<CheckAnnotation[]>(cacheOpts.stateKey, cacheName);
-    if (cached && Date.now() - cached.storedAt < ANNOTATION_CACHE_MAX_AGE_MS) return cached.value;
+  if (initialPage === undefined) {
+    const cached = await readFreshCheckAnnotations(checkRunId, cacheOpts);
+    if (cached) return cached;
   }
-  let cursor: string | null = null;
-  const nodes: RawCheckAnnotation[] = [];
-  for (let page = 1; page <= MAX_ANNOTATION_PAGES; page++) {
-    // eslint-disable-next-line no-await-in-loop
-    const result = await fetchAnnotationPage(checkRunId, cursor);
-    nodes.push(...result.nodes);
-    if (!result.pageInfo.hasNextPage || !result.pageInfo.endCursor) break;
-    if (page === MAX_ANNOTATION_PAGES) {
-      process.stderr.write(
-        `pr-shepherd: annotation pagination cap (${MAX_ANNOTATION_PAGES * ANNOTATIONS_PER_PAGE} annotations) reached for check run ${checkRunId} — annotation output may be incomplete\n`,
-      );
-      break;
-    }
-    cursor = result.pageInfo.endCursor;
-  }
-  const annotations = nodes.map((node) => toCheckAnnotation(checkRunId, node));
-  if (cacheOpts) {
-    await storeDerived(cacheOpts.stateKey, cacheName, annotations, cacheOpts.headSha);
-  }
+  const annotations = await collectAnnotations(checkRunId, initialPage);
+  await storeCheckAnnotations(checkRunId, annotations, cacheOpts);
   return annotations;
-}
-
-async function fetchAnnotationPage(checkRunId: string, cursor: string | null) {
-  const res = await graphql<RawCheckRunAnnotationsResponse>(CHECK_RUN_ANNOTATIONS_QUERY, {
-    id: checkRunId,
-    ...(cursor ? { cursor } : {}),
-  });
-  const node = res.data.node;
-  if (node?.__typename !== "CheckRun" || node.annotations === undefined) {
-    return { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [] };
-  }
-  return node.annotations;
-}
-
-function toCheckAnnotation(checkRunId: string, raw: RawCheckAnnotation): CheckAnnotation {
-  const id = `check_annotation_${raw.fullDatabaseId ?? fallbackId(checkRunId, raw)}`;
-  const title = raw.title?.trim() || undefined;
-  const rawDetails = raw.rawDetails?.trim() || undefined;
-  const blobUrl = raw.blobUrl?.trim() || undefined;
-  return {
-    id,
-    path: raw.path,
-    startLine: raw.location?.start.line ?? null,
-    endLine: raw.location?.end.line ?? raw.location?.start.line ?? null,
-    ...(raw.location?.start.column !== undefined && {
-      startColumn: raw.location.start.column,
-    }),
-    ...(raw.location?.end.column !== undefined && {
-      endColumn: raw.location.end.column,
-    }),
-    level: raw.annotationLevel,
-    ...(title !== undefined && { title }),
-    message: truncateAnnotationText(raw.message),
-    ...(rawDetails !== undefined && { rawDetails: truncateAnnotationText(rawDetails) }),
-    ...(blobUrl !== undefined && { blobUrl }),
-  };
-}
-
-function truncateAnnotationText(text: string): string {
-  if (text.length <= ANNOTATION_TEXT_MAX_CHARS) return text;
-  return `${text.slice(0, ANNOTATION_TEXT_MAX_CHARS - TRUNCATED_SUFFIX.length).trimEnd()}${TRUNCATED_SUFFIX}`;
-}
-
-function fallbackId(checkRunId: string, raw: RawCheckAnnotation): string {
-  const start = raw.location?.start;
-  const end = raw.location?.end;
-  const parts = [
-    checkRunId,
-    raw.path,
-    raw.annotationLevel,
-    raw.title ?? "",
-    raw.message,
-    raw.rawDetails ?? "",
-    raw.blobUrl ?? "",
-    String(start?.line ?? ""),
-    String(start?.column ?? ""),
-    String(end?.line ?? ""),
-    String(end?.column ?? ""),
-  ];
-  const input = parts.map((part) => `${part.length}:${part}`).join("|");
-  return createHash("sha256").update(input).digest("hex").slice(0, 24);
 }

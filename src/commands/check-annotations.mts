@@ -1,7 +1,6 @@
-import {
-  fetchCheckRunAnnotations,
-  type AnnotationCacheOptions,
-} from "../github/check-annotations.mts";
+import type { AnnotationCacheOptions } from "../github/check-annotation-cache.mts";
+import { fetchCheckRunAnnotationsBatch } from "../github/check-annotations-batch.mts";
+import { pollRateLimitRetryAfterMs } from "./poll-quota.mts";
 import type { CheckAnnotation, ClassifiedCheck, ShepherdReport, TriagedCheck } from "../types.mts";
 
 function shouldFetchCheckAnnotations(check: ClassifiedCheck): boolean {
@@ -101,34 +100,41 @@ async function attachUnseenCheckAnnotations(
   prNumber: number,
   cacheOpts?: AnnotationCacheOptions,
 ): Promise<TriagedCheck[]> {
-  const checksWithAnnotations: TriagedCheck[] = [];
-  for (const check of checks) {
-    // eslint-disable-next-line no-await-in-loop
-    checksWithAnnotations.push(await attachForCheck(check, seenMap, prNumber, cacheOpts));
+  if (checks.length === 0) return checks;
+  const ids = checks.flatMap((check) => (check.id == null ? [] : [check.id]));
+  let batch: Awaited<ReturnType<typeof fetchCheckRunAnnotationsBatch>>;
+  try {
+    batch = await fetchCheckRunAnnotationsBatch(ids, cacheOpts);
+  } catch (err) {
+    if (pollRateLimitRetryAfterMs(err) !== null) throw err;
+    writeAnnotationFailureSummary(prNumber, ids.length, err);
+    return checks;
   }
-  return checksWithAnnotations;
+  const firstFailure = batch.failures[0];
+  if (firstFailure !== undefined) {
+    writeAnnotationFailureSummary(prNumber, batch.failures.length, firstFailure.error);
+  }
+  return checks.map((check) => withUnseenAnnotations(check, batch.annotations, seenMap));
 }
 
-async function attachForCheck(
+function withUnseenAnnotations(
   check: ClassifiedCheck,
+  annotations: Map<string, CheckAnnotation[]>,
   seenMap: Map<string, { seenAt: number }>,
-  prNumber: number,
-  cacheOpts?: AnnotationCacheOptions,
-): Promise<TriagedCheck> {
-  if (check.id == null) return check;
-  let annotations: CheckAnnotation[];
-  try {
-    annotations = await fetchCheckRunAnnotations(check.id, cacheOpts);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    process.stderr.write(
-      `pr-shepherd: annotation fetch failed for PR #${prNumber} check "${check.name}" (ignored): ${msg}\n`,
-    );
-    return check;
-  }
-  const unseen = annotations.filter((a) => !seenMap.has(a.id));
+): TriagedCheck {
+  const fetched = check.id == null ? undefined : annotations.get(check.id);
+  if (fetched === undefined) return check;
+  const unseen = fetched.filter((annotation) => !seenMap.has(annotation.id));
   if (unseen.length === 0) return check;
   return { ...check, annotations: unseen };
+}
+
+function writeAnnotationFailureSummary(prNumber: number, count: number, err: unknown): void {
+  const noun = count === 1 ? "check" : "checks";
+  const message = err instanceof Error ? err.message : String(err);
+  process.stderr.write(
+    `pr-shepherd: annotation fetch failed for ${count} ${noun} on PR #${prNumber} (ignored): ${message}\n`,
+  );
 }
 
 export function annotationMarkerBody(a: CheckAnnotation): string {
