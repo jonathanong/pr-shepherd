@@ -63,6 +63,17 @@ describe("loadConfig — poll defaults", () => {
     expect(loadConfig().poll.stackIntervalFactor).toBe(expected);
   });
 
+  it("rejects a stack interval that exceeds the timer limit", async () => {
+    writeRc("poll:\n  intervalSeconds: 60\n  stackIntervalFactor: 40000\n");
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const loadConfig = await freshLoadConfig();
+
+    expect(loadConfig().poll).toEqual(DEFAULT_POLL);
+    expect(stderrSpy.mock.calls.map((call) => call[0]).join("")).toContain(
+      "must be finite and at most 2147483647 milliseconds",
+    );
+  });
+
   it.each([
     ["zero", "0"],
     ["negative", "-2"],

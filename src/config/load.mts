@@ -291,6 +291,7 @@ function parsePollConfig(value: unknown): PollConfig {
   const timeoutSeconds = parsePollDuration(record["timeoutSeconds"], "timeoutSeconds");
   const debounceSeconds = parsePollDuration(record["debounceSeconds"], "debounceSeconds", true);
   const stackIntervalFactor = parseStackIntervalFactor(record["stackIntervalFactor"]);
+  assertAggregateIntervalFits(intervalSeconds, stackIntervalFactor);
   const quietStatus = record["quietStatus"];
   if (typeof quietStatus !== "boolean") {
     throw new Error(
@@ -307,6 +308,18 @@ function parseStackIntervalFactor(value: unknown): number {
     );
   }
   return value;
+}
+
+/** Largest `setTimeout` delay. A bigger aggregate sleep would clamp to ~24.8 days. */
+const MAX_POLL_INTERVAL_MS = 2 ** 31 - 1;
+
+function assertAggregateIntervalFits(intervalSeconds: number, factor: number): void {
+  const ms = intervalSeconds * factor * 1000;
+  if (!Number.isFinite(ms) || ms > MAX_POLL_INTERVAL_MS) {
+    throw new Error(
+      `Invalid config: poll.intervalSeconds * poll.stackIntervalFactor must be finite and at most ${MAX_POLL_INTERVAL_MS} milliseconds, got ${JSON.stringify(ms)}`,
+    );
+  }
 }
 
 function parsePollDuration(value: unknown, key: string, allowZero = false): number {
