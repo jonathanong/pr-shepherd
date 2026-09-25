@@ -15,7 +15,7 @@ GitHub meters GraphQL in **points per hour**, not HTTP requests. A typical user 
 1. Count the connection-requests implied by the query AST. Nested `first`/`last` multiply by the parent connection size. Assume every connection fills its limit.
 2. Divide by 100 and round to the nearest integer. Minimum cost is 1.
 
-Example: `reviewThreads(last: 100) { comments(first: 100) }` is 1 (threads from the PR) + 100 (comments from each thread) = 101 connection-requests → cost 1 by itself. Combined with check-run annotation probes and merge-queue commit trees, a full `BatchPr` first page typically lands around **cost 4–8**. `--verbose` `GraphQL measured cost` is authoritative; do not guess from this page.
+Example: `reviewThreads(last: 20) { comments(first: 100) }` is 1 (threads from the PR) + 20 (comments from each thread on that page) = 21 connection-requests. Older threads use the slim page query. Combined with check-run annotation probes and merge-queue commit trees, a full `BatchPr` first page typically lands around **cost 4–8**. `--verbose` `GraphQL measured cost` is authoritative; do not guess from this page.
 
 Other limits that are not the hourly point budget:
 
@@ -204,6 +204,7 @@ Fingerprint skip is also refused — the tick runs `BatchPr` — when any of the
 - `watch.graphqlQuotaWarnings` (default 30% → 2x, 20% → 5x, 10% → 10x the configured `poll.intervalSeconds`) emits a one-shot-per-worktree-per-credential-per-window `quotaWarning` on non-terminal results for GraphQL and, with the same bands, REST `core`. An older sample in that window does not warn again; a changed credential fingerprint does. Bands can instead use absolute `pollIntervalMinutes`, or specify both and take the slower result. The skill / MCP caller is told to slow down. It is told to prefer REST `gh` for incidental work only when REST core is still above those bands. When both budgets are low, one combined warning uses the later reset and does not recommend moving work between them.
 - The **poll dispatcher** (`pr-shepherd [PR]`, including `--until-terminal`) also **applies** those bands: `WAIT` / `MARK_READY` sleeps use `max(effective interval, active band interval)` from the latest `apiUsage.graphql` remaining percent, every tick, even after the one-shot warning has already been claimed. Factors always use the configured base rather than an explicit flag, preventing compounding; a slower explicit interval remains in force. The active band is the crossed entry with the lowest `remainingPercent`, matching `quotaWarning`. Single-tick `iterate` and MCP `iterate` stay advisory — those callers own recurrence.
 - Unchanged ticks skip `BatchPr` when the fingerprint matches, CheckSuites are complete, and REST mergeability still agrees with the cached report, including reports whose mergeability was previously filled in by REST.
+- `BatchPr` loads the newest 20 review threads on the first page. GitHub prices the nested `comments` connection as one request per thread on that page, so 20 costs less than 100 on every full snapshot. Older threads still arrive on the slim page query.
 - `--until-terminal` retries a tick once after a GraphQL 429 / secondary-limit `Retry-After` instead of exiting 75 immediately. An explicit `Retry-After` header is honored in full. Single-tick iterate still fails with 75.
 
 ### How to read spend
@@ -228,6 +229,7 @@ Landed in this spec’s matching code:
 - Fingerprint skip on unchanged ticks.
 - Merge-queue check trees are follow-up-only.
 - `--until-terminal` honors GraphQL `Retry-After` once.
+- `BatchPr` review threads start at 20.
 
 Further work, if spend is still high:
 

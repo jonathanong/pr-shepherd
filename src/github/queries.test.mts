@@ -58,6 +58,8 @@ describe("queries — GQL constants load at import time", () => {
     expect(PR_FINGERPRINT_QUERY).toContain("...CommitCheckSuites");
     expect(BATCH_PR_QUERY).toContain("...CommitCheckSuites");
     expect(BATCH_PR_QUERY).toContain("checkSuites");
+    expect(BATCH_PR_QUERY).toContain("reviewThreads(last: 20)");
+    expect(BATCH_PR_PAGE_QUERY).toContain("reviewThreads(last: 100, before: $threadsCursor)");
   });
 
   it("loads compact aggregate and native-stack summary documents", () => {

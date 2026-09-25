@@ -121,7 +121,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           state
         }
       }
-      reviewThreads(last: 100) {
+      reviewThreads(last: 20) {
         totalCount
         pageInfo {
           hasPreviousPage
