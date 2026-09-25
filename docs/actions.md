@@ -301,7 +301,7 @@ A queue-required or queue-enabled branch instead emits a `merge queue` command p
 - queue API fallback: `gh api graphql -f 'query=mutation EnqueuePullRequest($pullRequestId: ID!, $expectedHeadOid: GitObjectID!) { enqueuePullRequest(input: { pullRequestId: $pullRequestId, expectedHeadOid: $expectedHeadOid }) { mergeQueueEntry { id } } }' -f pullRequestId=<nodeId> -f expectedHeadOid=<head>`
 ```
 
-After the caller runs an emitted auto-merge or queue command (or its fallback), iteration continues. An active auto-merge request or queue entry emits `WAIT` without ready-delay cancellation or generic stall escalation. Synthetic queue-commit `merge_group` failures emit `FIX_CODE` with their run/log context but no requeue command. Queue check contexts are fully paginated. A queue removal without an actionable failure emits `ESCALATE` with GitHub's raw reason, actor, time, queue commit, and parent commit IDs.
+After the caller runs an emitted auto-merge or queue command (or its fallback), iteration continues. An active auto-merge request or queue entry emits `WAIT` without ready-delay cancellation or generic stall escalation. Synthetic queue-commit `merge_group` failures emit `FIX_CODE` with their run/log context but no requeue command. Queue check contexts are fully paginated. A queue removal without an actionable failure emits `ESCALATE` with GitHub's raw reason, actor, time, queue commit, and parent commit IDs. Squash and rebase queue commits have one parent and still count as the current removal while the PR head is unchanged; see [`merge-queue-removed`](escalations.md#merge-queue-removed).
 
 ---
 

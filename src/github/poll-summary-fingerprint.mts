@@ -30,7 +30,13 @@ export function fingerprintRawSummaryPr(raw: RawSummaryPr): string | null {
         comments: hideBodies(thread.comments),
       })),
     },
-    commits: raw.commits,
+    commits: {
+      ...raw.commits,
+      nodes: raw.commits.nodes.map((node) => ({
+        ...node,
+        commit: { ...node.commit, committedDate: undefined },
+      })),
+    },
   };
   return createHash("sha256").update(JSON.stringify(evidence)).digest("hex");
 }

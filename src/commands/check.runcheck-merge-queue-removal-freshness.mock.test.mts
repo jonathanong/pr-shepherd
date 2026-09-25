@@ -52,6 +52,42 @@ describe("runCheck — merge-queue removal freshness", () => {
     expect(report.mergeQueue?.headUpdatedAfterRemoval).toBe(true);
   });
 
+  it("treats a single-parent squash removal as current when the head is unchanged", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        headRefOid: "pr-head",
+        isMergeQueueEnabled: true,
+        activity: {
+          commitCount: 1,
+          reviewRoundCount: 0,
+          latestCommitCommittedAtUnix: 1_699_000_000,
+          reviewItemsSinceLatestCommit: [],
+        },
+        latestMergeQueueRemoval: {
+          reason: "CI_FAILURE",
+          createdAtUnix: 1_700_000_000,
+          beforeCommitOid: "queue-squash",
+          beforeCommitParentOids: ["base-sha"],
+        },
+        removedMergeQueueChecks: [
+          {
+            name: "CI / merge",
+            status: "COMPLETED",
+            conclusion: "FAILURE",
+            detailsUrl: "https://github.com/owner/repo/actions/runs/1",
+            event: "merge_group",
+            runId: "1",
+          },
+        ],
+      }),
+    });
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.mergeQueue?.headUpdatedAfterRemoval).toBeUndefined();
+    expect(report.checks.failing.map((check) => check.name)).toContain("CI / merge");
+  });
+
   it("treats an unverifiable removal (GitHub omitted the removed commit) as stale rather than current", async () => {
     // GitHub's `timelineItems(last: 1, ...)` keeps returning the single most recent removal
     // event forever, even long after the PR moved on. If that old event's synthetic commit is

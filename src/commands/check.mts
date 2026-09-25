@@ -1,4 +1,5 @@
 import { fetchPrBatch } from "../github/batch.mts";
+import { queueRemovalAppliesToHead } from "../github/queue-removal-freshness.mts";
 import { storePrFingerprint } from "../state/pr-fingerprint.mts";
 import { tryReuseFingerprintReport } from "./check-fingerprint.mts";
 import { getRepoInfo, getCurrentPrNumber } from "../github/client.mts";
@@ -103,12 +104,20 @@ export async function runCheck(
   // historical event forever. When GitHub omits the removed queue commit for that old event
   // (e.g. after the synthetic commit is garbage collected), freshness is unverifiable — treat
   // it as stale/updated rather than as still current, so Shepherd doesn't escalate
-  // `merge-queue-removed` permanently on data it can no longer check. The raw removal fields
-  // still render in the merge-queue header regardless of this flag.
+  // `merge-queue-removed` permanently on data it can no longer check. A squash or rebase
+  // queue commit has one parent and does not list the PR head; that removal stays current
+  // until the head's committer time is later than the removal. The raw removal fields still
+  // render in the merge-queue header regardless of this flag.
+  const headCommittedAtUnix = batchData.activity?.latestCommitCommittedAtUnix;
   const headUpdatedAfterRemoval = Boolean(
     latestRemoval &&
-    (!latestRemoval.beforeCommitParentOids ||
-      !latestRemoval.beforeCommitParentOids.includes(batchData.headRefOid)),
+    !queueRemovalAppliesToHead({
+      parentOids: latestRemoval.beforeCommitParentOids,
+      headOid: batchData.headRefOid,
+      ...(headCommittedAtUnix !== undefined &&
+        headCommittedAtUnix !== null && { headCommittedAtUnix }),
+      removedAtUnix: latestRemoval.createdAtUnix,
+    }),
   );
   const queueRawChecks = batchData.isInMergeQueue
     ? (batchData.mergeQueueChecks ?? [])

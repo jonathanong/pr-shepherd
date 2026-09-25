@@ -184,6 +184,7 @@ fragment PollSummaryPr on PullRequest {
     nodes {
       commit {
         oid
+        committedDate
         statusCheckRollup {
           contexts(last: 100) {
             ...PollSummaryCheckContexts

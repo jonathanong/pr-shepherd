@@ -52,6 +52,7 @@ export interface RawCheckRollup {
 /** A commit whose status contexts the compact summary reads. */
 export interface RawSummaryCommit {
   oid: string;
+  committedDate?: string;
   statusCheckRollup: RawCheckRollup | null;
 }
 
