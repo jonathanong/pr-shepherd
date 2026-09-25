@@ -1,4 +1,3 @@
-import { GitHubRequestError } from "../github/errors.mts";
 import { rest } from "../github/rest-http.mts";
 import type { MergeStateStatus } from "../types.mts";
 import { sleep } from "../util/sleep.mts";
@@ -78,7 +77,9 @@ async function waitForRateLimit<T>(
       process.stderr.write(formatRateLimitGiveUpLine(opts.tickLabel, elapsed, retry));
       throw err;
     }
-    sleepMs = backoffMs(state.noProgress);
+    // Never sleep less than GitHub asked for. A short no-progress backoff must
+    // not undercut an explicit Retry-After or the secondary-limit default.
+    sleepMs = Math.max(retry.ms, backoffMs(state.noProgress));
   }
   process.stderr.write(
     formatRateLimitRetryLine(opts.tickLabel, elapsed, { ...retry, ms: sleepMs }),
@@ -106,20 +107,13 @@ async function sleepRateLimit<T>(
     try {
       const found = await probeOpenPulls(opts.targets, opts.onAllTerminal);
       if (found !== undefined) return found;
-    } catch (error) {
-      if (!isRestCoreRateLimit(error)) throw error;
+    } catch {
+      // The probe only notices a merge or close early. A 5xx, a 404, or a
+      // secondary limit must not abort the rate-limit sleep.
       probesDisabled = true;
     }
   }
   return undefined;
-}
-
-function isRestCoreRateLimit(error: unknown): boolean {
-  return (
-    error instanceof GitHubRequestError &&
-    error.rateLimit?.resource === "core" &&
-    error.rateLimit.remaining <= 0
-  );
 }
 
 interface GithubPullResponse {

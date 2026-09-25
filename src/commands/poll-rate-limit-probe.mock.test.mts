@@ -115,13 +115,16 @@ describe("one-PR rate-limit sleep probe", () => {
     expect(rest).toHaveBeenCalledTimes(1);
   });
 
-  it("rethrows a REST probe error that is not a core rate limit", async () => {
+  it("keeps sleeping when a REST probe fails", async () => {
     const resetAt = Math.floor(Date.now() / 1000) + 180;
+    const full = exhaustedPrimaryLimitDelayMs(resetAt, Date.now());
     vi.mocked(rest).mockRejectedValue(new Error("widgets probe failed"));
-    mockRunIterate.mockRejectedValueOnce(exhausted(resetAt));
+    mockRunIterate
+      .mockRejectedValueOnce(exhausted(resetAt))
+      .mockResolvedValueOnce(makeCancelResult());
     const pending = runPoll(opts);
-    const assertion = expect(pending).rejects.toThrow("widgets probe failed");
-    await vi.advanceTimersByTimeAsync(60_000);
-    await assertion;
+    await vi.advanceTimersByTimeAsync(full);
+    await expect(pending).resolves.toMatchObject({ action: "cancel" });
+    expect(rest).toHaveBeenCalledTimes(1);
   });
 });

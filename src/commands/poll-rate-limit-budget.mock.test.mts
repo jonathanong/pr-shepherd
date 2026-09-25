@@ -38,6 +38,27 @@ describe("one-PR until-terminal rate-limit budget", () => {
     await vi.advanceTimersByTimeAsync(exhaustedPrimaryLimitDelayMs(resetAt, Date.now()));
     await vi.advanceTimersByTimeAsync(15_000);
     await expect(pending).resolves.toMatchObject({ action: "cancel" });
+  });
+
+  it("does not shorten an explicit Retry-After on a no-progress retry", async () => {
+    const retryAfter = new GitHubRequestError("You have exceeded a secondary rate limit", {
+      status: 429,
+      retryAfterSeconds: 60,
+    });
+    mockRunIterate
+      .mockRejectedValueOnce(retryAfter)
+      .mockRejectedValueOnce(retryAfter)
+      .mockResolvedValueOnce(makeCancelResult());
+    const pending = runPoll(opts);
+    await vi.advanceTimersByTimeAsync(60_000);
+    let settled = false;
+    void pending.then(() => {
+      settled = true;
+    });
+    await vi.advanceTimersByTimeAsync(15_000);
+    expect(settled).toBe(false);
+    await vi.advanceTimersByTimeAsync(45_000);
+    await expect(pending).resolves.toMatchObject({ action: "cancel" });
     expect(mockRunIterate).toHaveBeenCalledTimes(3);
   });
 
