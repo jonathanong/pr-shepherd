@@ -44,7 +44,7 @@ describe("runIterate — stall-timeout guard", () => {
         },
       }),
     );
-    mockReadStallState.mockResolvedValue(null);
+    mockReadStallState.mockResolvedValue({ ok: true, state: null });
     await runIterate(makeOpts30mStall());
     const fp1 = (mockWriteStallState.mock.calls[0]![1] as StallState).fingerprint;
     expect(fp1).toContain("inProgress:ci-slow");
@@ -52,7 +52,10 @@ describe("runIterate — stall-timeout guard", () => {
     // Second call: inProgress is now empty (job completed) → fingerprint changes.
     mockWriteStallState.mockClear();
     mockRunCheck.mockResolvedValue(makeReport());
-    mockReadStallState.mockResolvedValue({ fingerprint: fp1, firstSeenAt: NOW - STALL_TIMEOUT_S });
+    mockReadStallState.mockResolvedValue({
+      ok: true,
+      state: { fingerprint: fp1, firstSeenAt: NOW - STALL_TIMEOUT_S },
+    });
 
     const result = await runIterate(makeOpts30mStall());
 

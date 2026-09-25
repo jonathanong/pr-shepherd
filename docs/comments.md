@@ -56,7 +56,7 @@ The agent reads these fields and decides what to fix. Skills are thin dispatcher
 
 Every review item must be surfaced to the agent **at least once**, even if it is outdated, resolved, or minimized. Items that would otherwise be silently dropped are presented on first encounter with a status tag (`outdated`, `resolved`, or `minimized`) so the agent can acknowledge them. For review threads, the seen marker hashes the full thread transcript, so replies to an already-seen resolved/minimized/outdated thread re-surface the thread as edited with links to the thread comments.
 
-After first display, a per-item seen-marker file is written under `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/seen/<id>.json`. Subsequent fetches check the marker and suppress items already seen.
+After first display, a per-item seen-marker file is written under `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/seen/<id>.json`. Subsequent fetches check the marker and suppress items already seen.
 
 First-look items appear in `iterate fix_code` output as a `## First-look items` section in text and `firstLookThreads` / `firstLookComments` arrays in JSON. Hidden PR comments in `firstLookComments` are acknowledge-only: bots keep editing hidden notices after a PR settles, so they never restart the [ready-delay](iterate-flow.md#2-ready-delay) or void a READY receipt.
 

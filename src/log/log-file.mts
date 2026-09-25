@@ -1,7 +1,7 @@
 /**
  * Append-only per-worktree markdown log.
  *
- * Log path: $PR_SHEPHERD_STATE_DIR/<owner>-<repo>/worktrees/<basename>-<sha8>.md
+ * Log path: $PR_SHEPHERD_STATE_DIR/<owner>/<repo>/worktrees/<basename>-<sha8>.md
  *
  * Always-on by default. Set PR_SHEPHERD_LOG_DISABLED=1 or CI=true to disable.
  * Write failures flip an internal disabled flag so the CLI never crashes because
@@ -10,8 +10,7 @@
 
 import { appendFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { resolveStateBase } from "../state/base.mts";
-import { SAFE_SEGMENT } from "../util/path-segment.mts";
+import { resolveRepoStateDir } from "../state/base.mts";
 import { getWorktreeKey } from "../util/worktree.mts";
 
 function computeDisabled(): boolean {
@@ -36,14 +35,9 @@ interface RepoKey {
 }
 
 export function getLogFilePath(key: RepoKey): string {
-  const { owner, repo } = key;
-  if (!SAFE_SEGMENT.test(owner) || !SAFE_SEGMENT.test(repo)) {
-    throw new Error(`Invalid repo key segments: ${owner}/${repo}`);
-  }
-  const base = resolveStateBase();
   // Worktree key injected at init time; fall back to "unknown" if not yet set.
   const wkey = _worktreeKey ?? "unknown";
-  return join(base, `${owner}-${repo}`, "worktrees", `${wkey}.md`);
+  return join(resolveRepoStateDir(key), "worktrees", `${wkey}.md`);
 }
 
 let _worktreeKey: string | null = null;
@@ -55,8 +49,6 @@ let _worktreeKey: string | null = null;
 export async function initLog(repoKey: RepoKey): Promise<string | null> {
   if (_disabled) return null;
   try {
-    const { owner, repo } = repoKey;
-    if (!SAFE_SEGMENT.test(owner) || !SAFE_SEGMENT.test(repo)) return null;
     _worktreeKey = await getWorktreeKey();
     const path = getLogFilePath(repoKey);
     mkdirSync(dirname(path), { recursive: true });
@@ -81,12 +73,8 @@ export function appendEntry(markdown: string): void {
 
 /** Resolve the log path without initializing (for the log-file subcommand). */
 export async function resolveLogPath(repoKey: RepoKey): Promise<string> {
-  if (!SAFE_SEGMENT.test(repoKey.owner) || !SAFE_SEGMENT.test(repoKey.repo)) {
-    throw new Error(`Invalid repo key segments: ${repoKey.owner}/${repoKey.repo}`);
-  }
   const wkey = await getWorktreeKey();
-  const base = resolveStateBase();
-  return join(base, `${repoKey.owner}-${repoKey.repo}`, "worktrees", `${wkey}.md`);
+  return join(resolveRepoStateDir(repoKey), "worktrees", `${wkey}.md`);
 }
 
 /** Exposed for tests to reset module state. */

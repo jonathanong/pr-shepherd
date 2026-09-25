@@ -36,7 +36,7 @@ describe("loadSeenSet", () => {
   });
 
   it("ignores non-.json files in the seen directory", async () => {
-    const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr), "seen");
+    const dir = join(testStateDir, testKey.owner, testKey.repo, String(testKey.pr), "seen");
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, "noise.txt"), "", "utf8");
     await markSeen(testKey, testId, "test body");

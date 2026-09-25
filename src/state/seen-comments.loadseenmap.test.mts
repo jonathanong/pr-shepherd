@@ -41,7 +41,7 @@ describe("loadSeenMap", () => {
     // always win so the stale legacy file cannot re-surface the item.
     const id = "PRRT_kwDOTest123";
     const hash = createHash("sha256").update(id, "utf8").digest("hex");
-    const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr), "seen");
+    const dir = join(testStateDir, testKey.owner, testKey.repo, String(testKey.pr), "seen");
     await mkdir(dir, { recursive: true });
     // Legacy file with stale hash.
     await writeFile(
@@ -65,7 +65,7 @@ describe("loadSeenMap", () => {
     // Legacy markers written before the id field was added use the filename stem as key.
     const legacyId = "PRRT_kwDOLegacy123";
     const hash = createHash("sha256").update(legacyId, "utf8").digest("hex");
-    const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr), "seen");
+    const dir = join(testStateDir, testKey.owner, testKey.repo, String(testKey.pr), "seen");
     await mkdir(dir, { recursive: true });
     // Write a legacy-format file (no id field) at the hash-based path.
     await writeFile(
@@ -94,12 +94,7 @@ describe("loadSeenMap", () => {
     // markSeen used raw IDs, the two files would exist on Linux but share a
     // name on macOS; the SHA-256 path produces two distinct 64-hex filenames
     // regardless of OS.
-    const seenDir = join(
-      testStateDir,
-      `${testKey.owner}-${testKey.repo}`,
-      String(testKey.pr),
-      "seen",
-    );
+    const seenDir = join(testStateDir, testKey.owner, testKey.repo, String(testKey.pr), "seen");
     const files = (await readdir(seenDir)).filter((f) => f.endsWith(".json"));
     expect(files).toHaveLength(2);
     const hexRe = /^[0-9a-f]{64}\.json$/;

@@ -23,11 +23,11 @@ afterEach(async () => {
 });
 
 function markerPath(): string {
-  return join(stateDir, `${OWNER}-${REPO}`, String(PR), "ready-since.txt");
+  return join(stateDir, OWNER, REPO, String(PR), "ready-since.txt");
 }
 
 async function writeMarker(content: string): Promise<void> {
-  await mkdir(join(stateDir, `${OWNER}-${REPO}`, String(PR)), { recursive: true });
+  await mkdir(join(stateDir, OWNER, REPO, String(PR)), { recursive: true });
   await writeFile(markerPath(), content, "utf8");
 }
 

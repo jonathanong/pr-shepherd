@@ -25,14 +25,17 @@ describe("runIterate — sub-minute stall-timeout", () => {
     mockRunCheck.mockResolvedValue(makeReport());
 
     // Get the real fingerprint first.
-    mockReadStallState.mockResolvedValue(null);
+    mockReadStallState.mockResolvedValue({ ok: true, state: null });
     await runIterate(makeOpts({ stallTimeoutSeconds: STALL_TIMEOUT_S, noAutoMarkReady: true }));
     const realFingerprint = (mockWriteStallState.mock.calls[0]![1] as StallState).fingerprint;
 
     // Second call: fingerprint matches but firstSeenAt is 8s ago — past the 5s threshold.
     mockWriteStallState.mockClear();
     const firstSeenAt = NOW - 8;
-    mockReadStallState.mockResolvedValue({ fingerprint: realFingerprint, firstSeenAt });
+    mockReadStallState.mockResolvedValue({
+      ok: true,
+      state: { fingerprint: realFingerprint, firstSeenAt },
+    });
 
     const result = await runIterate(
       makeOpts({ stallTimeoutSeconds: STALL_TIMEOUT_S, noAutoMarkReady: true }),

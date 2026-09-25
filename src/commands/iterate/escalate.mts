@@ -280,6 +280,10 @@ export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: st
     const duration = detail ?? "60 minutes";
     return `No progress detected for ${duration} — state has not changed. This is a manual checkpoint: inspect the PR and apply a manual fix before resuming.`;
   }
+  if (triggers.includes("stall-state-unavailable")) {
+    const reason = detail ?? "unknown error";
+    return `The stall timer could not be saved (${reason}). Fix PR_SHEPHERD_STATE_DIR or the directory permissions, then resume. Automated polling is paused because a stuck loop would not be detected.`;
+  }
   if (triggers.includes("base-branch-unknown")) {
     const reason = detail ? ` (${detail})` : "";
     return `Could not determine the PR's base branch${reason} — automated rebases are paused because branch safety is unclear. Run the rebase manually against the PR's real target branch.`;

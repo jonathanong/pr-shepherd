@@ -14,7 +14,7 @@
  *   terminal, check-run annotations once the check is COMPLETED. No ETag
  *   applies; the cache is keyed on an immutable identity instead.
  *
- * Entries live under `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/rest-cache/`
+ * Entries live under `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/rest-cache/`
  * and are removed for free when `pr-shepherd clean` deletes the PR's state
  * directory — there is no separate pruning routine.
  */

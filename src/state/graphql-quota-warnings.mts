@@ -3,8 +3,7 @@ import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { GraphqlQuotaWarningBand } from "../config/load.mts";
 import type { GraphqlQuotaWarning, GraphqlApiUsage } from "../types.mts";
-import { resolveStateBase } from "./base.mts";
-import { SAFE_SEGMENT } from "../util/path-segment.mts";
+import { resolveRepoStateDir } from "./base.mts";
 import { getWorktreeKey } from "../util/worktree.mts";
 import { claimWarning } from "./graphql-quota-claims.mts";
 import {
@@ -76,21 +75,13 @@ async function serializeStateUpdate<T>(key: string, update: () => Promise<T>): P
 }
 
 async function warningStatePath(key: { owner: string; repo: string }): Promise<string | undefined> {
-  if (!SAFE_SEGMENT.test(key.owner) || !SAFE_SEGMENT.test(key.repo)) {
-    throw new Error(`Invalid repo key segments: ${key.owner}/${key.repo}`);
-  }
   let worktreeKey: string;
   try {
     worktreeKey = await getWorktreeKey();
   } catch {
     return undefined;
   }
-  return join(
-    resolveStateBase(),
-    `${key.owner}-${key.repo}`,
-    "worktrees",
-    `${worktreeKey}-graphql-quota-warnings.json`,
-  );
+  return join(resolveRepoStateDir(key), "worktrees", `${worktreeKey}-graphql-quota-warnings.json`);
 }
 
 async function readState(path: string): Promise<GraphqlQuotaWarningState | null> {

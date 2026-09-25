@@ -40,10 +40,10 @@ describe("runLogFile", () => {
     expect(typeof result.path).toBe("string");
   });
 
-  it("path contains the owner-repo segment", async () => {
+  it("path contains separate owner and repo segments", async () => {
     gitRemote("https://github.com/acme/widgets.git");
     const result = await runLogFile();
-    expect(result.path).toContain("acme-widgets");
+    expect(result.path).toContain("/acme/widgets/");
   });
 
   it("path contains the worktrees directory", async () => {

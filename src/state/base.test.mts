@@ -1,6 +1,11 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { join } from "node:path";
-import { resolvePrStatePath, resolveStackStatePath, resolveStateBase } from "./base.mts";
+import {
+  resolvePrStatePath,
+  resolveRepoStateDir,
+  resolveStackStatePath,
+  resolveStateBase,
+} from "./base.mts";
 
 // The default (no override) location is covered in base.user-temp-dir.mock.test.mts.
 describe("resolveStateBase", () => {
@@ -34,10 +39,38 @@ describe("resolvePrStatePath", () => {
     }
   });
 
-  it("joins owner-repo, PR number, and extra parts under the state base", () => {
+  it("joins owner, repo, PR number, and extra parts under the state base", () => {
     process.env["PR_SHEPHERD_STATE_DIR"] = "/custom/state";
     expect(resolvePrStatePath({ owner: "acme", repo: "widgets", pr: 42 }, "seen")).toBe(
-      join("/custom/state", "acme-widgets", "42", "seen"),
+      join("/custom/state", "acme", "widgets", "42", "seen"),
+    );
+  });
+
+  it("keeps hyphenated owner and repo names in separate segments", () => {
+    process.env["PR_SHEPHERD_STATE_DIR"] = "/custom/state";
+    const labsWidgets = resolveRepoStateDir({ owner: "acme-labs", repo: "widgets" });
+    const acmeLabs = resolveRepoStateDir({ owner: "acme", repo: "labs-widgets" });
+    expect(labsWidgets).toBe(join("/custom/state", "acme-labs", "widgets"));
+    expect(acmeLabs).toBe(join("/custom/state", "acme", "labs-widgets"));
+    expect(labsWidgets).not.toBe(acmeLabs);
+  });
+
+  it("accepts a repository name that contains dots", () => {
+    process.env["PR_SHEPHERD_STATE_DIR"] = "/custom/state";
+    expect(resolveRepoStateDir({ owner: "acme", repo: "my.repo" })).toBe(
+      join("/custom/state", "acme", "my.repo"),
+    );
+  });
+
+  it.each([".", ".."])("rejects owner segment %s", (owner) => {
+    expect(() => resolveRepoStateDir({ owner, repo: "widgets" })).toThrow(
+      'Invalid state key segment "owner"',
+    );
+  });
+
+  it("rejects repo segment ..", () => {
+    expect(() => resolveRepoStateDir({ owner: "acme", repo: ".." })).toThrow(
+      'Invalid state key segment "repo"',
     );
   });
 
@@ -85,7 +118,7 @@ describe("resolveStackStatePath", () => {
   it("keeps a stack directory beside the per-PR directories", () => {
     process.env["PR_SHEPHERD_STATE_DIR"] = "/custom/state";
     expect(resolveStackStatePath({ owner: "acme", repo: "widgets", stack: 7 }, "stall.json")).toBe(
-      join("/custom/state", "acme-widgets", "stack-7", "stall.json"),
+      join("/custom/state", "acme", "widgets", "stack-7", "stall.json"),
     );
   });
 

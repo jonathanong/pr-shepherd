@@ -36,8 +36,8 @@ vi.mock("../../src/state/fix-attempts.mts", () => ({
   writeFixAttempts: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../src/state/iterate-stall.mts", () => ({
-  readStallState: vi.fn().mockResolvedValue(null),
-  writeStallState: vi.fn().mockResolvedValue(undefined),
+  readStallState: vi.fn().mockResolvedValue({ ok: true, state: null }),
+  writeStallState: vi.fn().mockResolvedValue({ ok: true }),
 }));
 vi.mock("../../src/state/seen-comments.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../src/state/seen-comments.mts")>();
@@ -155,8 +155,8 @@ export function registerHooks(): void {
     });
     mockReadFixAttempts.mockResolvedValue(null);
     mockWriteFixAttempts.mockResolvedValue(undefined);
-    mockReadStallState.mockResolvedValue(null);
-    mockWriteStallState.mockResolvedValue(undefined);
+    mockReadStallState.mockResolvedValue({ ok: true, state: null });
+    mockWriteStallState.mockResolvedValue({ ok: true });
   });
   afterEach(() => {
     vi.restoreAllMocks();

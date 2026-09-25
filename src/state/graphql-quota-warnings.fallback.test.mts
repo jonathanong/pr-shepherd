@@ -7,7 +7,14 @@ import { evaluateWorktreeGraphqlQuotaWarning } from "./graphql-quota-warnings.mt
 
 const testState = vi.hoisted(() => ({ base: "", failWorktree: false }));
 
-vi.mock("./base.mts", () => ({ resolveStateBase: () => testState.base }));
+vi.mock("./base.mts", async () => {
+  const { join } = await import("node:path");
+  return {
+    resolveStateBase: () => testState.base,
+    resolveRepoStateDir: (key: { owner: string; repo: string }) =>
+      join(testState.base, key.owner, key.repo),
+  };
+});
 vi.mock("../util/worktree.mts", () => ({
   getWorktreeKey: async () => {
     if (testState.failWorktree) throw new Error("not a worktree");
@@ -21,7 +28,8 @@ const repoKey = { owner: "fallback-owner", repo: "fallback-repo" };
 function statePath(): string {
   return join(
     testState.base,
-    "fallback-owner-fallback-repo",
+    "fallback-owner",
+    "fallback-repo",
     "worktrees",
     "fallback-test-worktree-graphql-quota-warnings.json",
   );

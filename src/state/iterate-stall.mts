@@ -5,7 +5,7 @@
  * was first seen. If the fingerprint does not change for stallTimeoutSeconds
  * the iterate command escalates instead of repeating the same action.
  *
- * State lives in `$PR_SHEPHERD_STATE_DIR/<owner>-<repo>/<pr>/iterate-stall.json`.
+ * State lives in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/iterate-stall.json`.
  */
 
 import { resolvePrStatePath } from "./base.mts";

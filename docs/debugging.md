@@ -65,7 +65,7 @@ pr-shepherd admin clean current --dry-run
 Then remove the `ready-since.txt` path it prints. Example:
 
 ```bash
-rm /var/folders/ab/xyz/T/pr-shepherd-state/acme-myrepo/42/ready-since.txt
+rm /var/folders/ab/xyz/T/pr-shepherd-state/acme/myrepo/42/ready-since.txt
 ```
 
 The state directory is `$PR_SHEPHERD_STATE_DIR` when set; see [configuration.md](configuration.md#environment-variables) for the default.

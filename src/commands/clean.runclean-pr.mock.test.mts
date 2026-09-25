@@ -19,14 +19,14 @@ describe("clean pr (explicit number)", () => {
     const result = await runClean({ variant: "pr", value: "42" });
     expect(result.ok).toBe(true);
     expect(result.deleted.length).toBeGreaterThan(0);
-    expect(await pathExists(join(sd(), "acme-widgets", "42"))).toBe(false);
+    expect(await pathExists(join(sd(), "acme", "widgets", "42"))).toBe(false);
   });
 
   it("leaves other PRs intact", async () => {
     await seedPrDir(sd(), 42);
     await seedPrDir(sd(), 99);
     await runClean({ variant: "pr", value: "42" });
-    expect(await pathExists(join(sd(), "acme-widgets", "99"))).toBe(true);
+    expect(await pathExists(join(sd(), "acme", "widgets", "99"))).toBe(true);
   });
 
   it("dry-run lists contents without deleting", async () => {
@@ -34,7 +34,7 @@ describe("clean pr (explicit number)", () => {
     const result = await runClean({ variant: "pr", value: "42", dryRun: true });
     expect(result.dryRun).toBe(true);
     expect(result.deleted.length).toBeGreaterThan(0);
-    expect(await pathExists(join(sd(), "acme-widgets", "42"))).toBe(true);
+    expect(await pathExists(join(sd(), "acme", "widgets", "42"))).toBe(true);
   });
 
   it("returns skipped when PR dir does not exist", async () => {
@@ -68,7 +68,7 @@ describe("clean pr (inferred from current branch)", () => {
     await seedPrDir(sd(), 42);
     const result = await runClean({ variant: "pr" });
     expect(result.ok).toBe(true);
-    expect(await pathExists(join(sd(), "acme-widgets", "42"))).toBe(false);
+    expect(await pathExists(join(sd(), "acme", "widgets", "42"))).toBe(false);
   });
 
   it("errors when no open PR found for current branch", async () => {

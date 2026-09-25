@@ -59,7 +59,10 @@ handoff, or otherwise `WAIT` with reason `waiting`, which `--until-terminal` rec
 cadence and a bounded poll returns at timeout. Because nothing reruns those probes, their own stall
 guards cannot fire, so the selector keeps a stack-level timer: once that `WAIT` stays unchanged for
 the stall timeout, it returns `ESCALATE` with `stall-timeout` naming each waiting layer
-([`stall-timeout`](escalations.md#stall-timeout)).
+([`stall-timeout`](escalations.md#stall-timeout)). If that timer cannot be read or written, the
+same tick returns `ESCALATE` with `stall-state-unavailable` and the filesystem error, so an
+unwritable state directory cannot keep the idle wait polling
+([`stall-state-unavailable`](escalations.md#stall-state-unavailable)).
 
 When `--merge` is requested, the lowest open layer is READY, every layer below it has merged, and
 GitHub has retargeted it onto the stack base, the read-only summary returns `MERGE` with
@@ -589,6 +592,7 @@ Ambiguous state that requires human judgement — iteration stops and surfaces d
 **Trigger:** Any of:
 
 - **`stall-timeout`** — the iterate result has not materially changed for `config.iterate.stallTimeoutMinutes` minutes (default 60), or a relevant CI check/status context has stayed pending without starting for that long. Catches loops where the same failing test, transient error, or pending state repeats indefinitely without progress. The generic timer resets whenever the HEAD SHA, failing-check set, or actionable item IDs change. A `--stack` selection whose layers can only wait keeps its own stack-level timer with the same threshold ([`stall-timeout`](escalations.md#stall-timeout)). Override with `--stall-timeout <duration>` — a bare number is minutes (e.g. `--stall-timeout 90`), or use an explicit `s`/`m`/`h` suffix (e.g. `--stall-timeout 90s`, `--stall-timeout 1h`); `--stall-timeout 0` disables. The escalation message renders the elapsed time in whatever unit reads best (seconds, minutes, or hours), independent of the flag's input unit.
+- **`stall-state-unavailable`** — the stall timeout is enabled, and Shepherd could not read or write the one-PR or `--stack` stall timer. The suggestion quotes the filesystem error. Fix `PR_SHEPHERD_STATE_DIR` or the directory permissions, then resume. `--stall-timeout 0` leaves the original action in place. Text and JSON both carry the trigger on `escalate.triggers`; a stack summary carries it in `instructions`. See [`stall-state-unavailable`](escalations.md#stall-state-unavailable).
 - **`fix-thrash`** — the same retryable, located active thread body remains unchanged and unresolved after being returned in `config.iterate.fixAttemptsPerThread` caller-visible `FIX_CODE` results (default 3). Those results each repeat the pending review commands; the following unchanged tick escalates and retains the commands. Internal debounce ticks do not count. Threads suppressed by seen markers, location-independent outdated-bot resolutions, other threads without a path/line, and threads with unauthorized required mutations do not count; edited thread bodies reset the per-thread attempt count.
 - **`base-branch-unknown`** — the GraphQL batch did not yield a usable base branch name: the derived value was empty or contained unsafe characters. Preempts any `[FIX_CODE]` that would require a push, since rebasing onto the wrong base is worse than pausing iteration.
 

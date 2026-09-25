@@ -467,7 +467,7 @@ describe("runIterate — cancel", () => {
       remainingSeconds: 0,
     });
     mockFetchRawSummaryPr.mockRejectedValue(new Error("summary unavailable"));
-    mockReadStallState.mockResolvedValue(null);
+    mockReadStallState.mockResolvedValue({ ok: true, state: null });
 
     const first = await runIterate(makeOpts({ stallTimeoutSeconds: 600 }));
 
@@ -478,8 +478,11 @@ describe("runIterate — cancel", () => {
       .fingerprint;
 
     mockReadStallState.mockResolvedValue({
-      fingerprint,
-      firstSeenAt: Math.floor(Date.now() / 1000) - 601,
+      ok: true,
+      state: {
+        fingerprint,
+        firstSeenAt: Math.floor(Date.now() / 1000) - 601,
+      },
     });
 
     const second = await runIterate(makeOpts({ stallTimeoutSeconds: 600 }));

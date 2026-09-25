@@ -26,7 +26,7 @@ describe("runIterate — stall-timeout guard", () => {
 
   it("fingerprints the PR head rather than the local checkout", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ headSha: firstHead }));
-    mockReadStallState.mockResolvedValue(null);
+    mockReadStallState.mockResolvedValue({ ok: true, state: null });
 
     await runIterate(makeOpts30mStall());
 
@@ -36,13 +36,16 @@ describe("runIterate — stall-timeout guard", () => {
 
   it("resets firstSeenAt when the PR head changes", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ headSha: firstHead }));
-    mockReadStallState.mockResolvedValue(null);
+    mockReadStallState.mockResolvedValue({ ok: true, state: null });
     await runIterate(makeOpts30mStall());
     const fp1 = (mockWriteStallState.mock.calls[0]![1] as StallState).fingerprint;
 
     mockRunCheck.mockResolvedValue(makeReport({ headSha: nextHead }));
     mockWriteStallState.mockClear();
-    mockReadStallState.mockResolvedValue({ fingerprint: fp1, firstSeenAt: NOW - STALL_TIMEOUT_S });
+    mockReadStallState.mockResolvedValue({
+      ok: true,
+      state: { fingerprint: fp1, firstSeenAt: NOW - STALL_TIMEOUT_S },
+    });
 
     const result = await runIterate(makeOpts30mStall());
 

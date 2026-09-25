@@ -4,7 +4,7 @@ import { rm, writeFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { readStallState, writeStallState, clearStallState } from "./iterate-stall.mts";
 
-type StallState = NonNullable<Awaited<ReturnType<typeof readStallState>>>;
+type StallState = Parameters<typeof writeStallState>[1];
 
 let testStateDir: string;
 
@@ -23,31 +23,31 @@ afterEach(async () => {
 describe("readStallState — miss", () => {
   it("returns null when no file exists", async () => {
     const result = await readStallState(testKey);
-    expect(result).toBeNull();
+    expect(result).toEqual({ ok: true, state: null });
   });
 });
 
 describe("readStallState — invalid JSON", () => {
   it("returns null instead of throwing", async () => {
-    const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr));
+    const dir = join(testStateDir, testKey.owner, testKey.repo, String(testKey.pr));
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, "iterate-stall.json"), "not json", "utf8");
     const result = await readStallState(testKey);
-    expect(result).toBeNull();
+    expect(result).toEqual({ ok: true, state: null });
   });
 });
 
 describe("readStallState — invalid shape (valid JSON but wrong types)", () => {
   it("returns null when fingerprint is missing", async () => {
-    const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr));
+    const dir = join(testStateDir, testKey.owner, testKey.repo, String(testKey.pr));
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, "iterate-stall.json"), JSON.stringify({ firstSeenAt: 1000 }), "utf8");
     const result = await readStallState(testKey);
-    expect(result).toBeNull();
+    expect(result).toEqual({ ok: true, state: null });
   });
 
   it("returns null when firstSeenAt is not a finite number", async () => {
-    const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr));
+    const dir = join(testStateDir, testKey.owner, testKey.repo, String(testKey.pr));
     await mkdir(dir, { recursive: true });
     await writeFile(
       join(dir, "iterate-stall.json"),
@@ -55,11 +55,11 @@ describe("readStallState — invalid shape (valid JSON but wrong types)", () => 
       "utf8",
     );
     const result = await readStallState(testKey);
-    expect(result).toBeNull();
+    expect(result).toEqual({ ok: true, state: null });
   });
 
   it("returns null when firstSeenAt is NaN", async () => {
-    const dir = join(testStateDir, `${testKey.owner}-${testKey.repo}`, String(testKey.pr));
+    const dir = join(testStateDir, testKey.owner, testKey.repo, String(testKey.pr));
     await mkdir(dir, { recursive: true });
     await writeFile(
       join(dir, "iterate-stall.json"),
@@ -67,7 +67,7 @@ describe("readStallState — invalid shape (valid JSON but wrong types)", () => 
       "utf8",
     );
     const result = await readStallState(testKey);
-    expect(result).toBeNull();
+    expect(result).toEqual({ ok: true, state: null });
   });
 });
 
@@ -79,7 +79,7 @@ describe("writeStallState / readStallState — round-trip", () => {
     };
     await writeStallState(testKey, state);
     const result = await readStallState(testKey);
-    expect(result).toEqual(state);
+    expect(result).toEqual({ ok: true, state });
   });
 });
 
@@ -87,36 +87,48 @@ describe("readStallState — default state dir", () => {
   it("returns null (no file) when PR_SHEPHERD_STATE_DIR is unset", async () => {
     delete process.env["PR_SHEPHERD_STATE_DIR"];
     const result = await readStallState(testKey);
-    expect(result).toBeNull();
+    expect(result).toEqual({ ok: true, state: null });
   });
 });
 
 describe("readStallState — unsafe key segments", () => {
-  it("returns null (does not throw) when owner contains a slash", async () => {
+  it("reports a persistence failure when owner contains a slash", async () => {
     const result = await readStallState({ owner: "a/b", repo: "repo", pr: 1 });
-    expect(result).toBeNull();
+    expect(result.ok).toBe(false);
   });
 
-  it("returns null (does not throw) when repo contains a space", async () => {
+  it("reports a persistence failure when repo contains a space", async () => {
     const result = await readStallState({ owner: "owner", repo: "my repo", pr: 1 });
-    expect(result).toBeNull();
+    expect(result.ok).toBe(false);
   });
 
-  it("returns null (does not throw) when pr is not a positive integer", async () => {
+  it("reports a persistence failure when pr is not a positive integer", async () => {
     const result = await readStallState({ owner: "owner", repo: "repo", pr: -1 });
-    expect(result).toBeNull();
+    expect(result.ok).toBe(false);
   });
 });
 
-describe("writeStallState — fire and forget", () => {
-  it("does not throw when the state dir is not writable", async () => {
+describe("writeStallState — unwritable state dir", () => {
+  it("reports the failure instead of swallowing it", async () => {
     const collision = join(testStateDir, "collision");
     await mkdir(testStateDir, { recursive: true });
     await writeFile(collision, "blocker", "utf8");
     process.env["PR_SHEPHERD_STATE_DIR"] = collision;
-    await expect(
-      writeStallState({ owner: "a", repo: "b", pr: 1 }, { fingerprint: "x", firstSeenAt: 1 }),
-    ).resolves.toBeUndefined();
+    const result = await writeStallState(
+      { owner: "a", repo: "b", pr: 1 },
+      { fingerprint: "x", firstSeenAt: 1 },
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.reason).toContain("ENOTDIR");
+  });
+
+  it("reports a read failure when the state dir is a file", async () => {
+    const collision = join(testStateDir, "collision");
+    await mkdir(testStateDir, { recursive: true });
+    await writeFile(collision, "blocker", "utf8");
+    process.env["PR_SHEPHERD_STATE_DIR"] = collision;
+    const result = await readStallState({ owner: "a", repo: "b", pr: 1 });
+    expect(result.ok).toBe(false);
   });
 });
 
@@ -124,9 +136,9 @@ describe("clearStallState", () => {
   it("removes an existing stall state file", async () => {
     const state: StallState = { fingerprint: "abc", firstSeenAt: 1700000000 };
     await writeStallState(testKey, state);
-    expect(await readStallState(testKey)).not.toBeNull();
+    expect(await readStallState(testKey)).toEqual({ ok: true, state });
     await clearStallState(testKey);
-    expect(await readStallState(testKey)).toBeNull();
+    expect(await readStallState(testKey)).toEqual({ ok: true, state: null });
   });
 
   it("does not throw when no file exists", async () => {

@@ -57,7 +57,7 @@ describe("initLog + appendEntry", () => {
     // File should not exist
     try {
       await readFile(
-        join(testStateDir, "acme-widgets", "worktrees", "test-worktree-abc12345.md"),
+        join(testStateDir, "acme", "widgets", "worktrees", "test-worktree-abc12345.md"),
         "utf8",
       );
       expect.fail("file should not exist");
@@ -90,7 +90,7 @@ describe("resolveLogPath", () => {
   it("returns the expected path structure", async () => {
     const { resolveLogPath } = await freshModule();
     const path = await resolveLogPath({ owner: "acme", repo: "widgets" });
-    expect(path).toContain("acme-widgets");
+    expect(path).toContain(`${join("acme", "widgets")}`);
     expect(path).toContain("worktrees");
     expect(path).toContain("test-worktree-abc12345.md");
   });
@@ -105,7 +105,7 @@ describe("getLogFilePath", () => {
   it("throws for invalid owner segment", async () => {
     const { getLogFilePath } = await freshModule();
     expect(() => getLogFilePath({ owner: "bad/owner", repo: "widgets" })).toThrow(
-      /Invalid repo key segments/,
+      /Invalid state key segment/,
     );
   });
 
