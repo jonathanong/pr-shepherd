@@ -64,8 +64,11 @@ vi.mock("../../src/checks/triage.mts", () => ({
   triageFailingChecks: vi.fn((checks) => Promise.resolve(checks)),
   fetchStartupFailureChecks: vi.fn().mockResolvedValue([]),
 }));
-vi.mock("../../src/github/check-annotations.mts", () => ({
-  fetchCheckRunAnnotations: vi.fn().mockResolvedValue([]),
+vi.mock("../../src/github/check-annotations-batch.mts", () => ({
+  fetchCheckRunAnnotationsBatch: vi.fn().mockResolvedValue({
+    annotations: new Map(),
+    failures: [],
+  }),
 }));
 vi.mock("../../src/comments/resolve.mts", () => ({
   autoResolveOutdated: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
@@ -109,7 +112,7 @@ import { fetchPrBatch } from "../../src/github/batch.mts";
 import { fetchPollSummary } from "../../src/github/poll-summary.mts";
 import { getMergeableState } from "../../src/github/client.mts";
 import { triageFailingChecks, fetchStartupFailureChecks } from "../../src/checks/triage.mts";
-import { fetchCheckRunAnnotations } from "../../src/github/check-annotations.mts";
+import { fetchCheckRunAnnotationsBatch } from "../../src/github/check-annotations-batch.mts";
 import { autoResolveOutdated } from "../../src/comments/resolve.mts";
 import { loadSeenMap, markSeen } from "../../src/state/seen-comments.mts";
 import { updateReadyDelay } from "../../src/commands/ready-delay.mts";
@@ -125,7 +128,7 @@ const mockFetchPollSummary = vi.mocked(fetchPollSummary);
 const mockGetMergeableState = vi.mocked(getMergeableState);
 const mockTriageFailingChecks = vi.mocked(triageFailingChecks);
 const mockFetchStartupFailureChecks = vi.mocked(fetchStartupFailureChecks);
-const mockFetchCheckRunAnnotations = vi.mocked(fetchCheckRunAnnotations);
+const mockFetchCheckRunAnnotationsBatch = vi.mocked(fetchCheckRunAnnotationsBatch);
 const mockAutoResolveOutdated = vi.mocked(autoResolveOutdated);
 const mockLoadSeenMap = vi.mocked(loadSeenMap);
 const mockMarkSeen = vi.mocked(markSeen);
@@ -192,7 +195,7 @@ export interface Fixture {
   triagedChecks?: unknown[];
   /** Return value of fetchStartupFailureChecks(). */
   startupFailureChecks?: unknown[];
-  /** Return values of fetchCheckRunAnnotations(), keyed by CheckRun node ID. */
+  /** Return values of fetchCheckRunAnnotationsBatch(), keyed by CheckRun node ID. */
   checkAnnotationsByCheckId?: Record<string, unknown[]>;
   /** Return value of loadSeenMap() — keys are item IDs. */
   seenMap?: Record<string, { seenAt: number; bodyHash: string }>;
@@ -418,8 +421,11 @@ export function applyFixture(fixture: Fixture): void {
   mockFetchStartupFailureChecks.mockResolvedValue(
     stampInitialRunAttempt(fixture.startupFailureChecks ?? []),
   );
-  mockFetchCheckRunAnnotations.mockImplementation((checkRunId) =>
-    Promise.resolve(fixture.checkAnnotationsByCheckId?.[checkRunId] ?? []),
+  mockFetchCheckRunAnnotationsBatch.mockImplementation((ids) =>
+    Promise.resolve({
+      annotations: new Map(ids.map((id) => [id, fixture.checkAnnotationsByCheckId?.[id] ?? []])),
+      failures: [],
+    }),
   );
 
   if (fixture.seenMap) {

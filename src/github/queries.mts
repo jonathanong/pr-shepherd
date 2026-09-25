@@ -51,6 +51,13 @@ export const REVIEW_THREAD_COMMENTS_QUERY = gql("review-thread-comments.gql");
 /** Fetch inline annotations for a single CheckRun by node ID. */
 export const CHECK_RUN_ANNOTATIONS_QUERY = gql("check-run-annotations.gql");
 
+/**
+ * First annotation page for many CheckRuns. Chunked at 20 ids so the nested
+ * `annotations` connections stay a 1-point query. Further pages use
+ * `CHECK_RUN_ANNOTATIONS_QUERY`.
+ */
+export const CHECK_RUN_ANNOTATIONS_BATCH_QUERY = gql("check-run-annotations-batch.gql");
+
 /** Fetches additional status contexts for a merge queue synthetic commit. */
 export const COMMIT_CHECK_CONTEXTS_QUERY = gql("commit-check-contexts.gql");
 

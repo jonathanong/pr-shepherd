@@ -35,24 +35,28 @@ describe("runPoll — GraphQL Retry-After", () => {
     expect(result.action).toBe("cancel");
   });
 
-  it("throws after a second until-terminal rate-limit failure", async () => {
+  it("backs off when a second until-terminal Retry-After has no later resetAt", async () => {
     const err = new GitHubRequestError("You have exceeded a secondary rate limit", {
       status: 403,
       retryAfterSeconds: 5,
     });
-    mockRunIterate.mockRejectedValue(err);
+    mockRunIterate
+      .mockRejectedValueOnce(err)
+      .mockRejectedValueOnce(err)
+      .mockResolvedValueOnce(makeCancelResult());
 
     const pollPromise = runPoll({
-      prNumber: 42,
+      prNumber: 7,
+      targetRepository: { owner: "acme", name: "widgets" },
       format: "text",
-      intervalSeconds: 30,
+      intervalSeconds: 120,
       timeoutSeconds: 300,
       untilTerminal: true,
     });
-    const assertion = expect(pollPromise).rejects.toMatchObject({ status: 403 });
     await vi.advanceTimersByTimeAsync(5_000);
-    await assertion;
-    expect(mockRunIterate).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(15_000);
+    await expect(pollPromise).resolves.toMatchObject({ action: "cancel" });
+    expect(mockRunIterate).toHaveBeenCalledTimes(3);
   });
 
   it("does not retry on a bounded poll", async () => {

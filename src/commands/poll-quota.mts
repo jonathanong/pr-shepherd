@@ -2,6 +2,7 @@ import type { GraphqlQuotaWarningBand } from "../config/load.mts";
 import { summarizeApiTelemetry } from "../github/api-telemetry.mts";
 import { GitHubRequestError } from "../github/errors.mts";
 import { isRateLimitMessage } from "../comments/rate-limit.mts";
+import { exhaustedPrimaryLimitDelayMs } from "./poll-rate-limit-delay.mts";
 import { selectQuotaWarning } from "./quota-selection.mts";
 import type { ApiResourceUsage, GraphqlApiUsage, PollSummaryResult } from "../types.mts";
 
@@ -80,7 +81,7 @@ export function pollRateLimitRetryAfterMs(err: unknown): RateLimitRetry | null {
     return { ...details, ms: Math.max(err.retryAfterSeconds, 0) * 1000 };
   }
   if (exhausted && rateLimit !== undefined) {
-    return { ...details, ms: Math.max(rateLimit.resetAt * 1000 - Date.now(), 0) };
+    return { ...details, ms: exhaustedPrimaryLimitDelayMs(rateLimit.resetAt, Date.now()) };
   }
   return { ...details, ms: GRAPHQL_RETRY_AFTER_DEFAULT_MS };
 }
@@ -95,25 +96,41 @@ function retryResource(err: GitHubRequestError): string {
   return secondary ? "secondary" : "graphql";
 }
 
+function rateLimitResourceLabel(resource: string): string {
+  if (resource === "graphql") return "GitHub GraphQL rate limit";
+  if (resource === "secondary") return "GitHub secondary rate limit";
+  return `GitHub REST ${resource} rate limit`;
+}
+
+function rateLimitCounts(retry: RateLimitRetry): string {
+  return retry.remaining !== undefined && retry.limit !== undefined
+    ? ` (${retry.remaining}/${retry.limit})`
+    : "";
+}
+
+function rateLimitClock(retry: RateLimitRetry): string {
+  const resetAt = retry.resetAt ?? Math.ceil((Date.now() + retry.ms) / 1000);
+  return `${new Date(resetAt * 1000).toISOString().slice(11, 19)}Z`;
+}
+
 /** Stderr line naming the exhausted budget and when the sleep ends. */
 export function formatRateLimitRetryLine(
   tickLabel: string,
   elapsedSeconds: number,
   retry: RateLimitRetry,
 ): string {
-  const resetAt = retry.resetAt ?? Math.ceil((Date.now() + retry.ms) / 1000);
-  const clock = `${new Date(resetAt * 1000).toISOString().slice(11, 19)}Z`;
-  const label =
-    retry.resource === "graphql"
-      ? "GitHub GraphQL rate limit"
-      : retry.resource === "secondary"
-        ? "GitHub secondary rate limit"
-        : `GitHub REST ${retry.resource} rate limit`;
-  const counts =
-    retry.remaining !== undefined && retry.limit !== undefined
-      ? ` (${retry.remaining}/${retry.limit})`
-      : "";
-  return `[${tickLabel} / +${elapsedSeconds}s] ${label}${counts} — retrying at ${clock} (in ${Math.round(retry.ms / 1000)}s)\n`;
+  const clock = rateLimitClock(retry);
+  return `[${tickLabel} / +${elapsedSeconds}s] ${rateLimitResourceLabel(retry.resource)}${rateLimitCounts(retry)} — retrying at ${clock} (in ${Math.round(retry.ms / 1000)}s)\n`;
+}
+
+/** One stderr line before `--until-terminal` gives up and exits 75. */
+export function formatRateLimitGiveUpLine(
+  tickLabel: string,
+  elapsedSeconds: number,
+  retry: RateLimitRetry,
+): string {
+  const clock = rateLimitClock(retry);
+  return `[${tickLabel} / +${elapsedSeconds}s] ${rateLimitResourceLabel(retry.resource)}${rateLimitCounts(retry)} still exhausted at ${clock} after 5 attempts with no progress\n`;
 }
 
 export async function aggregateQuotaWarning(

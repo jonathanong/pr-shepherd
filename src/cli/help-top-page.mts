@@ -48,7 +48,7 @@ Iterate flags:
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
 
 Polling flags:
-  --interval <duration>          Delay between WAIT ticks. Bare number = seconds. Default: poll.intervalSeconds (built-in 60s).
+  --interval <duration>          Delay between WAIT ticks. Bare number = seconds. Default: poll.intervalSeconds (built-in 60s). Stack and multi-PR polls multiply that by poll.stackIntervalFactor (built-in 2) unless this flag is set.
   --timeout <duration>           Poll wall-clock cap for WAIT ticks. Bare number = seconds. Default: poll.timeoutSeconds (built-in 4.5m).
   --debounce <duration>          Settle window after first FIX_CODE or stack SHEPHERD before returning. Bare number = seconds. Default: poll.debounceSeconds (built-in 60s). 0 disables.
   --quiet-status                 Print only changed WAIT snapshots. Overrides poll.quietStatus.
