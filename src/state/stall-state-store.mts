@@ -10,9 +10,7 @@ interface StallState {
 }
 
 /** A missing or unreadable-as-JSON file is `state: null`. Any other I/O or key error is `ok: false`. */
-type StallReadResult =
-  | { ok: true; state: StallState | null }
-  | { ok: false; reason: string };
+type StallReadResult = { ok: true; state: StallState | null } | { ok: false; reason: string };
 
 type StallWriteResult = { ok: true } | { ok: false; reason: string };
 
