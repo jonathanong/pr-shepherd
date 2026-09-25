@@ -355,7 +355,7 @@ describe("fetchPrBatch — merge queue check pagination", () => {
     expect(mockGraphql).toHaveBeenCalledTimes(2);
   });
 
-  it("does not hydrate a removal whose parents no longer contain HEAD", async () => {
+  it("does not hydrate a merge-commit removal whose parents no longer contain HEAD", async () => {
     mockGraphqlWithRateLimit.mockResolvedValue(
       makeResponse(
         makeRawPr({
@@ -366,7 +366,7 @@ describe("fetchPrBatch — merge queue check pagination", () => {
                 createdAt: "2026-08-27T13:00:00Z",
                 beforeCommit: {
                   oid: "removed-queue",
-                  parents: { nodes: [{ oid: "old-head" }] },
+                  parents: { nodes: [{ oid: "base-sha" }, { oid: "old-head" }] },
                 },
               },
             ],
@@ -377,5 +377,45 @@ describe("fetchPrBatch — merge queue check pagination", () => {
     const { data } = await fetchPrBatch(42, REPO);
     expect(data.removedMergeQueueChecks).toBeUndefined();
     expect(mockGraphql).not.toHaveBeenCalled();
+  });
+
+  it("hydrates a single-parent squash removal when the head commit predates it", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValue(
+      makeResponse(
+        makeRawPr({
+          mergeQueueRemovals: {
+            nodes: [
+              {
+                reason: "CI_FAILURE",
+                createdAt: "2026-08-27T13:00:00Z",
+                beforeCommit: {
+                  oid: "removed-queue",
+                  parents: { nodes: [{ oid: "base-sha" }] },
+                },
+              },
+            ],
+          },
+        }),
+      ),
+    );
+    mockGraphql.mockResolvedValue({
+      data: {
+        repository: {
+          object: {
+            __typename: "Commit",
+            oid: "removed-queue",
+            statusCheckRollup: {
+              contexts: {
+                pageInfo: { hasNextPage: false, endCursor: null },
+                nodes: [check("removed-ci", "FAILURE")],
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.removedMergeQueueChecks?.map((item) => item.name)).toEqual(["removed-ci"]);
   });
 });
