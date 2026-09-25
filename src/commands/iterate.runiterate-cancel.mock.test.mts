@@ -2,25 +2,17 @@
 import { beforeEach, describe, it, expect, vi } from "vitest";
 
 const {
-  mockClearReadyReceipt,
   mockFetchPollSummary,
   mockFetchRawSummaryPr,
   mockFingerprintRawSummaryPr,
-  mockIsReadyReceiptCurrent,
-  mockReadReadyReceipt,
   mockReadStackTopology,
   mockSummarizePollSummaryPr,
-  mockWriteReadyReceipt,
 } = vi.hoisted(() => ({
-  mockClearReadyReceipt: vi.fn(),
   mockFetchPollSummary: vi.fn(),
   mockFetchRawSummaryPr: vi.fn(),
   mockFingerprintRawSummaryPr: vi.fn(),
-  mockIsReadyReceiptCurrent: vi.fn(),
-  mockReadReadyReceipt: vi.fn(),
   mockReadStackTopology: vi.fn(),
   mockSummarizePollSummaryPr: vi.fn(),
-  mockWriteReadyReceipt: vi.fn(),
 }));
 
 vi.mock("../../src/github/poll-summary.mts", async (importOriginal) => ({
@@ -38,14 +30,12 @@ vi.mock("../../src/github/poll-summary-fingerprint.mts", () => ({
 vi.mock("../../src/github/poll-summary-projector.mts", () => ({
   summarizePollSummaryPr: mockSummarizePollSummaryPr,
 }));
-vi.mock("../../src/state/ready-receipts.mts", () => ({
-  clearReadyReceipt: mockClearReadyReceipt,
-  isReadyReceiptCurrent: mockIsReadyReceiptCurrent,
-  readReadyReceipt: mockReadReadyReceipt,
-  writeReadyReceipt: mockWriteReadyReceipt,
-}));
 import {
   registerIterateHooks,
+  mockClearReadyReceipt,
+  mockIsReadyReceiptCurrent,
+  mockReadReadyReceipt,
+  mockWriteReadyReceipt,
   makeOpts,
   makeReport,
   mockRunCheck,
@@ -176,7 +166,7 @@ describe("runIterate — cancel", () => {
     const result = await runIterate(makeOpts());
 
     expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
-      retainElapsed: false,
+      headSha: "unknown",
       alreadyElapsed: false,
     });
     expect(result.action).toBe("fix_code");
@@ -198,7 +188,7 @@ describe("runIterate — cancel", () => {
     const result = await runIterate(makeOpts());
 
     expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
-      retainElapsed: false,
+      headSha: "unknown",
       alreadyElapsed: false,
     });
     expect(result.action).toBe("fix_code");
@@ -225,7 +215,7 @@ describe("runIterate — cancel", () => {
     expect(result.action).toBe("wait");
     expect(result.shouldCancel).toBe(false);
     expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
-      retainElapsed: false,
+      headSha: "unknown",
       alreadyElapsed: false,
     });
   });
@@ -265,7 +255,7 @@ describe("runIterate — cancel", () => {
       }),
     );
     expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, true, 600, "owner", "repo", {
-      retainElapsed: true,
+      headSha: "head-1",
       alreadyElapsed: false,
     });
     expect(mockClearReadyDelay).toHaveBeenCalledWith(42, "owner", "repo");
@@ -356,8 +346,10 @@ describe("runIterate — cancel", () => {
     );
   });
 
-  it("keeps a non-stack cancel without receipt I/O", async () => {
-    mockRunCheck.mockResolvedValue(makeReport({ status: "READY", headSha: "head-1" }));
+  it("records a one-PR receipt and consumes the elapsed marker on cancel", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({ status: "READY", headSha: "head-1", baseRefOid: "base-1" }),
+    );
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: true,
       shouldCancel: true,
@@ -365,12 +357,27 @@ describe("runIterate — cancel", () => {
     });
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("cancel");
-    expect(mockReadReadyReceipt).not.toHaveBeenCalled();
-    expect(mockClearReadyReceipt).not.toHaveBeenCalled();
-    expect(mockFetchRawSummaryPr).not.toHaveBeenCalled();
-    expect(mockWriteReadyReceipt).not.toHaveBeenCalled();
-    expect(mockClearReadyDelay).not.toHaveBeenCalled();
+    expect(result).toMatchObject({ action: "cancel", reason: "ready-delay-elapsed" });
+    expect(mockWriteReadyReceipt).toHaveBeenCalledWith(
+      expect.objectContaining({ pr: 42, headRefOid: "head-1", baseRefOid: "base-1" }),
+    );
+    expect(mockClearReadyDelay).toHaveBeenCalledWith(42, "owner", "repo");
+  });
+
+  it("still cancels a one-PR poll when its receipt cannot be persisted", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({ status: "READY", headSha: "head-1", baseRefOid: "base-1" }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+    mockWriteReadyReceipt.mockRejectedValue(new Error("disk full"));
+    const result = await runIterate(makeOpts());
+
+    expect(result).toMatchObject({ action: "cancel", reason: "ready-delay-elapsed" });
+    expect(mockClearReadyDelay).toHaveBeenCalledWith(42, "owner", "repo");
   });
 
   it("fails closed to WAIT when a stack receipt cannot be persisted", async () => {
@@ -712,7 +719,7 @@ describe("runIterate — cancel", () => {
     const result = await runIterate(makeOpts());
 
     expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
-      retainElapsed: true,
+      headSha: "head-1",
       alreadyElapsed: false,
     });
     expect(result.action).toBe("fix_code");

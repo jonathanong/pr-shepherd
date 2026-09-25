@@ -133,4 +133,35 @@ describe("fingerprintRawSummaryPr", () => {
       fingerprintRawSummaryPr(withAnnotationCount(0)),
     );
   });
+
+  it("ignores body edits on hidden comments, reviews, and thread comments only", () => {
+    const withBodies = (body: string, isMinimized: boolean): RawSummaryPr => {
+      const node = { id: "node-1", body, isMinimized, author: { login: "summary-bot" } };
+      const connection = { totalCount: 1, pageInfo: { hasPreviousPage: false }, nodes: [node] };
+      return raw({
+        comments: connection,
+        reviews: { ...connection, nodes: [{ ...node, state: "COMMENTED" }] },
+        reviewThreads: {
+          ...connection,
+          nodes: [
+            {
+              id: "thread-1",
+              isResolved: true,
+              isOutdated: false,
+              path: "src/index.ts",
+              rootComments: { nodes: [node] },
+              comments: connection,
+            },
+          ],
+        },
+      });
+    };
+
+    expect(fingerprintRawSummaryPr(withBodies("edited", true))).toBe(
+      fingerprintRawSummaryPr(withBodies("original", true)),
+    );
+    expect(fingerprintRawSummaryPr(withBodies("edited", false))).not.toBe(
+      fingerprintRawSummaryPr(withBodies("original", false)),
+    );
+  });
 });

@@ -39,6 +39,12 @@ vi.mock("../../src/state/iterate-stall.mts", () => ({
   writeStallState: vi.fn().mockResolvedValue({ ok: true }),
   clearStallState: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("../../src/state/ready-receipts.mts", () => ({
+  clearReadyReceipt: vi.fn(),
+  isReadyReceiptCurrent: vi.fn(),
+  readReadyReceipt: vi.fn(),
+  writeReadyReceipt: vi.fn(),
+}));
 vi.mock("../../src/comments/resolve.mts", async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   // Default: echo the requested IDs back as successfully minimized, so tests
@@ -64,6 +70,12 @@ import {
   writeStallState,
 } from "../../src/state/iterate-stall.mts";
 import {
+  clearReadyReceipt,
+  isReadyReceiptCurrent,
+  readReadyReceipt,
+  writeReadyReceipt,
+} from "../../src/state/ready-receipts.mts";
+import {
   buildEscalateHumanMessage,
   buildEscalateSuggestion,
   checkEscalateTriggers,
@@ -81,6 +93,10 @@ const mockWriteFixAttempts = vi.mocked(writeFixAttempts);
 const mockReadStallState = vi.mocked(readStallState);
 const mockWriteStallState = vi.mocked(writeStallState);
 const mockClearStallState = vi.mocked(clearStallState);
+const mockClearReadyReceipt = vi.mocked(clearReadyReceipt);
+const mockIsReadyReceiptCurrent = vi.mocked(isReadyReceiptCurrent);
+const mockReadReadyReceipt = vi.mocked(readReadyReceipt);
+const mockWriteReadyReceipt = vi.mocked(writeReadyReceipt);
 const NOW = 1_700_000_000;
 const READY_STATE_DEFAULT = { isReady: true, shouldCancel: false, remainingSeconds: 300 };
 
@@ -271,6 +287,10 @@ function registerIterateHooks(config = defaultConfig): void {
     mockReadStallState.mockResolvedValue({ ok: true, state: null });
     mockWriteStallState.mockResolvedValue({ ok: true });
     mockClearStallState.mockResolvedValue(undefined);
+    mockClearReadyReceipt.mockResolvedValue(undefined);
+    mockIsReadyReceiptCurrent.mockReturnValue(true);
+    mockReadReadyReceipt.mockResolvedValue(null);
+    mockWriteReadyReceipt.mockResolvedValue(undefined);
   });
   afterEach(() => vi.useRealTimers());
 }
@@ -288,16 +308,20 @@ export {
   makeReview,
   mockAutoMinimizeComments,
   mockClearReadyDelay,
+  mockClearReadyReceipt,
   mockExecFile,
   mockFetch,
   mockGetCurrentPrNumber,
   mockClearStallState,
+  mockIsReadyReceiptCurrent,
   mockLoadConfig,
   mockReadFixAttempts,
+  mockReadReadyReceipt,
   mockReadStallState,
   mockRunCheck,
   mockUpdateReadyDelay,
   mockWriteFixAttempts,
+  mockWriteReadyReceipt,
   mockWriteStallState,
   registerIterateHooks,
 };

@@ -17,10 +17,6 @@ vi.mock("../../src/github/poll-summary-fingerprint.mts", () => ({
 vi.mock("../../src/github/poll-summary-projector.mts", () => ({
   summarizePollSummaryPr: mockSummarizePollSummaryPr,
 }));
-vi.mock("../../src/state/ready-receipts.mts", async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  writeReadyReceipt: vi.fn().mockResolvedValue(undefined),
-}));
 import {
   defaultConfig,
   makeOpts,

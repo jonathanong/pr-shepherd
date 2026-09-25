@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { join } from "node:path";
-import { mkdtemp, rm } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { clearReadyDelay, updateReadyDelay } from "./ready-delay.mts";
 
@@ -8,6 +8,7 @@ const OWNER = "test-owner";
 const REPO = "test-repo";
 const PR = 42;
 const DELAY = 600; // 10 minutes
+const HEAD = { headSha: "head-a" };
 
 let stateDir: string;
 
@@ -21,117 +22,113 @@ afterEach(async () => {
   await rm(stateDir, { recursive: true, force: true });
 });
 
+function markerPath(): string {
+  return join(stateDir, OWNER, REPO, String(PR), "ready-since.txt");
+}
+
+async function writeMarker(content: string): Promise<void> {
+  await mkdir(join(stateDir, OWNER, REPO, String(PR)), { recursive: true });
+  await writeFile(markerPath(), content, "utf8");
+}
+
+function secondsAgo(seconds: number): number {
+  return Math.floor(Date.now() / 1000) - seconds;
+}
+
 describe("updateReadyDelay", () => {
   it("returns isReady:false and resets remainingSeconds when not ready", async () => {
-    const state = await updateReadyDelay(PR, false, DELAY, OWNER, REPO);
+    const state = await updateReadyDelay(PR, false, DELAY, OWNER, REPO, HEAD);
     expect(state.isReady).toBe(false);
     expect(state.shouldCancel).toBe(false);
     expect(state.remainingSeconds).toBe(DELAY);
   });
 
-  it("starts a fresh countdown on first READY call", async () => {
-    const state = await updateReadyDelay(PR, true, DELAY, OWNER, REPO);
+  it("starts a fresh countdown bound to the head on first READY call", async () => {
+    const state = await updateReadyDelay(PR, true, DELAY, OWNER, REPO, HEAD);
     expect(state.isReady).toBe(true);
     expect(state.shouldCancel).toBe(false);
     expect(state.remainingSeconds).toBeGreaterThan(0);
     expect(state.remainingSeconds).toBeLessThanOrEqual(DELAY);
+    expect((await readFile(markerPath(), "utf8")).split(" ")[1]).toBe("head-a");
   });
 
-  it("fires shouldCancel when delay has elapsed", async () => {
-    // Write a marker from the past (delay + 5 seconds ago)
-    const past = Math.floor(Date.now() / 1000) - DELAY - 5;
-    const markerPath = join(stateDir, OWNER, REPO, String(PR), "ready-since.txt");
-    const { mkdir, writeFile } = await import("node:fs/promises");
-    await mkdir(join(stateDir, OWNER, REPO, String(PR)), { recursive: true });
-    await writeFile(markerPath, String(past), "utf8");
+  it("fires shouldCancel when delay has elapsed on the same head", async () => {
+    await writeMarker(`${secondsAgo(DELAY + 5)} head-a`);
 
-    const state = await updateReadyDelay(PR, true, DELAY, OWNER, REPO);
+    const state = await updateReadyDelay(PR, true, DELAY, OWNER, REPO, HEAD);
     expect(state.isReady).toBe(true);
     expect(state.shouldCancel).toBe(true);
     expect(state.remainingSeconds).toBe(0);
   });
 
-  it("deletes the marker file after shouldCancel fires and resets the timer on the next call", async () => {
-    // Write a past marker so the timer has already expired
-    const past = Math.floor(Date.now() / 1000) - DELAY - 5;
-    const markerPath = join(stateDir, OWNER, REPO, String(PR), "ready-since.txt");
-    const { mkdir, writeFile, access } = await import("node:fs/promises");
-    await mkdir(join(stateDir, OWNER, REPO, String(PR)), { recursive: true });
-    await writeFile(markerPath, String(past), "utf8");
+  it("keeps an elapsed marker until clearReadyDelay consumes it", async () => {
+    await writeMarker(`${secondsAgo(DELAY + 5)} head-a`);
 
-    // First call fires shouldCancel and must delete the marker
-    const first = await updateReadyDelay(PR, true, DELAY, OWNER, REPO);
-    expect(first.shouldCancel).toBe(true);
-
-    // Marker file must be gone
-    await expect(access(markerPath)).rejects.toThrow();
-
-    // Second call starts a fresh timer — shouldCancel must be false
-    const second = await updateReadyDelay(PR, true, DELAY, OWNER, REPO);
-    expect(second.shouldCancel).toBe(false);
-    expect(second.remainingSeconds).toBeGreaterThan(0);
-  });
-
-  it("keeps a retained elapsed marker until clearReadyDelay consumes it", async () => {
-    const past = Math.floor(Date.now() / 1000) - DELAY - 5;
-    const { mkdir, writeFile } = await import("node:fs/promises");
-    await mkdir(join(stateDir, OWNER, REPO, String(PR)), { recursive: true });
-    await writeFile(join(stateDir, OWNER, REPO, String(PR), "ready-since.txt"), String(past));
-
-    const retain = { retainElapsed: true };
-    expect(await updateReadyDelay(PR, true, DELAY, OWNER, REPO, retain)).toMatchObject({
+    expect(await updateReadyDelay(PR, true, DELAY, OWNER, REPO, HEAD)).toMatchObject({
       shouldCancel: true,
     });
-    expect(await updateReadyDelay(PR, true, DELAY, OWNER, REPO, retain)).toMatchObject({
+    expect(await updateReadyDelay(PR, true, DELAY, OWNER, REPO, HEAD)).toMatchObject({
       shouldCancel: true,
     });
 
     await clearReadyDelay(PR, OWNER, REPO);
+    await expect(access(markerPath())).rejects.toThrow();
 
-    const restarted = await updateReadyDelay(PR, true, DELAY, OWNER, REPO, retain);
+    const restarted = await updateReadyDelay(PR, true, DELAY, OWNER, REPO, HEAD);
     expect(restarted.shouldCancel).toBe(false);
     expect(restarted.remainingSeconds).toBe(DELAY);
   });
 
+  it("restarts the countdown when the head moved since the marker was written", async () => {
+    await writeMarker(`${secondsAgo(DELAY + 5)} head-a`);
+
+    const state = await updateReadyDelay(PR, true, DELAY, OWNER, REPO, { headSha: "head-b" });
+    expect(state).toEqual({ isReady: true, shouldCancel: false, remainingSeconds: DELAY });
+    expect((await readFile(markerPath(), "utf8")).split(" ")[1]).toBe("head-b");
+  });
+
+  it("restarts the countdown for a marker that names no head", async () => {
+    await writeMarker(String(secondsAgo(DELAY + 5)));
+
+    const state = await updateReadyDelay(PR, true, DELAY, OWNER, REPO, HEAD);
+    expect(state).toEqual({ isReady: true, shouldCancel: false, remainingSeconds: DELAY });
+  });
+
   it("cancels without starting a timer when durable evidence proves the delay elapsed", async () => {
-    const { access } = await import("node:fs/promises");
-    const markerPath = join(stateDir, OWNER, REPO, String(PR), "ready-since.txt");
-    const elapsed = { retainElapsed: true, alreadyElapsed: true };
+    const elapsed = { ...HEAD, alreadyElapsed: true };
 
     expect(await updateReadyDelay(PR, true, DELAY, OWNER, REPO, elapsed)).toEqual({
       isReady: true,
       shouldCancel: true,
       remainingSeconds: 0,
     });
-    await expect(access(markerPath)).rejects.toThrow();
+    await expect(access(markerPath())).rejects.toThrow();
   });
 
-  it("drops an unretained marker when durable evidence proves the delay elapsed", async () => {
-    const { access } = await import("node:fs/promises");
-    const markerPath = join(stateDir, OWNER, REPO, String(PR), "ready-since.txt");
-    await updateReadyDelay(PR, true, DELAY, OWNER, REPO);
-    await access(markerPath);
+  it("leaves a running marker for the caller to consume when evidence proves the delay elapsed", async () => {
+    await updateReadyDelay(PR, true, DELAY, OWNER, REPO, HEAD);
 
-    const state = await updateReadyDelay(PR, true, DELAY, OWNER, REPO, { alreadyElapsed: true });
+    const state = await updateReadyDelay(PR, true, DELAY, OWNER, REPO, {
+      ...HEAD,
+      alreadyElapsed: true,
+    });
     expect(state.shouldCancel).toBe(true);
-    await expect(access(markerPath)).rejects.toThrow();
+    await access(markerPath());
   });
 
   it("ignores elapsed evidence while the PR is not ready", async () => {
-    const state = await updateReadyDelay(PR, false, DELAY, OWNER, REPO, { alreadyElapsed: true });
+    const state = await updateReadyDelay(PR, false, DELAY, OWNER, REPO, {
+      ...HEAD,
+      alreadyElapsed: true,
+    });
     expect(state).toEqual({ isReady: false, shouldCancel: false, remainingSeconds: DELAY });
   });
 
   it("resets the countdown when ready-since.txt contains a future timestamp (clock skew)", async () => {
-    // Write a marker far in the future (simulating clock skew or manual corruption).
-    const future = Math.floor(Date.now() / 1000) + 9999;
-    const markerPath = join(stateDir, OWNER, REPO, String(PR), "ready-since.txt");
-    const { mkdir, writeFile } = await import("node:fs/promises");
-    await mkdir(join(stateDir, OWNER, REPO, String(PR)), { recursive: true });
-    await writeFile(markerPath, String(future), "utf8");
+    // A future timestamp (clock skew or manual corruption) must be reset to "now".
+    await writeMarker(`${Math.floor(Date.now() / 1000) + 9999} head-a`);
 
-    const state = await updateReadyDelay(PR, true, DELAY, OWNER, REPO);
-    // Future timestamp must be reset to "now" — remaining should be ~DELAY.
+    const state = await updateReadyDelay(PR, true, DELAY, OWNER, REPO, HEAD);
     expect(state.isReady).toBe(true);
     expect(state.shouldCancel).toBe(false);
     expect(state.remainingSeconds).toBeGreaterThan(0);
@@ -139,33 +136,27 @@ describe("updateReadyDelay", () => {
   });
 
   it("resets the timer when PR drops out of READY state after shouldCancel", async () => {
-    const past = Math.floor(Date.now() / 1000) - DELAY - 5;
-    const markerPath = join(stateDir, OWNER, REPO, String(PR), "ready-since.txt");
-    const { mkdir, writeFile, access } = await import("node:fs/promises");
-    await mkdir(join(stateDir, OWNER, REPO, String(PR)), { recursive: true });
-    await writeFile(markerPath, String(past), "utf8");
+    await writeMarker(`${secondsAgo(DELAY + 5)} head-a`);
 
     // shouldCancel fires
-    await updateReadyDelay(PR, true, DELAY, OWNER, REPO);
+    await updateReadyDelay(PR, true, DELAY, OWNER, REPO, HEAD);
 
     // PR becomes not-ready (e.g. new review comment) — timer must reset
-    const reset = await updateReadyDelay(PR, false, DELAY, OWNER, REPO);
+    const reset = await updateReadyDelay(PR, false, DELAY, OWNER, REPO, HEAD);
     expect(reset.isReady).toBe(false);
     expect(reset.shouldCancel).toBe(false);
-
-    // Marker file must be gone
-    await expect(access(markerPath)).rejects.toThrow();
+    await expect(access(markerPath())).rejects.toThrow();
   });
 
   it("rejects when owner contains an invalid path segment character", async () => {
     // owner contains '/' which is not in the allowed SAFE_SEGMENT charset.
-    await expect(updateReadyDelay(PR, true, DELAY, "owner/bad", "repo")).rejects.toThrow(
+    await expect(updateReadyDelay(PR, true, DELAY, "owner/bad", "repo", HEAD)).rejects.toThrow(
       "Invalid state key segment",
     );
   });
 
   it("rejects when pr is not a positive integer", async () => {
-    await expect(updateReadyDelay(-1, true, DELAY, OWNER, REPO)).rejects.toThrow(
+    await expect(updateReadyDelay(-1, true, DELAY, OWNER, REPO, HEAD)).rejects.toThrow(
       'Invalid state key segment "pr"',
     );
   });
