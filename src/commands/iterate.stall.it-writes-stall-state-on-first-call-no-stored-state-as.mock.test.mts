@@ -32,4 +32,17 @@ describe("runIterate — stall-timeout guard", () => {
     expect(written.firstSeenAt).toBe(Math.floor(NOW));
     expect(typeof written.fingerprint).toBe("string");
   });
+
+  it("escalates stall-state-unavailable when the new timer cannot be saved", async () => {
+    mockRunCheck.mockResolvedValue(makeReport());
+    mockReadStallState.mockResolvedValue({ ok: true, state: null });
+    mockWriteStallState.mockResolvedValue({ ok: false, reason: "ENOSPC: no space" });
+
+    const result = await runIterate(makeOpts30mStall());
+
+    expect(result.action).toBe("escalate");
+    if (result.action !== "escalate") return;
+    expect(result.escalate.triggers).toEqual(["stall-state-unavailable"]);
+    expect(result.escalate.suggestion).toContain("ENOSPC: no space");
+  });
 });
