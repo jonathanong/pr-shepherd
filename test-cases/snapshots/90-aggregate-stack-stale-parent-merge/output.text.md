@@ -32,8 +32,7 @@
 
 ## Instructions
 
-1. PR #510 is the bottom open layer of stack #514 in `jonathanong/auto-harness` and is ready. Run `GH_REPO=jonathanong/auto-harness gh stack merge 510 --yes --squash` to merge that layer alone, or to enqueue it when the base uses a merge queue. If `gh stack` is an unknown command, run `gh extension install github/gh-stack` first.
+1. PR #511 is the highest open layer of stack #514 in `jonathanong/auto-harness` whose open lower layers are all ready. Run `GH_REPO=jonathanong/auto-harness gh stack merge 511 --yes --squash` to merge PR #511 and every unmerged layer below it. When the base uses a merge queue, the same command queues that prefix together and GitHub evaluates each layer from the bottom; a failure ejects that layer and the layers above it. If `gh stack` is an unknown command, run `gh extension install github/gh-stack` first.
 2. Start or delegate the relevant one-PR sessions below; review and CI work on separate layers can proceed concurrently.
 3. Run `pr-shepherd https://github.com/jonathanong/auto-harness/pull/518 --until-terminal --merge` for PR #518.
-4. Keep upper draft PRs in draft until every lower layer has completed Shepherd READY.
-5. After the merge attempt, rerun this same `--stack --merge` selector; GitHub retargets the next layer onto `main`. Shepherd any layer that GitHub rejects or ejects.
+4. After the merge attempt, rerun this same `--stack --merge` selector; GitHub retargets the next layer onto `main`. Shepherd any layer that GitHub rejects or ejects.

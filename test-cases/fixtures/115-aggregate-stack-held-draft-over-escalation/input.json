@@ -1,5 +1,5 @@
 {
-  "description": "A disabled draft held above a layer that needs a human has no agent work of its own, so the selector stops for the lower handoff instead of rerunning the upper probe.",
+  "description": "A clean upper draft is still the agent's mark-ready step when a lower layer needs a human. The selector lists that step and then the handoff.",
   "mode": "aggregate",
   "args": [
     "--stack",
@@ -8,8 +8,8 @@
     "--debounce",
     "0s"
   ],
-  "expectedExitCode": 13,
-  "expectedNextAction": "escalate",
+  "expectedExitCode": 16,
+  "expectedNextAction": "shepherd",
   "expectedReason": "actionable",
   "aggregateSummary": {
     "selection": {

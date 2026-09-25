@@ -147,22 +147,24 @@ needed, every selected PR is complete, the bounded timeout expires, or `--until-
 configured GraphQL quota-warning band. Explicit PR sets give each actionable row an exact single-PR
 `pollCommand`, so independent rows can proceed before the next aggregate poll.
 
-Native-stack rows are ordered bottom-to-top. `--stack` never performs a mutation itself; only
-`--stack --merge` can emit a bottom-layer merge command for the agent. An unready layer (draft, missing a READY
-receipt, conflicting, failing, or stale) returns stack-level `SHEPHERD` with one-PR Shepherd instructions for
-the affected layers. A draft or other unready lower layer marks every higher open layer with
-`blockedByPr`; review and CI sessions on independent layers may proceed concurrently, but an upper
-draft cannot transition to ready until every lower layer has its READY receipt. With automatic
-mark-ready disabled, the instructions ask the agent to mark a clean, unblocked draft layer ready. A
-queued stack, or one whose remaining layers can only wait, returns `WAIT`; an idle `WAIT` that stays unchanged past the stall timeout returns `ESCALATE` with `stall-timeout`. A terminal READY or fully merged stack returns `CANCEL`. Closed or unverified
+Native-stack rows are ordered bottom-to-top. `--stack` never performs a mutation itself. Every
+layer that still has work gets its own one-PR session on the same tick, including a clean draft
+whose session marks it ready. Layers do not wait for a lower layer's READY receipt, so their
+ready-delays overlap. With automatic mark-ready disabled, the instructions ask the agent to mark
+a clean draft ready after its probe. A queued stack, or one whose remaining layers can only wait,
+returns `WAIT`; an idle `WAIT` that stays unchanged past the stall timeout returns `ESCALATE` with
+`stall-timeout`. A terminal READY or fully merged stack returns `CANCEL`. Closed or unverified
 topology returns `ESCALATE` for human direction after any other shepherdable PRs are handled;
 until then, `SHEPHERD` remains the immediate action and lists the human blockers too.
 
-With `--stack --merge`, a READY bottom open layer that GitHub has retargeted onto the stack base
-returns `MERGE` with `gh stack merge <PR number> --yes --squash`, which merges or enqueues that layer
-alone; unready upper layers keep their one-PR sessions alongside it. After each merge, GitHub
-retargets the next layer, so the rerun drains the stack layer by layer until it returns `CANCEL`. API and MCP aggregate calls perform one summary tick and leave recurrence to the
-caller.
+With `--stack --merge`, the highest open layer whose open lower layers all have current READY
+receipts, and whose bottom open layer GitHub has retargeted onto the stack base, returns `MERGE`
+with `gh stack merge <that PR number> --yes --squash`. That lands the named layer and every
+unmerged layer below it. When the base uses a merge queue, the same command queues the prefix
+together and GitHub evaluates each layer from the bottom; a failure ejects that layer and those
+above it. Layers above the prefix keep their one-PR sessions. After the merge, GitHub retargets
+the next layer, so the rerun continues until the stack returns `CANCEL`. API and MCP aggregate
+calls perform one summary tick and leave recurrence to the caller.
 
 Polling defaults can be set under `poll` in `.pr-shepherdrc.yml`: `intervalSeconds`, `timeoutSeconds`, `debounceSeconds`, and `quietStatus`. Explicit flags override configuration, including `--no-quiet-status` when a shared config enables quiet output. Quiet status remains off by default.
 

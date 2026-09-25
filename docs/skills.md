@@ -38,8 +38,8 @@ User                    Active Goal             pr-shepherd
 The skill treats a clear request to merge, land, or enqueue a selected PR or native stack as
 `--merge` intent even without the literal flag. Creating or opening a PR alone leaves merge mode
 off. For a native stack, an anchor PR selects `--stack PR`, so a merge request reconciles one-PR
-READY receipts and merges the stack one bottom layer at a time. Review and CI sessions can run concurrently;
-an upper draft cannot become ready until its lower layers have receipts. A queued stack remains
+READY receipts and merges the highest ready prefix with `gh stack merge`. Review and CI sessions
+can run concurrently, and a clean draft is marked ready without waiting for lower layers. A queued stack remains
 non-terminal until every layer is merged. Ready-delay (default 10 minutes) is `watch.readyDelayMinutes`. See
 [iterate-flow.md](iterate-flow.md#2-ready-delay) and [configuration.md](configuration.md).
 

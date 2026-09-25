@@ -15,5 +15,4 @@
 
 1. Start or delegate the relevant one-PR sessions below; review and CI work on separate layers can proceed concurrently.
 2. Run `pr-shepherd https://github.com/owner/repo/pull/431 --timeout 1s --debounce 0s --no-auto-mark-ready` for PR #431.
-3. Keep upper draft PRs in draft until every lower layer has completed Shepherd READY.
-4. After the selected one-PR sessions, rerun this same `--stack` selector.
+3. After the selected one-PR sessions, rerun this same `--stack` selector.

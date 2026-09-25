@@ -29,7 +29,7 @@ function text(result: { instructions?: string[] }): string {
 }
 
 describe("stack selector agent work", () => {
-  it("hands a clean, unblocked disabled draft's ready transition to the agent", () => {
+  it("hands a disabled draft's ready transition to the agent while an upper draft keeps its session", () => {
     const result = withPollSummaryInstructions(
       stack([disabledDraft(1, 1), row(2, 2, { isDraft: true })]),
       false,
@@ -39,25 +39,24 @@ describe("stack selector agent work", () => {
     expect(text(result)).toContain(
       "If it returns `[WAIT]` saying PR #1 stays in draft because automatic mark-ready is disabled for this session, run `gh pr ready 1 -R acme/widgets`; otherwise complete its instructions and leave PR #1 in draft this round.",
     );
-    expect(text(result)).not.toContain("pull/2");
+    expect(text(result)).toContain("pull/2 --until-terminal");
     expect(text(result)).not.toContain("human action");
   });
 
   it("waits at the polling cadence when every remaining probe could only report waiting", () => {
-    const result = withPollSummaryInstructions(
-      stack([
-        disabledDraft(1, 1, { reasons: ["pending-or-unknown"], checks: { inProgress: 1 } }),
-        row(2, 2, { isDraft: true }),
-      ]),
-      false,
-    );
+    const waiting = (pr: number, position: number) =>
+      disabledDraft(pr, position, {
+        reasons: ["pending-or-unknown"],
+        checks: { inProgress: 1 },
+      });
+    const result = withPollSummaryInstructions(stack([waiting(1, 1), waiting(2, 2)]), false);
     expect(result).toMatchObject({ nextAction: "wait", reason: "waiting", stackMergeable: false });
     expect(result.instructions).toEqual([
-      "1. No one-PR session can advance the stack yet: PR #1 (pending-or-unknown); PR #2 (stack-blocked by PR #1). Recheck at the configured polling cadence.",
+      "1. No one-PR session can advance the stack yet: PR #1 (pending-or-unknown); PR #2 (pending-or-unknown). Recheck at the configured polling cadence.",
     ]);
   });
 
-  it("escalates a held draft above a layer that needs a human", () => {
+  it("shepherds an upper draft while a lower layer needs a human", () => {
     const result = withPollSummaryInstructions(
       stack([
         row(1, 1, { action: "escalate", reasons: ["fix-thrash"] }),
@@ -65,14 +64,14 @@ describe("stack selector agent work", () => {
       ]),
       false,
     );
-    expect(result.nextAction).toBe("escalate");
+    expect(result.nextAction).toBe("shepherd");
+    expect(text(result)).toContain("pull/2 --until-terminal");
     expect(text(result)).toContain(
-      "PR #1 requires human action (fix-thrash). Stop for that decision.",
+      "PR #1 requires human action (fix-thrash). Keep shepherding other PRs before the handoff.",
     );
-    expect(text(result)).not.toContain("pull/2");
   });
 
-  it("keeps a held draft's review work above a layer that needs a human", () => {
+  it("keeps an upper draft's review session above a layer that needs a human", () => {
     const result = withPollSummaryInstructions(
       stack([
         row(1, 1, { action: "escalate", reasons: ["fix-thrash"] }),
@@ -81,7 +80,8 @@ describe("stack selector agent work", () => {
       false,
     );
     expect(result.nextAction).toBe("shepherd");
-    expect(text(result)).toContain(`Run \`${probe(2)}\` for PR #2 (stack-blocked by PR #1).`);
+    expect(text(result)).toContain("pull/2 --until-terminal` for PR #2.");
+    expect(text(result)).not.toContain("stack-blocked");
     expect(text(result)).toContain("Keep shepherding other PRs before the handoff.");
   });
 
@@ -113,7 +113,7 @@ describe("stack selector agent work", () => {
     expect(result.nextAction).toBe("merge");
     expect(text(result)).toContain("gh stack merge 1 --yes --squash");
     expect(text(result)).toContain("gh pr ready 2 -R acme/widgets");
-    expect(text(result)).not.toContain("pull/3");
+    expect(text(result)).toContain("pull/3 --until-terminal");
   });
 
   it("marks a draft ready before asking about a layer without a command", () => {

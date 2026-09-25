@@ -5,8 +5,8 @@ union below. Native-stack aggregate reconciliation remains read-only: autonomous
 return stack-level `SHEPHERD`, queued stacks return `WAIT`, and terminal READY or merged stacks return `CANCEL`.
 Aggregate `ESCALATE` is reserved for genuine human decisions such as closed or unverified topology,
 after no autonomous one-PR Shepherd session remains.
-Aggregate mode never performs a mutation; a `--stack --merge` result with a READY bottom layer emits
-an agent-run merge command for that layer.
+Aggregate mode never performs a mutation; a `--stack --merge` result emits an agent-run
+`gh stack merge` command for the highest ready prefix.
 
 | Trigger                       | Exact condition                                                                                                                                                                                      |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -90,7 +90,7 @@ There are two paths:
 
 A changed fingerprint resets the timer. Disabling the timeout refreshes state and never escalates. A native stack draft whose `WAIT` names the lower layer holding it ([held native stack drafts](actions.md#wait)) never reaches either path: its stall state is cleared on every such tick, so its timer restarts only after that lower layer releases it.
 
-A `--stack` selection has a third path. When every remaining layer's bounded probe can only report waiting ([the idle `WAIT`](actions.md#shepherd-actions)), no one-PR session runs, so the selector keeps its own timer in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/stack-<number>/stack-stall.json`. It fingerprints the summary status plus each layer's head commit, draft state, READY receipt, reasons, and `blockedByPr`. Every aggregate tick shares that timer, whether it comes from `--until-terminal`, a bounded poll, or MCP. A changed fingerprint resets it, and any other stack plan or a disabled timeout clears it. Once an unchanged idle `WAIT` reaches the threshold, the selector returns `ESCALATE` with a `stall-timeout` instruction that names each waiting layer and why it waits.
+A `--stack` selection has a third path. When every remaining layer's bounded probe can only report waiting ([the idle `WAIT`](actions.md#shepherd-actions)), no one-PR session runs, so the selector keeps its own timer in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/stack-<number>/stack-stall.json`. It fingerprints the summary status plus each layer's head commit, draft state, READY receipt, reasons. Every aggregate tick shares that timer, whether it comes from `--until-terminal`, a bounded poll, or MCP. A changed fingerprint resets it, and any other stack plan or a disabled timeout clears it. Once an unchanged idle `WAIT` reaches the threshold, the selector returns `ESCALATE` with a `stall-timeout` instruction that names each waiting layer and why it waits.
 
 ### `stall-state-unavailable`
 

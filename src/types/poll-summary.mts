@@ -70,8 +70,6 @@ export interface PollSummaryItem {
   pollProbe?: true;
   /** A current one-PR READY-after-delay completion was verified. */
   readyReceipt?: true;
-  /** Lowest unready ancestor that prevents this layer from being stack-mergeable. */
-  blockedByPr?: number;
 }
 
 export type PollSummarySelection =

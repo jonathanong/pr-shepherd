@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { row, stack } from "../../test-helpers/commands/poll-summary-stack.test-support.mts";
 import { withPollSummaryInstructions } from "./poll-summary-instructions.mts";
-import { planBottomDrain } from "./stack-drain.mts";
+import { planPrefixDrain } from "./stack-drain.mts";
 
 const ready = { readyReceipt: true } as const;
 
@@ -10,15 +10,16 @@ function text(result: { instructions?: string[] }): string {
 }
 
 describe("bottom-layer stack drain", () => {
-  it("merges only the bottom PR by number when every layer is ready", () => {
+  it("merges the top PR when every layer is ready", () => {
     const result = withPollSummaryInstructions(
       stack([row(1, 1, ready), row(2, 2, ready), row(3, 3, ready)]),
       true,
     );
     expect(result).toMatchObject({ nextAction: "merge", stackMergeable: true });
     expect(result.instructions?.[0]).toContain(
-      "`GH_REPO=acme/widgets gh stack merge 1 --yes --squash`",
+      "`GH_REPO=acme/widgets gh stack merge 3 --yes --squash`",
     );
+    expect(result.instructions?.[0]).toContain("PR #3 and every unmerged layer below it");
     expect(text(result)).not.toContain("gh stack merge --yes --squash 9");
     expect(text(result)).not.toContain("--help");
     expect(text(result)).toContain("GitHub retargets the next layer onto `main`");
@@ -36,8 +37,8 @@ describe("bottom-layer stack drain", () => {
     expect(result).toMatchObject({ nextAction: "merge", stackMergeable: false });
     expect(result.instructions?.[0]).toContain("gh stack merge 1 --yes --squash");
     expect(text(result)).toContain("pull/2 --until-terminal` for PR #2");
-    expect(text(result)).toContain("pull/3 --timeout 1s --debounce 0s --no-auto-mark-ready");
-    expect(text(result)).toContain("(stack-blocked by PR #2)");
+    expect(text(result)).toContain("pull/3 --until-terminal` for PR #3");
+    expect(text(result)).not.toContain("stack-blocked");
   });
 
   it("merges a ready bottom beneath an escalated upper layer", () => {
@@ -64,7 +65,7 @@ describe("bottom-layer stack drain", () => {
     );
     expect(result.nextAction).toBe("merge");
     expect(result.instructions?.[0]).toContain(
-      "PR #2 is the bottom open layer of stack #9 in `acme/widgets`",
+      "PR #2 is the highest open layer of stack #9 in `acme/widgets`",
     );
     expect(result.instructions?.[0]).toContain("gh stack merge 2 --yes --squash");
   });
@@ -151,9 +152,9 @@ describe("bottom-layer stack drain", () => {
   });
 });
 
-describe("planBottomDrain", () => {
-  it("selects the lowest open layer regardless of row order", () => {
-    const plan = planBottomDrain(
+describe("planPrefixDrain", () => {
+  it("selects the highest ready open layer regardless of row order", () => {
+    const plan = planPrefixDrain(
       stack([
         row(3, 3),
         row(2, 2, { ...ready, baseRefName: "main" }),
@@ -162,6 +163,7 @@ describe("planBottomDrain", () => {
       true,
     );
     expect(plan?.instructions[0]).toContain("gh stack merge 2 --yes --squash");
+    expect(plan?.instructions[0]).toContain("that layer alone");
   });
 
   it.each([
@@ -171,6 +173,6 @@ describe("planBottomDrain", () => {
     ["a queued upper layer", [row(1, 1, ready), row(2, 2, { ...ready, isInMergeQueue: true })]],
     ["no open layer", [row(1, 1, { state: "MERGED" })]],
   ] as const)("returns nothing for %s", (_case, prs) => {
-    expect(planBottomDrain(stack([...prs]), true)).toBeUndefined();
+    expect(planPrefixDrain(stack([...prs]), true)).toBeUndefined();
   });
 });

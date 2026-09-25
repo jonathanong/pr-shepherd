@@ -88,7 +88,71 @@ describe("native-stack reconciliation", () => {
     },
   );
 
-  it("blocks every upper layer above a draft parent and routes all unready sessions", () => {
+  it("lists a session for every clean draft even when none has a receipt", () => {
+    const drafts = [1, 2, 3, 4, 5].map((pr) =>
+      row(pr, pr, {
+        isDraft: true,
+        action: "mark_ready",
+        stack: { number: 9, size: 5, position: pr, baseRefName: "main" },
+      }),
+    );
+    const result = withPollSummaryInstructions(stack(drafts), false);
+    expect(result).toMatchObject({ nextAction: "shepherd", stackMergeable: false });
+    expect(result.prs.map((item) => item.action)).toEqual([
+      "mark_ready",
+      "mark_ready",
+      "mark_ready",
+      "mark_ready",
+      "mark_ready",
+    ]);
+    const body = result.instructions?.join("\n") ?? "";
+    for (const pr of drafts) {
+      expect(body).toContain(`pull/${pr.pr} --until-terminal`);
+    }
+    expect(body).not.toContain("lower-layer-not-ready");
+    expect(body).not.toContain("--timeout 1s");
+    expect(body).not.toContain("gh stack merge");
+  });
+
+  it("merges the ready prefix through layer 3 while layer 4 is still in review", () => {
+    const sized = (pr: number, overrides: Partial<PollSummaryItem> = {}) =>
+      row(pr, pr, {
+        stack: { number: 9, size: 4, position: pr, baseRefName: "main" },
+        ...overrides,
+      });
+    const result = withPollSummaryInstructions(
+      stack([
+        sized(1, { readyReceipt: true }),
+        sized(2, { readyReceipt: true }),
+        sized(3, { readyReceipt: true }),
+        sized(4, { action: "fix_code", reasons: ["review-work"], review: { actionable: 1 } }),
+      ]),
+      true,
+    );
+    expect(result.nextAction).toBe("merge");
+    expect(result.instructions?.[0]).toContain("gh stack merge 3 --yes --squash");
+    expect(result.instructions?.[0]).toContain("PR #3 and every unmerged layer below it");
+    expect(result.instructions?.join("\n")).toContain("pull/4 --until-terminal");
+    expect(result.instructions?.join("\n")).not.toContain("gh stack merge 4");
+  });
+
+  it("keeps a clean upper draft's mark-ready session while a lower layer is failing", () => {
+    const result = withPollSummaryInstructions(
+      stack([
+        row(1, 1, { action: "fix_code", reasons: ["failing-checks"], checks: { failing: 1 } }),
+        row(2, 2, { isDraft: true, action: "mark_ready" }),
+      ]),
+      false,
+    );
+    expect(result.prs.map((item) => item.action)).toEqual(["fix_code", "mark_ready"]);
+    const body = result.instructions?.join("\n") ?? "";
+    expect(body).toContain("pull/1 --until-terminal");
+    expect(body).toContain("pull/2 --until-terminal");
+    expect(body).not.toContain("lower-layer-not-ready");
+    expect(body).not.toContain("--timeout 1s");
+  });
+
+  it("hands every clean draft its own session without holding upper layers", () => {
     const result = withPollSummaryInstructions(
       stack([
         row(1, 1, { isDraft: true, action: "mark_ready" }),
@@ -98,13 +162,13 @@ describe("native-stack reconciliation", () => {
       false,
     );
     expect(result).toMatchObject({ nextAction: "shepherd", stackMergeable: false });
-    expect(result.prs[1]?.blockedByPr).toBe(1);
-    expect(result.prs[2]?.blockedByPr).toBe(1);
+    expect(result.prs.map((item) => item.action)).toEqual(["mark_ready", "cancel", "fix_code"]);
     expect(result.instructions?.join("\n")).toContain("PR #1");
     expect(result.instructions?.join("\n")).toContain("PR #3");
+    expect(result.instructions?.join("\n")).not.toContain("Keep upper draft");
   });
 
-  it("keeps a blocked upper draft session bounded and forbids auto-mark-ready", () => {
+  it("keeps an upper draft session as a full one-PR session", () => {
     const result = withPollSummaryInstructions(
       stack([
         row(1, 1, { isDraft: true, action: "mark_ready" }),
@@ -113,8 +177,8 @@ describe("native-stack reconciliation", () => {
       ]),
       false,
     );
-    expect(result.prs[1]?.pollCommand).toContain("--timeout 1s --debounce 0s --no-auto-mark-ready");
-    expect(result.prs[1]?.pollCommand).not.toContain("--until-terminal");
+    expect(result.prs[1]?.pollCommand).toContain("--until-terminal");
+    expect(result.prs[1]?.pollCommand).not.toContain("--timeout 1s");
   });
 
   it("does not mistake a conflicting lower layer for a ready stack", () => {
@@ -132,7 +196,7 @@ describe("native-stack reconciliation", () => {
       false,
     );
     expect(result.nextAction).toBe("shepherd");
-    expect(result.prs[2]?.blockedByPr).toBe(1);
+    expect(result.prs[1]?.action).not.toBe("wait");
     expect(result.instructions?.join("\n")).not.toContain("gh stack rebase");
   });
 

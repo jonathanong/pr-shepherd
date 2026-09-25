@@ -1,9 +1,8 @@
 import type { PollSummaryItem, StackLayerBlockReason } from "../types.mts";
 
 /**
- * Why a native stack layer does not yet let the layers above it advance, or undefined
- * when it does. The stack selector and an upper draft's parent-first mark-ready check
- * share this predicate so both always name the same blocking layer.
+ * Why a native stack layer is not ready to merge, or undefined when it is.
+ * A draft is marked ready by its own session; this predicate does not gate that.
  */
 export function stackLayerBlockReason(item: PollSummaryItem): StackLayerBlockReason | undefined {
   if (item.state !== "OPEN") return "closed";
@@ -12,7 +11,7 @@ export function stackLayerBlockReason(item: PollSummaryItem): StackLayerBlockRea
   // A receipt only establishes readiness after a merge-queue removal once
   // the one-PR session has observed and acknowledged that exact removal.
   // The aggregate projection preserves an unacknowledged removal here, so
-  // do not let its otherwise-current receipt promote a child draft.
+  // the layer is not ready to merge.
   if (item.queueRemoval) return "queue-removal";
   if ((item.checks?.failing ?? 0) > 0) return "failing-checks";
   if ((item.review?.actionable ?? 0) > 0) return "review-work";
@@ -27,6 +26,6 @@ export function stackLayerBlockReason(item: PollSummaryItem): StackLayerBlockRea
       return "merge-state";
   }
   // A layer that looks ready but has not completed its own one-PR receipt
-  // is not sufficient evidence for the layers above it.
+  // is not ready to merge.
   return item.readyReceipt === true ? undefined : "no-ready-receipt";
 }

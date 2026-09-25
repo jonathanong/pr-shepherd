@@ -14,54 +14,69 @@ export interface StackPlan {
 type StackLayer = PollSummaryItem & { stack: NonNullable<PollSummaryItem["stack"]> };
 
 /**
- * The lowest open layer when it can merge by itself: every layer below it
- * merged, GitHub retargeted it onto the stack base, it holds a current READY
- * receipt, and no layer is already in the merge queue.
+ * Highest open layer such that it and every open layer below it are ready to
+ * merge together. `gh stack merge <PR>` lands that PR and every unmerged layer
+ * below it. A merge queue accepts the same prefix and evaluates each layer
+ * from the bottom; a failure ejects that layer and those above it.
  */
-function drainableBottom(result: PollSummaryResult): StackLayer | undefined {
+function readyPrefixTop(result: PollSummaryResult): StackLayer | undefined {
   const layers = [...result.prs].sort((left, right) => stackPosition(left) - stackPosition(right));
-  const bottom = layers.find((item) => item.state !== "MERGED");
-  if (!bottom || !isStackLayer(bottom) || bottom.state !== "OPEN") return undefined;
-  if (bottom.action === "escalate" || !isStackLayerReady(bottom)) return undefined;
-  if (bottom.baseRefName !== bottom.stack.baseRefName) return undefined;
-  if (result.stackAncestry?.some((gap) => gap.childPr === bottom.pr)) return undefined;
   if (layers.some((item) => item.state === "OPEN" && item.isInMergeQueue)) return undefined;
-  return bottom;
+  const open = layers.filter((item) => item.state === "OPEN");
+  const bottom = open[0];
+  if (!bottom || !isStackLayer(bottom) || bottom.state !== "OPEN") return undefined;
+  if (bottom.baseRefName !== bottom.stack.baseRefName) return undefined;
+  const stale = new Set((result.stackAncestry ?? []).map((gap) => gap.childPr));
+  let top: StackLayer | undefined;
+  for (const item of open) {
+    if (!isStackLayer(item)) break;
+    if (item.action === "escalate" || !isStackLayerReady(item) || stale.has(item.pr)) break;
+    if (
+      layers.some((layer) => layer.state === "CLOSED" && stackPosition(layer) < stackPosition(item))
+    )
+      break;
+    top = item;
+  }
+  return top;
 }
 
 /**
- * Merge the ready bottom layer by PR number. `gh stack merge <n>` tries a stack
- * number first, but stack numbers come from the repository's issue and pull
- * request sequence, so a PR number never names a stack.
+ * Merge the ready prefix by its highest PR number. `gh stack merge <n>` tries a
+ * stack number first, but stack numbers come from the repository's issue and
+ * pull request sequence, so a PR number never names a stack.
  */
-export function planBottomDrain(
+export function planPrefixDrain(
   result: PollSummaryResult,
   mergeRequested: boolean,
 ): StackPlan | undefined {
   if (!mergeRequested) return undefined;
-  const bottom = drainableBottom(result);
-  if (!bottom) return undefined;
+  const top = readyPrefixTop(result);
+  if (!top) return undefined;
   const gaps = result.stackAncestry ?? [];
   const staleChildren = new Set(gaps.map((gap) => gap.childPr));
-  const open = result.prs.filter((item) => item.state === "OPEN");
-  const uppers = splitStackWork(
+  const open = result.prs
+    .filter((item) => item.state === "OPEN")
+    .sort((left, right) => stackPosition(left) - stackPosition(right));
+  const above = splitStackWork(
     open.filter(
       (item) =>
-        item.pr !== bottom.pr &&
+        stackPosition(item) > stackPosition(top) &&
         item.action !== "escalate" &&
         (!isStackLayerReady(item) || staleChildren.has(item.pr)),
     ),
     staleChildren,
   );
+  const span =
+    open[0]?.pr === top.pr ? "that layer alone" : `PR #${top.pr} and every unmerged layer below it`;
   const instructions = [
-    `1. PR #${bottom.pr} is the bottom open layer of stack #${bottom.stack.number} in \`${result.repo}\` and is ready. Run \`GH_REPO=${result.repo} gh stack merge ${bottom.pr} --yes --squash\` to merge that layer alone, or to enqueue it when the base uses a merge queue. If \`gh stack\` is an unknown command, run \`gh extension install github/gh-stack\` first.`,
+    `1. PR #${top.pr} is the highest open layer of stack #${top.stack.number} in \`${result.repo}\` whose open lower layers are all ready. Run \`GH_REPO=${result.repo} gh stack merge ${top.pr} --yes --squash\` to merge ${span}. When the base uses a merge queue, the same command queues that prefix together and GitHub evaluates each layer from the bottom; a failure ejects that layer and the layers above it. If \`gh stack\` is an unknown command, run \`gh extension install github/gh-stack\` first.`,
   ];
-  appendAutonomousInstructions(instructions, uppers.sessions);
-  appendMarkReadyInstructions(instructions, uppers.markReady);
+  appendAutonomousInstructions(instructions, above.sessions);
+  appendMarkReadyInstructions(instructions, above.markReady);
   const handoffs = findHumanHandoffs(result);
   if (handoffs) appendHumanHandoffInstructions(instructions, handoffs, false);
   instructions.push(
-    `${instructions.length + 1}. After the merge attempt, rerun this same \`--stack --merge\` selector; GitHub retargets the next layer onto \`${bottom.stack.baseRefName}\`. Shepherd any layer that GitHub rejects or ejects.`,
+    `${instructions.length + 1}. After the merge attempt, rerun this same \`--stack --merge\` selector; GitHub retargets the next layer onto \`${top.stack.baseRefName}\`. Shepherd any layer that GitHub rejects or ejects.`,
   );
   return {
     action: "merge",
@@ -85,7 +100,7 @@ export function retargetWaitPlan(first: PollSummaryItem): StackPlan {
   };
 }
 
-/** Every remaining layer only waits: on CI or merge state, or on a lower layer that does. */
+/** Every remaining layer only waits on CI or merge state. */
 export function idleWaitPlan(idle: PollSummaryItem[]): StackPlan {
   return {
     action: "wait",
@@ -99,12 +114,7 @@ export function idleWaitPlan(idle: PollSummaryItem[]): StackPlan {
 }
 
 export function describeIdleLayers(idle: PollSummaryItem[]): string {
-  return idle
-    .map(
-      (item) =>
-        `PR #${item.pr} (${item.blockedByPr ? `stack-blocked by PR #${item.blockedByPr}` : item.reasons.join(", ")})`,
-    )
-    .join("; ");
+  return idle.map((item) => `PR #${item.pr} (${item.reasons.join(", ")})`).join("; ");
 }
 
 export function appendAutonomousInstructions(
@@ -118,13 +128,10 @@ export function appendAutonomousInstructions(
   for (const item of candidates) {
     instructions.push(
       item.pollCommand
-        ? `${instructions.length + 1}. Run \`${item.pollCommand}\` for PR #${item.pr}${item.blockedByPr ? ` (stack-blocked by PR #${item.blockedByPr})` : ""}${item.queueRemoval ? `; GitHub removed it from the merge queue (${item.queueRemoval.reason ?? "unknown reason"})` : ""}.`
+        ? `${instructions.length + 1}. Run \`${item.pollCommand}\` for PR #${item.pr}${item.queueRemoval ? `; GitHub removed it from the merge queue (${item.queueRemoval.reason ?? "unknown reason"})` : ""}.`
         : `${instructions.length + 1}. PR #${item.pr} needs a one-PR Shepherd session, but no command was available.`,
     );
   }
-  instructions.push(
-    `${instructions.length + 1}. Keep upper draft PRs in draft until every lower layer has completed Shepherd READY.`,
-  );
 }
 
 /** Layers only a human can resolve: a closed dependency, an unverified state, or an escalation. */
