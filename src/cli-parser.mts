@@ -25,6 +25,7 @@ import {
   validateRequireSha,
   rejectPrrcMinimizeIds,
 } from "./cli/resolve-validators.mts";
+import { handleCheckBlocker } from "./cli/check-blocker-handler.mts";
 import { setupLog } from "./log/setup.mts";
 
 // ---------------------------------------------------------------------------
@@ -157,6 +158,9 @@ async function handleApply(args: string[]): Promise<void> {
       return;
     case "journal":
       await handleJournal(args.slice(1));
+      return;
+    case "check-blocker":
+      await handleCheckBlocker(args.slice(1));
       return;
     default:
       process.stderr.write(`Unknown apply action: ${action ?? "(none)"}\n`);

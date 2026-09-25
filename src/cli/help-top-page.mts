@@ -11,6 +11,7 @@ Usage:
   pr-shepherd apply review [PR] [review-flags]
   pr-shepherd apply files [PR] [files...] [--tests] [--match REGEX]
   pr-shepherd apply journal [PR] <item> [--dry-run] [--format text|json]
+  pr-shepherd apply check-blocker [PR] --check <name> (--blocked-by <ref>|--clear)
   pr-shepherd journal extract --body-file <path>
   pr-shepherd build-suggestion-patches [PR] --thread-id ID --message MSG [groups...]
   pr-shepherd admin clean <pr|branch|current|repo|all> [value] [flags]
@@ -22,6 +23,7 @@ Commands:
   apply review         Apply review-state mutations after fixes.
   apply files          Mark selected changed files as viewed.
   apply journal        Append a list item to the Shepherd Journal details block of a PR body.
+  apply check-blocker  Record that a failing check is blocked on an external PR or issue.
   journal extract      Extract a validated Shepherd Journal from a local PR-body file as JSON.
   build-suggestion-patches
                        Convert ordered GitHub suggestion threads into patches and commit instructions.

@@ -109,6 +109,8 @@ Static documents live in [`src/github/gql/`](../src/github/gql/) and are loaded 
 | `UpdatePrBody`             | `update-pr-body.gql`                          | Journal apply                                                                                                               | no (mutation)            |
 | `MarkPrReady`              | `mark-pr-ready.gql`                           | `mark_ready` when `viewerCanUpdate`                                                                                         | no (mutation)            |
 | `PullRequestFiles`         | inline in `mark-files-as-viewed.mts`          | `apply files`                                                                                                               | yes                      |
+| `CheckBlockerPull`         | inline in `iterate/check-blocker-gate.mts`    | One query per distinct pull blocker while a matching check is failing                                                       | yes                      |
+| `CheckBlockerIssue`        | inline in `iterate/check-blocker-gate.mts`    | One query per distinct issue blocker while a matching check is failing                                                      | yes                      |
 | `BulkApply`                | runtime aliases in `comments/resolve.mts`     | reply / resolve / minimize / dismiss, chunks of 10                                                                          | no (mutation)            |
 | `markFileAsViewed`         | runtime aliases, chunks of 10                 | `apply files`                                                                                                               | no (mutation)            |
 

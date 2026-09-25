@@ -18,6 +18,7 @@ import {
   threadHasAuthorizedMutation,
 } from "./thread-mutation-routing.mts";
 import { buildFixInstructions } from "./render.mts";
+import { buildReleasedBlockerInstruction } from "./check-instructions.mts";
 import { buildNativeStackLayerRebase } from "./native-stack-rebase.mts";
 import { applyStallGuard } from "./stall.mts";
 import { annotationMarkerBody, checksWithActionableAnnotations } from "../check-annotations.mts";
@@ -37,6 +38,8 @@ import type {
   ShepherdReport,
 } from "../../types.mts";
 import type { NormalizedBotUsernames } from "../../comments/authors.mts";
+const EMPTY_RELEASED: ReadonlySet<string> = new Set();
+
 interface HandleFixCodeContext {
   base: IterateResultBase;
   report: ShepherdReport;
@@ -52,6 +55,8 @@ interface HandleFixCodeContext {
   editedSummaries: Review[];
   surfacedApprovals: Review[];
   botUsernames: NormalizedBotUsernames;
+  /** Failing checks whose external blocker has merged or closed. */
+  releasedCheckNames?: ReadonlySet<string>;
   ruleAutoResolveThreadIds?: string[];
   /** Verified stack-repair guidance, when ancestry is stale. */
   repairInstructions?: string[];
@@ -137,6 +142,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     editedSummaries,
     surfacedApprovals,
     botUsernames,
+    releasedCheckNames = EMPTY_RELEASED,
     ruleAutoResolveThreadIds,
     repairInstructions,
   } = ctx;
@@ -291,20 +297,21 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const initialAttemptRunIds = new Set(
     failingChecks.flatMap((c) => (c.runId !== null && c.runAttempt === 1 ? [c.runId] : [])),
   );
-  const failingAgentChecks = toAgentChecks(failingChecks).map((c) =>
-    rerunAuthorized &&
-    c.runId &&
-    actionsRunIds.has(c.runId) &&
-    // GitHub increments run_attempt after every rerun. Recommend at most one rerun by limiting
-    // the command to the original attempt; missing attempt metadata is denied conservatively.
-    initialAttemptRunIds.has(c.runId) &&
-    // ACTION_REQUIRED means the run is paused pending manual workflow approval; rerunning does
-    // not grant that approval, so no rerun command applies.
-    c.conclusion !== "ACTION_REQUIRED" &&
-    !inProgressWorkflowRunIds.has(c.runId)
+  const failingAgentChecks = toAgentChecks(failingChecks).map((c) => {
+    if (releasedCheckNames.has(c.name)) return c;
+    return rerunAuthorized &&
+      c.runId &&
+      actionsRunIds.has(c.runId) &&
+      // GitHub increments run_attempt after every rerun. Recommend at most one rerun by limiting
+      // the command to the original attempt; missing attempt metadata is denied conservatively.
+      initialAttemptRunIds.has(c.runId) &&
+      // ACTION_REQUIRED means the run is paused pending manual workflow approval; rerunning does
+      // not grant that approval, so no rerun command applies.
+      c.conclusion !== "ACTION_REQUIRED" &&
+      !inProgressWorkflowRunIds.has(c.runId)
       ? { ...c, rerunCommand: `gh run rerun ${c.runId} -R ${report.repo}` }
-      : c,
-  );
+      : c;
+  });
   const checks = [
     ...failingAgentChecks,
     ...toAgentChecks(annotatedExtra).map((c) => ({ ...c, annotationOnly: true as const })),
@@ -321,7 +328,10 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const belongsToActiveWorkflowRun = (check: AgentCheck): boolean =>
     check.runId !== null && inProgressWorkflowRunIds.has(check.runId);
   const manualFollowUpChecks = failingAgentChecks.filter(
-    (check) => !belongsToActiveWorkflowRun(check) && checkRequiresHumanFollowUp(check),
+    (check) =>
+      !releasedCheckNames.has(check.name) &&
+      !belongsToActiveWorkflowRun(check) &&
+      checkRequiresHumanFollowUp(check),
   );
   const exhaustedAttempts = failingAgentChecks.filter(
     (check) => check.runAttempt !== undefined && check.runAttempt > 1,
@@ -345,7 +355,10 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     report.comments.firstLook.length > 0 ||
     checks.some((check) => (check.annotations?.length ?? 0) > 0) ||
     failingAgentChecks.some(
-      (check) => belongsToActiveWorkflowRun(check) || !checkRequiresHumanFollowUp(check),
+      (check) =>
+        releasedCheckNames.has(check.name) ||
+        belongsToActiveWorkflowRun(check) ||
+        !checkRequiresHumanFollowUp(check),
     );
   if (manualFollowUpChecks.length > 0 && !hasAutonomousWork) {
     const { resolveCommand, resolveOnlyCommand } = buildReviewCommands(failingAgentChecks);
@@ -455,6 +468,11 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     exhaustedAttempts.length > 0,
     stackRebase,
   );
+  if (failingAgentChecks.some((check) => releasedCheckNames.has(check.name))) {
+    const completion = instructions.pop();
+    instructions.push(buildReleasedBlockerInstruction(prNumber));
+    if (completion !== undefined) instructions.push(completion);
+  }
   if (repairInstructions && repairInstructions.length > 0) {
     instructions.unshift(...repairInstructions);
   }
