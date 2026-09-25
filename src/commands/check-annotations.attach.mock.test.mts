@@ -6,7 +6,10 @@ vi.mock("../github/client.mts", () => ({ graphql: vi.fn() }));
 
 import { attachAndMergeCheckAnnotations } from "./check-annotations.mts";
 import { graphql } from "../github/client.mts";
-import { CHECK_RUN_ANNOTATIONS_BATCH_QUERY } from "../github/queries.mts";
+import {
+  CHECK_RUN_ANNOTATIONS_BATCH_QUERY,
+  CHECK_RUN_ANNOTATIONS_QUERY,
+} from "../github/queries.mts";
 
 const mockGraphql = vi.mocked(graphql);
 
@@ -91,9 +94,11 @@ describe("attachUnseenCheckAnnotations", () => {
     await expect(attach(ids(21).map(check))).rejects.toBe(err);
 
     expect(mockGraphql).toHaveBeenCalledTimes(1);
-    expect(mockGraphql).toHaveBeenCalledWith(CHECK_RUN_ANNOTATIONS_BATCH_QUERY, {
-      ids: ids(21).slice(0, 20),
-    });
+    expect(mockGraphql).toHaveBeenCalledWith(
+      CHECK_RUN_ANNOTATIONS_BATCH_QUERY,
+      { ids: ids(21).slice(0, 20) },
+      { allowPartialData: true },
+    );
     const text = stderrText(stderr);
     expect(text).not.toContain("annotation fetch failed");
     expect(text).not.toContain('check "');
@@ -119,18 +124,19 @@ describe("attachUnseenCheckAnnotations", () => {
     );
   });
 
-  it("continues after a non-rate-limit chunk error and summarizes every failed check once", async () => {
+  it("falls back per check after a non-rate-limit chunk error and summarizes once", async () => {
     const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    mockGraphql
-      .mockRejectedValueOnce(new Error("resource not accessible"))
-      .mockResolvedValueOnce({ data: { nodes: [checkNode("CR_acme_21", "late")] } });
+    mockGraphql.mockImplementation(async (query: string, vars: { ids?: string[] }) => {
+      if (query === CHECK_RUN_ANNOTATIONS_BATCH_QUERY && vars.ids?.length === 1) {
+        return { data: { nodes: [checkNode("CR_acme_21", "late")] } };
+      }
+      throw new Error("resource not accessible");
+    });
 
     const result = await attach(ids(21).map(check));
 
-    expect(mockGraphql).toHaveBeenCalledTimes(2);
-    expect(mockGraphql).toHaveBeenLastCalledWith(CHECK_RUN_ANNOTATIONS_BATCH_QUERY, {
-      ids: ["CR_acme_21"],
-    });
+    expect(mockGraphql).toHaveBeenCalledTimes(22);
+    expect(mockGraphql).toHaveBeenCalledWith(CHECK_RUN_ANNOTATIONS_QUERY, { id: "CR_acme_1" });
     expect(result.passing[0]?.annotations).toBeUndefined();
     expect(result.passing[20]?.annotations?.[0]?.message).toBe("late");
     expect(stderrText(stderr)).toBe(
