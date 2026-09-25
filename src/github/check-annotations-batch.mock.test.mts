@@ -75,9 +75,11 @@ describe("fetchCheckRunAnnotationsBatch", () => {
     const result = await fetchCheckRunAnnotationsBatch(["CR_acme_1", "CR_acme_2", "CR_acme_3"]);
 
     expect(mockGraphql).toHaveBeenCalledTimes(1);
-    expect(mockGraphql).toHaveBeenCalledWith(CHECK_RUN_ANNOTATIONS_BATCH_QUERY, {
-      ids: ["CR_acme_1", "CR_acme_2", "CR_acme_3"],
-    });
+    expect(mockGraphql).toHaveBeenCalledWith(
+      CHECK_RUN_ANNOTATIONS_BATCH_QUERY,
+      { ids: ["CR_acme_1", "CR_acme_2", "CR_acme_3"] },
+      { allowPartialData: true },
+    );
     expect(result.failures).toEqual([]);
     expect(result.annotations.get("CR_acme_2")?.[0]?.message).toBe("b");
   });
@@ -96,9 +98,11 @@ describe("fetchCheckRunAnnotationsBatch", () => {
     );
 
     expect(mockGraphql).toHaveBeenCalledTimes(2);
-    expect(mockGraphql).toHaveBeenLastCalledWith(CHECK_RUN_ANNOTATIONS_BATCH_QUERY, {
-      ids: ["CR_acme_3"],
-    });
+    expect(mockGraphql).toHaveBeenLastCalledWith(
+      CHECK_RUN_ANNOTATIONS_BATCH_QUERY,
+      { ids: ["CR_acme_3"] },
+      { allowPartialData: true },
+    );
     expect(second.annotations.get("CR_acme_1")?.[0]?.message).toBe("kept");
     expect(second.annotations.get("CR_acme_3")?.[0]?.id).toBe("check_annotation_100");
   });
@@ -131,7 +135,7 @@ describe("fetchCheckRunAnnotationsBatch", () => {
     expect(result.annotations.get("CR_acme_2")?.map((item) => item.message)).toEqual(["only"]);
   });
 
-  it("returns no annotations for a null node or a node that is not a CheckRun", async () => {
+  it("fails only the missing nodes and keeps the rest of the chunk", async () => {
     mockGraphql.mockResolvedValueOnce({
       data: {
         nodes: [
@@ -141,12 +145,12 @@ describe("fetchCheckRunAnnotationsBatch", () => {
         ],
       },
     });
-
     const result = await fetchCheckRunAnnotationsBatch(["CR_acme_1", "CR_acme_2", "CR_acme_3"]);
-
-    expect(result.failures).toEqual([]);
-    expect(result.annotations.get("CR_acme_1")).toEqual([]);
-    expect(result.annotations.get("CR_acme_2")).toEqual([]);
+    expect(result.failures.map((failure) => failure.checkRunId)).toEqual([
+      "CR_acme_1",
+      "CR_acme_2",
+    ]);
+    expect(result.annotations.has("CR_acme_1")).toBe(false);
     expect(result.annotations.get("CR_acme_3")?.[0]?.message).toBe("ok");
   });
 

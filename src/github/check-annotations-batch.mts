@@ -2,7 +2,6 @@ import { pollRateLimitRetryAfterMs } from "../commands/poll-quota.mts";
 import type { CheckAnnotation } from "../types.mts";
 import {
   readFreshCheckAnnotations,
-  storeCheckAnnotations,
   type AnnotationCacheOptions,
 } from "./check-annotation-cache.mts";
 import { type RawCheckAnnotation } from "./check-annotation-shape.mts";
@@ -80,20 +79,33 @@ async function fetchChunk(
   failures: AnnotationBatchFailure[],
   cacheOpts: AnnotationCacheOptions | undefined,
 ): Promise<void> {
-  let nodes: Array<RawBatchNode | null>;
   try {
-    nodes = await requestFirstPages(chunk);
+    const nodes = await requestFirstPages(chunk);
+    await applyBatchNodes(chunk, nodes, annotations, failures, cacheOpts);
   } catch (err) {
     if (retryableRateLimit(err)) throw err;
-    for (const id of chunk) failures.push({ checkRunId: id, error: err });
-    return;
+    // A non-rate-limit batch failure (one NOT_FOUND or FORBIDDEN node rejects
+    // the whole `nodes(ids:)` request) must not drop the other ids.
+    await fetchChunkOneByOne(chunk, annotations, failures, cacheOpts);
   }
+}
+
+async function applyBatchNodes(
+  chunk: string[],
+  nodes: Array<RawBatchNode | null>,
+  annotations: Map<string, CheckAnnotation[]>,
+  failures: AnnotationBatchFailure[],
+  cacheOpts: AnnotationCacheOptions | undefined,
+): Promise<void> {
   for (const id of chunk) {
     const node = nodes.find((candidate) => candidate?.id === id) ?? null;
+    if (node?.__typename !== "CheckRun" || node.annotations === undefined) {
+      failures.push({ checkRunId: id, error: new Error("check run annotations unavailable") });
+      continue;
+    }
     try {
       // eslint-disable-next-line no-await-in-loop
-      const page = await annotationsForNode(id, node, cacheOpts);
-      annotations.set(id, page);
+      annotations.set(id, await fetchCheckRunAnnotations(id, cacheOpts, node.annotations));
     } catch (err) {
       if (retryableRateLimit(err)) throw err;
       failures.push({ checkRunId: id, error: err });
@@ -101,23 +113,28 @@ async function fetchChunk(
   }
 }
 
-async function annotationsForNode(
-  id: string,
-  node: RawBatchNode | null,
+async function fetchChunkOneByOne(
+  chunk: string[],
+  annotations: Map<string, CheckAnnotation[]>,
+  failures: AnnotationBatchFailure[],
   cacheOpts: AnnotationCacheOptions | undefined,
-): Promise<CheckAnnotation[]> {
-  if (node?.__typename !== "CheckRun" || node.annotations === undefined) {
-    const empty: CheckAnnotation[] = [];
-    await storeCheckAnnotations(id, empty, cacheOpts);
-    return empty;
+): Promise<void> {
+  for (const id of chunk) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      annotations.set(id, await fetchCheckRunAnnotations(id, cacheOpts));
+    } catch (err) {
+      if (retryableRateLimit(err)) throw err;
+      failures.push({ checkRunId: id, error: err });
+    }
   }
-  return fetchCheckRunAnnotations(id, cacheOpts, node.annotations);
 }
 
 async function requestFirstPages(ids: string[]): Promise<Array<RawBatchNode | null>> {
   const res = await graphql<{ nodes: Array<RawBatchNode | null> | null }>(
     CHECK_RUN_ANNOTATIONS_BATCH_QUERY,
     { ids },
+    { allowPartialData: true },
   );
   return res.data.nodes ?? [];
 }
