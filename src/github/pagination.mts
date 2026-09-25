@@ -55,7 +55,7 @@ export async function paginateForward<T>(
 /**
  * Paginate backward through a GraphQL connection (`last` / `before` cursors).
  *
- * Used for `reviewThreads(last: 100, before: $before)`.
+ * Used for `reviewThreads(last: 100, before: $before)` follow-up pages.
  *
  * @param fetchFn       Called once per page. Receives the cursor (or null for
  *                      the very first page). Returns a Connection<T> with
