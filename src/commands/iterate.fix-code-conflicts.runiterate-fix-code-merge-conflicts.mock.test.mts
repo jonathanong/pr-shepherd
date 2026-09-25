@@ -81,7 +81,7 @@ async function runConflictIterate(): Promise<ReturnType<typeof runIterate>> {
   });
   const result = await runIterate(makeOpts());
   expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
-    retainElapsed: false,
+    headSha: "unknown",
     alreadyElapsed: false,
   });
   return result;
