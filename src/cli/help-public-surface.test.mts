@@ -52,6 +52,7 @@ describe("public CLI help surface", () => {
     expect(helpKeyForArgs(["apply", "review", "--help"])).toBe("apply review");
     expect(helpKeyForArgs(["apply", "files", "-h"])).toBe("apply files");
     expect(helpKeyForArgs(["apply", "journal", "--help"])).toBe("apply journal");
+    expect(helpKeyForArgs(["apply", "check-blocker", "--help"])).toBe("apply check-blocker");
     expect(helpKeyForArgs(["journal", "extract", "--help"])).toBe("journal extract");
     expect(helpKeyForArgs(["admin", "clean", "--help"])).toBe("admin clean");
     expect(helpKeyForArgs(["admin", "log-file", "--help"])).toBe("admin log-file");

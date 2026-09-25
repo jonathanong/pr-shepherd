@@ -107,6 +107,11 @@ export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   return instructions;
 }
 
+/** Update the PR branch after an external blocker merges or closes. Never rerun that job. */
+export function buildReleasedBlockerInstruction(prNumber: number): string {
+  return `Update this PR branch from its base with \`gh pr update-branch ${prNumber} --rebase\`. Do not rerun the job; a rerun retests the old merge ref.`;
+}
+
 export function buildFixCompletionInstruction(
   checks: AgentCheck[],
   hasConflicts = false,

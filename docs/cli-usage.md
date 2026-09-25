@@ -15,6 +15,8 @@ pr-shepherd apply files [PR] [files...] [--tests] [--match REGEX]
 pr-shepherd apply journal [PR] <item> [--dry-run] [--format text|json]
 pr-shepherd apply journal [PR] --file <path> [--dry-run] [--format text|json]
 pr-shepherd apply journal [PR] --file - [--dry-run] [--format text|json]
+pr-shepherd apply check-blocker [PR] --check <name> --blocked-by <ref>
+pr-shepherd apply check-blocker [PR] --check <name> --clear
 pr-shepherd journal extract --body-file <path>
 pr-shepherd build-suggestion-patches [PR] --thread-id ID --message MSG [groups...]
 pr-shepherd admin clean <pr|branch|current|repo|all> [value] [--dry-run] [--format text|json]
@@ -26,6 +28,8 @@ to one repository. `--stack PR` selects the complete native GitHub stack contain
 orders its entries bottom-to-top. When omitted, Shepherd infers the current branch's open PR.
 
 `apply journal --file <path>` reads the journal item from a file; `--file -` reads stdin. Provide either a positional `<item>` or `--file`, not both.
+
+`apply check-blocker --check <name>` records that an exact failing check name is blocked on `--blocked-by`. The reference is a pull URL, an issue URL, `owner/repo#N` (pull), or `issue:owner/repo#N`. `--clear` removes that check only.
 
 Journal entries live in a collapsed `Shepherd Journal` details block. `apply journal` creates that canonical block when absent, appends before its closing tag, and leaves an exact duplicate unchanged. A legacy `## Shepherd Journal` section is migrated in place on the next journal operation.
 

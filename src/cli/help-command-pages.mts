@@ -6,15 +6,17 @@ export const COMMAND_USAGE = {
   default: DEFAULT_USAGE,
   apply: `pr-shepherd apply
 
-Apply review mutations, mark selected changed files as viewed, or append a PR journal item.
+Apply review mutations, mark selected changed files as viewed, append a PR journal item, or record an external check blocker.
 
 Usage:
   pr-shepherd apply review [PR] [review-flags]
   pr-shepherd apply files [PR] [files...] [--tests] [--match REGEX]
   pr-shepherd apply journal [PR] <item> [--dry-run] [--format text|json]
   pr-shepherd apply journal [PR] --file <path> [--dry-run] [--format text|json]
+  pr-shepherd apply check-blocker [PR] --check <name> --blocked-by <ref>
+  pr-shepherd apply check-blocker [PR] --check <name> --clear
 
-Run 'pr-shepherd apply <review|files|journal> --help' for command-specific details.
+Run 'pr-shepherd apply <review|files|journal|check-blocker> --help' for command-specific details.
 --help, -h                      Print this help and exit before GitHub I/O.`,
 
   "apply review": `pr-shepherd apply review
@@ -68,6 +70,24 @@ PR may be a number or GitHub pull request URL. An item must start with '- ' foll
 Use --file to read an item from a file, or --file - to read it from stdin. Exactly one item source
 is required. --dry-run previews the resulting body without writing it.
 --help, -h                      Print this help and exit before GitHub I/O.`,
+
+  "apply check-blocker": `pr-shepherd apply check-blocker
+
+Record that a failing check is blocked on an external pull request or issue, or clear that record.
+While the blocker is open, iterate waits instead of treating that check as agent work.
+
+Usage:
+  pr-shepherd apply check-blocker [PR] --check <name> --blocked-by <ref> [--format text|json]
+  pr-shepherd apply check-blocker [PR] --check <name> --clear [--format text|json]
+
+\`--check\` is the exact check name. \`--blocked-by\` accepts:
+  https://github.com/owner/repo/pull/N
+  https://github.com/owner/repo/issues/N
+  owner/repo#N
+  issue:owner/repo#N
+
+\`--clear\` removes that check's record and leaves other checks alone.
+--help, -h                      Print this help and exit before any I/O.`,
 
   "build-suggestion-patches": `pr-shepherd build-suggestion-patches
 

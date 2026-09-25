@@ -29,11 +29,16 @@ vi.mock("../../src/commands/ready-delay.mts", () => ({
 }));
 vi.mock("../../src/github/client.mts", () => ({
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
+  graphql: vi.fn(),
 }));
 vi.mock("../../src/state/fix-attempts.mts", () => ({
   readFixAttempts: vi.fn().mockResolvedValue(null),
   writeFixAttempts: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("../../src/state/check-blockers.mts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/state/check-blockers.mts")>();
+  return { ...actual, readCheckBlockers: vi.fn(async () => []) };
+});
 vi.mock("../../src/state/iterate-stall.mts", () => ({
   readStallState: vi.fn().mockResolvedValue({ ok: true, state: null }),
   writeStallState: vi.fn().mockResolvedValue({ ok: true }),
@@ -61,9 +66,10 @@ vi.mock("../../src/config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
 import { runCheck } from "../../src/commands/check.mts";
 import { clearReadyDelay, updateReadyDelay } from "../../src/commands/ready-delay.mts";
-import { getCurrentPrNumber } from "../../src/github/client.mts";
+import { getCurrentPrNumber, graphql } from "../../src/github/client.mts";
 import { autoMinimizeComments } from "../../src/comments/resolve.mts";
 import { readFixAttempts, writeFixAttempts } from "../../src/state/fix-attempts.mts";
+import { readCheckBlockers } from "../../src/state/check-blockers.mts";
 import {
   clearStallState,
   readStallState,
@@ -87,8 +93,10 @@ const mockRunCheck = vi.mocked(runCheck);
 const mockUpdateReadyDelay = vi.mocked(updateReadyDelay);
 const mockClearReadyDelay = vi.mocked(clearReadyDelay);
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
+const mockGraphql = vi.mocked(graphql);
 const mockAutoMinimizeComments = vi.mocked(autoMinimizeComments);
 const mockReadFixAttempts = vi.mocked(readFixAttempts);
+const mockReadCheckBlockers = vi.mocked(readCheckBlockers);
 const mockWriteFixAttempts = vi.mocked(writeFixAttempts);
 const mockReadStallState = vi.mocked(readStallState);
 const mockWriteStallState = vi.mocked(writeStallState);
@@ -283,6 +291,7 @@ function registerIterateHooks(config = defaultConfig): void {
     vi.setSystemTime(NOW * 1000);
     mockUpdateReadyDelay.mockResolvedValue(READY_STATE_DEFAULT);
     mockReadFixAttempts.mockResolvedValue(null);
+    mockReadCheckBlockers.mockResolvedValue([]);
     mockWriteFixAttempts.mockResolvedValue(undefined);
     mockReadStallState.mockResolvedValue({ ok: true, state: null });
     mockWriteStallState.mockResolvedValue({ ok: true });
@@ -312,10 +321,12 @@ export {
   mockExecFile,
   mockFetch,
   mockGetCurrentPrNumber,
+  mockGraphql,
   mockClearStallState,
   mockIsReadyReceiptCurrent,
   mockLoadConfig,
   mockReadFixAttempts,
+  mockReadCheckBlockers,
   mockReadReadyReceipt,
   mockReadStallState,
   mockRunCheck,

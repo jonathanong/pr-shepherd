@@ -30,6 +30,7 @@ import {
 } from "../../state/ready-receipts.mts";
 import { stackDraftHold } from "./parent-first.mts";
 import { findStaleNativeStackAncestry } from "./stale-ancestry.mts";
+import { annotateBlockedWait, resolveCheckBlockerGate } from "./check-blocker-gate.mts";
 
 export function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
   return withIterateApiUsage(opts, () => runIterateCore(opts));
@@ -77,6 +78,22 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     return buildTerminalCancelResult(report);
   }
 
+  const blockerGate = await resolveCheckBlockerGate(
+    { owner: repoOwner, repo: repoName, pr: prNumber },
+    report.checks.failing,
+  );
+  const deferredNames = blockerGate?.deferredNames;
+  const reportForWork =
+    deferredNames === undefined || deferredNames.size === 0
+      ? report
+      : {
+          ...report,
+          checks: {
+            ...report.checks,
+            failing: report.checks.failing.filter((check) => !deferredNames.has(check.name)),
+          },
+        };
+
   const { minimizeIds, selfMinimizeIds, firstLookSummaries, editedSummaries, surfacedApprovals } =
     classifyReviewSummaries(
       {
@@ -114,7 +131,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     report.comments.actionable.length > 0 ||
     (report.comments.minimizeIds?.length ?? 0) > 0 ||
     report.changesRequestedReviews.length > 0 ||
-    hasCheckDrivenActionableWork(report.checks, report.mergeStatus.status) ||
+    hasCheckDrivenActionableWork(reportForWork.checks, report.mergeStatus.status) ||
     reviewSummaryIds.length > 0 ||
     firstLookSummaries.length > 0 ||
     editedSummaries.length > 0 ||
@@ -149,7 +166,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     { headSha, alreadyElapsed: receiptCurrent },
   );
 
-  const base = buildIterateBase(report, readyState);
+  const base = buildIterateBase(reportForWork, readyState);
 
   // Checks (including merge-queue synthetic-commit checks) and hard conflicts are signals
   // GitHub itself is already acting on — the queue will eject the PR for these regardless of
@@ -157,7 +174,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   // changes-requested reviews/review summaries — the categories that would otherwise cause a
   // Shepherd-initiated push while the PR sits safely in the queue — are eligible for deferral.
   const checkDrivenActionableWork = hasCheckDrivenActionableWork(
-    report.checks,
+    reportForWork.checks,
     report.mergeStatus.status,
   );
   const deferWhileQueued =
@@ -168,7 +185,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   if (hasActionableWork && !(deferWhileQueued && !checkDrivenActionableWork)) {
     return handleFixCode({
       base,
-      report,
+      report: reportForWork,
       opts: { ...opts, prNumber, neverCancelRuns },
       headSha,
       stallKey,
@@ -181,6 +198,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
       editedSummaries,
       surfacedApprovals,
       botUsernames,
+      releasedCheckNames: blockerGate?.releasedNames,
       ruleAutoResolveThreadIds: report.threads.ruleAutoResolveIds,
     });
   }
@@ -197,12 +215,12 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     surfacedApprovals,
     minimizeApprovals: config.iterate.minimizeApprovals,
   });
-  if (mergeStateResult) return mergeStateResult;
+  if (mergeStateResult) return annotateBlockedWait(mergeStateResult, blockerGate);
 
   if (staleAncestry) {
     return handleFixCode({
       base,
-      report,
+      report: reportForWork,
       opts: { ...opts, prNumber, neverCancelRuns },
       headSha,
       stallKey,
@@ -215,6 +233,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
       editedSummaries,
       surfacedApprovals,
       botUsernames,
+      releasedCheckNames: blockerGate?.releasedNames,
       repairInstructions: staleAncestry.instructions,
       ruleAutoResolveThreadIds: report.threads.ruleAutoResolveIds,
     });
@@ -240,15 +259,18 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
         shouldCancel: false,
         log: `WAIT: PR #${base.pr} reached ready-delay but its stack readiness receipt could not be persisted`,
       };
-      return applyStallGuard(
-        stallKey,
-        stallTimeoutSeconds,
-        headSha,
-        base,
-        prNumber,
-        receiptWait,
-        report,
-        reviewSummaryIds,
+      return annotateBlockedWait(
+        await applyStallGuard(
+          stallKey,
+          stallTimeoutSeconds,
+          headSha,
+          base,
+          prNumber,
+          receiptWait,
+          reportForWork,
+          reviewSummaryIds,
+        ),
+        blockerGate,
       );
     }
     await clearReadyDelay(report.pr, repoOwner, repoName);
@@ -271,15 +293,18 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     log: buildWaitLog(base),
     ...(hold && { stackDraftHold: hold }),
   } as IterateResult;
-  return applyStallGuard(
-    stallKey,
-    stallTimeoutSeconds,
-    headSha,
-    base,
-    prNumber,
-    wait,
-    report,
-    reviewSummaryIds,
+  return annotateBlockedWait(
+    await applyStallGuard(
+      stallKey,
+      stallTimeoutSeconds,
+      headSha,
+      base,
+      prNumber,
+      wait,
+      reportForWork,
+      reviewSummaryIds,
+    ),
+    blockerGate,
   );
 }
 

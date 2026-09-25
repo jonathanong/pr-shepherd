@@ -24,6 +24,8 @@ const FLAGS_WITH_VALUES = new Set([
   "--timeout",
   "--debounce",
   "--match",
+  "--check",
+  "--blocked-by",
 ]);
 
 // Boolean flags that do NOT consume the next argument. Any --flag not in this
@@ -39,6 +41,7 @@ const BOOLEAN_FLAGS = new Set([
   "--merge",
   "--dry-run",
   "--verbose",
+  "--clear",
 ]);
 
 // ---------------------------------------------------------------------------

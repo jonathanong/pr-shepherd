@@ -17,6 +17,7 @@ import { summarizePollSummaryReview } from "./poll-summary-review.mts";
 import { fingerprintRawSummaryPr } from "./poll-summary-fingerprint.mts";
 import { currentQueueRemovalEvent } from "./poll-summary-queue-removal.mts";
 import { isCurrentSummaryReady } from "./poll-summary-readiness.mts";
+import { applyOpenCheckBlockers } from "./poll-summary-check-blockers.mts";
 import { normalizePollSummaryState, routePollSummary } from "./poll-summary-route.mts";
 export async function summarizePollSummaryPr(
   raw: RawSummaryPr,
@@ -95,6 +96,16 @@ export async function summarizePollSummaryPr(
       : removalEvent
         ? projectQueueRemoval(removalEvent)
         : undefined;
+  const blocked = await applyOpenCheckBlockers(
+    raw,
+    repo,
+    { action, reasons },
+    checks,
+    review,
+    opts.stackPrNumber !== undefined,
+  );
+  action = blocked.action;
+  reasons = blocked.reasons;
   return {
     pr: raw.number,
     repo: repoName,
@@ -123,6 +134,7 @@ export async function summarizePollSummaryPr(
       !(opts.stackPrNumber !== undefined && raw.stack && action === "merge"))
       ? pollCommandFields(repoName, raw.number, raw.isDraft, opts)
       : {}),
+    ...(blocked.pollProbe ? { pollProbe: true as const } : {}),
   };
 }
 

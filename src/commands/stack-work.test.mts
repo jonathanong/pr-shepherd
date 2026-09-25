@@ -129,6 +129,30 @@ describe("stack selector agent work", () => {
   });
 });
 
+describe("deferred check blockers", () => {
+  it("promotes a non-probe wait that still has failing checks", () => {
+    const blocked = row(1, 1, {
+      action: "wait",
+      reasons: ["blocked-by:acme/widgets#9"],
+      checks: { failing: 1 },
+    });
+    expect(withPollSummaryInstructions(stack([blocked]), false).nextAction).toBe("shepherd");
+  });
+
+  it("does not shepherd a probed wait whose only failing check is blocked", () => {
+    const blocked = row(1, 1, {
+      action: "wait",
+      reasons: ["blocked-by:acme/widgets#9"],
+      checks: { failing: 1 },
+      pollProbe: true,
+    });
+    const result = withPollSummaryInstructions(stack([blocked]), false);
+    expect(result.nextAction).toBe("wait");
+    expect(result.instructions?.join("\n")).toContain("acme/widgets#9");
+    expect(result.instructions?.join("\n")).not.toContain("--until-terminal");
+  });
+});
+
 describe("splitStackWork", () => {
   it("keeps a probe with work, or a flag without a command, as a session", () => {
     const failing = disabledDraft(1, 1, { action: "fix_code", reasons: ["failing-checks"] });
