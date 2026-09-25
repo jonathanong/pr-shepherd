@@ -140,7 +140,7 @@ describe("attachApiUsage", () => {
     expect(attached.fix.instructions.at(-1)).toContain("--interval 5m --timeout 10m");
   });
 
-  it("attaches non-GraphQL telemetry without evaluating or adding a quota warning", async () => {
+  it("evaluates REST core telemetry and adds no warning while it is above every band", async () => {
     const restOnlyUsage: ApiUsage = {
       credentialSources: ["gh auth token"],
       rest: [
@@ -159,7 +159,12 @@ describe("attachApiUsage", () => {
       ...result,
       apiUsage: restOnlyUsage,
     });
-    expect(mockEvaluateQuotaWarning).not.toHaveBeenCalled();
+    expect(mockEvaluateQuotaWarning).toHaveBeenCalledWith(
+      { owner: "owner", repo: "repo" },
+      bands,
+      restOnlyUsage.rest?.[0],
+      true,
+    );
   });
 
   it("keeps fix-code instructions unchanged when quota evaluation produces no warning", async () => {

@@ -64,7 +64,7 @@ export function evaluateGraphqlQuotaWarning(
   if (active === undefined) return { state };
   return {
     warning: {
-      resource: "graphql",
+      resource: sample.resource === "core" ? "core" : "graphql",
       thresholdPercent: active.remainingPercent,
       remaining: effective.remaining,
       limit: effective.limit,

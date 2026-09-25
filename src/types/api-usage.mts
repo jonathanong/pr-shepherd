@@ -5,6 +5,8 @@ export interface ApiResourceUsage {
   used?: number;
   remaining: number;
   resetAt: number;
+  /** Truncated SHA-256 of the credential. Quota state only; summarized usage omits it. */
+  credentialFingerprint?: string;
 }
 
 export interface GraphqlApiUsage extends ApiResourceUsage {
@@ -14,8 +16,16 @@ export interface GraphqlApiUsage extends ApiResourceUsage {
   unmeasuredRequestCount: number;
   /** Exact sum reported by rateLimit.nodeCount for measured GraphQL queries. */
   nodeCount: number;
-  /** Truncated SHA-256 of the credential. Quota state only; summarized usage omits it. */
-  credentialFingerprint?: string;
+}
+
+/** One budget inside a combined GraphQL and REST core warning. */
+export interface QuotaWarningBudget {
+  resource: "graphql" | "core";
+  thresholdPercent: number;
+  remaining: number;
+  limit: number;
+  used?: number;
+  resetAt: number;
 }
 
 export interface ApiUsage {
@@ -25,7 +35,7 @@ export interface ApiUsage {
 }
 
 export interface GraphqlQuotaWarning {
-  resource: "graphql";
+  resource: "graphql" | "core" | "combined";
   thresholdPercent: number;
   remaining: number;
   limit: number;
@@ -33,4 +43,6 @@ export interface GraphqlQuotaWarning {
   resetAt: number;
   pollIntervalMinutes: number;
   pollTimeoutMinutes: number;
+  /** Both budgets when GraphQL and REST core are low together. */
+  budgets?: QuotaWarningBudget[];
 }

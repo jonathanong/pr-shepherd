@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GitHubRequestError } from "../github/errors.mts";
-import { graphqlQuotaPollIntervalMs, pollGraphQlRetryAfterMs } from "./poll-quota.mts";
+import { pollRateLimitRetryAfterMs, quotaPollIntervalMs } from "./poll-quota.mts";
 
 const BANDS = [
   { remainingPercent: 30, pollIntervalMinutes: 2 },
@@ -10,23 +10,19 @@ const BANDS = [
 
 const MAX_MS = 2 ** 31 - 1;
 
-describe("graphqlQuotaPollIntervalMs", () => {
+function graphql(remaining: number, limit = 5000) {
+  return { graphql: { remaining, limit } };
+}
+
+describe("quotaPollIntervalMs", () => {
   it("keeps the configured interval when remaining is above every band", () => {
-    expect(
-      graphqlQuotaPollIntervalMs(BANDS, { remaining: 4000, limit: 5000 }, 60_000, MAX_MS),
-    ).toBe(60_000);
+    expect(quotaPollIntervalMs(BANDS, graphql(4000), 60_000, MAX_MS)).toBe(60_000);
   });
 
   it("uses the tightest crossed band when it exceeds --interval", () => {
-    expect(
-      graphqlQuotaPollIntervalMs(BANDS, { remaining: 1200, limit: 5000 }, 60_000, MAX_MS),
-    ).toBe(120_000);
-    expect(graphqlQuotaPollIntervalMs(BANDS, { remaining: 900, limit: 5000 }, 60_000, MAX_MS)).toBe(
-      300_000,
-    );
-    expect(graphqlQuotaPollIntervalMs(BANDS, { remaining: 400, limit: 5000 }, 60_000, MAX_MS)).toBe(
-      600_000,
-    );
+    expect(quotaPollIntervalMs(BANDS, graphql(1200), 60_000, MAX_MS)).toBe(120_000);
+    expect(quotaPollIntervalMs(BANDS, graphql(900), 60_000, MAX_MS)).toBe(300_000);
+    expect(quotaPollIntervalMs(BANDS, graphql(400), 60_000, MAX_MS)).toBe(600_000);
   });
 
   it("uses the lowest remainingPercent band when crossed intervals are not monotonic", () => {
@@ -34,12 +30,8 @@ describe("graphqlQuotaPollIntervalMs", () => {
       { remainingPercent: 40, pollIntervalMinutes: 20 },
       { remainingPercent: 5, pollIntervalMinutes: 1 },
     ];
-    expect(graphqlQuotaPollIntervalMs(bands, { remaining: 200, limit: 5000 }, 60_000, MAX_MS)).toBe(
-      60_000,
-    );
-    expect(
-      graphqlQuotaPollIntervalMs(bands, { remaining: 1500, limit: 5000 }, 60_000, MAX_MS),
-    ).toBe(1_200_000);
+    expect(quotaPollIntervalMs(bands, graphql(200), 60_000, MAX_MS)).toBe(60_000);
+    expect(quotaPollIntervalMs(bands, graphql(1500), 60_000, MAX_MS)).toBe(1_200_000);
   });
 
   it("picks the lowest remainingPercent even when bands are unsorted", () => {
@@ -47,106 +39,118 @@ describe("graphqlQuotaPollIntervalMs", () => {
       { remainingPercent: 10, pollIntervalMinutes: 10 },
       { remainingPercent: 30, pollIntervalMinutes: 2 },
     ];
-    expect(graphqlQuotaPollIntervalMs(bands, { remaining: 400, limit: 5000 }, 60_000, MAX_MS)).toBe(
-      600_000,
-    );
+    expect(quotaPollIntervalMs(bands, graphql(400), 60_000, MAX_MS)).toBe(600_000);
   });
 
   it("does not shrink an already-longer --interval", () => {
+    expect(quotaPollIntervalMs(BANDS, graphql(1200), 180_000, MAX_MS)).toBe(180_000);
+  });
+
+  it("uses the tighter of GraphQL and REST core", () => {
     expect(
-      graphqlQuotaPollIntervalMs(BANDS, { remaining: 1200, limit: 5000 }, 180_000, MAX_MS),
-    ).toBe(180_000);
+      quotaPollIntervalMs(
+        BANDS,
+        {
+          graphql: { remaining: 4000, limit: 5000 },
+          rest: [{ resource: "core", remaining: 400, limit: 5000 }],
+        },
+        60_000,
+        MAX_MS,
+      ),
+    ).toBe(600_000);
   });
 
   it("ignores missing usage, empty bands, and a zero limit", () => {
-    expect(graphqlQuotaPollIntervalMs(BANDS, undefined, 60_000, MAX_MS)).toBe(60_000);
-    expect(graphqlQuotaPollIntervalMs([], { remaining: 1, limit: 5000 }, 60_000, MAX_MS)).toBe(
-      60_000,
-    );
-    expect(graphqlQuotaPollIntervalMs(BANDS, { remaining: 1, limit: 0 }, 60_000, MAX_MS)).toBe(
-      60_000,
-    );
+    expect(quotaPollIntervalMs(BANDS, undefined, 60_000, MAX_MS)).toBe(60_000);
+    expect(quotaPollIntervalMs([], graphql(1), 60_000, MAX_MS)).toBe(60_000);
+    expect(quotaPollIntervalMs(BANDS, graphql(1, 0), 60_000, MAX_MS)).toBe(60_000);
   });
 });
 
-describe("pollGraphQlRetryAfterMs", () => {
+describe("pollRateLimitRetryAfterMs", () => {
   it("returns null for non-rate-limit errors", () => {
-    expect(pollGraphQlRetryAfterMs(new Error("boom"))).toBeNull();
+    expect(pollRateLimitRetryAfterMs(new Error("boom"))).toBeNull();
     expect(
-      pollGraphQlRetryAfterMs(new GitHubRequestError("not found", { status: 404 })),
+      pollRateLimitRetryAfterMs(new GitHubRequestError("not found", { status: 404 })),
     ).toBeNull();
   });
 
-  it("honors Retry-After without shortening an explicit delay", () => {
+  it("reports secondary for Retry-After and 429 without a resource", () => {
     expect(
-      pollGraphQlRetryAfterMs(
+      pollRateLimitRetryAfterMs(
         new GitHubRequestError("secondary rate limit", { status: 403, retryAfterSeconds: 15 }),
       ),
-    ).toBe(15_000);
+    ).toEqual({ ms: 15_000, resource: "secondary" });
     expect(
-      pollGraphQlRetryAfterMs(
+      pollRateLimitRetryAfterMs(
         new GitHubRequestError("secondary rate limit", { status: 403, retryAfterSeconds: 500 }),
       ),
-    ).toBe(500_000);
-  });
-
-  it("waits until GraphQL remaining resets when Retry-After is absent", () => {
-    const resetAt = Math.floor(Date.now() / 1000) + 180;
+    ).toEqual({ ms: 500_000, resource: "secondary" });
     expect(
-      pollGraphQlRetryAfterMs(
-        new GitHubRequestError("API rate limit exceeded", {
-          status: 403,
-          rateLimit: { remaining: 0, limit: 5000, resetAt },
-        }),
-      ),
-    ).toBeGreaterThan(170_000);
-  });
-
-  it("waits until resetAt when remaining is 0 without a rate-limit message", () => {
-    const resetAt = Math.floor(Date.now() / 1000) + 180;
+      pollRateLimitRetryAfterMs(new GitHubRequestError("rate limit", { status: 429 })),
+    ).toEqual({ ms: 60_000, resource: "secondary" });
     expect(
-      pollGraphQlRetryAfterMs(
-        new GitHubRequestError("forbidden", {
-          status: 403,
-          rateLimit: { remaining: 0, limit: 5000, resetAt },
-        }),
-      ),
-    ).toBeGreaterThan(170_000);
-  });
-
-  it("does not wait on an already-elapsed GraphQL resetAt", () => {
-    expect(
-      pollGraphQlRetryAfterMs(
-        new GitHubRequestError("forbidden", {
-          status: 403,
-          rateLimit: { remaining: 0, limit: 5000, resetAt: 0 },
-        }),
-      ),
-    ).toBe(0);
-  });
-
-  it("retries GraphQL error payloads that mention a secondary limit", () => {
-    expect(
-      pollGraphQlRetryAfterMs(
+      pollRateLimitRetryAfterMs(
         new GitHubRequestError("ok", {
           status: 200,
           graphqlErrors: [{ message: "secondary rate limit" }],
         }),
       ),
-    ).toBe(60_000);
-  });
-
-  it("defaults to 60s for a 429 without Retry-After", () => {
-    expect(pollGraphQlRetryAfterMs(new GitHubRequestError("rate limit", { status: 429 }))).toBe(
-      60_000,
-    );
-  });
-
-  it("clamps a zero Retry-After to zero milliseconds", () => {
+    ).toEqual({ ms: 60_000, resource: "secondary" });
     expect(
-      pollGraphQlRetryAfterMs(
+      pollRateLimitRetryAfterMs(
         new GitHubRequestError("secondary rate limit", { status: 403, retryAfterSeconds: 0 }),
       ),
+    ).toEqual({ ms: 0, resource: "secondary" });
+  });
+
+  it("reports graphql when a GraphQL primary limit is exhausted", () => {
+    const resetAt = Math.floor(Date.now() / 1000) + 180;
+    const retry = pollRateLimitRetryAfterMs(
+      new GitHubRequestError("API rate limit exceeded", {
+        status: 403,
+        rateLimit: { resource: "graphql", remaining: 0, limit: 5000, resetAt },
+      }),
+    );
+    expect(retry?.resource).toBe("graphql");
+    expect(retry?.ms).toBeGreaterThan(170_000);
+    expect(retry?.remaining).toBe(0);
+    expect(retry?.limit).toBe(5000);
+  });
+
+  it("reports core for a REST 403 with remaining 0", () => {
+    const resetAt = Math.floor(Date.now() / 1000) + 180;
+    const retry = pollRateLimitRetryAfterMs(
+      new GitHubRequestError("API rate limit exceeded", {
+        status: 403,
+        rateLimit: { resource: "core", remaining: 0, limit: 5000, resetAt },
+      }),
+    );
+    expect(retry?.resource).toBe("core");
+    expect(retry?.ms).toBeGreaterThan(170_000);
+    expect(retry?.resetAt).toBe(resetAt);
+  });
+
+  it("waits until resetAt when remaining is 0 without a rate-limit message", () => {
+    const resetAt = Math.floor(Date.now() / 1000) + 180;
+    const retry = pollRateLimitRetryAfterMs(
+      new GitHubRequestError("forbidden", {
+        status: 403,
+        rateLimit: { remaining: 0, limit: 5000, resetAt },
+      }),
+    );
+    expect(retry?.resource).toBe("graphql");
+    expect(retry?.ms).toBeGreaterThan(170_000);
+  });
+
+  it("does not wait on an already-elapsed resetAt", () => {
+    expect(
+      pollRateLimitRetryAfterMs(
+        new GitHubRequestError("forbidden", {
+          status: 403,
+          rateLimit: { remaining: 0, limit: 5000, resetAt: 0 },
+        }),
+      )?.ms,
     ).toBe(0);
   });
 });

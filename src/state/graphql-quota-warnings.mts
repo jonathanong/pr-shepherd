@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { GraphqlQuotaWarningBand } from "../config/load.mts";
-import type { GraphqlQuotaWarning, GraphqlApiUsage } from "../types.mts";
+import type { ApiResourceUsage, GraphqlQuotaWarning } from "../types.mts";
 import { resolveRepoStateDir } from "./base.mts";
 import { getWorktreeKey } from "../util/worktree.mts";
 import { claimWarning } from "./graphql-quota-claims.mts";
@@ -17,14 +17,15 @@ const sessionStates = new Map<string, GraphqlQuotaWarningState>();
 export async function evaluateWorktreeGraphqlQuotaWarning(
   key: { owner: string; repo: string },
   bands: GraphqlQuotaWarningBand[],
-  sample: GraphqlApiUsage,
+  sample: ApiResourceUsage,
   persist: boolean,
   now = Date.now() / 1000,
 ): Promise<GraphqlQuotaWarning | undefined> {
   if (bands.length === 0) return undefined;
-  const path = await warningStatePath(key);
+  const quotaResource = sample.resource === "core" ? "core" : "graphql";
+  const path = await warningStatePath(key, quotaResource);
   if (path === undefined) {
-    const sessionKey = `${key.owner}/${key.repo}`;
+    const sessionKey = `${key.owner}/${key.repo}/${quotaResource}`;
     if (!persist) {
       return evaluateGraphqlQuotaWarning(bands, sample, sessionStates.get(sessionKey) ?? null, now)
         .warning;
@@ -74,14 +75,21 @@ async function serializeStateUpdate<T>(key: string, update: () => Promise<T>): P
   return result;
 }
 
-async function warningStatePath(key: { owner: string; repo: string }): Promise<string | undefined> {
+async function warningStatePath(
+  key: { owner: string; repo: string },
+  resource: "graphql" | "core",
+): Promise<string | undefined> {
   let worktreeKey: string;
   try {
     worktreeKey = await getWorktreeKey();
   } catch {
     return undefined;
   }
-  return join(resolveRepoStateDir(key), "worktrees", `${worktreeKey}-graphql-quota-warnings.json`);
+  return join(
+    resolveRepoStateDir(key),
+    "worktrees",
+    `${worktreeKey}-${resource}-quota-warnings.json`,
+  );
 }
 
 async function readState(path: string): Promise<GraphqlQuotaWarningState | null> {

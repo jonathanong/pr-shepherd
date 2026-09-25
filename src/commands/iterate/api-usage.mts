@@ -1,9 +1,6 @@
 import { loadConfig } from "../../config/load.mts";
-import {
-  summarizeApiTelemetry,
-  withGraphqlCredentialFingerprint,
-} from "../../github/api-telemetry.mts";
-import { evaluateWorktreeGraphqlQuotaWarning } from "../../state/graphql-quota-warnings.mts";
+import { summarizeApiTelemetry } from "../../github/api-telemetry.mts";
+import { selectQuotaWarning } from "../quota-selection.mts";
 import type { IterateResult } from "../../types.mts";
 import { buildQuotaAwareContinuation } from "../../quota-warning.mts";
 
@@ -21,19 +18,15 @@ export async function attachApiUsage(
   if (apiUsage === undefined) return result;
 
   let quotaWarning = preservePersistedWarning ? result.quotaWarning : undefined;
-  if (quotaWarning === undefined && apiUsage.graphql !== undefined && shouldWarn(result)) {
+  const core = apiUsage.rest?.find((item) => item.resource === "core");
+  if (quotaWarning === undefined && shouldWarn(result) && (apiUsage.graphql || core)) {
     const [owner, repo] = result.repo.split("/");
     if (owner && repo) {
       const bands = loadConfig().watch.graphqlQuotaWarnings.map((band) => ({
         ...band,
         pollIntervalMinutes: Math.max(band.pollIntervalMinutes, minimumPollIntervalMinutes),
       }));
-      quotaWarning = await evaluateWorktreeGraphqlQuotaWarning(
-        { owner, repo },
-        bands,
-        withGraphqlCredentialFingerprint(apiUsage.graphql),
-        persistWarning,
-      );
+      quotaWarning = await selectQuotaWarning({ owner, repo }, bands, apiUsage, persistWarning);
     }
   }
 

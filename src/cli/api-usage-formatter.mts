@@ -12,7 +12,7 @@ function formatResource(resource: ApiResourceUsage): string {
 export function formatQuotaWarning(warning: GraphqlQuotaWarning | undefined): string | null {
   if (warning === undefined) return null;
   const used = warning.used === undefined ? "" : ` · used ${warning.used}`;
-  return [
+  const lines = [
     "## GitHub API quota warning",
     "",
     `- Resource: \`${warning.resource}\``,
@@ -21,8 +21,25 @@ export function formatQuotaWarning(warning: GraphqlQuotaWarning | undefined): st
     `- Reset: ${resetTime(warning.resetAt)}`,
     `- Recommended poll interval: ${warning.pollIntervalMinutes} minutes`,
     `- Recommended bounded CLI timeout: ${warning.pollTimeoutMinutes} minutes`,
-    "- Recommendation: keep polling pr-shepherd at the cadence above; for incidental PR operations prefer REST `gh` (`gh pr view`, `gh pr review`, `gh api`); do not substitute `gh pr checks`/`gh pr watch`",
-  ].join("\n");
+    recommendation(warning),
+  ];
+  for (const budget of warning.budgets ?? []) {
+    const budgetUsed = budget.used === undefined ? "" : ` · used ${budget.used}`;
+    lines.push(
+      `- Budget \`${budget.resource}\`: ${budget.remaining}/${budget.limit} remaining${budgetUsed} · crossed ${budget.thresholdPercent}% · resets ${resetTime(budget.resetAt)}`,
+    );
+  }
+  return lines.join("\n");
+}
+
+function recommendation(warning: GraphqlQuotaWarning): string {
+  if (warning.resource === "combined") {
+    return "- Recommendation: keep polling pr-shepherd at the cadence above; both GraphQL and REST core are below their warning thresholds, so do not shift work between them. Do not substitute `gh pr checks` or `gh pr watch`";
+  }
+  if (warning.resource === "core") {
+    return "- Recommendation: keep polling pr-shepherd at the cadence above; do not add incidental REST `gh` calls (`gh pr view`, `gh pr review`, `gh api`) while REST core is low. Do not substitute `gh pr checks` or `gh pr watch`";
+  }
+  return "- Recommendation: keep polling pr-shepherd at the cadence above; for incidental PR operations prefer REST `gh` (`gh pr view`, `gh pr review`, `gh api`); do not substitute `gh pr checks` or `gh pr watch`";
 }
 
 export function formatApiUsage(usage: ApiUsage | undefined): string | null {
