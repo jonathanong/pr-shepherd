@@ -1,4 +1,6 @@
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
+import { queueRemovalAppliesToHead } from "./queue-removal-freshness.mts";
+import { parseCreatedAt } from "./batch-parser-helpers.mts";
 
 type QueueRemovalEvent = NonNullable<RawSummaryPr["mergeQueueRemovals"]>["nodes"][number];
 
@@ -11,6 +13,16 @@ export function currentQueueRemovalEvent(raw: RawSummaryPr): QueueRemovalEvent |
   const addition = raw.mergeQueueAdditions?.nodes[0];
   if (addition && Date.parse(addition.createdAt) > removalTime) return null;
   const parents = removal.beforeCommit?.parents?.nodes.map((parent) => parent.oid);
-  if (!parents?.includes(raw.headRefOid)) return null;
+  const headCommittedAt = raw.commits?.nodes[0]?.commit.committedDate;
+  if (
+    !queueRemovalAppliesToHead({
+      parentOids: parents,
+      headOid: raw.headRefOid,
+      ...(headCommittedAt && { headCommittedAtUnix: parseCreatedAt(headCommittedAt) }),
+      removedAtUnix: Math.floor(removalTime / 1000),
+    })
+  ) {
+    return null;
+  }
   return removal;
 }
