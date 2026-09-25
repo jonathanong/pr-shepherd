@@ -7,8 +7,9 @@ import { fetchPollSummary } from "../github/poll-summary.mts";
 import { sleep } from "../util/sleep.mts";
 import {
   aggregateQuotaWarning,
-  graphqlQuotaPollIntervalMs,
-  pollGraphQlRetryAfterMs,
+  formatRateLimitRetryLine,
+  pollRateLimitRetryAfterMs,
+  quotaPollIntervalMs,
 } from "./poll-quota.mts";
 import type { PollSummaryCommandOptions, PollSummaryResult } from "../types.mts";
 import { planPollSummary, withPollSummaryInstructions } from "./poll-summary-instructions.mts";
@@ -111,13 +112,17 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
           opts.merge,
         );
       }
-      const retryMs = opts.untilTerminal ? pollGraphQlRetryAfterMs(error) : null;
-      if (retryMs === null || rateLimitRetries >= 1) throw error;
+      const retry = opts.untilTerminal ? pollRateLimitRetryAfterMs(error) : null;
+      if (retry === null || rateLimitRetries >= 1) throw error;
       rateLimitRetries += 1;
       process.stderr.write(
-        `[aggregate poll tick ${tick} / +${Math.round((Date.now() - start) / 1000)}s] GraphQL rate limit — retrying in ${Math.round(retryMs / 1000)}s\n`,
+        formatRateLimitRetryLine(
+          `aggregate poll tick ${tick}`,
+          Math.round((Date.now() - start) / 1000),
+          retry,
+        ),
       );
-      await sleep(retryMs);
+      await sleep(retry.ms);
       continue;
     }
     const allTerminal =
@@ -186,12 +191,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
     const elapsedMs = Date.now() - start;
     const sleepMs = debounceUntil
       ? Math.min(intervalMs, Math.max(debounceUntil - Date.now(), 0))
-      : graphqlQuotaPollIntervalMs(
-          quotaBands,
-          summarizeApiTelemetry()?.graphql,
-          intervalMs,
-          MAX_TIMER_MS,
-        );
+      : quotaPollIntervalMs(quotaBands, summarizeApiTelemetry(), intervalMs, MAX_TIMER_MS);
     if (!opts.untilTerminal && debounceUntil === null) {
       const remainingMs = timeoutMs - elapsedMs;
       if (remainingMs <= 0 || remainingMs + TIMER_DRIFT_TOLERANCE_MS < sleepMs) {

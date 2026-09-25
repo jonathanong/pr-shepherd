@@ -3,7 +3,11 @@ import type { IterateCommandOptions, IterateResult } from "../types.mts";
 import { sleep } from "../util/sleep.mts";
 import { withPollApiUsage } from "./poll-run.mts";
 import { loadConfig } from "../config/load.mts";
-import { graphqlQuotaPollIntervalMs, pollGraphQlRetryAfterMs } from "./poll-quota.mts";
+import {
+  formatRateLimitRetryLine,
+  pollRateLimitRetryAfterMs,
+  quotaPollIntervalMs,
+} from "./poll-quota.mts";
 import { writeDebounceProgress, writeWaitProgress } from "./poll-progress.mts";
 
 export interface PollCommandOptions extends IterateCommandOptions {
@@ -76,13 +80,17 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
         rateLimitRetries = 0;
         return result;
       } catch (err) {
-        const retryMs = untilTerminal ? pollGraphQlRetryAfterMs(err) : null;
-        if (retryMs === null || rateLimitRetries >= 1) throw err;
+        const retry = untilTerminal ? pollRateLimitRetryAfterMs(err) : null;
+        if (retry === null || rateLimitRetries >= 1) throw err;
         rateLimitRetries += 1;
         process.stderr.write(
-          `[poll tick ${tick} / +${Math.round((Date.now() - start) / 1000)}s] GraphQL rate limit — retrying in ${Math.round(retryMs / 1000)}s\n`,
+          formatRateLimitRetryLine(
+            `poll tick ${tick}`,
+            Math.round((Date.now() - start) / 1000),
+            retry,
+          ),
         );
-        await sleep(retryMs);
+        await sleep(retry.ms);
         const result = await iterateTick(fingerprintCache);
         rateLimitRetries = 0;
         return result;
@@ -121,9 +129,9 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
     if (lastResult.action === "wait" && !pastDebounce) {
       if (pendingQuotaWarning === undefined) debounceUntil = null;
       const elapsedMs = Date.now() - start;
-      const sleepMs = graphqlQuotaPollIntervalMs(
+      const sleepMs = quotaPollIntervalMs(
         quotaBands,
-        lastResult.apiUsage?.graphql,
+        lastResult.apiUsage,
         intervalMs,
         MAX_TIMER_MS,
       );
@@ -153,9 +161,9 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
     ) {
       debounceUntil = null;
       const elapsedMs = Date.now() - start;
-      const sleepMs = graphqlQuotaPollIntervalMs(
+      const sleepMs = quotaPollIntervalMs(
         quotaBands,
-        lastResult.apiUsage?.graphql,
+        lastResult.apiUsage,
         intervalMs,
         MAX_TIMER_MS,
       );
