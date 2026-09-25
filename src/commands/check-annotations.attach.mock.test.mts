@@ -126,8 +126,13 @@ describe("attachUnseenCheckAnnotations", () => {
 
   it("falls back per check after a non-rate-limit chunk error and summarizes once", async () => {
     const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    mockGraphql.mockImplementation(async (query: string, vars: { ids?: string[] }) => {
-      if (query === CHECK_RUN_ANNOTATIONS_BATCH_QUERY && vars.ids?.length === 1) {
+    mockGraphql.mockImplementation(async (query: string, vars?: Record<string, unknown>) => {
+      const batchIds = vars?.["ids"];
+      if (
+        query === CHECK_RUN_ANNOTATIONS_BATCH_QUERY &&
+        Array.isArray(batchIds) &&
+        batchIds.length === 1
+      ) {
         return { data: { nodes: [checkNode("CR_acme_21", "late")] } };
       }
       throw new Error("resource not accessible");
