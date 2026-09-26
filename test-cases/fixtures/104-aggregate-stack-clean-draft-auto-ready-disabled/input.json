@@ -13,7 +13,7 @@
         "action": "wait", "reasons": ["draft-auto-mark-ready-disabled"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
         "headRefName": "draft", "headRefOid": "4211111111111111111111111111111111111111", "baseRefName": "main", "isDraft": true,
         "stack": { "number": 42, "size": 1, "position": 1, "baseRefName": "main" },
-        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/421 --timeout 1s --debounce 0s --no-auto-mark-ready", "pollProbe": true
+        "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/421 --timeout 1s --debounce 0s --no-auto-mark-ready", "pollProbe": true
       }
     ]
   }

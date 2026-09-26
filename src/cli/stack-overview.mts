@@ -113,11 +113,18 @@ function layerBlocker(item: PollSummaryItem, stale: boolean): string | undefined
   return reason;
 }
 
+/** Skill stop tokens. Other stack actions stay untagged so the loop keeps running. */
+function stackTerminalTag(nextAction: StackOverview["nextAction"]): string {
+  if (nextAction === "cancel") return " [CANCEL]";
+  if (nextAction === "escalate") return " [ESCALATE]";
+  return "";
+}
+
 /** Markdown for a stack overview. */
 export function formatStackOverview(overview: StackOverview): string {
   const stack = overview.selection;
   const lines = [
-    `# ${overview.repo} stack #${stack.stackNumber} — ${overview.reason}`,
+    `# ${overview.repo} stack #${stack.stackNumber}${stackTerminalTag(overview.nextAction)} — ${overview.reason}`,
     "",
     `Stack: #${stack.stackNumber} · anchor PR #${stack.anchor} · ${stack.stackSize} layers · mode \`${overview.mode}\``,
     ...(overview.stackMergeable !== undefined

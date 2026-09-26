@@ -96,7 +96,7 @@
         "baseRefName": "codex/github-ingress-foundation",
         "remainingSeconds": 300,
         "stack": { "number": 514, "size": 5, "position": 5, "baseRefName": "main" },
-        "pollCommand": "pr-shepherd https://github.com/jonathanong/auto-harness/pull/518 --until-terminal"
+        "owned": true, "pollCommand": "pr-shepherd https://github.com/jonathanong/auto-harness/pull/518 --until-terminal"
       }
     ]
   }

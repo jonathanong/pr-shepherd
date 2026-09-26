@@ -113,6 +113,19 @@ export function idleWaitPlan(idle: PollSummaryItem[]): StackPlan {
   };
 }
 
+function sessionInstruction(item: PollSummaryItem): string {
+  if (!item.owned) return ` PR #${item.pr} is not owned. Do not run a session for it.`;
+  const removal = item.queueRemoval
+    ? ` PR #${item.pr} was removed from the merge queue (\`${item.queueRemoval.reason ?? "unknown reason"}\`${item.queueRemoval.actor ? ` by @${item.queueRemoval.actor}` : ""}).`
+    : "";
+  if (!item.pollCommand) {
+    return ` PR #${item.pr} needs a one-PR Shepherd session, but no command was available.`;
+  }
+  const queueNote = item.queueRemoval
+    ? " That session fixes failing queue CI, or escalates when the removal has no concrete fix."
+    : "";
+  return `${removal} Run \`${item.pollCommand}\` for PR #${item.pr}.${queueNote}`;
+}
 export function describeIdleLayers(idle: PollSummaryItem[]): string {
   return idle.map((item) => `PR #${item.pr} (${item.reasons.join(", ")})`).join("; ");
 }
@@ -123,17 +136,10 @@ export function appendAutonomousInstructions(
 ): void {
   if (candidates.length === 0) return;
   instructions.push(
-    `${instructions.length + 1}. Start or delegate the relevant one-PR sessions below; review and CI work on separate layers can proceed concurrently.`,
+    `${instructions.length + 1}. Start or delegate one-PR sessions only for rows marked \`owned\`. Leave every other author's layer untouched. Owned layers can proceed concurrently.`,
   );
   for (const item of candidates) {
-    const removal = item.queueRemoval
-      ? ` PR #${item.pr} was removed from the merge queue (\`${item.queueRemoval.reason ?? "unknown reason"}\`${item.queueRemoval.actor ? ` by @${item.queueRemoval.actor}` : ""}).`
-      : "";
-    instructions.push(
-      item.pollCommand
-        ? `${instructions.length + 1}.${removal} Run \`${item.pollCommand}\` for PR #${item.pr}.${item.queueRemoval ? " That session fixes failing queue CI, or escalates when the removal has no concrete fix." : ""}`
-        : `${instructions.length + 1}. PR #${item.pr} needs a one-PR Shepherd session, but no command was available.`,
-    );
+    instructions.push(`${instructions.length + 1}.${sessionInstruction(item)}`);
   }
 }
 

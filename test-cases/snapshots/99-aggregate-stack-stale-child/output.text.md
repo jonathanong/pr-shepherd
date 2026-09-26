@@ -8,7 +8,7 @@ nextAction: shepherd
 
 - [PR #361: Verified foundation](https://github.com/owner/repo/pull/361) — shepherded · mergeable
   - OPEN · position 1/2 · base `main`
-- [PR #362: Stale child](https://github.com/owner/repo/pull/362) — shepherded · not mergeable (`stale-ancestry`)
+- [PR #362: Stale child](https://github.com/owner/repo/pull/362) — shepherded · not mergeable (`stale-ancestry`) · owned
   - OPEN · position 2/2 · base `foundation`
 
 ## Stack ancestry
@@ -17,6 +17,6 @@ nextAction: shepherd
 
 ## Instructions
 
-1. Start or delegate the relevant one-PR sessions below; review and CI work on separate layers can proceed concurrently.
+1. Start or delegate one-PR sessions only for rows marked `owned`. Leave every other author's layer untouched. Owned layers can proceed concurrently.
 2. Run `pr-shepherd https://github.com/owner/repo/pull/362 --until-terminal` for PR #362.
 3. After the selected one-PR sessions, rerun this same `--stack` selector.

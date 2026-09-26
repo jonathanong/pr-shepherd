@@ -6,7 +6,7 @@ nextAction: shepherd
 
 ## Layers
 
-- [PR #421: Clean draft](https://github.com/owner/repo/pull/421) — not shepherded · not mergeable (`draft`)
+- [PR #421: Clean draft](https://github.com/owner/repo/pull/421) — not shepherded · not mergeable (`draft`) · owned
   - OPEN · draft · position 1/1 · base `main`
 
 ## Instructions

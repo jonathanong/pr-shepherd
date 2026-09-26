@@ -14,12 +14,11 @@ import type { RepoInfo } from "./client.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import { summarizePollSummaryChecks } from "./poll-summary-checks.mts";
 import { summarizePollSummaryReview } from "./poll-summary-review.mts";
-import { fingerprintRawSummaryPr } from "./poll-summary-fingerprint.mts";
 import { currentQueueRemovalEvent } from "./poll-summary-queue-removal.mts";
 import { isCurrentSummaryReady } from "./poll-summary-readiness.mts";
 import { applyOpenCheckBlockers } from "./poll-summary-check-blockers.mts";
 import { normalizePollSummaryState, routePollSummary } from "./poll-summary-route.mts";
-import { hydrateReadyAnnotationProbe } from "./poll-summary-annotation-probe.mts";
+import { hydrateReadyAnnotationProbe, readyFingerprint } from "./poll-summary-annotation-probe.mts";
 export async function summarizePollSummaryPr(
   raw: RawSummaryPr,
   repo: RepoInfo,
@@ -70,16 +69,18 @@ export async function summarizePollSummaryPr(
       }
     : undefined;
   if (opts.stackPrNumber !== undefined) await hydrateReadyAnnotationProbe(raw, repo, review);
-  const fingerprint = opts.stackPrNumber !== undefined ? fingerprintRawSummaryPr(raw) : null;
-  const receipt = fingerprint
-    ? await readReadyReceipt({ owner: repo.owner, repo: repo.name, pr: raw.number })
-    : null;
-  // A queued PR's target branch can advance as earlier queue entries merge.
-  // Keep the pre-enqueue base binding for the receipt comparison while the
-  // merge group itself supplies the current mergeability evidence.
+  const receipt =
+    opts.stackPrNumber === undefined
+      ? null
+      : await readReadyReceipt({ owner: repo.owner, repo: repo.name, pr: raw.number });
+  const fingerprint =
+    opts.stackPrNumber === undefined
+      ? null
+      : readyFingerprint(raw, receipt?.readinessFingerprint ?? null);
+  // A queued PR's base can advance. Keep the receipt base while the probe is complete.
   const receiptFingerprint =
     raw.isInMergeQueue && receipt
-      ? fingerprintRawSummaryPr({ ...raw, baseRefOid: receipt.baseRefOid })
+      ? readyFingerprint({ ...raw, baseRefOid: receipt.baseRefOid }, receipt.readinessFingerprint)
       : fingerprint;
   const currentReady = isCurrentSummaryReady(raw, checks, review, {
     allowQueuedProgress: opts.stackPrNumber !== undefined && raw.isInMergeQueue,

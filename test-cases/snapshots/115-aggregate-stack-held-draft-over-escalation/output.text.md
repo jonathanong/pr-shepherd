@@ -6,9 +6,9 @@ nextAction: shepherd
 
 ## Layers
 
-- [PR #451: Layer needing a decision](https://github.com/owner/repo/pull/451) — not shepherded · not mergeable (`fix-thrash`)
+- [PR #451: Layer needing a decision](https://github.com/owner/repo/pull/451) — not shepherded · not mergeable (`fix-thrash`) · owned
   - OPEN · position 1/2 · base `main`
-- [PR #452: Held upper draft](https://github.com/owner/repo/pull/452) — not shepherded · not mergeable (`draft`)
+- [PR #452: Held upper draft](https://github.com/owner/repo/pull/452) — not shepherded · not mergeable (`draft`) · owned
   - OPEN · draft · position 2/2 · base `needs-decision`
 
 ## Instructions

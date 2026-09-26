@@ -34,7 +34,7 @@ A stack tick is the summary plus the 1-point `PollStackTopology` preflight. The 
 
 `fetchRawSummaryPr` uses the same fragment: 3 points before, 1 after. A check page past the first 100 contexts stays 1 point and no longer repeats the annotation probe.
 
-`PollSummaryAnnotationProbe` runs only for a layer that otherwise looks ready, one commit at a time, so a late annotation still changes the READY-receipt fingerprint. It is not part of the always-on totals above.
+`PollSummaryAnnotationProbe` runs only for a layer that otherwise looks ready, one commit at a time, so a late annotation still changes the READY-receipt fingerprint. A commit with more than 100 check contexts adds a page. It is not part of the always-on totals above. A failed or incomplete probe does not replace a stored READY fingerprint.
 
 ## Usage by command
 

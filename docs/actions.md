@@ -44,7 +44,7 @@ A layer whose only failing checks are deferred on an open external pull request 
 keeps polling. A merged or closed blocker still sends the layer to its one-PR session, which says
 to update the branch rather than rerun the job.
 
-`CANCEL` is terminal only when every open layer is READY without merge intent (or every layer is merged). Aggregate mode
+`CANCEL` is terminal only when every open layer is READY without merge intent (or every layer is merged). The stack heading then includes `[CANCEL]`; a human handoff heading includes `[ESCALATE]`. Those tokens are what the skill stops on. Aggregate mode
 never performs mutations or emits rebase/push commands. `ESCALATE` is reserved for a human decision, such as a
 closed-unmerged or otherwise unverified dependency, once no autonomous one-PR session remains.
 If human blockers coexist with shepherdable layers, `SHEPHERD` is the immediate next action: its

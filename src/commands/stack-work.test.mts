@@ -71,6 +71,15 @@ describe("stack selector agent work", () => {
     );
   });
 
+  it("does not emit a session command for a layer the viewer does not own", () => {
+    const unowned = row(1, 1, { action: "fix_code", reasons: ["failing-checks"] });
+    delete unowned.owned;
+    const result = withPollSummaryInstructions(stack([unowned]), false);
+    expect(text(result)).toContain("PR #1 is not owned. Do not run a session for it.");
+    expect(text(result)).not.toContain("pull/1 --until-terminal");
+    expect(text(result)).toContain("rows marked `owned`");
+  });
+
   it("keeps an upper draft's review session above a layer that needs a human", () => {
     const result = withPollSummaryInstructions(
       stack([

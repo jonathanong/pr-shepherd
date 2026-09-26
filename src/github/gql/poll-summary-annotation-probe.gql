@@ -1,11 +1,20 @@
-query PollSummaryAnnotationProbe($owner: String!, $repo: String!, $oid: GitObjectID!) {
+query PollSummaryAnnotationProbe(
+  $owner: String!
+  $repo: String!
+  $oid: GitObjectID!
+  $before: String
+) {
   repository(owner: $owner, name: $repo) {
     object(oid: $oid) {
       __typename
       ... on Commit {
         oid
         statusCheckRollup {
-          contexts(last: 100) {
+          contexts(last: 100, before: $before) {
+            pageInfo {
+              hasPreviousPage
+              startCursor
+            }
             nodes {
               __typename
               ... on CheckRun {

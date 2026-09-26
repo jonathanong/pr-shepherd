@@ -6,9 +6,9 @@ nextAction: shepherd
 
 ## Layers
 
-- [PR #441: Draft with pending CI](https://github.com/owner/repo/pull/441) — not shepherded · not mergeable (`draft`)
+- [PR #441: Draft with pending CI](https://github.com/owner/repo/pull/441) — not shepherded · not mergeable (`draft`) · owned
   - OPEN · draft · position 1/2 · base `main`
-- [PR #442: Upper draft](https://github.com/owner/repo/pull/442) — not shepherded · not mergeable (`draft`)
+- [PR #442: Upper draft](https://github.com/owner/repo/pull/442) — not shepherded · not mergeable (`draft`) · owned
   - OPEN · draft · position 2/2 · base `draft-pending`
 
 ## Instructions

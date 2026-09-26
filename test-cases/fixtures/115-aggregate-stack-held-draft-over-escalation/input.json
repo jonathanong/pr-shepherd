@@ -40,7 +40,7 @@
           "position": 1,
           "baseRefName": "main"
         },
-        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/451 --until-terminal --no-auto-mark-ready"
+        "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/451 --until-terminal --no-auto-mark-ready"
       },
       {
         "pr": 452,
@@ -64,7 +64,7 @@
           "position": 2,
           "baseRefName": "main"
         },
-        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/452 --timeout 1s --debounce 0s --no-auto-mark-ready",
+        "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/452 --timeout 1s --debounce 0s --no-auto-mark-ready",
         "pollProbe": true
       }
     ]

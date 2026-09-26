@@ -13,14 +13,14 @@
         "action": "cancel", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "BLOCKED",
         "headRefName": "blocked", "headRefOid": "4411111111111111111111111111111111111111", "baseRefName": "main", "readyReceipt": true,
         "stack": { "number": 44, "size": 3, "position": 1, "baseRefName": "main" },
-        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/441 --until-terminal"
+        "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/441 --until-terminal"
       },
       {
         "pr": 442, "repo": "owner/repo", "title": "Hooks receipt", "url": "https://github.com/owner/repo/pull/442",
         "action": "cancel", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "HAS_HOOKS",
         "headRefName": "hooks", "headRefOid": "4422222222222222222222222222222222222222", "baseRefName": "blocked", "readyReceipt": true,
         "stack": { "number": 44, "size": 3, "position": 2, "baseRefName": "main" },
-        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/442 --until-terminal"
+        "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/442 --until-terminal"
       },
       {
         "pr": 443, "repo": "owner/repo", "title": "Pending CI receipt", "url": "https://github.com/owner/repo/pull/443",
@@ -28,7 +28,7 @@
         "headRefName": "pending-ci", "headRefOid": "4433333333333333333333333333333333333333", "baseRefName": "hooks", "readyReceipt": true,
         "checks": { "inProgress": 1 },
         "stack": { "number": 44, "size": 3, "position": 3, "baseRefName": "main" },
-        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/443 --until-terminal"
+        "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/443 --until-terminal"
       }
     ]
   }

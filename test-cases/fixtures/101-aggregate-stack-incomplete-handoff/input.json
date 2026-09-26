@@ -19,7 +19,7 @@
         "action": "cancel", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
         "headRefName": "child", "headRefOid": "2222222222222222222222222222222222222222", "baseRefName": "foundation",
         "stack": { "number": 39, "size": 2, "position": 2, "baseRefName": "main" },
-        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/382 --until-terminal"
+        "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/382 --until-terminal"
       }
     ]
   }

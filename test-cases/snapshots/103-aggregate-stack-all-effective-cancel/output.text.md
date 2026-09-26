@@ -1,4 +1,4 @@
-# owner/repo stack #41 — all_terminal
+# owner/repo stack #41 [CANCEL] — all_terminal
 
 Stack: #41 · anchor PR #413 · 3 layers · mode `summary`
 stackMergeable: true

@@ -1,4 +1,4 @@
-# owner/repo stack #38 — actionable
+# owner/repo stack #38 [ESCALATE] — actionable
 
 Stack: #38 · anchor PR #372 · 2 layers · mode `summary`
 stackMergeable: false

@@ -13,7 +13,7 @@
         "action": "mark_ready", "reasons": ["draft-appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
         "headRefName": "foundation", "headRefOid": "a111111111111111111111111111111111111111", "baseRefName": "main", "isDraft": true,
         "stack": { "number": 31, "size": 2, "position": 1, "baseRefName": "main" },
-        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/301 --until-terminal"
+        "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/301 --until-terminal"
       },
       {
         "pr": 302, "repo": "owner/repo", "title": "Ready-looking child", "url": "https://github.com/owner/repo/pull/302",

@@ -64,7 +64,7 @@ Clean variants:
 
 Exit codes: 0 done, 10-19 PR state, 64-78 shepherd failed (sysexits.h).
   0   CANCEL (merged or ready-delay elapsed)
-  10  WAIT
+  10  WAIT or READY
   11  MARK_READY
   12  FIX_CODE
   13  ESCALATE

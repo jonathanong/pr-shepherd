@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("./client.mts", () => ({ graphqlWithRateLimit: vi.fn() }));
 
 import { graphqlWithRateLimit } from "./client.mts";
-import { hydrateReadyAnnotationProbe } from "./poll-summary-annotation-probe.mts";
+import {
+  annotationProbeUnavailable,
+  hydrateReadyAnnotationProbe,
+} from "./poll-summary-annotation-probe.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 
 const mockGraphql = vi.mocked(graphqlWithRateLimit);
@@ -84,6 +87,7 @@ describe("hydrateReadyAnnotationProbe", () => {
             oid: "c".repeat(40),
             statusCheckRollup: {
               contexts: {
+                pageInfo: { hasPreviousPage: false, startCursor: null },
                 nodes: [{ __typename: "CheckRun", id: "CR1", annotations: { totalCount: 2 } }],
               },
             },
@@ -95,6 +99,47 @@ describe("hydrateReadyAnnotationProbe", () => {
     expect(pr.commits.nodes[0]?.commit.statusCheckRollup?.contexts.nodes[0]).toMatchObject({
       annotations: { totalCount: 2 },
     });
+    expect(annotationProbeUnavailable(pr)).toBe(false);
+    expect(mockGraphql.mock.calls[0]?.[1]).toMatchObject({ before: null });
+  });
+
+  it("pages older check runs before merging annotation totals", async () => {
+    const pr = readyPr();
+    const contexts = pr.commits.nodes[0]?.commit.statusCheckRollup?.contexts;
+    if (!contexts) throw new Error("missing contexts");
+    contexts.nodes.push({
+      __typename: "CheckRun",
+      id: "CR2",
+      name: "lint",
+      status: "COMPLETED",
+      conclusion: "SUCCESS",
+      checkSuite: null,
+    });
+    const page = (hasPreviousPage: boolean, cursor: string | null, id: string, total: number) => ({
+      data: {
+        repository: {
+          object: {
+            __typename: "Commit",
+            oid: "c".repeat(40),
+            statusCheckRollup: {
+              contexts: {
+                pageInfo: { hasPreviousPage, startCursor: cursor },
+                nodes: [{ __typename: "CheckRun", id, annotations: { totalCount: total } }],
+              },
+            },
+          },
+        },
+      },
+    });
+    mockGraphql
+      .mockResolvedValueOnce(page(true, "older", "CR1", 1))
+      .mockResolvedValueOnce(page(false, null, "CR2", 4));
+    await hydrateReadyAnnotationProbe(pr, repo, review);
+    expect(contexts.nodes.map((node) => ("annotations" in node ? node.annotations : null))).toEqual(
+      [{ totalCount: 1 }, { totalCount: 4 }],
+    );
+    expect(mockGraphql.mock.calls[1]?.[1]).toMatchObject({ before: "older" });
+    expect(annotationProbeUnavailable(pr)).toBe(false);
   });
 
   it("ignores a probe for a different commit and a failed request", async () => {
@@ -107,7 +152,13 @@ describe("hydrateReadyAnnotationProbe", () => {
       "annotations",
     );
 
+    expect(annotationProbeUnavailable(pr)).toBe(true);
+
     mockGraphql.mockRejectedValueOnce(new Error("rate limit"));
     await expect(hydrateReadyAnnotationProbe(pr, repo, review)).resolves.toBeUndefined();
+    expect(annotationProbeUnavailable(pr)).toBe(true);
+    expect(pr.commits.nodes[0]?.commit.statusCheckRollup?.contexts.nodes[0]).not.toHaveProperty(
+      "annotations",
+    );
   });
 });
