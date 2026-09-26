@@ -1,15 +1,13 @@
-# Poll summary [ACTIONABLE]
+# owner/repo stack #43 — actionable
 
-**repo** `owner/repo` · **selection** stack #43 anchored at PR #431 (1 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `shepherd`
+Stack: #43 · anchor PR #431 · 1 layers · mode `summary`
+stackMergeable: false
+nextAction: shepherd
 
-## Pull requests
+## Layers
 
-- [PR #431: Draft CI failure](https://github.com/owner/repo/pull/431) [FIX_CODE]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `UNSTABLE` · flags `draft` · stack `43` position `1/1` base `main`
-  - head `draft-failing` at `4311111111111111111111111111111111111111` · base `main`
-  - checks: 1 failing
-  - reasons: `failing-checks`
-  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/431 --timeout 1s --debounce 0s --no-auto-mark-ready` · bounded probe
+- [PR #431: Draft CI failure](https://github.com/owner/repo/pull/431) — not shepherded · not mergeable (`draft`)
+  - OPEN · draft · position 1/1 · base `main`
 
 ## Instructions
 

@@ -14,7 +14,7 @@ Shepherd does two jobs: **gather all context for a PR**, then **emit one determi
 
 ## Actions emitted
 
-- Exactly one action per tick: `WAIT`, `MARK_READY`, `MERGE`, `CANCEL`, `ESCALATE`, or `FIX_CODE`. See [actions.md](actions.md) and [iterate-flow.md](iterate-flow.md).
+- Exactly one action per tick: `WAIT`, `READY`, `MARK_READY`, `MERGE`, `CANCEL`, `ESCALATE`, or `FIX_CODE`. See [actions.md](actions.md) and [iterate-flow.md](iterate-flow.md).
 - Canonical local stdio MCP tools: `iterate`, `apply`, and `build_suggestion_patches`, plus a deprecated singular suggestion adapter. Shell: `pr-shepherd [PR]` (bounded poll) and `pr-shepherd iterate [PR]` (one tick). See [mcp.md](mcp.md) and [cli-usage.md](cli-usage.md).
 - Poll `--debounce` (default: `poll.debounceSeconds`; built-in 1m) so `FIX_CODE` waits a settle window, still iterating at `--interval`, then returns one batched tick. MCP `iterate` has no debounce.
 - Compact, read-only aggregate polling for explicit same-repository PR lists and complete native GitHub stacks, with one-PR READY receipts, a concurrent session for every layer that has work, raw ancestry detection, and an agent-run `gh stack merge` of the highest ready prefix when merge is requested.

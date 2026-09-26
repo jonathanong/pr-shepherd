@@ -1,30 +1,21 @@
-# Poll summary [ACTIONABLE]
+# jonathanong/auto-harness stack #514 — actionable
 
-**repo** `jonathanong/auto-harness` · **selection** stack #514 anchored at PR #518 (5 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `merge`
+Stack: #514 · anchor PR #518 · 5 layers · mode `summary`
+stackMergeable: false
+nextAction: merge
 
-## Pull requests
+## Layers
 
-- [PR #507: docs: clarify service account credential rotation](https://github.com/jonathanong/auto-harness/pull/507) [CANCEL]
-  - state `MERGED` · mergeable `UNKNOWN` · merge `UNKNOWN` · Shepherd READY completion `verified` · stack `514` position `1/5` base `main`
-  - head `codex/github-app-docs` at `e90a5b99c42e8d7d26dc1ac28f954411f7ef79cb` · base `main`
-  - reasons: `merged`
-- [PR #508: feat(host): mint per-session GitHub App tokens](https://github.com/jonathanong/auto-harness/pull/508) [CANCEL]
-  - state `MERGED` · mergeable `UNKNOWN` · merge `UNKNOWN` · stack `514` position `2/5` base `main`
-  - head `codex/github-app-credentials` at `80ad5e9953451916b07440b4fc3675464c17ea06` · base `main`
-  - reasons: `merged`
-- [PR #510: \[codex\] add verified custom webhook ingress](https://github.com/jonathanong/auto-harness/pull/510) [MERGE]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `514` position `3/5` base `main`
-  - head `codex/webhook-platform` at `ccbb8fdfc8317f11b0b35c5e3bc1aad6a4d83e4d` · base `main`
-  - reasons: `appears-ready`
-- [PR #511: \[codex\] add GitHub trigger and pull-ref foundation](https://github.com/jonathanong/auto-harness/pull/511) [MERGE]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `514` position `4/5` base `main`
-  - head `codex/github-ingress-foundation` at `b94436d2ddf60c55948b953610b16b34cff7b4da` · base `codex/webhook-platform`
-  - reasons: `appears-ready`
-- [PR #518: \[codex\] add GitHub App comment ingress](https://github.com/jonathanong/auto-harness/pull/518) [WAIT]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · ready delay `300s` · stack `514` position `5/5` base `main`
-  - head `codex/github-ingress` at `17378b0a7d22a11dcf96ace7a3e56b8da64ea74f` · base `codex/github-ingress-foundation`
-  - reasons: `ready-delay`
-  - pollCommand: `pr-shepherd https://github.com/jonathanong/auto-harness/pull/518 --until-terminal --merge`
+- [PR #507: docs: clarify service account credential rotation](https://github.com/jonathanong/auto-harness/pull/507) — shepherded · not mergeable (`closed`)
+  - MERGED · position 1/5 · base `main`
+- [PR #508: feat(host): mint per-session GitHub App tokens](https://github.com/jonathanong/auto-harness/pull/508) — not shepherded · not mergeable (`closed`)
+  - MERGED · position 2/5 · base `main`
+- [PR #510: [codex] add verified custom webhook ingress](https://github.com/jonathanong/auto-harness/pull/510) — shepherded · mergeable
+  - OPEN · position 3/5 · base `main`
+- [PR #511: [codex] add GitHub trigger and pull-ref foundation](https://github.com/jonathanong/auto-harness/pull/511) — shepherded · mergeable
+  - OPEN · position 4/5 · base `codex/webhook-platform`
+- [PR #518: [codex] add GitHub App comment ingress](https://github.com/jonathanong/auto-harness/pull/518) — not shepherded · not mergeable (`stale-ancestry`)
+  - OPEN · position 5/5 · base `codex/github-ingress-foundation`
 
 ## Stack ancestry
 

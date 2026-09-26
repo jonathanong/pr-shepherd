@@ -121,7 +121,7 @@ describe("runIterate — current stack READY receipt", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("wait");
+    expect(result.action).toBe("ready");
     expect(result.remainingSeconds).toBe(600);
     expect(mockClearReadyReceipt).toHaveBeenCalledWith(key);
     expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, true, 600, "owner", "repo", {

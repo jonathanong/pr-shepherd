@@ -24,7 +24,14 @@ import type { MergeCommandPlan } from "./merge-action.mts";
 import type { ProtectedRun } from "./protected-run.mts";
 import type { ApiUsage, GraphqlQuotaWarning } from "./api-usage.mts";
 
-export type ShepherdAction = "wait" | "fix_code" | "mark_ready" | "merge" | "cancel" | "escalate";
+export type ShepherdAction =
+  | "wait"
+  | "ready"
+  | "fix_code"
+  | "mark_ready"
+  | "merge"
+  | "cancel"
+  | "escalate";
 
 export interface IterateResultSummary {
   passing: number;
@@ -80,6 +87,12 @@ interface IterateResultWait extends IterateResultBase {
   log: string;
   deferredWork?: import("./merge-queue.mts").IterateDeferredWork;
   stackDraftHold?: StackDraftHold;
+}
+
+/** Clean PR whose ready-delay is still counting. `--until-terminal` returns this instead of sleeping. */
+interface IterateResultReady extends IterateResultBase {
+  action: "ready";
+  log: string;
 }
 
 export type CancelReason = "merged" | "closed" | "ready-delay-elapsed";
@@ -169,6 +182,7 @@ interface IterateResultEscalate extends IterateResultBase {
 
 export type IterateResult =
   | IterateResultWait
+  | IterateResultReady
   | IterateResultCancel
   | IterateResultFixCode
   | IterateResultMarkReady

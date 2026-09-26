@@ -91,18 +91,16 @@ async function fetchStackSummary(
 ): Promise<FetchedPollSummary> {
   const anchor = opts.stackPrNumber!;
   const topology = await readStackTopology(anchor, repo);
-  const { stackNumber, stackSize, viewerCanAdminister, ordered } = await readStack<RawSummaryPr>(
-    POLL_STACK_SUMMARY_QUERY,
-    anchor,
-    repo,
-    { first: Math.min(topology.stackSize, MAX_STACK_ENTRIES_PER_PAGE) },
-  );
+  const { stackNumber, stackSize, viewerLogin, viewerCanAdminister, ordered } =
+    await readStack<RawSummaryPr>(POLL_STACK_SUMMARY_QUERY, anchor, repo, {
+      first: Math.min(topology.stackSize, MAX_STACK_ENTRIES_PER_PAGE),
+    });
   for (const pr of ordered) await hydratePollSummaryChecks(pr, repo);
   const stackAncestry = stackAncestryGaps(ordered);
   return {
     selection: { kind: "stack", anchor, stackNumber, stackSize },
     prs: await Promise.all(
-      ordered.map((pr) => summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister)),
+      ordered.map((pr) => summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister, viewerLogin)),
     ),
     ...(stackAncestry.length > 0 && { stackAncestry }),
   };

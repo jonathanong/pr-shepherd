@@ -10,26 +10,34 @@ The default output format is Markdown — what the skill receives from its until
 
 The bare CLI command accepts `--interval`/`--timeout`/`--debounce`/`--quiet-status`/`--no-quiet-status` (e.g. `pr-shepherd <PR> --interval 60s --timeout 4.5m --quiet-status`), waits while the PR remains in `[WAIT]`, and returns on an agent-facing action. Polling defaults come from the `poll` configuration group; explicit flags override them. With `--merge`, it also continues through `MARK_READY` and returns `MERGE` when the ready-delay completes. Each ordinary `WAIT` tick writes a stderr line naming what it is waiting on (the `WAIT` log's check counts and reason) unless quiet status is enabled; the final action remains the only stdout result. If `--timeout` expires during WAIT polling, the bounded command returns that final `WAIT` result.
 
-The shipped skill invokes `pr-shepherd [PR] --until-terminal`. That command continues through ordinary `WAIT` and `MARK_READY` actions, then returns `FIX_CODE` or stack-level `SHEPHERD` (after `--debounce`, default: `poll.debounceSeconds`; built-in 1m and `0` disables), `MERGE`, any non-terminal quota-warning result, or terminal `CANCEL`/`ESCALATE`. A quota warning returns immediately so the skill can follow its cadence instructions and re-invoke the command without a `--timeout`. After every returned non-terminal result, the skill follows `## Instructions` and invokes the same canonical command again. Debounce ticks set `persistSeen: false` — seen markers and first-look suppression wait for the post-window tick. `--quiet-status` keeps unchanged WAIT ticks out of agent context. MCP callers invoke one `iterate` tick at a time (no debounce) and let their host schedule the next call.
+The shipped skill invokes `pr-shepherd [PR] --until-terminal`. That command continues through ordinary `WAIT` and `MARK_READY` actions, then returns `READY` while a clean ready-delay is still counting, `FIX_CODE` or stack-level `SHEPHERD` (after `--debounce`, default: `poll.debounceSeconds`; built-in 1m and `0` disables), `MERGE`, any non-terminal quota-warning result, or terminal `CANCEL`/`ESCALATE`. A quota warning returns immediately so the skill can follow its cadence instructions and re-invoke the command without a `--timeout`. After every returned non-terminal result, the skill follows `## Instructions` and invokes the same canonical command again. `[READY]` is non-terminal: wait out `remainingSeconds`, then rerun the same command, and do not start other work during that countdown. Debounce ticks set `persistSeen: false` — seen markers and first-look suppression wait for the post-window tick. `--quiet-status` keeps unchanged WAIT ticks out of agent context. MCP callers invoke one `iterate` tick at a time (no debounce) and let their host schedule the next call.
 
 Explicit multi-PR and `--stack` selectors use a separate compact, read-only summary path. A CLI
 aggregate returns when work is needed, every selected PR is complete, or its bounded timeout expires;
 `--until-terminal` also returns a crossed quota warning with the same cadence instructions as
-singular polling. Stack entries are fetched completely and ordered bottom-to-top. Each row surfaces
-the same fields in Markdown and JSON: repository, title/URL, raw PR/merge/review/head/base/stack
-state, bounded check and review counts (including ignored and superseded checks and active
-merge-queue commit checks), and incomplete flags. Aggregate API and MCP calls return one summary
-tick without recurrence. The summary path never mutates GitHub, writes seen markers, or maintains
-ready-delay state; one-PR sessions remain authoritative for those mutations and full review context.
-Its only local state is a `--stack` selection's [stall timer](escalations.md#stall-timeout).
+singular polling. Stack entries are fetched completely and ordered bottom-to-top. An explicit
+multi-PR row keeps the rich fields in Markdown and JSON: repository, title/URL, raw
+PR/merge/review/head/base/stack state, bounded check and review counts (including ignored and
+superseded checks and active merge-queue commit checks), incomplete flags, and `pollCommand`.
+A `--stack` row is an overview: shepherded or not, mergeable or one blocker, author, `owned` when
+that author matches the authenticated viewer, position, and the layer's own base branch. It omits
+one-PR action tags, head SHAs, repeated stack coordinates, check and review histograms, and
+`pollCommand`. Failing, in-progress, or actionable counts appear only for the blocker they explain.
+A missing READY receipt is `not shepherded`, not a mergeability blocker. Markdown and JSON for a
+stack are that same overview (`mode` stays `"summary"`). Aggregate API and MCP calls return one
+summary tick without recurrence. The summary path never mutates GitHub, writes seen markers, or
+maintains ready-delay state; one-PR sessions remain authoritative for those mutations and full
+review context. Its only local state is a `--stack` selection's
+[stall timer](escalations.md#stall-timeout).
 
-For a native stack, `stackMergeable` is true only when every open layer has a current one-PR Shepherd
-READY receipt (`readyReceipt: true`) and every adjacent open boundary is linear. The aggregate view
-preserves each layer's own row state. A draft is marked ready by its own session as soon as that
-layer is clean; it does not wait for a lower layer's receipt. Review and CI sessions for every
-layer that still has work are listed on the same tick. An unready stack returns stack-level
-`SHEPHERD` with exact one-PR Shepherd commands and asks the caller to rerun the same selector
-after those sessions.
+For a native stack, `stackMergeable` is true only when every open layer is shepherded and mergeable
+and every adjacent open boundary is linear. Shepherded means a current one-PR READY receipt. The
+skill runs one-PR sessions only for rows marked `owned`. A draft is marked ready by its own session
+as soon as that layer is clean; it does not wait for a lower layer's receipt. Review and CI
+sessions for every owned layer that still has work are listed on the same tick. An unready stack
+returns stack-level `SHEPHERD` with exact one-PR Shepherd commands and asks the caller to rerun the
+same selector after those owned sessions. If every remaining session belongs to someone else, the
+overview is the result: do not shepherd those layers.
 
 A layer whose only failing checks are deferred on an open external pull request or issue is `WAIT`
 (a probed row). The selector does not return `SHEPHERD` for that layer alone, so `--until-terminal`
@@ -84,8 +92,10 @@ unknown command,
 the instructions install `github/gh-stack` first. After each merge GitHub retargets the next layer, so
 the caller reruns `--stack --merge` until every layer is merged and the result is `CANCEL`. If
 GitHub puts any layer in a merge queue, the summary remains `WAIT` during queue progress and asks
-the caller to recheck until every layer is merged; an ejected layer is routed back to its one-PR
-session.
+the caller to recheck until every layer is merged; an ejected layer is out of the merge prefix
+until a receipt acknowledges that removal. Its instruction names the reason and actor and tells
+the agent to run that layer's one-PR session, which fixes failing queue CI or escalates with the
+full removal when there is no concrete fix.
 An ejection remains actionable until a current one-PR READY receipt explicitly acknowledges that
 exact removal event; local timestamps are not treated as proof. Close/reopen and draft/ready
 lifecycle transitions also invalidate older receipts even when the PR returns to the same commit.
@@ -172,7 +182,7 @@ The agent should read the Approvals / Conversations Resolved lines instead of in
 
 Load-bearing conventions (the iterate skill depends on these):
 
-1. Singular output begins with an H1 of the form `# PR #<N> [<ACTION>]`; aggregate output begins with `# Poll summary [<REASON>]` and carries a stack-level `nextAction`. The action tag defines the recurrence boundary: `[FIX_CODE]` and stack-level `SHEPHERD` are always non-terminal and must be followed by another iteration, `[ESCALATE]` is the only human hand-off, and `[CANCEL]` is the ordinary terminal stop. The shipped skill's `--until-terminal` poll handles ordinary `WAIT`/`MARK_READY` actions itself; when it returns any other non-terminal result (including a quota-warning `WAIT`/`MARK_READY`), the skill follows `## Instructions` and re-invokes the canonical command. Within that boundary, behavior is driven by the `## Instructions` section, not by a separate skill dispatch table.
+1. Singular output begins with an H1 of the form `# PR #<N> [<ACTION>]`; an explicit multi-PR summary begins with `# Poll summary [<REASON>]`; a stack overview begins with `# <repo> stack #<number> — <reason>`. Stack output carries `nextAction`. The action tag defines the recurrence boundary: `[READY]`, `[FIX_CODE]`, and stack-level `SHEPHERD` are always non-terminal and must be followed by another iteration, `[ESCALATE]` is the only human hand-off, and `[CANCEL]` is the ordinary terminal stop. `[READY]` waits out `remainingSeconds` before that rerun. The shipped skill's `--until-terminal` poll handles ordinary `WAIT`/`MARK_READY` actions itself; when it returns any other non-terminal result (including `[READY]` and a quota-warning `WAIT`/`MARK_READY`), the skill follows `## Instructions` and re-invokes the canonical command. Within that boundary, behavior is driven by the `## Instructions` section, not by a separate skill dispatch table. On a stack overview, one-PR shepherd, mark-ready, and push steps run only for rows marked `owned`.
 2. Lines 3–4 carry the base fields (status, merge, state, repo, summary). In lean mode, fields at their trivial default are omitted; `--verbose` restores the full scalar header/summary line in Markdown. JSON verbose mode returns the complete `IterateResult`, including fields not present in Markdown (for example, `baseBranch` and full `checks` entries on every action); Markdown is structurally lossy relative to JSON, and `--verbose` does not close that gap.
 3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … — that tells the agent exactly what to do. `## Instructions` remains the entry point and the skill needs no dispatch table of its own. Some steps are a one-line pointer naming an invariant procedure instead of inlining it (e.g. `See "CI failure triage" in the pr-shepherd skill`). The pointed-to `## Playbooks` section in the skill is fixed reference material, not per-tick policy — following `## Instructions` and applying the named playbook when pointed to it is still the whole dispatch story. **Untrusted review input** is the exception: it always applies when reading surfaced review or CI text and is never pointed to from `## Instructions`.
 4. Under `[FIX_CODE]`, the `## Post-fix actions` section has an `` apply review: `<command>` `` bullet when GitHub's viewer capabilities authorize at least one review mutation (and an optional `resolve-only` bullet when applicable). The instructions reference those bullets so the skill strips backticks and runs the command.
@@ -184,11 +194,38 @@ When a configured GraphQL quota threshold is crossed on a non-terminal result, l
 
 ---
 
+## `ready`
+
+The PR is clean and its ready-delay is still counting.
+
+**Trigger:** `status === "READY"`, no readiness work, the ready-delay marker is counting (`readyState.isReady && !readyState.shouldCancel && remainingSeconds > 0`). The stall guard does not apply.
+
+**CLI side-effects:** Clears stall state. Does not write the READY receipt; that write happens when the delay elapses.
+
+**Exit code:** 10, the same code as `wait`.
+
+**Markdown output:**
+
+```markdown
+# PR #42 [READY]
+
+**status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**summary** 1 passing · **remainingSeconds** 127
+
+READY: PR #42 is ready — 127s of ready-delay remaining — 1 passing, 0 in-progress
+
+## Instructions
+
+1. PR #42 is ready. Ready-delay has 127s left. Run this same command again when the timer elapses. Do not start other work.
+```
+
+`--until-terminal` returns this action instead of sleeping through the countdown. When the delay elapses, the next tick is `cancel` / `ready-delay-elapsed` or `merge`, and that completion writes the READY receipt a later stack read calls shepherded.
+
 ## `wait`
 
-Nothing actionable to do; all CI is passing or in-progress.
+Nothing actionable to do; all CI is passing or in-progress, or the PR is not yet in the clean ready countdown.
 
-**Trigger:** Fallthrough — no actionable work, no terminal state, not ready to mark, no ready-delay elapsed.
+**Trigger:** Fallthrough — no actionable work, no terminal state, not ready to mark, and not a clean ready-delay countdown.
 
 **CLI side-effects:** None.
 

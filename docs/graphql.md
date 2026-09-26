@@ -4,7 +4,7 @@
 
 This page is **how GitHub data is fetched**, **what each GraphQL operation costs**, and **how to keep a poll from exhausting the GraphQL quota**. A typical green tick is one GraphQL batch. Extra pages use a slim follow-up query. REST supplements run only where GraphQL cannot return the data.
 
-Related: [authentication.md](authentication.md) (token pools), [configuration.md](configuration.md) (`watch.graphqlQuotaWarnings`), [debugging.md](debugging.md) (rate-limit exhaustion), [actions.md](actions.md) (quota-warning output).
+Related: [graphql-usage.md](graphql-usage.md) (points per command), [authentication.md](authentication.md) (token pools), [configuration.md](configuration.md) (`watch.graphqlQuotaWarnings`), [debugging.md](debugging.md) (rate-limit exhaustion), [actions.md](actions.md) (quota-warning output).
 
 ## GitHub metering
 
@@ -15,7 +15,7 @@ GitHub meters GraphQL in **points per hour**, not HTTP requests. A typical user 
 1. Count the connection-requests implied by the query AST. Nested `first`/`last` multiply by the parent connection size. Assume every connection fills its limit.
 2. Divide by 100 and round to the nearest integer. Minimum cost is 1.
 
-Example: `reviewThreads(last: 20) { comments(first: 100) }` is 1 (threads from the PR) + 20 (comments from each thread on that page) = 21 connection-requests. Older threads use the slim page query. Combined with check-run annotation probes and merge-queue commit trees, a full `BatchPr` first page typically lands around **cost 4–8**. `--verbose` `GraphQL measured cost` is authoritative; do not guess from this page.
+Example: `reviewThreads(last: 20) { comments(first: 100) }` is 1 (threads from the PR) + 20 (comments from each thread on that page) = 21 connection-requests. Older threads use the slim page query. A `BatchPr`-shaped first page, including the check-run annotation probe, measures at **cost 1**. Per-command totals are in [graphql-usage.md](graphql-usage.md). `--verbose` `GraphQL measured cost` is authoritative; do not guess from this page.
 
 Other limits that are not the hourly point budget:
 
@@ -89,35 +89,36 @@ The generic paginator is in `github/pagination.mts`. It accepts a `direction` pa
 
 Static documents live in [`src/github/gql/`](../src/github/gql/) and are loaded from [`src/github/queries.mts`](../src/github/queries.mts). Dynamic mutation documents are built at runtime (they cannot be expressed as a single static file).
 
-| Operation                  | Document                                      | When it runs                                                                                                                | Selects `rateLimit.cost` |
-| -------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
-| `BatchPr`                  | `batch-pr.gql`                                | Every full `runCheck` / iterate tick that does not hit a fingerprint skip                                                   | yes                      |
-| `PollSummary`              | dynamic aliases + `poll-summary-fragment.gql` | Explicit multi-PR summary, in chunks of 50                                                                                  | yes                      |
-| `PollStackTopology`        | `poll-stack-topology.gql`                     | Every iterate tick of a non-root native-stack layer (stale-ancestry check), and before `PollStackSummary`; link fields only | yes                      |
-| `UpperLayerConflictTarget` | `upper-layer-conflict-target.gql`             | A conflicting upper native-stack layer: whether its head already contains its base, and which open layer targets trunk      | yes                      |
-| `PollStackSummary`         | `poll-stack-summary.gql`                      | `--stack` summary; entry pages sized to the stack (`first: min(size, 50)`)                                                  | yes                      |
-| `PollSummaryCheckPage`     | `poll-summary-check-page.gql`                 | A summary PR's head or merge-queue commit with more than 100 status contexts, per older page                                | yes                      |
-| `PrFingerprint`            | `pr-fingerprint.gql`                          | Every iterate tick after the first stored fingerprint, to decide whether the full batch is needed                           | yes                      |
-| `BatchPrPage`              | `batch-pr-page.gql`                           | Extra connection pages; combined cursors                                                                                    | yes                      |
-| `ReviewThreadComments`     | `review-thread-comments.gql`                  | A thread whose nested `comments` connection has another page                                                                | yes                      |
-| `CommitCheckContexts`      | `commit-check-contexts.gql`                   | Merge-queue (or current-removal) commit check rollup, including page 1                                                      | yes                      |
-| `CheckRunAnnotationsBatch` | `check-run-annotations-batch.gql`             | First annotation page for uncached completed checks with a probe hit, 20 check runs per request                             | yes                      |
-| `CheckRunAnnotations`      | `check-run-annotations.gql`                   | Further pages only when a batched first page has `hasNextPage` (1h derived cache per check-run id)                          | yes                      |
-| `SuggestionThreads`        | `suggestion-threads.gql`                      | `build-suggestion-patches`                                                                                                  | yes                      |
-| `GetPrHeadSha`             | `get-pr-head-sha.gql`                         | `--require-sha` poll (`resolve.shaPoll`, default 2s × 10)                                                                   | yes                      |
-| `PrNumberByBranch`         | `pr-number-by-branch.gql`                     | No PR number passed (avoid this — pass the number)                                                                          | yes                      |
-| `GetPrBody`                | `get-pr-body.gql`                             | Journal apply, before the body mutation                                                                                     | yes                      |
-| `UpdatePrBody`             | `update-pr-body.gql`                          | Journal apply                                                                                                               | no (mutation)            |
-| `MarkPrReady`              | `mark-pr-ready.gql`                           | `mark_ready` when `viewerCanUpdate`                                                                                         | no (mutation)            |
-| `PullRequestFiles`         | inline in `mark-files-as-viewed.mts`          | `apply files`                                                                                                               | yes                      |
-| `CheckBlockerPull`         | inline in `iterate/check-blocker-gate.mts`    | One query per distinct pull blocker while a matching check is failing                                                       | yes                      |
-| `CheckBlockerIssue`        | inline in `iterate/check-blocker-gate.mts`    | One query per distinct issue blocker while a matching check is failing                                                      | yes                      |
-| `BulkApply`                | runtime aliases in `comments/resolve.mts`     | reply / resolve / minimize / dismiss, chunks of 10                                                                          | no (mutation)            |
-| `markFileAsViewed`         | runtime aliases, chunks of 10                 | `apply files`                                                                                                               | no (mutation)            |
+| Operation                    | Document                                      | When it runs                                                                                                                | Selects `rateLimit.cost` |
+| ---------------------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `BatchPr`                    | `batch-pr.gql`                                | Every full `runCheck` / iterate tick that does not hit a fingerprint skip                                                   | yes                      |
+| `PollSummary`                | dynamic aliases + `poll-summary-fragment.gql` | Explicit multi-PR summary, in chunks of 50                                                                                  | yes                      |
+| `PollStackTopology`          | `poll-stack-topology.gql`                     | Every iterate tick of a non-root native-stack layer (stale-ancestry check), and before `PollStackSummary`; link fields only | yes                      |
+| `UpperLayerConflictTarget`   | `upper-layer-conflict-target.gql`             | A conflicting upper native-stack layer: whether its head already contains its base, and which open layer targets trunk      | yes                      |
+| `PollStackSummary`           | `poll-stack-summary.gql`                      | `--stack` summary; entry pages sized to the stack (`first: min(size, 50)`)                                                  | yes                      |
+| `PollSummaryAnnotationProbe` | `poll-summary-annotation-probe.gql`           | One commit, only when a summary layer otherwise looks ready, so a READY receipt still sees annotation totals                | yes                      |
+| `PollSummaryCheckPage`       | `poll-summary-check-page.gql`                 | A summary PR's head or merge-queue commit with more than 100 status contexts, per older page; no annotation probe           | yes                      |
+| `PrFingerprint`              | `pr-fingerprint.gql`                          | Every iterate tick after the first stored fingerprint, to decide whether the full batch is needed                           | yes                      |
+| `BatchPrPage`                | `batch-pr-page.gql`                           | Extra connection pages; combined cursors                                                                                    | yes                      |
+| `ReviewThreadComments`       | `review-thread-comments.gql`                  | A thread whose nested `comments` connection has another page                                                                | yes                      |
+| `CommitCheckContexts`        | `commit-check-contexts.gql`                   | Merge-queue (or current-removal) commit check rollup, including page 1                                                      | yes                      |
+| `CheckRunAnnotationsBatch`   | `check-run-annotations-batch.gql`             | First annotation page for uncached completed checks with a probe hit, 20 check runs per request                             | yes                      |
+| `CheckRunAnnotations`        | `check-run-annotations.gql`                   | Further pages only when a batched first page has `hasNextPage` (1h derived cache per check-run id)                          | yes                      |
+| `SuggestionThreads`          | `suggestion-threads.gql`                      | `build-suggestion-patches`                                                                                                  | yes                      |
+| `GetPrHeadSha`               | `get-pr-head-sha.gql`                         | `--require-sha` poll (`resolve.shaPoll`, default 2s × 10)                                                                   | yes                      |
+| `PrNumberByBranch`           | `pr-number-by-branch.gql`                     | No PR number passed (avoid this — pass the number)                                                                          | yes                      |
+| `GetPrBody`                  | `get-pr-body.gql`                             | Journal apply, before the body mutation                                                                                     | yes                      |
+| `UpdatePrBody`               | `update-pr-body.gql`                          | Journal apply                                                                                                               | no (mutation)            |
+| `MarkPrReady`                | `mark-pr-ready.gql`                           | `mark_ready` when `viewerCanUpdate`                                                                                         | no (mutation)            |
+| `PullRequestFiles`           | inline in `mark-files-as-viewed.mts`          | `apply files`                                                                                                               | yes                      |
+| `CheckBlockerPull`           | inline in `iterate/check-blocker-gate.mts`    | One query per distinct pull blocker while a matching check is failing                                                       | yes                      |
+| `CheckBlockerIssue`          | inline in `iterate/check-blocker-gate.mts`    | One query per distinct issue blocker while a matching check is failing                                                      | yes                      |
+| `BulkApply`                  | runtime aliases in `comments/resolve.mts`     | reply / resolve / minimize / dismiss, chunks of 10                                                                          | no (mutation)            |
+| `markFileAsViewed`           | runtime aliases, chunks of 10                 | `apply files`                                                                                                               | no (mutation)            |
 
 ### Check-run annotation bodies
 
-`annotations(first: 1)` on `BatchPr`, `BatchPrPage`, `PollSummary`, and `CommitCheckContexts` only detects whether a check has annotations. It is not the body fetch, and this change does not remove it.
+`annotations(first: 1)` on `BatchPr`, `BatchPrPage`, and `CommitCheckContexts` only detects whether a check has annotations. It is not the body fetch. The always-on poll-summary fragment does not select it. `PollSummaryAnnotationProbe` loads those totals for one commit only when that layer otherwise looks ready, so a late annotation still changes the READY-receipt fingerprint. A check page past the first 100 contexts stays 1 point and does not repeat the probe.
 
 Uncached completed checks with `hasAnnotations` (passing, failing, skipped, filtered, and ignored) share `CheckRunAnnotationsBatch`. The document is one `nodes(ids:)` connection plus one nested `annotations(first: 100)` connection per id. GitHub counts those as connection-requests, divides by 100, and rounds to the nearest integer, with a minimum cost of 1. A chunk of 20 is 1 + 20 = 21 connection-requests, which prices as **1 point**. A larger chunk multiplies the nested connection and can cross the next point, so the chunk size exists to keep the calculated cost at 1. `--verbose` measured `cost` stays authoritative; do not treat 1 as a guess when the response reports something else.
 
@@ -139,7 +140,7 @@ rollup is a valid empty check set.
 
 ## Per-tick budget
 
-The built-in single-PR poll interval is **60s** (`poll.intervalSeconds`). `--stack` and multi-PR polls default to that interval times `poll.stackIntervalFactor` (built-in **2**, so **120s**) because each tick reads per-layer snapshots plus the stack summary. An explicit `--interval` overrides either default and is not multiplied again. Ready-delay is **10 minutes**. Repeating a “cheap” 4–8 point batch every minute is what burns the hourly budget, not a single snapshot; stack polls are the expensive case, so they wait longer unless `--interval` is set.
+The built-in single-PR poll interval is **60s** (`poll.intervalSeconds`). `--stack` and multi-PR polls default to that interval times `poll.stackIntervalFactor` (built-in **2**, so **120s**) because each tick reads the stack summary, whose cost grows with the number of PRs. An explicit `--interval` overrides either default and is not multiplied again. Ready-delay is **10 minutes**. A one-PR `BatchPr` is 1 point, so repeating it every minute is a small share of the hourly budget. A stack tick is the 1-point topology query plus one summary query. See [graphql-usage.md](graphql-usage.md).
 
 | Situation                                                                                               | GraphQL                                                                                                            | REST                                                   |
 | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
@@ -246,5 +247,6 @@ Landed in this spec’s matching code:
 
 Further work, if spend is still high:
 
+- Ranked point-budget follow-ups are in [graphql-usage.md](graphql-usage.md).
 - Token-scoped quota state so two worktrees sharing one credential share warned bands (today warnings are per worktree).
 - Shrink `reviewThreads.comments(first: 100)` if `nodeCount` approaches 500,000 on huge PRs (point cost is mostly parent connections, not this `first`).

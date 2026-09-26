@@ -1,17 +1,15 @@
-# Poll summary [ALL_TERMINAL]
+# owner/repo stack #7 — all_terminal
 
-**repo** `owner/repo` · **selection** stack #7 anchored at PR #44 (2 PRs) · **mode** `summary` · **stack mergeable** `true` · **next action** `cancel`
+Stack: #7 · anchor PR #44 · 2 layers · mode `summary`
+stackMergeable: true
+nextAction: cancel
 
-## Pull requests
+## Layers
 
-- [PR #43: Stack base](https://github.com/owner/repo/pull/43) [CANCEL]
-  - state `MERGED` · mergeable `UNKNOWN` · merge `UNKNOWN` · stack `7` position `1/2` base `main`
-  - head `stack-base` at `cccccccccccccccccccccccccccccccccccccccc` · base `main`
-  - reasons: `merged`
-- [PR #44: Stack tip](https://github.com/owner/repo/pull/44) [CANCEL]
-  - state `MERGED` · mergeable `UNKNOWN` · merge `UNKNOWN` · stack `7` position `2/2` base `main`
-  - head `stack-tip` at `dddddddddddddddddddddddddddddddddddddddd` · base `stack-base`
-  - reasons: `merged`
+- [PR #43: Stack base](https://github.com/owner/repo/pull/43) — not shepherded · not mergeable (`closed`)
+  - MERGED · position 1/2 · base `main`
+- [PR #44: Stack tip](https://github.com/owner/repo/pull/44) — not shepherded · not mergeable (`closed`)
+  - MERGED · position 2/2 · base `stack-base`
 
 ## Instructions
 

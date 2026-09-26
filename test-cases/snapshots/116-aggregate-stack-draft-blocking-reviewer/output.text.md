@@ -1,14 +1,13 @@
-# Poll summary [TIMEOUT]
+# owner/repo stack #46 — timeout
 
-**repo** `owner/repo` · **selection** stack #46 anchored at PR #461 (1 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `wait`
+Stack: #46 · anchor PR #461 · 1 layers · mode `summary`
+stackMergeable: false
+nextAction: wait
 
-## Pull requests
+## Layers
 
-- [PR #461: Draft awaiting review](https://github.com/owner/repo/pull/461) [WAIT]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · flags `draft` · blocking reviewer `in progress` · stack `46` position `1/1` base `main`
-  - head `draft-review` at `4611111111111111111111111111111111111111` · base `main`
-  - reasons: `blocking-reviewer-in-progress`
-  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/461 --timeout 1s --debounce 0s --no-auto-mark-ready` · bounded probe
+- [PR #461: Draft awaiting review](https://github.com/owner/repo/pull/461) — not shepherded · not mergeable (`draft`)
+  - OPEN · draft · position 1/1 · base `main`
 
 ## Instructions
 

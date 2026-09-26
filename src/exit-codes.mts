@@ -16,7 +16,7 @@ export const EXIT = Object.freeze({
   /** `cancel` + `merged` or `ready-delay-elapsed` — shepherd finished cleanly. */
   OK: 0,
 
-  /** Nothing to do yet; CI still in progress. */
+  /** Nothing to do yet, or a clean PR whose ready-delay is still counting. */
   WAIT: 10,
   /** Draft PR converted to ready for review. */
   MARK_READY: 11,
@@ -71,6 +71,7 @@ export function iterateResultToExitCode(result: IterateResult): number {
     case "cancel":
       return CANCEL_REASON_EXIT_CODE[result.reason];
     case "wait":
+    case "ready":
       return EXIT.WAIT;
     case "mark_ready":
       return EXIT.MARK_READY;

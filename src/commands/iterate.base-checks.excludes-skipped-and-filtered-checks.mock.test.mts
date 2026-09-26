@@ -55,7 +55,7 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
 
     const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
 
-    expect(result.action).toBe("wait");
+    expect(result.action).toBe("ready");
     expect(result.checks).toEqual([]);
   });
   it("passing check with null detailsUrl maps to detailsUrl: null in base.checks", async () => {
@@ -92,7 +92,7 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
 
     const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
 
-    expect(result.action).toBe("wait");
+    expect(result.action).toBe("ready");
     expect(result.checks).toHaveLength(1);
     expect(result.checks[0]!.detailsUrl).toBeNull();
   });

@@ -122,6 +122,14 @@ export function formatIterateResult(
   const telemetrySections = [quotaWarning, apiUsage, verboseChecks];
 
   switch (result.action) {
+    case "ready":
+      return joinSections([
+        header,
+        ...telemetrySections,
+        adaptIterateLog(result.log),
+        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
+      ]);
+
     case "wait": {
       const waitLines = [header, ...telemetrySections, adaptIterateLog(result.log)];
       if (result.deferredWork) waitLines.push(formatDeferredWorkLine(result.deferredWork));

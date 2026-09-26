@@ -1,25 +1,17 @@
-# Poll summary [ACTIONABLE]
+# owner/repo stack #44 — actionable
 
-**repo** `owner/repo` · **selection** stack #44 anchored at PR #443 (3 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `shepherd`
+Stack: #44 · anchor PR #443 · 3 layers · mode `summary`
+stackMergeable: false
+nextAction: shepherd
 
-## Pull requests
+## Layers
 
-- [PR #441: Blocked receipt](https://github.com/owner/repo/pull/441) [FIX_CODE]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `BLOCKED` · Shepherd READY completion `verified` · stack `44` position `1/3` base `main`
-  - head `blocked` at `4411111111111111111111111111111111111111` · base `main`
-  - reasons: `appears-ready`, `ready-receipt-required`
-  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/441 --until-terminal`
-- [PR #442: Hooks receipt](https://github.com/owner/repo/pull/442) [FIX_CODE]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `HAS_HOOKS` · Shepherd READY completion `verified` · stack `44` position `2/3` base `main`
-  - head `hooks` at `4422222222222222222222222222222222222222` · base `blocked`
-  - reasons: `appears-ready`, `ready-receipt-required`
-  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/442 --until-terminal`
-- [PR #443: Pending CI receipt](https://github.com/owner/repo/pull/443) [FIX_CODE]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `44` position `3/3` base `main`
-  - head `pending-ci` at `4433333333333333333333333333333333333333` · base `hooks`
-  - checks: 1 in progress
-  - reasons: `appears-ready`, `ready-receipt-required`
-  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/443 --until-terminal`
+- [PR #441: Blocked receipt](https://github.com/owner/repo/pull/441) — shepherded · not mergeable (`merge-state`)
+  - OPEN · position 1/3 · base `main`
+- [PR #442: Hooks receipt](https://github.com/owner/repo/pull/442) — shepherded · not mergeable (`merge-state`)
+  - OPEN · position 2/3 · base `blocked`
+- [PR #443: Pending CI receipt](https://github.com/owner/repo/pull/443) — shepherded · not mergeable (`checks-in-progress`)
+  - OPEN · position 3/3 · base `hooks` · 1 in progress
 
 ## Instructions
 

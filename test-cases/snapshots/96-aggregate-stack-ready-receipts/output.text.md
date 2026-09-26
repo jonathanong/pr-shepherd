@@ -1,17 +1,15 @@
-# Poll summary [ALL_TERMINAL]
+# owner/repo stack #34 — all_terminal
 
-**repo** `owner/repo` · **selection** stack #34 anchored at PR #332 (2 PRs) · **mode** `summary` · **stack mergeable** `true` · **next action** `cancel`
+Stack: #34 · anchor PR #332 · 2 layers · mode `summary`
+stackMergeable: true
+nextAction: cancel
 
-## Pull requests
+## Layers
 
-- [PR #331: Verified foundation](https://github.com/owner/repo/pull/331) [CANCEL]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `34` position `1/2` base `main`
-  - head `foundation` at `d111111111111111111111111111111111111111` · base `main`
-  - reasons: `appears-ready`
-- [PR #332: Verified child](https://github.com/owner/repo/pull/332) [CANCEL]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `34` position `2/2` base `main`
-  - head `child` at `d222222222222222222222222222222222222222` · base `foundation`
-  - reasons: `appears-ready`
+- [PR #331: Verified foundation](https://github.com/owner/repo/pull/331) — shepherded · mergeable
+  - OPEN · position 1/2 · base `main`
+- [PR #332: Verified child](https://github.com/owner/repo/pull/332) — shepherded · mergeable
+  - OPEN · position 2/2 · base `foundation`
 
 ## Instructions
 

@@ -22,13 +22,14 @@ registerIterateHooks();
 describe("runIterate — stall-timeout guard", () => {
   it("clears stall state on cancel (ready-delay elapsed) so re-invocation starts fresh", async () => {
     mockRunCheck.mockResolvedValue(makeReport());
+    const opts = makeOpts30mStall({ stallTimeoutSeconds: STALL_TIMEOUT_S });
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: true,
       shouldCancel: true,
       remainingSeconds: 0,
     });
 
-    const result = await runIterate(makeOpts30mStall({ stallTimeoutSeconds: STALL_TIMEOUT_S }));
+    const result = await runIterate(opts);
 
     expect(result.action).toBe("cancel");
     expect(mockWriteStallState).not.toHaveBeenCalled();

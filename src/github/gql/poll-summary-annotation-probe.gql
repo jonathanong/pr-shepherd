@@ -1,0 +1,23 @@
+query PollSummaryAnnotationProbe($owner: String!, $repo: String!, $oid: GitObjectID!) {
+  repository(owner: $owner, name: $repo) {
+    object(oid: $oid) {
+      __typename
+      ... on Commit {
+        oid
+        statusCheckRollup {
+          contexts(last: 100) {
+            nodes {
+              __typename
+              ... on CheckRun {
+                id
+                annotations(first: 1) {
+                  totalCount
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

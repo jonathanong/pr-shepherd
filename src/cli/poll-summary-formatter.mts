@@ -1,12 +1,11 @@
 import type { PollSummaryItem, PollSummaryResult } from "../types.mts";
 import { formatApiUsage, formatQuotaWarning } from "./api-usage-formatter.mts";
 import { withPollSummaryInstructions } from "../commands/poll-summary-instructions.mts";
+import { formatStackOverview, projectStackOverview } from "./stack-overview.mts";
 
 export function formatPollSummaryResult(result: PollSummaryResult): string {
-  const selection =
-    result.selection.kind === "stack"
-      ? `stack #${result.selection.stackNumber} anchored at PR #${result.selection.anchor} (${result.selection.stackSize} PRs)`
-      : `PRs ${result.selection.requested.map((pr) => `#${pr}`).join(", ")}`;
+  if (result.selection.kind === "stack") return formatStackOverview(projectStackOverview(result));
+  const selection = `PRs ${result.selection.requested.map((pr) => `#${pr}`).join(", ")}`;
   const lines = [
     `# Poll summary [${result.reason.toUpperCase()}]`,
     "",

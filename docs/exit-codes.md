@@ -49,20 +49,22 @@ reconciliation returns `shepherd` (16) for autonomous one-PR work, `wait` (10) f
 no autonomous one-PR work is left. Human blockers are still surfaced on mixed `shepherd` ticks. The full row
 list remains in the output regardless of the aggregate action.
 
-| Code | Action       | Meaning                                            |
-| ---- | ------------ | -------------------------------------------------- |
-| 10   | `wait`       | Nothing to do yet; CI still in progress            |
-| 11   | `mark_ready` | Draft PR was converted to ready for review         |
-| 12   | `fix_code`   | Agent work required — see the printed instructions |
-| 13   | `escalate`   | Human attention required                           |
-| 14   | `cancel`     | PR closed without merging (`reason: "closed"`)     |
-| 15   | `merge`      | Run the emitted merge or merge-queue command       |
-| 16   | `shepherd`   | Run the listed one-PR sessions, then recheck stack |
+| Code | Action          | Meaning                                                              |
+| ---- | --------------- | -------------------------------------------------------------------- |
+| 10   | `wait`, `ready` | Nothing to do yet, or a clean PR whose ready-delay is still counting |
+| 11   | `mark_ready`    | Draft PR was converted to ready for review                           |
+| 12   | `fix_code`      | Agent work required — see the printed instructions                   |
+| 13   | `escalate`      | Human attention required                                             |
+| 14   | `cancel`        | PR closed without merging (`reason: "closed"`)                       |
+| 15   | `merge`         | Run the emitted merge or merge-queue command                         |
+| 16   | `shepherd`      | Run the listed one-PR sessions, then recheck stack                   |
 
-**`wait` (10) is not an error, and it is not a signal to give up.** It means
+**`wait` and `ready` (10) are not errors, and they are not a signal to give up.** `wait` means
 "nothing actionable right now" — including when `poll --timeout` gives up
-mid-wait and prints the last `wait` tick. A `set -e` shell script or CI step
-that only wants to know "is the PR fully done" should treat `wait` (10) the
+mid-wait and prints the last `wait` tick. `ready` means the PR is clean and
+`remainingSeconds` of ready-delay are still left; `--until-terminal` returns it
+instead of sleeping through that countdown. A `set -e` shell script or CI step
+that only wants to know "is the PR fully done" should treat `wait`/`ready` (10) the
 same way it treats `escalate`/`fix_code`/`shepherd` (12/13/16): not finished yet. Only `0`
 means the PR reached a terminal, successful state.
 

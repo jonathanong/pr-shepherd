@@ -1,20 +1,15 @@
-# Poll summary [ACTIONABLE]
+# owner/repo stack #44 — actionable
 
-**repo** `owner/repo` · **selection** stack #44 anchored at PR #442 (2 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `shepherd`
+Stack: #44 · anchor PR #442 · 2 layers · mode `summary`
+stackMergeable: false
+nextAction: shepherd
 
-## Pull requests
+## Layers
 
-- [PR #441: Draft with pending CI](https://github.com/owner/repo/pull/441) [WAIT]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `UNSTABLE` · flags `draft` · stack `44` position `1/2` base `main`
-  - head `draft-pending` at `4411111111111111111111111111111111111111` · base `main`
-  - checks: 1 in progress
-  - reasons: `pending-or-unknown`
-  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/441 --timeout 1s --debounce 0s --no-auto-mark-ready` · bounded probe
-- [PR #442: Upper draft](https://github.com/owner/repo/pull/442) [WAIT]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · flags `draft` · stack `44` position `2/2` base `main`
-  - head `draft-upper` at `4421111111111111111111111111111111111111` · base `draft-pending`
-  - reasons: `draft-auto-mark-ready-disabled`
-  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/442 --timeout 1s --debounce 0s --no-auto-mark-ready` · bounded probe
+- [PR #441: Draft with pending CI](https://github.com/owner/repo/pull/441) — not shepherded · not mergeable (`draft`)
+  - OPEN · draft · position 1/2 · base `main`
+- [PR #442: Upper draft](https://github.com/owner/repo/pull/442) — not shepherded · not mergeable (`draft`)
+  - OPEN · draft · position 2/2 · base `draft-pending`
 
 ## Instructions
 

@@ -287,6 +287,20 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     };
   }
 
+  if (
+    isCleanReadyState &&
+    readyState.isReady &&
+    !readyState.shouldCancel &&
+    readyState.remainingSeconds > 0
+  ) {
+    await clearStallState(stallKey);
+    return {
+      ...base,
+      action: "ready",
+      log: `READY: PR #${base.pr} is ready — ${readyState.remainingSeconds}s of ready-delay remaining — ${buildWaitLog(base).slice("WAIT: ".length)}`,
+    };
+  }
+
   const hold = stackDraftHold(report, autoMarkReady);
   const wait = {
     ...base,
@@ -323,20 +337,22 @@ async function recordReadyReceipt(
     return false;
   try {
     const raw = await fetchRawSummaryPr(report.pr, { owner: key.owner, name: key.repo });
-    const fingerprint = fingerprintRawSummaryPr(raw);
     if (
-      fingerprint === null ||
+      fingerprintRawSummaryPr(raw) === null ||
       raw.state !== "OPEN" ||
       raw.isDraft ||
       raw.headRefOid !== report.headSha ||
       raw.baseRefOid !== report.baseRefOid
     )
       return false;
+    // Summarize hydrates annotation totals onto the snapshot before the stored hash.
     const summary = await summarizePollSummaryPr(
       raw,
       { owner: key.owner, name: key.repo },
       { stackPrNumber: report.pr },
     );
+    const fingerprint = fingerprintRawSummaryPr(raw);
+    if (fingerprint === null) return false;
     if (!isCurrentSummaryReady(raw, summary.checks ?? {}, summary.review ?? {})) return false;
     const removalEvent = currentQueueRemovalEvent(raw);
     await writeReadyReceipt({
@@ -386,6 +402,11 @@ async function revalidateReadyReceipt(
   }
   try {
     const raw = await fetchRawSummaryPr(report.pr, { owner: key.owner, name: key.repo });
+    await summarizePollSummaryPr(
+      raw,
+      { owner: key.owner, name: key.repo },
+      { stackPrNumber: report.pr },
+    );
     // Queue predecessors can advance the target branch without changing this
     // PR's source. Compare against the receipt's base only while both fresh
     // views still place the PR in the queue.

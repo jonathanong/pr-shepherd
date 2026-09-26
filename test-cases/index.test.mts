@@ -25,6 +25,7 @@ const NAME_ACTION_SLUGS: ReadonlyArray<[prefix: string, action: string]> = [
   ["fix-code-", "fix_code"],
   ["mark-ready-", "mark_ready"],
   ["cancel-", "cancel"],
+  ["ready-", "ready"],
   ["wait-", "wait"],
   ["escalate-", "escalate"],
   ["merge-", "merge"],

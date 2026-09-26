@@ -44,6 +44,10 @@ export interface PollSummaryItem {
   repo: string;
   title: string;
   url: string;
+  /** GitHub author login, when the summary query returned one. */
+  authorLogin?: string;
+  /** Author login matches the authenticated viewer. */
+  owned?: true;
   /** Conservative routing hint; the selected one-PR poll makes the authoritative decision. */
   action: ShepherdAction;
   reasons: string[];

@@ -126,9 +126,12 @@ export function appendAutonomousInstructions(
     `${instructions.length + 1}. Start or delegate the relevant one-PR sessions below; review and CI work on separate layers can proceed concurrently.`,
   );
   for (const item of candidates) {
+    const removal = item.queueRemoval
+      ? ` PR #${item.pr} was removed from the merge queue (\`${item.queueRemoval.reason ?? "unknown reason"}\`${item.queueRemoval.actor ? ` by @${item.queueRemoval.actor}` : ""}).`
+      : "";
     instructions.push(
       item.pollCommand
-        ? `${instructions.length + 1}. Run \`${item.pollCommand}\` for PR #${item.pr}${item.queueRemoval ? `; GitHub removed it from the merge queue (${item.queueRemoval.reason ?? "unknown reason"})` : ""}.`
+        ? `${instructions.length + 1}.${removal} Run \`${item.pollCommand}\` for PR #${item.pr}.${item.queueRemoval ? " That session fixes failing queue CI, or escalates when the removal has no concrete fix." : ""}`
         : `${instructions.length + 1}. PR #${item.pr} needs a one-PR Shepherd session, but no command was available.`,
     );
   }

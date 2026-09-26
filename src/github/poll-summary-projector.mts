@@ -19,11 +19,13 @@ import { currentQueueRemovalEvent } from "./poll-summary-queue-removal.mts";
 import { isCurrentSummaryReady } from "./poll-summary-readiness.mts";
 import { applyOpenCheckBlockers } from "./poll-summary-check-blockers.mts";
 import { normalizePollSummaryState, routePollSummary } from "./poll-summary-route.mts";
+import { hydrateReadyAnnotationProbe } from "./poll-summary-annotation-probe.mts";
 export async function summarizePollSummaryPr(
   raw: RawSummaryPr,
   repo: RepoInfo,
   opts: PollSummaryCommandOptions,
   viewerCanAdminister = false,
+  viewerLogin: string | null = null,
 ): Promise<PollSummaryItem> {
   const repoName = `${repo.owner}/${repo.name}`;
   const seen = await loadSeenMap({ owner: repo.owner, repo: repo.name, pr: raw.number });
@@ -67,6 +69,7 @@ export async function summarizePollSummaryPr(
         baseRefName: raw.stack.baseRefName,
       }
     : undefined;
+  if (opts.stackPrNumber !== undefined) await hydrateReadyAnnotationProbe(raw, repo, review);
   const fingerprint = opts.stackPrNumber !== undefined ? fingerprintRawSummaryPr(raw) : null;
   const receipt = fingerprint
     ? await readReadyReceipt({ owner: repo.owner, repo: repo.name, pr: raw.number })
@@ -111,6 +114,10 @@ export async function summarizePollSummaryPr(
     repo: repoName,
     title: raw.title,
     url: raw.url || formatPrUrl(repoName, raw.number),
+    ...(raw.author?.login && { authorLogin: raw.author.login }),
+    ...(raw.author?.login &&
+      viewerLogin !== null &&
+      raw.author.login.toLowerCase() === viewerLogin.toLowerCase() && { owned: true as const }),
     action,
     reasons,
     state: normalizePollSummaryState(raw.state),

@@ -10,6 +10,7 @@ import type { CancelReason, ShepherdAction } from "./types.mts";
 describe("iterateResultToExitCode", () => {
   it.each<[Exclude<ShepherdAction, "cancel">, number]>([
     ["wait", EXIT.WAIT],
+    ["ready", EXIT.WAIT],
     ["mark_ready", EXIT.MARK_READY],
     ["fix_code", EXIT.FIX_CODE],
     ["escalate", EXIT.ESCALATE],

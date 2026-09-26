@@ -49,8 +49,8 @@ describe("runIterate — HAS_HOOKS (derived BLOCKED)", () => {
       remainingSeconds: 300,
     });
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("wait");
-    if (result.action === "wait") {
+    expect(result.action).toBe("ready");
+    if (result.action === "ready") {
       expect(result.log).toContain("branch protection");
     }
   });

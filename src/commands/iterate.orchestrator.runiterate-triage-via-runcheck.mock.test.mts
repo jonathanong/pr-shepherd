@@ -186,7 +186,7 @@ describe("runIterate — triage via runCheck", () => {
 
     const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
 
-    expect(result.action).toBe("wait");
+    expect(result.action).toBe("ready");
     expect(result.ignoredNames).toEqual(["Final Code Review / Claude Code Review"]);
     expect(result.checks).toEqual([]);
   });

@@ -121,7 +121,7 @@ describe("runIterate — one-PR READY receipt", () => {
 
     const result = await runIterate(makeOpts({ merge: true }));
 
-    expect(result.action).toBe("wait");
+    expect(result.action).toBe("ready");
     expect(mockClearReadyReceipt).toHaveBeenCalledWith(key);
     expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, true, 600, "owner", "repo", {
       headSha: "head-1",

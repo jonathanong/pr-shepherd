@@ -13,6 +13,9 @@ query PollStackSummary(
     resetAt
     used
   }
+  viewer {
+    login
+  }
   repository(owner: $owner, name: $repo) {
     viewerCanAdminister
     pullRequest(number: $anchor) {

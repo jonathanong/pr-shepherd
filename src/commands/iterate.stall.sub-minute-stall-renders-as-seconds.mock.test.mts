@@ -10,6 +10,7 @@ import {
   makeOpts,
   makeReport,
   mockRunCheck,
+  mockUpdateReadyDelay,
 } from "../../test-helpers/commands/iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
 
@@ -23,6 +24,11 @@ describe("runIterate — sub-minute stall-timeout", () => {
 
   it("renders the stall duration in seconds when the timeout is under a minute", async () => {
     mockRunCheck.mockResolvedValue(makeReport());
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 300,
+    });
 
     // Get the real fingerprint first.
     mockReadStallState.mockResolvedValue({ ok: true, state: null });

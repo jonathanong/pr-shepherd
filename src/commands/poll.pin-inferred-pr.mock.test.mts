@@ -3,6 +3,7 @@ import {
   registerIterateHooks,
   mockGetCurrentPrNumber,
   mockRunCheck,
+  mockUpdateReadyDelay,
   makeReport,
 } from "../../test-helpers/commands/iterate-test-support.mts";
 import { runPoll } from "./poll.mts";
@@ -19,6 +20,11 @@ describe("runPoll — pins an inferred PR after the first tick", () => {
   it("reports the terminal merged result instead of re-inferring and throwing", async () => {
     // Branch inference resolves PR 123 exactly once. A second call (the bug path) would return
     // null, since the PR has left the `states: OPEN` set the branch query filters on.
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 300,
+    });
     mockGetCurrentPrNumber.mockResolvedValueOnce(123).mockResolvedValue(null);
 
     mockRunCheck

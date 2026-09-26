@@ -44,7 +44,7 @@ describe("runIterate — BLOCKED + clean ready-delay state", () => {
         shouldCancel: false,
         remainingSeconds: 300,
       });
-      expect((await runIterate(makeOpts())).action).toBe("wait");
+      expect((await runIterate(makeOpts())).action).toBe("ready");
 
       mockUpdateReadyDelay.mockResolvedValue({
         isReady: true,

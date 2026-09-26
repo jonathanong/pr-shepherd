@@ -1,18 +1,15 @@
-# Poll summary [ACTIONABLE]
+# owner/repo stack #32 — actionable
 
-**repo** `owner/repo` · **selection** stack #32 anchored at PR #312 (2 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `shepherd`
+Stack: #32 · anchor PR #312 · 2 layers · mode `summary`
+stackMergeable: false
+nextAction: shepherd
 
-## Pull requests
+## Layers
 
-- [PR #311: Conflicting foundation](https://github.com/owner/repo/pull/311) [FIX_CODE]
-  - state `OPEN` · mergeable `CONFLICTING` · merge `DIRTY` · stack `32` position `1/2` base `main`
-  - head `foundation` at `b111111111111111111111111111111111111111` · base `main`
-  - reasons: `merge-conflicts`
-  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/311 --until-terminal`
-- [PR #312: Verified child](https://github.com/owner/repo/pull/312) [CANCEL]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `32` position `2/2` base `main`
-  - head `child` at `b222222222222222222222222222222222222222` · base `foundation`
-  - reasons: `appears-ready`
+- [PR #311: Conflicting foundation](https://github.com/owner/repo/pull/311) — not shepherded · not mergeable (`conflicting`)
+  - OPEN · position 1/2 · base `main`
+- [PR #312: Verified child](https://github.com/owner/repo/pull/312) — shepherded · mergeable
+  - OPEN · position 2/2 · base `foundation`
 
 ## Instructions
 

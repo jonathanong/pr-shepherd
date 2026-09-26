@@ -21,7 +21,7 @@ describe("runIterate — wait", () => {
 
     const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
 
-    expect(result.action).toBe("wait");
+    expect(result.action).toBe("ready");
     expect(result.pr).toBe(42);
     expect(result.status).toBe("READY");
     expect(result.summary.passing).toBe(1);

@@ -1,14 +1,13 @@
-# Poll summary [ACTIONABLE]
+# owner/repo stack #42 — actionable
 
-**repo** `owner/repo` · **selection** stack #42 anchored at PR #421 (1 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `shepherd`
+Stack: #42 · anchor PR #421 · 1 layers · mode `summary`
+stackMergeable: false
+nextAction: shepherd
 
-## Pull requests
+## Layers
 
-- [PR #421: Clean draft](https://github.com/owner/repo/pull/421) [WAIT]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · flags `draft` · stack `42` position `1/1` base `main`
-  - head `draft` at `4211111111111111111111111111111111111111` · base `main`
-  - reasons: `draft-auto-mark-ready-disabled`
-  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/421 --timeout 1s --debounce 0s --no-auto-mark-ready` · bounded probe
+- [PR #421: Clean draft](https://github.com/owner/repo/pull/421) — not shepherded · not mergeable (`draft`)
+  - OPEN · draft · position 1/1 · base `main`
 
 ## Instructions
 

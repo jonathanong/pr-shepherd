@@ -10,6 +10,12 @@ export function buildSimpleIterateInstructions(
   result: Exclude<IterateResult, { action: "fix_code" }>,
 ): string[] {
   switch (result.action) {
+    case "ready": {
+      const sentence = `PR #${result.pr} is ready. Ready-delay has ${result.remainingSeconds}s left. Run this same command again when the timer elapses. Do not start other work.`;
+      return [
+        result.quotaWarning ? buildQuotaAwareContinuation(result.quotaWarning, sentence) : sentence,
+      ];
+    }
     case "wait":
       if (result.stackDraftHold)
         return [buildStackDraftHoldInstruction(result, result.stackDraftHold)];
