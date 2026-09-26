@@ -1,5 +1,8 @@
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
-import { queueRemovalAppliesToHead } from "./queue-removal-freshness.mts";
+import {
+  headPushUnixFromCheckNodes,
+  queueRemovalAppliesToHead,
+} from "./queue-removal-freshness.mts";
 import { parseCreatedAt } from "./batch-parser-helpers.mts";
 
 type QueueRemovalEvent = NonNullable<RawSummaryPr["mergeQueueRemovals"]>["nodes"][number];
@@ -13,12 +16,18 @@ export function currentQueueRemovalEvent(raw: RawSummaryPr): QueueRemovalEvent |
   const addition = raw.mergeQueueAdditions?.nodes[0];
   if (addition && Date.parse(addition.createdAt) > removalTime) return null;
   const parents = removal.beforeCommit?.parents?.nodes.map((parent) => parent.oid);
-  const headCommittedAt = raw.commits?.nodes[0]?.commit.committedDate;
+  const headCommit = raw.commits?.nodes[0]?.commit;
+  const headPushedAtUnix = headPushUnixFromCheckNodes(
+    headCommit?.statusCheckRollup?.contexts.nodes,
+  );
   if (
     !queueRemovalAppliesToHead({
       parentOids: parents,
       headOid: raw.headRefOid,
-      ...(headCommittedAt && { headCommittedAtUnix: parseCreatedAt(headCommittedAt) }),
+      ...(headCommit?.committedDate && {
+        headCommittedAtUnix: parseCreatedAt(headCommit.committedDate),
+      }),
+      ...(headPushedAtUnix !== undefined && { headPushedAtUnix }),
       removedAtUnix: Math.floor(removalTime / 1000),
     })
   ) {

@@ -13,9 +13,11 @@ fragment PollSummaryCheckContexts on StatusCheckRollupContextConnection {
       conclusion
       detailsUrl
       checkSuite {
+        createdAt
         workflowRun {
           databaseId
           event
+          createdAt
           workflow {
             databaseId
             name

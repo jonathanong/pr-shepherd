@@ -31,9 +31,11 @@ type RawCheckContext =
       detailsUrl?: string;
       annotations?: { totalCount: number };
       checkSuite: {
+        createdAt?: string | null;
         workflowRun: {
           databaseId?: string | number;
           event: string;
+          createdAt?: string | null;
           workflow?: { name: string; databaseId: string | number } | null;
         } | null;
       } | null;

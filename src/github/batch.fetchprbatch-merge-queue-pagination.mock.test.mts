@@ -379,6 +379,70 @@ describe("fetchPrBatch — merge queue check pagination", () => {
     expect(mockGraphql).not.toHaveBeenCalled();
   });
 
+  it("does not hydrate a squash removal pushed after the removal", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValue(
+      makeResponse(
+        makeRawPr({
+          headRefOid: "bbbb",
+          commits: {
+            totalCount: 1,
+            nodes: [
+              {
+                commit: {
+                  oid: "bbbb",
+                  committedDate: "2026-08-27T12:55:00Z",
+                  statusCheckRollup: {
+                    contexts: {
+                      pageInfo: { hasNextPage: false, endCursor: null },
+                      nodes: [
+                        {
+                          __typename: "CheckRun",
+                          id: "CR_pr",
+                          name: "CI",
+                          status: "IN_PROGRESS",
+                          conclusion: null,
+                          detailsUrl: null,
+                          title: null,
+                          summary: null,
+                          checkSuite: {
+                            createdAt: "2026-08-27T13:01:00Z",
+                            workflowRun: {
+                              event: "pull_request",
+                              createdAt: "2026-08-27T13:02:00Z",
+                              workflow: null,
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            ],
+          },
+          mergeQueueRemovals: {
+            nodes: [
+              {
+                reason: "MANUAL",
+                createdAt: "2026-08-27T13:00:00Z",
+                beforeCommit: {
+                  oid: "removed-queue",
+                  parents: { nodes: [{ oid: "base-sha" }] },
+                },
+              },
+            ],
+          },
+        }),
+      ),
+    );
+
+    const { data } = await fetchPrBatch(42, REPO);
+
+    expect(data.headPushedAtUnix).toBe(Math.floor(Date.parse("2026-08-27T13:01:00Z") / 1000));
+    expect(data.removedMergeQueueChecks).toBeUndefined();
+    expect(mockGraphql).not.toHaveBeenCalled();
+  });
+
   it("hydrates a single-parent squash removal when the head commit predates it", async () => {
     mockGraphqlWithRateLimit.mockResolvedValue(
       makeResponse(

@@ -201,6 +201,11 @@ export interface BatchPrData extends BatchPrMergeFields {
   mergeStateStatus: MergeStateStatus;
   reviewDecision: ReviewDecision;
   headRefOid: string;
+  /**
+   * Earliest pull_request check-suite time on the head commit. Omitted when
+   * that signal is unavailable; queue-removal freshness then uses committer time.
+   */
+  headPushedAtUnix?: number;
   headRefName: string;
   /** `"owner/name"` of the head repository; null when the fork has been deleted. */
   headRepoWithOwner: string | null;
