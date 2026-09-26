@@ -4,7 +4,7 @@
 
 This page is **how GitHub data is fetched**, **what each GraphQL operation costs**, and **how to keep a poll from exhausting the GraphQL quota**. A typical green tick is one GraphQL batch. Extra pages use a slim follow-up query. REST supplements run only where GraphQL cannot return the data.
 
-Related: [authentication.md](authentication.md) (token pools), [configuration.md](configuration.md) (`watch.graphqlQuotaWarnings`), [debugging.md](debugging.md) (rate-limit exhaustion), [actions.md](actions.md) (quota-warning output).
+Related: [graphql-usage.md](graphql-usage.md) (points per command), [authentication.md](authentication.md) (token pools), [configuration.md](configuration.md) (`watch.graphqlQuotaWarnings`), [debugging.md](debugging.md) (rate-limit exhaustion), [actions.md](actions.md) (quota-warning output).
 
 ## GitHub metering
 
@@ -15,7 +15,7 @@ GitHub meters GraphQL in **points per hour**, not HTTP requests. A typical user 
 1. Count the connection-requests implied by the query AST. Nested `first`/`last` multiply by the parent connection size. Assume every connection fills its limit.
 2. Divide by 100 and round to the nearest integer. Minimum cost is 1.
 
-Example: `reviewThreads(last: 20) { comments(first: 100) }` is 1 (threads from the PR) + 20 (comments from each thread on that page) = 21 connection-requests. Older threads use the slim page query. Combined with check-run annotation probes and merge-queue commit trees, a full `BatchPr` first page typically lands around **cost 4–8**. `--verbose` `GraphQL measured cost` is authoritative; do not guess from this page.
+Example: `reviewThreads(last: 20) { comments(first: 100) }` is 1 (threads from the PR) + 20 (comments from each thread on that page) = 21 connection-requests. Older threads use the slim page query. A `BatchPr`-shaped first page, including the check-run annotation probe, measures at **cost 1**. Per-command totals are in [graphql-usage.md](graphql-usage.md). `--verbose` `GraphQL measured cost` is authoritative; do not guess from this page.
 
 Other limits that are not the hourly point budget:
 
@@ -139,7 +139,7 @@ rollup is a valid empty check set.
 
 ## Per-tick budget
 
-The built-in single-PR poll interval is **60s** (`poll.intervalSeconds`). `--stack` and multi-PR polls default to that interval times `poll.stackIntervalFactor` (built-in **2**, so **120s**) because each tick reads per-layer snapshots plus the stack summary. An explicit `--interval` overrides either default and is not multiplied again. Ready-delay is **10 minutes**. Repeating a “cheap” 4–8 point batch every minute is what burns the hourly budget, not a single snapshot; stack polls are the expensive case, so they wait longer unless `--interval` is set.
+The built-in single-PR poll interval is **60s** (`poll.intervalSeconds`). `--stack` and multi-PR polls default to that interval times `poll.stackIntervalFactor` (built-in **2**, so **120s**) because each tick reads the stack summary, whose cost grows with the number of PRs. An explicit `--interval` overrides either default and is not multiplied again. Ready-delay is **10 minutes**. A one-PR `BatchPr` is 1 point, so repeating it every minute is a small share of the hourly budget. The stack summary is the expensive case, so stack polls wait longer unless `--interval` is set. See [graphql-usage.md](graphql-usage.md).
 
 | Situation                                                                                               | GraphQL                                                                                                            | REST                                                   |
 | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
@@ -246,5 +246,6 @@ Landed in this spec’s matching code:
 
 Further work, if spend is still high:
 
+- Ranked point-budget follow-ups, including the aggregate summary's annotation probes, are in [graphql-usage.md](graphql-usage.md).
 - Token-scoped quota state so two worktrees sharing one credential share warned bands (today warnings are per worktree).
 - Shrink `reviewThreads.comments(first: 100)` if `nodeCount` approaches 500,000 on huge PRs (point cost is mostly parent connections, not this `first`).
