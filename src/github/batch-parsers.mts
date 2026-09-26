@@ -22,6 +22,7 @@ import {
   isReviewStale,
 } from "./batch-parser-helpers.mts";
 import { parseCheckNodes } from "./batch-parse-checks.mts";
+import { headPushUnixFromCheckNodes } from "./queue-removal-freshness.mts";
 import { requireContextNodes } from "./batch-response.mts";
 import { buildPrActivitySummary } from "./activity.mts";
 import { parseBranchProtection } from "./branch-protection.mts";
@@ -154,6 +155,7 @@ export function parseRawPr(
       : undefined,
     queueHead?.oid,
   );
+  const headPushedAtUnix = headPushUnixFromCheckNodes(rawCheckNodes);
   const removedMergeQueueChecks = parseCheckNodes(
     removedQueueHead?.statusCheckRollup
       ? requireContextNodes(removedQueueHead.statusCheckRollup.contexts.nodes)
@@ -170,6 +172,7 @@ export function parseRawPr(
     mergeStateStatus: raw.mergeStateStatus as BatchPrData["mergeStateStatus"],
     reviewDecision: (raw.reviewDecision ?? null) as BatchPrData["reviewDecision"],
     headRefOid: raw.headRefOid,
+    ...(headPushedAtUnix !== undefined && { headPushedAtUnix }),
     headRefName: raw.headRefName,
     headRepoWithOwner: raw.headRepository?.nameWithOwner ?? null,
     viewerAuthorization: {

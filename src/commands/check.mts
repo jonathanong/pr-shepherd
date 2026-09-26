@@ -107,8 +107,10 @@ export async function runCheck(
   // it as stale/updated rather than as still current, so Shepherd doesn't escalate
   // `merge-queue-removed` permanently on data it can no longer check. A squash or rebase
   // queue commit has one parent and does not list the PR head; that removal stays current
-  // until the head's committer time is later than the removal. The raw removal fields still
-  // render in the merge-queue header regardless of this flag.
+  // until this head reached the PR after it. The push time is the earliest pull_request
+  // check on the head, with committer time as the fallback when no check time is
+  // available. The raw removal fields still render in the merge-queue header regardless
+  // of this flag.
   const headCommittedAtUnix = batchData.activity?.latestCommitCommittedAtUnix;
   const headUpdatedAfterRemoval = Boolean(
     latestRemoval &&
@@ -117,6 +119,9 @@ export async function runCheck(
       headOid: batchData.headRefOid,
       ...(headCommittedAtUnix !== undefined &&
         headCommittedAtUnix !== null && { headCommittedAtUnix }),
+      ...(batchData.headPushedAtUnix !== undefined && {
+        headPushedAtUnix: batchData.headPushedAtUnix,
+      }),
       removedAtUnix: latestRemoval.createdAtUnix,
     }),
   );

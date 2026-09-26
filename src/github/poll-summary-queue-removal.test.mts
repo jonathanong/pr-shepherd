@@ -51,6 +51,55 @@ describe("currentQueueRemovalEvent", () => {
     ).toEqual(squash);
   });
 
+  it("rejects a single-parent removal pushed after it with an earlier committer time", () => {
+    expect(
+      currentQueueRemovalEvent(
+        raw({
+          headRefOid: "bbbb",
+          commits: {
+            nodes: [
+              {
+                commit: {
+                  oid: "bbbb",
+                  committedDate: "2026-09-20T10:05:00Z",
+                  statusCheckRollup: {
+                    contexts: {
+                      totalCount: 1,
+                      pageInfo: { hasPreviousPage: false },
+                      nodes: [
+                        {
+                          __typename: "CheckRun",
+                          name: "CI",
+                          status: "IN_PROGRESS",
+                          conclusion: null,
+                          checkSuite: {
+                            createdAt: "2026-09-20T10:11:00Z",
+                            workflowRun: {
+                              event: "pull_request",
+                              createdAt: "2026-09-20T10:12:00Z",
+                            },
+                          },
+                        },
+                      ],
+                    },
+                  },
+                },
+              },
+            ],
+          },
+          mergeQueueRemovals: {
+            nodes: [
+              {
+                ...removal,
+                beforeCommit: { oid: "queue-head", parents: { nodes: [{ oid: "base-sha" }] } },
+              },
+            ],
+          },
+        }),
+      ),
+    ).toBeNull();
+  });
+
   it("rejects a single-parent removal after the head is committed later", () => {
     expect(
       currentQueueRemovalEvent(

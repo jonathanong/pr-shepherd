@@ -1,6 +1,9 @@
 import { parseCreatedAt } from "./batch-parser-helpers.mts";
 import { graphql } from "./client.mts";
-import { queueRemovalAppliesToHead } from "./queue-removal-freshness.mts";
+import {
+  headPushUnixFromCheckNodes,
+  queueRemovalAppliesToHead,
+} from "./queue-removal-freshness.mts";
 import { requireContextNodes } from "./batch-response.mts";
 import { COMMIT_CHECK_CONTEXTS_QUERY } from "./queries.mts";
 import type { RepoInfo } from "./client.mts";
@@ -106,12 +109,18 @@ function currentRemovalCommit(raw: RawPr): QueueCommit | undefined {
   if (!removal?.beforeCommit) return undefined;
   if (addition && Date.parse(removal.createdAt) < Date.parse(addition.createdAt)) return undefined;
   const parentOids = removal.beforeCommit.parents?.nodes.map((node) => node.oid);
-  const headCommittedAt = raw.commits?.nodes[0]?.commit.committedDate;
+  const headCommit = raw.commits?.nodes[0]?.commit;
+  const headPushedAtUnix = headPushUnixFromCheckNodes(
+    headCommit?.statusCheckRollup?.contexts.nodes,
+  );
   if (
     !queueRemovalAppliesToHead({
       parentOids,
       headOid: raw.headRefOid,
-      ...(headCommittedAt && { headCommittedAtUnix: parseCreatedAt(headCommittedAt) }),
+      ...(headCommit?.committedDate && {
+        headCommittedAtUnix: parseCreatedAt(headCommit.committedDate),
+      }),
+      ...(headPushedAtUnix !== undefined && { headPushedAtUnix }),
       removedAtUnix: Math.floor(Date.parse(removal.createdAt) / 1000),
     })
   ) {
