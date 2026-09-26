@@ -93,6 +93,8 @@ export interface ShepherdReport {
     resolutionOnly: ReviewThread[];
     autoResolved: AutoResolvedThread[];
     autoResolveErrors: string[];
+    /** Rule reasons for this fetch's auto-resolve errors. Omitted when empty. */
+    autoResolveErrorReasons?: string[];
     /** First-look items — outdated/resolved/minimized threads not yet seen by the agent. */
     firstLook: FirstLookThread[];
     /** Thread IDs matched by user classification rules with autoResolve:true — routed to resolveThreadIds. */

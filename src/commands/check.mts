@@ -382,6 +382,7 @@ export async function runCheck(
     autoResolved,
     autoMinimized,
     autoResolveErrors,
+    errorReasons,
   } = await applySuppressedRuleAutoResolve({
     enabled: opts.autoMinimizeSuppressed === true,
     partition: authorizedPartition,
@@ -436,6 +437,7 @@ export async function runCheck(
       resolutionOnly: threadVisibility.resolutionOnlyThreads,
       autoResolved,
       autoResolveErrors,
+      ...(errorReasons.length > 0 && { autoResolveErrorReasons: errorReasons }),
       firstLook: threadVisibility.firstLookThreads,
       ...(ruleAutoResolveThreadIds.length > 0
         ? { ruleAutoResolveIds: ruleAutoResolveThreadIds }

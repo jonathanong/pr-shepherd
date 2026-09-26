@@ -20,6 +20,7 @@ export interface RuleAutoResolveApplied {
   autoResolved: AutoResolvedThread[];
   autoMinimized: AutoMinimizedItem[];
   autoResolveErrors: string[];
+  errorReasons: string[];
 }
 
 const EMPTY: RuleAutoResolveApplied = {
@@ -29,6 +30,7 @@ const EMPTY: RuleAutoResolveApplied = {
   autoResolved: [],
   autoMinimized: [],
   autoResolveErrors: [],
+  errorReasons: [],
 };
 
 function idsIn(ids: readonly string[], confirmed: ReadonlySet<string>): string[] {
@@ -119,6 +121,14 @@ export async function applySuppressedRuleAutoResolve(input: {
     ...decorateErrors(minimized.errors, minimizeIds, input.partition.ruleReasons),
     ...decorateErrors(resolved.errors, threadIds, input.partition.ruleReasons),
   ];
+  const errorReasons = uniqueReasons([
+    ...minimized.errors.flatMap((error) =>
+      reasonsForError(error, minimizeIds, input.partition.ruleReasons),
+    ),
+    ...resolved.errors.flatMap((error) =>
+      reasonsForError(error, threadIds, input.partition.ruleReasons),
+    ),
+  ]);
   const journalError = await journalSuccesses(input, autoResolved, autoMinimized);
   if (journalError) autoResolveErrors.push(journalError);
   return {
@@ -130,6 +140,7 @@ export async function applySuppressedRuleAutoResolve(input: {
     autoResolved,
     autoMinimized,
     autoResolveErrors,
+    errorReasons,
   };
 }
 

@@ -129,6 +129,7 @@ describe("applySuppressedRuleAutoResolve", () => {
       "network",
       "t-plain: failed",
     ]);
+    expect(result.errorReasons).toEqual(["noise", "other"]);
     expect(mockJournal).toHaveBeenCalledWith(
       expect.objectContaining({
         prNumber: 7,

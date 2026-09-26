@@ -402,6 +402,7 @@ describe("tryReuseFingerprintReport", () => {
           { id: "t1", isResolved: true } as ShepherdReport["threads"]["autoResolved"][number],
         ],
         autoResolveErrors: ["c1: failed (rule: noise)"],
+        autoResolveErrorReasons: ["quota (daily); extra"],
         firstLook: [],
       },
       comments: {
@@ -417,6 +418,7 @@ describe("tryReuseFingerprintReport", () => {
       pr: 42,
       threads: { autoResolved: [], autoResolveErrors: [] },
     });
+    expect(reused?.threads).not.toHaveProperty("autoResolveErrorReasons");
     expect(reused?.comments).not.toHaveProperty("autoMinimized");
   });
 

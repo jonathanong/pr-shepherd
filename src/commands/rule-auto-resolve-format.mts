@@ -87,18 +87,6 @@ function splitJoined(reason: string | undefined): string[] {
   return reason.split("; ").filter(Boolean);
 }
 
-function reasonsFromErrors(errors: readonly string[]): string[] {
-  const reasons: string[] = [];
-  for (const error of errors) {
-    const match = error.match(/ \((rule|rules): ([^)]+)\)$/);
-    if (!match?.[2]) continue;
-    for (const reason of match[2].split("; ")) {
-      if (reason && !reasons.includes(reason)) reasons.push(reason);
-    }
-  }
-  return reasons;
-}
-
 export function ruleAutoResolveFromReport(
   report: ShepherdReport,
 ): RuleAutoResolveReport | undefined {
@@ -114,7 +102,7 @@ export function ruleAutoResolveFromReport(
         ...threads.flatMap((thread) => splitJoined(thread.ruleReason)),
         ...minimized.flatMap((item) => splitJoined(item.ruleReason)),
       ])
-    : reasonsFromErrors(errors);
+    : uniqueReasons(report.threads.autoResolveErrorReasons ?? []);
   const body =
     ruleAutoResolveBody({ threads: threads.length, comments, reviewSummaries }) ??
     `auto-resolve failed for ${plural(errors.length, "mutation")}`;
@@ -164,12 +152,14 @@ export function stripReplayedRuleAutoResolve(report: ShepherdReport): ShepherdRe
   const hasEvent =
     report.threads.autoResolved.length > 0 ||
     report.threads.autoResolveErrors.length > 0 ||
+    (report.threads.autoResolveErrorReasons?.length ?? 0) > 0 ||
     (report.comments.autoMinimized?.length ?? 0) > 0;
   if (!hasEvent) return report;
   const { autoMinimized: _autoMinimized, ...comments } = report.comments;
+  const { autoResolveErrorReasons: _autoResolveErrorReasons, ...threads } = report.threads;
   return {
     ...report,
-    threads: { ...report.threads, autoResolved: [], autoResolveErrors: [] },
+    threads: { ...threads, autoResolved: [], autoResolveErrors: [] },
     comments,
   };
 }

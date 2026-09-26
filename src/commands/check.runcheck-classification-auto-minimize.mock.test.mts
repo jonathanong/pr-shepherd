@@ -62,6 +62,7 @@ describe("runCheck — classification auto-minimize", () => {
     expect(report.threads.autoResolveErrors).toEqual([
       "c-bot: failed (rule: review-bot suppressed)",
     ]);
+    expect(report.threads.autoResolveErrorReasons).toEqual(["review-bot suppressed"]);
   });
 
   it("keeps suppressed auto-resolve pr-comments queued when self-minimize is disabled", async () => {

@@ -20,6 +20,7 @@ const thread = { id: "t1", url: " https://t ", isResolved: false } as AutoResolv
 function report(overrides: {
   autoResolved?: ShepherdReport["threads"]["autoResolved"];
   autoResolveErrors?: string[];
+  autoResolveErrorReasons?: string[];
   autoMinimized?: NonNullable<ShepherdReport["comments"]["autoMinimized"]>;
 }): ShepherdReport {
   return {
@@ -29,6 +30,9 @@ function report(overrides: {
       firstLook: [],
       autoResolved: overrides.autoResolved ?? [],
       autoResolveErrors: overrides.autoResolveErrors ?? [],
+      ...(overrides.autoResolveErrorReasons
+        ? { autoResolveErrorReasons: overrides.autoResolveErrorReasons }
+        : {}),
     },
     comments: {
       actionable: [],
@@ -153,13 +157,22 @@ describe("rule auto-resolve formatting", () => {
     expect(reasonsForError("network", ["c1"], reasons)).toEqual([]);
     expect(ruleAutoResolveFromReport(report({}))).toBeUndefined();
     expect(
+      ruleAutoResolveFromReport(
+        report({
+          autoResolveErrors: ["c1: failed"],
+          autoResolveErrorReasons: ["quota (daily); extra"],
+        }),
+      )?.summary,
+    ).toBe("auto-resolve failed for 1 mutation (rule: quota (daily); extra)");
+    expect(
       ruleAutoResolveFromReport(report({ autoResolveErrors: ["c1: failed (rule: noise)"] }))
         ?.summary,
-    ).toBe("auto-resolve failed for 1 mutation (rule: noise)");
+    ).toBe("auto-resolve failed for 1 mutation");
     expect(
       ruleAutoResolveFromReport(
         report({
-          autoResolveErrors: ["c1: failed (rules: a; ; b)", "network", "c2: failed (rule: a)"],
+          autoResolveErrors: ["c1: failed", "network", "c2: failed"],
+          autoResolveErrorReasons: ["a", "b"],
         }),
       )?.summary,
     ).toBe("auto-resolve failed for 3 mutations (rules: a; b)");
@@ -168,11 +181,13 @@ describe("rule auto-resolve formatting", () => {
     const cached = report({
       autoResolved: [thread],
       autoResolveErrors: ["c1: failed"],
+      autoResolveErrorReasons: ["quota (daily); extra"],
       autoMinimized: [{ id: "c1", kind: "pr-comment" }],
     });
     const stripped = stripReplayedRuleAutoResolve(cached);
     expect(stripped.threads.autoResolved).toEqual([]);
     expect(stripped.threads.autoResolveErrors).toEqual([]);
+    expect(stripped.threads).not.toHaveProperty("autoResolveErrorReasons");
     expect(stripped.comments).not.toHaveProperty("autoMinimized");
   });
 });
