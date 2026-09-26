@@ -120,6 +120,38 @@ describe("errorToExitCode", () => {
     },
   );
 
+  it("classifies a GraphQL resource-limit message at HTTP 200 as EX_TEMPFAIL", () => {
+    const err = new GitHubRequestError(
+      "GitHub GraphQL error: Resource limits for this query exceeded (path: repository.pullRequest.stack.entries.nodes.7)",
+      {
+        status: 200,
+        graphqlErrors: [{ message: "Resource limits for this query exceeded" }],
+      },
+    );
+    expect(errorToExitCode(err)).toBe(EXIT.TEMPFAIL);
+  });
+
+  it.each(["RESOURCE_LIMITS_EXCEEDED", "resource_limits_exceeded"] as const)(
+    "classifies a GraphQL resource-limit type %s as EX_TEMPFAIL",
+    (type) => {
+      const err = new GitHubRequestError("GitHub GraphQL error", {
+        status: 200,
+        graphqlErrors: [{ message: "query failed", type }],
+      });
+      expect(errorToExitCode(err)).toBe(EXIT.TEMPFAIL);
+    },
+  );
+
+  it("classifies a GraphQL resource-limit extensions.code as EX_TEMPFAIL", () => {
+    const err = new GitHubRequestError("GitHub GraphQL error", {
+      status: 200,
+      graphqlErrors: [
+        { message: "query failed", extensions: { code: "RESOURCE_LIMITS_EXCEEDED" } },
+      ],
+    });
+    expect(errorToExitCode(err)).toBe(EXIT.TEMPFAIL);
+  });
+
   it("does not classify a GraphQL INTERNAL-looking permission error as EX_TEMPFAIL", () => {
     const err = new GitHubRequestError("GitHub GraphQL error: not accessible", {
       status: 200,

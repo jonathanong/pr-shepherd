@@ -30,7 +30,7 @@ The "before" column is the poll-summary shape measured for [the usage write-up](
 | 20  | 50             | 9             | 51                | 10               | 1,530              | 300               |
 | 50  | 126            | 26            | 127               | 27               | 3,810              | 810               |
 
-A stack tick is the summary plus the 1-point `PollStackTopology` preflight. The preflight stays: GitHub prices `entries(first: N)`, so asking for 50 slots on a 2-PR stack would bill the empty slots. The second summary page exists only past 50 layers. Hours use the default stack interval, 120s, which is 30 ticks/hour.
+A stack tick is the summary plus the 1-point `PollStackTopology` preflight. The preflight stays: GitHub prices `entries(first: N)`, so asking for 50 slots on a 2-PR stack would bill the empty slots. The second summary page exists only past 50 layers. A `Resource limits for this query exceeded` response halves that page down to one entry and rereads, so a wide check matrix can add summary pages beyond the table. Check contexts stay on the shared fragment: one layer is the same shape as an explicit summary, and `PollSummaryCheckPage` still completes a window past 100. Hours use the default stack interval, 120s, which is 30 ticks/hour.
 
 `fetchRawSummaryPr` uses the same fragment: 3 points before, 1 after. A check page past the first 100 contexts stays 1 point and no longer repeats the annotation probe.
 

@@ -100,7 +100,7 @@ subcommand, not just `iterate` — this range is uniform across `apply`,
 | 66   | `EX_NOINPUT`     | `apply journal --file` path could not be read (including `--file -` for stdin), or `journal extract --body-file` could not safely read a regular POSIX body file                                                                                                                    |
 | 69   | `EX_UNAVAILABLE` | A precondition is unmet: no open PR for the current branch; a suggestion thread is resolved, outdated, minimized, unanchored, unsafe, or not applyable to the local descendant; GitHub returned an unclassified 4xx; or an explicit review mutation returned a non-rate-limit error |
 | 70   | `EX_SOFTWARE`    | Unexpected or unclassified internal failure — the fallback when nothing more specific applies                                                                                                                                                                                       |
-| 75   | `EX_TEMPFAIL`    | A **retryable** GitHub failure: HTTP 429, any 5xx, a `Retry-After` header, an exhausted rate limit, or a GraphQL `INTERNAL` engine crash (HTTP 200 with `data: null`)                                                                                                               |
+| 75   | `EX_TEMPFAIL`    | A **retryable** GitHub failure: HTTP 429, any 5xx, a `Retry-After` header, an exhausted rate limit, a GraphQL `INTERNAL` engine crash (HTTP 200 with `data: null`), or a GraphQL resource-limit error (`Resource limits for this query exceeded`)                                      |
 | 77   | `EX_NOPERM`      | GitHub 401/403 that is not a rate-limit signal — missing token or insufficient PAT scopes                                                                                                                                                                                           |
 | 78   | `EX_CONFIG`      | Reserved for `.pr-shepherdrc.yml` validation failures. **Not currently emitted** — see below.                                                                                                                                                                                       |
 
@@ -115,7 +115,7 @@ returns 403, with a `Retry-After` header. `GitHubRequestError` classifies
 itself at construction time (via `classifyStatus`, not `errorToExitCode` —
 `errorToExitCode` only reads back whatever code the error already carries)
 and checks for a retry signal (`Retry-After`, `429`, `5xx`, an exhausted
-rate limit, or a GraphQL `INTERNAL` error) _before_ falling back to the blanket 401/403 → `77` rule, so a
+rate limit, a GraphQL `INTERNAL` error, or a GraphQL resource-limit error) _before_ falling back to the blanket 401/403 → `77` rule, so a
 throttled 403 correctly resolves to `75`, not `77`.
 
 **GraphQL permission failures often arrive at HTTP 200, not 401/403.** A
@@ -141,9 +141,14 @@ non-`INTERNAL` `type` does not hide `extensions.code`). Status-only
 classification treated this as `69` (`EX_UNAVAILABLE`) even though retrying
 the same **query** often succeeds. `GitHubRequestError` maps those errors to
 `75`. The GraphQL client retries read operations twice (500ms, then 1500ms)
-before surfacing the failure. Mutations are not retried: an INTERNAL after
+before surfacing the failure. The same retry covers
+`Resource limits for this query exceeded` (message, `type`, or
+`extensions.code` `RESOURCE_LIMITS_EXCEEDED`), including when GitHub also
+returns partial `data`. A `--stack` summary that still hits the limit halves
+`entries(first:)` down to 1 and pages with `after`; if a one-entry page still
+fails, the error surfaces as `75` with GitHub's message. Mutations are not retried: an INTERNAL or resource-limit error after
 GitHub applied a write (`addPullRequestReviewThreadReply`, mark-ready) would
-duplicate the side effect. If the INTERNAL response also carries
+duplicate the side effect. If that response also carries
 `Retry-After` or an exhausted rate limit, the client does not use the short
 delays; it surfaces `75` immediately. The GraphQL layer keeps `type` and
 `extensions` on `graphqlErrors` so classification can use them instead of

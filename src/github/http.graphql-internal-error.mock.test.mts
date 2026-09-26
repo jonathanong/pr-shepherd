@@ -114,6 +114,46 @@ describe("graphql — GitHub INTERNAL engine crash", () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
+  it("retries a resource-limit payload then succeeds", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        gqlJson({
+          data: { repository: null },
+          errors: [
+            {
+              message: "Resource limits for this query exceeded",
+              type: "RESOURCE_LIMITS_EXCEEDED",
+              path: ["repository", "pullRequest", "stack", "entries", "nodes", 7],
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(gqlOk({ ok: true }));
+
+    const promise = graphql("{ PollStackSummary }");
+    await vi.runAllTimersAsync();
+    await expect(promise).resolves.toMatchObject({ data: { ok: true } });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("throws EX_TEMPFAIL when resource-limit retries are exhausted", async () => {
+    mockFetch.mockResolvedValue(
+      gqlJson({
+        data: { repository: { pullRequest: null } },
+        errors: [{ message: "Resource limits for this query exceeded" }],
+      }),
+    );
+
+    const promise = graphql("{ PollStackSummary }");
+    const assertion = expect(promise).rejects.toMatchObject({
+      exitCode: EXIT.TEMPFAIL,
+      message: expect.stringContaining("Resource limits for this query exceeded"),
+    });
+    await vi.runAllTimersAsync();
+    await assertion;
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+  });
+
   it("does not retry INTERNAL when the rate limit is exhausted", async () => {
     mockFetch.mockResolvedValue(
       gqlJson(BATCHPR_INTERNAL, {

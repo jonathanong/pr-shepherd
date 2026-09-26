@@ -17,9 +17,10 @@ export interface GitHubGraphQlError {
 // GraphQL error messages themselves.
 const GRAPHQL_PERMISSION_ERROR = /resource not accessible/i;
 const GRAPHQL_INTERNAL_MESSAGE = /something went wrong while executing your query/i;
+const GRAPHQL_RESOURCE_LIMIT_MESSAGE = /resource limits for this query exceeded/i;
 
-function isInternalToken(value: unknown): boolean {
-  return typeof value === "string" && value.toUpperCase() === "INTERNAL";
+function isToken(value: unknown, token: string): boolean {
+  return typeof value === "string" && value.toUpperCase() === token;
 }
 
 function extensionsCode(extensions: unknown): unknown {
@@ -37,9 +38,23 @@ function hasPermissionError(graphqlErrors?: GitHubGraphQlError[]): boolean {
 export function isRetryableGraphQlInternal(graphqlErrors?: GitHubGraphQlError[]): boolean {
   if (!graphqlErrors?.length) return false;
   return graphqlErrors.some((error) => {
-    if (isInternalToken(error.type)) return true;
-    if (isInternalToken(extensionsCode(error.extensions))) return true;
+    if (isToken(error.type, "INTERNAL")) return true;
+    if (isToken(extensionsCode(error.extensions), "INTERNAL")) return true;
     return GRAPHQL_INTERNAL_MESSAGE.test(error.message);
+  });
+}
+
+/**
+ * GitHub refused the query for size or load (`Resource limits for this query
+ * exceeded`). The same document can succeed on a later attempt, and a smaller
+ * page can succeed when the full one cannot.
+ */
+export function isRetryableGraphQlResourceLimit(graphqlErrors?: GitHubGraphQlError[]): boolean {
+  if (!graphqlErrors?.length) return false;
+  return graphqlErrors.some((error) => {
+    if (isToken(error.type, "RESOURCE_LIMITS_EXCEEDED")) return true;
+    if (isToken(extensionsCode(error.extensions), "RESOURCE_LIMITS_EXCEEDED")) return true;
+    return GRAPHQL_RESOURCE_LIMIT_MESSAGE.test(error.message);
   });
 }
 
@@ -59,7 +74,8 @@ function classifyStatus(
     status >= 500 ||
     retryAfterSeconds !== undefined ||
     rateLimitExhausted ||
-    isRetryableGraphQlInternal(graphqlErrors)
+    isRetryableGraphQlInternal(graphqlErrors) ||
+    isRetryableGraphQlResourceLimit(graphqlErrors)
   ) {
     return EXIT.TEMPFAIL;
   }
