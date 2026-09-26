@@ -6,6 +6,7 @@ import { graphqlWithRateLimit } from "./client.mts";
 import {
   annotationProbeUnavailable,
   hydrateReadyAnnotationProbe,
+  readyFingerprint,
 } from "./poll-summary-annotation-probe.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 
@@ -100,6 +101,7 @@ describe("hydrateReadyAnnotationProbe", () => {
       annotations: { totalCount: 2 },
     });
     expect(annotationProbeUnavailable(pr)).toBe(false);
+    expect(readyFingerprint(pr, "stored")).not.toBe("stored");
     expect(mockGraphql.mock.calls[0]?.[1]).toMatchObject({ before: null });
   });
 
@@ -160,5 +162,31 @@ describe("hydrateReadyAnnotationProbe", () => {
     expect(pr.commits.nodes[0]?.commit.statusCheckRollup?.contexts.nodes[0]).not.toHaveProperty(
       "annotations",
     );
+  });
+
+  it("does not merge a partial page when the next cursor is missing", async () => {
+    const pr = readyPr();
+    mockGraphql.mockResolvedValue({
+      data: {
+        repository: {
+          object: {
+            __typename: "Commit",
+            oid: "c".repeat(40),
+            statusCheckRollup: {
+              contexts: {
+                pageInfo: { hasPreviousPage: true, startCursor: null },
+                nodes: [{ __typename: "CheckRun", id: "CR1", annotations: { totalCount: 3 } }],
+              },
+            },
+          },
+        },
+      },
+    });
+    await hydrateReadyAnnotationProbe(pr, repo, review);
+    expect(annotationProbeUnavailable(pr)).toBe(true);
+    expect(pr.commits.nodes[0]?.commit.statusCheckRollup?.contexts.nodes[0]).not.toHaveProperty(
+      "annotations",
+    );
+    expect(readyFingerprint(pr, "stored")).toBe("stored");
   });
 });
