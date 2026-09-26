@@ -1,9 +1,15 @@
 import { describe, it, expect, vi } from "vitest";
 
-const { mockFetchPollSummary } = vi.hoisted(() => ({ mockFetchPollSummary: vi.fn() }));
+const { mockFetchPollSummary, mockLookupTrunkConflict } = vi.hoisted(() => ({
+  mockFetchPollSummary: vi.fn(),
+  mockLookupTrunkConflict: vi.fn(),
+}));
 vi.mock("../github/poll-summary.mts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../github/poll-summary.mts")>()),
   fetchPollSummary: mockFetchPollSummary,
+}));
+vi.mock("./iterate/stack-trunk-conflict.mts", () => ({
+  lookupUpperLayerTrunkConflict: mockLookupTrunkConflict,
 }));
 
 import {
@@ -27,8 +33,10 @@ const openRequirements = {
 const trunkStack = { number: 7, size: 3, baseRefName: "main" };
 
 async function runStackConflict(stack: StackStatus, baseBranch = "main"): Promise<string[]> {
+  mockLookupTrunkConflict.mockResolvedValue(undefined);
   mockRunCheck.mockResolvedValue(
     makeReport({
+      headSha: "a".repeat(40),
       baseBranch,
       status: "FAILING",
       mergeStatus: {
@@ -72,6 +80,7 @@ describe("runIterate — fix_code (native stack merge conflicts)", () => {
     expect(joined).not.toContain("check out the parent stack branch `main`");
     expect(joined).not.toContain("Resolve them before committing.");
     expect(joined).not.toContain("push to the PR head branch");
+    expect(mockLookupTrunkConflict).toHaveBeenCalled();
   });
 
   it("rebases the whole stack onto trunk when the bottom layer conflicts", async () => {
@@ -82,6 +91,7 @@ describe("runIterate — fix_code (native stack merge conflicts)", () => {
     );
     expect(instructions.join("\n")).not.toContain("--no-trunk");
     expect(mockFetchPollSummary).not.toHaveBeenCalled();
+    expect(mockLookupTrunkConflict).not.toHaveBeenCalled();
   });
 
   it("rebases onto trunk from a higher layer once every layer below it merged", async () => {

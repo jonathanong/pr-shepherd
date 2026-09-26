@@ -52,6 +52,11 @@ export interface IterateResultBase {
   summary: IterateResultSummary;
   /** Validated base branch (e.g. "main") for this PR. */
   baseBranch: string;
+  /**
+   * Set when a native-stack upper layer is conflicting but already contains its
+   * PR base, so the dirty state is against the stack trunk rather than that base.
+   */
+  stackTrunkConflict?: string;
   /** Null when no classic protection rule exists or the base ref is unavailable. */
   branchProtection: BranchProtection | null;
   mergeRequirements?: MergeRequirements;

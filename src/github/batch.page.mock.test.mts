@@ -165,5 +165,6 @@ describe("fetchPrBatch — slim combined extra pages", () => {
     );
     const result = await fetchPrBatch(42, REPO);
     expect(result.checkSuitesComplete).toBe(true);
+    expect(result.headCheckSuitesEmpty).toBe(true);
   });
 });

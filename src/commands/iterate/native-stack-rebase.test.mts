@@ -26,6 +26,26 @@ describe("native stack rebase instructions", () => {
     );
   });
 
+  it("rebases an upper layer that already contains its parent from the bottom layer", () => {
+    const rebase = buildNativeStackLayerRebase("acme/widgets", upperPr, upperLayer, {
+      trunk: "main",
+      bottomPr: 11,
+    });
+    expect(rebase).toContain("check out the head branch of PR #11 and run `gh stack rebase`;");
+    expect(rebase).not.toContain("--no-trunk");
+    expect(rebase).not.toContain("PR #42");
+  });
+
+  it("names the trunk when the bottom open layer is not on the fetched page", () => {
+    expect(buildNativeStackRebaseInstruction("acme/widgets", 7, { trunk: "main" })).toContain(
+      "Then check out the bottom open layer whose base is `main` and run `gh stack rebase`;",
+    );
+    const rebase = buildNativeStackLayerRebase("acme/widgets", upperPr, upperLayer, {
+      trunk: "main",
+    });
+    expect(rebase).not.toContain("--no-trunk");
+  });
+
   it("rebases the whole stack onto trunk from the bottom layer", () => {
     expect(buildNativeStackRebaseInstruction("acme/widgets", 7, { bottomPr: 9 })).toBe(
       `${prepare} Then check out the head branch of PR #9 and run \`gh stack rebase\`; if it stops on a conflict, resolve it and run \`gh stack rebase --continue\`.`,

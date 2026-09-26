@@ -15,6 +15,7 @@ import {
 } from "./iterate-merge-formatter.mts";
 import { formatApiUsage, formatQuotaWarning } from "./api-usage-formatter.mts";
 import { formatActivityLine } from "./iterate-activity-formatter.mts";
+import { branchStateSegment } from "./iterate-branch-segment.mts";
 
 /**
  * Format an IterateResult as human-readable Markdown.
@@ -49,14 +50,10 @@ export function formatIterateResult(
     verbose && result.baseBranch ? ` · **baseBranch** \`${result.baseBranch}\`` : "";
   const baseLine = `**status** \`${result.status}\` · **merge** \`${result.mergeStateStatus}\`${reviewDecisionSeg} · **state** \`${result.state}\` · **repo** \`${result.repo}\`${baseBranchSeg}`;
 
+  const branchSeg = branchStateSegment(result);
   let summaryLine: string;
   if (verbose) {
-    let verboseBranch = "";
-    if (result.mergeStatus === "BEHIND" && result.baseBranch) {
-      verboseBranch = ` · **branch** behind PR base \`${result.baseBranch}\``;
-    } else if (result.mergeStatus === "CONFLICTS" && result.baseBranch) {
-      verboseBranch = ` · **branch** conflicts with PR base \`${result.baseBranch}\``;
-    }
+    const verboseBranch = branchSeg ? ` · ${branchSeg}` : "";
     summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress, ${result.summary.superseded} superseded · **remainingSeconds** ${result.remainingSeconds} · **blockingBotReviewInProgress** ${result.blockingBotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}${verboseBranch}`;
   } else {
     const counts = [`${result.summary.passing} passing`];
@@ -70,11 +67,7 @@ export function formatIterateResult(
     }
     if (result.blockingBotReviewInProgress) segs.push(`**blockingBotReviewInProgress**`);
     if (result.isDraft) segs.push(`**isDraft**`);
-    if (result.mergeStatus === "BEHIND" && result.baseBranch) {
-      segs.push(`**branch** behind PR base \`${result.baseBranch}\``);
-    } else if (result.mergeStatus === "CONFLICTS" && result.baseBranch) {
-      segs.push(`**branch** conflicts with PR base \`${result.baseBranch}\``);
-    }
+    if (branchSeg) segs.push(branchSeg);
     summaryLine = segs.join(" · ");
   }
 

@@ -408,6 +408,7 @@ export async function runCheck(
     status,
     baseBranch: batchData.baseRefName,
     ...(batchData.baseRefOid && { baseRefOid: batchData.baseRefOid }),
+    ...(result.headCheckSuitesEmpty && { headCheckSuitesEmpty: true as const }),
     mergeStatus,
     checks: {
       passing: merged.passing,

@@ -52,6 +52,7 @@ export function projectIterateLean(
         remainingSeconds: result.remainingSeconds,
       }),
     ...(result.baseBranch && { baseBranch: result.baseBranch }),
+    ...(result.stackTrunkConflict && { stackTrunkConflict: result.stackTrunkConflict }),
     ...(result.branchProtection !== null && { branchProtection: result.branchProtection }),
     ...(result.mergeRequirements && { mergeRequirements: result.mergeRequirements }),
     ...(result.mergeQueue && { mergeQueue: result.mergeQueue }),

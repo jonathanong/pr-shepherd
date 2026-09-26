@@ -54,6 +54,8 @@ export interface ShepherdReport {
   baseBranch: string;
   /** Base commit GitHub recorded for this PR (`PullRequest.baseRefOid`), not the branch's live tip. */
   baseRefOid?: string;
+  /** True when the head commit's check-suite page is complete and has no suites. */
+  headCheckSuitesEmpty?: true;
   mergeStatus: MergeStatusResult;
   checks: {
     passing: ClassifiedCheck[];
