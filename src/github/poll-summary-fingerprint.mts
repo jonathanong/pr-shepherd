@@ -34,7 +34,7 @@ export function fingerprintRawSummaryPr(raw: RawSummaryPr): string | null {
       ...raw.commits,
       nodes: raw.commits.nodes.map((node) => ({
         ...node,
-        commit: { ...node.commit, committedDate: undefined },
+        commit: { ...node.commit, committedDate: undefined, checkSuites: undefined },
       })),
     },
   };

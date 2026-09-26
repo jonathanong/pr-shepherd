@@ -16,6 +16,7 @@ import {
   POLL_STACK_SUMMARY_QUERY,
   POLL_STACK_TOPOLOGY_QUERY,
   UPPER_LAYER_CONFLICT_TARGET_QUERY,
+  REF_RULES_QUERY,
 } from "./queries.mts";
 
 describe("queries — GQL constants load at import time", () => {
@@ -47,6 +48,8 @@ describe("queries — GQL constants load at import time", () => {
 
   it("fingerprint preflight selects merge policy and check-suite completeness", () => {
     expect(PR_FINGERPRINT_QUERY).toContain("fragment PrMergePolicy on PullRequest");
+    expect(PR_FINGERPRINT_QUERY).toContain("fragment RefRules on Ref");
+    expect(PR_FINGERPRINT_QUERY).toContain("...RefRules");
     expect(PR_FINGERPRINT_QUERY).toContain("...PrMergePolicy");
     expect(PR_FINGERPRINT_QUERY).toContain("stackEntry");
     expect(PR_FINGERPRINT_QUERY).toContain("isMergeQueueEnabled");
@@ -60,12 +63,17 @@ describe("queries — GQL constants load at import time", () => {
     expect(PR_FINGERPRINT_QUERY).toContain("...CommitCheckSuites");
     expect(BATCH_PR_QUERY).toContain("...CommitCheckSuites");
     expect(BATCH_PR_QUERY).toContain("checkSuites");
+    expect(BATCH_PR_QUERY).toMatch(/nodes \{\s*id\s*status\s*conclusion/);
     expect(BATCH_PR_QUERY).toContain("reviewThreads(last: 20)");
     expect(BATCH_PR_PAGE_QUERY).toContain("reviewThreads(last: 100, before: $threadsCursor)");
   });
 
   it("loads compact aggregate and native-stack summary documents", () => {
     expect(POLL_SUMMARY_FRAGMENT).toContain("fragment PollSummaryPr on PullRequest");
+    expect(POLL_SUMMARY_FRAGMENT).toContain("fragment RefRules on Ref");
+    expect(POLL_SUMMARY_FRAGMENT).toContain("...RefRules");
+    expect(POLL_SUMMARY_FRAGMENT).toContain("checkSuites(first: 50)");
+    expect(REF_RULES_QUERY).toContain("compare(headRef: $headRef)");
     expect(POLL_STACK_SUMMARY_QUERY).toContain("entries(first: $first, after: $after)");
     expect(POLL_STACK_SUMMARY_QUERY).toContain("...PollSummaryPr");
     expect(POLL_STACK_TOPOLOGY_QUERY).toContain("entries(first: 50, after: $after)");

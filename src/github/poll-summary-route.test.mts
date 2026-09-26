@@ -97,6 +97,30 @@ describe("routePollSummary", () => {
     expect(route(rawOverrides, checks, review, opts)).toEqual({ action, reasons: [reason] });
   });
 
+  it("routes missing required checks as fix work when Actions is idle", () => {
+    expect(
+      route(
+        { mergeStateStatus: "BLOCKED" },
+        { passing: 4, unreportedRequired: ["build", "tests"] },
+      ),
+    ).toEqual({ action: "fix_code", reasons: ["unreported-required-checks"] });
+  });
+
+  it("keeps waiting while a workflow or check run is still in progress", () => {
+    expect(
+      route(
+        { mergeStateStatus: "BLOCKED" },
+        { passing: 4, inProgress: 1, unreportedRequired: ["build"] },
+      ),
+    ).toEqual({ action: "wait", reasons: ["pending-or-unknown"] });
+    expect(
+      route(
+        { mergeStateStatus: "BLOCKED" },
+        { passing: 4, unreportedRequired: ["build"], actionsWorkflowInProgress: true },
+      ),
+    ).toEqual({ action: "wait", reasons: ["pending-or-unknown"] });
+  });
+
   it("normalizes unrecognized PR states", () => {
     expect(normalizePollSummaryState("FUTURE")).toBe("UNKNOWN");
   });

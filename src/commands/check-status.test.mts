@@ -94,4 +94,14 @@ describe("computeStatus", () => {
       ),
     ).toBe("IN_PROGRESS");
   });
+
+  it("stays pending when a required context has not reported", () => {
+    expect(computeStatus(passingVerdict, 0, 0, { ...cleanMerge, status: "BLOCKED" }, 0, true)).toBe(
+      "PENDING",
+    );
+    expect(computeStatus(passingVerdict, 0, 0, cleanMerge, 0, true)).toBe("PENDING");
+    expect(
+      computeStatus(passingVerdict, 0, 0, { ...cleanMerge, status: "BLOCKED" }, 0, false),
+    ).toBe("READY");
+  });
 });

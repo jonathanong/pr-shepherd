@@ -5,6 +5,7 @@ export interface FingerprintSuites {
   pageInfo?: { hasNextPage: boolean };
   nodes?: Array<{
     id?: string;
+    status?: string | null;
     conclusion: string | null;
     workflowRun?: { databaseId: number | null } | null;
   }>;
@@ -22,7 +23,10 @@ export function suiteFingerprint(suites: FingerprintSuites | undefined): {
   if (suites === undefined) return { checkSuiteConclusions: "", checkSuitesComplete: false };
   return {
     checkSuiteConclusions: (suites.nodes ?? [])
-      .map((node) => `${node.id ?? node.workflowRun?.databaseId ?? ""}:${node.conclusion ?? ""}`)
+      .map(
+        (node) =>
+          `${node.id ?? node.workflowRun?.databaseId ?? ""}:${node.status ?? ""}:${node.conclusion ?? ""}`,
+      )
       .join(","),
     checkSuitesComplete: suites.pageInfo?.hasNextPage === false,
   };

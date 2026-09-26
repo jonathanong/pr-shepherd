@@ -109,7 +109,7 @@ describe("fingerprintFromRaw", () => {
     });
     const fingerprint = fingerprintFromRaw(raw as never, "WRITE");
     expect(fingerprint.reviewCount).toBe(0);
-    expect(fingerprint.checkSuiteConclusions).toBe("CS_1:");
+    expect(fingerprint.checkSuiteConclusions).toBe("CS_1::");
     expect(fingerprint.checkSuitesComplete).toBe(true);
     expect(fingerprint.viewerPermission).toBe("WRITE");
   });
@@ -150,7 +150,7 @@ describe("fingerprintFromRaw", () => {
         ],
       },
     });
-    expect(fingerprintFromRaw(raw as never).checkSuiteConclusions).toBe(":FAILURE");
+    expect(fingerprintFromRaw(raw as never).checkSuiteConclusions).toBe("::FAILURE");
   });
 
   it("falls back to workflow run id when a suite has no node id", () => {
@@ -170,7 +170,7 @@ describe("fingerprintFromRaw", () => {
         ],
       },
     });
-    expect(fingerprintFromRaw(raw as never).checkSuiteConclusions).toBe("9:SUCCESS");
+    expect(fingerprintFromRaw(raw as never).checkSuiteConclusions).toBe("9::SUCCESS");
   });
 
   it("does not treat a truncated check-suite page as complete", () => {

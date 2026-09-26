@@ -19,15 +19,18 @@ import { currentQueueRemovalEvent } from "./poll-summary-queue-removal.mts";
 import { isCurrentSummaryReady } from "./poll-summary-readiness.mts";
 import { applyOpenCheckBlockers } from "./poll-summary-check-blockers.mts";
 import { normalizePollSummaryState, routePollSummary } from "./poll-summary-route.mts";
+import { applyUnreportedRequiredChecks } from "./poll-summary-unreported.mts";
 export async function summarizePollSummaryPr(
   raw: RawSummaryPr,
   repo: RepoInfo,
   opts: PollSummaryCommandOptions,
   viewerCanAdminister = false,
+  mergeTargetContexts?: readonly string[],
 ): Promise<PollSummaryItem> {
   const repoName = `${repo.owner}/${repo.name}`;
   const seen = await loadSeenMap({ owner: repo.owner, repo: repo.name, pr: raw.number });
   const checks = summarizePollSummaryChecks(raw);
+  applyUnreportedRequiredChecks(raw, checks, mergeTargetContexts);
   const review = await summarizePollSummaryReview(raw, seen, viewerCanAdminister);
   const blockingReviewerInProgress = detectBlockingReviewer(raw);
   const removalEvent = currentQueueRemovalEvent(raw);

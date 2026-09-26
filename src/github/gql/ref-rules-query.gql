@@ -1,0 +1,18 @@
+query RefRules($owner: String!, $repo: String!, $qualifiedName: String!, $headRef: String!) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
+  repository(owner: $owner, name: $repo) {
+    ref(qualifiedName: $qualifiedName) {
+      ...RefRules
+      compare(headRef: $headRef) {
+        behindBy
+      }
+    }
+  }
+}

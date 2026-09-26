@@ -5,6 +5,7 @@ fragment CommitCheckSuites on Commit {
     }
     nodes {
       id
+      status
       conclusion
       workflowRun {
         databaseId

@@ -10,6 +10,9 @@ fragment PollSummaryPr on PullRequest {
   headRefOid
   baseRefName
   baseRefOid
+  baseRef {
+    ...RefRules
+  }
   mergeable
   mergeStateStatus
   lifecycleEvents: timelineItems(
@@ -185,6 +188,15 @@ fragment PollSummaryPr on PullRequest {
       commit {
         oid
         committedDate
+        checkSuites(first: 50) {
+          nodes {
+            status
+            conclusion
+            workflowRun {
+              event
+            }
+          }
+        }
         statusCheckRollup {
           contexts(last: 100) {
             ...PollSummaryCheckContexts

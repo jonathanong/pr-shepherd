@@ -60,6 +60,8 @@ export interface ShepherdReport {
   nodeId: string;
   /** GitHub PR head OID from the same batch used to decide the action. */
   headSha?: string;
+  /** PR head branch name. Used to compare a native stack against its trunk. */
+  headRefName?: string;
   /** Internal. True when this report was reused from the fingerprint cache. */
   fingerprintReused?: true;
   repo: string;
@@ -124,6 +126,14 @@ export interface ShepherdReport {
   branchProtection: import("./github.mts").BranchProtection | null;
   activity?: PrActivitySummary;
   mergeQueue?: MergeQueueReport;
+  /** Required merge-target contexts with no check run and no status context. Omitted when empty. */
+  unreportedRequiredChecks?: string[];
+  /** Commits on the stack trunk that the bottom open layer does not contain. Omitted when zero. */
+  trunkBehindBy?: number;
+  /** A relevant Actions workflow suite on the head has not completed. */
+  actionsWorkflowInProgress?: true;
+  /** Bottom open layer of this PR's native stack. Starts a trunk rebase. */
+  stackBottomPr?: number;
 }
 
 export interface ResolveOptions {

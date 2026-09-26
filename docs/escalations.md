@@ -16,6 +16,7 @@ Aggregate mode never performs a mutation; a `--stack --merge` result emits an ag
 | `base-branch-unknown`         | The GraphQL base branch is empty or unsafe and the current tick has work that could require a push, so Shepherd cannot name a safe rebase target.                                                    |
 | `merge-queue-removed`         | Merge mode is enabled, GitHub reports a queue removal, the head has not changed since removal, no queue/auto-merge state remains, and no earlier branch found an actionable failure or concrete fix. |
 | `stall-timeout`               | An enabled timeout expires for CI that never starts, an unchanged `WAIT`/`FIX_CODE` state fingerprint, or a `--stack` selection whose layers can only wait.                                          |
+| `required-checks-unreported`  | Required merge-target contexts still have no check run after one close/reopen of this head, and no Actions workflow is running.                                                                      |
 | `stall-state-unavailable`     | An enabled stall timeout cannot read or write its timer. The tick hands off instead of treating the failure as a new first sighting.                                                                 |
 
 ## Complete predicates
@@ -85,6 +86,12 @@ There are two paths:
 A changed fingerprint resets the timer. Disabling the timeout refreshes state and never escalates. A native-stack draft whose wait is the disabled mark-ready hold uses this same guard.
 
 A `--stack` selection has a third path. When every remaining layer's bounded probe can only report waiting ([the idle `WAIT`](actions.md#shepherd-actions)), no one-PR session runs, so the selector keeps its own timer in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/stack-<number>/stack-stall.json`. It fingerprints the summary status plus each layer's head commit, draft state, READY receipt, reasons. Every aggregate tick shares that timer, whether it comes from `--until-terminal`, a bounded poll, or MCP. A changed fingerprint resets it, and any other stack plan or a disabled timeout clears it. Once an unchanged idle `WAIT` reaches the threshold, the selector returns `ESCALATE` with a `stall-timeout` instruction that names each waiting layer and why it waits.
+
+### `required-checks-unreported`
+
+The merge target requires one or more status contexts that have no check run and no status context on the head, no relevant Actions workflow is running, and Shepherd already emitted one close/reopen for that same head and context set. The marker is `ci-retrigger.json` under the PR state directory. A second close will not create a job the workflow does not emit. Path filters are the usual cause.
+
+This is immediate. It does not wait for `stall-timeout`. A behind trunk or a `BEHIND` merge status stays on `FIX_CODE` (rebase, then push) and does not write the marker, so a repeated rebase still uses the ordinary stall timer. Failing checks, merge conflicts, and an in-progress Actions workflow do not take this trigger. Other autonomous review work on the same tick stays `FIX_CODE` without a second close; the trigger fires once that work is gone and the contexts are still missing.
 
 ### `stall-state-unavailable`
 

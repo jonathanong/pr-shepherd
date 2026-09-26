@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   parseCheckSuitesComplete,
   parseHeadCheckSuitesEmpty,
+  parseHeadWorkflowSuites,
   parseSuiteStartupFailures,
 } from "./batch-parse-suites.mts";
 import type { RawPr } from "./batch-raw-types.mts";
@@ -122,5 +123,29 @@ describe("parseSuiteStartupFailures", () => {
       ],
     });
     expect(parseSuiteStartupFailures(raw)[0]!.name).toBe("workflow run 7");
+  });
+});
+
+describe("parseHeadWorkflowSuites", () => {
+  it("keeps Actions suites and drops apps with no workflow run", () => {
+    const raw = withSuites({
+      pageInfo: { hasNextPage: false },
+      nodes: [
+        { conclusion: null, status: "QUEUED", workflowRun: null },
+        {
+          conclusion: null,
+          status: "IN_PROGRESS",
+          workflowRun: {
+            databaseId: 9,
+            event: "pull_request",
+            url: "https://example.test/run/9",
+            workflow: { name: "CI" },
+          },
+        },
+      ],
+    });
+    expect(parseHeadWorkflowSuites(raw)).toEqual([
+      { status: "IN_PROGRESS", conclusion: null, workflowRun: { event: "pull_request" } },
+    ]);
   });
 });
