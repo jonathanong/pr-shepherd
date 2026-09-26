@@ -106,6 +106,26 @@ describe("formatPollSummaryResult", () => {
     expect(text).toContain("3. After selected work completes");
   });
 
+  it("renders ancestry for an explicit multi-PR selection", () => {
+    const text = formatPollSummaryResult({
+      ...result(row(), "actionable"),
+      stackAncestry: [
+        {
+          parentPr: 41,
+          parentHeadRefName: "parent",
+          parentHeadRefOid: "a".repeat(40),
+          childPr: 42,
+          childBaseRefName: "parent",
+          childBaseRefOid: "b".repeat(40),
+        },
+      ],
+    });
+    expect(text).toContain("## Stack ancestry");
+    expect(text).toContain(
+      `- PR #42 base \`parent\` at \`${"b".repeat(40)}\` differs from parent PR #41 head \`parent\` at \`${"a".repeat(40)}\`.`,
+    );
+  });
+
   it("tells one-shot and timed-out callers to recheck", () => {
     expect(formatPollSummaryResult(result(row({ action: "wait" }), "waiting"))).toContain(
       "Run this aggregate selector again",
