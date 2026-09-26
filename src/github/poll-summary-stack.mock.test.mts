@@ -45,9 +45,15 @@ function member(number: number, position: number) {
   };
 }
 
-function stackPage(size: number, nodes: unknown[], endCursor: string | null = null) {
+function stackPage(
+  size: number,
+  nodes: unknown[],
+  endCursor: string | null = null,
+  viewerLogin?: string,
+) {
   return {
     data: {
+      ...(viewerLogin ? { viewer: { login: viewerLogin } } : {}),
       repository: {
         viewerCanAdminister: false,
         pullRequest: {
@@ -86,8 +92,7 @@ describe("fetchPollSummary native stack reads", () => {
   });
 
   it("marks a layer owned only when its author matches the viewer", async () => {
-    const owned = stackPage(1, [member(43, 1)]);
-    owned.data.viewer = { login: "Alice" };
+    const owned = stackPage(1, [member(43, 1)], null, "Alice");
     const ownedPr = owned.data.repository.pullRequest.stack.entries.nodes[0] as {
       pullRequest: { author?: { login: string } };
     };
@@ -96,8 +101,7 @@ describe("fetchPollSummary native stack reads", () => {
     const match = await fetchPollSummary({ stackPrNumber: 43 }, repo);
     expect(match.prs[0]).toMatchObject({ authorLogin: "alice", owned: true });
 
-    const other = stackPage(1, [member(43, 1)]);
-    other.data.viewer = { login: "bob" };
+    const other = stackPage(1, [member(43, 1)], null, "bob");
     const otherPr = other.data.repository.pullRequest.stack.entries.nodes[0] as {
       pullRequest: { author?: { login: string } };
     };
