@@ -5,6 +5,12 @@ export function parseCheckSuitesComplete(raw: RawPr): boolean {
   return raw.commits.nodes[0]?.commit.checkSuites?.pageInfo.hasNextPage === false;
 }
 
+/** True only when the head commit's suite page finished and listed nothing. */
+export function parseHeadCheckSuitesEmpty(raw: RawPr): boolean {
+  const suites = raw.commits.nodes[0]?.commit.checkSuites;
+  return suites?.pageInfo.hasNextPage === false && suites.nodes.length === 0;
+}
+
 export function parseSuiteStartupFailures(raw: RawPr): CheckRun[] {
   const suites = raw.commits.nodes[0]?.commit.checkSuites;
   if (!suites) return [];

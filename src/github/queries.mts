@@ -42,6 +42,12 @@ export const POLL_STACK_SUMMARY_QUERY = `${POLL_SUMMARY_FRAGMENT}\n${gql("poll-s
 /** Reads only native-stack membership and the refs that link adjacent entries. */
 export const POLL_STACK_TOPOLOGY_QUERY = gql("poll-stack-topology.gql");
 
+/**
+ * Whether a conflicting upper stack layer already contains its PR base, plus
+ * the open stack entries needed to name the bottom layer. Not part of BatchPr.
+ */
+export const UPPER_LAYER_CONFLICT_TARGET_QUERY = gql("upper-layer-conflict-target.gql");
+
 /** PR head fields plus a single review thread for `commit-suggestion`. */
 export const SUGGESTION_THREADS_QUERY = gql("suggestion-threads.gql");
 

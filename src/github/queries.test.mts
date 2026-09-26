@@ -15,6 +15,7 @@ import {
   POLL_SUMMARY_FRAGMENT,
   POLL_STACK_SUMMARY_QUERY,
   POLL_STACK_TOPOLOGY_QUERY,
+  UPPER_LAYER_CONFLICT_TARGET_QUERY,
 } from "./queries.mts";
 
 describe("queries — GQL constants load at import time", () => {
@@ -111,6 +112,12 @@ describe("queries — GQL constants load at import time", () => {
     expect(SUGGESTION_THREADS_QUERY).toContain("pullRequest");
   });
 
+  it("compares an upper stack layer to its base and lists stack entries", () => {
+    expect(UPPER_LAYER_CONFLICT_TARGET_QUERY).toContain("compare(headRef: $headRef)");
+    expect(UPPER_LAYER_CONFLICT_TARGET_QUERY).toContain("behindBy");
+    expect(UPPER_LAYER_CONFLICT_TARGET_QUERY).toContain("entries(first: 100)");
+  });
+
   it("batches check-run annotation bodies by node id", () => {
     expect(CHECK_RUN_ANNOTATIONS_BATCH_QUERY).toContain("nodes(ids: $ids)");
     expect(CHECK_RUN_ANNOTATIONS_BATCH_QUERY).toContain("annotations(first: 100)");
@@ -134,6 +141,7 @@ describe("queries — GQL constants load at import time", () => {
       POLL_STACK_SUMMARY_QUERY,
       POLL_SUMMARY_CHECK_PAGE_QUERY,
       POLL_STACK_TOPOLOGY_QUERY,
+      UPPER_LAYER_CONFLICT_TARGET_QUERY,
     ]) {
       expect(query).toContain("_shepherdRateLimit: rateLimit");
       expect(query).toContain("nodeCount");

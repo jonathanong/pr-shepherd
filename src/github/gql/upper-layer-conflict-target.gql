@@ -1,0 +1,36 @@
+query UpperLayerConflictTarget($owner: String!, $name: String!, $number: Int!, $headRef: String!) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
+  repository(owner: $owner, name: $name) {
+    pullRequest(number: $number) {
+      # compare() is invoked on the PR base. behindBy is commits on that base
+      # that the head does not contain — the same direction as REST base...head.
+      baseRef {
+        compare(headRef: $headRef) {
+          behindBy
+        }
+      }
+      stack {
+        entries(first: 100) {
+          pageInfo {
+            hasNextPage
+          }
+          nodes {
+            position
+            pullRequest {
+              number
+              state
+              baseRefName
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -2,7 +2,11 @@ import { graphqlWithRateLimit, type RateLimitInfo, type RepoInfo } from "./clien
 import { hydrateThreadCommentPages } from "./thread-comments.mts";
 import { BATCH_PR_QUERY } from "./queries.mts";
 import { parseRawPr } from "./batch-parsers.mts";
-import { parseCheckSuitesComplete, parseSuiteStartupFailures } from "./batch-parse-suites.mts";
+import {
+  parseCheckSuitesComplete,
+  parseHeadCheckSuitesEmpty,
+  parseSuiteStartupFailures,
+} from "./batch-parse-suites.mts";
 import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
 import { paginateBatchConnections } from "./batch-page.mts";
 import { requireRawPr } from "./batch-response.mts";
@@ -17,6 +21,8 @@ interface BatchResult {
   rateLimit?: RateLimitInfo;
   /** True when GraphQL returned a complete CheckSuite page; skip REST startup-failure fetch. */
   checkSuitesComplete?: boolean;
+  /** True when that complete page listed no check suites on the head commit. */
+  headCheckSuitesEmpty?: true;
 }
 
 interface FetchPrBatchOptions {
@@ -70,5 +76,6 @@ export async function fetchPrBatch(
     ),
     rateLimit: paged.rateLimit ?? result.rateLimit,
     ...(parseCheckSuitesComplete(raw) && { checkSuitesComplete: true }),
+    ...(parseHeadCheckSuitesEmpty(raw) && { headCheckSuitesEmpty: true as const }),
   };
 }

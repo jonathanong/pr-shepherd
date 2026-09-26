@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { parseCheckSuitesComplete, parseSuiteStartupFailures } from "./batch-parse-suites.mts";
+import {
+  parseCheckSuitesComplete,
+  parseHeadCheckSuitesEmpty,
+  parseSuiteStartupFailures,
+} from "./batch-parse-suites.mts";
 import type { RawPr } from "./batch-raw-types.mts";
 import { makeRawPr } from "../../test-helpers/github/batch-fixtures.mts";
 
@@ -26,6 +30,26 @@ describe("parseCheckSuitesComplete", () => {
   it("is false when more suite pages remain", () => {
     expect(
       parseCheckSuitesComplete(withSuites({ pageInfo: { hasNextPage: true }, nodes: [] })),
+    ).toBe(false);
+  });
+});
+
+describe("parseHeadCheckSuitesEmpty", () => {
+  it("is true only for a finished page with no suites", () => {
+    expect(parseHeadCheckSuitesEmpty(makeRawPr() as unknown as RawPr)).toBe(false);
+    expect(
+      parseHeadCheckSuitesEmpty(withSuites({ pageInfo: { hasNextPage: false }, nodes: [] })),
+    ).toBe(true);
+    expect(
+      parseHeadCheckSuitesEmpty(withSuites({ pageInfo: { hasNextPage: true }, nodes: [] })),
+    ).toBe(false);
+    expect(
+      parseHeadCheckSuitesEmpty(
+        withSuites({
+          pageInfo: { hasNextPage: false },
+          nodes: [{ conclusion: "SUCCESS", workflowRun: null }],
+        }),
+      ),
     ).toBe(false);
   });
 });

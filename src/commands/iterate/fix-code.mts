@@ -20,6 +20,13 @@ import {
 import { buildFixInstructions } from "./render.mts";
 import { buildReleasedBlockerInstruction } from "./check-instructions.mts";
 import { buildNativeStackLayerRebase } from "./native-stack-rebase.mts";
+import { lookupUpperLayerTrunkConflict } from "./stack-trunk-conflict.mts";
+import {
+  conflictingHeadCiNote,
+  countReportedChecks,
+  insertConflictingHeadCiNote,
+} from "./conflicting-head-ci.mts";
+import { conflictingHeadFirstSeenUnix } from "../../state/conflicting-head-seen.mts";
 import { applyStallGuard } from "./stall.mts";
 import { annotationMarkerBody, checksWithActionableAnnotations } from "../check-annotations.mts";
 import { threadTranscriptBody } from "../../threads/transcript.mts";
@@ -436,13 +443,27 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   }
   const firstLookThreads = report.threads.firstLook;
   const firstLookComments = report.comments.firstLook;
+  const stack = report.mergeStatus.mergeRequirements?.stack;
+  const headRef = report.headSha;
+  // Only an upper layer can be dirty against trunk while already containing its parent.
+  const trunkConflict =
+    hasConflicts && stack && headRef && baseLookup.branch !== stack.baseRefName
+      ? await lookupUpperLayerTrunkConflict({
+          owner: repoOwner,
+          name: repoName,
+          pr: prNumber,
+          headRef,
+          trunk: stack.baseRefName,
+        })
+      : undefined;
   // Conflicts, and a behind branch whose rerun already failed, both ask for a branch update.
   const stackRebase =
     hasConflicts || (isBehind && exhaustedAttempts.length > 0)
       ? buildNativeStackLayerRebase(
           report.repo,
           { number: prNumber, baseBranch: baseLookup.branch },
-          report.mergeStatus.mergeRequirements?.stack,
+          stack,
+          trunkConflict,
         )
       : undefined;
   const instructions = buildFixInstructions(
@@ -476,9 +497,31 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   if (repairInstructions && repairInstructions.length > 0) {
     instructions.unshift(...repairInstructions);
   }
+  const checkRunCount = countReportedChecks(report.checks);
+  const suitesEmpty = report.headCheckSuitesEmpty === true;
+  const nowMs = Date.now();
+  const firstSeenAtUnix =
+    hasConflicts && suitesEmpty && checkRunCount === 0 && report.headSha
+      ? await conflictingHeadFirstSeenUnix(
+          { owner: repoOwner, repo: repoName, pr: prNumber },
+          report.headSha,
+          nowMs,
+        )
+      : undefined;
+  insertConflictingHeadCiNote(
+    instructions,
+    conflictingHeadCiNote({
+      hasConflicts,
+      headCheckSuitesEmpty: suitesEmpty,
+      checkRunCount,
+      firstSeenAtUnix,
+      nowMs,
+    }),
+  );
   const prospectiveResult = {
     ...base,
     baseBranch: baseLookup.branch,
+    ...(trunkConflict && { stackTrunkConflict: trunkConflict.trunk }),
     action: "fix_code" as const,
     fix: {
       threads,
