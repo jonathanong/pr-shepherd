@@ -1,3 +1,4 @@
+import { readAllowedMergeMethods, type MergeMethod } from "../config/merge-method.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type { PollSummaryStackAncestry } from "../types.mts";
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
@@ -21,6 +22,9 @@ interface RawStackResponse<Pr> {
   viewer?: { login: string } | null;
   repository: {
     viewerCanAdminister: boolean;
+    mergeCommitAllowed?: boolean;
+    squashMergeAllowed?: boolean;
+    rebaseMergeAllowed?: boolean;
     pullRequest: {
       stack: {
         id: string;
@@ -44,6 +48,8 @@ export interface StackRead<Pr extends StackMemberRefs> {
   viewerCanAdminister: boolean;
   /** Every member, bottom-to-top, each observed in the same paged read. */
   ordered: Pr[];
+  /** Present when the query selected repository merge settings, including an empty list. */
+  allowedMergeMethods?: MergeMethod[];
 }
 
 /**
@@ -63,6 +69,7 @@ export async function readStack<Pr extends StackMemberRefs>(
   let stackSize = 0;
   let viewerCanAdminister = false;
   let viewerLogin: string | null = null;
+  let allowedMergeMethods: MergeMethod[] | undefined;
   const entries: Array<{ position: number; pullRequest: Pr }> = [];
   do {
     const response: { data: RawStackResponse<Pr> } = await graphqlWithRateLimit<
@@ -72,6 +79,7 @@ export async function readStack<Pr extends StackMemberRefs>(
     const repository = response.data.repository;
     if (!repository) throw missingRepositoryError(repo);
     viewerCanAdminister = repository.viewerCanAdminister;
+    allowedMergeMethods = readAllowedMergeMethods(repository) ?? allowedMergeMethods;
     if (!repository.pullRequest) {
       throw new ShepherdError(`PR #${anchor} not found`, EXIT.UNAVAILABLE);
     }
@@ -127,7 +135,14 @@ export async function readStack<Pr extends StackMemberRefs>(
   const ordered = [...unique.values()]
     .sort((left, right) => left.position - right.position)
     .map((entry) => entry.pullRequest);
-  return { stackNumber, stackSize, viewerLogin, viewerCanAdminister, ordered };
+  return {
+    stackNumber,
+    stackSize,
+    viewerLogin,
+    viewerCanAdminister,
+    ordered,
+    ...(allowedMergeMethods && { allowedMergeMethods }),
+  };
 }
 
 /** Membership and linking refs only — no per-PR CI or review hydration. */

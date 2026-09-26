@@ -159,7 +159,7 @@ until then, `SHEPHERD` remains the immediate action and lists the human blockers
 
 With `--stack --merge`, the highest open layer whose open lower layers all have current READY
 receipts, and whose bottom open layer GitHub has retargeted onto the stack base, returns `MERGE`
-with `gh stack merge <that PR number> --yes --squash`. That lands the named layer and every
+with `gh stack merge <that PR number> --yes` and the allowed method flag (`--squash` unless config or the repository selects another). That lands the named layer and every
 unmerged layer below it. When the base uses a merge queue, the same command queues the prefix
 together and GitHub evaluates each layer from the bottom; a failure ejects that layer and those
 above it. Layers above the prefix keep their one-PR sessions. After the merge, GitHub retargets
@@ -288,8 +288,8 @@ checks:
     - pull_request
     - pull_request_target
 merge:
+  method: squash
   commandArgs:
-    - --squash
     - --delete-branch
 actions:
   autoMinimizeSuppressed: true

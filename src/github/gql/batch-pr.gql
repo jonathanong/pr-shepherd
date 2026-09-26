@@ -15,6 +15,9 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
   repository(owner: $owner, name: $repo) {
     viewerPermission
     viewerCanAdminister
+    mergeCommitAllowed
+    squashMergeAllowed
+    rebaseMergeAllowed
     pullRequest(number: $pr) {
       id
       number

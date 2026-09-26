@@ -124,6 +124,8 @@ export interface ShepherdReport {
   ruleAutoResolveReviewSummaryIds?: string[];
   /** Branch protection rule for the PR's base branch. Null when no rule exists or the base ref is unavailable. */
   branchProtection: import("./github.mts").BranchProtection | null;
+  /** Repository merge methods from the same batch. Omitted when that query did not select them. */
+  allowedMergeMethods?: import("../config/merge-method.mts").MergeMethod[];
   activity?: PrActivitySummary;
   mergeQueue?: MergeQueueReport;
   /** Required merge-target contexts with no check run and no status context. Omitted when empty. */

@@ -228,5 +228,7 @@ export interface BatchPrData extends BatchPrMergeFields {
   removedMergeQueueChecks?: CheckRun[];
   removedMergeQueueChecksIncomplete?: true;
   branchProtection: BranchProtection | null;
+  /** Repository merge methods. Omitted when the batch did not select them. Empty when none are enabled. */
+  allowedMergeMethods?: import("../config/merge-method.mts").MergeMethod[];
   activity?: PrActivitySummary;
 }

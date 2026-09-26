@@ -29,6 +29,7 @@ export interface FetchedPollSummary {
   selection: PollSummarySelection;
   prs: PollSummaryItem[];
   stackAncestry?: PollSummaryStackAncestry[];
+  allowedMergeMethods?: import("../config/merge-method.mts").MergeMethod[];
 }
 
 export async function fetchPollSummary(
@@ -97,7 +98,7 @@ async function fetchStackSummary(
 ): Promise<FetchedPollSummary> {
   const anchor = opts.stackPrNumber!;
   const topology = await readStackTopology(anchor, repo);
-  const { stackNumber, stackSize, viewerLogin, viewerCanAdminister, ordered } =
+  const { stackNumber, stackSize, viewerLogin, viewerCanAdminister, ordered, allowedMergeMethods } =
     await readStackSummary(anchor, repo, topology.stackSize);
   for (const pr of ordered) await hydratePollSummaryChecks(pr, repo);
   const stackAncestry = stackAncestryGaps(ordered);
@@ -110,6 +111,7 @@ async function fetchStackSummary(
       ),
     ),
     ...(stackAncestry.length > 0 && { stackAncestry }),
+    ...(allowedMergeMethods && { allowedMergeMethods }),
   };
 }
 

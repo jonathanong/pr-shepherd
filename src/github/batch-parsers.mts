@@ -26,6 +26,7 @@ import { headPushUnixFromCheckNodes } from "./queue-removal-freshness.mts";
 import { requireContextNodes } from "./batch-response.mts";
 import { buildPrActivitySummary } from "./activity.mts";
 import { parseBranchProtection } from "./branch-protection.mts";
+import { readAllowedMergeMethods } from "../config/merge-method.mts";
 import {
   parseAutoMergeRequest,
   parseBranchRules,
@@ -61,7 +62,11 @@ export function parseRawPr(
   rawCheckNodes: RawContextNode[],
   repository?: Pick<
     NonNullable<RawBatchResponse["repository"]>,
-    "viewerPermission" | "viewerCanAdminister"
+    | "viewerPermission"
+    | "viewerCanAdminister"
+    | "mergeCommitAllowed"
+    | "squashMergeAllowed"
+    | "rebaseMergeAllowed"
   >,
 ): BatchPrData {
   const reviewRequests = (raw.reviewRequests?.nodes ?? []).flatMap((n) => {
@@ -162,6 +167,7 @@ export function parseRawPr(
       : undefined,
     removedQueueHead?.oid,
   );
+  const allowedMergeMethods = readAllowedMergeMethods(repository);
 
   return {
     nodeId: raw.id,
@@ -198,6 +204,7 @@ export function parseRawPr(
     approvedReviews,
     checks,
     branchProtection: parseBranchProtection(raw),
+    ...(allowedMergeMethods && { allowedMergeMethods }),
     branchRules: parseBranchRules(raw.baseRef),
     isInMergeQueue: raw.isInMergeQueue ?? false,
     isMergeQueueEnabled: raw.isMergeQueueEnabled ?? false,

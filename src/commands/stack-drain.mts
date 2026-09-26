@@ -1,3 +1,4 @@
+import { stackMergeFlag } from "./stack-merge-flag.mts";
 import type { PollSummaryItem, PollSummaryResult, StackNextAction } from "../types.mts";
 import { stackLayerBlockReason } from "./stack-layer-readiness.mts";
 import { appendMarkReadyInstructions, splitStackWork } from "./stack-work.mts";
@@ -13,12 +14,6 @@ export interface StackPlan {
 
 type StackLayer = PollSummaryItem & { stack: NonNullable<PollSummaryItem["stack"]> };
 
-/**
- * Highest open layer such that it and every open layer below it are ready to
- * merge together. `gh stack merge <PR>` lands that PR and every unmerged layer
- * below it. A merge queue accepts the same prefix and evaluates each layer
- * from the bottom; a failure ejects that layer and those above it.
- */
 function readyPrefixTop(result: PollSummaryResult): StackLayer | undefined {
   const layers = [...result.prs].sort((left, right) => stackPosition(left) - stackPosition(right));
   if (layers.some((item) => item.state === "OPEN" && item.isInMergeQueue)) return undefined;
@@ -40,11 +35,6 @@ function readyPrefixTop(result: PollSummaryResult): StackLayer | undefined {
   return top;
 }
 
-/**
- * Merge the ready prefix by its highest PR number. `gh stack merge <n>` tries a
- * stack number first, but stack numbers come from the repository's issue and
- * pull request sequence, so a PR number never names a stack.
- */
 export function planPrefixDrain(
   result: PollSummaryResult,
   mergeRequested: boolean,
@@ -68,8 +58,16 @@ export function planPrefixDrain(
   );
   const span =
     open[0]?.pr === top.pr ? "that layer alone" : `PR #${top.pr} and every unmerged layer below it`;
+  const method = stackMergeFlag(result.allowedMergeMethods);
+  if ("unavailable" in method) {
+    return {
+      action: "escalate",
+      stackMergeable: false,
+      instructions: [`1. ${method.unavailable}`],
+    };
+  }
   const instructions = [
-    `1. PR #${top.pr} is the highest open layer of stack #${top.stack.number} in \`${result.repo}\` whose open lower layers are all ready. Run \`GH_REPO=${result.repo} gh stack merge ${top.pr} --yes --squash\` to merge ${span}. When the base uses a merge queue, the same command queues that prefix together and GitHub evaluates each layer from the bottom; a failure ejects that layer and the layers above it. If \`gh stack\` is an unknown command, run \`gh extension install github/gh-stack\` first.`,
+    `1. PR #${top.pr} is the highest open layer of stack #${top.stack.number} in \`${result.repo}\` whose open lower layers are all ready. Run \`GH_REPO=${result.repo} gh stack merge ${top.pr} --yes ${method.flag}\` to merge ${span}. When the base uses a merge queue, the same command queues that prefix together and GitHub evaluates each layer from the bottom; a failure ejects that layer and the layers above it. If \`gh stack\` is an unknown command, run \`gh extension install github/gh-stack\` first.`,
   ];
   appendAutonomousInstructions(instructions, above.sessions);
   appendMarkReadyInstructions(instructions, above.markReady);

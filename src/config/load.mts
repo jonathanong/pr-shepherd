@@ -6,6 +6,7 @@ import { parse } from "yaml";
 import builtins from "../config.json" with { type: "json" };
 import { getEffectiveCwd } from "../execution-context.mts";
 import { findMergeStrategies } from "./merge-command-args.mts";
+import { parseMergeMethod, type MergeMethod } from "./merge-method.mts";
 
 const MINIMIZE_COMMENTS_POLICIES = ["all", "bots", "users", "none"] as const;
 
@@ -85,6 +86,8 @@ export interface PrShepherdConfig {
     blockingReviewerLogins: string[];
   };
   merge?: {
+    /** Preferred merge method. Used only when the repository allows it. */
+    method?: MergeMethod;
     /** Options added to ordinary `gh pr merge` commands. Queue commands never use these. */
     commandArgs: string[];
   };
@@ -279,7 +282,7 @@ function parseMergeCommandArgs(value: unknown): string[] {
       `Invalid config: merge.commandArgs includes multiple merge strategies: ${strategies.join(", ")}`,
     );
   }
-  return strategies.length === 0 ? [...value, "--merge"] : [...value];
+  return [...value];
 }
 
 function parsePollConfig(value: unknown): PollConfig {
@@ -458,7 +461,7 @@ const KNOWN_NESTED_KEYS: Record<string, ReadonlySet<string>> = {
   resolve: new Set(["shaPoll"]),
   checks: new Set(["ciTriggerEvents", "ignoreLogLines"]),
   mergeStatus: new Set(["blockingReviewerLogins"]),
-  merge: new Set(["commandArgs"]),
+  merge: new Set(["commandArgs", "method"]),
   actions: new Set([
     "autoMinimizeSuppressed",
     "autoMarkReady",
@@ -505,6 +508,14 @@ function parseConfig(value: Record<string, unknown>, normalizeMergeArgs = true):
   config.actions.neverCancelRuns = parseNeverCancelRuns(config.actions.neverCancelRuns);
   if (config.merge && normalizeMergeArgs) {
     config.merge.commandArgs = parseMergeCommandArgs(config.merge.commandArgs);
+    if (config.merge.method !== undefined)
+      config.merge.method = parseMergeMethod(config.merge.method);
+    const fromArgs = findMergeStrategies(config.merge.commandArgs)[0];
+    if (config.merge.method && fromArgs && fromArgs !== config.merge.method) {
+      throw new Error(
+        `Invalid config: merge.method ${config.merge.method} conflicts with merge.commandArgs strategy ${fromArgs}`,
+      );
+    }
   }
   config.poll = parsePollConfig(config.poll);
   config.watch.graphqlQuotaWarnings = parseGraphqlQuotaWarnings(
