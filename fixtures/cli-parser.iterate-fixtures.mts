@@ -29,6 +29,14 @@ export function makeIterateResult(
     },
   };
   if (action === "wait") return { ...base, action: "wait", log: "WAIT: 0 passing, 1 in-progress" };
+  if (action === "ready")
+    return {
+      ...base,
+      status: "READY",
+      action: "ready",
+      remainingSeconds: 127,
+      log: "READY: PR #42 is ready — 127s of ready-delay remaining",
+    };
   if (action === "mark_ready")
     return { ...base, action: "mark_ready", markedReady: true, log: "MARKED READY: PR 42" };
   if (action === "fix_code") {

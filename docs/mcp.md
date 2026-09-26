@@ -151,7 +151,7 @@ Replace `/path/to/pr-shepherd` with this checkout's absolute path. Do not use a 
 
 ## Tools
 
-The server registers three canonical tools plus a deprecated singular suggestion adapter. Each result includes Markdown `content` (the same text the CLI would print) and `structuredContent`. For singular `iterate`, `structuredContent` is the same lean JSON projection the CLI emits for `--format=json` — the same computed top-level `instructions` array and `readyDelayOverride`, and the same trivial-default fields omitted. Aggregate `iterate` returns the raw `PollSummaryResult` (see the `iterate` section below). For `apply`, `build_suggestion_patches`, and `build_suggestion_patch`, `structuredContent` is the raw result object, matching what their CLI counterparts print as JSON.
+The server registers three canonical tools plus a deprecated singular suggestion adapter. Each result includes Markdown `content` (the same text the CLI would print) and `structuredContent`. For singular `iterate`, `structuredContent` is the same lean JSON projection the CLI emits for `--format=json` — the same computed top-level `instructions` array and `readyDelayOverride`, and the same trivial-default fields omitted. Aggregate `iterate` for an explicit PR set returns the raw `PollSummaryResult`. A `--stack` selector returns the same lean stack overview the CLI prints as JSON (see the `iterate` section below). For `apply`, `build_suggestion_patches`, and `build_suggestion_patch`, `structuredContent` is the raw result object, matching what their CLI counterparts print as JSON.
 
 Every MCP call requires repository-qualified selectors: either GitHub PR URLs such as `https://github.com/owner/repo/pull/123` or `owner/repo#123` references. Singular tools require `pr`; aggregate `iterate` accepts `prs` or `stack`. Bare PR numbers and omitted selectors are rejected. The named repository is the GitHub target and may differ from the server's startup working directory (or the `cwd` supplied to an embedded factory), which remains the local git/configuration/rules context.
 
@@ -184,14 +184,16 @@ Hosts namespace tool names with the server name (`pr-shepherd__iterate` in Grok,
 
 Supply exactly one of `pr`, `prs`, or `stack`. `prs` is a non-empty list of qualified references
 from one repository; `stack` is one qualified anchor whose complete native GitHub stack is selected.
-Aggregate selectors return one compact, read-only summary tick. Markdown and `structuredContent`
-surface equivalent per-PR raw state, bounded check/review counts, routing hints, and `pollCommand`s.
-For native stacks they also surface `stackMergeable`, `readyReceipt`, `pollProbe`, and raw ancestry
-mismatches. The compact tick reuses singular check/review classification but does not maintain
-ready-delay state; bounded overflow is surfaced as incomplete context without becoming a permanent
-action by itself.
+Aggregate selectors return one compact, read-only summary tick. An explicit `prs` selection keeps
+per-PR raw state, bounded check/review counts, routing hints, and `pollCommand`s in both Markdown
+and `structuredContent`. A `stack` selection projects each layer to shepherded or not, mergeable or
+one blocker, author, `owned` when that author matches the viewer, position, and the layer's own
+base branch. It also surfaces `stackMergeable`, `nextAction`, and raw ancestry mismatches. The
+compact tick reuses singular check/review classification but does not maintain ready-delay state;
+bounded overflow is surfaced as incomplete context without becoming a permanent action by itself.
+One-PR sessions run only for layers marked `owned`.
 
-For a single-PR selector, Markdown `content` is the CLI's default (lean) rendering and `structuredContent` is the matching lean JSON projection of the `IterateResult` — not the raw result object. This projection omits fields that are the trivial default and adds `readyDelayOverride` when `readyDelaySeconds` was supplied. For every action except `fix_code`, it also adds a computed top-level `instructions` array; for `fix_code`, the equivalent steps are under `fix.instructions` instead. For aggregate `prs` or `stack` selectors, `structuredContent` is the raw `PollSummaryResult` and Markdown is produced from that same result. Action semantics, instruction text, and the full field contract live in [actions.md](actions.md).
+For a single-PR selector, Markdown `content` is the CLI's default (lean) rendering and `structuredContent` is the matching lean JSON projection of the `IterateResult` — not the raw result object. This projection omits fields that are the trivial default and adds `readyDelayOverride` when `readyDelaySeconds` was supplied. For every action except `fix_code`, it also adds a computed top-level `instructions` array; for `fix_code`, the equivalent steps are under `fix.instructions` instead. A clean PR whose ready-delay is still counting returns action `ready` with `remainingSeconds`. For an explicit `prs` selector, `structuredContent` is the raw `PollSummaryResult`. For a `stack` selector, `structuredContent` is the lean stack overview and Markdown is produced from that same projection. Action semantics, instruction text, and the full field contract live in [actions.md](actions.md).
 
 ### `apply`
 

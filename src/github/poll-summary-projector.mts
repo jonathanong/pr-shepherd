@@ -14,11 +14,11 @@ import type { RepoInfo } from "./client.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import { summarizePollSummaryChecks } from "./poll-summary-checks.mts";
 import { summarizePollSummaryReview } from "./poll-summary-review.mts";
-import { fingerprintRawSummaryPr } from "./poll-summary-fingerprint.mts";
 import { currentQueueRemovalEvent } from "./poll-summary-queue-removal.mts";
 import { isCurrentSummaryReady } from "./poll-summary-readiness.mts";
 import { applyOpenCheckBlockers } from "./poll-summary-check-blockers.mts";
 import { normalizePollSummaryState, routePollSummary } from "./poll-summary-route.mts";
+import { hydrateReadyAnnotationProbe, readyFingerprint } from "./poll-summary-annotation-probe.mts";
 import { applyUnreportedRequiredChecks } from "./poll-summary-unreported.mts";
 export async function summarizePollSummaryPr(
   raw: RawSummaryPr,
@@ -26,6 +26,7 @@ export async function summarizePollSummaryPr(
   opts: PollSummaryCommandOptions,
   viewerCanAdminister = false,
   mergeTargetContexts?: readonly string[],
+  viewerLogin: string | null = null,
 ): Promise<PollSummaryItem> {
   const repoName = `${repo.owner}/${repo.name}`;
   const seen = await loadSeenMap({ owner: repo.owner, repo: repo.name, pr: raw.number });
@@ -70,16 +71,19 @@ export async function summarizePollSummaryPr(
         baseRefName: raw.stack.baseRefName,
       }
     : undefined;
-  const fingerprint = opts.stackPrNumber !== undefined ? fingerprintRawSummaryPr(raw) : null;
-  const receipt = fingerprint
-    ? await readReadyReceipt({ owner: repo.owner, repo: repo.name, pr: raw.number })
-    : null;
-  // A queued PR's target branch can advance as earlier queue entries merge.
-  // Keep the pre-enqueue base binding for the receipt comparison while the
-  // merge group itself supplies the current mergeability evidence.
+  if (opts.stackPrNumber !== undefined) await hydrateReadyAnnotationProbe(raw, repo, review);
+  const receipt =
+    opts.stackPrNumber === undefined
+      ? null
+      : await readReadyReceipt({ owner: repo.owner, repo: repo.name, pr: raw.number });
+  const fingerprint =
+    opts.stackPrNumber === undefined
+      ? null
+      : readyFingerprint(raw, receipt?.readinessFingerprint ?? null);
+  // A queued PR's base can advance. Keep the receipt base while the probe is complete.
   const receiptFingerprint =
     raw.isInMergeQueue && receipt
-      ? fingerprintRawSummaryPr({ ...raw, baseRefOid: receipt.baseRefOid })
+      ? readyFingerprint({ ...raw, baseRefOid: receipt.baseRefOid }, receipt.readinessFingerprint)
       : fingerprint;
   const currentReady = isCurrentSummaryReady(raw, checks, review, {
     allowQueuedProgress: opts.stackPrNumber !== undefined && raw.isInMergeQueue,
@@ -114,6 +118,10 @@ export async function summarizePollSummaryPr(
     repo: repoName,
     title: raw.title,
     url: raw.url || formatPrUrl(repoName, raw.number),
+    ...(raw.author?.login && { authorLogin: raw.author.login }),
+    ...(raw.author?.login &&
+      viewerLogin !== null &&
+      raw.author.login.toLowerCase() === viewerLogin.toLowerCase() && { owned: true as const }),
     action,
     reasons,
     state: normalizePollSummaryState(raw.state),
@@ -184,9 +192,8 @@ function pollCommandFields(
   if (opts.merge && opts.stackPrNumber === undefined) args.push("--merge");
   if (opts.readyDelaySeconds !== undefined)
     args.push("--ready-delay", `${opts.readyDelaySeconds}s`);
-  if (opts.stallTimeoutSeconds !== undefined) {
+  if (opts.stallTimeoutSeconds !== undefined)
     args.push("--stall-timeout", `${opts.stallTimeoutSeconds}s`);
-  }
   if (opts.noAutoMarkReady && !boundedDraft) args.push("--no-auto-mark-ready");
   const pollCommand = buildPrShepherdCommand(args).text;
   return boundedDraft ? { pollCommand, pollProbe: true } : { pollCommand };

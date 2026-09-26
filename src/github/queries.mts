@@ -39,6 +39,12 @@ export const REF_RULES_QUERY = `${gql("ref-rules.gql")}\n${gql("ref-rules-query.
  */
 export const POLL_SUMMARY_CHECK_PAGE_QUERY = `${POLL_SUMMARY_CHECK_CONTEXTS_FRAGMENT}\n${gql("poll-summary-check-page.gql")}`;
 
+/**
+ * Annotation totals for one commit, used only when a summary layer otherwise
+ * looks ready. `$before` pages older than the newest 100 contexts.
+ */
+export const POLL_SUMMARY_ANNOTATION_PROBE_QUERY = gql("poll-summary-annotation-probe.gql");
+
 /** Discovers and summarizes every entry in one native GitHub pull-request stack. */
 export const POLL_STACK_SUMMARY_QUERY = `${POLL_SUMMARY_FRAGMENT}\n${gql("poll-stack-summary.gql")}`;
 

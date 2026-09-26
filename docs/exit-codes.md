@@ -49,20 +49,22 @@ reconciliation returns `shepherd` (16) for autonomous one-PR work, `wait` (10) f
 no autonomous one-PR work is left. Human blockers are still surfaced on mixed `shepherd` ticks. The full row
 list remains in the output regardless of the aggregate action.
 
-| Code | Action       | Meaning                                            |
-| ---- | ------------ | -------------------------------------------------- |
-| 10   | `wait`       | Nothing to do yet; CI still in progress            |
-| 11   | `mark_ready` | Draft PR was converted to ready for review         |
-| 12   | `fix_code`   | Agent work required — see the printed instructions |
-| 13   | `escalate`   | Human attention required                           |
-| 14   | `cancel`     | PR closed without merging (`reason: "closed"`)     |
-| 15   | `merge`      | Run the emitted merge or merge-queue command       |
-| 16   | `shepherd`   | Run the listed one-PR sessions, then recheck stack |
+| Code | Action          | Meaning                                                              |
+| ---- | --------------- | -------------------------------------------------------------------- |
+| 10   | `wait`, `ready` | Nothing to do yet, or a clean PR whose ready-delay is still counting |
+| 11   | `mark_ready`    | Draft PR was converted to ready for review                           |
+| 12   | `fix_code`      | Agent work required — see the printed instructions                   |
+| 13   | `escalate`      | Human attention required                                             |
+| 14   | `cancel`        | PR closed without merging (`reason: "closed"`)                       |
+| 15   | `merge`         | Run the emitted merge or merge-queue command                         |
+| 16   | `shepherd`      | Run the listed one-PR sessions, then recheck stack                   |
 
-**`wait` (10) is not an error, and it is not a signal to give up.** It means
+**`wait` and `ready` (10) are not errors, and they are not a signal to give up.** `wait` means
 "nothing actionable right now" — including when `poll --timeout` gives up
-mid-wait and prints the last `wait` tick. A `set -e` shell script or CI step
-that only wants to know "is the PR fully done" should treat `wait` (10) the
+mid-wait and prints the last `wait` tick. `ready` means the PR is clean and
+`remainingSeconds` of ready-delay are still left; `--until-terminal` returns it
+instead of sleeping through that countdown. A `set -e` shell script or CI step
+that only wants to know "is the PR fully done" should treat `wait`/`ready` (10) the
 same way it treats `escalate`/`fix_code`/`shepherd` (12/13/16): not finished yet. Only `0`
 means the PR reached a terminal, successful state.
 
@@ -98,7 +100,7 @@ subcommand, not just `iterate` — this range is uniform across `apply`,
 | 66   | `EX_NOINPUT`     | `apply journal --file` path could not be read (including `--file -` for stdin), or `journal extract --body-file` could not safely read a regular POSIX body file                                                                                                                    |
 | 69   | `EX_UNAVAILABLE` | A precondition is unmet: no open PR for the current branch; a suggestion thread is resolved, outdated, minimized, unanchored, unsafe, or not applyable to the local descendant; GitHub returned an unclassified 4xx; or an explicit review mutation returned a non-rate-limit error |
 | 70   | `EX_SOFTWARE`    | Unexpected or unclassified internal failure — the fallback when nothing more specific applies                                                                                                                                                                                       |
-| 75   | `EX_TEMPFAIL`    | A **retryable** GitHub failure: HTTP 429, any 5xx, a `Retry-After` header, an exhausted rate limit, or a GraphQL `INTERNAL` engine crash (HTTP 200 with `data: null`)                                                                                                               |
+| 75   | `EX_TEMPFAIL`    | A **retryable** GitHub failure: HTTP 429, any 5xx, a `Retry-After` header, an exhausted rate limit, a GraphQL `INTERNAL` engine crash (HTTP 200 with `data: null`), or a GraphQL resource-limit error (`Resource limits for this query exceeded`)                                   |
 | 77   | `EX_NOPERM`      | GitHub 401/403 that is not a rate-limit signal — missing token or insufficient PAT scopes                                                                                                                                                                                           |
 | 78   | `EX_CONFIG`      | Reserved for `.pr-shepherdrc.yml` validation failures. **Not currently emitted** — see below.                                                                                                                                                                                       |
 
@@ -113,7 +115,7 @@ returns 403, with a `Retry-After` header. `GitHubRequestError` classifies
 itself at construction time (via `classifyStatus`, not `errorToExitCode` —
 `errorToExitCode` only reads back whatever code the error already carries)
 and checks for a retry signal (`Retry-After`, `429`, `5xx`, an exhausted
-rate limit, or a GraphQL `INTERNAL` error) _before_ falling back to the blanket 401/403 → `77` rule, so a
+rate limit, a GraphQL `INTERNAL` error, or a GraphQL resource-limit error) _before_ falling back to the blanket 401/403 → `77` rule, so a
 throttled 403 correctly resolves to `75`, not `77`.
 
 **GraphQL permission failures often arrive at HTTP 200, not 401/403.** A
@@ -139,9 +141,14 @@ non-`INTERNAL` `type` does not hide `extensions.code`). Status-only
 classification treated this as `69` (`EX_UNAVAILABLE`) even though retrying
 the same **query** often succeeds. `GitHubRequestError` maps those errors to
 `75`. The GraphQL client retries read operations twice (500ms, then 1500ms)
-before surfacing the failure. Mutations are not retried: an INTERNAL after
+before surfacing the failure. The same retry covers
+`Resource limits for this query exceeded` (message, `type`, or
+`extensions.code` `RESOURCE_LIMITS_EXCEEDED`), including when GitHub also
+returns partial `data`. A `--stack` summary that still hits the limit halves
+`entries(first:)` down to 1 and pages with `after`; if a one-entry page still
+fails, the error surfaces as `75` with GitHub's message. Mutations are not retried: an INTERNAL or resource-limit error after
 GitHub applied a write (`addPullRequestReviewThreadReply`, mark-ready) would
-duplicate the side effect. If the INTERNAL response also carries
+duplicate the side effect. If that response also carries
 `Retry-After` or an exhausted rate limit, the client does not use the short
 delays; it surfaces `75` immediately. The GraphQL layer keeps `type` and
 `extensions` on `graphqlErrors` so classification can use them instead of

@@ -19,6 +19,7 @@ import type { IterateCommandOptions, IterateResult } from "../../types.mts";
 import { withIterateApiUsage } from "./run.mts";
 import { fetchRawSummaryPr } from "../../github/poll-summary.mts";
 import { summarizePollSummaryPr } from "../../github/poll-summary-projector.mts";
+import { annotationProbeUnavailable } from "../../github/poll-summary-annotation-probe.mts";
 import { fingerprintRawSummaryPr } from "../../github/poll-summary-fingerprint.mts";
 import { currentQueueRemovalEvent } from "../../github/poll-summary-queue-removal.mts";
 import { isCurrentSummaryReady } from "../../github/poll-summary-readiness.mts";
@@ -338,6 +339,20 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     };
   }
 
+  if (
+    isCleanReadyState &&
+    readyState.isReady &&
+    !readyState.shouldCancel &&
+    readyState.remainingSeconds > 0
+  ) {
+    await clearStallState(stallKey);
+    return {
+      ...base,
+      action: "ready",
+      log: `READY: PR #${base.pr} is ready — ${readyState.remainingSeconds}s of ready-delay remaining — ${buildWaitLog(base).slice("WAIT: ".length)}`,
+    };
+  }
+
   const hold = stackDraftHold(report, autoMarkReady);
   const wait = {
     ...base,
@@ -374,20 +389,23 @@ async function recordReadyReceipt(
     return false;
   try {
     const raw = await fetchRawSummaryPr(report.pr, { owner: key.owner, name: key.repo });
-    const fingerprint = fingerprintRawSummaryPr(raw);
     if (
-      fingerprint === null ||
+      fingerprintRawSummaryPr(raw) === null ||
       raw.state !== "OPEN" ||
       raw.isDraft ||
       raw.headRefOid !== report.headSha ||
       raw.baseRefOid !== report.baseRefOid
     )
       return false;
+    // Summarize hydrates annotation totals onto the snapshot before the stored hash.
     const summary = await summarizePollSummaryPr(
       raw,
       { owner: key.owner, name: key.repo },
       { stackPrNumber: report.pr },
     );
+    if (annotationProbeUnavailable(raw)) return false;
+    const fingerprint = fingerprintRawSummaryPr(raw);
+    if (fingerprint === null) return false;
     if (!isCurrentSummaryReady(raw, summary.checks ?? {}, summary.review ?? {})) return false;
     const removalEvent = currentQueueRemovalEvent(raw);
     await writeReadyReceipt({
@@ -437,6 +455,21 @@ async function revalidateReadyReceipt(
   }
   try {
     const raw = await fetchRawSummaryPr(report.pr, { owner: key.owner, name: key.repo });
+    const summary = await summarizePollSummaryPr(
+      raw,
+      { owner: key.owner, name: key.repo },
+      { stackPrNumber: report.pr },
+    );
+    if (annotationProbeUnavailable(raw)) {
+      const sameHead = raw.headRefOid === report.headSha;
+      const sameBase = retainQueuedReceipt || raw.baseRefOid === report.baseRefOid;
+      const stillReady = isCurrentSummaryReady(raw, summary.checks ?? {}, summary.review ?? {});
+      if (!sameHead || !sameBase || !stillReady) {
+        await clearReadyReceipt(key);
+        return false;
+      }
+      return true;
+    }
     // Queue predecessors can advance the target branch without changing this
     // PR's source. Compare against the receipt's base only while both fresh
     // views still place the PR in the queue.

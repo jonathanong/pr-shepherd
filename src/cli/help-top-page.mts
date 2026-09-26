@@ -53,7 +53,7 @@ Polling flags:
   --debounce <duration>          Settle window after first FIX_CODE or stack SHEPHERD before returning. Bare number = seconds. Default: poll.debounceSeconds (built-in 60s). 0 disables.
   --quiet-status                 Print only changed WAIT snapshots. Overrides poll.quietStatus.
   --no-quiet-status              Print every WAIT snapshot. Overrides poll.quietStatus.
-  --until-terminal               Continue through WAIT/MARK_READY until FIX_CODE/MERGE/CANCEL/ESCALATE or stack SHEPHERD.
+  --until-terminal               Continue through WAIT/MARK_READY until READY/FIX_CODE/MERGE/CANCEL/ESCALATE or stack SHEPHERD.
 
 Clean variants:
   pr [number]          Remove state for one PR. Defaults to current branch PR.
@@ -64,7 +64,7 @@ Clean variants:
 
 Exit codes: 0 done, 10-19 PR state, 64-78 shepherd failed (sysexits.h).
   0   CANCEL (merged or ready-delay elapsed)
-  10  WAIT
+  10  WAIT or READY
   11  MARK_READY
   12  FIX_CODE
   13  ESCALATE

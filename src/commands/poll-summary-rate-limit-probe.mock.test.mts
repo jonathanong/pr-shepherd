@@ -178,8 +178,8 @@ describe("aggregate rate-limit sleep probe", () => {
     expect(result.stackMergeable).toBe(false);
     expect(result.prs.map((item) => item.state)).toEqual(["CLOSED", "CLOSED"]);
     const text = formatPollSummaryResult(result);
-    expect(text).toContain("**next action** `escalate`");
-    expect(text).toContain("state `CLOSED`");
+    expect(text).toContain("nextAction: escalate");
+    expect(text).toContain("CLOSED");
     expect(text).not.toContain("every stack layer is merged");
   });
 });

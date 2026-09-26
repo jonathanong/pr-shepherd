@@ -20,7 +20,7 @@
         "action": "fix_code", "reasons": ["authoritative-poll-required"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
         "headRefName": "child", "headRefOid": "0222222222222222222222222222222222222222", "baseRefName": "foundation", "readyReceipt": true,
         "stack": { "number": 37, "size": 2, "position": 2, "baseRefName": "main" },
-        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/362 --until-terminal"
+        "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/362 --until-terminal"
       }
     ]
   }

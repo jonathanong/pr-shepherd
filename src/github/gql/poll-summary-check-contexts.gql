@@ -12,9 +12,6 @@ fragment PollSummaryCheckContexts on StatusCheckRollupContextConnection {
       status
       conclusion
       detailsUrl
-      annotations(first: 1) {
-        totalCount
-      }
       checkSuite {
         workflowRun {
           databaseId

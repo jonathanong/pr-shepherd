@@ -47,7 +47,7 @@ flowchart TD
   RERUN --> POLL
 ```
 
-The shipped skill runs `pr-shepherd [PR] --until-terminal`, not `pr-shepherd iterate`. That until-terminal poll continues through ordinary `WAIT` and `MARK_READY` actions; it returns agent-facing `FIX_CODE` (after its `--debounce` settle window), `MERGE`, and any non-terminal quota-warning result, plus terminal `CANCEL` or `ESCALATE`. After following a returned result's `## Instructions`, the skill re-invokes the same command unless it received `CANCEL` or `ESCALATE`. The bare `pr-shepherd [PR]` command remains bounded for direct CLI users. MCP `iterate` has no debounce and returns one tick; its caller owns recurrence.
+The shipped skill runs `pr-shepherd [PR] --until-terminal`, not `pr-shepherd iterate`. That until-terminal poll continues through ordinary `WAIT` and `MARK_READY` actions; it returns `READY` while a clean ready-delay is still counting, agent-facing `FIX_CODE` (after its `--debounce` settle window), `MERGE`, and any non-terminal quota-warning result, plus terminal `CANCEL` or `ESCALATE`. After following a returned result's `## Instructions`, the skill re-invokes the same command unless it received `CANCEL` or `ESCALATE`. The bare `pr-shepherd [PR]` command remains bounded for direct CLI users. MCP `iterate` has no debounce and returns one tick; its caller owns recurrence.
 
 ## Steps
 
@@ -83,7 +83,7 @@ A clean ready state means `status === "READY"`, `hasReadinessWork` is false, and
 
 Before a READY sweep reaches this step, `runCheck` performs one fresh REST mergeability read unless the UNKNOWN fallback already did so. If the refreshed mergeability reports `CONFLICTING`/`DIRTY`, the sweep becomes `FAILING`/`CONFLICTS`, resets the marker, and routes to `fix_code`.
 
-If `readyState.shouldCancel`, iterate emits `action: 'merge'` when `--merge` is enabled; otherwise it emits `action: 'cancel'` with `reason: "ready-delay-elapsed"`.
+While that countdown is still running (`isReady`, not `shouldCancel`, `remainingSeconds > 0`), iterate emits `action: 'ready'` and `--until-terminal` returns it instead of sleeping. The stall guard does not apply to that tick. If `readyState.shouldCancel`, iterate emits `action: 'merge'` when `--merge` is enabled; otherwise it emits `action: 'cancel'` with `reason: "ready-delay-elapsed"`. That completion writes the READY receipt a later stack read calls shepherded.
 
 Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/ready-since.txt` (`<unix seconds> <head SHA>`). A future timestamp (clock skew), another head, or a marker without a head is reset to now. Default delay is 10 minutes (`watch.readyDelayMinutes` or `--ready-delay`).
 

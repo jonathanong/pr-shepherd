@@ -29,6 +29,35 @@ describe("withGraphQlInternalRetry", () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 
+  it("retries a resource-limit error for a read and surfaces it after retries", async () => {
+    const limited = new GitHubRequestError(
+      "GitHub GraphQL error: Resource limits for this query exceeded",
+      {
+        status: 200,
+        graphqlErrors: [{ message: "Resource limits for this query exceeded" }],
+      },
+    );
+    const run = vi.fn().mockRejectedValue(limited);
+    const promise = withGraphQlInternalRetry("{ PollStackSummary }", run);
+    const assertion = expect(promise).rejects.toBe(limited);
+    await vi.runAllTimersAsync();
+    await assertion;
+    expect(run).toHaveBeenCalledTimes(3);
+  });
+
+  it("does not retry a resource-limit error for a mutation", async () => {
+    const limited = new GitHubRequestError(
+      "GitHub GraphQL error: Resource limits for this query exceeded",
+      {
+        status: 200,
+        graphqlErrors: [{ type: "RESOURCE_LIMITS_EXCEEDED", message: "limit" }],
+      },
+    );
+    const run = vi.fn().mockRejectedValue(limited);
+    await expect(withGraphQlInternalRetry("mutation { x }", run)).rejects.toBe(limited);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
   it.each(["{ BatchPr }", "query BatchPr { x }", "# only comment", '"""unterminated'])(
     "retries INTERNAL for read document %j",
     async (document) => {

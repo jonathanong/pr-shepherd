@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { NOW, makeOpts } from "./iterate-test-support.mts";
+import { NOW, makeOpts, mockUpdateReadyDelay } from "./iterate-test-support.mts";
 import { readStallState, writeStallState } from "../../src/state/iterate-stall.mts";
 import type { IterateCommandOptions } from "../../src/types.mts";
 
@@ -24,6 +24,12 @@ const RESOLUTION_ONLY_THREAD = {
 };
 
 function makeOpts30mStall(overrides: Partial<IterateCommandOptions> = {}): IterateCommandOptions {
+  // Stall applies to wait, not to a clean ready-delay countdown.
+  mockUpdateReadyDelay.mockResolvedValue({
+    isReady: false,
+    shouldCancel: false,
+    remainingSeconds: 300,
+  });
   return makeOpts({ stallTimeoutSeconds: STALL_TIMEOUT_S, noAutoMarkReady: true, ...overrides });
 }
 

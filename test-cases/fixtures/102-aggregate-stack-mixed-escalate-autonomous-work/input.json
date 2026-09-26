@@ -19,14 +19,14 @@
         "action": "fix_code", "reasons": ["review-work"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
         "headRefName": "review-work", "headRefOid": "4022222222222222222222222222222222222222", "baseRefName": "foundation",
         "stack": { "number": 40, "size": 3, "position": 2, "baseRefName": "main" },
-        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/402 --until-terminal"
+        "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/402 --until-terminal"
       },
       {
         "pr": 403, "repo": "owner/repo", "title": "Pending CI", "url": "https://github.com/owner/repo/pull/403",
         "action": "wait", "reasons": ["pending-or-unknown"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "BLOCKED",
         "headRefName": "pending-ci", "headRefOid": "4033333333333333333333333333333333333333", "baseRefName": "review-work",
         "checks": { "inProgress": 1 }, "stack": { "number": 40, "size": 3, "position": 3, "baseRefName": "main" },
-        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/403 --until-terminal"
+        "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/403 --until-terminal"
       }
     ]
   }

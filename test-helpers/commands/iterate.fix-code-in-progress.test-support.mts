@@ -38,6 +38,7 @@ vi.mock("../../src/state/fix-attempts.mts", () => ({
 vi.mock("../../src/state/iterate-stall.mts", () => ({
   readStallState: vi.fn().mockResolvedValue({ ok: true, state: null }),
   writeStallState: vi.fn().mockResolvedValue({ ok: true }),
+  clearStallState: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../src/state/seen-comments.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../src/state/seen-comments.mts")>();

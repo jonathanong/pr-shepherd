@@ -202,6 +202,65 @@ describe("pr-shepherd MCP server", () => {
     });
   });
 
+  it("projects a stack overview into both MCP channels", async () => {
+    const result = {
+      mode: "summary" as const,
+      repo: "openai/pr-shepherd",
+      selection: { kind: "stack" as const, anchor: 3, stackNumber: 9, stackSize: 1 },
+      reason: "actionable" as const,
+      nextAction: "shepherd" as const,
+      instructions: ["1. Run the owned session."],
+      prs: [
+        {
+          pr: 3,
+          repo: "openai/pr-shepherd",
+          title: "Fix widgets",
+          url: "https://github.com/openai/pr-shepherd/pull/3",
+          action: "wait" as const,
+          reasons: ["appears-ready"],
+          state: "OPEN" as const,
+          mergeable: "MERGEABLE" as const,
+          mergeStateStatus: "CLEAN" as const,
+          headRefName: "fix-widgets",
+          headRefOid: "a".repeat(40),
+          baseRefName: "main",
+          authorLogin: "alice",
+          owned: true as const,
+          stack: { number: 9, size: 1, position: 1, baseRefName: "main" },
+        },
+      ],
+    };
+    const tools = registeredTools(
+      createPrShepherdMcpServer({
+        shepherd: {
+          iterate: vi.fn().mockResolvedValue(result),
+          apply: vi.fn(),
+          buildSuggestionPatches: vi.fn(),
+          buildSuggestionPatch: vi.fn(),
+        },
+      }),
+    );
+
+    const response = await tools.iterate!.handler({
+      stack: "openai/pr-shepherd#3",
+    });
+    const structured = response.structuredContent as {
+      prs: Array<{ shepherded: boolean; mergeable: boolean; owned?: true; headRefOid?: string }>;
+    };
+
+    expect(structured.prs[0]).toMatchObject({
+      shepherded: false,
+      mergeable: true,
+      owned: true,
+      author: "alice",
+    });
+    expect(structured.prs[0]?.headRefOid).toBeUndefined();
+    expect(response.content?.[0]?.text).toContain("# openai/pr-shepherd stack #9 — actionable");
+    expect(response.content?.[0]?.text).toContain(
+      "not shepherded · mergeable · owner `@alice` · owned",
+    );
+  });
+
   it("requires a repository-qualified PR string in every tool schema and handler", async () => {
     const shepherd = {
       iterate: vi.fn(),

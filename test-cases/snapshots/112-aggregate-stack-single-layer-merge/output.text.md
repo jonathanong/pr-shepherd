@@ -1,13 +1,13 @@
-# Poll summary [ACTIONABLE]
+# owner/repo stack #50 — actionable
 
-**repo** `owner/repo` · **selection** stack #50 anchored at PR #501 (1 PRs) · **mode** `summary` · **stack mergeable** `true` · **next action** `merge`
+Stack: #50 · anchor PR #501 · 1 layers · mode `summary`
+stackMergeable: true
+nextAction: merge
 
-## Pull requests
+## Layers
 
-- [PR #501: Verified single layer](https://github.com/owner/repo/pull/501) [MERGE]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `50` position `1/1` base `main`
-  - head `single` at `5011111111111111111111111111111111111111` · base `main`
-  - reasons: `appears-ready`
+- [PR #501: Verified single layer](https://github.com/owner/repo/pull/501) — shepherded · mergeable
+  - OPEN · position 1/1 · base `main`
 
 ## Instructions
 

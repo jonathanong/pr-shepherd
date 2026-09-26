@@ -21,6 +21,7 @@ export function row(
     baseRefName: position === 1 ? "main" : `layer-${pr - 1}`,
     stack: { number: 9, size: 3, position, baseRefName: "main" },
     pollCommand: `pr-shepherd https://github.com/acme/widgets/pull/${pr} --until-terminal`,
+    owned: true,
     ...overrides,
   };
 }

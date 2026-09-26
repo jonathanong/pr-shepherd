@@ -22,7 +22,7 @@
         "baseRefName": "main",
         "checks": { "passing": 2, "failing": 1, "superseded": 1, "incomplete": true },
         "review": { "comments": 1, "actionable": 1, "incomplete": true },
-        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/42 --until-terminal"
+        "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/42 --until-terminal"
       },
       {
         "pr": 43,

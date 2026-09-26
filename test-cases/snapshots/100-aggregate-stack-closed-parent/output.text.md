@@ -1,17 +1,15 @@
-# Poll summary [ACTIONABLE]
+# owner/repo stack #38 [ESCALATE] — actionable
 
-**repo** `owner/repo` · **selection** stack #38 anchored at PR #372 (2 PRs) · **mode** `summary` · **stack mergeable** `false` · **next action** `escalate`
+Stack: #38 · anchor PR #372 · 2 layers · mode `summary`
+stackMergeable: false
+nextAction: escalate
 
-## Pull requests
+## Layers
 
-- [PR #371: Closed foundation](https://github.com/owner/repo/pull/371) [ESCALATE]
-  - state `CLOSED` · mergeable `UNKNOWN` · merge `UNKNOWN` · stack `38` position `1/2` base `main`
-  - head `foundation` at `1111111111111111111111111111111111111111` · base `main`
-  - reasons: `closed`, `closed-unmerged-dependency`
-- [PR #372: Open child](https://github.com/owner/repo/pull/372) [CANCEL]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `38` position `2/2` base `main`
-  - head `child` at `1222222222222222222222222222222222222222` · base `foundation`
-  - reasons: `appears-ready`
+- [PR #371: Closed foundation](https://github.com/owner/repo/pull/371) — not shepherded · not mergeable (`closed`)
+  - CLOSED · position 1/2 · base `main`
+- [PR #372: Open child](https://github.com/owner/repo/pull/372) — shepherded · mergeable
+  - OPEN · position 2/2 · base `foundation`
 
 ## Instructions
 

@@ -2,6 +2,10 @@ fragment PollSummaryPr on PullRequest {
   number
   title
   url
+  author {
+    __typename
+    login
+  }
   state
   updatedAt
   isDraft

@@ -45,9 +45,15 @@ function member(number: number, position: number) {
   };
 }
 
-function stackPage(size: number, nodes: unknown[], endCursor: string | null = null) {
+function stackPage(
+  size: number,
+  nodes: unknown[],
+  endCursor: string | null = null,
+  viewerLogin?: string,
+) {
   return {
     data: {
+      ...(viewerLogin ? { viewer: { login: viewerLogin } } : {}),
       repository: {
         viewerCanAdminister: false,
         pullRequest: {
@@ -83,6 +89,27 @@ describe("fetchPollSummary native stack reads", () => {
     expect(result.selection).toEqual({ kind: "stack", anchor: 44, stackNumber: 7, stackSize: 2 });
     expect(result.prs.map((item) => item.pr)).toEqual([43, 44]);
     expect(result.stackAncestry).toBeUndefined();
+  });
+
+  it("marks a layer owned only when its author matches the viewer", async () => {
+    const owned = stackPage(1, [member(43, 1)], null, "Alice");
+    const ownedPr = owned.data.repository.pullRequest.stack.entries.nodes[0] as {
+      pullRequest: { author?: { login: string } };
+    };
+    ownedPr.pullRequest.author = { login: "alice" };
+    mockGraphql.mockResolvedValue(owned);
+    const match = await fetchPollSummary({ stackPrNumber: 43 }, repo);
+    expect(match.prs[0]).toMatchObject({ authorLogin: "alice", owned: true });
+
+    const other = stackPage(1, [member(43, 1)], null, "bob");
+    const otherPr = other.data.repository.pullRequest.stack.entries.nodes[0] as {
+      pullRequest: { author?: { login: string } };
+    };
+    otherPr.pullRequest.author = { login: "alice" };
+    mockGraphql.mockResolvedValue(other);
+    const mismatch = await fetchPollSummary({ stackPrNumber: 43 }, repo);
+    expect(mismatch.prs[0]?.authorLogin).toBe("alice");
+    expect(mismatch.prs[0]?.owned).toBeUndefined();
   });
 
   it("caps the hydrated page at 50 entries and follows every cursor", async () => {

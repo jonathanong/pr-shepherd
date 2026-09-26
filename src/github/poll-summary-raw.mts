@@ -69,6 +69,7 @@ export interface RawSummaryPr {
   number: number;
   title: string;
   url: string;
+  author?: { login: string } | null;
   state: string;
   updatedAt?: string;
   lifecycleEvents?: {

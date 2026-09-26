@@ -18,6 +18,7 @@ export interface StackMemberRefs {
 }
 
 interface RawStackResponse<Pr> {
+  viewer?: { login: string } | null;
   repository: {
     viewerCanAdminister: boolean;
     pullRequest: {
@@ -39,6 +40,7 @@ interface RawStackResponse<Pr> {
 export interface StackRead<Pr extends StackMemberRefs> {
   stackNumber: number;
   stackSize: number;
+  viewerLogin: string | null;
   viewerCanAdminister: boolean;
   /** Every member, bottom-to-top, each observed in the same paged read. */
   ordered: Pr[];
@@ -60,11 +62,13 @@ export async function readStack<Pr extends StackMemberRefs>(
   let stackNumber = 0;
   let stackSize = 0;
   let viewerCanAdminister = false;
+  let viewerLogin: string | null = null;
   const entries: Array<{ position: number; pullRequest: Pr }> = [];
   do {
     const response: { data: RawStackResponse<Pr> } = await graphqlWithRateLimit<
       RawStackResponse<Pr>
     >(query, { owner: repo.owner, repo: repo.name, anchor, after, ...variables });
+    viewerLogin = response.data.viewer?.login ?? viewerLogin;
     const repository = response.data.repository;
     if (!repository) throw missingRepositoryError(repo);
     viewerCanAdminister = repository.viewerCanAdminister;
@@ -123,7 +127,7 @@ export async function readStack<Pr extends StackMemberRefs>(
   const ordered = [...unique.values()]
     .sort((left, right) => left.position - right.position)
     .map((entry) => entry.pullRequest);
-  return { stackNumber, stackSize, viewerCanAdminister, ordered };
+  return { stackNumber, stackSize, viewerLogin, viewerCanAdminister, ordered };
 }
 
 /** Membership and linking refs only — no per-PR CI or review hydration. */

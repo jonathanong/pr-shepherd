@@ -32,6 +32,7 @@ import {
   projectIterateLean,
 } from "../cli/formatters.mts";
 import { formatPollSummaryResult } from "../cli/poll-summary-formatter.mts";
+import { projectStackOverview } from "../cli/stack-overview.mts";
 import type { IterateResult, PollSummaryResult } from "../types.mts";
 import { formatCliError, serializeGitHubRequestErrorDetails } from "../cli/error-format.mts";
 import { errorToExitCode, EXIT } from "../exit-codes.mts";
@@ -175,7 +176,11 @@ export function createPrShepherdMcpServer(
             ? formatPollSummaryResult(result)
             : formatIterateResult(result, opts),
         (result: IterateResult | PollSummaryResult) =>
-          isPollSummary(result) ? result : projectIterateLean(result, opts),
+          isPollSummary(result)
+            ? result.selection.kind === "stack"
+              ? projectStackOverview(result)
+              : result
+            : projectIterateLean(result, opts),
       );
     },
   );

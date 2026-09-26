@@ -1,17 +1,15 @@
-# Poll summary [ACTIONABLE]
+# owner/repo stack #35 — actionable
 
-**repo** `owner/repo` · **selection** stack #35 anchored at PR #342 (2 PRs) · **mode** `summary` · **stack mergeable** `true` · **next action** `merge`
+Stack: #35 · anchor PR #342 · 2 layers · mode `summary`
+stackMergeable: true
+nextAction: merge
 
-## Pull requests
+## Layers
 
-- [PR #341: Verified foundation](https://github.com/owner/repo/pull/341) [MERGE]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `35` position `1/2` base `main`
-  - head `foundation` at `e111111111111111111111111111111111111111` · base `main`
-  - reasons: `appears-ready`
-- [PR #342: Verified child](https://github.com/owner/repo/pull/342) [MERGE]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `35` position `2/2` base `main`
-  - head `child` at `e222222222222222222222222222222222222222` · base `foundation`
-  - reasons: `appears-ready`
+- [PR #341: Verified foundation](https://github.com/owner/repo/pull/341) — shepherded · mergeable
+  - OPEN · position 1/2 · base `main`
+- [PR #342: Verified child](https://github.com/owner/repo/pull/342) — shepherded · mergeable
+  - OPEN · position 2/2 · base `foundation`
 
 ## Instructions
 

@@ -20,9 +20,9 @@ describe("runIterate — prescriptive fields: log strings", () => {
     });
 
     const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
-    expect(result.action).toBe("wait");
-    if (result.action === "wait") {
-      expect(result.log).toMatch(/WAIT/);
+    expect(result.action).toBe("ready");
+    if (result.action === "ready") {
+      expect(result.log).toMatch(/READY/);
       expect(result.log).toMatch(/passing/);
       expect(result.log).toMatch(/300s/);
     }

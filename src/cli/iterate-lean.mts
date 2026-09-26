@@ -90,6 +90,12 @@ export function projectIterateLean(
   };
 
   switch (result.action) {
+    case "ready":
+      return {
+        ...base,
+        log: adaptIterateLog(result.log),
+        instructions: simpleInstructions(result),
+      };
     case "wait":
       return {
         ...base,

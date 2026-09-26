@@ -1,5 +1,9 @@
 import { sleep } from "../util/sleep.mts";
-import { GitHubRequestError, isRetryableGraphQlInternal } from "./errors.mts";
+import {
+  GitHubRequestError,
+  isRetryableGraphQlInternal,
+  isRetryableGraphQlResourceLimit,
+} from "./errors.mts";
 
 const GRAPHQL_INTERNAL_RETRY_DELAYS = [500, 1500];
 
@@ -28,7 +32,7 @@ function hasServerBackoff(err: GitHubRequestError): boolean {
   return err.rateLimit !== undefined && err.rateLimit.remaining <= 0;
 }
 
-/** Retry GitHub GraphQL engine crashes (HTTP 200, data: null, INTERNAL) on reads. */
+/** Retry GitHub GraphQL engine crashes and resource-limit failures on reads. */
 export async function withGraphQlInternalRetry<T>(
   document: string,
   run: () => Promise<T>,
@@ -40,7 +44,10 @@ export async function withGraphQlInternalRetry<T>(
     } catch (err) {
       if (
         !(err instanceof GitHubRequestError) ||
-        !isRetryableGraphQlInternal(err.graphqlErrors) ||
+        !(
+          isRetryableGraphQlInternal(err.graphqlErrors) ||
+          isRetryableGraphQlResourceLimit(err.graphqlErrors)
+        ) ||
         isGraphQlMutationDocument(document) ||
         hasServerBackoff(err)
       ) {

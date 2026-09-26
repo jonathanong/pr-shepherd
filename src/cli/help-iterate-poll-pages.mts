@@ -21,6 +21,7 @@ Durations accept s/m/h suffixes: 30s, 4.5m, 1h. A bare number is minutes; decima
 Actions:
   WAIT        No immediate action; continue with the next poll.
   MARK_READY  Draft PR was marked ready; continue with the next poll.
+  READY       Clean PR is inside the ready-delay. Wait out remainingSeconds, then poll again.
   FIX_CODE    Agent action is required; follow the instructions, then continue polling.
   CANCEL      Stop polling: merged/closed or ready-delay elapsed.
   ESCALATE    Stop polling until a human provides direction.
@@ -28,7 +29,7 @@ Actions:
 
 Exit codes:
   0   CANCEL (merged or ready-delay elapsed)
-  10  WAIT
+  10  WAIT or READY
   11  MARK_READY
   12  FIX_CODE
   13  ESCALATE
@@ -40,7 +41,7 @@ export const POLL_USAGE = `pr-shepherd poll
 
 Run iterate repeatedly for one PR, or read compact summaries for an explicit PR set or native
 GitHub stack. Aggregate mode returns when any row needs work, every row is terminal, or timeout.
-Poll exits as soon as iterate returns MARK_READY, CANCEL, or ESCALATE, or when timeout
+Poll exits as soon as iterate returns READY, MARK_READY, CANCEL, or ESCALATE, or when timeout
 returns the last WAIT result. FIX_CODE starts a --debounce settle window (default:
 poll.debounceSeconds; built-in 1m): poll keeps
 iterating at --interval, then runs one more tick after the window and returns that result.
@@ -57,7 +58,7 @@ Poll flags:
   --debounce <duration>          Settle window after first FIX_CODE or stack SHEPHERD before returning. Bare number = seconds. Default: poll.debounceSeconds (built-in 60s). 0 disables.
   --quiet-status                 Print only changed WAIT snapshots. Overrides poll.quietStatus.
   --no-quiet-status              Print every WAIT snapshot. Overrides poll.quietStatus.
-  --until-terminal               Continue through WAIT/MARK_READY until FIX_CODE/MERGE/CANCEL/ESCALATE or stack SHEPHERD.
+  --until-terminal               Continue through WAIT/MARK_READY until READY/FIX_CODE/MERGE/CANCEL/ESCALATE or stack SHEPHERD.
 
 Forwarded iterate flags:
   --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Example: 15m.
@@ -74,11 +75,11 @@ for --interval/--timeout/--debounce, minutes for --ready-delay/--stall-timeout);
 an explicit unit (4.5m).
 Each WAIT tick writes a stderr line naming what it is waiting on by default; poll.quietStatus can change that default, --quiet-status/--no-quiet-status override it, and --verbose emits detailed per-tick lines.
 FIX_CODE debounce writes a remaining-seconds line to stderr. --timeout does not cut an in-flight debounce short.
-With --until-terminal, --timeout is ignored for WAIT ticks and polling continues until FIX_CODE, MERGE, CANCEL, or ESCALATE. With --merge, --timeout still bounds WAIT ticks; it only continues through MARK_READY while polling remains within that timeout.
+With --until-terminal, --timeout is ignored for WAIT ticks and polling continues until READY, FIX_CODE, MERGE, CANCEL, or ESCALATE. With --merge, --timeout still bounds WAIT ticks; it only continues through MARK_READY while polling remains within that timeout.
 
 Exit codes: same as iterate (the final tick's action/reason decides the code).
   0   CANCEL (merged or ready-delay elapsed)
-  10  WAIT (including a WAIT returned by --timeout)
+  10  WAIT or READY (including a WAIT returned by --timeout)
   11  MARK_READY
   12  FIX_CODE
   13  ESCALATE

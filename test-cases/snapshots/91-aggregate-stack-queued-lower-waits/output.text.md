@@ -1,17 +1,15 @@
-# Poll summary [TIMEOUT]
+# owner/repo stack #12 — timeout
 
-**repo** `owner/repo` · **selection** stack #12 anchored at PR #202 (2 PRs) · **mode** `summary` · **stack mergeable** `true` · **next action** `wait`
+Stack: #12 · anchor PR #202 · 2 layers · mode `summary`
+stackMergeable: true
+nextAction: wait
 
-## Pull requests
+## Layers
 
-- [PR #201: Base layer queued](https://github.com/owner/repo/pull/201) [WAIT]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · flags `queued` · Shepherd READY completion `verified` · stack `12` position `1/2` base `main`
-  - head `feature-base` at `bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb` · base `main`
-  - reasons: `appears-ready`, `already-in-merge-queue`
-- [PR #202: Ready upper layer](https://github.com/owner/repo/pull/202) [CANCEL]
-  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified` · stack `12` position `2/2` base `main`
-  - head `feature-upper` at `cccccccccccccccccccccccccccccccccccccccc` · base `feature-base`
-  - reasons: `appears-ready`
+- [PR #201: Base layer queued](https://github.com/owner/repo/pull/201) — shepherded · mergeable
+  - OPEN · in merge queue · position 1/2 · base `main`
+- [PR #202: Ready upper layer](https://github.com/owner/repo/pull/202) — shepherded · mergeable
+  - OPEN · position 2/2 · base `feature-base`
 
 ## Instructions
 

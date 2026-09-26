@@ -1,13 +1,16 @@
 import { EXIT } from "../exit-codes.mts";
 import type { PollSummaryResult, ShepherdAction, StackNextAction } from "../types.mts";
 import { formatPollSummaryResult } from "./poll-summary-formatter.mts";
+import { projectStackOverview } from "./stack-overview.mts";
 
 export function emitPollSummaryResult(
   result: PollSummaryResult,
   opts: { format: "text" | "json" },
 ): void {
   process.stdout.write(
-    opts.format === "json" ? `${JSON.stringify(result)}\n` : `${formatPollSummaryResult(result)}\n`,
+    opts.format === "json"
+      ? `${JSON.stringify(result.selection.kind === "stack" ? projectStackOverview(result) : result)}\n`
+      : `${formatPollSummaryResult(result)}\n`,
   );
   process.exitCode = pollSummaryExitCode(result);
 }

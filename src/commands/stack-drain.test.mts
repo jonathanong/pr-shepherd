@@ -10,6 +10,27 @@ function text(result: { instructions?: string[] }): string {
 }
 
 describe("bottom-layer stack drain", () => {
+  it("sends an ejected layer to its one-PR session", () => {
+    const result = withPollSummaryInstructions(
+      stack([
+        row(1, 1, {
+          action: "fix_code",
+          reasons: ["queue-removal"],
+          queueRemoval: {
+            reason: "CI_FAILURE",
+            actor: "github",
+            createdAtUnix: 1,
+            beforeCommitOid: "a".repeat(40),
+          },
+        }),
+      ]),
+      false,
+    );
+    expect(text(result)).toContain(
+      "PR #1 was removed from the merge queue (`CI_FAILURE` by @github). Run `pr-shepherd https://github.com/acme/widgets/pull/1 --until-terminal` for PR #1. That session fixes failing queue CI, or escalates when the removal has no concrete fix.",
+    );
+  });
+
   it("merges the top PR when every layer is ready", () => {
     const result = withPollSummaryInstructions(
       stack([row(1, 1, ready), row(2, 2, ready), row(3, 3, ready)]),

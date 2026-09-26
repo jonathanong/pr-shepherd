@@ -615,7 +615,7 @@ describe("runIterate — cancel", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("wait");
+    expect(result.action).toBe("ready");
     expect(mockClearReadyReceipt).toHaveBeenCalledWith({ owner: "owner", repo: "repo", pr: 42 });
   });
 

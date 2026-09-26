@@ -56,7 +56,7 @@ describe("fix_code — passing-check annotations", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("wait");
+    expect(result.action).toBe("ready");
   });
 
   it("does not keep fix_code alive for already-seen passing-check annotations", async () => {
@@ -93,7 +93,7 @@ describe("fix_code — passing-check annotations", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("wait");
+    expect(result.action).toBe("ready");
   });
 
   it("does not treat ignored annotated checks as failing CI", async () => {
