@@ -8,7 +8,7 @@ import type {
 } from "../../types.mts";
 import type { StackStatus } from "../../types/merge-requirements.mts";
 import { buildEscalateHumanMessage, buildEscalateSuggestion } from "./escalate.mts";
-import { buildMergeCommandPlan } from "./merge.mts";
+import { buildMergeCommandPlan, unavailableMergeResult } from "./merge.mts";
 import { formatPrUrl } from "../../pr-reference.mts";
 import { buildPrShepherdCommand } from "../../cli/runner.mts";
 import { inlineCode } from "../../util/markdown.mts";
@@ -70,17 +70,16 @@ export function buildReadyMergeOutcome(
     report.mergeStatus.mergeRequirements?.mergeQueue?.required ||
     report.mergeStatus.mergeRequirements?.mergeQueue?.enabled,
   );
-  return {
-    ...base,
-    action: "merge",
-    merge: buildMergeCommandPlan({
-      pr: report.pr,
-      repo: report.repo,
-      nodeId: report.nodeId,
-      headSha: report.headSha ?? "unknown",
-      queue,
-    }),
-  };
+  const plan = buildMergeCommandPlan({
+    pr: report.pr,
+    repo: report.repo,
+    nodeId: report.nodeId,
+    headSha: report.headSha ?? "unknown",
+    queue,
+    ...(report.allowedMergeMethods && { allowedMergeMethods: report.allowedMergeMethods }),
+  });
+  if ("unavailable" in plan) return unavailableMergeResult(base, report, plan.unavailable);
+  return { ...base, action: "merge", merge: plan };
 }
 
 /** Raw counts of non-CI actionable work held back for one queued-PR wait tick. Omitted (all zero) when empty. */

@@ -103,6 +103,8 @@ describe("queries — GQL constants load at import time", () => {
   it("selects raw viewer authorization fields for every generated GitHub action", () => {
     expect(BATCH_PR_QUERY).toContain("viewerPermission");
     expect(BATCH_PR_QUERY).toContain("viewerCanAdminister");
+    expect(BATCH_PR_QUERY).toContain("squashMergeAllowed");
+    expect(POLL_STACK_SUMMARY_QUERY).toContain("squashMergeAllowed");
     expect(BATCH_PR_QUERY).toContain("viewerCanUpdate");
     expect(BATCH_PR_QUERY).toContain("viewerCanEnableAutoMerge");
     expect(BATCH_PR_QUERY).toContain("viewerCanReply");

@@ -11,7 +11,8 @@ export type EscalateTrigger =
   | "stall-state-unavailable"
   | "check-follow-up-unavailable"
   | "authorization-required"
-  | "merge-queue-removed";
+  | "merge-queue-removed"
+  | "merge-method-unavailable";
 
 export interface AgentStalledCheck {
   name: string;

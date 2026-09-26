@@ -43,6 +43,7 @@ async function runPollSummaryCore(opts: PollSummaryCommandOptions): Promise<Poll
       reason: allTerminal ? "all_terminal" : actionable ? "actionable" : "waiting",
       prs: fetched.prs,
       ...(fetched.stackAncestry?.length && { stackAncestry: fetched.stackAncestry }),
+      ...(fetched.allowedMergeMethods && { allowedMergeMethods: fetched.allowedMergeMethods }),
     },
     opts.merge === true,
   );

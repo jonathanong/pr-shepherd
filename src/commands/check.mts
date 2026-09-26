@@ -476,6 +476,9 @@ export async function runCheck(
       ? { ruleAutoResolveReviewSummaryIds }
       : undefined),
     branchProtection: batchData.branchProtection,
+    ...(batchData.allowedMergeMethods && {
+      allowedMergeMethods: batchData.allowedMergeMethods,
+    }),
     activity: batchData.activity,
     ...(hasQueueState && {
       mergeQueue: {

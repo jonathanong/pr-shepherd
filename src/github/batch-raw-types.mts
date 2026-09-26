@@ -7,6 +7,9 @@ export interface RawBatchResponse {
   repository: {
     viewerPermission: string | null;
     viewerCanAdminister: boolean;
+    mergeCommitAllowed?: boolean;
+    squashMergeAllowed?: boolean;
+    rebaseMergeAllowed?: boolean;
     pullRequest: RawPr | null;
   } | null;
 }

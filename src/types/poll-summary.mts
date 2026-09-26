@@ -99,6 +99,11 @@ export interface PollSummaryResult {
   nextAction?: StackNextAction;
   /** Whether every open layer is independently ready and stack ancestry is linear. */
   stackMergeable?: boolean;
+  /**
+   * Repository merge methods for stack merge commands. Omitted from the lean
+   * stack overview. Empty when the repository enables none.
+   */
+  allowedMergeMethods?: import("../config/merge-method.mts").MergeMethod[];
   instructions?: string[];
   apiUsage?: ApiUsage;
   quotaWarning?: GraphqlQuotaWarning;

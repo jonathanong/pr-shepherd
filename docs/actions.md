@@ -79,7 +79,7 @@ unwritable state directory cannot keep the idle wait polling
 When `--merge` is requested, the selector finds the highest open layer such that it and every open
 layer below it have a current READY receipt, the bottom open layer targets the stack base, and the
 prefix has no stale ancestry, queued layer, escalation, or closed-unmerged layer. The summary
-returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge <that PR number> --yes --squash`.
+returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge <that PR number> --yes` and the repository-allowed method flag (`--squash` unless `merge.method` or the repository settings select another). When no allowed method remains, the result is `ESCALATE` with `merge-method-unavailable` and no merge command.
 `gh stack merge <PR>` lands that pull request and every unmerged pull request below it in one
 operation ([GitHub's stacked PR merge](https://github.github.com/gh-stack/introduction/overview/)).
 A direct merge is atomic. When the base branch uses a merge queue, the prefix is queued together
@@ -316,7 +316,7 @@ Emits an exact GitHub CLI command; Shepherd does not execute or wrap the merge o
 
 **Command modes:** Explicit merge intent is not gated by `viewerCanEnableAutoMerge`. An ordinary branch emits a head-pinned `gh pr merge <PR> --repo <owner/repo> --match-head-commit <head> --auto ...commandArgs` plus a plain-merge fallback command; a queue-required or queue-enabled branch (`mergeRequirements.mergeQueue.required` or `.enabled`) emits a head-pinned queue command (`mode: "queue"`) plus a `queueApiFallbackCommand` — a direct `enqueuePullRequest` GraphQL mutation — for the known gh CLI queue limitation. GitHub is authoritative: permission, branch-policy, and other execution failures are surfaced from the attempted command/API response.
 
-Configured `merge.commandArgs` apply only to ordinary auto-merge commands. Every emitted command pins the expected PR head.
+Configured `merge.method` and `merge.commandArgs` apply only to ordinary auto-merge commands. The method flag is one the repository allows (`mergeCommitAllowed`, `squashMergeAllowed`, `rebaseMergeAllowed`). When none is configured, the command uses the first allowed method in the order merge, squash, rebase. A configured method the repository disables, or a repository with every method disabled, returns `ESCALATE` with trigger `merge-method-unavailable` and does not print a `gh pr merge` command. Every emitted command pins the expected PR head.
 
 **Native stacks:** When GitHub's batch query reports the PR is part of a native stack, Shepherd builds neither ordinary command mode above, for any stack position including position 1. `--auto` is rejected server-side on stacked PRs, and the plain-merge fallback would land a mid-stack PR into its still-unmerged parent branch instead of the stack's trunk ref. After persisting its fresh READY receipt, the one-PR poll returns non-terminal `FIX_CODE` with `pr-shepherd --stack <PR URL> --until-terminal --merge`. That selector reconciles each layer's READY receipt and linear ancestry and returns `MERGE` for the highest open layer whose open lower layers are all ready; it then rechecks until every layer merges and returns `CANCEL`. If the fresh snapshot or receipt cannot be persisted, the one-PR poll returns `WAIT` and does not claim the stack is ready.
 

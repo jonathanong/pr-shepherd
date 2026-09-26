@@ -18,6 +18,9 @@ query PollStackSummary(
   }
   repository(owner: $owner, name: $repo) {
     viewerCanAdminister
+    mergeCommitAllowed
+    squashMergeAllowed
+    rebaseMergeAllowed
     pullRequest(number: $anchor) {
       stack {
         id
