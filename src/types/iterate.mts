@@ -8,6 +8,7 @@ import type {
   ShepherdStatus,
   FirstLookThread,
   FirstLookComment,
+  RuleAutoResolveReport,
 } from "./report.mts";
 import type { ActiveCheck, PrActivitySummary } from "./activity.mts";
 import type {
@@ -73,6 +74,8 @@ export interface IterateResultBase {
   apiUsage?: ApiUsage;
   quotaWarning?: GraphqlQuotaWarning;
   fingerprintReused?: true;
+  /** Classification-rule resolve/minimize applied during this fetch. Omitted when nothing happened. */
+  ruleAutoResolve?: RuleAutoResolveReport;
 }
 
 interface IterateResultWait extends IterateResultBase {

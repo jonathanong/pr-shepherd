@@ -8,6 +8,7 @@ import { fingerprintInputDigest, loadPrFingerprint } from "../state/pr-fingerpri
 import type { PrShepherdConfig } from "../config/load.mts";
 import { hasCheckDrivenActionableWork } from "./check-annotations.mts";
 import type { ShepherdReport } from "../types.mts";
+import { stripReplayedRuleAutoResolve } from "./rule-auto-resolve-format.mts";
 
 function reportAllowsFingerprintSkip(report: ShepherdReport): boolean {
   if (report.status === "READY") return false;
@@ -60,7 +61,7 @@ export async function tryReuseFingerprintReport(
   ) {
     return null;
   }
-  return { ...cached.report, fingerprintReused: true };
+  return { ...stripReplayedRuleAutoResolve(cached.report), fingerprintReused: true };
 }
 
 async function cachedReportSurvivesMergeabilityRefresh(

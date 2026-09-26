@@ -9,10 +9,15 @@ import {
   mockAutoResolveThreads,
   mockFetchPrBatch,
   mockLoadSeenMap,
+  mockUpdatePullRequestBody,
 } from "../../test-helpers/commands/check.test-support.mts";
 import { hashBody } from "../state/seen-comments.mts";
+import { formatIterateResult } from "../cli/iterate-formatter.mts";
+import { projectIterateLean } from "../cli/iterate-lean.mts";
 import { runCheck } from "./check.mts";
+import { buildIterateBase } from "./iterate/base.mts";
 import type { ClassifyItem } from "../classify/types.mts";
+import type { IterateResult, ShepherdReport } from "../types.mts";
 
 vi.mock("../classify/loader.mts", () => ({
   discoverRuleFiles: vi.fn().mockReturnValue(["fake-rule.mjs"]),
@@ -39,6 +44,9 @@ describe("runCheck — classification auto-minimize", () => {
     expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["c-bot"]);
     expect(report.comments.actionable.map((c) => c.id)).not.toContain("c-bot");
     expect(report.comments.minimizeIds).not.toContain("c-bot");
+    expect(report.comments.autoMinimized).toEqual([
+      { id: "c-bot", kind: "pr-comment", ruleReason: "review-bot suppressed" },
+    ]);
   });
 
   it("keeps failed suppressed auto-resolve pr-comments in minimizeIds", async () => {
@@ -50,6 +58,10 @@ describe("runCheck — classification auto-minimize", () => {
     const report = await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: true });
 
     expect(report.comments.minimizeIds).toContain("c-bot");
+    expect(report.comments.autoMinimized).toBeUndefined();
+    expect(report.threads.autoResolveErrors).toEqual([
+      "c-bot: failed (rule: review-bot suppressed)",
+    ]);
   });
 
   it("keeps suppressed auto-resolve pr-comments queued when self-minimize is disabled", async () => {
@@ -60,7 +72,12 @@ describe("runCheck — classification auto-minimize", () => {
     const report = await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: false });
 
     expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
+    expect(mockAutoResolveThreads).not.toHaveBeenCalled();
+    expect(mockUpdatePullRequestBody).not.toHaveBeenCalled();
     expect(report.comments.minimizeIds).toContain("c-bot");
+    expect(report.comments.autoMinimized).toBeUndefined();
+    expect(report.threads.autoResolved).toEqual([]);
+    expect(report.threads.autoResolveErrors).toEqual([]);
   });
 
   it("surfaces a suppressed auto-resolve pr-comment when minimization is denied", async () => {
@@ -99,7 +116,11 @@ describe("runCheck — classification auto-minimize", () => {
   it("self-minimizes suppressed auto-resolve review summaries when enabled", async () => {
     mockAutoMinimizeComments.mockResolvedValue({ minimized: ["rev-bot"], errors: [] });
     mockFetchPrBatch.mockResolvedValue({
-      data: makeBatchData({ reviewSummaries: [botReviewSummary()] }),
+      data: makeBatchData({
+        reviewSummaries: [
+          { ...botReviewSummary(), url: "https://github.com/o/r/pull/1#pullrequestreview-9" },
+        ],
+      }),
     });
 
     const report = await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: true });
@@ -107,6 +128,14 @@ describe("runCheck — classification auto-minimize", () => {
     expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["rev-bot"]);
     expect(report.reviewSummaries.map((r) => r.id)).not.toContain("rev-bot");
     expect(report.ruleAutoResolveReviewSummaryIds ?? []).not.toContain("rev-bot");
+    expect(report.comments.autoMinimized).toEqual([
+      {
+        id: "rev-bot",
+        kind: "review-summary",
+        url: "https://github.com/o/r/pull/1#pullrequestreview-9",
+        ruleReason: "review-bot suppressed",
+      },
+    ]);
   });
 
   it.each([false, undefined])(
@@ -160,6 +189,14 @@ describe("runCheck — classification auto-minimize", () => {
     expect(mockAutoResolveThreads).toHaveBeenCalledWith(["t-bot"]);
     expect(report.threads.actionable.map((t) => t.id)).not.toContain("t-bot");
     expect(report.threads.ruleAutoResolveIds ?? []).not.toContain("t-bot");
+    expect(report.threads.autoResolved).toEqual([
+      expect.objectContaining({
+        id: "t-bot",
+        isResolved: true,
+        ruleReason: "review-bot suppressed",
+      }),
+    ]);
+    expect(report.threads.autoResolveErrors).toEqual([]);
   });
 
   it("surfaces a suppressed auto-resolve thread when resolve authorization is denied", async () => {
@@ -189,6 +226,51 @@ describe("runCheck — classification auto-minimize", () => {
 
     expect(report.threads.actionable).toEqual([]);
     expect(report.threads.ruleAutoResolveIds ?? []).not.toContain(thread.id);
+  });
+
+  it("records confirmed resolutions in iterate output and the Shepherd Journal", async () => {
+    mockAutoResolveThreads.mockResolvedValue({ resolved: ["t-bot"], errors: [] });
+    mockAutoMinimizeComments.mockResolvedValue({ minimized: ["c-bot"], errors: [] });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        viewerLogin: "alice",
+        comments: [{ ...botComment(), url: "https://github.com/o/r/pull/1#issuecomment-1" }],
+        reviewThreads: [{ ...botThread(), url: "https://github.com/o/r/pull/1#discussion_r1" }],
+      }),
+    });
+
+    const report = await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: true });
+    const summary = "auto-resolved 1 thread, minimized 1 comment (rule: review-bot suppressed)";
+    const { text, lean } = iterateProjection(report);
+
+    expect(report.threads.autoResolved.map((item) => item.id)).toEqual(["t-bot"]);
+    expect(report.comments.autoMinimized?.map((item) => item.id)).toEqual(["c-bot"]);
+    expect(lean.ruleAutoResolve?.summary).toBe(summary);
+    expect(text.indexOf("## Classification auto-resolve")).toBeLessThan(
+      text.indexOf("## Instructions"),
+    );
+    expect(text).toContain(summary);
+    expect(mockUpdatePullRequestBody).toHaveBeenCalledWith(
+      "PR_kgDOAAA",
+      expect.stringContaining(
+        "- auto-resolved 1 thread, minimized 1 comment as @alice (rule: review-bot suppressed): https://github.com/o/r/pull/1#discussion_r1, https://github.com/o/r/pull/1#issuecomment-1",
+      ),
+    );
+  });
+
+  it("reports a journal failure without rejecting the check", async () => {
+    mockAutoResolveThreads.mockResolvedValue({ resolved: ["t-bot"], errors: [] });
+    mockUpdatePullRequestBody.mockRejectedValue(new Error("body write failed"));
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ reviewThreads: [botThread()] }),
+    });
+
+    const report = await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: true });
+
+    expect(report.threads.autoResolved.map((item) => item.id)).toEqual(["t-bot"]);
+    expect(report.threads.autoResolveErrors).toEqual([
+      "journal: body write failed (rule: review-bot suppressed)",
+    ]);
   });
 });
 
@@ -228,10 +310,25 @@ function botThread() {
   };
 }
 
+function iterateProjection(report: ShepherdReport): {
+  text: string;
+  lean: { ruleAutoResolve?: { summary: string } };
+} {
+  const result = {
+    ...buildIterateBase(report, { shouldCancel: false, remainingSeconds: 0 }),
+    action: "wait" as const,
+    log: "WAIT",
+  } as IterateResult;
+  return {
+    text: formatIterateResult(result),
+    lean: projectIterateLean(result) as { ruleAutoResolve?: { summary: string } },
+  };
+}
+
 function classifyNoiseForAutoMinimizeTests(item: ClassifyItem) {
   switch (item.author) {
     case "bot-reviewer":
-      return { suppress: true, autoResolve: true };
+      return { suppress: true, autoResolve: true, reason: "review-bot suppressed" };
     case "auto-resolver":
       return { autoResolve: true };
     default:

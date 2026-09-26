@@ -89,4 +89,36 @@ describe("fetchPrBatch — reviewSummaries", () => {
     expect(data.changesRequestedReviews.map((r) => r.id)).toEqual(["PRR_CR"]);
     expect(data.reviewSummaries.map((r) => r.id)).toEqual(["PRR_CM"]);
   });
+
+  it("copies a review-summary url and omits a blank one", async () => {
+    const pr = makeRawPr({
+      reviewSummaries: {
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [
+          {
+            id: "PRR_1",
+            isMinimized: false,
+            author: { login: "copilot" },
+            body: "Overview",
+            url: "https://github.com/o/r/pull/1#pullrequestreview-1",
+          },
+          { id: "PRR_2", isMinimized: false, author: { login: "copilot" }, body: "Blank", url: "" },
+        ],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.reviewSummaries[0]).toMatchObject({
+      url: "https://github.com/o/r/pull/1#pullrequestreview-1",
+    });
+    expect(data.reviewSummaries[1]).not.toHaveProperty("url");
+  });
+
+  it("stores a viewer login and omits an empty one", async () => {
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(makeRawPr(), "alice"));
+    await expect(fetchPrBatch(42, REPO)).resolves.toMatchObject({ data: { viewerLogin: "alice" } });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(makeRawPr(), ""));
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.viewerLogin).toBeUndefined();
+  });
 });

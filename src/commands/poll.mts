@@ -8,6 +8,10 @@ import { onePrCancelFromPulls, onePrRateLimitTargets } from "./poll-rate-limit-c
 import { createUntilTerminalRateLimitRetry } from "./poll-rate-limit-wait.mts";
 import { writeDebounceProgress, writeWaitProgress } from "./poll-progress.mts";
 
+function noteRuleAutoResolve(result: IterateResult): void {
+  if (result.ruleAutoResolve?.summary) process.stderr.write(`${result.ruleAutoResolve.summary}\n`);
+}
+
 export interface PollCommandOptions extends IterateCommandOptions {
   intervalSeconds: number;
   timeoutSeconds: number;
@@ -59,8 +63,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
     const remainingBefore = untilTerminal
       ? Number.POSITIVE_INFINITY
       : timeoutMs - (Date.now() - start);
-    // Cache only internal continuation ticks. Last bounded tick, FIX_CODE debounce,
-    // and any tick we return to the caller must fetch BatchPr.
+    // Cache only internal continuation ticks; returned ticks must fetch BatchPr.
     const allowCache =
       debounceUntil === null && remainingBefore + TIMER_DRIFT_TOLERANCE_MS >= intervalMs;
     const iterateTick = (fingerprintCache: boolean) =>
@@ -114,6 +117,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       if (lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) {
         debounceUntil ??= Date.now() + debounceMs;
         const remainingMs = Math.max(debounceUntil - Date.now(), 0);
+        noteRuleAutoResolve(lastResult);
         writeDebounceProgress(tick, Date.now() - start, remainingMs);
         await sleep(Math.min(intervalMs, remainingMs));
         continue;
@@ -151,6 +155,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
         verbose,
         lastWaitSignature,
       });
+      noteRuleAutoResolve(lastResult);
       await sleep(sleepMs);
       continue;
     }
@@ -174,10 +179,12 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
           break;
         }
       }
+      noteRuleAutoResolve(lastResult);
       await sleep(sleepMs);
       continue;
     }
     if (lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) {
+      noteRuleAutoResolve(lastResult);
       debounceUntil ??= Date.now() + debounceMs;
       const remainingMs = debounceUntil - Date.now();
       if (remainingMs > 0) {
