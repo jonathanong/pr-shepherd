@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { row, stack } from "../../test-helpers/commands/poll-summary-stack.test-support.mts";
 import type { PollSummaryItem } from "../types.mts";
 import { withPollSummaryInstructions } from "./poll-summary-instructions.mts";
+import { appendAutonomousInstructions } from "./stack-drain.mts";
 import { splitStackWork } from "./stack-work.mts";
 
 const ready = { readyReceipt: true } as const;
@@ -78,6 +79,14 @@ describe("stack selector agent work", () => {
     expect(text(result)).toContain("PR #1 is not owned. Do not run a session for it.");
     expect(text(result)).not.toContain("pull/1 --until-terminal");
     expect(text(result)).toContain("rows marked `owned`");
+  });
+
+  it("says when an owned layer has no session command", () => {
+    const instructions: string[] = [];
+    appendAutonomousInstructions(instructions, [row(2, 2, { pollCommand: undefined })]);
+    expect(instructions.join("\n")).toContain(
+      "PR #2 needs a one-PR Shepherd session, but no command was available.",
+    );
   });
 
   it("keeps an upper draft's review session above a layer that needs a human", () => {
