@@ -20,7 +20,7 @@ describe("conflictingHeadCiNote", () => {
     hasConflicts: true,
     headCheckSuitesEmpty: true,
     checkRunCount: 0,
-    headCommittedAtUnix: oldEnough,
+    firstSeenAtUnix: oldEnough,
     nowMs,
   };
 
@@ -32,14 +32,14 @@ describe("conflictingHeadCiNote", () => {
     expect(
       conflictingHeadCiNote({
         ...ready,
-        headCommittedAtUnix: Math.floor(nowMs / 1000),
+        firstSeenAtUnix: Math.floor(nowMs / 1000),
       }),
     ).toBeUndefined();
     expect(conflictingHeadCiNote({ ...ready, hasConflicts: false })).toBeUndefined();
     expect(conflictingHeadCiNote({ ...ready, headCheckSuitesEmpty: false })).toBeUndefined();
     expect(conflictingHeadCiNote({ ...ready, checkRunCount: 1 })).toBeUndefined();
-    expect(conflictingHeadCiNote({ ...ready, headCommittedAtUnix: undefined })).toBeUndefined();
-    expect(conflictingHeadCiNote({ ...ready, headCommittedAtUnix: Number.NaN })).toBeUndefined();
+    expect(conflictingHeadCiNote({ ...ready, firstSeenAtUnix: undefined })).toBeUndefined();
+    expect(conflictingHeadCiNote({ ...ready, firstSeenAtUnix: Number.NaN })).toBeUndefined();
   });
 
   it("counts every reported check bucket, including ignored", () => {

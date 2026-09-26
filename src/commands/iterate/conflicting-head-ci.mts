@@ -2,20 +2,21 @@
 const CONFLICTING_HEAD_CI_GRACE_MS = 2 * 60 * 1000;
 
 const NO_CI_NOTE =
-  "GitHub did not start pull_request workflows for this conflicting head: no check suites or workflow runs have appeared since the push. Missing CI is a consequence of the conflict, not an outage, and pushing this same head again will not start them.";
+  "GitHub did not start pull_request workflows for this conflicting head: no check suites or workflow runs have appeared for at least 2 minutes. Missing CI is a consequence of the conflict, not an outage, and pushing this same head again will not start them.";
 
 export function conflictingHeadCiNote(input: {
   hasConflicts: boolean;
   headCheckSuitesEmpty: boolean;
   checkRunCount: number;
-  headCommittedAtUnix: number | null | undefined;
+  /** Unix seconds when Shepherd first saw this head. Omit when that time is unknown. */
+  firstSeenAtUnix: number | null | undefined;
   nowMs: number;
 }): string | undefined {
   if (!input.hasConflicts || !input.headCheckSuitesEmpty || input.checkRunCount > 0) {
     return undefined;
   }
-  if (typeof input.headCommittedAtUnix !== "number") return undefined;
-  const ageMs = input.nowMs - input.headCommittedAtUnix * 1000;
+  if (typeof input.firstSeenAtUnix !== "number") return undefined;
+  const ageMs = input.nowMs - input.firstSeenAtUnix * 1000;
   if (!Number.isFinite(ageMs) || ageMs < CONFLICTING_HEAD_CI_GRACE_MS) return undefined;
   return NO_CI_NOTE;
 }

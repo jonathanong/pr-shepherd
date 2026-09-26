@@ -1,4 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   makeOpts,
   makeReport,
@@ -7,6 +10,7 @@ import {
   NOW,
   registerIterateHooks,
 } from "../../test-helpers/commands/iterate-test-support.mts";
+import { conflictingHeadFirstSeenUnix } from "../state/conflicting-head-seen.mts";
 import { runIterate } from "./iterate/index.mts";
 
 registerIterateHooks();
@@ -31,26 +35,42 @@ const noChecks = {
   blockedByFilteredCheck: false,
 };
 
-function report(committedAt: number) {
+const headSha = "c".repeat(40);
+
+function report() {
   return makeReport({
-    headSha: "c".repeat(40),
+    headSha,
     headCheckSuitesEmpty: true,
     status: "FAILING",
     baseBranch: "main",
     mergeStatus: conflicts,
     checks: noChecks,
-    activity: {
-      commitCount: 1,
-      reviewRoundCount: 0,
-      latestCommitCommittedAtUnix: committedAt,
-      reviewItemsSinceLatestCommit: [],
-    },
   });
 }
 
 describe("runIterate conflicting head with no CI", () => {
-  it("says CI did not start once the grace period has elapsed", async () => {
-    mockRunCheck.mockResolvedValue(report(NOW - 121));
+  let dir: string;
+  let previous: string | undefined;
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), "pr-shepherd-ci-"));
+    previous = process.env["PR_SHEPHERD_STATE_DIR"];
+    process.env["PR_SHEPHERD_STATE_DIR"] = dir;
+  });
+
+  afterEach(async () => {
+    if (previous === undefined) delete process.env["PR_SHEPHERD_STATE_DIR"];
+    else process.env["PR_SHEPHERD_STATE_DIR"] = previous;
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("says CI did not start once the head has been seen through the grace period", async () => {
+    await conflictingHeadFirstSeenUnix(
+      { owner: "owner", repo: "repo", pr: 42 },
+      headSha,
+      (NOW - 121) * 1000,
+    );
+    mockRunCheck.mockResolvedValue(report());
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: false,
       shouldCancel: false,
@@ -63,7 +83,7 @@ describe("runIterate conflicting head with no CI", () => {
   });
 
   it("omits the note while the head commit is still inside the grace period", async () => {
-    mockRunCheck.mockResolvedValue(report(NOW));
+    mockRunCheck.mockResolvedValue(report());
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: false,
       shouldCancel: false,

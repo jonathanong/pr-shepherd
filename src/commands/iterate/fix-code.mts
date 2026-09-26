@@ -26,6 +26,7 @@ import {
   countReportedChecks,
   insertConflictingHeadCiNote,
 } from "./conflicting-head-ci.mts";
+import { conflictingHeadFirstSeenUnix } from "../../state/conflicting-head-seen.mts";
 import { applyStallGuard } from "./stall.mts";
 import { annotationMarkerBody, checksWithActionableAnnotations } from "../check-annotations.mts";
 import { threadTranscriptBody } from "../../threads/transcript.mts";
@@ -496,14 +497,25 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   if (repairInstructions && repairInstructions.length > 0) {
     instructions.unshift(...repairInstructions);
   }
+  const checkRunCount = countReportedChecks(report.checks);
+  const suitesEmpty = report.headCheckSuitesEmpty === true;
+  const nowMs = Date.now();
+  const firstSeenAtUnix =
+    hasConflicts && suitesEmpty && checkRunCount === 0 && report.headSha
+      ? await conflictingHeadFirstSeenUnix(
+          { owner: repoOwner, repo: repoName, pr: prNumber },
+          report.headSha,
+          nowMs,
+        )
+      : undefined;
   insertConflictingHeadCiNote(
     instructions,
     conflictingHeadCiNote({
       hasConflicts,
-      headCheckSuitesEmpty: report.headCheckSuitesEmpty === true,
-      checkRunCount: countReportedChecks(report.checks),
-      headCommittedAtUnix: report.activity?.latestCommitCommittedAtUnix,
-      nowMs: Date.now(),
+      headCheckSuitesEmpty: suitesEmpty,
+      checkRunCount,
+      firstSeenAtUnix,
+      nowMs,
     }),
   );
   const prospectiveResult = {
