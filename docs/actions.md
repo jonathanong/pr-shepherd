@@ -144,6 +144,12 @@ Conversations Resolved: <Yes|No> [Required|Not Required]
 - Recommended bounded CLI timeout: <minutes> minutes
 - Recommendation: keep polling pr-shepherd at the cadence above; for incidental PR operations prefer REST `gh` (`gh pr view`, `gh pr review`, `gh api`); do not substitute `gh pr checks`/`gh pr watch`]
 
+[## Classification auto-resolve
+
+<one-line summary>[ (rule: <reason>)]
+[- <url or `id`>]
+[- <id>: <error> [(rule: <reason>)] ]]
+
 ## Instructions
 
 1. <numbered steps telling the agent exactly what to do>
@@ -672,13 +678,28 @@ export default function rule(item: ClassifyItem): ClassifyAction | null {}
 
 The `ClassifyItem` union covers four kinds: `"review-thread"`, `"pr-comment"`, `"review-summary"`, and `"changes-requested"`. Each item carries `id`, `author`, `authorType`, optional raw GitHub `authorAssociation`, `body`, and (for threads) `path`. Association values are context only; rules decide how, if at all, to use them.
 
-`ClassifyAction` has two optional boolean flags:
+`ClassifyAction` has two optional boolean flags and an optional note:
 
 - `suppress: true` — hides the item from agent output; the seen marker is still written so the item does not re-surface as first-look on the next tick.
-- `autoResolve: true` — routes the item's ID into the resolve/minimize mutation: threads go to `--resolve-thread-ids`, PR comments and review summaries go to `--minimize-comment-ids`. When combined with `suppress: true`, Shepherd performs the mutation silently by default via `actions.autoMinimizeSuppressed` and only falls back to the generated `apply review` command if the mutation fails. Not supported for `"changes-requested"` items (dismissing a review requires an explicit message).
+- `autoResolve: true` — routes the item's ID into the resolve/minimize mutation: threads go to `--resolve-thread-ids`, PR comments and review summaries go to `--minimize-comment-ids`. When combined with `suppress: true` and [`actions.autoMinimizeSuppressed`](configuration.md#actionsautominimizesuppressed--default-true) is `true` (the default), Shepherd performs the authorized mutation itself, records it (see [Classification auto-resolve](#classification-auto-resolve) below), and leaves only failed IDs on the generated `apply review` command. Not supported for `"changes-requested"` items (dismissing a review requires an explicit message).
+- `reason` — optional note printed in the auto-resolve line, stored as `ruleReason`, and included in the Shepherd Journal item when this rule fires.
 
-Rules from multiple files combine permissively: `suppress` and `autoResolve` are OR'd across all matching rules for a given item.
+Rules from multiple files combine permissively: `suppress` and `autoResolve` are OR'd across all matching rules for a given item, and every non-empty `reason` is kept.
 
 Files starting with `_` or `.` are ignored. The loader walks up from `cwd` looking for `.pr-shepherd/classification/`, stopping at the home directory. Unlike `.pr-shepherdrc.yml`, only the first classification directory found is used. TypeScript rule files (`.ts` / `.mts`) are loaded by the runtime's native TypeScript support, so keep them to erasable syntax such as type annotations and `import type`. Runtime TypeScript features that need transpilation, such as enums, namespaces, parameter properties, and decorators, are not supported. Use `.mts` for portable ESM rules across Node, Bun, and Deno.
 
 Example rules for common bot-noise patterns are in [`examples/classification/`](../examples/classification/).
+
+## Classification auto-resolve
+
+On a tick where `actions.autoMinimizeSuppressed` applied at least one confirmed resolve or minimize, or where one of those mutations failed, iterate prints `## Classification auto-resolve` immediately before `## Instructions` on every action. JSON and MCP carry the same object as `ruleAutoResolve`. The section and field are omitted when nothing was applied and nothing failed. Empty `threads`, `minimized`, and `errors` arrays are omitted.
+
+The summary is one line, for example `auto-resolved 2 threads, minimized 1 comment and 1 review summary (rules: review-bot suppressed; quota)`. One reason uses `(rule: …)`; several distinct reasons use `(rules: …)` joined with `; `. Review summaries are counted separately from PR comments. Bullets under the summary are thread and comment URLs (a review-summary URL when GitHub returned one, otherwise the backticked id). Mutation and journal failures are further bullets in the same section, not a second summary. A failure-only tick reads `auto-resolve failed for N mutation(s)`, plus the rule clause from `threads.autoResolveErrorReasons`. Those are the rule values themselves, so a reason that contains `)` or `; ` stays one reason. Shepherd does not parse reasons back out of the error text.
+
+`ruleAutoResolve.threads` is the confirmed `threads.autoResolved` list (`isResolved: true`, plus `ruleReason` when a rule supplied one). `ruleAutoResolve.minimized` is `comments.autoMinimized`: `{ id, url?, kind: "pr-comment" | "review-summary", ruleReason? }`. `ruleAutoResolve.errors` is `threads.autoResolveErrors`, each string `"<id>: <message>"` plus ` (rule: <reason>)` when the matching rule supplied one. IDs in `errors` stay in `threads.ruleAutoResolveIds`, `comments.minimizeIds`, or `ruleAutoResolveReviewSummaryIds` so the generated `apply review` command is the retry path.
+
+After confirmed successes, Shepherd appends one Shepherd Journal list item with the token login (`as @login`, or `(token login unavailable)`), the same reasons, and the URLs. A journal read or write failure is added to `errors` and does not undo the resolve or minimize. Exact-text dedupe in the journal append covers a retry of the same item.
+
+A swallowed poll tick (`WAIT`, a `MARK_READY` continuation, or a `FIX_CODE` debounce discard) writes that same summary line to stderr, including under `--quiet-status`. The tick returned as stdout does not also print it on stderr. A reused fingerprint drops `autoResolved`, `autoResolveErrors`, `autoResolveErrorReasons`, and `autoMinimized` before the next tick, so the line and journal entry are not replayed.
+
+`actions.autoMinimizeSuppressed: false` does not mutate, journal, or print the line. Those IDs stay on the generated `apply review` command.

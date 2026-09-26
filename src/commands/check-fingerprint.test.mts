@@ -393,6 +393,35 @@ describe("tryReuseFingerprintReport", () => {
     expect(mockMergeable).not.toHaveBeenCalled();
   });
 
+  it("drops rule auto-resolve results recorded on the cached tick", async () => {
+    const report = waitReport({
+      threads: {
+        actionable: [],
+        resolutionOnly: [],
+        autoResolved: [
+          { id: "t1", isResolved: true } as ShepherdReport["threads"]["autoResolved"][number],
+        ],
+        autoResolveErrors: ["c1: failed (rule: noise)"],
+        autoResolveErrorReasons: ["quota (daily); extra"],
+        firstLook: [],
+      },
+      comments: {
+        actionable: [],
+        firstLook: [],
+        autoMinimized: [{ id: "c1", kind: "pr-comment", url: "https://github.com/c/1" }],
+      },
+    });
+    mockLoad.mockResolvedValue(stored(report));
+    const reused = await tryReuseFingerprintReport(42, REPO, KEY, CONFIG);
+    expect(reused).toMatchObject({
+      fingerprintReused: true,
+      pr: 42,
+      threads: { autoResolved: [], autoResolveErrors: [] },
+    });
+    expect(reused?.threads).not.toHaveProperty("autoResolveErrorReasons");
+    expect(reused?.comments).not.toHaveProperty("autoMinimized");
+  });
+
   it("does not skip a READY report when live merge policy is missing", async () => {
     const report = waitReport({ status: "READY" });
     mockLoad.mockResolvedValue(stored(report));

@@ -16,6 +16,7 @@ import {
 import { formatApiUsage, formatQuotaWarning } from "./api-usage-formatter.mts";
 import { formatActivityLine } from "./iterate-activity-formatter.mts";
 import { branchStateSegment } from "./iterate-branch-segment.mts";
+import { insertRuleAutoResolveSection } from "../commands/rule-auto-resolve-format.mts";
 
 /**
  * Format an IterateResult as human-readable Markdown.
@@ -40,6 +41,8 @@ export function formatIterateResult(
 ): string {
   const verbose = opts?.verbose ?? false;
   const readyDelaySuffix = opts?.readyDelaySuffix;
+  const finish = (text: string): string =>
+    insertRuleAutoResolveSection(text, result.ruleAutoResolve);
 
   const heading = `# PR #${result.pr} [${result.action.toUpperCase()}]`;
   const reviewDecisionSeg =
@@ -128,19 +131,21 @@ export function formatIterateResult(
       waitLines.push(
         `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
       );
-      return joinSections(waitLines);
+      return finish(joinSections(waitLines));
     }
 
     case "mark_ready":
-      return joinSections([
-        header,
-        ...telemetrySections,
-        adaptIterateLog(result.log),
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
-      ]);
+      return finish(
+        joinSections([
+          header,
+          ...telemetrySections,
+          adaptIterateLog(result.log),
+          `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
+        ]),
+      );
 
     case "merge":
-      return formatMergeAction(joinSections([header, ...telemetrySections]), result);
+      return finish(formatMergeAction(joinSections([header, ...telemetrySections]), result));
 
     case "cancel": {
       const cancelHeaderLines = [`${heading} — ${result.reason}`, "", baseLine, summaryLine];
@@ -159,25 +164,31 @@ export function formatIterateResult(
       }
       appendMergeQueueHeader(cancelHeaderLines, result);
       if (activityLine) cancelHeaderLines.push(activityLine);
-      return joinSections([
-        cancelHeaderLines.join("\n"),
-        ...(apiUsage ? [apiUsage] : []),
-        ...(verboseChecks ? [verboseChecks] : []),
-        adaptIterateLog(result.log),
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
-      ]);
+      return finish(
+        joinSections([
+          cancelHeaderLines.join("\n"),
+          ...(apiUsage ? [apiUsage] : []),
+          ...(verboseChecks ? [verboseChecks] : []),
+          adaptIterateLog(result.log),
+          `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
+        ]),
+      );
     }
 
     case "escalate":
-      return joinSections([
-        header,
-        ...(apiUsage ? [apiUsage] : []),
-        ...(verboseChecks ? [verboseChecks] : []),
-        result.escalate.humanMessage,
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
-      ]);
+      return finish(
+        joinSections([
+          header,
+          ...(apiUsage ? [apiUsage] : []),
+          ...(verboseChecks ? [verboseChecks] : []),
+          result.escalate.humanMessage,
+          `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
+        ]),
+      );
 
     case "fix_code":
-      return formatFixCodeResult(joinSections([header, ...telemetrySections]), result, { verbose });
+      return finish(
+        formatFixCodeResult(joinSections([header, ...telemetrySections]), result, { verbose }),
+      );
   }
 }

@@ -42,6 +42,7 @@ function parseReviewNode(r: RawReview | RawReviewSummary): Review {
     viewerCanMinimize: "viewerCanMinimize" in r && r.viewerCanMinimize === true,
     body: r.body,
     createdAtUnix: r.createdAt ? parseCreatedAt(r.createdAt) : 0,
+    ...("url" in r && r.url ? { url: r.url } : {}),
   };
   if ("commit" in r && r.commit?.oid) {
     base.commitOid = r.commit.oid;

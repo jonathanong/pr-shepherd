@@ -176,6 +176,7 @@ export interface RawReviewSummary {
   author: RawAuthor | null;
   body: string;
   createdAt?: string;
+  url?: string;
 }
 
 export type RawContextNode =

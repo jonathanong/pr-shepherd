@@ -66,6 +66,8 @@ export async function fetchPrBatch(
     paged.checks,
     result.data.repository!,
   );
+  const viewerLogin = result.data.viewer?.login;
+  if (viewerLogin) data.viewerLogin = viewerLogin;
   data.checks = mergeStartupFailureChecks(data.checks, parseSuiteStartupFailures(raw));
   return {
     data,
