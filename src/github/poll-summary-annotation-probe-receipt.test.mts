@@ -64,7 +64,7 @@ function readyPr(): RawSummaryPr {
     comments: { totalCount: 0, pageInfo: { hasPreviousPage: false }, nodes: [] },
     reviews: { totalCount: 0, pageInfo: { hasPreviousPage: false }, nodes: [] },
     reviewThreads: { totalCount: 0, pageInfo: { hasPreviousPage: false }, nodes: [] },
-  } as RawSummaryPr;
+  } as unknown as RawSummaryPr;
 }
 
 beforeEach(() => vi.clearAllMocks());
