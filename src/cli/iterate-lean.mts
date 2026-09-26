@@ -1,6 +1,7 @@
 /* eslint-disable max-lines */
 import type { IterateResult } from "../types.mts";
 import { adaptIterateLog, buildSimpleIterateInstructions } from "./iterate-instructions.mts";
+import { projectRuleAutoResolve } from "../commands/rule-auto-resolve-format.mts";
 interface IterateProjectionOptions {
   readyDelaySuffix?: string;
 }
@@ -77,7 +78,15 @@ export function projectIterateLean(
     ...((result.supersededNames?.length ?? 0) > 0 && {
       supersededNames: result.supersededNames,
     }),
+    ...((result.unreportedRequiredChecks?.length ?? 0) > 0 && {
+      unreportedRequiredChecks: result.unreportedRequiredChecks,
+    }),
+    ...(result.trunkBehindBy !== undefined &&
+      result.trunkBehindBy > 0 && { trunkBehindBy: result.trunkBehindBy }),
     ...(result.quotaWarning && { quotaWarning: result.quotaWarning }),
+    ...(result.ruleAutoResolve && {
+      ruleAutoResolve: projectRuleAutoResolve(result.ruleAutoResolve),
+    }),
   };
 
   switch (result.action) {

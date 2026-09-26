@@ -12,6 +12,10 @@ export interface PollSummaryChecks {
   ignored?: number;
   superseded?: number;
   incomplete?: true;
+  /** Required contexts with no check run and no status context. Omitted when empty. */
+  unreportedRequired?: string[];
+  /** A relevant Actions workflow suite has not completed. */
+  actionsWorkflowInProgress?: true;
 }
 
 export interface PollSummaryReview {

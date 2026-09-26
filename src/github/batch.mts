@@ -5,8 +5,10 @@ import { parseRawPr } from "./batch-parsers.mts";
 import {
   parseCheckSuitesComplete,
   parseHeadCheckSuitesEmpty,
+  parseHeadWorkflowSuites,
   parseSuiteStartupFailures,
 } from "./batch-parse-suites.mts";
+import type { WorkflowSuiteSnapshot } from "../checks/unreported-required.mts";
 import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
 import { paginateBatchConnections } from "./batch-page.mts";
 import { requireRawPr } from "./batch-response.mts";
@@ -23,6 +25,8 @@ interface BatchResult {
   checkSuitesComplete?: boolean;
   /** True when that complete page listed no check suites on the head commit. */
   headCheckSuitesEmpty?: true;
+  /** Actions workflow suites on the head, excluding apps that have no workflow run. */
+  headWorkflowSuites?: WorkflowSuiteSnapshot[];
 }
 
 interface FetchPrBatchOptions {
@@ -66,6 +70,8 @@ export async function fetchPrBatch(
     paged.checks,
     result.data.repository!,
   );
+  const viewerLogin = result.data.viewer?.login;
+  if (viewerLogin) data.viewerLogin = viewerLogin;
   data.checks = mergeStartupFailureChecks(data.checks, parseSuiteStartupFailures(raw));
   return {
     data,
@@ -77,5 +83,13 @@ export async function fetchPrBatch(
     rateLimit: paged.rateLimit ?? result.rateLimit,
     ...(parseCheckSuitesComplete(raw) && { checkSuitesComplete: true }),
     ...(parseHeadCheckSuitesEmpty(raw) && { headCheckSuitesEmpty: true as const }),
+    ...workflowSuites(raw),
   };
+}
+
+function workflowSuites(raw: Parameters<typeof parseHeadWorkflowSuites>[0]): {
+  headWorkflowSuites?: WorkflowSuiteSnapshot[];
+} {
+  const suites = parseHeadWorkflowSuites(raw);
+  return suites.length > 0 ? { headWorkflowSuites: suites } : {};
 }

@@ -15,6 +15,22 @@ import type { CheckAnnotation } from "./check-annotations.mts";
 import type { PrActivitySummary } from "./activity.mts";
 import type { MergeQueueReport } from "./merge-queue.mts";
 
+export interface AutoMinimizedItem {
+  id: string;
+  url?: string;
+  kind: "pr-comment" | "review-summary";
+  ruleReason?: string;
+}
+
+export type AutoResolvedThread = ReviewThread & { ruleReason?: string };
+
+export interface RuleAutoResolveReport {
+  summary: string;
+  threads?: AutoResolvedThread[];
+  minimized?: AutoMinimizedItem[];
+  errors?: string[];
+}
+
 export interface FirstLookThread extends ReviewThread {
   firstLookStatus: "outdated" | "resolved" | "minimized";
   autoResolved?: boolean;
@@ -44,6 +60,8 @@ export interface ShepherdReport {
   nodeId: string;
   /** GitHub PR head OID from the same batch used to decide the action. */
   headSha?: string;
+  /** PR head branch name. Used to compare a native stack against its trunk. */
+  headRefName?: string;
   /** Internal. True when this report was reused from the fingerprint cache. */
   fingerprintReused?: true;
   repo: string;
@@ -75,8 +93,10 @@ export interface ShepherdReport {
     actionable: ReviewThread[];
     /** Unresolved threads that need a GitHub resolve mutation but do not require code edits. */
     resolutionOnly: ReviewThread[];
-    autoResolved: ReviewThread[];
+    autoResolved: AutoResolvedThread[];
     autoResolveErrors: string[];
+    /** Rule reasons for this fetch's auto-resolve errors. Omitted when empty. */
+    autoResolveErrorReasons?: string[];
     /** First-look items — outdated/resolved/minimized threads not yet seen by the agent. */
     firstLook: FirstLookThread[];
     /** Thread IDs matched by user classification rules with autoResolve:true — routed to resolveThreadIds. */
@@ -88,6 +108,8 @@ export interface ShepherdReport {
     minimizeIds?: string[];
     /** First-look items — minimized comments not yet seen by the agent. */
     firstLook: FirstLookComment[];
+    /** PR comments and review summaries minimized by a suppress+autoResolve rule this fetch. */
+    autoMinimized?: AutoMinimizedItem[];
   };
   changesRequestedReviews: Review[];
   /** COMMENTED reviews already seen — eligible for `--minimize-comment-ids` without re-rendering. */
@@ -104,6 +126,14 @@ export interface ShepherdReport {
   branchProtection: import("./github.mts").BranchProtection | null;
   activity?: PrActivitySummary;
   mergeQueue?: MergeQueueReport;
+  /** Required merge-target contexts with no check run and no status context. Omitted when empty. */
+  unreportedRequiredChecks?: string[];
+  /** Commits on the stack trunk that the bottom open layer does not contain. Omitted when zero. */
+  trunkBehindBy?: number;
+  /** A relevant Actions workflow suite on the head has not completed. */
+  actionsWorkflowInProgress?: true;
+  /** Bottom open layer of this PR's native stack. Starts a trunk rebase. */
+  stackBottomPr?: number;
 }
 
 export interface ResolveOptions {

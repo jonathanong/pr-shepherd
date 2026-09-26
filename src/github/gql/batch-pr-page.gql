@@ -128,6 +128,7 @@ query BatchPrPage(
           }
           body
           createdAt
+          url
         }
       }
       approvedReviews: reviews(states: APPROVED, last: 50, before: $approvedReviewsCursor)
@@ -147,6 +148,7 @@ query BatchPrPage(
           }
           body
           createdAt
+          url
         }
       }
       commits(last: 1) @include(if: $includeChecks) {

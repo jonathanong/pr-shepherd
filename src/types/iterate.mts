@@ -8,6 +8,7 @@ import type {
   ShepherdStatus,
   FirstLookThread,
   FirstLookComment,
+  RuleAutoResolveReport,
 } from "./report.mts";
 import type { ActiveCheck, PrActivitySummary } from "./activity.mts";
 import type {
@@ -75,11 +76,17 @@ export interface IterateResultBase {
   inProgressChecks?: ActiveCheck[];
   ignoredNames?: string[]; // Suppressed by ignoreChecks config; omitted when empty.
   supersededNames?: string[]; // CANCELLED, superseded by a newer same-workflow run; omitted when empty.
+  /** Required merge-target contexts with no check run and no status context. Omitted when empty. */
+  unreportedRequiredChecks?: string[];
+  /** Commits on the stack trunk that the bottom open layer does not contain. Omitted when zero. */
+  trunkBehindBy?: number;
   activity?: PrActivitySummary;
   mergeQueue?: import("./merge-queue.mts").MergeQueueReport;
   apiUsage?: ApiUsage;
   quotaWarning?: GraphqlQuotaWarning;
   fingerprintReused?: true;
+  /** Classification-rule resolve/minimize applied during this fetch. Omitted when nothing happened. */
+  ruleAutoResolve?: RuleAutoResolveReport;
 }
 
 interface IterateResultWait extends IterateResultBase {

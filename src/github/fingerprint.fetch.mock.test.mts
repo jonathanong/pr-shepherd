@@ -113,7 +113,7 @@ describe("fetchPrFingerprint", () => {
       latestCommentId: null,
       latestThreadId: null,
       latestReviewId: null,
-      checkSuiteConclusions: "CS_1:STARTUP_FAILURE",
+      checkSuiteConclusions: "CS_1::STARTUP_FAILURE",
       checkSuitesComplete: true,
       viewerCanUpdate: false,
       viewerPermission: "WRITE",

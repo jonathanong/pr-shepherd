@@ -1,4 +1,5 @@
 import type { IterateResultBase, ShepherdReport } from "../../types.mts";
+import { ruleAutoResolveFromReport } from "../rule-auto-resolve-format.mts";
 import {
   buildActiveChecks,
   buildRelevantChecks,
@@ -10,6 +11,7 @@ export function buildIterateBase(
   report: ShepherdReport,
   readyState: { shouldCancel: boolean; remainingSeconds: number },
 ): IterateResultBase {
+  const ruleAutoResolve = ruleAutoResolveFromReport(report);
   return {
     pr: report.pr,
     repo: report.repo,
@@ -31,6 +33,13 @@ export function buildIterateBase(
     ...buildSuppressedCheckFields(report),
     activity: report.activity,
     mergeQueue: report.mergeQueue,
+    ...(report.unreportedRequiredChecks &&
+      report.unreportedRequiredChecks.length > 0 && {
+        unreportedRequiredChecks: report.unreportedRequiredChecks,
+      }),
+    ...(report.trunkBehindBy !== undefined &&
+      report.trunkBehindBy > 0 && { trunkBehindBy: report.trunkBehindBy }),
     ...(report.fingerprintReused === true && { fingerprintReused: true as const }),
+    ...(ruleAutoResolve && { ruleAutoResolve }),
   };
 }

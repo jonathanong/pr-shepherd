@@ -19,16 +19,19 @@ import { isCurrentSummaryReady } from "./poll-summary-readiness.mts";
 import { applyOpenCheckBlockers } from "./poll-summary-check-blockers.mts";
 import { normalizePollSummaryState, routePollSummary } from "./poll-summary-route.mts";
 import { hydrateReadyAnnotationProbe, readyFingerprint } from "./poll-summary-annotation-probe.mts";
+import { applyUnreportedRequiredChecks } from "./poll-summary-unreported.mts";
 export async function summarizePollSummaryPr(
   raw: RawSummaryPr,
   repo: RepoInfo,
   opts: PollSummaryCommandOptions,
   viewerCanAdminister = false,
+  mergeTargetContexts?: readonly string[],
   viewerLogin: string | null = null,
 ): Promise<PollSummaryItem> {
   const repoName = `${repo.owner}/${repo.name}`;
   const seen = await loadSeenMap({ owner: repo.owner, repo: repo.name, pr: raw.number });
   const checks = summarizePollSummaryChecks(raw);
+  applyUnreportedRequiredChecks(raw, checks, mergeTargetContexts);
   const review = await summarizePollSummaryReview(raw, seen, viewerCanAdminister);
   const blockingReviewerInProgress = detectBlockingReviewer(raw);
   const removalEvent = currentQueueRemovalEvent(raw);
@@ -189,9 +192,8 @@ function pollCommandFields(
   if (opts.merge && opts.stackPrNumber === undefined) args.push("--merge");
   if (opts.readyDelaySeconds !== undefined)
     args.push("--ready-delay", `${opts.readyDelaySeconds}s`);
-  if (opts.stallTimeoutSeconds !== undefined) {
+  if (opts.stallTimeoutSeconds !== undefined)
     args.push("--stall-timeout", `${opts.stallTimeoutSeconds}s`);
-  }
   if (opts.noAutoMarkReady && !boundedDraft) args.push("--no-auto-mark-ready");
   const pollCommand = buildPrShepherdCommand(args).text;
   return boundedDraft ? { pollCommand, pollProbe: true } : { pollCommand };

@@ -11,6 +11,8 @@ vi.mock("../../src/github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
   getMergeableState: vi.fn(),
+  getPullRequestBody: vi.fn().mockResolvedValue({ nodeId: "PR_kgDOAAA", body: "" }),
+  updatePullRequestBody: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../src/checks/triage.mts", () => ({
   triageFailingChecks: vi.fn((checks: unknown[]) => Promise.resolve(checks)),
@@ -41,7 +43,12 @@ vi.mock("../../src/config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 
 import "../../src/commands/check.mts";
 import { fetchPrBatch } from "../../src/github/batch.mts";
-import { getCurrentPrNumber, getMergeableState } from "../../src/github/client.mts";
+import {
+  getCurrentPrNumber,
+  getMergeableState,
+  getPullRequestBody,
+  updatePullRequestBody,
+} from "../../src/github/client.mts";
 import { fetchStartupFailureChecks, triageFailingChecks } from "../../src/checks/triage.mts";
 import { fetchCheckRunAnnotationsBatch } from "../../src/github/check-annotations-batch.mts";
 import { loadSeenMap, markSeen, markReviewInlineThreads } from "../../src/state/seen-comments.mts";
@@ -62,6 +69,8 @@ import { testFingerprint } from "../github/fingerprint-fixture.mts";
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockGetMergeableState = vi.mocked(getMergeableState);
+const mockGetPullRequestBody = vi.mocked(getPullRequestBody);
+const mockUpdatePullRequestBody = vi.mocked(updatePullRequestBody);
 const mockTriageFailingChecks = vi.mocked(triageFailingChecks);
 const mockFetchStartupFailureChecks = vi.mocked(fetchStartupFailureChecks);
 const mockFetchCheckRunAnnotationsBatch = vi.mocked(fetchCheckRunAnnotationsBatch);
@@ -216,6 +225,8 @@ export function registerHooks(): void {
       fingerprint: testFingerprint({ reviewDecision: "APPROVED" }),
     });
     mockGetMergeableState.mockResolvedValue({ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN" });
+    mockGetPullRequestBody.mockResolvedValue({ nodeId: "PR_kgDOAAA", body: "" });
+    mockUpdatePullRequestBody.mockResolvedValue(undefined);
     mockFetchStartupFailureChecks.mockResolvedValue([]);
     mockFetchCheckRunAnnotationsBatch.mockResolvedValue({ annotations: new Map(), failures: [] });
     mockLoadSeenMap.mockResolvedValue(new Map());
@@ -238,6 +249,8 @@ export {
   mockFetchCheckRunAnnotationsBatch,
   mockGetCurrentPrNumber,
   mockGetMergeableState,
+  mockGetPullRequestBody,
+  mockUpdatePullRequestBody,
   mockLoadConfig,
   mockLoadSeenMap,
   mockMarkSeen,

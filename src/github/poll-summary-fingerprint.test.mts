@@ -164,4 +164,29 @@ describe("fingerprintRawSummaryPr", () => {
       fingerprintRawSummaryPr(withBodies("original", false)),
     );
   });
+
+  it("ignores head check-suite status when hashing a ready receipt", () => {
+    const commit = {
+      oid: "e".repeat(40),
+      committedDate: "2026-09-20T10:00:00Z",
+      statusCheckRollup: null,
+    };
+    const withSuites = raw({
+      commits: {
+        nodes: [
+          {
+            commit: {
+              ...commit,
+              checkSuites: {
+                nodes: [{ status: "QUEUED", conclusion: null, workflowRun: null }],
+              },
+            },
+          },
+        ],
+      },
+    });
+    expect(fingerprintRawSummaryPr(withSuites)).toBe(
+      fingerprintRawSummaryPr(raw({ commits: { nodes: [{ commit }] } })),
+    );
+  });
 });

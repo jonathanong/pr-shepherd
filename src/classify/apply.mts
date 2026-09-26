@@ -1,10 +1,12 @@
 import type { BatchPrData, ReviewThread, PrComment, Review } from "../types.mts";
 import type { ClassifyItem, ClassifyAction } from "./types.mts";
 import type { LoadedRule } from "./loader.mts";
+import { collectAction, type CollectedAction } from "./rule-action.mts";
 
 export interface ClassifyIndex {
   suppressedIds: Set<string>;
   autoResolveIds: Set<string>;
+  ruleReasons: Map<string, string[]>;
 }
 
 export interface BatchPartition {
@@ -16,27 +18,16 @@ export interface BatchPartition {
   ruleAutoResolveThreadIds: string[];
   /** COMMENTED review summary IDs — minimized without surfacing to the agent. */
   ruleAutoResolveReviewSummaryIds: string[];
+  ruleReasons: Map<string, string[]>;
 }
 
 export function applyRules(rules: LoadedRule[], item: ClassifyItem): ClassifyAction {
-  let autoResolve = false;
-  let suppress = false;
-  for (const { rule, name } of rules) {
-    let action: ClassifyAction | null | undefined;
-    try {
-      action = rule(item);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      process.stderr.write(
-        `pr-shepherd: classification rule ${name}: threw during evaluation: ${msg} — skipped\n`,
-      );
-      continue;
-    }
-    if (!action) continue;
-    if (action.autoResolve) autoResolve = true;
-    if (action.suppress) suppress = true;
-  }
-  return { autoResolve, suppress };
+  const applied = collectAction(rules, item);
+  return {
+    autoResolve: applied.autoResolve,
+    suppress: applied.suppress,
+    ...(applied.reasons.length > 0 && { reason: applied.reasons.join("; ") }),
+  };
 }
 
 function threadToItem(t: ReviewThread): ClassifyItem {
@@ -72,6 +63,7 @@ function reviewSummaryToItem(r: Review): ClassifyItem {
     authorType: r.authorType,
     ...(r.authorAssociation !== undefined && { authorAssociation: r.authorAssociation }),
     body: r.body,
+    ...(r.url ? { url: r.url } : {}),
   };
 }
 
@@ -88,29 +80,58 @@ function changesRequestedToItem(r: Review): ClassifyItem {
 
 function addToIndex(
   id: string,
-  { suppress, autoResolve }: ClassifyAction,
+  applied: CollectedAction,
   suppressedIds: Set<string>,
   autoResolveIds: Set<string>,
+  ruleReasons: Map<string, string[]>,
 ): void {
-  if (suppress) suppressedIds.add(id);
-  if (autoResolve) autoResolveIds.add(id);
+  if (applied.suppress) suppressedIds.add(id);
+  if (applied.autoResolve) autoResolveIds.add(id);
+  if (applied.reasons.length > 0) ruleReasons.set(id, applied.reasons);
+}
+
+function emptyIndex(): ClassifyIndex {
+  return { suppressedIds: new Set(), autoResolveIds: new Set(), ruleReasons: new Map() };
 }
 
 export function buildClassifyIndex(rules: LoadedRule[], batch: BatchPrData): ClassifyIndex {
-  if (rules.length === 0) return { suppressedIds: new Set(), autoResolveIds: new Set() };
+  if (rules.length === 0) return emptyIndex();
   const suppressedIds = new Set<string>();
   const autoResolveIds = new Set<string>();
-  for (const t of batch.reviewThreads)
-    addToIndex(t.id, applyRules(rules, threadToItem(t)), suppressedIds, autoResolveIds);
-  for (const c of batch.comments)
-    addToIndex(c.id, applyRules(rules, commentToItem(c)), suppressedIds, autoResolveIds);
+  const ruleReasons = new Map<string, string[]>();
+  for (const t of batch.reviewThreads) {
+    addToIndex(
+      t.id,
+      collectAction(rules, threadToItem(t)),
+      suppressedIds,
+      autoResolveIds,
+      ruleReasons,
+    );
+  }
+  for (const c of batch.comments) {
+    addToIndex(
+      c.id,
+      collectAction(rules, commentToItem(c)),
+      suppressedIds,
+      autoResolveIds,
+      ruleReasons,
+    );
+  }
   for (const r of batch.reviewSummaries)
-    addToIndex(r.id, applyRules(rules, reviewSummaryToItem(r)), suppressedIds, autoResolveIds);
+    addToIndex(
+      r.id,
+      collectAction(rules, reviewSummaryToItem(r)),
+      suppressedIds,
+      autoResolveIds,
+      ruleReasons,
+    );
   // autoResolve for changes-requested requires a dismiss message; not supported
   for (const r of batch.changesRequestedReviews) {
-    if (applyRules(rules, changesRequestedToItem(r)).suppress) suppressedIds.add(r.id);
+    const applied = collectAction(rules, changesRequestedToItem(r));
+    if (applied.suppress) suppressedIds.add(r.id);
+    if (applied.reasons.length > 0) ruleReasons.set(r.id, applied.reasons);
   }
-  return { suppressedIds, autoResolveIds };
+  return { suppressedIds, autoResolveIds, ruleReasons };
 }
 
 export function partitionBatch(index: ClassifyIndex, batch: BatchPrData): BatchPartition {
@@ -144,5 +165,6 @@ export function partitionBatch(index: ClassifyIndex, batch: BatchPrData): BatchP
     ruleAutoResolveCommentIds,
     ruleAutoResolveThreadIds,
     ruleAutoResolveReviewSummaryIds,
+    ruleReasons: index.ruleReasons,
   };
 }

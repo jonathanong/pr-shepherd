@@ -14,7 +14,7 @@ const gql = (name: string): string =>
   readFileSync(join((import.meta as { dirname: string }).dirname, "gql", name), "utf8");
 
 const withSharedFragments = (query: string): string =>
-  `${gql("pr-merge-policy.gql")}\n${gql("commit-check-suites.gql")}\n${query}`;
+  `${gql("ref-rules.gql")}\n${gql("pr-merge-policy.gql")}\n${gql("commit-check-suites.gql")}\n${query}`;
 
 /** The primary batch query that fetches CI + comments + merge status in one round-trip. */
 export const BATCH_PR_QUERY = withSharedFragments(gql("batch-pr.gql"));
@@ -28,7 +28,10 @@ export const PR_FINGERPRINT_QUERY = withSharedFragments(gql("pr-fingerprint.gql"
 const POLL_SUMMARY_CHECK_CONTEXTS_FRAGMENT = gql("poll-summary-check-contexts.gql");
 
 /** Compact per-PR fields shared by explicit-list and native-stack summary queries. */
-export const POLL_SUMMARY_FRAGMENT = `${POLL_SUMMARY_CHECK_CONTEXTS_FRAGMENT}\n${gql("poll-summary-fragment.gql")}`;
+export const POLL_SUMMARY_FRAGMENT = `${gql("ref-rules.gql")}\n${POLL_SUMMARY_CHECK_CONTEXTS_FRAGMENT}\n${gql("poll-summary-fragment.gql")}`;
+
+/** Trunk branch rules plus how far `headRef` is behind that branch. */
+export const REF_RULES_QUERY = `${gql("ref-rules.gql")}\n${gql("ref-rules-query.gql")}`;
 
 /**
  * Pages older status contexts for one commit with the same node selection as

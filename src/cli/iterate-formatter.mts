@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type { IterateResult } from "../types.mts";
 import { formatFixCodeResult } from "./fix-formatter.mts";
 import { formatRelevantChecks } from "./iterate-checks-formatter.mts";
@@ -16,6 +17,7 @@ import {
 import { formatApiUsage, formatQuotaWarning } from "./api-usage-formatter.mts";
 import { formatActivityLine } from "./iterate-activity-formatter.mts";
 import { branchStateSegment } from "./iterate-branch-segment.mts";
+import { insertRuleAutoResolveSection } from "../commands/rule-auto-resolve-format.mts";
 
 /**
  * Format an IterateResult as human-readable Markdown.
@@ -40,6 +42,8 @@ export function formatIterateResult(
 ): string {
   const verbose = opts?.verbose ?? false;
   const readyDelaySuffix = opts?.readyDelaySuffix;
+  const finish = (text: string): string =>
+    insertRuleAutoResolveSection(text, result.ruleAutoResolve);
 
   const heading = `# PR #${result.pr} [${result.action.toUpperCase()}]`;
   const reviewDecisionSeg =
@@ -112,6 +116,7 @@ export function formatIterateResult(
     const names = result.supersededNames.map((n) => "`" + n + "`").join(", ");
     headerLines.push(`**superseded** ${names}`);
   }
+  appendUnreportedLines(headerLines, result);
   appendMergeQueueHeader(headerLines, result);
   const activityLine = formatActivityLine(result);
   if (activityLine) headerLines.push(activityLine);
@@ -136,19 +141,21 @@ export function formatIterateResult(
       waitLines.push(
         `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
       );
-      return joinSections(waitLines);
+      return finish(joinSections(waitLines));
     }
 
     case "mark_ready":
-      return joinSections([
-        header,
-        ...telemetrySections,
-        adaptIterateLog(result.log),
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
-      ]);
+      return finish(
+        joinSections([
+          header,
+          ...telemetrySections,
+          adaptIterateLog(result.log),
+          `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
+        ]),
+      );
 
     case "merge":
-      return formatMergeAction(joinSections([header, ...telemetrySections]), result);
+      return finish(formatMergeAction(joinSections([header, ...telemetrySections]), result));
 
     case "cancel": {
       const cancelHeaderLines = [`${heading} — ${result.reason}`, "", baseLine, summaryLine];
@@ -165,27 +172,44 @@ export function formatIterateResult(
         const supersededStr = result.supersededNames.map((n) => "`" + n + "`").join(", ");
         cancelHeaderLines.push(`**superseded** ${supersededStr}`);
       }
+      appendUnreportedLines(cancelHeaderLines, result);
       appendMergeQueueHeader(cancelHeaderLines, result);
       if (activityLine) cancelHeaderLines.push(activityLine);
-      return joinSections([
-        cancelHeaderLines.join("\n"),
-        ...(apiUsage ? [apiUsage] : []),
-        ...(verboseChecks ? [verboseChecks] : []),
-        adaptIterateLog(result.log),
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
-      ]);
+      return finish(
+        joinSections([
+          cancelHeaderLines.join("\n"),
+          ...(apiUsage ? [apiUsage] : []),
+          ...(verboseChecks ? [verboseChecks] : []),
+          adaptIterateLog(result.log),
+          `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
+        ]),
+      );
     }
 
     case "escalate":
-      return joinSections([
-        header,
-        ...(apiUsage ? [apiUsage] : []),
-        ...(verboseChecks ? [verboseChecks] : []),
-        result.escalate.humanMessage,
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
-      ]);
+      return finish(
+        joinSections([
+          header,
+          ...(apiUsage ? [apiUsage] : []),
+          ...(verboseChecks ? [verboseChecks] : []),
+          result.escalate.humanMessage,
+          `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
+        ]),
+      );
 
     case "fix_code":
-      return formatFixCodeResult(joinSections([header, ...telemetrySections]), result, { verbose });
+      return finish(
+        formatFixCodeResult(joinSections([header, ...telemetrySections]), result, { verbose }),
+      );
+  }
+}
+
+function appendUnreportedLines(lines: string[], result: IterateResult): void {
+  if (result.unreportedRequiredChecks && result.unreportedRequiredChecks.length > 0) {
+    const names = result.unreportedRequiredChecks.map((name) => "`" + name + "`").join(", ");
+    lines.push(`**unreported required** ${names}`);
+  }
+  if (result.trunkBehindBy !== undefined && result.trunkBehindBy > 0) {
+    lines.push(`**trunk behind** \`${result.trunkBehindBy}\``);
   }
 }

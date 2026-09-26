@@ -55,10 +55,14 @@ vi.mock("../../src/state/pr-fingerprint.mts", () => ({
   storePrFingerprint: vi.fn().mockResolvedValue(undefined),
   fingerprintInputDigest: vi.fn().mockReturnValue("digest"),
 }));
+const { mockGraphqlWithRateLimit } = vi.hoisted(() => ({
+  mockGraphqlWithRateLimit: vi.fn(),
+}));
 vi.mock("../../src/github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
   getMergeableState: vi.fn(),
+  graphqlWithRateLimit: mockGraphqlWithRateLimit,
 }));
 vi.mock("../../src/checks/triage.mts", () => ({
   triageFailingChecks: vi.fn((checks) => Promise.resolve(checks)),
@@ -347,6 +351,72 @@ function stampInitialRunAttempt(checks: unknown[]): unknown[] {
   });
 }
 
+function graphqlForBatch(
+  query: string,
+  variables: { anchor?: number },
+  batchData: Record<string, any>,
+) {
+  if (query.includes("query RefRules")) {
+    return {
+      data: {
+        repository: {
+          ref: {
+            name: "main",
+            prefix: "refs/heads/",
+            branchProtectionRule: null,
+            rules: { nodes: [] },
+            compare: { behindBy: 0 },
+          },
+        },
+      },
+    };
+  }
+  const stack = batchData.stack ?? { number: 1, size: 1, position: 1, baseRefName: "main" };
+  const anchor = variables.anchor ?? batchData.number;
+  const layers = Array.from({ length: stack.size }, (_, index) => {
+    const position = index + 1;
+    return {
+      position,
+      number: position === stack.position ? anchor : 1000 + position,
+      headRefName: `layer-${position}`,
+      headRefOid: String(position).repeat(40).slice(0, 40),
+    };
+  });
+  const nodes = layers.map((layer, index) => {
+    const parent = index === 0 ? null : layers[index - 1];
+    return {
+      position: layer.position,
+      pullRequest: {
+        number: layer.number,
+        state: "OPEN",
+        headRefName: layer.headRefName,
+        headRefOid: layer.headRefOid,
+        baseRefName: parent ? parent.headRefName : stack.baseRefName,
+        baseRefOid: parent ? parent.headRefOid : "c".repeat(40),
+      },
+    };
+  });
+  return {
+    data: {
+      repository: {
+        viewerCanAdminister: true,
+        pullRequest: {
+          stack: {
+            id: `stack-${stack.number}`,
+            number: stack.number,
+            size: stack.size,
+            baseRefName: stack.baseRefName,
+            entries: {
+              nodes,
+              pageInfo: { hasNextPage: false, endCursor: null },
+            },
+          },
+        },
+      },
+    },
+  };
+}
+
 export function applyFixture(fixture: Fixture): void {
   const baseCfg = defaultConfig() as unknown as Record<string, unknown>;
   let overlayCfg: Record<string, unknown> = {};
@@ -365,6 +435,9 @@ export function applyFixture(fixture: Fixture): void {
   const batchData = fixture.batchData
     ? { ...DEFAULT_BATCH, ...fixture.batchData }
     : { ...DEFAULT_BATCH };
+  mockGraphqlWithRateLimit.mockImplementation((query: string, variables: { anchor?: number }) =>
+    Promise.resolve(graphqlForBatch(query, variables, batchData)),
+  );
   const annotationCheckIds = new Set(Object.keys(fixture.checkAnnotationsByCheckId ?? {}));
   if (Array.isArray(batchData.reviewThreads)) {
     batchData.reviewThreads = batchData.reviewThreads.map((thread) => ({

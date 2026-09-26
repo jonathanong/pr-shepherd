@@ -1,3 +1,4 @@
+import type { WorkflowSuiteSnapshot } from "../checks/unreported-required.mts";
 import type { CheckRun } from "../types.mts";
 import type { RawPr } from "./batch-raw-types.mts";
 
@@ -9,6 +10,21 @@ export function parseCheckSuitesComplete(raw: RawPr): boolean {
 export function parseHeadCheckSuitesEmpty(raw: RawPr): boolean {
   const suites = raw.commits.nodes[0]?.commit.checkSuites;
   return suites?.pageInfo.hasNextPage === false && suites.nodes.length === 0;
+}
+
+/** Actions suites on the head. Third-party suites with no workflow run are omitted. */
+export function parseHeadWorkflowSuites(raw: RawPr): WorkflowSuiteSnapshot[] {
+  const nodes = raw.commits.nodes[0]?.commit.checkSuites?.nodes ?? [];
+  return nodes.flatMap((node) => {
+    if (!node.workflowRun) return [];
+    return [
+      {
+        status: node.status ?? null,
+        conclusion: node.conclusion,
+        workflowRun: { event: node.workflowRun.event },
+      },
+    ];
+  });
 }
 
 export function parseSuiteStartupFailures(raw: RawPr): CheckRun[] {

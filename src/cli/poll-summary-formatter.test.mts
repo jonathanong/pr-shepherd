@@ -50,7 +50,7 @@ describe("formatPollSummaryResult", () => {
           state: "OPEN",
           mergeable: "MERGEABLE",
           mergeStateStatus: "UNSTABLE",
-          checks: { passing: 1, failing: 2 },
+          checks: { passing: 1, failing: 2, unreportedRequired: ["build", "tests"] },
           review: { comments: 1 },
           pollCommand: "npx pr-shepherd https://github.com/acme/widgets/pull/42 --until-terminal",
         }),
@@ -59,6 +59,7 @@ describe("formatPollSummaryResult", () => {
     );
 
     expect(text).toContain("checks: 1 passing, 2 failing");
+    expect(text).toContain("unreported required: `build`, `tests`");
     expect(text).toContain("review: 1 comment");
     expect(text).toContain("pollCommand: `npx pr-shepherd");
   });

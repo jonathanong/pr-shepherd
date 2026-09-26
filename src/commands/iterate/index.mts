@@ -32,6 +32,7 @@ import {
 import { stackDraftHold } from "./parent-first.mts";
 import { findStaleNativeStackAncestry } from "./stale-ancestry.mts";
 import { annotateBlockedWait, resolveCheckBlockerGate } from "./check-blocker-gate.mts";
+import { buildUnreportedFixResult, planUnreportedRequired } from "./unreported-required.mts";
 
 export function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
   return withIterateApiUsage(opts, () => runIterateCore(opts));
@@ -169,6 +170,15 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   );
 
   const base = buildIterateBase(reportForWork, readyState);
+  const unreportedPlan = await planUnreportedRequired({
+    report,
+    base,
+    stateKey: stallKey,
+    headSha,
+    otherAutonomousWork: hasActionableWork || staleAncestry !== null,
+  });
+  if (unreportedPlan.escalate) return unreportedPlan.escalate;
+  const unreportedRepair = unreportedPlan.repairInstructions ?? [];
 
   // Checks (including merge-queue synthetic-commit checks) and hard conflicts are signals
   // GitHub itself is already acting on — the queue will eject the PR for these regardless of
@@ -201,8 +211,49 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
       surfacedApprovals,
       botUsernames,
       releasedCheckNames: blockerGate?.releasedNames,
+      ...((unreportedRepair.length > 0 || staleAncestry !== null) && {
+        repairInstructions: [...unreportedRepair, ...(staleAncestry?.instructions ?? [])],
+      }),
       ruleAutoResolveThreadIds: report.threads.ruleAutoResolveIds,
     });
+  }
+
+  if (unreportedRepair.length > 0 && staleAncestry) {
+    return handleFixCode({
+      base,
+      report: reportForWork,
+      opts: { ...opts, prNumber, neverCancelRuns },
+      headSha,
+      stallKey,
+      prNumber,
+      stallTimeoutSeconds,
+      repoOwner,
+      repoName,
+      reviewSummaryIds,
+      firstLookSummaries,
+      editedSummaries,
+      surfacedApprovals,
+      botUsernames,
+      releasedCheckNames: blockerGate?.releasedNames,
+      repairInstructions: [...unreportedRepair, ...staleAncestry.instructions],
+      ruleAutoResolveThreadIds: report.threads.ruleAutoResolveIds,
+    });
+  }
+
+  if (unreportedRepair.length > 0) {
+    return annotateBlockedWait(
+      await applyStallGuard(
+        stallKey,
+        stallTimeoutSeconds,
+        headSha,
+        base,
+        prNumber,
+        buildUnreportedFixResult(base, report, unreportedRepair),
+        reportForWork,
+        reviewSummaryIds,
+      ),
+      blockerGate,
+    );
   }
 
   const mergeStateResult = await handleActiveMergeState({
@@ -236,7 +287,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
       surfacedApprovals,
       botUsernames,
       releasedCheckNames: blockerGate?.releasedNames,
-      repairInstructions: staleAncestry.instructions,
+      repairInstructions: [...unreportedRepair, ...staleAncestry.instructions],
       ruleAutoResolveThreadIds: report.threads.ruleAutoResolveIds,
     });
   }

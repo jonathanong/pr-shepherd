@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildClassifyIndex, partitionBatch } from "./apply.mts";
+import { applyRules, buildClassifyIndex, partitionBatch } from "./apply.mts";
 import type { LoadedRule } from "./loader.mts";
 import type { BatchPrData } from "../types.mts";
 import type { ClassifyItem } from "./types.mts";
@@ -193,6 +193,48 @@ describe("buildClassifyIndex", () => {
     );
     expect(idx.suppressedIds).toContain("c1");
     expect(idx.autoResolveIds).toContain("c1");
+  });
+
+  it("keeps every cleaned reason and a review-summary url", () => {
+    const seen: ClassifyItem[] = [];
+    const rules = [
+      makeRule("a", (item) => {
+        seen.push(item);
+        return { suppress: true, autoResolve: true, reason: "  bot\nnoise " };
+      }),
+      makeRule("blank", () => ({ reason: " \n " })),
+      makeRule("b", () => ({ reason: "quota" })),
+    ];
+    const batch = makeBatch({
+      comments: [makeComment("c1")],
+      reviewSummaries: [{ ...makeReview("r1"), url: "https://github.com/r/1" }, makeReview("r2")],
+      changesRequestedReviews: [makeReview("cr1")],
+    });
+    const idx = buildClassifyIndex(rules, batch);
+    expect(idx.ruleReasons.get("c1")).toEqual(["bot noise", "quota"]);
+    expect(idx.ruleReasons.get("cr1")).toEqual(["bot noise", "quota"]);
+    expect(idx.autoResolveIds.has("cr1")).toBe(false);
+    expect(seen.find((item) => item.id === "r1")).toMatchObject({ url: "https://github.com/r/1" });
+    expect(seen.find((item) => item.id === "r2")).not.toHaveProperty("url");
+    expect(
+      applyRules(rules, {
+        kind: "pr-comment",
+        id: "c1",
+        author: "bot",
+        authorType: "Bot",
+        body: "hello",
+      }).reason,
+    ).toBe("bot noise; quota");
+  });
+
+  it("records a changes-requested reason without suppressing or auto-resolving", () => {
+    const idx = buildClassifyIndex(
+      [makeRule("cr", (item) => (item.kind === "changes-requested" ? { reason: "kept" } : null))],
+      makeBatch({ changesRequestedReviews: [makeReview("cr1")] }),
+    );
+    expect(idx.suppressedIds.has("cr1")).toBe(false);
+    expect(idx.autoResolveIds.has("cr1")).toBe(false);
+    expect(idx.ruleReasons.get("cr1")).toEqual(["kept"]);
   });
 });
 

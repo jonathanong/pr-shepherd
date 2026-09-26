@@ -36,10 +36,14 @@ export function makeRawPr(overrides: Record<string, unknown> = {}) {
   };
 }
 
-export function makeResponse(pr: ReturnType<typeof makeRawPr> | null = makeRawPr()) {
+export function makeResponse(
+  pr: ReturnType<typeof makeRawPr> | null = makeRawPr(),
+  viewerLogin?: string,
+) {
   return {
     data: {
       repository: { viewerPermission: "ADMIN", viewerCanAdminister: true, pullRequest: pr },
+      ...(viewerLogin !== undefined && { viewer: { login: viewerLogin } }),
     },
   };
 }

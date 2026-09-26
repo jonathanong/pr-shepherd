@@ -157,6 +157,8 @@ export interface Review {
   staleBotCr?: boolean;
   /** Commit OID the review was made against, when available from GraphQL. */
   commitOid?: string;
+  /** Review HTML URL, when the batch query selected it. */
+  url?: string;
   /** True when commitOid !== headRefOid AND all associated threads are resolved/outdated. Distinct from `staleBotCr` (time-based). Reviews with no threads are not marked stale. */
   staleReview?: boolean;
 }
@@ -203,6 +205,8 @@ export interface BatchPrData extends BatchPrMergeFields {
   /** `"owner/name"` of the head repository; null when the fork has been deleted. */
   headRepoWithOwner: string | null;
   viewerAuthorization?: ViewerAuthorization;
+  /** GitHub `viewer.login` for the token that fetched this batch. */
+  viewerLogin?: string;
   baseRefName: string;
   /** Base commit GitHub recorded for this PR (`PullRequest.baseRefOid`), not the branch's live tip. */
   baseRefOid?: string;

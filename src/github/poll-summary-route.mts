@@ -29,6 +29,13 @@ export function routePollSummary(
     return { action: "fix_code", reasons: ["review-work"] };
   }
   if (
+    (checks.unreportedRequired?.length ?? 0) > 0 &&
+    checks.actionsWorkflowInProgress !== true &&
+    (checks.inProgress ?? 0) === 0
+  ) {
+    return { action: "fix_code", reasons: ["unreported-required-checks"] };
+  }
+  if (
     (checks.inProgress ?? 0) > 0 ||
     raw.mergeable === "UNKNOWN" ||
     raw.mergeStateStatus === "UNKNOWN" ||

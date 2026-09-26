@@ -1,3 +1,5 @@
+import type { RawBaseRef } from "./batch-raw-rules.mts";
+
 export interface RawAuthor {
   __typename?: string;
   login: string;
@@ -54,6 +56,13 @@ export interface RawSummaryCommit {
   oid: string;
   committedDate?: string;
   statusCheckRollup: RawCheckRollup | null;
+  checkSuites?: {
+    nodes: Array<{
+      status?: string | null;
+      conclusion: string | null;
+      workflowRun: { event: string | null } | null;
+    }>;
+  } | null;
 }
 
 export interface RawSummaryPr {
@@ -72,6 +81,7 @@ export interface RawSummaryPr {
   headRefOid: string;
   baseRefOid: string;
   baseRefName: string;
+  baseRef?: RawBaseRef | null;
   mergeable: string;
   mergeStateStatus: string;
   reviewDecision: string | null;
