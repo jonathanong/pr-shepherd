@@ -52,6 +52,8 @@ Active other-human threads are suppressed after their transcript is seen unless 
 
 The agent reads these fields and decides what to fix. Skills are thin dispatchers; they follow the printed `## Instructions` rather than a separate loop prompt.
 
+That routing follows [`iterate.resolveOtherHumanThreads`](configuration.md#iterateresolveotherhumanthreads). The branch rule `requiresConversationResolution` is a separate signal. Current matrices, and the requested policy for when that rule is on, are in [conversation-resolution.md](conversation-resolution.md).
+
 ## First-look items (comment visibility invariant)
 
 Every review item must be surfaced to the agent **at least once**, even if it is outdated, resolved, or minimized. Items that would otherwise be silently dropped are presented on first encounter with a status tag (`outdated`, `resolved`, or `minimized`) so the agent can acknowledge them. For review threads, the seen marker hashes the full thread transcript, so replies to an already-seen resolved/minimized/outdated thread re-surface the thread as edited with links to the thread comments.
