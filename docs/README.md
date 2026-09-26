@@ -15,14 +15,15 @@ into these files for every claim it makes; this remains the canonical spec.
 
 ## Job 1 — Context gathered
 
-| Document                             | What it covers                                                |
-| ------------------------------------ | ------------------------------------------------------------- |
-| [context.md](context.md)             | Inventory of what one `iterate`/poll surfaces                 |
-| [comments.md](comments.md)           | Threads, comments, summaries, seen markers, mutations         |
-| [checks.md](checks.md)               | Classify → triage → `failedStep`, `jobName`, event filtering  |
-| [merge-status.md](merge-status.md)   | `deriveMergeStatus` plus printed merge requirements           |
-| [graphql.md](graphql.md)             | Batch query, operation catalog, cost, quota, REST supplements |
-| [graphql-usage.md](graphql-usage.md) | Points each command spends, and which spend is worth reducing |
+| Document                                                 | What it covers                                                |
+| -------------------------------------------------------- | ------------------------------------------------------------- |
+| [context.md](context.md)                                 | Inventory of what one `iterate`/poll surfaces                 |
+| [comments.md](comments.md)                               | Threads, comments, summaries, seen markers, mutations         |
+| [conversation-resolution.md](conversation-resolution.md) | Human inline threads versus required conversation resolution  |
+| [checks.md](checks.md)                                   | Classify → triage → `failedStep`, `jobName`, event filtering  |
+| [merge-status.md](merge-status.md)                       | `deriveMergeStatus` plus printed merge requirements           |
+| [graphql.md](graphql.md)                                 | Batch query, operation catalog, cost, quota, REST supplements |
+| [graphql-usage.md](graphql-usage.md)                     | Points each command spends, and which spend is worth reducing |
 
 ## Job 2 — Actions emitted
 

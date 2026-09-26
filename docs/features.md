@@ -56,3 +56,4 @@ Shepherd does two jobs: **gather all context for a PR**, then **emit one determi
 - Context inventory: [context.md](context.md)
 - Configuration: [configuration.md](configuration.md)
 - Comments: [comments.md](comments.md)
+- Conversation resolution vs human inline threads: [conversation-resolution.md](conversation-resolution.md)
