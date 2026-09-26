@@ -280,6 +280,10 @@ export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: st
     const duration = detail ?? "60 minutes";
     return `No progress detected for ${duration} — state has not changed. This is a manual checkpoint: inspect the PR and apply a manual fix before resuming.`;
   }
+  if (triggers.includes("required-checks-unreported")) {
+    const names = detail ? ` (${detail})` : "";
+    return `Required checks are still unreported after one close/reopen of this head${names}. Another reopen will not create a job the workflow does not emit. Path filters are the usual cause.`;
+  }
   if (triggers.includes("stall-state-unavailable")) {
     const reason = detail ?? "unknown error";
     return `The stall timer could not be saved (${reason}). Fix PR_SHEPHERD_STATE_DIR or the directory permissions, then resume. Automated polling is paused because a stuck loop would not be detected.`;

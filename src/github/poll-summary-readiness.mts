@@ -30,6 +30,7 @@ export function isCurrentSummaryReady(
     (checks.failing ?? 0) === 0 &&
     (sourceChecks.failing ?? 0) === 0 &&
     (sourceChecks.inProgress ?? 0) === 0 &&
+    (checks.unreportedRequired?.length ?? 0) === 0 &&
     (review.actionable ?? 0) === 0
   );
 }

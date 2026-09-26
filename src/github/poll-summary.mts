@@ -9,6 +9,7 @@ import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import { missingRepositoryError } from "./errors.mts";
 import { hydratePollSummaryChecks } from "./poll-summary-check-hydration.mts";
 import { summarizePollSummaryPr } from "./poll-summary-projector.mts";
+import { trunkRequiredContexts } from "./poll-summary-unreported.mts";
 import type { RawExplicitResponse, RawSummaryPr } from "./poll-summary-raw.mts";
 import { POLL_STACK_SUMMARY_QUERY, POLL_SUMMARY_FRAGMENT } from "./queries.mts";
 import {
@@ -99,10 +100,11 @@ async function fetchStackSummary(
   );
   for (const pr of ordered) await hydratePollSummaryChecks(pr, repo);
   const stackAncestry = stackAncestryGaps(ordered);
+  const required = trunkRequiredContexts(ordered);
   return {
     selection: { kind: "stack", anchor, stackNumber, stackSize },
     prs: await Promise.all(
-      ordered.map((pr) => summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister)),
+      ordered.map((pr) => summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister, required)),
     ),
     ...(stackAncestry.length > 0 && { stackAncestry }),
   };

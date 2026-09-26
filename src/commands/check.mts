@@ -2,6 +2,7 @@ import { fetchPrBatch } from "../github/batch.mts";
 import { queueRemovalAppliesToHead } from "../github/queue-removal-freshness.mts";
 import { storePrFingerprint } from "../state/pr-fingerprint.mts";
 import { tryReuseFingerprintReport } from "./check-fingerprint.mts";
+import { collectUnreportedRequired, refreshCachedUnreported } from "./check-unreported.mts";
 import { getRepoInfo, getCurrentPrNumber } from "../github/client.mts";
 import { classifyChecks, getCiVerdict } from "../checks/classify.mts";
 import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
@@ -73,7 +74,7 @@ export async function runCheck(
   const reuseFingerprint = opts.fingerprintCache === true;
   if (reuseFingerprint) {
     const cached = await tryReuseFingerprintReport(prNumber, repo, stateKey, config);
-    if (cached) return cached;
+    if (cached) return refreshCachedUnreported(cached, repo);
   }
   const paginateApprovedReviews = config.iterate.minimizeApprovals;
   const result = await fetchPrBatch(prNumber, repo, { paginateApprovedReviews });
@@ -245,12 +246,22 @@ export async function runCheck(
     );
   }).length;
   const approvedReviews = approvedReviewVisibility.visible;
+  const unreported = await collectUnreportedRequired({
+    batchData,
+    checks: allChecks,
+    suites: result.headWorkflowSuites ?? [],
+    owner: repo.owner,
+    name: repo.name,
+    pr: prNumber,
+    relevantEvents: config.checks.ciTriggerEvents,
+  });
   let status = computeStatus(
     verdict,
     threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
     visibleCommentClassification.actionable.length,
     mergeStatus,
     changesRequestedReviewCount,
+    unreported.hasUnreportedRequired,
   );
 
   // Resolve any pending mergeability refresh (and the resulting MERGED/CLOSED short-circuit)
@@ -267,6 +278,7 @@ export async function runCheck(
       threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
       visibleCommentClassification.actionable.length,
       changesRequestedReviewCount,
+      unreported.hasUnreportedRequired,
     );
     batchData = refreshed.batchData;
     mergeStatus = refreshed.mergeStatus;
@@ -403,6 +415,7 @@ export async function runCheck(
     pr: prNumber,
     nodeId: batchData.nodeId,
     headSha: batchData.headRefOid,
+    headRefName: unreported.headRefName,
     repo: `${repo.owner}/${repo.name}`,
     ...(batchData.viewerAuthorization && { viewerAuthorization: batchData.viewerAuthorization }),
     status,
@@ -465,6 +478,14 @@ export async function runCheck(
         ...(headUpdatedAfterRemoval && { headUpdatedAfterRemoval: true as const }),
       },
     }),
+    ...(unreported.unreportedRequiredChecks && {
+      unreportedRequiredChecks: unreported.unreportedRequiredChecks,
+    }),
+    ...(unreported.trunkBehindBy !== undefined && { trunkBehindBy: unreported.trunkBehindBy }),
+    ...(unreported.actionsWorkflowInProgress && {
+      actionsWorkflowInProgress: true as const,
+    }),
+    ...(unreported.stackBottomPr !== undefined && { stackBottomPr: unreported.stackBottomPr }),
   };
   if (result.fingerprint) {
     await storePrFingerprint(stateKey, result.fingerprint, report, config);

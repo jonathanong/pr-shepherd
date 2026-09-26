@@ -31,6 +31,12 @@ export function buildIterateBase(
     ...buildSuppressedCheckFields(report),
     activity: report.activity,
     mergeQueue: report.mergeQueue,
+    ...(report.unreportedRequiredChecks &&
+      report.unreportedRequiredChecks.length > 0 && {
+        unreportedRequiredChecks: report.unreportedRequiredChecks,
+      }),
+    ...(report.trunkBehindBy !== undefined &&
+      report.trunkBehindBy > 0 && { trunkBehindBy: report.trunkBehindBy }),
     ...(report.fingerprintReused === true && { fingerprintReused: true as const }),
   };
 }

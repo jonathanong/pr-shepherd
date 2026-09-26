@@ -91,6 +91,7 @@ interface RawCheckSuites {
   pageInfo: { hasNextPage: boolean };
   nodes: Array<{
     id?: string;
+    status?: string | null;
     conclusion: string | null;
     workflowRun: {
       databaseId: number | null;

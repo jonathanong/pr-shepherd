@@ -112,6 +112,7 @@ export function formatIterateResult(
     const names = result.supersededNames.map((n) => "`" + n + "`").join(", ");
     headerLines.push(`**superseded** ${names}`);
   }
+  appendUnreportedLines(headerLines, result);
   appendMergeQueueHeader(headerLines, result);
   const activityLine = formatActivityLine(result);
   if (activityLine) headerLines.push(activityLine);
@@ -157,6 +158,7 @@ export function formatIterateResult(
         const supersededStr = result.supersededNames.map((n) => "`" + n + "`").join(", ");
         cancelHeaderLines.push(`**superseded** ${supersededStr}`);
       }
+      appendUnreportedLines(cancelHeaderLines, result);
       appendMergeQueueHeader(cancelHeaderLines, result);
       if (activityLine) cancelHeaderLines.push(activityLine);
       return joinSections([
@@ -179,5 +181,15 @@ export function formatIterateResult(
 
     case "fix_code":
       return formatFixCodeResult(joinSections([header, ...telemetrySections]), result, { verbose });
+  }
+}
+
+function appendUnreportedLines(lines: string[], result: IterateResult): void {
+  if (result.unreportedRequiredChecks && result.unreportedRequiredChecks.length > 0) {
+    const names = result.unreportedRequiredChecks.map((name) => "`" + name + "`").join(", ");
+    lines.push(`**unreported required** ${names}`);
+  }
+  if (result.trunkBehindBy !== undefined && result.trunkBehindBy > 0) {
+    lines.push(`**trunk behind** \`${result.trunkBehindBy}\``);
   }
 }

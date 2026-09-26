@@ -68,6 +68,16 @@ This is deliberately narrow:
 
 When all checks are filtered or skipped (e.g., docs-only PRs that only trigger push checks), `getCiVerdict` returns `allPassed: true`. This prevents shepherd from blocking READY on PRs that have no relevant CI.
 
+### Unreported required checks
+
+A required status context with no check run and no status context is a different gap. Other checks can be green, so `allPassed` is still true, and the missing names are not rows in the rollup. Shepherd loads the required contexts from the merge target. For a native stack that target is the stack trunk (`stack.baseRefName`), the same rules GitHub applies to every layer, not the upper layer's parent branch. The newest check or status of a name counts: a later success supersedes an older cancelled run of that name.
+
+When those contexts are missing and no relevant Actions workflow is still running, `iterate` returns `FIX_CODE` immediately. An in-progress or queued check run, or a check suite that has a `workflowRun` and is not completed, means CI is in progress and the action stays `WAIT`. A suite with no workflow run that stays `QUEUED` does not count. `computeStatus` stays `PENDING` in this gap, including when `mergeStateStatus` is `BLOCKED` and every reported check passed, so ready-delay does not start.
+
+The instruction lists the missing names. If the stack trunk compare is behind (`behindBy > 0`) or the PR's derived merge status is `BEHIND`, it rebases onto the trunk (or updates a non-stack PR from its base) and pushes, which sends `pull_request` `synchronize`. Otherwise it closes and reopens the PR once for that head. The head and context set are stored in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/ci-retrigger.json`. The next tick on that same head escalates with `required-checks-unreported` instead of closing the PR again. Being behind is not its own action once the required checks have reported.
+
+JSON and text both list `unreportedRequiredChecks`. `trunkBehindBy` is included when the trunk compare is behind. Both are omitted when empty. A `--stack` summary routes the layer as `fix_code` with reason `unreported-required-checks` instead of an idle wait, and prints the names on that layer. `actionsWorkflowInProgress` is set only when a relevant Actions suite has not completed.
+
 ### `getCiVerdict`
 
 Returns:
@@ -116,4 +126,4 @@ Pending CI checks also carry raw timing when GitHub exposes it:
 - `startedAtUnix` — check-run start time when present.
 - `updatedAtUnix` — check-suite/workflow-run update time when present.
 
-Iterate uses these raw fields to escalate with `stall-timeout` when relevant CI remains pending/unstarted longer than `iterate.stallTimeoutMinutes`.
+Iterate uses these raw fields to escalate with `stall-timeout` when relevant CI remains pending/unstarted longer than `iterate.stallTimeoutMinutes`. A required context that never created a check run is not that timer: it takes the unreported-required `FIX_CODE` path, then `required-checks-unreported`.

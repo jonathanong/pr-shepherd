@@ -58,6 +58,12 @@ function formatItem(item: PollSummaryItem): string {
     ...(checks
       ? [`  - checks: ${formatCounts(checks, checks.incomplete ? ", incomplete" : "")}`]
       : []),
+    ...(checks?.unreportedRequired?.length
+      ? [
+          `  - unreported required: ${checks.unreportedRequired.map((name) => `\`${name}\``).join(", ")}`,
+        ]
+      : []),
+    ...(checks?.actionsWorkflowInProgress ? ["  - actions workflow in progress"] : []),
     ...(review
       ? [`  - review: ${formatCounts(review, review.incomplete ? ", incomplete" : "")}`]
       : []),

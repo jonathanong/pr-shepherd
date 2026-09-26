@@ -77,6 +77,11 @@ export function projectIterateLean(
     ...((result.supersededNames?.length ?? 0) > 0 && {
       supersededNames: result.supersededNames,
     }),
+    ...((result.unreportedRequiredChecks?.length ?? 0) > 0 && {
+      unreportedRequiredChecks: result.unreportedRequiredChecks,
+    }),
+    ...(result.trunkBehindBy !== undefined &&
+      result.trunkBehindBy > 0 && { trunkBehindBy: result.trunkBehindBy }),
     ...(result.quotaWarning && { quotaWarning: result.quotaWarning }),
   };
 
