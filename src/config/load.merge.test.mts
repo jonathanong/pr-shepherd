@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { freshLoadConfig, writeRc } from "../../test-helpers/config/load-test-support.mts";
-import { buildMergeCommandPlan } from "../commands/iterate/merge.mts";
+import { buildMergeCommandPlan, unavailableMergeResult } from "../commands/iterate/merge.mts";
+import type { IterateResultBase } from "../types.mts";
 
 function mergeArgv(allowed?: Array<"merge" | "squash" | "rebase">): string[] {
   const plan = buildMergeCommandPlan({
@@ -143,6 +144,27 @@ describe("loadConfig — merge.commandArgs", () => {
     const loadConfig = await freshLoadConfig();
     expect(loadConfig().merge?.method).toBe("rebase");
     expect(mergeArgv(["merge", "rebase"])).toContain("--rebase");
+  });
+
+  it("rejects a method that disagrees with commandArgs", async () => {
+    writeRc("merge:\n  method: merge\n  commandArgs:\n    - --squash\n");
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const loadConfig = await freshLoadConfig();
+    expect(loadConfig().merge?.method).toBeUndefined();
+    expect(loadConfig().merge?.commandArgs).toEqual([]);
+    expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain("conflicts");
+  });
+
+  it("escalates when the selected method is unavailable", () => {
+    const result = unavailableMergeResult(
+      { pr: 42, repo: "acme/widgets" } as IterateResultBase,
+      { pr: 42, repo: "acme/widgets" },
+      "Configured merge method `merge` is not allowed by this repository. Allowed methods: squash.",
+    );
+    expect(result.action).toBe("escalate");
+    if (result.action !== "escalate") return;
+    expect(result.escalate.triggers).toEqual(["merge-method-unavailable"]);
+    expect(result.escalate.humanMessage).toContain("Allowed methods: squash");
   });
 
   it("does not suggest a configured method the repository disables", async () => {
