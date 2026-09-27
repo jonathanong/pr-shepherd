@@ -19,10 +19,10 @@ Estimates of what an agent pays to load the `pr-shepherd` skill and to read one 
 | CI failure triage          |    548 |
 | Suggestion patches         |    214 |
 | Review-mutation mechanics  |    195 |
-| Branch update              |    181 |
+| Branch update              |    175 |
 | Stack merge                |    105 |
 | Shepherd Journal           |     72 |
-| Every reference as well    |  2,605 |
+| Every reference as well    |  2,599 |
 
 A `FIX_CODE` tick that names CI triage, the journal, and review mutations loads about 2,105 skill tokens (1,290 + 548 + 72 + 195). A stack merge tick adds Stack merge (105) instead of Branch update.
 
@@ -51,7 +51,7 @@ The same measurement against the parent of `ad9bf2cd`, when every playbook lived
 |                           | Before | Current |
 | ------------------------- | -----: | ------: |
 | Always-loaded skill       |  2,712 |   1,290 |
-| Skill plus every playbook |  2,712 |   2,605 |
+| Skill plus every playbook |  2,712 |   2,599 |
 | Median full output        |    304 |     270 |
 | Median `## Instructions`  |    134 |     119 |
 | Mean `## Instructions`    |    159 |     114 |
