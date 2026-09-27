@@ -502,6 +502,7 @@ export async function runCheck(
       unreportedRequiredChecks: unreported.unreportedRequiredChecks,
     }),
     ...(unreported.trunkBehindBy !== undefined && { trunkBehindBy: unreported.trunkBehindBy }),
+    ...(unreported.baseBehindBy !== undefined && { baseBehindBy: unreported.baseBehindBy }),
     ...(unreported.actionsWorkflowInProgress && {
       actionsWorkflowInProgress: true as const,
     }),

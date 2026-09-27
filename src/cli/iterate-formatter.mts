@@ -212,4 +212,7 @@ function appendUnreportedLines(lines: string[], result: IterateResult): void {
   if (result.trunkBehindBy !== undefined && result.trunkBehindBy > 0) {
     lines.push(`**trunk behind** \`${result.trunkBehindBy}\``);
   }
+  if (result.baseBehindBy !== undefined && result.baseBehindBy > 0) {
+    lines.push(`**behind** \`${result.baseBehindBy}\``);
+  }
 }

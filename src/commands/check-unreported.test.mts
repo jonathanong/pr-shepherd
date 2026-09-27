@@ -1,12 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ShepherdReport } from "../types.mts";
 
-vi.mock("../github/merge-target-rules.mts", () => ({ loadMergeTargetStatus: vi.fn() }));
+vi.mock("../github/merge-target-rules.mts", () => ({
+  loadMergeTargetStatus: vi.fn(),
+  loadBaseBehindBy: vi.fn(),
+}));
 
-import { loadMergeTargetStatus } from "../github/merge-target-rules.mts";
+import { loadBaseBehindBy, loadMergeTargetStatus } from "../github/merge-target-rules.mts";
 import { refreshCachedUnreported } from "./check-unreported.mts";
 
 const target = vi.mocked(loadMergeTargetStatus);
+const behind = vi.mocked(loadBaseBehindBy);
 
 function report(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
   return {
@@ -45,7 +49,10 @@ function report(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
 }
 
 describe("refreshCachedUnreported", () => {
-  beforeEach(() => target.mockReset());
+  beforeEach(() => {
+    target.mockReset();
+    behind.mockReset();
+  });
 
   it("refreshes a stale trunk compare and keeps READY from hiding missing checks", async () => {
     target.mockResolvedValue({
@@ -74,5 +81,72 @@ describe("refreshCachedUnreported", () => {
     expect(next.trunkBehindBy).toBeUndefined();
     expect(next.stackBottomPr).toBe(613);
     expect(next.status).toBe("PENDING");
+  });
+
+  it("refreshes a non-stack base compare without a second batch", async () => {
+    behind.mockResolvedValue(93);
+    const next = await refreshCachedUnreported(
+      report({
+        baseBranch: "main",
+        trunkBehindBy: undefined,
+        baseBehindBy: 4,
+        mergeStatus: {
+          status: "BLOCKED",
+          state: "OPEN",
+          isDraft: false,
+          mergeable: "MERGEABLE",
+          reviewDecision: null,
+          blockingBotReviewInProgress: false,
+          mergeStateStatus: "BLOCKED",
+        },
+      }),
+      { owner: "acme", name: "widgets" },
+    );
+    expect(target).not.toHaveBeenCalled();
+    expect(next.baseBehindBy).toBe(93);
+    expect(next.unreportedRequiredChecks).toEqual(["old"]);
+  });
+
+  it("drops a stale base compare once the required checks have reported", async () => {
+    const next = await refreshCachedUnreported(
+      report({
+        unreportedRequiredChecks: undefined,
+        trunkBehindBy: undefined,
+        baseBehindBy: 4,
+        mergeStatus: {
+          status: "BLOCKED",
+          state: "OPEN",
+          isDraft: false,
+          mergeable: "MERGEABLE",
+          reviewDecision: null,
+          blockingBotReviewInProgress: false,
+          mergeStateStatus: "BLOCKED",
+        },
+      }),
+      { owner: "acme", name: "widgets" },
+    );
+    expect(behind).not.toHaveBeenCalled();
+    expect(next.baseBehindBy).toBeUndefined();
+  });
+
+  it("clears the base compare when the head has caught up", async () => {
+    behind.mockResolvedValue(0);
+    const next = await refreshCachedUnreported(
+      report({
+        trunkBehindBy: undefined,
+        baseBehindBy: 4,
+        mergeStatus: {
+          status: "BLOCKED",
+          state: "OPEN",
+          isDraft: false,
+          mergeable: "MERGEABLE",
+          reviewDecision: null,
+          blockingBotReviewInProgress: false,
+          mergeStateStatus: "BLOCKED",
+        },
+      }),
+      { owner: "acme", name: "widgets" },
+    );
+    expect(next.baseBehindBy).toBeUndefined();
   });
 });

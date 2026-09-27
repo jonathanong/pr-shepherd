@@ -22,32 +22,46 @@ function decideUnreportedRequired(input: {
   return "reopen";
 }
 
-function buildUnreportedRequiredInstruction(input: {
+function listedChecks(names: readonly string[]): string {
+  return names.map((name) => `\`${name}\``).join(", ");
+}
+
+/** Facts, then rebase-and-push, then investigate or escalate if that push does not start CI. */
+function buildUnreportedRequiredInstructions(input: {
   names: readonly string[];
   repo: string;
   pr: number;
   baseBranch: string;
   behind: boolean;
-  trunkBehindBy?: number;
+  behindBy: number;
+  trunk: boolean;
   stackRebase?: string;
-}): string {
-  const listed = input.names.map((name) => `\`${name}\``).join(", ");
-  const observed =
-    input.trunkBehindBy !== undefined && input.trunkBehindBy > 0
-      ? `The stack trunk compare is behind by ${input.trunkBehindBy}.`
-      : input.behind
-        ? "This PR's derived merge status is BEHIND."
-        : "The stack trunk compare is not behind and this PR's derived merge status is not BEHIND.";
-  const update = input.stackRebase
+}): string[] {
+  const names = listedChecks(input.names);
+  const gap =
+    input.behindBy > 0 && input.trunk
+      ? `The stack trunk is behind by ${input.behindBy} commits.`
+      : input.behindBy > 0
+        ? `This branch is behind \`${input.baseBranch}\` by ${input.behindBy} commits.`
+        : input.behind
+          ? "This PR's derived merge status is BEHIND."
+          : `This branch is not behind \`${input.baseBranch}\`.`;
+  const facts = `${gap} No CI checks are running, and required checks have not passed: ${names}.`;
+  if (!input.behind) {
+    return [
+      facts,
+      `Retrigger workflows once for this head with \`gh pr close ${input.pr} -R ${input.repo}\` then \`gh pr reopen ${input.pr} -R ${input.repo}\`.`,
+      "If those checks are still missing on the next poll, investigate why the workflows did not start. Do not close the PR again. Shepherd escalates with `required-checks-unreported` when this remains the only blocker.",
+    ];
+  }
+  const rebase = input.stackRebase
     ? `${input.stackRebase} Then push the rewritten stack with \`gh stack push\`.`
-    : `Rebase or otherwise update the PR branch from \`${input.baseBranch}\` according to repository conventions, then push.`;
+    : `Rebase onto \`${input.baseBranch}\` and push.`;
   return [
-    `Required status checks have no check run and no status context on this head, and no Actions workflow is running: ${listed}.`,
-    observed,
-    `If the stack trunk is behind or this PR is behind its base, update the branch so a pull_request synchronize event runs: ${update}`,
-    `Otherwise retrigger workflows once for this head with \`gh pr close ${input.pr} -R ${input.repo}\` then \`gh pr reopen ${input.pr} -R ${input.repo}\`.`,
-    "Do not close the PR again if those checks are still missing on the next poll.",
-  ].join(" ");
+    facts,
+    `${rebase} Rebase and push is how these checks start.`,
+    "If that push does not start the checks, investigate why the workflows did not run. Shepherd escalates with `required-checks-unreported` when the branch is current and this remains the only blocker.",
+  ];
 }
 
 export async function planUnreportedRequired(input: {
@@ -64,8 +78,8 @@ export async function planUnreportedRequired(input: {
   const conflicts = input.report.mergeStatus.status === "CONFLICTS";
   const inQueue = input.report.mergeQueue?.inQueue === true;
   if (names.length === 0 || actionsRunning || failing || conflicts || inQueue) return {};
-  const behind =
-    (input.report.trunkBehindBy ?? 0) > 0 || input.report.mergeStatus.status === "BEHIND";
+  const behindBy = input.report.trunkBehindBy ?? input.report.baseBehindBy ?? 0;
+  const behind = behindBy > 0 || input.report.mergeStatus.status === "BEHIND";
   const decision = decideUnreportedRequired({
     behind,
     alreadyRetriggered: sameCiRetrigger(
@@ -79,19 +93,20 @@ export async function planUnreportedRequired(input: {
   if (decision === "escalate")
     return { escalate: escalateUnreported(input.base, input.report, names) };
   const rebase = stackRebase(input.report);
-  const instruction = buildUnreportedRequiredInstruction({
+  const instructions = buildUnreportedRequiredInstructions({
     names,
     repo: input.report.repo,
     pr: input.report.pr,
     baseBranch: input.report.baseBranch,
     behind,
-    ...(input.report.trunkBehindBy !== undefined && { trunkBehindBy: input.report.trunkBehindBy }),
+    behindBy,
+    trunk: (input.report.trunkBehindBy ?? 0) > 0,
     ...(rebase && { stackRebase: rebase }),
   });
   if (decision === "reopen") {
     await writeCiRetrigger(input.stateKey, { headSha: input.headSha, contexts: names });
   }
-  return { repairInstructions: [instruction] };
+  return { repairInstructions: instructions };
 }
 
 export function buildUnreportedFixResult(

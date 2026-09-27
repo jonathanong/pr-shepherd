@@ -4,13 +4,15 @@ import {
   unreportedRequiredContexts,
   type WorkflowSuiteSnapshot,
 } from "../checks/unreported-required.mts";
-import { loadMergeTargetStatus } from "../github/merge-target-rules.mts";
+import { loadBaseBehindBy, loadMergeTargetStatus } from "../github/merge-target-rules.mts";
 import type { BatchPrData, CheckRun, ShepherdReport } from "../types.mts";
 import type { RepoInfo } from "../github/client.mts";
 
 export interface UnreportedRequiredFields {
   unreportedRequiredChecks?: string[];
   trunkBehindBy?: number;
+  /** Commits on the PR base that this head does not contain. Omitted when zero or a stack. */
+  baseBehindBy?: number;
   actionsWorkflowInProgress?: true;
   stackBottomPr?: number;
   headRefName: string;
@@ -42,10 +44,20 @@ export async function collectUnreportedRequired(input: {
   });
   const unreported = unreportedRequiredContexts(target.contexts, reportedCheckNames(input.checks));
   const actionsRunning = actionsWorkflowInProgress(input.suites, new Set(input.relevantEvents));
+  const baseBehindBy =
+    unreported.length > 0 && !input.batchData.stack
+      ? await loadBaseBehindBy(
+          input.owner,
+          input.name,
+          input.batchData.baseRefName,
+          input.batchData.headRefName,
+        )
+      : 0;
   return {
     ...(unreported.length > 0 && { unreportedRequiredChecks: unreported }),
     ...(target.trunkBehindBy !== undefined &&
       target.trunkBehindBy > 0 && { trunkBehindBy: target.trunkBehindBy }),
+    ...(baseBehindBy > 0 && { baseBehindBy }),
     ...(actionsRunning && { actionsWorkflowInProgress: true as const }),
     ...(target.stackBottomPr !== undefined && { stackBottomPr: target.stackBottomPr }),
     headRefName: input.batchData.headRefName,
@@ -62,7 +74,8 @@ export async function refreshCachedUnreported(
   repo: RepoInfo,
 ): Promise<ShepherdReport> {
   const stack = report.mergeStatus?.mergeRequirements?.stack;
-  if (!stack || !report.headRefName) return report;
+  if (!report.headRefName) return report;
+  if (!stack) return refreshBaseBehind(report, repo);
   const target = await loadMergeTargetStatus({
     owner: repo.owner,
     name: repo.name,
@@ -84,6 +97,22 @@ export async function refreshCachedUnreported(
   } else delete next.trunkBehindBy;
   if (target.stackBottomPr !== undefined) next.stackBottomPr = target.stackBottomPr;
   if (unreported.length > 0 && next.status === "READY") next.status = "PENDING";
+  return next;
+}
+
+/** A fingerprint hit can keep a stale base compare after main moves. */
+async function refreshBaseBehind(report: ShepherdReport, repo: RepoInfo): Promise<ShepherdReport> {
+  const headRefName = report.headRefName;
+  if (!headRefName || (report.unreportedRequiredChecks?.length ?? 0) === 0) {
+    if (report.baseBehindBy === undefined) return report;
+    const cleared = { ...report };
+    delete cleared.baseBehindBy;
+    return cleared;
+  }
+  const behind = await loadBaseBehindBy(repo.owner, repo.name, report.baseBranch, headRefName);
+  const next = { ...report };
+  if (behind > 0) next.baseBehindBy = behind;
+  else delete next.baseBehindBy;
   return next;
 }
 

@@ -51,7 +51,11 @@ describe("runIterate — unreported required checks", () => {
 
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") throw new Error("expected fix_code");
-    expect(result.fix.instructions.join("\n")).toContain("gh pr close 42");
+    const instructions = result.fix.instructions.join("\n");
+    expect(instructions).toContain("The stack trunk is behind by 2 commits.");
+    expect(instructions).toContain("No CI checks are running, and required checks have not passed");
+    expect(instructions).toContain("Rebase onto `main` and push.");
+    expect(instructions).not.toContain("gh pr close 42");
     expect(result.fix.checks).toEqual([]);
     const text = formatIterateResult(result);
     expect(text).toContain("**unreported required** `build`, `tests`");
