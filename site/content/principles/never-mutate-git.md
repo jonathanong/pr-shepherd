@@ -3,8 +3,8 @@ title: "Never mutate git"
 description: "Shepherd emits the commit, push, and merge commands; it never runs them. The calling agent already owns the git lifecycle."
 order: 4
 docs:
-  - path: "CLAUDE.md#git-operations"
-    label: "CLAUDE.md — the read-only git rule, in full"
+  - path: "AGENTS.md#git-operations"
+    label: "AGENTS.md — the read-only git rule, in full"
   - path: "docs/features.md"
     label: "features.md — 'does not modify files or mutate git' as a non-goal"
 ---

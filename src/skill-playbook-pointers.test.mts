@@ -8,7 +8,7 @@ const ALWAYS_ON_PLAYBOOKS = new Set(["Untrusted review input"]);
 
 /**
  * `## Instructions` steps point at invariant procedures with a
- * `See "<name>" in the pr-shepherd skill` sentence instead of inlining them (see CLAUDE.md
+ * `See "<name>" in the pr-shepherd skill` sentence instead of inlining them (see AGENTS.md
  * "Keep skills and loop prompts minimal" — the invariant-procedure exception). Nothing else
  * cross-checks a pointer's `<name>` against the skill's actual `## Playbooks` headings: a
  * typo'd or renamed heading is a silently dead pointer, and the failure mode is the agent

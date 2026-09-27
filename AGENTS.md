@@ -194,7 +194,7 @@ Rule of thumb: if a skill contains a table, policy, or interpretation block whos
 
 However, the CLI's `## Instructions` output must not duplicate guidance the caller's runtime already provides deterministically. Specifically:
 
-- Do not prescribe `git` mechanics the caller's pre-push hooks / `CLAUDE.md` already enforce (lint, typecheck, format) or that the caller's conventions specify (rebase style, push flags). Surface raw state (branch behind base, conflicts) and emit a one-liner pointer instead.
+- Do not prescribe `git` mechanics the caller's pre-push hooks / `AGENTS.md` already enforce (lint, typecheck, format) or that the caller's conventions specify (rebase style, push flags). Surface raw state (branch behind base, conflicts) and emit a one-liner pointer instead.
 - The CLI does not classify what will require code edits — only the agent can decide. Do not gate instruction steps on heuristics like "threads are present, therefore a push is needed." Emit all relevant data sections and use inline `if`/`else` phrasing.
 - Phrase multi-branch logic as inline `if` conditions in the same instruction step, not as separate CLI-predicated sections.
 

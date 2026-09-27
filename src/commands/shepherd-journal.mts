@@ -16,7 +16,7 @@ export const SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE =
  * Build the Shepherd Journal instruction step. The reference-citation convention (link
  * threads/comments from their headings, cite reviews by ID) is invariant across every
  * invocation, so it lives in the pr-shepherd skill's "Shepherd Journal" playbook instead
- * of being re-emitted every tick (see CLAUDE.md "Keep skills and loop prompts minimal").
+ * of being re-emitted every tick (see AGENTS.md "Keep skills and loop prompts minimal").
  */
 export function buildShepherdJournalInstruction(prReference: string | number): string {
   // Single-quote the placeholder so a substituted decision stays literal in the shell.

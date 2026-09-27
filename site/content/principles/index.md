@@ -5,8 +5,8 @@ order: 1
 docs:
   - path: "docs/architecture.md"
     label: "Architecture — design rationale"
-  - path: "CLAUDE.md"
-    label: "CLAUDE.md — contributor-facing principles"
+  - path: "AGENTS.md"
+    label: "AGENTS.md — contributor-facing principles"
 ---
 
 # Principles
