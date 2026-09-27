@@ -33,6 +33,9 @@ export const POLL_SUMMARY_FRAGMENT = `${gql("ref-rules.gql")}\n${POLL_SUMMARY_CH
 /** Trunk branch rules plus how far `headRef` is behind that branch. */
 export const REF_RULES_QUERY = `${gql("ref-rules.gql")}\n${gql("ref-rules-query.gql")}`;
 
+/** How far a non-stack head is behind its PR base. One compare, no rules payload. */
+export const BASE_BEHIND_QUERY = gql("base-behind.gql");
+
 /**
  * Pages older status contexts for one commit with the same node selection as
  * the compact summary, so hydrated and first-page nodes fingerprint alike.

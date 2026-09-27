@@ -39,6 +39,8 @@ export function buildIterateBase(
       }),
     ...(report.trunkBehindBy !== undefined &&
       report.trunkBehindBy > 0 && { trunkBehindBy: report.trunkBehindBy }),
+    ...(report.baseBehindBy !== undefined &&
+      report.baseBehindBy > 0 && { baseBehindBy: report.baseBehindBy }),
     ...(report.fingerprintReused === true && { fingerprintReused: true as const }),
     ...(ruleAutoResolve && { ruleAutoResolve }),
   };

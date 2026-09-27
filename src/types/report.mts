@@ -132,6 +132,8 @@ export interface ShepherdReport {
   unreportedRequiredChecks?: string[];
   /** Commits on the stack trunk that the bottom open layer does not contain. Omitted when zero. */
   trunkBehindBy?: number;
+  /** Commits on the PR base that this head does not contain. Omitted when zero. */
+  baseBehindBy?: number;
   /** A relevant Actions workflow suite on the head has not completed. */
   actionsWorkflowInProgress?: true;
   /** Bottom open layer of this PR's native stack. Starts a trunk rebase. */

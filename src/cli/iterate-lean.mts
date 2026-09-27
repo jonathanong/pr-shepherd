@@ -83,6 +83,8 @@ export function projectIterateLean(
     }),
     ...(result.trunkBehindBy !== undefined &&
       result.trunkBehindBy > 0 && { trunkBehindBy: result.trunkBehindBy }),
+    ...(result.baseBehindBy !== undefined &&
+      result.baseBehindBy > 0 && { baseBehindBy: result.baseBehindBy }),
     ...(result.quotaWarning && { quotaWarning: result.quotaWarning }),
     ...(result.ruleAutoResolve && {
       ruleAutoResolve: projectRuleAutoResolve(result.ruleAutoResolve),

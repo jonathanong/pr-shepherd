@@ -13,6 +13,7 @@ vi.mock("./iterate/stale-ancestry.mts", () => ({
 }));
 
 import { formatIterateResult } from "../cli/iterate-formatter.mts";
+import { projectIterateLean } from "../cli/iterate-lean.mts";
 import {
   makeOpts,
   makeReport,
@@ -51,11 +52,47 @@ describe("runIterate — unreported required checks", () => {
 
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") throw new Error("expected fix_code");
-    expect(result.fix.instructions.join("\n")).toContain("gh pr close 42");
+    const instructions = result.fix.instructions.join("\n");
+    expect(instructions).toContain("The stack trunk is behind by 2 commits.");
+    expect(instructions).toContain("No CI checks are running, and required checks have not passed");
+    expect(instructions).toContain("Rebase onto `main` and push.");
+    expect(instructions).not.toContain("gh pr close 42");
     expect(result.fix.checks).toEqual([]);
     const text = formatIterateResult(result);
     expect(text).toContain("**unreported required** `build`, `tests`");
     expect(text).toContain("**trunk behind** `2`");
+  });
+
+  it("prints the base compare count when merge status is BLOCKED", async () => {
+    dir = await mkdtemp(join(tmpdir(), "pr-shepherd-unreported-"));
+    previous = process.env["PR_SHEPHERD_STATE_DIR"];
+    process.env["PR_SHEPHERD_STATE_DIR"] = dir;
+    mockFindStale.mockResolvedValue(null);
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "PENDING",
+        headSha: "c".repeat(40),
+        unreportedRequiredChecks: ["static", "backend"],
+        baseBehindBy: 93,
+        mergeStatus: {
+          status: "BLOCKED",
+          state: "OPEN",
+          isDraft: false,
+          mergeable: "MERGEABLE",
+          reviewDecision: null,
+          blockingBotReviewInProgress: false,
+          mergeStateStatus: "BLOCKED",
+        },
+      }),
+    );
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("fix_code");
+    const text = formatIterateResult(result);
+    expect(text).toContain("**behind** `93`");
+    expect(text).toContain("This branch is behind `main` by 93 commits.");
+    expect(text).toContain("No CI checks are running, and required checks have not passed");
+    expect(projectIterateLean(result)).toMatchObject({ baseBehindBy: 93 });
   });
 
   it("prepends the missing checks to a stale stack-boundary repair", async () => {

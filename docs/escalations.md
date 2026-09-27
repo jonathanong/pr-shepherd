@@ -17,7 +17,7 @@ Aggregate mode never performs a mutation; a `--stack --merge` result emits an ag
 | `merge-queue-removed`         | Merge mode is enabled, GitHub reports a queue removal, the head has not changed since removal, no queue/auto-merge state remains, and no earlier branch found an actionable failure or concrete fix. |
 | `merge-method-unavailable`    | Merge mode is enabled, and the configured merge method is disabled on the repository, or the repository enables no merge method. Shepherd does not print a `gh pr merge` command.                    |
 | `stall-timeout`               | An enabled timeout expires for CI that never starts, an unchanged `WAIT`/`FIX_CODE` state fingerprint, or a `--stack` selection whose layers can only wait.                                          |
-| `required-checks-unreported`  | Required merge-target contexts still have no check run after one close/reopen of this head, and no Actions workflow is running.                                                                      |
+| `required-checks-unreported`  | Required merge-target contexts still have no check run after one close/reopen of a current head, and no Actions workflow is running. A behind base stays on rebase-and-push.                         |
 | `stall-state-unavailable`     | An enabled stall timeout cannot read or write its timer. The tick hands off instead of treating the failure as a new first sighting.                                                                 |
 
 ## Complete predicates
@@ -96,7 +96,7 @@ A `--stack` selection has a third path. When every remaining layer's bounded pro
 
 The merge target requires one or more status contexts that have no check run and no status context on the head, no relevant Actions workflow is running, and Shepherd already emitted one close/reopen for that same head and context set. The marker is `ci-retrigger.json` under the PR state directory. A second close will not create a job the workflow does not emit. Path filters are the usual cause.
 
-This is immediate. It does not wait for `stall-timeout`. A behind trunk or a `BEHIND` merge status stays on `FIX_CODE` (rebase, then push) and does not write the marker, so a repeated rebase still uses the ordinary stall timer. Failing checks, merge conflicts, and an in-progress Actions workflow do not take this trigger. Other autonomous review work on the same tick stays `FIX_CODE` without a second close; the trigger fires once that work is gone and the contexts are still missing.
+This is immediate. It does not wait for `stall-timeout`. Rebase and push stays the `FIX_CODE` action while the stack trunk compare is behind, the PR base compare (`baseBehindBy`) is behind, or the derived merge status is `BEHIND`. `mergeStateStatus` `BLOCKED` does not hide that compare. That path does not write the marker, so a repeated rebase still uses the ordinary stall timer. If the push does not start the checks, the next current head investigates and then takes this trigger. Failing checks, merge conflicts, and an in-progress Actions workflow do not take this trigger. Other autonomous review work on the same tick stays `FIX_CODE` without a second close; the trigger fires once that work is gone and the contexts are still missing.
 
 ### `stall-state-unavailable`
 

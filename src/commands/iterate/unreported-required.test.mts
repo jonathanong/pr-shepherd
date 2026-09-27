@@ -71,11 +71,14 @@ describe("planUnreportedRequired", () => {
       otherAutonomousWork: false,
     });
     expect(plan.escalate).toBeUndefined();
-    expect(plan.repairInstructions?.[0]).toContain("behind by 6");
-    expect(plan.repairInstructions?.[0]).toContain("gh stack rebase");
-    expect(plan.repairInstructions?.[0]).toContain("gh stack push");
-    expect(plan.repairInstructions?.[0]).toContain("gh pr close 622 -R acme/widgets");
-    expect(plan.repairInstructions?.[0]).toContain("gh pr reopen 622 -R acme/widgets");
+    const text = plan.repairInstructions?.join("\n") ?? "";
+    expect(text).toContain("The stack trunk is behind by 6 commits.");
+    expect(text).toContain("No CI checks are running, and required checks have not passed");
+    expect(text).toContain("gh stack rebase");
+    expect(text).toContain("gh stack push");
+    expect(text).toContain("Rebase and push is how these checks start.");
+    expect(text).toContain("investigate why the workflows did not run");
+    expect(text).not.toContain("gh pr close");
   });
 
   it("remembers one reopen and escalates when the same head is still missing those checks", async () => {
@@ -87,7 +90,11 @@ describe("planUnreportedRequired", () => {
       headSha,
       otherAutonomousWork: false,
     });
-    expect(first.repairInstructions?.[0]).toContain("not behind");
+    const firstText = first.repairInstructions?.join("\n") ?? "";
+    expect(firstText).toContain("This branch is not behind `feature-parent`.");
+    expect(firstText).toContain("No CI checks are running, and required checks have not passed");
+    expect(firstText).toContain("gh pr close 622 -R acme/widgets");
+    expect(firstText).toContain("investigate why the workflows did not start");
     const second = await planUnreportedRequired({
       report: current,
       base,
@@ -112,33 +119,6 @@ describe("planUnreportedRequired", () => {
       otherAutonomousWork: false,
     });
     expect(plan).toEqual({});
-  });
-
-  it("updates a non-stack PR from its base when that PR is behind", async () => {
-    const current = report({
-      trunkBehindBy: undefined,
-      stackBottomPr: undefined,
-      baseBranch: "main",
-      mergeStatus: {
-        status: "BEHIND",
-        state: "OPEN",
-        isDraft: false,
-        mergeable: "MERGEABLE",
-        reviewDecision: null,
-        blockingBotReviewInProgress: false,
-        mergeStateStatus: "BEHIND",
-      },
-    });
-    const plan = await planUnreportedRequired({
-      report: current,
-      base,
-      stateKey,
-      headSha,
-      otherAutonomousWork: false,
-    });
-    expect(plan.repairInstructions?.[0]).toContain("from `main`");
-    expect(plan.repairInstructions?.[0]).toContain("BEHIND");
-    expect(plan.repairInstructions?.[0]).not.toContain("gh stack rebase");
   });
 
   it("stays quiet while Actions is running, checks are failing, or the PR is queued", async () => {

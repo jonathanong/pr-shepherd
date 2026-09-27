@@ -17,6 +17,7 @@ import {
   POLL_STACK_TOPOLOGY_QUERY,
   UPPER_LAYER_CONFLICT_TARGET_QUERY,
   REF_RULES_QUERY,
+  BASE_BEHIND_QUERY,
 } from "./queries.mts";
 
 describe("queries — GQL constants load at import time", () => {
@@ -74,6 +75,8 @@ describe("queries — GQL constants load at import time", () => {
     expect(POLL_SUMMARY_FRAGMENT).toContain("...RefRules");
     expect(POLL_SUMMARY_FRAGMENT).toContain("checkSuites(first: 50)");
     expect(REF_RULES_QUERY).toContain("compare(headRef: $headRef)");
+    expect(BASE_BEHIND_QUERY).toContain("compare(headRef: $headRef)");
+    expect(BASE_BEHIND_QUERY).toContain("behindBy");
     expect(POLL_STACK_SUMMARY_QUERY).toContain("entries(first: $first, after: $after)");
     expect(POLL_STACK_SUMMARY_QUERY).toContain("...PollSummaryPr");
     expect(POLL_STACK_TOPOLOGY_QUERY).toContain("entries(first: 50, after: $after)");
@@ -152,6 +155,7 @@ describe("queries — GQL constants load at import time", () => {
       POLL_SUMMARY_CHECK_PAGE_QUERY,
       POLL_STACK_TOPOLOGY_QUERY,
       UPPER_LAYER_CONFLICT_TARGET_QUERY,
+      BASE_BEHIND_QUERY,
     ]) {
       expect(query).toContain("_shepherdRateLimit: rateLimit");
       expect(query).toContain("nodeCount");

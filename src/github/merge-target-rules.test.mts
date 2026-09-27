@@ -4,7 +4,7 @@ vi.mock("./client.mts", () => ({ graphqlWithRateLimit: vi.fn() }));
 vi.mock("./stack-read.mts", () => ({ readStackTopology: vi.fn() }));
 
 import { graphqlWithRateLimit } from "./client.mts";
-import { loadMergeTargetStatus } from "./merge-target-rules.mts";
+import { loadBaseBehindBy, loadMergeTargetStatus } from "./merge-target-rules.mts";
 import { readStackTopology } from "./stack-read.mts";
 
 const graphql = vi.mocked(graphqlWithRateLimit);
@@ -54,5 +54,47 @@ describe("loadMergeTargetStatus", () => {
     await expect(
       loadMergeTargetStatus({ ...input, baseRefName: "main", stack: { baseRefName: "main" } }),
     ).rejects.toThrow("Branch refs/heads/main was not found in acme/widgets");
+  });
+});
+
+describe("loadBaseBehindBy", () => {
+  beforeEach(() => graphql.mockReset());
+
+  it("returns the base compare behind count", async () => {
+    graphql.mockResolvedValue({
+      data: { repository: { ref: { compare: { behindBy: 93 } } } },
+    } as Awaited<ReturnType<typeof graphqlWithRateLimit>>);
+
+    const head = "c".repeat(40);
+    await expect(loadBaseBehindBy("acme", "widgets", "main", head)).resolves.toBe(93);
+    expect(graphql).toHaveBeenCalledWith(
+      expect.stringContaining("behindBy"),
+      expect.objectContaining({
+        qualifiedName: "refs/heads/main",
+        headRef: "c".repeat(40),
+      }),
+    );
+  });
+
+  it("returns zero when GitHub has no compare object", async () => {
+    graphql.mockResolvedValue({
+      data: { repository: { ref: { compare: null } } },
+    } as Awaited<ReturnType<typeof graphqlWithRateLimit>>);
+    await expect(loadBaseBehindBy("acme", "widgets", "main", "feature")).resolves.toBe(0);
+  });
+
+  it("fails when the repository or base ref is missing", async () => {
+    graphql.mockResolvedValue({
+      data: { repository: null },
+    } as Awaited<ReturnType<typeof graphqlWithRateLimit>>);
+    await expect(loadBaseBehindBy("acme", "widgets", "main", "feature")).rejects.toThrow(
+      "acme/widgets",
+    );
+    graphql.mockResolvedValue({
+      data: { repository: { ref: null } },
+    } as Awaited<ReturnType<typeof graphqlWithRateLimit>>);
+    await expect(loadBaseBehindBy("acme", "widgets", "main", "feature")).rejects.toThrow(
+      "refs/heads/main",
+    );
   });
 });

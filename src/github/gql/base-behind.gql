@@ -1,0 +1,20 @@
+# Commits on the PR base that the head branch does not contain.
+# Fetched only when required checks never reported, so a BLOCKED merge state
+# cannot hide a behind base.
+query BaseBehind($owner: String!, $repo: String!, $qualifiedName: String!, $headRef: String!) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
+  repository(owner: $owner, name: $repo) {
+    ref(qualifiedName: $qualifiedName) {
+      compare(headRef: $headRef) {
+        behindBy
+      }
+    }
+  }
+}

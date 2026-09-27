@@ -3,7 +3,7 @@ import { parseBranchRules } from "./batch-parsers-rules.mts";
 import type { RawBaseRef } from "./batch-raw-rules.mts";
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import { missingRepositoryError } from "./errors.mts";
-import { REF_RULES_QUERY } from "./queries.mts";
+import { BASE_BEHIND_QUERY, REF_RULES_QUERY } from "./queries.mts";
 import { readStackTopology } from "./stack-read.mts";
 
 export interface MergeTargetStatus {
@@ -15,6 +15,12 @@ export interface MergeTargetStatus {
 interface RefRulesData {
   repository: {
     ref: (RawBaseRef & { compare: { behindBy: number } | null }) | null;
+  } | null;
+}
+
+interface BaseBehindData {
+  repository: {
+    ref: { compare: { behindBy: number } | null } | null;
   } | null;
 }
 
@@ -65,6 +71,37 @@ async function bottomOpenLayer(
     );
   }
   return bottom;
+}
+
+/**
+ * Commits on the PR base that `headRef` does not contain.
+ * Pass the head commit OID. A fork's branch name can exist on the base
+ * repository, or fail to resolve, and either result hides a real behind count.
+ * `mergeStateStatus` stays `BLOCKED` when a conversation or an expected check
+ * is also open, so this compare is the behind count that status hides.
+ */
+export async function loadBaseBehindBy(
+  owner: string,
+  name: string,
+  baseRefName: string,
+  headRef: string,
+): Promise<number> {
+  const qualifiedName = `refs/heads/${baseRefName}`;
+  const { data } = await graphqlWithRateLimit<BaseBehindData>(BASE_BEHIND_QUERY, {
+    owner,
+    repo: name,
+    qualifiedName,
+    headRef,
+  });
+  if (!data.repository) throw missingRepositoryError({ owner, name });
+  const ref = data.repository.ref;
+  if (!ref) {
+    throw new ShepherdError(
+      `Branch ${qualifiedName} was not found in ${owner}/${name}`,
+      EXIT.TEMPFAIL,
+    );
+  }
+  return ref.compare?.behindBy ?? 0;
 }
 
 async function fetchRefRules(
