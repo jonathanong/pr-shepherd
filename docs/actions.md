@@ -103,7 +103,7 @@ Merge command:
 - A direct merge is atomic. On a merge queue, the prefix is queued together and each layer is evaluated from the bottom. A failure ejects that layer and the layers above it. Layers that already merged stay merged.
 - Layers above the prefix keep their one-PR sessions in the same instructions.
 - `gh stack merge` reads a bare number as a stack number before a PR number. Native stack numbers come from the repository issue and pull request sequence (observed; GitHub does not document it), so a PR number never names a stack.
-- If `gh stack` is an unknown command, the instructions install `github/gh-stack` first. That install step is also in the Branch update playbook.
+- If `gh stack` is an unknown command, the instructions install `github/gh-stack` first. The Stack merge playbook says the same, and it does not push.
 - After each merge, GitHub retargets the next layer. Rerun `--stack --merge` until every layer is merged and the result is `CANCEL`.
 - If GitHub queues a layer, the summary stays `WAIT` for those queued layers. Recheck at the polling cadence. Do not rewrite a queued layer. That wait does not block a layer that is not queued. The stack is not finished until every layer merges.
 - An ejected layer leaves the merge prefix until a receipt acknowledges that removal. The instruction names the reason and actor and says to run that layer's one-PR session, which fixes failing queue CI or escalates when there is no concrete fix.
@@ -489,7 +489,7 @@ Stale boundary and native-stack conflicts:
 - The stale-boundary path returns the observed parent and child OIDs and a one-PR repair, then the ordinary `FIX_CODE` continuation. Aggregate `--stack` never does that repair.
 - A native-stack conflict uses a gh-stack rebase from a clean checkout.
 - Import with `gh stack checkout <stack number>` when `gh stack` does not track the stack locally.
-- The step points at the Branch update playbook for the head check, `gh stack rebase --continue`, and merge-queue behavior.
+- The step points at the Branch update playbook for the head check and `gh stack rebase --continue`. Merge-queue behavior for `gh stack merge` is the Stack merge playbook.
 - An upper layer behind its parent gets `gh stack rebase --upstack --no-trunk` from that parent, not from the stack trunk.
 - A whole-stack `gh stack rebase` starts at the bottom open layer when the upper layer already contains its parent (summary: `conflicts with stack trunk`, JSON: `stackTrunkConflict`) or when the layer's own base is the stack trunk, including a higher layer retargeted after the layers below it merged.
 - Push the rewritten stack with `gh stack push`, not the PR head alone.

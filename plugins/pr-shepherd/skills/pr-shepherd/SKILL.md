@@ -19,7 +19,7 @@ Poll with the CLI. Use MCP `iterate` only when the CLI is unavailable. Stop at `
 
 ## Dispatch
 
-- Parse `$ARGUMENTS` for PR numbers, `owner/repo#N`, GitHub PR URLs, or one `--stack PR`. Reject any other argument.
+- Parse `$ARGUMENTS` for PR numbers, `owner/repo#N`, GitHub PR URLs, one `--stack PR`, and an optional `--merge`. Reject any other argument.
 - A request to merge, land, or enqueue the selected PR or stack sets `--merge`. Creating or opening a PR does not.
 - A request to shepherd or merge a native stack, with an anchor PR and no literal `--stack`, uses that PR as the `--stack` selector. Otherwise infer the current branch PR.
 - Follow the target repository's `AGENTS.md` while editing.
@@ -43,7 +43,7 @@ Poll with the CLI. Use MCP `iterate` only when the CLI is unavailable. Stop at `
 
 ## Recurrence
 
-- After the instructions, rerun that same command immediately with the same target and options.
+- After the instructions, rerun that same command immediately with the same target and options. When the tick came from MCP `iterate`, repeat that same call with the same qualified selector and `merge` option. Do not switch back to a CLI that was unavailable.
 - Stop only for `[CANCEL]`, `[ESCALATE]`, or a human telling you to stop. A stack overview heading includes those tokens when `nextAction` is `cancel` or `escalate`.
 - Keep `--until-terminal` and any `--merge`. Apply a printed polling-cadence change.
 - `[FIX_CODE]` is always non-terminal. Stack-level `[SHEPHERD]` is non-terminal. Only `[ESCALATE]` hands work to a human.
@@ -69,3 +69,4 @@ When a step says `Playbook: "<name>"`, read that file once and apply it before t
 - [Review-mutation mechanics](references/review-mutations.md)
 - [Shepherd Journal](references/journal.md)
 - [Branch update](references/branch-update.md)
+- [Stack merge](references/stack-merge.md)

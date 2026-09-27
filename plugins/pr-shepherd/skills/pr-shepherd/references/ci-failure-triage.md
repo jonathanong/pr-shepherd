@@ -1,6 +1,6 @@
 # CI failure triage
 
-Apply when a step says `Playbook: "CI failure triage"`. Use only evidence already in the output.
+Apply when a step says `Playbook: "CI failure triage"`. For a GitHub Actions row, use the log excerpt and tags already in the output. An `external` check with a URL may be opened or reproduced.
 
 - Match each failure's `[conclusion: …]` tag. A specific conclusion wins over the general GitHub Actions row.
 - `[rerun authorized]` plus a `rerun:` command means the viewer can rerun Actions (WRITE+) and this is the original attempt. Shepherd checked `repositoryPermission` and `run_attempt`.

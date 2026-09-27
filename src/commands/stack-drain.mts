@@ -68,7 +68,7 @@ export function planPrefixDrain(
     };
   }
   const instructions = [
-    `1. PR #${top.pr} is the highest open layer of stack #${top.stack.number} in \`${result.repo}\` whose open lower layers are all ready. Run \`GH_REPO=${result.repo} gh stack merge ${top.pr} --yes ${method.flag}\` to merge ${span}. ${playbookPointer("Branch update")}`,
+    `1. PR #${top.pr} is the highest open layer of stack #${top.stack.number} in \`${result.repo}\` whose open lower layers are all ready. Run \`GH_REPO=${result.repo} gh stack merge ${top.pr} --yes ${method.flag}\` to merge ${span}. ${playbookPointer("Stack merge")}`,
   ];
   appendAutonomousInstructions(instructions, above.sessions);
   appendMarkReadyInstructions(instructions, above.markReady);

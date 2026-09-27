@@ -61,7 +61,8 @@ After `## Instructions`:
 - Run an emitted `[MERGE]` command before the next invocation.
 - A quota warning can return `WAIT` or `MARK_READY` to change cadence. That is non-terminal.
 - `[CANCEL]` ends polling. Only `[ESCALATE]` hands work to a human.
-- Pass `--merge` to forward merge intent to the CLI or MCP.
+- Pass `--merge`, or accept a literal `--merge` argument, to forward merge intent to the CLI or MCP.
+- An MCP tick repeats the same `iterate` call. It does not switch back to a CLI that was unavailable.
 
 ```
 User                    Active Goal             pr-shepherd

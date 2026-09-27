@@ -123,7 +123,8 @@ CONFLICTS is included so merge conflicts and review comments can be handled in o
 
 - Import with `gh stack checkout <mergeRequirements.stack.number>` when `gh stack` does not track the stack locally. Use the stack number, not the PR number.
 - The printed step points at the Branch update playbook.
-- That playbook covers confirming each local layer is at its PR head before `gh stack push`, `gh stack rebase --continue`, and merge-queue behavior.
+- That playbook covers confirming each local layer is at its PR head before `gh stack push`, and `gh stack rebase --continue`.
+- A `gh stack merge` step points at the Stack merge playbook. That playbook does not push.
 - An upper layer behind its own PR base gets `gh stack rebase --upstack --no-trunk` from that base, not from the stack trunk `mergeRequirements.stack.baseRefName`. Stale-boundary repair uses the same command.
 - An upper layer that already contains that base (`baseRef.compare(headRef).behindBy === 0`) conflicts with the stack trunk. The summary says conflicts with stack trunk `<trunk>` (`stackTrunkConflict` in JSON). The instruction is a whole-stack `gh stack rebase` from the bottom open layer.
 - The bottom open layer is the one whose PR base is that trunk, including a higher layer GitHub retargeted after the layers below it merged. It gets the same whole-stack rebase.
