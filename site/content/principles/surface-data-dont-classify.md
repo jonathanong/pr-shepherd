@@ -3,8 +3,8 @@ title: "Surface data, don't classify it"
 description: "Ship the raw field, not a one-liner enum over it — unless removing the enum would cost the agent a second tool call."
 order: 3
 docs:
-  - path: "CLAUDE.md#surface-data-dont-classify-it"
-    label: "CLAUDE.md — the principle as enforced on this codebase"
+  - path: "AGENTS.md#surface-data-dont-classify-it"
+    label: "AGENTS.md — the principle as enforced on this codebase"
   - path: "docs/features.md"
     label: "features.md — the 'not supported' list this principle produces"
   - path: "docs/checks.md"
@@ -13,7 +13,7 @@ docs:
 
 # Surface data, don't classify it
 
-This is the one rule in the codebase's own `CLAUDE.md` literally labeled a Principle:
+This is the one rule in the codebase's own `AGENTS.md` literally labeled a Principle:
 
 > The CLI's job is to fetch and present raw-enough data; the agent's job is to interpret
 > it. Whenever the CLI is tempted to derive a categorical enum from raw GitHub fields

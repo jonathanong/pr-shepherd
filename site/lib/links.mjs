@@ -50,7 +50,7 @@ function docsBlobUrl(file, anchor) {
   return anchor ? `${url}#${anchor}` : url;
 }
 
-const DOCS_LINK_RE = /^(README\.md|CLAUDE\.md|docs\/[\w.-]+\.md)(?:#([\w-]+))?$/;
+const DOCS_LINK_RE = /^(README\.md|AGENTS\.md|docs\/[\w.-]+\.md)(?:#([\w-]+))?$/;
 
 /** `#anchor` on the current page — checked against that page's own headings. */
 function resolveAnchorHref(href, { route, sourceFile, headingsByRoute }) {
@@ -75,7 +75,7 @@ function resolveInternalHref(href, { sourceFile, routes, headingsByRoute }) {
   return withBase(routePath(route)) + (anchor ? `#${anchor}` : "");
 }
 
-/** `docs/<file>.md`, `README.md`, or `CLAUDE.md`, optionally `#anchor` — rewritten to a
+/** `docs/<file>.md`, `README.md`, or `AGENTS.md`, optionally `#anchor` — rewritten to a
  *  canonical GitHub blob URL. Returns `null` when `href` doesn't match this shape at all. */
 function resolveDocsHref(href, { sourceFile, repoRoot, headingsForDoc }) {
   const docsMatch = DOCS_LINK_RE.exec(href);

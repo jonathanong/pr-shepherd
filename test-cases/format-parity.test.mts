@@ -1,5 +1,5 @@
 /**
- * CLAUDE.md's "Output format invariant" requires --format=json and --format=text to surface
+ * AGENTS.md's "Output format invariant" requires --format=json and --format=text to surface
  * equivalent information, but nothing enforced it end-to-end: the fixtures in index.test.mts
  * snapshot each format independently, so a field added to JSON alone still passes. This walks
  * every string/number leaf of each fixture's lean JSON output and asserts it appears somewhere

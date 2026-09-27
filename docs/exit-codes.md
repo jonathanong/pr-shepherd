@@ -170,7 +170,7 @@ for ordinary mutation errors or `75` when the result reports a rate-limit stop.
 ## `--help` / `-h`
 
 Every subcommand's `--help`/`-h` short-circuits before any I/O and exits `0`.
-See the "Help flags" section of the project `CLAUDE.md`.
+See the "Help flags" section of the project `AGENTS.md`.
 
 ## Where this is implemented
 

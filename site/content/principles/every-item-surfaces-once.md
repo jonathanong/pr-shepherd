@@ -3,8 +3,8 @@ title: "Every item surfaces at least once"
 description: "Outdated, resolved, and minimized review items are never silently dropped — filtering them before the agent sees them discards reviewer intent."
 order: 5
 docs:
-  - path: "CLAUDE.md#comment-visibility-invariant"
-    label: "CLAUDE.md — the comment visibility invariant, in full"
+  - path: "AGENTS.md#comment-visibility-invariant"
+    label: "AGENTS.md — the comment visibility invariant, in full"
   - path: "docs/comments.md"
     label: "comments.md — threads, comments, summaries, seen markers, mutations"
 ---

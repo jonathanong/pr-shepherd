@@ -116,7 +116,7 @@ There is no generator. The procedure:
 4. If a fixture's output shows something [`docs/actions.md`](../docs/actions.md)
    or [`docs/escalations.md`](../docs/escalations.md) doesn't describe, that's
    a documentation bug to fix in the same change — not a snapshot to bless
-   (see the repo `CLAUDE.md`, "Documentation").
+   (see the repo `AGENTS.md`, "Documentation").
 5. Commit `input.json` and both generated snapshot files together.
 
 In CI, `vitest` fails on a missing or stale snapshot instead of writing it
