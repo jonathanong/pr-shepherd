@@ -21,7 +21,7 @@ Durations accept s/m/h suffixes: 30s, 4.5m, 1h. A bare number is minutes; decima
 Actions:
   WAIT        No immediate action; continue with the next poll.
   MARK_READY  Draft PR was marked ready; continue with the next poll.
-  READY       Clean PR is inside the ready-delay. Wait out remainingSeconds, then poll again.
+  READY       Clean PR is inside the ready-delay. Schedule the rerun for when remainingSeconds elapses. Do not invent unrelated work. Already-owned later work may continue.
   FIX_CODE    Agent action is required; follow the instructions, then continue polling.
   CANCEL      Stop polling: merged/closed or ready-delay elapsed.
   ESCALATE    Stop polling until a human provides direction.

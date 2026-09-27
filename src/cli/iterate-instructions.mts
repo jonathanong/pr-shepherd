@@ -11,7 +11,7 @@ export function buildSimpleIterateInstructions(
 ): string[] {
   switch (result.action) {
     case "ready": {
-      const sentence = `PR #${result.pr} is ready. Ready-delay has ${result.remainingSeconds}s left. Run this same command again when the timer elapses. Do not start other work.`;
+      const sentence = `PR #${result.pr} is ready. Ready-delay has ${result.remainingSeconds}s left. Run this same command again when the timer elapses. Do not invent unrelated work. If you already own a later layer of this stack or another stack, continue that work and schedule this rerun.`;
       return [
         result.quotaWarning ? buildQuotaAwareContinuation(result.quotaWarning, sentence) : sentence,
       ];
