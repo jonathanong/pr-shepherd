@@ -1,4 +1,8 @@
 import type { AgentCheck, ResolveCommand, Review } from "../../types.mts";
+import { playbookPointer } from "../playbook-pointer.mts";
+
+const FIX_CODE_CONTINUATION =
+  "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.";
 
 /** Build the stale-CR clause appended to the `## Changes-requested reviews` instruction. */
 export function buildCrStaleClause(reviews: Review[]): string {
@@ -68,43 +72,22 @@ export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): 
   const instructions: string[] = [];
   if (resolveCommand.requiresHeadSha) {
     instructions.push(
-      "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, commit and push to the PR head branch first, then replace `$HEAD_SHA` with the pushed commit SHA.",
+      "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)` (it must equal the remote PR head). If you did, use the pushed SHA.",
     );
   }
   if (resolveCommand.requiresDismissMessage) {
     instructions.push("Replace `$DISMISS_MESSAGE` with one sentence describing what changed.");
   }
   instructions.push(
-    'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
+    `Run the \`apply review:\` command above. ${playbookPointer("Review-mutation mechanics")}`,
   );
   return instructions;
 }
 
-/** Build the CI-triage pointer; the skill limits follow-up actions to included evidence. */
+/** One pointer. Conclusion, rerun, and bare-check rules live in the CI playbook. */
 export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
   if (checks.length === 0) return [];
-  const hasBare = checks.some((c) => !c.runId && !c.detailsUrl);
-  const hasTriageable = checks.some((c) => c.runId || c.detailsUrl);
-  const hasRerunAuthorized = checks.some((c) => c.rerunCommand);
-
-  const instructions: string[] = [];
-  if (hasTriageable) {
-    instructions.push(
-      'Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.',
-    );
-  }
-  if (hasRerunAuthorized) {
-    instructions.push(
-      'A `[rerun authorized]` check includes a `rerun:` command. See "CI failure triage" in the pr-shepherd skill for which conclusions warrant a rerun versus a code fix.',
-    );
-  }
-  if (hasBare) {
-    instructions.push(
-      "For each `(no runId)` failure, preserve the displayed metadata; Shepherd will escalate when no other autonomous work remains.",
-    );
-  }
-
-  return instructions;
+  return [`Triage \`## Failing checks\`. ${playbookPointer("CI failure triage")}`];
 }
 
 /** Update the PR branch after an external blocker merges or closes. Never rerun that job. */
@@ -112,22 +95,7 @@ export function buildReleasedBlockerInstruction(prNumber: number): string {
   return `Update this PR branch from its base with \`gh pr update-branch ${prNumber} --rebase\`. Do not rerun the job; a rerun retests the old merge ref.`;
 }
 
-export function buildFixCompletionInstruction(
-  checks: AgentCheck[],
-  hasConflicts = false,
-  hasShaGatedReviewMutations = false,
-  pushesRewrittenStack = false,
-): string {
-  const push = pushesRewrittenStack
-    ? "push the rewritten stack with `gh stack push`"
-    : "push to the PR head branch";
-  if (hasConflicts)
-    return `\`[FIX_CODE]\` is non-terminal: resolve the conflicts, commit, ${push}, then iterate immediately with the same options.`;
-  if (hasShaGatedReviewMutations) {
-    return `\`[FIX_CODE]\` is non-terminal: if you changed code, commit and ${push}, then run the review mutations using the pushed commit SHA and iterate immediately with the same options; if you did not change code, complete the authorized review mutations and iterate immediately with the same options.`;
-  }
-  if (checks.some((check) => check.rerunCommand)) {
-    return "`[FIX_CODE]` is non-terminal. Run any warranted reruns for `[rerun authorized]` checks (or apply code fixes for real failures), then iterate immediately with the same options to continue.";
-  }
-  return "`[FIX_CODE]` is non-terminal. After completing these steps, iterate immediately with the same options to continue.";
+/** Recurrence only. Commit, push, rerun, and SHA steps are earlier instructions. */
+export function buildFixCompletionInstruction(): string {
+  return FIX_CODE_CONTINUATION;
 }

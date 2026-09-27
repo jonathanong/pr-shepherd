@@ -66,9 +66,7 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
       expect(result.fix.instructions.join("\n")).toContain(
         "If you changed code, commit any remaining changes and push to the PR head branch",
       );
-      expect(result.fix.instructions.join("\n")).toContain(
-        "Run the `apply review:` command shown above",
-      );
+      expect(result.fix.instructions.join("\n")).toContain("Run the `apply review:` command above");
       expect(result.fix.instructions.join("\n")).toContain("`[FIX_CODE]` is non-terminal");
     }
   });

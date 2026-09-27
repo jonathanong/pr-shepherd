@@ -311,7 +311,7 @@ describe("native-stack reconciliation", () => {
     single.selection = { kind: "stack", anchor: 1, stackNumber: 9, stackSize: 1 };
     const ready = withPollSummaryInstructions(single, true);
     expect(ready).toMatchObject({ nextAction: "merge", stackMergeable: true });
-    expect(ready.instructions?.[0]).toContain("gh extension install github/gh-stack");
+    expect(ready.instructions?.[0]).toContain('Playbook: "Stack merge".');
     expect(ready.instructions?.[0]).toContain(
       "GH_REPO=acme/widgets gh stack merge 1 --yes --squash",
     );

@@ -65,7 +65,7 @@ describe("shepherd journal instruction helpers", () => {
     expect(text).not.toContain("idempotent");
     // Citation conventions moved to the pr-shepherd skill's "Shepherd Journal" playbook —
     // invariant text, not re-emitted per tick.
-    expect(text).toContain('See "Shepherd Journal" in the pr-shepherd skill');
+    expect(text).toContain('Playbook: "Shepherd Journal".');
     expect(countMentions(text, "append `- <decision>` to Shepherd Journal")).toBe(1);
   });
   it("buildShepherdJournalInstruction remains de-duped when reused across multiple instruction blocks", () => {

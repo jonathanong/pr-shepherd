@@ -40,35 +40,32 @@ Those snapshots are regression-tested by the repo's own suite, and CI regenerate
 the cases and fails on any diff, so a snapshot change cannot leave a committed
 eval prompt stale. 12 fire cases plus one should-NOT-fire over-trigger guard.
 
-Each case targets a distinct rule that the CLI output deliberately does *not*
-contain — it only points at it (`See "CI failure triage" in the pr-shepherd
-skill`). Both arms get identical text; the only difference is whether the skill is
-in context.
+Each case targets a distinct rule that the CLI output deliberately does _not_
+contain — it only points at it (`Playbook: "CI failure triage".`). Both arms get
+identical text; the only difference is whether the skill is in context.
 
-**Δ measures the whole skill, not the `## Playbooks` section.** When the skill
-fires, the agent receives all of `SKILL.md` — the dispatcher introduction and
-steps 1-4 as well as the playbooks. Some rules under test are stated in those
-non-playbook sections: the CI-watcher prohibition and "only `[ESCALATE]` hands
-work to a human" both live in the dispatcher intro, and they are exactly what
-cases `01` and `02` measure. Isolating the playbooks alone would need a third arm
-carrying a playbook-stripped copy of the skill; until that exists, read every Δ
-here as the effect of loading the skill.
+**Δ measures the dispatcher plus any reference it names.** When the skill fires,
+the agent receives `SKILL.md`. On-demand playbooks live in `references/` and are
+read when a step names them. The CI-watcher prohibition and "only `[ESCALATE]`
+hands work to a human" stay in the dispatcher, and they are what cases `01` and
+`02` measure. Isolating the playbooks alone would need a third arm; until that
+exists, read every Δ as the effect of loading the skill and the references it opens.
 
-| Case | Fixture | Rule under test |
-|---|---|---|
-| `01-ci-in-progress-no-watch` | `09` | Don't block on `gh run watch` — iterate |
-| `02-mark-ready-continue` | `07` | `MARK_READY` is non-terminal |
-| `03-multi-category-fix` | `54` | Four categories at once, none dropped |
-| `04-real-failure-no-blind-rerun` | `61` | `[rerun authorized]` is not a recommendation |
-| `05-cancelled-must-rerun` | `14` | `CANCELLED` *must* rerun (mirror of 04) |
-| `06-fix-code-dismiss-stale-bot` | `60` | Authorized stale bot dismissals stay autonomous |
-| `07-fix-code-bot-and-thread` | `84` | Preserve both review-thread and bot-review work |
-| `08-mergeability-diagnosis` | `32` | `[Not Required]` is not a blocker |
-| `09-cancel-terminal-beats-work` | `82` | Merged PR needs nothing |
-| `10-external-check-no-handoff` | `12` | External URL is not an escalation trigger |
-| `11-wait-no-work` | `24` | `WAIT` — continue, invent nothing |
-| `12-annotations-already-surfaced` | `55` | Act on the annotation, don't refetch |
-| `13-neg-github-review-api` | — | Should NOT fire (knowledge question) |
+| Case                              | Fixture | Rule under test                                 |
+| --------------------------------- | ------- | ----------------------------------------------- |
+| `01-ci-in-progress-no-watch`      | `09`    | Don't block on `gh run watch` — iterate         |
+| `02-mark-ready-continue`          | `07`    | `MARK_READY` is non-terminal                    |
+| `03-multi-category-fix`           | `54`    | Four categories at once, none dropped           |
+| `04-real-failure-no-blind-rerun`  | `61`    | `[rerun authorized]` is not a recommendation    |
+| `05-cancelled-must-rerun`         | `14`    | `CANCELLED` _must_ rerun (mirror of 04)         |
+| `06-fix-code-dismiss-stale-bot`   | `60`    | Authorized stale bot dismissals stay autonomous |
+| `07-fix-code-bot-and-thread`      | `84`    | Preserve both review-thread and bot-review work |
+| `08-mergeability-diagnosis`       | `32`    | `[Not Required]` is not a blocker               |
+| `09-cancel-terminal-beats-work`   | `82`    | Merged PR needs nothing                         |
+| `10-external-check-no-handoff`    | `12`    | External URL is not an escalation trigger       |
+| `11-wait-no-work`                 | `24`    | `WAIT` — continue, invent nothing               |
+| `12-annotations-already-surfaced` | `55`    | Act on the annotation, don't refetch            |
+| `13-neg-github-review-api`        | —       | Should NOT fire (knowledge question)            |
 
 **Tiers run:** sonnet (baseline) and haiku (goal). opus was also run and then
 dropped — it is flat against sonnet and is more useful in the judge seat. Effort
@@ -78,14 +75,14 @@ was varied at both tiers and had no effect; see below.
 
 ### sonnet @ low — mean Δ **+0.28** over 13 cases, **+0.41** over 9 non-ceiling
 
-| Case | Δ | with → without |
-|---|---|---|
-| `02-mark-ready-continue` | **+1.00** | 1.00 → **0.00** |
-| `01-ci-in-progress-no-watch` | **+0.83** | 0.83 → **0.00** |
-| `10-external-check-no-handoff` | **+0.67** | 1.00 → 0.33 |
-| `05-cancelled-must-rerun` | **+0.50** | 1.00 → 0.50 |
-| `06-escalate-stop-and-ask` | +0.27 | 1.00 → 0.73 |
-| `08-mergeability-diagnosis` | +0.13 | 1.00 → 0.87 |
+| Case                           | Δ         | with → without  |
+| ------------------------------ | --------- | --------------- |
+| `02-mark-ready-continue`       | **+1.00** | 1.00 → **0.00** |
+| `01-ci-in-progress-no-watch`   | **+0.83** | 0.83 → **0.00** |
+| `10-external-check-no-handoff` | **+0.67** | 1.00 → 0.33     |
+| `05-cancelled-must-rerun`      | **+0.50** | 1.00 → 0.50     |
+| `06-escalate-stop-and-ask`     | +0.27     | 1.00 → 0.73     |
+| `08-mergeability-diagnosis`    | +0.13     | 1.00 → 0.87     |
 
 The top two are the highest-frequency real failures in the transcript corpus
 (below). On both the baseline scores **0.00** and the plugin takes it to ~1.0.
@@ -115,17 +112,17 @@ score effect) and the scored graders `keeps-the-thread-id` (`03`) and
 incomparable; the remaining eleven are not.
 
 The accidental value of the re-run is a **measurement-noise control**. Nothing
-about the *without* arm changed between the two runs — no plugin either time,
+about the _without_ arm changed between the two runs — no plugin either time,
 same prompts, same opus judge — so its per-case movement is pure noise:
 
-| | `01` | `02` | `11` | `09` | `13` | `08` | `12` | `04` | `06` | `10` | `07` |
-|---|---|---|---|---|---|---|---|---|---|---|---|
+|                  | `01` | `02` | `11` | `09` | `13` | `08`  | `12`  | `04`  | `06`  | `10`  | `07`      |
+| ---------------- | ---- | ---- | ---- | ---- | ---- | ----- | ----- | ----- | ----- | ----- | --------- |
 | without-arm move | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | +0.13 | +0.17 | −0.17 | +0.20 | +0.33 | **−0.44** |
 
 A single case swings **±0.44 at `runs: 3` with zero treatment change**; mean
 |move| is 0.13 over 11 cases. That calibrates every other number here:
 
-- mean Δ **+0.28 → +0.23** between the two runs is *noise*, not a movement.
+- mean Δ **+0.28 → +0.23** between the two runs is _noise_, not a movement.
 - `02`'s Δ +1.00 → +0.67 is noise. `07`'s Δ 0.00 → +0.22 is noise — `07` is the
   noisiest case in the suite and should not be cited from a single round.
 - **`01` and `02` are the only clean signal.** Their without-arm is pinned at
@@ -138,14 +135,14 @@ Practical consequence: do not add tiers to tighten this. The limiting factor is
 
 ### haiku @ max — mean Δ **+0.02**. Out of range.
 
-Absolute *with*-arm scores: **0.00** on mark-ready, **0.14** on multi-category,
+Absolute _with_-arm scores: **0.00** on mark-ready, **0.14** on multi-category,
 **0.17** on real-failure. Haiku cannot do the task with the plugin, so there is
 nothing for the playbooks to add. This is a capability floor, not missing
 knowledge.
 
 A second, separable problem: the skill fired in only **19/36** with-arm runs
 (53%), all-or-nothing per case — it never fired on `05`, `06`, `07`, `08` or
-`09`. On those five the "with" arm received no treatment, so the *expected*
+`09`. On those five the "with" arm received no treatment, so the _expected_
 effect there is zero. Note this is an expectation, not a mechanism: the two arms
 are still separate stochastic runs and can score differently by chance, so the
 trigger misses explain the small aggregate Δ only in expectation. Establishing
@@ -162,10 +159,10 @@ neither of which this suite produces at `runs: 3`.
 Tested at both tiers. sonnet at `low` and `xhigh` gave an identical mean Δ
 (+0.28). haiku — far from ceiling, so any real effort difference should show — gave:
 
-| | mean Δ | skill fired | cost |
-|---|---|---|---|
-| haiku @ `max` | +0.02 | 19/36 (53%) | $5.92 |
-| haiku @ `low` | +0.01 | 20/36 (56%) | $5.76 |
+|               | mean Δ | skill fired | cost  |
+| ------------- | ------ | ----------- | ----- |
+| haiku @ `max` | +0.02  | 19/36 (53%) | $5.92 |
+| haiku @ `low` | +0.01  | 20/36 (56%) | $5.76 |
 
 Identical scores, identical trigger rate, and **cost within 3%**. That last point
 is the decisive one: maximum effort should burn materially more thinking tokens
@@ -233,22 +230,22 @@ timeout, so polling has to be the CLI.
 Discovered empirically; each cost a wasted run.
 
 **`--allow-tools` is the only way to grant Bash.** A case's `allowed_tools` can
-only *narrow* — granting `[Bash, Skill]` there yields `not granted (missing
+only _narrow_ — granting `[Bash, Skill]` there yields `not granted (missing
 --allow-tools grant…)`. A skill's own `allowed-tools:` frontmatter does not grant
 it either: the skill fires, then `ToolSearch select:Bash` returns nothing. (The
 `plugin eval init` interview claims the opposite.)
 
 **Bash-granting evals cannot run where `~/.docker` contains a symlink.** The run
-aborts: *"the Docker (~/.docker, DOCKER_CONFIG) credential store on this machine
-holds a symbolic link inside it, so the Bash sandbox cannot reliably exclude it."*
+aborts: _"the Docker (~/.docker, DOCKER_CONFIG) credential store on this machine
+holds a symbolic link inside it, so the Bash sandbox cannot reliably exclude it."_
 Docker Desktop puts links in `bin/` and `cli-plugins/`; `DOCKER_CONFIG` does not
-work around it. Flatten the store so nothing *inside* it is a link — its root may
+work around it. Flatten the store so nothing _inside_ it is a link — its root may
 be one. **This is what blocks the call-count measurement.**
 
 **The runner needs an unsandboxed `/tmp`** (`EPERM … mkdtemp '/tmp/e-…'`).
 
 Other notes: `--mocks record` is the default and a plugin MCP server with no mock
-is *not* started; the default judge is haiku, so always pass `--judge-model`;
+is _not_ started; the default judge is haiku, so always pass `--judge-model`;
 `--allow-tools 'mcp__*'` is rejected as malformed despite the help text.
 
 ## Calibration log
@@ -272,21 +269,21 @@ procedure while inventing no mutation, which the rubric passed 3–0. The regex
 punished the string, not the behaviour.
 
 **Full run 1 — two rubrics masked the strongest finding.** `iterates-immediately`
-required the plan to *"end by"* iterating, which is right for `FIX_CODE` but wrong
+required the plan to _"end by"_ iterating, which is right for `FIX_CODE` but wrong
 for `WAIT`/`MARK_READY` where re-running as step 1 is correct.
 `treats-mark-ready-as-non-terminal` said "Nothing is being asked here except to
 continue", inviting the judge to fail any elaborate answer. Underneath them,
 `does-not-block-on-a-ci-watcher` was already 3/3 with vs 0/3 without.
 
 The rule, learned three times: **absence checks on natural-language behaviour
-belong in a rubric, not a pattern.** Regex works for *presence* of a specific
+belong in a rubric, not a pattern.** Regex works for _presence_ of a specific
 token (`gh run rerun 555`); a declined action must be judged, because the framing
 explicitly asks the agent to state what it chose not to do.
 
 **A negative Δ that was not stable.** `07-escalate-beats-available-work` scored
-Δ −0.44 at sonnet in round 1, with the with-arm reasoning *"the bot review isn't
-noise to dismiss … fix first, then dismiss/reply, then resume Shepherd"* —
-overriding the printed *"Stop polling. Ask the user."* It looked like the
+Δ −0.44 at sonnet in round 1, with the with-arm reasoning _"the bot review isn't
+noise to dismiss … fix first, then dismiss/reply, then resume Shepherd"_ —
+overriding the printed _"Stop polling. Ask the user."_ It looked like the
 playbooks defeating an `ESCALATE` stop. Round 2 showed it 1/3 and opus went +0.22
 then −0.22. **Treat it as variance, not a finding**, unless a higher-`runs` run
 reproduces it.
@@ -303,11 +300,11 @@ failed three judge calls and scored them 0, manufacturing a fake +1.00. Check fo
    available. Worth doing even though it will not lift haiku above its capability
    floor — it will make any future weak-tier measurement honest.
 2. **Unblock the call-count and token measurement.** Flatten `~/.docker`, then
-   build a second suite that grants Bash to *both* arms so the baseline actually
+   build a second suite that grants Bash to _both_ arms so the baseline actually
    fans out over `gh`. That is the only way to measure the stated goals of fewer
    MCP/CLI calls and lower token usage. Note the inverting failure mode the
    `no-mistakes` README warns about: with a repo present and no working binary,
-   the with-arm tries the CLI, fails, falls back, and Δ goes *negative*.
+   the with-arm tries the CLI, fails, falls back, and Δ goes _negative_.
 3. **Add a `[Required]` gate fixture.** No fixture in the 93-snapshot corpus has
    one — 89 are `Approvals: None [Not Required]` — so `08-mergeability-diagnosis`
    can catch a false "blocked on an approver" but cannot verify that a genuinely
@@ -345,5 +342,5 @@ failed three judge calls and scored them 0, manufacturing a fake +1.00. Check fo
    same `0.50.0` version, so the `name@version` check passed on a changed
    treatment. The comment at the guard already admits this gap; close it.
 10. **Wire the eval run itself into CI** — run the sonnet@low tier on PRs that touch
-   `plugins/pr-shepherd/skills/**`, where a `description` or playbook edit can
-   silently change trigger rate or routing.
+    `plugins/pr-shepherd/skills/**`, where a `description` or playbook edit can
+    silently change trigger rate or routing.

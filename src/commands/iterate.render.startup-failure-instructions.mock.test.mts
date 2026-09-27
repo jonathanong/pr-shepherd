@@ -56,7 +56,7 @@ describe("runIterate — prescriptive fields: log strings", () => {
       // moved out of `## Instructions` entirely.
       expect(result.fix.checks.some((c) => c.conclusion === "STARTUP_FAILURE")).toBe(true);
       const joined = result.fix.instructions.join("\n");
-      expect(joined).toContain("Triage every failure under `## Failing checks`");
+      expect(joined).toContain("Triage `## Failing checks`");
       expect(joined).not.toContain("gh run view <runId> --log-failed");
       expect(joined).not.toContain("gh run rerun <runId> --failed");
     }

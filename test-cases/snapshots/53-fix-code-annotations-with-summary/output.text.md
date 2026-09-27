@@ -30,9 +30,9 @@ Conversations Resolved: Yes [Not Required]
 ## Instructions
 
 1. Review each item under `## Failing checks`, `## Check annotations` and decide whether it needs a code change.
-2. Review each body under `## Review summaries (first look)`. Eligible non-human IDs are already in `--minimize-comment-ids`. Record any warranted Shepherd Journal note before review mutations.
-3. Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.
+2. Read each body under `## Review summaries (first look)` and journal any warranted note before review mutations. Playbook: "Shepherd Journal".
+3. Triage `## Failing checks`. Playbook: "CI failure triage".
 4. Inspect every referenced range under `## Check annotations` and apply any warranted change.
-5. If you changed code, commit any remaining changes and push to the PR head branch, then run the remaining review mutations using the pushed commit SHA and iterate immediately with the same options. If you did not change code, do not commit and continue with the remaining steps.
-6. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
-7. `[FIX_CODE]` is non-terminal. After completing these steps, iterate immediately with the same options to continue.
+5. If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.
+6. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
+7. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.

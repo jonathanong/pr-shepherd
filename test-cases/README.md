@@ -108,11 +108,12 @@ There is no generator. The procedure:
    missing snapshot files silently on a local run — it does not fail. **Read
    both generated files by eye before committing.** A wrong snapshot is a
    passing test until someone reads it.
-3. If the fixture's Markdown output uses a `"<name>" in the pr-shepherd skill`
-   pointer sentence, `<name>` must match a real `### <name>` heading in
+3. If the fixture's Markdown output uses a `Playbook: "<name>".` pointer,
+   `<name>` must match a `###` heading in
    [`plugins/pr-shepherd/skills/pr-shepherd/SKILL.md`](../plugins/pr-shepherd/skills/pr-shepherd/SKILL.md)
-   — `src/skill-playbook-pointers.test.mts` sweeps the whole snapshot corpus
-   and fails on an invented or orphaned pointer name.
+   or the H1 of a file in that skill's `references/` directory.
+   `src/skill-playbook-pointers.test.mts` sweeps the snapshot corpus and the
+   instruction sources and fails on an invented or orphaned pointer name.
 4. If a fixture's output shows something [`docs/actions.md`](../docs/actions.md)
    or [`docs/escalations.md`](../docs/escalations.md) doesn't describe, that's
    a documentation bug to fix in the same change — not a snapshot to bless

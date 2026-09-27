@@ -1,3 +1,4 @@
+import { playbookPointer } from "./playbook-pointer.mts";
 import { stackMergeFlag } from "./stack-merge-flag.mts";
 import type { PollSummaryItem, PollSummaryResult, StackNextAction } from "../types.mts";
 import { stackLayerBlockReason } from "./stack-layer-readiness.mts";
@@ -67,7 +68,7 @@ export function planPrefixDrain(
     };
   }
   const instructions = [
-    `1. PR #${top.pr} is the highest open layer of stack #${top.stack.number} in \`${result.repo}\` whose open lower layers are all ready. Run \`GH_REPO=${result.repo} gh stack merge ${top.pr} --yes ${method.flag}\` to merge ${span}. When the base uses a merge queue, the same command queues that prefix together and GitHub evaluates each layer from the bottom; a failure ejects that layer and the layers above it. If \`gh stack\` is an unknown command, run \`gh extension install github/gh-stack\` first.`,
+    `1. PR #${top.pr} is the highest open layer of stack #${top.stack.number} in \`${result.repo}\` whose open lower layers are all ready. Run \`GH_REPO=${result.repo} gh stack merge ${top.pr} --yes ${method.flag}\` to merge ${span}. ${playbookPointer("Stack merge")}`,
   ];
   appendAutonomousInstructions(instructions, above.sessions);
   appendMarkReadyInstructions(instructions, above.markReady);

@@ -1,4 +1,5 @@
 import { buildPrShepherdCommand } from "../cli/runner.mts";
+import { playbookPointer } from "./playbook-pointer.mts";
 
 /**
  * Build the `build-suggestion-patches` instruction step for agent consumers.
@@ -23,5 +24,5 @@ export function buildCommitSuggestionInstruction(
     "<one-sentence headline>",
     "--format=json",
   ]).text;
-  return `For all threads marked \`[suggestion]\` under \`${sectionName}\`, run one \`${command}\` command, repeating the \`--thread-id <id> --message <one-sentence headline>\` group in displayed order, then apply the returned patches in order. See "Suggestion patches" in the pr-shepherd skill for refusals and drift.`;
+  return `For every \`[suggestion]\` thread under \`${sectionName}\`, run one \`${command}\`, repeating \`--thread-id\` and \`--message\` in displayed order. ${playbookPointer("Suggestion patches")}`;
 }

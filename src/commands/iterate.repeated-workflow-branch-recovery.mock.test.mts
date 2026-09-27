@@ -103,7 +103,7 @@ describe("runIterate — repeated workflow branch recovery", () => {
 
     const joined = instructions.join("\n");
     expect(joined).toContain("import it with `gh stack checkout 7`");
-    expect(joined).toContain("check out the head branch of PR #42 and run `gh stack rebase`;");
+    expect(joined).toContain("check out the head branch of PR #42 and run `gh stack rebase`.");
     expect(instructions).toContain(
       "Commit any remaining changes on the PR head branch and push the rewritten stack with `gh stack push`.",
     );

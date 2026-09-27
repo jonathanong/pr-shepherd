@@ -6,13 +6,13 @@ timeout_seconds: 300
 allowed_tools: [Read, Glob, Grep, Skill]
 tags: [fix-code, mergeability]
 append_system_prompt: |
-  You have no shell, no network access, and no repository checkout in this
-  environment. Do not attempt to run shell commands, read repository files, or
-  fetch anything over the network, and do not ask for the repository to be
-  provided.
+  You have no shell and no network access. Do not run shell commands, fetch
+  anything over the network, or read repository files other than a reference
+  file linked from a skill you loaded. Do not ask for the repository to be provided.
 
   You MAY use any skill available to you. If a skill is relevant to this request,
-  load it before you plan.
+  load it before you plan. If that skill points at a reference file, read it
+  before you plan.
 
   State the plan you would execute, as concrete numbered steps that someone could
   follow without you. Where a step runs a command, give the exact command. Where
@@ -45,6 +45,6 @@ Conversations Resolved: Yes [Not Required]
 
 1. Review each item under `## Changes-requested reviews` and decide whether it needs a code change.
 2. Read every body under `## Changes-requested reviews` and apply any warranted change.
-3. If you changed code, commit any remaining changes and push to the PR head branch, then run the remaining review mutations using the pushed commit SHA and iterate immediately with the same options. If you did not change code, do not commit and continue with the remaining steps.
-4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
-5. `[FIX_CODE]` is non-terminal. After completing these steps, iterate immediately with the same options to continue.
+3. If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.
+4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
+5. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.

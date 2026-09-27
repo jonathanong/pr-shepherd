@@ -16,13 +16,14 @@ const upperPr = { number: 42, baseBranch: "feature-parent" };
 
 describe("native stack rebase instructions", () => {
   const prepare =
-    "From a clean checkout of `acme/widgets`, if `gh stack` does not track stack #7 locally, import it with `gh stack checkout 7`, then confirm every layer's local branch is at its PR's head commit — a stale local layer would overwrite that PR's newer commits on push.";
+    "From a clean checkout of `acme/widgets`, if `gh stack` does not track stack #7 locally, import it with `gh stack checkout 7`.";
+  const playbook = 'Playbook: "Branch update".';
 
   it("rebases an upper layer from its parent without trunk", () => {
     expect(
       buildNativeStackRebaseInstruction("acme/widgets", 7, { parentBranch: "feature-a" }),
     ).toBe(
-      `${prepare} Then check out the parent stack branch \`feature-a\` and run \`gh stack rebase --upstack --no-trunk\`; if it stops on a conflict, resolve it and run \`gh stack rebase --continue\`.`,
+      `${prepare} Then check out the parent stack branch \`feature-a\` and run \`gh stack rebase --upstack --no-trunk\`. ${playbook}`,
     );
   });
 
@@ -31,14 +32,14 @@ describe("native stack rebase instructions", () => {
       trunk: "main",
       bottomPr: 11,
     });
-    expect(rebase).toContain("check out the head branch of PR #11 and run `gh stack rebase`;");
+    expect(rebase).toContain("check out the head branch of PR #11 and run `gh stack rebase`.");
     expect(rebase).not.toContain("--no-trunk");
     expect(rebase).not.toContain("PR #42");
   });
 
   it("names the trunk when the bottom open layer is not on the fetched page", () => {
     expect(buildNativeStackRebaseInstruction("acme/widgets", 7, { trunk: "main" })).toContain(
-      "Then check out the bottom open layer whose base is `main` and run `gh stack rebase`;",
+      "Then check out the bottom open layer whose base is `main` and run `gh stack rebase`.",
     );
     const rebase = buildNativeStackLayerRebase("acme/widgets", upperPr, upperLayer, {
       trunk: "main",
@@ -48,7 +49,7 @@ describe("native stack rebase instructions", () => {
 
   it("rebases the whole stack onto trunk from the bottom layer", () => {
     expect(buildNativeStackRebaseInstruction("acme/widgets", 7, { bottomPr: 9 })).toBe(
-      `${prepare} Then check out the head branch of PR #9 and run \`gh stack rebase\`; if it stops on a conflict, resolve it and run \`gh stack rebase --continue\`.`,
+      `${prepare} Then check out the head branch of PR #9 and run \`gh stack rebase\`. ${playbook}`,
     );
   });
 
@@ -74,7 +75,7 @@ describe("native stack rebase instructions", () => {
       { number: 42, baseBranch: "main" },
       { ...upperLayer, position },
     );
-    expect(rebase).toContain("check out the head branch of PR #42 and run `gh stack rebase`;");
+    expect(rebase).toContain("check out the head branch of PR #42 and run `gh stack rebase`.");
     expect(rebase).not.toContain("--no-trunk");
   });
 
@@ -103,8 +104,8 @@ describe("native stack rebase instructions", () => {
         rebase,
       )[1],
     ).toBe(rebase);
-    expect(buildFixCompletionInstruction([], true, false, true)).toBe(
-      "`[FIX_CODE]` is non-terminal: resolve the conflicts, commit, push the rewritten stack with `gh stack push`, then iterate immediately with the same options.",
+    expect(buildFixCompletionInstruction()).toBe(
+      "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.",
     );
   });
 
@@ -125,8 +126,8 @@ describe("native stack rebase instructions", () => {
       "The workflow rerun still fails while the branch is behind PR base branch `main`. Inspect the current base branch for an existing fix before choosing a remediation.",
       rebase,
     ]);
-    expect(buildFixCompletionInstruction([], false, true, true)).toBe(
-      "`[FIX_CODE]` is non-terminal: if you changed code, commit and push the rewritten stack with `gh stack push`, then run the review mutations using the pushed commit SHA and iterate immediately with the same options; if you did not change code, complete the authorized review mutations and iterate immediately with the same options.",
+    expect(buildFixCompletionInstruction()).toBe(
+      "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.",
     );
   });
 });

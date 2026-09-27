@@ -26,7 +26,7 @@ describe("buildFixInstructions", () => {
     );
 
     expect(instructions).toEqual([
-      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate immediately with the same options to continue.",
+      "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.",
     ]);
   });
 
@@ -70,8 +70,8 @@ describe("buildFixInstructions", () => {
 
     const text = instructions.join("\n");
     expect(text).toContain("build-suggestion-patches");
-    expect(text).toContain('See "Suggestion patches" in the pr-shepherd skill');
-    expect(text.match(/"Suggestion patches" in the pr-shepherd skill/g)).toHaveLength(1);
+    expect(text).toContain('Playbook: "Suggestion patches".');
+    expect(text.match(/Playbook: "Suggestion patches"/g)).toHaveLength(1);
     expect(text).not.toContain("refuses because the suggestion is unsafe");
     expect(text).not.toContain("replace the heading's exact `path:startLine-endLine` range");
   });
@@ -153,12 +153,12 @@ describe("buildFixInstructions", () => {
     expect(text).toContain("If you did not change code, replace `$HEAD_SHA`");
     expect(text).toContain("Replace `$DISMISS_MESSAGE` with one sentence");
     expect(instructions.at(-2)).toBe(
-      'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
+      'Run the `apply review:` command above. Playbook: "Review-mutation mechanics".',
     );
     expect(instructions.at(-1)).toBe(
-      "`[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate immediately with the same options; if you did not change code, complete the authorized review mutations and iterate immediately with the same options.",
+      "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.",
     );
-    expect(text).toContain("`[FIX_CODE]` is non-terminal: if you changed code, commit and push");
+    expect(text).toContain("`[FIX_CODE]` is non-terminal. Iterate immediately");
     expect(text).not.toContain("Stop this iteration");
     // Old prescriptive git commands gone
     expect(text).not.toContain("Commit changed files:");
@@ -196,7 +196,7 @@ describe("buildFixInstructions", () => {
     expect(text).toContain("$(git rev-parse HEAD)");
     expect(text).not.toContain("Replace `$DISMISS_MESSAGE`");
     expect(text).toContain(
-      'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill',
+      'Run the `apply review:` command above. Playbook: "Review-mutation mechanics"',
     );
   });
 
@@ -238,7 +238,7 @@ describe("buildFixInstructions", () => {
     expect(text).not.toContain("git fetch origin");
     expect(text).not.toContain("git push --force-with-lease");
     expect(text).toContain(
-      "`[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate immediately with the same options; if you did not change code, complete the authorized review mutations and iterate immediately with the same options.",
+      "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.",
     );
   });
 
@@ -279,7 +279,7 @@ describe("buildFixInstructions", () => {
     expect(text).not.toContain("git add");
     expect(text).not.toContain("git push --force-with-lease");
     expect(text).toContain(
-      "`[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate immediately with the same options; if you did not change code, complete the authorized review mutations and iterate immediately with the same options.",
+      "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.",
     );
   });
 

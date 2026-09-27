@@ -73,13 +73,12 @@ Conversations Resolved: No [Not Required]
 
 1. Review each item under `## Review threads` and `## Failing checks` and decide whether it needs a code change.
 2. Apply every warranted review fix in each file referenced above.
-3. Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.
-4. If you changed code, commit any remaining changes and push to the PR head branch, then run review mutations using the pushed commit SHA and iterate immediately with the same options. If you did not change code, do not commit and continue.
-5. Substitute any command placeholders and run the generated review mutations.
-6. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, commit and push to the PR head branch first, then replace `$HEAD_SHA` with the pushed commit SHA.
-7. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
-8. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.
-9. `[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run review mutations using the pushed commit SHA and iterate immediately with the same options; without code changes, complete the authorized review mutations and iterate immediately.
+3. Triage `## Failing checks`. Playbook: "CI failure triage".
+4. If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.
+5. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)` (it must equal the remote PR head). If you did, use the pushed SHA.
+6. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
+7. Run the `apply review:` command above. Playbook: "Review-mutation mechanics".
+8. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.
 ```
 
 See [docs/actions.md](docs/actions.md) for the complete output contract and [docs/escalations.md](docs/escalations.md) for the exact finite human-handoff boundary. Iterate/poll PR outcomes use exit codes `0` and `10`–`16`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).

@@ -17,6 +17,6 @@ Conversations Resolved: Yes [Not Required]
 
 ## Instructions
 
-1. Review each body under `## Review summaries (first look)`. Eligible non-human IDs are already in `--minimize-comment-ids`. Record any warranted Shepherd Journal note before review mutations.
-2. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
-3. `[FIX_CODE]` is non-terminal. After completing these steps, iterate immediately with the same options to continue.
+1. Read each body under `## Review summaries (first look)` and journal any warranted note before review mutations. Playbook: "Shepherd Journal".
+2. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
+3. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.

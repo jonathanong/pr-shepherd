@@ -102,45 +102,25 @@ describe("buildFailingCheckInstructions", () => {
     expect(buildFailingCheckInstructions([])).toEqual([]);
   });
 
-  it("emits a single triage pointer for any GitHub Actions / external failure, plus bare-check preservation", () => {
-    // Per-conclusion rerun mechanics (gh run view/rerun rules for CANCELLED,
-    // STARTUP_FAILURE, external) are invariant text now covered by the pr-shepherd
-    // skill's "CI failure triage" playbook — see the collision note on
-    // buildFailingCheckInstructions in check-instructions.mts. Only the `(no runId)`
-    // bare-check preservation stays here for mixed FIX_CODE ticks; when it is the only
-    // blocker, handleFixCode promotes the whole result to ESCALATE.
-    const instructions = buildFailingCheckInstructions([
-      check({}),
-      check({ runId: "124", conclusion: "CANCELLED" }),
-      check({ runId: "125", conclusion: "STARTUP_FAILURE" }),
-      check({ runId: null, detailsUrl: "https://ci.example/check" }),
-      check({ runId: null, detailsUrl: null }),
-    ]);
-
-    expect(instructions).toEqual([
-      'Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.',
-      "For each `(no runId)` failure, preserve the displayed metadata; Shepherd will escalate when no other autonomous work remains.",
-    ]);
-  });
-
-  it("emits only the bare-check preservation when every failure lacks a runId and a URL", () => {
-    expect(buildFailingCheckInstructions([check({ runId: null, detailsUrl: null })])).toEqual([
-      "For each `(no runId)` failure, preserve the displayed metadata; Shepherd will escalate when no other autonomous work remains.",
-    ]);
-  });
-
-  it("adds a rerun pointer when a failing check carries an authorized rerun command", () => {
-    const instructions = buildFailingCheckInstructions([
-      check({
-        conclusion: "CANCELLED",
-        rerunCommand: "gh run rerun 124 -R owner/repo",
-      }),
-    ]);
-
-    expect(instructions).toEqual([
-      'Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.',
-      'A `[rerun authorized]` check includes a `rerun:` command. See "CI failure triage" in the pr-shepherd skill for which conclusions warrant a rerun versus a code fix.',
-    ]);
+  it("emits one triage pointer for every failing check, including bare and rerun-authorized", () => {
+    const pointer = ['Triage `## Failing checks`. Playbook: "CI failure triage".'];
+    expect(
+      buildFailingCheckInstructions([
+        check({}),
+        check({ runId: "124", conclusion: "CANCELLED" }),
+        check({ runId: "125", conclusion: "STARTUP_FAILURE" }),
+        check({ runId: null, detailsUrl: "https://ci.example/check" }),
+        check({ runId: null, detailsUrl: null }),
+      ]),
+    ).toEqual(pointer);
+    expect(buildFailingCheckInstructions([check({ runId: null, detailsUrl: null })])).toEqual(
+      pointer,
+    );
+    expect(
+      buildFailingCheckInstructions([
+        check({ conclusion: "CANCELLED", rerunCommand: "gh run rerun 124 -R owner/repo" }),
+      ]),
+    ).toEqual(pointer);
   });
 });
 
@@ -151,13 +131,13 @@ describe("buildResolveCommandInstruction", () => {
 
   it("emits only the run-the-command step (plus pointer) when nothing else applies", () => {
     expect(buildResolveCommandInstruction(resolveCommand({}))).toEqual([
-      'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
+      'Run the `apply review:` command above. Playbook: "Review-mutation mechanics".',
     ]);
   });
 
   it("does not repeat routing policy when replyThreadIds is non-empty", () => {
     expect(buildResolveCommandInstruction(resolveCommand({ replyThreadIds: ["PRRT_1"] }))).toEqual([
-      'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
+      'Run the `apply review:` command above. Playbook: "Review-mutation mechanics".',
     ]);
   });
 
@@ -178,61 +158,27 @@ describe("buildResolveCommandInstruction", () => {
         }),
       ),
     ).toEqual([
-      "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, commit and push to the PR head branch first, then replace `$HEAD_SHA` with the pushed commit SHA.",
+      "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)` (it must equal the remote PR head). If you did, use the pushed SHA.",
       "Replace `$DISMISS_MESSAGE` with one sentence describing what changed.",
-      'Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.',
+      'Run the `apply review:` command above. Playbook: "Review-mutation mechanics".',
     ]);
   });
 });
 
 describe("buildFixCompletionInstruction", () => {
-  it("hands control back to the caller for the next tick", () => {
-    expect(buildFixCompletionInstruction([check({})])).toBe(
-      "`[FIX_CODE]` is non-terminal. After completing these steps, iterate immediately with the same options to continue.",
-    );
-  });
+  const continuation = "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.";
 
-  it("continues through a push before SHA-gated mutations", () => {
-    expect(buildFixCompletionInstruction([check({})], false, true)).toBe(
-      "`[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate immediately with the same options; if you did not change code, complete the authorized review mutations and iterate immediately with the same options.",
-    );
-  });
-
-  it("continues after conflict resolution and push", () => {
-    expect(buildFixCompletionInstruction([], true)).toBe(
-      "`[FIX_CODE]` is non-terminal: resolve the conflicts, commit, push to the PR head branch, then iterate immediately with the same options.",
-    );
-  });
-
-  it.each(["CANCELLED", "STARTUP_FAILURE"] as const)(
-    "is non-terminal when a %s check carries an authorized rerun command",
-    (conclusion) => {
-      expect(
-        buildFixCompletionInstruction([
-          check({ conclusion, rerunCommand: "gh run rerun 124 -R owner/repo" }),
-        ]),
-      ).toBe(
-        "`[FIX_CODE]` is non-terminal. Run any warranted reruns for `[rerun authorized]` checks (or apply code fixes for real failures), then iterate immediately with the same options to continue.",
-      );
-    },
-  );
-
-  it("prefers the SHA-gated instruction over an authorized rerun recommendation", () => {
-    expect(
-      buildFixCompletionInstruction(
-        [check({ conclusion: "CANCELLED", rerunCommand: "gh run rerun 124 -R owner/repo" })],
-        false,
-        true,
-      ),
-    ).toContain("if you changed code, commit and push");
+  it("hands control back without restating commit, push, or rerun policy", () => {
+    expect(buildFixCompletionInstruction()).toBe(continuation);
+    expect(continuation).not.toMatch(/commit|push|rerun/i);
   });
 
   it.each([
     check({ runId: null, detailsUrl: null }),
     check({ conclusion: "ACTION_REQUIRED", logExcerpt: undefined }),
     check({ conclusion: "STARTUP_FAILURE", logExcerpt: undefined }),
-  ])("never emits terminal handoff wording for a FIX_CODE completion", (value) => {
-    const completion = buildFixCompletionInstruction([value]);
+  ])("never emits terminal handoff wording for a FIX_CODE completion", () => {
+    const completion = buildFixCompletionInstruction();
     expect(completion).toContain("`[FIX_CODE]` is non-terminal");
     expect(completion).not.toMatch(/hand[- ]?off|stop polling|human direction/i);
   });

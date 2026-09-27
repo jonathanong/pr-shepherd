@@ -16,9 +16,9 @@ Conversations Resolved: Yes [Not Required]
 ## Instructions
 
 1. Review each item under `## Failing checks` and decide whether it needs a code change.
-2. Triage every failure under `## Failing checks`. See "CI failure triage" in the pr-shepherd skill for read-only inspection rules.
+2. Triage `## Failing checks`. Playbook: "CI failure triage".
 3. The workflow rerun still fails while the branch is behind PR base branch `main`. Inspect the current base branch for an existing fix before choosing a remediation.
 4. Rebase or otherwise update the PR branch from `main` according to repository conventions.
 5. Push the updated PR head branch before iterating immediately.
-6. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
-7. `[FIX_CODE]` is non-terminal. After completing these steps, iterate immediately with the same options to continue.
+6. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
+7. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.

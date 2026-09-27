@@ -24,16 +24,15 @@
 // snapshot suite, so the eval prompts cannot drift from what the CLI emits.
 //
 // Both ablation arms receive identical fixture text. The only difference is
-// whether the skill is loaded, so Δ is the effect of the WHOLE skill — not of
-// the `## Playbooks` section alone. A firing skill puts all of SKILL.md in
-// context, and several rules under test (the CI-watcher prohibition, "only
-// ESCALATE hands work to a human") are stated in the dispatcher introduction
-// rather than the playbooks. Isolating the playbooks would need a third arm
-// carrying a playbook-stripped copy of the skill.
+// whether the skill is loaded, so Δ is the effect of the dispatcher plus any
+// reference it tells the agent to open. A firing skill puts SKILL.md in
+// context. On-demand playbooks live in references/*.md and are not inlined.
+// Several rules under test (the CI-watcher prohibition, "only ESCALATE hands
+// work to a human") stay in the dispatcher. Isolating the playbooks would
+// need a third arm carrying a playbook-stripped copy of the skill.
 //
-// The fixtures reference those rules by name ("See 'CI failure triage' in the
-// pr-shepherd skill") without restating them — that dangling reference is the
-// seam under test.
+// The fixtures name those rules with `Playbook: "CI failure triage".` without
+// restating them — that pointer is the seam under test.
 //
 // ---------------------------------------------------------------------------
 // Calibrated against a pilot run and against real transcripts
@@ -67,14 +66,7 @@
 //   - Unsubstituted `$HEAD_SHA` / `$DISMISS_MESSAGE` never reached an executed
 //     command. Zero instances across all three tools.
 
-import {
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  writeFileSync,
-  rmSync,
-  existsSync,
-} from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -97,26 +89,26 @@ const ALLOWED_TOOLS = "[Read, Glob, Grep, Skill]";
 // The final sentence is what makes a *declined* action observable, so "chose not
 // to rerun" can be graded as a positive statement rather than inferred from a
 // missing string.
-const APPEND_SYSTEM_PROMPT = `You have no shell, no network access, and no repository checkout in this
-environment. Do not attempt to run shell commands, read repository files, or
-fetch anything over the network, and do not ask for the repository to be
-provided.
+const APPEND_SYSTEM_PROMPT = `You have no shell and no network access. Do not run shell commands, fetch
+anything over the network, or read repository files other than a reference
+file linked from a skill you loaded. Do not ask for the repository to be provided.
 
 You MAY use any skill available to you. If a skill is relevant to this request,
-load it before you plan.
+load it before you plan. If that skill points at a reference file, read it
+before you plan.
 
 State the plan you would execute, as concrete numbered steps that someone could
 follow without you. Where a step runs a command, give the exact command. Where
 you decide NOT to take an action that the output appears to offer, say so
 explicitly and say why.`;
 
-const APPEND_SYSTEM_PROMPT_NEG = `You have no shell, no network access, and no repository checkout in this
-environment. Do not attempt to run shell commands, read repository files, or
-fetch anything over the network, and do not ask for the repository to be
-provided.
+const APPEND_SYSTEM_PROMPT_NEG = `You have no shell and no network access. Do not run shell commands, fetch
+anything over the network, or read repository files other than a reference
+file linked from a skill you loaded. Do not ask for the repository to be provided.
 
 You MAY use any skill available to you. If a skill is relevant to this request,
-load it before you answer.
+load it before you answer. If that skill points at a reference file, read it
+before you answer.
 
 Answer from your own knowledge.`;
 
@@ -682,7 +674,9 @@ function writeCase(spec) {
   }
 
   const n = Object.keys(spec.graders).length;
-  console.log(`${spec.slug.padEnd(34)} ${String(n).padStart(2)} graders  ${spec.fixture ?? "(no fixture)"}`);
+  console.log(
+    `${spec.slug.padEnd(34)} ${String(n).padStart(2)} graders  ${spec.fixture ?? "(no fixture)"}`,
+  );
 }
 
 // Prune case directories that are no longer in CASES. Without this, renaming or
