@@ -10,7 +10,19 @@ The default output format is Markdown — what the skill receives from its until
 
 The bare CLI command accepts `--interval`/`--timeout`/`--debounce`/`--quiet-status`/`--no-quiet-status` (e.g. `pr-shepherd <PR> --interval 60s --timeout 4.5m --quiet-status`), waits while the PR remains in `[WAIT]`, and returns on an agent-facing action. Polling defaults come from the `poll` configuration group; explicit flags override them. With `--merge`, it also continues through `MARK_READY` and returns `MERGE` when the ready-delay completes. Each ordinary `WAIT` tick writes a stderr line naming what it is waiting on (the `WAIT` log's check counts and reason) unless quiet status is enabled; the final action remains the only stdout result. If `--timeout` expires during WAIT polling, the bounded command returns that final `WAIT` result.
 
-The shipped skill invokes `pr-shepherd [PR] --until-terminal`. That command continues through ordinary `WAIT` and `MARK_READY` actions, then returns `READY` while a clean ready-delay is still counting, `FIX_CODE` or stack-level `SHEPHERD` (after `--debounce`, default: `poll.debounceSeconds`; built-in 1m and `0` disables), `MERGE`, any non-terminal quota-warning result, or terminal `CANCEL`/`ESCALATE`. A quota warning returns immediately so the skill can follow its cadence instructions and re-invoke the command without a `--timeout`. After every returned non-terminal result, the skill follows `## Instructions` and invokes the same canonical command again. `[READY]` is non-terminal: schedule the rerun for when `remainingSeconds` elapses. Do not invent unrelated work. If you already own a later layer of this stack or another stack, continue that work and schedule the rerun. A parent coordinating more than one stack delegates this wait to the worker that owns the stack. Debounce ticks set `persistSeen: false` — seen markers and first-look suppression wait for the post-window tick. `--quiet-status` keeps unchanged WAIT ticks out of agent context. MCP callers invoke one `iterate` tick at a time (no debounce) and let their host schedule the next call.
+The shipped skill runs `pr-shepherd [PR] --until-terminal`.
+
+- Ordinary `WAIT` and `MARK_READY` stay inside that poll.
+- It returns `READY` while a clean ready-delay is counting.
+- It returns `FIX_CODE` or stack-level `SHEPHERD` after `--debounce` (`poll.debounceSeconds`, default 1m, `0` disables), plus `MERGE`, a non-terminal quota warning, or terminal `CANCEL` / `ESCALATE`.
+- A quota warning returns immediately. Follow its cadence and rerun without `--timeout`.
+- After every other non-terminal result, follow `## Instructions` and run the same command again.
+- `[READY]` is non-terminal. Rerun when `remainingSeconds` elapses. Do not invent unrelated work.
+- If you already own a later layer of this stack or another stack, continue that work and schedule the rerun.
+- A parent of more than one stack delegates that wait to the worker that owns the stack.
+- Debounce ticks set `persistSeen: false`. Seen markers and first-look suppression wait for the post-window tick.
+- `--quiet-status` keeps unchanged WAIT ticks out of agent context.
+- MCP callers run one `iterate` tick at a time, with no debounce, and the host schedules the next call.
 
 Explicit multi-PR and `--stack` selectors use a separate compact, read-only summary path. A CLI
 aggregate returns when work is needed, every selected PR is complete, or its bounded timeout expires;
@@ -76,39 +88,32 @@ same tick returns `ESCALATE` with `stall-state-unavailable` and the filesystem e
 unwritable state directory cannot keep the idle wait polling
 ([`stall-state-unavailable`](escalations.md#stall-state-unavailable)).
 
-When `--merge` is requested, the selector finds the highest open layer such that it and every open
-layer below it have a current READY receipt, the bottom open layer targets the stack base, and the
-prefix has no stale ancestry, queued layer, escalation, or closed-unmerged layer. The summary
-returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge <that PR number> --yes` and the repository-allowed method flag (`--squash` unless `merge.method` or the repository settings select another). When no allowed method remains, the result is `ESCALATE` with `merge-method-unavailable` and no merge command.
-`gh stack merge <PR>` lands that pull request and every unmerged pull request below it in one
-operation ([GitHub's stacked PR merge](https://github.github.com/gh-stack/introduction/overview/)).
-A direct merge is atomic. When the base branch uses a merge queue, the prefix is queued together
-and each layer is evaluated from the bottom; a failure ejects that layer and the layers above it,
-while layers that already merged stay merged. Layers above the prefix keep their one-PR sessions
-in the same instructions. `gh stack merge` reads a bare number as a stack number before a PR
-number, but native stack numbers come from the repository's issue and pull request sequence
-(observed; GitHub does not document it), so a PR number never names a stack. If `gh stack` is an
-unknown command,
-the instructions install `github/gh-stack` first. After each merge GitHub retargets the next layer, so
-the caller reruns `--stack --merge` until every layer is merged and the result is `CANCEL`. If
-GitHub puts any layer in a merge queue, the summary remains `WAIT` for those queued layers. Recheck
-them at the polling cadence and do not rewrite a queued layer. That wait does not block work on a
-layer that is not in the queue, and the stack is not finished until every layer merges. An ejected
-layer is out of the merge prefix until a receipt acknowledges that removal. Its instruction names
-the reason and actor and tells the agent to run that layer's one-PR session, which fixes failing
-queue CI or escalates with the full removal when there is no concrete fix.
-An ejection remains actionable until a current one-PR READY receipt explicitly acknowledges that
-exact removal event; local timestamps are not treated as proof. Close/reopen and draft/ready
-lifecycle transitions also invalidate older receipts even when the PR returns to the same commit.
-While a PR remains queued, an earlier queue entry advancing its target branch does not invalidate
-the receipt by itself: Shepherd still requires the same source head and review evidence and checks
-the current merge-group state. A hard `CONFLICTING` or `DIRTY` state invalidates readiness even in
-the queue. A changed base branch name invalidates the receipt; outside the queue, a changed base
-commit (the PR's recorded `baseRefOid`) also invalidates it. Compact check annotation
-counts are part of the receipt evidence, so a late annotation on a completed check sends the layer
-back through its one-PR session.
-An explicit PR set containing a native-stack member still routes that row to an authoritative
-one-PR poll and includes its `pollCommand`.
+When `--merge` is requested, the selector finds the highest open layer such that:
+
+- That layer and every open layer below it have a current READY receipt.
+- The bottom open layer targets the stack base.
+- The prefix has no stale ancestry, queued layer, escalation, or closed-unmerged layer.
+
+Merge command:
+
+- The summary returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge <that PR number> --yes` and the repository-allowed method flag.
+- The flag is `--squash` unless `merge.method` or the repository settings select another.
+- When no allowed method remains, the result is `ESCALATE` / `merge-method-unavailable` and there is no merge command.
+- `gh stack merge <PR>` lands that pull request and every unmerged pull request below it ([GitHub's stacked PR merge](https://github.github.com/gh-stack/introduction/overview/)).
+- A direct merge is atomic. On a merge queue, the prefix is queued together and each layer is evaluated from the bottom. A failure ejects that layer and the layers above it. Layers that already merged stay merged.
+- Layers above the prefix keep their one-PR sessions in the same instructions.
+- `gh stack merge` reads a bare number as a stack number before a PR number. Native stack numbers come from the repository issue and pull request sequence (observed; GitHub does not document it), so a PR number never names a stack.
+- If `gh stack` is an unknown command, the instructions install `github/gh-stack` first. That install step is also in the Branch update playbook.
+- After each merge, GitHub retargets the next layer. Rerun `--stack --merge` until every layer is merged and the result is `CANCEL`.
+- If GitHub queues a layer, the summary stays `WAIT` for those queued layers. Recheck at the polling cadence. Do not rewrite a queued layer. That wait does not block a layer that is not queued. The stack is not finished until every layer merges.
+- An ejected layer leaves the merge prefix until a receipt acknowledges that removal. The instruction names the reason and actor and says to run that layer's one-PR session, which fixes failing queue CI or escalates when there is no concrete fix.
+- An ejection stays actionable until a current one-PR READY receipt acknowledges that exact removal. Local timestamps are not proof.
+- Close/reopen and draft/ready transitions invalidate older receipts even when the PR returns to the same commit.
+- While a PR stays queued, an earlier queue entry advancing its target branch does not invalidate the receipt by itself. Shepherd still requires the same source head and review evidence, and checks the current merge-group state.
+- A hard `CONFLICTING` or `DIRTY` state invalidates readiness even in the queue.
+- A changed base branch name invalidates the receipt. Outside the queue, a changed base commit (`baseRefOid`) also invalidates it.
+- Compact check annotation counts are part of the receipt. A late annotation on a completed check sends the layer back through its one-PR session.
+- An explicit PR set that contains a native-stack member still routes that row to an authoritative one-PR poll and includes its `pollCommand`.
 
 For a native stack, aggregate compares each open child's raw `baseRefOid` with the immediately lower
 stack entry's `headRefOid` when both entries are open. GitHub can report both rows `CLEAN` and
@@ -173,31 +178,92 @@ Lean-mode rules for the summary line:
 - `blockingBotReviewInProgress` and `isDraft` are shown only when `true`.
 - `shouldCancel` is never shown (it is fully implied by `action === "cancel"`).
 
-**`ignored` line:** Emitted (in both Markdown and JSON as `ignoredNames`) only when at least one check matched the user's `ignoreChecks` config. Lists the suppressed check names. When present, these checks do not contribute to CI verdict, `inProgress` count, or stall detection. If GitHub's `mergeStateStatus` is `UNSTABLE` and all non-ignored checks pass, the PR is treated as `READY` (the same ready-state behaviour as `BLOCKED` with passing CI) — the ignored check's pending/failing state does not drive stall-timeout escalation.
+**`ignored` line** (Markdown and JSON `ignoredNames`), only when a check matched `ignoreChecks`:
 
-**`superseded` line:** Emitted (in both Markdown and JSON as `supersededNames`) only when at least one `CANCELLED` check was superseded by a newer run of the same GitHub Actions workflow on the same commit — the concurrency-group eviction that happens when a new push (or a second trigger of the same push) cancels an in-flight run. These checks do not contribute to the CI verdict (`anyFailing`/`allPassed`) and never appear under `## Failing checks` — no action is needed; GitHub branch protection itself resolves required status checks by latest-run-per-name and will merge past them. A `CANCELLED` check with no newer same-workflow run present is **not** superseded — it still appears under `## Failing checks` with `[conclusion: CANCELLED]`, per the existing guidance there.
+- Lists the suppressed check names.
+- Those checks do not affect the CI verdict, the `inProgress` count, or stall detection.
+- If `mergeStateStatus` is `UNSTABLE` and every non-ignored check passed, the PR is `READY`, same as `BLOCKED` with passing CI.
+- An ignored check's pending or failing state does not drive stall-timeout escalation.
 
-The `**branch**` segment is appended to the `**summary**` line on any action when `mergeStatus` is `"BEHIND"` or `"CONFLICTS"`. It surfaces the raw branch state so the agent can decide whether to rebase without further tool calls. `**reviewDecision**` is appended to the status line when the _derived_ merge status is `BLOCKED`.
+**`superseded` line** (Markdown and JSON `supersededNames`), only when a `CANCELLED` check was replaced by a newer run of the same workflow on the same commit:
 
-After a sweep, iterate always prints `Approvals:` and `Conversations Resolved:` (current vs required). Extra merge-rule lines appear only when they apply (code-owner review, last-push approval, signed commits, linear history, branch up to date, required status checks, deployments, workflows, code scanning, merge queue, GitHub stacks). Tests that construct an iterate result without a sweep (no `mergeRequirements`) still get a fallback `**required**` line listing names from `requiredStatusCheckContexts`. Live iterate output uses `mergeRequirements` and does not emit that `**required**` line.
+- This is concurrency-group eviction from a new push or a second trigger of the same push.
+- These checks do not affect `anyFailing` or `allPassed` and never appear under `## Failing checks`.
+- No action is needed. Branch protection uses the latest run per name.
+- A `CANCELLED` check with no newer same-workflow run is not superseded. It stays under `## Failing checks` with `[conclusion: CANCELLED]`.
 
-The agent should read the Approvals / Conversations Resolved lines instead of inferring a required review from `reviewDecision`. `REVIEW_REQUIRED` with `Approvals: None [Not Required]` means GitHub is not waiting on an approval.
-
-`--verbose` restores the full summary line: all five counts, `remainingSeconds`, `blockingBotReviewInProgress`, `isDraft`, and `shouldCancel` always present.
-
-**Note on `mergeStatus` in JSON lean mode.** The lean JSON projection (`--format=json`, default) always emits `mergeStateStatus` (the raw GitHub value), and now also emits the derived `mergeStatus` discriminator (`CLEAN | BEHIND | CONFLICTS | BLOCKED | UNSTABLE | DRAFT | UNKNOWN`) whenever it isn't the healthy `CLEAN` default — mirroring the `**branch**` segment above, since `mergeStateStatus` alone can't always reconstruct `mergeStatus` (for example, a conflicting `mergeable` value can produce `CONFLICTS` while `mergeStateStatus` reports something else). `--verbose` still returns the full `IterateResult` unconditionally, including `mergeStatus: "CLEAN"`.
+- `**branch**` is appended to `**summary**` when `mergeStatus` is `BEHIND` or `CONFLICTS`, so the agent can decide on a rebase without another fetch.
+- `**reviewDecision**` is appended to the status line when the derived merge status is `BLOCKED`.
+- After a sweep, iterate always prints `Approvals:` and `Conversations Resolved:` (current vs required).
+- Extra merge-rule lines appear only when they apply: code-owner review, last-push approval, signed commits, linear history, branch up to date, required status checks, deployments, workflows, code scanning, merge queue, GitHub stacks.
+- A test result with no `mergeRequirements` still gets a fallback `**required**` line from `requiredStatusCheckContexts`. Live iterate uses `mergeRequirements` and omits that line.
+- Read Approvals and Conversations Resolved instead of inferring a required review from `reviewDecision`. `REVIEW_REQUIRED` with `Approvals: None [Not Required]` means GitHub is not waiting on an approval.
+- `--verbose` restores all five counts, `remainingSeconds`, `blockingBotReviewInProgress`, `isDraft`, and `shouldCancel`.
+- Lean JSON always emits raw `mergeStateStatus`, plus derived `mergeStatus` when it is not `CLEAN`. `mergeStateStatus` alone cannot rebuild `mergeStatus` (a conflicting `mergeable` value can be `CONFLICTS` while `mergeStateStatus` says something else).
+- `--verbose` JSON returns the full `IterateResult`, including `mergeStatus: "CLEAN"`.
 
 Load-bearing conventions (the iterate skill depends on these):
 
-1. Singular output begins with an H1 of the form `# PR #<N> [<ACTION>]`; an explicit multi-PR summary begins with `# Poll summary [<REASON>]`; a stack overview begins with `# <repo> stack #<number> — <reason>`. Stack output carries `nextAction`. The action tag defines the recurrence boundary: `[READY]`, `[FIX_CODE]`, and stack-level `SHEPHERD` are always non-terminal and must be followed by another iteration, `[ESCALATE]` is the only human hand-off, and `[CANCEL]` is the ordinary terminal stop. `[READY]` schedules the rerun for when `remainingSeconds` elapses and does not invent unrelated work; already-owned later layers or other stacks continue, and a parent coordinating more than one stack delegates this wait to the worker that owns the stack. The shipped skill's `--until-terminal` poll handles ordinary `WAIT`/`MARK_READY` actions itself; when it returns any other non-terminal result (including `[READY]` and a quota-warning `WAIT`/`MARK_READY`), the skill follows `## Instructions` and re-invokes the canonical command. Within that boundary, behavior is driven by the `## Instructions` section, not by a separate skill dispatch table. On a stack overview, one-PR shepherd, mark-ready, and push steps run only for rows marked `owned`.
-2. Lines 3–4 carry the base fields (status, merge, state, repo, summary). In lean mode, fields at their trivial default are omitted; `--verbose` restores the full scalar header/summary line in Markdown. JSON verbose mode returns the complete `IterateResult`, including fields not present in Markdown (for example, `baseBranch` and full `checks` entries on every action); Markdown is structurally lossy relative to JSON, and `--verbose` does not close that gap.
-3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … — that tells the agent exactly what to do. `## Instructions` remains the entry point and the skill needs no dispatch table of its own. Some steps are a one-line pointer naming an invariant procedure instead of inlining it (e.g. `See "CI failure triage" in the pr-shepherd skill`). The pointed-to `## Playbooks` section in the skill is fixed reference material, not per-tick policy — following `## Instructions` and applying the named playbook when pointed to it is still the whole dispatch story. **Untrusted review input** is the exception: it always applies when reading surfaced review or CI text and is never pointed to from `## Instructions`.
-4. Under `[FIX_CODE]`, the `## Post-fix actions` section has an `` apply review: `<command>` `` bullet when GitHub's viewer capabilities authorize at least one review mutation (and an optional `resolve-only` bullet when applicable). The instructions reference those bullets so the skill strips backticks and runs the command.
-5. In lean mode, passing check counts are surfaced only via the `**summary**` line — no per-check detail is emitted for passing checks. Failing check detail appears in `## Failing checks` within `[FIX_CODE]`, or under the escalation's items needing attention when check follow-up is unavailable. Lean JSON surfaces those rows as `fix.checks[]` or `escalate.checks[]`. In verbose mode, both JSON and Markdown also include the base `checks` data on every action; Markdown renders it under `## Checks`.
+- Headings:
+  - One PR: `# PR #<N> [<ACTION>]`.
+  - Explicit multi-PR summary: `# Poll summary [<REASON>]`.
+  - Stack overview: `# <repo> stack #<number> — <reason>`, with `nextAction`.
+- `[READY]`, `[FIX_CODE]`, and stack-level `[SHEPHERD]` are non-terminal. Run another iteration.
+- `[ESCALATE]` is the only human hand-off. `[CANCEL]` is the ordinary stop.
+- `[READY]`: rerun when `remainingSeconds` elapses. Do not invent unrelated work. Continue a later layer you already own, and schedule the rerun. A parent of more than one stack delegates that wait to the worker that owns the stack.
+- `--until-terminal` keeps ordinary `WAIT` and `MARK_READY` inside the poll.
+- Any other non-terminal result, including `[READY]` and a quota-warning `WAIT` or `MARK_READY`, follows `## Instructions` and reruns the canonical command.
+- `## Instructions` is the entry point. The skill has no dispatch table of its own.
+- On a stack overview, shepherd, mark ready, and push only rows marked `owned`.
+- Lines 3–4 carry status, merge, state, repo, and summary.
+  - Lean mode omits trivial defaults. `--verbose` restores the scalar header in Markdown.
+  - Verbose JSON returns the full `IterateResult`, including fields Markdown does not print (`baseBranch`, full `checks` on every action).
+- Some steps say `Playbook: "<name>".` instead of inlining an invariant procedure. Example: `Playbook: "CI failure triage".`
+  - The name matches a file in `plugins/pr-shepherd/skills/pr-shepherd/references/`, linked from the skill.
+  - Read that file once, then apply it.
+  - **Untrusted review input** stays in `SKILL.md`. It always applies to surfaced review and CI text. Instructions never point at it.
+- Under `[FIX_CODE]`, `## Post-fix actions` includes ``apply review: `<command>` `` when the viewer can run at least one review mutation, and `resolve-only` when that split applies.
+  - The instructions name those bullets. Strip the backticks and run the command.
+- Lean mode prints passing checks only as the `**summary**` count.
+  - Failing detail is `## Failing checks` on `[FIX_CODE]`, or the escalation's items when follow-up is unavailable.
+  - Lean JSON uses `fix.checks[]` or `escalate.checks[]`.
+  - Verbose mode adds base `checks` on every action. Markdown renders them under `## Checks`.
 
-When a configured GraphQL quota threshold is crossed on a non-terminal result, lean Markdown and JSON include a `GitHub API quota warning` / `quotaWarning` block. The Markdown block includes `Recommended poll interval`, `Recommended bounded CLI timeout`, and a `Recommendation` line. The final instruction replaces the ordinary immediate continuation: keep polling pr-shepherd at that cadence; for incidental PR operations that do not need Shepherd's full snapshot, prefer REST `gh` (`gh pr view`, `gh pr review`, `gh api` REST endpoints) only when REST core is still above its warning band, since GraphQL and REST draw from separate quota pools. REST core uses the same bands and the same once-per-window claim. When both budgets are low, the warning is one combined block: its reset is the later of the two, and it does not recommend shifting work onto either budget. A `--until-terminal` retry names the exhausted resource (`GitHub GraphQL`, `GitHub REST core`, or `GitHub secondary`) and the reset time instead of always saying GraphQL. Do not substitute `gh pr checks` or `gh pr watch` for the Shepherd loop — those waiters only see CI and hide review comments until checks finish. Resume full-cadence pr-shepherd once the GraphQL quota resets (the block's `Reset` time). If the caller must keep polling before then, it falls back to a minimum poll interval: a bounded polling CLI command raises shorter `--interval` and `--timeout` flags while preserving a longer cadence; the shipped skill preserves `--until-terminal`, omits `--timeout`, and adjusts its cadence before re-invocation; a single-tick CLI, API, or MCP caller waits before its next tick instead. The warning is emitted once per worktree (or process session when no worktree is available), credential, and quota window. An older rate-limit sample saved after a newer one in that same window does not warn again. A different credential fingerprint re-arms the warning. The poll dispatcher also applies `max(effective interval, resolved band interval)` on every `WAIT` / `MARK_READY` sleep from the latest GraphQL remaining percent, including after the one-shot warning has already been claimed. An unbounded `--until-terminal` poll still returns the first warning so the skill can slow incidental GraphQL and re-invoke with `--interval`. Single-tick `iterate` / MCP do not sleep. Terminal `cancel`/`escalate` results do not warn because no automated continuation is actionable; every `[FIX_CODE]` result and stack-level `SHEPHERD` result remains eligible because it is non-terminal. GraphQL usage, cost, and fingerprint skip: [graphql.md](graphql.md).
+Quota warning, when a configured threshold is crossed on a non-terminal result:
 
-`--until-terminal` does not exit 75 just because the first retry lands on the reset instant. An exhausted primary limit sleeps until `resetAt`, plus 5 seconds, plus `resetAt % 5` seconds. A later `resetAt` starts that wait over. An unchanged or missing `resetAt` backs off 15s, then 30s, then 60s. The fifth of those no-progress attempts writes one stderr line naming the resource and reset time, then exits 75. A sleep longer than `--interval` is split into interval chunks. Between chunks, when the exhausted resource is not REST core, one REST `GET /repos/{owner}/{repo}/pulls/{n}` checks for a merge or close — GraphQL is exhausted, and REST core is a separate budget. A merged or closed PR returns the same `CANCEL` result as a merged or closed iterate tick, without waiting out the reset. `--stack` and multi-PR polls return the all-terminal `CANCEL` only when every tracked layer is merged or closed; a partial merge keeps sleeping. A REST core limit on that check skips further probes until the sleep ends. Bounded polls still fail with 75 on the first rate-limit error.
+- Lean Markdown and JSON include `GitHub API quota warning` / `quotaWarning`.
+- Markdown includes `Recommended poll interval`, `Recommended bounded CLI timeout`, and `Recommendation`.
+- The last instruction replaces the ordinary immediate continuation: keep polling at that cadence.
+- For incidental PR calls that do not need a full snapshot, prefer REST `gh` (`gh pr view`, `gh pr review`, `gh api`) only while REST core is above its band. GraphQL and REST are separate pools.
+- REST core uses the same bands and the same once-per-window claim.
+- When both budgets are low, one combined block uses the later reset and does not recommend switching pools.
+- A `--until-terminal` retry names the exhausted resource: `GitHub GraphQL`, `GitHub REST core`, or `GitHub secondary`, plus the reset time.
+- Do not substitute `gh pr checks` or `gh pr watch`. Those waiters hide review comments until CI finishes.
+- Resume full cadence at the block's `Reset` time.
+- Before that, a bounded poll raises shorter `--interval` and `--timeout` flags and keeps a longer cadence.
+- The shipped skill keeps `--until-terminal`, omits `--timeout`, and applies the cadence before it reruns.
+- A single-tick CLI, API, or MCP caller waits before the next tick.
+- The warning fires once per worktree (or process, when there is no worktree), credential, and quota window.
+- An older sample saved later in that window does not warn again. A different credential fingerprint re-arms it.
+- Every `WAIT` / `MARK_READY` sleep uses `max(effective interval, resolved band interval)` from the latest GraphQL remaining percent, including after the one-shot warning.
+- An unbounded `--until-terminal` poll still returns the first warning so the skill can slow down and rerun with `--interval`.
+- Single-tick `iterate` / MCP do not sleep.
+- Terminal `cancel` and `escalate` do not warn. `[FIX_CODE]` and stack-level `[SHEPHERD]` still can, because they are non-terminal.
+- Usage, cost, and fingerprint skip: [graphql.md](graphql.md).
+
+`--until-terminal` rate-limit retry:
+
+- The first retry landing on the reset instant does not exit 75.
+- An exhausted primary limit sleeps until `resetAt`, plus 5 seconds, plus `resetAt % 5` seconds.
+- A later `resetAt` starts that wait over.
+- An unchanged or missing `resetAt` backs off 15s, then 30s, then 60s.
+- The fifth no-progress attempt writes one stderr line naming the resource and reset time, then exits 75.
+- A sleep longer than `--interval` is split into interval chunks.
+- Between chunks, when the exhausted resource is not REST core, one REST `GET /repos/{owner}/{repo}/pulls/{n}` checks for a merge or close.
+- A merged or closed PR returns the same `CANCEL` as a merged or closed iterate tick.
+- `--stack` and multi-PR polls return all-terminal `CANCEL` only when every tracked layer is merged or closed. A partial merge keeps sleeping.
+- A REST core limit on that check skips further probes until the sleep ends.
+- Bounded polls still fail with 75 on the first rate-limit error.
 
 ---
 
@@ -223,7 +289,7 @@ READY: PR #42 is ready — 127s of ready-delay remaining — 1 passing, 0 in-pro
 
 ## Instructions
 
-1. PR #42 is ready. Ready-delay has 127s left. Run this same command again when the timer elapses. Do not invent unrelated work. If you already own a later layer of this stack or another stack, continue that work and schedule this rerun.
+1. PR #42 is ready. Ready-delay has 127s left. Rerun this command when the timer elapses. Do not invent unrelated work.
 ```
 
 `--until-terminal` returns this action instead of sleeping through the countdown. When the delay elapses, the next tick is `cancel` / `ready-delay-elapsed` or `merge`, and that completion writes the READY receipt a later stack read calls shepherded.
@@ -262,7 +328,13 @@ When a failing check is deferred on an open external pull request or issue, the 
 
 The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, unmet merge requirements (approvals, conversations, merge queue, …), `PR is a draft`, or `some checks are unstable`. After a sweep, iterate also prints current-vs-required merge rules so the agent can see _why_ GitHub is not mergeable (for example `Approvals: None [Not Required]` vs `Approvals: None [Required]`). Merge-queue and GitHub-stack membership appear as extra lines when they apply (`Merge queue: position 2 QUEUED [Required]`, `Stack: 7 (layer 2/3, base main)`); they are omitted when the PR is not in a queue or stack and merge queue is not required.
 
-**Deferred work while queued:** with `--merge` enabled and the PR currently in the merge queue (`mergeQueue.inQueue`), review threads, PR comments, `CHANGES_REQUESTED` reviews, and review summaries do not trigger `fix_code` — a Shepherd-initiated push right now would eject the PR from the queue. Instead this tick emits `WAIT` and raw counts of what is being held back appear as `deferredWork` (JSON) / a `**deferred (in merge queue)** N threads, N comments, …` line (Markdown), omitted entirely when there is nothing deferred. Failing checks (including merge-queue synthetic-commit `merge_group` failures), unseen check-run annotations, and merge conflicts are never deferred — GitHub is already acting on the queue for those regardless, so they still route to `fix_code` immediately. Set [`actions.workWhileQueued: true`](configuration.md#actionsworkwhilequeued--default-false) to restore pre-existing behavior and act on this work immediately even while queued. Once the PR leaves the queue (merged or ejected), the deferred work is picked up on the very next tick exactly as if `workWhileQueued` were `true` — deferred items are never marked seen while held back, so nothing is silently lost (see the Comment visibility invariant in [`AGENTS.md`](../AGENTS.md)).
+**Deferred work while queued** (`--merge` and `mergeQueue.inQueue`):
+
+- Review threads, PR comments, `CHANGES_REQUESTED` reviews, and review summaries do not trigger `fix_code`. A push now would eject the PR.
+- The tick is `WAIT`. Raw counts are `deferredWork` in JSON and `**deferred (in merge queue)**` in Markdown. Omit the line when nothing is deferred.
+- Failing checks, including `merge_group` failures on the queue commit, unseen check annotations, and merge conflicts are never deferred. They still go to `fix_code`.
+- [`actions.workWhileQueued: true`](configuration.md#actionsworkwhilequeued--default-false) acts on that work immediately.
+- After the PR leaves the queue, the next tick picks the work up. Held items are not marked seen, so nothing is dropped. See the comment visibility invariant in [`AGENTS.md`](../AGENTS.md).
 
 **Disabled mark-ready on a native stack draft:** a draft native stack layer whose session will not mark it ready carries `stackDraftHold` in JSON:
 
@@ -399,7 +471,31 @@ A `ready-delay-elapsed` cancel carries the same `**merge queue** …` header lin
 
 Actionable work exists — whether it requires code edits or only resolution is up to the agent.
 
-**Trigger:** Any of: unresolved inline review threads, resolution-only inline review threads, actionable PR-level comments, `CHANGES_REQUESTED` reviews, a failing CI check with autonomous follow-up, a later-attempt workflow failure while the branch is behind its PR base, required status contexts that have no check run and no status context while no Actions workflow is running, unseen check-run annotations on non-passing checks, merge conflicts (`mergeStatus.status === "CONFLICTS"`), a verified stale native-stack boundary for this PR, or pending first-look review summary IDs to minimize. The stale-boundary path returns observed parent and child OIDs and an ordered one-PR repair procedure, followed by the ordinary `FIX_CODE` continuation; aggregate `--stack` never performs that repair. Merge conflicts on a native stack layer replace the generic conflict pointer with a gh-stack rebase from a clean checkout — first `gh stack checkout <stack number>` when `gh stack` does not track the stack locally, plus a check that every local layer is at its PR head, then `gh stack rebase --upstack --no-trunk` from the parent stack branch (the layer's own PR base branch, not the stack's trunk) for an upper layer that is behind that parent, or a whole-stack `gh stack rebase` from the bottom open layer when that upper layer already contains its parent (GitHub's dirty state is against the stack trunk; the summary says `conflicts with stack trunk` and JSON includes `stackTrunkConflict`) or when the conflicting layer's own PR base is the stack's trunk (including a higher layer retargeted after the layers below it merged), continuing with `gh stack rebase --continue` after each resolved conflict — and the push and completion steps push the rewritten stack with `gh stack push` instead of the PR head branch alone. A conflicting head whose check-suite page is complete and empty, and which has no check runs, gets an instruction that GitHub did not start `pull_request` workflows once Shepherd has seen that same head for at least 2 minutes. Commit time is not used: GitHub's Commit object has no push timestamp, and an unreadable seen marker omits the note. Pushing that same head again does not start them. Failing checks of all types (timeout, cancelled, startup failure, actionable) enter check handling. The agent uses the included failed step, summary, and bounded log excerpt; when no nonblank log excerpt is included, or the check is CANCELLED/STARTUP_FAILURE, Shepherd emits a rerun recommendation (`[rerun authorized]` tag plus a `rerun:` command) when all of the following hold:
+**Trigger.** Any of:
+
+- Unresolved inline review threads, or resolution-only inline threads.
+- Actionable PR-level comments.
+- `CHANGES_REQUESTED` reviews.
+- A failing CI check with autonomous follow-up.
+- A later-attempt workflow failure while the branch is behind its PR base.
+- Required status contexts with no check run and no status context, while no Actions workflow is running.
+- Unseen check-run annotations on non-passing checks.
+- Merge conflicts (`mergeStatus.status === "CONFLICTS"`).
+- A verified stale native-stack boundary for this PR.
+- Pending first-look review summary IDs to minimize.
+
+Stale boundary and native-stack conflicts:
+
+- The stale-boundary path returns the observed parent and child OIDs and a one-PR repair, then the ordinary `FIX_CODE` continuation. Aggregate `--stack` never does that repair.
+- A native-stack conflict uses a gh-stack rebase from a clean checkout.
+- Import with `gh stack checkout <stack number>` when `gh stack` does not track the stack locally.
+- The step points at the Branch update playbook for the head check, `gh stack rebase --continue`, and merge-queue behavior.
+- An upper layer behind its parent gets `gh stack rebase --upstack --no-trunk` from that parent, not from the stack trunk.
+- A whole-stack `gh stack rebase` starts at the bottom open layer when the upper layer already contains its parent (summary: `conflicts with stack trunk`, JSON: `stackTrunkConflict`) or when the layer's own base is the stack trunk, including a higher layer retargeted after the layers below it merged.
+- Push the rewritten stack with `gh stack push`, not the PR head alone.
+- A conflicting head with a complete empty check-suite page and no check runs says GitHub did not start `pull_request` workflows after Shepherd has seen that head for 2 minutes. Commit time is not used. An unreadable seen marker omits the note. Pushing that same head again does not start them.
+- Failing checks of every type enter check handling. Use the included failed step, summary, and bounded log excerpt.
+- When no nonblank log excerpt is included, or the check is `CANCELLED` or `STARTUP_FAILURE`, Shepherd adds `[rerun authorized]` and a `rerun:` command when all of the following hold:
 
 - the viewer's repository role grants Actions rerun capability (`repositoryPermission` is `WRITE`/`MAINTAIN`/`ADMIN` — this confirms the account's role, not the granular scope of whatever credential actually executes `gh`; an unauthorized rerun simply fails when run, the same residual risk as any other CLI-recommended git/gh mutation);
 - GitHub reports `run_attempt === 1`; later attempts have consumed Shepherd's single rerun allowance, and unavailable attempt metadata is denied conservatively;
@@ -409,9 +505,34 @@ Actionable work exists — whether it requires code edits or only resolution is 
 
 A failing check recorded as blocked on an open external pull request or issue does not by itself return `[FIX_CODE]`, does not carry a `rerun:` command, and does not count toward fix-attempt or fix-thrash. If it was the only `[FIX_CODE]` cause, Shepherd returns `[WAIT]` and the log names the blocker (`owner/name#N`). Other `[FIX_CODE]` causes on the same tick still return `[FIX_CODE]`, with that check omitted from `## Failing checks` and from rerun commands. Once the blocker is merged or closed, the check stays actionable while the branch is `BEHIND`, conflicting, or `UNKNOWN`: `## Instructions` includes a numbered step to update this PR branch from its base, for example `gh pr update-branch <pr> --rebase`, and tells the agent not to rerun the job. When the branch is already current, Shepherd deletes that record so a later failure of the same check is an ordinary failure again. A released record whose check is no longer failing is ignored.
 
-External checks (no run ID) never get a rerun recommendation — they are not GitHub Actions runs. A non-empty external `detailsUrl` is nevertheless an autonomous investigation path, so the check remains `[FIX_CODE]`: the agent inspects the provider or reproduces the reported failure locally, applies any warranted fix, and iterates. A later workflow attempt (`runAttempt > 1`) remains `[FIX_CODE]` when a nonblank log excerpt supplies an investigation path, or when the PR branch is behind or conflicts with its base: Shepherd tells the agent to inspect the actual PR base branch for an existing fix, update the PR branch from that base according to repository conventions, push, and iterate immediately. The later attempt never receives another rerun command. Shepherd returns `[ESCALATE]` with trigger `check-follow-up-unavailable` only when every remaining failing check requires a human-only action or has neither a usable locator/evidence nor an authorized rerun or branch-refresh path, and no other autonomous work remains. If other autonomous work remains, the same tick stays `[FIX_CODE]`, surfaces all checks, and tells the agent to finish that work and iterate immediately; the unresolved manual-only blocker escalates on the next tick. That triage table lives in the pr-shepherd skill's "CI failure triage" playbook (see [`plugins/pr-shepherd/skills/pr-shepherd/SKILL.md`](../plugins/pr-shepherd/skills/pr-shepherd/SKILL.md)), keyed on the `[conclusion: …]` tag and `[rerun authorized]` tag each bullet already carries — see section 5 below. Unseen check annotations on skipped, ignored, or filtered CheckRuns also route here for one tick unless their conclusion is `SUCCESS`; they do not keep `fix_code` alive after the seen marker is written. A successful parent CheckRun is authoritative for iteration regardless of classification bucket, so its annotations remain visible in the current `check` output and are marked seen without triggering `FIX_CODE`.
+External checks and later attempts:
 
-Required status contexts that never produced a check run or status context are their own `FIX_CODE` cause, including when other checks passed and `mergeStateStatus` is `BLOCKED`. For a native stack the required names come from the stack trunk (`stack.baseRefName`), not the layer's parent branch. The newest run of a name wins, so a later success supersedes an older cancelled run. Shepherd stays on `WAIT` while any relevant check run is in progress or a check suite with a `workflowRun` is not completed. Suites with no workflow run that stay `QUEUED` do not count. The instruction says no CI checks are running and names the required checks that have not passed. A non-stack PR loads `baseRef.compare(headRef).behindBy` against the head commit OID when those contexts are missing, including when `mergeStateStatus` is `BLOCKED`. If that compare or the stack trunk compare is behind, or the derived merge status is `BEHIND`, the instruction states the commit count and tells the caller to rebase and push (`gh stack rebase` then `gh stack push` on a native stack; rebase onto the PR base otherwise). That push is how the missing checks start. If that push does not start them, the caller investigates. Once the branch is current, Shepherd runs `gh pr close <pr> -R <repo>` and `gh pr reopen <pr> -R <repo>` once for that head. The next tick on that same head, still missing those contexts with nothing running, returns `ESCALATE` with `required-checks-unreported`. A branch that is still behind stays on `FIX_CODE` and does not write the retrigger marker. Failing checks and merge conflicts keep their existing paths. Text prints `**unreported required**`, `**behind**` when the PR base compare is behind, and `**trunk behind**` when the trunk compare is behind. JSON uses `unreportedRequiredChecks`, `baseBehindBy`, and `trunkBehindBy`, omitted when empty. A `--stack` summary starts a one-PR session (`unreported-required-checks`) instead of idling in `pending-or-unknown`.
+- An external check has no run id, so it never gets a rerun. It is not a GitHub Actions run.
+- A non-empty `detailsUrl` is still an investigation path. The check stays `[FIX_CODE]`: inspect the provider or reproduce it locally, apply a warranted fix, and iterate.
+- A later attempt (`runAttempt > 1`) stays `[FIX_CODE]` when the log excerpt is nonblank, or when the branch is behind or conflicting. Inspect the PR base for an existing fix, update from that base, push, and iterate. It never gets another rerun.
+- `[ESCALATE]` / `check-follow-up-unavailable` happens only when every remaining failing check needs a human, or has no usable evidence, rerun, or branch refresh, and no other autonomous work remains.
+- If other autonomous work remains, the tick stays `[FIX_CODE]`. Finish that work and iterate. The manual-only blocker escalates on the next tick.
+- Conclusion and rerun rules are the CI failure triage reference, keyed on `[conclusion: …]` and `[rerun authorized]` already printed on each bullet.
+- Unseen annotations on skipped, ignored, or filtered CheckRuns route here for one tick unless the conclusion is `SUCCESS`. They do not keep `fix_code` alive after the seen marker is written.
+- A successful parent CheckRun is authoritative. Its annotations stay visible in `check` output and are marked seen without `FIX_CODE`.
+
+Required checks that never reported:
+
+- Missing required status contexts, with no check run and no status context, are their own `FIX_CODE` cause, even when other checks passed and `mergeStateStatus` is `BLOCKED`.
+- On a native stack the required names come from the stack trunk (`stack.baseRefName`), not the layer's parent.
+- The newest run of a name wins. A later success supersedes an older cancelled run.
+- Shepherd stays on `WAIT` while a relevant check run is in progress, or a check suite with a `workflowRun` is not completed. A `QUEUED` suite with no workflow run does not count.
+- The instruction says no CI is running and names the required checks that have not passed.
+- A non-stack PR loads `baseRef.compare(headRef).behindBy` against the head commit OID when those contexts are missing, including when `mergeStateStatus` is `BLOCKED`.
+- If that compare, the trunk compare, or derived merge status is `BEHIND`, the instruction states the commit count and says to rebase and push. On a native stack that is `gh stack rebase` then `gh stack push`. Otherwise rebase onto the PR base. That push is how the missing checks start.
+- If the push does not start them, investigate. Do not close and reopen first.
+- Once the branch is current, Shepherd runs `gh pr close <pr> -R <repo>` and `gh pr reopen <pr> -R <repo>` once for that head.
+- The next tick on that same head, still missing those contexts with nothing running, is `ESCALATE` / `required-checks-unreported`.
+- A branch that is still behind stays on `FIX_CODE` and does not write the retrigger marker.
+- Failing checks and merge conflicts keep their existing paths.
+- Text prints `**unreported required**`, `**behind**` when the PR base compare is behind, and `**trunk behind**` when the trunk compare is behind.
+- JSON uses `unreportedRequiredChecks`, `baseBehindBy`, and `trunkBehindBy`, omitted when empty.
+- A `--stack` summary starts a one-PR session (`unreported-required-checks`) instead of idling in `pending-or-unknown`.
 
 Eligible **already-seen** `COMMENTED` review summaries (surfaced in a prior iteration, body unchanged, author matches `iterate.minimizeComments`, no unresolved child thread) do **not** trigger `fix_code` on their own — iterate minimizes them in-process before computing actionable work (see CLI side-effects below), since there is no new content left to show the agent. A first-look (never-yet-surfaced) eligible summary still routes to `fix_code` for one tick so its body can be rendered; see section 8 below. If GitHub does not confirm the in-process minimize (null response, GraphQL error, rate limit — reported without throwing), that ID falls back into `reviewSummaryIds`/`## Review IDs to minimize queue` so `fix_code` still triggers and the `apply review` command remains a working fallback, instead of the summary silently staying unminimized forever.
 
@@ -444,22 +565,35 @@ Conversations Resolved: No [Not Required]
 
 1. Review each item under `## Review threads` and decide whether it needs a code change.
 2. Apply every warranted review fix in each file referenced above.
-3. If you changed code, commit any remaining changes and push to the PR head branch, then run the remaining review mutations using the pushed commit SHA and iterate immediately with the same options. If you did not change code, do not commit and continue.
-4. When Shepherd emits journal guidance (only when `viewerCanUpdate === true`), append `- <decision>` for any substantial decision or rejection with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. See "Shepherd Journal" in the pr-shepherd skill for citation conventions.
-5. Substitute any command placeholders and run the generated review mutations.
-6. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)`, which must equal the current remote PR head. If you changed code, commit and push to the PR head branch first, then replace `$HEAD_SHA` with the pushed commit SHA.
-7. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
-8. Run the `apply review:` command shown above. See "Review-mutation mechanics" in the pr-shepherd skill for dismiss-ID retention.
-9. `[FIX_CODE]` is non-terminal: if you changed code, commit and push to the PR head branch, then run the review mutations using the pushed commit SHA and iterate immediately with the same options; if you did not change code, complete the authorized review mutations and iterate immediately with the same options.
+3. If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.
+4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
+5. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)` (it must equal the remote PR head). If you did, use the pushed SHA.
+6. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
+7. Run the `apply review:` command above. Playbook: "Review-mutation mechanics".
+8. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.
 ```
 
-The CLI surfaces the raw `**branch**` state on the summary line and leaves rebase/commit mechanics to the caller. Push access to the PR head is a usage precondition: do not start pr-shepherd when the calling agent cannot push the branch. Raw GitHub fields such as `viewerCanEditFiles` and `headRepositoryPermission` remain useful context, but they do not gate `[FIX_CODE]`, suppress review mutations, or create a hand-off. Conflict and code-change ticks instruct the caller to commit, push, complete SHA-gated review mutations, and iterate immediately. `[FIX_CODE]` is always non-terminal; only `[ESCALATE]` hands work to a human.
-
-`$HEAD_SHA`/`$DISMISS_MESSAGE` substitution stays a CLI step — conditional on `resolveCommand.requiresHeadSha`/`requiresDismissMessage` as before — because the printed `apply review:` command is syntactically invalid without the placeholders. The CLI itself recognizes a Shepherd reply only when the latest comment begins `<!-- pr-shepherd -->`; author equality is not enough. Thus an unmarked bot/non-human or viewer-authored human thread is emitted for ordered reply-and-resolve, while a marked thread that is still being resolved is emitted resolve-only for retry. An unmarked other-human thread remains reply-only unless `iterate.resolveOtherHumanThreads` is `outdated` or `always`. A marked other-human thread is already acknowledged at the default `none` setting. A standalone CLI caller who never loads the skill still gets a command that is safe to run as printed. Dismiss-ID retention (omitting a `--dismiss-review-ids` ID leaves the PR stuck in `CHANGES_REQUESTED`) remains in the pr-shepherd skill's `## Playbooks` section (see [`plugins/pr-shepherd/skills/pr-shepherd/SKILL.md`](../plugins/pr-shepherd/skills/pr-shepherd/SKILL.md)). Shepherd Journal citation conventions remain there as well. Bare, external, CANCELLED, STARTUP_FAILURE, and GitHub Actions failures with no nonblank included log excerpt either stay in `[FIX_CODE]` while other autonomous work remains or return `[ESCALATE]` with `check-follow-up-unavailable` when they are the only blocker.
-
-When `mergeStatus` is `"BEHIND"` and [`iterate.behindBaseHint`](configuration.md#iteratebehindbasehint--default-) is configured (empty by default), an extra instruction appears immediately before commit/push finalization: `` `The branch is behind PR base branch `<base>`. <hint> before pushing.` ``. The CLI still never chooses the mechanics; it only echoes the configured hint.
-
-When a later workflow attempt is still failing and the branch is `BEHIND` or `CONFLICTS`, `## Instructions` names the actual PR base branch and tells the caller to inspect it for an existing fix before choosing a remediation. A second step tells the caller to rebase or otherwise update from that base according to repository conventions; conflict output includes conflict resolution as part of that update. Behind-branch output then explicitly requires pushing the updated PR head before iterating. On a native stack layer, whether behind or conflicting, the update step is the gh-stack rebase described above for merge conflicts, and the push and SHA-gated completion steps push the rewritten stack with `gh stack push`: updating one layer from its base strands every layer above it. Configured `iterate.behindBaseHint` text remains an additional repository-specific pointer.
+- The summary line shows raw `**branch**` state. The caller chooses rebase and commit mechanics.
+- Push access to the PR head is a usage precondition. Do not start pr-shepherd when the caller cannot push.
+- `viewerCanEditFiles` and `headRepositoryPermission` stay raw context. They do not gate `[FIX_CODE]`, hide review mutations, or create a hand-off.
+- Conflict and code-change ticks say to commit, push, finish SHA-gated review mutations, and iterate.
+- `[FIX_CODE]` is always non-terminal. Only `[ESCALATE]` hands work to a human.
+- `$HEAD_SHA` and `$DISMISS_MESSAGE` substitution stays in the CLI when `resolveCommand.requiresHeadSha` or `requiresDismissMessage` is set. The printed command is invalid without it.
+- Shepherd recognizes its own reply only when the latest comment begins `<!-- pr-shepherd -->`. Author equality is not enough.
+- An unmarked bot, non-human, or viewer-authored human thread is reply-and-resolve.
+- A marked thread that is still being resolved is resolve-only, so a previous reply can be retried.
+- An unmarked other-human thread stays reply-only unless `iterate.resolveOtherHumanThreads` is `outdated` or `always`.
+- A marked other-human thread is already acknowledged at the default `none`.
+- A caller who never loads the skill can still run the printed command. Placeholder steps are in the output.
+- Dismiss-ID retention is [`references/review-mutations.md`](../plugins/pr-shepherd/skills/pr-shepherd/references/review-mutations.md). Omitting a `--dismiss-review-ids` value leaves `CHANGES_REQUESTED`.
+- Journal citation rules are [`references/journal.md`](../plugins/pr-shepherd/skills/pr-shepherd/references/journal.md).
+- Bare checks, external checks, `CANCELLED`, `STARTUP_FAILURE`, and GitHub Actions failures with no usable log stay in `[FIX_CODE]` while other autonomous work remains.
+- When those checks are the only blocker, the result is `[ESCALATE]` with `check-follow-up-unavailable`.
+- When `mergeStatus` is `BEHIND` and [`iterate.behindBaseHint`](configuration.md#iteratebehindbasehint--default-) is set, one instruction echoes it: ``The branch is behind PR base branch `<base>`. <hint> before pushing.`` The CLI does not choose the git mechanics.
+- A later workflow attempt that is still failing while the branch is `BEHIND` or `CONFLICTS` names the PR base branch and says to inspect it for an existing fix.
+- The next step says to update from that base using repository conventions. Conflict output includes resolving conflicts. A behind branch must be pushed before the next iteration.
+- On a native stack layer, that update is the gh-stack rebase above, and the push is `gh stack push`. Updating one layer from its base strands the layers above it.
+- `iterate.behindBaseHint` is an extra repository-specific pointer when it is set.
 
 When one or more threads carry a `[suggestion]` marker, `## Instructions` adds one triage step pointing at the retrieve/apply command; the refusal and drift mechanics are invariant text that lives in the pr-shepherd skill's "Suggestion patches" playbook instead of being spelled out per tick:
 
@@ -467,7 +601,7 @@ When one or more threads carry a `[suggestion]` marker, `## Instructions` adds o
 ## Instructions
 
 1. Review each item under `## Review threads` and decide whether it needs a code change.
-2. For all threads marked `[suggestion]` under `## Review threads`, run one `pr-shepherd build-suggestion-patches https://github.com/owner/repo/pull/42 --thread-id <id> --message "<one-sentence headline>" --format=json` command, repeating the `--thread-id <id> --message <one-sentence headline>` group in displayed order, then apply the returned patches in order. See "Suggestion patches" in the pr-shepherd skill for refusals and drift.
+2. For every `[suggestion]` thread under `## Review threads`, run one `pr-shepherd build-suggestion-patches https://github.com/owner/repo/pull/42 --thread-id <id> --message "<one-sentence headline>" --format=json`, repeating `--thread-id` and `--message` in displayed order. Playbook: "Suggestion patches".
 3. Apply every warranted review fix in each file referenced above.
 4. [remaining remediation, finalization, mutation, and recurrence steps]
 ```
@@ -489,7 +623,7 @@ The review-fix step says "each file referenced above" only when `## Review threa
 
    Every bullet carries a `[conclusion: <CONCLUSION>]` tag (e.g. `[conclusion: FAILURE]`, `[conclusion: TIMED_OUT]`, `[conclusion: CANCELLED]`, `[conclusion: STARTUP_FAILURE]`); null conclusions produce no tag. Attempts after the original carry `[attempt: N]`; attempt 1 is omitted as the trivial default. A check carries a `[rerun authorized]` tag when it meets every eligibility condition listed under `fix_code`'s **Trigger** above (WRITE+ role, confirmed Actions provenance, `run_attempt === 1`, not `ACTION_REQUIRED`, not still in progress). The first bullet for a given `runId` additionally carries a rerun sub-line with `gh run rerun <runId> -R <owner/repo>`; later bullets sharing that same `runId` (matrix jobs from one run) carry the `[rerun authorized]` tag but omit the repeated command line, since one rerun covers all of them. External checks (no run ID) never carry this tag. Non-CANCELLED bullets may also carry a `> <failedStep>` blockquote line (the first step that failed, GitHub Actions only), a `> <summary>` blockquote line (one-line status text from the GitHub UI), and a bounded `> <logExcerpt>` blockquote from the matched failed job log. For aggregate jobs that print `Job results`, `logExcerpt` is condensed to non-success job results plus the exit-code/error line; otherwise it is the first failed step's visible output (run-command group and post-step cleanup omitted), suffix-truncated to 4000 characters. All three are omitted when not available.
 
-   The numbered instructions emit one triage pointer whenever any check has a run ID or a `detailsUrl` — "Triage every failure under `## Failing checks`. See 'CI failure triage' in the pr-shepherd skill for inspection rules." — plus a second pointer to the same playbook whenever any check carries `[rerun authorized]`. The playbook uses only evidence already included in the output and never recommends cancellation without an exact capability; a rerun is recommended only when `[rerun authorized]` is present. External checks with a non-empty URL remain `[FIX_CODE]` because that URL is an autonomous inspection path. Later-attempt failures stay `[FIX_CODE]` without another rerun command when a nonblank log excerpt supplies evidence or a behind/conflicting branch provides the branch-refresh path described above. Bare checks, CANCELLED/STARTUP_FAILURE checks, `ACTION_REQUIRED` checks, and GitHub Actions failures without a nonblank log excerpt require manual follow-up when they have no authorized rerun. They appear under `[FIX_CODE]` only while other autonomous work remains: the agent completes that work and iterates again. When those checks are the only remaining blockers, Shepherd returns `[ESCALATE]` with trigger `check-follow-up-unavailable`. They never make a `[FIX_CODE]` completion terminal.
+   The numbered instructions emit one triage pointer for every failing check: ``Triage `## Failing checks`. Playbook: "CI failure triage".`` Rerun-versus-fix rules, including bare checks with no run id, live in that playbook. The playbook uses only evidence already included in the output and never recommends cancellation without an exact capability; a rerun is recommended only when `[rerun authorized]` is present. External checks with a non-empty URL remain `[FIX_CODE]` because that URL is an autonomous inspection path. Later-attempt failures stay `[FIX_CODE]` without another rerun command when a nonblank log excerpt supplies evidence or a behind/conflicting branch provides the branch-refresh path described above. Bare checks, CANCELLED/STARTUP_FAILURE checks, `ACTION_REQUIRED` checks, and GitHub Actions failures without a nonblank log excerpt require manual follow-up when they have no authorized rerun. They appear under `[FIX_CODE]` only while other autonomous work remains: the agent completes that work and iterates again. When those checks are the only remaining blockers, Shepherd returns `[ESCALATE]` with trigger `check-follow-up-unavailable`. They never make a `[FIX_CODE]` completion terminal.
 
 6. `## Check annotations` — inline annotations attached to completed non-passing `CheckRun` checks (failing, skipped, ignored, or filtered), grouped by the same check locator used in `## Failing checks`. Each bullet includes the marker-gated annotation ID (`check_annotation_…`), optional blob link, file range, raw annotation level, optional title, bounded message blockquote, and optional bounded raw details blockquote. In-progress checks are not fetched. Each annotation is surfaced once per PR through the seen-marker store and does not add any resolve/minimize mutation ID. After that tick the annotation is omitted from later output. Not emitted when empty. When this section is present without any failing conclusions, `## Failing checks` is omitted. An annotation whose message is exactly `Process completed with exit code N.` with no raw details and no title is dropped entirely — it carries nothing beyond the check's own `[conclusion: …]` tag; a title alone is enough to keep it (the title, path:line anchor, and blob link survive). When a message or raw-details block is byte-identical to text already present in that check's `## Failing checks` log excerpt, only the blockquote is dropped; the bullet (with its `path:line` anchor and blob link) still renders, since that anchor is not in the log excerpt. A check whose annotations are all dropped this way is omitted from the section; the section itself is omitted when every check's annotations are dropped.
 7. `## Changes-requested reviews` — `CHANGES_REQUESTED` reviews. Each entry (other than the terse `staleBotCr` reminder below) is rendered with an H3 heading (``### `reviewId=<id>` (@<author>[ · <authorType>][ · <authorAssociation>])``) and the full body as a `>` blockquote (`(no review body)` when empty) — the same shape as sections 8-11 below. **Human-authored CRs are marker-gated**: each entry is emitted once, then suppressed until the body changes. Edited reviews are emitted again with `edited: true` in JSON. Human CRs are never auto-dismissed — the reviewer must re-review or dismiss themselves. **Authorized bot/non-human CRs** (`authorType` is `Bot`, `Unknown`, or a `[bot]`-suffix login, or a login in `botUsernames`, with `viewerCanAdminister: true`) bypass the marker gate: they are emitted on every tick until they leave `CHANGES_REQUESTED`. The first emission renders the full body; subsequent ticks render a terse one-line reminder carrying `staleBotCr: true`. Their IDs remain in `--dismiss-review-ids`, so the agent can recover a dropped dismissal; unchanged authorized reviews remain `FIX_CODE` with the dismissal command even after the stall window. **Unauthorized or unverifiable bot CR dismissals** are surfaced once, omitted from mutation commands, and then marker-gated until edited; they never trigger `authorization-required`. **Stale CR detection** — a review is marked `staleReview: true` in JSON when its `commit.oid` differs from `headRefOid` AND every associated review thread (matched by `thread.reviewId === review.id`) is `isResolved || isOutdated`. Reviews with no associated threads are treated conservatively and are NOT marked stale. **Stale bot CRs** follow the same authorization routing and gain a `[stale — review is on an old commit, all threads resolved]` tag in text output. **Stale human CRs** carry a `[stale — review is on an old commit, all threads resolved; ask reviewer to re-review or dismiss]` tag and are never added to `--dismiss-review-ids`; do not treat them as fresh feedback requiring code changes.

@@ -7,28 +7,31 @@ const rootUrl = new URL("../", import.meta.url);
 const ALWAYS_ON_PLAYBOOKS = new Set(["Untrusted review input"]);
 
 /**
- * `## Instructions` steps point at invariant procedures with a
- * `See "<name>" in the pr-shepherd skill` sentence instead of inlining them (see AGENTS.md
- * "Keep skills and loop prompts minimal" — the invariant-procedure exception). Nothing else
- * cross-checks a pointer's `<name>` against the skill's actual `## Playbooks` headings: a
- * typo'd or renamed heading is a silently dead pointer, and the failure mode is the agent
- * skipping the exception handling entirely — which is exactly the guidance that was moved
- * out of `## Instructions` to make room for it. This test is the load-bearing check.
+ * `## Instructions` steps name an on-demand playbook with `Playbook: "<name>".`
+ * The name must match a `###` heading in SKILL.md or the H1 of a file in
+ * `skills/pr-shepherd/references/`. A typo is a dead pointer: the agent skips the
+ * procedure that was moved out of the per-tick text.
  */
 function skillPlaybookHeadings(): Set<string> {
-  const skill = readFileSync(
-    new URL("plugins/pr-shepherd/skills/pr-shepherd/SKILL.md", rootUrl),
-    "utf8",
-  );
+  const skillDir = new URL("plugins/pr-shepherd/skills/pr-shepherd/", rootUrl);
   const headings = new Set<string>();
-  for (const match of skill.matchAll(/^### (.+)$/gm)) {
-    headings.add(match[1]!.trim());
+  const skill = readFileSync(new URL("SKILL.md", skillDir), "utf8");
+  for (const match of skill.matchAll(/^### (.+)$/gm)) headings.add(match[1]!.trim());
+  for (const file of readdirSync(new URL("references/", skillDir))) {
+    if (!file.endsWith(".md")) continue;
+    const title = readFileSync(new URL(`references/${file}`, skillDir), "utf8").match(
+      /^# (.+)$/m,
+    )?.[1];
+    if (title) headings.add(title.trim());
   }
   return headings;
 }
 
 function pointedPlaybookNames(text: string): string[] {
-  return [...text.matchAll(/"([^"]+)" in the pr-shepherd skill/g)].map((m) => m[1]!);
+  const names: string[] = [];
+  for (const match of text.matchAll(/Playbook: "([^"]+)"/g)) names.push(match[1]!);
+  for (const match of text.matchAll(/playbookPointer\("([^"]+)"\)/g)) names.push(match[1]!);
+  return names;
 }
 
 describe("CLI instruction pointers name real pr-shepherd skill playbooks", () => {
@@ -38,7 +41,7 @@ describe("CLI instruction pointers name real pr-shepherd skill playbooks", () =>
     expect(headings.size).toBeGreaterThan(0);
   });
 
-  it("every pointer in the committed snapshot corpus names an existing playbook heading", () => {
+  it("every pointer in snapshots or instruction source names an existing playbook", () => {
     // The snapshot corpus (test-cases/snapshots/*/output.text.md) is generated straight from
     // buildFixInstructions and covers every gated instruction branch across its ~65 fixtures
     // — suggestions, CI triage, the resolve command, resolution-only routing, and the
@@ -57,14 +60,31 @@ describe("CLI instruction pointers name real pr-shepherd skill playbooks", () =>
     expect(dirs.length).toBeGreaterThan(0);
 
     const foundNames = new Set<string>();
-    for (const dir of dirs) {
-      const path = new URL(`${dir.name}/output.text.md`, snapshotsDir);
-      const text = readFileSync(path, "utf8");
-      for (const name of pointedPlaybookNames(text)) {
+    const sources = dirs.map((dir) => ({
+      label: dir.name,
+      text: readFileSync(new URL(`${dir.name}/output.text.md`, snapshotsDir), "utf8"),
+    }));
+    const srcDir = new URL("src/", rootUrl);
+    for (const file of readdirSync(srcDir, { recursive: true })) {
+      if (
+        typeof file !== "string" ||
+        !file.endsWith(".mts") ||
+        file.endsWith(".test.mts") ||
+        file.endsWith("playbook-pointer.mts")
+      ) {
+        continue;
+      }
+      sources.push({
+        label: file,
+        text: readFileSync(new URL(file, srcDir), "utf8"),
+      });
+    }
+    for (const source of sources) {
+      for (const name of pointedPlaybookNames(source.text)) {
         foundNames.add(name);
         expect(
           headings.has(name),
-          `"${name}" (from ${dir.name}) has no matching ### heading in SKILL.md`,
+          `"${name}" (from ${source.label}) has no matching playbook heading`,
         ).toBe(true);
       }
     }
@@ -79,13 +99,13 @@ describe("CLI instruction pointers name real pr-shepherd skill playbooks", () =>
       if (ALWAYS_ON_PLAYBOOKS.has(heading)) continue;
       expect(
         foundNames.has(heading),
-        `SKILL.md playbook "${heading}" is never pointed to from any snapshot`,
+        `playbook "${heading}" is never pointed to from snapshots or instruction source`,
       ).toBe(true);
     }
     for (const heading of ALWAYS_ON_PLAYBOOKS) {
       expect(
         foundNames.has(heading),
-        `always-on playbook "${heading}" must not be pointed to from snapshots`,
+        `always-on playbook "${heading}" must not be pointed to from snapshots or source`,
       ).toBe(false);
     }
   });
@@ -104,19 +124,15 @@ describe("pr-shepherd skill recurrence contract", () => {
   );
 
   it("injects --until-terminal into the canonical CLI poll dispatcher", () => {
-    const cliDispatcher = skill.match(/^2\..*?(?=^3\.)/ms)?.[0];
-
-    expect(cliDispatcher).toBeDefined();
-    expect(cliDispatcher).toMatch(/run `pr-shepherd(?: \[PR \.\.\.\])? --until-terminal`/);
+    expect(skill).toMatch(/Run `pr-shepherd \[PR \.\.\.\] --until-terminal`/);
+    expect(skill).toMatch(/pr-shepherd --stack PR --until-terminal/);
+    expect(skill).toContain("Do not run `pr-shepherd iterate`");
   });
 
   it("repeats the dispatcher until CANCEL or ESCALATE", () => {
-    const recurrence = skill.match(/^4\..*?(?=^\d+\.|^## )/ms)?.[0];
-
-    expect(recurrence).toBeDefined();
-    expect(recurrence).toMatch(/immediately repeat step 2/i);
-    expect(recurrence).toContain("[CANCEL]");
-    expect(recurrence).toContain("[ESCALATE]");
+    expect(skill).toMatch(/rerun that same command immediately/i);
+    expect(skill).toContain("[CANCEL]");
+    expect(skill).toContain("[ESCALATE]");
   });
 
   it("forbids waiting for CI with gh pr checks or gh pr watch", () => {

@@ -65,7 +65,7 @@ describe("runIterate — upper layer trunk conflict", () => {
     const fix = result as Extract<IterateResult, { action: "fix_code" }>;
     expect(fix.stackTrunkConflict).toBe("main");
     expect(fix.fix.instructions.join("\n")).toContain(
-      "check out the head branch of PR #11 and run `gh stack rebase`;",
+      "check out the head branch of PR #11 and run `gh stack rebase`.",
     );
     expect(fix.fix.instructions.join("\n")).not.toContain("--no-trunk");
     const text = formatIterateResult(fix);

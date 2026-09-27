@@ -99,7 +99,7 @@ describe("verified stale-boundary guidance", () => {
 
     expect(instructions).toEqual([
       "PR #42 records base `feature-parent` at `parent-old`, but its open parent PR #41 currently ends at `feature-parent` `parent-current`.",
-      "From a clean checkout of `acme/widgets`, if `gh stack` does not track stack #7 locally, import it with `gh stack checkout 7`, then confirm every layer's local branch is at its PR's head commit — a stale local layer would overwrite that PR's newer commits on push. Then check out the parent stack branch `feature-parent` and run `gh stack rebase --upstack --no-trunk`; if it stops on a conflict, resolve it and run `gh stack rebase --continue`.",
+      'From a clean checkout of `acme/widgets`, if `gh stack` does not track stack #7 locally, import it with `gh stack checkout 7`. Then check out the parent stack branch `feature-parent` and run `gh stack rebase --upstack --no-trunk`. Playbook: "Branch update".',
       "Push the rewritten stack with `gh stack push`.",
     ]);
   });

@@ -126,7 +126,7 @@ describe("fix_code — GitHub Actions authorization", () => {
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") return;
     expect(result.fix.checks[0]?.rerunCommand).toBe("gh run rerun 123 -R owner/repo");
-    expect(result.fix.instructions.join("\n")).toContain("[rerun authorized]");
+    expect(result.fix.instructions.join("\n")).toContain('Playbook: "CI failure triage".');
     expect(result.fix.instructions.join("\n")).not.toContain("no authorized follow-up action");
   });
 

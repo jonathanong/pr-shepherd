@@ -1,4 +1,5 @@
 import type { StackStatus } from "../../types.mts";
+import { playbookPointer } from "../playbook-pointer.mts";
 
 /**
  * Where a native-stack rebase starts: an upper layer rebases from its parent stack branch
@@ -31,8 +32,8 @@ export function buildNativeStackRebaseInstruction(
       : "bottomPr" in start
         ? [`check out the head branch of PR #${start.bottomPr}`, "gh stack rebase"]
         : [`check out the bottom open layer whose base is \`${start.trunk}\``, "gh stack rebase"];
-  const prepare = `if \`gh stack\` does not track stack #${stackNumber} locally, import it with \`gh stack checkout ${stackNumber}\`, then confirm every layer's local branch is at its PR's head commit — a stale local layer would overwrite that PR's newer commits on push`;
-  return `From a clean checkout of \`${repo}\`, ${prepare}. Then ${checkout} and run \`${command}\`; if it stops on a conflict, resolve it and run \`gh stack rebase --continue\`.`;
+  const prepare = `if \`gh stack\` does not track stack #${stackNumber} locally, import it with \`gh stack checkout ${stackNumber}\``;
+  return `From a clean checkout of \`${repo}\`, ${prepare}. Then ${checkout} and run \`${command}\`. ${playbookPointer("Branch update")}`;
 }
 
 /**

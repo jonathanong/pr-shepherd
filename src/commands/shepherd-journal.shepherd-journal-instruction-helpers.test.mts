@@ -80,7 +80,7 @@ describe("shepherd journal instruction helpers", () => {
     // Citation conventions (link threads/comments from their headings, cite reviews by
     // ID) moved to the pr-shepherd skill's "Shepherd Journal" playbook — invariant text,
     // not re-emitted per tick. The instruction now points there instead of inlining it.
-    expect(text).toContain('See "Shepherd Journal" in the pr-shepherd skill');
+    expect(text).toContain('Playbook: "Shepherd Journal".');
     expect(text).toContain(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
     expect(countMentions(text, "append `- <decision>` to Shepherd Journal")).toBe(1);
     expect(text).not.toContain("`## Shepherd Journal` entry");

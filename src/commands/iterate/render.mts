@@ -165,7 +165,7 @@ export function buildFixInstructions(
     instructions.push(buildBranchPushInstruction(stackRebase, hasConflicts, mutationSuffix));
   } else if (hasNonConflictHints) {
     instructions.push(
-      "If you changed code, commit any remaining changes and push to the PR head branch, then run the remaining review mutations using the pushed commit SHA and iterate immediately with the same options. If you did not change code, do not commit and continue with the remaining steps.",
+      "If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.",
     );
   }
 
@@ -185,12 +185,7 @@ export function buildFixInstructions(
 
   instructions.push(
     ...buildResolveCommandInstruction(resolveCommand),
-    buildFixCompletionInstruction(
-      failingChecks,
-      hasConflicts,
-      resolveCommand.requiresHeadSha,
-      stackRebase !== undefined,
-    ),
+    buildFixCompletionInstruction(),
   );
   return instructions;
 }

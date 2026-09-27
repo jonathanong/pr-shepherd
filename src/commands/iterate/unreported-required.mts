@@ -134,7 +134,7 @@ export function buildUnreportedFixResult(
         requiresDismissMessage: false,
         hasMutations: false,
       },
-      instructions: [...instructions, buildFixCompletionInstruction([])],
+      instructions: [...instructions, buildFixCompletionInstruction()],
       inProgressRunIds: [],
       protectedRuns: [],
       firstLookThreads: [],

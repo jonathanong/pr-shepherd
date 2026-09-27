@@ -6,13 +6,13 @@ timeout_seconds: 300
 allowed_tools: [Read, Glob, Grep, Skill]
 tags: [wait]
 append_system_prompt: |
-  You have no shell, no network access, and no repository checkout in this
-  environment. Do not attempt to run shell commands, read repository files, or
-  fetch anything over the network, and do not ask for the repository to be
-  provided.
+  You have no shell and no network access. Do not run shell commands, fetch
+  anything over the network, or read repository files other than a reference
+  file linked from a skill you loaded. Do not ask for the repository to be provided.
 
   You MAY use any skill available to you. If a skill is relevant to this request,
-  load it before you plan.
+  load it before you plan. If that skill points at a reference file, read it
+  before you plan.
 
   State the plan you would execute, as concrete numbered steps that someone could
   follow without you. Where a step runs a command, give the exact command. Where

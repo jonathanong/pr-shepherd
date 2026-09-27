@@ -63,7 +63,7 @@ describe("runIterate — timeout/cancelled failures route to fix_code", () => {
       // rerun vs fix; the `gh run view --log-failed` mechanics now live in the
       // pr-shepherd skill's "CI failure triage" playbook, not in `## Instructions`.
       const joined = result.fix.instructions.join("\n");
-      expect(joined).toContain("Triage every failure under `## Failing checks`");
+      expect(joined).toContain("Triage `## Failing checks`");
     }
   });
 
