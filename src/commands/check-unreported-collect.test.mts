@@ -25,6 +25,7 @@ describe("collectUnreportedRequired", () => {
       batchData: {
         baseRefName: "main",
         headRefName: "feature",
+        headRefOid: "a".repeat(40),
         branchRules: { requiredStatusCheckContexts: ["backend", "gitleaks"] },
       } as BatchPrData,
       checks: [{ name: "gitleaks" } as CheckRun],
@@ -36,7 +37,7 @@ describe("collectUnreportedRequired", () => {
     });
     expect(fields.unreportedRequiredChecks).toEqual(["backend"]);
     expect(fields.baseBehindBy).toBe(93);
-    expect(behind).toHaveBeenCalledWith("acme", "widgets", "main", "feature");
+    expect(behind).toHaveBeenCalledWith("acme", "widgets", "main", "a".repeat(40));
   });
 
   it("skips the base compare once every required check has reported", async () => {

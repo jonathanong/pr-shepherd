@@ -74,7 +74,9 @@ async function bottomOpenLayer(
 }
 
 /**
- * Commits on the PR base that `headRefName` does not contain.
+ * Commits on the PR base that `headRef` does not contain.
+ * Pass the head commit OID. A fork's branch name can exist on the base
+ * repository, or fail to resolve, and either result hides a real behind count.
  * `mergeStateStatus` stays `BLOCKED` when a conversation or an expected check
  * is also open, so this compare is the behind count that status hides.
  */
@@ -82,14 +84,14 @@ export async function loadBaseBehindBy(
   owner: string,
   name: string,
   baseRefName: string,
-  headRefName: string,
+  headRef: string,
 ): Promise<number> {
   const qualifiedName = `refs/heads/${baseRefName}`;
   const { data } = await graphqlWithRateLimit<BaseBehindData>(BASE_BEHIND_QUERY, {
     owner,
     repo: name,
     qualifiedName,
-    headRef: headRefName,
+    headRef,
   });
   if (!data.repository) throw missingRepositoryError({ owner, name });
   const ref = data.repository.ref;

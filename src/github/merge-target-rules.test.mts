@@ -65,12 +65,13 @@ describe("loadBaseBehindBy", () => {
       data: { repository: { ref: { compare: { behindBy: 93 } } } },
     } as Awaited<ReturnType<typeof graphqlWithRateLimit>>);
 
-    await expect(loadBaseBehindBy("acme", "widgets", "main", "feature")).resolves.toBe(93);
+    const head = "c".repeat(40);
+    await expect(loadBaseBehindBy("acme", "widgets", "main", head)).resolves.toBe(93);
     expect(graphql).toHaveBeenCalledWith(
       expect.stringContaining("behindBy"),
       expect.objectContaining({
         qualifiedName: "refs/heads/main",
-        headRef: "feature",
+        headRef: "c".repeat(40),
       }),
     );
   });

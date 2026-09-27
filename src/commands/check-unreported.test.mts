@@ -18,6 +18,7 @@ function report(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
     repo: "acme/widgets",
     baseBranch: "feature-parent",
     headRefName: "feature",
+    headSha: "b".repeat(40),
     status: "READY",
     checks: {
       passing: [{ name: "gitleaks" }],
@@ -148,5 +149,27 @@ describe("refreshCachedUnreported", () => {
       { owner: "acme", name: "widgets" },
     );
     expect(next.baseBehindBy).toBeUndefined();
+  });
+
+  it("does not compare a branch name when the head commit is unknown", async () => {
+    const next = await refreshCachedUnreported(
+      report({
+        headSha: undefined,
+        trunkBehindBy: undefined,
+        baseBehindBy: 4,
+        mergeStatus: {
+          status: "BLOCKED",
+          state: "OPEN",
+          isDraft: false,
+          mergeable: "MERGEABLE",
+          reviewDecision: null,
+          blockingBotReviewInProgress: false,
+          mergeStateStatus: "BLOCKED",
+        },
+      }),
+      { owner: "acme", name: "widgets" },
+    );
+    expect(behind).not.toHaveBeenCalled();
+    expect(next.baseBehindBy).toBe(4);
   });
 });

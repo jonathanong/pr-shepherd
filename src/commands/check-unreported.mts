@@ -50,7 +50,7 @@ export async function collectUnreportedRequired(input: {
           input.owner,
           input.name,
           input.batchData.baseRefName,
-          input.batchData.headRefName,
+          input.batchData.headRefOid,
         )
       : 0;
   return {
@@ -102,14 +102,17 @@ export async function refreshCachedUnreported(
 
 /** A fingerprint hit can keep a stale base compare after main moves. */
 async function refreshBaseBehind(report: ShepherdReport, repo: RepoInfo): Promise<ShepherdReport> {
-  const headRefName = report.headRefName;
-  if (!headRefName || (report.unreportedRequiredChecks?.length ?? 0) === 0) {
+  if ((report.unreportedRequiredChecks?.length ?? 0) === 0) {
     if (report.baseBehindBy === undefined) return report;
     const cleared = { ...report };
     delete cleared.baseBehindBy;
     return cleared;
   }
-  const behind = await loadBaseBehindBy(repo.owner, repo.name, report.baseBranch, headRefName);
+  // A missing head OID must not fall back to the branch name. That name can
+  // resolve inside the base repository when the PR comes from a fork.
+  const headOid = report.headSha;
+  if (!headOid) return report;
+  const behind = await loadBaseBehindBy(repo.owner, repo.name, report.baseBranch, headOid);
   const next = { ...report };
   if (behind > 0) next.baseBehindBy = behind;
   else delete next.baseBehindBy;
