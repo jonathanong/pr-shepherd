@@ -9,4 +9,4 @@ READY: PR #42 is ready — 127s of ready-delay remaining — 1 passing, 0 in-pro
 
 ## Instructions
 
-1. PR #42 is ready. Ready-delay has 127s left. Run this same command again when the timer elapses. Do not start other work.
+1. PR #42 is ready. Ready-delay has 127s left. Run this same command again when the timer elapses. Do not invent unrelated work. If you already own a later layer of this stack or another stack, continue that work and schedule this rerun.
