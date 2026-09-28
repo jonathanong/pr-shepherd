@@ -33,8 +33,8 @@ The invariant extends to MCP: a tool's `structuredContent` and its Markdown `con
 All GitHub I/O uses GraphQL by default. The only permitted REST call sites are:
 
 - **Actions jobs/logs** (`src/checks/triage.mts`) — GitHub's GraphQL schema does not expose job-level data or log downloads.
-- **Cancel workflow run** (`src/commands/iterate/helpers.mts`) — no `cancelWorkflowRun` GraphQL mutation exists.
 - **`getMergeableState` fallback** (`src/github/client.mts`) — REST `GET /pulls/{n}` triggers GitHub's lazy mergeability computation when GraphQL returns `UNKNOWN`.
+- **Primary GraphQL exhaustion probe** (`src/commands/poll-rate-limit-wait.mts`) — REST `GET /pulls/{n}` checks for merge or closure while GraphQL is unavailable.
 
 Any new `rest()` call outside these three cases must be justified against this list. GraphQL is preferred for all read paths; mutations that GitHub exposes via GraphQL must use GraphQL.
 

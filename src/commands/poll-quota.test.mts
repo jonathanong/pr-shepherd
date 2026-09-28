@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GitHubRequestError } from "../github/errors.mts";
 import { exhaustedPrimaryLimitDelayMs } from "./poll-rate-limit-delay.mts";
@@ -83,15 +84,15 @@ describe("pollRateLimitRetryAfterMs", () => {
       pollRateLimitRetryAfterMs(
         new GitHubRequestError("secondary rate limit", { status: 403, retryAfterSeconds: 15 }),
       ),
-    ).toEqual({ ms: 15_000, resource: "secondary" });
+    ).toEqual({ ms: 60_000, resource: "secondary", kind: "secondary" });
     expect(
       pollRateLimitRetryAfterMs(
         new GitHubRequestError("secondary rate limit", { status: 403, retryAfterSeconds: 500 }),
       ),
-    ).toEqual({ ms: 500_000, resource: "secondary" });
+    ).toEqual({ ms: 500_000, resource: "secondary", kind: "secondary" });
     expect(
       pollRateLimitRetryAfterMs(new GitHubRequestError("rate limit", { status: 429 })),
-    ).toEqual({ ms: 60_000, resource: "secondary" });
+    ).toEqual({ ms: 60_000, resource: "secondary", kind: "secondary" });
     expect(
       pollRateLimitRetryAfterMs(
         new GitHubRequestError("ok", {
@@ -99,12 +100,42 @@ describe("pollRateLimitRetryAfterMs", () => {
           graphqlErrors: [{ message: "secondary rate limit" }],
         }),
       ),
-    ).toEqual({ ms: 60_000, resource: "secondary" });
+    ).toEqual({ ms: 60_000, resource: "secondary", kind: "secondary" });
     expect(
       pollRateLimitRetryAfterMs(
         new GitHubRequestError("secondary rate limit", { status: 403, retryAfterSeconds: 0 }),
       ),
-    ).toEqual({ ms: 0, resource: "secondary" });
+    ).toEqual({ ms: 60_000, resource: "secondary", kind: "secondary" });
+  });
+
+  it("keeps an explicit secondary throttle separate from the reported GraphQL budget", () => {
+    const rateLimit = { resource: "graphql", remaining: 4800, limit: 5000, resetAt: 1700000180 };
+    for (const status of [200, 403]) {
+      const error = new GitHubRequestError("GitHub GraphQL error: secondary rate limit", {
+        status,
+        rateLimit,
+      });
+      expect(error.exitCode).toBe(75);
+      expect(pollRateLimitRetryAfterMs(error)).toMatchObject({
+        kind: "secondary",
+        resource: "secondary",
+        ms: 60_000,
+      });
+    }
+  });
+
+  it("treats a 429 with an empty primary bucket as primary unless GitHub names secondary", () => {
+    const rateLimit = { resource: "graphql", remaining: 0, limit: 5000, resetAt: 1700000180 };
+    expect(
+      pollRateLimitRetryAfterMs(
+        new GitHubRequestError("API rate limit exceeded", { status: 429, rateLimit }),
+      )?.kind,
+    ).toBe("primary");
+    expect(
+      pollRateLimitRetryAfterMs(
+        new GitHubRequestError("secondary rate limit", { status: 429, rateLimit }),
+      )?.kind,
+    ).toBe("secondary");
   });
 
   it("adds a 5s margin and resetAt % 5 seconds when a primary limit is exhausted", () => {
@@ -118,6 +149,7 @@ describe("pollRateLimitRetryAfterMs", () => {
       }),
     );
     expect(retry).toEqual({
+      kind: "primary",
       resource: "graphql",
       remaining: 0,
       limit: 5000,

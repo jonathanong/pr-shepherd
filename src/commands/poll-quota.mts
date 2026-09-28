@@ -1,7 +1,7 @@
 import type { GraphqlQuotaWarningBand } from "../config/load.mts";
 import { summarizeApiTelemetry } from "../github/api-telemetry.mts";
 import { GitHubRequestError } from "../github/errors.mts";
-import { isRateLimitMessage } from "../comments/rate-limit.mts";
+import { rateLimitKind, type RateLimitKind } from "../github/rate-limit-kind.mts";
 import { exhaustedPrimaryLimitDelayMs } from "./poll-rate-limit-delay.mts";
 import { selectQuotaWarning } from "./quota-selection.mts";
 import type { ApiResourceUsage, GraphqlApiUsage, PollSummaryResult } from "../types.mts";
@@ -51,6 +51,7 @@ export function quotaPollIntervalMs(
 export interface RateLimitRetry {
   ms: number;
   resource: string;
+  kind: RateLimitKind;
   remaining?: number;
   limit?: number;
   resetAt?: number;
@@ -62,38 +63,31 @@ export interface RateLimitRetry {
  */
 export function pollRateLimitRetryAfterMs(err: unknown): RateLimitRetry | null {
   if (!(err instanceof GitHubRequestError)) return null;
-  const rateLimitMessage =
-    isRateLimitMessage(err.message) ||
-    (err.graphqlErrors?.some((error) => isRateLimitMessage(error.message)) ?? false);
-  const exhausted = err.rateLimit !== undefined && err.rateLimit.remaining <= 0;
-  const retryable =
-    err.status === 429 || err.retryAfterSeconds !== undefined || rateLimitMessage || exhausted;
-  if (!retryable) return null;
-  const resource = retryResource(err);
+  const kind = rateLimitKind(err);
+  if (kind === null) return null;
+  const resource = kind === "secondary" ? "secondary" : (err.rateLimit?.resource ?? "graphql");
   const rateLimit = err.rateLimit;
   const details = {
+    kind,
     resource,
-    ...(rateLimit?.remaining !== undefined && { remaining: rateLimit.remaining }),
-    ...(rateLimit?.limit !== undefined && { limit: rateLimit.limit }),
-    ...(rateLimit?.resetAt !== undefined && { resetAt: rateLimit.resetAt }),
+    ...(kind === "primary" &&
+      rateLimit?.remaining !== undefined && { remaining: rateLimit.remaining }),
+    ...(kind === "primary" && rateLimit?.limit !== undefined && { limit: rateLimit.limit }),
+    ...(kind === "primary" && rateLimit?.resetAt !== undefined && { resetAt: rateLimit.resetAt }),
   };
-  if (err.retryAfterSeconds !== undefined) {
-    return { ...details, ms: Math.max(err.retryAfterSeconds, 0) * 1000 };
+  if (kind === "primary" && rateLimit !== undefined) {
+    return {
+      ...details,
+      ms: Math.max(
+        exhaustedPrimaryLimitDelayMs(rateLimit.resetAt, Date.now()),
+        Math.max(err.retryAfterSeconds ?? 0, 0) * 1000,
+      ),
+    };
   }
-  if (exhausted && rateLimit !== undefined) {
-    return { ...details, ms: exhaustedPrimaryLimitDelayMs(rateLimit.resetAt, Date.now()) };
-  }
-  return { ...details, ms: GRAPHQL_RETRY_AFTER_DEFAULT_MS };
-}
-
-function retryResource(err: GitHubRequestError): string {
-  if (err.rateLimit?.resource) return err.rateLimit.resource;
-  const secondary =
-    err.status === 429 ||
-    err.retryAfterSeconds !== undefined ||
-    /secondary/i.test(err.message) ||
-    (err.graphqlErrors?.some((error) => /secondary/i.test(error.message)) ?? false);
-  return secondary ? "secondary" : "graphql";
+  return {
+    ...details,
+    ms: Math.max(GRAPHQL_RETRY_AFTER_DEFAULT_MS, Math.max(err.retryAfterSeconds ?? 0, 0) * 1000),
+  };
 }
 
 function rateLimitResourceLabel(resource: string): string {

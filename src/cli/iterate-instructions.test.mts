@@ -78,7 +78,7 @@ describe("iterate instruction polling contract", () => {
     expect(text).toContain("Recommended poll interval: 5 minutes");
     expect(text).toContain("Recommendation: keep polling pr-shepherd at the cadence above");
     expect(textInstructions(result)).toEqual(jsonInstructions(result));
-    expect(textInstructions(result)[0]).toContain("non-GraphQL `gh` CLI commands");
+    expect(textInstructions(result)[0]).toContain("gh api repos/OWNER/REPO/pulls/PR");
     expect(textInstructions(result)[0]).toContain(
       "Do not substitute `gh pr checks` or `gh pr watch` for the Shepherd loop",
     );
@@ -150,7 +150,7 @@ describe("iterate instruction polling contract", () => {
     expect(output).toContain("Recommendation: keep polling pr-shepherd at the cadence above");
     expect(output).toContain("## GitHub API usage");
     expect(textInstructions(result)).toEqual(jsonInstructions(result));
-    expect(textInstructions(result).at(-1)).toContain("non-GraphQL `gh` CLI commands");
+    expect(textInstructions(result).at(-1)).toContain("gh api repos/OWNER/REPO/pulls/PR");
     expect(textInstructions(result).at(-1)).toContain(
       "Resume full-cadence pr-shepherd after the GraphQL quota resets at 2026-08-30T05:12:29.000Z",
     );
@@ -173,7 +173,7 @@ describe("iterate instruction polling contract", () => {
 
     expect(textInstructions(result)).toEqual(jsonInstructions(result));
     expect(textInstructions(result)[0]).toContain("The CLI marked the PR ready for review");
-    expect(textInstructions(result)[0]).toContain("non-GraphQL `gh` CLI commands");
+    expect(textInstructions(result)[0]).toContain("gh api repos/OWNER/REPO/pulls/PR");
     expect(textInstructions(result)[0]).toContain(
       "Resume full-cadence pr-shepherd after the GraphQL quota resets at 2026-08-30T05:12:29.000Z",
     );

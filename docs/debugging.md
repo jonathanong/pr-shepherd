@@ -109,10 +109,10 @@ The state directory is `$PR_SHEPHERD_STATE_DIR` when set; see [configuration.md]
 **Diagnosis:**
 
 ```bash
-gh pr view <PR> --json state,mergeable,mergeStateStatus
+gh api repos/OWNER/REPO/pulls/PR --jq '{state,mergeable,mergeable_state}'
 ```
 
-If `state` is `OPEN` and both `mergeable` and `mergeStateStatus` are `UNKNOWN` after several minutes, there may be a GitHub backend issue.
+If `state` is `open`, `mergeable` is `null`, and `mergeable_state` remains `unknown` after several minutes, there may be a GitHub backend issue.
 
 ---
 

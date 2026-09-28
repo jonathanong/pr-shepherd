@@ -56,9 +56,9 @@ export async function fetchPrBatch(
   });
 
   const raw = requireRawPr(result.data, pr, repo);
-  await hydrateMergeQueueChecks(raw, repo);
-  const paged = await paginateBatchConnections(pr, repo, raw, opts, result.rateLimit);
-  const rawThreadPages = await hydrateThreadCommentPages(paged.threads);
+  const queueRateLimit = await hydrateMergeQueueChecks(raw, repo, result.rateLimit);
+  const paged = await paginateBatchConnections(pr, repo, raw, opts, queueRateLimit);
+  const rawThreadPages = await hydrateThreadCommentPages(paged.threads, paged.rateLimit);
 
   const data = parseRawPr(
     raw,

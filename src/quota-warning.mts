@@ -8,8 +8,8 @@ export function buildQuotaAwareContinuation(warning: GraphqlQuotaWarning, prefix
     warning.resource === "combined"
       ? "GitHub's GraphQL and REST core quotas are both low. Keep using pr-shepherd at the cadence below. Do not shift incidental calls between GraphQL and REST."
       : warning.resource === "core"
-        ? `GitHub's REST core quota is low (crossed the ${warning.thresholdPercent}% remaining threshold). Keep using pr-shepherd at the cadence below. Do not add incidental REST \`gh\` calls (\`gh pr view\`, \`gh pr review\`, \`gh api\`) while REST core is below its warning threshold.`
-        : `GitHub's GraphQL API quota is low (crossed the ${warning.thresholdPercent}% remaining threshold). Keep using pr-shepherd at the cadence below; for incidental PR operations that do not need Shepherd's full snapshot, prefer non-GraphQL \`gh\` CLI commands (e.g. \`gh pr view\`, \`gh pr review\`, \`gh api\` REST endpoints) — they draw on the separate REST budget, not the depleted GraphQL pool.`;
+        ? `GitHub's REST core quota is low (crossed the ${warning.thresholdPercent}% remaining threshold). Keep using pr-shepherd at the cadence below. Do not add incidental REST \`gh api repos/OWNER/REPO/pulls/PR\` calls while REST core is below its warning threshold.`
+        : `GitHub's GraphQL API quota is low (crossed the ${warning.thresholdPercent}% remaining threshold). Keep using pr-shepherd at the cadence below; for incidental PR reads that do not need Shepherd's full snapshot, use explicit REST endpoints such as \`gh api repos/OWNER/REPO/pulls/PR\` — they draw on the separate REST budget, not the depleted GraphQL pool.`;
   const resetLabel =
     warning.resource === "combined"
       ? "both quotas have reset"

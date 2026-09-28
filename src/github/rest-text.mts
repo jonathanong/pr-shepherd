@@ -3,13 +3,22 @@ import { formatRequestEntry, formatResponseEntry } from "../log/session.mts";
 import { GitHubRequestError } from "./errors.mts";
 import { makeAuthHeaders } from "./http-auth.mts";
 import { requestWithTokenRetry } from "./http-request.mts";
-import { parseRateLimit, parseRetryAfter, redactUrl, sanitizeBody } from "./http-utils.mts";
+import {
+  parseRateLimit,
+  parseRetryAfter,
+  redactUrl,
+  sanitizeBody,
+  type RateLimitInfo,
+} from "./http-utils.mts";
 import { recordApiTelemetry } from "./api-telemetry.mts";
 import { recordIntermediateResponse } from "./http-intermediate.mts";
 
 const BASE_URL = "https://api.github.com";
 
-export async function restText(path: string): Promise<string> {
+export async function restText(
+  path: string,
+  onRateLimit?: (rateLimit?: RateLimitInfo) => void,
+): Promise<string> {
   const url = `${BASE_URL}${path}`;
   const n = nextEntry();
   appendEntry(formatRequestEntry({ n, kind: "restText", method: "GET", url }));
@@ -37,6 +46,7 @@ export async function restText(path: string): Promise<string> {
 
   const durationMs = Math.round(performance.now() - retryT0);
   const rateLimit = parseRateLimit(res.headers) ?? undefined;
+  onRateLimit?.(rateLimit);
   const retryAfterSeconds = parseRetryAfter(res.headers);
   recordApiTelemetry({ kind: "REST", method: "GET", authSource, rateLimit });
   if ([301, 302, 307, 308].includes(res.status)) {

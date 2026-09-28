@@ -97,6 +97,24 @@ describe("one-PR rate-limit sleep probe", () => {
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
   });
 
+  it("does not spend REST core during a secondary GraphQL throttle", async () => {
+    const throttle = new GitHubRequestError("secondary rate limit", {
+      status: 403,
+      retryAfterSeconds: 180,
+      rateLimit: {
+        resource: "graphql",
+        remaining: 4800,
+        limit: 5000,
+        resetAt: Math.floor(Date.now() / 1000) + 3600,
+      },
+    });
+    mockRunIterate.mockRejectedValueOnce(throttle).mockResolvedValueOnce(makeCancelResult());
+    const pending = runPoll(opts);
+    await vi.advanceTimersByTimeAsync(180_000);
+    await expect(pending).resolves.toMatchObject({ action: "cancel" });
+    expect(rest).not.toHaveBeenCalled();
+  });
+
   it("skips later probes when the REST pull hits the core limit", async () => {
     const resetAt = Math.floor(Date.now() / 1000) + 180;
     const full = exhaustedPrimaryLimitDelayMs(resetAt, Date.now());

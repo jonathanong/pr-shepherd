@@ -218,7 +218,7 @@ describe("aggregate poll recurrence", () => {
     await expect(runAggregatePoll({ ...opts, untilTerminal: true })).resolves.toMatchObject({
       reason: "all_terminal",
     });
-    expect(mockSleep).toHaveBeenCalledWith(1_000);
+    expect(mockSleep).toHaveBeenCalledWith(60_000);
   });
 
   it("keeps completed rows alongside waiting rows until timeout", async () => {

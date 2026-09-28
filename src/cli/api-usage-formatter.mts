@@ -37,9 +37,9 @@ function recommendation(warning: GraphqlQuotaWarning): string {
     return "- Recommendation: keep polling pr-shepherd at the cadence above; both GraphQL and REST core are below their warning thresholds, so do not shift work between them. Do not substitute `gh pr checks` or `gh pr watch`";
   }
   if (warning.resource === "core") {
-    return "- Recommendation: keep polling pr-shepherd at the cadence above; do not add incidental REST `gh` calls (`gh pr view`, `gh pr review`, `gh api`) while REST core is low. Do not substitute `gh pr checks` or `gh pr watch`";
+    return "- Recommendation: keep polling pr-shepherd at the cadence above; do not add incidental REST `gh api repos/OWNER/REPO/pulls/PR` calls while REST core is low. Do not substitute `gh pr checks` or `gh pr watch`";
   }
-  return "- Recommendation: keep polling pr-shepherd at the cadence above; for incidental PR operations prefer REST `gh` (`gh pr view`, `gh pr review`, `gh api`); do not substitute `gh pr checks` or `gh pr watch`";
+  return "- Recommendation: keep polling pr-shepherd at the cadence above; for incidental PR reads use explicit REST endpoints such as `gh api repos/OWNER/REPO/pulls/PR`; do not substitute `gh pr checks` or `gh pr watch`";
 }
 
 export function formatApiUsage(usage: ApiUsage | undefined): string | null {

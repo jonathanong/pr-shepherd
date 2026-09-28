@@ -170,4 +170,29 @@ describe("fetchPrBatch — thread pagination", () => {
     });
     await expect(fetchPrBatch(42, REPO)).rejects.toThrow("thread comment pagination incomplete");
   });
+
+  it("does not request a thread page when BatchPr reports remaining 0", async () => {
+    const firstPage = makeRawPr({
+      reviewThreads: {
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: [
+          {
+            id: "t-1",
+            isResolved: false,
+            isOutdated: false,
+            comments: {
+              pageInfo: { hasNextPage: true, endCursor: "c1" },
+              nodes: [],
+            },
+          },
+        ],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValueOnce({
+      ...makeResponse(firstPage),
+      rateLimit: { remaining: 0, limit: 5000, resetAt: 1 },
+    });
+    await expect(fetchPrBatch(42, REPO)).rejects.toThrow("thread comment pagination incomplete");
+    expect(mockGraphqlWithRateLimit).toHaveBeenCalledTimes(1);
+  });
 });

@@ -7,6 +7,7 @@ import { getRepoInfo, getCurrentPrNumber } from "../github/client.mts";
 import { classifyChecks, getCiVerdict } from "../checks/classify.mts";
 import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
 import { fetchStartupFailureChecks, triageFailingChecks } from "../checks/triage.mts";
+import { TriageBudget } from "../checks/triage-budget.mts";
 import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
 import { classifyVisibleComments } from "../comments/visible-comments.mts";
@@ -93,10 +94,17 @@ export async function runCheck(
   const startupFailuresNeedAttempt = batchData.checks.some(
     (check) => check.source === "startup_failure" && check.runAttempt === undefined,
   );
+  const triageBudget = new TriageBudget();
   const startupFailureChecks =
     result.checkSuitesComplete && !startupFailuresNeedAttempt
       ? []
-      : await fetchStartupFailureChecks(repo, batchData.headRefOid, prNumber, stateKey);
+      : await fetchStartupFailureChecks(
+          repo,
+          batchData.headRefOid,
+          prNumber,
+          stateKey,
+          triageBudget,
+        );
   const allChecks = mergeStartupFailureChecks(batchData.checks, startupFailureChecks);
   const classifiedPrChecks = classifyChecks(allChecks);
   const latestRemoval = batchData.latestMergeQueueRemoval;
@@ -145,7 +153,7 @@ export async function runCheck(
   const ignored = classifiedChecks.filter((c) => c.category === "ignored");
   const triagedBase =
     failing.length > 0 && !opts.skipTriage
-      ? await triageFailingChecks(failing, repo, stateKey)
+      ? await triageFailingChecks(failing, repo, stateKey, triageBudget)
       : failing;
   const seenMap = await loadSeenMap(stateKey);
   const botUsernames = normalizeBotUsernames(config.botUsernames);

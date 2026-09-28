@@ -28,7 +28,7 @@ describe("runPoll — GraphQL Retry-After", () => {
       untilTerminal: true,
     });
 
-    await vi.advanceTimersByTimeAsync(10_000);
+    await vi.advanceTimersByTimeAsync(60_000);
     const result = await pollPromise;
 
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
@@ -53,8 +53,8 @@ describe("runPoll — GraphQL Retry-After", () => {
       timeoutSeconds: 300,
       untilTerminal: true,
     });
-    await vi.advanceTimersByTimeAsync(5_000);
-    await vi.advanceTimersByTimeAsync(15_000);
+    await vi.advanceTimersByTimeAsync(60_000);
+    await vi.advanceTimersByTimeAsync(120_000);
     await expect(pollPromise).resolves.toMatchObject({ action: "cancel" });
     expect(mockRunIterate).toHaveBeenCalledTimes(3);
   });
