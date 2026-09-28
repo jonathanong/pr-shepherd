@@ -188,13 +188,13 @@ Fingerprint skip is also refused — the tick runs `BatchPr` — when any of the
 
 **When:** GraphQL `statusCheckRollup` omits workflow runs that failed during startup before any jobs were created. The batch query reads `commit.checkSuites` and merges suites whose `conclusion` is `STARTUP_FAILURE` into the check list.
 
-**REST fallback:** `GET /repos/{owner}/{repo}/actions/runs?head_sha=<sha>&status=startup_failure` runs only when CheckSuites are missing or `hasNextPage` is true. The result is filtered to the current PR's `pull_requests` association. This supplement is best-effort: if the Actions runs request fails, Shepherd logs a warning and continues with the GraphQL check data. Extra REST pages stop if `x-ratelimit-remaining` is 0.
+**REST fallback:** `GET /repos/{owner}/{repo}/actions/runs?head_sha=<sha>&status=startup_failure` runs only when CheckSuites are missing or `hasNextPage` is true. The result is filtered to the current PR's `pull_requests` association. Ordinary request failures log a warning and retain any data already fetched. A secondary rate limit instead aborts the tick with exit 75 so polling can back off. Extra REST pages stop if `x-ratelimit-remaining` is 0.
 
 ### Failed job log excerpts
 
 **When:** A failing, non-cancelled, non-startup-failure GitHub Actions check has a matched job from the Actions jobs API.
 
-**Why:** Some useful failure context, such as aggregate `needs` job results, is only present in job logs and not in GraphQL check-run fields or check annotations. Shepherd fetches `GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs` and includes the first failed step's visible output (run-command group and post-step cleanup omitted) in the failing-check output. This supplement is best-effort: if the log request fails or the log is empty, the field is omitted. Extra jobs-list pages stop if remaining is 0.
+**Why:** Some useful failure context, such as aggregate `needs` job results, is only present in job logs and not in GraphQL check-run fields or check annotations. Shepherd fetches `GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs` and includes the first failed step's visible output (run-command group and post-step cleanup omitted) in the failing-check output. Ordinary request failures or empty logs omit the excerpt; a secondary rate limit aborts the tick with exit 75. Extra jobs-list pages stop if remaining is 0.
 
 ### Suggestion threads query
 
