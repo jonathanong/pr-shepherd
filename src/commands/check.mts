@@ -8,6 +8,7 @@ import { classifyChecks, getCiVerdict } from "../checks/classify.mts";
 import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
 import { fetchStartupFailureChecks, triageFailingChecks } from "../checks/triage.mts";
 import { TriageBudget } from "../checks/triage-budget.mts";
+import type { CheckExecutionContext } from "./check-execution-context.mts";
 import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
 import { classifyVisibleComments } from "../comments/visible-comments.mts";
@@ -61,6 +62,7 @@ export async function runCheck(
     fingerprintCache?: boolean;
     merge?: boolean;
   },
+  context?: CheckExecutionContext,
 ): Promise<ShepherdReport> {
   const repo = opts.targetRepository ?? (await getRepoInfo());
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
@@ -75,7 +77,7 @@ export async function runCheck(
   const reuseFingerprint = opts.fingerprintCache === true;
   if (reuseFingerprint) {
     const cached = await tryReuseFingerprintReport(prNumber, repo, stateKey, config);
-    if (cached) return refreshCachedUnreported(cached, repo);
+    if (cached) return refreshCachedUnreported(cached, repo, context);
   }
   const paginateApprovedReviews = config.iterate.minimizeApprovals;
   const result = await fetchPrBatch(prNumber, repo, { paginateApprovedReviews });
@@ -259,15 +261,18 @@ export async function runCheck(
     );
   }).length;
   const approvedReviews = approvedReviewVisibility.visible;
-  const unreported = await collectUnreportedRequired({
-    batchData,
-    checks: allChecks,
-    suites: result.headWorkflowSuites ?? [],
-    owner: repo.owner,
-    name: repo.name,
-    pr: prNumber,
-    relevantEvents: config.checks.ciTriggerEvents,
-  });
+  const unreported = await collectUnreportedRequired(
+    {
+      batchData,
+      checks: allChecks,
+      suites: result.headWorkflowSuites ?? [],
+      owner: repo.owner,
+      name: repo.name,
+      pr: prNumber,
+      relevantEvents: config.checks.ciTriggerEvents,
+    },
+    context,
+  );
   let status = computeStatus(
     verdict,
     threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,

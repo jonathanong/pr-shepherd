@@ -7,6 +7,7 @@ import {
 import { loadBaseBehindBy, loadMergeTargetStatus } from "../github/merge-target-rules.mts";
 import type { BatchPrData, CheckRun, ShepherdReport } from "../types.mts";
 import type { RepoInfo } from "../github/client.mts";
+import type { CheckExecutionContext } from "./check-execution-context.mts";
 
 export interface UnreportedRequiredFields {
   unreportedRequiredChecks?: string[];
@@ -20,28 +21,34 @@ export interface UnreportedRequiredFields {
 }
 
 /** Load trunk rules for a stack and diff them against the head's check names. */
-export async function collectUnreportedRequired(input: {
-  batchData: BatchPrData;
-  checks: readonly CheckRun[];
-  suites: readonly WorkflowSuiteSnapshot[];
-  owner: string;
-  name: string;
-  pr: number;
-  relevantEvents: readonly string[];
-}): Promise<UnreportedRequiredFields> {
+export async function collectUnreportedRequired(
+  input: {
+    batchData: BatchPrData;
+    checks: readonly CheckRun[];
+    suites: readonly WorkflowSuiteSnapshot[];
+    owner: string;
+    name: string;
+    pr: number;
+    relevantEvents: readonly string[];
+  },
+  context?: CheckExecutionContext,
+): Promise<UnreportedRequiredFields> {
   const localContexts =
     input.batchData.branchRules?.requiredStatusCheckContexts ??
     input.batchData.branchProtection?.requiredStatusCheckContexts ??
     [];
-  const target = await loadMergeTargetStatus({
-    owner: input.owner,
-    name: input.name,
-    pr: input.pr,
-    baseRefName: input.batchData.baseRefName,
-    headRefName: input.batchData.headRefName,
-    localContexts,
-    stack: input.batchData.stack,
-  });
+  const target = await loadMergeTargetStatus(
+    {
+      owner: input.owner,
+      name: input.name,
+      pr: input.pr,
+      baseRefName: input.batchData.baseRefName,
+      headRefName: input.batchData.headRefName,
+      localContexts,
+      stack: input.batchData.stack,
+    },
+    context,
+  );
   const unreported = unreportedRequiredContexts(target.contexts, reportedCheckNames(input.checks));
   const actionsRunning = actionsWorkflowInProgress(input.suites, new Set(input.relevantEvents));
   const baseBehindBy =
@@ -72,19 +79,23 @@ export async function collectUnreportedRequired(input: {
 export async function refreshCachedUnreported(
   report: ShepherdReport,
   repo: RepoInfo,
+  context?: CheckExecutionContext,
 ): Promise<ShepherdReport> {
   const stack = report.mergeStatus?.mergeRequirements?.stack;
   if (!report.headRefName) return report;
   if (!stack) return refreshBaseBehind(report, repo);
-  const target = await loadMergeTargetStatus({
-    owner: repo.owner,
-    name: repo.name,
-    pr: report.pr,
-    baseRefName: report.baseBranch,
-    headRefName: report.headRefName,
-    localContexts: report.mergeStatus.mergeRequirements?.requiredStatusChecks?.contexts ?? [],
-    stack,
-  });
+  const target = await loadMergeTargetStatus(
+    {
+      owner: repo.owner,
+      name: repo.name,
+      pr: report.pr,
+      baseRefName: report.baseBranch,
+      headRefName: report.headRefName,
+      localContexts: report.mergeStatus.mergeRequirements?.requiredStatusChecks?.contexts ?? [],
+      stack,
+    },
+    context,
+  );
   const unreported = unreportedRequiredContexts(
     target.contexts,
     reportedCheckNames(reportChecks(report)),

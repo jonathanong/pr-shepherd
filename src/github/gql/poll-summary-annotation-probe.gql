@@ -4,6 +4,14 @@ query PollSummaryAnnotationProbe(
   $oid: GitObjectID!
   $before: String
 ) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
   repository(owner: $owner, name: $repo) {
     object(oid: $oid) {
       __typename

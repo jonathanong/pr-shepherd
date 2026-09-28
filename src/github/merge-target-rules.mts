@@ -5,6 +5,7 @@ import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import { missingRepositoryError } from "./errors.mts";
 import { BASE_BEHIND_QUERY, REF_RULES_QUERY } from "./queries.mts";
 import { readStackTopology } from "./stack-read.mts";
+import type { CheckExecutionContext } from "../commands/check-execution-context.mts";
 
 export interface MergeTargetStatus {
   contexts: string[];
@@ -28,22 +29,30 @@ interface BaseBehindData {
  * Required status contexts for the branch GitHub actually merges into.
  * A native stack uses the trunk ref, and `behindBy` is that trunk against the bottom open layer.
  */
-export async function loadMergeTargetStatus(input: {
-  owner: string;
-  name: string;
-  pr: number;
-  baseRefName: string;
-  headRefName: string;
-  localContexts: readonly string[];
-  stack?: { baseRefName: string } | null;
-}): Promise<MergeTargetStatus> {
+export async function loadMergeTargetStatus(
+  input: {
+    owner: string;
+    name: string;
+    pr: number;
+    baseRefName: string;
+    headRefName: string;
+    localContexts: readonly string[];
+    stack?: { baseRefName: string } | null;
+  },
+  context?: CheckExecutionContext,
+): Promise<MergeTargetStatus> {
   const trunk = input.stack?.baseRefName;
   if (!trunk) return { contexts: [...input.localContexts] };
 
   let headRef = input.headRefName;
   let stackBottomPr = input.pr;
   if (trunk !== input.baseRefName) {
-    const bottom = await bottomOpenLayer(input.pr, { owner: input.owner, name: input.name }, trunk);
+    const bottom = await bottomOpenLayer(
+      input.pr,
+      { owner: input.owner, name: input.name },
+      trunk,
+      context,
+    );
     headRef = bottom.headRefName;
     stackBottomPr = bottom.number;
   }
@@ -59,8 +68,9 @@ async function bottomOpenLayer(
   pr: number,
   repo: RepoInfo,
   trunk: string,
+  context?: CheckExecutionContext,
 ): Promise<{ number: number; headRefName: string }> {
-  const topology = await readStackTopology(pr, repo);
+  const topology = await (context?.readStackTopology(pr, repo) ?? readStackTopology(pr, repo));
   const bottom = topology.ordered.find(
     (member) => member.state === "OPEN" && member.baseRefName === trunk,
   );

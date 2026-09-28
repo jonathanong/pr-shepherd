@@ -20,6 +20,9 @@ vi.mock("../../src/state/seen-comments.mts", async (importOriginal) => {
 vi.mock("../../src/github/batch.mts", () => ({
   fetchPrBatch: vi.fn(),
 }));
+vi.mock("../../src/github/reply-thread-transcripts.mts", () => ({
+  fetchReplyThreadTranscripts: vi.fn(),
+}));
 vi.mock("../../src/state/pr-fingerprint.mts", () => ({
   loadPrFingerprint: vi.fn().mockResolvedValue(null),
   storePrFingerprint: vi.fn().mockResolvedValue(undefined),
@@ -50,6 +53,7 @@ vi.mock("../../src/config/load.mts", () => ({
 import { runResolveMutate } from "../../src/commands/resolve.mts";
 import { getCurrentPrNumber } from "../../src/github/client.mts";
 import { fetchPrBatch } from "../../src/github/batch.mts";
+import { fetchReplyThreadTranscripts } from "../../src/github/reply-thread-transcripts.mts";
 import { testFingerprint } from "../github/fingerprint-fixture.mts";
 import { autoResolveOutdated, applyResolveOptions } from "../../src/comments/resolve.mts";
 import { loadConfig } from "../../src/config/load.mts";
@@ -64,6 +68,7 @@ import type { BatchPrData, ReviewThread, PrComment } from "../../src/types.mts";
 
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);
+const mockFetchReplyThreadTranscripts = vi.mocked(fetchReplyThreadTranscripts);
 const mockAutoResolveOutdated = vi.mocked(autoResolveOutdated);
 const mockApplyResolveOptions = vi.mocked(applyResolveOptions);
 const mockLoadConfig = vi.mocked(loadConfig);
@@ -167,6 +172,7 @@ export function registerHooks(): void {
       data: makeBatchData(),
       fingerprint: testFingerprint(),
     });
+    mockFetchReplyThreadTranscripts.mockResolvedValue(new Map());
     mockAutoResolveOutdated.mockResolvedValue({ resolved: [], errors: [] });
     mockApplyResolveOptions.mockResolvedValue({
       repliedThreads: [],
@@ -196,6 +202,7 @@ export {
   mockApplyResolveOptions,
   mockAutoResolveOutdated,
   mockFetchPrBatch,
+  mockFetchReplyThreadTranscripts,
   mockGetCurrentPrNumber,
   mockLoadConfig,
   mockLoadSeenMap,
