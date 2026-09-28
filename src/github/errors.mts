@@ -62,6 +62,7 @@ export function isRetryableGraphQlResourceLimit(graphqlErrors?: GitHubGraphQlErr
 function classifyStatus(
   status: number,
   message: string,
+  responseMessage?: string,
   rateLimit?: RateLimitInfo,
   retryAfterSeconds?: number,
   graphqlErrors?: GitHubGraphQlError[],
@@ -73,6 +74,7 @@ function classifyStatus(
   const throttle = rateLimitKind({
     status,
     message,
+    responseMessage,
     rateLimit,
     retryAfterSeconds,
     graphqlErrors,
@@ -103,6 +105,8 @@ export class GitHubRequestError extends ShepherdError {
   readonly retryAfterSeconds?: number;
   readonly graphqlErrors?: GitHubGraphQlError[];
   readonly authSource?: string;
+  /** Response text without a request path; safe input for throttle classification. */
+  readonly responseMessage?: string;
 
   constructor(
     message: string,
@@ -112,6 +116,7 @@ export class GitHubRequestError extends ShepherdError {
       retryAfterSeconds?: number;
       graphqlErrors?: GitHubGraphQlError[];
       authSource?: string;
+      responseMessage?: string;
       /**
        * Bypasses status-based classification entirely — for callers that already
        * know the failure kind better than the HTTP status can express (e.g. a
@@ -127,6 +132,7 @@ export class GitHubRequestError extends ShepherdError {
         classifyStatus(
           opts.status,
           message,
+          opts.responseMessage,
           opts.rateLimit,
           opts.retryAfterSeconds,
           opts.graphqlErrors,
@@ -138,5 +144,6 @@ export class GitHubRequestError extends ShepherdError {
     this.retryAfterSeconds = opts.retryAfterSeconds;
     this.graphqlErrors = opts.graphqlErrors;
     this.authSource = opts.authSource;
+    this.responseMessage = opts.responseMessage;
   }
 }

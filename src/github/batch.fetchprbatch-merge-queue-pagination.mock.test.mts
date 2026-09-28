@@ -12,7 +12,11 @@ import { fetchPrBatch } from "./batch.mts";
 
 registerHooks();
 
-function setBatchResponse(response: ReturnType<typeof makeResponse>): void {
+function setBatchResponse(
+  response: ReturnType<typeof makeResponse> & {
+    rateLimit?: { remaining: number; limit: number; resetAt: number };
+  },
+): void {
   mockGraphqlWithRateLimit.mockImplementation((query, variables) =>
     query.includes("query CommitCheckContexts")
       ? mockGraphql(query, variables)
@@ -48,6 +52,16 @@ function queuedPr(pageInfo: { hasNextPage: boolean; endCursor: string | null }) 
 }
 
 describe("fetchPrBatch — merge queue check pagination", () => {
+  it("does not request a queue page after BatchPr reports zero remaining", async () => {
+    setBatchResponse({
+      ...makeResponse(queuedPr({ hasNextPage: true, endCursor: "queue-cursor-1" })),
+      rateLimit: { remaining: 0, limit: 5000, resetAt: 1 },
+    });
+    await expect(fetchPrBatch(42, REPO)).rejects.toThrow("merge queue check pagination incomplete");
+    expect(mockGraphql).not.toHaveBeenCalled();
+    expect(mockGraphqlWithRateLimit).toHaveBeenCalledTimes(1);
+  });
+
   it("loads queue check contexts when the batch omits the rollup", async () => {
     setBatchResponse(
       makeResponse(

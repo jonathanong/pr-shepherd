@@ -85,6 +85,7 @@ export async function restText(
         rateLimit,
         retryAfterSeconds,
         authSource,
+        responseMessage: sanitizeBody(text),
       },
     );
   }
@@ -157,6 +158,7 @@ async function followRestTextRedirect(
       status: redirectRes.status,
       rateLimit: parseRateLimit(redirectRes.headers) ?? undefined,
       retryAfterSeconds: parseRetryAfter(redirectRes.headers),
+      responseMessage: "",
     });
   }
   return redirectRes.text();

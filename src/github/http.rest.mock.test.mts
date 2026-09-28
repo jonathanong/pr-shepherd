@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { registerHooks, jsonOk, mockFetch } from "../../test-helpers/github/http.test-support.mts";
 import { rest, restWithRateLimit } from "./http.mts";
+import { pollRateLimitRetryAfterMs } from "../commands/poll-quota.mts";
 
 registerHooks();
 
@@ -118,6 +119,29 @@ describe("restWithRateLimit", () => {
     const result = await restWithRateLimit<{ id: number }>("GET", "/repos/o/r/pulls/1");
     expect(result.data).toEqual({ id: 1 });
     expect(result.rateLimit).toEqual({ remaining: 42, limit: 5000, resetAt: 99 });
+  });
+
+  it("does not classify a repository path containing rate-limit as a secondary throttle", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 403,
+      headers: new Headers({
+        "x-ratelimit-resource": "core",
+        "x-ratelimit-remaining": "4900",
+        "x-ratelimit-limit": "5000",
+        "x-ratelimit-reset": "99",
+      }),
+      text: () => Promise.resolve("Resource not accessible by integration"),
+    });
+    const error = await restWithRateLimit("GET", "/repos/acme/rate-limit/actions/runs").then(
+      () => null,
+      (failure: unknown) => failure,
+    );
+    expect(error).toMatchObject({
+      exitCode: 77,
+      responseMessage: "Resource not accessible by integration",
+    });
+    expect(pollRateLimitRetryAfterMs(error)).toBeNull();
   });
 
   it("returns undefined data when there is no JSON content-type", async () => {

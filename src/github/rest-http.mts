@@ -150,6 +150,7 @@ export async function restWithRateLimit<T = unknown>(
         rateLimit,
         retryAfterSeconds,
         authSource,
+        responseMessage: sanitizeBody(text),
       },
     );
   }
