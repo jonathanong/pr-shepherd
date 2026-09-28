@@ -14,7 +14,7 @@ const THREAD_COMMENT_PAGE_CONCURRENCY = 4;
 export async function hydrateThreadCommentPages(
   threads: RawThread[],
   initialRateLimit?: RateLimitInfo,
-): Promise<RawThread[]> {
+): Promise<{ threads: RawThread[]; rateLimit?: RateLimitInfo }> {
   const gate: { rateLimit?: RateLimitInfo; exhausted: boolean; error?: unknown } = {
     rateLimit: initialRateLimit,
     exhausted: initialRateLimit?.remaining === 0,
@@ -29,7 +29,7 @@ export async function hydrateThreadCommentPages(
     }
   });
   if (gate.error !== undefined) throw gate.error;
-  return hydrated;
+  return { threads: hydrated, rateLimit: gate.rateLimit };
 }
 
 async function hydrateThreadCommentPage(

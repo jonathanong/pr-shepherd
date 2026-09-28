@@ -12,11 +12,14 @@ export function rateLimitKind(input: {
   graphqlErrors?: Array<{ message: string }>;
 }): RateLimitKind | null {
   const exhausted = input.rateLimit !== undefined && input.rateLimit.remaining <= 0;
-  const messages = [
-    input.responseMessage ?? input.message,
-    ...(input.graphqlErrors ?? []).map((error) => error.message),
-  ];
-  if (messages.some((message) => /secondary (?:rate )?limit|abuse detection/i.test(message))) {
+  const responseText = input.responseMessage ?? input.message;
+  const graphqlMessages = (input.graphqlErrors ?? []).map((error) => error.message);
+  const textThrottleCapable = input.status === 403 || input.status === 429;
+  const explicitlySecondary = /secondary (?:rate )?limit|abuse detection/i;
+  if (
+    (textThrottleCapable && explicitlySecondary.test(responseText)) ||
+    graphqlMessages.some((message) => explicitlySecondary.test(message))
+  ) {
     return "secondary";
   }
   // A 429 with an empty primary bucket is an actual primary-limit response.
@@ -25,7 +28,8 @@ export function rateLimitKind(input: {
   if (
     input.status === 429 ||
     input.retryAfterSeconds !== undefined ||
-    messages.some((message) => /\brate limit\b/i.test(message))
+    (textThrottleCapable && /\brate limit\b/i.test(responseText)) ||
+    graphqlMessages.some((message) => /\brate limit\b/i.test(message))
   ) {
     // Without a measured empty bucket, do not spend REST core on a probe.
     return "secondary";

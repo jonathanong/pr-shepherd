@@ -77,4 +77,18 @@ describe("thread comment pagination quota gate", () => {
     await expect(pending).rejects.toBe(secondary);
     expect(mockGraphqlWithRateLimit).toHaveBeenCalledTimes(2);
   });
+
+  it("keeps the final quota at zero when an older positive response settles later", async () => {
+    const zero = deferred<ReturnType<typeof response>>();
+    const stale = deferred<ReturnType<typeof response>>();
+    mockGraphqlWithRateLimit.mockImplementationOnce(() => zero.promise);
+    mockGraphqlWithRateLimit.mockImplementationOnce(() => stale.promise);
+    const pending = hydrateThreadCommentPages([thread("a"), thread("b")]);
+    zero.resolve(response(0, false));
+    await vi.waitFor(() => expect(zero.promise).resolves.toBeDefined());
+    stale.resolve(response(100, false));
+    const hydrated = await pending;
+    expect(hydrated.rateLimit?.remaining).toBe(0);
+    expect(hydrated.threads).toHaveLength(2);
+  });
 });

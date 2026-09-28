@@ -10,6 +10,22 @@ import { fetchPrBatch } from "./batch.mts";
 
 registerHooks();
 
+function makePrWithIncompleteThreadComments() {
+  return makeRawPr({
+    reviewThreads: {
+      pageInfo: { hasPreviousPage: false, startCursor: null },
+      nodes: [
+        {
+          id: "t-1",
+          isResolved: false,
+          isOutdated: false,
+          comments: { pageInfo: { hasNextPage: true, endCursor: "c1" }, nodes: [] },
+        },
+      ],
+    },
+  });
+}
+
 describe("fetchPrBatch — thread pagination", () => {
   it("paginates backward when hasPreviousPage is true", async () => {
     const firstPage = makeRawPr({
@@ -141,22 +157,7 @@ describe("fetchPrBatch — thread pagination", () => {
   });
 
   it("throws when nested thread-comment pages hit remaining 0", async () => {
-    const firstPage = makeRawPr({
-      reviewThreads: {
-        pageInfo: { hasPreviousPage: false, startCursor: null },
-        nodes: [
-          {
-            id: "t-1",
-            isResolved: false,
-            isOutdated: false,
-            comments: {
-              pageInfo: { hasNextPage: true, endCursor: "c1" },
-              nodes: [],
-            },
-          },
-        ],
-      },
-    });
+    const firstPage = makePrWithIncompleteThreadComments();
     mockGraphqlWithRateLimit.mockResolvedValueOnce(makeResponse(firstPage)).mockResolvedValueOnce({
       data: {
         node: {
@@ -171,23 +172,23 @@ describe("fetchPrBatch — thread pagination", () => {
     await expect(fetchPrBatch(42, REPO)).rejects.toThrow("thread comment pagination incomplete");
   });
 
-  it("does not request a thread page when BatchPr reports remaining 0", async () => {
-    const firstPage = makeRawPr({
-      reviewThreads: {
-        pageInfo: { hasPreviousPage: false, startCursor: null },
-        nodes: [
-          {
-            id: "t-1",
-            isResolved: false,
-            isOutdated: false,
-            comments: {
-              pageInfo: { hasNextPage: true, endCursor: "c1" },
-              nodes: [],
-            },
-          },
-        ],
+  it("returns the final thread-page quota when hydration finishes on remaining 0", async () => {
+    const firstPage = makePrWithIncompleteThreadComments();
+    mockGraphqlWithRateLimit.mockResolvedValueOnce(makeResponse(firstPage)).mockResolvedValueOnce({
+      data: {
+        node: {
+          comments: { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [] },
+        },
       },
+      rateLimit: { remaining: 0, limit: 5000, resetAt: 1 },
     });
+    const result = await fetchPrBatch(42, REPO);
+    expect(result.rateLimit?.remaining).toBe(0);
+    expect(mockGraphqlWithRateLimit).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not request a thread page when BatchPr reports remaining 0", async () => {
+    const firstPage = makePrWithIncompleteThreadComments();
     mockGraphqlWithRateLimit.mockResolvedValueOnce({
       ...makeResponse(firstPage),
       rateLimit: { remaining: 0, limit: 5000, resetAt: 1 },

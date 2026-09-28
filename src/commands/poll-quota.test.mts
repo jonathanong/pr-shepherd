@@ -114,6 +114,7 @@ describe("pollRateLimitRetryAfterMs", () => {
       const error = new GitHubRequestError("GitHub GraphQL error: secondary rate limit", {
         status,
         rateLimit,
+        ...(status === 200 && { graphqlErrors: [{ message: "secondary rate limit" }] }),
       });
       expect(error.exitCode).toBe(75);
       expect(pollRateLimitRetryAfterMs(error)).toMatchObject({

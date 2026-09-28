@@ -144,6 +144,29 @@ describe("restWithRateLimit", () => {
     expect(pollRateLimitRetryAfterMs(error)).toBeNull();
   });
 
+  it.each([404, 422])(
+    "does not turn a %i response mentioning rate limits into a throttle",
+    async (status) => {
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status,
+        headers: new Headers({
+          "x-ratelimit-resource": "core",
+          "x-ratelimit-remaining": "4900",
+          "x-ratelimit-limit": "5000",
+          "x-ratelimit-reset": "99",
+        }),
+        text: () => Promise.resolve("Validation text mentions a rate limit setting"),
+      });
+      const error = await restWithRateLimit("GET", "/repos/acme/widgets/actions/runs").then(
+        () => null,
+        (failure: unknown) => failure,
+      );
+      expect(error).toMatchObject({ exitCode: 69 });
+      expect(pollRateLimitRetryAfterMs(error)).toBeNull();
+    },
+  );
+
   it("returns undefined data when there is no JSON content-type", async () => {
     mockFetch.mockResolvedValue({
       ok: true,
