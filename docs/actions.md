@@ -158,7 +158,7 @@ Conversations Resolved: <Yes|No> [Required|Not Required]
 - Reset: <time>
 - Recommended poll interval: <minutes> minutes
 - Recommended bounded CLI timeout: <minutes> minutes
-- Recommendation: keep polling pr-shepherd at the cadence above; for incidental PR operations prefer REST `gh` (`gh pr view`, `gh pr review`, `gh api`); do not substitute `gh pr checks`/`gh pr watch`]
+- Recommendation: keep polling pr-shepherd at the cadence above; for incidental PR reads use explicit REST endpoints such as `gh api repos/OWNER/REPO/pulls/PR`; do not substitute `gh pr checks`/`gh pr watch`]
 
 [## Classification auto-resolve
 
@@ -234,7 +234,7 @@ Quota warning, when a configured threshold is crossed on a non-terminal result:
 - Lean Markdown and JSON include `GitHub API quota warning` / `quotaWarning`.
 - Markdown includes `Recommended poll interval`, `Recommended bounded CLI timeout`, and `Recommendation`.
 - The last instruction replaces the ordinary immediate continuation: keep polling at that cadence.
-- For incidental PR calls that do not need a full snapshot, prefer REST `gh` (`gh pr view`, `gh pr review`, `gh api`) only while REST core is above its band. GraphQL and REST are separate pools.
+- For incidental PR reads that do not need a full snapshot, use explicit REST endpoints such as `gh api repos/OWNER/REPO/pulls/PR` only while REST core is above its band. GraphQL and REST are separate pools.
 - REST core uses the same bands and the same once-per-window claim.
 - When both budgets are low, one combined block uses the later reset and does not recommend switching pools.
 - A `--until-terminal` retry names the exhausted resource: `GitHub GraphQL`, `GitHub REST core`, or `GitHub secondary`, plus the reset time.

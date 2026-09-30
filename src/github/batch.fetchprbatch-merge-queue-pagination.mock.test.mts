@@ -12,6 +12,18 @@ import { fetchPrBatch } from "./batch.mts";
 
 registerHooks();
 
+function setBatchResponse(
+  response: ReturnType<typeof makeResponse> & {
+    rateLimit?: { remaining: number; limit: number; resetAt: number };
+  },
+): void {
+  mockGraphqlWithRateLimit.mockImplementation((query, variables) =>
+    query.includes("query CommitCheckContexts")
+      ? mockGraphql(query, variables)
+      : Promise.resolve(response),
+  );
+}
+
 const check = (name: string, conclusion: string) => ({
   __typename: "CheckRun",
   id: `CR_${name}`,
@@ -40,8 +52,18 @@ function queuedPr(pageInfo: { hasNextPage: boolean; endCursor: string | null }) 
 }
 
 describe("fetchPrBatch — merge queue check pagination", () => {
+  it("does not request a queue page after BatchPr reports zero remaining", async () => {
+    setBatchResponse({
+      ...makeResponse(queuedPr({ hasNextPage: true, endCursor: "queue-cursor-1" })),
+      rateLimit: { remaining: 0, limit: 5000, resetAt: 1 },
+    });
+    await expect(fetchPrBatch(42, REPO)).rejects.toThrow("merge queue check pagination incomplete");
+    expect(mockGraphql).not.toHaveBeenCalled();
+    expect(mockGraphqlWithRateLimit).toHaveBeenCalledTimes(1);
+  });
+
   it("loads queue check contexts when the batch omits the rollup", async () => {
-    mockGraphqlWithRateLimit.mockResolvedValue(
+    setBatchResponse(
       makeResponse(
         makeRawPr({
           isInMergeQueue: true,
@@ -82,7 +104,7 @@ describe("fetchPrBatch — merge queue check pagination", () => {
 
   it("fetches failures after the first 100 queue contexts before classifying them", async () => {
     const pr = queuedPr({ hasNextPage: true, endCursor: "queue-cursor-1" });
-    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+    setBatchResponse(makeResponse(pr));
     mockGraphql.mockResolvedValue({
       data: {
         repository: {
@@ -113,7 +135,7 @@ describe("fetchPrBatch — merge queue check pagination", () => {
 
   it("follows a later queue page when the follow-up still has a next cursor", async () => {
     const pr = queuedPr({ hasNextPage: true, endCursor: "queue-cursor-1" });
-    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+    setBatchResponse(makeResponse(pr));
     mockGraphql
       .mockResolvedValueOnce({
         data: {
@@ -159,16 +181,12 @@ describe("fetchPrBatch — merge queue check pagination", () => {
   });
 
   it("rejects a missing initial next-page cursor", async () => {
-    mockGraphqlWithRateLimit.mockResolvedValue(
-      makeResponse(queuedPr({ hasNextPage: true, endCursor: null })),
-    );
+    setBatchResponse(makeResponse(queuedPr({ hasNextPage: true, endCursor: null })));
     await expect(fetchPrBatch(42, REPO)).rejects.toThrow("omitted the next cursor");
   });
 
   it("rejects a changed commit during queue pagination", async () => {
-    mockGraphqlWithRateLimit.mockResolvedValue(
-      makeResponse(queuedPr({ hasNextPage: true, endCursor: "cursor" })),
-    );
+    setBatchResponse(makeResponse(queuedPr({ hasNextPage: true, endCursor: "cursor" })));
     mockGraphql.mockResolvedValue({
       data: { repository: { object: { __typename: "Commit", oid: "other" } } },
     });
@@ -176,9 +194,7 @@ describe("fetchPrBatch — merge queue check pagination", () => {
   });
 
   it("rejects a disappearing rollup during queue pagination", async () => {
-    mockGraphqlWithRateLimit.mockResolvedValue(
-      makeResponse(queuedPr({ hasNextPage: true, endCursor: "cursor" })),
-    );
+    setBatchResponse(makeResponse(queuedPr({ hasNextPage: true, endCursor: "cursor" })));
     mockGraphql.mockResolvedValue({
       data: {
         repository: {
@@ -190,9 +206,7 @@ describe("fetchPrBatch — merge queue check pagination", () => {
   });
 
   it("rejects a missing cursor on a later queue page", async () => {
-    mockGraphqlWithRateLimit.mockResolvedValue(
-      makeResponse(queuedPr({ hasNextPage: true, endCursor: "cursor" })),
-    );
+    setBatchResponse(makeResponse(queuedPr({ hasNextPage: true, endCursor: "cursor" })));
     mockGraphql.mockResolvedValue({
       data: {
         repository: {
@@ -233,14 +247,14 @@ describe("fetchPrBatch — merge queue check pagination", () => {
         ],
       },
     });
-    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+    setBatchResponse(makeResponse(pr));
     const { data } = await fetchPrBatch(42, REPO);
     expect(data.latestMergeQueueRemoval).toBeNull();
     expect(mockGraphql).not.toHaveBeenCalled();
   });
 
   it("treats a disappeared initial queue commit as empty instead of throwing", async () => {
-    mockGraphqlWithRateLimit.mockResolvedValue(
+    setBatchResponse(
       makeResponse(
         makeRawPr({
           isInMergeQueue: true,
@@ -261,7 +275,7 @@ describe("fetchPrBatch — merge queue check pagination", () => {
   });
 
   it("treats a null rollup on the initial queue follow-up as empty", async () => {
-    mockGraphqlWithRateLimit.mockResolvedValue(
+    setBatchResponse(
       makeResponse(
         makeRawPr({
           isInMergeQueue: true,
@@ -286,7 +300,7 @@ describe("fetchPrBatch — merge queue check pagination", () => {
   });
 
   it("skips queue-check hydration when mergeQueueEntry has no head commit", async () => {
-    mockGraphqlWithRateLimit.mockResolvedValue(
+    setBatchResponse(
       makeResponse(
         makeRawPr({
           isInMergeQueue: true,
@@ -304,7 +318,7 @@ describe("fetchPrBatch — merge queue check pagination", () => {
   });
 
   it("hydrates a current removal commit when it differs from the active queue head", async () => {
-    mockGraphqlWithRateLimit.mockResolvedValue(
+    setBatchResponse(
       makeResponse(
         makeRawPr({
           isInMergeQueue: true,
@@ -356,7 +370,7 @@ describe("fetchPrBatch — merge queue check pagination", () => {
   });
 
   it("does not hydrate a merge-commit removal whose parents no longer contain HEAD", async () => {
-    mockGraphqlWithRateLimit.mockResolvedValue(
+    setBatchResponse(
       makeResponse(
         makeRawPr({
           mergeQueueRemovals: {
@@ -380,7 +394,7 @@ describe("fetchPrBatch — merge queue check pagination", () => {
   });
 
   it("does not hydrate a squash removal pushed after the removal", async () => {
-    mockGraphqlWithRateLimit.mockResolvedValue(
+    setBatchResponse(
       makeResponse(
         makeRawPr({
           headRefOid: "bbbb",
@@ -444,7 +458,7 @@ describe("fetchPrBatch — merge queue check pagination", () => {
   });
 
   it("hydrates a single-parent squash removal when the head commit predates it", async () => {
-    mockGraphqlWithRateLimit.mockResolvedValue(
+    setBatchResponse(
       makeResponse(
         makeRawPr({
           mergeQueueRemovals: {

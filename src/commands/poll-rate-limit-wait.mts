@@ -9,7 +9,8 @@ import {
 } from "./poll-quota.mts";
 
 const MAX_NO_PROGRESS_ATTEMPTS = 5;
-const NO_PROGRESS_BACKOFF_MS = [15_000, 30_000, 60_000];
+const PRIMARY_NO_PROGRESS_BACKOFF_MS = [15_000, 30_000, 60_000];
+const SECONDARY_NO_PROGRESS_BACKOFF_MS = [60_000, 120_000, 240_000, 480_000, 960_000];
 const MERGE_STATES = new Set([
   "BEHIND",
   "BLOCKED",
@@ -50,8 +51,11 @@ export function createUntilTerminalRateLimitRetry() {
   };
 }
 
-function backoffMs(attempt: number): number {
-  return NO_PROGRESS_BACKOFF_MS[Math.min(attempt, NO_PROGRESS_BACKOFF_MS.length) - 1] ?? 60_000;
+function backoffMs(attempt: number, kind: "primary" | "secondary"): number {
+  const backoff =
+    kind === "secondary" ? SECONDARY_NO_PROGRESS_BACKOFF_MS : PRIMARY_NO_PROGRESS_BACKOFF_MS;
+  const index = kind === "secondary" ? attempt : attempt - 1;
+  return backoff[Math.min(index, backoff.length - 1)] ?? backoff.at(-1)!;
 }
 
 async function waitForRateLimit<T>(
@@ -64,13 +68,16 @@ async function waitForRateLimit<T>(
   const elapsed = Math.round((Date.now() - opts.startedAt) / 1000);
   const progressed =
     state.armed &&
+    retry.kind === "primary" &&
     retry.resetAt !== undefined &&
     (state.lastResetAt === undefined || retry.resetAt > state.lastResetAt);
   let sleepMs = retry.ms;
   if (!state.armed || progressed) {
     state.armed = true;
     state.noProgress = 0;
-    if (retry.resetAt !== undefined) state.lastResetAt = retry.resetAt;
+    if (retry.kind === "primary" && retry.resetAt !== undefined) {
+      state.lastResetAt = retry.resetAt;
+    }
   } else {
     state.noProgress += 1;
     if (state.noProgress >= MAX_NO_PROGRESS_ATTEMPTS) {
@@ -79,20 +86,21 @@ async function waitForRateLimit<T>(
     }
     // Never sleep less than GitHub asked for. A short no-progress backoff must
     // not undercut an explicit Retry-After or the secondary-limit default.
-    sleepMs = Math.max(retry.ms, backoffMs(state.noProgress));
+    sleepMs = Math.max(retry.ms, backoffMs(state.noProgress, retry.kind));
   }
   process.stderr.write(
     formatRateLimitRetryLine(opts.tickLabel, elapsed, { ...retry, ms: sleepMs }),
   );
-  return sleepRateLimit(sleepMs, opts, retry.resource);
+  return sleepRateLimit(sleepMs, opts, retry.kind, retry.resource);
 }
 
 async function sleepRateLimit<T>(
   ms: number,
   opts: WaitOptions<T>,
+  kind: "primary" | "secondary",
   resource: string,
 ): Promise<T | undefined> {
-  const canProbe = resource !== "core" && opts.targets.length > 0;
+  const canProbe = kind === "primary" && resource === "graphql" && opts.targets.length > 0;
   if (ms <= opts.intervalMs || opts.intervalMs <= 0) {
     await sleep(ms);
     return undefined;

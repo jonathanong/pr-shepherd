@@ -33,6 +33,7 @@ describe("runCheck — startup failure workflow runs", () => {
       "abc123",
       42,
       { owner: "owner", repo: "repo", pr: 42 },
+      expect.anything(),
     );
     expect(report.status).toBe("FAILING");
     expect(report.checks.failing).toEqual([
@@ -47,6 +48,7 @@ describe("runCheck — startup failure workflow runs", () => {
       [expect.objectContaining({ conclusion: "STARTUP_FAILURE" })],
       { owner: "owner", name: "repo" },
       { owner: "owner", repo: "repo", pr: 42 },
+      expect.anything(),
     );
   });
 

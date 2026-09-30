@@ -56,13 +56,13 @@ export async function fetchPrBatch(
   });
 
   const raw = requireRawPr(result.data, pr, repo);
-  await hydrateMergeQueueChecks(raw, repo);
-  const paged = await paginateBatchConnections(pr, repo, raw, opts, result.rateLimit);
-  const rawThreadPages = await hydrateThreadCommentPages(paged.threads);
+  const queueRateLimit = await hydrateMergeQueueChecks(raw, repo, result.rateLimit);
+  const paged = await paginateBatchConnections(pr, repo, raw, opts, queueRateLimit);
+  const threadPages = await hydrateThreadCommentPages(paged.threads, paged.rateLimit);
 
   const data = parseRawPr(
     raw,
-    rawThreadPages,
+    threadPages.threads,
     paged.comments,
     paged.changesRequested,
     paged.reviewSummaries,
@@ -80,7 +80,7 @@ export async function fetchPrBatch(
       result.data.repository?.viewerPermission ?? null,
       result.data.viewer?.login ?? null,
     ),
-    rateLimit: paged.rateLimit ?? result.rateLimit,
+    rateLimit: threadPages.rateLimit ?? paged.rateLimit ?? result.rateLimit,
     ...(parseCheckSuitesComplete(raw) && { checkSuitesComplete: true }),
     ...(parseHeadCheckSuitesEmpty(raw) && { headCheckSuitesEmpty: true as const }),
     ...workflowSuites(raw),

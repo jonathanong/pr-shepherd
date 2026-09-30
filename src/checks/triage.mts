@@ -4,16 +4,24 @@ import type { CheckRun, ClassifiedCheck, TriagedCheck } from "../types.mts";
 import type { RepoInfo } from "../github/client.mts";
 import { loadDerived, storeDerived, type StateKey } from "../state/rest-cache.mts";
 import { buildLogExcerpt } from "./log-excerpt.mts";
+import { TriageBudget } from "./triage-budget.mts";
+import { mapPool } from "../util/pool.mts";
 
 const STARTUP_FAILURE_STATUS = "startup_failure";
 
-export function triageFailingChecks(
+export async function triageFailingChecks(
   failingChecks: ClassifiedCheck[],
   repo: RepoInfo,
   stateKey?: StateKey,
+  budget = new TriageBudget(),
 ): Promise<TriagedCheck[]> {
   const jobsCache = new Map<string, Promise<JobsResponse["jobs"] | undefined>>();
-  return Promise.all(failingChecks.map((c) => triageCheck(c, repo, jobsCache, stateKey)));
+  const checks = await mapPool(failingChecks, 4, (check) =>
+    triageCheck(check, repo, jobsCache, stateKey, budget),
+  );
+  budget.throwIfSecondary();
+  budget.reportOmissionIfNeeded();
+  return checks;
 }
 
 async function triageCheck(
@@ -21,16 +29,26 @@ async function triageCheck(
   repo: RepoInfo,
   jobsCache: Map<string, Promise<JobsResponse["jobs"] | undefined>>,
   stateKey?: StateKey,
+  budget?: TriageBudget,
 ): Promise<TriagedCheck> {
   if (check.runId === null || check.conclusion === "STARTUP_FAILURE") {
     return { ...check };
   }
-  const jobs = await fetchJobs(check.runId, repo, jobsCache, stateKey);
+  if (!jobsCache.has(check.runId) && !budget?.canScheduleOptional()) {
+    return { ...check };
+  }
+  const jobs = await fetchJobs(check.runId, repo, jobsCache, stateKey, budget);
   const jobInfo = jobs ? pickJobInfo(jobs, check.name) : undefined;
   const runAttempt = jobs ? pickRunAttempt(jobs) : undefined;
   const logExcerpt =
     check.conclusion !== "CANCELLED" && jobInfo?.jobId
-      ? await fetchJobLogExcerpt(jobInfo.jobId, repo, stateKey, jobInfo.jobConclusion != null)
+      ? await fetchJobLogExcerpt(
+          jobInfo.jobId,
+          repo,
+          stateKey,
+          jobInfo.jobConclusion != null,
+          budget,
+        )
       : undefined;
   return {
     ...check,
@@ -47,10 +65,14 @@ export async function fetchStartupFailureChecks(
   headSha: string,
   prNumber: number,
   stateKey?: StateKey,
+  budget = new TriageBudget(),
 ): Promise<CheckRun[]> {
   try {
-    return await fetchStartupFailureChecksUncached(repo, headSha, prNumber, stateKey);
+    return await fetchStartupFailureChecksUncached(repo, headSha, prNumber, stateKey, budget);
   } catch (err) {
+    budget.observeError(err);
+    budget.throwIfSecondary();
+    if (budget.primaryExhausted) return [];
     const msg = err instanceof Error ? err.message : String(err);
     process.stderr.write(
       `pr-shepherd: startup-failure run fetch failed for PR #${prNumber} at ${headSha} (ignored): ${msg}\n`,
@@ -64,37 +86,42 @@ async function fetchStartupFailureChecksUncached(
   headSha: string,
   prNumber: number,
   stateKey?: StateKey,
+  budget?: TriageBudget,
 ): Promise<CheckRun[]> {
   const { owner, name } = repo;
   const perPage = 100;
   const MAX_RUN_PAGES = 10;
   const checks: CheckRun[] = [];
   for (let page = 1; page <= MAX_RUN_PAGES; page++) {
-    const { data, rateLimit } = await restWithRateLimit<WorkflowRunsResponse>(
-      "GET",
-      `/repos/${owner}/${name}/actions/runs?head_sha=${encodeURIComponent(headSha)}&status=${STARTUP_FAILURE_STATUS}&per_page=${perPage}&page=${page}`,
-      undefined,
-      stateKey
-        ? {
-            conditional: {
-              key: stateKey,
-              name: `runs-startupfailure-${headSha}-p${page}`,
-              headSha,
-            },
-          }
-        : undefined,
-    );
+    if (!budget?.canScheduleOptional()) break;
+    let result: Awaited<ReturnType<typeof restWithRateLimit<WorkflowRunsResponse>>>;
+    try {
+      result = await restWithRateLimit<WorkflowRunsResponse>(
+        "GET",
+        `/repos/${owner}/${name}/actions/runs?head_sha=${encodeURIComponent(headSha)}&status=${STARTUP_FAILURE_STATUS}&per_page=${perPage}&page=${page}`,
+        undefined,
+        stateKey
+          ? {
+              conditional: {
+                key: stateKey,
+                name: `runs-startupfailure-${headSha}-p${page}`,
+                headSha,
+              },
+            }
+          : undefined,
+      );
+    } catch (error) {
+      budget?.observeError(error);
+      if (budget?.primaryExhausted) break;
+      throw error;
+    }
+    const { data, rateLimit } = result;
+    budget?.observe(rateLimit);
     checks.push(
       ...data.workflow_runs
         .filter((run) => runBelongsToPr(run, prNumber, headSha))
         .map(workflowRunToCheckRun),
     );
-    if (rateLimit?.remaining === 0) {
-      process.stderr.write(
-        `pr-shepherd: REST rate limit remaining is 0 while listing startup-failure runs for ${headSha} — detection may be incomplete\n`,
-      );
-      break;
-    }
     if (data.workflow_runs.length < perPage) break;
     if (page === MAX_RUN_PAGES) {
       process.stderr.write(
@@ -185,10 +212,11 @@ function fetchJobs(
   repo: RepoInfo,
   cache: Map<string, Promise<JobsResponse["jobs"] | undefined>>,
   stateKey?: StateKey,
+  budget?: TriageBudget,
 ): Promise<JobsResponse["jobs"] | undefined> {
   const cached = cache.get(runId);
   if (cached) return cached;
-  const promise = fetchJobsUncached(runId, repo, stateKey);
+  const promise = fetchJobsUncached(runId, repo, stateKey, budget);
   cache.set(runId, promise);
   return promise;
 }
@@ -197,6 +225,7 @@ async function fetchJobsUncached(
   runId: string,
   repo: RepoInfo,
   stateKey?: StateKey,
+  budget?: TriageBudget,
 ): Promise<JobsResponse["jobs"] | undefined> {
   const { owner, name } = repo;
   const perPage = 100;
@@ -205,6 +234,7 @@ async function fetchJobsUncached(
   const allJobs: JobsResponse["jobs"] = [];
   try {
     for (let page = 1; ; page++) {
+      if (!budget?.canScheduleOptional()) break;
       if (++pagesFetched > MAX_JOB_PAGES) {
         process.stderr.write(
           `pr-shepherd: job pagination cap (${MAX_JOB_PAGES * 100} jobs) reached for run ${runId} — triage may be incomplete\n`,
@@ -219,17 +249,13 @@ async function fetchJobsUncached(
           ? { conditional: { key: stateKey, name: `jobs-run-${runId}-p${page}` } }
           : undefined,
       );
+      budget?.observe(rateLimit);
       allJobs.push(...data.jobs);
-      if (rateLimit?.remaining === 0) {
-        process.stderr.write(
-          `pr-shepherd: REST rate limit remaining is 0 while listing jobs for run ${runId} — triage may be incomplete\n`,
-        );
-        break;
-      }
       if (data.jobs.length < perPage) break;
     }
-  } catch {
-    return undefined;
+  } catch (error) {
+    budget?.observeError(error);
+    return budget?.primaryExhausted ? allJobs : undefined;
   }
   return allJobs;
 }
@@ -269,6 +295,7 @@ async function fetchJobLogExcerpt(
   repo: RepoInfo,
   stateKey?: StateKey,
   cacheable = false,
+  budget?: TriageBudget,
 ): Promise<string | undefined> {
   const cacheName = `joblog-v2-${jobId}`;
   if (stateKey && cacheable) {
@@ -277,14 +304,18 @@ async function fetchJobLogExcerpt(
   }
   const { owner, name } = repo;
   try {
+    if (!budget?.canScheduleOptional()) return undefined;
     const excerpt = buildLogExcerpt(
-      await restText(`/repos/${owner}/${name}/actions/jobs/${jobId}/logs`),
+      await restText(`/repos/${owner}/${name}/actions/jobs/${jobId}/logs`, (rateLimit) =>
+        budget?.observe(rateLimit),
+      ),
     );
     if (stateKey && cacheable) {
       await storeDerived<string | null>(stateKey, cacheName, excerpt ?? null);
     }
     return excerpt;
-  } catch {
+  } catch (error) {
+    budget?.observeError(error);
     return undefined;
   }
 }

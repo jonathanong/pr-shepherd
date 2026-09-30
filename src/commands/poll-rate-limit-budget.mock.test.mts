@@ -57,9 +57,22 @@ describe("one-PR until-terminal rate-limit budget", () => {
     });
     await vi.advanceTimersByTimeAsync(15_000);
     expect(settled).toBe(false);
-    await vi.advanceTimersByTimeAsync(45_000);
+    await vi.advanceTimersByTimeAsync(105_000);
     await expect(pending).resolves.toMatchObject({ action: "cancel" });
     expect(mockRunIterate).toHaveBeenCalledTimes(3);
+  });
+
+  it("uses five escalating secondary waits before giving up", async () => {
+    const secondary = new GitHubRequestError("secondary rate limit", { status: 403 });
+    mockRunIterate.mockRejectedValue(secondary);
+    const pending = runPoll(opts);
+    const assertion = expect(pending).rejects.toMatchObject({ exitCode: 75 });
+    for (const [index, delayMs] of [60_000, 120_000, 240_000, 480_000, 960_000].entries()) {
+      expect(mockRunIterate).toHaveBeenCalledTimes(index + 1);
+      await vi.advanceTimersByTimeAsync(delayMs);
+    }
+    await assertion;
+    expect(mockRunIterate).toHaveBeenCalledTimes(6);
   });
 
   it("sleeps again when the next error has a later resetAt", async () => {

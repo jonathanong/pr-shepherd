@@ -59,8 +59,8 @@ describe("quota warning text", () => {
   it("recommends REST only while GraphQL is the low budget", () => {
     const text = formatQuotaWarning(graphql);
     const instruction = buildQuotaAwareContinuation(graphql, "Continue.");
-    expect(text).toContain("prefer REST `gh`");
-    expect(instruction).toContain("non-GraphQL `gh` CLI commands");
+    expect(text).toContain("gh api repos/OWNER/REPO/pulls/PR");
+    expect(instruction).toContain("explicit REST endpoints");
     expect(instruction).toContain(
       `after the GraphQL quota resets at ${new Date(graphql.resetAt * 1000).toISOString()}`,
     );

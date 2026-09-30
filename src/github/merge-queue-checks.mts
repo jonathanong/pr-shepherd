@@ -1,5 +1,6 @@
 import { parseCreatedAt } from "./batch-parser-helpers.mts";
-import { graphql } from "./client.mts";
+import { graphqlWithRateLimit, type RateLimitInfo } from "./client.mts";
+import { GitHubRequestError } from "./errors.mts";
 import {
   headPushUnixFromCheckNodes,
   queueRemovalAppliesToHead,
@@ -60,13 +61,24 @@ async function fetchQueuePage(
   oid: string,
   repo: RepoInfo,
   cursor: string | null,
+  gate: { rateLimit?: RateLimitInfo },
 ): Promise<QueueContexts | null> {
-  const result = await graphql<CommitContextsResponse>(COMMIT_CHECK_CONTEXTS_QUERY, {
+  if (gate.rateLimit?.remaining === 0) {
+    throw new GitHubRequestError(
+      "GitHub GraphQL rate limit remaining is 0; merge queue check pagination incomplete",
+      {
+        status: 403,
+        rateLimit: gate.rateLimit,
+      },
+    );
+  }
+  const result = await graphqlWithRateLimit<CommitContextsResponse>(COMMIT_CHECK_CONTEXTS_QUERY, {
     owner: repo.owner,
     repo: repo.name,
     oid,
     ...(cursor !== null && { cursor }),
   });
+  gate.rateLimit = result.rateLimit ?? gate.rateLimit;
   const object = result.data.repository?.object;
   if (object?.__typename !== "Commit" || object.oid !== oid) {
     if (cursor === null) return null;
@@ -77,14 +89,18 @@ async function fetchQueuePage(
   return object.statusCheckRollup?.contexts ?? null;
 }
 
-async function hydrateCommitContexts(commit: QueueCommit, repo: RepoInfo): Promise<void> {
+async function hydrateCommitContexts(
+  commit: QueueCommit,
+  repo: RepoInfo,
+  gate: { rateLimit?: RateLimitInfo },
+): Promise<void> {
   const existing = commit.statusCheckRollup?.contexts;
   const nodes: RawContextNode[] = existing ? [...requireContextNodes(existing.nodes)] : [];
   let cursor = initialQueueCursor(existing, commit.oid);
 
   while (cursor !== undefined) {
     // eslint-disable-next-line no-await-in-loop
-    const next = await fetchQueuePage(commit.oid, repo, cursor);
+    const next = await fetchQueuePage(commit.oid, repo, cursor, gate);
     if (!next) {
       if (cursor === null) {
         cursor = undefined;
@@ -130,9 +146,15 @@ function currentRemovalCommit(raw: RawPr): QueueCommit | undefined {
 }
 
 /** Hydrate all status contexts for the active or most recently removed queue commit. */
-export async function hydrateMergeQueueChecks(raw: RawPr, repo: RepoInfo): Promise<void> {
+export async function hydrateMergeQueueChecks(
+  raw: RawPr,
+  repo: RepoInfo,
+  initialRateLimit?: RateLimitInfo,
+): Promise<RateLimitInfo | undefined> {
+  const gate = { rateLimit: initialRateLimit };
   const active = raw.mergeQueueEntry?.headCommit;
   const removed = currentRemovalCommit(raw);
-  if (active) await hydrateCommitContexts(active, repo);
-  if (removed && removed.oid !== active?.oid) await hydrateCommitContexts(removed, repo);
+  if (active) await hydrateCommitContexts(active, repo, gate);
+  if (removed && removed.oid !== active?.oid) await hydrateCommitContexts(removed, repo, gate);
+  return gate.rateLimit;
 }

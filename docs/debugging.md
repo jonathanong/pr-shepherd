@@ -8,7 +8,7 @@
 
 ### "Resource not accessible by personal access token"
 
-**Symptom:** Shepherd exits `77` (`EX_NOPERM`) instead of returning an iterate action (0/10–14). This happens for an HTTP 401/403, or for a GraphQL response whose `errors[].message` matches "resource not accessible" — GitHub reports some field-level PAT scope failures this way at HTTP 200. Not every GraphQL error means `77`: a 403 carrying `Retry-After` (GitHub's secondary rate limit) exits `75` instead, and an unrelated GraphQL error exits `69`. The message may include the GraphQL field path that GitHub denied. See [exit-codes.md](exit-codes.md) for the full code table.
+**Symptom:** Shepherd exits `77` (`EX_NOPERM`) instead of returning an iterate action (0/10–14). This happens for an HTTP 401/403, or for a GraphQL response whose `errors[].message` matches "resource not accessible" — GitHub reports some field-level PAT scope failures this way at HTTP 200. Not every GraphQL error means `77`: a 403 carrying `Retry-After` or reporting a secondary rate limit in its response message exits `75` instead, as can an HTTP 200 GraphQL error naming a secondary limit; an unrelated GraphQL error exits `69`. The message may include the GraphQL field path that GitHub denied. See [exit-codes.md](exit-codes.md) for the full code table.
 
 **Cause:** The token does not include the target repository, lacks a required fine-grained permission, needs organization approval or SSO authorization, or belongs to a user whose repository role cannot perform the operation.
 
@@ -109,10 +109,10 @@ The state directory is `$PR_SHEPHERD_STATE_DIR` when set; see [configuration.md]
 **Diagnosis:**
 
 ```bash
-gh pr view <PR> --json state,mergeable,mergeStateStatus
+gh api repos/OWNER/REPO/pulls/PR --jq '{state,mergeable,mergeable_state}'
 ```
 
-If `state` is `OPEN` and both `mergeable` and `mergeStateStatus` are `UNKNOWN` after several minutes, there may be a GitHub backend issue.
+If `state` is `open`, `mergeable` is `null`, and `mergeable_state` remains `unknown` after several minutes, there may be a GitHub backend issue.
 
 ---
 
