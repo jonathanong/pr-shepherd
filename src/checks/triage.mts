@@ -20,6 +20,7 @@ export async function triageFailingChecks(
     triageCheck(check, repo, jobsCache, stateKey, budget),
   );
   budget.throwIfSecondary();
+  budget.reportOmissionIfNeeded();
   return checks;
 }
 
@@ -30,14 +31,17 @@ async function triageCheck(
   stateKey?: StateKey,
   budget?: TriageBudget,
 ): Promise<TriagedCheck> {
-  if (check.runId === null || check.conclusion === "STARTUP_FAILURE" || !budget?.canSchedule) {
+  if (check.runId === null || check.conclusion === "STARTUP_FAILURE") {
+    return { ...check };
+  }
+  if (!jobsCache.has(check.runId) && !budget?.canScheduleOptional()) {
     return { ...check };
   }
   const jobs = await fetchJobs(check.runId, repo, jobsCache, stateKey, budget);
   const jobInfo = jobs ? pickJobInfo(jobs, check.name) : undefined;
   const runAttempt = jobs ? pickRunAttempt(jobs) : undefined;
   const logExcerpt =
-    check.conclusion !== "CANCELLED" && jobInfo?.jobId && budget.canSchedule
+    check.conclusion !== "CANCELLED" && jobInfo?.jobId
       ? await fetchJobLogExcerpt(
           jobInfo.jobId,
           repo,
@@ -89,7 +93,7 @@ async function fetchStartupFailureChecksUncached(
   const MAX_RUN_PAGES = 10;
   const checks: CheckRun[] = [];
   for (let page = 1; page <= MAX_RUN_PAGES; page++) {
-    if (!budget?.canSchedule) break;
+    if (!budget?.canScheduleOptional()) break;
     let result: Awaited<ReturnType<typeof restWithRateLimit<WorkflowRunsResponse>>>;
     try {
       result = await restWithRateLimit<WorkflowRunsResponse>(
@@ -118,7 +122,6 @@ async function fetchStartupFailureChecksUncached(
         .filter((run) => runBelongsToPr(run, prNumber, headSha))
         .map(workflowRunToCheckRun),
     );
-    if (!budget?.canSchedule) break;
     if (data.workflow_runs.length < perPage) break;
     if (page === MAX_RUN_PAGES) {
       process.stderr.write(
@@ -231,7 +234,7 @@ async function fetchJobsUncached(
   const allJobs: JobsResponse["jobs"] = [];
   try {
     for (let page = 1; ; page++) {
-      if (!budget?.canSchedule) break;
+      if (!budget?.canScheduleOptional()) break;
       if (++pagesFetched > MAX_JOB_PAGES) {
         process.stderr.write(
           `pr-shepherd: job pagination cap (${MAX_JOB_PAGES * 100} jobs) reached for run ${runId} — triage may be incomplete\n`,
@@ -248,7 +251,6 @@ async function fetchJobsUncached(
       );
       budget?.observe(rateLimit);
       allJobs.push(...data.jobs);
-      if (!budget?.canSchedule) break;
       if (data.jobs.length < perPage) break;
     }
   } catch (error) {
@@ -302,7 +304,7 @@ async function fetchJobLogExcerpt(
   }
   const { owner, name } = repo;
   try {
-    if (!budget?.canSchedule) return undefined;
+    if (!budget?.canScheduleOptional()) return undefined;
     const excerpt = buildLogExcerpt(
       await restText(`/repos/${owner}/${name}/actions/jobs/${jobId}/logs`, (rateLimit) =>
         budget?.observe(rateLimit),

@@ -111,10 +111,11 @@ throttling or briefly unavailable); `77` means fix the token or its scopes;
 retried (there's no PR to act on, or the target thread isn't eligible).
 
 **GitHub 403 is ambiguous on its own** — GitHub's secondary rate limit also
-returns 403, with a `Retry-After` header. `GitHubRequestError` classifies
+returns 403, sometimes without `Retry-After` but with a secondary-limit response
+message. `GitHubRequestError` classifies
 itself at construction time (via `classifyStatus`, not `errorToExitCode` —
 `errorToExitCode` only reads back whatever code the error already carries)
-and checks for a retry signal (`Retry-After`, `429`, `5xx`, an exhausted
+and checks for a retry signal (`Retry-After`, a secondary-limit message, `429`, `5xx`, an exhausted
 rate limit, a GraphQL `INTERNAL` error, or a GraphQL resource-limit error) _before_ falling back to the blanket 401/403 → `77` rule, so a
 throttled 403 correctly resolves to `75`, not `77`.
 
