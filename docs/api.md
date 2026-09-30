@@ -16,6 +16,7 @@ const shepherd = createPrShepherd({ cwd: "/path/to/repo" });
 const tick = await shepherd.iterate({ pr: 42, merge: true });
 const group = await shepherd.iterate({ prs: [42, 43] });
 const stack = await shepherd.iterate({ stack: 43 });
+const journal = await shepherd.getJournal({ pr: "owner/repo#42" });
 const applied = await shepherd.apply({
   pr: 42,
   operations: [
@@ -42,10 +43,11 @@ const patches = await shepherd.buildSuggestionPatches({
 | ---------------------------------------------------- | -------------------------------------- |
 | `iterate(input?)`                                    | MCP `iterate` / `pr-shepherd iterate`  |
 | `apply({ pr, operations })`                          | MCP `apply`                            |
+| `getJournal({ pr })`                                 | MCP `get_journal`                      |
 | `buildSuggestionPatches({ pr, suggestions })`        | MCP `build_suggestion_patches`         |
 | `buildSuggestionPatch({ pr, threadId, message, … })` | Deprecated one-item compatibility path |
 
-For a singular programmatic API call, `pr` is an optional positive number, repository-qualified `owner/repo#N`, or GitHub pull-request URL. Omitted, Shepherd infers the current branch's open PR. A repository-qualified reference is authoritative for GitHub reads and mutations and may name a repository other than the configured `cwd`. `cwd` remains the source of local git state, configuration, classification-rule lookups, and per-worktree debug logging.
+For a singular programmatic API call, `pr` can be a positive number, repository-qualified `owner/repo#N`, or GitHub pull-request URL. `getJournal` requires `pr`; the other methods retain current-branch inference when omitted. A repository-qualified reference is authoritative for GitHub reads and mutations and may name a repository other than the configured `cwd`. `cwd` remains the source of local git state, configuration, classification-rule lookups, and per-worktree debug logging.
 
 `iterate` also accepts exactly one aggregate selector: non-empty `prs` or `stack`. Every selected
 reference must resolve to one repository. Aggregate calls perform one compact, read-only summary
@@ -61,6 +63,11 @@ Aggregate selectors never perform mutations or emit rebase/push commands. The ca
 and follows the returned instructions.
 
 `apply` runs `operations` in list order after validating every operation. Types: `review_mutations`, `mark_files_viewed`, `append_journal`. `mark_files_viewed` performs the requested `markFileAsViewed` mutations and surfaces GitHub's per-file results. Direct review operations forward explicitly supplied IDs without iterate's author, capability, or current-state policy; direct journal operations likewise honor explicit caller intent. GitHub is authoritative for authorization and mutation validity. Replies and dismissals require `message`. `requireSha` must be a full 40-character lowercase hex SHA.
+
+`getJournal({ pr })` fetches one PR body with GraphQL `GetPrBody` and returns the same typed result as
+`extractShepherdJournal(body)` without exposing the body or PR node ID. The API accepts a qualified
+reference or a numeric PR in the configured checkout repository. An absent journal returns
+`{ ok: true, journal: null }`; malformed journal content returns `{ ok: false, error }`.
 
 Validation failures throw `PrShepherdValidationError` before any GitHub mutation. If a later apply operation fails after earlier ones succeeded, Shepherd throws `PartialApplyError` with `failedIndex` and `completed`.
 
@@ -109,7 +116,7 @@ const server = createPrShepherdMcpServer({ cwd: "/path/to/repo" });
 await runPrShepherdMcpStdio({ cwd: "/path/to/repo" });
 ```
 
-`createPrShepherdMcpServer` accepts an optional `shepherd` for tests. The public factory exposes canonical `iterate`, `apply`, and `build_suggestion_patches` tools plus the deprecated singular adapter. Unlike `createPrShepherd`, every MCP PR reference must be repository-qualified; `iterate` accepts exactly one of `pr`, `prs`, or `stack`, while the other tools require `pr`. Bare and omitted references are rejected. The explicit repository is the GitHub target and may differ from the factory's `cwd`, which still supplies the local git/config/rules context. Host install and tool schemas: [mcp.md](mcp.md).
+`createPrShepherdMcpServer` accepts an optional `shepherd` for tests. The public factory exposes `iterate`, `apply`, `build_suggestion_patches`, `extract_journal`, and `get_journal` plus the deprecated singular adapter. MCP tools that target a PR require a repository-qualified reference; `iterate` accepts exactly one of `pr`, `prs`, or `stack`, while the other PR-targeted tools require `pr`. `extract_journal` instead requires only a Markdown `body` string and performs no GitHub, file, stdin, or Shepherd-log I/O. Bare and omitted PR references are rejected by PR-targeted tools. The explicit repository is the GitHub target and may differ from the factory's `cwd`, which still supplies the local git/config/rules context. Host install and tool schemas: [mcp.md](mcp.md).
 
 `createPrShepherd().iterate()` returns the raw `IterateResult` for a singular selector and a raw `PollSummaryResult` for aggregate `prs` or `stack` selectors. For singular MCP `iterate`, `structuredContent` is instead the lean JSON projection described in [mcp.md](mcp.md), matching CLI `--format=json`; aggregate MCP `structuredContent` remains the raw `PollSummaryResult`.
 

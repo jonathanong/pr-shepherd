@@ -10,6 +10,7 @@ import {
   type BuildSuggestionPatchInput,
   type BuildSuggestionPatchesInput,
   type CreatePrShepherdOptions,
+  type GetJournalInput,
   type IterateInput,
   type AggregateIterateInput,
   type SingleIterateInput,
@@ -36,6 +37,7 @@ import { projectStackOverview } from "../cli/stack-overview.mts";
 import type { IterateResult, PollSummaryResult } from "../types.mts";
 import { formatCliError, serializeGitHubRequestErrorDetails } from "../cli/error-format.mts";
 import { errorToExitCode, EXIT } from "../exit-codes.mts";
+import { extractShepherdJournal } from "../journal/index.mts";
 
 export interface CreatePrShepherdMcpServerOptions extends CreatePrShepherdOptions {
   /** Optional injection point for embedding hosts and focused tests. */
@@ -147,7 +149,8 @@ const suggestionPatchesInputSchema = z.object({
 export function createPrShepherdMcpServer(
   options: CreatePrShepherdMcpServerOptions = {},
 ): McpServer {
-  const shepherd = options.shepherd ?? createPrShepherd({ cwd: options.cwd });
+  let shepherd = options.shepherd;
+  const getShepherd = () => (shepherd ??= createPrShepherd({ cwd: options.cwd }));
   const server = new McpServer({ name: "pr-shepherd", version: readPackageVersion() });
 
   server.registerTool(
@@ -170,7 +173,7 @@ export function createPrShepherdMcpServer(
           input.readyDelaySeconds === undefined ? undefined : `${input.readyDelaySeconds}s`,
       };
       return runTool(
-        () => runIterateSelector(shepherd, requireRepositoryQualifiedIterate(input)),
+        () => runIterateSelector(getShepherd(), requireRepositoryQualifiedIterate(input)),
         (result: IterateResult | PollSummaryResult) =>
           isPollSummary(result)
             ? formatPollSummaryResult(result)
@@ -200,8 +203,49 @@ export function createPrShepherdMcpServer(
     },
     async (input) =>
       runTool(
-        () => shepherd.apply(requireRepositoryQualifiedPr(input) as ApplyInput),
+        () => getShepherd().apply(requireRepositoryQualifiedPr(input) as ApplyInput),
         formatApplyResult,
+      ),
+  );
+
+  server.registerTool(
+    "extract_journal",
+    {
+      description:
+        "Extract the validated Shepherd Journal from a supplied Markdown body without I/O.",
+      inputSchema: z.object({ body: z.string() }),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (input) =>
+      runTool(async () => {
+        if (typeof input.body !== "string") {
+          throw new PrShepherdValidationError("body must be a Markdown string");
+        }
+        return extractShepherdJournal(input.body);
+      }, JSON.stringify),
+  );
+
+  server.registerTool(
+    "get_journal",
+    {
+      description: "Fetch one pull request body with GraphQL and extract its Shepherd Journal.",
+      inputSchema: z.object({ pr }),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    async (input) =>
+      runTool(
+        () => getShepherd().getJournal(requireRepositoryQualifiedPr(input) as GetJournalInput),
+        JSON.stringify,
       ),
   );
 
@@ -220,7 +264,7 @@ export function createPrShepherdMcpServer(
     async (input) =>
       runTool(
         () =>
-          shepherd.buildSuggestionPatches(
+          getShepherd().buildSuggestionPatches(
             requireRepositoryQualifiedPr(input) as BuildSuggestionPatchesInput,
           ),
         formatSuggestionPatchesResult,
@@ -242,7 +286,7 @@ export function createPrShepherdMcpServer(
     async (input) =>
       runTool(
         () =>
-          shepherd.buildSuggestionPatch(
+          getShepherd().buildSuggestionPatch(
             requireRepositoryQualifiedPr(input) as BuildSuggestionPatchInput,
           ),
         formatCommitSuggestionResult,

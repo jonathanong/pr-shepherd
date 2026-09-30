@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-pr-shepherd's agent integration is a local stdio MCP server. It shares command implementations, GitHub token resolution, and cascading `.pr-shepherdrc.yml` files with the CLI. Tools gather PR context (`iterate`), apply deterministic GitHub mutations (`apply`), and build checked suggestion patches (`build_suggestion_patches`). The calling client owns recurrence and any git mutations.
+pr-shepherd's agent integration is a local stdio MCP server. It shares command implementations, GitHub token resolution, and cascading `.pr-shepherdrc.yml` files with the CLI. Tools gather PR context (`iterate`), apply deterministic GitHub mutations (`apply`), build checked suggestion patches (`build_suggestion_patches`), and read Shepherd Journals (`extract_journal`, `get_journal`). The calling client owns recurrence and any git mutations.
 
 The published binary is `pr-shepherd-mcp` from the `pr-shepherd` npm package:
 
@@ -151,22 +151,39 @@ Replace `/path/to/pr-shepherd` with this checkout's absolute path. Do not use a 
 
 ## Tools
 
-The server registers three canonical tools plus a deprecated singular suggestion adapter. Each result includes Markdown `content` (the same text the CLI would print) and `structuredContent`. For singular `iterate`, `structuredContent` is the same lean JSON projection the CLI emits for `--format=json` — the same computed top-level `instructions` array and `readyDelayOverride`, and the same trivial-default fields omitted. Aggregate `iterate` for an explicit PR set returns the raw `PollSummaryResult`. A `--stack` selector returns the same lean stack overview the CLI prints as JSON (see the `iterate` section below). For `apply`, `build_suggestion_patches`, and `build_suggestion_patch`, `structuredContent` is the raw result object, matching what their CLI counterparts print as JSON.
+The server registers five canonical tools plus a deprecated singular suggestion adapter. Each result includes text `content` and `structuredContent` with equivalent information. For singular `iterate`, `structuredContent` is the same lean JSON projection the CLI emits for `--format=json` — the same computed top-level `instructions` array and `readyDelayOverride`, and the same trivial-default fields omitted. Aggregate `iterate` for an explicit PR set returns the raw `PollSummaryResult`. A `--stack` selector returns the same lean stack overview the CLI prints as JSON (see the `iterate` section below). For `apply`, `build_suggestion_patches`, and `build_suggestion_patch`, `structuredContent` is the raw result object, matching what their CLI counterparts print as JSON. The journal read tools put the same typed extraction JSON in both channels.
 
-Every MCP call requires repository-qualified selectors: either GitHub PR URLs such as `https://github.com/owner/repo/pull/123` or `owner/repo#123` references. Singular tools require `pr`; aggregate `iterate` accepts `prs` or `stack`. Bare PR numbers and omitted selectors are rejected. The named repository is the GitHub target and may differ from the server's startup working directory (or the `cwd` supplied to an embedded factory), which remains the local git/configuration/rules context.
+Every PR-targeted MCP call requires a repository-qualified selector: either a GitHub PR URL such as `https://github.com/owner/repo/pull/123` or an `owner/repo#123` reference. Singular PR tools require `pr`; aggregate `iterate` accepts `prs` or `stack`. Bare PR numbers and omitted selectors are rejected. `extract_journal` has no PR selector; its only input is the supplied Markdown body. The named repository is the GitHub target and may differ from the server's startup working directory (or the `cwd` supplied to an embedded factory), which remains the local git/configuration/rules context.
 
 | Tool                       | Purpose                                                                                                       | Side effects                                                                                 |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | `iterate`                  | One state-machine tick. Surfaces review items, checks, merge state, and structured review-mutation arguments. | May mark a draft ready only when GitHub reports `viewerCanUpdate: true`; never cancels runs. |
 | `apply`                    | Ordered review mutations, `mark_files_viewed`, and `append_journal` under one required `pr`.                  | Explicit operations are attempted; GitHub returns per-operation results and errors.          |
+| `extract_journal`          | Extract a validated journal from a supplied Markdown `body`.                                                  | None; no file, stdin, GitHub, or Shepherd-log I/O.                                           |
+| `get_journal`              | Fetch a qualified PR body via GraphQL `GetPrBody` and extract its journal.                                    | Read-only GitHub request; never writes the PR body.                                          |
 | `build_suggestion_patches` | Validate ordered anchored suggestions and return checked diffs plus commit metadata.                          | None. Never edits the worktree or git history.                                               |
 | `build_suggestion_patch`   | Deprecated one-item adapter for `build_suggestion_patches`.                                                   | None. Never edits the worktree or git history.                                               |
 
-Call `iterate` first. Translate its `resolveCommand` / `resolveOnlyCommand` arguments into an `apply` `review_mutations` operation. Use one `build_suggestion_patches` call for all marked suggestion threads in displayed order. `mark_files_viewed` performs the requested viewed-state mutations and reports GitHub's results. Use `append_journal` only when the caller asks for that mutation; direct apply honors that explicit intent even when `viewerCanUpdate` is false.
+For review workflow, call `iterate` first. Translate its `resolveCommand` / `resolveOnlyCommand` arguments into an `apply` `review_mutations` operation. Use one `build_suggestion_patches` call for all marked suggestion threads in displayed order. `mark_files_viewed` performs the requested viewed-state mutations and reports GitHub's results. Use `append_journal` only when the caller asks for that mutation; direct apply honors that explicit intent even when `viewerCanUpdate` is false. Journal reads are independent of `iterate`.
 
 `build_suggestion_patches` treats GitHub's anchored line range at the fetched PR head as authoritative. It accepts a clean local descendant only when the full ordered patch stream passes `git apply --check`; otherwise inspect the current source and reviewer intent manually.
 
 Hosts namespace tool names with the server name (`pr-shepherd__iterate` in Grok, `mcp__pr-shepherd__iterate` in some Claude setups). The unqualified names below are the server-registered names.
+
+### `extract_journal` and `get_journal`
+
+`extract_journal` requires `{ "body": "<Markdown PR body>" }`. It calls the pure journal extractor
+directly, including for an empty body, and performs no GitHub, file, stdin, or Shepherd-log I/O.
+`get_journal` requires `{ "pr": "owner/repo#123" }` or an equivalent GitHub PR URL. It makes one
+GraphQL `GetPrBody` read and passes that body to the same extractor. Neither tool exposes the full
+PR body or node ID in its result, and neither changes the existing `apply` `append_journal`
+operation.
+
+Both return the extraction object as JSON in `structuredContent` and text `content`:
+`{ "ok": true, "journal": { "format": "details", "entries": ["- decision"] } }`,
+`{ "ok": true, "journal": null }` when no journal exists, or `{ "ok": false, "error": "…" }`
+for malformed journal content. A malformed journal is a successful tool call carrying a typed
+parser result; invalid tool input and GitHub failures use the normal MCP error response.
 
 ### `iterate`
 
@@ -294,7 +311,7 @@ const server = createPrShepherdMcpServer({ cwd: "/path/to/repo" });
 await runPrShepherdMcpStdio({ cwd: "/path/to/repo" });
 ```
 
-`createPrShepherdMcpServer` accepts an optional `shepherd` for tests or alternate transports. The public factory exposes canonical `iterate`, `apply`, and `build_suggestion_patches` plus the deprecated singular adapter.
+`createPrShepherdMcpServer` accepts an optional `shepherd` for tests or alternate transports. The public factory exposes `iterate`, `apply`, `build_suggestion_patches`, `extract_journal`, and `get_journal` plus the deprecated singular adapter.
 
 ## Related docs
 
