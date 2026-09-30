@@ -66,6 +66,10 @@ export const SUGGESTION_THREADS_QUERY = gql("suggestion-threads.gql");
 /** Fetches additional comments for a single review thread when its nested connection paginates. */
 export const REVIEW_THREAD_COMMENTS_QUERY = gql("review-thread-comments.gql");
 
+/** Requested review-thread transcripts for best-effort reply seen markers. */
+export const REPLY_THREAD_TRANSCRIPTS_QUERY = gql("reply-thread-transcripts.gql");
+export const REPLY_THREAD_COMMENTS_QUERY = gql("reply-thread-comments.gql");
+
 /** Fetch inline annotations for a single CheckRun by node ID. */
 export const CHECK_RUN_ANNOTATIONS_QUERY = gql("check-run-annotations.gql");
 

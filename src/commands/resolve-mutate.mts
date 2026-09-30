@@ -1,11 +1,11 @@
 import { getRepoInfo, getCurrentPrNumber } from "../github/client.mts";
 import { applyResolveOptions } from "../comments/resolve.mts";
-import { fetchPrBatch } from "../github/batch.mts";
+import { fetchReplyThreadTranscripts } from "../github/reply-thread-transcripts.mts";
 import { markReplySeen } from "../state/seen-comments.mts";
-import { threadTranscriptBody } from "../threads/transcript.mts";
+import { threadTranscriptBodies } from "../threads/transcript.mts";
 import { addPrShepherdMarker } from "../comments/marker.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
-import type { ResolveOptions, ReviewThread } from "../types.mts";
+import type { ResolveOptions } from "../types.mts";
 import type { ResolveCommandOptions } from "./resolve.mts";
 
 /** @deprecated Hidden implementation for `resolve`; use `apply review`. */
@@ -22,14 +22,10 @@ export async function runResolveMutate(
   }
   // Fetch only to retain the pre-reply transcript for successful-reply seen
   // markers. It never determines which user-supplied IDs are sent to GitHub.
-  let threadById: Map<string, ReviewThread> | undefined;
+  let transcriptById: Map<string, string> | undefined;
   if (opts.replyThreadIds?.length) {
     try {
-      threadById = new Map(
-        (
-          await fetchPrBatch(prNumber, repo, { paginateApprovedReviews: true })
-        ).data.reviewThreads.map((thread) => [thread.id, thread]),
-      );
+      transcriptById = await fetchReplyThreadTranscripts(prNumber, repo, opts.replyThreadIds);
     } catch {
       // Seen-marker bookkeeping is best-effort. A failed read must not block
       // the explicit mutation request; GitHub's mutation response is authoritative.
@@ -47,18 +43,17 @@ export async function runResolveMutate(
     dismissMessage: opts.dismissMessage,
     requireSha: opts.requireSha,
   });
-  if (opts.dismissMessage && threadById) {
+  if (opts.dismissMessage && transcriptById) {
     const markedMessage = addPrShepherdMarker(opts.dismissMessage);
     await Promise.all(
       result.repliedThreads.map((id) => {
-        const thread = threadById.get(id);
-        if (!thread) return Promise.resolve();
-        const previousBody = threadTranscriptBody(thread);
+        const previousBody = transcriptById.get(id);
+        if (previousBody === undefined) return Promise.resolve();
         return markReplySeen(
           { owner: repo.owner, repo: repo.name, pr: prNumber },
           id,
           previousBody,
-          threadTranscriptBody(thread, [markedMessage]),
+          threadTranscriptBodies([previousBody, markedMessage]),
           markedMessage,
         );
       }),

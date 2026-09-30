@@ -4,9 +4,8 @@ import {
   BASE_OPTS,
   mockApplyResolveOptions,
   mockFetchPrBatch,
+  mockFetchReplyThreadTranscripts,
   mockMarkReplySeen,
-  makeBatchData,
-  makeThread,
 } from "../../test-helpers/commands/resolve.test-support.mts";
 import { runResolveMutate } from "./resolve.mts";
 import { addPrShepherdMarker } from "../comments/marker.mts";
@@ -71,9 +70,7 @@ describe("runResolveMutate — forwards options", () => {
   });
 
   it("forwards every requested reply ID without using the current batch as a filter", async () => {
-    mockFetchPrBatch.mockResolvedValue({
-      data: makeBatchData({ reviewThreads: [makeThread({ id: "t-human" })] }),
-    });
+    mockFetchReplyThreadTranscripts.mockResolvedValue(new Map([["t-human", "body"]]));
     mockApplyResolveOptions.mockResolvedValue({
       repliedThreads: [],
       resolvedThreads: [],
@@ -96,10 +93,15 @@ describe("runResolveMutate — forwards options", () => {
       }),
     );
     expect(result.skippedNonHumanReplies).toBeUndefined();
+    expect(mockFetchReplyThreadTranscripts).toHaveBeenCalledWith(
+      42,
+      { owner: "owner", name: "repo" },
+      ["t-human", "t-bot", "t-typo"],
+    );
   });
 
   it("still forwards replies when best-effort transcript fetching fails", async () => {
-    mockFetchPrBatch.mockRejectedValueOnce(new Error("read failed"));
+    mockFetchReplyThreadTranscripts.mockRejectedValueOnce(new Error("read failed"));
 
     await runResolveMutate({
       ...BASE_OPTS,
@@ -116,27 +118,7 @@ describe("runResolveMutate — forwards options", () => {
   });
 
   it("records the successful reply marker without using it to decide the reply", async () => {
-    mockFetchPrBatch.mockResolvedValue({
-      data: makeBatchData({
-        reviewThreads: [
-          makeThread({
-            id: "t-human",
-            body: "top body",
-            comments: [
-              {
-                id: "c-1",
-                isMinimized: false,
-                author: "alice",
-                authorType: "User",
-                body: "top body",
-                url: "",
-                createdAtUnix: 1,
-              },
-            ],
-          }),
-        ],
-      }),
-    });
+    mockFetchReplyThreadTranscripts.mockResolvedValue(new Map([["t-human", "top body"]]));
     mockApplyResolveOptions.mockResolvedValue({
       repliedThreads: ["t-human"],
       resolvedThreads: [],

@@ -1,0 +1,31 @@
+query ReplyThreadTranscripts($ids: [ID!]!) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
+  nodes(ids: $ids) {
+    __typename
+    ... on PullRequestReviewThread {
+      id
+      pullRequest {
+        number
+        repository {
+          nameWithOwner
+        }
+      }
+      comments(first: 100) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          body
+        }
+      }
+    }
+  }
+}

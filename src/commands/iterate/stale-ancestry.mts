@@ -3,6 +3,7 @@ import type { RepoInfo } from "../../github/client.mts";
 import type { PollSummaryStackAncestry } from "../../types.mts";
 import type { ShepherdReport } from "../../types/report.mts";
 import { buildNativeStackRebaseInstruction } from "./native-stack-rebase.mts";
+import type { CheckExecutionContext } from "../check-execution-context.mts";
 
 /**
  * A verified stale boundary for the PR being shepherded.
@@ -26,12 +27,14 @@ export interface StaleNativeStackAncestry extends PollSummaryStackAncestry {
 export async function findStaleNativeStackAncestry(
   report: Pick<ShepherdReport, "pr" | "mergeStatus">,
   repo: RepoInfo,
+  context?: CheckExecutionContext,
 ): Promise<StaleNativeStackAncestry | null> {
   const stack = report.mergeStatus.mergeRequirements?.stack;
   if (!stack || stack.position <= 1) return null;
 
   try {
-    const topology = await readStackTopology(report.pr, repo);
+    const topology = await (context?.readStackTopology(report.pr, repo) ??
+      readStackTopology(report.pr, repo));
     const ancestry = stackAncestryGaps(topology.ordered).find((gap) => gap.childPr === report.pr);
     if (!ancestry) return null;
     return {

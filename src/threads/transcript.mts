@@ -48,10 +48,14 @@ export function threadComments(thread: {
 
 const THREAD_COMMENT_SEPARATOR = "\n\n--- thread comment ---\n\n";
 
+export function threadTranscriptBodies(bodies: string[]): string {
+  return bodies.join(THREAD_COMMENT_SEPARATOR);
+}
+
 export function threadTranscriptBody(thread: ReviewThread, appendedBodies: string[] = []): string {
   const bodies =
     thread.comments && thread.comments.length > 0
       ? threadComments(thread).map((c) => c.body)
       : [thread.body];
-  return [...bodies, ...appendedBodies].join(THREAD_COMMENT_SEPARATOR);
+  return threadTranscriptBodies([...bodies, ...appendedBodies]);
 }

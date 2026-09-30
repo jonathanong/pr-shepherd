@@ -34,7 +34,7 @@ A stack tick is the summary plus the 1-point `PollStackTopology` preflight. The 
 
 `fetchRawSummaryPr` uses the same fragment: 3 points before, 1 after. A check page past the first 100 contexts stays 1 point and no longer repeats the annotation probe.
 
-`PollSummaryAnnotationProbe` runs only for a layer that otherwise looks ready, one commit at a time, so a late annotation still changes the READY-receipt fingerprint. A commit with more than 100 check contexts adds a page. It is not part of the always-on totals above. A failed or incomplete probe does not replace a stored READY fingerprint.
+`PollSummaryAnnotationProbe` runs only for a layer that otherwise looks ready, one commit at a time, so a late annotation still changes the READY-receipt fingerprint. A commit with more than 100 check contexts adds a page. It is not part of the always-on totals above. Its `rateLimit.cost` is now measured in `--verbose` usage. A failed or incomplete probe does not replace a stored READY fingerprint.
 
 ## Usage by command
 
@@ -76,18 +76,18 @@ An explicit multi-PR selection skips the topology query and uses `PollSummary` i
 
 ### Mutations and one-shot reads
 
-| Command                                                                     | What runs                                                                                | Typical points                               |
-| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | -------------------------------------------- |
-| `apply review` / `resolve`, with reply IDs                                  | Full `fetchPrBatch`, including approved-review pagination, then `BulkApply` chunks of 10 | 1 or more for the read; mutations unmeasured |
-| `apply review` / `resolve`, without replies                                 | `BulkApply` only, plus up to 10 × `GetPrHeadSha` when `--require-sha` is set             | unmeasured, plus 1 per SHA poll              |
-| `apply files` / `mark-files-as-viewed`                                      | `files(first: 100)` per page, then `markFileAsViewed` chunks of 10                       | 1 per file page; mutations unmeasured        |
-| `apply journal` / `journal`                                                 | `GetPrBody`, then `UpdatePrBody` when the body changes and this is not `--dry-run`       | 1, plus an unmeasured mutation               |
-| `apply check-blocker`                                                       | none when the PR number is passed                                                        | 0                                            |
-| `build-suggestion-patches` / `build-suggestion-patch` / `commit-suggestion` | `SuggestionThreads`                                                                      | 1 for a handful of threads                   |
+| Command                                                                     | What runs                                                                                                          | Typical points                               |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
+| `apply review` / `resolve`, with reply IDs                                  | `ReplyThreadTranscripts` per 20 requested IDs, plus pages only for long transcripts, then `BulkApply` chunks of 10 | 1 or more for the read; mutations unmeasured |
+| `apply review` / `resolve`, without replies                                 | `BulkApply` only, plus up to 10 × `GetPrHeadSha` when `--require-sha` is set                                       | unmeasured, plus 1 per SHA poll              |
+| `apply files` / `mark-files-as-viewed`                                      | `files(first: 100)` per page, then `markFileAsViewed` chunks of 10                                                 | 1 per file page; mutations unmeasured        |
+| `apply journal` / `journal`                                                 | `GetPrBody`, then `UpdatePrBody` when the body changes and this is not `--dry-run`                                 | 1, plus an unmeasured mutation               |
+| `apply check-blocker`                                                       | none when the PR number is passed                                                                                  | 0                                            |
+| `build-suggestion-patches` / `build-suggestion-patch` / `commit-suggestion` | `SuggestionThreads`                                                                                                | 1 for a handful of threads                   |
 
 `clean`, `admin clean`, `log-file`, `admin log-file`, and `journal extract` do not call GitHub.
 
-The reply path's `fetchPrBatch` exists to store a seen-marker transcript. GitHub still authorizes the mutation. On a one-page PR that read is 1 point. A long thread history adds page queries and pulls CI with it.
+The reply path reads only requested thread IDs to store seen-marker transcripts. GitHub still authorizes the mutation. One batch of at most 20 IDs is typically at the 1-point floor; long transcripts add page requests. Incomplete or mismatched threads do not get a marker, but their requested mutations still run.
 
 ## Recommendations
 
@@ -95,7 +95,7 @@ One-PR `BatchPr` and `PrFingerprint` stay at the 1-point floor. Fewer review con
 
 1. **Done: summary annotation probes are no longer always-on.** Both `contexts(last: 100) { annotations(first: 1) }` trees (head commit and `mergeQueueEntry`) are gone from the summary fragment. A layer that otherwise looks ready loads annotation totals with `PollSummaryAnnotationProbe`, so [`fingerprintRawSummaryPr`](../src/github/poll-summary-fingerprint.mts) still changes when a check gains an annotation. The before/after table above is that change. Removing only the queue rollup would have left a 10-PR summary at 15 points (about 450 points/hour). Removing both brings it to 5 (about 180 points/hour for the stack tick at 30 ticks).
 
-2. **Read reply threads by id in `apply review`.** [`runResolveMutate`](../src/commands/resolve-mutate.mts) loads a full batch, with approved-review pagination, to remember the pre-reply transcript. `nodes(ids:)` for the supplied thread ids avoids CI, annotation probes, and that pagination. The point win is small when the batch stays on one page. The payload win is the reason. Not in this change.
+2. **Done: read reply threads by id in `apply review`.** [`runResolveMutate`](../src/commands/resolve-mutate.mts) now uses `nodes(ids:)` for supplied reply threads, avoiding CI, annotation probes, and approved-review pagination. A one-page full batch and one reply batch can both cost 1 point; the savings are in payload and extra pages on larger PRs.
 
 3. **Reuse the `BatchPr` snapshot for READY receipts.** `recordReadyReceipt` and `revalidateReadyReceipt` in [`src/commands/iterate/index.mts`](../src/commands/iterate/index.mts) still call `fetchRawSummaryPr` after `BatchPr`. That second snapshot is now 1 point instead of 3. Folding the receipt fingerprint into `BatchPr` would remove it. Not in this change.
 

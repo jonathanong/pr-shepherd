@@ -1,0 +1,25 @@
+query ReplyThreadComments($id: ID!, $cursor: String!) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
+  node(id: $id) {
+    __typename
+    ... on PullRequestReviewThread {
+      id
+      comments(first: 100, after: $cursor) {
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        nodes {
+          body
+        }
+      }
+    }
+  }
+}

@@ -145,6 +145,26 @@ describe("tryReuseFingerprintReport", () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["queued", { isInMergeQueue: true }],
+    ["incomplete check suites", { checkSuitesComplete: false }],
+    ["too many comments", { commentCount: 101 }],
+    ["too many reviews", { reviewCount: 101 }],
+    ["too many threads", { threadCount: 21 }],
+    ["multi-comment threads", { hasMultiCommentThreads: true }],
+    ["incomplete rules", { rulesComplete: false }],
+  ])(
+    "does not fetch a doomed live fingerprint when cached evidence is %s",
+    async (_name, fields) => {
+      mockLoad.mockResolvedValue({
+        ...stored(waitReport()),
+        fingerprint: testFingerprint(fields),
+      });
+      await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+      expect(mockFetch).not.toHaveBeenCalled();
+    },
+  );
+
   it("returns the cached WAIT-shaped report when the live fingerprint matches", async () => {
     const report = waitReport();
     mockLoad.mockResolvedValue(stored(report));

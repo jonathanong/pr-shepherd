@@ -33,6 +33,7 @@ import { stackDraftHold } from "./parent-first.mts";
 import { findStaleNativeStackAncestry } from "./stale-ancestry.mts";
 import { annotateBlockedWait, resolveCheckBlockerGate } from "./check-blocker-gate.mts";
 import { buildUnreportedFixResult, planUnreportedRequired } from "./unreported-required.mts";
+import { createCheckExecutionContext } from "../check-execution-context.mts";
 
 export function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
   return withIterateApiUsage(opts, () => runIterateCore(opts));
@@ -52,16 +53,20 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     );
   }
   const neverCancelRuns = opts.neverCancelRuns ?? config.actions.neverCancelRuns;
+  const checkContext = createCheckExecutionContext();
 
-  const report = await runCheck({
-    ...opts,
-    prNumber,
-    // Outdated Shepherd-visible threads are always resolved by iterate. The
-    // old actions.autoResolveOutdated switch is retained only as an ignored
-    // compatibility key in the config loader.
-    autoResolve: true,
-    autoMinimizeSuppressed: config.actions.autoMinimizeSuppressed,
-  });
+  const report = await runCheck(
+    {
+      ...opts,
+      prNumber,
+      // Outdated Shepherd-visible threads are always resolved by iterate. The
+      // old actions.autoResolveOutdated switch is retained only as an ignored
+      // compatibility key in the config loader.
+      autoResolve: true,
+      autoMinimizeSuppressed: config.actions.autoMinimizeSuppressed,
+    },
+    checkContext,
+  );
 
   const [repoOwner, repoName] = report.repo.split("/");
   if (!repoOwner || !repoName) {
@@ -144,10 +149,14 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   const activeMerge = Boolean(
     opts.merge && (report.mergeQueue?.inQueue || report.mergeQueue?.autoMergeRequest),
   );
-  const staleAncestry = await findStaleNativeStackAncestry(report, {
-    owner: repoOwner,
-    name: repoName,
-  });
+  const staleAncestry = await findStaleNativeStackAncestry(
+    report,
+    {
+      owner: repoOwner,
+      name: repoName,
+    },
+    checkContext,
+  );
   const isCleanReadyState =
     report.status === "READY" &&
     !report.mergeStatus.isDraft &&

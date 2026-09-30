@@ -42,14 +42,17 @@ export async function tryReuseFingerprintReport(
     return null;
   }
   if (!reportAllowsFingerprintSkip(cached.report)) return null;
+  if (cached.fingerprint.isInMergeQueue) return null;
+  if (!cached.fingerprint.checkSuitesComplete) return null;
+  if (cached.fingerprint.commentCount > 100) return null;
+  if (cached.fingerprint.reviewCount > 100) return null;
+  if (cached.fingerprint.threadCount > 20) return null;
+  if (cached.fingerprint.hasMultiCommentThreads) return null;
+  if (!cached.fingerprint.rulesComplete) return null;
   const live = await fetchPrFingerprint(prNumber, repo);
-  if (live.isInMergeQueue || cached.fingerprint.isInMergeQueue) return null;
-  if (!live.checkSuitesComplete || !cached.fingerprint.checkSuitesComplete) return null;
-  if (live.commentCount > 100 || cached.fingerprint.commentCount > 100) return null;
-  if (live.reviewCount > 100 || cached.fingerprint.reviewCount > 100) return null;
-  if (live.threadCount > 20 || cached.fingerprint.threadCount > 20) return null;
-  if (live.hasMultiCommentThreads || cached.fingerprint.hasMultiCommentThreads) return null;
-  if (!live.rulesComplete || !cached.fingerprint.rulesComplete) return null;
+  if (live.isInMergeQueue || !live.checkSuitesComplete) return null;
+  if (live.commentCount > 100 || live.reviewCount > 100 || live.threadCount > 20) return null;
+  if (live.hasMultiCommentThreads || !live.rulesComplete) return null;
   if (!fingerprintsEqual(cached.fingerprint, live)) return null;
   if (
     !(await cachedReportSurvivesMergeabilityRefresh(

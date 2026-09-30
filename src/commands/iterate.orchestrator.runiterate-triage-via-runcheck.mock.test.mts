@@ -23,6 +23,7 @@ describe("runIterate — triage via runCheck", () => {
 
     expect(mockRunCheck).toHaveBeenCalledWith(
       expect.objectContaining({ autoMinimizeSuppressed: false }),
+      expect.objectContaining({ readStackTopology: expect.any(Function) }),
     );
   });
 
