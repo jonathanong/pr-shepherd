@@ -23,7 +23,25 @@ own.
 
 **Sonnet 5.5, low effort, opus judge, `runs: 3` (2026-09-30)**
 
-_Pending: the first run against the 23-case suite has not been recorded yet._
+Mean Δ **+0.09** over all 23 cases, **+0.13** over the 14 single-PR cases. The
+skill fired in **64/66** runs where it should have, and **0/3** on the unrelated
+question.
+
+| Case                                 | Δ         | with → without  |
+| ------------------------------------ | --------- | --------------- |
+| `01-ci-in-progress-no-watch`         | **+1.00** | 1.00 → **0.00** |
+| `02-mark-ready-continue`             | **+0.50** | 0.83 → 0.33     |
+| `05-cancelled-must-rerun`            | **+0.50** | 1.00 → 0.50     |
+| `10-external-check-no-handoff`       | **+0.33** | 1.00 → 0.67     |
+| `22-stack-auto-ready-disabled-probe` | **+0.27** | 1.00 → 0.73     |
+
+Without the plugin, the agent blocks on `gh run watch` in every run of `01`,
+which is still the most frequent failure in real transcripts.
+
+The stack cases (`14`–`22`) score 1.00 in both arms except `22`. The stack
+output's own `## Instructions` are complete enough that the model follows them
+unaided. Three cases score lower with the plugin; see
+[EVALS.md](EVALS.md#latest-full-results).
 
 ## Run it
 

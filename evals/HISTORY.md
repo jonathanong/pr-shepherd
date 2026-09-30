@@ -21,6 +21,11 @@ current results see [README.md](README.md). For the suite design see
   - a rebase instruction ignored ("pr-shepherd tells you to rebase. why didn't
     you follow?").
 - The generator was split into `lib.mjs` and `cases/*.mjs`.
+- First run: mean Δ +0.09 (23 cases), +0.13 over the 14 single-PR cases. The
+  stack cases sat at ceiling in both arms. See "Latest full results" in
+  [EVALS.md](EVALS.md).
+- Effort check: `CLAUDE_CODE_EFFORT_LEVEL` in the shell moved agent cost +16%
+  from low to high on case `16`, so unlike `CLAUDE_EFFORT` it appears live.
 - Every earlier result below predates this change.
 
 ## Before 2026-09-30

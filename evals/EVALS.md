@@ -80,6 +80,46 @@ Absence of a behavior is graded by an LLM rubric: the framing asks the agent to
 state what it chose not to do, and a regex would punish the string rather than
 the behavior (see the calibration log in HISTORY.md).
 
+## Latest full results
+
+Sonnet 5.5, `CLAUDE_CODE_EFFORT_LEVEL=low`, opus judge, `runs: 3`, 2026-09-30.
+It took 732s at `-j 4` and cost $15.87. No `grader threw`, no run errors.
+
+| Case | with | without | Δ     | Case | with | without | Δ     |
+| ---- | ---- | ------- | ----- | ---- | ---- | ------- | ----- |
+| `01` | 1.00 | 0.00    | +1.00 | `13` | 1.00 | 1.00    | 0.00  |
+| `02` | 0.83 | 0.33    | +0.50 | `14` | 1.00 | 1.00    | 0.00  |
+| `03` | 1.00 | 1.00    | 0.00  | `15` | 1.00 | 1.00    | 0.00  |
+| `04` | 0.67 | 1.00    | −0.33 | `16` | 1.00 | 1.00    | 0.00  |
+| `05` | 1.00 | 0.50    | +0.50 | `17` | 1.00 | 1.00    | 0.00  |
+| `06` | 0.60 | 0.73    | −0.13 | `18` | 1.00 | 1.00    | 0.00  |
+| `07` | 0.56 | 0.56    | 0.00  | `19` | 1.00 | 1.00    | 0.00  |
+| `08` | 1.00 | 1.00    | 0.00  | `20` | 1.00 | 1.00    | 0.00  |
+| `09` | 1.00 | 1.00    | 0.00  | `21` | 1.00 | 1.00    | 0.00  |
+| `10` | 1.00 | 0.67    | +0.33 | `22` | 1.00 | 0.73    | +0.27 |
+| `11` | 0.67 | 0.67    | 0.00  | `23` | 1.00 | 0.89    | +0.11 |
+| `12` | 0.83 | 1.00    | −0.17 |      |      |         |       |
+
+Skill trigger: 64/66 on positive cases (`09` fired 1/3). Over-trigger (`13`):
+0/3.
+
+What the numbers say:
+
+- **Stack cases are at ceiling in both arms.** The stack overview's own
+  `## Instructions` ("Owned layers can proceed concurrently", "Do not rewrite a
+  queued layer", the printed `gh stack merge`) are enough on their own. That is
+  a result about the CLI output, not the skill. Keep the cases as regression
+  guards; a Δ there needs output that leans on a playbook.
+- **`04` (−0.33) is a playbook gap, not noise.** The CI-triage playbook says to
+  rerun "when the excerpt shows a transient failure" and to fix real failures.
+  It is silent on the original attempt when the excerpt has no usable evidence
+  (fixture `61` shows only `exit code 1`). The with-arm filled the gap with "no
+  evidence of a code defect → run the authorized rerun once". Next step 11.
+- **`06` (−0.13) and `12` (−0.17) are inside the ±0.44 noise floor.** In the
+  `12` failures the agent opened the external provider page "to confirm". That
+  is the behavior the case targets, so watch it across runs.
+- **`01` is the clean signal again:** without-arm 0.00, with-arm 1.00.
+
 ## Grounding in real traffic
 
 Cases 01–12 came from ~4,700 real pr-shepherd invocations in Claude (1,742
@@ -189,3 +229,9 @@ variable in a case's `env:` block fails every run: the runner accepts only
    version, so the `name@version` check passed on a changed treatment.
 10. **Wire the sonnet tier into CI** for PRs touching
     `plugins/pr-shepherd/skills/**`.
+11. **Close the CI-triage gap that `04` exposed.** Say what to do on the
+    original attempt when the excerpt has no usable evidence. Then rerun `04`
+    at `runs: 6`.
+12. **Make a stack case discriminate.** Every stack case but `22` is at
+    ceiling. Look for a stack state whose rule is only in the "Stack merge" or
+    "Branch update" playbook rather than printed in the output.
