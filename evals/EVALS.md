@@ -36,7 +36,7 @@ Layout:
 - `lib.mjs`: the framing, grader helpers and writer.
 - `cases/core.mjs`: cases 01–13.
 - `cases/stack.mjs`: cases 14–22 and 24.
-- `cases/recent.mjs`: case 23.
+- `cases/recent.mjs`: cases 23, 25 and 26.
 
 Case numbers are stable. Add new cases at the end instead of renumbering.
 
