@@ -46,6 +46,8 @@ import {
   mockWriteStallState,
 } from "../../test-helpers/commands/iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
+import type { CheckExecutionContext } from "./check-execution-context.mts";
+import type { RawSummaryPr } from "../github/poll-summary-raw.mts";
 
 registerIterateHooks();
 
@@ -259,6 +261,30 @@ describe("runIterate — cancel", () => {
       alreadyElapsed: false,
     });
     expect(mockClearReadyDelay).toHaveBeenCalledWith(42, "owner", "repo");
+  });
+
+  it("writes a v1 receipt from same-request evidence without standalone summary reads", async () => {
+    const report = makeReport({
+      status: "READY",
+      headSha: "head-1",
+      baseRefOid: "base-1",
+      mergeStatus: { ...makeReport().mergeStatus, mergeRequirements: stackRequirements() },
+    });
+    mockRunCheck.mockImplementation(async (_opts: unknown, context?: CheckExecutionContext) => {
+      context?.setReceiptSummary({ ...rawReadySnapshot, number: 42 } as RawSummaryPr);
+      return report;
+    });
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+
+    expect((await runIterate(makeOpts())).action).toBe("cancel");
+    expect(mockFetchRawSummaryPr).not.toHaveBeenCalled();
+    expect(mockWriteReadyReceipt).toHaveBeenCalledWith(
+      expect.objectContaining({ version: 1, readinessFingerprint: "fingerprint-1" }),
+    );
   });
 
   it("writes the receipt before routing a ready stacked merge request", async () => {

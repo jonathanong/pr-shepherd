@@ -30,6 +30,12 @@ const POLL_SUMMARY_CHECK_CONTEXTS_FRAGMENT = gql("poll-summary-check-contexts.gq
 /** Compact per-PR fields shared by explicit-list and native-stack summary queries. */
 export const POLL_SUMMARY_FRAGMENT = `${gql("ref-rules.gql")}\n${POLL_SUMMARY_CHECK_CONTEXTS_FRAGMENT}\n${gql("poll-summary-fragment.gql")}`;
 
+/** Exact compact summary sibling only when a one-PR READY receipt needs evidence. */
+export const BATCH_PR_RECEIPT_QUERY = `${POLL_SUMMARY_CHECK_CONTEXTS_FRAGMENT}\n${gql("poll-summary-fragment.gql")}\n${BATCH_PR_QUERY.replace(
+  "    pullRequest(number: $pr) {",
+  "    receiptSummary: pullRequest(number: $pr) { ...PollSummaryPr }\n    pullRequest(number: $pr) {",
+)}`;
+
 /** Trunk branch rules plus how far `headRef` is behind that branch. */
 export const REF_RULES_QUERY = `${gql("ref-rules.gql")}\n${gql("ref-rules-query.gql")}`;
 

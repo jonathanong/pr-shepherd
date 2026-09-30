@@ -80,7 +80,12 @@ export async function runCheck(
     if (cached) return refreshCachedUnreported(cached, repo, context);
   }
   const paginateApprovedReviews = config.iterate.minimizeApprovals;
-  const result = await fetchPrBatch(prNumber, repo, { paginateApprovedReviews });
+  const includeReceiptSummary = (await context?.wantsReceiptSummary(prNumber, repo)) ?? false;
+  const result = await fetchPrBatch(prNumber, repo, {
+    paginateApprovedReviews,
+    ...(includeReceiptSummary && { includeReceiptSummary: true }),
+  });
+  context?.setReceiptSummary(result.receiptSummary ?? null);
   let batchData = result.data;
   const unknownRefresh = await refreshUnknownMergeability(prNumber, repo, batchData);
   batchData = unknownRefresh.batchData;
@@ -407,6 +412,14 @@ export async function runCheck(
         batchData.reviewSummaries.find((review) => review.id === id)?.viewerCanMinimize === true,
     ),
   };
+  if (
+    opts.autoMinimizeSuppressed === true &&
+    (authorizedPartition.ruleAutoResolveThreadIds.length > 0 ||
+      authorizedPartition.ruleAutoResolveCommentIds.length > 0 ||
+      authorizedPartition.ruleAutoResolveReviewSummaryIds.length > 0)
+  ) {
+    context?.invalidateReceiptSummary();
+  }
   const {
     threadIds: authorizedRuleAutoResolveThreadIds,
     commentIds: ruleAutoResolveCommentIds,

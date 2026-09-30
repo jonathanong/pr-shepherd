@@ -11,6 +11,7 @@ export interface RawBatchResponse {
     squashMergeAllowed?: boolean;
     rebaseMergeAllowed?: boolean;
     pullRequest: RawPr | null;
+    receiptSummary?: import("./poll-summary-raw.mts").RawSummaryPr | null;
   } | null;
 }
 
@@ -195,7 +196,7 @@ export type RawContextNode =
       startedAt?: string | null;
       title: string | null;
       summary: string | null;
-      annotations?: { nodes: Array<{ message: string }> };
+      annotations?: { totalCount?: number; nodes: Array<{ message: string }> };
       checkSuite: {
         createdAt?: string;
         updatedAt?: string;

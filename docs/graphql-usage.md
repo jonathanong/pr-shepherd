@@ -12,7 +12,7 @@ A user PAT is **5,000 points / hour**. One-PR polling is a small slice of that. 
 
 [GitHub's formula](https://docs.github.com/en/graphql/overview/rate-limits-and-query-limits-for-the-graphql-api): add up the connection-requests in the query AST (nested `first`/`last` multiply by the parent connection size; assume every connection fills its limit), divide by 100, and round to the nearest integer. The minimum is 1.
 
-`nodeCount` is the separate 500,000-node cap. A BatchPr-shaped query measured `nodeCount` 2,871 and `cost` 1.
+`nodeCount` is the separate 500,000-node cap. An ordinary BatchPr-shaped query measured `nodeCount` 2,871 and `cost` 1. The conditional READY-receipt variant selects an exact compact summary sibling and can cost more.
 
 `annotations(first: 1)` nested under `contexts(last: 100)` is 100 connection-requests per rollup. GitHub prices the `last`, including when the rollup is empty. Two of those trees were about 2 points per PR once several PRs shared one query. The summary fragment no longer selects them.
 
@@ -60,7 +60,9 @@ Supplements on a full snapshot, usually 1 point each:
 - `PollStackTopology` — every iterate tick of a non-root native-stack layer, including fingerprint hits. One request per 50 entries.
 - `UpperLayerConflictTarget` — a conflicting upper native-stack layer.
 - `CheckBlockerPull` or `CheckBlockerIssue` — one request per distinct blocker while a matching check is failing.
-- `fetchRawSummaryPr` — 1 point when writing or revalidating a READY receipt, and an annotation probe only when that snapshot otherwise looks ready. This is a second snapshot on top of `BatchPr`.
+- READY receipt evidence — when an existing receipt or elapsed ready-delay marker makes it likely to be needed, `BatchPr` selects the exact `PollSummaryPr` sibling and copies complete annotation totals from the batch check pages. An ordinary tick retains the original query. A resource-limited combined document or a field error confined to the optional sibling retries plain `BatchPr`. Incomplete or mismatched evidence, or a review mutation after the batch, uses `fetchRawSummaryPr` and its annotation probe.
+
+On a measured ready PR (#481), the former path was three GraphQL requests and three points: `BatchPr` cost 1, standalone `PollSummaryPr` cost 1, and annotation probe cost 1. The combined request with annotation totals cost 2 points, so the same evidence took one request and two points. A wider or paginated PR can differ; `--verbose` measured cost remains authoritative.
 
 `BulkApply` runs when iterate minimizes or resolves in-process. Mutations are unmeasured, in chunks of 10.
 
@@ -97,7 +99,7 @@ One-PR `BatchPr` and `PrFingerprint` stay at the 1-point floor. Fewer review con
 
 2. **Done: read reply threads by id in `apply review`.** [`runResolveMutate`](../src/commands/resolve-mutate.mts) now uses `nodes(ids:)` for supplied reply threads, avoiding CI, annotation probes, and approved-review pagination. A one-page full batch and one reply batch can both cost 1 point; the savings are in payload and extra pages on larger PRs.
 
-3. **Reuse the `BatchPr` snapshot for READY receipts.** `recordReadyReceipt` and `revalidateReadyReceipt` in [`src/commands/iterate/index.mts`](../src/commands/iterate/index.mts) still call `fetchRawSummaryPr` after `BatchPr`. That second snapshot is now 1 point instead of 3. Folding the receipt fingerprint into `BatchPr` would remove it. Not in this change.
+3. **Done: reuse same-request evidence for READY receipts.** [`recordReadyReceipt` and `revalidateReadyReceipt`](../src/commands/iterate/index.mts) consume a complete conditional summary sibling when available, keeping the v1 fingerprint and safety checks. They use the original standalone summary and annotation probe when that evidence cannot be trusted.
 
 4. **Leave fingerprint-skip widening for later.** A multi-comment thread forces `BatchPr` on every continuation tick ([`tryReuseFingerprintReport`](../src/commands/check-fingerprint.mts)). Two points a minute is about 120 points/hour. Not in this change.
 

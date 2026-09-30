@@ -6,6 +6,12 @@ import { POLL_SUMMARY_ANNOTATION_PROBE_QUERY } from "./queries.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 
 const PROBE_UNAVAILABLE = Symbol.for("prShepherd.annotationProbeUnavailable");
+const COMPLETE_FROM_BATCH = new WeakSet<RawSummaryPr>();
+
+/** Annotation totals copied from the same full-snapshot request; no follow-up probe is needed. */
+export function markReadyAnnotationProbeComplete(pr: RawSummaryPr): void {
+  COMPLETE_FROM_BATCH.add(pr);
+}
 
 interface ProbeNode {
   __typename: string;
@@ -43,6 +49,7 @@ export async function hydrateReadyAnnotationProbe(
   repo: RepoInfo,
   review: { actionable?: number; incomplete?: true },
 ): Promise<void> {
+  if (COMPLETE_FROM_BATCH.has(pr)) return;
   const checks = summarizePollSummaryChecks(pr);
   if (!isCurrentSummaryReady(pr, checks, review)) return;
   if (!(await hydrateCommitAnnotations(pr, repo))) {
