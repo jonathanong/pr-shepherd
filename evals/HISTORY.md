@@ -50,7 +50,7 @@ and more useful in the judge seat.
 | `08-mergeability-diagnosis`    | +0.13     | 1.00 → 0.87     |
 
 The top two are the highest-frequency real failures in the transcript corpus
-(below). On both the baseline scores **0.00** and the plugin takes it to ~1.0.
+(see "Grounding in real traffic" in [EVALS.md](EVALS.md)). On both the baseline scores **0.00** and the plugin takes it to ~1.0.
 
 Four cases held a consistent positive Δ across four independent runs (sonnet and
 opus, two rounds each): `01`, `02`, `05`, `10`. Those are the load-bearing

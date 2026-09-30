@@ -71,7 +71,7 @@ third arm.
 | `18-stack-queued-lower-waits`          | `91`    | Never rewrite a queued layer                                 |
 | `19-stack-merge-prefix`                | `90`    | `gh stack merge <prefix>`, shepherd the stale tip, rerun     |
 | `20-stack-closed-parent-escalate`      | `100`   | Closed parent: stop and ask, don't pick a repair             |
-| `21-stack-all-terminal-stop`           | `87`    | Every layer merged: stop                                     |
+| `21-stack-all-terminal-stop`           | `87`    | Every layer merged: stop (ceiling guard; flat Δ expected)    |
 | `22-stack-auto-ready-disabled-probe`   | `104`   | Probe first; `gh pr ready` only on the described `WAIT`      |
 | `23-behind-base-rebase-hint`           | `73`    | Rebase `--force-with-lease` before pushing the review fix    |
 
@@ -94,7 +94,8 @@ transcripts. By frequency:
 3. **Halting on a non-terminal action** (`MARK_READY`, `FIX_CODE`). → `02`
 4. **Treating `[rerun authorized]` as a recommendation.** → `04`
 
-Stack cases 14–23 came from agent-blackboard session history:
+Stack cases 14–22 and the rebase case 23 came from agent-blackboard session
+history:
 
 - **Layers nobody shepherded** ("why isn't anyone shepherding 9673 and 9677",
   "i think you lost track of your work"). → `15`, `16`

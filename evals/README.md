@@ -3,8 +3,9 @@
 **Does an agent act correctly on pr-shepherd's output, and would it without the
 plugin?**
 
-23 cases replay real recorded pr-shepherd output from the states agents most
-often get wrong in real transcripts:
+22 cases replay real recorded pr-shepherd output from the states agents most
+often get wrong in real transcripts. A 23rd case checks that the skill stays
+out of unrelated GitHub questions.
 
 - **CI:** blocking on `gh run watch` instead of letting Shepherd poll, rerunning
   real failures, fetching pages the output already summarized.

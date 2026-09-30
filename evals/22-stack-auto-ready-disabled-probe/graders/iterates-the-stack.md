@@ -11,8 +11,10 @@ A stack overview whose heading carries neither `[CANCEL]` nor `[ESCALATE]` is
 non-terminal: the agent is expected to continue without being asked.
 
 Passing responses state that, once the listed one-PR sessions have run (or while
-they run), they rerun the stack command. Describing how the NEXT tick will be
-handled is extra detail, not a defect.
+they run), they rerun the stack command. Where the output lists no one-PR work
+(a stack-level wait), rechecking at the polling cadence with the same stack
+command is correct and should pass. Describing how the NEXT tick will be handled
+is extra detail, not a defect.
 
 Failing responses do any of: end after the one-PR sessions without rerunning the
 stack command; ask the user whether to continue; present the stack as finished;

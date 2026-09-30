@@ -217,6 +217,8 @@ behalf.`,
   },
 
   {
+    // Expected at ceiling in both arms. It guards against a skill change that
+    // makes the with-arm keep polling a finished stack, so a flat Δ is the pass.
     slug: "21-stack-all-terminal-stop",
     fixture: "87-aggregate-stack-all-terminal",
     shape: stackShape(repoPr(44)),
