@@ -29,8 +29,8 @@ _Pending: the first run against the 23-case suite has not been recorded yet._
 
 ```sh
 node evals/generate.mjs
-claude plugin eval . --model claude-sonnet-5-5 --ablation with-without \
-  --judge-model opus --no-publish
+CLAUDE_CODE_EFFORT_LEVEL=low claude plugin eval . --model claude-sonnet-5-5 \
+  --ablation with-without --judge-model opus --no-publish
 ```
 
 ## More

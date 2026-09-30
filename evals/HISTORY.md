@@ -9,9 +9,10 @@ current results see [README.md](README.md). For the suite design see
 ## 2026-09-30: Sonnet 5.5 at low effort, stack cases
 
 - The agent model moved from `claude-opus-5` in the case frontmatter (overridden
-  per tier by `--model`) to `claude-sonnet-5-5`. Effort is now requested through
-  the case's `env:` block (`CLAUDE_CODE_EFFORT_LEVEL: low`) instead of the inert
-  ambient `CLAUDE_EFFORT` (see "Effort" below).
+  per tier by `--model`) to `claude-sonnet-5-5`. Effort is now requested with
+  `CLAUDE_CODE_EFFORT_LEVEL=low` in the operator's shell instead of the inert
+  ambient `CLAUDE_EFFORT` (see "Effort" below). A case's `env:` block cannot
+  carry it: the runner allows only `EVAL_*` keys there.
 - Added cases `14`–`22` (native stacked PRs) and `23` (behind-base rebase hint).
   The stack failures come from agent-blackboard session history:
   - layers left unshepherded ("why isn't anyone shepherding 9673 and 9677"),

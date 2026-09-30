@@ -9,8 +9,8 @@ Current numbers are in [README.md](README.md). Past runs and calibration are in
 ```sh
 node evals/generate.mjs        # regenerate cases — edit the generator, never a case
 
-claude plugin eval . --model claude-sonnet-5-5 --ablation with-without \
-  --judge-model opus --no-publish
+CLAUDE_CODE_EFFORT_LEVEL=low claude plugin eval . --model claude-sonnet-5-5 \
+  --ablation with-without --judge-model opus --no-publish
 
 node evals/analyze.mjs <results-dir-a> <results-dir-b>   # compare two tiers
 ```
@@ -20,11 +20,11 @@ node evals/analyze.mjs <results-dir-a> <results-dir-b>   # compare two tiers
   the skill.
 - **The judge stays on opus and off the agent tier.** A judge that is also the
   agent model favors its own answers.
-- **Effort is set per case, not on the command line.** `plugin eval` has no
-  `--effort` flag and ignores the ambient `CLAUDE_EFFORT` (see HISTORY.md).
-  Every case carries `env: { CLAUDE_CODE_EFFORT_LEVEL: low }`. That variable is
-  on the runner's `CLAUDE_CODE_*` passthrough allowlist. Whether it actually
-  changes effort is under "Effort passthrough" below.
+- **Effort comes from the operator's shell.** `plugin eval` has no `--effort`
+  flag and ignores the ambient `CLAUDE_EFFORT` (see HISTORY.md). A case's
+  `env:` block may only set `EVAL_*` keys; the runner rejects anything else.
+  So prefix the command with `CLAUDE_CODE_EFFORT_LEVEL=low`. Whether that
+  actually changes effort is under "Effort passthrough" below.
 - Results land in `evals/results/`, which is gitignored. Before trusting an
   anomalous Δ, check `aggregate-result.json` for `grader threw`.
 - CI regenerates the cases and fails on any diff, so a snapshot change cannot
@@ -147,10 +147,19 @@ anyway, because its tools hit a 60s timeout.
 
 ## Effort passthrough
 
-Unverified. The check: run one case with `CLAUDE_CODE_EFFORT_LEVEL` at `low` and
-again at `high`, then compare `cost` in `aggregate-result.json`. A difference
-within ~3% is the signature of an inert variable (that was the `CLAUDE_EFFORT`
-finding). Record the result here.
+`CLAUDE_CODE_EFFORT_LEVEL` in the operator's shell appears to reach the child
+runs. Case `16`, 3 runs per level, sonnet 5.5, agent cost only (judge excluded):
+
+| Level  | Agent cost / run   | Duration / run | Score |
+| ------ | ------------------ | -------------- | ----- |
+| `low`  | $0.0845            | ~22s           | 1.00  |
+| `high` | $0.0979 (**+16%**) | ~26s           | 1.00  |
+
+The inert `CLAUDE_EFFORT` moved cost by under 3% (see HISTORY.md). A 16% gap on
+a short, ceiling-scoring case is consistent with a live setting, but n=3 on one
+case is not proof. Rerun this check whenever the runner changes. Setting the
+variable in a case's `env:` block fails every run: the runner accepts only
+`EVAL_*` keys there.
 
 ## Next steps
 

@@ -12,11 +12,9 @@ const SNAPSHOTS = join(REPO_ROOT, "test-cases", "snapshots");
 const MODEL = "claude-sonnet-5-5";
 const RUNS = 3;
 
-// `plugin eval` has no effort flag or frontmatter key, but it forwards a case's
-// `env:` block and passes `CLAUDE_CODE_*` through to child runs. The previously
-// tried ambient `CLAUDE_EFFORT` is not on that allowlist and was inert. Whether
-// this variable actually moves reasoning effort is recorded in EVALS.md.
-const ENV = { CLAUDE_CODE_EFFORT_LEVEL: "low" };
+// Effort is not set here: a case's `env:` block may only carry `EVAL_*` keys,
+// and `plugin eval` has no effort flag. Export `CLAUDE_CODE_EFFORT_LEVEL` in the
+// operator's shell instead (see EVALS.md).
 
 // No tool can accomplish these cases; the written plan is the deliverable. The
 // read-only default needs no operator grant, which is also what keeps the suite
@@ -196,8 +194,6 @@ export function writeCase(spec) {
     `timeout_seconds: 300`,
     `allowed_tools: ${ALLOWED_TOOLS}`,
     `tags: [${spec.tags.join(", ")}]`,
-    `env:`,
-    ...Object.entries(ENV).map(([k, v]) => `  ${k}: ${v}`),
     `append_system_prompt: |`,
     ...append.split("\n").map((l) => (l ? `  ${l}` : "")),
     "---",
