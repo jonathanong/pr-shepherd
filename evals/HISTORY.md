@@ -25,7 +25,10 @@ current results see [README.md](README.md). For the suite design see
   Claude, Codex, Cursor and Grok transcripts. The skill and `AGENTS.md` now
   allow a `--force-with-lease` push of your own rebased PR head; before, every
   force-push was out of scope, and agents merged `main` in or asked first. `26`
-  scored Δ +0.89; `23` (rubric tightened) and `25` sat at ceiling.
+  first scored Δ +0.89, but that measured a skill line prescribing rebase.
+  After review moved the rebase-vs-merge choice back to the repository's
+  convention (#492) and the prompt stated it, `26` scored +0.11 (noise). `23`
+  (rubric tightened) and `25` sat at ceiling.
 - The generator was split into `lib.mjs` and `cases/*.mjs`.
 - First run: mean Δ +0.09 (23 cases), +0.13 over the 14 non-stack cases. The
   stack cases sat at ceiling in both arms. See "Latest full results" in

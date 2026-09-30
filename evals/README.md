@@ -54,10 +54,6 @@ Where the rule lives only in a playbook, the plugin matters. On `24`, a missing
 `gh stack` extension, Δ is **+0.50**: without the plugin, the agent offers to
 merge each layer by hand.
 
-The conflicts case `26` shows the largest skill-only effect: Δ **+0.89**.
-Without the plugin, the agent merges `main` in to avoid a force-push; the skill
-tells it to rebase and push `--force-with-lease` without asking.
-
 In this run, three cases scored lower with the plugin. `04` exposed a gap in
 the CI-triage playbook. After the fix it scores +0.25 at `runs: 6`. `06` and
 `12` are within noise. See [EVALS.md](EVALS.md#latest-full-results).

@@ -84,9 +84,15 @@ did not ask for a merge).`,
     // rebases", "why didn't you just rebase main and push?", "why did you make a
     // duplicate PR? you could've just rebased it". Rebasing your own PR head and
     // pushing --force-with-lease is in scope; bare --force is not.
+    // Rebase-vs-merge is the repository's convention, not the skill's (the CLI
+    // only relays it via iterate.behindBaseHint, #492), so the prompt states it.
+    // What the skill adds is permission: lease-push your own head without asking.
     slug: "26-conflicts-rebase-without-asking",
     fixture: "27-fix-code-conflicts",
-    shape: shapeA,
+    shape: (fixture) => `This repository's AGENTS.md says: "Keep a linear history. Update a PR branch by
+rebasing it onto its base, never by merging the base in."
+
+${shapeA(fixture)}`,
     tags: ["fix-code", "conflicts"],
     graders: {
       "force-with-lease": regex(String.raw`push[^\n]*--force-with-lease`),

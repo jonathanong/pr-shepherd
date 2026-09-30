@@ -76,7 +76,7 @@ third arm.
 | `23-behind-base-rebase-hint`           | `73`    | Rebase `--force-with-lease` before pushing the review fix     |
 | `24-stack-merge-missing-extension`     | `97`    | Missing `gh stack`: install it, don't merge per layer         |
 | `25-multi-pr-cancel-is-per-pr`         | `03`    | One PR's `CANCEL` ends only its loop; keep shepherding #43    |
-| `26-conflicts-rebase-without-asking`   | `27`    | Conflicts: rebase, `--force-with-lease`, don't ask first      |
+| `26-conflicts-rebase-without-asking`   | `27`    | Conflicts under a rebase convention: lease-push, don't ask    |
 
 Presence of a specific token is graded by regex (`gh stack merge 511`).
 Absence of a behavior is graded by an LLM rubric: the framing asks the agent to
@@ -143,18 +143,34 @@ numbers above.
 
 Targeted runs for the cases from the second transcript pass.
 
-| Case | with | without | Δ         | Note                                                  |
-| ---- | ---- | ------- | --------- | ----------------------------------------------------- |
-| `23` | 1.00 | 1.00    | 0.00      | rubric now also fails "asks before rebasing"; ceiling |
-| `25` | 1.00 | 1.00    | 0.00      | ceiling even framed as a background-task notice       |
-| `26` | 1.00 | 0.11    | **+0.89** | new; the rebase rule lives only in the skill          |
+| Case | with | without | Δ     | Note                                                  |
+| ---- | ---- | ------- | ----- | ----------------------------------------------------- |
+| `23` | 1.00 | 1.00    | 0.00  | rubric now also fails "asks before rebasing"; ceiling |
+| `25` | 1.00 | 1.00    | 0.00  | ceiling even framed as a background-task notice       |
+| `26` | 1.00 | 0.89    | +0.11 | inside noise once the prompt states the convention    |
 
-On `26`, every without-arm run merged `main` into the branch "so the push needs
-no force-push", which is the transcript failure. The fixture's instructions
-never say "rebase"; only the skill's `--force-with-lease` line does. On `23` the
-output prints the rebase hint, so both arms follow it. `25`'s real failure
-comes from long multi-PR sessions losing track, which a single-turn case cannot
-reproduce; it stays as a regression guard.
+`26` went through three versions, and the first number was misleading:
+
+1. The skill said "when behind or conflicting, rebase and `--force-with-lease`".
+   Δ **+0.89**: every without-arm run merged `main` in "so the push needs no
+   force-push".
+2. Review pointed out that this is routing keyed on CLI output, and that
+   rebase-vs-merge is the repository's convention, which the CLI relays via
+   `iterate.behindBaseHint` (on conflicts too, once #492 lands). The skill line
+   became a permission only: lease-pushing your own rebased head needs no
+   confirmation. The with-arm then chose merge in 2 of 3 runs (0.78 vs 0.11,
+   Δ +0.67; every with-arm miss was the "merge instead of rebase" clause), and
+   no with-arm run asked first.
+3. The prompt now states the convention ("rebase, never merge the base in").
+   Both arms rebase and lease-push; one without-arm run would still "confirm
+   with you first". Δ +0.11.
+
+So the +0.89 measured the rebase prescription, not the permission. With the
+convention given, Sonnet 5.5 already rebases and lease-pushes unaided. `26`
+stays as a regression guard for "ask before rebasing". On `23` the output
+prints the rebase hint, so both arms follow it. `25`'s real failure comes from
+long multi-PR sessions losing track, which a single-turn case cannot
+reproduce; it stays as a regression guard too.
 
 ### Sonnet 5 vs Sonnet 5.5
 

@@ -19,6 +19,9 @@ append_system_prompt: |
   you decide NOT to take an action that the output appears to offer, say so
   explicitly and say why.
 ---
+This repository's AGENTS.md says: "Keep a linear history. Update a PR branch by
+rebasing it onto its base, never by merging the base in."
+
 Shepherd https://github.com/owner/repo/pull/42 through to a terminal state. I already ran the first tick —
 here is what it returned. Take it from there.
 

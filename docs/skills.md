@@ -17,7 +17,7 @@ Three skills ship for Claude Code, Codex, and Grok.
 - On a request to make, create, or open a PR: non-force push the reviewed in-scope commits, then create the PR.
 - Do not ask for a separate confirmation because the push publishes those commits.
 - A skill cannot grant host permissions. Unattended approval comes from a trusted command rule or host policy.
-- When Shepherd reports the branch is behind or conflicts with its base, rebase your own PR head onto that base and push with `--force-with-lease`. Do not ask first: that push is part of this workflow. For a native stack layer, follow the printed stack route instead (Branch update playbook); never push one layer alone.
+- Rebasing your own PR head onto its base and pushing it with `--force-with-lease` is also part of this workflow. Do not ask first.
 - Bare `--force`, pushes to any other branch, remote or credential changes, unrelated changes, and ambiguous targets stay outside this workflow.
 - Accept a bare number, `owner/repo#N`, or a GitHub PR URL.
 - A qualified reference can name a fork or upstream repository. This checkout supplies git, config, and rules.
@@ -62,6 +62,7 @@ After `## Instructions`:
 - Run an emitted `[MERGE]` command before the next invocation.
 - A quota warning can return `WAIT` or `MARK_READY` to change cadence. That is non-terminal.
 - `[CANCEL]` ends polling. Only `[ESCALATE]` hands work to a human.
+- A one-PR `[CANCEL]` or `[ESCALATE]` ends only that PR's loop. When separate loops run for several PRs, keep every other loop running until it is terminal too.
 - Pass `--merge`, or accept a literal `--merge` argument, to forward merge intent to the CLI or MCP.
 - An MCP tick repeats the same `iterate` call. It does not switch back to a CLI that was unavailable.
 
@@ -81,7 +82,7 @@ User                    Active Goal             pr-shepherd
  |                          |-- pr-shepherd <PR> --until-terminal --> |
  |  [if merge/quota warning]|-- follow instructions  |
  |                          |-- pr-shepherd <PR> --until-terminal --> |
- |  [if cancel/escalate]    |   goal ends            |
+ |  [if cancel/escalate]    |   this PR's loop ends  |
 ```
 
 - A request to merge, land, or enqueue a selected PR or native stack sets `--merge` even without the flag.
@@ -112,7 +113,7 @@ Use `pr-shepherd` inside a `/goal`; the other skills are one-shot:
 
 - The goal loop handles recurrence.
 - The skill prints the full result and follows its plan.
-- `[CANCEL]` and `[ESCALATE]` stop the goal.
+- `[CANCEL]` and `[ESCALATE]` stop that PR's loop. The goal ends when every PR it covers is terminal.
 
 ## Codex
 
@@ -174,7 +175,7 @@ Use the skill from the slash menu:
 
 - The session owns recurrence.
 - The skill prints the full result and follows its plan.
-- `[CANCEL]` and `[ESCALATE]` stop the work.
+- `[CANCEL]` and `[ESCALATE]` stop that PR's loop. The work ends when every PR it covers is terminal.
 
 ## Competing PR babysitters
 
