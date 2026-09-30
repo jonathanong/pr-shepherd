@@ -26,11 +26,15 @@ import {
   mockWriteReadyReceipt,
   makeOpts,
   makeReport,
+  makeReview,
+  mockAutoMinimizeComments,
   mockRunCheck,
   mockClearReadyDelay,
   mockUpdateReadyDelay,
 } from "../../test-helpers/commands/iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
+import type { CheckExecutionContext } from "./check-execution-context.mts";
+import type { RawSummaryPr } from "../github/poll-summary-raw.mts";
 
 registerIterateHooks();
 
@@ -94,6 +98,37 @@ beforeEach(() => {
 });
 
 describe("runIterate — current stack READY receipt", () => {
+  it("falls back to a fresh summary when the same-request hint names another head", async () => {
+    mockRunCheck.mockImplementation(async (_opts: unknown, context?: CheckExecutionContext) => {
+      context?.setReceiptSummary({
+        number: 42,
+        headRefOid: "other-head",
+        baseRefOid: "base-1",
+      } as RawSummaryPr);
+      return stackReport();
+    });
+
+    expect((await runIterate(makeOpts())).action).toBe("cancel");
+    expect(mockFetchRawSummaryPr).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to a fresh read after an in-process review mutation", async () => {
+    mockRunCheck.mockImplementation(async (_opts: unknown, context?: CheckExecutionContext) => {
+      context?.setReceiptSummary({
+        number: 42,
+        headRefOid: "head-1",
+        baseRefOid: "base-1",
+      } as RawSummaryPr);
+      return stackReport({
+        reviewSummaries: [makeReview("PRR_BOT", "copilot-pull-request-reviewer", "overview")],
+      });
+    });
+
+    expect((await runIterate(makeOpts())).action).toBe("cancel");
+    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
+    expect(mockFetchRawSummaryPr).toHaveBeenCalledTimes(1);
+  });
+
   it("cancels a re-polled layer without restarting the ready-delay", async () => {
     mockRunCheck.mockResolvedValue(stackReport());
 

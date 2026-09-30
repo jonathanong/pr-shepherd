@@ -15,6 +15,8 @@ import { hashBody } from "../state/seen-comments.mts";
 import { formatIterateResult } from "../cli/iterate-formatter.mts";
 import { projectIterateLean } from "../cli/iterate-lean.mts";
 import { runCheck } from "./check.mts";
+import { createCheckExecutionContext } from "./check-execution-context.mts";
+import type { RawSummaryPr } from "../github/poll-summary-raw.mts";
 import { buildIterateBase } from "./iterate/base.mts";
 import type { ClassifyItem } from "../classify/types.mts";
 import type { IterateResult, ShepherdReport } from "../types.mts";
@@ -33,6 +35,35 @@ vi.mock("../classify/loader.mts", () => ({
 registerHooks();
 
 describe("runCheck — classification auto-minimize", () => {
+  it("invalidates prefetched receipt evidence before an authorized review mutation", async () => {
+    const candidate = { number: 42 } as RawSummaryPr;
+    const context = createCheckExecutionContext();
+    mockAutoMinimizeComments.mockResolvedValue({ minimized: ["c-bot"], errors: [] });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ comments: [botComment()] }),
+      receiptSummary: candidate,
+    });
+
+    await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: true }, context);
+
+    expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["c-bot"]);
+    expect(context.getReceiptSummary()).toBeNull();
+  });
+
+  it("retains prefetched evidence when the proposed mutation is unauthorized", async () => {
+    const candidate = { number: 42 } as RawSummaryPr;
+    const context = createCheckExecutionContext();
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ comments: [{ ...botComment(), viewerCanMinimize: false }] }),
+      receiptSummary: candidate,
+    });
+
+    await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: true }, context);
+
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
+    expect(context.getReceiptSummary()).toBe(candidate);
+  });
+
   it("self-minimizes suppressed auto-resolve pr-comments when enabled", async () => {
     mockAutoMinimizeComments.mockResolvedValue({ minimized: ["c-bot"], errors: [] });
     mockFetchPrBatch.mockResolvedValue({

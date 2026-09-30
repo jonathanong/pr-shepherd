@@ -32,6 +32,8 @@ import {
 } from "../../test-helpers/commands/iterate-test-support.mts";
 import { makeThread } from "../../test-helpers/commands/iterate-thread-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
+import type { CheckExecutionContext } from "./check-execution-context.mts";
+import type { RawSummaryPr } from "../github/poll-summary-raw.mts";
 
 registerIterateHooks();
 
@@ -92,6 +94,24 @@ beforeEach(() => {
 });
 
 describe("runIterate — one-PR READY receipt", () => {
+  it("revalidates an existing v1 receipt from complete same-request evidence", async () => {
+    mockRunCheck.mockImplementation(async (_opts: unknown, context?: CheckExecutionContext) => {
+      context?.setReceiptSummary({
+        number: 42,
+        state: "OPEN",
+        isDraft: false,
+        headRefOid: "head-1",
+        baseRefOid: "base-1",
+      } as RawSummaryPr);
+      return onePrReport();
+    });
+
+    const result = await runIterate(makeOpts({ merge: true }));
+
+    expect(result.action).toBe("merge");
+    expect(mockFetchRawSummaryPr).not.toHaveBeenCalled();
+  });
+
   it("merges a --merge rerun from a current receipt without waiting again", async () => {
     mockRunCheck.mockResolvedValue(onePrReport());
 

@@ -279,6 +279,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
                     title
                     summary
                     annotations(first: 1) {
+                      totalCount
                       nodes {
                         message
                       }

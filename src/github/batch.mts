@@ -1,6 +1,13 @@
 import { graphqlWithRateLimit, type RateLimitInfo, type RepoInfo } from "./client.mts";
 import { hydrateThreadCommentPages } from "./thread-comments.mts";
-import { BATCH_PR_QUERY } from "./queries.mts";
+import { BATCH_PR_QUERY, BATCH_PR_RECEIPT_QUERY } from "./queries.mts";
+import { prepareBatchReceiptEvidence } from "./batch-receipt-evidence.mts";
+import {
+  GitHubRequestError,
+  isRetryableGraphQlResourceLimit,
+  type GitHubGraphQlError,
+} from "./errors.mts";
+import { rateLimitKind } from "./rate-limit-kind.mts";
 import { parseRawPr } from "./batch-parsers.mts";
 import {
   parseCheckSuitesComplete,
@@ -14,6 +21,7 @@ import { paginateBatchConnections } from "./batch-page.mts";
 import { requireRawPr } from "./batch-response.mts";
 import { hydrateMergeQueueChecks } from "./merge-queue-checks.mts";
 import type { RawBatchResponse } from "./batch-raw-types.mts";
+import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import type { BatchPrData } from "../types.mts";
 import { fingerprintFromRaw, type PrFingerprint } from "./fingerprint.mts";
 
@@ -27,6 +35,8 @@ interface BatchResult {
   headCheckSuitesEmpty?: true;
   /** Actions workflow suites on the head, excluding apps that have no workflow run. */
   headWorkflowSuites?: WorkflowSuiteSnapshot[];
+  /** Internal READY-receipt evidence from the same request, if complete. */
+  receiptSummary?: RawSummaryPr;
 }
 
 interface FetchPrBatchOptions {
@@ -39,6 +49,19 @@ interface FetchPrBatchOptions {
    * request — so there's no need to conditionally omit the field itself.
    */
   paginateApprovedReviews?: boolean;
+  includeReceiptSummary?: boolean;
+}
+
+function onlyReceiptSummaryErrors(errors?: GitHubGraphQlError[]): boolean {
+  return (
+    !!errors?.length &&
+    errors.every(
+      (error) =>
+        Array.isArray(error.path) &&
+        error.path[0] === "repository" &&
+        error.path[1] === "receiptSummary",
+    )
+  );
 }
 
 /**
@@ -49,16 +72,50 @@ export async function fetchPrBatch(
   repo: RepoInfo,
   opts: FetchPrBatchOptions = {},
 ): Promise<BatchResult> {
-  const result = await graphqlWithRateLimit<RawBatchResponse>(BATCH_PR_QUERY, {
+  const variables = {
     owner: repo.owner,
     repo: repo.name,
     pr,
-  });
+  };
+  let result: Awaited<ReturnType<typeof graphqlWithRateLimit<RawBatchResponse>>>;
+  try {
+    result = await graphqlWithRateLimit<RawBatchResponse>(
+      opts.includeReceiptSummary ? BATCH_PR_RECEIPT_QUERY : BATCH_PR_QUERY,
+      variables,
+    );
+  } catch (error) {
+    if (
+      !opts.includeReceiptSummary ||
+      !(error instanceof GitHubRequestError) ||
+      rateLimitKind(error) !== null ||
+      !(
+        isRetryableGraphQlResourceLimit(error.graphqlErrors) ||
+        (error.status === 200 && onlyReceiptSummaryErrors(error.graphqlErrors))
+      )
+    )
+      throw error;
+    // Receipt evidence is optional; a resource-limited combined query or an
+    // error confined to its sibling must not prevent the ordinary snapshot.
+    result = await graphqlWithRateLimit<RawBatchResponse>(BATCH_PR_QUERY, variables);
+  }
 
   const raw = requireRawPr(result.data, pr, repo);
   const queueRateLimit = await hydrateMergeQueueChecks(raw, repo, result.rateLimit);
   const paged = await paginateBatchConnections(pr, repo, raw, opts, queueRateLimit);
   const threadPages = await hydrateThreadCommentPages(paged.threads, paged.rateLimit);
+  let receiptSummary: RawSummaryPr | null = null;
+  if (opts.includeReceiptSummary) {
+    try {
+      receiptSummary = await prepareBatchReceiptEvidence(
+        result.data.repository?.receiptSummary,
+        raw,
+        paged.checks,
+        repo,
+      );
+    } catch {
+      // Malformed supplemental evidence must not discard a complete BatchPr.
+    }
+  }
 
   const data = parseRawPr(
     raw,
@@ -84,6 +141,7 @@ export async function fetchPrBatch(
     ...(parseCheckSuitesComplete(raw) && { checkSuitesComplete: true }),
     ...(parseHeadCheckSuitesEmpty(raw) && { headCheckSuitesEmpty: true as const }),
     ...workflowSuites(raw),
+    ...(receiptSummary && { receiptSummary }),
   };
 }
 

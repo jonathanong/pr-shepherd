@@ -53,7 +53,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     );
   }
   const neverCancelRuns = opts.neverCancelRuns ?? config.actions.neverCancelRuns;
-  const checkContext = createCheckExecutionContext();
+  const checkContext = createCheckExecutionContext(readyDelaySeconds);
 
   const report = await runCheck(
     {
@@ -123,6 +123,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   // the apply command remains a working fallback instead of silently dropping it.
   let reviewSummaryIds = minimizeIds;
   if (selfMinimizeIds.length > 0) {
+    checkContext.invalidateReceiptSummary();
     const { minimized } = await autoMinimizeComments(selfMinimizeIds);
     const minimizedIds = new Set(minimized);
     const unminimized = selfMinimizeIds.filter((id) => !minimizedIds.has(id));
@@ -163,7 +164,12 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     !hasReadinessWork &&
     !activeMerge &&
     staleAncestry === null;
-  const receiptCurrent = await revalidateReadyReceipt(receiptKey, report, hasReadinessWork);
+  const receiptCurrent = await revalidateReadyReceipt(
+    receiptKey,
+    report,
+    hasReadinessWork,
+    checkContext,
+  );
   const headSha = report.headSha ?? "unknown";
   // The elapsed marker survives a hidden-comment acknowledgement tick and is
   // consumed only when this tick cancels or merges. A receipt that is still
@@ -310,7 +316,8 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   if (markReadyResult) return markReadyResult;
 
   if (readyState.shouldCancel && !report.mergeStatus.isDraft) {
-    const receiptWritten = receiptCurrent || (await recordReadyReceipt(receiptKey, report));
+    const receiptWritten =
+      receiptCurrent || (await recordReadyReceipt(receiptKey, report, checkContext));
     // Aggregate --stack routing trusts only a layer's receipt, so an unwritten
     // one keeps the elapsed marker and retries next tick. A one-PR receipt
     // only lets a rerun skip the wait, so its failure never changes the action.
@@ -387,6 +394,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
 async function recordReadyReceipt(
   key: { owner: string; repo: string; pr: number },
   report: Awaited<ReturnType<typeof runCheck>>,
+  context?: ReturnType<typeof createCheckExecutionContext>,
 ): Promise<boolean> {
   if (
     report.status !== "READY" ||
@@ -397,7 +405,7 @@ async function recordReadyReceipt(
   )
     return false;
   try {
-    const raw = await fetchRawSummaryPr(report.pr, { owner: key.owner, name: key.repo });
+    const raw = await receiptSummaryForReport(key, report, context);
     if (
       fingerprintRawSummaryPr(raw) === null ||
       raw.state !== "OPEN" ||
@@ -444,6 +452,7 @@ async function revalidateReadyReceipt(
   key: { owner: string; repo: string; pr: number },
   report: Awaited<ReturnType<typeof runCheck>>,
   hasReadinessWork: boolean,
+  context?: ReturnType<typeof createCheckExecutionContext>,
 ): Promise<boolean> {
   const receipt = await readReadyReceipt(key);
   if (!receipt) return false;
@@ -463,7 +472,7 @@ async function revalidateReadyReceipt(
     return false;
   }
   try {
-    const raw = await fetchRawSummaryPr(report.pr, { owner: key.owner, name: key.repo });
+    const raw = await receiptSummaryForReport(key, report, context);
     const summary = await summarizePollSummaryPr(
       raw,
       { owner: key.owner, name: key.repo },
@@ -511,4 +520,20 @@ async function revalidateReadyReceipt(
     await clearReadyReceipt(key);
     return false;
   }
+}
+
+/** A mismatched or invalidated same-request hint falls back to the original fresh read. */
+async function receiptSummaryForReport(
+  key: { owner: string; repo: string; pr: number },
+  report: Awaited<ReturnType<typeof runCheck>>,
+  context?: ReturnType<typeof createCheckExecutionContext>,
+) {
+  const candidate = context?.getReceiptSummary();
+  if (
+    candidate?.number === report.pr &&
+    candidate.headRefOid === report.headSha &&
+    candidate.baseRefOid === report.baseRefOid
+  )
+    return candidate;
+  return fetchRawSummaryPr(report.pr, { owner: key.owner, name: key.repo });
 }

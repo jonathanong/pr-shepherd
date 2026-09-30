@@ -90,6 +90,31 @@ export async function clearReadyDelay(
   await safeUnlink(readySincePath(prNumber, owner, repo));
 }
 
+/** Read-only hint for including compact receipt evidence in the next full PR snapshot. */
+export async function readyDelayElapsed(
+  prNumber: number,
+  owner: string,
+  repo: string,
+  readyDelaySeconds: number,
+): Promise<boolean> {
+  const markerPath = readySincePath(prNumber, owner, repo);
+  let raw: string;
+  try {
+    raw = await readFile(markerPath, "utf8");
+  } catch {
+    return false;
+  }
+  const [since, head] = raw.trim().split(" ");
+  const readySince = Number(since);
+  const now = Math.floor(Date.now() / 1000);
+  return Boolean(
+    head &&
+    Number.isSafeInteger(readySince) &&
+    readySince <= now &&
+    now - readySince >= readyDelaySeconds,
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
