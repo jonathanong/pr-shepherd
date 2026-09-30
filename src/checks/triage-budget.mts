@@ -5,6 +5,7 @@ import type { RateLimitInfo } from "../github/client.mts";
 export class TriageBudget {
   private exhausted = false;
   private secondaryError: unknown;
+  private omitted = false;
   private omissionReported = false;
 
   get canSchedule(): boolean {
@@ -13,6 +14,13 @@ export class TriageBudget {
 
   get primaryExhausted(): boolean {
     return this.exhausted;
+  }
+
+  /** Call only when a needed optional request is about to be scheduled. */
+  canScheduleOptional(): boolean {
+    if (this.canSchedule) return true;
+    if (this.exhausted) this.omitted = true;
+    return false;
   }
 
   observe(rateLimit?: RateLimitInfo): void {
@@ -25,6 +33,7 @@ export class TriageBudget {
       this.secondaryError ??= error;
     } else if (retry?.kind === "primary") {
       this.stopForPrimaryLimit();
+      this.omitted = true;
     }
   }
 
@@ -32,12 +41,15 @@ export class TriageBudget {
     if (this.secondaryError !== undefined) throw this.secondaryError;
   }
 
-  private stopForPrimaryLimit(): void {
-    this.exhausted = true;
-    if (this.omissionReported) return;
+  reportOmissionIfNeeded(): void {
+    if (!this.omitted || this.omissionReported || this.secondaryError !== undefined) return;
     this.omissionReported = true;
     process.stderr.write(
       "pr-shepherd: REST core quota is exhausted; optional Actions job and log enrichment is incomplete\n",
     );
+  }
+
+  private stopForPrimaryLimit(): void {
+    this.exhausted = true;
   }
 }

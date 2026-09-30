@@ -22,6 +22,17 @@ function withRemaining(res: Response, remaining: number): Response {
 }
 
 describe("REST pagination stops when remaining is 0", () => {
+  it("does not claim omitted enrichment after a complete final jobs page", async () => {
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    mockFetch.mockResolvedValueOnce(withRemaining(makeJobsResponse([]), 0));
+
+    await triageFailingChecks([makeCheck({ conclusion: "FAILURE" })], REPO);
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(stderr).not.toHaveBeenCalledWith(expect.stringContaining("enrichment is incomplete"));
+    stderr.mockRestore();
+  });
+
   it("stops extra startup-failure pages", async () => {
     const fullPage = Array.from({ length: 100 }, (_, i) => ({
       id: i + 1,
@@ -58,6 +69,22 @@ describe("REST pagination stops when remaining is 0", () => {
     await triageFailingChecks([makeCheck({ conclusion: "FAILURE" })], REPO);
     expect(mockFetch).toHaveBeenCalledTimes(1);
     expect(stderr).toHaveBeenCalledWith(expect.stringContaining("REST core quota is exhausted"));
+    stderr.mockRestore();
+  });
+
+  it("omits queued enrichment after an in-flight worker exhausts REST core", async () => {
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    mockFetch
+      .mockResolvedValueOnce(withRemaining(makeJobsResponse([]), 0))
+      .mockResolvedValue(makeJobsResponse([]));
+    const checks = Array.from({ length: 5 }, (_, index) =>
+      makeCheck({ runId: `run-${index}`, name: `check-${index}` }),
+    );
+
+    expect(await triageFailingChecks(checks, REPO)).toHaveLength(5);
+    expect(mockFetch).toHaveBeenCalledTimes(4);
+    expect(stderr).toHaveBeenCalledTimes(1);
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining("enrichment is incomplete"));
     stderr.mockRestore();
   });
 

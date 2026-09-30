@@ -155,6 +155,8 @@ export async function runCheck(
     failing.length > 0 && !opts.skipTriage
       ? await triageFailingChecks(failing, repo, stateKey, triageBudget)
       : failing;
+  triageBudget.throwIfSecondary();
+  triageBudget.reportOmissionIfNeeded();
   const seenMap = await loadSeenMap(stateKey);
   const botUsernames = normalizeBotUsernames(config.botUsernames);
   const ruleSet = await loadRules(discoverRuleFiles(getEffectiveCwd()));
