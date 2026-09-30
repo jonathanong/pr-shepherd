@@ -15,7 +15,8 @@ Poll with the CLI. Use MCP `iterate` only when the CLI is unavailable. Stop at `
 - When the user asks to make, create, or open a PR: review and commit the in-scope changes, verify the push remote and base branch, push a fresh branch, create the PR, and pass its qualified URL to Dispatch.
 - Push is the ordinary non-force push of those reviewed commits. Do not ask for a separate confirmation because the push publishes them. Request runtime escalation when the host requires it.
 - A skill cannot grant host permissions. Unattended approval comes from a trusted command rule or host policy.
-- Force-pushes, remote or credential changes, unrelated changes, and ambiguous targets stay outside this workflow.
+- When Shepherd reports the branch is behind or conflicts with its base, rebase your own PR head onto that base and push with `--force-with-lease`. Do not ask first: that push is part of this workflow.
+- Bare `--force`, pushes to any other branch, remote or credential changes, unrelated changes, and ambiguous targets stay outside this workflow.
 
 ## Dispatch
 
@@ -45,6 +46,7 @@ Poll with the CLI. Use MCP `iterate` only when the CLI is unavailable. Stop at `
 
 - After the instructions, rerun that same command immediately with the same target and options. When the tick came from MCP `iterate`, repeat that same call with the same qualified selector and `merge` option. Do not switch back to a CLI that was unavailable.
 - Stop only for `[CANCEL]`, `[ESCALATE]`, or a human telling you to stop. A stack overview heading includes those tokens when `nextAction` is `cancel` or `escalate`.
+- A one-PR `[CANCEL]` or `[ESCALATE]` ends only that PR's loop. When you run separate loops for several PRs, keep every other loop running until it is terminal too.
 - Keep `--until-terminal` and any `--merge`. Apply a printed polling-cadence change.
 - `[FIX_CODE]` is always non-terminal. Stack-level `[SHEPHERD]` is non-terminal. Only `[ESCALATE]` hands work to a human.
 - `[READY]` is non-terminal. Rerun when `remainingSeconds` elapses. Do not invent unrelated work. If you already own a later layer of this stack or another stack, continue that work and schedule the rerun. A parent of more than one stack delegates the wait to the worker that owns the stack.

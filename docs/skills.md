@@ -17,7 +17,8 @@ Three skills ship for Claude Code, Codex, and Grok.
 - On a request to make, create, or open a PR: non-force push the reviewed in-scope commits, then create the PR.
 - Do not ask for a separate confirmation because the push publishes those commits.
 - A skill cannot grant host permissions. Unattended approval comes from a trusted command rule or host policy.
-- Force-pushes, remote or credential changes, unrelated changes, and ambiguous targets stay outside this workflow.
+- When Shepherd reports the branch is behind or conflicts with its base, rebase your own PR head onto that base and push with `--force-with-lease`. Do not ask first: that push is part of this workflow.
+- Bare `--force`, pushes to any other branch, remote or credential changes, unrelated changes, and ambiguous targets stay outside this workflow.
 - Accept a bare number, `owner/repo#N`, or a GitHub PR URL.
 - A qualified reference can name a fork or upstream repository. This checkout supplies git, config, and rules.
 - If the CLI is unavailable, call MCP `iterate`, then MCP `apply` and `build_suggestion_patches`.

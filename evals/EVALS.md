@@ -75,6 +75,8 @@ third arm.
 | `22-stack-auto-ready-disabled-probe`   | `104`   | Probe first; `gh pr ready` only on the described `WAIT`      |
 | `23-behind-base-rebase-hint`           | `73`    | Rebase `--force-with-lease` before pushing the review fix    |
 | `24-stack-merge-missing-extension`     | `97`    | Missing `gh stack`: install it, don't merge per layer        |
+| `25-multi-pr-cancel-is-per-pr`         | `03`    | One PR's `CANCEL` ends only its loop; keep shepherding #43   |
+| `26-conflicts-rebase-without-asking`   | `27`    | Conflicts: rebase, `--force-with-lease`, don't ask first     |
 
 Presence of a specific token is graded by regex (`gh stack merge 511`).
 Absence of a behavior is graded by an LLM rubric: the framing asks the agent to
@@ -183,6 +185,29 @@ history:
 - **Ignored rebase guidance** ("pr-shepherd tells you to rebase. why didn't you
   follow?"). → `23`, and `17` for its stack form
 
+Cases 25–26 came from a second pass over Claude, Codex, Cursor and Grok
+transcripts, looking for user corrections rather than command counts:
+
+- **Stopping after the first of several PRs ends** (six sessions: "Only 3 of 4
+  PRs have reached terminal", "why are there so many PRs in draft still? are you
+  not shepherding them?", "the skill says to continue until it returns CANCEL or
+  ESCALATE. why do you keep stopping?"). → `25`, plus a `## Recurrence` line
+  in the skill
+- **Asking before rebasing, or opening a duplicate PR instead** (four sessions:
+  "you rebase. stop asking me to approve rebases", "why did you make a duplicate
+  PR? you could've just rebased it"). The skill used to put every force-push out
+  of scope; it now allows a `--force-with-lease` push of your own PR head
+  after rebasing. → `26`, and a stricter `23`
+
+Clusters that did not become cases:
+
+- "Why did it escalate?" corrections were about CLI escalation triggers, which
+  the CLI has since redesigned. That is CLI behavior, not skill behavior.
+- "Why didn't you make a proper GitHub stack?" is about writing a stack, which
+  this skill does not do.
+- "File an issue and resolve the non-blocking comment" is one user's policy,
+  not a pr-shepherd rule.
+
 Case `24` is playbook coverage, not traffic: no transcript shows a missing
 `gh stack` extension. It exists because every printed stack rule scored at
 ceiling in both arms, so it tests a rule found only in the "Stack merge"
@@ -277,7 +302,7 @@ variable in a case's `env:` block fails every run: the runner accepts only
 11. **Surface the failing jobs' log tails when the failing job is a gate.**
     The `04` fix has the agent run `gh run view --log-failed`. Per "Surface
     data, don't classify it", the CLI should print that evidence itself. This
-    is a CLI and snapshot change.
+    is a CLI and snapshot change, tracked in #491.
 12. **More playbook-only stack cases.** `24` shows the pattern: stack rules
     printed in the output sit at ceiling, and rules found only in a playbook
     discriminate. Next candidate: a merge-queue ejection (fixture `98`).

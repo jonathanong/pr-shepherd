@@ -51,7 +51,8 @@ before you answer.
 
 Answer from your own knowledge.`;
 
-const PR_URL = "https://github.com/owner/repo/pull/42";
+export const PR_URL = "https://github.com/owner/repo/pull/42";
+export const PR_URL_43 = "https://github.com/owner/repo/pull/43";
 
 // Both wrappers open with "shepherd this PR", matching how the skill is actually
 // invoked in real traffic ("/pr-shepherd:pr-shepherd <url>", "have a subagent

@@ -13,4 +13,6 @@ with `--force-with-lease`, and then use the pushed SHA for the review command.
 
 Failing responses do any of: skip the rebase; merge `main` into the branch
 instead; push with bare `--force`; rebase only after running the review
-command; defer the rebase to a later tick.
+command; defer the rebase to a later tick; stop to ask the user for permission
+before rebasing or force-pushing (rebasing your own PR head and pushing with
+`--force-with-lease` needs no confirmation).

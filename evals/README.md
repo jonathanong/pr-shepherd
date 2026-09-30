@@ -33,7 +33,7 @@ own.
 
 **Sonnet 5.5, low effort, opus judge, `runs: 3` (2026-09-30)**
 
-Mean Δ **+0.09** over all 23 cases, **+0.13** over the 14 single-PR cases. The
+Mean Δ **+0.09** over all 23 cases, **+0.13** over the 14 non-stack cases. The
 skill fired in **64/66** runs where it should have, and **0/3** on the unrelated
 question.
 
