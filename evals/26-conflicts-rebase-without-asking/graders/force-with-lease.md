@@ -6,4 +6,4 @@ flags: i
 weight: 1
 ---
 
-push[^\n]*--force-with-lease
+push(?:[^\n]|\\\n)*--force-with-lease

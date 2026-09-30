@@ -95,7 +95,7 @@ rebasing it onto its base, never by merging the base in."
 ${shapeA(fixture)}`,
     tags: ["fix-code", "conflicts"],
     graders: {
-      "force-with-lease": regex(String.raw`push[^\n]*--force-with-lease`),
+      "force-with-lease": regex(String.raw`push(?:[^\n]|\\\n)*--force-with-lease`),
       "rebases-without-asking": llm(
         `The plan rebases the PR branch onto the current \`main\`, resolves the
 conflicts, pushes with \`--force-with-lease\`, and continues in the same turn.
