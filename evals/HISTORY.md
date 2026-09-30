@@ -26,6 +26,11 @@ current results see [README.md](README.md). For the suite design see
   [EVALS.md](EVALS.md).
 - Effort check: `CLAUDE_CODE_EFFORT_LEVEL` in the shell moved agent cost +16%
   from low to high on case `16`, so unlike `CLAUDE_EFFORT` it appears live.
+- Haiku 4.5 on case `16`, with-arm only, 3 runs per level: `xhigh` scored 0.56
+  at $0.089/run, `low` scored 0.56 at $0.076/run (one 10-turn outlier). The
+  skill fired 6/6 runs, and every miss was in the rubrics. Sonnet 5.5 scores 1.00
+  on this case even without the plugin, so haiku is still below the capability
+  floor and effort does not lift it. No full haiku run was made.
 - Every earlier result below predates this change.
 
 ## Before 2026-09-30
