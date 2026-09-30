@@ -21,6 +21,13 @@ own.
 
 ## Latest results
 
+> **Run pr-shepherd on Sonnet 5.5 or better. Low effort is enough.**
+>
+> - Sonnet 5.5 at low effort scores 1.00 with the plugin on 17 of 23 cases.
+> - Haiku 4.5 scores 0.56 on a stack case that Sonnet aces even without the
+>   plugin. The skill fires every time, and raising Haiku to `xhigh` effort does
+>   not move the score.
+
 **Sonnet 5.5, low effort, opus judge, `runs: 3` (2026-09-30)**
 
 Mean Δ **+0.09** over all 23 cases, **+0.13** over the 14 single-PR cases. The
