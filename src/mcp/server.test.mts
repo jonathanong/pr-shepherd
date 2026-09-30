@@ -26,6 +26,125 @@ function registeredTools(server: ReturnType<typeof createPrShepherdMcpServer>) {
 }
 
 describe("pr-shepherd MCP server", () => {
+  it("extracts a supplied body without invoking the PR API and keeps both MCP channels identical", async () => {
+    const getJournal = vi.fn();
+    const tools = registeredTools(
+      createPrShepherdMcpServer({
+        shepherd: {
+          iterate: vi.fn(),
+          apply: vi.fn(),
+          buildSuggestionPatches: vi.fn(),
+          buildSuggestionPatch: vi.fn(),
+          getJournal,
+        },
+      }),
+    );
+    const body = "<details>\n<summary>Shepherd Journal</summary>\n\n- read this\n</details>";
+
+    expect(tools.extract_journal!.inputSchema.safeParse({ body }).success).toBe(true);
+    expect(tools.extract_journal!.inputSchema.safeParse({ pr: "owner/repo#1" }).success).toBe(
+      false,
+    );
+    expect(tools.extract_journal!.annotations).toMatchObject({
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    });
+    const result = await tools.extract_journal!.handler({ body });
+    expect(result.structuredContent).toEqual({
+      ok: true,
+      journal: { format: "details", entries: ["- read this"] },
+    });
+    expect(JSON.parse(result.content![0]!.text)).toEqual(result.structuredContent);
+    expect(getJournal).not.toHaveBeenCalled();
+
+    const empty = await tools.extract_journal!.handler({ body: "" });
+    expect(empty.structuredContent).toEqual({ ok: true, journal: null });
+    expect(JSON.parse(empty.content![0]!.text)).toEqual(empty.structuredContent);
+
+    const malformed = await tools.extract_journal!.handler({
+      body: "## Shepherd Journal\n\ninvalid",
+    });
+    expect(malformed.isError).toBeUndefined();
+    expect(malformed.structuredContent).toMatchObject({ ok: false });
+    expect(JSON.parse(malformed.content![0]!.text)).toEqual(malformed.structuredContent);
+
+    const invalid = await tools.extract_journal!.handler({ body: 42 });
+    expect(invalid).toMatchObject({
+      isError: true,
+      structuredContent: { code: 64, details: { validation: true } },
+    });
+  });
+
+  it("gets a qualified PR journal read-only and preserves parser errors as data", async () => {
+    const extracted = { ok: false, error: "malformed Shepherd Journal" };
+    const getJournal = vi.fn().mockResolvedValue(extracted);
+    const tools = registeredTools(
+      createPrShepherdMcpServer({
+        shepherd: {
+          iterate: vi.fn(),
+          apply: vi.fn(),
+          buildSuggestionPatches: vi.fn(),
+          buildSuggestionPatch: vi.fn(),
+          getJournal,
+        },
+      }),
+    );
+    const pr = "https://github.com/other/widgets/pull/42";
+
+    expect(tools.get_journal!.inputSchema.safeParse({ pr }).success).toBe(true);
+    expect(tools.get_journal!.inputSchema.safeParse({ pr: "42" }).success).toBe(false);
+    expect(tools.get_journal!.annotations).toMatchObject({
+      readOnlyHint: true,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: true,
+    });
+    const result = await tools.get_journal!.handler({ pr });
+    expect(getJournal).toHaveBeenCalledWith({ pr });
+    expect(result.isError).toBeUndefined();
+    expect(result.structuredContent).toEqual(extracted);
+    expect(JSON.parse(result.content![0]!.text)).toEqual(extracted);
+
+    const invalid = await tools.get_journal!.handler({ pr: "42" });
+    expect(invalid).toMatchObject({
+      isError: true,
+      structuredContent: { code: 64, details: { validation: true } },
+    });
+    expect(getJournal).toHaveBeenCalledOnce();
+  });
+
+  it("maps get_journal GitHub read failures through the existing safe MCP error channel", async () => {
+    const getJournal = vi.fn().mockRejectedValue(
+      new GitHubRequestError("GitHub GraphQL error: ghp_secret", {
+        status: 403,
+        authSource: "GH_TOKEN",
+      }),
+    );
+    const tools = registeredTools(
+      createPrShepherdMcpServer({
+        shepherd: {
+          iterate: vi.fn(),
+          apply: vi.fn(),
+          buildSuggestionPatches: vi.fn(),
+          buildSuggestionPatch: vi.fn(),
+          getJournal,
+        },
+      }),
+    );
+
+    const result = await tools.get_journal!.handler({ pr: "owner/repo#42" });
+    expect(result).toMatchObject({
+      isError: true,
+      structuredContent: {
+        code: 77,
+        details: { github: { credential: "GH_TOKEN" } },
+      },
+    });
+    expect(JSON.stringify(result)).not.toContain("ghp_secret");
+  });
+
   it("registers only the public tools and returns API results as structured content", async () => {
     const result = {
       action: "wait" as const,
@@ -53,6 +172,7 @@ describe("pr-shepherd MCP server", () => {
         apply: vi.fn(),
         buildSuggestionPatches: vi.fn(),
         buildSuggestionPatch: vi.fn(),
+        getJournal: vi.fn(),
       },
     });
     const tools = registeredTools(server);
@@ -61,6 +181,8 @@ describe("pr-shepherd MCP server", () => {
       "apply",
       "build_suggestion_patch",
       "build_suggestion_patches",
+      "extract_journal",
+      "get_journal",
       "iterate",
     ]);
     expect(tools.iterate!.annotations).toMatchObject({
@@ -131,6 +253,7 @@ describe("pr-shepherd MCP server", () => {
         apply: vi.fn(),
         buildSuggestionPatches: vi.fn(),
         buildSuggestionPatch: vi.fn(),
+        getJournal: vi.fn(),
       },
     });
     const tools = registeredTools(server);
@@ -186,6 +309,7 @@ describe("pr-shepherd MCP server", () => {
           apply: vi.fn(),
           buildSuggestionPatches: vi.fn(),
           buildSuggestionPatch: vi.fn(),
+          getJournal: vi.fn(),
         },
       }),
     );
@@ -237,6 +361,7 @@ describe("pr-shepherd MCP server", () => {
           apply: vi.fn(),
           buildSuggestionPatches: vi.fn(),
           buildSuggestionPatch: vi.fn(),
+          getJournal: vi.fn(),
         },
       }),
     );
@@ -267,6 +392,7 @@ describe("pr-shepherd MCP server", () => {
       apply: vi.fn(),
       buildSuggestionPatches: vi.fn(),
       buildSuggestionPatch: vi.fn(),
+      getJournal: vi.fn(),
     };
     const tools = registeredTools(createPrShepherdMcpServer({ shepherd }));
     const invalidByTool = {
@@ -383,6 +509,7 @@ describe("pr-shepherd MCP server", () => {
         apply,
         buildSuggestionPatches: vi.fn(),
         buildSuggestionPatch: vi.fn(),
+        getJournal: vi.fn(),
       },
     });
 
@@ -405,6 +532,7 @@ describe("pr-shepherd MCP server", () => {
         apply: vi.fn(),
         buildSuggestionPatches: vi.fn(),
         buildSuggestionPatch: vi.fn(),
+        getJournal: vi.fn(),
       },
     });
 
@@ -442,6 +570,7 @@ describe("pr-shepherd MCP server", () => {
         apply: vi.fn(),
         buildSuggestionPatches: vi.fn(),
         buildSuggestionPatch: vi.fn(),
+        getJournal: vi.fn(),
       },
     });
 
@@ -545,7 +674,13 @@ describe("pr-shepherd MCP server", () => {
     };
     const buildSuggestionPatches = vi.fn().mockResolvedValue(batchResult);
     const server = createPrShepherdMcpServer({
-      shepherd: { iterate: vi.fn(), apply, buildSuggestionPatches, buildSuggestionPatch },
+      shepherd: {
+        iterate: vi.fn(),
+        apply,
+        buildSuggestionPatches,
+        buildSuggestionPatch,
+        getJournal: vi.fn(),
+      },
     });
     const tools = registeredTools(server);
 
@@ -602,6 +737,7 @@ describe("pr-shepherd MCP server", () => {
         apply: vi.fn().mockRejectedValue(error),
         buildSuggestionPatches: vi.fn(),
         buildSuggestionPatch: vi.fn(),
+        getJournal: vi.fn(),
       },
     });
 

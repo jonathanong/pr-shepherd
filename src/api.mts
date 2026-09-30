@@ -28,7 +28,8 @@ import type {
   IterateResult,
   PollSummaryResult,
 } from "./types.mts";
-import { getRepoInfo } from "./github/client.mts";
+import { getPullRequestBody, getRepoInfo } from "./github/client.mts";
+import { extractShepherdJournal, type ShepherdJournalExtraction } from "./journal/index.mts";
 
 export interface CreatePrShepherdOptions {
   /** Working directory used for git, config, and classification-rule lookups. */
@@ -127,12 +128,17 @@ export interface BuildSuggestionPatchesInput {
   suggestions: SuggestionPatchInput[];
 }
 
+export interface GetJournalInput {
+  pr: PrReference;
+}
+
 export interface PrShepherd {
   iterate(input?: SingleIterateInput): Promise<IterateResult>;
   iterate(input: AggregateIterateInput): Promise<PollSummaryResult>;
   iterate(input: IterateInput): Promise<IterateResult | PollSummaryResult>;
   apply(input: ApplyInput): Promise<ApplyResult>;
   buildSuggestionPatches(input: BuildSuggestionPatchesInput): Promise<BuildSuggestionPatchesResult>;
+  getJournal(input: GetJournalInput): Promise<ShepherdJournalExtraction>;
   /** Compatibility adapter; prefer buildSuggestionPatches. */
   buildSuggestionPatch(input: BuildSuggestionPatchInput): Promise<CommitSuggestionResult>;
 }
@@ -184,6 +190,16 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
 
   return Object.freeze({
     iterate,
+
+    getJournal(input: GetJournalInput) {
+      return runWithExecutionCwd(cwd, async () => {
+        const { prNumber, targetRepository } = resolvePrReference(input.pr);
+        if (!prNumber) throw new PrShepherdValidationError("getJournal requires a PR reference");
+        const { owner, name } = targetRepository ?? (await getRepoInfo());
+        const { body } = await getPullRequestBody(prNumber, owner, name);
+        return extractShepherdJournal(body);
+      });
+    },
 
     apply(input: ApplyInput) {
       return runWithExecutionCwd(cwd, async () => {

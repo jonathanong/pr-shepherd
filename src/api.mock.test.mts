@@ -9,6 +9,7 @@ const {
   mockRunMarkFilesAsViewed,
   mockRunResolveMutate,
   mockGetRepoInfo,
+  mockGetPullRequestBody,
   mockRunPollSummary,
 } = vi.hoisted(() => ({
   mockRunCommitSuggestion: vi.fn(),
@@ -18,6 +19,7 @@ const {
   mockRunMarkFilesAsViewed: vi.fn(),
   mockRunResolveMutate: vi.fn(),
   mockGetRepoInfo: vi.fn(),
+  mockGetPullRequestBody: vi.fn(),
   mockRunPollSummary: vi.fn(),
 }));
 
@@ -34,7 +36,10 @@ vi.mock("./commands/mark-files-as-viewed.mts", () => ({
   runMarkFilesAsViewed: mockRunMarkFilesAsViewed,
 }));
 vi.mock("./commands/resolve-mutate.mts", () => ({ runResolveMutate: mockRunResolveMutate }));
-vi.mock("./github/client.mts", () => ({ getRepoInfo: mockGetRepoInfo }));
+vi.mock("./github/client.mts", () => ({
+  getRepoInfo: mockGetRepoInfo,
+  getPullRequestBody: mockGetPullRequestBody,
+}));
 
 import {
   createPrShepherd,
@@ -46,6 +51,7 @@ import {
 beforeEach(() => {
   vi.clearAllMocks();
   mockGetRepoInfo.mockResolvedValue({ owner: "openai", name: "pr-shepherd" });
+  mockGetPullRequestBody.mockResolvedValue({ nodeId: "PR_42", body: "" });
 });
 
 describe("public API", () => {
@@ -57,6 +63,7 @@ describe("public API", () => {
       "apply",
       "buildSuggestionPatch",
       "buildSuggestionPatches",
+      "getJournal",
       "iterate",
     ]);
     await shepherd.iterate({ pr: "https://github.com/openai/pr-shepherd/pull/42" });
@@ -79,6 +86,60 @@ describe("public API", () => {
         format: "json",
       }),
     );
+  });
+
+  it("fetches one qualified PR body through GraphQL and returns only its journal extraction", async () => {
+    mockGetPullRequestBody.mockResolvedValue({
+      nodeId: "PR_42",
+      body: "<details>\n<summary>Shepherd Journal</summary>\n\n- first decision\n  with context\n- second decision\n</details>",
+    });
+
+    const extracted = await createPrShepherd({ cwd: "." }).getJournal({ pr: "other/widgets#42" });
+
+    expect(mockGetPullRequestBody).toHaveBeenCalledOnce();
+    expect(mockGetPullRequestBody).toHaveBeenCalledWith(42, "other", "widgets");
+    expect(mockGetRepoInfo).not.toHaveBeenCalled();
+    expect(extracted).toEqual({
+      ok: true,
+      journal: {
+        format: "details",
+        entries: ["- first decision\n  with context", "- second decision"],
+      },
+    });
+  });
+
+  it("uses the checkout repository for a numeric PR and preserves malformed extraction results", async () => {
+    mockGetPullRequestBody.mockResolvedValue({
+      nodeId: "PR_7",
+      body: "## Shepherd Journal\n\ninvalid",
+    });
+
+    const extracted = await createPrShepherd().getJournal({ pr: 7 });
+
+    expect(mockGetPullRequestBody).toHaveBeenCalledWith(7, "openai", "pr-shepherd");
+    expect(extracted).toEqual({
+      ok: false,
+      error: "Shepherd Journal content uses an unrecognized entry format",
+    });
+  });
+
+  it("returns an absent journal without exposing the PR body and propagates a GitHub read failure", async () => {
+    const shepherd = createPrShepherd();
+    expect(await shepherd.getJournal({ pr: "openai/pr-shepherd#42" })).toEqual({
+      ok: true,
+      journal: null,
+    });
+
+    const failure = new Error("GitHub body read failed");
+    mockGetPullRequestBody.mockRejectedValueOnce(failure);
+    await expect(shepherd.getJournal({ pr: "openai/pr-shepherd#42" })).rejects.toBe(failure);
+  });
+
+  it("rejects an invalid journal PR before any GitHub request", async () => {
+    await expect(createPrShepherd().getJournal({ pr: "invalid" })).rejects.toBeInstanceOf(
+      PrShepherdValidationError,
+    );
+    expect(mockGetPullRequestBody).not.toHaveBeenCalled();
   });
 
   it("routes plural and native-stack iterate inputs to one read-only summary tick", async () => {

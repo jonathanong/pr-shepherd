@@ -27,7 +27,7 @@ Full reference: [docs/README.md](docs/README.md). Feature matrix: [docs/features
 
 `pr-shepherd` moves deterministic PR orchestration into a local MCP server, with a CLI for shells and CI. Both interfaces fetch the same GitHub state, emit raw-enough context, and return a numbered plan for the calling agent to follow.
 
-The MCP server exposes canonical `iterate`, `apply`, and `build_suggestion_patches` tools. `apply` accepts ordered review mutations, file-view mutations, and journal entries; the deprecated singular suggestion tool remains temporarily as an adapter. Direct MCP calls require a repository-qualified `pr`: a GitHub PR URL or `owner/repo#N`; the explicit repository is the target for GitHub I/O, even when it differs from the local checkout. The CLI and programmatic API also retain bare-number and current-branch PR discovery. The shipped skills are thin dispatchers for those tools.
+The MCP server exposes `iterate`, `apply`, `build_suggestion_patches`, `extract_journal`, and `get_journal`. `apply` accepts ordered review mutations, file-view mutations, and journal entries; the deprecated singular suggestion tool remains temporarily as an adapter. PR-targeted MCP calls require a repository-qualified `pr`: a GitHub PR URL or `owner/repo#N`; the explicit repository is the target for GitHub I/O, even when it differs from the local checkout. `extract_journal` takes a Markdown body string and performs no I/O. The CLI and programmatic API also retain bare-number and current-branch PR discovery. The shipped skills are thin dispatchers for those tools.
 
 Each tick returns exactly one action:
 
@@ -122,7 +122,7 @@ Grok:
 /pr-shepherd 42
 ```
 
-MCP clients call `iterate` once per tick, then use `apply` for review/file/journal mutations and `build_suggestion_patches` for anchored suggestions. Every direct MCP call supplies the same repository-qualified PR reference. `iterate` returns the same structured action data as the CLI, including its review mutation arguments. The client owns recurrence, so this works consistently in Codex, Claude Code, Grok, and any other stdio MCP client.
+MCP clients call `iterate` once per tick, then use `apply` for review/file/journal mutations and `build_suggestion_patches` for anchored suggestions. To read journal entries, call `extract_journal` with a body already in hand or `get_journal` with a repository-qualified PR reference. `iterate` returns the same structured action data as the CLI, including its review mutation arguments. The client owns recurrence, so this works consistently in Codex, Claude Code, Grok, and any other stdio MCP client.
 
 The CLI remains useful for shell workflows. Its canonical polling form is:
 
@@ -188,6 +188,10 @@ The result identifies canonical `details` versus historical `legacy` H2 journals
 complete Markdown list item with LF line endings. It fails closed for malformed or ambiguous
 containers and ignores journal-shaped examples hidden in Markdown constructs. The full journal API,
 including append and reconciliation helpers, is documented in [docs/api.md](docs/api.md).
+
+MCP clients can call `extract_journal({ body: prBody })` for the same pure result without writing a
+file, or `get_journal({ pr: "owner/repo#123" })` to fetch a PR body through GraphQL and extract it.
+Both return the typed extraction JSON in `structuredContent` and `content`; neither mutates the PR.
 
 For shell automation that already has a PR body, use the equivalent local-only command:
 
