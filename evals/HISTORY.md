@@ -20,6 +20,12 @@ current results see [README.md](README.md). For the suite design see
   - an agent losing track of a stack after one layer,
   - a rebase instruction ignored ("pr-shepherd tells you to rebase. why didn't
     you follow?").
+- Added cases `25` (one PR's `CANCEL` ends only its loop) and `26` (conflicts:
+  rebase and `--force-with-lease` without asking) from user corrections in
+  Claude, Codex, Cursor and Grok transcripts. The skill and `AGENTS.md` now
+  allow a `--force-with-lease` push of your own rebased PR head; before, every
+  force-push was out of scope, and agents merged `main` in or asked first. `26`
+  scored Δ +0.89; `23` (rubric tightened) and `25` sat at ceiling.
 - The generator was split into `lib.mjs` and `cases/*.mjs`.
 - First run: mean Δ +0.09 (23 cases), +0.13 over the 14 non-stack cases. The
   stack cases sat at ceiling in both arms. See "Latest full results" in
@@ -198,4 +204,3 @@ reproduces it.
 **An opus round was contaminated** by `You've hit your session limit`, which
 failed three judge calls and scored them 0, manufacturing a fake +1.00. Check for
 `grader threw` in `aggregate-result.json` before trusting any anomalous Δ.
-

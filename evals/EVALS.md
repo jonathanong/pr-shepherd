@@ -49,34 +49,34 @@ agent gets `SKILL.md` plus any `references/` playbook a step names. So Δ measur
 the dispatcher and the playbooks together. Isolating the playbooks would need a
 third arm.
 
-| Case                                   | Fixture | Rule under test                                              |
-| -------------------------------------- | ------- | ------------------------------------------------------------ |
-| `01-ci-in-progress-no-watch`           | `09`    | Don't block on `gh run watch`; iterate                       |
-| `02-mark-ready-continue`               | `07`    | `MARK_READY` is non-terminal                                 |
-| `03-multi-category-fix`                | `54`    | Four categories at once, none dropped                        |
-| `04-real-failure-no-blind-rerun`       | `61`    | `[rerun authorized]` is not a recommendation                 |
-| `05-cancelled-must-rerun`              | `14`    | `CANCELLED` _must_ rerun (mirror of 04)                      |
-| `06-fix-code-dismiss-stale-bot`        | `60`    | Authorized stale bot dismissals stay autonomous              |
-| `07-fix-code-bot-and-thread`           | `84`    | Preserve both review-thread and bot-review work              |
-| `08-mergeability-diagnosis`            | `32`    | `[Not Required]` is not a blocker                            |
-| `09-cancel-terminal-beats-work`        | `82`    | Merged PR needs nothing                                      |
-| `10-external-check-no-handoff`         | `12`    | External URL is not an escalation trigger                    |
-| `11-wait-no-work`                      | `24`    | `WAIT`: continue, invent nothing                             |
-| `12-annotations-already-surfaced`      | `55`    | Act on the annotation, don't refetch                         |
-| `13-neg-github-review-api`             | —       | Should NOT fire (knowledge question)                         |
+| Case                                   | Fixture | Rule under test                                               |
+| -------------------------------------- | ------- | ------------------------------------------------------------- |
+| `01-ci-in-progress-no-watch`           | `09`    | Don't block on `gh run watch`; iterate                        |
+| `02-mark-ready-continue`               | `07`    | `MARK_READY` is non-terminal                                  |
+| `03-multi-category-fix`                | `54`    | Four categories at once, none dropped                         |
+| `04-real-failure-no-blind-rerun`       | `61`    | `[rerun authorized]` is not a recommendation                  |
+| `05-cancelled-must-rerun`              | `14`    | `CANCELLED` _must_ rerun (mirror of 04)                       |
+| `06-fix-code-dismiss-stale-bot`        | `60`    | Authorized stale bot dismissals stay autonomous               |
+| `07-fix-code-bot-and-thread`           | `84`    | Preserve both review-thread and bot-review work               |
+| `08-mergeability-diagnosis`            | `32`    | `[Not Required]` is not a blocker                             |
+| `09-cancel-terminal-beats-work`        | `82`    | Merged PR needs nothing                                       |
+| `10-external-check-no-handoff`         | `12`    | External URL is not an escalation trigger                     |
+| `11-wait-no-work`                      | `24`    | `WAIT`: continue, invent nothing                              |
+| `12-annotations-already-surfaced`      | `55`    | Act on the annotation, don't refetch                          |
+| `13-neg-github-review-api`             | —       | Should NOT fire (knowledge question)                          |
 | `14-stack-layer-no-direct-merge`       | `85`    | A stack layer merges via `--stack --merge`, not `gh pr merge` |
-| `15-stack-owned-layers-before-handoff` | `102`   | Shepherd owned layers before a lower layer's human handoff   |
-| `16-stack-all-owned-concurrent`        | `106`   | Every owned layer at once, none serialized or dropped        |
-| `17-stack-parent-conflict-owned-only`  | `94`    | Route only the listed layer; don't hand-rewrite the child    |
-| `18-stack-queued-lower-waits`          | `91`    | Never rewrite a queued layer                                 |
-| `19-stack-merge-prefix`                | `90`    | `gh stack merge <prefix>`, shepherd the stale tip, rerun     |
-| `20-stack-closed-parent-escalate`      | `100`   | Closed parent: stop and ask, don't pick a repair             |
-| `21-stack-all-terminal-stop`           | `87`    | Every layer merged: stop (ceiling guard; flat Δ expected)    |
-| `22-stack-auto-ready-disabled-probe`   | `104`   | Probe first; `gh pr ready` only on the described `WAIT`      |
-| `23-behind-base-rebase-hint`           | `73`    | Rebase `--force-with-lease` before pushing the review fix    |
-| `24-stack-merge-missing-extension`     | `97`    | Missing `gh stack`: install it, don't merge per layer        |
-| `25-multi-pr-cancel-is-per-pr`         | `03`    | One PR's `CANCEL` ends only its loop; keep shepherding #43   |
-| `26-conflicts-rebase-without-asking`   | `27`    | Conflicts: rebase, `--force-with-lease`, don't ask first     |
+| `15-stack-owned-layers-before-handoff` | `102`   | Shepherd owned layers before a lower layer's human handoff    |
+| `16-stack-all-owned-concurrent`        | `106`   | Every owned layer at once, none serialized or dropped         |
+| `17-stack-parent-conflict-owned-only`  | `94`    | Route only the listed layer; don't hand-rewrite the child     |
+| `18-stack-queued-lower-waits`          | `91`    | Never rewrite a queued layer                                  |
+| `19-stack-merge-prefix`                | `90`    | `gh stack merge <prefix>`, shepherd the stale tip, rerun      |
+| `20-stack-closed-parent-escalate`      | `100`   | Closed parent: stop and ask, don't pick a repair              |
+| `21-stack-all-terminal-stop`           | `87`    | Every layer merged: stop (ceiling guard; flat Δ expected)     |
+| `22-stack-auto-ready-disabled-probe`   | `104`   | Probe first; `gh pr ready` only on the described `WAIT`       |
+| `23-behind-base-rebase-hint`           | `73`    | Rebase `--force-with-lease` before pushing the review fix     |
+| `24-stack-merge-missing-extension`     | `97`    | Missing `gh stack`: install it, don't merge per layer         |
+| `25-multi-pr-cancel-is-per-pr`         | `03`    | One PR's `CANCEL` ends only its loop; keep shepherding #43    |
+| `26-conflicts-rebase-without-asking`   | `27`    | Conflicts: rebase, `--force-with-lease`, don't ask first      |
 
 Presence of a specific token is graded by regex (`gh stack merge 511`).
 Absence of a behavior is graded by an LLM rubric: the framing asks the agent to
@@ -138,6 +138,23 @@ offered per-layer `gh pr merge` as a fallback in 4. The first run of `24`
 scored the with-arm 0.67 because the rubric's "hand the merge to the human"
 clause caught correct no-shell step lists. The rubric was clarified before the
 numbers above.
+
+### Transcript cases (2026-09-30, Sonnet 5.5 low, `runs: 3`)
+
+Targeted runs for the cases from the second transcript pass.
+
+| Case | with | without | Δ         | Note                                                  |
+| ---- | ---- | ------- | --------- | ----------------------------------------------------- |
+| `23` | 1.00 | 1.00    | 0.00      | rubric now also fails "asks before rebasing"; ceiling |
+| `25` | 1.00 | 1.00    | 0.00      | ceiling even framed as a background-task notice       |
+| `26` | 1.00 | 0.11    | **+0.89** | new; the rebase rule lives only in the skill          |
+
+On `26`, every without-arm run merged `main` into the branch "so the push needs
+no force-push", which is the transcript failure. The fixture's instructions
+never say "rebase"; only the skill's `--force-with-lease` line does. On `23` the
+output prints the rebase hint, so both arms follow it. `25`'s real failure
+comes from long multi-PR sessions losing track, which a single-turn case cannot
+reproduce; it stays as a regression guard.
 
 ### Sonnet 5 vs Sonnet 5.5
 
