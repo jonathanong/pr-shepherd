@@ -31,6 +31,12 @@ current results see [README.md](README.md). For the suite design see
   skill fired 6/6 runs, and every miss was in the rubrics. Sonnet 5.5 scores 1.00
   on this case even without the plugin, so haiku is still below the capability
   floor and effort does not lift it. No full haiku run was made.
+- Sonnet 5 on the same suite and plugin: with 0.84 / without 0.73 / Δ +0.11,
+  against Sonnet 5.5's 0.92 / 0.83 / +0.09.
+- Case `04` exposed a CI-triage playbook gap (gate-job excerpts with no
+  assertion). After a playbook fix, `04` went from −0.33 to +0.25 (`runs: 6`).
+  Case `24` was added: a playbook-only stack rule, Δ +0.50. Its first rubric
+  failed correct no-shell step lists and was clarified.
 - Every earlier result below predates this change.
 
 ## Before 2026-09-30

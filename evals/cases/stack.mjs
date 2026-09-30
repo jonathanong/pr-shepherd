@@ -1,4 +1,4 @@
-// Cases 14–22: native stacked PRs (`pr-shepherd --stack`).
+// Cases 14–22 and 24: native stacked PRs (`pr-shepherd --stack`).
 //
 // Grounded in agent-blackboard session history, where the recurring stack
 // failures were:
@@ -256,6 +256,50 @@ the mark-ready step to the human.`,
       ),
       "names-the-ready-command": regex(String.raw`gh pr ready\s+421(?![0-9])`, { weight: 0.5 }),
       "iterates-the-stack": llm(ITERATES_STACK_AGAIN),
+      "skill-fired": skillFired,
+    },
+  },
+
+  {
+    // Playbook coverage, not traffic: no transcript shows this failure. Cases
+    // 14–22 sit at ceiling because the stack output prints its own rules; this
+    // one leans on a rule that lives only in the "Stack merge" playbook. The
+    // model may guess the extension name unaided, so the per-layer-merge
+    // rubric is the part more likely to separate the arms.
+    slug: "24-stack-merge-missing-extension",
+    fixture: "97-aggregate-stack-full-merge",
+    shape: (fixture) => `${stackShape(repoPr(342), { merge: true })(fixture)}
+
+---
+
+I ran the printed merge command and got:
+
+\`\`\`
+unknown command "stack" for "gh"
+\`\`\`
+
+Should I just \`gh pr merge\` each layer instead?`,
+    tags: ["stack", "merge"],
+    graders: {
+      "installs-the-gh-stack-extension": regex(String.raw`gh extension install\s+github/gh-stack`),
+      "reruns-the-stack-merge-not-per-layer": llm(
+        `The plan installs the \`gh stack\` extension and then reruns the SAME printed
+command, \`GH_REPO=owner/repo gh stack merge 342 --yes --squash\`, which lands
+PR #341 and PR #342 bottom-up in one step. Afterwards it reruns the
+\`--stack … --merge\` selector.
+
+The error means only that the \`gh stack\` extension is missing. It is not a
+reason to change the merge route.
+
+This session has no shell, so steps written for the user to run are expected
+and pass. So does asking for approval before installing, as long as the plan
+still installs the extension and reruns the printed command.
+
+Failing responses do any of: answer yes and merge PR #341 or PR #342 with
+\`gh pr merge\`; enable auto-merge on either layer; run \`gh stack push\`;
+retarget #342 onto \`main\` by hand; replace the stack merge with a manual or
+GitHub-UI merge of the layers.`,
+      ),
       "skill-fired": skillFired,
     },
   },

@@ -3,8 +3,8 @@
 **Does an agent act correctly on pr-shepherd's output, and would it without the
 plugin?**
 
-22 cases replay real recorded pr-shepherd output from the states agents most
-often get wrong in real transcripts. A 23rd case checks that the skill stays
+23 cases replay real recorded pr-shepherd output, mostly from the states agents
+get wrong in real transcripts. A 24th case checks that the skill stays
 out of unrelated GitHub questions.
 
 - **CI:** blocking on `gh run watch` instead of letting Shepherd poll, rerunning
@@ -24,6 +24,9 @@ own.
 > **Run pr-shepherd on Sonnet 5.5 or better. Low effort is enough.**
 >
 > - Sonnet 5.5 at low effort scores 1.00 with the plugin on 17 of 23 cases.
+> - Sonnet 5 → 5.5 raised the with-plugin mean from 0.84 to 0.92. The
+>   without-plugin mean rose too (0.73 → 0.83), so the plugin still adds about
+>   +0.1 on the newer model.
 > - Haiku 4.5 scores 0.56 on a stack case that Sonnet aces even without the
 >   plugin. The skill fires every time, and raising Haiku to `xhigh` effort does
 >   not move the score.
@@ -45,10 +48,15 @@ question.
 Without the plugin, the agent blocks on `gh run watch` in every run of `01`,
 which is still the most frequent failure in real transcripts.
 
-The stack cases (`14`–`22`) score 1.00 in both arms except `22`. The stack
-output's own `## Instructions` are complete enough that the model follows them
-unaided. Three cases score lower with the plugin; see
-[EVALS.md](EVALS.md#latest-full-results).
+Stack cases `14`–`22` score 1.00 in both arms except `22`. The stack output's
+own `## Instructions` are complete enough that the model follows them unaided.
+Where the rule lives only in a playbook, the plugin matters. On `24`, a missing
+`gh stack` extension, Δ is **+0.50**: without the plugin, the agent offers to
+merge each layer by hand.
+
+In this run, three cases scored lower with the plugin. `04` exposed a gap in
+the CI-triage playbook. After the fix it scores +0.25 at `runs: 6`. `06` and
+`12` are within noise. See [EVALS.md](EVALS.md#latest-full-results).
 
 ## Run it
 

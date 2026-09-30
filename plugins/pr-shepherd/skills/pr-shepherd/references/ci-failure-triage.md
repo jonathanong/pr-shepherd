@@ -1,6 +1,6 @@
 # CI failure triage
 
-Apply when a step says `Playbook: "CI failure triage"`. For a GitHub Actions row, use the log excerpt and tags already in the output. An `external` check with a URL may be opened or reproduced.
+Apply when a step says `Playbook: "CI failure triage"`. For a GitHub Actions row, use the log excerpt and tags already in the output; fetch a job log only in the gate-job case below. An `external` check with a URL may be opened or reproduced.
 
 - Match each failure's `[conclusion: …]` tag. A specific conclusion wins over the general GitHub Actions row.
 - `[rerun authorized]` plus a `rerun:` command means the viewer can rerun Actions (WRITE+) and this is the original attempt. Shepherd checked `repositoryPermission` and `run_attempt`.
@@ -12,6 +12,7 @@ Apply when a step says `Playbook: "CI failure triage"`. For a GitHub Actions row
 ## Conclusions
 
 - GitHub Actions failure (has a run id, not `CANCELLED` or `STARTUP_FAILURE`): read the log excerpt. Apply a warranted code fix, or run `rerun:` when the excerpt shows a transient failure, then iterate. Do not wait for the rerun.
+- No usable evidence in the excerpt is not evidence of a transient failure. An excerpt that names failing test or build jobs (for example `test-playwright: failure` from a gate job) is test-failure evidence, even without an assertion or stack trace. On the original attempt, read those jobs' logs with `gh run view <runId> --log-failed -R <owner/repo>` before choosing between a code fix and `rerun:`. Rerun only when that log shows a transient cause.
 - Transient infrastructure failure: run `rerun:` when it is printed, then iterate. Do not wait. If no command is printed, finish the other surfaced work and iterate.
 - Real test or build failure: fix the code. Do not rerun, even when `[rerun authorized]` is shown.
 - `[conclusion: CANCELLED]` or `[conclusion: STARTUP_FAILURE]`: no log excerpt. Run `rerun:` when printed, then iterate. Do not wait. Without a command, finish other work and iterate.

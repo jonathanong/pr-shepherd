@@ -35,8 +35,8 @@ Layout:
 - `generate.mjs`: the entrypoint and the design rationale.
 - `lib.mjs`: the framing, grader helpers and writer.
 - `cases/core.mjs`: cases 01–13.
-- `cases/stack.mjs`: cases 14–22.
-- `cases/recent.mjs`: cases 23 onward.
+- `cases/stack.mjs`: cases 14–22 and 24.
+- `cases/recent.mjs`: case 23.
 
 Case numbers are stable. Add new cases at the end instead of renumbering.
 
@@ -74,6 +74,7 @@ third arm.
 | `21-stack-all-terminal-stop`           | `87`    | Every layer merged: stop (ceiling guard; flat Δ expected)    |
 | `22-stack-auto-ready-disabled-probe`   | `104`   | Probe first; `gh pr ready` only on the described `WAIT`      |
 | `23-behind-base-rebase-hint`           | `73`    | Rebase `--force-with-lease` before pushing the review fix    |
+| `24-stack-merge-missing-extension`     | `97`    | Missing `gh stack`: install it, don't merge per layer        |
 
 Presence of a specific token is graded by regex (`gh stack merge 511`).
 Absence of a behavior is graded by an LLM rubric: the framing asks the agent to
@@ -120,6 +121,45 @@ What the numbers say:
   is the behavior the case targets, so watch it across runs.
 - **`01` is the clean signal again:** without-arm 0.00, with-arm 1.00.
 
+### After the CI-triage fix (2026-09-30, Sonnet 5.5 low, `runs: 6`)
+
+These are targeted reruns, not a full run. The table above is the pre-fix
+plugin.
+
+| Case | with | without | Δ         | Note                                              |
+| ---- | ---- | ------- | --------- | ------------------------------------------------- |
+| `04` | 1.00 | 0.75    | **+0.25** | was −0.33; gate-job rule added to the playbook    |
+| `24` | 1.00 | 0.50    | **+0.50** | new; the first stack case that separates the arms |
+
+On `24`, the without-arm declined to name the extension in 2 of 6 runs and
+offered per-layer `gh pr merge` as a fallback in 4. The first run of `24`
+scored the with-arm 0.67 because the rubric's "hand the merge to the human"
+clause caught correct no-shell step lists. The rubric was clarified before the
+numbers above.
+
+### Sonnet 5 vs Sonnet 5.5
+
+Both runs use the same 23 cases, the same plugin (before the CI-triage fix),
+low effort and the opus judge.
+
+|                        | Sonnet 5 | Sonnet 5.5 |
+| ---------------------- | -------- | ---------- |
+| with-arm mean          | 0.84     | **0.92**   |
+| without-arm mean       | 0.73     | **0.83**   |
+| mean Δ                 | +0.11    | +0.09      |
+| cases at 1.00 (with)   | 13       | 17         |
+| skill fired (positive) | 56/66    | 64/66      |
+| cost                   | $17.06   | $15.87     |
+
+5.5 lifts both arms by about +0.1, so Δ holds steady. The plugin's
+contribution does not shrink as the model improves. `02` and `05` keep their
+Δ on both models. `01` is +0.50 on 5 and +1.00 on 5.5, because 5 sometimes
+stopped instead of iterating.
+
+Per-case moves under ±0.44 are noise at `runs: 3`. `04` went from +0.33 to
+−0.33 and `06` from +0.67 to −0.13; don't read those as regressions without a
+higher-`runs` rerun.
+
 ## Grounding in real traffic
 
 Cases 01–12 came from ~4,700 real pr-shepherd invocations in Claude (1,742
@@ -142,6 +182,11 @@ history:
 - **Merge order** ("if the lower stacks are ready, merge it first"). → `14`, `19`
 - **Ignored rebase guidance** ("pr-shepherd tells you to rebase. why didn't you
   follow?"). → `23`, and `17` for its stack form
+
+Case `24` is playbook coverage, not traffic: no transcript shows a missing
+`gh stack` extension. It exists because every printed stack rule scored at
+ceiling in both arms, so it tests a rule found only in the "Stack merge"
+playbook.
 
 The corpus disproved two assumptions, so nothing here tests them:
 
@@ -229,9 +274,10 @@ variable in a case's `env:` block fails every run: the runner accepts only
    version, so the `name@version` check passed on a changed treatment.
 10. **Wire the sonnet tier into CI** for PRs touching
     `plugins/pr-shepherd/skills/**`.
-11. **Close the CI-triage gap that `04` exposed.** Say what to do on the
-    original attempt when the excerpt has no usable evidence. Then rerun `04`
-    at `runs: 6`.
-12. **Make a stack case discriminate.** Every stack case but `22` is at
-    ceiling. Look for a stack state whose rule is only in the "Stack merge" or
-    "Branch update" playbook rather than printed in the output.
+11. **Surface the failing jobs' log tails when the failing job is a gate.**
+    The `04` fix has the agent run `gh run view --log-failed`. Per "Surface
+    data, don't classify it", the CLI should print that evidence itself. This
+    is a CLI and snapshot change.
+12. **More playbook-only stack cases.** `24` shows the pattern: stack rules
+    printed in the output sit at ceiling, and rules found only in a playbook
+    discriminate. Next candidate: a merge-queue ejection (fixture `98`).
