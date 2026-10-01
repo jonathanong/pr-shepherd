@@ -37,7 +37,7 @@ At least one remaining failing check has no `rerunCommand` and is one of:
 - a GitHub Actions check whose `runAttempt` is greater than 1 and has no nonblank included log excerpt, meaning Shepherd's single rerun allowance is exhausted with no usable failure evidence (unless a behind/conflicting branch still provides a branch-refresh path);
 - `ACTION_REQUIRED`, `CANCELLED`, or `STARTUP_FAILURE`;
 - a check with `runId === null` and an empty or whitespace-only `detailsUrl`; or
-- a check with a non-null run ID but no nonblank included `logExcerpt`.
+- a check with a non-null run ID but no nonblank included `logExcerpt` (or `relatedJobs[].logExcerpt`).
 
 The trigger fires only when no autonomous work or newly surfaced one-look item remains: no conflicts, behind-base recovery for a later workflow attempt, currently surfaced actionable or resolution-only threads, actionable comments, pending comment minimizations, actionable changes-requested reviews, queued/first-look/edited review summaries, first-look threads/comments, actionable annotations, another failing check with an autonomous path, or a failed job whose workflow run still has an in-progress job. An unauthorized review item can therefore postpone this escalation for its one visibility tick; after its seen marker suppresses it, the manual-only check may escalate on the next tick. An authorized bot, viewer-authored, or configured other-human thread with a generated mutation is repeatable work even without a source location. A stale human `CHANGES_REQUESTED` review does not postpone the handoff, but it is preserved in the escalation payload so the human sees every remaining blocker.
 

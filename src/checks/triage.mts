@@ -16,9 +16,11 @@ export async function triageFailingChecks(
   repo: RepoInfo,
   stateKey?: StateKey,
   budget = new TriageBudget(),
+  /** Non-failing checks (ignored, filtered, superseded, …) whose jobs must not resurface as related jobs. */
+  otherChecks: ClassifiedCheck[] = [],
 ): Promise<TriagedCheck[]> {
   const jobsCache = new Map<string, Promise<JobsResponse["jobs"] | undefined>>();
-  const surfaced = surfacedNamesByRun(failingChecks);
+  const surfaced = surfacedNamesByRun([...failingChecks, ...otherChecks]);
   const relatedOwners = firstCheckPerRun(failingChecks);
   const checks = await mapPool(failingChecks, 4, (check) =>
     triageCheck(

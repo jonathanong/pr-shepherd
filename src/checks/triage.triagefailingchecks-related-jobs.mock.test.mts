@@ -63,6 +63,22 @@ describe("triageFailingChecks — related failed jobs", () => {
     expect(logFetchCount()).toBe(3);
   });
 
+  it("excludes jobs belonging to non-failing (e.g. ignored) checks", async () => {
+    routeFetch([
+      { id: 1, name: "gate", conclusion: "failure" },
+      { id: 2, name: "ignored-job", conclusion: "failure" },
+      { id: 3, name: "child", conclusion: "failure" },
+    ]);
+    const [gate] = await triageFailingChecks(
+      [makeCheck({ name: "gate" })],
+      REPO,
+      undefined,
+      undefined,
+      [makeCheck({ name: "ignored-job", category: "ignored" })],
+    );
+    expect(gate?.relatedJobs?.map((j) => j.name)).toEqual(["child"]);
+  });
+
   it("omits relatedJobs when no sibling failed, and for cancelled checks", async () => {
     routeFetch([
       { id: 1, name: "gate", conclusion: "failure" },

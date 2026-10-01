@@ -160,7 +160,13 @@ export async function runCheck(
   const ignored = classifiedChecks.filter((c) => c.category === "ignored");
   const triagedBase =
     failing.length > 0 && !opts.skipTriage
-      ? await triageFailingChecks(failing, repo, stateKey, triageBudget)
+      ? await triageFailingChecks(
+          failing,
+          repo,
+          stateKey,
+          triageBudget,
+          classifiedChecks.filter((c) => c.category !== "failing"),
+        )
       : failing;
   triageBudget.throwIfSecondary();
   triageBudget.reportOmissionIfNeeded();

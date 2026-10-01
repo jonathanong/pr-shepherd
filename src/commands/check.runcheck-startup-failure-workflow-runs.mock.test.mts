@@ -49,6 +49,7 @@ describe("runCheck — startup failure workflow runs", () => {
       { owner: "owner", name: "repo" },
       { owner: "owner", repo: "repo", pr: 42 },
       expect.anything(),
+      expect.any(Array),
     );
   });
 
