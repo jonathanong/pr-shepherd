@@ -9,7 +9,7 @@ import type {
   CheckConclusion,
   SuggestionBlock,
 } from "./github.mts";
-import type { ClassifiedCheck, TriagedCheck } from "./check-classification.mts";
+import type { ClassifiedCheck, RelatedFailedJob, TriagedCheck } from "./check-classification.mts";
 import type { AgentThreadComment } from "./agent-thread.mts";
 import type { CheckAnnotation } from "./check-annotations.mts";
 import type { PrActivitySummary } from "./activity.mts";
@@ -200,6 +200,8 @@ export interface AgentCheck {
   /** One-line status text shown in the GitHub UI (e.g. "67.68% of diff hit (target 85.00%)"). */
   summary?: string;
   logExcerpt?: string;
+  /** Other failed jobs from the same workflow run (not their own check entries), with log tails. */
+  relatedJobs?: RelatedFailedJob[];
   /** `gh run rerun` command, present only when the check has a runId and the viewer's repository role grants Actions rerun capability (WRITE+). */
   rerunCommand?: string;
   /** Workflow-run attempt number, surfaced only after the initial attempt. */
@@ -231,6 +233,7 @@ export interface RelevantCheck {
   /** One-line status text shown in the GitHub UI (e.g. "67.68% of diff hit (target 85.00%)"). */
   summary?: string;
   logExcerpt?: string;
+  relatedJobs?: RelatedFailedJob[];
   /** Marker-gated inline annotations from this check. */
   annotations?: CheckAnnotation[];
   scope?: "merge_group";

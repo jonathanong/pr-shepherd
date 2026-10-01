@@ -1,4 +1,5 @@
 /* eslint-disable max-lines */
+import { renderRelatedJobLines } from "../../cli/related-jobs-format.mts";
 import type { AgentCheck, EscalateDetails, EscalateTrigger, ReviewThread } from "../../types.mts";
 import { loadConfig } from "../../config/load.mts";
 import { renderResolveCommand } from "./render.mts";
@@ -66,6 +67,7 @@ function renderEscalateCheck(check: AgentCheck): string[] {
   if (check.failedStep) lines.push(`  > failed step: ${check.failedStep}`);
   if (check.summary) lines.push(`  > ${check.summary}`);
   if (check.logExcerpt) lines.push(...renderBlockquoteLines(check.logExcerpt, "  "));
+  lines.push(...renderRelatedJobLines(check.relatedJobs));
   if (check.rerunCommand) lines.push(`  rerun: \`${check.rerunCommand}\``);
   for (const annotation of check.annotations ?? []) {
     lines.push(...renderEscalateAnnotation(annotation));

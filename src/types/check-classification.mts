@@ -18,6 +18,15 @@ export interface ClassifiedCheck extends CheckRun {
   annotations?: CheckAnnotation[];
 }
 
+/** Another failed job in the same workflow run that is not its own failing check entry. */
+export interface RelatedFailedJob {
+  name: string;
+  /** Uppercased job conclusion (e.g. `FAILURE`, `TIMED_OUT`). */
+  conclusion: string;
+  failedStep?: string;
+  logExcerpt?: string;
+}
+
 export interface TriagedCheck extends ClassifiedCheck {
   /** Workflow display name (e.g. `"CI"`). Populated when available from the jobs API; may be `undefined` on fetch failure or when no matching job is found. */
   workflowName?: string;
@@ -27,4 +36,6 @@ export interface TriagedCheck extends ClassifiedCheck {
   failedStep?: string;
   /** Bounded raw excerpt from the matched failed job log, when GitHub exposes one. */
   logExcerpt?: string;
+  /** Sibling failed jobs from the same run, with log tails (reported once per run). */
+  relatedJobs?: RelatedFailedJob[];
 }

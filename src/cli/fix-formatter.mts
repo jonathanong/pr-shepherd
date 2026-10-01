@@ -14,6 +14,7 @@ import {
 import { BODY_TRUNCATE_MAX_CHARS } from "./body-truncate.mts";
 import { numberInstructions } from "./iterate-instructions.mts";
 import { renderCheckAnnotation, renderProtectedRun } from "./fix-formatter-extra.mts";
+import { renderRelatedJobLines } from "./related-jobs-format.mts";
 import { isFailingAgentCheck } from "../checks/conclusions.mts";
 import type { IterateResultFixCode } from "../types.mts";
 import { renderMergeCommand } from "../commands/iterate/merge.mts";
@@ -107,6 +108,7 @@ export function formatFixCodeResult(
         if (ch.failedStep) lines.push(`  > ${ch.failedStep}`);
         if (ch.summary) lines.push(`  > ${ch.summary}`);
         if (ch.logExcerpt) lines.push(indentBlockquote(ch.logExcerpt, "  "));
+        lines.push(...renderRelatedJobLines(ch.relatedJobs));
       }
       if (ch.rerunCommand && ch.runId && !seenRerunRunIds.has(ch.runId)) {
         seenRerunRunIds.add(ch.runId);

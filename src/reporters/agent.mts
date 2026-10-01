@@ -80,6 +80,7 @@ export function toAgentCheck(c: TriagedCheck): AgentCheck {
     ...(c.failedStep !== undefined && { failedStep: c.failedStep }),
     ...(c.summary !== undefined && { summary: c.summary }),
     ...(c.logExcerpt !== undefined && { logExcerpt: c.logExcerpt }),
+    ...(c.relatedJobs !== undefined && { relatedJobs: c.relatedJobs }),
     ...(c.annotations !== undefined && { annotations: c.annotations }),
     ...(c.scope !== undefined && { scope: c.scope }),
     ...(c.commitOid !== undefined && { commitOid: c.commitOid }),

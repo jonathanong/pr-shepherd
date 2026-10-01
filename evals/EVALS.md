@@ -335,7 +335,9 @@ variable in a case's `env:` block fails every run: the runner accepts only
 11. **Surface the failing jobs' log tails when the failing job is a gate.**
     The `04` fix has the agent run `gh run view --log-failed`. Per "Surface
     data, don't classify it", the CLI should print that evidence itself. This
-    is a CLI and snapshot change, tracked in #491.
+    #491 landed this: `## Failing checks` now lists sibling failed jobs with
+    log tails. Re-run case `04` to confirm the playbook's `gh run view` step is
+    no longer needed.
 12. **More playbook-only stack cases.** `24` shows the pattern: stack rules
     printed in the output sit at ceiling, and rules found only in a playbook
     discriminate. Next candidate: a merge-queue ejection (fixture `98`).

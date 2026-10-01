@@ -98,6 +98,7 @@ For each failing check, triage fetches additional context from the GitHub Action
 - **`failedStep`** — the first step whose conclusion is not `success`, `skipped`, or `neutral` (e.g. a step with `failure` or `timed_out` conclusion).
 - **`runAttempt`** — GitHub's `run_attempt`, used to ensure Shepherd recommends at most one rerun. Attempt 1 is omitted from agent output as the trivial default; later attempts are rendered as `[attempt: N]`.
 - **`logExcerpt`** — bounded failure context from the matched failed job log, fetched from `GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs`. The excerpt is the first failed step's visible output: the collapsed `##[group]Run`/`Post` command block (script echo, `with:`, `env:`, `shell:`) is dropped, and later steps plus post-job cleanup (`Post job cleanup.`, `Cleaning up orphan processes`) are clipped. For aggregate jobs that print a `Job results` JSON block, Shepherd emits the non-success job results plus the exit-code/error line. A step over 4000 characters is suffix-truncated so the error line is kept. When the log has no step groups, Shepherd falls back to lines around the first error (still clipping post-job cleanup). The fetch is best-effort; missing or inaccessible logs leave the field omitted.
+- **`relatedJobs`** — other failed jobs (`failure`/`timed_out`, max 5) from the same workflow run that are not surfaced as their own failing check, each `{ name, conclusion, failedStep?, logExcerpt? }` with the same excerpt rules as `logExcerpt`. Attached once per run, to its first failing check, so a gate job's failure shows its children's errors. Log reads use the same job-log cache and REST read budget as `logExcerpt`.
 - **`annotations`** — marker-gated inline annotations from completed `CheckRun` checks (any conclusion). The batch query probes `annotations(first: 1)` so Shepherd only paginates a CheckRun that actually has annotations. Those bodies are loaded together: one `nodes(ids:)` request per 20 uncached check runs, then the single-check query only when `hasNextPage` is set. Annotation `message` and `rawDetails` fields are capped independently before text and JSON output. Each annotation is surfaced once per PR; there is no resolve/minimize mutation. The current `check` result preserves successful-check annotations as raw context and marks them seen, while `iterate` treats the successful parent conclusion as authoritative regardless of classification bucket and does not turn those annotations into `FIX_CODE`.
 
 Checks with `conclusion === "CANCELLED"` fetch job metadata only to recover `run_attempt`; they never fetch a log excerpt. Checks with `conclusion === "STARTUP_FAILURE"` receive `run_attempt` from the workflow-runs response and skip the jobs/logs calls. Cancelled output carries a `[conclusion: CANCELLED]` tag. Startup-failure output carries a `[conclusion: STARTUP_FAILURE]` tag and may include the workflow run display title as `summary`. Ordinary failures use only the bounded evidence included by Shepherd. A later failed attempt never receives a second rerun command, but a nonblank included log excerpt still provides autonomous `FIX_CODE` investigation work. When a check has no included evidence or authorized first-attempt rerun, Shepherd lets any other autonomous work complete under `FIX_CODE`, including refreshing a behind/conflicting branch after a later workflow attempt. It returns `ESCALATE` if that check remains the only blocker after no autonomous path remains.
@@ -106,18 +107,18 @@ Checks with `conclusion === "CANCELLED"` fetch job metadata only to recover `run
 
 `report.checks` has these fields:
 
-| Field                    | Content                                                                                                                       |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| `passing`                | Classified checks with `category === 'passed'`                                                                                |
-| `failing`                | Triaged failing checks — with `workflowName`, `jobName`, `failedStep`, `logExcerpt` (non-cancelled, non-startup-failure only) |
-| `inProgress`             | Checks with `category === 'in_progress'`                                                                                      |
-| `skipped`                | Checks with `category === 'skipped'`                                                                                          |
-| `filtered`               | Checks excluded by event filter                                                                                               |
-| `ignored`                | Ignored checks that still carry unseen annotations; omitted when empty                                                        |
-| `filteredNames`          | Names of filtered checks (for reporter display)                                                                               |
-| `blockedByFilteredCheck` | True when BLOCKED state is caused by a filtered check                                                                         |
-| `ignoredNames`           | Names of checks suppressed by `ignoreChecks`; omitted when empty                                                              |
-| `supersededNames`        | Names of `CANCELLED` checks reclassified as `superseded`; omitted when empty                                                  |
+| Field                    | Content                                                                                                                                      |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `passing`                | Classified checks with `category === 'passed'`                                                                                               |
+| `failing`                | Triaged failing checks — with `workflowName`, `jobName`, `failedStep`, `logExcerpt`, `relatedJobs` (non-cancelled, non-startup-failure only) |
+| `inProgress`             | Checks with `category === 'in_progress'`                                                                                                     |
+| `skipped`                | Checks with `category === 'skipped'`                                                                                                         |
+| `filtered`               | Checks excluded by event filter                                                                                                              |
+| `ignored`                | Ignored checks that still carry unseen annotations; omitted when empty                                                                       |
+| `filteredNames`          | Names of filtered checks (for reporter display)                                                                                              |
+| `blockedByFilteredCheck` | True when BLOCKED state is caused by a filtered check                                                                                        |
+| `ignoredNames`           | Names of checks suppressed by `ignoreChecks`; omitted when empty                                                                             |
+| `supersededNames`        | Names of `CANCELLED` checks reclassified as `superseded`; omitted when empty                                                                 |
 
 Pending CI checks also carry raw timing when GitHub exposes it:
 
