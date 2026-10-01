@@ -171,6 +171,20 @@ describe("fix_code — GitHub Actions authorization", () => {
     expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
   });
 
+  it("treats a sibling job log tail as autonomous evidence", async () => {
+    prepareManualCheck({
+      checks: checkSet([
+        failingCheck({
+          relatedJobs: [{ name: "test-a", conclusion: "FAILURE", logExcerpt: "AssertionError" }],
+        }),
+      ]),
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+  });
+
   it("preserves merge mode in the resume command for a manual check hand-off", async () => {
     prepareManualCheck();
 

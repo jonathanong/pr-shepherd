@@ -69,6 +69,13 @@ interface HandleFixCodeContext {
   repairInstructions?: string[];
 }
 
+function hasLogEvidence(check: AgentCheck): boolean {
+  return (
+    Boolean(check.logExcerpt?.trim()) ||
+    (check.relatedJobs ?? []).some((job) => Boolean(job.logExcerpt?.trim()))
+  );
+}
+
 function checkRequiresHumanFollowUp(check: AgentCheck): boolean {
   if (check.rerunCommand) return false;
   if (
@@ -80,12 +87,12 @@ function checkRequiresHumanFollowUp(check: AgentCheck): boolean {
   // A later attempt cannot be rerun automatically, but its included log can still
   // identify a code or configuration fix for the agent. Only a later failure with
   // no actionable evidence needs a human handoff.
-  if (check.runAttempt !== undefined && check.runAttempt > 1) return !check.logExcerpt?.trim();
+  if (check.runAttempt !== undefined && check.runAttempt > 1) return !hasLogEvidence(check);
   // An external check's direct URL is actionable evidence: the agent can inspect the
   // provider and/or reproduce the reported failure locally. Only a truly bare check
   // has no autonomous investigation path.
   if (check.runId === null) return !check.detailsUrl?.trim();
-  return !check.logExcerpt?.trim();
+  return !hasLogEvidence(check);
 }
 
 function nextFixAttempts(

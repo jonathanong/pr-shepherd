@@ -1,9 +1,11 @@
 /* eslint-disable max-lines */
-import { restWithRateLimit, restText } from "../github/http.mts";
+import { restWithRateLimit } from "../github/http.mts";
 import type { CheckRun, ClassifiedCheck, TriagedCheck } from "../types.mts";
 import type { RepoInfo } from "../github/client.mts";
-import { loadDerived, storeDerived, type StateKey } from "../state/rest-cache.mts";
-import { buildLogExcerpt } from "./log-excerpt.mts";
+import type { StateKey } from "../state/rest-cache.mts";
+import { fetchJobLogExcerpt } from "./job-log.mts";
+import { pickFailedStep, type ActionsJob } from "./jobs-types.mts";
+import { pickRelatedFailedJobs, fetchRelatedJobs } from "./related-jobs.mts";
 import { TriageBudget } from "./triage-budget.mts";
 import { mapPool } from "../util/pool.mts";
 
@@ -14,10 +16,21 @@ export async function triageFailingChecks(
   repo: RepoInfo,
   stateKey?: StateKey,
   budget = new TriageBudget(),
+  /** Non-failing checks (ignored, filtered, superseded, …) whose jobs must not resurface as related jobs. */
+  otherChecks: ClassifiedCheck[] = [],
 ): Promise<TriagedCheck[]> {
   const jobsCache = new Map<string, Promise<JobsResponse["jobs"] | undefined>>();
+  const surfaced = surfacedNamesByRun([...failingChecks, ...otherChecks]);
+  const relatedOwners = firstCheckPerRun(failingChecks);
   const checks = await mapPool(failingChecks, 4, (check) =>
-    triageCheck(check, repo, jobsCache, stateKey, budget),
+    triageCheck(
+      check,
+      repo,
+      jobsCache,
+      stateKey,
+      budget,
+      relatedOwners.has(check) ? surfaced.get(check.runId ?? "") : undefined,
+    ),
   );
   budget.throwIfSecondary();
   budget.reportOmissionIfNeeded();
@@ -30,6 +43,7 @@ async function triageCheck(
   jobsCache: Map<string, Promise<JobsResponse["jobs"] | undefined>>,
   stateKey?: StateKey,
   budget?: TriageBudget,
+  relatedSurfaced?: ReadonlySet<string>,
 ): Promise<TriagedCheck> {
   if (check.runId === null || check.conclusion === "STARTUP_FAILURE") {
     return { ...check };
@@ -50,6 +64,15 @@ async function triageCheck(
           budget,
         )
       : undefined;
+  const relatedJobs =
+    jobs && relatedSurfaced && check.conclusion !== "CANCELLED"
+      ? await fetchRelatedJobs(
+          pickRelatedFailedJobs(jobs, jobInfo?.jobId, relatedSurfaced),
+          repo,
+          stateKey,
+          budget,
+        )
+      : [];
   return {
     ...check,
     ...(runAttempt !== undefined && { runAttempt }),
@@ -57,7 +80,32 @@ async function triageCheck(
     ...(jobInfo?.jobName !== undefined && { jobName: jobInfo.jobName }),
     ...(jobInfo?.failedStep !== undefined && { failedStep: jobInfo.failedStep }),
     ...(logExcerpt !== undefined && { logExcerpt }),
+    ...(relatedJobs.length > 0 && { relatedJobs }),
   };
+}
+
+function surfacedNamesByRun(checks: ClassifiedCheck[]): Map<string, Set<string>> {
+  const byRun = new Map<string, Set<string>>();
+  for (const check of checks) {
+    if (check.runId === null) continue;
+    const names = byRun.get(check.runId) ?? new Set<string>();
+    names.add(check.name);
+    byRun.set(check.runId, names);
+  }
+  return byRun;
+}
+
+/** Sibling failed jobs are reported once per run, on its first failing check. */
+function firstCheckPerRun(checks: ClassifiedCheck[]): Set<ClassifiedCheck> {
+  const seen = new Set<string>();
+  const first = new Set<ClassifiedCheck>();
+  for (const check of checks) {
+    if (check.runId === null || seen.has(check.runId)) continue;
+    if (check.conclusion === "CANCELLED" || check.conclusion === "STARTUP_FAILURE") continue;
+    seen.add(check.runId);
+    first.add(check);
+  }
+  return first;
 }
 
 export async function fetchStartupFailureChecks(
@@ -133,14 +181,7 @@ async function fetchStartupFailureChecksUncached(
 }
 
 interface JobsResponse {
-  jobs: Array<{
-    id?: number;
-    name: string;
-    workflow_name?: string;
-    conclusion: string | null;
-    run_attempt?: number;
-    steps?: Array<{ name: string; number: number; conclusion: string | null }>;
-  }>;
+  jobs: ActionsJob[];
 }
 
 interface WorkflowRunsResponse {
@@ -269,13 +310,7 @@ function pickJobInfo(jobs: JobsResponse["jobs"], checkName: string): JobInfo | u
     matchedJobs.find((j) => j.conclusion !== null && j.conclusion !== "success") ??
     matchedJobs[0];
   if (!job) return undefined;
-  const failedStep = job.steps?.find(
-    (s) =>
-      s.conclusion !== null &&
-      s.conclusion !== "success" &&
-      s.conclusion !== "skipped" &&
-      s.conclusion !== "neutral",
-  )?.name;
+  const failedStep = pickFailedStep(job);
   return {
     ...(job.id !== undefined && { jobId: job.id }),
     workflowName: job.workflow_name,
@@ -283,39 +318,4 @@ function pickJobInfo(jobs: JobsResponse["jobs"], checkName: string): JobInfo | u
     failedStep,
     jobConclusion: job.conclusion,
   };
-}
-
-/**
- * `cacheable` gates the cross-tick cache — only set once the matched job has
- * a terminal conclusion, so an in-progress job's (possibly partial) log
- * never gets frozen into the cache.
- */
-async function fetchJobLogExcerpt(
-  jobId: number,
-  repo: RepoInfo,
-  stateKey?: StateKey,
-  cacheable = false,
-  budget?: TriageBudget,
-): Promise<string | undefined> {
-  const cacheName = `joblog-v2-${jobId}`;
-  if (stateKey && cacheable) {
-    const cached = await loadDerived<string | null>(stateKey, cacheName);
-    if (cached) return cached.value ?? undefined;
-  }
-  const { owner, name } = repo;
-  try {
-    if (!budget?.canScheduleOptional()) return undefined;
-    const excerpt = buildLogExcerpt(
-      await restText(`/repos/${owner}/${name}/actions/jobs/${jobId}/logs`, (rateLimit) =>
-        budget?.observe(rateLimit),
-      ),
-    );
-    if (stateKey && cacheable) {
-      await storeDerived<string | null>(stateKey, cacheName, excerpt ?? null);
-    }
-    return excerpt;
-  } catch (error) {
-    budget?.observeError(error);
-    return undefined;
-  }
 }

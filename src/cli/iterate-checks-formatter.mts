@@ -1,4 +1,5 @@
 import type { RelevantCheck } from "../types.mts";
+import { renderRelatedJobLines } from "./related-jobs-format.mts";
 import { renderCheckAnnotation } from "./fix-formatter-extra.mts";
 
 export function formatRelevantChecks(checks: RelevantCheck[]): string | null {
@@ -16,6 +17,7 @@ function formatRelevantCheck(check: RelevantCheck): string[] {
   const lines = [`- \`${workflow}${job}\` [conclusion: ${check.conclusion}]`];
   appendCheckFields(lines, check);
   appendLogExcerpt(lines, check.logExcerpt);
+  lines.push(...renderRelatedJobLines(check.relatedJobs));
   appendAnnotations(lines, check.annotations, check.logExcerpt);
   return lines;
 }
