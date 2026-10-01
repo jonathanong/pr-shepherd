@@ -42,7 +42,7 @@ iterate:
   stallTimeoutMinutes: 60 # escalate if state unchanged or CI has not started for this many minutes
   minimizeApprovals: false # set true to also minimize APPROVED-state reviews
   minimizeComments: all # all | bots | none
-  behindBaseHint: "rebase --force-with-lease" # one-liner shown on the fix_code push step when behind base
+  behindBaseHint: "rebase --force-with-lease" # one-liner shown on fix_code when behind or conflicting with base
   resolveOtherHumanThreads: none # none | outdated | always
 
 poll:
@@ -103,7 +103,7 @@ actions:
 | `iterate.stallTimeoutMinutes`        | `60`                                      | Minutes the loop may repeat the same action without progress, or CI may stay pending without starting, before `escalate` with `stall-timeout`; `0` disables      |
 | `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination).                                                                           |
 | `iterate.minimizeComments`           | `"all"`                                   | Which non-human GitHub author classes to minimize for PR comments and review summaries: `all`, `bots`, or `none`; humans are never minimized.                    |
-| `iterate.behindBaseHint`             | `""`                                      | One-liner shown on the `fix_code` push step when the branch is behind its base; empty omits the hint entirely                                                    |
+| `iterate.behindBaseHint`             | `""`                                      | One-liner shown on `fix_code` when the branch is behind or conflicts with its base; empty omits the hint entirely                                                |
 | `iterate.resolveOtherHumanThreads`   | `"none"`                                  | When to resolve other-human inline threads after a reply: `none` (reply-only), `outdated` (also resolve when GitHub reports outdated), or `always`               |
 | `poll.intervalSeconds`               | `60`                                      | Default delay between `WAIT` ticks for one PR; overridden by `--interval`                                                                                        |
 | `poll.stackIntervalFactor`           | `2`                                       | Multiplier for --stack and multi-PR sleeps (`intervalSeconds` × this). `--interval` overrides it and is not multiplied                                           |
@@ -213,7 +213,7 @@ Items excluded by this policy still go through seen markers: Shepherd surfaces t
 
 ### `iterate.behindBaseHint` — default `""`
 
-One-liner appended to the `fix_code` push instruction when the branch is behind its base (`mergeStatus: "BEHIND"`) — e.g. `"rebase --force-with-lease"`, `"merge the main branch"`, or `"see .agents/skills/agent-workflow/git-and-prs.md"`. Shepherd never decides the convention itself (see [`docs/actions.md`](actions.md) on why rebase/merge mechanics are intentionally left to the caller) — it only echoes back whatever pointer you configure here.
+One-liner added to the `fix_code` instructions when the branch is behind its base (`mergeStatus: "BEHIND"`) or conflicts with it (`mergeStatus: "CONFLICTS"`, shown right after the merge-conflicts step and omitted on a native stack layer) — e.g. `"rebase --force-with-lease"`, `"merge the main branch"`, or `"see .agents/skills/agent-workflow/git-and-prs.md"`. Shepherd never decides the convention itself (see [`docs/actions.md`](actions.md) on why rebase/merge mechanics are intentionally left to the caller) — it only echoes back whatever pointer you configure here.
 
 Empty (default) omits the hint entirely.
 

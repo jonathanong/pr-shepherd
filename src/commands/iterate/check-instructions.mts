@@ -13,8 +13,8 @@ export function buildCrStaleClause(reviews: Review[]): string {
 }
 
 /**
- * Build the optional behind-base push hint. Empty unless the branch is actually behind its base
- * and the user configured a non-blank `iterate.behindBaseHint` — the CLI never prescribes
+ * Build the optional branch-update hint. Empty unless the branch is behind or conflicts with its
+ * base and the user configured a non-blank `iterate.behindBaseHint` — the CLI never prescribes
  * rebase/merge mechanics itself (see "Keep skills and loop prompts minimal" in AGENTS.md); this
  * only echoes back the caller's own configured pointer. `hint` is trimmed and type-checked at the
  * point of use (rather than at config load) so a malformed rc file value (non-string, or
@@ -24,11 +24,12 @@ export function buildCrStaleClause(reviews: Review[]): string {
 export function buildBehindBaseHintInstruction(
   baseBranch: string,
   hint: string,
-  isBehind: boolean,
+  branch: { isBehind: boolean; hasConflicts: boolean },
 ): string[] {
   const trimmedHint = typeof hint === "string" ? hint.trim() : "";
-  if (!isBehind || trimmedHint === "") return [];
-  return [`The branch is behind PR base branch \`${baseBranch}\`. ${trimmedHint} before pushing.`];
+  if ((!branch.isBehind && !branch.hasConflicts) || trimmedHint === "") return [];
+  const state = branch.hasConflicts ? "conflicts with" : "is behind";
+  return [`The branch ${state} PR base branch \`${baseBranch}\`. ${trimmedHint} before pushing.`];
 }
 
 /**

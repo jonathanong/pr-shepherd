@@ -94,8 +94,15 @@ export function buildFixInstructions(
       actionableSections.length > 0 ? `under ${actionableSections.join(", ")}` : "above";
     instructions.push(`Review each item ${sectionRef} and decide whether it needs a code change.`);
   }
-  if (hasConflicts && !hasRepeatedWorkflowBranchRecovery) {
-    instructions.push(buildConflictInstruction(stackRebase));
+  // A native stack layer follows the printed gh-stack route, so the branch-level hint is omitted.
+  const branchUpdateHint = buildBehindBaseHintInstruction(baseBranch, behindBaseHint, {
+    isBehind,
+    hasConflicts: hasConflicts && !stackRebase,
+  });
+  // The conflict hint belongs with the conflict step; otherwise it precedes the push step.
+  const hintWithConflictStep = hasConflicts && !hasRepeatedWorkflowBranchRecovery;
+  if (hintWithConflictStep) {
+    instructions.push(buildConflictInstruction(stackRebase), ...branchUpdateHint);
   }
 
   const firstLookTotal = firstLookThreads.length + firstLookComments.length;
@@ -156,7 +163,7 @@ export function buildFixInstructions(
     );
   }
 
-  instructions.push(...buildBehindBaseHintInstruction(baseBranch, behindBaseHint, isBehind));
+  if (!hintWithConflictStep) instructions.push(...branchUpdateHint);
 
   const hasReviewMutations =
     resolveCommand.hasMutations || resolveOnlyCommand?.hasMutations === true;
