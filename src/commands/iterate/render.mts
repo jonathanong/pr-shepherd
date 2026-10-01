@@ -94,7 +94,7 @@ export function buildFixInstructions(
       actionableSections.length > 0 ? `under ${actionableSections.join(", ")}` : "above";
     instructions.push(`Review each item ${sectionRef} and decide whether it needs a code change.`);
   }
-  // A native stack layer follows the printed gh-stack route, so the branch-level hint is omitted.
+  // A conflicting native stack layer follows the printed gh-stack route, so it omits the hint.
   const branchUpdateHint = buildBehindBaseHintInstruction(baseBranch, behindBaseHint, {
     isBehind,
     hasConflicts: hasConflicts && !stackRebase,
