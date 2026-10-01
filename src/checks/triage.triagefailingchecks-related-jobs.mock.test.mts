@@ -78,6 +78,20 @@ describe("triageFailingChecks — related failed jobs", () => {
     expect(alone?.relatedJobs).toBeUndefined();
   });
 
+  it("lets the first non-cancelled check own the related jobs", async () => {
+    routeFetch([
+      { id: 1, name: "gate", conclusion: "failure" },
+      { id: 2, name: "early", conclusion: "cancelled" },
+      { id: 3, name: "child", conclusion: "failure" },
+    ]);
+    const results = await triageFailingChecks(
+      [makeCheck({ name: "early", conclusion: "CANCELLED" }), makeCheck({ name: "gate" })],
+      REPO,
+    );
+    expect(results[0]?.relatedJobs).toBeUndefined();
+    expect(results[1]?.relatedJobs?.map((j) => j.name)).toEqual(["child"]);
+  });
+
   it("caps sibling jobs at five", async () => {
     routeFetch([
       { id: 1, name: "gate", conclusion: "failure" },

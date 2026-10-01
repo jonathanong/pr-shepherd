@@ -99,6 +99,7 @@ function firstCheckPerRun(checks: ClassifiedCheck[]): Set<ClassifiedCheck> {
   const first = new Set<ClassifiedCheck>();
   for (const check of checks) {
     if (check.runId === null || seen.has(check.runId)) continue;
+    if (check.conclusion === "CANCELLED" || check.conclusion === "STARTUP_FAILURE") continue;
     seen.add(check.runId);
     first.add(check);
   }
