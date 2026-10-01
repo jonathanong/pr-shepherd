@@ -31,34 +31,48 @@ function check(overrides: Partial<AgentCheck>): AgentCheck {
 }
 
 describe("buildBehindBaseHintInstruction", () => {
+  const BEHIND = { isBehind: true, hasConflicts: false };
+  const CLEAN = { isBehind: false, hasConflicts: false };
+
   it("renders the hint when behind and configured", () => {
-    expect(buildBehindBaseHintInstruction("main", "rebase --force-with-lease", true)).toEqual([
+    expect(buildBehindBaseHintInstruction("main", "rebase --force-with-lease", BEHIND)).toEqual([
       "The branch is behind PR base branch `main`. rebase --force-with-lease before pushing.",
     ]);
   });
 
-  it("returns empty when not behind", () => {
-    expect(buildBehindBaseHintInstruction("main", "rebase --force-with-lease", false)).toEqual([]);
+  it("renders the hint when the branch conflicts with its base", () => {
+    expect(
+      buildBehindBaseHintInstruction("main", "rebase --force-with-lease", {
+        isBehind: false,
+        hasConflicts: true,
+      }),
+    ).toEqual([
+      "The branch conflicts with PR base branch `main`. rebase --force-with-lease before pushing.",
+    ]);
+  });
+
+  it("returns empty when neither behind nor conflicting", () => {
+    expect(buildBehindBaseHintInstruction("main", "rebase --force-with-lease", CLEAN)).toEqual([]);
   });
 
   it("returns empty when the hint is empty", () => {
-    expect(buildBehindBaseHintInstruction("main", "", true)).toEqual([]);
+    expect(buildBehindBaseHintInstruction("main", "", BEHIND)).toEqual([]);
   });
 
   it("trims surrounding whitespace from the configured hint", () => {
-    expect(buildBehindBaseHintInstruction("main", "  rebase  ", true)).toEqual([
+    expect(buildBehindBaseHintInstruction("main", "  rebase  ", BEHIND)).toEqual([
       "The branch is behind PR base branch `main`. rebase before pushing.",
     ]);
   });
 
   it("treats a whitespace-only hint as unconfigured", () => {
-    expect(buildBehindBaseHintInstruction("main", "   ", true)).toEqual([]);
+    expect(buildBehindBaseHintInstruction("main", "   ", BEHIND)).toEqual([]);
   });
 
   it("treats a non-string hint from a malformed rc file as unconfigured", () => {
     // yaml parsing does not enforce the TS type at runtime (e.g. `behindBaseHint: true`).
     const malformed = true as unknown as string;
-    expect(buildBehindBaseHintInstruction("main", malformed, true)).toEqual([]);
+    expect(buildBehindBaseHintInstruction("main", malformed, BEHIND)).toEqual([]);
   });
 });
 

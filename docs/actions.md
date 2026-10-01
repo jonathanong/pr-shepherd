@@ -589,11 +589,12 @@ Conversations Resolved: No [Not Required]
 - Journal citation rules are [`references/journal.md`](../plugins/pr-shepherd/skills/pr-shepherd/references/journal.md).
 - Bare checks, external checks, `CANCELLED`, `STARTUP_FAILURE`, and GitHub Actions failures with no usable log stay in `[FIX_CODE]` while other autonomous work remains.
 - When those checks are the only blocker, the result is `[ESCALATE]` with `check-follow-up-unavailable`.
-- When `mergeStatus` is `BEHIND` and [`iterate.behindBaseHint`](configuration.md#iteratebehindbasehint--default-) is set, one instruction echoes it: ``The branch is behind PR base branch `<base>`. <hint> before pushing.`` The CLI does not choose the git mechanics.
+- When `mergeStatus` is `BEHIND` or `CONFLICTS` and [`iterate.behindBaseHint`](configuration.md#iteratebehindbasehint--default-) is set, one instruction echoes it: ``The branch is behind PR base branch `<base>`. <hint> before pushing.`` or ``The branch conflicts with PR base branch `<base>`. <hint> before pushing.`` The CLI does not choose the git mechanics.
+- The conflicts line directly follows the merge-conflicts step. A conflicting native stack layer omits it because the gh-stack route applies.
 - A later workflow attempt that is still failing while the branch is `BEHIND` or `CONFLICTS` names the PR base branch and says to inspect it for an existing fix.
 - The next step says to update from that base using repository conventions. Conflict output includes resolving conflicts. A behind branch must be pushed before the next iteration.
 - On a native stack layer, that update is the gh-stack rebase above, and the push is `gh stack push`. Updating one layer from its base strands the layers above it.
-- `iterate.behindBaseHint` is an extra repository-specific pointer when it is set.
+- `iterate.behindBaseHint` is an extra repository-specific pointer when it is set, except on a conflicting native stack layer.
 
 When one or more threads carry a `[suggestion]` marker, `## Instructions` adds one triage step pointing at the retrieve/apply command; the refusal and drift mechanics are invariant text that lives in the pr-shepherd skill's "Suggestion patches" playbook instead of being spelled out per tick:
 
