@@ -176,11 +176,11 @@ The cached fingerprint's own queue, count, completeness, and rule-window checks 
 
 ### `getMergeableState`
 
-**When:** GraphQL returns `mergeable === 'UNKNOWN'` or `mergeStateStatus === 'UNKNOWN'` for an **OPEN** PR, or `runCheck` is about to return a candidate READY state.
+**When:** GraphQL returns `mergeable === 'UNKNOWN'` or `mergeStateStatus === 'UNKNOWN'` for an **OPEN** PR, or `runCheck` is about to return a candidate READY state. Aggregate polls (`--stack` and explicit PR lists) apply the same UNKNOWN fallback per PR in `poll-summary-mergeability.mts`, so a layer that just gained a conflict routes to `merge-conflicts` on the same tick instead of `pending-or-unknown`.
 
 **Why:** GitHub computes `mergeable` asynchronously. GraphQL often returns UNKNOWN while the REST API already has the result. The REST endpoint (`GET /repos/{owner}/{repo}/pulls/{pull_number}`) returns the computed value faster. Its `state` and `merged_at` fields also let an already-required refresh detect a merge or close that raced the initial GraphQL snapshot; Shepherd does not make a separate terminal-state request.
 
-**Not called for:** Merged or closed PRs — REST also returns UNKNOWN for those, and the REST call would be wasted. `check.mts` guards this with `batchData.state === 'OPEN'`.
+**Not called for:** Merged or closed PRs — REST also returns UNKNOWN for those, and the REST call would be wasted. `check.mts` guards this with `batchData.state === 'OPEN'`; the aggregate poll guards on the summary PR's `state`.
 
 ### `getPrHeadSha`
 
