@@ -12,6 +12,7 @@ import {
   missingRepositoryError,
 } from "./errors.mts";
 import { hydratePollSummaryChecks } from "./poll-summary-check-hydration.mts";
+import { refreshUnknownSummaryMergeability } from "./poll-summary-mergeability.mts";
 import { summarizePollSummaryPr } from "./poll-summary-projector.mts";
 import { trunkRequiredContexts } from "./poll-summary-unreported.mts";
 import type { RawExplicitResponse, RawSummaryPr } from "./poll-summary-raw.mts";
@@ -84,7 +85,10 @@ async function fetchExplicitChunk(
     if (!raw) throw new ShepherdError(`PR #${pr} not found`, EXIT.UNAVAILABLE);
     return raw;
   });
-  for (const raw of rawPrs) await hydratePollSummaryChecks(raw, repo);
+  for (const raw of rawPrs) {
+    await hydratePollSummaryChecks(raw, repo);
+    await refreshUnknownSummaryMergeability(raw, repo);
+  }
   return { prs: rawPrs, viewerCanAdminister: result.data.repository.viewerCanAdminister };
 }
 
@@ -100,7 +104,10 @@ async function fetchStackSummary(
   const topology = await readStackTopology(anchor, repo);
   const { stackNumber, stackSize, viewerLogin, viewerCanAdminister, ordered, allowedMergeMethods } =
     await readStackSummary(anchor, repo, topology.stackSize);
-  for (const pr of ordered) await hydratePollSummaryChecks(pr, repo);
+  for (const pr of ordered) {
+    await hydratePollSummaryChecks(pr, repo);
+    await refreshUnknownSummaryMergeability(pr, repo);
+  }
   const stackAncestry = stackAncestryGaps(ordered);
   const required = trunkRequiredContexts(ordered);
   return {
