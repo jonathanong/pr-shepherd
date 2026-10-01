@@ -119,4 +119,13 @@ describe("refreshUnknownSummaryMergeability", () => {
 
     expect(pr).toMatchObject({ state: "OPEN", mergeStateStatus: "BEHIND" });
   });
+
+  it("keeps a known GraphQL field when REST is still computing", async () => {
+    const pr = rawPr(4, { mergeable: "CONFLICTING" }) as unknown as RawSummaryPr;
+    mockRest.mockResolvedValue({ mergeable: "UNKNOWN", mergeStateStatus: "UNKNOWN" });
+
+    await refreshUnknownSummaryMergeability(pr, repo);
+
+    expect(pr).toMatchObject({ mergeable: "CONFLICTING", mergeStateStatus: "UNKNOWN" });
+  });
 });

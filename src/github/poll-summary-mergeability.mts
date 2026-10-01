@@ -16,7 +16,8 @@ export async function refreshUnknownSummaryMergeability(
   if (raw.state !== "OPEN") return;
   if (raw.mergeable !== "UNKNOWN" && raw.mergeStateStatus !== "UNKNOWN") return;
   const rest = await getMergeableState(raw.number, repo.owner, repo.name);
-  raw.mergeable = rest.mergeable;
-  raw.mergeStateStatus = rest.mergeStateStatus;
+  // REST can still be computing; keep a field GraphQL already knew rather than erase it.
+  if (rest.mergeable !== "UNKNOWN") raw.mergeable = rest.mergeable;
+  if (rest.mergeStateStatus !== "UNKNOWN") raw.mergeStateStatus = rest.mergeStateStatus;
   if (rest.state !== undefined) raw.state = rest.state;
 }
