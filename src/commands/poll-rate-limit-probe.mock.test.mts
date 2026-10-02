@@ -74,7 +74,7 @@ describe("one-PR rate-limit sleep probe", () => {
     const json = projectIterateLean(result) as { instructions?: string[] };
     expect(text).toContain("# PR #7 [CANCEL] — merged");
     expect(text).toContain(
-      "Stop polling this pull request — its poll is complete. Continue any remaining pull requests or issues from the original request.",
+      "Stop polling this pull request — its poll is complete.\n2. Continue any remaining pull requests or issues from the original request.",
     );
     expect(json).toMatchObject({
       action: "cancel",
@@ -82,9 +82,10 @@ describe("one-PR rate-limit sleep probe", () => {
       state: "MERGED",
       repo: "acme/widgets",
     });
-    expect(json.instructions?.join("\n")).toContain(
-      "Stop polling this pull request — its poll is complete. Continue any remaining pull requests or issues from the original request.",
-    );
+    expect(json.instructions).toEqual([
+      "Stop polling this pull request — its poll is complete.",
+      "Continue any remaining pull requests or issues from the original request.",
+    ]);
   });
 
   it("does not probe while REST core is exhausted", async () => {

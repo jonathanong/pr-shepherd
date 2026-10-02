@@ -44,7 +44,7 @@ describe("main — iterate text format", () => {
     expect(out).toContain("— ready-delay-elapsed");
     expect(out).toContain("## Instructions");
     expect(out).toContain(
-      "1. Stop polling this pull request — its poll is complete. Continue any remaining pull requests or issues from the original request.",
+      "1. Stop polling this pull request — its poll is complete.\n2. Continue any remaining pull requests or issues from the original request.",
     );
   });
   it("escalate: heading, base/summary, humanMessage, then ## Instructions with stop steps", async () => {
@@ -89,7 +89,7 @@ describe("main — iterate text format", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain(
-      "1. Stop polling this pull request — its poll is complete. Continue any remaining pull requests or issues from the original request.",
+      "1. Stop polling this pull request — its poll is complete.\n2. Continue any remaining pull requests or issues from the original request.",
     );
     expect(out).not.toContain("CronList");
     expect(out).not.toContain("/loop cancel");

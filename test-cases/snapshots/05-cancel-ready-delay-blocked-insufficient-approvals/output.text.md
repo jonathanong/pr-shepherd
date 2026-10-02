@@ -9,4 +9,5 @@ CANCEL: PR #42 is awaiting human review or branch protection resolution — read
 
 ## Instructions
 
-1. Stop polling this pull request — its poll is complete. Continue any remaining pull requests or issues from the original request.
+1. Stop polling this pull request — its poll is complete.
+2. Continue any remaining pull requests or issues from the original request.

@@ -65,7 +65,10 @@ describe("main — positional poll output", () => {
 
     const output = JSON.parse(getStdout()) as { action: string; instructions: string[] };
     expect(output.action).toBe("cancel");
-    expect(output.instructions).toHaveLength(1);
+    expect(output.instructions).toEqual([
+      "Stop polling this pull request — its poll is complete.",
+      "Continue any remaining pull requests or issues from the original request.",
+    ]);
     expect(getStdout()).not.toContain("next tick in");
     expect(getStderr()).toContain("WAIT — 0 passing, 1 in-progress; next tick in 30s");
     expect(process.exitCode).toBe(EXIT.OK);

@@ -454,7 +454,8 @@ CANCEL: PR #42 is merged — stopping
 
 ## Instructions
 
-1. Stop polling this pull request — its poll is complete. Continue any remaining pull requests or issues from the original request.
+1. Stop polling this pull request — its poll is complete.
+2. Continue any remaining pull requests or issues from the original request.
 ```
 
 Other heading variants: `# PR #42 [CANCEL] — closed`, `# PR #42 [CANCEL] — ready-delay-elapsed`.
