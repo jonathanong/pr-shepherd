@@ -8,7 +8,7 @@ allowed-tools: ["MCP", "Bash", "Read", "Grep", "Glob", "Edit", "Write"]
 
 # pr-shepherd
 
-Poll with the CLI. Use MCP `iterate` only when the CLI is unavailable. Stop at `[CANCEL]` or `[ESCALATE]`.
+Poll with the CLI. Use MCP `iterate` only when the CLI is unavailable. Stop polling the selected pull request at `[CANCEL]` or `[ESCALATE]`.
 
 ## Create a PR
 
@@ -46,7 +46,7 @@ Poll with the CLI. Use MCP `iterate` only when the CLI is unavailable. Stop at `
 
 - After the instructions, rerun that same command immediately with the same target and options. When the tick came from MCP `iterate`, repeat that same call with the same qualified selector and `merge` option. Do not switch back to a CLI that was unavailable.
 - Stop only for `[CANCEL]`, `[ESCALATE]`, or a human telling you to stop. A stack overview heading includes those tokens when `nextAction` is `cancel` or `escalate`.
-- A one-PR `[CANCEL]` or `[ESCALATE]` ends only that PR's loop. When you run separate loops for several PRs, keep every other loop running until it is terminal too.
+- A one-PR `[CANCEL]` or `[ESCALATE]` ends only that PR's loop. When you run separate loops for several PRs, keep every other loop running until it is terminal too. Continue any remaining pull requests or issues from the original request.
 - Keep `--until-terminal` and any `--merge`. Apply a printed polling-cadence change.
 - `[FIX_CODE]` is always non-terminal. Stack-level `[SHEPHERD]` is non-terminal. Only `[ESCALATE]` hands work to a human.
 - `[READY]` is non-terminal. Rerun when `remainingSeconds` elapses. Do not invent unrelated work. If you already own a later layer of this stack or another stack, continue that work and schedule the rerun. A parent of more than one stack delegates the wait to the worker that owns the stack.

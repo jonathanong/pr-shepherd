@@ -267,7 +267,9 @@ describe("pr-shepherd MCP server", () => {
       action: "cancel",
       reason: "merged",
       readyDelayOverride: "900s",
-      instructions: ["Stop — the PR loop is complete. No further polling is needed."],
+      instructions: [
+        "Stop polling this pull request — its poll is complete. Continue any remaining pull requests or issues from the original request.",
+      ],
     });
     // mergeStatus: "CLEAN" is the healthy default and stays omitted, unlike the
     // non-CLEAN case covered above.

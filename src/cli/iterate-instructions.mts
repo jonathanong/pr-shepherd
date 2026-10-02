@@ -63,7 +63,9 @@ export function buildSimpleIterateInstructions(
       return instructions;
     }
     case "cancel":
-      return ["Stop — the PR loop is complete. No further polling is needed."];
+      return [
+        "Stop polling this pull request — its poll is complete. Continue any remaining pull requests or issues from the original request.",
+      ];
     case "escalate": {
       const pending = result.escalate.pendingReviewCommands;
       if (!pending)
