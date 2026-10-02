@@ -35,4 +35,4 @@ CANCEL: PR #42 is merged — stopping
 
 ## Instructions
 
-1. Stop — the PR loop is complete. No further polling is needed.
+1. Stop polling this pull request — its poll is complete. Continue any remaining pull requests or issues from the original request.
