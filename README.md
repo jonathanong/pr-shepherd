@@ -35,7 +35,7 @@ Each tick returns exactly one action:
 - `MARK_READY` — the CLI converted an eligible draft PR to ready; continue polling.
 - `FIX_CODE` — agent work is required; complete it, push when needed, then continue polling. Push access to the PR head branch is a usage precondition.
 - `MERGE` — run the emitted head-pinned auto-merge or queue command. Ordinary merges include a plain-merge fallback; queue merges include a GraphQL enqueue fallback. GitHub is authoritative for the result and reports any authorization failure.
-- `CANCEL` — stop polling because the PR merged, closed, or completed its ready-delay.
+- `CANCEL` — stop polling this pull request because it merged, closed, or completed its ready-delay. Continue any remaining pull requests or issues from the original request.
 - `ESCALATE` — stop polling until a human provides direction. Native stacks reach this only after their autonomous one-PR sessions are exhausted.
 
 Native-stack summaries additionally use stack-level `SHEPHERD`: run the listed one-PR sessions,

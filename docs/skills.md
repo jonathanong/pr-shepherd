@@ -61,8 +61,8 @@ After `## Instructions`:
 - `[FIX_CODE]` and stack-level `[SHEPHERD]` are always non-terminal.
 - Run an emitted `[MERGE]` command before the next invocation.
 - A quota warning can return `WAIT` or `MARK_READY` to change cadence. That is non-terminal.
-- `[CANCEL]` ends polling. Only `[ESCALATE]` hands work to a human.
-- A one-PR `[CANCEL]` or `[ESCALATE]` ends only that PR's loop. When separate loops run for several PRs, keep every other loop running until it is terminal too.
+- `[CANCEL]` ends polling this pull request. Only `[ESCALATE]` hands work to a human.
+- A one-PR `[CANCEL]` or `[ESCALATE]` ends only that PR's loop. When separate loops run for several PRs, keep every other loop running until it is terminal too. Continue any remaining pull requests or issues from the original request.
 - Pass `--merge`, or accept a literal `--merge` argument, to forward merge intent to the CLI or MCP.
 - An MCP tick repeats the same `iterate` call. It does not switch back to a CLI that was unavailable.
 

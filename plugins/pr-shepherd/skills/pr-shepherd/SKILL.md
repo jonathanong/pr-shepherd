@@ -8,7 +8,7 @@ allowed-tools: ["MCP", "Bash", "Read", "Grep", "Glob", "Edit", "Write"]
 
 # pr-shepherd
 
-Poll with the CLI. Use MCP `iterate` only when the CLI is unavailable. Stop at `[CANCEL]` or `[ESCALATE]`.
+Poll with the CLI. Use MCP `iterate` only when the CLI is unavailable. Stop polling the selected pull request at `[CANCEL]` or `[ESCALATE]`.
 
 ## Create a PR
 

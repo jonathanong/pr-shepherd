@@ -432,7 +432,7 @@ After the caller runs an emitted auto-merge or queue command (or its fallback), 
 
 ## `cancel`
 
-Stops the iterate loop — no further iterations needed.
+Stops polling this pull request — no further iterations for this PR are needed. Continue any remaining pull requests or issues from the original request.
 
 **Trigger:** Either the PR is merged or closed (`state !== "OPEN"`), or `--merge` is not enabled and the ready-delay timer elapsed after the current sweep still verifies the PR as a READY state. Candidate READY reports get a fresh mergeability read before the timer can complete, so newly detected conflicts route to `fix_code` instead of `cancel`.
 
@@ -454,7 +454,8 @@ CANCEL: PR #42 is merged — stopping
 
 ## Instructions
 
-1. Stop — the PR loop is complete. No further polling is needed.
+1. Stop polling this pull request — its poll is complete.
+2. Continue any remaining pull requests or issues from the original request.
 ```
 
 Other heading variants: `# PR #42 [CANCEL] — closed`, `# PR #42 [CANCEL] — ready-delay-elapsed`.
@@ -463,7 +464,7 @@ Merged and closed PRs surface terminal top-level statuses (`MERGED` or `CLOSED`)
 
 A `ready-delay-elapsed` cancel carries the same `**merge queue** …` header line (raw enabled/inQueue/entry/removal fields, see the header block above) as every other action when `mergeQueue` is present, matching JSON output.
 
-**What the skill does:** Follow `## Instructions` — stop.
+**What the skill does:** Follow `## Instructions` — stop polling this pull request and continue any remaining work from the original request.
 
 ---
 

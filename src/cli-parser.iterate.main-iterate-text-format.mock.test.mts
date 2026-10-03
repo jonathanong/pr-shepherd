@@ -43,7 +43,9 @@ describe("main — iterate text format", () => {
     expect(out).toContain("# PR #42 [CANCEL]");
     expect(out).toContain("— ready-delay-elapsed");
     expect(out).toContain("## Instructions");
-    expect(out).toContain("1. Stop — the PR loop is complete. No further polling is needed.");
+    expect(out).toContain(
+      "1. Stop polling this pull request — its poll is complete.\n2. Continue any remaining pull requests or issues from the original request.",
+    );
   });
   it("escalate: heading, base/summary, humanMessage, then ## Instructions with stop steps", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("escalate"));
@@ -82,11 +84,13 @@ describe("main — iterate text format", () => {
       "1. The CLI marked the PR ready for review. Iterate immediately with the same options to continue.",
     );
   });
-  it("cancel: instructions say the PR loop is complete", async () => {
+  it("cancel: instructions stop polling only this pull request", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
-    expect(out).toContain("1. Stop — the PR loop is complete. No further polling is needed.");
+    expect(out).toContain(
+      "1. Stop polling this pull request — its poll is complete.\n2. Continue any remaining pull requests or issues from the original request.",
+    );
     expect(out).not.toContain("CronList");
     expect(out).not.toContain("/loop cancel");
   });
