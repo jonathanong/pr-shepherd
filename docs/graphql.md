@@ -142,8 +142,12 @@ provides GitHub's confirmation that conversations no longer block merging, so a 
 sample alone does not prevent a receipt. Sampled actionable feedback and incomplete CI still
 prevent certification. `BLOCKED` and `UNKNOWN` are not proof of resolved conversations; neither
 is queue membership. Without the conversation-resolution requirement, review truncation alone
-does not block certification. The full one-PR check still fetches and surfaces review feedback independently of this
-compact certification. A null status-check rollup is a valid empty check set.
+does not block certification when the applicable rule page is complete; a truncated rule page
+cannot establish that resolution is optional. Truncated review evidence includes the PR's
+`updatedAt` in its receipt fingerprint, so an update outside the sample invalidates the receipt
+and sends the layer through a full one-PR review poll. Complete samples keep their existing
+fingerprint behavior. The full one-PR check still fetches and surfaces review feedback independently
+of this compact certification. A null status-check rollup is a valid empty check set.
 
 ## Per-tick budget
 

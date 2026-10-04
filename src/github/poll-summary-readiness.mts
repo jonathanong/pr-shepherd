@@ -1,6 +1,7 @@
 import type { PollSummaryChecks, PollSummaryReview } from "../types.mts";
 import { summarizePollSummaryChecks } from "./poll-summary-checks.mts";
 import { parseBranchRules } from "./batch-parsers-rules.mts";
+import { rulesComplete } from "./fingerprint-fields.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 
 /** Fresh compact evidence required before a READY receipt can be used. */
@@ -29,8 +30,8 @@ export function isCurrentSummaryReady(
     checks.incomplete !== true &&
     sourceChecks.incomplete !== true &&
     (review.incomplete !== true ||
-      !requiresConversationResolution ||
-      raw.mergeStateStatus === "CLEAN") &&
+      raw.mergeStateStatus === "CLEAN" ||
+      (rulesComplete(raw.baseRef) && !requiresConversationResolution)) &&
     raw.state === "OPEN" &&
     !raw.isDraft &&
     raw.mergeable !== "CONFLICTING" &&

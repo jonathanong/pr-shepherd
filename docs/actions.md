@@ -101,6 +101,9 @@ merging. The raw `review.incomplete` flag remains visible. Sampled actionable fe
 CI, and blocked or unknown merge states still prevent certification; without required conversation
 resolution, truncation alone is not a blocker. Queue membership alone does not waive completeness
 when conversation resolution is required.
+The optional-resolution exception requires a complete branch-rule page. A truncated review sample
+also binds the receipt to the PR's `updatedAt`, so a later PR update invalidates it and routes the
+layer back through its full one-PR poll before stack merging.
 
 Merge command:
 

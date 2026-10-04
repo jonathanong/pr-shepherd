@@ -151,6 +151,11 @@ describe("ready receipt with a compact conversation sample", () => {
       expect(item.readyReceipt).toBe(true);
       expect(item.review).toEqual({ threads: 76, incomplete: true });
       expect(mockGraphql).not.toHaveBeenCalled();
+
+      // A PR revision change can hide an edit outside the compact window.
+      raw.updatedAt = "2026-09-26T00:01:00Z";
+      const edited = await summarizePollSummaryPr(raw, repo, { stackPrNumber: 7, merge: true });
+      expect(edited.readyReceipt).toBeUndefined();
     },
   );
 });

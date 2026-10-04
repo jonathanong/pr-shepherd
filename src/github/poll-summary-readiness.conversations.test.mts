@@ -92,6 +92,20 @@ describe("GitHub conversation-resolution readiness", () => {
     );
   });
 
+  it("does not assume resolution is optional when applicable rules are truncated", () => {
+    const pr = snapshot({
+      isInMergeQueue: true,
+      mergeStateStatus: "BLOCKED",
+      baseRef: {
+        branchProtectionRule: null,
+        rules: { pageInfo: { hasNextPage: true }, nodes: [] },
+      },
+    });
+    expect(isCurrentSummaryReady(pr, {}, { incomplete: true }, { allowQueuedProgress: true })).toBe(
+      false,
+    );
+  });
+
   it("does not treat a queued BLOCKED state as proof that conversations are resolved", () => {
     const pr = snapshot({ isInMergeQueue: true, mergeStateStatus: "BLOCKED" });
     expect(isCurrentSummaryReady(pr, {}, { incomplete: true }, { allowQueuedProgress: true })).toBe(
