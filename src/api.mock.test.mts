@@ -272,6 +272,28 @@ describe("public API", () => {
     expect(mockApplyQueueRemovalAck).not.toHaveBeenCalled();
   });
 
+  it.each(["requireSha", "queueCommitOid"])(
+    "rejects coercible non-string %s before earlier operations run",
+    async (field) => {
+      const operation = {
+        type: "acknowledge_queue_removal" as const,
+        requireSha: "a".repeat(40),
+        queueCommitOid: "b".repeat(40),
+        removedAtUnix: 1_700_000_000,
+      };
+      operation[field as "requireSha" | "queueCommitOid"] = ["a".repeat(40)] as unknown as string;
+      await expect(
+        createPrShepherd().apply({
+          operations: [{ type: "review_mutations", resolveThreadIds: ["PRRT_one"] }, operation],
+        }),
+      ).rejects.toThrow(
+        `acknowledge_queue_removal.${field} must be a full 40-character lowercase hex SHA`,
+      );
+      expect(mockRunResolveMutate).not.toHaveBeenCalled();
+      expect(mockApplyQueueRemovalAck).not.toHaveBeenCalled();
+    },
+  );
+
   it("routes a validated queue-removal acknowledgment to the shared helper", async () => {
     const result = {
       pr: 42,

@@ -382,12 +382,18 @@ function validateOperation(operation: ApplyOperation): void {
       }
       return;
     case "acknowledge_queue_removal":
-      if (!/^[0-9a-f]{40}$/.test(operation.requireSha)) {
+      if (
+        typeof operation.requireSha !== "string" ||
+        !/^[0-9a-f]{40}$/.test(operation.requireSha)
+      ) {
         throw new PrShepherdValidationError(
           "acknowledge_queue_removal.requireSha must be a full 40-character lowercase hex SHA",
         );
       }
-      if (!/^[0-9a-f]{40}$/.test(operation.queueCommitOid)) {
+      if (
+        typeof operation.queueCommitOid !== "string" ||
+        !/^[0-9a-f]{40}$/.test(operation.queueCommitOid)
+      ) {
         throw new PrShepherdValidationError(
           "acknowledge_queue_removal.queueCommitOid must be a full 40-character lowercase hex SHA",
         );
