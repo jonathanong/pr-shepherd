@@ -10,6 +10,90 @@ import { runIterate } from "./iterate/index.mts";
 registerIterateHooks();
 
 describe("queue recovery evidence", () => {
+  it("offers local stack acknowledgment for aggregate child sessions without --merge", async () => {
+    const report = removedEntryReport("OpenRouter HTTP 529");
+    report.mergeStatus.mergeRequirements = {
+      approvals: { current: 0, requiredCount: 0 },
+      conversationsResolved: { resolved: true, unresolvedCount: 0, required: false },
+      stack: { number: 7, size: 1, position: 1, baseRefName: "main" },
+    };
+    mockRunCheck.mockResolvedValue(report);
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.queueRemovalAcknowledgment?.argv).toEqual([
+      "pr-shepherd",
+      "apply",
+      "queue-removal",
+      "https://github.com/owner/repo/pull/42",
+      "--require-sha",
+      "abc123",
+      "--queue-commit",
+      "queue-commit",
+      "--removed-at",
+      "1700000000",
+    ]);
+    expect(result.fix.requeue).toBeUndefined();
+  });
+
+  it.each([false, true])(
+    "accepts an external check URL as recovery evidence (stack: %s)",
+    async (stack) => {
+      const report = removedEntryReport();
+      const check = report.checks.failing[0]!;
+      check.runId = null;
+      check.workflowName = undefined;
+      check.logExcerpt = undefined;
+      check.detailsUrl = "https://ci.example/jobs/123";
+      if (stack)
+        report.mergeStatus.mergeRequirements = {
+          approvals: { current: 0, requiredCount: 0 },
+          conversationsResolved: { resolved: true, unresolvedCount: 0, required: false },
+          stack: { number: 7, size: 1, position: 1, baseRefName: "main" },
+        };
+      mockRunCheck.mockResolvedValue(report);
+
+      const result = await runIterate(makeOpts({ merge: true }));
+
+      expect(result.action).toBe("fix_code");
+      if (result.action !== "fix_code") return;
+      if (stack) {
+        expect(result.fix.queueRemovalAcknowledgment).toBeDefined();
+        expect(result.fix.requeue).toBeUndefined();
+      } else {
+        expect(result.fix.requeue).toBeDefined();
+        expect(result.fix.queueRemovalAcknowledgment).toBeUndefined();
+      }
+    },
+  );
+
+  it.each([false, true])(
+    "denies an external check without a URL or log evidence (stack: %s)",
+    async (stack) => {
+      const report = removedEntryReport();
+      const check = report.checks.failing[0]!;
+      check.runId = null;
+      check.workflowName = undefined;
+      check.logExcerpt = undefined;
+      check.detailsUrl = "";
+      if (stack)
+        report.mergeStatus.mergeRequirements = {
+          approvals: { current: 0, requiredCount: 0 },
+          conversationsResolved: { resolved: true, unresolvedCount: 0, required: false },
+          stack: { number: 7, size: 1, position: 1, baseRefName: "main" },
+        };
+      mockRunCheck.mockResolvedValue(report);
+
+      const result = await runIterate(makeOpts({ merge: true }));
+
+      expect(result.action).toBe("escalate");
+      if (result.action !== "escalate") return;
+      expect(result.escalate.triggers).toContain("check-follow-up-unavailable");
+    },
+  );
+
   it.each([false, true])(
     "does not offer no-evidence recovery alongside review work (stack: %s)",
     async (stack) => {

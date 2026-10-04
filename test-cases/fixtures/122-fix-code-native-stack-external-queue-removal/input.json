@@ -1,5 +1,5 @@
 {
-  "description": "A native-stack layer was ejected for unrelated CI. Emit an exact head/queue-commit/removal-time acknowledgment command, never a direct enqueue or merge. After acknowledgment the one-PR session revalidates source readiness, and the aggregate selector still checks the complete lower prefix. The aggregate child session omits --merge and still gets local acknowledgment.",
+  "description": "An external provider failed a removed native-stack queue commit. Its direct provider URL remains inspectable recovery evidence without an Actions run or downloaded log. The aggregate child session omits --merge and emits only the pinned local acknowledgment.",
   "args": [],
   "batchData": {
     "latestMergeQueueRemoval": {
@@ -13,19 +13,15 @@
     },
     "removedMergeQueueChecks": [
       {
-        "name": "CI / tests",
+        "name": "provider / tests",
         "status": "COMPLETED",
         "conclusion": "FAILURE",
         "source": "check_run",
-        "event": "merge_group",
-        "detailsUrl": "https://github.com/owner/repo/actions/runs/37106358227",
-        "runId": "37106358227",
-        "runAttempt": 1,
-        "workflowName": "CI",
+        "detailsUrl": "https://ci.example.com/build/42",
+        "runId": null,
         "scope": "merge_group",
         "commitOid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        "logExcerpt": "OpenRouter HTTP 529: provider temporarily unavailable",
-        "jobName": "tests"
+        "event": "merge_group"
       }
     ],
     "isMergeQueueEnabled": true,

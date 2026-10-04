@@ -497,12 +497,11 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const queueRemovalAcknowledgment = buildStackQueueRemovalAcknowledgment(
     report,
     failingAgentChecks,
-    opts.merge,
   );
   if (queueRemovalAcknowledgment) {
     const completion = instructions.pop();
     instructions.push(
-      "If the merge-group failure belongs to this PR, fix and push its head, then iterate. Otherwise, if no code changed and no other blocker remains, run `acknowledge queue removal:` exactly as printed. This records only the disposition of that removed queue commit; finish this one-PR session to validate current source CI and record its READY receipt, then rerun the aggregate `--stack --merge` selector, which verifies lower-layer readiness before merging. Do not enqueue or merge this layer directly.",
+      "If the merge-group failure belongs to this PR, fix and push its head, then iterate. Otherwise, if no code changed and no other blocker remains, run `acknowledge queue removal:` exactly as printed. This records only the disposition of that removed queue commit; finish this one-PR session to validate current source CI and record its READY receipt, then return to the aggregate `--stack` selector with its original options. In merge mode it verifies lower-layer readiness before merging. Do not enqueue or merge this layer directly.",
     );
     if (completion !== undefined) instructions.push(completion);
   }

@@ -6,3 +6,8 @@ export function hasLogEvidence(check: AgentCheck): boolean {
     (check.relatedJobs ?? []).some((job) => Boolean(job.logExcerpt?.trim()))
   );
 }
+
+/** An external provider link is inspectable even when Actions log downloads are unavailable. */
+export function hasQueueRecoveryEvidence(check: AgentCheck): boolean {
+  return hasLogEvidence(check) || (check.runId === null && Boolean(check.detailsUrl?.trim()));
+}

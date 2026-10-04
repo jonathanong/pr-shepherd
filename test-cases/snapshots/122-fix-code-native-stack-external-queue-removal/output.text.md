@@ -11,8 +11,7 @@ Stack: 7 (layer 1/1, base main)
 
 ## Failing checks
 
-- `37106358227` — `CI › tests` [conclusion: FAILURE] [scope: merge_group, commit: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb]
-  > OpenRouter HTTP 529: provider temporarily unavailable
+- external `https://ci.example.com/build/42` — `provider / tests` [conclusion: FAILURE] [scope: merge_group, commit: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb]
 
 ## Post-fix actions
 

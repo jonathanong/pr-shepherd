@@ -14,7 +14,7 @@ import type {
   ShepherdReport,
 } from "../../types.mts";
 import { renderShellCommand, buildPrShepherdCommand } from "../../cli/runner.mts";
-import { hasLogEvidence } from "./check-evidence.mts";
+import { hasQueueRecoveryEvidence } from "./check-evidence.mts";
 import { isCiQueueRemovalReason } from "../../state/queue-removal-ack.mts";
 import { buildEscalateHumanMessage } from "./escalate.mts";
 
@@ -111,10 +111,10 @@ export function buildRemovedQueueRecovery(
 export function buildStackQueueRemovalAcknowledgment(
   report: ShepherdReport,
   checks: AgentCheck[],
-  merge: boolean | undefined,
 ): { argv: string[] } | undefined {
   if (!report.mergeStatus.mergeRequirements?.stack) return undefined;
-  if (!removedQueueRecoveryAvailable(report, checks, merge)) return undefined;
+  // This records a local disposition, without enqueueing; aggregate child sessions omit --merge.
+  if (!removedQueueRecoveryAvailable(report, checks, true)) return undefined;
   const removal = report.mergeQueue!.latestRemoval!;
   return buildPrShepherdCommand([
     "apply",
@@ -154,7 +154,7 @@ function removedQueueRecoveryAvailable(
     return false;
   return checks
     .filter((check) => check.scope === "merge_group" && check.commitOid === removedCommit)
-    .every(hasLogEvidence);
+    .every(hasQueueRecoveryEvidence);
 }
 
 export function unavailableMergeResult(
