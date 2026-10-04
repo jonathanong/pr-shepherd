@@ -94,6 +94,14 @@ When `--merge` is requested, the selector finds the highest open layer such that
 - The bottom open layer targets the stack base.
 - The prefix has no stale ancestry, queued layer, escalation, or closed-unmerged layer.
 
+READY-receipt certification uses the compact review sample independently of the full one-PR review
+check. When the base branch requires conversation resolution and GitHub reports `CLEAN`, a
+truncated sample does not prevent certification: GitHub confirms conversations no longer block
+merging. The raw `review.incomplete` flag remains visible. Sampled actionable feedback, incomplete
+CI, and blocked or unknown merge states still prevent certification; without required conversation
+resolution, truncation alone is not a blocker. Queue membership alone does not waive completeness
+when conversation resolution is required.
+
 Merge command:
 
 - The summary returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge <that PR number> --yes` and the repository-allowed method flag.

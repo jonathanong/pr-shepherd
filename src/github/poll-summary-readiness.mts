@@ -1,5 +1,6 @@
 import type { PollSummaryChecks, PollSummaryReview } from "../types.mts";
 import { summarizePollSummaryChecks } from "./poll-summary-checks.mts";
+import { parseBranchRules } from "./batch-parsers-rules.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 
 /** Fresh compact evidence required before a READY receipt can be used. */
@@ -16,10 +17,20 @@ export function isCurrentSummaryReady(
   const sourceChecks = queued
     ? summarizePollSummaryChecks({ ...raw, mergeQueueEntry: null })
     : checks;
+  // The full one-PR check already surfaces review feedback. Certification
+  // need not reread historical conversations unless their resolution is a
+  // merge requirement. GitHub's CLEAN state proves that requirement is
+  // satisfied. BLOCKED is not conversation-specific, and queue progress
+  // alone is not that proof.
+  const requiresConversationResolution = parseBranchRules(
+    raw.baseRef,
+  ).requiresConversationResolution;
   return (
     checks.incomplete !== true &&
     sourceChecks.incomplete !== true &&
-    review.incomplete !== true &&
+    (review.incomplete !== true ||
+      !requiresConversationResolution ||
+      raw.mergeStateStatus === "CLEAN") &&
     raw.state === "OPEN" &&
     !raw.isDraft &&
     raw.mergeable !== "CONFLICTING" &&
