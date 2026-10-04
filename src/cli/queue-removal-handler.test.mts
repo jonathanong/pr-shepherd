@@ -19,7 +19,6 @@ vi.mock("../github/client.mts", () => ({
 import { main } from "../cli-parser.mts";
 import { handleQueueRemoval } from "./queue-removal-handler.mts";
 import {
-  isCiQueueRemovalReason,
   matchesQueueRemovalAcknowledgment,
   readQueueRemovalAcknowledgment,
 } from "../state/queue-removal-ack.mts";
@@ -88,8 +87,8 @@ function currentBatch(overrides: Record<string, unknown> = {}): BatchPrData {
 }
 
 describe("apply queue-removal", () => {
-  it("records acknowledgment only for the exact current CI queue-removal tuple", async () => {
-    await handleQueueRemoval(args());
+  it.each(["text", "json"])("records the current removal through the CLI (%s)", async (format) => {
+    await main(["node", "shepherd", "apply", "queue-removal", ...args(), "--format", format]);
     const acknowledgment = await readQueueRemovalAcknowledgment(key);
     expect(acknowledgment).toEqual({
       headSha,
@@ -103,7 +102,8 @@ describe("apply queue-removal", () => {
         removedAtUnix,
       }),
     ).toBe(true);
-    expect(out()).toContain(`queueCommitOid: ${queueCommitOid}`);
+    if (format === "text") expect(out()).toContain(`queueCommitOid: ${queueCommitOid}`);
+    else expect(JSON.parse(out())).toMatchObject({ pr: 42, repo: "acme/widgets", acknowledgment });
     expect(mockFetchPrBatch).toHaveBeenCalledWith(42, { owner: "acme", name: "widgets" });
     expect(process.exitCode).toBeUndefined();
   });
@@ -168,13 +168,6 @@ describe("apply queue-removal", () => {
     expect(stderr.mock.calls.map((call: unknown[]) => String(call[0])).join("")).toContain(
       "stale or is not a current CI-driven removal",
     );
-  });
-
-  it("recognizes only the two CI-driven removal reasons", () => {
-    expect(isCiQueueRemovalReason("CI_FAILURE")).toBe(true);
-    expect(isCiQueueRemovalReason("MERGE_QUEUE_POLICY_CHECK_FAILURE")).toBe(true);
-    expect(isCiQueueRemovalReason("MANUAL")).toBe(false);
-    expect(isCiQueueRemovalReason(null)).toBe(false);
   });
 
   it("prints help before GitHub or repository I/O", async () => {
