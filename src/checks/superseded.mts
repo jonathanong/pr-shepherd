@@ -1,60 +1,90 @@
-/**
- * Detects check runs that are `CANCELLED` because a newer run of the *same workflow*
- * superseded them on the same commit (concurrency-group eviction), rather than a genuine
- * cancellation. Split out of classify.mts to stay under the file-length cap.
- */
+/** Identify cancelled checks covered by another run on the same commit and event. */
 
 import type { CheckRun } from "../types.mts";
 
-/** Grouping key for a check's workflow: numeric `workflowId`, falling back to `workflowName`. */
+/** Prefer the stable workflow ID; retain the name fallback for the older-run rule. */
 function workflowKeyOf(check: CheckRun): string | undefined {
-  return check.workflowId ?? check.workflowName;
+  if (check.workflowId) return `id:${check.workflowId}`;
+  return check.workflowName ? `name:${check.workflowName}` : undefined;
+}
+
+function groupKeyOf(check: CheckRun): string | undefined {
+  const workflow = workflowKeyOf(check);
+  if (workflow === undefined) return undefined;
+  return JSON.stringify([workflow, check.event, check.scope ?? null, check.commitOid ?? null]);
+}
+
+function numericRunId(check: CheckRun): number | undefined {
+  if (check.runId === null || !/^[1-9]\d*$/.test(check.runId)) return undefined;
+  const id = Number(check.runId);
+  return Number.isSafeInteger(id) ? id : undefined;
+}
+
+function validTimes(check: CheckRun): boolean {
+  const { startedAtUnix: start, completedAtUnix: completion } = check;
+  return (
+    typeof start === "number" &&
+    Number.isFinite(start) &&
+    start > 0 &&
+    typeof completion === "number" &&
+    Number.isFinite(completion) &&
+    completion > 0 &&
+    completion >= start
+  );
 }
 
 /**
- * Grouping key is `workflowId ?? workflowName` — the numeric GitHub Actions workflow database
- * ID when available, falling back to the display name. Checks with neither a workflow identity
- * nor a numeric `runId` (status contexts, startup-failure synthetics) never participate: they
- * can neither be marked superseded nor count as evidence of a newer run.
- *
- * A check is superseded iff its own conclusion is `CANCELLED` and some other check sharing its
- * workflow key has a strictly greater `runId`. The newest run for a workflow is therefore never
- * superseded, even if it is itself cancelled — that case stays "failing" so the agent can decide
- * whether to rerun it.
- *
- * @returns Indices into `checks` (not object identities, since check-run objects are not
- *   deduplicated by reference elsewhere) that should be reclassified as "superseded".
+ * A later-created run supersedes an older cancellation as before. GitHub can start
+ * check jobs out of run-ID order, so a lower-ID run can also cover a cancellation
+ * when its matching successful job actually started and completed later.
  */
 export function buildSupersededIndices(checks: CheckRun[]): Set<number> {
-  const runIdByIndex = new Map<number, number>();
-  const maxRunIdByWorkflow = new Map<string, number>();
+  const maxRunIdByGroup = new Map<string, number>();
+  const runIds = checks.map(numericRunId);
   checks.forEach((check, index) => {
-    const workflowKey = workflowKeyOf(check);
-    if (workflowKey === undefined || check.runId === null) return;
-    const runIdNum = Number(check.runId);
-    if (!Number.isFinite(runIdNum)) return;
-    runIdByIndex.set(index, runIdNum);
-    const currentMax = maxRunIdByWorkflow.get(workflowKey);
-    if (currentMax === undefined || runIdNum > currentMax) {
-      maxRunIdByWorkflow.set(workflowKey, runIdNum);
-    }
+    const group = groupKeyOf(check);
+    const runId = runIds[index];
+    if (group === undefined || runId === undefined) return;
+    const previous = maxRunIdByGroup.get(group);
+    if (previous === undefined || runId > previous) maxRunIdByGroup.set(group, runId);
   });
 
   const superseded = new Set<number>();
-  checks.forEach((check, index) => {
-    if (check.conclusion !== "CANCELLED") return;
-    const runIdNum = runIdByIndex.get(index);
-    if (runIdNum === undefined) return;
-    // workflowKeyOf(check) is guaranteed defined here, with a corresponding entry in
-    // maxRunIdByWorkflow: runIdByIndex is only ever populated in the loop above alongside a
-    // maxRunIdByWorkflow entry for that same workflow key (at minimum, this check's own
-    // runIdNum) — the two maps are always updated together for a given index. A defensive
-    // undefined-check here would therefore guard a branch no input can ever exercise, which
-    // would silently fail this repo's 100%-coverage requirement instead of catching a real bug.
-    const maxRunId = maxRunIdByWorkflow.get(workflowKeyOf(check)!)!;
-    if (maxRunId > runIdNum) {
+  checks.forEach((cancelled, index) => {
+    if (cancelled.conclusion !== "CANCELLED") return;
+    const group = groupKeyOf(cancelled);
+    const runId = runIds[index];
+    if (group === undefined || runId === undefined) return;
+    if (maxRunIdByGroup.get(group)! > runId) {
       superseded.add(index);
+      return;
     }
+
+    if (
+      cancelled.status !== "COMPLETED" ||
+      !cancelled.workflowId ||
+      cancelled.event === null ||
+      !validTimes(cancelled)
+    )
+      return;
+    const covered = checks.some((success, candidateIndex) => {
+      const candidateRunId = runIds[candidateIndex];
+      return (
+        candidateRunId !== undefined &&
+        candidateRunId < runId &&
+        success.status === "COMPLETED" &&
+        success.conclusion === "SUCCESS" &&
+        success.workflowId === cancelled.workflowId &&
+        success.event === cancelled.event &&
+        success.scope === cancelled.scope &&
+        success.commitOid === cancelled.commitOid &&
+        success.name === cancelled.name &&
+        validTimes(success) &&
+        success.startedAtUnix! > cancelled.startedAtUnix! &&
+        success.completedAtUnix! > cancelled.completedAtUnix!
+      );
+    });
+    if (covered) superseded.add(index);
   });
   return superseded;
 }

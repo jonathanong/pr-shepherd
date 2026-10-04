@@ -196,12 +196,13 @@ Lean-mode rules for the summary line:
 - If `mergeStateStatus` is `UNSTABLE` and every non-ignored check passed, the PR is `READY`, same as `BLOCKED` with passing CI.
 - An ignored check's pending or failing state does not drive stall-timeout escalation.
 
-**`superseded` line** (Markdown and JSON `supersededNames`), only when a `CANCELLED` check was replaced by a newer run of the same workflow on the same commit:
+**`superseded` line** (Markdown and JSON `supersededNames`), only when a `CANCELLED` check has newer-run evidence in the same loaded commit context:
 
 - This is concurrency-group eviction from a new push or a second trigger of the same push.
+- The evidence is either a strictly greater run ID from the same workflow, event, scope, and commit, or an exact-name `SUCCESS` check with a distinct lower numeric run ID and the same workflow ID, event, scope, and commit whose valid positive start and completion timestamps are both strictly later (with completion at or after start). The timestamp form establishes observed ordering only; it does not prove that both triggers used an identical PR base.
 - These checks do not affect `anyFailing` or `allPassed` and never appear under `## Failing checks`.
-- No action is needed. Branch protection uses the latest run per name.
-- A `CANCELLED` check with no newer same-workflow run is not superseded. It stays under `## Failing checks` with `[conclusion: CANCELLED]`.
+- No action is needed for the local Shepherd verdict. GitHub's status rollup remains unchanged; its branch protection evaluates the checks it received.
+- A `CANCELLED` check without either matching form of newer-run evidence is not superseded. It stays under `## Failing checks` with `[conclusion: CANCELLED]`.
 
 - `**branch**` is appended to `**summary**` when `mergeStatus` is `BEHIND` or `CONFLICTS`, so the agent can decide on a rebase without another fetch.
 - `**reviewDecision**` is appended to the status line when the derived merge status is `BLOCKED`.

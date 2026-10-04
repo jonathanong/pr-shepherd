@@ -29,7 +29,7 @@ Each check run is assigned a `CheckCategory`:
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `passed`        | `status === 'COMPLETED'` and `conclusion === 'SUCCESS'`                                                                                                            |
 | `failing`       | `status === 'COMPLETED'` and `conclusion` in `{FAILURE, TIMED_OUT, CANCELLED, STARTUP_FAILURE, ACTION_REQUIRED}`, and not reclassified as `superseded` (see below) |
-| `superseded`    | `conclusion === 'CANCELLED'` and a newer run of the same GitHub Actions workflow exists on the same commit (concurrency-group eviction) — see below                |
+| `superseded`    | `conclusion === 'CANCELLED'` and matching newer-run evidence exists in the same commit context — see below                                                         |
 | `in_progress`   | `status` in `{IN_PROGRESS, QUEUED, WAITING, PENDING, REQUESTED}`                                                                                                   |
 | `skipped`       | `conclusion` in `{SKIPPED, NEUTRAL}` — reported but do not block readiness                                                                                         |
 | `ignored`       | Matches `ignoreChecks`, unless the same Actions run is protected by `actions.neverCancelRuns`                                                                      |
@@ -51,15 +51,18 @@ Filtered checks appear in `report.checks.filtered` and `report.checks.filteredNa
 
 GitHub Actions concurrency groups cancel an in-flight workflow run when a newer run of the same workflow starts on the same commit — most commonly when a push fires the workflow twice in quick succession, or a second push lands before the first run finishes. The evicted run's check runs complete with `conclusion === "CANCELLED"`, but GitHub branch protection resolves required status checks by **latest run per name** and merges past them once the newer run's checks pass. Treating every `CANCELLED` check as `failing` would make shepherd block on PRs GitHub itself considers mergeable.
 
-Shepherd groups check runs by workflow — keyed on the Actions workflow's numeric `databaseId` (`workflowId`), falling back to the workflow display name (`workflowName`) when the ID is unavailable — and tracks the highest numeric `runId` seen per workflow. A check is reclassified from `failing` to `superseded` only when **both**:
+Shepherd groups check runs by workflow — keyed on the Actions workflow's numeric `databaseId` (`workflowId`), falling back to the workflow display name (`workflowName`) when the ID is unavailable for the run-ID rule. A check is reclassified from `failing` to `superseded` only when its own `conclusion` is `CANCELLED` and one of these forms of newer-run evidence is present:
 
-- its own `conclusion` is `CANCELLED`, and
-- some other check sharing its workflow key has a strictly greater `runId`.
+- A check in the same workflow, event, scope, and commit has a strictly greater numeric `runId`.
+- A completed `SUCCESS` check has the same exact check name, stable workflow ID, event, scope, and commit, and both its start and completion timestamps are strictly later than the cancelled check's. This evidence requires a distinct, lower numeric `runId` on the successful check, non-null matching event, and valid positive timestamps with completion at or after start.
+
+The timestamp case covers duplicated triggers whose run IDs were allocated in a different order from when the runs actually started. It establishes only the observed run ordering in the loaded same-commit check context; it does not prove that both events used an identical PR base.
 
 This is deliberately narrow:
 
 - Only `CANCELLED` is ever reclassified. A real `FAILURE`/`TIMED_OUT`/`STARTUP_FAILURE` on an older run is never masked, even if a newer run exists (the newer run may not re-emit that check at all, e.g. under path filtering).
-- The **newest** run for a workflow is never superseded, even if it is itself cancelled (no newer run exists to supersede it) — that case stays `failing`; Shepherd recommends an authorized rerun or returns `ESCALATE` when no autonomous follow-up remains.
+- A cancelled run remains `failing` unless either the same-event/scope/commit higher-run-ID rule applies or the precise later-execution success evidence above is present. A greatest-ID cancellation can therefore be superseded when a lower-ID success proves it started and completed later; without either form of evidence it stays `failing`, and Shepherd recommends an authorized rerun or returns `ESCALATE` when no autonomous follow-up remains.
+- Timestamp evidence must be strict on both start and completion, and it only applies to an exact-name successful check from the same workflow ID, event, and scope. It changes Shepherd's local check classification; it does not change or remove checks from GitHub's status rollup.
 - Checks with no workflow identity (`workflowId` and `workflowName` both absent) or no numeric `runId` — external `StatusContext` checks, and `STARTUP_FAILURE` synthetics from the Stage 0 supplement — never participate; they can neither be marked superseded nor count as evidence of a newer run.
 
 `superseded` checks are excluded from `getCiVerdict`'s `relevant` tally (same as `filtered`/`skipped`/`ignored`) and from `report.checks.failing` — they are never triaged (no jobs/logs API call) and never appear under `## Failing checks`. They are surfaced only as a `supersededNames` list for transparency.

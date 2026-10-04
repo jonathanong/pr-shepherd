@@ -7,11 +7,10 @@
  *      to PR readiness.
  *   2. Drop checks with `conclusion == SKIPPED` or `conclusion == NEUTRAL` from the
  *      pass/fail tally. Report them as "skipped" for transparency but don't block on them.
- *   3. Reclassify `CANCELLED` checks as "superseded" (non-blocking) when a newer run of
- *      the same workflow exists on the same commit — this is GitHub's concurrency-group
- *      eviction behavior, not a real failure. GitHub branch protection itself resolves
- *      required status checks by latest-run-per-name and merges past these; mirroring
- *      that here keeps shepherd's verdict aligned with what GitHub will actually allow.
+ *   3. Reclassify `CANCELLED` checks as "superseded" (non-blocking) when a newer
+ *      run of the same workflow exists on the same commit and event, or when an
+ *      exact matching check from a lower-ID run started and succeeded later.
+ *      GitHub can start jobs out of workflow-run creation order.
  */
 
 import type { CheckRun, ClassifiedCheck } from "../types.mts";
@@ -43,8 +42,7 @@ export function classifyChecks(
       return { ...c, category: "ignored" as const };
     }
     const classified = classify(c, relevantEvents);
-    // Only ever override a "failing" verdict (i.e. conclusion === CANCELLED, guaranteed by
-    // buildSupersededIndices below) — never touch filtered/skipped/passed classifications.
+    // Only override a failing CANCELLED check, never filtered/skipped/passed classifications.
     if (classified.category === "failing" && supersededIndices.has(index)) {
       return { ...classified, category: "superseded" as const };
     }
@@ -126,7 +124,7 @@ export interface CiVerdict {
   filteredNames: string[];
   /** Names of checks suppressed by the user's ignoreChecks config. */
   ignoredNames: string[];
-  /** Names of CANCELLED checks superseded by a newer run of the same workflow (concurrency-group eviction). */
+  /** Names of CANCELLED checks covered by another run of the same workflow and event. */
   supersededNames: string[];
 }
 

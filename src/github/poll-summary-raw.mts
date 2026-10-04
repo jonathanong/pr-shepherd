@@ -29,6 +29,8 @@ type RawCheckContext =
       status: string;
       conclusion: string | null;
       detailsUrl?: string;
+      startedAt?: string | null;
+      completedAt?: string | null;
       annotations?: { totalCount: number };
       checkSuite: {
         createdAt?: string | null;
