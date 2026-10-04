@@ -158,15 +158,17 @@ describe("compact check chronology", () => {
     expect(summarizePollSummaryChecks(snapshot)).toEqual({ failing: 1, passing: 1 });
   });
 
-  it("recognizes covered checks within a queue-only rollup", () => {
+  it.each([false, true])("accepts merge-group checks only in the queue rollup: %s", (queued) => {
     const nodes = [cancelled(), check()].map((node) => ({
       ...node,
       checkSuite: {
         workflowRun: { ...node.checkSuite!.workflowRun!, event: "merge_group" },
       },
     }));
-    const snapshot = raw(null, rollup(nodes));
-    expect(summarizePollSummaryChecks(snapshot)).toEqual({ superseded: 1, passing: 1 });
+    const snapshot = queued ? raw(null, rollup(nodes)) : raw(rollup(nodes));
+    expect(summarizePollSummaryChecks(snapshot)).toEqual(
+      queued ? { superseded: 1, passing: 1 } : { filtered: 2 },
+    );
     expect(failingSummaryCheckNames(snapshot)).toEqual([]);
   });
 

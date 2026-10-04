@@ -45,7 +45,10 @@ function summaryRollups(raw: RawSummaryPr) {
 function classifiedSummaryChecks(raw: RawSummaryPr) {
   // A successful check on the queue commit cannot cover a PR-head cancellation, or vice versa.
   return summaryRollups(raw).flatMap(({ rollup, scope }) =>
-    classifyChecks(checkRuns(rollup, scope), { additionalRelevantEvents: ["merge_group"] }),
+    classifyChecks(
+      checkRuns(rollup, scope),
+      scope === "merge_group" ? { additionalRelevantEvents: ["merge_group"] } : {},
+    ),
   );
 }
 
