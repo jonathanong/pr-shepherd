@@ -136,8 +136,18 @@ shared `poll-summary-check-contexts.gql` fragment) until the list matches `total
 paths hydrate before anything fingerprints the PR and drop the page cursor, so a one-PR READY
 receipt and an aggregate stack read hash the same evidence. A page that answers for another object,
 loses its rollup, or leaves the count short keeps the checks incomplete, which fails readiness
-closed. Other bounded connection overflow is reported as incomplete context; a null status-check
-rollup is a valid empty check set.
+closed. Bounded review connection overflow remains reported as incomplete context. For READY
+certification, a `CLEAN` merge state plus a conversation-resolution requirement on the base branch
+provides GitHub's confirmation that conversations no longer block merging, so a truncated review
+sample alone does not prevent a receipt. Sampled actionable feedback and incomplete CI still
+prevent certification. `BLOCKED` and `UNKNOWN` are not proof of resolved conversations; neither
+is queue membership. Without the conversation-resolution requirement, review truncation alone
+does not block certification when the applicable rule page is complete; a truncated rule page
+cannot establish that resolution is optional. Truncated review evidence includes the PR's
+`updatedAt` in its receipt fingerprint, so an update outside the sample invalidates the receipt
+and sends the layer through a full one-PR review poll. Complete samples keep their existing
+fingerprint behavior. The full one-PR check still fetches and surfaces review feedback independently
+of this compact certification. A null status-check rollup is a valid empty check set.
 
 ## Per-tick budget
 

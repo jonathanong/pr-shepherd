@@ -9,6 +9,11 @@ import type { RawSummaryPr } from "./poll-summary-raw.mts";
  */
 export function fingerprintRawSummaryPr(raw: RawSummaryPr): string | null {
   if (!raw.updatedAt || !raw.headRefOid || !raw.baseRefOid) return null;
+  const reviewTruncated =
+    raw.comments.pageInfo.hasPreviousPage ||
+    raw.reviews.pageInfo.hasPreviousPage ||
+    raw.reviewThreads.pageInfo.hasPreviousPage ||
+    raw.reviewThreads.nodes.some((thread) => thread.comments.pageInfo.hasPreviousPage);
   const evidence = {
     number: raw.number,
     state: raw.state,
@@ -20,6 +25,9 @@ export function fingerprintRawSummaryPr(raw: RawSummaryPr): string | null {
     reviewDecision: raw.reviewDecision,
     reviewRequests: raw.reviewRequests,
     latestReviews: raw.latestReviews,
+    // Omitted bodies cannot participate in the hash. Bind truncated evidence
+    // to the PR revision instead, so updates require a fresh full review poll.
+    ...(reviewTruncated && { reviewUpdatedAt: raw.updatedAt }),
     comments: hideBodies(raw.comments),
     reviews: hideBodies(raw.reviews),
     reviewThreads: {

@@ -11,8 +11,10 @@ vi.mock("../state/ready-receipts.mts", async (importOriginal) => {
 });
 
 import { readReadyReceipt } from "../state/ready-receipts.mts";
+import { loadSeenMap } from "../state/seen-comments.mts";
 import { graphqlWithRateLimit } from "./client.mts";
 import { summarizePollSummaryPr } from "./poll-summary-projector.mts";
+import { fingerprintRawSummaryPr } from "./poll-summary-fingerprint.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 
 const mockGraphql = vi.mocked(graphqlWithRateLimit);
@@ -87,4 +89,73 @@ describe("ready receipt when the annotation probe fails", () => {
     const item = await summarizePollSummaryPr(readyPr(), repo, { stackPrNumber: 7, merge: true });
     expect(item.readyReceipt).toBe(true);
   });
+});
+
+describe("ready receipt with a compact conversation sample", () => {
+  it.each([false, true])(
+    "validates 20 of 76 conversations without fetching older threads (resolution required: %s)",
+    async (required) => {
+      const raw = readyPr();
+      raw.isInMergeQueue = false;
+      raw.baseRef = {
+        branchProtectionRule: null,
+        rules: {
+          nodes: [
+            { type: "PULL_REQUEST", parameters: { requiredReviewThreadResolution: required } },
+          ],
+        },
+      };
+      raw.commits.nodes[0]!.commit.statusCheckRollup!.contexts.nodes = [
+        { __typename: "StatusContext", context: "ci", state: "SUCCESS" },
+      ];
+      raw.reviewThreads = {
+        totalCount: 76,
+        pageInfo: { hasPreviousPage: true },
+        nodes: Array.from({ length: 20 }, (_, index) => ({
+          id: `thread-${index}`,
+          isResolved: true,
+          isOutdated: false,
+          path: "file.mts",
+          comments: {
+            totalCount: 1,
+            pageInfo: { hasPreviousPage: false },
+            nodes: [
+              {
+                id: `comment-${index}`,
+                body: "Addressed feedback",
+                isMinimized: false,
+                author: { __typename: "User", login: "reviewer" },
+              },
+            ],
+          },
+        })),
+      };
+      vi.mocked(loadSeenMap).mockResolvedValue(
+        new Map(raw.reviewThreads.nodes.map((thread) => [thread.id, { seenAt: 1 }])),
+      );
+      vi.mocked(readReadyReceipt).mockResolvedValue({
+        version: 1,
+        owner: repo.owner,
+        repo: repo.name,
+        pr: raw.number,
+        headRefOid: raw.headRefOid,
+        baseRefOid: raw.baseRefOid,
+        status: "READY",
+        isDraft: false,
+        readinessFingerprint: fingerprintRawSummaryPr(raw)!,
+        recordedAtUnix: 1,
+      });
+
+      const item = await summarizePollSummaryPr(raw, repo, { stackPrNumber: 7, merge: true });
+
+      expect(item.readyReceipt).toBe(true);
+      expect(item.review).toEqual({ threads: 76, incomplete: true });
+      expect(mockGraphql).not.toHaveBeenCalled();
+
+      // A PR revision change can hide an edit outside the compact window.
+      raw.updatedAt = "2026-09-26T00:01:00Z";
+      const edited = await summarizePollSummaryPr(raw, repo, { stackPrNumber: 7, merge: true });
+      expect(edited.readyReceipt).toBeUndefined();
+    },
+  );
 });
