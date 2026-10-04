@@ -141,6 +141,9 @@ pr-shepherd 42 43 44                   # summarize an explicit same-repository s
 pr-shepherd --stack 43                 # summarize every PR in a native GitHub stack
 ```
 
+A user-supplied `--merge` authorizes the agent to run the emitted merge/enqueue commands for the
+selected PRs or stack without another conversational confirmation. Host permission checks still apply.
+
 Multi-PR and `--stack` polling use compact, read-only GraphQL summaries. They return when work is
 needed, every selected PR is complete, the bounded timeout expires, or `--until-terminal` crosses a
 configured GraphQL quota-warning band. Explicit PR sets give each actionable row an exact single-PR
