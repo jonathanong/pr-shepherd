@@ -1,0 +1,52 @@
+{
+  "description": "An external provider failed a removed native-stack queue commit. Its direct provider URL remains inspectable recovery evidence without an Actions run or downloaded log. The aggregate child session omits --merge and emits only the pinned local acknowledgment.",
+  "args": [],
+  "batchData": {
+    "latestMergeQueueRemoval": {
+      "reason": "MERGE_QUEUE_POLICY_CHECK_FAILURE",
+      "actor": "github-actions",
+      "createdAtUnix": 1715799000,
+      "beforeCommitOid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "beforeCommitParentOids": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ]
+    },
+    "removedMergeQueueChecks": [
+      {
+        "name": "provider / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "source": "check_run",
+        "detailsUrl": "https://ci.example.com/build/42",
+        "runId": null,
+        "scope": "merge_group",
+        "commitOid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "event": "merge_group"
+      }
+    ],
+    "isMergeQueueEnabled": true,
+    "stack": {
+      "number": 7,
+      "size": 1,
+      "position": 1,
+      "baseRefName": "main"
+    },
+    "checks": [
+      {
+        "name": "CI / source tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ],
+    "headRefOid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

@@ -12,6 +12,10 @@ import {
   type MarkFilesAsViewedResult,
 } from "./commands/mark-files-as-viewed.mts";
 import { runResolveMutate } from "./commands/resolve-mutate.mts";
+import {
+  applyQueueRemovalAck,
+  type ApplyQueueRemovalResult,
+} from "./commands/apply-queue-removal.mts";
 import { runWithExecutionCwd } from "./execution-context.mts";
 import {
   parsePrReference,
@@ -89,11 +93,19 @@ export interface AppendJournalOperation {
   dryRun?: boolean;
 }
 
+export interface AcknowledgeQueueRemovalOperation {
+  type: "acknowledge_queue_removal";
+  requireSha: string;
+  queueCommitOid: string;
+  removedAtUnix: number;
+}
+
 /** Operations run in this exact list order after validation. */
 export type ApplyOperation =
   | ReviewMutationsOperation
   | MarkFilesViewedOperation
-  | AppendJournalOperation;
+  | AppendJournalOperation
+  | AcknowledgeQueueRemovalOperation;
 
 export interface ApplyInput {
   /** PR shared by every operation in this ordered apply request. */
@@ -104,7 +116,8 @@ export interface ApplyInput {
 export type ApplyOperationResult =
   | { type: "review_mutations"; result: ResolveResult }
   | { type: "mark_files_viewed"; result: MarkFilesAsViewedResult }
-  | { type: "append_journal"; result: JournalResult };
+  | { type: "append_journal"; result: JournalResult }
+  | { type: "acknowledge_queue_removal"; result: ApplyQueueRemovalResult };
 
 export interface ApplyResult {
   operations: ApplyOperationResult[];
@@ -245,6 +258,17 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
                 results.push({ type: operation.type, result });
                 break;
               }
+              case "acknowledge_queue_removal": {
+                const result = await applyQueueRemovalAck({
+                  prNumber,
+                  targetRepository,
+                  headSha: operation.requireSha,
+                  queueCommitOid: operation.queueCommitOid,
+                  removedAtUnix: operation.removedAtUnix,
+                });
+                results.push({ type: operation.type, result });
+                break;
+              }
             }
           } catch (error) {
             if (results.length === 0) throw error;
@@ -355,6 +379,29 @@ function validateOperation(operation: ApplyOperation): void {
       {
         const validation = validateJournalItem(operation.item);
         if (!validation.ok) throw new PrShepherdValidationError(validation.error);
+      }
+      return;
+    case "acknowledge_queue_removal":
+      if (
+        typeof operation.requireSha !== "string" ||
+        !/^[0-9a-f]{40}$/.test(operation.requireSha)
+      ) {
+        throw new PrShepherdValidationError(
+          "acknowledge_queue_removal.requireSha must be a full 40-character lowercase hex SHA",
+        );
+      }
+      if (
+        typeof operation.queueCommitOid !== "string" ||
+        !/^[0-9a-f]{40}$/.test(operation.queueCommitOid)
+      ) {
+        throw new PrShepherdValidationError(
+          "acknowledge_queue_removal.queueCommitOid must be a full 40-character lowercase hex SHA",
+        );
+      }
+      if (!Number.isSafeInteger(operation.removedAtUnix) || operation.removedAtUnix <= 0) {
+        throw new PrShepherdValidationError(
+          "acknowledge_queue_removal.removedAtUnix must be a positive Unix timestamp in seconds",
+        );
       }
       return;
     default:

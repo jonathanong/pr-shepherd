@@ -17,6 +17,7 @@ pr-shepherd apply journal [PR] --file <path> [--dry-run] [--format text|json]
 pr-shepherd apply journal [PR] --file - [--dry-run] [--format text|json]
 pr-shepherd apply check-blocker [PR] --check <name> --blocked-by <ref>
 pr-shepherd apply check-blocker [PR] --check <name> --clear
+pr-shepherd apply queue-removal [PR] --require-sha SHA --queue-commit SHA --removed-at UNIX
 pr-shepherd journal extract --body-file <path>
 pr-shepherd build-suggestion-patches [PR] --thread-id ID --message MSG [groups...]
 pr-shepherd admin clean <pr|branch|current|repo|all> [value] [--dry-run] [--format text|json]
@@ -30,6 +31,8 @@ orders its entries bottom-to-top. When omitted, Shepherd infers the current bran
 `apply journal --file <path>` reads the journal item from a file; `--file -` reads stdin. Provide either a positional `<item>` or `--file`, not both.
 
 `apply check-blocker --check <name>` records that an exact failing check name is blocked on `--blocked-by`. The reference is a pull URL, an issue URL, `owner/repo#N` (pull), or `issue:owner/repo#N`. `--clear` removes that check only.
+
+`apply queue-removal` records a local acknowledgment of a current CI-driven native-stack removal, pinned to the head SHA, queue commit SHA, and removal timestamp. Run the generated command only after inspecting the failed queue evidence and deciding no source change or other blocker remains. Fresh source checks and a one-PR READY receipt then permit aggregate stack recovery; the command itself does not enqueue or merge. Manual, stale, and non-stack removals are rejected.
 
 Journal entries live in a collapsed `Shepherd Journal` details block. `apply journal` creates that canonical block when absent, appends before its closing tag, and leaves an exact duplicate unchanged. A legacy `## Shepherd Journal` section is migrated in place on the next journal operation.
 
@@ -92,16 +95,16 @@ npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
 
 The server exposes these tools:
 
-| Tool                       | Purpose                                                                                                                                     |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `iterate`                  | Run one state-machine tick. `pr` is required and must be a GitHub PR URL or `owner/repo#N`; its repository is the GitHub target.            |
-| `apply`                    | Apply ordered review/journal/file-view mutations under one required repository-qualified `pr`; GitHub returns operation results and errors. |
-| `extract_journal`          | Parse a supplied Markdown `body` string into typed journal JSON without I/O; no `pr` is needed.                                             |
-| `get_journal`              | Fetch one repository-qualified PR body through GraphQL and return its typed journal extraction.                                             |
-| `build_suggestion_patches` | Validate ordered anchored suggestions and return checked patches plus commit metadata.                                                      |
-| `build_suggestion_patch`   | Deprecated one-item adapter for `build_suggestion_patches`.                                                                                 |
+| Tool                       | Purpose                                                                                                                                                                       |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `iterate`                  | Run one state-machine tick. `pr` is required and must be a GitHub PR URL or `owner/repo#N`; its repository is the GitHub target.                                              |
+| `apply`                    | Apply ordered review/journal/file-view mutations and queue-removal acknowledgments under one required repository-qualified `pr`; GitHub returns operation results and errors. |
+| `extract_journal`          | Parse a supplied Markdown `body` string into typed journal JSON without I/O; no `pr` is needed.                                                                               |
+| `get_journal`              | Fetch one repository-qualified PR body through GraphQL and return its typed journal extraction.                                                                               |
+| `build_suggestion_patches` | Validate ordered anchored suggestions and return checked patches plus commit metadata.                                                                                        |
+| `build_suggestion_patch`   | Deprecated one-item adapter for `build_suggestion_patches`.                                                                                                                   |
 
-Use `iterate` first for review work. Its result surfaces review threads, comments, checks, and the existing structured `resolveCommand`/`resolveOnlyCommand` arguments. Translate those arguments into an `apply` `review_mutations` operation when making the mutation; `mark_files_viewed` attempts `markFileAsViewed` for selected files and reports GitHub's results; use `append_journal` for an idempotent PR-body journal entry. Explicit apply operations honor caller intent and surface GitHub errors. Use one `build_suggestion_patches` call for all marked suggestion threads in displayed order. Journal reads can use `extract_journal` or `get_journal` without an iterate tick.
+Use `iterate` first for review work. Its result surfaces review threads, comments, checks, and the existing structured `resolveCommand`/`resolveOnlyCommand` arguments. Translate those arguments into an `apply` `review_mutations` operation when making the mutation; `mark_files_viewed` attempts `markFileAsViewed` for selected files and reports GitHub's results; use `append_journal` for an idempotent PR-body journal entry. Use `acknowledge_queue_removal` with the generated head SHA, queue commit SHA, and removal time to record a validated native-stack CI removal disposition. Explicit apply operations honor caller intent and surface GitHub errors. Use one `build_suggestion_patches` call for all marked suggestion threads in displayed order. Journal reads can use `extract_journal` or `get_journal` without an iterate tick.
 
 `build-suggestion-patches` and `build_suggestion_patches` treat GitHub's anchored line range at the fetched PR head as authoritative. They accept a clean local descendant only when the ordered patches pass `git apply --check`; otherwise inspect the current source and reviewer intent manually.
 

@@ -1,0 +1,41 @@
+{
+  "description": "A human deliberately removed the entry, and its queue commit still has a failing merge-group check. Surface the failure and raw MANUAL reason, but never offer rerun or requeue commands even with --merge.",
+  "args": [
+    "--merge"
+  ],
+  "batchData": {
+    "latestMergeQueueRemoval": {
+      "reason": "MANUAL",
+      "actor": "maintainer",
+      "createdAtUnix": 1715799000,
+      "beforeCommitOid": "queue-commit-1",
+      "beforeCommitParentOids": [
+        "abc123"
+      ]
+    },
+    "removedMergeQueueChecks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "source": "check_run",
+        "event": "merge_group",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/37106358227",
+        "runId": "37106358227",
+        "runAttempt": 1,
+        "workflowName": "CI",
+        "scope": "merge_group",
+        "commitOid": "queue-commit-1",
+        "logExcerpt": "OpenRouter HTTP 529: provider temporarily unavailable",
+        "jobName": "tests"
+      }
+    ],
+    "isMergeQueueEnabled": true
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

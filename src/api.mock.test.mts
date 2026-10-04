@@ -11,6 +11,7 @@ const {
   mockGetRepoInfo,
   mockGetPullRequestBody,
   mockRunPollSummary,
+  mockApplyQueueRemovalAck,
 } = vi.hoisted(() => ({
   mockRunCommitSuggestion: vi.fn(),
   mockRunSuggestionPatches: vi.fn(),
@@ -21,6 +22,7 @@ const {
   mockGetRepoInfo: vi.fn(),
   mockGetPullRequestBody: vi.fn(),
   mockRunPollSummary: vi.fn(),
+  mockApplyQueueRemovalAck: vi.fn(),
 }));
 
 vi.mock("./commands/commit-suggestion.mts", () => ({
@@ -36,6 +38,9 @@ vi.mock("./commands/mark-files-as-viewed.mts", () => ({
   runMarkFilesAsViewed: mockRunMarkFilesAsViewed,
 }));
 vi.mock("./commands/resolve-mutate.mts", () => ({ runResolveMutate: mockRunResolveMutate }));
+vi.mock("./commands/apply-queue-removal.mts", () => ({
+  applyQueueRemovalAck: mockApplyQueueRemovalAck,
+}));
 vi.mock("./github/client.mts", () => ({
   getRepoInfo: mockGetRepoInfo,
   getPullRequestBody: mockGetPullRequestBody,
@@ -248,6 +253,82 @@ describe("public API", () => {
     expect(mockRunResolveMutate).not.toHaveBeenCalled();
   });
 
+  it("validates queue-removal SHAs and timestamp before any ordered mutation", async () => {
+    const shepherd = createPrShepherd();
+    await expect(
+      shepherd.apply({
+        operations: [
+          { type: "review_mutations", resolveThreadIds: ["PRRT_one"] },
+          {
+            type: "acknowledge_queue_removal",
+            requireSha: "short",
+            queueCommitOid: "b".repeat(40),
+            removedAtUnix: 1_700_000_000,
+          },
+        ],
+      }),
+    ).rejects.toBeInstanceOf(PrShepherdValidationError);
+    expect(mockRunResolveMutate).not.toHaveBeenCalled();
+    expect(mockApplyQueueRemovalAck).not.toHaveBeenCalled();
+  });
+
+  it.each(["requireSha", "queueCommitOid"])(
+    "rejects coercible non-string %s before earlier operations run",
+    async (field) => {
+      const operation = {
+        type: "acknowledge_queue_removal" as const,
+        requireSha: "a".repeat(40),
+        queueCommitOid: "b".repeat(40),
+        removedAtUnix: 1_700_000_000,
+      };
+      operation[field as "requireSha" | "queueCommitOid"] = ["a".repeat(40)] as unknown as string;
+      await expect(
+        createPrShepherd().apply({
+          operations: [{ type: "review_mutations", resolveThreadIds: ["PRRT_one"] }, operation],
+        }),
+      ).rejects.toThrow(
+        `acknowledge_queue_removal.${field} must be a full 40-character lowercase hex SHA`,
+      );
+      expect(mockRunResolveMutate).not.toHaveBeenCalled();
+      expect(mockApplyQueueRemovalAck).not.toHaveBeenCalled();
+    },
+  );
+
+  it("routes a validated queue-removal acknowledgment to the shared helper", async () => {
+    const result = {
+      pr: 42,
+      repo: "acme/widgets",
+      acknowledgment: {
+        headSha: "a".repeat(40),
+        queueCommitOid: "b".repeat(40),
+        removedAtUnix: 1_700_000_000,
+      },
+    };
+    mockApplyQueueRemovalAck.mockResolvedValue(result);
+    await expect(
+      createPrShepherd().apply({
+        pr: "acme/widgets#42",
+        operations: [
+          {
+            type: "acknowledge_queue_removal",
+            requireSha: "a".repeat(40),
+            queueCommitOid: "b".repeat(40),
+            removedAtUnix: 1_700_000_000,
+          },
+        ],
+      }),
+    ).resolves.toEqual({
+      operations: [{ type: "acknowledge_queue_removal", result }],
+    });
+    expect(mockApplyQueueRemovalAck).toHaveBeenCalledWith({
+      prNumber: 42,
+      targetRepository: { owner: "acme", name: "widgets" },
+      headSha: "a".repeat(40),
+      queueCommitOid: "b".repeat(40),
+      removedAtUnix: 1_700_000_000,
+    });
+  });
+
   it("preserves operation order, translates message, and reports completed work after a failure", async () => {
     mockRunResolveMutate.mockResolvedValue({ resolvedThreads: ["PRRT_one"] });
     mockRunMarkFilesAsViewed.mockRejectedValue(new Error("GitHub unavailable"));
@@ -409,6 +490,45 @@ describe("public API", () => {
     ],
     ["unsupported operation", { operations: [{ type: "unknown" }] }],
     ["empty review mutation", { operations: [{ type: "review_mutations" }] }],
+    [
+      "invalid queue-removal head SHA",
+      {
+        operations: [
+          {
+            type: "acknowledge_queue_removal",
+            requireSha: "abc",
+            queueCommitOid: "b".repeat(40),
+            removedAtUnix: 1_700_000_000,
+          },
+        ],
+      },
+    ],
+    [
+      "invalid queue-removal commit SHA",
+      {
+        operations: [
+          {
+            type: "acknowledge_queue_removal",
+            requireSha: "a".repeat(40),
+            queueCommitOid: "abc",
+            removedAtUnix: 1_700_000_000,
+          },
+        ],
+      },
+    ],
+    [
+      "invalid queue-removal timestamp",
+      {
+        operations: [
+          {
+            type: "acknowledge_queue_removal",
+            requireSha: "a".repeat(40),
+            queueCommitOid: "b".repeat(40),
+            removedAtUnix: 0,
+          },
+        ],
+      },
+    ],
     [
       "missing review reply message",
       { operations: [{ type: "review_mutations", replyThreadIds: ["PRRT_one"] }] },

@@ -122,7 +122,7 @@ Grok:
 /pr-shepherd 42
 ```
 
-MCP clients call `iterate` once per tick, then use `apply` for review/file/journal mutations and `build_suggestion_patches` for anchored suggestions. To read journal entries, call `extract_journal` with a body already in hand or `get_journal` with a repository-qualified PR reference. `iterate` returns the same structured action data as the CLI, including its review mutation arguments. The client owns recurrence, so this works consistently in Codex, Claude Code, Grok, and any other stdio MCP client.
+MCP clients call `iterate` once per tick, then use `apply` for review/file/journal mutations and validated queue-removal acknowledgments and `build_suggestion_patches` for anchored suggestions. To read journal entries, call `extract_journal` with a body already in hand or `get_journal` with a repository-qualified PR reference. `iterate` returns the same structured action data as the CLI, including its review mutation arguments. The client owns recurrence, so this works consistently in Codex, Claude Code, Grok, and any other stdio MCP client.
 
 The CLI remains useful for shell workflows. Its canonical polling form is:
 
@@ -164,7 +164,7 @@ receipts, and whose bottom open layer GitHub has retargeted onto the stack base,
 with `gh stack merge <that PR number> --yes` and the allowed method flag (`--squash` unless config or the repository selects another). That lands the named layer and every
 unmerged layer below it. When the base uses a merge queue, the same command queues the prefix
 together and GitHub evaluates each layer from the bottom; a failure ejects that layer and those
-above it. Layers above the prefix keep their one-PR sessions. After the merge, GitHub retargets
+above it. If the evidence shows an unrelated failure and no source changes or other blockers remain, the one-PR session emits a head-, queue-commit-, and timestamp-pinned local acknowledgment command. Fresh source checks and a new READY receipt then let the aggregate selector recover the eligible prefix. Manual or stale removals cannot use this path. Layers above the prefix keep their one-PR sessions. After the merge, GitHub retargets
 the next layer, so the rerun continues until the stack returns `CANCEL`. API and MCP aggregate
 calls perform one summary tick and leave recurrence to the caller.
 
@@ -172,7 +172,7 @@ Polling defaults can be set under `poll` in `.pr-shepherdrc.yml`: `intervalSecon
 
 ### Apply Review And Journal Changes, Or Select Files
 
-Use `apply` with ordered operations to reply/resolve/minimize/dismiss review items, mark selected changed files as viewed, or append an idempotent Shepherd Journal item. Explicit operations are attempted and surface GitHub's per-operation results; generated iterate guidance remains capability-filtered. Use `build_suggestion_patches` to turn ordered review suggestions into checked patches and commit metadata; it never changes the worktree or git history.
+Use `apply` with ordered operations to reply/resolve/minimize/dismiss review items, mark selected changed files as viewed, append an idempotent Shepherd Journal item, or record a validated native-stack CI queue-removal acknowledgment. Explicit operations are attempted and surface GitHub's per-operation results; generated iterate guidance remains capability-filtered. Use `build_suggestion_patches` to turn ordered review suggestions into checked patches and commit metadata; it never changes the worktree or git history.
 
 ### Extract Shepherd Journal Entries
 

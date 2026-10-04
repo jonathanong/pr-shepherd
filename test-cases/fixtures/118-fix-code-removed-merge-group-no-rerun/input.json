@@ -1,0 +1,41 @@
+{
+  "description": "A required first-attempt merge-group Actions check failed and GitHub removed the queue entry. The viewer has rerun capability, but rerunning cannot restore the entry and would overwrite its failure evidence. Preserve the queue commit and log excerpt in both formats without rerun authorization or a rerun command.",
+  "args": [
+    "--merge"
+  ],
+  "batchData": {
+    "latestMergeQueueRemoval": {
+      "reason": "MERGE_QUEUE_POLICY_CHECK_FAILURE",
+      "actor": "github-actions",
+      "createdAtUnix": 1715799000,
+      "beforeCommitOid": "queue-commit-1",
+      "beforeCommitParentOids": [
+        "abc123"
+      ]
+    },
+    "removedMergeQueueChecks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "source": "check_run",
+        "event": "merge_group",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/37106358227",
+        "runId": "37106358227",
+        "runAttempt": 1,
+        "workflowName": "CI",
+        "scope": "merge_group",
+        "commitOid": "queue-commit-1",
+        "logExcerpt": "OpenRouter HTTP 529: provider temporarily unavailable",
+        "jobName": "tests"
+      }
+    ],
+    "isMergeQueueEnabled": true
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

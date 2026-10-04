@@ -6,6 +6,7 @@ Apply when a step says `Playbook: "CI failure triage"`. For a GitHub Actions row
 - `[rerun authorized]` plus a `rerun:` command means the viewer can rerun Actions (WRITE+) and this is the original attempt. Shepherd checked `repositoryPermission` and `run_attempt`.
 - Run that printed command at most once. An `[attempt: N]` check never gets another rerun. A log excerpt on a later attempt is still investigation work. A later attempt with no usable evidence escalates when nothing else remains.
 - A run in progress, `[conclusion: ACTION_REQUIRED]`, a check whose run id is not a GitHub Actions workflow, or a run with no attempt metadata never gets `[rerun authorized]`.
+- A check with `scope: merge_group` never gets a rerun command. Rerunning cannot restore a removed queue entry and overwrites the failure evidence. If the failure belongs to this PR, fix the PR head. If it does not, follow the printed requeue instruction when a plan is present. Without `--merge`, report the failure without enqueueing. For native stacks, child sessions omit `--merge` and may still record the printed local acknowledgment after inspecting logs or an external provider URL. Complete fresh one-PR READY validation before returning to the aggregate selector with its original options; never enqueue a stack layer directly.
 - Do not invent a handoff from `[FIX_CODE]`. Shepherd returns `[ESCALATE]` when no autonomous follow-up remains.
 - Several bullets can share one run id (matrix jobs). The `rerun:` command is printed once, on the first bullet. Run it once.
 

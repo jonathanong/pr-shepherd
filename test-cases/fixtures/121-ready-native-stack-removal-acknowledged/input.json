@@ -1,0 +1,61 @@
+{
+  "description": "An unrelated native-stack queue failure was acknowledged for the exact current head, queue commit, and removal time. Source CI is freshly checked and the raw removal remains visible while the one-PR READY delay completes.",
+  "args": [],
+  "batchData": {
+    "latestMergeQueueRemoval": {
+      "reason": "MERGE_QUEUE_POLICY_CHECK_FAILURE",
+      "actor": "github-actions",
+      "createdAtUnix": 1715799000,
+      "beforeCommitOid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "beforeCommitParentOids": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ]
+    },
+    "removedMergeQueueChecks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "source": "check_run",
+        "event": "merge_group",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/37106358227",
+        "runId": "37106358227",
+        "runAttempt": 1,
+        "workflowName": "CI",
+        "scope": "merge_group",
+        "commitOid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "logExcerpt": "OpenRouter HTTP 529: provider temporarily unavailable",
+        "jobName": "tests"
+      }
+    ],
+    "isMergeQueueEnabled": true,
+    "stack": {
+      "number": 7,
+      "size": 1,
+      "position": 1,
+      "baseRefName": "main"
+    },
+    "checks": [
+      {
+        "name": "CI / source tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ],
+    "headRefOid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "readyDelayState": {
+    "isReady": true,
+    "shouldCancel": false,
+    "remainingSeconds": 300
+  },
+  "expectedExitCode": 10,
+  "queueRemovalAcknowledgment": {
+    "headSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "queueCommitOid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "removedAtUnix": 1715799000
+  }
+}

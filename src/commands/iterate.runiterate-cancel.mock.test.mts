@@ -335,42 +335,77 @@ describe("runIterate — cancel", () => {
     expect(result.action).not.toBe("fix_code");
   });
 
-  it("acknowledges a current queue removal in the fresh receipt", async () => {
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "READY",
-        headSha: "head-1",
-        baseRefOid: "base-1",
-        mergeStatus: { ...makeReport().mergeStatus, mergeRequirements: stackRequirements() },
-      }),
-    );
-    mockFetchRawSummaryPr.mockResolvedValue({
-      ...rawReadySnapshot,
-      isInMergeQueue: false,
-      mergeQueueRemovals: {
-        nodes: [
-          {
-            id: "removal-1",
-            createdAt: "2026-09-20T10:00:00Z",
-            reason: "FAILED",
-            actor: null,
-            beforeCommit: { oid: "queue-1", parents: { nodes: [{ oid: "head-1" }] } },
+  it.each(["same", "newer", "manual", "different-commit", "queued"])(
+    "binds the fresh receipt to the acknowledged removal (%s)",
+    async (state) => {
+      mockRunCheck.mockResolvedValue(
+        makeReport({
+          status: "READY",
+          headSha: "head-1",
+          baseRefOid: "base-1",
+          mergeQueue: {
+            enabled: true,
+            inQueue: false,
+            removalAcknowledged: true,
+            autoMergeRequest: { enabledAtUnix: 1_790_000_000, mergeMethod: "SQUASH" },
+            latestRemoval: {
+              reason: "CI_FAILURE",
+              createdAtUnix: Math.floor(Date.parse("2026-09-20T10:00:00Z") / 1000),
+              beforeCommitOid: "queue-1",
+            },
           },
-        ],
-      },
-    });
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
-      shouldCancel: true,
-      remainingSeconds: 0,
-    });
+          mergeStatus: { ...makeReport().mergeStatus, mergeRequirements: stackRequirements() },
+        }),
+      );
+      mockFetchRawSummaryPr.mockResolvedValue({
+        ...rawReadySnapshot,
+        isInMergeQueue: state === "queued",
+        mergeQueueRemovals: {
+          nodes: [
+            {
+              id: "removal-1",
+              createdAt: state === "newer" ? "2026-09-20T10:01:00Z" : "2026-09-20T10:00:00Z",
+              reason: state === "manual" ? "MANUAL" : "CI_FAILURE",
+              actor: null,
+              beforeCommit: {
+                oid: state === "different-commit" ? "queue-2" : "queue-1",
+                parents: { nodes: [{ oid: "head-1" }] },
+              },
+            },
+          ],
+        },
+      });
+      mockUpdateReadyDelay.mockResolvedValue({
+        isReady: true,
+        shouldCancel: true,
+        remainingSeconds: 0,
+      });
 
-    await runIterate(makeOpts());
+      const result = await runIterate(makeOpts({ merge: true }));
+      expect(mockUpdateReadyDelay).toHaveBeenCalledWith(
+        42,
+        true,
+        expect.any(Number),
+        "owner",
+        "repo",
+        expect.any(Object),
+      );
+      if (state !== "same") {
+        expect(result.action).toBe("wait");
+        expect(mockWriteReadyReceipt).not.toHaveBeenCalled();
+        return;
+      }
+      expect(result.action).toBe("fix_code");
+      if (result.action === "fix_code") {
+        expect(result.fix.instructions.join("\n")).toContain("--stack");
+        expect(result.fix.requeue).toBeUndefined();
+      }
 
-    expect(mockWriteReadyReceipt).toHaveBeenCalledWith(
-      expect.objectContaining({ acknowledgedQueueRemovalId: "removal-1" }),
-    );
-  });
+      expect(mockWriteReadyReceipt).toHaveBeenCalledWith(
+        expect.objectContaining({ acknowledgedQueueRemovalId: "removal-1" }),
+      );
+    },
+  );
 
   it("records a one-PR receipt and consumes the elapsed marker on cancel", async () => {
     mockRunCheck.mockResolvedValue(
