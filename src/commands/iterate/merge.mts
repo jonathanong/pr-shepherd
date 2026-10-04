@@ -100,6 +100,10 @@ export function buildRemovedQueueRecovery(
     !queue?.enabled ||
     queue.inQueue ||
     queue.headUpdatedAfterRemoval ||
+    // GitHub exposes a raw string, not a capability to reverse a human's queue removal.
+    // Only known CI-driven reasons authorize offering automated recovery.
+    (queue.latestRemoval?.reason !== "CI_FAILURE" &&
+      queue.latestRemoval?.reason !== "MERGE_QUEUE_POLICY_CHECK_FAILURE") ||
     !removedCommit ||
     !report.headSha ||
     !report.nodeId ||

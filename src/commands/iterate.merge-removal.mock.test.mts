@@ -89,6 +89,21 @@ describe("runIterate — merge queue removal", () => {
     expect(text).not.toContain("rerun:");
   });
 
+  it.each(["MANUAL", "MANUALLY_DEQUEUED", "UNKNOWN_REASON", null])(
+    "preserves %s removal without offering automatic requeue",
+    async (reason) => {
+      const report = removedEntryReport("OpenRouter HTTP 529");
+      report.mergeQueue!.latestRemoval!.reason = reason;
+      mockRunCheck.mockResolvedValue(report);
+      const result = await runIterate(makeOpts({ merge: true }));
+      expect(result.action).toBe("fix_code");
+      if (result.action !== "fix_code") return;
+      expect(result.fix.requeue).toBeUndefined();
+      expect(result.fix.checks[0]?.logExcerpt).toBe("OpenRouter HTTP 529");
+      expect(formatIterateResult(result)).not.toContain("- requeue:");
+    },
+  );
+
   it("marks an eligible draft ready before an elapsed-delay merge", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
