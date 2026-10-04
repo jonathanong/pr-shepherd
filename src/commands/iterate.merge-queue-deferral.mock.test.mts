@@ -168,6 +168,7 @@ describe("runIterate — merge-queue work deferral", () => {
               category: "failing",
               scope: "merge_group",
               commitOid: "queue-commit",
+              logExcerpt: "AssertionError: expected tests to pass",
             },
           ],
           inProgress: [],

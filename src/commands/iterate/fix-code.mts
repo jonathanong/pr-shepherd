@@ -314,6 +314,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const failingAgentChecks = toAgentChecks(failingChecks).map((c) => {
     if (releasedCheckNames.has(c.name)) return c;
     return rerunAuthorized &&
+      // Rerunning queue CI cannot restore a removed entry and overwrites its failure evidence.
+      c.scope !== "merge_group" &&
       c.runId &&
       actionsRunIds.has(c.runId) &&
       // GitHub increments run_attempt after every rerun. Recommend at most one rerun by limiting
