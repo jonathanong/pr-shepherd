@@ -247,6 +247,11 @@ export function formatFixCodeResult(
       );
     }
   }
+  if (result.fix.queueRemovalAcknowledgment) {
+    postFixLines.push(
+      `- acknowledge queue removal: ${inlineCode(renderMergeCommand(result.fix.queueRemovalAcknowledgment))}`,
+    );
+  }
   sections.push(postFixLines.join("\n"));
   sections.push("## Instructions");
   sections.push(numberInstructions(result.fix.instructions));

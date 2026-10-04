@@ -640,6 +640,18 @@ describe("pr-shepherd MCP server", () => {
           type: "append_journal" as const,
           result: { prNumber: 3, mutated: true, sectionExisted: false, dryRun: false },
         },
+        {
+          type: "acknowledge_queue_removal" as const,
+          result: {
+            pr: 3,
+            repo: "acme/widgets",
+            acknowledgment: {
+              headSha: "a".repeat(40),
+              queueCommitOid: "b".repeat(40),
+              removedAtUnix: 1_700_000_000,
+            },
+          },
+        },
       ],
     };
     const suggestionResult = {
@@ -689,7 +701,15 @@ describe("pr-shepherd MCP server", () => {
 
     const applyResponse = await tools.apply!.handler({
       pr: "acme/widgets#3",
-      operations: [{ type: "mark_files_viewed", tests: true }],
+      operations: [
+        { type: "mark_files_viewed", tests: true },
+        {
+          type: "acknowledge_queue_removal",
+          requireSha: "a".repeat(40),
+          queueCommitOid: "b".repeat(40),
+          removedAtUnix: 1_700_000_000,
+        },
+      ],
     });
     const suggestionResponse = await tools.build_suggestion_patch!.handler({
       pr: "acme/widgets#3",
@@ -705,6 +725,8 @@ describe("pr-shepherd MCP server", () => {
     expect(applyResponse.content?.[0]?.text).toContain("Operation 1: review_mutations");
     expect(applyResponse.content?.[0]?.text).toContain("Operation 2: mark_files_viewed");
     expect(applyResponse.content?.[0]?.text).toContain("Operation 3: append_journal");
+    expect(applyResponse.content?.[0]?.text).toContain("Operation 4: acknowledge_queue_removal");
+    expect(applyResponse.content?.[0]?.text).toContain("queueCommitOid: " + "b".repeat(40));
     expect(suggestionResponse.structuredContent).toBe(suggestionResult);
     expect(batchResponse.structuredContent).toBe(batchResult);
     expect(batchResponse.content?.[0]?.text).toContain("## Patch 1");

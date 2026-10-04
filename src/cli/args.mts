@@ -26,6 +26,9 @@ const FLAGS_WITH_VALUES = new Set([
   "--match",
   "--check",
   "--blocked-by",
+  "--require-sha",
+  "--queue-commit",
+  "--removed-at",
 ]);
 
 // Boolean flags that do NOT consume the next argument. Any --flag not in this

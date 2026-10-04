@@ -148,7 +148,9 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   const hasActionableWork = hasReadinessWork || report.comments.firstLook.length > 0;
 
   const activeMerge = Boolean(
-    opts.merge && (report.mergeQueue?.inQueue || report.mergeQueue?.autoMergeRequest),
+    opts.merge &&
+    (report.mergeQueue?.inQueue ||
+      (report.mergeQueue?.autoMergeRequest && !report.mergeQueue.removalAcknowledged)),
   );
   const staleAncestry = await findStaleNativeStackAncestry(
     report,
@@ -425,6 +427,20 @@ async function recordReadyReceipt(
     if (fingerprint === null) return false;
     if (!isCurrentSummaryReady(raw, summary.checks ?? {}, summary.review ?? {})) return false;
     const removalEvent = currentQueueRemovalEvent(raw);
+    // Bind recovery to the exact evidence the one-PR check accepted. A new ejection
+    // between that check and this fresh snapshot must get its own acknowledgment.
+    if (report.mergeQueue?.removalAcknowledged) {
+      const accepted = report.mergeQueue.latestRemoval;
+      if (
+        raw.isInMergeQueue ||
+        !accepted ||
+        !removalEvent ||
+        removalEvent.beforeCommit?.oid !== accepted.beforeCommitOid ||
+        Math.floor(Date.parse(removalEvent.createdAt) / 1000) !== accepted.createdAtUnix ||
+        removalEvent.reason !== accepted.reason
+      )
+        return false;
+    }
     await writeReadyReceipt({
       version: 1,
       ...key,

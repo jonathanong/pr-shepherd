@@ -13,7 +13,9 @@ import type {
   MergeCommandPlan,
   ShepherdReport,
 } from "../../types.mts";
-import { renderShellCommand } from "../../cli/runner.mts";
+import { renderShellCommand, buildPrShepherdCommand } from "../../cli/runner.mts";
+import { hasLogEvidence } from "./check-evidence.mts";
+import { isCiQueueRemovalReason } from "../../state/queue-removal-ack.mts";
 import { buildEscalateHumanMessage } from "./escalate.mts";
 
 const ENQUEUE_MUTATION =
@@ -93,6 +95,45 @@ export function buildRemovedQueueRecovery(
   checks: AgentCheck[],
   merge: boolean | undefined,
 ): MergeCommandPlan | undefined {
+  if (report.mergeStatus.mergeRequirements?.stack) return undefined;
+  if (!removedQueueRecoveryAvailable(report, checks, merge)) return undefined;
+  const plan = buildMergeCommandPlan({
+    pr: report.pr,
+    repo: report.repo,
+    nodeId: report.nodeId,
+    headSha: report.headSha!,
+    queue: true,
+  });
+  return "unavailable" in plan ? undefined : plan;
+}
+
+/** Bind a caller's disposition to one removed stack queue commit, without submitting a merge. */
+export function buildStackQueueRemovalAcknowledgment(
+  report: ShepherdReport,
+  checks: AgentCheck[],
+  merge: boolean | undefined,
+): { argv: string[] } | undefined {
+  if (!report.mergeStatus.mergeRequirements?.stack) return undefined;
+  if (!removedQueueRecoveryAvailable(report, checks, merge)) return undefined;
+  const removal = report.mergeQueue!.latestRemoval!;
+  return buildPrShepherdCommand([
+    "apply",
+    "queue-removal",
+    formatPrUrl(report.repo, report.pr),
+    "--require-sha",
+    report.headSha!,
+    "--queue-commit",
+    removal.beforeCommitOid!,
+    "--removed-at",
+    String(removal.createdAtUnix),
+  ]);
+}
+
+function removedQueueRecoveryAvailable(
+  report: ShepherdReport,
+  checks: AgentCheck[],
+  merge: boolean | undefined,
+): boolean {
   const queue = report.mergeQueue;
   const removedCommit = queue?.latestRemoval?.beforeCommitOid;
   if (
@@ -102,24 +143,18 @@ export function buildRemovedQueueRecovery(
     queue.headUpdatedAfterRemoval ||
     // GitHub exposes a raw string, not a capability to reverse a human's queue removal.
     // Only known CI-driven reasons authorize offering automated recovery.
-    (queue.latestRemoval?.reason !== "CI_FAILURE" &&
-      queue.latestRemoval?.reason !== "MERGE_QUEUE_POLICY_CHECK_FAILURE") ||
+    !isCiQueueRemovalReason(queue.latestRemoval?.reason) ||
+    !queue.latestRemoval ||
+    queue.latestRemoval.createdAtUnix <= 0 ||
     !removedCommit ||
     !report.headSha ||
     !report.nodeId ||
-    // Native stacks must keep their aggregate merge route and lower-layer readiness checks.
-    report.mergeStatus.mergeRequirements?.stack ||
     !checks.some((check) => check.scope === "merge_group" && check.commitOid === removedCommit)
   )
-    return undefined;
-  const plan = buildMergeCommandPlan({
-    pr: report.pr,
-    repo: report.repo,
-    nodeId: report.nodeId,
-    headSha: report.headSha,
-    queue: true,
-  });
-  return "unavailable" in plan ? undefined : plan;
+    return false;
+  return checks
+    .filter((check) => check.scope === "merge_group" && check.commitOid === removedCommit)
+    .every(hasLogEvidence);
 }
 
 export function unavailableMergeResult(

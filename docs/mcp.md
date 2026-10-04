@@ -155,14 +155,14 @@ The server registers five canonical tools plus a deprecated singular suggestion 
 
 Every PR-targeted MCP call requires a repository-qualified selector: either a GitHub PR URL such as `https://github.com/owner/repo/pull/123` or an `owner/repo#123` reference. Singular PR tools require `pr`; aggregate `iterate` accepts `prs` or `stack`. Bare PR numbers and omitted selectors are rejected. `extract_journal` has no PR selector; its only input is the supplied Markdown body. The named repository is the GitHub target and may differ from the server's startup working directory (or the `cwd` supplied to an embedded factory), which remains the local git/configuration/rules context.
 
-| Tool                       | Purpose                                                                                                       | Side effects                                                                                 |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `iterate`                  | One state-machine tick. Surfaces review items, checks, merge state, and structured review-mutation arguments. | May mark a draft ready only when GitHub reports `viewerCanUpdate: true`; never cancels runs. |
-| `apply`                    | Ordered review mutations, `mark_files_viewed`, and `append_journal` under one required `pr`.                  | Explicit operations are attempted; GitHub returns per-operation results and errors.          |
-| `extract_journal`          | Extract a validated journal from a supplied Markdown `body`.                                                  | None; no file, stdin, GitHub, or Shepherd-log I/O.                                           |
-| `get_journal`              | Fetch a qualified PR body via GraphQL `GetPrBody` and extract its journal.                                    | Read-only GitHub request; never writes the PR body.                                          |
-| `build_suggestion_patches` | Validate ordered anchored suggestions and return checked diffs plus commit metadata.                          | None. Never edits the worktree or git history.                                               |
-| `build_suggestion_patch`   | Deprecated one-item adapter for `build_suggestion_patches`.                                                   | None. Never edits the worktree or git history.                                               |
+| Tool                       | Purpose                                                                                                                   | Side effects                                                                                 |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `iterate`                  | One state-machine tick. Surfaces review items, checks, merge state, and structured review-mutation arguments.             | May mark a draft ready only when GitHub reports `viewerCanUpdate: true`; never cancels runs. |
+| `apply`                    | Ordered review mutations, `mark_files_viewed`, `append_journal`, and `acknowledge_queue_removal` under one required `pr`. | Explicit operations are attempted; GitHub returns per-operation results and errors.          |
+| `extract_journal`          | Extract a validated journal from a supplied Markdown `body`.                                                              | None; no file, stdin, GitHub, or Shepherd-log I/O.                                           |
+| `get_journal`              | Fetch a qualified PR body via GraphQL `GetPrBody` and extract its journal.                                                | Read-only GitHub request; never writes the PR body.                                          |
+| `build_suggestion_patches` | Validate ordered anchored suggestions and return checked diffs plus commit metadata.                                      | None. Never edits the worktree or git history.                                               |
+| `build_suggestion_patch`   | Deprecated one-item adapter for `build_suggestion_patches`.                                                               | None. Never edits the worktree or git history.                                               |
 
 For review workflow, call `iterate` first. Translate its `resolveCommand` / `resolveOnlyCommand` arguments into an `apply` `review_mutations` operation. Use one `build_suggestion_patches` call for all marked suggestion threads in displayed order. `mark_files_viewed` performs the requested viewed-state mutations and reports GitHub's results. Use `append_journal` only when the caller asks for that mutation; direct apply honors that explicit intent even when `viewerCanUpdate` is false. Journal reads are independent of `iterate`.
 
@@ -232,6 +232,17 @@ Each operation is one of:
 | `dismissReviewIds`   | string array         | no                                      |
 | `message`            | string               | yes when replying or dismissing         |
 | `requireSha`         | string               | no; poll until this HEAD SHA is visible |
+
+`acknowledge_queue_removal`
+
+| Field            | Type                          | Required | Meaning                                                         |
+| ---------------- | ----------------------------- | -------- | --------------------------------------------------------------- |
+| `type`           | `"acknowledge_queue_removal"` | yes      | Record a validated local native-stack CI removal acknowledgment |
+| `requireSha`     | string                        | yes      | Full current head SHA                                           |
+| `queueCommitOid` | string                        | yes      | Full removed queue commit SHA                                   |
+| `removedAtUnix`  | number                        | yes      | Positive safe-integer Unix timestamp of removal                 |
+
+This operation validates current GitHub evidence before writing local state. It does not enqueue or merge. Fresh source CI and the one-PR READY receipt still precede aggregate stack recovery. Its result contains `pr`, `repo`, and `acknowledgment` (`headSha`, `queueCommitOid`, `removedAtUnix`) in both output channels.
 
 `mark_files_viewed`
 

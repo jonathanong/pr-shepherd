@@ -161,6 +161,8 @@ interface FixRebaseAndPush {
   protectedRuns: ProtectedRun[];
   /** Requeue command emitted after merge-group remediation. */
   requeue?: MergeCommandPlan;
+  /** Acknowledge an unrelated native-stack queue failure before fresh READY validation. */
+  queueRemovalAcknowledgment?: { argv: string[] };
   /** First-look threads — previously hidden, surfaced for acknowledgment only. */
   firstLookThreads: FirstLookThread[];
   /** First-look comments — previously hidden, surfaced for acknowledgment only. */

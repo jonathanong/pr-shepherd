@@ -112,6 +112,13 @@ const appendJournalOperationSchema = z.object({
   dryRun: z.boolean().optional(),
 });
 
+const acknowledgeQueueRemovalOperationSchema = z.object({
+  type: z.literal("acknowledge_queue_removal"),
+  requireSha: z.string().regex(/^[0-9a-f]{40}$/),
+  queueCommitOid: z.string().regex(/^[0-9a-f]{40}$/),
+  removedAtUnix: z.number().int().positive().safe(),
+});
+
 const applyInputSchema = z.object({
   pr,
   operations: z
@@ -120,6 +127,7 @@ const applyInputSchema = z.object({
         reviewMutationsOperationSchema,
         markFilesViewedOperationSchema,
         appendJournalOperationSchema,
+        acknowledgeQueueRemovalOperationSchema,
       ]),
     )
     .min(1),
@@ -385,6 +393,17 @@ function formatApplyResult(result: Awaited<ReturnType<PrShepherd["apply"]>>): st
           return `${heading}\n\n${formatMarkFilesAsViewedResult(operation.result)}`;
         case "append_journal":
           return `${heading}\n\n${formatJournalResult(operation.result)}`;
+        case "acknowledge_queue_removal": {
+          const result = operation.result;
+          return [
+            heading,
+            "",
+            `PR: ${result.repo}#${result.pr}`,
+            `headSha: ${result.acknowledgment.headSha}`,
+            `queueCommitOid: ${result.acknowledgment.queueCommitOid}`,
+            `removedAtUnix: ${result.acknowledgment.removedAtUnix}`,
+          ].join("\n");
+        }
       }
     })
     .join("\n\n");

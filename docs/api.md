@@ -62,7 +62,7 @@ until all layers merge and the stack returns `CANCEL`.
 Aggregate selectors never perform mutations or emit rebase/push commands. The caller owns recurrence
 and follows the returned instructions.
 
-`apply` runs `operations` in list order after validating every operation. Types: `review_mutations`, `mark_files_viewed`, `append_journal`. `mark_files_viewed` performs the requested `markFileAsViewed` mutations and surfaces GitHub's per-file results. Direct review operations forward explicitly supplied IDs without iterate's author, capability, or current-state policy; direct journal operations likewise honor explicit caller intent. GitHub is authoritative for authorization and mutation validity. Replies and dismissals require `message`. `requireSha` must be a full 40-character lowercase hex SHA.
+`apply` runs `operations` in list order after validating every operation. Types: `review_mutations`, `mark_files_viewed`, `append_journal`, `acknowledge_queue_removal`. `mark_files_viewed` performs the requested `markFileAsViewed` mutations and surfaces GitHub's per-file results. Direct review operations forward explicitly supplied IDs without iterate's author, capability, or current-state policy; direct journal operations likewise honor explicit caller intent. GitHub is authoritative for authorization and mutation validity. Replies and dismissals require `message`. `requireSha` must be a full 40-character lowercase hex SHA.
 
 `getJournal({ pr })` fetches one PR body with GraphQL `GetPrBody` and returns the same typed result as
 `extractShepherdJournal(body)` without exposing the body or PR node ID. The API accepts a qualified
@@ -72,6 +72,8 @@ reference or a numeric PR in the configured checkout repository. An absent journ
 Validation failures throw `PrShepherdValidationError` before any GitHub mutation. If a later apply operation fails after earlier ones succeeded, Shepherd throws `PartialApplyError` with `failedIndex` and `completed`.
 
 `buildSuggestionPatches` returns an ordered patch list plus per-patch commit metadata and shared instructions. It accepts one or more `{ threadId, message, description? }` items, builds against the fetched PR-head blobs, permits a clean local descendant of that head, and returns nothing unless the ordered stream passes `git apply --check`. It never writes a patch file or mutates git. `buildSuggestionPatch` remains temporarily as a deprecated one-item adapter.
+
+`acknowledge_queue_removal` requires `requireSha` (the full current head SHA), `queueCommitOid` (the full removed queue commit SHA), and `removedAtUnix` (a positive safe-integer Unix timestamp). It validates the current native-stack CI removal before recording a local acknowledgment; it does not enqueue or merge. The result contains `pr`, `repo`, and `acknowledgment` with `headSha`, `queueCommitOid`, and `removedAtUnix`. Fresh source checks, a current READY receipt, and aggregate lower-layer checks remain required for stack recovery.
 
 ## `pr-shepherd/journal`
 

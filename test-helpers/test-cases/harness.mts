@@ -50,6 +50,10 @@ vi.mock("../../src/state/ready-receipts.mts", async (importOriginal) => ({
   ...(await importOriginal()),
   writeReadyReceipt: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("../../src/state/queue-removal-ack.mts", async (importOriginal) => ({
+  ...(await importOriginal()),
+  readQueueRemovalAcknowledgment: vi.fn().mockResolvedValue(null),
+}));
 vi.mock("../../src/state/pr-fingerprint.mts", () => ({
   loadPrFingerprint: vi.fn().mockResolvedValue(null),
   storePrFingerprint: vi.fn().mockResolvedValue(undefined),
@@ -120,6 +124,7 @@ import { triageFailingChecks, fetchStartupFailureChecks } from "../../src/checks
 import { fetchCheckRunAnnotationsBatch } from "../../src/github/check-annotations-batch.mts";
 import { autoResolveOutdated } from "../../src/comments/resolve.mts";
 import { loadSeenMap, markSeen } from "../../src/state/seen-comments.mts";
+import { readQueueRemovalAcknowledgment } from "../../src/state/queue-removal-ack.mts";
 import { updateReadyDelay } from "../../src/commands/ready-delay.mts";
 import {
   readStallState,
@@ -184,6 +189,12 @@ function rawSummaryForBatch(batchData: Record<string, any>): any {
 // ---------------------------------------------------------------------------
 
 export interface Fixture {
+  /** Exact local acknowledgment of an unrelated native-stack queue failure. */
+  queueRemovalAcknowledgment?: {
+    headSha: string;
+    queueCommitOid: string;
+    removedAtUnix: number;
+  };
   /** Selects the aggregate bare-poll fixture path instead of singular iterate. */
   mode?: "aggregate";
   /** Return value of fetchPollSummary() for aggregate fixtures. */
@@ -419,6 +430,9 @@ function graphqlForBatch(
 }
 
 export function applyFixture(fixture: Fixture): void {
+  vi.mocked(readQueueRemovalAcknowledgment).mockResolvedValue(
+    fixture.queueRemovalAcknowledgment ?? null,
+  );
   const baseCfg = defaultConfig() as unknown as Record<string, unknown>;
   let overlayCfg: Record<string, unknown> = {};
   if (fixture.stallTimeoutMinutes !== undefined) {

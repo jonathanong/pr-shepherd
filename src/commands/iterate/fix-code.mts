@@ -18,7 +18,8 @@ import {
   threadHasAuthorizedMutation,
 } from "./thread-mutation-routing.mts";
 import { buildFixInstructions } from "./render.mts";
-import { buildRemovedQueueRecovery } from "./merge.mts";
+import { buildRemovedQueueRecovery, buildStackQueueRemovalAcknowledgment } from "./merge.mts";
+import { hasLogEvidence } from "./check-evidence.mts";
 import { buildReleasedBlockerInstruction } from "./check-instructions.mts";
 import { buildNativeStackLayerRebase } from "./native-stack-rebase.mts";
 import { lookupUpperLayerTrunkConflict } from "./stack-trunk-conflict.mts";
@@ -68,13 +69,6 @@ interface HandleFixCodeContext {
   ruleAutoResolveThreadIds?: string[];
   /** Verified stack-repair guidance, when ancestry is stale. */
   repairInstructions?: string[];
-}
-
-function hasLogEvidence(check: AgentCheck): boolean {
-  return (
-    Boolean(check.logExcerpt?.trim()) ||
-    (check.relatedJobs ?? []).some((job) => Boolean(job.logExcerpt?.trim()))
-  );
 }
 
 function checkRequiresHumanFollowUp(check: AgentCheck): boolean {
@@ -500,6 +494,18 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     stackRebase,
   );
   const requeue = buildRemovedQueueRecovery(report, failingAgentChecks, opts.merge);
+  const queueRemovalAcknowledgment = buildStackQueueRemovalAcknowledgment(
+    report,
+    failingAgentChecks,
+    opts.merge,
+  );
+  if (queueRemovalAcknowledgment) {
+    const completion = instructions.pop();
+    instructions.push(
+      "If the merge-group failure belongs to this PR, fix and push its head, then iterate. Otherwise, if no code changed and no other blocker remains, run `acknowledge queue removal:` exactly as printed. This records only the disposition of that removed queue commit; finish this one-PR session to validate current source CI and record its READY receipt, then rerun the aggregate `--stack --merge` selector, which verifies lower-layer readiness before merging. Do not enqueue or merge this layer directly.",
+    );
+    if (completion !== undefined) instructions.push(completion);
+  }
   if (requeue) {
     const completion = instructions.pop();
     instructions.push(
@@ -551,6 +557,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       surfacedApprovals,
       checks,
       ...(requeue && { requeue }),
+      ...(queueRemovalAcknowledgment && { queueRemovalAcknowledgment }),
       changesRequestedReviews,
       resolveCommand,
       ...(resolveOnlyCommand !== undefined ? { resolveOnlyCommand } : undefined),

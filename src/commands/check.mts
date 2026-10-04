@@ -1,5 +1,10 @@
 import { fetchPrBatch } from "../github/batch.mts";
 import { queueRemovalAppliesToHead } from "../github/queue-removal-freshness.mts";
+import {
+  readQueueRemovalAcknowledgment,
+  matchesQueueRemovalAcknowledgment,
+  isCiQueueRemovalReason,
+} from "../state/queue-removal-ack.mts";
 import { storePrFingerprint } from "../state/pr-fingerprint.mts";
 import { tryReuseFingerprintReport } from "./check-fingerprint.mts";
 import { collectUnreportedRequired, refreshCachedUnreported } from "./check-unreported.mts";
@@ -140,9 +145,21 @@ export async function runCheck(
       removedAtUnix: latestRemoval.createdAtUnix,
     }),
   );
+  const removalAcknowledged = Boolean(
+    batchData.stack &&
+    latestRemoval?.beforeCommitOid &&
+    isCiQueueRemovalReason(latestRemoval.reason) &&
+    !batchData.isInMergeQueue &&
+    !headUpdatedAfterRemoval &&
+    matchesQueueRemovalAcknowledgment(await readQueueRemovalAcknowledgment(stateKey), {
+      headSha: batchData.headRefOid,
+      queueCommitOid: latestRemoval.beforeCommitOid,
+      removedAtUnix: latestRemoval.createdAtUnix,
+    }),
+  );
   const queueRawChecks = batchData.isInMergeQueue
     ? (batchData.mergeQueueChecks ?? [])
-    : latestRemoval && !headUpdatedAfterRemoval
+    : latestRemoval && !headUpdatedAfterRemoval && !removalAcknowledged
       ? (batchData.removedMergeQueueChecks ?? [])
       : [];
   // Keep supersession grouping commit-local, but accept merge_group only for the
@@ -530,6 +547,7 @@ export async function runCheck(
           checksIncomplete: true as const,
         }),
         ...(headUpdatedAfterRemoval && { headUpdatedAfterRemoval: true as const }),
+        ...(removalAcknowledged && { removalAcknowledged: true as const }),
       },
     }),
     ...(unreported.unreportedRequiredChecks && {

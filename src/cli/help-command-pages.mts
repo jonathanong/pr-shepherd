@@ -15,8 +15,9 @@ Usage:
   pr-shepherd apply journal [PR] --file <path> [--dry-run] [--format text|json]
   pr-shepherd apply check-blocker [PR] --check <name> --blocked-by <ref>
   pr-shepherd apply check-blocker [PR] --check <name> --clear
+  pr-shepherd apply queue-removal [PR] --require-sha <head> --queue-commit <commit> --removed-at <unix>
 
-Run 'pr-shepherd apply <review|files|journal|check-blocker> --help' for command-specific details.
+Run 'pr-shepherd apply <review|files|journal|check-blocker|queue-removal> --help' for command-specific details.
 --help, -h                      Print this help and exit before GitHub I/O.`,
 
   "apply review": `pr-shepherd apply review
@@ -88,6 +89,21 @@ Usage:
 
 \`--clear\` removes that check's record and leaves other checks alone.
 --help, -h                      Print this help and exit before any I/O.`,
+
+  "apply queue-removal": `pr-shepherd apply queue-removal
+
+Acknowledge one current CI-driven merge-queue removal for a native-stack PR.
+This writes local state only after a fresh GitHub read confirms the supplied head,
+queue commit, and removal timestamp still identify the current removal.
+
+Usage:
+  pr-shepherd apply queue-removal [PR] --require-sha <head> --queue-commit <commit> --removed-at <unix>
+
+--require-sha <sha>       Full 40-character lowercase PR head SHA observed with the failure.
+--queue-commit <sha>      Full 40-character lowercase synthetic merge-group commit SHA.
+--removed-at <unix>       Removal time in Unix seconds.
+--format text|json        Output format. Default: text.
+--help, -h                Print this help and exit before any I/O.`,
 
   "build-suggestion-patches": `pr-shepherd build-suggestion-patches
 

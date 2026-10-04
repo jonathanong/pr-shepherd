@@ -13,6 +13,7 @@ export function helpKeyForArgs(args: string[]): keyof typeof USAGE {
   if (args[0] === "apply" && args[1] === "files") return "apply files";
   if (args[0] === "apply" && args[1] === "journal") return "apply journal";
   if (args[0] === "apply" && args[1] === "check-blocker") return "apply check-blocker";
+  if (args[0] === "apply" && args[1] === "queue-removal") return "apply queue-removal";
   if (args[0] === "journal" && args[1] === "extract") return "journal extract";
   if (args[0] === "admin" && args[1] === "clean") return "admin clean";
   if (args[0] === "admin" && args[1] === "log-file") return "admin log-file";

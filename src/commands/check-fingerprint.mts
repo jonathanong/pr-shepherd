@@ -14,6 +14,7 @@ function reportAllowsFingerprintSkip(report: ShepherdReport): boolean {
   if (report.status === "READY") return false;
   if (report.mergeStatus.state !== "OPEN") return false;
   if (report.mergeQueue?.inQueue === true) return false;
+  if (report.mergeQueue?.removalAcknowledged === true) return false;
   return (
     report.threads.actionable.length === 0 &&
     report.threads.resolutionOnly.length === 0 &&

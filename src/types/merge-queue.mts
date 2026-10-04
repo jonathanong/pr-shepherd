@@ -15,6 +15,8 @@ export interface MergeQueueReport {
   checksIncomplete?: true;
   /** The current PR head is not a parent of the removed synthetic queue commit. */
   headUpdatedAfterRemoval?: true;
+  /** The caller acknowledged this exact native-stack removal on the current head. */
+  removalAcknowledged?: true;
 }
 
 /**

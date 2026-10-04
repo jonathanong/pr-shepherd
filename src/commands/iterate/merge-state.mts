@@ -164,7 +164,13 @@ export async function handleActiveMergeState(input: {
   }
 
   const removal = report.mergeQueue?.latestRemoval;
-  if (!enabled || !removal || report.mergeQueue?.headUpdatedAfterRemoval) return null;
+  if (
+    !enabled ||
+    !removal ||
+    report.mergeQueue?.headUpdatedAfterRemoval ||
+    report.mergeQueue?.removalAcknowledged
+  )
+    return null;
   await clearStallState(stallKey);
   const escalateBase = {
     triggers: ["merge-queue-removed" as const],

@@ -164,6 +164,9 @@ export function projectIterateLean(
             protectedRuns: result.fix.protectedRuns,
           }),
           ...(result.fix.requeue && { requeue: result.fix.requeue }),
+          ...(result.fix.queueRemovalAcknowledgment && {
+            queueRemovalAcknowledgment: result.fix.queueRemovalAcknowledgment,
+          }),
           ...(result.fix.checks.length > 0 && { checks: result.fix.checks }),
           ...(result.fix.changesRequestedReviews.length > 0 && {
             changesRequestedReviews: result.fix.changesRequestedReviews,
