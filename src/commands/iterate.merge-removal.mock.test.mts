@@ -26,11 +26,52 @@ describe("runIterate — merge queue removal", () => {
         logExcerpt: "OpenRouter HTTP 529",
       });
       expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
+      if (merge) {
+        expect(result.fix.requeue?.command.argv).toEqual([
+          "gh",
+          "pr",
+          "merge",
+          "42",
+          "--repo",
+          "owner/repo",
+          "--match-head-commit",
+          "abc123",
+        ]);
+        expect(result.fix.requeue?.queueApiFallbackCommand?.argv).toContain(
+          "expectedHeadOid=abc123",
+        );
+      } else {
+        expect(result.fix.requeue).toBeUndefined();
+      }
       const text = formatIterateResult(result);
       expect(text).toContain("OpenRouter HTTP 529");
       expect(text).toContain("merge_group");
       expect(text).not.toContain("[rerun authorized]");
       expect(text).not.toContain("rerun:");
+    },
+  );
+
+  it.each(["active", "updated-head", "different-commit", "missing-head", "native-stack"])(
+    "omits requeue recovery for %s queue evidence",
+    async (state) => {
+      const report = removedEntryReport("AssertionError");
+      if (state === "active") report.mergeQueue!.inQueue = true;
+      if (state === "updated-head") report.mergeQueue!.headUpdatedAfterRemoval = true;
+      if (state === "different-commit") report.checks.failing[0]!.commitOid = "another-commit";
+      if (state === "missing-head") delete report.headSha;
+      if (state === "native-stack") {
+        report.mergeStatus.mergeRequirements = {
+          approvals: { current: 0, requiredCount: 0 },
+          conversationsResolved: { resolved: true, unresolvedCount: 0, required: false },
+          stack: { number: 7, size: 2, position: 2, baseRefName: "main" },
+        };
+      }
+      mockRunCheck.mockResolvedValue(report);
+      const result = await runIterate(makeOpts({ merge: true }));
+      expect(result.action).toBe("fix_code");
+      if (result.action !== "fix_code") return;
+      expect(result.fix.requeue).toBeUndefined();
+      expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
     },
   );
 
@@ -103,10 +144,15 @@ describe("runIterate — merge queue removal", () => {
 function removedEntryReport(logExcerpt?: string) {
   return makeReport({
     status: "FAILING",
+    headSha: "abc123",
     mergeQueue: {
       enabled: true,
       inQueue: false,
-      latestRemoval: { reason: "CI_FAILURE", createdAtUnix: 1_700_000_000 },
+      latestRemoval: {
+        reason: "CI_FAILURE",
+        createdAtUnix: 1_700_000_000,
+        beforeCommitOid: "queue-commit",
+      },
     },
     checks: {
       passing: [],

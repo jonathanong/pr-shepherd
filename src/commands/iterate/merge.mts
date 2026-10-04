@@ -6,7 +6,13 @@ import {
   type MergeMethod,
 } from "../../config/merge-method.mts";
 import { formatPrUrl } from "../../pr-reference.mts";
-import type { IterateResult, IterateResultBase, MergeCommandPlan } from "../../types.mts";
+import type {
+  AgentCheck,
+  IterateResult,
+  IterateResultBase,
+  MergeCommandPlan,
+  ShepherdReport,
+} from "../../types.mts";
 import { renderShellCommand } from "../../cli/runner.mts";
 import { buildEscalateHumanMessage } from "./escalate.mts";
 
@@ -79,6 +85,37 @@ export function buildMergeCommandPlan(
 
 export function renderMergeCommand(command: { argv: string[] }): string {
   return renderShellCommand(command.argv);
+}
+
+/** Offer a guarded queue command; the caller decides whether the failure warrants a PR fix. */
+export function buildRemovedQueueRecovery(
+  report: ShepherdReport,
+  checks: AgentCheck[],
+  merge: boolean | undefined,
+): MergeCommandPlan | undefined {
+  const queue = report.mergeQueue;
+  const removedCommit = queue?.latestRemoval?.beforeCommitOid;
+  if (
+    !merge ||
+    !queue?.enabled ||
+    queue.inQueue ||
+    queue.headUpdatedAfterRemoval ||
+    !removedCommit ||
+    !report.headSha ||
+    !report.nodeId ||
+    // Native stacks must keep their aggregate merge route and lower-layer readiness checks.
+    report.mergeStatus.mergeRequirements?.stack ||
+    !checks.some((check) => check.scope === "merge_group" && check.commitOid === removedCommit)
+  )
+    return undefined;
+  const plan = buildMergeCommandPlan({
+    pr: report.pr,
+    repo: report.repo,
+    nodeId: report.nodeId,
+    headSha: report.headSha,
+    queue: true,
+  });
+  return "unavailable" in plan ? undefined : plan;
 }
 
 export function unavailableMergeResult(

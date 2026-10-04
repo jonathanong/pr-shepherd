@@ -18,6 +18,7 @@ import {
   threadHasAuthorizedMutation,
 } from "./thread-mutation-routing.mts";
 import { buildFixInstructions } from "./render.mts";
+import { buildRemovedQueueRecovery } from "./merge.mts";
 import { buildReleasedBlockerInstruction } from "./check-instructions.mts";
 import { buildNativeStackLayerRebase } from "./native-stack-rebase.mts";
 import { lookupUpperLayerTrunkConflict } from "./stack-trunk-conflict.mts";
@@ -498,6 +499,14 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     exhaustedAttempts.length > 0,
     stackRebase,
   );
+  const requeue = buildRemovedQueueRecovery(report, failingAgentChecks, opts.merge);
+  if (requeue) {
+    const completion = instructions.pop();
+    instructions.push(
+      "If the merge-group failure belongs to this PR, fix and push the PR head, then iterate. Otherwise, if no code changed and no other blocker remains, run the `requeue:` command exactly as printed. If gh reports auto-merge is disabled instead of adding the PR to the queue, run the `requeue API fallback:` command. Both commands require the observed PR head SHA; if the head changed, iterate for a fresh command.",
+    );
+    if (completion !== undefined) instructions.push(completion);
+  }
   if (failingAgentChecks.some((check) => releasedCheckNames.has(check.name))) {
     const completion = instructions.pop();
     instructions.push(buildReleasedBlockerInstruction(prNumber));
@@ -541,6 +550,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       editedSummaries,
       surfacedApprovals,
       checks,
+      ...(requeue && { requeue }),
       changesRequestedReviews,
       resolveCommand,
       ...(resolveOnlyCommand !== undefined ? { resolveOnlyCommand } : undefined),
