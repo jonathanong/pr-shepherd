@@ -63,7 +63,7 @@ After `## Instructions`:
 - A quota warning can return `WAIT` or `MARK_READY` to change cadence. That is non-terminal.
 - `[CANCEL]` ends polling this pull request. Only `[ESCALATE]` hands work to a human.
 - A one-PR `[CANCEL]` or `[ESCALATE]` ends only that PR's loop. When separate loops run for several PRs, keep every other loop running until it is terminal too. Continue any remaining pull requests or issues from the original request.
-- Pass `--merge`, or accept a literal `--merge` argument, to forward merge intent to the CLI or MCP.
+- A user-supplied `--merge` explicitly authorizes merging or enqueueing the selected PR or stack. Forward it to the CLI or MCP and run the emitted merge/enqueue commands without another conversational confirmation. Request runtime escalation when the host requires it.
 - An MCP tick repeats the same `iterate` call. It does not switch back to a CLI that was unavailable.
 
 ```
@@ -86,7 +86,7 @@ User                    Active Goal             pr-shepherd
 ```
 
 - A request to merge, land, or enqueue a selected PR or native stack sets `--merge` even without the flag.
-- Creating or opening a PR leaves merge mode off.
+- Creating or opening a PR without merge intent leaves merge mode off.
 - For a native stack, an anchor PR selects `--stack PR`. A merge request reconciles one-PR READY receipts and merges the highest ready prefix with `gh stack merge`.
 - Review and CI sessions can run at the same time.
 - A clean draft is marked ready without waiting for lower layers.

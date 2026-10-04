@@ -21,7 +21,8 @@ Poll with the CLI. Use MCP `iterate` only when the CLI is unavailable. Stop poll
 ## Dispatch
 
 - Parse `$ARGUMENTS` for PR numbers, `owner/repo#N`, GitHub PR URLs, one `--stack PR`, and an optional `--merge`. Reject any other argument.
-- A request to merge, land, or enqueue the selected PR or stack sets `--merge`. Creating or opening a PR does not.
+- A user-supplied `--merge` explicitly authorizes merging or enqueueing the selected PR or stack. Run the emitted merge/enqueue commands without asking for another conversational confirmation; request runtime escalation when the host requires it.
+- A request to merge, land, or enqueue the selected PR or stack also sets `--merge`. Creating or opening a PR without merge intent leaves merge mode off.
 - A request to shepherd or merge a native stack, with an anchor PR and no literal `--stack`, uses that PR as the `--stack` selector. Otherwise infer the current branch PR.
 - Follow the target repository's `AGENTS.md` while editing.
 - CLI: turn `owner/repo#N` into `https://github.com/owner/repo/pull/N`. Pass other URLs and bare numbers through.
