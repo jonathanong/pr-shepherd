@@ -6,6 +6,7 @@ import {
 } from "../../state/fix-attempts.mts";
 import { toAgentThread, toAgentComment, toAgentChecks } from "../../reporters/agent.mts";
 import { hashBody, markSeen } from "../../state/seen-comments.mts";
+import { isAutomaticQueueRemovalReason } from "../../state/queue-removal-ack.mts";
 import {
   checkEscalateTriggers,
   validateBaseBranch,
@@ -469,20 +470,24 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     report,
     failingAgentChecks,
   );
-  const queueEjection: QueueEjectionRecovery | undefined = currentEjectionCommit(
+  const queueEjection: QueueEjectionRecovery | undefined = !currentEjectionCommit(
     report,
     failingAgentChecks,
   )
-    ? requeue
-      ? "requeue"
-      : queueRemovalAcknowledgment
-        ? "acknowledge"
-        : "none"
-    : undefined;
-  // Conflicts, a behind branch whose rerun already failed, and a queue ejection that must be
-  // reproduced on the latest base all ask for a branch update.
+    ? undefined
+    : !isAutomaticQueueRemovalReason(report.mergeQueue?.latestRemoval?.reason)
+      ? "hold"
+      : requeue
+        ? "requeue"
+        : queueRemovalAcknowledgment
+          ? "acknowledge"
+          : "none";
+  // Conflicts, a behind branch whose rerun already failed, and an automatic queue ejection that
+  // must be reproduced on the latest base all ask for a branch update.
   const stackRebase =
-    hasConflicts || (isBehind && exhaustedAttempts.length > 0) || queueEjection
+    hasConflicts ||
+    (isBehind && exhaustedAttempts.length > 0) ||
+    (queueEjection && queueEjection !== "hold")
       ? buildNativeStackLayerRebase(
           report.repo,
           { number: prNumber, baseBranch: baseLookup.branch },

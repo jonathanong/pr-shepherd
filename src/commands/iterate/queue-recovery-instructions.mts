@@ -3,8 +3,11 @@
 import type { AgentCheck, ShepherdReport } from "../../types.mts";
 import { playbookPointer } from "../playbook-pointer.mts";
 
-/** Which recovery command, if any, Shepherd printed for a failure that does not reproduce. */
-export type QueueEjectionRecovery = "requeue" | "acknowledge" | "none";
+/**
+ * Which recovery command, if any, Shepherd printed for a failure that does not reproduce.
+ * `hold` marks a removal whose reason is not an automatic one, so a person may have dequeued it.
+ */
+export type QueueEjectionRecovery = "requeue" | "acknowledge" | "none" | "hold";
 
 /** The removed queue commit whose failed checks this tick surfaces, if the removal is current. */
 export function currentEjectionCommit(
@@ -26,9 +29,12 @@ export function queueEjectionSteps(
   routePrinted: boolean,
 ): string[] {
   if (!recovery) return [];
+  if (recovery === "hold") return [HOLD_INSTRUCTION];
   const route = stackRebase && routePrinted ? "use the stack route printed above." : stackRebase;
   return [buildQueueEjectionInstruction(recovery, route)];
 }
+
+const HOLD_INSTRUCTION = `Triage the merge-queue ejection before any requeue. GitHub records no automatic reason for this removal, so a person may have dequeued the PR. Do not update the branch from base or enqueue the PR for this removal. Fix the failure only if it belongs to this PR. ${playbookPointer("Merge queue ejection")}`;
 
 /** The trigger, update route, and command guard; the fixed procedure lives in the playbook. */
 function buildQueueEjectionInstruction(

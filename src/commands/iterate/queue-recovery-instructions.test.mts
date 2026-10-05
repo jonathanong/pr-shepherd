@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AgentCheck, ShepherdReport } from "../../types.mts";
 import { currentEjectionCommit, queueEjectionSteps } from "./queue-recovery-instructions.mts";
 
-const step = (recovery: "requeue" | "acknowledge" | "none", route?: string) =>
+const step = (recovery: "requeue" | "acknowledge" | "none" | "hold", route?: string) =>
   queueEjectionSteps(recovery, route, false)[0]!;
 
 describe("ejection step text", () => {
@@ -24,6 +24,13 @@ describe("ejection step text", () => {
     const text = step("none");
     expect(text).toContain("so do not enqueue the PR.");
     expect(text).not.toContain("requeue:");
+  });
+
+  it("holds a possible human dequeue without a base update, even on a stack", () => {
+    const text = step("hold", "run `gh stack rebase`.");
+    expect(text).toContain("a person may have dequeued the PR");
+    expect(text).toContain("Do not update the branch from base or enqueue the PR");
+    expect(text).not.toContain("gh stack rebase");
   });
 });
 
