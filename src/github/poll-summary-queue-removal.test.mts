@@ -100,6 +100,35 @@ describe("currentQueueRemovalEvent", () => {
     ).toBeNull();
   });
 
+  it("rejects a single-parent removal when the head was force-pushed back after it", () => {
+    expect(
+      currentQueueRemovalEvent(
+        raw({
+          commits: {
+            nodes: [
+              {
+                commit: {
+                  oid: "pr-head",
+                  committedDate: "2026-09-20T10:00:00Z",
+                  statusCheckRollup: null,
+                },
+              },
+            ],
+          },
+          headRefForcePushes: { nodes: [{ createdAt: "2026-09-20T10:20:00Z" }] },
+          mergeQueueRemovals: {
+            nodes: [
+              {
+                ...removal,
+                beforeCommit: { oid: "queue-head", parents: { nodes: [{ oid: "base-sha" }] } },
+              },
+            ],
+          },
+        }),
+      ),
+    ).toBeNull();
+  });
+
   it("rejects a single-parent removal after the head is committed later", () => {
     expect(
       currentQueueRemovalEvent(

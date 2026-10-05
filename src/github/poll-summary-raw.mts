@@ -103,6 +103,8 @@ export interface RawSummaryPr {
     }>;
   } | null;
   mergeQueueEntry: { headCommit: RawSummaryCommit | null } | null;
+  /** The latest force-push, which dates a head whose commit and check times predate its push. */
+  headRefForcePushes?: { nodes: Array<{ createdAt: string }> } | null;
   stack: { number: number; size: number; baseRefName: string } | null;
   stackEntry: { position: number } | null;
   comments: SummaryConnection<RawSummaryComment>;

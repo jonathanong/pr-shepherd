@@ -2,6 +2,7 @@ import { parseCreatedAt } from "./batch-parser-helpers.mts";
 import { graphqlWithRateLimit, type RateLimitInfo } from "./client.mts";
 import { GitHubRequestError } from "./errors.mts";
 import {
+  forcePushUnix,
   headPushUnixFromCheckNodes,
   queueRemovalAppliesToHead,
 } from "./queue-removal-freshness.mts";
@@ -137,6 +138,7 @@ function currentRemovalCommit(raw: RawPr): QueueCommit | undefined {
         headCommittedAtUnix: parseCreatedAt(headCommit.committedDate),
       }),
       ...(headPushedAtUnix !== undefined && { headPushedAtUnix }),
+      headForcePushedAtUnix: forcePushUnix(raw.headRefForcePushes),
       removedAtUnix: Math.floor(Date.parse(removal.createdAt) / 1000),
     })
   ) {
