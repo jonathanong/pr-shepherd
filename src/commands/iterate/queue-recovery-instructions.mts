@@ -39,7 +39,7 @@ function buildQueueEjectionInstruction(
     ? `Update the stack from the latest base first: ${stackRoute}`
     : "Update the PR head from the latest base first.";
   const reproduce =
-    "only if the failure does not reproduce on the updated head and the update did not change the head.";
+    "only if the failure does not reproduce on the updated head, neither the update nor a code change altered the head, and no other blocker remains.";
   const guard =
     recovery === "requeue"
       ? `Run \`requeue:\` ${reproduce} If gh reports auto-merge is disabled, run \`requeue API fallback:\` instead.`

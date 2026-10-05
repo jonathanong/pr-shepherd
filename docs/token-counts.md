@@ -17,15 +17,15 @@ Estimates of what an agent pays to load the `pr-shepherd` skill and to read one 
 | -------------------------- | -----: |
 | `SKILL.md` (always loaded) |  1,447 |
 | CI failure triage          |    776 |
-| Merge queue ejection       |    514 |
+| Merge queue ejection       |    532 |
 | Suggestion patches         |    214 |
 | Review-mutation mechanics  |    195 |
 | Branch update              |    175 |
 | Stack merge                |    105 |
 | Shepherd Journal           |     72 |
-| Every reference as well    |  3,498 |
+| Every reference as well    |  3,516 |
 
-A `FIX_CODE` tick that names CI triage, the journal, and review mutations loads about 2,490 skill tokens (1,447 + 776 + 72 + 195). A merge-queue ejection tick adds Merge queue ejection (514). A stack merge tick adds Stack merge (105) instead of Branch update.
+A `FIX_CODE` tick that names CI triage, the journal, and review mutations loads about 2,490 skill tokens (1,447 + 776 + 72 + 195). A merge-queue ejection tick adds Merge queue ejection (532). A stack merge tick adds Stack merge (105) instead of Branch update.
 
 ## One iterate result, current
 
@@ -35,7 +35,7 @@ A `FIX_CODE` tick that names CI triage, the journal, and review mutations loads 
 | Mean full text output                         |    292 |
 | Median `## Instructions`                      |    129 |
 | Mean `## Instructions`                        |    120 |
-| Sum of `## Instructions` across 126 snapshots | 15,127 |
+| Sum of `## Instructions` across 126 snapshots | 15,154 |
 
 Examples from the snapshot corpus:
 
@@ -52,11 +52,11 @@ The same measurement against the parent of `ad9bf2cd`, when every playbook lived
 |                           | Before | Current |
 | ------------------------- | -----: | ------: |
 | Always-loaded skill       |  2,712 |   1,447 |
-| Skill plus every playbook |  2,712 |   3,498 |
+| Skill plus every playbook |  2,712 |   3,516 |
 | Median full output        |    304 |     270 |
 | Median `## Instructions`  |    134 |     129 |
 | Mean `## Instructions`    |    159 |     120 |
-| Sum of `## Instructions`  | 18,481 |  15,127 |
+| Sum of `## Instructions`  | 18,481 |  15,154 |
 
 | Snapshot `## Instructions` | Before | Current |
 | -------------------------- | -----: | ------: |

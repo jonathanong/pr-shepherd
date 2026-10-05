@@ -8,7 +8,7 @@ const step = (recovery: "requeue" | "acknowledge" | "none", route?: string) =>
 describe("ejection step text", () => {
   it("updates first, guards the printed requeue, and names the API fallback", () => {
     expect(step("requeue")).toBe(
-      'Triage the merge-queue ejection before any requeue. Update the PR head from the latest base first. Run `requeue:` only if the failure does not reproduce on the updated head and the update did not change the head. If gh reports auto-merge is disabled, run `requeue API fallback:` instead. Playbook: "Merge queue ejection".',
+      'Triage the merge-queue ejection before any requeue. Update the PR head from the latest base first. Run `requeue:` only if the failure does not reproduce on the updated head, neither the update nor a code change altered the head, and no other blocker remains. If gh reports auto-merge is disabled, run `requeue API fallback:` instead. Playbook: "Merge queue ejection".',
     );
   });
 
