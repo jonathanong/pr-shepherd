@@ -10,7 +10,7 @@ const base = { baseBranch: "main", queueCommitOid: "queue-commit-1" };
 describe("buildQueueEjectionInstruction", () => {
   it("orders rebase, fix, and requeue for a transient failure", () => {
     const text = buildQueueEjectionInstruction({ ...base, recovery: "requeue" });
-    const rebase = text.indexOf("Rebase the PR head onto the latest `main`");
+    const rebase = text.indexOf("Update the PR head from the latest `main`");
     const fix = text.indexOf("If the failure belongs to this PR, fix it");
     const requeue = text.indexOf("run the `requeue:` command exactly as printed");
     expect(rebase).toBeGreaterThan(-1);
@@ -18,7 +18,10 @@ describe("buildQueueEjectionInstruction", () => {
     expect(requeue).toBeGreaterThan(fix);
     expect(text).toContain("its queue commit `queue-commit-1`");
     expect(text).toContain("any entries queued ahead of it");
-    expect(text).toContain("push the rebased head and iterate");
+    expect(text).toContain("push the updated head and iterate");
+    expect(text).toContain("branch-update convention");
+    expect(text).toContain("the logs or the check's details page show");
+    expect(text).toContain("do not requeue it: record the finding");
     expect(text).toContain("do not run `requeue:` after any push");
     expect(text).toContain("caused by another entry in the same queue group");
   });
@@ -29,19 +32,21 @@ describe("buildQueueEjectionInstruction", () => {
       stackRebase: "run `gh stack rebase`.",
       recovery: "acknowledge",
     });
-    expect(text).toContain("Update the stack onto the latest `main`");
+    expect(text).toContain("Update the stack from the latest `main`");
     expect(text).toContain("run `gh stack rebase`.");
     expect(text).toContain("push the rewritten stack with `gh stack push`");
-    expect(text).toContain("do not acknowledge it; report it");
+    expect(text).toContain("do not acknowledge it: record the finding");
     expect(text).toContain("run `acknowledge queue removal:` exactly as printed");
     expect(text).not.toContain("requeue:");
   });
 
   it("forbids enqueueing when no recovery command was printed", () => {
     const text = buildQueueEjectionInstruction({ ...base, recovery: "none" });
-    expect(text).toContain("Rebase the PR head onto the latest `main`");
-    expect(text).toContain("do not requeue it; report it");
-    expect(text).toContain("so do not enqueue the PR");
+    expect(text).toContain("Update the PR head from the latest `main`");
+    expect(text).toContain("itself or does not reproduce");
+    expect(text).toContain("so do not enqueue the PR: record the finding");
+    expect(text).toContain("escalates through the stall timeout");
+    expect(text).not.toContain("Only if");
     expect(text).not.toContain("requeue:");
   });
 });
