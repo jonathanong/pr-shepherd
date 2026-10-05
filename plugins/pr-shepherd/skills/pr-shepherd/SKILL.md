@@ -73,3 +73,4 @@ When a step says `Playbook: "<name>"`, read that file once and apply it before t
 - [Shepherd Journal](references/journal.md)
 - [Branch update](references/branch-update.md)
 - [Stack merge](references/stack-merge.md)
+- [Merge queue ejection](references/merge-queue-ejection.md)

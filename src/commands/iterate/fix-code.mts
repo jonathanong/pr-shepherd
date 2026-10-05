@@ -502,13 +502,10 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     report,
     failingAgentChecks,
   );
-  const ejectionCommit = currentEjectionCommit(report, failingAgentChecks);
-  if (ejectionCommit) {
+  if (currentEjectionCommit(report, failingAgentChecks)) {
     const completion = instructions.pop();
     instructions.push(
       buildQueueEjectionInstruction({
-        baseBranch: baseLookup.branch,
-        queueCommitOid: ejectionCommit,
         stackRebase:
           stackRebase ??
           buildNativeStackLayerRebase(
