@@ -95,6 +95,13 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           }
         }
       }
+      headRefForcePushes: timelineItems(last: 1, itemTypes: [HEAD_REF_FORCE_PUSHED_EVENT]) {
+        nodes {
+          ... on HeadRefForcePushedEvent {
+            createdAt
+          }
+        }
+      }
       stack {
         number
         size

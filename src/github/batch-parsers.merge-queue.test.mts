@@ -119,6 +119,14 @@ describe("parseRawPr — merge queue", () => {
     expect(parse(raw).mergeQueueRemovalTimesUnix).toEqual([1_787_828_400, 1_787_832_000]);
   });
 
+  it("parses the latest force-push time", () => {
+    const raw = makeRawPr({
+      headRefForcePushes: { nodes: [{ createdAt: "2026-08-27T11:00:00Z" }] },
+    });
+
+    expect(parse(raw).headForcePushedAtUnix).toBe(1_787_828_400);
+  });
+
   it("rejects a null context on an active queue commit", () => {
     const raw = makeRawPr({
       mergeQueueEntry: {

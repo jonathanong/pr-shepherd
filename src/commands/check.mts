@@ -145,8 +145,14 @@ export async function runCheck(
       removedAtUnix: latestRemoval.createdAtUnix,
     }),
   );
-  // Repeat ejections of this head: removals after it reached the PR (push time, else commit time).
-  const headSinceUnix = batchData.headPushedAtUnix ?? headCommittedAtUnix ?? undefined;
+  // Repeat ejections of this head: removals after it reached the PR. Without a pull_request check
+  // time, a commit time can predate the push (an older commit force-pushed), so take the later
+  // of it and the latest force-push.
+  const headSinceUnix =
+    batchData.headPushedAtUnix ??
+    (headCommittedAtUnix === undefined || headCommittedAtUnix === null
+      ? batchData.headForcePushedAtUnix
+      : Math.max(headCommittedAtUnix, batchData.headForcePushedAtUnix ?? 0));
   const removalsOnHead =
     latestRemoval && !headUpdatedAfterRemoval && headSinceUnix !== undefined
       ? (batchData.mergeQueueRemovalTimesUnix ?? []).filter((t) => t >= headSinceUnix).length
