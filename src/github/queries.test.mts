@@ -97,6 +97,9 @@ describe("queries — GQL constants load at import time", () => {
     expect(POLL_SUMMARY_FRAGMENT).toContain("...PollSummaryCheckContexts");
     expect(POLL_SUMMARY_CHECK_PAGE_QUERY).toContain(fragment);
     expect(POLL_SUMMARY_CHECK_PAGE_QUERY).toContain("contexts(last: 100, before: $before)");
+    for (const query of [POLL_SUMMARY_FRAGMENT, POLL_SUMMARY_CHECK_PAGE_QUERY]) {
+      expect(query).toMatch(/\.\.\. on CheckRun\s*\{[^}]*\bstartedAt\b[^}]*\bcompletedAt\b/s);
+    }
   });
 
   it("keeps merge-queue metadata in BatchPr without nested queue check trees", () => {

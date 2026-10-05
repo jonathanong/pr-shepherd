@@ -1,0 +1,26 @@
+{
+  "batchData": {
+    "checks": [
+      {
+        "name": "CI / build",
+        "status": "COMPLETED",
+        "conclusion": "CANCELLED",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/900/jobs/1",
+        "runId": "900",
+        "workflowId": "1",
+        "workflowName": "CI",
+        "jobName": "build",
+        "createdAtUnix": 1715700000,
+        "startedAtUnix": 1715700001,
+        "completedAtUnix": 1715700002
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

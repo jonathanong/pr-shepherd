@@ -1,0 +1,38 @@
+{
+  "batchData": {
+    "checks": [
+      {
+        "name": "CI / build",
+        "status": "COMPLETED",
+        "conclusion": "CANCELLED",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/900/jobs/1",
+        "runId": "900",
+        "workflowId": "1",
+        "workflowName": "CI",
+        "createdAtUnix": 1715700000,
+        "startedAtUnix": 1715700001,
+        "completedAtUnix": 1715700002
+      },
+      {
+        "name": "CI / build",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/899/jobs/1",
+        "runId": "899",
+        "workflowId": "1",
+        "workflowName": "CI",
+        "createdAtUnix": 1715700003,
+        "startedAtUnix": 1715700004,
+        "completedAtUnix": 1715700005
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": true,
+    "shouldCancel": true,
+    "remainingSeconds": 0
+  },
+  "expectedExitCode": 0
+}
