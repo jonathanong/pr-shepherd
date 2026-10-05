@@ -117,16 +117,14 @@ export function buildFixInstructions(
     actionableComments.filter((c) => c.edited).length +
     firstLookThreads.filter((t) => t.edited).length +
     firstLookComments.filter((c) => c.edited).length;
-  if (editedTotal > 0) {
+  if (editedTotal > 0)
     instructions.push(
       "Read every item marked `[edited since first look]`, including edited summaries and edited first-look bullets, before deciding whether to resolve a matching thread.",
     );
-  }
-  if (unlocatedThreads.length > 0) {
+  if (unlocatedThreads.length > 0)
     instructions.push(
       "Acknowledge each item under `## Unlocated review threads (logged once — no mutation)`. Shepherd cannot route a code fix or review mutation without a path and line; the unchanged item will be skipped on later ticks.",
     );
-  }
 
   const hasSuggestions = locatedThreads.some((t) => t.suggestion);
   if (hasSuggestions)
@@ -140,11 +138,10 @@ export function buildFixInstructions(
     instructions.push(`Apply every warranted review fix in ${filesRef}.`);
   }
 
-  if (resolutionOnlyThreads.length > 0) {
+  if (resolutionOnlyThreads.length > 0)
     instructions.push(
       "Review the threads under `## Review threads to resolve` before running the generated mutations.",
     );
-  }
 
   instructions.push(
     ...buildFailingCheckInstructions(failingChecks),
@@ -152,11 +149,10 @@ export function buildFixInstructions(
     ...queueEjectionSteps(queueEjection, stackRebase, branchRecovery),
   );
 
-  if (hasAnnotations) {
+  if (hasAnnotations)
     instructions.push(
       "Inspect every referenced range under `## Check annotations` and apply any warranted change.",
     );
-  }
 
   if (changesRequestedReviews.length > 0) {
     const staleClause = buildCrStaleClause(changesRequestedReviews);
@@ -170,8 +166,10 @@ export function buildFixInstructions(
   const hasReviewMutations =
     resolveCommand.hasMutations || resolveOnlyCommand?.hasMutations === true;
   const mutationSuffix = hasReviewMutations ? " before review mutations" : "";
-  if (branchRecovery || (queueEjection && stackRebase)) {
-    instructions.push(buildBranchPushInstruction(stackRebase, hasConflicts, mutationSuffix));
+  if (branchRecovery || queueEjection) {
+    instructions.push(
+      buildBranchPushInstruction(stackRebase, hasConflicts, mutationSuffix, !branchRecovery),
+    );
   } else if (hasNonConflictHints) {
     instructions.push(
       "If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.",

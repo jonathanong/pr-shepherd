@@ -18,6 +18,8 @@ type PushCheckNode = {
  * later push. Missing parents are unverifiable: GitHub keeps returning the
  * latest removal after the synthetic commit is gone. A one-parent removal is
  * stale once this head reached the PR after the removal (see `headArrivalUnix`).
+ * A force-push after the removal makes any removal stale, even one whose
+ * parents list the head: that SHA was pushed back for a new attempt.
  */
 export function queueRemovalAppliesToHead(
   input: HeadTimes & {
@@ -28,10 +30,14 @@ export function queueRemovalAppliesToHead(
 ): boolean {
   const parents = input.parentOids ?? [];
   if (parents.length === 0) return false;
+  const removedAt = positive(input.removedAtUnix);
+  const forcePushedAt = positive(input.headForcePushedAtUnix);
+  // The same SHA force-pushed back after the removal starts a new tenure.
+  if (removedAt !== undefined && forcePushedAt !== undefined && forcePushedAt > removedAt)
+    return false;
   if (parents.includes(input.headOid)) return true;
   if (parents.length > 1) return false;
-  const removedAt = input.removedAtUnix;
-  if (removedAt === undefined || removedAt <= 0) return true;
+  if (removedAt === undefined) return true;
   const arrivedAt = headArrivalUnix(input);
   return arrivedAt === undefined || arrivedAt <= removedAt;
 }

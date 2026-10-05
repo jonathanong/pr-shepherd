@@ -48,6 +48,30 @@ describe("queueRemovalAppliesToHead — force-push", () => {
   });
 });
 
+describe("queueRemovalAppliesToHead — same SHA force-pushed back", () => {
+  it("rejects a merge-commit removal whose parent matches but was force-pushed back after it", () => {
+    expect(
+      queueRemovalAppliesToHead({
+        parentOids: ["base-sha", "pr-head"],
+        headOid: "pr-head",
+        headForcePushedAtUnix: removedAtUnix + 60,
+        removedAtUnix,
+      }),
+    ).toBe(false);
+  });
+
+  it("keeps a matching parent when the force-push came before the removal", () => {
+    expect(
+      queueRemovalAppliesToHead({
+        parentOids: ["base-sha", "pr-head"],
+        headOid: "pr-head",
+        headForcePushedAtUnix: removedAtUnix - 60,
+        removedAtUnix,
+      }),
+    ).toBe(true);
+  });
+});
+
 describe("forcePushUnix", () => {
   it("parses the latest force-push time", () => {
     expect(forcePushUnix({ nodes: [{ createdAt: "2023-11-14T22:13:20Z" }] })).toBe(removedAtUnix);
