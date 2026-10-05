@@ -86,7 +86,7 @@ For aggregate `--stack` polling, a clean draft is marked ready by its own sessio
 There are two paths:
 
 - CI-start path: the timeout is enabled, the prospective result is `WAIT`, and an external status context—or a `PENDING`, `QUEUED`, `REQUESTED`, or `WAITING` check run with no start time—remains unstarted for at least the threshold.
-- Stable-state path: the timeout is enabled, the prospective result is `WAIT` or `FIX_CODE`, the stored fingerprint is unchanged, its age is nonnegative, and that age reaches the threshold. The fingerprint covers the action, the PR head commit GitHub reports (not the local checkout's `HEAD`), PR/merge/draft state, failing and in-progress checks, actionable item IDs, and actionable annotations.
+- Stable-state path: the timeout is enabled, the prospective result is `WAIT` or `FIX_CODE`, the stored fingerprint is unchanged, its age is nonnegative, and that age reaches the threshold. The fingerprint covers the action, the PR head commit GitHub reports (not the local checkout's `HEAD`), PR/merge/draft state, failing and in-progress checks, the latest merge-queue removal commit, actionable item IDs, and actionable annotations.
 
 A changed fingerprint resets the timer. Disabling the timeout refreshes state and never escalates. A native-stack draft whose wait is the disabled mark-ready hold uses this same guard.
 

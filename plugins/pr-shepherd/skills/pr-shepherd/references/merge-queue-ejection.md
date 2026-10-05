@@ -5,7 +5,7 @@ Apply when a step says `Playbook: "Merge queue ejection"`. The `**queue removal*
 1. Update the PR head from the latest base following the repository's branch-update convention. On a native stack, use the printed stack update route instead. Reproduce the failing step on the updated head.
 2. If the failure belongs to this PR, fix it, commit, push, and iterate.
 3. If the failure does not reproduce and the update changed the head, push it and iterate. On a native stack, push with `gh stack push`. Never run a printed `requeue:` or `acknowledge queue removal:` command after a push. Shepherd prints a fresh queue command once the new head is READY.
-4. If the failure comes from the base itself, do not requeue or acknowledge it. Record the finding with the Shepherd Journal command, make no change, and iterate. The unchanged failure escalates through the stall timeout.
+4. If the failure comes from the base itself, do not requeue or acknowledge it. If a Shepherd Journal step is printed, record the finding with it. Make no change and iterate. The unchanged failure escalates through the stall timeout.
 5. If the step says no queue command was printed, never enqueue. A failure that does not reproduce follows step 4.
 6. Otherwise, run the printed `requeue:` or `acknowledge queue removal:` command exactly as printed, and only if all of these hold:
    - the head did not change;
