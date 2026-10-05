@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isAutomaticQueueRemovalReason, isCiQueueRemovalReason } from "./queue-removal-ack.mts";
+import { isCiQueueRemovalReason } from "./queue-removal-ack.mts";
 
 describe("isCiQueueRemovalReason", () => {
   it("accepts GitHub's CI-driven removal reason", () => {
@@ -19,18 +19,5 @@ describe("isCiQueueRemovalReason", () => {
     undefined,
   ])("rejects %s", (reason) => {
     expect(isCiQueueRemovalReason(reason)).toBe(false);
-  });
-});
-
-describe("isAutomaticQueueRemovalReason", () => {
-  it.each(["failed_checks", "merge_conflict", "invalid_merge_commit", "stack_invalidated"])(
-    "accepts %s",
-    (reason) => {
-      expect(isAutomaticQueueRemovalReason(reason)).toBe(true);
-    },
-  );
-
-  it.each(["MANUAL", "merged", "", null, undefined])("rejects %s", (reason) => {
-    expect(isAutomaticQueueRemovalReason(reason)).toBe(false);
   });
 });

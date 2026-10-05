@@ -21,7 +21,7 @@ Merge queue: No [Required]
 
 1. Review each item under `## Failing checks` and decide whether it needs a code change.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
-3. Triage the merge-queue ejection before any requeue. GitHub records no automatic reason for this removal, so a person may have dequeued the PR. Do not update the branch from base or enqueue the PR for this removal. Fix the failure only if it belongs to this PR. Playbook: "Merge queue ejection".
-4. If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.
+3. Triage the merge-queue ejection before any requeue. If the `**queue removal**` reason shows GitHub removed the entry itself, update the PR head from the latest base first. If a person may have dequeued the PR, skip that update unless a conflict step above requires it. Shepherd printed no queue command for this session, so do not enqueue the PR. Playbook: "Merge queue ejection".
+4. If the base update or a fix changed the head, commit any remaining changes and push to the PR head branch. If neither did, do not push.
 5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
 6. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.

@@ -23,18 +23,6 @@ export function isCiQueueRemovalReason(reason: string | null | undefined): boole
   return reason === "failed_checks";
 }
 
-const AUTOMATIC_REMOVAL_REASONS = new Set([
-  "failed_checks",
-  "merge_conflict",
-  "invalid_merge_commit",
-  "stack_invalidated",
-]);
-
-/** Reasons GitHub records when it removes an entry itself; any other may be a person's dequeue. */
-export function isAutomaticQueueRemovalReason(reason: string | null | undefined): boolean {
-  return reason != null && AUTOMATIC_REMOVAL_REASONS.has(reason);
-}
-
 /** Missing, unreadable, or malformed acknowledgment state is treated as absent. */
 export async function readQueueRemovalAcknowledgment(
   key: StateKey,

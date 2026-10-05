@@ -3,11 +3,8 @@
 import type { AgentCheck, ShepherdReport } from "../../types.mts";
 import { playbookPointer } from "../playbook-pointer.mts";
 
-/**
- * Which recovery command, if any, Shepherd printed for a failure that does not reproduce.
- * `hold` marks a removal whose reason is not an automatic one, so a person may have dequeued it.
- */
-export type QueueEjectionRecovery = "requeue" | "acknowledge" | "none" | "hold";
+/** Which recovery command, if any, Shepherd printed for a failure that does not reproduce. */
+export type QueueEjectionRecovery = "requeue" | "acknowledge" | "none";
 
 /** The removed queue commit whose failed checks this tick surfaces, if the removal is current. */
 export function currentEjectionCommit(
@@ -29,21 +26,25 @@ export function queueEjectionSteps(
   routePrinted: boolean,
 ): string[] {
   if (!recovery) return [];
-  if (recovery === "hold") return [HOLD_INSTRUCTION];
   const route = stackRebase && routePrinted ? "use the stack route printed above." : stackRebase;
   return [buildQueueEjectionInstruction(recovery, route)];
 }
 
-const HOLD_INSTRUCTION = `Triage the merge-queue ejection before any requeue. GitHub records no automatic reason for this removal, so a person may have dequeued the PR. Do not update the branch from base or enqueue the PR for this removal. Fix the failure only if it belongs to this PR. ${playbookPointer("Merge queue ejection")}`;
-
-/** The trigger, update route, and command guard; the fixed procedure lives in the playbook. */
+/**
+ * The trigger, update route, and command guard; the fixed procedure lives in the playbook.
+ * A printed command implies a `failed_checks` removal. Without one, the agent reads the raw
+ * removal reason, since a person's dequeue must not be undone by a branch update.
+ */
 function buildQueueEjectionInstruction(
   recovery: QueueEjectionRecovery,
   stackRoute?: string,
 ): string {
-  const update = stackRoute
-    ? `Update the stack from the latest base first: ${stackRoute}`
-    : "Update the PR head from the latest base first.";
+  const target = stackRoute ? "the stack" : "the PR head";
+  const route = stackRoute ? `: ${stackRoute}` : ".";
+  const update =
+    recovery === "none"
+      ? `If the \`**queue removal**\` reason shows GitHub removed the entry itself, update ${target} from the latest base first${route} If a person may have dequeued the PR, skip that update unless a conflict step above requires it.`
+      : `Update ${target} from the latest base first${route}`;
   const reproduce =
     "only if the failure does not reproduce on the updated head, neither the update nor a code change altered the head, and no other blocker remains.";
   const guard =

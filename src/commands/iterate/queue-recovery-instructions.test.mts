@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AgentCheck, ShepherdReport } from "../../types.mts";
 import { currentEjectionCommit, queueEjectionSteps } from "./queue-recovery-instructions.mts";
 
-const step = (recovery: "requeue" | "acknowledge" | "none" | "hold", route?: string) =>
+const step = (recovery: "requeue" | "acknowledge" | "none", route?: string) =>
   queueEjectionSteps(recovery, route, false)[0]!;
 
 describe("ejection step text", () => {
@@ -26,11 +26,10 @@ describe("ejection step text", () => {
     expect(text).not.toContain("requeue:");
   });
 
-  it("holds a possible human dequeue without a base update, even on a stack", () => {
-    const text = step("hold", "run `gh stack rebase`.");
-    expect(text).toContain("a person may have dequeued the PR");
-    expect(text).toContain("Do not update the branch from base or enqueue the PR");
-    expect(text).not.toContain("gh stack rebase");
+  it("leaves the raw removal reason to decide the update when no command was printed", () => {
+    expect(step("none", "run `gh stack rebase`.")).toBe(
+      'Triage the merge-queue ejection before any requeue. If the `**queue removal**` reason shows GitHub removed the entry itself, update the stack from the latest base first: run `gh stack rebase`. If a person may have dequeued the PR, skip that update unless a conflict step above requires it. Shepherd printed no queue command for this session, so do not enqueue the PR. Playbook: "Merge queue ejection".',
+    );
   });
 });
 

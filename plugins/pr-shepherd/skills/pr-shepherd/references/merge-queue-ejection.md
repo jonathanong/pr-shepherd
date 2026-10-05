@@ -6,7 +6,7 @@ Apply when a step says `Playbook: "Merge queue ejection"`. The `**queue removal*
 2. If the failure belongs to this PR, fix it. The printed push step commits and pushes the fix.
 3. If the failure does not reproduce and the update changed the head, the printed push step pushes it (`gh stack push` on a native stack). Never run a printed `requeue:` or `acknowledge queue removal:` command after a push. Shepherd prints a fresh queue command once the new head is READY.
 4. If the failure comes from the base itself, do not requeue or acknowledge it. If a Shepherd Journal step is printed, record the finding with it. Make no change. The unchanged failure escalates through the stall timeout.
-5. If the step says a person may have dequeued the PR, skip step 1: do not update from base. Fix a failure that belongs to this PR; otherwise make no change. Never enqueue.
+5. If the removal reason suggests a person dequeued the PR, skip the step 1 update unless a conflict step requires it. Fix a failure that belongs to this PR; otherwise make no change. Never enqueue.
 6. If the step says no queue command was printed, never enqueue. A failure that does not reproduce follows step 4. Shepherd prints no queue command once the same head was already removed before (`removals on this head` in the header), so a flaky failure is not retried indefinitely.
 7. Otherwise, run the printed `requeue:` or `acknowledge queue removal:` command exactly as printed, and only if all of these hold:
    - the head did not change;

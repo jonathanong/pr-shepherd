@@ -166,7 +166,7 @@ export function buildFixInstructions(
   const hasReviewMutations =
     resolveCommand.hasMutations || resolveOnlyCommand?.hasMutations === true;
   const mutationSuffix = hasReviewMutations ? " before review mutations" : "";
-  if (branchRecovery || (queueEjection && queueEjection !== "hold")) {
+  if (branchRecovery || queueEjection) {
     instructions.push(
       buildBranchPushInstruction(stackRebase, hasConflicts, mutationSuffix, !branchRecovery),
     );
