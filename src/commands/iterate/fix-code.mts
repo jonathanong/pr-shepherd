@@ -21,8 +21,8 @@ import { buildFixInstructions } from "./render.mts";
 import { buildRemovedQueueRecovery, buildStackQueueRemovalAcknowledgment } from "./merge.mts";
 import { hasLogEvidence } from "./check-evidence.mts";
 import {
-  buildQueueRemovalAcknowledgmentInstruction,
-  buildRequeueInstruction,
+  buildQueueEjectionInstruction,
+  currentEjectionCommit,
 } from "./queue-recovery-instructions.mts";
 import { buildReleasedBlockerInstruction } from "./check-instructions.mts";
 import { buildNativeStackLayerRebase } from "./native-stack-rebase.mts";
@@ -502,18 +502,22 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     report,
     failingAgentChecks,
   );
-  if (queueRemovalAcknowledgment) {
-    const completion = instructions.pop();
-    instructions.push(buildQueueRemovalAcknowledgmentInstruction());
-    if (completion !== undefined) instructions.push(completion);
-  }
-  if (requeue) {
+  const ejectionCommit = currentEjectionCommit(report, failingAgentChecks);
+  if (ejectionCommit) {
     const completion = instructions.pop();
     instructions.push(
-      buildRequeueInstruction(
-        baseLookup.branch,
-        report.mergeQueue!.latestRemoval!.beforeCommitOid!,
-      ),
+      buildQueueEjectionInstruction({
+        baseBranch: baseLookup.branch,
+        queueCommitOid: ejectionCommit,
+        stackRebase:
+          stackRebase ??
+          buildNativeStackLayerRebase(
+            report.repo,
+            { number: prNumber, baseBranch: baseLookup.branch },
+            stack,
+          ),
+        recovery: requeue ? "requeue" : queueRemovalAcknowledgment ? "acknowledge" : "none",
+      }),
     );
     if (completion !== undefined) instructions.push(completion);
   }
