@@ -145,6 +145,12 @@ export async function runCheck(
       removedAtUnix: latestRemoval.createdAtUnix,
     }),
   );
+  // Repeat ejections of this head: removals after it reached the PR (push time, else commit time).
+  const headSinceUnix = batchData.headPushedAtUnix ?? headCommittedAtUnix ?? undefined;
+  const removalsOnHead =
+    latestRemoval && !headUpdatedAfterRemoval && headSinceUnix !== undefined
+      ? (batchData.mergeQueueRemovalTimesUnix ?? []).filter((t) => t >= headSinceUnix).length
+      : 0;
   const removalAcknowledged = Boolean(
     batchData.stack &&
     latestRemoval?.beforeCommitOid &&
@@ -547,6 +553,7 @@ export async function runCheck(
           checksIncomplete: true as const,
         }),
         ...(headUpdatedAfterRemoval && { headUpdatedAfterRemoval: true as const }),
+        ...(removalsOnHead > 1 && { removalsOnHead }),
         ...(removalAcknowledged && { removalAcknowledged: true as const }),
       },
     }),

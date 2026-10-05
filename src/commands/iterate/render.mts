@@ -25,6 +25,7 @@ import { isFailingAgentCheck } from "../../checks/conclusions.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
 import { partitionFixThreads, reviewSectionRefs } from "./fix-instruction-threads.mts";
 import { buildBranchPushInstruction, buildConflictInstruction } from "./native-stack-rebase.mts";
+import { queueEjectionSteps, type QueueEjectionRecovery } from "./queue-recovery-instructions.mts";
 
 /** Render a resolve command as a shell snippet. Appends `--require-sha "$HEAD_SHA"` when set. */
 export function renderResolveCommand(rc: ResolveCommand): string {
@@ -55,6 +56,7 @@ export function buildFixInstructions(
   viewerCanUpdate = false,
   hasExhaustedWorkflowRerun = false,
   stackRebase?: string, // native stack layers rebase with gh-stack, not branch by branch
+  queueEjection?: QueueEjectionRecovery, // current merge-queue removal with failing queue checks
 ): string[] {
   const instructions: string[] = [];
   const { locatedThreads, unlocatedMutatedThreads, unlocatedThreads } = partitionFixThreads(
@@ -101,14 +103,13 @@ export function buildFixInstructions(
   });
   // The conflict hint belongs with the conflict step; otherwise it precedes the push step.
   const hintWithConflictStep = hasConflicts && !hasRepeatedWorkflowBranchRecovery;
-  if (hintWithConflictStep) {
+  const branchRecovery = hasConflicts || hasRepeatedWorkflowBranchRecovery;
+  if (hintWithConflictStep)
     instructions.push(buildConflictInstruction(stackRebase), ...branchUpdateHint);
-  }
 
   const firstLookTotal = firstLookThreads.length + firstLookComments.length;
-  if (firstLookTotal > 0) {
+  if (firstLookTotal > 0)
     instructions.push("Review every item under `## First-look items` before acting.");
-  }
   if (firstLookSummaries.length > 0 && viewerCanUpdate)
     instructions.push(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
   const editedTotal =
@@ -148,6 +149,7 @@ export function buildFixInstructions(
   instructions.push(
     ...buildFailingCheckInstructions(failingChecks),
     ...repeatedWorkflowBranchRecoveryInstructions,
+    ...queueEjectionSteps(queueEjection, stackRebase, branchRecovery),
   );
 
   if (hasAnnotations) {
@@ -168,7 +170,7 @@ export function buildFixInstructions(
   const hasReviewMutations =
     resolveCommand.hasMutations || resolveOnlyCommand?.hasMutations === true;
   const mutationSuffix = hasReviewMutations ? " before review mutations" : "";
-  if (hasConflicts || hasRepeatedWorkflowBranchRecovery) {
+  if (branchRecovery || (queueEjection && stackRebase)) {
     instructions.push(buildBranchPushInstruction(stackRebase, hasConflicts, mutationSuffix));
   } else if (hasNonConflictHints) {
     instructions.push(

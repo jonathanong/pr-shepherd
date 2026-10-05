@@ -179,6 +179,11 @@ export function parseRawPr(
     reviewDecision: (raw.reviewDecision ?? null) as BatchPrData["reviewDecision"],
     headRefOid: raw.headRefOid,
     ...(headPushedAtUnix !== undefined && { headPushedAtUnix }),
+    ...(raw.mergeQueueRemovalTimes && {
+      mergeQueueRemovalTimesUnix: raw.mergeQueueRemovalTimes.nodes.map((node) =>
+        Math.floor(Date.parse(node.createdAt) / 1000),
+      ),
+    }),
     headRefName: raw.headRefName,
     headRepoWithOwner: raw.headRepository?.nameWithOwner ?? null,
     viewerAuthorization: {

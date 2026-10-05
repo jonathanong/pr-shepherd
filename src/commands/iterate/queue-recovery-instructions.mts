@@ -4,13 +4,7 @@ import type { AgentCheck, ShepherdReport } from "../../types.mts";
 import { playbookPointer } from "../playbook-pointer.mts";
 
 /** Which recovery command, if any, Shepherd printed for a failure that does not reproduce. */
-type QueueEjectionRecovery = "requeue" | "acknowledge" | "none";
-
-interface QueueEjectionInput {
-  /** The printed native-stack rebase step; absent outside a native stack. */
-  stackRebase?: string;
-  recovery: QueueEjectionRecovery;
-}
+export type QueueEjectionRecovery = "requeue" | "acknowledge" | "none";
 
 /** The removed queue commit whose failed checks this tick surfaces, if the removal is current. */
 export function currentEjectionCommit(
@@ -25,13 +19,32 @@ export function currentEjectionCommit(
     : undefined;
 }
 
-/** The trigger, stack route, and command guard; the fixed procedure lives in the playbook. */
-export function buildQueueEjectionInstruction(input: QueueEjectionInput): string {
-  const { stackRebase, recovery } = input;
-  const route = stackRebase ? ` Stack update route: ${stackRebase}` : "";
+/** The ejection step after failing-check triage; points at a stack route already printed. */
+export function queueEjectionSteps(
+  recovery: QueueEjectionRecovery | undefined,
+  stackRebase: string | undefined,
+  routePrinted: boolean,
+): string[] {
+  if (!recovery) return [];
+  const route = stackRebase && routePrinted ? "use the stack route printed above." : stackRebase;
+  return [buildQueueEjectionInstruction(recovery, route)];
+}
+
+/** The trigger, update route, and command guard; the fixed procedure lives in the playbook. */
+function buildQueueEjectionInstruction(
+  recovery: QueueEjectionRecovery,
+  stackRoute?: string,
+): string {
+  const update = stackRoute
+    ? `Update the stack from the latest base first: ${stackRoute}`
+    : "Update the PR head from the latest base first.";
+  const reproduce =
+    "only if the failure does not reproduce on the updated head and the update did not change the head.";
   const guard =
-    recovery === "none"
-      ? "Shepherd printed no queue command for this session, so do not enqueue the PR."
-      : `Run \`${recovery === "requeue" ? "requeue:" : "acknowledge queue removal:"}\` only if the failure does not reproduce and the head did not change.`;
-  return `Triage the merge-queue ejection before any requeue.${route} ${guard} ${playbookPointer("Merge queue ejection")}`;
+    recovery === "requeue"
+      ? `Run \`requeue:\` ${reproduce} If gh reports auto-merge is disabled, run \`requeue API fallback:\` instead.`
+      : recovery === "acknowledge"
+        ? `Run \`acknowledge queue removal:\` ${reproduce}`
+        : "Shepherd printed no queue command for this session, so do not enqueue the PR.";
+  return `Triage the merge-queue ejection before any requeue. ${update} ${guard} ${playbookPointer("Merge queue ejection")}`;
 }

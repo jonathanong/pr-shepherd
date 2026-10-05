@@ -1,32 +1,43 @@
 import { describe, expect, it } from "vitest";
 import type { AgentCheck, ShepherdReport } from "../../types.mts";
-import {
-  buildQueueEjectionInstruction,
-  currentEjectionCommit,
-} from "./queue-recovery-instructions.mts";
+import { currentEjectionCommit, queueEjectionSteps } from "./queue-recovery-instructions.mts";
 
-describe("buildQueueEjectionInstruction", () => {
-  it("guards the printed requeue and points at the playbook", () => {
-    expect(buildQueueEjectionInstruction({ recovery: "requeue" })).toBe(
-      'Triage the merge-queue ejection before any requeue. Run `requeue:` only if the failure does not reproduce and the head did not change. Playbook: "Merge queue ejection".',
+const step = (recovery: "requeue" | "acknowledge" | "none", route?: string) =>
+  queueEjectionSteps(recovery, route, false)[0]!;
+
+describe("ejection step text", () => {
+  it("updates first, guards the printed requeue, and names the API fallback", () => {
+    expect(step("requeue")).toBe(
+      'Triage the merge-queue ejection before any requeue. Update the PR head from the latest base first. Run `requeue:` only if the failure does not reproduce on the updated head and the update did not change the head. If gh reports auto-merge is disabled, run `requeue API fallback:` instead. Playbook: "Merge queue ejection".',
     );
   });
 
   it("prints the native-stack update route and guards the acknowledgment", () => {
-    const text = buildQueueEjectionInstruction({
-      stackRebase: "run `gh stack rebase`.",
-      recovery: "acknowledge",
-    });
-    expect(text).toContain("Stack update route: run `gh stack rebase`.");
+    const text = step("acknowledge", "run `gh stack rebase`.");
+    expect(text).toContain("Update the stack from the latest base first: run `gh stack rebase`.");
     expect(text).toContain(
       "Run `acknowledge queue removal:` only if the failure does not reproduce",
     );
   });
 
   it("forbids enqueueing when no recovery command was printed", () => {
-    const text = buildQueueEjectionInstruction({ recovery: "none" });
+    const text = step("none");
     expect(text).toContain("so do not enqueue the PR.");
     expect(text).not.toContain("requeue:");
+  });
+});
+
+describe("queueEjectionSteps", () => {
+  it("emits nothing without a current ejection", () => {
+    expect(queueEjectionSteps(undefined, "route", false)).toEqual([]);
+  });
+
+  it("points at a stack route already printed for a conflict", () => {
+    const [step] = queueEjectionSteps("acknowledge", "run `gh stack rebase`.", true);
+    expect(step).toContain(
+      "Update the stack from the latest base first: use the stack route printed above.",
+    );
+    expect(step).not.toContain("gh stack rebase");
   });
 });
 

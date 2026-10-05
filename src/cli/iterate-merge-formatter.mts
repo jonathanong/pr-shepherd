@@ -37,6 +37,7 @@ export function appendMergeQueueHeader(lines: string[], result: IterateResult): 
   if (queue.checkCommitOid) parts.push(`checkCommit \`${queue.checkCommitOid}\``);
   if (queue.checksIncomplete) parts.push("checks incomplete (first 100 shown)");
   if (queue.headUpdatedAfterRemoval) parts.push("head updated after removal");
+  if (queue.removalsOnHead) parts.push(`removals on this head \`${queue.removalsOnHead}\``);
   if (queue.removalAcknowledged) parts.push("removal acknowledged");
   lines.push(`**merge queue** ${parts.join(" · ")}`);
   if (queue.autoMergeRequest) {

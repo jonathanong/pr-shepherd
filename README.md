@@ -164,7 +164,7 @@ receipts, and whose bottom open layer GitHub has retargeted onto the stack base,
 with `gh stack merge <that PR number> --yes` and the allowed method flag (`--squash` unless config or the repository selects another). That lands the named layer and every
 unmerged layer below it. When the base uses a merge queue, the same command queues the prefix
 together and GitHub evaluates each layer from the bottom; a failure ejects that layer and those
-above it. If the evidence shows an unrelated failure and no source changes or other blockers remain, the one-PR session emits a head-, queue-commit-, and timestamp-pinned local acknowledgment command. Fresh source checks and a new READY receipt then let the aggregate selector recover the eligible prefix. Manual or stale removals cannot use this path. Layers above the prefix keep their one-PR sessions. After the merge, GitHub retargets
+above it. For a `failed_checks` removal on the layer's first ejection, the one-PR session emits a head-, queue-commit-, and timestamp-pinned local acknowledgment command; run it only when the failure does not reproduce after updating from the latest base, the head did not change, and no source changes or other blockers remain. Fresh source checks and a new READY receipt then let the aggregate selector recover the eligible prefix. Manual or stale removals cannot use this path. Layers above the prefix keep their one-PR sessions. After the merge, GitHub retargets
 the next layer, so the rerun continues until the stack returns `CANCEL`. API and MCP aggregate
 calls perform one summary tick and leave recurrence to the caller.
 

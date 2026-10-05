@@ -21,8 +21,8 @@ import { buildFixInstructions } from "./render.mts";
 import { buildRemovedQueueRecovery, buildStackQueueRemovalAcknowledgment } from "./merge.mts";
 import { hasLogEvidence } from "./check-evidence.mts";
 import {
-  buildQueueEjectionInstruction,
   currentEjectionCommit,
+  type QueueEjectionRecovery,
 } from "./queue-recovery-instructions.mts";
 import { buildReleasedBlockerInstruction } from "./check-instructions.mts";
 import { buildNativeStackLayerRebase } from "./native-stack-rebase.mts";
@@ -464,9 +464,25 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
           trunk: stack.baseRefName,
         })
       : undefined;
-  // Conflicts, and a behind branch whose rerun already failed, both ask for a branch update.
+  const requeue = buildRemovedQueueRecovery(report, failingAgentChecks, opts.merge);
+  const queueRemovalAcknowledgment = buildStackQueueRemovalAcknowledgment(
+    report,
+    failingAgentChecks,
+  );
+  const queueEjection: QueueEjectionRecovery | undefined = currentEjectionCommit(
+    report,
+    failingAgentChecks,
+  )
+    ? requeue
+      ? "requeue"
+      : queueRemovalAcknowledgment
+        ? "acknowledge"
+        : "none"
+    : undefined;
+  // Conflicts, a behind branch whose rerun already failed, and a queue ejection that must be
+  // reproduced on the latest base all ask for a branch update.
   const stackRebase =
-    hasConflicts || (isBehind && exhaustedAttempts.length > 0)
+    hasConflicts || (isBehind && exhaustedAttempts.length > 0) || queueEjection
       ? buildNativeStackLayerRebase(
           report.repo,
           { number: prNumber, baseBranch: baseLookup.branch },
@@ -496,28 +512,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     report.viewerAuthorization?.viewerCanUpdate === true,
     exhaustedAttempts.length > 0,
     stackRebase,
+    queueEjection,
   );
-  const requeue = buildRemovedQueueRecovery(report, failingAgentChecks, opts.merge);
-  const queueRemovalAcknowledgment = buildStackQueueRemovalAcknowledgment(
-    report,
-    failingAgentChecks,
-  );
-  if (currentEjectionCommit(report, failingAgentChecks)) {
-    const completion = instructions.pop();
-    instructions.push(
-      buildQueueEjectionInstruction({
-        stackRebase:
-          stackRebase ??
-          buildNativeStackLayerRebase(
-            report.repo,
-            { number: prNumber, baseBranch: baseLookup.branch },
-            stack,
-          ),
-        recovery: requeue ? "requeue" : queueRemovalAcknowledgment ? "acknowledge" : "none",
-      }),
-    );
-    if (completion !== undefined) instructions.push(completion);
-  }
   if (failingAgentChecks.some((check) => releasedCheckNames.has(check.name))) {
     const completion = instructions.pop();
     instructions.push(buildReleasedBlockerInstruction(prNumber));

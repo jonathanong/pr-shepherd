@@ -109,6 +109,16 @@ describe("parseRawPr — merge queue", () => {
     expect(data.removedMergeQueueChecks?.[0]).toMatchObject({ commitOid: "removed123" });
   });
 
+  it("parses recent removal times", () => {
+    const raw = makeRawPr({
+      mergeQueueRemovalTimes: {
+        nodes: [{ createdAt: "2026-08-27T11:00:00Z" }, { createdAt: "2026-08-27T12:00:00Z" }],
+      },
+    });
+
+    expect(parse(raw).mergeQueueRemovalTimesUnix).toEqual([1_787_828_400, 1_787_832_000]);
+  });
+
   it("rejects a null context on an active queue commit", () => {
     const raw = makeRawPr({
       mergeQueueEntry: {

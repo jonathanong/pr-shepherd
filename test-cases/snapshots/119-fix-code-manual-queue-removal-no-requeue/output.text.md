@@ -21,7 +21,7 @@ Merge queue: No [Required]
 
 1. Review each item under `## Failing checks` and decide whether it needs a code change.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
-3. If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.
-4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
-5. Triage the merge-queue ejection before any requeue. Shepherd printed no queue command for this session, so do not enqueue the PR. Playbook: "Merge queue ejection".
+3. Triage the merge-queue ejection before any requeue. Update the PR head from the latest base first. Shepherd printed no queue command for this session, so do not enqueue the PR. Playbook: "Merge queue ejection".
+4. If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.
+5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
 6. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.
