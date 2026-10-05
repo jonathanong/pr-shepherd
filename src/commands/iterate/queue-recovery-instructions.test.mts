@@ -20,6 +20,8 @@ describe("buildRequeueInstruction", () => {
     expect(text).toContain("queue commit `queue-commit-1`");
     expect(text).toContain("do not run `requeue:` after any push");
     expect(text).toContain("the logs show a transient failure");
+    expect(text).toContain("any entries queued ahead of it");
+    expect(text).toContain("caused by another entry in the same queue group");
   });
 });
 
@@ -28,7 +30,7 @@ describe("buildQueueRemovalAcknowledgmentInstruction", () => {
     const text = buildQueueRemovalAcknowledgmentInstruction();
     expect(text).toContain("do not acknowledge it; report it");
     expect(text).toContain(
-      "the logs show a transient failure, run `acknowledge queue removal:` exactly as printed",
+      "caused by another entry in the same queue group, run `acknowledge queue removal:` exactly as printed",
     );
   });
 });
