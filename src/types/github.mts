@@ -206,6 +206,10 @@ export interface BatchPrData extends BatchPrMergeFields {
    * that signal is unavailable; queue-removal freshness then uses committer time.
    */
   headPushedAtUnix?: number;
+  /** Unix times of the last 10 merge-queue removals, oldest first. */
+  mergeQueueRemovalTimesUnix?: number[];
+  /** Unix time of the latest head-ref force-push, when GitHub reports one. */
+  headForcePushedAtUnix?: number;
   headRefName: string;
   /** `"owner/name"` of the head repository; null when the fork has been deleted. */
   headRepoWithOwner: string | null;

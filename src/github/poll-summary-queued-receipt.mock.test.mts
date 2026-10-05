@@ -250,7 +250,7 @@ describe("queued READY receipt projection", () => {
           nodes: [
             {
               id: "removal-1",
-              reason: "CI_FAILURE",
+              reason: "failed_checks",
               createdAt: "2026-09-20T10:10:00Z",
               actor: { login: "github-merge-queue" },
               beforeCommit: {
@@ -288,7 +288,7 @@ describe("queued READY receipt projection", () => {
           nodes: [
             {
               id: "removal-2",
-              reason: "CI_FAILURE",
+              reason: "failed_checks",
               createdAt: "2026-09-20T10:10:00Z",
               actor: null,
               beforeCommit: { oid: "q".repeat(40), parents: { nodes: [{ oid: head }] } },
@@ -299,6 +299,6 @@ describe("queued READY receipt projection", () => {
       repo,
       { stackPrNumber: 42, merge: true },
     );
-    expect(item.queueRemoval?.reason).toBe("CI_FAILURE");
+    expect(item.queueRemoval?.reason).toBe("failed_checks");
   });
 });

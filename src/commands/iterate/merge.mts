@@ -141,6 +141,9 @@ function removedQueueRecoveryAvailable(
     !queue?.enabled ||
     queue.inQueue ||
     queue.headUpdatedAfterRemoval ||
+    // A repeat ejection of the same head is not retried blindly; a conflict forces a new head.
+    (queue.removalsOnHead ?? 1) > 1 ||
+    report.mergeStatus.status === "CONFLICTS" ||
     // GitHub exposes a raw string, not a capability to reverse a human's queue removal.
     // Only known CI-driven reasons authorize offering automated recovery.
     !isCiQueueRemovalReason(queue.latestRemoval?.reason) ||

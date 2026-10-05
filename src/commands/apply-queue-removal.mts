@@ -50,10 +50,9 @@ export async function applyQueueRemovalAck(
     !queueRemovalAppliesToHead({
       parentOids: removal.beforeCommitParentOids,
       headOid: data.headRefOid,
-      ...(data.activity?.latestCommitCommittedAtUnix != null && {
-        headCommittedAtUnix: data.activity.latestCommitCommittedAtUnix,
-      }),
-      ...(data.headPushedAtUnix !== undefined && { headPushedAtUnix: data.headPushedAtUnix }),
+      headCommittedAtUnix: data.activity?.latestCommitCommittedAtUnix,
+      headPushedAtUnix: data.headPushedAtUnix,
+      headForcePushedAtUnix: data.headForcePushedAtUnix,
       removedAtUnix: removal.createdAtUnix,
     })
   ) {

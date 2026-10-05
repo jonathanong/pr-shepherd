@@ -83,6 +83,10 @@ export interface RawPrMergeFields {
   autoMergeRequest?: RawAutoMergeRequest | null;
   mergeQueueRemovals?: { nodes: RawMergeQueueRemoval[] } | null;
   mergeQueueAdditions?: { nodes: Array<{ createdAt: string }> } | null;
+  /** Timestamps of the last 10 queue removals; counts repeat ejections of one head. */
+  mergeQueueRemovalTimes?: { nodes: Array<{ createdAt: string }> } | null;
+  /** The latest force-push, which dates a head whose commit time predates its push. */
+  headRefForcePushes?: { nodes: Array<{ createdAt: string }> } | null;
   stack?: RawStack | null;
   stackEntry?: { position: number } | null;
   baseRef?: RawBaseRef | null;

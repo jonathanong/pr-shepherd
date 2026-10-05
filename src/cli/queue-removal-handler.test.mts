@@ -77,7 +77,7 @@ function currentBatch(overrides: Record<string, unknown> = {}): BatchPrData {
     isInMergeQueue: false,
     autoMergeRequest: null,
     latestMergeQueueRemoval: {
-      reason: "CI_FAILURE",
+      reason: "failed_checks",
       beforeCommitOid: queueCommitOid,
       beforeCommitParentOids: ["c".repeat(40), headSha],
       createdAtUnix: removedAtUnix,

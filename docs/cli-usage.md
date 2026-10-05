@@ -32,7 +32,7 @@ orders its entries bottom-to-top. When omitted, Shepherd infers the current bran
 
 `apply check-blocker --check <name>` records that an exact failing check name is blocked on `--blocked-by`. The reference is a pull URL, an issue URL, `owner/repo#N` (pull), or `issue:owner/repo#N`. `--clear` removes that check only.
 
-`apply queue-removal` records a local acknowledgment of a current CI-driven native-stack removal, pinned to the head SHA, queue commit SHA, and removal timestamp. Run the generated command only after inspecting the failed queue evidence and deciding no source change or other blocker remains. Fresh source checks and a one-PR READY receipt then permit aggregate stack recovery; the command itself does not enqueue or merge. Manual, stale, and non-stack removals are rejected.
+`apply queue-removal` records a local acknowledgment of a current CI-driven native-stack removal, pinned to the head SHA, queue commit SHA, and removal timestamp. Run the generated command only after inspecting the failed queue evidence and deciding the failure was transient or came from another entry in the same queue group, and no source change or other blocker remains. Only GitHub's `failed_checks` removal reason qualifies. Fresh source checks and a one-PR READY receipt then permit aggregate stack recovery; the command itself does not enqueue or merge. Manual, stale, and non-stack removals are rejected.
 
 Journal entries live in a collapsed `Shepherd Journal` details block. `apply journal` creates that canonical block when absent, appends before its closing tag, and leaves an exact duplicate unchanged. A legacy `## Shepherd Journal` section is migrated in place on the next journal operation.
 

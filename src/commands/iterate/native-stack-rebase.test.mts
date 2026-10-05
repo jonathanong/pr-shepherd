@@ -94,6 +94,15 @@ describe("native stack rebase instructions", () => {
     );
   });
 
+  it("pushes after a merge-queue ejection update only when the head changed", () => {
+    expect(buildBranchPushInstruction("rebase", false, "", true)).toBe(
+      "If the base update or a fix changed the head, commit any remaining changes on the PR head branch and push the rewritten stack with `gh stack push`. If neither did, do not push.",
+    );
+    expect(buildBranchPushInstruction(undefined, false, " before review mutations", true)).toBe(
+      "If the base update or a fix changed the head, commit any remaining changes and push to the PR head branch before review mutations. If neither did, do not push.",
+    );
+  });
+
   it("routes repeated-workflow conflict recovery and completion through the stack", () => {
     const rebase = buildNativeStackLayerRebase("acme/widgets", upperPr, upperLayer);
     expect(

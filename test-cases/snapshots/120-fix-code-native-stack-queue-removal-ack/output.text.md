@@ -7,7 +7,7 @@ Conversations Resolved: Yes [Not Required]
 Merge queue: No [Required]
 Stack: 7 (layer 1/1, base main)
 **merge queue** enabled `true` · inQueue `false` · checkCommit `bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb`
-**queue removal** reason `MERGE_QUEUE_POLICY_CHECK_FAILURE` · createdAtUnix `1715799000` · actor `@github-actions` · commit `bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb` · parents `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`
+**queue removal** reason `failed_checks` · createdAtUnix `1715799000` · actor `@github-actions` · commit `bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb` · parents `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`
 
 ## Failing checks
 
@@ -23,7 +23,7 @@ Stack: 7 (layer 1/1, base main)
 
 1. Review each item under `## Failing checks` and decide whether it needs a code change.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
-3. If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.
-4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
-5. If the merge-group failure belongs to this PR, fix and push its head, then iterate. Otherwise, if no code changed and no other blocker remains, run `acknowledge queue removal:` exactly as printed. This records only the disposition of that removed queue commit; finish this one-PR session to validate current source CI and record its READY receipt, then return to the aggregate `--stack` selector with its original options. In merge mode it verifies lower-layer readiness before merging. Do not enqueue or merge this layer directly.
+3. Triage the merge-queue ejection before any requeue. Update the stack from the latest base first: From a clean checkout of `owner/repo`, if `gh stack` does not track stack #7 locally, import it with `gh stack checkout 7`. Then check out the head branch of PR #42 and run `gh stack rebase`. Playbook: "Branch update". Run `acknowledge queue removal:` only if the failure does not reproduce on the updated head, neither the update nor a code change altered the head, and no other blocker remains. Playbook: "Merge queue ejection".
+4. If the base update or a fix changed the head, commit any remaining changes on the PR head branch and push the rewritten stack with `gh stack push`. If neither did, do not push.
+5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
 6. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.

@@ -20,6 +20,10 @@ import {
 import { buildFixInstructions } from "./render.mts";
 import { buildRemovedQueueRecovery, buildStackQueueRemovalAcknowledgment } from "./merge.mts";
 import { hasLogEvidence } from "./check-evidence.mts";
+import {
+  currentEjectionCommit,
+  type QueueEjectionRecovery,
+} from "./queue-recovery-instructions.mts";
 import { buildReleasedBlockerInstruction } from "./check-instructions.mts";
 import { buildNativeStackLayerRebase } from "./native-stack-rebase.mts";
 import { lookupUpperLayerTrunkConflict } from "./stack-trunk-conflict.mts";
@@ -460,9 +464,25 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
           trunk: stack.baseRefName,
         })
       : undefined;
-  // Conflicts, and a behind branch whose rerun already failed, both ask for a branch update.
+  const requeue = buildRemovedQueueRecovery(report, failingAgentChecks, opts.merge);
+  const queueRemovalAcknowledgment = buildStackQueueRemovalAcknowledgment(
+    report,
+    failingAgentChecks,
+  );
+  const queueEjection: QueueEjectionRecovery | undefined = !currentEjectionCommit(
+    report,
+    failingAgentChecks,
+  )
+    ? undefined
+    : requeue
+      ? "requeue"
+      : queueRemovalAcknowledgment
+        ? "acknowledge"
+        : "none";
+  // Conflicts, a behind branch whose rerun already failed, and a queue ejection that may be
+  // reproduced on the latest base all print the branch update route.
   const stackRebase =
-    hasConflicts || (isBehind && exhaustedAttempts.length > 0)
+    hasConflicts || (isBehind && exhaustedAttempts.length > 0) || queueEjection
       ? buildNativeStackLayerRebase(
           report.repo,
           { number: prNumber, baseBranch: baseLookup.branch },
@@ -492,26 +512,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     report.viewerAuthorization?.viewerCanUpdate === true,
     exhaustedAttempts.length > 0,
     stackRebase,
+    queueEjection,
   );
-  const requeue = buildRemovedQueueRecovery(report, failingAgentChecks, opts.merge);
-  const queueRemovalAcknowledgment = buildStackQueueRemovalAcknowledgment(
-    report,
-    failingAgentChecks,
-  );
-  if (queueRemovalAcknowledgment) {
-    const completion = instructions.pop();
-    instructions.push(
-      "If the merge-group failure belongs to this PR, fix and push its head, then iterate. Otherwise, if no code changed and no other blocker remains, run `acknowledge queue removal:` exactly as printed. This records only the disposition of that removed queue commit; finish this one-PR session to validate current source CI and record its READY receipt, then return to the aggregate `--stack` selector with its original options. In merge mode it verifies lower-layer readiness before merging. Do not enqueue or merge this layer directly.",
-    );
-    if (completion !== undefined) instructions.push(completion);
-  }
-  if (requeue) {
-    const completion = instructions.pop();
-    instructions.push(
-      "If the merge-group failure belongs to this PR, fix and push the PR head, then iterate. Otherwise, if no code changed and no other blocker remains, run the `requeue:` command exactly as printed. If gh reports auto-merge is disabled instead of adding the PR to the queue, run the `requeue API fallback:` command. Both commands require the observed PR head SHA; if the head changed, iterate for a fresh command.",
-    );
-    if (completion !== undefined) instructions.push(completion);
-  }
   if (failingAgentChecks.some((check) => releasedCheckNames.has(check.name))) {
     const completion = instructions.pop();
     instructions.push(buildReleasedBlockerInstruction(prNumber));

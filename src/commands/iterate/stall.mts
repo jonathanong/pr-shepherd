@@ -79,6 +79,8 @@ function computeStallFingerprint(
     state: base.state,
     isDraft: base.isDraft,
     checks,
+    // A requeued head ejected again gets its own triage window.
+    queueRemovalCommit: report.mergeQueue?.latestRemoval?.beforeCommitOid,
     threads,
     resolutionOnlyThreads,
     ruleAutoResolveThreads,

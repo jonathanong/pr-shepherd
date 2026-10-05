@@ -88,6 +88,20 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           }
         }
       }
+      mergeQueueRemovalTimes: timelineItems(last: 10, itemTypes: [REMOVED_FROM_MERGE_QUEUE_EVENT]) {
+        nodes {
+          ... on RemovedFromMergeQueueEvent {
+            createdAt
+          }
+        }
+      }
+      headRefForcePushes: timelineItems(last: 1, itemTypes: [HEAD_REF_FORCE_PUSHED_EVENT]) {
+        nodes {
+          ... on HeadRefForcePushedEvent {
+            createdAt
+          }
+        }
+      }
       stack {
         number
         size

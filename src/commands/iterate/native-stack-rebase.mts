@@ -67,12 +67,22 @@ export function buildConflictInstruction(stackRebase: string | undefined): strin
   return stackRebase ? `${pointer} ${stackRebase}` : `${pointer} Resolve them before committing.`;
 }
 
-/** Push a conflict resolution or branch refresh: one branch, or the whole rewritten native stack. */
+/**
+ * Push a conflict resolution or branch refresh: one branch, or the whole rewritten native stack.
+ * After a merge-queue ejection update, push only when the update or a fix changed the head.
+ */
 export function buildBranchPushInstruction(
   stackRebase: string | undefined,
   hasConflicts: boolean,
   mutationSuffix: string,
+  ejectionUpdate = false,
 ): string {
+  if (ejectionUpdate) {
+    const push = stackRebase
+      ? "commit any remaining changes on the PR head branch and push the rewritten stack with `gh stack push`"
+      : "commit any remaining changes and push to the PR head branch";
+    return `If the base update or a fix changed the head, ${push}${mutationSuffix}. If neither did, do not push.`;
+  }
   if (stackRebase)
     return `Commit any remaining changes on the PR head branch and push the rewritten stack with \`gh stack push\`${mutationSuffix}.`;
   return hasConflicts

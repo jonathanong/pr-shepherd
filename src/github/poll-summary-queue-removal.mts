@@ -1,5 +1,6 @@
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import {
+  forcePushUnix,
   headPushUnixFromCheckNodes,
   queueRemovalAppliesToHead,
 } from "./queue-removal-freshness.mts";
@@ -28,6 +29,7 @@ export function currentQueueRemovalEvent(raw: RawSummaryPr): QueueRemovalEvent |
         headCommittedAtUnix: parseCreatedAt(headCommit.committedDate),
       }),
       ...(headPushedAtUnix !== undefined && { headPushedAtUnix }),
+      headForcePushedAtUnix: forcePushUnix(raw.headRefForcePushes),
       removedAtUnix: Math.floor(removalTime / 1000),
     })
   ) {

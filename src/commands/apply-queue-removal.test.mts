@@ -38,7 +38,7 @@ beforeEach(async () => {
       isMergeQueueEnabled: true,
       isInMergeQueue: false,
       latestMergeQueueRemoval: {
-        reason: "CI_FAILURE",
+        reason: "failed_checks",
         beforeCommitOid: queueCommitOid,
         beforeCommitParentOids: ["c".repeat(40), headSha],
         createdAtUnix: removedAtUnix,

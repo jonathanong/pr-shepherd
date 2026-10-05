@@ -123,6 +123,31 @@ describe("queue recovery evidence", () => {
       expect(result.fix.queueRemovalAcknowledgment).toBeUndefined();
     },
   );
+
+  it("withholds requeue after a repeat ejection of the same head", async () => {
+    const report = removedEntryReport("OpenRouter HTTP 529");
+    report.mergeQueue!.removalsOnHead = 2;
+    mockRunCheck.mockResolvedValue(report);
+
+    const result = await runIterate(makeOpts({ merge: true }));
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.requeue).toBeUndefined();
+    expect(result.fix.instructions.join("\n")).toContain("so do not enqueue the PR.");
+  });
+
+  it("withholds requeue while the branch has conflicts", async () => {
+    const report = removedEntryReport("OpenRouter HTTP 529");
+    report.mergeStatus.status = "CONFLICTS";
+    mockRunCheck.mockResolvedValue(report);
+
+    const result = await runIterate(makeOpts({ merge: true }));
+
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.requeue).toBeUndefined();
+  });
 });
 
 function removedEntryReport(logExcerpt?: string) {
@@ -133,7 +158,7 @@ function removedEntryReport(logExcerpt?: string) {
       enabled: true,
       inQueue: false,
       latestRemoval: {
-        reason: "CI_FAILURE",
+        reason: "failed_checks",
         createdAtUnix: 1_700_000_000,
         beforeCommitOid: "queue-commit",
       },

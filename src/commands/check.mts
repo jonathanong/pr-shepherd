@@ -1,5 +1,5 @@
 import { fetchPrBatch } from "../github/batch.mts";
-import { queueRemovalAppliesToHead } from "../github/queue-removal-freshness.mts";
+import { headArrivalUnix, queueRemovalAppliesToHead } from "../github/queue-removal-freshness.mts";
 import {
   readQueueRemovalAcknowledgment,
   matchesQueueRemovalAcknowledgment,
@@ -127,24 +127,28 @@ export async function runCheck(
   // it as stale/updated rather than as still current, so Shepherd doesn't escalate
   // `merge-queue-removed` permanently on data it can no longer check. A squash or rebase
   // queue commit has one parent and does not list the PR head; that removal stays current
-  // until this head reached the PR after it. The push time is the earliest pull_request
-  // check on the head, with committer time as the fallback when no check time is
-  // available. The raw removal fields still render in the merge-queue header regardless
-  // of this flag.
-  const headCommittedAtUnix = batchData.activity?.latestCommitCommittedAtUnix;
+  // until this head reached the PR after it (`headArrivalUnix`). The raw removal fields
+  // still render in the merge-queue header regardless of this flag.
+  const headTimes = {
+    headCommittedAtUnix: batchData.activity?.latestCommitCommittedAtUnix,
+    headPushedAtUnix: batchData.headPushedAtUnix,
+    headForcePushedAtUnix: batchData.headForcePushedAtUnix,
+  };
   const headUpdatedAfterRemoval = Boolean(
     latestRemoval &&
     !queueRemovalAppliesToHead({
+      ...headTimes,
       parentOids: latestRemoval.beforeCommitParentOids,
       headOid: batchData.headRefOid,
-      ...(headCommittedAtUnix !== undefined &&
-        headCommittedAtUnix !== null && { headCommittedAtUnix }),
-      ...(batchData.headPushedAtUnix !== undefined && {
-        headPushedAtUnix: batchData.headPushedAtUnix,
-      }),
       removedAtUnix: latestRemoval.createdAtUnix,
     }),
   );
+  // Repeat ejections of this head: removals after it reached the PR.
+  const headSinceUnix = headArrivalUnix(headTimes);
+  const removalsOnHead =
+    latestRemoval && !headUpdatedAfterRemoval && headSinceUnix !== undefined
+      ? (batchData.mergeQueueRemovalTimesUnix ?? []).filter((t) => t >= headSinceUnix).length
+      : 0;
   const removalAcknowledged = Boolean(
     batchData.stack &&
     latestRemoval?.beforeCommitOid &&
@@ -547,6 +551,7 @@ export async function runCheck(
           checksIncomplete: true as const,
         }),
         ...(headUpdatedAfterRemoval && { headUpdatedAfterRemoval: true as const }),
+        ...(removalsOnHead > 1 && { removalsOnHead }),
         ...(removalAcknowledged && { removalAcknowledged: true as const }),
       },
     }),

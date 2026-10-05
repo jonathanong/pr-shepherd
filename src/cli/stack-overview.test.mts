@@ -67,7 +67,7 @@ describe("projectStackOverview", () => {
           checks: { failing: 1, passing: 4 },
           review: { actionable: 2 },
           pollCommand: "pr-shepherd 321",
-          queueRemoval: { reason: "CI_FAILURE", actor: "github", createdAtUnix: 1 },
+          queueRemoval: { reason: "failed_checks", actor: "github", createdAtUnix: 1 },
         }),
       ]),
     );
@@ -82,7 +82,7 @@ describe("projectStackOverview", () => {
       position: 1,
       stackSize: 2,
       baseRefName: "main",
-      queueRemoval: { reason: "CI_FAILURE", actor: "github" },
+      queueRemoval: { reason: "failed_checks", actor: "github" },
     });
     expect(JSON.stringify(overview)).not.toContain("headRefOid");
     expect(JSON.stringify(overview)).not.toContain("pollCommand");
@@ -90,7 +90,7 @@ describe("projectStackOverview", () => {
       "not shepherded · not mergeable (`queue-removal`)",
     );
     expect(formatStackOverview(overview)).toContain(
-      "removed from merge queue (CI_FAILURE by @github)",
+      "removed from merge queue (failed_checks by @github)",
     );
   });
 
