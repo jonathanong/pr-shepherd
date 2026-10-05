@@ -349,7 +349,7 @@ describe("runIterate — cancel", () => {
             removalAcknowledged: true,
             autoMergeRequest: { enabledAtUnix: 1_790_000_000, mergeMethod: "SQUASH" },
             latestRemoval: {
-              reason: "CI_FAILURE",
+              reason: "failed_checks",
               createdAtUnix: Math.floor(Date.parse("2026-09-20T10:00:00Z") / 1000),
               beforeCommitOid: "queue-1",
             },
@@ -365,7 +365,7 @@ describe("runIterate — cancel", () => {
             {
               id: "removal-1",
               createdAt: state === "newer" ? "2026-09-20T10:01:00Z" : "2026-09-20T10:00:00Z",
-              reason: state === "manual" ? "MANUAL" : "CI_FAILURE",
+              reason: state === "manual" ? "MANUAL" : "failed_checks",
               actor: null,
               beforeCommit: {
                 oid: state === "different-commit" ? "queue-2" : "queue-1",

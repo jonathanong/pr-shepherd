@@ -83,7 +83,7 @@ describe("parseRawPr — merge queue", () => {
       mergeQueueRemovals: {
         nodes: [
           {
-            reason: "CI_FAILURE",
+            reason: "failed_checks",
             actor: { login: "github-merge-queue" },
             createdAt: "2026-08-27T12:00:00Z",
             beforeCommit: {
@@ -102,7 +102,7 @@ describe("parseRawPr — merge queue", () => {
 
     const data = parse(raw);
     expect(data.latestMergeQueueRemoval).toMatchObject({
-      reason: "CI_FAILURE",
+      reason: "failed_checks",
       actor: "github-merge-queue",
       beforeCommitOid: "removed123",
     });
@@ -136,7 +136,7 @@ describe("parseRawPr — merge queue", () => {
         mergeQueueRemovals: {
           nodes: [
             {
-              reason: "CI_FAILURE",
+              reason: "failed_checks",
               createdAt: "2026-08-27T12:00:00Z",
               beforeCommit: {
                 oid: "removed123",

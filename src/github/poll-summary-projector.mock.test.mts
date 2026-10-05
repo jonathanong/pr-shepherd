@@ -203,7 +203,7 @@ describe("summarizePollSummaryPr", () => {
         mergeQueueRemovals: {
           nodes: [
             {
-              reason: "CI_FAILURE",
+              reason: "failed_checks",
               createdAt: "2026-09-20T10:10:00Z",
               actor: { login: "github-merge-queue" },
               beforeCommit: {
@@ -218,7 +218,7 @@ describe("summarizePollSummaryPr", () => {
       { stackPrNumber: 42, merge: true },
     );
     expect(item.queueRemoval).toMatchObject({
-      reason: "CI_FAILURE",
+      reason: "failed_checks",
       actor: "github-merge-queue",
       beforeCommitParentOids: ["a".repeat(40)],
     });
@@ -231,7 +231,7 @@ describe("summarizePollSummaryPr", () => {
         mergeQueueRemovals: {
           nodes: [
             {
-              reason: "CI_FAILURE",
+              reason: "failed_checks",
               createdAt: "2026-09-20T10:10:00Z",
               actor: null,
               beforeCommit: {

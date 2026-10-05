@@ -14,9 +14,13 @@ export interface QueueRemovalAcknowledgment {
 type StateKey = { owner: string; repo: string; pr: number };
 const FILE = "queue-removal-ack.json";
 
-/** The only removal reasons that indicate a CI-driven queue ejection. */
+/**
+ * The only removal reason that indicates a CI-driven queue ejection. GitHub sends lowercase raw
+ * strings; observed values also include `merged`, `merge_conflict`, `invalid_merge_commit`, and
+ * `stack_invalidated`, none of which a requeue can recover.
+ */
 export function isCiQueueRemovalReason(reason: string | null | undefined): boolean {
-  return reason === "CI_FAILURE" || reason === "MERGE_QUEUE_POLICY_CHECK_FAILURE";
+  return reason === "failed_checks";
 }
 
 /** Missing, unreadable, or malformed acknowledgment state is treated as absent. */

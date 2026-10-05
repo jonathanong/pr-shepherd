@@ -232,7 +232,7 @@ describe("fetchPrBatch — merge queue check pagination", () => {
       mergeQueueRemovals: {
         nodes: [
           {
-            reason: "CI_FAILURE",
+            reason: "failed_checks",
             createdAt: "2026-08-27T12:00:00Z",
             beforeCommit: {
               oid: "old-queue",
@@ -326,7 +326,7 @@ describe("fetchPrBatch — merge queue check pagination", () => {
           mergeQueueRemovals: {
             nodes: [
               {
-                reason: "CI_FAILURE",
+                reason: "failed_checks",
                 createdAt: "2026-08-27T13:00:00Z",
                 beforeCommit: {
                   oid: "removed-queue",
@@ -464,7 +464,7 @@ describe("fetchPrBatch — merge queue check pagination", () => {
           mergeQueueRemovals: {
             nodes: [
               {
-                reason: "CI_FAILURE",
+                reason: "failed_checks",
                 createdAt: "2026-08-27T13:00:00Z",
                 beforeCommit: {
                   oid: "removed-queue",

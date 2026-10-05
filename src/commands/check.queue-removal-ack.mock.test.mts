@@ -29,7 +29,7 @@ function batch() {
     stack: { number: 7, size: 1, position: 1, baseRefName: "main" },
     isMergeQueueEnabled: true,
     latestMergeQueueRemoval: {
-      reason: "CI_FAILURE",
+      reason: "failed_checks",
       createdAtUnix: ack.removedAtUnix,
       beforeCommitOid: ack.queueCommitOid,
       beforeCommitParentOids: [ack.headSha],
@@ -58,7 +58,7 @@ describe("runCheck — acknowledged stack queue removal", () => {
     expect(report.checks.passing).toHaveLength(1);
     expect(report.mergeQueue).toMatchObject({
       removalAcknowledged: true,
-      latestRemoval: { reason: "CI_FAILURE" },
+      latestRemoval: { reason: "failed_checks" },
     });
   });
 

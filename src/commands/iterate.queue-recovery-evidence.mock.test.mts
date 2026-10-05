@@ -133,7 +133,7 @@ function removedEntryReport(logExcerpt?: string) {
       enabled: true,
       inQueue: false,
       latestRemoval: {
-        reason: "CI_FAILURE",
+        reason: "failed_checks",
         createdAtUnix: 1_700_000_000,
         beforeCommitOid: "queue-commit",
       },

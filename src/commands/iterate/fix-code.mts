@@ -20,6 +20,10 @@ import {
 import { buildFixInstructions } from "./render.mts";
 import { buildRemovedQueueRecovery, buildStackQueueRemovalAcknowledgment } from "./merge.mts";
 import { hasLogEvidence } from "./check-evidence.mts";
+import {
+  buildQueueRemovalAcknowledgmentInstruction,
+  buildRequeueInstruction,
+} from "./queue-recovery-instructions.mts";
 import { buildReleasedBlockerInstruction } from "./check-instructions.mts";
 import { buildNativeStackLayerRebase } from "./native-stack-rebase.mts";
 import { lookupUpperLayerTrunkConflict } from "./stack-trunk-conflict.mts";
@@ -500,15 +504,16 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   );
   if (queueRemovalAcknowledgment) {
     const completion = instructions.pop();
-    instructions.push(
-      "If the merge-group failure belongs to this PR, fix and push its head, then iterate. Otherwise, if no code changed and no other blocker remains, run `acknowledge queue removal:` exactly as printed. This records only the disposition of that removed queue commit; finish this one-PR session to validate current source CI and record its READY receipt, then return to the aggregate `--stack` selector with its original options. In merge mode it verifies lower-layer readiness before merging. Do not enqueue or merge this layer directly.",
-    );
+    instructions.push(buildQueueRemovalAcknowledgmentInstruction());
     if (completion !== undefined) instructions.push(completion);
   }
   if (requeue) {
     const completion = instructions.pop();
     instructions.push(
-      "If the merge-group failure belongs to this PR, fix and push the PR head, then iterate. Otherwise, if no code changed and no other blocker remains, run the `requeue:` command exactly as printed. If gh reports auto-merge is disabled instead of adding the PR to the queue, run the `requeue API fallback:` command. Both commands require the observed PR head SHA; if the head changed, iterate for a fresh command.",
+      buildRequeueInstruction(
+        baseLookup.branch,
+        report.mergeQueue!.latestRemoval!.beforeCommitOid!,
+      ),
     );
     if (completion !== undefined) instructions.push(completion);
   }

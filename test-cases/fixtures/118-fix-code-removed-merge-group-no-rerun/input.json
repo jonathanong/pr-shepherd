@@ -5,7 +5,7 @@
   ],
   "batchData": {
     "latestMergeQueueRemoval": {
-      "reason": "MERGE_QUEUE_POLICY_CHECK_FAILURE",
+      "reason": "failed_checks",
       "actor": "github-actions",
       "createdAtUnix": 1715799000,
       "beforeCommitOid": "queue-commit-1",

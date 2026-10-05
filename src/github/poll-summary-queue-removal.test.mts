@@ -4,7 +4,7 @@ import type { RawSummaryPr } from "./poll-summary-raw.mts";
 
 const removal = {
   id: "removal-1",
-  reason: "CI_FAILURE",
+  reason: "failed_checks",
   createdAt: "2026-09-20T10:10:00Z",
   actor: null,
   beforeCommit: { oid: "queue-head", parents: { nodes: [{ oid: "pr-head" }] } },

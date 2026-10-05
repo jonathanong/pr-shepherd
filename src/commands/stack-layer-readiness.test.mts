@@ -22,7 +22,10 @@ function layer(overrides: Partial<PollSummaryItem> = {}): PollSummaryItem {
   } as PollSummaryItem;
 }
 
-const queueRemoval = { reason: "CI_FAILURE", createdAtUnix: 1 } as PollSummaryItem["queueRemoval"];
+const queueRemoval = {
+  reason: "failed_checks",
+  createdAtUnix: 1,
+} as PollSummaryItem["queueRemoval"];
 const checks = (counts: Partial<NonNullable<PollSummaryItem["checks"]>>) =>
   ({ passing: 0, failing: 0, inProgress: 0, ...counts }) as PollSummaryItem["checks"];
 

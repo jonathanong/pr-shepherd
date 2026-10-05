@@ -5,17 +5,17 @@
 Approvals: None [Not Required]
 Conversations Resolved: Yes [Not Required]
 **merge queue** enabled `false` · inQueue `false` · checkCommit `queue-commit-1`
-**queue removal** reason `MERGE_QUEUE_POLICY_CHECK_FAILURE` · createdAtUnix `1715799000` · actor `@github-actions` · commit `queue-commit-1` · parents `abc123`
+**queue removal** reason `failed_checks` · createdAtUnix `1715799000` · actor `@github-actions` · commit `queue-commit-1` · parents `abc123`
 
 ⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required
 
 **Triggers:** `merge-queue-removed`
 
-The PR left the merge queue without an actionable check failure. GitHub reason: MERGE_QUEUE_POLICY_CHECK_FAILURE. Confirm the removal was not intentional before adding it again.
+The PR left the merge queue without an actionable check failure. GitHub reason: failed_checks. Confirm the removal was not intentional before adding it again.
 
 ## Merge queue removal
 
-- reason: `MERGE_QUEUE_POLICY_CHECK_FAILURE`
+- reason: `failed_checks`
 - actor: `@github-actions`
 - createdAtUnix: `1715799000`
 - queue commit: `queue-commit-1`

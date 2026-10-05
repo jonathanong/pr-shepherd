@@ -321,7 +321,7 @@ describe("runIterate — merge", () => {
           enabled: true,
           inQueue: false,
           latestRemoval: {
-            reason: "CI_FAILURE",
+            reason: "failed_checks",
             createdAtUnix: 1_700_000_000,
             beforeCommitOid: "queue-old",
           },
@@ -415,7 +415,7 @@ describe("runIterate — merge", () => {
         mergeQueue: {
           enabled: true,
           inQueue: false,
-          latestRemoval: { reason: "CI_FAILURE", createdAtUnix: 1_700_000_000 },
+          latestRemoval: { reason: "failed_checks", createdAtUnix: 1_700_000_000 },
           headUpdatedAfterRemoval: true,
         },
       }),

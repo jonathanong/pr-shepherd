@@ -185,7 +185,7 @@ describe("projectIterateLean", () => {
     const result = makeIterateResult("escalate");
     if (result.action !== "escalate") throw new Error("expected escalate fixture");
     result.escalate.mergeQueueRemoval = {
-      reason: "CI_FAILURE",
+      reason: "failed_checks",
       createdAtUnix: 123,
       actor: "github-merge-queue",
       beforeCommitOid: "queue-head",

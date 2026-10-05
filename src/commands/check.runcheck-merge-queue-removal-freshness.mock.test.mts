@@ -64,7 +64,7 @@ describe("runCheck — merge-queue removal freshness", () => {
           reviewItemsSinceLatestCommit: [],
         },
         latestMergeQueueRemoval: {
-          reason: "CI_FAILURE",
+          reason: "failed_checks",
           createdAtUnix: 1_700_000_000,
           beforeCommitOid: "queue-squash",
           beforeCommitParentOids: ["base-sha"],
