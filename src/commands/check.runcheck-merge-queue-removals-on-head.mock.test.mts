@@ -58,6 +58,20 @@ describe("runCheck — merge-queue removals on the current head", () => {
     expect(report.mergeQueue?.removalsOnHead).toBeUndefined();
   });
 
+  it("prefers a later force-push over an earlier pull_request check time", async () => {
+    mockFetchPrBatch.mockResolvedValue({
+      data: batch({
+        headPushedAtUnix: 1_690_000_000,
+        headForcePushedAtUnix: 1_699_600_000,
+        mergeQueueRemovalTimesUnix: [1_695_000_000, 1_699_500_000, 1_700_000_000],
+      }),
+    });
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(report.mergeQueue?.removalsOnHead).toBeUndefined();
+  });
+
   it("uses the force-push alone when no commit time is known", async () => {
     mockFetchPrBatch.mockResolvedValue({
       data: batch({
