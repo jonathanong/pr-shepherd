@@ -1,0 +1,32 @@
+{
+  "description": "PR #2099 is the final layer after #2095 merged. GitHub reports stack:null and DIRTY because #2099 still targets #2095's old head branch. Live GraphQL comparisons showed #2099's head ahead of current main by 2 and behind by 0, while it diverged from the old base by 4 ahead and 7 behind. The first step must verify the merged parent, retarget the PR base to main, and rerun without a conflict-resolution commit.",
+  "repository": { "owner": "vouchington", "name": "vouchington" },
+  "batchData": {
+    "number": 2099,
+    "mergeable": "CONFLICTING",
+    "mergeStateStatus": "DIRTY",
+    "baseRefName": "knip-exports-retentions",
+    "baseRefOid": "ed48e5c203b16eaf6037da2f3c64641912918804",
+    "headRefName": "knip-exports-direct-zero",
+    "headRefOid": "b9ddec6445057649f5ccabe0e2dce51ba7d00c46",
+    "stack": null
+  },
+  "mergedBasePullRequests": [
+    {
+      "number": 2095,
+      "url": "https://github.com/vouchington/vouchington/pull/2095",
+      "state": "MERGED",
+      "headRefName": "knip-exports-retentions",
+      "headRefOid": "ed48e5c203b16eaf6037da2f3c64641912918804",
+      "baseRefName": "main",
+      "mergedAt": "2026-10-07T04:44:56Z",
+      "headRepository": { "nameWithOwner": "vouchington/vouchington" }
+    }
+  ],
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

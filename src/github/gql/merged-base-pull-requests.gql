@@ -1,0 +1,31 @@
+query MergedBasePullRequests($owner: String!, $repo: String!, $branch: String!) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
+  repository(owner: $owner, name: $repo) {
+    pullRequests(
+      headRefName: $branch
+      states: MERGED
+      first: 20
+      orderBy: { field: UPDATED_AT, direction: DESC }
+    ) {
+      nodes {
+        number
+        url
+        state
+        headRefName
+        headRefOid
+        baseRefName
+        mergedAt
+        headRepository {
+          nameWithOwner
+        }
+      }
+    }
+  }
+}

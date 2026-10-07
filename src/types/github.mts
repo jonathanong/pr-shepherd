@@ -39,6 +39,18 @@ export type MergeStateStatus =
 
 export type ReviewDecision = "APPROVED" | "CHANGES_REQUESTED" | "REVIEW_REQUIRED" | null;
 
+/** Raw GitHub fields for a merged PR whose head is this PR's current base. */
+export interface MergedBasePullRequest {
+  number: number;
+  url: string;
+  state: "MERGED";
+  headRefName: string;
+  headRefOid: string;
+  baseRefName: string;
+  mergedAt: string;
+  headRepository: { nameWithOwner: string };
+}
+
 export type AuthorType = "User" | "Bot" | "Unknown";
 
 type RepositoryPermission = "NONE" | "READ" | "TRIAGE" | "WRITE" | "MAINTAIN" | "ADMIN";

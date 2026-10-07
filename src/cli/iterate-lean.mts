@@ -54,6 +54,9 @@ export function projectIterateLean(
       }),
     ...(result.baseBranch && { baseBranch: result.baseBranch }),
     ...(result.stackTrunkConflict && { stackTrunkConflict: result.stackTrunkConflict }),
+    ...((result.mergedBasePullRequests?.length ?? 0) > 0 && {
+      mergedBasePullRequests: result.mergedBasePullRequests,
+    }),
     ...(result.branchProtection !== null && { branchProtection: result.branchProtection }),
     ...(result.mergeRequirements && { mergeRequirements: result.mergeRequirements }),
     ...(result.mergeQueue && { mergeQueue: result.mergeQueue }),

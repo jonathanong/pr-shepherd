@@ -29,6 +29,18 @@ export function formatFixCodeResult(
   const topCap = verbose ? undefined : BODY_TRUNCATE_MAX_CHARS;
   const sections: string[] = [header];
 
+  if (result.mergedBasePullRequests?.length) {
+    sections.push("## Merged PRs matching the current base");
+    sections.push(
+      result.mergedBasePullRequests
+        .map(
+          (pr) =>
+            `- [#${pr.number}](${pr.url}) · state \`${pr.state}\` · head \`${pr.headRefName}\` at \`${pr.headRefOid}\` · base \`${pr.baseRefName}\` · mergedAt \`${pr.mergedAt}\` · headRepository \`${pr.headRepository.nameWithOwner}\``,
+        )
+        .join("\n"),
+    );
+  }
+
   const renderThreads = (heading: string, threads: typeof result.fix.threads): void => {
     if (threads.length === 0) return;
     sections.push(heading);

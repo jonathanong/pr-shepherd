@@ -27,6 +27,7 @@ import {
 import { buildReleasedBlockerInstruction } from "./check-instructions.mts";
 import { buildNativeStackLayerRebase } from "./native-stack-rebase.mts";
 import { lookupUpperLayerTrunkConflict } from "./stack-trunk-conflict.mts";
+import { lookupMergedBasePullRequests } from "./merged-base-pull-requests.mts";
 import {
   conflictingHeadCiNote,
   countReportedChecks,
@@ -453,6 +454,15 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const firstLookComments = report.comments.firstLook;
   const stack = report.mergeStatus.mergeRequirements?.stack;
   const headRef = report.headSha;
+  const mergedBasePullRequests =
+    hasConflicts && !stack && report.baseRefOid
+      ? await lookupMergedBasePullRequests({
+          owner: repoOwner,
+          repo: repoName,
+          baseRefName: baseLookup.branch,
+          baseRefOid: report.baseRefOid,
+        })
+      : [];
   // Only an upper layer can be dirty against trunk while already containing its parent.
   const trunkConflict =
     hasConflicts && stack && headRef && baseLookup.branch !== stack.baseRefName
@@ -522,6 +532,11 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   if (repairInstructions && repairInstructions.length > 0) {
     instructions.unshift(...repairInstructions);
   }
+  if (mergedBasePullRequests.length > 0) {
+    instructions.unshift(
+      `Inspect every PR under \`## Merged PRs matching the current base\`. If this PR is the remaining layer intended for a merged parent's base branch, run \`gh pr edit ${prReference} --base <verified-parent-base>\` after replacing \`<verified-parent-base>\` with that parent's shell-quoted base branch, then rerun Shepherd immediately and follow its fresh instructions instead of the remaining steps here. Otherwise keep the current base and follow the remaining conflict-resolution steps.`,
+    );
+  }
   const checkRunCount = countReportedChecks(report.checks);
   const suitesEmpty = report.headCheckSuitesEmpty === true;
   const nowMs = Date.now();
@@ -546,6 +561,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const prospectiveResult = {
     ...base,
     baseBranch: baseLookup.branch,
+    ...(mergedBasePullRequests.length > 0 && { mergedBasePullRequests }),
     ...(trunkConflict && { stackTrunkConflict: trunkConflict.trunk }),
     action: "fix_code" as const,
     fix: {
