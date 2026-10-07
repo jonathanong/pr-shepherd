@@ -541,8 +541,8 @@ Required checks that never reported:
 - A non-stack PR loads `baseRef.compare(headRef).behindBy` against the head commit OID when those contexts are missing, including when `mergeStateStatus` is `BLOCKED`.
 - If that compare, the trunk compare, or derived merge status is `BEHIND`, the instruction states the commit count and says to rebase and push. On a native stack that is `gh stack rebase` then `gh stack push`. Otherwise rebase onto the PR base. That push is how the missing checks start.
 - If the push does not start them, investigate. Do not close and reopen first.
-- Once the branch is current, Shepherd runs `gh pr close <pr> -R <repo>` and `gh pr reopen <pr> -R <repo>` once for that head.
-- The next tick on that same head, still missing those contexts with nothing running, is `ESCALATE` / `required-checks-unreported`.
+- Once the branch is current, Shepherd instructs the caller to run `gh pr close <pr> -R <repo>` and `gh pr reopen <pr> -R <repo>` once for that head. The marker records that the instruction was returned; it does not verify the caller ran it.
+- Internal poll debounce preview ticks do not consume this one reopen instruction. The next presented tick on that same head, still missing those contexts with nothing running, is `ESCALATE` / `required-checks-unreported`.
 - A branch that is still behind stays on `FIX_CODE` and does not write the retrigger marker.
 - Failing checks and merge conflicts keep their existing paths.
 - Text prints `**unreported required**`, `**behind**` when the PR base compare is behind, and `**trunk behind**` when the trunk compare is behind.

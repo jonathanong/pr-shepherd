@@ -113,6 +113,11 @@ vi.mock("../../src/state/fix-attempts.mts", () => ({
   readFixAttempts: vi.fn().mockResolvedValue(null),
   writeFixAttempts: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("../../src/state/ci-retrigger.mts", async (importOriginal) => ({
+  ...(await importOriginal()),
+  readCiRetrigger: vi.fn().mockResolvedValue(null),
+  writeCiRetrigger: vi.fn().mockResolvedValue(undefined),
+}));
 
 // ---------------------------------------------------------------------------
 // Imports (after mocks)
@@ -196,6 +201,10 @@ export interface Fixture {
   repository?: { owner: string; name: string };
   /** Raw merged-base lookup rows for a conflicting PR with no native stack. */
   mergedBasePullRequests?: unknown[];
+  /** Parsed head check-suite rows; a queued third-party suite has workflowRun:null. */
+  headWorkflowSuites?: unknown[];
+  /** Commits on the PR base that the head does not contain for the GraphQL compare. */
+  baseBehindBy?: number;
   /** Exact local acknowledgment of an unrelated native-stack queue failure. */
   queueRemovalAcknowledgment?: {
     headSha: string;
@@ -374,7 +383,11 @@ function graphqlForBatch(
   query: string,
   variables: { anchor?: number },
   batchData: Record<string, any>,
+  baseBehindBy: number,
 ) {
+  if (query.includes("query BaseBehind")) {
+    return { data: { repository: { ref: { compare: { behindBy: baseBehindBy } } } } };
+  }
   if (query.includes("query RefRules")) {
     return {
       data: {
@@ -459,7 +472,7 @@ export function applyFixture(fixture: Fixture): void {
     ? { ...DEFAULT_BATCH, ...fixture.batchData }
     : { ...DEFAULT_BATCH };
   mockGraphqlWithRateLimit.mockImplementation((query: string, variables: { anchor?: number }) =>
-    Promise.resolve(graphqlForBatch(query, variables, batchData)),
+    Promise.resolve(graphqlForBatch(query, variables, batchData, fixture.baseBehindBy ?? 0)),
   );
   mockGraphql.mockResolvedValue({
     data: {
@@ -496,6 +509,7 @@ export function applyFixture(fixture: Fixture): void {
   }
   mockFetchPrBatch.mockResolvedValue({
     data: batchData,
+    headWorkflowSuites: fixture.headWorkflowSuites ?? [],
     fingerprint: testFingerprint({
       headRefOid: typeof batchData.headRefOid === "string" ? batchData.headRefOid : "abc123",
     }),

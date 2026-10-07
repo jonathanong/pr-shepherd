@@ -193,6 +193,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     stateKey: stallKey,
     headSha,
     otherAutonomousWork: hasActionableWork || staleAncestry !== null,
+    persistState: opts.persistSeen !== false,
   });
   if (unreportedPlan.escalate) return unreportedPlan.escalate;
   const unreportedRepair = unreportedPlan.repairInstructions ?? [];

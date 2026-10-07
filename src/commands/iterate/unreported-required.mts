@@ -70,6 +70,8 @@ export async function planUnreportedRequired(input: {
   stateKey: { owner: string; repo: string; pr: number };
   headSha: string;
   otherAutonomousWork: boolean;
+  /** Internal preview ticks must not consume the one-time reopen opportunity. */
+  persistState?: boolean;
 }): Promise<UnreportedPlan> {
   const names = input.report.unreportedRequiredChecks ?? [];
   const actionsRunning =
@@ -103,7 +105,7 @@ export async function planUnreportedRequired(input: {
     trunk: (input.report.trunkBehindBy ?? 0) > 0,
     ...(rebase && { stackRebase: rebase }),
   });
-  if (decision === "reopen") {
+  if (decision === "reopen" && input.persistState !== false) {
     await writeCiRetrigger(input.stateKey, { headSha: input.headSha, contexts: names });
   }
   return { repairInstructions: instructions };

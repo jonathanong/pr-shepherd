@@ -1,8 +1,10 @@
 /**
- * One close/reopen of a head that was missing required checks.
+ * One presented close/reopen instruction for a head that was missing required checks.
  *
  * `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/ci-retrigger.json`
- * Reopening does not change the head SHA, so the next tick must not close the PR again.
+ * This records that Shepherd returned the instruction, not that the caller executed it.
+ * Reopening does not change the head SHA, so the next presented tick must not offer it again.
+ * Internal debounce preview ticks do not write this marker.
  */
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -23,7 +25,7 @@ export async function readCiRetrigger(key: {
   return readRetrigger(resolvePrStatePath(key, "ci-retrigger.json"));
 }
 
-/** Remember that this head was already closed and reopened for these contexts. */
+/** Remember that the one close/reopen instruction was returned for this head and context set. */
 export async function writeCiRetrigger(
   key: { owner: string; repo: string; pr: number },
   record: Retrigger,
@@ -37,7 +39,7 @@ export async function writeCiRetrigger(
   await writeFile(path, JSON.stringify(next));
 }
 
-/** True when this head was already retriggered for the same required contexts. */
+/** True when the one close/reopen instruction was already returned for this head and contexts. */
 export function sameCiRetrigger(
   record: Retrigger | undefined,
   headSha: string,
