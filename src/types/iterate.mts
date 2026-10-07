@@ -14,6 +14,7 @@ import type { ActiveCheck, PrActivitySummary } from "./activity.mts";
 import type {
   BranchProtection,
   MergeStateStatus,
+  MergedBasePullRequest,
   Review,
   ReviewDecision,
   ReviewThread,
@@ -65,6 +66,8 @@ export interface IterateResultBase {
    * PR base, so the dirty state is against the stack trunk rather than that base.
    */
   stackTrunkConflict?: string;
+  /** Merged PRs whose exact head commit and repository match this conflicting PR's base. */
+  mergedBasePullRequests?: MergedBasePullRequest[];
   /** Null when no classic protection rule exists or the base ref is unavailable. */
   branchProtection: BranchProtection | null;
   mergeRequirements?: MergeRequirements;

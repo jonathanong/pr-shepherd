@@ -1,0 +1,45 @@
+{
+  "description": "After #2099 was retargeted from merged #2095's old branch to main, GitHub reports MERGEABLE/BLOCKED on unchanged head b9ddec6. The branch contains main (base behindBy 0). The seven required main-rule contexts have no runs; the only queued suite has no workflowRun and must not count as an Actions workflow in progress. Shepherd should print one close/reopen pair for this head, then rerun, without a rebase or push.",
+  "repository": { "owner": "vouchington", "name": "vouchington" },
+  "batchData": {
+    "number": 2099,
+    "mergeable": "MERGEABLE",
+    "mergeStateStatus": "BLOCKED",
+    "baseRefName": "main",
+    "baseRefOid": "1d21e91225cf647c65920b116bba9b85a3077d59",
+    "headRefName": "knip-exports-direct-zero",
+    "headRefOid": "b9ddec6445057649f5ccabe0e2dce51ba7d00c46",
+    "stack": null,
+    "checks": [],
+    "branchRules": {
+      "requiredApprovingReviewCount": 0,
+      "requiresConversationResolution": false,
+      "requiresCodeOwnerReviews": false,
+      "requiresLastPushApproval": false,
+      "requiresCommitSignatures": false,
+      "requiresLinearHistory": true,
+      "requiresStrictStatusChecks": false,
+      "requiredStatusCheckContexts": [
+        "static",
+        "backend",
+        "web",
+        "cloudflare-worker",
+        "lambdas",
+        "tooling",
+        "gitleaks"
+      ],
+      "requiredDeploymentEnvironments": [],
+      "requiresMergeQueue": true,
+      "requiresWorkflows": false,
+      "requiresCodeScanning": false
+    }
+  },
+  "headWorkflowSuites": [{ "status": "QUEUED", "conclusion": null, "workflowRun": null }],
+  "baseBehindBy": 0,
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

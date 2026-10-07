@@ -66,6 +66,9 @@ export const POLL_STACK_TOPOLOGY_QUERY = gql("poll-stack-topology.gql");
  */
 export const UPPER_LAYER_CONFLICT_TARGET_QUERY = gql("upper-layer-conflict-target.gql");
 
+/** Merged PRs whose head may be the stale base of a non-stack conflict. */
+export const MERGED_BASE_PULL_REQUESTS_QUERY = gql("merged-base-pull-requests.gql");
+
 /** PR head fields plus a single review thread for `commit-suggestion`. */
 export const SUGGESTION_THREADS_QUERY = gql("suggestion-threads.gql");
 

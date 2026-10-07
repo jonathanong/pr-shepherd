@@ -541,8 +541,8 @@ Required checks that never reported:
 - A non-stack PR loads `baseRef.compare(headRef).behindBy` against the head commit OID when those contexts are missing, including when `mergeStateStatus` is `BLOCKED`.
 - If that compare, the trunk compare, or derived merge status is `BEHIND`, the instruction states the commit count and says to rebase and push. On a native stack that is `gh stack rebase` then `gh stack push`. Otherwise rebase onto the PR base. That push is how the missing checks start.
 - If the push does not start them, investigate. Do not close and reopen first.
-- Once the branch is current, Shepherd runs `gh pr close <pr> -R <repo>` and `gh pr reopen <pr> -R <repo>` once for that head.
-- The next tick on that same head, still missing those contexts with nothing running, is `ESCALATE` / `required-checks-unreported`.
+- Once the branch is current, Shepherd instructs the caller to run `gh pr close <pr> -R <repo>` and `gh pr reopen <pr> -R <repo>` once for that head. The marker records that the instruction was returned; it does not verify the caller ran it.
+- Internal poll debounce preview ticks do not consume this one reopen instruction. The next presented tick on that same head, still missing those contexts with nothing running, is `ESCALATE` / `required-checks-unreported`.
 - A branch that is still behind stays on `FIX_CODE` and does not write the retrigger marker.
 - Failing checks and merge conflicts keep their existing paths.
 - Text prints `**unreported required**`, `**behind**` when the PR base compare is behind, and `**trunk behind**` when the trunk compare is behind.
@@ -592,6 +592,7 @@ Conversations Resolved: No [Not Required]
 - Push access to the PR head is a usage precondition. Do not start pr-shepherd when the caller cannot push.
 - `viewerCanEditFiles` and `headRepositoryPermission` stay raw context. They do not gate `[FIX_CODE]`, hide review mutations, or create a hand-off.
 - Conflict and code-change ticks say to commit, push, finish SHA-gated review mutations, and iterate.
+- For a non-stack conflict, Shepherd may show `## Merged PRs matching the current base` when a lookup of the 20 most recently updated merged PRs with the current base's branch name finds rows whose exact head OID and head repository match this PR's recorded base. JSON exposes the same raw rows as `mergedBasePullRequests` (number, URL, state, head branch and OID, base branch, merge time, and head repository). The first instruction asks the caller to verify whether this is the remaining layer intended for that merged parent's base. If so, change the PR base with `gh pr edit` and rerun Shepherd immediately, following the fresh result; otherwise follow the remaining conflict-resolution steps. A failed non-rate-limit lookup leaves the ordinary conflict route in place, while rate limits propagate for retry.
 - `[FIX_CODE]` is always non-terminal. Only `[ESCALATE]` hands work to a human.
 - `$HEAD_SHA` and `$DISMISS_MESSAGE` substitution stays in the CLI when `resolveCommand.requiresHeadSha` or `requiresDismissMessage` is set. The printed command is invalid without it.
 - Shepherd recognizes its own reply only when the latest comment begins `<!-- pr-shepherd -->`. Author equality is not enough.

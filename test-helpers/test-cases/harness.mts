@@ -59,13 +59,15 @@ vi.mock("../../src/state/pr-fingerprint.mts", () => ({
   storePrFingerprint: vi.fn().mockResolvedValue(undefined),
   fingerprintInputDigest: vi.fn().mockReturnValue("digest"),
 }));
-const { mockGraphqlWithRateLimit } = vi.hoisted(() => ({
+const { mockGraphqlWithRateLimit, mockGraphql } = vi.hoisted(() => ({
   mockGraphqlWithRateLimit: vi.fn(),
+  mockGraphql: vi.fn(),
 }));
 vi.mock("../../src/github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
   getCurrentPrNumber: vi.fn().mockResolvedValue(42),
   getMergeableState: vi.fn(),
+  graphql: mockGraphql,
   graphqlWithRateLimit: mockGraphqlWithRateLimit,
 }));
 vi.mock("../../src/checks/triage.mts", () => ({
@@ -111,6 +113,11 @@ vi.mock("../../src/state/fix-attempts.mts", () => ({
   readFixAttempts: vi.fn().mockResolvedValue(null),
   writeFixAttempts: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("../../src/state/ci-retrigger.mts", async (importOriginal) => ({
+  ...(await importOriginal()),
+  readCiRetrigger: vi.fn().mockResolvedValue(null),
+  writeCiRetrigger: vi.fn().mockResolvedValue(undefined),
+}));
 
 // ---------------------------------------------------------------------------
 // Imports (after mocks)
@@ -119,7 +126,7 @@ vi.mock("../../src/state/fix-attempts.mts", () => ({
 import { main } from "../../src/cli-parser.mts";
 import { fetchPrBatch } from "../../src/github/batch.mts";
 import { fetchPollSummary } from "../../src/github/poll-summary.mts";
-import { getMergeableState } from "../../src/github/client.mts";
+import { getMergeableState, getRepoInfo } from "../../src/github/client.mts";
 import { triageFailingChecks, fetchStartupFailureChecks } from "../../src/checks/triage.mts";
 import { fetchCheckRunAnnotationsBatch } from "../../src/github/check-annotations-batch.mts";
 import { autoResolveOutdated } from "../../src/comments/resolve.mts";
@@ -136,6 +143,7 @@ import { readFixAttempts, writeFixAttempts } from "../../src/state/fix-attempts.
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockFetchPollSummary = vi.mocked(fetchPollSummary);
 const mockGetMergeableState = vi.mocked(getMergeableState);
+const mockGetRepoInfo = vi.mocked(getRepoInfo);
 const mockTriageFailingChecks = vi.mocked(triageFailingChecks);
 const mockFetchStartupFailureChecks = vi.mocked(fetchStartupFailureChecks);
 const mockFetchCheckRunAnnotationsBatch = vi.mocked(fetchCheckRunAnnotationsBatch);
@@ -189,6 +197,14 @@ function rawSummaryForBatch(batchData: Record<string, any>): any {
 // ---------------------------------------------------------------------------
 
 export interface Fixture {
+  /** GitHub repository for this fixture. Defaults to owner/repo. */
+  repository?: { owner: string; name: string };
+  /** Raw merged-base lookup rows for a conflicting PR with no native stack. */
+  mergedBasePullRequests?: unknown[];
+  /** Parsed head check-suite rows; a queued third-party suite has workflowRun:null. */
+  headWorkflowSuites?: unknown[];
+  /** Commits on the PR base that the head does not contain for the GraphQL compare. */
+  baseBehindBy?: number;
   /** Exact local acknowledgment of an unrelated native-stack queue failure. */
   queueRemovalAcknowledgment?: {
     headSha: string;
@@ -367,7 +383,11 @@ function graphqlForBatch(
   query: string,
   variables: { anchor?: number },
   batchData: Record<string, any>,
+  baseBehindBy: number,
 ) {
+  if (query.includes("query BaseBehind")) {
+    return { data: { repository: { ref: { compare: { behindBy: baseBehindBy } } } } };
+  }
   if (query.includes("query RefRules")) {
     return {
       data: {
@@ -430,6 +450,7 @@ function graphqlForBatch(
 }
 
 export function applyFixture(fixture: Fixture): void {
+  mockGetRepoInfo.mockResolvedValue(fixture.repository ?? { owner: "owner", name: "repo" });
   vi.mocked(readQueueRemovalAcknowledgment).mockResolvedValue(
     fixture.queueRemovalAcknowledgment ?? null,
   );
@@ -451,8 +472,13 @@ export function applyFixture(fixture: Fixture): void {
     ? { ...DEFAULT_BATCH, ...fixture.batchData }
     : { ...DEFAULT_BATCH };
   mockGraphqlWithRateLimit.mockImplementation((query: string, variables: { anchor?: number }) =>
-    Promise.resolve(graphqlForBatch(query, variables, batchData)),
+    Promise.resolve(graphqlForBatch(query, variables, batchData, fixture.baseBehindBy ?? 0)),
   );
+  mockGraphql.mockResolvedValue({
+    data: {
+      repository: { pullRequests: { nodes: fixture.mergedBasePullRequests ?? [] } },
+    },
+  });
   const annotationCheckIds = new Set(Object.keys(fixture.checkAnnotationsByCheckId ?? {}));
   if (Array.isArray(batchData.reviewThreads)) {
     batchData.reviewThreads = batchData.reviewThreads.map((thread) => ({
@@ -483,6 +509,7 @@ export function applyFixture(fixture: Fixture): void {
   }
   mockFetchPrBatch.mockResolvedValue({
     data: batchData,
+    headWorkflowSuites: fixture.headWorkflowSuites ?? [],
     fingerprint: testFingerprint({
       headRefOid: typeof batchData.headRefOid === "string" ? batchData.headRefOid : "abc123",
     }),
@@ -596,10 +623,11 @@ async function runMain(args: string[]): Promise<{ out: string; exitCode: number 
 }
 
 export async function captureRun(fixture: Fixture): Promise<RunResult> {
+  const pr = String(fixture.batchData?.number ?? 42);
   const args =
     fixture.mode === "aggregate"
       ? (fixture.args ?? ["42", "43", "--timeout", "0s"])
-      : ["iterate", "42", ...(fixture.args ?? [])];
+      : ["iterate", pr, ...(fixture.args ?? [])];
   const { out: textOut, exitCode } = await runMain(args);
   const { out: jsonOut, exitCode: jsonExitCode } = await runMain([...args, "--format=json"]);
   return { textOut, jsonOut, exitCode, jsonExitCode };

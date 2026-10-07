@@ -84,4 +84,40 @@ describe("planUnreportedRequired behind a BLOCKED base", () => {
     expect(text).toContain("Rebase onto `main` and push.");
     expect(text).not.toContain("gh pr close");
   });
+
+  it("does not consume the one reopen during an internal preview tick", async () => {
+    const current = blocked(undefined, "BLOCKED");
+    const preview = await planUnreportedRequired({
+      report: current,
+      base,
+      stateKey,
+      headSha,
+      otherAutonomousWork: false,
+      persistState: false,
+    });
+    expect(preview.repairInstructions?.join("\n")).toContain("gh pr close 622 -R acme/widgets");
+
+    const firstPresented = await planUnreportedRequired({
+      report: current,
+      base,
+      stateKey,
+      headSha,
+      otherAutonomousWork: false,
+      persistState: true,
+    });
+    expect(firstPresented.repairInstructions?.join("\n")).toContain(
+      "gh pr close 622 -R acme/widgets",
+    );
+
+    const nextPresented = await planUnreportedRequired({
+      report: current,
+      base,
+      stateKey,
+      headSha,
+      otherAutonomousWork: false,
+      persistState: true,
+    });
+    expect(nextPresented.repairInstructions).toBeUndefined();
+    expect(nextPresented.escalate?.action).toBe("escalate");
+  });
 });
