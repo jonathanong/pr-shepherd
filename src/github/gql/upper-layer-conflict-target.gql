@@ -16,21 +16,6 @@ query UpperLayerConflictTarget($owner: String!, $name: String!, $number: Int!, $
           behindBy
         }
       }
-      stack {
-        entries(first: 100) {
-          pageInfo {
-            hasNextPage
-          }
-          nodes {
-            position
-            pullRequest {
-              number
-              state
-              baseRefName
-            }
-          }
-        }
-      }
     }
   }
 }

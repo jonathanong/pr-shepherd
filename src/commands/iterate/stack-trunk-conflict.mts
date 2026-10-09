@@ -1,45 +1,21 @@
 import { graphql } from "../../github/client.mts";
+import { readStackTopology } from "../../github/stack-read.mts";
 import { UPPER_LAYER_CONFLICT_TARGET_QUERY } from "../../github/queries.mts";
 import { pollRateLimitRetryAfterMs } from "../poll-quota.mts";
 
-/** An upper layer already contains its parent, so the dirty state is against trunk. */
+/** A bottom open layer, or an upper layer that already contains its parent, updates from trunk. */
 export interface UpperLayerTrunkConflict {
   trunk: string;
-  /** Open layer whose PR base is the trunk. Omitted when that layer is not on this page. */
+  /** First open layer in validated stack order. Omitted when topology is unavailable. */
   bottomPr?: number;
-}
-
-interface StackEntryNode {
-  position: number;
-  pullRequest: { number: number; state: string; baseRefName: string } | null;
 }
 
 interface ConflictTargetData {
   repository: {
     pullRequest: {
       baseRef: { compare: { behindBy: number } | null } | null;
-      stack: {
-        entries: {
-          pageInfo: { hasNextPage: boolean };
-          nodes: Array<StackEntryNode | null>;
-        };
-      } | null;
     } | null;
   } | null;
-}
-
-/** Lowest-position open layer whose base is the stack trunk, if this page contains one. */
-function selectBottomOpenLayer(
-  nodes: ReadonlyArray<StackEntryNode | null>,
-  trunk: string,
-): number | undefined {
-  const onTrunk = nodes.flatMap((node) => {
-    const pull = node?.pullRequest;
-    if (!node || !pull || pull.state !== "OPEN" || pull.baseRefName !== trunk) return [];
-    return [{ position: node.position, number: pull.number }];
-  });
-  onTrunk.sort((a, b) => a.position - b.position);
-  return onTrunk[0]?.number;
 }
 
 export async function lookupUpperLayerTrunkConflict(input: {
@@ -48,7 +24,24 @@ export async function lookupUpperLayerTrunkConflict(input: {
   pr: number;
   headRef: string;
   trunk: string;
+  /** Reuse the bottom layer already resolved for the report, avoiding a topology fetch. */
+  bottomPr?: number;
 }): Promise<UpperLayerTrunkConflict | undefined> {
+  let bottomPr = input.bottomPr;
+  if (bottomPr === undefined) {
+    try {
+      const topology = await readStackTopology(input.pr, { owner: input.owner, name: input.name });
+      bottomPr = topology.ordered.find((pull) => pull.state === "OPEN")?.number;
+      if (bottomPr === undefined) ignore(input.pr, "bottom open layer not found");
+    } catch (err) {
+      if (pollRateLimitRetryAfterMs(err) !== null) throw err;
+      ignore(input.pr, err instanceof Error ? err.message : String(err));
+    }
+  }
+  // Merged lower layers need not cause GitHub to retarget this PR to trunk. Even when its
+  // head is behind that old parent branch, the first open layer rebases the stack onto trunk.
+  if (bottomPr === input.pr) return { trunk: input.trunk, bottomPr };
+
   let data: ConflictTargetData;
   try {
     ({ data } = await graphql<ConflictTargetData>(UPPER_LAYER_CONFLICT_TARGET_QUERY, {
@@ -70,16 +63,6 @@ export async function lookupUpperLayerTrunkConflict(input: {
   }
   // behindBy > 0: the layer is still behind its parent. Keep the parent rebase.
   if (behindBy !== 0) return undefined;
-  const entries = pull.stack?.entries;
-  const bottomPr = entries ? selectBottomOpenLayer(entries.nodes, input.trunk) : undefined;
-  if (bottomPr === undefined) {
-    ignore(
-      input.pr,
-      entries?.pageInfo.hasNextPage
-        ? "stack entry page truncated before the trunk layer"
-        : "bottom open layer not found",
-    );
-  }
   return { trunk: input.trunk, ...(bottomPr !== undefined && { bottomPr }) };
 }
 

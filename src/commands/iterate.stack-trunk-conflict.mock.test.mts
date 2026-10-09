@@ -51,6 +51,63 @@ function conflictingReport(headSha?: string) {
 }
 
 describe("runIterate — upper layer trunk conflict", () => {
+  it("updates the lowest open layer from trunk while its base still names a merged parent", async () => {
+    mockFetchPollSummary.mockResolvedValue({ prs: [] });
+    // The comparison lookup would keep a parent route when behind it. Validated bottom
+    // membership takes precedence, so the handler must not make that lookup at all.
+    mockLookupTrunkConflict.mockResolvedValue(undefined);
+    const report = conflictingReport();
+    report.pr = 2547;
+    report.baseBranch = "merged-parent";
+    report.baseRefOid = "merged-parent-sha";
+    report.stackBottomPr = 2547;
+    report.mergeStatus.mergeRequirements!.stack = {
+      number: 2535,
+      size: 6,
+      position: 3,
+      baseRefName: "main",
+    };
+    mockRunCheck.mockResolvedValue(report);
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts({ prNumber: 2547 }));
+    expect(result.action).toBe("fix_code");
+    expect(mockLookupTrunkConflict).not.toHaveBeenCalled();
+    if (result.action !== "fix_code") return;
+    const instructions = result.fix.instructions.join("\n");
+    expect(instructions).toContain("gh stack checkout 2535");
+    expect(instructions).toContain(
+      "check out the head branch of PR #2547 and run `gh stack rebase`.",
+    );
+    expect(instructions).toContain("gh stack push");
+    expect(instructions).not.toContain("--no-trunk");
+    expect(instructions).not.toContain("gh pr edit");
+    expect(result.mergedBasePullRequests).toBeUndefined();
+    expect(result.stackTrunkConflict).toBe("main");
+  });
+
+  it("passes the already resolved bottom to a true upper layer's conflict lookup", async () => {
+    mockFetchPollSummary.mockResolvedValue({ prs: [] });
+    mockLookupTrunkConflict.mockResolvedValue(undefined);
+    const report = conflictingReport("b".repeat(40));
+    report.stackBottomPr = 11;
+    mockRunCheck.mockResolvedValue(report);
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+    const result = await runIterate(makeOpts());
+    expect(mockLookupTrunkConflict).toHaveBeenCalledWith(expect.objectContaining({ bottomPr: 11 }));
+    expect(result.action).toBe("fix_code");
+    if (result.action !== "fix_code") return;
+    expect(result.fix.instructions.join("\n")).toContain("gh stack rebase --upstack --no-trunk");
+  });
+
   it("rebases onto trunk when the upper layer already contains its parent", async () => {
     mockFetchPollSummary.mockResolvedValue({ prs: [] });
     mockLookupTrunkConflict.mockResolvedValue({ trunk: "main", bottomPr: 11 });

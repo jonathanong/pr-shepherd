@@ -26,7 +26,57 @@ describe("loadMergeTargetStatus", () => {
     topology.mockReset();
   });
 
-  it("fails when the stack has no open layer based on the trunk", async () => {
+  it.each([2547, 2569, 2627, 2629])(
+    "loads trunk rules for PR #%i while the lowest open layer retains its merged parent's base",
+    async (pr) => {
+      const members = [
+        [2509, "MERGED", "main", "hashtags"],
+        [2534, "MERGED", "main", "hostname-flags"],
+        [2547, "OPEN", "hostname-flags", "dispatcher"],
+        [2569, "OPEN", "dispatcher", "bloom"],
+        [2627, "OPEN", "bloom", "registry"],
+        [2629, "OPEN", "registry", "projection"],
+      ] as const;
+      topology.mockResolvedValue({
+        ordered: members.map(([number, state, baseRefName, headRefName]) => ({
+          number,
+          state,
+          baseRefName,
+          headRefName,
+          headRefOid: `${number}`.padStart(40, "0"),
+          baseRefOid: "a".repeat(40),
+        })),
+      } as Awaited<ReturnType<typeof readStackTopology>>);
+      graphql.mockResolvedValue({
+        data: {
+          repository: {
+            ref: {
+              branchProtectionRule: {
+                requiresStatusChecks: true,
+                requiredStatusCheckContexts: ["required-on-main"],
+              },
+              compare: { behindBy: 13 },
+            },
+          },
+        },
+      } as Awaited<ReturnType<typeof graphqlWithRateLimit>>);
+
+      await expect(loadMergeTargetStatus({ ...input, pr })).resolves.toEqual({
+        contexts: ["required-on-main"],
+        trunkBehindBy: 13,
+        stackBottomPr: 2547,
+      });
+      expect(graphql).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          qualifiedName: "refs/heads/main",
+          headRef: "2547".padStart(40, "0"),
+        }),
+      );
+    },
+  );
+
+  it("fails when the stack has no open layer", async () => {
     topology.mockResolvedValue({
       ordered: [
         {
@@ -41,7 +91,7 @@ describe("loadMergeTargetStatus", () => {
     } as Awaited<ReturnType<typeof readStackTopology>>);
 
     await expect(loadMergeTargetStatus(input)).rejects.toThrow(
-      "Native stack for PR #622 has no open layer based on main",
+      "Native stack for PR #622 has no open layer",
     );
     expect(graphql).not.toHaveBeenCalled();
   });

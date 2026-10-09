@@ -10,6 +10,7 @@ import { summarizePollSummaryPr } from "./poll-summary-projector.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 
 beforeEach(() => {
+  vi.clearAllMocks();
   mockLoadConfig.mockReturnValue({
     cliCommand: ["pr-shepherd"],
     botUsernames: [],

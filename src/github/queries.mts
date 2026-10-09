@@ -61,8 +61,8 @@ export const POLL_STACK_SUMMARY_QUERY = `${POLL_SUMMARY_FRAGMENT}\n${gql("poll-s
 export const POLL_STACK_TOPOLOGY_QUERY = gql("poll-stack-topology.gql");
 
 /**
- * Whether a conflicting upper stack layer already contains its PR base, plus
- * the open stack entries needed to name the bottom layer. Not part of BatchPr.
+ * Whether a conflicting upper stack layer already contains its PR base.
+ * Bottom-layer identity comes from the validated stack topology. Not part of BatchPr.
  */
 export const UPPER_LAYER_CONFLICT_TARGET_QUERY = gql("upper-layer-conflict-target.gql");
 

@@ -37,9 +37,9 @@ describe("native stack rebase instructions", () => {
     expect(rebase).not.toContain("PR #42");
   });
 
-  it("names the trunk when the bottom open layer is not on the fetched page", () => {
+  it("names the trunk when the bottom open layer cannot be determined", () => {
     expect(buildNativeStackRebaseInstruction("acme/widgets", 7, { trunk: "main" })).toContain(
-      "Then check out the bottom open layer whose base is `main` and run `gh stack rebase`.",
+      "Then check out the bottom open layer of the stack to rebase onto `main` and run `gh stack rebase`.",
     );
     const rebase = buildNativeStackLayerRebase("acme/widgets", upperPr, upperLayer, {
       trunk: "main",
@@ -51,6 +51,31 @@ describe("native stack rebase instructions", () => {
     expect(buildNativeStackRebaseInstruction("acme/widgets", 7, { bottomPr: 9 })).toBe(
       `${prepare} Then check out the head branch of PR #9 and run \`gh stack rebase\`. ${playbook}`,
     );
+  });
+
+  it("rebases the lowest open layer after two merged layers even while it retains its parent's base", () => {
+    const rebase = buildNativeStackLayerRebase(
+      "acme/widgets",
+      { number: 2547, baseBranch: "merged-parent" },
+      { number: 2535, size: 6, position: 3, baseRefName: "main" },
+      undefined,
+      2547,
+    );
+    expect(rebase).toContain("check out the head branch of PR #2547 and run `gh stack rebase`.");
+    expect(rebase).not.toContain("--no-trunk");
+    expect(rebase).not.toContain("merged-parent");
+  });
+
+  it("keeps a true upper layer on its parent when the lowest open layer is known", () => {
+    const rebase = buildNativeStackLayerRebase(
+      "acme/widgets",
+      { number: 2548, baseBranch: "first-open-parent" },
+      { number: 2535, size: 6, position: 4, baseRefName: "main" },
+      undefined,
+      2547,
+    );
+    expect(rebase).toContain("check out the parent stack branch `first-open-parent`");
+    expect(rebase).toContain("gh stack rebase --upstack --no-trunk");
   });
 
   it("imports the layer's stack by stack number, not PR number", () => {

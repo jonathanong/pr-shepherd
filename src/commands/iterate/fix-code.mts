@@ -463,17 +463,21 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
           baseRefOid: report.baseRefOid,
         })
       : [];
-  // Only an upper layer can be dirty against trunk while already containing its parent.
+  // A bottom open layer can still retain its merged parent's PR base. Its update starts
+  // at trunk regardless of that base comparison; true upper layers first check the parent.
   const trunkConflict =
-    hasConflicts && stack && headRef && baseLookup.branch !== stack.baseRefName
-      ? await lookupUpperLayerTrunkConflict({
-          owner: repoOwner,
-          name: repoName,
-          pr: prNumber,
-          headRef,
-          trunk: stack.baseRefName,
-        })
-      : undefined;
+    hasConflicts && stack && report.stackBottomPr === prNumber
+      ? { trunk: stack.baseRefName, bottomPr: prNumber }
+      : hasConflicts && stack && headRef && baseLookup.branch !== stack.baseRefName
+        ? await lookupUpperLayerTrunkConflict({
+            owner: repoOwner,
+            name: repoName,
+            pr: prNumber,
+            headRef,
+            trunk: stack.baseRefName,
+            bottomPr: report.stackBottomPr,
+          })
+        : undefined;
   const requeue = buildRemovedQueueRecovery(report, failingAgentChecks, opts.merge);
   const queueRemovalAcknowledgment = buildStackQueueRemovalAcknowledgment(
     report,
@@ -498,6 +502,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
           { number: prNumber, baseBranch: baseLookup.branch },
           stack,
           trunkConflict,
+          report.stackBottomPr,
         )
       : undefined;
   const instructions = buildFixInstructions(

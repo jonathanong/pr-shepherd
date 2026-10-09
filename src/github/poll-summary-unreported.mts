@@ -5,16 +5,29 @@ import {
   unreportedRequiredContexts,
 } from "../checks/unreported-required.mts";
 import { parseBranchRules } from "./batch-parsers-rules.mts";
+import type { RepoInfo } from "./client.mts";
+import { loadRefRules } from "./merge-target-rules.mts";
 import type { PollSummaryChecks } from "../types.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 
-/** Required contexts from the open layer whose base is the stack trunk. */
-export function trunkRequiredContexts(ordered: readonly RawSummaryPr[]): string[] | undefined {
+/** Current trunk rules may remain available on a merged layer's base ref. */
+export async function trunkRequiredContexts(
+  ordered: readonly RawSummaryPr[],
+  repo: RepoInfo,
+): Promise<string[] | undefined> {
   const trunk = ordered.find((pr) => pr.stack)?.stack?.baseRefName;
   if (!trunk) return undefined;
-  const bottom = ordered.find((pr) => pr.state === "OPEN" && pr.baseRefName === trunk);
+  const bottom = ordered.find((pr) => pr.state === "OPEN");
   if (!bottom) return undefined;
-  return parseBranchRules(bottom.baseRef).requiredStatusCheckContexts;
+  const trunkLayer = ordered.find((pr) => pr.baseRefName === trunk && pr.baseRef != null);
+  if (trunkLayer) return parseBranchRules(trunkLayer.baseRef).requiredStatusCheckContexts;
+  const loaded = await loadRefRules(
+    repo.owner,
+    repo.name,
+    `refs/heads/${trunk}`,
+    bottom.headRefOid,
+  );
+  return loaded.contexts;
 }
 
 /** Record missing required contexts. A running Actions workflow does not clear the names. */
