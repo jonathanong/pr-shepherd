@@ -201,6 +201,8 @@ export interface Fixture {
   repository?: { owner: string; name: string };
   /** Raw merged-base lookup rows for a conflicting PR with no native stack. */
   mergedBasePullRequests?: unknown[];
+  /** Raw native-stack entries, bottom-to-top, including merged parents and retained base refs. */
+  stackTopology?: unknown[];
   /** Parsed head check-suite rows; a queued third-party suite has workflowRun:null. */
   headWorkflowSuites?: unknown[];
   /** Commits on the PR base that the head does not contain for the GraphQL compare. */
@@ -384,6 +386,7 @@ function graphqlForBatch(
   variables: { anchor?: number },
   batchData: Record<string, any>,
   baseBehindBy: number,
+  stackTopology?: unknown[],
 ) {
   if (query.includes("query BaseBehind")) {
     return { data: { repository: { ref: { compare: { behindBy: baseBehindBy } } } } };
@@ -439,7 +442,7 @@ function graphqlForBatch(
             size: stack.size,
             baseRefName: stack.baseRefName,
             entries: {
-              nodes,
+              nodes: stackTopology ?? nodes,
               pageInfo: { hasNextPage: false, endCursor: null },
             },
           },
@@ -472,7 +475,15 @@ export function applyFixture(fixture: Fixture): void {
     ? { ...DEFAULT_BATCH, ...fixture.batchData }
     : { ...DEFAULT_BATCH };
   mockGraphqlWithRateLimit.mockImplementation((query: string, variables: { anchor?: number }) =>
-    Promise.resolve(graphqlForBatch(query, variables, batchData, fixture.baseBehindBy ?? 0)),
+    Promise.resolve(
+      graphqlForBatch(
+        query,
+        variables,
+        batchData,
+        fixture.baseBehindBy ?? 0,
+        fixture.stackTopology,
+      ),
+    ),
   );
   mockGraphql.mockResolvedValue({
     data: {

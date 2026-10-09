@@ -36,7 +36,7 @@ Layout:
 - `lib.mjs`: the framing, grader helpers and writer.
 - `cases/core.mjs`: cases 01–13.
 - `cases/stack.mjs`: cases 14–22 and 24.
-- `cases/recent.mjs`: cases 23, 25 and 26.
+- `cases/recent.mjs`: cases 23 and 25–28.
 
 Case numbers are stable. Add new cases at the end instead of renumbering.
 
@@ -78,6 +78,7 @@ third arm.
 | `25-multi-pr-cancel-is-per-pr`         | `03`    | One PR's `CANCEL` ends only its loop; keep shepherding #43     |
 | `26-conflicts-rebase-without-asking`   | `27`    | Conflicts under a rebase convention: lease-push, don't ask     |
 | `27-merged-parent-stale-base`          | `127`   | Retarget the merged parent's base before any obsolete-base fix |
+| `28-native-stack-merged-parent`        | `129`   | Rebase the lowest open native-stack layer onto trunk, preserving the stack |
 
 Presence of a specific token is graded by regex (`gh stack merge 511`).
 Absence of a behavior is graded by an LLM rubric: the framing asks the agent to

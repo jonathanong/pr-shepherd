@@ -1,0 +1,171 @@
+{
+  "mode": "aggregate",
+  "repository": {
+    "owner": "vouchington",
+    "name": "vouchington"
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "description": "All four open native-stack layers have READY receipts after the two lower layers merged. With --merge, the bottom open PR still targets its merged parent instead of main, so wait for GitHub retargeting and emit no stack merge command.",
+  "args": [
+    "--stack",
+    "https://github.com/vouchington/vouchington/pull/2547",
+    "--merge",
+    "--timeout",
+    "1s",
+    "--interval",
+    "2s"
+  ],
+  "expectedExitCode": 10,
+  "expectedNextAction": "wait",
+  "expectedReason": "timeout",
+  "aggregateSummary": {
+    "selection": {
+      "kind": "stack",
+      "anchor": 2547,
+      "stackNumber": 2535,
+      "stackSize": 6
+    },
+    "prs": [
+      {
+        "pr": 2509,
+        "repo": "vouchington/vouchington",
+        "title": "Hashtags bounds",
+        "url": "https://github.com/vouchington/vouchington/pull/2509",
+        "action": "cancel",
+        "reasons": [
+          "merged"
+        ],
+        "state": "MERGED",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "fix/1855-top-hashtags-bounds",
+        "headRefOid": "1111111111111111111111111111111111111111",
+        "baseRefName": "main",
+        "stack": {
+          "number": 2535,
+          "size": 6,
+          "position": 1,
+          "baseRefName": "main"
+        }
+      },
+      {
+        "pr": 2534,
+        "repo": "vouchington/vouchington",
+        "title": "Hostname flags NOT NULL",
+        "url": "https://github.com/vouchington/vouchington/pull/2534",
+        "action": "cancel",
+        "reasons": [
+          "merged"
+        ],
+        "state": "MERGED",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "fix/2429-hostname-flags-not-null",
+        "headRefOid": "2222222222222222222222222222222222222222",
+        "baseRefName": "main",
+        "stack": {
+          "number": 2535,
+          "size": 6,
+          "position": 2,
+          "baseRefName": "main"
+        }
+      },
+      {
+        "pr": 2547,
+        "repo": "vouchington/vouchington",
+        "title": "Hostname dispatcher",
+        "url": "https://github.com/vouchington/vouchington/pull/2547",
+        "action": "merge",
+        "reasons": [
+          "appears-ready"
+        ],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "fix/1855-crawl-hostnames-dispatcher",
+        "headRefOid": "3333333333333333333333333333333333333333",
+        "baseRefName": "fix/2429-hostname-flags-not-null",
+        "stack": {
+          "number": 2535,
+          "size": 6,
+          "position": 3,
+          "baseRefName": "main"
+        },
+        "readyReceipt": true
+      },
+      {
+        "pr": 2569,
+        "repo": "vouchington/vouchington",
+        "title": "Bloom rebuilds and backfills",
+        "url": "https://github.com/vouchington/vouchington/pull/2569",
+        "action": "merge",
+        "reasons": [
+          "appears-ready"
+        ],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "fix/1855-bloom-reconciliation",
+        "headRefOid": "4444444444444444444444444444444444444444",
+        "baseRefName": "fix/1855-crawl-hostnames-dispatcher",
+        "stack": {
+          "number": 2535,
+          "size": 6,
+          "position": 4,
+          "baseRefName": "main"
+        },
+        "readyReceipt": true
+      },
+      {
+        "pr": 2627,
+        "repo": "vouchington/vouchington",
+        "title": "UUID media registry and paged async replay",
+        "url": "https://github.com/vouchington/vouchington/pull/2627",
+        "action": "merge",
+        "reasons": [
+          "appears-ready"
+        ],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "fix/2508-media-delivery-registry-ids",
+        "headRefOid": "5555555555555555555555555555555555555555",
+        "baseRefName": "fix/1855-bloom-reconciliation",
+        "stack": {
+          "number": 2535,
+          "size": 6,
+          "position": 5,
+          "baseRefName": "main"
+        },
+        "readyReceipt": true
+      },
+      {
+        "pr": 2629,
+        "repo": "vouchington/vouchington",
+        "title": "Image projection view and hydration budgets",
+        "url": "https://github.com/vouchington/vouchington/pull/2629",
+        "action": "merge",
+        "reasons": [
+          "appears-ready"
+        ],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "fix/1600-image-projection-view",
+        "headRefOid": "6666666666666666666666666666666666666666",
+        "baseRefName": "fix/2508-media-delivery-registry-ids",
+        "stack": {
+          "number": 2535,
+          "size": 6,
+          "position": 6,
+          "baseRefName": "main"
+        },
+        "readyReceipt": true
+      }
+    ]
+  }
+}
