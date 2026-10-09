@@ -3,7 +3,7 @@
 **Does an agent act correctly on pr-shepherd's output, and would it without the
 plugin?**
 
-26 cases replay real recorded pr-shepherd output, mostly from the states agents
+27 cases replay real recorded pr-shepherd output, mostly from the states agents
 get wrong in real transcripts. One other case checks that the skill stays
 out of unrelated GitHub questions.
 
@@ -13,7 +13,8 @@ out of unrelated GitHub questions.
   or skipping the generated `apply review:` command.
 - **Stacks:** leaving layers unshepherded, merging a middle layer directly,
   rewriting a queued layer, or stopping at a lower layer's handoff while owned
-  layers still have work.
+  layers still have work, or treating a merged parent's retained base as a
+  reason to stop reviewing the remaining layers.
 
 Each case runs twice: with the plugin and without it. The headline number is
 **Δ = with − without**. Δ isolates what the plugin adds over the model on its

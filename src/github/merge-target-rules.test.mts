@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./client.mts", () => ({ graphqlWithRateLimit: vi.fn() }));
-vi.mock("./stack-read.mts", () => ({ readStackTopology: vi.fn() }));
+vi.mock("./stack-read.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./stack-read.mts")>()),
+  readStackTopology: vi.fn(),
+}));
 
 import { graphqlWithRateLimit } from "./client.mts";
 import { loadBaseBehindBy, loadMergeTargetStatus } from "./merge-target-rules.mts";
@@ -26,7 +29,57 @@ describe("loadMergeTargetStatus", () => {
     topology.mockReset();
   });
 
-  it("fails when the stack has no open layer based on the trunk", async () => {
+  it.each([2547, 2569, 2627, 2629])(
+    "loads trunk rules for PR #%i while the lowest open layer retains its merged parent's base",
+    async (pr) => {
+      const members = [
+        [2509, "MERGED", "main", "hashtags"],
+        [2534, "MERGED", "main", "hostname-flags"],
+        [2547, "OPEN", "hostname-flags", "dispatcher"],
+        [2569, "OPEN", "dispatcher", "bloom"],
+        [2627, "OPEN", "bloom", "registry"],
+        [2629, "OPEN", "registry", "projection"],
+      ] as const;
+      topology.mockResolvedValue({
+        ordered: members.map(([number, state, baseRefName, headRefName]) => ({
+          number,
+          state,
+          baseRefName,
+          headRefName,
+          headRefOid: `${number}`.padStart(40, "0"),
+          baseRefOid: "a".repeat(40),
+        })),
+      } as Awaited<ReturnType<typeof readStackTopology>>);
+      graphql.mockResolvedValue({
+        data: {
+          repository: {
+            ref: {
+              branchProtectionRule: {
+                requiresStatusChecks: true,
+                requiredStatusCheckContexts: ["required-on-main"],
+              },
+              compare: { behindBy: 13 },
+            },
+          },
+        },
+      } as Awaited<ReturnType<typeof graphqlWithRateLimit>>);
+
+      await expect(loadMergeTargetStatus({ ...input, pr })).resolves.toEqual({
+        contexts: ["required-on-main"],
+        trunkBehindBy: 13,
+        stackBottomPr: 2547,
+      });
+      expect(graphql).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          qualifiedName: "refs/heads/main",
+          headRef: "2547".padStart(40, "0"),
+        }),
+      );
+    },
+  );
+
+  it("fails when the stack has no open layer", async () => {
     topology.mockResolvedValue({
       ordered: [
         {
@@ -41,10 +94,29 @@ describe("loadMergeTargetStatus", () => {
     } as Awaited<ReturnType<typeof readStackTopology>>);
 
     await expect(loadMergeTargetStatus(input)).rejects.toThrow(
-      "Native stack for PR #622 has no open layer based on main",
+      "Native stack for PR #622 has no open layer",
     );
     expect(graphql).not.toHaveBeenCalled();
   });
+
+  it.each(["CLOSED", "UNKNOWN"])(
+    "does not designate an open descendant as bottom after a %s predecessor",
+    async (state) => {
+      topology.mockResolvedValue({
+        ordered: [
+          { number: 610, state: "MERGED" },
+          { number: 611, state },
+          { number: 622, state: "OPEN", headRefOid: "c".repeat(40) },
+          { number: 623, state: "OPEN", headRefOid: "d".repeat(40) },
+        ],
+      } as Awaited<ReturnType<typeof readStackTopology>>);
+
+      await expect(loadMergeTargetStatus(input)).rejects.toThrow(
+        `PR #611 in state ${state} before open PR #622`,
+      );
+      expect(graphql).not.toHaveBeenCalled();
+    },
+  );
 
   it("fails when the trunk ref does not exist", async () => {
     graphql.mockResolvedValue({

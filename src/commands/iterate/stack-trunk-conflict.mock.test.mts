@@ -1,125 +1,199 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GitHubRequestError } from "../../github/errors.mts";
 
-const { mockGraphql } = vi.hoisted(() => ({ mockGraphql: vi.fn() }));
-vi.mock("../../github/client.mts", () => ({ graphql: mockGraphql }));
+const { mockGraphql, mockGraphqlWithRateLimit } = vi.hoisted(() => ({
+  mockGraphql: vi.fn(),
+  mockGraphqlWithRateLimit: vi.fn(),
+}));
+vi.mock("../../github/client.mts", () => ({
+  graphql: mockGraphql,
+  graphqlWithRateLimit: mockGraphqlWithRateLimit,
+}));
 
 import { lookupUpperLayerTrunkConflict } from "./stack-trunk-conflict.mts";
 
 const input = {
   owner: "acme",
   name: "widgets",
-  pr: 12,
+  pr: 2548,
   headRef: "a".repeat(40),
   trunk: "main",
 };
+const knownBottom = { ...input, bottomPr: 2547 };
 
-function compare(behindBy: number | null, entries?: unknown) {
+function compare(behindBy: number | null) {
   return {
     data: {
       repository: {
         pullRequest: {
           baseRef: behindBy === null ? null : { compare: { behindBy } },
-          stack: entries ?? null,
         },
       },
     },
   };
 }
 
+// Two merged trunk-based layers followed by four open descendants. The lowest open PR
+// retains its merged parent's base rather than having been retargeted onto main.
+const members = [2536, 2546, 2547, 2548, 2549, 2550].map((number, index) => ({
+  position: index + 1,
+  pullRequest: {
+    number,
+    state: index < 2 ? "MERGED" : "OPEN",
+    headRefName: `layer-${number}`,
+    headRefOid: `head-${number}`,
+    baseRefName: index < 2 ? "main" : `layer-${index === 2 ? 2546 : number - 1}`,
+    baseRefOid: `base-${number}`,
+  },
+}));
+
+function topologyPage(
+  nodes: typeof members,
+  pageInfo = { hasNextPage: false, endCursor: null as string | null },
+) {
+  return {
+    data: {
+      repository: {
+        viewerCanAdminister: false,
+        pullRequest: {
+          stack: {
+            id: "stack-id",
+            number: 2535,
+            size: 6,
+            baseRefName: "main",
+            entries: { nodes, pageInfo },
+          },
+        },
+      },
+    },
+  };
+}
+
+function paginatedTopology() {
+  mockGraphqlWithRateLimit
+    .mockResolvedValueOnce(
+      topologyPage(members.slice(0, 2), { hasNextPage: true, endCursor: "next" }),
+    )
+    .mockResolvedValueOnce(topologyPage(members.slice(2).reverse()));
+}
+
 describe("lookupUpperLayerTrunkConflict", () => {
   afterEach(() => {
+    vi.restoreAllMocks();
     mockGraphql.mockReset();
+    mockGraphqlWithRateLimit.mockReset();
   });
 
-  it("returns the bottom open layer when the head already contains its base", async () => {
-    mockGraphql.mockResolvedValue(
-      compare(0, {
-        entries: {
-          pageInfo: { hasNextPage: false },
-          nodes: [
-            { position: 5, pullRequest: { number: 15, state: "OPEN", baseRefName: "main" } },
-            { position: 1, pullRequest: { number: 11, state: "MERGED", baseRefName: "main" } },
-            null,
-            { position: 2, pullRequest: { number: 12, state: "OPEN", baseRefName: "feature-a" } },
-            { position: 4, pullRequest: null },
-            { position: 3, pullRequest: { number: 13, state: "OPEN", baseRefName: "main" } },
-          ],
-        },
-      }),
-    );
+  it("uses a known bottom open layer without refetching topology", async () => {
+    mockGraphql.mockResolvedValue(compare(0));
+    await expect(lookupUpperLayerTrunkConflict(knownBottom)).resolves.toEqual({
+      trunk: "main",
+      bottomPr: 2547,
+    });
+    expect(mockGraphqlWithRateLimit).not.toHaveBeenCalled();
+  });
+
+  it("rebases the known bottom onto trunk without comparing its obsolete parent", async () => {
+    // A positive comparison to the merged parent's branch must never override topology.
+    mockGraphql.mockResolvedValue(compare(3));
+    await expect(lookupUpperLayerTrunkConflict({ ...knownBottom, pr: 2547 })).resolves.toEqual({
+      trunk: "main",
+      bottomPr: 2547,
+    });
+    expect(mockGraphql).not.toHaveBeenCalled();
+    expect(mockGraphqlWithRateLimit).not.toHaveBeenCalled();
+  });
+
+  it("finds the bottom open layer across validated pages regardless of its base", async () => {
+    paginatedTopology();
+    mockGraphql.mockResolvedValue(compare(0));
     await expect(lookupUpperLayerTrunkConflict(input)).resolves.toEqual({
       trunk: "main",
-      bottomPr: 13,
+      bottomPr: 2547,
     });
+    expect(mockGraphqlWithRateLimit).toHaveBeenCalledTimes(2);
+    expect(mockGraphqlWithRateLimit.mock.calls[1]?.[1]).toMatchObject({ after: "next" });
   });
 
-  it("keeps the parent rebase when the layer is behind its base", async () => {
-    const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    mockGraphql.mockResolvedValue(
-      compare(3, { entries: { pageInfo: { hasNextPage: false }, nodes: [] } }),
-    );
-    await expect(lookupUpperLayerTrunkConflict(input)).resolves.toBeUndefined();
-    expect(write).not.toHaveBeenCalled();
-    write.mockRestore();
+  it("finds a bottom retaining a merged base before checking whether it is behind that parent", async () => {
+    paginatedTopology();
+    mockGraphql.mockResolvedValue(compare(3));
+    await expect(lookupUpperLayerTrunkConflict({ ...input, pr: 2547 })).resolves.toEqual({
+      trunk: "main",
+      bottomPr: 2547,
+    });
+    expect(mockGraphql).not.toHaveBeenCalled();
   });
 
-  it("rethrows a rate-limit error", async () => {
+  it("keeps the parent rebase when a true upper layer is behind its base", async () => {
+    mockGraphql.mockResolvedValue(compare(3));
+    await expect(lookupUpperLayerTrunkConflict(knownBottom)).resolves.toBeUndefined();
+    expect(mockGraphqlWithRateLimit).not.toHaveBeenCalled();
+  });
+
+  it.each(["CLOSED", "UNKNOWN"])(
+    "keeps the parent route after a %s predecessor even if an open descendant contains its base",
+    async (state) => {
+      const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+      const unresolvedMembers = members.map((member) => ({
+        ...member,
+        pullRequest: {
+          ...member.pullRequest,
+          ...(member.pullRequest.number === 2546 && { state }),
+        },
+      }));
+      mockGraphqlWithRateLimit.mockResolvedValue(topologyPage(unresolvedMembers));
+      mockGraphql.mockResolvedValue(compare(0));
+
+      await expect(lookupUpperLayerTrunkConflict(input)).resolves.toBeUndefined();
+      await expect(lookupUpperLayerTrunkConflict({ ...input, pr: 2547 })).resolves.toBeUndefined();
+      expect(mockGraphql).not.toHaveBeenCalled();
+      expect(write).toHaveBeenCalledWith(
+        expect.stringContaining(`PR #2546 in state ${state} before open PR #2547`),
+      );
+    },
+  );
+
+  it("rethrows a comparison rate-limit error", async () => {
     mockGraphql.mockRejectedValue(
       new GitHubRequestError("API rate limit exceeded", { status: 429 }),
     );
-    await expect(lookupUpperLayerTrunkConflict(input)).rejects.toBeInstanceOf(GitHubRequestError);
+    await expect(lookupUpperLayerTrunkConflict(knownBottom)).rejects.toBeInstanceOf(
+      GitHubRequestError,
+    );
   });
 
-  it("ignores other lookup failures", async () => {
+  it("rethrows a topology rate-limit error", async () => {
+    mockGraphqlWithRateLimit.mockRejectedValue(
+      new GitHubRequestError("API rate limit exceeded", { status: 429 }),
+    );
+    await expect(lookupUpperLayerTrunkConflict(input)).rejects.toBeInstanceOf(GitHubRequestError);
+    expect(mockGraphql).not.toHaveBeenCalled();
+  });
+
+  it("ignores other comparison failures", async () => {
     const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     mockGraphql.mockRejectedValueOnce(new GitHubRequestError("bad gateway", { status: 502 }));
-    await expect(lookupUpperLayerTrunkConflict(input)).resolves.toBeUndefined();
+    await expect(lookupUpperLayerTrunkConflict(knownBottom)).resolves.toBeUndefined();
     mockGraphql.mockRejectedValueOnce("socket hangup");
-    await expect(lookupUpperLayerTrunkConflict(input)).resolves.toBeUndefined();
+    await expect(lookupUpperLayerTrunkConflict(knownBottom)).resolves.toBeUndefined();
     mockGraphql.mockResolvedValueOnce({ data: { repository: null } });
-    await expect(lookupUpperLayerTrunkConflict(input)).resolves.toBeUndefined();
+    await expect(lookupUpperLayerTrunkConflict(knownBottom)).resolves.toBeUndefined();
     mockGraphql.mockResolvedValueOnce(compare(null));
-    await expect(lookupUpperLayerTrunkConflict(input)).resolves.toBeUndefined();
+    await expect(lookupUpperLayerTrunkConflict(knownBottom)).resolves.toBeUndefined();
     expect(write.mock.calls.map((call) => String(call[0]))).toEqual([
       expect.stringContaining("bad gateway"),
       expect.stringContaining("socket hangup"),
       expect.stringContaining("pull request not found"),
       expect.stringContaining("base comparison unavailable"),
     ]);
-    write.mockRestore();
   });
 
-  it("still reports a trunk conflict when the bottom layer is not on the page", async () => {
+  it("does not select a bottom from incomplete topology but retains a proven trunk conflict", async () => {
     const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    mockGraphql.mockResolvedValueOnce(
-      compare(0, {
-        entries: {
-          pageInfo: { hasNextPage: true },
-          nodes: [
-            { position: 2, pullRequest: { number: 12, state: "OPEN", baseRefName: "feature-a" } },
-          ],
-        },
-      }),
-    );
+    mockGraphqlWithRateLimit.mockResolvedValueOnce(topologyPage(members.slice(2)));
+    mockGraphql.mockResolvedValue(compare(0));
     await expect(lookupUpperLayerTrunkConflict(input)).resolves.toEqual({ trunk: "main" });
-    mockGraphql.mockResolvedValueOnce(
-      compare(0, {
-        entries: {
-          pageInfo: { hasNextPage: false },
-          nodes: [
-            { position: 2, pullRequest: { number: 12, state: "OPEN", baseRefName: "feature-a" } },
-          ],
-        },
-      }),
-    );
-    await expect(lookupUpperLayerTrunkConflict(input)).resolves.toEqual({ trunk: "main" });
-    mockGraphql.mockResolvedValueOnce(compare(0));
-    await expect(lookupUpperLayerTrunkConflict(input)).resolves.toEqual({ trunk: "main" });
-    const lines = write.mock.calls.map((call) => String(call[0]));
-    expect(lines[0]).toContain("truncated");
-    expect(lines[1]).toContain("bottom open layer not found");
-    expect(lines[2]).toContain("bottom open layer not found");
-    write.mockRestore();
+    expect(write).toHaveBeenCalledWith(expect.stringContaining("incomplete stack membership"));
   });
 });

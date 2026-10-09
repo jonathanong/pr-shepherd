@@ -4,7 +4,7 @@ import type { RawBaseRef } from "./batch-raw-rules.mts";
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import { missingRepositoryError } from "./errors.mts";
 import { BASE_BEHIND_QUERY, REF_RULES_QUERY } from "./queries.mts";
-import { readStackTopology } from "./stack-read.mts";
+import { readStackTopology, verifiedBottomOpenLayer } from "./stack-read.mts";
 import type { CheckExecutionContext } from "../commands/check-execution-context.mts";
 
 export interface MergeTargetStatus {
@@ -50,13 +50,12 @@ export async function loadMergeTargetStatus(
     const bottom = await bottomOpenLayer(
       input.pr,
       { owner: input.owner, name: input.name },
-      trunk,
       context,
     );
-    headRef = bottom.headRefName;
+    headRef = bottom.headRefOid;
     stackBottomPr = bottom.number;
   }
-  const loaded = await fetchRefRules(input.owner, input.name, `refs/heads/${trunk}`, headRef);
+  const loaded = await loadRefRules(input.owner, input.name, `refs/heads/${trunk}`, headRef);
   return {
     contexts: loaded.contexts,
     ...(loaded.behindBy > 0 && { trunkBehindBy: loaded.behindBy }),
@@ -67,20 +66,12 @@ export async function loadMergeTargetStatus(
 async function bottomOpenLayer(
   pr: number,
   repo: RepoInfo,
-  trunk: string,
   context?: CheckExecutionContext,
-): Promise<{ number: number; headRefName: string }> {
+): Promise<{ number: number; headRefOid: string }> {
   const topology = await (context?.readStackTopology(pr, repo) ?? readStackTopology(pr, repo));
-  const bottom = topology.ordered.find(
-    (member) => member.state === "OPEN" && member.baseRefName === trunk,
-  );
-  if (!bottom) {
-    throw new ShepherdError(
-      `Native stack for PR #${pr} has no open layer based on ${trunk}`,
-      EXIT.TEMPFAIL,
-    );
-  }
-  return bottom;
+  // GitHub can retain a merged parent's branch as the lowest open layer's
+  // base. Stack order, rather than retargeting, determines the review target.
+  return verifiedBottomOpenLayer(topology.ordered, pr);
 }
 
 /**
@@ -114,7 +105,7 @@ export async function loadBaseBehindBy(
   return ref.compare?.behindBy ?? 0;
 }
 
-async function fetchRefRules(
+export async function loadRefRules(
   owner: string,
   name: string,
   qualifiedName: string,

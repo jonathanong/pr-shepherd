@@ -31,7 +31,10 @@ export function buildNativeStackRebaseInstruction(
         ]
       : "bottomPr" in start
         ? [`check out the head branch of PR #${start.bottomPr}`, "gh stack rebase"]
-        : [`check out the bottom open layer whose base is \`${start.trunk}\``, "gh stack rebase"];
+        : [
+            `check out the bottom open layer of the stack to rebase onto \`${start.trunk}\``,
+            "gh stack rebase",
+          ];
   const prepare = `if \`gh stack\` does not track stack #${stackNumber} locally, import it with \`gh stack checkout ${stackNumber}\``;
   return `From a clean checkout of \`${repo}\`, ${prepare}. Then ${checkout} and run \`${command}\`. ${playbookPointer("Branch update")}`;
 }
@@ -39,23 +42,29 @@ export function buildNativeStackRebaseInstruction(
 /**
  * The stack-aware branch update for a native stack layer (a conflict, or a behind branch whose
  * workflow keeps failing); undefined outside a stack.
- * A layer whose PR targets the stack's trunk (`stack.baseRefName`) is the bottom open layer —
- * position 1, or a higher layer GitHub retargeted after every layer below it merged. Any other
- * layer is an upper layer whose parent is its own PR base branch. `trunkConflict` means that
- * upper layer already contains its parent, so the rebase starts at the bottom open layer.
+ * The first open layer in validated stack order is the bottom open layer, even when GitHub
+ * retains its merged parent's branch as its PR base. Without that topology, a PR base matching
+ * the stack trunk also identifies a bottom layer. Other layers rebase from their PR base.
+ * `trunkConflict` means an upper layer already contains its parent, so the rebase starts
+ * at the bottom open layer.
  */
 export function buildNativeStackLayerRebase(
   repo: string,
   pr: { number: number; baseBranch: string },
   stack: StackStatus | undefined,
   trunkConflict?: { trunk: string; bottomPr?: number },
+  stackBottomPr?: number,
 ): string | undefined {
   if (!stack) return undefined;
   const start: NativeStackRebaseStart = trunkConflict
     ? trunkConflict.bottomPr !== undefined
       ? { bottomPr: trunkConflict.bottomPr }
       : { trunk: trunkConflict.trunk }
-    : pr.baseBranch === stack.baseRefName
+    : (
+          stackBottomPr !== undefined
+            ? pr.number === stackBottomPr
+            : pr.baseBranch === stack.baseRefName
+        )
       ? { bottomPr: pr.number }
       : { parentBranch: pr.baseBranch };
   return buildNativeStackRebaseInstruction(repo, stack.number, start);

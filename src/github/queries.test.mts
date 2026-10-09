@@ -131,10 +131,10 @@ describe("queries — GQL constants load at import time", () => {
     expect(SUGGESTION_THREADS_QUERY).toContain("pullRequest");
   });
 
-  it("compares an upper stack layer to its base and lists stack entries", () => {
+  it("compares an upper stack layer to its base without duplicating stack topology", () => {
     expect(UPPER_LAYER_CONFLICT_TARGET_QUERY).toContain("compare(headRef: $headRef)");
     expect(UPPER_LAYER_CONFLICT_TARGET_QUERY).toContain("behindBy");
-    expect(UPPER_LAYER_CONFLICT_TARGET_QUERY).toContain("entries(first: 100)");
+    expect(UPPER_LAYER_CONFLICT_TARGET_QUERY).not.toContain("entries(");
   });
 
   it("batches check-run annotation bodies by node id", () => {

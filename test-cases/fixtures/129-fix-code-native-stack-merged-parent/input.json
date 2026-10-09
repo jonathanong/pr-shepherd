@@ -1,0 +1,97 @@
+{
+  "description": "The first two native-stack layers merged, but PR #2547 (position 3 of 6) still targets its merged parent branch. Real topology selects #2547 as the bottom open layer; conflicting code requires a whole-stack trunk rebase and stack push, without parent-only rebase or manual retargeting.",
+  "repository": {
+    "owner": "vouchington",
+    "name": "vouchington"
+  },
+  "batchData": {
+    "number": 2547,
+    "headRefName": "fix/1855-crawl-hostnames-dispatcher",
+    "headRefOid": "3333333333333333333333333333333333333333",
+    "headRepoWithOwner": "vouchington/vouchington",
+    "baseRefName": "fix/2429-hostname-flags-not-null",
+    "baseRefOid": "2222222222222222222222222222222222222222",
+    "mergeable": "CONFLICTING",
+    "mergeStateStatus": "DIRTY",
+    "stack": {
+      "number": 2535,
+      "size": 6,
+      "position": 3,
+      "baseRefName": "main"
+    }
+  },
+  "stackTopology": [
+    {
+      "position": 1,
+      "pullRequest": {
+        "number": 2509,
+        "state": "MERGED",
+        "headRefName": "fix/1855-top-hashtags-bounds",
+        "headRefOid": "1111111111111111111111111111111111111111",
+        "baseRefName": "main",
+        "baseRefOid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "position": 2,
+      "pullRequest": {
+        "number": 2534,
+        "state": "MERGED",
+        "headRefName": "fix/2429-hostname-flags-not-null",
+        "headRefOid": "2222222222222222222222222222222222222222",
+        "baseRefName": "main",
+        "baseRefOid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "position": 3,
+      "pullRequest": {
+        "number": 2547,
+        "state": "OPEN",
+        "headRefName": "fix/1855-crawl-hostnames-dispatcher",
+        "headRefOid": "3333333333333333333333333333333333333333",
+        "baseRefName": "fix/2429-hostname-flags-not-null",
+        "baseRefOid": "2222222222222222222222222222222222222222"
+      }
+    },
+    {
+      "position": 4,
+      "pullRequest": {
+        "number": 2569,
+        "state": "OPEN",
+        "headRefName": "fix/1855-bloom-reconciliation",
+        "headRefOid": "4444444444444444444444444444444444444444",
+        "baseRefName": "fix/1855-crawl-hostnames-dispatcher",
+        "baseRefOid": "3333333333333333333333333333333333333333"
+      }
+    },
+    {
+      "position": 5,
+      "pullRequest": {
+        "number": 2627,
+        "state": "OPEN",
+        "headRefName": "fix/2508-media-delivery-registry-ids",
+        "headRefOid": "5555555555555555555555555555555555555555",
+        "baseRefName": "fix/1855-bloom-reconciliation",
+        "baseRefOid": "4444444444444444444444444444444444444444"
+      }
+    },
+    {
+      "position": 6,
+      "pullRequest": {
+        "number": 2629,
+        "state": "OPEN",
+        "headRefName": "fix/1600-image-projection-view",
+        "headRefOid": "6666666666666666666666666666666666666666",
+        "baseRefName": "fix/2508-media-delivery-registry-ids",
+        "baseRefOid": "5555555555555555555555555555555555555555"
+      }
+    }
+  ],
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

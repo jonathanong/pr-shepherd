@@ -39,6 +39,7 @@ function rawPr(startCursor: string) {
     headRefName: "feature",
     headRefOid: HEAD,
     baseRefName: "main",
+    baseRef: { branchProtectionRule: null, rules: { nodes: [] } },
     baseRefOid: "c".repeat(40),
     mergeQueueEntry: null,
     comments: { totalCount: 0, pageInfo: { hasPreviousPage: false }, nodes: [] },

@@ -1,0 +1,79 @@
+{
+  "description": "PR #2621 is individually ready, but its open lower layer #2620 has three actionable review items. A stack merge request must route #2620 for review and must not merge #2621 or reopen its completed session.",
+  "mode": "aggregate",
+  "args": [
+    "--stack",
+    "https://github.com/vouchington/vouchington/pull/2621",
+    "--merge",
+    "--debounce",
+    "0s"
+  ],
+  "expectedExitCode": 16,
+  "expectedNextAction": "shepherd",
+  "expectedReason": "actionable",
+  "aggregateSummary": {
+    "selection": {
+      "kind": "stack",
+      "anchor": 2621,
+      "stackNumber": 2622,
+      "stackSize": 2
+    },
+    "prs": [
+      {
+        "pr": 2620,
+        "repo": "vouchington/vouchington",
+        "title": "ci(filters): require path filters to cover executed scripts",
+        "url": "https://github.com/vouchington/vouchington/pull/2620",
+        "action": "fix_code",
+        "reasons": [
+          "actionable-reviews"
+        ],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "ci/executed-script-path-coverage",
+        "headRefOid": "b111111111111111111111111111111111111111",
+        "baseRefName": "main",
+        "stack": {
+          "number": 2622,
+          "size": 2,
+          "position": 1,
+          "baseRefName": "main"
+        },
+        "owned": true,
+        "pollCommand": "pr-shepherd https://github.com/vouchington/vouchington/pull/2620 --until-terminal",
+        "review": {
+          "actionable": 3
+        }
+      },
+      {
+        "pr": 2621,
+        "repo": "vouchington/vouchington",
+        "title": "fix(ci): make run-bounded own the command's output pipes",
+        "url": "https://github.com/vouchington/vouchington/pull/2621",
+        "action": "cancel",
+        "reasons": [
+          "appears-ready"
+        ],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "ci/run-bounded-owns-output-pipes",
+        "headRefOid": "b222222222222222222222222222222222222222",
+        "baseRefName": "ci/executed-script-path-coverage",
+        "readyReceipt": true,
+        "stack": {
+          "number": 2622,
+          "size": 2,
+          "position": 2,
+          "baseRefName": "main"
+        },
+        "owned": true
+      }
+    ]
+  },
+  "repository": {
+    "owner": "vouchington",
+    "name": "vouchington"
+  }
+}

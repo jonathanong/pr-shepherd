@@ -109,7 +109,7 @@ async function fetchStackSummary(
     await refreshUnknownSummaryMergeability(pr, repo);
   }
   const stackAncestry = stackAncestryGaps(ordered);
-  const required = trunkRequiredContexts(ordered);
+  const required = await trunkRequiredContexts(ordered, repo);
   return {
     selection: { kind: "stack", anchor, stackNumber, stackSize },
     prs: await Promise.all(

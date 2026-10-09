@@ -171,4 +171,48 @@ Shepherd command.`,
       "skill-fired": skillFired,
     },
   },
+  {
+    slug: "28-native-stack-merged-parent",
+    fixture: "129-fix-code-native-stack-merged-parent",
+    shape: (
+      fixture,
+    ) => `Shepherd https://github.com/vouchington/vouchington/pull/2547 through to a terminal state.
+This PR is the lowest open layer in native stack #2535. PRs #2509 and #2534
+have merged, but #2547 still targets #2534's old head branch. The remaining
+open layers are #2547, #2569, #2627, and #2629. GitHub rejects changing a
+native-stack PR's base with gh pr edit. I have not asked you to merge or
+enqueue the stack. Here is Shepherd's current output.
+
+---
+
+${fixture}`,
+    tags: ["fix-code", "conflicts", "native-stack", "merged-parent"],
+    graders: {
+      "rebases-from-lowest-open-layer": llm(
+        `The plan follows the generated stack-aware branch update: import native
+stack #2535 with \`gh stack checkout 2535\` if necessary, verify the local
+heads using the Branch update playbook, check out PR #2547's head branch, and
+run \`gh stack rebase\` onto the trunk. It resolves conflicts and uses
+\`gh stack push\` to publish the rewritten stack.
+
+Failing responses rebase only #2547 onto its merged parent's branch, check
+out #2534's old branch and run \`gh stack rebase --upstack --no-trunk\`, push
+only #2547's head, or stop because no open PR directly targets main.`,
+      ),
+      "preserves-native-stack-routing": llm(
+        `The plan keeps the native stack intact. It does not call
+\`gh pr edit --base\`, unstack or recreate these PRs, or merge/enqueue any
+layer. The user authorized shepherding but did not authorize merging.
+The stale recorded PR base does not prevent the plan from doing the
+generated conflict work.`,
+      ),
+      "reruns-qualified-single-pr": llm(
+        `After the stack update, the plan reruns
+\`pr-shepherd https://github.com/vouchington/vouchington/pull/2547 --until-terminal\`
+and follows its fresh output. It does not stop after pushing, add --merge,
+or declare the remaining layers ready solely because their parents merged.`,
+      ),
+      "skill-fired": skillFired,
+    },
+  },
 ];
