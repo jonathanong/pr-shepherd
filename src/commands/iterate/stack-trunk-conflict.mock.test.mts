@@ -131,6 +131,29 @@ describe("lookupUpperLayerTrunkConflict", () => {
     expect(mockGraphqlWithRateLimit).not.toHaveBeenCalled();
   });
 
+  it.each(["CLOSED", "UNKNOWN"])(
+    "keeps the parent route after a %s predecessor even if an open descendant contains its base",
+    async (state) => {
+      const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+      const unresolvedMembers = members.map((member) => ({
+        ...member,
+        pullRequest: {
+          ...member.pullRequest,
+          ...(member.pullRequest.number === 2546 && { state }),
+        },
+      }));
+      mockGraphqlWithRateLimit.mockResolvedValue(topologyPage(unresolvedMembers));
+      mockGraphql.mockResolvedValue(compare(0));
+
+      await expect(lookupUpperLayerTrunkConflict(input)).resolves.toBeUndefined();
+      await expect(lookupUpperLayerTrunkConflict({ ...input, pr: 2547 })).resolves.toBeUndefined();
+      expect(mockGraphql).not.toHaveBeenCalled();
+      expect(write).toHaveBeenCalledWith(
+        expect.stringContaining(`PR #2546 in state ${state} before open PR #2547`),
+      );
+    },
+  );
+
   it("rethrows a comparison rate-limit error", async () => {
     mockGraphql.mockRejectedValue(
       new GitHubRequestError("API rate limit exceeded", { status: 429 }),

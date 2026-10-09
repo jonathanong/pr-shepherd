@@ -95,8 +95,11 @@ When `--merge` is requested, the selector finds the highest open layer such that
 - The prefix has no stale ancestry, queued layer, escalation, or closed-unmerged layer.
 
 The lowest open layer is selected by native-stack order, even when GitHub still records its
-merged parent's branch as its base. That retained base does not prevent one-PR review or loading
-the stack trunk's required checks. Once the open layers are ready, `--stack --merge` waits for
+merged parent's branch as its base, only after every preceding layer is verified `MERGED`.
+A closed or unverified predecessor keeps the lookup fail-closed and cannot become a trunk
+rebase target merely because the next layer is open. With a merged prefix, the retained base
+does not prevent one-PR review or loading the stack trunk's required checks. Once the open layers
+are ready, `--stack --merge` waits for
 GitHub to retarget the lowest open layer onto the trunk before emitting a merge command; it
 does not instruct the caller to edit a native-stack PR's base with `gh pr edit`.
 
@@ -510,7 +513,7 @@ Stale boundary and native-stack conflicts:
 - Import with `gh stack checkout <stack number>` when `gh stack` does not track the stack locally.
 - The step points at the Branch update playbook for the head check and `gh stack rebase --continue`. Merge-queue behavior for `gh stack merge` is the Stack merge playbook.
 - An upper layer behind its parent gets `gh stack rebase --upstack --no-trunk` from that parent, not from the stack trunk.
-- A whole-stack `gh stack rebase` starts at the lowest open layer by stack order when the upper layer already contains its parent (summary: `conflicts with stack trunk`, JSON: `stackTrunkConflict`) or when this is the lowest open layer. The latter includes a higher-position layer whose lower layers merged, even if GitHub has not yet retargeted its recorded PR base onto the trunk. An unavailable bottom PR number is described as the stack's bottom open layer, without requiring its base branch to name the trunk.
+- A whole-stack `gh stack rebase` starts at the lowest open layer by stack order when the upper layer already contains its parent (summary: `conflicts with stack trunk`, JSON: `stackTrunkConflict`) or when this is the lowest open layer. The latter includes a higher-position layer whose lower layers are all verified `MERGED`, even if GitHub has not yet retargeted its recorded PR base onto the trunk. An unavailable bottom PR number is described as the stack's bottom open layer, without requiring its base branch to name the trunk. A known closed or unverified lower layer cannot supply that fallback.
 - Push the rewritten stack with `gh stack push`, not the PR head alone.
 - A conflicting head with a complete empty check-suite page and no check runs says GitHub did not start `pull_request` workflows after Shepherd has seen that head for 2 minutes. Commit time is not used. An unreadable seen marker omits the note. Pushing that same head again does not start them.
 - Failing checks of every type enter check handling. Use the included failed step, summary, and bounded log excerpt.

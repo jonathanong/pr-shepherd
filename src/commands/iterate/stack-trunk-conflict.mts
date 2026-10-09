@@ -1,12 +1,12 @@
 import { graphql } from "../../github/client.mts";
-import { readStackTopology } from "../../github/stack-read.mts";
+import { readStackTopology, verifiedBottomOpenLayer } from "../../github/stack-read.mts";
 import { UPPER_LAYER_CONFLICT_TARGET_QUERY } from "../../github/queries.mts";
 import { pollRateLimitRetryAfterMs } from "../poll-quota.mts";
 
 /** A bottom open layer, or an upper layer that already contains its parent, updates from trunk. */
 export interface UpperLayerTrunkConflict {
   trunk: string;
-  /** First open layer in validated stack order. Omitted when topology is unavailable. */
+  /** First open layer after a verified merged prefix. Omitted when topology is unavailable. */
   bottomPr?: number;
 }
 
@@ -29,13 +29,21 @@ export async function lookupUpperLayerTrunkConflict(input: {
 }): Promise<UpperLayerTrunkConflict | undefined> {
   let bottomPr = input.bottomPr;
   if (bottomPr === undefined) {
+    let topology: Awaited<ReturnType<typeof readStackTopology>> | undefined;
     try {
-      const topology = await readStackTopology(input.pr, { owner: input.owner, name: input.name });
-      bottomPr = topology.ordered.find((pull) => pull.state === "OPEN")?.number;
-      if (bottomPr === undefined) ignore(input.pr, "bottom open layer not found");
+      topology = await readStackTopology(input.pr, { owner: input.owner, name: input.name });
     } catch (err) {
       if (pollRateLimitRetryAfterMs(err) !== null) throw err;
       ignore(input.pr, err instanceof Error ? err.message : String(err));
+    }
+    if (topology) {
+      try {
+        bottomPr = verifiedBottomOpenLayer(topology.ordered, input.pr).number;
+      } catch (err) {
+        ignore(input.pr, err instanceof Error ? err.message : String(err));
+        // A base comparison cannot prove that a closed or unverified predecessor merged.
+        return undefined;
+      }
     }
   }
   // Merged lower layers need not cause GitHub to retarget this PR to trunk. Even when its

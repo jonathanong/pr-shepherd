@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./client.mts", () => ({ graphqlWithRateLimit: vi.fn() }));
-vi.mock("./stack-read.mts", () => ({ readStackTopology: vi.fn() }));
+vi.mock("./stack-read.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./stack-read.mts")>()),
+  readStackTopology: vi.fn(),
+}));
 
 import { graphqlWithRateLimit } from "./client.mts";
 import { loadBaseBehindBy, loadMergeTargetStatus } from "./merge-target-rules.mts";
@@ -95,6 +98,25 @@ describe("loadMergeTargetStatus", () => {
     );
     expect(graphql).not.toHaveBeenCalled();
   });
+
+  it.each(["CLOSED", "UNKNOWN"])(
+    "does not designate an open descendant as bottom after a %s predecessor",
+    async (state) => {
+      topology.mockResolvedValue({
+        ordered: [
+          { number: 610, state: "MERGED" },
+          { number: 611, state },
+          { number: 622, state: "OPEN", headRefOid: "c".repeat(40) },
+          { number: 623, state: "OPEN", headRefOid: "d".repeat(40) },
+        ],
+      } as Awaited<ReturnType<typeof readStackTopology>>);
+
+      await expect(loadMergeTargetStatus(input)).rejects.toThrow(
+        `PR #611 in state ${state} before open PR #622`,
+      );
+      expect(graphql).not.toHaveBeenCalled();
+    },
+  );
 
   it("fails when the trunk ref does not exist", async () => {
     graphql.mockResolvedValue({

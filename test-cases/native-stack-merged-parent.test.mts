@@ -8,6 +8,25 @@ import {
 
 registerHarnessBefore();
 
+it("shows lower review blockers before merging an individually ready upper layer", async () => {
+  const fixture = loadFixture("132-aggregate-stack-lower-review-blocker");
+  applyFixture(fixture);
+  const result = await captureRun(fixture);
+  const json = JSON.parse(result.jsonOut);
+
+  expect(result.exitCode).toBe(16);
+  expect(json.stackMergeable).toBe(false);
+  expect(json.nextAction).toBe("shepherd");
+  expect(json.prs[0].blocker).toBe("review-work");
+  expect(json.prs[1].shepherded).toBe(true);
+  expect(json.prs[1].mergeable).toBe(true);
+  for (const output of [result.textOut, json.instructions.join("\n")]) {
+    expect(output).toContain("pull/2620 --until-terminal");
+    expect(output).not.toContain("pull/2621 --until-terminal");
+    expect(output).not.toContain("gh stack merge");
+  }
+});
+
 describe("native stack after its two lower layers merge", () => {
   it("rebases the actual bottom open layer onto trunk despite its retained parent base", async () => {
     const fixture = loadFixture("129-fix-code-native-stack-merged-parent");

@@ -4,7 +4,7 @@ import type { RawBaseRef } from "./batch-raw-rules.mts";
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import { missingRepositoryError } from "./errors.mts";
 import { BASE_BEHIND_QUERY, REF_RULES_QUERY } from "./queries.mts";
-import { readStackTopology } from "./stack-read.mts";
+import { readStackTopology, verifiedBottomOpenLayer } from "./stack-read.mts";
 import type { CheckExecutionContext } from "../commands/check-execution-context.mts";
 
 export interface MergeTargetStatus {
@@ -71,11 +71,7 @@ async function bottomOpenLayer(
   const topology = await (context?.readStackTopology(pr, repo) ?? readStackTopology(pr, repo));
   // GitHub can retain a merged parent's branch as the lowest open layer's
   // base. Stack order, rather than retargeting, determines the review target.
-  const bottom = topology.ordered.find((member) => member.state === "OPEN");
-  if (!bottom) {
-    throw new ShepherdError(`Native stack for PR #${pr} has no open layer`, EXIT.TEMPFAIL);
-  }
-  return bottom;
+  return verifiedBottomOpenLayer(topology.ordered, pr);
 }
 
 /**

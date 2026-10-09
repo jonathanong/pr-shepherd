@@ -77,7 +77,8 @@ A required status context with no check run and no status context is a different
 
 Merged lower layers do not prevent this lookup when the lowest open PR retains its merged
 parent's base branch. One-PR checks compare the trunk with the lowest open layer's head commit
-from the validated stack order. Aggregate summaries reuse the current trunk ref's rules from a
+from the validated stack order after verifying that every lower layer merged. Closed or unknown
+lower states cannot designate an open child as the bottom. Aggregate summaries reuse the current trunk ref's rules from a
 retained trunk-based member, including a merged member, or fetch the trunk ref directly when
 none is available. They never substitute the merged parent's branch rules for the trunk rules.
 
