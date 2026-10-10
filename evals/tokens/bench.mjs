@@ -34,6 +34,7 @@ import {
 } from "./lib.mjs";
 import { SCENARIOS, eventArm } from "./scenarios.mjs";
 import { checkPending, findLosses, lossKey, pendingEntry, readPending } from "./gate.mjs";
+import { realSessionsSection } from "./sessions.mjs";
 
 const ARMS = ["shepherd", "gh", "mcp"];
 const METRICS = ["calls", "turns", "toolTokens", "ite"];
@@ -818,6 +819,8 @@ out(
   `- State first was cheaper for ${pickedSF.map((r) => `\`${r.id}\` (${[r.stateFirst.gh && "gh", r.stateFirst.mcp && "MCP"].filter(Boolean).join(", ")})`).join(", ") || "no step"}.`,
 );
 out();
+for (const line of realSessionsSection()) out(line);
+
 out("## Model");
 out();
 out(`- Tokens: ${MODEL.charsPerToken} characters per token for every arm.`);

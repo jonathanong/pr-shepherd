@@ -25,6 +25,7 @@
 
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { ISSUE_FOR } from "./gate.mjs";
 import {
   DATA_DIR,
   MODEL,
@@ -50,7 +51,8 @@ export const REAL_SESSIONS_FILE = "real-sessions.json";
 
 // --- extraction: debug logs -------------------------------------------------------
 
-const ENTRY = /^(## \d{4}-\d\d-\d\dT\S+ — pr-shepherd |### #\d+ (GraphQL|REST) (request|response) — |### Output \()/;
+const ENTRY =
+  /^(## \d{4}-\d\d-\d\dT\S+ — pr-shepherd |### #\d+ (GraphQL|REST) (request|response) — |### Output \()/;
 const secs = (iso) => Date.parse(iso) / 1000;
 /** A gap this long between two snapshot reads starts a new poll tick. */
 const TICK_GAP_SECONDS = 30;
@@ -62,9 +64,18 @@ const MUTATION_OPS = new Set(["BulkApply", "UpdatePrBody"]);
 
 const prOfArgs = (args) => Number(args.match(/(?:\/pull\/|^|\s)(\d{3,})(?=\s|$)/)?.[1]) || null;
 const kindOfArgs = (args) =>
-  /^apply review\b/.test(args) ? "review" : /^apply journal\b/.test(args) ? "journal" : /^(\S+\/pull\/)?\d+\b/.test(args) ? "poll" : "other";
+  /^apply review\b/.test(args)
+    ? "review"
+    : /^apply journal\b/.test(args)
+      ? "journal"
+      : /^(\S+\/pull\/)?\d+\b/.test(args)
+        ? "poll"
+        : "other";
 const idCount = (args, flag) =>
-  args.match(new RegExp(`--${flag}(?:=|\\s+)(\\S+)`))?.[1].split(",").filter(Boolean).length ?? 0;
+  args
+    .match(new RegExp(`--${flag}(?:=|\\s+)(\\S+)`))?.[1]
+    .split(",")
+    .filter(Boolean).length ?? 0;
 
 function logEntries(text) {
   const entries = [];
@@ -154,11 +165,16 @@ function parseLog(text, scope, stats) {
       const out = body.replace(/^\n*```\n/, "").replace(/\n```\n*$/, "");
       const pr = Number(out.match(/^# PR #(\d+) \[/m)?.[1]) || null;
       // A poll prints a `# PR #N [ACTION]` header; an apply does not.
-      const cands = open(t).filter((i) => !i.outs.length && (pr ? i.pr === pr && i.kind === "poll" : i.kind !== "poll"));
+      const cands = open(t).filter(
+        (i) => !i.outs.length && (pr ? i.pr === pr && i.kind === "poll" : i.kind !== "poll"),
+      );
       if (cands.length > 1) stats.heuristic++;
       const inv = cands.sort((a, b) => a.t - b.t)[0];
       if (!inv) continue;
-      inv.outs.push({ chars: out.length, action: out.match(/^# PR #\d+ \[([A-Z_]+)\]/m)?.[1] ?? null });
+      inv.outs.push({
+        chars: out.length,
+        action: out.match(/^# PR #\d+ \[([A-Z_]+)\]/m)?.[1] ?? null,
+      });
       inv.last = t;
       inv.closed = true;
     }
@@ -217,7 +233,8 @@ const resultText = (b) =>
     : (b.content ?? []).map((x) => (x?.type === "text" ? x.text : "")).join("");
 
 const SHEPHERD_CLI = /(?:^|[\s;&|(])(?:npx (?:--prefix \S+ )?)?pr-shepherd(?=\s)/m;
-const GH_PR_STATE = /\bgh (?:pr (?:view|checks|ready|edit|comment|review)\b|api\b[^\n|;]*(?:\/pulls\/\d+|graphql[^\n]*pullRequest))/;
+const GH_PR_STATE =
+  /\bgh (?:pr (?:view|checks|ready|edit|comment|review)\b|api\b[^\n|;]*(?:\/pulls\/\d+|graphql[^\n]*pullRequest))/;
 const POLL_FILE = /\bp(5\d\d)[a-z]?\.md\b/g;
 const ENV_FAILURE =
   /^(?:This (?:session|agent) is isolated in the worktree|.*\b(?:Operation not permitted|Author identity unknown|index\.lock)\b)|pr-shepherd error: Command failed|exit 70\b|Exit code 70\b/m;
@@ -232,25 +249,40 @@ function classify(use, result, bgPrs, scope) {
   const input = use.input ?? {};
   const text =
     use.name === "Bash"
-      ? input.command ?? ""
+      ? (input.command ?? "")
       : use.name === "Read"
-        ? input.file_path ?? ""
+        ? (input.file_path ?? "")
         : JSON.stringify(input);
   const inScope = (n) => scope.has(n);
   const prs = new Set();
-  for (const m of text.matchAll(/(?:pr-shepherd(?: apply \w+)? (?:\S+\/pull\/)?|\/pull\/|\bpulls\/|number:\s*|gh pr \w+ )(\d{3})\b/g))
+  for (const m of text.matchAll(
+    /(?:pr-shepherd(?: apply \w+)? (?:\S+\/pull\/)?|\/pull\/|\bpulls\/|number:\s*|gh pr \w+ )(\d{3})\b/g,
+  ))
     if (inScope(Number(m[1]))) prs.add(Number(m[1]));
   for (const m of text.matchAll(POLL_FILE)) if (inScope(Number(m[1]))) prs.add(Number(m[1]));
   for (const [id, p] of bgPrs) if (text.includes(id)) p.forEach((n) => prs.add(n));
-  const readsPolls = (POLL_FILE.test(text) || [...bgPrs.keys()].some((id) => text.includes(id))) && prs.size;
+  const readsPolls =
+    (POLL_FILE.test(text) || [...bgPrs.keys()].some((id) => text.includes(id))) && prs.size;
   POLL_FILE.lastIndex = 0;
   const shepherd =
     (use.name === "Bash" && (SHEPHERD_CLI.test(text) || GH_PR_STATE.test(text))) ||
     ((use.name === "Read" || use.name === "Bash" || /Output$/.test(use.name)) && readsPolls);
-  if (use.name === "Bash" && /^\s*(?:for n in [\d ]+; do )?for n in/.test(text) === false && /\bfor n in ((?:5\d\d ?)+)/.test(text))
-    for (const n of text.match(/\bfor n in ((?:5\d\d ?)+)/)[1].trim().split(" ")) if (inScope(Number(n))) prs.add(Number(n));
+  if (
+    use.name === "Bash" &&
+    /^\s*(?:for n in [\d ]+; do )?for n in/.test(text) === false &&
+    /\bfor n in ((?:5\d\d ?)+)/.test(text)
+  )
+    for (const n of text
+      .match(/\bfor n in ((?:5\d\d ?)+)/)[1]
+      .trim()
+      .split(" "))
+      if (inScope(Number(n))) prs.add(Number(n));
   const env = ENV_FAILURE.test(result.slice(0, 600));
-  return { bucket: env ? "overhead" : shepherd ? "shepherd" : "common", prs: [...prs], isCli: SHEPHERD_CLI.test(text) };
+  return {
+    bucket: env ? "overhead" : shepherd ? "shepherd" : "common",
+    prs: [...prs],
+    isCli: SHEPHERD_CLI.test(text),
+  };
 }
 
 /**
@@ -266,13 +298,24 @@ function parseTranscript(path, until) {
     if (e.type === "assistant" && e.message?.id) {
       let c = byId.get(e.message.id);
       if (!c) {
-        c = { idx, lastIdx: idx, t: e.timestamp, usage: e.message.usage, uses: [], thinking: false };
+        c = {
+          idx,
+          lastIdx: idx,
+          t: e.timestamp,
+          usage: e.message.usage,
+          uses: [],
+          thinking: false,
+        };
         byId.set(e.message.id, c);
         calls.push(c);
       }
       c.lastIdx = idx;
       const u = e.message.usage;
-      if (u) c.usage = { ...u, output_tokens: Math.max(u.output_tokens ?? 0, c.usage?.output_tokens ?? 0) };
+      if (u)
+        c.usage = {
+          ...u,
+          output_tokens: Math.max(u.output_tokens ?? 0, c.usage?.output_tokens ?? 0),
+        };
       for (const b of e.message.content ?? []) {
         if (b?.type === "tool_use") c.uses.push(b);
         if (b?.type === "thinking" || b?.type === "redacted_thinking") c.thinking = true;
@@ -280,12 +323,14 @@ function parseTranscript(path, until) {
     }
     if (e.type === "user" && Array.isArray(e.message?.content))
       for (const b of e.message.content)
-        if (b?.type === "tool_result") results.set(b.tool_use_id, { text: resultText(b), idx, isError: !!b.is_error });
+        if (b?.type === "tool_result")
+          results.set(b.tool_use_id, { text: resultText(b), idx, isError: !!b.is_error });
   });
   return { events, calls, results };
 }
 
-const prompt = (u) => (u.input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0);
+const prompt = (u) =>
+  (u.input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0);
 /** Real spend of one request, in the bench's input-token equivalents. */
 const realIte = (u) =>
   (u.input_tokens ?? 0) +
@@ -293,7 +338,14 @@ const realIte = (u) =>
   MODEL.cacheReadMultiplier * (u.cache_read_input_tokens ?? 0) +
   MODEL.outputMultiplier * (u.output_tokens ?? 0);
 
-const emptyBucket = () => ({ ite: 0, turns: 0, calls: 0, resultChars: 0, measuredChars: 0, resultTokens: 0 });
+const emptyBucket = () => ({
+  ite: 0,
+  turns: 0,
+  calls: 0,
+  resultChars: 0,
+  measuredChars: 0,
+  resultTokens: 0,
+});
 /** Per-turn reminders Claude Code adds after every result; the fit's intercept absorbs them. */
 const QUIET_ATTACHMENTS = new Set(["total_tokens_reminder", "deferred_tools_record"]);
 
@@ -308,7 +360,10 @@ function walkTranscript(tr, { scope, coordinator, add, samples }) {
   let started = coordinator;
   tr.calls.forEach((c, i) => {
     const next = tr.calls[i + 1];
-    const delta = next && c.usage && next.usage ? prompt(next.usage) - prompt(c.usage) - (c.usage.output_tokens ?? 0) : null;
+    const delta =
+      next && c.usage && next.usage
+        ? prompt(next.usage) - prompt(c.usage) - (c.usage.output_tokens ?? 0)
+        : null;
     const items = c.uses.map((u) => {
       const r = tr.results.get(u.id) ?? { text: "", idx: c.lastIdx, isError: false };
       const k = classify(u, r.text, bgPrs, scope);
@@ -337,7 +392,11 @@ function walkTranscript(tr, { scope, coordinator, add, samples }) {
     const chars = items.reduce((s, x) => s + x.r.text.length, 0);
     const ite = c.usage ? realIte(c.usage) : 0;
     if (!items.length) {
-      if (started) add(coordinator ? null : current, coordinator ? "coordination" : "common", { ite, turns: 1 });
+      if (started)
+        add(coordinator ? null : current, coordinator ? "coordination" : "common", {
+          ite,
+          turns: 1,
+        });
       return;
     }
     for (const { r, k } of items) {
@@ -350,14 +409,25 @@ function walkTranscript(tr, { scope, coordinator, add, samples }) {
       const measurable = delta != null && chars && delta >= 0 && delta <= chars + 1000;
       const tokens = measurable ? (delta * r.text.length) / chars : null;
       const bucket = coordinator && k.bucket === "common" ? "coordination" : k.bucket;
-      const prs = coordinator ? (bucket === "coordination" ? [null] : k.prs.length ? k.prs : [null]) : k.bucket === "shepherd" && k.prs.length ? k.prs : [current];
+      const prs = coordinator
+        ? bucket === "coordination"
+          ? [null]
+          : k.prs.length
+            ? k.prs
+            : [null]
+        : k.bucket === "shepherd" && k.prs.length
+          ? k.prs
+          : [current];
       for (const pr of prs)
         add(pr, bucket, {
           ite: (ite * share) / prs.length,
           turns: share / prs.length,
           calls: 1 / prs.length,
           resultChars: r.text.length / prs.length,
-          ...(tokens != null && { measuredChars: r.text.length / prs.length, resultTokens: tokens / prs.length }),
+          ...(tokens != null && {
+            measuredChars: r.text.length / prs.length,
+            resultTokens: tokens / prs.length,
+          }),
           ...(k.isCli && bucket === "shepherd" && { cliResults: 1 / prs.length }),
         });
     }
@@ -406,10 +476,23 @@ function prContent(raw, t0) {
       outdated: t.isOutdated,
       pathChars: t.path.length,
       hasLine: t.line != null,
-      comments: t.comments.nodes.map((c) => ({ t: rel(c.createdAt), chars: c.body.length, urlChars: c.url.length })),
+      comments: t.comments.nodes.map((c) => ({
+        t: rel(c.createdAt),
+        chars: c.body.length,
+        urlChars: c.url.length,
+      })),
     })),
-    comments: p.comments.nodes.map((c) => ({ t: rel(c.createdAt), chars: c.body.length, urlChars: c.url.length, minimized: c.isMinimized })),
-    reviews: p.reviews.nodes.map((r) => ({ t: rel(r.submittedAt), state: r.state, chars: r.body.length })),
+    comments: p.comments.nodes.map((c) => ({
+      t: rel(c.createdAt),
+      chars: c.body.length,
+      urlChars: c.url.length,
+      minimized: c.isMinimized,
+    })),
+    reviews: p.reviews.nodes.map((r) => ({
+      t: rel(r.submittedAt),
+      state: r.state,
+      chars: r.body.length,
+    })),
     commits: p.commits.nodes.map(({ commit }) => ({
       t: rel(commit.committedDate),
       checks: commit.checkSuites.nodes.flatMap((s) =>
@@ -417,7 +500,8 @@ function prContent(raw, t0) {
           nameChars: c.name.length,
           urlChars: c.detailsUrl?.length ?? 0,
           done: rel(c.completedAt),
-          ok: c.conclusion === "SUCCESS" || c.conclusion === "SKIPPED" || c.conclusion === "NEUTRAL",
+          ok:
+            c.conclusion === "SUCCESS" || c.conclusion === "SKIPPED" || c.conclusion === "NEUTRAL",
         })),
       ),
     })),
@@ -433,7 +517,9 @@ function extract(opts) {
   const invs = logFiles
     .flatMap((f) => parseLog(readFileSync(join(opts.logs, f), "utf8"), scope, stats))
     .filter((i) => !opts.until || i.t <= secs(opts.until));
-  const t0 = Object.fromEntries(opts.prs.map((pr) => [pr, Math.min(...invs.filter((i) => i.pr === pr).map((i) => i.t))]));
+  const t0 = Object.fromEntries(
+    opts.prs.map((pr) => [pr, Math.min(...invs.filter((i) => i.pr === pr).map((i) => i.t))]),
+  );
 
   const sub = join(opts.transcripts, "subagents");
   const files = [
@@ -467,8 +553,10 @@ function extract(opts) {
     };
     walkTranscript(tr, { scope, coordinator: f.coordinator, add, samples });
   }
-  const roundBucket = (b) => Object.fromEntries(Object.entries(b).map(([k, v]) => [k, Math.round(v * 10) / 10]));
-  const roundAll = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, roundBucket(v)]));
+  const roundBucket = (b) =>
+    Object.fromEntries(Object.entries(b).map(([k, v]) => [k, Math.round(v * 10) / 10]));
+  const roundAll = (o) =>
+    Object.fromEntries(Object.entries(o).map(([k, v]) => [k, roundBucket(v)]));
 
   return {
     note: "Generated by `node evals/tokens/sessions.mjs --extract`. Numbers only: seconds are relative to each PR's first poll.",
@@ -547,7 +635,12 @@ export function stateAt(pr, t) {
     reviewSummaries: [],
     historyReviews: c.reviews
       .filter((r) => r.t <= t)
-      .map((r) => ({ id: fakeId("", 20), author: "reviewer[bot]", body: fill(r.chars), state: r.state })),
+      .map((r) => ({
+        id: fakeId("", 20),
+        author: "reviewer[bot]",
+        body: fill(r.chars),
+        state: r.state,
+      })),
     checks: commit.checks.map((k) => ({
       name: fill(k.nameChars, "n"),
       status: k.done != null && k.done <= t ? "COMPLETED" : "IN_PROGRESS",
@@ -558,8 +651,16 @@ export function stateAt(pr, t) {
 }
 
 const call = (phase, cmd, out, extra = {}) => ({ phase, via: "bash", cmd, out, ...extra });
-const mcp = (phase, tool, args, out) => ({ phase, via: "mcp", cmd: `${tool} ${JSON.stringify({ owner: "owner", repo: "repo", ...args })}`, out });
-const ghObserve = (s, phase) => [call(phase, ghViewCmd(s), ghPrView(s)), call(phase, ghThreadsCmd(s), ghThreads(s))];
+const mcp = (phase, tool, args, out) => ({
+  phase,
+  via: "mcp",
+  cmd: `${tool} ${JSON.stringify({ owner: "owner", repo: "repo", ...args })}`,
+  out,
+});
+const ghObserve = (s, phase) => [
+  call(phase, ghViewCmd(s), ghPrView(s)),
+  call(phase, ghThreadsCmd(s), ghThreads(s)),
+];
 const mcpObserve = (s, phase) =>
   [
     ["get", mcpGet],
@@ -567,11 +668,17 @@ const mcpObserve = (s, phase) =>
     ["get_review_comments", mcpReviewThreads],
     ["get_reviews", mcpReviews],
     ["get_comments", mcpComments],
-  ].map(([method, render]) => mcp(phase, "pull_request_read", { method, pullNumber: s.number }, render(s)));
+  ].map(([method, render]) =>
+    mcp(phase, "pull_request_read", { method, pullNumber: s.number }, render(s)),
+  );
 
 const REPLY = "Fixed in the latest commit.";
-const MINIMIZE_OUT = JSON.stringify({ data: { minimizeComment: { minimizedComment: { isMinimized: true } } } });
-const RESOLVE_OUT = JSON.stringify({ data: { resolveReviewThread: { thread: { isResolved: true } } } });
+const MINIMIZE_OUT = JSON.stringify({
+  data: { minimizeComment: { minimizedComment: { isMinimized: true } } },
+});
+const RESOLVE_OUT = JSON.stringify({
+  data: { resolveReviewThread: { thread: { isResolved: true } } },
+});
 
 /**
  * One invocation of the real timeline, played three ways. Baselines read the
@@ -588,17 +695,27 @@ function stepArms(pr, inv) {
     const tickTimes = Array.from({ length: waits }, (_, i) => inv.t + 60 * i);
     return {
       shepherd: [
-        call(1, `pr-shepherd ${n} --interval 60s --timeout 4.5m --quiet-status`, fill(inv.outChars ?? 0), {
-          // A fingerprint miss costs 2 points, each later hit 1 (docs/graphql-usage.md).
-          api: gql(SHEPHERD_TICK_API.graphqlPoints + waits),
-        }),
+        call(
+          1,
+          `pr-shepherd ${n} --interval 60s --timeout 4.5m --quiet-status`,
+          fill(inv.outChars ?? 0),
+          {
+            // A fingerprint miss costs 2 points, each later hit 1 (docs/graphql-usage.md).
+            api: gql(SHEPHERD_TICK_API.graphqlPoints + waits),
+          },
+        ),
       ],
       gh: [
         ...(waits
           ? [
-              call(1, `gh pr checks ${n} -R owner/repo --watch --interval 60`, tickTimes.map((t) => ghPrChecks(stateAt(pr, t))).join("\n"), {
-                api: gql(waits),
-              }),
+              call(
+                1,
+                `gh pr checks ${n} -R owner/repo --watch --interval 60`,
+                tickTimes.map((t) => ghPrChecks(stateAt(pr, t))).join("\n"),
+                {
+                  api: gql(waits),
+                },
+              ),
             ]
           : []),
         ...ghObserve(s, waits ? 2 : 1),
@@ -606,7 +723,12 @@ function stepArms(pr, inv) {
       mcp: [
         ...tickTimes.flatMap((t, i) => [
           call(2 * i + 1, "sleep 60", ""),
-          mcp(2 * i + 2, "pull_request_read", { method: "get_check_runs", pullNumber: n }, mcpCheckRuns(stateAt(pr, t))),
+          mcp(
+            2 * i + 2,
+            "pull_request_read",
+            { method: "get_check_runs", pullNumber: n },
+            mcpCheckRuns(stateAt(pr, t)),
+          ),
         ]),
         ...mcpObserve(s, 2 * waits + 1),
       ],
@@ -614,12 +736,17 @@ function stepArms(pr, inv) {
   }
   if (inv.kind === "journal")
     return {
-      shepherd: [call(1, `pr-shepherd apply journal ${n} --message "${fill(80)}"`, fill(inv.outChars ?? 0), { api: gql(2) })],
+      shepherd: [
+        call(1, `pr-shepherd apply journal ${n} --message "${fill(80)}"`, fill(inv.outChars ?? 0), {
+          api: gql(2),
+        }),
+      ],
       gh: [],
       mcp: [],
     };
   const a = inv.apply;
-  const ids = (flag, prefix, len, count) => (count ? ` --${flag} ${Array.from({ length: count }, () => fakeId(prefix, len)).join(",")}` : "");
+  const ids = (flag, prefix, len, count) =>
+    count ? ` --${flag} ${Array.from({ length: count }, () => fakeId(prefix, len)).join(",")}` : "";
   const mutations = a.replies + a.resolves + a.minimizes + a.dismissals;
   return {
     shepherd: [
@@ -632,10 +759,18 @@ function stepArms(pr, inv) {
     ],
     gh: [
       ...Array.from({ length: a.replies }, (_, i) =>
-        call(1, `gh api --silent -X POST repos/owner/repo/pulls/${n}/comments/${4238000000 + i}/replies -f body='${REPLY}'`, ""),
+        call(
+          1,
+          `gh api --silent -X POST repos/owner/repo/pulls/${n}/comments/${4238000000 + i}/replies -f body='${REPLY}'`,
+          "",
+        ),
       ),
       ...Array.from({ length: a.resolves }, () =>
-        call(1, `gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "${fakeId("PRRT_", 22)}"}) { thread { isResolved } } }'`, RESOLVE_OUT),
+        call(
+          1,
+          `gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "${fakeId("PRRT_", 22)}"}) { thread { isResolved } } }'`,
+          RESOLVE_OUT,
+        ),
       ),
       ...Array.from({ length: a.minimizes }, () =>
         call(
@@ -649,9 +784,21 @@ function stepArms(pr, inv) {
     // only flatters it.
     mcp: [
       ...Array.from({ length: a.replies }, (_, i) =>
-        mcp(1, "add_reply_to_pull_request_comment", { pullNumber: n, commentId: 4238000000 + i, body: REPLY }, JSON.stringify({ id: "4238000000", url: fill(70, "u") })),
+        mcp(
+          1,
+          "add_reply_to_pull_request_comment",
+          { pullNumber: n, commentId: 4238000000 + i, body: REPLY },
+          JSON.stringify({ id: "4238000000", url: fill(70, "u") }),
+        ),
       ),
-      ...Array.from({ length: a.resolves }, () => mcp(1, "resolve_review_thread", { threadID: fakeId("PRRT_", 22) }, "review thread resolved successfully")),
+      ...Array.from({ length: a.resolves }, () =>
+        mcp(
+          1,
+          "resolve_review_thread",
+          { threadID: fakeId("PRRT_", 22) },
+          "review thread resolved successfully",
+        ),
+      ),
     ],
   };
 }
@@ -663,7 +810,9 @@ const SUM_KEYS = ["calls", "turns", "toolTokens", "ite", "graphqlPoints", "restC
 export function realSessions(data = readJson(REAL_SESSIONS_FILE)) {
   const rows = data.prs.map((pr) => {
     const steps = pr.invocations.filter((i) => i.outChars != null);
-    const sum = Object.fromEntries(ARMS.map((a) => [a, Object.fromEntries(SUM_KEYS.map((k) => [k, 0]))]));
+    const sum = Object.fromEntries(
+      ARMS.map((a) => [a, Object.fromEntries(SUM_KEYS.map((k) => [k, 0]))]),
+    );
     for (const inv of steps) {
       const arms = stepArms(pr, inv);
       for (const a of ARMS) {
@@ -687,7 +836,10 @@ export function realSessions(data = readJson(REAL_SESSIONS_FILE)) {
     );
     return {
       pr: pr.pr,
-      rounds: Math.max(1, polls.filter((i) => ["READY", "CANCEL", "ESCALATE"].includes(i.action)).length),
+      rounds: Math.max(
+        1,
+        polls.filter((i) => ["READY", "CANCEL", "ESCALATE"].includes(i.action)).length,
+      ),
       polls: polls.length,
       applies: steps.length - polls.length,
       ticks: polls.reduce((s, i) => s + i.ticks, 0),
@@ -713,7 +865,13 @@ export function realSessionLosses(rows) {
     for (const b of ["gh", "mcp"])
       for (const k of SUM_KEYS)
         if (r.modeled.shepherd[k] > r.modeled[b][k])
-          losses.push({ where: `real:${r.pr}`, metric: k, baseline: b, ours: r.modeled.shepherd[k], theirs: r.modeled[b][k] });
+          losses.push({
+            where: `real:${r.pr}`,
+            metric: k,
+            baseline: b,
+            ours: r.modeled.shepherd[k],
+            theirs: r.modeled[b][k],
+          });
   return losses;
 }
 
@@ -730,7 +888,12 @@ const pct = (ours, base) => {
 export function realSessionsSection({ rows, data } = realSessions()) {
   const out = [];
   const total = (f) => rows.reduce((s, r) => s + f(r), 0);
-  const T = Object.fromEntries(ARMS.map((a) => [a, Object.fromEntries(SUM_KEYS.map((k) => [k, total((r) => r.modeled[a][k])]))]));
+  const T = Object.fromEntries(
+    ARMS.map((a) => [
+      a,
+      Object.fromEntries(SUM_KEYS.map((k) => [k, total((r) => r.modeled[a][k])])),
+    ]),
+  );
   const cpt = data.charsPerToken;
   out.push("## Real sessions", "");
   out.push(
@@ -756,8 +919,14 @@ export function realSessionsSection({ rows, data } = realSessions()) {
   );
   const losses = realSessionLosses(rows);
   if (losses.length) {
-    out.push("Where modeled pr-shepherd costs more on a real PR:", "");
-    for (const l of losses) out.push(`- #${l.where.slice(5)} ${l.metric} vs. ${l.baseline === "gh" ? "gh" : "MCP"}: ${num(l.ours)} vs. ${num(l.theirs)}`);
+    out.push(
+      "Where modeled pr-shepherd costs more on a real PR. These are not gated: `--check` gates the synthetic sessions, where the same metrics are already pending.",
+      "",
+    );
+    for (const l of losses)
+      out.push(
+        `- #${l.where.slice(5)} ${l.metric} vs. ${l.baseline === "gh" ? "gh" : "MCP"}: ${num(l.ours)} vs. ${num(l.theirs)} (#${ISSUE_FOR[l.metric]})`,
+      );
     out.push("");
   }
 
@@ -774,9 +943,9 @@ export function realSessionsSection({ rows, data } = realSessions()) {
     { cost: 0, mut: 0, rest: 0 },
   );
   out.push(
-    `- **Characters per token.** Fitted on ${cpt.all.samples} clean tool results (one result between two requests, nothing else): ${cpt.all.charsPerToken} characters per token plus ${cpt.all.intercept} tokens per result (R² ${cpt.all.r2}). pr-shepherd's own output alone: ${cpt.shepherd ? `${cpt.shepherd.charsPerToken} (${cpt.shepherd.samples} results, R² ${cpt.shepherd.r2})` : "too few clean samples"}. Per result of 2,000+ characters: median ${cpt.all.perSample.p50}, 10th–90th percentile ${cpt.all.perSample.p10}–${cpt.all.perSample.p90}. The model assumes ${MODEL.charsPerToken}; \`fixtures/calibrate\` assumes 4.00.`,
-    `- **Context tokens.** The pr-shepherd and PR-state results whose size the next request's prompt growth pins down (${num(mChars)} characters) measured ${num(mTok)} tokens; the model's ${MODEL.charsPerToken} characters per token gives ${num(mChars / MODEL.charsPerToken)}.`,
-    `- **Rate limit.** The debug logs record every request: pr-shepherd spent ${num(api.cost)} GraphQL points on queries, ${num(api.mut)} mutation requests (GitHub reports no cost for these; at 1 point each the total is ${num(api.cost + api.mut)}) and ${num(api.rest)} REST requests. The model charges ${num(T.shepherd.graphqlPoints)} points and ${num(T.shepherd.restCore)} REST requests for the same timeline. No poll recorded \`apiUsage\` (none ran with \`--verbose\`), so these come from the per-request log entries.`,
+    `- **Characters per token.** A result's tokens are the next request's prompt growth, less the calling request's output. Fitted on the ${cpt.noThinking.samples} clean results (one result between two requests, nothing else) whose request had no thinking block: ${cpt.noThinking.charsPerToken} characters per token plus ${cpt.noThinking.intercept} tokens per result (R² ${cpt.noThinking.r2}); per result of 2,000+ characters, median ${cpt.noThinking.perSample.p50}, 10th–90th percentile ${cpt.noThinking.perSample.p10}–${cpt.noThinking.perSample.p90}. pr-shepherd's own output alone: ${cpt.shepherd ? `${cpt.shepherd.charsPerToken} (${cpt.shepherd.samples} results, R² ${cpt.shepherd.r2})` : "too few clean samples"}. With thinking requests included the fit degrades (${cpt.all.samples} results, ${cpt.all.charsPerToken}, R² ${cpt.all.r2}): thinking counts as output but leaves the next prompt. The model assumes ${MODEL.charsPerToken} for every arm and \`fixtures/calibrate\` 4.00, so both undercount real tokens. No session used GitHub MCP, so MCP's JSON ratio is unmeasured.`,
+    `- **Context tokens.** The pr-shepherd and PR-state results whose size the next request's prompt growth pins down (${num(mChars)} characters) measured, per-result wrapper included, ${num(mTok)} tokens; the model's ${MODEL.charsPerToken} characters per token gives ${num(mChars / MODEL.charsPerToken)}.`,
+    `- **Rate limit.** The debug logs record every request: pr-shepherd spent ${num(api.cost)} GraphQL points on queries, ${num(api.mut)} mutation requests (GitHub reports no cost for these; at 1 point each the total is ${num(api.cost + api.mut)}) and ${num(api.rest)} REST requests. The model charges ${num(T.shepherd.graphqlPoints)} points and ${num(T.shepherd.restCore)} REST requests for the same timeline (GraphQL transport, which every session used); most of the REST requests are mergeability refreshes on READY, which the model omits. No poll recorded \`apiUsage\` (none ran with \`--verbose\`), so these come from the per-request log entries.`,
     `- **Turns.** The agents spent ${num(sh.reduce((s, b) => s + b.turns, 0))} turns on pr-shepherd calls and reads of their output; the model counts ${num(T.shepherd.turns)}, one per invocation.`,
     "",
   );
@@ -784,7 +953,8 @@ export function realSessionsSection({ rows, data } = realSessions()) {
   out.push("### Where the real tokens went", "");
   const b = data.buckets.agents;
   const allIte = Object.values(b).reduce((s, x) => s + x.ite, 0);
-  const row = (name, x) => `| ${name} | ${num(x?.ite ?? 0)} | ${Math.round(((x?.ite ?? 0) / allIte) * 100)}% | ${num(x?.turns ?? 0)} | ${num(x?.resultTokens ?? 0)} |`;
+  const row = (name, x) =>
+    `| ${name} | ${num(x?.ite ?? 0)} | ${Math.round(((x?.ite ?? 0) / allIte) * 100)}% | ${num(x?.turns ?? 0)} | ${num(x?.resultTokens ?? 0)} |`;
   out.push(
     `Measured on the ${data.sources.transcripts - 1} agent transcripts that shepherded a PR, from each one's first poll. A request's spend goes to the calls it emitted. Real spend weighs Opus usage like the model: cache reads ×${MODEL.cacheReadMultiplier}, cache writes ×${MODEL.cacheWriteMultiplier}, output ×${MODEL.outputMultiplier}.`,
     "",
@@ -823,7 +993,14 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split("/").pop()
     writeFileSync(join(DATA_DIR, REAL_SESSIONS_FILE), `${JSON.stringify(data, null, 2)}\n`);
   } else {
     const { rows, data } = realSessions();
-    if (process.argv.includes("--json")) console.log(JSON.stringify({ rows, charsPerToken: data.charsPerToken, buckets: data.buckets, sources: data.sources }, null, 2));
+    if (process.argv.includes("--json"))
+      console.log(
+        JSON.stringify(
+          { rows, charsPerToken: data.charsPerToken, buckets: data.buckets, sources: data.sources },
+          null,
+          2,
+        ),
+      );
     else console.log(realSessionsSection({ rows, data }).join("\n"));
   }
 }

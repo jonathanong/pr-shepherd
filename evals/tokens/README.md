@@ -423,6 +423,30 @@ Stack session:
 
 These are assumptions, not measurements. See "Next steps".
 
+### Real sessions
+
+REPORT.md's "Real sessions" section replays the pr-shepherd runs that
+shepherded eight of this repository's PRs. `sessions.mjs --extract` reads the
+agents' Claude Code transcripts, pr-shepherd's debug logs and one `gh api
+graphql` dump per PR (threads, comments, reviews, check runs). It writes
+`data/real-sessions.json`: counts, character lengths, relative seconds and
+token usage, never text, IDs or paths. The bench reads only that file.
+
+- **Timeline.** Each poll (its action, and its ticks: snapshot reads at least
+  30 s apart) and each `apply` (its mutation counts) is one step. Both
+  baselines read the state that step read and issue the mutations it batched.
+  Their payloads are filler of the PR's real item sizes as of that step.
+- **Calibration, not gating.** Measured pr-shepherd numbers (result tokens,
+  GraphQL cost per request, REST requests, turns) calibrate the modeled
+  pr-shepherd arm. They are never compared with the modeled baselines, and
+  the real sessions do not feed `--check`.
+- **Buckets.** Each request's real spend goes to the calls it emitted:
+  pr-shepherd and PR-state calls, environment overhead (worktree guard,
+  sandbox, git identity, polls run outside the repository), or the code, test
+  and commit work every arm would do.
+- **Model.** The sessions ran on Opus; the eval target is Sonnet. Per-output
+  token counts carry over; turn and call counts are model behavior.
+
 ## Where the savings come from
 
 - **History is re-read every tick.** After one review round, `gh pr view
@@ -519,7 +543,10 @@ explains the main ones.
 
 - **Real token counts.** 3.5 characters per token is applied to every arm.
   JSON tokenizes denser than Markdown, so the estimate undercounts the
-  JSON-heavy baselines.
+  JSON-heavy baselines. The real sessions in REPORT.md measured about 2.5
+  characters per token across all tool results and about 2.2 for
+  pr-shepherd's own output, so the model undercounts every arm. None of those
+  sessions used GitHub MCP.
 - **Reasoning tokens.** The baselines must also classify raw state (Is this
   thread already handled? Is this failure a flake?), work pr-shepherd's output
   has already done. This benchmark counts none of it.
@@ -530,7 +557,8 @@ explains the main ones.
   are excluded.
 - **Real rate-limit cost.** The gh numbers are assumptions. The MCP mapping is
   read from source, and pr-shepherd's one-PR tick is checked against one live
-  PR, but no whole session is measured. GraphQL point cost also depends on
+  PR. pr-shepherd's whole-session spend is measured only for the real
+  sessions, from its debug logs; the baselines' is never measured. GraphQL point cost also depends on
   query shape and node counts, which a flat 1 or 2 points per call ignores.
   REST conditional requests (ETag/304) are modeled only in the informational
   event arm; the gated arms make none. Real sessions run the
