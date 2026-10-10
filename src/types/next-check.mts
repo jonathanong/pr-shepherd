@@ -1,5 +1,10 @@
 /** Why a deadline exists even though GitHub events may wake the session first. */
-export type NextCheckReason = "ready-delay" | "stall-timeout" | "merge-queue" | "safety-net";
+export type NextCheckReason =
+  | "ready-delay"
+  | "stall-timeout"
+  | "merge-queue"
+  | "merge-pending"
+  | "safety-net";
 
 /**
  * Event mode runs one tick, so the caller owns the next wake-up. `at` is an RFC3339 UTC time

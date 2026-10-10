@@ -54,6 +54,9 @@ export function runInPollModeScope<T>(args: string[], work: () => Promise<T>): P
 function resolvesToEvent(args: string[]): boolean {
   const flag = getFlag(args, "--poll-mode");
   const requested = requestedPollMode(flag);
+  // An explicit poll or event request wins without reading config, so a malformed config
+  // cannot drop an explicit `--poll-mode event` out of the durable scope.
+  if (requested === "event" || requested === "poll") return requested === "event";
   try {
     return resolvePollMode(requested, loadConfig().poll.mode) === "event";
   } catch {

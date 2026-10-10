@@ -43,7 +43,7 @@ describe("runInEventStateScope", () => {
     m.loadConfig.mockImplementation(() => {
       throw new Error("Invalid config");
     });
-    expect(await scoped(["iterate", "42", "--poll-mode", "event"])).toBe(false);
+    expect(await scoped(["iterate", "42"])).toBe(false);
   });
 });
 
@@ -56,5 +56,15 @@ describe("runInPollModeScope", () => {
     m.loadConfig.mockReturnValue({ poll: { mode: "event" } });
     expect(await logFile([])).toBe(true);
     expect(await logFile(["--poll-mode=poll"])).toBe(false);
+  });
+
+  it("honors an explicit poll or event mode without reading a malformed config", async () => {
+    m.loadConfig.mockImplementation(() => {
+      throw new Error("Invalid config");
+    });
+    expect(await logFile(["--poll-mode", "event"])).toBe(true);
+    expect(await logFile(["--poll-mode", "poll"])).toBe(false);
+    expect(await logFile(["--poll-mode", "auto"])).toBe(false);
+    expect(m.loadConfig).toHaveBeenCalledTimes(1);
   });
 });

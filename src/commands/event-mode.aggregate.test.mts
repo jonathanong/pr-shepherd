@@ -76,6 +76,29 @@ describe("aggregate event mode", () => {
     expect(queued.instructions![0]).toMatch(/^1\. /);
   });
 
+  it("rechecks a printed stack merge and drops polling-cadence sentences", async () => {
+    m.runPollSummary.mockResolvedValue(
+      summary({
+        reason: "actionable",
+        stackMergeable: true,
+        instructions: [
+          "1. PR #2 is the highest ready layer. Run `x`. If status is `pending`, rerun that command at the configured cadence to resume its UUID. `enqueued` is not merged.",
+          "2. No one-PR session can advance the stack yet: #3 idle. Recheck at the configured polling cadence.",
+          "3. The queued layers are waiting on the merge queue. Recheck them at the configured polling cadence. Do not rewrite a queued layer.",
+        ],
+      }),
+    );
+    const result = await runPollSummaryForMode({} as never);
+    expect(result.nextCheck).toMatchObject({ reason: "merge-pending" });
+    const text = result.instructions!.join("\n");
+    expect(text).not.toContain("configured polling cadence");
+    expect(text).not.toContain("configured cadence");
+    expect(result.instructions![0]).toContain("rerun that command after the wake-up below");
+    expect(result.instructions![2]).toBe(
+      "3. The queued layers are waiting on the merge queue. Do not rewrite a queued layer.",
+    );
+  });
+
   it("omits nextCheck once nothing is left to watch", async () => {
     for (const over of [
       { reason: "all_terminal" },

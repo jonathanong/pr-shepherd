@@ -31,6 +31,8 @@ interface NextCheckFacts {
   /** Ready-delay seconds left; only meaningful for `ready`. */
   remainingSeconds?: number;
   queued?: boolean;
+  /** A `merge` tick whose printed command is a REST merge request, which can stay `pending`. */
+  restMerge?: boolean;
   /** A native-stack draft hold: repeating this one-PR session cannot advance it. */
   stackDraftHold?: boolean;
   /** Unix seconds when an unchanged state would trip the stall timeout. */
@@ -39,9 +41,13 @@ interface NextCheckFacts {
 
 /**
  * Deadlines for one PR, or none when the caller must not wait for one. `mark_ready` has none:
- * its tick saw a draft, so only an immediate rerun can start the ready-delay timer.
+ * its tick saw a draft, so only an immediate rerun can start the ready-delay timer. A REST
+ * merge can return `pending`, so it keeps a wake-up to resume the recorded request.
  */
 export function nextCheckCandidates(facts: NextCheckFacts, nowMs: number): NextCheckCandidate[] {
+  if (facts.action === "merge" && facts.restMerge) {
+    return [{ reason: "merge-pending", seconds: MERGE_QUEUE_RECHECK_SECONDS }];
+  }
   const terminal = ["cancel", "escalate", "merge", "mark_ready"].includes(facts.action);
   if (terminal || facts.stackDraftHold) return [];
   const candidates: NextCheckCandidate[] = [];

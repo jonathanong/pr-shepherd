@@ -91,6 +91,7 @@ async function runIterateEvent(opts: IterateCommandOptions): Promise<IterateResu
         action: result.action,
         remainingSeconds: result.remainingSeconds,
         queued: result.mergeQueue?.inQueue === true,
+        restMerge: result.action === "merge" && result.merge.mode === "rest",
         stackDraftHold: result.action === "wait" && result.stackDraftHold !== undefined,
         stallDeadlineSeconds,
       },
@@ -140,7 +141,7 @@ async function withAggregateNextCheck(
   );
   const nextCheck = aggregateNextCheck(result, stallDeadlineSeconds);
   if (!nextCheck) return tagged;
-  const instructions = result.instructions ?? [];
+  const instructions = (result.instructions ?? []).map(withoutPollingCadence);
   const waiting = result.reason === "waiting" || result.reason === "timeout";
   return {
     ...tagged,
@@ -150,6 +151,20 @@ async function withAggregateNextCheck(
       `${instructions.length + 1}. ${eventAggregateStep(nextCheck, waiting)}`,
     ],
   };
+}
+
+/**
+ * Event mode replaces polling: the appended event step owns the next wake-up, so a stack
+ * step's "recheck at the configured polling cadence" would contradict it. A pending stack
+ * merge resumes on that wake-up instead.
+ */
+function withoutPollingCadence(step: string): string {
+  return step
+    .replace(/ Recheck(?: them)? at the configured polling cadence\./g, "")
+    .replace(
+      "rerun that command at the configured cadence to resume its UUID",
+      "rerun that command after the wake-up below to resume its UUID",
+    );
 }
 
 function aggregateNextCheck(
@@ -167,6 +182,10 @@ function aggregateNextCheck(
   const candidates: NextCheckCandidate[] = result.prs
     .filter((item) => (item.remainingSeconds ?? 0) > 0)
     .map((item) => ({ reason: "ready-delay" as const, seconds: item.remainingSeconds! }));
+  // A printed stack merge can stay pending, so recheck it like a REST merge.
+  if (result.stackMergeable === true) {
+    candidates.push({ reason: "merge-pending", seconds: MERGE_QUEUE_RECHECK_SECONDS });
+  }
   candidates.push(
     result.prs.some((item) => item.isInMergeQueue)
       ? { reason: "merge-queue", seconds: MERGE_QUEUE_RECHECK_SECONDS }

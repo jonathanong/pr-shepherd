@@ -55,6 +55,12 @@ describe("nextCheckCandidates", () => {
     ]);
   });
 
+  it("keeps a merge-pending recheck for a REST merge", () => {
+    expect(
+      nextCheckCandidates({ action: "merge", restMerge: true, stallDeadlineSeconds: 1 }, 0),
+    ).toEqual([{ reason: "merge-pending", seconds: MERGE_QUEUE_RECHECK_SECONDS }]);
+  });
+
   it("uses merge-queue for a queued wait", () => {
     expect(nextCheckCandidates({ action: "wait", queued: true }, NOW_MS)).toEqual([
       { reason: "merge-queue", seconds: MERGE_QUEUE_RECHECK_SECONDS },

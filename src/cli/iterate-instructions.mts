@@ -55,6 +55,11 @@ export function buildSimpleIterateInstructions(
         "The CLI marked the PR ready for review. Iterate immediately with the same options to continue.",
       ];
     case "merge": {
+      if (result.merge.mode === "rest" && result.nextCheck)
+        return [
+          "Run the `REST merge` command shown above exactly as printed; `enqueued` is not merged.",
+          ...eventWaitSteps(result.nextCheck),
+        ];
       if (result.merge.mode === "rest")
         return [
           "Run the `REST merge` command shown above exactly as printed. If its status is `pending`, rerun that same command at the configured polling cadence to resume the recorded request; `enqueued` is not merged.",
