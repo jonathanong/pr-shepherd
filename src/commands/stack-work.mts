@@ -76,3 +76,22 @@ export function appendMarkReadyInstructions(instructions: string[], layers: Prob
 function isProbed(item: PollSummaryItem): item is ProbedLayer {
   return item.pollProbe === true && item.pollCommand !== undefined;
 }
+
+/**
+ * Work exists, but every routed layer belongs to another author: rerunning the stack selector
+ * cannot change anything, so the caller reports the overview and stops instead.
+ */
+function onlyUnownedWork(layers: PollSummaryItem[]): boolean {
+  return layers.length > 0 && layers.every((item) => !item.owned);
+}
+
+/** The closing step after routed sessions: rerun the selector, or stop when nothing is owned. */
+export function appendStackRerunInstruction(
+  instructions: string[],
+  layers: PollSummaryItem[],
+  rerun: string,
+): void {
+  instructions.push(
+    `${instructions.length + 1}. ${onlyUnownedWork(layers) ? "No owned layer needs a session. Report this overview and stop." : rerun}`,
+  );
+}

@@ -124,7 +124,7 @@ CONFLICTS is included so merge conflicts and review comments can be handled in o
 - In GraphQL mode, import with `gh stack checkout <mergeRequirements.stack.number>` when `gh stack` does not track the stack locally. REST mode uses the repository's stack-update procedure. Use the stack number, not the PR number.
 - The printed step points at the Branch update playbook.
 - That playbook covers confirming each local layer is at its PR head before publishing the rewritten stack, and `gh stack rebase --continue` in GraphQL mode. It does not print a second push.
-- A `gh stack merge` step points at the Stack merge playbook. That playbook does not push.
+- A `gh stack merge` step prints its missing-extension rule inline and says not to rebase or push.
 - In GraphQL mode, an upper layer behind its own PR base gets `gh stack rebase --upstack --no-trunk` from that base, not from the stack trunk `mergeRequirements.stack.baseRefName`. REST mode follows the repository's stack-update procedure. Stale-boundary repair uses the same transport-appropriate route.
 - An upper layer that already contains that base (`baseRef.compare(headRef).behindBy === 0`) conflicts with the stack trunk. The summary says conflicts with stack trunk `<trunk>` (`stackTrunkConflict` in JSON). The instruction is a whole-stack `gh stack rebase` from the bottom open layer.
 - The bottom open layer is the one whose PR base is that trunk, including a higher layer GitHub retargeted after the layers below it merged. It gets the same whole-stack rebase.

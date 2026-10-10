@@ -30,8 +30,8 @@ const MAX_RETRIES = 3;
 2. For every `[suggestion]` thread under `## Review threads`, run one `pr-shepherd build-suggestion-patches https://github.com/owner/repo/pull/42 --thread-id "<id>" --message "<one-sentence headline>" --format=json`, repeating `--thread-id` and `--message` in displayed order. Playbook: "Suggestion patches".
 3. Apply every warranted review fix in each file referenced above.
 4. If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.
-5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
+5. For any substantial decision or rejection, add a Shepherd Journal entry with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`, linking threads and comments by heading URL and citing reviews by ID.
 6. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)` (it must equal the remote PR head). If you did, use the pushed SHA.
 7. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
-8. Run the `apply review:` command above. Playbook: "Review-mutation mechanics".
+8. Run the `apply review:` command above with every printed ID, even if you changed no code.
 9. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.

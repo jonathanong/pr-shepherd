@@ -13,7 +13,11 @@ import {
   stackPosition,
   type StackPlan,
 } from "./stack-drain.mts";
-import { appendMarkReadyInstructions, splitStackWork } from "./stack-work.mts";
+import {
+  appendMarkReadyInstructions,
+  appendStackRerunInstruction,
+  splitStackWork,
+} from "./stack-work.mts";
 
 /** Keep aggregate JSON, Markdown, and MCP instructions on one projection. */
 export function withPollSummaryInstructions(
@@ -135,8 +139,10 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
       );
     }
     if (agentWork) {
-      instructions.push(
-        `${instructions.length + 1}. After the listed one-PR sessions, rerun this same \`--stack\` selector. Stop for the human handoff only when no autonomous shepherding remains.`,
+      appendStackRerunInstruction(
+        instructions,
+        [...runnableCandidates, ...work.markReady],
+        "After the listed one-PR sessions, rerun this same `--stack` selector. Stop for the human handoff only when no autonomous shepherding remains.",
       );
     }
     return { action: stop ? "escalate" : "shepherd", stackMergeable: false, instructions };
@@ -161,8 +167,10 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
         );
       }
       if (agentWork) {
-        instructions.push(
-          `${instructions.length + 1}. After the listed one-PR sessions, rerun this same \`--stack\` selector. Stop for the human handoff only when no autonomous shepherding remains.`,
+        appendStackRerunInstruction(
+          instructions,
+          [...runnableCandidates, ...work.markReady],
+          "After the listed one-PR sessions, rerun this same `--stack` selector. Stop for the human handoff only when no autonomous shepherding remains.",
         );
       }
       return { action: agentWork ? "shepherd" : "escalate", stackMergeable: false, instructions };
@@ -171,8 +179,10 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
     const instructions: string[] = [];
     appendAutonomousInstructions(instructions, work.sessions);
     appendMarkReadyInstructions(instructions, work.markReady);
-    instructions.push(
-      `${instructions.length + 1}. After the selected one-PR sessions, rerun this same \`--stack\` selector.`,
+    appendStackRerunInstruction(
+      instructions,
+      [...work.sessions, ...work.markReady],
+      "After the selected one-PR sessions, rerun this same `--stack` selector.",
     );
     return { action: "shepherd", stackMergeable: false, instructions };
   }
@@ -198,12 +208,12 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
 
   if (!mergeRequested) {
     const instructions: string[] = [];
-    appendAutonomousInstructions(
+    const sessions = open.filter((item) => item.action !== "cancel");
+    appendAutonomousInstructions(instructions, sessions);
+    appendStackRerunInstruction(
       instructions,
-      open.filter((item) => item.action !== "cancel"),
-    );
-    instructions.push(
-      `${instructions.length + 1}. After the selected one-PR sessions, rerun this same \`--stack\` selector.`,
+      sessions,
+      "After the selected one-PR sessions, rerun this same `--stack` selector.",
     );
     return {
       action: "shepherd",

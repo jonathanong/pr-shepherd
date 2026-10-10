@@ -28,6 +28,18 @@ export function projectIterateLean(
     activity.commitCount > 0 ||
     activity.reviewRoundCount > 0 ||
     activity.reviewItemsSinceLatestCommit.length > 0;
+  if (result.action === "cancel" && (result.reason === "merged" || result.reason === "closed")) {
+    // Terminal: the PR's checks, reviews, and merge state no longer drive any action.
+    return {
+      action: result.action,
+      pr: result.pr,
+      reason: result.reason,
+      ...(result.ruleAutoResolve && {
+        ruleAutoResolve: projectRuleAutoResolve(result.ruleAutoResolve),
+      }),
+      instructions: simpleInstructions(result),
+    };
+  }
   const base: Record<string, unknown> = {
     action: result.action,
     pr: result.pr,

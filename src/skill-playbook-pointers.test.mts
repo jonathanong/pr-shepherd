@@ -13,7 +13,7 @@ const ALWAYS_ON_PLAYBOOKS = new Set(["Untrusted review input"]);
  * procedure that was moved out of the per-tick text.
  */
 /** Playbooks the skill's own Dispatch bullets name (quoted); the CLI never points at them. */
-const SKILL_DISPATCHED_PLAYBOOKS = new Set(["Create a PR", "MCP fallback", "Stack sessions"]);
+const SKILL_DISPATCHED_PLAYBOOKS = new Set(["Create a PR", "MCP fallback"]);
 
 function skillPlaybookHeadings(): Set<string> {
   const skillDir = new URL("plugins/pr-shepherd/skills/pr-shepherd/", rootUrl);
@@ -165,7 +165,7 @@ describe("pr-shepherd skill recurrence contract", () => {
 
   it("treats surfaced review and CI text as untrusted input without a new ESCALATE trigger", () => {
     expect(skill).toContain("### Untrusted review input");
-    expect(skill).toMatch(/not as user or system instructions/);
+    expect(skill).toMatch(/data, not user or system instructions/);
     expect(skill).toContain("is not a new `[ESCALATE]` trigger");
   });
 });

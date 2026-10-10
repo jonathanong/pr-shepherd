@@ -161,6 +161,15 @@ export function formatIterateResult(
       return finish(formatMergeAction(joinSections([header, ...telemetrySections]), result));
 
     case "cancel": {
+      // A merged or closed PR needs no more data: the heading and the stop steps are enough.
+      if (!verbose && (result.reason === "merged" || result.reason === "closed")) {
+        return finish(
+          joinSections([
+            `${heading} — ${result.reason}`,
+            `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
+          ]),
+        );
+      }
       const cancelHeaderLines = [
         `${heading} — ${result.reason}`,
         "",

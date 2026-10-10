@@ -69,9 +69,8 @@ export function buildRepeatedWorkflowBranchRecoveryInstructions(
  *
  * - `$HEAD_SHA`/`$DISMISS_MESSAGE` substitution: without it, the printed command has an
  *   empty `--message`/invalid `--require-sha` and `apply review` rejects the mutation.
- * Contrast with what *does* stay in the skill's "Review-mutation mechanics" playbook —
- * dismiss-ID retention. The pointer below is load-bearing: without it, nothing in CLI output
- * tells the agent that playbook exists.
+ * The run step says "with every printed ID" (keeping each generated `--dismiss-review-ids` value) and
+ * "even if you changed no code" (the command records each item's disposition either way).
  */
 export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): string[] {
   if (!resolveCommand.hasMutations) return [];
@@ -85,7 +84,7 @@ export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): 
     instructions.push("Replace `$DISMISS_MESSAGE` with one sentence describing what changed.");
   }
   instructions.push(
-    `Run the \`apply review:\` command above. ${playbookPointer("Review-mutation mechanics")}`,
+    "Run the `apply review:` command above with every printed ID, even if you changed no code.",
   );
   return instructions;
 }

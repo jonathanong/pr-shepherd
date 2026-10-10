@@ -8,7 +8,7 @@ describe("runPlaybook", () => {
     expect(result).toHaveProperty("playbooks");
     const names = (result as { playbooks: string[] }).playbooks;
     expect(names).toContain("Fix-code loop");
-    expect(names).toContain("Shepherd Journal");
+    expect(names).toContain("CI failure triage");
     expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
     expect(runPlaybook("  ")).toEqual(result);
   });
@@ -18,8 +18,8 @@ describe("runPlaybook", () => {
     expect(byName).toMatchObject({ name: "Fix-code loop" });
     expect(runPlaybook("fix-code loop")).toEqual(byName);
     expect(runPlaybook("fix-code-loop")).toEqual(byName);
-    expect(runPlaybook("shepherd journal")).toMatchObject({
-      name: "Shepherd Journal",
+    expect(runPlaybook("ci failure triage")).toMatchObject({
+      name: "CI failure triage",
     });
   });
 

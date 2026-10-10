@@ -229,11 +229,11 @@ describe("pr-shepherd MCP server", () => {
   it("projects structuredContent for a non-wait action and derives readyDelayOverride from readyDelaySeconds", async () => {
     const result = {
       action: "cancel" as const,
-      reason: "merged" as const,
+      reason: "ready-delay-elapsed" as const,
       pr: 3,
       repo: "openai/pr-shepherd",
-      status: "MERGED" as const,
-      state: "MERGED" as const,
+      status: "READY" as const,
+      state: "OPEN" as const,
       mergeStateStatus: "UNKNOWN" as const,
       mergeStatus: "CLEAN" as const,
       reviewDecision: null,
@@ -266,7 +266,7 @@ describe("pr-shepherd MCP server", () => {
 
     expect(response.structuredContent).toMatchObject({
       action: "cancel",
-      reason: "merged",
+      reason: "ready-delay-elapsed",
       readyDelayOverride: "900s",
       instructions: [
         "Stop polling this pull request — its poll is complete.",
@@ -277,6 +277,60 @@ describe("pr-shepherd MCP server", () => {
     // non-CLEAN case covered above.
     expect(response.structuredContent).not.toHaveProperty("mergeStatus");
     expect(response.content?.[0]?.text).toContain("**ready-delay** `900s` (override)");
+  });
+
+  it("keeps a merged cancel minimal in both MCP structured and Markdown content", async () => {
+    const result = {
+      action: "cancel" as const,
+      reason: "merged" as const,
+      pr: 3,
+      repo: "openai/pr-shepherd",
+      status: "READY" as const,
+      state: "MERGED" as const,
+      mergeStateStatus: "UNKNOWN" as const,
+      mergeStatus: "CLEAN" as const,
+      reviewDecision: null,
+      blockingBotReviewInProgress: false,
+      isDraft: false,
+      shouldCancel: true,
+      remainingSeconds: 0,
+      summary: { passing: 1, skipped: 0, filtered: 0, inProgress: 0, superseded: 0 },
+      baseBranch: "main",
+      branchProtection: null,
+      checks: [],
+      log: "merged",
+    };
+    const server = createPrShepherdMcpServer({
+      shepherd: {
+        iterate: vi.fn().mockResolvedValue(result),
+        apply: vi.fn(),
+        buildSuggestionPatches: vi.fn(),
+        buildSuggestionPatch: vi.fn(),
+        getJournal: vi.fn(),
+      },
+    });
+    const tools = registeredTools(server);
+
+    const response = await tools.iterate!.handler({
+      pr: "openai/pr-shepherd#3",
+      readyDelaySeconds: 900,
+    });
+
+    expect(response.structuredContent).toEqual({
+      action: "cancel",
+      pr: 3,
+      reason: "merged",
+      instructions: [
+        "Stop polling this pull request — its poll is complete.",
+        "Continue any remaining pull requests or issues from the original request.",
+      ],
+    });
+    const text = response.content?.[0]?.text ?? "";
+    expect(text).toContain("merged");
+    expect(text).toContain("Stop polling this pull request");
+    expect(text).not.toContain("ready-delay");
+    expect(text).not.toContain("openai/pr-shepherd");
+    expect(text).not.toContain("summary");
   });
 
   it("keeps REST transport gaps aligned between MCP structured and Markdown content", async () => {

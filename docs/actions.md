@@ -129,7 +129,7 @@ Merge command:
 - A direct merge is atomic. On a merge queue, the prefix is queued together and each layer is evaluated from the bottom. A failure ejects that layer and the layers above it. Layers that already merged stay merged.
 - Layers above the prefix keep their one-PR sessions in the same instructions.
 - `gh stack merge` reads a bare number as a stack number before a PR number. Native stack numbers come from the repository issue and pull request sequence (observed; GitHub does not document it), so a PR number never names a stack.
-- If `gh stack` is an unknown command, the instructions install `github/gh-stack` first. The Stack merge playbook says the same, and it does not push.
+- If `gh stack` is an unknown command, the instructions install `github/gh-stack` first. The same step says not to rebase, push, or run `gh stack push`.
 - After each merge, GitHub retargets the next layer. Rerun `--stack --merge` until every layer is merged and the result is `CANCEL`.
 - If GitHub queues a layer, the summary stays `WAIT` for those queued layers. Recheck at the polling cadence. Do not rewrite a queued layer. That wait does not block a layer that is not queued. The stack is not finished until every layer merges.
 - An ejected layer leaves the merge prefix until a receipt acknowledges that removal. The instruction names the reason and actor and says to run that layer's one-PR session, which fixes failing queue CI, records a validated acknowledgment for a transient or grouped-entry failure that does not reproduce after updating from the latest base, with no remaining blocker, or escalates when no autonomous path remains.
@@ -469,7 +469,7 @@ Conversations Resolved: Yes [Not Required]
 ## Instructions
 
 1. Run the `auto-merge` command shown above exactly as printed.
-2. Only if GitHub reports that auto-merge is unavailable, run the `plain merge fallback` command: `gh pr merge 42 --repo owner/repo --match-head-commit abc123 --merge`.
+2. Only if GitHub reports that auto-merge is unavailable, run the `plain merge fallback` command shown above.
 3. Then iterate immediately with the same options to monitor until the PR merges or needs work.
 ```
 
@@ -523,20 +523,15 @@ Stops polling this pull request — no further iterations for this PR are needed
 ```markdown
 # PR #42 [CANCEL] — merged
 
-**status** `MERGED` · **merge** `UNKNOWN` · **state** `MERGED` · **repo** `owner/repo`
-**summary** 0 passing
-
-CANCEL: PR #42 is merged — stopping
-
 ## Instructions
 
 1. Stop polling this pull request — its poll is complete.
 2. Continue any remaining pull requests or issues from the original request.
 ```
 
-Other heading variants: `# PR #42 [CANCEL] — closed`, `# PR #42 [CANCEL] — ready-delay-elapsed`.
+Merged and closed PRs are terminal, so their default output is only the heading and `## Instructions`; no status, check, review, or merge-requirement data can change the next step. The lean JSON matches it: `{ "action": "cancel", "pr": 42, "reason": "merged", "instructions": [...] }` (plus `ruleAutoResolve` when that ran). `--verbose` keeps the full header, status lines, and `CANCEL: PR #42 is merged — stopping` / `CANCEL: PR #42 is closed — stopping` log line.
 
-Merged and closed PRs surface terminal top-level statuses (`MERGED` or `CLOSED`) because `runCheck` short-circuits before CI/comment processing. Other body-line variants: `CANCEL: PR #42 is closed — stopping`, `CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping`. When merge is still `BLOCKED` after the delay, the body uses a specific unmet-requirement note when one is known (`awaiting 1 approval`, `in merge queue position 2`, …) and otherwise `is awaiting human review or branch protection resolution` — it does not guess from `reviewDecision` alone.
+A `ready-delay-elapsed` cancel (`# PR #42 [CANCEL] — ready-delay-elapsed`) keeps the full header and its body line: `CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping`. When merge is still `BLOCKED` after the delay, the body uses a specific unmet-requirement note when one is known (`awaiting 1 approval`, `in merge queue position 2`, …) and otherwise `is awaiting human review or branch protection resolution` — it does not guess from `reviewDecision` alone.
 
 A `ready-delay-elapsed` cancel carries the same `**merge queue** …` header line (raw enabled/inQueue/entry/removal fields, see the header block above) as every other action when `mergeQueue` is present, matching JSON output.
 
@@ -566,7 +561,7 @@ Stale boundary and native-stack conflicts:
 - The stale-boundary path returns the observed parent and child OIDs and a one-PR repair, then the ordinary `FIX_CODE` continuation. Aggregate `--stack` never does that repair.
 - In GraphQL mode, a native-stack conflict uses a gh-stack rebase from a clean checkout. REST-mode instructions use the repository's stack-update procedure rather than gh-stack API commands.
 - GraphQL mode imports with `gh stack checkout <stack number>` when `gh stack` does not track the stack locally. Use the stack number, not the PR number.
-- The step points at the Branch update playbook for the head check and `gh stack rebase --continue` in GraphQL mode. Merge-queue behavior for `gh stack merge` is the Stack merge playbook.
+- The step points at the Branch update playbook for the head check and `gh stack rebase --continue` in GraphQL mode. The `gh stack merge` step prints its own missing-extension and no-push rules inline.
 - In GraphQL mode, an upper layer behind its parent gets `gh stack rebase --upstack --no-trunk` from that parent, not from the stack trunk.
 - A whole-stack rebase starts at the lowest open layer by stack order when the upper layer already contains its parent (summary: `conflicts with stack trunk`, JSON: `stackTrunkConflict`) or when this is the lowest open layer. The latter includes a higher-position layer whose lower layers are all verified `MERGED`, even if GitHub has not yet retargeted its recorded PR base onto the trunk. An unavailable bottom PR number is described as the stack's bottom open layer, without requiring its base branch to name the trunk. A known closed or unverified lower layer cannot supply that fallback.
 - Publish the rewritten stack with the repository's stack-update procedure in REST mode and `gh stack push` in GraphQL mode, not a push of the PR head alone.
@@ -645,14 +640,14 @@ Conversations Resolved: No [Not Required]
 1. Review each item under `## Review threads` and decide whether it needs a code change.
 2. Apply every warranted review fix in each file referenced above.
 3. If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.
-4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
+4. For any substantial decision or rejection, add a Shepherd Journal entry with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`, linking threads and comments by heading URL and citing reviews by ID.
 5. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)` (it must equal the remote PR head). If you did, use the pushed SHA.
 6. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
-7. Run the `apply review:` command above. Playbook: "Review-mutation mechanics".
+7. Run the `apply review:` command above with every printed ID, even if you changed no code.
 8. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.
 ```
 
-With `--instructions playbook` (or `iterate.instructions: playbook`, or the MCP `instructions` input), steps 3 and 4 fold into one step that carries only the trigger, the concrete journal command, and a playbook pointer to "Fix-code loop" (also readable with `pr-shepherd playbook "Fix-code loop"`). The fold applies only when the generic commit/push step is printed. Without update permission the folded step omits the journal command, and the playbook's journal step applies only when that command is printed. When a conflict or queue-recovery push step replaces it, the journal step stays inline with its "Shepherd Journal" pointer, because the "Fix-code loop" playbook's push to the PR head branch would conflict with the specialized push. Steps 5 and 6 stay inline because their commands need placeholder substitution, and the final `[FIX_CODE]` continuation stays inline. The default is `inline`: the bench measured the playbook default as a smaller saving than inline for the typical session.
+With `--instructions playbook` (or `iterate.instructions: playbook`, or the MCP `instructions` input), steps 3 and 4 fold into one step that carries only the trigger, the concrete journal command, and a playbook pointer to "Fix-code loop" (also readable with `pr-shepherd playbook "Fix-code loop"`). The fold applies only when the generic commit/push step is printed. Without update permission the folded step omits the journal command, and the playbook's journal step applies only when that command is printed. When a conflict or queue-recovery push step replaces it, the journal step stays inline with its citation clause, because the "Fix-code loop" playbook's push to the PR head branch would conflict with the specialized push. Steps 5 and 6 stay inline because their commands need placeholder substitution, and the final `[FIX_CODE]` continuation stays inline. The default is `inline`: the bench measured the playbook default as a smaller saving than inline for the typical session.
 
 - The summary line shows raw `**branch**` state. The caller chooses rebase and commit mechanics.
 - Push access to the PR head is a usage precondition. Do not start pr-shepherd when the caller cannot push.
@@ -667,8 +662,7 @@ With `--instructions playbook` (or `iterate.instructions: playbook`, or the MCP 
 - An unmarked other-human thread stays reply-only unless `iterate.resolveOtherHumanThreads` is `outdated` or `always`.
 - A marked other-human thread is already acknowledged at the default `none`.
 - A caller who never loads the skill can still run the printed command. Placeholder steps are in the output.
-- Dismiss-ID retention is [`references/review-mutations.md`](../plugins/pr-shepherd/skills/pr-shepherd/references/review-mutations.md). Omitting a `--dismiss-review-ids` value leaves `CHANGES_REQUESTED`.
-- Journal citation rules are [`references/journal.md`](../plugins/pr-shepherd/skills/pr-shepherd/references/journal.md).
+- Dismiss-ID retention and the journal citation rule are short clauses printed in their steps, not separate playbooks: a playbook read costs the agent an extra turn that outweighs the clause. Omitting a `--dismiss-review-ids` value leaves `CHANGES_REQUESTED`.
 - Bare checks, external checks, `CANCELLED`, `STARTUP_FAILURE`, and GitHub Actions failures with no usable log stay in `[FIX_CODE]` while other autonomous work remains.
 - When those checks are the only blocker, the result is `[ESCALATE]` with `check-follow-up-unavailable`.
 - When `mergeStatus` is `BEHIND` or `CONFLICTS` and [`iterate.behindBaseHint`](configuration.md#iteratebehindbasehint--default-) is set, one instruction echoes it: ``The branch is behind PR base branch `<base>`. <hint> before pushing.`` or ``The branch conflicts with PR base branch `<base>`. <hint> before pushing.`` The CLI does not choose the git mechanics.

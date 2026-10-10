@@ -143,15 +143,15 @@ describe("buildResolveCommandInstruction", () => {
     expect(buildResolveCommandInstruction(resolveCommand({ hasMutations: false }))).toEqual([]);
   });
 
-  it("emits only the run-the-command step (plus pointer) when nothing else applies", () => {
+  it("emits only the run-the-command step when nothing else applies", () => {
     expect(buildResolveCommandInstruction(resolveCommand({}))).toEqual([
-      'Run the `apply review:` command above. Playbook: "Review-mutation mechanics".',
+      "Run the `apply review:` command above with every printed ID, even if you changed no code.",
     ]);
   });
 
   it("does not repeat routing policy when replyThreadIds is non-empty", () => {
     expect(buildResolveCommandInstruction(resolveCommand({ replyThreadIds: ["PRRT_1"] }))).toEqual([
-      'Run the `apply review:` command above. Playbook: "Review-mutation mechanics".',
+      "Run the `apply review:` command above with every printed ID, even if you changed no code.",
     ]);
   });
 
@@ -174,7 +174,7 @@ describe("buildResolveCommandInstruction", () => {
     ).toEqual([
       "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)` (it must equal the remote PR head). If you did, use the pushed SHA.",
       "Replace `$DISMISS_MESSAGE` with one sentence describing what changed.",
-      'Run the `apply review:` command above. Playbook: "Review-mutation mechanics".',
+      "Run the `apply review:` command above with every printed ID, even if you changed no code.",
     ]);
   });
 });

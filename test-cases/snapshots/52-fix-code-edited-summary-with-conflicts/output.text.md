@@ -20,5 +20,5 @@ Conversations Resolved: Yes [Not Required]
 1. The branch has merge conflicts (see `**branch**` above). Resolve them before committing.
 2. Read every item marked `[edited since first look]`, including edited summaries and edited first-look bullets, before deciding whether to resolve a matching thread.
 3. Commit any remaining conflict-resolution changes and push to the PR head branch.
-4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
+4. For any substantial decision or rejection, add a Shepherd Journal entry with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`, linking threads and comments by heading URL and citing reviews by ID.
 5. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.

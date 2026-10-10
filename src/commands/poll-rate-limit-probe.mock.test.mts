@@ -76,11 +76,11 @@ describe("one-PR rate-limit sleep probe", () => {
     expect(text).toContain(
       "Stop polling this pull request — its poll is complete.\n2. Continue any remaining pull requests or issues from the original request.",
     );
-    expect(json).toMatchObject({
+    expect(json).toEqual({
       action: "cancel",
+      pr: 7,
       reason: "merged",
-      state: "MERGED",
-      repo: "acme/widgets",
+      instructions: expect.any(Array),
     });
     expect(json.instructions).toEqual([
       "Stop polling this pull request — its poll is complete.",

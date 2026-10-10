@@ -20,5 +20,5 @@ Conversations Resolved: Yes [Not Required]
 3. The workflow rerun still fails while the branch is behind PR base branch `main`. Inspect the current base branch for an existing fix before choosing a remediation.
 4. Rebase or otherwise update the PR branch from `main` according to repository conventions.
 5. Push the updated PR head branch before iterating immediately.
-6. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
+6. For any substantial decision or rejection, add a Shepherd Journal entry with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`, linking threads and comments by heading URL and citing reviews by ID.
 7. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.

@@ -167,7 +167,7 @@ describe("buildFixInstructions", () => {
     expect(text).toContain("If you did not change code, replace `$HEAD_SHA`");
     expect(text).toContain("Replace `$DISMISS_MESSAGE` with one sentence");
     expect(instructions.at(-2)).toBe(
-      'Run the `apply review:` command above. Playbook: "Review-mutation mechanics".',
+      "Run the `apply review:` command above with every printed ID, even if you changed no code.",
     );
     expect(instructions.at(-1)).toBe(
       "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.",
@@ -179,7 +179,7 @@ describe("buildFixInstructions", () => {
     expect(text).not.toContain("Rebase and push:");
   });
 
-  it("emits only the placeholder substitution steps that apply, plus the pointer", () => {
+  it("emits only the placeholder substitution steps that apply, plus the run step", () => {
     // requiresHeadSha true, requiresDismissMessage false: only the $HEAD_SHA step appears.
     const instructions = buildFixInstructions(
       [],
@@ -210,7 +210,7 @@ describe("buildFixInstructions", () => {
     expect(text).toContain("$(git rev-parse HEAD)");
     expect(text).not.toContain("Replace `$DISMISS_MESSAGE`");
     expect(text).toContain(
-      'Run the `apply review:` command above. Playbook: "Review-mutation mechanics"',
+      "Run the `apply review:` command above with every printed ID, even if you changed no code.",
     );
   });
 

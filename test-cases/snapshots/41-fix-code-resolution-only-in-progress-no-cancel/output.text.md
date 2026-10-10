@@ -23,7 +23,7 @@ Conversations Resolved: No [Not Required]
 
 1. Review every item under `## First-look items` before acting.
 2. Review the threads under `## Review threads to resolve` before running the generated mutations.
-3. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
+3. For any substantial decision or rejection, add a Shepherd Journal entry with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`, linking threads and comments by heading URL and citing reviews by ID.
 4. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
-5. Run the `apply review:` command above. Playbook: "Review-mutation mechanics".
+5. Run the `apply review:` command above with every printed ID, even if you changed no code.
 6. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.

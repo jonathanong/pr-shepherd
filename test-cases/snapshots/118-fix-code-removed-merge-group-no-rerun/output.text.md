@@ -25,5 +25,5 @@ Merge queue: No [Required]
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
 3. Triage the merge-queue ejection before any requeue. Update the PR head from the latest base first. Run `requeue:` only if the failure does not reproduce on the updated head, neither the update nor a code change altered the head, and no other blocker remains. If gh reports auto-merge is disabled, run `requeue API fallback:` instead. Playbook: "Merge queue ejection".
 4. If the base update or a fix changed the head, commit any remaining changes and push to the PR head branch. If neither did, do not push.
-5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
+5. For any substantial decision or rejection, add a Shepherd Journal entry with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`, linking threads and comments by heading URL and citing reviews by ID.
 6. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.

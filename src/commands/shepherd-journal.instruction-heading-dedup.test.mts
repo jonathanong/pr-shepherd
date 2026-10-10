@@ -67,21 +67,19 @@ describe("shepherd journal instruction helpers", () => {
     expect(text).toContain(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
     expect(text).toContain("pr-shepherd apply journal 42");
     expect(text).not.toContain("idempotent");
-    // Citation conventions moved to the pr-shepherd skill's "Shepherd Journal" playbook —
-    // invariant text, not re-emitted per tick.
-    expect(text).toContain('Playbook: "Shepherd Journal".');
-    expect(countMentions(text, "append `- <decision>` to Shepherd Journal")).toBe(1);
+    // The citation convention is a short inline clause, not a separate playbook read.
+    expect(text).toContain("linking threads and comments by heading URL and citing reviews by ID.");
+    expect(countMentions(text, "add a Shepherd Journal entry")).toBe(1);
   });
   it("buildShepherdJournalInstruction remains de-duped when reused across multiple instruction blocks", () => {
     const first = buildShepherdJournalInstruction(42);
     const second = buildShepherdJournalInstruction(42);
     const merged = `${first}\n---\n${second}`;
-    // Each call now mentions "Shepherd Journal" twice (the append instruction and the
-    // skill-playbook pointer) — 4 total across two independent calls. What this test
-    // actually guards is that reusing the function doesn't fabricate an extra
+    // Each call mentions "Shepherd Journal" once — 2 total across two independent calls.
+    // What this test guards is that reusing the function doesn't fabricate an extra
     // "## Shepherd Journal" markdown heading of its own.
     const total = countMentions(merged, SHEPHERD_JOURNAL_SECTION);
-    expect(total).toBe(4);
+    expect(total).toBe(2);
     expect(first).not.toContain("`## Shepherd Journal` entry");
     expect(second).not.toContain("`## Shepherd Journal` entry");
   });

@@ -27,7 +27,7 @@ describe("buildPushJournalSteps playbook fold", () => {
     expect(text).not.toContain("Commit and push");
     expect(text).not.toContain("Fix-code loop");
     expect(text).toContain("pr-shepherd apply journal 42 '- <decision>'");
-    expect(text).toContain('Playbook: "Shepherd Journal".');
+    expect(text).toContain("linking threads and comments by heading URL and citing reviews by ID.");
   });
 
   it("omits the journal clause when the journal step does not apply", () => {
@@ -87,7 +87,7 @@ describe("buildFixInstructions instruction style", () => {
     const text = call("playbook", true).join("\n");
     expect(text).toContain('Playbook: "Fix-code loop"');
     expect(text).not.toContain("If you changed code, commit any remaining changes");
-    expect(text).not.toContain("append `- <decision>` to Shepherd Journal");
+    expect(text).not.toContain("add a Shepherd Journal entry");
     expect(text).toContain("replace `$HEAD_SHA`");
     expect(text).toContain("`[FIX_CODE]` is non-terminal");
   });
@@ -102,6 +102,6 @@ describe("buildFixInstructions instruction style", () => {
     const text = call("inline", true).join("\n");
     expect(text).not.toContain("Fix-code loop");
     expect(text).toContain("If you changed code, commit any remaining changes");
-    expect(text).toContain("append `- <decision>` to Shepherd Journal");
+    expect(text).toContain("add a Shepherd Journal entry");
   });
 });

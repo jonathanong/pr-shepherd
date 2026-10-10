@@ -27,5 +27,5 @@ Conversations Resolved: Yes [Not Required]
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
 3. Read every body under `## Changes-requested reviews` and apply any warranted change.
 4. If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.
-5. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
+5. For any substantial decision or rejection, add a Shepherd Journal entry with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`, linking threads and comments by heading URL and citing reviews by ID.
 6. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.
