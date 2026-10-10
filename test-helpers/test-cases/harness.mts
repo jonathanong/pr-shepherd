@@ -232,7 +232,7 @@ export interface Fixture {
   /** Return values of fetchCheckRunAnnotationsBatch(), keyed by CheckRun node ID. */
   checkAnnotationsByCheckId?: Record<string, unknown[]>;
   /** Return value of loadSeenMap() — keys are item IDs. */
-  seenMap?: Record<string, { seenAt: number; bodyHash: string }>;
+  seenMap?: Record<string, { seenAt: number; bodyHash: string; deniedMutationBodyHash?: string }>;
   /** Deep-merged on top of defaultConfig(). */
   config?: Record<string, unknown>;
   /** Return value of updateReadyDelay(). */
@@ -255,6 +255,13 @@ export interface Fixture {
   cancelRunsFail?: boolean;
   /** Explicit REST response bodies keyed by URL pathname for transport-transition fixtures. */
   restResponses?: Record<string, unknown>;
+  /**
+   * Non-2xx REST responses keyed by URL pathname (e.g. a cloud proxy 403). Other paths fall back
+   * to `restResponses` when set, else the default empty success.
+   */
+  restErrorResponses?: Record<string, { status: number; body: unknown }>;
+  /** Sets CLAUDE_CODE_REMOTE=true for the run (a Claude Code cloud session behind the proxy). */
+  claudeCodeRemote?: boolean;
   /** Extra CLI args appended after "42". */
   args?: string[];
   /** Freeform note about the scenario. Not read by the harness; documentation only. */
@@ -574,7 +581,23 @@ export function applyFixture(fixture: Fixture): void {
   mockReadFixAttempts.mockResolvedValue(fixture.fixAttempts ?? null);
   mockWriteFixAttempts.mockResolvedValue(undefined);
 
-  if (fixture.cancelRunsFail) {
+  if (fixture.claudeCodeRemote) process.env.CLAUDE_CODE_REMOTE = "true";
+  else delete process.env.CLAUDE_CODE_REMOTE;
+
+  if (fixture.restErrorResponses) {
+    const errors = fixture.restErrorResponses;
+    mockFetch.mockImplementation((url) => {
+      const path = new URL(String(url)).pathname;
+      const error = errors[path];
+      const body = error ? error.body : (fixture.restResponses?.[path] ?? { data: {} });
+      return Promise.resolve(
+        new Response(JSON.stringify(body), {
+          status: error ? error.status : 200,
+          headers: { "content-type": "application/json" },
+        }),
+      );
+    });
+  } else if (fixture.cancelRunsFail) {
     mockFetch.mockImplementation((url) => {
       if (typeof url === "string" && url.includes("/cancel")) {
         return Promise.resolve({
@@ -719,6 +742,7 @@ export function registerHarnessBefore(): void {
   afterEach(() => {
     vi.useRealTimers();
     delete process.env.GH_TOKEN;
+    delete process.env.CLAUDE_CODE_REMOTE;
     process.exitCode = undefined;
   });
 }

@@ -1,0 +1,49 @@
+{
+  "description": "REST tick after the apply review run snapshotted as apply-review-denied-reply, in which GitHub denied the reply to rest-thread-11 (markMutationDenied stored deniedMutationBodyHash for its unchanged body). The denied thread is a one-look skip: it is suppressed and omitted from the generated apply command, while the new thread rest-thread-12 gets ordinary FIX_CODE work. No escalation.",
+  "args": ["--transport", "rest"],
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "rest-thread-11",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/index.ts",
+        "line": 42,
+        "startLine": null,
+        "author": "maintainer",
+        "authorType": "User",
+        "body": "Please rename this variable to be more descriptive.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r11",
+        "createdAtUnix": 1715700000
+      },
+      {
+        "id": "rest-thread-12",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/retry.ts",
+        "line": 17,
+        "startLine": null,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Please add a regression test for the retry limit.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r12",
+        "createdAtUnix": 1715790000
+      }
+    ]
+  },
+  "seenMap": {
+    "rest-thread-11": {
+      "seenAt": 1715750000,
+      "bodyHash": "acc0c7c950c2b9b7",
+      "deniedMutationBodyHash": "acc0c7c950c2b9b7"
+    }
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}
