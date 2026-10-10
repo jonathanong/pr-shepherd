@@ -64,7 +64,7 @@ const TICK_GAP_SECONDS = 30;
 const IDLE_SECONDS = 150;
 const SNAPSHOT_OPS = new Set(["BatchPr", "PrFingerprint"]);
 /** Mutation requests: GitHub reports no query cost for them. */
-const MUTATION_OPS = new Set(["BulkApply", "UpdatePrBody"]);
+const MUTATION_OPS = new Set(["BulkApply", "UpdatePrBody", "MarkPrReady"]);
 
 const prOfArgs = (args) => Number(args.match(/(?:\/pull\/|^|\s)(\d+)(?=\s|$)/)?.[1]) || null;
 const kindOfArgs = (args) =>
@@ -833,6 +833,9 @@ const HEAD_SHA = "0123456789abcdef0123456789abcdef01234567";
 const MINIMIZE_OUT = JSON.stringify({
   data: { minimizeComment: { minimizedComment: { isMinimized: true } } },
 });
+const DISMISS_OUT = JSON.stringify({
+  data: { dismissPullRequestReview: { pullRequestReview: { state: "DISMISSED" } } },
+});
 const RESOLVE_OUT = JSON.stringify({
   data: { resolveReviewThread: { thread: { isResolved: true } } },
 });
@@ -850,28 +853,32 @@ function stepArms(pr, inv) {
   if (inv.kind === "poll") {
     const waits = Math.max(0, inv.ticks - 1);
     // Each wait ends one interval after the previous tick.
-    const tickTimes = Array.from({ length: waits }, (_, i) => inv.t + 60 * (i + 1));
+    // The final wait ends at the invocation's end, its last tick.
+    const tickTimes = Array.from({ length: waits }, (_, i) =>
+      i === waits - 1 ? Math.max(end, inv.t + 60 * (i + 1)) : inv.t + 60 * (i + 1),
+    );
     // `gh pr checks --watch` returns at once when no check is pending, so a
     // wait with nothing pending (shepherd's debounce) is a plain sleep for gh.
     // Consecutive waits of one kind form one call, in timeline order.
     const pending = (t) => stateAt(pr, t).checks.some((k) => k.status !== "COMPLETED");
     const runs = [];
-    for (const t of tickTimes) {
-      const watch = pending(t - 60);
+    tickTimes.forEach((t, i) => {
+      const prev = i ? tickTimes[i - 1] : inv.t;
+      const watch = pending(prev);
       const last = runs.at(-1);
       if (last?.watch === watch) last.times.push(t);
-      else runs.push({ watch, times: [t] });
-    }
-    const ghWaits = runs.map(({ watch, times }, i) =>
+      else runs.push({ watch, prev, times: [t] });
+    });
+    const ghWaits = runs.map(({ watch, prev, times }, i) =>
       watch
         ? // One query on start, then one per refresh, each reprinting the table.
           call(
             i + 1,
             `gh pr checks ${n} -R owner/repo --watch --interval 60`,
-            [times[0] - 60, ...times].map((t) => ghPrChecks(stateAt(pr, t))).join("\n"),
+            [prev, ...times].map((t) => ghPrChecks(stateAt(pr, t))).join("\n"),
             { api: gql(times.length + 1) },
           )
-        : call(i + 1, `sleep ${60 * times.length}`, ""),
+        : call(i + 1, `sleep ${times.at(-1) - prev}`, ""),
     );
     return {
       shepherd: [
@@ -895,7 +902,10 @@ function stepArms(pr, inv) {
                   ? SHEPHERD_RECEIPT_TICK_API.graphqlPoints - SHEPHERD_TICK_API.graphqlPoints
                   : 0),
               restCore:
-                inv.action === "READY" || inv.readyDelayElapsed ? READY_MERGEABILITY_REST : 0,
+                // MARK_READY is acted on from a READY status, after the same refresh.
+                ["READY", "MARK_READY"].includes(inv.action) || inv.readyDelayElapsed
+                  ? READY_MERGEABILITY_REST
+                  : 0,
             },
           },
         ),
@@ -903,7 +913,7 @@ function stepArms(pr, inv) {
       gh: [...ghWaits, ...ghObserve(s, ghWaits.length + 1)],
       mcp: [
         ...tickTimes.flatMap((t, i) => [
-          call(2 * i + 1, "sleep 60", ""),
+          call(2 * i + 1, `sleep ${t - (i ? tickTimes[i - 1] : inv.t)}`, ""),
           mcp(
             2 * i + 2,
             "pull_request_read",
@@ -1008,8 +1018,9 @@ function baselineApply(pr, inv) {
       ...dismissed.map((i) =>
         call(
           1,
-          `gh api --silent -X PUT repos/owner/repo/pulls/${n}/reviews/${3900000000 + i}/dismissals -f message='${REPLY}' -f event=DISMISS`,
-          "",
+          // On the review node ID the observation shows (`PRR_` + its ID).
+          `gh api graphql -f query='mutation { dismissPullRequestReview(input: {pullRequestReviewId: "PRR_${fakeId("", 20, i)}", message: "${REPLY}"}) { pullRequestReview { state } } }'`,
+          DISMISS_OUT,
         ),
       ),
     ],
@@ -1050,15 +1061,21 @@ export function measuredCharsPerToken(data = readJson(REAL_SESSIONS_FILE)) {
   };
 }
 
-/** Run `fn` with tokens counted at `cpt` characters each (the model's own when null). */
+/**
+ * Run `fn` with result tokens counted at `cpt` characters each (the model's own
+ * when null). Commands and schemas keep the model's ratio: `cpt` is measured
+ * on tool results only.
+ */
 export function atCharsPerToken(cpt, fn) {
   if (cpt == null) return fn();
   const saved = MODEL.charsPerToken;
+  MODEL.inputCharsPerToken = saved;
   MODEL.charsPerToken = cpt;
   try {
     return fn();
   } finally {
     MODEL.charsPerToken = saved;
+    delete MODEL.inputCharsPerToken;
   }
 }
 

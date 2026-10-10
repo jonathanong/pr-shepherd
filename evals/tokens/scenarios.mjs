@@ -65,6 +65,7 @@ import {
   readJson,
   snapshot,
   tail,
+  inputTokens,
   tokens,
   withHistory,
 } from "./lib.mjs";
@@ -495,7 +496,7 @@ function setupScenario({ id, session }) {
         return schemas[t];
       };
       // Context holds each load's command and result.
-      const size = (calls) => calls.reduce((t, c) => t + tokens(c.cmd) + tokens(c.out), 0);
+      const size = (calls) => calls.reduce((t, c) => t + inputTokens(c.cmd) + tokens(c.out), 0);
       const skill = [
         {
           phase: 1,

@@ -46,6 +46,13 @@ export const MODEL = {
 };
 
 export const tokens = (text) => Math.ceil(text.length / MODEL.charsPerToken);
+/**
+ * Tokens of text the agent sends (commands, schemas). The measured ratios are
+ * of tool results only, so a sensitivity run (sessions.mjs's atCharsPerToken)
+ * keeps these at the model's own ratio.
+ */
+export const inputTokens = (text) =>
+  Math.ceil(text.length / (MODEL.inputCharsPerToken ?? MODEL.charsPerToken));
 
 // --- data -------------------------------------------------------------------
 
@@ -512,7 +519,7 @@ export const mcpOversizeError = (call) =>
 /** Apply the host's per-call output cap: truncate Bash, reject MCP. */
 function capped(call) {
   const raw = tokens(call.out);
-  const cmdTokens = tokens(call.cmd);
+  const cmdTokens = inputTokens(call.cmd);
   if (call.via === "mcp") {
     const rejected = raw > MODEL.mcpOutputCapTokens;
     return {

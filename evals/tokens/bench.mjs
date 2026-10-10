@@ -30,6 +30,7 @@ import {
   cost,
   mcpVerificationNote,
   readJson,
+  inputTokens,
   tokens,
 } from "./lib.mjs";
 import { SCENARIOS, eventArm } from "./scenarios.mjs";
@@ -45,7 +46,7 @@ const SESSIONS = {
 
 const schemas = readJson("mcp-tool-schemas.json");
 const API_CHECK = readJson("api-usage-check.json");
-const eagerTokens = tokens("x".repeat(schemas.eagerChars));
+const eagerTokens = inputTokens("x".repeat(schemas.eagerChars));
 if (MCP_API.source !== schemas.source)
   throw new Error(
     `data/mcp-api-map.json is pinned to ${MCP_API.source}, the schemas to ${schemas.source}; re-run record.mjs`,
@@ -412,11 +413,12 @@ const cptMeasured = MEASURED_CPT.shepherd != null && MEASURED_CPT.baseline != nu
 /** Every row, re-costed with tokens counted at `cpt` characters each. */
 const rowsAtCpt = (cpt) =>
   atCharsPerToken(cpt, () => {
-    const ctx = { carry: setupCarry(), eagerTokens: tokens("x".repeat(schemas.eagerChars)) };
+    const ctx = { carry: setupCarry(), eagerTokens: inputTokens("x".repeat(schemas.eagerChars)) };
     return pickRows(Object.fromEntries(STRATEGIES.map((st) => [st, buildRows(st, ctx)])));
   });
-const cptShepherdRows = rowsAtCpt(MEASURED_CPT.shepherd);
-const cptRows = rowsAtCpt(MEASURED_CPT.baseline).map((r, i) => ({
+// With either ratio unmeasured, both arms keep the model's: no partial re-score.
+const cptShepherdRows = rowsAtCpt(cptMeasured ? MEASURED_CPT.shepherd : null);
+const cptRows = rowsAtCpt(cptMeasured ? MEASURED_CPT.baseline : null).map((r, i) => ({
   ...r,
   shepherd: cptShepherdRows[i].shepherd,
   variable: { ...r.variable, shepherd: cptShepherdRows[i].variable.shepherd },
@@ -936,7 +938,7 @@ if (!cptMeasured)
   );
 else {
   out(
-    `The model counts ${MODEL.charsPerToken} characters per token for every arm. The real sessions below measured pr-shepherd's output at ${MEASURED_CPT.shepherd} and tool output overall at ${MEASURED_CPT.baseline}: pr-shepherd's output is denser. Here every step is re-scored with pr-shepherd at ${MEASURED_CPT.shepherd} and gh and GitHub MCP at ${MEASURED_CPT.baseline}. MCP's ratio is unmeasured (no real session used it), so it takes the overall one. Turns and calls do not depend on the ratio. A denser ratio also pushes more MCP results past the host's ${num(MODEL.mcpOutputCapTokens)}-token cap, where they are rejected: MCP's cost can fall while it finishes less of the step. Only the ratio changes: the fits' per-result intercept (wrapper and harness reminders) is left out, as the model leaves it out.${baselinesNeverFewerCalls ? " Every baseline makes at least as many calls as pr-shepherd on every step, so the intercept would only add to the baselines' cost." : ""}`,
+    `The model counts ${MODEL.charsPerToken} characters per token for every arm. The real sessions below measured pr-shepherd's output at ${MEASURED_CPT.shepherd} and tool output overall at ${MEASURED_CPT.baseline}: pr-shepherd's output is denser. Here every step's tool results are re-scored with pr-shepherd at ${MEASURED_CPT.shepherd} and gh and GitHub MCP at ${MEASURED_CPT.baseline}; commands and tool schemas, which the fits did not measure, keep ${MODEL.charsPerToken}. MCP's ratio is unmeasured (no real session used it), so it takes the overall one. Turns and calls do not depend on the ratio. A denser ratio also pushes more MCP results past the host's ${num(MODEL.mcpOutputCapTokens)}-token cap, where they are rejected: MCP's cost can fall while it finishes less of the step. Only the ratio changes: the fits' per-result intercept (wrapper and harness reminders) is left out, as the model leaves it out.${baselinesNeverFewerCalls ? " Every baseline makes at least as many calls as pr-shepherd on every step, so the intercept would only add to the baselines' cost." : ""}`,
   );
   out();
   const cptExcluded = BASELINE_KEYS.flatMap((b) => {

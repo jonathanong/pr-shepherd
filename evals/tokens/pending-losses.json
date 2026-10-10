@@ -121,6 +121,11 @@
     { "where": "chars-per-token:session:stack", "metric": "toolTokens", "baseline": "mcpEager", "issue": 528 },
     { "where": "chars-per-token:review-thread", "metric": "toolTokens", "baseline": "mcp", "issue": 528 },
     { "where": "chars-per-token:review-thread", "metric": "toolTokens", "baseline": "mcpEager", "issue": 528 },
-    { "where": "chars-per-token:bot-threads", "metric": "toolTokens", "baseline": "gh", "issue": 528 }
+    { "where": "chars-per-token:bot-threads", "metric": "toolTokens", "baseline": "gh", "issue": 528 },
+    { "where": "chars-per-token:bot-threads", "metric": "ite", "baseline": "gh", "issue": 528 },
+    { "where": "chars-per-token:check-annotations", "metric": "toolTokens", "baseline": "gh", "issue": 528 },
+    { "where": "chars-per-token:merge", "metric": "toolTokens", "baseline": "gh", "issue": 528 },
+    { "where": "chars-per-token:stack-work", "metric": "ite", "baseline": "gh", "issue": 528 },
+    { "where": "chars-per-token:review-thread", "metric": "ite", "baseline": "mcp", "issue": 528 }
   ]
 }

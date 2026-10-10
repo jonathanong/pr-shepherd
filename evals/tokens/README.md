@@ -489,7 +489,10 @@ review` pays the head-SHA read, and its replayed command carries a 40-character
   the sessions can add or remove gated losses. A step where pr-shepherd or a
   baseline gains a truncated or rejected call at those ratios is left out of
   the comparison with that baseline only, since the arm no longer finishes
-  it. Only the ratio changes: the fits' per-result intercept is not charged,
+  it. The ratios apply to tool results only, since that is what they were
+  fitted on; commands and tool schemas keep the model's ratio. If either
+  ratio is unmeasured, nothing is re-scored. Only the ratio changes: the
+  fits' per-result intercept is not charged,
   as the model charges none. Leaving it out favors the baselines only where
   they make at least as many calls as pr-shepherd; setup and unsupported
   steps can have pr-shepherd making more, so the report claims it only when
