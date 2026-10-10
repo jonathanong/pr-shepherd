@@ -170,7 +170,6 @@ describe("cancelled checks covered by later-executed lower-ID runs", () => {
     ]);
     expect(getCiVerdict(classified)).toMatchObject({ anyFailing: true, anyInProgress: true });
   });
-
   it("never covers a genuine failure or timeout", () => {
     for (const conclusion of ["FAILURE", "TIMED_OUT"] as const) {
       const [failed] = classifyChecks([check({ conclusion }), success()]);
@@ -178,7 +177,6 @@ describe("cancelled checks covered by later-executed lower-ID runs", () => {
     }
   });
 });
-
 describe("higher-ID supersession boundaries", () => {
   it.each([
     ["event", { event: "workflow_dispatch" }],
@@ -191,7 +189,6 @@ describe("higher-ID supersession boundaries", () => {
     ]);
     expect(cancelled?.category).toBe("failing");
   });
-
   it("retains workflow-name fallback within the same event and scope", () => {
     const [cancelled] = classifyChecks([
       check({ runId: "100", workflowId: undefined }),
