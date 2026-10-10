@@ -310,7 +310,10 @@ The event arm models a local (non-cloud) session that waits without polling
 the full snapshot. A blocking `pr-shepherd wait` runs in the background and
 wakes the agent only on a relevant change or at `nextCheck`. That command does
 not exist yet; this is a costing for the webhook/event source brainstorm,
-#544. The arm is informational: it is not gated (see "The gate") and has its
+#544. It is not the cloud event mode (`poll.mode`,
+[docs/cloud.md](../../docs/cloud.md)), where the host wakes the session on PR
+events and Shepherd runs one tick per wake; this arm models a local session
+whose wait detects changes itself. The arm is informational: it is not gated (see "The gate") and has its
 own REPORT.md section and Summary lines. `eventArm` in
 [scenarios.mjs](scenarios.mjs) derives it from the pr-shepherd arm, step by
 step, so it reuses that arm's outputs and its per-tick GraphQL costs. Each

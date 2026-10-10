@@ -731,7 +731,7 @@ out();
 out("## Event arm (informational)");
 out();
 out(
-  'A local session where a background `pr-shepherd wait` replaces the blocking poll: REST change detectors with ETags, a full snapshot only when one changes, and a reconcile snapshot on a timer. The command does not exist yet (#544), so **every number here is assumed** (README.md "Event arm"). It is not gated: it adds no loss and removes none.',
+  'A local session where a background `pr-shepherd wait` replaces the blocking poll: REST change detectors with ETags, a full snapshot only when one changes, and a reconcile snapshot on a timer. The command does not exist yet (#544), and it is not the cloud event mode (`poll.mode`), so **every number here is assumed** (README.md "Event arm"). It is not gated: it adds no loss and removes none.',
 );
 out();
 out("| session | arm | GraphQL points | REST core requests | turns | tool calls | tool tokens | cost (ITE) |");
