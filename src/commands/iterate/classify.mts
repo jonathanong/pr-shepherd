@@ -17,6 +17,7 @@ import {
 import type { MinimizeCommentsPolicy, ResolveOtherHumanThreads } from "../../config/load.mts";
 import { buildThreadMutationRouting } from "./thread-mutation-routing.mts";
 import { canGenerateGithubMutation } from "../../github/mutation-policy.mts";
+import { durableStateRequested } from "../../state/durable-state.mts";
 
 function dedupeIds(ids: string[]): string[] {
   const seen = new Set<string>();
@@ -90,6 +91,15 @@ export function classifyReviewSummaries(
     editedSummaries: summaries.edited,
     surfacedApprovals: approvals,
   };
+}
+
+/**
+ * A durable-state session (event mode or a cloud session) can lose its uncertain-reply records
+ * between ticks. Its generated reply command opts in to adopting a reply GitHub already shows,
+ * so rerunning the same printed command cannot double-post. Direct apply requests never do.
+ */
+function pushAdoptExistingReplies(argv: string[], hasReply: boolean): void {
+  if (hasReply && durableStateRequested()) argv.push("--adopt-existing-replies");
 }
 
 export function buildResolveCommand(
@@ -169,6 +179,7 @@ export function buildResolveCommand(
       resolveArgv.push("--resolve-thread-ids", pairedResolveThreadIds.join(","));
     }
     resolveArgv.push("--message", "$DISMISS_MESSAGE");
+    pushAdoptExistingReplies(resolveArgv, hasReply);
     if (hasDismiss) {
       resolveArgv.push("--dismiss-review-ids", dismissReviewIds.join(","));
     }
@@ -212,6 +223,7 @@ export function buildResolveCommand(
   if (replyThreadIds.length > 0) {
     argv.push("--reply-thread-ids", replyThreadIds.join(","));
     argv.push("--message", "$DISMISS_MESSAGE");
+    pushAdoptExistingReplies(argv, true);
   }
   if (resolveThreadIds.length > 0) {
     argv.push("--resolve-thread-ids", resolveThreadIds.join(","));

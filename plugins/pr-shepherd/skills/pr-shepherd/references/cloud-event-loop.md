@@ -10,5 +10,5 @@ Apply when Shepherd's output shows `pollMode` `event`: the header line `**pollMo
    - `eventDriven` `true` (`safety-net`): `at` only backstops a missed event. A PR event will usually wake you first.
    - `eventDriven` `false` (`ready-delay`, `stall-timeout`, `merge-queue`): no event will fire at that moment, so the wake-up at `at` is required.
 6. After a `[FIX_CODE]` tick, finish the fixes and the push the instructions name, rerun Shepherd once, then end the turn again.
-7. No `nextCheck` means there is nothing to schedule: `[CANCEL]`, `[ESCALATE]`, and `[MERGE]` ticks. Cancel any wake-up you scheduled for that PR. A stack or multi-PR selector keeps one wake-up for the whole selection.
+7. No `nextCheck` means there is nothing to schedule: `[CANCEL]`, `[ESCALATE]`, and `[MERGE]` ticks, and a `[WAIT]` with `stackDraftHold`. Cancel any wake-up you scheduled for that PR. For a held stack draft, run the printed `--stack` handoff and do not rerun the held one-PR command. A stack or multi-PR selector keeps one wake-up for the whole selection.
 8. Never poll with `gh pr checks`, `gh pr watch`, `gh run watch`, or equivalent GitHub MCP waiters while waiting for the next event.

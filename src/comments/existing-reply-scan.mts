@@ -1,6 +1,5 @@
 import type { RepoInfo } from "../github/client.mts";
 import { readReplyRecoveryEvidence } from "../github/reply-recovery-read.mts";
-import { durableStateRequested } from "../state/durable-state.mts";
 import { addPrShepherdMarker } from "./marker.mts";
 
 const BATCH = 10;
@@ -10,15 +9,17 @@ const BATCH = 10;
  *
  * A cloud session can lose its state directory between ticks, taking the uncertain-reply
  * records with it. With no local record to consult, GitHub is the only evidence of whether a
- * reply already landed, so durable-state sessions check it before posting. A failed read
- * never blocks the reply: it only means this safeguard had nothing to say.
+ * reply already landed, so the `apply review` commands Shepherd generates in durable-state
+ * sessions opt in (`--adopt-existing-replies`) to checking it before posting. Direct apply
+ * requests never run this scan. A failed read never blocks the reply: it only means this
+ * safeguard had nothing to say.
  */
 export async function findExistingReplies(
   context: { repo: RepoInfo; pr: number },
   ids: readonly string[],
   message: string,
 ): Promise<string[]> {
-  if (ids.length === 0 || !durableStateRequested()) return [];
+  if (ids.length === 0) return [];
   const marked = addPrShepherdMarker(message);
   const found: string[] = [];
   for (let offset = 0; offset < ids.length; offset += BATCH) {

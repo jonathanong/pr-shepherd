@@ -22,10 +22,7 @@ afterEach(() => {
 });
 
 describe("findExistingReplies", () => {
-  it("does nothing outside durable sessions or with no ids", async () => {
-    vi.stubEnv("CLAUDE_CODE_REMOTE", "");
-    expect(await findExistingReplies(ctx, ["T1"], message)).toEqual([]);
-    vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
+  it("does nothing with no ids", async () => {
     expect(await findExistingReplies(ctx, [], message)).toEqual([]);
     expect(mockRead).not.toHaveBeenCalled();
   });

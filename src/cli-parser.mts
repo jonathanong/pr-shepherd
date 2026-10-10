@@ -273,6 +273,7 @@ async function handleResolve(
   const dismissReviewIds = parseList(getFlag(extra, "--dismiss-review-ids"));
   const dismissMessage = getFlag(extra, "--message") ?? undefined;
   const requireSha = getFlag(extra, "--require-sha") ?? undefined;
+  const adoptExistingReplies = hasFlag(extra, "--adopt-existing-replies");
 
   warnPrrcThreadIds(resolveThreadIds);
   if (!validateRequireSha(requireSha)) return;
@@ -308,6 +309,7 @@ async function handleResolve(
     dismissReviewIds,
     dismissMessage,
     requireSha,
+    ...(adoptExistingReplies && { adoptExistingReplies }),
   });
   process.stdout.write(
     globalOpts.format === "json"

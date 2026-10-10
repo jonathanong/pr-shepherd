@@ -44,4 +44,5 @@ export const BOOLEAN_FLAGS = new Set([
   "--dry-run",
   "--verbose",
   "--clear",
+  "--adopt-existing-replies",
 ]);

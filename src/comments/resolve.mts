@@ -143,11 +143,13 @@ export async function applyResolveOptions(
   );
   const adopted = [
     ...known,
-    ...(await findExistingReplies(
-      { repo, pr },
-      replyThreadIds.filter((id) => !known.includes(id)),
-      opts.dismissMessage ?? "",
-    )),
+    ...(opts.adoptExistingReplies
+      ? await findExistingReplies(
+          { repo, pr },
+          replyThreadIds.filter((id) => !known.includes(id)),
+          opts.dismissMessage ?? "",
+        )
+      : []),
   ];
   result.repliedThreads.push(...adopted);
   trackAdoptedReplyThreads(result, adopted);

@@ -21,7 +21,8 @@ vi.mock("../config/load.mts", async (importOriginal) => ({
 }));
 
 import { runIterateForMode, runPollForMode } from "./event-mode.mts";
-import { FIX_CODE_CONTINUATION } from "./iterate/check-instructions.mts";
+const FIX_CODE_CONTINUATION =
+  "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.";
 import { durableStateRequested } from "../state/durable-state.mts";
 
 const NOW = Date.parse("2024-05-15T19:07:00.000Z");
@@ -126,17 +127,22 @@ describe("runIterateForMode", () => {
     expect(await runIterateForMode(opts)).toMatchObject({ nextCheck: { reason: "safety-net" } });
   });
 
-  it("rewrites only the fix_code continuation", async () => {
-    m.runIterate.mockResolvedValue({
-      action: "fix_code",
-      fix: { instructions: ["1. do it", FIX_CODE_CONTINUATION] },
-      ...base,
-    });
-    const result = await runIterateForMode(opts);
-    expect(result).toMatchObject({ action: "fix_code" });
-    const steps = (result as { fix: { instructions: string[] } }).fix.instructions;
-    expect(steps[0]).toBe("1. do it");
-    expect(steps[1]).toContain("end the turn without sleeping");
+  it("rewrites only the fix_code continuation, plain or quota-aware", async () => {
+    const quota =
+      "`[FIX_CODE]` is non-terminal. After completing these steps, GitHub's GraphQL API quota is low. Poll no more often than every 5 minutes.";
+    for (const continuation of [FIX_CODE_CONTINUATION, quota]) {
+      m.runIterate.mockResolvedValue({
+        action: "fix_code",
+        fix: { instructions: ["1. do it", continuation] },
+        ...base,
+      });
+      const result = await runIterateForMode(opts);
+      expect(result).toMatchObject({ action: "fix_code" });
+      const steps = (result as { fix: { instructions: string[] } }).fix.instructions;
+      expect(steps[0]).toBe("1. do it");
+      expect(steps[1]).toContain("end the turn without sleeping");
+      expect(steps[1]).toContain('Playbook: "Cloud event loop"');
+    }
   });
 
   it("leaves fix_code untouched when no next check applies", async () => {

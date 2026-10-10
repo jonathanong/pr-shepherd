@@ -33,8 +33,7 @@ describe("successful REST mutation exhaustion", () => {
     expect(wire.requests.filter(({ method }) => method === "POST")).toMatchObject([
       { path: "/repos/octocat/hello-world/pulls/101/comments/11/replies" },
     ]);
-    expect(wire.requests.filter(({ method }) => method === "POST")).toHaveLength(1);
-    expect(wire.requests).toHaveLength(5);
+    expect(wire.requests).toHaveLength(3);
   });
   it("stops after a success exhausts core quota and reports every remaining ID", async () => {
     vi.stubEnv("CLAUDE_CODE_REMOTE", "true");

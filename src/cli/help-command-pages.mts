@@ -57,6 +57,9 @@ Flags:
   --dismiss-review-ids <ids>      Comma-separated review IDs to dismiss.
   --message <text>                Reply/dismiss message. Required with reply or dismiss IDs.
   --require-sha <sha>             Wait for this full 40-character lowercase PR head SHA.
+  --adopt-existing-replies        Generated durable-state commands only: count a thread whose last
+                                  comment is already this exact Shepherd reply from you as replied
+                                  instead of posting it again. Omit it to forward every reply ID.
   --format text|json              Output format. Default: text.
 
 At least one action flag is required.

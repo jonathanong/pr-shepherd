@@ -4,6 +4,10 @@ const m = vi.hoisted(() => ({
   runPollSummary: vi.fn(),
   runAggregatePoll: vi.fn(),
   loadConfig: vi.fn(),
+  readStackStallDeadline: vi.fn(),
+}));
+vi.mock("./stack-stall.mts", () => ({
+  readStackStallDeadline: m.readStackStallDeadline,
 }));
 vi.mock("./poll-summary.mts", () => ({
   runPollSummary: m.runPollSummary,
@@ -19,6 +23,7 @@ import { runAggregatePollForMode, runPollSummaryForMode } from "./event-mode.mts
 beforeEach(() => {
   for (const fn of Object.values(m)) fn.mockReset();
   m.loadConfig.mockReturnValue({ poll: { mode: "event" }, iterate: { stallTimeoutMinutes: 60 } });
+  m.readStackStallDeadline.mockResolvedValue(undefined);
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -82,5 +87,26 @@ describe("aggregate event mode", () => {
       expect(result).toMatchObject({ pollMode: "event" });
       expect(result).not.toHaveProperty("nextCheck");
     }
+  });
+
+  it("runs the tick with event mode so child poll commands carry it", async () => {
+    m.runPollSummary.mockResolvedValue(summary());
+    await runPollSummaryForMode({} as never);
+    expect(m.runPollSummary).toHaveBeenCalledWith({ pollMode: "event" });
+  });
+
+  it("schedules the stack stall deadline before the safety net", async () => {
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    m.readStackStallDeadline.mockResolvedValue(nowSeconds + 600);
+    m.runPollSummary.mockResolvedValue(summary());
+    const result = await runPollSummaryForMode({} as never);
+    expect(m.readStackStallDeadline).toHaveBeenCalledWith(expect.anything(), 3600);
+    expect(result.nextCheck).toMatchObject({
+      reason: "stall-timeout",
+      eventDriven: false,
+    });
+    expect(result.nextCheck!.inSeconds).toBeLessThanOrEqual(660);
+    await runPollSummaryForMode({ stallTimeoutSeconds: 120 } as never);
+    expect(m.readStackStallDeadline).toHaveBeenLastCalledWith(expect.anything(), 120);
   });
 });

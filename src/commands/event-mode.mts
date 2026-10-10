@@ -16,9 +16,10 @@ import {
   SAFETY_NET_SECONDS,
   type NextCheckCandidate,
 } from "./next-check.mts";
-import { FIX_CODE_CONTINUATION } from "./iterate/check-instructions.mts";
+import { isFixCodeContinuation } from "./iterate/check-instructions.mts";
 import { runIterate } from "./iterate/index.mts";
 import { resolvePollMode } from "./poll-mode.mts";
+import { readStackStallDeadline } from "./stack-stall.mts";
 import { runPoll, type PollCommandOptions } from "./poll.mts";
 import {
   runAggregatePoll,
@@ -42,7 +43,10 @@ export function runIterateForMode(opts: IterateCommandOptions): Promise<IterateR
 /** One aggregate tick; event mode adds `pollMode` and `nextCheck`. */
 export function runPollSummaryForMode(opts: PollSummaryCommandOptions): Promise<PollSummaryResult> {
   if (!isEventMode(opts.pollMode)) return runPollSummary(opts);
-  return runWithDurableState(async () => withAggregateNextCheck(await runPollSummary(opts)));
+  const eventOpts = { ...opts, pollMode: "event" as const };
+  return runWithDurableState(async () =>
+    withAggregateNextCheck(await runPollSummary(eventOpts), eventOpts),
+  );
 }
 
 /** The default poll command: the sleeping loop in poll mode, one tick in event mode. */
@@ -91,7 +95,7 @@ async function runIterateEvent(opts: IterateCommandOptions): Promise<IterateResu
     fix: {
       ...tagged.fix,
       instructions: tagged.fix.instructions.map((step) =>
-        step === FIX_CODE_CONTINUATION ? eventFixContinuation(nextCheck) : step,
+        isFixCodeContinuation(step) ? eventFixContinuation(nextCheck) : step,
       ),
     },
   };
@@ -110,9 +114,16 @@ async function readStallDeadline(
   return read.ok && read.state ? read.state.firstSeenAt + timeout : undefined;
 }
 
-function withAggregateNextCheck(result: PollSummaryResult): PollSummaryResult {
+async function withAggregateNextCheck(
+  result: PollSummaryResult,
+  opts: PollSummaryCommandOptions,
+): Promise<PollSummaryResult> {
   const tagged = { ...result, pollMode: "event" as const };
-  const nextCheck = aggregateNextCheck(result);
+  const stallDeadlineSeconds = await readStackStallDeadline(
+    result,
+    opts.stallTimeoutSeconds ?? loadConfig().iterate.stallTimeoutMinutes * 60,
+  );
+  const nextCheck = aggregateNextCheck(result, stallDeadlineSeconds);
   if (!nextCheck) return tagged;
   const instructions = result.instructions ?? [];
   const waiting = result.reason === "waiting" || result.reason === "timeout";
@@ -126,7 +137,10 @@ function withAggregateNextCheck(result: PollSummaryResult): PollSummaryResult {
   };
 }
 
-function aggregateNextCheck(result: PollSummaryResult): NextCheck | undefined {
+function aggregateNextCheck(
+  result: PollSummaryResult,
+  stallDeadlineSeconds: number | undefined,
+): NextCheck | undefined {
   if (
     result.reason === "all_terminal" ||
     result.nextAction === "cancel" ||
@@ -146,5 +160,13 @@ function aggregateNextCheck(result: PollSummaryResult): NextCheck | undefined {
       ? { reason: "merge-queue", seconds: MERGE_QUEUE_RECHECK_SECONDS, eventDriven: false }
       : { reason: "safety-net", seconds: SAFETY_NET_SECONDS, eventDriven: true },
   );
-  return earliestNextCheck(candidates);
+  const nowMs = Date.now();
+  if (stallDeadlineSeconds !== undefined) {
+    candidates.push({
+      reason: "stall-timeout",
+      seconds: stallDeadlineSeconds - nowMs / 1000,
+      eventDriven: false,
+    });
+  }
+  return earliestNextCheck(candidates, nowMs);
 }
