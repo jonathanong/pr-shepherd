@@ -4,6 +4,7 @@ import { selectQuotaWarning } from "../quota-selection.mts";
 import type { IterateResult } from "../../types.mts";
 import { buildQuotaAwareContinuation } from "../../quota-warning.mts";
 import { getGithubTransport } from "../../github/transport.mts";
+import { isFixCodeContinuation } from "./check-instructions.mts";
 
 function shouldWarn(result: IterateResult): boolean {
   return ["wait", "mark_ready", "merge", "fix_code"].includes(result.action);
@@ -48,7 +49,7 @@ export async function attachApiUsage(
   const instructions = [...withWarning.fix.instructions];
   const completion = instructions.at(-1);
   if (completion !== undefined) {
-    if (/\[FIX_CODE\].*non-terminal/i.test(completion)) {
+    if (isFixCodeContinuation(completion)) {
       instructions[instructions.length - 1] = buildQuotaAwareContinuation(
         quotaWarning,
         "`[FIX_CODE]` is non-terminal. After completing these steps,",

@@ -150,6 +150,12 @@ export interface ResolveOptions {
   dismissMessage?: string;
   /** When set, shepherd verifies GitHub has received this commit before resolving. */
   requireSha?: string;
+  /**
+   * Generated-automation only: treat a thread whose last comment is already this exact Shepherd
+   * reply from the viewer as replied instead of posting it again. Direct apply requests leave it
+   * unset so every supplied ID reaches GitHub.
+   */
+  adoptExistingReplies?: boolean;
 }
 
 export interface AgentThread {

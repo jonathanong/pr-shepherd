@@ -19,6 +19,7 @@ import { formatActivityLine } from "./iterate-activity-formatter.mts";
 import { branchStateSegment } from "./iterate-branch-segment.mts";
 import { insertRuleAutoResolveSection } from "../commands/rule-auto-resolve-format.mts";
 import { formatTransportEvidence } from "./transport-formatter.mts";
+import { formatNextCheckLines, formatPollModeSegment } from "./next-check-format.mts";
 
 /**
  * Format an IterateResult as human-readable Markdown.
@@ -53,7 +54,7 @@ export function formatIterateResult(
       : "";
   const baseBranchSeg =
     verbose && result.baseBranch ? ` · **baseBranch** \`${result.baseBranch}\`` : "";
-  const baseLine = `**status** \`${result.status}\` · **merge** \`${result.mergeStateStatus}\`${reviewDecisionSeg} · **state** \`${result.state}\` · **repo** \`${result.repo}\`${baseBranchSeg}`;
+  const baseLine = `**status** \`${result.status}\` · **merge** \`${result.mergeStateStatus}\`${reviewDecisionSeg} · **state** \`${result.state}\` · **repo** \`${result.repo}\`${baseBranchSeg}${formatPollModeSegment(result)}`;
 
   const branchSeg = branchStateSegment(result);
   let summaryLine: string;
@@ -121,6 +122,7 @@ export function formatIterateResult(
   appendMergeQueueHeader(headerLines, result);
   const activityLine = formatActivityLine(result);
   if (activityLine) headerLines.push(activityLine);
+  headerLines.push(...formatNextCheckLines(result.nextCheck));
   const header = headerLines.join("\n");
   const quotaWarning = formatQuotaWarning(result.quotaWarning);
   const apiUsage = verbose ? formatApiUsage(result.apiUsage) : null;

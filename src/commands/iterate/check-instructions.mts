@@ -4,6 +4,11 @@ import { playbookPointer } from "../playbook-pointer.mts";
 const FIX_CODE_CONTINUATION =
   "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.";
 
+/** The `[FIX_CODE]` recurrence step, whether plain or rewritten by the quota warning. */
+export function isFixCodeContinuation(step: string): boolean {
+  return /\[FIX_CODE\].*non-terminal/i.test(step);
+}
+
 /** Build the stale-CR clause appended to the `## Changes-requested reviews` instruction. */
 export function buildCrStaleClause(reviews: Review[]): string {
   const human = reviews.some((r) => r.staleReview && !r.staleBotCr)

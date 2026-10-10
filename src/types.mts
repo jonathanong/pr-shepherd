@@ -15,3 +15,4 @@ export * from "./types/escalate.mts";
 export * from "./types/merge-queue.mts";
 export * from "./types/api-usage.mts";
 export * from "./types/poll-summary.mts";
+export * from "./types/next-check.mts";

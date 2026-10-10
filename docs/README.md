@@ -23,6 +23,7 @@ into these files for every claim it makes; this remains the canonical spec.
 | [checks.md](checks.md)                                   | Classify → triage → `failedStep`, `jobName`, event filtering  |
 | [merge-status.md](merge-status.md)                       | `deriveMergeStatus` plus printed merge requirements           |
 | [graphql.md](graphql.md)                                 | Batch query, operation catalog, cost, quota, REST supplements |
+| [cloud.md](cloud.md)                                     | Event mode, `nextCheck`, durable state, duplicate-reply scan  |
 | [graphql-usage.md](graphql-usage.md)                     | Points each command spends, and which spend is worth reducing |
 
 ## Job 2 — Actions emitted

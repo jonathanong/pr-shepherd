@@ -6,7 +6,7 @@ import { row, stack } from "../../test-helpers/commands/poll-summary-stack.test-
 import { readStackStallState } from "../state/stack-stall.mts";
 import type { PollSummaryItem } from "../types.mts";
 import { planPollSummary } from "./poll-summary-instructions.mts";
-import { applyStackStallGuard } from "./stack-stall.mts";
+import { applyStackStallGuard, readStackStallDeadline } from "./stack-stall.mts";
 
 const repo = { owner: "acme", name: "widgets" };
 const key = { owner: "acme", repo: "widgets", stack: 9 };
@@ -143,5 +143,33 @@ describe("applyStackStallGuard", () => {
       false,
     );
     await expect(applyStackStallGuard(planned, repo, 600)).resolves.toBe(planned.result);
+  });
+});
+
+describe("readStackStallDeadline", () => {
+  it("returns firstSeenAt plus the timeout once an idle stack timer runs", async () => {
+    const planned = idleStack();
+    await expect(readStackStallDeadline(planned.result, 600)).resolves.toBeUndefined();
+    await applyStackStallGuard(planned, repo, 600);
+    const start = Math.floor(Date.now() / 1000);
+    advance(60);
+    await expect(readStackStallDeadline(planned.result, 600)).resolves.toBe(start + 600);
+    await expect(readStackStallDeadline(planned.result, 0)).resolves.toBeUndefined();
+    await expect(
+      readStackStallDeadline({ ...planned.result, repo: "nope" }, 600),
+    ).resolves.toBeUndefined();
+  });
+
+  it("ignores explicit selections and unreadable state", async () => {
+    const explicit = planPollSummary(
+      { ...stack([row(1, 1)]), selection: { kind: "prs", requested: [1] } },
+      false,
+    );
+    await expect(readStackStallDeadline(explicit.result, 600)).resolves.toBeUndefined();
+    const blocker = join(stateDir, "blocker");
+    await mkdir(stateDir, { recursive: true });
+    await writeFile(blocker, "not a directory");
+    process.env["PR_SHEPHERD_STATE_DIR"] = blocker;
+    await expect(readStackStallDeadline(idleStack().result, 600)).resolves.toBeUndefined();
   });
 });

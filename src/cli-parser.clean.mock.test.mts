@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   registerHooks,
   mockRunClean,
@@ -7,6 +7,7 @@ import {
 } from "../test-helpers/cli-parser.clean.test-support.mts";
 import { main } from "./cli-parser.mts";
 import { EXIT } from "./exit-codes.mts";
+import { durableStateRequested } from "./state/durable-state.mts";
 
 registerHooks();
 
@@ -125,6 +126,38 @@ describe("main — clean dispatch", () => {
   it("writes error to stderr and exits EX_USAGE for invalid --format value", async () => {
     await main(["node", "shepherd", "clean", "all", "--format", "xml"]);
     expect(getStderr()).toContain("invalid --format value");
+    expect(process.exitCode).toBe(EXIT.USAGE);
+    expect(mockRunClean).not.toHaveBeenCalled();
+  });
+});
+
+describe("main — clean poll-mode scope", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("cleans inside the durable state scope when --poll-mode resolves to event", async () => {
+    vi.stubEnv("CLAUDE_CODE_REMOTE", "");
+    const durable: boolean[] = [];
+    mockRunClean.mockImplementation(async () => {
+      durable.push(durableStateRequested());
+      return { ...OK_RESULT, variant: "pr" };
+    });
+    await main(["node", "shepherd", "admin", "clean", "pr", "42", "--poll-mode", "event"]);
+    await main(["node", "shepherd", "clean", "all", "--poll-mode=poll"]);
+    expect(durable).toEqual([true, false]);
+    expect(mockRunClean).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ variant: "pr", value: "42" }),
+    );
+    expect(process.exitCode).toBeUndefined();
+  });
+
+  it("rejects an invalid --poll-mode value with a usage error", async () => {
+    await main(["node", "shepherd", "clean", "all", "--poll-mode", "evnet"]);
+    expect(getStderr()).toContain(
+      'pr-shepherd: clean: --poll-mode must be one of auto, poll, event, got "evnet"',
+    );
     expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunClean).not.toHaveBeenCalled();
   });

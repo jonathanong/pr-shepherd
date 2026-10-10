@@ -20,6 +20,7 @@ export function pollCommandFields(
   if (opts.stallTimeoutSeconds !== undefined)
     args.push("--stall-timeout", `${opts.stallTimeoutSeconds}s`);
   if (opts.instructions) args.push("--instructions", opts.instructions);
+  if (opts.pollMode === "event") args.push("--poll-mode", "event");
   if (opts.noAutoMarkReady && !boundedDraft) args.push("--no-auto-mark-ready");
   const pollCommand = buildPrShepherdCommand(args).text;
   return boundedDraft ? { pollCommand, pollProbe: true } : { pollCommand };

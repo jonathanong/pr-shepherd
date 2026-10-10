@@ -3,6 +3,7 @@ import { buildResolveCommand } from "./classify.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
 import { buildShepherdJournalInstruction } from "../shepherd-journal.mts";
 import { addPrShepherdMarker } from "../../comments/marker.mts";
+import { runWithDurableState } from "../../state/durable-state.mts";
 import type { AgentThread, ReviewThread } from "../../types.mts";
 
 const FORK_PR = "https://github.com/fork/widgets/pull/42";
@@ -93,5 +94,41 @@ describe("buildResolveCommand — split paired and standalone resolves", () => {
     expect(resolveCommand.argv).toContain("bot-active");
     expect(resolveOnlyCommand?.argv).toContain("--resolve-thread-ids");
     expect(resolveOnlyCommand?.argv).toContain("bot-retry");
+  });
+});
+
+describe("buildResolveCommand — existing-reply adoption", () => {
+  const thread = botThread("bot-active");
+  const build = (comments: string[] = []) =>
+    buildResolveCommand(
+      [thread as AgentThread],
+      [],
+      comments,
+      [],
+      [],
+      FORK_PR,
+      new Set(),
+      [],
+      undefined,
+      [thread],
+    );
+
+  it("omits the opt-in flag outside durable state", () => {
+    expect(build().resolveCommand.argv).not.toContain("--adopt-existing-replies");
+  });
+
+  it("adds the opt-in flag to generated reply commands in durable state", () => {
+    const single = runWithDurableState(() => build());
+    expect(single.resolveCommand.argv).toContain("--adopt-existing-replies");
+    const split = runWithDurableState(() => build(["PRRC_one"]));
+    expect(split.resolveCommand.argv).toContain("--adopt-existing-replies");
+    expect(split.resolveOnlyCommand?.argv).not.toContain("--adopt-existing-replies");
+  });
+
+  it("never adds the flag to a command without replies", () => {
+    const { resolveCommand } = runWithDurableState(() =>
+      buildResolveCommand([], [], ["PRRC_one"], [], [], FORK_PR),
+    );
+    expect(resolveCommand.argv).not.toContain("--adopt-existing-replies");
   });
 });

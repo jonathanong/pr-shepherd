@@ -4,10 +4,13 @@ Print the per-worktree append-only debug log path for the current repository.
 The log is created by the first non-help pr-shepherd command that initializes logging.
 
 Usage:
-  pr-shepherd log-file [--format text|json]
+  pr-shepherd log-file [--format text|json] [--poll-mode auto|poll|event]
 
 Flags:
   --format text|json   Print a raw path or {"path": "..."} JSON. Default: text.
+  --poll-mode auto|poll|event
+                       Report the log for that poll mode; event mode keeps it in durable
+                       state under the git common directory. Default: poll.mode (auto).
   --help, -h           Print this help and exit before logging setup.
 
 Environment:

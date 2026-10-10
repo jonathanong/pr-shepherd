@@ -8,6 +8,7 @@ export const FLAGS_WITH_VALUES = new Set([
   "--ready-delay",
   "--stall-timeout",
   "--instructions",
+  "--poll-mode",
   "--require-sha",
   "--message",
   "--description",
@@ -43,4 +44,5 @@ export const BOOLEAN_FLAGS = new Set([
   "--dry-run",
   "--verbose",
   "--clear",
+  "--adopt-existing-replies",
 ]);

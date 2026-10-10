@@ -1,0 +1,27 @@
+{
+  "description": "Event mode after the CLI marks a draft ready omits nextCheck and reruns immediately so the next tick starts the ready-delay.",
+  "args": [
+    "--poll-mode",
+    "event"
+  ],
+  "batchData": {
+    "isDraft": true,
+    "mergeStateStatus": "CLEAN",
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": true,
+    "shouldCancel": false,
+    "remainingSeconds": 300
+  },
+  "expectedExitCode": 11
+}

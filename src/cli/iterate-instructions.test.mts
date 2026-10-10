@@ -178,5 +178,9 @@ describe("iterate instruction polling contract", () => {
       "Resume full-cadence pr-shepherd after the GraphQL quota resets at 2026-08-30T05:12:29.000Z",
     );
     expect(textInstructions(result)[0]).toContain("no more often than every 10 minutes");
+    const event: IterateResult = { ...result, pollMode: "event" };
+    expect(textInstructions(event)).toEqual([
+      "The CLI marked the PR ready for review. Iterate immediately with the same options to continue.",
+    ]);
   });
 });

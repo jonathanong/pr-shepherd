@@ -16,6 +16,7 @@ const shepherd = createPrShepherd({ cwd: "/path/to/repo", transport: "auto" });
 const tick = await shepherd.iterate({ pr: 42, merge: true });
 const group = await shepherd.iterate({ prs: [42, 43] });
 const stack = await shepherd.iterate({ stack: 43 });
+const cloud = await shepherd.iterate({ pr: 42, pollMode: "event" }); // adds pollMode and nextCheck
 const journal = await shepherd.getJournal({ pr: "owner/repo#42" });
 const applied = await shepherd.apply({
   pr: 42,
@@ -76,6 +77,8 @@ A definite failed merge request permits a replacement with changed options. A de
 An HTTP `400` or `409` merge rejection without the asynchronous result envelope remains a definite failure. A malformed successful response remains uncertain, because GitHub may have accepted the merge request.
 
 Native-stack merge operations also accept `expectedStack: { number, baseRefName, prefix }`. `number` is the positive stack number, `baseRefName` is its trunk, and `prefix` is the observed ordered lower prefix through the requested PR. Each entry is `{ pr, headRefName, headRefOid, baseRefName }`, with a unique positive PR number and full lowercase head SHA. The final entry must match the requested PR and `requireSha`. Generated REST stack commands carry the same object as `--expected-stack '<JSON>'`. Missing membership or changed stack identity, trunk, prefix, or parent refs rejects the request before submission. Current READY receipts and topology are also revalidated. The guard is persisted with the merge intent; changing or dropping it cannot bypass pending or uncertain request protection.
+
+`pollMode` (`auto`, `poll`, `event`) on `iterate` selects the event-mode tick described in [cloud.md](cloud.md); the result then carries `pollMode: "event"` and, when another tick is meaningful, `nextCheck { at, inSeconds, reason }`.
 
 `mark_files_viewed` performs the requested mutations where the selected transport supports them and surfaces GitHub's per-file results; REST currently reports the operation as explicitly unsupported. Direct review operations forward explicitly supplied IDs without iterate's author, capability, or current-state policy; direct journal operations likewise honor explicit caller intent. GitHub is authoritative for authorization and mutation validity. Replies and dismissals require `message`.
 

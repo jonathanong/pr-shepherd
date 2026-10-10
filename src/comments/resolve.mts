@@ -2,6 +2,7 @@
 import { graphqlWithRateLimit, type RepoInfo } from "../github/client.mts";
 import type { ResolveOptions } from "../types.mts";
 import { addPrShepherdMarker } from "./marker.mts";
+import { findExistingReplies } from "./existing-reply-scan.mts";
 import {
   isRateLimitMessage,
   rateLimitFromError,
@@ -135,11 +136,21 @@ export async function applyResolveOptions(
     await waitForSha(pr, repo, opts.requireSha);
   }
 
-  const adopted = await assertReplyOutcomeKnown(
+  const known = await assertReplyOutcomeKnown(
     { repo, pr },
     replyThreadIds,
     opts.dismissMessage ?? "",
   );
+  const adopted = [
+    ...known,
+    ...(opts.adoptExistingReplies
+      ? await findExistingReplies(
+          { repo, pr },
+          replyThreadIds.filter((id) => !known.includes(id)),
+          opts.dismissMessage ?? "",
+        )
+      : []),
+  ];
   result.repliedThreads.push(...adopted);
   trackAdoptedReplyThreads(result, adopted);
 

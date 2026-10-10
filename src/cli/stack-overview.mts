@@ -9,6 +9,8 @@ import type { ApiUsage, GraphqlQuotaWarning } from "../types/api-usage.mts";
 import { formatApiUsage, formatQuotaWarning } from "./api-usage-formatter.mts";
 import { formatTransportEvidence } from "./transport-formatter.mts";
 import type { StackLayerView } from "./stack-layer-view.mts";
+import type { NextCheck } from "../types/next-check.mts";
+import { formatNextCheckLines } from "./next-check-format.mts";
 
 export interface StackOverview {
   transport?: "rest";
@@ -24,6 +26,8 @@ export interface StackOverview {
   instructions?: string[];
   apiUsage?: ApiUsage;
   quotaWarning?: GraphqlQuotaWarning;
+  pollMode?: "event";
+  nextCheck?: NextCheck;
 }
 
 /** Lean stack payload shared by Markdown, JSON, and MCP. */
@@ -49,6 +53,8 @@ export function projectStackOverview(result: PollSummaryResult): StackOverview {
     ...(result.instructions?.length && { instructions: result.instructions }),
     ...(result.apiUsage && { apiUsage: result.apiUsage }),
     ...(result.quotaWarning && { quotaWarning: result.quotaWarning }),
+    ...(result.pollMode && { pollMode: result.pollMode }),
+    ...(result.nextCheck && { nextCheck: result.nextCheck }),
   };
 }
 
@@ -113,11 +119,12 @@ export function formatStackOverview(overview: StackOverview): string {
   const lines = [
     `# ${overview.repo} stack #${stack.stackNumber}${stackTerminalTag(overview.nextAction)} — ${overview.reason}`,
     "",
-    `Stack: #${stack.stackNumber} · anchor PR #${stack.anchor} · ${stack.stackSize} layers · mode \`${overview.mode}\``,
+    `Stack: #${stack.stackNumber} · anchor PR #${stack.anchor} · ${stack.stackSize} layers · mode \`${overview.mode}\`${overview.pollMode ? ` · pollMode \`${overview.pollMode}\`` : ""}`,
     ...(overview.stackMergeable !== undefined
       ? [`stackMergeable: ${overview.stackMergeable}`]
       : []),
     ...(overview.nextAction ? [`nextAction: ${overview.nextAction}`] : []),
+    ...formatNextCheckLines(overview.nextCheck),
     "",
     "## Layers",
     "",

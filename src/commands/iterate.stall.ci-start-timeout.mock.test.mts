@@ -108,12 +108,14 @@ describe("runIterate — CI start stall timeout", () => {
 
   it("keeps waiting for a younger pending status context", async () => {
     mockInProgressCheck(statusContext(NOW - STALL_TIMEOUT_S + 1));
+    const stallDeadlineSink: { ciStartDeadlineSeconds?: number } = {};
 
     const result = await runIterate(
-      makeOpts({ stallTimeoutSeconds: STALL_TIMEOUT_S, noAutoMarkReady: true }),
+      makeOpts({ stallTimeoutSeconds: STALL_TIMEOUT_S, noAutoMarkReady: true, stallDeadlineSink }),
     );
 
     expect(result.action).toBe("wait");
+    expect(stallDeadlineSink.ciStartDeadlineSeconds).toBe(NOW + 1);
   });
 
   it("uses updatedAtUnix as the CI-start stall age when present", async () => {
@@ -171,9 +173,13 @@ describe("runIterate — CI start stall timeout", () => {
 
   it("respects stallTimeoutSeconds: 0 for CI-start stalls", async () => {
     mockInProgressCheck(statusContext(NOW - 100_000));
+    const stallDeadlineSink: { ciStartDeadlineSeconds?: number } = {};
 
-    const result = await runIterate(makeOpts({ stallTimeoutSeconds: 0, noAutoMarkReady: true }));
+    const result = await runIterate(
+      makeOpts({ stallTimeoutSeconds: 0, noAutoMarkReady: true, stallDeadlineSink }),
+    );
 
     expect(result.action).toBe("wait");
+    expect(stallDeadlineSink.ciStartDeadlineSeconds).toBeUndefined();
   });
 });

@@ -6,12 +6,12 @@ import { readFileSync } from "node:fs";
 import { EXIT, applyReviewResultToExitCode, errorToExitCode } from "./exit-codes.mts";
 import { runResolveMutate } from "./commands/resolve.mts";
 import { runLogFile } from "./commands/log-file.mts";
+import { handleClean } from "./cli/clean-handler.mts";
 import { parseCommonArgs, getFlag, hasFlag, parseList } from "./cli/args.mts";
 import { isDefaultPollInvocation, validateDefaultPollArgs } from "./cli/default-poll.mts";
 import { USAGE, helpKeyForArgs, maybePrintHelp } from "./cli/help.mts";
 import { formatMutateResult } from "./cli/formatters.mts";
 import {
-  handleClean,
   handleCommitSuggestion,
   handleSuggestionPatches,
   handleIterate,
@@ -29,6 +29,11 @@ import {
 import { handleCheckBlocker } from "./cli/check-blocker-handler.mts";
 import { handleQueueRemoval } from "./cli/queue-removal-handler.mts";
 import { setupLog } from "./log/setup.mts";
+import {
+  rejectInvalidPollModeFlag,
+  runInEventStateScope,
+  runInPollModeScope,
+} from "./cli/event-state-scope.mts";
 import { handleApplyMerge } from "./cli/apply-merge-handler.mts";
 import { extractTransportArgs } from "./cli/transport-args.mts";
 import { parseGithubTransport } from "./github/transport-mode.mts";
@@ -132,6 +137,14 @@ async function dispatch(argv: string[]): Promise<void> {
     handlePlaybook(args.slice(1));
     return;
   }
+
+  // Event mode enters the durable state scope before the log resolves its path.
+  return runInEventStateScope(args, () => dispatchLogged(argv));
+}
+
+async function dispatchLogged(argv: string[]): Promise<void> {
+  const args = argv.slice(2);
+  const subcommand = args[0];
 
   // Initialize the per-worktree log and install a stdout tee.
   await setupLog(argv);
@@ -245,6 +258,7 @@ async function handleLogFile(
   usageKey: "log-file" | "admin log-file" = "log-file",
 ): Promise<void> {
   if (maybePrintHelp(args, usageKey)) return;
+  if (rejectInvalidPollModeFlag(args, usageKey)) return;
   const jsonOut =
     args.some((a) => a === "--format=json") ||
     (() => {
@@ -253,7 +267,8 @@ async function handleLogFile(
     })();
 
   try {
-    const result = await runLogFile();
+    // Report the log the matching tick writes: event mode keeps it in durable state.
+    const result = await runInPollModeScope(args, () => runLogFile());
     process.stdout.write(jsonOut ? `${JSON.stringify(result, null, 2)}\n` : `${result.path}\n`);
   } catch (e) {
     process.stderr.write(`pr-shepherd: log-file: ${String(e)}\n`);
@@ -273,6 +288,7 @@ async function handleResolve(
   const dismissReviewIds = parseList(getFlag(extra, "--dismiss-review-ids"));
   const dismissMessage = getFlag(extra, "--message") ?? undefined;
   const requireSha = getFlag(extra, "--require-sha") ?? undefined;
+  const adoptExistingReplies = hasFlag(extra, "--adopt-existing-replies");
 
   warnPrrcThreadIds(resolveThreadIds);
   if (!validateRequireSha(requireSha)) return;
@@ -308,6 +324,7 @@ async function handleResolve(
     dismissReviewIds,
     dismissMessage,
     requireSha,
+    ...(adoptExistingReplies && { adoptExistingReplies }),
   });
   process.stdout.write(
     globalOpts.format === "json"

@@ -50,6 +50,21 @@ export async function applyStackStallGuard(
   };
 }
 
+/**
+ * Unix seconds when an unchanged idle stack plan trips `stall-timeout`, or undefined when no
+ * stack timer is running. Event mode schedules its next tick no later than this.
+ */
+export async function readStackStallDeadline(
+  result: PollSummaryResult,
+  stallTimeoutSeconds: number,
+): Promise<number | undefined> {
+  const [owner, repo] = result.repo.split("/");
+  if (result.selection.kind !== "stack" || stallTimeoutSeconds <= 0 || !owner || !repo)
+    return undefined;
+  const read = await readStackStallState({ owner, repo, stack: result.selection.stackNumber });
+  return read.ok && read.state ? read.state.firstSeenAt + stallTimeoutSeconds : undefined;
+}
+
 function stackStateUnavailable(result: PollSummaryResult, reason: string): PollSummaryResult {
   return {
     ...result,

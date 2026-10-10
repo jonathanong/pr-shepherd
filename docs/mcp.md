@@ -190,18 +190,19 @@ parser result; invalid tool input and GitHub failures use the normal MCP error r
 
 ### `iterate`
 
-| Input                    | Type                            | Required | Meaning                                                                  |
-| ------------------------ | ------------------------------- | -------- | ------------------------------------------------------------------------ |
-| `pr`                     | GitHub PR URL or `owner/repo#N` | selector | One PR to inspect; its named repository is the target.                   |
-| `prs`                    | qualified PR array              | selector | Non-empty explicit set from one repository.                              |
-| `stack`                  | GitHub PR URL or `owner/repo#N` | selector | Anchor selecting its complete native GitHub stack.                       |
-| `readyDelaySeconds`      | non-negative number             | no       | Override the ready-delay window.                                         |
-| `stallTimeoutSeconds`    | non-negative number             | no       | Override the one-PR or `stack` stall timeout.                            |
-| `noAutoMarkReady`        | boolean                         | no       | Disable automatic draft → ready.                                         |
-| `noAutoCancelActionable` | boolean                         | no       | Deprecated no-op; Shepherd never cancels workflow runs.                  |
-| `merge`                  | boolean                         | no       | Shepherd to readiness and emit merge/queue commands.                     |
-| `instructions`           | `inline` or `playbook`          | no       | `fix_code` instruction style; default `iterate.instructions` (`inline`). |
-| `neverCancelRuns`        | string array                    | no       | Deprecated per-call no-op retained for compatibility.                    |
+| Input                    | Type                            | Required | Meaning                                                                                                                                   |
+| ------------------------ | ------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `pr`                     | GitHub PR URL or `owner/repo#N` | selector | One PR to inspect; its named repository is the target.                                                                                    |
+| `prs`                    | qualified PR array              | selector | Non-empty explicit set from one repository.                                                                                               |
+| `stack`                  | GitHub PR URL or `owner/repo#N` | selector | Anchor selecting its complete native GitHub stack.                                                                                        |
+| `readyDelaySeconds`      | non-negative number             | no       | Override the ready-delay window.                                                                                                          |
+| `stallTimeoutSeconds`    | non-negative number             | no       | Override the one-PR or `stack` stall timeout.                                                                                             |
+| `noAutoMarkReady`        | boolean                         | no       | Disable automatic draft → ready.                                                                                                          |
+| `noAutoCancelActionable` | boolean                         | no       | Deprecated no-op; Shepherd never cancels workflow runs.                                                                                   |
+| `merge`                  | boolean                         | no       | Shepherd to readiness and emit merge/queue commands.                                                                                      |
+| `instructions`           | `inline` or `playbook`          | no       | `fix_code` instruction style; default `iterate.instructions` (`inline`).                                                                  |
+| `pollMode`               | `auto`, `poll`, or `event`      | no       | Event mode adds `pollMode` and `nextCheck` to the result and event-mode instruction steps; default `poll.mode`. See [cloud.md](cloud.md). |
+| `neverCancelRuns`        | string array                    | no       | Deprecated per-call no-op retained for compatibility.                                                                                     |
 
 Supply exactly one of `pr`, `prs`, or `stack`. `prs` is a non-empty list of qualified references
 from one repository; `stack` is one qualified anchor whose complete native GitHub stack is selected.
@@ -315,7 +316,7 @@ Requests honor `HTTPS_PROXY`, `HTTP_PROXY`, and `NO_PROXY` for either transport.
 
 Other environment variables:
 
-- `PR_SHEPHERD_STATE_DIR` — seen markers, stall files, ready-delay, and the debug log.
+- `PR_SHEPHERD_STATE_DIR` — seen markers, stall files, ready-delay, and the debug log. Defaults to `<git-common-dir>/pr-shepherd-state` for cloud sessions; see [cloud.md](cloud.md#durable-state).
 - `PR_SHEPHERD_LOG_DISABLED=1` — disable the per-worktree debug log.
 
 Print the log path with `pr-shepherd admin log-file` from a shell. That command is not an MCP tool.

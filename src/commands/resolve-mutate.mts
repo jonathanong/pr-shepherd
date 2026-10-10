@@ -36,6 +36,7 @@ export async function runResolveMutate(
   // Iterate capability-checks and routes its generated commands. Direct apply
   // requests are user-directed: forward every supplied ID unchanged and let
   // GitHub report whether each requested mutation is permitted or applicable.
+  // Only generated durable-state commands carry `--adopt-existing-replies`.
   const result = await applyResolveOptions(prNumber, repo, {
     resolveThreadIds: opts.resolveThreadIds,
     replyThreadIds: opts.replyThreadIds,
@@ -43,6 +44,7 @@ export async function runResolveMutate(
     dismissReviewIds: opts.dismissReviewIds,
     dismissMessage: opts.dismissMessage,
     requireSha: opts.requireSha,
+    ...(opts.adoptExistingReplies && { adoptExistingReplies: true }),
   });
   const adopted = new Set(adoptedReplyThreads(result));
   let adoptedTranscripts: Map<string, string> | undefined;

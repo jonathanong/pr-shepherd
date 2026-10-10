@@ -13,6 +13,7 @@ Iterate flags:
   --no-auto-cancel-actionable    Legacy no-op; workflow runs are never cancelled.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
   --instructions playbook|inline Render fix_code steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
+  --poll-mode auto|poll|event    event runs one tick, never sleeps, and prints nextCheck; auto picks event when CLAUDE_CODE_REMOTE=true. Default: poll.mode (auto).
   --transport auto|graphql|rest  Select GitHub transport. Default: github.transport (auto).
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include verbose iterate fields.
@@ -69,6 +70,7 @@ Forwarded iterate flags:
   --no-auto-cancel-actionable    Legacy no-op; workflow runs are never cancelled.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
   --instructions playbook|inline Render fix_code steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
+  --poll-mode auto|poll|event    event runs one tick, never sleeps, and prints nextCheck; auto picks event when CLAUDE_CODE_REMOTE=true. Default: poll.mode (auto).
   --transport auto|graphql|rest  Select GitHub transport. Default: github.transport (auto).
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include verbose iterate fields and detailed per-tick lines.

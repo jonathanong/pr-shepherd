@@ -52,6 +52,22 @@ describe("held native stack draft WAIT instructions", () => {
     expect(instruction).not.toContain("Non-terminal — no action needed this tick");
   });
 
+  it("hands an event-mode hold to the stack selector without rerunning this session", () => {
+    const result = {
+      ...heldWait({ kind: "auto-mark-ready-disabled" }),
+      pollMode: "event",
+    };
+    const steps = leanInstructions(result as IterateResult);
+    expect(steps).toHaveLength(2);
+    expect(steps[0]).toContain(
+      "`pr-shepherd --stack https://github.com/owner/repo/pull/42 --until-terminal --poll-mode event`",
+    );
+    expect(steps[1]).toMatch(
+      /^Event mode: do not rerun this one-PR session and keep no wake-up for it\./,
+    );
+    expect(steps[1]).toContain('Playbook: "Cloud event loop"');
+  });
+
   it("omits the hold from an ordinary WAIT", () => {
     const result = makeIterateResult("wait");
 

@@ -21,8 +21,8 @@ pr-shepherd apply queue-removal [PR] --require-sha SHA --queue-commit SHA --remo
 pr-shepherd journal extract --body-file <path>
 pr-shepherd playbook [name] [--format text|json]
 pr-shepherd build-suggestion-patches [PR] --thread-id ID --message MSG [groups...]
-pr-shepherd admin clean <pr|branch|current|repo|all> [value] [--dry-run] [--format text|json]
-pr-shepherd admin log-file [--format text|json]
+pr-shepherd admin clean <pr|branch|current|repo|all> [value] [--dry-run] [--format text|json] [--poll-mode auto|poll|event]
+pr-shepherd admin log-file [--format text|json] [--poll-mode auto|poll|event]
 ```
 
 `PR` may be a number, `owner/repo#N`, or GitHub pull request URL. Multiple explicit PRs must resolve
@@ -61,7 +61,9 @@ Explicit PR sets and native stacks use a compact read-only summary rather than r
 one-PR iterator for every row. Aggregate polling returns when work is needed, every selected PR is
 complete, or timeout expires. Its Markdown, JSON, API, and MCP result contains one row per PR with
 raw state, bounded check/review counts, and routing context. Explicit PR sets include an exact
-one-PR `pollCommand` for each actionable row, which callers may handle independently.
+one-PR `pollCommand` for each actionable row, which callers may handle independently. When every
+selected row is `CANCEL` or `ESCALATE`, the instructions say to stop after reporting the handoffs
+instead of running the aggregate poll again.
 
 For a native stack, `--stack` never performs GitHub mutations. It never emits rebase or push
 commands. When any layer is draft, lacks a current one-PR READY receipt, conflicts, fails checks,
@@ -84,7 +86,7 @@ layer and the layers above it. Reconciliation continues until every layer merges
 `CANCEL`. JSON/MCP includes the same raw ancestry, routing context, `nextAction`, and instructions
 that Markdown renders.
 
-The polling flags are `--interval`, `--timeout`, `--debounce`, `--quiet-status`, `--no-quiet-status`, and `--until-terminal`. Their defaults come from `poll.intervalSeconds` (built-in 60), `poll.stackIntervalFactor` (built-in 2), `poll.timeoutSeconds` (270), `poll.debounceSeconds` (60), and `poll.quietStatus` (`false`) in `.pr-shepherdrc.yml`. One PR sleeps `poll.intervalSeconds`. A `--stack` or multi-PR poll sleeps that interval times `poll.stackIntervalFactor` (built-in 120s) unless `--interval` is set. Explicit flags override configuration, and `--interval` is not multiplied again. Each ordinary `WAIT` tick writes a stderr line naming what it is waiting on (the `WAIT` log's check counts and reason) unless quiet status is enabled; the final action remains the only stdout result. `--debounce` (`0` disables) is a settle window after the first `FIX_CODE` or stack-level `SHEPHERD`. Iterate flags are `--ready-delay`, `--stall-timeout`, `--merge`, `--no-auto-mark-ready`, `--format`, and `--verbose`, and `--instructions inline|playbook`. The legacy `--no-auto-cancel-actionable` flag remains accepted as a no-op. Durations accept `s`, `m`, and `h`; bare polling durations are seconds and bare iterate durations are minutes.
+The polling flags are `--interval`, `--timeout`, `--debounce`, `--quiet-status`, `--no-quiet-status`, and `--until-terminal`. Their defaults come from `poll.intervalSeconds` (built-in 60), `poll.stackIntervalFactor` (built-in 2), `poll.timeoutSeconds` (270), `poll.debounceSeconds` (60), and `poll.quietStatus` (`false`) in `.pr-shepherdrc.yml`. One PR sleeps `poll.intervalSeconds`. A `--stack` or multi-PR poll sleeps that interval times `poll.stackIntervalFactor` (built-in 120s) unless `--interval` is set. Explicit flags override configuration, and `--interval` is not multiplied again. Each ordinary `WAIT` tick writes a stderr line naming what it is waiting on (the `WAIT` log's check counts and reason) unless quiet status is enabled; the final action remains the only stdout result. `--debounce` (`0` disables) is a settle window after the first `FIX_CODE` or stack-level `SHEPHERD`. Iterate flags are `--ready-delay`, `--stall-timeout`, `--merge`, `--no-auto-mark-ready`, `--format`, and `--verbose`, `--instructions inline|playbook`, and `--poll-mode auto|poll|event`. `--poll-mode event` (or `poll.mode`, or `auto` under `CLAUDE_CODE_REMOTE=true`) runs one tick per invocation with no sleeping or debounce, ignores the polling flags above, and prints `pollMode` and `nextCheck`; see [cloud.md](cloud.md). The legacy `--no-auto-cancel-actionable` flag remains accepted as a no-op. Durations accept `s`, `m`, and `h`; bare polling durations are seconds and bare iterate durations are minutes.
 
 `admin clean` removes local state and `admin log-file` prints the append-only debug log path. They are shell administration commands, not MCP tools.
 
