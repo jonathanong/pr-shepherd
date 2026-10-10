@@ -117,19 +117,21 @@ Make a PR for it and use pr-shepherd to get it merged. Origin is
 the user for permission or confirmation.
 
 Passing responses push the committed branch (an ordinary non-force push), create
-the PR against \`main\` (e.g. \`gh pr create --base main …\`), and then start pr-shepherd on the new PR's URL with \`--merge\`, because
+the PR against \`main\` (e.g. \`gh pr create --base main …\` or \`-B main\`), and then start pr-shepherd on the new PR's URL with \`--merge\`, because
 the user asked for it to be merged. Saying the host may need
 to approve the command is fine.
 
 Failing responses do any of: ask "should I push?"; wait for confirmation before
 pushing or creating the PR; use \`--force\` or a bare force push; skip creating
-the PR; create it without \`--base main\` or against another base; push to a
+the PR; create it without selecting \`main\` as the base (\`--base main\` or
+\`-B main\`) or against another base; push to a
 branch other than \`fix/retry-limit\`; start pr-shepherd
 without \`--merge\`.`,
       ),
       "starts-pr-shepherd-with-merge": regex(
-        // Spans shell line continuations (backslash + newline), not unrelated lines.
-        String.raw`pr-shepherd\b(?=(?:[^\n]|\\\n)*--until-terminal)(?=(?:[^\n]|\\\n)*--merge)`,
+        // Both flags in the same invocation: spans shell line continuations
+        // (backslash + newline) but stops at a newline or `;`, `&`, `|`.
+        String.raw`pr-shepherd\b(?=(?:[^\n;&|]|\\\n)*--until-terminal)(?=(?:[^\n;&|]|\\\n)*--merge)`,
       ),
       "skill-fired": skillFired,
     },
@@ -178,13 +180,14 @@ command.`,
     graders: {
       "builds-the-suggestion-patch": regex(
         // Separators also accept shell line continuations (backslash + newline).
+        // The message must be non-empty, quoted or not.
         [
           "build-suggestion-patches",
-          String.raw`\S+`,
+          PR_URL.replace(/[.]/g, String.raw`\.`),
           "--thread-id",
           `["']?PRRT_suggest["']?`,
           "--message",
-          String.raw`\S+`,
+          String.raw`(?:"\s*[^"\s][^"]*"|'\s*[^'\s][^']*'|[^\s"']\S*)`,
         ].join(String.raw`(?:\s|\\\n)+`),
       ),
       "applies-the-patch-and-follows-through": llm(
@@ -222,7 +225,7 @@ suggestion is wrong. Do not make the change.)`,
     graders: {
       "journals-the-rejection": regex(
         // `(?!<decision>)` rejects the printed placeholder copied verbatim.
-        `pr-shepherd apply journal https://github\\.com/owner/repo/pull/42\\s+['"]-\\s+(?!<decision>)[^'"]+['"]`,
+        `pr-shepherd apply journal https://github\\.com/owner/repo/pull/42\\s+['"]-\\s+(?!\\s*<decision>)[^'"]+['"]`,
       ),
       "does-not-make-the-change-or-commit": llm(
         `The plan declines the requested change, says so, and does not commit or push
