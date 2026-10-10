@@ -161,7 +161,10 @@ export function buildWaitLog(base: IterateResultBase): string {
     parts.push(`${remainingSeconds}s until auto-cancel`);
   }
 
-  return `WAIT: ${parts.length > 0 ? parts.join(" — ") : "no checks reported"}`;
+  if (parts.length > 0) return `WAIT: ${parts.join(" — ")}`;
+  // Skipped, filtered, or superseded checks still count as reported CI data.
+  const reported = summary.skipped + summary.filtered + summary.superseded > 0;
+  return `WAIT: ${reported ? "no passing or in-progress checks" : "no checks reported"}`;
 }
 
 export function blockedCancelNote(base: IterateResultBase): string {
