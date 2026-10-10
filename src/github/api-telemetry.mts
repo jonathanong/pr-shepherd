@@ -19,6 +19,8 @@ export interface ApiTelemetryEvent {
   /** Truncated SHA-256 of the credential that produced this request. */
   credentialFingerprint?: string;
   rateLimit?: RateLimitInfo;
+  /** HTTP 304 to a conditional read: consumes no primary quota, so it is not a counted request. */
+  notModified?: boolean;
 }
 
 interface GraphqlRateLimitPayload {
@@ -155,7 +157,9 @@ function summarizeGraphql(selected: TelemetryAggregate["graphql"]): GraphqlApiUs
 
 function summarizeRest(selected: TelemetryAggregate["rest"]): ApiResourceUsage[] {
   return [...selected.entries()].flatMap(([resource, group]) => {
-    return group.rateLimit ? [resourceUsage(group.rateLimit, group.requestCount, resource)] : [];
+    return group.rateLimit
+      ? [resourceUsage(group.rateLimit, group.requestCount, resource, group.notModifiedCount)]
+      : [];
   });
 }
 
@@ -163,10 +167,12 @@ function resourceUsage(
   rateLimit: RateLimitInfo,
   requestCount: number,
   fallbackResource: string,
+  notModified = 0,
 ): ApiResourceUsage {
   return {
     resource: rateLimit.resource ?? fallbackResource,
-    requestCount,
+    ...(requestCount > 0 && { requestCount }),
+    ...(notModified > 0 && { notModified }),
     limit: rateLimit.limit,
     ...(rateLimit.used !== undefined && { used: rateLimit.used }),
     remaining: rateLimit.remaining,

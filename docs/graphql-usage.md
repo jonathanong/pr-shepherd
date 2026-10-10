@@ -115,3 +115,5 @@ Designs that are already at the floor and should stay:
 - Quota warnings and cadence follow the active transport; after switching to REST, prior GraphQL usage remains in telemetry but does not throttle the REST poll. Pending REST core warnings remain active through the loop.
 - REST for job logs, startup-failure runs, and mergeability. That pool is separate.
 - Mutation chunks of 10. Primary `cost` is unavailable; secondary limits bill each mutation request at 5 points.
+
+REST transport: conditional reads that return `304 Not Modified` cost no core quota and appear as `apiUsage.rest.<resource>.notModified` under `--verbose`. See [graphql.md](graphql.md).

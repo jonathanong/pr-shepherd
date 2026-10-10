@@ -2,7 +2,9 @@ import type { ApiTelemetryEvent } from "./api-telemetry.mts";
 import type { RateLimitInfo } from "./http-utils.mts";
 
 interface RestTelemetryGroup {
+  /** Quota-consuming requests; 304 Not Modified responses are tallied separately. */
   requestCount: number;
+  notModifiedCount: number;
   rateLimit?: RateLimitInfo;
   /** Fingerprint for the credential that produced the selected quota sample. */
   credentialFingerprint?: string;
@@ -62,9 +64,10 @@ export function aggregateEvents(events: SequencedApiTelemetryEvent[]): Telemetry
       }
       continue;
     }
-    const resource = event.rateLimit?.resource ?? "unknown";
-    const group = aggregate.rest.get(resource) ?? { requestCount: 0 };
-    group.requestCount += 1;
+    const resource = event.rateLimit?.resource ?? (event.notModified ? "core" : "unknown");
+    const group = aggregate.rest.get(resource) ?? { requestCount: 0, notModifiedCount: 0 };
+    if (event.notModified) group.notModifiedCount += 1;
+    else group.requestCount += 1;
     if (event.rateLimit !== undefined) {
       adoptRestRateLimit(group, event.rateLimit, event.credentialFingerprint, event.sequence);
     }
@@ -93,8 +96,9 @@ export function mergeAggregate(target: TelemetryAggregate, source: TelemetryAggr
     );
   }
   for (const [resource, sourceGroup] of source.rest) {
-    const targetGroup = target.rest.get(resource) ?? { requestCount: 0 };
+    const targetGroup = target.rest.get(resource) ?? { requestCount: 0, notModifiedCount: 0 };
     targetGroup.requestCount += sourceGroup.requestCount;
+    targetGroup.notModifiedCount += sourceGroup.notModifiedCount;
     if (sourceGroup.rateLimit !== undefined) {
       adoptRestRateLimit(
         targetGroup,

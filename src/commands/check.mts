@@ -6,9 +6,11 @@ import {
   isCiQueueRemovalReason,
 } from "../state/queue-removal-ack.mts";
 import { storePrFingerprint } from "../state/pr-fingerprint.mts";
-import { tryReuseFingerprintReport } from "./check-fingerprint.mts";
+import { storeRestSnapshotReport } from "../state/rest-snapshot-report.mts";
+import { restSnapshotState, withRestConditionalScope } from "../github/rest-conditional-scope.mts";
+import { tryReuseFingerprintReport, tryReuseRestSnapshotReport } from "./check-fingerprint.mts";
 import { collectUnreportedRequired, refreshCachedUnreported } from "./check-unreported.mts";
-import { getRepoInfo, getCurrentPrNumber } from "../github/client.mts";
+import { getRepoInfo, getCurrentPrNumber, type RepoInfo } from "../github/client.mts";
 import { classifyChecks, getCiVerdict } from "../checks/classify.mts";
 import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
 import { fetchStartupFailureChecks, triageFailingChecks } from "../checks/triage.mts";
@@ -89,15 +91,17 @@ function enforceTransportReadiness(status: ShepherdStatus, data: BatchPrData): S
   return status;
 }
 
+type CheckOptions = GlobalOptions & {
+  autoResolve?: boolean;
+  autoMinimizeSuppressed?: boolean;
+  skipTriage?: boolean;
+  persistSeen?: boolean;
+  fingerprintCache?: boolean;
+  merge?: boolean;
+};
+
 export async function runCheck(
-  opts: GlobalOptions & {
-    autoResolve?: boolean;
-    autoMinimizeSuppressed?: boolean;
-    skipTriage?: boolean;
-    persistSeen?: boolean;
-    fingerprintCache?: boolean;
-    merge?: boolean;
-  },
+  opts: CheckOptions,
   context?: CheckExecutionContext,
 ): Promise<ShepherdReport> {
   const repo = opts.targetRepository ?? (await getRepoInfo());
@@ -109,6 +113,19 @@ export async function runCheck(
     );
   }
   const stateKey = { owner: repo.owner, repo: repo.name, pr: prNumber };
+  // Named REST reads in this PR's check are conditional (ETag/304) and cached under its state dir.
+  return withRestConditionalScope(stateKey, () =>
+    runScopedCheck(opts, context, repo, prNumber, stateKey),
+  );
+}
+
+async function runScopedCheck(
+  opts: CheckOptions,
+  context: CheckExecutionContext | undefined,
+  repo: RepoInfo,
+  prNumber: number,
+  stateKey: { owner: string; repo: string; pr: number },
+): Promise<ShepherdReport> {
   const config = loadConfig();
   const reuseFingerprint = opts.fingerprintCache === true;
   if (reuseFingerprint) {
@@ -122,6 +139,11 @@ export async function runCheck(
     ...(includeReceiptSummary && { includeReceiptSummary: true }),
   });
   context?.setReceiptSummary(result.receiptSummary ?? null);
+  const restSnapshot = result.data.transport === "rest" ? restSnapshotState() : undefined;
+  if (reuseFingerprint) {
+    const reused = await tryReuseRestSnapshotReport(prNumber, repo, stateKey, config, restSnapshot);
+    if (reused) return refreshCachedUnreported(reused, repo, context);
+  }
   let batchData = result.data;
   const unknownRefresh = await refreshUnknownMergeability(prNumber, repo, batchData);
   batchData = unknownRefresh.batchData;
@@ -588,11 +610,15 @@ export async function runCheck(
     pr: prNumber,
     nodeId: batchData.nodeId,
     ...(batchData.transport && { transport: batchData.transport }),
-    ...(batchData.transportUnavailable && { transportUnavailable: batchData.transportUnavailable }),
+    ...(batchData.transportUnavailable && {
+      transportUnavailable: batchData.transportUnavailable,
+    }),
     headSha: batchData.headRefOid,
     headRefName: unreported.headRefName,
     repo: `${repo.owner}/${repo.name}`,
-    ...(batchData.viewerAuthorization && { viewerAuthorization: batchData.viewerAuthorization }),
+    ...(batchData.viewerAuthorization && {
+      viewerAuthorization: batchData.viewerAuthorization,
+    }),
     status,
     baseBranch: batchData.baseRefName,
     ...(batchData.baseRefOid && { baseRefOid: batchData.baseRefOid }),
@@ -607,8 +633,12 @@ export async function runCheck(
       ...(ignoredAnnotated.length > 0 && { ignored: ignoredAnnotated }),
       filteredNames: verdict.filteredNames,
       blockedByFilteredCheck,
-      ...(verdict.ignoredNames.length > 0 && { ignoredNames: verdict.ignoredNames }),
-      ...(verdict.supersededNames.length > 0 && { supersededNames: verdict.supersededNames }),
+      ...(verdict.ignoredNames.length > 0 && {
+        ignoredNames: verdict.ignoredNames,
+      }),
+      ...(verdict.supersededNames.length > 0 && {
+        supersededNames: verdict.supersededNames,
+      }),
     },
     threads: {
       actionable: threadVisibility.activeThreads,
@@ -644,7 +674,9 @@ export async function runCheck(
       mergeQueue: {
         enabled: Boolean(batchData.isMergeQueueEnabled),
         inQueue: Boolean(batchData.isInMergeQueue),
-        ...(batchData.autoMergeRequest && { autoMergeRequest: batchData.autoMergeRequest }),
+        ...(batchData.autoMergeRequest && {
+          autoMergeRequest: batchData.autoMergeRequest,
+        }),
         ...(batchData.mergeQueueEntry && { entry: batchData.mergeQueueEntry }),
         ...(batchData.latestMergeQueueRemoval && {
           latestRemoval: batchData.latestMergeQueueRemoval,
@@ -655,7 +687,9 @@ export async function runCheck(
           : batchData.removedMergeQueueChecksIncomplete) && {
           checksIncomplete: true as const,
         }),
-        ...(headUpdatedAfterRemoval && { headUpdatedAfterRemoval: true as const }),
+        ...(headUpdatedAfterRemoval && {
+          headUpdatedAfterRemoval: true as const,
+        }),
         ...(removalsOnHead > 1 && { removalsOnHead }),
         ...(removalAcknowledged && { removalAcknowledged: true as const }),
       },
@@ -663,15 +697,22 @@ export async function runCheck(
     ...(unreported.unreportedRequiredChecks && {
       unreportedRequiredChecks: unreported.unreportedRequiredChecks,
     }),
-    ...(unreported.trunkBehindBy !== undefined && { trunkBehindBy: unreported.trunkBehindBy }),
-    ...(unreported.baseBehindBy !== undefined && { baseBehindBy: unreported.baseBehindBy }),
+    ...(unreported.trunkBehindBy !== undefined && {
+      trunkBehindBy: unreported.trunkBehindBy,
+    }),
+    ...(unreported.baseBehindBy !== undefined && {
+      baseBehindBy: unreported.baseBehindBy,
+    }),
     ...(unreported.actionsWorkflowInProgress && {
       actionsWorkflowInProgress: true as const,
     }),
-    ...(unreported.stackBottomPr !== undefined && { stackBottomPr: unreported.stackBottomPr }),
+    ...(unreported.stackBottomPr !== undefined && {
+      stackBottomPr: unreported.stackBottomPr,
+    }),
   };
   if (result.fingerprint) {
     await storePrFingerprint(stateKey, result.fingerprint, report, config);
   }
+  if (restSnapshot) await storeRestSnapshotReport(stateKey, restSnapshot.digest, report, config);
   return report;
 }

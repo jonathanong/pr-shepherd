@@ -6,7 +6,11 @@ function resetTime(resetAt: number): string {
 
 function formatResource(resource: ApiResourceUsage): string {
   const used = resource.used === undefined ? "" : ` · used ${resource.used}`;
-  return `- \`${resource.resource}\`: ${resource.remaining}/${resource.limit} remaining${used} · ${resource.requestCount} requests · resets ${resetTime(resource.resetAt)}`;
+  const notModified =
+    resource.notModified === undefined ? "" : ` · ${resource.notModified} not modified (304)`;
+  const requests =
+    resource.requestCount === undefined ? "" : ` · ${resource.requestCount} requests`;
+  return `- \`${resource.resource}\`: ${resource.remaining}/${resource.limit} remaining${used}${requests}${notModified} · resets ${resetTime(resource.resetAt)}`;
 }
 
 export function formatQuotaWarning(warning: GraphqlQuotaWarning | undefined): string | null {
