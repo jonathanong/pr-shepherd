@@ -51,6 +51,21 @@ describe("main — log-file", () => {
     expect(durable).toEqual([true, false]);
   });
 
+  it("rejects an invalid --poll-mode value with a usage error", async () => {
+    await main(["node", "shepherd", "log-file", "--poll-mode", "evnet"]);
+    expect(stderrSpy).toHaveBeenCalledWith(
+      'pr-shepherd: log-file: --poll-mode must be one of auto, poll, event, got "evnet"\n',
+    );
+    expect(process.exitCode).toBe(EXIT.USAGE);
+    expect(mockRunLogFile).not.toHaveBeenCalled();
+  });
+
+  it("rejects a --poll-mode flag with no value", async () => {
+    await main(["node", "shepherd", "admin", "log-file", "--poll-mode"]);
+    expect(process.exitCode).toBe(EXIT.USAGE);
+    expect(mockRunLogFile).not.toHaveBeenCalled();
+  });
+
   it("reports log-file errors and sets exitCode", async () => {
     mockRunLogFile.mockRejectedValue(new Error("not in repo"));
     await main(["node", "shepherd", "log-file"]);

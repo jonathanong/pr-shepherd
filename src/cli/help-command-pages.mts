@@ -178,14 +178,16 @@ Run 'pr-shepherd admin <clean|log-file> --help' for command-specific details.
 Remove pr-shepherd state files from PR_SHEPHERD_STATE_DIR.
 
 Usage:
-  pr-shepherd admin clean pr [number] [--dry-run] [--format text|json]
-  pr-shepherd admin clean branch [name] [--dry-run] [--format text|json]
-  pr-shepherd admin clean current [--dry-run] [--format text|json]
-  pr-shepherd admin clean repo [--dry-run] [--format text|json]
-  pr-shepherd admin clean all [--dry-run] [--format text|json]
+  pr-shepherd admin clean pr [number] [--dry-run] [--format text|json] [--poll-mode auto|poll|event]
+  pr-shepherd admin clean branch [name] [--dry-run] [--format text|json] [--poll-mode auto|poll|event]
+  pr-shepherd admin clean current [--dry-run] [--format text|json] [--poll-mode auto|poll|event]
+  pr-shepherd admin clean repo [--dry-run] [--format text|json] [--poll-mode auto|poll|event]
+  pr-shepherd admin clean all [--dry-run] [--format text|json] [--poll-mode auto|poll|event]
 
 Variants remove state for one PR, branch, current branch, repository, or all repositories.
 Use --dry-run to preview paths without removing them.
+--poll-mode auto|poll|event      Clean the state for that poll mode; event mode keeps it in durable
+                                state under the git common directory. Default: poll.mode (auto).
 --help, -h                      Print this help and exit before any cleanup.`,
 
   "admin log-file": LOG_FILE_USAGE.replaceAll("pr-shepherd log-file", "pr-shepherd admin log-file"),
@@ -276,11 +278,11 @@ Exit code: 0 on success; nonzero on failure (sysexits.h — see docs/exit-codes.
 Remove pr-shepherd state files from PR_SHEPHERD_STATE_DIR.
 
 Usage:
-  pr-shepherd clean pr [number] [--dry-run] [--format text|json]
-  pr-shepherd clean branch [name] [--dry-run] [--format text|json]
-  pr-shepherd clean current [--dry-run] [--format text|json]
-  pr-shepherd clean repo [--dry-run] [--format text|json]
-  pr-shepherd clean all [--dry-run] [--format text|json]
+  pr-shepherd clean pr [number] [--dry-run] [--format text|json] [--poll-mode auto|poll|event]
+  pr-shepherd clean branch [name] [--dry-run] [--format text|json] [--poll-mode auto|poll|event]
+  pr-shepherd clean current [--dry-run] [--format text|json] [--poll-mode auto|poll|event]
+  pr-shepherd clean repo [--dry-run] [--format text|json] [--poll-mode auto|poll|event]
+  pr-shepherd clean all [--dry-run] [--format text|json] [--poll-mode auto|poll|event]
 
 Variants:
   pr [number]          Remove state for one PR. Defaults to current branch PR.
@@ -293,6 +295,9 @@ Variants:
 Flags:
   --dry-run            Preview paths without removing them.
   --format text|json   Output format. Default: text.
+  --poll-mode auto|poll|event
+                       Clean the state for that poll mode; event mode keeps it in durable
+                       state under the git common directory. Default: poll.mode (auto).
   --help, -h           Print this help and exit before any cleanup.
 
 Exit code: 0 on success (including a no-op --dry-run on a nonexistent target); nonzero on failure (sysexits.h — see docs/exit-codes.md).`,

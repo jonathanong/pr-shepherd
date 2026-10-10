@@ -21,7 +21,7 @@ pr-shepherd apply queue-removal [PR] --require-sha SHA --queue-commit SHA --remo
 pr-shepherd journal extract --body-file <path>
 pr-shepherd playbook [name] [--format text|json]
 pr-shepherd build-suggestion-patches [PR] --thread-id ID --message MSG [groups...]
-pr-shepherd admin clean <pr|branch|current|repo|all> [value] [--dry-run] [--format text|json]
+pr-shepherd admin clean <pr|branch|current|repo|all> [value] [--dry-run] [--format text|json] [--poll-mode auto|poll|event]
 pr-shepherd admin log-file [--format text|json] [--poll-mode auto|poll|event]
 ```
 
