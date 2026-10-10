@@ -104,7 +104,7 @@ export function planPrefixDrain(
         stackMergeable: false,
         instructions: [`1. ${method.unavailable}`],
       };
-    instructions[0] = `1. PR #${top.pr} is the highest open layer of stack #${top.stack.number} in \`${result.repo}\` whose open lower layers are all ready. Run \`GH_REPO=${result.repo} gh stack merge ${top.pr} --yes ${method.flag}\` to merge ${span}. If \`gh stack\` is an unknown command, run \`gh extension install github/gh-stack\` first. Do not rebase, push, or run \`gh stack push\`.`;
+    instructions[0] = `1. PR #${top.pr} is the highest open layer of stack #${top.stack.number} in \`${result.repo}\` whose open lower layers are all ready. Run \`GH_REPO=${result.repo} gh stack merge ${top.pr} --yes ${method.flag}\` to merge ${span}. If \`gh stack\` is an unknown command, run \`gh extension install github/gh-stack\`, then rerun that merge command. Do not rebase, push, or run \`gh stack push\`.`;
   }
   appendAutonomousInstructions(instructions, above.sessions);
   appendMarkReadyInstructions(instructions, above.markReady);

@@ -129,7 +129,7 @@ Merge command:
 - A direct merge is atomic. On a merge queue, the prefix is queued together and each layer is evaluated from the bottom. A failure ejects that layer and the layers above it. Layers that already merged stay merged.
 - Layers above the prefix keep their one-PR sessions in the same instructions.
 - `gh stack merge` reads a bare number as a stack number before a PR number. Native stack numbers come from the repository issue and pull request sequence (observed; GitHub does not document it), so a PR number never names a stack.
-- If `gh stack` is an unknown command, the instructions install `github/gh-stack` first. The same step says not to rebase, push, or run `gh stack push`.
+- If `gh stack` is an unknown command, the instructions install `github/gh-stack` and then rerun the merge command. The same step says not to rebase, push, or run `gh stack push`.
 - After each merge, GitHub retargets the next layer. Rerun `--stack --merge` until every layer is merged and the result is `CANCEL`.
 - If GitHub queues a layer, the summary stays `WAIT` for those queued layers. Recheck at the polling cadence. Do not rewrite a queued layer. That wait does not block a layer that is not queued. The stack is not finished until every layer merges.
 - An ejected layer leaves the merge prefix until a receipt acknowledges that removal. The instruction names the reason and actor and says to run that layer's one-PR session, which fixes failing queue CI, records a validated acknowledgment for a transient or grouped-entry failure that does not reproduce after updating from the latest base, with no remaining blocker, or escalates when no autonomous path remains.

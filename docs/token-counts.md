@@ -15,17 +15,17 @@ Estimates of what an agent pays to load the `pr-shepherd` skill and to read one 
 
 | Text                       | Tokens |
 | -------------------------- | -----: |
-| `SKILL.md` (always loaded) |    704 |
+| `SKILL.md` (always loaded) |    739 |
 | Merge queue ejection       |    576 |
 | CI failure triage          |    551 |
-| Fix-code loop              |    375 |
+| Fix-code loop              |    374 |
 | MCP fallback               |    215 |
 | Suggestion patches         |    214 |
 | Create a PR                |    193 |
 | Branch update              |    175 |
-| Every reference as well    |  3,003 |
+| Every reference as well    |  3,037 |
 
-A `FIX_CODE` tick that names CI triage loads about 1,255 skill tokens (704 + 551). Review mutations, the Shepherd Journal, and the stack merge command are clauses inside the printed steps, so they load nothing. A merge-queue ejection tick adds Merge queue ejection (576).
+A `FIX_CODE` tick that names CI triage loads about 1,290 skill tokens (739 + 551). Review mutations, the Shepherd Journal, and the stack merge command are clauses inside the printed steps, so they load nothing. A merge-queue ejection tick adds Merge queue ejection (576).
 
 ## One iterate result, current
 
@@ -53,8 +53,8 @@ The same measurement against the parent of `ad9bf2cd`, when every playbook lived
 
 |                           | Before | Current |
 | ------------------------- | -----: | ------: |
-| Always-loaded skill       |  2,712 |     704 |
-| Skill plus every playbook |  2,712 |   3,003 |
+| Always-loaded skill       |  2,712 |     739 |
+| Skill plus every playbook |  2,712 |   3,037 |
 | Median full output        |    304 |     273 |
 | Median `## Instructions`  |    134 |     134 |
 | Mean `## Instructions`    |    159 |     124 |

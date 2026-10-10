@@ -312,7 +312,7 @@ describe("native-stack reconciliation", () => {
     const ready = withPollSummaryInstructions(single, true);
     expect(ready).toMatchObject({ nextAction: "merge", stackMergeable: true });
     expect(ready.instructions?.[0]).toContain(
-      "If `gh stack` is an unknown command, run `gh extension install github/gh-stack` first.",
+      "If `gh stack` is an unknown command, run `gh extension install github/gh-stack`, then rerun that merge command.",
     );
     expect(ready.instructions?.[0]).toContain(
       "GH_REPO=acme/widgets gh stack merge 1 --yes --squash",
