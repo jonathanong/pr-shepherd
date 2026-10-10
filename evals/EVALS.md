@@ -408,8 +408,9 @@ default). Until it lands, only the scaffolding exists:
    ```
 
 `--instructions-ablation` restricts the inline results to the cases the
-playbook arm ran and blanks every `## Instructions` section before the drift
-check, since that section is what differs. The rest of each prompt, graders,
+playbook arm ran and blanks the latest tick's `## Instructions` section before
+the drift check, since only that section differs. Replayed history, including
+its inline `## Instructions`, the rest of each prompt, graders,
 run config, agent model, judge and plugin version must still match. The inline arm's cost line covers its whole run.
 
 Without `--instructions`, the generator's output is unchanged.

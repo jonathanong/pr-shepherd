@@ -18,7 +18,10 @@ import {
 } from "../lib.mjs";
 
 const TICK = `pr-shepherd ${PR_URL} --until-terminal --transport rest`;
-const APPLY = `pr-shepherd apply review ${PR_URL} --transport rest --reply-thread-ids rest-thread-11 --message "Renamed the variable." --require-sha 9f3c2ab`;
+// The pushed head; test-cases/apply-review.test.mts records the apply run with
+// the same `--require-sha`, so its preflight read sees this SHA.
+const PUSHED_SHA = "9f3c2ab61d4e0b8a7c5f3e2d1c0b9a8f7e6d5c4b";
+const APPLY = `pr-shepherd apply review ${PR_URL} --transport rest --reply-thread-ids rest-thread-11 --message "Renamed the variable." --require-sha ${PUSHED_SHA}`;
 
 /**
  * The shared history: the first REST tick showed one thread (fixture 143), and

@@ -69,7 +69,7 @@ Renamed `val` to `retryLimit` in `src/index.ts`, committed it and pushed
 
 ---
 
-[tool] $ pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-11 --message "Renamed the variable." --require-sha 9f3c2ab
+[tool] $ pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-11 --message "Renamed the variable." --require-sha 9f3c2ab61d4e0b8a7c5f3e2d1c0b9a8f7e6d5c4b
 
 Errors:
   rest-thread-11: GitHub REST POST /repos/owner/repo/pulls/42/comments/11/replies failed: 403 {"message":"Resource not accessible by integration"}
