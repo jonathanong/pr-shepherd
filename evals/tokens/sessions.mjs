@@ -145,17 +145,20 @@ function parseLog(text, scope, stats, until = Infinity) {
         reqs: [],
         outs: [],
       });
-    } else if ((m = e.head.match(/^### #(\d+) (GraphQL|REST) request — \S+ (\S+) · (\S+)$/))) {
+    } else if ((m = e.head.match(/^### #(\d+) (GraphQL|REST) request — (\S+) (\S+) · (\S+)$/))) {
       const k = Number(m[1]);
-      const t = secs(m[4]);
+      const t = secs(m[5]);
       const op = body.match(/^operation: `(\w+)`/m)?.[1] ?? (m[2] === "REST" ? "rest" : "graphql");
       const vars = body.match(/^variables:\n+```json\n([\s\S]*?)\n```/m)?.[1] ?? "";
       let pr = Number(vars.match(/"pr":\s*(\d+)/)?.[1]) || null;
-      if (!pr && m[2] === "REST") pr = Number(m[3].match(/\/pulls\/(\d+)/)?.[1]) || null;
+      if (!pr && m[2] === "REST") pr = Number(m[4].match(/\/pulls\/(\d+)/)?.[1]) || null;
       if (!pr) pr = headPr.get(vars.match(/"headRef":\s*"(\w+)"/)?.[1]) ?? null;
       const inv = pick(open(t), pr, k, t);
       if (!inv) continue;
       const req = { k, t, op, transport: m[2], cost: null };
+      // Whether the invocation sent any mutation, past the cutoff included: an
+      // apply that sent none failed before mutating anything.
+      if (MUTATION_OPS.has(op) || (m[2] === "REST" && m[3] !== "GET")) inv.mutated = true;
       if (t <= until) inv.reqs.push(req);
       inv.pending.set(k, req);
       inv.nextK = k + 1;
@@ -252,6 +255,8 @@ function invocationRecord(inv, t0) {
       minimizes: idCount(inv.args, "minimize-comment-ids"),
       dismissals: idCount(inv.args, "dismiss-review-ids"),
       ...(/--require-sha\b/.test(inv.args) && { requireSha: true }),
+      // It sent no mutation (it exited first): nothing was applied.
+      ...(!inv.mutated && { failed: true }),
     };
   return rec;
 }
@@ -673,23 +678,25 @@ const fakeId = (prefix, n) => `${prefix}${fill(n - prefix.length, "A")}`;
 /** How many `key` mutations the timeline's applies had finished by second `t`. */
 const appliedBy = (pr, t, key) =>
   pr.invocations
-    .filter((i) => i.apply && i.t + i.seconds <= t)
+    .filter((i) => i.apply && !i.apply.failed && i.t + i.seconds <= t)
     .reduce((s, i) => s + i.apply[key], 0);
 
 /**
- * Whether each item had its final status (`has`) by second `t`. The PR dump
- * holds only final statuses, so the timeline's applies are taken to have set
- * them earliest item first. Items beyond what the applies account for (resolved
- * by a poll's auto-resolve or by hand) keep their final status throughout.
+ * Whether each item had its status (`has`) by second `t`. The PR dump holds
+ * only its own statuses, so the timeline's applies are taken to have set them
+ * earliest item first: items that end with the status, then (a dump taken
+ * before a later apply) items that do not. Items beyond what the applies
+ * account for (resolved by a poll's auto-resolve or by hand) keep their dumped
+ * status throughout.
  */
 function statusAt(pr, t, items, has, key) {
   const done = appliedBy(pr, t, key);
   const total = appliedBy(pr, Infinity, key);
-  let rank = 0;
-  return items.map((item) => {
-    if (!has(item)) return false;
-    const r = rank++;
-    return r < done || r >= total;
+  const order = [...items.keys()].sort((a, b) => has(items[b]) - has(items[a]) || a - b);
+  const rank = new Map(order.map((i, r) => [i, r]));
+  return items.map((item, i) => {
+    const r = rank.get(i);
+    return r < done || (has(item) && r >= total);
   });
 }
 
@@ -852,7 +859,7 @@ function stepArms(pr, inv) {
       shepherd: [
         call(
           1,
-          `pr-shepherd ${n} --interval 60s --timeout 4.5m --quiet-status`,
+          `pr-shepherd ${n} --interval 60s --timeout 4.5m --quiet-status${inv.untilTerminal ? " --until-terminal" : ""}`,
           fill(inv.outChars ?? 0),
           {
             // Each tick is one point, and each later tick whose fingerprint
@@ -913,9 +920,22 @@ function stepArms(pr, inv) {
         1,
         `pr-shepherd apply review ${n}${ids("reply-thread-ids", "PRRT_", 22, a.replies)}${ids("resolve-thread-ids", "PRRT_", 22, a.resolves)}${ids("minimize-comment-ids", "IC_", 26, a.minimizes)}${ids("dismiss-review-ids", "PRR_", 24, a.dismissals)}${a.replies || a.dismissals ? ` --message "${REPLY}"` : ""}${a.requireSha ? ` --require-sha "${HEAD_SHA}"` : ""}`,
         fill(inv.outChars ?? 0),
-        { api: gql(reads + Math.ceil(mutations / 10)) },
+        // A failed attempt mutated nothing; it paid its reads if it got that far.
+        {
+          api: gql(
+            a.failed ? (inv.graphqlRequests ? reads : 0) : reads + Math.ceil(mutations / 10),
+          ),
+        },
       ),
     ],
+    // A failed attempt applied nothing, so the baselines have nothing to repeat.
+    ...(a.failed ? { gh: [], mcp: [] } : baselineApply(n, a)),
+  };
+}
+
+/** The baselines' calls for one successful `apply review`. */
+function baselineApply(n, a) {
+  return {
     gh: [
       ...Array.from({ length: a.replies }, (_, i) =>
         call(
@@ -1210,7 +1230,7 @@ export function realSessionsSection({ rows, data } = realSessions()) {
   const cpt = data.charsPerToken;
   out.push("## Real sessions", "");
   out.push(
-    `Today's pr-shepherd runs on ${rows.length} real PRs (#${rows.map((r) => r.pr).join(", #")}), rebuilt from the agents' transcripts and pr-shepherd's debug logs by \`sessions.mjs --extract\`. Each PR's timeline (every poll with its ticks and action, every \`apply\` with its mutations) is replayed through this report's per-call models for all three arms. The baselines read the PR's real thread, comment, review and check sizes as of each step. pr-shepherd's modeled output is its real output length. Items are resolved, minimized or dismissed as the timeline's applies reach them, earliest first, since the PR dumps hold only final statuses. The data is [data/real-sessions.json](data/real-sessions.json); it holds numbers only.`,
+    `Today's pr-shepherd runs on ${rows.length} real PRs (#${rows.map((r) => r.pr).join(", #")}), rebuilt from the agents' transcripts and pr-shepherd's debug logs by \`sessions.mjs --extract\`. Each PR's timeline (every poll with its ticks and action, every \`apply\` with its mutations) is replayed through this report's per-call models for all three arms. The baselines read the PR's real thread, comment, review and check sizes as of each step. pr-shepherd's modeled output is its real output length. Items are resolved, minimized or dismissed as the timeline's applies reach them, earliest first, since the PR dumps hold only the statuses at dump time; an \`apply\` that sent no mutation applied nothing. The data is [data/real-sessions.json](data/real-sessions.json); it holds numbers only.`,
     "",
     `**The timelines are reconstructed, not exact.** Concurrent invocations interleave in one debug log and number their requests alike, so across the ${num(data.sources.debugLogs)} debug logs (in-scope PRs and others alike) ${num(data.sources.heuristicAttributions)} requests, responses or outputs matched more than one open invocation and were assigned by heuristic (the PR their variables name, then the latest active). Those picks set per-PR ticks, output lengths and measured API counts.`,
     "",

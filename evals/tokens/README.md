@@ -446,8 +446,13 @@ token usage, never text, IDs or paths. The bench reads only that file.
   30 s apart) and each `apply` (its mutation counts) is one step. Both
   baselines read the state that step read and issue the mutations it batched.
   Their payloads are filler of the PR's real item sizes as of that step. The
-  PR dumps hold only final statuses, so items turn resolved, minimized or
-  dismissed as the timeline's applies reach them, earliest first. Checks from
+  PR dumps hold only the statuses at dump time, so items turn resolved,
+  minimized or dismissed as the timeline's applies reach them, earliest first:
+  items the dump shows with that status, then (for applies after the dump)
+  items it does not. An `apply` that sent no mutation failed before applying
+  anything: pr-shepherd pays for the attempt, and the baselines repeat
+  nothing. Replayed commands keep the real ones' `--until-terminal` and
+  `--require-sha`. Checks from
   before the first recorded commit are unknown and replayed as none. A wait
   with a check pending is a `gh pr checks --watch` refresh for gh; a wait with
   none pending (pr-shepherd's debounce) is a plain sleep, since `--watch`
