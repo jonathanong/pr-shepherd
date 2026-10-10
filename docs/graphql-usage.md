@@ -44,12 +44,12 @@ Costs below assume the PR number was passed. Omitting it adds 1 point for `PrNum
 
 | Command                                                           | What runs                            | Typical points      |
 | ----------------------------------------------------------------- | ------------------------------------ | ------------------- |
-| `pr-shepherd [PR]` / `poll`, continuation tick, fingerprint hit   | `PrFingerprint`                      | 1                   |
-| Same tick, fingerprint miss                                       | `PrFingerprint` + `BatchPr`          | 2, plus supplements |
+| `pr-shepherd [PR]` / `poll`, continuation tick, fingerprint hit   | `BatchPr` first page only            | 1                   |
+| Same tick, fingerprint miss                                       | `BatchPr`                            | 1, plus supplements |
 | Tick returned to the caller, last bounded tick, FIX_CODE debounce | `BatchPr` (fingerprint reuse is off) | 1, plus supplements |
 | `iterate`, MCP `iterate` for one PR                               | `BatchPr` every call                 | 1, plus supplements |
 
-At the default 60s interval, a fingerprint hit is about 60 points/hour and a miss is about 120. Both are a small share of 5,000. A thread among the newest 20 with more than one comment disables the skip, so many reviewed PRs pay the miss cost. That is still cheap.
+`BatchPr`'s first page is the fingerprint read: a hit returns the stored report before any supplement, and a miss continues the same request. There is no separate pre-check, so a hit and a miss cost the same 1 point when there are no supplements. At the default 60s interval, that is about 60 points/hour either way, a small share of 5,000. A thread among the newest 20 with more than one comment disables reuse; such a tick costs 1 point plus any supplements.
 
 Supplements on a full snapshot, usually 1 point each:
 
@@ -95,7 +95,7 @@ The reply path reads only requested thread IDs to store seen-marker transcripts.
 
 ## Recommendations
 
-One-PR `BatchPr` and `PrFingerprint` stay at the 1-point floor. Fewer review connections, a smaller annotation probe, or fewer thread comments on `BatchPr` do not reduce primary quota.
+One-PR `BatchPr` stays at the 1-point floor. Fewer review connections, a smaller annotation probe, or fewer thread comments on `BatchPr` do not reduce primary quota.
 
 1. **Done: summary annotation probes are no longer always-on.** Both `contexts(last: 100) { annotations(first: 1) }` trees (head commit and `mergeQueueEntry`) are gone from the summary fragment. A layer that otherwise looks ready loads annotation totals with `PollSummaryAnnotationProbe`, so [`fingerprintRawSummaryPr`](../src/github/poll-summary-fingerprint.mts) still changes when a check gains an annotation. The before/after table above is that change. Removing only the queue rollup would have left a 10-PR summary at 15 points (about 450 points/hour). Removing both brings it to 5 (about 180 points/hour for the stack tick at 30 ticks).
 
@@ -103,7 +103,7 @@ One-PR `BatchPr` and `PrFingerprint` stay at the 1-point floor. Fewer review con
 
 3. **Done: reuse same-request evidence for READY receipts.** [`recordReadyReceipt` and `revalidateReadyReceipt`](../src/commands/iterate/index.mts) consume a complete conditional summary sibling when available, keeping the v1 fingerprint and safety checks. They use the original standalone summary and annotation probe when that evidence cannot be trusted.
 
-4. **Leave fingerprint-skip widening for later.** A multi-comment thread forces `BatchPr` on every continuation tick ([`tryReuseFingerprintReport`](../src/commands/check-fingerprint.mts)). Two points a minute is about 120 points/hour. Not in this change.
+4. **Done: fold the fingerprint pre-check into `BatchPr`.** The separate `PrFingerprint` query is gone. [`fingerprintReuser`](../src/commands/check-fingerprint.mts) decides reuse from `BatchPr`'s first page, so a miss (including any PR with a multi-comment thread) costs 1 point instead of 2, and a merged or closed PR is read once.
 
 Designs that are already at the floor and should stay:
 

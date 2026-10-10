@@ -9,7 +9,6 @@ import {
 } from "../../test-helpers/github/rest-read.test-support.mts";
 import { runWithGithubTransport } from "./transport.mts";
 import { getPullRequestBody, updatePullRequestBody } from "./client.mts";
-import { fetchPrFingerprint } from "./fingerprint.mts";
 import { fetchSuggestionThreads } from "./suggestion-thread.mts";
 import { readRestFeedback } from "./rest-feedback-read.mts";
 import { hydrateThreadCommentPages } from "./thread-comments.mts";
@@ -104,14 +103,6 @@ describe("REST operation boundaries", () => {
       { method: "GET", path: `${prefix}/pulls/101` },
       { method: "PATCH", path: `${prefix}/pulls/101`, body: { body: "updated journal" } },
     ]);
-  });
-
-  it("refuses an incomplete cheap fingerprint instead of certifying a REST receipt", async () => {
-    await server();
-    await expect(
-      runWithGithubTransport("rest", () => fetchPrFingerprint(101, repo)),
-    ).rejects.toThrow("read a full PR snapshot instead");
-    expect(wire.requests).toEqual([]);
   });
 
   it("keeps unknown suggestion IDs separate from complete stored thread transcripts", async () => {

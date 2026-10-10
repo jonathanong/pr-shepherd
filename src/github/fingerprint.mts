@@ -1,9 +1,3 @@
-import { githubOperation } from "./transport.mts";
-import { UnsupportedRestOperationError } from "./unsupported-rest.mts";
-import { graphqlWithRateLimit } from "./client.mts";
-import { PR_FINGERPRINT_QUERY } from "./queries.mts";
-import { GitHubRequestError } from "./errors.mts";
-import { EXIT, ShepherdError } from "../exit-codes.mts";
 import {
   commentRevisions,
   mergePolicyFingerprint,
@@ -12,13 +6,13 @@ import {
   suiteFingerprint,
   hasMultiCommentThreads,
   threadCommentRevisions,
-  type FingerprintComment,
-  type FingerprintSuites,
 } from "./fingerprint-fields.mts";
-import type { RepoInfo } from "./client.mts";
 import type { RawPr } from "./batch-raw-types.mts";
-import type { RawBaseRef } from "./batch-raw-rules.mts";
 
+/**
+ * Summary of BatchPr's first page. Two equal fingerprints mean the first page is unchanged, as
+ * long as every window it summarizes is complete (see `fingerprintReuser`).
+ */
 export interface PrFingerprint {
   headRefOid: string;
   updatedAt: string;
@@ -50,61 +44,10 @@ export interface PrFingerprint {
   hasMultiCommentThreads: boolean;
 }
 
-interface FingerprintSource {
-  headRefOid: string;
-  updatedAt?: string;
-  state: string;
-  isDraft: boolean;
-  mergeable: string;
-  mergeStateStatus: string;
-  reviewDecision: string | null;
-  isInMergeQueue?: boolean;
-  isMergeQueueEnabled?: boolean;
-  stack?: { number: number; size: number; baseRefName: string } | null;
-  stackEntry?: { position: number } | null;
-  viewerCanUpdate?: boolean;
-  baseRef?: RawBaseRef | null;
-  comments: { totalCount?: number; nodes: FingerprintComment[] };
-  reviewThreads: {
-    totalCount?: number;
-    nodes: Array<{
-      id: string;
-      comments?: { totalCount?: number; nodes: Array<{ id: string; updatedAt?: string }> };
-    }>;
-  };
-  commits: {
-    nodes: Array<{
-      commit: {
-        statusCheckRollup: { state?: string | null } | null;
-        checkSuites?: FingerprintSuites;
-      };
-    }>;
-  };
-}
-
-interface RawFingerprintResponse {
-  viewer?: { login: string | null } | null;
-  repository: {
-    viewerPermission: string | null;
-    pullRequest:
-      | (FingerprintSource & {
-          updatedAt: string;
-          isInMergeQueue: boolean;
-          isMergeQueueEnabled: boolean;
-          viewerCanUpdate: boolean;
-          comments: { totalCount: number; nodes: FingerprintComment[] };
-          reviewThreads: { totalCount: number; nodes: Array<{ id: string }> };
-          reviews: { totalCount: number; nodes: FingerprintComment[] };
-          baseRef: RawBaseRef | null;
-        })
-      | null;
-  } | null;
-}
-
-function coreFingerprint(
-  raw: FingerprintSource,
-  counts: { reviewCount: number; latestReviewId: string | null; reviewRevisions: string },
-  viewer: { permission: string | null; login: string | null },
+export function fingerprintFromRaw(
+  raw: RawPr,
+  viewerPermission: string | null = null,
+  viewerLogin: string | null = null,
 ): PrFingerprint {
   return {
     headRefOid: raw.headRefOid,
@@ -120,16 +63,16 @@ function coreFingerprint(
     commentCount: raw.comments.totalCount ?? raw.comments.nodes.length,
     commentRevisions: commentRevisions(raw.comments.nodes),
     threadCount: raw.reviewThreads.totalCount ?? raw.reviewThreads.nodes.length,
-    reviewCount: counts.reviewCount,
-    reviewRevisions: counts.reviewRevisions,
+    reviewCount: raw.allReviews?.totalCount ?? 0,
+    reviewRevisions: commentRevisions(raw.allReviews?.nodes ?? []),
     latestCommentId: raw.comments.nodes.at(-1)?.id ?? null,
     latestThreadId: raw.reviewThreads.nodes.at(-1)?.id ?? null,
-    latestReviewId: counts.latestReviewId,
+    latestReviewId: raw.allReviews?.nodes?.at(-1)?.id ?? null,
     checkRollupState: raw.commits.nodes[0]?.commit.statusCheckRollup?.state ?? null,
     ...suiteFingerprint(raw.commits.nodes[0]?.commit.checkSuites),
     viewerCanUpdate: raw.viewerCanUpdate === true,
-    viewerPermission: viewer.permission,
-    viewerLogin: viewer.login,
+    viewerPermission,
+    viewerLogin,
     stackKey: stackKey(raw),
     threadCommentRevisions: threadCommentRevisions(raw.reviewThreads.nodes),
     rulesComplete: rulesComplete(raw.baseRef),
@@ -137,63 +80,6 @@ function coreFingerprint(
   };
 }
 
-export function fingerprintFromRaw(
-  raw: RawPr,
-  viewerPermission: string | null = null,
-  viewerLogin: string | null = null,
-): PrFingerprint {
-  return coreFingerprint(
-    raw,
-    {
-      reviewCount: raw.allReviews?.totalCount ?? 0,
-      latestReviewId: raw.allReviews?.nodes?.at(-1)?.id ?? null,
-      reviewRevisions: commentRevisions(raw.allReviews?.nodes ?? []),
-    },
-    { permission: viewerPermission, login: viewerLogin },
-  );
-}
-
 export function fingerprintsEqual(left: PrFingerprint, right: PrFingerprint): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
-}
-
-async function fetchGraphqlPrFingerprint(pr: number, repo: RepoInfo): Promise<PrFingerprint> {
-  const result = await graphqlWithRateLimit<RawFingerprintResponse>(PR_FINGERPRINT_QUERY, {
-    owner: repo.owner,
-    repo: repo.name,
-    pr,
-  });
-  if (!result.data.repository) {
-    throw new GitHubRequestError(
-      `GitHub GraphQL response did not include repository ${repo.owner}/${repo.name} (not found or access denied)`,
-      { status: 200 },
-    );
-  }
-  const raw = result.data.repository.pullRequest;
-  if (!raw) throw new ShepherdError(`PR #${pr} not found`, EXIT.UNAVAILABLE);
-  return coreFingerprint(
-    raw,
-    {
-      reviewCount: raw.reviews.totalCount,
-      latestReviewId: raw.reviews.nodes.at(-1)?.id ?? null,
-      reviewRevisions: commentRevisions(raw.reviews.nodes),
-    },
-    {
-      permission: result.data.repository.viewerPermission,
-      login: result.data.viewer?.login ?? null,
-    },
-  );
-}
-
-export function fetchPrFingerprint(pr: number, repo: RepoInfo): Promise<PrFingerprint> {
-  return githubOperation(
-    "PrFingerprint",
-    () => fetchGraphqlPrFingerprint(pr, repo),
-    async () => {
-      throw new UnsupportedRestOperationError(
-        "PrFingerprint",
-        "REST snapshots lack complete viewer, policy and queue evidence; read a full PR snapshot instead",
-      );
-    },
-  );
 }

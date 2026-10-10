@@ -14,6 +14,8 @@ export interface WireRequest {
   method: string;
   path: string;
   body: Record<string, unknown>;
+  /** Non-enumerable, so whole-request equality assertions keep their shape. */
+  readonly headers?: Record<string, string | string[] | undefined>;
 }
 
 /** Real HTTP requests; only GitHub's origin is redirected to a local test server. */
@@ -28,6 +30,7 @@ export async function githubWire(reply: (request: WireRequest, response: ServerR
       path: request.url ?? "/",
       body: raw ? (JSON.parse(raw) as Record<string, unknown>) : {},
     };
+    Object.defineProperty(received, "headers", { value: request.headers, enumerable: false });
     requests.push(received);
     response.setHeader("content-type", "application/json");
     reply(received, response);

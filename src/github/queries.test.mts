@@ -12,7 +12,6 @@ import {
   REPLY_THREAD_TRANSCRIPTS_QUERY,
   REPLY_THREAD_COMMENTS_QUERY,
   SUGGESTION_THREADS_QUERY,
-  PR_FINGERPRINT_QUERY,
   POLL_SUMMARY_CHECK_PAGE_QUERY,
   POLL_SUMMARY_ANNOTATION_PROBE_QUERY,
   POLL_SUMMARY_FRAGMENT,
@@ -50,21 +49,12 @@ describe("queries — GQL constants load at import time", () => {
     expect(BATCH_PR_QUERY).toContain("checkSuites");
   });
 
-  it("fingerprint preflight selects merge policy and check-suite completeness", () => {
-    expect(PR_FINGERPRINT_QUERY).toContain("fragment PrMergePolicy on PullRequest");
-    expect(PR_FINGERPRINT_QUERY).toContain("fragment RefRules on Ref");
-    expect(PR_FINGERPRINT_QUERY).toContain("...RefRules");
-    expect(PR_FINGERPRINT_QUERY).toContain("...PrMergePolicy");
-    expect(PR_FINGERPRINT_QUERY).toContain("stackEntry");
-    expect(PR_FINGERPRINT_QUERY).toContain("isMergeQueueEnabled");
-    expect(PR_FINGERPRINT_QUERY).toContain("branchProtectionRule");
-    expect(PR_FINGERPRINT_QUERY).toContain("requiredApprovingReviewCount");
-    expect(PR_FINGERPRINT_QUERY).toContain("viewer {");
-    expect(PR_FINGERPRINT_QUERY).toContain("updatedAt");
-    expect(PR_FINGERPRINT_QUERY).toContain("pageInfo");
-    expect(PR_FINGERPRINT_QUERY).toContain("hasNextPage");
+  it("batch first page selects every fingerprinted field", () => {
+    expect(BATCH_PR_QUERY).toContain("fragment PrMergePolicy on PullRequest");
     expect(BATCH_PR_QUERY).toContain("...PrMergePolicy");
-    expect(PR_FINGERPRINT_QUERY).toContain("...CommitCheckSuites");
+    expect(BATCH_PR_QUERY).toContain("stackEntry");
+    expect(BATCH_PR_QUERY).toContain("viewer {");
+    expect(BATCH_PR_QUERY).toContain("updatedAt");
     expect(BATCH_PR_QUERY).toContain("...CommitCheckSuites");
     expect(BATCH_PR_QUERY).toContain("checkSuites");
     expect(BATCH_PR_QUERY).toMatch(/nodes \{\s*id\s*status\s*conclusion/);
@@ -158,7 +148,6 @@ describe("queries — GQL constants load at import time", () => {
       REPLY_THREAD_TRANSCRIPTS_QUERY,
       REPLY_THREAD_COMMENTS_QUERY,
       SUGGESTION_THREADS_QUERY,
-      PR_FINGERPRINT_QUERY,
       POLL_STACK_SUMMARY_QUERY,
       POLL_SUMMARY_CHECK_PAGE_QUERY,
       POLL_SUMMARY_ANNOTATION_PROBE_QUERY,

@@ -5,24 +5,16 @@ vi.mock("../state/pr-fingerprint.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../state/pr-fingerprint.mts")>();
   return { ...actual, loadPrFingerprint: vi.fn() };
 });
-vi.mock("../github/fingerprint.mts", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../github/fingerprint.mts")>();
-  return { ...actual, fetchPrFingerprint: vi.fn() };
-});
 vi.mock("../github/client.mts", () => ({
   getMergeableState: vi.fn(),
 }));
 
 import { fingerprintInputDigest, loadPrFingerprint } from "../state/pr-fingerprint.mts";
-import { fetchPrFingerprint } from "../github/fingerprint.mts";
+import type { PrFingerprint } from "../github/fingerprint.mts";
+import type { RepoInfo } from "../github/client.mts";
 import { getMergeableState } from "../github/client.mts";
-import {
-  getGithubTransport,
-  githubOperation,
-  runWithGithubTransport,
-} from "../github/transport.mts";
-import { GitHubRequestError } from "../github/errors.mts";
-import { tryReuseFingerprintReport } from "./check-fingerprint.mts";
+import { runWithGithubTransport } from "../github/transport.mts";
+import { fingerprintReuser } from "./check-fingerprint.mts";
 import {
   testFingerprint,
   testShepherdConfig,
@@ -30,7 +22,19 @@ import {
 import type { ShepherdReport } from "../types.mts";
 
 const mockLoad = vi.mocked(loadPrFingerprint);
-const mockFetch = vi.mocked(fetchPrFingerprint);
+/** Stands in for BatchPr's first page: called only when the stored side allows reuse. */
+const mockFetch = vi.fn<(pr: number, repo: RepoInfo) => Promise<PrFingerprint>>();
+
+async function tryReuseFingerprintReport(
+  pr: number,
+  repo: RepoInfo,
+  key: typeof KEY,
+  config: typeof CONFIG,
+): Promise<ShepherdReport | null> {
+  const decide = await fingerprintReuser(pr, repo, key, config);
+  if (!decide) return null;
+  return decide(await mockFetch(pr, repo));
+}
 const mockMergeable = vi.mocked(getMergeableState);
 const REPO = { owner: "owner", name: "repo" };
 const KEY = { owner: "owner", repo: "repo", pr: 42 };
@@ -104,7 +108,7 @@ function waitReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
   };
 }
 
-describe("tryReuseFingerprintReport", () => {
+describe("fingerprintReuser", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFetch.mockResolvedValue(FP);
@@ -157,23 +161,6 @@ describe("tryReuseFingerprintReport", () => {
       await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
       expect(mockLoad).not.toHaveBeenCalled();
       expect(mockFetch).not.toHaveBeenCalled();
-    });
-  });
-
-  it("disables fingerprint reuse when the fingerprint read switches from GraphQL to REST", async () => {
-    mockLoad.mockResolvedValue(stored(waitReport()));
-    await runWithGithubTransport("auto", async () => {
-      mockFetch.mockImplementationOnce(async () =>
-        githubOperation(
-          "fingerprint-test",
-          async () => {
-            throw new GitHubRequestError("GraphQL unavailable", { status: 503 });
-          },
-          async () => FP,
-        ),
-      );
-      await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
-      expect(getGithubTransport()).toBe("rest");
     });
   });
 
@@ -315,6 +302,14 @@ describe("tryReuseFingerprintReport", () => {
       mergeStateStatus: "CLEAN",
       state: "OPEN",
     });
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+  });
+
+  it("declines reuse instead of throwing when the REST mergeability read fails", async () => {
+    mockLoad.mockResolvedValue(
+      stored(waitReport({ status: "UNKNOWN", mergeStatus: unknownMerge() })),
+    );
+    mockMergeable.mockRejectedValueOnce(new Error("503 from /pulls/42"));
     await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
   });
 

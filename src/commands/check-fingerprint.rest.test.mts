@@ -14,7 +14,6 @@ import type { ShepherdReport } from "../types.mts";
 
 const mockLoad = vi.mocked(loadRestSnapshotReport);
 const mockMergeable = vi.mocked(getMergeableState);
-const REPO = { owner: "owner", name: "repo" };
 const KEY = { owner: "owner", repo: "repo", pr: 42 };
 const CONFIG = testShepherdConfig();
 const SNAPSHOT = { allNotModified: true, digest: "snap" };
@@ -72,8 +71,8 @@ function stored(report: ShepherdReport, overrides: Record<string, unknown> = {})
   };
 }
 
-const reuse = (snapshot: Parameters<typeof tryReuseRestSnapshotReport>[4]) =>
-  tryReuseRestSnapshotReport(42, REPO, KEY, CONFIG, snapshot);
+const reuse = (snapshot: Parameters<typeof tryReuseRestSnapshotReport>[2]) =>
+  tryReuseRestSnapshotReport(KEY, CONFIG, snapshot);
 
 describe("tryReuseRestSnapshotReport", () => {
   beforeEach(() => {
@@ -84,13 +83,13 @@ describe("tryReuseRestSnapshotReport", () => {
     });
   });
 
-  it("reuses the stored report when every read was 304 and mergeability is unchanged", async () => {
+  it("reuses the stored report when every read (including the pull) was 304, without an extra read", async () => {
     mockLoad.mockResolvedValue(stored(waitReport()));
     await expect(reuse(SNAPSHOT)).resolves.toMatchObject({
       pr: 42,
       fingerprintReused: true,
     });
-    expect(mockMergeable).toHaveBeenCalledWith(42, "owner", "repo");
+    expect(mockMergeable).not.toHaveBeenCalled();
   });
 
   it.each([undefined, { allNotModified: false, digest: "snap" }])(
@@ -118,16 +117,5 @@ describe("tryReuseRestSnapshotReport", () => {
     mockLoad.mockResolvedValue(stored(waitReport({ status: "READY" })));
     await expect(reuse(SNAPSHOT)).resolves.toBeNull();
     expect(mockMergeable).not.toHaveBeenCalled();
-  });
-
-  it.each([
-    [{ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", state: "MERGED" }],
-    [{ mergeable: "MERGEABLE", mergeStateStatus: "CLEAN", state: "CLOSED" }],
-    [{ mergeable: "CONFLICTING", mergeStateStatus: "CLEAN" }],
-    [{ mergeable: "MERGEABLE", mergeStateStatus: "BEHIND" }],
-  ] as const)("declines when the live pull differs (%j)", async (live) => {
-    mockLoad.mockResolvedValue(stored(waitReport()));
-    mockMergeable.mockResolvedValue({ ...live });
-    await expect(reuse(SNAPSHOT)).resolves.toBeNull();
   });
 });

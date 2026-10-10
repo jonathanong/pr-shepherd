@@ -48,8 +48,11 @@ const throttles: Array<{
 
 async function serveFailure(endpoint: string, body: string, headers: Record<string, string> = {}) {
   await serve((request, response) => {
+    // A branch summary without `protection` falls through to the authoritative endpoint.
     const protection = request.path.includes("/protection");
-    if (protection === (endpoint === "protection")) {
+    if (request.path.split("?")[0]!.endsWith("/hello-world/branches/main")) {
+      response.end("{}");
+    } else if (protection === (endpoint === "protection")) {
       response.statusCode = 403;
       for (const [name, value] of Object.entries(headers)) response.setHeader(name, value);
       response.end(body);
@@ -82,7 +85,7 @@ describe.each(["protection", "rules"])("REST %s policy failure propagation", (en
         resource: "core",
         resetAt: 2000000000,
       });
-    expect(wire.requests).toHaveLength(endpoint === "protection" ? 1 : 2);
+    expect(wire.requests).toHaveLength(endpoint === "protection" ? 2 : 3);
   });
 
   it.each([
@@ -103,7 +106,7 @@ describe.each(["protection", "rules"])("REST %s policy failure propagation", (en
     expect(error).toMatchObject({ status: 403, responseMessage: body });
     expect(isRestSessionRefusal(error)).toBe(true);
     expect(rateLimitKind(error)).toBeNull();
-    expect(wire.requests).toHaveLength(endpoint === "protection" ? 1 : 2);
+    expect(wire.requests).toHaveLength(endpoint === "protection" ? 2 : 3);
   });
 
   it("keeps ordinary permission denial as an explicit policy gap", async () => {
@@ -111,6 +114,6 @@ describe.each(["protection", "rules"])("REST %s policy failure propagation", (en
     expect(await readRestBranchRules(repo, "main")).toMatchObject({
       unavailable: [{ field: endpoint === "protection" ? "branchProtection" : "branchRules" }],
     });
-    expect(wire.requests).toHaveLength(2);
+    expect(wire.requests).toHaveLength(3);
   });
 });

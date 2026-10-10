@@ -57,6 +57,7 @@
   },
   "expectedExitCode": 12,
   "restResponses": {
+    "/repos/owner/repo/branches/main": { "name": "main", "protection": { "enabled": true } },
     "/repos/owner/repo/branches/main/protection": {},
     "/repos/owner/repo/rules/branches/main": [],
     "/repos/owner/repo/compare/main...feature": {

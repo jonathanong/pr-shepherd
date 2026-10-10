@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("./check-fingerprint.mts", () => ({
-  tryReuseFingerprintReport: vi.fn().mockResolvedValue(null),
+  fingerprintReuser: vi.fn().mockResolvedValue(undefined),
   tryReuseRestSnapshotReport: vi.fn().mockResolvedValue(null),
 }));
 vi.mock("../state/rest-snapshot-report.mts", () => ({
@@ -42,8 +42,6 @@ describe("runCheck — REST snapshot reuse", () => {
     const report = await runCheck({ ...BASE_OPTS, fingerprintCache: true });
     expect(report).toBe(cached);
     expect(mockReuse).toHaveBeenCalledWith(
-      42,
-      { owner: "owner", name: "repo" },
       { owner: "owner", repo: "repo", pr: 42 },
       expect.anything(),
       { allNotModified: true, digest: "snap" },
@@ -68,13 +66,7 @@ describe("runCheck — REST snapshot reuse", () => {
   it("does not consult or store the REST snapshot on a GraphQL snapshot", async () => {
     mockFetchPrBatch.mockResolvedValueOnce({ data: makeBatchData() });
     await runCheck({ ...BASE_OPTS, fingerprintCache: true });
-    expect(mockReuse).toHaveBeenCalledWith(
-      42,
-      expect.anything(),
-      expect.anything(),
-      expect.anything(),
-      undefined,
-    );
+    expect(mockReuse).toHaveBeenCalledWith(expect.anything(), expect.anything(), undefined);
     expect(mockStore).not.toHaveBeenCalled();
   });
 });

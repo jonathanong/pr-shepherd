@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("./check-fingerprint.mts", () => ({
-  tryReuseFingerprintReport: vi.fn().mockResolvedValue(null),
+  fingerprintReuser: vi.fn().mockResolvedValue(undefined),
+  tryReuseRestSnapshotReport: vi.fn().mockResolvedValue(null),
 }));
 
 import {
@@ -10,46 +11,38 @@ import {
   mockFetchPrBatch,
   registerHooks,
 } from "../../test-helpers/commands/check.test-support.mts";
-import { tryReuseFingerprintReport } from "./check-fingerprint.mts";
+import { fingerprintReuser } from "./check-fingerprint.mts";
 import { runCheck } from "./check.mts";
 import type { ShepherdReport } from "../types.mts";
 
 registerHooks();
 
-const mockReuse = vi.mocked(tryReuseFingerprintReport);
+const mockReuser = vi.mocked(fingerprintReuser);
 
 describe("runCheck — fingerprint reuse", () => {
-  it("returns a cached WAIT report without fetching BatchPr", async () => {
+  it("returns the cached report when BatchPr's first page matches the fingerprint", async () => {
     const cached = { pr: 42, status: "IN_PROGRESS", repo: "owner/repo" } as ShepherdReport;
-    mockReuse.mockResolvedValueOnce(cached);
+    const decide = vi.fn().mockResolvedValue(cached);
+    mockReuser.mockResolvedValueOnce(decide);
+    mockFetchPrBatch.mockResolvedValueOnce({ reused: cached } as never);
     const report = await runCheck({ ...BASE_OPTS, fingerprintCache: true });
     expect(report).toBe(cached);
-    expect(mockFetchPrBatch).not.toHaveBeenCalled();
+    expect(mockFetchPrBatch).toHaveBeenCalledWith(42, expect.anything(), expect.anything(), decide);
   });
 
-  it("does not reuse a cached report on a single-tick iterate", async () => {
-    mockReuse.mockResolvedValueOnce({
-      pr: 99,
-      status: "IN_PROGRESS",
-      repo: "owner/repo",
-    } as ShepherdReport);
+  it("does not offer reuse on a single-tick iterate", async () => {
     mockFetchPrBatch.mockResolvedValueOnce({ data: makeBatchData() });
     const report = await runCheck({ ...BASE_OPTS });
-    expect(mockFetchPrBatch).toHaveBeenCalled();
+    expect(mockFetchPrBatch).toHaveBeenCalledWith(42, expect.anything(), expect.anything());
     expect(report.pr).toBe(42);
-    expect(mockReuse).not.toHaveBeenCalled();
+    expect(mockReuser).not.toHaveBeenCalled();
   });
 
-  it("fetches BatchPr when fingerprintCache is false", async () => {
-    mockReuse.mockResolvedValueOnce({
-      pr: 99,
-      status: "IN_PROGRESS",
-      repo: "owner/repo",
-    } as ShepherdReport);
+  it("fetches a full snapshot when no stored report can be reused", async () => {
     mockFetchPrBatch.mockResolvedValueOnce({ data: makeBatchData() });
-    const report = await runCheck({ ...BASE_OPTS, persistSeen: false, fingerprintCache: false });
-    expect(mockFetchPrBatch).toHaveBeenCalled();
+    const report = await runCheck({ ...BASE_OPTS, persistSeen: false, fingerprintCache: true });
+    expect(mockReuser).toHaveBeenCalled();
+    expect(mockFetchPrBatch).toHaveBeenCalledWith(42, expect.anything(), expect.anything());
     expect(report.pr).toBe(42);
-    expect(mockReuse).not.toHaveBeenCalled();
   });
 });

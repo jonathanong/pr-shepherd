@@ -1,9 +1,5 @@
 import { getMergeableState, type RepoInfo } from "../github/client.mts";
-import {
-  fetchPrFingerprint,
-  fingerprintsEqual,
-  type PrFingerprint,
-} from "../github/fingerprint.mts";
+import { fingerprintsEqual, type PrFingerprint } from "../github/fingerprint.mts";
 import { fingerprintInputDigest, loadPrFingerprint } from "../state/pr-fingerprint.mts";
 import { loadRestSnapshotReport } from "../state/rest-snapshot-report.mts";
 import type { RestSnapshotState } from "../github/rest-conditional-scope.mts";
@@ -35,56 +31,69 @@ function reportAllowsFingerprintSkip(report: ShepherdReport): boolean {
   );
 }
 
-export async function tryReuseFingerprintReport(
+/** Whether a fingerprint's windows cover everything it summarizes, so equality means unchanged. */
+function fingerprintIsComplete(fingerprint: PrFingerprint): boolean {
+  return (
+    !fingerprint.isInMergeQueue &&
+    fingerprint.checkSuitesComplete &&
+    fingerprint.commentCount <= 100 &&
+    fingerprint.reviewCount <= 100 &&
+    fingerprint.threadCount <= 20 &&
+    !fingerprint.hasMultiCommentThreads &&
+    fingerprint.rulesComplete
+  );
+}
+
+/**
+ * GraphQL fingerprint reuse. Returns a decider for `fetchPrBatch`'s first page, or `undefined`
+ * when the stored report cannot be reused whatever GitHub says. The decider replays the stored
+ * report only when the first page's fingerprint equals the stored one, so a hit costs the one
+ * BatchPr request and skips every supplement, and a miss continues the same snapshot.
+ */
+export async function fingerprintReuser(
   prNumber: number,
   repo: RepoInfo,
   stateKey: { owner: string; repo: string; pr: number },
   config: PrShepherdConfig,
-): Promise<ShepherdReport | null> {
-  if (getGithubTransport() === "rest") return null;
+): Promise<((live: PrFingerprint) => Promise<ShepherdReport | null>) | undefined> {
+  if (getGithubTransport() === "rest") return undefined;
   const cached = await loadPrFingerprint(stateKey);
   if (cached?.inputDigest == null || cached.inputDigest !== fingerprintInputDigest(config)) {
-    return null;
+    return undefined;
   }
-  if (!reportAllowsFingerprintSkip(cached.report)) return null;
-  if (cached.fingerprint.isInMergeQueue) return null;
-  if (!cached.fingerprint.checkSuitesComplete) return null;
-  if (cached.fingerprint.commentCount > 100) return null;
-  if (cached.fingerprint.reviewCount > 100) return null;
-  if (cached.fingerprint.threadCount > 20) return null;
-  if (cached.fingerprint.hasMultiCommentThreads) return null;
-  if (!cached.fingerprint.rulesComplete) return null;
-  const live = await fetchPrFingerprint(prNumber, repo);
-  if (getGithubTransport() === "rest") return null;
-  if (live.isInMergeQueue || !live.checkSuitesComplete) return null;
-  if (live.commentCount > 100 || live.reviewCount > 100 || live.threadCount > 20) return null;
-  if (live.hasMultiCommentThreads || !live.rulesComplete) return null;
-  if (!fingerprintsEqual(cached.fingerprint, live)) return null;
-  if (
-    !(await cachedReportSurvivesMergeabilityRefresh(
-      prNumber,
-      repo,
-      cached.report,
-      cached.fingerprint,
-    ))
-  ) {
-    return null;
-  }
-  if (getGithubTransport() === "rest") return null;
-  return {
-    ...stripReplayedRuleAutoResolve(cached.report),
-    fingerprintReused: true,
+  if (!reportAllowsFingerprintSkip(cached.report)) return undefined;
+  if (!fingerprintIsComplete(cached.fingerprint)) return undefined;
+  return async (live) => {
+    if (!fingerprintIsComplete(live) || !fingerprintsEqual(cached.fingerprint, live)) return null;
+    try {
+      const survives = await cachedReportSurvivesMergeabilityRefresh(
+        prNumber,
+        repo,
+        cached.report,
+        cached.fingerprint,
+      );
+      if (!survives) return null;
+    } catch {
+      // This REST read runs inside the GraphQL BatchPr operation. Its failure must not read as a
+      // GraphQL failure (which could switch transports), so build the full snapshot instead.
+      return null;
+    }
+    return {
+      ...stripReplayedRuleAutoResolve(cached.report),
+      fingerprintReused: true,
+    };
   };
 }
 
 /**
- * REST counterpart of `tryReuseFingerprintReport`: after the snapshot reads, reuse the previous
+ * REST counterpart of `fingerprintReuser`: after the snapshot reads, reuse the previous
  * report only when every conditional read came back 304 with the same validators it was built
- * from. One uncached pull read still confirms the mergeability GitHub computes lazily.
+ * from. No separate mergeability read is made. Mergeability moves when the head or the base
+ * moves: the head is in the pull body, and the base branch summary read by
+ * `readRestBranchRules` carries the base's `commit.sha`, so a base push answers 200 and blocks
+ * reuse. An unsettled `mergeable: null` pull body is never cached, so it cannot answer 304.
  */
 export async function tryReuseRestSnapshotReport(
-  prNumber: number,
-  repo: RepoInfo,
   stateKey: { owner: string; repo: string; pr: number },
   config: PrShepherdConfig,
   snapshot: RestSnapshotState | undefined,
@@ -94,10 +103,6 @@ export async function tryReuseRestSnapshotReport(
   if (cached === null || cached.snapshotDigest !== snapshot.digest) return null;
   if (cached.inputDigest !== fingerprintInputDigest(config)) return null;
   if (!reportAllowsFingerprintSkip(cached.report)) return null;
-  const live = await getMergeableState(prNumber, repo.owner, repo.name);
-  if (live.state === "MERGED" || live.state === "CLOSED") return null;
-  if (live.mergeable !== cached.report.mergeStatus.mergeable) return null;
-  if (live.mergeStateStatus !== cached.report.mergeStatus.mergeStateStatus) return null;
   return {
     ...stripReplayedRuleAutoResolve(cached.report),
     fingerprintReused: true,

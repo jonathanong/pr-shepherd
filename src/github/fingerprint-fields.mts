@@ -60,10 +60,20 @@ export function threadCommentRevisions(
     .join(",");
 }
 
+/**
+ * A thread whose earlier comments the fingerprint cannot see. BatchPr's `comments(first: 100)`
+ * carries the nodes and `hasNextPage`; a stored `totalCount` is honored when present.
+ */
 export function hasMultiCommentThreads(
-  nodes: Array<{ comments?: { totalCount?: number } }>,
+  nodes: Array<{
+    comments?: { totalCount?: number; nodes?: unknown[]; pageInfo?: { hasNextPage?: boolean } };
+  }>,
 ): boolean {
-  return nodes.some((thread) => (thread.comments?.totalCount ?? 0) > 1);
+  return nodes.some(
+    ({ comments }) =>
+      (comments?.totalCount ?? comments?.nodes?.length ?? 0) > 1 ||
+      comments?.pageInfo?.hasNextPage === true,
+  );
 }
 
 export function rulesComplete(

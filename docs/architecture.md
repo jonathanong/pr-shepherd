@@ -47,7 +47,6 @@ src/
 │   └── gql/
 │       ├── batch-pr.gql
 │       ├── batch-pr-page.gql
-│       ├── pr-fingerprint.gql
 │       └── suggestion-threads.gql
 ├── checks/                # classify, triage, startup-failures, superseded
 ├── comments/              # resolve / minimize / dismiss mutations

@@ -74,6 +74,8 @@ export async function serveSummaryStack(size = 10) {
     else if (path.endsWith("check-suites")) body = { total_count: 0, check_suites: [] };
     else if (path.endsWith("actions/runs")) body = { total_count: 0, workflow_runs: [] };
     else if (path.includes("/compare/")) body = { behind_by: 0 };
+    else if (/^\/repos\/octocat\/hello-world\/branches\/[^/]+$/.test(path))
+      body = { name: path.split("/").at(-1), protected: false, protection: { enabled: false } };
     else if (path.endsWith("/protection")) {
       response.statusCode = 404;
       body = { message: "Branch not protected" };

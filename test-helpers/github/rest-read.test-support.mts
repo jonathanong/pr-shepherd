@@ -2,6 +2,7 @@ import { afterEach, beforeEach, vi } from "vitest";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createHash } from "node:crypto";
 import { githubWire } from "./transport-wire.mts";
 import { _resetTokenCache } from "../../src/github/http.mts";
 export let wire: Awaited<ReturnType<typeof githubWire>>;
@@ -51,6 +52,8 @@ beforeEach(async () => {
   vi.stubEnv("HTTPS_PROXY", "");
   vi.stubEnv("HTTP_PROXY", "");
   _resetTokenCache();
+  conditionalEtags = false;
+  etagResponses.length = 0;
 });
 afterEach(async () => {
   if (wire) await wire.close();
@@ -58,9 +61,38 @@ afterEach(async () => {
   vi.unstubAllEnvs();
   await rm(directory, { recursive: true, force: true });
 });
+let conditionalEtags = false;
+/** Wire responses recorded by `serveWithEtags`; a charged request is any entry that is not 304. */
+export const etagResponses: Array<{ status: number; path: string }> = [];
+/**
+ * Make the next `serve` answer like GitHub's conditional reads: every 200 GET carries a
+ * body-hash ETag and a matching `If-None-Match` gets a bodiless 304.
+ */
+export function serveWithEtags(): void {
+  conditionalEtags = true;
+}
 export async function serve(reply: Parameters<typeof githubWire>[0]) {
-  wire = await githubWire(reply);
+  wire = await githubWire(conditionalEtags ? withEtags(reply) : reply);
   vi.stubGlobal("fetch", wire.fetch);
+}
+function withEtags(reply: Parameters<typeof githubWire>[0]): Parameters<typeof githubWire>[0] {
+  return (request, response) => {
+    const end = response.end.bind(response) as (body?: string) => void;
+    (response as unknown as { end: (body?: string) => void }).end = (body?: string) => {
+      if (response.statusCode === 200 && request.method === "GET") {
+        const etag = `"${createHash("sha256").update(String(body)).digest("hex").slice(0, 16)}"`;
+        response.setHeader("etag", etag);
+        if (request.headers?.["if-none-match"] === etag) {
+          response.statusCode = 304;
+          etagResponses.push({ status: 304, path: request.path });
+          return end();
+        }
+      }
+      etagResponses.push({ status: response.statusCode, path: request.path });
+      return end(body);
+    };
+    reply(request, response);
+  };
 }
 export function nextLink(path: string, page: number) {
   return `<https://api.github.com${path}?per_page=100&page=${page}>; rel="next"`;
