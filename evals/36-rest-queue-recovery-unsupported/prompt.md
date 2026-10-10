@@ -19,8 +19,9 @@ append_system_prompt: |
   you decide NOT to take an action that the output appears to offer, say so
   explicitly and say why.
 ---
-Shepherd https://github.com/owner/repo/pull/42 through to a terminal state. I already ran the first tick —
-here is what it returned. Take it from there.
+Shepherd https://github.com/owner/repo/pull/42 and merge it. I already ran the first tick
+(`pr-shepherd https://github.com/owner/repo/pull/42 --until-terminal --merge`) — here is what it returned.
+Take it from there.
 
 ---
 
