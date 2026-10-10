@@ -12,12 +12,12 @@ Latest numbers: [REPORT.md](REPORT.md). Estimated cost per session:
 
 | session   | cost vs. gh | cost vs. MCP | turns vs. gh / MCP | tool tokens vs. gh / MCP |
 | --------- | ----------- | ------------ | ------------------ | ------------------------ |
-| single PR | **−39%**    | **−64%**     | −41% / −60%        | −71% / −87%              |
-| PR stack  | **−41%**    | **−51%**     | −58% / −60%        | +39% / −40%              |
+| single PR | **−50%**    | **−72%**     | −41% / −60%        | −71% / −87%              |
+| PR stack  | **−54%**    | **−61%**     | −58% / −60%        | +25% / −42%              |
 
 The savings are concentrated. Re-read review history, CI logs, CI polling and
 stacks account for nearly all of them. Against a frugal gh agent, a single
-fresh read-and-reply tick is a wash, or a few percent worse. See "Where
+fresh read-and-reply tick is a wash: between 9% cheaper and 6% dearer. See "Where
 pr-shepherd does not save".
 
 ## Run it
@@ -51,8 +51,10 @@ layer's base after GitHub retargets it.
 
 Each baseline is a competent agent, not a straw man. The gh arm selects
 `--json` fields instead of dumping raw REST output, tails the log, and
-silences mutation responses with `gh api --silent`. The MCP
-arm loads tool schemas on demand.
+silences mutation responses with `gh api --silent`. The MCP arm loads tool
+schemas on demand. Both arms guard merges with the head SHA they observed
+(`--match-head-commit`, `expectedHeadSha`), as pr-shepherd's merge commands
+do, and target the fixture's own repository.
 
 Where the content comes from:
 
@@ -80,7 +82,9 @@ Each scenario reports four numbers per arm:
 - **cost (ITE)**: input-token equivalents. Every turn re-reads the context from
   cache (×0.1), writes new tokens to cache (×1.25), and pays output price (×5)
   for the commands it emits. The base context is 30k tokens. Turns cost money
-  even when they fetch little; this column captures that.
+  even when they fetch little; this column captures that. The request that
+  reads one step's last results also emits the next step's first call, so it
+  is charged once, to the next step.
 
 Setup output stays in context. The skill and playbooks for pr-shepherd, and
 the loaded schemas for MCP, ride along on every later request in the session.
@@ -97,7 +101,8 @@ one-PR sessions it routes are PR sessions. The "per tick" figures are weighted
 by scenario frequency and baseline cost, excluding setup.
 
 A † in the report marks a baseline that cannot finish the step with its tools
-(the GitHub MCP server cannot read check annotations or enqueue a PR). Its cost
+(the GitHub MCP server cannot read check annotations, enqueue a PR, or see a
+PR's merge-queue membership). Its cost
 then covers only what it could do, so the saving shown understates the gap. Every knob is in `MODEL` in [lib.mjs](lib.mjs) and is
 printed at the bottom of the report.
 
@@ -148,16 +153,16 @@ These are assumptions, not measurements. See "Next steps".
   about 2.2–3.0k tokens. Those tokens then ride along on every later request.
   gh needs nothing.
 - **Fresh single-step ticks against gh.** A frugal gh agent selects `--json`
-  fields and replies with `gh api --silent`. On these steps pr-shepherd costs
-  0–8% more than gh, because its Markdown output and carried skill context
-  outweigh the saved reads. Against MCP's five-reader observe, pr-shepherd
-  still saves 2–10% on each, and 64% on `multi-category`, where MCP's log
-  retries dominate. The steps:
+  fields and replies with `gh api --silent`. On these steps pr-shepherd lands
+  between 9% cheaper and 6% dearer than gh, because its Markdown output and
+  carried skill context offset the saved reads. Against MCP's five-reader
+  observe, pr-shepherd still saves 4–19% on each, and 67% on `multi-category`,
+  where MCP's log retries dominate. The steps:
   - `bot-review-summary`, `review-thread`, `multi-category` and `bot-threads`;
   - `conflicts`, `merge` and `merge-queue`.
 - **Stack token volume.** Each routed layer's first tick prints its own
-  instructions. In the stack session pr-shepherd reads 39% more tool tokens than
-  gh's terse per-layer reads. It still costs 41% less, because it takes 10 turns
+  instructions. In the stack session pr-shepherd reads 25% more tool tokens than
+  gh's terse per-layer reads. It still costs 54% less, because it takes 10 turns
   where gh takes 24.
 
 ## What this does not measure

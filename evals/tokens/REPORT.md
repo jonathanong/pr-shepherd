@@ -10,24 +10,24 @@ Weighted sum of the session's scenarios below, one-time setup included.
 
 | vs. baseline | tool calls | turns | tool tokens | cost (ITE) |
 | --- | --- | --- | --- | --- |
-| gh CLI | −54% | −41% | −71% | −39% |
-| GitHub MCP | −77% | −60% | −87% | −64% |
-| GitHub MCP, eager tools | −77% | −59% | −87% | −70% |
+| gh CLI | −54% | −41% | −71% | −50% |
+| GitHub MCP | −77% | −60% | −87% | −72% |
+| GitHub MCP, eager tools | −77% | −59% | −87% | −77% |
 
 Per tick, setup excluded:
 
 | vs. baseline | tool calls | turns | tool tokens | cost (ITE) |
 | --- | --- | --- | --- | --- |
-| gh CLI | −64% | −48% | −78% | −46% |
-| GitHub MCP | −82% | −64% | −90% | −68% |
-| GitHub MCP, eager tools | −82% | −64% | −90% | −74% |
+| gh CLI | −64% | −48% | −79% | −57% |
+| GitHub MCP | −82% | −64% | −90% | −76% |
+| GitHub MCP, eager tools | −82% | −64% | −90% | −80% |
 
 | arm | tool calls | turns | tool tokens | cost (ITE) | truncated calls |
 | --- | --- | --- | --- | --- | --- |
-| pr-shepherd | 18.8 | 16.8 | 11,483 | 108,180 | 0 |
-| gh CLI | 41.3 | 28.3 | 39,267 | 176,239 | 0 |
-| GitHub MCP | 82.3 | 42.3 | 90,983 | 302,607 | 1.5 |
-| GitHub MCP, eager tools | 81.3 | 41.3 | 89,089 | 363,301 | 1.5 |
+| pr-shepherd | 18.8 | 16.8 | 11,485 | 71,446 | 0 |
+| gh CLI | 41.3 | 28.3 | 39,468 | 141,919 | 0 |
+| GitHub MCP | 82.3 | 42.3 | 90,992 | 259,340 | 1.5 |
+| GitHub MCP, eager tools | 81.3 | 41.3 | 89,098 | 308,451 | 1.5 |
 
 ## Typical stack session
 
@@ -35,24 +35,24 @@ Weighted sum of the session's scenarios below, one-time setup included.
 
 | vs. baseline | tool calls | turns | tool tokens | cost (ITE) |
 | --- | --- | --- | --- | --- |
-| gh CLI | −65% | −58% | +39% | −41% |
-| GitHub MCP | −81% | −60% | −40% | −51% |
-| GitHub MCP, eager tools | −81% | −58% | −32% | −61% |
+| gh CLI | −65% | −58% | +25% | −54% |
+| GitHub MCP | −81% | −60% | −42% | −61% |
+| GitHub MCP, eager tools | −81% | −58% | −34% | −69% |
 
 Per tick, setup excluded:
 
 | vs. baseline | tool calls | turns | tool tokens | cost (ITE) |
 | --- | --- | --- | --- | --- |
-| gh CLI | −73% | −67% | −3% | −52% |
-| GitHub MCP | −85% | −67% | −52% | −58% |
-| GitHub MCP, eager tools | −85% | −67% | −52% | −69% |
+| gh CLI | −73% | −67% | −13% | −64% |
+| GitHub MCP | −85% | −67% | −54% | −68% |
+| GitHub MCP, eager tools | −85% | −67% | −54% | −76% |
 
 | arm | tool calls | turns | tool tokens | cost (ITE) | truncated calls |
 | --- | --- | --- | --- | --- | --- |
-| pr-shepherd | 18 | 10 | 7,277 | 62,112 | 0 |
-| gh CLI | 52 | 24 | 5,245 | 104,997 | 0 |
-| GitHub MCP | 95 | 25 | 12,051 | 127,143 | 0 |
-| GitHub MCP, eager tools | 94 | 24 | 10,649 | 159,148 | 0 |
+| pr-shepherd | 18 | 10 | 7,277 | 42,696 | 0 |
+| gh CLI | 52 | 24 | 5,833 | 92,722 | 0 |
+| GitHub MCP | 95 | 25 | 12,451 | 109,758 | 0 |
+| GitHub MCP, eager tools | 94 | 24 | 11,049 | 137,888 | 0 |
 
 ## Scenarios
 
@@ -62,29 +62,29 @@ Each cell is `turns · tool tokens · cost (ITE)`. Saving columns compare cost.
 
 | scenario | weight | pr-shepherd | gh CLI | GitHub MCP | vs. gh | vs. MCP |
 | --- | --- | --- | --- | --- | --- | --- |
-| `session-setup` | 1 | 2 · 3,006 · 13,131 | 0 · 0 · 0 | 1 · 1,894 · 8,593 | n/a | +53% |
-| `ci-wait` | 2 | 1 · 190 · 6,934 | 6 · 168 · 21,492 | 12 · 612 · 43,405 | −68% | −84% |
-| `failing-check` | 1 | 1 · 1,533 · 8,612 | 2 · 7,596 · 19,177 | 3 · 36,509 · 60,546 ✂ | −55% | −86% |
-| `bot-review-summary` | 1 | 1 · 269 · 7,032 | 1 · 344 · 6,990 | 1 · 611 · 7,788 | +1% | −10% |
-| `review-thread` | 1 | 2 · 510 · 10,964 | 2 · 305 · 10,133 | 2 · 578 · 11,187 | +8% | −2% |
-| `review-thread-with-history` | 1 | 2 · 510 · 10,964 | 2 · 8,567 · 21,287 | 2 · 10,031 · 23,948 | −48% | −54% |
-| `multi-category` | 0.5 | 3 · 8,020 · 24,556 | 3 · 7,871 · 23,494 | 4 · 36,934 · 68,225 ✂ | +5% | −64% |
-| `mark-ready` | 1 | 0 · 0 · 0 | 2 · 8,543 · 21,111 | 2 · 9,979 · 23,801 | −100% | −100% |
-| `merged` | 1 | 1 · 133 · 6,862 | 1 · 8,454 · 17,128 | 1 · 9,857 · 19,345 | −60% | −65% |
-| `bot-threads` | 1 | 2 · 666 · 11,270 | 2 · 699 · 11,323 | 2 · 1,068 · 12,459 | 0% | −10% |
-| `check-annotations` | 0.25 | 1 · 492 · 7,311 | 3 · 586 · 13,759 | 1 · 481 · 7,625 † | −47% | −4% |
-| `conflicts` | 0.5 | 1 · 203 · 6,950 | 1 · 259 · 6,884 | 1 · 483 · 7,628 | +1% | −9% |
-| `merge` | 0.5 | 2 · 269 · 10,466 | 2 · 280 · 9,971 | 2 · 531 · 11,055 | +5% | −5% |
-| `merge-queue` | 0.25 | 2 · 426 · 10,653 | 2 · 287 · 9,965 | 2 · 550 · 11,079 † | +7% | −4% |
+| `session-setup` | 1 | 2 · 3,006 · 9,963 | 0 · 0 · 0 | 1 · 1,894 · 5,593 | n/a | +78% |
+| `ci-wait` | 2 | 1 · 190 · 3,633 | 6 · 168 · 18,478 | 12 · 612 · 40,164 | −80% | −91% |
+| `failing-check` | 1 | 1 · 1,533 · 5,312 | 2 · 7,617 · 16,246 | 3 · 36,509 · 56,208 ✂ | −67% | −91% |
+| `bot-review-summary` | 1 | 1 · 269 · 3,732 | 1 · 365 · 4,086 | 1 · 611 · 4,598 | −9% | −19% |
+| `review-thread` | 1 | 2 · 510 · 7,619 | 2 · 328 · 7,210 | 2 · 580 · 7,954 | +6% | −4% |
+| `review-thread-with-history` | 1 | 2 · 510 · 7,619 | 2 · 8,590 · 17,538 | 2 · 10,033 · 19,770 | −57% | −61% |
+| `multi-category` | 0.5 | 3 · 8,024 · 20,465 | 3 · 7,896 · 19,819 | 4 · 36,937 · 61,358 ✂ | +3% | −67% |
+| `mark-ready` | 1 | 0 · 0 · 0 | 2 · 8,564 · 17,355 | 2 · 9,979 · 19,618 | −100% | −100% |
+| `merged` | 1 | 1 · 133 · 3,562 | 1 · 8,475 · 14,224 | 1 · 9,857 · 16,156 | −75% | −78% |
+| `bot-threads` | 1 | 2 · 666 · 7,914 | 2 · 720 · 8,385 | 2 · 1,066 · 9,201 | −6% | −14% |
+| `check-annotations` | 0.25 | 1 · 492 · 4,011 | 3 · 607 · 10,822 | 1 · 481 · 4,436 † | −63% | −10% |
+| `conflicts` | 0.5 | 1 · 203 · 3,649 | 1 · 280 · 3,980 | 1 · 483 · 4,438 | −8% | −18% |
+| `merge` | 0.5 | 2 · 269 · 7,142 | 2 · 308 · 7,085 | 2 · 539 · 7,868 | +1% | −9% |
+| `merge-queue` | 0.25 | 2 · 426 · 7,314 | 2 · 316 · 7,085 | 2 · 558 · 7,891 † | +3% | −7% |
 
 ### Typical stack session
 
 | scenario | weight | pr-shepherd | gh CLI | GitHub MCP | vs. gh | vs. MCP |
 | --- | --- | --- | --- | --- | --- | --- |
-| `stack-setup` | 1 | 2 · 2,189 · 12,100 | 0 · 0 · 0 | 1 · 1,402 · 7,878 | n/a | +54% |
-| `stack-work` | 2 | 2 · 2,158 · 13,027 | 6 · 1,576 · 26,281 | 6 · 3,065 · 30,023 | −50% | −57% |
-| `stack-queue-wait` | 2 | 1 · 226 · 6,840 | 3 · 669 · 14,324 | 3 · 1,391 · 16,178 | −52% | −58% |
-| `stack-merge` | 1 | 2 · 320 · 10,278 | 6 · 755 · 23,787 | 6 · 1,737 · 26,863 | −57% | −62% |
+| `stack-setup` | 1 | 2 · 2,189 · 8,931 | 0 · 0 · 0 | 1 · 1,402 · 4,878 | n/a | +83% |
+| `stack-work` | 2 | 2 · 2,158 · 9,745 | 6 · 1,749 · 24,114 | 6 · 3,244 · 27,548 | −60% | −65% |
+| `stack-queue-wait` | 2 | 1 · 226 · 3,621 | 3 · 739 · 11,599 | 3 · 1,393 · 13,000 † | −69% | −72% |
+| `stack-merge` | 1 | 2 · 320 · 7,033 | 6 · 857 · 21,296 | 6 · 1,775 · 23,784 | −67% | −70% |
 
 - ✂ marks a baseline call whose output the host truncated.
 - † marks a baseline that cannot finish the step with its tools. Its cost covers only what it can do.
@@ -106,7 +106,7 @@ Each cell is `turns · tool tokens · cost (ITE)`. Saving columns compare cost.
 - `merge-queue` — Enqueue a ready PR on a merge-queue branch. `gh pr merge` enqueues on its own. The REST merge behind MCP's merge_pull_request is refused on a queue branch, and the GitHub MCP server has no enqueue tool. †GitHub MCP: cannot enqueue.
 - `stack-setup` — One-time setup. Skill + Review-mutation mechanics, Shepherd Journal, Stack merge playbooks for shepherd; list_pull_requests, merge_pull_request, pull_request_read schemas for MCP; nothing for gh.
 - `stack-work` — Six-layer stack: two merged parents, four owned layers with work. Fixture 130, from a real vouchington stack. Shepherd's overview routes four one-PR sessions, whose first ticks are counted here.
-- `stack-queue-wait` — Two-layer stack waiting in the merge queue. Fixture 98. Nothing to do but recheck.
+- `stack-queue-wait` — Two-layer stack waiting in the merge queue. Fixture 98. Nothing to do but recheck. The gh arm reads each layer's `mergeQueueEntry` in its thread query; the GitHub MCP server exposes no merge-queue state. †GitHub MCP: cannot see merge-queue membership.
 - `stack-merge` — Merge a ready two-layer stack. Fixture 97. Shepherd prints one `gh stack merge`. Without the extension, a baseline merges bottom-up and waits for GitHub to retarget the next layer.
 
 ## Model

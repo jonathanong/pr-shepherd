@@ -26,8 +26,9 @@ import { formatMutateResult } from "../../src/cli/mutate-formatter.mts";
 import { buildLogExcerpt } from "../../src/checks/log-excerpt.mts";
 import {
   REPO_ROOT,
-  GH_THREADS_CMD,
-  GH_VIEW_CMD,
+  fixtureCommentId,
+  ghThreadsCmd,
+  ghViewCmd,
   fixtureInput,
   fixtureState,
   ghAnnotations,
@@ -79,49 +80,62 @@ const ghObserve = (state, phase = 1) => [
   {
     phase,
     via: "bash",
-    cmd: GH_VIEW_CMD.replace("view 42", `view ${state.number}`),
+    cmd: ghViewCmd(state),
     out: ghPrView(state),
   },
   {
     phase,
     via: "bash",
-    cmd: GH_THREADS_CMD.replace("number: 42", `number: ${state.number}`),
+    cmd: ghThreadsCmd(state),
     out: ghThreads(state),
   },
 ];
 
-const mcpCall = (phase, tool, args, out) => ({
-  phase,
-  via: "mcp",
-  cmd: `${tool} ${JSON.stringify({ owner: "owner", repo: "repo", ...args })}`,
-  out,
-});
+const mcpCall = (phase, tool, args, out, repo = "owner/repo") => {
+  const [owner, name] = repo.split("/");
+  return {
+    phase,
+    via: "mcp",
+    cmd: `${tool} ${JSON.stringify({ owner, repo: name, ...args })}`,
+    out,
+  };
+};
 
 const mcpObserve = (state, phase = 1) => [
-  mcpCall(phase, "pull_request_read", { method: "get", pullNumber: state.number }, mcpGet(state)),
+  mcpCall(
+    phase,
+    "pull_request_read",
+    { method: "get", pullNumber: state.number },
+    mcpGet(state),
+    state.repo,
+  ),
   mcpCall(
     phase,
     "pull_request_read",
     { method: "get_check_runs", pullNumber: state.number },
     mcpCheckRuns(state),
+    state.repo,
   ),
   mcpCall(
     phase,
     "pull_request_read",
     { method: "get_review_comments", pullNumber: state.number },
     mcpReviewThreads(state),
+    state.repo,
   ),
   mcpCall(
     phase,
     "pull_request_read",
     { method: "get_reviews", pullNumber: state.number },
     mcpReviews(state),
+    state.repo,
   ),
   mcpCall(
     phase,
     "pull_request_read",
     { method: "get_comments", pullNumber: state.number },
     mcpComments(state),
+    state.repo,
   ),
 ];
 
@@ -153,12 +167,14 @@ const ghResolve = (threadId, phase = 2) => ({
 const mcpResolve = (threadId, phase = 2) =>
   mcpCall(phase, "resolve_review_thread", { threadId }, "review thread resolved successfully");
 
-const mcpMerge = (pullNumber, sha, phase = 2) =>
+// Guarded like shepherd's `--match-head-commit`: refuse a head the agent did not see.
+const mcpMerge = (pullNumber, sha, { phase = 2, method = "merge", repo } = {}) =>
   mcpCall(
     phase,
     "merge_pull_request",
-    { pullNumber, merge_method: "merge" },
+    { pullNumber, merge_method: method, expectedHeadSha: sha },
     JSON.stringify({ sha, merged: true, message: "Pull Request successfully merged" }),
+    repo,
   );
 
 // --- the real CI failure ----------------------------------------------------
@@ -414,8 +430,8 @@ const PR_SCENARIOS = [
       const text = snapshot(fixture);
       return {
         shepherd: [shepherdTick(text), shepherdApply(text, { repliedThreads: ["PRRT_active"] })],
-        gh: [...ghObserve(state), ghReply(1)],
-        mcp: [...mcpObserve(state), mcpReply(1)],
+        gh: [...ghObserve(state), ghReply(fixtureCommentId(0))],
+        mcp: [...mcpObserve(state), mcpReply(fixtureCommentId(0))],
       };
     },
   },
@@ -431,8 +447,8 @@ const PR_SCENARIOS = [
       const text = snapshot(fixture);
       return {
         shepherd: [shepherdTick(text), shepherdApply(text, { repliedThreads: ["PRRT_active"] })],
-        gh: [...ghObserve(state), ghReply(1)],
-        mcp: [...mcpObserve(state), mcpReply(1)],
+        gh: [...ghObserve(state), ghReply(fixtureCommentId(0))],
+        mcp: [...mcpObserve(state), mcpReply(fixtureCommentId(0))],
       };
     },
   },
@@ -444,16 +460,27 @@ const PR_SCENARIOS = [
     note: "The output has no log excerpt, so the CI-triage playbook sends every arm to the failed log. All three read the real log from `failing-check`.",
     arms() {
       const fixture = "54-fix-code-multi-category-threads-comments-checks-changes";
-      const state = fixtureState(fixture);
-      const text = snapshot(fixture);
+      // The fixture's run 5401 becomes the recorded run, so the log every arm
+      // fetches belongs to the failure the output shows.
+      const recorded = (t) => t.replace(/\b5401\b/g, String(RUN_ID));
+      const raw = fixtureState(fixture);
+      const state = {
+        ...raw,
+        checks: raw.checks.map((c) => ({
+          ...c,
+          runId: recorded(c.runId),
+          detailsUrl: recorded(c.detailsUrl),
+        })),
+      };
+      const text = recorded(snapshot(fixture));
       return {
         shepherd: [
           shepherdTick(text),
           ghLogCall(2),
           shepherdApply(text, { repliedThreads: ["PRRT_multi"] }, 3),
         ],
-        gh: [...ghObserve(state), ghLogCall(2), ghReply(54, 3)],
-        mcp: [...mcpObserve(state), ...mcpLogCalls(2), mcpReply(54, 4)],
+        gh: [...ghObserve(state), ghLogCall(2), ghReply(fixtureCommentId(0), 3)],
+        mcp: [...mcpObserve(state), ...mcpLogCalls(2), mcpReply(fixtureCommentId(0), 4)],
       };
     },
   },
@@ -523,12 +550,12 @@ const PR_SCENARIOS = [
         ],
         gh: [
           ...ghObserve(state),
-          ...threads.map((_, i) => ghReply(i + 1)),
+          ...threads.map((_, i) => ghReply(fixtureCommentId(i))),
           ...bots.map((id) => ghResolve(id)),
         ],
         mcp: [
           ...mcpObserve(state),
-          ...threads.map((_, i) => mcpReply(i + 1)),
+          ...threads.map((_, i) => mcpReply(fixtureCommentId(i))),
           ...bots.map((id) => mcpResolve(id)),
         ],
       };
@@ -604,7 +631,12 @@ const PR_SCENARIOS = [
         ],
         gh: [
           ...ghObserve(state),
-          { phase: 2, via: "bash", cmd: "gh pr merge 42 --merge", out: merged },
+          {
+            phase: 2,
+            via: "bash",
+            cmd: `gh pr merge 42 --match-head-commit ${state.headRefOid} --merge`,
+            out: merged,
+          },
         ],
         mcp: [...mcpObserve(state), mcpMerge(42, state.headRefOid)],
       };
@@ -632,13 +664,21 @@ const PR_SCENARIOS = [
             out: queued,
           },
         ],
-        gh: [...ghObserve(state), { phase: 2, via: "bash", cmd: "gh pr merge 42", out: queued }],
+        gh: [
+          ...ghObserve(state),
+          {
+            phase: 2,
+            via: "bash",
+            cmd: `gh pr merge 42 --match-head-commit ${state.headRefOid}`,
+            out: queued,
+          },
+        ],
         mcp: [
           ...mcpObserve(state),
           mcpCall(
             2,
             "merge_pull_request",
-            { pullNumber: 42, merge_method: "merge" },
+            { pullNumber: 42, merge_method: "merge", expectedHeadSha: state.headRefOid },
             "failed to merge pull request: PUT https://api.github.com/repos/owner/repo/pulls/42/merge: 405 Changes must be made through the merge queue []",
           ),
         ],
@@ -656,7 +696,8 @@ const PR_SCENARIOS = [
 //
 // Each open layer's GitHub content comes from the single-PR fixture that
 // matches its row: a conflicting layer reads like fixture 27, a layer with
-// review work like fixture 16, any other open layer like the clean fixture 64.
+// review work like fixture 16, a queued layer like fixture 66, any other open
+// layer like the clean fixture 64.
 // Where pr-shepherd routes a layer to a one-PR session, that session's first
 // tick reads the same fixture, so both arms pay for the same per-layer read.
 
@@ -666,12 +707,14 @@ function layerFixture(layer) {
   if (layer.state !== "OPEN") return null;
   if (layer.reasons?.includes("merge-conflicts")) return "27-fix-code-conflicts";
   if (layer.reasons?.includes("review-work")) return "16-fix-code-review-thread";
+  if (layer.reasons?.includes("already-in-merge-queue")) return "66-wait-merge-queue-active";
   return "64-merge-ready-delay-elapsed";
 }
 
 function layerState(layer) {
   return {
     ...fixtureState(layerFixture(layer)),
+    repo: STACK_REPO(layer),
     number: layer.pr,
     headRefName: layer.headRefName,
     headRefOid: layer.headRefOid,
@@ -694,7 +737,7 @@ function ghDiscover(layers, anchor) {
     {
       phase: 1,
       via: "bash",
-      cmd: `gh pr view ${a.pr} --json ${GH_LIST_FIELDS}`,
+      cmd: `gh pr view ${a.pr} -R ${STACK_REPO(a)} --json ${GH_LIST_FIELDS}`,
       out: ghPrList([a]).slice(1, -1),
     },
   ];
@@ -703,7 +746,7 @@ function ghDiscover(layers, anchor) {
     calls.push({
       phase,
       via: "bash",
-      cmd: `gh pr list --head ${layers[i + 1].baseRefName} --state all --json ${GH_LIST_FIELDS}`,
+      cmd: `gh pr list -R ${STACK_REPO(a)} --head ${layers[i + 1].baseRefName} --state all --json ${GH_LIST_FIELDS}`,
       out: ghPrList([layers[i]]),
     });
     if (layers[i].baseRefName === "main") break;
@@ -713,7 +756,7 @@ function ghDiscover(layers, anchor) {
     calls.push({
       phase,
       via: "bash",
-      cmd: `gh pr list --base ${layers[i - 1].headRefName} --state all --json ${GH_LIST_FIELDS}`,
+      cmd: `gh pr list -R ${STACK_REPO(a)} --base ${layers[i - 1].headRefName} --state all --json ${GH_LIST_FIELDS}`,
       out: ghPrList(layers.slice(i, i + 1)),
     });
   }
@@ -728,12 +771,23 @@ function mcpDiscover(layers, anchor) {
       "list_pull_requests",
       { ...filter, state: "all", fields: ["number", "title", "state", "head", "base"] },
       mcpPrList(found),
+      STACK_REPO(a),
     );
   const calls = [
-    mcpCall(1, "pull_request_read", { method: "get", pullNumber: a.pr }, mcpGet(layerState(a))),
+    mcpCall(
+      1,
+      "pull_request_read",
+      { method: "get", pullNumber: a.pr },
+      mcpGet(layerState(a)),
+      STACK_REPO(a),
+    ),
   ];
   for (let i = anchor - 1, phase = 2; i >= 0; i--, phase++) {
-    calls.push(list(phase, { head: `owner:${layers[i + 1].baseRefName}` }, [layers[i]]));
+    calls.push(
+      list(phase, { head: `${STACK_REPO(a).split("/")[0]}:${layers[i + 1].baseRefName}` }, [
+        layers[i],
+      ]),
+    );
     if (layers[i].baseRefName === "main") break;
   }
   for (let i = anchor + 1, phase = 2; i <= layers.length; i++, phase++) {
@@ -801,7 +855,8 @@ const STACK_SCENARIOS = [
     session: "stack",
     weight: 2,
     title: "Two-layer stack waiting in the merge queue",
-    note: "Fixture 98. Nothing to do but recheck.",
+    note: "Fixture 98. Nothing to do but recheck. The gh arm reads each layer's `mergeQueueEntry` in its thread query; the GitHub MCP server exposes no merge-queue state.",
+    gaps: { mcp: "cannot see merge-queue membership" },
     arms() {
       const name = "98-aggregate-stack-merge-queue";
       const { layers, anchor, gh, mcp } = stackBaselines(name);
@@ -839,30 +894,44 @@ const STACK_SCENARIOS = [
         ],
         gh: [
           ...gh,
-          { phase: p, via: "bash", cmd: `gh pr merge ${lower.pr} --squash`, out: merged(lower) },
+          {
+            phase: p,
+            via: "bash",
+            cmd: `gh pr merge ${lower.pr} -R ${STACK_REPO(lower)} --match-head-commit ${lower.headRefOid} --squash`,
+            out: merged(lower),
+          },
           {
             phase: p + 1,
             via: "bash",
-            cmd: `gh pr view ${upper.pr} --json baseRefName,mergeStateStatus`,
+            cmd: `gh pr view ${upper.pr} -R ${STACK_REPO(upper)} --json baseRefName,mergeStateStatus`,
             out: JSON.stringify({ baseRefName: "main", mergeStateStatus: "CLEAN" }),
           },
           {
             phase: p + 2,
             via: "bash",
-            cmd: `gh pr merge ${upper.pr} --squash`,
+            cmd: `gh pr merge ${upper.pr} -R ${STACK_REPO(upper)} --match-head-commit ${upper.headRefOid} --squash`,
             out: merged(upper),
           },
         ],
         mcp: [
           ...mcp,
-          mcpMerge(lower.pr, lower.headRefOid, q),
+          mcpMerge(lower.pr, lower.headRefOid, {
+            phase: q,
+            method: "squash",
+            repo: STACK_REPO(lower),
+          }),
           mcpCall(
             q + 1,
             "pull_request_read",
             { method: "get", pullNumber: upper.pr },
             mcpGet({ ...layerState(upper), baseRefName: "main" }),
+            STACK_REPO(upper),
           ),
-          mcpMerge(upper.pr, upper.headRefOid, q + 2),
+          mcpMerge(upper.pr, upper.headRefOid, {
+            phase: q + 2,
+            method: "squash",
+            repo: STACK_REPO(upper),
+          }),
         ],
       };
     },

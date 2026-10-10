@@ -61,6 +61,7 @@ export const snapshot = (name) =>
 // Mirrors DEFAULT_BATCH in test-helpers/test-cases/harness.mts: the fields a
 // fixture leaves out take these values when its snapshot is generated.
 const DEFAULT_BATCH = {
+  repo: "owner/repo",
   number: 42,
   state: "OPEN",
   isDraft: false,
@@ -124,10 +125,23 @@ const ghStatus = (c) => (c.status === "COMPLETED" ? "COMPLETED" : c.status);
 const CHECK_STARTED = "2026-10-02T05:08:20Z";
 const CHECK_COMPLETED = "2026-10-02T05:09:30Z";
 
+/**
+ * The numeric REST ID of fixture thread `i`'s root comment. Fixture URLs carry
+ * readable anchors (`#discussion_r45_bot`), so the baselines get numeric IDs
+ * and matching URLs, the only form a REST reply accepts.
+ */
+export const fixtureCommentId = (i) => 1000 + i;
+
 /** Normalize a fixture thread (one root comment) and a history thread (many). */
-const threadComments = (t) =>
+const threadComments = (t, i, state) =>
   t.comments ?? [
-    { id: 1, author: t.author, body: t.body, url: t.url, createdAt: ISO(t.createdAtUnix) },
+    {
+      id: fixtureCommentId(i),
+      author: t.author,
+      body: t.body,
+      url: `https://github.com/${state.repo}/pull/${state.number}#discussion_r${fixtureCommentId(i)}`,
+      createdAt: ISO(t.createdAtUnix),
+    },
   ];
 
 /** All reviews a baseline sees: open changes-requested, summaries, history. */
@@ -153,7 +167,8 @@ const [workflowOf, jobOf] = [
 const GH_VIEW_FIELDS =
   "state,isDraft,mergeable,mergeStateStatus,reviewDecision,headRefOid,baseRefName,statusCheckRollup,reviews,comments";
 
-export const GH_VIEW_CMD = `gh pr view 42 --json ${GH_VIEW_FIELDS}`;
+export const ghViewCmd = (state) =>
+  `gh pr view ${state.number} -R ${state.repo} --json ${GH_VIEW_FIELDS}`;
 
 export function ghPrView(state) {
   return JSON.stringify({
@@ -201,22 +216,29 @@ export function ghPrView(state) {
   });
 }
 
-export const GH_THREADS_CMD = `gh api graphql -f query='query { repository(owner: "owner", name: "repo") { pullRequest(number: 42) { reviewThreads(first: 100) { nodes { id isResolved isOutdated path line comments(first: 50) { nodes { databaseId author { login } body url } } } } } } }'`;
+// `gh pr view --json` has no merge-queue field, so the thread query asks for it.
+export const ghThreadsCmd = (state) => {
+  const [owner, name] = state.repo.split("/");
+  return `gh api graphql -f query='query { repository(owner: "${owner}", name: "${name}") { pullRequest(number: ${state.number}) { mergeQueueEntry { position state } reviewThreads(first: 100) { nodes { id isResolved isOutdated path line comments(first: 50) { nodes { databaseId author { login } body url } } } } } } }'`;
+};
 
 export function ghThreads(state) {
   return JSON.stringify({
     data: {
       repository: {
         pullRequest: {
+          mergeQueueEntry: state.mergeQueueEntry
+            ? { position: state.mergeQueueEntry.position, state: state.mergeQueueEntry.state }
+            : null,
           reviewThreads: {
-            nodes: state.reviewThreads.map((t) => ({
+            nodes: state.reviewThreads.map((t, i) => ({
               id: t.id,
               isResolved: t.isResolved,
               isOutdated: t.isOutdated,
               path: t.path,
               line: t.line ?? null,
               comments: {
-                nodes: threadComments(t).map((c) => ({
+                nodes: threadComments(t, i, state).map((c) => ({
                   databaseId: c.id,
                   author: { login: c.author },
                   body: c.body,
@@ -333,18 +355,18 @@ export function mcpGet(state) {
     draft: state.isDraft,
     merged,
     mergeable_state: state.mergeStateStatus.toLowerCase(),
-    html_url: "https://github.com/owner/repo/pull/42",
+    html_url: `https://github.com/${state.repo}/pull/${state.number}`,
     user: mcpUser("author"),
     labels: [],
     head: {
       ref: state.headRefName,
       sha: state.headRefOid,
-      repo: { full_name: "owner/repo", description: "Example repository" },
+      repo: { full_name: state.repo, description: "Example repository" },
     },
     base: {
       ref: state.baseRefName,
       sha: "base123",
-      repo: { full_name: "owner/repo", description: "Example repository" },
+      repo: { full_name: state.repo, description: "Example repository" },
     },
     additions: 120,
     deletions: 30,
@@ -374,8 +396,8 @@ export function mcpCheckRuns(state) {
 
 export function mcpReviewThreads(state) {
   return JSON.stringify({
-    review_threads: state.reviewThreads.map((t) => {
-      const comments = threadComments(t);
+    review_threads: state.reviewThreads.map((t, i) => {
+      const comments = threadComments(t, i, state);
       return {
         id: t.id,
         is_resolved: t.isResolved,
@@ -502,13 +524,18 @@ export function capped(call) {
  * spend would buy in uncached input tokens.
  *
  * Calls are grouped into phases. One phase is one model turn: the model emits
- * every call in the phase in parallel, then reads all their results. A run of
- * P phases makes P + 1 requests (the last one reads the final results). Each
- * request re-reads the context so far from cache and writes the tokens added
- * since the previous request to cache.
+ * every call in the phase in parallel, then reads all their results. Each
+ * phase costs one request, which re-reads the context so far from cache and
+ * writes the tokens added since the previous request to cache.
  *
- * `extraContext` is carried on every request, e.g. tool schemas a host loads
- * up front.
+ * The request that reads a run's last results is the one that emits the next
+ * run's first calls, so it is charged there, as the next run's first request.
+ * This run pays only the cache write of its last results. Charging a read on
+ * both sides of that boundary would add one base-context read per scenario to
+ * every arm.
+ *
+ * `extraContext` is carried on every request: setup output that stays in
+ * context, or tool schemas a host loads up front.
  */
 export function cost(calls, { extraContext = 0 } = {}) {
   const phases = [...new Set(calls.map((c) => c.phase))].sort((a, b) => a - b);
@@ -532,9 +559,7 @@ export function cost(calls, { extraContext = 0 } = {}) {
       pending += t.cmdTokens + t.outTokens;
     }
   }
-  if (phases.length === 0) return { calls: 0, turns: 0, toolTokens: 0, ite: 0, truncated: 0 };
-  // Final request reads the last results.
-  ite += MODEL.cacheReadMultiplier * context + MODEL.cacheWriteMultiplier * pending;
+  ite += MODEL.cacheWriteMultiplier * pending;
   return {
     calls: calls.length,
     turns: phases.length,
