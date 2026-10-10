@@ -16,6 +16,7 @@ node evals/analyze.mjs <results-dir-a> <results-dir-b>   # compare two tiers
 node evals/analyze.mjs --summary <results-dir>           # paste-ready summary of one run
 node evals/analyze.mjs --calibrate <results-dir>         # measured tokens vs. the bench's 3.5 chars/token
 node evals/analyze.mjs --calibrate <results-dir> --write # also record it for evals/tokens/REPORT.md
+node evals/analyze.mjs --instructions-ablation <inline-dir> <playbook-dir>  # see "Ablation: inline vs playbook instructions"
 ```
 
 ### Reading a result
@@ -58,8 +59,8 @@ Each case carries `tier:discriminating` or `tier:guard` in its tags, set in
   regression. One run each is a cheap sweep.
 
 `EVAL_RUNS_DISCRIMINATING` and `EVAL_RUNS_GUARD` override the per-case `runs`
-(a case's own `runs`, else 3) at generation time. Regenerate, run, then regenerate without the variables so
-the tree matches the committed cases:
+(a case's own `runs`, else 3) at generation time. Regenerate, run, then
+regenerate without the variables so the tree matches the committed cases:
 
 ```sh
 # Targeted run: signal where it matters, one regression look elsewhere.
@@ -414,6 +415,8 @@ that has a `-playbook` snapshot, such as after a narrower `--case` filter. It bl
 the drift check, since only that section differs. Replayed history, including
 its inline `## Instructions`, the rest of each prompt, graders,
 run config, agent model, judge and plugin version must still match. The inline arm's cost line covers its whole run.
+Generate both arms with the same `EVAL_RUNS_*` overrides (or none), because the
+run count is part of that check.
 
 Without `--instructions`, the generator's output is unchanged.
 
