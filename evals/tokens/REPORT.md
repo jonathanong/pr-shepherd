@@ -14,20 +14,29 @@ Weighted sum of the session's scenarios below, one-time setup included.
 | GitHub MCP | −77% | −60% | −87% | −72% |
 | GitHub MCP, eager tools | −77% | −59% | −87% | −77% |
 
-Per tick, setup excluded:
-
-| vs. baseline | tool calls | turns | tool tokens | cost (ITE) |
-| --- | --- | --- | --- | --- |
-| gh CLI | −53% | −19% | −78% | −45% |
-| GitHub MCP | −82% | −64% | −90% | −76% |
-| GitHub MCP, eager tools | −82% | −64% | −90% | −80% |
-
 | arm | tool calls | turns | tool tokens | cost (ITE) | truncated calls |
 | --- | --- | --- | --- | --- | --- |
 | pr-shepherd | 18.8 | 16.8 | 11,485 | 71,446 | 0 |
 | gh CLI | 31.3 | 18.3 | 39,394 | 111,401 | 0 |
 | GitHub MCP | 82.3 | 42.3 | 90,992 | 259,340 | 1.5 |
 | GitHub MCP, eager tools | 81.3 | 41.3 | 89,098 | 308,451 | 1.5 |
+
+### Fixed vs. variable
+
+Fixed is setup (skill and playbooks, or MCP tool schemas) plus carrying it in context on every later request. Variable is the steps themselves, with nothing carried.
+
+| arm | fixed tokens | fixed ITE | variable tokens | variable ITE | total ITE |
+| --- | --- | --- | --- | --- | --- |
+| pr-shepherd | 3,006 | 14,396 | 8,479 | 57,050 | 71,446 |
+| gh CLI | 0 | 0 | 39,394 | 111,401 | 111,401 |
+| GitHub MCP | 1,894 | 13,404 | 89,098 | 245,936 | 259,340 |
+| GitHub MCP, eager tools | 0 | 62,515 | 89,098 | 245,936 | 308,451 |
+
+| vs. baseline | fixed ITE | variable tokens | variable ITE | total ITE |
+| --- | --- | --- | --- | --- |
+| gh CLI | +14,396 | −78% | −49% | −36% |
+| GitHub MCP | +992 | −90% | −77% | −72% |
+| GitHub MCP, eager tools | −48,119 | −90% | −77% | −77% |
 
 ## Typical stack session
 
@@ -39,20 +48,29 @@ Weighted sum of the session's scenarios below, one-time setup included.
 | GitHub MCP | −80% | −64% | −35% | −63% |
 | GitHub MCP, eager tools | −80% | −63% | −27% | −71% |
 
-Per tick, setup excluded:
-
-| vs. baseline | tool calls | turns | tool tokens | cost (ITE) |
-| --- | --- | --- | --- | --- |
-| gh CLI | −61% | −46% | −7% | −46% |
-| GitHub MCP | −84% | −71% | −49% | −70% |
-| GitHub MCP, eager tools | −84% | −71% | −49% | −78% |
-
 | arm | tool calls | turns | tool tokens | cost (ITE) | truncated calls |
 | --- | --- | --- | --- | --- | --- |
 | pr-shepherd | 17 | 9 | 7,086 | 39,119 | 0 |
 | gh CLI | 33 | 13 | 5,272 | 55,402 | 0 |
 | GitHub MCP | 84 | 25 | 10,876 | 105,584 | 0 |
 | GitHub MCP, eager tools | 83 | 24 | 9,684 | 134,511 | 0 |
+
+### Fixed vs. variable
+
+Fixed is setup (skill and playbooks, or MCP tool schemas) plus carrying it in context on every later request. Variable is the steps themselves, with nothing carried.
+
+| arm | fixed tokens | fixed ITE | variable tokens | variable ITE | total ITE |
+| --- | --- | --- | --- | --- | --- |
+| pr-shepherd | 2,189 | 10,462 | 4,897 | 28,657 | 39,119 |
+| gh CLI | 0 | 0 | 5,272 | 55,402 | 55,402 |
+| GitHub MCP | 1,192 | 7,446 | 9,684 | 98,138 | 105,584 |
+| GitHub MCP, eager tools | 0 | 36,373 | 9,684 | 98,138 | 134,511 |
+
+| vs. baseline | fixed ITE | variable tokens | variable ITE | total ITE |
+| --- | --- | --- | --- | --- |
+| gh CLI | +10,462 | −7% | −48% | −29% |
+| GitHub MCP | +3,016 | −49% | −71% | −63% |
+| GitHub MCP, eager tools | −25,911 | −49% | −71% | −71% |
 
 ## Scenarios
 
@@ -99,7 +117,7 @@ Each cell is `turns · tool tokens · cost (ITE)`. Saving columns compare cost.
 - `multi-category` — Thread, comment, failing check and changes-requested review at once. The output has no log excerpt, so the CI-triage playbook sends every arm to the failed log. All three read the real log from `failing-check`.
 - `mark-ready` — Mark a clean draft ready. With #505's history. Under --until-terminal the shepherd poll marks the PR ready and keeps polling without returning, so shepherd spends no call here.
 - `merged` — Notice the PR merged and stop. With #505's history.
-- `bot-threads` — Reply to one human and two bot threads, resolve the bot ones. Five mutations. Shepherd batches them into one `apply review`; the baselines issue each one. A REST reply echoes the full comment object back.
+- `bot-threads` — Reply to one human and two bot threads, resolve the bot ones. Five mutations. Shepherd batches them into one `apply review`; the baselines issue each one, gh with `gh api --silent`.
 - `check-annotations` — Failing external check with line annotations. gh must find the check-run ID, then fetch its annotations. The GitHub MCP server has no annotations tool. †GitHub MCP: cannot read check annotations.
 - `conflicts` — Branch conflicts with its base. Shepherd also relays the repository's configured branch-update hint.
 - `merge` — Merge a ready PR. Half of sessions run with --merge. Shepherd prints the guarded merge command.

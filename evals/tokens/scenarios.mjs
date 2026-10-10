@@ -538,7 +538,7 @@ const PR_SCENARIOS = [
     id: "bot-threads",
     weight: 1,
     title: "Reply to one human and two bot threads, resolve the bot ones",
-    note: "Five mutations. Shepherd batches them into one `apply review`; the baselines issue each one. A REST reply echoes the full comment object back.",
+    note: "Five mutations. Shepherd batches them into one `apply review`; the baselines issue each one, gh with `gh api --silent`.",
     arms() {
       const fixture = "45-fix-code-bot-threads-resolve-human-reply";
       const state = fixtureState(fixture);

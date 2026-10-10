@@ -42,6 +42,11 @@ const rows = SCENARIOS.map((s) => {
   // Sensitivity: the whole GitHub toolset in context on every request instead
   // of the few schemas the setup scenario loads on demand.
   result.mcpEager = s.setup ? cost([]) : cost(arms.mcp, { extraContext: eagerTokens });
+  // The same step with nothing carried in context: its variable cost. The rest
+  // of the row (all of a setup row) is fixed cost: setup, and keeping it in
+  // context on every request.
+  const bare = Object.fromEntries(ARMS.map((a) => [a, s.setup ? cost([]) : cost(arms[a])]));
+  bare.mcpEager = s.setup ? cost([]) : cost(arms.mcp);
   return {
     id: s.id,
     session: s.session,
@@ -51,6 +56,7 @@ const rows = SCENARIOS.map((s) => {
     gaps: s.gaps ?? {},
     weight: s.weight,
     ...result,
+    variable: bare,
   };
 });
 
@@ -74,6 +80,29 @@ function totals(sessionRows) {
   );
 }
 
+/** Split a session's cost into fixed (setup and its carriage) and variable. */
+function split(sessionRows) {
+  return Object.fromEntries(
+    [...ARMS, "mcpEager"].map((a) => {
+      const sum = (pick) => Math.round(sessionRows.reduce((t, r) => t + r.weight * pick(r), 0));
+      const totalIte = sum((r) => r[a].ite);
+      const variableIte = sum((r) => r.variable[a].ite);
+      const totalTokens = sum((r) => r[a].toolTokens);
+      const variableTokens = sum((r) => r.variable[a].toolTokens);
+      return [
+        a,
+        {
+          fixedTokens: totalTokens - variableTokens,
+          fixedIte: totalIte - variableIte,
+          variableTokens,
+          variableIte,
+          totalIte,
+        },
+      ];
+    }),
+  );
+}
+
 /** Fraction of the baseline that pr-shepherd saves; negative means it costs more. */
 const saving = (base, ours) => (base === 0 ? (ours === 0 ? 0 : -Infinity) : 1 - ours / base);
 
@@ -83,10 +112,6 @@ const sessions = Object.fromEntries(
   Object.keys(SESSIONS).map((key) => {
     const sessionRows = rows.filter((r) => r.session === key);
     const total = totals(sessionRows);
-    // Ticks exclude setup, which is paid once per session. A ratio of weighted
-    // sums weights each scenario by how often it occurs and by its baseline
-    // cost, so the figure is the share of tick spend pr-shepherd removes.
-    const ticks = totals(sessionRows.filter((r) => !r.setup));
     const summary = Object.fromEntries(
       BASELINE_KEYS.map((b) => [
         b,
@@ -94,13 +119,10 @@ const sessions = Object.fromEntries(
           session: Object.fromEntries(
             METRICS.map((m) => [m, saving(total[b][m], total.shepherd[m])]),
           ),
-          perTick: Object.fromEntries(
-            METRICS.map((m) => [m, saving(ticks[b][m], ticks.shepherd[m])]),
-          ),
         },
       ]),
     );
-    return [key, { total, summary }];
+    return [key, { total, summary, split: split(sessionRows) }];
   }),
 );
 
@@ -116,6 +138,7 @@ const pct = (f) => {
   const n = Math.round(f * 100);
   return n === 0 ? "0%" : `${n > 0 ? "−" : "+"}${Math.abs(n)}%`;
 };
+const signed = (n) => (n === 0 ? "0" : `${n > 0 ? "+" : "−"}${num(Math.abs(n))}`);
 const num = (n) => n.toLocaleString("en-US", { maximumFractionDigits: 1 });
 const BASELINES = { gh: "gh CLI", mcp: "GitHub MCP", mcpEager: "GitHub MCP, eager tools" };
 
@@ -142,21 +165,43 @@ out(
 out();
 
 for (const [key, title] of Object.entries(SESSIONS)) {
-  const { total, summary } = sessions[key];
+  const { total, summary, split: parts } = sessions[key];
   out(`## ${title}`);
   out();
   out("Weighted sum of the session's scenarios below, one-time setup included.");
   out();
   savingTable(Object.fromEntries(BASELINE_KEYS.map((b) => [b, summary[b].session])));
-  out("Per tick, setup excluded:");
-  out();
-  savingTable(Object.fromEntries(BASELINE_KEYS.map((b) => [b, summary[b].perTick])));
   out("| arm | tool calls | turns | tool tokens | cost (ITE) | truncated calls |");
   out("| --- | --- | --- | --- | --- | --- |");
   for (const [a, label] of Object.entries({ shepherd: "pr-shepherd", ...BASELINES })) {
     const s = total[a];
     out(
       `| ${label} | ${num(s.calls)} | ${num(s.turns)} | ${num(s.toolTokens)} | ${num(s.ite)} | ${num(s.truncated)} |`,
+    );
+  }
+  out();
+  out("### Fixed vs. variable");
+  out();
+  out(
+    "Fixed is setup (skill and playbooks, or MCP tool schemas) plus carrying it in context on every later request. Variable is the steps themselves, with nothing carried.",
+  );
+  out();
+  out("| arm | fixed tokens | fixed ITE | variable tokens | variable ITE | total ITE |");
+  out("| --- | --- | --- | --- | --- | --- |");
+  for (const [a, label] of Object.entries({ shepherd: "pr-shepherd", ...BASELINES })) {
+    const p = parts[a];
+    out(
+      `| ${label} | ${num(p.fixedTokens)} | ${num(p.fixedIte)} | ${num(p.variableTokens)} | ${num(p.variableIte)} | ${num(p.totalIte)} |`,
+    );
+  }
+  out();
+  out("| vs. baseline | fixed ITE | variable tokens | variable ITE | total ITE |");
+  out("| --- | --- | --- | --- | --- |");
+  for (const [b, label] of Object.entries(BASELINES)) {
+    const ours = parts.shepherd;
+    const base = parts[b];
+    out(
+      `| ${label} | ${signed(ours.fixedIte - base.fixedIte)} | ${pct(saving(base.variableTokens, ours.variableTokens))} | ${pct(saving(base.variableIte, ours.variableIte))} | ${pct(saving(base.totalIte, ours.totalIte))} |`,
     );
   }
   out();

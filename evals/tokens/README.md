@@ -158,6 +158,46 @@ These are assumptions, not measurements. See "Next steps".
   asynchronous merge plus a poll, where pr-shepherd prints one
   `gh stack merge`.
 
+## Fixed vs. variable cost
+
+The report splits each session's cost in two:
+
+- **Fixed:** setup, plus carrying it in context on every later request.
+  - pr-shepherd: the skill and the playbooks the outputs name.
+  - MCP: the tool schemas.
+  - gh: nothing.
+- **Variable:** the steps themselves, costed with nothing carried.
+
+| session | pr-shepherd fixed share | variable tokens vs. gh | variable cost vs. gh |
+| ------- | ----------------------- | ---------------------- | -------------------- |
+| PR      | 20% of its cost         | −78%                   | −49%                 |
+| stack   | 27% of its cost         | −7%                    | −48%                 |
+
+The stack session's "+34% tool tokens vs. gh" is all fixed cost. pr-shepherd
+loads about 2.2k tokens of skill and playbooks, and gh loads nothing. On
+variable tokens alone pr-shepherd reads 7% less than gh.
+
+Within the variable cost, `stack-work` is where pr-shepherd reads more than gh:
+2,254 tokens against 1,644.
+
+- **Overview:** pr-shepherd's stack overview is about 600 tokens. gh's native
+  stacks call is about 350.
+- **Routed layers:** each layer pr-shepherd routes gets its own one-PR tick of
+  about 450 tokens. About 250 of those are the fixed `## Instructions` block and
+  60 the post-fix commands. gh's per-layer reads are 100–250 tokens, because the
+  fixture layers each carry a single short thread.
+
+So on small layers, the per-output instruction boilerplate outweighs the
+content. pr-shepherd still costs 9% less on that row, because its commands are
+shorter (output tokens cost 5×). It pulls ahead once layers carry real review
+history, which gh re-reads and pr-shepherd shows once.
+
+The levers, in order of size:
+
+1. Trim the invariant instruction text that every routed one-PR tick repeats.
+2. Shrink SKILL.md, which is most of the fixed cost.
+3. Tighten the stack overview.
+
 ## Where pr-shepherd does not save
 
 - **Setup.** The skill and every playbook the session's outputs name cost
