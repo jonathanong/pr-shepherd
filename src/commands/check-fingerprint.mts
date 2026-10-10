@@ -65,14 +65,17 @@ export async function fingerprintReuser(
   if (!fingerprintIsComplete(cached.fingerprint)) return undefined;
   return async (live) => {
     if (!fingerprintIsComplete(live) || !fingerprintsEqual(cached.fingerprint, live)) return null;
-    if (
-      !(await cachedReportSurvivesMergeabilityRefresh(
+    try {
+      const survives = await cachedReportSurvivesMergeabilityRefresh(
         prNumber,
         repo,
         cached.report,
         cached.fingerprint,
-      ))
-    ) {
+      );
+      if (!survives) return null;
+    } catch {
+      // This REST read runs inside the GraphQL BatchPr operation. Its failure must not read as a
+      // GraphQL failure (which could switch transports), so build the full snapshot instead.
       return null;
     }
     return {

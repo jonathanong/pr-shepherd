@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { serve, repo, wire } from "../../test-helpers/github/rest-read.test-support.mts";
+import { serve, repo, wire, pull } from "../../test-helpers/github/rest-read.test-support.mts";
 import { makeRawPr, makeResponse } from "../../test-helpers/github/batch-fixtures.mts";
 import { freshLoadConfig } from "../../test-helpers/config/load-test-support.mts";
 import { runIterate } from "../commands/iterate/index.mts";
-import { runWithGithubTransport } from "./transport.mts";
+import { getGithubTransport, runWithGithubTransport } from "./transport.mts";
 
 /**
  * GraphQL requests per wait tick, measured at the HTTP boundary. BatchPr's first page carries
@@ -15,6 +15,8 @@ interface PrState {
   updatedAt: string;
   threadComments: number;
   state: string;
+  mergeable?: string;
+  pullFailures?: number;
 }
 
 function pendingPr(state: PrState) {
@@ -30,6 +32,7 @@ function pendingPr(state: PrState) {
     number: 101,
     state: state.state,
     updatedAt: state.updatedAt,
+    ...(state.mergeable && { mergeable: state.mergeable, mergeStateStatus: state.mergeable }),
     headRefOid: "aaa111",
     baseRef: { rules: { pageInfo: { hasNextPage: false }, nodes: [] } },
     reviewThreads:
@@ -85,13 +88,19 @@ async function servePr(state: PrState) {
   await serve((request, response) => {
     if (request.path === "/graphql") {
       response.end(JSON.stringify(makeResponse(pendingPr(state), "me")));
+    } else if (request.path === "/repos/octocat/hello-world/pulls/101") {
+      if (state.pullFailures) {
+        state.pullFailures--;
+        response.statusCode = 503;
+      }
+      response.end(JSON.stringify({ ...pull, mergeable: null, mergeable_state: "unknown" }));
     } else response.end("[]");
   });
 }
 
-const tick = (fingerprintCache: boolean) =>
-  runWithGithubTransport("graphql", () =>
-    runIterate({
+const tick = (fingerprintCache: boolean, mode: "graphql" | "auto" = "graphql") =>
+  runWithGithubTransport(mode, async () => {
+    const report = await runIterate({
       prNumber: 101,
       targetRepository: repo,
       format: "json",
@@ -99,8 +108,9 @@ const tick = (fingerprintCache: boolean) =>
       stallTimeoutSeconds: 0,
       noAutoMarkReady: true,
       fingerprintCache,
-    }),
-  );
+    });
+    return { report, transport: getGithubTransport() };
+  });
 
 function operations(): string[] {
   return wire.requests.map((request) =>
@@ -110,10 +120,10 @@ function operations(): string[] {
   );
 }
 
-async function measure(fingerprintCache: boolean) {
+async function measure(fingerprintCache: boolean, mode: "graphql" | "auto" = "graphql") {
   wire.requests.length = 0;
-  const report = await tick(fingerprintCache);
-  return { report, operations: operations() };
+  const { report, transport } = await tick(fingerprintCache, mode);
+  return { report, transport, operations: operations() };
 }
 
 describe("GraphQL wait tick cost", () => {
@@ -151,6 +161,25 @@ describe("GraphQL wait tick cost", () => {
     expect(next.report.action).toBe("wait");
     expect(next.report).not.toHaveProperty("fingerprintReused");
     expect(next.operations).toEqual(["BatchPr"]);
+  });
+
+  it("keeps the GraphQL transport when the reuse mergeability read fails", async () => {
+    await freshLoadConfig();
+    const state: PrState = {
+      updatedAt: "2026-10-09T00:00:00Z",
+      threadComments: 0,
+      state: "OPEN",
+      mergeable: "UNKNOWN",
+    };
+    await servePr(state);
+    expect((await measure(false, "auto")).report.action).toBe("wait");
+    // Only the read inside BatchPr fails; the full snapshot's own refresh succeeds.
+    state.pullFailures = 1;
+    const next = await measure(true, "auto");
+    expect(next.report).not.toHaveProperty("fingerprintReused");
+    expect(next.transport).toBe("graphql");
+    expect(next.operations[0]).toBe("BatchPr");
+    expect(next.operations).toContain("GET /repos/octocat/hello-world/pulls/101");
   });
 
   it("reads a PR that merged since the last wait tick with one BatchPr request", async () => {

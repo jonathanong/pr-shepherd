@@ -305,6 +305,14 @@ describe("fingerprintReuser", () => {
     await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
   });
 
+  it("declines reuse instead of throwing when the REST mergeability read fails", async () => {
+    mockLoad.mockResolvedValue(
+      stored(waitReport({ status: "UNKNOWN", mergeStatus: unknownMerge() })),
+    );
+    mockMergeable.mockRejectedValueOnce(new Error("503 from /pulls/42"));
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+  });
+
   it("does not skip when REST reports the PR merged or closed", async () => {
     const report = waitReport({ status: "UNKNOWN", mergeStatus: unknownMerge() });
     mockLoad.mockResolvedValue(stored(report));
