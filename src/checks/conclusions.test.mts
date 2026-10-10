@@ -59,4 +59,13 @@ describe("canRerunWorkflows", () => {
   it("denies rerun capability when authorization is unknown", () => {
     expect(canRerunWorkflows(undefined)).toBe(false);
   });
+
+  it("allows an unknown REST role so GitHub decides the rerun", () => {
+    expect(canRerunWorkflows(undefined, "rest")).toBe(true);
+  });
+
+  it("keeps a reported role authoritative on REST", () => {
+    expect(canRerunWorkflows(auth("READ"), "rest")).toBe(false);
+    expect(canRerunWorkflows(auth(null), "rest")).toBe(false);
+  });
 });

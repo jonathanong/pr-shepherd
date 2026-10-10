@@ -63,10 +63,16 @@ describe("CLI instruction pointers name real pr-shepherd skill playbooks", () =>
     expect(dirs.length).toBeGreaterThan(0);
 
     const foundNames = new Set<string>();
-    const sources = dirs.map((dir) => ({
-      label: dir.name,
-      text: readFileSync(new URL(`${dir.name}/output.text.md`, snapshotsDir), "utf8"),
-    }));
+    // A fixture may be GraphQL-only, REST-only (no output.text.md), or both; REST snapshots
+    // exist only where REST output differs from GraphQL.
+    const sources = dirs.flatMap((dir) =>
+      readdirSync(new URL(`${dir.name}/`, snapshotsDir))
+        .filter((file) => file === "output.text.md" || file === "output.rest.text.md")
+        .map((file) => ({
+          label: `${dir.name}/${file}`,
+          text: readFileSync(new URL(`${dir.name}/${file}`, snapshotsDir), "utf8"),
+        })),
+    );
     const srcDir = new URL("src/", rootUrl);
     for (const file of readdirSync(srcDir, { recursive: true })) {
       if (

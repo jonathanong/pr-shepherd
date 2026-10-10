@@ -12,6 +12,8 @@ import { isReviewStale } from "./batch-parser-helpers.mts";
 import { readRest as rest, restRepoPath, restObject, restString } from "./rest-reader-core.mts";
 import { restLatestReviews, restPendingReviews } from "./rest-review-read.mts";
 import type { RestSnapshotContext } from "./rest-snapshot-context.mts";
+import { REST_BATCH_UNAVAILABLE } from "./rest-batch-unavailable.mts";
+
 export async function readRestSnapshot(
   pull: RestPull,
   repo: RepoInfo,
@@ -48,20 +50,7 @@ export async function readRestSnapshot(
   const transportUnavailable = [
     ...feedback.unavailable,
     ...rules.unavailable,
-    {
-      field: "reviewDecision",
-      reason:
-        "REST does not expose an aggregate review decision; latest review states are supplied",
-    },
-    { field: "viewerAuthorization", reason: "REST does not expose viewer capability fields" },
-    {
-      field: "comments.isMinimized",
-      reason: "REST does not expose minimization state or support minimizing comments",
-    },
-    {
-      field: "mergeQueue",
-      reason: "REST does not expose queue membership, entry or removal history",
-    },
+    ...REST_BATCH_UNAVAILABLE,
   ];
   const data: BatchPrData = {
     nodeId: pull.node_id,

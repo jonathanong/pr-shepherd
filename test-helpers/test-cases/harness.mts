@@ -12,6 +12,13 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import builtinConfig from "../../src/config.json" with { type: "json" };
 import { testFingerprint } from "../github/fingerprint-fixture.mts";
+import {
+  projectBatchToRest,
+  projectRawSummaryToRest,
+  projectSummaryItemToRest,
+  restBatchEnvelope,
+} from "./rest-projection.mts";
+import { restRoutesForFixture, stackLayerRows } from "./rest-routes.mts";
 
 // ---------------------------------------------------------------------------
 // Global stubs (evaluated before imports)
@@ -199,7 +206,36 @@ function rawSummaryForBatch(batchData: Record<string, any>): any {
 // Fixture type
 // ---------------------------------------------------------------------------
 
+/** GitHub transport a fixture variant runs under. See test-cases/README.md. */
+export type FixtureTransport = "graphql" | "rest";
+
+/**
+ * A documented REST-variant outcome that legitimately differs from the GraphQL variant's
+ * action, exit code, or aggregate reason/next action (e.g. READY evidence REST cannot supply).
+ */
+export interface RestDivergence {
+  action?: string;
+  exitCode?: number;
+  reason?: string;
+  nextAction?: string;
+  /** Why REST legitimately differs. Required: an unexplained divergence is a bug. */
+  why: string;
+}
+
 export interface Fixture {
+  /**
+   * Transports this fixture runs under. Defaults to both: the GraphQL variant uses the fixture
+   * as written; the REST variant projects it through rest-projection.mts. A REST-only fixture
+   * (`["rest"]`) has no GraphQL snapshot.
+   */
+  transports?: FixtureTransport[];
+  /**
+   * `batchData` keys kept through the REST projection because the scenario carries evidence a
+   * previous GraphQL read fetched before the process switched to REST.
+   */
+  restCarryOver?: string[];
+  /** Required when the REST variant's action/exit code/reason differs from the GraphQL one. */
+  restDivergence?: RestDivergence;
   /** GitHub repository for this fixture. Defaults to owner/repo. */
   repository?: { owner: string; name: string };
   /** Raw merged-base lookup rows for a conflicting PR with no native stack. */
@@ -419,30 +455,7 @@ function graphqlForBatch(
     };
   }
   const stack = batchData.stack ?? { number: 1, size: 1, position: 1, baseRefName: "main" };
-  const anchor = variables.anchor ?? batchData.number;
-  const layers = Array.from({ length: stack.size }, (_, index) => {
-    const position = index + 1;
-    return {
-      position,
-      number: position === stack.position ? anchor : 1000 + position,
-      headRefName: `layer-${position}`,
-      headRefOid: String(position).repeat(40).slice(0, 40),
-    };
-  });
-  const nodes = layers.map((layer, index) => {
-    const parent = index === 0 ? null : layers[index - 1];
-    return {
-      position: layer.position,
-      pullRequest: {
-        number: layer.number,
-        state: "OPEN",
-        headRefName: layer.headRefName,
-        headRefOid: layer.headRefOid,
-        baseRefName: parent ? parent.headRefName : stack.baseRefName,
-        baseRefOid: parent ? parent.headRefOid : "c".repeat(40),
-      },
-    };
-  });
+  const nodes = stackLayerRows(batchData, variables.anchor ?? batchData.number, stackTopology);
   return {
     data: {
       repository: {
@@ -454,7 +467,7 @@ function graphqlForBatch(
             size: stack.size,
             baseRefName: stack.baseRefName,
             entries: {
-              nodes: stackTopology ?? nodes,
+              nodes,
               pageInfo: { hasNextPage: false, endCursor: null },
             },
           },
@@ -464,7 +477,16 @@ function graphqlForBatch(
   };
 }
 
-export function applyFixture(fixture: Fixture): void {
+export function fixtureTransports(fixture: Fixture): FixtureTransport[] {
+  return fixture.transports ?? ["graphql", "rest"];
+}
+
+export function applyFixture(fixture: Fixture, transport: FixtureTransport = "graphql"): void {
+  const rest = transport === "rest";
+  // The REST variant models a Claude Code cloud session: complete CCR thread status and the
+  // CCR resolve/ready proxy routes. Cleared again by registerHarnessBefore's afterEach.
+  if (rest || fixture.claudeCodeRemote) process.env.CLAUDE_CODE_REMOTE = "true";
+  else delete process.env.CLAUDE_CODE_REMOTE;
   mockGetRepoInfo.mockResolvedValue(fixture.repository ?? { owner: "owner", name: "repo" });
   vi.mocked(readQueueRemovalAcknowledgment).mockResolvedValue(
     fixture.queueRemovalAcknowledgment ?? null,
@@ -486,8 +508,9 @@ export function applyFixture(fixture: Fixture): void {
   const batchData = fixture.batchData
     ? { ...DEFAULT_BATCH, ...fixture.batchData }
     : { ...DEFAULT_BATCH };
-  mockGraphqlWithRateLimit.mockImplementation((query: string, variables: { anchor?: number }) =>
-    Promise.resolve(
+  mockGraphqlWithRateLimit.mockImplementation((query: string, variables: { anchor?: number }) => {
+    if (rest) throw new Error(`REST fixture variant issued GraphQL: ${query.slice(0, 60)}`);
+    return Promise.resolve(
       graphqlForBatch(
         query,
         variables,
@@ -495,12 +518,15 @@ export function applyFixture(fixture: Fixture): void {
         fixture.baseBehindBy ?? 0,
         fixture.stackTopology,
       ),
-    ),
-  );
-  mockGraphql.mockResolvedValue({
-    data: {
-      repository: { pullRequests: { nodes: fixture.mergedBasePullRequests ?? [] } },
-    },
+    );
+  });
+  mockGraphql.mockImplementation(() => {
+    if (rest) throw new Error("REST fixture variant issued GraphQL");
+    return Promise.resolve({
+      data: {
+        repository: { pullRequests: { nodes: fixture.mergedBasePullRequests ?? [] } },
+      },
+    });
   });
   const annotationCheckIds = new Set(Object.keys(fixture.checkAnnotationsByCheckId ?? {}));
   if (Array.isArray(batchData.reviewThreads)) {
@@ -530,15 +556,32 @@ export function applyFixture(fixture: Fixture): void {
       annotationCheckIds,
     );
   }
-  mockFetchPrBatch.mockResolvedValue({
-    data: batchData,
-    headWorkflowSuites: fixture.headWorkflowSuites ?? [],
-    fingerprint: testFingerprint({
-      headRefOid: typeof batchData.headRefOid === "string" ? batchData.headRefOid : "abc123",
-    }),
-  });
-  mockFetchRawSummaryPr.mockResolvedValue(rawSummaryForBatch(batchData));
-  if (fixture.aggregateSummary) mockFetchPollSummary.mockResolvedValue(fixture.aggregateSummary);
+  if (rest) {
+    const restData = projectBatchToRest(batchData, {
+      startupFailureChecks: stampInitialRunAttempt(fixture.startupFailureChecks ?? []),
+      carryOver: fixture.restCarryOver,
+    });
+    mockFetchPrBatch.mockResolvedValue(
+      restBatchEnvelope(restData, fixture.headWorkflowSuites ?? []),
+    );
+    mockFetchRawSummaryPr.mockResolvedValue(projectRawSummaryToRest(rawSummaryForBatch(restData)));
+    if (fixture.aggregateSummary) {
+      mockFetchPollSummary.mockResolvedValue({
+        ...fixture.aggregateSummary,
+        prs: fixture.aggregateSummary.prs.map(projectSummaryItemToRest),
+      });
+    }
+  } else {
+    mockFetchPrBatch.mockResolvedValue({
+      data: batchData,
+      headWorkflowSuites: fixture.headWorkflowSuites ?? [],
+      fingerprint: testFingerprint({
+        headRefOid: typeof batchData.headRefOid === "string" ? batchData.headRefOid : "abc123",
+      }),
+    });
+    mockFetchRawSummaryPr.mockResolvedValue(rawSummaryForBatch(batchData));
+    if (fixture.aggregateSummary) mockFetchPollSummary.mockResolvedValue(fixture.aggregateSummary);
+  }
 
   const mergeableFallback = fixture.mergeableFallback ?? {
     mergeable: "MERGEABLE",
@@ -584,10 +627,10 @@ export function applyFixture(fixture: Fixture): void {
   mockReadFixAttempts.mockResolvedValue(fixture.fixAttempts ?? null);
   mockWriteFixAttempts.mockResolvedValue(undefined);
 
-  if (fixture.claudeCodeRemote) process.env.CLAUDE_CODE_REMOTE = "true";
-  else delete process.env.CLAUDE_CODE_REMOTE;
-
-  if (fixture.restErrorResponses) {
+  if (rest) {
+    const route = restRoutesForFixture(fixture, batchData);
+    mockFetch.mockImplementation((url, init) => route(String(url), init?.method ?? "GET"));
+  } else if (fixture.restErrorResponses) {
     const errors = fixture.restErrorResponses;
     mockFetch.mockImplementation((url) => {
       const path = new URL(String(url)).pathname;
@@ -672,12 +715,19 @@ async function runMain(args: string[]): Promise<{ out: string; exitCode: number 
   return { out, exitCode };
 }
 
-export async function captureRun(fixture: Fixture): Promise<RunResult> {
+function transportArgs(transport: FixtureTransport): string[] {
+  return transport === "rest" ? ["--transport", "rest"] : [];
+}
+
+export async function captureRun(
+  fixture: Fixture,
+  transport: FixtureTransport = "graphql",
+): Promise<RunResult> {
   const pr = String(fixture.batchData?.number ?? 42);
   const args =
     fixture.mode === "aggregate"
-      ? (fixture.args ?? ["42", "43", "--timeout", "0s"])
-      : ["iterate", pr, ...(fixture.args ?? [])];
+      ? [...(fixture.args ?? ["42", "43", "--timeout", "0s"]), ...transportArgs(transport)]
+      : ["iterate", pr, ...(fixture.args ?? []), ...transportArgs(transport)];
   const { out: textOut, exitCode } = await runMain(args);
   const { out: jsonOut, exitCode: jsonExitCode } = await runMain([...args, "--format=json"]);
   return { textOut, jsonOut, exitCode, jsonExitCode };
@@ -687,8 +737,11 @@ export async function captureRun(fixture: Fixture): Promise<RunResult> {
  * Two-tick stall run: tick-1 populates stall state, tick-2 reads it with
  * firstSeenAt far in the past so applyStallGuard escalates.
  */
-export async function captureTwoTickStallRun(fixture: Fixture): Promise<RunResult> {
-  const args = ["iterate", "42", ...(fixture.args ?? [])];
+export async function captureTwoTickStallRun(
+  fixture: Fixture,
+  transport: FixtureTransport = "graphql",
+): Promise<RunResult> {
+  const args = ["iterate", "42", ...(fixture.args ?? []), ...transportArgs(transport)];
 
   // Clear write history so we only inspect calls from this run's tick 1.
   mockWriteStallState.mockClear();

@@ -1,9 +1,7 @@
 {
   "description": "Previously fetched native-stack queue-removal evidence survives a switch to REST. Surface the failed check and unavailable current-removal verification rather than printing an acknowledgment command that REST cannot validate.",
-  "args": [
-    "--transport",
-    "rest"
-  ],
+  "transports": ["rest"],
+  "restCarryOver": ["latestMergeQueueRemoval", "removedMergeQueueChecks", "isMergeQueueEnabled"],
   "batchData": {
     "latestMergeQueueRemoval": {
       "reason": "failed_checks",

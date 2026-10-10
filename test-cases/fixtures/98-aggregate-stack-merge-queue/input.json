@@ -1,4 +1,10 @@
 {
+  "restDivergence": {
+    "exitCode": 15,
+    "reason": "actionable",
+    "nextAction": "merge",
+    "why": "REST cannot see merge-queue membership, so the already-queued READY stack looks unsubmitted and the selector emits the guarded REST merge command; GitHub decides the duplicate request."
+  },
   "description": "After whole-stack submission, a merge-queued stack remains non-terminal until every layer is merged; an upper READY receipt does not complete the handoff.",
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/352", "--merge", "--timeout", "1s", "--interval", "2s"],

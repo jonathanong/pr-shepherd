@@ -1,0 +1,37 @@
+# PR #42 [FIX_CODE]
+
+**status** `FAILING` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**summary** 1 passing
+**transport** `rest`
+
+## Unavailable transport fields
+
+- `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
+- `viewerAuthorization`: REST does not expose viewer capability fields
+- `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
+- `mergeQueue`: REST does not expose queue membership, entry or removal history
+Approvals: None [Not Required]
+Conversations Resolved: Yes [Not Required]
+Merge queue: Unknown [Required]
+Stack: 7 (layer 1/1, base main)
+**merge queue** enabled `true` · inQueue `false` · checkCommit `bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb`
+**queue removal** reason `failed_checks` · createdAtUnix `1715799000` · actor `@github-actions` · commit `bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb` · parents `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`
+
+## Failing checks
+
+- `37106358227` — `CI › tests` [conclusion: FAILURE] [scope: merge_group, commit: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb]
+  > OpenRouter HTTP 529: provider temporarily unavailable
+
+## Post-fix actions
+
+- base: `main`
+
+## Instructions
+
+1. Queue recovery is transport-unsupported: REST cannot verify current merge-queue removal evidence. Continue the printed fix steps; requeue and removal acknowledgment require verified current removal evidence.
+2. Review each item under `## Failing checks` and decide whether it needs a code change.
+3. Triage `## Failing checks`. Playbook: "CI failure triage".
+4. Triage the merge-queue ejection before any requeue. If the `**queue removal**` reason shows GitHub removed the entry itself, update the stack from the latest base first: Use the repository's stack-update procedure for native stack #7 in `owner/repo`, starting at bottom open layer PR #42 and preserving the ordered parent boundaries of every affected upper layer. Read membership with REST-backed Shepherd `--stack` output and update and push affected branches using the caller's git workflow. Playbook: "Branch update". If a person may have dequeued the PR, skip that update unless a conflict step above requires it. Shepherd printed no queue command for this session, so do not enqueue the PR. Playbook: "Merge queue ejection".
+5. If the base update or a fix changed any heads, commit the remaining changes and push every affected stack branch using the repository's stack-update procedure. If no heads changed, do not push.
+6. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`. Playbook: "Shepherd Journal".
+7. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.

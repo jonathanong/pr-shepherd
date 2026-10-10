@@ -58,6 +58,10 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
   ["fix.firstLookThreads[].createdAtUnix", "same"],
   ["fix.firstLookThreads[].comments[].createdAtUnix", "same, for transcript replies"],
   [
+    "fix.resolutionOnlyThreads[].comments[].createdAtUnix",
+    "same, for transcript replies (the REST reader always returns the full transcript)",
+  ],
+  [
     "escalate.stalledChecks[].createdAtUnix",
     "rendered as a relative 'waiting N minutes' duration, not a raw timestamp",
   ],
@@ -73,6 +77,10 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
   [
     "escalate.unresolvedThreads[].url",
     "the escalate 'Items needing attention' bullet omits the thread URL (id + location + author + body only)",
+  ],
+  [
+    "escalate.unresolvedThreads[].comments[].url",
+    "same, for transcript replies (the REST reader always returns the full transcript)",
   ],
   [
     "escalate.authorization[].reason",
