@@ -176,7 +176,23 @@ query BatchPrPage(
                     annotations(first: 1) {
                       totalCount
                       nodes {
+                        fullDatabaseId
+                        path
+                        annotationLevel
+                        title
                         message
+                        rawDetails
+                        blobUrl
+                        location {
+                          start {
+                            line
+                            column
+                          }
+                          end {
+                            line
+                            column
+                          }
+                        }
                       }
                     }
                     checkSuite {

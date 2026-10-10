@@ -295,7 +295,23 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
                     annotations(first: 1) {
                       totalCount
                       nodes {
+                        fullDatabaseId
+                        path
+                        annotationLevel
+                        title
                         message
+                        rawDetails
+                        blobUrl
+                        location {
+                          start {
+                            line
+                            column
+                          }
+                          end {
+                            line
+                            column
+                          }
+                        }
                       }
                     }
                     checkSuite {

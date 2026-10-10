@@ -56,7 +56,7 @@ Supplements on a full snapshot, usually 1 point each:
 - `BatchPrPage` — one combined request per extra round of threads, comments, reviews, or checks.
 - `ReviewThreadComments` — one request per extra page of a thread whose nested comments continue. Concurrency is 4.
 - `CommitCheckContexts` — when the PR is in the merge queue, or the latest removal still matches HEAD.
-- `CheckRunAnnotationsBatch` — one request per 20 uncached completed checks whose probe saw an annotation. Cached for 1 hour per check-run id. Further pages use `CheckRunAnnotations`.
+- `CheckRunAnnotationsBatch` — one request per 20 uncached completed checks whose probe saw more than one annotation. A run with exactly one annotation takes its body from `BatchPr`'s `annotations(first: 1)` page at no extra cost. Cached for 1 hour per check-run id. Further pages use `CheckRunAnnotations`.
 - `PollStackTopology` — every iterate tick of a non-root native-stack layer, including fingerprint hits. One request per 50 entries.
 - `UpperLayerConflictTarget` — a conflicting upper native-stack layer.
 - `CheckBlockerPull` or `CheckBlockerIssue` — one request per distinct blocker while a matching check is failing.
@@ -104,6 +104,8 @@ One-PR `BatchPr` stays at the 1-point floor. Fewer review connections, a smaller
 3. **Done: reuse same-request evidence for READY receipts.** [`recordReadyReceipt` and `revalidateReadyReceipt`](../src/commands/iterate/index.mts) consume a complete conditional summary sibling when available, keeping the v1 fingerprint and safety checks. They use the original standalone summary and annotation probe when that evidence cannot be trusted.
 
 4. **Done: fold the fingerprint pre-check into `BatchPr`.** The separate `PrFingerprint` query is gone. [`fingerprintReuser`](../src/commands/check-fingerprint.mts) decides reuse from `BatchPr`'s first page, so a miss (including any PR with a multi-comment thread) costs 1 point instead of 2, and a merged or closed PR is read once.
+
+5. **Done: take single annotations from `BatchPr`.** The `annotations(first: 1)` probe selects the full annotation fields. In the recorded debug logs, 109 of 110 `CheckRunAnnotationsBatch` requests read only runs with exactly one annotation, so a failing-check tick with annotations drops from 2 points to 1. Runs with more annotations still use the batch.
 
 Designs that are already at the floor and should stay:
 

@@ -1,6 +1,7 @@
 /* eslint-disable max-lines */
 import type { CommentAuthorAssociation } from "../types/github.mts";
 import type { RawPrMergeFields } from "./batch-raw-rules.mts";
+import type { RawCheckAnnotation } from "./check-annotation-shape.mts";
 
 export interface RawBatchResponse {
   viewer?: { login: string | null } | null;
@@ -196,7 +197,10 @@ export type RawContextNode =
       startedAt?: string | null;
       title: string | null;
       summary: string | null;
-      annotations?: { totalCount?: number; nodes: Array<{ message: string }> };
+      annotations?: {
+        totalCount?: number;
+        nodes: Array<Partial<RawCheckAnnotation> & { message: string }>;
+      };
       checkSuite: {
         createdAt?: string;
         updatedAt?: string;

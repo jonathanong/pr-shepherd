@@ -104,6 +104,11 @@ export interface CheckRun {
   workflowId?: string; // Stable workflow database ID (stringified); groups runs across concurrency evictions.
   /** True when GraphQL reported at least one CheckRun annotation. Omitted when false. */
   hasAnnotations?: boolean;
+  /**
+   * Every annotation on this run, when BatchPr's `annotations(first: 1)` page already held all
+   * of them. Internal: lets the check path skip `CheckRunAnnotationsBatch`; never rendered.
+   */
+  inlineAnnotations?: import("./check-annotations.mts").CheckAnnotation[];
 }
 
 export interface ReviewThread {
