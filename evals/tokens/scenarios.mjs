@@ -32,6 +32,7 @@ import {
   SHEPHERD_TICK_API,
   SHEPHERD_TICK_API_REST,
   HEAD_SHA_READ,
+  applyReviewGraphqlReads,
   READY_MERGEABILITY_REST,
   readyTick,
   SHEPHERD_TICK_API_CLOUD,
@@ -42,7 +43,6 @@ import {
   fixtureState,
   gql,
   rest,
-  SHEPHERD_CHANGED_TICK_GRAPHQL,
   SHEPHERD_RECEIPT_TICK_API,
   annotationBatchApi,
   stackTickApi,
@@ -171,11 +171,11 @@ const CLOUD_TRANSCRIPT_READ = REST_TRANSCRIPT_READ + 1;
  * and reads the job log (`fetchJobs`, `fetchJobLogExcerpt`). Those are REST
  * calls on either transport, so they add to the tick's base cost. The failed
  * job is one annotated check run (the recorded job carries a "Process
- * completed with exit code 1." annotation), so the tick also runs the
- * annotation supplement.
+ * completed with exit code 1." annotation). That single annotation comes from
+ * `BatchPr`'s probe page at no GraphQL cost; REST reads it separately.
  */
 const ACTIONS_LOG_REST = 2;
-const FAILING_CHECK_ANNOTATIONS = annotationBatchApi(1);
+const FAILING_CHECK_ANNOTATIONS = annotationBatchApi(1, 1);
 const FAILING_CHECK_TICK_API = {
   api: {
     graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + FAILING_CHECK_ANNOTATIONS.graphqlPoints,
@@ -208,11 +208,14 @@ function shepherdApply(text, result, phase = 2) {
   const cmd = text.match(/`(pr-shepherd apply review [^`]+)`/)?.[1];
   if (!cmd) throw new Error("snapshot has no apply review command");
   const filled = cmd.replace("$DISMISS_MESSAGE", "Renamed the variable as requested.");
-  // Every printed command carries --require-sha, so `waitForSha` first reads
-  // the head SHA: one `GetPrHeadSha` point, or one REST pull read. GraphQL:
-  // then one thread read plus one request per chunk of 10 mutations, and one
-  // `ReplyRecoveryEvidence` read per chunk that carries replies (replies come
-  // first, so ceil(replies / 10) chunks; src/comments/resolve.mts). REST: with
+  // Every printed command carries --require-sha. GraphQL reads follow
+  // `applyReviewGraphqlReads` (lib.mjs): with 1 to 20 replies, one
+  // `ApplyReviewPreflight` read confirms the head SHA and carries the
+  // transcripts and the first chunk's recovery evidence, and each later chunk
+  // that carries replies reads its own; without replies, `waitForSha` reads
+  // `GetPrHeadSha`. Then one request per chunk of 10 mutations
+  // (src/comments/resolve.mts). REST first reads the head SHA (one
+  // pull read), then, with
   // replies, the transcript read (`REST_TRANSCRIPT_READ`), then per reply the
   // `/user` and pull-comments reads that make a lost response recoverable plus
   // the POST (`REST_REPLY_REQUESTS`, src/comments/rest-reply.mts). The
@@ -224,13 +227,12 @@ function shepherdApply(text, result, phase = 2) {
   const replies = result.repliedThreads?.length ?? 0;
   const resolves = result.resolvedThreads?.length ?? 0;
   const mutations = replies + resolves;
-  const replyChunks = Math.ceil(replies / 10);
   return {
     phase,
     via: "bash",
     cmd: filled,
     out: formatMutateResult({ errors: [], ...result }),
-    api: gql(HEAD_SHA_READ + 1 + Math.ceil(mutations / 10) + replyChunks),
+    api: gql(applyReviewGraphqlReads({ replies, requireSha: true }) + Math.ceil(mutations / 10)),
     apiRest: rest(
       HEAD_SHA_READ + (replies ? REST_TRANSCRIPT_READ : 0) + replies * REST_REPLY_REQUESTS,
     ),
@@ -618,9 +620,10 @@ const PR_SCENARIOS = [
       ).join("");
       return {
         // Each poll is 1 GraphQL point (the cold first tick's BatchPr, then a
-        // fingerprint hit), or a full REST read. The tick this call returns, the
-        // next scenario's, is the first changed tick after the wait: its extra
-        // fingerprint read is charged here, so that tick keeps the base cost.
+        // fingerprint hit on BatchPr's first page), or a full REST read. The
+        // tick this call returns, the next scenario's, is the first changed
+        // tick after the wait: a miss continues the same BatchPr request, so it
+        // costs the base tick and nothing is charged here for it.
         shepherd: [
           {
             phase: 1,
@@ -628,7 +631,7 @@ const PR_SCENARIOS = [
             cmd: "",
             out: stderr,
             continues: true,
-            api: gql(polls * SHEPHERD_TICK_API.graphqlPoints + SHEPHERD_CHANGED_TICK_GRAPHQL),
+            api: gql(polls * SHEPHERD_TICK_API.graphqlPoints),
             apiRest: rest(polls * SHEPHERD_TICK_API_REST.restCore),
             apiCloud: rest(polls * SHEPHERD_TICK_API_CLOUD.restCore),
           },
@@ -789,8 +792,9 @@ const PR_SCENARIOS = [
       return {
         // The poll's mark-ready tick costs no call or tokens, but it still spends
         // rate limit: runPoll -> runIterate reads the PR snapshot first. That is
-        // the first changed tick after a wait (a fingerprint miss, then BatchPr;
-        // mark-ready refuses a reused fingerprint). markReadyIfAuthorized then
+        // the first changed tick after a wait (a fingerprint miss that continues
+        // the same BatchPr request; mark-ready refuses a reused fingerprint).
+        // markReadyIfAuthorized then
         // sends one GraphQL mutation point. Standard REST has no ready-for-review
         // route, so after its read the tick escalates as transport-unsupported
         // (mark-ready.mts). Cloud REST marks it ready with one POST to the CCR
@@ -804,7 +808,7 @@ const PR_SCENARIOS = [
             out: "",
             continues: true,
             api: {
-              graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + SHEPHERD_CHANGED_TICK_GRAPHQL + 1,
+              graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + 1,
               restCore: READY_MERGEABILITY_REST,
             },
             apiRest: rest(SHEPHERD_TICK_API_REST.restCore + READY_MERGEABILITY_REST),
@@ -909,7 +913,11 @@ const PR_SCENARIOS = [
       const fixture = "42-fix-code-check-annotations";
       const state = fixtureState(fixture);
       const annotations = fixtureInput(fixture).checkAnnotationsByCheckId;
-      const annotationApi = annotationBatchApi(Object.keys(annotations).length);
+      // The fixture's run has two annotations, so it still needs the batch read.
+      const annotationApi = annotationBatchApi(
+        Object.keys(annotations).length,
+        Object.values(annotations).filter((list) => list.length === 1).length,
+      );
       return {
         shepherd: [
           {

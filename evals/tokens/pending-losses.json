@@ -1,7 +1,6 @@
 {
   "note": "Temporary: every metric on which pr-shepherd is worse than a baseline today, each linked to the issue that removes it. bench.mjs --check fails on a loss missing here and on an entry here that is no longer a loss. Remove entries as fixes land; the list must end empty (#524).",
   "losses": [
-    { "where": "session:pr", "metric": "graphqlPoints", "transport": "graphql", "baseline": "gh", "issue": 525 },
     { "where": "session:pr", "metric": "graphqlPoints", "transport": "graphql", "baseline": "mcp", "issue": 525 },
     { "where": "session:pr", "metric": "restCore", "transport": "rest", "baseline": "gh", "issue": 525 },
     { "where": "session:pr", "metric": "restCore", "transport": "rest", "baseline": "mcp", "issue": 525 },
@@ -18,7 +17,6 @@
     { "where": "ci-wait", "metric": "restCore", "transport": "rest", "baseline": "mcp", "issue": 525 },
     { "where": "ci-wait", "metric": "restCore", "transport": "cloud", "baseline": "gh", "issue": 525 },
     { "where": "ci-wait", "metric": "restCore", "transport": "cloud", "baseline": "mcp", "issue": 525 },
-    { "where": "failing-check", "metric": "graphqlPoints", "transport": "graphql", "baseline": "mcp", "issue": 525 },
     { "where": "failing-check", "metric": "restCore", "transport": "rest", "baseline": "gh", "issue": 525 },
     { "where": "failing-check", "metric": "restCore", "transport": "rest", "baseline": "mcp", "issue": 525 },
     { "where": "failing-check", "metric": "restCore", "transport": "cloud", "baseline": "gh", "issue": 525 },
@@ -56,8 +54,6 @@
     { "where": "merged", "metric": "restCore", "transport": "rest", "baseline": "mcp", "issue": 525 },
     { "where": "merged", "metric": "restCore", "transport": "cloud", "baseline": "gh", "issue": 525 },
     { "where": "merged", "metric": "restCore", "transport": "cloud", "baseline": "mcp", "issue": 525 },
-    { "where": "bot-threads", "metric": "graphqlPoints", "transport": "graphql", "baseline": "gh", "issue": 525 },
-    { "where": "bot-threads", "metric": "graphqlPoints", "transport": "graphql", "baseline": "mcp", "issue": 525 },
     { "where": "bot-threads", "metric": "restCore", "transport": "rest", "baseline": "gh", "issue": 525 },
     { "where": "bot-threads", "metric": "restCore", "transport": "rest", "baseline": "mcp", "issue": 525 },
     { "where": "bot-threads", "metric": "restCore", "transport": "cloud", "baseline": "gh", "issue": 525 },

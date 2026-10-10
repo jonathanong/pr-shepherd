@@ -28,13 +28,12 @@ import { join } from "node:path";
 import { ISSUE_FOR } from "./gate.mjs";
 import {
   DATA_DIR,
-  HEAD_SHA_READ,
   MODEL,
   READY_MERGEABILITY_REST,
-  SHEPHERD_CHANGED_TICK_GRAPHQL,
   SHEPHERD_RECEIPT_TICK_API,
   SHEPHERD_TICK_API,
   apiTotals,
+  applyReviewGraphqlReads,
   cost,
   ghPrChecks,
   ghPrView,
@@ -242,7 +241,9 @@ function tickGroups(reqs) {
 
 /**
  * `ticks`, and `changedTicks`: the ticks after the first whose fingerprint
- * missed, so they read BatchPr too.
+ * missed, so they read BatchPr too. The recorded logs predate #542, which
+ * folded the fingerprint into BatchPr's first page; the charge no longer adds
+ * a point for them, and the count stays as recorded evidence.
  */
 function pollTicks(reqs) {
   const groups = tickGroups(reqs);
@@ -933,17 +934,17 @@ function stepArms(pr, inv) {
           `pr-shepherd ${n} --interval 60s --timeout 4.5m --quiet-status${inv.untilTerminal ? " --until-terminal" : ""}`,
           fill(inv.outChars ?? 0),
           {
-            // Each tick is one point, and each later tick whose fingerprint
-            // missed one more (docs/graphql-usage.md). A READY tick re-reads
-            // mergeability over REST; a ready-delay CANCEL reached READY first,
-            // on the two-point receipt query. BatchPr's supplements are not
-            // charged: the logs do not say which state triggered them. Each
-            // mutation request a tick sent (auto-resolve, journal) is one point.
+            // Each tick is one point: a fingerprint miss continues the same
+            // BatchPr request, and a ready-delay CANCEL's receipt query is one
+            // point too (docs/graphql-usage.md). A READY tick re-reads
+            // mergeability over REST; a ready-delay CANCEL reached READY first.
+            // BatchPr's supplements are not charged: the logs do not say which
+            // state triggered them. Each mutation request a tick sent
+            // (auto-resolve, journal) is one point.
             api: {
               graphqlPoints:
                 SHEPHERD_TICK_API.graphqlPoints * inv.ticks +
                 (inv.graphqlMutations ?? 0) +
-                SHEPHERD_CHANGED_TICK_GRAPHQL * (inv.changedTicks ?? 0) +
                 (inv.readyDelayElapsed
                   ? SHEPHERD_RECEIPT_TICK_API.graphqlPoints - SHEPHERD_TICK_API.graphqlPoints
                   : 0),
@@ -990,11 +991,10 @@ function stepArms(pr, inv) {
       ? ` --${flag} ${Array.from({ length: count }, (_, j) => fakeId(prefix, len, j)).join(",")}`
       : "";
   const mutations = a.replies + a.resolves + a.minimizes + a.dismissals;
-  // As scenarios.mjs's shepherdApply: `--require-sha` reads the head SHA;
-  // replies add the thread-transcript read and one `ReplyRecoveryEvidence`
-  // read per 10-reply chunk; then one request per 10 mutations.
-  const reads =
-    (a.requireSha ? HEAD_SHA_READ : 0) + (a.replies ? 1 + Math.ceil(a.replies / 10) : 0);
+  // As scenarios.mjs's shepherdApply: the reads `applyReviewGraphqlReads`
+  // models (the preflight with 1 to 20 replies, otherwise the head-SHA,
+  // transcript and recovery reads), then one request per 10 mutations.
+  const reads = applyReviewGraphqlReads(a);
   return {
     shepherd: [
       call(
@@ -1331,7 +1331,7 @@ function graphqlBreakdown(data) {
             .map(([op, o]) => `${op} ${num(o.cost)}`)
             .join(
               ", ",
-            )}), which the replay does not charge: the logs do not say which state triggered them, and the bench charges them only in scenarios whose state does.`
+            )}), which the replay does not charge: the logs do not say which state triggered them, and the bench charges them only in scenarios whose state does.${fp ? " The logs predate #542, which folded `PrFingerprint` into BatchPr's first page and reads a lone annotation inline; the model charges the current per-tick cost." : ""}`
     }`,
   );
   return out;

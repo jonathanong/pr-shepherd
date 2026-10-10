@@ -654,42 +654,42 @@ export function mcpApi(tool, args) {
 }
 
 /**
- * pr-shepherd's one-PR tick (docs/graphql-usage.md). A cold tick is one
- * `BatchPr` point, and an unchanged wait tick is one `PrFingerprint` point.
+ * pr-shepherd's one-PR tick (docs/graphql-usage.md). Every tick is one
+ * `BatchPr` point: its first page is the fingerprint read, so a hit returns
+ * there and a miss (the first changed tick after a wait) continues the same
+ * request. There is no separate pre-check to charge.
  */
 export const SHEPHERD_TICK_API = gql(1);
-/**
- * The first changed tick after a fingerprint-skipped wait reads the fingerprint,
- * misses, and then reads `BatchPr`: one point on top of `SHEPHERD_TICK_API`.
- */
-export const SHEPHERD_CHANGED_TICK_GRAPHQL = 1;
 /**
  * `BatchPr` supplement: a full tick whose completed check runs report
  * annotations (`hasAnnotations`) that are not in the 1-hour per-check-run cache
  * runs `CheckRunAnnotationsBatch`, 1 point per chunk of 20 uncached check runs
- * (src/github/check-annotations-batch.mts). On REST each uncached check run is
- * one annotation read. Charged only by scenarios whose check runs carry
- * annotations.
+ * (src/github/check-annotations-batch.mts). A run with exactly one annotation
+ * takes it from `BatchPr`'s `annotations(first: 1)` page instead, so
+ * `singleAnnotationRuns` of the `checkRuns` cost no GraphQL. On REST each
+ * uncached check run is one annotation read. Charged only by scenarios whose
+ * check runs carry annotations.
  */
-export const annotationBatchApi = (checkRuns) => ({
-  graphqlPoints: Math.ceil(checkRuns / 20),
+export const annotationBatchApi = (checkRuns, singleAnnotationRuns = 0) => ({
+  graphqlPoints: Math.ceil((checkRuns - singleAnnotationRuns) / 20),
   restCore: checkRuns,
 });
 /**
  * `BatchPr` supplement: a non-stack PR whose base has a required status context
  * that no check has reported yet runs `BaseBehind` (1 point,
- * src/github/merge-target-rules.mts) on full ticks and again on every
- * fingerprint-hit tick. No scenario has an unreported required context, so
- * none charges it.
+ * src/github/merge-target-rules.mts). The count is cached under the base tip
+ * and the head commit, so it is charged again only when one of them moves. No
+ * scenario has an unreported required context, so none charges it.
  */
 export const BASE_BEHIND_GRAPHQL = 1;
 /**
  * Once an elapsed ready-delay marker or a stored READY receipt makes it likely
- * to be needed, `BatchPr` also selects the `PollSummaryPr` receipt sibling:
- * 2 points instead of 1 (docs/graphql-usage.md). REST derives the receipt from
- * the same snapshot, so its tick does not change.
+ * to be needed, `BatchPr` also selects the `PollSummaryPr` receipt sibling. Its
+ * first context page is 50, so the receipt variant stays at 1 point
+ * (docs/graphql-usage.md). REST derives the receipt from the same snapshot, so
+ * its tick does not change either.
  */
-export const SHEPHERD_RECEIPT_TICK_API = gql(2);
+export const SHEPHERD_RECEIPT_TICK_API = gql(1);
 /**
  * Standard REST (an explicit `--transport rest`, or `auto` after a GraphQL
  * fallback outside the Claude Code cloud). It has no fingerprint shortcut: 14
@@ -720,6 +720,22 @@ export const SHEPHERD_TICK_API_CLOUD = rest(SHEPHERD_TICK_API_REST.restCore + CC
  */
 /** `apply review --require-sha`'s head read: `GetPrHeadSha` or one REST pull read. */
 export const HEAD_SHA_READ = 1;
+/**
+ * GraphQL reads `apply review` sends before and between its mutation chunks
+ * (src/commands/resolve-mutate.mts, src/comments/resolve.mts). With 1 to 20
+ * reply IDs, one `ApplyReviewPreflight` read stands in for `GetPrHeadSha`,
+ * `ReplyThreadTranscripts` and the first mutation chunk's
+ * `ReplyRecoveryEvidence`; each later chunk that carries replies (replies come
+ * first, 10 per chunk) still reads its own evidence. Past 20 replies the
+ * standalone reads run: the head SHA, one transcript read per 20 IDs and one
+ * evidence read per reply chunk. Without replies only `--require-sha` reads.
+ */
+export const APPLY_REVIEW_PREFLIGHT_MAX_REPLIES = 20;
+export function applyReviewGraphqlReads({ replies, requireSha }) {
+  const replyChunks = Math.ceil(replies / 10);
+  if (replies && replies <= APPLY_REVIEW_PREFLIGHT_MAX_REPLIES) return 1 + replyChunks - 1;
+  return (requireSha ? HEAD_SHA_READ : 0) + Math.ceil(replies / 20) + replyChunks;
+}
 
 export const READY_MERGEABILITY_REST = 1;
 /** `call`, a READY tick: its cost on every transport plus the mergeability refresh. */

@@ -22,7 +22,7 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
-| single PR | 42.5 / 36.5 / 12 | 4.8 / 9 / 78.3 | 334 core + 1.5 points | 361.5 core + 1.5 points |
+| single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 334 core + 1.5 points | 361.5 core + 1.5 points |
 | PR stack | 42 / 27 / 12 | 2 / 6 / 74 | 540 core + 0 points | 570 core + 0 points |
 
 <!-- bench:headline:end -->
@@ -215,32 +215,35 @@ arm spends: GraphQL points and REST core requests, which are separate buckets.
 are as good as these assumptions:
 
 - **pr-shepherd, GraphQL transport** (`docs/graphql-usage.md`):
-  - a cold one-PR tick is 1 point (`BatchPr`), and each unchanged wait poll is
-    a 1-point fingerprint hit; the first changed tick after a wait reads the
-    fingerprint, misses and reads `BatchPr`, so it is 2 (the wait scenario
-    carries that extra point);
+  - every one-PR tick is 1 point (`BatchPr`). Its first page is the
+    fingerprint read, so an unchanged wait poll is a 1-point hit and the first
+    changed tick after a wait, a miss, continues the same request at 1 point;
   - a stack tick is 1 topology point plus `max(1, round(0.52 × layers))`;
   - a one-PR tick on a non-root native-stack layer (the sessions `stack-work`
     routes) also loads the trunk's required contexts (`RefRules`) and the
     stack topology (`PollStackTopology`), 3 points in all;
-  - `apply review` reads the head SHA for `--require-sha` (1 point), then
-    spends one thread read plus one point per chunk of 10 mutations, and one
-    `ReplyRecoveryEvidence` read per chunk that carries replies;
+  - `apply review` with 1 to 20 replies spends one `ApplyReviewPreflight`
+    read (head SHA for `--require-sha`, transcripts and recovery evidence),
+    then one point per chunk of 10 mutations; without replies the read is
+    `GetPrHeadSha` (1 point);
   - a tick that renders a failing job's log excerpt also lists the run's jobs
     and reads the job log, two REST requests on either transport;
   - `BatchPr`'s supplements are charged only where the scenario's state
     triggers them. `CheckRunAnnotationsBatch` runs on a full tick whose
     completed check runs report annotations that are not in the 1-hour
-    per-check-run cache: 1 point per 20 check runs. `failing-check` (the
-    recorded job carries an exit-code annotation) and `check-annotations` are
-    charged it. `BaseBehind` (1 point, on every tick including fingerprint
-    hits) runs while a non-stack PR's base has a required status context that
-    no check has reported yet; no scenario has that state, so none is charged;
+    per-check-run cache: 1 point per 20 check runs. A run with exactly one
+    annotation takes it from `BatchPr`'s `annotations(first: 1)` page for no
+    extra point, so `failing-check` (the recorded job carries one exit-code
+    annotation) is 1 point and only `check-annotations` (two annotations on
+    one run) is charged the batch. `BaseBehind` (1 point) runs while a
+    non-stack PR's base has a required status context that no check has
+    reported yet, and is cached under the base tip and head, so it repeats only
+    when one of them moves; no scenario has that state, so none is charged;
   - the tick after an elapsed ready delay (`merge`, `merge-queue`) selects the
-    READY-receipt summary sibling, 2 points instead of 1;
+    READY-receipt summary sibling with a 50-context first page, still 1 point;
   - the guarded merge is 2 points (lookup and mutation);
   - the poll tick that marks a draft ready is a changed tick after a wait plus
-    the 1-point mutation, 3 points;
+    the 1-point mutation, 2 points;
   - a READY tick re-reads the PR's mergeability with one REST request before
     acting, on every transport (`refreshReadyMergeability`). The real sessions
     measured exactly one on each of their 21 READY polls. It is charged to
@@ -306,7 +309,10 @@ Each first tick also read the annotations of three first-look check runs, so
 its model adds `annotationBatchApi(3)`. GraphQL took 2 points on the first tick
 (`BatchPr` plus one `CheckRunAnnotationsBatch` chunk) and 1 on the second, with
 no REST. REST took 17 requests on the first tick (14 plus three annotation
-reads) and 14 on the second, all `200`. All four match the model. REPORT.md
+reads) and 14 on the second, all `200`. All four match the model. The
+measurement predates single annotations being read from `BatchPr`, so the model
+treats those three runs as batch reads; re-measure to see whether they now cost
+nothing. REPORT.md
 prints the table. Re-run it by hand when the transports change; CI makes no
 GitHub calls.
 
@@ -352,9 +358,7 @@ by how far they move the result.
   persist across `wait` runs. A 304 costs no primary rate limit (GitHub REST
   docs, conditional requests) but still costs a round trip; a 200 is one REST
   core request. Each changed tick then runs one full snapshot at the poll
-  arm's GraphQL tick cost. The wait reads no fingerprint, so where the poll
-  pays a fingerprint miss after a skipped wait (`ci-wait`, `mark-ready`), the
-  event arm does not. The stack arm's detectors are per open layer. CI that
+  arm's GraphQL tick cost. The stack arm's detectors are per open layer. CI that
   reports through the legacy Commit Status API (`commits/{head}/statuses`,
   which the snapshot reads) is not watched; such a repository would need a
   sixth detector, which costs nothing while it answers 304, or it waits for
@@ -365,7 +369,7 @@ by how far they move the result.
   - While CI runs, the new head's check runs are a fresh URL (one initial
     200), then a 200 on every round (jobs start and finish). The wait reads
     the statuses from that body and wakes only when CI settles, so `ci-wait`
-    spends 2 + 1 + 6 REST requests and no GraphQL instead of 7 fingerprint
+    spends 2 + 1 + 6 REST requests and no GraphQL instead of 6 fingerprint
     points.
   - A review thread changes reviews and review comments; the agent's reply
     changes review comments again (the wait recognizes its own echo without a
@@ -470,14 +474,16 @@ token usage, never text, IDs or paths. The bench reads only that file.
   JSON-escaped lengths, since the baselines read them as JSON, and each
   thread comment's filler URL keeps its numeric `#discussion_r` anchor for
   MCP's reply tool.
-- **pr-shepherd's charge.** A poll pays one point per tick, one more per
-  later tick whose fingerprint missed (the logs show which did), and on a
-  READY or ready-delay CANCEL tick one REST mergeability refresh; the
-  ready-delay CANCEL also reads on the two-point receipt query. An `apply
-review` pays the head-SHA read, and its replayed command carries a 40-character
-  SHA, when it passed `--require-sha`, and, with
-  replies, the thread-transcript read and one recovery read per 10 replies,
-  plus one request per 10 mutations. Requests, costs and output past
+- **pr-shepherd's charge.** A poll pays one point per tick, since a
+  fingerprint miss continues the same `BatchPr` request, and on a READY or
+  ready-delay CANCEL tick one REST mergeability refresh; the ready-delay
+  CANCEL's receipt query is also one point. An `apply review` with 1 to 20
+  replies pays one `ApplyReviewPreflight` read, which also confirms the head
+  SHA and carries the transcripts and the first chunk's recovery evidence,
+  plus one recovery read per later chunk of 10 replies. Without replies it
+  pays the head-SHA read when it passed `--require-sha` (its replayed command
+  carries a 40-character SHA). Every `apply review` adds one request per 10
+  mutations. Requests, costs and output past
   `--until` close an invocation but add nothing to its record.
 - **Attribution.** Concurrent invocations interleave in one debug log; a
   request, response or output that matches more than one open invocation is
