@@ -14,10 +14,8 @@ export function projectIterateVerbose(
   if (result.action === "fix_code") return { ...result, ...readyDelayOverride };
   const log =
     "log" in result && typeof result.log === "string" ? { log: adaptIterateLog(result.log) } : {};
-  return {
-    ...result,
-    ...log,
-    ...readyDelayOverride,
-    instructions: buildSimpleIterateInstructions(result),
-  };
+  // `cancel` has no instructions, so verbose JSON omits the field as verbose Markdown omits the section.
+  const instructions =
+    result.action === "cancel" ? {} : { instructions: buildSimpleIterateInstructions(result) };
+  return { ...result, ...log, ...readyDelayOverride, ...instructions };
 }
