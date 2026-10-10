@@ -123,10 +123,10 @@ Every session and scenario where pr-shepherd costs strictly more than a baseline
 | `stack-queue-wait` | REST core requests (cloud REST transport) | gh CLI | 128 | 1 | +12700% | #525 |
 | `stack-merge` | REST core requests (REST transport) | gh CLI | 32 | 3 | +967% | #525 |
 | `stack-merge` | REST core requests (cloud REST transport) | gh CLI | 34 | 3 | +1033% | #525 |
-| `chars-per-token:session:stack` | tool tokens | GitHub MCP, eager tools | 11,646 | 11,433 | +2% | #528 |
-| `chars-per-token:review-thread` | tool tokens | GitHub MCP | 814 | 799 | +2% | #528 |
-| `chars-per-token:review-thread` | tool tokens | GitHub MCP, eager tools | 814 | 799 | +2% | #528 |
 | `chars-per-token:bot-threads` | tool tokens | gh CLI | 1,064 | 992 | +7% | #528 |
+| `chars-per-token:review-thread` | tool tokens | GitHub MCP | 814 | 799 | +2% | #528 |
+| `chars-per-token:session:stack` | tool tokens | GitHub MCP, eager tools | 11,646 | 11,433 | +2% | #528 |
+| `chars-per-token:review-thread` | tool tokens | GitHub MCP, eager tools | 814 | 799 | +2% | #528 |
 
 ## Typical PR session
 
@@ -327,45 +327,58 @@ A baseline either fires every read in its first turn (parallel) or reads the PR'
 
 ## Sensitivity: measured characters per token
 
-The model counts 3.5 characters per token for every arm. The real sessions below measured pr-shepherd's output at 2.19 and tool output overall at 2.53: pr-shepherd's output is denser. Here every step is re-scored with pr-shepherd at 2.19 and gh and GitHub MCP at 2.53. MCP's ratio is unmeasured (no real session used it), so it takes the overall one. Turns and calls do not depend on the ratio. A denser ratio also pushes more MCP results past the host's 25,000-token cap, where they are rejected: MCP's cost can fall while it finishes less of the step.
+The model counts 3.5 characters per token for every arm. The real sessions below measured pr-shepherd's output at 2.19 and tool output overall at 2.53: pr-shepherd's output is denser. Here every step is re-scored with pr-shepherd at 2.19 and gh and GitHub MCP at 2.53. MCP's ratio is unmeasured (no real session used it), so it takes the overall one. Turns and calls do not depend on the ratio. A denser ratio also pushes more MCP results past the host's 25,000-token cap, where they are rejected: MCP's cost can fall while it finishes less of the step. Only the ratio changes: the fits' per-result intercept (wrapper and harness reminders) is left out, as the model leaves it out.
 
-An arm that gains a truncated or rejected call at the measured ratios no longer finishes that step, so these steps are left out of both rows of each session below and out of the verdicts: `failing-check`, `multi-category`.
+An arm that gains a truncated or rejected call at the measured ratios no longer finishes that step. Each comparison below and its verdicts leave out, on both sides, the steps where pr-shepherd or that baseline does:
 
-| session | metric | characters per token | pr-shepherd | gh CLI | GitHub MCP | vs. gh | vs. MCP |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Typical PR session | cost (ITE) | 3.5 for every arm | 52,131 | 74,185 | 171,707 | −30% | −70% |
-| Typical PR session | cost (ITE) | 2.19 / 2.53 / 2.53 (unmeasured) | 59,525 | 85,615 | 189,152 | −30% | −69% |
-| Typical PR session | tool tokens | 3.5 for every arm | 5,966 | 19,369 | 26,883 | −69% | −78% |
-| Typical PR session | tool tokens | 2.19 / 2.53 / 2.53 (unmeasured) | 9,530 | 26,785 | 37,170 | −64% | −74% |
-| Typical stack session | cost (ITE) | 3.5 for every arm | 42,188 | 56,002 | 83,549 | −25% | −50% |
-| Typical stack session | cost (ITE) | 2.19 / 2.53 / 2.53 (unmeasured) | 49,387 | 62,565 | 93,609 | −21% | −47% |
-| Typical stack session | tool tokens | 3.5 for every arm | 7,297 | 5,133 | 9,478 | +42% | −23% |
-| Typical stack session | tool tokens | 2.19 / 2.53 / 2.53 (unmeasured) | 11,646 | 7,109 | 13,083 | +64% | −11% |
+- vs. GitHub MCP, `failing-check`, `multi-category`
+- vs. GitHub MCP, eager tools, `failing-check`, `multi-category`
+
+| session | metric | vs. | characters per token | pr-shepherd | baseline | saving |
+| --- | --- | --- | --- | --- | --- | --- |
+| Typical PR session | cost (ITE) | gh CLI | 3.5 for every arm | 67,560 | 100,341 | −33% |
+| Typical PR session | cost (ITE) | gh CLI | 2.19 / 2.53 | 79,702 | 117,763 | −32% |
+| Typical PR session | cost (ITE) | GitHub MCP | 3.5 for every arm | 52,131 | 171,707 | −70% |
+| Typical PR session | cost (ITE) | GitHub MCP | 2.19 / 2.53 (unmeasured) | 59,525 | 189,152 | −69% |
+| Typical PR session | tool tokens | gh CLI | 3.5 for every arm | 11,511 | 30,934 | −63% |
+| Typical PR session | tool tokens | gh CLI | 2.19 / 2.53 | 18,392 | 42,782 | −57% |
+| Typical PR session | tool tokens | GitHub MCP | 3.5 for every arm | 5,966 | 26,883 | −78% |
+| Typical PR session | tool tokens | GitHub MCP | 2.19 / 2.53 (unmeasured) | 9,530 | 37,170 | −74% |
+| Typical stack session | cost (ITE) | gh CLI | 3.5 for every arm | 42,188 | 56,002 | −25% |
+| Typical stack session | cost (ITE) | gh CLI | 2.19 / 2.53 | 49,387 | 62,565 | −21% |
+| Typical stack session | cost (ITE) | GitHub MCP | 3.5 for every arm | 42,188 | 83,549 | −50% |
+| Typical stack session | cost (ITE) | GitHub MCP | 2.19 / 2.53 (unmeasured) | 49,387 | 93,609 | −47% |
+| Typical stack session | tool tokens | gh CLI | 3.5 for every arm | 7,297 | 5,133 | +42% |
+| Typical stack session | tool tokens | gh CLI | 2.19 / 2.53 | 11,646 | 7,109 | +64% |
+| Typical stack session | tool tokens | GitHub MCP | 3.5 for every arm | 7,297 | 9,478 | −23% |
+| Typical stack session | tool tokens | GitHub MCP | 2.19 / 2.53 (unmeasured) | 11,646 | 13,083 | −11% |
 
 Verdicts, per session and per scenario, that flip to a loss at the measured ratios. They are gated like any other loss and pending in `pending-losses.json` under `chars-per-token:`:
 
-- session:stack: tool tokens vs. GitHub MCP, eager tools, 11,646 vs. 11,433 (#528)
-- review-thread: tool tokens vs. GitHub MCP, 814 vs. 799 (#528)
-- review-thread: tool tokens vs. GitHub MCP, eager tools, 814 vs. 799 (#528)
 - bot-threads: tool tokens vs. gh CLI, 1,064 vs. 992 (#528)
+- review-thread: tool tokens vs. GitHub MCP, 814 vs. 799 (#528)
+- session:stack: tool tokens vs. GitHub MCP, eager tools, 11,646 vs. 11,433 (#528)
+- review-thread: tool tokens vs. GitHub MCP, eager tools, 814 vs. 799 (#528)
 
 ## Real sessions
 
 Today's pr-shepherd runs on 8 real PRs (#520, #521, #522, #523, #530, #531, #532, #533), rebuilt from the agents' transcripts and pr-shepherd's debug logs by `sessions.mjs --extract`. Each PR's timeline (every poll with its ticks and action, every `apply` with its mutations) is replayed through this report's per-call models for all three arms. The baselines read the PR's real thread, comment, review and check sizes as of each step. pr-shepherd's modeled output is its real output length. Items are resolved, minimized or dismissed as the timeline's applies reach them, earliest first, since the PR dumps hold only final statuses. The data is [data/real-sessions.json](data/real-sessions.json); it holds numbers only.
 
-**The timelines are reconstructed, not exact.** Concurrent invocations interleave in one debug log and number their requests alike, so across the 14 debug logs (in-scope PRs and others alike) 96 requests, responses or outputs matched more than one open invocation and were assigned by heuristic (the PR their variables name, then the latest active). Those picks set per-PR ticks, output lengths and measured API counts.
+**The timelines are reconstructed, not exact.** Concurrent invocations interleave in one debug log and number their requests alike, so across the 14 debug logs (in-scope PRs and others alike) 98 requests, responses or outputs matched more than one open invocation and were assigned by heuristic (the PR their variables name, then the latest active). Those picks set per-PR ticks, output lengths and measured API counts.
+
+**The baselines fetch no CI logs.** 2 FIX_CODE polls (#530: 2) ended with a failed check. pr-shepherd's measured output includes the failure context it printed, but the replay gives gh and MCP no `gh run view --log-failed` or `get_job_logs` call: the data holds no real log sizes, and borrowing the scenarios' fixture log would replay another PR's log. This leaves the baselines cheaper than they would be.
 
 | PR | rounds | polls (ticks) | FIX_CODE | applies | threads | cost: pr-shepherd / gh / MCP | turns: pr-shepherd / gh / MCP | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| #520 | 4 | 15 (30) | 11 | 7 | 17 | 106,887 / 434,003 / 536,478 | 22 / 36 / 48 | 51 / 63 / 29 | 4 / 15 / 119 |
-| #521 | 4 | 9 (16) | 5 | 3 | 2 | 44,778 / 108,054 / 135,592 | 12 / 19 / 24 | 25 / 32 / 11 | 4 / 2 / 61 |
-| #522 | 3 | 14 (33) | 11 | 7 | 8 | 87,300 / 292,817 / 387,340 | 21 / 36 / 55 | 57 / 59 / 22 | 3 / 9 / 116 |
-| #523 | 5 | 12 (23) | 7 | 7 | 2 | 69,183 / 158,579 / 212,527 | 19 / 27 / 37 | 45 / 44 / 15 | 5 / 3 / 85 |
-| #530 | 3 | 8 (17) | 5 | 4 | 5 | 50,328 / 98,058 / 136,452 | 12 / 20 / 27 | 28 / 28 / 13 | 3 / 5 / 63 |
+| #520 | 4 | 15 (30) | 11 | 7 | 17 | 107,193 / 434,003 / 536,478 | 22 / 36 / 48 | 51 / 63 / 29 | 4 / 15 / 119 |
+| #521 | 4 | 9 (16) | 5 | 3 | 2 | 44,878 / 108,054 / 135,592 | 12 / 19 / 24 | 25 / 32 / 11 | 4 / 2 / 61 |
+| #522 | 3 | 14 (33) | 11 | 7 | 8 | 87,600 / 292,817 / 387,340 | 21 / 36 / 55 | 57 / 59 / 22 | 3 / 9 / 116 |
+| #523 | 5 | 12 (23) | 7 | 7 | 2 | 69,501 / 158,579 / 212,527 | 19 / 27 / 37 | 45 / 44 / 15 | 5 / 3 / 85 |
+| #530 | 3 | 8 (17) | 5 | 4 | 5 | 50,428 / 98,058 / 136,452 | 12 / 20 / 27 | 28 / 28 / 13 | 3 / 5 / 63 |
 | #531 | 1 | 4 (7) | 2 | 2 | 0 | 21,417 / 43,609 / 53,317 | 6 / 9 / 10 | 10 / 13 / 4 | 1 / 0 / 26 |
-| #532 | 2 | 6 (12) | 4 | 4 | 2 | 37,622 / 75,477 / 97,948 | 10 / 16 / 19 | 21 / 22 / 8 | 2 / 2 / 44 |
-| #533 | 1 | 3 (6) | 2 | 2 | 1 | 20,686 / 40,347 / 51,692 | 5 / 8 / 10 | 12 / 15 / 4 | 1 / 1 / 22 |
-| **all** | 23 | 71 (144) | 47 | 36 | 37 | 438,201 / 1,250,944 / 1,611,346 | 107 / 171 / 230 | 249 / 276 / 106 | 23 / 37 / 536 |
+| #532 | 2 | 6 (12) | 4 | 4 | 2 | 37,722 / 75,477 / 97,948 | 10 / 16 / 19 | 21 / 22 / 8 | 2 / 2 / 44 |
+| #533 | 1 | 3 (6) | 2 | 2 | 1 | 20,792 / 40,347 / 51,692 | 5 / 8 / 10 | 12 / 15 / 4 | 1 / 1 / 22 |
+| **all** | 23 | 71 (144) | 47 | 36 | 37 | 439,531 / 1,250,944 / 1,611,346 | 107 / 171 / 230 | 249 / 276 / 106 | 23 / 37 / 536 |
 
 Modeled cost of pr-shepherd vs. gh: −65%; vs. MCP: −73%. Tool tokens: −85% / −88%.
 

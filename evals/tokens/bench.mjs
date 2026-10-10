@@ -422,34 +422,60 @@ const cptRows = rowsAtCpt(MEASURED_CPT.baseline).map((r, i) => ({
   variable: { ...r.variable, shepherd: cptShepherdRows[i].variable.shepherd },
 }));
 /**
- * Steps where an arm gains a truncated or rejected call at the measured ratios.
- * That arm no longer finishes the step, so its lower cost is not a saving: the
- * comparison leaves these steps out on both sides.
+ * Per baseline, the steps where pr-shepherd or that baseline gains a truncated
+ * or rejected call at the measured ratios. That arm no longer finishes the
+ * step, so its lower cost is not a saving: the comparison with that baseline
+ * leaves these steps out on both sides. Other baselines keep them.
  */
-const cptIncomplete = new Set(
-  cptRows.flatMap((r, i) =>
-    [...ARMS, "mcpEager"].some((a) => r[a].truncated > rows[i][a].truncated) ? [i] : [],
-  ),
+const cptIncomplete = Object.fromEntries(
+  BASELINE_KEYS.map((b) => [
+    b,
+    new Set(
+      cptRows.flatMap((r, i) =>
+        ["shepherd", b].some((a) => r[a].truncated > rows[i][a].truncated) ? [i] : [],
+      ),
+    ),
+  ]),
 );
-const completeOnly = (rs) => rs.filter((_, i) => !cptIncomplete.has(i));
-const cptBaseRows = completeOnly(rows);
-const cptBaseSessions = sessionsOf(cptBaseRows);
-const cptSessions = sessionsOf(completeOnly(cptRows));
+/** The step sets each baseline is compared on, at the model's ratio and the measured ones. */
+const cptCompare = Object.fromEntries(
+  BASELINE_KEYS.map((b) => {
+    const completeOnly = (rs) => rs.filter((_, i) => !cptIncomplete[b].has(i));
+    const baseRows = completeOnly(rows);
+    const measuredRows = completeOnly(cptRows);
+    return [
+      b,
+      {
+        baseRows,
+        baseSessions: sessionsOf(baseRows),
+        measuredRows,
+        measuredSessions: sessionsOf(measuredRows),
+      },
+    ];
+  }),
+);
+
+/** Whether a per-result token charge could only add to the baselines' side. */
+const baselinesNeverFewerCalls = rows.every((r) =>
+  BASELINE_KEYS.every((b) => r[b].calls >= r.shepherd.calls),
+);
 
 const baseLosses = findLosses({ rows, sessions, apiSessions });
 const baseLossKeys = new Set(baseLosses.map(lossKey));
-const cptBaseLossKeys = new Set(
-  findLosses({ rows: cptBaseRows, sessions: cptBaseSessions, apiSessions }).map(lossKey),
-);
 /** Token losses that appear only at the measured ratios: gated like any other. */
-const cptFlips = findLosses({ rows: completeOnly(cptRows), sessions: cptSessions, apiSessions })
-  .filter(
-    (l) =>
-      (l.metric === "ite" || l.metric === "toolTokens") &&
-      !baseLossKeys.has(lossKey(l)) &&
-      !cptBaseLossKeys.has(lossKey(l)),
-  )
-  .map((l) => ({ ...l, where: `chars-per-token:${l.where}` }));
+const cptFlips = BASELINE_KEYS.flatMap((b) => {
+  const c = cptCompare[b];
+  const ofBaseline = (ls) =>
+    ls.filter((l) => l.baseline === b && (l.metric === "ite" || l.metric === "toolTokens"));
+  const before = new Set(
+    ofBaseline(findLosses({ rows: c.baseRows, sessions: c.baseSessions, apiSessions })).map(
+      lossKey,
+    ),
+  );
+  return ofBaseline(
+    findLosses({ rows: c.measuredRows, sessions: c.measuredSessions, apiSessions }),
+  ).filter((l) => !baseLossKeys.has(lossKey(l)) && !before.has(lossKey(l)));
+}).map((l) => ({ ...l, where: `chars-per-token:${l.where}` }));
 const losses = [...baseLosses, ...cptFlips];
 const pending = readPending();
 
@@ -500,9 +526,24 @@ if (process.argv.includes("--json")) {
         idleHour,
         charsPerTokenSensitivity: {
           measured: MEASURED_CPT,
-          incomplete: rows.filter((_, i) => cptIncomplete.has(i)).map((r) => r.id),
+          // Per baseline: the steps left out of its comparison, and each
+          // session's totals over the rest at the measured ratios.
+          incomplete: Object.fromEntries(
+            BASELINE_KEYS.map((b) => [
+              b,
+              rows.filter((_, i) => cptIncomplete[b].has(i)).map((r) => r.id),
+            ]),
+          ),
           sessions: Object.fromEntries(
-            Object.entries(cptSessions).map(([k, v]) => [k, { total: v.total }]),
+            BASELINE_KEYS.map((b) => [
+              b,
+              Object.fromEntries(
+                Object.entries(cptCompare[b].measuredSessions).map(([k, v]) => [
+                  k,
+                  { total: { shepherd: v.total.shepherd, [b]: v.total[b] } },
+                ]),
+              ),
+            ]),
           ),
           flips: cptFlips,
         },
@@ -895,34 +936,38 @@ if (!cptMeasured)
   );
 else {
   out(
-    `The model counts ${MODEL.charsPerToken} characters per token for every arm. The real sessions below measured pr-shepherd's output at ${MEASURED_CPT.shepherd} and tool output overall at ${MEASURED_CPT.baseline}: pr-shepherd's output is denser. Here every step is re-scored with pr-shepherd at ${MEASURED_CPT.shepherd} and gh and GitHub MCP at ${MEASURED_CPT.baseline}. MCP's ratio is unmeasured (no real session used it), so it takes the overall one. Turns and calls do not depend on the ratio. A denser ratio also pushes more MCP results past the host's ${num(MODEL.mcpOutputCapTokens)}-token cap, where they are rejected: MCP's cost can fall while it finishes less of the step.`,
+    `The model counts ${MODEL.charsPerToken} characters per token for every arm. The real sessions below measured pr-shepherd's output at ${MEASURED_CPT.shepherd} and tool output overall at ${MEASURED_CPT.baseline}: pr-shepherd's output is denser. Here every step is re-scored with pr-shepherd at ${MEASURED_CPT.shepherd} and gh and GitHub MCP at ${MEASURED_CPT.baseline}. MCP's ratio is unmeasured (no real session used it), so it takes the overall one. Turns and calls do not depend on the ratio. A denser ratio also pushes more MCP results past the host's ${num(MODEL.mcpOutputCapTokens)}-token cap, where they are rejected: MCP's cost can fall while it finishes less of the step. Only the ratio changes: the fits' per-result intercept (wrapper and harness reminders) is left out, as the model leaves it out.${baselinesNeverFewerCalls ? " Every baseline makes at least as many calls as pr-shepherd on every step, so the intercept would only add to the baselines' cost." : ""}`,
   );
   out();
-  const cptExcluded = rows.filter((_, i) => cptIncomplete.has(i));
+  const cptExcluded = BASELINE_KEYS.flatMap((b) => {
+    const ids = rows.filter((_, i) => cptIncomplete[b].has(i)).map((r) => `\`${r.id}\``);
+    return ids.length ? [`vs. ${BASELINES[b]}, ${ids.join(", ")}`] : [];
+  });
   if (cptExcluded.length) {
     out(
-      `An arm that gains a truncated or rejected call at the measured ratios no longer finishes that step, so these steps are left out of both rows of each session below and out of the verdicts: ${cptExcluded.map((r) => `\`${r.id}\``).join(", ")}.`,
+      "An arm that gains a truncated or rejected call at the measured ratios no longer finishes that step. Each comparison below and its verdicts leave out, on both sides, the steps where pr-shepherd or that baseline does:",
     );
     out();
+    for (const line of cptExcluded) out(`- ${line}`);
+    out();
   }
-  out(
-    "| session | metric | characters per token | pr-shepherd | gh CLI | GitHub MCP | vs. gh | vs. MCP |",
-  );
-  out("| --- | --- | --- | --- | --- | --- | --- | --- |");
+  out("| session | metric | vs. | characters per token | pr-shepherd | baseline | saving |");
+  out("| --- | --- | --- | --- | --- | --- | --- |");
   for (const [key, title] of Object.entries(SESSIONS))
     for (const m of ["ite", "toolTokens"])
-      for (const [label, s] of [
-        [`${MODEL.charsPerToken} for every arm`, cptBaseSessions[key]],
-        [
-          `${MEASURED_CPT.shepherd} / ${MEASURED_CPT.baseline} / ${MEASURED_CPT.baseline} (unmeasured)`,
-          cptSessions[key],
-        ],
-      ]) {
-        const t = s.total;
-        out(
-          `| ${title} | ${METRIC_LABELS[m]} | ${label} | ${num(t.shepherd[m])} | ${num(t.gh[m])} | ${num(t.mcp[m])} | ${pct(saving(t.gh[m], t.shepherd[m]))} | ${pct(saving(t.mcp[m], t.shepherd[m]))} |`,
-        );
-      }
+      for (const b of ["gh", "mcp"])
+        for (const [label, s] of [
+          [`${MODEL.charsPerToken} for every arm`, cptCompare[b].baseSessions[key]],
+          [
+            `${MEASURED_CPT.shepherd} / ${MEASURED_CPT.baseline}${b === "mcp" ? " (unmeasured)" : ""}`,
+            cptCompare[b].measuredSessions[key],
+          ],
+        ]) {
+          const t = s.total;
+          out(
+            `| ${title} | ${METRIC_LABELS[m]} | ${BASELINES[b]} | ${label} | ${num(t.shepherd[m])} | ${num(t[b][m])} | ${pct(saving(t[b][m], t.shepherd[m]))} |`,
+          );
+        }
   out();
   if (cptFlips.length) {
     out(

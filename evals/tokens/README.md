@@ -461,7 +461,8 @@ token usage, never text, IDs or paths. The bench reads only that file.
   later tick whose fingerprint missed (the logs show which did), and on a
   READY or ready-delay CANCEL tick one REST mergeability refresh; the
   ready-delay CANCEL also reads on the two-point receipt query. An `apply
-review` pays the head-SHA read when it passed `--require-sha`, and, with
+review` pays the head-SHA read, and its replayed command carries a 40-character
+  SHA, when it passed `--require-sha`, and, with
   replies, the thread-transcript read and one recovery read per 10 replies,
   plus one request per 10 mutations. Requests, costs and output past
   `--until` close an invocation but add nothing to its record.
@@ -480,9 +481,16 @@ review` pays the head-SHA read when it passed `--require-sha`, and, with
   characters per token that `real-sessions.json` records re-score every
   synthetic step, and verdicts that flip at those ratios are gated
   (`chars-per-token:` entries in `pending-losses.json`). So re-extracting
-  the sessions can add or remove gated losses. Steps where an arm gains a
-  truncated or rejected call at those ratios are left out of that
-  comparison, since the arm no longer finishes them.
+  the sessions can add or remove gated losses. A step where pr-shepherd or a
+  baseline gains a truncated or rejected call at those ratios is left out of
+  the comparison with that baseline only, since the arm no longer finishes
+  it. Only the ratio changes: the fits' per-result intercept is not charged,
+  as the model charges none, and every baseline makes at least as many calls
+  as pr-shepherd, so leaving it out favors the baselines.
+- **No CI logs for the baselines.** A FIX_CODE poll that ended with a failed
+  check would send a baseline to the failed job's log, but the data has no
+  real log sizes, so the replay gives gh and MCP no log call. The report
+  counts those polls.
 - **Buckets.** Each request's real spend goes to the calls it emitted:
   pr-shepherd and PR-state calls, environment overhead (worktree guard,
   sandbox, git identity, polls run outside the repository), or the code, test

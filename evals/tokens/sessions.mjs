@@ -66,7 +66,7 @@ const SNAPSHOT_OPS = new Set(["BatchPr", "PrFingerprint"]);
 /** Mutation requests: GitHub reports no query cost for them. */
 const MUTATION_OPS = new Set(["BulkApply", "UpdatePrBody"]);
 
-const prOfArgs = (args) => Number(args.match(/(?:\/pull\/|^|\s)(\d{3,})(?=\s|$)/)?.[1]) || null;
+const prOfArgs = (args) => Number(args.match(/(?:\/pull\/|^|\s)(\d+)(?=\s|$)/)?.[1]) || null;
 const kindOfArgs = (args) =>
   /^apply review\b/.test(args)
     ? "review"
@@ -277,7 +277,7 @@ const resultText = (b) =>
 const SHEPHERD_CLI = /(?:^|[\s;&|(])(?:npx (?:--prefix \S+ )?)?pr-shepherd(?=\s)/m;
 const GH_PR_STATE =
   /\bgh (?:pr (?:view|checks|ready|edit|comment|review)\b|api\b[^\n|;]*(?:\/pulls\/\d+|graphql[^\n]*pullRequest))/;
-const POLL_FILE = /\bp(5\d\d)[a-z]?\.md\b/g;
+const POLL_FILE = /\bp(\d+)[a-z]?\.md\b/g;
 const ENV_FAILURE =
   /^(?:This (?:session|agent) is isolated in the worktree|.*\b(?:Operation not permitted|Author identity unknown|index\.lock)\b)|pr-shepherd error: Command failed|exit 70\b|Exit code 70\b/m;
 
@@ -298,7 +298,7 @@ function classify(use, result, bgPrs, scope) {
   const inScope = (n) => scope.has(n);
   const prs = new Set();
   for (const m of text.matchAll(
-    /(?:pr-shepherd(?: apply \w+)? (?:\S+\/pull\/)?|\/pull\/|\bpulls\/|number:\s*|gh pr \w+ )(\d{3})\b/g,
+    /(?:pr-shepherd(?: apply \w+)? (?:\S+\/pull\/)?|\/pull\/|\bpulls\/|number:\s*|gh pr \w+ )(\d+)\b/g,
   ))
     if (inScope(Number(m[1]))) prs.add(Number(m[1]));
   for (const m of text.matchAll(POLL_FILE)) if (inScope(Number(m[1]))) prs.add(Number(m[1]));
@@ -803,6 +803,8 @@ const mcpObserve = (s, phase) =>
   );
 
 const REPLY = "Fixed in the latest commit.";
+/** A 40-character head SHA, as `--require-sha` carries one. */
+const HEAD_SHA = "0123456789abcdef0123456789abcdef01234567";
 const MINIMIZE_OUT = JSON.stringify({
   data: { minimizeComment: { minimizedComment: { isMinimized: true } } },
 });
@@ -909,7 +911,7 @@ function stepArms(pr, inv) {
     shepherd: [
       call(
         1,
-        `pr-shepherd apply review ${n}${ids("reply-thread-ids", "PRRT_", 22, a.replies)}${ids("resolve-thread-ids", "PRRT_", 22, a.resolves)}${ids("minimize-comment-ids", "IC_", 26, a.minimizes)}${ids("dismiss-review-ids", "PRR_", 24, a.dismissals)}${a.replies || a.dismissals ? ` --message "${REPLY}"` : ""}`,
+        `pr-shepherd apply review ${n}${ids("reply-thread-ids", "PRRT_", 22, a.replies)}${ids("resolve-thread-ids", "PRRT_", 22, a.resolves)}${ids("minimize-comment-ids", "IC_", 26, a.minimizes)}${ids("dismiss-review-ids", "PRR_", 24, a.dismissals)}${a.replies || a.dismissals ? ` --message "${REPLY}"` : ""}${a.requireSha ? ` --require-sha "${HEAD_SHA}"` : ""}`,
         fill(inv.outChars ?? 0),
         { api: gql(reads + Math.ceil(mutations / 10)) },
       ),
@@ -1042,6 +1044,13 @@ export function realSessions(data = readJson(REAL_SESSIONS_FILE), cpt = {}) {
       applies: steps.length - polls.length,
       ticks: polls.reduce((s, i) => s + i.ticks, 0),
       fixCode: polls.filter((i) => i.action === "FIX_CODE").length,
+      // FIX_CODE polls that ended with a failed check: a baseline would fetch
+      // the failed job's log, which the replay does not model.
+      failedCheckFixes: polls.filter(
+        (i) =>
+          i.action === "FIX_CODE" &&
+          stateAt(pr, i.t + i.seconds).checks.some((k) => k.conclusion === "FAILURE"),
+      ).length,
       threads: pr.content.threads.length,
       comments: pr.content.comments.length,
       measured: {
@@ -1206,6 +1215,12 @@ export function realSessionsSection({ rows, data } = realSessions()) {
     `**The timelines are reconstructed, not exact.** Concurrent invocations interleave in one debug log and number their requests alike, so across the ${num(data.sources.debugLogs)} debug logs (in-scope PRs and others alike) ${num(data.sources.heuristicAttributions)} requests, responses or outputs matched more than one open invocation and were assigned by heuristic (the PR their variables name, then the latest active). Those picks set per-PR ticks, output lengths and measured API counts.`,
     "",
   );
+  const failedFixes = rows.filter((r) => r.failedCheckFixes);
+  if (failedFixes.length)
+    out.push(
+      `**The baselines fetch no CI logs.** ${total((r) => r.failedCheckFixes)} FIX_CODE polls (${failedFixes.map((r) => `#${r.pr}: ${r.failedCheckFixes}`).join(", ")}) ended with a failed check. pr-shepherd's measured output includes the failure context it printed, but the replay gives gh and MCP no \`gh run view --log-failed\` or \`get_job_logs\` call: the data holds no real log sizes, and borrowing the scenarios' fixture log would replay another PR's log. This leaves the baselines cheaper than they would be.`,
+      "",
+    );
   out.push(
     "| PR | rounds | polls (ticks) | FIX_CODE | applies | threads | cost: pr-shepherd / gh / MCP | turns: pr-shepherd / gh / MCP | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP |",
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
