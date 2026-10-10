@@ -339,7 +339,9 @@ by how far they move the result.
   persist across `wait` runs. A 304 costs no primary rate limit (GitHub REST
   docs, conditional requests) but still costs a round trip; a 200 is one REST
   core request. Each changed tick then runs one full snapshot at the poll
-  arm's GraphQL tick cost, without the fingerprint miss the poll pays. The
+  arm's GraphQL tick cost. The wait reads no fingerprint, so where the poll
+  pays a fingerprint miss after a skipped wait (`ci-wait`, `mark-ready`), the
+  event arm does not. The
   stack arm's detectors are per open layer.
 - **Which reads change (assumed, per scenario).**
   - After a push, the pull is a 200 (new head), and mergeability, which GitHub
