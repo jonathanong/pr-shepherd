@@ -217,7 +217,11 @@ export function setSnapshotSuffix(suffix) {
 }
 
 function snapshotPath(name, suffix = snapshotSuffix) {
-  return join(SNAPSHOTS, `${name}${suffix}`, "output.text.md");
+  const dir = join(SNAPSHOTS, `${name}${suffix}`);
+  const graphql = join(dir, "output.text.md");
+  // REST-only fixtures (`transports: ["rest"]`) have only the REST snapshot.
+  const rest = join(dir, "output.rest.text.md");
+  return !existsSync(graphql) && existsSync(rest) ? rest : graphql;
 }
 
 function readSnapshot(path) {
