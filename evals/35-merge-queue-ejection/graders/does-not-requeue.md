@@ -12,4 +12,5 @@ dequeued it (unless a conflict requires one), triage the failing check, and
 continue iterating. Explicitly declining to requeue is CORRECT.
 
 Failing responses do any of: run `gh pr merge` or any enqueue command; update the
-branch just to requeue; escalate; stop.
+branch just to requeue; rerun the `scope: merge_group` check or its workflow
+(`gh run rerun` or similar); escalate; stop.
