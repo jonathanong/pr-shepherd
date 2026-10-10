@@ -1,6 +1,9 @@
 export interface ApiResourceUsage {
   resource: string;
+  /** Quota-consuming requests; excludes `notModified` responses. */
   requestCount: number;
+  /** Conditional reads answered 304 Not Modified (no quota consumed). Omitted when 0. */
+  notModified?: number;
   limit: number;
   used?: number;
   remaining: number;

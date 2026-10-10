@@ -2,6 +2,7 @@ import { restWithRateLimit } from "./http.mts";
 import type { RepoInfo, RateLimitInfo } from "./client.mts";
 import { GitHubRequestError } from "./errors.mts";
 import { EXIT } from "../exit-codes.mts";
+import { currentRestConditionalKey, recordRestConditionalRead } from "./rest-conditional-scope.mts";
 
 export function restRepoPath(repo: RepoInfo): string {
   return `/repos/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
@@ -104,6 +105,13 @@ function nextRestPage(link: string | undefined, original: string): string | unde
   return `${url.pathname}${url.search}`;
 }
 
+/** A pull request whose mergeability GitHub is still computing must be re-read, never replayed. */
+function isSettledBody(body: unknown): boolean {
+  if (body === null || typeof body !== "object" || Array.isArray(body)) return true;
+  const record = body as Record<string, unknown>;
+  return record.mergeable !== null && record.mergeable_state !== "unknown";
+}
+
 let activeRequests = 0;
 const pendingRequests: Array<() => void> = [];
 /** Bound independent snapshots and nested connection reads to four HTTP requests together. */
@@ -111,7 +119,13 @@ async function readRestRequest<T>(method: string, path: string, body?: unknown) 
   if (activeRequests >= 4) await new Promise<void>((resolve) => pendingRequests.push(resolve));
   else activeRequests++;
   try {
-    return await restWithRateLimit<T>(method, path, body);
+    const key = method === "GET" ? currentRestConditionalKey() : undefined;
+    if (key === undefined) return await restWithRateLimit<T>(method, path, body);
+    const result = await restWithRateLimit<T>(method, path, body, {
+      conditional: { key, name: path, shouldStore: isSettledBody },
+    });
+    recordRestConditionalRead(path, result.status === 304, result.etag);
+    return result;
   } finally {
     const waiting = pendingRequests.shift();
     if (waiting) waiting();

@@ -5,6 +5,8 @@ import {
   type PrFingerprint,
 } from "../github/fingerprint.mts";
 import { fingerprintInputDigest, loadPrFingerprint } from "../state/pr-fingerprint.mts";
+import { loadRestSnapshotReport } from "../state/rest-snapshot-report.mts";
+import type { RestSnapshotState } from "../github/rest-conditional-scope.mts";
 import type { PrShepherdConfig } from "../config/load.mts";
 import { hasCheckDrivenActionableWork } from "./check-annotations.mts";
 import type { ShepherdReport } from "../types.mts";
@@ -69,7 +71,37 @@ export async function tryReuseFingerprintReport(
     return null;
   }
   if (getGithubTransport() === "rest") return null;
-  return { ...stripReplayedRuleAutoResolve(cached.report), fingerprintReused: true };
+  return {
+    ...stripReplayedRuleAutoResolve(cached.report),
+    fingerprintReused: true,
+  };
+}
+
+/**
+ * REST counterpart of `tryReuseFingerprintReport`: after the snapshot reads, reuse the previous
+ * report only when every conditional read came back 304 with the same validators it was built
+ * from. One uncached pull read still confirms the mergeability GitHub computes lazily.
+ */
+export async function tryReuseRestSnapshotReport(
+  prNumber: number,
+  repo: RepoInfo,
+  stateKey: { owner: string; repo: string; pr: number },
+  config: PrShepherdConfig,
+  snapshot: RestSnapshotState | undefined,
+): Promise<ShepherdReport | null> {
+  if (snapshot === undefined || !snapshot.allNotModified) return null;
+  const cached = await loadRestSnapshotReport(stateKey);
+  if (cached === null || cached.snapshotDigest !== snapshot.digest) return null;
+  if (cached.inputDigest !== fingerprintInputDigest(config)) return null;
+  if (!reportAllowsFingerprintSkip(cached.report)) return null;
+  const live = await getMergeableState(prNumber, repo.owner, repo.name);
+  if (live.state === "MERGED" || live.state === "CLOSED") return null;
+  if (live.mergeable !== cached.report.mergeStatus.mergeable) return null;
+  if (live.mergeStateStatus !== cached.report.mergeStatus.mergeStateStatus) return null;
+  return {
+    ...stripReplayedRuleAutoResolve(cached.report),
+    fingerprintReused: true,
+  };
 }
 
 async function cachedReportSurvivesMergeabilityRefresh(

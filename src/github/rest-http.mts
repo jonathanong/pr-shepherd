@@ -40,6 +40,8 @@ export interface RestResult<T = unknown> {
   rateLimit?: RateLimitInfo;
   /** HTTP status, including documented non-2xx statuses accepted by the caller. */
   status?: number;
+  /** Validator of a conditional read: the stored ETag on a 304, the response ETag on a 200. */
+  etag?: string;
   /** GitHub pagination header, retained for named REST readers. */
   link?: string;
 }
@@ -58,6 +60,8 @@ export interface RestRequestOptions {
     /** Logical cache name; must be unique per distinct resource + page. */
     name: string;
     headSha?: string;
+    /** Return false to keep a 200 body out of the cache (e.g. a still-computing resource). */
+    shouldStore?: (body: unknown) => boolean;
   };
 }
 
@@ -131,12 +135,21 @@ export async function restWithRateLimit<T = unknown>(
         retryAfterSeconds,
       }),
     );
-    recordApiTelemetry({ kind: "REST", method, authSource, credentialFingerprint, rateLimit });
+    // A 304 consumes no quota: telemetry counts it as notModified, not as a request.
+    recordApiTelemetry({
+      kind: "REST",
+      method,
+      authSource,
+      credentialFingerprint,
+      rateLimit,
+      notModified: true,
+    });
     return {
       data: cached.body as T,
       rateLimit,
       status: res.status,
-      link: res.headers.get("link") ?? undefined,
+      etag: cached.etag,
+      link: res.headers.get("link") ?? cached.link,
     };
   }
 
@@ -159,7 +172,13 @@ export async function restWithRateLimit<T = unknown>(
         retryAfterSeconds,
       }),
     );
-    recordApiTelemetry({ kind: "REST", method, authSource, credentialFingerprint, rateLimit });
+    recordApiTelemetry({
+      kind: "REST",
+      method,
+      authSource,
+      credentialFingerprint,
+      rateLimit,
+    });
     const responseMessage = isRestSessionRefusalResponse(res.status, text)
       ? redactToken(text)
       : sanitizeBody(text);
@@ -197,7 +216,13 @@ export async function restWithRateLimit<T = unknown>(
           retryAfterSeconds,
         }),
       );
-      recordApiTelemetry({ kind: "REST", method, authSource, credentialFingerprint, rateLimit });
+      recordApiTelemetry({
+        kind: "REST",
+        method,
+        authSource,
+        credentialFingerprint,
+        rateLimit,
+      });
       if (!res.ok) {
         throw new GitHubRequestError(
           `GitHub REST ${method} ${path} failed: ${res.status} Invalid JSON response${detail}`,
@@ -228,22 +253,31 @@ export async function restWithRateLimit<T = unknown>(
         retryAfterSeconds,
       }),
     );
-    recordApiTelemetry({ kind: "REST", method, authSource, credentialFingerprint, rateLimit });
-    if (opts?.conditional) {
-      const etag = res.headers.get("etag");
-      if (etag) {
-        await storeEtagEntry(opts.conditional.key, opts.conditional.name, {
-          etag,
-          body: json,
-          ...(opts.conditional.headSha !== undefined && { headSha: opts.conditional.headSha }),
-        });
-      }
+    recordApiTelemetry({
+      kind: "REST",
+      method,
+      authSource,
+      credentialFingerprint,
+      rateLimit,
+    });
+    const etag = opts?.conditional ? (res.headers.get("etag") ?? undefined) : undefined;
+    const link = res.headers.get("link") ?? undefined;
+    if (opts?.conditional && etag && (opts.conditional.shouldStore?.(json) ?? true)) {
+      await storeEtagEntry(opts.conditional.key, opts.conditional.name, {
+        etag,
+        body: json,
+        ...(opts.conditional.headSha !== undefined && {
+          headSha: opts.conditional.headSha,
+        }),
+        ...(link !== undefined && { link }),
+      });
     }
     return {
       data: json,
       rateLimit,
       status: res.status,
-      link: res.headers.get("link") ?? undefined,
+      ...(etag !== undefined && { etag }),
+      link,
     };
   }
   appendEntry(
@@ -261,6 +295,12 @@ export async function restWithRateLimit<T = unknown>(
       retryAfterSeconds,
     }),
   );
-  recordApiTelemetry({ kind: "REST", method, authSource, credentialFingerprint, rateLimit });
+  recordApiTelemetry({
+    kind: "REST",
+    method,
+    authSource,
+    credentialFingerprint,
+    rateLimit,
+  });
   return { data: undefined as T, rateLimit, status: res.status };
 }

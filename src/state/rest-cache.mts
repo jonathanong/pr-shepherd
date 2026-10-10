@@ -37,6 +37,8 @@ export interface EtagCacheEntry {
   body: unknown;
   storedAt: number;
   headSha?: string;
+  /** Pagination `Link` header; GitHub does not reliably repeat it on a 304. */
+  link?: string;
 }
 
 export interface DerivedCacheEntry<T = unknown> {
@@ -57,7 +59,7 @@ export async function loadEtagEntry(key: StateKey, name: string): Promise<EtagCa
 export async function storeEtagEntry(
   key: StateKey,
   name: string,
-  fields: { etag: string; body: unknown; headSha?: string },
+  fields: { etag: string; body: unknown; headSha?: string; link?: string },
 ): Promise<void> {
   await writeEntry(key, name, {
     kind: "etag",
@@ -66,6 +68,7 @@ export async function storeEtagEntry(
     body: fields.body,
     storedAt: Date.now(),
     ...(fields.headSha !== undefined && { headSha: fields.headSha }),
+    ...(fields.link !== undefined && { link: fields.link }),
   });
 }
 
