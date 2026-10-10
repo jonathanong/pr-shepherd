@@ -55,8 +55,9 @@ if (MCP_API.source !== schemas.source)
 // Setup output stays in context for the rest of the session: the skill and
 // playbooks for shepherd, the loaded tool schemas for MCP. Each setup scenario
 // reports, per later scenario, how much each arm has loaded by then.
-const setupCarry = () =>
-  Object.assign({}, ...SCENARIOS.filter((s) => s.setup).map((s) => s.arms().carry));
+// `exclude` leaves out steps a comparison drops, and their loads with them.
+const setupCarry = (exclude) =>
+  Object.assign({}, ...SCENARIOS.filter((s) => s.setup).map((s) => s.arms(exclude).carry));
 const BASE_CTX = { carry: setupCarry(), eagerTokens };
 
 /** Sum cost results, each scaled by a weight. */
@@ -110,8 +111,8 @@ function buildRows(strategy, ctx = BASE_CTX) {
   return SCENARIOS.map((s) => buildRow(s, strategy, ctx));
 }
 
-function buildRow(s, strategy, { carry, eagerTokens } = BASE_CTX) {
-  const arms = applyStrategy(s.arms(), s, strategy);
+function buildRow(s, strategy, { carry, eagerTokens, exclude } = BASE_CTX) {
+  const arms = applyStrategy(s.setup ? s.arms(exclude) : s.arms(), s, strategy);
   const carried = (arm) => (s.setup ? 0 : (carry[s.id]?.[arm] ?? 0));
   // A setup row adds its lazy loads, each at the share of sessions that trigger it.
   const armCost = (a) =>
@@ -410,19 +411,32 @@ const calibration = existsSync(calibrationPath)
 const MEASURED_CPT = measuredCharsPerToken();
 const cptMeasured = MEASURED_CPT.shepherd != null && MEASURED_CPT.baseline != null;
 
-/** Every row, re-costed with tokens counted at `cpt` characters each. */
-const rowsAtCpt = (cpt) =>
+/**
+ * Every row but the `exclude`d steps, re-costed with tokens counted at `cpt`
+ * characters each. Setup rows and their carry leave out the excluded steps' loads.
+ */
+const rowsAtCpt = (cpt, exclude = new Set()) =>
   atCharsPerToken(cpt, () => {
-    const ctx = { carry: setupCarry(), eagerTokens: inputTokens("x".repeat(schemas.eagerChars)) };
-    return pickRows(Object.fromEntries(STRATEGIES.map((st) => [st, buildRows(st, ctx)])));
+    const ctx = {
+      carry: setupCarry(exclude),
+      eagerTokens: inputTokens("x".repeat(schemas.eagerChars)),
+      exclude,
+    };
+    return pickRows(Object.fromEntries(STRATEGIES.map((st) => [st, buildRows(st, ctx)]))).filter(
+      (r) => !exclude.has(r.id),
+    );
   });
-// With either ratio unmeasured, both arms keep the model's: no partial re-score.
-const cptShepherdRows = rowsAtCpt(cptMeasured ? MEASURED_CPT.shepherd : null);
-const cptRows = rowsAtCpt(cptMeasured ? MEASURED_CPT.baseline : null).map((r, i) => ({
-  ...r,
-  shepherd: cptShepherdRows[i].shepherd,
-  variable: { ...r.variable, shepherd: cptShepherdRows[i].variable.shepherd },
-}));
+/** pr-shepherd at its measured ratio, the baselines at theirs. */
+const measuredRowsOf = (exclude) => {
+  // With either ratio unmeasured, both arms keep the model's: no partial re-score.
+  const shepherdRows = rowsAtCpt(cptMeasured ? MEASURED_CPT.shepherd : null, exclude);
+  return rowsAtCpt(cptMeasured ? MEASURED_CPT.baseline : null, exclude).map((r, i) => ({
+    ...r,
+    shepherd: shepherdRows[i].shepherd,
+    variable: { ...r.variable, shepherd: shepherdRows[i].variable.shepherd },
+  }));
+};
+const cptRows = measuredRowsOf();
 /**
  * Per baseline, the steps where pr-shepherd or that baseline gains a truncated
  * or rejected call at the measured ratios. That arm no longer finishes the
@@ -439,12 +453,15 @@ const cptIncomplete = Object.fromEntries(
     ),
   ]),
 );
-/** The step sets each baseline is compared on, at the model's ratio and the measured ones. */
+/**
+ * The step sets each baseline is compared on, at the model's ratio and the
+ * measured ones, with setup rebuilt over the steps left.
+ */
 const cptCompare = Object.fromEntries(
   BASELINE_KEYS.map((b) => {
-    const completeOnly = (rs) => rs.filter((_, i) => !cptIncomplete[b].has(i));
-    const baseRows = completeOnly(rows);
-    const measuredRows = completeOnly(cptRows);
+    const exclude = new Set(rows.filter((_, i) => cptIncomplete[b].has(i)).map((r) => r.id));
+    const baseRows = exclude.size ? rowsAtCpt(null, exclude) : rows;
+    const measuredRows = exclude.size ? measuredRowsOf(exclude) : cptRows;
     return [
       b,
       {
@@ -947,7 +964,7 @@ else {
   });
   if (cptExcluded.length) {
     out(
-      "An arm that gains a truncated or rejected call at the measured ratios no longer finishes that step. Each comparison below and its verdicts leave out, on both sides, the steps where pr-shepherd or that baseline does:",
+      "An arm that gains a truncated or rejected call at the measured ratios no longer finishes that step. Each comparison below and its verdicts leave out, on both sides, the steps where pr-shepherd or that baseline does, and the setup loads only those steps trigger:",
     );
     out();
     for (const line of cptExcluded) out(`- ${line}`);

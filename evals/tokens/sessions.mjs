@@ -319,27 +319,30 @@ function classify(use, result, bgPrs, scope) {
     if (inScope(Number(m[1]))) prs.add(Number(m[1]));
   for (const m of text.matchAll(POLL_FILE)) if (inScope(Number(m[1]))) prs.add(Number(m[1]));
   for (const [id, p] of bgPrs) if (text.includes(id)) p.forEach((n) => prs.add(n));
+  // A batched `for n in 520 521; do …` loop, at the start or after a `cd …`.
+  const loop = use.name === "Bash" && text.match(/\bfor n in ((?:\d+ ?)+)/);
+  if (loop) for (const n of loop[1].trim().split(" ")) if (inScope(Number(n))) prs.add(Number(n));
   const readsPolls =
-    (POLL_FILE.test(text) || [...bgPrs.keys()].some((id) => text.includes(id))) && prs.size;
+    (POLL_FILE.test(text) || [...bgPrs.keys()].some((id) => text.includes(id))) && prs.size > 0;
   POLL_FILE.lastIndex = 0;
+  const reader = use.name === "Read" || use.name === "Bash" || /Output$/.test(use.name);
+  // Reads pr-shepherd's own output: a poll file, or a background CLI run's.
+  const readsOutput =
+    reader &&
+    readsPolls &&
+    (POLL_FILE.test(text) || [...bgPrs].some(([id, p]) => p.cli && text.includes(id)));
+  POLL_FILE.lastIndex = 0;
+  // An explicit PR-state call counts only when it names an in-scope PR: one
+  // for any other PR is not charged to the PR last shepherded.
   const shepherd =
-    (use.name === "Bash" && (SHEPHERD_CLI.test(text) || GH_PR_STATE.test(text))) ||
-    ((use.name === "Read" || use.name === "Bash" || /Output$/.test(use.name)) && readsPolls);
-  if (
-    use.name === "Bash" &&
-    /^\s*(?:for n in [\d ]+; do )?for n in/.test(text) === false &&
-    /\bfor n in ((?:\d+ ?)+)/.test(text)
-  )
-    for (const n of text
-      .match(/\bfor n in ((?:\d+ ?)+)/)[1]
-      .trim()
-      .split(" "))
-      if (inScope(Number(n))) prs.add(Number(n));
+    (use.name === "Bash" && (SHEPHERD_CLI.test(text) || GH_PR_STATE.test(text)) && prs.size > 0) ||
+    (reader && readsPolls);
   const env = ENV_FAILURE.test(result.slice(0, 600));
   return {
     bucket: env ? "overhead" : shepherd ? "shepherd" : "common",
     prs: [...prs],
     isCli: SHEPHERD_CLI.test(text),
+    readsOutput,
   };
 }
 
@@ -434,7 +437,7 @@ function walkTranscript(tr, { scope, coordinator, add, samples }) {
       };
       const k = classify(u, r.text, bgPrs, scope);
       const bg = r.text.match(/Command running in background with ID: (\w+)/);
-      if (bg && k.prs.length) bgPrs.set(bg[1], k.prs);
+      if (bg && k.prs.length) bgPrs.set(bg[1], Object.assign([...k.prs], { cli: k.isCli }));
       return { u, r, k };
     });
     // Clean sample: one call, one result, nothing else between the requests.
@@ -451,7 +454,10 @@ function walkTranscript(tr, { scope, coordinator, add, samples }) {
         samples.push({
           chars: items[0].r.text.length,
           tokens: delta,
-          shepherd: items[0].k.bucket === "shepherd" && items[0].k.isCli,
+          // pr-shepherd's output, whether returned directly or read back
+          // from a redirected file.
+          shepherd:
+            items[0].k.bucket === "shepherd" && (items[0].k.isCli || items[0].k.readsOutput),
           thinking: c.thinking,
         });
     }
@@ -1099,13 +1105,18 @@ export function atCharsPerToken(cpt, fn) {
  */
 export function realSessions(data = readJson(REAL_SESSIONS_FILE), cpt = {}) {
   const rows = data.prs.map((pr) => {
-    // An invocation whose output was not captured still did its work: its
-    // output size alone is unknown, and is replayed as empty.
     const steps = pr.invocations;
     const sum = Object.fromEntries(
       ARMS.map((a) => [a, Object.fromEntries(SUM_KEYS.map((k) => [k, 0]))]),
     );
+    // An invocation whose output was not captured has no known result size:
+    // its comparison is left out on every arm rather than replayed as empty.
+    let uncaptured = 0;
     for (const inv of steps) {
+      if (inv.outChars == null) {
+        uncaptured++;
+        continue;
+      }
       const arms = stepArms(pr, inv);
       for (const a of ARMS) {
         if (!arms[a].length) continue;
@@ -1151,6 +1162,7 @@ export function realSessions(data = readJson(REAL_SESSIONS_FILE), cpt = {}) {
       ).length,
       threads: pr.content.threads.length,
       comments: pr.content.comments.length,
+      ...(uncaptured && { uncaptured }),
       measured: {
         shepherd: m.shepherd ?? null,
         common: m.common ?? null,
@@ -1315,6 +1327,12 @@ export function realSessionsSection({ rows, data } = realSessions()) {
     `**The timelines are reconstructed, not exact.** Concurrent invocations interleave in one debug log and number their requests alike, so across the ${num(data.sources.debugLogs)} debug logs (in-scope PRs and others alike) ${num(data.sources.heuristicAttributions)} requests, responses or outputs matched more than one open invocation and were assigned by heuristic (the PR their variables name, then the latest active). Those picks set per-PR ticks, output lengths and measured API counts.`,
     "",
   );
+  const uncaptured = rows.filter((r) => r.uncaptured);
+  if (uncaptured.length)
+    out.push(
+      `**Steps without a captured output are left out.** ${total((r) => r.uncaptured ?? 0)} invocations (${uncaptured.map((r) => `#${r.pr}: ${r.uncaptured}`).join(", ")}) have no output in the debug logs, so their result size is unknown. The modeled columns leave them out on every arm rather than replay pr-shepherd's result as empty.`,
+      "",
+    );
   const failedFixes = rows.filter((r) => r.failedCheckFixes);
   if (failedFixes.length)
     out.push(

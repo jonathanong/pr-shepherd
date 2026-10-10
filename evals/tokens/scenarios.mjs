@@ -481,6 +481,9 @@ const PLAYBOOK_FILES = Object.fromEntries(
  * `carry` gives, per scenario, the expected tokens each arm has in context
  * from loads: a playbook only after the output that names it (so from the
  * next scenario on), a tool schema from the call that needs it.
+ *
+ * `exclude` holds scenario IDs a comparison leaves out: their loads are not
+ * charged or carried.
  */
 function setupScenario({ id, session }) {
   return {
@@ -489,7 +492,7 @@ function setupScenario({ id, session }) {
     setup: true,
     weight: 1,
     title: "One-time setup",
-    arms() {
+    arms(exclude = new Set()) {
       const schemas = readJson("mcp-tool-schemas.json").tools;
       const schema = (t) => {
         if (!schemas[t]) throw new Error(`no recorded schema for ${t}; add it to MCP_TOOLS_USED`);
@@ -519,7 +522,9 @@ function setupScenario({ id, session }) {
       let shepherdTokens = size(skill);
       let mcpTokens = 0;
       const carry = {};
-      for (const s of SCENARIOS.filter((x) => x.session === session && !x.setup)) {
+      for (const s of SCENARIOS.filter(
+        (x) => x.session === session && !x.setup && !exclude.has(x.id),
+      )) {
         const arms = s.arms();
         const share = Math.min(1, s.weight);
         const before = shepherdTokens;

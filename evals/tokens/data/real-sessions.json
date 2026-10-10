@@ -20,15 +20,15 @@
       }
     },
     "shepherd": {
-      "samples": 44,
-      "charsPerToken": 2.19,
-      "intercept": 311,
-      "r2": 0.91,
+      "samples": 47,
+      "charsPerToken": 2.26,
+      "intercept": 249,
+      "r2": 0.96,
       "perSample": {
-        "samples": 13,
+        "samples": 15,
         "p10": 2.16,
-        "p50": 2.31,
-        "p90": 2.42
+        "p50": 2.27,
+        "p90": 2.39
       }
     },
     "noThinking": {
@@ -82,21 +82,21 @@
         "resultTokens": 3050.5
       },
       "coordination": {
-        "ite": 2490209.7,
-        "turns": 121.8,
-        "calls": 130,
-        "resultChars": 231233,
-        "measuredChars": 198135,
-        "resultTokens": 89475.9
+        "ite": 2610451.6,
+        "turns": 129.5,
+        "calls": 139,
+        "resultChars": 260622,
+        "measuredChars": 227524,
+        "resultTokens": 101530.6
       },
       "shepherd": {
-        "ite": 849648.6,
-        "turns": 51.7,
-        "calls": 65,
-        "resultChars": 137230,
-        "measuredChars": 126651,
-        "resultTokens": 59403.6,
-        "cliResults": 39
+        "ite": 729406.8,
+        "turns": 44,
+        "calls": 56,
+        "resultChars": 107841,
+        "measuredChars": 97262,
+        "resultTokens": 47348.8,
+        "cliResults": 35
       }
     }
   },

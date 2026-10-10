@@ -453,7 +453,8 @@ token usage, never text, IDs or paths. The bench reads only that file.
   observed, so the baselines skip them, which only flatters the baselines.
   An `apply` that sent no mutation failed before applying
   anything: pr-shepherd pays for the attempt, and the baselines repeat
-  nothing. Replayed commands keep the real ones' `--until-terminal` and
+  nothing. A step whose output the debug logs did not capture is left out
+  on every arm. Replayed commands keep the real ones' `--until-terminal` and
   `--require-sha`. Checks from
   before the first recorded commit are unknown and replayed as none. A wait
   with a check pending is a `gh pr checks --watch` refresh for gh; a wait with
@@ -493,7 +494,8 @@ review` pays the head-SHA read, and its replayed command carries a 40-character
   the sessions can add or remove gated losses. A step where pr-shepherd or a
   baseline gains a truncated or rejected call at those ratios is left out of
   the comparison with that baseline only, since the arm no longer finishes
-  it. The ratios apply to tool results only, since that is what they were
+  it, and that comparison's setup leaves out the loads only those steps
+  trigger. The ratios apply to tool results only, since that is what they were
   fitted on; commands and tool schemas keep the model's ratio. If either
   ratio is unmeasured, nothing is re-scored. Only the ratio changes: the
   fits' per-result intercept is not charged,
