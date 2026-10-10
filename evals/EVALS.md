@@ -343,8 +343,11 @@ anyway, because its tools hit a 60s timeout.
   single `gh run view --log` routinely runs to tens of thousands.
 - **Whether the CLI produces correct output.** That is covered by
   `test-cases/**` and the unit suite.
-- **Target resolution from conversation.** Roughly a third of real invocations
-  carry no PR identifier; every case here supplies a URL.
+- **Target resolution itself.** Roughly a third of real invocations carry no PR
+  identifier. Case `37-no-target-infers-branch` grades only the plan: invoke the
+  CLI with no target instead of looking the PR up first. No case runs the CLI,
+  so whether it resolves the right PR from the checkout is not executed or
+  validated here; that is the CLI's own test suite.
 
 ## Environment constraints
 

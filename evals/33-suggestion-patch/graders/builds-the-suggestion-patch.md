@@ -6,4 +6,4 @@ flags: i
 weight: 1
 ---
 
-build-suggestion-patches\s+\S+\s+--thread-id\s+["']?PRRT_suggest["']?\s+--message\s+\S+
+build-suggestion-patches(?:\s|\\\n)+\S+(?:\s|\\\n)+--thread-id(?:\s|\\\n)+["']?PRRT_suggest["']?(?:\s|\\\n)+--message(?:\s|\\\n)+\S+

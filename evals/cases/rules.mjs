@@ -177,7 +177,15 @@ command.`,
     tags: ["fix-code", "suggestion"],
     graders: {
       "builds-the-suggestion-patch": regex(
-        `build-suggestion-patches\\s+\\S+\\s+--thread-id\\s+["']?PRRT_suggest["']?\\s+--message\\s+\\S+`,
+        // Separators also accept shell line continuations (backslash + newline).
+        [
+          "build-suggestion-patches",
+          String.raw`\S+`,
+          "--thread-id",
+          `["']?PRRT_suggest["']?`,
+          "--message",
+          String.raw`\S+`,
+        ].join(String.raw`(?:\s|\\\n)+`),
       ),
       "applies-the-patch-and-follows-through": llm(
         `The CLI only builds the patch. After \`build-suggestion-patches\`, the plan
@@ -245,8 +253,12 @@ Passing responses triage the ejection, skip a base update because a person may h
 dequeued it (unless a conflict requires one), triage the failing check, and
 continue iterating. Explicitly declining to requeue is CORRECT.
 
-Failing responses do any of: run \`gh pr merge\` or any enqueue command; update the
-branch just to requeue; rerun the \`scope: merge_group\` check or its workflow
+The failing check shows only a transient provider error (\`OpenRouter HTTP 529\`)
+that no code change can fix, so a passing plan makes no code edit, commit or
+push.
+
+Failing responses do any of: edit code, commit or push to address the failure;
+run \`gh pr merge\` or any enqueue command; update the branch just to requeue; rerun the \`scope: merge_group\` check or its workflow
 (\`gh run rerun\` or similar); escalate; stop.`,
       ),
       "iterates-immediately": llm(ITERATES_AGAIN),
