@@ -70,17 +70,64 @@
 // Layout: lib.mjs holds the framing, grader helpers and writer; cases/*.mjs hold
 // the case specs. Case numbers are stable — append, never renumber.
 
+//
+// Ablation scaffolding (skill on/off × inline/playbook instructions): with
+// `--instructions playbook --out <dir>`, every case reads the
+// `<fixture>-playbook` snapshot instead (recorded with `iterate --instructions
+// playbook`) and is written under <dir>, outside evals/ so neither the default
+// suite nor its pruning sees it. Cases with no playbook snapshot are skipped and
+// listed. See EVALS.md "Ablation: inline vs playbook instructions".
+
+import { parseArgs } from "node:util";
+import { resolve } from "node:path";
 import { CORE_CASES } from "./cases/core.mjs";
+import { DEFERRED_CASES } from "./cases/deferred.mjs";
+import { MULTITURN_CASES } from "./cases/multiturn.mjs";
 import { RECENT_CASES } from "./cases/recent.mjs";
 import { RULES_CASES } from "./cases/rules.mjs";
 import { STACK_CASES } from "./cases/stack.mjs";
-import { EVALS_DIR, pruneStaleCases, writeCase } from "./lib.mjs";
+import { EVALS_DIR, hasFixture, pruneStaleCases, setSnapshotSuffix, writeCase } from "./lib.mjs";
 
-const CASES = [...CORE_CASES, ...STACK_CASES, ...RECENT_CASES, ...RULES_CASES];
+const CASES = [
+  ...CORE_CASES,
+  ...STACK_CASES,
+  ...RECENT_CASES,
+  ...RULES_CASES,
+  ...DEFERRED_CASES,
+  ...MULTITURN_CASES,
+];
 
 const slugs = CASES.map((c) => c.slug);
 const dupes = slugs.filter((s, i) => slugs.indexOf(s) !== i);
 if (dupes.length) throw new Error(`duplicate case slugs: ${dupes.join(", ")}`);
+
+const { values: flags } = parseArgs({
+  options: { instructions: { type: "string", default: "inline" }, out: { type: "string" } },
+});
+if (flags.instructions === "playbook") {
+  if (!flags.out) throw new Error("--instructions playbook needs --out <dir> outside evals/");
+  const outDir = resolve(flags.out);
+  setSnapshotSuffix("-playbook");
+  const ready = CASES.filter(hasFixture);
+  const written = [];
+  for (const spec of ready) {
+    try {
+      writeCase(spec, outDir);
+      written.push(spec.slug);
+    } catch (error) {
+      // Transcript history can read snapshots that have no playbook variant.
+      if (!String(error.message).startsWith("missing snapshot")) throw error;
+    }
+  }
+  const skipped = slugs.filter((s) => !written.includes(s));
+  console.log(
+    `\n${written.length} playbook-mode cases written to ${outDir}` +
+      (skipped.length ? `\nskipped (no -playbook snapshot): ${skipped.join(", ")}` : ""),
+  );
+  process.exit(0);
+}
+if (flags.instructions !== "inline")
+  throw new Error(`--instructions must be inline or playbook, got ${flags.instructions}`);
 
 for (const spec of CASES) writeCase(spec);
 const pruned = pruneStaleCases(slugs);

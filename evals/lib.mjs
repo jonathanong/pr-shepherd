@@ -181,10 +181,64 @@ Failing responses do any of: end after the one-PR sessions without rerunning the
 stack command; ask the user whether to continue; present the stack as finished;
 replace the stack loop with a hand-rolled per-PR merge sequence.`;
 
+// --- multi-turn -------------------------------------------------------------
+
+// `claude plugin eval` takes one prompt per case. Its only multi-turn hook
+// (`context.history_file` in a case.yaml) has no published schema, so a case
+// that needs session history replays the earlier turns as a transcript inside
+// the prompt instead. The agent sees what it said and ran before, and the
+// latest tool result last, which is where long-session drift shows up.
+//
+// Turns are `{ role: "user" | "assistant", text }` or
+// `{ role: "tool", command, output }`. Tool outputs should come from
+// `fixtureText(...)`, so the replayed history stays in sync with the CLI.
+
+const TRANSCRIPT_LEAD = `The conversation so far is replayed below, oldest turn first. Each \`[tool]\`
+turn shows a command you ran earlier in this session and what it printed.`;
+
+function renderTurn(turn) {
+  if (turn.role === "tool")
+    return `[tool] $ ${turn.command}\n\n${turn.output.trimEnd()}`;
+  return `[${turn.role}]\n\n${turn.text.trimEnd()}`;
+}
+
+/**
+ * Prompt framing for a case with session history. `turns` is a function so the
+ * snapshots it reads resolve at write time. `latest` is the command whose output
+ * (the case fixture) arrives last; `ask`, when set, is a closing user line.
+ */
+export const transcriptShape =
+  ({ turns, latest, ask = null }) =>
+  (fixture) =>
+    [
+      TRANSCRIPT_LEAD,
+      ...turns().map(renderTurn),
+      renderTurn({ role: "tool", command: latest, output: fixture }),
+      ...(ask ? [renderTurn({ role: "user", text: ask })] : []),
+    ].join("\n\n---\n\n");
+
 // --- emit -------------------------------------------------------------------
 
-function fixtureText(name) {
-  const path = join(SNAPSHOTS, name, "output.text.md");
+// Ablation scaffolding: `generate.mjs --instructions playbook --out <dir>` sets
+// this suffix, and every fixture then resolves to `<name><suffix>`. A case whose
+// fixture has no such snapshot is skipped by the generator (see `hasFixture`).
+let snapshotSuffix = "";
+export function setSnapshotSuffix(suffix) {
+  snapshotSuffix = suffix;
+}
+
+function snapshotPath(name) {
+  return join(SNAPSHOTS, `${name}${snapshotSuffix}`, "output.text.md");
+}
+
+/** True when every snapshot the case reads exists under the current suffix. */
+export function hasFixture(spec) {
+  return !spec.fixture || existsSync(snapshotPath(spec.fixture));
+}
+
+/** A recorded CLI output, verbatim. Also used to build transcript history. */
+export function fixtureText(name) {
+  const path = snapshotPath(name);
   if (!existsSync(path)) throw new Error(`missing snapshot: ${path}`);
   return readFileSync(path, "utf8").trimEnd();
 }
@@ -199,42 +253,51 @@ const TIERS = ["discriminating", "guard"];
 // where they buy signal: `EVAL_RUNS_DISCRIMINATING=6 EVAL_RUNS_GUARD=1 node
 // evals/generate.mjs`, then run the eval, then regenerate without the variables
 // so the tree matches the committed cases again (CI fails on any diff).
-const runsFor = (tier) => {
+// Without an override a case runs its own `runs` (new cases set 6), else RUNS.
+const runsFor = (spec) => {
+  const tier = spec.tier;
   const raw = process.env[`EVAL_RUNS_${tier.toUpperCase()}`];
-  if (raw === undefined) return RUNS;
+  if (raw === undefined) return spec.runs ?? RUNS;
   const n = Number(raw);
   if (!Number.isInteger(n) || n < 1) throw new Error(`EVAL_RUNS_${tier.toUpperCase()} must be a positive integer`);
   return n;
 };
 
-export function writeCase(spec) {
+/**
+ * Returns `edit(text)` and throws if it changed nothing. A search string that
+ * stopped matching would otherwise leave a case without its planted content.
+ */
+export function mustChange(label, text, edit) {
+  const changed = edit(text);
+  if (changed === text) throw new Error(`${label}: transform changed nothing`);
+  return changed;
+}
+
+export function writeCase(spec, outDir = EVALS_DIR) {
   if (!TIERS.includes(spec.tier)) {
     throw new Error(`${spec.slug}: tier must be one of ${TIERS.join(", ")}`);
   }
-  const dir = join(EVALS_DIR, spec.slug);
-  rmSync(dir, { recursive: true, force: true });
-  mkdirSync(join(dir, "graders"), { recursive: true });
+  const dir = join(outDir, spec.slug);
 
   // `transform` edits the recorded text before framing (e.g. to plant an
   // injection in a real snapshot). `plan: true` asks for a plan without any CLI
   // output, for cases that start from a user request alone.
   let text = spec.fixture ? fixtureText(spec.fixture) : null;
-  if (text !== null && spec.transform) {
-    const changed = spec.transform(text);
-    // A transform whose search string stopped matching would silently leave the
-    // case without its planted content while CI still reports the suite in sync.
-    if (changed === text)
-      throw new Error(`${spec.slug}: transform changed nothing`);
-    text = changed;
-  }
+  // A transform whose search string stopped matching would silently leave the
+  // case without its planted content while CI still reports the suite in sync.
+  if (text !== null && spec.transform)
+    text = mustChange(spec.slug, text, spec.transform);
   const body = spec.fixture ? spec.shape(text) : spec.prompt;
+  // Only now touch the directory, so a missing snapshot leaves nothing behind.
+  rmSync(dir, { recursive: true, force: true });
+  mkdirSync(join(dir, "graders"), { recursive: true });
   const append =
     spec.fixture || spec.plan ? APPEND_SYSTEM_PROMPT : APPEND_SYSTEM_PROMPT_NEG;
 
   const frontmatter = [
     "---",
     `model: ${MODEL}`,
-    `runs: ${runsFor(spec.tier)}`,
+    `runs: ${runsFor(spec)}`,
     `max_turns: 6`,
     `timeout_seconds: 300`,
     `allowed_tools: ${ALLOWED_TOOLS}`,

@@ -51,13 +51,14 @@ Each case carries `tier:discriminating` or `tier:guard` in its tags, set in
 
 - `discriminating`: the arms separated on a full run (`01`, `02`, `04`, `05`,
   `10`, `22`, `24`). These get the runs. A case without a full run yet
-  (`29`–`37`) starts here too, so a targeted run measures it; `--summary` lists
-  it for demotion if its interval includes 0.
+  (`29`–`46`) starts here too, so a targeted run measures it; `--summary` lists
+  it for demotion if its interval includes 0. Cases `38` and up also commit
+  `runs: 6`, because at 3 the without arm alone has swung ±0.44.
 - `guard`: both arms sit at ceiling, so the case only exists to notice a
   regression. One run each is a cheap sweep.
 
 `EVAL_RUNS_DISCRIMINATING` and `EVAL_RUNS_GUARD` override the per-case `runs`
-at generation time. Regenerate, run, then regenerate without the variables so
+(a case's own `runs`, else 3) at generation time. Regenerate, run, then regenerate without the variables so
 the tree matches the committed cases:
 
 ```sh
@@ -67,7 +68,7 @@ CLAUDE_CODE_EFFORT_LEVEL=low claude plugin eval . --model claude-sonnet-5-5 \
   --ablation with-without --judge-model opus --no-publish
 node evals/generate.mjs        # restore the committed suite
 
-# Full sweep: the committed runs: 3 on every case.
+# Full sweep: the committed runs (3, or the case's own 6 on 38 and up).
 node evals/generate.mjs
 ```
 
@@ -99,6 +100,12 @@ Layout:
 - `cases/stack.mjs`: cases 14–22 and 24.
 - `cases/recent.mjs`: cases 23 and 25–28.
 - `cases/rules.mjs`: cases 29–37, one per skill or CLI rule that had no case. A case may set `transform` (edit the recorded text, used to plant an injection) or `plan: true` (no fixture; the prompt is the whole input).
+- `cases/deferred.mjs`: cases 38, 39 and 43, the rules that first needed a new
+  CLI snapshot. Numbers 40–42 are reserved for the cloud event-mode cases.
+- `cases/multiturn.mjs`: cases 44–46, long-session variants of ceiling cases
+  (see "Multi-turn cases").
+
+A case may also set `runs` (default 3). Cases 38+ use 6.
 
 Case numbers are stable. Add new cases at the end instead of renumbering.
 
@@ -150,6 +157,21 @@ third arm.
 | `35-merge-queue-ejection`              | `119`   | Manual queue removal under `--merge`: do not requeue                                 |
 | `36-rest-queue-recovery-unsupported`   | `133`   | REST `transport-unsupported`: base update and reproduce, no requeue, keep REST       |
 | `37-no-target-infers-branch`           | none    | "Shepherd my PR": run the CLI with no target, no `gh pr view` first                  |
+| `38-denied-reply-one-look-skip`        | `136`   | Denied reply is a one-look skip: no retry, no escalation, keep going                 |
+| `39-proxy-session-refusal`             | apply   | Exit 77: `add_repo` with push access, retry the pending ID (regression guard)        |
+| `43-required-approval-gate`            | `138`   | `[Required]` approval is the blocker: request review, no self-approval or bypass     |
+| `44-multi-pr-cancel-long-session`      | `03`    | `25` after earlier ticks on both PRs                                                 |
+| `45-stack-handoff-long-session`        | `102`   | `15` after a finished one-PR session                                                 |
+| `46-stack-all-owned-long-session`      | `106`   | `16` after a finished one-PR session                                                 |
+
+"apply" is `test-cases/snapshots/apply-review-session-refusal`, an
+`apply review` output recorded by `test-cases/apply-review.test.mts` through
+the REST mutation path. `38` replays its sibling, `apply-review-denied-reply`,
+as the turn before fixture `136`.
+
+`39` expects Δ≈0. The plugin has no `add_repo` guidance; the CLI output's own
+instructions and the proxy's message carry the fix. A negative Δ would mean the
+skill pulls the agent toward reading the refusal as a review denial.
 
 Presence of a specific token is graded by regex (`gh stack merge 511`).
 Absence of a behavior is graded by an LLM rubric: the framing asks the agent to
@@ -328,6 +350,58 @@ The corpus disproved two assumptions, so nothing here tests them:
 The corpus cannot support a model-tier claim: about 99.5% of the Claude
 invocations ran on one model.
 
+## Multi-turn cases
+
+The ceiling cases (`15`, `16`, `25`) score 1.00 in a fresh context, while the
+real failures behind them happened deep in a session. `44`–`46` reuse those
+cases' fixtures and graders and add earlier turns: prior ticks, the agent's own
+fixes and commands, and for `45`/`46` a finished one-PR session whose last
+instruction was "stop polling".
+
+`claude plugin eval` takes one prompt per case. Its only history hook,
+`context.history_file` in a `case.yaml`, has no published schema, so these
+cases do not use it. `transcriptShape` in `lib.mjs` replays the earlier turns
+as a labelled transcript inside the prompt (`[user]`, `[assistant]`,
+`[tool] $ <command>`), with the case fixture as the last tool result. Every
+tool output in the history is read from a snapshot with `fixtureText`, so the
+history stays in CI sync with the CLI like the fixture does. The agent sees the
+history as text, not as its own prior turns, so this approximates real
+long-session drift rather than reproducing it. Switch to `history_file` once
+its format is documented.
+
+## Ablation: inline vs playbook instructions
+
+The 2×2 is skill on/off × inline/playbook `## Instructions`. Skill on/off is
+`--ablation with-without`. The instructions mode is chosen when the case is
+generated. #523 adds `iterate --instructions inline|playbook` (inline stays the
+default). Until it lands, only the scaffolding exists:
+
+1. For each fixture to compare, add a sibling under `test-cases/fixtures/`
+   whose name ends in `-playbook` and whose `input.json` adds
+   `"args": ["--instructions", "playbook"]`. Then run
+   `npx vitest run test-cases -u` and review the new snapshots.
+2. Generate the playbook arm outside `evals/` (the default suite and its
+   pruning never see it). Cases without a `-playbook` snapshot are skipped and
+   listed:
+
+   ```sh
+   node evals/generate.mjs --instructions playbook --out /tmp/pr-shepherd-evals-playbook
+   ```
+
+3. Run both arms with the same flags and compare:
+
+   ```sh
+   CLAUDE_CODE_EFFORT_LEVEL=low claude plugin eval . --model claude-sonnet-5-5 \
+     --ablation with-without --judge-model opus --no-publish \
+     --output-dir evals/results/inline
+   CLAUDE_CODE_EFFORT_LEVEL=low claude plugin eval . --model claude-sonnet-5-5 \
+     --ablation with-without --judge-model opus --no-publish \
+     --eval-dir /tmp/pr-shepherd-evals-playbook --output-dir evals/results/playbook
+   node evals/analyze.mjs evals/results/inline evals/results/playbook
+   ```
+
+Without `--instructions`, the generator's output is unchanged.
+
 ## Design: why no case runs the CLI
 
 The skill is a thin dispatcher: parse args, invoke the CLI, print the output,
@@ -396,9 +470,8 @@ variable in a case's `env:` block fails every run: the runner accepts only
 5. **Unblock the call-count and token measurement.** Flatten `~/.docker`, then
    build a suite that grants Bash to both arms. Watch for the inverted failure:
    with no working binary, the with-arm tries the CLI, fails, and Δ goes negative.
-6. **Add a `[Required]` approval-gate fixture.** Nearly every snapshot is
-   `Approvals: None [Not Required]`, so `08` cannot check the positive
-   direction.
+6. **Run the `[Required]` approval-gate case.** Fixture `138` and case `43`
+   now cover the positive direction of `08`; neither has run live yet.
 7. **Add a bad-workflow-YAML fixture**, if the CLI surfaces that state at all.
    If it doesn't, that's a CLI gap and no eval can close it.
 8. **Watch the over-trigger rate, not just Δ.** A widened skill `description`
