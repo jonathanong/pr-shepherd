@@ -448,7 +448,11 @@ token usage, never text, IDs or paths. The bench reads only that file.
   Their payloads are filler of the PR's real item sizes as of that step. The
   PR dumps hold only final statuses, so items turn resolved, minimized or
   dismissed as the timeline's applies reach them, earliest first. Checks from
-  before the first recorded commit are unknown and replayed as none.
+  before the first recorded commit are unknown and replayed as none. A wait
+  with a check pending is a `gh pr checks --watch` refresh for gh; a wait with
+  none pending (pr-shepherd's debounce) is a plain sleep, since `--watch`
+  would return at once. The baselines' PR body leaves out the Shepherd
+  Journal block, which only pr-shepherd writes.
 - **Attribution.** Concurrent invocations interleave in one debug log; a
   request, response or output that matches more than one open invocation is
   assigned by heuristic, and the report prints how many were (up to
