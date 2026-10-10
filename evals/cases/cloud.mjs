@@ -1,5 +1,5 @@
-// Cases 40+: the cloud event loop (event mode). 29-37 are the uncovered-rule
-// cases in rules.mjs; 38-39 are left free.
+// Cases 40-42: the cloud event loop (event mode). 38, 39 and 43 live in
+// deferred.mjs.
 
 import { PR_URL, llm, skillFired } from "../lib.mjs";
 
