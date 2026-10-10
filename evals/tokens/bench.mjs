@@ -5,6 +5,7 @@
 //
 //   node evals/tokens/bench.mjs           # rewrite REPORT.md
 //   node evals/tokens/bench.mjs --json    # print the raw numbers instead
+//   node evals/tokens/bench.mjs --check   # fail on a loss not in pending-losses.json
 //
 // Method and limits: README.md. Scenarios: scenarios.mjs. Cost model: lib.mjs.
 
@@ -26,6 +27,7 @@ import {
   tokens,
 } from "./lib.mjs";
 import { SCENARIOS } from "./scenarios.mjs";
+import { checkPending, findLosses, lossKey, pendingEntry, readPending } from "./gate.mjs";
 
 const ARMS = ["shepherd", "gh", "mcp"];
 const METRICS = ["calls", "turns", "toolTokens", "ite"];
@@ -284,10 +286,54 @@ const calibration = existsSync(calibrationPath)
   ? JSON.parse(readFileSync(calibrationPath, "utf8"))
   : null;
 
+const losses = findLosses({ rows, sessions, apiSessions });
+const pending = readPending();
+
+if (process.argv.includes("--check")) {
+  const { unlisted, stale, wrongIssue, duplicate } = checkPending(losses, pending);
+  const fail = unlisted.length + stale.length + wrongIssue.length + duplicate.length > 0;
+  console.log(
+    `bench gate: ${losses.length} losses vs. a baseline, ${pending.length} pending entries`,
+  );
+  if (unlisted.length) {
+    console.error(
+      `\n✗ ${unlisted.length} loss(es) not on the pending list. Fix them, or add these to evals/tokens/pending-losses.json:`,
+    );
+    for (const l of unlisted) console.error(`  ${lossKey(l)}: ${l.ours} vs ${l.theirs}`);
+    console.error("");
+    for (const l of unlisted) console.error(`    ${JSON.stringify(pendingEntry(l))},`);
+  }
+  if (stale.length) {
+    console.error(
+      `\n✗ ${stale.length} pending entr(y/ies) no longer a loss. Remove them from evals/tokens/pending-losses.json:`,
+    );
+    for (const p of stale) console.error(`  ${lossKey(p)}`);
+  }
+  if (wrongIssue.length) {
+    console.error(`\n✗ ${wrongIssue.length} pending entr(y/ies) link the wrong issue:`);
+    for (const p of wrongIssue) console.error(`  ${lossKey(p)}: #${p.issue}`);
+  }
+  if (duplicate.length) {
+    console.error(`\n✗ ${duplicate.length} duplicate pending entr(y/ies):`);
+    for (const p of duplicate) console.error(`  ${lossKey(p)}`);
+  }
+  if (!fail) console.log("✓ every loss is pending; no pending entry is stale");
+  process.exit(fail ? 1 : 0);
+}
+
 if (process.argv.includes("--json")) {
   console.log(
     JSON.stringify(
-      { model: MODEL, eagerTokens, rows, sessions, apiSessions, waitPerHour, strategyTotals },
+      {
+        model: MODEL,
+        eagerTokens,
+        rows,
+        sessions,
+        apiSessions,
+        waitPerHour,
+        strategyTotals,
+        losses,
+      },
       null,
       2,
     ),
@@ -305,6 +351,14 @@ const pct = (f) => {
 const signed = (n) => (n === 0 ? "0" : `${n > 0 ? "+" : "−"}${num(Math.abs(n))}`);
 const num = (n) => n.toLocaleString("en-US", { maximumFractionDigits: 1 });
 const BASELINES = { gh: "gh CLI", mcp: "GitHub MCP", mcpEager: "GitHub MCP, eager tools" };
+const METRIC_LABELS = {
+  ite: "cost (ITE)",
+  toolTokens: "tool tokens",
+  turns: "turns",
+  calls: "tool calls",
+  graphqlPoints: "GraphQL points",
+  restCore: "REST core requests",
+};
 
 const lines = [];
 const out = (s = "") => lines.push(s);
@@ -335,13 +389,6 @@ const share = (key) => {
   const p = sessions[key].split.shepherd;
   return `${Math.round((100 * p.fixedIte) / p.totalIte)}%`;
 };
-const scenarioSaving = rows
-  .filter((r) => !r.setup && r.gh.ite > 0)
-  .map((r) => ({ id: r.id, s: saving(r.gh.ite, r.shepherd.ite) }))
-  .filter((r) => Number.isFinite(r.s))
-  .sort((a, b) => b.s - a.s);
-const win = scenarioSaving[0];
-const loss = scenarioSaving[scenarioSaving.length - 1];
 const apiPct = (key, b, f) => {
   const a = apiSessions[key];
   return pct(saving(a[b][f], a.shepherd[f]));
@@ -374,15 +421,38 @@ out(
   `- **Fixed vs. variable.** The skill and playbooks are ${share("pr")} of pr-shepherd's PR-session cost and ${share("stack")} of its stack-session cost; on variable cost alone it is ${pct(saving(sessions.pr.split.gh.variableIte, sessions.pr.split.shepherd.variableIte))} vs. gh in a PR session and ${pct(saving(sessions.stack.split.gh.variableIte, sessions.stack.split.shepherd.variableIte))} in a stack session.`,
 );
 out(
-  `- **Biggest win and loss vs. gh.** \`${win.id}\` ${pct(win.s)}; \`${loss.id}\` ${pct(loss.s)}.`,
-);
-out(
   `- **GitHub rate limit (assumed).** In a PR session pr-shepherd spends ${num(apiSessions.pr.shepherd.graphqlPoints)} GraphQL points and ${num(apiSessions.pr.shepherd.restCore)} REST requests; gh ${num(apiSessions.pr.gh.graphqlPoints)} and ${num(apiSessions.pr.gh.restCore)}; MCP ${num(apiSessions.pr.mcp.graphqlPoints)} and ${num(apiSessions.pr.mcp.restCore)}. GraphQL points ${apiPct("pr", "gh", "graphqlPoints")} vs. gh and ${apiPct("pr", "mcp", "graphqlPoints")} vs. MCP; REST requests ${apiPct("pr", "gh", "restCore")} and ${apiPct("pr", "mcp", "restCore")}.`,
 );
 out(
   `- **Waiting on CI, per hour.** pr-shepherd spends ${waitPerHour.shepherdGraphql} GraphQL points on the GraphQL transport (one fingerprint hit per ${POLL_SECONDS}s poll) and about ${waitPerHour.shepherdRest} REST requests on the REST transport, which has no fingerprint shortcut. A \`gh pr checks --watch\` refresh costs ${waitPerHour.ghWatchGraphql} points; an MCP re-check about ${waitPerHour.mcpRest} requests.`,
 );
+const lossCount = (issue) => losses.filter((l) => l.issue === issue).length;
+out(
+  losses.length
+    ? `- **Losses: ${losses.length}.** pr-shepherd costs more than a baseline on ${losses.length} gated cells below: ${lossCount(528)} on tokens or turns (#528) and ${lossCount(525)} on the GitHub rate limit (#525). Each is on the temporary pending list, pending-losses.json; \`bench.mjs --check\` fails on any other loss and on any listed one that is gone.`
+    : "- **Losses: none.** pr-shepherd costs no more than any baseline on any gated metric.",
+);
 out();
+if (losses.length) {
+  out("### Losses");
+  out();
+  out(
+    "Every session and scenario where pr-shepherd costs strictly more than a baseline, on any gated metric. Token metrics are the same on both transports; rate-limit metrics are listed per transport. README.md \"The gate\" has the rules.",
+  );
+  out();
+  out("| where | metric | vs. | pr-shepherd | baseline | change | issue |");
+  out("| --- | --- | --- | --- | --- | --- | --- |");
+  for (const l of losses) {
+    const where = l.where.startsWith("session:")
+      ? `${SESSIONS[l.where.slice(8)]}`
+      : `\`${l.where}\``;
+    const metric = `${METRIC_LABELS[l.metric]}${l.transport ? ` (${l.transport === "rest" ? "REST" : "GraphQL"} transport)` : ""}`;
+    out(
+      `| ${where} | ${metric} | ${BASELINES[l.baseline]} | ${num(l.ours)} | ${num(l.theirs)} | ${pct(saving(l.theirs, l.ours))} | #${l.issue} |`,
+    );
+  }
+  out();
+}
 
 for (const [key, title] of Object.entries(SESSIONS)) {
   const { total, summary, split: parts } = sessions[key];

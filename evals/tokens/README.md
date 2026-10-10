@@ -42,12 +42,53 @@ pr-shepherd does not save" and "Rate-limit assumptions".
 ```sh
 node evals/tokens/bench.mjs          # rewrite REPORT.md
 node evals/tokens/bench.mjs --json   # raw numbers
+node evals/tokens/bench.mjs --check  # the gate: fail on a loss not in pending-losses.json
 ```
 
 It is offline and deterministic. CI regenerates REPORT.md next to the eval
 cases and fails on any diff. So a snapshot change that moves the numbers has to
-commit the new report. `record.mjs` refreshes the recorded GitHub data; see its
-header.
+commit the new report. CI then runs `--check`. `record.mjs` refreshes the
+recorded GitHub data; see its header.
+
+## The gate
+
+The goal is for pr-shepherd to cost less than every baseline on every metric.
+`bench.mjs --check` exits nonzero when pr-shepherd is strictly worse than a
+baseline on any gated cell that the pending list does not name. A tie is not a
+loss.
+
+- **Metrics.** Cost (ITE), tool tokens, turns and tool calls; GraphQL points and
+  REST core requests.
+- **Baselines.** gh, GitHub MCP and GitHub MCP with eager tools for the token
+  metrics. Eager MCP makes the same calls as MCP, so the rate-limit metrics
+  compare against gh and MCP.
+- **Transports.** The model gives pr-shepherd the same output on both
+  transports, so each token metric is one cell. Each rate-limit metric is gated
+  twice, for the GraphQL transport and for the REST transport.
+- **Scopes.** Each session total, and each scenario on its own, so a loss on
+  one step cannot hide in a session average.
+- **† steps.** A baseline that cannot finish a step (the † cells) is skipped on
+  that scenario: its lower cost covers only part of the work, so it is not a
+  win. Session totals keep those rows at the baseline's partial cost, which
+  only makes the session gate stricter on pr-shepherd.
+- **Setup rows.** A setup row is compared with MCP only. gh has no setup step,
+  and eager MCP carries its schemas on every later row instead of loading them.
+  pr-shepherd's fixed cost is still gated against both through the session
+  totals, which include setup. Setup makes no GitHub call, so it has no
+  rate-limit cells.
+
+Today's losses are listed in [pending-losses.json](pending-losses.json). Each
+entry names its scope, metric, transport (rate-limit metrics only) and
+baseline, and links the issue that removes it: #528 for tokens and turns, #525
+for the rate limit. Entries carry no numbers, so a change in size is not churn;
+REPORT.md's Summary prints every loss with its numbers. `--check` also fails
+when a listed entry is no longer a loss, or links the wrong issue, so the list
+can only shrink. When a fix lands, delete its entries in the same change. The
+list is temporary: #524 closes when it is empty.
+
+On a failure, `--check` prints each unlisted loss with its numbers and a
+paste-ready entry. Add one only for a regression you accept and track in an
+issue.
 
 ## Method
 
@@ -315,6 +356,9 @@ The levers, in order of size:
 3. Tighten the stack overview.
 
 ## Where pr-shepherd does not save
+
+REPORT.md's Summary lists every gated loss with its numbers; this section
+explains the main ones.
 
 - **Setup.** The skill and the playbooks a session's outputs name cost about
   2.2–3.0k tokens, loaded over one to three turns. Those tokens then ride along

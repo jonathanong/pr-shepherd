@@ -39,6 +39,8 @@ jobs:
           git add -A -- evals/
           git diff --cached --exit-code -- evals/ \
             || { echo "::error::evals/ is out of sync - run 'node evals/generate.mjs && node evals/tokens/bench.mjs' and commit the result"; exit 1; }
+      - name: pr-shepherd loses to no baseline beyond the pending list
+        run: node evals/tokens/bench.mjs --check
       - run: npm run test:coverage
       - name: Upload test results to Codecov
         if: ${{ always() && !cancelled() }}
