@@ -6,4 +6,4 @@ flags: i
 weight: 1
 ---
 
-pr-shepherd\s+--until-terminal
+pr-shepherd(?:\s|\\\n)+--until-terminal

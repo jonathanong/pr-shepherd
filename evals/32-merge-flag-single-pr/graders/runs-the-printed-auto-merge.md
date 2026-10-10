@@ -6,4 +6,4 @@ flags: i
 weight: 1
 ---
 
-gh pr merge 42 --repo owner/repo --match-head-commit abc123 --auto --merge
+gh(?:\s|\\\n)+pr(?:\s|\\\n)+merge(?:\s|\\\n)+42(?:\s|\\\n)+--repo(?:\s|\\\n)+owner/repo(?:\s|\\\n)+--match-head-commit(?:\s|\\\n)+abc123(?:\s|\\\n)+--auto(?:\s|\\\n)+--merge
