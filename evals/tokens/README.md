@@ -445,7 +445,13 @@ token usage, never text, IDs or paths. The bench reads only that file.
 - **Timeline.** Each poll (its action, and its ticks: snapshot reads at least
   30 s apart) and each `apply` (its mutation counts) is one step. Both
   baselines read the state that step read and issue the mutations it batched.
-  Their payloads are filler of the PR's real item sizes as of that step.
+  Their payloads are filler of the PR's real item sizes as of that step. The
+  PR dumps hold only final statuses, so items turn resolved, minimized or
+  dismissed as the timeline's applies reach them, earliest first. Checks from
+  before the first recorded commit are unknown and replayed as none.
+- **Attribution.** Concurrent invocations interleave in one debug log; a
+  request, response or output that matches more than one open invocation is
+  assigned by heuristic, and the report prints how many were.
 - **Calibration, not gating.** Measured pr-shepherd numbers (result tokens,
   GraphQL cost per request, REST requests, turns) calibrate the modeled
   pr-shepherd arm. They are never compared with the modeled baselines, and

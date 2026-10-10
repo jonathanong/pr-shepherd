@@ -69,7 +69,7 @@ const kindOfArgs = (args) =>
     ? "review"
     : /^apply journal\b/.test(args)
       ? "journal"
-      : /^(\S+\/pull\/)?\d+\b/.test(args)
+      : /^(iterate\s+)?(\S+\/pull\/)?\d+\b/.test(args)
         ? "poll"
         : "other";
 const idCount = (args, flag) =>
@@ -586,10 +586,38 @@ function extract(opts) {
 const fill = (n, c = "x") => c.repeat(Math.max(0, n));
 const fakeId = (prefix, n) => `${prefix}${fill(n - prefix.length, "A")}`;
 
+/** How many `key` mutations the timeline's applies had finished by second `t`. */
+const appliedBy = (pr, t, key) =>
+  pr.invocations
+    .filter((i) => i.apply && i.t + i.seconds <= t)
+    .reduce((s, i) => s + i.apply[key], 0);
+
+/**
+ * Whether each item had its final status (`has`) by second `t`. The PR dump
+ * holds only final statuses, so the timeline's applies are taken to have set
+ * them earliest item first. Items beyond what the applies account for (resolved
+ * by a poll's auto-resolve or by hand) keep their final status throughout.
+ */
+function statusAt(pr, t, items, has, key) {
+  const done = appliedBy(pr, t, key);
+  const total = appliedBy(pr, Infinity, key);
+  let rank = 0;
+  return items.map((item) => {
+    if (!has(item)) return false;
+    const r = rank++;
+    return r < done || r >= total;
+  });
+}
+
 /** The PR's GitHub state at second `t`, rebuilt from sizes with filler text. */
 export function stateAt(pr, t) {
   const c = pr.content;
-  const commit = c.commits.filter((k) => k.t <= t).at(-1) ?? c.commits[0];
+  // Before the first recorded commit (a later rebase replaced the ones polled),
+  // the head's checks are unknown: none are replayed rather than future ones.
+  const commit = c.commits.filter((k) => k.t <= t).at(-1) ?? { checks: [] };
+  const resolved = statusAt(pr, t, c.threads, (th) => th.resolved, "resolves");
+  const minimized = statusAt(pr, t, c.comments, (k) => k.minimized, "minimizes");
+  const dismissed = statusAt(pr, t, c.reviews, (r) => r.state === "DISMISSED", "dismissals");
   return {
     repo: "owner/repo",
     number: pr.pr,
@@ -604,10 +632,11 @@ export function stateAt(pr, t) {
     prTitle: fill(c.titleChars),
     prBody: fill(c.bodyChars),
     reviewThreads: c.threads
-      .filter((th) => th.comments[0].t <= t)
-      .map((th, i) => ({
+      .map((th, i) => ({ th, i }))
+      .filter(({ th }) => th.comments[0].t <= t)
+      .map(({ th, i }) => ({
         id: fakeId("PRRT_", 22),
-        isResolved: th.resolved,
+        isResolved: resolved[i],
         isOutdated: th.outdated,
         path: fill(th.pathChars, "p"),
         line: th.hasLine ? 10 : null,
@@ -622,6 +651,7 @@ export function stateAt(pr, t) {
           })),
       })),
     comments: c.comments
+      .map((k, i) => ({ ...k, minimized: minimized[i] }))
       .filter((k) => k.t <= t)
       .map((k) => ({
         id: fakeId("IC_", 26),
@@ -635,6 +665,11 @@ export function stateAt(pr, t) {
     changesRequestedReviews: [],
     reviewSummaries: [],
     historyReviews: c.reviews
+      // A bot review pr-shepherd dismissed was requesting changes until then.
+      .map((r, i) => ({
+        ...r,
+        state: r.state === "DISMISSED" && !dismissed[i] ? "CHANGES_REQUESTED" : r.state,
+      }))
       .filter((r) => r.t <= t)
       .map((r) => ({
         id: fakeId("", 20),
@@ -757,7 +792,7 @@ function stepArms(pr, inv) {
     shepherd: [
       call(
         1,
-        `pr-shepherd apply review ${n}${ids("reply-thread-ids", "PRRT_", 22, a.replies)}${ids("resolve-thread-ids", "PRRT_", 22, a.resolves)}${ids("minimize-comment-ids", "IC_", 26, a.minimizes)}${a.replies ? ` --message "${REPLY}"` : ""}`,
+        `pr-shepherd apply review ${n}${ids("reply-thread-ids", "PRRT_", 22, a.replies)}${ids("resolve-thread-ids", "PRRT_", 22, a.resolves)}${ids("minimize-comment-ids", "IC_", 26, a.minimizes)}${ids("dismiss-review-ids", "PRR_", 24, a.dismissals)}${a.replies || a.dismissals ? ` --message "${REPLY}"` : ""}`,
         fill(inv.outChars ?? 0),
         { api: gql(1 + Math.ceil(mutations / 10)) },
       ),
@@ -784,9 +819,16 @@ function stepArms(pr, inv) {
           MINIMIZE_OUT,
         ),
       ),
+      ...Array.from({ length: a.dismissals }, (_, i) =>
+        call(
+          1,
+          `gh api --silent -X PUT repos/owner/repo/pulls/${n}/reviews/${3900000000 + i}/dismissals -f message='${REPLY}' -f event=DISMISS`,
+          "",
+        ),
+      ),
     ],
-    // github-mcp-server has no minimize tool: the MCP arm skips minimizes, which
-    // only flatters it.
+    // github-mcp-server has no minimize or review-dismiss tool: the MCP arm skips
+    // both, which only flatters it.
     mcp: [
       ...Array.from({ length: a.replies }, (_, i) =>
         mcp(
@@ -840,7 +882,9 @@ export function atCharsPerToken(cpt, fn) {
  */
 export function realSessions(data = readJson(REAL_SESSIONS_FILE), cpt = {}) {
   const rows = data.prs.map((pr) => {
-    const steps = pr.invocations.filter((i) => i.outChars != null);
+    // An invocation whose output was not captured still did its work: its
+    // output size alone is unknown, and is replayed as empty.
+    const steps = pr.invocations;
     const sum = Object.fromEntries(
       ARMS.map((a) => [a, Object.fromEntries(SUM_KEYS.map((k) => [k, 0]))]),
     );
@@ -862,8 +906,9 @@ export function realSessions(data = readJson(REAL_SESSIONS_FILE), cpt = {}) {
         graphqlCost: t.graphqlCost + i.graphqlCost,
         graphqlMutations: t.graphqlMutations + i.graphqlMutations,
         restRequests: t.restRequests + i.restRequests,
+        graphqlNoCost: t.graphqlNoCost + i.graphqlNoCost,
       }),
-      { graphqlCost: 0, graphqlMutations: 0, restRequests: 0 },
+      { graphqlCost: 0, graphqlMutations: 0, restRequests: 0, graphqlNoCost: 0 },
     );
     return {
       pr: pr.pr,
@@ -928,7 +973,9 @@ export function realSessionsSection({ rows, data } = realSessions()) {
   const cpt = data.charsPerToken;
   out.push("## Real sessions", "");
   out.push(
-    `Today's pr-shepherd runs on ${rows.length} real PRs (#${rows.map((r) => r.pr).join(", #")}), rebuilt from the agents' transcripts and pr-shepherd's debug logs by \`sessions.mjs --extract\`. Each PR's timeline (every poll with its ticks and action, every \`apply\` with its mutations) is replayed through this report's per-call models for all three arms. The baselines read the PR's real thread, comment, review and check sizes as of each step. pr-shepherd's modeled output is its real output length. The data is [data/real-sessions.json](data/real-sessions.json); it holds numbers only.`,
+    `Today's pr-shepherd runs on ${rows.length} real PRs (#${rows.map((r) => r.pr).join(", #")}), rebuilt from the agents' transcripts and pr-shepherd's debug logs by \`sessions.mjs --extract\`. Each PR's timeline (every poll with its ticks and action, every \`apply\` with its mutations) is replayed through this report's per-call models for all three arms. The baselines read the PR's real thread, comment, review and check sizes as of each step. pr-shepherd's modeled output is its real output length. Items are resolved, minimized or dismissed as the timeline's applies reach them, earliest first, since the PR dumps hold only final statuses. The data is [data/real-sessions.json](data/real-sessions.json); it holds numbers only.`,
+    "",
+    `**The timelines are reconstructed, not exact.** Concurrent invocations interleave in one debug log and number their requests alike, so across the ${num(data.sources.debugLogs)} debug logs (in-scope PRs and others alike) ${num(data.sources.heuristicAttributions)} requests, responses or outputs matched more than one open invocation and were assigned by heuristic (the PR their variables name, then the latest active). Those picks set per-PR ticks, output lengths and measured API counts.`,
     "",
   );
   out.push(
@@ -987,13 +1034,14 @@ export function realSessionsSection({ rows, data } = realSessions()) {
       cost: t.cost + r.measured.api.graphqlCost,
       mut: t.mut + r.measured.api.graphqlMutations,
       rest: t.rest + r.measured.api.restRequests,
+      noCost: t.noCost + r.measured.api.graphqlNoCost,
     }),
-    { cost: 0, mut: 0, rest: 0 },
+    { cost: 0, mut: 0, rest: 0, noCost: 0 },
   );
   out.push(
     `- **Characters per token.** A result's tokens are the next request's prompt growth, less the calling request's output. Fitted on the ${cpt.noThinking.samples} clean results (one result between two requests, nothing else) whose request had no thinking block: ${cpt.noThinking.charsPerToken} characters per token plus ${cpt.noThinking.intercept} tokens per result (R² ${cpt.noThinking.r2}); per result of 2,000+ characters, median ${cpt.noThinking.perSample.p50}, 10th–90th percentile ${cpt.noThinking.perSample.p10}–${cpt.noThinking.perSample.p90}. pr-shepherd's own output alone: ${cpt.shepherd ? `${cpt.shepherd.charsPerToken} (${cpt.shepherd.samples} results, R² ${cpt.shepherd.r2})` : "too few clean samples"}. With thinking requests included the fit degrades (${cpt.all.samples} results, ${cpt.all.charsPerToken}, R² ${cpt.all.r2}): thinking counts as output but leaves the next prompt. The model assumes ${MODEL.charsPerToken} for every arm and \`fixtures/calibrate\` 4.00, so both undercount real tokens. No session used GitHub MCP, so MCP's JSON ratio is unmeasured.`,
     `- **Context tokens.** The pr-shepherd and PR-state results whose size the next request's prompt growth pins down (${num(mChars)} characters) measured, per-result wrapper included, ${num(mTok)} tokens; the model's ${MODEL.charsPerToken} characters per token gives ${num(mChars / MODEL.charsPerToken)}.`,
-    `- **Rate limit.** The debug logs record every request: pr-shepherd spent ${num(api.cost)} GraphQL points on queries, ${num(api.mut)} mutation requests (GitHub reports no cost for these; at 1 point each the total is ${num(api.cost + api.mut)}) and ${num(api.rest)} REST requests. The model charges ${num(T.shepherd.graphqlPoints)} points and ${num(T.shepherd.restCore)} REST requests for the same timeline (GraphQL transport, which every session used). The model's REST requests are one mergeability refresh per READY poll, the rate measured there; the measured remainder falls on CANCEL and FIX_CODE polls, which the model does not charge. No poll recorded \`apiUsage\` (none ran with \`--verbose\`), so these come from the per-request log entries.`,
+    `- **Rate limit.** The debug logs record every request: pr-shepherd spent ${num(api.cost)} GraphQL points on queries${api.noCost ? ` (a lower bound: ${num(api.noCost)} ${api.noCost === 1 ? "query" : "queries"} logged no cost)` : ""}, ${num(api.mut)} mutation requests (GitHub reports no cost for these; at 1 point each the total is ${num(api.cost + api.mut)}) and ${num(api.rest)} REST requests. The model charges ${num(T.shepherd.graphqlPoints)} points and ${num(T.shepherd.restCore)} REST requests for the same timeline (GraphQL transport, which every session used). The model's REST requests are one mergeability refresh per READY poll, the rate measured there; the measured remainder falls on CANCEL and FIX_CODE polls, which the model does not charge. No poll recorded \`apiUsage\` (none ran with \`--verbose\`), so these come from the per-request log entries.`,
     `- **Turns.** The agents spent ${num(sh.reduce((s, b) => s + b.turns, 0))} turns on pr-shepherd calls and reads of their output; the model counts ${num(T.shepherd.turns)}, one per invocation.`,
     "",
   );
