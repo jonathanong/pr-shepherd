@@ -64,6 +64,12 @@ describe("default poll invocation helpers", () => {
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("Unknown subcommand"));
   });
 
+  it("accepts --instructions as a value flag", () => {
+    expect(isDefaultPollInvocation("--instructions=inline")).toBe(true);
+    expect(validateDefaultPollArgs(["42", "--instructions", "playbook"])).toBe(true);
+    expect(validateDefaultPollArgs(["42", "--instructions"])).toBe(false);
+  });
+
   it("accepts multiple PRs and rejects unknown args", () => {
     expect(validateDefaultPollArgs(["42", "43"])).toBe(true);
     expect(validateDefaultPollArgs(["--stack", "42"])).toBe(true);

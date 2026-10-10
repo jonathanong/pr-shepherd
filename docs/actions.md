@@ -623,6 +623,8 @@ Conversations Resolved: No [Not Required]
 6. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
 7. Run the `apply review:` command above. Playbook: "Review-mutation mechanics".
 8. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.
+
+With `--instructions playbook` (or `iterate.instructions: playbook`, or the MCP `instructions` input), steps 3 and 4 fold into one step that carries only the trigger, the concrete journal command, and a playbook pointer to "Fix-code loop" (also readable with `pr-shepherd playbook "Fix-code loop"`). Steps 5 and 6 stay inline because their commands need placeholder substitution, and the final `[FIX_CODE]` continuation stays inline. The default is `inline`: the bench measured the playbook default as a smaller saving than inline for the typical session.
 ```
 
 - The summary line shows raw `**branch**` state. The caller chooses rebase and commit mechanics.

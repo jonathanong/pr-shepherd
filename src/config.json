@@ -22,7 +22,8 @@
     "minimizeApprovals": false,
     "minimizeComments": "all",
     "behindBaseHint": "",
-    "resolveOtherHumanThreads": "none"
+    "resolveOtherHumanThreads": "none",
+    "instructions": "inline"
   },
   "poll": {
     "intervalSeconds": 60,

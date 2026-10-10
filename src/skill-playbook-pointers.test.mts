@@ -12,6 +12,9 @@ const ALWAYS_ON_PLAYBOOKS = new Set(["Untrusted review input"]);
  * `skills/pr-shepherd/references/`. A typo is a dead pointer: the agent skips the
  * procedure that was moved out of the per-tick text.
  */
+/** Playbooks the skill's own Dispatch bullets name (quoted); the CLI never points at them. */
+const SKILL_DISPATCHED_PLAYBOOKS = new Set(["Create a PR", "MCP fallback", "Stack sessions"]);
+
 function skillPlaybookHeadings(): Set<string> {
   const skillDir = new URL("plugins/pr-shepherd/skills/pr-shepherd/", rootUrl);
   const headings = new Set<string>();
@@ -96,7 +99,7 @@ describe("CLI instruction pointers name real pr-shepherd skill playbooks", () =>
     // exception handling (no pointer); they still need a ### heading so the skill loads
     // them once per session.
     for (const heading of headings) {
-      if (ALWAYS_ON_PLAYBOOKS.has(heading)) continue;
+      if (ALWAYS_ON_PLAYBOOKS.has(heading) || SKILL_DISPATCHED_PLAYBOOKS.has(heading)) continue;
       expect(
         foundNames.has(heading),
         `playbook "${heading}" is never pointed to from snapshots or instruction source`,
@@ -107,6 +110,17 @@ describe("CLI instruction pointers name real pr-shepherd skill playbooks", () =>
         foundNames.has(heading),
         `always-on playbook "${heading}" must not be pointed to from snapshots or source`,
       ).toBe(false);
+    }
+  });
+
+  it("names every skill-dispatched playbook in a SKILL.md Dispatch bullet", () => {
+    const skill = readFileSync(
+      new URL("plugins/pr-shepherd/skills/pr-shepherd/SKILL.md", rootUrl),
+      "utf8",
+    );
+    for (const name of SKILL_DISPATCHED_PLAYBOOKS) {
+      expect(headings.has(name), `missing playbook "${name}"`).toBe(true);
+      expect(skill, `SKILL.md never names "${name}"`).toContain(`"${name}" playbook`);
     }
   });
 

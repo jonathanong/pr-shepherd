@@ -184,6 +184,7 @@ describe("pr-shepherd MCP server", () => {
       "extract_journal",
       "get_journal",
       "iterate",
+      "playbook",
     ]);
     expect(tools.iterate!.annotations).toMatchObject({
       readOnlyHint: false,
@@ -460,7 +461,10 @@ describe("pr-shepherd MCP server", () => {
       ],
       apply: [
         {},
-        { pr: 3, operations: [{ type: "review_mutations", resolveThreadIds: ["PRRT_one"] }] },
+        {
+          pr: 3,
+          operations: [{ type: "review_mutations", resolveThreadIds: ["PRRT_one"] }],
+        },
         {
           pr: "42",
           operations: [{ type: "review_mutations", resolveThreadIds: ["PRRT_one"] }],

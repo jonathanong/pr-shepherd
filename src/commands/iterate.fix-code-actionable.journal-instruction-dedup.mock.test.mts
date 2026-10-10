@@ -66,7 +66,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
       remainingSeconds: 600,
     });
 
-    const result = await runIterate(makeOpts());
+    const result = await runIterate({ ...makeOpts(), instructions: "inline" });
 
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {

@@ -7,6 +7,7 @@ export const FLAGS_WITH_VALUES = new Set([
   "--format",
   "--ready-delay",
   "--stall-timeout",
+  "--instructions",
   "--require-sha",
   "--message",
   "--description",

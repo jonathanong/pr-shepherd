@@ -40,6 +40,7 @@ describe("runResolveMutate — configured bot threads", () => {
         minimizeComments: "all",
         behindBaseHint: "",
         resolveOtherHumanThreads: "none",
+        instructions: "playbook",
       },
       watch: { readyDelayMinutes: 10, graphqlQuotaWarnings: [] },
       checks: { ciTriggerEvents: ["pull_request", "pull_request_target"], ignoreLogLines: [] },

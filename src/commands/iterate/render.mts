@@ -17,15 +17,14 @@ import {
   buildResolveCommandInstruction,
   buildFixCompletionInstruction,
 } from "./check-instructions.mts";
-import {
-  SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE,
-  buildShepherdJournalInstruction,
-} from "../shepherd-journal.mts";
+import { SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE } from "../shepherd-journal.mts";
 import { isFailingAgentCheck } from "../../checks/conclusions.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
 import { partitionFixThreads, reviewSectionRefs } from "./fix-instruction-threads.mts";
 import { buildBranchPushInstruction, buildConflictInstruction } from "./native-stack-rebase.mts";
 import { queueEjectionSteps, type QueueEjectionRecovery } from "./queue-recovery-instructions.mts";
+import { buildPushJournalSteps } from "./fix-loop-instruction.mts";
+import type { InstructionStyle } from "../../config/load.mts";
 
 /** Render a resolve command as a shell snippet. Appends `--require-sha "$HEAD_SHA"` when set. */
 export function renderResolveCommand(rc: ResolveCommand): string {
@@ -57,6 +56,7 @@ export function buildFixInstructions(
   hasExhaustedWorkflowRerun = false,
   stackRebase?: string, // native stack layers rebase with gh-stack, not branch by branch
   queueEjection?: QueueEjectionRecovery, // current merge-queue removal with failing queue checks
+  instructionStyle: InstructionStyle = "inline", // see iterate.instructions
 ): string[] {
   const instructions: string[] = [];
   const { locatedThreads, unlocatedMutatedThreads, unlocatedThreads } = partitionFixThreads(
@@ -166,26 +166,23 @@ export function buildFixInstructions(
   const hasReviewMutations =
     resolveCommand.hasMutations || resolveOnlyCommand?.hasMutations === true;
   const mutationSuffix = hasReviewMutations ? " before review mutations" : "";
-  if (branchRecovery || queueEjection) {
-    instructions.push(
-      buildBranchPushInstruction(stackRebase, hasConflicts, mutationSuffix, !branchRecovery),
-    );
-  } else if (hasNonConflictHints) {
-    instructions.push(
-      "If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.",
-    );
-  }
-
-  if (
+  const genericPush = !(branchRecovery || queueEjection) && hasNonConflictHints;
+  const wantsJournal =
     viewerCanUpdate &&
     (hasReviewMutations ||
       hasNonConflictHints ||
       firstLookTotal > 0 ||
       firstLookSummaries.length > 0 ||
-      editedTotal > 0)
-  ) {
-    instructions.push(buildShepherdJournalInstruction(prReference));
+      editedTotal > 0);
+
+  if (branchRecovery || queueEjection) {
+    instructions.push(
+      buildBranchPushInstruction(stackRebase, hasConflicts, mutationSuffix, !branchRecovery),
+    );
   }
+  instructions.push(
+    ...buildPushJournalSteps(instructionStyle, prReference, genericPush, wantsJournal),
+  );
 
   if (resolveOnlyCommand?.hasMutations)
     instructions.push("Run the `resolve-only:` command shown above.");

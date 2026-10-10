@@ -450,7 +450,11 @@ function setupScenario({ id, session }) {
         // A scenario whose skill text, not its output, sends the agent to a
         // playbook (a step the skill runs without a CLI call) lists it in
         // `skillTriggers`. It is loaded like a named one and must exist.
-        const triggers = s.skillTriggers ?? [];
+        // SKILL.md's Dispatch bullets send every stack session to "Stack sessions".
+        const triggers = [
+          ...(session === "stack" ? ["Stack sessions"] : []),
+          ...(s.skillTriggers ?? []),
+        ];
         for (const n of triggers)
           if (!PLAYBOOK_FILES[n]) throw new Error(`skillTriggers: unknown playbook "${n}"`);
         const named = [

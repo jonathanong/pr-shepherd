@@ -17,6 +17,18 @@ const RESOLVE_OTHER_HUMAN_THREADS = ["none", "outdated", "always"] as const;
 
 export type ResolveOtherHumanThreads = (typeof RESOLVE_OTHER_HUMAN_THREADS)[number];
 
+export const INSTRUCTION_STYLES = ["playbook", "inline"] as const;
+
+/**
+ * How `fix_code` `## Instructions` render invariant procedure text. `inline` (default)
+ * prints every step each tick; `playbook` points at the shipped "Fix-code loop" playbook.
+ */
+export type InstructionStyle = (typeof INSTRUCTION_STYLES)[number];
+
+export function isInstructionStyle(value: unknown): value is InstructionStyle {
+  return INSTRUCTION_STYLES.some((style) => style === value);
+}
+
 export interface GraphqlQuotaWarningBand {
   remainingPercent: number;
   pollIntervalMinutes: number;
@@ -68,6 +80,12 @@ export interface PrShepherdConfig {
      * also resolves when GitHub reports `isOutdated`; `always` pairs reply-and-resolve.
      */
     resolveOtherHumanThreads: ResolveOtherHumanThreads;
+    /**
+     * `inline` (default) prints the commit/push and journal steps of `fix_code` instructions
+     * every tick; `playbook` folds them into one `Playbook: "Fix-code loop"` pointer. The
+     * default is inline because the token bench measured playbook as a net cost: it adds a read. The `--instructions` flag and MCP `instructions` input override per call.
+     */
+    instructions: InstructionStyle;
   };
   poll: PollConfig;
   watch: {
@@ -199,6 +217,13 @@ function parseResolveOtherHumanThreads(value: unknown): ResolveOtherHumanThreads
   }
   throw new Error(
     `Invalid config: iterate.resolveOtherHumanThreads must be one of "none", "outdated", or "always", got ${JSON.stringify(value)}`,
+  );
+}
+
+function parseInstructionStyle(value: unknown): InstructionStyle {
+  if (isInstructionStyle(value)) return value;
+  throw new Error(
+    `Invalid config: iterate.instructions must be "playbook" or "inline", got ${JSON.stringify(value)}`,
   );
 }
 
@@ -454,6 +479,7 @@ const KNOWN_NESTED_KEYS: Record<string, ReadonlySet<string>> = {
     "minimizeComments",
     "behindBaseHint",
     "resolveOtherHumanThreads",
+    "instructions",
   ]),
   poll: new Set([
     "intervalSeconds",
@@ -538,6 +564,7 @@ function parseConfig(value: Record<string, unknown>, normalizeMergeArgs = true):
   config.iterate.resolveOtherHumanThreads = parseResolveOtherHumanThreads(
     config.iterate.resolveOtherHumanThreads,
   );
+  config.iterate.instructions = parseInstructionStyle(config.iterate.instructions);
   config.checks.ignoreLogLines = parseIgnoreLogLines(config.checks.ignoreLogLines);
   return config;
 }

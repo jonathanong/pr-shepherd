@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
-vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
+vi.mock("../config/load.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../config/load.mts")>()),
+  loadConfig: mockLoadConfig,
+}));
 
 import type { loadConfig } from "../config/load.mts";
 import { parseIterateFlags } from "./iterate-flags.mts";
@@ -29,6 +32,7 @@ function defaultConfig(): PrShepherdConfig {
       minimizeComments: "bots",
       behindBaseHint: "",
       resolveOtherHumanThreads: "none",
+      instructions: "playbook",
     },
     resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 } },
     checks: { ciTriggerEvents: ["pull_request"], ignoreLogLines: [] },
@@ -111,6 +115,27 @@ describe("parseIterateFlags", () => {
 
   it("parses --merge", () => {
     expect(parseIterateFlags(["--merge"], defaultConfig()).merge).toBe(true);
+  });
+
+  it("parses --instructions in both spellings and leaves it undefined when absent", () => {
+    expect(parseIterateFlags([], defaultConfig()).instructions).toBeUndefined();
+    expect(parseIterateFlags(["--instructions", "inline"], defaultConfig()).instructions).toBe(
+      "inline",
+    );
+    expect(parseIterateFlags(["--instructions=playbook"], defaultConfig()).instructions).toBe(
+      "playbook",
+    );
+  });
+
+  it("returns null instructions and a usage error on an invalid --instructions", () => {
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    expect(parseIterateFlags(["--instructions", "bogus"], defaultConfig()).instructions).toBeNull();
+    expect(stderrSpy).toHaveBeenCalledWith(
+      expect.stringContaining("--instructions must be one of"),
+    );
+    expect(process.exitCode).toBe(EXIT.USAGE);
+    expect(parseIterateFlags(["--instructions"], defaultConfig()).instructions).toBeNull();
+    stderrSpy.mockRestore();
   });
 
   it("returns null readyDelaySuffix on malformed --ready-delay", () => {

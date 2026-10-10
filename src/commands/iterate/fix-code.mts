@@ -346,7 +346,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const { changesRequestedReviews } = report;
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
   const isBehind = report.mergeStatus.status === "BEHIND";
-  const { behindBaseHint } = loadConfig().iterate;
+  const { behindBaseHint, instructions: configuredInstructions } = loadConfig().iterate;
   // Only surface in-progress runs when a push is plausible — resolution-only and
   // summary-only iterations have no path to a push, so listing runs would prompt
   // unnecessary cancellation.
@@ -541,6 +541,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     exhaustedAttempts.length > 0,
     stackRebase,
     queueEjection,
+    opts.instructions ?? configuredInstructions,
   );
   if (recovery && "unavailable" in recovery) instructions.unshift(recovery.unavailable);
   if (acknowledgmentRecovery && "unavailable" in acknowledgmentRecovery)

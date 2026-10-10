@@ -228,6 +228,8 @@ export interface IterateCommandOptions extends GlobalOptions {
   fingerprintCache?: boolean;
   /** Shepherd through readiness and emit the exact merge/queue command when ready. */
   merge?: boolean;
+  /** Override `iterate.instructions` for this call. */
+  instructions?: import("../config/load.mts").InstructionStyle;
   /**
    * Internal. Defers quota warnings until an until-terminal poll breaks. Set only by
    * `runPollCore`; excluded from the public `IterateInput` in api.mts.
