@@ -36,16 +36,21 @@ describe("main — iterate text format", () => {
       "1. The CLI marked the PR ready for review. Iterate immediately with the same options to continue.",
     );
   });
-  it("cancel: heading includes [CANCEL] tag with reason and ## Instructions with stop steps", async () => {
+  it("cancel: heading includes [CANCEL] tag with reason and no ## Instructions", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain("# PR #42 [CANCEL]");
     expect(out).toContain("— ready-delay-elapsed");
-    expect(out).toContain("## Instructions");
-    expect(out).toContain(
-      "1. Stop polling this pull request — its poll is complete.\n2. Continue any remaining pull requests or issues from the original request.",
-    );
+    expect(out).not.toContain("## Instructions");
+  });
+  it("cancel: a merged PR prints only the [CANCEL] heading", async () => {
+    const result = makeIterateResult("cancel");
+    if (result.action !== "cancel") throw new Error("unreachable");
+    result.reason = "merged";
+    mockRunIterate.mockResolvedValue(result);
+    await main(["node", "shepherd", "iterate", "42"]);
+    expect(getStdout().trim()).toBe("# PR #42 [CANCEL] — merged");
   });
   it("escalate: heading, base/summary, humanMessage, then ## Instructions with stop steps", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("escalate"));
@@ -84,13 +89,11 @@ describe("main — iterate text format", () => {
       "1. The CLI marked the PR ready for review. Iterate immediately with the same options to continue.",
     );
   });
-  it("cancel: instructions stop polling only this pull request", async () => {
+  it("cancel: emits no stop or loop-cancel steps", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
-    expect(out).toContain(
-      "1. Stop polling this pull request — its poll is complete.\n2. Continue any remaining pull requests or issues from the original request.",
-    );
+    expect(out).not.toContain("Stop polling");
     expect(out).not.toContain("CronList");
     expect(out).not.toContain("/loop cancel");
   });
@@ -129,13 +132,19 @@ describe("main — iterate text format", () => {
   });
   it("cancel text: ignoredNames appear in header when present", async () => {
     const base = makeIterateResult("cancel") as Extract<IterateResult, { action: "cancel" }>;
-    mockRunIterate.mockResolvedValue({ ...base, ignoredNames: ["Kilo Code Review"] });
+    mockRunIterate.mockResolvedValue({
+      ...base,
+      ignoredNames: ["Kilo Code Review"],
+    });
     await main(["node", "shepherd", "iterate", "42"]);
     expect(getStdout()).toContain("**ignored** `Kilo Code Review`");
   });
   it("cancel text: supersededNames appear in header when present", async () => {
     const base = makeIterateResult("cancel") as Extract<IterateResult, { action: "cancel" }>;
-    mockRunIterate.mockResolvedValue({ ...base, supersededNames: ["CI / build"] });
+    mockRunIterate.mockResolvedValue({
+      ...base,
+      supersededNames: ["CI / build"],
+    });
     await main(["node", "shepherd", "iterate", "42"]);
     expect(getStdout()).toContain("**superseded** `CI / build`");
   });

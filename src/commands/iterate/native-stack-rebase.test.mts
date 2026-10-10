@@ -21,7 +21,9 @@ describe("native stack rebase instructions", () => {
 
   it("rebases an upper layer from its parent without trunk", () => {
     expect(
-      buildNativeStackRebaseInstruction("acme/widgets", 7, { parentBranch: "feature-a" }),
+      buildNativeStackRebaseInstruction("acme/widgets", 7, {
+        parentBranch: "feature-a",
+      }),
     ).toBe(
       `${prepare} Then check out the parent stack branch \`feature-a\` and run \`gh stack rebase --upstack --no-trunk\`. ${playbook}`,
     );
@@ -139,7 +141,7 @@ describe("native stack rebase instructions", () => {
       )[1],
     ).toBe(rebase);
     expect(buildFixCompletionInstruction()).toBe(
-      "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.",
+      "`[FIX_CODE]` is non-terminal. Rerun the same command now.",
     );
   });
 
@@ -161,7 +163,7 @@ describe("native stack rebase instructions", () => {
       rebase,
     ]);
     expect(buildFixCompletionInstruction()).toBe(
-      "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.",
+      "`[FIX_CODE]` is non-terminal. Rerun the same command now.",
     );
   });
 });

@@ -25,9 +25,7 @@ describe("buildFixInstructions", () => {
       0,
     );
 
-    expect(instructions).toEqual([
-      "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.",
-    ]);
+    expect(instructions).toEqual(["`[FIX_CODE]` is non-terminal. Rerun the same command now."]);
   });
 
   it("points at the skill's Suggestion patches playbook instead of inlining refusal/drift mechanics", () => {
@@ -155,32 +153,25 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).toContain(
-      "Read every body under `## Changes-requested reviews` and apply any warranted change.",
-    );
-    expect(text).toContain("If you changed code, commit any remaining changes");
-    expect(text).toContain("commit any remaining changes and push to the PR head branch");
+    expect(instructions[0]).toBe("Fix each warranted item above.");
+    expect(text).toContain("Commit and push any code changes.");
     // CLI no longer prescribes rebase mechanics — that is the caller's convention.
     expect(text).not.toContain("rebase onto");
-    // Placeholder substitution stays CLI-side because the command is invalid without it.
-    // ID routing is already encoded; only dismiss-ID retention needs the skill pointer.
-    expect(text).toContain("If you did not change code, replace `$HEAD_SHA`");
-    expect(text).toContain("Replace `$DISMISS_MESSAGE` with one sentence");
+    // $DISMISS_MESSAGE substitution stays CLI-side because the command is invalid without it.
+    // The SHA gate reads HEAD itself, so no $HEAD_SHA substitution step remains.
+    expect(text).not.toContain("$HEAD_SHA");
     expect(instructions.at(-2)).toBe(
-      "Run the `apply review:` command above with every printed ID, even if you changed no code.",
+      'Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd resolve 42 --require-sha "$(git rev-parse HEAD)"`',
     );
-    expect(instructions.at(-1)).toBe(
-      "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.",
-    );
-    expect(text).toContain("`[FIX_CODE]` is non-terminal. Iterate immediately");
+    expect(instructions.at(-1)).toBe("`[FIX_CODE]` is non-terminal. Rerun the same command now.");
     expect(text).not.toContain("Stop this iteration");
     // Old prescriptive git commands gone
     expect(text).not.toContain("Commit changed files:");
     expect(text).not.toContain("Rebase and push:");
   });
 
-  it("emits only the placeholder substitution steps that apply, plus the run step", () => {
-    // requiresHeadSha true, requiresDismissMessage false: only the $HEAD_SHA step appears.
+  it("emits a plain run step with the SHA gate inline when no dismiss message is needed", () => {
+    // requiresHeadSha true, requiresDismissMessage false: no substitution step appears.
     const instructions = buildFixInstructions(
       [],
       [],
@@ -206,11 +197,10 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).toContain("If you did not change code, replace `$HEAD_SHA`");
-    expect(text).toContain("$(git rev-parse HEAD)");
-    expect(text).not.toContain("Replace `$DISMISS_MESSAGE`");
+    expect(text).not.toContain("$HEAD_SHA");
+    expect(text).not.toContain("$DISMISS_MESSAGE");
     expect(text).toContain(
-      "Run the `apply review:` command above with every printed ID, even if you changed no code.",
+      'Run, even if no code changed: `pr-shepherd resolve 42 --require-sha "$(git rev-parse HEAD)"`',
     );
   });
 
@@ -254,20 +244,18 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).toContain("If you changed code, commit any remaining changes");
-    expect(text).toContain("commit any remaining changes and push to the PR head branch");
+    expect(text).toContain("Commit and push any code changes.");
     // CLI no longer prescribes rebase mechanics or names origin/main
     expect(text).not.toContain("rebase onto");
     expect(text).not.toContain("origin/main");
-    // $HEAD_SHA substitution stays in the CLI — the printed command needs it to be valid.
-    expect(text).toContain("If you did not change code, replace `$HEAD_SHA`");
+    // The printed command reads HEAD itself, so it needs no $HEAD_SHA substitution.
+    expect(text).toContain('--require-sha "$(git rev-parse HEAD)"');
+    expect(text).not.toContain("$HEAD_SHA");
     // No prescriptive git command lines
     expect(text).not.toContain("git add");
     expect(text).not.toContain("git fetch origin");
     expect(text).not.toContain("git push --force-with-lease");
-    expect(text).toContain(
-      "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.",
-    );
+    expect(text).toContain("`[FIX_CODE]` is non-terminal. Rerun the same command now.");
   });
 
   it("agent-facing commit/rebase instruction always conditional regardless of review type", () => {
@@ -310,19 +298,14 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).toContain(
-      "Read every body under `## Changes-requested reviews` and apply any warranted change.",
-    );
-    expect(text).toContain("If you changed code, commit any remaining changes");
-    expect(text).toContain("commit any remaining changes and push to the PR head branch");
+    expect(instructions[0]).toBe("Fix each warranted item above.");
+    expect(text).toContain("Commit and push any code changes.");
     // No old prescriptive commands
     expect(text).not.toContain("Commit changed files:");
     expect(text).not.toContain("Rebase and push:");
     expect(text).not.toContain("git add");
     expect(text).not.toContain("git push --force-with-lease");
-    expect(text).toContain(
-      "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.",
-    );
+    expect(text).toContain("`[FIX_CODE]` is non-terminal. Rerun the same command now.");
   });
 
   it("includes annotation-only passing-check guidance without a failing-checks section", () => {
@@ -403,7 +386,7 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).toContain("`## Failing checks`, `## Check annotations`");
+    expect(text).toContain('Triage `## Failing checks`. Playbook: "CI failure triage".');
     expect(text).toContain("Inspect every referenced range under `## Check annotations`");
   });
 

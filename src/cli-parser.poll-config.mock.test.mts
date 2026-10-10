@@ -16,7 +16,9 @@ vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
 });
 vi.mock("./commands/check.mts", () => ({ runCheck: vi.fn() }));
 vi.mock("./commands/resolve.mts", () => ({ runResolveMutate: vi.fn() }));
-vi.mock("./commands/commit-suggestion.mts", () => ({ runCommitSuggestion: vi.fn() }));
+vi.mock("./commands/commit-suggestion.mts", () => ({
+  runCommitSuggestion: vi.fn(),
+}));
 vi.mock("./github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
 }));
@@ -127,7 +129,7 @@ describe("main — configured poll defaults", () => {
     await promise;
 
     expect(stderrSpy.mock.calls.map((call: unknown[]) => String(call[0])).join("")).toContain(
-      "WAIT — 0 passing, 1 in-progress; next tick in 1s",
+      "WAIT — 0 passing, 1 in-progress\n",
     );
   });
 

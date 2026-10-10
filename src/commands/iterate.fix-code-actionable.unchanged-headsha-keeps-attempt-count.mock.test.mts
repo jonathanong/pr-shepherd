@@ -96,8 +96,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       const joined = result.fix.instructions.join("\n");
-      const journalMentions = joined.match(/add a Shepherd Journal entry/g)?.length ?? 0;
-      expect(joined).toContain("Shepherd Journal");
+      const journalMentions = joined.match(/Journal substantial decisions/g)?.length ?? 0;
       expect(journalMentions).toBe(1);
       expect(joined).toContain("pr-shepherd apply journal");
       expect(joined).not.toContain("idempotent");

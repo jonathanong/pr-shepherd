@@ -159,7 +159,13 @@ describe("pr-shepherd MCP server", () => {
       isDraft: false,
       shouldCancel: false,
       remainingSeconds: 0,
-      summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 1, superseded: 0 },
+      summary: {
+        passing: 0,
+        skipped: 0,
+        filtered: 0,
+        inProgress: 1,
+        superseded: 0,
+      },
       baseBranch: "main",
       branchProtection: null,
       checks: [],
@@ -201,12 +207,15 @@ describe("pr-shepherd MCP server", () => {
       destructiveHint: false,
       idempotentHint: true,
     });
-    const response = await tools.iterate!.handler({ pr: "openai/pr-shepherd#3" });
+    const response = await tools.iterate!.handler({
+      pr: "openai/pr-shepherd#3",
+    });
 
     expect(iterate).toHaveBeenCalledWith({ pr: "openai/pr-shepherd#3" });
     // structuredContent is the lean projection (matching CLI --format=json), not the
     // raw result — trivial-default fields (reviewDecision, blockingBotReviewInProgress,
-    // isDraft, shouldCancel, remainingSeconds, branchProtection, checks) are dropped,
+    // isDraft, shouldCancel, remainingSeconds, branchProtection, checks, OPEN state, zero
+    // summary counts, and a base branch that is neither behind nor conflicting) are dropped,
     // mergeStatus is kept because it's non-CLEAN, and a computed `instructions` array
     // is added. Update alongside src/cli/iterate-lean.mts if that projection changes.
     expect(response.structuredContent).toEqual({
@@ -214,11 +223,9 @@ describe("pr-shepherd MCP server", () => {
       pr: 3,
       repo: "openai/pr-shepherd",
       status: "PENDING",
-      state: "OPEN",
       mergeStateStatus: "UNKNOWN",
       mergeStatus: "UNSTABLE",
-      summary: { passing: 0, inProgress: 1 },
-      baseBranch: "main",
+      summary: { inProgress: 1 },
       log: "waiting",
       instructions: [
         "Non-terminal — no action needed this tick. Iterate immediately with the same options to continue.",
@@ -241,7 +248,13 @@ describe("pr-shepherd MCP server", () => {
       isDraft: false,
       shouldCancel: true,
       remainingSeconds: 0,
-      summary: { passing: 1, skipped: 0, filtered: 0, inProgress: 0, superseded: 0 },
+      summary: {
+        passing: 1,
+        skipped: 0,
+        filtered: 0,
+        inProgress: 0,
+        superseded: 0,
+      },
       baseBranch: "main",
       branchProtection: null,
       checks: [],
@@ -268,11 +281,10 @@ describe("pr-shepherd MCP server", () => {
       action: "cancel",
       reason: "ready-delay-elapsed",
       readyDelayOverride: "900s",
-      instructions: [
-        "Stop polling this pull request — its poll is complete.",
-        "Continue any remaining pull requests or issues from the original request.",
-      ],
     });
+    // Cancel carries no instruction steps in either channel.
+    expect(response.structuredContent).not.toHaveProperty("instructions");
+    expect(response.content?.[0]?.text).not.toContain("## Instructions");
     // mergeStatus: "CLEAN" is the healthy default and stays omitted, unlike the
     // non-CLEAN case covered above.
     expect(response.structuredContent).not.toHaveProperty("mergeStatus");
@@ -294,7 +306,13 @@ describe("pr-shepherd MCP server", () => {
       isDraft: false,
       shouldCancel: true,
       remainingSeconds: 0,
-      summary: { passing: 1, skipped: 0, filtered: 0, inProgress: 0, superseded: 0 },
+      summary: {
+        passing: 1,
+        skipped: 0,
+        filtered: 0,
+        inProgress: 0,
+        superseded: 0,
+      },
       baseBranch: "main",
       branchProtection: null,
       checks: [],
@@ -320,14 +338,10 @@ describe("pr-shepherd MCP server", () => {
       action: "cancel",
       pr: 3,
       reason: "merged",
-      instructions: [
-        "Stop polling this pull request — its poll is complete.",
-        "Continue any remaining pull requests or issues from the original request.",
-      ],
     });
     const text = response.content?.[0]?.text ?? "";
-    expect(text).toContain("merged");
-    expect(text).toContain("Stop polling this pull request");
+    expect(text).toContain("[CANCEL] — merged");
+    expect(text).not.toContain("## Instructions");
     expect(text).not.toContain("ready-delay");
     expect(text).not.toContain("openai/pr-shepherd");
     expect(text).not.toContain("summary");
@@ -340,7 +354,10 @@ describe("pr-shepherd MCP server", () => {
       repo: "openai/pr-shepherd",
       transport: "rest" as const,
       transportUnavailable: [
-        { field: "reviewDecision", reason: "REST does not expose aggregate review state" },
+        {
+          field: "reviewDecision",
+          reason: "REST does not expose aggregate review state",
+        },
       ],
       status: "PENDING" as const,
       state: "OPEN" as const,
@@ -351,7 +368,13 @@ describe("pr-shepherd MCP server", () => {
       isDraft: false,
       shouldCancel: false,
       remainingSeconds: 0,
-      summary: { passing: 1, skipped: 0, filtered: 0, inProgress: 0, superseded: 0 },
+      summary: {
+        passing: 1,
+        skipped: 0,
+        filtered: 0,
+        inProgress: 0,
+        superseded: 0,
+      },
       baseBranch: "main",
       branchProtection: null,
       checks: [],
@@ -369,11 +392,16 @@ describe("pr-shepherd MCP server", () => {
       }),
     );
 
-    const response = await tools.iterate!.handler({ pr: "openai/pr-shepherd#3" });
+    const response = await tools.iterate!.handler({
+      pr: "openai/pr-shepherd#3",
+    });
     expect(response.structuredContent).toMatchObject({
       transport: "rest",
       transportUnavailable: [
-        { field: "reviewDecision", reason: "REST does not expose aggregate review state" },
+        {
+          field: "reviewDecision",
+          reason: "REST does not expose aggregate review state",
+        },
       ],
     });
     expect(response.content?.[0]?.text).toContain("**transport** `rest`");
@@ -435,7 +463,12 @@ describe("pr-shepherd MCP server", () => {
     const result = {
       mode: "summary" as const,
       repo: "openai/pr-shepherd",
-      selection: { kind: "stack" as const, anchor: 3, stackNumber: 9, stackSize: 1 },
+      selection: {
+        kind: "stack" as const,
+        anchor: 3,
+        stackNumber: 9,
+        stackSize: 1,
+      },
       reason: "actionable" as const,
       nextAction: "shepherd" as const,
       instructions: ["1. Run the owned session."],
@@ -475,20 +508,23 @@ describe("pr-shepherd MCP server", () => {
       stack: "openai/pr-shepherd#3",
     });
     const structured = response.structuredContent as {
-      prs: Array<{ shepherded: boolean; mergeable: boolean; owned?: true; headRefOid?: string }>;
+      prs: Array<{
+        shepherded?: true;
+        mergeable?: boolean;
+        owned?: true;
+        headRefOid?: string;
+      }>;
     };
 
     expect(structured.prs[0]).toMatchObject({
-      shepherded: false,
       mergeable: true,
       owned: true,
       author: "alice",
     });
+    expect(structured.prs[0]?.shepherded).toBeUndefined();
     expect(structured.prs[0]?.headRefOid).toBeUndefined();
     expect(response.content?.[0]?.text).toContain("# openai/pr-shepherd stack #9 — actionable");
-    expect(response.content?.[0]?.text).toContain(
-      "not shepherded · mergeable · owner `@alice` · owned",
-    );
+    expect(response.content?.[0]?.text).toContain(") — mergeable · owner `@alice` · owned");
   });
 
   it("requires a repository-qualified PR string in every tool schema and handler", async () => {
@@ -545,7 +581,11 @@ describe("pr-shepherd MCP server", () => {
         { pr: 3, threadId: "PRRT_one", message: "Apply it" },
         { pr: "42", threadId: "PRRT_one", message: "Apply it" },
         { pr: "openai/pr-shepherd", threadId: "PRRT_one", message: "Apply it" },
-        { pr: "openai/pr-shepherd#0", threadId: "PRRT_one", message: "Apply it" },
+        {
+          pr: "openai/pr-shepherd#0",
+          threadId: "PRRT_one",
+          message: "Apply it",
+        },
         { pr: "openai#3", threadId: "PRRT_one", message: "Apply it" },
         {
           pr: "https://example.com/openai/pr-shepherd/pull/3",
@@ -556,7 +596,10 @@ describe("pr-shepherd MCP server", () => {
       build_suggestion_patches: [
         {},
         { pr: 3, suggestions: [{ threadId: "PRRT_one", message: "Apply it" }] },
-        { pr: "42", suggestions: [{ threadId: "PRRT_one", message: "Apply it" }] },
+        {
+          pr: "42",
+          suggestions: [{ threadId: "PRRT_one", message: "Apply it" }],
+        },
         { pr: "openai/pr-shepherd#0", suggestions: [] },
       ],
     } as const;
@@ -743,7 +786,12 @@ describe("pr-shepherd MCP server", () => {
         },
         {
           type: "append_journal" as const,
-          result: { prNumber: 3, mutated: true, sectionExisted: false, dryRun: false },
+          result: {
+            prNumber: 3,
+            mutated: true,
+            sectionExisted: false,
+            dryRun: false,
+          },
         },
         {
           type: "acknowledge_queue_removal" as const,

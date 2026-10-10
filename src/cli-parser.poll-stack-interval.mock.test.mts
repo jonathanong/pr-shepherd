@@ -16,7 +16,9 @@ vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
 });
 vi.mock("./commands/check.mts", () => ({ runCheck: vi.fn() }));
 vi.mock("./commands/resolve.mts", () => ({ runResolveMutate: vi.fn() }));
-vi.mock("./commands/commit-suggestion.mts", () => ({ runCommitSuggestion: vi.fn() }));
+vi.mock("./commands/commit-suggestion.mts", () => ({
+  runCommitSuggestion: vi.fn(),
+}));
 vi.mock("./commands/poll-summary.mts", () => ({ runAggregatePoll: vi.fn() }));
 vi.mock("./github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "acme", name: "widgets" }),
@@ -39,7 +41,12 @@ const mockRunIterate = vi.mocked(runIterate);
 const aggregateResult = {
   mode: "summary" as const,
   repo: "acme/widgets",
-  selection: { kind: "stack" as const, anchor: 43, stackNumber: 1, stackSize: 2 },
+  selection: {
+    kind: "stack" as const,
+    anchor: 43,
+    stackNumber: 1,
+    stackSize: 2,
+  },
   reason: "waiting" as const,
   prs: [],
 };
@@ -79,13 +86,14 @@ describe("poll interval periods", () => {
       .mockResolvedValueOnce(makeIterateResult("wait"))
       .mockResolvedValue(makeIterateResult("cancel"));
 
-    const promise = main(["node", "shepherd", "poll", "42"]);
+    // Only the verbose tick line names the sleep period.
+    const promise = main(["node", "shepherd", "poll", "42", "--verbose"]);
     await vi.waitFor(() => expect(mockRunIterate).toHaveBeenCalledTimes(1));
     await vi.advanceTimersByTimeAsync(30_000);
     await promise;
 
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
-    expect(stderrText()).toContain("next tick in 30s");
+    expect(stderrText()).toContain("sleeping 30s");
     expect(mockRunAggregatePoll).not.toHaveBeenCalled();
   });
 

@@ -1,23 +1,15 @@
 # PR #42 [FIX_CODE]
 
-**status** `UNRESOLVED_COMMENTS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo`
 **summary** 1 passing
-Approvals: None [Not Required]
-Conversations Resolved: No [Not Required]
 
 ## Review threads to resolve
 
 - `threadId=PRRT_minimized` [↗](https://github.com/owner/repo/pull/42#discussion_r5) `src/helpers.ts:5` (@reviewer · User) [status: minimized]: Minor nit: trailing whitespace.
 
-## Post-fix actions
-
-- base: `main`
-- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_minimized --message "$DISMISS_MESSAGE"`
-
 ## Instructions
 
 1. Review the threads under `## Review threads to resolve` before running the generated mutations.
-2. For any substantial decision or rejection, add a Shepherd Journal entry with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`, linking threads and comments by heading URL and citing reviews by ID.
-3. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
-4. Run the `apply review:` command above with every printed ID, even if you changed no code.
-5. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.
+2. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
+3. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_minimized --message "$DISMISS_MESSAGE"`
+4. `[FIX_CODE]` is non-terminal. Rerun the same command now.

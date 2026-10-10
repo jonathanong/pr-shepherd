@@ -46,7 +46,7 @@ export function projectStackOverview(result: PollSummaryResult): StackOverview {
     }),
     selection,
     reason: result.reason,
-    ...(result.stackMergeable !== undefined && { stackMergeable: result.stackMergeable }),
+    ...(result.stackMergeable && { stackMergeable: true }),
     ...(result.nextAction && { nextAction: result.nextAction }),
     prs: result.prs.map((item) => projectLayer(item, stale.has(item.pr))),
     ...(result.stackAncestry?.length && { stackAncestry: result.stackAncestry }),
@@ -59,7 +59,9 @@ export function projectStackOverview(result: PollSummaryResult): StackOverview {
 }
 
 function projectLayer(item: PollSummaryItem, stale: boolean): StackLayerView {
-  const blocker = layerBlocker(item, stale);
+  // A merged or closed layer's state already says it will not merge; skip the `closed` blocker.
+  const open = item.state === "OPEN";
+  const blocker = open ? layerBlocker(item, stale) : undefined;
   const removal = item.queueRemoval;
   return {
     pr: item.pr,
@@ -68,8 +70,8 @@ function projectLayer(item: PollSummaryItem, stale: boolean): StackLayerView {
     title: item.title,
     url: item.url,
     state: item.state,
-    shepherded: item.readyReceipt === true,
-    mergeable: blocker === undefined,
+    ...(item.readyReceipt === true && { shepherded: true as const }),
+    ...(open && { mergeable: blocker === undefined }),
     ...(blocker && { blocker }),
     ...(item.authorLogin && { author: item.authorLogin }),
     ...(item.owned && { owned: true as const }),
@@ -119,10 +121,8 @@ export function formatStackOverview(overview: StackOverview): string {
   const lines = [
     `# ${overview.repo} stack #${stack.stackNumber}${stackTerminalTag(overview.nextAction)} — ${overview.reason}`,
     "",
-    `Stack: #${stack.stackNumber} · anchor PR #${stack.anchor} · ${stack.stackSize} layers · mode \`${overview.mode}\`${overview.pollMode ? ` · pollMode \`${overview.pollMode}\`` : ""}`,
-    ...(overview.stackMergeable !== undefined
-      ? [`stackMergeable: ${overview.stackMergeable}`]
-      : []),
+    `anchor PR #${stack.anchor} · ${stack.stackSize} layers · mode \`${overview.mode}\`${overview.pollMode ? ` · pollMode \`${overview.pollMode}\`` : ""}`,
+    ...(overview.stackMergeable ? ["stackMergeable: true"] : []),
     ...(overview.nextAction ? [`nextAction: ${overview.nextAction}`] : []),
     ...formatNextCheckLines(overview.nextCheck),
     "",
@@ -151,8 +151,12 @@ export function formatStackOverview(overview: StackOverview): string {
 
 function formatLayerLines(layer: StackLayerView): string[] {
   const facts = [
-    layer.shepherded ? "shepherded" : "not shepherded",
-    layer.mergeable ? "mergeable" : `not mergeable (\`${layer.blocker ?? "unknown"}\`)`,
+    layer.shepherded ? "shepherded" : undefined,
+    layer.mergeable === undefined
+      ? undefined
+      : layer.mergeable
+        ? "mergeable"
+        : `not mergeable (\`${layer.blocker ?? "unknown"}\`)`,
     layer.author ? `owner \`@${layer.author}\`` : undefined,
     layer.owned ? "owned" : undefined,
   ].filter((fact): fact is string => fact !== undefined);
@@ -177,7 +181,7 @@ function formatLayerLines(layer: StackLayerView): string[] {
       : undefined,
   ].filter((detail): detail is string => detail !== undefined);
   return [
-    `- [PR #${layer.pr}: ${layer.title}](${layer.url}) — ${facts.join(" · ")}`,
+    `- [PR #${layer.pr}: ${layer.title}](${layer.url})${facts.length > 0 ? ` — ${facts.join(" · ")}` : ""}`,
     `  - ${details.join(" · ")}`,
     ...(layer.transport ? [`  - transport \`${layer.transport}\``] : []),
     ...(layer.transportUnavailable ?? []).map(

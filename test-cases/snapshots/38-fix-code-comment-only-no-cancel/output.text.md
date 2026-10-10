@@ -1,9 +1,7 @@
 # PR #42 [FIX_CODE]
 
-**status** `IN_PROGRESS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 0 passing, 1 inProgress
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
+**status** `IN_PROGRESS` · **repo** `owner/repo`
+**summary** 1 inProgress
 **activity** 0 commits · 0 review rounds · active: `CI / build`
 
 ## Actionable comments
@@ -12,14 +10,9 @@ Conversations Resolved: Yes [Not Required]
 
 > Please update the README with usage examples.
 
-## Post-fix actions
-
-- base: `main`
-
 ## Instructions
 
-1. Review each item under `## Actionable comments` and decide whether it needs a code change.
-2. Apply every warranted review fix in the relevant files.
-3. If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.
-4. For any substantial decision or rejection, add a Shepherd Journal entry with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`, linking threads and comments by heading URL and citing reviews by ID.
-5. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.
+1. Fix each warranted item above.
+2. Commit and push any code changes.
+3. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
+4. `[FIX_CODE]` is non-terminal. Rerun the same command now.

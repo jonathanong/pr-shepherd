@@ -159,7 +159,7 @@ function sessionInstruction(item: PollSummaryItem): string {
   const queueNote = item.queueRemoval
     ? " That session fixes failing queue CI, or escalates when the removal has no concrete fix."
     : "";
-  return `${removal} Run \`${item.pollCommand}\` for PR #${item.pr}.${queueNote}`;
+  return `${removal} Run \`${item.pollCommand}\`.${queueNote}`;
 }
 export function describeIdleLayers(idle: PollSummaryItem[]): string {
   return idle.map((item) => `PR #${item.pr} (${item.reasons.join(", ")})`).join("; ");
@@ -171,7 +171,7 @@ export function appendAutonomousInstructions(
 ): void {
   if (candidates.length === 0) return;
   instructions.push(
-    `${instructions.length + 1}. Start or delegate one-PR sessions only for rows marked \`owned\`. Leave every other author's layer untouched. Owned layers can proceed concurrently.`,
+    `${instructions.length + 1}. Start or delegate concurrent one-PR sessions only for \`owned\` rows. Leave other layers untouched.`,
   );
   for (const item of candidates) {
     instructions.push(`${instructions.length + 1}.${sessionInstruction(item)}`);

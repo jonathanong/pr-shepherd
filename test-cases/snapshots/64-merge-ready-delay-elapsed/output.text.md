@@ -1,9 +1,7 @@
 # PR #42 [MERGE]
 
-**status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo`
 **summary** 1 passing
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
 
 ## Merge command
 

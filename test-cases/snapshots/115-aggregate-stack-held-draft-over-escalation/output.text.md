@@ -1,14 +1,13 @@
 # owner/repo stack #45 — actionable
 
-Stack: #45 · anchor PR #452 · 2 layers · mode `summary`
-stackMergeable: false
+anchor PR #452 · 2 layers · mode `summary`
 nextAction: shepherd
 
 ## Layers
 
-- [PR #451: Layer needing a decision](https://github.com/owner/repo/pull/451) — not shepherded · not mergeable (`fix-thrash`) · owned
+- [PR #451: Layer needing a decision](https://github.com/owner/repo/pull/451) — not mergeable (`fix-thrash`) · owned
   - OPEN · position 1/2 · base `main`
-- [PR #452: Held upper draft](https://github.com/owner/repo/pull/452) — not shepherded · not mergeable (`draft`) · owned
+- [PR #452: Held upper draft](https://github.com/owner/repo/pull/452) — not mergeable (`draft`) · owned
   - OPEN · draft · position 2/2 · base `needs-decision`
 
 ## Instructions

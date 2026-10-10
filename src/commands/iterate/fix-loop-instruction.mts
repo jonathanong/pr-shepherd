@@ -41,10 +41,7 @@ export function buildPushJournalSteps(
   if (style === "playbook" && genericPush)
     return [buildFixLoopInstruction(prReference, wantsJournal)];
   const steps: string[] = [];
-  if (genericPush)
-    steps.push(
-      "If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.",
-    );
+  if (genericPush) steps.push("Commit and push any code changes.");
   if (wantsJournal) steps.push(buildShepherdJournalInstruction(prReference));
   return steps;
 }

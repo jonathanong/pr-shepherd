@@ -23,5 +23,5 @@ export function buildShepherdJournalCommand(prReference: string | number): strin
  */
 export function buildShepherdJournalInstruction(prReference: string | number): string {
   const command = buildShepherdJournalCommand(prReference);
-  return `For any substantial decision or rejection, add a Shepherd Journal entry with \`${command}\`, linking threads and comments by heading URL and citing reviews by ID.`;
+  return `Journal substantial decisions or rejections, citing item URLs or review IDs: \`${command}\``;
 }

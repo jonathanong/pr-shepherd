@@ -63,12 +63,11 @@ export function writeWaitProgress(opts: {
   const sleepSeconds = Math.round(opts.sleepMs / 1000);
   if (!opts.quietStatus) {
     const reason = waitReason(opts.result);
+    // The tick interval is the caller's own `--interval`; only verbose mode repeats it.
     writeTickProgress(
       opts.tick,
       elapsedSeconds,
-      opts.verbose
-        ? `${reason} — sleeping ${sleepSeconds}s`
-        : `${reason}; next tick in ${sleepSeconds}s`,
+      opts.verbose ? `${reason} — sleeping ${sleepSeconds}s` : reason,
     );
     return opts.lastWaitSignature;
   }

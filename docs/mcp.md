@@ -208,9 +208,9 @@ Supply exactly one of `pr`, `prs`, or `stack`. `prs` is a non-empty list of qual
 from one repository; `stack` is one qualified anchor whose complete native GitHub stack is selected.
 Aggregate selectors return one compact, read-only summary tick. An explicit `prs` selection keeps
 per-PR raw state, bounded check/review counts, routing hints, and `pollCommand`s in both Markdown
-and `structuredContent`. A `stack` selection projects each layer to shepherded or not, mergeable or
-one blocker, author, `owned` when that author matches the viewer, position, and the layer's own
-base branch. It also surfaces `stackMergeable`, `nextAction`, and raw ancestry mismatches. The
+and `structuredContent`. A `stack` selection projects each layer to `shepherded` (when true), mergeable or
+one blocker (open layers only), author, `owned` when that author matches the viewer, position, and the layer's own
+base branch. It also surfaces `stackMergeable` (when true), `nextAction`, and raw ancestry mismatches. The
 compact tick reuses singular check/review classification but does not maintain ready-delay state;
 bounded overflow is surfaced as incomplete context without becoming a permanent action by itself.
 One-PR sessions run only for layers marked `owned`.

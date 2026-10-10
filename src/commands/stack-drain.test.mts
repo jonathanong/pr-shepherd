@@ -27,7 +27,7 @@ describe("bottom-layer stack drain", () => {
       false,
     );
     expect(text(result)).toContain(
-      "PR #1 was removed from the merge queue (`failed_checks` by @github). Run `pr-shepherd https://github.com/acme/widgets/pull/1 --until-terminal` for PR #1. That session fixes failing queue CI, or escalates when the removal has no concrete fix.",
+      "PR #1 was removed from the merge queue (`failed_checks` by @github). Run `pr-shepherd https://github.com/acme/widgets/pull/1 --until-terminal`. That session fixes failing queue CI, or escalates when the removal has no concrete fix.",
     );
   });
 
@@ -57,8 +57,8 @@ describe("bottom-layer stack drain", () => {
     );
     expect(result).toMatchObject({ nextAction: "merge", stackMergeable: false });
     expect(result.instructions?.[0]).toContain("gh stack merge 1 --yes --squash");
-    expect(text(result)).toContain("pull/2 --until-terminal` for PR #2");
-    expect(text(result)).toContain("pull/3 --until-terminal` for PR #3");
+    expect(text(result)).toContain("pull/2 --until-terminal`.");
+    expect(text(result)).toContain("pull/3 --until-terminal`.");
     expect(text(result)).not.toContain("stack-blocked");
   });
 

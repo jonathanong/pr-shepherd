@@ -1,9 +1,7 @@
 # PR #42 [ESCALATE]
 
-**status** `UNRESOLVED_COMMENTS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo`
 **summary** 1 passing
-Approvals: None [Not Required]
-Conversations Resolved: No [Not Required]
 
 ⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required
 
@@ -24,7 +22,7 @@ The same thread(s) remain unresolved after their pending review commands were re
 
 ## Pending review commands
 
-- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_thrash --message "$DISMISS_MESSAGE" --resolve-thread-ids PRRT_thrash --require-sha "$HEAD_SHA"`
+- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_thrash --message "$DISMISS_MESSAGE" --resolve-thread-ids PRRT_thrash --require-sha "$(git rev-parse HEAD)"`
 
 ---
 
@@ -33,4 +31,4 @@ After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-
 ## Instructions
 
 1. Stop polling. Ask the user whether to run the pending review commands shown above.
-2. If yes, replace any `$HEAD_SHA` with the full 40-character pushed PR-head SHA and any `$DISMISS_MESSAGE` with a one-sentence disposition, run every pending command, then rerun Shepherd with the same options.
+2. If yes, set any `$DISMISS_MESSAGE` to a one-sentence disposition, run every pending command from the pushed PR head, then rerun Shepherd with the same options.

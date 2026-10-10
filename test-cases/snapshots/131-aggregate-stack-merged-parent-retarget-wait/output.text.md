@@ -1,14 +1,14 @@
 # vouchington/vouchington stack #2535 — timeout
 
-Stack: #2535 · anchor PR #2547 · 6 layers · mode `summary`
+anchor PR #2547 · 6 layers · mode `summary`
 stackMergeable: true
 nextAction: wait
 
 ## Layers
 
-- [PR #2509: Hashtags bounds](https://github.com/vouchington/vouchington/pull/2509) — not shepherded · not mergeable (`closed`)
+- [PR #2509: Hashtags bounds](https://github.com/vouchington/vouchington/pull/2509)
   - MERGED · position 1/6 · base `main`
-- [PR #2534: Hostname flags NOT NULL](https://github.com/vouchington/vouchington/pull/2534) — not shepherded · not mergeable (`closed`)
+- [PR #2534: Hostname flags NOT NULL](https://github.com/vouchington/vouchington/pull/2534)
   - MERGED · position 2/6 · base `main`
 - [PR #2547: Hostname dispatcher](https://github.com/vouchington/vouchington/pull/2547) — shepherded · mergeable
   - OPEN · position 3/6 · base `fix/2429-hostname-flags-not-null`

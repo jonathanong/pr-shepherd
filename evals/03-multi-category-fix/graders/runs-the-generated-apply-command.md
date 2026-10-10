@@ -4,7 +4,7 @@ focus: last_message
 weight: 1
 ---
 
-The plan commits to running the generated `apply review:` command.
+The plan commits to running the generated `apply review` command.
 
 That command records the agent's disposition of the review items. Skipping it
 leaves authorized threads active and the PR stuck — in real traffic this is the

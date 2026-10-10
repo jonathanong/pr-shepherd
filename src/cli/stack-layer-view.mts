@@ -8,8 +8,8 @@ export interface StackLayerView {
   title: string;
   url: string;
   state: PollSummaryItem["state"];
-  shepherded: boolean;
-  mergeable: boolean;
+  shepherded?: true;
+  mergeable?: boolean;
   blocker?: string;
   author?: string;
   owned?: true;

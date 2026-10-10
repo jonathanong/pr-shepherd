@@ -2,6 +2,8 @@
 import type { IterateResult } from "../types.mts";
 import { adaptIterateLog, buildSimpleIterateInstructions } from "./iterate-instructions.mts";
 import { projectRuleAutoResolve } from "../commands/rule-auto-resolve-format.mts";
+import { projectMergeRequirements } from "../merge-status/requirements-format.mts";
+import { branchSegmentShowsBase } from "./iterate-branch-segment.mts";
 interface IterateProjectionOptions {
   readyDelaySuffix?: string;
 }
@@ -37,9 +39,17 @@ export function projectIterateLean(
       ...(result.ruleAutoResolve && {
         ruleAutoResolve: projectRuleAutoResolve(result.ruleAutoResolve),
       }),
-      instructions: simpleInstructions(result),
     };
   }
+  const counts = Object.fromEntries(
+    (["passing", "skipped", "filtered", "inProgress", "superseded"] as const)
+      .filter((k) => result.summary[k] > 0)
+      .map((k) => [k, result.summary[k]]),
+  );
+  const summary = Object.keys(counts).length > 0 ? counts : null;
+  const mergeRequirements = result.mergeRequirements
+    ? projectMergeRequirements(result.mergeRequirements)
+    : null;
   const base: Record<string, unknown> = {
     action: result.action,
     pr: result.pr,
@@ -49,32 +59,28 @@ export function projectIterateLean(
       transportUnavailable: result.transportUnavailable,
     }),
     status: result.status,
-    state: result.state,
-    mergeStateStatus: result.mergeStateStatus,
+    // OPEN and CLEAN are the trivial defaults; the text header omits them the same way.
+    ...(result.state !== "OPEN" && { state: result.state }),
+    ...(result.mergeStateStatus !== "CLEAN" && { mergeStateStatus: result.mergeStateStatus }),
     ...(result.mergeStatus !== "CLEAN" && { mergeStatus: result.mergeStatus }), // mergeStateStatus alone can't always reconstruct this
     ...(readyDelaySuffix && { readyDelayOverride: readyDelaySuffix }),
     ...(result.mergeStatus === "BLOCKED" &&
       result.reviewDecision !== null && { reviewDecision: result.reviewDecision }),
     ...(result.blockingBotReviewInProgress && { blockingBotReviewInProgress: true }),
     ...(result.isDraft && { isDraft: true }),
-    summary: {
-      passing: result.summary.passing,
-      ...(result.summary.skipped > 0 && { skipped: result.summary.skipped }),
-      ...(result.summary.filtered > 0 && { filtered: result.summary.filtered }),
-      ...(result.summary.inProgress > 0 && { inProgress: result.summary.inProgress }),
-      ...(result.summary.superseded > 0 && { superseded: result.summary.superseded }),
-    },
+    ...(summary && { summary }),
     ...(result.status === "READY" &&
       result.remainingSeconds > 0 && {
         remainingSeconds: result.remainingSeconds,
       }),
-    ...(result.baseBranch && { baseBranch: result.baseBranch }),
+    // Lean text shows the base branch only in the behind/conflicts branch segment.
+    ...(branchSegmentShowsBase(result) && { baseBranch: result.baseBranch }),
     ...(result.stackTrunkConflict && { stackTrunkConflict: result.stackTrunkConflict }),
     ...((result.mergedBasePullRequests?.length ?? 0) > 0 && {
       mergedBasePullRequests: result.mergedBasePullRequests,
     }),
     ...(result.branchProtection !== null && { branchProtection: result.branchProtection }),
-    ...(result.mergeRequirements && { mergeRequirements: result.mergeRequirements }),
+    ...(mergeRequirements && { mergeRequirements }),
     ...(result.mergeQueue && { mergeQueue: result.mergeQueue }),
     ...(hasActivity && {
       activity: {
@@ -122,7 +128,12 @@ export function projectIterateLean(
     case "wait":
       return {
         ...base,
-        ...(result.deferredWork && { deferredWork: result.deferredWork }),
+        // Zero counts are omitted, matching the text `**deferred (in merge queue)**` rollup.
+        ...(result.deferredWork && {
+          deferredWork: Object.fromEntries(
+            Object.entries(result.deferredWork).filter(([, n]) => n > 0),
+          ),
+        }),
         ...(result.stackDraftHold && { stackDraftHold: result.stackDraftHold }),
         log: adaptIterateLog(result.log),
         instructions: simpleInstructions(result),
@@ -132,7 +143,6 @@ export function projectIterateLean(
         ...base,
         reason: result.reason,
         log: adaptIterateLog(result.log),
-        instructions: simpleInstructions(result),
       };
     case "mark_ready":
       // drop markedReady — always true, redundant with action discriminator

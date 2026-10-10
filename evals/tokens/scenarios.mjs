@@ -124,13 +124,14 @@ const receiptTick = (out) => ({
 /** `apply review --require-sha`'s head read: `GetPrHeadSha` or one REST pull read. */
 const HEAD_SHA_READ = 1;
 
-/** Run the printed `apply review:` command and read its output. */
+/**
+ * Run the printed `apply review` command and read its output. Only `$DISMISS_MESSAGE` needs
+ * filling; `--require-sha "$(git rev-parse HEAD)"` runs as printed.
+ */
 function shepherdApply(text, result, phase = 2) {
-  const cmd = text.match(/apply review: `([^`]+)`/)?.[1];
+  const cmd = text.match(/`(pr-shepherd apply review [^`]+)`/)?.[1];
   if (!cmd) throw new Error("snapshot has no apply review command");
-  const filled = cmd
-    .replace("$DISMISS_MESSAGE", "Renamed the variable as requested.")
-    .replace("$HEAD_SHA", "0123456789abcdef0123456789abcdef01234567");
+  const filled = cmd.replace("$DISMISS_MESSAGE", "Renamed the variable as requested.");
   // Every printed command carries --require-sha, so `waitForSha` first reads
   // the head SHA: one `GetPrHeadSha` point, or one REST pull read. GraphQL:
   // then one thread read plus one request per chunk of 10 mutations, and one
@@ -526,11 +527,12 @@ const PR_SCENARIOS = [
         ...state,
         checks: state.checks.map((c) => ({ ...c, status: "COMPLETED", conclusion: "FAILURE" })),
       };
-      // poll-progress.mts, default (non-quiet) status: one line per WAIT tick.
+      // poll-progress.mts, default (non-quiet, non-verbose) status: one line per WAIT tick.
+      // Keep in sync with writeWaitProgress.
       const reason = snapshot(fixture).match(/^WAIT: (.+)$/m)[1];
       const stderr = Array.from(
         { length: polls },
-        (_, i) => `[poll tick ${i + 1} / +${i * 60}s] WAIT — ${reason}; next tick in 60s\n`,
+        (_, i) => `[poll tick ${i + 1} / +${i * 60}s] WAIT — ${reason}\n`,
       ).join("");
       return {
         // Each poll is 1 GraphQL point (the cold first tick's BatchPr, then a
@@ -1048,7 +1050,6 @@ function settledOverview(layers, number) {
   const [lower, upper] = layers;
   return snapshot("87-aggregate-stack-all-terminal")
     .replace("stack #7", `stack #${number}`)
-    .replace("Stack: #7", `Stack: #${number}`)
     .replaceAll("PR #44", `PR #${upper.pr}`)
     .replaceAll("PR #43", `PR #${lower.pr}`)
     .replaceAll("/pull/44", `/pull/${upper.pr}`)

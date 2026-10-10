@@ -19,7 +19,7 @@ allowed-tools: ["MCP", "Bash", "Read", "Grep", "Glob", "Edit", "Write"]
 
 ## Recurrence
 
-- After the instructions, rerun that same command immediately, unless the printed instructions say to end the turn or not to rerun. Stop a loop only at `[CANCEL]`, `[ESCALATE]`, or a human's request; keep other loops running.
+- After the instructions, rerun that same command immediately, unless the printed instructions say to end the turn or not to rerun. Stop a loop only at `[CANCEL]`, `[ESCALATE]`, or a human's request; keep other loops and the rest of the original request going.
 - `[FIX_CODE]` is always non-terminal; only `[ESCALATE]` hands work to a human. `[READY]` is non-terminal: rerun when `remainingSeconds` elapses.
 - After a push or `rerun:`, do not wait for CI to finish; fetching check logs is fine. Never poll with `gh pr checks`, `gh pr watch`, `gh run watch`, or MCP waiters.
 

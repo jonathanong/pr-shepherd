@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AgentThread, ResolveCommand } from "../../types.mts";
-import { partitionFixThreads, reviewSectionRefs } from "./fix-instruction-threads.mts";
+import { partitionFixThreads } from "./fix-instruction-threads.mts";
 
 function command(ids: { reply?: string[]; resolve?: string[] }): ResolveCommand {
   return {
@@ -44,37 +44,5 @@ describe("partitionFixThreads", () => {
       unlocatedMutatedThreads: [mutated, fromResolveOnly],
       unlocatedThreads: [skipped],
     });
-  });
-});
-
-describe("reviewSectionRefs", () => {
-  it("omits empty sections and preserves dashboard order", () => {
-    expect(
-      reviewSectionRefs({
-        hasReviewThreads: true,
-        hasUnlocatedSkipThreads: false,
-        hasActionableComments: true,
-        hasFailingChecks: false,
-        hasAnnotations: true,
-        hasChangesRequested: false,
-      }),
-    ).toEqual(["`## Review threads`", "`## Actionable comments`", "`## Check annotations`"]);
-  });
-
-  it("includes the unlocated skip and CR sections when present", () => {
-    expect(
-      reviewSectionRefs({
-        hasReviewThreads: false,
-        hasUnlocatedSkipThreads: true,
-        hasActionableComments: false,
-        hasFailingChecks: true,
-        hasAnnotations: false,
-        hasChangesRequested: true,
-      }),
-    ).toEqual([
-      "`## Unlocated review threads (logged once — no mutation)`",
-      "`## Failing checks`",
-      "`## Changes-requested reviews`",
-    ]);
   });
 });

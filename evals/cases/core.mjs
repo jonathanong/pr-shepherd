@@ -89,7 +89,7 @@ inline note and the comment; defer categories to "a later pass" without saying
 what happens to them now.`,
       ),
       "runs-the-generated-apply-command": llm(
-        `The plan commits to running the generated \`apply review:\` command.
+        `The plan commits to running the generated \`apply review\` command.
 
 That command records the agent's disposition of the review items. Skipping it
 leaves authorized threads active and the PR stuck — in real traffic this is the
@@ -192,7 +192,7 @@ iterates Shepherd again. It does not ask a human to dismiss an authorized bot
 review just because the review is old.`,
       ),
       "runs-both-dismissals": llm(
-        `The response retains both review IDs in the generated \`apply review:\`
+        `The response retains both review IDs in the generated \`apply review\`
 command and runs that command after any warranted code fixes. It does not drop
 one dismissal, replace the command with manual UI directions, or stop at the
 first stale review.`,
@@ -228,9 +228,9 @@ dismissal to a human or silently abandon the actionable thread.`,
     // PR "blocked on an approver" when the output says approvals are NOT required
     // and the real blocker is something else.
     //
-    // Known limitation: no fixture in the 93-snapshot corpus has a genuinely
-    // `[Required]` gate (89 are `Approvals: None [Not Required]`), so there is no
-    // true-positive mirror. The grader therefore demands correct positive
+    // Known limitation: no fixture in the snapshot corpus has a genuinely
+    // `[Required]` gate (trivial `Approvals: None [Not Required]` lines are now
+    // omitted from the output), so there is no true-positive mirror. The grader therefore demands correct positive
     // identification of the real blocker rather than mere absence of the word
     // "approval", which would be one-directional and gameable.
     slug: "08-mergeability-diagnosis",
@@ -256,13 +256,13 @@ it.`,
         `The response does NOT treat the approval or conversation-resolution lines as
 unmet requirements.
 
-The output states \`Approvals: None [Not Required]\` and \`Conversations Resolved:
-Yes [Not Required]\`. The \`[Not Required]\` marker means this repository does not
-gate merges on either, so "None" approvals is not a blocker and presenting it as
-one is a misreading.
+The output prints no \`Approvals:\` or \`Conversations Resolved:\` line. Shepherd
+omits those lines when the rule is trivial (no approvals required, conversation
+resolution not required), so their absence means this repository does not gate
+merges on either, and presenting missing approvals as a blocker is a misreading.
 
-Passing responses either ignore those lines as non-blocking or explicitly note
-they are not required.
+Passing responses either ignore approvals and conversation resolution as
+non-blocking or explicitly note they are not required.
 
 Failing responses do any of: list "needs approval" / "awaiting an approver" /
 "zero approvals" among the reasons the PR cannot merge; recommend requesting a
@@ -275,9 +275,10 @@ outstanding merge requirement.`,
   },
 
   {
-    // Terminal beats all work. The same output that says MERGED also shows
-    // `merge DIRTY`, a branch conflicting with base, and unresolved
-    // conversations — bait for a model that pattern-matches "conflicts".
+    // Terminal beats all work. The fixture's PR is MERGED while its raw state
+    // is `merge DIRTY`, a branch conflicting with base, and unresolved
+    // conversations. Lean CANCEL output now prints only `[CANCEL] — merged`, so
+    // the bait is no longer rendered; the graders still guard against acting on it.
     slug: "09-cancel-terminal-beats-work",
     tier: "guard",
     fixture: "82-cancel-terminal-beats-all-work",
@@ -355,7 +356,7 @@ that the correct next step is to iterate again, and it characterises the PR's
 state correctly.
 
 The output reads \`**summary** 1 passing · **remainingSeconds** 600\` and
-\`WAIT: 1 passing, 0 in-progress\`. So: one check has PASSED, nothing is running,
+\`WAIT: 1 passing\`. So: one check has PASSED, nothing is running,
 and the 600 seconds is the ready-delay countdown — NOT a CI job in flight. There
 are no review threads, no comments and no failing checks.
 
@@ -371,8 +372,8 @@ do.`,
       // A `not_contains` regex on "apply review" lived here and was removed: it
       // scored -0.33 against the with-arm in the pilot as a false positive. With
       // the playbooks loaded the agent correctly described the *general* next-tick
-      // procedure ("run each printed mutation command verbatim (`apply review:`,
-      // `resolve-only:` …); keep every --dismiss-review-ids ID") while inventing
+      // procedure ("run each printed mutation command verbatim (`apply review`,
+      // resolve-only …); keep every --dismiss-review-ids ID") while inventing
       // no mutation for this tick — which the llm grader above passed 3-0. The
       // regex punished the string rather than the behaviour, penalising the arm
       // that was more precise. Absence checks on natural-language behaviour

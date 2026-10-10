@@ -110,9 +110,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       expect(joined).toContain(
         "Commit any remaining conflict-resolution changes and push to the PR head branch.",
       );
-      expect(joined).toContain(
-        "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.",
-      );
+      expect(joined).toContain("`[FIX_CODE]` is non-terminal. Rerun the same command now.");
       expect(joined).not.toContain("requires a human handoff");
     }
   });
@@ -135,7 +133,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
         "Commit any remaining conflict-resolution changes and push to the PR head branch.",
       );
       expect(joined).toContain("`[FIX_CODE]` is non-terminal");
-      expect(joined).toMatch(/iterate immediately/i);
+      expect(joined).toContain("Rerun the same command now.");
       expect(joined).not.toMatch(/hand[- ]?off|stop polling|human direction/i);
     }
   });
@@ -160,17 +158,18 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       expect(joined).toContain(
         "Commit any remaining conflict-resolution changes and push to the PR head branch before review mutations.",
       );
-      expect(joined).toContain("apply review:");
-      expect(joined).toContain(
-        "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.",
-      );
+      expect(joined).toContain("`pr-shepherd apply review ");
+      expect(joined).toContain("`[FIX_CODE]` is non-terminal. Rerun the same command now.");
       expect(joined).not.toContain("requires a human handoff");
     }
   });
 
   it("builds review mutations for CONFLICTS + threads despite denied head-access fields", async () => {
     mockRunCheck.mockResolvedValue(
-      makeConflictReport({ withThread: true, viewerAuthorization: PUSH_DENIED_AUTH }),
+      makeConflictReport({
+        withThread: true,
+        viewerAuthorization: PUSH_DENIED_AUTH,
+      }),
     );
 
     const result = await runConflictIterate();
@@ -188,7 +187,7 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       expect(joined).toContain(
         "Commit any remaining conflict-resolution changes and push to the PR head branch before review mutations.",
       );
-      expect(joined).toContain("apply review:");
+      expect(joined).toContain("`pr-shepherd apply review ");
       expect(joined).toContain("`[FIX_CODE]` is non-terminal");
       expect(joined).not.toMatch(/hand[- ]?off|stop polling|human direction/i);
     }

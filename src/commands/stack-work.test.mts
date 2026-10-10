@@ -78,7 +78,7 @@ describe("stack selector agent work", () => {
     const result = withPollSummaryInstructions(stack([unowned]), false);
     expect(text(result)).toContain("PR #1 is not owned. Do not run a session for it.");
     expect(text(result)).not.toContain("pull/1 --until-terminal");
-    expect(text(result)).toContain("rows marked `owned`");
+    expect(text(result)).toContain("only for `owned` rows");
   });
 
   it("says when an owned layer has no session command", () => {
@@ -98,7 +98,7 @@ describe("stack selector agent work", () => {
       false,
     );
     expect(result.nextAction).toBe("shepherd");
-    expect(text(result)).toContain("pull/2 --until-terminal` for PR #2.");
+    expect(text(result)).toContain("pull/2 --until-terminal`.");
     expect(text(result)).not.toContain("stack-blocked");
     expect(text(result)).toContain("Keep shepherding other PRs before the handoff.");
   });
@@ -119,7 +119,7 @@ describe("stack selector agent work", () => {
       false,
     );
     expect(result.nextAction).toBe("shepherd");
-    expect(text(result)).toContain(`Run \`${probe(3)}\` for PR #3.`);
+    expect(text(result)).toContain(`Run \`${probe(3)}\`.`);
     expect(text(result)).not.toContain("gh pr ready");
   });
 

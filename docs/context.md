@@ -43,7 +43,7 @@ Always printed after a sweep:
 
 Extra lines appear only when they apply (code-owner review, last-push approval, signed commits, linear history, branch up to date, required checks/deployments/workflows, code scanning, merge queue, stacks).
 
-Do not infer “must wait for an approval” from `reviewDecision`. `REVIEW_REQUIRED` with `Approvals: None [Not Required]` means GitHub is not waiting on an approval. Field contract: [merge-status.md](merge-status.md#merge-requirements).
+Do not infer “must wait for an approval” from `reviewDecision`. `REVIEW_REQUIRED` with no `Approvals:` line (none required) means GitHub is not waiting on an approval. Field contract: [merge-status.md](merge-status.md#merge-requirements).
 
 ## Review context
 
@@ -71,7 +71,7 @@ An unmarked human inline thread authored by the authenticated viewer is replied 
 
 Context gathering also emits the arguments for later mutations so the agent does not reconstruct them:
 
-- `apply review:` command (reply / resolve / minimize / dismiss, optional `resolve-only:` split)
+- `apply review` command, printed inline in its instruction step (reply / resolve / minimize / dismiss, with an optional resolve-only `Run:` step)
 - grouped `build_suggestion_patches` inputs when threads contain ` ```suggestion ` fences
 - Journal instruction for large decisions
 

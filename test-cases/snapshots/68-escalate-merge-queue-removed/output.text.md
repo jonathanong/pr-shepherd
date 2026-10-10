@@ -1,9 +1,7 @@
 # PR #42 [ESCALATE]
 
-**status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 0 passing · **remainingSeconds** 600
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
+**status** `READY` · **repo** `owner/repo`
+**remainingSeconds** 600
 **merge queue** enabled `false` · inQueue `false` · checkCommit `queue-commit-1`
 **queue removal** reason `failed_checks` · createdAtUnix `1715799000` · actor `@github-actions` · commit `queue-commit-1` · parents `abc123`
 

@@ -3,11 +3,35 @@ import type { MergeRequirements } from "../types.mts";
 const REQUIRED = "[Required]";
 const NOT_REQUIRED = "[Not Required]";
 
+/** No approvals and none required: the trivial default, omitted from lean output. */
+function isTrivialApprovals(req: MergeRequirements): boolean {
+  return req.approvals.current === 0 && req.approvals.requiredCount === 0;
+}
+
+/** Resolution is known not to be required: unresolved threads are listed as items anyway. */
+function isTrivialConversations(req: MergeRequirements): boolean {
+  return req.conversationsResolved.required === false;
+}
+
+/**
+ * Lean JSON projection of the merge requirements. Drops exactly the entries that
+ * `formatMergeRequirementLines` omits, so text and JSON stay equivalent.
+ */
+export function projectMergeRequirements(req: MergeRequirements): Record<string, unknown> | null {
+  const { approvals, conversationsResolved, ...rest } = req;
+  const projected: Record<string, unknown> = {
+    ...(!isTrivialApprovals(req) && { approvals }),
+    ...(!isTrivialConversations(req) && { conversationsResolved }),
+    ...rest,
+  };
+  return Object.keys(projected).length > 0 ? projected : null;
+}
+
 export function formatMergeRequirementLines(req: MergeRequirements): string[] {
-  const lines = [
-    formatApprovals(req.approvals.current, req.approvals.requiredCount),
-    formatConversations(req.conversationsResolved),
-  ];
+  const lines: string[] = [];
+  if (!isTrivialApprovals(req))
+    lines.push(formatApprovals(req.approvals.current, req.approvals.requiredCount));
+  if (!isTrivialConversations(req)) lines.push(formatConversations(req.conversationsResolved));
   if (req.codeOwnerReview) lines.push(`Code owner review: ${REQUIRED}`);
   if (req.lastPushApproval) lines.push(`Last-push approval: ${REQUIRED}`);
   if (req.signedCommits) lines.push(`Signed commits: ${REQUIRED}`);
@@ -66,7 +90,6 @@ function formatApprovals(current: number, requiredCount: number | undefined): st
     return `Approvals: ${currentValue} [Requirement Unknown]`;
   }
   const tag = requiredCount > 0 ? REQUIRED : NOT_REQUIRED;
-  if (current === 0 && requiredCount === 0) return `Approvals: None ${NOT_REQUIRED}`;
   if (current === 0) return `Approvals: None ${REQUIRED}`;
   if (requiredCount > 0) return `Approvals: ${current}/${requiredCount} ${tag}`;
   return `Approvals: ${current} ${NOT_REQUIRED}`;
@@ -74,8 +97,8 @@ function formatApprovals(current: number, requiredCount: number | undefined): st
 
 function formatConversations(c: MergeRequirements["conversationsResolved"]): string {
   const value = c.resolved === undefined ? "Unknown" : c.resolved ? "Yes" : "No";
-  const tag =
-    c.required === undefined ? "[Requirement Unknown]" : c.required ? REQUIRED : NOT_REQUIRED;
+  // `required: false` never reaches here (see isTrivialConversations).
+  const tag = c.required === undefined ? "[Requirement Unknown]" : REQUIRED;
   return `Conversations Resolved: ${value} ${tag}`;
 }
 

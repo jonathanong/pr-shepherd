@@ -1,9 +1,6 @@
 # PR #42 [ESCALATE]
 
-**status** `FAILING` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 0 passing
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
+**status** `FAILING` · **repo** `owner/repo`
 
 ⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required
 

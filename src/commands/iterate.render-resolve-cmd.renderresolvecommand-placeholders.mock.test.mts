@@ -41,14 +41,15 @@ describe("renderResolveCommand", () => {
       requiresDismissMessage: true,
       hasMutations: true,
     });
-    // Both placeholders appear with their quotes attached as a single token —
+    // The one placeholder appears with its quotes attached as a single token —
     // this is the contract consumers rely on when doing literal-text substitution.
+    // The SHA gate reads HEAD itself, so it needs no substitution.
     expect(joined).toContain('"$DISMISS_MESSAGE"');
-    expect(joined).toContain('"$HEAD_SHA"');
-    expect(joined.endsWith('--require-sha "$HEAD_SHA"')).toBe(true);
+    expect(joined).not.toContain("$HEAD_SHA");
+    expect(joined.endsWith('--require-sha "$(git rev-parse HEAD)"')).toBe(true);
   });
 
-  it("never emits an unquoted $HEAD_SHA (regardless of requiresHeadSha)", () => {
+  it("never emits a $HEAD_SHA placeholder (regardless of requiresHeadSha)", () => {
     const withSha = renderResolveCommand({
       argv: ["pr-shepherd", "resolve", "42"],
       requiresHeadSha: true,
@@ -61,8 +62,7 @@ describe("renderResolveCommand", () => {
       requiresDismissMessage: false,
       hasMutations: false,
     });
-    // Whenever $HEAD_SHA appears it is always quoted.
-    expect(withSha).not.toMatch(/(?<!")\$HEAD_SHA(?!")/);
+    expect(withSha).not.toContain("$HEAD_SHA");
     expect(withoutSha).not.toContain("$HEAD_SHA");
   });
 

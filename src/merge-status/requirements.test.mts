@@ -3,6 +3,7 @@ import { deriveMergeRequirements } from "./requirements.mts";
 import {
   formatMergeRequirementLines,
   blockedReasonFromRequirements,
+  projectMergeRequirements,
 } from "./requirements-format.mts";
 import { EMPTY_BRANCH_RULES } from "../github/batch-parsers-rules.mts";
 import type { BatchPrData, BranchRules } from "../types.mts";
@@ -86,10 +87,10 @@ describe("deriveMergeRequirements", () => {
 });
 
 describe("formatMergeRequirementLines", () => {
-  it("always emits approvals and conversations", () => {
-    const lines = formatMergeRequirementLines(deriveMergeRequirements(makePr()));
-    expect(lines[0]).toBe("Approvals: None [Not Required]");
-    expect(lines[1]).toBe("Conversations Resolved: Yes [Not Required]");
+  it("omits trivial approvals and not-required conversations in text and projection", () => {
+    const req = deriveMergeRequirements(makePr());
+    expect(formatMergeRequirementLines(req)).toEqual([]);
+    expect(projectMergeRequirements(req)).toBeNull();
   });
 
   it("formats required approvals and unresolved conversations", () => {

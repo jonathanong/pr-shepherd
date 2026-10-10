@@ -40,9 +40,8 @@ describe("main — iterate text format (fix_code and checks)", () => {
 
     expect(out).toContain("## Review IDs to minimize queue");
     expect(out).toContain("- `PRR_BOT`\n- `PRR_AP`");
-    expect(out).toContain(
-      "- apply review: `pr-shepherd apply review 42 --minimize-comment-ids PRR_BOT,PRR_AP`",
-    );
+    // The command renders only inside the Instructions step runIterate builds, not as a bullet.
+    expect(out).not.toContain("- apply review:");
     expect(out).not.toContain("## Approvals (surfaced");
   });
   it("fix_code: renders resolution-only threads with status tags", async () => {
@@ -101,8 +100,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain("## Review summaries (first look)");
     expect(out).toContain("### `reviewId=PRR_FL` (@copilot · Unknown)");
     expect(out).toContain("> Nice work overall.");
-    // ID is in the resolve command but NOT in the bare minimize-queue section.
-    expect(out).toContain("--minimize-comment-ids PRR_FL");
+    // The first-look ID is not repeated in the bare minimize-queue section.
     expect(out).not.toContain("## Review IDs to minimize queue");
   });
   it("fix_code: renders '## Approvals (surfaced — not minimized)' with H3 + blockquote", async () => {
@@ -132,7 +130,12 @@ describe("main — iterate text format (fix_code and checks)", () => {
     if (result.action !== "fix_code") throw new Error("unreachable");
 
     result.fix.surfacedApprovals = [
-      { id: "PRR_EMPTY", author: "alice", authorType: "Unknown" as const, body: "" },
+      {
+        id: "PRR_EMPTY",
+        author: "alice",
+        authorType: "Unknown" as const,
+        body: "",
+      },
     ];
     mockRunIterate.mockResolvedValue(result);
 
@@ -184,7 +187,7 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain(
       "[pending dismissal — already surfaced; include in `--dismiss-review-ids`]",
     );
-    expect(out).toContain("--dismiss-review-ids PRR_BOT_STALE");
+    expect(out.indexOf("[stale")).toBeLessThan(out.indexOf("[pending dismissal"));
   });
 
   it("fix_code: stale human CR renders [stale] guidance tag, not in dismiss list", async () => {

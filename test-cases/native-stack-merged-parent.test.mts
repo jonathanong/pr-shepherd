@@ -15,7 +15,7 @@ it("shows lower review blockers before merging an individually ready upper layer
   const json = JSON.parse(result.jsonOut);
 
   expect(result.exitCode).toBe(16);
-  expect(json.stackMergeable).toBe(false);
+  expect(json.stackMergeable).toBeUndefined();
   expect(json.nextAction).toBe("shepherd");
   expect(json.prs[0].blocker).toBe("review-work");
   expect(json.prs[1].shepherded).toBe(true);
@@ -38,7 +38,6 @@ describe("native stack after its two lower layers merge", () => {
     expect(result.jsonExitCode).toBe(result.exitCode);
     expect(json.action).toBe("fix_code");
     expect(json.stackTrunkConflict).toBe("main");
-    expect(json.baseBranch).toBe("fix/2429-hostname-flags-not-null");
     for (const output of [result.textOut, json.fix.instructions.join("\n")]) {
       expect(output).toContain("`gh stack checkout 2535`");
       expect(output).toContain("head branch of PR #2547 and run `gh stack rebase`");
@@ -57,7 +56,7 @@ describe("native stack after its two lower layers merge", () => {
     expect(result.exitCode).toBe(16);
     expect(result.jsonExitCode).toBe(result.exitCode);
     expect(json.nextAction).toBe("shepherd");
-    expect(json.stackMergeable).toBe(false);
+    expect(json.stackMergeable).toBeUndefined();
     expect(json.prs.map((row: { state: string }) => row.state)).toEqual([
       "MERGED",
       "MERGED",

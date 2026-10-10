@@ -1,6 +1,6 @@
 # owner/repo stack #35 — actionable
 
-Stack: #35 · anchor PR #342 · 2 layers · mode `summary`
+anchor PR #342 · 2 layers · mode `summary`
 stackMergeable: true
 nextAction: merge
 

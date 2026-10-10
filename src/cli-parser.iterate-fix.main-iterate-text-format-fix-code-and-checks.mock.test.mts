@@ -11,14 +11,15 @@ import type { IterateResult } from "../test-helpers/cli-parser.iterate-fix.test-
 registerHooks();
 
 describe("main — iterate text format (fix_code and checks)", () => {
-  it("fix_code (empty payload): heading + base/summary + Post-fix actions + fallback Instructions", async () => {
+  it("fix_code (empty payload): heading + base/summary + fallback Instructions, no empty Post-fix actions", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("fix_code"));
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain("# PR #42 [FIX_CODE]");
-    expect(out).toContain("## Post-fix actions");
+    // The base line is verbose-only, so a non-verbose empty payload has no Post-fix actions.
+    expect(out).not.toContain("## Post-fix actions");
     expect(out).not.toContain("## Rebase");
-    expect(out).toContain("- base: `main`");
+    expect(out).not.toContain("- base: `main`");
     // hasMutations: false in the fixture → resolve line is omitted (no-op commit).
     expect(out).not.toContain("- resolve:");
     // No item sections.
@@ -66,7 +67,12 @@ describe("main — iterate text format (fix_code and checks)", () => {
       editedSummaries: [],
       surfacedApprovals: [],
       checks: [
-        { name: "lint", runId: "run-42", detailsUrl: "https://x", conclusion: "FAILURE" as const },
+        {
+          name: "lint",
+          runId: "run-42",
+          detailsUrl: "https://x",
+          conclusion: "FAILURE" as const,
+        },
         {
           name: "codecov/patch",
           runId: null,
@@ -109,14 +115,13 @@ describe("main — iterate text format (fix_code and checks)", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
 
-    // Section ordering: threads → comments → checks → reviews → cancelled → Post-fix push → Instructions.
+    // Section ordering: threads → comments → checks → reviews → cancelled → Instructions.
     const order = [
       "## Review threads",
       "## Actionable comments",
       "## Failing checks",
       "## Changes-requested reviews",
       "## Cancelled runs",
-      "## Post-fix actions",
       "## Instructions",
     ];
     let cursor = 0;
@@ -142,11 +147,9 @@ describe("main — iterate text format (fix_code and checks)", () => {
     expect(out).toContain("> please rework this");
     // Cancelled runs
     expect(out).toContain("`run-99`");
-    // Post-fix actions use a backticked base + resolve command with --require-sha appended.
-    expect(out).toContain("- base: `main`");
-    expect(out).toContain(
-      '- apply review: `pr-shepherd apply review 42 --dismiss-review-ids REV_1 --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`',
-    );
+    // The apply-review command lives in the instruction step, not in a Post-fix actions bullet.
+    expect(out).not.toContain("## Post-fix actions");
+    expect(out).not.toContain("- apply review:");
     // Instructions are numbered.
     expect(out).toContain("1. step one");
     expect(out).toContain("2. step two");
