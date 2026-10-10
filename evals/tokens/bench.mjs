@@ -30,10 +30,12 @@ import {
   cost,
   mcpVerificationNote,
   readJson,
+  inputTokens,
   tokens,
 } from "./lib.mjs";
 import { SCENARIOS, eventArm } from "./scenarios.mjs";
 import { checkPending, findLosses, lossKey, pendingEntry, readPending } from "./gate.mjs";
+import { atCharsPerToken, measuredCharsPerToken, realSessionsSection } from "./sessions.mjs";
 
 const ARMS = ["shepherd", "gh", "mcp"];
 const METRICS = ["calls", "turns", "toolTokens", "ite"];
@@ -44,7 +46,7 @@ const SESSIONS = {
 
 const schemas = readJson("mcp-tool-schemas.json");
 const API_CHECK = readJson("api-usage-check.json");
-const eagerTokens = tokens("x".repeat(schemas.eagerChars));
+const eagerTokens = inputTokens("x".repeat(schemas.eagerChars));
 if (MCP_API.source !== schemas.source)
   throw new Error(
     `data/mcp-api-map.json is pinned to ${MCP_API.source}, the schemas to ${schemas.source}; re-run record.mjs`,
@@ -53,7 +55,10 @@ if (MCP_API.source !== schemas.source)
 // Setup output stays in context for the rest of the session: the skill and
 // playbooks for shepherd, the loaded tool schemas for MCP. Each setup scenario
 // reports, per later scenario, how much each arm has loaded by then.
-const carry = Object.assign({}, ...SCENARIOS.filter((s) => s.setup).map((s) => s.arms().carry));
+// `exclude` leaves out steps a comparison drops, and their loads with them.
+const setupCarry = (exclude) =>
+  Object.assign({}, ...SCENARIOS.filter((s) => s.setup).map((s) => s.arms(exclude).carry));
+const BASE_CTX = { carry: setupCarry(), eagerTokens };
 
 /** Sum cost results, each scaled by a weight. */
 function addCosts(parts) {
@@ -102,12 +107,12 @@ function applyStrategy(arms, s, strategy) {
   return { ...arms, gh: stateFirstGh(arms.gh, s), mcp: stateFirstMcp(arms.mcp, s) };
 }
 
-function buildRows(strategy) {
-  return SCENARIOS.map((s) => buildRow(s, strategy));
+function buildRows(strategy, ctx = BASE_CTX) {
+  return SCENARIOS.map((s) => buildRow(s, strategy, ctx));
 }
 
-function buildRow(s, strategy) {
-  const arms = applyStrategy(s.arms(), s, strategy);
+function buildRow(s, strategy, { carry, eagerTokens, exclude } = BASE_CTX) {
+  const arms = applyStrategy(s.setup ? s.arms(exclude) : s.arms(), s, strategy);
   const carried = (arm) => (s.setup ? 0 : (carry[s.id]?.[arm] ?? 0));
   // A setup row adds its lazy loads, each at the share of sessions that trigger it.
   const armCost = (a) =>
@@ -160,27 +165,29 @@ function buildRow(s, strategy) {
 const rowsByStrategy = Object.fromEntries(STRATEGIES.map((st) => [st, buildRows(st)]));
 
 /** Per step, each baseline arm takes whichever strategy costs it less. */
-const rows = rowsByStrategy.parallel.map((base, i) => {
-  const alt = rowsByStrategy.stateFirst[i];
-  const pick = (arm) => (alt[arm].ite < base[arm].ite ? alt : base);
-  const gh = pick("gh");
-  const mcp = pick("mcp");
-  const eager = alt.mcpEager.ite < base.mcpEager.ite ? alt : base;
-  return {
-    ...base,
-    gh: gh.gh,
-    mcp: mcp.mcp,
-    mcpEager: eager.mcpEager,
-    variable: {
-      ...base.variable,
-      gh: gh.variable.gh,
-      mcp: mcp.variable.mcp,
-      mcpEager: eager.variable.mcpEager,
-    },
-    api: { ...base.api, gh: gh.api.gh, mcp: mcp.api.mcp },
-    stateFirst: { gh: gh.strategy === "stateFirst", mcp: mcp.strategy === "stateFirst" },
-  };
-});
+const pickRows = (byStrategy) =>
+  byStrategy.parallel.map((base, i) => {
+    const alt = byStrategy.stateFirst[i];
+    const pick = (arm) => (alt[arm].ite < base[arm].ite ? alt : base);
+    const gh = pick("gh");
+    const mcp = pick("mcp");
+    const eager = alt.mcpEager.ite < base.mcpEager.ite ? alt : base;
+    return {
+      ...base,
+      gh: gh.gh,
+      mcp: mcp.mcp,
+      mcpEager: eager.mcpEager,
+      variable: {
+        ...base.variable,
+        gh: gh.variable.gh,
+        mcp: mcp.variable.mcp,
+        mcpEager: eager.variable.mcpEager,
+      },
+      api: { ...base.api, gh: gh.api.gh, mcp: mcp.api.mcp },
+      stateFirst: { gh: gh.strategy === "stateFirst", mcp: mcp.strategy === "stateFirst" },
+    };
+  });
+const rows = pickRows(rowsByStrategy);
 
 function round(n) {
   return Math.round(n * 10) / 10;
@@ -230,23 +237,25 @@ const saving = (base, ours) => (base === 0 ? (ours === 0 ? 0 : -Infinity) : 1 - 
 
 const BASELINE_KEYS = ["gh", "mcp", "mcpEager"];
 
-const sessions = Object.fromEntries(
-  Object.keys(SESSIONS).map((key) => {
-    const sessionRows = rows.filter((r) => r.session === key);
-    const total = totals(sessionRows);
-    const summary = Object.fromEntries(
-      BASELINE_KEYS.map((b) => [
-        b,
-        {
-          session: Object.fromEntries(
-            METRICS.map((m) => [m, saving(total[b][m], total.shepherd[m])]),
-          ),
-        },
-      ]),
-    );
-    return [key, { total, summary, split: split(sessionRows) }];
-  }),
-);
+const sessionsOf = (rows) =>
+  Object.fromEntries(
+    Object.keys(SESSIONS).map((key) => {
+      const sessionRows = rows.filter((r) => r.session === key);
+      const total = totals(sessionRows);
+      const summary = Object.fromEntries(
+        BASELINE_KEYS.map((b) => [
+          b,
+          {
+            session: Object.fromEntries(
+              METRICS.map((m) => [m, saving(total[b][m], total.shepherd[m])]),
+            ),
+          },
+        ]),
+      );
+      return [key, { total, summary, split: split(sessionRows) }];
+    }),
+  );
+const sessions = sessionsOf(rows);
 
 // --- rate-limit totals -----------------------------------------------------------
 
@@ -325,7 +334,7 @@ const boundedTicks = Math.floor(BOUNDED_TIMEOUT_SECONDS / BOUNDED_INTERVAL_SECON
 const BOUNDED_POLL_SECONDS = (boundedTicks - 1) * BOUNDED_INTERVAL_SECONDS;
 const PR_URL = "https://github.com/owner/repo/pull/42";
 const PR_CMD = `pr-shepherd ${PR_URL}`;
-const idleCarry = carry["ci-wait"]?.shepherd ?? 0;
+const idleCarry = BASE_CTX.carry["ci-wait"]?.shepherd ?? 0;
 const waitText = snapshot("09-wait-in-progress-ci");
 // poll-progress.mts, default (non-quiet) status: one line per sleeping tick.
 const waitReason = waitText.match(/^WAIT: (.+)$/m)[1];
@@ -345,10 +354,19 @@ const reconcileWake = cost(
   ],
   { extraContext: idleCarry },
 );
-const perHour = (n, wake) => ({ wakes: round(n), turns: round(n * wake.turns), ite: Math.round(n * wake.ite) });
+const perHour = (n, wake) => ({
+  wakes: round(n),
+  turns: round(n * wake.turns),
+  ite: Math.round(n * wake.ite),
+});
 const reconcilesPerHour = 60 / RECONCILE_MINUTES;
 const idleHour = {
-  shepherd: { graphqlPoints: waitPerHour.shepherdGraphql, restCore: 0, conditional: 0, ...perHour(0, boundedWake) },
+  shepherd: {
+    graphqlPoints: waitPerHour.shepherdGraphql,
+    restCore: 0,
+    conditional: 0,
+    ...perHour(0, boundedWake),
+  },
   shepherdBounded: {
     graphqlPoints: round(
       (3600 / BOUNDED_POLL_SECONDS) * boundedTicks * SHEPHERD_TICK_API.graphqlPoints,
@@ -363,7 +381,12 @@ const idleHour = {
     conditional: (3600 / DETECTOR_POLL_SECONDS) * EVENT_DETECTORS.length,
     ...perHour(reconcilesPerHour, reconcileWake),
   },
-  eventProxy: { graphqlPoints: 0, restCore: 0, conditional: 0, ...perHour(reconcilesPerHour, reconcileWake) },
+  eventProxy: {
+    graphqlPoints: 0,
+    restCore: 0,
+    conditional: 0,
+    ...perHour(reconcilesPerHour, reconcileWake),
+  },
 };
 
 /** Sensitivity: each baseline's session cost under each pure strategy. */
@@ -392,7 +415,101 @@ const calibration = existsSync(calibrationPath)
   ? JSON.parse(readFileSync(calibrationPath, "utf8"))
   : null;
 
-const losses = findLosses({ rows, sessions, apiSessions });
+// --- sensitivity: measured characters per token ----------------------------------
+//
+// The model reads every arm at MODEL.charsPerToken. The real sessions measured
+// pr-shepherd's output denser than tool output overall (sessions.mjs), so this
+// re-scores every step with pr-shepherd at its measured ratio and both baselines
+// at the overall one. No session used GitHub MCP, so MCP's ratio is assumed.
+
+const MEASURED_CPT = measuredCharsPerToken();
+const cptMeasured = MEASURED_CPT.shepherd != null && MEASURED_CPT.baseline != null;
+
+/**
+ * Every row but the `exclude`d steps, re-costed with tokens counted at `cpt`
+ * characters each. Setup rows and their carry leave out the excluded steps' loads.
+ */
+const rowsAtCpt = (cpt, exclude = new Set()) =>
+  atCharsPerToken(cpt, () => {
+    const ctx = {
+      carry: setupCarry(exclude),
+      eagerTokens: inputTokens("x".repeat(schemas.eagerChars)),
+      exclude,
+    };
+    return pickRows(Object.fromEntries(STRATEGIES.map((st) => [st, buildRows(st, ctx)]))).filter(
+      (r) => !exclude.has(r.id),
+    );
+  });
+/** pr-shepherd at its measured ratio, the baselines at theirs. */
+const measuredRowsOf = (exclude) => {
+  // With either ratio unmeasured, both arms keep the model's: no partial re-score.
+  const shepherdRows = rowsAtCpt(cptMeasured ? MEASURED_CPT.shepherd : null, exclude);
+  return rowsAtCpt(cptMeasured ? MEASURED_CPT.baseline : null, exclude).map((r, i) => ({
+    ...r,
+    shepherd: shepherdRows[i].shepherd,
+    variable: { ...r.variable, shepherd: shepherdRows[i].variable.shepherd },
+  }));
+};
+const cptRows = measuredRowsOf();
+/**
+ * Per baseline, the steps where pr-shepherd or that baseline gains a truncated
+ * or rejected call at the measured ratios. That arm no longer finishes the
+ * step, so its lower cost is not a saving: the comparison with that baseline
+ * leaves these steps out on both sides. Other baselines keep them.
+ */
+const cptIncomplete = Object.fromEntries(
+  BASELINE_KEYS.map((b) => [
+    b,
+    new Set(
+      cptRows.flatMap((r, i) =>
+        ["shepherd", b].some((a) => r[a].truncated > rows[i][a].truncated) ? [i] : [],
+      ),
+    ),
+  ]),
+);
+/**
+ * The step sets each baseline is compared on, at the model's ratio and the
+ * measured ones, with setup rebuilt over the steps left.
+ */
+const cptCompare = Object.fromEntries(
+  BASELINE_KEYS.map((b) => {
+    const exclude = new Set(rows.filter((_, i) => cptIncomplete[b].has(i)).map((r) => r.id));
+    const baseRows = exclude.size ? rowsAtCpt(null, exclude) : rows;
+    const measuredRows = exclude.size ? measuredRowsOf(exclude) : cptRows;
+    return [
+      b,
+      {
+        baseRows,
+        baseSessions: sessionsOf(baseRows),
+        measuredRows,
+        measuredSessions: sessionsOf(measuredRows),
+      },
+    ];
+  }),
+);
+
+/** Whether a per-result token charge could only add to the baselines' side. */
+const baselinesNeverFewerCalls = rows.every((r) =>
+  BASELINE_KEYS.every((b) => r[b].calls >= r.shepherd.calls),
+);
+
+const baseLosses = findLosses({ rows, sessions, apiSessions });
+const baseLossKeys = new Set(baseLosses.map(lossKey));
+/** Token losses that appear only at the measured ratios: gated like any other. */
+const cptFlips = BASELINE_KEYS.flatMap((b) => {
+  const c = cptCompare[b];
+  const ofBaseline = (ls) =>
+    ls.filter((l) => l.baseline === b && (l.metric === "ite" || l.metric === "toolTokens"));
+  const before = new Set(
+    ofBaseline(findLosses({ rows: c.baseRows, sessions: c.baseSessions, apiSessions })).map(
+      lossKey,
+    ),
+  );
+  return ofBaseline(
+    findLosses({ rows: c.measuredRows, sessions: c.measuredSessions, apiSessions }),
+  ).filter((l) => !baseLossKeys.has(lossKey(l)) && !before.has(lossKey(l)));
+}).map((l) => ({ ...l, where: `chars-per-token:${l.where}` }));
+const losses = [...baseLosses, ...cptFlips];
 const pending = readPending();
 
 if (process.argv.includes("--check")) {
@@ -440,6 +557,29 @@ if (process.argv.includes("--json")) {
         strategyTotals,
         eventSessions,
         idleHour,
+        charsPerTokenSensitivity: {
+          measured: MEASURED_CPT,
+          // Per baseline: the steps left out of its comparison, and each
+          // session's totals over the rest at the measured ratios.
+          incomplete: Object.fromEntries(
+            BASELINE_KEYS.map((b) => [
+              b,
+              rows.filter((_, i) => cptIncomplete[b].has(i)).map((r) => r.id),
+            ]),
+          ),
+          sessions: Object.fromEntries(
+            BASELINE_KEYS.map((b) => [
+              b,
+              Object.fromEntries(
+                Object.entries(cptCompare[b].measuredSessions).map(([k, v]) => [
+                  k,
+                  { total: { shepherd: v.total.shepherd, [b]: v.total[b] } },
+                ]),
+              ),
+            ]),
+          ),
+          flips: cptFlips,
+        },
         losses,
       },
       null,
@@ -675,7 +815,9 @@ for (const [key, title] of Object.entries(SESSIONS)) {
 out();
 out("Per scenario, `GraphQL points / REST core requests` for one occurrence.");
 out();
-out("| scenario | pr-shepherd | pr-shepherd, REST | pr-shepherd, cloud REST | gh CLI | GitHub MCP |");
+out(
+  "| scenario | pr-shepherd | pr-shepherd, REST | pr-shepherd, cloud REST | gh CLI | GitHub MCP |",
+);
 out("| --- | --- | --- | --- | --- | --- |");
 for (const r of rows.filter((r) => !r.setup)) {
   const c = (a) => `${num(r.api[a].graphqlPoints)} / ${num(r.api[a].restCore)}`;
@@ -719,7 +861,8 @@ for (const t of API_CHECK.ticks) {
   const key = t.transport === "rest" ? "restCore" : "graphqlPoints";
   const base = MODEL_TICK[t.model];
   if (base === undefined) throw new Error(`api-usage-check.json: unknown model ${t.model}`);
-  const model = base[key] + (t.annotationCheckRuns ? annotationBatchApi(t.annotationCheckRuns)[key] : 0);
+  const model =
+    base[key] + (t.annotationCheckRuns ? annotationBatchApi(t.annotationCheckRuns)[key] : 0);
   out(
     `| ${t.transport} | ${t.tick} (${t.model}) | \`${t.action}\` | ${num(t[key])} | ${num(model)} | ${(t[key] / model).toFixed(2)} |`,
   );
@@ -734,7 +877,9 @@ out(
   'A local session where a background `pr-shepherd wait` replaces the blocking poll: REST change detectors with ETags, a full snapshot only when one changes, and a reconcile snapshot on a timer. The command does not exist yet (#544), and it is not the cloud event mode (`poll.mode`), so **every number here is assumed** (README.md "Event arm"). It is not gated: it adds no loss and removes none.',
 );
 out();
-out("| session | arm | GraphQL points | REST core requests | turns | tool calls | tool tokens | cost (ITE) |");
+out(
+  "| session | arm | GraphQL points | REST core requests | turns | tool calls | tool tokens | cost (ITE) |",
+);
 out("| --- | --- | --- | --- | --- | --- | --- | --- |");
 const EVENT_LABELS = {
   event: "event",
@@ -769,7 +914,9 @@ for (const r of rows.filter((r) => !r.setup)) {
 out();
 out("An idle hour, while nothing changes:");
 out();
-out("| arm | GraphQL points | REST core requests | conditional requests (304) | wakes | turns | cost (ITE) |");
+out(
+  "| arm | GraphQL points | REST core requests | conditional requests (304) | wakes | turns | cost (ITE) |",
+);
 out("| --- | --- | --- | --- | --- | --- | --- |");
 for (const [a, label] of Object.entries({
   shepherd: "pr-shepherd poll, `--until-terminal` (the skill)",
@@ -818,6 +965,61 @@ out(
   `- State first was cheaper for ${pickedSF.map((r) => `\`${r.id}\` (${[r.stateFirst.gh && "gh", r.stateFirst.mcp && "MCP"].filter(Boolean).join(", ")})`).join(", ") || "no step"}.`,
 );
 out();
+out("## Sensitivity: measured characters per token");
+out();
+if (!cptMeasured)
+  out(
+    "Not measured: `data/real-sessions.json` has too few clean samples for a ratio, so every step keeps the model's.",
+  );
+else {
+  out(
+    `The model counts ${MODEL.charsPerToken} characters per token for every arm. The real sessions below measured pr-shepherd's output at ${MEASURED_CPT.shepherd} and tool output overall at ${MEASURED_CPT.baseline}: pr-shepherd's output is denser. Here every step's tool results are re-scored with pr-shepherd at ${MEASURED_CPT.shepherd} and gh and GitHub MCP at ${MEASURED_CPT.baseline}; commands and tool schemas, which the fits did not measure, keep ${MODEL.charsPerToken}. MCP's ratio is unmeasured (no real session used it), so it takes the overall one. Turns and calls do not depend on the ratio. A denser ratio also pushes more MCP results past the host's ${num(MODEL.mcpOutputCapTokens)}-token cap, where they are rejected: MCP's cost can fall while it finishes less of the step. Only the ratio changes: the fits' per-result intercept (wrapper and harness reminders) is left out, as the model leaves it out.${baselinesNeverFewerCalls ? " Every baseline makes at least as many calls as pr-shepherd on every step, so the intercept would only add to the baselines' cost." : ""}`,
+  );
+  out();
+  const cptExcluded = BASELINE_KEYS.flatMap((b) => {
+    const ids = rows.filter((_, i) => cptIncomplete[b].has(i)).map((r) => `\`${r.id}\``);
+    return ids.length ? [`vs. ${BASELINES[b]}, ${ids.join(", ")}`] : [];
+  });
+  if (cptExcluded.length) {
+    out(
+      "An arm that gains a truncated or rejected call at the measured ratios no longer finishes that step. Each comparison below and its verdicts leave out, on both sides, the steps where pr-shepherd or that baseline does, and the setup loads only those steps trigger:",
+    );
+    out();
+    for (const line of cptExcluded) out(`- ${line}`);
+    out();
+  }
+  out("| session | metric | vs. | characters per token | pr-shepherd | baseline | saving |");
+  out("| --- | --- | --- | --- | --- | --- | --- |");
+  for (const [key, title] of Object.entries(SESSIONS))
+    for (const m of ["ite", "toolTokens"])
+      for (const b of ["gh", "mcp"])
+        for (const [label, s] of [
+          [`${MODEL.charsPerToken} for every arm`, cptCompare[b].baseSessions[key]],
+          [
+            `${MEASURED_CPT.shepherd} / ${MEASURED_CPT.baseline}${b === "mcp" ? " (unmeasured)" : ""}`,
+            cptCompare[b].measuredSessions[key],
+          ],
+        ]) {
+          const t = s.total;
+          out(
+            `| ${title} | ${METRIC_LABELS[m]} | ${BASELINES[b]} | ${label} | ${num(t.shepherd[m])} | ${num(t[b][m])} | ${pct(saving(t[b][m], t.shepherd[m]))} |`,
+          );
+        }
+  out();
+  if (cptFlips.length) {
+    out(
+      "Verdicts, per session and per scenario, that flip to a loss at the measured ratios. They are gated like any other loss and pending in `pending-losses.json` under `chars-per-token:`:",
+    );
+    out();
+    for (const l of cptFlips)
+      out(
+        `- ${l.where.slice("chars-per-token:".length)}: ${METRIC_LABELS[l.metric]} vs. ${BASELINES[l.baseline]}, ${num(l.ours)} vs. ${num(l.theirs)} (#${l.issue})`,
+      );
+  } else out("No session or scenario verdict flips at the measured ratios.");
+}
+out();
+for (const line of realSessionsSection()) out(line);
+
 out("## Model");
 out();
 out(`- Tokens: ${MODEL.charsPerToken} characters per token for every arm.`);

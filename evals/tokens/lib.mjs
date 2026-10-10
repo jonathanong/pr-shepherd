@@ -27,9 +27,10 @@ export const MCP_TOOLS_USED = [
  * checks, so a tweak is always visible in review.
  */
 export const MODEL = {
-  // A uniform 3.5 chars/token for every arm. JSON packs more tokens per char
-  // than Markdown, so a uniform ratio undercounts the JSON-heavy baselines:
-  // the error runs against pr-shepherd, not for it.
+  // A uniform 3.5 chars/token for every arm. The real sessions measured 2.19
+  // for pr-shepherd's output and 2.53 for tool output overall, so this
+  // undercounts pr-shepherd most; REPORT.md's sensitivity section re-scores
+  // every step at the measured ratios.
   charsPerToken: 3.5,
   // Claude Code truncates Bash output past 30,000 characters. It rejects an
   // MCP result past 25,000 tokens outright, returning only an error.
@@ -45,6 +46,13 @@ export const MODEL = {
 };
 
 export const tokens = (text) => Math.ceil(text.length / MODEL.charsPerToken);
+/**
+ * Tokens of text the agent sends (commands, schemas). The measured ratios are
+ * of tool results only, so a sensitivity run (sessions.mjs's atCharsPerToken)
+ * keeps these at the model's own ratio.
+ */
+export const inputTokens = (text) =>
+  Math.ceil(text.length / (MODEL.inputCharsPerToken ?? MODEL.charsPerToken));
 
 // --- data -------------------------------------------------------------------
 
@@ -508,10 +516,16 @@ export function mcpJobLogs(log, runId, jobId, jobName, tailLines = 500) {
 export const mcpOversizeError = (call) =>
   `Error: MCP tool "${call.cmd.split(" ")[0]}" response (${tokens(call.out)} tokens) exceeds maximum allowed tokens (${MODEL.mcpOutputCapTokens}). Please use pagination, filtering, or limit parameters to reduce the response size.`;
 
+/**
+ * Tokens of a call's result. A `schema` result (a ToolSearch load) is tool
+ * schema text, counted at the input ratio like the eager toolset.
+ */
+export const outTokens = (call) => (call.schema ? inputTokens(call.out) : tokens(call.out));
+
 /** Apply the host's per-call output cap: truncate Bash, reject MCP. */
 function capped(call) {
-  const raw = tokens(call.out);
-  const cmdTokens = tokens(call.cmd);
+  const raw = outTokens(call);
+  const cmdTokens = inputTokens(call.cmd);
   if (call.via === "mcp") {
     const rejected = raw > MODEL.mcpOutputCapTokens;
     return {
@@ -698,6 +712,24 @@ export const SHEPHERD_TICK_API_REST = rest(14);
  */
 export const CCR_REQUESTS_PER_PR = 1;
 export const SHEPHERD_TICK_API_CLOUD = rest(SHEPHERD_TICK_API_REST.restCore + CCR_REQUESTS_PER_PR);
+/**
+ * A tick whose status is READY re-reads the PR's mergeability over REST before
+ * acting (refreshReadyMergeability in src/commands/check.mts), on either
+ * transport. The real sessions measured exactly one such request on each of
+ * their 21 READY polls (data/real-sessions.json).
+ */
+/** `apply review --require-sha`'s head read: `GetPrHeadSha` or one REST pull read. */
+export const HEAD_SHA_READ = 1;
+
+export const READY_MERGEABILITY_REST = 1;
+/** `call`, a READY tick: its cost on every transport plus the mergeability refresh. */
+export function readyTick(call) {
+  const add = (transport) => {
+    const a = callApi(call, transport);
+    return { ...a, restCore: a.restCore + READY_MERGEABILITY_REST };
+  };
+  return { ...call, api: add("graphql"), apiRest: add("rest"), apiCloud: add("cloud") };
+}
 /** A stack tick: one topology query plus about 0.52 points per layer, at least 1. */
 export const stackTickApi = (layers) => gql(1 + Math.max(1, Math.round(0.52 * layers)));
 /**

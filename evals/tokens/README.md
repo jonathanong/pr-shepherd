@@ -22,7 +22,7 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
-| single PR | 42.5 / 36.5 / 12 | 3 / 9 / 78.3 | 332.3 core + 1.5 points | 359.8 core + 1.5 points |
+| single PR | 42.5 / 36.5 / 12 | 4.8 / 9 / 78.3 | 334 core + 1.5 points | 361.5 core + 1.5 points |
 | PR stack | 42 / 27 / 12 | 2 / 6 / 74 | 540 core + 0 points | 570 core + 0 points |
 
 <!-- bench:headline:end -->
@@ -86,6 +86,12 @@ loss.
   pr-shepherd's fixed cost is still gated against both through the session
   totals, which include setup. Setup makes no GitHub call, so it has no
   rate-limit cells.
+- **Characters per token.** The token cells are gated a second time with
+  pr-shepherd's output counted at its measured characters per token and both
+  baselines at the measured ratio for tool output overall (REPORT.md's
+  "Sensitivity: measured characters per token"). A cell that is a loss only
+  there is listed with a `chars-per-token:` prefix on its scope. The real
+  sessions themselves are not gated.
 
 The event arm ("Event arm" below) is informational and not gated. It lives in
 its own report section, outside the session and rate-limit totals that
@@ -234,7 +240,11 @@ are as good as these assumptions:
     READY-receipt summary sibling, 2 points instead of 1;
   - the guarded merge is 2 points (lookup and mutation);
   - the poll tick that marks a draft ready is a changed tick after a wait plus
-    the 1-point mutation, 3 points.
+    the 1-point mutation, 3 points;
+  - a READY tick re-reads the PR's mergeability with one REST request before
+    acting, on every transport (`refreshReadyMergeability`). The real sessions
+    measured exactly one on each of their 21 READY polls. It is charged to
+    `mark-ready`, `merge` and `merge-queue`.
 - **pr-shepherd, REST transport.** This is standard REST (an explicit
   `--transport rest`, or `auto` after a GraphQL fallback outside the Claude
   Code cloud). REST has no fingerprint shortcut, so a poll is a full read.
@@ -244,15 +254,15 @@ are as good as these assumptions:
   rules and compare, and the stack topology (the stack list and read twice,
   each layer's pull and the viewer). A one-PR
   tick is 14 requests, counted at the HTTP boundary of the REST iterate test
-  routes and measured live (below); none is conditional, so none is a free
-  304. The `failing-check` and
+  routes and measured live (below); none is conditional, so none is a free 304. The `failing-check` and
   `check-annotations` ticks add one annotation read per annotated check run.
   `apply review` reads the pull for `--require-sha`; a thread resolve has no
   standard REST route, so it then spends, when it has replies, a 4-request
   transcript read (pull comments, issue comments, reviews and the viewer) and
   three requests per reply (`/user` and the pull comments, read so a lost
   response can be recovered, then the POST). Ready-for-review has no standard REST route either: the
-  `mark-ready` tick is its 14-request read, and it escalates as
+  `mark-ready` tick is its 14-request read plus the mergeability refresh (15
+  requests), and it escalates as
   transport-unsupported instead of marking the PR ready. The live check below
   had no failing check, so neither the job/log reads nor the annotation reads
   were measured.
@@ -423,6 +433,92 @@ Stack session:
 
 These are assumptions, not measurements. See "Next steps".
 
+### Real sessions
+
+REPORT.md's "Real sessions" section replays the pr-shepherd runs that
+shepherded eight of this repository's PRs. `sessions.mjs --extract` reads the
+agents' Claude Code transcripts, pr-shepherd's debug logs and one `gh api
+graphql` dump per PR (threads, comments, reviews, check runs). It writes
+`data/real-sessions.json`: counts, character lengths, relative seconds and
+token usage, never text, IDs or paths. The bench reads only that file.
+
+- **Timeline.** Each poll (its action, and its ticks: snapshot reads at least
+  30 s apart) and each `apply` (its mutation counts) is one step. Both
+  baselines read the state that step read and issue the mutations it batched.
+  Their payloads are filler of the PR's real item sizes as of that step. The
+  PR dumps hold only the statuses at dump time, so items turn resolved,
+  minimized or dismissed as the timeline's applies reach them, earliest first:
+  items the dump shows with that status, then (for applies after the dump)
+  items it does not. Mutations past the dumped items hit nothing a baseline
+  observed, so the baselines skip them, which only flatters the baselines.
+  An `apply` that sent no mutation failed before applying
+  anything: pr-shepherd pays for the attempt, and the baselines repeat
+  nothing. A step whose output the debug logs did not capture is left out
+  on every arm. Replayed commands keep the real ones' `--until-terminal` and
+  `--require-sha`. Checks from
+  before the first recorded commit are unknown and replayed as none. Before a
+  poll's first wait, each baseline reads the checks its first tick read: MCP
+  with `get_check_runs`, gh with `gh pr checks` unless a watch prints them on
+  start. A wait
+  with a check pending is a `gh pr checks --watch` refresh for gh; a wait with
+  none pending (pr-shepherd's debounce) is a plain sleep, since `--watch`
+  would return at once. Consecutive waits of one kind form one call, in
+  timeline order, and a watch is bounded by `timeout` to end with the poll,
+  since checks can still be pending when it returns. A REST-mode tick's
+  snapshot read is its pull request read. The baselines' PR body leaves out the Shepherd
+  Journal block, which only pr-shepherd writes. Text sizes are their
+  JSON-escaped lengths, since the baselines read them as JSON, and each
+  thread comment's filler URL keeps its numeric `#discussion_r` anchor for
+  MCP's reply tool.
+- **pr-shepherd's charge.** A poll pays one point per tick, one more per
+  later tick whose fingerprint missed (the logs show which did), and on a
+  READY or ready-delay CANCEL tick one REST mergeability refresh; the
+  ready-delay CANCEL also reads on the two-point receipt query. An `apply
+review` pays the head-SHA read, and its replayed command carries a 40-character
+  SHA, when it passed `--require-sha`, and, with
+  replies, the thread-transcript read and one recovery read per 10 replies,
+  plus one request per 10 mutations. Requests, costs and output past
+  `--until` close an invocation but add nothing to its record.
+- **Attribution.** Concurrent invocations interleave in one debug log; a
+  request, response or output that matches more than one open invocation is
+  assigned by heuristic, and the report prints how many were (up to
+  `--until`). An output without a `# PR` header (an `apply`) goes to the open
+  run whose arguments name its IDs, then by kind, then to the one that sent
+  the mutations it reports; one still ambiguous stays uncaptured.
+- **GraphQL points by query.** Each invocation records requests and logged
+  cost per GraphQL operation. The report groups them (fingerprint, BatchPr and
+  its supplements, `apply review` reads, and so on) and sets the tick queries
+  against the model's per-poll charge.
+- **Calibration, not gating.** Measured pr-shepherd numbers (result tokens,
+  GraphQL cost per request, REST requests, turns) calibrate the modeled
+  pr-shepherd arm. They are never compared with the modeled baselines, and
+  no real-session row is gated. One measurement does reach `--check`: the
+  characters per token that `real-sessions.json` records re-score every
+  synthetic step, and verdicts that flip at those ratios are gated
+  (`chars-per-token:` entries in `pending-losses.json`). So re-extracting
+  the sessions can add or remove gated losses. A step where pr-shepherd or a
+  baseline gains a truncated or rejected call at those ratios is left out of
+  the comparison with that baseline only, since the arm no longer finishes
+  it, and that comparison's setup leaves out the loads only those steps
+  trigger. The ratios apply to tool results only, since that is what they were
+  fitted on; commands and tool schemas keep the model's ratio. If either
+  ratio is unmeasured, nothing is re-scored. Only the ratio changes: the
+  fits' per-result intercept is not charged,
+  as the model charges none. Leaving it out favors the baselines only where
+  they make at least as many calls as pr-shepherd; setup and unsupported
+  steps can have pr-shepherd making more, so the report claims it only when
+  every step passes that check.
+- **No CI logs for the baselines.** A FIX_CODE poll that ended with a failed
+  check would send a baseline to the failed job's log, but the data has no
+  real log sizes, so the replay gives gh and MCP no log call. The report
+  counts those polls.
+- **Buckets.** Each request's real spend goes to the calls it emitted:
+  pr-shepherd and PR-state calls, environment overhead (worktree guard,
+  sandbox, git identity, polls run outside the repository), or the code, test
+  and commit work every arm would do.
+- **Model.** The sessions ran on Opus; the eval target is Sonnet. Per-output
+  token counts carry over; turn and call counts are model behavior.
+
 ## Where the savings come from
 
 - **History is re-read every tick.** After one review round, `gh pr view
@@ -517,9 +613,13 @@ explains the main ones.
 
 ## What this does not measure
 
-- **Real token counts.** 3.5 characters per token is applied to every arm.
-  JSON tokenizes denser than Markdown, so the estimate undercounts the
-  JSON-heavy baselines.
+- **Real token counts.** 3.5 characters per token is applied to every arm. The
+  real sessions in REPORT.md measured about 2.5 characters per token across all
+  tool results and about 2.2 for pr-shepherd's own output, so the model
+  undercounts every arm, pr-shepherd's most. REPORT.md's "Sensitivity: measured
+  characters per token" re-scores every step at those ratios and lists the
+  verdicts that flip. None of those sessions used GitHub MCP, so its ratio is
+  unmeasured and taken as the overall one.
 - **Reasoning tokens.** The baselines must also classify raw state (Is this
   thread already handled? Is this failure a flake?), work pr-shepherd's output
   has already done. This benchmark counts none of it.
@@ -530,7 +630,8 @@ explains the main ones.
   are excluded.
 - **Real rate-limit cost.** The gh numbers are assumptions. The MCP mapping is
   read from source, and pr-shepherd's one-PR tick is checked against one live
-  PR, but no whole session is measured. GraphQL point cost also depends on
+  PR. pr-shepherd's whole-session spend is measured only for the real
+  sessions, from its debug logs; the baselines' is never measured. GraphQL point cost also depends on
   query shape and node counts, which a flat 1 or 2 points per call ignores.
   REST conditional requests (ETag/304) are modeled only in the informational
   event arm; the gated arms make none. Real sessions run the

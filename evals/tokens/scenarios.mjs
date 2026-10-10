@@ -31,6 +31,9 @@ import {
   callApi,
   SHEPHERD_TICK_API,
   SHEPHERD_TICK_API_REST,
+  HEAD_SHA_READ,
+  READY_MERGEABILITY_REST,
+  readyTick,
   SHEPHERD_TICK_API_CLOUD,
   fixtureCommentId,
   ghThreadsCmd,
@@ -62,7 +65,8 @@ import {
   readJson,
   snapshot,
   tail,
-  tokens,
+  inputTokens,
+  outTokens,
   withHistory,
 } from "./lib.mjs";
 
@@ -195,9 +199,6 @@ const receiptTick = (out) => ({
   apiRest: SHEPHERD_TICK_API_REST,
   apiCloud: SHEPHERD_TICK_API_CLOUD,
 });
-
-/** `apply review --require-sha`'s head read: `GetPrHeadSha` or one REST pull read. */
-const HEAD_SHA_READ = 1;
 
 /**
  * Run the printed `apply review` command and read its output. Only `$DISMISS_MESSAGE` needs
@@ -480,6 +481,9 @@ const PLAYBOOK_FILES = Object.fromEntries(
  * `carry` gives, per scenario, the expected tokens each arm has in context
  * from loads: a playbook only after the output that names it (so from the
  * next scenario on), a tool schema from the call that needs it.
+ *
+ * `exclude` holds scenario IDs a comparison leaves out: their loads are not
+ * charged or carried.
  */
 function setupScenario({ id, session }) {
   return {
@@ -488,14 +492,14 @@ function setupScenario({ id, session }) {
     setup: true,
     weight: 1,
     title: "One-time setup",
-    arms() {
+    arms(exclude = new Set()) {
       const schemas = readJson("mcp-tool-schemas.json").tools;
       const schema = (t) => {
         if (!schemas[t]) throw new Error(`no recorded schema for ${t}; add it to MCP_TOOLS_USED`);
         return schemas[t];
       };
       // Context holds each load's command and result.
-      const size = (calls) => calls.reduce((t, c) => t + tokens(c.cmd) + tokens(c.out), 0);
+      const size = (calls) => calls.reduce((t, c) => t + inputTokens(c.cmd) + outTokens(c), 0);
       const skill = [
         {
           phase: 1,
@@ -518,7 +522,9 @@ function setupScenario({ id, session }) {
       let shepherdTokens = size(skill);
       let mcpTokens = 0;
       const carry = {};
-      for (const s of SCENARIOS.filter((x) => x.session === session && !x.setup)) {
+      for (const s of SCENARIOS.filter(
+        (x) => x.session === session && !x.setup && !exclude.has(x.id),
+      )) {
         const arms = s.arms();
         const share = Math.min(1, s.weight);
         const before = shepherdTokens;
@@ -563,6 +569,7 @@ function setupScenario({ id, session }) {
               via: "mcp",
               cmd: `ToolSearch {"query":"select:${names.join(",")}"}`,
               out: names.map(schema).join("\n"),
+              schema: true,
             },
           ];
           loads.push({ arm: "mcp", share: delta, calls: search });
@@ -787,7 +794,8 @@ const PR_SCENARIOS = [
         // sends one GraphQL mutation point. Standard REST has no ready-for-review
         // route, so after its read the tick escalates as transport-unsupported
         // (mark-ready.mts). Cloud REST marks it ready with one POST to the CCR
-        // proxy's ready_for_review route, on top of the tick's read.
+        // proxy's ready_for_review route, on top of the tick's read. On every
+        // transport the READY status re-reads mergeability over REST first.
         shepherd: [
           {
             phase: 1,
@@ -795,18 +803,25 @@ const PR_SCENARIOS = [
             cmd: "",
             out: "",
             continues: true,
-            api: gql(SHEPHERD_TICK_API.graphqlPoints + SHEPHERD_CHANGED_TICK_GRAPHQL + 1),
-            apiRest: SHEPHERD_TICK_API_REST,
-            apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + 1),
+            api: {
+              graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + SHEPHERD_CHANGED_TICK_GRAPHQL + 1,
+              restCore: READY_MERGEABILITY_REST,
+            },
+            apiRest: rest(SHEPHERD_TICK_API_REST.restCore + READY_MERGEABILITY_REST),
+            apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + 1 + READY_MERGEABILITY_REST),
           },
         ],
         // The wait's in-process tick marks it ready, as the poll's does: a
-        // snapshot with no fingerprint miss, the mutation, and the pull's echo.
-        // The check-runs 200 that triggers it is counted in ci-wait.
+        // snapshot with no fingerprint miss, the READY mergeability refresh, the
+        // mutation, and the pull's echo. The check-runs 200 that triggers it is
+        // counted in ci-wait.
         event: {
           wake: "none",
           tail: {
-            api: { graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + 1, restCore: 1 },
+            api: {
+              graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + 1,
+              restCore: 1 + READY_MERGEABILITY_REST,
+            },
             apiProxy: gql(1),
           },
         },
@@ -957,7 +972,7 @@ const PR_SCENARIOS = [
       const merged = "✓ Merged pull request owner/repo#42 (Fixture PR)\n";
       return {
         shepherd: [
-          receiptTick(snapshot(fixture)),
+          readyTick(receiptTick(snapshot(fixture))),
           {
             phase: 2,
             via: "bash",
@@ -994,7 +1009,7 @@ const PR_SCENARIOS = [
         "✓ Pull request owner/repo#42 will be added to the merge queue for main when ready\n";
       return {
         shepherd: [
-          receiptTick(snapshot(fixture)),
+          readyTick(receiptTick(snapshot(fixture))),
           {
             phase: 2,
             via: "bash",
