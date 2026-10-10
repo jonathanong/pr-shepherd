@@ -124,10 +124,28 @@ const mcpReply = (commentId, phase = 2) =>
 // --- the real CI failure ----------------------------------------------------
 
 const JOB_ID = 110714612462;
-const RUN_ID = 34906500059;
 const JOB_LOG = readData(`job-${JOB_ID}.txt`);
-const JOB_NAME = readJson(`job-${JOB_ID}.steps.json`).name;
+const { runId: RUN_ID, name: JOB_NAME } = readJson(`job-${JOB_ID}.steps.json`);
 const FAILED_STEP = "Run npm run test:coverage";
+
+// Snapshot 92's fixture names its own run and job. Both arms see the recorded
+// job's IDs instead, so every command targets the run the log came from.
+const FIXTURE_RUN_ID = "34906500059";
+const FIXTURE_JOB_ID = "104190467372";
+const withRecordedIds = (text) =>
+  text.replaceAll(FIXTURE_RUN_ID, String(RUN_ID)).replaceAll(FIXTURE_JOB_ID, String(JOB_ID));
+
+function failingCheckState() {
+  const state = fixtureState("92-fix-code-failing-check-first-failed-step");
+  return {
+    ...state,
+    checks: state.checks.map((c) => ({
+      ...c,
+      runId: withRecordedIds(c.runId),
+      detailsUrl: withRecordedIds(c.detailsUrl),
+    })),
+  };
+}
 
 /**
  * Snapshot 92 renders a fixture's two-line log excerpt. Swap in the excerpt
@@ -144,7 +162,7 @@ function failingCheckOutput() {
   if (!text.includes(fixtureExcerpt)) throw new Error("snapshot 92 excerpt moved");
   const real = buildLogExcerpt(JOB_LOG);
   const rendered = [`  > ${FAILED_STEP}`, ...real.split("\n").map((l) => `  > ${l}`)].join("\n");
-  return text.replace(fixtureExcerpt, rendered);
+  return withRecordedIds(text.replace(fixtureExcerpt, rendered));
 }
 
 // --- scenarios --------------------------------------------------------------
@@ -230,7 +248,7 @@ export const SCENARIOS = [
     title: "Triage a real failing CI job",
     note: `Real 194 KB log of job ${JOB_ID} (a vitest snapshot failure). gh tails the failed step; MCP uses get_job_logs' default 500-line tail.`,
     arms() {
-      const state = fixtureState("92-fix-code-failing-check-first-failed-step");
+      const state = failingCheckState();
       const logFailed = ghLogFailed(
         JOB_LOG,
         JOB_NAME,

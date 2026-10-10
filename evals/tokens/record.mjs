@@ -100,7 +100,7 @@ function recordJobLog() {
   }));
   writeFileSync(
     join(DATA_DIR, `job-${JOB_ID}.steps.json`),
-    `${JSON.stringify({ name: jobs.name, steps }, null, 2)}\n`,
+    `${JSON.stringify({ runId: jobs.run_id, name: jobs.name, steps }, null, 2)}\n`,
   );
 }
 
