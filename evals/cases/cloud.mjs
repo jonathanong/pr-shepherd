@@ -1,6 +1,5 @@
-// Cases 40+: the cloud event loop (event mode). Numbers 29-37 are held by the
-// uncovered-rule cases on origin/evals/uncovered-rule-cases; 38-39 are left free
-// so neither branch has to renumber when both land.
+// Cases 40+: the cloud event loop (event mode). 29-37 are the uncovered-rule
+// cases in rules.mjs; 38-39 are left free.
 
 import { PR_URL, llm, skillFired } from "../lib.mjs";
 
