@@ -22,8 +22,8 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport |
 | --- | --- | --- | --- |
-| single PR | 39.5 / 34.5 / 11 | 3 / 9 / 78.3 | 279 core + 1.5 points |
-| PR stack | 34 / 27 / 12 | 2 / 6 / 74 | 404 core + 0 points |
+| single PR | 33.5 / 34.5 / 11 | 3 / 9 / 78.3 | 321 core + 1.5 points |
+| PR stack | 26 / 27 / 12 | 2 / 6 / 74 | 420 core + 0 points |
 
 <!-- bench:headline:end -->
 
@@ -154,20 +154,23 @@ arm spends: GraphQL points and REST core requests, which are separate buckets.
 are as good as these assumptions:
 
 - **pr-shepherd, GraphQL transport** (`docs/graphql-usage.md`):
-  - a one-PR tick is 2 points, the fingerprint-miss cost; each CI-wait poll is a
-    1-point fingerprint hit;
+  - a cold one-PR tick is 1 point (`BatchPr`), and each unchanged wait poll is
+    a 1-point fingerprint hit; the first changed tick after a wait reads the
+    fingerprint, misses and reads `BatchPr`, so it is 2 (the wait scenario
+    carries that extra point);
   - a stack tick is 1 topology point plus `max(1, round(0.52 × layers))`;
   - `apply review` is one thread read plus one point per chunk of 10 mutations;
   - a tick that renders a failing job's log excerpt also lists the run's jobs
     and reads the job log, two REST requests on either transport;
   - the guarded merge is 2 points (lookup and mutation);
-  - the poll tick that marks a draft ready is a full one-PR tick plus the
-    1-point mutation, 3 points (on REST, a full read plus one CCR POST).
+  - the poll tick that marks a draft ready is a changed tick after a wait plus
+    the 1-point mutation, 3 points (on REST, a full read plus one CCR POST).
 - **pr-shepherd, REST transport.** REST has no fingerprint shortcut, so a poll
   is a full read. From `src/github/rest-stack-summary-sharing.test.mts`, a
   10-layer stack tick is 126 requests, which this models as 6 shared plus 12
-  per layer. A one-PR tick is about 12. A thread resolve has no REST route, so
-  `apply review` there spends its replies plus, when it has any, a 5-request
+  per layer. A one-PR tick is 14 requests, counted at the HTTP boundary of the
+  REST iterate test routes; none is conditional, so none is a free 304. A
+  thread resolve has no REST route, so `apply review` there spends its replies plus, when it has any, a 5-request
   transcript read (pull comments, issue comments, reviews, CCR review threads
   and the viewer).
 - **gh:** `gh pr view`, the thread query and each `gh pr checks` refresh are

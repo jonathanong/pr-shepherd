@@ -33,6 +33,7 @@ import {
   fixtureState,
   gql,
   rest,
+  SHEPHERD_CHANGED_TICK_GRAPHQL,
   SHEPHERD_TICK_API,
   SHEPHERD_TICK_API_REST,
   stackTickApi,
@@ -478,7 +479,10 @@ const PR_SCENARIOS = [
         (_, i) => `[poll tick ${i + 1} / +${i * 60}s] WAIT — ${reason}; next tick in 60s\n`,
       ).join("");
       return {
-        // Each poll is a fingerprint hit: 1 GraphQL point, or a full REST read.
+        // Each poll is 1 GraphQL point (the cold first tick's BatchPr, then a
+        // fingerprint hit), or a full REST read. The tick this call returns, the
+        // next scenario's, is the first changed tick after the wait: its extra
+        // fingerprint read is charged here, so that tick keeps the base cost.
         shepherd: [
           {
             phase: 1,
@@ -486,8 +490,8 @@ const PR_SCENARIOS = [
             cmd: "",
             out: stderr,
             continues: true,
-            api: gql(polls),
-            apiRest: rest(12 * polls),
+            api: gql(polls * SHEPHERD_TICK_API.graphqlPoints + SHEPHERD_CHANGED_TICK_GRAPHQL),
+            apiRest: rest(polls * SHEPHERD_TICK_API_REST.restCore),
           },
         ],
         gh: [
@@ -624,11 +628,12 @@ const PR_SCENARIOS = [
       const state = withHistory(fixtureState(fixture), HISTORY);
       return {
         // The poll's mark-ready tick costs no call or tokens, but it still spends
-        // rate limit: runPoll -> runIterate reads the PR snapshot first (a full
-        // read, since mark-ready refuses a reused fingerprint), then
-        // markReadyIfAuthorized sends one GraphQL mutation point, or on REST one
-        // POST to the CCR proxy's ready_for_review route (mark-ready.mts).
-        // Outside CCR, REST escalates as transport-unsupported.
+        // rate limit: runPoll -> runIterate reads the PR snapshot first. That is
+        // the first changed tick after a wait (a fingerprint miss, then BatchPr;
+        // mark-ready refuses a reused fingerprint). markReadyIfAuthorized then
+        // sends one GraphQL mutation point, or on REST one POST to the CCR
+        // proxy's ready_for_review route (mark-ready.mts). Outside CCR, REST
+        // escalates as transport-unsupported.
         shepherd: [
           {
             phase: 1,
@@ -636,7 +641,7 @@ const PR_SCENARIOS = [
             cmd: "",
             out: "",
             continues: true,
-            api: gql(SHEPHERD_TICK_API.graphqlPoints + 1),
+            api: gql(SHEPHERD_TICK_API.graphqlPoints + SHEPHERD_CHANGED_TICK_GRAPHQL + 1),
             apiRest: rest(SHEPHERD_TICK_API_REST.restCore + 1),
           },
         ],

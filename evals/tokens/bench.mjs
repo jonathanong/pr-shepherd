@@ -11,7 +11,17 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
-import { MCP_API, MODEL, TOKENS_DIR, apiTotals, cost, readJson, tokens } from "./lib.mjs";
+import {
+  MCP_API,
+  MODEL,
+  SHEPHERD_TICK_API,
+  SHEPHERD_TICK_API_REST,
+  TOKENS_DIR,
+  apiTotals,
+  cost,
+  readJson,
+  tokens,
+} from "./lib.mjs";
 import { SCENARIOS } from "./scenarios.mjs";
 
 const ARMS = ["shepherd", "gh", "mcp"];
@@ -236,11 +246,11 @@ const apiSessions = Object.fromEntries(
 );
 
 // Waiting on CI: pr-shepherd polls every 60s (poll.intervalSeconds). A
-// fingerprint hit is 1 GraphQL point; REST has no shortcut (~12 requests).
+// fingerprint hit is 1 GraphQL point; REST has no shortcut (a full read).
 const POLL_SECONDS = 60;
 const waitPerHour = {
-  shepherdGraphql: 3600 / POLL_SECONDS,
-  shepherdRest: (3600 / POLL_SECONDS) * 12,
+  shepherdGraphql: (3600 / POLL_SECONDS) * SHEPHERD_TICK_API.graphqlPoints,
+  shepherdRest: (3600 / POLL_SECONDS) * SHEPHERD_TICK_API_REST.restCore,
   ghWatchGraphql: 3600 / POLL_SECONDS,
   mcpRest: (3600 / POLL_SECONDS) * 2,
 };

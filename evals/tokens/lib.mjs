@@ -629,10 +629,24 @@ export function mcpApi(tool, args) {
   return { graphqlPoints: entry.graphqlPoints, restCore: entry.restCore };
 }
 
-/** pr-shepherd's one-PR tick: a fingerprint hit costs 1 point, a miss 2 (docs/graphql-usage.md). */
-export const SHEPHERD_TICK_API = gql(2);
-/** REST has no fingerprint shortcut: about 12 requests for one PR's full snapshot. */
-export const SHEPHERD_TICK_API_REST = rest(12);
+/**
+ * pr-shepherd's one-PR tick (docs/graphql-usage.md). A cold tick is one
+ * `BatchPr` point, and an unchanged wait tick is one `PrFingerprint` point.
+ */
+export const SHEPHERD_TICK_API = gql(1);
+/**
+ * The first changed tick after a fingerprint-skipped wait reads the fingerprint,
+ * misses, and then reads `BatchPr`: one point on top of `SHEPHERD_TICK_API`.
+ */
+export const SHEPHERD_CHANGED_TICK_GRAPHQL = 1;
+/**
+ * REST has no fingerprint shortcut: 14 requests for one PR's full snapshot
+ * (pull, review comments, check runs, protection, check suites, stacks, rules,
+ * issue comments, statuses, reviews, workflow runs, viewer, repository, and a
+ * second pull read), counted at the HTTP boundary of the REST iterate test
+ * routes. None of them is conditional, so none can be a free 304.
+ */
+export const SHEPHERD_TICK_API_REST = rest(14);
 /** A stack tick: one topology query plus about 0.52 points per layer, at least 1. */
 export const stackTickApi = (layers) => gql(1 + Math.max(1, Math.round(0.52 * layers)));
 /** REST stack tick: about 6 shared requests plus 12 per layer (126 for 10 layers in rest-stack-summary-sharing.test.mts). */
