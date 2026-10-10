@@ -12,11 +12,11 @@ Latest numbers: [REPORT.md](REPORT.md). Estimated cost per session:
 
 | session   | cost vs. gh | cost vs. MCP | turns vs. gh / MCP | tool tokens vs. gh / MCP |
 | --------- | ----------- | ------------ | ------------------ | ------------------------ |
-| single PR | **−36%**    | **−72%**     | −8% / −60%         | −71% / −87%              |
-| PR stack  | **−29%**    | **−63%**     | −31% / −64%        | +34% / −35%              |
+| single PR | **−39%**    | **−75%**     | −14% / −67%        | −71% / −87%              |
+| PR stack  | **−30%**    | **−53%**     | −31% / −53%        | +34% / −25%              |
 
 The savings are concentrated. Against a frugal gh agent they come from
-re-read review history, CI logs, merge-queue waits and stack merges. Against
+re-read review history, CI logs, CI and merge-queue waits, and stack merges. Against
 the GitHub MCP server they also come from polling and stack discovery, which
 MCP has no shortcut for. A single fresh read-and-reply tick against gh is a
 wash: between 9% cheaper and 6% dearer. See "Where pr-shepherd does not save".
@@ -93,14 +93,22 @@ Each scenario reports four numbers per arm:
   reads one step's last results also emits the next step's first call, so it
   is charged once, to the next step.
 
-Setup output stays in context. The skill and playbooks for pr-shepherd, and
-the loaded schemas for MCP, ride along on every later request in the session.
+Setup loads lazily, in scenario order, as an agent would:
+
+- **pr-shepherd:** the skill up front, then each playbook when an output first
+  names it.
+- **MCP:** each tool's schema, through ToolSearch, when the arm first calls the
+  tool.
+
+Each load is its own turn. Whatever has loaded stays in context on every later
+request in the session.
 
 The pr-shepherd arm follows the skill and runs `--until-terminal`. That poll
 blocks through WAIT ticks, printing one stderr line per tick, and keeps going
-through MARK_READY. So a CI wait is one call, and marking a draft ready costs no
-call of its own. The blocking call's final result is the next scenario's tick,
-so that call is counted twice against pr-shepherd.
+through MARK_READY. The blocking call's final result is the next scenario's
+tick, so a wait adds only its stderr lines, and marking a draft ready adds
+nothing. gh's `gh pr checks --watch` returns only the checks table, so gh still
+needs its own read for the next step.
 
 The report has one total for a PR session and one for a stack session. Each
 total adds its own setup. The stack session counts only stack-level ticks; the
@@ -151,8 +159,10 @@ These are assumptions, not measurements. See "Next steps".
   again for 1,000 lines, and the host truncates that at its 25k-token cap.
 - **Polling happens inside the CLI.** One blocking `--until-terminal` call
   replaces a minute-by-minute MCP re-check, and it carries on through
-  MARK_READY. gh has its own blocking `gh pr checks --watch` for CI, but
-  nothing for a merge queue, so it must re-check queue state itself.
+  MARK_READY. It returns the next step's result itself, so a wait costs no
+  extra turn. gh's `gh pr checks --watch` also blocks, but gh still has to read
+  the PR once it returns, and it has nothing for a merge queue, so it re-checks
+  queue state itself.
 - **Stacks need one overview.** MCP needs one turn per layer to find the stack.
   gh finds it in one call, but merging a native stack still costs it an
   asynchronous merge plus a poll, where pr-shepherd prints one
@@ -170,12 +180,12 @@ The report splits each session's cost in two:
 
 | session | pr-shepherd fixed share | variable tokens vs. gh | variable cost vs. gh |
 | ------- | ----------------------- | ---------------------- | -------------------- |
-| PR      | 20% of its cost         | −78%                   | −49%                 |
-| stack   | 27% of its cost         | −7%                    | −48%                 |
+| PR      | 25% of its cost         | −79%                   | −54%                 |
+| stack   | 34% of its cost         | −8%                    | −54%                 |
 
 The stack session's "+34% tool tokens vs. gh" is all fixed cost. pr-shepherd
 loads about 2.2k tokens of skill and playbooks, and gh loads nothing. On
-variable tokens alone pr-shepherd reads 7% less than gh.
+variable tokens alone pr-shepherd reads 8% less than gh.
 
 Within the variable cost, `stack-work` is where pr-shepherd reads more than gh:
 2,254 tokens against 1,644.
@@ -200,12 +210,10 @@ The levers, in order of size:
 
 ## Where pr-shepherd does not save
 
-- **Setup.** The skill and every playbook the session's outputs name cost
-  about 2.2–3.0k tokens. Those tokens then ride along on every later request.
+- **Setup.** The skill and the playbooks a session's outputs name cost about
+  2.2–3.0k tokens, loaded over one to three turns. Those tokens then ride along
+  on every later request: a quarter to a third of pr-shepherd's session cost.
   gh needs nothing.
-- **CI waits against gh.** `gh pr checks --watch` blocks just like
-  pr-shepherd's poll and prints less, so `ci-wait` costs pr-shepherd 13% more
-  than gh.
 - **Fresh single-step ticks against gh.** A frugal gh agent selects `--json`
   fields and replies with `gh api --silent`. On these steps pr-shepherd lands
   between 9% cheaper and 6% dearer than gh, because its Markdown output and
@@ -217,7 +225,7 @@ The levers, in order of size:
 - **Stack token volume.** Each routed layer's first tick prints its own
   instructions. In the stack session pr-shepherd reads 34% more tool tokens than
   gh's terse per-layer reads, and routing work across the six-layer stack is
-  nearly even with gh (−9%). The session still costs 29% less, because
+  nearly even with gh (−9%). The session still costs 30% less, because
   pr-shepherd takes 9 turns where gh takes 13.
 
 ## What this does not measure

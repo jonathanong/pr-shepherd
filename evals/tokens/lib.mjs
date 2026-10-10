@@ -521,10 +521,16 @@ function capped(call) {
  * both sides of that boundary would add one base-context read per scenario to
  * every arm.
  *
+ * A call marked `continues` is the tail of a blocking call that an earlier
+ * step started: its output lands in context with no request, turn or command
+ * of its own.
+ *
  * `extraContext` is carried on every request: setup output that stays in
  * context, or tool schemas a host loads up front.
  */
-export function cost(calls, { extraContext = 0 } = {}) {
+export function cost(allCalls, { extraContext = 0 } = {}) {
+  const tails = allCalls.filter((c) => c.continues);
+  const calls = allCalls.filter((c) => !c.continues);
   const phases = [...new Set(calls.map((c) => c.phase))].sort((a, b) => a - b);
   let context = MODEL.baseContextTokens + extraContext;
   let ite = 0;
@@ -532,6 +538,11 @@ export function cost(calls, { extraContext = 0 } = {}) {
   let cmdTotal = 0;
   let outTotal = 0;
   let truncated = 0;
+  for (const tail of tails) {
+    const t = capped(tail);
+    outTotal += t.outTokens;
+    pending += t.outTokens;
+  }
   for (const p of phases) {
     // Request that emits this phase's calls.
     ite += MODEL.cacheReadMultiplier * context + MODEL.cacheWriteMultiplier * pending;

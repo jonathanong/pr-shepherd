@@ -48,6 +48,7 @@ import {
   readJson,
   snapshot,
   tail,
+  tokens,
   withHistory,
 } from "./lib.mjs";
 
@@ -165,7 +166,12 @@ const ghResolve = (threadId, phase = 2) => ({
 });
 
 const mcpResolve = (threadId, phase = 2) =>
-  mcpCall(phase, "resolve_review_thread", { threadId }, "review thread resolved successfully");
+  mcpCall(
+    phase,
+    "resolve_review_thread",
+    { threadID: threadId },
+    "review thread resolved successfully",
+  );
 
 // Guarded like shepherd's `--match-head-commit`: refuse a head the agent did not see.
 const mcpMerge = (pullNumber, sha, { phase = 2, method = "merge", repo } = {}) =>
@@ -288,9 +294,14 @@ const PLAYBOOK_FILES = Object.fromEntries(
 );
 
 /**
- * One-time cost per session, derived from the session's other scenarios: the
- * skill plus every playbook a shepherd output names (the skill reads each once),
- * and the schema of every GitHub MCP tool the MCP arm calls. gh needs nothing.
+ * One-time costs per session, loaded lazily in scenario order, as an agent
+ * would: the skill up front; each playbook when a shepherd output first names
+ * it; each GitHub MCP tool's schema (via ToolSearch) when the MCP arm first
+ * calls it. gh needs nothing.
+ *
+ * Every load is its own turn. `carry` gives, per scenario, the tokens each arm
+ * has loaded by the end of that scenario; bench.mjs keeps them in context on
+ * every request of that scenario.
  */
 function setupScenario({ id, session }) {
   return {
@@ -300,50 +311,63 @@ function setupScenario({ id, session }) {
     weight: 1,
     title: "One-time setup",
     arms() {
-      const ticks = SCENARIOS.filter((s) => s.session === session && !s.setup).map((s) => s.arms());
-      const shepherdText = ticks.flatMap((a) => a.shepherd.map((c) => c.out)).join("\n");
-      const playbooks = [
-        ...new Set([...shepherdText.matchAll(/Playbook: "([^"]+)"/g)].map((m) => m[1])),
-      ].sort();
-      const tools = [
-        ...new Set(
-          ticks.flatMap((a) =>
-            a.mcp.filter((c) => c.via === "mcp").map((c) => c.cmd.split(" ")[0]),
-          ),
-        ),
-      ].sort();
       const schemas = readJson("mcp-tool-schemas.json").tools;
-      return {
-        note: `Skill + ${playbooks.join(", ")} playbooks for shepherd; ${tools.join(", ")} schemas for MCP; nothing for gh.`,
-        shepherd: [
-          {
-            phase: 1,
-            via: "bash",
-            cmd: 'Skill {"skill":"pr-shepherd:pr-shepherd"}',
-            out: readSkill("SKILL.md"),
-          },
-          ...playbooks.map((name) => ({
-            phase: 2,
-            via: "bash",
-            cmd: `Read ${PLAYBOOK_FILES[name]}`,
-            out: readSkill(PLAYBOOK_FILES[name]),
-          })),
-        ],
-        gh: [],
-        mcp: [
-          {
-            phase: 1,
+      const schema = (t) => {
+        if (!schemas[t]) throw new Error(`no recorded schema for ${t}; add it to MCP_TOOLS_USED`);
+        return schemas[t];
+      };
+      const skill = readSkill("SKILL.md");
+      const shepherd = [
+        { phase: 1, via: "bash", cmd: 'Skill {"skill":"pr-shepherd:pr-shepherd"}', out: skill },
+      ];
+      // Context holds each load's command and result.
+      const size = (c) => tokens(c.cmd) + tokens(c.out);
+      const mcp = [];
+      const playbooks = new Set();
+      const tools = new Set();
+      let shepherdTokens = size(shepherd[0]);
+      let mcpTokens = 0;
+      const carry = {};
+      for (const s of SCENARIOS.filter((x) => x.session === session && !x.setup)) {
+        const arms = s.arms();
+        const text = arms.shepherd.map((c) => c.out).join("\n");
+        const named = [...new Set([...text.matchAll(/Playbook: "([^"]+)"/g)].map((m) => m[1]))];
+        const newPlaybooks = named.filter((n) => !playbooks.has(n)).sort();
+        if (newPlaybooks.length) {
+          const phase = shepherd.length + 1;
+          for (const name of newPlaybooks) {
+            playbooks.add(name);
+            const call = {
+              phase,
+              via: "bash",
+              cmd: `Read ${PLAYBOOK_FILES[name]}`,
+              out: readSkill(PLAYBOOK_FILES[name]),
+            };
+            shepherdTokens += size(call);
+            shepherd.push(call);
+          }
+        }
+        const used = arms.mcp.filter((c) => c.via === "mcp").map((c) => c.cmd.split(" ")[0]);
+        const newTools = [...new Set(used)].filter((t) => !tools.has(t)).sort();
+        if (newTools.length) {
+          newTools.forEach((t) => tools.add(t));
+          const call = {
+            phase: mcp.length + 1,
             via: "mcp",
-            cmd: `ToolSearch {"query":"select:${tools.join(",")}"}`,
-            out: tools
-              .map((t) => {
-                if (!schemas[t])
-                  throw new Error(`no recorded schema for ${t}; add it to MCP_TOOLS_USED`);
-                return schemas[t];
-              })
-              .join("\n"),
-          },
-        ],
+            cmd: `ToolSearch {"query":"select:${newTools.join(",")}"}`,
+            out: newTools.map(schema).join("\n"),
+          };
+          mcpTokens += size(call);
+          mcp.push(call);
+        }
+        carry[s.id] = { shepherd: shepherdTokens, gh: 0, mcp: mcpTokens };
+      }
+      return {
+        note: `Skill up front, then ${[...playbooks].join(", ")} playbooks as outputs first name them, for shepherd; ${[...tools].sort().join(", ")} schemas as MCP first calls them; nothing for gh.`,
+        shepherd,
+        gh: [],
+        mcp,
+        carry,
       };
     },
   };
@@ -356,7 +380,7 @@ const PR_SCENARIOS = [
     id: "ci-wait",
     weight: 2,
     title: `Wait out one ${CI_MINUTES}-minute CI run`,
-    note: `With --until-terminal, shepherd's one call blocks until CI settles and prints a stderr line per poll. gh blocks the same way on \`gh pr checks --watch\`, which reprints the table each refresh. Both final results are the next scenario's tick, so each blocking call is counted twice. MCP has no watch or sleep, so it re-checks every ${BASELINE_POLL_MINUTES}m with a Bash sleep plus a call.`,
+    note: `With --until-terminal, shepherd's one call blocks until CI settles and prints a stderr line per poll. gh blocks the same way on \`gh pr checks --watch\`, which reprints the table each refresh. Shepherd's call returns the next scenario's tick, so here it adds only the stderr lines, no call or turn. gh's next read is a separate call. MCP has no watch or sleep, so it re-checks every ${BASELINE_POLL_MINUTES}m with a Bash sleep plus a call.`,
     arms() {
       const fixture = "09-wait-in-progress-ci";
       const state = fixtureState(fixture);
@@ -368,7 +392,7 @@ const PR_SCENARIOS = [
         (_, i) => `[poll tick ${i + 1} / +${i * 60}s] WAIT — ${reason}; next tick in 60s\n`,
       ).join("");
       return {
-        shepherd: [{ phase: 1, via: "bash", cmd: SHEPHERD_CMD, out: stderr }],
+        shepherd: [{ phase: 1, via: "bash", cmd: "", out: stderr, continues: true }],
         gh: [
           {
             phase: 1,
@@ -502,7 +526,7 @@ const PR_SCENARIOS = [
           {
             phase: 2,
             via: "bash",
-            cmd: "gh pr ready 42",
+            cmd: "gh pr ready 42 -R owner/repo",
             out: '✓ Pull request owner/repo#42 is marked as "ready for review"\n',
           },
         ],
@@ -636,7 +660,7 @@ const PR_SCENARIOS = [
           {
             phase: 2,
             via: "bash",
-            cmd: `gh pr merge 42 --match-head-commit ${state.headRefOid} --merge`,
+            cmd: `gh pr merge 42 -R owner/repo --match-head-commit ${state.headRefOid} --merge`,
             out: merged,
           },
         ],
@@ -671,7 +695,7 @@ const PR_SCENARIOS = [
           {
             phase: 2,
             via: "bash",
-            cmd: `gh pr merge 42 --match-head-commit ${state.headRefOid}`,
+            cmd: `gh pr merge 42 -R owner/repo --match-head-commit ${state.headRefOid}`,
             out: queued,
           },
         ],
@@ -843,7 +867,7 @@ const STACK_SCENARIOS = [
     session: "stack",
     weight: 2,
     title: "Six-layer stack: two merged parents, four owned layers with work",
-    note: "Fixture 130, from a real vouchington stack. Shepherd's overview routes four one-PR sessions, whose first ticks are counted here.",
+    note: "Fixture 130, from a real vouchington stack. Shepherd's overview routes four one-PR sessions, whose first ticks are counted here. MCP's branch walk stops at #2534, whose base is the trunk, and never sees the merged #2509, which needs no work.",
     arms() {
       const name = "130-aggregate-stack-merged-parent-work";
       const { layers, anchor, gh, mcp } = stackBaselines(name);
@@ -870,7 +894,7 @@ const STACK_SCENARIOS = [
     session: "stack",
     weight: 1,
     title: `Two-layer stack: wait out a ${CI_MINUTES}-minute merge queue`,
-    note: `Fixture 98. With --until-terminal, shepherd's stack poll ignores its timeout and blocks until the queue settles, printing one stderr line per ${STACK_POLL_SECONDS}s tick; its final result is the next step's tick, so that call is counted twice. gh finds the stack, reads both layers once, then re-checks queue state at the same ${STACK_POLL_SECONDS}s cadence with one GraphQL query. MCP cannot see queue state at all.`,
+    note: `Fixture 98. With --until-terminal, shepherd's stack poll ignores its timeout and blocks until the queue settles, printing one stderr line per ${STACK_POLL_SECONDS}s tick; its final result is \`stack-merge\`'s overview, so here it adds only the stderr lines. gh finds the stack, reads both layers once, then re-checks queue state at the same ${STACK_POLL_SECONDS}s cadence with one GraphQL query. MCP cannot see queue state at all, so it stops after its reads.`,
     gaps: { mcp: "cannot see merge-queue membership" },
     arms() {
       const name = "98-aggregate-stack-merge-queue";
@@ -903,15 +927,10 @@ const STACK_SCENARIOS = [
         },
       });
       const ghStart = lastPhase(gh) + 1;
-      const mcpStart = lastPhase(mcp) + 1;
       return {
         shepherd: [
-          {
-            phase: 1,
-            via: "bash",
-            cmd: stackCmd(layers[anchor].pr, repo, " --merge"),
-            out: stderr,
-          },
+          // The blocking call's final result is `stack-merge`'s overview.
+          { phase: 1, via: "bash", cmd: "", out: stderr, continues: true },
         ],
         gh: [
           ...gh,
@@ -922,21 +941,9 @@ const STACK_SCENARIOS = [
             out: queueState,
           })),
         ],
-        mcp: [
-          ...mcp,
-          ...Array.from({ length: polls }, (_, i) => [
-            { phase: mcpStart + 2 * i, via: "bash", cmd: `sleep ${STACK_POLL_SECONDS}`, out: "" },
-            ...openLayers(layers).map((l) =>
-              mcpCall(
-                mcpStart + 2 * i + 1,
-                "pull_request_read",
-                { method: "get", pullNumber: l.pr },
-                mcpGet(layerState(l)),
-                repo,
-              ),
-            ),
-          ]).flat(),
-        ],
+        // MCP can see neither queue membership nor a settled queue, so it
+        // stops once its reads establish the gap.
+        mcp,
       };
     },
   },
