@@ -456,7 +456,10 @@ token usage, never text, IDs or paths. The bench reads only that file.
   nothing. A step whose output the debug logs did not capture is left out
   on every arm. Replayed commands keep the real ones' `--until-terminal` and
   `--require-sha`. Checks from
-  before the first recorded commit are unknown and replayed as none. A wait
+  before the first recorded commit are unknown and replayed as none. Before a
+  poll's first wait, each baseline reads the checks its first tick read: MCP
+  with `get_check_runs`, gh with `gh pr checks` unless a watch prints them on
+  start. A wait
   with a check pending is a `gh pr checks --watch` refresh for gh; a wait with
   none pending (pr-shepherd's debounce) is a plain sleep, since `--watch`
   would return at once. Consecutive waits of one kind form one call, in

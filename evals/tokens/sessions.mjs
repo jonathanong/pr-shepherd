@@ -317,6 +317,10 @@ function classify(use, result, bgPrs, scope) {
     /(?:pr-shepherd(?: apply \w+)? (?:\S+\/pull\/)?|\/pull\/|\bpulls\/|number:\s*|gh pr \w+ )(\d+)\b/g,
   ))
     if (inScope(Number(m[1]))) prs.add(Number(m[1]));
+  // The `iterate` and `poll` subcommands, only where a command runs them.
+  if (use.name === "Bash")
+    for (const m of text.matchAll(/pr-shepherd (?:iterate|poll) (?:\S+\/pull\/)?(\d+)\b/g))
+      if (inScope(Number(m[1]))) prs.add(Number(m[1]));
   for (const m of text.matchAll(POLL_FILE)) if (inScope(Number(m[1]))) prs.add(Number(m[1]));
   for (const [id, p] of bgPrs) if (text.includes(id)) p.forEach((n) => prs.add(n));
   // A batched `for n in 520 521; do …` loop, at the start or after a `cd …`.
@@ -887,8 +891,12 @@ function stepArms(pr, inv) {
       if (last?.watch === watch) last.times.push(t);
       else runs.push({ watch, prev, times: [t] });
     });
-    const ghWaits = runs.map(({ watch, prev, times }, i) =>
-      watch
+    // Each baseline reads the checks the first tick read before its first wait;
+    // a watch prints them on start, so only a leading sleep needs the read.
+    const ghStart = runs[0] && !runs[0].watch ? 1 : 0;
+    const ghWaits = runs.map(({ watch, prev, times }, j) => {
+      const i = j + ghStart;
+      return watch
         ? // One query on start, then one per refresh, each reprinting the table.
           // Checks can still be pending when the poll returns, so the watch is
           // bounded to end with it.
@@ -898,8 +906,10 @@ function stepArms(pr, inv) {
             [prev, ...times].map((t) => ghPrChecks(stateAt(pr, t))).join("\n"),
             { api: gql(times.length + 1) },
           )
-        : call(i + 1, `sleep ${times.at(-1) - prev}`, ""),
-    );
+        : call(i + 1, `sleep ${times.at(-1) - prev}`, "");
+    });
+    if (ghStart)
+      ghWaits.unshift(call(1, `gh pr checks ${n} -R owner/repo`, ghPrChecks(stateAt(pr, inv.t))));
     return {
       shepherd: [
         call(
@@ -932,17 +942,19 @@ function stepArms(pr, inv) {
       ],
       gh: [...ghWaits, ...ghObserve(s, ghWaits.length + 1)],
       mcp: [
-        ...tickTimes.flatMap((t, i) => [
-          call(2 * i + 1, `sleep ${t - (i ? tickTimes[i - 1] : inv.t)}`, ""),
-          mcp(
-            2 * i + 2,
-            "pull_request_read",
-            { method: "get_check_runs", pullNumber: n },
-            mcpCheckRuns(stateAt(pr, t)),
-          ),
-        ]),
+        ...[waits ? inv.t : null, ...tickTimes]
+          .filter((t) => t != null)
+          .flatMap((t, i) => [
+            ...(i ? [call(2 * i, `sleep ${t - (i > 1 ? tickTimes[i - 2] : inv.t)}`, "")] : []),
+            mcp(
+              2 * i + 1,
+              "pull_request_read",
+              { method: "get_check_runs", pullNumber: n },
+              mcpCheckRuns(stateAt(pr, t)),
+            ),
+          ]),
         // The last wait's check-run read is the final tick's.
-        ...mcpObserve(s, 2 * waits + 1, waits > 0),
+        ...mcpObserve(s, waits ? 2 * waits + 2 : 1, waits > 0),
       ],
     };
   }
