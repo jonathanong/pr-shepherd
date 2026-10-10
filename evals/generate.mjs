@@ -72,10 +72,11 @@
 
 import { CORE_CASES } from "./cases/core.mjs";
 import { RECENT_CASES } from "./cases/recent.mjs";
+import { RULES_CASES } from "./cases/rules.mjs";
 import { STACK_CASES } from "./cases/stack.mjs";
 import { EVALS_DIR, pruneStaleCases, writeCase } from "./lib.mjs";
 
-const CASES = [...CORE_CASES, ...STACK_CASES, ...RECENT_CASES];
+const CASES = [...CORE_CASES, ...STACK_CASES, ...RECENT_CASES, ...RULES_CASES];
 
 const slugs = CASES.map((c) => c.slug);
 const dupes = slugs.filter((s, i) => slugs.indexOf(s) !== i);
@@ -85,5 +86,7 @@ for (const spec of CASES) writeCase(spec);
 const pruned = pruneStaleCases(slugs);
 console.log(
   `\n${CASES.length} cases written to ${EVALS_DIR}` +
-    (pruned ? ` · ${pruned} stale case director${pruned === 1 ? "y" : "ies"} pruned` : ""),
+    (pruned
+      ? ` · ${pruned} stale case director${pruned === 1 ? "y" : "ies"} pruned`
+      : ""),
 );
