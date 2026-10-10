@@ -385,7 +385,9 @@ default). Until it lands, only the scaffolding exists:
 2. Generate the playbook arm outside `evals/` (the default suite and its
    pruning never see it); an `--out` inside `evals/` is rejected. Cases without
    a `-playbook` snapshot are skipped and listed. So are the fixture-less cases,
-   which would match the inline arm. Case directories left in `--out` by an
+   which would match the inline arm. `--out` must be a new or empty
+   directory, or one an earlier playbook run created (it leaves a
+   `.pr-shepherd-playbook-evals` marker). Case directories left there by an
    earlier run that this run skipped are pruned.
    Transcript history stays inline; only the latest tick changes mode:
 
@@ -406,9 +408,9 @@ default). Until it lands, only the scaffolding exists:
    ```
 
 `--instructions-ablation` restricts the inline results to the cases the
-playbook arm ran and leaves the prompt text out of the drift check, since the
-prompt is what differs. Graders, run config, judge and plugin version must
-still match. The inline arm's cost line covers its whole run.
+playbook arm ran and blanks every `## Instructions` section before the drift
+check, since that section is what differs. The rest of each prompt, graders,
+run config, agent model, judge and plugin version must still match. The inline arm's cost line covers its whole run.
 
 Without `--instructions`, the generator's output is unchanged.
 
