@@ -18,10 +18,22 @@ describe("buildPushJournalSteps playbook fold", () => {
     expect(text).toContain('CLI: `pr-shepherd playbook "Fix-code loop"`.');
   });
 
-  it("omits the parts that do not apply", () => {
-    const text = buildPushJournalSteps("playbook", 42, false, true).join("\n");
+  it("keeps a journal-only step inline without the Fix-code loop pointer", () => {
+    // A conflict or queue-recovery push step already owns the push; pointing at the
+    // Fix-code loop playbook would add a conflicting generic push procedure.
+    const steps = buildPushJournalSteps("playbook", 42, false, true);
+    expect(steps).toHaveLength(1);
+    const text = steps.join("\n");
     expect(text).not.toContain("Commit and push");
-    expect(text).toContain("apply journal");
+    expect(text).not.toContain("Fix-code loop");
+    expect(text).toContain("pr-shepherd apply journal 42 '- <decision>'");
+    expect(text).toContain('Playbook: "Shepherd Journal".');
+  });
+
+  it("omits the journal clause when the journal step does not apply", () => {
+    const text = buildPushJournalSteps("playbook", 42, true, false).join("\n");
+    expect(text).toContain("Commit and push any code changes.");
+    expect(text).not.toContain("apply journal");
     expect(text).toContain('Playbook: "Fix-code loop".');
   });
 
