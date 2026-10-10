@@ -30,10 +30,10 @@ import { formatNextCheckLines, formatPollModeSegment } from "./next-check-format
  *      not by dispatching on the tag.
  *   2. `[FIX_CODE]` wraps the `resolve` command under `## Post-fix actions` in
  *      backticks — the skill extracts the backticked content for execution.
- *   3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … —
- *      that tells the agent exactly what to do with this output. The section is
- *      unconditional: every action, every variant, always emits at least one step.
- *      The skill simply follows those steps; it does not need its own dispatch table.
+ *   3. Every action except `cancel` ends with a `## Instructions` section — numbered
+ *      `1.`, `2.`, … — that tells the agent exactly what to do with this output, with at
+ *      least one step. `cancel` has no section: the `[CANCEL]` tag already means stop this
+ *      PR's loop. The skill follows those steps; it does not need its own dispatch table.
  */
 export function formatIterateResult(
   result: IterateResult,

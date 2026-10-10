@@ -10,7 +10,7 @@ Debounce ticks in the poll dispatcher (`pr-shepherd [PR] --debounce`, default: `
 
 ## Header
 
-Always present after a sweep:
+Always present after a sweep, except that lean output omits `**merge**`/`mergeStateStatus` when it is `CLEAN` and `**state**`/`state` when it is `OPEN` (an absent field means that default):
 
 | Text          | JSON                                                                  | Meaning                                                                                     |
 | ------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |

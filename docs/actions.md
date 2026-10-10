@@ -155,14 +155,14 @@ a closed layer is an `ESCALATE`, not a successful completion.
 
 Command examples show the default `pr-shepherd` launcher. Every emitted follow-up command starts with the configured [`cliCommand`](configuration.md#clicommand--default-pr-shepherd) argv instead, such as `pnpm exec pr-shepherd`.
 
-Pass `--verbose` to get more debug state. In JSON mode, the output starts from the full `IterateResult` shape (all fields, including `baseBranch`, `checks`, `shouldCancel`, and command-scoped `apiUsage`) and then applies the same instruction projection as lean JSON: non-`fix_code` actions get a top-level `instructions` array, and `fix.instructions` may be rewritten. In Markdown mode, `--verbose` restores the full header summary line and adds `## GitHub API usage`, including credential source labels, request counts, the latest authoritative quota state by resource, and exact measured GraphQL query cost. GraphQL mutations remain counted as unmeasured because GitHub exposes `rateLimit` only on the query root. Markdown and JSON use different representations but surface equivalent action information; MCP structured and Markdown content use the same projection options. Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick and add context noise without value.
+Pass `--verbose` to get more debug state. In JSON mode, the output starts from the full `IterateResult` shape (all fields, including `baseBranch`, `checks`, `shouldCancel`, and command-scoped `apiUsage`) and then applies the same instruction projection as lean JSON: actions other than `fix_code` and `cancel` get a top-level `instructions` array (`cancel` has none), and `fix.instructions` may be rewritten. In Markdown mode, `--verbose` restores the full header summary line and adds `## GitHub API usage`, including credential source labels, request counts, the latest authoritative quota state by resource, and exact measured GraphQL query cost. GraphQL mutations remain counted as unmeasured because GitHub exposes `rateLimit` only on the query root. Markdown and JSON use different representations but surface equivalent action information; MCP structured and Markdown content use the same projection options. Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick and add context noise without value.
 
 **Output shape (every action, default lean format):**
 
 ```
 # PR #<N> [ACTION]
 
-**status** `<…>` · **merge** `<…>`[ · **reviewDecision** `<…>`] · **state** `<…>` · **repo** `<…>`
+**status** `<…>`[ · **merge** `<…>`][ · **reviewDecision** `<…>`][ · **state** `<…>`] · **repo** `<…>`
 **summary** <N> passing[, <N> skipped][, <N> filtered][, <N> inProgress][, <N> superseded][· **remainingSeconds** <N>][· **blockingBotReviewInProgress**][· **isDraft**][· **branch** behind PR base `<base>` | · **branch** conflicts with PR base `<base>` | · **branch** conflicts with stack trunk `<trunk>`]
 Approvals: <None|N[/M]> [Required|Not Required]
 Conversations Resolved: <Yes|No> [Required|Not Required]
@@ -194,10 +194,13 @@ Conversations Resolved: <Yes|No> [Required|Not Required]
 [- <url or `id`>]
 [- <id>: <error> [(rule: <reason>)] ]]
 
-## Instructions
+[## Instructions
 
-1. <numbered steps telling the agent exactly what to do>
+1. <numbered steps telling the agent exactly what to do>]
 ```
+
+- `## Instructions` is present for every action except `cancel`.
+- Lean output omits `**merge**` when it is `CLEAN` and `**state**` when it is `OPEN`; lean JSON omits `mergeStateStatus` and `state` the same way. An absent field means that default.
 
 `apiUsage` keeps raw telemetry for every pool used during the command, including GraphQL attempts before an automatic switch to REST. Warning selection and poll cadence use the active pool: REST mode uses REST core only; GraphQL mode considers both GraphQL and REST core budgets. Pending REST core warnings stay active through the poll loop; GraphQL warnings are discarded after a switch to REST.
 
@@ -230,7 +233,7 @@ Lean-mode rules for the summary line:
 - A test result with no `mergeRequirements` still gets a fallback `**required**` line from `requiredStatusCheckContexts`. Live iterate uses `mergeRequirements` and omits that line.
 - Read Approvals and Conversations Resolved instead of inferring a required review from `reviewDecision`. `REVIEW_REQUIRED` with no `Approvals:` line (none required) means GitHub is not waiting on an approval.
 - `--verbose` restores all five counts, `remainingSeconds`, `blockingBotReviewInProgress`, `isDraft`, and `shouldCancel`.
-- Lean JSON always emits raw `mergeStateStatus`, plus derived `mergeStatus` when it is not `CLEAN`. `mergeStateStatus` alone cannot rebuild `mergeStatus` (a conflicting `mergeable` value can be `CONFLICTS` while `mergeStateStatus` says something else).
+- Lean JSON emits raw `mergeStateStatus` when it is not `CLEAN`, plus derived `mergeStatus` when that is not `CLEAN`; an absent field means `CLEAN`. `mergeStateStatus` alone cannot rebuild `mergeStatus` (a conflicting `mergeable` value can be `CONFLICTS` while `mergeStateStatus` says something else).
 - `--verbose` JSON returns the full `IterateResult`, including `mergeStatus: "CLEAN"`.
 
 Load-bearing conventions (the iterate skill depends on these):
