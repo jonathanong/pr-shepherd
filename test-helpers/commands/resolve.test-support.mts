@@ -23,6 +23,9 @@ vi.mock("../../src/github/batch.mts", () => ({
 vi.mock("../../src/github/reply-thread-transcripts.mts", () => ({
   fetchReplyThreadTranscripts: vi.fn(),
 }));
+vi.mock("../../src/github/apply-review-preflight.mts", () => ({
+  readApplyReviewPreflight: async () => null,
+}));
 vi.mock("../../src/state/pr-fingerprint.mts", () => ({
   loadPrFingerprint: vi.fn().mockResolvedValue(null),
   storePrFingerprint: vi.fn().mockResolvedValue(undefined),

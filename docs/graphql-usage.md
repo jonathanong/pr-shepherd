@@ -12,7 +12,7 @@ A user PAT is **5,000 points / hour**. One-PR polling is a small slice of that. 
 
 [GitHub's formula](https://docs.github.com/en/graphql/overview/rate-limits-and-query-limits-for-the-graphql-api): add up the connection-requests in the query AST (nested `first`/`last` multiply by the parent connection size; assume every connection fills its limit), divide by 100, and round to the nearest integer. The minimum is 1.
 
-`nodeCount` is the separate 500,000-node cap. An ordinary BatchPr-shaped query measured `nodeCount` 2,871 and `cost` 1. The conditional READY-receipt variant selects an exact compact summary sibling and can cost more.
+`nodeCount` is the separate 500,000-node cap. An ordinary BatchPr-shaped query measured `nodeCount` 2,871 and `cost` 1. The conditional READY-receipt variant selects an exact compact summary sibling (about 55 connection-requests) and reads only the first 50 batch contexts, so it also prices at 1 point (142 requests). A head with more than 50 contexts reads the rest with `BatchPrPage`.
 
 `annotations(first: 1)` nested under `contexts(last: 100)` is 100 connection-requests per rollup. GitHub prices the `last`, including when the rollup is empty. Two of those trees were about 2 points per PR once several PRs shared one query. The summary fragment no longer selects them.
 
@@ -56,7 +56,7 @@ Supplements on a full snapshot, usually 1 point each:
 - `BatchPrPage` — one combined request per extra round of threads, comments, reviews, or checks.
 - `ReviewThreadComments` — one request per extra page of a thread whose nested comments continue. Concurrency is 4.
 - `CommitCheckContexts` — when the PR is in the merge queue, or the latest removal still matches HEAD.
-- `CheckRunAnnotationsBatch` — one request per 20 uncached completed checks whose probe saw an annotation. Cached for 1 hour per check-run id. Further pages use `CheckRunAnnotations`.
+- `CheckRunAnnotationsBatch` — one request per 20 uncached completed checks whose probe saw more than one annotation. A run with exactly one annotation takes its body from `BatchPr`'s `annotations(first: 1)` page at no extra cost. Cached for 1 hour per check-run id. Further pages use `CheckRunAnnotations`.
 - `PollStackTopology` — every iterate tick of a non-root native-stack layer, including fingerprint hits. One request per 50 entries.
 - `UpperLayerConflictTarget` — a conflicting upper native-stack layer.
 - `CheckBlockerPull` or `CheckBlockerIssue` — one request per distinct blocker while a matching check is failing.
@@ -89,6 +89,8 @@ An explicit multi-PR selection skips the topology query and uses `PollSummary` i
 | `apply check-blocker`                                                       | none when the PR number is passed                                                                                  | 0                                            |
 | `build-suggestion-patches` / `build-suggestion-patch` / `commit-suggestion` | `SuggestionThreads`                                                                                                | 1 for a handful of threads                   |
 
+For 1 to 20 GraphQL reply thread IDs, one `ApplyReviewPreflight` read replaces the first `ReplyThreadTranscripts`, `GetPrHeadSha`, and `ReplyRecoveryEvidence` reads. The standalone reads still run for anything it cannot verify.
+
 `clean`, `admin clean`, `log-file`, `admin log-file`, and `journal extract` do not call GitHub.
 
 The reply path reads only requested thread IDs to store seen-marker transcripts. GitHub still authorizes the mutation. One batch of at most 20 IDs is typically at the 1-point floor; long transcripts add page requests. Incomplete or mismatched threads do not get a marker, but their requested mutations still run.
@@ -104,6 +106,14 @@ One-PR `BatchPr` stays at the 1-point floor. Fewer review connections, a smaller
 3. **Done: reuse same-request evidence for READY receipts.** [`recordReadyReceipt` and `revalidateReadyReceipt`](../src/commands/iterate/index.mts) consume a complete conditional summary sibling when available, keeping the v1 fingerprint and safety checks. They use the original standalone summary and annotation probe when that evidence cannot be trusted.
 
 4. **Done: fold the fingerprint pre-check into `BatchPr`.** The separate `PrFingerprint` query is gone. [`fingerprintReuser`](../src/commands/check-fingerprint.mts) decides reuse from `BatchPr`'s first page, so a miss (including any PR with a multi-comment thread) costs 1 point instead of 2, and a merged or closed PR is read once.
+
+5. **Done: take single annotations from `BatchPr`.** The `annotations(first: 1)` probe selects the full annotation fields. In the recorded debug logs, 109 of 110 `CheckRunAnnotationsBatch` requests read only runs with exactly one annotation, so a failing-check tick with annotations drops from 2 points to 1. Runs with more annotations still use the batch.
+
+6. **Done: keep the READY-receipt `BatchPr` at 1 point.** Each first-page context carries an `annotations(first: 1)` probe, so 100 contexts are 100 connection-requests. Adding the summary sibling made the receipt variant 192 requests (2 points) on every READY and CANCEL-candidate tick. Its first context page is now 50, which totals 142 (1 point). The ordinary `BatchPr` keeps 100.
+
+7. **Done: cache the base compare.** `BatchPr` selects the live base tip (`baseRef.target.oid`, an object field with no connection cost). The `BaseBehind` count for a non-stack head with unreported required checks is cached under that tip and the head commit, so a tick on which neither moved (including a fingerprint hit) drops from 2 points to 1. REST already answers the compare with a conditional request.
+
+8. **Done: one read before `apply review` replies.** `GetPrHeadSha`, `ReplyThreadTranscripts`, and `ReplyRecoveryEvidence` each cost 1 point on a reply with `--require-sha`. `ApplyReviewPreflight` reads all three in one request, so that command drops from 3 read points to 1. Anything it cannot verify falls back to the standalone read.
 
 Designs that are already at the floor and should stay:
 

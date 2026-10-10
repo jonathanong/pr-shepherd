@@ -14,6 +14,7 @@ const mockGraphqlWithRateLimit = vi.mocked(graphqlWithRateLimit);
 
 const REPO = { owner: "owner", name: "repo" };
 const RECORDED_BASE = "a".repeat(40);
+const LIVE_TIP = "b".repeat(40);
 const emptyPage = { pageInfo: { hasPreviousPage: false, startCursor: null }, nodes: [] };
 
 function makeRawPr(overrides: Record<string, unknown> = {}) {
@@ -56,9 +57,14 @@ describe("fetchPrBatch — base OID", () => {
   // baseRefOid. The base branch's live tip moves whenever the branch advances,
   // even though the PR's recorded base only moves when GitHub syncs the PR, so
   // a mismatch would make every stack receipt write fail.
-  it("selects the PR's recorded base commit, not the base branch tip", () => {
+  it("selects the PR's recorded base commit, not the base branch tip", async () => {
     expect(BATCH_PR_QUERY).toContain("baseRefOid");
-    expect(BATCH_PR_QUERY).not.toMatch(/target\s*\{\s*oid/);
+    respondWith(makeRawPr({ baseRefOid: RECORDED_BASE, baseRef: { target: { oid: LIVE_TIP } } }));
+
+    const { data } = await fetchPrBatch(42, REPO);
+
+    expect(data.baseRefOid).toBe(RECORDED_BASE);
+    expect(data.baseTipOid).toBe(LIVE_TIP);
   });
 
   it("reports the PR's recorded base commit", async () => {
@@ -89,6 +95,14 @@ describe("fetchPrBatch — first-page reuse", () => {
     expect(result).toEqual({ reused: "cached" });
     expect(reuse).toHaveBeenCalledWith(expect.objectContaining({ mergeStateStatus: "CLEAN" }));
     expect(mockGraphqlWithRateLimit).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns the live base tip with a reuse answer", async () => {
+    respondWith(makeRawPr({ baseRef: { target: { oid: LIVE_TIP } } }));
+
+    const result = await fetchPrBatch(42, REPO, {}, vi.fn().mockResolvedValue("cached"));
+
+    expect(result).toEqual({ reused: "cached", baseTipOid: LIVE_TIP });
   });
 
   it("continues the same request into a full snapshot when reuse declines", async () => {

@@ -81,9 +81,10 @@ export async function attachAndMergeCheckAnnotations(
   const byId = new Map(annotated.flatMap((c) => (c.id != null ? [[c.id, c] as const] : [])));
   const apply = <T extends ClassifiedCheck>(list: T[]): T[] =>
     list.map((c) => {
-      if (c.id == null) return c;
-      const next = byId.get(c.id);
-      return next !== undefined ? (next as T) : c;
+      const next = (c.id == null ? undefined : byId.get(c.id)) ?? c;
+      if (next.inlineAnnotations === undefined) return next as T;
+      const { inlineAnnotations: _inline, ...rest } = next;
+      return rest as T;
     });
   return {
     passing: apply(buckets.passing),
@@ -101,20 +102,30 @@ async function attachUnseenCheckAnnotations(
   cacheOpts?: AnnotationCacheOptions,
 ): Promise<TriagedCheck[]> {
   if (checks.length === 0) return checks;
-  const ids = checks.flatMap((check) => (check.id == null ? [] : [check.id]));
-  let batch: Awaited<ReturnType<typeof fetchCheckRunAnnotationsBatch>>;
-  try {
-    batch = await fetchCheckRunAnnotationsBatch(ids, cacheOpts);
-  } catch (err) {
-    if (pollRateLimitRetryAfterMs(err) !== null) throw err;
-    writeAnnotationFailureSummary(prNumber, ids.length, err);
-    return checks;
+  const annotations = new Map<string, CheckAnnotation[]>();
+  for (const check of checks) {
+    if (check.id != null && check.inlineAnnotations)
+      annotations.set(check.id, check.inlineAnnotations);
   }
-  const firstFailure = batch.failures[0];
-  if (firstFailure !== undefined) {
-    writeAnnotationFailureSummary(prNumber, batch.failures.length, firstFailure.error);
+  const ids = checks.flatMap((check) =>
+    check.id == null || annotations.has(check.id) ? [] : [check.id],
+  );
+  if (ids.length > 0) {
+    let batch: Awaited<ReturnType<typeof fetchCheckRunAnnotationsBatch>>;
+    try {
+      batch = await fetchCheckRunAnnotationsBatch(ids, cacheOpts);
+    } catch (err) {
+      if (pollRateLimitRetryAfterMs(err) !== null) throw err;
+      writeAnnotationFailureSummary(prNumber, ids.length, err);
+      return checks.map((check) => withUnseenAnnotations(check, annotations, seenMap));
+    }
+    const firstFailure = batch.failures[0];
+    if (firstFailure !== undefined) {
+      writeAnnotationFailureSummary(prNumber, batch.failures.length, firstFailure.error);
+    }
+    for (const [id, list] of batch.annotations) annotations.set(id, list);
   }
-  return checks.map((check) => withUnseenAnnotations(check, batch.annotations, seenMap));
+  return checks.map((check) => withUnseenAnnotations(check, annotations, seenMap));
 }
 
 function withUnseenAnnotations(

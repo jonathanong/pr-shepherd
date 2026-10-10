@@ -31,8 +31,25 @@ query CommitCheckContexts($owner: String!, $repo: String!, $oid: String!, $curso
                 title
                 summary
                 annotations(first: 1) {
+                  totalCount
                   nodes {
+                    fullDatabaseId
+                    path
+                    annotationLevel
+                    title
                     message
+                    rawDetails
+                    blobUrl
+                    location {
+                      start {
+                        line
+                        column
+                      }
+                      end {
+                        line
+                        column
+                      }
+                    }
                   }
                 }
                 checkSuite {

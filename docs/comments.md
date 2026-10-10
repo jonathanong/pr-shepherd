@@ -74,7 +74,7 @@ State module: `src/state/seen-comments.mts`.
 
 ## `--require-sha` polling
 
-When `pr-shepherd apply review --require-sha <SHA>` is used, shepherd polls the GraphQL `get-pr-head-sha.gql` query for `headRefOid` until it matches `expectedSha`, then issues the resolve/minimize/dismiss mutations.
+When `pr-shepherd apply review --require-sha <SHA>` is used, shepherd polls the GraphQL `get-pr-head-sha.gql` query for `headRefOid` until it matches `expectedSha`, then issues the resolve/minimize/dismiss mutations. With reply thread IDs, the `ApplyReviewPreflight` read's `headRefOid` serves as the first poll.
 
 **Why:** Mutations must not race a push GitHub has not yet acknowledged. The poll waits until `headRefOid` matches the expected SHA, then fires. Shepherd never merges PRs; this guard only delays review mutations.
 

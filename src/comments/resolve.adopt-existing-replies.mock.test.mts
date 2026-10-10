@@ -38,7 +38,7 @@ describe("applyResolveOptions — existing-reply adoption", () => {
       dismissMessage: "Addressed.",
       adoptExistingReplies: true,
     });
-    expect(mockFind).toHaveBeenCalledWith({ repo: REPO, pr: 1 }, ["t-1"], "Addressed.");
+    expect(mockFind).toHaveBeenCalledWith({ repo: REPO, pr: 1 }, ["t-1"], "Addressed.", undefined);
     expect(result.repliedThreads).toEqual(["t-1"]);
     const docs = mockGraphql.mock.calls.map((call) => String(call[0])).join("\n");
     expect(docs).not.toContain("addPullRequestReviewThreadReply");

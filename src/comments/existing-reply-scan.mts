@@ -1,5 +1,5 @@
 import type { RepoInfo } from "../github/client.mts";
-import { readReplyRecoveryEvidence } from "../github/reply-recovery-read.mts";
+import { readReplyRecoveryEvidence, type ReplyEvidence } from "../github/reply-recovery-read.mts";
 import { addPrShepherdMarker } from "./marker.mts";
 
 const BATCH = 10;
@@ -12,12 +12,14 @@ const BATCH = 10;
  * reply already landed, so the `apply review` commands Shepherd generates in durable-state
  * sessions opt in (`--adopt-existing-replies`) to checking it before posting. Direct apply
  * requests never run this scan. A failed read never blocks the reply: it only means this
- * safeguard had nothing to say.
+ * safeguard had nothing to say. A batch fully covered by `preloaded` evidence (the
+ * apply-review preflight, read with no wait since) skips its read.
  */
 export async function findExistingReplies(
   context: { repo: RepoInfo; pr: number },
   ids: readonly string[],
   message: string,
+  preloaded?: Map<string, ReplyEvidence>,
 ): Promise<string[]> {
   if (ids.length === 0) return [];
   const marked = addPrShepherdMarker(message);
@@ -25,7 +27,9 @@ export async function findExistingReplies(
   for (let offset = 0; offset < ids.length; offset += BATCH) {
     const batch = ids.slice(offset, offset + BATCH);
     try {
-      const evidence = await readReplyRecoveryEvidence(context.repo, context.pr, batch);
+      const evidence = batch.every((id) => preloaded?.has(id))
+        ? preloaded!
+        : await readReplyRecoveryEvidence(context.repo, context.pr, batch);
       for (const id of batch) {
         const item = evidence.get(id);
         const last = item?.comments.at(-1);

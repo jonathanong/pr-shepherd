@@ -104,6 +104,11 @@ export interface CheckRun {
   workflowId?: string; // Stable workflow database ID (stringified); groups runs across concurrency evictions.
   /** True when GraphQL reported at least one CheckRun annotation. Omitted when false. */
   hasAnnotations?: boolean;
+  /**
+   * Every annotation on this run, when BatchPr's `annotations(first: 1)` page already held all
+   * of them. Internal: lets the check path skip `CheckRunAnnotationsBatch`; never rendered.
+   */
+  inlineAnnotations?: import("./check-annotations.mts").CheckAnnotation[];
 }
 
 export interface ReviewThread {
@@ -235,6 +240,8 @@ export interface BatchPrData extends BatchPrMergeFields {
   baseRefName: string;
   /** Base commit GitHub recorded for this PR (`PullRequest.baseRefOid`), not the branch's live tip. */
   baseRefOid?: string;
+  /** The base branch's live tip (`baseRef.target.oid`). GraphQL only; keys the BaseBehind cache. */
+  baseTipOid?: string;
   reviewRequests: Array<{ login: string }>;
   latestReviews: Array<{ login: string; state: string }>;
   reviewThreads: ReviewThread[];

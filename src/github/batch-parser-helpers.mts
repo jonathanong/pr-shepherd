@@ -6,7 +6,9 @@ import type {
   Review,
   ReviewThread,
 } from "../types.mts";
+import type { CheckAnnotation } from "../types/check-annotations.mts";
 import type { RawContextNode } from "./batch-raw-types.mts";
+import { toCheckAnnotation, type RawCheckAnnotation } from "./check-annotation-shape.mts";
 import { normalizeAuthorType } from "../comments/authors.mts";
 
 export function mapAuthorType(
@@ -69,6 +71,44 @@ export function mapCheckRunNode(
     ...(((node.annotations?.totalCount ?? 0) > 0 || (node.annotations?.nodes.length ?? 0) > 0) && {
       hasAnnotations: true as const,
     }),
+    ...inlineAnnotationsField(node.id, node.annotations),
+  };
+}
+
+/**
+ * The complete annotation list when the first page already holds every annotation with its full
+ * selection. A partial page (more than one annotation, or a node without the full fields) yields
+ * nothing, so the caller still reads the run's annotations separately.
+ */
+function inlineAnnotationsField(
+  checkRunId: string,
+  annotations: Extract<RawContextNode, { __typename: "CheckRun" }>["annotations"],
+): { inlineAnnotations?: CheckAnnotation[] } {
+  const total = annotations?.totalCount;
+  if (total === undefined || total < 1 || annotations!.nodes.length !== total) return {};
+  const raws = annotations!.nodes.map(fullRawAnnotation);
+  if (raws.some((raw) => raw === null)) return {};
+  return {
+    inlineAnnotations: (raws as RawCheckAnnotation[]).map((raw) =>
+      toCheckAnnotation(checkRunId, raw),
+    ),
+  };
+}
+
+function fullRawAnnotation(
+  node: Partial<RawCheckAnnotation> & { message: string },
+): RawCheckAnnotation | null {
+  if (typeof node.path !== "string" || typeof node.annotationLevel !== "string") return null;
+  if (node.location === undefined || node.fullDatabaseId === undefined) return null;
+  return {
+    fullDatabaseId: node.fullDatabaseId,
+    path: node.path,
+    annotationLevel: node.annotationLevel,
+    title: node.title ?? null,
+    message: node.message,
+    rawDetails: node.rawDetails ?? null,
+    blobUrl: node.blobUrl ?? null,
+    location: node.location,
   };
 }
 

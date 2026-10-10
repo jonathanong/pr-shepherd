@@ -58,6 +58,10 @@ export async function collectUnreportedRequired(
           input.name,
           input.batchData.baseRefName,
           input.batchData.headRefOid,
+          {
+            stateKey: { owner: input.owner, repo: input.name, pr: input.pr },
+            ...(input.batchData.baseTipOid && { baseTipOid: input.batchData.baseTipOid }),
+          },
         )
       : 0;
   return {
@@ -80,10 +84,11 @@ export async function refreshCachedUnreported(
   report: ShepherdReport,
   repo: RepoInfo,
   context?: CheckExecutionContext,
+  baseTipOid?: string,
 ): Promise<ShepherdReport> {
   const stack = report.mergeStatus?.mergeRequirements?.stack;
   if (!report.headRefName) return report;
-  if (!stack) return refreshBaseBehind(report, repo);
+  if (!stack) return refreshBaseBehind(report, repo, baseTipOid);
   const target = await loadMergeTargetStatus(
     {
       owner: repo.owner,
@@ -112,7 +117,11 @@ export async function refreshCachedUnreported(
 }
 
 /** A fingerprint hit can keep a stale base compare after main moves. */
-async function refreshBaseBehind(report: ShepherdReport, repo: RepoInfo): Promise<ShepherdReport> {
+async function refreshBaseBehind(
+  report: ShepherdReport,
+  repo: RepoInfo,
+  baseTipOid: string | undefined,
+): Promise<ShepherdReport> {
   if ((report.unreportedRequiredChecks?.length ?? 0) === 0) {
     if (report.baseBehindBy === undefined) return report;
     const cleared = { ...report };
@@ -123,7 +132,10 @@ async function refreshBaseBehind(report: ShepherdReport, repo: RepoInfo): Promis
   // resolve inside the base repository when the PR comes from a fork.
   const headOid = report.headSha;
   if (!headOid) return report;
-  const behind = await loadBaseBehindBy(repo.owner, repo.name, report.baseBranch, headOid);
+  const behind = await loadBaseBehindBy(repo.owner, repo.name, report.baseBranch, headOid, {
+    stateKey: { owner: repo.owner, repo: repo.name, pr: report.pr },
+    ...(baseTipOid && { baseTipOid }),
+  });
   const next = { ...report };
   if (behind > 0) next.baseBehindBy = behind;
   else delete next.baseBehindBy;
