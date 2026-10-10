@@ -19,6 +19,7 @@ export async function readRestRawThread(
     body: comment.body,
     url: comment.url,
     author: { login: comment.author, __typename: comment.authorType },
+    ...(comment.viewerDidAuthor === true && { viewerDidAuthor: true as const }),
     ...(comment.authorAssociation && { authorAssociation: comment.authorAssociation }),
     ...(comment.reviewId && { pullRequestReview: { id: comment.reviewId } }),
     path: thread.path,

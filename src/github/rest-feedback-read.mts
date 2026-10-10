@@ -13,9 +13,11 @@ import {
   malformedRest,
 } from "./rest-reader-core.mts";
 import { recordRestIdentity, recordThreadIdentity, restThreadId } from "./rest-identities.mts";
-import { mapAuthorType, parseCreatedAt } from "./batch-parser-helpers.mts";
+import { parseCreatedAt } from "./batch-parser-helpers.mts";
+import { restCommentAuthorFields as authorFields } from "./rest-comment-authorship.mts";
 import { validateRestReviews } from "./rest-review-read.mts";
 import { validateRestComments, feedbackIdsMatch } from "./rest-feedback-validation.mts";
+import { readRestViewerLogin } from "./rest-viewer-read.mts";
 
 export interface RestComment {
   id: number;
@@ -44,7 +46,11 @@ interface RestThread {
   line: number | null;
   comment_ids: number[];
 }
-export async function readRestFeedback(pr: number, repo: RepoInfo) {
+export async function readRestFeedback(
+  pr: number,
+  repo: RepoInfo,
+  knownViewerLogin?: string | null,
+) {
   const prefix = restRepoPath(repo);
   let inline = (await readRestPages<RestComment>(`${prefix}/pulls/${pr}/comments`)).nodes;
   const issue = (await readRestPages<RestComment>(`${prefix}/issues/${pr}/comments`)).nodes;
@@ -110,6 +116,8 @@ export async function readRestFeedback(pr: number, repo: RepoInfo) {
       malformedRest("inline comment reply has no root");
   }
   const threads: ReviewThread[] = [];
+  const viewerLogin =
+    knownViewerLogin === undefined ? await readRestViewerLogin() : knownViewerLogin;
   for (const group of groups) {
     const root = group.comments[0]!;
     const id = restThreadId(String(group.id));
@@ -124,14 +132,14 @@ export async function readRestFeedback(pr: number, repo: RepoInfo) {
       line: group.status ? group.status.line : (root.line ?? null),
       startLine: root.start_line ?? null,
       ...(review ? { reviewId: review.node_id } : {}),
-      ...authorFields(root),
+      ...authorFields(root, viewerLogin),
       body: root.body ?? "",
       url: root.html_url,
       createdAtUnix: parseCreatedAt(root.created_at),
       comments: group.comments.map((comment) => ({
         id: comment.node_id,
         ...(review ? { reviewId: review.node_id } : {}),
-        ...authorFields(comment),
+        ...authorFields(comment, viewerLogin),
         body: comment.body ?? "",
         url: comment.html_url,
         createdAtUnix: parseCreatedAt(comment.created_at),
@@ -145,7 +153,7 @@ export async function readRestFeedback(pr: number, repo: RepoInfo) {
     url: comment.html_url,
     createdAtUnix: parseCreatedAt(comment.created_at),
   }));
-  return { threads, comments, reviews, unavailable };
+  return { threads, comments, reviews, unavailable, viewerLogin };
 }
 async function readRestThreadStatuses(path: string): Promise<RestThread[] | undefined> {
   if (!isCcrTransport()) return undefined;
@@ -166,13 +174,6 @@ async function readRestThreadStatuses(path: string): Promise<RestThread[] | unde
     if (!(error instanceof GitHubRequestError) || error.status !== 404) throw error;
     return undefined;
   }
-}
-function authorFields(comment: RestComment) {
-  return {
-    author: comment.user?.login ?? "unknown",
-    authorType: mapAuthorType(comment.user?.type, comment.user?.login),
-    ...(comment.author_association && { authorAssociation: comment.author_association }),
-  };
 }
 export function restReviewToReview(review: RestReview): Review {
   return {

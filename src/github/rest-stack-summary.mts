@@ -1,4 +1,5 @@
-import { readRest, restRepoPath, restObject, restString } from "./rest-reader-core.mts";
+import { readRest, restRepoPath, restObject } from "./rest-reader-core.mts";
+import { readRestViewerLogin } from "./rest-viewer-read.mts";
 import { readAllowedMergeMethods } from "../config/merge-method.mts";
 import type { RepoInfo } from "./client.mts";
 import { readRestStackMembership } from "./rest-stack-read.mts";
@@ -18,13 +19,13 @@ export async function readRestStackSummary(anchor: number, repo: RepoInfo) {
     await readRest<unknown>("GET", restRepoPath(repo)),
     "repository merge settings",
   );
-  const viewer = restObject(await readRest<unknown>("GET", "/user"), "authenticated viewer");
-  const viewerLogin = restString(viewer.login, "authenticated viewer login");
+  const viewerLogin = await readRestViewerLogin();
   const branchRules = new Map<string, ReturnType<typeof readRestBranchRules>>();
   const pullRevisions = new Map<number, string>();
   const context: RestSnapshotContext = {
     stack,
     repository: settings,
+    viewerLogin,
     readBranchRules(branch) {
       let rules = branchRules.get(branch);
       if (!rules) {

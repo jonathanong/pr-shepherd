@@ -8,6 +8,7 @@ import { readRestStackMembership } from "./rest-stack-read.mts";
 import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
 import { parseCheckNodes } from "./batch-parse-checks.mts";
 import { parseBranchRules } from "./batch-parsers-rules.mts";
+import { isReviewStale } from "./batch-parser-helpers.mts";
 import { readRest as rest, restRepoPath, restObject, restString } from "./rest-reader-core.mts";
 import { restLatestReviews, restPendingReviews } from "./rest-review-read.mts";
 import type { RestSnapshotContext } from "./rest-snapshot-context.mts";
@@ -15,9 +16,10 @@ export async function readRestSnapshot(
   pull: RestPull,
   repo: RepoInfo,
   context?: RestSnapshotContext,
+  knownViewerLogin?: string | null,
 ) {
   const [feedback, checks, rules, stack] = await Promise.all([
-    readRestFeedback(pull.number, repo),
+    readRestFeedback(pull.number, repo, context ? context.viewerLogin : knownViewerLogin),
     readRestCommitChecks(pull.head.sha, repo, pull.number),
     context ? context.readBranchRules(pull.base.ref) : readRestBranchRules(repo, pull.base.ref),
     context ? Promise.resolve(context.stack) : readRestStackMembership(pull.number, repo),
@@ -63,6 +65,7 @@ export async function readRestSnapshot(
   ];
   const data: BatchPrData = {
     nodeId: pull.node_id,
+    ...(feedback.viewerLogin && { viewerLogin: feedback.viewerLogin }),
     ...restPullRefs(pull),
     state: restPullRefs(pull).state as BatchPrData["state"],
     isDraft: pull.draft,
@@ -91,7 +94,11 @@ export async function readRestSnapshot(
     latestReviews: [...restPendingReviews(feedback.reviews), ...latestReviews.values()],
     reviewThreads: feedback.threads,
     comments: feedback.comments,
-    changesRequestedReviews: changes.map(restReviewToReview),
+    changesRequestedReviews: changes.map((review) => {
+      const mapped = restReviewToReview(review);
+      if (isReviewStale(mapped, pull.head.sha, feedback.threads)) mapped.staleReview = true;
+      return mapped;
+    }),
     reviewSummaries: feedback.reviews
       .filter((review) => review.state === "COMMENTED" && review.body?.trim())
       .map(restReviewToReview),

@@ -74,6 +74,7 @@ export function restSummary(
         comments: connection(
           (thread.comments ?? []).map((comment) => ({
             id: comment.id,
+            ...(comment.viewerDidAuthor === true && { viewerDidAuthor: true as const }),
             body: comment.body,
             author: { login: comment.author, __typename: comment.authorType },
             url: comment.url,

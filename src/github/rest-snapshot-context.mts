@@ -5,6 +5,7 @@ import type { readRestBranchRules } from "./rest-rules-read.mts";
 export interface RestSnapshotContext {
   stack: Awaited<ReturnType<typeof readRestStackMembership>>;
   repository: Record<string, unknown>;
+  viewerLogin: string | null;
   readBranchRules(branch: string): ReturnType<typeof readRestBranchRules>;
   recordPullRevision(pr: number, revision: string): void;
 }

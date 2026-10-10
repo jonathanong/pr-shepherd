@@ -26,6 +26,8 @@ REST returns raw check runs, workflow suites, review states, partial applicable 
 
 The REST PR's `auto_merge` request is retained when present, including its merge method and enabler. REST provides no enable timestamp, so that field remains omitted. A merge-enabled session waits on an existing request instead of issuing another merge operation.
 
+REST inline feedback retains viewer authorship by matching each actual author to the authenticated `/user` login. A viewer-owned root keeps reply-and-resolve routing, including resolve-only retries after a marked reply. An unavailable viewer identity stays unknown; a viewer-authored reply never grants ownership of another person's root. When complete CCR thread status proves an older review's associated threads all resolved or outdated, REST marks the review stale using the same predicate as GraphQL. Unknown thread status or a review without associated threads cannot prove staleness.
+
 ## GitHub metering
 
 GitHub meters GraphQL in **points per hour**, not HTTP requests. A typical user PAT is **5,000 points / hour**. GitHub App installation tokens can be higher. REST `core` is a **separate** pool; exhausting GraphQL does not exhaust REST, and vice versa.

@@ -37,7 +37,12 @@ describe("REST feedback snapshot consistency", () => {
       ["PRRC_11", "PRRC_12"],
     );
     expect(result.unavailable).toEqual([]);
-    expect(wire.requests.slice(-2).map((request) => request.path.split("?")[0])).toEqual([
+    expect(
+      wire.requests
+        .filter((request) => request.path !== "/user")
+        .slice(-2)
+        .map((request) => request.path.split("?")[0]),
+    ).toEqual([
       "/repos/octocat/hello-world/pulls/101/ccr/review_threads",
       "/repos/octocat/hello-world/pulls/101/comments",
     ]);

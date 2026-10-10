@@ -12,11 +12,15 @@ import type { RestSnapshotContext } from "./rest-snapshot-context.mts";
 export async function fetchRestPrBatch(
   pr: number,
   repo: RepoInfo,
-  opts: { includeReceiptSummary?: boolean; snapshotContext?: RestSnapshotContext } = {},
+  opts: {
+    includeReceiptSummary?: boolean;
+    snapshotContext?: RestSnapshotContext;
+    viewerLogin?: string | null;
+  } = {},
 ) {
   for (let attempt = 0; attempt < 2; attempt++) {
     const pull = await readRestPull(pr, repo);
-    const snapshot = await readRestSnapshot(pull, repo, opts.snapshotContext);
+    const snapshot = await readRestSnapshot(pull, repo, opts.snapshotContext, opts.viewerLogin);
     const latest = await readRestPull(pr, repo);
     if (restPullRevision(pull) !== restPullRevision(latest)) continue;
     opts.snapshotContext?.recordPullRevision(pr, restPullRevision(latest));
@@ -59,10 +63,12 @@ export async function fetchRestRawSummaryPr(
   pr: number,
   repo: RepoInfo,
   snapshotContext?: RestSnapshotContext,
+  viewerLogin?: string | null,
 ): Promise<RawSummaryPr> {
   const snapshot = await fetchRestPrBatch(pr, repo, {
     includeReceiptSummary: true,
     snapshotContext,
+    viewerLogin,
   });
   return snapshot.receiptSummary!;
 }

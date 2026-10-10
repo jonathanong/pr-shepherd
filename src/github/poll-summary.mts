@@ -1,7 +1,6 @@
 import { readRestStackSummary } from "./rest-stack-summary.mts";
 import { githubOperation, getGithubTransport, runWithGithubTransport } from "./transport.mts";
-import { fetchRestRawSummaryPr } from "./rest-batch-read.mts";
-import { mapPool } from "../util/pool.mts";
+import { readRestExplicitSummary } from "./rest-explicit-summary-read.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type {
   PollSummaryCommandOptions,
@@ -103,7 +102,7 @@ async function fetchExplicitChunk(
   return githubOperation(
     "PollSummary",
     () => runWithGithubTransport("graphql", () => fetchGraphqlExplicitChunk(prs, repo)),
-    async () => ({ prs: await mapPool(prs, 4, (pr) => fetchRestRawSummaryPr(pr, repo)) }),
+    async () => ({ prs: await readRestExplicitSummary(prs, repo) }),
   );
 }
 
