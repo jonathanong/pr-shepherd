@@ -285,12 +285,16 @@ records `npx pr-shepherd iterate 522 --verbose --format=json` run twice per
 transport from a fresh `PR_SHEPHERD_STATE_DIR`. A temporary untracked
 `.pr-shepherdrc.yml` (`iterate.minimizeComments: none`,
 `actions.autoMinimizeSuppressed: false`, `actions.autoMarkReady: false`) and a
-PR with no unresolved outdated threads kept the runs read-only. GraphQL matched
-the model: 2 points on the fingerprint miss (the 1-point tick plus the
-changed-tick fingerprint read), 1 on the hit, and no REST. REST took 17
-requests on the first tick (14 plus three first-look annotation reads) and 14
-on the second, all `200`, matching the 14-request tick. REPORT.md prints the
-table. Re-run it by hand when the transports change; CI makes no GitHub calls.
+PR with no unresolved outdated threads kept the runs read-only. A one-shot
+`iterate` never uses the fingerprint cache (only the poll path does), so every
+tick is a full read and the check does not measure fingerprint hits or misses.
+Each first tick also read the annotations of three first-look check runs, so
+its model adds `annotationBatchApi(3)`. GraphQL took 2 points on the first tick
+(`BatchPr` plus one `CheckRunAnnotationsBatch` chunk) and 1 on the second, with
+no REST. REST took 17 requests on the first tick (14 plus three annotation
+reads) and 14 on the second, all `200`. All four match the model. REPORT.md
+prints the table. Re-run it by hand when the transports change; CI makes no
+GitHub calls.
 
 A call whose cost is not derivable from its command (a stack tick, a poll
 tail, a hidden mutation) carries an explicit `api`; every other call is

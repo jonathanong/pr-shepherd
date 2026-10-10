@@ -16,7 +16,6 @@ import {
   BASE_BEHIND_GRAPHQL,
   MCP_API,
   MODEL,
-  SHEPHERD_CHANGED_TICK_GRAPHQL,
   SHEPHERD_TICK_API,
   SHEPHERD_TICK_API_REST,
   SHEPHERD_TICK_API_CLOUD,
@@ -583,21 +582,24 @@ out();
 out("### Live cross-check");
 out();
 out(
-  `Measured \`apiUsage\` from \`pr-shepherd iterate --verbose\` on ${API_CHECK.pr} (${API_CHECK.date}; ${API_CHECK.prState}), two ticks per transport from fresh state, against the model.`,
+  `Measured \`apiUsage\` from \`pr-shepherd iterate --verbose\` on ${API_CHECK.pr} (${API_CHECK.date}; ${API_CHECK.prState}), two one-shot ticks per transport from fresh state, against the model. A one-shot \`iterate\` skips the fingerprint cache, so each tick is a full read; a first tick's model adds its first-look annotation reads.`,
 );
 out();
 out("| transport | tick | action | measured points / requests | model | measured ÷ model |");
 out("| --- | --- | --- | --- | --- | --- |");
-// The model side comes from lib.mjs, so a changed constant shows up here.
+// The model side comes from lib.mjs, so a changed constant shows up here. A
+// one-shot `iterate` never uses the fingerprint cache (only the poll path
+// does), so every measured tick is a full read; first-look annotation reads
+// are added through annotationBatchApi.
 const MODEL_TICK = {
-  "fingerprint miss": SHEPHERD_TICK_API.graphqlPoints + SHEPHERD_CHANGED_TICK_GRAPHQL,
-  "fingerprint hit": SHEPHERD_TICK_API.graphqlPoints,
-  "explicit REST tick": SHEPHERD_TICK_API_REST.restCore,
+  "full GraphQL tick": SHEPHERD_TICK_API,
+  "full REST tick": SHEPHERD_TICK_API_REST,
 };
 for (const t of API_CHECK.ticks) {
   const key = t.transport === "rest" ? "restCore" : "graphqlPoints";
-  const model = MODEL_TICK[t.model];
-  if (model === undefined) throw new Error(`api-usage-check.json: unknown model ${t.model}`);
+  const base = MODEL_TICK[t.model];
+  if (base === undefined) throw new Error(`api-usage-check.json: unknown model ${t.model}`);
+  const model = base[key] + (t.annotationCheckRuns ? annotationBatchApi(t.annotationCheckRuns)[key] : 0);
   out(
     `| ${t.transport} | ${t.tick} (${t.model}) | \`${t.action}\` | ${num(t[key])} | ${num(model)} | ${(t[key] / model).toFixed(2)} |`,
   );

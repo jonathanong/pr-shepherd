@@ -289,15 +289,17 @@ Per scenario, `GraphQL points / REST core requests` for one occurrence.
 
 ### Live cross-check
 
-Measured `apiUsage` from `pr-shepherd iterate --verbose` on jonathanong/pr-shepherd#522 (2026-10-10; open, not a draft, mergeStateStatus UNSTABLE, CI in progress, 0 unresolved threads, 4 unminimized COMMENTED reviews), two ticks per transport from fresh state, against the model.
+Measured `apiUsage` from `pr-shepherd iterate --verbose` on jonathanong/pr-shepherd#522 (2026-10-10; open, not a draft, mergeStateStatus UNSTABLE, CI in progress, 0 unresolved threads, 4 unminimized COMMENTED reviews), two one-shot ticks per transport from fresh state, against the model. A one-shot `iterate` skips the fingerprint cache, so each tick is a full read; a first tick's model adds its first-look annotation reads.
 
 | transport | tick | action | measured points / requests | model | measured ÷ model |
 | --- | --- | --- | --- | --- | --- |
-| graphql | first (fingerprint miss) | `fix_code` | 2 | 2 | 1.00 |
-| graphql | second (fingerprint hit) | `wait` | 1 | 1 | 1.00 |
-| rest | first (explicit REST tick) | `fix_code` | 17 | 14 | 1.21 |
-| rest | second (explicit REST tick) | `wait` | 14 | 14 | 1.00 |
+| graphql | first (full GraphQL tick) | `fix_code` | 2 | 2 | 1.00 |
+| graphql | second (full GraphQL tick) | `wait` | 1 | 1 | 1.00 |
+| rest | first (full REST tick) | `fix_code` | 17 | 17 | 1.00 |
+| rest | second (full REST tick) | `wait` | 14 | 14 | 1.00 |
 
+- graphql, first: BatchPr plus one CheckRunAnnotationsBatch chunk for the 3 first-look annotated check runs (attribution inferred from the REST first tick's three annotation reads).
+- graphql, second: BatchPr only; the annotations were already seen.
 - rest, first: the 14 snapshot requests plus 3 check-run annotation reads on first look.
 - rest, second: pulls/522 (twice: snapshot and mergeability refresh), review comments, check runs, check suites, statuses, actions runs, branch protection (404), branch rules, stacks, issue comments, reviews, /user, the repository.
 
