@@ -41,12 +41,15 @@ export function restCollection(value: unknown, key: string): unknown[] {
   return restArray(record[key], key);
 }
 
+const REST_PAGE_SIZE = 100;
+
 /** Complete REST connections; follow GitHub's Link, never infer completeness from a short page. */
 export async function readRestPages<T>(
   path: string,
   select: (body: unknown) => T[] = (body) => restArray(body, path) as T[],
 ): Promise<{ nodes: T[]; rateLimit?: RateLimitInfo }> {
-  let next: string | undefined = `${path}${path.includes("?") ? "&" : "?"}per_page=100`;
+  let next: string | undefined =
+    `${path}${path.includes("?") ? "&" : "?"}per_page=${REST_PAGE_SIZE}`;
   const visited = new Set<string>();
   const nodes: T[] = [];
   let rateLimit: RateLimitInfo | undefined;
@@ -55,10 +58,22 @@ export async function readRestPages<T>(
     if (visited.has(next) || visited.size >= 1_000)
       malformedRest(`pagination cycle or limit at ${next}`);
     visited.add(next);
-    const result = await readRestRequest<unknown>("GET", next);
-    rateLimit = result.rateLimit ?? rateLimit;
-    const page = select(result.data);
+    let result = await readRestRequest<unknown>("GET", next);
+    let page = select(result.data);
     if (!Array.isArray(page)) malformedRest(`missing page at ${next}`);
+    // A full page's body (and ETag) stays the same when an item is appended past it; only its
+    // Link gains rel="next". A 304 can't prove the cached terminal Link is still current, so a
+    // full page without a next link is re-read fresh rather than hiding items on a later page.
+    if (
+      result.status === 304 &&
+      page.length >= REST_PAGE_SIZE &&
+      nextRestPage(result.link, path) === undefined
+    ) {
+      result = await readRestRequest<unknown>("GET", next, undefined, true);
+      page = select(result.data);
+      if (!Array.isArray(page)) malformedRest(`missing page at ${next}`);
+    }
+    rateLimit = result.rateLimit ?? rateLimit;
     nodes.push(...page);
     if (
       result.data &&
@@ -115,14 +130,19 @@ function isSettledBody(body: unknown): boolean {
 let activeRequests = 0;
 const pendingRequests: Array<() => void> = [];
 /** Bound independent snapshots and nested connection reads to four HTTP requests together. */
-async function readRestRequest<T>(method: string, path: string, body?: unknown) {
+async function readRestRequest<T>(
+  method: string,
+  path: string,
+  body?: unknown,
+  revalidate = false,
+) {
   if (activeRequests >= 4) await new Promise<void>((resolve) => pendingRequests.push(resolve));
   else activeRequests++;
   try {
     const key = method === "GET" ? currentRestConditionalKey() : undefined;
     if (key === undefined) return await restWithRateLimit<T>(method, path, body);
     const result = await restWithRateLimit<T>(method, path, body, {
-      conditional: { key, name: path, shouldStore: isSettledBody },
+      conditional: { key, name: path, shouldStore: isSettledBody, revalidate },
     });
     recordRestConditionalRead(path, result.status === 304, result.etag);
     return result;

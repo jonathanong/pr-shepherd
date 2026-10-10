@@ -8,7 +8,9 @@ function formatResource(resource: ApiResourceUsage): string {
   const used = resource.used === undefined ? "" : ` · used ${resource.used}`;
   const notModified =
     resource.notModified === undefined ? "" : ` · ${resource.notModified} not modified (304)`;
-  return `- \`${resource.resource}\`: ${resource.remaining}/${resource.limit} remaining${used} · ${resource.requestCount} requests${notModified} · resets ${resetTime(resource.resetAt)}`;
+  const requests =
+    resource.requestCount === undefined ? "" : ` · ${resource.requestCount} requests`;
+  return `- \`${resource.resource}\`: ${resource.remaining}/${resource.limit} remaining${used}${requests}${notModified} · resets ${resetTime(resource.resetAt)}`;
 }
 
 export function formatQuotaWarning(warning: GraphqlQuotaWarning | undefined): string | null {

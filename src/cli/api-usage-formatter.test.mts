@@ -27,4 +27,14 @@ describe("formatApiUsage REST conditional reads", () => {
     expect(text).toContain("3 requests · resets");
     expect(text).not.toContain("not modified");
   });
+
+  it("omits the zero request tally when every read was a 304", () => {
+    const { requestCount: _omitted, ...allNotModified } = core;
+    const text = formatApiUsage({
+      credentialSources: ["GH_TOKEN"],
+      rest: [{ ...allNotModified, notModified: 4 }],
+    });
+    expect(text).toContain("used 10 · 4 not modified (304) · resets");
+    expect(text).not.toContain("requests");
+  });
 });

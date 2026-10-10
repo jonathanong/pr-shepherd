@@ -62,6 +62,8 @@ export interface RestRequestOptions {
     headSha?: string;
     /** Return false to keep a 200 body out of the cache (e.g. a still-computing resource). */
     shouldStore?: (body: unknown) => boolean;
+    /** Send no validator, forcing a fresh body that then replaces the cached entry. */
+    revalidate?: boolean;
   };
 }
 
@@ -83,9 +85,10 @@ export async function restWithRateLimit<T = unknown>(
   let authSource = "unknown";
   let credentialFingerprint: string | undefined;
 
-  const cached = opts?.conditional
-    ? await loadEtagEntry(opts.conditional.key, opts.conditional.name)
-    : null;
+  const cached =
+    opts?.conditional && !opts.conditional.revalidate
+      ? await loadEtagEntry(opts.conditional.key, opts.conditional.name)
+      : null;
 
   const { res, attempt, retryT0 } = await requestWithTokenRetry(
     async () => {

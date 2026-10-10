@@ -76,10 +76,11 @@ describe("REST conditional reads", () => {
     // 304s consume no quota: they are tallied as notModified, not as requests.
     expect(second.usage?.rest?.[0]).toMatchObject({
       resource: "core",
-      requestCount: 0,
       notModified: 2,
       remaining: 4990,
     });
+    // An all-304 tick omits the trivial zero request tally.
+    expect(second.usage?.rest?.[0]).not.toHaveProperty("requestCount");
   });
 
   it("is no longer all-304 after a page changes", async () => {
@@ -105,6 +106,41 @@ describe("REST conditional reads", () => {
     const second = await tick();
     expect(second.pages.nodes).toEqual([{ id: 1 }, { id: 2 }]);
     expect(second.usage?.rest).toBeUndefined();
+  });
+
+  it("re-reads a full terminal page on 304 so an item appended past it is not hidden", async () => {
+    const full = Array.from({ length: 100 }, (_, index) => ({ id: index + 1 }));
+    const validators: Array<string | undefined> = [];
+    let grown = false;
+    await serve((request, response) => {
+      for (const [name, value] of Object.entries(rate)) response.setHeader(name, value);
+      const page2 = request.path.includes("page=2");
+      const tag = page2 ? `W/"p2"` : `W/"p1"`;
+      const validator = response.req.headers["if-none-match"];
+      validators.push(validator);
+      // Page 1's body and ETag are unchanged by the 101st item; only its Link grows a next.
+      if (validator === tag) {
+        response.statusCode = 304;
+        response.end();
+        return;
+      }
+      response.setHeader("etag", tag);
+      if (!page2 && grown) response.setHeader("link", nextLink(comments, 2));
+      response.end(JSON.stringify(page2 ? [{ id: 101 }] : full));
+    });
+    const first = await tick();
+    expect(first.pages.nodes).toHaveLength(100);
+    grown = true;
+    const second = await tick();
+    expect(second.pages.nodes).toHaveLength(101);
+    expect(second.pages.nodes.at(-1)).toEqual({ id: 101 });
+    expect(second.snapshot?.allNotModified).toBe(false);
+    // The 304 is followed by a validator-less re-read whose new Link is stored for later 304s.
+    expect(validators.slice(1, 3)).toEqual([`W/"p1"`, undefined]);
+    const third = await tick();
+    expect(third.pages.nodes).toHaveLength(101);
+    expect(third.snapshot?.allNotModified).toBe(true);
+    expect(wire.requests).toHaveLength(6);
   });
 
   it("never replays a pull whose mergeability is still being computed", async () => {

@@ -171,7 +171,7 @@ function resourceUsage(
 ): ApiResourceUsage {
   return {
     resource: rateLimit.resource ?? fallbackResource,
-    requestCount,
+    ...(requestCount > 0 && { requestCount }),
     ...(notModified > 0 && { notModified }),
     limit: rateLimit.limit,
     ...(rateLimit.used !== undefined && { used: rateLimit.used }),
