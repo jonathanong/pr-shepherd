@@ -1,0 +1,42 @@
+{
+  "note": "Live `npx pr-shepherd iterate 522 --verbose --format=json` apiUsage, two ticks per transport from a fresh PR_SHEPHERD_STATE_DIR. bench.mjs compares these measurements with its per-tick model. Made read-only by a temporary untracked .pr-shepherdrc.yml (iterate.minimizeComments: none, actions.autoMinimizeSuppressed: false, actions.autoMarkReady: false) and a PR with no unresolved outdated threads; GraphQL unmeasuredRequestCount was 0 (no mutations) and the debug log shows only GET requests, all 200 (no conditional 304s). The REST one-PR tick was modeled at 12 requests before this check. CI had no failing check, so job and log triage reads were not exercised.",
+  "date": "2026-10-10",
+  "pr": "jonathanong/pr-shepherd#522",
+  "prState": "open, not a draft, mergeStateStatus UNSTABLE, CI in progress, 0 unresolved threads, 4 unminimized COMMENTED reviews",
+  "ticks": [
+    {
+      "transport": "graphql",
+      "tick": "first",
+      "model": "fingerprint miss",
+      "action": "fix_code",
+      "graphqlPoints": 2,
+      "restCore": 0
+    },
+    {
+      "transport": "graphql",
+      "tick": "second",
+      "model": "fingerprint hit",
+      "action": "wait",
+      "graphqlPoints": 1,
+      "restCore": 0
+    },
+    {
+      "transport": "rest",
+      "tick": "first",
+      "model": "REST tick",
+      "action": "fix_code",
+      "graphqlPoints": 0,
+      "restCore": 17,
+      "detail": "the 14 snapshot requests plus 3 check-run annotation reads on first look"
+    },
+    {
+      "transport": "rest",
+      "tick": "second",
+      "model": "REST tick",
+      "action": "wait",
+      "graphqlPoints": 0,
+      "restCore": 14,
+      "detail": "pulls/522 (twice: snapshot and mergeability refresh), review comments, check runs, check suites, statuses, actions runs, branch protection (404), branch rules, stacks, issue comments, reviews, /user, the repository"
+    }
+  ]
+}

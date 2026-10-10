@@ -679,10 +679,11 @@ export const SHEPHERD_RECEIPT_TICK_API = gql(2);
  * requests for one PR's full snapshot (pull, review comments, check runs,
  * protection, check suites, stacks, rules, issue comments, statuses, reviews,
  * workflow runs, viewer, repository, and a second pull read), counted at the
- * HTTP boundary of the REST iterate test routes. None of them is conditional,
- * so none can be a free 304. The REST column models this transport only; the
- * cloud (CCR) variant, which adds `/ccr/review_threads` reads, the CCR
- * ready-for-review POST and resolve POSTs, comes in #533.
+ * HTTP boundary of the REST iterate test routes, and measured live
+ * (data/api-usage-check.json). None of them is conditional, so none can be a
+ * free 304. The REST column models this transport only; the cloud (CCR)
+ * variant, which adds `/ccr/review_threads` reads, the CCR ready-for-review
+ * POST and resolve POSTs, comes in #533.
  */
 export const SHEPHERD_TICK_API_REST = rest(14);
 /** A stack tick: one topology query plus about 0.52 points per layer, at least 1. */

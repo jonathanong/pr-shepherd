@@ -26,6 +26,8 @@ import { formatMutateResult } from "../../src/cli/mutate-formatter.mts";
 import { buildLogExcerpt } from "../../src/checks/log-excerpt.mts";
 import {
   REPO_ROOT,
+  SHEPHERD_TICK_API,
+  SHEPHERD_TICK_API_REST,
   fixtureCommentId,
   ghThreadsCmd,
   ghViewCmd,
@@ -34,9 +36,7 @@ import {
   gql,
   rest,
   SHEPHERD_CHANGED_TICK_GRAPHQL,
-  SHEPHERD_TICK_API,
   SHEPHERD_RECEIPT_TICK_API,
-  SHEPHERD_TICK_API_REST,
   annotationBatchApi,
   stackTickApi,
   stackTickApiRest,

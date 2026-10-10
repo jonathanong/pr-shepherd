@@ -191,7 +191,14 @@ function recordMcpSchemas(serverDir) {
     .map((k) => k.split(":")[0])
     .filter((t) => !existsSync(join(snaps, `${t}.snap`)));
   if (missing.length) console.error(`mcp-api-map.json names tools the server lacks: ${missing}`);
-  repinMcpApiMap(map, `github/github-mcp-server@${commit}`);
+  // A new commit can change any handler, so the costs need re-reading.
+  const source = `github/github-mcp-server@${commit}`;
+  if (map.source !== source) {
+    console.error(
+      `mcp-api-map.json moved from ${map.source} to ${source}: re-read each entry's "source" handler, then set "verified": true`,
+    );
+  }
+  repinMcpApiMap(map, source);
   writeFileSync(mapPath, `${JSON.stringify(map, null, 2)}\n`);
 }
 

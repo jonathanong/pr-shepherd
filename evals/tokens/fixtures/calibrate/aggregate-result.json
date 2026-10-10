@@ -1,0 +1,100 @@
+{
+  "cases": [
+    {
+      "name": "synthetic-1",
+      "promptMarkdown": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "arms": {
+        "without": [
+          {
+            "numTurns": 1,
+            "usage": {
+              "input_tokens": 2920,
+              "cache_read_input_tokens": 100,
+              "output_tokens": 200
+            }
+          },
+          {
+            "numTurns": 2,
+            "usage": {
+              "input_tokens": 5940,
+              "cache_read_input_tokens": 100,
+              "output_tokens": 200
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "synthetic-2",
+      "promptMarkdown": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "arms": {
+        "without": [
+          {
+            "numTurns": 1,
+            "usage": {
+              "input_tokens": 2940,
+              "cache_read_input_tokens": 100,
+              "output_tokens": 200
+            }
+          },
+          {
+            "numTurns": 2,
+            "usage": {
+              "input_tokens": 5980,
+              "cache_read_input_tokens": 100,
+              "output_tokens": 200
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "synthetic-3",
+      "promptMarkdown": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "arms": {
+        "without": [
+          {
+            "numTurns": 1,
+            "usage": {
+              "input_tokens": 2980,
+              "cache_read_input_tokens": 100,
+              "output_tokens": 200
+            }
+          },
+          {
+            "numTurns": 2,
+            "usage": {
+              "input_tokens": 6060,
+              "cache_read_input_tokens": 100,
+              "output_tokens": 200
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "synthetic-4",
+      "promptMarkdown": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "arms": {
+        "without": [
+          {
+            "numTurns": 1,
+            "usage": {
+              "input_tokens": 3060,
+              "cache_read_input_tokens": 100,
+              "output_tokens": 200
+            }
+          },
+          {
+            "numTurns": 2,
+            "usage": {
+              "input_tokens": 6220,
+              "cache_read_input_tokens": 100,
+              "output_tokens": 200
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

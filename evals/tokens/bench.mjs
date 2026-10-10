@@ -16,6 +16,7 @@ import {
   BASE_BEHIND_GRAPHQL,
   MCP_API,
   MODEL,
+  SHEPHERD_CHANGED_TICK_GRAPHQL,
   SHEPHERD_TICK_API,
   SHEPHERD_TICK_API_REST,
   TOKENS_DIR,
@@ -37,6 +38,7 @@ const SESSIONS = {
 };
 
 const schemas = readJson("mcp-tool-schemas.json");
+const API_CHECK = readJson("api-usage-check.json");
 const eagerTokens = tokens("x".repeat(schemas.eagerChars));
 if (MCP_API.source !== schemas.source)
   throw new Error(
@@ -437,7 +439,7 @@ if (losses.length) {
   out("### Losses");
   out();
   out(
-    "Every session and scenario where pr-shepherd costs strictly more than a baseline, on any gated metric. Token metrics are the same on both transports; rate-limit metrics are listed per transport. README.md \"The gate\" has the rules.",
+    'Every session and scenario where pr-shepherd costs strictly more than a baseline, on any gated metric. Token metrics are the same on both transports; rate-limit metrics are listed per transport. README.md "The gate" has the rules.',
   );
   out();
   out("| where | metric | vs. | pr-shepherd | baseline | change | issue |");
@@ -529,7 +531,7 @@ out();
 out("## GitHub API usage");
 out();
 out(
-  `Rate-limit cost per session, weighted like the token numbers. **Deterministic and assumed**: no GitHub call is made. GraphQL is counted in points, REST in core requests, and the two buckets are separate. pr-shepherd costs come from docs/graphql-usage.md and the REST HTTP-boundary tests; gh and MCP costs are the per-call assumptions in README.md. ${mcpVerificationNote(MCP_API)}`,
+  `Rate-limit cost per session, weighted like the token numbers. **Deterministic and assumed**: no GitHub call is made. GraphQL is counted in points, REST in core requests, and the two buckets are separate. pr-shepherd costs come from docs/graphql-usage.md and the REST HTTP-boundary tests; gh costs are the per-call assumptions in README.md, and MCP costs are read from the pinned github-mcp-server source (data/mcp-api-map.json). ${mcpVerificationNote(MCP_API)} The pr-shepherd one-PR tick is cross-checked against live \`--verbose\` apiUsage below.`,
 );
 out();
 out("| session | arm | GraphQL points | REST core requests |");
@@ -562,11 +564,39 @@ out(
   `- Waiting on CI costs ${waitPerHour.shepherdGraphql} GraphQL points an hour for pr-shepherd (one fingerprint hit per ${POLL_SECONDS}s poll), about ${waitPerHour.shepherdRest} REST requests an hour on the REST transport, ${waitPerHour.ghWatchGraphql} points for \`gh pr checks --watch --interval ${POLL_SECONDS}\`, and about ${waitPerHour.mcpRest} REST requests for a one-minute MCP re-check.`,
 );
 out(
-  `- MCP tool costs are read from data/mcp-api-map.json (${MCP_API.source}, verified: ${MCP_API.verified}).`,
+  MCP_API.verified
+    ? `- MCP tool costs are read from data/mcp-api-map.json, checked against each tool's handler in ${MCP_API.source} (default configuration: lockdown and IFC labels off).`
+    : `- MCP tool costs are read from data/mcp-api-map.json. They have not been re-checked since the pin moved to ${MCP_API.source}.`,
 );
 out(
   "- The REST-transport column resolves nothing by REST: a thread resolve has no REST route, so `apply review` there spends only its replies.",
 );
+out();
+out("### Live cross-check");
+out();
+out(
+  `Measured \`apiUsage\` from \`pr-shepherd iterate --verbose\` on ${API_CHECK.pr} (${API_CHECK.date}; ${API_CHECK.prState}), two ticks per transport from fresh state, against the model.`,
+);
+out();
+out("| transport | tick | action | measured points / requests | model | measured ÷ model |");
+out("| --- | --- | --- | --- | --- | --- |");
+// The model side comes from lib.mjs, so a changed constant shows up here.
+const MODEL_TICK = {
+  "fingerprint miss": SHEPHERD_TICK_API.graphqlPoints + SHEPHERD_CHANGED_TICK_GRAPHQL,
+  "fingerprint hit": SHEPHERD_TICK_API.graphqlPoints,
+  "REST tick": SHEPHERD_TICK_API_REST.restCore,
+};
+for (const t of API_CHECK.ticks) {
+  const key = t.transport === "rest" ? "restCore" : "graphqlPoints";
+  const model = MODEL_TICK[t.model];
+  if (model === undefined) throw new Error(`api-usage-check.json: unknown model ${t.model}`);
+  out(
+    `| ${t.transport} | ${t.tick} (${t.model}) | \`${t.action}\` | ${num(t[key])} | ${num(model)} | ${(t[key] / model).toFixed(2)} |`,
+  );
+}
+out();
+for (const t of API_CHECK.ticks.filter((t) => t.detail))
+  out(`- ${t.transport}, ${t.tick}: ${t.detail}.`);
 out();
 out("## Baseline strategy sensitivity");
 out();

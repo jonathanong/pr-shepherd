@@ -22,7 +22,7 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport |
 | --- | --- | --- | --- |
-| single PR | 42.5 / 36.5 / 11 | 3 / 9 / 78.3 | 332.3 core + 1.5 points |
+| single PR | 42.5 / 36.5 / 12 | 3 / 9 / 78.3 | 332.3 core + 1.5 points |
 | PR stack | 42 / 27 / 12 | 2 / 6 / 74 | 540 core + 0 points |
 
 <!-- bench:headline:end -->
@@ -49,6 +49,15 @@ It is offline and deterministic. CI regenerates REPORT.md next to the eval
 cases and fails on any diff. So a snapshot change that moves the numbers has to
 commit the new report. CI then runs `--check`. `record.mjs` refreshes the
 recorded GitHub data; see its header.
+
+`node evals/analyze.mjs --calibrate <results dir>` fits the measured
+without-plugin input tokens per turn of a live eval run against prompt size,
+and `--write` stores the result in `data/calibration.json` for this report. No
+live calibration is recorded yet. `fixtures/calibrate` is a synthetic results
+directory whose input is `3000 + chars / 4` per turn;
+`node evals/analyze.mjs --calibrate evals/tokens/fixtures/calibrate` must
+print 4.00 characters per token and a 3,000-token intercept. Never run it with
+`--write`.
 
 ## The gate
 
@@ -231,7 +240,8 @@ are as good as these assumptions:
   rules and compare, and the stack topology (the stack list and read twice,
   each layer's pull and the viewer). A one-PR
   tick is 14 requests, counted at the HTTP boundary of the REST iterate test
-  routes; none is conditional, so none is a free 304. The `failing-check` and
+  routes and measured live (below); none is conditional, so none is a free
+  304. The `failing-check` and
   `check-annotations` ticks add one annotation read per annotated check run.
   `apply review` reads the pull for `--require-sha`; a thread resolve has no
   standard REST route, so it then spends, when it has replies, a 4-request
@@ -239,20 +249,39 @@ are as good as these assumptions:
   three requests per reply (`/user` and the pull comments, read so a lost
   response can be recovered, then the POST). Ready-for-review has no standard REST route either: the
   `mark-ready` tick is its 14-request read, and it escalates as
-  transport-unsupported instead of marking the PR ready.
+  transport-unsupported instead of marking the PR ready. The live check below
+  had no failing check, so neither the job/log reads nor the annotation reads
+  were measured.
 - **gh:** `gh pr view`, the thread query and each `gh pr checks` refresh are
   one point; `--watch` is one point on start plus one per refresh; `gh pr ready` and
   `gh pr merge` are two (lookup and mutation); `gh run view --log-failed` is
   two REST requests; replies, annotations, the stacks lookup and the
   merge-async calls are one REST request each; a thread resolve is one point.
 - **GitHub MCP:** a mapping from tool to cost in
-  [data/mcp-api-map.json](data/mcp-api-map.json). **It is unverified.** It was
-  written from memory of github-mcp-server, not read from its source, and its
-  `verified` flag is `false` until someone checks it against the pinned commit
-  (the one `data/mcp-tool-schemas.json` records). `record.mjs` resets it to
-  `false` whenever it repins the map to a different commit. Notably it assumes
-  `get_review_comments` is one GraphQL query and `get_check_runs` is two REST
-  requests. Correct the file and re-run the bench if it is wrong.
+  [data/mcp-api-map.json](data/mcp-api-map.json), read from each tool's
+  handler at the pinned commit (the one `data/mcp-tool-schemas.json` records).
+  Every entry names its `source` file and function and the `calls` it makes.
+  It assumes the server's default configuration: lockdown mode and the IFC
+  labels flag are off, so no extra visibility or author lookups run. A job
+  log's body comes from a signed redirect URL and is not a core API request.
+  Reading the source changed one entry: `update_pull_request` with `draft`
+  is two GraphQL points (an `isDraft` query and the mutation) plus one REST
+  `PullRequests.Get`, not one point and one request.
+  When `record.mjs` moves the pin to another commit it sets `verified` to
+  `false`, and the report says so, until someone re-reads each `source`
+  handler and sets it back. It cannot check the costs by itself.
+
+**Live cross-check.** [data/api-usage-check.json](data/api-usage-check.json)
+records `npx pr-shepherd iterate 522 --verbose --format=json` run twice per
+transport from a fresh `PR_SHEPHERD_STATE_DIR`. A temporary untracked
+`.pr-shepherdrc.yml` (`iterate.minimizeComments: none`,
+`actions.autoMinimizeSuppressed: false`, `actions.autoMarkReady: false`) and a
+PR with no unresolved outdated threads kept the runs read-only. GraphQL matched
+the model: 2 points on the fingerprint miss (the 1-point tick plus the
+changed-tick fingerprint read), 1 on the hit, and no REST. REST took 17
+requests on the first tick (14 plus three first-look annotation reads) and 14
+on the second, all `200`, matching the 14-request tick. REPORT.md prints the
+table. Re-run it by hand when the transports change; CI makes no GitHub calls.
 
 A call whose cost is not derivable from its command (a stack tick, a poll
 tail, a hidden mutation) carries an explicit `api`; every other call is
@@ -395,11 +424,12 @@ explains the main ones.
   more than any row here.
 - **Agent work.** Code edits, commits and pushes are the same in every arm and
   are excluded.
-- **Real rate-limit cost.** The GitHub API numbers are assumptions, and the MCP
-  mapping is unverified. GraphQL point cost also depends on query shape and
-  node counts, which a flat 1 or 2 points per call ignores. REST conditional
-  requests (ETag/304) are not modeled. Real sessions run the annotation
-  supplement more often than the bench: GitHub currently adds an
+- **Real rate-limit cost.** The gh numbers are assumptions. The MCP mapping is
+  read from source, and pr-shepherd's one-PR tick is checked against one live
+  PR, but no whole session is measured. GraphQL point cost also depends on
+  query shape and node counts, which a flat 1 or 2 points per call ignores.
+  REST conditional requests (ETag/304) are not modeled. Real sessions run the
+  annotation supplement more often than the bench: GitHub currently adds an
   `ubuntu-latest` migration notice annotation to Actions jobs on that runner,
   so each new set of completed check runs costs a point.
 - **What the MCP stack walk cannot see.** `stack-work` has MCP stop at the
