@@ -25,7 +25,10 @@ import { runWithExecutionCwd } from "../../src/execution-context.mts";
 import { formatMutateResult } from "../../src/cli/mutate-formatter.mts";
 import { buildLogExcerpt } from "../../src/checks/log-excerpt.mts";
 import {
+  BACKGROUND_ACK,
+  NO_API,
   REPO_ROOT,
+  callApi,
   SHEPHERD_TICK_API,
   SHEPHERD_TICK_API_REST,
   SHEPHERD_TICK_API_CLOUD,
@@ -74,6 +77,78 @@ const BASELINE_POLL_MINUTES = 1;
 const STACK_POLL_SECONDS = 120;
 
 // --- arms -------------------------------------------------------------------
+
+/**
+ * Event arm (informational; README.md "Event arm"). After a push the wait's
+ * pull detector sees the new head (a 200), and mergeability, which GitHub
+ * computes asynchronously, needs one follow-up pull read (another 200).
+ */
+const PUSH_DETECTORS = 2;
+
+/**
+ * The event arm's calls for one step, derived from the shepherd arm's. Every
+ * non-setup scenario returns an `event` spec from `arms()`:
+ *
+ * - `wake`: "change" (a detector saw a relevant change), "timer" (`nextCheck`,
+ *   such as an elapsed ready delay) or "none" (the step happens inside a wait
+ *   without waking the agent, like the poll arm's own in-process ticks).
+ * - `detectors`: detector 200s spent during the wait that ends in this step,
+ *   including the agent's own echoes (a reply changes review comments). Each
+ *   is one REST core request; every other detector read is a free 304.
+ * - `tail`: what a `continues` tail spends instead (`api`, and `apiProxy` for
+ *   the hosted-proxy row). Its stderr is dropped: the wait prints nothing
+ *   until it wakes.
+ * - `out`: the wake's output, when it differs from the poll's.
+ *
+ * A wake replaces the step's first tick with two calls: starting `wait` in the
+ * background, whose acknowledgement the agent reads in a request of its own,
+ * and the notification that carries the tick's output and spends its full
+ * snapshot. Later calls move one phase on. Calls the agent runs itself keep
+ * their cost; under the hypothetical proxy every pr-shepherd snapshot read is
+ * the proxy's, so only the agent's mutations and own reads count.
+ */
+export function eventArm(arms) {
+  const e = arms.event;
+  if (!e) throw new Error("scenario needs an event spec for the event arm");
+  const isTick = (c) => !c.continues && /^pr-shepherd (?!apply )/.test(c.cmd);
+  const wakeTick = e.wake === "none" ? null : arms.shepherd.find((c) => isTick(c) && c.phase === 1);
+  if (e.wake !== "none" && !wakeTick) throw new Error("event wake needs a phase-1 tick");
+  if (e.detectors && !wakeTick) throw new Error("detectors without a wake go in the tail's api");
+  const calls = [];
+  for (const c of arms.shepherd) {
+    if (c.continues) {
+      if (!e.tail) throw new Error("a continues tail needs event.tail");
+      calls.push({ ...c, out: "", api: e.tail.api, apiProxy: e.tail.apiProxy ?? NO_API });
+    } else if (c === wakeTick) {
+      calls.push(
+        {
+          phase: 1,
+          via: "bash",
+          cmd: c.cmd.replace(/^pr-shepherd /, "pr-shepherd wait ").replace(" --until-terminal", ""),
+          out: BACKGROUND_ACK,
+          api: rest(e.detectors ?? 0),
+          apiProxy: NO_API,
+        },
+        {
+          phase: 2,
+          via: "bash",
+          notification: true,
+          cmd: "",
+          out: e.out ?? c.out,
+          api: callApi(c),
+          apiProxy: NO_API,
+        },
+      );
+    } else {
+      calls.push({
+        ...c,
+        phase: c.phase + (wakeTick ? 1 : 0),
+        ...(isTick(c) && { apiProxy: NO_API }),
+      });
+    }
+  }
+  return calls;
+}
 
 const shepherdTick = (out, phase = 1) => ({ phase, via: "bash", cmd: SHEPHERD_CMD, out });
 
@@ -551,6 +626,15 @@ const PR_SCENARIOS = [
             apiCloud: rest(polls * SHEPHERD_TICK_API_CLOUD.restCore),
           },
         ],
+        // No snapshot while CI runs. The new head's check runs are a fresh URL
+        // (one initial 200), and the body then changes on every one of the
+        // `polls` rounds while jobs start and finish (assumed: one 200 per
+        // round). The wait reads each status from the body and wakes only when
+        // CI settles, on the last one.
+        event: {
+          wake: "none",
+          tail: { api: rest(PUSH_DETECTORS + 1 + polls), apiProxy: NO_API },
+        },
         gh: [
           {
             phase: 1,
@@ -588,6 +672,8 @@ const PR_SCENARIOS = [
       const state = failingCheckState();
       return {
         shepherd: [{ ...shepherdTick(failingCheckOutput()), ...FAILING_CHECK_TICK_API }],
+        // The check-runs 200 that wakes it is counted in ci-wait.
+        event: { wake: "change", detectors: 0 },
         gh: [...ghObserve(state), ghLogCall(2)],
         mcp: [...mcpObserve(state), ...mcpLogCalls(2)],
       };
@@ -604,6 +690,8 @@ const PR_SCENARIOS = [
       const state = fixtureState(fixture);
       return {
         shepherd: [shepherdTick(snapshot(fixture))],
+        // Reviews.
+        event: { wake: "change", detectors: 1 },
         gh: ghObserve(state),
         mcp: mcpObserve(state),
       };
@@ -621,6 +709,8 @@ const PR_SCENARIOS = [
       const text = snapshot(fixture);
       return {
         shepherd: [shepherdTick(text), shepherdApply(text, { repliedThreads: ["PRRT_active"] })],
+        // Reviews and review comments, then review comments again for the reply.
+        event: { wake: "change", detectors: 3 },
         gh: [...ghObserve(state), ghReply(fixtureCommentId(0))],
         mcp: [...mcpObserve(state), mcpReply(fixtureCommentId(0))],
       };
@@ -638,6 +728,8 @@ const PR_SCENARIOS = [
       const text = snapshot(fixture);
       return {
         shepherd: [shepherdTick(text), shepherdApply(text, { repliedThreads: ["PRRT_active"] })],
+        // Reviews and review comments, then review comments again for the reply.
+        event: { wake: "change", detectors: 3 },
         gh: [...ghObserve(state), ghReply(fixtureCommentId(0))],
         mcp: [...mcpObserve(state), mcpReply(fixtureCommentId(0))],
       };
@@ -670,6 +762,9 @@ const PR_SCENARIOS = [
           ghLogCall(2),
           shepherdApply(text, { repliedThreads: ["PRRT_multi"] }, 3),
         ],
+        // Reviews, review comments, issue comments and check runs, then review
+        // comments again for the reply.
+        event: { wake: "change", detectors: 5 },
         gh: [...ghObserve(state), ghLogCall(2), ghReply(fixtureCommentId(0), 3)],
         mcp: [...mcpObserve(state), ...mcpLogCalls(2), mcpReply(fixtureCommentId(0), 5)],
       };
@@ -705,6 +800,16 @@ const PR_SCENARIOS = [
             apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + 1),
           },
         ],
+        // The wait's in-process tick marks it ready, as the poll's does: a
+        // snapshot with no fingerprint miss, the mutation, and the pull's echo.
+        // The check-runs 200 that triggers it is counted in ci-wait.
+        event: {
+          wake: "none",
+          tail: {
+            api: { graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + 1, restCore: 1 },
+            apiProxy: gql(1),
+          },
+        },
         gh: [
           ...ghObserve(state),
           {
@@ -739,6 +844,8 @@ const PR_SCENARIOS = [
       const state = withHistory(fixtureState(fixture), HISTORY);
       return {
         shepherd: [shepherdTick(snapshot(fixture))],
+        // The pull.
+        event: { wake: "change", detectors: 1 },
         gh: ghObserve(state),
         mcp: mcpObserve(state),
       };
@@ -760,6 +867,9 @@ const PR_SCENARIOS = [
           shepherdTick(text),
           shepherdApply(text, { repliedThreads: threads, resolvedThreads: bots }),
         ],
+        // Reviews and review comments, then review comments again for the
+        // replies. A resolve changes no REST detector.
+        event: { wake: "change", detectors: 3 },
         gh: [
           ...ghObserve(state),
           ...threads.map((_, i) => ghReply(fixtureCommentId(i))),
@@ -796,6 +906,8 @@ const PR_SCENARIOS = [
             apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + annotationApi.restCore),
           },
         ],
+        // Check runs.
+        event: { wake: "change", detectors: 1 },
         gh: [
           ...ghObserve(state),
           {
@@ -826,6 +938,8 @@ const PR_SCENARIOS = [
       const state = fixtureState(fixture);
       return {
         shepherd: [shepherdTick(snapshot(fixture))],
+        // The pull: its mergeable state turns dirty.
+        event: { wake: "change", detectors: 1 },
         gh: ghObserve(state),
         mcp: mcpObserve(state),
       };
@@ -851,6 +965,8 @@ const PR_SCENARIOS = [
             out: merged,
           },
         ],
+        // nextCheck: the ready delay elapsed.
+        event: { wake: "timer", detectors: 0 },
         gh: [
           ...ghObserve(state),
           {
@@ -886,6 +1002,8 @@ const PR_SCENARIOS = [
             out: queued,
           },
         ],
+        // nextCheck: the ready delay elapsed.
+        event: { wake: "timer", detectors: 0 },
         gh: [
           ...ghObserve(state),
           {
@@ -1109,6 +1227,8 @@ const STACK_SCENARIOS = [
             ...routedLayerTickApi(layers.length),
           })),
         ],
+        // Assumed: one changed endpoint per layer it routes.
+        event: { wake: "change", detectors: routed.length },
         gh,
         mcp,
       };
@@ -1182,6 +1302,15 @@ const STACK_SCENARIOS = [
             apiCloud: rest(ticks * stackTickApiCloud(layers.length).restCore),
           },
         ],
+        // No stack ticks while the queue runs: each layer's pull turns merged
+        // (a 200 each), and the wake's one stack snapshot reads the settled
+        // stack. The wait prints no per-tick lines.
+        event: {
+          wake: "change",
+          detectors: layers.length,
+          out: settledOverview(layers, number),
+          tail: { api: NO_API },
+        },
         gh: [
           ...gh,
           ...Array.from({ length: polls }, (_, i) => ({
@@ -1233,6 +1362,8 @@ const STACK_SCENARIOS = [
             out: layers.map(merged).join(""),
           },
         ],
+        // nextCheck: the ready delay elapsed.
+        event: { wake: "timer", detectors: 0 },
         gh: [
           ...gh,
           {

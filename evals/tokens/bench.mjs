@@ -13,8 +13,13 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import {
+  BACKGROUND_ACK,
   BASE_BEHIND_GRAPHQL,
+  DETECTOR_POLL_SECONDS,
+  EVENT_DETECTORS,
   MCP_API,
+  RECONCILE_MINUTES,
+  snapshot,
   MODEL,
   SHEPHERD_TICK_API,
   SHEPHERD_TICK_API_REST,
@@ -27,7 +32,7 @@ import {
   readJson,
   tokens,
 } from "./lib.mjs";
-import { SCENARIOS } from "./scenarios.mjs";
+import { SCENARIOS, eventArm } from "./scenarios.mjs";
 import { checkPending, findLosses, lossKey, pendingEntry, readPending } from "./gate.mjs";
 
 const ARMS = ["shepherd", "gh", "mcp"];
@@ -121,6 +126,11 @@ function buildRow(s, strategy) {
   // context on every request.
   const bare = Object.fromEntries(ARMS.map((a) => [a, s.setup ? cost([]) : cost(arms[a])]));
   bare.mcpEager = s.setup ? cost([]) : cost(arms.mcp);
+  // Event arm (informational, not gated): the same skill and setup, with the
+  // waiting done by a background `wait` (scenarios.mjs `eventArm`).
+  const event = s.setup ? [] : eventArm(arms);
+  result.event = s.setup ? result.shepherd : cost(event, { extraContext: carried("shepherd") });
+  bare.event = s.setup ? cost([]) : cost(event);
   // Rate-limit cost (deterministic, assumed). Setup loads touch no API.
   const api = {
     shepherd: apiTotals(arms.shepherd),
@@ -128,6 +138,8 @@ function buildRow(s, strategy) {
     shepherdCloud: apiTotals(arms.shepherd, { transport: "cloud" }),
     gh: apiTotals(arms.gh),
     mcp: apiTotals(arms.mcp),
+    event: apiTotals(event),
+    eventProxy: apiTotals(event, { transport: "proxy" }),
   };
   return {
     id: s.id,
@@ -138,6 +150,7 @@ function buildRow(s, strategy) {
     gaps: s.gaps ?? {},
     weight: s.weight,
     strategy,
+    eventWake: s.setup ? null : arms.event.wake,
     ...result,
     variable: bare,
     api,
@@ -264,6 +277,95 @@ const waitPerHour = {
   mcpRest: (3600 / POLL_SECONDS) * 2,
 };
 
+// --- event arm (informational, not gated) -------------------------------------
+//
+// Kept out of `sessions`, `apiSessions` and `findLosses`, so the gate and the
+// pending list see exactly the arms they saw before.
+
+const EVENT_ARMS = ["event", "shepherd", "gh", "mcp"];
+const EVENT_API_ARMS = ["event", "eventProxy", "shepherd", "gh", "mcp"];
+const eventSessions = Object.fromEntries(
+  Object.keys(SESSIONS).map((key) => {
+    const rs = rows.filter((r) => r.session === key);
+    const sum = (pick) => rs.reduce((t, r) => t + r.weight * pick(r), 0);
+    const tokens = Object.fromEntries(
+      EVENT_ARMS.map((a) => [
+        a,
+        Object.fromEntries(
+          METRICS.map((m) => {
+            const v = sum((r) => r[a][m]);
+            return [m, m === "ite" || m === "toolTokens" ? Math.round(v) : round(v)];
+          }),
+        ),
+      ]),
+    );
+    const api = Object.fromEntries(
+      EVENT_API_ARMS.map((a) => [
+        a,
+        {
+          graphqlPoints: round(sum((r) => r.api[a].graphqlPoints)),
+          restCore: round(sum((r) => r.api[a].restCore)),
+        },
+      ]),
+    );
+    const wakes = round(sum((r) => (r.eventWake && r.eventWake !== "none" ? 1 : 0)));
+    return [key, { tokens, api, wakes }];
+  }),
+);
+
+// An idle hour: nothing changes. The poll arm's blocking call costs no turn;
+// a `--timeout 4.5m` poll (the legacy bounded CLI mode; the skill uses `--until-terminal`) returns a
+// WAIT tick and is called again. It declines a sleep that does not fit in its
+// timeout (poll.mts), so each call runs ticks at 0, 60, ... 240s and returns
+// after the last. The event arm's detectors all answer 304, and the reconcile
+// timer wakes the agent with a WAIT tick.
+const BOUNDED_TIMEOUT_SECONDS = 270;
+const BOUNDED_INTERVAL_SECONDS = 60;
+const boundedTicks = Math.floor(BOUNDED_TIMEOUT_SECONDS / BOUNDED_INTERVAL_SECONDS) + 1;
+const BOUNDED_POLL_SECONDS = (boundedTicks - 1) * BOUNDED_INTERVAL_SECONDS;
+const PR_URL = "https://github.com/owner/repo/pull/42";
+const PR_CMD = `pr-shepherd ${PR_URL}`;
+const idleCarry = carry["ci-wait"]?.shepherd ?? 0;
+const waitText = snapshot("09-wait-in-progress-ci");
+// poll-progress.mts, default (non-quiet) status: one line per sleeping tick.
+const waitReason = waitText.match(/^WAIT: (.+)$/m)[1];
+const boundedProgress = Array.from(
+  { length: boundedTicks - 1 },
+  (_, i) =>
+    `[poll tick ${i + 1} / +${i * BOUNDED_INTERVAL_SECONDS}s] WAIT — ${waitReason}; next tick in ${BOUNDED_INTERVAL_SECONDS}s\n`,
+).join("");
+const boundedWake = cost(
+  [{ phase: 1, via: "bash", cmd: `${PR_CMD} --timeout 4.5m`, out: boundedProgress + waitText }],
+  { extraContext: idleCarry },
+);
+const reconcileWake = cost(
+  [
+    { phase: 1, via: "bash", cmd: `pr-shepherd wait ${PR_URL}`, out: BACKGROUND_ACK },
+    { phase: 2, via: "bash", notification: true, cmd: "", out: waitText },
+  ],
+  { extraContext: idleCarry },
+);
+const perHour = (n, wake) => ({ wakes: round(n), turns: round(n * wake.turns), ite: Math.round(n * wake.ite) });
+const reconcilesPerHour = 60 / RECONCILE_MINUTES;
+const idleHour = {
+  shepherd: { graphqlPoints: waitPerHour.shepherdGraphql, restCore: 0, conditional: 0, ...perHour(0, boundedWake) },
+  shepherdBounded: {
+    graphqlPoints: round(
+      (3600 / BOUNDED_POLL_SECONDS) * boundedTicks * SHEPHERD_TICK_API.graphqlPoints,
+    ),
+    restCore: 0,
+    conditional: 0,
+    ...perHour(3600 / BOUNDED_POLL_SECONDS, boundedWake),
+  },
+  event: {
+    graphqlPoints: reconcilesPerHour * SHEPHERD_TICK_API.graphqlPoints,
+    restCore: 0,
+    conditional: (3600 / DETECTOR_POLL_SECONDS) * EVENT_DETECTORS.length,
+    ...perHour(reconcilesPerHour, reconcileWake),
+  },
+  eventProxy: { graphqlPoints: 0, restCore: 0, conditional: 0, ...perHour(reconcilesPerHour, reconcileWake) },
+};
+
 /** Sensitivity: each baseline's session cost under each pure strategy. */
 const strategyTotals = Object.fromEntries(
   Object.keys(SESSIONS).map((key) => [
@@ -336,6 +438,8 @@ if (process.argv.includes("--json")) {
         apiSessions,
         waitPerHour,
         strategyTotals,
+        eventSessions,
+        idleHour,
         losses,
       },
       null,
@@ -429,6 +533,22 @@ out(
 );
 out(
   `- **Waiting on CI, per hour.** pr-shepherd spends ${waitPerHour.shepherdGraphql} GraphQL points on the GraphQL transport (one fingerprint hit per ${POLL_SECONDS}s poll) and about ${waitPerHour.shepherdRest} REST requests on the REST transport (${waitPerHour.shepherdCloud} on cloud REST), which has no fingerprint shortcut. A \`gh pr checks --watch\` refresh costs ${waitPerHour.ghWatchGraphql} points; an MCP re-check about ${waitPerHour.mcpRest} requests.`,
+);
+// The event arm's summary lines: its session totals against each arm, and
+// idle waiting per hour.
+const evLine = (key, label) => {
+  const { tokens: t, api: a } = eventSessions[key];
+  const cmp = (v) =>
+    `${num(v("event"))} (poll ${num(v("shepherd"))}, gh ${num(v("gh"))}, MCP ${num(v("mcp"))})`;
+  const api = (f) => cmp((arm) => a[arm][f]);
+  const tk = (m) => cmp((arm) => t[arm][m]);
+  return `${label}: ${api("graphqlPoints")} GraphQL points, ${api("restCore")} REST requests, ${tk("turns")} turns, ${tk("toolTokens")} tool tokens and ${tk("ite")} ITE`;
+};
+out(
+  `- **Event arm (informational, assumed, not gated).** A background \`pr-shepherd wait\` with ETag change detectors (#544). ${evLine("pr", "PR session")}. ${evLine("stack", "Stack session")}. Each of its ${num(eventSessions.pr.wakes)} PR-session wakes (${num(eventSessions.stack.wakes)} on a stack) adds a request to read the background start, so it spends more turns and tokens than the blocking poll. The hypothetical hosted webhook proxy spends ${num(eventSessions.pr.api.eventProxy.graphqlPoints)} GraphQL points and ${num(eventSessions.pr.api.eventProxy.restCore)} REST core of the user's token in a PR session (${num(eventSessions.stack.api.eventProxy.graphqlPoints)} and ${num(eventSessions.stack.api.eventProxy.restCore)} on a stack), on the agent's own mutations and reads.`,
+);
+out(
+  `- **Idle waiting, per hour (assumed).** The poll arm's blocking \`--until-terminal\` call (the skill's mode, and the comparison that counts) spends ${idleHour.shepherd.graphqlPoints} GraphQL points and no turn; the legacy bounded \`--timeout 4.5m\` CLI mode, which the skill no longer uses, spends ${num(idleHour.shepherdBounded.graphqlPoints)} points (it returns every ${BOUNDED_POLL_SECONDS}s, after ${boundedTicks} ticks) and ${num(idleHour.shepherdBounded.wakes)} wakes (${num(idleHour.shepherdBounded.turns)} turns, ${num(idleHour.shepherdBounded.ite)} ITE). The event arm spends ${idleHour.event.graphqlPoints} points on ${num(idleHour.event.wakes)} reconcile snapshots and no REST (${num(idleHour.event.conditional)} conditional requests, all 304), with ${num(idleHour.event.turns)} turns (${num(idleHour.event.ite)} ITE). The hypothetical proxy spends nothing of the user's token, with the same wakes.`,
 );
 const TRANSPORT_LABELS = { graphql: "GraphQL", rest: "REST", cloud: "cloud REST" };
 const lossCount = (issue) => losses.filter((l) => l.issue === issue).length;
@@ -607,6 +727,74 @@ for (const t of API_CHECK.ticks) {
 out();
 for (const t of API_CHECK.ticks.filter((t) => t.detail))
   out(`- ${t.transport}, ${t.tick}: ${t.detail}.`);
+out();
+out("## Event arm (informational)");
+out();
+out(
+  'A local session where a background `pr-shepherd wait` replaces the blocking poll: REST change detectors with ETags, a full snapshot only when one changes, and a reconcile snapshot on a timer. The command does not exist yet (#544), and it is not the cloud event mode (`poll.mode`), so **every number here is assumed** (README.md "Event arm"). It is not gated: it adds no loss and removes none.',
+);
+out();
+out("| session | arm | GraphQL points | REST core requests | turns | tool calls | tool tokens | cost (ITE) |");
+out("| --- | --- | --- | --- | --- | --- | --- | --- |");
+const EVENT_LABELS = {
+  event: "event",
+  eventProxy: "event, hosted webhook proxy (hypothetical)",
+  shepherd: "pr-shepherd poll",
+  gh: "gh CLI",
+  mcp: "GitHub MCP",
+};
+for (const [key, title] of Object.entries(SESSIONS)) {
+  const { tokens: t, api: a } = eventSessions[key];
+  for (const arm of EVENT_API_ARMS) {
+    const tk = t[arm === "eventProxy" ? "event" : arm];
+    out(
+      `| ${title} | ${EVENT_LABELS[arm]} | ${num(a[arm].graphqlPoints)} | ${num(a[arm].restCore)} | ${num(tk.turns)} | ${num(tk.calls)} | ${num(tk.toolTokens)} | ${num(tk.ite)} |`,
+    );
+  }
+}
+out();
+out(
+  "Per scenario, `GraphQL points / REST core requests · turns` for one occurrence. The proxy column counts only the user's token; its turns are the event arm's.",
+);
+out();
+out("| scenario | weight | wake | pr-shepherd poll | event | event, proxy |");
+out("| --- | --- | --- | --- | --- | --- |");
+for (const r of rows.filter((r) => !r.setup)) {
+  const c = (a, turns) =>
+    `${num(r.api[a].graphqlPoints)} / ${num(r.api[a].restCore)}${turns === undefined ? "" : ` · ${turns}`}`;
+  out(
+    `| \`${r.id}\` | ${r.weight} | ${r.eventWake} | ${c("shepherd", r.shepherd.turns)} | ${c("event", r.event.turns)} | ${c("eventProxy")} |`,
+  );
+}
+out();
+out("An idle hour, while nothing changes:");
+out();
+out("| arm | GraphQL points | REST core requests | conditional requests (304) | wakes | turns | cost (ITE) |");
+out("| --- | --- | --- | --- | --- | --- | --- |");
+for (const [a, label] of Object.entries({
+  shepherd: "pr-shepherd poll, `--until-terminal` (the skill)",
+  shepherdBounded: "pr-shepherd poll, legacy bounded `--timeout 4.5m` (not the skill)",
+  event: "event",
+  eventProxy: "event, hosted webhook proxy (hypothetical)",
+})) {
+  const h = idleHour[a];
+  out(
+    `| ${label} | ${num(h.graphqlPoints)} | ${num(h.restCore)} | ${num(h.conditional)} | ${num(h.wakes)} | ${num(h.turns)} | ${num(h.ite)} |`,
+  );
+}
+out();
+out(
+  `- Wakes: \`change\` is a detector change, \`timer\` an elapsed \`nextCheck\` (here the ready delay), \`none\` a step the wait handles in process, as the poll does. Each wake costs one more request than the poll arm, which reads the background start's acknowledgement.`,
+);
+out(
+  `- Detectors: ${EVENT_DETECTORS.length} conditional REST reads per PR every ${DETECTOR_POLL_SECONDS}s (${EVENT_DETECTORS.map((d) => `\`${d}\``).join(", ")}). A 304 costs no primary rate limit, only latency; a 200 is one REST core request. A change wakes the agent with one full snapshot, at the poll arm's GraphQL tick cost with no fingerprint miss.`,
+);
+out(
+  `- Reconcile: a full snapshot ${RECONCILE_MINUTES} minutes after the last one, which wakes the agent. No modeled wait is that long, so the sessions have none; the idle hour has ${num(reconcilesPerHour)}.`,
+);
+out(
+  "- The proxy row moves every pr-shepherd snapshot (detectors, change ticks, reconciles, and their log and annotation reads) to a hosted proxy's own token. The agent's mutations, merges, `apply review` reads and its own `gh` reads still count against the user.",
+);
 out();
 out("## Baseline strategy sensitivity");
 out();
