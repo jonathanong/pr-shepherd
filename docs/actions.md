@@ -63,6 +63,8 @@ to update the branch rather than rerun the job.
 `CANCEL` is terminal only when every open layer is READY without merge intent (or every layer is merged). The stack heading then includes `[CANCEL]`; a human handoff heading includes `[ESCALATE]`. Those tokens are what the skill stops on. Aggregate mode
 never performs mutations or emits rebase/push commands. `ESCALATE` is reserved for a human decision, such as a
 closed-unmerged or otherwise unverified dependency, once no autonomous one-PR session remains.
+Only `owned` layers count as shepherdable here: when every remaining autonomous layer belongs to
+another author, a human blocker returns `ESCALATE` immediately.
 If human blockers coexist with shepherdable layers, `SHEPHERD` is the immediate next action: its
 instructions surface those blockers, route the autonomous layers, and require another stack
 reconciliation. The stack returns `ESCALATE` for the remaining human handoff only after the

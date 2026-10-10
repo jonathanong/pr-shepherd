@@ -123,6 +123,8 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
   const runnableCandidates = work.sessions.filter((item) => item.pollCommand);
   const missingCommands = work.sessions.filter((item) => !item.pollCommand);
   const agentWork = runnableCandidates.length > 0 || work.markReady.length > 0;
+  // Only owned work defers a human handoff: rerunning cannot advance another author's layer.
+  const ownedWork = [...runnableCandidates, ...work.markReady].some((item) => item.owned);
   const drain = planPrefixDrain(result, mergeRequested);
   if (drain) return drain;
 
@@ -131,14 +133,14 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
     const instructions: string[] = [];
     appendAutonomousInstructions(instructions, runnableCandidates);
     appendMarkReadyInstructions(instructions, work.markReady);
-    const stop = !agentWork;
+    const stop = !ownedWork;
     appendHumanHandoffInstructions(instructions, handoffs, stop);
     for (const item of missingCommands) {
       instructions.push(
         `${instructions.length + 1}. PR #${item.pr} needs a one-PR session, but Shepherd could not produce its command. Ask for direction.`,
       );
     }
-    if (agentWork) {
+    if (ownedWork) {
       appendStackRerunInstruction(
         instructions,
         [...runnableCandidates, ...work.markReady],
@@ -163,17 +165,17 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
       appendMarkReadyInstructions(instructions, work.markReady);
       for (const item of missingCommands) {
         instructions.push(
-          `${instructions.length + 1}. PR #${item.pr} needs a one-PR session, but Shepherd could not produce its command. ${agentWork ? "After autonomous shepherding, ask" : "Stop and ask"} for direction.`,
+          `${instructions.length + 1}. PR #${item.pr} needs a one-PR session, but Shepherd could not produce its command. ${ownedWork ? "After autonomous shepherding, ask" : "Stop and ask"} for direction.`,
         );
       }
-      if (agentWork) {
+      if (ownedWork) {
         appendStackRerunInstruction(
           instructions,
           [...runnableCandidates, ...work.markReady],
           "After the listed one-PR sessions, rerun this same `--stack` selector. Stop for the human handoff only when no autonomous shepherding remains.",
         );
       }
-      return { action: agentWork ? "shepherd" : "escalate", stackMergeable: false, instructions };
+      return { action: ownedWork ? "shepherd" : "escalate", stackMergeable: false, instructions };
     }
     if (!agentWork) return idleWaitPlan(work.idle);
     const instructions: string[] = [];
