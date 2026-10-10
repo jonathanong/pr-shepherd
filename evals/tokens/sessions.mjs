@@ -32,6 +32,7 @@ import {
   MODEL,
   READY_MERGEABILITY_REST,
   SHEPHERD_CHANGED_TICK_GRAPHQL,
+  SHEPHERD_RECEIPT_TICK_API,
   SHEPHERD_TICK_API,
   apiTotals,
   cost,
@@ -188,6 +189,7 @@ function parseLog(text, scope, stats, until = Infinity) {
         inv.outs.push({
           chars: out.length,
           action: out.match(/^# PR #\d+ \[([A-Z_]+)\]/m)?.[1] ?? null,
+          readyDelayElapsed: /^# PR #\d+ \[CANCEL\] — ready-delay-elapsed$/m.test(out),
         });
       touch(inv, t);
       inv.closed = true;
@@ -196,10 +198,28 @@ function parseLog(text, scope, stats, until = Infinity) {
   return invs.filter((i) => scope.has(i.pr) && i.kind !== "other");
 }
 
-function tickCount(reqs) {
-  const times = reqs.filter((r) => SNAPSHOT_OPS.has(r.op)).map((r) => r.t);
-  if (!times.length) return 0;
-  return 1 + times.slice(1).filter((t, i) => t - times[i] >= TICK_GAP_SECONDS).length;
+/** A poll's ticks: its snapshot requests, split where they pause for an interval. */
+function tickGroups(reqs) {
+  const groups = [];
+  let prev = null;
+  for (const r of reqs.filter((r) => SNAPSHOT_OPS.has(r.op))) {
+    if (prev == null || r.t - prev >= TICK_GAP_SECONDS) groups.push([]);
+    groups.at(-1).push(r.op);
+    prev = r.t;
+  }
+  return groups;
+}
+
+/**
+ * `ticks`, and `changedTicks`: the ticks after the first whose fingerprint
+ * missed, so they read BatchPr too.
+ */
+function pollTicks(reqs) {
+  const groups = tickGroups(reqs);
+  const changedTicks = groups
+    .slice(1)
+    .filter((g) => g.includes("PrFingerprint") && g.includes("BatchPr")).length;
+  return { ticks: groups.length, ...(changedTicks && { changedTicks }) };
 }
 
 function invocationRecord(inv, t0) {
@@ -209,9 +229,10 @@ function invocationRecord(inv, t0) {
     seconds: Math.round(inv.lastCounted - inv.t),
     kind: inv.kind,
     ...(/--until-terminal/.test(inv.args) && { untilTerminal: true }),
-    ...(inv.kind === "poll" && { ticks: tickCount(inv.reqs) }),
+    ...(inv.kind === "poll" && pollTicks(inv.reqs)),
     action: inv.outs[0]?.action ?? null,
     outChars: inv.outs[0]?.chars ?? null,
+    ...(inv.outs[0]?.readyDelayElapsed && { readyDelayElapsed: true }),
     graphqlRequests: gqlReqs.length,
     graphqlCost: gqlReqs.reduce((s, r) => s + (r.cost ?? 0), 0),
     graphqlMutations: gqlReqs.filter((r) => MUTATION_OPS.has(r.op)).length,
@@ -502,38 +523,45 @@ function fit(samples) {
 /** Characters of the body's Shepherd Journal `<details>` block, its leading blank line included. */
 function journalChars(body) {
   const m = body.match(/\n*<details>\n<summary>Shepherd Journal<\/summary>\n[\s\S]*?\n<\/details>/);
-  return m ? m[0].length : 0;
+  return m ? jsonChars(m[0]) : 0;
 }
+
+/**
+ * Characters `text` takes inside a JSON string, escapes included. The baselines
+ * read titles, bodies and paths only as JSON (`gh pr view --json`, `gh api`, MCP),
+ * where each newline, quote or backslash costs two characters.
+ */
+const jsonChars = (text) => JSON.stringify(text).length - 2;
 
 function prContent(raw, t0) {
   const p = raw.data.repository.pullRequest;
   const rel = (iso) => (iso ? Math.round(secs(iso) - t0) : null);
   return {
-    titleChars: p.title.length,
-    bodyChars: p.body.length,
+    titleChars: jsonChars(p.title),
+    bodyChars: jsonChars(p.body),
     // The Shepherd Journal block `apply journal` wrote; the baselines never write it.
     journalChars: journalChars(p.body),
     threads: p.reviewThreads.nodes.map((t) => ({
       resolved: t.isResolved,
       outdated: t.isOutdated,
-      pathChars: t.path.length,
+      pathChars: jsonChars(t.path),
       hasLine: t.line != null,
       comments: t.comments.nodes.map((c) => ({
         t: rel(c.createdAt),
-        chars: c.body.length,
+        chars: jsonChars(c.body),
         urlChars: c.url.length,
       })),
     })),
     comments: p.comments.nodes.map((c) => ({
       t: rel(c.createdAt),
-      chars: c.body.length,
+      chars: jsonChars(c.body),
       urlChars: c.url.length,
       minimized: c.isMinimized,
     })),
     reviews: p.reviews.nodes.map((r) => ({
       t: rel(r.submittedAt),
       state: r.state,
-      chars: r.body.length,
+      chars: jsonChars(r.body),
     })),
     commits: p.commits.nodes.map(({ commit }) => ({
       t: rel(commit.committedDate),
@@ -699,11 +727,14 @@ export function stateAt(pr, t) {
         line: th.hasLine ? 10 : null,
         comments: th.comments
           .filter((k) => k.t <= t)
-          .map((k, j) => ({
-            id: 4238000000 + i * 50 + j,
+          .map((k, j) => ({ k, id: 4238000000 + i * 50 + j }))
+          .map(({ k, id }) => ({
+            id,
             author: "reviewer[bot]",
             body: fill(k.chars),
-            url: fill(k.urlChars, "u"),
+            // Same length, but ending in the `#discussion_r<id>` anchor MCP's
+            // reply tool takes its comment ID from.
+            url: `${fill(k.urlChars - `#discussion_r${id}`.length, "u")}#discussion_r${id}`,
             createdAt: "2026-10-10T18:00:00Z",
           })),
       })),
@@ -822,15 +853,20 @@ function stepArms(pr, inv) {
           `pr-shepherd ${n} --interval 60s --timeout 4.5m --quiet-status`,
           fill(inv.outChars ?? 0),
           {
-            // Each tick is one point, and the first changed tick after a wait
-            // one more (docs/graphql-usage.md); a READY tick re-reads
-            // mergeability over REST. BatchPr's supplements are not charged:
-            // the logs do not say which state triggered them.
+            // Each tick is one point, and each later tick whose fingerprint
+            // missed one more (docs/graphql-usage.md). A READY tick re-reads
+            // mergeability over REST; a ready-delay CANCEL reached READY first,
+            // on the two-point receipt query. BatchPr's supplements are not
+            // charged: the logs do not say which state triggered them.
             api: {
               graphqlPoints:
                 SHEPHERD_TICK_API.graphqlPoints * inv.ticks +
-                (waits ? SHEPHERD_CHANGED_TICK_GRAPHQL : 0),
-              restCore: inv.action === "READY" ? READY_MERGEABILITY_REST : 0,
+                SHEPHERD_CHANGED_TICK_GRAPHQL * (inv.changedTicks ?? 0) +
+                (inv.readyDelayElapsed
+                  ? SHEPHERD_RECEIPT_TICK_API.graphqlPoints - SHEPHERD_TICK_API.graphqlPoints
+                  : 0),
+              restCore:
+                inv.action === "READY" || inv.readyDelayElapsed ? READY_MERGEABILITY_REST : 0,
             },
           },
         ),
@@ -1233,7 +1269,7 @@ export function realSessionsSection({ rows, data } = realSessions()) {
   out.push(
     `- **Characters per token.** A result's tokens are the next request's prompt growth, less the calling request's output. Fitted on the ${cpt.noThinking.samples} clean results (one result between two requests, nothing else) whose request had no thinking block: ${cpt.noThinking.charsPerToken} characters per token plus ${cpt.noThinking.intercept} tokens per result (R² ${cpt.noThinking.r2}); per result of 2,000+ characters, median ${cpt.noThinking.perSample.p50}, 10th–90th percentile ${cpt.noThinking.perSample.p10}–${cpt.noThinking.perSample.p90}. pr-shepherd's own output alone: ${cpt.shepherd ? `${cpt.shepherd.charsPerToken} (${cpt.shepherd.samples} results, R² ${cpt.shepherd.r2})` : "too few clean samples"}. With thinking requests included the fit degrades (${cpt.all.samples} results, ${cpt.all.charsPerToken}, R² ${cpt.all.r2}): thinking counts as output but leaves the next prompt. The model assumes ${MODEL.charsPerToken} for every arm and \`fixtures/calibrate\` 4.00, so both undercount real tokens. No session used GitHub MCP, so MCP's JSON ratio is unmeasured.`,
     `- **Context tokens.** The pr-shepherd and PR-state results whose size the next request's prompt growth pins down (${num(mChars)} characters) measured, per-result wrapper included, ${num(mTok)} tokens; the model's ${MODEL.charsPerToken} characters per token gives ${num(mChars / MODEL.charsPerToken)}.`,
-    `- **Rate limit.** The debug logs record every request: pr-shepherd spent ${num(api.cost)} GraphQL points on queries${api.noCost ? ` (a lower bound: ${num(api.noCost)} ${api.noCost === 1 ? "query" : "queries"} logged no cost)` : ""}, ${num(api.mut)} mutation requests (GitHub reports no cost for these; at 1 point each the total is ${num(api.cost + api.mut)}) and ${num(api.rest)} REST requests. The model charges ${num(T.shepherd.graphqlPoints)} points and ${num(T.shepherd.restCore)} REST requests for the same timeline (GraphQL transport, which every session used). The model's REST requests are one mergeability refresh per READY poll, the rate measured there; the measured remainder falls on CANCEL and FIX_CODE polls, which the model does not charge. No poll recorded \`apiUsage\` (none ran with \`--verbose\`), so these come from the per-request log entries.`,
+    `- **Rate limit.** The debug logs record every request: pr-shepherd spent ${num(api.cost)} GraphQL points on queries${api.noCost ? ` (a lower bound: ${num(api.noCost)} ${api.noCost === 1 ? "query" : "queries"} logged no cost)` : ""}, ${num(api.mut)} mutation requests (GitHub reports no cost for these; at 1 point each the total is ${num(api.cost + api.mut)}) and ${num(api.rest)} REST requests. The model charges ${num(T.shepherd.graphqlPoints)} points and ${num(T.shepherd.restCore)} REST requests for the same timeline (GraphQL transport, which every session used). The model's REST requests are one mergeability refresh per READY or ready-delay CANCEL poll, the rate measured there; the measured remainder falls on other polls (mostly FIX_CODE), which the model does not charge. No poll recorded \`apiUsage\` (none ran with \`--verbose\`), so these come from the per-request log entries.`,
     `- **Turns.** The agents spent ${num(sh.reduce((s, b) => s + b.turns, 0))} turns on pr-shepherd calls and reads of their output; the model counts ${num(T.shepherd.turns)}, one per invocation.`,
     "",
   );

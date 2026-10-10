@@ -452,7 +452,18 @@ token usage, never text, IDs or paths. The bench reads only that file.
   none pending (pr-shepherd's debounce) is a plain sleep, since `--watch`
   would return at once. Consecutive waits of one kind form one call, in
   timeline order. The baselines' PR body leaves out the Shepherd
-  Journal block, which only pr-shepherd writes.
+  Journal block, which only pr-shepherd writes. Text sizes are their
+  JSON-escaped lengths, since the baselines read them as JSON, and each
+  thread comment's filler URL keeps its numeric `#discussion_r` anchor for
+  MCP's reply tool.
+- **pr-shepherd's charge.** A poll pays one point per tick, one more per
+  later tick whose fingerprint missed (the logs show which did), and on a
+  READY or ready-delay CANCEL tick one REST mergeability refresh; the
+  ready-delay CANCEL also reads on the two-point receipt query. An `apply
+review` pays the head-SHA read when it passed `--require-sha`, and, with
+  replies, the thread-transcript read and one recovery read per 10 replies,
+  plus one request per 10 mutations. Requests, costs and output past
+  `--until` close an invocation but add nothing to its record.
 - **Attribution.** Concurrent invocations interleave in one debug log; a
   request, response or output that matches more than one open invocation is
   assigned by heuristic, and the report prints how many were (up to

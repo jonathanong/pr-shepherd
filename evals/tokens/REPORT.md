@@ -357,35 +357,32 @@ Today's pr-shepherd runs on 8 real PRs (#520, #521, #522, #523, #530, #531, #532
 
 | PR | rounds | polls (ticks) | FIX_CODE | applies | threads | cost: pr-shepherd / gh / MCP | turns: pr-shepherd / gh / MCP | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| #520 | 4 | 15 (30) | 11 | 7 | 17 | 106,887 / 431,785 / 530,723 | 22 / 36 / 48 | 62 / 63 / 29 | 4 / 15 / 119 |
-| #521 | 4 | 9 (16) | 5 | 3 | 2 | 44,778 / 107,458 / 134,951 | 12 / 19 / 24 | 29 / 32 / 11 | 3 / 2 / 61 |
-| #522 | 3 | 14 (33) | 11 | 7 | 8 | 87,300 / 289,762 / 384,187 | 21 / 36 / 55 | 63 / 59 / 22 | 3 / 9 / 116 |
-| #523 | 5 | 12 (23) | 7 | 7 | 2 | 69,183 / 157,582 / 211,342 | 19 / 27 / 37 | 51 / 44 / 15 | 4 / 3 / 85 |
-| #530 | 3 | 8 (17) | 5 | 4 | 5 | 50,328 / 97,684 / 135,946 | 12 / 20 / 27 | 32 / 28 / 13 | 3 / 5 / 63 |
-| #531 | 1 | 4 (7) | 2 | 2 | 0 | 21,417 / 43,462 / 53,126 | 6 / 9 / 10 | 12 / 13 / 4 | 1 / 0 / 26 |
-| #532 | 2 | 6 (12) | 4 | 4 | 2 | 37,622 / 75,226 / 97,601 | 10 / 16 / 19 | 25 / 22 / 8 | 2 / 2 / 44 |
-| #533 | 1 | 3 (6) | 2 | 2 | 1 | 20,686 / 40,201 / 51,503 | 5 / 8 / 10 | 14 / 15 / 4 | 1 / 1 / 22 |
-| **all** | 23 | 71 (144) | 47 | 36 | 37 | 438,201 / 1,243,160 / 1,599,379 | 107 / 171 / 230 | 288 / 276 / 106 | 21 / 37 / 536 |
+| #520 | 4 | 15 (30) | 11 | 7 | 17 | 106,887 / 434,003 / 536,478 | 22 / 36 / 48 | 51 / 63 / 29 | 4 / 15 / 119 |
+| #521 | 4 | 9 (16) | 5 | 3 | 2 | 44,778 / 108,054 / 135,592 | 12 / 19 / 24 | 25 / 32 / 11 | 4 / 2 / 61 |
+| #522 | 3 | 14 (33) | 11 | 7 | 8 | 87,300 / 292,817 / 387,340 | 21 / 36 / 55 | 57 / 59 / 22 | 3 / 9 / 116 |
+| #523 | 5 | 12 (23) | 7 | 7 | 2 | 69,183 / 158,579 / 212,527 | 19 / 27 / 37 | 45 / 44 / 15 | 5 / 3 / 85 |
+| #530 | 3 | 8 (17) | 5 | 4 | 5 | 50,328 / 98,058 / 136,452 | 12 / 20 / 27 | 28 / 28 / 13 | 3 / 5 / 63 |
+| #531 | 1 | 4 (7) | 2 | 2 | 0 | 21,417 / 43,609 / 53,317 | 6 / 9 / 10 | 10 / 13 / 4 | 1 / 0 / 26 |
+| #532 | 2 | 6 (12) | 4 | 4 | 2 | 37,622 / 75,477 / 97,948 | 10 / 16 / 19 | 21 / 22 / 8 | 2 / 2 / 44 |
+| #533 | 1 | 3 (6) | 2 | 2 | 1 | 20,686 / 40,347 / 51,692 | 5 / 8 / 10 | 12 / 15 / 4 | 1 / 1 / 22 |
+| **all** | 23 | 71 (144) | 47 | 36 | 37 | 438,201 / 1,250,944 / 1,611,346 | 107 / 171 / 230 | 249 / 276 / 106 | 23 / 37 / 536 |
 
-Modeled cost of pr-shepherd vs. gh: −65%; vs. MCP: −73%. Tool tokens: −84% / −88%.
+Modeled cost of pr-shepherd vs. gh: −65%; vs. MCP: −73%. Tool tokens: −85% / −88%.
 
 Where modeled pr-shepherd costs more on a real PR. These are not gated: `--check` gates the synthetic sessions, where the same metrics are already pending.
 
-- #520 graphqlPoints vs. MCP: 62 vs. 29 (#525)
-- #521 restCore vs. gh: 3 vs. 2 (#525)
-- #521 graphqlPoints vs. MCP: 29 vs. 11 (#525)
-- #522 graphqlPoints vs. gh: 63 vs. 59 (#525)
-- #522 graphqlPoints vs. MCP: 63 vs. 22 (#525)
-- #523 graphqlPoints vs. gh: 51 vs. 44 (#525)
-- #523 restCore vs. gh: 4 vs. 3 (#525)
-- #523 graphqlPoints vs. MCP: 51 vs. 15 (#525)
-- #530 graphqlPoints vs. gh: 32 vs. 28 (#525)
-- #530 graphqlPoints vs. MCP: 32 vs. 13 (#525)
+- #520 graphqlPoints vs. MCP: 51 vs. 29 (#525)
+- #521 restCore vs. gh: 4 vs. 2 (#525)
+- #521 graphqlPoints vs. MCP: 25 vs. 11 (#525)
+- #522 graphqlPoints vs. MCP: 57 vs. 22 (#525)
+- #523 graphqlPoints vs. gh: 45 vs. 44 (#525)
+- #523 restCore vs. gh: 5 vs. 3 (#525)
+- #523 graphqlPoints vs. MCP: 45 vs. 15 (#525)
+- #530 graphqlPoints vs. MCP: 28 vs. 13 (#525)
 - #531 restCore vs. gh: 1 vs. 0 (#525)
-- #531 graphqlPoints vs. MCP: 12 vs. 4 (#525)
-- #532 graphqlPoints vs. gh: 25 vs. 22 (#525)
-- #532 graphqlPoints vs. MCP: 25 vs. 8 (#525)
-- #533 graphqlPoints vs. MCP: 14 vs. 4 (#525)
+- #531 graphqlPoints vs. MCP: 10 vs. 4 (#525)
+- #532 graphqlPoints vs. MCP: 21 vs. 8 (#525)
+- #533 graphqlPoints vs. MCP: 12 vs. 4 (#525)
 
 At the measured characters per token (pr-shepherd 2.19, gh and MCP 2.53; MCP's is unmeasured), modeled cost vs. gh: −67%; vs. MCP: −74%. Tool tokens: −82% / −86%. No PR's verdict flips.
 
@@ -393,7 +390,7 @@ At the measured characters per token (pr-shepherd 2.19, gh and MCP 2.53; MCP's i
 
 - **Characters per token.** A result's tokens are the next request's prompt growth, less the calling request's output. Fitted on the 220 clean results (one result between two requests, nothing else) whose request had no thinking block: 2.53 characters per token plus 279 tokens per result (R² 0.96); per result of 2,000+ characters, median 2.43, 10th–90th percentile 2.18–2.8. pr-shepherd's own output alone: 2.19 (44 results, R² 0.91). With thinking requests included the fit degrades (494 results, 2.63, R² 0.05): thinking counts as output but leaves the next prompt. The model assumes 3.5 for every arm and `fixtures/calibrate` 4.00, so both undercount real tokens. No session used GitHub MCP, so MCP's JSON ratio is unmeasured.
 - **Context tokens.** The pr-shepherd and PR-state results whose size the next request's prompt growth pins down (181,357 characters) measured, per-result wrapper included, 112,711 tokens; the model's 3.5 characters per token gives 51,816.
-- **Rate limit.** The debug logs record every request: pr-shepherd spent 308 GraphQL points on queries (a lower bound: 1 query logged no cost), 50 mutation requests (GitHub reports no cost for these; at 1 point each the total is 358) and 31 REST requests. The model charges 288 points and 21 REST requests for the same timeline (GraphQL transport, which every session used). The model's REST requests are one mergeability refresh per READY poll, the rate measured there; the measured remainder falls on CANCEL and FIX_CODE polls, which the model does not charge. No poll recorded `apiUsage` (none ran with `--verbose`), so these come from the per-request log entries.
+- **Rate limit.** The debug logs record every request: pr-shepherd spent 308 GraphQL points on queries (a lower bound: 1 query logged no cost), 50 mutation requests (GitHub reports no cost for these; at 1 point each the total is 358) and 31 REST requests. The model charges 249 points and 23 REST requests for the same timeline (GraphQL transport, which every session used). The model's REST requests are one mergeability refresh per READY or ready-delay CANCEL poll, the rate measured there; the measured remainder falls on other polls (mostly FIX_CODE), which the model does not charge. No poll recorded `apiUsage` (none ran with `--verbose`), so these come from the per-request log entries.
 - **Turns.** The agents spent 107 turns on pr-shepherd calls and reads of their output; the model counts 107, one per invocation.
 
 ### GraphQL points by query
@@ -411,7 +408,7 @@ No request fell under review/resolve fetch or stack summary: no session ran thos
 
 Mutations log no cost and are not in the table. Requests: BulkApply from `apply review` 35, BulkApply from polls 12, UpdatePrBody from `apply journal` 2, UpdatePrBody from polls 1.
 
-The model charges 209 points for these polls (1.45 per tick), 99 short of the measured total. The 39 points outside the tick queries do not account for it: the tick itself costs more than modeled. A real tick spent 1.87 points (269 over 144 ticks): the fingerprint and BatchPr 181 points (1.26 per tick), within the model's charge, plus 88 (0.61 per tick) for BatchPr's supplements (CheckRunAnnotationsBatch 49, BaseBehind 39), which the replay does not charge: the logs do not say which state triggered them, and the bench charges them only in scenarios whose state does.
+The model charges 170 points for these polls (1.18 per tick), 138 short of the measured total. The 39 points outside the tick queries do not account for it: the tick itself costs more than modeled. A real tick spent 1.87 points (269 over 144 ticks): the fingerprint and BatchPr 181 points (1.26 per tick), above the model's charge, plus 88 (0.61 per tick) for BatchPr's supplements (CheckRunAnnotationsBatch 49, BaseBehind 39), which the replay does not charge: the logs do not say which state triggered them, and the bench charges them only in scenarios whose state does.
 
 ### Where the real tokens went
 

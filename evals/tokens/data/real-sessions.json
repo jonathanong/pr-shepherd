@@ -271,6 +271,7 @@
           "kind": "poll",
           "untilTerminal": true,
           "ticks": 2,
+          "changedTicks": 1,
           "action": "READY",
           "outChars": 610,
           "graphqlRequests": 5,
@@ -432,6 +433,7 @@
           "seconds": 64,
           "kind": "poll",
           "ticks": 2,
+          "changedTicks": 1,
           "action": "READY",
           "outChars": 609,
           "graphqlRequests": 5,
@@ -558,6 +560,7 @@
           "seconds": 128,
           "kind": "poll",
           "ticks": 3,
+          "changedTicks": 1,
           "action": "FIX_CODE",
           "outChars": 2379,
           "graphqlRequests": 10,
@@ -707,7 +710,7 @@
       },
       "content": {
         "titleChars": 55,
-        "bodyChars": 1398,
+        "bodyChars": 1423,
         "journalChars": 0,
         "threads": [
           {
@@ -718,12 +721,12 @@
             "comments": [
               {
                 "t": -1812,
-                "chars": 605,
+                "chars": 609,
                 "urlChars": 74
               },
               {
                 "t": 221,
-                "chars": 252,
+                "chars": 253,
                 "urlChars": 74
               }
             ]
@@ -736,12 +739,12 @@
             "comments": [
               {
                 "t": -1811,
-                "chars": 732,
+                "chars": 738,
                 "urlChars": 74
               },
               {
                 "t": 222,
-                "chars": 252,
+                "chars": 253,
                 "urlChars": 74
               }
             ]
@@ -754,12 +757,12 @@
             "comments": [
               {
                 "t": -1811,
-                "chars": 544,
+                "chars": 548,
                 "urlChars": 74
               },
               {
                 "t": 223,
-                "chars": 252,
+                "chars": 253,
                 "urlChars": 74
               }
             ]
@@ -772,12 +775,12 @@
             "comments": [
               {
                 "t": -1811,
-                "chars": 792,
+                "chars": 798,
                 "urlChars": 74
               },
               {
                 "t": 224,
-                "chars": 252,
+                "chars": 253,
                 "urlChars": 74
               }
             ]
@@ -790,12 +793,12 @@
             "comments": [
               {
                 "t": -1811,
-                "chars": 819,
+                "chars": 825,
                 "urlChars": 74
               },
               {
                 "t": 224,
-                "chars": 252,
+                "chars": 253,
                 "urlChars": 74
               }
             ]
@@ -808,17 +811,17 @@
             "comments": [
               {
                 "t": -1807,
-                "chars": 2155,
+                "chars": 2246,
                 "urlChars": 74
               },
               {
                 "t": 225,
-                "chars": 252,
+                "chars": 253,
                 "urlChars": 74
               },
               {
                 "t": 294,
-                "chars": 892,
+                "chars": 910,
                 "urlChars": 74
               }
             ]
@@ -831,17 +834,17 @@
             "comments": [
               {
                 "t": -1807,
-                "chars": 2255,
+                "chars": 2338,
                 "urlChars": 74
               },
               {
                 "t": 226,
-                "chars": 252,
+                "chars": 253,
                 "urlChars": 74
               },
               {
                 "t": 259,
-                "chars": 906,
+                "chars": 924,
                 "urlChars": 74
               }
             ]
@@ -854,17 +857,17 @@
             "comments": [
               {
                 "t": -1807,
-                "chars": 1360,
+                "chars": 1394,
                 "urlChars": 74
               },
               {
                 "t": 226,
-                "chars": 252,
+                "chars": 253,
                 "urlChars": 74
               },
               {
                 "t": 259,
-                "chars": 882,
+                "chars": 900,
                 "urlChars": 74
               }
             ]
@@ -877,17 +880,17 @@
             "comments": [
               {
                 "t": -1807,
-                "chars": 1365,
+                "chars": 1399,
                 "urlChars": 74
               },
               {
                 "t": 227,
-                "chars": 252,
+                "chars": 253,
                 "urlChars": 74
               },
               {
                 "t": 278,
-                "chars": 907,
+                "chars": 925,
                 "urlChars": 74
               }
             ]
@@ -900,17 +903,17 @@
             "comments": [
               {
                 "t": -1807,
-                "chars": 1271,
+                "chars": 1306,
                 "urlChars": 74
               },
               {
                 "t": 228,
-                "chars": 252,
+                "chars": 253,
                 "urlChars": 74
               },
               {
                 "t": 290,
-                "chars": 875,
+                "chars": 893,
                 "urlChars": 74
               }
             ]
@@ -923,12 +926,12 @@
             "comments": [
               {
                 "t": 547,
-                "chars": 881,
+                "chars": 887,
                 "urlChars": 74
               },
               {
                 "t": 2532,
-                "chars": 219,
+                "chars": 220,
                 "urlChars": 74
               }
             ]
@@ -941,12 +944,12 @@
             "comments": [
               {
                 "t": 547,
-                "chars": 919,
+                "chars": 925,
                 "urlChars": 74
               },
               {
                 "t": 2533,
-                "chars": 219,
+                "chars": 220,
                 "urlChars": 74
               }
             ]
@@ -959,12 +962,12 @@
             "comments": [
               {
                 "t": 547,
-                "chars": 686,
+                "chars": 692,
                 "urlChars": 74
               },
               {
                 "t": 2534,
-                "chars": 219,
+                "chars": 220,
                 "urlChars": 74
               }
             ]
@@ -977,12 +980,12 @@
             "comments": [
               {
                 "t": 2772,
-                "chars": 880,
+                "chars": 886,
                 "urlChars": 74
               },
               {
                 "t": 3673,
-                "chars": 156,
+                "chars": 157,
                 "urlChars": 74
               }
             ]
@@ -995,7 +998,7 @@
             "comments": [
               {
                 "t": 3922,
-                "chars": 677,
+                "chars": 682,
                 "urlChars": 74
               }
             ]
@@ -1008,7 +1011,7 @@
             "comments": [
               {
                 "t": 3922,
-                "chars": 826,
+                "chars": 832,
                 "urlChars": 74
               }
             ]
@@ -1021,7 +1024,7 @@
             "comments": [
               {
                 "t": 3922,
-                "chars": 604,
+                "chars": 612,
                 "urlChars": 74
               }
             ]
@@ -1036,13 +1039,13 @@
           },
           {
             "t": -2046,
-            "chars": 860,
+            "chars": 888,
             "urlChars": 75,
             "minimized": true
           },
           {
             "t": -2037,
-            "chars": 13764,
+            "chars": 14184,
             "urlChars": 75,
             "minimized": true
           },
@@ -1069,12 +1072,12 @@
           {
             "t": -1812,
             "state": "COMMENTED",
-            "chars": 623
+            "chars": 650
           },
           {
             "t": -1805,
             "state": "DISMISSED",
-            "chars": 5597
+            "chars": 5728
           },
           {
             "t": 221,
@@ -1154,7 +1157,7 @@
           {
             "t": 547,
             "state": "COMMENTED",
-            "chars": 623
+            "chars": 650
           },
           {
             "t": 2532,
@@ -1174,7 +1177,7 @@
           {
             "t": 2772,
             "state": "COMMENTED",
-            "chars": 623
+            "chars": 650
           },
           {
             "t": 3673,
@@ -1184,7 +1187,7 @@
           {
             "t": 3922,
             "state": "COMMENTED",
-            "chars": 623
+            "chars": 650
           }
         ],
         "commits": [
@@ -1440,6 +1443,7 @@
           "kind": "poll",
           "untilTerminal": true,
           "ticks": 2,
+          "changedTicks": 1,
           "action": "READY",
           "outChars": 608,
           "graphqlRequests": 5,
@@ -1601,6 +1605,7 @@
           "seconds": 65,
           "kind": "poll",
           "ticks": 2,
+          "changedTicks": 1,
           "action": "READY",
           "outChars": 608,
           "graphqlRequests": 5,
@@ -1674,6 +1679,7 @@
           "ticks": 1,
           "action": "CANCEL",
           "outChars": 609,
+          "readyDelayElapsed": true,
           "graphqlRequests": 1,
           "graphqlCost": 2,
           "graphqlMutations": 0,
@@ -1716,7 +1722,7 @@
       },
       "content": {
         "titleChars": 65,
-        "bodyChars": 1006,
+        "bodyChars": 1022,
         "journalChars": 0,
         "threads": [
           {
@@ -1727,12 +1733,12 @@
             "comments": [
               {
                 "t": 317,
-                "chars": 926,
+                "chars": 932,
                 "urlChars": 74
               },
               {
                 "t": 1950,
-                "chars": 197,
+                "chars": 198,
                 "urlChars": 74
               }
             ]
@@ -1745,12 +1751,12 @@
             "comments": [
               {
                 "t": 317,
-                "chars": 609,
+                "chars": 615,
                 "urlChars": 74
               },
               {
                 "t": 1950,
-                "chars": 197,
+                "chars": 198,
                 "urlChars": 74
               }
             ]
@@ -1765,13 +1771,13 @@
           },
           {
             "t": 1,
-            "chars": 4390,
+            "chars": 4516,
             "urlChars": 75,
             "minimized": true
           },
           {
             "t": 2,
-            "chars": 860,
+            "chars": 888,
             "urlChars": 75,
             "minimized": true
           },
@@ -1786,7 +1792,7 @@
           {
             "t": 317,
             "state": "COMMENTED",
-            "chars": 623
+            "chars": 650
           },
           {
             "t": 1950,
@@ -1958,6 +1964,7 @@
           "kind": "poll",
           "untilTerminal": true,
           "ticks": 2,
+          "changedTicks": 1,
           "action": "READY",
           "outChars": 608,
           "graphqlRequests": 5,
@@ -2119,6 +2126,7 @@
           "seconds": 188,
           "kind": "poll",
           "ticks": 4,
+          "changedTicks": 2,
           "action": "FIX_CODE",
           "outChars": 1282,
           "graphqlRequests": 8,
@@ -2150,6 +2158,7 @@
           "seconds": 187,
           "kind": "poll",
           "ticks": 4,
+          "changedTicks": 2,
           "action": "FIX_CODE",
           "outChars": 7156,
           "graphqlRequests": 6,
@@ -2261,6 +2270,7 @@
           "seconds": 127,
           "kind": "poll",
           "ticks": 3,
+          "changedTicks": 2,
           "action": "READY",
           "outChars": 608,
           "graphqlRequests": 8,
@@ -2441,6 +2451,7 @@
           "seconds": 65,
           "kind": "poll",
           "ticks": 2,
+          "changedTicks": 1,
           "action": "READY",
           "outChars": 609,
           "graphqlRequests": 5,
@@ -2497,7 +2508,7 @@
       },
       "content": {
         "titleChars": 68,
-        "bodyChars": 1938,
+        "bodyChars": 1956,
         "journalChars": 0,
         "threads": [
           {
@@ -2508,12 +2519,12 @@
             "comments": [
               {
                 "t": 294,
-                "chars": 721,
+                "chars": 729,
                 "urlChars": 74
               },
               {
                 "t": 1765,
-                "chars": 247,
+                "chars": 248,
                 "urlChars": 74
               }
             ]
@@ -2526,12 +2537,12 @@
             "comments": [
               {
                 "t": 294,
-                "chars": 608,
+                "chars": 612,
                 "urlChars": 74
               },
               {
                 "t": 1766,
-                "chars": 247,
+                "chars": 248,
                 "urlChars": 74
               }
             ]
@@ -2544,12 +2555,12 @@
             "comments": [
               {
                 "t": 294,
-                "chars": 817,
+                "chars": 821,
                 "urlChars": 74
               },
               {
                 "t": 1767,
-                "chars": 247,
+                "chars": 248,
                 "urlChars": 74
               }
             ]
@@ -2562,12 +2573,12 @@
             "comments": [
               {
                 "t": 294,
-                "chars": 858,
+                "chars": 864,
                 "urlChars": 74
               },
               {
                 "t": 1768,
-                "chars": 247,
+                "chars": 248,
                 "urlChars": 74
               }
             ]
@@ -2580,17 +2591,17 @@
             "comments": [
               {
                 "t": 2134,
-                "chars": 5158,
+                "chars": 5308,
                 "urlChars": 74
               },
               {
                 "t": 2259,
-                "chars": 168,
+                "chars": 169,
                 "urlChars": 74
               },
               {
                 "t": 2294,
-                "chars": 1003,
+                "chars": 1021,
                 "urlChars": 74
               }
             ]
@@ -2603,12 +2614,12 @@
             "comments": [
               {
                 "t": 2597,
-                "chars": 823,
+                "chars": 829,
                 "urlChars": 74
               },
               {
                 "t": 3621,
-                "chars": 233,
+                "chars": 234,
                 "urlChars": 74
               }
             ]
@@ -2621,12 +2632,12 @@
             "comments": [
               {
                 "t": 2597,
-                "chars": 832,
+                "chars": 838,
                 "urlChars": 74
               },
               {
                 "t": 3622,
-                "chars": 233,
+                "chars": 234,
                 "urlChars": 74
               }
             ]
@@ -2639,12 +2650,12 @@
             "comments": [
               {
                 "t": 2597,
-                "chars": 801,
+                "chars": 807,
                 "urlChars": 74
               },
               {
                 "t": 3622,
-                "chars": 233,
+                "chars": 234,
                 "urlChars": 74
               }
             ]
@@ -2659,13 +2670,13 @@
           },
           {
             "t": -2,
-            "chars": 12606,
+            "chars": 12969,
             "urlChars": 75,
             "minimized": true
           },
           {
             "t": 0,
-            "chars": 865,
+            "chars": 893,
             "urlChars": 75,
             "minimized": true
           },
@@ -2692,7 +2703,7 @@
           {
             "t": 294,
             "state": "COMMENTED",
-            "chars": 623
+            "chars": 650
           },
           {
             "t": 1765,
@@ -2717,7 +2728,7 @@
           {
             "t": 2135,
             "state": "DISMISSED",
-            "chars": 3776
+            "chars": 3888
           },
           {
             "t": 2259,
@@ -2732,7 +2743,7 @@
           {
             "t": 2597,
             "state": "COMMENTED",
-            "chars": 623
+            "chars": 650
           },
           {
             "t": 3621,
@@ -2991,6 +3002,7 @@
           "kind": "poll",
           "untilTerminal": true,
           "ticks": 2,
+          "changedTicks": 1,
           "action": "READY",
           "outChars": 608,
           "graphqlRequests": 6,
@@ -3194,6 +3206,7 @@
           "seconds": 64,
           "kind": "poll",
           "ticks": 2,
+          "changedTicks": 1,
           "action": "READY",
           "outChars": 608,
           "graphqlRequests": 6,
@@ -3381,6 +3394,7 @@
           "seconds": 126,
           "kind": "poll",
           "ticks": 3,
+          "changedTicks": 1,
           "action": "READY",
           "outChars": 608,
           "graphqlRequests": 7,
@@ -3414,6 +3428,7 @@
           "ticks": 1,
           "action": "CANCEL",
           "outChars": 609,
+          "readyDelayElapsed": true,
           "graphqlRequests": 1,
           "graphqlCost": 2,
           "graphqlMutations": 0,
@@ -3456,8 +3471,8 @@
       },
       "content": {
         "titleChars": 64,
-        "bodyChars": 2932,
-        "journalChars": 646,
+        "bodyChars": 2981,
+        "journalChars": 654,
         "threads": [
           {
             "resolved": true,
@@ -3467,12 +3482,12 @@
             "comments": [
               {
                 "t": 191,
-                "chars": 938,
+                "chars": 944,
                 "urlChars": 74
               },
               {
                 "t": 1174,
-                "chars": 208,
+                "chars": 209,
                 "urlChars": 74
               }
             ]
@@ -3485,12 +3500,12 @@
             "comments": [
               {
                 "t": 1411,
-                "chars": 899,
+                "chars": 905,
                 "urlChars": 74
               },
               {
                 "t": 2319,
-                "chars": 171,
+                "chars": 172,
                 "urlChars": 74
               }
             ]
@@ -3505,13 +3520,13 @@
           },
           {
             "t": -16,
-            "chars": 860,
+            "chars": 888,
             "urlChars": 75,
             "minimized": true
           },
           {
             "t": -12,
-            "chars": 6071,
+            "chars": 6233,
             "urlChars": 75,
             "minimized": true
           },
@@ -3523,7 +3538,7 @@
           },
           {
             "t": 2319,
-            "chars": 267,
+            "chars": 268,
             "urlChars": 75,
             "minimized": true
           }
@@ -3532,7 +3547,7 @@
           {
             "t": 191,
             "state": "COMMENTED",
-            "chars": 623
+            "chars": 650
           },
           {
             "t": 1174,
@@ -3542,7 +3557,7 @@
           {
             "t": 1411,
             "state": "COMMENTED",
-            "chars": 623
+            "chars": 650
           },
           {
             "t": 2319,
@@ -3750,6 +3765,7 @@
           "seconds": 63,
           "kind": "poll",
           "ticks": 2,
+          "changedTicks": 1,
           "action": "READY",
           "outChars": 548,
           "graphqlRequests": 4,
@@ -3777,6 +3793,7 @@
           "seconds": 124,
           "kind": "poll",
           "ticks": 3,
+          "changedTicks": 1,
           "action": "FIX_CODE",
           "outChars": 1252,
           "graphqlRequests": 6,
@@ -3804,6 +3821,7 @@
           "seconds": 63,
           "kind": "poll",
           "ticks": 2,
+          "changedTicks": 1,
           "action": "READY",
           "outChars": 511,
           "graphqlRequests": 4,
@@ -3981,6 +3999,7 @@
           "seconds": 64,
           "kind": "poll",
           "ticks": 2,
+          "changedTicks": 1,
           "action": "READY",
           "outChars": 548,
           "graphqlRequests": 5,
@@ -4033,7 +4052,7 @@
       },
       "content": {
         "titleChars": 73,
-        "bodyChars": 3946,
+        "bodyChars": 3995,
         "journalChars": 0,
         "threads": [
           {
@@ -4044,7 +4063,7 @@
             "comments": [
               {
                 "t": 440,
-                "chars": 851,
+                "chars": 857,
                 "urlChars": 74
               }
             ]
@@ -4057,7 +4076,7 @@
             "comments": [
               {
                 "t": 440,
-                "chars": 834,
+                "chars": 840,
                 "urlChars": 74
               }
             ]
@@ -4070,7 +4089,7 @@
             "comments": [
               {
                 "t": 440,
-                "chars": 869,
+                "chars": 875,
                 "urlChars": 74
               }
             ]
@@ -4083,7 +4102,7 @@
             "comments": [
               {
                 "t": 440,
-                "chars": 785,
+                "chars": 791,
                 "urlChars": 74
               }
             ]
@@ -4096,7 +4115,7 @@
             "comments": [
               {
                 "t": 440,
-                "chars": 812,
+                "chars": 818,
                 "urlChars": 74
               }
             ]
@@ -4105,7 +4124,7 @@
         "comments": [
           {
             "t": -23,
-            "chars": 3097,
+            "chars": 3171,
             "urlChars": 75,
             "minimized": true
           },
@@ -4117,7 +4136,7 @@
           },
           {
             "t": -12,
-            "chars": 865,
+            "chars": 893,
             "urlChars": 75,
             "minimized": true
           },
@@ -4132,7 +4151,7 @@
           {
             "t": 440,
             "state": "COMMENTED",
-            "chars": 623
+            "chars": 650
           }
         ],
         "commits": [
@@ -4299,6 +4318,7 @@
           "seconds": 63,
           "kind": "poll",
           "ticks": 2,
+          "changedTicks": 1,
           "action": null,
           "outChars": null,
           "graphqlRequests": 4,
@@ -4351,7 +4371,7 @@
       },
       "content": {
         "titleChars": 68,
-        "bodyChars": 1893,
+        "bodyChars": 1924,
         "journalChars": 0,
         "threads": [],
         "comments": [
@@ -4363,13 +4383,13 @@
           },
           {
             "t": -1068,
-            "chars": 3097,
+            "chars": 3171,
             "urlChars": 75,
             "minimized": true
           },
           {
             "t": -1067,
-            "chars": 860,
+            "chars": 888,
             "urlChars": 75,
             "minimized": true
           },
@@ -4493,6 +4513,7 @@
           "seconds": 63,
           "kind": "poll",
           "ticks": 2,
+          "changedTicks": 1,
           "action": "READY",
           "outChars": 511,
           "graphqlRequests": 4,
@@ -4675,6 +4696,7 @@
           "seconds": 64,
           "kind": "poll",
           "ticks": 2,
+          "changedTicks": 1,
           "action": "READY",
           "outChars": 548,
           "graphqlRequests": 4,
@@ -4727,7 +4749,7 @@
       },
       "content": {
         "titleChars": 62,
-        "bodyChars": 3173,
+        "bodyChars": 3223,
         "journalChars": 0,
         "threads": [
           {
@@ -4738,7 +4760,7 @@
             "comments": [
               {
                 "t": 143,
-                "chars": 629,
+                "chars": 633,
                 "urlChars": 74
               }
             ]
@@ -4751,7 +4773,7 @@
             "comments": [
               {
                 "t": 143,
-                "chars": 619,
+                "chars": 623,
                 "urlChars": 74
               }
             ]
@@ -4766,13 +4788,13 @@
           },
           {
             "t": -121,
-            "chars": 3097,
+            "chars": 3171,
             "urlChars": 75,
             "minimized": true
           },
           {
             "t": 146,
-            "chars": 858,
+            "chars": 886,
             "urlChars": 75,
             "minimized": false
           }
@@ -4781,7 +4803,7 @@
           {
             "t": 142,
             "state": "COMMENTED",
-            "chars": 623
+            "chars": 650
           }
         ],
         "commits": [
@@ -5009,6 +5031,7 @@
           "seconds": 64,
           "kind": "poll",
           "ticks": 2,
+          "changedTicks": 1,
           "action": "READY",
           "outChars": 548,
           "graphqlRequests": 5,
@@ -5065,7 +5088,7 @@
       },
       "content": {
         "titleChars": 84,
-        "bodyChars": 2843,
+        "bodyChars": 2884,
         "journalChars": 0,
         "threads": [
           {
@@ -5076,12 +5099,12 @@
             "comments": [
               {
                 "t": -58,
-                "chars": 974,
+                "chars": 980,
                 "urlChars": 74
               },
               {
                 "t": 282,
-                "chars": 257,
+                "chars": 258,
                 "urlChars": 74
               }
             ]
@@ -5096,13 +5119,13 @@
           },
           {
             "t": -294,
-            "chars": 3097,
+            "chars": 3171,
             "urlChars": 75,
             "minimized": true
           },
           {
             "t": -54,
-            "chars": 860,
+            "chars": 888,
             "urlChars": 75,
             "minimized": true
           },
@@ -5117,7 +5140,7 @@
           {
             "t": -58,
             "state": "COMMENTED",
-            "chars": 623
+            "chars": 650
           },
           {
             "t": 282,
