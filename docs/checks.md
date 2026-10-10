@@ -54,7 +54,7 @@ GitHub Actions concurrency groups cancel an in-flight workflow run when a newer 
 Shepherd groups check runs by workflow — keyed on the Actions workflow's numeric `databaseId` (`workflowId`), falling back to the workflow display name (`workflowName`) when the ID is unavailable for the run-ID rule. A check is reclassified from `failing` to `superseded` only when its own `conclusion` is `CANCELLED` and one of these forms of newer-run evidence is present:
 
 - A check in the same workflow, event, scope, and commit has a strictly greater numeric `runId`.
-- A completed `SUCCESS` check has the same exact check name, stable workflow ID, event, scope, and commit, and both its start and completion timestamps are strictly later than the cancelled check's. This evidence requires a distinct, lower numeric `runId` on the successful check, non-null matching event, and valid positive timestamps with completion at or after start.
+- A completed `SUCCESS` check has the same exact check name, stable workflow ID, event, scope, and commit, and both its start and completion timestamps are strictly later than the cancelled check's. This evidence requires a distinct, lower numeric `runId` on the successful check, non-null matching event, and finite positive timestamps. The successful check must complete at or after its start. A cancelled wrapper may report completion before start; both recorded boundaries still require strictly later matching success timestamps.
 
 The timestamp case covers duplicated triggers whose run IDs were allocated in a different order from when the runs actually started. It establishes only the observed run ordering in the loaded same-commit check context; it does not prove that both events used an identical PR base.
 

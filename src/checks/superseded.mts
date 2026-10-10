@@ -20,7 +20,7 @@ function numericRunId(check: CheckRun): number | undefined {
   return Number.isSafeInteger(id) ? id : undefined;
 }
 
-function validTimes(check: CheckRun): boolean {
+function validTimes(check: CheckRun, requireOrdered = true): boolean {
   const { startedAtUnix: start, completedAtUnix: completion } = check;
   return (
     typeof start === "number" &&
@@ -29,14 +29,16 @@ function validTimes(check: CheckRun): boolean {
     typeof completion === "number" &&
     Number.isFinite(completion) &&
     completion > 0 &&
-    completion >= start
+    (!requireOrdered || completion >= start)
   );
 }
 
 /**
  * A later-created run supersedes an older cancellation as before. GitHub can start
  * check jobs out of run-ID order, so a lower-ID run can also cover a cancellation
- * when its matching successful job actually started and completed later.
+ * when its matching successful job actually started and completed later. Cancelled
+ * wrappers can report completion before start; compare both observed boundaries
+ * without treating that reversed interval as a successful execution.
  */
 export function buildSupersededIndices(checks: CheckRun[]): Set<number> {
   const maxRunIdByGroup = new Map<string, number>();
@@ -64,7 +66,7 @@ export function buildSupersededIndices(checks: CheckRun[]): Set<number> {
       cancelled.status !== "COMPLETED" ||
       !cancelled.workflowId ||
       cancelled.event === null ||
-      !validTimes(cancelled)
+      !validTimes(cancelled, false)
     )
       return;
     const covered = checks.some((success, candidateIndex) => {
