@@ -1,11 +1,10 @@
 # PR #42 [READY]
 
-**status** `READY` · **merge** `BLOCKED` · **reviewDecision** `REVIEW_REQUIRED` · **state** `OPEN` · **repo** `owner/repo`
+**status** `READY` · **merge** `BLOCKED` · **reviewDecision** `REVIEW_REQUIRED` · **repo** `owner/repo`
 **summary** 1 passing · **remainingSeconds** 300
 Approvals: None [Required]
-Conversations Resolved: Yes [Not Required]
 
-READY: PR #42 is ready — 300s of ready-delay remaining — 1 passing, 0 in-progress — awaiting 1 approval
+READY: PR #42 is ready — 300s of ready-delay remaining — 1 passing — awaiting 1 approval
 
 ## Instructions
 
