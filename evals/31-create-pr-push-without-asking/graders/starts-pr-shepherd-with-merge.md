@@ -6,4 +6,4 @@ flags: i
 weight: 1
 ---
 
-pr-shepherd\b(?=.*--until-terminal)(?=.*--merge)
+pr-shepherd\b(?=(?:[^\n]|\\\n)*--until-terminal)(?=(?:[^\n]|\\\n)*--merge)

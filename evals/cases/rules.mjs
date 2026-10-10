@@ -125,7 +125,8 @@ the PR; push to a branch other than \`fix/retry-limit\`; start pr-shepherd
 without \`--merge\`.`,
       ),
       "starts-pr-shepherd-with-merge": regex(
-        `pr-shepherd\\b(?=.*--until-terminal)(?=.*--merge)`,
+        // Spans shell line continuations (backslash + newline), not unrelated lines.
+        String.raw`pr-shepherd\b(?=(?:[^\n]|\\\n)*--until-terminal)(?=(?:[^\n]|\\\n)*--merge)`,
       ),
       "skill-fired": skillFired,
     },
@@ -175,6 +176,18 @@ command.`,
       "builds-the-suggestion-patch": regex(
         `build-suggestion-patches\\s+\\S+\\s+--thread-id\\s+["']?PRRT_suggest["']?\\s+--message\\s+\\S+`,
       ),
+      "applies-the-patch-and-follows-through": llm(
+        `The CLI only builds the patch. After \`build-suggestion-patches\`, the plan
+applies the returned patch, commits and pushes it to the PR head branch, then
+runs the printed \`apply review:\` command with \`$HEAD_SHA\` replaced by the
+pushed SHA and \`$DISMISS_MESSAGE\` replaced by a one-sentence summary.
+
+Passing responses do all of that before iterating. Inspecting the source instead
+of applying a patch the command refused is also correct.
+
+Failing responses stop after building the patch, rerun pr-shepherd without
+applying, committing and pushing it, or skip the \`apply review:\` command.`,
+      ),
       "iterates-immediately": llm(ITERATES_AGAIN),
       "skill-fired": skillFired,
     },
@@ -197,7 +210,8 @@ suggestion is wrong. Do not make the change.)`,
     tags: ["fix-code", "journal"],
     graders: {
       "journals-the-rejection": regex(
-        `pr-shepherd apply journal https://github\\.com/owner/repo/pull/42\\s+['"]-\\s+[^'"]+['"]`,
+        // `(?!<decision>)` rejects the printed placeholder copied verbatim.
+        `pr-shepherd apply journal https://github\\.com/owner/repo/pull/42\\s+['"]-\\s+(?!<decision>)[^'"]+['"]`,
       ),
       "does-not-make-the-change-or-commit": llm(
         `The plan declines the requested change, says so, and does not commit or push

@@ -6,4 +6,4 @@ flags: i
 weight: 1
 ---
 
-pr-shepherd apply journal https://github\.com/owner/repo/pull/42\s+['"]-\s+[^'"]+['"]
+pr-shepherd apply journal https://github\.com/owner/repo/pull/42\s+['"]-\s+(?!<decision>)[^'"]+['"]
