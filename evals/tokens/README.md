@@ -87,6 +87,10 @@ loss.
   totals, which include setup. Setup makes no GitHub call, so it has no
   rate-limit cells.
 
+The event arm ("Event arm" below) is informational and not gated. It lives in
+its own report section, outside the session and rate-limit totals that
+`--check` reads, so it adds no loss and removes none.
+
 Today's losses are listed in [pending-losses.json](pending-losses.json). Each
 entry names its scope, metric, transport (rate-limit metrics only) and
 baseline, and links the issue that removes it: #528 for tokens and turns, #525
@@ -300,6 +304,78 @@ A call whose cost is not derivable from its command (a stack tick, a poll
 tail, a hidden mutation) carries an explicit `api`; every other call is
 classified from its command, and an unrecognized command throws.
 
+### Event arm
+
+The event arm models a local (non-cloud) session that waits without polling
+the full snapshot. A blocking `pr-shepherd wait` runs in the background and
+wakes the agent only on a relevant change or at `nextCheck`. That command does
+not exist yet; this is a costing for the webhook/event source brainstorm,
+#544. The arm is informational: it is not gated (see "The gate") and has its
+own REPORT.md section and Summary lines. `eventArm` in
+[scenarios.mjs](scenarios.mjs) derives it from the pr-shepherd arm, step by
+step, so it reuses that arm's outputs and its per-tick GraphQL costs. Each
+scenario's `event` spec says how the step wakes and how many detector reads
+change during its wait.
+
+Every assumption below is **assumed**, not measured. They are listed roughly
+by how far they move the result.
+
+- **A wake costs one more request than the blocking poll (assumed).** The
+  agent starts `wait` in the background, reads the host's acknowledgement in a
+  request of its own, and ends its turn. The wake notification then carries the
+  tick's output (assumed; a host that only signals completion would add a
+  Read call and another turn per wake). That extra request is +8 turns in a PR
+  session and +4 on a stack, and it is most of the arm's extra ITE. If the
+  agent started `wait` in the same turn as the step's last calls, its turns
+  would match the poll arm's.
+- **Reconcile (assumed).** A full snapshot runs `RECONCILE_MINUTES` (15)
+  after the last one and wakes the agent with a WAIT tick, because webhooks and
+  detectors can miss things. Every snapshot restarts the timer. No modeled wait
+  is 15 minutes long, so the sessions have no reconcile; an idle hour has 4.
+- **Detectors (assumed).** Every `DETECTOR_POLL_SECONDS` (60, the poll arm's
+  interval, so latency is unchanged), the wait sends one conditional
+  `If-None-Match` request to each of `EVENT_DETECTORS`: the pull, the head
+  commit's check runs, reviews, issue comments and review comments. ETags
+  persist across `wait` runs. A 304 costs no primary rate limit (GitHub REST
+  docs, conditional requests) but still costs a round trip; a 200 is one REST
+  core request. Each changed tick then runs one full snapshot at the poll
+  arm's GraphQL tick cost, without the fingerprint miss the poll pays. The
+  stack arm's detectors are per open layer.
+- **Which reads change (assumed, per scenario).**
+  - After a push, the pull is a 200 (new head), and mergeability, which GitHub
+    computes asynchronously, needs one follow-up pull read (another 200).
+  - While CI runs, the new head's check runs are a 200 on every round (jobs
+    start and finish). The wait reads the statuses from that body and wakes
+    only when CI settles, so `ci-wait` spends 2 + 6 REST requests and no
+    GraphQL instead of 7 fingerprint points.
+  - A review thread changes reviews and review comments; the agent's reply
+    changes review comments again (the wait recognizes its own echo without a
+    snapshot). A resolve changes no REST detector. A merge, a conflict or a
+    mark-ready changes the pull; an external failing check changes check runs.
+  - On a stack, `stack-work` changes one read per layer it routes, and the
+    merge-queue wait sees each layer's pull turn merged, then runs one stack
+    snapshot instead of one per 120s tick.
+- **Steps the poll runs in process stay in process (assumed).** The wait
+  marks a draft ready without waking the agent, as `--until-terminal` does
+  (a snapshot, the mutation, and the pull's echo), and the ready delay is a
+  `nextCheck` timer wake with the same receipt tick. Steps the agent runs
+  itself (`apply review`, merges, log reads) cost what they cost in the poll
+  arm.
+- **Idle hour (assumed).** The report also prices an hour where nothing
+  changes: the poll arm's blocking call (60 fingerprint points, no turn), a
+  `--timeout 4.5m` poll that returns a WAIT tick every 4.5 minutes and is
+  called again (one turn each), and the event arm (4 reconcile wakes of two
+  requests each, 300 conditional requests that all answer 304).
+- **Hosted webhook proxy (hypothetical).** A sensitivity row, not a design:
+  the same agent wakes and tokens, no detector polls, and every pr-shepherd
+  snapshot (change ticks, reconciles, and their log and annotation reads)
+  fetched by the proxy with its own credentials, so it spends none of the
+  user's token. The agent's mutations, merges, `apply review` reads and its own
+  `gh` reads still count.
+
+Open PR #542 lowers several GraphQL per-tick costs. This arm uses the costs
+on `main`, so its numbers, and the poll arm's, shift when #542 lands.
+
 ### Fixed costs a skill triggers
 
 `setupScenario` loads each playbook a shepherd output names with
@@ -441,7 +517,8 @@ explains the main ones.
   read from source, and pr-shepherd's one-PR tick is checked against one live
   PR, but no whole session is measured. GraphQL point cost also depends on
   query shape and node counts, which a flat 1 or 2 points per call ignores.
-  REST conditional requests (ETag/304) are not modeled. Real sessions run the
+  REST conditional requests (ETag/304) are modeled only in the informational
+  event arm; the gated arms make none. Real sessions run the
   annotation supplement more often than the bench: GitHub currently adds an
   `ubuntu-latest` migration notice annotation to Actions jobs on that runner,
   so each new set of completed check runs costs a point.

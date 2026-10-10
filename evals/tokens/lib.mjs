@@ -548,6 +548,9 @@ function capped(call) {
  */
 export function cost(allCalls, { extraContext = 0 } = {}) {
   const tails = allCalls.filter((c) => c.continues);
+  // A wake notification lands in context like a call result, but the agent
+  // issued no command for it, so it is not counted as a call.
+  const notifications = allCalls.filter((c) => c.notification).length;
   const calls = allCalls.filter((c) => !c.continues);
   const phases = [...new Set(calls.map((c) => c.phase))].sort((a, b) => a - b);
   let context = MODEL.baseContextTokens + extraContext;
@@ -577,7 +580,7 @@ export function cost(allCalls, { extraContext = 0 } = {}) {
   }
   ite += MODEL.cacheWriteMultiplier * pending;
   return {
-    calls: calls.length,
+    calls: calls.length - notifications,
     turns: phases.length,
     toolTokens: cmdTotal + outTotal,
     ite: Math.round(ite),
@@ -705,15 +708,55 @@ export const stackTickApiRest = (layers) => rest(6 + 12 * layers);
 /** Cloud REST stack tick: 6 shared plus 13 per layer (136 for 10 layers in the same test). */
 export const stackTickApiCloud = (layers) => rest(6 + (12 + CCR_REQUESTS_PER_PR) * layers);
 
+// --- event arm (informational, not gated) ---------------------------------------
+//
+// A local session where a background `pr-shepherd wait` replaces the polling
+// loop. It is a model of a command that does not exist yet (the webhook/event
+// source brainstorm, #544). Every number here is ASSUMED; README.md "Event
+// arm" lists each one.
+
+/**
+ * REST endpoints the wait's change detectors read with `If-None-Match`, per PR:
+ * the pull, the head commit's check runs, reviews, issue comments and review
+ * comments.
+ */
+export const EVENT_DETECTORS = [
+  "pulls/{n}",
+  "commits/{head}/check-runs",
+  "pulls/{n}/reviews",
+  "issues/{n}/comments",
+  "pulls/{n}/comments",
+];
+/** Seconds between detector rounds: the poll arm's interval, so latency is unchanged. */
+export const DETECTOR_POLL_SECONDS = 60;
+/**
+ * A 304 costs no primary rate limit (GitHub REST docs, conditional requests),
+ * only latency. A 200 is one REST core request.
+ */
+export const DETECTOR_304 = rest(0);
+export const DETECTOR_200 = rest(1);
+/** A full snapshot every this many minutes since the last one, which also wakes the agent. */
+export const RECONCILE_MINUTES = 15;
+/**
+ * What the host returns when the agent starts `wait` in the background. The
+ * agent's next request reads it and ends the turn, so every wake costs one
+ * more request than the poll arm's blocking call.
+ */
+export const BACKGROUND_ACK =
+  "Command running in background with ID: b7k2m9q. You will be notified when it completes.";
+
 /**
  * Rate-limit cost of one call, for pr-shepherd on the given transport:
  * "graphql", "rest" (standard REST) or "cloud" (REST through the CCR proxy).
+ * "proxy" is the hypothetical hosted webhook proxy row of the event arm: a
+ * call's `apiProxy`, when set, is what it spends against the user's token.
  */
 export function callApi(call, transport = "graphql") {
   if (transport === "cloud" && call.apiCloud) return call.apiCloud;
   if (transport === "cloud" && call.apiRest)
     throw new Error(`call with a REST cost needs an apiCloud: ${call.cmd.slice(0, 80)}`);
   if (transport === "rest" && call.apiRest) return call.apiRest;
+  if (transport === "proxy" && call.apiProxy) return call.apiProxy;
   if (call.api) return call.api;
   const cmd = call.cmd;
   if (call.via === "mcp") {
