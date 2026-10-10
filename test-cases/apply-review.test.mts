@@ -61,6 +61,7 @@ describe("apply review snapshots", () => {
     await snapshot("apply-review-denied-reply", result, EXIT.UNAVAILABLE);
   });
 
+  // The same apply run in a Claude Code cloud session whose proxy refuses GitHub access.
   it("apply-review-session-refusal: the cloud proxy refuses the session", async () => {
     vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
     await serve((request, response) => {
@@ -76,8 +77,8 @@ describe("apply review snapshots", () => {
         );
       } else response.end("[]");
     });
-    const result = await reply(["rest-thread-11", "rest-thread-12"]);
-    expect(result.sessionRefusal).toBeTruthy();
+    const result = await reply(["rest-thread-11"]);
+    expect(result.unrepliedThreads).toEqual(["rest-thread-11"]);
     await snapshot("apply-review-session-refusal", result, EXIT.NOPERM);
   });
 });
