@@ -22,7 +22,7 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
-| single PR | 42.5 / 36.5 / 12 | 3 / 9 / 78.3 | 332.3 core + 1.5 points | 359.8 core + 1.5 points |
+| single PR | 42.5 / 36.5 / 12 | 4.8 / 9 / 78.3 | 334 core + 1.5 points | 361.5 core + 1.5 points |
 | PR stack | 42 / 27 / 12 | 2 / 6 / 74 | 540 core + 0 points | 570 core + 0 points |
 
 <!-- bench:headline:end -->
@@ -86,6 +86,12 @@ loss.
   pr-shepherd's fixed cost is still gated against both through the session
   totals, which include setup. Setup makes no GitHub call, so it has no
   rate-limit cells.
+- **Characters per token.** The token cells are gated a second time with
+  pr-shepherd's output counted at its measured characters per token and both
+  baselines at the measured ratio for tool output overall (REPORT.md's
+  "Sensitivity: measured characters per token"). A cell that is a loss only
+  there is listed with a `chars-per-token:` prefix on its scope. The real
+  sessions themselves are not gated.
 
 The event arm ("Event arm" below) is informational and not gated. It lives in
 its own report section, outside the session and rate-limit totals that
@@ -234,7 +240,11 @@ are as good as these assumptions:
     READY-receipt summary sibling, 2 points instead of 1;
   - the guarded merge is 2 points (lookup and mutation);
   - the poll tick that marks a draft ready is a changed tick after a wait plus
-    the 1-point mutation, 3 points.
+    the 1-point mutation, 3 points;
+  - a READY tick re-reads the PR's mergeability with one REST request before
+    acting, on every transport (`refreshReadyMergeability`). The real sessions
+    measured exactly one on each of their 21 READY polls. It is charged to
+    `mark-ready`, `merge` and `merge-queue`.
 - **pr-shepherd, REST transport.** This is standard REST (an explicit
   `--transport rest`, or `auto` after a GraphQL fallback outside the Claude
   Code cloud). REST has no fingerprint shortcut, so a poll is a full read.
@@ -541,12 +551,13 @@ explains the main ones.
 
 ## What this does not measure
 
-- **Real token counts.** 3.5 characters per token is applied to every arm.
-  JSON tokenizes denser than Markdown, so the estimate undercounts the
-  JSON-heavy baselines. The real sessions in REPORT.md measured about 2.5
-  characters per token across all tool results and about 2.2 for
-  pr-shepherd's own output, so the model undercounts every arm. None of those
-  sessions used GitHub MCP.
+- **Real token counts.** 3.5 characters per token is applied to every arm. The
+  real sessions in REPORT.md measured about 2.5 characters per token across all
+  tool results and about 2.2 for pr-shepherd's own output, so the model
+  undercounts every arm, pr-shepherd's most. REPORT.md's "Sensitivity: measured
+  characters per token" re-scores every step at those ratios and lists the
+  verdicts that flip. None of those sessions used GitHub MCP, so its ratio is
+  unmeasured and taken as the overall one.
 - **Reasoning tokens.** The baselines must also classify raw state (Is this
   thread already handled? Is this failure a flake?), work pr-shepherd's output
   has already done. This benchmark counts none of it.

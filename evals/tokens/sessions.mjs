@@ -29,6 +29,7 @@ import { ISSUE_FOR } from "./gate.mjs";
 import {
   DATA_DIR,
   MODEL,
+  READY_MERGEABILITY_REST,
   SHEPHERD_TICK_API,
   apiTotals,
   cost,
@@ -700,8 +701,12 @@ function stepArms(pr, inv) {
           `pr-shepherd ${n} --interval 60s --timeout 4.5m --quiet-status`,
           fill(inv.outChars ?? 0),
           {
-            // A fingerprint miss costs 2 points, each later hit 1 (docs/graphql-usage.md).
-            api: gql(SHEPHERD_TICK_API.graphqlPoints + waits),
+            // A fingerprint miss costs 2 points, each later hit 1 (docs/graphql-usage.md);
+            // a READY tick re-reads mergeability over REST.
+            api: {
+              graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + waits,
+              restCore: inv.action === "READY" ? READY_MERGEABILITY_REST : 0,
+            },
           },
         ),
       ],
@@ -806,8 +811,34 @@ function stepArms(pr, inv) {
 const ARMS = ["shepherd", "gh", "mcp"];
 const SUM_KEYS = ["calls", "turns", "toolTokens", "ite", "graphqlPoints", "restCore"];
 
-/** Replay every PR's timeline through the bench models. */
-export function realSessions(data = readJson(REAL_SESSIONS_FILE)) {
+/**
+ * The measured characters per token: pr-shepherd's own output, and tool output
+ * overall (the baselines' ratio; MCP's own is unmeasured).
+ */
+export function measuredCharsPerToken(data = readJson(REAL_SESSIONS_FILE)) {
+  return {
+    shepherd: data.charsPerToken.shepherd.charsPerToken,
+    baseline: data.charsPerToken.noThinking.charsPerToken,
+  };
+}
+
+/** Run `fn` with tokens counted at `cpt` characters each (the model's own when null). */
+export function atCharsPerToken(cpt, fn) {
+  if (cpt == null) return fn();
+  const saved = MODEL.charsPerToken;
+  MODEL.charsPerToken = cpt;
+  try {
+    return fn();
+  } finally {
+    MODEL.charsPerToken = saved;
+  }
+}
+
+/**
+ * Replay every PR's timeline through the bench models. `cpt` maps an arm to the
+ * characters per token its output is counted at.
+ */
+export function realSessions(data = readJson(REAL_SESSIONS_FILE), cpt = {}) {
   const rows = data.prs.map((pr) => {
     const steps = pr.invocations.filter((i) => i.outChars != null);
     const sum = Object.fromEntries(
@@ -817,7 +848,7 @@ export function realSessions(data = readJson(REAL_SESSIONS_FILE)) {
       const arms = stepArms(pr, inv);
       for (const a of ARMS) {
         if (!arms[a].length) continue;
-        const c = cost(arms[a]);
+        const c = atCharsPerToken(cpt[a], () => cost(arms[a]));
         const api = apiTotals(arms[a]);
         for (const k of ["calls", "turns", "toolTokens", "ite"]) sum[a][k] += c[k];
         sum[a].graphqlPoints += api.graphqlPoints;
@@ -929,6 +960,23 @@ export function realSessionsSection({ rows, data } = realSessions()) {
       );
     out.push("");
   }
+  const m = measuredCharsPerToken(data);
+  const cptRows = realSessions(data, {
+    shepherd: m.shepherd,
+    gh: m.baseline,
+    mcp: m.baseline,
+  }).rows;
+  const C = (a, k) => cptRows.reduce((s, r) => s + r.modeled[a][k], 0);
+  const baseKeys = new Set(losses.map((l) => `${l.where} ${l.metric} ${l.baseline}`));
+  const flips = realSessionLosses(cptRows).filter(
+    (l) =>
+      (l.metric === "ite" || l.metric === "toolTokens") &&
+      !baseKeys.has(`${l.where} ${l.metric} ${l.baseline}`),
+  );
+  out.push(
+    `At the measured characters per token (pr-shepherd ${m.shepherd}, gh and MCP ${m.baseline}; MCP's is unmeasured), modeled cost vs. gh: ${pct(C("shepherd", "ite"), C("gh", "ite"))}; vs. MCP: ${pct(C("shepherd", "ite"), C("mcp", "ite"))}. Tool tokens: ${pct(C("shepherd", "toolTokens"), C("gh", "toolTokens"))} / ${pct(C("shepherd", "toolTokens"), C("mcp", "toolTokens"))}. ${flips.length ? `Verdicts that flip to a loss: ${flips.map((l) => `#${l.where.slice(5)} ${l.metric} vs. ${l.baseline === "gh" ? "gh" : "MCP"} (${num(l.ours)} vs. ${num(l.theirs)})`).join(", ")}.` : "No PR's verdict flips."}`,
+    "",
+  );
 
   out.push("### Calibration: measured vs. modeled pr-shepherd", "");
   const sh = rows.map((r) => r.measured.shepherd).filter(Boolean);
@@ -945,7 +993,7 @@ export function realSessionsSection({ rows, data } = realSessions()) {
   out.push(
     `- **Characters per token.** A result's tokens are the next request's prompt growth, less the calling request's output. Fitted on the ${cpt.noThinking.samples} clean results (one result between two requests, nothing else) whose request had no thinking block: ${cpt.noThinking.charsPerToken} characters per token plus ${cpt.noThinking.intercept} tokens per result (R² ${cpt.noThinking.r2}); per result of 2,000+ characters, median ${cpt.noThinking.perSample.p50}, 10th–90th percentile ${cpt.noThinking.perSample.p10}–${cpt.noThinking.perSample.p90}. pr-shepherd's own output alone: ${cpt.shepherd ? `${cpt.shepherd.charsPerToken} (${cpt.shepherd.samples} results, R² ${cpt.shepherd.r2})` : "too few clean samples"}. With thinking requests included the fit degrades (${cpt.all.samples} results, ${cpt.all.charsPerToken}, R² ${cpt.all.r2}): thinking counts as output but leaves the next prompt. The model assumes ${MODEL.charsPerToken} for every arm and \`fixtures/calibrate\` 4.00, so both undercount real tokens. No session used GitHub MCP, so MCP's JSON ratio is unmeasured.`,
     `- **Context tokens.** The pr-shepherd and PR-state results whose size the next request's prompt growth pins down (${num(mChars)} characters) measured, per-result wrapper included, ${num(mTok)} tokens; the model's ${MODEL.charsPerToken} characters per token gives ${num(mChars / MODEL.charsPerToken)}.`,
-    `- **Rate limit.** The debug logs record every request: pr-shepherd spent ${num(api.cost)} GraphQL points on queries, ${num(api.mut)} mutation requests (GitHub reports no cost for these; at 1 point each the total is ${num(api.cost + api.mut)}) and ${num(api.rest)} REST requests. The model charges ${num(T.shepherd.graphqlPoints)} points and ${num(T.shepherd.restCore)} REST requests for the same timeline (GraphQL transport, which every session used); most of the REST requests are mergeability refreshes on READY, which the model omits. No poll recorded \`apiUsage\` (none ran with \`--verbose\`), so these come from the per-request log entries.`,
+    `- **Rate limit.** The debug logs record every request: pr-shepherd spent ${num(api.cost)} GraphQL points on queries, ${num(api.mut)} mutation requests (GitHub reports no cost for these; at 1 point each the total is ${num(api.cost + api.mut)}) and ${num(api.rest)} REST requests. The model charges ${num(T.shepherd.graphqlPoints)} points and ${num(T.shepherd.restCore)} REST requests for the same timeline (GraphQL transport, which every session used). The model's REST requests are one mergeability refresh per READY poll, the rate measured there; the measured remainder falls on CANCEL and FIX_CODE polls, which the model does not charge. No poll recorded \`apiUsage\` (none ran with \`--verbose\`), so these come from the per-request log entries.`,
     `- **Turns.** The agents spent ${num(sh.reduce((s, b) => s + b.turns, 0))} turns on pr-shepherd calls and reads of their output; the model counts ${num(T.shepherd.turns)}, one per invocation.`,
     "",
   );

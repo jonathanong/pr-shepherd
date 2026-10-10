@@ -34,7 +34,7 @@ import {
 } from "./lib.mjs";
 import { SCENARIOS, eventArm } from "./scenarios.mjs";
 import { checkPending, findLosses, lossKey, pendingEntry, readPending } from "./gate.mjs";
-import { realSessionsSection } from "./sessions.mjs";
+import { atCharsPerToken, measuredCharsPerToken, realSessionsSection } from "./sessions.mjs";
 
 const ARMS = ["shepherd", "gh", "mcp"];
 const METRICS = ["calls", "turns", "toolTokens", "ite"];
@@ -54,7 +54,9 @@ if (MCP_API.source !== schemas.source)
 // Setup output stays in context for the rest of the session: the skill and
 // playbooks for shepherd, the loaded tool schemas for MCP. Each setup scenario
 // reports, per later scenario, how much each arm has loaded by then.
-const carry = Object.assign({}, ...SCENARIOS.filter((s) => s.setup).map((s) => s.arms().carry));
+const setupCarry = () =>
+  Object.assign({}, ...SCENARIOS.filter((s) => s.setup).map((s) => s.arms().carry));
+const BASE_CTX = { carry: setupCarry(), eagerTokens };
 
 /** Sum cost results, each scaled by a weight. */
 function addCosts(parts) {
@@ -103,11 +105,11 @@ function applyStrategy(arms, s, strategy) {
   return { ...arms, gh: stateFirstGh(arms.gh, s), mcp: stateFirstMcp(arms.mcp, s) };
 }
 
-function buildRows(strategy) {
-  return SCENARIOS.map((s) => buildRow(s, strategy));
+function buildRows(strategy, ctx = BASE_CTX) {
+  return SCENARIOS.map((s) => buildRow(s, strategy, ctx));
 }
 
-function buildRow(s, strategy) {
+function buildRow(s, strategy, { carry, eagerTokens } = BASE_CTX) {
   const arms = applyStrategy(s.arms(), s, strategy);
   const carried = (arm) => (s.setup ? 0 : (carry[s.id]?.[arm] ?? 0));
   // A setup row adds its lazy loads, each at the share of sessions that trigger it.
@@ -161,27 +163,29 @@ function buildRow(s, strategy) {
 const rowsByStrategy = Object.fromEntries(STRATEGIES.map((st) => [st, buildRows(st)]));
 
 /** Per step, each baseline arm takes whichever strategy costs it less. */
-const rows = rowsByStrategy.parallel.map((base, i) => {
-  const alt = rowsByStrategy.stateFirst[i];
-  const pick = (arm) => (alt[arm].ite < base[arm].ite ? alt : base);
-  const gh = pick("gh");
-  const mcp = pick("mcp");
-  const eager = alt.mcpEager.ite < base.mcpEager.ite ? alt : base;
-  return {
-    ...base,
-    gh: gh.gh,
-    mcp: mcp.mcp,
-    mcpEager: eager.mcpEager,
-    variable: {
-      ...base.variable,
-      gh: gh.variable.gh,
-      mcp: mcp.variable.mcp,
-      mcpEager: eager.variable.mcpEager,
-    },
-    api: { ...base.api, gh: gh.api.gh, mcp: mcp.api.mcp },
-    stateFirst: { gh: gh.strategy === "stateFirst", mcp: mcp.strategy === "stateFirst" },
-  };
-});
+const pickRows = (byStrategy) =>
+  byStrategy.parallel.map((base, i) => {
+    const alt = byStrategy.stateFirst[i];
+    const pick = (arm) => (alt[arm].ite < base[arm].ite ? alt : base);
+    const gh = pick("gh");
+    const mcp = pick("mcp");
+    const eager = alt.mcpEager.ite < base.mcpEager.ite ? alt : base;
+    return {
+      ...base,
+      gh: gh.gh,
+      mcp: mcp.mcp,
+      mcpEager: eager.mcpEager,
+      variable: {
+        ...base.variable,
+        gh: gh.variable.gh,
+        mcp: mcp.variable.mcp,
+        mcpEager: eager.variable.mcpEager,
+      },
+      api: { ...base.api, gh: gh.api.gh, mcp: mcp.api.mcp },
+      stateFirst: { gh: gh.strategy === "stateFirst", mcp: mcp.strategy === "stateFirst" },
+    };
+  });
+const rows = pickRows(rowsByStrategy);
 
 function round(n) {
   return Math.round(n * 10) / 10;
@@ -231,23 +235,25 @@ const saving = (base, ours) => (base === 0 ? (ours === 0 ? 0 : -Infinity) : 1 - 
 
 const BASELINE_KEYS = ["gh", "mcp", "mcpEager"];
 
-const sessions = Object.fromEntries(
-  Object.keys(SESSIONS).map((key) => {
-    const sessionRows = rows.filter((r) => r.session === key);
-    const total = totals(sessionRows);
-    const summary = Object.fromEntries(
-      BASELINE_KEYS.map((b) => [
-        b,
-        {
-          session: Object.fromEntries(
-            METRICS.map((m) => [m, saving(total[b][m], total.shepherd[m])]),
-          ),
-        },
-      ]),
-    );
-    return [key, { total, summary, split: split(sessionRows) }];
-  }),
-);
+const sessionsOf = (rows) =>
+  Object.fromEntries(
+    Object.keys(SESSIONS).map((key) => {
+      const sessionRows = rows.filter((r) => r.session === key);
+      const total = totals(sessionRows);
+      const summary = Object.fromEntries(
+        BASELINE_KEYS.map((b) => [
+          b,
+          {
+            session: Object.fromEntries(
+              METRICS.map((m) => [m, saving(total[b][m], total.shepherd[m])]),
+            ),
+          },
+        ]),
+      );
+      return [key, { total, summary, split: split(sessionRows) }];
+    }),
+  );
+const sessions = sessionsOf(rows);
 
 // --- rate-limit totals -----------------------------------------------------------
 
@@ -393,7 +399,36 @@ const calibration = existsSync(calibrationPath)
   ? JSON.parse(readFileSync(calibrationPath, "utf8"))
   : null;
 
-const losses = findLosses({ rows, sessions, apiSessions });
+// --- sensitivity: measured characters per token ----------------------------------
+//
+// The model reads every arm at MODEL.charsPerToken. The real sessions measured
+// pr-shepherd's output denser than tool output overall (sessions.mjs), so this
+// re-scores every step with pr-shepherd at its measured ratio and both baselines
+// at the overall one. No session used GitHub MCP, so MCP's ratio is assumed.
+
+const MEASURED_CPT = measuredCharsPerToken();
+
+/** Every row, re-costed with tokens counted at `cpt` characters each. */
+const rowsAtCpt = (cpt) =>
+  atCharsPerToken(cpt, () => {
+    const ctx = { carry: setupCarry(), eagerTokens: tokens("x".repeat(schemas.eagerChars)) };
+    return pickRows(Object.fromEntries(STRATEGIES.map((st) => [st, buildRows(st, ctx)])));
+  });
+const cptShepherdRows = rowsAtCpt(MEASURED_CPT.shepherd);
+const cptRows = rowsAtCpt(MEASURED_CPT.baseline).map((r, i) => ({
+  ...r,
+  shepherd: cptShepherdRows[i].shepherd,
+  variable: { ...r.variable, shepherd: cptShepherdRows[i].variable.shepherd },
+}));
+const cptSessions = sessionsOf(cptRows);
+
+const baseLosses = findLosses({ rows, sessions, apiSessions });
+const baseLossKeys = new Set(baseLosses.map(lossKey));
+/** Token losses that appear only at the measured ratios: gated like any other. */
+const cptFlips = findLosses({ rows: cptRows, sessions: cptSessions, apiSessions })
+  .filter((l) => (l.metric === "ite" || l.metric === "toolTokens") && !baseLossKeys.has(lossKey(l)))
+  .map((l) => ({ ...l, where: `chars-per-token:${l.where}` }));
+const losses = [...baseLosses, ...cptFlips];
 const pending = readPending();
 
 if (process.argv.includes("--check")) {
@@ -441,6 +476,13 @@ if (process.argv.includes("--json")) {
         strategyTotals,
         eventSessions,
         idleHour,
+        charsPerTokenSensitivity: {
+          measured: MEASURED_CPT,
+          sessions: Object.fromEntries(
+            Object.entries(cptSessions).map(([k, v]) => [k, { total: v.total }]),
+          ),
+          flips: cptFlips,
+        },
         losses,
       },
       null,
@@ -818,6 +860,42 @@ const pickedSF = rows.filter((r) => r.stateFirst.gh || r.stateFirst.mcp);
 out(
   `- State first was cheaper for ${pickedSF.map((r) => `\`${r.id}\` (${[r.stateFirst.gh && "gh", r.stateFirst.mcp && "MCP"].filter(Boolean).join(", ")})`).join(", ") || "no step"}.`,
 );
+out();
+out("## Sensitivity: measured characters per token");
+out();
+out(
+  `The model counts ${MODEL.charsPerToken} characters per token for every arm. The real sessions below measured pr-shepherd's output at ${MEASURED_CPT.shepherd} and tool output overall at ${MEASURED_CPT.baseline}: pr-shepherd's output is denser. Here every step is re-scored with pr-shepherd at ${MEASURED_CPT.shepherd} and gh and GitHub MCP at ${MEASURED_CPT.baseline}. MCP's ratio is unmeasured (no real session used it), so it takes the overall one. Turns and calls do not depend on the ratio. A denser ratio also pushes more MCP results past the host's ${num(MODEL.mcpOutputCapTokens)}-token cap, where they are rejected: MCP's cost can fall while it finishes less of the step.`,
+);
+out();
+out(
+  "| session | metric | characters per token | pr-shepherd | gh CLI | GitHub MCP | vs. gh | vs. MCP |",
+);
+out("| --- | --- | --- | --- | --- | --- | --- | --- |");
+for (const [key, title] of Object.entries(SESSIONS))
+  for (const m of ["ite", "toolTokens"])
+    for (const [label, s] of [
+      [`${MODEL.charsPerToken} for every arm`, sessions[key]],
+      [
+        `${MEASURED_CPT.shepherd} / ${MEASURED_CPT.baseline} / ${MEASURED_CPT.baseline} (unmeasured)`,
+        cptSessions[key],
+      ],
+    ]) {
+      const t = s.total;
+      out(
+        `| ${title} | ${METRIC_LABELS[m]} | ${label} | ${num(t.shepherd[m])} | ${num(t.gh[m])} | ${num(t.mcp[m])} | ${pct(saving(t.gh[m], t.shepherd[m]))} | ${pct(saving(t.mcp[m], t.shepherd[m]))} |`,
+      );
+    }
+out();
+if (cptFlips.length) {
+  out(
+    "Verdicts, per session and per scenario, that flip to a loss at the measured ratios. They are gated like any other loss and pending in `pending-losses.json` under `chars-per-token:`:",
+  );
+  out();
+  for (const l of cptFlips)
+    out(
+      `- ${l.where.slice("chars-per-token:".length)}: ${METRIC_LABELS[l.metric]} vs. ${BASELINES[l.baseline]}, ${num(l.ours)} vs. ${num(l.theirs)} (#${l.issue})`,
+    );
+} else out("No session or scenario verdict flips at the measured ratios.");
 out();
 for (const line of realSessionsSection()) out(line);
 

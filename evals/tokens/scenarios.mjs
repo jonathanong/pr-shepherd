@@ -31,6 +31,8 @@ import {
   callApi,
   SHEPHERD_TICK_API,
   SHEPHERD_TICK_API_REST,
+  READY_MERGEABILITY_REST,
+  readyTick,
   SHEPHERD_TICK_API_CLOUD,
   fixtureCommentId,
   ghThreadsCmd,
@@ -787,7 +789,8 @@ const PR_SCENARIOS = [
         // sends one GraphQL mutation point. Standard REST has no ready-for-review
         // route, so after its read the tick escalates as transport-unsupported
         // (mark-ready.mts). Cloud REST marks it ready with one POST to the CCR
-        // proxy's ready_for_review route, on top of the tick's read.
+        // proxy's ready_for_review route, on top of the tick's read. On every
+        // transport the READY status re-reads mergeability over REST first.
         shepherd: [
           {
             phase: 1,
@@ -795,9 +798,12 @@ const PR_SCENARIOS = [
             cmd: "",
             out: "",
             continues: true,
-            api: gql(SHEPHERD_TICK_API.graphqlPoints + SHEPHERD_CHANGED_TICK_GRAPHQL + 1),
-            apiRest: SHEPHERD_TICK_API_REST,
-            apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + 1),
+            api: {
+              graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + SHEPHERD_CHANGED_TICK_GRAPHQL + 1,
+              restCore: READY_MERGEABILITY_REST,
+            },
+            apiRest: rest(SHEPHERD_TICK_API_REST.restCore + READY_MERGEABILITY_REST),
+            apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + 1 + READY_MERGEABILITY_REST),
           },
         ],
         // The wait's in-process tick marks it ready, as the poll's does: a
@@ -957,7 +963,7 @@ const PR_SCENARIOS = [
       const merged = "✓ Merged pull request owner/repo#42 (Fixture PR)\n";
       return {
         shepherd: [
-          receiptTick(snapshot(fixture)),
+          readyTick(receiptTick(snapshot(fixture))),
           {
             phase: 2,
             via: "bash",
@@ -994,7 +1000,7 @@ const PR_SCENARIOS = [
         "✓ Pull request owner/repo#42 will be added to the merge queue for main when ready\n";
       return {
         shepherd: [
-          receiptTick(snapshot(fixture)),
+          readyTick(receiptTick(snapshot(fixture))),
           {
             phase: 2,
             via: "bash",

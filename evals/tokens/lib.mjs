@@ -27,9 +27,10 @@ export const MCP_TOOLS_USED = [
  * checks, so a tweak is always visible in review.
  */
 export const MODEL = {
-  // A uniform 3.5 chars/token for every arm. JSON packs more tokens per char
-  // than Markdown, so a uniform ratio undercounts the JSON-heavy baselines:
-  // the error runs against pr-shepherd, not for it.
+  // A uniform 3.5 chars/token for every arm. The real sessions measured 2.19
+  // for pr-shepherd's output and 2.53 for tool output overall, so this
+  // undercounts pr-shepherd most; REPORT.md's sensitivity section re-scores
+  // every step at the measured ratios.
   charsPerToken: 3.5,
   // Claude Code truncates Bash output past 30,000 characters. It rejects an
   // MCP result past 25,000 tokens outright, returning only an error.
@@ -698,6 +699,21 @@ export const SHEPHERD_TICK_API_REST = rest(14);
  */
 export const CCR_REQUESTS_PER_PR = 1;
 export const SHEPHERD_TICK_API_CLOUD = rest(SHEPHERD_TICK_API_REST.restCore + CCR_REQUESTS_PER_PR);
+/**
+ * A tick whose status is READY re-reads the PR's mergeability over REST before
+ * acting (refreshReadyMergeability in src/commands/check.mts), on either
+ * transport. The real sessions measured exactly one such request on each of
+ * their 21 READY polls (data/real-sessions.json).
+ */
+export const READY_MERGEABILITY_REST = 1;
+/** `call`, a READY tick: its cost on every transport plus the mergeability refresh. */
+export function readyTick(call) {
+  const add = (transport) => {
+    const a = callApi(call, transport);
+    return { ...a, restCore: a.restCore + READY_MERGEABILITY_REST };
+  };
+  return { ...call, api: add("graphql"), apiRest: add("rest"), apiCloud: add("cloud") };
+}
 /** A stack tick: one topology query plus about 0.52 points per layer, at least 1. */
 export const stackTickApi = (layers) => gql(1 + Math.max(1, Math.round(0.52 * layers)));
 /**
