@@ -3,6 +3,7 @@ import { summarizeApiTelemetry } from "../../github/api-telemetry.mts";
 import { selectQuotaWarning } from "../quota-selection.mts";
 import type { IterateResult } from "../../types.mts";
 import { buildQuotaAwareContinuation } from "../../quota-warning.mts";
+import { getGithubTransport } from "../../github/transport.mts";
 
 function shouldWarn(result: IterateResult): boolean {
   return ["wait", "mark_ready", "merge", "fix_code"].includes(result.action);
@@ -26,7 +27,13 @@ export async function attachApiUsage(
         ...band,
         pollIntervalMinutes: Math.max(band.pollIntervalMinutes, minimumPollIntervalMinutes),
       }));
-      quotaWarning = await selectQuotaWarning({ owner, repo }, bands, apiUsage, persistWarning);
+      quotaWarning = await selectQuotaWarning(
+        { owner, repo },
+        bands,
+        apiUsage,
+        persistWarning,
+        getGithubTransport(),
+      );
     }
   }
 

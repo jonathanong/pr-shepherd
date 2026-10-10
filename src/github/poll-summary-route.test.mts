@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
@@ -6,6 +7,7 @@ vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 import type { PollSummaryChecks, PollSummaryReview } from "../types.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import { normalizePollSummaryState, routePollSummary } from "./poll-summary-route.mts";
+import { runWithGithubTransport } from "./transport.mts";
 
 function raw(overrides: Record<string, unknown> = {}): RawSummaryPr {
   return {
@@ -34,10 +36,26 @@ describe("routePollSummary", () => {
     mockLoadConfig.mockReturnValue({ actions: { autoMarkReady: true, workWhileQueued: false } });
   });
   it.each([
+    [
+      { transport: "rest", mergeStateStatus: "NEW_SERVER_STATE" },
+      {},
+      {},
+      { merge: true },
+      "wait",
+      "pending-or-unknown",
+    ],
     [{ state: "CLOSED" }, {}, {}, {}, "cancel", "closed"],
     [{ mergeable: "CONFLICTING" }, {}, {}, {}, "fix_code", "merge-conflicts"],
     [{}, { failing: 1 }, {}, {}, "fix_code", "failing-checks"],
     [{}, { incomplete: true }, {}, {}, "cancel", "appears-ready"],
+    [
+      { transport: "rest", transportUnavailable: [{ field: "reviewThreads", reason: "denied" }] },
+      {},
+      {},
+      {},
+      "escalate",
+      "transport-unsupported",
+    ],
     [{ mergeable: "UNKNOWN" }, {}, {}, {}, "wait", "pending-or-unknown"],
     [{ mergeStateStatus: "BEHIND" }, {}, {}, { merge: true }, "wait", "pending-or-unknown"],
     [{}, {}, { actionable: 1 }, {}, "fix_code", "review-work"],
@@ -76,6 +94,14 @@ describe("routePollSummary", () => {
       { merge: true },
       "wait",
       "already-in-merge-queue",
+    ],
+    [
+      { autoMergeRequest: { mergeMethod: "SQUASH" } },
+      { passing: 1 },
+      {},
+      { merge: true },
+      "wait",
+      "already-auto-merging",
     ],
     [
       { stack: { number: 1 } },
@@ -147,5 +173,37 @@ describe("routePollSummary", () => {
       action: "wait",
       reasons: ["draft-auto-mark-ready-disabled"],
     });
+  });
+
+  it("reports standard REST ready as unsupported while preserving known denials", async () => {
+    vi.stubEnv("CLAUDE_CODE_REMOTE", "");
+    try {
+      const unknown = await runWithGithubTransport("rest", async () =>
+        route({ transport: "rest", isDraft: true, viewerCanUpdate: undefined }),
+      );
+      const knownAllowed = await runWithGithubTransport("rest", async () =>
+        route({ transport: "rest", isDraft: true, viewerCanUpdate: true }),
+      );
+      const denied = await runWithGithubTransport("rest", async () =>
+        route({ transport: "rest", isDraft: true, viewerCanUpdate: false }),
+      );
+      expect([unknown, knownAllowed]).toEqual(
+        Array(2).fill({ action: "escalate", reasons: ["transport-unsupported"] }),
+      );
+      expect(denied).toEqual({
+        action: "escalate",
+        reasons: ["mark-ready-authorization-required"],
+      });
+      await expect(
+        runWithGithubTransport("graphql", async () =>
+          route({ isDraft: true, viewerCanUpdate: undefined }),
+        ),
+      ).resolves.toEqual({
+        action: "escalate",
+        reasons: ["mark-ready-authorization-required"],
+      });
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

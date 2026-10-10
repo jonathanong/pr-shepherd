@@ -5,7 +5,10 @@ import {
 } from "../../test-helpers/github/batch.test-support.mts";
 import type { RawThread } from "./batch-raw-types.mts";
 import { GitHubRequestError } from "./errors.mts";
-import { hydrateThreadCommentPages } from "./thread-comments.mts";
+import { hydrateThreadCommentPages as operation } from "./thread-comments.mts";
+import { runWithGithubTransport } from "./transport.mts";
+const hydrateThreadCommentPages = (...args: Parameters<typeof operation>) =>
+  runWithGithubTransport("graphql", () => operation(...args));
 
 registerHooks();
 

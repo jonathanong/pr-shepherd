@@ -25,16 +25,14 @@ Poll with the CLI. Use MCP `iterate` only when the CLI is unavailable. Stop poll
 - A request to merge, land, or enqueue the selected PR or stack also sets `--merge`. Creating or opening a PR without merge intent leaves merge mode off.
 - A request to shepherd or merge a native stack, with an anchor PR and no literal `--stack`, uses that PR as the `--stack` selector. Otherwise infer the current branch PR.
 - Follow the target repository's `AGENTS.md` while editing.
-- CLI: turn `owner/repo#N` into `https://github.com/owner/repo/pull/N`. Pass other URLs and bare numbers through.
+- CLI: turn `owner/repo#N` into `https://github.com/owner/repo/pull/N`. Pass other URLs and bare numbers through. For a bare number or omitted target, use the CLI directly so it resolves the selected PR in its local context; do not spend an extra stateful tick trying to discover a qualified selector for MCP.
 - Run `pr-shepherd [PR ...] --until-terminal`, or `pr-shepherd --stack PR --until-terminal`. Omit `[PR ...]` when none was supplied. Append `--merge` when requested.
 - Do not run `pr-shepherd iterate`.
 - A qualified reference may name a fork or upstream repository. It is the GitHub target. This checkout supplies git, config, and rules.
-- MCP, only when the CLI is unavailable and `iterate` exists:
-  - Qualify every reference as a GitHub URL or `owner/repo#N`.
-  - Bare number: `gh pr view <number> --json url --jq .url`.
-  - Omitted target: `gh pr view --json url --jq .url`.
-  - If that does not yield a qualified selector, stop and say MCP cannot determine it.
+- MCP, only when the CLI is unavailable and `iterate` exists, and the supplied target is already a GitHub URL or `owner/repo#N`:
+  - Pass the qualified reference directly as `pr` or `stack`.
   - Call `iterate` with `pr`, `prs`, or `stack`, and `merge: true` when requested. Print the full result.
+  - If the target is bare or omitted, report that the CLI is required to resolve it in the local checkout; do not call `gh pr view` as a separate discovery request.
 - Print the full result and follow every `## Instructions` step.
 - CLI: run each printed mutation command.
 - MCP: use MCP `apply` and `build_suggestion_patches` with the same qualified reference. Do not run a shell `pr-shepherd apply`.

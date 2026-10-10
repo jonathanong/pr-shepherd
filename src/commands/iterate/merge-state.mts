@@ -56,7 +56,6 @@ function buildStackedRouteResult(
     cancelled: [],
   };
 }
-
 export function buildReadyMergeOutcome(
   enabled: boolean | undefined,
   readyElapsed: boolean,
@@ -72,16 +71,21 @@ export function buildReadyMergeOutcome(
   );
   const plan = buildMergeCommandPlan({
     pr: report.pr,
+    ...(report.transport && { transport: report.transport }),
     repo: report.repo,
     nodeId: report.nodeId,
     headSha: report.headSha ?? "unknown",
     queue,
+    queueKnown:
+      (report.transport !== "rest" || report.branchProtection === null) &&
+      !(report.transportUnavailable ?? []).some(({ field }) =>
+        ["branchProtection", "branchRules"].includes(field),
+      ),
     ...(report.allowedMergeMethods && { allowedMergeMethods: report.allowedMergeMethods }),
   });
   if ("unavailable" in plan) return unavailableMergeResult(base, report, plan.unavailable);
   return { ...base, action: "merge", merge: plan };
 }
-
 /** Raw counts of non-CI actionable work held back for one queued-PR wait tick. Omitted (all zero) when empty. */
 function buildDeferredWork(input: {
   report: ShepherdReport;

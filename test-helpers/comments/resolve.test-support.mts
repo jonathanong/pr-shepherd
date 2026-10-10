@@ -1,4 +1,7 @@
-import { vi, beforeEach } from "vitest";
+import { vi, beforeEach, afterEach } from "vitest";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 // ---------------------------------------------------------------------------
 // Mock github/client.mts before any imports.
@@ -7,6 +10,9 @@ import { vi, beforeEach } from "vitest";
 vi.mock("../../src/github/client.mts", () => ({
   graphqlWithRateLimit: vi.fn(),
   getPrHeadSha: vi.fn(),
+}));
+vi.mock("../../src/github/reply-recovery-read.mts", () => ({
+  readReplyRecoveryEvidence: vi.fn(async () => new Map()),
 }));
 
 import { applyResolveOptions, autoResolveOutdated } from "../../src/comments/resolve.mts";
@@ -38,9 +44,17 @@ function makeBulkResponse(doc: unknown): { data: Record<string, unknown> } {
 // ---------------------------------------------------------------------------
 
 export function registerHooks(): void {
-  beforeEach(() => {
+  let stateDirectory: string;
+  beforeEach(async () => {
+    stateDirectory = await mkdtemp(join(tmpdir(), "pr-shepherd-resolve-mock-"));
+    vi.stubEnv("PR_SHEPHERD_STATE_DIR", stateDirectory);
     vi.clearAllMocks();
+    mockGraphql.mockReset();
     mockGraphql.mockImplementation(async (doc) => makeBulkResponse(doc));
+  });
+  afterEach(async () => {
+    await rm(stateDirectory, { recursive: true, force: true });
+    vi.unstubAllEnvs();
   });
 }
 

@@ -1,3 +1,5 @@
+import { githubOperation } from "./transport.mts";
+import { readRestAnnotationCounts } from "./rest-check-read.mts";
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import { isCurrentSummaryReady } from "./poll-summary-readiness.mts";
 import { summarizePollSummaryChecks } from "./poll-summary-checks.mts";
@@ -100,23 +102,32 @@ async function fetchProbePage(
   before: string | null,
 ): Promise<ProbeContexts | null> {
   try {
-    const { data } = await graphqlWithRateLimit<{
-      repository: {
-        object: {
-          __typename: string;
-          oid?: string;
-          statusCheckRollup?: { contexts: ProbeContexts } | null;
-        } | null;
-      } | null;
-    }>(POLL_SUMMARY_ANNOTATION_PROBE_QUERY, {
-      owner: repo.owner,
-      repo: repo.name,
-      oid,
-      before,
-    });
-    const object = data.repository?.object;
-    if (object?.__typename !== "Commit" || object.oid !== oid) return null;
-    return object.statusCheckRollup?.contexts ?? null;
+    return await githubOperation(
+      "PollSummaryAnnotationProbe",
+      async () => {
+        const { data } = await graphqlWithRateLimit<{
+          repository: {
+            object: {
+              __typename: string;
+              oid?: string;
+              statusCheckRollup?: { contexts: ProbeContexts } | null;
+            } | null;
+          } | null;
+        }>(POLL_SUMMARY_ANNOTATION_PROBE_QUERY, {
+          owner: repo.owner,
+          repo: repo.name,
+          oid,
+          before,
+        });
+        const object = data.repository?.object;
+        if (object?.__typename !== "Commit" || object.oid !== oid) return null;
+        return object.statusCheckRollup?.contexts ?? null;
+      },
+      async () => ({
+        pageInfo: { hasPreviousPage: false, startCursor: null },
+        nodes: await readRestAnnotationCounts(oid, repo),
+      }),
+    );
   } catch {
     return null;
   }

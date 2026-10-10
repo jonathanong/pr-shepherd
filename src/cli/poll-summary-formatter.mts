@@ -2,6 +2,7 @@ import type { PollSummaryItem, PollSummaryResult } from "../types.mts";
 import { formatApiUsage, formatQuotaWarning } from "./api-usage-formatter.mts";
 import { withPollSummaryInstructions } from "../commands/poll-summary-instructions.mts";
 import { formatStackOverview, projectStackOverview } from "./stack-overview.mts";
+import { formatTransportEvidence } from "./transport-formatter.mts";
 
 export function formatPollSummaryResult(result: PollSummaryResult): string {
   if (result.selection.kind === "stack") return formatStackOverview(projectStackOverview(result));
@@ -14,6 +15,7 @@ export function formatPollSummaryResult(result: PollSummaryResult): string {
     "## Pull requests",
     "",
     ...result.prs.map(formatItem),
+    ...formatTransportEvidence(result),
   ];
   if (result.stackAncestry?.length) {
     lines.push("", "## Stack ancestry", "");
@@ -48,11 +50,15 @@ function formatItem(item: PollSummaryItem): string {
   const readyDelay =
     item.remainingSeconds !== undefined ? ` · ready delay \`${item.remainingSeconds}s\`` : "";
   const readyReceipt = item.readyReceipt ? " · Shepherd READY completion `verified`" : "";
+  const queuePolicy =
+    item.requiresMergeQueue !== undefined
+      ? ` · merge queue ${item.requiresMergeQueue ? "required" : "not required"}`
+      : "";
   const checks = item.checks;
   const review = item.review;
   return [
     `- [PR #${item.pr}: ${escapeMarkdownText(item.title)}](${item.url}) [${item.action.toUpperCase()}]`,
-    `  - state \`${item.state}\` · mergeable \`${item.mergeable}\` · merge \`${item.mergeStateStatus}\`${reviewDecision}${stateFlags}${blockingReviewer}${readyDelay}${readyReceipt}${stack}`,
+    `  - state \`${item.state}\` · mergeable \`${item.mergeable}\` · merge \`${item.mergeStateStatus}\`${reviewDecision}${stateFlags}${blockingReviewer}${readyDelay}${readyReceipt}${queuePolicy}${stack}`,
     `  - head \`${item.headRefName}\` at \`${item.headRefOid}\` · base \`${item.baseRefName}\``,
     ...(checks
       ? [`  - checks: ${formatCounts(checks, checks.incomplete ? ", incomplete" : "")}`]
@@ -72,6 +78,10 @@ function formatItem(item: PollSummaryItem): string {
         ]
       : []),
     `  - reasons: ${item.reasons.map((reason) => `\`${reason}\``).join(", ")}`,
+    ...(item.transport ? [`  - transport \`${item.transport}\``] : []),
+    ...(item.transportUnavailable ?? []).map(
+      ({ field, reason }) => `  - unavailable \`${field}\`: ${reason}`,
+    ),
     ...(item.pollCommand
       ? [`  - pollCommand: \`${item.pollCommand}\`${item.pollProbe ? " · bounded probe" : ""}`]
       : []),

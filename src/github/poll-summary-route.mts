@@ -6,6 +6,9 @@ import type {
   PollSummaryReview,
 } from "../types.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
+import { isKnownMergeStateStatus, transportReadinessGaps } from "./transport-evidence.mts";
+import { canGenerateGithubMutation } from "./mutation-policy.mts";
+import { getGithubTransport, isCcrTransport } from "./transport.mts";
 
 export function routePollSummary(
   raw: RawSummaryPr,
@@ -37,6 +40,14 @@ export function routePollSummary(
   }
   if (
     (checks.inProgress ?? 0) > 0 ||
+    !isKnownMergeStateStatus(raw.mergeStateStatus) ||
+    raw.mergeable === "UNKNOWN" ||
+    raw.mergeStateStatus === "UNKNOWN"
+  )
+    return { action: "wait", reasons: ["pending-or-unknown"] };
+  if (transportReadinessGaps(raw, raw.mergeStateStatus).length > 0)
+    return { action: "escalate", reasons: ["transport-unsupported"] };
+  if (
     raw.mergeable === "UNKNOWN" ||
     raw.mergeStateStatus === "UNKNOWN" ||
     raw.mergeStateStatus === "BEHIND" ||
@@ -49,15 +60,24 @@ export function routePollSummary(
     const autoMarkReadyDisabled = opts.noAutoMarkReady || actions.autoMarkReady === false;
     // The stack selector asks the agent to mark a disabled draft ready, so
     // that transition needs the same capability as the automatic one.
-    if (!raw.viewerCanUpdate && (!autoMarkReadyDisabled || opts.stackPrNumber !== undefined)) {
+    if (
+      !canGenerateGithubMutation(raw.viewerCanUpdate, "ready") &&
+      (!autoMarkReadyDisabled || opts.stackPrNumber !== undefined)
+    ) {
+      const unsupported =
+        getGithubTransport() === "rest" && raw.viewerCanUpdate !== false && !isCcrTransport();
+      if (unsupported) return { action: "escalate", reasons: ["transport-unsupported"] };
       return { action: "escalate", reasons: ["mark-ready-authorization-required"] };
     }
     return autoMarkReadyDisabled
       ? { action: "wait", reasons: ["draft-auto-mark-ready-disabled"] }
       : { action: "mark_ready", reasons: ["draft-appears-ready"] };
   }
-  if (opts.merge && raw.isInMergeQueue) {
-    return { action: "wait", reasons: ["already-in-merge-queue"] };
+  if (opts.merge && (raw.isInMergeQueue || raw.autoMergeRequest)) {
+    return {
+      action: "wait",
+      reasons: [raw.isInMergeQueue ? "already-in-merge-queue" : "already-auto-merging"],
+    };
   }
   if (opts.merge && raw.stack && opts.stackPrNumber === undefined) {
     return { action: "fix_code", reasons: ["authoritative-poll-required"] };

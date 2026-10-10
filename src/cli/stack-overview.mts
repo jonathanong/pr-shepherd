@@ -7,32 +7,12 @@ import type {
 } from "../types.mts";
 import type { ApiUsage, GraphqlQuotaWarning } from "../types/api-usage.mts";
 import { formatApiUsage, formatQuotaWarning } from "./api-usage-formatter.mts";
-
-/** Agent-facing stack row. Planning keeps the richer PollSummaryItem. */
-interface StackLayerView {
-  pr: number;
-  title: string;
-  url: string;
-  state: PollSummaryItem["state"];
-  shepherded: boolean;
-  mergeable: boolean;
-  blocker?: string;
-  author?: string;
-  owned?: true;
-  isDraft?: true;
-  isInMergeQueue?: true;
-  position?: number;
-  stackSize?: number;
-  baseRefName: string;
-  failing?: number;
-  inProgress?: number;
-  actionable?: number;
-  checksIncomplete?: true;
-  reviewIncomplete?: true;
-  queueRemoval?: { reason: string | null; actor?: string };
-}
+import { formatTransportEvidence } from "./transport-formatter.mts";
+import type { StackLayerView } from "./stack-layer-view.mts";
 
 export interface StackOverview {
+  transport?: "rest";
+  transportUnavailable?: Array<{ field: string; reason: string }>;
   mode: "summary";
   repo: string;
   selection: Extract<PollSummaryResult["selection"], { kind: "stack" }>;
@@ -56,6 +36,10 @@ export function projectStackOverview(result: PollSummaryResult): StackOverview {
   return {
     mode: "summary",
     repo: result.repo,
+    ...(result.transport && { transport: result.transport }),
+    ...(result.transportUnavailable?.length && {
+      transportUnavailable: result.transportUnavailable,
+    }),
     selection,
     reason: result.reason,
     ...(result.stackMergeable !== undefined && { stackMergeable: result.stackMergeable }),
@@ -73,6 +57,8 @@ function projectLayer(item: PollSummaryItem, stale: boolean): StackLayerView {
   const removal = item.queueRemoval;
   return {
     pr: item.pr,
+    ...(item.transport && { transport: item.transport }),
+    ...(item.transportUnavailable?.length && { transportUnavailable: item.transportUnavailable }),
     title: item.title,
     url: item.url,
     state: item.state,
@@ -83,6 +69,7 @@ function projectLayer(item: PollSummaryItem, stale: boolean): StackLayerView {
     ...(item.owned && { owned: true as const }),
     ...(item.isDraft && { isDraft: true as const }),
     ...(item.isInMergeQueue && { isInMergeQueue: true as const }),
+    ...(item.requiresMergeQueue !== undefined && { requiresMergeQueue: item.requiresMergeQueue }),
     ...(item.stack && { position: item.stack.position, stackSize: item.stack.size }),
     baseRefName: item.baseRefName,
     ...(blocker === "failing-checks" &&
@@ -135,6 +122,7 @@ export function formatStackOverview(overview: StackOverview): string {
     "## Layers",
     "",
     ...overview.prs.flatMap(formatLayerLines),
+    ...formatTransportEvidence(overview),
   ];
   if (overview.stackAncestry?.length) {
     lines.push("", "## Stack ancestry", "");
@@ -165,6 +153,9 @@ function formatLayerLines(layer: StackLayerView): string[] {
     layer.state,
     layer.isDraft ? "draft" : undefined,
     layer.isInMergeQueue ? "in merge queue" : undefined,
+    layer.requiresMergeQueue !== undefined
+      ? `merge queue ${layer.requiresMergeQueue ? "required" : "not required"}`
+      : undefined,
     layer.position !== undefined && layer.stackSize !== undefined
       ? `position ${layer.position}/${layer.stackSize}`
       : undefined,
@@ -181,5 +172,9 @@ function formatLayerLines(layer: StackLayerView): string[] {
   return [
     `- [PR #${layer.pr}: ${layer.title}](${layer.url}) — ${facts.join(" · ")}`,
     `  - ${details.join(" · ")}`,
+    ...(layer.transport ? [`  - transport \`${layer.transport}\``] : []),
+    ...(layer.transportUnavailable ?? []).map(
+      ({ field, reason }) => `  - unavailable \`${field}\`: ${reason}`,
+    ),
   ];
 }

@@ -29,7 +29,9 @@ import {
   refreshReadyMergeability,
   refreshUnknownMergeability,
 } from "./ready-mergeability.mts";
-import { loadSeenMap, markSeen, classifyItem } from "../state/seen-comments.mts";
+import { loadSeenMap, markSeen, classifyItem, mutationWasDenied } from "../state/seen-comments.mts";
+import { aliasThreadSeenMarkers } from "../github/rest-identities.mts";
+import { canGenerateGithubMutation } from "../github/mutation-policy.mts";
 import { threadTranscriptBody } from "../threads/transcript.mts";
 import { classifyThreadVisibility } from "../comments/thread-visibility.mts";
 import {
@@ -56,7 +58,36 @@ import type {
   ShepherdReport,
   ClassifiedCheck,
   FirstLookComment,
+  BatchPrData,
+  ShepherdStatus,
 } from "../types.mts";
+
+function enforceTransportReadiness(status: ShepherdStatus, data: BatchPrData): ShepherdStatus {
+  if (status !== "READY" || data.transport !== "rest") return status;
+  const unavailable = data.transportUnavailable ?? [];
+  if (
+    data.reviewThreads.some(
+      (thread) =>
+        thread.isResolved === undefined ||
+        thread.isOutdated === undefined ||
+        thread.comments === undefined,
+    )
+  )
+    return "UNKNOWN";
+  if (
+    unavailable.some(({ field }) =>
+      /^(reviewThreads(?:\.|$)|reviewTranscripts(?:\.|$)|changesRequestedReviews(?:\.|$)|reviewSummaries(?:\.|$)|checks(?:\.|$)|checkRuns(?:\.|$)|checkSuites(?:\.|$)|checkAnnotations(?:\.|$)|annotations(?:\.|$)|nativeStack(?:\.|$))/.test(
+        field,
+      ),
+    )
+  )
+    return "UNKNOWN";
+  const missingPolicy = unavailable.some(({ field }) =>
+    /^(reviewDecision|branchProtection|branchRules|mergeRequirements)(?:\.|$)/.test(field),
+  );
+  if (missingPolicy && data.mergeStateStatus !== "CLEAN") return "UNKNOWN";
+  return status;
+}
 
 export async function runCheck(
   opts: GlobalOptions & {
@@ -192,6 +223,19 @@ export async function runCheck(
   triageBudget.throwIfSecondary();
   triageBudget.reportOmissionIfNeeded();
   const seenMap = await loadSeenMap(stateKey);
+  await aliasThreadSeenMarkers(
+    repo,
+    prNumber,
+    batchData.reviewThreads.map((thread) => thread.id),
+    seenMap,
+  );
+  const canGenerateItemMutation = (
+    id: string,
+    body: string,
+    capability: boolean | undefined,
+    operation: "reply" | "resolve" | "dismiss" | "minimize" | "view",
+  ): boolean =>
+    !mutationWasDenied(id, body, seenMap) && canGenerateGithubMutation(capability, operation);
   const botUsernames = normalizeBotUsernames(config.botUsernames);
   const ruleSet = await loadRules(discoverRuleFiles(getEffectiveCwd()));
   const classifyIndex = buildClassifyIndex(ruleSet, batchData);
@@ -208,7 +252,13 @@ export async function runCheck(
   );
   const deniedRuleAutoResolveCommentIds = new Set(
     partition.ruleAutoResolveCommentIds.filter(
-      (id) => batchData.comments.find((comment) => comment.id === id)?.viewerCanMinimize !== true,
+      (id) =>
+        !canGenerateItemMutation(
+          id,
+          batchData.comments.find((comment) => comment.id === id)?.body ?? "",
+          batchData.comments.find((comment) => comment.id === id)?.viewerCanMinimize,
+          "minimize",
+        ),
     ),
   );
   const visibleCommentClassification = classifyVisibleComments(
@@ -218,11 +268,25 @@ export async function runCheck(
     seenMap,
     config.iterate.minimizeComments,
     botUsernames,
+    new Set(
+      batchData.comments
+        .filter((comment) => mutationWasDenied(comment.id, comment.body, seenMap))
+        .map((comment) => comment.id),
+    ),
   );
   const deniedRuleAutoResolveThreadIds = new Set(
-    partition.ruleAutoResolveThreadIds.filter(
-      (id) => batchData.reviewThreads.find((thread) => thread.id === id)?.viewerCanResolve !== true,
-    ),
+    partition.ruleAutoResolveThreadIds.filter((id) => {
+      const thread = batchData.reviewThreads.find((candidate) => candidate.id === id);
+      return (
+        thread?.isResolved !== false ||
+        !canGenerateItemMutation(
+          thread.id,
+          threadTranscriptBody(thread),
+          thread.viewerCanResolve,
+          "resolve",
+        )
+      );
+    }),
   );
   const visibleThreadCandidates = batchData.reviewThreads.filter(
     (t) => !partition.suppressedThreadIds.has(t.id) || deniedRuleAutoResolveThreadIds.has(t.id),
@@ -238,7 +302,11 @@ export async function runCheck(
   const resolveThreadIds = new Set(threadMutationRouting.resolveThreadIds);
   const repeatableThreadIds = new Set(
     visibleThreadCandidates
-      .filter((thread) => threadHasAuthorizedMutation(thread, replyThreadIds, resolveThreadIds))
+      .filter(
+        (thread) =>
+          !mutationWasDenied(thread.id, threadTranscriptBody(thread), seenMap) &&
+          threadHasAuthorizedMutation(thread, replyThreadIds, resolveThreadIds),
+      )
       .map((thread) => thread.id),
   );
   const threadVisibility = classifyThreadVisibility(
@@ -260,7 +328,12 @@ export async function runCheck(
   const deniedRuleAutoResolveReviewSummaryIds = new Set(
     partition.ruleAutoResolveReviewSummaryIds.filter(
       (id) =>
-        batchData.reviewSummaries.find((review) => review.id === id)?.viewerCanMinimize !== true,
+        !canGenerateItemMutation(
+          id,
+          batchData.reviewSummaries.find((review) => review.id === id)?.body ?? "",
+          batchData.reviewSummaries.find((review) => review.id === id)?.viewerCanMinimize,
+          "minimize",
+        ),
     ),
   );
   const unseenReviewSummaries = batchData.reviewSummaries.filter(
@@ -272,7 +345,7 @@ export async function runCheck(
     const cls = classifyItem(r.id, r.body, seenMap);
     if (cls === "new") firstLookSummaries.push(r);
     else if (cls === "edited") editedSummaries.push(r);
-    else seenSummaries.push(r);
+    else if (!mutationWasDenied(r.id, r.body, seenMap)) seenSummaries.push(r);
   }
   const changesRequestedReviewVisibility = classifyChangesRequestedReviewsForDisplay(
     batchData.changesRequestedReviews.filter(
@@ -280,7 +353,12 @@ export async function runCheck(
     ),
     seenMap,
     botUsernames,
-    batchData.viewerAuthorization?.viewerCanAdminister === true,
+    canGenerateGithubMutation(batchData.viewerAuthorization?.viewerCanAdminister, "dismiss"),
+    new Set(
+      batchData.changesRequestedReviews
+        .filter((review) => mutationWasDenied(review.id, review.body, seenMap))
+        .map((review) => review.id),
+    ),
   );
   const approvedReviewVisibility = classifyReviewsForDisplay(batchData.approvedReviews, seenMap);
   const changesRequestedReviews = changesRequestedReviewVisibility.visible;
@@ -290,7 +368,12 @@ export async function runCheck(
     const isBot = !isHumanAuthor(review) || isConfiguredBotAuthor(review, botUsernames);
     return (
       !isBot ||
-      batchData.viewerAuthorization?.viewerCanAdminister === true ||
+      canGenerateItemMutation(
+        review.id,
+        review.body,
+        batchData.viewerAuthorization?.viewerCanAdminister,
+        "dismiss",
+      ) ||
       visibleChangesRequestedIds.has(review.id)
     );
   }).length;
@@ -315,6 +398,7 @@ export async function runCheck(
     changesRequestedReviewCount,
     unreported.hasUnreportedRequired,
   );
+  status = enforceTransportReadiness(status, batchData);
 
   // Resolve any pending mergeability refresh (and the resulting MERGED/CLOSED short-circuit)
   // before deciding what to persist below — deferWhileQueued must see the same final,
@@ -335,6 +419,7 @@ export async function runCheck(
     batchData = refreshed.batchData;
     mergeStatus = refreshed.mergeStatus;
     status = refreshed.status;
+    status = enforceTransportReadiness(status, batchData);
     if (mergeStatus.state === "MERGED" || mergeStatus.state === "CLOSED") {
       const terminal = buildTerminalReport(
         prNumber,
@@ -428,15 +513,33 @@ export async function runCheck(
   }
   const authorizedPartition: BatchPartition = {
     ...partition,
-    ruleAutoResolveThreadIds: partition.ruleAutoResolveThreadIds.filter(
-      (id) => batchData.reviewThreads.find((thread) => thread.id === id)?.viewerCanResolve === true,
+    ruleAutoResolveThreadIds: partition.ruleAutoResolveThreadIds.filter((id) => {
+      const thread = batchData.reviewThreads.find((candidate) => candidate.id === id);
+      return (
+        thread?.isResolved === false &&
+        canGenerateItemMutation(
+          id,
+          threadTranscriptBody(thread),
+          thread.viewerCanResolve,
+          "resolve",
+        )
+      );
+    }),
+    ruleAutoResolveCommentIds: partition.ruleAutoResolveCommentIds.filter((id) =>
+      canGenerateItemMutation(
+        id,
+        batchData.comments.find((comment) => comment.id === id)?.body ?? "",
+        batchData.comments.find((comment) => comment.id === id)?.viewerCanMinimize,
+        "minimize",
+      ),
     ),
-    ruleAutoResolveCommentIds: partition.ruleAutoResolveCommentIds.filter(
-      (id) => batchData.comments.find((comment) => comment.id === id)?.viewerCanMinimize === true,
-    ),
-    ruleAutoResolveReviewSummaryIds: partition.ruleAutoResolveReviewSummaryIds.filter(
-      (id) =>
-        batchData.reviewSummaries.find((review) => review.id === id)?.viewerCanMinimize === true,
+    ruleAutoResolveReviewSummaryIds: partition.ruleAutoResolveReviewSummaryIds.filter((id) =>
+      canGenerateItemMutation(
+        id,
+        batchData.reviewSummaries.find((review) => review.id === id)?.body ?? "",
+        batchData.reviewSummaries.find((review) => review.id === id)?.viewerCanMinimize,
+        "minimize",
+      ),
     ),
   };
   if (
@@ -484,6 +587,8 @@ export async function runCheck(
   const report = {
     pr: prNumber,
     nodeId: batchData.nodeId,
+    ...(batchData.transport && { transport: batchData.transport }),
+    ...(batchData.transportUnavailable && { transportUnavailable: batchData.transportUnavailable }),
     headSha: batchData.headRefOid,
     headRefName: unreported.headRefName,
     repo: `${repo.owner}/${repo.name}`,

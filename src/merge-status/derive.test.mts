@@ -33,6 +33,13 @@ function makePr(overrides: Partial<BatchPrData>): BatchPrData {
 // ---------------------------------------------------------------------------
 
 describe("deriveMergeStatus", () => {
+  it("does not treat an unrecognized server merge state as clean", () => {
+    const result = deriveMergeStatus(
+      makePr({ mergeStateStatus: "FUTURE_STATE" as BatchPrData["mergeStateStatus"] }),
+    );
+    expect(result.status).toBe("UNKNOWN");
+    expect(result.mergeStateStatus).toBe("FUTURE_STATE");
+  });
   it("CONFLICTING mergeable → CONFLICTS", () => {
     const result = deriveMergeStatus(makePr({ mergeable: "CONFLICTING" }));
     expect(result.status).toBe("CONFLICTS");

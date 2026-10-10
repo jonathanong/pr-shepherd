@@ -18,6 +18,7 @@ import { formatApiUsage, formatQuotaWarning } from "./api-usage-formatter.mts";
 import { formatActivityLine } from "./iterate-activity-formatter.mts";
 import { branchStateSegment } from "./iterate-branch-segment.mts";
 import { insertRuleAutoResolveSection } from "../commands/rule-auto-resolve-format.mts";
+import { formatTransportEvidence } from "./transport-formatter.mts";
 
 /**
  * Format an IterateResult as human-readable Markdown.
@@ -102,7 +103,7 @@ export function formatIterateResult(
   }
   const requiredLine = requiredParts.length > 0 ? `**required** ${requiredParts.join(", ")}` : null;
 
-  const headerLines = [heading, "", baseLine, summaryLine];
+  const headerLines = [heading, "", baseLine, summaryLine, ...formatTransportEvidence(result)];
   if (result.mergeRequirements) {
     headerLines.push(...formatMergeRequirementLines(result.mergeRequirements));
   } else if (requiredLine) {
@@ -158,7 +159,13 @@ export function formatIterateResult(
       return finish(formatMergeAction(joinSections([header, ...telemetrySections]), result));
 
     case "cancel": {
-      const cancelHeaderLines = [`${heading} — ${result.reason}`, "", baseLine, summaryLine];
+      const cancelHeaderLines = [
+        `${heading} — ${result.reason}`,
+        "",
+        baseLine,
+        summaryLine,
+        ...formatTransportEvidence(result),
+      ];
       if (result.mergeRequirements) {
         cancelHeaderLines.push(...formatMergeRequirementLines(result.mergeRequirements));
       } else if (requiredLine) {

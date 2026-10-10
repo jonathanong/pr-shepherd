@@ -1,8 +1,11 @@
+import { githubOperation } from "./transport.mts";
+import { readRestCommitChecks } from "./rest-check-read.mts";
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import type { RawCheckRollup, RawSummaryCommit, RawSummaryPr } from "./poll-summary-raw.mts";
 import { POLL_SUMMARY_CHECK_PAGE_QUERY } from "./queries.mts";
 
 type RawCheckContexts = RawCheckRollup["contexts"];
+type HydratedContexts = RawCheckContexts & { fullSnapshot?: true };
 
 interface CheckPageResponse {
   repository: {
@@ -38,7 +41,8 @@ async function hydrateCommitContexts(commit: RawSummaryCommit, repo: RepoInfo): 
   while (pageInfo.hasPreviousPage && pageInfo.startCursor) {
     const older = await fetchOlderContexts(commit.oid, pageInfo.startCursor, repo);
     if (!older) break;
-    nodes.unshift(...older.nodes);
+    if (older.fullSnapshot) nodes.splice(0, nodes.length, ...older.nodes);
+    else nodes.unshift(...older.nodes);
     pageInfo = older.pageInfo;
   }
   // A window that shifted between pages can repeat or skip contexts; the
@@ -57,14 +61,31 @@ async function fetchOlderContexts(
   oid: string,
   before: string,
   repo: RepoInfo,
-): Promise<RawCheckContexts | null> {
-  const { data } = await graphqlWithRateLimit<CheckPageResponse>(POLL_SUMMARY_CHECK_PAGE_QUERY, {
-    owner: repo.owner,
-    repo: repo.name,
-    oid,
-    before,
-  });
-  const object = data.repository?.object;
-  if (object?.__typename !== "Commit" || object.oid !== oid) return null;
-  return object.statusCheckRollup?.contexts ?? null;
+): Promise<HydratedContexts | null> {
+  return githubOperation(
+    "PollSummaryCheckPage",
+    async () => {
+      const { data } = await graphqlWithRateLimit<CheckPageResponse>(
+        POLL_SUMMARY_CHECK_PAGE_QUERY,
+        {
+          owner: repo.owner,
+          repo: repo.name,
+          oid,
+          before,
+        },
+      );
+      const object = data.repository?.object;
+      if (object?.__typename !== "Commit" || object.oid !== oid) return null;
+      return object.statusCheckRollup?.contexts ?? null;
+    },
+    async () => {
+      const checks = await readRestCommitChecks(oid, repo);
+      return {
+        fullSnapshot: true,
+        totalCount: checks.nodes.length,
+        pageInfo: { hasPreviousPage: false },
+        nodes: checks.nodes as RawCheckContexts["nodes"],
+      };
+    },
+  );
 }

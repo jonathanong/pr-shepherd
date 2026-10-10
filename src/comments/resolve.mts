@@ -10,6 +10,22 @@ import {
 } from "./rate-limit.mts";
 import { setPendingOps, type ResolveMutationOp } from "./pending-ops.mts";
 import { waitForSha } from "./sha-poll.mts";
+import { githubOperation, getGithubTransport } from "../github/transport.mts";
+import { resolveGraphqlThreadId } from "../github/rest-identities.mts";
+import { applyRestReviewChunk, isAmbiguousMutationError } from "./rest-review-mutations.mts";
+import {
+  assertReplyOutcomeKnown,
+  rememberUncertainReplies,
+  trackAdoptedReplyThreads,
+} from "./uncertain-replies.mts";
+import { isRestSessionRefusal } from "../github/rest-session-refusal.mts";
+import { EXIT, ShepherdError } from "../exit-codes.mts";
+import { readReplyRecoveryEvidence, type ReplyEvidence } from "../github/reply-recovery-read.mts";
+import {
+  GitHubRequestError,
+  isRetryableGraphQlInternal,
+  type GitHubGraphQlError,
+} from "../github/errors.mts";
 
 export interface ResolveResult {
   repliedThreads: string[];
@@ -36,6 +52,8 @@ export interface ResolveResult {
   /** @deprecated Direct apply requests now rely on GitHub's mutation response. */
   skippedUnauthorizedDismissals?: string[];
   rateLimit?: ResolveRateLimitStop;
+  sessionRefusal?: string;
+  instructions?: string[];
   unrepliedThreads?: string[];
   unresolvedThreads?: string[];
   unminimizedComments?: string[];
@@ -46,10 +64,7 @@ const COMMENTED_DISMISS_ERROR_PATTERNS = [
   /can\s*not\s+dismiss[\s\S]*?commented pull request review/i,
 ];
 
-interface GraphQlErrorLike {
-  message: string;
-  path?: unknown;
-}
+type GraphQlErrorLike = GitHubGraphQlError;
 
 function dedupeIds(ids: string[]): string[] {
   const seen = new Set<string>();
@@ -75,6 +90,21 @@ function mutationErrorMessage(errors: GraphQlErrorLike[], alias: string): string
     .filter((error) => Array.isArray(error.path) && error.path.includes(alias))
     .map((error) => error.message);
   return messages.length > 0 ? messages.join("; ") : undefined;
+}
+
+function uncertainReplyIds(
+  ids: string[],
+  confirmed: string[],
+  errors: GraphQlErrorLike[],
+): string[] {
+  return ids.filter((id, index) => {
+    if (confirmed.includes(id)) return false;
+    const applicable = errors.filter(
+      (error) =>
+        error.path === undefined || (Array.isArray(error.path) && error.path[0] === `p${index}`),
+    );
+    return applicable.length === 0 || isRetryableGraphQlInternal(applicable);
+  });
 }
 
 export async function applyResolveOptions(
@@ -105,14 +135,29 @@ export async function applyResolveOptions(
     await waitForSha(pr, repo, opts.requireSha);
   }
 
-  await bulkApply(
+  const adopted = await assertReplyOutcomeKnown(
+    { repo, pr },
     replyThreadIds,
+    opts.dismissMessage ?? "",
+  );
+  result.repliedThreads.push(...adopted);
+  trackAdoptedReplyThreads(result, adopted);
+
+  await bulkApply(
+    replyThreadIds.filter((id) => !adopted.includes(id)),
     resolveThreadIds,
     minimizeCommentIds,
     dismissReviewIds,
     opts.dismissMessage ?? "",
     result,
+    { repo, pr },
   );
+
+  if (result.sessionRefusal)
+    result.instructions = [
+      "Restore GitHub access for this session using the proxy instructions above.",
+      "Retry only the pending IDs listed above.",
+    ];
 
   return result;
 }
@@ -136,6 +181,7 @@ export async function autoResolveThreads(
     errors: [],
   };
   await bulkApply([], threadIds, [], [], "", result);
+  if (result.sessionRefusal) throw new ShepherdError(result.sessionRefusal, EXIT.NOPERM);
   return { resolved: result.resolvedThreads, errors: result.errors };
 }
 
@@ -151,6 +197,7 @@ export async function autoMinimizeComments(
     errors: [],
   };
   await bulkApply([], [], minimizeIds, [], "", result);
+  if (result.sessionRefusal) throw new ShepherdError(result.sessionRefusal, EXIT.NOPERM);
   return { minimized: result.minimizedComments, errors: result.errors };
 }
 
@@ -201,6 +248,7 @@ async function bulkApply(
   dismissIds: string[],
   dismissMessage: string,
   result: ResolveResult,
+  context?: { repo: RepoInfo; pr: number },
 ): Promise<void> {
   const allOps: ResolveMutationOp[] = [
     ...replyIds.map((id) => ({ kind: "p" as const, id })),
@@ -220,6 +268,7 @@ async function bulkApply(
       dismissMessage,
       result,
       i + BULK_CHUNK_SIZE < allOps.length,
+      context,
     );
     if (stopped) {
       setPendingOps(result, allOps.slice(i));
@@ -236,31 +285,80 @@ async function bulkApplyChunk(
   dismissMessage: string,
   result: ResolveResult,
   hasPendingAfter: boolean,
+  context?: { repo: RepoInfo; pr: number },
 ): Promise<boolean> {
-  const doc = buildBulkMutation(replyIds, resolveIds, minimizeIds, dismissIds, dismissMessage);
-
   let data: Record<string, unknown> = {};
   let graphQlErrors: GraphQlErrorLike[] = [];
   let rateLimitStop: ResolveRateLimitStop | undefined;
   let suppressCurrentChunkErrors = false;
+  let restStopped = false;
+  let graphqlMutationAttempted = false;
+  let replyEvidence = new Map<string, ReplyEvidence>();
+  if (context && replyIds.length && getGithubTransport() === "graphql") {
+    try {
+      replyEvidence = await readReplyRecoveryEvidence(context.repo, context.pr, replyIds);
+    } catch {
+      /* Preserve explicit mutation eligibility when recovery evidence is unavailable. */
+    }
+  }
   try {
-    const resp = await graphqlWithRateLimit<Record<string, unknown>>(
-      doc,
-      {},
-      {
-        allowPartialData: true,
+    const resp = await githubOperation(
+      "BulkApply",
+      async () => {
+        const [graphqlReplies, graphqlResolves] = await Promise.all([
+          Promise.all(replyIds.map(resolveGraphqlThreadId)),
+          Promise.all(resolveIds.map(resolveGraphqlThreadId)),
+        ]);
+        graphqlMutationAttempted = true;
+        return graphqlWithRateLimit<Record<string, unknown>>(
+          buildBulkMutation(
+            graphqlReplies,
+            graphqlResolves,
+            minimizeIds,
+            dismissIds,
+            dismissMessage,
+          ),
+          {},
+          { allowPartialData: true },
+        );
       },
+      () =>
+        applyRestReviewChunk({
+          ...context,
+          replyIds,
+          resolveIds,
+          minimizeIds,
+          dismissIds,
+          message: dismissMessage,
+        }),
+      { mutation: true },
     );
+    if ("restStopped" in resp) restStopped = resp.restStopped === true;
+    if ("sessionRefusal" in resp && typeof resp.sessionRefusal === "string")
+      result.sessionRefusal = resp.sessionRefusal;
     data = resp.data;
     graphQlErrors = (resp.errors ?? []) as GraphQlErrorLike[];
     const graphQlErrorMessages = graphQlErrors.map((e) => e.message);
-    suppressCurrentChunkErrors = graphQlErrorMessages.some(isRateLimitMessage);
+    suppressCurrentChunkErrors = restStopped || graphQlErrorMessages.some(isRateLimitMessage);
     rateLimitStop = rateLimitFromGraphQlResult(graphQlErrorMessages, {
       rateLimit: resp.rateLimit,
-      retryAfterSeconds: resp.retryAfterSeconds,
+      retryAfterSeconds: "retryAfterSeconds" in resp ? resp.retryAfterSeconds : undefined,
       stopOnZeroRemaining: hasPendingAfter,
     });
   } catch (err) {
+    if (isRestSessionRefusal(err)) throw err;
+    const uncertainIds =
+      err instanceof GitHubRequestError && err.status === 200
+        ? uncertainReplyIds(replyIds, [], err.graphqlErrors ?? [])
+        : replyIds;
+    const ambiguous =
+      isAmbiguousMutationError(err) ||
+      (graphqlMutationAttempted &&
+        err instanceof GitHubRequestError &&
+        (isRetryableGraphQlInternal(err.graphqlErrors) ||
+          (err.status === 200 && (!err.graphqlErrors?.length || uncertainIds.length > 0))));
+    if (context && graphqlMutationAttempted && ambiguous)
+      await rememberUncertainReplies(context, uncertainIds, dismissMessage, replyEvidence);
     const msg = err instanceof Error ? err.message : String(err);
     const stop = rateLimitFromError(err, msg);
     if (stop) {
@@ -272,7 +370,7 @@ async function bulkApplyChunk(
     for (const id of resolveIds) result.errors.push(`${id}: ${msg}`);
     for (const id of minimizeIds) result.errors.push(`${id}: ${msg}`);
     for (const id of dismissIds) result.errors.push(`${id}: ${msg}`);
-    return false;
+    return ambiguous;
   }
 
   for (let i = 0; i < replyIds.length; i++) {
@@ -280,7 +378,7 @@ async function bulkApplyChunk(
     if (id === undefined) continue;
     const p = data[`p${i}`] as { comment?: { id?: string } } | null | undefined;
     if (p?.comment?.id) result.repliedThreads.push(id);
-    else if (!suppressCurrentChunkErrors)
+    else if (!suppressCurrentChunkErrors || mutationErrorMessage(graphQlErrors, `p${i}`))
       result.errors.push(
         `${id}: ${mutationErrorMessage(graphQlErrors, `p${i}`) ?? "reply returned null or comment not created"}`,
       );
@@ -289,7 +387,7 @@ async function bulkApplyChunk(
   for (let i = 0; i < resolveIds.length; i++) {
     const r = data[`r${i}`] as { thread?: { isResolved?: boolean } } | null | undefined;
     if (r?.thread?.isResolved === true) result.resolvedThreads.push(resolveIds[i]!);
-    else if (!suppressCurrentChunkErrors)
+    else if (!suppressCurrentChunkErrors || mutationErrorMessage(graphQlErrors, `r${i}`))
       result.errors.push(
         `${resolveIds[i]}: ${mutationErrorMessage(graphQlErrors, `r${i}`) ?? "resolve returned null or thread not resolved"}`,
       );
@@ -298,7 +396,7 @@ async function bulkApplyChunk(
   for (let i = 0; i < minimizeIds.length; i++) {
     const m = data[`m${i}`] as { minimizedComment?: { isMinimized?: boolean } } | null | undefined;
     if (m?.minimizedComment?.isMinimized === true) result.minimizedComments.push(minimizeIds[i]!);
-    else if (!suppressCurrentChunkErrors)
+    else if (!suppressCurrentChunkErrors || mutationErrorMessage(graphQlErrors, `m${i}`))
       result.errors.push(
         `${minimizeIds[i]}: ${mutationErrorMessage(graphQlErrors, `m${i}`) ?? "minimize returned null or comment not minimized"}`,
       );
@@ -320,12 +418,20 @@ async function bulkApplyChunk(
   for (let i = 0; i < dismissIds.length; i++) {
     const d = data[`d${i}`] as { pullRequestReview?: { state?: string } } | null | undefined;
     if (d?.pullRequestReview != null) result.dismissedReviews.push(dismissIds[i]!);
-    else if (!suppressCurrentChunkErrors)
+    else if (!suppressCurrentChunkErrors || mutationErrorMessage(graphQlErrors, `d${i}`))
       result.errors.push(
         commentedDismissErrorIndexes.has(i) || (singleDismiss && hasUnmappedCommentedDismissError)
           ? dismissReviewNonDismissibleMessage(dismissIds[i]!)
           : `${dismissIds[i]}: ${mutationErrorMessage(graphQlErrors, `d${i}`) ?? "dismiss returned null"}`,
       );
+  }
+
+  const internalFailure = graphqlMutationAttempted && isRetryableGraphQlInternal(graphQlErrors);
+  const uncertainIds = graphqlMutationAttempted
+    ? uncertainReplyIds(replyIds, result.repliedThreads, graphQlErrors)
+    : [];
+  if (context && uncertainIds.length) {
+    await rememberUncertainReplies(context, uncertainIds, dismissMessage, replyEvidence);
   }
 
   if (rateLimitStop) {
@@ -334,7 +440,9 @@ async function bulkApplyChunk(
     return true;
   }
 
-  return false;
+  if (result.sessionRefusal) return true;
+
+  return restStopped || internalFailure || uncertainIds.length > 0;
 }
 
 function dismissErrorAliasIndex(error: GraphQlErrorLike): number | undefined {

@@ -10,6 +10,10 @@ export function buildTerminalReport(
   return {
     pr: prNumber,
     nodeId: batchData.nodeId,
+    ...(batchData.transport && { transport: batchData.transport }),
+    ...(batchData.transportUnavailable?.length && {
+      transportUnavailable: batchData.transportUnavailable,
+    }),
     headSha: batchData.headRefOid,
     repo: `${repo.owner}/${repo.name}`,
     status,

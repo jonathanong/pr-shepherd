@@ -3,6 +3,7 @@ import { summarizePollSummaryChecks } from "./poll-summary-checks.mts";
 import { parseBranchRules } from "./batch-parsers-rules.mts";
 import { rulesComplete } from "./fingerprint-fields.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
+import { isKnownMergeStateStatus, transportReadinessGaps } from "./transport-evidence.mts";
 
 /** Fresh compact evidence required before a READY receipt can be used. */
 export function isCurrentSummaryReady(
@@ -27,6 +28,8 @@ export function isCurrentSummaryReady(
     raw.baseRef,
   ).requiresConversationResolution;
   return (
+    isKnownMergeStateStatus(raw.mergeStateStatus) &&
+    transportReadinessGaps(raw, raw.mergeStateStatus).length === 0 &&
     checks.incomplete !== true &&
     sourceChecks.incomplete !== true &&
     (review.incomplete !== true ||

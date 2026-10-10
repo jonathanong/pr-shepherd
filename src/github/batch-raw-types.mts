@@ -113,7 +113,7 @@ interface RawAuthor {
 
 export interface RawThreadComment {
   id: string;
-  isMinimized: boolean;
+  isMinimized?: boolean;
   url: string;
   authorAssociation?: CommentAuthorAssociation;
   viewerDidAuthor?: boolean;
@@ -129,10 +129,10 @@ export interface RawThreadComment {
 
 export interface RawThread {
   id: string;
-  isResolved: boolean;
-  isOutdated: boolean;
-  viewerCanReply: boolean;
-  viewerCanResolve: boolean;
+  isResolved?: boolean;
+  isOutdated?: boolean;
+  viewerCanReply?: boolean;
+  viewerCanResolve?: boolean;
   path?: string | null;
   line?: number | null;
   startLine?: number | null;
@@ -201,6 +201,7 @@ export type RawContextNode =
         createdAt?: string;
         updatedAt?: string;
         workflowRun: {
+          databaseId?: number;
           event: string;
           createdAt?: string;
           updatedAt?: string;

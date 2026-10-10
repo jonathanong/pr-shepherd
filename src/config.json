@@ -1,4 +1,5 @@
 {
+  "github": { "transport": "auto" },
   "cliCommand": ["pr-shepherd"],
   "botUsernames": [
     "chatgpt-connector",

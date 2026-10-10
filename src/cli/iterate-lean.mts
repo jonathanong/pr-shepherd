@@ -32,6 +32,10 @@ export function projectIterateLean(
     action: result.action,
     pr: result.pr,
     repo: result.repo || undefined,
+    ...(result.transport && { transport: result.transport }),
+    ...(result.transportUnavailable?.length && {
+      transportUnavailable: result.transportUnavailable,
+    }),
     status: result.status,
     state: result.state,
     mergeStateStatus: result.mergeStateStatus,

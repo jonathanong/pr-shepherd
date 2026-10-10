@@ -39,6 +39,7 @@ import { annotationMarkerBody, checksWithActionableAnnotations } from "../check-
 import { threadTranscriptBody } from "../../threads/transcript.mts";
 import { isHumanAuthor, isConfiguredBotAuthor } from "../../comments/authors.mts";
 import { canRerunWorkflows } from "../../checks/conclusions.mts";
+import { canGenerateGithubMutation } from "../../github/mutation-policy.mts";
 import { loadConfig } from "../../config/load.mts";
 import { formatPrUrl } from "../../pr-reference.mts";
 import type {
@@ -177,15 +178,19 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const replyIdSet = new Set(routedThreadMutations.replyThreadIds);
   const resolveIdSet = new Set(routedThreadMutations.resolveThreadIds);
   const unauthorizedReplies = allThreads.filter(
-    (thread) => replyIdSet.has(thread.id) && thread.viewerCanReply !== true,
+    (thread) =>
+      replyIdSet.has(thread.id) && !canGenerateGithubMutation(thread.viewerCanReply, "reply"),
   );
   const unauthorizedResolves = allThreads.filter(
-    (thread) => resolveIdSet.has(thread.id) && thread.viewerCanResolve !== true,
+    (thread) =>
+      resolveIdSet.has(thread.id) &&
+      (thread.isResolved !== false ||
+        !canGenerateGithubMutation(thread.viewerCanResolve, "resolve")),
   );
   const unauthorizedDismissals = report.changesRequestedReviews.filter(
     (review) =>
       (!isHumanAuthor(review) || isConfiguredBotAuthor(review, botUsernames)) &&
-      report.viewerAuthorization?.viewerCanAdminister !== true,
+      !canGenerateGithubMutation(report.viewerAuthorization?.viewerCanAdminister, "dismiss"),
   );
   const skippedThreadIds = new Set(
     [...unauthorizedReplies, ...unauthorizedResolves].map((thread) => thread.id),
@@ -201,6 +206,12 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   );
   const protectedRuns: [] = [];
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
+  await aliasThreadFixAttempts(
+    { owner: repoOwner, name: repoName },
+    prNumber,
+    retryableActionableThreads.map(({ id }) => id),
+    stored,
+  );
   const countFixCodeAttempt = opts.persistSeen !== false;
   const priorThreadAttempts = previousFixAttempts(stored, retryableActionableThreads);
   const { threadAttempts, threadBodyHashes } = nextFixAttempts(
@@ -478,11 +489,13 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
             bottomPr: report.stackBottomPr,
           })
         : undefined;
-  const requeue = buildRemovedQueueRecovery(report, failingAgentChecks, opts.merge);
-  const queueRemovalAcknowledgment = buildStackQueueRemovalAcknowledgment(
-    report,
-    failingAgentChecks,
-  );
+  const recovery = buildRemovedQueueRecovery(report, failingAgentChecks, opts.merge);
+  const requeue = recovery && !("unavailable" in recovery) ? recovery : undefined;
+  const acknowledgmentRecovery = buildStackQueueRemovalAcknowledgment(report, failingAgentChecks);
+  const queueRemovalAcknowledgment =
+    acknowledgmentRecovery && !("unavailable" in acknowledgmentRecovery)
+      ? acknowledgmentRecovery
+      : undefined;
   const queueEjection: QueueEjectionRecovery | undefined = !currentEjectionCommit(
     report,
     failingAgentChecks,
@@ -524,11 +537,14 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     resolveOnlyCommand,
     behindBaseHint,
     isBehind,
-    report.viewerAuthorization?.viewerCanUpdate === true,
+    canGenerateGithubMutation(report.viewerAuthorization?.viewerCanUpdate, "ready"),
     exhaustedAttempts.length > 0,
     stackRebase,
     queueEjection,
   );
+  if (recovery && "unavailable" in recovery) instructions.unshift(recovery.unavailable);
+  if (acknowledgmentRecovery && "unavailable" in acknowledgmentRecovery)
+    instructions.unshift(acknowledgmentRecovery.unavailable);
   if (failingAgentChecks.some((check) => releasedCheckNames.has(check.name))) {
     const completion = instructions.pop();
     instructions.push(buildReleasedBlockerInstruction(prNumber));
@@ -614,3 +630,4 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   }
   return result;
 }
+import { aliasThreadFixAttempts } from "../../github/rest-identities.mts";

@@ -2,7 +2,7 @@
 
 [← README](../README.md) | [graphql.md](graphql.md)
 
-This page is **what each command spends** against GitHub's primary GraphQL point budget. How data is fetched stays in [graphql.md](graphql.md).
+This page is **what each GraphQL command spends** against GitHub's primary point budget. In REST mode, usage is reported against the separate REST `core` pool, and these GraphQL cost estimates do not apply. Automatic fallback can move the remainder of a process from GraphQL to REST; see [transport selection](graphql.md#shepherd-graphql).
 
 A user PAT is **5,000 points / hour**. One-PR polling is a small slice of that. Aggregate polls are not.
 
@@ -112,5 +112,6 @@ Designs that are already at the floor and should stay:
 - Annotation bodies in chunks of 20, cached for 1 hour. A chunk is 21 connection-requests, which prices as 1 point.
 - Merge-queue check rollups loaded only when the queue commit is current.
 - Quota-band sleep on the poll dispatcher.
+- Quota warnings and cadence follow the active transport; after switching to REST, prior GraphQL usage remains in telemetry but does not throttle the REST poll. Pending REST core warnings remain active through the loop.
 - REST for job logs, startup-failure runs, and mergeability. That pool is separate.
 - Mutation chunks of 10. Primary `cost` is unavailable; secondary limits bill each mutation request at 5 points.

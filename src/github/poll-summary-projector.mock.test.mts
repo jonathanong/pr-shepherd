@@ -8,6 +8,8 @@ vi.mock("../state/seen-comments.mts", async (importOriginal) => {
 
 import { summarizePollSummaryPr } from "./poll-summary-projector.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
+import { loadSeenMap, hashBody, type SeenMarker } from "../state/seen-comments.mts";
+import { runWithGithubTransport } from "./transport.mts";
 
 const repo = { owner: "acme", name: "widgets" };
 
@@ -193,6 +195,62 @@ describe("summarizePollSummaryPr", () => {
       {},
     );
     expect(item.review).toEqual({ reviews: 1 });
+  });
+
+  it("keeps an unchanged bot review actionable when REST omits viewer capability", async () => {
+    const body = "Please update the generated client.";
+    const seen = new Map<string, SeenMarker>([
+      ["bot-review", { seenAt: 1, bodyHash: hashBody(body) }],
+    ]);
+    const deniedSeen = new Map<string, SeenMarker>([
+      [
+        "bot-review",
+        { seenAt: 1, bodyHash: hashBody(body), deniedMutationBodyHash: hashBody(body) },
+      ],
+    ]);
+    vi.mocked(loadSeenMap)
+      .mockResolvedValueOnce(seen)
+      .mockResolvedValueOnce(seen)
+      .mockResolvedValueOnce(deniedSeen)
+      .mockResolvedValueOnce(seen);
+    const pull = raw({
+      transport: "rest",
+      stack: null,
+      stackEntry: null,
+      isInMergeQueue: false,
+      reviews: {
+        totalCount: 1,
+        pageInfo: { hasPreviousPage: false },
+        nodes: [
+          {
+            id: "bot-review",
+            body,
+            state: "CHANGES_REQUESTED",
+            isMinimized: false,
+            author: { __typename: "Bot", login: "review-bot" },
+          },
+        ],
+      },
+    });
+
+    const restUnknown = await runWithGithubTransport("rest", () =>
+      summarizePollSummaryPr(pull, repo, {}),
+    );
+    const restDenied = await runWithGithubTransport("rest", () =>
+      summarizePollSummaryPr(pull, repo, {}, false),
+    );
+    const restMutationDenied = await runWithGithubTransport("rest", () =>
+      summarizePollSummaryPr(pull, repo, {}),
+    );
+    const graphqlUnknown = await runWithGithubTransport("graphql", () =>
+      summarizePollSummaryPr({ ...pull, transport: undefined }, repo, {}),
+    );
+
+    expect(restUnknown.review).toEqual({ reviews: 1, actionable: 1 });
+    expect(restUnknown.action).toBe("fix_code");
+    expect(restDenied.review).toEqual({ reviews: 1 });
+    expect(restMutationDenied.review).toEqual({ reviews: 1 });
+    expect(graphqlUnknown.review).toEqual({ reviews: 1 });
   });
 
   it("surfaces a current merge-queue removal with its raw reason and actor", async () => {

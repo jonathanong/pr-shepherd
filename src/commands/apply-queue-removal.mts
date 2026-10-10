@@ -2,6 +2,7 @@ import { EXIT, ShepherdError } from "../exit-codes.mts";
 import { fetchPrBatch } from "../github/batch.mts";
 import { queueRemovalAppliesToHead } from "../github/queue-removal-freshness.mts";
 import { getCurrentPrNumber, getRepoInfo } from "../github/client.mts";
+import { getGithubTransport } from "../github/transport.mts";
 import {
   isCiQueueRemovalReason,
   writeQueueRemovalAcknowledgment,
@@ -26,6 +27,7 @@ export interface ApplyQueueRemovalResult {
 export async function applyQueueRemovalAck(
   input: ApplyQueueRemovalInput,
 ): Promise<ApplyQueueRemovalResult> {
+  requireQueueRemovalTransport();
   const repo = input.targetRepository ?? (await getRepoInfo());
   const pr = input.prNumber ?? (await getCurrentPrNumber());
   if (pr === null) {
@@ -36,6 +38,7 @@ export async function applyQueueRemovalAck(
   }
 
   const { data } = await fetchPrBatch(pr, repo);
+  requireQueueRemovalTransport(data.transport);
   const removal = data.latestMergeQueueRemoval;
   if (
     data.state !== "OPEN" ||
@@ -79,4 +82,12 @@ export async function applyQueueRemovalAck(
     );
   }
   return { pr, repo: `${repo.owner}/${repo.name}`, acknowledgment };
+}
+
+function requireQueueRemovalTransport(snapshotTransport?: "rest"): void {
+  if (snapshotTransport === "rest" || getGithubTransport() === "rest")
+    throw new ShepherdError(
+      "Queue-removal acknowledgment is transport-unsupported: REST cannot verify current merge-queue removal evidence.",
+      EXIT.UNAVAILABLE,
+    );
 }

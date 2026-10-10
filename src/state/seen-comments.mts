@@ -127,6 +127,25 @@ export async function markSeen(key: StateKey, id: string, body: string): Promise
   await writeSeenMarker(key, id, { bodyHash: hashBody(body) });
 }
 
+/** A definite permission denial suppresses generated retries until the feedback changes. */
+export async function markMutationDenied(key: StateKey, id: string, body?: string): Promise<void> {
+  let bodyHash: unknown = body === undefined ? undefined : hashBody(body);
+  if (bodyHash === undefined) {
+    try {
+      const marker = JSON.parse(await readFile(resolvePath(key, id), "utf8")) as SeenMarker;
+      bodyHash = marker.bodyHash;
+    } catch {
+      return;
+    }
+  }
+  if (typeof bodyHash === "string")
+    await writeSeenMarker(key, id, { deniedMutationBodyHash: bodyHash });
+}
+
+export function mutationWasDenied(id: string, body: string, map: Map<string, SeenMarker>): boolean {
+  return map.get(id)?.deniedMutationBodyHash === hashBody(body);
+}
+
 export async function markReviewInlineThreads(
   key: StateKey,
   reviewId: string,

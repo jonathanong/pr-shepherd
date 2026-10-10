@@ -93,10 +93,13 @@ export function buildFailingCheckInstructions(checks: AgentCheck[]): string[] {
 
 /** Update the PR branch after an external blocker merges or closes. Never rerun that job. */
 export function buildReleasedBlockerInstruction(prNumber: number): string {
-  return `Update this PR branch from its base with \`gh pr update-branch ${prNumber} --rebase\`. Do not rerun the job; a rerun retests the old merge ref.`;
+  return getGithubTransport() === "rest"
+    ? "Update this PR branch from its base using the repository's branch-update procedure. Do not rerun the job; a rerun retests the old merge ref."
+    : `Update this PR branch from its base with \`gh pr update-branch ${prNumber} --rebase\`. Do not rerun the job; a rerun retests the old merge ref.`;
 }
 
 /** Recurrence only. Commit, push, rerun, and SHA steps are earlier instructions. */
 export function buildFixCompletionInstruction(): string {
   return FIX_CODE_CONTINUATION;
 }
+import { getGithubTransport } from "../../github/transport.mts";

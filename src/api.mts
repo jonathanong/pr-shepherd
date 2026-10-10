@@ -1,6 +1,16 @@
 /* eslint-disable max-lines */
 import { resolve } from "node:path";
+import { createGithubTransportRunner, type GithubTransport } from "./github/transport.mts";
+export type { GithubTransport } from "./github/transport.mts";
 
+import {
+  runApplyMerge,
+  validateApplyMergeOptions,
+  type ApplyMergeResult,
+} from "./commands/apply-merge.mts";
+import type { RestMergeAction, RestMergeStackGuard } from "./github/rest-merge.mts";
+export type { RestMergeStackGuard } from "./github/rest-merge.mts";
+import type { MergeMethod } from "./config/merge-method.mts";
 import { runCommitSuggestion } from "./commands/commit-suggestion.mts";
 import { runSuggestionPatches } from "./commands/suggestion-patches.mts";
 import { runIterate } from "./commands/iterate/index.mts";
@@ -36,6 +46,8 @@ import { getPullRequestBody, getRepoInfo } from "./github/client.mts";
 import { extractShepherdJournal, type ShepherdJournalExtraction } from "./journal/index.mts";
 
 export interface CreatePrShepherdOptions {
+  /** GitHub transport retained for this client; individual calls may override it. */
+  transport?: GithubTransport;
   /** Working directory used for git, config, and classification-rule lookups. */
   cwd?: string;
 }
@@ -100,20 +112,31 @@ export interface AcknowledgeQueueRemovalOperation {
   removedAtUnix: number;
 }
 
+export interface MergeOperation {
+  type: "merge";
+  requireSha: string;
+  mergeAction: RestMergeAction;
+  mergeMethod?: MergeMethod;
+  expectedStack?: RestMergeStackGuard;
+}
+
 /** Operations run in this exact list order after validation. */
 export type ApplyOperation =
+  | MergeOperation
   | ReviewMutationsOperation
   | MarkFilesViewedOperation
   | AppendJournalOperation
   | AcknowledgeQueueRemovalOperation;
 
 export interface ApplyInput {
+  transport?: GithubTransport;
   /** PR shared by every operation in this ordered apply request. */
   pr?: PrReference;
   operations: ApplyOperation[];
 }
 
 export type ApplyOperationResult =
+  | { type: "merge"; result: ApplyMergeResult }
   | { type: "review_mutations"; result: ResolveResult }
   | { type: "mark_files_viewed"; result: MarkFilesAsViewedResult }
   | { type: "append_journal"; result: JournalResult }
@@ -124,6 +147,7 @@ export interface ApplyResult {
 }
 
 export interface BuildSuggestionPatchInput {
+  transport?: GithubTransport;
   pr?: PrReference;
   threadId: string;
   message: string;
@@ -137,11 +161,13 @@ export interface SuggestionPatchInput {
 }
 
 export interface BuildSuggestionPatchesInput {
+  transport?: GithubTransport;
   pr?: PrReference;
   suggestions: SuggestionPatchInput[];
 }
 
 export interface GetJournalInput {
+  transport?: GithubTransport;
   pr: PrReference;
 }
 
@@ -184,12 +210,19 @@ export class PartialApplyError extends Error {
  */
 export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrShepherd {
   const cwd = options.cwd === undefined ? undefined : resolve(options.cwd);
+  const transportRunner = createGithubTransportRunner(options.transport);
+  function runInClient<T>(
+    input: { transport?: GithubTransport },
+    work: () => Promise<T>,
+  ): Promise<T> {
+    return runWithExecutionCwd(cwd, () => transportRunner(work, input?.transport));
+  }
 
   function iterate(input?: SingleIterateInput): Promise<IterateResult>;
   function iterate(input: AggregateIterateInput): Promise<PollSummaryResult>;
   function iterate(input: IterateInput): Promise<IterateResult | PollSummaryResult>;
   function iterate(input: IterateInput = {}): Promise<IterateResult | PollSummaryResult> {
-    return runWithExecutionCwd(cwd, async () => {
+    return runInClient(input, async () => {
       validateIterateSelectors(input);
       if ("prs" in input || "stack" in input) {
         const target = await resolveAggregateIterateInput(input as AggregateIterateInput);
@@ -205,7 +238,7 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
     iterate,
 
     getJournal(input: GetJournalInput) {
-      return runWithExecutionCwd(cwd, async () => {
+      return runInClient(input, async () => {
         const { prNumber, targetRepository } = resolvePrReference(input.pr);
         if (!prNumber) throw new PrShepherdValidationError("getJournal requires a PR reference");
         const { owner, name } = targetRepository ?? (await getRepoInfo());
@@ -215,7 +248,7 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
     },
 
     apply(input: ApplyInput) {
-      return runWithExecutionCwd(cwd, async () => {
+      return runInClient(input, async () => {
         validateApplyInput(input);
         const { prNumber, targetRepository } = resolvePrReference(input.pr);
         const results: ApplyOperationResult[] = [];
@@ -224,6 +257,18 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
           const operation = input.operations[index]!;
           try {
             switch (operation.type) {
+              case "merge": {
+                const result = await runApplyMerge({
+                  prNumber,
+                  targetRepository,
+                  requireSha: operation.requireSha,
+                  mergeAction: operation.mergeAction,
+                  mergeMethod: operation.mergeMethod,
+                  expectedStack: operation.expectedStack,
+                });
+                results.push({ type: operation.type, result });
+                break;
+              }
               case "review_mutations": {
                 const { type: _type, message, ...options } = operation;
                 const result = await runResolveMutate({
@@ -234,6 +279,7 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
                   format: "json",
                 });
                 results.push({ type: operation.type, result });
+                if (result.sessionRefusal) return { operations: results };
                 break;
               }
               case "mark_files_viewed": {
@@ -282,7 +328,7 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
     buildSuggestionPatch(input: BuildSuggestionPatchInput) {
       validateSuggestionPatchInput(input);
       const { pr: _pr, ...options } = input;
-      return runWithExecutionCwd(cwd, async () => {
+      return runInClient(input, async () => {
         const target = resolvePrReference(input.pr);
         return runCommitSuggestion({ ...options, ...target, format: "json" });
       });
@@ -291,7 +337,7 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
     buildSuggestionPatches(input: BuildSuggestionPatchesInput) {
       validateSuggestionPatchesInput(input);
       const { pr: _pr, ...options } = input;
-      return runWithExecutionCwd(cwd, async () => {
+      return runInClient(input, async () => {
         const target = resolvePrReference(input.pr);
         return runSuggestionPatches({ ...options, ...target, format: "json" });
       });
@@ -353,8 +399,17 @@ function validateApplyInput(input: ApplyInput): void {
   if (!input || !Array.isArray(input.operations) || input.operations.length === 0) {
     throw new PrShepherdValidationError("apply requires a non-empty operations array");
   }
-  for (const operation of input.operations) validateOperation(operation);
-  validatePrReference(input.pr);
+  const parsed = validatePrReference(input.pr);
+  for (const operation of input.operations) {
+    validateOperation(operation);
+    if (
+      operation.type === "merge" &&
+      operation.expectedStack !== undefined &&
+      parsed.number !== undefined &&
+      operation.expectedStack.prefix.at(-1)?.pr !== parsed.number
+    )
+      throw new PrShepherdValidationError("expectedStack prefix must end at the requested PR");
+  }
 }
 
 function validateOperation(operation: ApplyOperation): void {
@@ -363,6 +418,13 @@ function validateOperation(operation: ApplyOperation): void {
   }
 
   switch (operation.type) {
+    case "merge":
+      try {
+        validateApplyMergeOptions(operation);
+      } catch (error) {
+        throw new PrShepherdValidationError(error instanceof Error ? error.message : String(error));
+      }
+      return;
     case "review_mutations":
       validateReviewMutations(operation);
       return;

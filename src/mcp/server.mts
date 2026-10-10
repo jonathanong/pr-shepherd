@@ -37,6 +37,7 @@ import { projectStackOverview } from "../cli/stack-overview.mts";
 import type { IterateResult, PollSummaryResult } from "../types.mts";
 import { formatCliError, serializeGitHubRequestErrorDetails } from "../cli/error-format.mts";
 import { errorToExitCode, EXIT } from "../exit-codes.mts";
+import { formatApplyMergeResult } from "../cli/apply-merge-handler.mts";
 import { extractShepherdJournal } from "../journal/index.mts";
 
 export interface CreatePrShepherdMcpServerOptions extends CreatePrShepherdOptions {
@@ -52,9 +53,11 @@ const pr = z
     "GitHub pull-request URL or owner/repo#number; the explicit repository may differ from the server working directory",
   );
 const ids = z.array(z.string().min(1)).optional();
+const transport = z.enum(["auto", "graphql", "rest"]).optional();
 
 const iterateInputSchema = z
   .object({
+    transport,
     pr: pr.optional(),
     prs: z.array(pr).min(1).optional(),
     stack: pr.optional(),
@@ -119,11 +122,36 @@ const acknowledgeQueueRemovalOperationSchema = z.object({
   removedAtUnix: z.number().int().positive().safe(),
 });
 
+const mergeOperationSchema = z.object({
+  type: z.literal("merge"),
+  requireSha: z.string().regex(/^[0-9a-f]{40}$/),
+  mergeAction: z.enum(["direct_merge", "merge_queue", "default"]),
+  mergeMethod: z.enum(["merge", "squash", "rebase"]).optional(),
+  expectedStack: z
+    .object({
+      number: z.number().int().positive().safe(),
+      baseRefName: z.string().min(1),
+      prefix: z
+        .array(
+          z.object({
+            pr: z.number().int().positive().safe(),
+            headRefName: z.string().min(1),
+            headRefOid: z.string().regex(/^[0-9a-f]{40}$/),
+            baseRefName: z.string().min(1),
+          }),
+        )
+        .min(1)
+        .max(100_000),
+    })
+    .optional(),
+});
 const applyInputSchema = z.object({
+  transport,
   pr,
   operations: z
     .array(
       z.discriminatedUnion("type", [
+        mergeOperationSchema,
         reviewMutationsOperationSchema,
         markFilesViewedOperationSchema,
         appendJournalOperationSchema,
@@ -134,6 +162,7 @@ const applyInputSchema = z.object({
 });
 
 const suggestionPatchInputSchema = z.object({
+  transport,
   pr,
   threadId: z.string().min(1),
   message: z.string().min(1),
@@ -141,6 +170,7 @@ const suggestionPatchInputSchema = z.object({
 });
 
 const suggestionPatchesInputSchema = z.object({
+  transport,
   pr,
   suggestions: z
     .array(
@@ -158,7 +188,8 @@ export function createPrShepherdMcpServer(
   options: CreatePrShepherdMcpServerOptions = {},
 ): McpServer {
   let shepherd = options.shepherd;
-  const getShepherd = () => (shepherd ??= createPrShepherd({ cwd: options.cwd }));
+  const getShepherd = () =>
+    (shepherd ??= createPrShepherd({ cwd: options.cwd, transport: options.transport }));
   const server = new McpServer({ name: "pr-shepherd", version: readPackageVersion() });
 
   server.registerTool(
@@ -241,8 +272,9 @@ export function createPrShepherdMcpServer(
   server.registerTool(
     "get_journal",
     {
-      description: "Fetch one pull request body with GraphQL and extract its Shepherd Journal.",
-      inputSchema: z.object({ pr }),
+      description:
+        "Fetch one pull request body through the selected transport and extract its Shepherd Journal.",
+      inputSchema: z.object({ pr, transport }),
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -387,6 +419,8 @@ function formatApplyResult(result: Awaited<ReturnType<PrShepherd["apply"]>>): st
     .map((operation, index) => {
       const heading = `## Operation ${index + 1}: ${operation.type}`;
       switch (operation.type) {
+        case "merge":
+          return `${heading}\n\n${formatApplyMergeResult(operation.result)}`;
         case "review_mutations":
           return `${heading}\n\n${formatMutateResult(operation.result)}`;
         case "mark_files_viewed":

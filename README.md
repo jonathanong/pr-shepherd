@@ -15,7 +15,7 @@ An agent finishing a PR should think about code, not reconstruct GitHub state or
 
 Highlights:
 
-- Batched GraphQL reads and writes (plus REST where GraphQL cannot) so one poll replaces a tool-call fan-out. MCP `iterate` is one tick and the client owns recurrence; `--debounce` is a poll-dispatcher settle window, not an MCP tool.
+- GraphQL by default, with a supported REST transport for Claude Code cloud sessions and narrowly defined automatic fallback. REST may expose less context; missing fields remain unknown. MCP `iterate` is one tick and the client owns recurrence; `--debounce` is a poll-dispatcher settle window, not an MCP tool.
 - CI summaries include failed checks, and the failed job/step plus a log excerpt when triage can fetch them. Job and log details are omitted for `STARTUP_FAILURE` and `CANCELLED`; agents may still inspect logs.
 - Handles GitHub comment types (comments, threads, replies) and their states, including first-look, outdated, resolved, minimized, and edited.
 - `apply` batches resolve / reply / minimize / dismiss. `build_suggestion_patches` validates and returns ordered diffs without mutating git.
@@ -34,7 +34,7 @@ Each tick returns exactly one action:
 - `WAIT` — no immediate action; continue with the next poll.
 - `MARK_READY` — the CLI converted an eligible draft PR to ready; continue polling.
 - `FIX_CODE` — agent work is required; complete it, push when needed, then continue polling. Push access to the PR head branch is a usage precondition.
-- `MERGE` — run the emitted head-pinned auto-merge or queue command. Ordinary merges include a plain-merge fallback; queue merges include a GraphQL enqueue fallback. GitHub is authoritative for the result and reports any authorization failure.
+- `MERGE` — run the emitted head-pinned merge or queue command for the selected transport. GitHub is authoritative for the result and reports any authorization failure. Queue operations can use REST.
 - `CANCEL` — stop polling this pull request because it merged, closed, or completed its ready-delay. Continue any remaining pull requests or issues from the original request.
 - `ESCALATE` — stop polling until a human provides direction. Native stacks reach this only after their autonomous one-PR sessions are exhausted.
 
@@ -94,7 +94,7 @@ This system is opinionated and works best with PRs that use required status chec
 - Draft PRs can be marked ready automatically when clean; disable with `actions.autoMarkReady: false` or `--no-auto-mark-ready`.
 - With `--merge`, actionable review threads/comments/reviews/summaries are held back (`WAIT`, with raw deferred-work counts) while a PR sits in the merge queue, since a Shepherd-initiated push would eject it; set `actions.workWhileQueued: true` to act on them immediately instead. Failing checks and merge conflicts are never deferred.
 - The CLI never performs git mutations itself — it only emits commit/push instructions for the agent to run. Push access to the PR head is a usage precondition; GitHub viewer fields do not create a separate push-authorization handoff.
-- Generated iterate mutations and automatic actions are capability-aware and omit unauthorized commands. Explicit `apply` operations forward the caller's requested IDs without iterate's author or capability policy and surface GitHub's result.
+- Generated iterate mutations use capability fields when the transport supplies them. With REST, capability is unknown and otherwise eligible mutations are attempted; GitHub's response is authoritative. Explicit `apply` operations forward the caller's requested IDs and surface GitHub's result.
 - `build_suggestion_patches` turns one or more ordered GitHub suggestion threads into checked patches and commit metadata, but never edits the working tree or git history. Local HEAD may be ahead when the live PR head is its ancestor.
 
 ## Usage
@@ -144,13 +144,16 @@ pr-shepherd --stack 43                 # summarize every PR in a native GitHub s
 A user-supplied `--merge` authorizes the agent to run the emitted merge/enqueue commands for the
 selected PRs or stack without another conversational confirmation. Host permission checks still apply.
 
-Multi-PR and `--stack` polling use compact, read-only GraphQL summaries. They return when work is
+Multi-PR and `--stack` polling use compact, read-only summaries from the selected transport.
+GraphQL mode uses GraphQL summaries; REST mode preserves unavailable fields as unknown. They return when work is
 needed, every selected PR is complete, the bounded timeout expires, or `--until-terminal` crosses a
 configured GraphQL quota-warning band. Explicit PR sets give each actionable row an exact single-PR
 `pollCommand`, so independent rows can proceed before the next aggregate poll.
 
 Native-stack rows are ordered bottom-to-top. `--stack` never performs a mutation itself. Every
-layer that still has work gets its own one-PR session on the same tick, including a clean draft
+row marks ownership by comparing its author with the authenticated viewer; REST reads `/user`
+for that identity without inferring viewer permissions. Sessions act only on rows marked `owned`. Every
+owned layer that still has work gets its own one-PR session on the same tick, including a clean draft
 whose session marks it ready. Layers do not wait for a lower layer's READY receipt, so their
 ready-delays overlap. With automatic mark-ready disabled, the instructions ask the agent to mark
 a clean draft ready after its probe. A queued stack, or one whose remaining layers can only wait,
@@ -161,7 +164,13 @@ until then, `SHEPHERD` remains the immediate action and lists the human blockers
 
 With `--stack --merge`, the highest open layer whose open lower layers all have current READY
 receipts, and whose bottom open layer GitHub has retargeted onto the stack base, returns `MERGE`
-with `gh stack merge <that PR number> --yes` and the allowed method flag (`--squash` unless config or the repository selects another). That lands the named layer and every
+with the transport-specific stack merge command and allowed method. GraphQL mode uses
+`gh stack merge <that PR number> --yes`; REST mode uses the SHA-pinned
+`pr-shepherd apply merge` command, using the trunk's known queue policy even when the named layer
+targets its parent branch. The command binds the observed stack, trunk, and ordered prefix with
+`--expected-stack` and rejects a changed stack before submission. Unknown REST queue policy uses
+`default` without a merge method. Known queue requests omit the configured direct merge method.
+That lands the named layer and every
 unmerged layer below it. When the base uses a merge queue, the same command queues the prefix
 together and GitHub evaluates each layer from the bottom; a failure ejects that layer and those
 above it. For a `failed_checks` removal on the layer's first ejection, the one-PR session emits a head-, queue-commit-, and timestamp-pinned local acknowledgment command; run it only when the failure does not reproduce after updating from the latest base, the head did not change, and no source changes or other blockers remain. Fresh source checks and a new READY receipt then let the aggregate selector recover the eligible prefix. Manual or stale removals cannot use this path. Layers above the prefix keep their one-PR sessions. After the merge, GitHub retargets
@@ -193,7 +202,8 @@ containers and ignores journal-shaped examples hidden in Markdown constructs. Th
 including append and reconciliation helpers, is documented in [docs/api.md](docs/api.md).
 
 MCP clients can call `extract_journal({ body: prBody })` for the same pure result without writing a
-file, or `get_journal({ pr: "owner/repo#123" })` to fetch a PR body through GraphQL and extract it.
+file, or `get_journal({ pr: "owner/repo#123" })` to fetch a PR body through the selected
+transport and extract it.
 Both return the typed extraction JSON in `structuredContent` and `content`; neither mutates the PR.
 
 For shell automation that already has a PR body, use the equivalent local-only command:
@@ -328,7 +338,7 @@ const rule: ClassifyRule = (item) => {
 export default rule;
 ```
 
-`suppress: true` hides the item from agent output. `autoResolve: true` queues it for the minimize/resolve mutation. `reason` is an optional note. When both flags apply together and `actions.autoMinimizeSuppressed` is `true` (the default), Shepherd resolves the thread or minimizes the comment or review summary during `iterate` only when GitHub reports the exact per-object capability. Confirmed successes are recorded on `threads.autoResolved` and `comments.autoMinimized`, printed once as `## Classification auto-resolve` before `## Instructions` (the same `ruleAutoResolve` object in JSON), and appended as one Shepherd Journal list item attributed to the token login. Distinct rule reasons are included. Failed IDs stay on the generated `apply review` command, and each failure is an extra bullet in that section. A journal write failure is reported the same way and does not undo the GitHub resolve or minimize. `actions.autoMinimizeSuppressed: false` leaves the IDs on that command and does not mutate, journal, or print the line. Denied or unverifiable items return to the normal first-look/edit visibility gate and produce no mutation recommendation.
+`suppress: true` hides the item from agent output. `autoResolve: true` queues it for the minimize/resolve mutation. `reason` is an optional note. When both flags apply together and `actions.autoMinimizeSuppressed` is `true` (the default), Shepherd attempts supported operations and relies on GitHub's response when capability is unknown. Confirmed successes are recorded on `threads.autoResolved` and `comments.autoMinimized`, printed once as `## Classification auto-resolve` before `## Instructions` (the same `ruleAutoResolve` object in JSON), and appended as one Shepherd Journal list item attributed to the token login. Distinct rule reasons are included. Failed IDs stay on the generated `apply review` command, and each failure is an extra bullet in that section. A journal write failure is reported the same way and does not undo the GitHub resolve or minimize. `actions.autoMinimizeSuppressed: false` leaves the IDs on that command and does not mutate, journal, or print the line. Denied review mutations are surfaced once then skipped; REST comment minimization is unsupported and is surfaced as a one-look skip. See [transport behavior](docs/graphql.md).
 
 TypeScript rules are loaded by the runtime's native TypeScript support; keep them to erasable syntax such as type annotations and `import type`. Runtime TypeScript features that need transpilation, such as enums, namespaces, parameter properties, and decorators, are not supported. Use `.mts` for portable ESM rules across Node, Bun, and Deno.
 

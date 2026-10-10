@@ -5,6 +5,8 @@ import {
   markReplySeen,
   markReviewInlineThreads,
   markSeen,
+  markMutationDenied,
+  loadSeenMap,
   readSeenMarker,
   hashBody,
 } from "./seen-comments.mts";
@@ -77,5 +79,10 @@ describe("markSeen — bodyHash upsert", () => {
     const second = await readSeenMarker(testKey, "PRR_PARENT");
 
     expect(second).toEqual(first);
+  });
+
+  it("ignores a denial marker when no previously displayed body hash exists", async () => {
+    await markMutationDenied(testKey, testId);
+    expect((await loadSeenMap(testKey)).has(testId)).toBe(false);
   });
 });

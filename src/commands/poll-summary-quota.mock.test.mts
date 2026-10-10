@@ -11,6 +11,7 @@ vi.mock("../github/api-telemetry.mts", () => ({
   withApiTelemetryScope: vi.fn((callback: () => unknown) => callback()),
   summarizeApiTelemetry: mockSummarizeApiTelemetry,
   withGraphqlCredentialFingerprint: <T,>(sample: T) => sample,
+  withRestCoreCredentialFingerprint: <T,>(sample: T) => sample,
 }));
 vi.mock("../state/graphql-quota-warnings.mts", () => ({
   evaluateWorktreeGraphqlQuotaWarning: mockEvaluateQuotaWarning,

@@ -15,6 +15,10 @@ export function buildIterateBase(
   return {
     pr: report.pr,
     repo: report.repo,
+    ...(report.transport && { transport: report.transport }),
+    ...(report.transportUnavailable?.length && {
+      transportUnavailable: report.transportUnavailable,
+    }),
     status: report.status,
     state: report.mergeStatus.state,
     mergeStateStatus: report.mergeStatus.mergeStateStatus,

@@ -253,6 +253,8 @@ export interface Fixture {
   };
   /** If true, REST cancel calls return HTTP 409. */
   cancelRunsFail?: boolean;
+  /** Explicit REST response bodies keyed by URL pathname for transport-transition fixtures. */
+  restResponses?: Record<string, unknown>;
   /** Extra CLI args appended after "42". */
   args?: string[];
   /** Freeform note about the scenario. Not read by the harness; documentation only. */
@@ -589,6 +591,17 @@ export function applyFixture(fixture: Fixture): void {
         json: () => Promise.resolve({ data: {} }),
         text: () => Promise.resolve('{"data":{}}'),
       });
+    });
+  } else if (fixture.restResponses) {
+    mockFetch.mockImplementation((url) => {
+      const path = new URL(String(url)).pathname;
+      if (!(path in fixture.restResponses))
+        throw new Error(`Missing fixture REST response: ${path}`);
+      return Promise.resolve(
+        new Response(JSON.stringify(fixture.restResponses[path]), {
+          headers: { "content-type": "application/json" },
+        }),
+      );
     });
   } else {
     mockFetch.mockResolvedValue({

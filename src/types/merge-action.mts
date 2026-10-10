@@ -3,7 +3,7 @@ interface ShellCommand {
 }
 
 export interface MergeCommandPlan {
-  mode: "auto" | "queue";
+  mode: "auto" | "queue" | "rest";
   command: ShellCommand;
   /** Ordinary merge retry without `--auto`, used only when auto-merge is unavailable. */
   fallbackCommand?: ShellCommand;

@@ -1,10 +1,5 @@
-import { loadConfig } from "../../config/load.mts";
-import { findMergeStrategies } from "../../config/merge-command-args.mts";
-import {
-  chooseMergeMethod,
-  configuredMergeMethod,
-  type MergeMethod,
-} from "../../config/merge-method.mts";
+import { buildMergeCommandPlan } from "./merge-plan.mts";
+export { buildMergeCommandPlan } from "./merge-plan.mts";
 import { formatPrUrl } from "../../pr-reference.mts";
 import type {
   AgentCheck,
@@ -17,72 +12,10 @@ import { renderShellCommand, buildPrShepherdCommand } from "../../cli/runner.mts
 import { hasQueueRecoveryEvidence } from "./check-evidence.mts";
 import { isCiQueueRemovalReason } from "../../state/queue-removal-ack.mts";
 import { buildEscalateHumanMessage } from "./escalate.mts";
+import { getGithubTransport } from "../../github/transport.mts";
 
-const ENQUEUE_MUTATION =
-  "mutation EnqueuePullRequest($pullRequestId: ID!, $expectedHeadOid: GitObjectID!) { enqueuePullRequest(input: { pullRequestId: $pullRequestId, expectedHeadOid: $expectedHeadOid }) { mergeQueueEntry { id } } }";
-
-interface MergePlanInput {
-  pr: number;
-  repo: string;
-  nodeId: string;
-  headSha: string;
-  queue: boolean;
-  /** Omitted when the batch did not select repository merge settings. */
-  allowedMergeMethods?: readonly MergeMethod[];
-}
-
-export interface MergeMethodUnavailable {
+interface QueueRecoveryUnavailable {
   unavailable: string;
-}
-
-export function buildMergeCommandPlan(
-  input: MergePlanInput,
-): MergeCommandPlan | MergeMethodUnavailable {
-  const base = [
-    "gh",
-    "pr",
-    "merge",
-    String(input.pr),
-    "--repo",
-    input.repo,
-    "--match-head-commit",
-    input.headSha,
-  ];
-  if (input.queue) {
-    return {
-      mode: "queue",
-      command: { argv: base },
-      queueApiFallbackCommand: {
-        argv: [
-          "gh",
-          "api",
-          "graphql",
-          "-f",
-          `query=${ENQUEUE_MUTATION}`,
-          "-f",
-          `pullRequestId=${input.nodeId}`,
-          "-f",
-          `expectedHeadOid=${input.headSha}`,
-        ],
-      },
-    };
-  }
-
-  const mergeConfig = loadConfig().merge;
-  const configuredArgs = mergeConfig?.commandArgs ?? [];
-  const decision = chooseMergeMethod({
-    allowed: input.allowedMergeMethods,
-    configured: configuredMergeMethod(mergeConfig ?? {}),
-    fallback: "merge",
-  });
-  if ("unavailable" in decision) return decision;
-  const hasStrategy = findMergeStrategies(configuredArgs).length > 0;
-  const commandArgs = hasStrategy ? configuredArgs : [...configuredArgs, `--${decision.method}`];
-  return {
-    mode: "auto",
-    command: { argv: [...base, "--auto", ...commandArgs] },
-    fallbackCommand: { argv: [...base, ...commandArgs] },
-  };
 }
 
 export function renderMergeCommand(command: { argv: string[] }): string {
@@ -94,9 +27,13 @@ export function buildRemovedQueueRecovery(
   report: ShepherdReport,
   checks: AgentCheck[],
   merge: boolean | undefined,
-): MergeCommandPlan | undefined {
+): MergeCommandPlan | QueueRecoveryUnavailable | undefined {
   if (report.mergeStatus.mergeRequirements?.stack) return undefined;
   if (!removedQueueRecoveryAvailable(report, checks, merge)) return undefined;
+  // REST cannot prove that a recorded enqueue was removed or that no later enqueue exists.
+  // Never offer a resume command as if it could authorize a fresh same-head submission.
+  const unsupported = unsupportedRestQueueRecovery(report);
+  if (unsupported) return unsupported;
   const plan = buildMergeCommandPlan({
     pr: report.pr,
     repo: report.repo,
@@ -111,10 +48,12 @@ export function buildRemovedQueueRecovery(
 export function buildStackQueueRemovalAcknowledgment(
   report: ShepherdReport,
   checks: AgentCheck[],
-): { argv: string[] } | undefined {
+): { argv: string[] } | QueueRecoveryUnavailable | undefined {
   if (!report.mergeStatus.mergeRequirements?.stack) return undefined;
   // This records a local disposition, without enqueueing; aggregate child sessions omit --merge.
   if (!removedQueueRecoveryAvailable(report, checks, true)) return undefined;
+  const unsupported = unsupportedRestQueueRecovery(report);
+  if (unsupported) return unsupported;
   const removal = report.mergeQueue!.latestRemoval!;
   return buildPrShepherdCommand([
     "apply",
@@ -127,6 +66,16 @@ export function buildStackQueueRemovalAcknowledgment(
     "--removed-at",
     String(removal.createdAtUnix),
   ]);
+}
+
+function unsupportedRestQueueRecovery(
+  report: ShepherdReport,
+): QueueRecoveryUnavailable | undefined {
+  if (report.transport !== "rest" && getGithubTransport() !== "rest") return undefined;
+  return {
+    unavailable:
+      "Queue recovery is transport-unsupported: REST cannot verify current merge-queue removal evidence. Continue the printed fix steps; requeue and removal acknowledgment require verified current removal evidence.",
+  };
 }
 
 function removedQueueRecoveryAvailable(

@@ -15,6 +15,7 @@ export function fingerprintRawSummaryPr(raw: RawSummaryPr): string | null {
     raw.reviewThreads.pageInfo.hasPreviousPage ||
     raw.reviewThreads.nodes.some((thread) => thread.comments.pageInfo.hasPreviousPage);
   const evidence = {
+    ...(raw.transport === "rest" && { transport: "rest" }),
     number: raw.number,
     state: raw.state,
     lifecycleEvents: raw.lifecycleEvents,
@@ -50,7 +51,7 @@ export function fingerprintRawSummaryPr(raw: RawSummaryPr): string | null {
 }
 
 /** Hidden bodies are not readiness evidence: bots keep editing hidden notices after a PR settles. */
-function hideBodies<C extends { nodes: Array<{ isMinimized: boolean; body: string }> }>(
+function hideBodies<C extends { nodes: Array<{ isMinimized?: boolean; body: string }> }>(
   connection: C,
 ) {
   return {

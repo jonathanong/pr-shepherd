@@ -1,3 +1,5 @@
+import { githubOperation } from "./transport.mts";
+import { readRestRawThread } from "./rest-thread-read.mts";
 import { graphqlWithRateLimit, type RateLimitInfo } from "./client.mts";
 import { GitHubRequestError } from "./errors.mts";
 import { paginateForward } from "./pagination.mts";
@@ -11,7 +13,7 @@ import type {
 
 const THREAD_COMMENT_PAGE_CONCURRENCY = 4;
 
-export async function hydrateThreadCommentPages(
+async function hydrateGraphqlThreadCommentPages(
   threads: RawThread[],
   initialRateLimit?: RateLimitInfo,
 ): Promise<{ threads: RawThread[]; rateLimit?: RateLimitInfo }> {
@@ -77,4 +79,20 @@ async function hydrateThreadCommentPage(
       nodes: [...thread.comments.nodes, ...extra],
     },
   };
+}
+
+export function hydrateThreadCommentPages(
+  threads: RawThread[],
+  initialRateLimit?: RateLimitInfo,
+): Promise<{ threads: RawThread[]; rateLimit?: RateLimitInfo }> {
+  return githubOperation(
+    "ReviewThreadComments",
+    () => hydrateGraphqlThreadCommentPages(threads, initialRateLimit),
+    async () => ({
+      threads: await mapPool(threads, THREAD_COMMENT_PAGE_CONCURRENCY, async (thread) =>
+        thread.comments.pageInfo?.hasNextPage ? readRestRawThread(thread.id) : thread,
+      ),
+      rateLimit: initialRateLimit,
+    }),
+  );
 }

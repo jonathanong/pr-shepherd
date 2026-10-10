@@ -10,7 +10,10 @@ vi.mock("../../github/client.mts", () => ({
   graphqlWithRateLimit: mockGraphqlWithRateLimit,
 }));
 
-import { lookupUpperLayerTrunkConflict } from "./stack-trunk-conflict.mts";
+import { lookupUpperLayerTrunkConflict as operation } from "./stack-trunk-conflict.mts";
+import { runWithGithubTransport } from "../../github/transport.mts";
+const lookupUpperLayerTrunkConflict = (...args: Parameters<typeof operation>) =>
+  runWithGithubTransport("graphql", () => operation(...args));
 
 const input = {
   owner: "acme",
@@ -33,8 +36,7 @@ function compare(behindBy: number | null) {
   };
 }
 
-// Two merged trunk-based layers followed by four open descendants. The lowest open PR
-// retains its merged parent's base rather than having been retargeted onto main.
+// Two merged layers precede four open descendants whose bottom retains its merged parent's base.
 const members = [2536, 2546, 2547, 2548, 2549, 2550].map((number, index) => ({
   position: index + 1,
   pullRequest: {
@@ -94,7 +96,6 @@ describe("lookupUpperLayerTrunkConflict", () => {
   });
 
   it("rebases the known bottom onto trunk without comparing its obsolete parent", async () => {
-    // A positive comparison to the merged parent's branch must never override topology.
     mockGraphql.mockResolvedValue(compare(3));
     await expect(lookupUpperLayerTrunkConflict({ ...knownBottom, pr: 2547 })).resolves.toEqual({
       trunk: "main",

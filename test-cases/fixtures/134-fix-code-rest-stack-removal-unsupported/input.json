@@ -1,0 +1,66 @@
+{
+  "description": "Previously fetched native-stack queue-removal evidence survives a switch to REST. Surface the failed check and unavailable current-removal verification rather than printing an acknowledgment command that REST cannot validate.",
+  "args": [
+    "--transport",
+    "rest"
+  ],
+  "batchData": {
+    "latestMergeQueueRemoval": {
+      "reason": "failed_checks",
+      "actor": "github-actions",
+      "createdAtUnix": 1715799000,
+      "beforeCommitOid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "beforeCommitParentOids": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ]
+    },
+    "removedMergeQueueChecks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "source": "check_run",
+        "event": "merge_group",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/37106358227",
+        "runId": "37106358227",
+        "runAttempt": 1,
+        "workflowName": "CI",
+        "scope": "merge_group",
+        "commitOid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "logExcerpt": "OpenRouter HTTP 529: provider temporarily unavailable",
+        "jobName": "tests"
+      }
+    ],
+    "isMergeQueueEnabled": true,
+    "stack": {
+      "number": 7,
+      "size": 1,
+      "position": 1,
+      "baseRefName": "main"
+    },
+    "checks": [
+      {
+        "name": "CI / source tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ],
+    "headRefOid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12,
+  "restResponses": {
+    "/repos/owner/repo/branches/main/protection": {},
+    "/repos/owner/repo/rules/branches/main": [],
+    "/repos/owner/repo/compare/main...feature": {
+      "behind_by": 0
+    }
+  }
+}

@@ -4,9 +4,23 @@ import { GitHubRequestError } from "../github/errors.mts";
 import { rateLimitKind, type RateLimitKind } from "../github/rate-limit-kind.mts";
 import { exhaustedPrimaryLimitDelayMs } from "./poll-rate-limit-delay.mts";
 import { selectQuotaWarning } from "./quota-selection.mts";
-import type { ApiResourceUsage, GraphqlApiUsage, PollSummaryResult } from "../types.mts";
+import type {
+  ApiResourceUsage,
+  GraphqlApiUsage,
+  GraphqlQuotaWarning,
+  PollSummaryResult,
+} from "../types.mts";
+import { getGithubTransport } from "../github/transport.mts";
 
 const GRAPHQL_RETRY_AFTER_DEFAULT_MS = 60_000;
+
+export function carryQuotaWarning(
+  pending: GraphqlQuotaWarning | undefined,
+  current: GraphqlQuotaWarning | undefined,
+  transport = getGithubTransport(),
+): GraphqlQuotaWarning | undefined {
+  return current ?? (transport === "rest" && pending?.resource !== "core" ? undefined : pending);
+}
 
 /** Sleep at least `--interval`, and at least the active crossed quota band. */
 function graphqlQuotaPollIntervalMs(
@@ -40,10 +54,16 @@ export function quotaPollIntervalMs(
     | undefined,
   fallbackMs: number,
   maxMs: number,
+  transport?: "graphql" | "rest",
 ): number {
   const core = usage?.rest?.find((item) => item.resource === "core");
   return Math.max(
-    graphqlQuotaPollIntervalMs(bands, usage?.graphql, fallbackMs, maxMs),
+    graphqlQuotaPollIntervalMs(
+      bands,
+      transport === "rest" ? undefined : usage?.graphql,
+      fallbackMs,
+      maxMs,
+    ),
     graphqlQuotaPollIntervalMs(bands, core, fallbackMs, maxMs),
   );
 }
@@ -144,5 +164,6 @@ export async function aggregateQuotaWarning(
     })),
     usage,
     true,
+    getGithubTransport(),
   );
 }

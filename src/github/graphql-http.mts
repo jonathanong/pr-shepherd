@@ -2,7 +2,8 @@
 import { appendEntry, nextEntry } from "../log/log-file.mts";
 import { formatRequestEntry, formatResponseEntry } from "../log/session.mts";
 import { GitHubRequestError, type GitHubGraphQlError } from "./errors.mts";
-import { withGraphQlInternalRetry } from "./graphql-internal-retry.mts";
+import { isGraphQlMutationDocument, withGraphQlInternalRetry } from "./graphql-internal-retry.mts";
+import { githubFetch } from "./github-fetch.mts";
 import { formatGraphQlErrors, parseGraphQlPayload } from "./graphql-response.mts";
 import { makeAuthHeaders } from "./http-auth.mts";
 import { requestWithTokenRetry } from "./http-request.mts";
@@ -64,7 +65,7 @@ async function graphqlInner<T>(
       const auth = await makeAuthHeaders();
       authSource = auth.source;
       credentialFingerprint = auth.fingerprint;
-      return fetch(url, {
+      return githubFetch(url, {
         method: "POST",
         headers: auth.headers,
         body: JSON.stringify({ query, variables: vars }),
@@ -82,6 +83,8 @@ async function graphqlInner<T>(
         authSource,
         credentialFingerprint,
       }),
+    !isGraphQlMutationDocument(query),
+    true,
   );
 
   const durationMs = Math.round(performance.now() - retryT0);
@@ -119,6 +122,7 @@ async function graphqlInner<T>(
         rateLimit: headerRateLimit ?? undefined,
         retryAfterSeconds,
         authSource,
+        responseMessage: redactToken(body),
       },
     );
   }

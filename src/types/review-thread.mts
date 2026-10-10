@@ -2,7 +2,7 @@ import type { AuthorType, CommentAuthorAssociation } from "./github.mts";
 
 export interface ReviewThreadComment {
   id: string;
-  isMinimized: boolean;
+  isMinimized?: boolean;
   reviewId?: string;
   author: string;
   authorType: AuthorType;

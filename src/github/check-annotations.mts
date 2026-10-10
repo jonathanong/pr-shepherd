@@ -1,3 +1,5 @@
+import { githubOperation } from "./transport.mts";
+import { readRestCheckAnnotations } from "./rest-annotation-read.mts";
 import {
   readFreshCheckAnnotations,
   storeCheckAnnotations,
@@ -23,7 +25,11 @@ export async function fetchCheckRunAnnotations(
     const cached = await readFreshCheckAnnotations(checkRunId, cacheOpts);
     if (cached) return cached;
   }
-  const annotations = await collectAnnotations(checkRunId, initialPage);
+  const annotations = await githubOperation(
+    "CheckRunAnnotations",
+    () => collectAnnotations(checkRunId, initialPage),
+    () => readRestCheckAnnotations(checkRunId, cacheOpts),
+  );
   await storeCheckAnnotations(checkRunId, annotations, cacheOpts);
   return annotations;
 }

@@ -110,6 +110,8 @@ throttling or briefly unavailable); `77` means fix the token or its scopes;
 `69` means the request itself can't proceed no matter how many times it's
 retried (there's no PR to act on, or the target thread isn't eligible).
 
+A REST snapshot that keeps changing during bounded reconciliation also exits `75`: either the PR revision moved, or the CCR thread and inline-comment memberships still disagree after a retry. No incomplete snapshot is returned. A cloud proxy session-access refusal during review mutations exits `77` with the proxy's message; repair session repository access and retry. It does not persist a GitHub-denied marker for the review item.
+
 **GitHub 403 is ambiguous on its own** — GitHub's secondary rate limit also
 returns 403, sometimes without `Retry-After` but with a secondary-limit response
 message. `GitHubRequestError` classifies

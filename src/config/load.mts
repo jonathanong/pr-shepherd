@@ -7,6 +7,7 @@ import builtins from "../config.json" with { type: "json" };
 import { getEffectiveCwd } from "../execution-context.mts";
 import { findMergeStrategies } from "./merge-command-args.mts";
 import { parseMergeMethod, type MergeMethod } from "./merge-method.mts";
+import { parseGithubTransport, type GithubTransport } from "../github/transport-mode.mts";
 
 const MINIMIZE_COMMENTS_POLICIES = ["all", "bots", "users", "none"] as const;
 
@@ -31,6 +32,8 @@ interface PollConfig {
 }
 
 export interface PrShepherdConfig {
+  /** GitHub API settings; auto prefers GraphQL outside Claude Code cloud sessions. */
+  github?: { transport?: GithubTransport };
   /** Optional user classification configuration; preserved for rule consumers. */
   classify?: unknown;
   /** Argv prefix for every pr-shepherd command Shepherd emits, e.g. `["pnpm", "exec", "pr-shepherd"]`. */
@@ -428,6 +431,7 @@ function parseGraphqlQuotaWarnings(
 }
 
 const KNOWN_CONFIG_KEYS = new Set([
+  "github",
   "classify",
   "cliCommand",
   "botUsernames",
@@ -442,6 +446,7 @@ const KNOWN_CONFIG_KEYS = new Set([
   "actions",
 ]);
 const KNOWN_NESTED_KEYS: Record<string, ReadonlySet<string>> = {
+  github: new Set(["transport"]),
   iterate: new Set([
     "fixAttemptsPerThread",
     "stallTimeoutMinutes",
@@ -502,6 +507,13 @@ const rawDefaults = builtins as unknown as Record<string, unknown>;
 
 function parseConfig(value: Record<string, unknown>, normalizeMergeArgs = true): PrShepherdConfig {
   const config = value as unknown as PrShepherdConfig;
+  const github = value["github"];
+  if (github === null || typeof github !== "object" || Array.isArray(github)) {
+    throw new Error("Invalid config: github must be a plain object");
+  }
+  config.github = {
+    transport: parseGithubTransport((github as Record<string, unknown>)["transport"] ?? "auto"),
+  };
   config.cliCommand = parseCliCommand(config.cliCommand);
   config.botUsernames = parseBotUsernames(config.botUsernames);
   config.ignoreChecks = parseIgnoreChecks(config.ignoreChecks);

@@ -42,8 +42,10 @@ export function deriveMergeStatus(pr: BatchPrData): MergeStatusResult {
     status = "UNSTABLE";
   } else if (pr.mergeStateStatus === "UNKNOWN") {
     status = "UNKNOWN";
-  } else {
+  } else if (pr.mergeStateStatus === "CLEAN") {
     status = "CLEAN";
+  } else {
+    status = "UNKNOWN";
   }
 
   return {

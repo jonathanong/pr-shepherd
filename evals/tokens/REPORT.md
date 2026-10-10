@@ -16,7 +16,7 @@ Weighted sum of the session's scenarios below, one-time setup included.
 
 | arm | tool calls | turns | tool tokens | cost (ITE) | truncated calls |
 | --- | --- | --- | --- | --- | --- |
-| pr-shepherd | 16.8 | 15.8 | 11,447 | 67,397 | 0 |
+| pr-shepherd | 16.8 | 15.8 | 11,511 | 67,560 | 0 |
 | gh CLI | 31.3 | 18.3 | 39,313 | 111,375 | 0 |
 | GitHub MCP | 88.6 | 48.6 | 85,958 | 270,494 | 1.5 |
 | GitHub MCP, eager tools | 82.8 | 42.8 | 84,075 | 310,914 | 1.5 |
@@ -27,16 +27,16 @@ Fixed is setup (skill and playbooks, or MCP tool schemas) plus carrying it in co
 
 | arm | fixed tokens | fixed ITE | variable tokens | variable ITE | total ITE |
 | --- | --- | --- | --- | --- | --- |
-| pr-shepherd | 3,006 | 16,585 | 8,441 | 50,812 | 67,397 |
+| pr-shepherd | 3,070 | 16,748 | 8,441 | 50,812 | 67,560 |
 | gh CLI | 0 | 0 | 39,313 | 111,375 | 111,375 |
 | GitHub MCP | 1,883 | 24,368 | 84,075 | 246,126 | 270,494 |
 | GitHub MCP, eager tools | 0 | 64,788 | 84,075 | 246,126 | 310,914 |
 
 | vs. baseline | fixed ITE | variable tokens | variable ITE | total ITE |
 | --- | --- | --- | --- | --- |
-| gh CLI | +16,585 | −79% | −54% | −39% |
-| GitHub MCP | −7,783 | −90% | −79% | −75% |
-| GitHub MCP, eager tools | −48,203 | −90% | −79% | −78% |
+| gh CLI | +16,748 | −79% | −54% | −39% |
+| GitHub MCP | −7,620 | −90% | −79% | −75% |
+| GitHub MCP, eager tools | −48,040 | −90% | −79% | −78% |
 
 ## Typical stack session
 
@@ -44,13 +44,13 @@ Weighted sum of the session's scenarios below, one-time setup included.
 
 | vs. baseline | tool calls | turns | tool tokens | cost (ITE) |
 | --- | --- | --- | --- | --- |
-| gh CLI | −48% | −23% | +41% | −25% |
-| GitHub MCP | −77% | −47% | −24% | −50% |
-| GitHub MCP, eager tools | −77% | −44% | −13% | −60% |
+| gh CLI | −48% | −23% | +42% | −25% |
+| GitHub MCP | −77% | −47% | −23% | −50% |
+| GitHub MCP, eager tools | −77% | −44% | −12% | −59% |
 
 | arm | tool calls | turns | tool tokens | cost (ITE) | truncated calls |
 | --- | --- | --- | --- | --- | --- |
-| pr-shepherd | 17 | 10 | 7,233 | 42,062 | 0 |
+| pr-shepherd | 17 | 10 | 7,297 | 42,188 | 0 |
 | gh CLI | 33 | 13 | 5,133 | 56,002 | 0 |
 | GitHub MCP | 75 | 19 | 9,478 | 83,549 | 0 |
 | GitHub MCP, eager tools | 74 | 18 | 8,286 | 104,098 | 0 |
@@ -61,16 +61,16 @@ Fixed is setup (skill and playbooks, or MCP tool schemas) plus carrying it in co
 
 | arm | fixed tokens | fixed ITE | variable tokens | variable ITE | total ITE |
 | --- | --- | --- | --- | --- | --- |
-| pr-shepherd | 2,189 | 13,221 | 5,044 | 28,841 | 42,062 |
+| pr-shepherd | 2,253 | 13,347 | 5,044 | 28,841 | 42,188 |
 | gh CLI | 0 | 0 | 5,133 | 56,002 | 56,002 |
 | GitHub MCP | 1,192 | 6,731 | 8,286 | 76,818 | 83,549 |
 | GitHub MCP, eager tools | 0 | 27,280 | 8,286 | 76,818 | 104,098 |
 
 | vs. baseline | fixed ITE | variable tokens | variable ITE | total ITE |
 | --- | --- | --- | --- | --- |
-| gh CLI | +13,221 | −2% | −49% | −25% |
-| GitHub MCP | +6,490 | −39% | −62% | −50% |
-| GitHub MCP, eager tools | −14,059 | −39% | −62% | −60% |
+| gh CLI | +13,347 | −2% | −49% | −25% |
+| GitHub MCP | +6,616 | −39% | −62% | −50% |
+| GitHub MCP, eager tools | −13,933 | −39% | −62% | −59% |
 
 ## Scenarios
 
@@ -80,29 +80,29 @@ Each cell is `turns · tool tokens · cost (ITE)`. Saving columns compare cost.
 
 | scenario | weight | pr-shepherd | gh CLI | GitHub MCP | vs. gh | vs. MCP |
 | --- | --- | --- | --- | --- | --- | --- |
-| `session-setup` | 1 | 3 · 3,006 · 12,963 | 0 · 0 · 0 | 5.8 · 1,883 · 20,023 | n/a | −35% |
+| `session-setup` | 1 | 3 · 3,070 · 13,043 | 0 · 0 · 0 | 5.8 · 1,883 · 20,023 | n/a | −35% |
 | `ci-wait` | 2 | 0 · 171 · 214 | 1 · 135 · 3,244 | 12 · 612 · 38,772 | −93% | −99% |
-| `failing-check` | 1 | 1 · 1,533 · 5,180 | 2 · 7,617 · 16,246 | 4 · 33,272 · 56,287 ✂ | −68% | −91% |
-| `bot-review-summary` | 1 | 1 · 269 · 3,706 | 1 · 365 · 4,086 | 1 · 611 · 4,508 | −9% | −18% |
-| `review-thread` | 1 | 2 · 510 · 7,566 | 2 · 328 · 7,210 | 2 · 580 · 7,839 | +5% | −3% |
-| `review-thread-with-history` | 1 | 2 · 510 · 7,619 | 2 · 8,558 · 17,498 | 2 · 9,977 · 19,586 | −56% | −61% |
-| `multi-category` | 0.5 | 3 · 8,024 · 20,465 | 3 · 7,896 · 19,819 | 5 · 33,700 · 61,557 ✂ | +3% | −67% |
+| `failing-check` | 1 | 1 · 1,533 · 5,187 | 2 · 7,617 · 16,246 | 4 · 33,272 · 56,287 ✂ | −68% | −91% |
+| `bot-review-summary` | 1 | 1 · 269 · 3,712 | 1 · 365 · 4,086 | 1 · 611 · 4,508 | −9% | −18% |
+| `review-thread` | 1 | 2 · 510 · 7,579 | 2 · 328 · 7,210 | 2 · 580 · 7,839 | +5% | −3% |
+| `review-thread-with-history` | 1 | 2 · 510 · 7,632 | 2 · 8,558 · 17,498 | 2 · 9,977 · 19,586 | −56% | −61% |
+| `multi-category` | 0.5 | 3 · 8,024 · 20,484 | 3 · 7,896 · 19,819 | 5 · 33,700 · 61,557 ✂ | +3% | −67% |
 | `mark-ready` | 1 | 0 · 0 · 0 | 2 · 8,536 · 17,340 | 2 · 9,923 · 19,491 | −100% | −100% |
-| `merged` | 1 | 1 · 133 · 3,562 | 1 · 8,443 · 14,184 | 1 · 9,801 · 16,057 | −75% | −78% |
-| `bot-threads` | 1 | 2 · 666 · 7,914 | 2 · 720 · 8,385 | 2 · 1,066 · 9,166 | −6% | −14% |
-| `check-annotations` | 0.25 | 1 · 492 · 4,011 | 3 · 607 · 10,822 | 1 · 481 · 4,418 † | −63% | −9% |
-| `conflicts` | 0.5 | 1 · 203 · 3,649 | 1 · 280 · 3,980 | 1 · 483 · 4,421 | −8% | −17% |
-| `merge` | 0.5 | 2 · 269 · 7,142 | 2 · 312 · 7,110 | 2 · 539 · 7,854 | 0% | −9% |
-| `merge-queue` | 0.25 | 2 · 426 · 7,314 | 2 · 320 · 7,110 | 2 · 558 · 7,889 † | +3% | −7% |
+| `merged` | 1 | 1 · 133 · 3,568 | 1 · 8,443 · 14,184 | 1 · 9,801 · 16,057 | −75% | −78% |
+| `bot-threads` | 1 | 2 · 666 · 7,927 | 2 · 720 · 8,385 | 2 · 1,066 · 9,166 | −5% | −14% |
+| `check-annotations` | 0.25 | 1 · 492 · 4,017 | 3 · 607 · 10,822 | 1 · 481 · 4,418 † | −63% | −9% |
+| `conflicts` | 0.5 | 1 · 203 · 3,656 | 1 · 280 · 3,980 | 1 · 483 · 4,421 | −8% | −17% |
+| `merge` | 0.5 | 2 · 269 · 7,155 | 2 · 312 · 7,110 | 2 · 539 · 7,854 | +1% | −9% |
+| `merge-queue` | 0.25 | 2 · 426 · 7,327 | 2 · 320 · 7,110 | 2 · 558 · 7,889 † | +3% | −7% |
 
 ### Typical stack session
 
 | scenario | weight | pr-shepherd | gh CLI | GitHub MCP | vs. gh | vs. MCP |
 | --- | --- | --- | --- | --- | --- | --- |
-| `stack-setup` | 1 | 3 · 2,189 · 11,932 | 0 · 0 · 0 | 1 · 1,192 · 4,585 | n/a | +160% |
-| `stack-work` | 2 | 2 · 2,254 · 9,765 | 2 · 1,598 · 10,963 | 6 · 2,982 · 26,955 | −11% | −64% |
-| `stack-queue-wait` | 1 | 1 · 216 · 3,595 | 5 · 1,066 · 19,063 | 3 · 1,161 · 12,527 † | −81% | −71% |
-| `stack-merge` | 1 | 2 · 320 · 7,005 | 4 · 871 · 15,013 | 3 · 1,161 · 12,527 † | −53% | −44% |
+| `stack-setup` | 1 | 3 · 2,253 · 12,012 | 0 · 0 · 0 | 1 · 1,192 · 4,585 | n/a | +162% |
+| `stack-work` | 2 | 2 · 2,254 · 9,778 | 2 · 1,598 · 10,963 | 6 · 2,982 · 26,955 | −11% | −64% |
+| `stack-queue-wait` | 1 | 1 · 216 · 3,602 | 5 · 1,066 · 19,063 | 3 · 1,161 · 12,527 † | −81% | −71% |
+| `stack-merge` | 1 | 2 · 320 · 7,018 | 4 · 871 · 15,013 | 3 · 1,161 · 12,527 † | −53% | −44% |
 
 - ✂ marks a baseline call whose output the host truncated (Bash) or rejected (MCP).
 - † marks a baseline that cannot finish the step with its tools. Its cost covers only what it can do.

@@ -12,6 +12,7 @@ import {
 } from "../../test-helpers/commands/check.test-support.mts";
 import { hashBody } from "../state/seen-comments.mts";
 import { runCheck } from "./check.mts";
+import { runWithGithubTransport } from "../github/transport.mts";
 
 registerHooks();
 
@@ -93,6 +94,39 @@ describe("runCheck — first-look items", () => {
     const report = await runCheck(BASE_OPTS);
     expect(report.threads.firstLook).toHaveLength(1);
     expect(report.threads.firstLook[0]?.firstLookStatus).toBe("minimized");
+  });
+  it("surfaces REST threads with unknown status once and prevents a false READY", async () => {
+    const unknown = makeThread({
+      id: "rest-thread-100",
+      isResolved: undefined,
+      isOutdated: undefined,
+      viewerCanReply: undefined,
+      viewerCanResolve: undefined,
+      comments: [],
+    });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        transport: "rest",
+        transportUnavailable: [
+          { field: "reviewThreads.status", reason: "CCR status route unavailable" },
+        ],
+        reviewThreads: [unknown],
+      }),
+    });
+
+    const report = await runWithGithubTransport("rest", () => runCheck(BASE_OPTS));
+
+    expect(report.transport).toBe("rest");
+    expect(report.transportUnavailable).toEqual([
+      { field: "reviewThreads.status", reason: "CCR status route unavailable" },
+    ]);
+    expect(report.threads.firstLook).toMatchObject([
+      { id: "rest-thread-100", firstLookStatus: "unknown" },
+    ]);
+    expect(report.threads.actionable).toEqual([]);
+    expect(report.threads.resolutionOnly).toEqual([]);
+    expect(report.status).toBe("UNKNOWN");
+    expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "rest-thread-100", "fix this");
   });
   it("suppresses already-seen items (unchanged hash)", async () => {
     const outdated = makeThread({ id: "t-outdated", isOutdated: true, body: "fix this" });

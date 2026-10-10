@@ -8,7 +8,7 @@ import {
 const GRAPHQL_INTERNAL_RETRY_DELAYS = [500, 1500];
 
 /** True when the root operation is a mutation. Anonymous `{...}` is a query. */
-function isGraphQlMutationDocument(document: string): boolean {
+export function isGraphQlMutationDocument(document: string): boolean {
   let rest = document;
   for (;;) {
     rest = rest.replace(/^\s+/, "");

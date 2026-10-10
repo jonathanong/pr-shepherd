@@ -1,9 +1,12 @@
+import { githubOperation } from "./transport.mts";
+import { readRestStackTopology } from "./rest-stack-read.mts";
 import { readAllowedMergeMethods, type MergeMethod } from "../config/merge-method.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type { PollSummaryStackAncestry } from "../types.mts";
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import { missingRepositoryError } from "./errors.mts";
 import { POLL_STACK_TOPOLOGY_QUERY } from "./queries.mts";
+export { verifiedBottomOpenLayer } from "./stack-bottom.mts";
 
 /** GitHub's `first` ceiling for one native-stack entries page. */
 export const MAX_STACK_ENTRIES_PER_PAGE = 50;
@@ -45,7 +48,7 @@ export interface StackRead<Pr extends StackMemberRefs> {
   stackNumber: number;
   stackSize: number;
   viewerLogin: string | null;
-  viewerCanAdminister: boolean;
+  viewerCanAdminister?: boolean;
   /** Every member, bottom-to-top, each observed in the same paged read. */
   ordered: Pr[];
   /** Present when the query selected repository merge settings, including an empty list. */
@@ -150,27 +153,11 @@ export function readStackTopology(
   anchor: number,
   repo: RepoInfo,
 ): Promise<StackRead<StackMemberRefs>> {
-  return readStack<StackMemberRefs>(POLL_STACK_TOPOLOGY_QUERY, anchor, repo);
-}
-
-/** The first open member can replace merged lower layers only after a fully merged prefix. */
-export function verifiedBottomOpenLayer<Pr extends StackMemberRefs>(
-  ordered: readonly Pr[],
-  anchor: number,
-): Pr {
-  const index = ordered.findIndex((member) => member.state === "OPEN");
-  const bottom = ordered[index];
-  if (!bottom) {
-    throw new ShepherdError(`Native stack for PR #${anchor} has no open layer`, EXIT.TEMPFAIL);
-  }
-  const predecessor = ordered.slice(0, index).find((member) => member.state !== "MERGED");
-  if (predecessor) {
-    throw new ShepherdError(
-      `Native stack for PR #${anchor} has PR #${predecessor.number} in state ${predecessor.state} before open PR #${bottom.number}; cannot verify the bottom open layer`,
-      EXIT.TEMPFAIL,
-    );
-  }
-  return bottom;
+  return githubOperation(
+    "PollStackTopology",
+    () => readStack<StackMemberRefs>(POLL_STACK_TOPOLOGY_QUERY, anchor, repo),
+    () => readRestStackTopology(anchor, repo),
+  );
 }
 
 /**

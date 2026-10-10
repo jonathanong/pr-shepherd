@@ -86,6 +86,22 @@ describe("iterate merge formatting", () => {
     expect(lines.join("\n")).toContain("parents `base,pr-head`");
   });
 
+  it("omits the unavailable enable timestamp while retaining REST auto-merge fields", () => {
+    const lines: string[] = [];
+    appendMergeQueueHeader(lines, {
+      ...mergeResult("auto"),
+      mergeQueue: {
+        enabled: false,
+        inQueue: false,
+        autoMergeRequest: { mergeMethod: "SQUASH", enabledBy: "octocat" },
+      },
+    } as IterateResult);
+
+    expect(lines.join("\n")).toContain("**auto-merge** method `SQUASH` · by `@octocat`");
+    expect(lines.join("\n")).not.toContain("enabledAtUnix");
+    expect(lines.join("\n")).not.toContain("undefined");
+  });
+
   it("renders ordinary and queue merge commands with their fallback instructions", () => {
     const ordinary = formatMergeAction("header", mergeResult("auto"));
     expect(ordinary).toContain("plain merge fallback");

@@ -5,47 +5,9 @@
 import { parseArgs } from "node:util";
 import type { GlobalOptions } from "../types.mts";
 import { parseCliPrReference, resolveParsedPrTarget } from "../pr-reference.mts";
+import { parseGithubTransport } from "../github/transport-mode.mts";
 
-// Flags that consume the next argument as their value (used for PR-number
-// detection only — prevents a flag's value from being mistaken for a PR number).
-const FLAGS_WITH_VALUES = new Set([
-  "--format",
-  "--ready-delay",
-  "--stall-timeout",
-  "--require-sha",
-  "--message",
-  "--description",
-  "--thread-id",
-  "--resolve-thread-ids",
-  "--reply-thread-ids",
-  "--minimize-comment-ids",
-  "--dismiss-review-ids",
-  "--interval",
-  "--timeout",
-  "--debounce",
-  "--match",
-  "--check",
-  "--blocked-by",
-  "--require-sha",
-  "--queue-commit",
-  "--removed-at",
-]);
-
-// Boolean flags that do NOT consume the next argument. Any --flag not in this
-// set and not in FLAGS_WITH_VALUES is treated conservatively as value-taking
-// for PR-number detection — so removed flags don't silently cause their
-// numeric value to be misidentified as the PR number.
-const BOOLEAN_FLAGS = new Set([
-  "--no-auto-mark-ready",
-  "--no-auto-cancel-actionable",
-  "--quiet-status",
-  "--no-quiet-status",
-  "--until-terminal",
-  "--merge",
-  "--dry-run",
-  "--verbose",
-  "--clear",
-]);
+import { FLAGS_WITH_VALUES, BOOLEAN_FLAGS } from "./arg-flags.mts";
 
 // ---------------------------------------------------------------------------
 // Strict integer parsing
@@ -75,7 +37,11 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
     allowPositionals: true,
     tokens: true,
     options: {
+      ...Object.fromEntries(
+        [...FLAGS_WITH_VALUES].map((flag) => [flag.slice(2), { type: "string" }]),
+      ),
       format: { type: "string" },
+      transport: { type: "string" },
       verbose: { type: "boolean" },
     },
   });
@@ -87,12 +53,15 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
   // them from `extra`.  Subcommand-specific flags are left untouched.
   const consumedIndices = new Set<number>();
   for (const tok of tokens ?? []) {
-    if (tok.kind === "option" && (tok.name === "format" || tok.name === "verbose")) {
+    if (
+      tok.kind === "option" &&
+      (tok.name === "format" || tok.name === "verbose" || tok.name === "transport")
+    ) {
       consumedIndices.add(tok.index);
       // When the value is a separate arg (--flag value, not --flag=value),
       // inlineValue is false and the value occupies tok.index + 1.
       if (
-        tok.name === "format" &&
+        (tok.name === "format" || tok.name === "transport") &&
         "inlineValue" in tok &&
         tok.inlineValue === false &&
         tok.value != null
@@ -148,6 +117,9 @@ export function parseCommonArgs(args: string[]): ParsedArgs {
     global: {
       format,
       verbose,
+      ...(values.transport !== undefined
+        ? { transport: parseGithubTransport(values.transport) }
+        : {}),
       ...(target.targetRepository !== undefined
         ? { targetRepository: target.targetRepository }
         : undefined),

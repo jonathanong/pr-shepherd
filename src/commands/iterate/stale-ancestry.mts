@@ -4,6 +4,7 @@ import type { PollSummaryStackAncestry } from "../../types.mts";
 import type { ShepherdReport } from "../../types/report.mts";
 import { buildNativeStackRebaseInstruction } from "./native-stack-rebase.mts";
 import type { CheckExecutionContext } from "../check-execution-context.mts";
+import { getGithubTransport } from "../../github/transport.mts";
 
 /**
  * A verified stale boundary for the PR being shepherded.
@@ -59,6 +60,8 @@ function buildStaleNativeStackAncestryInstructions(
     buildNativeStackRebaseInstruction(`${repo.owner}/${repo.name}`, stackNumber, {
       parentBranch: ancestry.parentHeadRefName,
     }),
-    "Push the rewritten stack with `gh stack push`.",
+    getGithubTransport() === "rest"
+      ? "Push every affected stack branch using the repository's stack-update procedure."
+      : "Push the rewritten stack with `gh stack push`.",
   ];
 }

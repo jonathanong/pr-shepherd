@@ -15,6 +15,8 @@ import {
 } from "../comments/rate-limit.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type { GlobalOptions } from "../types.mts";
+import { githubOperation } from "../github/transport.mts";
+import { UnsupportedRestOperationError } from "../github/unsupported-rest.mts";
 
 export interface MarkFilesAsViewedOptions extends GlobalOptions {
   prNumber?: number;
@@ -103,6 +105,19 @@ const MARK_FILES_CHUNK_SIZE = 10;
 
 /** @deprecated Hidden implementation for `mark-files-as-viewed`; use `apply files`. */
 export async function runMarkFilesAsViewed(
+  opts: MarkFilesAsViewedOptions,
+): Promise<MarkFilesAsViewedResult> {
+  return githubOperation(
+    "markFileAsViewed",
+    () => runGraphqlMarkFilesAsViewed(opts),
+    async () => {
+      throw new UnsupportedRestOperationError("markFileAsViewed");
+    },
+    { mutation: true },
+  );
+}
+
+async function runGraphqlMarkFilesAsViewed(
   opts: MarkFilesAsViewedOptions,
 ): Promise<MarkFilesAsViewedResult> {
   const repo = opts.targetRepository ?? (await getRepoInfo());

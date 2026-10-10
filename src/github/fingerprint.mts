@@ -1,3 +1,5 @@
+import { githubOperation } from "./transport.mts";
+import { UnsupportedRestOperationError } from "./unsupported-rest.mts";
 import { graphqlWithRateLimit } from "./client.mts";
 import { PR_FINGERPRINT_QUERY } from "./queries.mts";
 import { GitHubRequestError } from "./errors.mts";
@@ -155,7 +157,7 @@ export function fingerprintsEqual(left: PrFingerprint, right: PrFingerprint): bo
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-export async function fetchPrFingerprint(pr: number, repo: RepoInfo): Promise<PrFingerprint> {
+async function fetchGraphqlPrFingerprint(pr: number, repo: RepoInfo): Promise<PrFingerprint> {
   const result = await graphqlWithRateLimit<RawFingerprintResponse>(PR_FINGERPRINT_QUERY, {
     owner: repo.owner,
     repo: repo.name,
@@ -179,6 +181,19 @@ export async function fetchPrFingerprint(pr: number, repo: RepoInfo): Promise<Pr
     {
       permission: result.data.repository.viewerPermission,
       login: result.data.viewer?.login ?? null,
+    },
+  );
+}
+
+export function fetchPrFingerprint(pr: number, repo: RepoInfo): Promise<PrFingerprint> {
+  return githubOperation(
+    "PrFingerprint",
+    () => fetchGraphqlPrFingerprint(pr, repo),
+    async () => {
+      throw new UnsupportedRestOperationError(
+        "PrFingerprint",
+        "REST snapshots lack complete viewer, policy and queue evidence; read a full PR snapshot instead",
+      );
     },
   );
 }

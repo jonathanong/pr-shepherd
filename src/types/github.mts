@@ -58,11 +58,11 @@ type RepositoryPermission = "NONE" | "READ" | "TRIAGE" | "WRITE" | "MAINTAIN" | 
 /** Raw GitHub viewer fields used to gate remote actions. */
 export interface ViewerAuthorization {
   repositoryPermission: RepositoryPermission | null;
-  viewerCanAdminister: boolean;
-  viewerDidAuthor: boolean;
-  viewerCanUpdate: boolean;
-  viewerCanEnableAutoMerge: boolean;
-  viewerCanEditFiles: boolean;
+  viewerCanAdminister?: boolean;
+  viewerDidAuthor?: boolean;
+  viewerCanUpdate?: boolean;
+  viewerCanEnableAutoMerge?: boolean;
+  viewerCanEditFiles?: boolean;
   headRepositoryPermission: RepositoryPermission | null;
 }
 
@@ -108,9 +108,9 @@ export interface CheckRun {
 
 export interface ReviewThread {
   id: string;
-  isResolved: boolean;
-  isOutdated: boolean;
-  isMinimized: boolean;
+  isResolved?: boolean;
+  isOutdated?: boolean;
+  isMinimized?: boolean;
   viewerCanReply?: boolean;
   viewerCanResolve?: boolean;
   path: string | null;
@@ -145,7 +145,7 @@ export interface SuggestionBlock {
 
 export interface PrComment {
   id: string;
-  isMinimized: boolean;
+  isMinimized?: boolean;
   viewerCanMinimize?: boolean;
   author: string;
   authorType: AuthorType;
@@ -205,6 +205,10 @@ export interface MergeStatusResult {
 }
 
 export interface BatchPrData extends BatchPrMergeFields {
+  /** Present when this snapshot was fetched through REST. */
+  transport?: "rest";
+  /** Fields unavailable from the selected transport; absence is never fabricated as false. */
+  transportUnavailable?: Array<{ field: string; reason: string }>;
   nodeId: string;
   number: number;
   state: "OPEN" | "CLOSED" | "MERGED";

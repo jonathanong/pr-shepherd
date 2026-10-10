@@ -154,6 +154,18 @@ describe("classifyThreadVisibility", () => {
     expect(result.firstLookThreads).toEqual([]);
   });
 
+  it("shows partially known thread state once as unknown without duplicate labels", () => {
+    const thread = makeThread({
+      isResolved: true,
+      isOutdated: undefined,
+      isMinimized: true,
+    });
+    const result = classifyThreadVisibility([thread], new Map());
+
+    expect(result.firstLookThreads).toMatchObject([{ firstLookStatus: "unknown" }]);
+    expect(result.firstLookThreads).toHaveLength(1);
+  });
+
   it("suppresses stale pre-reply transcript markers for human threads", () => {
     const human = makeThread({ id: "human", authorType: "User", body: "reviewer body" });
     const seenMap = new Map([

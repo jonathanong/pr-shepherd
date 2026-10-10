@@ -355,6 +355,39 @@ describe("public API", () => {
     );
   });
 
+  it("stops later apply operations after returning partial review mutations on session refusal", async () => {
+    const result = {
+      repliedThreads: ["PRRT_done"],
+      resolvedThreads: [],
+      minimizedComments: [],
+      dismissedReviews: [],
+      errors: [],
+      sessionRefusal: "proxy session refusal",
+      instructions: [
+        "Restore GitHub access for this session using the proxy instructions above.",
+        "Retry only the pending IDs listed above.",
+      ],
+      unrepliedThreads: ["PRRT_pending"],
+    };
+    mockRunResolveMutate.mockResolvedValue(result);
+    const response = await createPrShepherd().apply({
+      pr: 7,
+      operations: [
+        {
+          type: "review_mutations",
+          replyThreadIds: ["PRRT_done", "PRRT_pending"],
+          message: "Done",
+        },
+        { type: "mark_files_viewed", files: ["src/api.mts"] },
+      ],
+    });
+
+    expect(response).toEqual({
+      operations: [{ type: "review_mutations", result }],
+    });
+    expect(mockRunMarkFilesAsViewed).not.toHaveBeenCalled();
+  });
+
   it("runs every operation in order and builds suggestion patches in the configured cwd", async () => {
     mockRunResolveMutate.mockResolvedValue({ resolvedThreads: ["PRRT_one"] });
     mockRunMarkFilesAsViewed.mockResolvedValue({ markedPaths: ["src/api.mts"] });

@@ -1,3 +1,6 @@
+import { recordThreadIdentity } from "./rest-identities.mts";
+import { githubOperation, runWithGithubTransport } from "./transport.mts";
+import { fetchRestPrBatch } from "./rest-batch-read.mts";
 import { graphqlWithRateLimit, type RateLimitInfo, type RepoInfo } from "./client.mts";
 import { hydrateThreadCommentPages } from "./thread-comments.mts";
 import { BATCH_PR_QUERY, BATCH_PR_RECEIPT_QUERY } from "./queries.mts";
@@ -67,7 +70,7 @@ function onlyReceiptSummaryErrors(errors?: GitHubGraphQlError[]): boolean {
 /**
  * Fetch all PR data needed for a `shepherd check` in one (or a few, if paginating) GraphQL requests.
  */
-export async function fetchPrBatch(
+async function fetchGraphqlPrBatch(
   pr: number,
   repo: RepoInfo,
   opts: FetchPrBatchOptions = {},
@@ -117,6 +120,11 @@ export async function fetchPrBatch(
     }
   }
 
+  for (const thread of threadPages.threads) {
+    const root = thread.comments.nodes[0];
+    const numericId = root?.url?.match(/discussion_r([0-9]+)/)?.[1];
+    if (numericId) await recordThreadIdentity(repo, pr, thread.id, numericId);
+  }
   const data = parseRawPr(
     raw,
     threadPages.threads,
@@ -150,4 +158,16 @@ function workflowSuites(raw: Parameters<typeof parseHeadWorkflowSuites>[0]): {
 } {
   const suites = parseHeadWorkflowSuites(raw);
   return suites.length > 0 ? { headWorkflowSuites: suites } : {};
+}
+
+export function fetchPrBatch(
+  pr: number,
+  repo: RepoInfo,
+  opts: FetchPrBatchOptions = {},
+): Promise<BatchResult> {
+  return githubOperation(
+    "BatchPr",
+    () => runWithGithubTransport("graphql", () => fetchGraphqlPrBatch(pr, repo, opts)),
+    () => fetchRestPrBatch(pr, repo, opts),
+  );
 }

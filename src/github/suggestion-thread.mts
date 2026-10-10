@@ -1,3 +1,7 @@
+import { githubOperation } from "./transport.mts";
+import { readRestFeedback } from "./rest-feedback-read.mts";
+import { readRestPull } from "./rest-pr-core.mts";
+import { resolveRestThreadRoot, restThreadId } from "./rest-identities.mts";
 import { graphql } from "./client.mts";
 import { SUGGESTION_THREADS_QUERY } from "./queries.mts";
 import { mapAuthorType, parseCreatedAt } from "./batch-parser-helpers.mts";
@@ -27,7 +31,7 @@ interface RawSuggestionResponse {
   nodes: (RawSuggestionThread | null)[];
 }
 
-export async function fetchSuggestionThreads(
+async function fetchGraphqlSuggestionThreads(
   pr: number,
   repo: RepoInfo,
   threadIds: readonly string[],
@@ -79,4 +83,36 @@ function parseThread(
     url: comment?.url ?? "",
     createdAtUnix: comment?.createdAt ? parseCreatedAt(comment.createdAt) : 0,
   };
+}
+
+export function fetchSuggestionThreads(
+  pr: number,
+  repo: RepoInfo,
+  threadIds: readonly string[],
+): Promise<SuggestionThreadsResult> {
+  return githubOperation(
+    "SuggestionThreads",
+    () => fetchGraphqlSuggestionThreads(pr, repo, threadIds),
+    async () => {
+      const pull = await readRestPull(pr, repo);
+      const feedback = await readRestFeedback(pr, repo);
+      const threads = await Promise.all(
+        threadIds.map(async (id) => {
+          try {
+            const root = await resolveRestThreadRoot(repo, pr, id);
+            const found = feedback.threads.find((thread) => thread.id === restThreadId(root));
+            return found ? { ...found, id } : null;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      return {
+        headRefOid: pull.head.sha,
+        headRefName: pull.head.ref,
+        headRepoWithOwner: pull.head.repo?.full_name ?? null,
+        threads,
+      };
+    },
+  );
 }

@@ -15,7 +15,11 @@ const bands = [
 const repoKey = { owner: "acme", repo: "widgets" };
 let stateDir = "";
 
-function core(remaining: number, resetAt = 1_700_000_000): ApiResourceUsage {
+function core(
+  remaining: number,
+  resetAt = 1_700_000_000,
+  credentialFingerprint?: string,
+): ApiResourceUsage {
   return {
     resource: "core",
     requestCount: 1,
@@ -23,6 +27,7 @@ function core(remaining: number, resetAt = 1_700_000_000): ApiResourceUsage {
     used: 5000 - remaining,
     remaining,
     resetAt,
+    ...(credentialFingerprint !== undefined && { credentialFingerprint }),
   };
 }
 
@@ -71,5 +76,43 @@ describe("REST core quota warnings", () => {
       1_700_000_001,
     );
     expect(next).toMatchObject({ resource: "core", thresholdPercent: 30, resetAt: 1_700_003_600 });
+  });
+
+  it("accepts a new credential's higher quota before reset and uses its warning band cadence", async () => {
+    const oldCredential = "a".repeat(16);
+    const newCredential = "b".repeat(16);
+    const first = await evaluateWorktreeGraphqlQuotaWarning(
+      repoKey,
+      bands,
+      core(500, 1_700_000_000, oldCredential),
+      true,
+      1_699_999_000,
+    );
+    expect(first).toMatchObject({ resource: "core", thresholdPercent: 10, remaining: 500 });
+
+    const switched = await evaluateWorktreeGraphqlQuotaWarning(
+      repoKey,
+      bands,
+      core(4900, 1_700_000_000, newCredential),
+      true,
+      1_699_999_001,
+    );
+    expect(switched).toBeUndefined();
+
+    const depleted = await evaluateWorktreeGraphqlQuotaWarning(
+      repoKey,
+      bands,
+      core(900, 1_700_000_000, newCredential),
+      true,
+      1_699_999_002,
+    );
+    expect(depleted).toMatchObject({
+      resource: "core",
+      thresholdPercent: 20,
+      remaining: 900,
+      resetAt: 1_700_000_000,
+      pollIntervalMinutes: 5,
+      pollTimeoutMinutes: 10,
+    });
   });
 });

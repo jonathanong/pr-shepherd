@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,6 +16,8 @@ vi.mock("../github/client.mts", () => ({
 }));
 
 import { applyQueueRemovalAck } from "./apply-queue-removal.mts";
+import { githubOperation, runWithGithubTransport } from "../github/transport.mts";
+import { GitHubRequestError } from "../github/errors.mts";
 
 const headSha = "a".repeat(40);
 const queueCommitOid = "b".repeat(40);
@@ -48,11 +50,58 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  vi.unstubAllEnvs();
   delete process.env["PR_SHEPHERD_STATE_DIR"];
   await rm(tempDir, { recursive: true, force: true });
 });
 
 describe("applyQueueRemovalAck persistence failures", () => {
+  it.each(["fallback-during-fetch", "rest-snapshot"])(
+    "reports unsupported removal validation after %s without storing acknowledgment",
+    async (state) => {
+      vi.stubEnv("CLAUDE_CODE_REMOTE", "");
+      vi.stubEnv("PR_SHEPHERD_LOG_DISABLED", "1");
+      if (state === "fallback-during-fetch")
+        mockFetchPrBatch.mockImplementationOnce(() =>
+          githubOperation(
+            "queue removal read",
+            async () => {
+              throw new GitHubRequestError("GraphQL refused", {
+                status: 403,
+                responseMessage: "GitHub GraphQL is not available from Claude Code sessions",
+              });
+            },
+            async () => ({ data: {} }),
+          ),
+        );
+      else mockFetchPrBatch.mockResolvedValueOnce({ data: { transport: "rest" } });
+      await expect(
+        runWithGithubTransport(state === "rest-snapshot" ? "graphql" : "auto", () =>
+          applyQueueRemovalAck({ headSha, queueCommitOid, removedAtUnix }),
+        ),
+      ).rejects.toMatchObject({
+        exitCode: EXIT.UNAVAILABLE,
+        message: expect.stringContaining("transport-unsupported"),
+      });
+      expect(mockFetchPrBatch).toHaveBeenCalledOnce();
+      expect(await readdir(tempDir)).toEqual([]);
+    },
+  );
+
+  it("reports unsupported REST removal validation before repository, PR, or GitHub I/O", async () => {
+    await expect(
+      runWithGithubTransport("rest", () =>
+        applyQueueRemovalAck({ headSha, queueCommitOid, removedAtUnix }),
+      ),
+    ).rejects.toMatchObject({
+      exitCode: EXIT.UNAVAILABLE,
+      message: expect.stringContaining("transport-unsupported"),
+    });
+    expect(mockGetRepoInfo).not.toHaveBeenCalled();
+    expect(mockGetCurrentPrNumber).not.toHaveBeenCalled();
+    expect(mockFetchPrBatch).not.toHaveBeenCalled();
+  });
+
   it("reports a failed marker write and preserves the state-path obstruction", async () => {
     const obstruction = join(tempDir, "not-a-directory");
     await writeFile(obstruction, "leave this file alone", "utf8");

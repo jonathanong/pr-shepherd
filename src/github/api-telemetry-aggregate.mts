@@ -1,6 +1,16 @@
 import type { ApiTelemetryEvent } from "./api-telemetry.mts";
 import type { RateLimitInfo } from "./http-utils.mts";
 
+interface RestTelemetryGroup {
+  requestCount: number;
+  rateLimit?: RateLimitInfo;
+  /** Fingerprint for the credential that produced the selected quota sample. */
+  credentialFingerprint?: string;
+  /** Newest observed credential and sequence, even if its sample did not win quota selection. */
+  latestCredentialFingerprint?: string;
+  latestCredentialSequence?: number;
+}
+
 export interface TelemetryAggregate {
   eventCount: number;
   credentialSources: Map<string, number>;
@@ -12,7 +22,7 @@ export interface TelemetryAggregate {
     rateLimit?: RateLimitInfo;
     credentialFingerprint?: string;
   };
-  rest: Map<string, { requestCount: number; rateLimit?: RateLimitInfo }>;
+  rest: Map<string, RestTelemetryGroup>;
 }
 
 export interface SequencedApiTelemetryEvent extends ApiTelemetryEvent {
@@ -56,7 +66,7 @@ export function aggregateEvents(events: SequencedApiTelemetryEvent[]): Telemetry
     const group = aggregate.rest.get(resource) ?? { requestCount: 0 };
     group.requestCount += 1;
     if (event.rateLimit !== undefined) {
-      group.rateLimit = selectAuthoritativeRateLimit(group.rateLimit, event.rateLimit);
+      adoptRestRateLimit(group, event.rateLimit, event.credentialFingerprint, event.sequence);
     }
     aggregate.rest.set(resource, group);
   }
@@ -86,9 +96,13 @@ export function mergeAggregate(target: TelemetryAggregate, source: TelemetryAggr
     const targetGroup = target.rest.get(resource) ?? { requestCount: 0 };
     targetGroup.requestCount += sourceGroup.requestCount;
     if (sourceGroup.rateLimit !== undefined) {
-      targetGroup.rateLimit = selectAuthoritativeRateLimit(
-        targetGroup.rateLimit,
+      adoptRestRateLimit(
+        targetGroup,
         sourceGroup.rateLimit,
+        sourceGroup.credentialFingerprint,
+        sourceGroup.latestCredentialSequence,
+        sourceGroup.latestCredentialFingerprint ?? sourceGroup.credentialFingerprint,
+        sourceGroup.latestCredentialSequence,
       );
     }
     target.rest.set(resource, targetGroup);
@@ -110,6 +124,47 @@ function adoptGraphqlRateLimit(
   const next = selectAuthoritativeRateLimit(graphql.rateLimit, candidate);
   if (next !== graphql.rateLimit) graphql.credentialFingerprint = fingerprint;
   graphql.rateLimit = next;
+}
+
+function adoptRestRateLimit(
+  group: RestTelemetryGroup,
+  candidate: RateLimitInfo,
+  fingerprint: string | undefined,
+  sequence: number | undefined,
+  latestCredentialFingerprint: string | undefined = fingerprint,
+  latestCredentialSequence: number | undefined = sequence,
+): void {
+  const credentialChanged =
+    group.latestCredentialFingerprint !== undefined &&
+    latestCredentialFingerprint !== undefined &&
+    group.latestCredentialFingerprint !== latestCredentialFingerprint;
+  const olderCredentialObservation =
+    credentialChanged &&
+    group.latestCredentialSequence !== undefined &&
+    latestCredentialSequence !== undefined &&
+    latestCredentialSequence < group.latestCredentialSequence;
+  if (olderCredentialObservation) return;
+
+  if (group.rateLimit === undefined || credentialChanged) {
+    group.rateLimit = { ...candidate };
+    group.credentialFingerprint = fingerprint;
+  } else {
+    const next = selectAuthoritativeRateLimit(group.rateLimit, candidate);
+    if (next !== group.rateLimit) {
+      group.rateLimit = next;
+      group.credentialFingerprint = fingerprint;
+    }
+  }
+
+  if (
+    latestCredentialFingerprint !== undefined &&
+    (group.latestCredentialSequence === undefined ||
+      latestCredentialSequence === undefined ||
+      latestCredentialSequence >= group.latestCredentialSequence)
+  ) {
+    group.latestCredentialFingerprint = latestCredentialFingerprint;
+    group.latestCredentialSequence = latestCredentialSequence;
+  }
 }
 
 function selectAuthoritativeRateLimit(

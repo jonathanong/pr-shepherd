@@ -66,7 +66,7 @@ Applies to threads already selected into the work set. `iterate.resolveOtherHuma
 
 Reply and paired resolve share the `apply review` command. A marker-ended resolve is the separate resolve-only command. Both use the thread id when GitHub has cleared the path or line.
 
-`viewerCanReply: true` is required for a reply id. `viewerCanResolve: true` is required for a resolve id. A missing capability drops that id. The thread is surfaced once, then marker-gated until the body changes. `authorization-required` is the automatic mark-ready handoff; this skip stays a one-look omission.
+When GraphQL supplies capability fields, `viewerCanReply: false` or `viewerCanResolve: false` omits the generated mutation. REST has no equivalent capability fields, so an otherwise-eligible operation is attempted and GitHub's response is authoritative. A definite, non-throttled REST 403 or 404 is surfaced once, then marker-gated until the body changes; review denials do not use `authorization-required` or count toward `fix-thrash`. Quota failures and uncertain mutation outcomes remain eligible for reconciliation.
 
 ## Current visibility matrix
 
@@ -124,7 +124,7 @@ The required-resolution row for other humans is the gap. `always` replies and re
 | Situation                                                                                                 | Current action                                                                                                       | Trigger         |
 | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | --------------- |
 | Choose a code edit versus an acknowledgment reply                                                         | `FIX_CODE`. Instructions say to decide, then run the generated review mutation even when no code change is warranted | none            |
-| `viewerCanReply` or `viewerCanResolve` is not true                                                        | surface once, omit the mutation, suppress until the transcript changes                                               | none            |
+| GraphQL reports `viewerCanReply` or `viewerCanResolve` false; or GitHub denies the REST attempt           | surface once, omit/retry no generated mutation, suppress until the transcript changes                                | none            |
 | Resolution required, other-human thread already replied to, enum leaves it open                           | thread leaves the work set; ready-delay `CANCEL` names `unresolved conversations are required`                       | none            |
 | Located thread stays in the work set for `iterate.fixAttemptsPerThread` caller-visible `FIX_CODE` results | following unchanged tick                                                                                             | `fix-thrash`    |
 | `WAIT` or `FIX_CODE` fingerprint unchanged through an enabled stall timeout                               | handoff                                                                                                              | `stall-timeout` |
@@ -138,14 +138,14 @@ The requested "if a decision needs to be made, escalate" cell has no predicate i
 
 Conversation resolution is a review-thread rule. These surfaces keep their own routing on every branch.
 
-| Surface                    | Reply              | Resolve / hide                                                                                  |
-| -------------------------- | ------------------ | ----------------------------------------------------------------------------------------------- |
-| Inline review thread       | generated reply    | resolve per the mutation matrix                                                                 |
-| Top-level PR comment       | no generated reply | minimize non-humans per `iterate.minimizeComments`; humans are marker-gated and never minimized |
-| `COMMENTED` review summary | no generated reply | minimize eligible non-humans after known inline child threads are resolved                      |
-| `APPROVED` review          | no generated reply | minimize only when `iterate.minimizeApprovals` is on and the author is eligible                 |
-| Human `CHANGES_REQUESTED`  | no generated reply | left in place; the review stays on the status count after its body is unchanged                 |
-| Bot `CHANGES_REQUESTED`    | no generated reply | dismiss when `viewerCanAdminister` is true                                                      |
+| Surface                    | Reply              | Resolve / hide                                                                                       |
+| -------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------- |
+| Inline review thread       | generated reply    | resolve per the mutation matrix                                                                      |
+| Top-level PR comment       | no generated reply | minimize non-humans per `iterate.minimizeComments`; humans are marker-gated and never minimized      |
+| `COMMENTED` review summary | no generated reply | minimize eligible non-humans after known inline child threads are resolved                           |
+| `APPROVED` review          | no generated reply | minimize only when `iterate.minimizeApprovals` is on and the author is eligible                      |
+| Human `CHANGES_REQUESTED`  | no generated reply | left in place; the review stays on the status count after its body is unchanged                      |
+| Bot `CHANGES_REQUESTED`    | no generated reply | dismiss when GraphQL reports `viewerCanAdminister: true`; REST attempts and trusts GitHub's response |
 
 ## Code map
 

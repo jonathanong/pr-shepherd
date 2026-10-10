@@ -9,6 +9,7 @@ import type { PrShepherdConfig } from "../config/load.mts";
 import { hasCheckDrivenActionableWork } from "./check-annotations.mts";
 import type { ShepherdReport } from "../types.mts";
 import { stripReplayedRuleAutoResolve } from "./rule-auto-resolve-format.mts";
+import { getGithubTransport } from "../github/transport.mts";
 
 function reportAllowsFingerprintSkip(report: ShepherdReport): boolean {
   if (report.status === "READY") return false;
@@ -38,6 +39,7 @@ export async function tryReuseFingerprintReport(
   stateKey: { owner: string; repo: string; pr: number },
   config: PrShepherdConfig,
 ): Promise<ShepherdReport | null> {
+  if (getGithubTransport() === "rest") return null;
   const cached = await loadPrFingerprint(stateKey);
   if (cached?.inputDigest == null || cached.inputDigest !== fingerprintInputDigest(config)) {
     return null;
@@ -51,6 +53,7 @@ export async function tryReuseFingerprintReport(
   if (cached.fingerprint.hasMultiCommentThreads) return null;
   if (!cached.fingerprint.rulesComplete) return null;
   const live = await fetchPrFingerprint(prNumber, repo);
+  if (getGithubTransport() === "rest") return null;
   if (live.isInMergeQueue || !live.checkSuitesComplete) return null;
   if (live.commentCount > 100 || live.reviewCount > 100 || live.threadCount > 20) return null;
   if (live.hasMultiCommentThreads || !live.rulesComplete) return null;
@@ -65,6 +68,7 @@ export async function tryReuseFingerprintReport(
   ) {
     return null;
   }
+  if (getGithubTransport() === "rest") return null;
   return { ...stripReplayedRuleAutoResolve(cached.report), fingerprintReused: true };
 }
 
