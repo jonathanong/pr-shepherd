@@ -10,6 +10,8 @@ Change in cost when an agent uses pr-shepherd instead of a baseline. A negative 
 - **Fixed vs. variable.** The skill and playbooks are 17% of pr-shepherd's PR-session cost and 15% of its stack-session cost; on variable cost alone it is −51% vs. gh in a PR session and −52% in a stack session.
 - **GitHub rate limit (assumed).** In a PR session pr-shepherd spends 42.5 GraphQL points and 4.8 REST requests; gh 36.5 and 9; MCP 12 and 78.3. GraphQL points +16% vs. gh and +254% vs. MCP; REST requests −47% and −94%.
 - **Waiting on CI, per hour.** pr-shepherd spends 60 GraphQL points on the GraphQL transport (one fingerprint hit per 60s poll) and about 840 REST requests on the REST transport (900 on cloud REST), which has no fingerprint shortcut. A `gh pr checks --watch` refresh costs 60 points; an MCP re-check about 120 requests.
+- **Event arm (informational, assumed, not gated).** A background `pr-shepherd wait` with ETag change detectors (#544). PR session: 27.5 (poll 42.5, gh 36.5, MCP 12) GraphQL points, 37 (poll 4.8, gh 9, MCP 78.3) REST requests, 22.8 (poll 14.8, gh 18.3, MCP 48.6) turns, 8,756 (poll 8,822, gh 30,934, MCP 77,005) tool tokens and 84,178 (poll 59,195, gh 100,341, MCP 258,773) ITE. Stack session: 36 (poll 42, gh 27, MCP 12) GraphQL points, 12 (poll 2, gh 6, MCP 74) REST requests, 12 (poll 8, gh 13, MCP 19) turns, 4,522 (poll 4,481, gh 5,133, MCP 9,478) tool tokens and 44,132 (poll 31,795, gh 56,002, MCP 83,549) ITE. Each of its 8 PR-session wakes (4 on a stack) adds a request to read the background start, so it spends more turns and tokens than the blocking poll. The hypothetical hosted webhook proxy spends 16.5 GraphQL points and 1 REST core of the user's token in a PR session (0 and 2 on a stack), on the agent's own mutations and reads.
+- **Idle waiting, per hour (assumed).** The poll arm's blocking `--until-terminal` call (the skill's mode, and the comparison that counts) spends 60 GraphQL points and no turn; the legacy bounded `--timeout 4.5m` CLI mode, which the skill no longer uses, spends 75 points (it returns every 240s, after 5 ticks) and 15 wakes (15 turns, 51,675 ITE). The event arm spends 4 points on 4 reconcile snapshots and no REST (300 conditional requests, all 304), with 8 turns (25,668 ITE). The hypothetical proxy spends nothing of the user's token, with the same wakes.
 - **Losses: 98.** pr-shepherd costs more than a baseline on 98 gated cells below: 10 on tokens or turns (#528) and 88 on the GitHub rate limit (#525). Each is on the temporary pending list, pending-losses.json; `bench.mjs --check` fails on any other loss and on any listed one that is gone.
 
 ### Losses
@@ -298,6 +300,58 @@ Measured `apiUsage` from `pr-shepherd iterate --verbose` on jonathanong/pr-sheph
 - graphql, second: BatchPr only; the annotations were already seen.
 - rest, first: the 14 snapshot requests plus 3 check-run annotation reads on first look.
 - rest, second: pulls/522 (twice: snapshot and mergeability refresh), review comments, check runs, check suites, statuses, actions runs, branch protection (404), branch rules, stacks, issue comments, reviews, /user, the repository.
+
+## Event arm (informational)
+
+A local session where a background `pr-shepherd wait` replaces the blocking poll: REST change detectors with ETags, a full snapshot only when one changes, and a reconcile snapshot on a timer. The command does not exist yet (#544), and it is not the cloud event mode (`poll.mode`), so **every number here is assumed** (README.md "Event arm"). It is not gated: it adds no loss and removes none.
+
+| session | arm | GraphQL points | REST core requests | turns | tool calls | tool tokens | cost (ITE) |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Typical PR session | event | 27.5 | 37 | 22.8 | 14.8 | 8,756 | 84,178 |
+| Typical PR session | event, hosted webhook proxy (hypothetical) | 16.5 | 1 | 22.8 | 14.8 | 8,756 | 84,178 |
+| Typical PR session | pr-shepherd poll | 42.5 | 4.8 | 14.8 | 14.8 | 8,822 | 59,195 |
+| Typical PR session | gh CLI | 36.5 | 9 | 18.3 | 30.3 | 30,934 | 100,341 |
+| Typical PR session | GitHub MCP | 12 | 78.3 | 48.6 | 84.6 | 77,005 | 258,773 |
+| Typical stack session | event | 36 | 12 | 12 | 14 | 4,522 | 44,132 |
+| Typical stack session | event, hosted webhook proxy (hypothetical) | 0 | 2 | 12 | 14 | 4,522 | 44,132 |
+| Typical stack session | pr-shepherd poll | 42 | 2 | 8 | 14 | 4,481 | 31,795 |
+| Typical stack session | gh CLI | 27 | 6 | 13 | 33 | 5,133 | 56,002 |
+| Typical stack session | GitHub MCP | 12 | 74 | 19 | 75 | 9,478 | 83,549 |
+
+Per scenario, `GraphQL points / REST core requests · turns` for one occurrence. The proxy column counts only the user's token; its turns are the event arm's.
+
+| scenario | weight | wake | pr-shepherd poll | event | event, proxy |
+| --- | --- | --- | --- | --- | --- |
+| `ci-wait` | 2 | none | 7 / 0 · 0 | 0 / 9 · 0 | 0 / 0 |
+| `failing-check` | 1 | change | 2 / 2 · 1 | 2 / 2 · 2 | 0 / 0 |
+| `bot-review-summary` | 1 | change | 1 / 0 · 1 | 1 / 1 · 2 | 0 / 0 |
+| `review-thread` | 1 | change | 5 / 0 · 2 | 5 / 3 · 3 | 4 / 0 |
+| `review-thread-with-history` | 1 | change | 5 / 0 · 2 | 5 / 3 · 3 | 4 / 0 |
+| `multi-category` | 0.5 | change | 5 / 2 · 3 | 5 / 7 · 4 | 4 / 2 |
+| `mark-ready` | 1 | none | 3 / 1 · 0 | 2 / 1 · 0 | 1 / 0 |
+| `merged` | 1 | change | 1 / 0 · 1 | 1 / 1 · 2 | 0 / 0 |
+| `bot-threads` | 1 | change | 5 / 0 · 2 | 5 / 3 · 3 | 4 / 0 |
+| `check-annotations` | 0.25 | change | 2 / 0 · 1 | 2 / 1 · 2 | 0 / 0 |
+| `conflicts` | 0.5 | change | 1 / 0 · 1 | 1 / 1 · 2 | 0 / 0 |
+| `merge` | 0.5 | timer | 4 / 1 · 2 | 4 / 1 · 3 | 2 / 0 |
+| `merge-queue` | 0.25 | timer | 4 / 1 · 2 | 4 / 1 · 3 | 2 / 0 |
+| `stack-work` | 2 | change | 16 / 0 · 2 | 16 / 4 · 3 | 0 / 0 |
+| `stack-queue-wait` | 1 | change | 8 / 0 · 1 | 2 / 2 · 2 | 0 / 0 |
+| `stack-merge` | 1 | timer | 2 / 2 · 2 | 2 / 2 · 3 | 0 / 2 |
+
+An idle hour, while nothing changes:
+
+| arm | GraphQL points | REST core requests | conditional requests (304) | wakes | turns | cost (ITE) |
+| --- | --- | --- | --- | --- | --- | --- |
+| pr-shepherd poll, `--until-terminal` (the skill) | 60 | 0 | 0 | 0 | 0 | 0 |
+| pr-shepherd poll, legacy bounded `--timeout 4.5m` (not the skill) | 75 | 0 | 0 | 15 | 15 | 51,675 |
+| event | 4 | 0 | 300 | 4 | 8 | 25,668 |
+| event, hosted webhook proxy (hypothetical) | 0 | 0 | 0 | 4 | 8 | 25,668 |
+
+- Wakes: `change` is a detector change, `timer` an elapsed `nextCheck` (here the ready delay), `none` a step the wait handles in process, as the poll does. Each wake costs one more request than the poll arm, which reads the background start's acknowledgement.
+- Detectors: 5 conditional REST reads per PR every 60s (`pulls/{n}`, `commits/{head}/check-runs`, `pulls/{n}/reviews`, `issues/{n}/comments`, `pulls/{n}/comments`). A 304 costs no primary rate limit, only latency; a 200 is one REST core request. A change wakes the agent with one full snapshot, at the poll arm's GraphQL tick cost with no fingerprint miss.
+- Reconcile: a full snapshot 15 minutes after the last one, which wakes the agent. No modeled wait is that long, so the sessions have none; the idle hour has 4.
+- The proxy row moves every pr-shepherd snapshot (detectors, change ticks, reconciles, and their log and annotation reads) to a hosted proxy's own token. The agent's mutations, merges, `apply review` reads and its own `gh` reads still count against the user.
 
 ## Baseline strategy sensitivity
 

@@ -334,7 +334,7 @@ const boundedTicks = Math.floor(BOUNDED_TIMEOUT_SECONDS / BOUNDED_INTERVAL_SECON
 const BOUNDED_POLL_SECONDS = (boundedTicks - 1) * BOUNDED_INTERVAL_SECONDS;
 const PR_URL = "https://github.com/owner/repo/pull/42";
 const PR_CMD = `pr-shepherd ${PR_URL}`;
-const idleCarry = carry["ci-wait"]?.shepherd ?? 0;
+const idleCarry = BASE_CTX.carry["ci-wait"]?.shepherd ?? 0;
 const waitText = snapshot("09-wait-in-progress-ci");
 // poll-progress.mts, default (non-quiet) status: one line per sleeping tick.
 const waitReason = waitText.match(/^WAIT: (.+)$/m)[1];
@@ -354,10 +354,19 @@ const reconcileWake = cost(
   ],
   { extraContext: idleCarry },
 );
-const perHour = (n, wake) => ({ wakes: round(n), turns: round(n * wake.turns), ite: Math.round(n * wake.ite) });
+const perHour = (n, wake) => ({
+  wakes: round(n),
+  turns: round(n * wake.turns),
+  ite: Math.round(n * wake.ite),
+});
 const reconcilesPerHour = 60 / RECONCILE_MINUTES;
 const idleHour = {
-  shepherd: { graphqlPoints: waitPerHour.shepherdGraphql, restCore: 0, conditional: 0, ...perHour(0, boundedWake) },
+  shepherd: {
+    graphqlPoints: waitPerHour.shepherdGraphql,
+    restCore: 0,
+    conditional: 0,
+    ...perHour(0, boundedWake),
+  },
   shepherdBounded: {
     graphqlPoints: round(
       (3600 / BOUNDED_POLL_SECONDS) * boundedTicks * SHEPHERD_TICK_API.graphqlPoints,
@@ -372,7 +381,12 @@ const idleHour = {
     conditional: (3600 / DETECTOR_POLL_SECONDS) * EVENT_DETECTORS.length,
     ...perHour(reconcilesPerHour, reconcileWake),
   },
-  eventProxy: { graphqlPoints: 0, restCore: 0, conditional: 0, ...perHour(reconcilesPerHour, reconcileWake) },
+  eventProxy: {
+    graphqlPoints: 0,
+    restCore: 0,
+    conditional: 0,
+    ...perHour(reconcilesPerHour, reconcileWake),
+  },
 };
 
 /** Sensitivity: each baseline's session cost under each pure strategy. */
@@ -863,7 +877,9 @@ out(
   'A local session where a background `pr-shepherd wait` replaces the blocking poll: REST change detectors with ETags, a full snapshot only when one changes, and a reconcile snapshot on a timer. The command does not exist yet (#544), and it is not the cloud event mode (`poll.mode`), so **every number here is assumed** (README.md "Event arm"). It is not gated: it adds no loss and removes none.',
 );
 out();
-out("| session | arm | GraphQL points | REST core requests | turns | tool calls | tool tokens | cost (ITE) |");
+out(
+  "| session | arm | GraphQL points | REST core requests | turns | tool calls | tool tokens | cost (ITE) |",
+);
 out("| --- | --- | --- | --- | --- | --- | --- | --- |");
 const EVENT_LABELS = {
   event: "event",
@@ -898,7 +914,9 @@ for (const r of rows.filter((r) => !r.setup)) {
 out();
 out("An idle hour, while nothing changes:");
 out();
-out("| arm | GraphQL points | REST core requests | conditional requests (304) | wakes | turns | cost (ITE) |");
+out(
+  "| arm | GraphQL points | REST core requests | conditional requests (304) | wakes | turns | cost (ITE) |",
+);
 out("| --- | --- | --- | --- | --- | --- | --- |");
 for (const [a, label] of Object.entries({
   shepherd: "pr-shepherd poll, `--until-terminal` (the skill)",
