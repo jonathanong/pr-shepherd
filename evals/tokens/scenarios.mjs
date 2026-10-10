@@ -424,6 +424,10 @@ const PR_SCENARIOS = [
       const fixture = "09-wait-in-progress-ci";
       const state = fixtureState(fixture);
       const polls = Math.ceil(CI_MINUTES / BASELINE_POLL_MINUTES);
+      const settled = {
+        ...state,
+        checks: state.checks.map((c) => ({ ...c, status: "COMPLETED", conclusion: "FAILURE" })),
+      };
       // poll-progress.mts, default (non-quiet) status: one line per WAIT tick.
       const reason = snapshot(fixture).match(/^WAIT: (.+)$/m)[1];
       const stderr = Array.from(
@@ -437,7 +441,11 @@ const PR_SCENARIOS = [
             phase: 1,
             via: "bash",
             cmd: "gh pr checks 42 -R owner/repo --watch --interval 60",
-            out: Array.from({ length: polls }, () => ghPrChecks(state)).join("\n"),
+            // `--watch` returns only once the checks finish: the last refresh is
+            // terminal (here the failure \`failing-check\` picks up).
+            out: Array.from({ length: polls }, (_, i) =>
+              ghPrChecks(i === polls - 1 ? settled : state),
+            ).join("\n"),
           },
         ],
         mcp: Array.from({ length: polls }, (_, i) => [
