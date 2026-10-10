@@ -305,11 +305,11 @@ With `--poll-mode event` (or `poll.mode: event`, or `auto` under `CLAUDE_CODE_RE
 
 Instruction changes when `nextCheck` is present:
 
-- `ready`, `wait`, and `mark_ready` replace "iterate immediately" or "rerun when the timer elapses" with two steps: end the turn without sleeping (`Playbook: "Cloud event loop".`), then keep exactly one wake-up at `nextCheck.at` and rerun the same command on a PR event or that wake-up, acting only on Shepherd's output. The quota-aware polling-cadence sentence is not printed in event mode, since Shepherd is not polling; the quota warning itself still prints. A native-stack draft hold keeps its own instruction and has no `nextCheck`.
+- `ready`, `wait`, and `mark_ready` replace "iterate immediately" or "rerun when the timer elapses" with two steps: end the turn without sleeping (`Playbook: "Cloud event loop".`), then keep exactly one wake-up at `nextCheck.at` and rerun the same command on a PR event or that wake-up, acting only on Shepherd's output. The quota-aware polling-cadence sentence is not printed in event mode, since Shepherd is not polling; the quota warning itself still prints. A native-stack draft hold has no `nextCheck` and does not get these two steps; it uses the event-mode hold instructions below.
 - `fix_code` replaces its last step (`FIX_CODE_CONTINUATION`, or its quota-aware variant) with: rerun once after the fixes, then end the turn, keeping one wake-up at `nextCheck.at`.
 - In durable-state sessions (event mode or `CLAUDE_CODE_REMOTE=true`), a generated `apply review` command that replies carries `--adopt-existing-replies`, so rerunning it after a lost state directory adopts a reply GitHub already shows instead of posting it twice. A direct `apply review` without the flag forwards every supplied ID.
 - Aggregate (`--stack`, multi-PR) results append one numbered step with the same rule and carry one `nextCheck` for the selection. That `nextCheck` includes the stack stall deadline (`stall-timeout`), and every row `pollCommand` carries `--poll-mode event`.
-- A native-stack draft hold prints its `--stack` handoff with `--poll-mode event` and adds a second step: do not rerun this one-PR session and keep no wake-up for it (`Playbook: "Cloud event loop".`).
+- A native-stack draft hold keeps its hold instruction as step 1, with the `--stack` handoff carrying `--poll-mode event`, and adds a second step: do not rerun this one-PR session and keep no wake-up for it (`Playbook: "Cloud event loop".`).
 
 ```markdown
 **nextCheck** `2024-05-15T19:57:00Z` · in 3020s · reason `safety-net` · event-driven (a PR event may wake you sooner)
