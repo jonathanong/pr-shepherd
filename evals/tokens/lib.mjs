@@ -614,6 +614,13 @@ export function repinMcpApiMap(map, source) {
   return map;
 }
 
+/** The report's sentence on the MCP map, taken from its `verified` flag. */
+export function mcpVerificationNote(map) {
+  return map.verified
+    ? `The MCP mapping is verified against ${map.source}.`
+    : "The MCP mapping is unverified.";
+}
+
 /** Rate-limit cost of one GitHub MCP tool call, from data/mcp-api-map.json. */
 export function mcpApi(tool, args) {
   const key =

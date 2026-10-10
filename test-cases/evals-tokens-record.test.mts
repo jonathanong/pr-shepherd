@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { repinMcpApiMap } from "../evals/tokens/lib.mjs";
+import { mcpVerificationNote, repinMcpApiMap } from "../evals/tokens/lib.mjs";
 
 describe("repinMcpApiMap (evals/tokens/record.mjs)", () => {
   it("resets verified when the map is repinned to a different commit", () => {
@@ -18,5 +18,19 @@ describe("repinMcpApiMap (evals/tokens/record.mjs)", () => {
     const map = { source: "github/github-mcp-server@aaa", verified: false };
     repinMcpApiMap(map, "github/github-mcp-server@bbb");
     expect(map.verified).toBe(false);
+  });
+});
+
+describe("mcpVerificationNote (evals/tokens/bench.mjs)", () => {
+  it("says the map is unverified when verified is false", () => {
+    expect(mcpVerificationNote({ source: "github/github-mcp-server@aaa", verified: false })).toBe(
+      "The MCP mapping is unverified.",
+    );
+  });
+
+  it("names the pinned source when verified is true", () => {
+    expect(mcpVerificationNote({ source: "github/github-mcp-server@aaa", verified: true })).toBe(
+      "The MCP mapping is verified against github/github-mcp-server@aaa.",
+    );
   });
 });

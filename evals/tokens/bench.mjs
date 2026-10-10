@@ -21,6 +21,7 @@ import {
   annotationBatchApi,
   apiTotals,
   cost,
+  mcpVerificationNote,
   readJson,
   tokens,
 } from "./lib.mjs";
@@ -458,7 +459,7 @@ out();
 out("## GitHub API usage");
 out();
 out(
-  "Rate-limit cost per session, weighted like the token numbers. **Deterministic and assumed**: no GitHub call is made. GraphQL is counted in points, REST in core requests, and the two buckets are separate. pr-shepherd costs come from docs/graphql-usage.md and the REST HTTP-boundary tests; gh and MCP costs are the per-call assumptions in README.md. The MCP mapping is unverified.",
+  `Rate-limit cost per session, weighted like the token numbers. **Deterministic and assumed**: no GitHub call is made. GraphQL is counted in points, REST in core requests, and the two buckets are separate. pr-shepherd costs come from docs/graphql-usage.md and the REST HTTP-boundary tests; gh and MCP costs are the per-call assumptions in README.md. ${mcpVerificationNote(MCP_API)}`,
 );
 out();
 out("| session | arm | GraphQL points | REST core requests |");
