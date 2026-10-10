@@ -2,6 +2,7 @@ import type { ApiUsage, GraphqlQuotaWarning } from "./api-usage.mts";
 import type { MergeableState, MergeStateStatus, ReviewDecision } from "./github.mts";
 import type { MergeQueueRemovalStatus } from "./merge-requirements.mts";
 import type { ShepherdAction } from "./iterate.mts";
+import type { NextCheck } from "./next-check.mts";
 
 export interface PollSummaryChecks {
   passing?: number;
@@ -113,6 +114,10 @@ export interface PollSummaryResult {
   instructions?: string[];
   apiUsage?: ApiUsage;
   quotaWarning?: GraphqlQuotaWarning;
+  /** `event` when this aggregate result came from event mode. Omitted in poll mode. */
+  pollMode?: "event";
+  /** Event mode only: when to come back if no GitHub event arrives first. */
+  nextCheck?: NextCheck;
 }
 
 export interface PollSummaryCommandOptions {
@@ -126,4 +131,6 @@ export interface PollSummaryCommandOptions {
   noAutoMarkReady?: boolean;
   noAutoCancelActionable?: boolean;
   instructions?: import("../config/load.mts").InstructionStyle;
+  /** Override `poll.mode` for this call. `auto` resolves to `event` when `CLAUDE_CODE_REMOTE=true`. */
+  pollMode?: import("../config/load.mts").PollMode;
 }

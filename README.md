@@ -136,6 +136,7 @@ pr-shepherd 42 --ready-delay 15m
 pr-shepherd 42 --merge                  # request head-pinned auto-merge/queue; GitHub reports the result
 pr-shepherd iterate 42                 # single tick
 pr-shepherd 42 --instructions playbook # fold invariant fix_code steps into a playbook pointer (default: inline)
+pr-shepherd 42 --poll-mode event       # one tick, no sleeping; prints nextCheck (default under CLAUDE_CODE_REMOTE=true)
 pr-shepherd playbook "Fix-code loop"   # print a bundled skill playbook (no name lists them)
 pr-shepherd owner/repo#42              # poll a PR in an explicit repository
 pr-shepherd https://github.com/owner/repo/pull/42
@@ -220,6 +221,8 @@ file in a trusted parent directory; symlinks, FIFOs, and devices are rejected wi
 Unsupported platforms fail closed with that same exit code.
 
 ### Clean Local State
+
+In Claude Code cloud sessions, [event mode](docs/cloud.md) runs one tick per event or wake-up instead of sleeping, and the default state directory moves into the repository's common directory.
 
 `pr-shepherd` stores seen markers, fix-attempt counters, stall fingerprints, ready-delay markers, and logs under `$PR_SHEPHERD_STATE_DIR` (default: `pr-shepherd-state` in the per-user temp dir; see [configuration](docs/configuration.md#environment-variables)).
 

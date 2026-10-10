@@ -3,6 +3,7 @@ import { formatApiUsage, formatQuotaWarning } from "./api-usage-formatter.mts";
 import { withPollSummaryInstructions } from "../commands/poll-summary-instructions.mts";
 import { formatStackOverview, projectStackOverview } from "./stack-overview.mts";
 import { formatTransportEvidence } from "./transport-formatter.mts";
+import { formatNextCheckLines, formatPollModeSegment } from "./next-check-format.mts";
 
 export function formatPollSummaryResult(result: PollSummaryResult): string {
   if (result.selection.kind === "stack") return formatStackOverview(projectStackOverview(result));
@@ -10,7 +11,8 @@ export function formatPollSummaryResult(result: PollSummaryResult): string {
   const lines = [
     `# Poll summary [${result.reason.toUpperCase()}]`,
     "",
-    `**repo** \`${result.repo}\` · **selection** ${selection} · **mode** \`${result.mode}\`${result.stackMergeable !== undefined ? ` · **stack mergeable** \`${result.stackMergeable}\`` : ""}${result.nextAction ? ` · **next action** \`${result.nextAction}\`` : ""}`,
+    `**repo** \`${result.repo}\` · **selection** ${selection} · **mode** \`${result.mode}\`${formatPollModeSegment(result)}${result.stackMergeable !== undefined ? ` · **stack mergeable** \`${result.stackMergeable}\`` : ""}${result.nextAction ? ` · **next action** \`${result.nextAction}\`` : ""}`,
+    ...formatNextCheckLines(result.nextCheck),
     "",
     "## Pull requests",
     "",

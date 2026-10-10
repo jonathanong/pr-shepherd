@@ -25,6 +25,7 @@ import type { EscalateDetails } from "./escalate.mts";
 import type { MergeCommandPlan } from "./merge-action.mts";
 import type { ProtectedRun } from "./protected-run.mts";
 import type { ApiUsage, GraphqlQuotaWarning } from "./api-usage.mts";
+import type { NextCheck } from "./next-check.mts";
 
 export type ShepherdAction =
   | "wait"
@@ -92,6 +93,10 @@ export interface IterateResultBase {
   apiUsage?: ApiUsage;
   quotaWarning?: GraphqlQuotaWarning;
   fingerprintReused?: true;
+  /** Set to `event` when this result came from event mode: one tick, no sleeping. Omitted in poll mode. */
+  pollMode?: "event";
+  /** Event mode only: when to come back if no GitHub event arrives first. Omitted for terminal actions. */
+  nextCheck?: NextCheck;
   /** Classification-rule resolve/minimize applied during this fetch. Omitted when nothing happened. */
   ruleAutoResolve?: RuleAutoResolveReport;
 }
@@ -228,6 +233,8 @@ export interface IterateCommandOptions extends GlobalOptions {
   fingerprintCache?: boolean;
   /** Shepherd through readiness and emit the exact merge/queue command when ready. */
   merge?: boolean;
+  /** Override `poll.mode` for this call. `auto` resolves to `event` when `CLAUDE_CODE_REMOTE=true`. */
+  pollMode?: import("../config/load.mts").PollMode;
   /** Override `iterate.instructions` for this call. */
   instructions?: import("../config/load.mts").InstructionStyle;
   /**

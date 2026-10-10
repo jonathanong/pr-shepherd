@@ -93,6 +93,8 @@ export function projectIterateLean(
     ...(result.baseBehindBy !== undefined &&
       result.baseBehindBy > 0 && { baseBehindBy: result.baseBehindBy }),
     ...(result.quotaWarning && { quotaWarning: result.quotaWarning }),
+    ...(result.pollMode && { pollMode: result.pollMode }),
+    ...(result.nextCheck && { nextCheck: result.nextCheck }),
     ...(result.ruleAutoResolve && {
       ruleAutoResolve: projectRuleAutoResolve(result.ruleAutoResolve),
     }),

@@ -14,6 +14,7 @@ const VALUE_FLAGS = new Set([
   "--ready-delay",
   "--stall-timeout",
   "--instructions",
+  "--poll-mode",
   "--interval",
   "--timeout",
   "--debounce",

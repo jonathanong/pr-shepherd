@@ -13,8 +13,7 @@ export type { RestMergeStackGuard } from "./github/rest-merge.mts";
 import type { MergeMethod } from "./config/merge-method.mts";
 import { runCommitSuggestion } from "./commands/commit-suggestion.mts";
 import { runSuggestionPatches } from "./commands/suggestion-patches.mts";
-import { runIterate } from "./commands/iterate/index.mts";
-import { runPollSummary } from "./commands/poll-summary.mts";
+import { runIterateForMode, runPollSummaryForMode } from "./commands/event-mode.mts";
 import { runJournal, type JournalResult } from "./commands/journal/index.mts";
 import { validateJournalItem } from "./commands/journal/transform.mts";
 import {
@@ -226,11 +225,11 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
       validateIterateSelectors(input);
       if ("prs" in input || "stack" in input) {
         const target = await resolveAggregateIterateInput(input as AggregateIterateInput);
-        return runPollSummary(target);
+        return runPollSummaryForMode(target);
       }
       const { pr: _pr, ...iterateOptions } = input;
       const target = resolvePrReference(input.pr);
-      return runIterate({ ...iterateOptions, ...target, format: "json" });
+      return runIterateForMode({ ...iterateOptions, ...target, format: "json" });
     });
   }
 

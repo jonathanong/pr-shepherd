@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { isAbsolute, join } from "node:path";
 import { tmpdir } from "node:os";
 import { SAFE_PR_NUMBER, SAFE_SEGMENT } from "../util/path-segment.mts";
+import { resolveDurableStateBase } from "./durable-state.mts";
 
 /** Read once per process; null when the platform or `getconf` offers no per-user temp dir. */
 let darwinUserTempDir: string | null | undefined;
@@ -27,6 +28,8 @@ function readDarwinUserTempDir(): string | null {
 export function resolveStateBase(): string {
   const envDir = process.env["PR_SHEPHERD_STATE_DIR"];
   if (envDir) return envDir;
+  const durable = resolveDurableStateBase();
+  if (durable) return durable;
   if (darwinUserTempDir === undefined) darwinUserTempDir = readDarwinUserTempDir();
   return join(darwinUserTempDir ?? tmpdir(), "pr-shepherd-state");
 }

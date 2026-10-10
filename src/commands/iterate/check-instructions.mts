@@ -1,7 +1,7 @@
 import type { AgentCheck, ResolveCommand, Review } from "../../types.mts";
 import { playbookPointer } from "../playbook-pointer.mts";
 
-const FIX_CODE_CONTINUATION =
+export const FIX_CODE_CONTINUATION =
   "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.";
 
 /** Build the stale-CR clause appended to the `## Changes-requested reviews` instruction. */

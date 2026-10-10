@@ -72,6 +72,12 @@ const iterateInputSchema = z
       .describe(
         "fix_code instruction style. inline (default) prints every step each tick; playbook folds commit, push and journal into the Fix-code loop playbook.",
       ),
+    pollMode: z
+      .enum(["auto", "poll", "event"])
+      .optional()
+      .describe(
+        "Overrides poll.mode. event returns one tick with pollMode and nextCheck so the caller owns the wake-up; auto (default) selects event when CLAUDE_CODE_REMOTE=true.",
+      ),
     noAutoCancelActionable: z
       .boolean()
       .optional()

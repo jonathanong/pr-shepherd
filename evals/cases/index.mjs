@@ -1,4 +1,5 @@
 // The full case list, shared by generate.mjs and analyze.mjs.
+import { CLOUD_CASES } from "./cloud.mjs";
 import { CORE_CASES } from "./core.mjs";
 import { DEFERRED_CASES } from "./deferred.mjs";
 import { MULTITURN_CASES } from "./multiturn.mjs";
@@ -12,5 +13,6 @@ export const CASES = [
   ...RECENT_CASES,
   ...RULES_CASES,
   ...DEFERRED_CASES,
+  ...CLOUD_CASES,
   ...MULTITURN_CASES,
 ];

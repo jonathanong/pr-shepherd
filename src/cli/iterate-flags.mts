@@ -1,8 +1,11 @@
 import {
   INSTRUCTION_STYLES,
+  POLL_MODES,
   isInstructionStyle,
+  isPollMode,
   type loadConfig,
   type InstructionStyle,
+  type PollMode,
 } from "../config/load.mts";
 import { EXIT } from "../exit-codes.mts";
 import { getFlag, hasFlag } from "./args.mts";
@@ -23,6 +26,18 @@ interface IterateFlags {
   merge: boolean;
   /** `null` when `--instructions` was invalid (an error was already printed). */
   instructions: InstructionStyle | null | undefined;
+  /** `null` when `--poll-mode` was invalid (an error was already printed). */
+  pollMode: PollMode | null | undefined;
+}
+
+/** True when any flag failed validation; the usage error is already printed. */
+export function hasInvalidIterateFlags(flags: IterateFlags): boolean {
+  return (
+    flags.readyDelaySuffix === null ||
+    flags.stallTimeoutSuffix === null ||
+    flags.instructions === null ||
+    flags.pollMode === null
+  );
 }
 
 export function parseIterateFlags(
@@ -61,6 +76,7 @@ export function parseIterateFlags(
   const instructions = parseInstructionsFlag(extra);
   return {
     instructions,
+    pollMode: parsePollModeFlag(extra),
     readyDelaySuffix,
     readyDelaySeconds,
     stallTimeoutSuffix,
@@ -85,4 +101,18 @@ function parseInstructionsFlag(extra: string[]): InstructionStyle | null | undef
 
 function hasInstructionsFlag(extra: string[]): boolean {
   return extra.some((arg) => arg === "--instructions" || arg.startsWith("--instructions="));
+}
+
+/** Validate `--poll-mode`. Returns `undefined` when absent, `null` after printing a usage error. */
+function parsePollModeFlag(extra: string[]): PollMode | null | undefined {
+  const value = getFlag(extra, "--poll-mode");
+  if (!extra.some((arg) => arg === "--poll-mode" || arg.startsWith("--poll-mode="))) {
+    return undefined;
+  }
+  if (isPollMode(value)) return value;
+  process.stderr.write(
+    `pr-shepherd: --poll-mode must be one of ${POLL_MODES.join(", ")}, got ${JSON.stringify(value ?? "")}\n`,
+  );
+  process.exitCode = EXIT.USAGE;
+  return null;
 }

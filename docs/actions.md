@@ -296,6 +296,29 @@ Quota warning, when a configured threshold is crossed on a non-terminal result:
 
 ---
 
+## Event mode
+
+With `--poll-mode event` (or `poll.mode: event`, or `auto` under `CLAUDE_CODE_REMOTE=true`) Shepherd runs one tick and never sleeps. The action, exit code, and every section below are unchanged. Two additions apply; see [cloud.md](cloud.md) for the full contract.
+
+- **`pollMode`** is `"event"`. The text header repeats it as `**pollMode** \`event\``. It is omitted in poll mode.
+- **`nextCheck`** is `{ at, inSeconds, reason, eventDriven }`, printed as a `**nextCheck**` header line after `**activity**`. `reason` is `ready-delay`, `stall-timeout`, `merge-queue`, or `safety-net`; `eventDriven` is `true` only for `safety-net`. It is omitted for `cancel`, `escalate`, `merge`, a native-stack draft hold, and an all-terminal aggregate.
+
+Instruction changes when `nextCheck` is present:
+
+- `ready`, `wait`, and `mark_ready` replace "iterate immediately" or "rerun when the timer elapses" with two steps: end the turn without sleeping (`Playbook: "Cloud event loop".`), then keep exactly one wake-up at `nextCheck.at` and rerun the same command on a PR event or that wake-up, acting only on Shepherd's output. The quota-aware polling-cadence sentence is not printed in event mode, since Shepherd is not polling; the quota warning itself still prints. A native-stack draft hold keeps its own instruction and has no `nextCheck`.
+- `fix_code` replaces its last step (`FIX_CODE_CONTINUATION`) with: rerun once after the fixes, then end the turn, keeping one wake-up at `nextCheck.at`.
+- Aggregate (`--stack`, multi-PR) results append one numbered step with the same rule and carry one `nextCheck` for the selection.
+
+```markdown
+**nextCheck** `2024-05-15T19:57:00Z` · in 3020s · reason `safety-net` · event-driven (a PR event may wake you sooner)
+
+## Instructions
+
+1. Non-terminal — no action needed this tick.
+2. Event mode: end this turn now without sleeping or polling. Playbook: "Cloud event loop".
+3. Keep exactly one safety-net wake-up at `2024-05-15T19:57:00Z` (`safety-net`). When a PR event or that wake-up arrives, rerun this command with the same options and act only on Shepherd's output, never on the event payload.
+```
+
 ## `ready`
 
 The PR is clean and its ready-delay is still counting.

@@ -25,7 +25,10 @@ vi.stubGlobal("fetch", mockFetch);
 // ---------------------------------------------------------------------------
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
-vi.mock("../../src/config/load.mts", () => ({ loadConfig: mockLoadConfig }));
+vi.mock("../../src/config/load.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/config/load.mts")>()),
+  loadConfig: mockLoadConfig,
+}));
 
 const { mockExecFile } = vi.hoisted(() => ({ mockExecFile: vi.fn() }));
 vi.mock("node:child_process", () => ({

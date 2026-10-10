@@ -30,7 +30,8 @@
     "stackIntervalFactor": 2,
     "timeoutSeconds": 270,
     "debounceSeconds": 60,
-    "quietStatus": false
+    "quietStatus": false,
+    "mode": "auto"
   },
   "watch": {
     "readyDelayMinutes": 10,

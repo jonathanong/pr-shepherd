@@ -25,6 +25,7 @@ Poll with the CLI. Stop polling the selected pull request at `[CANCEL]` or `[ESC
 ## Recurrence
 
 - After the instructions, rerun that same command immediately with the same target and options. Stop only for `[CANCEL]`, `[ESCALATE]`, or a human telling you to stop. A one-PR terminal ends only that PR's loop; keep other loops running.
+- Output with `pollMode` `event` and a `nextCheck` overrides "rerun immediately": read the "Cloud event loop" playbook, end the turn, and keep one wake-up at `nextCheck.at`.
 - `[FIX_CODE]` is always non-terminal. Only `[ESCALATE]` hands work to a human.
 - `[READY]` is non-terminal. Rerun when `remainingSeconds` elapses. Do not invent unrelated work; continue any later layer you own.
 - After a push or `rerun:`, do not wait for CI to finish — fetching check logs is fine. Do not poll with `gh pr checks`, `gh pr watch`, `gh run watch`, or equivalent GitHub MCP waiters.
@@ -54,3 +55,4 @@ When a step says `Playbook: "<name>"`, read that file once and apply it before t
 - [Branch update](references/branch-update.md)
 - [Stack merge](references/stack-merge.md)
 - [Merge queue ejection](references/merge-queue-ejection.md)
+- [Cloud event loop](references/cloud-event-loop.md)

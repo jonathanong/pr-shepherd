@@ -1,0 +1,25 @@
+{
+  "description": "Event mode on a ready-delay countdown reports a deterministic nextCheck and tells the agent to end the turn.",
+  "args": [
+    "--poll-mode",
+    "event"
+  ],
+  "batchData": {
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": true,
+    "shouldCancel": false,
+    "remainingSeconds": 127
+  },
+  "expectedExitCode": 10
+}

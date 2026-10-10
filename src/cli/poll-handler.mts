@@ -1,12 +1,11 @@
-import { runPoll } from "../commands/poll.mts";
+import { runAggregatePollForMode, runPollForMode } from "../commands/event-mode.mts";
 import { loadConfig } from "../config/load.mts";
 import { parseCommonArgs, getFlag, hasFlag } from "./args.mts";
 import { parseDurationToSeconds } from "./duration.mts";
 import { validateSecondsDurationFlag } from "./duration-flag.mts";
-import { parseIterateFlags } from "./iterate-flags.mts";
+import { hasInvalidIterateFlags, parseIterateFlags } from "./iterate-flags.mts";
 import { emitIterateResult } from "./iterate-emitter.mts";
 import { EXIT } from "../exit-codes.mts";
-import { runAggregatePoll } from "../commands/poll-summary.mts";
 import { emitPollSummaryResult } from "./poll-summary-emitter.mts";
 import { parsePollTargets, resolvePollTargets } from "./poll-targets.mts";
 
@@ -25,12 +24,7 @@ export async function handlePoll(args: string[]): Promise<void> {
   const cfg = loadConfig();
 
   const flags = parseIterateFlags(extra, cfg);
-  if (
-    flags.readyDelaySuffix === null ||
-    flags.stallTimeoutSuffix === null ||
-    flags.instructions === null
-  )
-    return;
+  if (hasInvalidIterateFlags(flags)) return;
 
   const intervalStr = getFlag(extra, "--interval");
   const intervalSuffix = validateSecondsDurationFlag(
@@ -87,7 +81,8 @@ export async function handlePoll(args: string[]): Promise<void> {
     noAutoMarkReady: flags.noAutoMarkReady,
     noAutoCancelActionable: flags.noAutoCancelActionable,
     merge: flags.merge,
-    instructions: flags.instructions,
+    instructions: flags.instructions ?? undefined,
+    pollMode: flags.pollMode ?? undefined,
     intervalSeconds,
     timeoutSeconds,
     debounceSeconds,
@@ -96,7 +91,7 @@ export async function handlePoll(args: string[]): Promise<void> {
   };
 
   if (isAggregate) {
-    const result = await runAggregatePoll({
+    const result = await runAggregatePollForMode({
       ...shared,
       ...resolvedTargets,
     });
@@ -104,7 +99,7 @@ export async function handlePoll(args: string[]): Promise<void> {
     return;
   }
 
-  const result = await runPoll({ ...shared, prNumber });
+  const result = await runPollForMode({ ...shared, prNumber });
 
   emitIterateResult(result, {
     format: globalOpts.format,

@@ -5,12 +5,19 @@ import { buildQuotaAwareContinuation } from "../quota-warning.mts";
 import { formatPrUrl } from "../pr-reference.mts";
 import { AUTO_MARK_READY_DISABLED_HOLD } from "../commands/stack-work.mts";
 import { buildPrShepherdCommand } from "./runner.mts";
+import { eventWaitSteps } from "../commands/event-instructions.mts";
 
 export function buildSimpleIterateInstructions(
   result: Exclude<IterateResult, { action: "fix_code" }>,
 ): string[] {
   switch (result.action) {
     case "ready": {
+      if (result.nextCheck) {
+        return [
+          `PR #${result.pr} is ready. Ready-delay has ${result.remainingSeconds}s left. Do not invent unrelated work.`,
+          ...eventWaitSteps(result.nextCheck),
+        ];
+      }
       const sentence = `PR #${result.pr} is ready. Ready-delay has ${result.remainingSeconds}s left. Rerun this command when the timer elapses. Do not invent unrelated work.`;
       return [
         result.quotaWarning ? buildQuotaAwareContinuation(result.quotaWarning, sentence) : sentence,
@@ -19,6 +26,9 @@ export function buildSimpleIterateInstructions(
     case "wait":
       if (result.stackDraftHold)
         return [buildStackDraftHoldInstruction(result, result.stackDraftHold)];
+      if (result.nextCheck) {
+        return ["Non-terminal — no action needed this tick.", ...eventWaitSteps(result.nextCheck)];
+      }
       if (result.quotaWarning) {
         return [
           buildQuotaAwareContinuation(
@@ -31,6 +41,9 @@ export function buildSimpleIterateInstructions(
         "Non-terminal — no action needed this tick. Iterate immediately with the same options to continue.",
       ];
     case "mark_ready":
+      if (result.nextCheck) {
+        return ["The CLI marked the PR ready for review.", ...eventWaitSteps(result.nextCheck)];
+      }
       if (result.quotaWarning) {
         return [
           buildQuotaAwareContinuation(

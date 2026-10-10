@@ -25,6 +25,7 @@ describe("runResolveMutate — configured bot threads", () => {
         timeoutSeconds: 270,
         debounceSeconds: 60,
         quietStatus: false,
+        mode: "auto",
       },
       resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 } },
       actions: {
