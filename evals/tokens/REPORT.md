@@ -351,7 +351,7 @@ Verdicts, per session and per scenario, that flip to a loss at the measured rati
 
 Today's pr-shepherd runs on 8 real PRs (#520, #521, #522, #523, #530, #531, #532, #533), rebuilt from the agents' transcripts and pr-shepherd's debug logs by `sessions.mjs --extract`. Each PR's timeline (every poll with its ticks and action, every `apply` with its mutations) is replayed through this report's per-call models for all three arms. The baselines read the PR's real thread, comment, review and check sizes as of each step. pr-shepherd's modeled output is its real output length. Items are resolved, minimized or dismissed as the timeline's applies reach them, earliest first, since the PR dumps hold only final statuses. The data is [data/real-sessions.json](data/real-sessions.json); it holds numbers only.
 
-**The timelines are reconstructed, not exact.** Concurrent invocations interleave in one debug log and number their requests alike, so across the 17 debug logs (in-scope PRs and others alike) 115 requests, responses or outputs matched more than one open invocation and were assigned by heuristic (the PR their variables name, then the latest active). Those picks set per-PR ticks, output lengths and measured API counts.
+**The timelines are reconstructed, not exact.** Concurrent invocations interleave in one debug log and number their requests alike, so across the 17 debug logs (in-scope PRs and others alike) 96 requests, responses or outputs matched more than one open invocation and were assigned by heuristic (the PR their variables name, then the latest active). Those picks set per-PR ticks, output lengths and measured API counts.
 
 | PR | rounds | polls (ticks) | FIX_CODE | applies | threads | cost: pr-shepherd / gh / MCP | turns: pr-shepherd / gh / MCP | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -389,6 +389,23 @@ At the measured characters per token (pr-shepherd 2.19, gh and MCP 2.53; MCP's i
 - **Context tokens.** The pr-shepherd and PR-state results whose size the next request's prompt growth pins down (181,357 characters) measured, per-result wrapper included, 112,711 tokens; the model's 3.5 characters per token gives 51,816.
 - **Rate limit.** The debug logs record every request: pr-shepherd spent 309 GraphQL points on queries (a lower bound: 1 query logged no cost), 50 mutation requests (GitHub reports no cost for these; at 1 point each the total is 359) and 32 REST requests. The model charges 219 points and 21 REST requests for the same timeline (GraphQL transport, which every session used). The model's REST requests are one mergeability refresh per READY poll, the rate measured there; the measured remainder falls on CANCEL and FIX_CODE polls, which the model does not charge. No poll recorded `apiUsage` (none ran with `--verbose`), so these come from the per-request log entries.
 - **Turns.** The agents spent 107 turns on pr-shepherd calls and reads of their output; the model counts 107, one per invocation.
+
+### GraphQL points by query
+
+The 309 measured query points, by the operation each request names (mutations excluded). Per tick divides by the 145 poll ticks.
+
+| queries | requests | points | per tick | operations: requests / points |
+| --- | --- | --- | --- | --- |
+| PrFingerprint | 24 | 24 | 0.17 | PrFingerprint 24 / 24 |
+| BatchPr and its supplements | 233 | 246 | 1.70 | BatchPr 145 / 158, CheckRunAnnotationsBatch 49 / 49, BaseBehind 39 / 39 |
+| `apply review` reads | 36 | 36 | 0.25 | ReplyThreadTranscripts 12 / 12, GetPrHeadSha 12 / 12, ReplyRecoveryEvidence 12 / 12 |
+| other | 3 | 3 | 0.02 | GetPrBody 3 / 3 |
+
+No request fell under review/resolve fetch or stack summary: no session ran those commands on these PRs.
+
+Mutations log no cost and are not in the table. Requests: BulkApply from `apply review` 35, BulkApply from polls 12, UpdatePrBody from `apply journal` 2, UpdatePrBody from polls 1.
+
+The model charges 216 points for these polls (1.49 per tick), 93 short of the measured total. The 39 points outside the tick queries do not account for it: the tick itself costs more than modeled. A real tick spent 1.86 points (270 over 145 ticks): the fingerprint and BatchPr 182 points (1.26 per tick), within the model's charge, plus 88 (0.61 per tick) for BatchPr's supplements (CheckRunAnnotationsBatch 49, BaseBehind 39), which it does not.
 
 ### Where the real tokens went
 

@@ -3,7 +3,7 @@
   "sources": {
     "transcripts": 10,
     "debugLogs": 17,
-    "heuristicAttributions": 115
+    "heuristicAttributions": 96
   },
   "apiUsageRecorded": false,
   "charsPerToken": {
@@ -116,7 +116,17 @@
           "graphqlCost": 3,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 77,
@@ -130,7 +140,13 @@
           "graphqlCost": 2,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 211,
@@ -143,6 +159,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -161,6 +183,24 @@
           "graphqlMutations": 3,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "ReplyThreadTranscripts": [
+              1,
+              1
+            ],
+            "GetPrHeadSha": [
+              1,
+              1
+            ],
+            "ReplyRecoveryEvidence": [
+              1,
+              1
+            ],
+            "BulkApply": [
+              3,
+              0
+            ]
+          },
           "apply": {
             "replies": 10,
             "resolves": 10,
@@ -180,7 +220,25 @@
           "graphqlCost": 5,
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ],
+            "BaseBehind": [
+              2,
+              2
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          }
         },
         {
           "t": 308,
@@ -193,6 +251,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -212,7 +276,25 @@
           "graphqlCost": 5,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "BaseBehind": [
+              1,
+              1
+            ],
+            "PrFingerprint": [
+              1,
+              1
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 2207,
@@ -225,7 +307,13 @@
           "graphqlCost": 2,
           "graphqlMutations": 0,
           "graphqlNoCost": 1,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 2336,
@@ -238,7 +326,13 @@
           "graphqlCost": 2,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 2532,
@@ -251,6 +345,24 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "ReplyThreadTranscripts": [
+              1,
+              1
+            ],
+            "GetPrHeadSha": [
+              1,
+              1
+            ],
+            "ReplyRecoveryEvidence": [
+              1,
+              1
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 3,
             "resolves": 3,
@@ -269,7 +381,25 @@
           "graphqlCost": 5,
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ],
+            "BaseBehind": [
+              2,
+              2
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          }
         },
         {
           "t": 2607,
@@ -282,6 +412,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -300,7 +436,25 @@
           "graphqlCost": 5,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "BaseBehind": [
+              1,
+              1
+            ],
+            "PrFingerprint": [
+              1,
+              1
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 2695,
@@ -314,7 +468,13 @@
           "graphqlCost": 1,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 3332,
@@ -327,7 +487,13 @@
           "graphqlCost": 3,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              3
+            ]
+          }
         },
         {
           "t": 3548,
@@ -340,7 +506,13 @@
           "graphqlCost": 2,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 3672,
@@ -353,6 +525,24 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "ReplyThreadTranscripts": [
+              1,
+              1
+            ],
+            "GetPrHeadSha": [
+              1,
+              1
+            ],
+            "ReplyRecoveryEvidence": [
+              1,
+              1
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 1,
             "resolves": 1,
@@ -371,7 +561,29 @@
           "graphqlCost": 9,
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              3,
+              3
+            ],
+            "BaseBehind": [
+              3,
+              3
+            ],
+            "BulkApply": [
+              1,
+              0
+            ],
+            "PrFingerprint": [
+              1,
+              1
+            ],
+            "CheckRunAnnotationsBatch": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 3807,
@@ -384,6 +596,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -402,7 +620,21 @@
           "graphqlCost": 4,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ],
+            "BaseBehind": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 4505,
@@ -415,7 +647,13 @@
           "graphqlCost": 3,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              3
+            ]
+          }
         },
         {
           "t": 4603,
@@ -428,7 +666,13 @@
           "graphqlCost": 2,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ]
+          }
         }
       ],
       "measured": {
@@ -1146,7 +1390,21 @@
           "graphqlCost": 5,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "BaseBehind": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 72,
@@ -1159,6 +1417,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -1178,7 +1442,25 @@
           "graphqlCost": 5,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "BaseBehind": [
+              1,
+              1
+            ],
+            "PrFingerprint": [
+              1,
+              1
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 1608,
@@ -1191,7 +1473,13 @@
           "graphqlCost": 3,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              3
+            ]
+          }
         },
         {
           "t": 1733,
@@ -1204,7 +1492,13 @@
           "graphqlCost": 2,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 1949,
@@ -1217,6 +1511,24 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "ReplyThreadTranscripts": [
+              1,
+              1
+            ],
+            "GetPrHeadSha": [
+              1,
+              1
+            ],
+            "ReplyRecoveryEvidence": [
+              1,
+              1
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 2,
             "resolves": 2,
@@ -1235,7 +1547,25 @@
           "graphqlCost": 5,
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ],
+            "BaseBehind": [
+              2,
+              2
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          }
         },
         {
           "t": 2022,
@@ -1248,6 +1578,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -1266,7 +1602,25 @@
           "graphqlCost": 5,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "BaseBehind": [
+              1,
+              1
+            ],
+            "PrFingerprint": [
+              1,
+              1
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 2105,
@@ -1280,7 +1634,13 @@
           "graphqlCost": 1,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 2797,
@@ -1293,7 +1653,13 @@
           "graphqlCost": 4,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 2
+          "restRequests": 2,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              4
+            ]
+          }
         },
         {
           "t": 2943,
@@ -1307,7 +1673,13 @@
           "graphqlCost": 2,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              1,
+              2
+            ]
+          }
         }
       ],
       "measured": {
@@ -1534,7 +1906,21 @@
           "graphqlCost": 5,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ],
+            "BaseBehind": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 70,
@@ -1547,6 +1933,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -1566,7 +1958,25 @@
           "graphqlCost": 5,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "BaseBehind": [
+              1,
+              1
+            ],
+            "PrFingerprint": [
+              1,
+              1
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 1464,
@@ -1579,7 +1989,13 @@
           "graphqlCost": 3,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              3
+            ]
+          }
         },
         {
           "t": 1580,
@@ -1592,7 +2008,13 @@
           "graphqlCost": 2,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 1764,
@@ -1605,6 +2027,24 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "ReplyThreadTranscripts": [
+              1,
+              1
+            ],
+            "GetPrHeadSha": [
+              1,
+              1
+            ],
+            "ReplyRecoveryEvidence": [
+              1,
+              1
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 4,
             "resolves": 4,
@@ -1623,7 +2063,25 @@
           "graphqlCost": 5,
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ],
+            "BaseBehind": [
+              2,
+              2
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          }
         },
         {
           "t": 1841,
@@ -1636,6 +2094,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -1654,7 +2118,25 @@
           "graphqlCost": 8,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              4,
+              4
+            ],
+            "BaseBehind": [
+              1,
+              1
+            ],
+            "PrFingerprint": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 2033,
@@ -1667,7 +2149,17 @@
           "graphqlCost": 6,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              4,
+              4
+            ],
+            "PrFingerprint": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 2258,
@@ -1680,6 +2172,24 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "ReplyThreadTranscripts": [
+              1,
+              1
+            ],
+            "GetPrHeadSha": [
+              1,
+              1
+            ],
+            "ReplyRecoveryEvidence": [
+              1,
+              1
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 1,
             "resolves": 1,
@@ -1698,7 +2208,21 @@
           "graphqlCost": 5,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "BaseBehind": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 2331,
@@ -1711,6 +2235,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -1729,7 +2259,25 @@
           "graphqlCost": 8,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              3,
+              3
+            ],
+            "BaseBehind": [
+              2,
+              2
+            ],
+            "PrFingerprint": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 3096,
@@ -1742,7 +2290,13 @@
           "graphqlCost": 3,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              3
+            ]
+          }
         },
         {
           "t": 3287,
@@ -1755,7 +2309,13 @@
           "graphqlCost": 2,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 3471,
@@ -1768,7 +2328,13 @@
           "graphqlCost": 2,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 3620,
@@ -1781,6 +2347,24 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "ReplyThreadTranscripts": [
+              1,
+              1
+            ],
+            "GetPrHeadSha": [
+              1,
+              1
+            ],
+            "ReplyRecoveryEvidence": [
+              1,
+              1
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 3,
             "resolves": 3,
@@ -1799,7 +2383,25 @@
           "graphqlCost": 5,
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ],
+            "BaseBehind": [
+              2,
+              2
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          }
         },
         {
           "t": 3701,
@@ -1812,6 +2414,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -1830,7 +2438,25 @@
           "graphqlCost": 5,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "BaseBehind": [
+              1,
+              1
+            ],
+            "PrFingerprint": [
+              1,
+              1
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         }
       ],
       "measured": {
@@ -2309,7 +2935,21 @@
           "graphqlCost": 5,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ],
+            "BaseBehind": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 103,
@@ -2322,6 +2962,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -2341,7 +2987,25 @@
           "graphqlCost": 6,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              2,
+              2
+            ],
+            "BaseBehind": [
+              1,
+              1
+            ],
+            "PrFingerprint": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 846,
@@ -2354,7 +3018,13 @@
           "graphqlCost": 3,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              3
+            ]
+          }
         },
         {
           "t": 971,
@@ -2367,7 +3037,13 @@
           "graphqlCost": 2,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 1163,
@@ -2379,7 +3055,17 @@
           "graphqlCost": 1,
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "GetPrBody": [
+              1,
+              1
+            ],
+            "UpdatePrBody": [
+              1,
+              0
+            ]
+          }
         },
         {
           "t": 1167,
@@ -2392,6 +3078,7 @@
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {},
           "apply": {
             "replies": 1,
             "resolves": 1,
@@ -2410,6 +3097,24 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "ReplyThreadTranscripts": [
+              1,
+              1
+            ],
+            "GetPrHeadSha": [
+              1,
+              1
+            ],
+            "ReplyRecoveryEvidence": [
+              1,
+              1
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 1,
             "resolves": 1,
@@ -2428,7 +3133,25 @@
           "graphqlCost": 5,
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ],
+            "BaseBehind": [
+              2,
+              2
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          }
         },
         {
           "t": 1245,
@@ -2441,6 +3164,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -2459,7 +3188,25 @@
           "graphqlCost": 6,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              2,
+              2
+            ],
+            "BaseBehind": [
+              1,
+              1
+            ],
+            "PrFingerprint": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 1335,
@@ -2473,7 +3220,13 @@
           "graphqlCost": 1,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 2098,
@@ -2486,7 +3239,13 @@
           "graphqlCost": 3,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              3
+            ]
+          }
         },
         {
           "t": 2188,
@@ -2499,7 +3258,13 @@
           "graphqlCost": 2,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 2317,
@@ -2511,7 +3276,17 @@
           "graphqlCost": 1,
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "GetPrBody": [
+              1,
+              1
+            ],
+            "UpdatePrBody": [
+              1,
+              0
+            ]
+          }
         },
         {
           "t": 2319,
@@ -2524,6 +3299,24 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "ReplyThreadTranscripts": [
+              1,
+              1
+            ],
+            "GetPrHeadSha": [
+              1,
+              1
+            ],
+            "ReplyRecoveryEvidence": [
+              1,
+              1
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 1,
             "resolves": 1,
@@ -2542,7 +3335,33 @@
           "graphqlCost": 6,
           "graphqlMutations": 3,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ],
+            "BaseBehind": [
+              2,
+              2
+            ],
+            "BulkApply": [
+              2,
+              0
+            ],
+            "GetPrBody": [
+              1,
+              1
+            ],
+            "UpdatePrBody": [
+              1,
+              0
+            ]
+          }
         },
         {
           "t": 2394,
@@ -2555,7 +3374,25 @@
           "graphqlCost": 7,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              3,
+              3
+            ],
+            "BaseBehind": [
+              2,
+              2
+            ],
+            "PrFingerprint": [
+              1,
+              1
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 3170,
@@ -2568,7 +3405,13 @@
           "graphqlCost": 2,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              1,
+              2
+            ]
+          }
         }
       ],
       "measured": {
@@ -2852,7 +3695,17 @@
           "graphqlCost": 4,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 66,
@@ -2865,6 +3718,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -2883,7 +3742,21 @@
           "graphqlCost": 4,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "PrFingerprint": [
+              1,
+              1
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 170,
@@ -2896,7 +3769,21 @@
           "graphqlCost": 6,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              3,
+              3
+            ],
+            "PrFingerprint": [
+              1,
+              1
+            ],
+            "CheckRunAnnotationsBatch": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 297,
@@ -2909,7 +3796,21 @@
           "graphqlCost": 4,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "PrFingerprint": [
+              1,
+              1
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 990,
@@ -2922,7 +3823,13 @@
           "graphqlCost": 3,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              3
+            ]
+          }
         },
         {
           "t": 1804,
@@ -2935,7 +3842,13 @@
           "graphqlCost": 2,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 2
+          "restRequests": 2,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 1890,
@@ -2948,6 +3861,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -2966,6 +3885,24 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "ReplyThreadTranscripts": [
+              1,
+              1
+            ],
+            "GetPrHeadSha": [
+              1,
+              1
+            ],
+            "ReplyRecoveryEvidence": [
+              1,
+              1
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 5,
             "resolves": 5,
@@ -2984,7 +3921,21 @@
           "graphqlCost": 3,
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          }
         },
         {
           "t": 1978,
@@ -2997,6 +3948,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -3015,7 +3972,21 @@
           "graphqlCost": 5,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              2,
+              2
+            ],
+            "PrFingerprint": [
+              1,
+              1
+            ]
+          }
         }
       ],
       "measured": {
@@ -3205,7 +4176,17 @@
           "graphqlCost": 3,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 139,
@@ -3218,6 +4199,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -3236,7 +4223,13 @@
           "graphqlCost": 1,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 841,
@@ -3249,7 +4242,17 @@
           "graphqlCost": 4,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 908,
@@ -3262,6 +4265,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -3280,7 +4289,21 @@
           "graphqlCost": 5,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 2
+          "restRequests": 2,
+          "graphqlByOp": {
+            "BatchPr": [
+              3,
+              3
+            ],
+            "PrFingerprint": [
+              1,
+              1
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         }
       ],
       "measured": {
@@ -3412,7 +4435,17 @@
           "graphqlCost": 3,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 66,
@@ -3425,6 +4458,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -3443,7 +4482,21 @@
           "graphqlCost": 4,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "PrFingerprint": [
+              1,
+              1
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 766,
@@ -3457,7 +4510,17 @@
           "graphqlCost": 4,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              3
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 844,
@@ -3470,7 +4533,13 @@
           "graphqlCost": 2,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ]
+          }
         },
         {
           "t": 992,
@@ -3483,6 +4552,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -3501,6 +4576,24 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "ReplyThreadTranscripts": [
+              1,
+              1
+            ],
+            "GetPrHeadSha": [
+              1,
+              1
+            ],
+            "ReplyRecoveryEvidence": [
+              1,
+              1
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 2,
             "resolves": 2,
@@ -3519,7 +4612,21 @@
           "graphqlCost": 3,
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          }
         },
         {
           "t": 1066,
@@ -3532,6 +4639,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -3550,7 +4663,21 @@
           "graphqlCost": 4,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "PrFingerprint": [
+              1,
+              1
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         }
       ],
       "measured": {
@@ -3762,7 +4889,17 @@
           "graphqlCost": 3,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 186,
@@ -3775,7 +4912,17 @@
           "graphqlCost": 3,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 0
+          "restRequests": 0,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         },
         {
           "t": 274,
@@ -3788,6 +4935,12 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 0,
             "resolves": 0,
@@ -3806,6 +4959,24 @@
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
           "restRequests": 0,
+          "graphqlByOp": {
+            "ReplyThreadTranscripts": [
+              1,
+              1
+            ],
+            "GetPrHeadSha": [
+              1,
+              1
+            ],
+            "ReplyRecoveryEvidence": [
+              1,
+              1
+            ],
+            "BulkApply": [
+              1,
+              0
+            ]
+          },
           "apply": {
             "replies": 1,
             "resolves": 1,
@@ -3824,7 +4995,25 @@
           "graphqlCost": 4,
           "graphqlMutations": 1,
           "graphqlNoCost": 0,
-          "restRequests": 1
+          "restRequests": 1,
+          "graphqlByOp": {
+            "BatchPr": [
+              2,
+              2
+            ],
+            "BulkApply": [
+              1,
+              0
+            ],
+            "PrFingerprint": [
+              1,
+              1
+            ],
+            "CheckRunAnnotationsBatch": [
+              1,
+              1
+            ]
+          }
         }
       ],
       "measured": {

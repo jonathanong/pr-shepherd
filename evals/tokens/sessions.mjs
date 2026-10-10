@@ -96,11 +96,15 @@ function logEntries(text) {
  * invocation whose next number it is, preferring the PR its variables name.
  * Ambiguous picks are counted in `heuristic`.
  */
-function parseLog(text, scope, stats) {
+function parseLog(text, scope, stats, until = Infinity) {
   const invs = [];
+  // Entries past the cutoff are still parsed (they close invocations) but not counted.
+  const ambiguous = (t) => {
+    if (t <= until) stats.heuristic++;
+  };
   const headPr = new Map();
   const open = (t) => invs.filter((i) => !i.closed && t - i.last <= IDLE_SECONDS);
-  const pick = (cands, pr, k) => {
+  const pick = (cands, pr, k, t) => {
     let c = cands.filter((i) => i.nextK === k);
     if (pr) {
       const same = c.filter((i) => i.pr === pr);
@@ -108,12 +112,12 @@ function parseLog(text, scope, stats) {
       else {
         const any = cands.filter((i) => i.pr === pr);
         if (any.length) {
-          stats.heuristic++;
+          ambiguous(t);
           c = any;
         }
       }
     }
-    if (c.length > 1) stats.heuristic++;
+    if (c.length > 1) ambiguous(t);
     return c.sort((a, b) => b.last - a.last)[0] ?? null;
   };
   for (const e of logEntries(text)) {
@@ -140,7 +144,7 @@ function parseLog(text, scope, stats) {
       let pr = Number(vars.match(/"pr":\s*(\d+)/)?.[1]) || null;
       if (!pr && m[2] === "REST") pr = Number(m[3].match(/\/pulls\/(\d+)/)?.[1]) || null;
       if (!pr) pr = headPr.get(vars.match(/"headRef":\s*"(\w+)"/)?.[1]) ?? null;
-      const inv = pick(open(t), pr, k);
+      const inv = pick(open(t), pr, k, t);
       if (!inv) continue;
       const req = { k, t, op, transport: m[2], cost: null };
       inv.reqs.push(req);
@@ -151,7 +155,7 @@ function parseLog(text, scope, stats) {
       const k = Number(m[1]);
       const t = secs(m[3]);
       const cands = open(t).filter((i) => i.pending.has(k));
-      if (cands.length > 1) stats.heuristic++;
+      if (cands.length > 1) ambiguous(t);
       const inv = cands.sort((a, b) => a.pending.get(k).t - b.pending.get(k).t)[0];
       if (!inv) continue;
       const req = inv.pending.get(k);
@@ -169,7 +173,7 @@ function parseLog(text, scope, stats) {
       const cands = open(t).filter(
         (i) => !i.outs.length && (pr ? i.pr === pr && i.kind === "poll" : i.kind !== "poll"),
       );
-      if (cands.length > 1) stats.heuristic++;
+      if (cands.length > 1) ambiguous(t);
       const inv = cands.sort((a, b) => a.t - b.t)[0];
       if (!inv) continue;
       inv.outs.push({
@@ -204,6 +208,12 @@ function invocationRecord(inv, t0) {
     graphqlMutations: gqlReqs.filter((r) => MUTATION_OPS.has(r.op)).length,
     graphqlNoCost: gqlReqs.filter((r) => r.cost == null && !MUTATION_OPS.has(r.op)).length,
     restRequests: inv.reqs.length - gqlReqs.length,
+    // Per GraphQL operation: [requests, logged cost].
+    graphqlByOp: gqlReqs.reduce((o, r) => {
+      const [n, c] = o[r.op] ?? [0, 0];
+      o[r.op] = [n + 1, c + (r.cost ?? 0)];
+      return o;
+    }, {}),
   };
   if (inv.kind === "review")
     rec.apply = {
@@ -325,7 +335,11 @@ function parseTranscript(path, until) {
     if (e.type === "user" && Array.isArray(e.message?.content))
       for (const b of e.message.content)
         if (b?.type === "tool_result")
-          results.set(b.tool_use_id, { text: resultText(b), idx, isError: !!b.is_error });
+          results.set(b.tool_use_id, {
+            text: resultText(b),
+            idx,
+            isError: !!b.is_error,
+          });
   });
   return { events, calls, results };
 }
@@ -366,7 +380,11 @@ function walkTranscript(tr, { scope, coordinator, add, samples }) {
         ? prompt(next.usage) - prompt(c.usage) - (c.usage.output_tokens ?? 0)
         : null;
     const items = c.uses.map((u) => {
-      const r = tr.results.get(u.id) ?? { text: "", idx: c.lastIdx, isError: false };
+      const r = tr.results.get(u.id) ?? {
+        text: "",
+        idx: c.lastIdx,
+        isError: false,
+      };
       const k = classify(u, r.text, bgPrs, scope);
       const bg = r.text.match(/Command running in background with ID: (\w+)/);
       if (bg && k.prs.length) bgPrs.set(bg[1], k.prs);
@@ -459,7 +477,12 @@ function fit(samples) {
     charsPerToken: r2(1 / slope),
     intercept: Math.round(intercept),
     r2: r2(1 - ssr / sst),
-    perSample: { samples: big.length, p10: r2(q(0.1)), p50: r2(q(0.5)), p90: r2(q(0.9)) },
+    perSample: {
+      samples: big.length,
+      p10: r2(q(0.1)),
+      p50: r2(q(0.5)),
+      p90: r2(q(0.9)),
+    },
   };
 }
 
@@ -516,7 +539,14 @@ function extract(opts) {
   const stats = { heuristic: 0 };
   const logFiles = readdirSync(opts.logs).filter((f) => f.endsWith(".md"));
   const invs = logFiles
-    .flatMap((f) => parseLog(readFileSync(join(opts.logs, f), "utf8"), scope, stats))
+    .flatMap((f) =>
+      parseLog(
+        readFileSync(join(opts.logs, f), "utf8"),
+        scope,
+        stats,
+        opts.until ? secs(opts.until) : Infinity,
+      ),
+    )
     .filter((i) => !opts.until || i.t <= secs(opts.until));
   const t0 = Object.fromEntries(
     opts.prs.map((pr) => [pr, Math.min(...invs.filter((i) => i.pr === pr).map((i) => i.t))]),
@@ -561,14 +591,21 @@ function extract(opts) {
 
   return {
     note: "Generated by `node evals/tokens/sessions.mjs --extract`. Numbers only: seconds are relative to each PR's first poll.",
-    sources: { transcripts, debugLogs: logFiles.length, heuristicAttributions: stats.heuristic },
+    sources: {
+      transcripts,
+      debugLogs: logFiles.length,
+      heuristicAttributions: stats.heuristic,
+    },
     apiUsageRecorded: false,
     charsPerToken: {
       all: fit(samples),
       shepherd: fit(samples.filter((s) => s.shepherd)),
       noThinking: fit(samples.filter((s) => !s.thinking)),
     },
-    buckets: { agents: roundAll(totals.agents), coordinator: roundAll(totals.coordinator) },
+    buckets: {
+      agents: roundAll(totals.agents),
+      coordinator: roundAll(totals.coordinator),
+    },
     prs: opts.prs.map((pr) => ({
       pr,
       invocations: invs
@@ -686,7 +723,13 @@ export function stateAt(pr, t) {
   };
 }
 
-const call = (phase, cmd, out, extra = {}) => ({ phase, via: "bash", cmd, out, ...extra });
+const call = (phase, cmd, out, extra = {}) => ({
+  phase,
+  via: "bash",
+  cmd,
+  out,
+  ...extra,
+});
 const mcp = (phase, tool, args, out) => ({
   phase,
   via: "mcp",
@@ -908,7 +951,12 @@ export function realSessions(data = readJson(REAL_SESSIONS_FILE), cpt = {}) {
         restRequests: t.restRequests + i.restRequests,
         graphqlNoCost: t.graphqlNoCost + i.graphqlNoCost,
       }),
-      { graphqlCost: 0, graphqlMutations: 0, restRequests: 0, graphqlNoCost: 0 },
+      {
+        graphqlCost: 0,
+        graphqlMutations: 0,
+        restRequests: 0,
+        graphqlNoCost: 0,
+      },
     );
     return {
       pr: pr.pr,
@@ -959,6 +1007,110 @@ const pct = (ours, base) => {
   const p = Math.round(f * 100);
   return p === 0 ? "0%" : `${p > 0 ? "−" : "+"}${Math.abs(p)}%`;
 };
+
+// GraphQL operations a poll tick sends besides the fingerprint.
+const SNAPSHOT_QUERY_OPS = new Set([
+  "BatchPr",
+  "BaseBehind",
+  "CheckRunAnnotationsBatch",
+  "CommitCheckContexts",
+]);
+const QUERY_CATEGORIES = [
+  ["PrFingerprint", (kind, op) => op === "PrFingerprint"],
+  ["BatchPr and its supplements", (kind, op) => SNAPSHOT_QUERY_OPS.has(op)],
+  ["review/resolve fetch", (kind) => kind === "resolve"],
+  ["`apply review` reads", (kind) => kind === "review"],
+  ["stack summary", (kind, op) => /^Poll(Stack|Summary)/.test(op)],
+  ["other", () => true],
+];
+
+/** The measured GraphQL query points split by operation, against the modeled tick cost. */
+function graphqlBreakdown(data) {
+  const cats = new Map(QUERY_CATEGORIES.map(([name]) => [name, { ops: new Map(), n: 0, cost: 0 }]));
+  let ticks = 0;
+  let modeledPolls = 0;
+  const mutations = new Map();
+  for (const pr of data.prs)
+    for (const inv of pr.invocations) {
+      if (inv.kind === "poll") {
+        ticks += inv.ticks;
+        modeledPolls += apiTotals(stepArms(pr, inv).shepherd).graphqlPoints;
+      }
+      for (const [op, [n, cost]] of Object.entries(inv.graphqlByOp ?? {})) {
+        if (MUTATION_OPS.has(op)) {
+          const where =
+            inv.kind === "review"
+              ? "`apply review`"
+              : inv.kind === "poll"
+                ? "polls"
+                : `\`apply ${inv.kind}\``;
+          mutations.set(`${op} from ${where}`, (mutations.get(`${op} from ${where}`) ?? 0) + n);
+          continue;
+        }
+        const [name] = QUERY_CATEGORIES.find(([, test]) => test(inv.kind, op));
+        const c = cats.get(name);
+        const o = c.ops.get(op) ?? { n: 0, cost: 0 };
+        c.ops.set(op, { n: o.n + n, cost: o.cost + cost });
+        c.n += n;
+        c.cost += cost;
+      }
+    }
+  const all = [...cats.values()].reduce((s, c) => s + c.cost, 0);
+  const per = (x) => (x / ticks).toFixed(2);
+  const opList = (c) =>
+    [...c.ops]
+      .sort((a, b) => b[1].cost - a[1].cost)
+      .map(([op, o]) => `${op} ${num(o.n)} / ${num(o.cost)}`)
+      .join(", ");
+  const out = [
+    "### GraphQL points by query",
+    "",
+    `The ${num(all)} measured query points, by the operation each request names (mutations excluded). Per tick divides by the ${num(ticks)} poll ticks.`,
+    "",
+    "| queries | requests | points | per tick | operations: requests / points |",
+    "| --- | --- | --- | --- | --- |",
+  ];
+  const empty = [];
+  for (const [name, c] of cats) {
+    if (!c.n) {
+      empty.push(name);
+      continue;
+    }
+    out.push(`| ${name} | ${num(c.n)} | ${num(c.cost)} | ${per(c.cost)} | ${opList(c)} |`);
+  }
+  out.push("");
+  if (empty.length)
+    out.push(
+      `No request fell under ${empty.join(" or ")}: no session ran those commands on these PRs.`,
+      "",
+    );
+  if (mutations.size)
+    out.push(
+      `Mutations log no cost and are not in the table. Requests: ${[...mutations].map(([k, n]) => `${k} ${num(n)}`).join(", ")}.`,
+      "",
+    );
+  const tickCats = ["PrFingerprint", "BatchPr and its supplements"].map((n) => cats.get(n));
+  const tickCost = tickCats.reduce((s, c) => s + c.cost, 0);
+  const nonTick = all - tickCost;
+  const gap = all - modeledPolls;
+  const batch = cats.get("BatchPr and its supplements");
+  const batchPr = batch.ops.get("BatchPr")?.cost ?? 0;
+  const supplements = batch.cost - batchPr;
+  const fp = cats.get("PrFingerprint").cost;
+  out.push(
+    `The model charges ${num(modeledPolls)} points for these polls (${per(modeledPolls)} per tick), ${num(gap)} short of the measured total. ${
+      nonTick >= gap
+        ? `The ${num(nonTick)} points outside the tick queries account for that gap.`
+        : `The ${num(nonTick)} points outside the tick queries do not account for it: the tick itself costs more than modeled. A real tick spent ${per(tickCost)} points (${num(tickCost)} over ${num(ticks)} ticks): the fingerprint and BatchPr ${num(fp + batchPr)} points (${per(fp + batchPr)} per tick), within the model's charge, plus ${num(supplements)} (${per(supplements)} per tick) for BatchPr's supplements (${[
+            ...batch.ops,
+          ]
+            .filter(([op]) => op !== "BatchPr")
+            .map(([op, o]) => `${op} ${num(o.cost)}`)
+            .join(", ")}), which it does not.`
+    }`,
+  );
+  return out;
+}
 
 /** The REPORT.md section, as lines. */
 export function realSessionsSection({ rows, data } = realSessions()) {
@@ -1046,6 +1198,8 @@ export function realSessionsSection({ rows, data } = realSessions()) {
     "",
   );
 
+  out.push(...graphqlBreakdown(data), "");
+
   out.push("### Where the real tokens went", "");
   const b = data.buckets.agents;
   const allIte = Object.values(b).reduce((s, x) => s + x.ite, 0);
@@ -1092,7 +1246,12 @@ if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split("/").pop()
     if (process.argv.includes("--json"))
       console.log(
         JSON.stringify(
-          { rows, charsPerToken: data.charsPerToken, buckets: data.buckets, sources: data.sources },
+          {
+            rows,
+            charsPerToken: data.charsPerToken,
+            buckets: data.buckets,
+            sources: data.sources,
+          },
           null,
           2,
         ),

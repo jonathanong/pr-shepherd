@@ -451,7 +451,12 @@ token usage, never text, IDs or paths. The bench reads only that file.
   before the first recorded commit are unknown and replayed as none.
 - **Attribution.** Concurrent invocations interleave in one debug log; a
   request, response or output that matches more than one open invocation is
-  assigned by heuristic, and the report prints how many were.
+  assigned by heuristic, and the report prints how many were (up to
+  `--until`).
+- **GraphQL points by query.** Each invocation records requests and logged
+  cost per GraphQL operation. The report groups them (fingerprint, BatchPr and
+  its supplements, `apply review` reads, and so on) and sets the tick queries
+  against the model's per-poll charge.
 - **Calibration, not gating.** Measured pr-shepherd numbers (result tokens,
   GraphQL cost per request, REST requests, turns) calibrate the modeled
   pr-shepherd arm. They are never compared with the modeled baselines, and
