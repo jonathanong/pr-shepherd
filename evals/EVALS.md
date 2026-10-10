@@ -52,7 +52,9 @@ Each case carries `tier:discriminating` or `tier:guard` in its tags, set in
 - `discriminating`: the arms separated on a full run (`01`, `02`, `04`, `05`,
   `10`, `22`, `24`). These get the runs.
 - `guard`: both arms sit at ceiling, so the case only exists to notice a
-  regression. One run each is a cheap sweep.
+  regression. One run each is a cheap sweep. A case without a full run yet
+  (`29`–`37`) starts here; `--summary` lists it if a run shows it separating
+  the arms.
 
 `EVAL_RUNS_DISCRIMINATING` and `EVAL_RUNS_GUARD` override the per-case `runs`
 at generation time. Regenerate, run, then regenerate without the variables so
