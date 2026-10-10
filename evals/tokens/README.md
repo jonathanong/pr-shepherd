@@ -12,7 +12,7 @@ Latest numbers: [REPORT.md](REPORT.md). Estimated cost per session:
 
 | session   | cost vs. gh | cost vs. MCP | turns vs. gh / MCP | tool tokens vs. gh / MCP |
 | --------- | ----------- | ------------ | ------------------ | ------------------------ |
-| single PR | **−40%**    | **−75%**     | −14% / −66%        | −71% / −87%              |
+| single PR | **−39%**    | **−75%**     | −14% / −67%        | −71% / −87%              |
 | PR stack  | **−25%**    | **−50%**     | −23% / −47%        | +41% / −24%              |
 
 The savings are concentrated. Against a frugal gh agent they come from
@@ -156,7 +156,8 @@ These are assumptions, not measurements. See "Next steps".
   tokens. `gh … --log-failed | tail -n 200` is about 7k. MCP's default
   500-line tail is about 11k, and none of it is the failure: on this log the
   last 500 lines are all Codecov upload and post-job steps. The MCP arm asks
-  again for 1,000 lines, and the host truncates that at its 25k-token cap.
+  again for 1,000 lines, which is over the host's 25k-token MCP cap and comes
+  back as an error, then retries with 900.
 - **Polling happens inside the CLI.** One blocking `--until-terminal` call
   replaces a minute-by-minute MCP re-check, and it carries on through
   MARK_READY. It returns the next step's result itself, so a wait costs no

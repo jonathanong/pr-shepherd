@@ -31,8 +31,8 @@ export const MODEL = {
   // than Markdown, so a uniform ratio undercounts the JSON-heavy baselines:
   // the error runs against pr-shepherd, not for it.
   charsPerToken: 3.5,
-  // Claude Code truncates Bash output past 30,000 characters and rejects MCP
-  // results past 25,000 tokens. A baseline call never costs more than that.
+  // Claude Code truncates Bash output past 30,000 characters. It rejects an
+  // MCP result past 25,000 tokens outright, returning only an error.
   bashOutputCapChars: 30_000,
   mcpOutputCapTokens: 25_000,
   // Context already in the window when a tick starts: system prompt, tool
@@ -95,6 +95,10 @@ export function fixtureState(name) {
  */
 export function withHistory(state, history) {
   const ts = (iso) => Math.floor(Date.parse(iso) / 1000);
+  // Recorded URLs point at the source PR; re-home them, anchors kept.
+  const home = (url) =>
+    url?.replace(history.source, `https://github.com/${state.repo}/pull/${state.number}`);
+  const rehome = (item) => ({ ...item, url: home(item.url) });
   return {
     ...state,
     prTitle: history.prTitle,
@@ -107,14 +111,18 @@ export function withHistory(state, history) {
         isOutdated: t.isOutdated,
         path: t.path,
         line: t.line,
-        comments: t.comments,
+        comments: t.comments.map(rehome),
       })),
     ],
     comments: [
       ...state.comments,
-      ...history.comments.map((c) => ({ ...c, id: `IC_${c.id}`, createdAtUnix: ts(c.createdAt) })),
+      ...history.comments.map((c) => ({
+        ...rehome(c),
+        id: `IC_${c.id}`,
+        createdAtUnix: ts(c.createdAt),
+      })),
     ],
-    historyReviews: history.reviews,
+    historyReviews: history.reviews.map(rehome),
   };
 }
 
@@ -496,14 +504,24 @@ export function mcpJobLogs(log, runId, jobId, jobName, tailLines = 500) {
 
 // --- cost -------------------------------------------------------------------
 
-/** Apply the host's per-call output cap. */
+/** The error Claude Code returns in place of an oversized MCP result. */
+export const mcpOversizeError = (call) =>
+  `Error: MCP tool "${call.cmd.split(" ")[0]}" response (${tokens(call.out)} tokens) exceeds maximum allowed tokens (${MODEL.mcpOutputCapTokens}). Please use pagination, filtering, or limit parameters to reduce the response size.`;
+
+/** Apply the host's per-call output cap: truncate Bash, reject MCP. */
 function capped(call) {
   const raw = tokens(call.out);
-  const cap =
-    call.via === "mcp"
-      ? MODEL.mcpOutputCapTokens
-      : Math.ceil(MODEL.bashOutputCapChars / MODEL.charsPerToken);
-  return { cmdTokens: tokens(call.cmd), outTokens: Math.min(raw, cap), truncated: raw > cap };
+  const cmdTokens = tokens(call.cmd);
+  if (call.via === "mcp") {
+    const rejected = raw > MODEL.mcpOutputCapTokens;
+    return {
+      cmdTokens,
+      outTokens: rejected ? tokens(mcpOversizeError(call)) : raw,
+      truncated: rejected,
+    };
+  }
+  const cap = Math.ceil(MODEL.bashOutputCapChars / MODEL.charsPerToken);
+  return { cmdTokens, outTokens: Math.min(raw, cap), truncated: raw > cap };
 }
 
 /**

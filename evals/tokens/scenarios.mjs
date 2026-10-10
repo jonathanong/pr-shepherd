@@ -263,7 +263,8 @@ const ghLogCall = (phase) => ({
 /**
  * get_job_logs' default 500-line tail of this log is all Codecov upload and
  * post-job steps. The first FAIL line sits 852 lines from the end, so the
- * agent asks again for a 1000-line tail of the failed job.
+ * agent asks again for a 1000-line tail of the failed job. That result is over
+ * the host's MCP cap, so it comes back as an error, and a 900-line retry fits.
  */
 const mcpLogCalls = (phase) => [
   mcpCall(
@@ -277,6 +278,12 @@ const mcpLogCalls = (phase) => [
     "get_job_logs",
     { job_id: JOB_ID, return_content: true, tail_lines: 1000 },
     mcpJobLogs(JOB_LOG, RUN_ID, JOB_ID, JOB_NAME, 1000),
+  ),
+  mcpCall(
+    phase + 2,
+    "get_job_logs",
+    { job_id: JOB_ID, return_content: true, tail_lines: 900 },
+    mcpJobLogs(JOB_LOG, RUN_ID, JOB_ID, JOB_NAME, 900),
   ),
 ];
 
@@ -332,8 +339,16 @@ function setupScenario({ id, session }) {
         },
       ];
       const loads = [];
-      const playbooks = new Set();
-      const tools = new Set();
+      // Expected share already loaded, per playbook or tool. Optional steps
+      // that need the same item are alternatives, so their shares add up to
+      // at most 1, and each use tops the expected load up to that.
+      const loaded = new Map();
+      const topUp = (key, share) => {
+        const before = loaded.get(key) ?? 0;
+        const after = Math.min(1, before + share);
+        loaded.set(key, after);
+        return after - before;
+      };
       let shepherdTokens = size(skill);
       let mcpTokens = 0;
       const carry = {};
@@ -343,41 +358,50 @@ function setupScenario({ id, session }) {
         const before = shepherdTokens;
         const text = arms.shepherd.map((c) => c.out).join("\n");
         const named = [...new Set([...text.matchAll(/Playbook: "([^"]+)"/g)].map((m) => m[1]))];
-        const reads = named
-          .filter((n) => !playbooks.has(n))
+        const freshBooks = named
           .sort()
-          .map((name) => {
-            playbooks.add(name);
-            return {
+          .map((n) => [n, topUp(`playbook:${n}`, share)])
+          .filter(([, delta]) => delta > 0);
+        // One turn of parallel Reads loads every playbook the step newly names.
+        for (const delta of [...new Set(freshBooks.map(([, d]) => d))]) {
+          const reads = freshBooks
+            .filter(([, d]) => d === delta)
+            .map(([name]) => ({
               phase: 1,
               via: "bash",
               cmd: `Read ${PLAYBOOK_FILES[name]}`,
               out: readSkill(PLAYBOOK_FILES[name]),
-            };
-          });
-        if (reads.length) {
-          loads.push({ arm: "shepherd", share, calls: reads });
-          shepherdTokens += share * size(reads);
+            }));
+          loads.push({ arm: "shepherd", share: delta, calls: reads });
+          shepherdTokens += delta * size(reads);
         }
         const used = arms.mcp.filter((c) => c.via === "mcp").map((c) => c.cmd.split(" ")[0]);
-        const newTools = [...new Set(used)].filter((t) => !tools.has(t)).sort();
-        if (newTools.length) {
-          newTools.forEach((t) => tools.add(t));
+        const fresh = [...new Set(used)]
+          .sort()
+          .map((t) => [t, topUp(`tool:${t}`, share)])
+          .filter(([, delta]) => delta > 0);
+        // One ToolSearch per step loads every schema the step newly needs.
+        for (const delta of [...new Set(fresh.map(([, d]) => d))]) {
+          const names = fresh.filter(([, d]) => d === delta).map(([t]) => t);
           const search = [
             {
               phase: 1,
               via: "mcp",
-              cmd: `ToolSearch {"query":"select:${newTools.join(",")}"}`,
-              out: newTools.map(schema).join("\n"),
+              cmd: `ToolSearch {"query":"select:${names.join(",")}"}`,
+              out: names.map(schema).join("\n"),
             },
           ];
-          loads.push({ arm: "mcp", share, calls: search });
-          mcpTokens += share * size(search);
+          loads.push({ arm: "mcp", share: delta, calls: search });
+          mcpTokens += delta * size(search);
         }
         carry[s.id] = { shepherd: before, gh: 0, mcp: mcpTokens };
       }
+      const playbooks = [...loaded.keys()]
+        .filter((k) => k.startsWith("playbook:"))
+        .map((k) => k.slice(9));
+      const tools = [...loaded.keys()].filter((k) => k.startsWith("tool:")).map((k) => k.slice(5));
       return {
-        note: `Skill up front, then ${[...playbooks].join(", ")} playbooks as outputs first name them, for shepherd; ${[...tools].sort().join(", ")} schemas as MCP first calls them; nothing for gh. Loads that only an optional step triggers count at that step's weight.`,
+        note: `Skill up front, then ${playbooks.join(", ")} playbooks as outputs first name them, for shepherd; ${tools.sort().join(", ")} schemas as MCP first calls them; nothing for gh. A load that only optional steps trigger counts at their combined weight, capped at 1.`,
         shepherd: skill,
         gh: [],
         mcp: [],
@@ -433,7 +457,7 @@ const PR_SCENARIOS = [
     id: "failing-check",
     weight: 1,
     title: "Triage a real failing CI job",
-    note: `Real 194 KB log of job ${JOB_ID} (a vitest snapshot failure). gh tails the failed step. MCP's default 500-line tail misses the failure, so it asks again for 1000 lines.`,
+    note: `Real 194 KB log of job ${JOB_ID} (a vitest snapshot failure). gh tails the failed step. MCP's default 500-line tail misses the failure; its 1000-line retry is over the host's 25k-token MCP cap and rejected, so it retries with 900.`,
     arms() {
       const state = failingCheckState();
       return {
@@ -521,7 +545,7 @@ const PR_SCENARIOS = [
           shepherdApply(text, { repliedThreads: ["PRRT_multi"] }, 3),
         ],
         gh: [...ghObserve(state), ghLogCall(2), ghReply(fixtureCommentId(0), 3)],
-        mcp: [...mcpObserve(state), ...mcpLogCalls(2), mcpReply(fixtureCommentId(0), 4)],
+        mcp: [...mcpObserve(state), ...mcpLogCalls(2), mcpReply(fixtureCommentId(0), 5)],
       };
     },
   },
@@ -936,16 +960,19 @@ const STACK_SCENARIOS = [
             `l${i}: pullRequest(number: ${l.pr}) { state mergeQueueEntry { position state } }`,
         )
         .join(" ");
-      const queueState = JSON.stringify({
-        data: {
-          repository: Object.fromEntries(
-            layers.map((l, i) => [
-              `l${i}`,
-              { state: "OPEN", mergeQueueEntry: { position: i + 1, state: "QUEUED" } },
-            ]),
-          ),
-        },
-      });
+      const queueState = (settled) =>
+        JSON.stringify({
+          data: {
+            repository: Object.fromEntries(
+              layers.map((l, i) => [
+                `l${i}`,
+                settled
+                  ? { state: "MERGED", mergeQueueEntry: null }
+                  : { state: "OPEN", mergeQueueEntry: { position: i + 1, state: "QUEUED" } },
+              ]),
+            ),
+          },
+        });
       const ghStart = lastPhase(gh) + 1;
       return {
         shepherd: [
@@ -962,7 +989,8 @@ const STACK_SCENARIOS = [
             phase: ghStart + i,
             via: "bash",
             cmd: `sleep ${STACK_POLL_SECONDS} && gh api graphql -f query='query { repository(owner: "${owner}", name: "${repoName}") { ${fields} } }'`,
-            out: queueState,
+            // The last re-check sees both layers merged.
+            out: queueState(i === polls - 1),
           })),
         ],
         // MCP can see neither queue membership nor a settled queue, so it

@@ -237,7 +237,7 @@ for (const [key, title] of Object.entries(SESSIONS)) {
   }
   out();
 }
-out("- ✂ marks a baseline call whose output the host truncated.");
+out("- ✂ marks a baseline call whose output the host truncated (Bash) or rejected (MCP).");
 out(
   "- † marks a baseline that cannot finish the step with its tools. Its cost covers only what it can do.",
 );
