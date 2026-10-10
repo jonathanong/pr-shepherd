@@ -182,8 +182,9 @@ function aggregateNextCheck(
   const candidates: NextCheckCandidate[] = result.prs
     .filter((item) => (item.remainingSeconds ?? 0) > 0)
     .map((item) => ({ reason: "ready-delay" as const, seconds: item.remainingSeconds! }));
-  // A printed stack merge can stay pending, so recheck it like a REST merge.
-  if (result.stackMergeable === true) {
+  // A printed stack merge can stay pending, so recheck it like a REST merge. A mergeable
+  // stack that is queued or waiting prints no merge command, so it gets no such wake-up.
+  if (result.nextAction === "merge") {
     candidates.push({ reason: "merge-pending", seconds: MERGE_QUEUE_RECHECK_SECONDS });
   }
   candidates.push(

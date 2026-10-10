@@ -81,6 +81,7 @@ describe("aggregate event mode", () => {
       summary({
         reason: "actionable",
         stackMergeable: true,
+        nextAction: "merge",
         instructions: [
           "1. PR #2 is the highest ready layer. Run `x`. If status is `pending`, rerun that command at the configured cadence to resume its UUID. `enqueued` is not merged.",
           "2. No one-PR session can advance the stack yet: #3 idle. Recheck at the configured polling cadence.",
@@ -97,6 +98,26 @@ describe("aggregate event mode", () => {
     expect(result.instructions![2]).toBe(
       "3. The queued layers are waiting on the merge queue. Do not rewrite a queued layer.",
     );
+  });
+
+  it("keeps merge-pending off a mergeable stack that prints no merge", async () => {
+    m.runPollSummary.mockResolvedValue(
+      summary({
+        stackMergeable: true,
+        nextAction: "wait",
+        prs: [{ pr: 1, isInMergeQueue: true }],
+        instructions: undefined,
+      }),
+    );
+    expect((await runPollSummaryForMode({} as never)).nextCheck).toMatchObject({
+      reason: "merge-queue",
+    });
+    m.runPollSummary.mockResolvedValue(
+      summary({ stackMergeable: true, nextAction: "wait", instructions: undefined }),
+    );
+    expect((await runPollSummaryForMode({} as never)).nextCheck).toMatchObject({
+      reason: "safety-net",
+    });
   });
 
   it("omits nextCheck once nothing is left to watch", async () => {
