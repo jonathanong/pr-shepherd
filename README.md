@@ -151,7 +151,9 @@ configured GraphQL quota-warning band. Explicit PR sets give each actionable row
 `pollCommand`, so independent rows can proceed before the next aggregate poll.
 
 Native-stack rows are ordered bottom-to-top. `--stack` never performs a mutation itself. Every
-layer that still has work gets its own one-PR session on the same tick, including a clean draft
+row marks ownership by comparing its author with the authenticated viewer; REST reads `/user`
+for that identity without inferring viewer permissions. Sessions act only on rows marked `owned`. Every
+owned layer that still has work gets its own one-PR session on the same tick, including a clean draft
 whose session marks it ready. Layers do not wait for a lower layer's READY receipt, so their
 ready-delays overlap. With automatic mark-ready disabled, the instructions ask the agent to mark
 a clean draft ready after its probe. A queued stack, or one whose remaining layers can only wait,
@@ -164,7 +166,9 @@ With `--stack --merge`, the highest open layer whose open lower layers all have 
 receipts, and whose bottom open layer GitHub has retargeted onto the stack base, returns `MERGE`
 with the transport-specific stack merge command and allowed method. GraphQL mode uses
 `gh stack merge <that PR number> --yes`; REST mode uses the SHA-pinned
-`pr-shepherd apply merge` command. That lands the named layer and every
+`pr-shepherd apply merge` command, using the trunk's known queue policy even when the named layer
+targets its parent branch. Unknown REST queue policy uses `default` without a merge method.
+That lands the named layer and every
 unmerged layer below it. When the base uses a merge queue, the same command queues the prefix
 together and GitHub evaluates each layer from the bottom; a failure ejects that layer and those
 above it. For a `failed_checks` removal on the layer's first ejection, the one-PR session emits a head-, queue-commit-, and timestamp-pinned local acknowledgment command; run it only when the failure does not reproduce after updating from the latest base, the head did not change, and no source changes or other blockers remain. Fresh source checks and a new READY receipt then let the aggregate selector recover the eligible prefix. Manual or stale removals cannot use this path. Layers above the prefix keep their one-PR sessions. After the merge, GitHub retargets

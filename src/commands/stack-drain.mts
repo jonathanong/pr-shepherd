@@ -75,16 +75,16 @@ export function planPrefixDrain(
     `1. PR #${top.pr} is the highest open layer of stack #${top.stack.number} in \`${result.repo}\` whose open lower layers are all ready. Run \`GH_REPO=${result.repo} gh stack merge ${top.pr} --yes ${method.flag}\` to merge ${span}. ${playbookPointer("Stack merge")}`,
   ];
   if (getGithubTransport() === "rest" || top.transport === "rest") {
+    // Upper layers target their parent; the prefix merges into the stack trunk.
+    const trunk = result.prs.find((item) => item.baseRefName === top.stack.baseRefName);
     const plan = buildMergeCommandPlan({
       transport: "rest",
       pr: top.pr,
       repo: result.repo,
       nodeId: "",
       headSha: top.headRefOid,
-      queue: false,
-      queueKnown: !(top.transportUnavailable ?? []).some(({ field }) =>
-        ["branchProtection", "branchRules"].includes(field),
-      ),
+      queue: trunk?.requiresMergeQueue === true,
+      queueKnown: trunk?.requiresMergeQueue !== undefined,
       allowedMergeMethods: result.allowedMergeMethods,
     });
     if ("unavailable" in plan)

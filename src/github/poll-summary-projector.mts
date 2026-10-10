@@ -21,6 +21,7 @@ import { normalizePollSummaryState, routePollSummary } from "./poll-summary-rout
 import { hydrateReadyAnnotationProbe, readyFingerprint } from "./poll-summary-annotation-probe.mts";
 import { applyUnreportedRequiredChecks } from "./poll-summary-unreported.mts";
 import { aliasThreadSeenMarkers } from "./rest-identities.mts";
+import { restQueueRequirement } from "./poll-summary-rest-queue.mts";
 export async function summarizePollSummaryPr(
   raw: RawSummaryPr,
   repo: RepoInfo,
@@ -120,6 +121,7 @@ export async function summarizePollSummaryPr(
   );
   action = blocked.action;
   reasons = blocked.reasons;
+  const requiresMergeQueue = raw.transport === "rest" ? restQueueRequirement(raw) : undefined;
   return {
     pr: raw.number,
     repo: repoName,
@@ -142,6 +144,7 @@ export async function summarizePollSummaryPr(
     baseRefName: raw.baseRefName,
     ...(raw.isDraft && { isDraft: true as const }),
     ...(raw.isInMergeQueue && { isInMergeQueue: true as const }),
+    ...(requiresMergeQueue !== undefined && { requiresMergeQueue }),
     ...(queueRemoval && { queueRemoval }),
     ...(blockingReviewerInProgress && { blockingReviewerInProgress: true as const }),
     ...(remainingSeconds !== undefined && { remainingSeconds }),

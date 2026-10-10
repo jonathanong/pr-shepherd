@@ -30,6 +30,8 @@ function formatRateLimit(result: ResolveResult): string | null {
 
 export function formatMutateResult(result: ResolveResult): string {
   const lines: string[] = [];
+  if (result.sessionRefusal)
+    lines.push(`Stopped: GitHub session access refused — ${result.sessionRefusal}`);
   pushIds(lines, "Replied to threads", result.repliedThreads);
   pushIds(lines, "Resolved threads", result.resolvedThreads);
   pushIds(lines, "Minimized comments", result.minimizedComments);
@@ -61,13 +63,18 @@ export function formatMutateResult(result: ResolveResult): string {
   );
   const rateLimit = formatRateLimit(result);
   if (rateLimit) lines.push(rateLimit);
-  pushIds(lines, "Not replied due to rate limit", result.unrepliedThreads);
-  pushIds(lines, "Not resolved due to rate limit", result.unresolvedThreads);
-  pushIds(lines, "Not minimized due to rate limit", result.unminimizedComments);
-  pushIds(lines, "Not dismissed due to rate limit", result.undismissedReviews);
+  const pendingReason = result.sessionRefusal ? "session access" : "rate limit";
+  pushIds(lines, `Not replied due to ${pendingReason}`, result.unrepliedThreads);
+  pushIds(lines, `Not resolved due to ${pendingReason}`, result.unresolvedThreads);
+  pushIds(lines, `Not minimized due to ${pendingReason}`, result.unminimizedComments);
+  pushIds(lines, `Not dismissed due to ${pendingReason}`, result.undismissedReviews);
   const errors = result.rateLimit
     ? result.errors.filter((e) => !e.startsWith("rate limit:"))
     : result.errors;
   if (errors.length) lines.push(`Errors:\n  ${errors.join("\n  ")}`);
+  if (result.instructions?.length)
+    lines.push(
+      `## Instructions\n\n${result.instructions.map((instruction, index) => `${index + 1}. ${instruction}`).join("\n")}`,
+    );
   return lines.join("\n");
 }

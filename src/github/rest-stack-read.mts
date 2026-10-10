@@ -55,5 +55,8 @@ export async function readRestStackTopology(
   const verified = await readRestStackMembership(anchor, repo);
   if (!verified || JSON.stringify(verified) !== JSON.stringify(stack))
     malformedRest("native stack changed during topology read");
-  return { stackNumber: stack.number, stackSize: ordered.length, ordered, viewerLogin: null };
+  // Identity is available through REST; it does not imply any viewer capability.
+  const viewer = restObject(await rest<unknown>("GET", "/user"), "authenticated viewer");
+  const viewerLogin = restString(viewer.login, "authenticated viewer login");
+  return { stackNumber: stack.number, stackSize: ordered.length, ordered, viewerLogin };
 }

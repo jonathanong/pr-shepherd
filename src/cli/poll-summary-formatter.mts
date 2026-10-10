@@ -50,11 +50,15 @@ function formatItem(item: PollSummaryItem): string {
   const readyDelay =
     item.remainingSeconds !== undefined ? ` · ready delay \`${item.remainingSeconds}s\`` : "";
   const readyReceipt = item.readyReceipt ? " · Shepherd READY completion `verified`" : "";
+  const queuePolicy =
+    item.requiresMergeQueue !== undefined
+      ? ` · merge queue ${item.requiresMergeQueue ? "required" : "not required"}`
+      : "";
   const checks = item.checks;
   const review = item.review;
   return [
     `- [PR #${item.pr}: ${escapeMarkdownText(item.title)}](${item.url}) [${item.action.toUpperCase()}]`,
-    `  - state \`${item.state}\` · mergeable \`${item.mergeable}\` · merge \`${item.mergeStateStatus}\`${reviewDecision}${stateFlags}${blockingReviewer}${readyDelay}${readyReceipt}${stack}`,
+    `  - state \`${item.state}\` · mergeable \`${item.mergeable}\` · merge \`${item.mergeStateStatus}\`${reviewDecision}${stateFlags}${blockingReviewer}${readyDelay}${readyReceipt}${queuePolicy}${stack}`,
     `  - head \`${item.headRefName}\` at \`${item.headRefOid}\` · base \`${item.baseRefName}\``,
     ...(checks
       ? [`  - checks: ${formatCounts(checks, checks.incomplete ? ", incomplete" : "")}`]

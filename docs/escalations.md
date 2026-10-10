@@ -35,6 +35,8 @@ Denied or unverifiable generated review replies, thread resolutions, bot-review 
 
 The selected REST transport lacks an operation required by an autonomous action or explicit mutation. Shepherd names the unsupported operation and the affected item in the escalation. Mark-ready without a CCR route uses this reason when authorization is unknown or allowed. Generated comment minimization is a one-look skip; explicit `apply` minimization and file-view requests return an explicit unsupported-operation error. Merge-queue and ordinary merge operations are not presumed unsupported by REST.
 
+A cloud proxy session-access refusal during mark-ready also uses this trigger and preserves the proxy message, including its repository-access instructions. Review mutations stop with exit `77` instead of recording the target as GitHub-denied; repairing session access makes the unchanged item retryable.
+
 ### `check-follow-up-unavailable`
 
 At least one remaining failing check has no `rerunCommand` and is one of:

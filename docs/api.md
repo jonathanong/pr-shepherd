@@ -75,6 +75,8 @@ A definite failed merge request permits a replacement with changed options. A de
 
 `mark_files_viewed` performs the requested mutations where the selected transport supports them and surfaces GitHub's per-file results; REST currently reports the operation as explicitly unsupported. Direct review operations forward explicitly supplied IDs without iterate's author, capability, or current-state policy; direct journal operations likewise honor explicit caller intent. GitHub is authoritative for authorization and mutation validity. Replies and dismissals require `message`.
 
+A proxy session refusal stops the current review batch and subsequent `apply` operations. The review result preserves confirmed successes, includes the original proxy message in `sessionRefusal`, and lists pending IDs in the existing `unrepliedThreads`, `unresolvedThreads`, `unminimizedComments`, and `undismissedReviews` fields when nonempty. Its `instructions` array tells the caller to repair session repository access and retry only those pending IDs; any later operations did not run. No GitHub-denied marker is persisted for a session refusal. CLI text/JSON and MCP Markdown/structured output carry the same partial result; the CLI exits `77`.
+
 `getJournal({ pr })` fetches one PR body through the selected transport and returns the same typed result as
 `extractShepherdJournal(body)` without exposing the body or PR node ID. The API accepts a qualified
 reference or a numeric PR in the configured checkout repository. An absent journal returns

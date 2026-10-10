@@ -13,7 +13,8 @@ describe("REST merge targets after a merged stack prefix", () => {
     };
     await serve((request, response) => {
       const path = request.path.split("?")[0];
-      if (path === `${prefix}/stacks`) response.end(JSON.stringify([stack]));
+      if (path === "/user") response.end('{"login":"author"}');
+      else if (path === `${prefix}/stacks`) response.end(JSON.stringify([stack]));
       else if (path === `${prefix}/stacks/42`) response.end(JSON.stringify(stack));
       else if (path?.includes("/pulls/")) {
         const number = Number(path.split("/").at(-1));

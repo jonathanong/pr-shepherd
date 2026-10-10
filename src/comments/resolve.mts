@@ -14,6 +14,8 @@ import { githubOperation } from "../github/transport.mts";
 import { resolveGraphqlThreadId } from "../github/rest-identities.mts";
 import { applyRestReviewChunk, isAmbiguousMutationError } from "./rest-review-mutations.mts";
 import { assertReplyOutcomeKnown, rememberUncertainReplies } from "./uncertain-replies.mts";
+import { isRestSessionRefusal } from "../github/rest-session-refusal.mts";
+import { EXIT, ShepherdError } from "../exit-codes.mts";
 
 export interface ResolveResult {
   repliedThreads: string[];
@@ -40,6 +42,8 @@ export interface ResolveResult {
   /** @deprecated Direct apply requests now rely on GitHub's mutation response. */
   skippedUnauthorizedDismissals?: string[];
   rateLimit?: ResolveRateLimitStop;
+  sessionRefusal?: string;
+  instructions?: string[];
   unrepliedThreads?: string[];
   unresolvedThreads?: string[];
   unminimizedComments?: string[];
@@ -121,6 +125,12 @@ export async function applyResolveOptions(
     { repo, pr },
   );
 
+  if (result.sessionRefusal)
+    result.instructions = [
+      "Restore GitHub access for this session using the proxy instructions above.",
+      "Retry only the pending IDs listed above.",
+    ];
+
   return result;
 }
 
@@ -143,6 +153,7 @@ export async function autoResolveThreads(
     errors: [],
   };
   await bulkApply([], threadIds, [], [], "", result);
+  if (result.sessionRefusal) throw new ShepherdError(result.sessionRefusal, EXIT.NOPERM);
   return { resolved: result.resolvedThreads, errors: result.errors };
 }
 
@@ -158,6 +169,7 @@ export async function autoMinimizeComments(
     errors: [],
   };
   await bulkApply([], [], minimizeIds, [], "", result);
+  if (result.sessionRefusal) throw new ShepherdError(result.sessionRefusal, EXIT.NOPERM);
   return { minimized: result.minimizedComments, errors: result.errors };
 }
 
@@ -284,6 +296,8 @@ async function bulkApplyChunk(
       { mutation: true },
     );
     if ("restStopped" in resp) restStopped = resp.restStopped === true;
+    if ("sessionRefusal" in resp && typeof resp.sessionRefusal === "string")
+      result.sessionRefusal = resp.sessionRefusal;
     data = resp.data;
     graphQlErrors = (resp.errors ?? []) as GraphQlErrorLike[];
     const graphQlErrorMessages = graphQlErrors.map((e) => e.message);
@@ -294,6 +308,7 @@ async function bulkApplyChunk(
       stopOnZeroRemaining: hasPendingAfter,
     });
   } catch (err) {
+    if (isRestSessionRefusal(err)) throw err;
     if (context && isAmbiguousMutationError(err))
       await rememberUncertainReplies(context, replyIds, dismissMessage);
     const msg = err instanceof Error ? err.message : String(err);
@@ -368,6 +383,8 @@ async function bulkApplyChunk(
     result.rateLimit = rateLimitStop;
     return true;
   }
+
+  if (result.sessionRefusal) return true;
 
   return restStopped;
 }

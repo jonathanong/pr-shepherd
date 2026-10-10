@@ -66,6 +66,8 @@ export interface PollSummaryItem {
   baseRefName: string;
   isDraft?: true;
   isInMergeQueue?: true;
+  /** REST branch policy: true requires a queue, false proves no queue; omitted when unknown. */
+  requiresMergeQueue?: boolean;
   queueRemoval?: MergeQueueRemovalStatus;
   blockingReviewerInProgress?: true;
   remainingSeconds?: number;

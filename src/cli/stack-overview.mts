@@ -8,31 +8,7 @@ import type {
 import type { ApiUsage, GraphqlQuotaWarning } from "../types/api-usage.mts";
 import { formatApiUsage, formatQuotaWarning } from "./api-usage-formatter.mts";
 import { formatTransportEvidence } from "./transport-formatter.mts";
-
-interface StackLayerView {
-  transport?: "rest";
-  transportUnavailable?: Array<{ field: string; reason: string }>;
-  pr: number;
-  title: string;
-  url: string;
-  state: PollSummaryItem["state"];
-  shepherded: boolean;
-  mergeable: boolean;
-  blocker?: string;
-  author?: string;
-  owned?: true;
-  isDraft?: true;
-  isInMergeQueue?: true;
-  position?: number;
-  stackSize?: number;
-  baseRefName: string;
-  failing?: number;
-  inProgress?: number;
-  actionable?: number;
-  checksIncomplete?: true;
-  reviewIncomplete?: true;
-  queueRemoval?: { reason: string | null; actor?: string };
-}
+import type { StackLayerView } from "./stack-layer-view.mts";
 
 export interface StackOverview {
   transport?: "rest";
@@ -93,6 +69,7 @@ function projectLayer(item: PollSummaryItem, stale: boolean): StackLayerView {
     ...(item.owned && { owned: true as const }),
     ...(item.isDraft && { isDraft: true as const }),
     ...(item.isInMergeQueue && { isInMergeQueue: true as const }),
+    ...(item.requiresMergeQueue !== undefined && { requiresMergeQueue: item.requiresMergeQueue }),
     ...(item.stack && { position: item.stack.position, stackSize: item.stack.size }),
     baseRefName: item.baseRefName,
     ...(blocker === "failing-checks" &&
@@ -176,6 +153,9 @@ function formatLayerLines(layer: StackLayerView): string[] {
     layer.state,
     layer.isDraft ? "draft" : undefined,
     layer.isInMergeQueue ? "in merge queue" : undefined,
+    layer.requiresMergeQueue !== undefined
+      ? `merge queue ${layer.requiresMergeQueue ? "required" : "not required"}`
+      : undefined,
     layer.position !== undefined && layer.stackSize !== undefined
       ? `position ${layer.position}/${layer.stackSize}`
       : undefined,

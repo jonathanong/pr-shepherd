@@ -49,6 +49,12 @@ export function splitStackWork(
  */
 export function appendMarkReadyInstructions(instructions: string[], layers: ProbedLayer[]): void {
   for (const item of layers) {
+    if (!item.owned) {
+      instructions.push(
+        `${instructions.length + 1}. PR #${item.pr} is not owned. Leave its draft state unchanged.`,
+      );
+      continue;
+    }
     if (item.transport === "rest") {
       const command = buildPrShepherdCommand([
         "iterate",

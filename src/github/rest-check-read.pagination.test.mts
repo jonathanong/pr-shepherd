@@ -24,12 +24,12 @@ describe("REST check matrix pagination", () => {
         if (url.pathname.endsWith("check-runs")) {
           const page = Number(url.searchParams.get("page") ?? 1);
           expect(url.searchParams.get("per_page")).toBe("100");
-          expect(url.searchParams.get("filter")).toBe("all");
+          expect(url.searchParams.get("filter")).toBe("latest");
           const start = (page - 1) * 100;
           if (start + 100 < count)
             response.setHeader(
               "link",
-              `<https://api.github.com${prefix}/commits/aaa111/check-runs?filter=all&per_page=100&page=${page + 1}>; rel="next"`,
+              `<https://api.github.com${prefix}/commits/aaa111/check-runs?filter=latest&per_page=100&page=${page + 1}>; rel="next"`,
             );
           response.end(
             JSON.stringify({

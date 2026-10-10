@@ -276,6 +276,7 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
                   format: "json",
                 });
                 results.push({ type: operation.type, result });
+                if (result.sessionRefusal) return { operations: results };
                 break;
               }
               case "mark_files_viewed": {

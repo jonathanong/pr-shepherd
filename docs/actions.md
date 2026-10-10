@@ -32,7 +32,11 @@ multi-PR row keeps the rich fields in Markdown and JSON: repository, title/URL, 
 PR/merge/review/head/base/stack state, bounded check and review counts (including ignored and
 superseded checks and active merge-queue commit checks), incomplete flags, and `pollCommand`.
 A `--stack` row is an overview: shepherded or not, mergeable or one blocker, author, `owned` when
-that author matches the authenticated viewer, position, and the layer's own base branch. It omits
+that author matches the authenticated viewer (REST reads the authenticated `/user` login without
+inferring capabilities), position, and the layer's own base branch. REST rows include
+`requiresMergeQueue` when branch policy proves a queue is required (`true`) or proves it is not
+(`false`); an unavailable or incomplete negative policy remains omitted. Markdown renders the same
+fact as `merge queue required` or `merge queue not required`. It omits
 one-PR action tags, head SHAs, repeated stack coordinates, check and review histograms, and
 `pollCommand`. Failing, in-progress, or actionable counts appear only for the blocker they explain.
 A missing READY receipt is `not shepherded`, not a mergeability blocker. Markdown and JSON for a
@@ -117,6 +121,7 @@ layer back through its full one-PR poll before stack merging.
 Merge command:
 
 - The summary returns `MERGE` with a repository-qualified `gh stack merge` command in GraphQL mode, or the SHA-pinned `pr-shepherd apply merge` command in REST mode. Both name the ready prefix and the repository-allowed merge method.
+- REST uses the stack trunk's parsed branch policy, including when the highest ready layer targets its parent: `--merge-action merge_queue` for a known required queue, `direct_merge` with `--method` for known no-queue policy, or `default` without a method for unknown policy. A known queue rule remains authoritative when other policy is unavailable; a configured direct method with unknown queue policy escalates.
 - The flag is `--squash` unless `merge.method` or the repository settings select another.
 - When no allowed method remains, the result is `ESCALATE` / `merge-method-unavailable` and there is no merge command.
 - `gh stack merge <PR>` lands that pull request and every unmerged pull request below it ([GitHub's stacked PR merge](https://github.github.com/gh-stack/introduction/overview/)).
@@ -696,6 +701,8 @@ Comment/review/thread objects include `authorType` (`User`, `Bot`, or `Unknown`)
 Generated iterate commands and automatic side effects use capability data when the selected transport supplies it. GraphQL returns per-object fields (`viewerCanMinimize`, `viewerCanReply`, `viewerCanResolve`) and PR/repository fields (`viewerCanUpdate`, `viewerCanEnableAutoMerge`, `viewerCanAdminister`, `viewerPermission`). REST has no equivalent viewer-capability fields, so otherwise-eligible operations are attempted and GitHub's response is authoritative. A generated review mutation denied by GitHub is surfaced once, then skipped until edited and excluded from fix-thrash accounting. Unsupported REST minimization is surfaced as a one-look skip. Omission from a generated command means only that Shepherd did not select the ID for automation; it does not prohibit an explicit user-directed mutation. Direct `apply review` forwards the requested IDs without applying iterate's author, capability, or current-state policy and surfaces GitHub's per-operation results. Explicit merge/enqueue requests likewise rely on GitHub's response.
 
 Generated journal guidance uses capability fields when available, but direct `apply journal` attempts the requested PR-body update and surfaces GitHub's result. `apply files` performs the requested file-view mutation where supported; REST reports it as unsupported.
+
+A cloud proxy session-access refusal is not a GitHub-denied review item. `apply review` stops the batch, preserves successful mutation IDs, and returns the proxy message in `sessionRefusal` with the remaining IDs in `unrepliedThreads`, `unresolvedThreads`, `unminimizedComments`, and `undismissedReviews` when nonempty. The CLI exits `77`; Markdown and MCP render the same successes, refusal, and pending IDs. The raw result's `instructions` array also renders as numbered steps under `## Instructions`: repair session access and retry only those pending IDs. No denied marker is written. Automatic cleanup aborts the incomplete tick with exit `77`, and a session refusal during mark-ready escalates with `transport-unsupported` while quoting the proxy message.
 
 `fix.checks[]` includes `relatedJobs: [{ name, conclusion, failedStep?, logExcerpt? }]` (the sibling failed jobs described above; same information as the text sub-list, also present on `escalate` checks) and `logExcerpt` when Shepherd fetched a bounded raw excerpt from the matched failed job log and `runAttempt` when GitHub reports an attempt later than 1. `fix.checks[]` also includes skipped, ignored, or filtered CheckRuns that still have unseen annotations; those rows carry `annotationOnly: true` and are omitted from `## Failing checks` and from failing-check rerun/`--require-sha` gating. Passing CheckRuns and their annotations remain available in `check` output but are not projected into `FIX_CODE`. `fix.checks[].annotations[]` contains marker-gated annotations: `{ id, path, startLine, endLine, startColumn?, endColumn?, level, title?, message, rawDetails?, blobUrl? }`. Annotation `message` and `rawDetails` values are capped independently before rendering or JSON projection. Seen annotations are not re-emitted.
 

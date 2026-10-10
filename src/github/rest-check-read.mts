@@ -52,7 +52,7 @@ export interface RestWorkflowRun {
 export async function readRestCommitChecks(oid: string, repo: RepoInfo, pr = 0) {
   const prefix = restRepoPath(repo);
   const checks = await readRestPages<RestCheck>(
-    `${prefix}/commits/${encodeURIComponent(oid)}/check-runs?filter=all`,
+    `${prefix}/commits/${encodeURIComponent(oid)}/check-runs?filter=latest`,
     (body) => restCollection(body, "check_runs") as RestCheck[],
   );
   const suites = await readRestPages<RestSuite>(
@@ -179,7 +179,7 @@ export async function readRestCommitChecks(oid: string, repo: RepoInfo, pr = 0) 
 
 export async function readRestAnnotationCounts(oid: string, repo: RepoInfo) {
   const checks = await readRestPages<RestCheck>(
-    `${restRepoPath(repo)}/commits/${encodeURIComponent(oid)}/check-runs?filter=all`,
+    `${restRepoPath(repo)}/commits/${encodeURIComponent(oid)}/check-runs?filter=latest`,
     (body) => restCollection(body, "check_runs") as RestCheck[],
   );
   return checks.nodes.map((check) => ({

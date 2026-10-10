@@ -22,7 +22,8 @@ describe("official REST native stacks", () => {
   it("reads ordered members and checks topology stability through the named adapter", async () => {
     await serve((request, response) => {
       const path = request.path.split("?")[0];
-      if (path === `${prefix}/stacks`) response.end(JSON.stringify([stack]));
+      if (path === "/user") response.end('{"login":"author"}');
+      else if (path === `${prefix}/stacks`) response.end(JSON.stringify([stack]));
       else if (path === `${prefix}/stacks/42`) response.end(JSON.stringify(stack));
       else if (path === `${prefix}/pulls/101`) response.end(JSON.stringify(pull));
       else if (path === `${prefix}/pulls/102`)
@@ -45,6 +46,7 @@ describe("official REST native stacks", () => {
     expect(result).toMatchObject({
       stackNumber: 42,
       stackSize: 2,
+      viewerLogin: "author",
       ordered: [
         { number: 101, headRefName: "user-model", baseRefName: "main" },
         { number: 102, headRefName: "user-api", baseRefName: "user-model", baseRefOid: "aaa111" },
@@ -93,4 +95,28 @@ describe("official REST native stacks", () => {
       runWithGithubTransport("rest", () => readStackTopology(101, repo)),
     ).rejects.toThrow("repeated member");
   });
+  it.each([
+    [200, {}, "authenticated viewer login"],
+    [401, { message: "Bad credentials" }, "401"],
+  ] as const)(
+    "does not guess ownership from unavailable viewer identity (%i)",
+    async (status, viewer, expected) => {
+      await serve((request, response) => {
+        const path = request.path.split("?")[0];
+        if (path === "/user") {
+          response.statusCode = status;
+          response.end(JSON.stringify(viewer));
+        } else if (path === `${prefix}/stacks`) response.end(JSON.stringify([stack]));
+        else if (path === `${prefix}/stacks/42`) response.end(JSON.stringify(stack));
+        else {
+          const number = Number(path?.split("/").at(-1));
+          response.end(JSON.stringify({ ...pull, number, node_id: `PR_${number}` }));
+        }
+      });
+      await expect(
+        runWithGithubTransport("rest", () => readStackTopology(101, repo)),
+      ).rejects.toThrow(expected);
+      expect(wire.requests.some((request) => request.path === "/graphql")).toBe(false);
+    },
+  );
 });

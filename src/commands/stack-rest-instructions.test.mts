@@ -49,7 +49,10 @@ describe("REST native stack instructions", () => {
 
   it("requests a guarded merge of the ready prefix without GraphQL commands", async () => {
     await freshLoadConfig();
-    const result = stack([row(1, 1, { readyReceipt: true, transport: "rest" }), row(2, 2)]);
+    const result = stack([
+      row(1, 1, { readyReceipt: true, transport: "rest", requiresMergeQueue: false }),
+      row(2, 2),
+    ]);
     const plan = planPrefixDrain(result, true);
     expect(plan).toMatchObject({ action: "merge", stackMergeable: false });
     expect(plan?.instructions[0]).toContain(

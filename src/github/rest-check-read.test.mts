@@ -1,8 +1,62 @@
 import { describe, expect, it } from "vitest";
 import { wire, serve, repo } from "../../test-helpers/github/rest-read.test-support.mts";
-import { readRestCommitChecks, readRestBehind } from "./rest-check-read.mts";
+import {
+  readRestAnnotationCounts,
+  readRestCommitChecks,
+  readRestBehind,
+} from "./rest-check-read.mts";
 import { readRestCheckAnnotations } from "./rest-annotation-read.mts";
 describe("REST check evidence", () => {
+  it("uses the latest rerun for check state and annotation counts", async () => {
+    const runs = [
+      {
+        id: 77,
+        node_id: "CR_77",
+        name: "build",
+        status: "completed",
+        conclusion: "failure",
+        details_url: null,
+        started_at: "2026-10-09T00:00:00Z",
+        completed_at: "2026-10-09T00:01:00Z",
+        check_suite: null,
+        output: { title: "Failed", summary: "failed rerun", annotations_count: 3 },
+      },
+      {
+        id: 78,
+        node_id: "CR_78",
+        name: "build",
+        status: "completed",
+        conclusion: "success",
+        details_url: null,
+        started_at: "2026-10-09T01:00:00Z",
+        completed_at: "2026-10-09T01:01:00Z",
+        check_suite: null,
+        output: { title: "Passed", summary: "successful rerun", annotations_count: 0 },
+      },
+    ];
+    await serve((request, response) => {
+      const url = new URL(request.path, "https://api.github.com");
+      if (url.pathname.endsWith("check-runs")) {
+        expect(url.searchParams.get("filter")).toBe("latest");
+        response.end(JSON.stringify({ total_count: 1, check_runs: [runs[1]] }));
+      } else if (url.pathname.endsWith("check-suites"))
+        response.end('{"total_count":0,"check_suites":[]}');
+      else if (url.pathname.endsWith("actions/runs"))
+        response.end('{"total_count":0,"workflow_runs":[]}');
+      else response.end("[]");
+    });
+
+    expect(await readRestCommitChecks("aaa111", repo)).toMatchObject({
+      nodes: [
+        { id: "CR_78", name: "build", conclusion: "SUCCESS", annotations: { totalCount: 0 } },
+      ],
+    });
+    expect(await readRestAnnotationCounts("aaa111", repo)).toEqual([
+      { __typename: "CheckRun", id: "CR_78", annotations: { totalCount: 0 } },
+    ]);
+    expect(wire.requests.filter((request) => request.path.includes("check-runs"))).toHaveLength(2);
+  });
+
   it("loads check runs, suites, statuses, workflow metadata and annotations without GraphQL", async () => {
     await serve((request, response) => {
       const path = request.path.split("?")[0];

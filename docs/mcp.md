@@ -235,6 +235,8 @@ Each operation is one of:
 | `message`            | string               | yes when replying or dismissing         |
 | `requireSha`         | string               | no; poll until this HEAD SHA is visible |
 
+A REST proxy session refusal stops the batch and any subsequent operations. Both output channels preserve successful IDs and the pending ID lists, with the proxy's message in `sessionRefusal`. Repair session access and retry only pending IDs; an unchanged item remains eligible because no denied marker is written. See [API partial review results](api.md).
+
 `acknowledge_queue_removal`
 
 | Field            | Type                          | Required | Meaning                                                         |

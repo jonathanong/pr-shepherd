@@ -8,6 +8,7 @@ import type { RepoInfo } from "../github/client.mts";
 import { GitHubRequestError } from "../github/errors.mts";
 import { isTransportError } from "../github/http-utils.mts";
 import { readRestPages, restRepoPath } from "../github/rest-reader-core.mts";
+import { isRestSessionRefusal } from "../github/rest-session-refusal.mts";
 interface ReplyComment {
   id: number;
   body: string;
@@ -92,6 +93,7 @@ export async function replyToThread(
   try {
     viewer = (await rest<{ login?: string }>("GET", "/user")).login;
   } catch (error) {
+    if (isRestSessionRefusal(error)) throw error;
     if (!(error instanceof GitHubRequestError) || ![403, 404].includes(error.status)) throw error;
   }
   const comments = await readComments(repo, pr);

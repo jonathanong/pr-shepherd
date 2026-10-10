@@ -12,6 +12,7 @@ import type { RateLimitInfo } from "../github/http-utils.mts";
 import { markMutationDenied } from "../state/seen-comments.mts";
 import { readRestFeedback } from "../github/rest-feedback-read.mts";
 import { threadTranscriptBody } from "../threads/transcript.mts";
+import { isRestSessionRefusal } from "../github/rest-session-refusal.mts";
 
 async function reviewNumericId(repo: RepoInfo, pr: number, id: string): Promise<string> {
   if (/^[1-9][0-9]*$/.test(id)) return id;
@@ -81,6 +82,7 @@ export async function applyRestReviewChunk(input: {
   rateLimit?: RateLimitInfo;
   retryAfterSeconds?: number;
   restStopped?: true;
+  sessionRefusal?: string;
 }> {
   const result: Awaited<ReturnType<typeof applyRestReviewChunk>> = { data: {}, errors: [] };
   const ops = [
@@ -141,6 +143,11 @@ export async function applyRestReviewChunk(input: {
         break;
       }
     } catch (error) {
+      if (isRestSessionRefusal(error)) {
+        result.sessionRefusal = error.message;
+        result.restStopped = true;
+        break;
+      }
       const message = error instanceof Error ? error.message : String(error);
       result.errors.push({ message, path: [op.alias] });
       const stop = rateLimitFromError(error, message);

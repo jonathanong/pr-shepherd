@@ -93,6 +93,24 @@ describe("REST mark-ready authorization", () => {
     });
     expect(wire.requests).toEqual([]);
   });
+  it("surfaces a proxy session refusal separately from GitHub authorization", async () => {
+    vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
+    const message =
+      'GitHub access to this repository is not enabled for this session. Call add_repo again with access:"push".';
+    await serve((_request, response) => {
+      response.statusCode = 403;
+      response.end(JSON.stringify({ message }));
+    });
+    const result = await markReady();
+    expect(result).toMatchObject({
+      action: "escalate",
+      escalate: {
+        triggers: ["transport-unsupported"],
+        suggestion: expect.stringContaining(message.replaceAll('"', '\\"')),
+      },
+    });
+    expect(wire.requests).toHaveLength(1);
+  });
   it("reports unsupported standard REST even with a known update capability", async () => {
     await serve((_request, response) => response.end("{}"));
     expect(

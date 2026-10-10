@@ -4,6 +4,7 @@ import { readRestPull, restPullRevision } from "./rest-pr-core.mts";
 import { readRestSnapshot } from "./rest-batch-snapshot.mts";
 import { restSummary } from "./rest-summary-read.mts";
 import { markReadyAnnotationProbeComplete } from "./poll-summary-annotation-probe.mts";
+import { hydratePollSummaryChecks } from "./poll-summary-check-hydration.mts";
 import { GitHubRequestError } from "./errors.mts";
 import { EXIT } from "../exit-codes.mts";
 /** REST uses multiple resources; retry a moving head/base once rather than combining revisions. */
@@ -24,6 +25,8 @@ export async function fetchRestPrBatch(
       snapshot.checks,
       snapshot.rules.baseRef,
     );
+    // Match the canonical check window hashed by aggregate stack reconciliation.
+    await hydratePollSummaryChecks(receiptSummary, repo);
     markReadyAnnotationProbeComplete(receiptSummary);
     return {
       data: snapshot.data,

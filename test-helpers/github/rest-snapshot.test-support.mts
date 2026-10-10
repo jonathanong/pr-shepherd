@@ -18,7 +18,8 @@ export async function serveRestSnapshot(
   await serve((request, response) => {
     const path = request.path.split("?")[0];
     let body: unknown = [];
-    if (path === `${prefix}/pulls/101`) {
+    if (path === "/user") body = { login: "author" };
+    else if (path === `${prefix}/pulls/101`) {
       const overrides = typeof options.pull === "function" ? options.pull(++pulls) : options.pull;
       body = { ...pull, ...overrides };
     } else if (path === prefix)

@@ -50,7 +50,7 @@ describe("REST feedback integrity", () => {
     );
     expect(wire.requests.some((request) => request.path.includes("ccr"))).toBe(false);
   });
-  it("rejects an incomplete CCR join", async () => {
+  it("fails a persistently incomplete CCR join as a temporary snapshot change", async () => {
     vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
     await serve((request, response) =>
       response.end(
@@ -71,7 +71,7 @@ describe("REST feedback integrity", () => {
         ),
       ),
     );
-    await expect(readRestFeedback(101, repo)).rejects.toThrow("comment missing");
+    await expect(readRestFeedback(101, repo)).rejects.toMatchObject({ status: 409, exitCode: 75 });
   });
   it("does not treat unavailable native stack membership as standalone", async () => {
     await serve((_request, response) => {

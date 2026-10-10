@@ -15,6 +15,7 @@ import {
 } from "./http-utils.mts";
 import { recordApiTelemetry } from "./api-telemetry.mts";
 import { recordIntermediateResponse } from "./http-intermediate.mts";
+import { isRestSessionRefusalResponse } from "./rest-session-refusal.mts";
 
 const BASE_URL = "https://api.github.com";
 const SAFE_GITHUB_REST_PATH = /^\/[A-Za-z0-9._~!$&'()*+,;=:@%/?-]*$/;
@@ -149,14 +150,17 @@ export async function restWithRateLimit<T = unknown>(
       }),
     );
     recordApiTelemetry({ kind: "REST", method, authSource, rateLimit });
+    const responseMessage = isRestSessionRefusalResponse(res.status, text)
+      ? redactToken(text)
+      : sanitizeBody(text);
     throw new GitHubRequestError(
-      `GitHub REST ${method} ${path} failed: ${res.status} ${sanitizeBody(text)}`,
+      `GitHub REST ${method} ${path} failed: ${res.status} ${responseMessage}`,
       {
         status: res.status,
         rateLimit,
         retryAfterSeconds,
         authSource,
-        responseMessage: sanitizeBody(text),
+        responseMessage,
       },
     );
   }

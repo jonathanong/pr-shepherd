@@ -20,7 +20,8 @@ const stack = {
 async function topology(behindBy: number) {
   await serve((request, response) => {
     const path = request.path.split("?")[0];
-    if (path === `${prefix}/pulls/101`) response.end(JSON.stringify(pull));
+    if (path === "/user") response.end('{"login":"author"}');
+    else if (path === `${prefix}/pulls/101`) response.end(JSON.stringify(pull));
     else if (path === `${prefix}/pulls/102`)
       response.end(
         JSON.stringify({

@@ -35,7 +35,8 @@ async function stackedServer() {
   };
   await serve((request, response) => {
     const path = request.path.split("?")[0];
-    if (path === `${prefix}/stacks`) response.end(JSON.stringify([stack]));
+    if (path === "/user") response.end('{"login":"author"}');
+    else if (path === `${prefix}/stacks`) response.end(JSON.stringify([stack]));
     else if (path === `${prefix}/stacks/42`) response.end(JSON.stringify(stack));
     else if (path === `${prefix}/pulls/101`)
       response.end(

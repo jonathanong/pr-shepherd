@@ -82,4 +82,28 @@ describe("formatMutateResult", () => {
       ),
     ).toBe("Stopped: GitHub rate limit hit — secondary limit");
   });
+
+  it("renders a session refusal with successful and pending IDs plus retry instructions", () => {
+    const output = formatMutateResult(
+      makeResult({
+        repliedThreads: ["thread-1"],
+        sessionRefusal: "proxy refusal details",
+        instructions: [
+          "Restore GitHub access for this session using the proxy instructions above.",
+          "Retry only the pending IDs listed above.",
+        ],
+        unrepliedThreads: ["thread-2"],
+        unresolvedThreads: ["thread-3"],
+      }),
+    );
+
+    expect(output).toContain("Replied to threads (1): thread-1");
+    expect(output).toContain("Stopped: GitHub session access refused — proxy refusal details");
+    expect(output).toContain("Not replied due to session access (1): thread-2");
+    expect(output).toContain("Not resolved due to session access (1): thread-3");
+    expect(output).toContain(
+      "## Instructions\n\n1. Restore GitHub access for this session using the proxy instructions above.\n2. Retry only the pending IDs listed above.",
+    );
+    expect(output).not.toContain("due to rate limit");
+  });
 });

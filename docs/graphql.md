@@ -14,6 +14,8 @@ Related: [graphql-usage.md](graphql-usage.md) (points per command), [authenticat
 
 REST reads use the core API pool and paginate list endpoints with `per_page=100` and GitHub's `Link` header. A full snapshot repeats the core PR read at the end and retries once when the head, base, or revision changes during pagination. REST does not use the GraphQL `PrFingerprint` shortcut, because the REST snapshot cannot provide all policy, capability, and queue inputs needed to validate a cached report.
 
+If the CCR thread list and inline-comment list disagree because feedback changed during the read, Shepherd re-reads the CCR threads and then the inline comments once. A persistent membership mismatch returns a retryable snapshot-changed error (`409`, exit `75`) instead of presenting incomplete feedback or treating the race as malformed data. Invalid payloads and duplicate memberships still fail as malformed data.
+
 REST returns raw check runs, workflow suites, review states, partial applicable branch rules, and native-stack membership where the endpoint supplies them. It does not currently report queue membership, enqueue state, or queue-removal history; queue metadata is retained only when a documented operation response supplies it. A 403/404 from classic branch-protection reads leaves protection unknown; aggregate `reviewDecision` and viewer capabilities are unavailable. Native stacks use GitHub's `/stacks?pull_request=N` lookup followed by `/stacks/{number}`; an authoritative 404 is an error rather than evidence that the PR is a standalone branch. The observed Claude Code proxy routes and supported mutation gaps are listed above.
 
 ## GitHub metering
