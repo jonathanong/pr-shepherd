@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { registerHooks, mockFetch } from "../../test-helpers/github/http.test-support.mts";
-import { restText } from "./http.mts";
+import { _resetTokenCache, restText } from "./http.mts";
+import { withApiTelemetryScope, withRestCoreCredentialFingerprint } from "./api-telemetry.mts";
+import { credentialFingerprint } from "./http-auth.mts";
 
 registerHooks();
 
@@ -118,23 +120,46 @@ describe("restText — redirect handling", () => {
     );
   });
 
-  it("retries on 401 and returns text after token refresh", async () => {
+  it("keeps the refreshed token's REST quota provenance after a 401 retry", async () => {
+    process.env["GH_TOKEN"] = "old-rest-text-token";
+    _resetTokenCache();
     mockFetch
-      .mockResolvedValueOnce({
-        ok: false,
-        status: 401,
-        headers: new Headers(),
-        arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
-        text: () => Promise.resolve("Unauthorized"),
+      .mockImplementationOnce(async () => {
+        process.env["GH_TOKEN"] = "new-rest-text-token";
+        return {
+          ok: false,
+          status: 401,
+          headers: new Headers({
+            "x-ratelimit-resource": "core",
+            "x-ratelimit-remaining": "500",
+            "x-ratelimit-limit": "5000",
+            "x-ratelimit-used": "4500",
+            "x-ratelimit-reset": "99",
+          }),
+          arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+          text: () => Promise.resolve("Unauthorized"),
+        } as unknown as Response;
       })
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        headers: new Headers(),
+        headers: new Headers({
+          "x-ratelimit-resource": "core",
+          "x-ratelimit-remaining": "4900",
+          "x-ratelimit-limit": "5000",
+          "x-ratelimit-used": "100",
+          "x-ratelimit-reset": "99",
+        }),
         text: () => Promise.resolve("log content"),
+      } as unknown as Response);
+    await withApiTelemetryScope(async () => {
+      const text = await restText("/repos/o/r/actions/jobs/1/logs");
+      expect(text).toBe("log content");
+      expect(withRestCoreCredentialFingerprint({ remaining: 4900 })).toEqual({
+        remaining: 4900,
+        credentialFingerprint: credentialFingerprint("new-rest-text-token"),
       });
-    const text = await restText("/repos/o/r/actions/jobs/1/logs");
-    expect(text).toBe("log content");
+    });
     expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });

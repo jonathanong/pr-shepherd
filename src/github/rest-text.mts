@@ -25,11 +25,13 @@ export async function restText(
   appendEntry(formatRequestEntry({ n, kind: "restText", method: "GET", url }));
   const t0 = performance.now();
   let authSource = "unknown";
+  let credentialFingerprint: string | undefined;
 
   const { res, attempt, retryT0 } = await requestWithTokenRetry(
     async () => {
       const auth = await makeAuthHeaders();
       authSource = auth.source;
+      credentialFingerprint = auth.fingerprint;
       return githubFetch(url, { method: "GET", headers: auth.headers, redirect: "manual" });
     },
     t0,
@@ -42,6 +44,7 @@ export async function restText(
         response,
         durationMs,
         authSource,
+        credentialFingerprint,
       }),
   );
 
@@ -49,7 +52,7 @@ export async function restText(
   const rateLimit = parseRateLimit(res.headers) ?? undefined;
   onRateLimit?.(rateLimit);
   const retryAfterSeconds = parseRetryAfter(res.headers);
-  recordApiTelemetry({ kind: "REST", method: "GET", authSource, rateLimit });
+  recordApiTelemetry({ kind: "REST", method: "GET", authSource, credentialFingerprint, rateLimit });
   if ([301, 302, 307, 308].includes(res.status)) {
     const redirected = await followRestTextRedirect(res, {
       n,

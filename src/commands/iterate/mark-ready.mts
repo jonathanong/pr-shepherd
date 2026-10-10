@@ -8,6 +8,7 @@ import { canGenerateGithubMutation } from "../../github/mutation-policy.mts";
 import { UnsupportedRestOperationError } from "../../github/unsupported-rest.mts";
 import { GitHubRequestError } from "../../github/errors.mts";
 import { isRestSessionRefusal } from "../../github/rest-session-refusal.mts";
+import { rateLimitKind } from "../../github/rate-limit-kind.mts";
 
 export async function markReadyIfAuthorized(
   enabled: boolean,
@@ -65,8 +66,7 @@ export async function markReadyIfAuthorized(
       else if (
         !(error instanceof GitHubRequestError) ||
         error.status !== 403 ||
-        error.retryAfterSeconds !== undefined ||
-        error.rateLimit?.remaining === 0
+        rateLimitKind(error) !== null
       )
         throw error;
     }

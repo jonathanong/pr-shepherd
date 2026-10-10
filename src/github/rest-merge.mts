@@ -2,6 +2,8 @@ import { restWithRateLimit } from "./rest-http.mts";
 import { restRepoPath } from "./rest-reader-core.mts";
 import type { RepoInfo } from "./client.mts";
 import type { MergeMethod } from "../config/merge-method.mts";
+import { GitHubRequestError } from "./errors.mts";
+import { sanitizeBody } from "./http-utils.mts";
 
 export type RestMergeAction = "direct_merge" | "merge_queue" | "default";
 export interface RestMergeOptions {
@@ -44,7 +46,7 @@ export async function requestRestMerge(
   pr: number,
   options: RestMergeOptions,
 ): Promise<RestMergeResponse> {
-  const { data } = await restWithRateLimit(
+  const { data, status, rateLimit } = await restWithRateLimit(
     "PUT",
     `${restRepoPath(repo)}/pulls/${pr}/merge-async`,
     {
@@ -57,7 +59,21 @@ export async function requestRestMerge(
     },
     { acceptStatuses: [400, 409] },
   );
-  return parseRestMergeResponse(data);
+  try {
+    return parseRestMergeResponse(data);
+  } catch (error) {
+    // Accepted 400/409 responses may contain an ordinary API error envelope,
+    // rather than merge state. Retain their definite refusal for intent recovery.
+    if (status !== undefined && status >= 400 && status < 500) {
+      const responseMessage = sanitizeBody(JSON.stringify(data) ?? "");
+      throw new GitHubRequestError(
+        `Invalid asynchronous merge response: ${status} ${responseMessage}`,
+        { status, rateLimit, responseMessage },
+      );
+    }
+    // A malformed acknowledgement may follow a successful submission.
+    throw error;
+  }
 }
 
 export async function getRestMerge(

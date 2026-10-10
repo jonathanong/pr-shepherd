@@ -38,6 +38,8 @@ function githubApiUrl(path: string): string {
 export interface RestResult<T = unknown> {
   data: T;
   rateLimit?: RateLimitInfo;
+  /** HTTP status, including documented non-2xx statuses accepted by the caller. */
+  status?: number;
   /** GitHub pagination header, retained for named REST readers. */
   link?: string;
 }
@@ -75,6 +77,7 @@ export async function restWithRateLimit<T = unknown>(
   appendEntry(formatRequestEntry({ n, kind: "REST", method, url, body }));
   const t0 = performance.now();
   let authSource = "unknown";
+  let credentialFingerprint: string | undefined;
 
   const cached = opts?.conditional
     ? await loadEtagEntry(opts.conditional.key, opts.conditional.name)
@@ -84,6 +87,7 @@ export async function restWithRateLimit<T = unknown>(
     async () => {
       const auth = await makeAuthHeaders(cached ? { "If-None-Match": cached.etag } : undefined);
       authSource = auth.source;
+      credentialFingerprint = auth.fingerprint;
       return githubFetch(url, {
         method,
         headers: auth.headers,
@@ -100,6 +104,7 @@ export async function restWithRateLimit<T = unknown>(
         response,
         durationMs,
         authSource,
+        credentialFingerprint,
       }),
     method === "GET" || method === "HEAD",
   );
@@ -126,8 +131,13 @@ export async function restWithRateLimit<T = unknown>(
         retryAfterSeconds,
       }),
     );
-    recordApiTelemetry({ kind: "REST", method, authSource, rateLimit });
-    return { data: cached.body as T, rateLimit, link: res.headers.get("link") ?? undefined };
+    recordApiTelemetry({ kind: "REST", method, authSource, credentialFingerprint, rateLimit });
+    return {
+      data: cached.body as T,
+      rateLimit,
+      status: res.status,
+      link: res.headers.get("link") ?? undefined,
+    };
   }
 
   const ct = res.headers.get("content-type") ?? "";
@@ -149,7 +159,7 @@ export async function restWithRateLimit<T = unknown>(
         retryAfterSeconds,
       }),
     );
-    recordApiTelemetry({ kind: "REST", method, authSource, rateLimit });
+    recordApiTelemetry({ kind: "REST", method, authSource, credentialFingerprint, rateLimit });
     const responseMessage = isRestSessionRefusalResponse(res.status, text)
       ? redactToken(text)
       : sanitizeBody(text);
@@ -166,7 +176,42 @@ export async function restWithRateLimit<T = unknown>(
   }
 
   if (ct.includes("application/json")) {
-    const json = (await res.json()) as T;
+    let json: T;
+    try {
+      json = (await res.json()) as T;
+    } catch (err) {
+      const detail = err instanceof Error ? `: ${err.message}` : "";
+      appendEntry(
+        formatResponseEntry({
+          n,
+          kind: "REST",
+          method,
+          url,
+          status: res.status,
+          durationMs,
+          contentType: ct,
+          textBody: `Invalid JSON response${detail}`,
+          attempt: attempt > 1 ? attempt : undefined,
+          authSource,
+          rateLimit,
+          retryAfterSeconds,
+        }),
+      );
+      recordApiTelemetry({ kind: "REST", method, authSource, credentialFingerprint, rateLimit });
+      if (!res.ok) {
+        throw new GitHubRequestError(
+          `GitHub REST ${method} ${path} failed: ${res.status} Invalid JSON response${detail}`,
+          {
+            status: res.status,
+            rateLimit,
+            retryAfterSeconds,
+            authSource,
+            responseMessage: `Invalid JSON response${detail}`,
+          },
+        );
+      }
+      throw err;
+    }
     appendEntry(
       formatResponseEntry({
         n,
@@ -183,7 +228,7 @@ export async function restWithRateLimit<T = unknown>(
         retryAfterSeconds,
       }),
     );
-    recordApiTelemetry({ kind: "REST", method, authSource, rateLimit });
+    recordApiTelemetry({ kind: "REST", method, authSource, credentialFingerprint, rateLimit });
     if (opts?.conditional) {
       const etag = res.headers.get("etag");
       if (etag) {
@@ -194,7 +239,12 @@ export async function restWithRateLimit<T = unknown>(
         });
       }
     }
-    return { data: json, rateLimit, link: res.headers.get("link") ?? undefined };
+    return {
+      data: json,
+      rateLimit,
+      status: res.status,
+      link: res.headers.get("link") ?? undefined,
+    };
   }
   appendEntry(
     formatResponseEntry({
@@ -211,6 +261,6 @@ export async function restWithRateLimit<T = unknown>(
       retryAfterSeconds,
     }),
   );
-  recordApiTelemetry({ kind: "REST", method, authSource, rateLimit });
-  return { data: undefined as T, rateLimit };
+  recordApiTelemetry({ kind: "REST", method, authSource, credentialFingerprint, rateLimit });
+  return { data: undefined as T, rateLimit, status: res.status };
 }

@@ -150,3 +150,5 @@ REST ticks do not issue GraphQL requests. `rest-transport.quota-scenario.test.mt
 capabilities, pagination, partial-write denial, REST-to-GraphQL switching,
 async stack resume, and equivalent text/JSON/MCP projections as those
 integration cases are added. Fixtures `133` and `134` carry earlier GraphQL queue-removal evidence into REST mode and verify that failed checks remain visible, text and JSON explain unsupported recovery, and no stale same-head requeue or unvalidatable stack acknowledgment command is printed.
+
+`rest-transport.journal-scenario.test.mts` drives ordered library and MCP journal operations through real local HTTP. The GraphQL body read succeeds, its write exhausts quota, and REST completes the write using the read's PR identity. Header-based and probe-confirmed exhaustion are covered. A repeated journal entry causes no duplicate write, subsequent reads retain REST fallback, and MCP structured and Markdown results describe the same operations.

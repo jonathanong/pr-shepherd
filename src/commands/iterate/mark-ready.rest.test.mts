@@ -1,67 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { wire, serve, repo } from "../../../test-helpers/github/rest-read.test-support.mts";
-import type { IterateResultBase, ShepherdReport } from "../../types.mts";
+import { wire, serve } from "../../../test-helpers/github/rest-read.test-support.mts";
+import { base, report } from "../../../test-helpers/github/mark-ready.test-support.mts";
 import { runWithGithubTransport } from "../../github/transport.mts";
 import { markReadyIfAuthorized } from "./mark-ready.mts";
 
-const report: ShepherdReport = {
-  transport: "rest",
-  pr: 101,
-  nodeId: "PR_101",
-  repo: `${repo.owner}/${repo.name}`,
-  status: "READY",
-  baseBranch: "main",
-  mergeStatus: {
-    status: "CLEAN",
-    state: "OPEN",
-    isDraft: true,
-    mergeable: "MERGEABLE",
-    reviewDecision: null,
-    blockingBotReviewInProgress: false,
-    mergeStateStatus: "CLEAN",
-  },
-  checks: {
-    passing: [],
-    failing: [],
-    inProgress: [],
-    skipped: [],
-    filtered: [],
-    filteredNames: [],
-    blockedByFilteredCheck: false,
-  },
-  threads: {
-    actionable: [],
-    resolutionOnly: [],
-    autoResolved: [],
-    autoResolveErrors: [],
-    firstLook: [],
-  },
-  comments: { actionable: [], firstLook: [] },
-  changesRequestedReviews: [],
-  reviewSummaries: [],
-  firstLookSummaries: [],
-  editedSummaries: [],
-  approvedReviews: [],
-  branchProtection: null,
-};
-const base: IterateResultBase = {
-  transport: "rest",
-  pr: 101,
-  repo: report.repo,
-  status: "READY",
-  state: "OPEN",
-  mergeStateStatus: "CLEAN",
-  mergeStatus: "CLEAN",
-  reviewDecision: null,
-  blockingBotReviewInProgress: false,
-  isDraft: true,
-  shouldCancel: false,
-  remainingSeconds: 0,
-  summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 0, superseded: 0 },
-  baseBranch: "main",
-  branchProtection: null,
-  checks: [],
-};
 const markReady = (value = report) =>
   runWithGithubTransport("rest", () => markReadyIfAuthorized(true, base, value));
 describe("REST mark-ready authorization", () => {

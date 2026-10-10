@@ -1,7 +1,13 @@
 import { githubOperation } from "./transport.mts";
 import { readRestPull } from "./rest-pr-core.mts";
-import { readRestPages, restRepoPath, restObject, restNumber } from "./rest-reader-core.mts";
-import { resolveRestIdentity } from "./rest-identities.mts";
+import {
+  readRestPages,
+  restRepoPath,
+  restObject,
+  restNumber,
+  restString,
+} from "./rest-reader-core.mts";
+import { recordRestIdentity, resolveRestIdentity } from "./rest-identities.mts";
 /* eslint-disable max-lines */
 /**
  * High-level GitHub client — wraps http.mts for application-level concerns.
@@ -106,7 +112,11 @@ async function getGraphqlPullRequestBody(
 ): Promise<{ nodeId: string; body: string }> {
   const result = await httpGraphql<{
     repository: {
-      pullRequest: { id: string; body: string | null } | null;
+      pullRequest: {
+        id: string;
+        fullDatabaseId?: string | number | null;
+        body: string | null;
+      } | null;
     } | null;
   }>(GET_PR_BODY_QUERY, { owner, repo: name, pr });
   const pullRequest = result.data.repository?.pullRequest;
@@ -115,6 +125,17 @@ async function getGraphqlPullRequestBody(
       ? "repository not found or access denied"
       : "PR not found or access denied";
     throw new Error(`Could not fetch body for ${owner}/${name} PR #${pr}: ${detail}`);
+  }
+  if (pullRequest.fullDatabaseId != null) {
+    if (typeof pullRequest.fullDatabaseId !== "string")
+      restNumber(pullRequest.fullDatabaseId, "pull request fullDatabaseId");
+    await recordRestIdentity(
+      { owner, name },
+      pr,
+      pullRequest.id,
+      pullRequest.fullDatabaseId,
+      "pull",
+    );
   }
   return {
     nodeId: pullRequest.id,
@@ -212,11 +233,14 @@ export function getPrNumberForBranch(
     () => getGraphqlPrNumberForBranch(branch, owner, name),
     async () => {
       const listed = await readRestPages<Record<string, unknown>>(
-        `${restRepoPath({ owner, name })}/pulls?head=${encodeURIComponent(`${owner}:${branch}`)}&state=open`,
+        `${restRepoPath({ owner, name })}/pulls?state=open`,
       );
-      return listed.nodes.length
-        ? restNumber(restObject(listed.nodes[0], "pull request").number, "pull number")
-        : null;
+      // REST's head filter requires an owner, but GraphQL's headRefName also matches fork heads.
+      const pull = listed.nodes.find((value) => {
+        const head = restObject(restObject(value, "pull request").head, "pull request head");
+        return restString(head.ref, "pull request head ref") === branch;
+      });
+      return pull ? restNumber(pull.number, "pull number") : null;
     },
   ).catch(() => null);
 }

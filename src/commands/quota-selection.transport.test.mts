@@ -1,8 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { evaluateWarning } = vi.hoisted(() => ({ evaluateWarning: vi.fn() }));
+const { evaluateWarning, restFingerprint } = vi.hoisted(() => ({
+  evaluateWarning: vi.fn(),
+  restFingerprint: { value: "rest-fingerprint" },
+}));
 vi.mock("../github/api-telemetry.mts", () => ({
-  withGraphqlCredentialFingerprint: <T,>(sample: T) => sample,
+  withGraphqlCredentialFingerprint: <T extends object>(sample: T) => ({
+    ...sample,
+    credentialFingerprint: "graphql-fingerprint",
+  }),
+  withRestCoreCredentialFingerprint: <T extends object>(sample: T) => ({
+    ...sample,
+    credentialFingerprint: restFingerprint.value,
+  }),
 }));
 vi.mock("../state/graphql-quota-warnings.mts", () => ({
   evaluateWorktreeGraphqlQuotaWarning: evaluateWarning,
@@ -63,6 +73,7 @@ const usage: ApiUsage = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  restFingerprint.value = "rest-fingerprint";
   evaluateWarning.mockImplementation(async (_key, _bands, sample) =>
     sample.resource === "graphql" ? graphqlWarning : undefined,
   );
@@ -92,6 +103,10 @@ describe("quota warning selection by active transport", () => {
 
     expect(result).toBeUndefined();
     expect(evaluateWarning.mock.calls.map(([, , sample]) => sample.resource)).toEqual(["core"]);
+    expect(evaluateWarning.mock.calls[0]?.[2]).toMatchObject({
+      resource: "core",
+      credentialFingerprint: "rest-fingerprint",
+    });
   });
 
   it("warns on REST core depletion and preserves GraphQL-mode combined warnings", async () => {
@@ -106,6 +121,10 @@ describe("quota warning selection by active transport", () => {
     await expect(
       selectQuotaWarning({ owner: "acme", repo: "widgets" }, bands, restUsage, false, "rest"),
     ).resolves.toMatchObject({ resource: "core", remaining: 400 });
+    expect(evaluateWarning.mock.calls[0]?.[2]).toMatchObject({
+      resource: "core",
+      credentialFingerprint: "rest-fingerprint",
+    });
     expect(
       await selectQuotaWarning(
         { owner: "acme", repo: "widgets" },
@@ -118,5 +137,27 @@ describe("quota warning selection by active transport", () => {
       resource: "combined",
       budgets: [{ resource: "core" }, { resource: "graphql" }],
     });
+    expect(evaluateWarning.mock.calls.at(-2)?.[2]).toMatchObject({
+      resource: "graphql",
+      credentialFingerprint: "graphql-fingerprint",
+    });
+    expect(evaluateWarning.mock.calls.at(-1)?.[2]).toMatchObject({
+      resource: "core",
+      credentialFingerprint: "rest-fingerprint",
+    });
+  });
+
+  it("captures REST credential provenance before GraphQL warning evaluation yields", async () => {
+    evaluateWarning.mockImplementation(async (_key, _bands, sample) => {
+      if (sample.resource === "graphql") restFingerprint.value = "rotated-rest-fingerprint";
+      return sample.resource === "graphql" ? graphqlWarning : undefined;
+    });
+
+    await selectQuotaWarning({ owner: "acme", repo: "widgets" }, bands, usage, false, "graphql");
+
+    expect(evaluateWarning.mock.calls.map(([, , sample]) => sample.credentialFingerprint)).toEqual([
+      "graphql-fingerprint",
+      "rest-fingerprint",
+    ]);
   });
 });

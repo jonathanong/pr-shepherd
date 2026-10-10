@@ -1,7 +1,10 @@
+/* eslint-disable max-lines */
 import { describe, it, expect, beforeEach } from "vitest";
 import { registerHooks, jsonOk, mockFetch } from "../../test-helpers/github/http.test-support.mts";
-import { rest, restWithRateLimit } from "./http.mts";
+import { _resetTokenCache, rest, restWithRateLimit } from "./http.mts";
 import { pollRateLimitRetryAfterMs } from "../commands/poll-quota.mts";
+import { withApiTelemetryScope, withRestCoreCredentialFingerprint } from "./api-telemetry.mts";
+import { credentialFingerprint } from "./http-auth.mts";
 
 registerHooks();
 
@@ -119,6 +122,43 @@ describe("restWithRateLimit", () => {
     const result = await restWithRateLimit<{ id: number }>("GET", "/repos/o/r/pulls/1");
     expect(result.data).toEqual({ id: 1 });
     expect(result.rateLimit).toEqual({ remaining: 42, limit: 5000, resetAt: 99 });
+    expect(result.status).toBe(200);
+  });
+
+  it("retains accepted non-2xx status and wraps malformed accepted error JSON", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 409,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: () => Promise.resolve({ message: "already merged" }),
+    });
+    const accepted = await restWithRateLimit<{ message: string }>(
+      "PUT",
+      "/repos/o/r/pulls/1/merge",
+      { sha: "abc" },
+      { acceptStatuses: [409] },
+    );
+    expect(accepted).toMatchObject({ status: 409, data: { message: "already merged" } });
+
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: () => Promise.reject(new SyntaxError("unexpected token")),
+    });
+    await expect(
+      restWithRateLimit(
+        "PUT",
+        "/repos/o/r/pulls/1/merge",
+        { sha: "abc" },
+        {
+          acceptStatuses: [400],
+        },
+      ),
+    ).rejects.toMatchObject({
+      status: 400,
+      responseMessage: "Invalid JSON response: unexpected token",
+    });
   });
 
   it("does not classify a repository path containing rate-limit as a secondary throttle", async () => {
@@ -181,5 +221,46 @@ describe("restWithRateLimit", () => {
     const result = await restWithRateLimit("POST", "/repos/o/r/actions/runs/1/cancel");
     expect(result.data).toBeUndefined();
     expect(result.rateLimit?.remaining).toBe(1);
+    expect(result.status).toBe(204);
+  });
+
+  it("records REST credential fingerprints and adopts a new token's higher core quota", async () => {
+    const headers = (remaining: string) =>
+      new Headers({
+        "content-type": "application/json",
+        "x-ratelimit-resource": "core",
+        "x-ratelimit-remaining": remaining,
+        "x-ratelimit-limit": "5000",
+        "x-ratelimit-reset": "99",
+        "x-ratelimit-used": `${5000 - Number(remaining)}`,
+      });
+    process.env["GH_TOKEN"] = "old-rest-token";
+    _resetTokenCache();
+    mockFetch
+      .mockImplementationOnce(async () => {
+        process.env["GH_TOKEN"] = "new-rest-token";
+        return {
+          ok: false,
+          status: 401,
+          headers: headers("500"),
+          arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+        } as unknown as Response;
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: headers("4900"),
+        json: () => Promise.resolve({ id: 2 }),
+      } as unknown as Response);
+
+    await withApiTelemetryScope(async () => {
+      await restWithRateLimit("GET", "/repos/o/r/second");
+
+      expect(withRestCoreCredentialFingerprint({ remaining: 4900 })).toEqual({
+        remaining: 4900,
+        credentialFingerprint: credentialFingerprint("new-rest-token"),
+      });
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
   });
 });

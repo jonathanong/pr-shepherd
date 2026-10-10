@@ -29,6 +29,8 @@ This trigger covers an automatic mark-ready operation that GitHub denied:
 
 1. Mark ready: automatic mark-ready was selected for an otherwise-ready draft PR, Shepherd attempted the selected transport's operation, and GitHub denied it. When GraphQL returns `viewerCanUpdate: false`, Shepherd can hand off without attempting. REST has no equivalent capability field, so it attempts and uses GitHub's response.
 
+A mark-ready rate limit remains retryable, including a message-only secondary throttle with a nonempty or absent primary quota sample. It does not create an authorization handoff; `--until-terminal` applies the normal throttle backoff.
+
 Denied or unverifiable generated review replies, thread resolutions, bot-review dismissals, and automatic cleanup do not escalate. Shepherd surfaces the affected item once, omits the generated mutation, records that first-look output in its normal debug log, and suppresses the unchanged item on later ticks. Explicit `apply` review, journal, file-view, and merge/enqueue operations are attempted; GitHub's response is authoritative. Push access is also not an escalation trigger; it is a precondition for using Shepherd on the PR.
 
 ### `transport-unsupported`

@@ -106,9 +106,22 @@ function graphqlQuotaCredentialFingerprint(): string | undefined {
   return aggregateStore(active).graphql.credentialFingerprint;
 }
 
+/** Fingerprint of the credential that owns the authoritative REST core sample. */
+function restCoreQuotaCredentialFingerprint(): string | undefined {
+  const active = store();
+  if (active === undefined) return undefined;
+  return aggregateStore(active).rest.get("core")?.credentialFingerprint;
+}
+
 /** Attach the credential fingerprint without adding it when this command has none. */
 export function withGraphqlCredentialFingerprint<T extends object>(sample: T): T {
   const credentialFingerprint = graphqlQuotaCredentialFingerprint();
+  return credentialFingerprint === undefined ? sample : { ...sample, credentialFingerprint };
+}
+
+/** Attach the REST core credential fingerprint without exposing it in API usage output. */
+export function withRestCoreCredentialFingerprint<T extends object>(sample: T): T {
+  const credentialFingerprint = restCoreQuotaCredentialFingerprint();
   return credentialFingerprint === undefined ? sample : { ...sample, credentialFingerprint };
 }
 

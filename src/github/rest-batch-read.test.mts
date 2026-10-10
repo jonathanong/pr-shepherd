@@ -38,7 +38,8 @@ describe("REST high-level operation selection", () => {
             mergeable_state: state,
           }),
         );
-      } else if (path === `${prefix}/pulls`) response.end(JSON.stringify([{ number: 101 }]));
+      } else if (path === `${prefix}/pulls`)
+        response.end(JSON.stringify([{ number: 101, head: { ref: pull.head.ref } }]));
       else if (path === prefix)
         response.end(
           '{"allow_merge_commit":true,"allow_squash_merge":true,"allow_rebase_merge":false}',
