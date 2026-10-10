@@ -44,6 +44,8 @@ interface PollSummaryStack {
 }
 
 export interface PollSummaryItem {
+  transport?: "rest";
+  transportUnavailable?: Array<{ field: string; reason: string }>;
   pr: number;
   repo: string;
   title: string;
@@ -88,6 +90,8 @@ export type PollSummarySelection =
 export type StackNextAction = "shepherd" | "wait" | "merge" | "cancel" | "escalate";
 
 export interface PollSummaryResult {
+  transport?: "rest";
+  transportUnavailable?: Array<{ field: string; reason: string }>;
   mode: "summary";
   repo: string;
   selection: PollSummarySelection;
@@ -110,6 +114,7 @@ export interface PollSummaryResult {
 }
 
 export interface PollSummaryCommandOptions {
+  transport?: import("../github/transport.mts").GithubTransport;
   prNumbers?: number[];
   stackPrNumber?: number;
   targetRepository?: { owner: string; name: string };

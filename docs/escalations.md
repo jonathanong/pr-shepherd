@@ -10,7 +10,7 @@ Aggregate mode never performs a mutation; a `--stack --merge` result emits an ag
 
 | Trigger                       | Exact condition                                                                                                                                                                                      |
 | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `authorization-required`      | Shepherd is about to automatically mark a draft ready and `viewerCanUpdate !== true`. Explicit merge/enqueue requests are attempted and surface GitHub's actual error instead.                       |
+| `authorization-required`      | An otherwise-eligible automatic mark-ready operation is denied by GitHub. Unknown REST capability is attempted; explicit merge/enqueue requests are also attempted and surface GitHub's response.    |
 | `check-follow-up-unavailable` | At least one remaining failing check has no autonomous follow-up, and no other autonomous work remains in the tick.                                                                                  |
 | `fix-thrash`                  | A retryable, located review thread remains unchanged and unresolved after appearing in `iterate.fixAttemptsPerThread` caller-visible `FIX_CODE` results; the following unchanged tick escalates.     |
 | `base-branch-unknown`         | The GraphQL base branch is empty or unsafe and the current tick has work that could require a push, so Shepherd cannot name a safe rebase target.                                                    |
@@ -19,16 +19,21 @@ Aggregate mode never performs a mutation; a `--stack --merge` result emits an ag
 | `stall-timeout`               | An enabled timeout expires for CI that never starts, an unchanged `WAIT`/`FIX_CODE` state fingerprint, or a `--stack` selection whose layers can only wait.                                          |
 | `required-checks-unreported`  | Required merge-target contexts still have no check run after one close/reopen of a current head, and no Actions workflow is running. A behind base stays on rebase-and-push.                         |
 | `stall-state-unavailable`     | An enabled stall timeout cannot read or write its timer. The tick hands off instead of treating the failure as a new first sighting.                                                                 |
+| `transport-unsupported`       | The selected transport cannot perform an operation needed for the requested action, and Shepherd cannot safely represent it as a one-look skip or explicit apply error.                              |
 
 ## Complete predicates
 
 ### `authorization-required`
 
-This trigger covers one operation family:
+This trigger covers an automatic mark-ready operation that GitHub denied:
 
-1. Mark ready: automatic mark-ready was selected for an otherwise-ready draft PR, but `viewerCanUpdate !== true`.
+1. Mark ready: automatic mark-ready was selected for an otherwise-ready draft PR, Shepherd attempted the selected transport's operation, and GitHub denied it. When GraphQL returns `viewerCanUpdate: false`, Shepherd can hand off without attempting. REST has no equivalent capability field, so it attempts and uses GitHub's response.
 
 Denied or unverifiable generated review replies, thread resolutions, bot-review dismissals, and automatic cleanup do not escalate. Shepherd surfaces the affected item once, omits the generated mutation, records that first-look output in its normal debug log, and suppresses the unchanged item on later ticks. Explicit `apply` review, journal, file-view, and merge/enqueue operations are attempted; GitHub's response is authoritative. Push access is also not an escalation trigger; it is a precondition for using Shepherd on the PR.
+
+### `transport-unsupported`
+
+The selected REST transport lacks an operation required by an autonomous action or explicit mutation. Shepherd names the unsupported operation and the affected item in the escalation. Generated comment minimization is a one-look skip; explicit `apply` minimization and file-view requests return an explicit unsupported-operation error. Merge-queue and ordinary merge operations are not presumed unsupported by REST.
 
 ### `check-follow-up-unavailable`
 

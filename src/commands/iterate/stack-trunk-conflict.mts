@@ -2,6 +2,9 @@ import { graphql } from "../../github/client.mts";
 import { readStackTopology, verifiedBottomOpenLayer } from "../../github/stack-read.mts";
 import { UPPER_LAYER_CONFLICT_TARGET_QUERY } from "../../github/queries.mts";
 import { pollRateLimitRetryAfterMs } from "../poll-quota.mts";
+import { githubOperation } from "../../github/transport.mts";
+import { readRestPull } from "../../github/rest-pr-core.mts";
+import { readRestBehind } from "../../github/rest-check-read.mts";
 
 /** A bottom open layer, or an upper layer that already contains its parent, updates from trunk. */
 export interface UpperLayerTrunkConflict {
@@ -52,12 +55,30 @@ export async function lookupUpperLayerTrunkConflict(input: {
 
   let data: ConflictTargetData;
   try {
-    ({ data } = await graphql<ConflictTargetData>(UPPER_LAYER_CONFLICT_TARGET_QUERY, {
-      owner: input.owner,
-      name: input.name,
-      number: input.pr,
-      headRef: input.headRef,
-    }));
+    ({ data } = await githubOperation(
+      "UpperLayerConflictTarget",
+      () =>
+        graphql<ConflictTargetData>(UPPER_LAYER_CONFLICT_TARGET_QUERY, {
+          owner: input.owner,
+          name: input.name,
+          number: input.pr,
+          headRef: input.headRef,
+        }),
+      async () => {
+        const repo = { owner: input.owner, name: input.name };
+        const pull = await readRestPull(input.pr, repo);
+        const behindBy = await readRestBehind(repo, pull.base.ref, input.headRef);
+        return {
+          data: {
+            repository: {
+              pullRequest: {
+                baseRef: { compare: { behindBy } },
+              },
+            },
+          },
+        };
+      },
+    ));
   } catch (err) {
     if (pollRateLimitRetryAfterMs(err) !== null) throw err;
     ignore(input.pr, err instanceof Error ? err.message : String(err));

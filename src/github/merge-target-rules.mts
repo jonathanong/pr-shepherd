@@ -1,3 +1,6 @@
+import { githubOperation } from "./transport.mts";
+import { readRestBehind } from "./rest-check-read.mts";
+import { readRestBranchRules } from "./rest-rules-read.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import { parseBranchRules } from "./batch-parsers-rules.mts";
 import type { RawBaseRef } from "./batch-raw-rules.mts";
@@ -87,22 +90,28 @@ export async function loadBaseBehindBy(
   baseRefName: string,
   headRef: string,
 ): Promise<number> {
-  const qualifiedName = `refs/heads/${baseRefName}`;
-  const { data } = await graphqlWithRateLimit<BaseBehindData>(BASE_BEHIND_QUERY, {
-    owner,
-    repo: name,
-    qualifiedName,
-    headRef,
-  });
-  if (!data.repository) throw missingRepositoryError({ owner, name });
-  const ref = data.repository.ref;
-  if (!ref) {
-    throw new ShepherdError(
-      `Branch ${qualifiedName} was not found in ${owner}/${name}`,
-      EXIT.TEMPFAIL,
-    );
-  }
-  return ref.compare?.behindBy ?? 0;
+  return githubOperation(
+    "BaseBehind",
+    async () => {
+      const qualifiedName = `refs/heads/${baseRefName}`;
+      const { data } = await graphqlWithRateLimit<BaseBehindData>(BASE_BEHIND_QUERY, {
+        owner,
+        repo: name,
+        qualifiedName,
+        headRef,
+      });
+      if (!data.repository) throw missingRepositoryError({ owner, name });
+      const ref = data.repository.ref;
+      if (!ref) {
+        throw new ShepherdError(
+          `Branch ${qualifiedName} was not found in ${owner}/${name}`,
+          EXIT.TEMPFAIL,
+        );
+      }
+      return ref.compare?.behindBy ?? 0;
+    },
+    () => readRestBehind({ owner, name }, baseRefName, headRef),
+  );
 }
 
 export async function loadRefRules(
@@ -111,22 +120,46 @@ export async function loadRefRules(
   qualifiedName: string,
   headRef: string,
 ): Promise<{ contexts: string[]; behindBy: number }> {
-  const { data } = await graphqlWithRateLimit<RefRulesData>(REF_RULES_QUERY, {
-    owner,
-    repo: name,
-    qualifiedName,
-    headRef,
-  });
-  if (!data.repository) throw missingRepositoryError({ owner, name });
-  const ref = data.repository.ref;
-  if (!ref) {
-    throw new ShepherdError(
-      `Branch ${qualifiedName} was not found in ${owner}/${name}`,
-      EXIT.TEMPFAIL,
-    );
-  }
-  return {
-    contexts: parseBranchRules(ref).requiredStatusCheckContexts,
-    behindBy: ref.compare?.behindBy ?? 0,
-  };
+  return githubOperation(
+    "RefRules",
+    async () => {
+      const { data } = await graphqlWithRateLimit<RefRulesData>(REF_RULES_QUERY, {
+        owner,
+        repo: name,
+        qualifiedName,
+        headRef,
+      });
+      if (!data.repository) throw missingRepositoryError({ owner, name });
+      const ref = data.repository.ref;
+      if (!ref) {
+        throw new ShepherdError(
+          `Branch ${qualifiedName} was not found in ${owner}/${name}`,
+          EXIT.TEMPFAIL,
+        );
+      }
+      return {
+        contexts: parseBranchRules(ref).requiredStatusCheckContexts,
+        behindBy: ref.compare?.behindBy ?? 0,
+      };
+    },
+    async () => {
+      const rules = await readRestBranchRules(
+        { owner, name },
+        qualifiedName.replace(/^refs\/heads\//, ""),
+      );
+      if (rules.unavailable.length > 0)
+        throw new ShepherdError(
+          rules.unavailable.map((item) => item.reason).join("; "),
+          EXIT.UNAVAILABLE,
+        );
+      return {
+        contexts: parseBranchRules(rules.baseRef).requiredStatusCheckContexts,
+        behindBy: await readRestBehind(
+          { owner, name },
+          qualifiedName.replace(/^refs\/heads\//, ""),
+          headRef,
+        ),
+      };
+    },
+  );
 }

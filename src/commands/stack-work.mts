@@ -1,4 +1,6 @@
 import type { PollSummaryItem } from "../types.mts";
+import { buildPrShepherdCommand } from "../cli/runner.mts";
+import { formatPrUrl } from "../pr-reference.mts";
 
 type ProbedLayer = PollSummaryItem & { pollCommand: string; pollProbe: true };
 
@@ -47,6 +49,18 @@ export function splitStackWork(
  */
 export function appendMarkReadyInstructions(instructions: string[], layers: ProbedLayer[]): void {
   for (const item of layers) {
+    if (item.transport === "rest") {
+      const command = buildPrShepherdCommand([
+        "iterate",
+        formatPrUrl(item.repo, item.pr),
+        "--transport",
+        "rest",
+      ]).text;
+      instructions.push(
+        `${instructions.length + 1}. Run \`${item.pollCommand}\` first for PR #${item.pr}. If it returns \`[WAIT]\` saying the draft is held only because automatic mark-ready is disabled, run \`${command}\` to authorize the CCR ready transition; otherwise follow the probe's instructions.`,
+      );
+      continue;
+    }
     instructions.push(
       `${instructions.length + 1}. Automatic mark-ready is disabled, so marking PR #${item.pr} ready for review is your step. Run \`${item.pollCommand}\` first. If it returns \`[WAIT]\` saying PR #${item.pr} stays in draft because ${AUTO_MARK_READY_DISABLED_HOLD}, run \`gh pr ready ${item.pr} -R ${item.repo}\`; otherwise complete its instructions and leave PR #${item.pr} in draft this round.`,
     );

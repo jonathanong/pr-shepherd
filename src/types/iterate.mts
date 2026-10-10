@@ -44,6 +44,8 @@ export interface IterateResultSummary {
 }
 
 export interface IterateResultBase {
+  transport?: "rest";
+  transportUnavailable?: Array<{ field: string; reason: string }>;
   pr: number;
   repo: string;
   status: ShepherdStatus;

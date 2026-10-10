@@ -8,7 +8,7 @@ export interface RawAuthor {
 interface RawSummaryComment {
   id: string;
   body: string;
-  isMinimized: boolean;
+  isMinimized?: boolean;
   viewerDidAuthor?: boolean;
   authorAssociation?: string;
   url?: string;
@@ -70,6 +70,8 @@ export interface RawSummaryCommit {
 }
 
 export interface RawSummaryPr {
+  transport?: "rest";
+  transportUnavailable?: Array<{ field: string; reason: string }>;
   number: number;
   title: string;
   url: string;
@@ -80,7 +82,7 @@ export interface RawSummaryPr {
     nodes: Array<{ __typename: string; createdAt: string }>;
   } | null;
   isDraft: boolean;
-  viewerCanUpdate: boolean;
+  viewerCanUpdate?: boolean;
   headRefName: string;
   headRefOid: string;
   baseRefOid: string;
@@ -91,7 +93,7 @@ export interface RawSummaryPr {
   reviewDecision: string | null;
   reviewRequests?: { nodes: Array<{ requestedReviewer: RawAuthor | null }> };
   latestReviews?: { nodes: Array<{ state: string; author: RawAuthor | null }> };
-  isInMergeQueue: boolean;
+  isInMergeQueue?: boolean;
   mergeQueueAdditions?: { nodes: Array<{ createdAt: string }> } | null;
   mergeQueueRemovals?: {
     nodes: Array<{
@@ -111,8 +113,8 @@ export interface RawSummaryPr {
   reviews: SummaryConnection<RawSummaryComment & { state: string }>;
   reviewThreads: SummaryConnection<{
     id: string;
-    isResolved: boolean;
-    isOutdated: boolean;
+    isResolved?: boolean;
+    isOutdated?: boolean;
     path: string | null;
     rootComments?: { nodes: RawSummaryComment[] };
     comments: SummaryConnection<RawSummaryComment>;

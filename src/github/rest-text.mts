@@ -1,6 +1,7 @@
 import { appendEntry, nextEntry } from "../log/log-file.mts";
 import { formatRequestEntry, formatResponseEntry } from "../log/session.mts";
 import { GitHubRequestError } from "./errors.mts";
+import { githubFetch } from "./github-fetch.mts";
 import { makeAuthHeaders } from "./http-auth.mts";
 import { requestWithTokenRetry } from "./http-request.mts";
 import {
@@ -29,7 +30,7 @@ export async function restText(
     async () => {
       const auth = await makeAuthHeaders();
       authSource = auth.source;
-      return fetch(url, { method: "GET", headers: auth.headers, redirect: "manual" });
+      return githubFetch(url, { method: "GET", headers: auth.headers, redirect: "manual" });
     },
     t0,
     (response, durationMs) =>
@@ -141,7 +142,7 @@ async function followRestTextRedirect(
   const logUrl = redactUrl(location);
   appendEntry(formatRequestEntry({ n: n2, kind: "restText", method: "GET", url: logUrl }));
   const t1 = performance.now();
-  const redirectRes = await fetch(location);
+  const redirectRes = await githubFetch(location);
   appendEntry(
     formatResponseEntry({
       n: n2,

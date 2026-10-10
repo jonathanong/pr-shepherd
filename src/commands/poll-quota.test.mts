@@ -2,7 +2,11 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GitHubRequestError } from "../github/errors.mts";
 import { exhaustedPrimaryLimitDelayMs } from "./poll-rate-limit-delay.mts";
-import { pollRateLimitRetryAfterMs, quotaPollIntervalMs } from "./poll-quota.mts";
+import {
+  carryQuotaWarning,
+  pollRateLimitRetryAfterMs,
+  quotaPollIntervalMs,
+} from "./poll-quota.mts";
 
 const BANDS = [
   { remainingPercent: 30, pollIntervalMinutes: 2 },
@@ -62,10 +66,73 @@ describe("quotaPollIntervalMs", () => {
     ).toBe(600_000);
   });
 
+  it("ignores stale GraphQL usage after REST becomes the active transport", () => {
+    expect(
+      quotaPollIntervalMs(
+        BANDS,
+        {
+          graphql: { remaining: 400, limit: 5000 },
+          rest: [{ resource: "core", remaining: 4000, limit: 5000 }],
+        },
+        60_000,
+        MAX_MS,
+        "rest",
+      ),
+    ).toBe(60_000);
+  });
+
+  it("still throttles on low REST core in REST mode", () => {
+    expect(
+      quotaPollIntervalMs(
+        BANDS,
+        {
+          graphql: { remaining: 4000, limit: 5000 },
+          rest: [{ resource: "core", remaining: 400, limit: 5000 }],
+        },
+        60_000,
+        MAX_MS,
+        "rest",
+      ),
+    ).toBe(600_000);
+  });
+
+  it("keeps GraphQL-mode cadence based on both reported budgets", () => {
+    expect(
+      quotaPollIntervalMs(
+        BANDS,
+        {
+          graphql: { remaining: 400, limit: 5000 },
+          rest: [{ resource: "core", remaining: 4000, limit: 5000 }],
+        },
+        60_000,
+        MAX_MS,
+        "graphql",
+      ),
+    ).toBe(600_000);
+  });
+
   it("ignores missing usage, empty bands, and a zero limit", () => {
     expect(quotaPollIntervalMs(BANDS, undefined, 60_000, MAX_MS)).toBe(60_000);
     expect(quotaPollIntervalMs([], graphql(1), 60_000, MAX_MS)).toBe(60_000);
     expect(quotaPollIntervalMs(BANDS, graphql(1, 0), 60_000, MAX_MS)).toBe(60_000);
+  });
+});
+
+describe("carryQuotaWarning", () => {
+  it("drops stale GraphQL warnings after REST fallback but retains a REST core warning", () => {
+    const graphqlWarning = {
+      resource: "graphql" as const,
+      thresholdPercent: 10,
+      remaining: 400,
+      limit: 5000,
+      resetAt: 1_700_000_000,
+      pollIntervalMinutes: 10,
+      pollTimeoutMinutes: 20,
+    };
+    const coreWarning = { ...graphqlWarning, resource: "core" as const };
+    expect(carryQuotaWarning(graphqlWarning, undefined, "rest")).toBeUndefined();
+    expect(carryQuotaWarning(coreWarning, undefined, "rest")).toBe(coreWarning);
+    expect(carryQuotaWarning(graphqlWarning, undefined, "graphql")).toBe(graphqlWarning);
   });
 });
 

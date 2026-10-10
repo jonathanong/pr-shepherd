@@ -2,10 +2,11 @@
 import { loadConfig } from "../config/load.mts";
 import { ShepherdError } from "../exit-codes.mts";
 import { getRepoInfo } from "../github/client.mts";
+import { getGithubTransport } from "../github/transport.mts";
 import { withApiTelemetryScope, summarizeApiTelemetry } from "../github/api-telemetry.mts";
 import { fetchPollSummary } from "../github/poll-summary.mts";
 import { sleep } from "../util/sleep.mts";
-import { aggregateQuotaWarning, quotaPollIntervalMs } from "./poll-quota.mts";
+import { aggregateQuotaWarning, carryQuotaWarning, quotaPollIntervalMs } from "./poll-quota.mts";
 import { aggregateCancelFromPulls, aggregateRateLimitTargets } from "./poll-rate-limit-cancel.mts";
 import { createUntilTerminalRateLimitRetry } from "./poll-rate-limit-wait.mts";
 import type { PollSummaryCommandOptions, PollSummaryResult } from "../types.mts";
@@ -73,6 +74,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
       last = await runPollSummaryCore(opts);
       rateLimitRetry.reset();
     } catch (error) {
+      pendingQuotaWarning = carryQuotaWarning(pendingQuotaWarning, undefined);
       if (last?.selection.kind === "stack" && isMissingStack(error)) {
         const explicit = await runPollSummaryCore({
           ...opts,
@@ -81,7 +83,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
         });
         if (explicit.prs.every((item) => item.state === "MERGED")) {
           const warning = await aggregateQuotaWarning(explicit, quotaBands, opts.intervalSeconds);
-          if (warning) pendingQuotaWarning = warning;
+          pendingQuotaWarning = carryQuotaWarning(pendingQuotaWarning, warning);
           return attachUsage(
             {
               ...explicit,
@@ -140,7 +142,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
         ? last.nextAction === "shepherd" && last.reason !== "waiting"
         : last.prs.some((item) => item.action === "fix_code");
     const warning = await aggregateQuotaWarning(last, quotaBands, opts.intervalSeconds);
-    if (warning) pendingQuotaWarning = warning;
+    pendingQuotaWarning = carryQuotaWarning(pendingQuotaWarning, warning);
     if (allTerminal) {
       return attachUsage(
         {
@@ -192,7 +194,13 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
     const elapsedMs = Date.now() - start;
     const sleepMs = debounceUntil
       ? Math.min(intervalMs, Math.max(debounceUntil - Date.now(), 0))
-      : quotaPollIntervalMs(quotaBands, summarizeApiTelemetry(), intervalMs, MAX_TIMER_MS);
+      : quotaPollIntervalMs(
+          quotaBands,
+          summarizeApiTelemetry(),
+          intervalMs,
+          MAX_TIMER_MS,
+          getGithubTransport(),
+        );
     if (!opts.untilTerminal && debounceUntil === null) {
       const remainingMs = timeoutMs - elapsedMs;
       if (remainingMs <= 0 || remainingMs + TIMER_DRIFT_TOLERANCE_MS < sleepMs) {

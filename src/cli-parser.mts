@@ -28,12 +28,46 @@ import {
 import { handleCheckBlocker } from "./cli/check-blocker-handler.mts";
 import { handleQueueRemoval } from "./cli/queue-removal-handler.mts";
 import { setupLog } from "./log/setup.mts";
+import { handleApplyMerge } from "./cli/apply-merge-handler.mts";
+import { extractTransportArgs } from "./cli/transport-args.mts";
+import { parseGithubTransport } from "./github/transport-mode.mts";
+import { runWithGithubTransport } from "./github/transport.mts";
 
 // ---------------------------------------------------------------------------
 // Entry
 // ---------------------------------------------------------------------------
 
 export async function main(argv: string[]): Promise<void> {
+  const extracted = extractTransportArgs(argv.slice(2));
+  const dispatched = [...argv.slice(0, 2), ...extracted.args];
+  // Help and version retain their I/O-free short circuit, even with invalid flags.
+  if (
+    extracted.args.some((arg) => arg === "--help" || arg === "-h") ||
+    extracted.args[0] === "--version" ||
+    extracted.args[0] === "-v" ||
+    extracted.args[0] === "log-file" ||
+    (extracted.args[0] === "admin" && extracted.args[1] === "log-file") ||
+    (extracted.args[0] === "journal" && extracted.args[1] === "extract")
+  ) {
+    return dispatch(dispatched);
+  }
+  let mode;
+  try {
+    mode =
+      extracted.transport === undefined ? undefined : parseGithubTransport(extracted.transport);
+  } catch (error) {
+    process.stderr.write(
+      `pr-shepherd: ${error instanceof Error ? error.message : String(error)}\n`,
+    );
+    process.exitCode = EXIT.USAGE;
+    return;
+  }
+  return runWithGithubTransport(mode, () => dispatch(dispatched), {
+    verbose: extracted.args.includes("--verbose"),
+  });
+}
+
+async function dispatch(argv: string[]): Promise<void> {
   const args = argv.slice(2); // strip node + script path
 
   const subcommand = args[0];
@@ -151,6 +185,9 @@ function warnLegacyAlias(alias: string, replacement: string): void {
 async function handleApply(args: string[]): Promise<void> {
   const action = args[0];
   switch (action) {
+    case "merge":
+      await handleApplyMerge(args.slice(1));
+      return;
     case "review":
       await handleResolve(args.slice(1));
       return;

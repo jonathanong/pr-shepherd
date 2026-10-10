@@ -43,6 +43,19 @@ linear ancestry reconcile successfully, `--merge` names the highest ready prefix
 remains non-terminal until every layer is merged. Do not assert aggregate rebase/push
 instructions: they are intentionally absent.
 
+Transport tests should cover these contracts across HTTP, state-machine, and fixture layers where
+appropriate: proxy environment variables configure the HTTP client without network access; `auto`
+chooses the configured cloud transport and switches only on the documented GraphQL-blocked response,
+exhausted primary quota, or bounded outage; ordinary permission, credential, or query errors and
+secondary limits do not switch. REST field gaps remain unknown and allow clean readiness only with
+complete CI and no sampled actionable feedback. Unknown capabilities attempt eligible mutations;
+GitHub denials use the one-look review skip or `authorization-required` mark-ready path. REST
+pagination must surface data beyond first-page limits. Partial writes report completed operations
+accurately. Explicit transport selection is honored, stack merge uses the supported selected-transport
+route, async merge results persist by operation identifier and resume safely, and text/JSON plus MCP
+structured/Markdown stay equivalent. Do not require exact REST/GraphQL parity or silently drop
+unsupported operations.
+
 Fixture numbers are not unique today (`42`, `43`, `46`, `47` each have more than
 one entry, and `36` is skipped) — this is harmless (directories are addressed
 by full name, not by number) but pick an unused number for new fixtures rather
@@ -124,3 +137,16 @@ In CI, `vitest` fails on a missing or stale snapshot instead of writing it
 (`process.env.CI`, set automatically by GitHub Actions) — so a fixture with no
 committed snapshot, or a source change that would change one, is caught, not
 silently regenerated.
+
+## Transport scenario coverage
+
+`rest-transport.scenario.test.mts` exercises real local HTTP responses through
+the REST reader and iterate/poll orchestration, rather than mocking the
+normalized batch. It covers pending CI, a cloud `--until-terminal` invocation
+resumed by a fresh transport scope with first-look feedback shown once before
+ready evidence is recorded, an unknown thread status escalating after its
+one-look display, and cloud CCR mark-ready. These scenarios also assert that
+REST ticks do not issue GraphQL requests. Keep the contract aligned with transport fallback, unknown
+capabilities, pagination, partial-write denial, REST-to-GraphQL switching,
+async stack resume, and equivalent text/JSON/MCP projections as those
+integration cases are added.

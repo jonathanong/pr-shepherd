@@ -72,10 +72,14 @@ export function buildReadyMergeOutcome(
   );
   const plan = buildMergeCommandPlan({
     pr: report.pr,
+    ...(report.transport && { transport: report.transport }),
     repo: report.repo,
     nodeId: report.nodeId,
     headSha: report.headSha ?? "unknown",
     queue,
+    queueKnown: !(report.transportUnavailable ?? []).some(({ field }) =>
+      ["branchProtection", "branchRules"].includes(field),
+    ),
     ...(report.allowedMergeMethods && { allowedMergeMethods: report.allowedMergeMethods }),
   });
   if ("unavailable" in plan) return unavailableMergeResult(base, report, plan.unavailable);

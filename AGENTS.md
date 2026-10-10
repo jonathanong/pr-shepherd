@@ -30,13 +30,11 @@ The invariant extends to MCP: a tool's `structuredContent` and its Markdown `con
 
 ## GitHub API
 
-All GitHub I/O uses GraphQL by default. The only permitted REST call sites are:
+GitHub I/O uses the configured transport: `github.transport` is `auto` (default), `graphql`, or `rest`; the CLI `--transport` option and library/MCP option select the same mode. `auto` starts with REST when `CLAUDE_CODE_REMOTE=true`. Otherwise it starts with GraphQL and switches the remainder of the process to REST only after the recognized Claude Code GraphQL 403, proven primary GraphQL exhaustion, or an outage after bounded GraphQL retries. Credential errors, ordinary permission/query errors, and secondary rate limits do not trigger fallback. Proxy settings must be honored for both transports; never disable TLS verification.
 
-- **Actions jobs/logs** (`src/checks/triage.mts`, and the job-log download extracted from it into `src/checks/job-log.mts`) — GitHub's GraphQL schema does not expose job-level data or log downloads.
-- **`getMergeableState` fallback** (`src/github/client.mts`) — REST `GET /pulls/{n}` triggers GitHub's lazy mergeability computation when GraphQL returns `UNKNOWN`.
-- **Primary GraphQL exhaustion probe** (`src/commands/poll-rate-limit-wait.mts`) — REST `GET /pulls/{n}` checks for merge or closure while GraphQL is unavailable.
+REST transport is a supported GitHub API path, not an ad-hoc exception list. GraphQL remains the normal default outside the auto-selection cases above. REST data can omit fields GraphQL provides; preserve those as unknown rather than inventing values. In particular, a clean merge state with complete CI and complete feedback evidence can be READY without `reviewDecision` or branch-protection data. REST has no viewer-capability equivalents: when REST omits a capability, attempt an otherwise-eligible supported mutation and let GitHub's response decide. GraphQL mutations remain fail-closed unless the capability is explicitly true. An actual denied automatic review mutation is a one-look skip and does not count toward `fix-thrash`; a denied mark-ready operation escalates with `authorization-required`.
 
-Any new `rest()` call outside these three cases must be justified against this list. GraphQL is preferred for all read paths; mutations that GitHub exposes via GraphQL must use GraphQL.
+Actions jobs/logs, REST mergeability refreshes, and primary GraphQL exhaustion probes remain REST call sites in GraphQL mode. REST-mode unsupported operations must surface an explicit transport-unsupported skip, error, or escalation according to the operation contract. Do not silently omit them. Keep CLI text/JSON and MCP structured/Markdown projections equivalent for the data available on the selected transport.
 
 ## Git operations
 

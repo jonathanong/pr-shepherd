@@ -7,9 +7,11 @@ import type {
 } from "../types.mts";
 import type { ApiUsage, GraphqlQuotaWarning } from "../types/api-usage.mts";
 import { formatApiUsage, formatQuotaWarning } from "./api-usage-formatter.mts";
+import { formatTransportEvidence } from "./transport-formatter.mts";
 
-/** Agent-facing stack row. Planning keeps the richer PollSummaryItem. */
 interface StackLayerView {
+  transport?: "rest";
+  transportUnavailable?: Array<{ field: string; reason: string }>;
   pr: number;
   title: string;
   url: string;
@@ -33,6 +35,8 @@ interface StackLayerView {
 }
 
 export interface StackOverview {
+  transport?: "rest";
+  transportUnavailable?: Array<{ field: string; reason: string }>;
   mode: "summary";
   repo: string;
   selection: Extract<PollSummaryResult["selection"], { kind: "stack" }>;
@@ -56,6 +60,10 @@ export function projectStackOverview(result: PollSummaryResult): StackOverview {
   return {
     mode: "summary",
     repo: result.repo,
+    ...(result.transport && { transport: result.transport }),
+    ...(result.transportUnavailable?.length && {
+      transportUnavailable: result.transportUnavailable,
+    }),
     selection,
     reason: result.reason,
     ...(result.stackMergeable !== undefined && { stackMergeable: result.stackMergeable }),
@@ -73,6 +81,8 @@ function projectLayer(item: PollSummaryItem, stale: boolean): StackLayerView {
   const removal = item.queueRemoval;
   return {
     pr: item.pr,
+    ...(item.transport && { transport: item.transport }),
+    ...(item.transportUnavailable?.length && { transportUnavailable: item.transportUnavailable }),
     title: item.title,
     url: item.url,
     state: item.state,
@@ -135,6 +145,7 @@ export function formatStackOverview(overview: StackOverview): string {
     "## Layers",
     "",
     ...overview.prs.flatMap(formatLayerLines),
+    ...formatTransportEvidence(overview),
   ];
   if (overview.stackAncestry?.length) {
     lines.push("", "## Stack ancestry", "");
@@ -181,5 +192,9 @@ function formatLayerLines(layer: StackLayerView): string[] {
   return [
     `- [PR #${layer.pr}: ${layer.title}](${layer.url}) — ${facts.join(" · ")}`,
     `  - ${details.join(" · ")}`,
+    ...(layer.transport ? [`  - transport \`${layer.transport}\``] : []),
+    ...(layer.transportUnavailable ?? []).map(
+      ({ field, reason }) => `  - unavailable \`${field}\`: ${reason}`,
+    ),
   ];
 }

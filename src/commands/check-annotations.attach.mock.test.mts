@@ -4,7 +4,10 @@ import type { ClassifiedCheck } from "../types.mts";
 
 vi.mock("../github/client.mts", () => ({ graphql: vi.fn() }));
 
-import { attachAndMergeCheckAnnotations } from "./check-annotations.mts";
+import { attachAndMergeCheckAnnotations as operation } from "./check-annotations.mts";
+import { runWithGithubTransport } from "../github/transport.mts";
+const attachAndMergeCheckAnnotations = (...args: Parameters<typeof operation>) =>
+  runWithGithubTransport("graphql", () => operation(...args));
 import { graphql } from "../github/client.mts";
 import {
   CHECK_RUN_ANNOTATIONS_BATCH_QUERY,

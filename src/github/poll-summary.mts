@@ -1,3 +1,7 @@
+import { readRestStackSummary } from "./rest-stack-summary.mts";
+import { githubOperation, runWithGithubTransport } from "./transport.mts";
+import { fetchRestRawSummaryPr } from "./rest-batch-read.mts";
+import { mapPool } from "../util/pool.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type {
   PollSummaryCommandOptions,
@@ -33,7 +37,7 @@ export interface FetchedPollSummary {
   allowedMergeMethods?: import("../config/merge-method.mts").MergeMethod[];
 }
 
-export async function fetchPollSummary(
+async function fetchSelectedPollSummary(
   opts: PollSummaryCommandOptions,
   repo: RepoInfo,
 ): Promise<FetchedPollSummary> {
@@ -43,7 +47,7 @@ export async function fetchPollSummary(
     throw new ShepherdError("Aggregate poll requires at least two PRs or --stack <PR>", EXIT.USAGE);
   }
   const raw: RawSummaryPr[] = [];
-  let viewerCanAdminister = false;
+  let viewerCanAdminister: boolean | undefined;
   for (let offset = 0; offset < requested.length; offset += MAX_EXPLICIT_PRS_PER_QUERY) {
     const chunk = requested.slice(offset, offset + MAX_EXPLICIT_PRS_PER_QUERY);
     const fetched = await fetchExplicitChunk(chunk, repo);
@@ -64,7 +68,7 @@ export async function fetchRawSummaryPr(pr: number, repo: RepoInfo): Promise<Raw
   return fetched.prs[0]!;
 }
 
-async function fetchExplicitChunk(
+async function fetchGraphqlExplicitChunk(
   prs: number[],
   repo: RepoInfo,
 ): Promise<{ prs: RawSummaryPr[]; viewerCanAdminister: boolean }> {
@@ -90,6 +94,17 @@ async function fetchExplicitChunk(
     await refreshUnknownSummaryMergeability(raw, repo);
   }
   return { prs: rawPrs, viewerCanAdminister: result.data.repository.viewerCanAdminister };
+}
+
+async function fetchExplicitChunk(
+  prs: number[],
+  repo: RepoInfo,
+): Promise<{ prs: RawSummaryPr[]; viewerCanAdminister?: boolean }> {
+  return githubOperation(
+    "PollSummary",
+    () => runWithGithubTransport("graphql", () => fetchGraphqlExplicitChunk(prs, repo)),
+    async () => ({ prs: await mapPool(prs, 4, (pr) => fetchRestRawSummaryPr(pr, repo)) }),
+  );
 }
 
 /**
@@ -128,7 +143,7 @@ async function fetchStackSummary(
  * The shared summary fragment stays intact: one layer is the same shape as an
  * explicit summary, and check hydration still completes windows past 100.
  */
-async function readStackSummary(
+async function readGraphqlStackSummary(
   anchor: number,
   repo: RepoInfo,
   stackSize: number,
@@ -152,4 +167,27 @@ async function readStackSummary(
 
 function deduplicate(values: number[]): number[] {
   return [...new Set(values)];
+}
+
+async function readStackSummary(
+  anchor: number,
+  repo: RepoInfo,
+  stackSize: number,
+): Promise<StackRead<RawSummaryPr>> {
+  return githubOperation(
+    "PollStackSummary",
+    () => readGraphqlStackSummary(anchor, repo, stackSize),
+    () => readRestStackSummary(anchor, repo),
+  );
+}
+
+export function fetchPollSummary(
+  opts: PollSummaryCommandOptions,
+  repo: RepoInfo,
+): Promise<FetchedPollSummary> {
+  return githubOperation(
+    "PollSummarySelection",
+    () => runWithGithubTransport("graphql", () => fetchSelectedPollSummary(opts, repo)),
+    () => fetchSelectedPollSummary(opts, repo),
+  );
 }

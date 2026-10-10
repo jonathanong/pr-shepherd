@@ -1,3 +1,6 @@
+import { githubOperation } from "./transport.mts";
+import { readRestFeedback } from "./rest-feedback-read.mts";
+import { resolveRestThreadRoot, restThreadId } from "./rest-identities.mts";
 import { graphqlWithRateLimit, type RateLimitInfo, type RepoInfo } from "./client.mts";
 import { GitHubRequestError } from "./errors.mts";
 import { rateLimitKind } from "./rate-limit-kind.mts";
@@ -30,7 +33,7 @@ interface NextPageResponse {
 }
 
 /** Best-effort transcript evidence; it never filters user-supplied mutation IDs. */
-export async function fetchReplyThreadTranscripts(
+async function fetchGraphqlReplyThreadTranscripts(
   pr: number,
   repo: RepoInfo,
   requestedIds: readonly string[],
@@ -117,4 +120,34 @@ async function completeThread(
 
 function isThrottle(error: unknown): boolean {
   return error instanceof GitHubRequestError && rateLimitKind(error) !== null;
+}
+
+export function fetchReplyThreadTranscripts(
+  pr: number,
+  repo: RepoInfo,
+  requestedIds: readonly string[],
+): Promise<Map<string, string>> {
+  if (requestedIds.length === 0) return Promise.resolve(new Map());
+  return githubOperation(
+    "ReplyThreadTranscripts",
+    () => fetchGraphqlReplyThreadTranscripts(pr, repo, requestedIds),
+    async () => {
+      const feedback = await readRestFeedback(pr, repo);
+      const result = new Map<string, string>();
+      for (const id of new Set(requestedIds)) {
+        try {
+          const root = await resolveRestThreadRoot(repo, pr, id);
+          const thread = feedback.threads.find((thread) => thread.id === restThreadId(root));
+          if (thread)
+            result.set(
+              id,
+              threadTranscriptBodies((thread.comments ?? []).map((comment) => comment.body)),
+            );
+        } catch {
+          /* Transcript evidence never prohibits an explicit mutation. */
+        }
+      }
+      return result;
+    },
+  );
 }

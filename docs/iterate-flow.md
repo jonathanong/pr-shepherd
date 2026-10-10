@@ -119,18 +119,18 @@ Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/ready-since.txt` (`<uni
 
 All failing checks — including timeout, cancelled, startup-failure, flaky failures, and `merge_group` checks from the active/latest queue commit — route here, except a check recorded as blocked on an external pull request or issue that is still open. That check does not count toward this step, does not get a `rerun:` command, and does not increment fix-attempt or fix-thrash. If it was the only cause, the tick is `wait` and the log names the blocker (`owner/name#N`). When the blocker is merged or closed, the check stays in this step and `## Instructions` says to update the PR branch from its base (for example `gh pr update-branch <pr> --rebase`) and not to rerun the job. Queue checks are classified separately from PR-head checks so supersession never crosses commit boundaries. The `fix` payload carries `conclusion` for each failing check; `workflowName`, `jobName`, `failedStep`, `logExcerpt`, and `relatedJobs` are populated only when triage runs (not for cancelled or startup-failure checks).
 
-CONFLICTS is included so merge conflicts and review comments can be handled in one tick. Iterate surfaces raw `**branch**` state; it does not tell the caller how to rebase a standalone PR. A native stack layer (`mergeRequirements.stack`) is the exception, because updating one layer from its base branch strands every layer above it. Native-stack rebases:
+CONFLICTS is included so merge conflicts and review comments can be handled in one tick. Iterate surfaces raw `**branch**` state; it does not tell the caller how to rebase a standalone PR. A native stack layer (`mergeRequirements.stack`) is the exception, because updating one layer from its base branch strands every layer above it. In REST mode, use the repository's stack-update procedure named in the instructions. GraphQL mode uses these gh-stack steps:
 
-- Import with `gh stack checkout <mergeRequirements.stack.number>` when `gh stack` does not track the stack locally. Use the stack number, not the PR number.
+- In GraphQL mode, import with `gh stack checkout <mergeRequirements.stack.number>` when `gh stack` does not track the stack locally. REST mode uses the repository's stack-update procedure. Use the stack number, not the PR number.
 - The printed step points at the Branch update playbook.
-- That playbook covers confirming each local layer is at its PR head before the printed `gh stack push`, and `gh stack rebase --continue`. It does not print a second push.
+- That playbook covers confirming each local layer is at its PR head before publishing the rewritten stack, and `gh stack rebase --continue` in GraphQL mode. It does not print a second push.
 - A `gh stack merge` step points at the Stack merge playbook. That playbook does not push.
-- An upper layer behind its own PR base gets `gh stack rebase --upstack --no-trunk` from that base, not from the stack trunk `mergeRequirements.stack.baseRefName`. Stale-boundary repair uses the same command.
+- In GraphQL mode, an upper layer behind its own PR base gets `gh stack rebase --upstack --no-trunk` from that base, not from the stack trunk `mergeRequirements.stack.baseRefName`. REST mode follows the repository's stack-update procedure. Stale-boundary repair uses the same transport-appropriate route.
 - An upper layer that already contains that base (`baseRef.compare(headRef).behindBy === 0`) conflicts with the stack trunk. The summary says conflicts with stack trunk `<trunk>` (`stackTrunkConflict` in JSON). The instruction is a whole-stack `gh stack rebase` from the bottom open layer.
 - The bottom open layer is the one whose PR base is that trunk, including a higher layer GitHub retargeted after the layers below it merged. It gets the same whole-stack rebase.
-- Push and completion use `gh stack push`, not a push of the PR head alone.
+- Publish the rewritten stack with the repository's stack-update procedure in REST mode and `gh stack push` in GraphQL mode, not a push of the PR head alone.
 - A conflicting head with a complete empty check-suite page and no check runs says GitHub did not start `pull_request` workflows after Shepherd has seen that head for at least 2 minutes. Commit time is not used: GitHub's Commit object has no push timestamp. An unreadable seen marker omits the note.
-- A behind layer whose workflow rerun already failed gets the same stack rebase and `gh stack push` in its repeated-workflow recovery.
+- A behind layer whose workflow rerun already failed gets the same transport-appropriate stack update and push in its repeated-workflow recovery.
 
 **Deferred while queued:** with `--merge` enabled, the PR currently in the merge queue, and `actions.workWhileQueued` not `true`, everything in the bullet list above **except** `checks.failing` and `mergeStatus.status === 'CONFLICTS'` (and check-run annotations) does not count toward this step — a Shepherd-initiated push right now would eject the PR from the queue. That work falls through to step 4.5 instead, which reports it as `deferredWork` counts on the `wait` result. Checks and conflicts are never deferred; they always route here regardless of queue state.
 
@@ -146,7 +146,7 @@ CONFLICTS is included so merge conflicts and review comments can be handled in o
 
 There is no extra `mergeStateStatus === "CLEAN"` requirement. A draft that derived `DRAFT` (including a draft that is also behind) can still be marked ready when the Shepherd status is `READY`.
 
-**Side-effects:** `markPullRequestReadyForReview` GraphQL mutation.
+**Side-effects:** The selected transport's mark-ready operation. REST uses the supported CCR route; an unavailable route is surfaced as `transport-unsupported`.
 
 **Emits:** `action: 'mark_ready'`
 
@@ -154,7 +154,7 @@ There is no extra `mergeStateStatus === "CLEAN"` requirement. A draft that deriv
 
 ### 4.5. Active merge and queue removal
 
-An active auto-merge request or merge-queue entry emits `wait` after actionable checks are handled. When the PR is in the merge queue and non-CI work was deferred at step 3 (see above), that `wait` result also carries raw `deferredWork` counts (threads/comments/changes-requested-reviews/review-summaries) — omitted when nothing was held back. Plain active auto-merge (no queue membership) never defers anything and never carries `deferredWork`. When `--merge` reaches its execution point, iterate emits a head-pinned ordinary auto-merge command plus a plain-merge fallback, or a queue command plus a GraphQL enqueue fallback; it does not gate these explicit requests on `viewerCanEnableAutoMerge`. GitHub reports any authorization or policy failure. If `--merge` is enabled and the latest queue removal has no actionable failure, iterate emits `escalate` with the raw removal fields. A removal whose freshness GitHub can no longer verify (the removed queue commit is unavailable) is treated as stale and does not escalate. A squash or rebase removal is also stale when the current head reached the PR after the removal, even when that commit's committer time is earlier.
+An active auto-merge request or merge-queue entry emits `wait` after actionable checks are handled. When the PR is in the merge queue and non-CI work was deferred at step 3 (see above), that `wait` result also carries raw `deferredWork` counts (threads/comments/changes-requested-reviews/review-summaries) — omitted when nothing was held back. Plain active auto-merge (no queue membership) never defers anything and never carries `deferredWork`. When `--merge` reaches its execution point, iterate emits transport-aware head-pinned ordinary merge or queue instructions, including any supported fallback; it does not gate these explicit requests on `viewerCanEnableAutoMerge`. GitHub reports authorization or policy failures. If `--merge` is enabled and the latest queue removal has no actionable failure, iterate emits `escalate` with the raw removal fields. A removal whose freshness GitHub can no longer verify (the removed queue commit is unavailable) is treated as stale and does not escalate. A squash or rebase removal is also stale when the current head reached the PR after the removal, even when that commit's committer time is earlier.
 
 ### 5. Wait
 

@@ -2,9 +2,19 @@
 
 [← README](../README.md) | [context.md](context.md)
 
-This page is **how GitHub data is fetched**, **what each GraphQL operation costs**, and **how to keep a poll from exhausting the GraphQL quota**. A typical green tick is one GraphQL batch. Extra pages use a slim follow-up query. REST supplements run only where GraphQL cannot return the data.
+This page describes GitHub transports, GraphQL operation cost, and how to keep a poll from exhausting API budgets. `github.transport` selects `auto` (default), `graphql`, or `rest`; the CLI `--transport` flag and library/MCP option select the same mode. In `auto`, `CLAUDE_CODE_REMOTE=true` starts with REST. Elsewhere Shepherd starts with GraphQL and switches to REST for the rest of the process only after the recognized Claude Code GraphQL 403, proven primary GraphQL exhaustion, or an outage after bounded retries. Credential errors, ordinary permission/query errors, and secondary limits do not trigger fallback. Proxy settings apply to both clients.
+
+REST may not provide every field available through GraphQL; unavailable fields stay unknown, and transport-unsupported operations produce a surfaced skip, error, or escalation. Each selected transport's text, JSON, and MCP outputs still project equivalent available information. A clean merge state with complete CI and complete feedback evidence can establish READY even if REST cannot supply `reviewDecision` or branch-protection details. A queued PR may use REST for supported queue interactions; queue enqueue is not presumed GraphQL-only. See [configuration](configuration.md#github-api-transport) and [escalations](escalations.md#transport-unsupported).
+
+The observed Claude Code proxy contract includes `GET /pulls/{n}/ccr/review_threads`, `POST /pulls/{n}/ccr/comments/{comment_id}/resolve`, and `POST /pulls/{n}/ccr/ready_for_review`. These routes support thread reads, resolve, and mark-ready in REST mode. The corresponding unresolve, auto-merge, and convert-to-draft `ccr` routes have not had their request/response contracts verified, so Shepherd treats those operations as unsupported until they are recorded and implemented. REST also has no comment-minimize or file-view operation. Unsupported automatic cleanup is a surfaced one-look skip; an explicit requested operation returns a clear unsupported error or `transport-unsupported` handoff.
 
 Related: [graphql-usage.md](graphql-usage.md) (points per command), [authentication.md](authentication.md) (token pools), [configuration.md](configuration.md) (`watch.graphqlQuotaWarnings`), [debugging.md](debugging.md) (rate-limit exhaustion), [actions.md](actions.md) (quota-warning output).
+
+## REST snapshot coverage
+
+REST reads use the core API pool and paginate list endpoints with `per_page=100` and GitHub's `Link` header. A full snapshot repeats the core PR read at the end and retries once when the head, base, or revision changes during pagination. REST does not use the GraphQL `PrFingerprint` shortcut, because the REST snapshot cannot provide all policy, capability, and queue inputs needed to validate a cached report.
+
+REST returns raw check runs, workflow suites, review states, partial applicable branch rules, and native-stack membership where the endpoint supplies them. It does not currently report queue membership, enqueue state, or queue-removal history; queue metadata is retained only when a documented operation response supplies it. A 403/404 from classic branch-protection reads leaves protection unknown; aggregate `reviewDecision` and viewer capabilities are unavailable. Native stacks use GitHub's `/stacks?pull_request=N` lookup followed by `/stacks/{number}`; an authoritative 404 is an error rather than evidence that the PR is a standalone branch. The observed Claude Code proxy routes and supported mutation gaps are listed above.
 
 ## GitHub metering
 
@@ -26,6 +36,8 @@ Other limits that are not the hourly point budget:
 | Secondary rate limit  | Burst / concurrency / mutation abuse. **Does not** decrement remaining                                            | HTTP 200 with GraphQL errors, or HTTP 403, often with `Retry-After` and a `secondary rate limit` message; `EXIT.TEMPFAIL` (75) |
 
 Mutations cannot select `rateLimit { cost }` (that field lives on the Query root). Shepherd records them as `unmeasuredRequestCount` and still reads remaining/limit from response headers.
+
+REST requests use GitHub's `core` budget and GraphQL requests use the separate `graphql` budget. `apiUsage` retains telemetry from both pools, including GraphQL attempts made before an automatic switch. Quota warnings and poll cadence follow the active transport: REST mode uses REST core only, while GraphQL mode considers GraphQL and REST core usage. A pending REST core warning remains active through the poll loop; stale GraphQL warnings are discarded after a switch. A transport switch is logged once in verbose output; it is not a signal that the original error was harmless or that the two snapshots have identical fields.
 
 Queries select this sibling so cost is exact:
 

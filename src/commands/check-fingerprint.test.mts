@@ -16,6 +16,12 @@ vi.mock("../github/client.mts", () => ({
 import { fingerprintInputDigest, loadPrFingerprint } from "../state/pr-fingerprint.mts";
 import { fetchPrFingerprint } from "../github/fingerprint.mts";
 import { getMergeableState } from "../github/client.mts";
+import {
+  getGithubTransport,
+  githubOperation,
+  runWithGithubTransport,
+} from "../github/transport.mts";
+import { GitHubRequestError } from "../github/errors.mts";
 import { tryReuseFingerprintReport } from "./check-fingerprint.mts";
 import {
   testFingerprint,
@@ -143,6 +149,32 @@ describe("tryReuseFingerprintReport", () => {
     mockLoad.mockResolvedValue(null);
     await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("disables fingerprint reuse when REST is selected before reading", async () => {
+    mockLoad.mockResolvedValue(stored(waitReport()));
+    await runWithGithubTransport("rest", async () => {
+      await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+      expect(mockLoad).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+  });
+
+  it("disables fingerprint reuse when the fingerprint read switches from GraphQL to REST", async () => {
+    mockLoad.mockResolvedValue(stored(waitReport()));
+    await runWithGithubTransport("auto", async () => {
+      mockFetch.mockImplementationOnce(async () =>
+        githubOperation(
+          "fingerprint-test",
+          async () => {
+            throw new GitHubRequestError("GraphQL unavailable", { status: 503 });
+          },
+          async () => FP,
+        ),
+      );
+      await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+      expect(getGithubTransport()).toBe("rest");
+    });
   });
 
   it.each([

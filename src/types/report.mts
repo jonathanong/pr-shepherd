@@ -32,7 +32,7 @@ export interface RuleAutoResolveReport {
 }
 
 export interface FirstLookThread extends ReviewThread {
-  firstLookStatus: "outdated" | "resolved" | "minimized";
+  firstLookStatus: "outdated" | "resolved" | "minimized" | "unknown";
   autoResolved?: boolean;
   edited?: boolean;
 }
@@ -55,6 +55,8 @@ export type ShepherdStatus =
   | "UNKNOWN";
 
 export interface ShepherdReport {
+  transport?: "rest";
+  transportUnavailable?: Array<{ field: string; reason: string }>;
   pr: number;
   /** GitHub node ID of the PR — used for mutations (e.g. markPullRequestReadyForReview). */
   nodeId: string;
@@ -241,6 +243,7 @@ export interface RelevantCheck {
 }
 
 export interface GlobalOptions {
+  transport?: import("../github/transport.mts").GithubTransport;
   prNumber?: number;
   targetRepository?: { owner: string; name: string }; // Explicit repository from a qualified PR.
   format: "text" | "json";

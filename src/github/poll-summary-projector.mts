@@ -1,7 +1,7 @@
+import { pollCommandFields } from "./poll-summary-command.mts";
 import { loadConfig } from "../config/load.mts";
 import { updateReadyDelay } from "../commands/ready-delay.mts";
 import { formatPrUrl } from "../pr-reference.mts";
-import { buildPrShepherdCommand } from "../cli/runner.mts";
 import { loadSeenMap } from "../state/seen-comments.mts";
 import { isReadyReceiptCurrent, readReadyReceipt } from "../state/ready-receipts.mts";
 import type {
@@ -20,6 +20,7 @@ import { applyOpenCheckBlockers } from "./poll-summary-check-blockers.mts";
 import { normalizePollSummaryState, routePollSummary } from "./poll-summary-route.mts";
 import { hydrateReadyAnnotationProbe, readyFingerprint } from "./poll-summary-annotation-probe.mts";
 import { applyUnreportedRequiredChecks } from "./poll-summary-unreported.mts";
+import { aliasThreadSeenMarkers } from "./rest-identities.mts";
 export async function summarizePollSummaryPr(
   raw: RawSummaryPr,
   repo: RepoInfo,
@@ -30,6 +31,12 @@ export async function summarizePollSummaryPr(
 ): Promise<PollSummaryItem> {
   const repoName = `${repo.owner}/${repo.name}`;
   const seen = await loadSeenMap({ owner: repo.owner, repo: repo.name, pr: raw.number });
+  await aliasThreadSeenMarkers(
+    repo,
+    raw.number,
+    raw.reviewThreads.nodes.map(({ id }) => id),
+    seen,
+  );
   const checks = summarizePollSummaryChecks(raw);
   applyUnreportedRequiredChecks(raw, checks, mergeTargetContexts);
   const review = await summarizePollSummaryReview(raw, seen, viewerCanAdminister);
@@ -116,6 +123,8 @@ export async function summarizePollSummaryPr(
   return {
     pr: raw.number,
     repo: repoName,
+    ...(raw.transport && { transport: raw.transport }),
+    ...(raw.transportUnavailable?.length && { transportUnavailable: raw.transportUnavailable }),
     title: raw.title,
     url: raw.url || formatPrUrl(repoName, raw.number),
     ...(raw.author?.login && { authorLogin: raw.author.login }),
@@ -175,26 +184,4 @@ function detectBlockingReviewer(raw: RawSummaryPr): boolean {
       (review) => review.state === "PENDING" && matches(review.author),
     )
   );
-}
-
-function pollCommandFields(
-  repo: string,
-  pr: number,
-  isDraft: boolean,
-  opts: PollSummaryCommandOptions,
-): Pick<PollSummaryItem, "pollCommand" | "pollProbe"> {
-  const autoMarkReadyDisabled =
-    opts.noAutoMarkReady || loadConfig().actions.autoMarkReady === false;
-  const boundedDraft = isDraft && autoMarkReadyDisabled;
-  const args = boundedDraft
-    ? [formatPrUrl(repo, pr), "--timeout", "1s", "--debounce", "0s", "--no-auto-mark-ready"]
-    : [formatPrUrl(repo, pr), "--until-terminal"];
-  if (opts.merge && opts.stackPrNumber === undefined) args.push("--merge");
-  if (opts.readyDelaySeconds !== undefined)
-    args.push("--ready-delay", `${opts.readyDelaySeconds}s`);
-  if (opts.stallTimeoutSeconds !== undefined)
-    args.push("--stall-timeout", `${opts.stallTimeoutSeconds}s`);
-  if (opts.noAutoMarkReady && !boundedDraft) args.push("--no-auto-mark-ready");
-  const pollCommand = buildPrShepherdCommand(args).text;
-  return boundedDraft ? { pollCommand, pollProbe: true } : { pollCommand };
 }

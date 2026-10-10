@@ -36,6 +36,10 @@ export function buildTerminalCancelResult(report: ShepherdReport): IterateResult
   return {
     pr: report.pr,
     repo: report.repo,
+    ...(report.transport && { transport: report.transport }),
+    ...(report.transportUnavailable?.length && {
+      transportUnavailable: report.transportUnavailable,
+    }),
     status: report.status,
     mergeStateStatus: report.mergeStatus.mergeStateStatus,
     mergeStatus: report.mergeStatus.status,

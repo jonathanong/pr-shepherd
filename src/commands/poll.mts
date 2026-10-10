@@ -3,14 +3,15 @@ import type { IterateCommandOptions, IterateResult } from "../types.mts";
 import { sleep } from "../util/sleep.mts";
 import { withPollApiUsage } from "./poll-run.mts";
 import { loadConfig } from "../config/load.mts";
-import { quotaPollIntervalMs } from "./poll-quota.mts";
+import { carryQuotaWarning, quotaPollIntervalMs } from "./poll-quota.mts";
 import { onePrCancelFromPulls, onePrRateLimitTargets } from "./poll-rate-limit-cancel.mts";
 import { createUntilTerminalRateLimitRetry } from "./poll-rate-limit-wait.mts";
-import { writeDebounceProgress, writeWaitProgress } from "./poll-progress.mts";
-
-function noteRuleAutoResolve(result: IterateResult): void {
-  if (result.ruleAutoResolve?.summary) process.stderr.write(`${result.ruleAutoResolve.summary}\n`);
-}
+import {
+  writeDebounceProgress,
+  writeRuleAutoResolveProgress,
+  writeWaitProgress,
+} from "./poll-progress.mts";
+import { getGithubTransport } from "../github/transport.mts";
 
 export interface PollCommandOptions extends IterateCommandOptions {
   intervalSeconds: number;
@@ -23,7 +24,6 @@ export interface PollCommandOptions extends IterateCommandOptions {
 const DEFAULT_POLL_DEBOUNCE_SECONDS = 60;
 const MAX_TIMER_MS = 2 ** 31 - 1;
 const TIMER_DRIFT_TOLERANCE_MS = 500;
-/** @deprecated Hidden implementation for the legacy `poll` alias. */
 export function runPoll(opts: PollCommandOptions): Promise<IterateResult> {
   return withPollApiUsage(
     () => runPollCore(opts),
@@ -53,7 +53,6 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
   const untilTerminal = untilTerminalOpt === true;
   let lastWaitSignature: string | null = null;
   let pendingQuotaWarning: IterateResult["quotaWarning"];
-  // Pin the PR resolved by the first tick; branch inference only matches OPEN PRs.
   let prNumber = opts.prNumber;
   let debounceUntil: number | null = null;
   const rateLimitRetry = createUntilTerminalRateLimitRetry();
@@ -63,7 +62,6 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
     const remainingBefore = untilTerminal
       ? Number.POSITIVE_INFINITY
       : timeoutMs - (Date.now() - start);
-    // Cache only internal continuation ticks; returned ticks must fetch BatchPr.
     const allowCache =
       debounceUntil === null && remainingBefore + TIMER_DRIFT_TOLERANCE_MS >= intervalMs;
     const iterateTick = (fingerprintCache: boolean) =>
@@ -101,11 +99,11 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
     };
     lastResult = await runTick(allowCache);
     prNumber ??= lastResult.pr;
-    if (lastResult.quotaWarning !== undefined) pendingQuotaWarning = lastResult.quotaWarning;
+    pendingQuotaWarning = carryQuotaWarning(pendingQuotaWarning, lastResult.quotaWarning);
     const refreshIfReturning = async (): Promise<void> => {
       if (lastResult?.fingerprintReused !== true) return;
       lastResult = await runTick(false);
-      if (lastResult.quotaWarning !== undefined) pendingQuotaWarning = lastResult.quotaWarning;
+      pendingQuotaWarning = carryQuotaWarning(pendingQuotaWarning, lastResult.quotaWarning);
     };
     if (
       untilTerminal &&
@@ -117,7 +115,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       if (lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) {
         debounceUntil ??= Date.now() + debounceMs;
         const remainingMs = Math.max(debounceUntil - Date.now(), 0);
-        noteRuleAutoResolve(lastResult);
+        writeRuleAutoResolveProgress(lastResult);
         writeDebounceProgress(tick, Date.now() - start, remainingMs);
         await sleep(Math.min(intervalMs, remainingMs));
         continue;
@@ -138,6 +136,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
         lastResult.apiUsage,
         intervalMs,
         MAX_TIMER_MS,
+        getGithubTransport(),
       );
       if (!untilTerminal) {
         const remainingMs = timeoutMs - elapsedMs;
@@ -155,7 +154,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
         verbose,
         lastWaitSignature,
       });
-      noteRuleAutoResolve(lastResult);
+      writeRuleAutoResolveProgress(lastResult);
       await sleep(sleepMs);
       continue;
     }
@@ -171,6 +170,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
         lastResult.apiUsage,
         intervalMs,
         MAX_TIMER_MS,
+        getGithubTransport(),
       );
       if (!untilTerminal) {
         const remainingMs = timeoutMs - elapsedMs;
@@ -179,12 +179,12 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
           break;
         }
       }
-      noteRuleAutoResolve(lastResult);
+      writeRuleAutoResolveProgress(lastResult);
       await sleep(sleepMs);
       continue;
     }
     if (lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) {
-      noteRuleAutoResolve(lastResult);
+      writeRuleAutoResolveProgress(lastResult);
       debounceUntil ??= Date.now() + debounceMs;
       const remainingMs = debounceUntil - Date.now();
       if (remainingMs > 0) {

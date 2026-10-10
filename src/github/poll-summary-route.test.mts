@@ -34,6 +34,14 @@ describe("routePollSummary", () => {
     mockLoadConfig.mockReturnValue({ actions: { autoMarkReady: true, workWhileQueued: false } });
   });
   it.each([
+    [
+      { transport: "rest", mergeStateStatus: "NEW_SERVER_STATE" },
+      {},
+      {},
+      { merge: true },
+      "wait",
+      "pending-or-unknown",
+    ],
     [{ state: "CLOSED" }, {}, {}, {}, "cancel", "closed"],
     [{ mergeable: "CONFLICTING" }, {}, {}, {}, "fix_code", "merge-conflicts"],
     [{}, { failing: 1 }, {}, {}, "fix_code", "failing-checks"],

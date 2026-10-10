@@ -3,6 +3,7 @@ import { classifyItem, type SeenMarker } from "../state/seen-comments.mts";
 import type { MinimizeCommentsPolicy } from "../config/load.mts";
 import type { ActionableComment, PrComment } from "../types.mts";
 import type { NormalizedBotUsernames } from "./authors.mts";
+import { canGenerateGithubMutation } from "../github/mutation-policy.mts";
 
 interface VisibleCommentClassification {
   actionable: ActionableComment[];
@@ -15,13 +16,15 @@ export function classifyVisibleComments(
   seenMap: Map<string, SeenMarker>,
   minimizeComments: MinimizeCommentsPolicy | undefined,
   botUsernames: NormalizedBotUsernames = new Set(),
+  deniedMinimizeIds: ReadonlySet<string> = new Set(),
 ): VisibleCommentClassification {
   const actionable: ActionableComment[] = [];
   const minimizeIds: string[] = [];
   const toMarkSeen: ActionableComment[] = [];
   for (const c of comments.filter((comment) => !comment.isMinimized)) {
     if (
-      c.viewerCanMinimize === true &&
+      !deniedMinimizeIds.has(c.id) &&
+      canGenerateGithubMutation(c.viewerCanMinimize, "minimize") &&
       shouldMinimizeAuthor(c.authorType, minimizeComments, c.author, botUsernames)
     ) {
       actionable.push(c);

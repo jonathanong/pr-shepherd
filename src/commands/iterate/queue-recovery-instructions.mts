@@ -2,6 +2,7 @@
 
 import type { AgentCheck, ShepherdReport } from "../../types.mts";
 import { playbookPointer } from "../playbook-pointer.mts";
+import { getGithubTransport } from "../../github/transport.mts";
 
 /** Which recovery command, if any, Shepherd printed for a failure that does not reproduce. */
 export type QueueEjectionRecovery = "requeue" | "acknowledge" | "none";
@@ -49,7 +50,7 @@ function buildQueueEjectionInstruction(
     "only if the failure does not reproduce on the updated head, neither the update nor a code change altered the head, and no other blocker remains.";
   const guard =
     recovery === "requeue"
-      ? `Run \`requeue:\` ${reproduce} If gh reports auto-merge is disabled, run \`requeue API fallback:\` instead.`
+      ? `Run \`requeue:\` ${reproduce}${getGithubTransport() === "rest" ? " If pending, resume the same REST command; enqueued is not merged." : " If gh reports auto-merge is disabled, run `requeue API fallback:` instead."}`
       : recovery === "acknowledge"
         ? `Run \`acknowledge queue removal:\` ${reproduce}`
         : "Shepherd printed no queue command for this session, so do not enqueue the PR.";

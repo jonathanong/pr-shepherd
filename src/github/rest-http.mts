@@ -3,6 +3,7 @@ import { appendEntry, nextEntry } from "../log/log-file.mts";
 import { formatRequestEntry, formatResponseEntry } from "../log/session.mts";
 import { loadEtagEntry, storeEtagEntry, type StateKey } from "../state/rest-cache.mts";
 import { GitHubRequestError } from "./errors.mts";
+import { githubFetch } from "./github-fetch.mts";
 import { makeAuthHeaders } from "./http-auth.mts";
 import { requestWithTokenRetry } from "./http-request.mts";
 import {
@@ -36,6 +37,8 @@ function githubApiUrl(path: string): string {
 export interface RestResult<T = unknown> {
   data: T;
   rateLimit?: RateLimitInfo;
+  /** GitHub pagination header, retained for named REST readers. */
+  link?: string;
 }
 
 /**
@@ -45,6 +48,8 @@ export interface RestResult<T = unknown> {
  * the primary REST rate-limit quota.
  */
 export interface RestRequestOptions {
+  /** Endpoints such as merge-async return useful state on documented non-2xx responses. */
+  acceptStatuses?: readonly number[];
   conditional?: {
     key: StateKey;
     /** Logical cache name; must be unique per distinct resource + page. */
@@ -78,7 +83,7 @@ export async function restWithRateLimit<T = unknown>(
     async () => {
       const auth = await makeAuthHeaders(cached ? { "If-None-Match": cached.etag } : undefined);
       authSource = auth.source;
-      return fetch(url, {
+      return githubFetch(url, {
         method,
         headers: auth.headers,
         body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -95,6 +100,7 @@ export async function restWithRateLimit<T = unknown>(
         durationMs,
         authSource,
       }),
+    method === "GET" || method === "HEAD",
   );
 
   const durationMs = Math.round(performance.now() - retryT0);
@@ -120,12 +126,12 @@ export async function restWithRateLimit<T = unknown>(
       }),
     );
     recordApiTelemetry({ kind: "REST", method, authSource, rateLimit });
-    return { data: cached.body as T, rateLimit };
+    return { data: cached.body as T, rateLimit, link: res.headers.get("link") ?? undefined };
   }
 
   const ct = res.headers.get("content-type") ?? "";
 
-  if (!res.ok) {
+  if (!res.ok && !opts?.acceptStatuses?.includes(res.status)) {
     const text = await res.text();
     appendEntry(
       formatResponseEntry({
@@ -184,7 +190,7 @@ export async function restWithRateLimit<T = unknown>(
         });
       }
     }
-    return { data: json, rateLimit };
+    return { data: json, rateLimit, link: res.headers.get("link") ?? undefined };
   }
   appendEntry(
     formatResponseEntry({

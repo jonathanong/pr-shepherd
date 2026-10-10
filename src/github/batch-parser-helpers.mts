@@ -39,7 +39,10 @@ export function mapCheckRunNode(
   const event = node.checkSuite?.workflowRun?.event ?? null;
   const workflowName = node.checkSuite?.workflowRun?.workflow?.name?.trim() || undefined;
   const workflowId = resolveWorkflowId(node.checkSuite?.workflowRun?.workflow?.databaseId);
-  const runId = extractRunId(node.detailsUrl);
+  const runId =
+    node.checkSuite?.workflowRun?.databaseId != null
+      ? String(node.checkSuite.workflowRun.databaseId)
+      : extractRunId(node.detailsUrl);
   const summary = extractCheckRunSummary(node.title, node.summary);
   const rawCreatedAt = node.checkSuite?.workflowRun?.createdAt ?? node.checkSuite?.createdAt;
   const rawUpdatedAt = node.checkSuite?.workflowRun?.updatedAt ?? node.checkSuite?.updatedAt;
@@ -63,7 +66,9 @@ export function mapCheckRunNode(
     ...(completedAtUnix !== undefined && { completedAtUnix }),
     ...(updatedAtUnix !== undefined && { updatedAtUnix }),
     ...(summary !== undefined && { summary }),
-    ...((node.annotations?.nodes.length ?? 0) > 0 && { hasAnnotations: true as const }),
+    ...(((node.annotations?.totalCount ?? 0) > 0 || (node.annotations?.nodes.length ?? 0) > 0) && {
+      hasAnnotations: true as const,
+    }),
   };
 }
 

@@ -11,7 +11,7 @@ Install the MCP server: [mcp.md](mcp.md). Classification rules: [configuration.m
 ```ts
 import { createPrShepherd } from "pr-shepherd";
 
-const shepherd = createPrShepherd({ cwd: "/path/to/repo" });
+const shepherd = createPrShepherd({ cwd: "/path/to/repo", transport: "auto" });
 
 const tick = await shepherd.iterate({ pr: 42, merge: true });
 const group = await shepherd.iterate({ prs: [42, 43] });
@@ -19,7 +19,14 @@ const stack = await shepherd.iterate({ stack: 43 });
 const journal = await shepherd.getJournal({ pr: "owner/repo#42" });
 const applied = await shepherd.apply({
   pr: 42,
+  transport: "rest",
   operations: [
+    {
+      type: "merge",
+      requireSha: "<40-char lowercase sha>",
+      mergeAction: "direct_merge",
+      mergeMethod: "squash",
+    },
     {
       type: "review_mutations",
       replyThreadIds: ["PRRT_…"],
@@ -37,7 +44,7 @@ const patches = await shepherd.buildSuggestionPatches({
 });
 ```
 
-`createPrShepherd({ cwd })` returns the canonical methods below plus a deprecated singular adapter:
+`createPrShepherd({ cwd, transport })` returns the canonical methods below plus a deprecated singular adapter. `transport` accepts `auto`, `graphql`, or `rest` and selects the same GitHub API transport as the CLI `--transport` option and `github.transport` configuration key. The MCP server accepts the equivalent option. In `auto`, Claude Code cloud sessions start with REST; other environments start with GraphQL and use the documented fallback triggers. REST fields or operations that are unavailable remain explicit unknowns or surfaced unsupported outcomes.
 
 | Method                                               | Same as                                |
 | ---------------------------------------------------- | -------------------------------------- |
@@ -62,9 +69,11 @@ until all layers merge and the stack returns `CANCEL`.
 Aggregate selectors never perform mutations or emit rebase/push commands. The caller owns recurrence
 and follows the returned instructions.
 
-`apply` runs `operations` in list order after validating every operation. Types: `review_mutations`, `mark_files_viewed`, `append_journal`, `acknowledge_queue_removal`. `mark_files_viewed` performs the requested `markFileAsViewed` mutations and surfaces GitHub's per-file results. Direct review operations forward explicitly supplied IDs without iterate's author, capability, or current-state policy; direct journal operations likewise honor explicit caller intent. GitHub is authoritative for authorization and mutation validity. Replies and dismissals require `message`. `requireSha` must be a full 40-character lowercase hex SHA.
+`apply` runs `operations` in list order after validating every operation. Types: `merge`, `review_mutations`, `mark_files_viewed`, `append_journal`, and `acknowledge_queue_removal`. `merge` requires `requireSha` (a full 40-character lowercase SHA) and `mergeAction` (`direct_merge`, `merge_queue`, or `default`); `mergeMethod` (`merge`, `squash`, or `rebase`) is valid only for `direct_merge`. It requires REST transport, either from the client/API `transport` option or `input.transport`. A merge result carries `{ pr, repo, status, details, uncertain? }`; `status` is `pending`, `enqueued`, `merged`, or `failed`. Pending and enqueued results are not merged. The CLI prints the same result as text or JSON and rerunning the same request resumes its persisted UUID without resubmission. `details` may include `message`, `uuid`, `expected_head_sha`, `merge_action`, `merge_method`, `bypass_rules`, and merged `sha`; `uncertain: true` marks an outcome that needs reconciliation before another request.
 
-`getJournal({ pr })` fetches one PR body with GraphQL `GetPrBody` and returns the same typed result as
+`mark_files_viewed` performs the requested mutations where the selected transport supports them and surfaces GitHub's per-file results; REST currently reports the operation as explicitly unsupported. Direct review operations forward explicitly supplied IDs without iterate's author, capability, or current-state policy; direct journal operations likewise honor explicit caller intent. GitHub is authoritative for authorization and mutation validity. Replies and dismissals require `message`.
+
+`getJournal({ pr })` fetches one PR body through the selected transport and returns the same typed result as
 `extractShepherdJournal(body)` without exposing the body or PR node ID. The API accepts a qualified
 reference or a numeric PR in the configured checkout repository. An absent journal returns
 `{ ok: true, journal: null }`; malformed journal content returns `{ ok: false, error }`.

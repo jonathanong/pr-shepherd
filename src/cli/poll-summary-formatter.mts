@@ -2,6 +2,7 @@ import type { PollSummaryItem, PollSummaryResult } from "../types.mts";
 import { formatApiUsage, formatQuotaWarning } from "./api-usage-formatter.mts";
 import { withPollSummaryInstructions } from "../commands/poll-summary-instructions.mts";
 import { formatStackOverview, projectStackOverview } from "./stack-overview.mts";
+import { formatTransportEvidence } from "./transport-formatter.mts";
 
 export function formatPollSummaryResult(result: PollSummaryResult): string {
   if (result.selection.kind === "stack") return formatStackOverview(projectStackOverview(result));
@@ -14,6 +15,7 @@ export function formatPollSummaryResult(result: PollSummaryResult): string {
     "## Pull requests",
     "",
     ...result.prs.map(formatItem),
+    ...formatTransportEvidence(result),
   ];
   if (result.stackAncestry?.length) {
     lines.push("", "## Stack ancestry", "");
@@ -72,6 +74,10 @@ function formatItem(item: PollSummaryItem): string {
         ]
       : []),
     `  - reasons: ${item.reasons.map((reason) => `\`${reason}\``).join(", ")}`,
+    ...(item.transport ? [`  - transport \`${item.transport}\``] : []),
+    ...(item.transportUnavailable ?? []).map(
+      ({ field, reason }) => `  - unavailable \`${field}\`: ${reason}`,
+    ),
     ...(item.pollCommand
       ? [`  - pollCommand: \`${item.pollCommand}\`${item.pollProbe ? " · bounded probe" : ""}`]
       : []),

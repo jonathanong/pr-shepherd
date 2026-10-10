@@ -2,6 +2,7 @@ import type { BatchPartition } from "../classify/apply.mts";
 import { autoMinimizeComments, autoResolveThreads } from "../comments/resolve.mts";
 import { runJournal } from "./journal/index.mts";
 import type { AutoMinimizedItem, AutoResolvedThread, BatchPrData } from "../types.mts";
+import { canGenerateGithubMutation } from "../github/mutation-policy.mts";
 import {
   decorateAutoResolveError,
   formatRuleAutoResolveJournalItem,
@@ -69,14 +70,25 @@ export async function applySuppressedRuleAutoResolve(input: {
       reviewSummaryIds: input.partition.ruleAutoResolveReviewSummaryIds,
     };
   }
-  const commentIds = input.partition.ruleAutoResolveCommentIds.filter((id) =>
-    input.partition.suppressedCommentIds.has(id),
+  const canMinimize = <T extends { id: string; viewerCanMinimize?: boolean }>(
+    items: readonly T[],
+    id: string,
+  ): boolean =>
+    canGenerateGithubMutation(items.find((item) => item.id === id)?.viewerCanMinimize, "minimize");
+  const threadFor = (id: string) => input.batch.reviewThreads.find((thread) => thread.id === id);
+  const commentIds = input.partition.ruleAutoResolveCommentIds.filter(
+    (id) => input.partition.suppressedCommentIds.has(id) && canMinimize(input.batch.comments, id),
   );
-  const reviewSummaryIds = input.partition.ruleAutoResolveReviewSummaryIds.filter((id) =>
-    input.partition.suppressedReviewSummaryIds.has(id),
+  const reviewSummaryIds = input.partition.ruleAutoResolveReviewSummaryIds.filter(
+    (id) =>
+      input.partition.suppressedReviewSummaryIds.has(id) &&
+      canMinimize(input.batch.reviewSummaries, id),
   );
-  const threadIds = input.partition.ruleAutoResolveThreadIds.filter((id) =>
-    input.partition.suppressedThreadIds.has(id),
+  const threadIds = input.partition.ruleAutoResolveThreadIds.filter(
+    (id) =>
+      input.partition.suppressedThreadIds.has(id) &&
+      threadFor(id)?.isResolved === false &&
+      canGenerateGithubMutation(threadFor(id)?.viewerCanResolve, "resolve"),
   );
   const minimizeIds = [...commentIds, ...reviewSummaryIds];
   const [minimized, resolved] = await Promise.all([

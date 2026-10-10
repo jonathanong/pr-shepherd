@@ -5,7 +5,10 @@ import { GitHubRequestError } from "./errors.mts";
 
 vi.mock("./client.mts", () => ({ graphql: vi.fn() }));
 
-import { fetchCheckRunAnnotationsBatch } from "./check-annotations-batch.mts";
+import { fetchCheckRunAnnotationsBatch as operation } from "./check-annotations-batch.mts";
+import { runWithGithubTransport } from "./transport.mts";
+const fetchCheckRunAnnotationsBatch = (...args: Parameters<typeof operation>) =>
+  runWithGithubTransport("graphql", () => operation(...args));
 import { graphql } from "./client.mts";
 import { CHECK_RUN_ANNOTATIONS_BATCH_QUERY, CHECK_RUN_ANNOTATIONS_QUERY } from "./queries.mts";
 

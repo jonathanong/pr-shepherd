@@ -55,7 +55,7 @@ export function appendMergeQueueHeader(lines: string[], result: IterateResult): 
 
 export function formatMergeAction(header: string, result: IterateResultMerge): string {
   const commandLines = [
-    `- ${result.merge.mode === "queue" ? "merge queue" : "auto-merge"}: ${inlineCode(renderMergeCommand(result.merge.command))}`,
+    `- ${result.merge.mode === "rest" ? "REST merge" : result.merge.mode === "queue" ? "merge queue" : "auto-merge"}: ${inlineCode(renderMergeCommand(result.merge.command))}`,
   ];
   if (result.merge.fallbackCommand) {
     commandLines.push(

@@ -8,7 +8,10 @@ import {
   registerHooks,
   REPO,
 } from "../../test-helpers/github/batch.test-support.mts";
-import { fetchPrBatch } from "./batch.mts";
+import { fetchPrBatch as operation } from "./batch.mts";
+import { runWithGithubTransport } from "./transport.mts";
+const fetchPrBatch = (...args: Parameters<typeof operation>) =>
+  runWithGithubTransport("graphql", () => operation(...args));
 
 registerHooks();
 

@@ -5,6 +5,7 @@ import { readCiRetrigger, sameCiRetrigger, writeCiRetrigger } from "../../state/
 import { buildFixCompletionInstruction } from "./check-instructions.mts";
 import { buildEscalateHumanMessage, buildEscalateSuggestion } from "./escalate.mts";
 import { buildNativeStackRebaseInstruction } from "./native-stack-rebase.mts";
+import { getGithubTransport } from "../../github/transport.mts";
 
 interface UnreportedPlan {
   escalate?: IterateResult;
@@ -50,12 +51,14 @@ function buildUnreportedRequiredInstructions(input: {
   if (!input.behind) {
     return [
       facts,
-      `Retrigger workflows once for this head with \`gh pr close ${input.pr} -R ${input.repo}\` then \`gh pr reopen ${input.pr} -R ${input.repo}\`.`,
+      getGithubTransport() === "rest"
+        ? `Retrigger workflows once for this head: run \`gh api --method PATCH repos/${input.repo}/pulls/${input.pr} -f state=closed\`, then run \`gh api --method PATCH repos/${input.repo}/pulls/${input.pr} -f state=open\`.`
+        : `Retrigger workflows once for this head with \`gh pr close ${input.pr} -R ${input.repo}\` then \`gh pr reopen ${input.pr} -R ${input.repo}\`.`,
       "If those checks are still missing on the next poll, investigate why the workflows did not start. Do not close the PR again. Shepherd escalates with `required-checks-unreported` when this remains the only blocker.",
     ];
   }
   const rebase = input.stackRebase
-    ? `${input.stackRebase} Then push the rewritten stack with \`gh stack push\`.`
+    ? `${input.stackRebase} Then push the rewritten stack${getGithubTransport() === "rest" ? " using the repository's stack-update procedure" : " with `gh stack push`"}.`
     : `Rebase onto \`${input.baseBranch}\` and push.`;
   return [
     facts,

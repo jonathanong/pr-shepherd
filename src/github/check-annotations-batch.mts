@@ -1,3 +1,10 @@
+import {
+  githubOperation,
+  runWithGithubTransport,
+  isGithubReadFallbackError,
+} from "./transport.mts";
+import { mapPool } from "../util/pool.mts";
+import { ensureRestCheckIdentities } from "./rest-annotation-read.mts";
 import { pollRateLimitRetryAfterMs } from "../commands/poll-quota.mts";
 import type { CheckAnnotation } from "../types.mts";
 import {
@@ -51,7 +58,7 @@ function retryableRateLimit(err: unknown): boolean {
  * use the single-node query and only run when that first page has `hasNextPage`.
  * A retryable rate limit aborts the remaining chunks and pages.
  */
-export async function fetchCheckRunAnnotationsBatch(
+async function fetchGraphqlCheckRunAnnotationsBatch(
   checkRunIds: string[],
   cacheOpts?: AnnotationCacheOptions,
 ): Promise<CheckAnnotationBatchResult> {
@@ -83,7 +90,7 @@ async function fetchChunk(
     const nodes = await requestFirstPages(chunk);
     await applyBatchNodes(chunk, nodes, annotations, failures, cacheOpts);
   } catch (err) {
-    if (retryableRateLimit(err)) throw err;
+    if (retryableRateLimit(err) || isGithubReadFallbackError(err)) throw err;
     // A non-rate-limit batch failure (one NOT_FOUND or FORBIDDEN node rejects
     // the whole `nodes(ids:)` request) must not drop the other ids.
     await fetchChunkOneByOne(chunk, annotations, failures, cacheOpts);
@@ -107,7 +114,7 @@ async function applyBatchNodes(
       // eslint-disable-next-line no-await-in-loop
       annotations.set(id, await fetchCheckRunAnnotations(id, cacheOpts, node.annotations));
     } catch (err) {
-      if (retryableRateLimit(err)) throw err;
+      if (retryableRateLimit(err) || isGithubReadFallbackError(err)) throw err;
       failures.push({ checkRunId: id, error: err });
     }
   }
@@ -124,7 +131,7 @@ async function fetchChunkOneByOne(
       // eslint-disable-next-line no-await-in-loop
       annotations.set(id, await fetchCheckRunAnnotations(id, cacheOpts));
     } catch (err) {
-      if (retryableRateLimit(err)) throw err;
+      if (retryableRateLimit(err) || isGithubReadFallbackError(err)) throw err;
       failures.push({ checkRunId: id, error: err });
     }
   }
@@ -137,4 +144,31 @@ async function requestFirstPages(ids: string[]): Promise<Array<RawBatchNode | nu
     { allowPartialData: true },
   );
   return res.data.nodes ?? [];
+}
+
+export function fetchCheckRunAnnotationsBatch(
+  checkRunIds: string[],
+  cacheOpts?: AnnotationCacheOptions,
+): Promise<CheckAnnotationBatchResult> {
+  return githubOperation(
+    "CheckRunAnnotationsBatch",
+    () =>
+      runWithGithubTransport("graphql", () =>
+        fetchGraphqlCheckRunAnnotationsBatch(checkRunIds, cacheOpts),
+      ),
+    async () => {
+      const annotations = new Map<string, CheckAnnotation[]>();
+      const failures: AnnotationBatchFailure[] = [];
+      await ensureRestCheckIdentities(checkRunIds, cacheOpts);
+      await mapPool([...new Set(checkRunIds)], 4, async (id) => {
+        try {
+          annotations.set(id, await fetchCheckRunAnnotations(id, cacheOpts));
+        } catch (error) {
+          if (retryableRateLimit(error)) throw error;
+          failures.push({ checkRunId: id, error });
+        }
+      });
+      return { annotations, failures };
+    },
+  );
 }

@@ -77,8 +77,8 @@ export interface BatchPrMergeFields {
 
 /** Snapshot of "why can't I merge" requirements vs current PR state. */
 export interface MergeRequirements {
-  approvals: { current: number; requiredCount: number };
-  conversationsResolved: { resolved: boolean; unresolvedCount: number; required: boolean };
+  approvals: { current: number; requiredCount?: number };
+  conversationsResolved: { resolved?: boolean; unresolvedCount?: number; required?: boolean };
   codeOwnerReview?: { required: true };
   lastPushApproval?: { required: true };
   signedCommits?: { required: true };
@@ -90,8 +90,8 @@ export interface MergeRequirements {
   codeScanning?: { required: true };
   mergeQueue?: {
     required: boolean;
-    enabled: boolean;
-    inQueue: boolean;
+    enabled?: boolean;
+    inQueue?: boolean;
     position?: number;
     state?: string;
   };

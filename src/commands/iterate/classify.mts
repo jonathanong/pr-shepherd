@@ -16,6 +16,7 @@ import {
 } from "../../comments/authors.mts";
 import type { MinimizeCommentsPolicy, ResolveOtherHumanThreads } from "../../config/load.mts";
 import { buildThreadMutationRouting } from "./thread-mutation-routing.mts";
+import { canGenerateGithubMutation } from "../../github/mutation-policy.mts";
 
 function dedupeIds(ids: string[]): string[] {
   const seen = new Set<string>();
@@ -47,7 +48,7 @@ export function classifyReviewSummaries(
     unresolvedThreads.flatMap((t) => (t.reviewId !== undefined ? [t.reviewId] : [])),
   );
   const eligible = (r: Review): boolean =>
-    r.viewerCanMinimize === true &&
+    canGenerateGithubMutation(r.viewerCanMinimize, "minimize") &&
     shouldMinimizeAuthor(r.authorType, minimizeComments, r.author, botUsernames) &&
     !blockedReviewIds.has(r.id);
   // First-look summaries still need one tick to surface their body to the agent,
@@ -68,7 +69,7 @@ export function classifyReviewSummaries(
     const surfacedApprovals: Review[] = [];
     for (const r of approvals) {
       if (
-        r.viewerCanMinimize === true &&
+        canGenerateGithubMutation(r.viewerCanMinimize, "minimize") &&
         shouldMinimizeAuthor(r.authorType, minimizeComments, r.author, botUsernames)
       )
         minimizeIds.push(r.id);
@@ -113,12 +114,16 @@ export function buildResolveCommand(
   );
   const canReply = new Set(
     authorizationThreads
-      .filter((thread) => thread.viewerCanReply === true)
+      .filter((thread) => canGenerateGithubMutation(thread.viewerCanReply, "reply"))
       .map((thread) => thread.id),
   );
   const canResolve = new Set(
     authorizationThreads
-      .filter((thread) => thread.viewerCanResolve === true)
+      .filter(
+        (thread) =>
+          thread.isResolved === false &&
+          canGenerateGithubMutation(thread.viewerCanResolve, "resolve"),
+      )
       .map((thread) => thread.id),
   );
   const pairedResolveIds = new Set(routed.pairedResolveThreadIds);
@@ -137,7 +142,7 @@ export function buildResolveCommand(
   // Bot/non-human CHANGES_REQUESTED reviews are auto-dismissed after the agent pushes a fix.
   // Human reviews are left for the reviewer to re-review or dismiss themselves.
   const dismissReviewIds = dedupeIds(
-    viewerAuthorization?.viewerCanAdminister === true
+    canGenerateGithubMutation(viewerAuthorization?.viewerCanAdminister, "dismiss")
       ? reviews
           .filter((r) => !isHumanAuthor(r) || isConfiguredBotAuthor(r, botUsernames))
           .map((r) => r.id)

@@ -278,6 +278,53 @@ describe("pr-shepherd MCP server", () => {
     expect(response.content?.[0]?.text).toContain("**ready-delay** `900s` (override)");
   });
 
+  it("keeps REST transport gaps aligned between MCP structured and Markdown content", async () => {
+    const result = {
+      action: "wait" as const,
+      pr: 3,
+      repo: "openai/pr-shepherd",
+      transport: "rest" as const,
+      transportUnavailable: [
+        { field: "reviewDecision", reason: "REST does not expose aggregate review state" },
+      ],
+      status: "PENDING" as const,
+      state: "OPEN" as const,
+      mergeStateStatus: "CLEAN" as const,
+      mergeStatus: "CLEAN" as const,
+      reviewDecision: null,
+      blockingBotReviewInProgress: false,
+      isDraft: false,
+      shouldCancel: false,
+      remainingSeconds: 0,
+      summary: { passing: 1, skipped: 0, filtered: 0, inProgress: 0, superseded: 0 },
+      baseBranch: "main",
+      branchProtection: null,
+      checks: [],
+      log: "waiting",
+    };
+    const tools = registeredTools(
+      createPrShepherdMcpServer({
+        shepherd: {
+          iterate: vi.fn().mockResolvedValue(result),
+          apply: vi.fn(),
+          buildSuggestionPatches: vi.fn(),
+          buildSuggestionPatch: vi.fn(),
+          getJournal: vi.fn(),
+        },
+      }),
+    );
+
+    const response = await tools.iterate!.handler({ pr: "openai/pr-shepherd#3" });
+    expect(response.structuredContent).toMatchObject({
+      transport: "rest",
+      transportUnavailable: [
+        { field: "reviewDecision", reason: "REST does not expose aggregate review state" },
+      ],
+    });
+    expect(response.content?.[0]?.text).toContain("**transport** `rest`");
+    expect(response.content?.[0]?.text).toContain("`reviewDecision`");
+  });
+
   it("returns equivalent compact aggregate Markdown and structured content", async () => {
     const result = {
       mode: "summary" as const,

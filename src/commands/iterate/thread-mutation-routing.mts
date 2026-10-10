@@ -7,6 +7,7 @@ import {
 import { threadEndedByShepherd } from "../../comments/marker.mts";
 import { shouldResolveOtherHumanThread } from "../../comments/thread-resolve-policy.mts";
 import type { ResolveOtherHumanThreads } from "../../config/load.mts";
+import { canGenerateGithubMutation } from "../../github/mutation-policy.mts";
 import type { AgentThread, ReviewThread } from "../../types.mts";
 
 export type RoutableThread = AgentThread | ReviewThread;
@@ -37,15 +38,24 @@ function shouldPairResolve(
 }
 
 export function threadHasAuthorizedMutation(
-  thread: { id: string; viewerCanReply?: boolean; viewerCanResolve?: boolean },
+  thread: {
+    id: string;
+    isResolved?: boolean;
+    viewerCanReply?: boolean;
+    viewerCanResolve?: boolean;
+  },
   replyThreadIds: ReadonlySet<string>,
   resolveThreadIds: ReadonlySet<string>,
 ): boolean {
   const inReply = replyThreadIds.has(thread.id);
   const inResolve = resolveThreadIds.has(thread.id);
   if (!inReply && !inResolve) return false;
-  if (inReply && thread.viewerCanReply !== true) return false;
-  if (inResolve && thread.viewerCanResolve !== true) return false;
+  if (inReply && !canGenerateGithubMutation(thread.viewerCanReply, "reply")) return false;
+  if (
+    inResolve &&
+    (thread.isResolved !== false || !canGenerateGithubMutation(thread.viewerCanResolve, "resolve"))
+  )
+    return false;
   return true;
 }
 

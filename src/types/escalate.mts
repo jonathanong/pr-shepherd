@@ -4,6 +4,7 @@ import type { CheckStatus, Review } from "./github.mts";
 import type { MergeQueueRemovalStatus } from "./merge-requirements.mts";
 
 export type EscalateTrigger =
+  | "transport-unsupported"
   | "fix-thrash"
   | "base-branch-unknown"
   | "stall-timeout"

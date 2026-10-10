@@ -1,3 +1,7 @@
+import { githubOperation } from "./transport.mts";
+import { readRestPull } from "./rest-pr-core.mts";
+import { readRestPages, restRepoPath, restObject, restNumber } from "./rest-reader-core.mts";
+import { resolveRestIdentity } from "./rest-identities.mts";
 /* eslint-disable max-lines */
 /**
  * High-level GitHub client — wraps http.mts for application-level concerns.
@@ -66,23 +70,19 @@ export async function getCurrentPrNumber(): Promise<number | null> {
 }
 
 /** Returns the PR number for a given branch, or null if no open PR is found. */
-export async function getPrNumberForBranch(
+async function getGraphqlPrNumberForBranch(
   branch: string,
   owner: string,
   repo: string,
 ): Promise<number | null> {
-  try {
-    const result = await httpGraphql<{
-      repository: { pullRequests: { nodes: Array<{ number: number }> } } | null;
-    }>(PR_NUMBER_BY_BRANCH_QUERY, { owner, repo, branch });
-    return result.data.repository?.pullRequests.nodes[0]?.number ?? null;
-  } catch {
-    return null;
-  }
+  const result = await httpGraphql<{
+    repository: { pullRequests: { nodes: Array<{ number: number }> } } | null;
+  }>(PR_NUMBER_BY_BRANCH_QUERY, { owner, repo, branch });
+  return result.data.repository?.pullRequests.nodes[0]?.number ?? null;
 }
 
 /** Returns the `headRefOid` (commit SHA) of the given PR as reported by GitHub. */
-export async function getPrHeadSha(pr: number, owner: string, name: string): Promise<string> {
+async function getGraphqlPrHeadSha(pr: number, owner: string, name: string): Promise<string> {
   const result = await httpGraphql<{
     repository: { pullRequest: { headRefOid: string } | null } | null;
   }>(GET_PR_HEAD_SHA_QUERY, { owner, repo: name, pr });
@@ -99,7 +99,7 @@ export async function getPrHeadSha(pr: number, owner: string, name: string): Pro
 }
 
 /** Fetches the node ID and body text for a PR. GitHub returns null body for empty bodies — coerced to "". */
-export async function getPullRequestBody(
+async function getGraphqlPullRequestBody(
   pr: number,
   owner: string,
   name: string,
@@ -123,7 +123,7 @@ export async function getPullRequestBody(
 }
 
 /** Overwrites the PR body. */
-export async function updatePullRequestBody(pullRequestId: string, body: string): Promise<void> {
+async function updateGraphqlPullRequestBody(pullRequestId: string, body: string): Promise<void> {
   await httpGraphql(UPDATE_PR_BODY_MUTATION, { pullRequestId, body });
 }
 
@@ -200,4 +200,55 @@ function parseRemoteUrl(url: string): RepoInfo {
   }
 
   throw new Error(`Cannot parse GitHub remote URL: ${url}`);
+}
+
+export function getPrNumberForBranch(
+  branch: string,
+  owner: string,
+  name: string,
+): Promise<number | null> {
+  return githubOperation(
+    "PrNumberByBranch",
+    () => getGraphqlPrNumberForBranch(branch, owner, name),
+    async () => {
+      const listed = await readRestPages<Record<string, unknown>>(
+        `${restRepoPath({ owner, name })}/pulls?head=${encodeURIComponent(`${owner}:${branch}`)}&state=open`,
+      );
+      return listed.nodes.length
+        ? restNumber(restObject(listed.nodes[0], "pull request").number, "pull number")
+        : null;
+    },
+  ).catch(() => null);
+}
+export function getPrHeadSha(pr: number, owner: string, name: string): Promise<string> {
+  return githubOperation(
+    "GetPrHeadSha",
+    () => getGraphqlPrHeadSha(pr, owner, name),
+    async () => (await readRestPull(pr, { owner, name })).head.sha,
+  );
+}
+export function getPullRequestBody(
+  pr: number,
+  owner: string,
+  name: string,
+): Promise<{ nodeId: string; body: string }> {
+  return githubOperation(
+    "GetPrBody",
+    () => getGraphqlPullRequestBody(pr, owner, name),
+    async () => {
+      const pull = await readRestPull(pr, { owner, name });
+      return { nodeId: pull.node_id, body: pull.body ?? "" };
+    },
+  );
+}
+export function updatePullRequestBody(pullRequestId: string, body: string): Promise<void> {
+  return githubOperation(
+    "UpdatePrBody",
+    () => updateGraphqlPullRequestBody(pullRequestId, body),
+    async () => {
+      const identity = await resolveRestIdentity(pullRequestId, "pull");
+      await rest("PATCH", `${restRepoPath(identity.repo)}/pulls/${identity.pr}`, { body });
+    },
+    { mutation: true },
+  );
 }

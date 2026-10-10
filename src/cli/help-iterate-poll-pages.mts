@@ -12,6 +12,7 @@ Iterate flags:
   --no-auto-mark-ready           Do not convert draft PRs to ready for review.
   --no-auto-cancel-actionable    Legacy no-op; workflow runs are never cancelled.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
+  --transport auto|graphql|rest  Select GitHub transport. Default: github.transport (auto).
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include verbose iterate fields.
   --help, -h                     Print this help and exit before GitHub, git, config, or log I/O.
@@ -66,6 +67,7 @@ Forwarded iterate flags:
   --no-auto-mark-ready           Do not convert draft PRs to ready for review.
   --no-auto-cancel-actionable    Legacy no-op; workflow runs are never cancelled.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
+  --transport auto|graphql|rest  Select GitHub transport. Default: github.transport (auto).
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include verbose iterate fields and detailed per-tick lines.
   --help, -h                     Print this help and exit before GitHub, git, config, or log I/O.

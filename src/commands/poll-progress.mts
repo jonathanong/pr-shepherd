@@ -86,3 +86,7 @@ export function writeDebounceProgress(tick: number, elapsedMs: number, remaining
     `[poll tick ${tick} / +${elapsedSeconds}s] FIX_CODE — debounce ${remainingSeconds}s remaining\n`,
   );
 }
+
+export function writeRuleAutoResolveProgress(result: IterateResult): void {
+  if (result.ruleAutoResolve?.summary) process.stderr.write(`${result.ruleAutoResolve.summary}\n`);
+}

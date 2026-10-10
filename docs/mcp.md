@@ -4,6 +4,8 @@
 
 pr-shepherd's agent integration is a local stdio MCP server. It shares command implementations, GitHub token resolution, and cascading `.pr-shepherdrc.yml` files with the CLI. Tools gather PR context (`iterate`), apply deterministic GitHub mutations (`apply`), build checked suggestion patches (`build_suggestion_patches`), and read Shepherd Journals (`extract_journal`, `get_journal`). The calling client owns recurrence and any git mutations.
 
+The server uses `github.transport` from configuration or its equivalent `transport: "auto"|"graphql"|"rest"` option. `auto` starts with REST in Claude Code cloud sessions and GraphQL elsewhere, with the same limited fallback triggers as the CLI. REST results may omit GraphQL-only fields; unavailable context stays unknown, and unsupported operations are reported explicitly. See [GitHub API transport](graphql.md#shepherd-graphql).
+
 The published binary is `pr-shepherd-mcp` from the `pr-shepherd` npm package:
 
 ```text
@@ -155,14 +157,14 @@ The server registers five canonical tools plus a deprecated singular suggestion 
 
 Every PR-targeted MCP call requires a repository-qualified selector: either a GitHub PR URL such as `https://github.com/owner/repo/pull/123` or an `owner/repo#123` reference. Singular PR tools require `pr`; aggregate `iterate` accepts `prs` or `stack`. Bare PR numbers and omitted selectors are rejected. `extract_journal` has no PR selector; its only input is the supplied Markdown body. The named repository is the GitHub target and may differ from the server's startup working directory (or the `cwd` supplied to an embedded factory), which remains the local git/configuration/rules context.
 
-| Tool                       | Purpose                                                                                                                   | Side effects                                                                                 |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `iterate`                  | One state-machine tick. Surfaces review items, checks, merge state, and structured review-mutation arguments.             | May mark a draft ready only when GitHub reports `viewerCanUpdate: true`; never cancels runs. |
-| `apply`                    | Ordered review mutations, `mark_files_viewed`, `append_journal`, and `acknowledge_queue_removal` under one required `pr`. | Explicit operations are attempted; GitHub returns per-operation results and errors.          |
-| `extract_journal`          | Extract a validated journal from a supplied Markdown `body`.                                                              | None; no file, stdin, GitHub, or Shepherd-log I/O.                                           |
-| `get_journal`              | Fetch a qualified PR body via GraphQL `GetPrBody` and extract its journal.                                                | Read-only GitHub request; never writes the PR body.                                          |
-| `build_suggestion_patches` | Validate ordered anchored suggestions and return checked diffs plus commit metadata.                                      | None. Never edits the worktree or git history.                                               |
-| `build_suggestion_patch`   | Deprecated one-item adapter for `build_suggestion_patches`.                                                               | None. Never edits the worktree or git history.                                               |
+| Tool                       | Purpose                                                                                                       | Side effects                                                                                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `iterate`                  | One state-machine tick. Surfaces review items, checks, merge state, and structured review-mutation arguments. | With REST, attempts otherwise-eligible supported mutations when capability is omitted; GitHub decides. Never cancels runs.                                    |
+| `apply`                    | Ordered review mutations, file-view, merge, journal, and queue-removal operations under one required `pr`.    | Explicit operations are attempted; merge requires REST and returns its pending/enqueued/merged/failed result, while unsupported REST operations are reported. |
+| `extract_journal`          | Extract a validated journal from a supplied Markdown `body`.                                                  | None; no file, stdin, GitHub, or Shepherd-log I/O.                                                                                                            |
+| `get_journal`              | Fetch a qualified PR body through the selected transport and extract its journal.                             | Read-only GitHub request; never writes the PR body.                                                                                                           |
+| `build_suggestion_patches` | Validate ordered anchored suggestions and return checked diffs plus commit metadata.                          | None. Never edits the worktree or git history.                                                                                                                |
+| `build_suggestion_patch`   | Deprecated one-item adapter for `build_suggestion_patches`.                                                   | None. Never edits the worktree or git history.                                                                                                                |
 
 For review workflow, call `iterate` first. Translate its `resolveCommand` / `resolveOnlyCommand` arguments into an `apply` `review_mutations` operation. Use one `build_suggestion_patches` call for all marked suggestion threads in displayed order. `mark_files_viewed` performs the requested viewed-state mutations and reports GitHub's results. Use `append_journal` only when the caller asks for that mutation; direct apply honors that explicit intent even when `viewerCanUpdate` is false. Journal reads are independent of `iterate`.
 
@@ -292,6 +294,8 @@ The shell command `pr-shepherd [PR]` is the bounded poll dispatcher. It is not a
 The server uses its startup working directory (or an embedded factory's `cwd`) for local git, cascading `.pr-shepherdrc.yml` files, classification rules, and per-worktree debug logging. An explicit `pr` changes only the GitHub target; it does not change that local context. PR-scoped state uses the explicit target repository and PR number.
 
 Token resolution is the same as the CLI: `GH_TOKEN`, `GITHUB_TOKEN`, `gh auth token`, then `GITHUB_PERSONAL_ACCESS_TOKEN`. See [authentication.md](authentication.md).
+
+Requests honor `HTTPS_PROXY`, `HTTP_PROXY`, and `NO_PROXY` for either transport. In cloud sessions, a placeholder token may be replaced by the proxy; local token validation is not authoritative. Keep TLS verification enabled and configure the proxy CA through Node's normal certificate settings.
 
 Other environment variables:
 

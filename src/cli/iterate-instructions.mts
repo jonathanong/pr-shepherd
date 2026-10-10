@@ -43,6 +43,11 @@ export function buildSimpleIterateInstructions(
         "The CLI marked the PR ready for review. Iterate immediately with the same options to continue.",
       ];
     case "merge": {
+      if (result.merge.mode === "rest")
+        return [
+          "Run the `REST merge` command shown above exactly as printed. If its status is `pending`, rerun that same command at the configured polling cadence to resume the recorded request; `enqueued` is not merged.",
+          "Then iterate with the same options until GitHub confirms the PR merged or needs work.",
+        ];
       const instructions = [
         `Run the \`${result.merge.mode === "queue" ? "merge queue" : "auto-merge"}\` command shown above exactly as printed.`,
       ];

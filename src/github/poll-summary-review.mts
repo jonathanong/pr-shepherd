@@ -7,6 +7,7 @@ import { classifyItem, type SeenMarker } from "../state/seen-comments.mts";
 import type { ClassifyItem } from "../classify/types.mts";
 import type { PollSummaryReview } from "../types.mts";
 import type { RawAuthor, RawSummaryPr } from "./poll-summary-raw.mts";
+import { mutationWasDenied } from "../state/seen-comments.mts";
 
 const THREAD_COMMENT_SEPARATOR = "\n\n--- thread comment ---\n\n";
 
@@ -56,7 +57,7 @@ export async function summarizePollSummaryReview(
     const isBot =
       review.author?.__typename === "Bot" || bots.has(review.author?.login.toLowerCase() ?? "");
     if (
-      (isBot && viewerCanAdminister) ||
+      (isBot && viewerCanAdminister && !mutationWasDenied(review.id, review.body, seen)) ||
       classifyItem(review.id, review.body, seen) !== "unchanged"
     )
       actionable += 1;
@@ -70,12 +71,14 @@ export async function summarizePollSummaryReview(
       .join(THREAD_COMMENT_SEPARATOR);
     if (isSuppressed(rules, "review-thread", root, thread.id, thread.path, transcript)) continue;
     const repeatable =
-      root?.viewerDidAuthor === true ||
-      root?.author?.__typename === "Bot" ||
-      bots.has(root?.author?.login.toLowerCase() ?? "");
+      !mutationWasDenied(thread.id, transcript, seen) &&
+      (root?.viewerDidAuthor === true ||
+        root?.author?.__typename === "Bot" ||
+        bots.has(root?.author?.login.toLowerCase() ?? ""));
     const unseen = classifyItem(thread.id, transcript, seen) !== "unchanged";
     if (
-      (!thread.isResolved && (repeatable || unseen)) ||
+      (thread.isResolved === false && (repeatable || unseen)) ||
+      (thread.isResolved === undefined && unseen) ||
       ((thread.isResolved || thread.isOutdated) && unseen)
     )
       actionable += 1;

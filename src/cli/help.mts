@@ -9,6 +9,7 @@ export const USAGE = {
 
 /** Resolve help keys for nested public commands before any command I/O. */
 export function helpKeyForArgs(args: string[]): keyof typeof USAGE {
+  if (args[0] === "apply" && args[1] === "merge") return "apply merge";
   if (args[0] === "apply" && args[1] === "review") return "apply review";
   if (args[0] === "apply" && args[1] === "files") return "apply files";
   if (args[0] === "apply" && args[1] === "journal") return "apply journal";

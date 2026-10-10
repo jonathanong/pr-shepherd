@@ -1,4 +1,5 @@
 import { loadConfig } from "../config/load.mts";
+import { getGithubTransport } from "../github/transport.mts";
 
 interface PrShepherdCommand {
   argv: string[];
@@ -7,7 +8,12 @@ interface PrShepherdCommand {
 
 /** Every emitted pr-shepherd command starts with the configured `cliCommand` launcher. */
 export function buildPrShepherdCommand(args: string[]): PrShepherdCommand {
-  const argv = [...loadConfig().cliCommand, ...args];
+  const transport =
+    getGithubTransport() === "rest" &&
+    !args.some((arg) => arg === "--transport" || arg.startsWith("--transport="))
+      ? ["--transport", "rest"]
+      : [];
+  const argv = [...loadConfig().cliCommand, ...args, ...transport];
   return { argv, text: renderShellCommand(argv) };
 }
 

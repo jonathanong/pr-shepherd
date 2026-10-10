@@ -28,6 +28,7 @@ const thread = {
   author: "bot",
   authorType: "Bot",
   body: "noise",
+  viewerCanResolve: true,
 } as ReviewThread;
 
 function partition(overrides: Partial<BatchPartition> = {}): BatchPartition {
@@ -107,9 +108,17 @@ describe("applySuppressedRuleAutoResolve", () => {
         viewerLogin: "alice",
         reviewThreads: [thread],
         comments: [
-          { id: "c-ok", url: "https://github.com/c/ok" } as BatchPrData["comments"][number],
+          {
+            id: "c-ok",
+            url: "https://github.com/c/ok",
+            viewerCanMinimize: true,
+          } as BatchPrData["comments"][number],
+          { id: "c-bad", viewerCanMinimize: true } as BatchPrData["comments"][number],
+          { id: "c-other", viewerCanMinimize: true } as BatchPrData["comments"][number],
         ],
-        reviewSummaries: [{ id: "r1" } as BatchPrData["reviewSummaries"][number]],
+        reviewSummaries: [
+          { id: "r1", viewerCanMinimize: true } as BatchPrData["reviewSummaries"][number],
+        ],
       }),
       prNumber: 7,
       repo,

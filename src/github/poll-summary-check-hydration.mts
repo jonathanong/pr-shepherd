@@ -1,3 +1,5 @@
+import { githubOperation } from "./transport.mts";
+import { readRestCommitChecks } from "./rest-check-read.mts";
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import type { RawCheckRollup, RawSummaryCommit, RawSummaryPr } from "./poll-summary-raw.mts";
 import { POLL_SUMMARY_CHECK_PAGE_QUERY } from "./queries.mts";
@@ -58,13 +60,29 @@ async function fetchOlderContexts(
   before: string,
   repo: RepoInfo,
 ): Promise<RawCheckContexts | null> {
-  const { data } = await graphqlWithRateLimit<CheckPageResponse>(POLL_SUMMARY_CHECK_PAGE_QUERY, {
-    owner: repo.owner,
-    repo: repo.name,
-    oid,
-    before,
-  });
-  const object = data.repository?.object;
-  if (object?.__typename !== "Commit" || object.oid !== oid) return null;
-  return object.statusCheckRollup?.contexts ?? null;
+  return githubOperation(
+    "PollSummaryCheckPage",
+    async () => {
+      const { data } = await graphqlWithRateLimit<CheckPageResponse>(
+        POLL_SUMMARY_CHECK_PAGE_QUERY,
+        {
+          owner: repo.owner,
+          repo: repo.name,
+          oid,
+          before,
+        },
+      );
+      const object = data.repository?.object;
+      if (object?.__typename !== "Commit" || object.oid !== oid) return null;
+      return object.statusCheckRollup?.contexts ?? null;
+    },
+    async () => {
+      const checks = await readRestCommitChecks(oid, repo);
+      return {
+        totalCount: checks.nodes.length,
+        pageInfo: { hasPreviousPage: false },
+        nodes: checks.nodes as RawCheckContexts["nodes"],
+      };
+    },
+  );
 }

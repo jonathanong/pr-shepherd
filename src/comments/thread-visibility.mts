@@ -53,9 +53,14 @@ export function classifyThreadVisibility(
     repeatableThreadIds?.has(thread.id) ?? true;
   const isOrdinaryHuman = (thread: ReviewThread): boolean =>
     isHumanAuthor(thread) && !isConfiguredBotAuthor(thread, botUsernames);
-  const unresolvedThreads = threads.filter((t) => !t.isResolved);
+  const unknownStatusThreads = threads.filter(
+    (thread) => thread.isResolved === undefined || thread.isOutdated === undefined,
+  );
+  const unresolvedThreads = threads.filter(
+    (thread) => thread.isResolved === false && thread.isOutdated !== undefined,
+  );
   const activeThreads = unresolvedThreads
-    .filter((t) => !t.isOutdated && !t.isMinimized)
+    .filter((t) => t.isOutdated === false && t.isMinimized !== true)
     .flatMap((t) => {
       if (threadEndedByShepherd(t)) return [];
       const repeatAuthor =
@@ -85,18 +90,22 @@ export function classifyThreadVisibility(
     });
   const firstLookThreads: FirstLookThread[] = [
     ...threads.flatMap((t) => {
-      if (!t.isOutdated) return [];
+      if (t.isOutdated !== true || t.isResolved === undefined) return [];
       const visible = classifyFirstLookThread(t, seenMap, "outdated");
       return visible ? [visible] : [];
     }),
     ...threads.flatMap((t) => {
-      if (!t.isResolved || t.isOutdated) return [];
+      if (t.isResolved !== true || t.isOutdated !== false) return [];
       const visible = classifyFirstLookThread(t, seenMap, "resolved");
       return visible ? [visible] : [];
     }),
     ...threads.flatMap((t) => {
-      if (!t.isMinimized || t.isResolved || t.isOutdated) return [];
+      if (!t.isMinimized || t.isResolved !== false || t.isOutdated !== false) return [];
       const visible = classifyFirstLookThread(t, seenMap, "minimized");
+      return visible ? [visible] : [];
+    }),
+    ...unknownStatusThreads.flatMap((thread) => {
+      const visible = classifyFirstLookThread(thread, seenMap, "unknown");
       return visible ? [visible] : [];
     }),
   ];

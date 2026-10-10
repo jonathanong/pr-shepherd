@@ -1,5 +1,6 @@
 import type { StackStatus } from "../../types.mts";
 import { playbookPointer } from "../playbook-pointer.mts";
+import { getGithubTransport } from "../../github/transport.mts";
 
 /**
  * Where a native-stack rebase starts: an upper layer rebases from its parent stack branch
@@ -23,6 +24,15 @@ export function buildNativeStackRebaseInstruction(
   stackNumber: number,
   start: NativeStackRebaseStart,
 ): string {
+  if (getGithubTransport() === "rest") {
+    const boundary =
+      "parentBranch" in start
+        ? `parent branch \`${start.parentBranch}\``
+        : "trunk" in start
+          ? `trunk \`${start.trunk}\``
+          : `bottom open layer PR #${start.bottomPr}`;
+    return `Use the repository's stack-update procedure for native stack #${stackNumber} in \`${repo}\`, starting at ${boundary} and preserving the ordered parent boundaries of every affected upper layer. Read membership with REST-backed Shepherd \`--stack\` output and update and push affected branches using the caller's git workflow. ${playbookPointer("Branch update")}`;
+  }
   const [checkout, command] =
     "parentBranch" in start
       ? [
@@ -86,6 +96,8 @@ export function buildBranchPushInstruction(
   mutationSuffix: string,
   ejectionUpdate = false,
 ): string {
+  if (stackRebase && getGithubTransport() === "rest")
+    return `If the base update or a fix changed any heads, commit the remaining changes and push every affected stack branch using the repository's stack-update procedure${mutationSuffix}. If no heads changed, do not push.`;
   if (ejectionUpdate) {
     const push = stackRebase
       ? "commit any remaining changes on the PR head branch and push the rewritten stack with `gh stack push`"

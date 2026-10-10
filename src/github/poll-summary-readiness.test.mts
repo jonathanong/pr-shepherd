@@ -61,6 +61,24 @@ function raw(
 }
 
 describe("queued readiness", () => {
+  it.each([false, true])("rejects a future REST merge state with queued progress %s", (queued) => {
+    const snapshot = raw("SUCCESS", "SUCCESS", {
+      transport: "rest",
+      mergeable: "MERGEABLE",
+      mergeStateStatus: "NEW_SERVER_STATE",
+      isInMergeQueue: queued,
+    });
+    expect(
+      isCurrentSummaryReady(
+        snapshot,
+        summarizePollSummaryChecks(snapshot),
+        {},
+        {
+          allowQueuedProgress: queued,
+        },
+      ),
+    ).toBe(false);
+  });
   it("allows a running merge-group check after source CI completed", () => {
     const snapshot = raw("SUCCESS", "PENDING");
     expect(

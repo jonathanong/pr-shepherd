@@ -55,7 +55,10 @@ export function rateLimitFromGraphQlResult(
   const message = messages.find(isRateLimitMessage);
   if (message) return buildRateLimitStop(message, meta);
   if (meta.stopOnZeroRemaining === true && meta.rateLimit?.remaining === 0) {
-    return buildRateLimitStop("GitHub GraphQL rate limit remaining is 0", meta);
+    return buildRateLimitStop(
+      `GitHub ${meta.rateLimit?.resource === "core" ? "REST core" : "GraphQL"} rate limit remaining is 0`,
+      meta,
+    );
   }
   return undefined;
 }

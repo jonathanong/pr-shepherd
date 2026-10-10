@@ -8,6 +8,7 @@ Usage:
   pr-shepherd [PR ...] [poll-flags] [iterate-flags]
   pr-shepherd --stack PR [poll-flags] [iterate-flags]
   pr-shepherd iterate [PR] [iterate-flags]
+  pr-shepherd apply merge [PR] --require-sha SHA --merge-action ACTION --transport rest
   pr-shepherd apply review [PR] [review-flags]
   pr-shepherd apply files [PR] [files...] [--tests] [--match REGEX]
   pr-shepherd apply journal [PR] <item> [--dry-run] [--format text|json]
@@ -21,6 +22,7 @@ Usage:
 Commands:
   [PR ...]             Poll one PR, an explicit same-repository set, or a native stack.
   iterate              Run one iterate tick (single-tick alias).
+  apply merge          Submit or resume a guarded asynchronous merge or enqueue request.
   apply review         Apply review-state mutations after fixes.
   apply files          Mark selected changed files as viewed.
   apply journal        Append a list item to the Shepherd Journal details block of a PR body.
@@ -38,6 +40,7 @@ PR argument:
   When omitted, pr-shepherd infers the current branch's pull request.
 
 Common flags:
+  --transport auto|graphql|rest  Select GitHub transport. Default: github.transport (auto).
   --format text|json   Output Markdown text or JSON. Default: text.
   --verbose            Include verbose iterate fields and detailed poll-tick lines.
   --help, -h           Print help and exit before any GitHub, git, config, or log I/O.

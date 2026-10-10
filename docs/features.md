@@ -4,7 +4,7 @@ Shepherd does two jobs: **gather all context for a PR**, then **emit one determi
 
 ## Context gathered
 
-- One GraphQL batch per tick for PR state, branch rules, merge queue/stacks, threads, comments, reviews, and check runs. Extra pages use a slim `batch-pr-page.gql` follow-up, not another full snapshot. REST supplements: job logs, mergeability fallback, and startup-failure runs only when CheckSuites are missing or truncated. See [graphql.md](graphql.md) and [context.md](context.md).
+- GraphQL by default, with a REST transport for Claude Code cloud sessions and narrowly defined fallback after GraphQL blocking, primary exhaustion, or a bounded outage. REST leaves unavailable fields unknown, while text, JSON, and MCP outputs preserve equivalent information for the selected transport. See [graphql.md](graphql.md) and [context.md](context.md).
 - Surfaces inline review threads (full transcript), top-level PR comments, `COMMENTED` summaries, `APPROVED` reviews, and `CHANGES_REQUESTED` reviews. See [comments.md](comments.md).
 - Surfaces GitHub's raw `authorAssociation` and true-only `viewerDidAuthor`, plus Shepherd `authorType`, without deriving a trust label.
 - First-look tracking for outdated/resolved/minimized items; edited bodies re-surface. Poll debounce ticks do not persist seen markers until the post-window tick.

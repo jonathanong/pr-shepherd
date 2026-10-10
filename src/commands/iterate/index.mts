@@ -34,6 +34,8 @@ import { findStaleNativeStackAncestry } from "./stale-ancestry.mts";
 import { annotateBlockedWait, resolveCheckBlockerGate } from "./check-blocker-gate.mts";
 import { buildUnreportedFixResult, planUnreportedRequired } from "./unreported-required.mts";
 import { createCheckExecutionContext } from "../check-execution-context.mts";
+import { transportReadinessGaps } from "../../github/transport-evidence.mts";
+import { buildEscalateHumanMessage } from "./escalate.mts";
 
 export function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
   return withIterateApiUsage(opts, () => runIterateCore(opts));
@@ -314,6 +316,26 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     report.status === "READY" &&
     report.mergeStatus.isDraft &&
     !report.mergeStatus.blockingBotReviewInProgress;
+  const gaps = transportReadinessGaps(report, report.mergeStatus.mergeStateStatus);
+  if (
+    gaps.length > 0 &&
+    report.checks.inProgress.length === 0 &&
+    report.mergeStatus.mergeStateStatus !== "UNKNOWN"
+  ) {
+    await clearReadyReceipt(receiptKey);
+    const escalation = {
+      triggers: ["transport-unsupported" as const],
+      unresolvedThreads: [],
+      ambiguousComments: [],
+      changesRequestedReviews: [],
+      suggestion: gaps.map(({ field, reason }) => `${field}: ${reason}`).join("; "),
+    };
+    return {
+      ...base,
+      action: "escalate",
+      escalate: { ...escalation, humanMessage: buildEscalateHumanMessage(escalation, report.pr) },
+    };
+  }
   const autoMarkReady = !opts.noAutoMarkReady && config.actions.autoMarkReady;
   const markReadyResult = await markReadyIfAuthorized(canMarkReady && autoMarkReady, base, report);
   if (markReadyResult) return markReadyResult;
@@ -404,7 +426,8 @@ async function recordReadyReceipt(
     report.mergeStatus.state !== "OPEN" ||
     report.mergeStatus.isDraft ||
     !report.headSha ||
-    !report.baseRefOid
+    !report.baseRefOid ||
+    transportReadinessGaps(report, report.mergeStatus.mergeStateStatus).length > 0
   )
     return false;
   try {
@@ -483,6 +506,7 @@ async function revalidateReadyReceipt(
     report.mergeStatus.isDraft ||
     !report.headSha ||
     !report.baseRefOid ||
+    transportReadinessGaps(report, report.mergeStatus.mergeStateStatus).length > 0 ||
     (!retainQueuedReceipt && (report.status !== "READY" || hasReadinessWork))
   ) {
     await clearReadyReceipt(key);

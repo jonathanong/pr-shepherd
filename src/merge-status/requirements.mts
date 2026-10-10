@@ -4,16 +4,28 @@ import { EMPTY_BRANCH_RULES } from "../github/batch-parsers-rules.mts";
 export function deriveMergeRequirements(pr: BatchPrData): MergeRequirements {
   const rules = pr.branchRules ?? EMPTY_BRANCH_RULES;
   const currentApprovals = pr.latestReviews.filter((r) => r.state === "APPROVED").length;
-  const unresolvedCount = pr.reviewThreads.filter((t) => !t.isResolved).length;
+  const policyUnavailable =
+    pr.transport === "rest" &&
+    (pr.transportUnavailable ?? []).some(({ field }) =>
+      /^(?:branchRules|branchProtection)(?:\.|$)/.test(field),
+    );
+  const threadStatusUnavailable = pr.reviewThreads.some(
+    (thread) => thread.isResolved === undefined,
+  );
+  const unresolvedCount = threadStatusUnavailable
+    ? undefined
+    : pr.reviewThreads.filter((thread) => thread.isResolved === false).length;
   const req: MergeRequirements = {
     approvals: {
       current: currentApprovals,
-      requiredCount: rules.requiredApprovingReviewCount,
+      ...(!policyUnavailable && { requiredCount: rules.requiredApprovingReviewCount }),
     },
     conversationsResolved: {
-      resolved: unresolvedCount === 0,
-      unresolvedCount,
-      required: rules.requiresConversationResolution,
+      ...(unresolvedCount !== undefined && {
+        resolved: unresolvedCount === 0,
+        unresolvedCount,
+      }),
+      ...(!policyUnavailable && { required: rules.requiresConversationResolution }),
     },
   };
 
@@ -37,8 +49,12 @@ export function deriveMergeRequirements(pr: BatchPrData): MergeRequirements {
   if (queueRequired || pr.isInMergeQueue) {
     req.mergeQueue = {
       required: queueRequired,
-      enabled: Boolean(pr.isMergeQueueEnabled),
-      inQueue: Boolean(pr.isInMergeQueue),
+      ...(pr.transport !== "rest" || pr.isMergeQueueEnabled !== undefined
+        ? { enabled: Boolean(pr.isMergeQueueEnabled) }
+        : {}),
+      ...(pr.transport !== "rest" || pr.isInMergeQueue !== undefined
+        ? { inQueue: Boolean(pr.isInMergeQueue) }
+        : {}),
       ...(pr.mergeQueueEntry?.position !== undefined && { position: pr.mergeQueueEntry.position }),
       ...(pr.mergeQueueEntry?.state !== undefined && { state: pr.mergeQueueEntry.state }),
     };

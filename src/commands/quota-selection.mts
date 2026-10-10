@@ -3,6 +3,7 @@ import { withGraphqlCredentialFingerprint } from "../github/api-telemetry.mts";
 import { composeQuotaWarning } from "../quota-budgets.mts";
 import { evaluateWorktreeGraphqlQuotaWarning } from "../state/graphql-quota-warnings.mts";
 import type { ApiUsage, GraphqlQuotaWarning } from "../types.mts";
+import type { GithubTransport } from "../github/transport.mts";
 
 /** Claim GraphQL and REST core warnings separately, then present one result. */
 export async function selectQuotaWarning(
@@ -10,13 +11,15 @@ export async function selectQuotaWarning(
   bands: GraphqlQuotaWarningBand[],
   usage: ApiUsage,
   persist: boolean,
+  transport?: Exclude<GithubTransport, "auto">,
 ): Promise<GraphqlQuotaWarning | undefined> {
   const core = usage.rest?.find((item) => item.resource === "core");
-  const graphqlWarning = usage.graphql
+  const graphql = transport === "rest" ? undefined : usage.graphql;
+  const graphqlWarning = graphql
     ? await evaluateWorktreeGraphqlQuotaWarning(
         key,
         bands,
-        withGraphqlCredentialFingerprint(usage.graphql),
+        withGraphqlCredentialFingerprint(graphql),
         persist,
       )
     : undefined;
@@ -31,7 +34,7 @@ export async function selectQuotaWarning(
   return composeQuotaWarning({
     graphqlWarning,
     coreWarning,
-    graphql: usage.graphql,
+    graphql,
     core,
     bands,
   });

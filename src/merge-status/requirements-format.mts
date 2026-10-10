@@ -37,11 +37,15 @@ export function formatMergeRequirementLines(req: MergeRequirements): string[] {
 export function blockedReasonFromRequirements(req: MergeRequirements | undefined): string | null {
   if (!req) return null;
   const unmet: string[] = [];
-  if (req.approvals.requiredCount > 0 && req.approvals.current < req.approvals.requiredCount) {
+  if (
+    req.approvals.requiredCount !== undefined &&
+    req.approvals.requiredCount > 0 &&
+    req.approvals.current < req.approvals.requiredCount
+  ) {
     const need = req.approvals.requiredCount - req.approvals.current;
     unmet.push(`awaiting ${need} approval${need === 1 ? "" : "s"}`);
   }
-  if (req.conversationsResolved.required && !req.conversationsResolved.resolved) {
+  if (req.conversationsResolved.required === true && req.conversationsResolved.resolved === false) {
     unmet.push("unresolved conversations are required");
   }
   if (req.branchUpToDate && !req.branchUpToDate.current) {
@@ -56,7 +60,11 @@ export function blockedReasonFromRequirements(req: MergeRequirements | undefined
   return unmet.length > 0 ? unmet.join("; ") : null;
 }
 
-function formatApprovals(current: number, requiredCount: number): string {
+function formatApprovals(current: number, requiredCount: number | undefined): string {
+  if (requiredCount === undefined) {
+    const currentValue = current === 0 ? "None" : String(current);
+    return `Approvals: ${currentValue} [Requirement Unknown]`;
+  }
   const tag = requiredCount > 0 ? REQUIRED : NOT_REQUIRED;
   if (current === 0 && requiredCount === 0) return `Approvals: None ${NOT_REQUIRED}`;
   if (current === 0) return `Approvals: None ${REQUIRED}`;
@@ -65,13 +73,15 @@ function formatApprovals(current: number, requiredCount: number): string {
 }
 
 function formatConversations(c: MergeRequirements["conversationsResolved"]): string {
-  const value = c.resolved ? "Yes" : "No";
-  const tag = c.required ? REQUIRED : NOT_REQUIRED;
+  const value = c.resolved === undefined ? "Unknown" : c.resolved ? "Yes" : "No";
+  const tag =
+    c.required === undefined ? "[Requirement Unknown]" : c.required ? REQUIRED : NOT_REQUIRED;
   return `Conversations Resolved: ${value} ${tag}`;
 }
 
 function formatMergeQueue(q: NonNullable<MergeRequirements["mergeQueue"]>): string {
   const tag = q.required ? REQUIRED : NOT_REQUIRED;
+  if (q.inQueue === undefined) return `Merge queue: Unknown ${tag}`;
   if (q.inQueue) {
     const pos = q.position != null ? `position ${q.position}` : "Yes";
     const state = q.state ? ` ${q.state}` : "";

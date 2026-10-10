@@ -7,6 +7,8 @@ import {
   type CheckBlockerRef,
 } from "../../state/check-blockers.mts";
 import type { IterateResult } from "../../types.mts";
+import { rest } from "../../github/http.mts";
+import { githubOperation } from "../../github/transport.mts";
 
 const RATE_LIMIT = "cost limit nodeCount remaining resetAt used";
 
@@ -107,18 +109,44 @@ async function lookupBlocker(blocker: CheckBlockerRef): Promise<Lookup> {
   try {
     const vars = { owner: blocker.owner, name: blocker.name, number: blocker.number };
     if (blocker.kind === "issue") {
-      const { data } = await graphql<{
-        repository: { issue: { state: string } | null } | null;
-      }>(ISSUE_QUERY, vars);
+      const { data } = await githubOperation(
+        "CheckBlockerIssue",
+        () =>
+          graphql<{
+            repository: { issue: { state: string } | null } | null;
+          }>(ISSUE_QUERY, vars),
+        async () => {
+          const issue = await rest<{ state: string }>(
+            "GET",
+            `/repos/${blocker.owner}/${blocker.name}/issues/${blocker.number}`,
+          );
+          return { data: { repository: { issue: { state: issue.state.toUpperCase() } } } };
+        },
+      );
       const issue = data.repository?.issue;
       if (!issue) return ignore(blocker, "not found");
       if (issue.state === "OPEN") return "deferred";
       if (issue.state === "CLOSED") return "released";
       return ignore(blocker, `unexpected state ${issue.state}`);
     }
-    const { data } = await graphql<{
-      repository: { pullRequest: { state: string; merged: boolean } | null } | null;
-    }>(PULL_QUERY, vars);
+    const { data } = await githubOperation(
+      "CheckBlockerPull",
+      () =>
+        graphql<{
+          repository: { pullRequest: { state: string; merged: boolean } | null } | null;
+        }>(PULL_QUERY, vars),
+      async () => {
+        const pull = await rest<{ state: string; merged: boolean }>(
+          "GET",
+          `/repos/${blocker.owner}/${blocker.name}/pulls/${blocker.number}`,
+        );
+        return {
+          data: {
+            repository: { pullRequest: { state: pull.state.toUpperCase(), merged: pull.merged } },
+          },
+        };
+      },
+    );
     const pull = data.repository?.pullRequest;
     if (!pull) return ignore(blocker, "not found");
     if (pull.state === "OPEN" && pull.merged !== true) return "deferred";
