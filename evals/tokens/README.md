@@ -261,7 +261,8 @@ are as good as these assumptions:
   transcript read (pull comments, issue comments, reviews and the viewer) and
   three requests per reply (`/user` and the pull comments, read so a lost
   response can be recovered, then the POST). Ready-for-review has no standard REST route either: the
-  `mark-ready` tick is its 14-request read, and it escalates as
+  `mark-ready` tick is its 14-request read plus the mergeability refresh (15
+  requests), and it escalates as
   transport-unsupported instead of marking the PR ready. The live check below
   had no failing check, so neither the job/log reads nor the annotation reads
   were measured.

@@ -976,8 +976,8 @@ const SUM_KEYS = ["calls", "turns", "toolTokens", "ite", "graphqlPoints", "restC
  */
 export function measuredCharsPerToken(data = readJson(REAL_SESSIONS_FILE)) {
   return {
-    shepherd: data.charsPerToken.shepherd.charsPerToken,
-    baseline: data.charsPerToken.noThinking.charsPerToken,
+    shepherd: data.charsPerToken.shepherd?.charsPerToken ?? null,
+    baseline: data.charsPerToken.noThinking?.charsPerToken ?? null,
   };
 }
 
@@ -1155,7 +1155,7 @@ function graphqlBreakdown(data) {
   out.push("");
   if (empty.length)
     out.push(
-      `No request fell under ${empty.join(" or ")}: no session ran those commands on these PRs.`,
+      `No request fell under ${empty.join(" or ")}: the extractor keeps only polls and \`apply\` runs, so it records none of those commands.`,
       "",
     );
   if (mutations.size)

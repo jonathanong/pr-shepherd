@@ -404,7 +404,7 @@ The 308 measured query points, by the operation each request names (mutations ex
 | `apply review` reads | 36 | 36 | 0.25 | ReplyThreadTranscripts 12 / 12, GetPrHeadSha 12 / 12, ReplyRecoveryEvidence 12 / 12 |
 | other | 3 | 3 | 0.02 | GetPrBody 3 / 3 |
 
-No request fell under review/resolve fetch or stack summary: no session ran those commands on these PRs.
+No request fell under review/resolve fetch or stack summary: the extractor keeps only polls and `apply` runs, so it records none of those commands.
 
 Mutations log no cost and are not in the table. Requests: BulkApply from `apply review` 35, BulkApply from polls 12, UpdatePrBody from `apply journal` 2, UpdatePrBody from polls 1.
 

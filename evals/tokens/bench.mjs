@@ -407,6 +407,7 @@ const calibration = existsSync(calibrationPath)
 // at the overall one. No session used GitHub MCP, so MCP's ratio is assumed.
 
 const MEASURED_CPT = measuredCharsPerToken();
+const cptMeasured = MEASURED_CPT.shepherd != null && MEASURED_CPT.baseline != null;
 
 /** Every row, re-costed with tokens counted at `cpt` characters each. */
 const rowsAtCpt = (cpt) =>
@@ -888,46 +889,52 @@ out(
 out();
 out("## Sensitivity: measured characters per token");
 out();
-out(
-  `The model counts ${MODEL.charsPerToken} characters per token for every arm. The real sessions below measured pr-shepherd's output at ${MEASURED_CPT.shepherd} and tool output overall at ${MEASURED_CPT.baseline}: pr-shepherd's output is denser. Here every step is re-scored with pr-shepherd at ${MEASURED_CPT.shepherd} and gh and GitHub MCP at ${MEASURED_CPT.baseline}. MCP's ratio is unmeasured (no real session used it), so it takes the overall one. Turns and calls do not depend on the ratio. A denser ratio also pushes more MCP results past the host's ${num(MODEL.mcpOutputCapTokens)}-token cap, where they are rejected: MCP's cost can fall while it finishes less of the step.`,
-);
-out();
-const cptExcluded = rows.filter((_, i) => cptIncomplete.has(i));
-if (cptExcluded.length) {
+if (!cptMeasured)
   out(
-    `An arm that gains a truncated or rejected call at the measured ratios no longer finishes that step, so these steps are left out of both rows of each session below and out of the verdicts: ${cptExcluded.map((r) => `\`${r.id}\``).join(", ")}.`,
+    "Not measured: `data/real-sessions.json` has too few clean samples for a ratio, so every step keeps the model's.",
+  );
+else {
+  out(
+    `The model counts ${MODEL.charsPerToken} characters per token for every arm. The real sessions below measured pr-shepherd's output at ${MEASURED_CPT.shepherd} and tool output overall at ${MEASURED_CPT.baseline}: pr-shepherd's output is denser. Here every step is re-scored with pr-shepherd at ${MEASURED_CPT.shepherd} and gh and GitHub MCP at ${MEASURED_CPT.baseline}. MCP's ratio is unmeasured (no real session used it), so it takes the overall one. Turns and calls do not depend on the ratio. A denser ratio also pushes more MCP results past the host's ${num(MODEL.mcpOutputCapTokens)}-token cap, where they are rejected: MCP's cost can fall while it finishes less of the step.`,
   );
   out();
-}
-out(
-  "| session | metric | characters per token | pr-shepherd | gh CLI | GitHub MCP | vs. gh | vs. MCP |",
-);
-out("| --- | --- | --- | --- | --- | --- | --- | --- |");
-for (const [key, title] of Object.entries(SESSIONS))
-  for (const m of ["ite", "toolTokens"])
-    for (const [label, s] of [
-      [`${MODEL.charsPerToken} for every arm`, cptBaseSessions[key]],
-      [
-        `${MEASURED_CPT.shepherd} / ${MEASURED_CPT.baseline} / ${MEASURED_CPT.baseline} (unmeasured)`,
-        cptSessions[key],
-      ],
-    ]) {
-      const t = s.total;
-      out(
-        `| ${title} | ${METRIC_LABELS[m]} | ${label} | ${num(t.shepherd[m])} | ${num(t.gh[m])} | ${num(t.mcp[m])} | ${pct(saving(t.gh[m], t.shepherd[m]))} | ${pct(saving(t.mcp[m], t.shepherd[m]))} |`,
-      );
-    }
-out();
-if (cptFlips.length) {
-  out(
-    "Verdicts, per session and per scenario, that flip to a loss at the measured ratios. They are gated like any other loss and pending in `pending-losses.json` under `chars-per-token:`:",
-  );
-  out();
-  for (const l of cptFlips)
+  const cptExcluded = rows.filter((_, i) => cptIncomplete.has(i));
+  if (cptExcluded.length) {
     out(
-      `- ${l.where.slice("chars-per-token:".length)}: ${METRIC_LABELS[l.metric]} vs. ${BASELINES[l.baseline]}, ${num(l.ours)} vs. ${num(l.theirs)} (#${l.issue})`,
+      `An arm that gains a truncated or rejected call at the measured ratios no longer finishes that step, so these steps are left out of both rows of each session below and out of the verdicts: ${cptExcluded.map((r) => `\`${r.id}\``).join(", ")}.`,
     );
-} else out("No session or scenario verdict flips at the measured ratios.");
+    out();
+  }
+  out(
+    "| session | metric | characters per token | pr-shepherd | gh CLI | GitHub MCP | vs. gh | vs. MCP |",
+  );
+  out("| --- | --- | --- | --- | --- | --- | --- | --- |");
+  for (const [key, title] of Object.entries(SESSIONS))
+    for (const m of ["ite", "toolTokens"])
+      for (const [label, s] of [
+        [`${MODEL.charsPerToken} for every arm`, cptBaseSessions[key]],
+        [
+          `${MEASURED_CPT.shepherd} / ${MEASURED_CPT.baseline} / ${MEASURED_CPT.baseline} (unmeasured)`,
+          cptSessions[key],
+        ],
+      ]) {
+        const t = s.total;
+        out(
+          `| ${title} | ${METRIC_LABELS[m]} | ${label} | ${num(t.shepherd[m])} | ${num(t.gh[m])} | ${num(t.mcp[m])} | ${pct(saving(t.gh[m], t.shepherd[m]))} | ${pct(saving(t.mcp[m], t.shepherd[m]))} |`,
+        );
+      }
+  out();
+  if (cptFlips.length) {
+    out(
+      "Verdicts, per session and per scenario, that flip to a loss at the measured ratios. They are gated like any other loss and pending in `pending-losses.json` under `chars-per-token:`:",
+    );
+    out();
+    for (const l of cptFlips)
+      out(
+        `- ${l.where.slice("chars-per-token:".length)}: ${METRIC_LABELS[l.metric]} vs. ${BASELINES[l.baseline]}, ${num(l.ours)} vs. ${num(l.theirs)} (#${l.issue})`,
+      );
+  } else out("No session or scenario verdict flips at the measured ratios.");
+}
 out();
 for (const line of realSessionsSection()) out(line);
 
