@@ -420,13 +420,34 @@ const cptRows = rowsAtCpt(MEASURED_CPT.baseline).map((r, i) => ({
   shepherd: cptShepherdRows[i].shepherd,
   variable: { ...r.variable, shepherd: cptShepherdRows[i].variable.shepherd },
 }));
-const cptSessions = sessionsOf(cptRows);
+/**
+ * Steps where an arm gains a truncated or rejected call at the measured ratios.
+ * That arm no longer finishes the step, so its lower cost is not a saving: the
+ * comparison leaves these steps out on both sides.
+ */
+const cptIncomplete = new Set(
+  cptRows.flatMap((r, i) =>
+    [...ARMS, "mcpEager"].some((a) => r[a].truncated > rows[i][a].truncated) ? [i] : [],
+  ),
+);
+const completeOnly = (rs) => rs.filter((_, i) => !cptIncomplete.has(i));
+const cptBaseRows = completeOnly(rows);
+const cptBaseSessions = sessionsOf(cptBaseRows);
+const cptSessions = sessionsOf(completeOnly(cptRows));
 
 const baseLosses = findLosses({ rows, sessions, apiSessions });
 const baseLossKeys = new Set(baseLosses.map(lossKey));
+const cptBaseLossKeys = new Set(
+  findLosses({ rows: cptBaseRows, sessions: cptBaseSessions, apiSessions }).map(lossKey),
+);
 /** Token losses that appear only at the measured ratios: gated like any other. */
-const cptFlips = findLosses({ rows: cptRows, sessions: cptSessions, apiSessions })
-  .filter((l) => (l.metric === "ite" || l.metric === "toolTokens") && !baseLossKeys.has(lossKey(l)))
+const cptFlips = findLosses({ rows: completeOnly(cptRows), sessions: cptSessions, apiSessions })
+  .filter(
+    (l) =>
+      (l.metric === "ite" || l.metric === "toolTokens") &&
+      !baseLossKeys.has(lossKey(l)) &&
+      !cptBaseLossKeys.has(lossKey(l)),
+  )
   .map((l) => ({ ...l, where: `chars-per-token:${l.where}` }));
 const losses = [...baseLosses, ...cptFlips];
 const pending = readPending();
@@ -478,6 +499,7 @@ if (process.argv.includes("--json")) {
         idleHour,
         charsPerTokenSensitivity: {
           measured: MEASURED_CPT,
+          incomplete: rows.filter((_, i) => cptIncomplete.has(i)).map((r) => r.id),
           sessions: Object.fromEntries(
             Object.entries(cptSessions).map(([k, v]) => [k, { total: v.total }]),
           ),
@@ -718,7 +740,9 @@ for (const [key, title] of Object.entries(SESSIONS)) {
 out();
 out("Per scenario, `GraphQL points / REST core requests` for one occurrence.");
 out();
-out("| scenario | pr-shepherd | pr-shepherd, REST | pr-shepherd, cloud REST | gh CLI | GitHub MCP |");
+out(
+  "| scenario | pr-shepherd | pr-shepherd, REST | pr-shepherd, cloud REST | gh CLI | GitHub MCP |",
+);
 out("| --- | --- | --- | --- | --- | --- |");
 for (const r of rows.filter((r) => !r.setup)) {
   const c = (a) => `${num(r.api[a].graphqlPoints)} / ${num(r.api[a].restCore)}`;
@@ -762,7 +786,8 @@ for (const t of API_CHECK.ticks) {
   const key = t.transport === "rest" ? "restCore" : "graphqlPoints";
   const base = MODEL_TICK[t.model];
   if (base === undefined) throw new Error(`api-usage-check.json: unknown model ${t.model}`);
-  const model = base[key] + (t.annotationCheckRuns ? annotationBatchApi(t.annotationCheckRuns)[key] : 0);
+  const model =
+    base[key] + (t.annotationCheckRuns ? annotationBatchApi(t.annotationCheckRuns)[key] : 0);
   out(
     `| ${t.transport} | ${t.tick} (${t.model}) | \`${t.action}\` | ${num(t[key])} | ${num(model)} | ${(t[key] / model).toFixed(2)} |`,
   );
@@ -867,6 +892,13 @@ out(
   `The model counts ${MODEL.charsPerToken} characters per token for every arm. The real sessions below measured pr-shepherd's output at ${MEASURED_CPT.shepherd} and tool output overall at ${MEASURED_CPT.baseline}: pr-shepherd's output is denser. Here every step is re-scored with pr-shepherd at ${MEASURED_CPT.shepherd} and gh and GitHub MCP at ${MEASURED_CPT.baseline}. MCP's ratio is unmeasured (no real session used it), so it takes the overall one. Turns and calls do not depend on the ratio. A denser ratio also pushes more MCP results past the host's ${num(MODEL.mcpOutputCapTokens)}-token cap, where they are rejected: MCP's cost can fall while it finishes less of the step.`,
 );
 out();
+const cptExcluded = rows.filter((_, i) => cptIncomplete.has(i));
+if (cptExcluded.length) {
+  out(
+    `An arm that gains a truncated or rejected call at the measured ratios no longer finishes that step, so these steps are left out of both rows of each session below and out of the verdicts: ${cptExcluded.map((r) => `\`${r.id}\``).join(", ")}.`,
+  );
+  out();
+}
 out(
   "| session | metric | characters per token | pr-shepherd | gh CLI | GitHub MCP | vs. gh | vs. MCP |",
 );
@@ -874,7 +906,7 @@ out("| --- | --- | --- | --- | --- | --- | --- | --- |");
 for (const [key, title] of Object.entries(SESSIONS))
   for (const m of ["ite", "toolTokens"])
     for (const [label, s] of [
-      [`${MODEL.charsPerToken} for every arm`, sessions[key]],
+      [`${MODEL.charsPerToken} for every arm`, cptBaseSessions[key]],
       [
         `${MEASURED_CPT.shepherd} / ${MEASURED_CPT.baseline} / ${MEASURED_CPT.baseline} (unmeasured)`,
         cptSessions[key],

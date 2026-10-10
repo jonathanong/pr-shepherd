@@ -205,7 +205,8 @@
             "replies": 10,
             "resolves": 10,
             "minimizes": 0,
-            "dismissals": 1
+            "dismissals": 1,
+            "requireSha": true
           }
         },
         {
@@ -367,7 +368,8 @@
             "replies": 3,
             "resolves": 3,
             "minimizes": 0,
-            "dismissals": 0
+            "dismissals": 0,
+            "requireSha": true
           }
         },
         {
@@ -547,7 +549,8 @@
             "replies": 1,
             "resolves": 1,
             "minimizes": 0,
-            "dismissals": 0
+            "dismissals": 0,
+            "requireSha": true
           }
         },
         {
@@ -1534,7 +1537,8 @@
             "replies": 2,
             "resolves": 2,
             "minimizes": 0,
-            "dismissals": 0
+            "dismissals": 0,
+            "requireSha": true
           }
         },
         {
@@ -2051,7 +2055,8 @@
             "replies": 4,
             "resolves": 4,
             "minimizes": 0,
-            "dismissals": 0
+            "dismissals": 0,
+            "requireSha": true
           }
         },
         {
@@ -2196,7 +2201,8 @@
             "replies": 1,
             "resolves": 1,
             "minimizes": 0,
-            "dismissals": 1
+            "dismissals": 1,
+            "requireSha": true
           }
         },
         {
@@ -2371,7 +2377,8 @@
             "replies": 3,
             "resolves": 3,
             "minimizes": 0,
-            "dismissals": 0
+            "dismissals": 0,
+            "requireSha": true
           }
         },
         {
@@ -3086,7 +3093,8 @@
             "replies": 1,
             "resolves": 1,
             "minimizes": 0,
-            "dismissals": 0
+            "dismissals": 0,
+            "requireSha": true
           }
         },
         {
@@ -3122,7 +3130,8 @@
             "replies": 1,
             "resolves": 1,
             "minimizes": 0,
-            "dismissals": 0
+            "dismissals": 0,
+            "requireSha": true
           }
         },
         {
@@ -3324,7 +3333,8 @@
             "replies": 1,
             "resolves": 1,
             "minimizes": 0,
-            "dismissals": 0
+            "dismissals": 0,
+            "requireSha": true
           }
         },
         {
@@ -3911,7 +3921,8 @@
             "replies": 5,
             "resolves": 5,
             "minimizes": 0,
-            "dismissals": 0
+            "dismissals": 0,
+            "requireSha": true
           }
         },
         {
@@ -4285,20 +4296,20 @@
         },
         {
           "t": 909,
-          "seconds": 124,
+          "seconds": 63,
           "kind": "poll",
-          "ticks": 3,
-          "action": "FIX_CODE",
-          "outChars": 1230,
-          "graphqlRequests": 5,
-          "graphqlCost": 5,
+          "ticks": 2,
+          "action": null,
+          "outChars": null,
+          "graphqlRequests": 4,
+          "graphqlCost": 4,
           "graphqlMutations": 0,
           "graphqlNoCost": 0,
-          "restRequests": 2,
+          "restRequests": 1,
           "graphqlByOp": {
             "BatchPr": [
-              3,
-              3
+              2,
+              2
             ],
             "PrFingerprint": [
               1,
@@ -4604,7 +4615,8 @@
             "replies": 2,
             "resolves": 2,
             "minimizes": 0,
-            "dismissals": 0
+            "dismissals": 0,
+            "requireSha": true
           }
         },
         {
@@ -4988,7 +5000,8 @@
             "replies": 1,
             "resolves": 1,
             "minimizes": 0,
-            "dismissals": 0
+            "dismissals": 0,
+            "requireSha": true
           }
         },
         {

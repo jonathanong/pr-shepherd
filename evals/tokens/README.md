@@ -254,8 +254,7 @@ are as good as these assumptions:
   rules and compare, and the stack topology (the stack list and read twice,
   each layer's pull and the viewer). A one-PR
   tick is 14 requests, counted at the HTTP boundary of the REST iterate test
-  routes and measured live (below); none is conditional, so none is a free
-  304. The `failing-check` and
+  routes and measured live (below); none is conditional, so none is a free 304. The `failing-check` and
   `check-annotations` ticks add one annotation read per annotated check run.
   `apply review` reads the pull for `--require-sha`; a thread resolve has no
   standard REST route, so it then spends, when it has replies, a 4-request
@@ -451,7 +450,8 @@ token usage, never text, IDs or paths. The bench reads only that file.
   before the first recorded commit are unknown and replayed as none. A wait
   with a check pending is a `gh pr checks --watch` refresh for gh; a wait with
   none pending (pr-shepherd's debounce) is a plain sleep, since `--watch`
-  would return at once. The baselines' PR body leaves out the Shepherd
+  would return at once. Consecutive waits of one kind form one call, in
+  timeline order. The baselines' PR body leaves out the Shepherd
   Journal block, which only pr-shepherd writes.
 - **Attribution.** Concurrent invocations interleave in one debug log; a
   request, response or output that matches more than one open invocation is
@@ -464,7 +464,13 @@ token usage, never text, IDs or paths. The bench reads only that file.
 - **Calibration, not gating.** Measured pr-shepherd numbers (result tokens,
   GraphQL cost per request, REST requests, turns) calibrate the modeled
   pr-shepherd arm. They are never compared with the modeled baselines, and
-  the real sessions do not feed `--check`.
+  no real-session row is gated. One measurement does reach `--check`: the
+  characters per token that `real-sessions.json` records re-score every
+  synthetic step, and verdicts that flip at those ratios are gated
+  (`chars-per-token:` entries in `pending-losses.json`). So re-extracting
+  the sessions can add or remove gated losses. Steps where an arm gains a
+  truncated or rejected call at those ratios are left out of that
+  comparison, since the arm no longer finishes them.
 - **Buckets.** Each request's real spend goes to the calls it emitted:
   pr-shepherd and PR-state calls, environment overhead (worktree guard,
   sandbox, git identity, polls run outside the repository), or the code, test

@@ -705,6 +705,9 @@ export const SHEPHERD_TICK_API_CLOUD = rest(SHEPHERD_TICK_API_REST.restCore + CC
  * transport. The real sessions measured exactly one such request on each of
  * their 21 READY polls (data/real-sessions.json).
  */
+/** `apply review --require-sha`'s head read: `GetPrHeadSha` or one REST pull read. */
+export const HEAD_SHA_READ = 1;
+
 export const READY_MERGEABILITY_REST = 1;
 /** `call`, a READY tick: its cost on every transport plus the mergeability refresh. */
 export function readyTick(call) {

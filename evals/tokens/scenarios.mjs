@@ -31,6 +31,7 @@ import {
   callApi,
   SHEPHERD_TICK_API,
   SHEPHERD_TICK_API_REST,
+  HEAD_SHA_READ,
   READY_MERGEABILITY_REST,
   readyTick,
   SHEPHERD_TICK_API_CLOUD,
@@ -197,9 +198,6 @@ const receiptTick = (out) => ({
   apiRest: SHEPHERD_TICK_API_REST,
   apiCloud: SHEPHERD_TICK_API_CLOUD,
 });
-
-/** `apply review --require-sha`'s head read: `GetPrHeadSha` or one REST pull read. */
-const HEAD_SHA_READ = 1;
 
 /**
  * Run the printed `apply review` command and read its output. Only `$DISMISS_MESSAGE` needs

@@ -28,6 +28,7 @@ import { join } from "node:path";
 import { ISSUE_FOR } from "./gate.mjs";
 import {
   DATA_DIR,
+  HEAD_SHA_READ,
   MODEL,
   READY_MERGEABILITY_REST,
   SHEPHERD_CHANGED_TICK_GRAPHQL,
@@ -99,9 +100,14 @@ function logEntries(text) {
  */
 function parseLog(text, scope, stats, until = Infinity) {
   const invs = [];
-  // Entries past the cutoff are still parsed (they close invocations) but not counted.
+  // Entries past the cutoff are still parsed (they correlate and close
+  // invocations) but add nothing to an invocation's record.
   const ambiguous = (t) => {
     if (t <= until) stats.heuristic++;
+  };
+  const touch = (inv, t) => {
+    inv.last = t;
+    if (t <= until) inv.lastCounted = t;
   };
   const headPr = new Map();
   const open = (t) => invs.filter((i) => !i.closed && t - i.last <= IDLE_SECONDS);
@@ -129,6 +135,7 @@ function parseLog(text, scope, stats, until = Infinity) {
       invs.push({
         t,
         last: t,
+        lastCounted: t,
         args: m[2],
         pr: prOfArgs(m[2]),
         kind: kindOfArgs(m[2]),
@@ -148,10 +155,10 @@ function parseLog(text, scope, stats, until = Infinity) {
       const inv = pick(open(t), pr, k, t);
       if (!inv) continue;
       const req = { k, t, op, transport: m[2], cost: null };
-      inv.reqs.push(req);
+      if (t <= until) inv.reqs.push(req);
       inv.pending.set(k, req);
       inv.nextK = k + 1;
-      inv.last = t;
+      touch(inv, t);
     } else if ((m = e.head.match(/^### #(\d+) (GraphQL|REST) response — .* · (\S+)$/))) {
       const k = Number(m[1]);
       const t = secs(m[3]);
@@ -161,9 +168,9 @@ function parseLog(text, scope, stats, until = Infinity) {
       if (!inv) continue;
       const req = inv.pending.get(k);
       inv.pending.delete(k);
-      inv.last = t;
+      touch(inv, t);
       const c = body.match(/^graphql-query: cost (\d+)/m);
-      if (c) req.cost = Number(c[1]);
+      if (c && t <= until) req.cost = Number(c[1]);
       const head = body.match(/"headRefOid":\s*"(\w+)"/)?.[1];
       if (head && inv.pr) headPr.set(head, inv.pr);
     } else if ((m = e.head.match(/^### Output \((\w+)\) · (\S+)$/))) {
@@ -177,11 +184,12 @@ function parseLog(text, scope, stats, until = Infinity) {
       if (cands.length > 1) ambiguous(t);
       const inv = cands.sort((a, b) => a.t - b.t)[0];
       if (!inv) continue;
-      inv.outs.push({
-        chars: out.length,
-        action: out.match(/^# PR #\d+ \[([A-Z_]+)\]/m)?.[1] ?? null,
-      });
-      inv.last = t;
+      if (t <= until)
+        inv.outs.push({
+          chars: out.length,
+          action: out.match(/^# PR #\d+ \[([A-Z_]+)\]/m)?.[1] ?? null,
+        });
+      touch(inv, t);
       inv.closed = true;
     }
   }
@@ -198,7 +206,7 @@ function invocationRecord(inv, t0) {
   const gqlReqs = inv.reqs.filter((r) => r.transport === "GraphQL");
   const rec = {
     t: Math.round(inv.t - t0),
-    seconds: Math.round(inv.last - inv.t),
+    seconds: Math.round(inv.lastCounted - inv.t),
     kind: inv.kind,
     ...(/--until-terminal/.test(inv.args) && { untilTerminal: true }),
     ...(inv.kind === "poll" && { ticks: tickCount(inv.reqs) }),
@@ -222,6 +230,7 @@ function invocationRecord(inv, t0) {
       resolves: idCount(inv.args, "resolve-thread-ids"),
       minimizes: idCount(inv.args, "minimize-comment-ids"),
       dismissals: idCount(inv.args, "dismiss-review-ids"),
+      ...(/--require-sha\b/.test(inv.args) && { requireSha: true }),
     };
   return rec;
 }
@@ -786,10 +795,26 @@ function stepArms(pr, inv) {
     const tickTimes = Array.from({ length: waits }, (_, i) => inv.t + 60 * (i + 1));
     // `gh pr checks --watch` returns at once when no check is pending, so a
     // wait with nothing pending (shepherd's debounce) is a plain sleep for gh.
+    // Consecutive waits of one kind form one call, in timeline order.
     const pending = (t) => stateAt(pr, t).checks.some((k) => k.status !== "COMPLETED");
-    const watchTimes = tickTimes.filter((t) => pending(t - 60));
-    const sleeps = waits - watchTimes.length;
-    const ghPhase = 1 + (sleeps ? 1 : 0) + (watchTimes.length ? 1 : 0);
+    const runs = [];
+    for (const t of tickTimes) {
+      const watch = pending(t - 60);
+      const last = runs.at(-1);
+      if (last?.watch === watch) last.times.push(t);
+      else runs.push({ watch, times: [t] });
+    }
+    const ghWaits = runs.map(({ watch, times }, i) =>
+      watch
+        ? // One query on start, then one per refresh, each reprinting the table.
+          call(
+            i + 1,
+            `gh pr checks ${n} -R owner/repo --watch --interval 60`,
+            [times[0] - 60, ...times].map((t) => ghPrChecks(stateAt(pr, t))).join("\n"),
+            { api: gql(times.length + 1) },
+          )
+        : call(i + 1, `sleep ${60 * times.length}`, ""),
+    );
     return {
       shepherd: [
         call(
@@ -810,23 +835,7 @@ function stepArms(pr, inv) {
           },
         ),
       ],
-      gh: [
-        ...(sleeps ? [call(1, `sleep ${60 * sleeps}`, "")] : []),
-        ...(watchTimes.length
-          ? [
-              // One query on start, then one per refresh, each reprinting the table.
-              call(
-                sleeps ? 2 : 1,
-                `gh pr checks ${n} -R owner/repo --watch --interval 60`,
-                [watchTimes[0] - 60, ...watchTimes]
-                  .map((t) => ghPrChecks(stateAt(pr, t)))
-                  .join("\n"),
-                { api: gql(watchTimes.length + 1) },
-              ),
-            ]
-          : []),
-        ...ghObserve(s, ghPhase),
-      ],
+      gh: [...ghWaits, ...ghObserve(s, ghWaits.length + 1)],
       mcp: [
         ...tickTimes.flatMap((t, i) => [
           call(2 * i + 1, "sleep 60", ""),
@@ -855,13 +864,18 @@ function stepArms(pr, inv) {
   const ids = (flag, prefix, len, count) =>
     count ? ` --${flag} ${Array.from({ length: count }, () => fakeId(prefix, len)).join(",")}` : "";
   const mutations = a.replies + a.resolves + a.minimizes + a.dismissals;
+  // As scenarios.mjs's shepherdApply: `--require-sha` reads the head SHA;
+  // replies add the thread-transcript read and one `ReplyRecoveryEvidence`
+  // read per 10-reply chunk; then one request per 10 mutations.
+  const reads =
+    (a.requireSha ? HEAD_SHA_READ : 0) + (a.replies ? 1 + Math.ceil(a.replies / 10) : 0);
   return {
     shepherd: [
       call(
         1,
         `pr-shepherd apply review ${n}${ids("reply-thread-ids", "PRRT_", 22, a.replies)}${ids("resolve-thread-ids", "PRRT_", 22, a.resolves)}${ids("minimize-comment-ids", "IC_", 26, a.minimizes)}${ids("dismiss-review-ids", "PRR_", 24, a.dismissals)}${a.replies || a.dismissals ? ` --message "${REPLY}"` : ""}`,
         fill(inv.outChars ?? 0),
-        { api: gql(1 + Math.ceil(mutations / 10)) },
+        { api: gql(reads + Math.ceil(mutations / 10)) },
       ),
     ],
     gh: [
