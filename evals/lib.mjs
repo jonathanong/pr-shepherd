@@ -218,13 +218,16 @@ export function writeCase(spec) {
   // `transform` edits the recorded text before framing (e.g. to plant an
   // injection in a real snapshot). `plan: true` asks for a plan without any CLI
   // output, for cases that start from a user request alone.
-  const body = spec.fixture
-    ? spec.shape(
-        spec.transform
-          ? spec.transform(fixtureText(spec.fixture))
-          : fixtureText(spec.fixture),
-      )
-    : spec.prompt;
+  let text = spec.fixture ? fixtureText(spec.fixture) : null;
+  if (text !== null && spec.transform) {
+    const changed = spec.transform(text);
+    // A transform whose search string stopped matching would silently leave the
+    // case without its planted content while CI still reports the suite in sync.
+    if (changed === text)
+      throw new Error(`${spec.slug}: transform changed nothing`);
+    text = changed;
+  }
+  const body = spec.fixture ? spec.shape(text) : spec.prompt;
   const append =
     spec.fixture || spec.plan ? APPEND_SYSTEM_PROMPT : APPEND_SYSTEM_PROMPT_NEG;
 
