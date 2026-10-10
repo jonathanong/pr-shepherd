@@ -42,6 +42,9 @@ interface BatchResult {
   receiptSummary?: RawSummaryPr;
 }
 
+/** A fingerprint hit, plus the live base tip from the same first page. */
+type ReusedBatch<T> = { reused: T; baseTipOid?: string };
+
 interface FetchPrBatchOptions {
   /**
    * When false (default), the first-page approvedReviews are returned but
@@ -75,7 +78,7 @@ async function fetchGraphqlPrBatch<T>(
   repo: RepoInfo,
   opts: FetchPrBatchOptions = {},
   reuse?: (fingerprint: PrFingerprint) => Promise<T | null>,
-): Promise<BatchResult | { reused: T }> {
+): Promise<BatchResult | ReusedBatch<T>> {
   const variables = {
     owner: repo.owner,
     repo: repo.name,
@@ -111,7 +114,8 @@ async function fetchGraphqlPrBatch<T>(
   );
   // Decide reuse from the first page alone, before any supplement is paid for.
   const reused = reuse && (await reuse(fingerprint));
-  if (reused) return { reused };
+  const baseTipOid = raw.baseRef?.target?.oid;
+  if (reused) return { reused, ...(baseTipOid && { baseTipOid }) };
   const queueRateLimit = await hydrateMergeQueueChecks(raw, repo, result.rateLimit);
   const paged = await paginateBatchConnections(pr, repo, raw, opts, queueRateLimit);
   const threadPages = await hydrateThreadCommentPages(paged.threads, paged.rateLimit);
@@ -175,7 +179,7 @@ export function fetchPrBatch<T>(
   repo: RepoInfo,
   opts: FetchPrBatchOptions,
   reuse: (fingerprint: PrFingerprint) => Promise<T | null>,
-): Promise<BatchResult | { reused: T }>;
+): Promise<BatchResult | ReusedBatch<T>>;
 // Last, so `Parameters<typeof fetchPrBatch>` keeps describing the ordinary snapshot read.
 export function fetchPrBatch(
   pr: number,
@@ -187,7 +191,7 @@ export function fetchPrBatch<T>(
   repo: RepoInfo,
   opts: FetchPrBatchOptions = {},
   reuse?: (fingerprint: PrFingerprint) => Promise<T | null>,
-): Promise<BatchResult | { reused: T }> {
+): Promise<BatchResult | ReusedBatch<T>> {
   return githubOperation(
     "BatchPr",
     () => runWithGithubTransport("graphql", () => fetchGraphqlPrBatch(pr, repo, opts, reuse)),

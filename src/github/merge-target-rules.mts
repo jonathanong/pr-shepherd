@@ -6,6 +6,11 @@ import { parseBranchRules } from "./batch-parsers-rules.mts";
 import type { RawBaseRef } from "./batch-raw-rules.mts";
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import { missingRepositoryError } from "./errors.mts";
+import {
+  cachedBaseBehind,
+  storeBaseBehind,
+  type BaseBehindCacheOptions,
+} from "./base-behind-cache.mts";
 import { BASE_BEHIND_QUERY, REF_RULES_QUERY } from "./queries.mts";
 import { readStackTopology, verifiedBottomOpenLayer } from "./stack-read.mts";
 import type { CheckExecutionContext } from "../commands/check-execution-context.mts";
@@ -24,7 +29,10 @@ interface RefRulesData {
 
 interface BaseBehindData {
   repository: {
-    ref: { compare: { behindBy: number } | null } | null;
+    ref: {
+      target?: { oid?: string } | null;
+      compare: { behindBy: number } | null;
+    } | null;
   } | null;
 }
 
@@ -89,7 +97,10 @@ export async function loadBaseBehindBy(
   name: string,
   baseRefName: string,
   headRef: string,
+  cache?: BaseBehindCacheOptions,
 ): Promise<number> {
+  const cached = await cachedBaseBehind(cache, headRef);
+  if (cached !== undefined) return cached;
   return githubOperation(
     "BaseBehind",
     async () => {
@@ -108,7 +119,9 @@ export async function loadBaseBehindBy(
           EXIT.TEMPFAIL,
         );
       }
-      return ref.compare?.behindBy ?? 0;
+      if (!ref.compare) return 0;
+      await storeBaseBehind(cache, ref.target?.oid, headRef, ref.compare.behindBy);
+      return ref.compare.behindBy;
     },
     () => readRestBehind({ owner, name }, baseRefName, headRef),
   );

@@ -102,8 +102,14 @@ describe("refreshCachedUnreported", () => {
         },
       }),
       { owner: "acme", name: "widgets" },
+      undefined,
+      "b".repeat(40),
     );
     expect(target).not.toHaveBeenCalled();
+    expect(behind).toHaveBeenCalledWith("acme", "widgets", "main", expect.any(String), {
+      stateKey: { owner: "acme", repo: "widgets", pr: expect.any(Number) },
+      baseTipOid: "b".repeat(40),
+    });
     expect(next.baseBehindBy).toBe(93);
     expect(next.unreportedRequiredChecks).toEqual(["old"]);
   });

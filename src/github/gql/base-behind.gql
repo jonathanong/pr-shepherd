@@ -12,6 +12,9 @@ query BaseBehind($owner: String!, $repo: String!, $qualifiedName: String!, $head
   }
   repository(owner: $owner, name: $repo) {
     ref(qualifiedName: $qualifiedName) {
+      target {
+        oid
+      }
       compare(headRef: $headRef) {
         behindBy
       }

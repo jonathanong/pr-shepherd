@@ -39,6 +39,12 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
       }
       baseRefName
       baseRefOid
+      # Live base tip (an object, no connection cost): keys the BaseBehind cache.
+      baseRef {
+        target {
+          oid
+        }
+      }
       isInMergeQueue
       ...PrMergePolicy
       autoMergeRequest {

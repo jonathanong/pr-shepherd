@@ -107,6 +107,8 @@ One-PR `BatchPr` stays at the 1-point floor. Fewer review connections, a smaller
 
 5. **Done: take single annotations from `BatchPr`.** The `annotations(first: 1)` probe selects the full annotation fields. In the recorded debug logs, 109 of 110 `CheckRunAnnotationsBatch` requests read only runs with exactly one annotation, so a failing-check tick with annotations drops from 2 points to 1. Runs with more annotations still use the batch.
 
+6. **Done: cache the base compare.** `BatchPr` selects the live base tip (`baseRef.target.oid`, an object field with no connection cost). The `BaseBehind` count for a non-stack head with unreported required checks is cached under that tip and the head commit, so a tick on which neither moved (including a fingerprint hit) drops from 2 points to 1. REST already answers the compare with a conditional request.
+
 Designs that are already at the floor and should stay:
 
 - The 1-point `PollStackTopology` preflight, so `entries(first:)` matches the stack instead of billing 50 empty slots.

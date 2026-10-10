@@ -240,6 +240,8 @@ export interface BatchPrData extends BatchPrMergeFields {
   baseRefName: string;
   /** Base commit GitHub recorded for this PR (`PullRequest.baseRefOid`), not the branch's live tip. */
   baseRefOid?: string;
+  /** The base branch's live tip (`baseRef.target.oid`). GraphQL only; keys the BaseBehind cache. */
+  baseTipOid?: string;
   reviewRequests: Array<{ login: string }>;
   latestReviews: Array<{ login: string; state: string }>;
   reviewThreads: ReviewThread[];

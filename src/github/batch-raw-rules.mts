@@ -74,6 +74,8 @@ interface RawRuleParameters {
 export interface RawBaseRef {
   branchProtectionRule: RawBranchProtectionRule | null;
   rules: { pageInfo?: { hasNextPage: boolean }; nodes: RawRepositoryRule[] } | null;
+  /** Live base branch tip; selected only by `BatchPr`. */
+  target?: { oid?: string } | null;
 }
 
 export interface RawPrMergeFields {
