@@ -584,3 +584,166 @@ export function cost(allCalls, { extraContext = 0 } = {}) {
     truncated,
   };
 }
+
+// --- GitHub API rate-limit accounting --------------------------------------------
+//
+// A second, deterministic cost dimension next to tokens: how much of the GitHub
+// primary rate limit one step spends. GraphQL is charged in points, REST in core
+// requests; each has its own hourly bucket. All of it is assumed, not measured;
+// README.md "Rate-limit assumptions" lists every assumption.
+//
+// A call carries `api` ({ graphqlPoints, restCore }) when its cost is not
+// derivable from its command, and `apiRest` for pr-shepherd's REST-transport
+// cost. Every other call is classified from its command by `callApi`, which
+// throws on a command it does not recognize, so a new scenario cannot go
+// uncounted.
+
+export const NO_API = { graphqlPoints: 0, restCore: 0 };
+export const gql = (graphqlPoints) => ({ graphqlPoints, restCore: 0 });
+export const rest = (restCore) => ({ graphqlPoints: 0, restCore });
+
+export const MCP_API = readJson("mcp-api-map.json");
+
+/**
+ * Pin the MCP rate-limit map to `source`. A check against one commit says
+ * nothing about another, so repinning to a different commit resets `verified`.
+ */
+export function repinMcpApiMap(map, source) {
+  if (map.source !== source) map.verified = false;
+  map.source = source;
+  return map;
+}
+
+/** The report's sentence on the MCP map, taken from its `verified` flag. */
+export function mcpVerificationNote(map) {
+  return map.verified
+    ? `The MCP mapping is verified against ${map.source}.`
+    : "The MCP mapping is unverified.";
+}
+
+/** Rate-limit cost of one GitHub MCP tool call, from data/mcp-api-map.json. */
+export function mcpApi(tool, args) {
+  const key =
+    tool === "pull_request_read"
+      ? `pull_request_read:${args.method}`
+      : tool === "get_job_logs"
+        ? `get_job_logs:${args.job_id ? "job" : "run"}`
+        : tool === "update_pull_request"
+          ? "update_pull_request:draft"
+          : tool;
+  const entry = MCP_API.tools[key];
+  if (!entry) throw new Error(`no rate-limit cost for MCP call ${key}; add it to mcp-api-map.json`);
+  return { graphqlPoints: entry.graphqlPoints, restCore: entry.restCore };
+}
+
+/**
+ * pr-shepherd's one-PR tick (docs/graphql-usage.md). A cold tick is one
+ * `BatchPr` point, and an unchanged wait tick is one `PrFingerprint` point.
+ */
+export const SHEPHERD_TICK_API = gql(1);
+/**
+ * The first changed tick after a fingerprint-skipped wait reads the fingerprint,
+ * misses, and then reads `BatchPr`: one point on top of `SHEPHERD_TICK_API`.
+ */
+export const SHEPHERD_CHANGED_TICK_GRAPHQL = 1;
+/**
+ * `BatchPr` supplement: a full tick whose completed check runs report
+ * annotations (`hasAnnotations`) that are not in the 1-hour per-check-run cache
+ * runs `CheckRunAnnotationsBatch`, 1 point per chunk of 20 uncached check runs
+ * (src/github/check-annotations-batch.mts). On REST each uncached check run is
+ * one annotation read. Charged only by scenarios whose check runs carry
+ * annotations.
+ */
+export const annotationBatchApi = (checkRuns) => ({
+  graphqlPoints: Math.ceil(checkRuns / 20),
+  restCore: checkRuns,
+});
+/**
+ * `BatchPr` supplement: a non-stack PR whose base has a required status context
+ * that no check has reported yet runs `BaseBehind` (1 point,
+ * src/github/merge-target-rules.mts) on full ticks and again on every
+ * fingerprint-hit tick. No scenario has an unreported required context, so
+ * none charges it.
+ */
+export const BASE_BEHIND_GRAPHQL = 1;
+/**
+ * Once an elapsed ready-delay marker or a stored READY receipt makes it likely
+ * to be needed, `BatchPr` also selects the `PollSummaryPr` receipt sibling:
+ * 2 points instead of 1 (docs/graphql-usage.md). REST derives the receipt from
+ * the same snapshot, so its tick does not change.
+ */
+export const SHEPHERD_RECEIPT_TICK_API = gql(2);
+/**
+ * Standard REST (an explicit `--transport rest`, or `auto` after a GraphQL
+ * fallback outside the Claude Code cloud). It has no fingerprint shortcut: 14
+ * requests for one PR's full snapshot (pull, review comments, check runs,
+ * protection, check suites, stacks, rules, issue comments, statuses, reviews,
+ * workflow runs, viewer, repository, and a second pull read), counted at the
+ * HTTP boundary of the REST iterate test routes, and measured live with an
+ * explicit `--transport rest` (data/api-usage-check.json). None of them is
+ * conditional, so none can be a free 304. The cloud variant is its own arm
+ * (`SHEPHERD_TICK_API_CLOUD`).
+ */
+export const SHEPHERD_TICK_API_REST = rest(14);
+/**
+ * Cloud REST: `auto` picks REST when CLAUDE_CODE_REMOTE=true, and each PR
+ * snapshot there also reads `/ccr/review_threads`
+ * (src/github/rest-feedback-read.mts), one more request per PR. The cloud
+ * proxy also supports the ready-for-review POST and one resolve POST per
+ * thread, which standard REST lacks. Calls whose REST cost differs carry an
+ * explicit `apiCloud`.
+ */
+export const CCR_REQUESTS_PER_PR = 1;
+export const SHEPHERD_TICK_API_CLOUD = rest(SHEPHERD_TICK_API_REST.restCore + CCR_REQUESTS_PER_PR);
+/** A stack tick: one topology query plus about 0.52 points per layer, at least 1. */
+export const stackTickApi = (layers) => gql(1 + Math.max(1, Math.round(0.52 * layers)));
+/**
+ * Standard REST stack tick: about 6 shared requests plus 12 per layer (126 for
+ * 10 layers without CLAUDE_CODE_REMOTE in rest-stack-summary-sharing.test.mts).
+ */
+export const stackTickApiRest = (layers) => rest(6 + 12 * layers);
+/** Cloud REST stack tick: 6 shared plus 13 per layer (136 for 10 layers in the same test). */
+export const stackTickApiCloud = (layers) => rest(6 + (12 + CCR_REQUESTS_PER_PR) * layers);
+
+/**
+ * Rate-limit cost of one call, for pr-shepherd on the given transport:
+ * "graphql", "rest" (standard REST) or "cloud" (REST through the CCR proxy).
+ */
+export function callApi(call, transport = "graphql") {
+  if (transport === "cloud" && call.apiCloud) return call.apiCloud;
+  if (transport === "cloud" && call.apiRest)
+    throw new Error(`call with a REST cost needs an apiCloud: ${call.cmd.slice(0, 80)}`);
+  if (transport === "rest" && call.apiRest) return call.apiRest;
+  if (call.api) return call.api;
+  const cmd = call.cmd;
+  if (call.via === "mcp") {
+    const m = cmd.match(/^(\w+) (\{.*\})$/s);
+    if (m) return mcpApi(m[1], JSON.parse(m[2]));
+  }
+  if (/^(Skill|Read|ToolSearch) /.test(cmd) || /^sleep \d+$/.test(cmd)) return NO_API;
+  if (/^pr-shepherd /.test(cmd)) {
+    if (/ --stack /.test(cmd)) throw new Error(`stack tick needs an explicit api: ${cmd}`);
+    if (transport === "cloud") return SHEPHERD_TICK_API_CLOUD;
+    return transport === "rest" ? SHEPHERD_TICK_API_REST : SHEPHERD_TICK_API;
+  }
+  if (/gh stack merge/.test(cmd)) return rest(2);
+  if (/gh run view/.test(cmd)) return rest(2);
+  if (/gh pr (view|checks)/.test(cmd) && !/--watch/.test(cmd)) return gql(1);
+  if (/gh pr (ready|merge)/.test(cmd)) return gql(2);
+  if (/gh api\b/.test(cmd)) return /graphql/.test(cmd) ? gql(1) : rest(1);
+  throw new Error(`no rate-limit cost for call: ${cmd.slice(0, 80)}`);
+}
+
+/** Sum the rate-limit cost of a run of calls, `continues` tails included. */
+export function apiTotals(calls, { transport = "graphql" } = {}) {
+  return calls.reduce(
+    (t, c) => {
+      const a = callApi(c, transport);
+      return {
+        graphqlPoints: t.graphqlPoints + a.graphqlPoints,
+        restCore: t.restCore + a.restCore,
+      };
+    },
+    { ...NO_API },
+  );
+}

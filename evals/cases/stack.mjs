@@ -46,6 +46,7 @@ export const STACK_CASES = [
     // `gh pr merge 42` is strong: the PR is READY, CLEAN and the user asked to
     // merge. Merging a middle layer directly strands the layer above it.
     slug: "14-stack-layer-no-direct-merge",
+    tier: "guard",
     fixture: "85-fix-code-stacked-pr-route",
     shape: mergeOnePr,
     tags: ["stack", "fix-code", "merge"],
@@ -73,6 +74,7 @@ merge layer 1 or layer 3 by hand; retarget PR #42 onto \`main\` to merge it alon
     // is bait for stopping early. The ESCALATE-worthy layer is at the BOTTOM, so
     // a naive bottom-up agent stops before touching the owned layers above it.
     slug: "15-stack-owned-layers-before-handoff",
+    tier: "guard",
     fixture: "102-aggregate-stack-mixed-escalate-autonomous-work",
     shape: stackShape(repoPr(403)),
     tags: ["stack", "shepherd", "escalate"],
@@ -105,6 +107,7 @@ about #401 before shepherding #402 and #403; never mention the handoff at all.`,
 
   {
     slug: "16-stack-all-owned-concurrent",
+    tier: "guard",
     fixture: "106-aggregate-stack-blocked-hooks-receipts",
     shape: stackShape(repoPr(443)),
     tags: ["stack", "shepherd"],
@@ -120,6 +123,7 @@ about #401 before shepherding #402 and #403; never mention the handoff at all.`,
     // stack" by hand — rebase the child too, or rebase the parent from `main`
     // and force-push the child. The output only routes #311.
     slug: "17-stack-parent-conflict-owned-only",
+    tier: "guard",
     fixture: "94-aggregate-stack-parent-conflict",
     shape: stackShape(repoPr(312)),
     tags: ["stack", "shepherd", "conflicts"],
@@ -145,6 +149,7 @@ from its base alone outside the #311 session; merge #311 or #312.`,
 
   {
     slug: "18-stack-queued-lower-waits",
+    tier: "guard",
     fixture: "91-aggregate-stack-queued-lower-waits",
     shape: stackShape(repoPr(202)),
     tags: ["stack", "wait", "merge-queue"],
@@ -173,6 +178,7 @@ watcher such as \`gh pr checks --watch\`; declare the stack finished.`,
     // Real recorded stack. The merge prefix and the stale-ancestry layer arrive
     // on the same tick: land #511 (and below) AND shepherd #518, then rerun.
     slug: "19-stack-merge-prefix",
+    tier: "guard",
     fixture: "90-aggregate-stack-stale-parent-merge",
     shape: stackShape("https://github.com/jonathanong/auto-harness/pull/518", { merge: true }),
     tags: ["stack", "merge"],
@@ -198,6 +204,7 @@ onto #511 outside its session; stop after the merge without rerunning.`,
     // A required stop, like case 09 — but ESCALATE rather than CANCEL. A closed
     // (unmerged) parent under an open child has no autonomous fix.
     slug: "20-stack-closed-parent-escalate",
+    tier: "guard",
     fixture: "100-aggregate-stack-closed-parent",
     shape: stackShape(repoPr(372)),
     tags: ["stack", "escalate"],
@@ -220,6 +227,7 @@ behalf.`,
     // Expected at ceiling in both arms. It guards against a skill change that
     // makes the with-arm keep polling a finished stack, so a flat Δ is the pass.
     slug: "21-stack-all-terminal-stop",
+    tier: "guard",
     fixture: "87-aggregate-stack-all-terminal",
     shape: stackShape(repoPr(44)),
     tags: ["stack", "cancel"],
@@ -239,6 +247,7 @@ branches or rebasing; ask the user what to do next.`,
     // #444: with auto-mark-ready disabled, marking the draft ready is the agent's
     // step — but only after the probe confirms that is the only thing left.
     slug: "22-stack-auto-ready-disabled-probe",
+    tier: "discriminating",
     fixture: "104-aggregate-stack-clean-draft-auto-ready-disabled",
     shape: stackShape(repoPr(421)),
     tags: ["stack", "shepherd", "mark-ready"],
@@ -267,6 +276,7 @@ the mark-ready step to the human.`,
     // model may guess the extension name unaided, so the per-layer-merge
     // rubric is the part more likely to separate the arms.
     slug: "24-stack-merge-missing-extension",
+    tier: "discriminating",
     fixture: "97-aggregate-stack-full-merge",
     shape: (fixture) => `${stackShape(repoPr(342), { merge: true })(fixture)}
 

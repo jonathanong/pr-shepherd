@@ -8,6 +8,7 @@ export const RECENT_CASES = [
     // you follow?". The rebase step sits in the middle of an ordinary review
     // fix, so it is easy to push the fix and skip the rebase.
     slug: "23-behind-base-rebase-hint",
+    tier: "guard",
     fixture: "73-fix-code-behind-base-hint",
     shape: shapeA,
     tags: ["fix-code", "behind-base"],
@@ -45,6 +46,7 @@ thread through the GitHub UI instead.`,
     // ESCALATE. why do you keep stopping?"). The CANCEL is real, but it ends one
     // PR's loop, not the task.
     slug: "25-multi-pr-cancel-is-per-pr",
+    tier: "guard",
     fixture: "03-cancel-ready-delay-elapsed-clean",
     // The framing mirrors the real shape: the request is old, and what arrives is
     // one background loop's result with nothing about the other PR's state.
@@ -90,6 +92,7 @@ did not ask for a merge).`,
     // only relays it via iterate.behindBaseHint, #492), so the prompt states it.
     // What the skill adds is permission: lease-push your own head without asking.
     slug: "26-conflicts-rebase-without-asking",
+    tier: "guard",
     fixture: "27-fix-code-conflicts",
     shape: (
       fixture,
@@ -121,6 +124,7 @@ back to the user without attempting them.`,
     // #2099 remained based on merged #2095's old head branch after its code was
     // rebased onto main. GitHub reported a conflict against that obsolete base.
     slug: "27-merged-parent-stale-base",
+    tier: "guard",
     fixture: "127-fix-code-merged-parent-stale-base",
     shape: (
       fixture,
@@ -173,6 +177,7 @@ Shepherd command.`,
   },
   {
     slug: "28-native-stack-merged-parent",
+    tier: "guard",
     fixture: "129-fix-code-native-stack-merged-parent",
     shape: (
       fixture,

@@ -1,0 +1,79 @@
+{
+  "source": "github/github-mcp-server@eb47a99ddb866ca2b8a162920e6bda9521f33ebb",
+  "verified": true,
+  "note": "GitHub rate-limit cost of one call to each GitHub MCP tool, read from the handler source at the pinned commit. graphqlPoints is the primary GraphQL budget (connection requests / 100, at least 1; a mutation counts 1); restCore is the number of REST core requests. Assumes the server's default configuration: lockdown mode off and the IFC-labels feature flag off, so no repository-visibility or lockdown lookups are added. Log bodies downloaded from the signed redirect URL are not core API requests. record.mjs resets verified to false when the pinned commit changes; re-read each entry's source and set it back to true.",
+  "tools": {
+    "pull_request_read:get": {
+      "graphqlPoints": 0,
+      "restCore": 1,
+      "source": "pkg/github/pullrequests.go getPullRequest",
+      "calls": "REST PullRequests.Get"
+    },
+    "pull_request_read:get_check_runs": {
+      "graphqlPoints": 0,
+      "restCore": 2,
+      "source": "pkg/github/pullrequests.go getPullRequestCheckRuns",
+      "calls": "REST PullRequests.Get for the head SHA, then Checks.ListCheckRunsForRef"
+    },
+    "pull_request_read:get_review_comments": {
+      "graphqlPoints": 1,
+      "restCore": 0,
+      "source": "pkg/github/pullrequests.go getPullRequestReviewComments",
+      "calls": "one GraphQL query: reviewThreads(first: 30) with comments(first: 100) each, 31 connection requests"
+    },
+    "pull_request_read:get_reviews": {
+      "graphqlPoints": 0,
+      "restCore": 1,
+      "source": "pkg/github/pullrequests.go getPullRequestReviews",
+      "calls": "REST PullRequests.ListReviews"
+    },
+    "pull_request_read:get_comments": {
+      "graphqlPoints": 0,
+      "restCore": 1,
+      "source": "pkg/github/issues.go getIssueComments",
+      "calls": "REST Issues.ListComments"
+    },
+    "get_job_logs:run": {
+      "graphqlPoints": 0,
+      "restCore": 2,
+      "source": "pkg/github/actions.go handleFailedJobLogs",
+      "calls": "REST Actions.ListWorkflowJobs, then Actions.GetWorkflowJobLogs per failed job (one failed job here)"
+    },
+    "get_job_logs:job": {
+      "graphqlPoints": 0,
+      "restCore": 1,
+      "source": "pkg/github/actions.go handleSingleJobLogs",
+      "calls": "REST Actions.GetWorkflowJobLogs"
+    },
+    "add_reply_to_pull_request_comment": {
+      "graphqlPoints": 0,
+      "restCore": 1,
+      "source": "pkg/github/pullrequests.go AddReplyToPullRequestComment",
+      "calls": "REST PullRequests.CreateCommentInReplyTo"
+    },
+    "resolve_review_thread": {
+      "graphqlPoints": 1,
+      "restCore": 0,
+      "source": "pkg/github/pullrequests_granular.go granularResolveReviewThread, pkg/github/pullrequests.go ResolveReviewThread",
+      "calls": "one GraphQL resolveReviewThread mutation"
+    },
+    "update_pull_request:draft": {
+      "graphqlPoints": 2,
+      "restCore": 1,
+      "source": "pkg/github/pullrequests.go UpdatePullRequest",
+      "calls": "GraphQL isDraft query, GraphQL markPullRequestReadyForReview mutation, then REST PullRequests.Get for the result"
+    },
+    "merge_pull_request": {
+      "graphqlPoints": 0,
+      "restCore": 1,
+      "source": "pkg/github/pullrequests.go MergePullRequest",
+      "calls": "REST PullRequests.Merge"
+    },
+    "list_pull_requests": {
+      "graphqlPoints": 0,
+      "restCore": 1,
+      "source": "pkg/github/pullrequests.go ListPullRequests",
+      "calls": "REST PullRequests.List"
+    }
+  }
+}

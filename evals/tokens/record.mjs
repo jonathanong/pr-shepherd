@@ -21,7 +21,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { DATA_DIR, MCP_TOOLS_USED } from "./lib.mjs";
+import { DATA_DIR, MCP_TOOLS_USED, repinMcpApiMap } from "./lib.mjs";
 
 const REPO = "jonathanong/pr-shepherd";
 const HISTORY_PR = 505;
@@ -43,16 +43,55 @@ update_issue_comment update_pull_request update_pull_request_branch`.split(/\s+/
 const gh = (path) => execFileSync("gh", ["api", path], { encoding: "utf8", maxBuffer: 64 << 20 });
 const ghJson = (path) => JSON.parse(gh(path));
 
+/**
+ * Review threads as `{ path, line, resolved, outdated, comment_ids }`. GraphQL
+ * is the normal transport and has real thread objects, so it comes first. The
+ * REST-only `ccr/review_threads` route is the fallback for a token or network
+ * that cannot reach GraphQL (the Claude Code remote 403, for one).
+ *
+ * The GraphQL path is not exercised by CI or by the author's sandbox, which has
+ * no GitHub access; it is unverified until record.mjs is next run live.
+ */
+function recordThreads() {
+  const [owner, name] = REPO.split("/");
+  // fullDatabaseId, not databaseId: review-comment IDs now exceed Int32, where
+  // the legacy databaseId is null.
+  const query = `query { repository(owner: "${owner}", name: "${name}") { pullRequest(number: ${HISTORY_PR}) { reviewThreads(first: 100) { nodes { path line isResolved isOutdated comments(first: 100) { nodes { fullDatabaseId } } } } } } }`;
+  try {
+    const out = JSON.parse(
+      execFileSync("gh", ["api", "graphql", "-f", `query=${query}`], {
+        encoding: "utf8",
+        maxBuffer: 64 << 20,
+      }),
+    );
+    const threads = out.data.repository.pullRequest.reviewThreads.nodes.map((t) => ({
+      path: t.path,
+      line: t.line,
+      resolved: t.isResolved,
+      outdated: t.isOutdated,
+      comment_ids: t.comments.nodes.map((c) => c.fullDatabaseId),
+    }));
+    if (threads.some((t) => t.comment_ids.some((id) => id === null || id === undefined))) {
+      throw new Error("a review comment has no fullDatabaseId");
+    }
+    return threads;
+  } catch (error) {
+    console.error(`GraphQL review threads failed (${error.message.split("\n")[0]}); using REST`);
+    // REST has no thread objects; this route groups comment IDs by thread.
+    return ghJson(`repos/${REPO}/pulls/${HISTORY_PR}/ccr/review_threads`);
+  }
+}
+
 function recordHistory() {
   const base = `repos/${REPO}`;
   const reviewComments = ghJson(`${base}/pulls/${HISTORY_PR}/comments?per_page=100`);
   const issueComments = ghJson(`${base}/issues/${HISTORY_PR}/comments?per_page=100`);
   const reviews = ghJson(`${base}/pulls/${HISTORY_PR}/reviews?per_page=100`);
-  // REST has no thread objects; this route groups comment IDs by thread.
-  const threads = ghJson(`${base}/pulls/${HISTORY_PR}/ccr/review_threads`);
+  const threads = recordThreads();
 
   const pull = ghJson(`${base}/pulls/${HISTORY_PR}`);
-  const byId = new Map(reviewComments.map((c) => [c.id, c]));
+  // GraphQL's BigInt fullDatabaseId arrives as a string, REST's id as a number.
+  const byId = new Map(reviewComments.map((c) => [String(c.id), c]));
   const comment = (c) => ({
     id: c.id,
     author: c.user.login,
@@ -69,7 +108,7 @@ function recordHistory() {
       line: t.line,
       isResolved: t.resolved,
       isOutdated: t.outdated,
-      comments: t.comment_ids.map((id) => comment(byId.get(id))),
+      comments: t.comment_ids.map((id) => comment(byId.get(String(id)))),
     })),
     comments: issueComments.map(comment),
     reviews: reviews.map((r) => ({
@@ -144,6 +183,23 @@ function recordMcpSchemas(serverDir) {
       2,
     )}\n`,
   );
+  // The rate-limit mapping is hand-written, not recorded. Check it still names
+  // tools the server has, and stamp the commit it was last compared against.
+  const mapPath = join(DATA_DIR, "mcp-api-map.json");
+  const map = JSON.parse(readFileSync(mapPath, "utf8"));
+  const missing = Object.keys(map.tools)
+    .map((k) => k.split(":")[0])
+    .filter((t) => !existsSync(join(snaps, `${t}.snap`)));
+  if (missing.length) console.error(`mcp-api-map.json names tools the server lacks: ${missing}`);
+  // A new commit can change any handler, so the costs need re-reading.
+  const source = `github/github-mcp-server@${commit}`;
+  if (map.source !== source) {
+    console.error(
+      `mcp-api-map.json moved from ${map.source} to ${source}: re-read each entry's "source" handler, then set "verified": true`,
+    );
+  }
+  repinMcpApiMap(map, source);
+  writeFileSync(mapPath, `${JSON.stringify(map, null, 2)}\n`);
 }
 
 const i = process.argv.indexOf("--mcp-server");

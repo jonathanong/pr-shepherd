@@ -8,30 +8,97 @@ benchmark asks what the work costs. The null hypothesis is that an agent with
 only `gh` or only the GitHub MCP server reaches the same state for the same
 cost.
 
-Latest numbers: [REPORT.md](REPORT.md). Estimated cost per session:
+Latest numbers: [REPORT.md](REPORT.md). Estimated cost per session
+(rewritten by `bench.mjs`; do not edit between the markers):
 
-| session   | cost vs. gh | cost vs. MCP | turns vs. gh / MCP | tool tokens vs. gh / MCP |
-| --------- | ----------- | ------------ | ------------------ | ------------------------ |
-| single PR | **−39%**    | **−75%**     | −14% / −67%        | −71% / −87%              |
-| PR stack  | **−25%**    | **−50%**     | −23% / −47%        | +41% / −24%              |
+<!-- bench:headline:start -->
+
+| session | cost vs. gh | cost vs. MCP | turns vs. gh / MCP | tool tokens vs. gh / MCP |
+| --- | --- | --- | --- | --- |
+| single PR | **−33%** | **−74%** | −14% / −67% | −63% / −85% |
+| PR stack | **−25%** | **−50%** | −23% / −47% | +42% / −23% |
+
+GitHub rate limit per session (deterministic, assumed; see the Method section):
+
+| session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
+| --- | --- | --- | --- | --- |
+| single PR | 42.5 / 36.5 / 12 | 3 / 9 / 78.3 | 332.3 core + 1.5 points | 359.8 core + 1.5 points |
+| PR stack | 42 / 27 / 12 | 2 / 6 / 74 | 540 core + 0 points | 570 core + 0 points |
+
+<!-- bench:headline:end -->
 
 The savings are concentrated. Against a frugal gh agent they come from
 re-read review history, CI logs, CI and merge-queue waits, and stack merges. Against
 the GitHub MCP server they also come from polling and stack discovery, which
 MCP has no shortcut for. A single fresh read-and-reply tick against gh is a
-wash: between 9% cheaper and 6% dearer. See "Where pr-shepherd does not save".
+wash: between 9% cheaper and 5% dearer. A PR that has already merged costs
+15% more to confirm than a state-first gh agent pays. On the GitHub rate limit,
+pr-shepherd spends more GraphQL points than gh on a single PR and on a stack,
+and far fewer REST requests; against MCP it trades REST requests for GraphQL points. See "Where
+pr-shepherd does not save" and "Rate-limit assumptions".
 
 ## Run it
 
 ```sh
 node evals/tokens/bench.mjs          # rewrite REPORT.md
 node evals/tokens/bench.mjs --json   # raw numbers
+node evals/tokens/bench.mjs --check  # the gate: fail on a loss not in pending-losses.json
 ```
 
 It is offline and deterministic. CI regenerates REPORT.md next to the eval
 cases and fails on any diff. So a snapshot change that moves the numbers has to
-commit the new report. `record.mjs` refreshes the recorded GitHub data; see its
-header.
+commit the new report. CI then runs `--check`. `record.mjs` refreshes the
+recorded GitHub data; see its header.
+
+`node evals/analyze.mjs --calibrate <results dir>` fits the measured
+without-plugin input tokens per turn of a live eval run against prompt size,
+and `--write` stores the result in `data/calibration.json` for this report. No
+live calibration is recorded yet. `fixtures/calibrate` is a synthetic results
+directory whose input is `3000 + chars / 4` per turn;
+`node evals/analyze.mjs --calibrate evals/tokens/fixtures/calibrate` must
+print 4.00 characters per token and a 3,000-token intercept. Never run it with
+`--write`.
+
+## The gate
+
+The goal is for pr-shepherd to cost less than every baseline on every metric.
+`bench.mjs --check` exits nonzero when pr-shepherd is strictly worse than a
+baseline on any gated cell that the pending list does not name. A tie is not a
+loss.
+
+- **Metrics.** Cost (ITE), tool tokens, turns and tool calls; GraphQL points and
+  REST core requests.
+- **Baselines.** gh, GitHub MCP and GitHub MCP with eager tools for the token
+  metrics. Eager MCP makes the same calls as MCP, so the rate-limit metrics
+  compare against gh and MCP.
+- **Transports.** The model gives pr-shepherd the same output on every
+  transport, so each token metric is one cell. Each rate-limit metric is gated
+  three times: for the GraphQL transport, for standard REST (`rest`) and for
+  REST through the Claude Code cloud proxy (`cloud`).
+- **Scopes.** Each session total, and each scenario on its own, so a loss on
+  one step cannot hide in a session average.
+- **† steps.** A baseline that cannot finish a step (the † cells) is skipped on
+  that scenario: its lower cost covers only part of the work, so it is not a
+  win. Session totals keep those rows at the baseline's partial cost, which
+  only makes the session gate stricter on pr-shepherd.
+- **Setup rows.** A setup row is compared with MCP only. gh has no setup step,
+  and eager MCP carries its schemas on every later row instead of loading them.
+  pr-shepherd's fixed cost is still gated against both through the session
+  totals, which include setup. Setup makes no GitHub call, so it has no
+  rate-limit cells.
+
+Today's losses are listed in [pending-losses.json](pending-losses.json). Each
+entry names its scope, metric, transport (rate-limit metrics only) and
+baseline, and links the issue that removes it: #528 for tokens and turns, #525
+for the rate limit. Entries carry no numbers, so a change in size is not churn;
+REPORT.md's Summary prints every loss with its numbers. `--check` also fails
+when a listed entry is no longer a loss, or links the wrong issue, so the list
+can only shrink. When a fix lands, delete its entries in the same change. The
+list is temporary: #524 closes when it is empty.
+
+On a failure, `--check` prints each unlisted loss with its numbers and a
+paste-ready entry. Add one only for a regression you accept and track in an
+issue.
 
 ## Method
 
@@ -121,6 +188,126 @@ merge-queue membership, or merge a native stack). Its cost
 then covers only what it could do, so the saving shown understates the gap. Every knob is in `MODEL` in [lib.mjs](lib.mjs) and is
 printed at the bottom of the report.
 
+### Baseline strategy
+
+A baseline can fire all its reads in one turn (**parallel**) or read the PR's
+state first and the rest in the next turn, stopping when the PR is terminal
+(**state first**). Each baseline takes the cheaper strategy for every PR step,
+and the report prints both strategies' session costs. State first only wins on
+`merged`, where gh stops after one `gh pr view --json state,isDraft` and MCP
+after one `pull_request_read get`. Stack steps stay parallel.
+
+### Rate-limit assumptions
+
+Beside tokens, the report counts how much of the GitHub primary rate limit each
+arm spends: GraphQL points and REST core requests, which are separate buckets.
+**It is deterministic and assumed.** No GitHub call is made, and the numbers
+are as good as these assumptions:
+
+- **pr-shepherd, GraphQL transport** (`docs/graphql-usage.md`):
+  - a cold one-PR tick is 1 point (`BatchPr`), and each unchanged wait poll is
+    a 1-point fingerprint hit; the first changed tick after a wait reads the
+    fingerprint, misses and reads `BatchPr`, so it is 2 (the wait scenario
+    carries that extra point);
+  - a stack tick is 1 topology point plus `max(1, round(0.52 × layers))`;
+  - a one-PR tick on a non-root native-stack layer (the sessions `stack-work`
+    routes) also loads the trunk's required contexts (`RefRules`) and the
+    stack topology (`PollStackTopology`), 3 points in all;
+  - `apply review` reads the head SHA for `--require-sha` (1 point), then
+    spends one thread read plus one point per chunk of 10 mutations, and one
+    `ReplyRecoveryEvidence` read per chunk that carries replies;
+  - a tick that renders a failing job's log excerpt also lists the run's jobs
+    and reads the job log, two REST requests on either transport;
+  - `BatchPr`'s supplements are charged only where the scenario's state
+    triggers them. `CheckRunAnnotationsBatch` runs on a full tick whose
+    completed check runs report annotations that are not in the 1-hour
+    per-check-run cache: 1 point per 20 check runs. `failing-check` (the
+    recorded job carries an exit-code annotation) and `check-annotations` are
+    charged it. `BaseBehind` (1 point, on every tick including fingerprint
+    hits) runs while a non-stack PR's base has a required status context that
+    no check has reported yet; no scenario has that state, so none is charged;
+  - the tick after an elapsed ready delay (`merge`, `merge-queue`) selects the
+    READY-receipt summary sibling, 2 points instead of 1;
+  - the guarded merge is 2 points (lookup and mutation);
+  - the poll tick that marks a draft ready is a changed tick after a wait plus
+    the 1-point mutation, 3 points.
+- **pr-shepherd, REST transport.** This is standard REST (an explicit
+  `--transport rest`, or `auto` after a GraphQL fallback outside the Claude
+  Code cloud). REST has no fingerprint shortcut, so a poll is a full read.
+  From `src/github/rest-stack-summary-sharing.test.mts`, a 10-layer stack tick
+  is 126 requests, which this models as 6 shared plus 12 per layer. A routed
+  non-root layer's one-PR tick adds the stack read, the trunk's protection,
+  rules and compare, and the stack topology (the stack list and read twice,
+  each layer's pull and the viewer). A one-PR
+  tick is 14 requests, counted at the HTTP boundary of the REST iterate test
+  routes and measured live (below); none is conditional, so none is a free
+  304. The `failing-check` and
+  `check-annotations` ticks add one annotation read per annotated check run.
+  `apply review` reads the pull for `--require-sha`; a thread resolve has no
+  standard REST route, so it then spends, when it has replies, a 4-request
+  transcript read (pull comments, issue comments, reviews and the viewer) and
+  three requests per reply (`/user` and the pull comments, read so a lost
+  response can be recovered, then the POST). Ready-for-review has no standard REST route either: the
+  `mark-ready` tick is its 14-request read, and it escalates as
+  transport-unsupported instead of marking the PR ready. The live check below
+  had no failing check, so neither the job/log reads nor the annotation reads
+  were measured.
+- **pr-shepherd, cloud REST.** The same REST path through the Claude Code
+  cloud proxy (`CLAUDE_CODE_REMOTE=true`, where `auto` starts on REST). Each
+  PR snapshot also reads `/ccr/review_threads`, so a one-PR tick is 15
+  requests and a stack tick is 6 shared plus 13 per layer. `apply review`'s
+  transcript read is 5 requests, and each thread resolve is one CCR POST
+  (`src/comments/rest-review-mutations.mts`). The `mark-ready` tick marks the
+  PR ready with one more CCR POST. Replies and a routed stack layer's extra
+  reads cost what they do on standard REST. The live check below ran outside the cloud,
+  so this arm is the measured 14-request tick plus the proxy read.
+- **gh:** `gh pr view`, the thread query and each `gh pr checks` refresh are
+  one point; `--watch` is one point on start plus one per refresh; `gh pr ready` and
+  `gh pr merge` are two (lookup and mutation); `gh run view --log-failed` is
+  two REST requests; replies, annotations, the stacks lookup and the
+  merge-async calls are one REST request each; a thread resolve is one point.
+- **GitHub MCP:** a mapping from tool to cost in
+  [data/mcp-api-map.json](data/mcp-api-map.json), read from each tool's
+  handler at the pinned commit (the one `data/mcp-tool-schemas.json` records).
+  Every entry names its `source` file and function and the `calls` it makes.
+  It assumes the server's default configuration: lockdown mode and the IFC
+  labels flag are off, so no extra visibility or author lookups run. A job
+  log's body comes from a signed redirect URL and is not a core API request.
+  Reading the source changed one entry: `update_pull_request` with `draft`
+  is two GraphQL points (an `isDraft` query and the mutation) plus one REST
+  `PullRequests.Get`, not one point and one request.
+  When `record.mjs` moves the pin to another commit it sets `verified` to
+  `false`, and the report says so, until someone re-reads each `source`
+  handler and sets it back. It cannot check the costs by itself.
+
+**Live cross-check.** [data/api-usage-check.json](data/api-usage-check.json)
+records `npx pr-shepherd iterate 522 --verbose --format=json` run twice per
+transport from a fresh `PR_SHEPHERD_STATE_DIR`. A temporary untracked
+`.pr-shepherdrc.yml` (`iterate.minimizeComments: none`,
+`actions.autoMinimizeSuppressed: false`, `actions.autoMarkReady: false`) and a
+PR with no unresolved outdated threads kept the runs read-only. A one-shot
+`iterate` never uses the fingerprint cache (only the poll path does), so every
+tick is a full read and the check does not measure fingerprint hits or misses.
+Each first tick also read the annotations of three first-look check runs, so
+its model adds `annotationBatchApi(3)`. GraphQL took 2 points on the first tick
+(`BatchPr` plus one `CheckRunAnnotationsBatch` chunk) and 1 on the second, with
+no REST. REST took 17 requests on the first tick (14 plus three annotation
+reads) and 14 on the second, all `200`. All four match the model. REPORT.md
+prints the table. Re-run it by hand when the transports change; CI makes no
+GitHub calls.
+
+A call whose cost is not derivable from its command (a stack tick, a poll
+tail, a hidden mutation) carries an explicit `api`; every other call is
+classified from its command, and an unrecognized command throws.
+
+### Fixed costs a skill triggers
+
+`setupScenario` loads each playbook a shepherd output names with
+`Playbook: "<name>"`. A step whose skill text, rather than its output, sends the
+agent to a playbook lists it in `skillTriggers: ["<name>"]` on the scenario. It
+is loaded at that scenario's share like a named one, and an unknown name
+throws. No scenario uses it yet.
+
 ### Weights
 
 `weight` is how often a step happens in one typical session.
@@ -150,8 +337,9 @@ These are assumptions, not measurements. See "Next steps".
 - **History is re-read every tick.** After one review round, `gh pr view
 --json comments,reviews` and the MCP readers return every bot summary and
   resolved thread again: about 8.5k tokens on #505. pr-shepherd's seen markers
-  surface each item once. This is most of the gap in the `-with-history`,
-  `mark-ready` and `merged` scenarios.
+  surface each item once. This is most of the gap in the `-with-history` and
+  `mark-ready` scenarios. A state-first gh agent skips the re-read on a merged
+  PR, so `merged` is not one of them.
 - **Logs are excerpted.** On the real log, pr-shepherd's excerpt is about 1.1k
   tokens. `gh … --log-failed | tail -n 200` is about 7k. MCP's default
   500-line tail is about 11k, and none of it is the failure: on this log the
@@ -181,10 +369,10 @@ The report splits each session's cost in two:
 
 | session | pr-shepherd fixed share | variable tokens vs. gh | variable cost vs. gh |
 | ------- | ----------------------- | ---------------------- | -------------------- |
-| PR      | 25% of its cost         | −79%                   | −54%                 |
-| stack   | 31% of its cost         | −2%                    | −49%                 |
+| PR      | 25% of its cost         | −73%                   | −49%                 |
+| stack   | 32% of its cost         | −2%                    | −49%                 |
 
-The stack session's "+41% tool tokens vs. gh" is all fixed cost. pr-shepherd
+The stack session's "+42% tool tokens vs. gh" is all fixed cost. pr-shepherd
 loads about 2.2k tokens of skill and playbooks, and gh loads nothing. On
 variable tokens alone pr-shepherd reads 2% less than gh.
 
@@ -211,20 +399,27 @@ The levers, in order of size:
 
 ## Where pr-shepherd does not save
 
+REPORT.md's Summary lists every gated loss with its numbers; this section
+explains the main ones.
+
 - **Setup.** The skill and the playbooks a session's outputs name cost about
   2.2–3.0k tokens, loaded over one to three turns. Those tokens then ride along
   on every later request: a quarter to a third of pr-shepherd's session cost.
   gh needs nothing.
 - **Fresh single-step ticks against gh.** A frugal gh agent selects `--json`
   fields and replies with `gh api --silent`. On these steps pr-shepherd lands
-  between 9% cheaper and 6% dearer than gh, because its Markdown output and
+  between 9% cheaper and 5% dearer than gh, because its Markdown output and
   carried skill context offset the saved reads. Against MCP's five-reader
-  observe, pr-shepherd still saves 4–19% on each, and 67% on `multi-category`,
+  observe, pr-shepherd still saves 3–18% on each, and 67% on `multi-category`,
   where MCP's log retries dominate. The steps:
   - `bot-review-summary`, `review-thread`, `multi-category` and `bot-threads`;
   - `conflicts`, `merge` and `merge-queue`.
+- **Confirming a merged PR.** A state-first gh agent runs one
+  `gh pr view --json state,isDraft` and stops, about 24 tokens. pr-shepherd's
+  tick is 133 tokens and carries the skill, so `merged` costs 15% more than
+  gh and 18% less than MCP.
 - **Stack token volume.** Each routed layer's first tick prints its own
-  instructions. In the stack session pr-shepherd reads 41% more tool tokens than
+  instructions. In the stack session pr-shepherd reads 42% more tool tokens than
   gh's terse per-layer reads, and routing work across the six-layer stack is
   nearly even with gh (−11%). The session still costs 25% less, because
   pr-shepherd takes 10 turns where gh takes 13.
@@ -242,6 +437,20 @@ The levers, in order of size:
   more than any row here.
 - **Agent work.** Code edits, commits and pushes are the same in every arm and
   are excluded.
+- **Real rate-limit cost.** The gh numbers are assumptions. The MCP mapping is
+  read from source, and pr-shepherd's one-PR tick is checked against one live
+  PR, but no whole session is measured. GraphQL point cost also depends on
+  query shape and node counts, which a flat 1 or 2 points per call ignores.
+  REST conditional requests (ETag/304) are not modeled. Real sessions run the
+  annotation supplement more often than the bench: GitHub currently adds an
+  `ubuntu-latest` migration notice annotation to Actions jobs on that runner,
+  so each new set of completed check runs costs a point.
+- **What the MCP stack walk cannot see.** `stack-work` has MCP stop at the
+  first layer whose base is the trunk, so a merged parent below a trunk-based
+  layer is never read. That is cheaper for MCP and also a blind spot: it
+  cannot learn that the parent merged, which pr-shepherd's overview reports
+  and which can change what the agent does. The baseline's cost here is a
+  lower bound.
 
 ## Next steps
 

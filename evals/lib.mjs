@@ -179,7 +179,28 @@ function fixtureText(name) {
   return readFileSync(path, "utf8").trimEnd();
 }
 
+// Every case declares how much it can discriminate. `discriminating` cases have
+// a Δ the suite can read (they separate the arms on the last full run) and get the
+// expensive runs; `guard` cases sit at ceiling in both arms and only need to
+// notice a regression, so one run each is enough. See EVALS.md "Runs recipes".
+const TIERS = ["discriminating", "guard"];
+
+// The committed suite runs every case 3 times. A targeted run can spend runs
+// where they buy signal: `EVAL_RUNS_DISCRIMINATING=6 EVAL_RUNS_GUARD=1 node
+// evals/generate.mjs`, then run the eval, then regenerate without the variables
+// so the tree matches the committed cases again (CI fails on any diff).
+const runsFor = (tier) => {
+  const raw = process.env[`EVAL_RUNS_${tier.toUpperCase()}`];
+  if (raw === undefined) return RUNS;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 1) throw new Error(`EVAL_RUNS_${tier.toUpperCase()} must be a positive integer`);
+  return n;
+};
+
 export function writeCase(spec) {
+  if (!TIERS.includes(spec.tier)) {
+    throw new Error(`${spec.slug}: tier must be one of ${TIERS.join(", ")}`);
+  }
   const dir = join(EVALS_DIR, spec.slug);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(join(dir, "graders"), { recursive: true });
@@ -190,11 +211,11 @@ export function writeCase(spec) {
   const frontmatter = [
     "---",
     `model: ${MODEL}`,
-    `runs: ${RUNS}`,
+    `runs: ${runsFor(spec.tier)}`,
     `max_turns: 6`,
     `timeout_seconds: 300`,
     `allowed_tools: ${ALLOWED_TOOLS}`,
-    `tags: [${spec.tags.join(", ")}]`,
+    `tags: [${[...spec.tags, `tier:${spec.tier}`].join(", ")}]`,
     `append_system_prompt: |`,
     ...append.split("\n").map((l) => (l ? `  ${l}` : "")),
     "---",

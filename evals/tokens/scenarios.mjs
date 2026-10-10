@@ -26,11 +26,22 @@ import { formatMutateResult } from "../../src/cli/mutate-formatter.mts";
 import { buildLogExcerpt } from "../../src/checks/log-excerpt.mts";
 import {
   REPO_ROOT,
+  SHEPHERD_TICK_API,
+  SHEPHERD_TICK_API_REST,
+  SHEPHERD_TICK_API_CLOUD,
   fixtureCommentId,
   ghThreadsCmd,
   ghViewCmd,
   fixtureInput,
   fixtureState,
+  gql,
+  rest,
+  SHEPHERD_CHANGED_TICK_GRAPHQL,
+  SHEPHERD_RECEIPT_TICK_API,
+  annotationBatchApi,
+  stackTickApi,
+  stackTickApiRest,
+  stackTickApiCloud,
   ghAnnotations,
   ghFailingCheckRuns,
   mcpPrList,
@@ -66,6 +77,53 @@ const STACK_POLL_SECONDS = 120;
 
 const shepherdTick = (out, phase = 1) => ({ phase, via: "bash", cmd: SHEPHERD_CMD, out });
 
+/**
+ * REST requests `readRestFeedback` spends on a reply's transcript read on
+ * standard REST: pull comments, issue comments, reviews and /user. The cloud
+ * also reads `/ccr/review_threads`.
+ */
+const REST_TRANSCRIPT_READ = 4;
+/** A standard REST reply: `/user`, one pull-comments page, then the POST. */
+const REST_REPLY_REQUESTS = 3;
+const CLOUD_TRANSCRIPT_READ = REST_TRANSCRIPT_READ + 1;
+
+/**
+ * A tick that renders a failing job's log excerpt also lists the run's jobs
+ * and reads the job log (`fetchJobs`, `fetchJobLogExcerpt`). Those are REST
+ * calls on either transport, so they add to the tick's base cost. The failed
+ * job is one annotated check run (the recorded job carries a "Process
+ * completed with exit code 1." annotation), so the tick also runs the
+ * annotation supplement.
+ */
+const ACTIONS_LOG_REST = 2;
+const FAILING_CHECK_ANNOTATIONS = annotationBatchApi(1);
+const FAILING_CHECK_TICK_API = {
+  api: {
+    graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + FAILING_CHECK_ANNOTATIONS.graphqlPoints,
+    restCore: SHEPHERD_TICK_API.restCore + ACTIONS_LOG_REST,
+  },
+  apiRest: rest(
+    SHEPHERD_TICK_API_REST.restCore + ACTIONS_LOG_REST + FAILING_CHECK_ANNOTATIONS.restCore,
+  ),
+  apiCloud: rest(
+    SHEPHERD_TICK_API_CLOUD.restCore + ACTIONS_LOG_REST + FAILING_CHECK_ANNOTATIONS.restCore,
+  ),
+};
+
+/**
+ * The tick after an elapsed ready delay selects the READY-receipt sibling
+ * (`SHEPHERD_RECEIPT_TICK_API`); REST reads the same snapshot.
+ */
+const receiptTick = (out) => ({
+  ...shepherdTick(out),
+  api: SHEPHERD_RECEIPT_TICK_API,
+  apiRest: SHEPHERD_TICK_API_REST,
+  apiCloud: SHEPHERD_TICK_API_CLOUD,
+});
+
+/** `apply review --require-sha`'s head read: `GetPrHeadSha` or one REST pull read. */
+const HEAD_SHA_READ = 1;
+
 /** Run the printed `apply review:` command and read its output. */
 function shepherdApply(text, result, phase = 2) {
   const cmd = text.match(/apply review: `([^`]+)`/)?.[1];
@@ -73,7 +131,39 @@ function shepherdApply(text, result, phase = 2) {
   const filled = cmd
     .replace("$DISMISS_MESSAGE", "Renamed the variable as requested.")
     .replace("$HEAD_SHA", "0123456789abcdef0123456789abcdef01234567");
-  return { phase, via: "bash", cmd: filled, out: formatMutateResult({ errors: [], ...result }) };
+  // Every printed command carries --require-sha, so `waitForSha` first reads
+  // the head SHA: one `GetPrHeadSha` point, or one REST pull read. GraphQL:
+  // then one thread read plus one request per chunk of 10 mutations, and one
+  // `ReplyRecoveryEvidence` read per chunk that carries replies (replies come
+  // first, so ceil(replies / 10) chunks; src/comments/resolve.mts). REST: with
+  // replies, the transcript read (`REST_TRANSCRIPT_READ`), then per reply the
+  // `/user` and pull-comments reads that make a lost response recoverable plus
+  // the POST (`REST_REPLY_REQUESTS`, src/comments/rest-reply.mts). The
+  // thread-root lookup reads only the local identity cache. A resolve has no
+  // standard REST route, so REST mode skips it (docs/graphql-usage.md,
+  // docs/escalations.md). Cloud REST's transcript read adds
+  // `/ccr/review_threads`, and it resolves each thread with one CCR POST
+  // (src/comments/rest-review-mutations.mts).
+  const replies = result.repliedThreads?.length ?? 0;
+  const resolves = result.resolvedThreads?.length ?? 0;
+  const mutations = replies + resolves;
+  const replyChunks = Math.ceil(replies / 10);
+  return {
+    phase,
+    via: "bash",
+    cmd: filled,
+    out: formatMutateResult({ errors: [], ...result }),
+    api: gql(HEAD_SHA_READ + 1 + Math.ceil(mutations / 10) + replyChunks),
+    apiRest: rest(
+      HEAD_SHA_READ + (replies ? REST_TRANSCRIPT_READ : 0) + replies * REST_REPLY_REQUESTS,
+    ),
+    apiCloud: rest(
+      HEAD_SHA_READ +
+        (replies ? CLOUD_TRANSCRIPT_READ : 0) +
+        replies * REST_REPLY_REQUESTS +
+        resolves,
+    ),
+  };
 }
 
 /** Everything a baseline must read to decide what a tick needs. */
@@ -357,7 +447,15 @@ function setupScenario({ id, session }) {
         const share = Math.min(1, s.weight);
         const before = shepherdTokens;
         const text = arms.shepherd.map((c) => c.out).join("\n");
-        const named = [...new Set([...text.matchAll(/Playbook: "([^"]+)"/g)].map((m) => m[1]))];
+        // A scenario whose skill text, not its output, sends the agent to a
+        // playbook (a step the skill runs without a CLI call) lists it in
+        // `skillTriggers`. It is loaded like a named one and must exist.
+        const triggers = s.skillTriggers ?? [];
+        for (const n of triggers)
+          if (!PLAYBOOK_FILES[n]) throw new Error(`skillTriggers: unknown playbook "${n}"`);
+        const named = [
+          ...new Set([...text.matchAll(/Playbook: "([^"]+)"/g)].map((m) => m[1]).concat(triggers)),
+        ];
         const freshBooks = named
           .sort()
           .map((n) => [n, topUp(`playbook:${n}`, share)])
@@ -435,16 +533,34 @@ const PR_SCENARIOS = [
         (_, i) => `[poll tick ${i + 1} / +${i * 60}s] WAIT — ${reason}; next tick in 60s\n`,
       ).join("");
       return {
-        shepherd: [{ phase: 1, via: "bash", cmd: "", out: stderr, continues: true }],
+        // Each poll is 1 GraphQL point (the cold first tick's BatchPr, then a
+        // fingerprint hit), or a full REST read. The tick this call returns, the
+        // next scenario's, is the first changed tick after the wait: its extra
+        // fingerprint read is charged here, so that tick keeps the base cost.
+        shepherd: [
+          {
+            phase: 1,
+            via: "bash",
+            cmd: "",
+            out: stderr,
+            continues: true,
+            api: gql(polls * SHEPHERD_TICK_API.graphqlPoints + SHEPHERD_CHANGED_TICK_GRAPHQL),
+            apiRest: rest(polls * SHEPHERD_TICK_API_REST.restCore),
+            apiCloud: rest(polls * SHEPHERD_TICK_API_CLOUD.restCore),
+          },
+        ],
         gh: [
           {
             phase: 1,
             via: "bash",
+            // One GraphQL query on start, then one per refresh: the checks
+            // settle on the refresh after shepherd's last WAIT tick.
+            api: gql(polls + 1),
             cmd: "gh pr checks 42 -R owner/repo --watch --interval 60",
             // `--watch` returns only once the checks finish: the last refresh is
             // terminal (here the failure \`failing-check\` picks up).
-            out: Array.from({ length: polls }, (_, i) =>
-              ghPrChecks(i === polls - 1 ? settled : state),
+            out: Array.from({ length: polls + 1 }, (_, i) =>
+              ghPrChecks(i === polls ? settled : state),
             ).join("\n"),
           },
         ],
@@ -469,7 +585,7 @@ const PR_SCENARIOS = [
     arms() {
       const state = failingCheckState();
       return {
-        shepherd: [shepherdTick(failingCheckOutput())],
+        shepherd: [{ ...shepherdTick(failingCheckOutput()), ...FAILING_CHECK_TICK_API }],
         gh: [...ghObserve(state), ghLogCall(2)],
         mcp: [...mcpObserve(state), ...mcpLogCalls(2)],
       };
@@ -567,7 +683,26 @@ const PR_SCENARIOS = [
       const fixture = "07-mark-ready-draft-clean";
       const state = withHistory(fixtureState(fixture), HISTORY);
       return {
-        shepherd: [],
+        // The poll's mark-ready tick costs no call or tokens, but it still spends
+        // rate limit: runPoll -> runIterate reads the PR snapshot first. That is
+        // the first changed tick after a wait (a fingerprint miss, then BatchPr;
+        // mark-ready refuses a reused fingerprint). markReadyIfAuthorized then
+        // sends one GraphQL mutation point. Standard REST has no ready-for-review
+        // route, so after its read the tick escalates as transport-unsupported
+        // (mark-ready.mts). Cloud REST marks it ready with one POST to the CCR
+        // proxy's ready_for_review route, on top of the tick's read.
+        shepherd: [
+          {
+            phase: 1,
+            via: "bash",
+            cmd: "",
+            out: "",
+            continues: true,
+            api: gql(SHEPHERD_TICK_API.graphqlPoints + SHEPHERD_CHANGED_TICK_GRAPHQL + 1),
+            apiRest: SHEPHERD_TICK_API_REST,
+            apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + 1),
+          },
+        ],
         gh: [
           ...ghObserve(state),
           {
@@ -593,6 +728,8 @@ const PR_SCENARIOS = [
   {
     id: "merged",
     weight: 1,
+    // A state-first baseline stops after reading the state.
+    terminal: true,
     title: "Notice the PR merged and stop",
     note: "With #505's history.",
     arms() {
@@ -645,8 +782,18 @@ const PR_SCENARIOS = [
       const fixture = "42-fix-code-check-annotations";
       const state = fixtureState(fixture);
       const annotations = fixtureInput(fixture).checkAnnotationsByCheckId;
+      const annotationApi = annotationBatchApi(Object.keys(annotations).length);
       return {
-        shepherd: [shepherdTick(snapshot(fixture))],
+        shepherd: [
+          {
+            ...shepherdTick(snapshot(fixture)),
+            // The annotated check runs' first look runs the annotation
+            // supplement on either transport.
+            api: gql(SHEPHERD_TICK_API.graphqlPoints + annotationApi.graphqlPoints),
+            apiRest: rest(SHEPHERD_TICK_API_REST.restCore + annotationApi.restCore),
+            apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + annotationApi.restCore),
+          },
+        ],
         gh: [
           ...ghObserve(state),
           {
@@ -694,7 +841,7 @@ const PR_SCENARIOS = [
       const merged = "✓ Merged pull request owner/repo#42 (Fixture PR)\n";
       return {
         shepherd: [
-          shepherdTick(snapshot(fixture)),
+          receiptTick(snapshot(fixture)),
           {
             phase: 2,
             via: "bash",
@@ -729,7 +876,7 @@ const PR_SCENARIOS = [
         "✓ Pull request owner/repo#42 will be added to the merge queue for main when ready\n";
       return {
         shepherd: [
-          shepherdTick(snapshot(fixture)),
+          receiptTick(snapshot(fixture)),
           {
             phase: 2,
             via: "bash",
@@ -908,6 +1055,23 @@ function settledOverview(layers, number) {
     .replaceAll("/pull/43", `/pull/${lower.pr}`);
 }
 
+/**
+ * A one-PR tick on a non-root native-stack layer. Beside the ordinary
+ * snapshot, every full tick loads the trunk's required contexts (`RefRules`;
+ * on REST, branch protection, branch rules and a compare) and the stack
+ * topology (`PollStackTopology`, shared with the stale-ancestry check; on
+ * REST, the stack list and stack read twice, each layer's pull and the
+ * viewer). REST's snapshot also reads the stack itself. Sources:
+ * src/github/merge-target-rules.mts, src/commands/iterate/stale-ancestry.mts,
+ * src/github/rest-stack-read.mts.
+ */
+const routedLayerTickApi = (stackSize) => ({
+  api: gql(SHEPHERD_TICK_API.graphqlPoints + 2),
+  apiRest: rest(SHEPHERD_TICK_API_REST.restCore + 1 + 3 + (5 + stackSize)),
+  // Cloud REST: the same reads on top of the cloud snapshot.
+  apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + 1 + 3 + (5 + stackSize)),
+});
+
 const stackCmd = (anchorPr, repo, flags = "") =>
   `pr-shepherd --stack https://github.com/${repo}/pull/${anchorPr} --until-terminal${flags}`;
 
@@ -927,12 +1091,21 @@ const STACK_SCENARIOS = [
       const routed = openLayers(layers).filter((l) => l.owned && l.action !== "cancel");
       return {
         shepherd: [
-          { phase: 1, via: "bash", cmd: stackCmd(layers[anchor].pr, repo), out: snapshot(name) },
+          {
+            phase: 1,
+            via: "bash",
+            cmd: stackCmd(layers[anchor].pr, repo),
+            out: snapshot(name),
+            api: stackTickApi(layers.length),
+            apiRest: stackTickApiRest(layers.length),
+            apiCloud: stackTickApiCloud(layers.length),
+          },
           ...routed.map((l) => ({
             phase: 2,
             via: "bash",
             cmd: `pr-shepherd https://github.com/${repo}/pull/${l.pr} --until-terminal`,
             out: layerSnapshot(l),
+            ...routedLayerTickApi(layers.length),
           })),
         ],
         gh,
@@ -989,6 +1162,23 @@ const STACK_SCENARIOS = [
             via: "bash",
             cmd: stackCmd(layers[anchor].pr, repo, " --merge"),
             out: `${stderr}${settledOverview(layers, number)}`,
+            // The initial stack tick.
+            api: stackTickApi(layers.length),
+            apiRest: stackTickApiRest(layers.length),
+            apiCloud: stackTickApiCloud(layers.length),
+          },
+          {
+            phase: 1,
+            via: "bash",
+            cmd: "",
+            out: "",
+            continues: true,
+            // Stack ticks have no fingerprint shortcut: each runs PollStackTopology
+            // plus PollStackSummary (docs/graphql-usage.md). After the initial tick
+            // come the remaining WAIT ticks and the tick that sees the queue settle.
+            api: gql(ticks * stackTickApi(layers.length).graphqlPoints),
+            apiRest: rest(ticks * stackTickApiRest(layers.length).restCore),
+            apiCloud: rest(ticks * stackTickApiCloud(layers.length).restCore),
           },
         ],
         gh: [
@@ -1030,6 +1220,9 @@ const STACK_SCENARIOS = [
             via: "bash",
             cmd: stackCmd(layers[anchor].pr, repo, " --merge"),
             out: snapshot(name),
+            api: stackTickApi(layers.length),
+            apiRest: stackTickApiRest(layers.length),
+            apiCloud: stackTickApiCloud(layers.length),
           },
           {
             phase: 2,

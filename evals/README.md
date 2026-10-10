@@ -65,7 +65,13 @@ the CI-triage playbook. After the fix it scores +0.25 at `runs: 6`. `06` and
 node evals/generate.mjs
 CLAUDE_CODE_EFFORT_LEVEL=low claude plugin eval . --model claude-sonnet-5-5 \
   --ablation with-without --judge-model opus --no-publish
+node evals/analyze.mjs --summary <results-dir>   # paste-ready block for "Latest results"
 ```
+
+Cases are tagged `tier:discriminating` or `tier:guard`; spend `runs: 6` on the
+first and `runs: 1` on the second for a targeted run (see
+[EVALS.md](EVALS.md#tiers-and-run-recipes)). Only a Δ whose 95% bootstrap
+interval excludes 0 is a result.
 
 ## More
 

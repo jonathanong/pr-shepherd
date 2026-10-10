@@ -13,7 +13,65 @@ CLAUDE_CODE_EFFORT_LEVEL=low claude plugin eval . --model claude-sonnet-5-5 \
   --ablation with-without --judge-model opus --no-publish
 
 node evals/analyze.mjs <results-dir-a> <results-dir-b>   # compare two tiers
+node evals/analyze.mjs --summary <results-dir>           # paste-ready summary of one run
+node evals/analyze.mjs --calibrate <results-dir>         # measured tokens vs. the bench's 3.5 chars/token
+node evals/analyze.mjs --calibrate <results-dir> --write # also record it for evals/tokens/REPORT.md
 ```
+
+### Reading a result
+
+- `analyze.mjs` prints a bootstrap 95% interval beside every per-case Δ
+  (resampling runs within each arm) and stars only a Δ whose interval excludes 0.
+  At `runs: 3` the noise floor is about ±0.44, so an unstarred Δ is noise, not a
+  small effect. A case with fewer than two runs in an arm has no interval and is
+  marked `(runs<2)`.
+- `--summary <dir>` prints the block that goes under "Latest results" in
+  README.md: mean Δ overall and over non-stack cases with intervals, the cases
+  whose interval excludes 0, plugin regressions, the ceiling count, trigger and
+  over-trigger rates, and cost per run. It also lists cases whose declared tier
+  disagrees with the run, so the tags can be corrected.
+- `--calibrate <dir>` regresses the without-plugin arm's measured input tokens
+  per turn on each case's prompt length. The slope is the real characters per
+  token, and the intercept is the fixed context (system prompt and tools). Compare
+  the slope with the token bench's 3.5 and record it under "Model" in
+  [tokens/README.md](tokens/README.md). It reads `input_tokens`,
+  `cache_creation_input_tokens`, `cache_read_input_tokens` and `output_tokens`
+  from each run's `usage`; if the runner's aggregate lacks them it exits with a
+  message instead of guessing.
+- The case fingerprint that gates a comparison is split. The scored part (prompt,
+  run count, turn budget, timeout, every scored grader) must match. The
+  display-only part (`skill-fired`) may drift and is only noted. The plugin guard compares
+  a source hash when the runner records one. Otherwise it prints this checkout's
+  hash, because `name@version` does not change when `SKILL.md` is edited (#426).
+
+### Tiers and run recipes
+
+Each case carries `tier:discriminating` or `tier:guard` in its tags, set in
+`cases/*.mjs` from the last full run.
+
+- `discriminating`: the arms separated on a full run (`01`, `02`, `04`, `05`,
+  `10`, `22`, `24`). These get the runs.
+- `guard`: both arms sit at ceiling, so the case only exists to notice a
+  regression. One run each is a cheap sweep.
+
+`EVAL_RUNS_DISCRIMINATING` and `EVAL_RUNS_GUARD` override the per-case `runs`
+at generation time. Regenerate, run, then regenerate without the variables so
+the tree matches the committed cases:
+
+```sh
+# Targeted run: signal where it matters, one regression look elsewhere.
+EVAL_RUNS_DISCRIMINATING=6 EVAL_RUNS_GUARD=1 node evals/generate.mjs
+CLAUDE_CODE_EFFORT_LEVEL=low claude plugin eval . --model claude-sonnet-5-5 \
+  --ablation with-without --judge-model opus --no-publish
+node evals/generate.mjs        # restore the committed suite
+
+# Full sweep: the committed runs: 3 on every case.
+node evals/generate.mjs
+```
+
+A comparison needs both tiers generated with the same overrides, because the run
+count is part of the scored fingerprint. Move a case between tiers by editing its
+`tier` in `cases/*.mjs` after a run shows it separating the arms (or not).
 
 - **Δ is the headline** (with-plugin minus without-plugin), not the absolute
   score. A high absolute score with Δ ≈ 0 means the model does as well without
@@ -34,6 +92,7 @@ Layout:
 
 - `generate.mjs`: the entrypoint and the design rationale.
 - `lib.mjs`: the framing, grader helpers and writer.
+- `analyze.mjs` and `stats.mjs`: result analysis and its bootstrap helpers.
 - `cases/core.mjs`: cases 01–13.
 - `cases/stack.mjs`: cases 14–22 and 24.
 - `cases/recent.mjs`: cases 23 and 25–28.
@@ -316,8 +375,9 @@ variable in a case's `env:` block fails every run: the runner accepts only
    (classification auto-resolve)**, then cases for them.
 3. **Fix the haiku trigger rate (53%).** One line in the skill `description`
    moved a sibling suite from 44% to 94%.
-4. **Raise `runs` on the stable cases** (`01`, `02`, `05`, `10`). At `runs: 3`
-   the without arm alone swung ±0.44 on one case with no change.
+4. **Run the discriminating tier at `runs: 6`.** At `runs: 3` the without arm
+   alone swung ±0.44 on one case with no change. The recipe is in "Tiers and run
+   recipes"; it still needs a live run to confirm the intervals tighten.
 5. **Unblock the call-count and token measurement.** Flatten `~/.docker`, then
    build a suite that grants Bash to both arms. Watch for the inverted failure:
    with no working binary, the with-arm tries the CLI, fails, and Δ goes negative.
@@ -329,9 +389,10 @@ variable in a case's `env:` block fails every run: the runner accepts only
 8. **Watch the over-trigger rate, not just Δ.** A widened skill `description`
    can start activating on unrelated GitHub questions while every score looks
    healthy.
-9. **Split `analyze.mjs`'s case fingerprint into scored vs display-only**, and
-   **hash the plugin source in its guard**. #426 added a whole skill at the same
-   version, so the `name@version` check passed on a changed treatment.
+9. **Done in `analyze.mjs`:** the case fingerprint is split into scored and
+   display-only parts, and the plugin guard compares a recorded source hash.
+   Still open: the runner does not record that hash, so today the guard only
+   prints this checkout's hash.
 10. **Wire the sonnet tier into CI** for PRs touching
     `plugins/pr-shepherd/skills/**`.
 11. **Surface the failing jobs' log tails when the failing job is a gate.**
