@@ -76,7 +76,8 @@
 // `<fixture>-playbook` snapshot instead (recorded with `iterate --instructions
 // playbook`) and is written under <dir>, outside evals/ so neither the default
 // suite nor its pruning sees it. Cases with no playbook snapshot are skipped and
-// listed. See EVALS.md "Ablation: inline vs playbook instructions".
+// listed. Transcript history stays inline. See EVALS.md "Ablation: inline vs
+// playbook instructions".
 
 import { parseArgs } from "node:util";
 import { resolve } from "node:path";
@@ -108,17 +109,10 @@ if (flags.instructions === "playbook") {
   if (!flags.out) throw new Error("--instructions playbook needs --out <dir> outside evals/");
   const outDir = resolve(flags.out);
   setSnapshotSuffix("-playbook");
+  // Fixture-less cases are skipped too: with no CLI output they match the inline arm.
   const ready = CASES.filter(hasFixture);
-  const written = [];
-  for (const spec of ready) {
-    try {
-      writeCase(spec, outDir);
-      written.push(spec.slug);
-    } catch (error) {
-      // Transcript history can read snapshots that have no playbook variant.
-      if (!String(error.message).startsWith("missing snapshot")) throw error;
-    }
-  }
+  for (const spec of ready) writeCase(spec, outDir);
+  const written = ready.map((c) => c.slug);
   const skipped = slugs.filter((s) => !written.includes(s));
   console.log(
     `\n${written.length} playbook-mode cases written to ${outDir}` +

@@ -191,7 +191,7 @@ replace the stack loop with a hand-rolled per-PR merge sequence.`;
 //
 // Turns are `{ role: "user" | "assistant", text }` or
 // `{ role: "tool", command, output }`. Tool outputs should come from
-// `fixtureText(...)`, so the replayed history stays in sync with the CLI.
+// `historyText(...)`, so the replayed history stays in sync with the CLI.
 
 const TRANSCRIPT_LEAD = `The conversation so far is replayed below, oldest turn first. Each \`[tool]\`
 turn shows a command you ran earlier in this session and what it printed.`;
@@ -227,20 +227,31 @@ export function setSnapshotSuffix(suffix) {
   snapshotSuffix = suffix;
 }
 
-function snapshotPath(name) {
-  return join(SNAPSHOTS, `${name}${snapshotSuffix}`, "output.text.md");
+function snapshotPath(name, suffix = snapshotSuffix) {
+  return join(SNAPSHOTS, `${name}${suffix}`, "output.text.md");
 }
 
-/** True when every snapshot the case reads exists under the current suffix. */
-export function hasFixture(spec) {
-  return !spec.fixture || existsSync(snapshotPath(spec.fixture));
-}
-
-/** A recorded CLI output, verbatim. Also used to build transcript history. */
-export function fixtureText(name) {
-  const path = snapshotPath(name);
+function readSnapshot(path) {
   if (!existsSync(path)) throw new Error(`missing snapshot: ${path}`);
   return readFileSync(path, "utf8").trimEnd();
+}
+
+/** True when the case's fixture has a snapshot under the current suffix. */
+export function hasFixture(spec) {
+  return Boolean(spec.fixture) && existsSync(snapshotPath(spec.fixture));
+}
+
+/** The case's own recorded CLI output, verbatim, under the current suffix. */
+export function fixtureText(name) {
+  return readSnapshot(snapshotPath(name));
+}
+
+/**
+ * A recorded output for transcript history. Never suffixed: the ablation varies
+ * only the latest tick, and `apply review` output has no instructions mode.
+ */
+export function historyText(name) {
+  return readSnapshot(snapshotPath(name, ""));
 }
 
 // Every case declares how much it can discriminate. `discriminating` cases have

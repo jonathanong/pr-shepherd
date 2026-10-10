@@ -9,9 +9,8 @@
 import {
   ITERATES_AGAIN,
   PR_URL,
-  fixtureText,
+  historyText,
   llm,
-  mustChange,
   regex,
   shapeB,
   skillFired,
@@ -22,24 +21,15 @@ const TICK = `pr-shepherd ${PR_URL} --until-terminal --transport rest`;
 const APPLY = `pr-shepherd apply review ${PR_URL} --transport rest --reply-thread-ids rest-thread-11 --message "Renamed the variable." --require-sha 9f3c2ab`;
 
 /**
- * The shared history: the first REST tick showed one thread (fixture 16 under
- * REST IDs), and the agent fixed it, pushed and ran the printed apply command.
+ * The shared history: the first REST tick showed one thread (fixture 139), and
+ * the agent fixed it, pushed and ran the printed apply command.
  */
 const replyHistory = (intro) => () => [
   {
     role: "user",
     text: `Shepherd ${PR_URL} through to a terminal state. ${intro}`,
   },
-  {
-    role: "tool",
-    command: TICK,
-    output: mustChange("rest tick", fixtureText("16-fix-code-review-thread"), (t) =>
-      t
-        .replaceAll("PRRT_active", "rest-thread-11")
-        .replace("#discussion_r1)", "#discussion_r11)")
-        .replace("pull/42 --reply-thread-ids", "pull/42 --transport rest --reply-thread-ids"),
-    ),
-  },
+  { role: "tool", command: TICK, output: historyText("139-fix-code-rest-review-thread") },
   {
     role: "assistant",
     text: `Renamed \`val\` to \`retryLimit\` in \`src/index.ts\`, committed it and pushed
@@ -58,7 +48,7 @@ export const DEFERRED_CASES = [
     shape: transcriptShape({
       turns: () => [
         ...replyHistory("This environment uses the REST transport.")(),
-        { role: "tool", command: APPLY, output: fixtureText("apply-review-denied-reply") },
+        { role: "tool", command: APPLY, output: historyText("apply-review-denied-reply") },
         {
           role: "assistant",
           text: "The reply to `rest-thread-11` failed with a 403. Running the next tick.",

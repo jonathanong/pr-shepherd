@@ -4,7 +4,7 @@
 // Each variant reuses its original's fixture and graders and replays earlier
 // turns, built from real snapshots, as session history (see `transcriptShape`).
 
-import { PR_URL, PR_URL_43, fixtureText, mustChange, transcriptShape } from "../lib.mjs";
+import { PR_URL, PR_URL_43, historyText, mustChange, transcriptShape } from "../lib.mjs";
 import { RECENT_CASES } from "./recent.mjs";
 import { STACK_CASES } from "./stack.mjs";
 
@@ -16,7 +16,7 @@ const gradersOf = (cases, slug) => {
 
 /** A PR #42 snapshot replayed as PR #43's. Line numbers like `:42` stay put. */
 const as43 = (name) =>
-  mustChange(`${name} as #43`, fixtureText(name), (t) =>
+  mustChange(`${name} as #43`, historyText(name), (t) =>
     t.replaceAll("PR #42", "PR #43").replaceAll("pull/42", "pull/43"),
   );
 
@@ -25,18 +25,18 @@ const loop = (url) => `pr-shepherd ${url} --until-terminal`;
 /** A finished one-PR session: FIX_CODE, MARK_READY, then CANCEL for PR #42. */
 const finishedPr42 = () => [
   { role: "user", text: `Shepherd ${PR_URL} until it's ready for review.` },
-  { role: "tool", command: loop(PR_URL), output: fixtureText("16-fix-code-review-thread") },
+  { role: "tool", command: loop(PR_URL), output: historyText("16-fix-code-review-thread") },
   {
     role: "assistant",
     text: `Renamed the variable in \`src/index.ts\`, committed, pushed \`5d1e0a7\` and ran
 the printed \`apply review:\` command (it replied to \`PRRT_active\`). Iterating.`,
   },
-  { role: "tool", command: loop(PR_URL), output: fixtureText("07-mark-ready-draft-clean") },
+  { role: "tool", command: loop(PR_URL), output: historyText("07-mark-ready-draft-clean") },
   { role: "assistant", text: "The CLI marked #42 ready for review. Iterating." },
   {
     role: "tool",
     command: loop(PR_URL),
-    output: fixtureText("03-cancel-ready-delay-elapsed-clean"),
+    output: historyText("03-cancel-ready-delay-elapsed-clean"),
   },
   {
     role: "assistant",
@@ -73,7 +73,7 @@ export const MULTITURN_CASES = [
 the printed \`apply review:\` command (it replied to \`PRRT_active\`). Restarted
 \`${loop(PR_URL_43)}\` in the background.`,
         },
-        { role: "tool", command: loop(PR_URL), output: fixtureText("07-mark-ready-draft-clean") },
+        { role: "tool", command: loop(PR_URL), output: historyText("07-mark-ready-draft-clean") },
         {
           role: "assistant",
           text: `The CLI marked #42 ready for review. Restarted \`${loop(PR_URL)}\` in the background.`,

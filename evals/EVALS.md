@@ -167,7 +167,8 @@ third arm.
 "apply" is `test-cases/snapshots/apply-review-session-refusal`, an
 `apply review` output recorded by `test-cases/apply-review.test.mts` through
 the REST mutation path. `38` replays its sibling, `apply-review-denied-reply`,
-as the turn before fixture `136`.
+as the turn before fixture `136`. Both cases open with the same first REST
+tick, fixture `139`.
 
 `39` expects Δ≈0. The plugin has no `add_repo` guidance; the CLI output's own
 instructions and the proxy's message carry the fix. A negative Δ would mean the
@@ -363,8 +364,9 @@ instruction was "stop polling".
 cases do not use it. `transcriptShape` in `lib.mjs` replays the earlier turns
 as a labelled transcript inside the prompt (`[user]`, `[assistant]`,
 `[tool] $ <command>`), with the case fixture as the last tool result. Every
-tool output in the history is read from a snapshot with `fixtureText`, so the
-history stays in CI sync with the CLI like the fixture does. The agent sees the
+tool output in the history is read from a snapshot with `historyText`, so the
+history stays in CI sync with the CLI like the fixture does. The one edit is in
+`44`, which renumbers a PR #42 snapshot to PR #43. The agent sees the
 history as text, not as its own prior turns, so this approximates real
 long-session drift rather than reproducing it. Switch to `history_file` once
 its format is documented.
@@ -382,7 +384,8 @@ default). Until it lands, only the scaffolding exists:
    `npx vitest run test-cases -u` and review the new snapshots.
 2. Generate the playbook arm outside `evals/` (the default suite and its
    pruning never see it). Cases without a `-playbook` snapshot are skipped and
-   listed:
+   listed. So are the fixture-less cases, which would match the inline arm.
+   Transcript history stays inline; only the latest tick changes mode:
 
    ```sh
    node evals/generate.mjs --instructions playbook --out /tmp/pr-shepherd-evals-playbook
