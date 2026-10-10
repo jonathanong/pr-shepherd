@@ -341,15 +341,19 @@ by how far they move the result.
   core request. Each changed tick then runs one full snapshot at the poll
   arm's GraphQL tick cost. The wait reads no fingerprint, so where the poll
   pays a fingerprint miss after a skipped wait (`ci-wait`, `mark-ready`), the
-  event arm does not. The
-  stack arm's detectors are per open layer.
+  event arm does not. The stack arm's detectors are per open layer. CI that
+  reports through the legacy Commit Status API (`commits/{head}/statuses`,
+  which the snapshot reads) is not watched; such a repository would need a
+  sixth detector, which costs nothing while it answers 304, or it waits for
+  the reconcile.
 - **Which reads change (assumed, per scenario).**
   - After a push, the pull is a 200 (new head), and mergeability, which GitHub
     computes asynchronously, needs one follow-up pull read (another 200).
-  - While CI runs, the new head's check runs are a 200 on every round (jobs
-    start and finish). The wait reads the statuses from that body and wakes
-    only when CI settles, so `ci-wait` spends 2 + 6 REST requests and no
-    GraphQL instead of 7 fingerprint points.
+  - While CI runs, the new head's check runs are a fresh URL (one initial
+    200), then a 200 on every round (jobs start and finish). The wait reads
+    the statuses from that body and wakes only when CI settles, so `ci-wait`
+    spends 2 + 1 + 6 REST requests and no GraphQL instead of 7 fingerprint
+    points.
   - A review thread changes reviews and review comments; the agent's reply
     changes review comments again (the wait recognizes its own echo without a
     snapshot). A resolve changes no REST detector. A merge, a conflict or a
@@ -365,9 +369,13 @@ by how far they move the result.
   arm.
 - **Idle hour (assumed).** The report also prices an hour where nothing
   changes: the poll arm's blocking call (60 fingerprint points, no turn), a
-  `--timeout 4.5m` poll that returns a WAIT tick every 4.5 minutes and is
-  called again (one turn each), and the event arm (4 reconcile wakes of two
-  requests each, 300 conditional requests that all answer 304).
+  `--timeout 4.5m` poll called again each time it returns (one turn each),
+  and the event arm (4 reconcile wakes of two requests each, 300 conditional
+  requests that all answer 304). The poll declines a sleep that does not fit
+  in its timeout (`poll.mts`), so with the 60s interval each bounded call runs
+  5 ticks and returns after about 240s: 15 calls and 75 GraphQL points an
+  hour. Each call's output is its default (non-quiet) progress line for each of
+  its 4 sleeping ticks plus the final WAIT tick, as in `ci-wait`.
 - **Hosted webhook proxy (hypothetical).** A sensitivity row, not a design:
   the same agent wakes and tokens, no detector polls, and every pr-shepherd
   snapshot (change ticks, reconciles, and their log and annotation reads)

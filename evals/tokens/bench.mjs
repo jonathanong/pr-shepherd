@@ -315,16 +315,29 @@ const eventSessions = Object.fromEntries(
 
 // An idle hour: nothing changes. The poll arm's blocking call costs no turn;
 // a `--timeout 4.5m` poll (the bounded form a background host runs) returns a
-// WAIT tick every 4.5 minutes and is called again. The event arm's detectors
-// all answer 304, and the reconcile timer wakes the agent with a WAIT tick.
-const BOUNDED_POLL_SECONDS = 270;
+// WAIT tick and is called again. It declines a sleep that does not fit in its
+// timeout (poll.mts), so each call runs ticks at 0, 60, ... 240s and returns
+// after the last. The event arm's detectors all answer 304, and the reconcile
+// timer wakes the agent with a WAIT tick.
+const BOUNDED_TIMEOUT_SECONDS = 270;
+const BOUNDED_INTERVAL_SECONDS = 60;
+const boundedTicks = Math.floor(BOUNDED_TIMEOUT_SECONDS / BOUNDED_INTERVAL_SECONDS) + 1;
+const BOUNDED_POLL_SECONDS = (boundedTicks - 1) * BOUNDED_INTERVAL_SECONDS;
 const PR_URL = "https://github.com/owner/repo/pull/42";
 const PR_CMD = `pr-shepherd ${PR_URL}`;
 const idleCarry = carry["ci-wait"]?.shepherd ?? 0;
 const waitText = snapshot("09-wait-in-progress-ci");
-const boundedWake = cost([{ phase: 1, via: "bash", cmd: `${PR_CMD} --timeout 4.5m`, out: waitText }], {
-  extraContext: idleCarry,
-});
+// poll-progress.mts, default (non-quiet) status: one line per sleeping tick.
+const waitReason = waitText.match(/^WAIT: (.+)$/m)[1];
+const boundedProgress = Array.from(
+  { length: boundedTicks - 1 },
+  (_, i) =>
+    `[poll tick ${i + 1} / +${i * BOUNDED_INTERVAL_SECONDS}s] WAIT — ${waitReason}; next tick in ${BOUNDED_INTERVAL_SECONDS}s\n`,
+).join("");
+const boundedWake = cost(
+  [{ phase: 1, via: "bash", cmd: `${PR_CMD} --timeout 4.5m`, out: boundedProgress + waitText }],
+  { extraContext: idleCarry },
+);
 const reconcileWake = cost(
   [
     { phase: 1, via: "bash", cmd: `pr-shepherd wait ${PR_URL}`, out: BACKGROUND_ACK },
@@ -337,7 +350,9 @@ const reconcilesPerHour = 60 / RECONCILE_MINUTES;
 const idleHour = {
   shepherd: { graphqlPoints: waitPerHour.shepherdGraphql, restCore: 0, conditional: 0, ...perHour(0, boundedWake) },
   shepherdBounded: {
-    graphqlPoints: waitPerHour.shepherdGraphql,
+    graphqlPoints: round(
+      (3600 / BOUNDED_POLL_SECONDS) * boundedTicks * SHEPHERD_TICK_API.graphqlPoints,
+    ),
     restCore: 0,
     conditional: 0,
     ...perHour(3600 / BOUNDED_POLL_SECONDS, boundedWake),
@@ -533,7 +548,7 @@ out(
   `- **Event arm (informational, assumed, not gated).** A background \`pr-shepherd wait\` with ETag change detectors (#544). ${evLine("pr", "PR session")}. ${evLine("stack", "Stack session")}. Each of its ${num(eventSessions.pr.wakes)} PR-session wakes (${num(eventSessions.stack.wakes)} on a stack) adds a request to read the background start, so it spends more turns and tokens than the blocking poll. The hypothetical hosted webhook proxy spends ${num(eventSessions.pr.api.eventProxy.graphqlPoints)} GraphQL points and ${num(eventSessions.pr.api.eventProxy.restCore)} REST core of the user's token in a PR session (${num(eventSessions.stack.api.eventProxy.graphqlPoints)} and ${num(eventSessions.stack.api.eventProxy.restCore)} on a stack), on the agent's own mutations and reads.`,
 );
 out(
-  `- **Idle waiting, per hour (assumed).** The poll arm's blocking call spends ${idleHour.shepherd.graphqlPoints} GraphQL points and no turn; a \`--timeout 4.5m\` poll spends the same points plus ${num(idleHour.shepherdBounded.wakes)} wakes (${num(idleHour.shepherdBounded.turns)} turns, ${num(idleHour.shepherdBounded.ite)} ITE). The event arm spends ${idleHour.event.graphqlPoints} points on ${num(idleHour.event.wakes)} reconcile snapshots and no REST (${num(idleHour.event.conditional)} conditional requests, all 304), with ${num(idleHour.event.turns)} turns (${num(idleHour.event.ite)} ITE). The hypothetical proxy spends nothing of the user's token, with the same wakes.`,
+  `- **Idle waiting, per hour (assumed).** The poll arm's blocking call spends ${idleHour.shepherd.graphqlPoints} GraphQL points and no turn; a \`--timeout 4.5m\` poll spends ${num(idleHour.shepherdBounded.graphqlPoints)} points (it returns every ${BOUNDED_POLL_SECONDS}s, after ${boundedTicks} ticks) and ${num(idleHour.shepherdBounded.wakes)} wakes (${num(idleHour.shepherdBounded.turns)} turns, ${num(idleHour.shepherdBounded.ite)} ITE). The event arm spends ${idleHour.event.graphqlPoints} points on ${num(idleHour.event.wakes)} reconcile snapshots and no REST (${num(idleHour.event.conditional)} conditional requests, all 304), with ${num(idleHour.event.turns)} turns (${num(idleHour.event.ite)} ITE). The hypothetical proxy spends nothing of the user's token, with the same wakes.`,
 );
 const TRANSPORT_LABELS = { graphql: "GraphQL", rest: "REST", cloud: "cloud REST" };
 const lossCount = (issue) => losses.filter((l) => l.issue === issue).length;

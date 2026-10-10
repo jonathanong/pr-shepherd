@@ -627,12 +627,13 @@ const PR_SCENARIOS = [
           },
         ],
         // No snapshot while CI runs. The new head's check runs are a fresh URL
-        // (a 200), and the body then changes on every round while jobs start
-        // and finish (assumed: one 200 per round). The wait reads each status
-        // from the body and wakes only when CI settles, on the last one.
+        // (one initial 200), and the body then changes on every one of the
+        // `polls` rounds while jobs start and finish (assumed: one 200 per
+        // round). The wait reads each status from the body and wakes only when
+        // CI settles, on the last one.
         event: {
           wake: "none",
-          tail: { api: rest(PUSH_DETECTORS + polls), apiProxy: NO_API },
+          tail: { api: rest(PUSH_DETECTORS + 1 + polls), apiProxy: NO_API },
         },
         gh: [
           {
