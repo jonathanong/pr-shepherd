@@ -81,24 +81,10 @@
 // playbook instructions".
 
 import { parseArgs } from "node:util";
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
-import { isAbsolute, join, relative, resolve, sep } from "node:path";
-import { CORE_CASES } from "./cases/core.mjs";
-import { DEFERRED_CASES } from "./cases/deferred.mjs";
-import { MULTITURN_CASES } from "./cases/multiturn.mjs";
-import { RECENT_CASES } from "./cases/recent.mjs";
-import { RULES_CASES } from "./cases/rules.mjs";
-import { STACK_CASES } from "./cases/stack.mjs";
+import { existsSync, mkdirSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { CASES } from "./cases/index.mjs";
 import { EVALS_DIR, hasFixture, pruneStaleCases, setSnapshotSuffix, writeCase } from "./lib.mjs";
-
-const CASES = [
-  ...CORE_CASES,
-  ...STACK_CASES,
-  ...RECENT_CASES,
-  ...RULES_CASES,
-  ...DEFERRED_CASES,
-  ...MULTITURN_CASES,
-];
 
 // Marks a playbook --out directory as generator-owned, so a rerun may prune it.
 const PLAYBOOK_MARKER = ".pr-shepherd-playbook-evals";
@@ -114,7 +100,11 @@ if (flags.instructions === "playbook") {
   if (!flags.out) throw new Error("--instructions playbook needs --out <dir> outside evals/");
   const outDir = resolve(flags.out);
   // Writing into evals/ would overwrite canonical cases with playbook prompts.
-  const fromEvals = relative(EVALS_DIR, outDir);
+  // Compare canonical paths so a symlinked --out (or ancestor) cannot alias evals/.
+  let base = outDir;
+  while (!existsSync(base)) base = dirname(base);
+  const realOut = join(realpathSync(base), relative(base, outDir));
+  const fromEvals = relative(realpathSync(EVALS_DIR), realOut);
   const outside = fromEvals === ".." || fromEvals.startsWith(`..${sep}`) || isAbsolute(fromEvals);
   if (!outside) throw new Error(`--out must be outside ${EVALS_DIR}, got ${outDir}`);
   // Writing and pruning replace case directories by name, so only touch a

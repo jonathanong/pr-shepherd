@@ -383,7 +383,8 @@ default). Until it lands, only the scaffolding exists:
    `"args": ["--instructions", "playbook"]`. Then run
    `npx vitest run test-cases -u` and review the new snapshots.
 2. Generate the playbook arm outside `evals/` (the default suite and its
-   pruning never see it); an `--out` inside `evals/` is rejected. Cases without
+   pruning never see it); an `--out` inside `evals/`, including through a
+   symlink, is rejected. Cases without
    a `-playbook` snapshot are skipped and listed. So are the fixture-less cases,
    which would match the inline arm. `--out` must be a new or empty
    directory, or one an earlier playbook run created (it leaves a
@@ -408,7 +409,8 @@ default). Until it lands, only the scaffolding exists:
    ```
 
 `--instructions-ablation` restricts the inline results to the cases the
-playbook arm ran and blanks the latest tick's `## Instructions` section before
+playbook arm ran. It refuses to compare when the playbook arm is missing a case
+that has a `-playbook` snapshot, such as after a narrower `--case` filter. It blanks the latest tick's `## Instructions` section before
 the drift check, since only that section differs. Replayed history, including
 its inline `## Instructions`, the rest of each prompt, graders,
 run config, agent model, judge and plugin version must still match. The inline arm's cost line covers its whole run.

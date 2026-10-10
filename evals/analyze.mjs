@@ -31,6 +31,8 @@ import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { CASES } from "./cases/index.mjs";
+import { hasFixture, setSnapshotSuffix } from "./lib.mjs";
 import { bootstrapDeltas, excludesZero, interval, mean, ols, seedOf } from "./stats.mjs";
 
 const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -435,6 +437,15 @@ if (mode === "calibrate") {
 if (instructionsAblation) {
   const inB = new Set(B.cases.map((c) => c.name));
   const dropped = A.cases.filter((c) => !inB.has(c.name)).map((c) => c.name);
+  // Only a case the generator skips (no `-playbook` snapshot) may be missing from
+  // B; anything else means B ran a narrower --case filter or lost a case.
+  setSnapshotSuffix("-playbook");
+  const playbookSlugs = new Set(CASES.filter(hasFixture).map((c) => c.slug));
+  const missing = dropped.filter((n) => playbookSlugs.has(n));
+  if (missing.length) {
+    console.error(`✗ ${LB} is missing playbook case(s): ${missing.join(", ")}; refusing to compare.`);
+    process.exit(1);
+  }
   A.cases = A.cases.filter((c) => inB.has(c.name));
   if (dropped.length)
     console.log(
