@@ -15,14 +15,21 @@ const REQUESTABLE: readonly PollMode[] = ["auto", "poll", "event"];
  * command handler reports them.
  */
 export function runInEventStateScope<T>(args: string[], work: () => Promise<T>): Promise<T> {
-  return isEventInvocation(args) ? runWithDurableState(work) : work();
+  const subcommand = args[0];
+  const honorsPollMode =
+    isDefaultPollInvocation(subcommand) || POLL_MODE_SUBCOMMANDS.has(subcommand ?? "");
+  return honorsPollMode ? runInPollModeScope(args, work) : work();
 }
 
-function isEventInvocation(args: string[]): boolean {
-  const subcommand = args[0];
-  if (!isDefaultPollInvocation(subcommand) && !POLL_MODE_SUBCOMMANDS.has(subcommand ?? "")) {
-    return false;
-  }
+/**
+ * Run `work` in the durable state scope when `--poll-mode` in `args`, or else `poll.mode`,
+ * resolves to event mode. `log-file` uses this to report the log an event tick writes.
+ */
+export function runInPollModeScope<T>(args: string[], work: () => Promise<T>): Promise<T> {
+  return resolvesToEvent(args) ? runWithDurableState(work) : work();
+}
+
+function resolvesToEvent(args: string[]): boolean {
   const flag = getFlag(args, "--poll-mode");
   const requested = REQUESTABLE.find((mode) => mode === flag);
   try {

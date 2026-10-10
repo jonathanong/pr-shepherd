@@ -29,7 +29,7 @@ import {
 import { handleCheckBlocker } from "./cli/check-blocker-handler.mts";
 import { handleQueueRemoval } from "./cli/queue-removal-handler.mts";
 import { setupLog } from "./log/setup.mts";
-import { runInEventStateScope } from "./cli/event-state-scope.mts";
+import { runInEventStateScope, runInPollModeScope } from "./cli/event-state-scope.mts";
 import { handleApplyMerge } from "./cli/apply-merge-handler.mts";
 import { extractTransportArgs } from "./cli/transport-args.mts";
 import { parseGithubTransport } from "./github/transport-mode.mts";
@@ -262,7 +262,8 @@ async function handleLogFile(
     })();
 
   try {
-    const result = await runLogFile();
+    // Report the log the matching tick writes: event mode keeps it in durable state.
+    const result = await runInPollModeScope(args, () => runLogFile());
     process.stdout.write(jsonOut ? `${JSON.stringify(result, null, 2)}\n` : `${result.path}\n`);
   } catch (e) {
     process.stderr.write(`pr-shepherd: log-file: ${String(e)}\n`);

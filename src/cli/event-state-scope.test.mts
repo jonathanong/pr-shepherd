@@ -6,7 +6,7 @@ vi.mock("../config/load.mts", async (importOriginal) => ({
   loadConfig: m.loadConfig,
 }));
 
-import { runInEventStateScope } from "./event-state-scope.mts";
+import { runInEventStateScope, runInPollModeScope } from "./event-state-scope.mts";
 import { durableStateRequested } from "../state/durable-state.mts";
 
 function scoped(args: string[]): Promise<boolean> {
@@ -44,5 +44,17 @@ describe("runInEventStateScope", () => {
       throw new Error("Invalid config");
     });
     expect(await scoped(["iterate", "42", "--poll-mode", "event"])).toBe(false);
+  });
+});
+
+describe("runInPollModeScope", () => {
+  const logFile = (args: string[]) => runInPollModeScope(args, async () => durableStateRequested());
+
+  it("follows --poll-mode and poll.mode for any command, such as log-file", async () => {
+    expect(await logFile(["--poll-mode", "event"])).toBe(true);
+    expect(await logFile([])).toBe(false);
+    m.loadConfig.mockReturnValue({ poll: { mode: "event" } });
+    expect(await logFile([])).toBe(true);
+    expect(await logFile(["--poll-mode=poll"])).toBe(false);
   });
 });

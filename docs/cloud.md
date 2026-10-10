@@ -40,7 +40,7 @@ The instructions end with a "Cloud event loop" step pointing at the bundled play
 A cloud VM can be recycled between ticks, and its temp directory with it. When `PR_SHEPHERD_STATE_DIR` is unset, state moves to `<git-common-dir>/pr-shepherd-state` (found with the read-only `git rev-parse --git-common-dir`). It lives with the checkout rather than `TMPDIR`.
 
 - Under `CLAUDE_CODE_REMOTE=true` this applies to every command.
-- Otherwise it applies inside event-mode `iterate` and poll calls only, including their per-worktree log: the CLI resolves the poll mode before it opens the log. A local `apply` in the same checkout would use the temp directory, so set `PR_SHEPHERD_STATE_DIR` if you mix modes.
+- Otherwise it applies inside event-mode `iterate` and poll calls only, including their per-worktree log: the CLI resolves the poll mode before it opens the log. `pr-shepherd log-file` resolves the same mode from `poll.mode` and its own `--poll-mode` flag, so `pr-shepherd log-file --poll-mode event` prints the log an explicit event tick writes. A local `apply` in the same checkout would use the temp directory, so set `PR_SHEPHERD_STATE_DIR` if you mix modes.
 - `PR_SHEPHERD_STATE_DIR` always wins.
 - Outside a git repository the temp directory is used.
 

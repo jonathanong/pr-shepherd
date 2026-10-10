@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   registerHooks,
   getStdout,
@@ -7,6 +7,7 @@ import {
 } from "../test-helpers/cli-parser.test-support.mts";
 import { main } from "./cli-parser.mts";
 import { EXIT } from "./exit-codes.mts";
+import { durableStateRequested } from "./state/durable-state.mts";
 
 registerHooks();
 
@@ -35,6 +36,19 @@ describe("main — log-file", () => {
     mockRunLogFile.mockResolvedValue({ path: "/tmp/shepherd.md" });
     await main(["node", "shepherd", "log-file", "--format", "json"]);
     expect(JSON.parse(getStdout())).toEqual({ path: "/tmp/shepherd.md" });
+  });
+
+  it("resolves the event-mode log path inside the durable state scope", async () => {
+    vi.stubEnv("CLAUDE_CODE_REMOTE", "");
+    const durable: boolean[] = [];
+    mockRunLogFile.mockImplementation(async () => {
+      durable.push(durableStateRequested());
+      return { path: "/tmp/shepherd.md" };
+    });
+    await main(["node", "shepherd", "log-file", "--poll-mode", "event"]);
+    await main(["node", "shepherd", "admin", "log-file", "--poll-mode", "poll"]);
+    vi.unstubAllEnvs();
+    expect(durable).toEqual([true, false]);
   });
 
   it("reports log-file errors and sets exitCode", async () => {
