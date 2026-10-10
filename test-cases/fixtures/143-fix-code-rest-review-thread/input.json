@@ -1,5 +1,5 @@
 {
-  "description": "First REST tick of the session that fixture 136 continues: one active thread, rest-thread-11. Evals replay it as the turn before apply-review-denied-reply and apply-review-session-refusal.",
+  "description": "First REST tick of the session that fixture 140 continues: one active thread, rest-thread-11. Evals replay it as the turn before apply-review-denied-reply and apply-review-session-refusal.",
   "args": [
     "--transport",
     "rest"

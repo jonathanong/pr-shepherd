@@ -3,7 +3,7 @@
 
 import { readFileSync } from "node:fs";
 
-import { EXIT, errorToExitCode } from "./exit-codes.mts";
+import { EXIT, applyReviewResultToExitCode, errorToExitCode } from "./exit-codes.mts";
 import { runResolveMutate } from "./commands/resolve.mts";
 import { runLogFile } from "./commands/log-file.mts";
 import { parseCommonArgs, getFlag, hasFlag, parseList } from "./cli/args.mts";
@@ -306,9 +306,6 @@ async function handleResolve(
       ? `${JSON.stringify(result, null, 2)}\n`
       : `${formatMutateResult(result)}\n`,
   );
-  if (result.sessionRefusal) {
-    process.exitCode = EXIT.NOPERM;
-  } else if (result.errors.length > 0) {
-    process.exitCode = result.rateLimit ? EXIT.TEMPFAIL : EXIT.UNAVAILABLE;
-  }
+  const exitCode = applyReviewResultToExitCode(result);
+  if (exitCode !== EXIT.OK) process.exitCode = exitCode;
 }

@@ -21,7 +21,7 @@ const TICK = `pr-shepherd ${PR_URL} --until-terminal --transport rest`;
 const APPLY = `pr-shepherd apply review ${PR_URL} --transport rest --reply-thread-ids rest-thread-11 --message "Renamed the variable." --require-sha 9f3c2ab`;
 
 /**
- * The shared history: the first REST tick showed one thread (fixture 139), and
+ * The shared history: the first REST tick showed one thread (fixture 143), and
  * the agent fixed it, pushed and ran the printed apply command.
  */
 const replyHistory = (intro) => () => [
@@ -29,7 +29,7 @@ const replyHistory = (intro) => () => [
     role: "user",
     text: `Shepherd ${PR_URL} through to a terminal state. ${intro}`,
   },
-  { role: "tool", command: TICK, output: historyText("139-fix-code-rest-review-thread") },
+  { role: "tool", command: TICK, output: historyText("143-fix-code-rest-review-thread") },
   {
     role: "assistant",
     text: `Renamed \`val\` to \`retryLimit\` in \`src/index.ts\`, committed it and pushed
@@ -44,7 +44,7 @@ export const DEFERRED_CASES = [
     // over the earlier 403 or retries the denied ID by hand.
     slug: "38-denied-reply-one-look-skip",
     tier: "discriminating",
-    fixture: "136-fix-code-denied-reply-one-look-skip",
+    fixture: "140-fix-code-denied-reply-one-look-skip",
     shape: transcriptShape({
       turns: () => [
         ...replyHistory("This environment uses the REST transport.")(),
@@ -132,7 +132,7 @@ checks.`,
     // requires one approval and has none, so the approval IS the blocker.
     slug: "43-required-approval-gate",
     tier: "discriminating",
-    fixture: "138-ready-required-approval-gate",
+    fixture: "142-ready-required-approval-gate",
     shape: shapeB,
     runs: 6,
     tags: ["ready", "mergeability"],

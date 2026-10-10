@@ -157,9 +157,9 @@ third arm.
 | `35-merge-queue-ejection`              | `119`   | Manual queue removal under `--merge`: do not requeue                                 |
 | `36-rest-queue-recovery-unsupported`   | `133`   | REST `transport-unsupported`: base update and reproduce, no requeue, keep REST       |
 | `37-no-target-infers-branch`           | none    | "Shepherd my PR": run the CLI with no target, no `gh pr view` first                  |
-| `38-denied-reply-one-look-skip`        | `136`   | Denied reply is a one-look skip: no retry, no escalation, keep going                 |
+| `38-denied-reply-one-look-skip`        | `140`   | Denied reply is a one-look skip: no retry, no escalation, keep going                 |
 | `39-proxy-session-refusal`             | apply   | Exit 77: `add_repo` with push access, retry the pending ID (regression guard)        |
-| `43-required-approval-gate`            | `138`   | `[Required]` approval is the blocker: request review, no self-approval or bypass     |
+| `43-required-approval-gate`            | `142`   | `[Required]` approval is the blocker: request review, no self-approval or bypass     |
 | `44-multi-pr-cancel-long-session`      | `03`    | `25` after earlier ticks on both PRs                                                 |
 | `45-stack-handoff-long-session`        | `102`   | `15` after a finished one-PR session                                                 |
 | `46-stack-all-owned-long-session`      | `106`   | `16` after a finished one-PR session                                                 |
@@ -167,8 +167,8 @@ third arm.
 "apply" is `test-cases/snapshots/apply-review-session-refusal`, an
 `apply review` output recorded by `test-cases/apply-review.test.mts` through
 the REST mutation path. `38` replays its sibling, `apply-review-denied-reply`,
-as the turn before fixture `136`. Both cases open with the same first REST
-tick, fixture `139`.
+as the turn before fixture `140`. Both cases open with the same first REST
+tick, fixture `143`.
 
 `39` expects Δ≈0. The plugin has no `add_repo` guidance; the CLI output's own
 instructions and the proxy's message carry the fix. A negative Δ would mean the
@@ -473,7 +473,7 @@ variable in a case's `env:` block fails every run: the runner accepts only
 5. **Unblock the call-count and token measurement.** Flatten `~/.docker`, then
    build a suite that grants Bash to both arms. Watch for the inverted failure:
    with no working binary, the with-arm tries the CLI, fails, and Δ goes negative.
-6. **Run the `[Required]` approval-gate case.** Fixture `138` and case `43`
+6. **Run the `[Required]` approval-gate case.** Fixture `142` and case `43`
    now cover the positive direction of `08`; neither has run live yet.
 7. **Add a bad-workflow-YAML fixture**, if the CLI surfaces that state at all.
    If it doesn't, that's a CLI gap and no eval can close it.
