@@ -623,9 +623,12 @@ const PR_SCENARIOS = [
       const fixture = "07-mark-ready-draft-clean";
       const state = withHistory(fixtureState(fixture), HISTORY);
       return {
-        // The poll's mark-ready mutation costs no call or tokens: one GraphQL
-        // point, or on REST one POST to the CCR proxy's ready_for_review route
-        // (mark-ready.mts). Outside CCR, REST escalates as transport-unsupported.
+        // The poll's mark-ready tick costs no call or tokens, but it still spends
+        // rate limit: runPoll -> runIterate reads the PR snapshot first (a full
+        // read, since mark-ready refuses a reused fingerprint), then
+        // markReadyIfAuthorized sends one GraphQL mutation point, or on REST one
+        // POST to the CCR proxy's ready_for_review route (mark-ready.mts).
+        // Outside CCR, REST escalates as transport-unsupported.
         shepherd: [
           {
             phase: 1,
@@ -633,8 +636,8 @@ const PR_SCENARIOS = [
             cmd: "",
             out: "",
             continues: true,
-            api: gql(1),
-            apiRest: rest(1),
+            api: gql(SHEPHERD_TICK_API.graphqlPoints + 1),
+            apiRest: rest(SHEPHERD_TICK_API_REST.restCore + 1),
           },
         ],
         gh: [

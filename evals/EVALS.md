@@ -39,8 +39,8 @@ node evals/analyze.mjs --calibrate <results-dir> --write # also record it for ev
   from each run's `usage`; if the runner's aggregate lacks them it exits with a
   message instead of guessing.
 - The case fingerprint that gates a comparison is split. The scored part (prompt,
-  run count, turn budget, every scored grader) must match. The display-only part
-  (timeout, `skill-fired`) may drift and is only noted. The plugin guard compares
+  run count, turn budget, timeout, every scored grader) must match. The
+  display-only part (`skill-fired`) may drift and is only noted. The plugin guard compares
   a source hash when the runner records one. Otherwise it prints this checkout's
   hash, because `name@version` does not change when `SKILL.md` is edited (#426).
 

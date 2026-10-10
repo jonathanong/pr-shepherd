@@ -22,7 +22,7 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport |
 | --- | --- | --- | --- |
-| single PR | 37.5 / 34.5 / 11 | 3 / 9 / 78.3 | 267 core + 1.5 points |
+| single PR | 39.5 / 34.5 / 11 | 3 / 9 / 78.3 | 279 core + 1.5 points |
 | PR stack | 34 / 27 / 12 | 2 / 6 / 74 | 404 core + 0 points |
 
 <!-- bench:headline:end -->
@@ -160,7 +160,9 @@ are as good as these assumptions:
   - `apply review` is one thread read plus one point per chunk of 10 mutations;
   - a tick that renders a failing job's log excerpt also lists the run's jobs
     and reads the job log, two REST requests on either transport;
-  - the guarded merge is 2 points (lookup and mutation).
+  - the guarded merge is 2 points (lookup and mutation);
+  - the poll tick that marks a draft ready is a full one-PR tick plus the
+    1-point mutation, 3 points (on REST, a full read plus one CCR POST).
 - **pr-shepherd, REST transport.** REST has no fingerprint shortcut, so a poll
   is a full read. From `src/github/rest-stack-summary-sharing.test.mts`, a
   10-layer stack tick is 126 requests, which this models as 6 shared plus 12
@@ -177,7 +179,8 @@ are as good as these assumptions:
   [data/mcp-api-map.json](data/mcp-api-map.json). **It is unverified.** It was
   written from memory of github-mcp-server, not read from its source, and its
   `verified` flag is `false` until someone checks it against the pinned commit
-  (the one `data/mcp-tool-schemas.json` records). Notably it assumes
+  (the one `data/mcp-tool-schemas.json` records). `record.mjs` resets it to
+  `false` whenever it repins the map to a different commit. Notably it assumes
   `get_review_comments` is one GraphQL query and `get_check_runs` is two REST
   requests. Correct the file and re-run the bench if it is wrong.
 

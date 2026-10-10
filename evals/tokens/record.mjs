@@ -21,7 +21,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { DATA_DIR, MCP_TOOLS_USED } from "./lib.mjs";
+import { DATA_DIR, MCP_TOOLS_USED, repinMcpApiMap } from "./lib.mjs";
 
 const REPO = "jonathanong/pr-shepherd";
 const HISTORY_PR = 505;
@@ -191,7 +191,7 @@ function recordMcpSchemas(serverDir) {
     .map((k) => k.split(":")[0])
     .filter((t) => !existsSync(join(snaps, `${t}.snap`)));
   if (missing.length) console.error(`mcp-api-map.json names tools the server lacks: ${missing}`);
-  map.source = `github/github-mcp-server@${commit}`;
+  repinMcpApiMap(map, `github/github-mcp-server@${commit}`);
   writeFileSync(mapPath, `${JSON.stringify(map, null, 2)}\n`);
 }
 

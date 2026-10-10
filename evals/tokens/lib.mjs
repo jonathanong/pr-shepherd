@@ -604,6 +604,16 @@ export const rest = (restCore) => ({ graphqlPoints: 0, restCore });
 
 export const MCP_API = readJson("mcp-api-map.json");
 
+/**
+ * Pin the MCP rate-limit map to `source`. A check against one commit says
+ * nothing about another, so repinning to a different commit resets `verified`.
+ */
+export function repinMcpApiMap(map, source) {
+  if (map.source !== source) map.verified = false;
+  map.source = source;
+  return map;
+}
+
 /** Rate-limit cost of one GitHub MCP tool call, from data/mcp-api-map.json. */
 export function mcpApi(tool, args) {
   const key =

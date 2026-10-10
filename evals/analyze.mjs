@@ -444,8 +444,8 @@ const b = byName(B);
 // aggregate-result.json, so this needs no cooperation from the runner.
 //
 // Split in two. The SCORED part decides the verdict: prompt, run count, turn
-// budget and every grader that feeds the score. The DISPLAY-ONLY part is what
-// changes no score: the timeout and display-only graders such as `skill-fired`.
+// budget, timeout and every grader that feeds the score. The DISPLAY-ONLY part is
+// what changes no score: display-only graders such as `skill-fired`.
 // Drift there is reported, not refused, so adding an indicator does not discard
 // an otherwise comparable pair of runs.
 {
@@ -459,10 +459,11 @@ const b = byName(B);
       prompt: c.promptMarkdown ?? "",
       runs: c.runsPerCase ?? null,
       maxTurns: c.maxTurns ?? null,
+      timeout: c.timeoutSeconds ?? null,
       graders: graderSpecs(c, (display) => !display),
     });
   const display = (c) =>
-    JSON.stringify({ timeout: c.timeoutSeconds ?? null, graders: graderSpecs(c, (d) => d) });
+    JSON.stringify({ graders: graderSpecs(c, (d) => d) });
 
   const drifted = Object.keys(a).filter((n) => scored(a[n]) !== scored(b[n]));
   if (drifted.length) {
@@ -481,8 +482,8 @@ const b = byName(B);
   const displayDrift = Object.keys(a).filter((n) => display(a[n]) !== display(b[n]));
   if (displayDrift.length) {
     console.error(
-      `note: ${displayDrift.length} case(s) differ only in display-only config (timeout or\n` +
-        `  display-only graders such as skill-fired); scores are still comparable.`,
+      `note: ${displayDrift.length} case(s) differ only in display-only graders such as\n` +
+        `  skill-fired; scores are still comparable.`,
     );
   }
 }
