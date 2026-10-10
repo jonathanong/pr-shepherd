@@ -216,7 +216,7 @@ Lean-mode rules for the summary line:
 **`superseded` line** (Markdown and JSON `supersededNames`), only when a `CANCELLED` check has newer-run evidence in the same loaded commit context:
 
 - This is concurrency-group eviction from a new push or a second trigger of the same push.
-- The evidence is either a strictly greater run ID from the same workflow, event, scope, and commit, or an exact-name `SUCCESS` check with a distinct lower numeric run ID and the same workflow ID, event, scope, and commit whose valid positive start and completion timestamps are both strictly later (with completion at or after start). The timestamp form establishes observed ordering only; it does not prove that both triggers used an identical PR base.
+- The evidence is either a strictly greater run ID from the same workflow, event, scope, and commit, or an exact-name `SUCCESS` check with a distinct lower numeric run ID and the same workflow ID, event, scope, and commit whose valid positive start and completion timestamps are both strictly later (the successful check must complete at or after start; a cancelled wrapper can report completion before start, but both observed boundaries must still be strictly older). The timestamp form establishes observed ordering only; it does not prove that both triggers used an identical PR base.
 - These checks do not affect `anyFailing` or `allPassed` and never appear under `## Failing checks`.
 - No action is needed for the local Shepherd verdict. GitHub's status rollup remains unchanged; its branch protection evaluates the checks it received.
 - A `CANCELLED` check without either matching form of newer-run evidence is not superseded. It stays under `## Failing checks` with `[conclusion: CANCELLED]`.
