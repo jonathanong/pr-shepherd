@@ -22,8 +22,8 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport |
 | --- | --- | --- | --- |
-| single PR | 39 / 34.5 / 11 | 3 / 9 / 78.3 | 321.3 core + 1.5 points |
-| PR stack | 26 / 27 / 12 | 2 / 6 / 74 | 420 core + 0 points |
+| single PR | 42.5 / 36.5 / 11 | 3 / 9 / 78.3 | 332.3 core + 1.5 points |
+| PR stack | 42 / 27 / 12 | 2 / 6 / 74 | 540 core + 0 points |
 
 <!-- bench:headline:end -->
 
@@ -33,8 +33,8 @@ the GitHub MCP server they also come from polling and stack discovery, which
 MCP has no shortcut for. A single fresh read-and-reply tick against gh is a
 wash: between 9% cheaper and 5% dearer. A PR that has already merged costs
 15% more to confirm than a state-first gh agent pays. On the GitHub rate limit,
-pr-shepherd spends more GraphQL points than gh on a single PR (about as many on
-a stack) and far fewer REST requests; against MCP it trades REST requests for GraphQL points. See "Where
+pr-shepherd spends more GraphQL points than gh on a single PR and on a stack,
+and far fewer REST requests; against MCP it trades REST requests for GraphQL points. See "Where
 pr-shepherd does not save" and "Rate-limit assumptions".
 
 ## Run it
@@ -159,8 +159,12 @@ are as good as these assumptions:
     fingerprint, misses and reads `BatchPr`, so it is 2 (the wait scenario
     carries that extra point);
   - a stack tick is 1 topology point plus `max(1, round(0.52 × layers))`;
+  - a one-PR tick on a non-root native-stack layer (the sessions `stack-work`
+    routes) also loads the trunk's required contexts (`RefRules`) and the
+    stack topology (`PollStackTopology`), 3 points in all;
   - `apply review` reads the head SHA for `--require-sha` (1 point), then
-    spends one thread read plus one point per chunk of 10 mutations;
+    spends one thread read plus one point per chunk of 10 mutations, and one
+    `ReplyRecoveryEvidence` read per chunk that carries replies;
   - a tick that renders a failing job's log excerpt also lists the run's jobs
     and reads the job log, two REST requests on either transport;
   - `BatchPr`'s supplements are charged only where the scenario's state
@@ -181,18 +185,22 @@ are as good as these assumptions:
   Code cloud). The cloud variant, where each snapshot also reads the CCR proxy,
   comes in #533. REST has no fingerprint shortcut, so a poll is a full read.
   From `src/github/rest-stack-summary-sharing.test.mts`, a 10-layer stack tick
-  is 126 requests, which this models as 6 shared plus 12 per layer. A one-PR
+  is 126 requests, which this models as 6 shared plus 12 per layer. A routed
+  non-root layer's one-PR tick adds the stack read, the trunk's protection,
+  rules and compare, and the stack topology (the stack list and read twice,
+  each layer's pull and the viewer). A one-PR
   tick is 14 requests, counted at the HTTP boundary of the REST iterate test
   routes; none is conditional, so none is a free 304. The `failing-check` and
   `check-annotations` ticks add one annotation read per annotated check run.
   `apply review` reads the pull for `--require-sha`; a thread resolve has no
-  standard REST route, so it then spends its replies plus, when it has any, a
-  4-request transcript read (pull comments, issue comments, reviews and the
-  viewer). Ready-for-review has no standard REST route either: the
+  standard REST route, so it then spends, when it has replies, a 4-request
+  transcript read (pull comments, issue comments, reviews and the viewer) and
+  three requests per reply (`/user` and the pull comments, read so a lost
+  response can be recovered, then the POST). Ready-for-review has no standard REST route either: the
   `mark-ready` tick is its 14-request read, and it escalates as
   transport-unsupported instead of marking the PR ready.
 - **gh:** `gh pr view`, the thread query and each `gh pr checks` refresh are
-  one point; `--watch` is one point per refresh; `gh pr ready` and
+  one point; `--watch` is one point on start plus one per refresh; `gh pr ready` and
   `gh pr merge` are two (lookup and mutation); `gh run view --log-failed` is
   two REST requests; replies, annotations, the stacks lookup and the
   merge-async calls are one REST request each; a thread resolve is one point.

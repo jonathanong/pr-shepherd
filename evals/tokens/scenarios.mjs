@@ -81,6 +81,8 @@ const shepherdTick = (out, phase = 1) => ({ phase, via: "bash", cmd: SHEPHERD_CM
  * also reads `/ccr/review_threads`.
  */
 const REST_TRANSCRIPT_READ = 4;
+/** A standard REST reply: `/user`, one pull-comments page, then the POST. */
+const REST_REPLY_REQUESTS = 3;
 
 /**
  * A tick that renders a failing job's log excerpt also lists the run's jobs
@@ -124,20 +126,27 @@ function shepherdApply(text, result, phase = 2) {
     .replace("$HEAD_SHA", "0123456789abcdef0123456789abcdef01234567");
   // Every printed command carries --require-sha, so `waitForSha` first reads
   // the head SHA: one `GetPrHeadSha` point, or one REST pull read. GraphQL:
-  // then one thread read plus one request per chunk of 10 mutations. REST: with
-  // replies, the transcript read (`REST_TRANSCRIPT_READ`) plus one request per
-  // reply; the thread-root lookup reads only the local identity cache. A
-  // resolve has no standard REST route, so REST mode skips it
-  // (docs/graphql-usage.md, docs/escalations.md).
+  // then one thread read plus one request per chunk of 10 mutations, and one
+  // `ReplyRecoveryEvidence` read per chunk that carries replies (replies come
+  // first, so ceil(replies / 10) chunks; src/comments/resolve.mts). REST: with
+  // replies, the transcript read (`REST_TRANSCRIPT_READ`), then per reply the
+  // `/user` and pull-comments reads that make a lost response recoverable plus
+  // the POST (`REST_REPLY_REQUESTS`, src/comments/rest-reply.mts). The
+  // thread-root lookup reads only the local identity cache. A resolve has no
+  // standard REST route, so REST mode skips it (docs/graphql-usage.md,
+  // docs/escalations.md).
   const replies = result.repliedThreads?.length ?? 0;
   const mutations = replies + (result.resolvedThreads?.length ?? 0);
+  const replyChunks = Math.ceil(replies / 10);
   return {
     phase,
     via: "bash",
     cmd: filled,
     out: formatMutateResult({ errors: [], ...result }),
-    api: gql(HEAD_SHA_READ + 1 + Math.ceil(mutations / 10)),
-    apiRest: rest(HEAD_SHA_READ + (replies ? REST_TRANSCRIPT_READ : 0) + replies),
+    api: gql(HEAD_SHA_READ + 1 + Math.ceil(mutations / 10) + replyChunks),
+    apiRest: rest(
+      HEAD_SHA_READ + (replies ? REST_TRANSCRIPT_READ : 0) + replies * REST_REPLY_REQUESTS,
+    ),
   };
 }
 
@@ -527,13 +536,14 @@ const PR_SCENARIOS = [
           {
             phase: 1,
             via: "bash",
-            // One GraphQL query per refresh.
-            api: gql(polls),
+            // One GraphQL query on start, then one per refresh: the checks
+            // settle on the refresh after shepherd's last WAIT tick.
+            api: gql(polls + 1),
             cmd: "gh pr checks 42 -R owner/repo --watch --interval 60",
             // `--watch` returns only once the checks finish: the last refresh is
             // terminal (here the failure \`failing-check\` picks up).
-            out: Array.from({ length: polls }, (_, i) =>
-              ghPrChecks(i === polls - 1 ? settled : state),
+            out: Array.from({ length: polls + 1 }, (_, i) =>
+              ghPrChecks(i === polls ? settled : state),
             ).join("\n"),
           },
         ],
@@ -1025,6 +1035,21 @@ function settledOverview(layers, number) {
     .replaceAll("/pull/43", `/pull/${lower.pr}`);
 }
 
+/**
+ * A one-PR tick on a non-root native-stack layer. Beside the ordinary
+ * snapshot, every full tick loads the trunk's required contexts (`RefRules`;
+ * on REST, branch protection, branch rules and a compare) and the stack
+ * topology (`PollStackTopology`, shared with the stale-ancestry check; on
+ * REST, the stack list and stack read twice, each layer's pull and the
+ * viewer). REST's snapshot also reads the stack itself. Sources:
+ * src/github/merge-target-rules.mts, src/commands/iterate/stale-ancestry.mts,
+ * src/github/rest-stack-read.mts.
+ */
+const routedLayerTickApi = (stackSize) => ({
+  api: gql(SHEPHERD_TICK_API.graphqlPoints + 2),
+  apiRest: rest(SHEPHERD_TICK_API_REST.restCore + 1 + 3 + (5 + stackSize)),
+});
+
 const stackCmd = (anchorPr, repo, flags = "") =>
   `pr-shepherd --stack https://github.com/${repo}/pull/${anchorPr} --until-terminal${flags}`;
 
@@ -1057,6 +1082,7 @@ const STACK_SCENARIOS = [
             via: "bash",
             cmd: `pr-shepherd https://github.com/${repo}/pull/${l.pr} --until-terminal`,
             out: layerSnapshot(l),
+            ...routedLayerTickApi(layers.length),
           })),
         ],
         gh,
