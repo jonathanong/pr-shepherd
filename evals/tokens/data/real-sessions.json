@@ -3,7 +3,7 @@
   "sources": {
     "transcripts": 10,
     "debugLogs": 14,
-    "heuristicAttributions": 98
+    "heuristicAttributions": 89
   },
   "apiUsageRecorded": false,
   "charsPerToken": {
@@ -3091,10 +3091,10 @@
         },
         {
           "t": 1167,
-          "seconds": 8,
+          "seconds": 0,
           "kind": "review",
           "action": null,
-          "outChars": 89,
+          "outChars": null,
           "graphqlRequests": 0,
           "graphqlCost": 0,
           "graphqlMutations": 0,
@@ -3112,10 +3112,10 @@
         },
         {
           "t": 1172,
-          "seconds": 73,
+          "seconds": 3,
           "kind": "review",
           "action": null,
-          "outChars": 49,
+          "outChars": 89,
           "graphqlRequests": 4,
           "graphqlCost": 3,
           "graphqlMutations": 1,
@@ -3183,7 +3183,7 @@
           "seconds": 1,
           "kind": "review",
           "action": null,
-          "outChars": null,
+          "outChars": 49,
           "graphqlRequests": 1,
           "graphqlCost": 0,
           "graphqlMutations": 1,

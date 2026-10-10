@@ -98,6 +98,8 @@
     { "where": "chars-per-token:multi-category", "metric": "toolTokens", "baseline": "gh", "issue": 528 },
     { "where": "chars-per-token:merge-queue", "metric": "ite", "baseline": "gh", "issue": 528 },
     { "where": "chars-per-token:merge-queue", "metric": "toolTokens", "baseline": "gh", "issue": 528 },
-    { "where": "chars-per-token:stack-work", "metric": "toolTokens", "baseline": "gh", "issue": 528 }
+    { "where": "chars-per-token:stack-work", "metric": "toolTokens", "baseline": "gh", "issue": 528 },
+    { "where": "chars-per-token:stack-setup", "metric": "ite", "baseline": "mcp", "issue": 528 },
+    { "where": "chars-per-token:stack-setup", "metric": "toolTokens", "baseline": "mcp", "issue": 528 }
   ]
 }

@@ -516,9 +516,15 @@ export function mcpJobLogs(log, runId, jobId, jobName, tailLines = 500) {
 export const mcpOversizeError = (call) =>
   `Error: MCP tool "${call.cmd.split(" ")[0]}" response (${tokens(call.out)} tokens) exceeds maximum allowed tokens (${MODEL.mcpOutputCapTokens}). Please use pagination, filtering, or limit parameters to reduce the response size.`;
 
+/**
+ * Tokens of a call's result. A `schema` result (a ToolSearch load) is tool
+ * schema text, counted at the input ratio like the eager toolset.
+ */
+export const outTokens = (call) => (call.schema ? inputTokens(call.out) : tokens(call.out));
+
 /** Apply the host's per-call output cap: truncate Bash, reject MCP. */
 function capped(call) {
-  const raw = tokens(call.out);
+  const raw = outTokens(call);
   const cmdTokens = inputTokens(call.cmd);
   if (call.via === "mcp") {
     const rejected = raw > MODEL.mcpOutputCapTokens;

@@ -193,11 +193,27 @@ function parseLog(text, scope, stats, until = Infinity) {
       const out = body.replace(/^\n*```\n/, "").replace(/\n```\n*$/, "");
       const pr = Number(out.match(/^# PR #(\d+) \[/m)?.[1]) || null;
       // A poll prints a `# PR #N [ACTION]` header; an apply does not.
-      const cands = open(t).filter(
+      let cands = open(t).filter(
         (i) => !i.outs.length && (pr ? i.pr === pr && i.kind === "poll" : i.kind !== "poll"),
       );
-      if (cands.length > 1) ambiguous(t);
-      const inv = cands.sort((a, b) => a.t - b.t)[0];
+      // Overlapping applies: narrow by the IDs the output names, then by kind.
+      const narrow = (keep) => {
+        const c = cands.filter(keep);
+        if (c.length) cands = c;
+      };
+      const ids = pr ? [] : (out.match(/\b(?:PRRT|PRRC|PRR|IC)_[\w-]+/g) ?? []);
+      if (cands.length > 1 && ids.length) narrow((i) => ids.some((id) => i.args.includes(id)));
+      if (cands.length > 1 && !pr)
+        narrow((i) => i.kind === (/Shepherd Journal/.test(out) ? "journal" : "review"));
+      // An output reporting applied mutations is the run's that sent them.
+      if (cands.length > 1 && /^(?:Replied|Resolved|Minimized|Dismissed)\b/m.test(out))
+        narrow((i) => i.mutated);
+      // Still ambiguous: the output stays uncaptured rather than go to a guess.
+      if (cands.length > 1) {
+        ambiguous(t);
+        continue;
+      }
+      const inv = cands[0];
       if (!inv) continue;
       if (t <= until)
         inv.outs.push({

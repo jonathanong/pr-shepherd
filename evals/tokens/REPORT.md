@@ -10,9 +10,9 @@ Change in cost when an agent uses pr-shepherd instead of a baseline. A negative 
 - **Fixed vs. variable.** The skill and playbooks are 17% of pr-shepherd's PR-session cost and 15% of its stack-session cost; on variable cost alone it is −51% vs. gh in a PR session and −52% in a stack session.
 - **GitHub rate limit (assumed).** In a PR session pr-shepherd spends 42.5 GraphQL points and 4.8 REST requests; gh 36.5 and 9; MCP 12 and 78.3. GraphQL points +16% vs. gh and +254% vs. MCP; REST requests −47% and −94%.
 - **Waiting on CI, per hour.** pr-shepherd spends 60 GraphQL points on the GraphQL transport (one fingerprint hit per 60s poll) and about 840 REST requests on the REST transport (900 on cloud REST), which has no fingerprint shortcut. A `gh pr checks --watch` refresh costs 60 points; an MCP re-check about 120 requests.
-- **Event arm (informational, assumed, not gated).** A background `pr-shepherd wait` with ETag change detectors (#544). PR session: 27.5 (poll 42.5, gh 36.5, MCP 12) GraphQL points, 37 (poll 4.8, gh 9, MCP 78.3) REST requests, 22.8 (poll 14.8, gh 18.3, MCP 48.6) turns, 8,756 (poll 8,822, gh 30,934, MCP 77,005) tool tokens and 84,178 (poll 59,195, gh 100,341, MCP 258,773) ITE. Stack session: 36 (poll 42, gh 27, MCP 12) GraphQL points, 12 (poll 2, gh 6, MCP 74) REST requests, 12 (poll 8, gh 13, MCP 19) turns, 4,522 (poll 4,481, gh 5,133, MCP 9,478) tool tokens and 44,132 (poll 31,795, gh 56,002, MCP 83,549) ITE. Each of its 8 PR-session wakes (4 on a stack) adds a request to read the background start, so it spends more turns and tokens than the blocking poll. The hypothetical hosted webhook proxy spends 16.5 GraphQL points and 1 REST core of the user's token in a PR session (0 and 2 on a stack), on the agent's own mutations and reads.
+- **Event arm (informational, assumed, not gated).** A background `pr-shepherd wait` with ETag change detectors (#544). PR session: 27.5 (poll 42.5, gh 36.5, MCP 12) GraphQL points, 38 (poll 4.8, gh 9, MCP 78.3) REST requests, 22.8 (poll 14.8, gh 18.3, MCP 48.6) turns, 8,756 (poll 8,822, gh 30,934, MCP 77,005) tool tokens and 84,178 (poll 59,195, gh 100,341, MCP 258,773) ITE. Stack session: 36 (poll 42, gh 27, MCP 12) GraphQL points, 12 (poll 2, gh 6, MCP 74) REST requests, 12 (poll 8, gh 13, MCP 19) turns, 4,522 (poll 4,481, gh 5,133, MCP 9,478) tool tokens and 44,132 (poll 31,795, gh 56,002, MCP 83,549) ITE. Each of its 8 PR-session wakes (4 on a stack) adds a request to read the background start, so it spends more turns and tokens than the blocking poll. The hypothetical hosted webhook proxy spends 16.5 GraphQL points and 1 REST core of the user's token in a PR session (0 and 2 on a stack), on the agent's own mutations and reads.
 - **Idle waiting, per hour (assumed).** The poll arm's blocking `--until-terminal` call (the skill's mode, and the comparison that counts) spends 60 GraphQL points and no turn; the legacy bounded `--timeout 4.5m` CLI mode, which the skill no longer uses, spends 75 points (it returns every 240s, after 5 ticks) and 15 wakes (15 turns, 51,675 ITE). The event arm spends 4 points on 4 reconcile snapshots and no REST (300 conditional requests, all 304), with 8 turns (25,668 ITE). The hypothetical proxy spends nothing of the user's token, with the same wakes.
-- **Losses: 98.** pr-shepherd costs more than a baseline on 98 gated cells below: 10 on tokens or turns (#528) and 88 on the GitHub rate limit (#525). Each is on the temporary pending list, pending-losses.json; `bench.mjs --check` fails on any other loss and on any listed one that is gone.
+- **Losses: 100.** pr-shepherd costs more than a baseline on 100 gated cells below: 12 on tokens or turns (#528) and 88 on the GitHub rate limit (#525). Each is on the temporary pending list, pending-losses.json; `bench.mjs --check` fails on any other loss and on any listed one that is gone.
 
 ### Losses
 
@@ -118,6 +118,8 @@ Every session and scenario where pr-shepherd costs strictly more than a baseline
 | `chars-per-token:merge-queue` | cost (ITE) | gh CLI | 7,236 | 7,194 | +1% | #528 |
 | `chars-per-token:merge-queue` | tool tokens | gh CLI | 464 | 387 | +20% | #528 |
 | `chars-per-token:stack-work` | tool tokens | gh CLI | 2,321 | 1,984 | +17% | #528 |
+| `chars-per-token:stack-setup` | cost (ITE) | GitHub MCP | 4,705 | 4,585 | +3% | #528 |
+| `chars-per-token:stack-setup` | tool tokens | GitHub MCP | 1,316 | 1,192 | +10% | #528 |
 
 ## Typical PR session
 
@@ -307,7 +309,7 @@ A local session where a background `pr-shepherd wait` replaces the blocking poll
 
 | session | arm | GraphQL points | REST core requests | turns | tool calls | tool tokens | cost (ITE) |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Typical PR session | event | 27.5 | 37 | 22.8 | 14.8 | 8,756 | 84,178 |
+| Typical PR session | event | 27.5 | 38 | 22.8 | 14.8 | 8,756 | 84,178 |
 | Typical PR session | event, hosted webhook proxy (hypothetical) | 16.5 | 1 | 22.8 | 14.8 | 8,756 | 84,178 |
 | Typical PR session | pr-shepherd poll | 42.5 | 4.8 | 14.8 | 14.8 | 8,822 | 59,195 |
 | Typical PR session | gh CLI | 36.5 | 9 | 18.3 | 30.3 | 30,934 | 100,341 |
@@ -328,7 +330,7 @@ Per scenario, `GraphQL points / REST core requests · turns` for one occurrence.
 | `review-thread` | 1 | change | 5 / 0 · 2 | 5 / 3 · 3 | 4 / 0 |
 | `review-thread-with-history` | 1 | change | 5 / 0 · 2 | 5 / 3 · 3 | 4 / 0 |
 | `multi-category` | 0.5 | change | 5 / 2 · 3 | 5 / 7 · 4 | 4 / 2 |
-| `mark-ready` | 1 | none | 3 / 1 · 0 | 2 / 1 · 0 | 1 / 0 |
+| `mark-ready` | 1 | none | 3 / 1 · 0 | 2 / 2 · 0 | 1 / 0 |
 | `merged` | 1 | change | 1 / 0 · 1 | 1 / 1 · 2 | 0 / 0 |
 | `bot-threads` | 1 | change | 5 / 0 · 2 | 5 / 3 · 3 | 4 / 0 |
 | `check-annotations` | 0.25 | change | 2 / 0 · 1 | 2 / 1 · 2 | 0 / 0 |
@@ -382,19 +384,19 @@ An arm that gains a truncated or rejected call at the measured ratios no longer 
 | Typical PR session | cost (ITE) | gh CLI | 3.5 for every arm | 59,195 | 100,341 | −41% |
 | Typical PR session | cost (ITE) | gh CLI | 2.26 / 2.53 | 66,008 | 114,509 | −42% |
 | Typical PR session | cost (ITE) | GitHub MCP | 3.5 for every arm | 40,777 | 168,019 | −76% |
-| Typical PR session | cost (ITE) | GitHub MCP | 2.26 / 2.53 (unmeasured) | 43,089 | 181,387 | −76% |
+| Typical PR session | cost (ITE) | GitHub MCP | 2.26 / 2.53 (unmeasured) | 43,089 | 179,405 | −76% |
 | Typical PR session | tool tokens | gh CLI | 3.5 for every arm | 8,822 | 30,934 | −71% |
 | Typical PR session | tool tokens | gh CLI | 2.26 / 2.53 | 13,443 | 42,262 | −68% |
 | Typical PR session | tool tokens | GitHub MCP | 3.5 for every arm | 2,983 | 26,629 | −89% |
-| Typical PR session | tool tokens | GitHub MCP | 2.26 / 2.53 (unmeasured) | 4,440 | 36,222 | −88% |
+| Typical PR session | tool tokens | GitHub MCP | 2.26 / 2.53 (unmeasured) | 4,440 | 35,626 | −88% |
 | Typical stack session | cost (ITE) | gh CLI | 3.5 for every arm | 31,795 | 56,002 | −43% |
 | Typical stack session | cost (ITE) | gh CLI | 2.26 / 2.53 | 34,967 | 57,528 | −39% |
 | Typical stack session | cost (ITE) | GitHub MCP | 3.5 for every arm | 31,795 | 83,549 | −62% |
-| Typical stack session | cost (ITE) | GitHub MCP | 2.26 / 2.53 (unmeasured) | 34,967 | 87,901 | −60% |
+| Typical stack session | cost (ITE) | GitHub MCP | 2.26 / 2.53 (unmeasured) | 34,967 | 86,528 | −60% |
 | Typical stack session | tool tokens | gh CLI | 3.5 for every arm | 4,481 | 5,133 | −13% |
 | Typical stack session | tool tokens | gh CLI | 2.26 / 2.53 | 6,761 | 6,310 | +7% |
 | Typical stack session | tool tokens | GitHub MCP | 3.5 for every arm | 4,481 | 9,478 | −53% |
-| Typical stack session | tool tokens | GitHub MCP | 2.26 / 2.53 (unmeasured) | 6,761 | 12,179 | −44% |
+| Typical stack session | tool tokens | GitHub MCP | 2.26 / 2.53 (unmeasured) | 6,761 | 11,729 | −42% |
 
 Verdicts, per session and per scenario, that flip to a loss at the measured ratios. They are gated like any other loss and pending in `pending-losses.json` under `chars-per-token:`:
 
@@ -406,12 +408,14 @@ Verdicts, per session and per scenario, that flip to a loss at the measured rati
 - merge-queue: cost (ITE) vs. gh CLI, 7,236 vs. 7,194 (#528)
 - merge-queue: tool tokens vs. gh CLI, 464 vs. 387 (#528)
 - stack-work: tool tokens vs. gh CLI, 2,321 vs. 1,984 (#528)
+- stack-setup: cost (ITE) vs. GitHub MCP, 4,705 vs. 4,585 (#528)
+- stack-setup: tool tokens vs. GitHub MCP, 1,316 vs. 1,192 (#528)
 
 ## Real sessions
 
 Today's pr-shepherd runs on 8 real PRs (#520, #521, #522, #523, #530, #531, #532, #533), rebuilt from the agents' transcripts and pr-shepherd's debug logs by `sessions.mjs --extract`. Each PR's timeline (every poll with its ticks and action, every `apply` with its mutations) is replayed through this report's per-call models for all three arms. The baselines read the PR's real thread, comment, review and check sizes as of each step. pr-shepherd's modeled output is its real output length. Items are resolved, minimized or dismissed as the timeline's applies reach them, earliest first, since the PR dumps hold only the statuses at dump time; an `apply` that sent no mutation applied nothing. The data is [data/real-sessions.json](data/real-sessions.json); it holds numbers only.
 
-**The timelines are reconstructed, not exact.** Concurrent invocations interleave in one debug log and number their requests alike, so across the 14 debug logs (in-scope PRs and others alike) 98 requests, responses or outputs matched more than one open invocation and were assigned by heuristic (the PR their variables name, then the latest active). Those picks set per-PR ticks, output lengths and measured API counts.
+**The timelines are reconstructed, not exact.** Concurrent invocations interleave in one debug log and number their requests alike, so across the 14 debug logs (in-scope PRs and others alike) 89 requests, responses or outputs matched more than one open invocation and were assigned by heuristic (the PR their variables name, then the latest active). Those picks set per-PR ticks, output lengths and measured API counts.
 
 **Steps without a captured output are left out.** 2 invocations (#523: 1, #531: 1) have no output in the debug logs, so their result size is unknown. The modeled columns leave them out on every arm rather than replay pr-shepherd's result as empty.
 
@@ -422,12 +426,12 @@ Today's pr-shepherd runs on 8 real PRs (#520, #521, #522, #523, #530, #531, #532
 | #520 | 4 | 15 (30) | 11 | 7 | 17 | 107,318 / 461,021 / 580,120 | 22 / 44 / 62 | 54 / 72 / 29 | 4 / 14 / 119 |
 | #521 | 4 | 9 (16) | 5 | 3 | 2 | 44,978 / 118,167 / 157,236 | 12 / 22 / 31 | 26 / 35 / 11 | 4 / 2 / 61 |
 | #522 | 3 | 14 (33) | 11 | 7 | 8 | 87,650 / 313,179 / 431,320 | 21 / 42 / 69 | 59 / 66 / 22 | 3 / 8 / 116 |
-| #523 | 5 | 12 (23) | 7 | 7 | 2 | 66,432 / 165,298 / 240,215 | 18 / 29 / 46 | 44 / 46 / 14 | 5 / 2 / 84 |
+| #523 | 5 | 12 (23) | 7 | 7 | 2 | 66,194 / 168,616 / 240,214 | 18 / 30 / 46 | 45 / 47 / 14 | 5 / 2 / 84 |
 | #530 | 3 | 8 (17) | 5 | 4 | 5 | 50,428 / 116,601 / 160,695 | 12 / 26 / 35 | 29 / 34 / 13 | 3 / 5 / 63 |
 | #531 | 1 | 4 (7) | 2 | 2 | 0 | 18,304 / 37,305 / 44,516 | 5 / 8 / 9 | 7 / 12 / 3 | 1 / 0 / 19 |
 | #532 | 2 | 6 (12) | 4 | 4 | 2 | 37,747 / 85,574 / 116,618 | 10 / 19 / 25 | 22 / 25 / 8 | 2 / 2 / 44 |
 | #533 | 1 | 3 (6) | 2 | 2 | 1 | 20,792 / 43,731 / 60,936 | 5 / 9 / 13 | 13 / 16 / 4 | 1 / 1 / 22 |
-| **all** | 23 | 71 (144) | 47 | 36 | 37 | 433,649 / 1,340,876 / 1,791,656 | 105 / 199 / 290 | 254 / 306 / 104 | 23 / 34 / 528 |
+| **all** | 23 | 71 (144) | 47 | 36 | 37 | 433,411 / 1,344,194 / 1,791,655 | 105 / 200 / 290 | 255 / 307 / 104 | 23 / 34 / 528 |
 
 Modeled cost of pr-shepherd vs. gh: −68%; vs. MCP: −76%. Tool tokens: −85% / −88%.
 
@@ -438,7 +442,7 @@ Where modeled pr-shepherd costs more on a real PR. These are not gated: `--check
 - #521 graphqlPoints vs. MCP: 26 vs. 11 (#525)
 - #522 graphqlPoints vs. MCP: 59 vs. 22 (#525)
 - #523 restCore vs. gh: 5 vs. 2 (#525)
-- #523 graphqlPoints vs. MCP: 44 vs. 14 (#525)
+- #523 graphqlPoints vs. MCP: 45 vs. 14 (#525)
 - #530 graphqlPoints vs. MCP: 29 vs. 13 (#525)
 - #531 restCore vs. gh: 1 vs. 0 (#525)
 - #531 graphqlPoints vs. MCP: 7 vs. 3 (#525)
@@ -451,7 +455,7 @@ At the measured characters per token (pr-shepherd 2.26, gh and MCP 2.53; MCP's i
 
 - **Characters per token.** A result's tokens are the next request's prompt growth, less the calling request's output. Fitted on the 220 clean results (one result between two requests, nothing else) whose request had no thinking block: 2.53 characters per token plus 279 tokens per result (R² 0.96); per result of 2,000+ characters, median 2.43, 10th–90th percentile 2.18–2.8. pr-shepherd's own output alone: 2.26 (47 results, R² 0.96). With thinking requests included the fit degrades (494 results, 2.63, R² 0.05): thinking counts as output but leaves the next prompt. The model assumes 3.5 for every arm and `fixtures/calibrate` 4.00, so both undercount real tokens. No session used GitHub MCP, so MCP's JSON ratio is unmeasured.
 - **Context tokens.** The pr-shepherd and PR-state results whose size the next request's prompt growth pins down (181,357 characters) measured, per-result wrapper included, 112,711 tokens; the model's 3.5 characters per token gives 51,816.
-- **Rate limit.** The debug logs record every request: pr-shepherd spent 308 GraphQL points on queries (a lower bound: 1 query logged no cost), 50 mutation requests (GitHub reports no cost for these; at 1 point each the total is 358) and 31 REST requests. The model charges 254 points and 23 REST requests for the same timeline (GraphQL transport, which every session used). The model's REST requests are one mergeability refresh per READY or ready-delay CANCEL poll, the rate measured there; the measured remainder falls on other polls (mostly FIX_CODE), which the model does not charge. No poll recorded `apiUsage` (none ran with `--verbose`), so these come from the per-request log entries.
+- **Rate limit.** The debug logs record every request: pr-shepherd spent 308 GraphQL points on queries (a lower bound: 1 query logged no cost), 50 mutation requests (GitHub reports no cost for these; at 1 point each the total is 358) and 31 REST requests. The model charges 255 points and 23 REST requests for the same timeline (GraphQL transport, which every session used). The model's REST requests are one mergeability refresh per READY or ready-delay CANCEL poll, the rate measured there; the measured remainder falls on other polls (mostly FIX_CODE), which the model does not charge. No poll recorded `apiUsage` (none ran with `--verbose`), so these come from the per-request log entries.
 - **Turns.** The agents spent 107 turns on pr-shepherd calls and reads of their output; the model counts 105, one per invocation.
 
 ### GraphQL points by query

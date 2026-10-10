@@ -66,7 +66,7 @@ import {
   snapshot,
   tail,
   inputTokens,
-  tokens,
+  outTokens,
   withHistory,
 } from "./lib.mjs";
 
@@ -499,7 +499,7 @@ function setupScenario({ id, session }) {
         return schemas[t];
       };
       // Context holds each load's command and result.
-      const size = (calls) => calls.reduce((t, c) => t + inputTokens(c.cmd) + tokens(c.out), 0);
+      const size = (calls) => calls.reduce((t, c) => t + inputTokens(c.cmd) + outTokens(c), 0);
       const skill = [
         {
           phase: 1,
@@ -569,6 +569,7 @@ function setupScenario({ id, session }) {
               via: "mcp",
               cmd: `ToolSearch {"query":"select:${names.join(",")}"}`,
               out: names.map(schema).join("\n"),
+              schema: true,
             },
           ];
           loads.push({ arm: "mcp", share: delta, calls: search });
@@ -811,12 +812,16 @@ const PR_SCENARIOS = [
           },
         ],
         // The wait's in-process tick marks it ready, as the poll's does: a
-        // snapshot with no fingerprint miss, the mutation, and the pull's echo.
-        // The check-runs 200 that triggers it is counted in ci-wait.
+        // snapshot with no fingerprint miss, the READY mergeability refresh, the
+        // mutation, and the pull's echo. The check-runs 200 that triggers it is
+        // counted in ci-wait.
         event: {
           wake: "none",
           tail: {
-            api: { graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + 1, restCore: 1 },
+            api: {
+              graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + 1,
+              restCore: 1 + READY_MERGEABILITY_REST,
+            },
             apiProxy: gql(1),
           },
         },

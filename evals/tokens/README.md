@@ -482,7 +482,9 @@ review` pays the head-SHA read, and its replayed command carries a 40-character
 - **Attribution.** Concurrent invocations interleave in one debug log; a
   request, response or output that matches more than one open invocation is
   assigned by heuristic, and the report prints how many were (up to
-  `--until`).
+  `--until`). An output without a `# PR` header (an `apply`) goes to the open
+  run whose arguments name its IDs, then by kind, then to the one that sent
+  the mutations it reports; one still ambiguous stays uncaptured.
 - **GraphQL points by query.** Each invocation records requests and logged
   cost per GraphQL operation. The report groups them (fingerprint, BatchPr and
   its supplements, `apply review` reads, and so on) and sets the tick queries
