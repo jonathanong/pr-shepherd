@@ -12,6 +12,7 @@ import {
 } from "./rest-reader-core.mts";
 import { readRestPull, restPullRefs } from "./rest-pr-core.mts";
 import { mapPool } from "../util/pool.mts";
+import { readRestViewerLogin } from "./rest-viewer-read.mts";
 
 interface RestStack {
   number: number;
@@ -55,8 +56,7 @@ export async function readRestStackTopology(
   const verified = await readRestStackMembership(anchor, repo);
   if (!verified || JSON.stringify(verified) !== JSON.stringify(stack))
     malformedRest("native stack changed during topology read");
-  // Identity is available through REST; it does not imply any viewer capability.
-  const viewer = restObject(await rest<unknown>("GET", "/user"), "authenticated viewer");
-  const viewerLogin = restString(viewer.login, "authenticated viewer login");
+  // Installation tokens may read native stacks without supporting authenticated-user identity.
+  const viewerLogin = await readRestViewerLogin();
   return { stackNumber: stack.number, stackSize: ordered.length, ordered, viewerLogin };
 }

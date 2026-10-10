@@ -2,6 +2,8 @@ import type { RepoInfo } from "./client.mts";
 import type { RawBaseRef, RawBranchProtectionRule, RawRepositoryRule } from "./batch-raw-rules.mts";
 import { readRest as rest } from "./rest-reader-core.mts";
 import { GitHubRequestError } from "./errors.mts";
+import { rateLimitKind } from "./rate-limit-kind.mts";
+import { isRestSessionRefusal } from "./rest-session-refusal.mts";
 import {
   readRestPages,
   restRepoPath,
@@ -47,8 +49,7 @@ export async function readRestBranchRules(
       requiresStrictStatusChecks: checks?.strict === true,
     };
   } catch (error) {
-    if (!(error instanceof GitHubRequestError) || ![403, 404].includes(error.status ?? 0))
-      throw error;
+    if (!isUnavailablePolicy(error)) throw error;
     // Only GitHub's explicit unprotected response proves absence. A generic
     // 404 may hide protection from a token without administration access.
     if (!isUnprotectedBranch(error))
@@ -104,8 +105,7 @@ export async function readRestBranchRules(
       };
     });
   } catch (error) {
-    if (!(error instanceof GitHubRequestError) || ![403, 404].includes(error.status ?? 0))
-      throw error;
+    if (!isUnavailablePolicy(error)) throw error;
     unavailable.push({
       field: "branchRules",
       reason: `Branch rules unavailable (HTTP ${error.status})`,
@@ -120,6 +120,14 @@ export async function readRestBranchRules(
         }
       : undefined;
   return { ...(baseRef && { baseRef }), unavailable };
+}
+function isUnavailablePolicy(error: unknown): error is GitHubRequestError {
+  return (
+    error instanceof GitHubRequestError &&
+    [403, 404].includes(error.status) &&
+    rateLimitKind(error) === null &&
+    !isRestSessionRefusal(error)
+  );
 }
 function isUnprotectedBranch(error: GitHubRequestError): boolean {
   if (error.status !== 404) return false;

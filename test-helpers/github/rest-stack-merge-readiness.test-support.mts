@@ -31,6 +31,9 @@ export async function stackedServer() {
     changeMembershipAfterFinalTopology: false,
     changeMembershipAfterInitialTopology: undefined as "identity" | "trunk" | undefined,
     viewerReads: 0,
+    viewerStatus: 200,
+    viewerMessage: "Resource not accessible by integration",
+    viewerHeaders: {} as Record<string, string>,
     upperBaseSha: lowerSha,
     lowerHeadSha: lowerSha,
     upperBaseName: "user-model",
@@ -44,6 +47,9 @@ export async function stackedServer() {
   await serve((request, response) => {
     const path = request.path.split("?")[0];
     if (path === "/user") {
+      response.statusCode = fixture.viewerStatus;
+      for (const [name, value] of Object.entries(fixture.viewerHeaders))
+        response.setHeader(name, value);
       fixture.viewerReads += 1;
       if (fixture.changeMembershipAfterInitialTopology && fixture.viewerReads === 1) {
         if (fixture.changeMembershipAfterInitialTopology === "identity")
@@ -52,7 +58,11 @@ export async function stackedServer() {
       }
       if (fixture.changeMembershipAfterFinalTopology && fixture.viewerReads === 2)
         fixture.nativeStack!.pull_requests.reverse();
-      response.end('{"login":"author"}');
+      response.end(
+        fixture.viewerStatus === 200
+          ? '{"login":"author"}'
+          : JSON.stringify({ message: fixture.viewerMessage }),
+      );
     } else if (path === `${prefix}/stacks`)
       response.end(JSON.stringify(fixture.nativeStack ? [fixture.nativeStack] : []));
     else if (path === `${prefix}/stacks/${fixture.nativeStack?.number}`)

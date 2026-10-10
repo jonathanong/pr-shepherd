@@ -96,11 +96,13 @@ describe("official REST native stacks", () => {
     ).rejects.toThrow("repeated member");
   });
   it.each([
-    [200, {}, "authenticated viewer login"],
-    [401, { message: "Bad credentials" }, "401"],
+    [200, {}],
+    [401, { message: "Bad credentials" }],
+    [403, { message: "Resource not accessible by integration" }],
+    [404, { message: "Not Found" }],
   ] as const)(
     "does not guess ownership from unavailable viewer identity (%i)",
-    async (status, viewer, expected) => {
+    async (status, viewer) => {
       await serve((request, response) => {
         const path = request.path.split("?")[0];
         if (path === "/user") {
@@ -115,7 +117,7 @@ describe("official REST native stacks", () => {
       });
       await expect(
         runWithGithubTransport("rest", () => readStackTopology(101, repo)),
-      ).rejects.toThrow(expected);
+      ).resolves.toMatchObject({ viewerLogin: null, stackNumber: 42, stackSize: 2 });
       expect(wire.requests.some((request) => request.path === "/graphql")).toBe(false);
     },
   );
