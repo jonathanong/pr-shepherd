@@ -2,6 +2,8 @@
 // Analyzes `claude plugin eval` result directories (aggregate-result.json).
 //
 //   node evals/analyze.mjs <dir-a> <dir-b>      compare two tiers
+//   node evals/analyze.mjs --instructions-ablation <inline-dir> <playbook-dir>
+//                                               compare inline vs. playbook instructions
 //   node evals/analyze.mjs --summary <dir>      paste-ready summary of one run
 //   node evals/analyze.mjs --calibrate <dir> [--write]
 //                                               measured tokens vs. the bench's chars/token
@@ -16,6 +18,14 @@
 // numbers of cases, so a bare mean-Δ comparison is computed over different
 // effective denominators and will mislead. Per-case Δ is the primary result;
 // the adjusted mean is reported with its denominator stated.
+//
+// `--instructions-ablation` compares the inline arm with a playbook arm generated
+// by `generate.mjs --instructions playbook`. That arm skips cases with no
+// `-playbook` snapshot and its `## Instructions` sections differ by design, so
+// this mode compares only the playbook arm's cases (refusing if one with a
+// `-playbook` snapshot is missing) and fingerprints each prompt with the latest
+// tick's section blanked; replayed history must still match. Graders, run config
+// and the agent model must still match.
 
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -25,14 +35,19 @@ import { bootstrapDeltas, excludesZero, interval, mean, ols, seedOf } from "./st
 
 const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const USAGE =
-  "usage: node evals/analyze.mjs <dir-a> <dir-b>\n" +
+  "usage: node evals/analyze.mjs [--instructions-ablation] <dir-a> <dir-b>\n" +
   "       node evals/analyze.mjs --summary <dir>\n" +
   "       node evals/analyze.mjs --calibrate <dir> [--write]";
 
 const argv = process.argv.slice(2);
 // --write is a calibrate-only flag; strip it before counting directory arguments.
 const write = argv[0] === "--calibrate" && argv.includes("--write");
-const args = write ? argv.filter((a) => a !== "--write") : argv;
+// --instructions-ablation is a compare-only flag; any other mode rejects it below.
+const instructionsAblation =
+  argv[0] !== "--summary" && argv[0] !== "--calibrate" && argv.includes("--instructions-ablation");
+const args = argv.filter(
+  (a) => !(write && a === "--write") && !(instructionsAblation && a === "--instructions-ablation"),
+);
 const mode =
   args[0] === "--summary" ? "summary" : args[0] === "--calibrate" ? "calibrate" : "compare";
 const dirs = mode === "compare" ? args : args.slice(1);
@@ -414,6 +429,19 @@ if (mode === "calibrate") {
 
 // --- compare two tiers ------------------------------------------------------
 
+// In instructions-ablation mode the playbook arm (B) is a subset of the inline
+// suite. Restrict the inline arm (A) to those cases so every check and mean below
+// runs over the same case list. A case only in B is still refused below.
+if (instructionsAblation) {
+  const inB = new Set(B.cases.map((c) => c.name));
+  const dropped = A.cases.filter((c) => !inB.has(c.name)).map((c) => c.name);
+  A.cases = A.cases.filter((c) => inB.has(c.name));
+  if (dropped.length)
+    console.log(
+      `instructions ablation: ignoring ${dropped.length} ${LA} case(s) with no playbook arm\n`,
+    );
+}
+
 const byName = (r) => Object.fromEntries(r.cases.map((c) => [c.name, c]));
 const a = byName(A);
 const b = byName(B);
@@ -448,6 +476,19 @@ const b = byName(B);
 // what changes no score: display-only graders such as `skill-fired`.
 // Drift there is reported, not refused, so adding an indicator does not discard
 // an otherwise comparable pair of runs.
+//
+// Instructions-ablation mode first blanks the latest tick's `## Instructions`
+// section, the last one in the prompt: only the case fixture switches mode.
+// Replayed history keeps inline instructions in both arms, so it must still
+// match. The section runs to the next turn separator (`---`), the next `## `
+// heading or the end of the prompt.
+const withoutInstructions = (prompt) => {
+  const start = [...prompt.matchAll(/^## Instructions\n/gm)].at(-1)?.index;
+  if (start === undefined) return prompt;
+  const rest = prompt.slice(start).replace(/^## Instructions\n/, "");
+  const end = rest.search(/^---$|^## /m);
+  return `${prompt.slice(0, start)}## Instructions\n\n${end === -1 ? "" : rest.slice(end)}`;
+};
 {
   const graderSpecs = (c, keep) =>
     (c.graders ?? [])
@@ -456,7 +497,9 @@ const b = byName(B);
       .sort((x, y) => (x.name < y.name ? -1 : x.name > y.name ? 1 : 0));
   const scored = (c) =>
     JSON.stringify({
-      prompt: c.promptMarkdown ?? "",
+      prompt: instructionsAblation
+        ? withoutInstructions(c.promptMarkdown ?? "")
+        : (c.promptMarkdown ?? ""),
       runs: c.runsPerCase ?? null,
       maxTurns: c.maxTurns ?? null,
       timeout: c.timeoutSeconds ?? null,
@@ -499,6 +542,20 @@ const b = byName(B);
     console.error(`  ${LA}: ${ja}`);
     console.error(`  ${LB}: ${jb}`);
     console.error(`\nRe-run one tier with the same --judge-model as the other.`);
+    process.exit(1);
+  }
+}
+
+// The agent model is fixed within an instructions ablation. Ordinary mode still
+// compares tiers, which are expected to differ by model.
+if (instructionsAblation) {
+  const ma = A.suite?.modelOverride ?? A.suite?.model ?? "(unrecorded)";
+  const mb = B.suite?.modelOverride ?? B.suite?.model ?? "(unrecorded)";
+  if (ma !== mb) {
+    console.error(`✗ the two result sets ran different agent models; refusing.`);
+    console.error(`  ${LA}: ${ma}`);
+    console.error(`  ${LB}: ${mb}`);
+    console.error(`\nRe-run one arm with the same --model as the other.`);
     process.exit(1);
   }
 }
@@ -580,7 +637,7 @@ for (const [L, R] of [
     `${L.padEnd(8)} mean Δ ${fmt(meanAll)}${ivAll ? ` ${fmtCi(ivAll)}` : ""} over ${cases.length} cases · ` +
       `mean Δ ${fmt(meanNC)} over ${nonCeiling.length} non-ceiling · ` +
       `skill fired ${trig.fired}/${trig.total} (${pctOf(trig.fired, trig.total)}) · ` +
-      `$${R.costUsd.toFixed(2)}`,
+      `$${R.costUsd.toFixed(2)}${instructionsAblation ? " (whole run)" : ""}`,
   );
   console.log(
     `${"".padEnd(8)} over-trigger ${trig.over}/${trig.overTotal} (${overPct}%) on should-NOT-fire cases` +

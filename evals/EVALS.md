@@ -402,8 +402,13 @@ default). Until it lands, only the scaffolding exists:
    CLAUDE_CODE_EFFORT_LEVEL=low claude plugin eval . --model claude-sonnet-5-5 \
      --ablation with-without --judge-model opus --no-publish \
      --eval-dir /tmp/pr-shepherd-evals-playbook --output-dir evals/results/playbook
-   node evals/analyze.mjs evals/results/inline evals/results/playbook
+   node evals/analyze.mjs --instructions-ablation evals/results/inline evals/results/playbook
    ```
+
+`--instructions-ablation` restricts the inline results to the cases the
+playbook arm ran and leaves the prompt text out of the drift check, since the
+prompt is what differs. Graders, run config, judge and plugin version must
+still match. The inline arm's cost line covers its whole run.
 
 Without `--instructions`, the generator's output is unchanged.
 
