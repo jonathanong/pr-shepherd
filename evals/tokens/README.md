@@ -490,8 +490,10 @@ review` pays the head-SHA read, and its replayed command carries a 40-character
   baseline gains a truncated or rejected call at those ratios is left out of
   the comparison with that baseline only, since the arm no longer finishes
   it. Only the ratio changes: the fits' per-result intercept is not charged,
-  as the model charges none, and every baseline makes at least as many calls
-  as pr-shepherd, so leaving it out favors the baselines.
+  as the model charges none. Leaving it out favors the baselines only where
+  they make at least as many calls as pr-shepherd; setup and unsupported
+  steps can have pr-shepherd making more, so the report claims it only when
+  every step passes that check.
 - **No CI logs for the baselines.** A FIX_CODE poll that ended with a failed
   check would send a baseline to the failed job's log, but the data has no
   real log sizes, so the replay gives gh and MCP no log call. The report

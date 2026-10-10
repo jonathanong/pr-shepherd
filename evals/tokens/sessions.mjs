@@ -317,10 +317,10 @@ function classify(use, result, bgPrs, scope) {
   if (
     use.name === "Bash" &&
     /^\s*(?:for n in [\d ]+; do )?for n in/.test(text) === false &&
-    /\bfor n in ((?:5\d\d ?)+)/.test(text)
+    /\bfor n in ((?:\d+ ?)+)/.test(text)
   )
     for (const n of text
-      .match(/\bfor n in ((?:5\d\d ?)+)/)[1]
+      .match(/\bfor n in ((?:\d+ ?)+)/)[1]
       .trim()
       .split(" "))
       if (inScope(Number(n))) prs.add(Number(n));
@@ -673,7 +673,9 @@ function extract(opts) {
 // --- model: replay a real timeline --------------------------------------------------
 
 const fill = (n, c = "x") => c.repeat(Math.max(0, n));
-const fakeId = (prefix, n) => `${prefix}${fill(n - prefix.length, "A")}`;
+/** An `n`-character ID, distinct per item index `i`. */
+const fakeId = (prefix, n, i = "") =>
+  `${prefix}${fill(n - prefix.length - String(i).length, "A")}${i}`;
 
 /** How many `key` mutations the timeline's applies had finished by second `t`. */
 const appliedBy = (pr, t, key) =>
@@ -692,12 +694,25 @@ const appliedBy = (pr, t, key) =>
 function statusAt(pr, t, items, has, key) {
   const done = appliedBy(pr, t, key);
   const total = appliedBy(pr, Infinity, key);
-  const order = [...items.keys()].sort((a, b) => has(items[b]) - has(items[a]) || a - b);
-  const rank = new Map(order.map((i, r) => [i, r]));
+  const rank = new Map(statusOrder(items, has).map((i, r) => [i, r]));
   return items.map((item, i) => {
     const r = rank.get(i);
     return r < done || (has(item) && r >= total);
   });
+}
+
+/** Item indices in the order `statusAt` takes the applies to have set them. */
+const statusOrder = (items, has) =>
+  [...items.keys()].sort((a, b) => has(items[b]) - has(items[a]) || a - b);
+
+/**
+ * The item indices one apply's `count` mutations hit: the next ones in
+ * `statusAt`'s order. Past the dumped items, indices continue synthetically.
+ */
+function applyTargets(pr, inv, items, has, key, count) {
+  const before = appliedBy(pr, inv.t + inv.seconds, key) - inv.apply[key];
+  const order = statusOrder(items, has);
+  return Array.from({ length: count }, (_, j) => order[before + j] ?? before + j);
 }
 
 /** The PR's GitHub state at second `t`, rebuilt from sizes with filler text. */
@@ -727,7 +742,7 @@ export function stateAt(pr, t) {
       .map((th, i) => ({ th, i }))
       .filter(({ th }) => th.comments[0].t <= t)
       .map(({ th, i }) => ({
-        id: fakeId("PRRT_", 22),
+        id: fakeId("PRRT_", 22, i),
         isResolved: resolved[i],
         isOutdated: th.outdated,
         path: fill(th.pathChars, "p"),
@@ -746,10 +761,10 @@ export function stateAt(pr, t) {
           })),
       })),
     comments: c.comments
-      .map((k, i) => ({ ...k, minimized: minimized[i] }))
+      .map((k, i) => ({ ...k, i, minimized: minimized[i] }))
       .filter((k) => k.t <= t)
       .map((k) => ({
-        id: fakeId("IC_", 26),
+        id: fakeId("IC_", 26, k.i),
         author: "reviewer[bot]",
         authorType: "Bot",
         body: fill(k.chars),
@@ -760,14 +775,16 @@ export function stateAt(pr, t) {
     changesRequestedReviews: [],
     reviewSummaries: [],
     historyReviews: c.reviews
-      // A bot review pr-shepherd dismissed was requesting changes until then.
+      // A bot review pr-shepherd dismissed was requesting changes until then,
+      // whether the dump came before or after the dismissal.
       .map((r, i) => ({
         ...r,
-        state: r.state === "DISMISSED" && !dismissed[i] ? "CHANGES_REQUESTED" : r.state,
+        i,
+        state: dismissed[i] ? "DISMISSED" : r.state === "DISMISSED" ? "CHANGES_REQUESTED" : r.state,
       }))
       .filter((r) => r.t <= t)
       .map((r) => ({
-        id: fakeId("", 20),
+        id: fakeId("", 20, r.i),
         author: "reviewer[bot]",
         body: fill(r.chars),
         state: r.state,
@@ -798,10 +815,11 @@ const ghObserve = (s, phase) => [
   call(phase, ghViewCmd(s), ghPrView(s)),
   call(phase, ghThreadsCmd(s), ghThreads(s)),
 ];
-const mcpObserve = (s, phase) =>
+/** MCP's observation; `checksRead` skips the check runs a last wait just read. */
+const mcpObserve = (s, phase, checksRead = false) =>
   [
     ["get", mcpGet],
-    ["get_check_runs", mcpCheckRuns],
+    ...(checksRead ? [] : [["get_check_runs", mcpCheckRuns]]),
     ["get_review_comments", mcpReviewThreads],
     ["get_reviews", mcpReviews],
     ["get_comments", mcpComments],
@@ -866,10 +884,12 @@ function stepArms(pr, inv) {
             // missed one more (docs/graphql-usage.md). A READY tick re-reads
             // mergeability over REST; a ready-delay CANCEL reached READY first,
             // on the two-point receipt query. BatchPr's supplements are not
-            // charged: the logs do not say which state triggered them.
+            // charged: the logs do not say which state triggered them. Each
+            // mutation request a tick sent (auto-resolve, journal) is one point.
             api: {
               graphqlPoints:
                 SHEPHERD_TICK_API.graphqlPoints * inv.ticks +
+                (inv.graphqlMutations ?? 0) +
                 SHEPHERD_CHANGED_TICK_GRAPHQL * (inv.changedTicks ?? 0) +
                 (inv.readyDelayElapsed
                   ? SHEPHERD_RECEIPT_TICK_API.graphqlPoints - SHEPHERD_TICK_API.graphqlPoints
@@ -891,7 +911,8 @@ function stepArms(pr, inv) {
             mcpCheckRuns(stateAt(pr, t)),
           ),
         ]),
-        ...mcpObserve(s, 2 * waits + 1),
+        // The last wait's check-run read is the final tick's.
+        ...mcpObserve(s, 2 * waits + 1, waits > 0),
       ],
     };
   }
@@ -907,7 +928,9 @@ function stepArms(pr, inv) {
     };
   const a = inv.apply;
   const ids = (flag, prefix, len, count) =>
-    count ? ` --${flag} ${Array.from({ length: count }, () => fakeId(prefix, len)).join(",")}` : "";
+    count
+      ? ` --${flag} ${Array.from({ length: count }, (_, j) => fakeId(prefix, len, j)).join(",")}`
+      : "";
   const mutations = a.replies + a.resolves + a.minimizes + a.dismissals;
   // As scenarios.mjs's shepherdApply: `--require-sha` reads the head SHA;
   // replies add the thread-transcript read and one `ReplyRecoveryEvidence`
@@ -920,45 +943,69 @@ function stepArms(pr, inv) {
         1,
         `pr-shepherd apply review ${n}${ids("reply-thread-ids", "PRRT_", 22, a.replies)}${ids("resolve-thread-ids", "PRRT_", 22, a.resolves)}${ids("minimize-comment-ids", "IC_", 26, a.minimizes)}${ids("dismiss-review-ids", "PRR_", 24, a.dismissals)}${a.replies || a.dismissals ? ` --message "${REPLY}"` : ""}${a.requireSha ? ` --require-sha "${HEAD_SHA}"` : ""}`,
         fill(inv.outChars ?? 0),
-        // A failed attempt mutated nothing; it paid its reads if it got that far.
+        // A failed attempt mutated nothing; it paid one point per read it sent.
         {
-          api: gql(
-            a.failed ? (inv.graphqlRequests ? reads : 0) : reads + Math.ceil(mutations / 10),
-          ),
+          api: gql(a.failed ? (inv.graphqlRequests ?? 0) : reads + Math.ceil(mutations / 10)),
         },
       ),
     ],
     // A failed attempt applied nothing, so the baselines have nothing to repeat.
-    ...(a.failed ? { gh: [], mcp: [] } : baselineApply(n, a)),
+    ...(a.failed ? { gh: [], mcp: [] } : baselineApply(pr, inv)),
   };
 }
 
-/** The baselines' calls for one successful `apply review`. */
-function baselineApply(n, a) {
+/**
+ * The baselines' calls for one successful `apply review`, on the IDs the
+ * replayed state shows for the items it hits. Replies go to the threads it
+ * resolves, in the same order.
+ */
+function baselineApply(pr, inv) {
+  const n = pr.pr;
+  const a = inv.apply;
+  const c = pr.content;
+  const threads = applyTargets(
+    pr,
+    inv,
+    c.threads,
+    (th) => th.resolved,
+    "resolves",
+    Math.max(a.replies, a.resolves),
+  );
+  const replied = threads.slice(0, a.replies);
+  const resolved = threads.slice(0, a.resolves);
+  const minimized = applyTargets(pr, inv, c.comments, (k) => k.minimized, "minimizes", a.minimizes);
+  const dismissed = applyTargets(
+    pr,
+    inv,
+    c.reviews,
+    (r) => r.state === "DISMISSED",
+    "dismissals",
+    a.dismissals,
+  );
   return {
     gh: [
-      ...Array.from({ length: a.replies }, (_, i) =>
+      ...replied.map((i) =>
         call(
           1,
-          `gh api --silent -X POST repos/owner/repo/pulls/${n}/comments/${4238000000 + i}/replies -f body='${REPLY}'`,
+          `gh api --silent -X POST repos/owner/repo/pulls/${n}/comments/${4238000000 + i * 50}/replies -f body='${REPLY}'`,
           "",
         ),
       ),
-      ...Array.from({ length: a.resolves }, () =>
+      ...resolved.map((i) =>
         call(
           1,
-          `gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "${fakeId("PRRT_", 22)}"}) { thread { isResolved } } }'`,
+          `gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "${fakeId("PRRT_", 22, i)}"}) { thread { isResolved } } }'`,
           RESOLVE_OUT,
         ),
       ),
-      ...Array.from({ length: a.minimizes }, () =>
+      ...minimized.map((i) =>
         call(
           1,
-          `gh api graphql -f query='mutation { minimizeComment(input: {subjectId: "${fakeId("IC_", 26)}", classifier: RESOLVED}) { minimizedComment { isMinimized } } }'`,
+          `gh api graphql -f query='mutation { minimizeComment(input: {subjectId: "${fakeId("IC_", 26, i)}", classifier: RESOLVED}) { minimizedComment { isMinimized } } }'`,
           MINIMIZE_OUT,
         ),
       ),
-      ...Array.from({ length: a.dismissals }, (_, i) =>
+      ...dismissed.map((i) =>
         call(
           1,
           `gh api --silent -X PUT repos/owner/repo/pulls/${n}/reviews/${3900000000 + i}/dismissals -f message='${REPLY}' -f event=DISMISS`,
@@ -969,19 +1016,19 @@ function baselineApply(n, a) {
     // github-mcp-server has no minimize or review-dismiss tool: the MCP arm skips
     // both, which only flatters it.
     mcp: [
-      ...Array.from({ length: a.replies }, (_, i) =>
+      ...replied.map((i) =>
         mcp(
           1,
           "add_reply_to_pull_request_comment",
-          { pullNumber: n, commentId: 4238000000 + i, body: REPLY },
+          { pullNumber: n, commentId: 4238000000 + i * 50, body: REPLY },
           JSON.stringify({ id: "4238000000", url: fill(70, "u") }),
         ),
       ),
-      ...Array.from({ length: a.resolves }, () =>
+      ...resolved.map((i) =>
         mcp(
           1,
           "resolve_review_thread",
-          { threadID: fakeId("PRRT_", 22) },
+          { threadID: fakeId("PRRT_", 22, i) },
           "review thread resolved successfully",
         ),
       ),
@@ -1137,7 +1184,9 @@ function graphqlBreakdown(data) {
     for (const inv of pr.invocations) {
       if (inv.kind === "poll") {
         ticks += inv.ticks;
-        modeledPolls += apiTotals(stepArms(pr, inv).shepherd).graphqlPoints;
+        // Queries only, as the measured total: less the mutation points.
+        modeledPolls +=
+          apiTotals(stepArms(pr, inv).shepherd).graphqlPoints - (inv.graphqlMutations ?? 0);
       }
       for (const [op, [n, cost]] of Object.entries(inv.graphqlByOp ?? {})) {
         if (MUTATION_OPS.has(op)) {
