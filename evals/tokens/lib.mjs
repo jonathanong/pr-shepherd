@@ -281,19 +281,6 @@ export function ghLogFailed(log, jobName, stepName, stepStartPattern, stepEndPat
 
 export const tail = (text, n) => text.split("\n").slice(-n).join("\n");
 
-/** One `gh pr list --head|--base <branch> --state all --json …` result. */
-export const GH_LIST_FIELDS = "number,title,state,headRefName,baseRefName";
-export const ghPrList = (layers) =>
-  JSON.stringify(
-    layers.map((l) => ({
-      baseRefName: l.baseRefName,
-      headRefName: l.headRefName,
-      number: l.pr,
-      state: l.state,
-      title: l.title,
-    })),
-  );
-
 /**
  * `gh api …/commits/<sha>/check-runs --jq` narrowed to failing runs: the only
  * way to find the check-run IDs whose annotations to fetch.
@@ -510,7 +497,7 @@ export function mcpJobLogs(log, runId, jobId, jobName, tailLines = 500) {
 // --- cost -------------------------------------------------------------------
 
 /** Apply the host's per-call output cap. */
-export function capped(call) {
+function capped(call) {
   const raw = tokens(call.out);
   const cap =
     call.via === "mcp"

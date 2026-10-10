@@ -12,13 +12,14 @@ Latest numbers: [REPORT.md](REPORT.md). Estimated cost per session:
 
 | session   | cost vs. gh | cost vs. MCP | turns vs. gh / MCP | tool tokens vs. gh / MCP |
 | --------- | ----------- | ------------ | ------------------ | ------------------------ |
-| single PR | **−50%**    | **−72%**     | −41% / −60%        | −71% / −87%              |
-| PR stack  | **−54%**    | **−61%**     | −58% / −60%        | +25% / −42%              |
+| single PR | **−36%**    | **−72%**     | −8% / −60%         | −71% / −87%              |
+| PR stack  | **−29%**    | **−63%**     | −31% / −64%        | +34% / −35%              |
 
-The savings are concentrated. Re-read review history, CI logs, CI polling and
-stacks account for nearly all of them. Against a frugal gh agent, a single
-fresh read-and-reply tick is a wash: between 9% cheaper and 6% dearer. See "Where
-pr-shepherd does not save".
+The savings are concentrated. Against a frugal gh agent they come from
+re-read review history, CI logs, merge-queue waits and stack merges. Against
+the GitHub MCP server they also come from polling and stack discovery, which
+MCP has no shortcut for. A single fresh read-and-reply tick against gh is a
+wash: between 9% cheaper and 6% dearer. See "Where pr-shepherd does not save".
 
 ## Run it
 
@@ -43,11 +44,17 @@ stack's life. It is played three ways over **identical GitHub content**:
 | gh CLI      | `gh pr view --json <fields>` plus one `gh api graphql` thread query per PR per tick, then whatever the step needs: `gh run view --log-failed \| tail -n 200`, check-run annotations, `gh api … /replies`, a GraphQL resolve per thread, `gh pr ready`, `gh pr merge` |
 | GitHub MCP  | five `pull_request_read` calls per PR per tick (`get`, `get_check_runs`, `get_review_comments`, `get_reviews`, `get_comments`), then `get_job_logs`, `add_reply_…`, `resolve_review_thread`, `update_pull_request`, `merge_pull_request`                             |
 
-On a stack, neither baseline has pr-shepherd's overview. Each walks the stack
-through its branch chain from the anchor, one `gh pr list --head|--base` (or
-`list_pull_requests`) call per layer, then reads every open layer in full. A
-stack merge without the `gh stack` extension goes bottom-up, re-checking each
-layer's base after GitHub retargets it.
+On a stack, neither baseline has pr-shepherd's overview:
+
+- **gh** finds the layers with GitHub's native
+  `GET /repos/{owner}/{repo}/stacks?pull_request=N` endpoint, in one call.
+- **MCP** has no stack tool, so it walks the branch chain from the anchor: one
+  `list_pull_requests` call per layer.
+
+Both then read every open layer in full. A native stack cannot merge through
+the synchronous merge endpoints. gh therefore calls the asynchronous
+`PUT …/pulls/{n}/merge-async` on the top layer, which takes the open downstack
+with it, and polls the result. MCP has no asynchronous merge tool.
 
 Each baseline is a competent agent, not a straw man. The gh arm selects
 `--json` fields instead of dumping raw REST output, tails the log, and
@@ -101,8 +108,8 @@ one-PR sessions it routes are PR sessions. The "per tick" figures are weighted
 by scenario frequency and baseline cost, excluding setup.
 
 A † in the report marks a baseline that cannot finish the step with its tools
-(the GitHub MCP server cannot read check annotations, enqueue a PR, or see a
-PR's merge-queue membership). Its cost
+(the GitHub MCP server cannot read check annotations, enqueue a PR, see a PR's
+merge-queue membership, or merge a native stack). Its cost
 then covers only what it could do, so the saving shown understates the gap. Every knob is in `MODEL` in [lib.mjs](lib.mjs) and is
 printed at the bottom of the report.
 
@@ -125,7 +132,7 @@ PR session:
 Stack session:
 
 - two ticks that route work across a six-layer stack;
-- two ticks waiting on the merge queue;
+- one merge-queue wait;
 - one stack merge.
 
 These are assumptions, not measurements. See "Next steps".
@@ -143,15 +150,22 @@ These are assumptions, not measurements. See "Next steps".
   last 500 lines are all Codecov upload and post-job steps. The MCP arm asks
   again for 1,000 lines, and the host truncates that at its 25k-token cap.
 - **Polling happens inside the CLI.** One blocking `--until-terminal` call
-  replaces a minute-by-minute re-check, and it carries on through MARK_READY.
-- **Stacks need one overview, not a walk.** A baseline needs one turn per layer
-  to find the stack and one more to read it. pr-shepherd needs one call.
+  replaces a minute-by-minute MCP re-check, and it carries on through
+  MARK_READY. gh has its own blocking `gh pr checks --watch` for CI, but
+  nothing for a merge queue, so it must re-check queue state itself.
+- **Stacks need one overview.** MCP needs one turn per layer to find the stack.
+  gh finds it in one call, but merging a native stack still costs it an
+  asynchronous merge plus a poll, where pr-shepherd prints one
+  `gh stack merge`.
 
 ## Where pr-shepherd does not save
 
 - **Setup.** The skill and every playbook the session's outputs name cost
   about 2.2–3.0k tokens. Those tokens then ride along on every later request.
   gh needs nothing.
+- **CI waits against gh.** `gh pr checks --watch` blocks just like
+  pr-shepherd's poll and prints less, so `ci-wait` costs pr-shepherd 13% more
+  than gh.
 - **Fresh single-step ticks against gh.** A frugal gh agent selects `--json`
   fields and replies with `gh api --silent`. On these steps pr-shepherd lands
   between 9% cheaper and 6% dearer than gh, because its Markdown output and
@@ -161,9 +175,10 @@ These are assumptions, not measurements. See "Next steps".
   - `bot-review-summary`, `review-thread`, `multi-category` and `bot-threads`;
   - `conflicts`, `merge` and `merge-queue`.
 - **Stack token volume.** Each routed layer's first tick prints its own
-  instructions. In the stack session pr-shepherd reads 25% more tool tokens than
-  gh's terse per-layer reads. It still costs 54% less, because it takes 10 turns
-  where gh takes 24.
+  instructions. In the stack session pr-shepherd reads 34% more tool tokens than
+  gh's terse per-layer reads, and routing work across the six-layer stack is
+  nearly even with gh (−9%). The session still costs 29% less, because
+  pr-shepherd takes 9 turns where gh takes 13.
 
 ## What this does not measure
 

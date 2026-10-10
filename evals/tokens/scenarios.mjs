@@ -33,8 +33,6 @@ import {
   fixtureState,
   ghAnnotations,
   ghFailingCheckRuns,
-  ghPrList,
-  GH_LIST_FIELDS,
   mcpPrList,
   ghLogFailed,
   ghPrChecks,
@@ -60,6 +58,8 @@ const HISTORY = readJson("history-pr505.json");
 // How long one CI run takes, and how often a baseline agent re-checks it.
 const CI_MINUTES = 6;
 const BASELINE_POLL_MINUTES = 1;
+// A stack poll sleeps poll.intervalSeconds × poll.stackIntervalFactor (60s × 2).
+const STACK_POLL_SECONDS = 120;
 
 // --- arms -------------------------------------------------------------------
 
@@ -356,7 +356,7 @@ const PR_SCENARIOS = [
     id: "ci-wait",
     weight: 2,
     title: `Wait out one ${CI_MINUTES}-minute CI run`,
-    note: `Baselines re-check every ${BASELINE_POLL_MINUTES}m. With --until-terminal, shepherd's one call blocks until CI settles and prints a stderr line per poll; its final result is the next scenario's tick, so that call is counted twice against shepherd. MCP has no sleep, so each MCP poll is a Bash sleep plus a call.`,
+    note: `With --until-terminal, shepherd's one call blocks until CI settles and prints a stderr line per poll. gh blocks the same way on \`gh pr checks --watch\`, which reprints the table each refresh. Both final results are the next scenario's tick, so each blocking call is counted twice. MCP has no watch or sleep, so it re-checks every ${BASELINE_POLL_MINUTES}m with a Bash sleep plus a call.`,
     arms() {
       const fixture = "09-wait-in-progress-ci";
       const state = fixtureState(fixture);
@@ -369,12 +369,14 @@ const PR_SCENARIOS = [
       ).join("");
       return {
         shepherd: [{ phase: 1, via: "bash", cmd: SHEPHERD_CMD, out: stderr }],
-        gh: Array.from({ length: polls }, (_, i) => ({
-          phase: i + 1,
-          via: "bash",
-          cmd: "sleep 60 && gh pr checks 42",
-          out: ghPrChecks(state),
-        })),
+        gh: [
+          {
+            phase: 1,
+            via: "bash",
+            cmd: "gh pr checks 42 --watch --interval 60",
+            out: Array.from({ length: polls }, () => ghPrChecks(state)).join("\n"),
+          },
+        ],
         mcp: Array.from({ length: polls }, (_, i) => [
           { phase: 2 * i + 1, via: "bash", cmd: "sleep 60", out: "" },
           mcpCall(
@@ -690,16 +692,19 @@ const PR_SCENARIOS = [
 // --- native stacks ------------------------------------------------------------
 //
 // A stack tick asks: which layers need work, and is the stack mergeable?
-// pr-shepherd answers with one overview. A baseline without it walks the stack
-// through its branch chain (`gh pr list --head <base>` down, `--base <head>`
-// up, one layer per call), then reads every open layer in full.
+// pr-shepherd answers with one overview. The gh baseline finds the stack with
+// GitHub's native `GET /repos/{owner}/{repo}/stacks?pull_request=N` endpoint,
+// then reads every open layer in full. The GitHub MCP server has no stack
+// tool, so the MCP baseline walks the branch chain (`list_pull_requests` by
+// head down, by base up, one layer per call) before its reads.
 //
 // Each open layer's GitHub content comes from the single-PR fixture that
 // matches its row: a conflicting layer reads like fixture 27, a layer with
 // review work like fixture 16, a queued layer like fixture 66, any other open
-// layer like the clean fixture 64.
-// Where pr-shepherd routes a layer to a one-PR session, that session's first
-// tick reads the same fixture, so both arms pay for the same per-layer read.
+// layer like the clean fixture 64. Where pr-shepherd routes a layer to a
+// one-PR session, that session's first tick reads the same fixture, rewritten
+// for the layer's repository, number, head and branch, so both arms pay for
+// the same per-layer read.
 
 const STACK_REPO = (layer) => layer.repo ?? "owner/repo";
 
@@ -722,56 +727,68 @@ function layerState(layer) {
   };
 }
 
-/** Load a stack fixture: its layers bottom to top, and the anchor's index. */
+/** A single-PR snapshot rewritten for a stack layer. */
+function layerSnapshot(layer) {
+  const fixture = layerFixture(layer);
+  const state = fixtureState(fixture);
+  return snapshot(fixture)
+    .replaceAll("owner/repo", STACK_REPO(layer))
+    .replaceAll("/pull/42", `/pull/${layer.pr}`)
+    .replaceAll("PR #42", `PR #${layer.pr}`)
+    .replaceAll(`\`${state.baseRefName}\``, `\`${layer.baseRefName}\``)
+    .replaceAll(state.headRefOid, layer.headRefOid);
+}
+
+/** Load a stack fixture: its layers bottom to top, the anchor, the stack number. */
 function stackFixture(name) {
   const summary = fixtureInput(name).aggregateSummary;
   const layers = [...summary.prs].sort((a, b) => a.stack.position - b.stack.position);
   const anchor = layers.findIndex((l) => l.pr === summary.selection.anchor);
-  return { layers, anchor };
+  return { layers, anchor, number: summary.selection.stackNumber };
 }
 
-/** Discover the stack by walking its branch chain from the anchor. */
-function ghDiscover(layers, anchor) {
+/** One call to GitHub's native stack endpoint returns every layer in order. */
+function ghDiscover(layers, anchor, number) {
   const a = layers[anchor];
-  const calls = [
+  const repo = STACK_REPO(a);
+  return [
     {
       phase: 1,
       via: "bash",
-      cmd: `gh pr view ${a.pr} -R ${STACK_REPO(a)} --json ${GH_LIST_FIELDS}`,
-      out: ghPrList([a]).slice(1, -1),
+      cmd: `gh api "repos/${repo}/stacks?pull_request=${a.pr}"`,
+      out: JSON.stringify([
+        {
+          id: 9000000 + number,
+          number,
+          node_id: `PRS_${number}`,
+          url: `https://api.github.com/repos/${repo}/stacks/${number}`,
+          base: { ref: layers[0].stack?.baseRefName ?? "main" },
+          open: true,
+          created_at: "2026-10-01T12:00:00Z",
+          pull_requests: layers.map((l) => ({
+            number: l.pr,
+            state: l.state === "OPEN" ? "open" : "closed",
+            draft: false,
+            merged_at: l.state === "MERGED" ? "2026-10-02T12:00:00Z" : null,
+            head: { ref: l.headRefName, sha: l.headRefOid },
+          })),
+        },
+      ]),
     },
   ];
-  // Down: stop once a layer's base is the trunk.
-  for (let i = anchor - 1, phase = 2; i >= 0; i--, phase++) {
-    calls.push({
-      phase,
-      via: "bash",
-      cmd: `gh pr list -R ${STACK_REPO(a)} --head ${layers[i + 1].baseRefName} --state all --json ${GH_LIST_FIELDS}`,
-      out: ghPrList([layers[i]]),
-    });
-    if (layers[i].baseRefName === "main") break;
-  }
-  // Up: the last call finds nothing above the top layer.
-  for (let i = anchor + 1, phase = 2; i <= layers.length; i++, phase++) {
-    calls.push({
-      phase,
-      via: "bash",
-      cmd: `gh pr list -R ${STACK_REPO(a)} --base ${layers[i - 1].headRefName} --state all --json ${GH_LIST_FIELDS}`,
-      out: ghPrList(layers.slice(i, i + 1)),
-    });
-  }
-  return calls;
 }
 
+/** MCP has no stack tool: walk the branch chain from the anchor. */
 function mcpDiscover(layers, anchor) {
   const a = layers[anchor];
+  const repo = STACK_REPO(a);
   const list = (phase, filter, found) =>
     mcpCall(
       phase,
       "list_pull_requests",
       { ...filter, state: "all", fields: ["number", "title", "state", "head", "base"] },
       mcpPrList(found),
-      STACK_REPO(a),
+      repo,
     );
   const calls = [
     mcpCall(
@@ -779,17 +796,17 @@ function mcpDiscover(layers, anchor) {
       "pull_request_read",
       { method: "get", pullNumber: a.pr },
       mcpGet(layerState(a)),
-      STACK_REPO(a),
+      repo,
     ),
   ];
+  // Down: stop once a layer's base is the trunk.
   for (let i = anchor - 1, phase = 2; i >= 0; i--, phase++) {
     calls.push(
-      list(phase, { head: `${STACK_REPO(a).split("/")[0]}:${layers[i + 1].baseRefName}` }, [
-        layers[i],
-      ]),
+      list(phase, { head: `${repo.split("/")[0]}:${layers[i + 1].baseRefName}` }, [layers[i]]),
     );
     if (layers[i].baseRefName === "main") break;
   }
+  // Up: the last call finds nothing above the top layer.
   for (let i = anchor + 1, phase = 2; i <= layers.length; i++, phase++) {
     calls.push(list(phase, { base: layers[i - 1].headRefName }, layers.slice(i, i + 1)));
   }
@@ -801,24 +818,22 @@ const openLayers = (layers) => layers.filter((l) => l.state === "OPEN");
 
 /** Discovery, then every open layer read in full, in parallel. */
 function stackBaselines(name) {
-  const { layers, anchor } = stackFixture(name);
-  const gh = ghDiscover(layers, anchor);
+  const { layers, anchor, number } = stackFixture(name);
+  const gh = ghDiscover(layers, anchor, number);
   const mcp = mcpDiscover(layers, anchor);
   const ghRead = lastPhase(gh) + 1;
   const mcpRead = lastPhase(mcp) + 1;
   for (const l of openLayers(layers)) {
     gh.push(...ghObserve(layerState(l), ghRead));
-    mcp.push(...mcpObserve(layerState(l), mcpRead));
+    // MCP discovery already read the anchor's PR details.
+    const reads = mcpObserve(layerState(l), mcpRead);
+    mcp.push(...(l === layers[anchor] ? reads.filter((c) => !c.cmd.includes('"get"')) : reads));
   }
   return { layers, anchor, gh, mcp };
 }
 
-const stackTick = (name, anchorPr, repo, flags = "") => ({
-  phase: 1,
-  via: "bash",
-  cmd: `pr-shepherd --stack https://github.com/${repo}/pull/${anchorPr} --until-terminal${flags}`,
-  out: snapshot(name),
-});
+const stackCmd = (anchorPr, repo, flags = "") =>
+  `pr-shepherd --stack https://github.com/${repo}/pull/${anchorPr} --until-terminal${flags}`;
 
 const STACK_SCENARIOS = [
   setupScenario({ id: "stack-setup", session: "stack" }),
@@ -836,12 +851,12 @@ const STACK_SCENARIOS = [
       const routed = openLayers(layers).filter((l) => l.owned && l.action !== "cancel");
       return {
         shepherd: [
-          stackTick(name, layers[anchor].pr, repo),
+          { phase: 1, via: "bash", cmd: stackCmd(layers[anchor].pr, repo), out: snapshot(name) },
           ...routed.map((l) => ({
             phase: 2,
             via: "bash",
             cmd: `pr-shepherd https://github.com/${repo}/pull/${l.pr} --until-terminal`,
-            out: snapshot(layerFixture(l)),
+            out: layerSnapshot(l),
           })),
         ],
         gh,
@@ -853,17 +868,75 @@ const STACK_SCENARIOS = [
   {
     id: "stack-queue-wait",
     session: "stack",
-    weight: 2,
-    title: "Two-layer stack waiting in the merge queue",
-    note: "Fixture 98. Nothing to do but recheck. The gh arm reads each layer's `mergeQueueEntry` in its thread query; the GitHub MCP server exposes no merge-queue state.",
+    weight: 1,
+    title: `Two-layer stack: wait out a ${CI_MINUTES}-minute merge queue`,
+    note: `Fixture 98. With --until-terminal, shepherd's stack poll ignores its timeout and blocks until the queue settles, printing one stderr line per ${STACK_POLL_SECONDS}s tick; its final result is the next step's tick, so that call is counted twice. gh finds the stack, reads both layers once, then re-checks queue state at the same ${STACK_POLL_SECONDS}s cadence with one GraphQL query. MCP cannot see queue state at all.`,
     gaps: { mcp: "cannot see merge-queue membership" },
     arms() {
       const name = "98-aggregate-stack-merge-queue";
       const { layers, anchor, gh, mcp } = stackBaselines(name);
+      const repo = STACK_REPO(layers[anchor]);
+      const [owner, repoName] = repo.split("/");
+      const ticks = Math.ceil((CI_MINUTES * 60) / STACK_POLL_SECONDS);
+      // Baselines re-check at shepherd's own stack cadence.
+      const polls = ticks;
+      // poll-summary.mts: one stderr line per tick, every layer's action.
+      const stderr = Array.from(
+        { length: ticks },
+        (_, i) =>
+          `[aggregate poll tick ${i + 1} / +${i * STACK_POLL_SECONDS}s] ${layers.map((l) => `#${l.pr} WAIT`).join(", ")}\n`,
+      ).join("");
+      const fields = layers
+        .map(
+          (l, i) =>
+            `l${i}: pullRequest(number: ${l.pr}) { state mergeQueueEntry { position state } }`,
+        )
+        .join(" ");
+      const queueState = JSON.stringify({
+        data: {
+          repository: Object.fromEntries(
+            layers.map((l, i) => [
+              `l${i}`,
+              { state: "OPEN", mergeQueueEntry: { position: i + 1, state: "QUEUED" } },
+            ]),
+          ),
+        },
+      });
+      const ghStart = lastPhase(gh) + 1;
+      const mcpStart = lastPhase(mcp) + 1;
       return {
-        shepherd: [stackTick(name, layers[anchor].pr, STACK_REPO(layers[anchor]), " --merge")],
-        gh,
-        mcp,
+        shepherd: [
+          {
+            phase: 1,
+            via: "bash",
+            cmd: stackCmd(layers[anchor].pr, repo, " --merge"),
+            out: stderr,
+          },
+        ],
+        gh: [
+          ...gh,
+          ...Array.from({ length: polls }, (_, i) => ({
+            phase: ghStart + i,
+            via: "bash",
+            cmd: `sleep ${STACK_POLL_SECONDS} && gh api graphql -f query='query { repository(owner: "${owner}", name: "${repoName}") { ${fields} } }'`,
+            out: queueState,
+          })),
+        ],
+        mcp: [
+          ...mcp,
+          ...Array.from({ length: polls }, (_, i) => [
+            { phase: mcpStart + 2 * i, via: "bash", cmd: `sleep ${STACK_POLL_SECONDS}`, out: "" },
+            ...openLayers(layers).map((l) =>
+              mcpCall(
+                mcpStart + 2 * i + 1,
+                "pull_request_read",
+                { method: "get", pullNumber: l.pr },
+                mcpGet(layerState(l)),
+                repo,
+              ),
+            ),
+          ]).flat(),
+        ],
       };
     },
   },
@@ -873,21 +946,28 @@ const STACK_SCENARIOS = [
     session: "stack",
     weight: 1,
     title: "Merge a ready two-layer stack",
-    note: "Fixture 97. Shepherd prints one `gh stack merge`. Without the extension, a baseline merges bottom-up and waits for GitHub to retarget the next layer.",
+    note: "Fixture 97. A native stack cannot merge through the synchronous merge endpoints. Shepherd prints one `gh stack merge`. gh calls the asynchronous `merge-async` endpoint on the top layer, which takes the open downstack with it, then polls the result. The GitHub MCP server has no asynchronous merge tool.",
+    gaps: { mcp: "cannot merge a native stack" },
     arms() {
       const name = "97-aggregate-stack-full-merge";
       const { layers, anchor, gh, mcp } = stackBaselines(name);
-      const [lower, upper] = layers;
-      const merged = (l) => `✓ Squashed and merged pull request owner/repo#${l.pr} (${l.title})\n`;
+      const repo = STACK_REPO(layers[anchor]);
+      const upper = layers[layers.length - 1];
+      const merged = (l) => `✓ Squashed and merged pull request ${repo}#${l.pr} (${l.title})\n`;
+      const uuid = "0b9f3c3e-6d1a-4c55-9a0e-2f4b8d7c1a42";
       const p = lastPhase(gh) + 1;
-      const q = lastPhase(mcp) + 1;
       return {
         shepherd: [
-          stackTick(name, layers[anchor].pr, STACK_REPO(layers[anchor]), " --merge"),
+          {
+            phase: 1,
+            via: "bash",
+            cmd: stackCmd(layers[anchor].pr, repo, " --merge"),
+            out: snapshot(name),
+          },
           {
             phase: 2,
             via: "bash",
-            cmd: `GH_REPO=owner/repo gh stack merge ${upper.pr} --yes --squash`,
+            cmd: `GH_REPO=${repo} gh stack merge ${upper.pr} --yes --squash`,
             // Approximate: one line per merged layer.
             out: layers.map(merged).join(""),
           },
@@ -897,42 +977,29 @@ const STACK_SCENARIOS = [
           {
             phase: p,
             via: "bash",
-            cmd: `gh pr merge ${lower.pr} -R ${STACK_REPO(lower)} --match-head-commit ${lower.headRefOid} --squash`,
-            out: merged(lower),
+            cmd: `gh api -X PUT repos/${repo}/pulls/${upper.pr}/merge-async -f sha=${upper.headRefOid} -f merge_method=squash`,
+            out: JSON.stringify({
+              status: "pending",
+              details: {
+                message: "Merge request accepted",
+                uuid,
+                merge_method: "squash",
+                merge_action: "default",
+                expected_head_sha: upper.headRefOid,
+              },
+            }),
           },
           {
             phase: p + 1,
             via: "bash",
-            cmd: `gh pr view ${upper.pr} -R ${STACK_REPO(upper)} --json baseRefName,mergeStateStatus`,
-            out: JSON.stringify({ baseRefName: "main", mergeStateStatus: "CLEAN" }),
-          },
-          {
-            phase: p + 2,
-            via: "bash",
-            cmd: `gh pr merge ${upper.pr} -R ${STACK_REPO(upper)} --match-head-commit ${upper.headRefOid} --squash`,
-            out: merged(upper),
+            cmd: `sleep 30 && gh api repos/${repo}/pulls/${upper.pr}/merge-async/${uuid}`,
+            out: JSON.stringify({
+              status: "merged",
+              details: { message: "Pull request merged", sha: "f".repeat(40) },
+            }),
           },
         ],
-        mcp: [
-          ...mcp,
-          mcpMerge(lower.pr, lower.headRefOid, {
-            phase: q,
-            method: "squash",
-            repo: STACK_REPO(lower),
-          }),
-          mcpCall(
-            q + 1,
-            "pull_request_read",
-            { method: "get", pullNumber: upper.pr },
-            mcpGet({ ...layerState(upper), baseRefName: "main" }),
-            STACK_REPO(upper),
-          ),
-          mcpMerge(upper.pr, upper.headRefOid, {
-            phase: q + 2,
-            method: "squash",
-            repo: STACK_REPO(upper),
-          }),
-        ],
+        mcp,
       };
     },
   },
