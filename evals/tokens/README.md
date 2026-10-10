@@ -368,9 +368,11 @@ by how far they move the result.
   itself (`apply review`, merges, log reads) cost what they cost in the poll
   arm.
 - **Idle hour (assumed).** The report also prices an hour where nothing
-  changes: the poll arm's blocking call (60 fingerprint points, no turn), a
-  `--timeout 4.5m` poll called again each time it returns (one turn each),
-  and the event arm (4 reconcile wakes of two requests each, 300 conditional
+  changes: the poll arm's blocking `--until-terminal` call (60 fingerprint
+  points, no turn), which is what the skill runs and the comparison that
+  counts; the legacy bounded CLI mode, a `--timeout 4.5m` poll called again
+  each time it returns (one turn each), which the skill no longer uses and is
+  shown only for reference; and the event arm (4 reconcile wakes of two requests each, 300 conditional
   requests that all answer 304). The poll declines a sleep that does not fit
   in its timeout (`poll.mts`), so with the 60s interval each bounded call runs
   5 ticks and returns after about 240s: 15 calls and 75 GraphQL points an
