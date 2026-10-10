@@ -9,6 +9,7 @@ import { formatPrUrl } from "../../pr-reference.mts";
 import type { MergeCommandPlan } from "../../types.mts";
 import { buildPrShepherdCommand } from "../../cli/runner.mts";
 import { getGithubTransport } from "../../github/transport.mts";
+import type { RestMergeStackGuard } from "../../github/rest-merge.mts";
 const ENQUEUE_MUTATION =
   "mutation EnqueuePullRequest($pullRequestId: ID!, $expectedHeadOid: GitObjectID!) { enqueuePullRequest(input: { pullRequestId: $pullRequestId, expectedHeadOid: $expectedHeadOid }) { mergeQueueEntry { id } } }";
 
@@ -22,6 +23,7 @@ export interface MergePlanInput {
   queueKnown?: boolean;
   /** Omitted when the batch did not select repository merge settings. */
   allowedMergeMethods?: readonly MergeMethod[];
+  expectedStack?: RestMergeStackGuard;
 }
 
 export interface MergeMethodUnavailable {
@@ -38,12 +40,16 @@ export function buildMergeCommandPlan(
         unavailable:
           "REST cannot verify merge-queue policy and cannot apply a configured direct merge method to an automatic merge request. Refresh branch policy before merging.",
       };
-    const decision = chooseMergeMethod({
-      allowed: input.allowedMergeMethods,
-      configured: configuredMergeMethod(loadConfig().merge ?? {}),
-      fallback: "merge",
-    });
-    if ("unavailable" in decision) return decision;
+    let method: MergeMethod | undefined;
+    if (!input.queue && input.queueKnown === true) {
+      const decision = chooseMergeMethod({
+        allowed: input.allowedMergeMethods,
+        configured,
+        fallback: "merge",
+      });
+      if ("unavailable" in decision) return decision;
+      method = decision.method;
+    }
     return {
       mode: "rest",
       command: buildPrShepherdCommand([
@@ -54,7 +60,8 @@ export function buildMergeCommandPlan(
         input.headSha,
         "--merge-action",
         input.queue ? "merge_queue" : input.queueKnown ? "direct_merge" : "default",
-        ...(!input.queue && input.queueKnown ? ["--method", decision.method] : []),
+        ...(method ? ["--method", method] : []),
+        ...(input.expectedStack ? ["--expected-stack", JSON.stringify(input.expectedStack)] : []),
         "--transport",
         "rest",
       ]),

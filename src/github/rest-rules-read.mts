@@ -49,11 +49,13 @@ export async function readRestBranchRules(
   } catch (error) {
     if (!(error instanceof GitHubRequestError) || ![403, 404].includes(error.status ?? 0))
       throw error;
-    // A 404 can hide protection from a token without admin access; it is not proof of no policy.
-    unavailable.push({
-      field: "branchProtection",
-      reason: `Classic branch protection unavailable (HTTP ${error.status})`,
-    });
+    // Only GitHub's explicit unprotected response proves absence. A generic
+    // 404 may hide protection from a token without administration access.
+    if (!isUnprotectedBranch(error))
+      unavailable.push({
+        field: "branchProtection",
+        reason: `Classic branch protection unavailable (HTTP ${error.status})`,
+      });
   }
   let rules: RawRepositoryRule[] | undefined;
   try {
@@ -118,6 +120,20 @@ export async function readRestBranchRules(
         }
       : undefined;
   return { ...(baseRef && { baseRef }), unavailable };
+}
+function isUnprotectedBranch(error: GitHubRequestError): boolean {
+  if (error.status !== 404) return false;
+  try {
+    const body: unknown = JSON.parse(error.responseMessage ?? "");
+    return (
+      body !== null &&
+      typeof body === "object" &&
+      !Array.isArray(body) &&
+      (body as Record<string, unknown>)["message"] === "Branch not protected"
+    );
+  } catch {
+    return false;
+  }
 }
 function enabled(value: unknown): boolean {
   return (

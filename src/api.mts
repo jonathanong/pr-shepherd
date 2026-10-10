@@ -8,7 +8,8 @@ import {
   validateApplyMergeOptions,
   type ApplyMergeResult,
 } from "./commands/apply-merge.mts";
-import type { RestMergeAction } from "./github/rest-merge.mts";
+import type { RestMergeAction, RestMergeStackGuard } from "./github/rest-merge.mts";
+export type { RestMergeStackGuard } from "./github/rest-merge.mts";
 import type { MergeMethod } from "./config/merge-method.mts";
 import { runCommitSuggestion } from "./commands/commit-suggestion.mts";
 import { runSuggestionPatches } from "./commands/suggestion-patches.mts";
@@ -116,6 +117,7 @@ export interface MergeOperation {
   requireSha: string;
   mergeAction: RestMergeAction;
   mergeMethod?: MergeMethod;
+  expectedStack?: RestMergeStackGuard;
 }
 
 /** Operations run in this exact list order after validation. */
@@ -262,6 +264,7 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
                   requireSha: operation.requireSha,
                   mergeAction: operation.mergeAction,
                   mergeMethod: operation.mergeMethod,
+                  expectedStack: operation.expectedStack,
                 });
                 results.push({ type: operation.type, result });
                 break;
@@ -396,8 +399,17 @@ function validateApplyInput(input: ApplyInput): void {
   if (!input || !Array.isArray(input.operations) || input.operations.length === 0) {
     throw new PrShepherdValidationError("apply requires a non-empty operations array");
   }
-  for (const operation of input.operations) validateOperation(operation);
-  validatePrReference(input.pr);
+  const parsed = validatePrReference(input.pr);
+  for (const operation of input.operations) {
+    validateOperation(operation);
+    if (
+      operation.type === "merge" &&
+      operation.expectedStack !== undefined &&
+      parsed.number !== undefined &&
+      operation.expectedStack.prefix.at(-1)?.pr !== parsed.number
+    )
+      throw new PrShepherdValidationError("expectedStack prefix must end at the requested PR");
+  }
 }
 
 function validateOperation(operation: ApplyOperation): void {

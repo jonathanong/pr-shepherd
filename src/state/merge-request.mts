@@ -3,6 +3,10 @@ import { link, mkdir, readFile, rename, unlink, writeFile } from "node:fs/promis
 import { dirname } from "node:path";
 import { resolvePrStatePath } from "./base.mts";
 import type { RestMergeOptions, RestMergeResponse } from "../github/rest-merge.mts";
+import {
+  restMergeStackGuardKey,
+  validateRestMergeStackGuard,
+} from "../github/rest-merge-stack-guard.mts";
 
 export interface MergeRequestRecord {
   version: 1;
@@ -25,6 +29,9 @@ const generation = (record: MergeRequestRecord) =>
         record.options.mergeMethod,
         record.startedAtUnix,
         record.replacementToken,
+        ...(record.options.expectedStack
+          ? [restMergeStackGuardKey(record.options.expectedStack)]
+          : []),
       ]),
     )
     .digest("hex")
@@ -68,6 +75,13 @@ function parseRecord(raw: string): MergeRequestRecord {
     throw new Error(
       "Invalid asynchronous merge state; outcome must be reconciled before another request",
     );
+  }
+  if (record.options.expectedStack !== undefined) {
+    validateRestMergeStackGuard(record.options.expectedStack);
+    if (record.options.expectedStack.prefix.at(-1)?.headRefOid !== record.options.requireSha)
+      throw new Error(
+        "Invalid asynchronous merge state: expectedStack head differs from guarded SHA",
+      );
   }
   return record;
 }
@@ -121,7 +135,9 @@ export async function replaceFailedMergeRequest(
       if (
         persisted.options.requireSha !== next.options.requireSha ||
         persisted.options.mergeAction !== next.options.mergeAction ||
-        persisted.options.mergeMethod !== next.options.mergeMethod
+        persisted.options.mergeMethod !== next.options.mergeMethod ||
+        restMergeStackGuardKey(persisted.options.expectedStack) !==
+          restMergeStackGuardKey(next.options.expectedStack)
       )
         return false;
     }

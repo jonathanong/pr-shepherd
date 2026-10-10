@@ -223,6 +223,18 @@ For a single-PR selector, Markdown `content` is the CLI's default (lean) renderi
 
 Each operation is one of:
 
+`merge`
+
+| Field           | Type                                           | Required | Meaning                                                         |
+| --------------- | ---------------------------------------------- | -------- | --------------------------------------------------------------- |
+| `type`          | `"merge"`                                      | yes      | Submit or resume a REST merge request                           |
+| `requireSha`    | string                                         | yes      | Full current lowercase head SHA                                 |
+| `mergeAction`   | `"direct_merge"`, `"merge_queue"`, `"default"` | yes      | Direct merge, known queue, or let GitHub select                 |
+| `mergeMethod`   | `"merge"`, `"squash"`, `"rebase"`              | no       | Valid only for `direct_merge`                                   |
+| `expectedStack` | `{ number, baseRefName, prefix }`              | no       | Bind the observed native stack, trunk, and ordered lower prefix |
+
+Each `expectedStack.prefix` entry carries `{ pr, headRefName, headRefOid, baseRefName }`. The final entry must match the requested PR and `requireSha`. Generated REST stack commands carry this guard, and apply rejects missing membership or changed topology before submission. The guard is persisted with request options. Results are returned unprojected in `structuredContent` and describe the same `pending`, `enqueued`, `merged`, or `failed` outcome in Markdown; pending and enqueued do not mean merged. See [merge validation and resume](api.md).
+
 `review_mutations`
 
 | Field                | Type                 | Required                                |

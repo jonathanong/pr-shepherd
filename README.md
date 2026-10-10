@@ -167,7 +167,9 @@ receipts, and whose bottom open layer GitHub has retargeted onto the stack base,
 with the transport-specific stack merge command and allowed method. GraphQL mode uses
 `gh stack merge <that PR number> --yes`; REST mode uses the SHA-pinned
 `pr-shepherd apply merge` command, using the trunk's known queue policy even when the named layer
-targets its parent branch. Unknown REST queue policy uses `default` without a merge method.
+targets its parent branch. The command binds the observed stack, trunk, and ordered prefix with
+`--expected-stack` and rejects a changed stack before submission. Unknown REST queue policy uses
+`default` without a merge method. Known queue requests omit the configured direct merge method.
 That lands the named layer and every
 unmerged layer below it. When the base uses a merge queue, the same command queues the prefix
 together and GitHub evaluates each layer from the bottom; a failure ejects that layer and those

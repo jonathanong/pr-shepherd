@@ -88,7 +88,7 @@ For aggregate `--stack` polling, a clean draft is marked ready by its own sessio
 
 ### `merge-method-unavailable`
 
-`--merge` is enabled and Shepherd is about to print a merge command, but the method it would use is not allowed. That is either `merge.method` (or the strategy flag in `merge.commandArgs`) naming a method the repository disables, or a repository with merge commits, squash, and rebase all disabled. The result names the allowed methods and does not include a `gh pr merge` or `gh stack merge` command.
+`--merge` is enabled and Shepherd is about to print a merge command, but the method it would use is not allowed. That is either `merge.method` (or the strategy flag in `merge.commandArgs`) naming a method the repository disables, or a repository with merge commits, squash, and rebase all disabled. The result names the allowed methods and does not include a merge command. REST queue requests omit the direct method and do not escalate for a disabled method they never use. When REST queue policy is unknown, a configured direct method still escalates because it cannot safely be applied to a `default` request.
 
 ### `stall-timeout`
 

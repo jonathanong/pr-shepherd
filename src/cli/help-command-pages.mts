@@ -13,11 +13,12 @@ An uncertain submission is never repeated automatically.
 
 Usage:
   pr-shepherd apply merge [PR] --require-sha SHA --merge-action direct_merge|merge_queue|default
-    [--method merge|squash|rebase] --transport rest [--format text|json]
+    [--method merge|squash|rebase] [--expected-stack JSON] --transport rest [--format text|json]
 
 --require-sha <sha>             Full 40-character lowercase PR head SHA.
 --merge-action <action>         direct_merge, merge_queue, or default.
 --method <method>               Optional merge method, only for direct_merge.
+--expected-stack <json>         Bind native stack number, baseRefName, and ordered prefix PRs/refs/head SHAs.
 --transport rest               Required REST transport; repository rules are never bypassed.
 --format text|json              Output format. Default: text.
 --help, -h                     Print this help before validation or I/O.`,

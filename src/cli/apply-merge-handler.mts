@@ -1,11 +1,11 @@
 import { EXIT, ShepherdError, errorToExitCode } from "../exit-codes.mts";
 import { runApplyMerge, type ApplyMergeResult } from "../commands/apply-merge.mts";
-import type { RestMergeAction } from "../github/rest-merge.mts";
+import type { RestMergeAction, RestMergeStackGuard } from "../github/rest-merge.mts";
 import type { MergeMethod } from "../config/merge-method.mts";
 import { getFlag, parseCommonArgs } from "./args.mts";
 import { maybePrintHelp, USAGE } from "./help.mts";
 
-const flags = new Set(["--require-sha", "--merge-action", "--method"]);
+const flags = new Set(["--require-sha", "--merge-action", "--method", "--expected-stack"]);
 export async function handleApplyMerge(args: string[]): Promise<void> {
   if (maybePrintHelp(args, "apply merge")) return;
   try {
@@ -34,6 +34,7 @@ export async function handleApplyMerge(args: string[]): Promise<void> {
       requireSha,
       mergeAction: mergeAction as RestMergeAction,
       mergeMethod: (getFlag(extra, "--method") ?? undefined) as MergeMethod | undefined,
+      expectedStack: parseExpectedStack(getFlag(extra, "--expected-stack")),
     });
     process.stdout.write(
       `${global.format === "json" ? JSON.stringify(result, null, 2) : formatApplyMergeResult(result)}\n`,
@@ -51,6 +52,15 @@ export async function handleApplyMerge(args: string[]): Promise<void> {
       `pr-shepherd: apply merge: ${error instanceof Error ? error.message : String(error)}\n`,
     );
     process.exitCode = errorToExitCode(error);
+  }
+}
+
+function parseExpectedStack(raw: string | null): RestMergeStackGuard | undefined {
+  if (raw === null) return undefined;
+  try {
+    return JSON.parse(raw) as RestMergeStackGuard;
+  } catch {
+    throw new ShepherdError("--expected-stack must be valid JSON", EXIT.DATAERR);
   }
 }
 

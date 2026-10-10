@@ -1,5 +1,9 @@
 import { mergeResultFactory } from "./apply-merge-output.mts";
-import { validateApplyMergeOptions, sameMergeOptions } from "./apply-merge-options.mts";
+import {
+  validateApplyMergeOptions,
+  validateApplyMergeTarget,
+  sameMergeOptions,
+} from "./apply-merge-options.mts";
 import { validateRestStackMergeReadiness } from "./rest-stack-merge-readiness.mts";
 export { validateApplyMergeOptions } from "./apply-merge-options.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
@@ -46,6 +50,7 @@ interface PullState {
 /** Submit one guarded asynchronous request, or resume its existing UUID without resubmitting. */
 export async function runApplyMerge(input: ApplyMergeInput): Promise<ApplyMergeResult> {
   validateApplyMergeOptions(input);
+  validateApplyMergeTarget(input, input.prNumber);
   if (getGithubTransport() !== "rest")
     throw new ShepherdError(
       "apply merge requires REST transport; pass --transport rest",
@@ -58,11 +63,13 @@ export async function runApplyMerge(input: ApplyMergeInput): Promise<ApplyMergeR
       "No open PR found for current branch. Pass a PR explicitly.",
       EXIT.UNAVAILABLE,
     );
+  validateApplyMergeTarget(input, pr);
   const key = { owner: repo.owner, repo: repo.name, pr };
   const options: RestMergeOptions = {
     requireSha: input.requireSha,
     mergeAction: input.mergeAction,
     ...(input.mergeMethod && { mergeMethod: input.mergeMethod }),
+    ...(input.expectedStack && { expectedStack: input.expectedStack }),
   };
   const { failed, project } = mergeResultFactory(pr, repo, options);
   const existing = await readMergeRequest(key);
@@ -140,7 +147,7 @@ export async function runApplyMerge(input: ApplyMergeInput): Promise<ApplyMergeR
     options,
     startedAtUnix: Math.floor(Date.now() / 1000),
   };
-  await validateRestStackMergeReadiness(pr, repo, input.requireSha);
+  await validateRestStackMergeReadiness(pr, repo, input.requireSha, input.expectedStack);
   if (
     !(existing
       ? await replaceFailedMergeRequest(key, existing, record)

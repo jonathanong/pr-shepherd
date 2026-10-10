@@ -127,6 +127,23 @@ const mergeOperationSchema = z.object({
   requireSha: z.string().regex(/^[0-9a-f]{40}$/),
   mergeAction: z.enum(["direct_merge", "merge_queue", "default"]),
   mergeMethod: z.enum(["merge", "squash", "rebase"]).optional(),
+  expectedStack: z
+    .object({
+      number: z.number().int().positive().safe(),
+      baseRefName: z.string().min(1),
+      prefix: z
+        .array(
+          z.object({
+            pr: z.number().int().positive().safe(),
+            headRefName: z.string().min(1),
+            headRefOid: z.string().regex(/^[0-9a-f]{40}$/),
+            baseRefName: z.string().min(1),
+          }),
+        )
+        .min(1)
+        .max(100_000),
+    })
+    .optional(),
 });
 const applyInputSchema = z.object({
   transport,

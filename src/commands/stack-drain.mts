@@ -63,17 +63,7 @@ export function planPrefixDrain(
   );
   const span =
     open[0]?.pr === top.pr ? "that layer alone" : `PR #${top.pr} and every unmerged layer below it`;
-  const method = stackMergeFlag(result.allowedMergeMethods);
-  if ("unavailable" in method) {
-    return {
-      action: "escalate",
-      stackMergeable: false,
-      instructions: [`1. ${method.unavailable}`],
-    };
-  }
-  const instructions = [
-    `1. PR #${top.pr} is the highest open layer of stack #${top.stack.number} in \`${result.repo}\` whose open lower layers are all ready. Run \`GH_REPO=${result.repo} gh stack merge ${top.pr} --yes ${method.flag}\` to merge ${span}. ${playbookPointer("Stack merge")}`,
-  ];
+  const instructions: string[] = [];
   if (getGithubTransport() === "rest" || top.transport === "rest") {
     // Upper layers target their parent; the prefix merges into the stack trunk.
     const trunk = result.prs.find((item) => item.baseRefName === top.stack.baseRefName);
@@ -86,6 +76,19 @@ export function planPrefixDrain(
       queue: trunk?.requiresMergeQueue === true,
       queueKnown: trunk?.requiresMergeQueue !== undefined,
       allowedMergeMethods: result.allowedMergeMethods,
+      expectedStack: {
+        number: top.stack.number,
+        baseRefName: top.stack.baseRefName,
+        prefix: [...result.prs]
+          .sort((left, right) => stackPosition(left) - stackPosition(right))
+          .filter((item) => stackPosition(item) <= stackPosition(top))
+          .map((item) => ({
+            pr: item.pr,
+            headRefName: item.headRefName,
+            headRefOid: item.headRefOid,
+            baseRefName: item.baseRefName,
+          })),
+      },
     });
     if ("unavailable" in plan)
       return {
@@ -94,6 +97,15 @@ export function planPrefixDrain(
         instructions: [`1. ${plan.unavailable}`],
       };
     instructions[0] = `1. PR #${top.pr} is the highest ready layer of native stack #${top.stack.number}. Run \`${renderMergeCommand(plan.command)}\` to request merging ${span}. If status is \`pending\`, rerun that command at the configured cadence to resume its UUID. \`enqueued\` is not merged. Shepherd revalidates every open lower layer's READY receipt before submission.`;
+  } else {
+    const method = stackMergeFlag(result.allowedMergeMethods);
+    if ("unavailable" in method)
+      return {
+        action: "escalate",
+        stackMergeable: false,
+        instructions: [`1. ${method.unavailable}`],
+      };
+    instructions[0] = `1. PR #${top.pr} is the highest open layer of stack #${top.stack.number} in \`${result.repo}\` whose open lower layers are all ready. Run \`GH_REPO=${result.repo} gh stack merge ${top.pr} --yes ${method.flag}\` to merge ${span}. ${playbookPointer("Stack merge")}`;
   }
   appendAutonomousInstructions(instructions, above.sessions);
   appendMarkReadyInstructions(instructions, above.markReady);

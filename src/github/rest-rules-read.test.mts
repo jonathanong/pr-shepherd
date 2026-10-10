@@ -2,8 +2,94 @@ import { describe, expect, it } from "vitest";
 import { serve, repo, wire } from "../../test-helpers/github/rest-read.test-support.mts";
 import { readRestBranchRules } from "./rest-rules-read.mts";
 import { parseBranchRules } from "./batch-parsers-rules.mts";
+import { restQueueRequirement } from "./poll-summary-rest-queue.mts";
 
 describe("REST protection and rulesets", () => {
+  it.each(["Branch not protected", '{"message":"Branch not protected"'])(
+    "does not infer classic protection absence from an unparseable HTTP 404 body: %j",
+    async (body) => {
+      await serve((request, response) => {
+        if (request.path.includes("/protection")) {
+          response.statusCode = 404;
+          response.end(body);
+        } else response.end("[]");
+      });
+      const result = await readRestBranchRules(repo, "main");
+      expect(result.unavailable).toEqual([expect.objectContaining({ field: "branchProtection" })]);
+      expect(
+        restQueueRequirement({
+          baseRef: result.baseRef,
+          transportUnavailable: result.unavailable,
+        }),
+      ).toBeUndefined();
+    },
+  );
+
+  it("preserves unknown queue policy when classic protection exists without a readable queue field", async () => {
+    await serve((request, response) =>
+      response.end(request.path.includes("/protection") ? "{}" : "[]"),
+    );
+    const result = await readRestBranchRules(repo, "main");
+    expect(result.unavailable).toEqual([]);
+    expect(result.baseRef?.branchProtectionRule).not.toBeNull();
+    expect(
+      restQueueRequirement({ baseRef: result.baseRef, transportUnavailable: result.unavailable }),
+    ).toBeUndefined();
+  });
+
+  it.each([
+    { protectionStatus: 404, message: "Branch not protected", required: false },
+    { protectionStatus: 404, message: "Not Found", required: undefined },
+    { protectionStatus: 403, message: "Branch not protected", required: undefined },
+    {
+      protectionStatus: 403,
+      message: "Resource not accessible by integration",
+      required: undefined,
+    },
+  ])(
+    "keeps queue absence distinct from inaccessible classic protection: %j",
+    async ({ protectionStatus, message, required }) => {
+      await serve((request, response) => {
+        if (request.path.includes("/protection")) {
+          response.statusCode = protectionStatus;
+          response.end(JSON.stringify({ message }));
+        } else response.end("[]");
+      });
+      const result = await readRestBranchRules(repo, "main");
+      expect(result.baseRef?.rules).toMatchObject({ nodes: [], pageInfo: { hasNextPage: false } });
+      expect(result.unavailable).toEqual(
+        required === false ? [] : [expect.objectContaining({ field: "branchProtection" })],
+      );
+      expect(
+        restQueueRequirement({
+          baseRef: result.baseRef,
+          transportUnavailable: result.unavailable,
+        }),
+      ).toBe(required);
+    },
+  );
+
+  it("preserves unknown queue policy when an explicitly unprotected branch has unavailable rules", async () => {
+    await serve((request, response) => {
+      response.statusCode = request.path.includes("/protection") ? 404 : 403;
+      response.end(
+        JSON.stringify({
+          message: request.path.includes("/protection")
+            ? "Branch not protected"
+            : "Resource not accessible by integration",
+        }),
+      );
+    });
+    const result = await readRestBranchRules(repo, "main");
+    expect(result.unavailable).toEqual([expect.objectContaining({ field: "branchRules" })]);
+    expect(
+      restQueueRequirement({
+        baseRef: result.baseRef,
+        transportUnavailable: result.unavailable,
+      }),
+    ).toBeUndefined();
+  });
+
   it("combines required checks, reviews, deployments and standalone rule types", async () => {
     await serve((request, response) =>
       response.end(

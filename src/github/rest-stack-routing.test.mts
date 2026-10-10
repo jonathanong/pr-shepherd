@@ -25,6 +25,7 @@ const upperSha = "c".repeat(40);
 
 interface Policy {
   queue?: boolean;
+  classic?: boolean;
   unavailable?: "classic" | "rules";
 }
 
@@ -62,6 +63,9 @@ async function server(options: Policy & { drafts?: boolean } = {}) {
       if (options.unavailable === "classic" && path.includes("/main/")) {
         response.statusCode = 403;
         body = { message: "Resource not accessible by integration" };
+      } else if (!options.classic || !path.includes("/main/")) {
+        response.statusCode = 404;
+        body = { message: "Branch not protected" };
       }
     } else if (path === `${prefix}/rules/branches/main`) {
       body = options.queue ? [{ type: "merge_queue", parameters: null }] : [];
@@ -157,7 +161,8 @@ describe("REST native-stack routing through the public summary", () => {
     [{ queue: true }, true, "merge_queue"],
     [{ queue: true, unavailable: "classic" }, true, "merge_queue"],
     [{}, false, "direct_merge"],
-    [{ unavailable: "rules" }, undefined, "default"],
+    [{ classic: true }, undefined, "default"],
+    [{ unavailable: "rules", classic: true }, undefined, "default"],
     [{ unavailable: "classic" }, undefined, "default"],
   ] as const)(
     "uses trunk policy %j for the highest ready prefix",

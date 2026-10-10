@@ -74,8 +74,10 @@ export async function serveSummaryStack(size = 10) {
     else if (path.endsWith("check-suites")) body = { total_count: 0, check_suites: [] };
     else if (path.endsWith("actions/runs")) body = { total_count: 0, workflow_runs: [] };
     else if (path.includes("/compare/")) body = { behind_by: 0 };
-    else if (path.endsWith("/protection")) body = {};
-    else if (path.includes("/rules/branches/")) body = fixture.rules;
+    else if (path.endsWith("/protection")) {
+      response.statusCode = 404;
+      body = { message: "Branch not protected" };
+    } else if (path.includes("/rules/branches/")) body = fixture.rules;
     response.end(JSON.stringify(body));
   });
   return fixture;

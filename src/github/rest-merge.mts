@@ -4,12 +4,15 @@ import type { RepoInfo } from "./client.mts";
 import type { MergeMethod } from "../config/merge-method.mts";
 import { GitHubRequestError } from "./errors.mts";
 import { sanitizeBody } from "./http-utils.mts";
+import type { RestMergeStackGuard } from "./rest-merge-stack-guard.mts";
+export type { RestMergeStackGuard } from "./rest-merge-stack-guard.mts";
 
 export type RestMergeAction = "direct_merge" | "merge_queue" | "default";
 export interface RestMergeOptions {
   requireSha: string;
   mergeAction: RestMergeAction;
   mergeMethod?: MergeMethod;
+  expectedStack?: RestMergeStackGuard;
 }
 export interface RestMergeResponse {
   status: "pending" | "enqueued" | "merged" | "failed";
