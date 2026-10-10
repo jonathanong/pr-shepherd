@@ -1,9 +1,7 @@
 # PR #42 [ESCALATE]
 
-**status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo` · **pollMode** `event`
+**status** `READY` · **repo** `owner/repo` · **pollMode** `event`
 **summary** 1 passing · **remainingSeconds** 300 · **isDraft**
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
 
 ⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required
 

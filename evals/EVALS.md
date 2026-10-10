@@ -342,10 +342,10 @@ Clusters that did not become cases:
 - "File an issue and resolve the non-blocking comment" is one user's policy,
   not a pr-shepherd rule.
 
-Case `24` is playbook coverage, not traffic: no transcript shows a missing
-`gh stack` extension. It exists because every printed stack rule scored at
-ceiling in both arms, so it tests a rule found only in the "Stack merge"
-playbook.
+Case `24` is coverage, not traffic: no transcript shows a missing `gh stack`
+extension. It was added to test a rule then found only in the "Stack merge"
+playbook; the stack merge step now prints that rule inline, so the case guards
+the inlined clause.
 
 The corpus disproved two assumptions, so nothing here tests them:
 

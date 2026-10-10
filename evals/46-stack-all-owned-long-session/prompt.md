@@ -34,10 +34,7 @@ Shepherd https://github.com/owner/repo/pull/42 until it's ready for review.
 
 # PR #42 [FIX_CODE]
 
-**status** `UNRESOLVED_COMMENTS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 0 passing
-Approvals: None [Not Required]
-Conversations Resolved: No [Not Required]
+**status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo`
 
 ## Review threads
 
@@ -45,21 +42,13 @@ Conversations Resolved: No [Not Required]
 
 > Please rename this variable to be more descriptive.
 
-## Post-fix actions
-
-- base: `main`
-- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_active --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
-
 ## Instructions
 
-1. Review each item under `## Review threads` and decide whether it needs a code change.
-2. Apply every warranted review fix in each file referenced above.
-3. If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.
-4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
-5. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)` (it must equal the remote PR head). If you did, use the pushed SHA.
-6. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
-7. Run the `apply review:` command above. Playbook: "Review-mutation mechanics".
-8. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.
+1. Fix each warranted item above.
+2. Commit and push any code changes.
+3. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
+4. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_active --message "$DISMISS_MESSAGE" --require-sha "$(git rev-parse HEAD)"`
+5. `[FIX_CODE]` is non-terminal. Rerun the same command now.
 
 ---
 
@@ -74,10 +63,8 @@ the printed `apply review:` command (it replied to `PRRT_active`). Iterating.
 
 # PR #42 [MARK_READY]
 
-**status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo`
 **summary** 1 passing · **remainingSeconds** 300 · **isDraft**
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
 
 MARKED READY: PR #42 converted from draft to ready for review
 
@@ -97,17 +84,10 @@ The CLI marked #42 ready for review. Iterating.
 
 # PR #42 [CANCEL] — ready-delay-elapsed
 
-**status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo`
 **summary** 1 passing
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
 
 CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping
-
-## Instructions
-
-1. Stop polling this pull request — its poll is complete.
-2. Continue any remaining pull requests or issues from the original request.
 
 ---
 
@@ -127,8 +107,7 @@ Thanks. Now shepherd the native PR stack anchored at https://github.com/owner/re
 
 # owner/repo stack #44 — actionable
 
-Stack: #44 · anchor PR #443 · 3 layers · mode `summary`
-stackMergeable: false
+anchor PR #443 · 3 layers · mode `summary`
 nextAction: shepherd
 
 ## Layers
@@ -142,8 +121,8 @@ nextAction: shepherd
 
 ## Instructions
 
-1. Start or delegate one-PR sessions only for rows marked `owned`. Leave every other author's layer untouched. Owned layers can proceed concurrently.
-2. Run `pr-shepherd https://github.com/owner/repo/pull/441 --until-terminal` for PR #441.
-3. Run `pr-shepherd https://github.com/owner/repo/pull/442 --until-terminal` for PR #442.
-4. Run `pr-shepherd https://github.com/owner/repo/pull/443 --until-terminal` for PR #443.
+1. Start or delegate concurrent one-PR sessions only for `owned` rows. Leave other layers untouched.
+2. Run `pr-shepherd https://github.com/owner/repo/pull/441 --until-terminal`.
+3. Run `pr-shepherd https://github.com/owner/repo/pull/442 --until-terminal`.
+4. Run `pr-shepherd https://github.com/owner/repo/pull/443 --until-terminal`.
 5. After the selected one-PR sessions, rerun this same `--stack` selector.

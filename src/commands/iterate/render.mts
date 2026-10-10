@@ -20,18 +20,23 @@ import {
 import { SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE } from "../shepherd-journal.mts";
 import { isFailingAgentCheck } from "../../checks/conclusions.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
-import { partitionFixThreads, reviewSectionRefs } from "./fix-instruction-threads.mts";
+import { partitionFixThreads } from "./fix-instruction-threads.mts";
 import { buildBranchPushInstruction, buildConflictInstruction } from "./native-stack-rebase.mts";
 import { queueEjectionSteps, type QueueEjectionRecovery } from "./queue-recovery-instructions.mts";
 import { buildPushJournalSteps } from "./fix-loop-instruction.mts";
 import type { InstructionStyle } from "../../config/load.mts";
 
-/** Render a resolve command as a shell snippet. Appends `--require-sha "$HEAD_SHA"` when set. */
+/**
+ * Render a resolve command as a shell snippet. Appends `--require-sha "$(git rev-parse HEAD)"`
+ * when set: run after the push step, the local HEAD is the pushed PR head, and `apply review`
+ * rejects the mutations if it is not. The caller's shell runs that read-only git command.
+ */
 export function renderResolveCommand(rc: ResolveCommand): string {
-  const parts = [...rc.argv];
-  if (rc.requiresHeadSha) parts.push("--require-sha", "$HEAD_SHA");
-  return renderShellCommand(parts);
+  const command = renderShellCommand(rc.argv);
+  return rc.requiresHeadSha ? `${command} ${REQUIRE_HEAD_SHA}` : command;
 }
+
+const REQUIRE_HEAD_SHA = `--require-sha "$(git rev-parse HEAD)"`;
 
 export function buildFixInstructions(
   threads: AgentThread[],
@@ -59,7 +64,7 @@ export function buildFixInstructions(
   instructionStyle: InstructionStyle = "inline", // see iterate.instructions
 ): string[] {
   const instructions: string[] = [];
-  const { locatedThreads, unlocatedMutatedThreads, unlocatedThreads } = partitionFixThreads(
+  const { locatedThreads, unlocatedThreads } = partitionFixThreads(
     threads,
     resolveCommand,
     resolveOnlyCommand,
@@ -83,19 +88,7 @@ export function buildFixInstructions(
     actionableComments.length > 0;
 
   // Start with interpretation. The agent decides what raw feedback warrants a code change.
-  if (hasNonConflictHints) {
-    const actionableSections = reviewSectionRefs({
-      hasReviewThreads: locatedThreads.length > 0 || unlocatedMutatedThreads.length > 0,
-      hasUnlocatedSkipThreads: unlocatedThreads.length > 0,
-      hasActionableComments: actionableComments.length > 0,
-      hasFailingChecks: failingChecks.length > 0,
-      hasAnnotations,
-      hasChangesRequested: changesRequestedReviews.length > 0,
-    });
-    const sectionRef =
-      actionableSections.length > 0 ? `under ${actionableSections.join(", ")}` : "above";
-    instructions.push(`Review each item ${sectionRef} and decide whether it needs a code change.`);
-  }
+  if (hasNonConflictHints) instructions.push("Fix each warranted item above.");
   // A conflicting native stack layer follows the printed gh-stack route, so it omits the hint.
   const branchUpdateHint = buildBehindBaseHintInstruction(baseBranch, behindBaseHint, {
     isBehind,
@@ -130,14 +123,6 @@ export function buildFixInstructions(
   if (hasSuggestions)
     instructions.push(buildCommitSuggestionInstruction(prReference, "## Review threads"));
 
-  if (locatedThreads.length > 0 || actionableComments.length > 0) {
-    // Actionable comments carry no file/line location (unlike threads), so "referenced above"
-    // is only accurate when threads are present.
-    const filesRef =
-      locatedThreads.length > 0 ? "each file referenced above" : "the relevant files";
-    instructions.push(`Apply every warranted review fix in ${filesRef}.`);
-  }
-
   if (resolutionOnlyThreads.length > 0)
     instructions.push(
       "Review the threads under `## Review threads to resolve` before running the generated mutations.",
@@ -154,12 +139,9 @@ export function buildFixInstructions(
       "Inspect every referenced range under `## Check annotations` and apply any warranted change.",
     );
 
-  if (changesRequestedReviews.length > 0) {
-    const staleClause = buildCrStaleClause(changesRequestedReviews);
-    instructions.push(
-      `Read every body under \`## Changes-requested reviews\` and apply any warranted change.${staleClause}`,
-    );
-  }
+  // The first step already covers applying changes-requested bodies; only stale CRs add a step.
+  const staleClause = buildCrStaleClause(changesRequestedReviews);
+  if (staleClause) instructions.push(staleClause);
 
   if (!hintWithConflictStep) instructions.push(...branchUpdateHint);
 
@@ -185,10 +167,10 @@ export function buildFixInstructions(
   );
 
   if (resolveOnlyCommand?.hasMutations)
-    instructions.push("Run the `resolve-only:` command shown above.");
+    instructions.push(`Run: \`${renderResolveCommand(resolveOnlyCommand)}\``);
 
   instructions.push(
-    ...buildResolveCommandInstruction(resolveCommand),
+    ...buildResolveCommandInstruction(resolveCommand, renderResolveCommand(resolveCommand)),
     buildFixCompletionInstruction(),
   );
   return instructions;

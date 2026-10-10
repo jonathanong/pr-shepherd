@@ -126,7 +126,7 @@ describe("iterate merge formatting", () => {
 
     const output = formatMergeAction("header", result);
     expect(output).toContain("``gh pr merge 42 --subject 'release `v1`'``");
-    expect(output).toContain("command: ``gh pr merge 42 --merge --subject 'release `v1`'``.");
+    expect(output).toContain("fallback: ``gh pr merge 42 --merge --subject 'release `v1`'``");
   });
 
   it("renders the deferred-work line on a wait result while queued", () => {

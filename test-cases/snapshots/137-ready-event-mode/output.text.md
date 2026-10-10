@@ -1,12 +1,10 @@
 # PR #42 [READY]
 
-**status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo` · **pollMode** `event`
+**status** `READY` · **repo** `owner/repo` · **pollMode** `event`
 **summary** 1 passing · **remainingSeconds** 127
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
 **nextCheck** `2024-05-15T19:09:00Z` · in 140s · reason `ready-delay`
 
-READY: PR #42 is ready — 127s of ready-delay remaining — 1 passing, 0 in-progress
+READY: PR #42 is ready — 127s of ready-delay remaining — 1 passing
 
 ## Instructions
 

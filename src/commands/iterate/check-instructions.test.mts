@@ -132,59 +132,65 @@ describe("buildFailingCheckInstructions", () => {
     );
     expect(
       buildFailingCheckInstructions([
-        check({ conclusion: "CANCELLED", rerunCommand: "gh run rerun 124 -R owner/repo" }),
+        check({
+          conclusion: "CANCELLED",
+          rerunCommand: "gh run rerun 124 -R owner/repo",
+        }),
       ]),
     ).toEqual(pointer);
   });
 });
 
 describe("buildResolveCommandInstruction", () => {
+  const rendered = "pr-shepherd apply review 42";
+
   it("returns nothing when there are no mutations", () => {
-    expect(buildResolveCommandInstruction(resolveCommand({ hasMutations: false }))).toEqual([]);
+    expect(
+      buildResolveCommandInstruction(resolveCommand({ hasMutations: false }), rendered),
+    ).toEqual([]);
   });
 
-  it("emits only the run-the-command step (plus pointer) when nothing else applies", () => {
-    expect(buildResolveCommandInstruction(resolveCommand({}))).toEqual([
-      'Run the `apply review:` command above. Playbook: "Review-mutation mechanics".',
+  it("emits only the run step with the command inline when nothing else applies", () => {
+    expect(buildResolveCommandInstruction(resolveCommand({}), rendered)).toEqual([
+      "Run, even if no code changed: `pr-shepherd apply review 42`",
     ]);
   });
 
   it("does not repeat routing policy when replyThreadIds is non-empty", () => {
-    expect(buildResolveCommandInstruction(resolveCommand({ replyThreadIds: ["PRRT_1"] }))).toEqual([
-      'Run the `apply review:` command above. Playbook: "Review-mutation mechanics".',
-    ]);
+    expect(
+      buildResolveCommandInstruction(resolveCommand({ replyThreadIds: ["PRRT_1"] }), rendered),
+    ).toEqual(["Run, even if no code changed: `pr-shepherd apply review 42`"]);
   });
 
   it("omits routing policy when replyThreadIds is empty", () => {
-    const instructions = buildResolveCommandInstruction(resolveCommand({}));
+    const instructions = buildResolveCommandInstruction(resolveCommand({}), rendered);
     expect(instructions.some((i) => i.includes("remove any `--reply-thread-ids` entry"))).toBe(
       false,
     );
   });
 
-  it("emits $HEAD_SHA and $DISMISS_MESSAGE substitution steps before the run-the-command step, in order", () => {
-    expect(
-      buildResolveCommandInstruction(
-        resolveCommand({
-          replyThreadIds: ["PRRT_1"],
-          requiresHeadSha: true,
-          requiresDismissMessage: true,
-        }),
-      ),
-    ).toEqual([
-      "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)` (it must equal the remote PR head). If you did, use the pushed SHA.",
-      "Replace `$DISMISS_MESSAGE` with one sentence describing what changed.",
-      'Run the `apply review:` command above. Playbook: "Review-mutation mechanics".',
+  it("folds the $DISMISS_MESSAGE substitution into the run step, with no $HEAD_SHA step", () => {
+    const instructions = buildResolveCommandInstruction(
+      resolveCommand({
+        replyThreadIds: ["PRRT_1"],
+        requiresHeadSha: true,
+        requiresDismissMessage: true,
+      }),
+      rendered,
+    );
+    expect(instructions).toEqual([
+      "Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review 42`",
     ]);
+    expect(instructions.join("\n")).not.toContain("$HEAD_SHA");
   });
 });
 
 describe("buildFixCompletionInstruction", () => {
-  const continuation = "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.";
+  const continuation = "`[FIX_CODE]` is non-terminal. Rerun the same command now.";
 
-  it("hands control back without restating commit, push, or rerun policy", () => {
+  it("hands control back without restating commit or push policy", () => {
     expect(buildFixCompletionInstruction()).toBe(continuation);
-    expect(continuation).not.toMatch(/commit|push|rerun/i);
+    expect(continuation).not.toMatch(/commit|push/i);
   });
 
   it.each([

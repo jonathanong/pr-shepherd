@@ -27,7 +27,7 @@ here is what it returned. Take it from there.
 
 # owner/repo stack #35 — actionable
 
-Stack: #35 · anchor PR #342 · 2 layers · mode `summary`
+anchor PR #342 · 2 layers · mode `summary`
 stackMergeable: true
 nextAction: merge
 
@@ -40,7 +40,7 @@ nextAction: merge
 
 ## Instructions
 
-1. PR #342 is the highest open layer of stack #35 in `owner/repo` whose open lower layers are all ready. Run `GH_REPO=owner/repo gh stack merge 342 --yes --squash` to merge PR #342 and every unmerged layer below it. Playbook: "Stack merge".
+1. PR #342 is the highest open layer of stack #35 in `owner/repo` whose open lower layers are all ready. Run `GH_REPO=owner/repo gh stack merge 342 --yes --squash` to merge PR #342 and every unmerged layer below it. If `gh stack` is an unknown command, run `gh extension install github/gh-stack`, then rerun that merge command. Do not rebase, push, or run `gh stack push`.
 2. After the merge attempt, rerun this same `--stack --merge` selector; GitHub retargets the next layer onto `main`. Shepherd any layer that GitHub rejects or ejects.
 
 ---

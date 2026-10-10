@@ -31,16 +31,14 @@ describe("main — positional poll output", () => {
     await vi.advanceTimersByTimeAsync(0);
 
     expect(getStdout()).toBe("");
-    expect(getStderr()).toContain(
-      "[poll tick 1 / +0s] WAIT — 0 passing, 1 in-progress; next tick in 30s",
-    );
+    expect(getStderr()).toContain("[poll tick 1 / +0s] WAIT — 0 passing, 1 in-progress\n");
 
     await vi.advanceTimersByTimeAsync(30_000);
     await promise;
 
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
     expect(getStdout()).toContain("[CANCEL]");
-    expect(getStdout()).toContain("## Instructions");
+    expect(getStdout()).not.toContain("## Instructions");
     expect(getStdout()).not.toContain("next tick in");
     expect(process.exitCode).toBe(EXIT.OK);
   });
@@ -63,19 +61,22 @@ describe("main — positional poll output", () => {
     await vi.advanceTimersByTimeAsync(30_000);
     await promise;
 
-    const output = JSON.parse(getStdout()) as { action: string; instructions: string[] };
+    const output = JSON.parse(getStdout()) as {
+      action: string;
+      instructions?: string[];
+    };
     expect(output.action).toBe("cancel");
-    expect(output.instructions).toEqual([
-      "Stop polling this pull request — its poll is complete.",
-      "Continue any remaining pull requests or issues from the original request.",
-    ]);
+    expect(output.instructions).toBeUndefined();
     expect(getStdout()).not.toContain("next tick in");
-    expect(getStderr()).toContain("WAIT — 0 passing, 1 in-progress; next tick in 30s");
+    expect(getStderr()).toContain("WAIT — 0 passing, 1 in-progress\n");
     expect(process.exitCode).toBe(EXIT.OK);
   });
 
   it("emits the full WAIT result and instructions when positional polling times out", async () => {
-    mockRunIterate.mockResolvedValue({ ...makeIterateResult("wait"), isDraft: true });
+    mockRunIterate.mockResolvedValue({
+      ...makeIterateResult("wait"),
+      isDraft: true,
+    });
 
     const promise = main(["node", "shepherd", "42", "--interval", "30s", "--timeout", "60s"]);
     await vi.advanceTimersByTimeAsync(60_000);

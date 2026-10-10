@@ -21,7 +21,12 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
       makeReport({
         status: "UNRESOLVED_COMMENTS",
         changesRequestedReviews: [
-          { id: "review-1", author: "boss", authorType: "Unknown" as const, body: "Needs rework" },
+          {
+            id: "review-1",
+            author: "boss",
+            authorType: "Unknown" as const,
+            body: "Needs rework",
+          },
         ],
         threads: {
           actionable: [],
@@ -63,10 +68,13 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
       expect(result.fix.resolveCommand.argv).toContain("review-1");
       expect(result.fix.resolveOnlyCommand?.argv).toContain("--minimize-comment-ids");
       expect(result.fix.resolveOnlyCommand?.argv).toContain("comment-1");
+      expect(result.fix.instructions.join("\n")).toContain("Commit and push any code changes.");
       expect(result.fix.instructions.join("\n")).toContain(
-        "If you changed code, commit any remaining changes and push to the PR head branch",
+        "Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review",
       );
-      expect(result.fix.instructions.join("\n")).toContain("Run the `apply review:` command above");
+      expect(result.fix.instructions.join("\n")).toContain(
+        "Run: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --minimize-comment-ids comment-1`",
+      );
       expect(result.fix.instructions.join("\n")).toContain("`[FIX_CODE]` is non-terminal");
     }
   });
@@ -77,7 +85,12 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
         status: "UNRESOLVED_COMMENTS",
         baseBranch: "",
         changesRequestedReviews: [
-          { id: "review-2", author: "boss", authorType: "Unknown" as const, body: "Needs rework" },
+          {
+            id: "review-2",
+            author: "boss",
+            authorType: "Unknown" as const,
+            body: "Needs rework",
+          },
         ],
         threads: {
           actionable: [],

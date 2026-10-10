@@ -29,14 +29,7 @@ Background task finished: `pr-shepherd https://github.com/owner/repo/pull/42 --u
 
 # PR #42 [CANCEL] — ready-delay-elapsed
 
-**status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo`
 **summary** 1 passing
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
 
 CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping
-
-## Instructions
-
-1. Stop polling this pull request — its poll is complete.
-2. Continue any remaining pull requests or issues from the original request.

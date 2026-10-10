@@ -1,9 +1,6 @@
 # PR #42 [WAIT]
 
-**status** `UNRESOLVED_COMMENTS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 0 passing
-Approvals: None [Not Required]
-Conversations Resolved: No [Not Required]
+**status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo`
 Merge queue: position 1 AWAITING_CHECKS [Required]
 **merge queue** enabled `true` · inQueue `true` · state `AWAITING_CHECKS` · position `1`
 

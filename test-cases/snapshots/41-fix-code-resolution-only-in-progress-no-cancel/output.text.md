@@ -1,9 +1,7 @@
 # PR #42 [FIX_CODE]
 
-**status** `IN_PROGRESS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 0 passing, 1 inProgress
-Approvals: None [Not Required]
-Conversations Resolved: No [Not Required]
+**status** `IN_PROGRESS` · **repo** `owner/repo`
+**summary** 1 inProgress
 **activity** 0 commits · 0 review rounds · active: `CI / tests`
 
 ## Review threads to resolve
@@ -14,16 +12,10 @@ Conversations Resolved: No [Not Required]
 
 - `threadId=PRRT_outdated` [↗](https://github.com/owner/repo/pull/42#discussion_r10) `src/helpers.ts:12` (@reviewer · User) [status: outdated]
 
-## Post-fix actions
-
-- base: `main`
-- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_outdated --message "$DISMISS_MESSAGE"`
-
 ## Instructions
 
 1. Review every item under `## First-look items` before acting.
 2. Review the threads under `## Review threads to resolve` before running the generated mutations.
-3. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
-4. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
-5. Run the `apply review:` command above. Playbook: "Review-mutation mechanics".
-6. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.
+3. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
+4. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_outdated --message "$DISMISS_MESSAGE"`
+5. `[FIX_CODE]` is non-terminal. Rerun the same command now.

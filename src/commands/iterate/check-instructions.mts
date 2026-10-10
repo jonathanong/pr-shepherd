@@ -1,20 +1,18 @@
 import type { AgentCheck, ResolveCommand, Review } from "../../types.mts";
 import { playbookPointer } from "../playbook-pointer.mts";
 
-const FIX_CODE_CONTINUATION =
-  "`[FIX_CODE]` is non-terminal. Iterate immediately with the same options.";
+const FIX_CODE_CONTINUATION = "`[FIX_CODE]` is non-terminal. Rerun the same command now.";
 
 /** The `[FIX_CODE]` recurrence step, whether plain or rewritten by the quota warning. */
 export function isFixCodeContinuation(step: string): boolean {
   return /\[FIX_CODE\].*non-terminal/i.test(step);
 }
 
-/** Build the stale-CR clause appended to the `## Changes-requested reviews` instruction. */
+/** Build the stale-CR step for `## Changes-requested reviews`. Empty when no human CR is stale. */
 export function buildCrStaleClause(reviews: Review[]): string {
-  const human = reviews.some((r) => r.staleReview && !r.staleBotCr)
-    ? " `[stale]` bullets are human CRs on an old commit. Ask the reviewer to re-review."
+  return reviews.some((r) => r.staleReview && !r.staleBotCr)
+    ? "`[stale]` changes-requested reviews are human CRs on an old commit. Ask the reviewer to re-review."
     : "";
-  return human;
 }
 
 /**
@@ -64,30 +62,23 @@ export function buildRepeatedWorkflowBranchRecoveryInstructions(
 }
 
 /**
- * Build the `Run the apply review: command` instruction. Steps stay here (not in the skill)
- * whenever the *unmodified, as-printed* command is unsafe without them:
- *
- * - `$HEAD_SHA`/`$DISMISS_MESSAGE` substitution: without it, the printed command has an
- *   empty `--message`/invalid `--require-sha` and `apply review` rejects the mutation.
- * Contrast with what *does* stay in the skill's "Review-mutation mechanics" playbook —
- * dismiss-ID retention. The pointer below is load-bearing: without it, nothing in CLI output
- * tells the agent that playbook exists.
+ * Build the `apply review` step, with the rendered command inline. The step stays here (not in
+ * the skill) because the *as-printed* command is invalid without `$DISMISS_MESSAGE`: an empty
+ * `--message` makes `apply review` reject the mutation. `--require-sha` needs no substitution:
+ * the rendered command reads the pushed HEAD itself. "Even if you changed no code": the
+ * command records each item's disposition either way.
  */
-export function buildResolveCommandInstruction(resolveCommand: ResolveCommand): string[] {
+export function buildResolveCommandInstruction(
+  resolveCommand: ResolveCommand,
+  rendered: string,
+): string[] {
   if (!resolveCommand.hasMutations) return [];
-  const instructions: string[] = [];
-  if (resolveCommand.requiresHeadSha) {
-    instructions.push(
-      "If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)` (it must equal the remote PR head). If you did, use the pushed SHA.",
-    );
-  }
   if (resolveCommand.requiresDismissMessage) {
-    instructions.push("Replace `$DISMISS_MESSAGE` with one sentence describing what changed.");
+    return [
+      `Set \`$DISMISS_MESSAGE\` to one sentence on what changed and run, even if no code changed: \`${rendered}\``,
+    ];
   }
-  instructions.push(
-    `Run the \`apply review:\` command above. ${playbookPointer("Review-mutation mechanics")}`,
-  );
-  return instructions;
+  return [`Run, even if no code changed: \`${rendered}\``];
 }
 
 /** One pointer. Conclusion, rerun, and bare-check rules live in the CI playbook. */

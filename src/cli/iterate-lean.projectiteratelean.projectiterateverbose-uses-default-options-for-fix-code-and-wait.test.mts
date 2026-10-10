@@ -23,6 +23,9 @@ describe("projectIterateLean", () => {
 
     const wait = projectIterateVerbose(makeIterateResult("wait")) as Record<string, unknown>;
     expect(wait.instructions).toBeDefined();
+
+    const cancel = projectIterateVerbose(makeIterateResult("cancel")) as Record<string, unknown>;
+    expect(cancel).not.toHaveProperty("instructions");
   });
   it("escalate (empty arrays): omits triggers and all empty arrays", () => {
     const lean = projectIterateLean(makeIterateResult("escalate")) as Record<string, unknown>;

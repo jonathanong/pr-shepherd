@@ -65,7 +65,7 @@ describe("projectIterateLean", () => {
     const result = makeIterateResult("wait"); // skipped=0, filtered=0, inProgress=1
     const lean = projectIterateLean(result) as Record<string, unknown>;
     const summary = lean.summary as Record<string, unknown>;
-    expect(summary.passing).toBe(0);
+    expect(summary.passing).toBeUndefined();
     expect(summary.skipped).toBeUndefined();
     expect(summary.filtered).toBeUndefined();
     expect(summary.inProgress).toBe(1);
@@ -157,7 +157,8 @@ describe("projectIterateLean", () => {
       },
     };
     const lean = projectIterateLean(result) as Record<string, unknown>;
-    expect(lean.mergeRequirements).toEqual(result.mergeRequirements);
+    const { approvals: _a, conversationsResolved: _c, ...rest } = result.mergeRequirements;
+    expect(lean.mergeRequirements).toEqual(rest);
   });
 
   it("wait: includes log, omits checks", () => {

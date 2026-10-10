@@ -10,7 +10,7 @@ Debounce ticks in the poll dispatcher (`pr-shepherd [PR] --debounce`, default: `
 
 ## Header
 
-Always present after a sweep:
+Always present after a sweep, except that lean output omits `**merge**`/`mergeStateStatus` when it is `CLEAN`, `**state**`/`state` when it is `OPEN`, and `**summary**`/`summary` when every count is zero (an absent field means that default):
 
 | Text          | JSON                                                                  | Meaning                                                                                     |
 | ------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
@@ -36,14 +36,16 @@ Shown when they apply:
 
 ## Merge requirements
 
-Always printed after a sweep:
+Printed after a sweep unless trivial:
 
-- `Approvals: <None\|N[/M]> [Required\|Not Required]`
-- `Conversations Resolved: <Yes\|No> [Required\|Not Required]`
+- `Approvals: <None\|N[/M]> [Required\|Not Required]`, omitted when there are no approvals and none are required.
+- `Conversations Resolved: <Yes\|No> [Required\|Not Required]`, omitted when resolution is known not to be required.
+
+Lean JSON `mergeRequirements` drops the same entries.
 
 Extra lines appear only when they apply (code-owner review, last-push approval, signed commits, linear history, branch up to date, required checks/deployments/workflows, code scanning, merge queue, stacks).
 
-Do not infer “must wait for an approval” from `reviewDecision`. `REVIEW_REQUIRED` with `Approvals: None [Not Required]` means GitHub is not waiting on an approval. Field contract: [merge-status.md](merge-status.md#merge-requirements).
+Do not infer “must wait for an approval” from `reviewDecision`. `REVIEW_REQUIRED` with no `Approvals:` line (none required) means GitHub is not waiting on an approval. Field contract: [merge-status.md](merge-status.md#merge-requirements).
 
 ## Review context
 
@@ -71,7 +73,7 @@ An unmarked human inline thread authored by the authenticated viewer is replied 
 
 Context gathering also emits the arguments for later mutations so the agent does not reconstruct them:
 
-- `apply review:` command (reply / resolve / minimize / dismiss, optional `resolve-only:` split)
+- `apply review` command, printed inline in its instruction step (reply / resolve / minimize / dismiss, with an optional resolve-only `Run:` step)
 - grouped `build_suggestion_patches` inputs when threads contain ` ```suggestion ` fences
 - Journal instruction for large decisions
 

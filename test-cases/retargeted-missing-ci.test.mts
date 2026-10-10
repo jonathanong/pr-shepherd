@@ -15,12 +15,12 @@ describe("PR #2099 after retargeting to main", () => {
     const run = await captureRun(fixture);
     const output = JSON.parse(run.jsonOut) as {
       action: string;
-      baseBranch: string;
+
       unreportedRequiredChecks: string[];
       fix: { instructions: string[] };
     };
     expect(output.action).toBe("fix_code");
-    expect(output.baseBranch).toBe("main");
+
     expect(output.unreportedRequiredChecks).toEqual([
       "static",
       "backend",

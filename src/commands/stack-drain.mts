@@ -1,6 +1,5 @@
 import { findHumanHandoffs, appendHumanHandoffInstructions } from "./stack-handoffs.mts";
 export { findHumanHandoffs, appendHumanHandoffInstructions } from "./stack-handoffs.mts";
-import { playbookPointer } from "./playbook-pointer.mts";
 import { stackMergeFlag } from "./stack-merge-flag.mts";
 import type { PollSummaryItem, PollSummaryResult, StackNextAction } from "../types.mts";
 import { stackLayerBlockReason } from "./stack-layer-readiness.mts";
@@ -105,7 +104,7 @@ export function planPrefixDrain(
         stackMergeable: false,
         instructions: [`1. ${method.unavailable}`],
       };
-    instructions[0] = `1. PR #${top.pr} is the highest open layer of stack #${top.stack.number} in \`${result.repo}\` whose open lower layers are all ready. Run \`GH_REPO=${result.repo} gh stack merge ${top.pr} --yes ${method.flag}\` to merge ${span}. ${playbookPointer("Stack merge")}`;
+    instructions[0] = `1. PR #${top.pr} is the highest open layer of stack #${top.stack.number} in \`${result.repo}\` whose open lower layers are all ready. Run \`GH_REPO=${result.repo} gh stack merge ${top.pr} --yes ${method.flag}\` to merge ${span}. If \`gh stack\` is an unknown command, run \`gh extension install github/gh-stack\`, then rerun that merge command. Do not rebase, push, or run \`gh stack push\`.`;
   }
   appendAutonomousInstructions(instructions, above.sessions);
   appendMarkReadyInstructions(instructions, above.markReady);
@@ -160,7 +159,7 @@ function sessionInstruction(item: PollSummaryItem): string {
   const queueNote = item.queueRemoval
     ? " That session fixes failing queue CI, or escalates when the removal has no concrete fix."
     : "";
-  return `${removal} Run \`${item.pollCommand}\` for PR #${item.pr}.${queueNote}`;
+  return `${removal} Run \`${item.pollCommand}\`.${queueNote}`;
 }
 export function describeIdleLayers(idle: PollSummaryItem[]): string {
   return idle.map((item) => `PR #${item.pr} (${item.reasons.join(", ")})`).join("; ");
@@ -172,7 +171,7 @@ export function appendAutonomousInstructions(
 ): void {
   if (candidates.length === 0) return;
   instructions.push(
-    `${instructions.length + 1}. Start or delegate one-PR sessions only for rows marked \`owned\`. Leave every other author's layer untouched. Owned layers can proceed concurrently.`,
+    `${instructions.length + 1}. Start or delegate concurrent one-PR sessions only for \`owned\` rows. Leave other layers untouched.`,
   );
   for (const item of candidates) {
     instructions.push(`${instructions.length + 1}.${sessionInstruction(item)}`);

@@ -31,7 +31,7 @@ singular polling. Stack entries are fetched completely and ordered bottom-to-top
 multi-PR row keeps the rich fields in Markdown and JSON: repository, title/URL, raw
 PR/merge/review/head/base/stack state, bounded check and review counts (including ignored and
 superseded checks and active merge-queue commit checks), incomplete flags, and `pollCommand`.
-A `--stack` row is an overview: shepherded or not, mergeable or one blocker, author, `owned` when
+A `--stack` row is an overview: `shepherded` when true, mergeable or one blocker on an open layer, author, `owned` when
 that author matches the authenticated viewer (REST reads the authenticated `/user` login without
 inferring capabilities), position, and the layer's own base branch. REST rows include
 `requiresMergeQueue` when branch policy proves a queue is required (`true`) or proves it is not
@@ -39,8 +39,8 @@ inferring capabilities), position, and the layer's own base branch. REST rows in
 fact as `merge queue required` or `merge queue not required`. It omits
 one-PR action tags, head SHAs, repeated stack coordinates, check and review histograms, and
 `pollCommand`. Failing, in-progress, or actionable counts appear only for the blocker they explain.
-A missing READY receipt is `not shepherded`, not a mergeability blocker. Markdown and JSON for a
-stack are that same overview (`mode` stays `"summary"`). Aggregate API and MCP calls return one
+A missing READY receipt omits `shepherded`; it is not a mergeability blocker. A merged or closed layer carries only its state, with no mergeability fact. `stackMergeable` appears only when true, and the header is `anchor PR #<N> · <K> layers · mode \`summary\``. Markdown and JSON for a
+stack are that same overview (`mode`stays`"summary"`). Aggregate API and MCP calls return one
 summary tick without recurrence. The summary path never mutates GitHub, writes seen markers, or
 maintains ready-delay state; one-PR sessions remain authoritative for those mutations and full
 review context. Its only local state is a `--stack` selection's
@@ -53,7 +53,8 @@ as soon as that layer is clean; it does not wait for a lower layer's receipt. Re
 sessions for every owned layer that still has work are listed on the same tick. An unready stack
 returns stack-level `SHEPHERD` with exact one-PR Shepherd commands and asks the caller to rerun the
 same selector after those owned sessions. If every remaining session belongs to someone else, the
-overview is the result: do not shepherd those layers.
+overview is the result: the stack returns `ESCALATE` with no rerun, quota-cadence, or wake-up step,
+and the caller does not shepherd those layers.
 
 A layer whose only failing checks are deferred on an open external pull request or issue is `WAIT`
 (a probed row). The selector does not return `SHEPHERD` for that layer alone, so `--until-terminal`
@@ -63,6 +64,8 @@ to update the branch rather than rerun the job.
 `CANCEL` is terminal only when every open layer is READY without merge intent (or every layer is merged). The stack heading then includes `[CANCEL]`; a human handoff heading includes `[ESCALATE]`. Those tokens are what the skill stops on. Aggregate mode
 never performs mutations or emits rebase/push commands. `ESCALATE` is reserved for a human decision, such as a
 closed-unmerged or otherwise unverified dependency, once no autonomous one-PR session remains.
+Only `owned` layers count as shepherdable here: when every remaining autonomous layer belongs to
+another author, a human blocker returns `ESCALATE` immediately.
 If human blockers coexist with shepherdable layers, `SHEPHERD` is the immediate next action: its
 instructions surface those blockers, route the autonomous layers, and require another stack
 reconciliation. The stack returns `ESCALATE` for the remaining human handoff only after the
@@ -129,7 +132,7 @@ Merge command:
 - A direct merge is atomic. On a merge queue, the prefix is queued together and each layer is evaluated from the bottom. A failure ejects that layer and the layers above it. Layers that already merged stay merged.
 - Layers above the prefix keep their one-PR sessions in the same instructions.
 - `gh stack merge` reads a bare number as a stack number before a PR number. Native stack numbers come from the repository issue and pull request sequence (observed; GitHub does not document it), so a PR number never names a stack.
-- If `gh stack` is an unknown command, the instructions install `github/gh-stack` first. The Stack merge playbook says the same, and it does not push.
+- If `gh stack` is an unknown command, the instructions install `github/gh-stack` and then rerun the merge command. The same step says not to rebase, push, or run `gh stack push`.
 - After each merge, GitHub retargets the next layer. Rerun `--stack --merge` until every layer is merged and the result is `CANCEL`.
 - If GitHub queues a layer, the summary stays `WAIT` for those queued layers. Recheck at the polling cadence. Do not rewrite a queued layer. That wait does not block a layer that is not queued. The stack is not finished until every layer merges.
 - An ejected layer leaves the merge prefix until a receipt acknowledges that removal. The instruction names the reason and actor and says to run that layer's one-PR session, which fixes failing queue CI, records a validated acknowledgment for a transient or grouped-entry failure that does not reproduce after updating from the latest base, with no remaining blocker, or escalates when no autonomous path remains.
@@ -153,17 +156,17 @@ a closed layer is an `ESCALATE`, not a successful completion.
 
 Command examples show the default `pr-shepherd` launcher. Every emitted follow-up command starts with the configured [`cliCommand`](configuration.md#clicommand--default-pr-shepherd) argv instead, such as `pnpm exec pr-shepherd`.
 
-Pass `--verbose` to get more debug state. In JSON mode, the output starts from the full `IterateResult` shape (all fields, including `baseBranch`, `checks`, `shouldCancel`, and command-scoped `apiUsage`) and then applies the same instruction projection as lean JSON: non-`fix_code` actions get a top-level `instructions` array, and `fix.instructions` may be rewritten. In Markdown mode, `--verbose` restores the full header summary line and adds `## GitHub API usage`, including credential source labels, request counts, the latest authoritative quota state by resource, and exact measured GraphQL query cost. GraphQL mutations remain counted as unmeasured because GitHub exposes `rateLimit` only on the query root. Markdown and JSON use different representations but surface equivalent action information; MCP structured and Markdown content use the same projection options. Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick and add context noise without value.
+Pass `--verbose` to get more debug state. In JSON mode, the output starts from the full `IterateResult` shape (all fields, including `baseBranch`, `checks`, `shouldCancel`, and command-scoped `apiUsage`) and then applies the same instruction projection as lean JSON: actions other than `fix_code` and `cancel` get a top-level `instructions` array (`cancel` has none), and `fix.instructions` may be rewritten. In Markdown mode, `--verbose` restores the full header summary line and adds `## GitHub API usage`, including credential source labels, request counts, the latest authoritative quota state by resource, and exact measured GraphQL query cost. GraphQL mutations remain counted as unmeasured because GitHub exposes `rateLimit` only on the query root. Markdown and JSON use different representations but surface equivalent action information; MCP structured and Markdown content use the same projection options. Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick and add context noise without value.
 
 **Output shape (every action, default lean format):**
 
 ```
 # PR #<N> [ACTION]
 
-**status** `<…>` · **merge** `<…>`[ · **reviewDecision** `<…>`] · **state** `<…>` · **repo** `<…>`
-**summary** <N> passing[, <N> skipped][, <N> filtered][, <N> inProgress][, <N> superseded][· **remainingSeconds** <N>][· **blockingBotReviewInProgress**][· **isDraft**][· **branch** behind PR base `<base>` | · **branch** conflicts with PR base `<base>` | · **branch** conflicts with stack trunk `<trunk>`]
-Approvals: <None|N[/M]> [Required|Not Required]
-Conversations Resolved: <Yes|No> [Required|Not Required]
+**status** `<…>`[ · **merge** `<…>`][ · **reviewDecision** `<…>`][ · **state** `<…>`] · **repo** `<…>`
+[**summary** <N> passing[, <N> skipped][, <N> filtered][, <N> inProgress][, <N> superseded]][· **remainingSeconds** <N>][· **blockingBotReviewInProgress**][· **isDraft**][· **branch** behind PR base `<base>` | · **branch** conflicts with PR base `<base>` | · **branch** conflicts with stack trunk `<trunk>`]
+[Approvals: <None|N[/M]> [Required|Not Required]]
+[Conversations Resolved: <Yes|No> [Required|Not Required]]
 [Merge queue: <No|position N STATE> [Required|Not Required]]
 [Stack: <n> (layer <pos>/<size>, base <ref>)]
 [other required-only merge-rule lines]
@@ -192,16 +195,20 @@ Conversations Resolved: <Yes|No> [Required|Not Required]
 [- <url or `id`>]
 [- <id>: <error> [(rule: <reason>)] ]]
 
-## Instructions
+[## Instructions
 
-1. <numbered steps telling the agent exactly what to do>
+1. <numbered steps telling the agent exactly what to do>]
 ```
+
+- `## Instructions` is present for every action except `cancel`.
+- Lean output omits `**merge**` when it is `CLEAN` and `**state**` when it is `OPEN`; lean JSON omits `mergeStateStatus` and `state` the same way. An absent field means that default.
 
 `apiUsage` keeps raw telemetry for every pool used during the command, including GraphQL attempts before an automatic switch to REST. Warning selection and poll cadence use the active pool: REST mode uses REST core only; GraphQL mode considers both GraphQL and REST core budgets. Pending REST core warnings stay active through the poll loop; GraphQL warnings are discarded after a switch to REST.
 
 Lean-mode rules for the summary line:
 
-- Zero counts (`skipped`, `filtered`, `inProgress`, `superseded`) are omitted.
+- Zero counts are omitted, `passing` included. When every count is zero, the `**summary**` label and the lean JSON `summary` field are omitted entirely.
+- `Approvals:` is omitted when there are no approvals and none are required; `Conversations Resolved:` is omitted when resolution is known not to be required. Lean JSON `mergeRequirements` drops the same entries.
 - `remainingSeconds` is shown only when the ready-delay timer is actively counting down (`status === "READY"` and `remainingSeconds > 0`).
 - `blockingBotReviewInProgress` and `isDraft` are shown only when `true`.
 - `shouldCancel` is never shown (it is fully implied by `action === "cancel"`).
@@ -223,12 +230,12 @@ Lean-mode rules for the summary line:
 
 - `**branch**` is appended to `**summary**` when `mergeStatus` is `BEHIND` or `CONFLICTS`, so the agent can decide on a rebase without another fetch.
 - `**reviewDecision**` is appended to the status line when the derived merge status is `BLOCKED`.
-- After a sweep, iterate always prints `Approvals:` and `Conversations Resolved:` (current vs required).
+- After a sweep, iterate prints `Approvals:` and `Conversations Resolved:` (current vs required) unless the rule is trivial: zero approvals when none are required, or conversation resolution that is not required.
 - Extra merge-rule lines appear only when they apply: code-owner review, last-push approval, signed commits, linear history, branch up to date, required status checks, deployments, workflows, code scanning, merge queue, GitHub stacks.
 - A test result with no `mergeRequirements` still gets a fallback `**required**` line from `requiredStatusCheckContexts`. Live iterate uses `mergeRequirements` and omits that line.
-- Read Approvals and Conversations Resolved instead of inferring a required review from `reviewDecision`. `REVIEW_REQUIRED` with `Approvals: None [Not Required]` means GitHub is not waiting on an approval.
+- Read Approvals and Conversations Resolved instead of inferring a required review from `reviewDecision`. `REVIEW_REQUIRED` with no `Approvals:` line (none required) means GitHub is not waiting on an approval.
 - `--verbose` restores all five counts, `remainingSeconds`, `blockingBotReviewInProgress`, `isDraft`, and `shouldCancel`.
-- Lean JSON always emits raw `mergeStateStatus`, plus derived `mergeStatus` when it is not `CLEAN`. `mergeStateStatus` alone cannot rebuild `mergeStatus` (a conflicting `mergeable` value can be `CONFLICTS` while `mergeStateStatus` says something else).
+- Lean JSON emits raw `mergeStateStatus` when it is not `CLEAN`, plus derived `mergeStatus` when that is not `CLEAN`; an absent field means `CLEAN`. `mergeStateStatus` alone cannot rebuild `mergeStatus` (a conflicting `mergeable` value can be `CONFLICTS` while `mergeStateStatus` says something else).
 - `--verbose` JSON returns the full `IterateResult`, including `mergeStatus: "CLEAN"`.
 
 Load-bearing conventions (the iterate skill depends on these):
@@ -251,8 +258,8 @@ Load-bearing conventions (the iterate skill depends on these):
   - The name matches a file in `plugins/pr-shepherd/skills/pr-shepherd/references/`, linked from the skill.
   - Read that file once, then apply it.
   - **Untrusted review input** stays in `SKILL.md`. It always applies to surfaced review and CI text. Instructions never point at it.
-- Under `[FIX_CODE]`, `## Post-fix actions` includes ``apply review: `<command>` `` when the viewer can run at least one review mutation, and `resolve-only` when that split applies.
-  - The instructions name those bullets. Strip the backticks and run the command.
+- Under `[FIX_CODE]`, the instruction steps print the `apply review` command inline when the viewer can run at least one review mutation, and a separate resolve-only `Run:` step when that split applies.
+  - Strip the backticks and run the command.
 - Lean mode prints passing checks only as the `**summary**` count.
   - Failing detail is `## Failing checks` on `[FIX_CODE]`, or the escalation's items when follow-up is unavailable.
   - Lean JSON uses `fix.checks[]` or `escalate.checks[]`.
@@ -338,10 +345,10 @@ The PR is clean and its ready-delay is still counting.
 ```markdown
 # PR #42 [READY]
 
-**status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo`
 **summary** 1 passing · **remainingSeconds** 127
 
-READY: PR #42 is ready — 127s of ready-delay remaining — 1 passing, 0 in-progress
+READY: PR #42 is ready — 127s of ready-delay remaining — 1 passing
 
 ## Instructions
 
@@ -365,13 +372,11 @@ Nothing actionable to do; all CI is passing or in-progress, or the PR is not yet
 ```markdown
 # PR #42 [WAIT]
 
-**status** `IN_PROGRESS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 0 passing, 1 inProgress
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
+**status** `IN_PROGRESS` · **repo** `owner/repo`
+**summary** 1 inProgress
 **activity** 0 commits · 0 review rounds · active: `CI / build`
 
-WAIT: 0 passing, 1 in-progress — active checks: CI / build
+WAIT: 1 in-progress — active checks: CI / build
 
 ## Instructions
 
@@ -382,7 +387,7 @@ The bare CLI command owns its bounded `--interval`/`--timeout` waits. A final `W
 
 When a failing check is deferred on an open external pull request or issue, the body line names that blocker as `owner/name#N` (`blocked by acme/widgets#9`). Text and JSON both carry that log. `--until-terminal` keeps polling at its normal cadence instead of returning `FIX_CODE` for that check alone.
 
-The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, unmet merge requirements (approvals, conversations, merge queue, …), `PR is a draft`, or `some checks are unstable`. After a sweep, iterate also prints current-vs-required merge rules so the agent can see _why_ GitHub is not mergeable (for example `Approvals: None [Not Required]` vs `Approvals: None [Required]`). Merge-queue and GitHub-stack membership appear as extra lines when they apply (`Merge queue: position 2 QUEUED [Required]`, `Stack: 7 (layer 2/3, base main)`); they are omitted when the PR is not in a queue or stack and merge queue is not required.
+The body line (`WAIT: …`) varies with the merge state — `branch is behind base`, unmet merge requirements (approvals, conversations, merge queue, …), `PR is a draft`, or `some checks are unstable`. After a sweep, iterate also prints current-vs-required merge rules so the agent can see _why_ GitHub is not mergeable (for example `Approvals: None [Required]`). Trivial rules are omitted from Markdown and JSON `mergeRequirements`: zero approvals when none are required, and conversation resolution when it is not required. Merge-queue and GitHub-stack membership appear as extra lines when they apply (`Merge queue: position 2 QUEUED [Required]`, `Stack: 7 (layer 2/3, base main)`); they are omitted when the PR is not in a queue or stack and merge queue is not required.
 
 **Deferred work while queued** (`--merge` and `mergeQueue.inQueue`):
 
@@ -421,10 +426,8 @@ Converts a draft PR to ready for review.
 ```markdown
 # PR #42 [MARK_READY]
 
-**status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo`
 **summary** 1 passing · **remainingSeconds** 300 · **isDraft**
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
 
 MARKED READY: PR #42 converted from draft to ready for review
 
@@ -456,10 +459,8 @@ Emits an exact GitHub CLI command; Shepherd does not execute or wrap the merge o
 ```markdown
 # PR #42 [MERGE]
 
-**status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo`
 **summary** 1 passing
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
 
 ## Merge command
 
@@ -469,7 +470,7 @@ Conversations Resolved: Yes [Not Required]
 ## Instructions
 
 1. Run the `auto-merge` command shown above exactly as printed.
-2. Only if GitHub reports that auto-merge is unavailable, run the `plain merge fallback` command: `gh pr merge 42 --repo owner/repo --match-head-commit abc123 --merge`.
+2. Only if GitHub reports that auto-merge is unavailable, run the `plain merge fallback` command shown above.
 3. Then iterate immediately with the same options to monitor until the PR merges or needs work.
 ```
 
@@ -522,21 +523,11 @@ Stops polling this pull request — no further iterations for this PR are needed
 
 ```markdown
 # PR #42 [CANCEL] — merged
-
-**status** `MERGED` · **merge** `UNKNOWN` · **state** `MERGED` · **repo** `owner/repo`
-**summary** 0 passing
-
-CANCEL: PR #42 is merged — stopping
-
-## Instructions
-
-1. Stop polling this pull request — its poll is complete.
-2. Continue any remaining pull requests or issues from the original request.
 ```
 
-Other heading variants: `# PR #42 [CANCEL] — closed`, `# PR #42 [CANCEL] — ready-delay-elapsed`.
+`cancel` has no `## Instructions` section and no JSON `instructions`: the `[CANCEL]` tag already means stop this PR's loop, and continuing the rest of the original request is the skill's invariant recurrence rule. Merged and closed PRs are terminal, so their default output is only the heading; no status, check, review, or merge-requirement data can change the next step. The lean JSON matches it: `{ "action": "cancel", "pr": 42, "reason": "merged" }` (plus `ruleAutoResolve` when that ran). `--verbose` keeps the full header, status lines, and `CANCEL: PR #42 is merged — stopping` / `CANCEL: PR #42 is closed — stopping` log line.
 
-Merged and closed PRs surface terminal top-level statuses (`MERGED` or `CLOSED`) because `runCheck` short-circuits before CI/comment processing. Other body-line variants: `CANCEL: PR #42 is closed — stopping`, `CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping`. When merge is still `BLOCKED` after the delay, the body uses a specific unmet-requirement note when one is known (`awaiting 1 approval`, `in merge queue position 2`, …) and otherwise `is awaiting human review or branch protection resolution` — it does not guess from `reviewDecision` alone.
+A `ready-delay-elapsed` cancel (`# PR #42 [CANCEL] — ready-delay-elapsed`) keeps the full header and its body line: `CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping`. When merge is still `BLOCKED` after the delay, the body uses a specific unmet-requirement note when one is known (`awaiting 1 approval`, `in merge queue position 2`, …) and otherwise `is awaiting human review or branch protection resolution` — it does not guess from `reviewDecision` alone.
 
 A `ready-delay-elapsed` cancel carries the same `**merge queue** …` header line (raw enabled/inQueue/entry/removal fields, see the header block above) as every other action when `mergeQueue` is present, matching JSON output.
 
@@ -566,7 +557,7 @@ Stale boundary and native-stack conflicts:
 - The stale-boundary path returns the observed parent and child OIDs and a one-PR repair, then the ordinary `FIX_CODE` continuation. Aggregate `--stack` never does that repair.
 - In GraphQL mode, a native-stack conflict uses a gh-stack rebase from a clean checkout. REST-mode instructions use the repository's stack-update procedure rather than gh-stack API commands.
 - GraphQL mode imports with `gh stack checkout <stack number>` when `gh stack` does not track the stack locally. Use the stack number, not the PR number.
-- The step points at the Branch update playbook for the head check and `gh stack rebase --continue` in GraphQL mode. Merge-queue behavior for `gh stack merge` is the Stack merge playbook.
+- The step points at the Branch update playbook for the head check and `gh stack rebase --continue` in GraphQL mode. The `gh stack merge` step prints its own missing-extension and no-push rules inline.
 - In GraphQL mode, an upper layer behind its parent gets `gh stack rebase --upstack --no-trunk` from that parent, not from the stack trunk.
 - A whole-stack rebase starts at the lowest open layer by stack order when the upper layer already contains its parent (summary: `conflicts with stack trunk`, JSON: `stackTrunkConflict`) or when this is the lowest open layer. The latter includes a higher-position layer whose lower layers are all verified `MERGED`, even if GitHub has not yet retargeted its recorded PR base onto the trunk. An unavailable bottom PR number is described as the stack's bottom open layer, without requiring its base branch to name the trunk. A known closed or unverified lower layer cannot supply that fallback.
 - Publish the rewritten stack with the repository's stack-update procedure in REST mode and `gh stack push` in GraphQL mode, not a push of the PR head alone.
@@ -624,10 +615,7 @@ Eligible **already-seen** `COMMENTED` review summaries (surfaced in a prior iter
 ```markdown
 # PR #42 [FIX_CODE]
 
-**status** `UNRESOLVED_COMMENTS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 0 passing
-Approvals: None [Not Required]
-Conversations Resolved: No [Not Required]
+**status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo`
 
 ## Review threads
 
@@ -635,24 +623,18 @@ Conversations Resolved: No [Not Required]
 
 > The variable name is misleading.
 
-## Post-fix actions
-
-- base: `main`
-- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
-
 ## Instructions
 
-1. Review each item under `## Review threads` and decide whether it needs a code change.
-2. Apply every warranted review fix in each file referenced above.
-3. If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.
-4. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
-5. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)` (it must equal the remote PR head). If you did, use the pushed SHA.
-6. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
-7. Run the `apply review:` command above. Playbook: "Review-mutation mechanics".
-8. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.
+1. Fix each warranted item above.
+2. Commit and push any code changes.
+3. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
+4. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha "$(git rev-parse HEAD)"`
+5. `[FIX_CODE]` is non-terminal. Rerun the same command now.
 ```
 
-With `--instructions playbook` (or `iterate.instructions: playbook`, or the MCP `instructions` input), steps 3 and 4 fold into one step that carries only the trigger, the concrete journal command, and a playbook pointer to "Fix-code loop" (also readable with `pr-shepherd playbook "Fix-code loop"`). The fold applies only when the generic commit/push step is printed. Without update permission the folded step omits the journal command, and the playbook's journal step applies only when that command is printed. When a conflict or queue-recovery push step replaces it, the journal step stays inline with its "Shepherd Journal" pointer, because the "Fix-code loop" playbook's push to the PR head branch would conflict with the specialized push. Steps 5 and 6 stay inline because their commands need placeholder substitution, and the final `[FIX_CODE]` continuation stays inline. The default is `inline`: the bench measured the playbook default as a smaller saving than inline for the typical session.
+The review mutation commands are printed inline in their instruction steps rather than as `## Post-fix actions` bullets. `--require-sha "$(git rev-parse HEAD)"` reads the pushed HEAD itself, so it needs no substitution; run the command after any push so it equals the remote PR head. Run from another checkout (a qualified PR reference), that HEAD is unrelated: `apply review` then times out and its error says to rerun with the PR head SHA you pushed, naming the current head. `## Post-fix actions` remains only for `- base:` under `--verbose`, the merge-queue `requeue` / `requeue API fallback` commands, and the native-stack queue acknowledgment; it is omitted when empty.
+
+With `--instructions playbook` (or `iterate.instructions: playbook`, or the MCP `instructions` input), steps 2 and 3 fold into one step that carries only the trigger, the concrete journal command, and a playbook pointer to "Fix-code loop" (also readable with `pr-shepherd playbook "Fix-code loop"`). The fold applies only when the generic commit/push step is printed. Without update permission the folded step omits the journal command, and the playbook's journal step applies only when that command is printed. When a conflict or queue-recovery push step replaces it, the journal step stays inline with its citation clause, because the "Fix-code loop" playbook's push to the PR head branch would conflict with the specialized push. Step 4 stays inline because its command needs `$DISMISS_MESSAGE` substitution, and the final `[FIX_CODE]` continuation stays inline. The default is `inline`: the bench measured the playbook default as a smaller saving than inline for the typical session.
 
 - The summary line shows raw `**branch**` state. The caller chooses rebase and commit mechanics.
 - Push access to the PR head is a usage precondition. Do not start pr-shepherd when the caller cannot push.
@@ -660,15 +642,14 @@ With `--instructions playbook` (or `iterate.instructions: playbook`, or the MCP 
 - Conflict and code-change ticks say to commit, push, finish SHA-gated review mutations, and iterate.
 - For a non-stack conflict, Shepherd may show `## Merged PRs matching the current base` when a lookup of the 20 most recently updated merged PRs with the current base's branch name finds rows whose exact head OID and head repository match this PR's recorded base. JSON exposes the same raw rows as `mergedBasePullRequests` (number, URL, state, head branch and OID, base branch, merge time, and head repository). The first instruction asks the caller to verify whether this is the remaining layer intended for that merged parent's base. If so, change the PR base with `gh pr edit` and rerun Shepherd immediately, following the fresh result; otherwise follow the remaining conflict-resolution steps. A failed non-rate-limit lookup leaves the ordinary conflict route in place, while rate limits propagate for retry.
 - `[FIX_CODE]` is always non-terminal. Only `[ESCALATE]` hands work to a human.
-- `$HEAD_SHA` and `$DISMISS_MESSAGE` substitution stays in the CLI when `resolveCommand.requiresHeadSha` or `requiresDismissMessage` is set. The printed command is invalid without it.
+- `$DISMISS_MESSAGE` substitution stays in the CLI when `resolveCommand.requiresDismissMessage` is set. The printed command is invalid without it. When `resolveCommand.requiresHeadSha` is set, the printed command carries `--require-sha "$(git rev-parse HEAD)"`, which needs no substitution.
 - Shepherd recognizes its own reply only when the latest comment begins `<!-- pr-shepherd -->`. Author equality is not enough.
 - An unmarked bot, non-human, or viewer-authored human thread is reply-and-resolve.
 - A marked thread that is still being resolved is resolve-only, so a previous reply can be retried.
 - An unmarked other-human thread stays reply-only unless `iterate.resolveOtherHumanThreads` is `outdated` or `always`.
 - A marked other-human thread is already acknowledged at the default `none`.
 - A caller who never loads the skill can still run the printed command. Placeholder steps are in the output.
-- Dismiss-ID retention is [`references/review-mutations.md`](../plugins/pr-shepherd/skills/pr-shepherd/references/review-mutations.md). Omitting a `--dismiss-review-ids` value leaves `CHANGES_REQUESTED`.
-- Journal citation rules are [`references/journal.md`](../plugins/pr-shepherd/skills/pr-shepherd/references/journal.md).
+- Dismiss-ID retention and the journal citation rule are short clauses printed in their steps, not separate playbooks: a playbook read costs the agent an extra turn that outweighs the clause. Omitting a `--dismiss-review-ids` value leaves `CHANGES_REQUESTED`.
 - Bare checks, external checks, `CANCELLED`, `STARTUP_FAILURE`, and GitHub Actions failures with no usable log stay in `[FIX_CODE]` while other autonomous work remains.
 - When those checks are the only blocker, the result is `[ESCALATE]` with `check-follow-up-unavailable`.
 - When `mergeStatus` is `BEHIND` or `CONFLICTS` and [`iterate.behindBaseHint`](configuration.md#iteratebehindbasehint--default-) is set, one instruction echoes it: ``The branch is behind PR base branch `<base>`. <hint> before pushing.`` or ``The branch conflicts with PR base branch `<base>`. <hint> before pushing.`` The CLI does not choose the git mechanics.
@@ -683,15 +664,12 @@ When one or more threads carry a `[suggestion]` marker, `## Instructions` adds o
 ```markdown
 ## Instructions
 
-1. Review each item under `## Review threads` and decide whether it needs a code change.
+1. Fix each warranted item above.
 2. For every `[suggestion]` thread under `## Review threads`, run one `pr-shepherd build-suggestion-patches https://github.com/owner/repo/pull/42 --thread-id <id> --message "<one-sentence headline>" --format=json`, repeating `--thread-id` and `--message` in displayed order. Playbook: "Suggestion patches".
-3. Apply every warranted review fix in each file referenced above.
-4. [remaining remediation, finalization, mutation, and recurrence steps]
+3. [remaining remediation, finalization, mutation, and recurrence steps]
 ```
 
 The `build-suggestion-patches` step is absent when no thread has a `[suggestion]` marker.
-
-The review-fix step says "each file referenced above" only when `## Review threads` is present. With actionable comments alone, it says "the relevant files" because comments have no file location.
 
 **Section order:**
 
@@ -718,11 +696,13 @@ The review-fix step says "each file referenced above" only when `## Review threa
 13. `## In-progress runs` — reserved for compatibility and currently omitted. GitHub exposes no exact viewer capability for workflow-run cancellation.
 14. `## Protected runs` — reserved for compatibility and currently omitted because Shepherd does not cancel workflow runs.
 15. `## Cancelled runs` — reserved for compatibility and currently omitted.
-16. `## Post-fix actions`:
-    - ``- base: `<branch>` `` — raw PR base branch context.
-    - ``- resolve-only: `<argv>` `` — present when authorized standalone resolve/minimize mutations are split from a message-bearing command, including authorized marker-ended viewer-authored retry resolves. Its instruction appears before `apply review:` and requires no substitutions. Omitted when all mutations are combined into one command.
-    - ``- apply review: `<argv>` `` — fully quoted apply command containing IDs selected by iterate's available capability and semantic routing. When GraphQL supplies capability fields, those fields filter generated actions. REST has no equivalent viewer-capability fields, so otherwise-eligible operations are attempted and GitHub's response is authoritative. Viewer-authored human resolution retains the reply/marker routing described above. A separate, user-directed `apply review` forwards its explicitly supplied IDs without applying this generation policy and surfaces GitHub's result.
-17. `## Instructions` — numbered list to execute in order. When a `resolve-only:` bullet is present, a `Run the resolve-only: command` step precedes the `Run the apply review: command` step. The instructions reference the command bullets by name rather than duplicating them — that single source of truth is what the skill executes.
+16. `## Post-fix actions` — omitted when empty:
+    - ``- base: `<branch>` `` — raw PR base branch context, under `--verbose` only.
+    - ``- requeue: `<argv>` `` and ``- requeue API fallback: `<argv>` `` — merge-queue recovery, described under the merge-queue ejection rules above.
+    - ``- acknowledge queue removal: `<argv>` `` — the native-stack queue acknowledgment.
+17. `## Instructions` — numbered list to execute in order. Review mutation commands are printed inline in their steps:
+    - ``Run: `<argv>` `` — the resolve-only command, present when authorized standalone resolve/minimize mutations are split from a message-bearing command, including authorized marker-ended viewer-authored retry resolves. It precedes the `apply review` step and requires no substitutions. Omitted when all mutations are combined into one command.
+    - The `apply review` step — a fully quoted apply command containing IDs selected by iterate's available capability and semantic routing. When GraphQL supplies capability fields, those fields filter generated actions. REST has no equivalent viewer-capability fields, so otherwise-eligible operations are attempted and GitHub's response is authoritative. Viewer-authored human resolution retains the reply/marker routing described above. A separate, user-directed `apply review` forwards its explicitly supplied IDs without applying this generation policy and surfaces GitHub's result.
 
 **Body truncation (Markdown only):** thread, actionable-comment, changes-requested-review, and review-summary bodies (sections 2–4, 7, 8, 9, 11, and 12 above) are capped at 1,200 characters for a top-level body and 600 characters for a nested thread reply — a thread's first transcript entry (the original comment) always gets the top-level budget even when replies follow. The cap keeps a head and a tail so an opening question and a trailing summary both survive; when a single line is too long to fit either end on its own, that line falls back to a character-level slice instead of being dropped outright. An elided body carries `[…N chars elided — full text: <pointer>]` in place of the missing middle. `<pointer>` is a `gh api repos/<owner>/<repo>/pulls/comments/<id>` (inline review comment) or `gh api repos/<owner>/<repo>/issues/comments/<id>` (PR-level comment) command the agent can run directly — no browser round-trip — derived from the comment's own URL; it falls back to the bare URL when the shape isn't recognized, and is omitted where no URL is available at all (e.g. review summaries). The cut point always snaps to a line boundary outside any ` ``` ` or `~~~` fence, so a capped body never leaves an unterminated fence — if no fence-safe cut exists (a single fence spanning the whole body), the body is left uncapped rather than risk corrupting every section rendered after it. Pass `--verbose` to render bodies uncapped. **JSON is never capped:** `body` fields always carry the full text regardless of format or `--verbose` — the Markdown cap is a presentation choice over the same fetched data, not a difference in what iterate retrieved, so a capped Markdown body's linked pointer and the corresponding JSON `body` field always agree.
 
@@ -753,7 +733,7 @@ For `escalate`, `escalate.stalledChecks[]` is emitted when unstarted CI caused `
 **Resolve command rules (same in Markdown and JSON):**
 
 - A leading `<!-- pr-shepherd -->` in the latest visible comment is the only signal for a prior Shepherd reply; author equality is not sufficient. The generated command does not re-reply to a marked thread. An unmarked bot/non-human or viewer-authored human thread may appear in both reply and resolve flags. Generated unmarked other-human work remains reply-only unless `iterate.resolveOtherHumanThreads` allows resolution. A marked other-human thread is already acknowledged at the default `none` setting. These rules select automatic commands only; a separate user-directed `apply review` forwards explicitly supplied IDs.
-- `--require-sha "$HEAD_SHA"` is appended to the `apply review:` command when it contains `--reply-thread-ids` following actionable thread fixes, when failing checks are being addressed, or whenever `--dismiss-review-ids` is present (dismissal is a post-push operation that must race-check against a moving HEAD). The `resolve-only:` command (marker-ended retries that are still being resolved, plus minimize-only work) never carries `--require-sha` — run it independently of any SHA check.
+- `--require-sha "$(git rev-parse HEAD)"` is appended to the `apply review` command when it contains `--reply-thread-ids` following actionable thread fixes, when failing checks are being addressed, or whenever `--dismiss-review-ids` is present (dismissal is a post-push operation that must race-check against a moving HEAD). The resolve-only command (marker-ended retries that are still being resolved, plus minimize-only work) never carries `--require-sha` — run it independently of any SHA check.
 - `$DISMISS_MESSAGE` must be one specific sentence describing what changed — never generic text like "address review comments".
 
 ### Applying ` ```suggestion ` blocks
@@ -849,10 +829,10 @@ return value ?? defaultValue;
 ```
 ````
 
-The `apply review:` command at the bottom of `## Post-fix actions` includes both IDs when their capabilities authorize the mutations:
+The `apply review` step in `## Instructions` includes both IDs when their capabilities authorize the mutations:
 
 ```
-- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_kwDOSGizTs58XB1L,PRRT_kwDOSGizTs58XC2M --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
+`pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_kwDOSGizTs58XB1L,PRRT_kwDOSGizTs58XC2M --message "$DISMISS_MESSAGE" --require-sha "$(git rev-parse HEAD)"`
 ```
 
 Both IDs stay in `--reply-thread-ids` — `build-suggestion-patches` does not resolve threads automatically. If a suggestion was handled manually instead, its ID still belongs in `--reply-thread-ids`.
@@ -907,7 +887,7 @@ The same thread(s) remain unresolved after their pending commands were returned 
 
 ## Pending review commands
 
-- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
+- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha "$(git rev-parse HEAD)"`
 
 ---
 
@@ -916,7 +896,7 @@ After completing manual fixes, resume only after every required remote update ha
 ## Instructions
 
 1. Stop polling. Ask the user whether to run the pending review commands shown above.
-2. If yes, replace any `$HEAD_SHA` with the full 40-character pushed PR-head SHA and any `$DISMISS_MESSAGE` with a one-sentence disposition, run every pending command, then rerun Shepherd with the same options.
+2. If yes, set any `$DISMISS_MESSAGE` to a one-sentence disposition, run every pending command from the pushed PR head, then rerun Shepherd with the same options.
 ```
 
 The block after the base-fields line (separated by a blank line) is `escalate.humanMessage` in JSON — ready to print verbatim.

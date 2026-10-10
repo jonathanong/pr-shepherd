@@ -16,10 +16,11 @@ describe("shepherd journal instruction helpers", () => {
   it("buildShepherdJournalInstruction references the journal subcommand", () => {
     const text = buildShepherdJournalInstruction(42);
 
-    expect(text).toContain(SHEPHERD_JOURNAL_SECTION);
-    expect(text).toContain("pr-shepherd apply journal 42");
+    expect(text).toBe(
+      "Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal 42 '- <decision>'`",
+    );
     expect(text).not.toContain("idempotent");
-    expect(countMentions(text, "append `- <decision>` to Shepherd Journal")).toBe(1);
+    expect(text).not.toContain(SHEPHERD_JOURNAL_SECTION);
   });
   it("validates the Shepherd Journal section heading matcher", () => {
     expect(SHEPHERD_JOURNAL_SECTION_PATTERN.test("## Shepherd Journal")).toBe(true);
@@ -78,15 +79,13 @@ describe("shepherd journal instruction helpers", () => {
 
     const text = instructions.join("\n");
 
-    expect(text).toContain(SHEPHERD_JOURNAL_SECTION);
     expect(text).toContain("pr-shepherd apply journal 42");
     expect(text).not.toContain("idempotent");
-    // Citation conventions (link threads/comments from their headings, cite reviews by
-    // ID) moved to the pr-shepherd skill's "Shepherd Journal" playbook — invariant text,
-    // not re-emitted per tick. The instruction now points there instead of inlining it.
-    expect(text).toContain('Playbook: "Shepherd Journal".');
+    // Citation conventions (cite item URLs or review IDs) stay inline: a separate playbook
+    // read would cost more than the clause.
+    expect(text).toContain("citing item URLs or review IDs");
     expect(text).toContain(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
-    expect(countMentions(text, "append `- <decision>` to Shepherd Journal")).toBe(1);
+    expect(countMentions(text, "Journal substantial decisions")).toBe(1);
     expect(text).not.toContain("`## Shepherd Journal` entry");
   });
   it("omits Shepherd Journal recommendations when update permission is not established", () => {
@@ -112,6 +111,6 @@ describe("shepherd journal instruction helpers", () => {
     const instructions = buildFixInstructions([], [], [], [], "main", resolveCommand, false, 42, 0);
 
     const text = instructions.join("\n");
-    expect(text).not.toContain(SHEPHERD_JOURNAL_SECTION);
+    expect(text).not.toContain("pr-shepherd apply journal");
   });
 });

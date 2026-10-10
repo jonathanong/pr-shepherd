@@ -27,12 +27,12 @@ A draft that is also behind is `DRAFT`, not `BEHIND`.
 
 After each sweep, `deriveMergeRequirements` (`src/merge-status/requirements.mts`) folds classic branch protection and the PR's applicable rulesets together with current PR state. Iterate prints that snapshot. JSON lives on `mergeRequirements`; text is formatted by `src/merge-status/requirements-format.mts`.
 
-Always printed:
+Printed unless trivial (both text and JSON omit them together):
 
-| Text                                         | JSON                                                             | Meaning                                                                                 |
-| -------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `Approvals: None [Not Required]`             | `approvals: { current, requiredCount }`                          | Current APPROVED reviews vs required count. `[Required]` only when `requiredCount > 0`. |
-| `Conversations Resolved: Yes [Not Required]` | `conversationsResolved: { resolved, unresolvedCount, required }` | Unresolved thread count vs `requiresConversationResolution`.                            |
+| Text                                    | JSON                                                             | Meaning                                                                                                                                            |
+| --------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Approvals: None [Required]`            | `approvals: { current, requiredCount }`                          | Current APPROVED reviews vs required count. `[Required]` only when `requiredCount > 0`. Omitted when there are no approvals and none are required. |
+| `Conversations Resolved: No [Required]` | `conversationsResolved: { resolved, unresolvedCount, required }` | Unresolved thread count vs `requiresConversationResolution`. Omitted when resolution is not required.                                              |
 
 Printed only when they apply:
 
@@ -50,7 +50,7 @@ Printed only when they apply:
 | `Merge queue: …`                              | `mergeQueue`                       | Required, enabled, or already in queue                                                    |
 | `Stack: <n> (layer <pos>/<size>, base <ref>)` | `stack`                            | GitHub stack membership                                                                   |
 
-The agent should read these lines instead of inferring a required review from `reviewDecision`. `REVIEW_REQUIRED` with `Approvals: None [Not Required]` means GitHub is not waiting on an approval.
+The agent should read these lines instead of inferring a required review from `reviewDecision`. `REVIEW_REQUIRED` with no `Approvals:` line (none required) means GitHub is not waiting on an approval.
 
 `stack` is not display-only: when `--merge` is enabled and the clean READY state has lasted for the configured ready-delay, a present `stack` field diverts that one-PR tick to non-terminal `FIX_CODE`, which directs the agent to `pr-shepherd --stack <PR URL> --until-terminal --merge` rather than an ordinary `gh pr merge` command. The aggregate selector emits `gh stack merge` for the highest open layer whose open lower layers all have current READY receipts. That command lands the named layer and every unmerged layer below it. This applies at every stack position, including position 1. GitHub's stack field is public preview and can be absent for a genuinely stacked PR; an absent field means Shepherd has no signal, not that the PR is confirmed unstacked.
 

@@ -94,4 +94,29 @@ describe("iterate helper fallbacks", () => {
       "some checks are unstable",
     );
   });
+
+  it("keeps skipped-only checks distinct from no reported checks", () => {
+    const base = {
+      pr: 42,
+      repo: "owner/repo",
+      status: "IN_PROGRESS" as const,
+      state: "OPEN" as const,
+      mergeStateStatus: "BLOCKED" as const,
+      mergeStatus: "BLOCKED" as const,
+      reviewDecision: null,
+      blockingBotReviewInProgress: true,
+      isDraft: false,
+      shouldCancel: false,
+      remainingSeconds: 0,
+      summary: { passing: 0, skipped: 2, filtered: 0, inProgress: 0, superseded: 0 },
+      baseBranch: "main",
+      branchProtection: null,
+      checks: [],
+    };
+
+    expect(buildWaitLog(base)).toBe("WAIT: no passing or in-progress checks");
+    expect(buildWaitLog({ ...base, summary: { ...base.summary, skipped: 0 } })).toBe(
+      "WAIT: no checks reported",
+    );
+  });
 });

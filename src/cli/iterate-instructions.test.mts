@@ -3,6 +3,9 @@ import { makeIterateResult } from "../../fixtures/cli-parser.iterate-fixtures.mt
 import type { IterateResult } from "../types.mts";
 import { formatIterateResult } from "./iterate-formatter.mts";
 import { projectIterateLean } from "./iterate-lean.mts";
+import { buildSimpleIterateInstructions } from "./iterate-instructions.mts";
+
+type CancelResult = Extract<IterateResult, { action: "cancel" }>;
 
 function textInstructions(result: IterateResult): string[] {
   const section = formatIterateResult(result).split("## Instructions\n\n")[1];
@@ -22,13 +25,22 @@ function jsonInstructions(result: IterateResult): string[] {
 }
 
 describe("iterate instruction polling contract", () => {
-  it.each(["wait", "mark_ready", "merge", "cancel", "escalate"] as const)(
+  it.each(["wait", "mark_ready", "merge", "escalate"] as const)(
     "%s text instructions equal the JSON instruction array",
     (action) => {
       const result = makeIterateResult(action);
       expect(textInstructions(result)).toEqual(jsonInstructions(result));
     },
   );
+
+  it("cancel emits no Instructions section and no JSON instructions", () => {
+    const result = makeIterateResult("cancel");
+    expect(formatIterateResult(result)).not.toContain("## Instructions");
+    expect(
+      (projectIterateLean(result) as { instructions?: string[] }).instructions,
+    ).toBeUndefined();
+    expect(buildSimpleIterateInstructions(result as CancelResult)).toEqual([]);
+  });
 
   it("fix_code text instructions equal fix.instructions", () => {
     const result = makeIterateResult("fix_code");
@@ -52,7 +64,7 @@ describe("iterate instruction polling contract", () => {
     expect(text).toEqual(jsonInstructions(result));
     expect(text).toHaveLength(2);
     expect(text[0]).toContain("Ask the user whether to run");
-    expect(text.join(" ")).toContain("$HEAD_SHA");
+    expect(text.join(" ")).toContain("pushed PR head");
     expect(text.join(" ")).toContain("$DISMISS_MESSAGE");
     expect(text.join(" ")).toContain("pending review commands");
     expect(text.at(-1)).toContain("rerun Shepherd");
@@ -90,7 +102,9 @@ describe("iterate instruction polling contract", () => {
     expect(textInstructions(result)[0]).toContain("With a polling CLI command");
     expect(textInstructions(result)[0]).toContain("With a single-tick CLI, API, or MCP call");
     expect(textInstructions(result)[0]).toContain("wait at least 5 minutes before the next tick");
-    expect(projectIterateLean(result)).toMatchObject({ quotaWarning: result.quotaWarning });
+    expect(projectIterateLean(result)).toMatchObject({
+      quotaWarning: result.quotaWarning,
+    });
   });
 
   it("shows command-scoped API telemetry only in verbose Markdown", () => {

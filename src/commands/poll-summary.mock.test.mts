@@ -98,7 +98,11 @@ describe("aggregate poll recurrence", () => {
     mockFetch.mockResolvedValue({
       selection: { kind: "stack", anchor: 43, stackNumber: 1, stackSize: 2 },
       prs: [
-        { ...row(42, "fix_code"), stack: { number: 1, size: 2, position: 1, baseRefName: "main" } },
+        {
+          ...row(42, "fix_code"),
+          owned: true,
+          stack: { number: 1, size: 2, position: 1, baseRefName: "main" },
+        },
         { ...row(43, "fix_code"), stack: { number: 1, size: 2, position: 2, baseRefName: "main" } },
       ],
     });
@@ -124,7 +128,11 @@ describe("aggregate poll recurrence", () => {
     mockFetch.mockResolvedValue({
       selection: { kind: "stack", anchor: 43, stackNumber: 1, stackSize: 2 },
       prs: [
-        { ...row(42, "fix_code"), stack: { number: 1, size: 2, position: 1, baseRefName: "main" } },
+        {
+          ...row(42, "fix_code"),
+          owned: true,
+          stack: { number: 1, size: 2, position: 1, baseRefName: "main" },
+        },
         { ...row(43, "fix_code"), stack: { number: 1, size: 2, position: 2, baseRefName: "main" } },
       ],
     });

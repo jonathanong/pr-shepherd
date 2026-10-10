@@ -1,5 +1,4 @@
 /* eslint-disable max-lines */
-import { renderResolveCommand } from "../commands/iterate/render.mts";
 import { inlineCode, joinSections } from "../util/markdown.mts";
 import { renderSuggestionBlock, renderLineRange } from "./suggestion-renderer.mts";
 import {
@@ -244,13 +243,8 @@ export function formatFixCodeResult(
     sections.push(result.cancelled.map((id) => `- \`${id}\``).join("\n"));
   }
 
-  sections.push("## Post-fix actions");
-  const postFixLines = [`- base: \`${result.baseBranch}\``];
-  if (result.fix.resolveOnlyCommand?.hasMutations)
-    postFixLines.push(`- resolve-only: \`${renderResolveCommand(result.fix.resolveOnlyCommand)}\``);
-  if (result.fix.resolveCommand.hasMutations) {
-    postFixLines.push(`- apply review: \`${renderResolveCommand(result.fix.resolveCommand)}\``);
-  }
+  // The review mutation commands render inline in their `## Instructions` steps.
+  const postFixLines = verbose ? [`- base: \`${result.baseBranch}\``] : [];
   if (result.fix.requeue) {
     postFixLines.push(`- requeue: ${inlineCode(renderMergeCommand(result.fix.requeue.command))}`);
     if (result.fix.requeue.queueApiFallbackCommand) {
@@ -264,7 +258,7 @@ export function formatFixCodeResult(
       `- acknowledge queue removal: ${inlineCode(renderMergeCommand(result.fix.queueRemovalAcknowledgment))}`,
     );
   }
-  sections.push(postFixLines.join("\n"));
+  if (postFixLines.length > 0) sections.push("## Post-fix actions", postFixLines.join("\n"));
   sections.push("## Instructions");
   sections.push(numberInstructions(result.fix.instructions));
   return joinSections(sections);

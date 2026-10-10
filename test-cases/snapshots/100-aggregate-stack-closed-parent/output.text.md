@@ -1,12 +1,11 @@
 # owner/repo stack #38 [ESCALATE] — actionable
 
-Stack: #38 · anchor PR #372 · 2 layers · mode `summary`
-stackMergeable: false
+anchor PR #372 · 2 layers · mode `summary`
 nextAction: escalate
 
 ## Layers
 
-- [PR #371: Closed foundation](https://github.com/owner/repo/pull/371) — not shepherded · not mergeable (`closed`)
+- [PR #371: Closed foundation](https://github.com/owner/repo/pull/371)
   - CLOSED · position 1/2 · base `main`
 - [PR #372: Open child](https://github.com/owner/repo/pull/372) — shepherded · mergeable
   - OPEN · position 2/2 · base `foundation`

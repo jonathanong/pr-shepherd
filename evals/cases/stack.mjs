@@ -29,7 +29,7 @@ ${fixture}`;
 const ownedConcurrently = (owned, extra = "") => `The plan starts (or delegates) a one-PR \`pr-shepherd … --until-terminal\` session
 for EVERY layer marked \`owned\` — ${owned} — and lets them proceed concurrently.
 
-The output says "Owned layers can proceed concurrently". Stack layers do not wait
+The output says "Start or delegate concurrent one-PR sessions only for \`owned\` rows". Stack layers do not wait
 on a lower layer's READY receipt, so there is no reason to finish one layer before
 starting the next.
 ${extra}
@@ -270,11 +270,11 @@ the mark-ready step to the human.`,
   },
 
   {
-    // Playbook coverage, not traffic: no transcript shows this failure. Cases
-    // 14–22 sit at ceiling because the stack output prints its own rules; this
-    // one leans on a rule that lives only in the "Stack merge" playbook. The
-    // model may guess the extension name unaided, so the per-layer-merge
-    // rubric is the part more likely to separate the arms.
+    // Coverage, not traffic: no transcript shows this failure. Cases 14–22 sit
+    // at ceiling because the stack output prints its own rules; this one tests
+    // the missing-extension clause the merge step now prints inline (it was a
+    // separate "Stack merge" playbook). The model may guess the extension name
+    // unaided, so the per-layer-merge rubric is more likely to separate the arms.
     slug: "24-stack-merge-missing-extension",
     tier: "discriminating",
     fixture: "97-aggregate-stack-full-merge",

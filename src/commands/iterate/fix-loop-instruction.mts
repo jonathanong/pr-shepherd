@@ -29,7 +29,7 @@ function buildFixLoopInstruction(prReference: string | number, journal: boolean)
  * The generic commit/push step and the journal step. Playbook style folds both into one pointer
  * only when the generic push applies: the "Fix-code loop" playbook tells the caller to push to the
  * PR head branch, which would conflict with a conflict or queue-recovery push step. Without the
- * generic push, the journal step stays inline with its own "Shepherd Journal" pointer. The rerun
+ * generic push, the journal step stays inline with its citation clause. The rerun
  * step stays inline because it is the one step a halted loop cannot recover from.
  */
 export function buildPushJournalSteps(
@@ -41,10 +41,7 @@ export function buildPushJournalSteps(
   if (style === "playbook" && genericPush)
     return [buildFixLoopInstruction(prReference, wantsJournal)];
   const steps: string[] = [];
-  if (genericPush)
-    steps.push(
-      "If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.",
-    );
+  if (genericPush) steps.push("Commit and push any code changes.");
   if (wantsJournal) steps.push(buildShepherdJournalInstruction(prReference));
   return steps;
 }

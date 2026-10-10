@@ -1,22 +1,18 @@
 # CI failure triage
 
-Apply when a step says `Playbook: "CI failure triage"`. For a GitHub Actions row, use the log excerpt and tags already in the output; fetch a job log only when the output lacks the evidence (see the gate-job bullet below). An `external` check with a URL may be opened or reproduced.
+Apply when a step says `Playbook: "CI failure triage"`. Use the excerpts and tags already printed; fetch a job log only under the gate-job rule below. An `external` check with a URL may be opened or reproduced.
 
-- Match each failure's `[conclusion: …]` tag. A specific conclusion wins over the general GitHub Actions row.
-- `[rerun authorized]` plus a `rerun:` command means the viewer can rerun Actions (WRITE+) and this is the original attempt. Shepherd checked `repositoryPermission` and `run_attempt`.
-- Run that printed command at most once. An `[attempt: N]` check never gets another rerun. A log excerpt on a later attempt is still investigation work. A later attempt with no usable evidence escalates when nothing else remains.
-- A run in progress, `[conclusion: ACTION_REQUIRED]`, a check whose run id is not a GitHub Actions workflow, or a run with no attempt metadata never gets `[rerun authorized]`.
-- A check with `scope: merge_group` never gets a rerun command. Rerunning cannot restore a removed queue entry and overwrites the failure evidence. If the failure belongs to this PR, fix the PR head. If it does not and an ejection step is printed, apply the Merge queue ejection playbook it names. Without an ejection step the entry is still queued: make no queue mutation and iterate until GitHub reports the removal.
-- Do not invent a handoff from `[FIX_CODE]`. Shepherd returns `[ESCALATE]` when no autonomous follow-up remains.
-- Several bullets can share one run id (matrix jobs). The `rerun:` command is printed once, on the first bullet. Run it once.
+- A specific `[conclusion: …]` tag wins over the general GitHub Actions rule.
+- `[rerun authorized]` with a `rerun:` command means Shepherd verified Actions rerun access (WRITE+) and an original attempt. Run it at most once, even when matrix bullets share its run id. An `[attempt: N]` check never gets another rerun; its excerpt is still investigation work, and without usable evidence it escalates when nothing else remains.
+- In-progress runs, `ACTION_REQUIRED`, non-Actions run ids, and runs without attempt metadata never get `[rerun authorized]`.
+- `scope: merge_group` never gets a rerun: it cannot restore the queue entry and overwrites the evidence. Fix the PR head if the failure is this PR's. Otherwise apply the Merge queue ejection playbook a printed ejection step names; with no ejection step the entry is still queued, so make no queue mutation and iterate until GitHub reports the removal.
+- Do not invent a handoff from `[FIX_CODE]`. Shepherd escalates when nothing autonomous remains.
 
 ## Conclusions
 
-- GitHub Actions failure (has a run id, not `CANCELLED` or `STARTUP_FAILURE`): read the log excerpt. Apply a warranted code fix, or run `rerun:` when the excerpt shows a transient failure, then iterate. Do not wait for the rerun.
-- No usable evidence in the excerpt is not evidence of a transient failure. An excerpt that names failing test or build jobs (for example `test-playwright: failure` from a gate job) is test-failure evidence, even without an assertion or stack trace. Read the `Other failed jobs in this run` log tails under the check first. Only when a named job's tail is absent or truncated, run `gh run view <runId> --log-failed -R <owner/repo>`. Rerun only when the child logs show a transient cause.
-- Transient infrastructure failure: run `rerun:` when it is printed, then iterate. Do not wait. If no command is printed, finish the other surfaced work and iterate.
-- Real test or build failure: fix the code. Do not rerun, even when `[rerun authorized]` is shown.
-- `[conclusion: CANCELLED]` or `[conclusion: STARTUP_FAILURE]`: no log excerpt. Run `rerun:` when printed, then iterate. Do not wait. Without a command, finish other work and iterate.
-- `[conclusion: ACTION_REQUIRED]`: this appears beside other autonomous work. Finish that work and iterate. Shepherd escalates if manual workflow approval is still required.
-- `external` (no run id, has a URL): inspect the provider or reproduce the failure locally, apply a warranted fix, and iterate. The URL is not `[ESCALATE]` by itself.
-- `(no runId)` and no URL: keep the displayed metadata. Shepherd escalates when no other autonomous work remains.
+- Actions failure with a run id: read the excerpt. Fix a real test or build failure in code and never rerun it, even with `[rerun authorized]`. Run a printed `rerun:` only for a transient cause; without one, finish the other work. Then iterate without waiting.
+- An empty excerpt is not evidence of a transient failure. A gate-job excerpt naming failed jobs (for example `test-playwright: failure`) is test-failure evidence even without a stack trace: read the `Other failed jobs in this run` tails first, and only when a named job's tail is absent or truncated run `gh run view <runId> --log-failed -R <owner/repo>`. Rerun only when those logs show a transient cause.
+- `CANCELLED` or `STARTUP_FAILURE` (no excerpt): run a printed `rerun:`, else finish the other work; iterate without waiting.
+- `ACTION_REQUIRED`: finish the other work and iterate. Shepherd escalates if manual approval is still required.
+- `external` with a URL: inspect the provider or reproduce locally, fix, and iterate. The URL alone is not `[ESCALATE]`.
+- `(no runId)` without a URL: keep the metadata. Shepherd escalates when nothing else remains.

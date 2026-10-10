@@ -1,5 +1,4 @@
 import type { IterateResult, StackDraftHold } from "../types.mts";
-import { renderMergeCommand } from "../commands/iterate/merge.mts";
 import { inlineCode } from "../util/markdown.mts";
 import { buildQuotaAwareContinuation } from "../quota-warning.mts";
 import { formatPrUrl } from "../pr-reference.mts";
@@ -70,11 +69,11 @@ export function buildSimpleIterateInstructions(
       ];
       if (result.merge.mode === "queue" && result.merge.queueApiFallbackCommand) {
         instructions.push(
-          `If the gh CLI says auto-merge is disabled instead of adding the PR to the queue, run the \`queue API fallback\` command: ${inlineCode(renderMergeCommand(result.merge.queueApiFallbackCommand))}.`,
+          `If the gh CLI says auto-merge is disabled instead of adding the PR to the queue, run the \`queue API fallback\` command shown above.`,
         );
       } else if (result.merge.fallbackCommand) {
         instructions.push(
-          `Only if GitHub reports that auto-merge is unavailable, run the \`plain merge fallback\` command: ${inlineCode(renderMergeCommand(result.merge.fallbackCommand))}.`,
+          `Only if GitHub reports that auto-merge is unavailable, run the \`plain merge fallback\` command shown above.`,
         );
       }
       instructions.push(
@@ -85,17 +84,16 @@ export function buildSimpleIterateInstructions(
       return instructions;
     }
     case "cancel":
-      return [
-        "Stop polling this pull request — its poll is complete.",
-        "Continue any remaining pull requests or issues from the original request.",
-      ];
+      // `[CANCEL]` needs no steps: stopping, then continuing the original request, is the skill's
+      // invariant recurrence rule, and nothing remains to run for this PR.
+      return [];
     case "escalate": {
       const pending = result.escalate.pendingReviewCommands;
       if (!pending)
         return ["Stop — human direction is required before automated polling can resume."];
       return [
         "Stop polling. Ask the user whether to run the pending review commands shown above.",
-        "If yes, replace any `$HEAD_SHA` with the full 40-character pushed PR-head SHA and any `$DISMISS_MESSAGE` with a one-sentence disposition, run every pending command, then rerun Shepherd with the same options.",
+        "If yes, set any `$DISMISS_MESSAGE` to a one-sentence disposition, run every pending command from the pushed PR head, then rerun Shepherd with the same options.",
       ];
     }
   }

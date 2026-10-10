@@ -1,7 +1,6 @@
 # owner/repo stack #37 — actionable
 
-Stack: #37 · anchor PR #362 · 2 layers · mode `summary`
-stackMergeable: false
+anchor PR #362 · 2 layers · mode `summary`
 nextAction: shepherd
 
 ## Layers
@@ -17,6 +16,6 @@ nextAction: shepherd
 
 ## Instructions
 
-1. Start or delegate one-PR sessions only for rows marked `owned`. Leave every other author's layer untouched. Owned layers can proceed concurrently.
-2. Run `pr-shepherd https://github.com/owner/repo/pull/362 --until-terminal` for PR #362.
+1. Start or delegate concurrent one-PR sessions only for `owned` rows. Leave other layers untouched.
+2. Run `pr-shepherd https://github.com/owner/repo/pull/362 --until-terminal`.
 3. After the selected one-PR sessions, rerun this same `--stack` selector.

@@ -26,15 +26,9 @@ here is what it returned. Take it from there.
 
 # PR #42 [FIX_CODE]
 
-**status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo`
 **summary** 1 passing
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
 Stack: 7 (layer 2/3, base stack/7/1)
-
-## Post-fix actions
-
-- base: `main`
 
 ## Instructions
 

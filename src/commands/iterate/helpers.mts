@@ -121,7 +121,12 @@ export function buildActiveChecks(report: ShepherdReport): ActiveCheck[] {
 
 export function buildWaitLog(base: IterateResultBase): string {
   const { summary, remainingSeconds } = base;
-  const parts: string[] = [`WAIT: ${summary.passing} passing, ${summary.inProgress} in-progress`];
+  // Zero counts are trivial defaults; the line keeps whichever count is non-zero.
+  const counts = [
+    ...(summary.passing > 0 ? [`${summary.passing} passing`] : []),
+    ...(summary.inProgress > 0 ? [`${summary.inProgress} in-progress`] : []),
+  ];
+  const parts: string[] = counts.length > 0 ? [counts.join(", ")] : [];
 
   if ((base.inProgressChecks?.length ?? 0) > 0) {
     parts.push(
@@ -156,7 +161,10 @@ export function buildWaitLog(base: IterateResultBase): string {
     parts.push(`${remainingSeconds}s until auto-cancel`);
   }
 
-  return parts.join(" — ");
+  if (parts.length > 0) return `WAIT: ${parts.join(" — ")}`;
+  // Skipped, filtered, or superseded checks still count as reported CI data.
+  const reported = summary.skipped + summary.filtered + summary.superseded > 0;
+  return `WAIT: ${reported ? "no passing or in-progress checks" : "no checks reported"}`;
 }
 
 export function blockedCancelNote(base: IterateResultBase): string {

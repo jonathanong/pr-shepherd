@@ -1,9 +1,6 @@
 # PR #42 [FIX_CODE]
 
-**status** `FAILING` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 0 passing
-Approvals: None [Not Required]
-Conversations Resolved: No [Not Required]
+**status** `FAILING` · **repo** `owner/repo`
 
 ## Review threads
 
@@ -23,20 +20,12 @@ Conversations Resolved: No [Not Required]
 - `check_annotation_5501` [↗](https://github.com/owner/repo/blob/abc123/src/util/parse.ts#L18) `src/util/parse.ts:18` [FAILURE] — Unhandled edge case
 > Empty input is not handled before indexing.
 
-## Post-fix actions
-
-- base: `main`
-- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_with_annotations --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
-
 ## Instructions
 
-1. Review each item under `## Review threads`, `## Failing checks`, `## Check annotations` and decide whether it needs a code change.
-2. Apply every warranted review fix in each file referenced above.
-3. Triage `## Failing checks`. Playbook: "CI failure triage".
-4. Inspect every referenced range under `## Check annotations` and apply any warranted change.
-5. If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.
-6. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`. Playbook: "Shepherd Journal".
-7. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)` (it must equal the remote PR head). If you did, use the pushed SHA.
-8. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
-9. Run the `apply review:` command above. Playbook: "Review-mutation mechanics".
-10. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.
+1. Fix each warranted item above.
+2. Triage `## Failing checks`. Playbook: "CI failure triage".
+3. Inspect every referenced range under `## Check annotations` and apply any warranted change.
+4. Commit and push any code changes.
+5. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
+6. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_with_annotations --message "$DISMISS_MESSAGE" --require-sha "$(git rev-parse HEAD)"`
+7. `[FIX_CODE]` is non-terminal. Rerun the same command now.

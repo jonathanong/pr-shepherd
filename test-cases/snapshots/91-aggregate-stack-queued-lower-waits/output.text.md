@@ -1,6 +1,6 @@
 # owner/repo stack #12 — timeout
 
-Stack: #12 · anchor PR #202 · 2 layers · mode `summary`
+anchor PR #202 · 2 layers · mode `summary`
 stackMergeable: true
 nextAction: wait
 

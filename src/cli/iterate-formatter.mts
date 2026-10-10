@@ -28,12 +28,12 @@ import { formatNextCheckLines, formatPollModeSegment } from "./next-check-format
  *   1. The H1 heading on line 1 contains `[<ACTION>]` — the action tag identifies
  *      the output for logging and validation. Behavior is driven by `## Instructions`,
  *      not by dispatching on the tag.
- *   2. `[FIX_CODE]` wraps the `resolve` command under `## Post-fix actions` in
- *      backticks — the skill extracts the backticked content for execution.
- *   3. Every action ends with a `## Instructions` section — numbered `1.`, `2.`, … —
- *      that tells the agent exactly what to do with this output. The section is
- *      unconditional: every action, every variant, always emits at least one step.
- *      The skill simply follows those steps; it does not need its own dispatch table.
+ *   2. `[FIX_CODE]` prints the `apply review` command inline, in backticks, in its
+ *      `## Instructions` step; the agent runs that backticked command as printed.
+ *   3. Every action except `cancel` ends with a `## Instructions` section — numbered
+ *      `1.`, `2.`, … — that tells the agent exactly what to do with this output, with at
+ *      least one step. `cancel` has no section: the `[CANCEL]` tag already means stop this
+ *      PR's loop. The skill follows those steps; it does not need its own dispatch table.
  */
 export function formatIterateResult(
   result: IterateResult,
@@ -54,34 +54,39 @@ export function formatIterateResult(
       : "";
   const baseBranchSeg =
     verbose && result.baseBranch ? ` · **baseBranch** \`${result.baseBranch}\`` : "";
-  const baseLine = `**status** \`${result.status}\` · **merge** \`${result.mergeStateStatus}\`${reviewDecisionSeg} · **state** \`${result.state}\` · **repo** \`${result.repo}\`${baseBranchSeg}${formatPollModeSegment(result)}`;
+  // A CLEAN merge state and an OPEN PR are the trivial defaults; verbose output keeps them.
+  const mergeSeg =
+    verbose || result.mergeStateStatus !== "CLEAN"
+      ? ` · **merge** \`${result.mergeStateStatus}\``
+      : "";
+  const stateSeg = verbose || result.state !== "OPEN" ? ` · **state** \`${result.state}\`` : "";
+  const baseLine = `**status** \`${result.status}\`${mergeSeg}${reviewDecisionSeg}${stateSeg} · **repo** \`${result.repo}\`${baseBranchSeg}${formatPollModeSegment(result)}`;
 
   const branchSeg = branchStateSegment(result);
-  let summaryLine: string;
+  let summaryLine: string | null;
   if (verbose) {
     const verboseBranch = branchSeg ? ` · ${branchSeg}` : "";
-    summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress, ${result.summary.superseded} superseded · **remainingSeconds** ${result.remainingSeconds} · **blockingBotReviewInProgress** ${result.blockingBotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}${verboseBranch}`;
+    summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress, ${result.summary.superseded} superseded · **remainingSeconds** ${result.remainingSeconds} · **blockingBotReviewInProgress** ${result.blockingBotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}${verboseBranch}${readyDelaySuffix ? ` · **ready-delay** \`${readyDelaySuffix}\` (override)` : ""}`;
   } else {
-    const counts = [`${result.summary.passing} passing`];
+    const counts: string[] = [];
+    if (result.summary.passing > 0) counts.push(`${result.summary.passing} passing`);
     if (result.summary.skipped > 0) counts.push(`${result.summary.skipped} skipped`);
     if (result.summary.filtered > 0) counts.push(`${result.summary.filtered} filtered`);
     if (result.summary.inProgress > 0) counts.push(`${result.summary.inProgress} inProgress`);
     if (result.summary.superseded > 0) counts.push(`${result.summary.superseded} superseded`);
-    const segs = [`**summary** ${counts.join(", ")}`];
+    const segs = counts.length > 0 ? [`**summary** ${counts.join(", ")}`] : [];
     if (result.status === "READY" && result.remainingSeconds > 0) {
       segs.push(`**remainingSeconds** ${result.remainingSeconds}`);
     }
     if (result.blockingBotReviewInProgress) segs.push(`**blockingBotReviewInProgress**`);
     if (result.isDraft) segs.push(`**isDraft**`);
     if (branchSeg) segs.push(branchSeg);
-    summaryLine = segs.join(" · ");
+    // Surface an explicit `--ready-delay` override (set only when the user passed the flag)
+    // so the active settle window stays visible on every tick.
+    if (readyDelaySuffix) segs.push(`**ready-delay** \`${readyDelaySuffix}\` (override)`);
+    summaryLine = segs.length > 0 ? segs.join(" · ") : null;
   }
-
-  // Surface an explicit `--ready-delay` override (set only when the user passed the flag)
-  // so the active settle window stays visible on every tick. Replaces the rerun command
-  if (readyDelaySuffix) {
-    summaryLine += ` · **ready-delay** \`${readyDelaySuffix}\` (override)`;
-  }
+  const summaryLines = summaryLine ? [summaryLine] : [];
 
   const bp = result.branchProtection;
   const requiredParts: string[] = [];
@@ -104,7 +109,7 @@ export function formatIterateResult(
   }
   const requiredLine = requiredParts.length > 0 ? `**required** ${requiredParts.join(", ")}` : null;
 
-  const headerLines = [heading, "", baseLine, summaryLine, ...formatTransportEvidence(result)];
+  const headerLines = [heading, "", baseLine, ...summaryLines, ...formatTransportEvidence(result)];
   if (result.mergeRequirements) {
     headerLines.push(...formatMergeRequirementLines(result.mergeRequirements));
   } else if (requiredLine) {
@@ -161,11 +166,16 @@ export function formatIterateResult(
       return finish(formatMergeAction(joinSections([header, ...telemetrySections]), result));
 
     case "cancel": {
+      // A merged or closed PR needs no more data: the `[CANCEL]` heading is enough. Cancel has no
+      // instruction steps; the skill's recurrence rule says what to do after it.
+      if (!verbose && (result.reason === "merged" || result.reason === "closed")) {
+        return finish(`${heading} — ${result.reason}`);
+      }
       const cancelHeaderLines = [
         `${heading} — ${result.reason}`,
         "",
         baseLine,
-        summaryLine,
+        ...summaryLines,
         ...formatTransportEvidence(result),
       ];
       if (result.mergeRequirements) {
@@ -190,7 +200,6 @@ export function formatIterateResult(
           ...(apiUsage ? [apiUsage] : []),
           ...(verboseChecks ? [verboseChecks] : []),
           adaptIterateLog(result.log),
-          `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
         ]),
       );
     }

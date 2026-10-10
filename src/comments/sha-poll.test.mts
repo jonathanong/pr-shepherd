@@ -29,4 +29,21 @@ describe("waitForSha", () => {
       vi.useRealTimers();
     }
   });
+
+  it("names the checkout cause and the current PR head on timeout", async () => {
+    vi.useFakeTimers();
+    try {
+      mockGetPrHeadSha.mockResolvedValue("pr-head-sha");
+      const settled = waitForSha(42, REPO, "local-sha").catch((e: unknown) => e as Error);
+
+      await vi.runAllTimersAsync();
+
+      const { message } = (await settled) as Error;
+      expect(message).toContain("has not updated to local-sha");
+      expect(message).toContain("outside the PR head checkout");
+      expect(message).toContain("(currently pr-head-sha)");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

@@ -1,13 +1,11 @@
 # PR #42 [WAIT]
 
-**status** `IN_PROGRESS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 0 passing, 1 inProgress, 1 superseded
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
+**status** `IN_PROGRESS` · **repo** `owner/repo`
+**summary** 1 inProgress, 1 superseded
 **superseded** `CI / build`
 **activity** 0 commits · 0 review rounds · active: `CI / tests`
 
-WAIT: 0 passing, 1 in-progress — active checks: CI / tests
+WAIT: 1 in-progress — active checks: CI / tests
 
 ## Instructions
 

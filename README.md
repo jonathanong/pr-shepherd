@@ -35,7 +35,7 @@ Each tick returns exactly one action:
 - `MARK_READY` — the CLI converted an eligible draft PR to ready; continue polling.
 - `FIX_CODE` — agent work is required; complete it, push when needed, then continue polling. Push access to the PR head branch is a usage precondition.
 - `MERGE` — run the emitted head-pinned merge or queue command for the selected transport. GitHub is authoritative for the result and reports any authorization failure. Queue operations can use REST.
-- `CANCEL` — stop polling this pull request because it merged, closed, or completed its ready-delay. Continue any remaining pull requests or issues from the original request.
+- `CANCEL` — stop polling this pull request because it merged, closed, or completed its ready-delay. It prints no instructions; continue any remaining pull requests or issues from the original request.
 - `ESCALATE` — stop polling until a human provides direction. Native stacks reach this only after their autonomous one-PR sessions are exhausted.
 
 Native-stack summaries additionally use stack-level `SHEPHERD`: run the listed one-PR sessions,
@@ -48,10 +48,8 @@ Example shape:
 
 # PR #123 [FIX_CODE]
 
-**status** `UNRESOLVED_COMMENTS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo`
 **summary** 3 passing
-Approvals: None [Not Required]
-Conversations Resolved: No [Not Required]
 
 ## Review threads
 
@@ -64,21 +62,14 @@ Conversations Resolved: No [Not Required]
 - `24697658766` — `CI › lint / typecheck / test (22.x)` [conclusion: FAILURE]
   > oxfmt
 
-## Post-fix actions
-
-- base: `main`
-- apply review: `pr-shepherd apply review 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
-
 ## Instructions
 
-1. Review each item under `## Review threads` and `## Failing checks` and decide whether it needs a code change.
-2. Apply every warranted review fix in each file referenced above.
-3. Triage `## Failing checks`. Playbook: "CI failure triage".
-4. If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.
-5. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)` (it must equal the remote PR head). If you did, use the pushed SHA.
-6. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
-7. Run the `apply review:` command above. Playbook: "Review-mutation mechanics".
-8. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.
+1. Fix each warranted item above.
+2. Triage `## Failing checks`. Playbook: "CI failure triage".
+3. Commit and push any code changes.
+4. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal 123 '- <decision>'`
+5. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha "$(git rev-parse HEAD)"`
+6. `[FIX_CODE]` is non-terminal. Rerun the same command now.
 ```
 
 See [docs/actions.md](docs/actions.md) for the complete output contract and [docs/escalations.md](docs/escalations.md) for the exact finite human-handoff boundary. Iterate/poll PR outcomes use exit codes `0` and `10`–`16`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).

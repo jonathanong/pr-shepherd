@@ -26,7 +26,12 @@ function stack(prs: PollSummaryItem[]): PollSummaryResult {
   return {
     mode: "summary",
     repo: "acme/widgets",
-    selection: { kind: "stack", anchor: 321, stackNumber: 7, stackSize: prs.length },
+    selection: {
+      kind: "stack",
+      anchor: 321,
+      stackNumber: 7,
+      stackSize: prs.length,
+    },
     reason: "actionable",
     nextAction: "shepherd",
     prs,
@@ -90,13 +95,23 @@ describe("formatStackOverview", () => {
       },
     };
     const overview = projectStackOverview(result);
-    expect(overview.prs[0]).toMatchObject({ blocker: "fix-thrash", isDraft: true, author: "bob" });
+    expect(overview.prs[0]).toMatchObject({
+      blocker: "fix-thrash",
+      isDraft: true,
+      author: "bob",
+    });
     expect(overview.prs[1]).toMatchObject({
       blocker: "queue-removal",
       queueRemoval: { reason: null },
     });
-    expect(overview.prs[2]).toMatchObject({ blocker: "review-work", actionable: 2 });
-    expect(overview.prs[3]).toMatchObject({ blocker: "checks-in-progress", inProgress: 4 });
+    expect(overview.prs[2]).toMatchObject({
+      blocker: "review-work",
+      actionable: 2,
+    });
+    expect(overview.prs[3]).toMatchObject({
+      blocker: "checks-in-progress",
+      inProgress: 4,
+    });
     const text = formatStackOverview(overview);
     expect(text).toContain("1. Leave unowned layers.");
     expect(text).toContain("## Stack ancestry");
@@ -122,7 +137,6 @@ describe("formatStackOverview", () => {
           title: "Bare",
           url: "https://github.com/acme/widgets/pull/1",
           state: "OPEN",
-          shepherded: false,
           mergeable: false,
           baseRefName: "main",
         },

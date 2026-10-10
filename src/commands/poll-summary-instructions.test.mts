@@ -12,8 +12,8 @@ describe("native-stack reconciliation", () => {
       stackMergeable: false,
       reason: "actionable",
     });
-    expect(result.instructions?.join("\n")).toContain("PR #1");
-    expect(result.instructions?.join("\n")).toContain("PR #3");
+    expect(result.instructions?.join("\n")).toContain("pull/1 --until-terminal`.");
+    expect(result.instructions?.join("\n")).toContain("pull/3 --until-terminal`.");
   });
 
   it("sorts rows without stack positions after positioned layers", () => {
@@ -163,8 +163,8 @@ describe("native-stack reconciliation", () => {
     );
     expect(result).toMatchObject({ nextAction: "shepherd", stackMergeable: false });
     expect(result.prs.map((item) => item.action)).toEqual(["mark_ready", "cancel", "fix_code"]);
-    expect(result.instructions?.join("\n")).toContain("PR #1");
-    expect(result.instructions?.join("\n")).toContain("PR #3");
+    expect(result.instructions?.join("\n")).toContain("pull/1 --until-terminal`.");
+    expect(result.instructions?.join("\n")).toContain("pull/3 --until-terminal`.");
     expect(result.instructions?.join("\n")).not.toContain("Keep upper draft");
   });
 
@@ -219,7 +219,7 @@ describe("native-stack reconciliation", () => {
     );
     expect(result).toMatchObject({ nextAction: "shepherd", stackMergeable: false });
     expect(result.prs[0]?.action).toBe("fix_code");
-    expect(result.instructions?.join("\n")).toContain("PR #1");
+    expect(result.instructions?.join("\n")).toContain("pull/1 --until-terminal`.");
   });
 
   it("surfaces a row ESCALATE while shepherding another row's autonomous work", () => {
@@ -241,7 +241,7 @@ describe("native-stack reconciliation", () => {
     expect(result).toMatchObject({ nextAction: "shepherd", stackMergeable: false });
     expect(result.prs.map((item) => item.action)).toEqual(["escalate", "fix_code"]);
     expect(result.instructions?.join("\n")).toContain("PR #1");
-    expect(result.instructions?.join("\n")).toContain("PR #2");
+    expect(result.instructions?.join("\n")).toContain("pull/2 --until-terminal`.");
     expect(result.instructions?.join("\n")).toContain("rerun this same `--stack` selector");
   });
 
@@ -297,7 +297,7 @@ describe("native-stack reconciliation", () => {
       false,
     );
     expect(result.nextAction).toBe("shepherd");
-    expect(result.instructions?.join("\n")).toContain("PR #3");
+    expect(result.instructions?.join("\n")).toContain("pull/3 --until-terminal`.");
     expect(result.instructions?.join("\n")).not.toContain("gh stack push");
   });
 
@@ -311,7 +311,9 @@ describe("native-stack reconciliation", () => {
     single.selection = { kind: "stack", anchor: 1, stackNumber: 9, stackSize: 1 };
     const ready = withPollSummaryInstructions(single, true);
     expect(ready).toMatchObject({ nextAction: "merge", stackMergeable: true });
-    expect(ready.instructions?.[0]).toContain('Playbook: "Stack merge".');
+    expect(ready.instructions?.[0]).toContain(
+      "If `gh stack` is an unknown command, run `gh extension install github/gh-stack`, then rerun that merge command.",
+    );
     expect(ready.instructions?.[0]).toContain(
       "GH_REPO=acme/widgets gh stack merge 1 --yes --squash",
     );
@@ -373,7 +375,7 @@ describe("native-stack reconciliation", () => {
       false,
     );
     expect(result.nextAction).toBe("shepherd");
-    expect(result.instructions?.join("\n")).toContain("PR #3");
+    expect(result.instructions?.join("\n")).toContain("pull/3 --until-terminal`.");
   });
 
   it("does not convert a quota warning into a third stack nextAction", () => {

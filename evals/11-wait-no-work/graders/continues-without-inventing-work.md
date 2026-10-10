@@ -9,7 +9,7 @@ that the correct next step is to iterate again, and it characterises the PR's
 state correctly.
 
 The output reads `**summary** 1 passing · **remainingSeconds** 600` and
-`WAIT: 1 passing, 0 in-progress`. So: one check has PASSED, nothing is running,
+`WAIT: 1 passing`. So: one check has PASSED, nothing is running,
 and the 600 seconds is the ready-delay countdown — NOT a CI job in flight. There
 are no review threads, no comments and no failing checks.
 

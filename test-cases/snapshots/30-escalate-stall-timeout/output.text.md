@@ -1,9 +1,7 @@
 # PR #42 [ESCALATE]
 
-**status** `IN_PROGRESS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 0 passing, 1 inProgress
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
+**status** `IN_PROGRESS` · **repo** `owner/repo`
+**summary** 1 inProgress
 **activity** 0 commits · 0 review rounds · active: `CI / build`
 
 ⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required

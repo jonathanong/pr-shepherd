@@ -24,7 +24,7 @@ describe("renderResolveCommand", () => {
       'pr-shepherd resolve 42 --dismiss-review-ids r-1 --message "$DISMISS_MESSAGE"',
     );
   });
-  it('appends --require-sha "$HEAD_SHA" when requiresHeadSha is true', () => {
+  it('appends --require-sha "$(git rev-parse HEAD)" when requiresHeadSha is true', () => {
     const joined = renderResolveCommand({
       argv: ["pr-shepherd", "resolve", "42", "--resolve-thread-ids", "t-1"],
       requiresHeadSha: true,
@@ -32,7 +32,7 @@ describe("renderResolveCommand", () => {
       hasMutations: true,
     });
     expect(joined).toBe(
-      'pr-shepherd resolve 42 --resolve-thread-ids t-1 --require-sha "$HEAD_SHA"',
+      'pr-shepherd resolve 42 --resolve-thread-ids t-1 --require-sha "$(git rev-parse HEAD)"',
     );
   });
   it("omits --require-sha when requiresHeadSha is false (noise-only path)", () => {
