@@ -31,6 +31,10 @@ import {
   ghViewCmd,
   fixtureInput,
   fixtureState,
+  gql,
+  rest,
+  stackTickApi,
+  stackTickApiRest,
   ghAnnotations,
   ghFailingCheckRuns,
   mcpPrList,
@@ -73,7 +77,19 @@ function shepherdApply(text, result, phase = 2) {
   const filled = cmd
     .replace("$DISMISS_MESSAGE", "Renamed the variable as requested.")
     .replace("$HEAD_SHA", "0123456789abcdef0123456789abcdef01234567");
-  return { phase, via: "bash", cmd: filled, out: formatMutateResult({ errors: [], ...result }) };
+  // GraphQL: one thread read plus one request per chunk of 10 mutations. REST:
+  // one request per reply plus the thread read; a resolve has no REST route, so
+  // REST mode skips it (docs/graphql-usage.md, docs/escalations.md).
+  const replies = result.repliedThreads?.length ?? 0;
+  const mutations = replies + (result.resolvedThreads?.length ?? 0);
+  return {
+    phase,
+    via: "bash",
+    cmd: filled,
+    out: formatMutateResult({ errors: [], ...result }),
+    api: gql(1 + Math.ceil(mutations / 10)),
+    apiRest: rest(1 + replies),
+  };
 }
 
 /** Everything a baseline must read to decide what a tick needs. */
@@ -357,7 +373,15 @@ function setupScenario({ id, session }) {
         const share = Math.min(1, s.weight);
         const before = shepherdTokens;
         const text = arms.shepherd.map((c) => c.out).join("\n");
-        const named = [...new Set([...text.matchAll(/Playbook: "([^"]+)"/g)].map((m) => m[1]))];
+        // A scenario whose skill text, not its output, sends the agent to a
+        // playbook (a step the skill runs without a CLI call) lists it in
+        // `skillTriggers`. It is loaded like a named one and must exist.
+        const triggers = s.skillTriggers ?? [];
+        for (const n of triggers)
+          if (!PLAYBOOK_FILES[n]) throw new Error(`skillTriggers: unknown playbook "${n}"`);
+        const named = [
+          ...new Set([...text.matchAll(/Playbook: "([^"]+)"/g)].map((m) => m[1]).concat(triggers)),
+        ];
         const freshBooks = named
           .sort()
           .map((n) => [n, topUp(`playbook:${n}`, share)])
@@ -435,11 +459,24 @@ const PR_SCENARIOS = [
         (_, i) => `[poll tick ${i + 1} / +${i * 60}s] WAIT — ${reason}; next tick in 60s\n`,
       ).join("");
       return {
-        shepherd: [{ phase: 1, via: "bash", cmd: "", out: stderr, continues: true }],
+        // Each poll is a fingerprint hit: 1 GraphQL point, or a full REST read.
+        shepherd: [
+          {
+            phase: 1,
+            via: "bash",
+            cmd: "",
+            out: stderr,
+            continues: true,
+            api: gql(polls),
+            apiRest: rest(12 * polls),
+          },
+        ],
         gh: [
           {
             phase: 1,
             via: "bash",
+            // One GraphQL query per refresh.
+            api: gql(polls),
             cmd: "gh pr checks 42 -R owner/repo --watch --interval 60",
             // `--watch` returns only once the checks finish: the last refresh is
             // terminal (here the failure \`failing-check\` picks up).
@@ -567,7 +604,18 @@ const PR_SCENARIOS = [
       const fixture = "07-mark-ready-draft-clean";
       const state = withHistory(fixtureState(fixture), HISTORY);
       return {
-        shepherd: [],
+        // The poll's mark-ready mutation costs no call or tokens, only one point.
+        shepherd: [
+          {
+            phase: 1,
+            via: "bash",
+            cmd: "",
+            out: "",
+            continues: true,
+            api: gql(1),
+            apiRest: gql(1),
+          },
+        ],
         gh: [
           ...ghObserve(state),
           {
@@ -593,6 +641,8 @@ const PR_SCENARIOS = [
   {
     id: "merged",
     weight: 1,
+    // A state-first baseline stops after reading the state.
+    terminal: true,
     title: "Notice the PR merged and stop",
     note: "With #505's history.",
     arms() {
@@ -927,7 +977,14 @@ const STACK_SCENARIOS = [
       const routed = openLayers(layers).filter((l) => l.owned && l.action !== "cancel");
       return {
         shepherd: [
-          { phase: 1, via: "bash", cmd: stackCmd(layers[anchor].pr, repo), out: snapshot(name) },
+          {
+            phase: 1,
+            via: "bash",
+            cmd: stackCmd(layers[anchor].pr, repo),
+            out: snapshot(name),
+            api: stackTickApi(layers.length),
+            apiRest: stackTickApiRest(layers.length),
+          },
           ...routed.map((l) => ({
             phase: 2,
             via: "bash",
@@ -989,6 +1046,18 @@ const STACK_SCENARIOS = [
             via: "bash",
             cmd: stackCmd(layers[anchor].pr, repo, " --merge"),
             out: `${stderr}${settledOverview(layers, number)}`,
+            // One stack tick per poll; the first is a fingerprint miss, the rest hits.
+            api: stackTickApi(layers.length),
+            apiRest: stackTickApiRest(layers.length),
+          },
+          {
+            phase: 1,
+            via: "bash",
+            cmd: "",
+            out: "",
+            continues: true,
+            api: gql(ticks - 1),
+            apiRest: rest((ticks - 1) * stackTickApiRest(layers.length).restCore),
           },
         ],
         gh: [
@@ -1030,6 +1099,8 @@ const STACK_SCENARIOS = [
             via: "bash",
             cmd: stackCmd(layers[anchor].pr, repo, " --merge"),
             out: snapshot(name),
+            api: stackTickApi(layers.length),
+            apiRest: stackTickApiRest(layers.length),
           },
           {
             phase: 2,

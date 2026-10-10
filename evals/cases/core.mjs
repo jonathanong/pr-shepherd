@@ -9,6 +9,7 @@ export const CORE_CASES = [
     // instead of letting the CLI poll. The skill forbids it by name; the
     // baseline has no such rule and a watch looks locally sensible.
     slug: "01-ci-in-progress-no-watch",
+    tier: "discriminating",
     fixture: "09-wait-in-progress-ci",
     shape: shapeA,
     tags: ["wait", "efficiency"],
@@ -39,6 +40,7 @@ the next tick.`,
     // with the same options to continue" and the agent stopped anyway, prompting
     // "what? why did you stop at MARK_READY?".
     slug: "02-mark-ready-continue",
+    tier: "discriminating",
     fixture: "07-mark-ready-draft-clean",
     shape: shapeA,
     tags: ["mark-ready"],
@@ -68,6 +70,7 @@ to start before continuing.`,
     // model has to hold threads, comments, a failing check and a
     // changes-requested review in mind simultaneously and drop none of them.
     slug: "03-multi-category-fix",
+    tier: "guard",
     fixture: "54-fix-code-multi-category-threads-comments-checks-changes",
     shape: shapeA,
     tags: ["fix-code", "complex"],
@@ -115,6 +118,7 @@ passing without committing to run it.`,
     // Fixture 11's only detail is the step name, so an agent that wants to read
     // logs before deciding is behaving correctly there and the grader was unfair.
     slug: "04-real-failure-no-blind-rerun",
+    tier: "discriminating",
     fixture: "61-fix-code-aggregate-ci-exit-code",
     shape: shapeA,
     tags: ["fix-code", "ci-triage"],
@@ -145,6 +149,7 @@ rerun "to see if it's flaky" before looking at the failure; describe
     // gamed by never rerunning; this case punishes exactly that, so the pair only
     // means anything together.
     slug: "05-cancelled-must-rerun",
+    tier: "discriminating",
     fixture: "14-fix-code-cancelled-conclusion",
     shape: shapeB,
     tags: ["fix-code", "ci-triage"],
@@ -174,6 +179,7 @@ unfixable.`,
     // pending command wholesale, not editing its ID list. Zero truncated ID lists
     // were found across three tools.
     slug: "06-fix-code-dismiss-stale-bot",
+    tier: "guard",
     fixture: "60-fix-code-bot-cr-not-dismissed",
     shape: shapeA,
     tags: ["fix_code"],
@@ -199,6 +205,7 @@ first stale review.`,
   {
     // Sibling of case 06: preserve the thread reply and bot dismissal together.
     slug: "07-fix-code-bot-and-thread",
+    tier: "guard",
     fixture: "84-fix-code-bot-cr-with-thread",
     shape: shapeB,
     tags: ["fix_code"],
@@ -227,6 +234,7 @@ dismissal to a human or silently abandon the actionable thread.`,
     // identification of the real blocker rather than mere absence of the word
     // "approval", which would be one-directional and gameable.
     slug: "08-mergeability-diagnosis",
+    tier: "guard",
     fixture: "32-fix-code-pr-level-changes-requested",
     shape: shapeB,
     tags: ["fix-code", "mergeability"],
@@ -271,6 +279,7 @@ outstanding merge requirement.`,
     // `merge DIRTY`, a branch conflicting with base, and unresolved
     // conversations — bait for a model that pattern-matches "conflicts".
     slug: "09-cancel-terminal-beats-work",
+    tier: "guard",
     fixture: "82-cancel-terminal-beats-all-work",
     shape: shapeA,
     tags: ["cancel", "mergeability"],
@@ -304,6 +313,7 @@ any push against this PR.`,
 
   {
     slug: "10-external-check-no-handoff",
+    tier: "discriminating",
     fixture: "12-fix-code-failing-check-external",
     shape: shapeA,
     tags: ["fix-code", "ci-triage"],
@@ -334,6 +344,7 @@ to investigate; stop the loop pending someone else's input.`,
 
   {
     slug: "11-wait-no-work",
+    tier: "guard",
     fixture: "24-wait-review-summary-already-surfaced",
     shape: shapeB,
     tags: ["wait"],
@@ -374,6 +385,7 @@ do.`,
     // Context-efficiency: the annotation already carries file, line and message.
     // Re-fetching the provider's page adds context and no information.
     slug: "12-annotations-already-surfaced",
+    tier: "guard",
     fixture: "55-fix-code-failing-check-annotations-with-thread",
     shape: shapeA,
     tags: ["fix-code", "complex", "efficiency"],
@@ -412,6 +424,7 @@ the failure cannot be understood without it.`,
 
   {
     slug: "13-neg-github-review-api",
+    tier: "guard",
     fixture: null,
     tags: ["neg"],
     prompt: `In GitHub's API, what's the difference between a pull request review whose

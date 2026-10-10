@@ -43,13 +43,45 @@ update_issue_comment update_pull_request update_pull_request_branch`.split(/\s+/
 const gh = (path) => execFileSync("gh", ["api", path], { encoding: "utf8", maxBuffer: 64 << 20 });
 const ghJson = (path) => JSON.parse(gh(path));
 
+/**
+ * Review threads as `{ path, line, resolved, outdated, comment_ids }`. GraphQL
+ * is the normal transport and has real thread objects, so it comes first. The
+ * REST-only `ccr/review_threads` route is the fallback for a token or network
+ * that cannot reach GraphQL (the Claude Code remote 403, for one).
+ *
+ * The GraphQL path is not exercised by CI or by the author's sandbox, which has
+ * no GitHub access; it is unverified until record.mjs is next run live.
+ */
+function recordThreads() {
+  const [owner, name] = REPO.split("/");
+  const query = `query { repository(owner: "${owner}", name: "${name}") { pullRequest(number: ${HISTORY_PR}) { reviewThreads(first: 100) { nodes { path line isResolved isOutdated comments(first: 100) { nodes { databaseId } } } } } } }`;
+  try {
+    const out = JSON.parse(
+      execFileSync("gh", ["api", "graphql", "-f", `query=${query}`], {
+        encoding: "utf8",
+        maxBuffer: 64 << 20,
+      }),
+    );
+    return out.data.repository.pullRequest.reviewThreads.nodes.map((t) => ({
+      path: t.path,
+      line: t.line,
+      resolved: t.isResolved,
+      outdated: t.isOutdated,
+      comment_ids: t.comments.nodes.map((c) => c.databaseId),
+    }));
+  } catch (error) {
+    console.error(`GraphQL review threads failed (${error.message.split("\n")[0]}); using REST`);
+    // REST has no thread objects; this route groups comment IDs by thread.
+    return ghJson(`repos/${REPO}/pulls/${HISTORY_PR}/ccr/review_threads`);
+  }
+}
+
 function recordHistory() {
   const base = `repos/${REPO}`;
   const reviewComments = ghJson(`${base}/pulls/${HISTORY_PR}/comments?per_page=100`);
   const issueComments = ghJson(`${base}/issues/${HISTORY_PR}/comments?per_page=100`);
   const reviews = ghJson(`${base}/pulls/${HISTORY_PR}/reviews?per_page=100`);
-  // REST has no thread objects; this route groups comment IDs by thread.
-  const threads = ghJson(`${base}/pulls/${HISTORY_PR}/ccr/review_threads`);
+  const threads = recordThreads();
 
   const pull = ghJson(`${base}/pulls/${HISTORY_PR}`);
   const byId = new Map(reviewComments.map((c) => [c.id, c]));
@@ -144,6 +176,16 @@ function recordMcpSchemas(serverDir) {
       2,
     )}\n`,
   );
+  // The rate-limit mapping is hand-written, not recorded. Check it still names
+  // tools the server has, and stamp the commit it was last compared against.
+  const mapPath = join(DATA_DIR, "mcp-api-map.json");
+  const map = JSON.parse(readFileSync(mapPath, "utf8"));
+  const missing = Object.keys(map.tools)
+    .map((k) => k.split(":")[0])
+    .filter((t) => !existsSync(join(snaps, `${t}.snap`)));
+  if (missing.length) console.error(`mcp-api-map.json names tools the server lacks: ${missing}`);
+  map.source = `github/github-mcp-server@${commit}`;
+  writeFileSync(mapPath, `${JSON.stringify(map, null, 2)}\n`);
 }
 
 const i = process.argv.indexOf("--mcp-server");

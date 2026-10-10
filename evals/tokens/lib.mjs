@@ -584,3 +584,82 @@ export function cost(allCalls, { extraContext = 0 } = {}) {
     truncated,
   };
 }
+
+// --- GitHub API rate-limit accounting --------------------------------------------
+//
+// A second, deterministic cost dimension next to tokens: how much of the GitHub
+// primary rate limit one step spends. GraphQL is charged in points, REST in core
+// requests; each has its own hourly bucket. All of it is assumed, not measured;
+// README.md "Rate-limit assumptions" lists every assumption.
+//
+// A call carries `api` ({ graphqlPoints, restCore }) when its cost is not
+// derivable from its command, and `apiRest` for pr-shepherd's REST-transport
+// cost. Every other call is classified from its command by `callApi`, which
+// throws on a command it does not recognize, so a new scenario cannot go
+// uncounted.
+
+export const NO_API = { graphqlPoints: 0, restCore: 0 };
+export const gql = (graphqlPoints) => ({ graphqlPoints, restCore: 0 });
+export const rest = (restCore) => ({ graphqlPoints: 0, restCore });
+
+export const MCP_API = readJson("mcp-api-map.json");
+
+/** Rate-limit cost of one GitHub MCP tool call, from data/mcp-api-map.json. */
+export function mcpApi(tool, args) {
+  const key =
+    tool === "pull_request_read"
+      ? `pull_request_read:${args.method}`
+      : tool === "get_job_logs"
+        ? `get_job_logs:${args.job_id ? "job" : "run"}`
+        : tool === "update_pull_request"
+          ? "update_pull_request:draft"
+          : tool;
+  const entry = MCP_API.tools[key];
+  if (!entry) throw new Error(`no rate-limit cost for MCP call ${key}; add it to mcp-api-map.json`);
+  return { graphqlPoints: entry.graphqlPoints, restCore: entry.restCore };
+}
+
+/** pr-shepherd's one-PR tick: a fingerprint hit costs 1 point, a miss 2 (docs/graphql-usage.md). */
+export const SHEPHERD_TICK_API = gql(2);
+/** REST has no fingerprint shortcut: about 12 requests for one PR's full snapshot. */
+export const SHEPHERD_TICK_API_REST = rest(12);
+/** A stack tick: one topology query plus about 0.52 points per layer, at least 1. */
+export const stackTickApi = (layers) => gql(1 + Math.max(1, Math.round(0.52 * layers)));
+/** REST stack tick: about 6 shared requests plus 12 per layer (126 for 10 layers in rest-stack-summary-sharing.test.mts). */
+export const stackTickApiRest = (layers) => rest(6 + 12 * layers);
+
+/** Rate-limit cost of one call, for pr-shepherd on the given transport. */
+export function callApi(call, transport = "graphql") {
+  if (transport === "rest" && call.apiRest) return call.apiRest;
+  if (call.api) return call.api;
+  const cmd = call.cmd;
+  if (call.via === "mcp") {
+    const m = cmd.match(/^(\w+) (\{.*\})$/s);
+    if (m) return mcpApi(m[1], JSON.parse(m[2]));
+  }
+  if (/^(Skill|Read|ToolSearch) /.test(cmd) || /^sleep \d+$/.test(cmd)) return NO_API;
+  if (/^pr-shepherd /.test(cmd)) {
+    if (/ --stack /.test(cmd)) throw new Error(`stack tick needs an explicit api: ${cmd}`);
+    return transport === "rest" ? SHEPHERD_TICK_API_REST : SHEPHERD_TICK_API;
+  }
+  if (/gh stack merge/.test(cmd)) return rest(2);
+  if (/gh run view/.test(cmd)) return rest(2);
+  if (/gh pr (view|checks)/.test(cmd) && !/--watch/.test(cmd)) return gql(1);
+  if (/gh pr (ready|merge)/.test(cmd)) return gql(2);
+  if (/gh api\b/.test(cmd)) return /graphql/.test(cmd) ? gql(1) : rest(1);
+  throw new Error(`no rate-limit cost for call: ${cmd.slice(0, 80)}`);
+}
+
+/** Sum the rate-limit cost of a run of calls, `continues` tails included. */
+export function apiTotals(calls, { transport = "graphql" } = {}) {
+  return calls.reduce(
+    (t, c) => {
+      const a = callApi(c, transport);
+      return {
+        graphqlPoints: t.graphqlPoints + a.graphqlPoints,
+        restCore: t.restCore + a.restCore,
+      };
+    },
+    { ...NO_API },
+  );
+}

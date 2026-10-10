@@ -10,7 +10,8 @@
 
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { MODEL, TOKENS_DIR, cost, readJson, tokens } from "./lib.mjs";
+import { existsSync, readFileSync } from "node:fs";
+import { MCP_API, MODEL, TOKENS_DIR, apiTotals, cost, readJson, tokens } from "./lib.mjs";
 import { SCENARIOS } from "./scenarios.mjs";
 
 const ARMS = ["shepherd", "gh", "mcp"];
@@ -22,6 +23,10 @@ const SESSIONS = {
 
 const schemas = readJson("mcp-tool-schemas.json");
 const eagerTokens = tokens("x".repeat(schemas.eagerChars));
+if (MCP_API.source !== schemas.source)
+  throw new Error(
+    `data/mcp-api-map.json is pinned to ${MCP_API.source}, the schemas to ${schemas.source}; re-run record.mjs`,
+  );
 
 // Setup output stays in context for the rest of the session: the skill and
 // playbooks for shepherd, the loaded tool schemas for MCP. Each setup scenario
@@ -39,8 +44,48 @@ function addCosts(parts) {
   );
 }
 
-const rows = SCENARIOS.map((s) => {
-  const arms = s.arms();
+// --- baseline strategies -------------------------------------------------------
+//
+// "parallel" fires every read in the first turn (generous on turns, wasteful on
+// tokens when the PR is already terminal). "stateFirst" spends a first turn on
+// the PR's state alone and reads the rest in the next, or stops when the PR is
+// terminal. Each baseline takes the cheaper strategy for every step, so a
+// frugal agent is not undercut by a strawman.
+
+const STRATEGIES = ["parallel", "stateFirst"];
+
+function stateFirstGh(calls, s) {
+  const view = calls.find((c) => /^gh pr view /.test(c.cmd));
+  if (!view) return calls;
+  const { state, isDraft } = JSON.parse(view.out);
+  const tiny = {
+    phase: 1,
+    via: "bash",
+    cmd: view.cmd.replace(/--json \S+/, "--json state,isDraft"),
+    out: JSON.stringify({ isDraft, state }),
+  };
+  if (s.terminal) return [tiny];
+  return [tiny, ...calls.map((c) => ({ ...c, phase: c.phase + 1 }))];
+}
+
+function stateFirstMcp(calls, s) {
+  const get = calls.find((c) => c.cmd.startsWith("pull_request_read") && /"get"/.test(c.cmd));
+  if (!get) return calls;
+  if (s.terminal) return [get];
+  return [get, ...calls.filter((c) => c !== get).map((c) => ({ ...c, phase: c.phase + 1 }))];
+}
+
+function applyStrategy(arms, s, strategy) {
+  if (strategy === "parallel" || s.setup || s.session !== "pr") return arms;
+  return { ...arms, gh: stateFirstGh(arms.gh, s), mcp: stateFirstMcp(arms.mcp, s) };
+}
+
+function buildRows(strategy) {
+  return SCENARIOS.map((s) => buildRow(s, strategy));
+}
+
+function buildRow(s, strategy) {
+  const arms = applyStrategy(s.arms(), s, strategy);
   const carried = (arm) => (s.setup ? 0 : (carry[s.id]?.[arm] ?? 0));
   // A setup row adds its lazy loads, each at the share of sessions that trigger it.
   const armCost = (a) =>
@@ -59,6 +104,13 @@ const rows = SCENARIOS.map((s) => {
   // context on every request.
   const bare = Object.fromEntries(ARMS.map((a) => [a, s.setup ? cost([]) : cost(arms[a])]));
   bare.mcpEager = s.setup ? cost([]) : cost(arms.mcp);
+  // Rate-limit cost (deterministic, assumed). Setup loads touch no API.
+  const api = {
+    shepherd: apiTotals(arms.shepherd),
+    shepherdRest: apiTotals(arms.shepherd, { transport: "rest" }),
+    gh: apiTotals(arms.gh),
+    mcp: apiTotals(arms.mcp),
+  };
   return {
     id: s.id,
     session: s.session,
@@ -67,8 +119,35 @@ const rows = SCENARIOS.map((s) => {
     note: arms.note ?? s.note,
     gaps: s.gaps ?? {},
     weight: s.weight,
+    strategy,
     ...result,
     variable: bare,
+    api,
+  };
+}
+
+const rowsByStrategy = Object.fromEntries(STRATEGIES.map((st) => [st, buildRows(st)]));
+
+/** Per step, each baseline arm takes whichever strategy costs it less. */
+const rows = rowsByStrategy.parallel.map((base, i) => {
+  const alt = rowsByStrategy.stateFirst[i];
+  const pick = (arm) => (alt[arm].ite < base[arm].ite ? alt : base);
+  const gh = pick("gh");
+  const mcp = pick("mcp");
+  const eager = alt.mcpEager.ite < base.mcpEager.ite ? alt : base;
+  return {
+    ...base,
+    gh: gh.gh,
+    mcp: mcp.mcp,
+    mcpEager: eager.mcpEager,
+    variable: {
+      ...base.variable,
+      gh: gh.variable.gh,
+      mcp: mcp.variable.mcp,
+      mcpEager: eager.variable.mcpEager,
+    },
+    api: { ...base.api, gh: gh.api.gh, mcp: mcp.api.mcp },
+    stateFirst: { gh: gh.strategy === "stateFirst", mcp: mcp.strategy === "stateFirst" },
   };
 });
 
@@ -138,8 +217,68 @@ const sessions = Object.fromEntries(
   }),
 );
 
+// --- rate-limit totals -----------------------------------------------------------
+
+const API_ARMS = ["shepherd", "shepherdRest", "gh", "mcp"];
+
+/** Weighted GraphQL points and REST core requests per session, per arm. */
+const apiSessions = Object.fromEntries(
+  Object.keys(SESSIONS).map((key) => [
+    key,
+    Object.fromEntries(
+      API_ARMS.map((a) => {
+        const rs = rows.filter((r) => r.session === key);
+        const sum = (f) => round(rs.reduce((t, r) => t + r.weight * r.api[a][f], 0));
+        return [a, { graphqlPoints: sum("graphqlPoints"), restCore: sum("restCore") }];
+      }),
+    ),
+  ]),
+);
+
+// Waiting on CI: pr-shepherd polls every 60s (poll.intervalSeconds). A
+// fingerprint hit is 1 GraphQL point; REST has no shortcut (~12 requests).
+const POLL_SECONDS = 60;
+const waitPerHour = {
+  shepherdGraphql: 3600 / POLL_SECONDS,
+  shepherdRest: (3600 / POLL_SECONDS) * 12,
+  ghWatchGraphql: 3600 / POLL_SECONDS,
+  mcpRest: (3600 / POLL_SECONDS) * 2,
+};
+
+/** Sensitivity: each baseline's session cost under each pure strategy. */
+const strategyTotals = Object.fromEntries(
+  Object.keys(SESSIONS).map((key) => [
+    key,
+    Object.fromEntries(
+      STRATEGIES.map((st) => {
+        const rs = rowsByStrategy[st].filter((r) => r.session === key);
+        return [
+          st,
+          Object.fromEntries(
+            ["shepherd", "gh", "mcp"].map((a) => [
+              a,
+              Math.round(rs.reduce((t, r) => t + r.weight * r[a].ite, 0)),
+            ]),
+          ),
+        ];
+      }),
+    ),
+  ]),
+);
+
+const calibrationPath = join(TOKENS_DIR, "data", "calibration.json");
+const calibration = existsSync(calibrationPath)
+  ? JSON.parse(readFileSync(calibrationPath, "utf8"))
+  : null;
+
 if (process.argv.includes("--json")) {
-  console.log(JSON.stringify({ model: MODEL, eagerTokens, rows, sessions }, null, 2));
+  console.log(
+    JSON.stringify(
+      { model: MODEL, eagerTokens, rows, sessions, apiSessions, waitPerHour, strategyTotals },
+      null,
+      2,
+    ),
+  );
   process.exit(0);
 }
 
@@ -173,6 +312,62 @@ out("<!-- Generated by `node evals/tokens/bench.mjs`. Do not edit by hand. -->")
 out();
 out(
   "Change in cost when an agent uses pr-shepherd instead of a baseline. A negative number means pr-shepherd costs less.",
+);
+out();
+
+// --- summary ------------------------------------------------------------------
+
+const sess = (key, b, m = "ite") => pct(sessions[key].summary[b].session[m]);
+const share = (key) => {
+  const p = sessions[key].split.shepherd;
+  return `${Math.round((100 * p.fixedIte) / p.totalIte)}%`;
+};
+const scenarioSaving = rows
+  .filter((r) => !r.setup && r.gh.ite > 0)
+  .map((r) => ({ id: r.id, s: saving(r.gh.ite, r.shepherd.ite) }))
+  .filter((r) => Number.isFinite(r.s))
+  .sort((a, b) => b.s - a.s);
+const win = scenarioSaving[0];
+const loss = scenarioSaving[scenarioSaving.length - 1];
+const apiPct = (key, b, f) => {
+  const a = apiSessions[key];
+  return pct(saving(a[b][f], a.shepherd[f]));
+};
+
+const headline = [
+  "| session | cost vs. gh | cost vs. MCP | turns vs. gh / MCP | tool tokens vs. gh / MCP |",
+  "| --- | --- | --- | --- | --- |",
+  ...Object.entries({ pr: "single PR", stack: "PR stack" }).map(
+    ([k, label]) =>
+      `| ${label} | **${sess(k, "gh")}** | **${sess(k, "mcp")}** | ${sess(k, "gh", "turns")} / ${sess(k, "mcp", "turns")} | ${sess(k, "gh", "toolTokens")} / ${sess(k, "mcp", "toolTokens")} |`,
+  ),
+  "",
+  "GitHub rate limit per session (deterministic, assumed; see the Method section):",
+  "",
+  "| session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport |",
+  "| --- | --- | --- | --- |",
+  ...Object.entries({ pr: "single PR", stack: "PR stack" }).map(([k, label]) => {
+    const a = apiSessions[k];
+    return `| ${label} | ${num(a.shepherd.graphqlPoints)} / ${num(a.gh.graphqlPoints)} / ${num(a.mcp.graphqlPoints)} | ${num(a.shepherd.restCore)} / ${num(a.gh.restCore)} / ${num(a.mcp.restCore)} | ${num(a.shepherdRest.restCore)} core + ${num(a.shepherdRest.graphqlPoints)} points |`;
+  }),
+];
+
+out("## Summary");
+out();
+out(
+  `- **Cost (ITE).** PR session ${sess("pr", "gh")} vs. gh and ${sess("pr", "mcp")} vs. GitHub MCP; stack session ${sess("stack", "gh")} and ${sess("stack", "mcp")}.`,
+);
+out(
+  `- **Fixed vs. variable.** The skill and playbooks are ${share("pr")} of pr-shepherd's PR-session cost and ${share("stack")} of its stack-session cost; on variable cost alone it is ${pct(saving(sessions.pr.split.gh.variableIte, sessions.pr.split.shepherd.variableIte))} vs. gh in a PR session and ${pct(saving(sessions.stack.split.gh.variableIte, sessions.stack.split.shepherd.variableIte))} in a stack session.`,
+);
+out(
+  `- **Biggest win and loss vs. gh.** \`${win.id}\` ${pct(win.s)}; \`${loss.id}\` ${pct(loss.s)}.`,
+);
+out(
+  `- **GitHub rate limit (assumed).** In a PR session pr-shepherd spends ${num(apiSessions.pr.shepherd.graphqlPoints)} GraphQL points and ${num(apiSessions.pr.shepherd.restCore)} REST requests; gh ${num(apiSessions.pr.gh.graphqlPoints)} and ${num(apiSessions.pr.gh.restCore)}; MCP ${num(apiSessions.pr.mcp.graphqlPoints)} and ${num(apiSessions.pr.mcp.restCore)}. GraphQL points ${apiPct("pr", "gh", "graphqlPoints")} vs. gh and ${apiPct("pr", "mcp", "graphqlPoints")} vs. MCP; REST requests ${apiPct("pr", "gh", "restCore")} and ${apiPct("pr", "mcp", "restCore")}.`,
+);
+out(
+  `- **Waiting on CI, per hour.** pr-shepherd spends ${waitPerHour.shepherdGraphql} GraphQL points on the GraphQL transport (one fingerprint hit per ${POLL_SECONDS}s poll) and about ${waitPerHour.shepherdRest} REST requests on the REST transport, which has no fingerprint shortcut. A \`gh pr checks --watch\` refresh costs ${waitPerHour.ghWatchGraphql} points; an MCP re-check about ${waitPerHour.mcpRest} requests.`,
 );
 out();
 
@@ -248,9 +443,78 @@ for (const r of rows) {
   out(`- \`${r.id}\` — ${r.title}. ${r.note}${gaps.join("")}`);
 }
 out();
+out("## GitHub API usage");
+out();
+out(
+  "Rate-limit cost per session, weighted like the token numbers. **Deterministic and assumed**: no GitHub call is made. GraphQL is counted in points, REST in core requests, and the two buckets are separate. pr-shepherd costs come from docs/graphql-usage.md and the REST HTTP-boundary tests; gh and MCP costs are the per-call assumptions in README.md. The MCP mapping is unverified.",
+);
+out();
+out("| session | arm | GraphQL points | REST core requests |");
+out("| --- | --- | --- | --- |");
+const API_LABELS = {
+  shepherd: "pr-shepherd",
+  shepherdRest: "pr-shepherd, REST transport",
+  gh: "gh CLI",
+  mcp: "GitHub MCP",
+};
+for (const [key, title] of Object.entries(SESSIONS)) {
+  for (const a of API_ARMS) {
+    const v = apiSessions[key][a];
+    out(`| ${title} | ${API_LABELS[a]} | ${num(v.graphqlPoints)} | ${num(v.restCore)} |`);
+  }
+}
+out();
+out("Per scenario, `GraphQL points / REST core requests` for one occurrence.");
+out();
+out("| scenario | pr-shepherd | pr-shepherd, REST | gh CLI | GitHub MCP |");
+out("| --- | --- | --- | --- | --- |");
+for (const r of rows.filter((r) => !r.setup)) {
+  const c = (a) => `${num(r.api[a].graphqlPoints)} / ${num(r.api[a].restCore)}`;
+  out(
+    `| \`${r.id}\` | ${c("shepherd")} | ${c("shepherdRest")} | ${c("gh")}${r.gaps.gh ? " †" : ""} | ${c("mcp")}${r.gaps.mcp ? " †" : ""} |`,
+  );
+}
+out();
+out(
+  `- Waiting on CI costs ${waitPerHour.shepherdGraphql} GraphQL points an hour for pr-shepherd (one fingerprint hit per ${POLL_SECONDS}s poll), about ${waitPerHour.shepherdRest} REST requests an hour on the REST transport, ${waitPerHour.ghWatchGraphql} points for \`gh pr checks --watch --interval ${POLL_SECONDS}\`, and about ${waitPerHour.mcpRest} REST requests for a one-minute MCP re-check.`,
+);
+out(
+  `- MCP tool costs are read from data/mcp-api-map.json (${MCP_API.source}, verified: ${MCP_API.verified}).`,
+);
+out(
+  "- The REST-transport column resolves nothing by REST: a thread resolve has no REST route, so `apply review` there spends only its replies.",
+);
+out();
+out("## Baseline strategy sensitivity");
+out();
+out(
+  "A baseline either fires every read in its first turn (parallel) or reads the PR's state first and the rest in the next turn, stopping when the PR is terminal (state first). Each baseline takes the cheaper strategy for every step; the table shows each pure strategy's session cost (ITE) and what the report used. Stack steps always read in parallel.",
+);
+out();
+out("| session | strategy | pr-shepherd | gh CLI | GitHub MCP |");
+out("| --- | --- | --- | --- | --- |");
+for (const [key, title] of Object.entries(SESSIONS)) {
+  for (const st of STRATEGIES) {
+    const t = strategyTotals[key][st];
+    out(`| ${title} | ${st} | ${num(t.shepherd)} | ${num(t.gh)} | ${num(t.mcp)} |`);
+  }
+  const t = sessions[key].total;
+  out(`| ${title} | used | ${num(t.shepherd.ite)} | ${num(t.gh.ite)} | ${num(t.mcp.ite)} |`);
+}
+out();
+const pickedSF = rows.filter((r) => r.stateFirst.gh || r.stateFirst.mcp);
+out(
+  `- State first was cheaper for ${pickedSF.map((r) => `\`${r.id}\` (${[r.stateFirst.gh && "gh", r.stateFirst.mcp && "MCP"].filter(Boolean).join(", ")})`).join(", ") || "no step"}.`,
+);
+out();
 out("## Model");
 out();
 out(`- Tokens: ${MODEL.charsPerToken} characters per token for every arm.`);
+out(
+  calibration
+    ? `- Calibration (\`analyze.mjs --calibrate\`, ${calibration.source}): measured ${calibration.charsPerToken} characters per token against the assumed ${MODEL.charsPerToken}.`
+    : "- Calibration: none recorded. Run `node evals/analyze.mjs --calibrate <results dir> --write` after a live eval run to compare measured tokens with the assumed ratio.",
+);
 out(`- Base context replayed each turn: ${num(MODEL.baseContextTokens)} tokens.`);
 out(
   `- Price ratios to one uncached input token: cache read ${MODEL.cacheReadMultiplier}, cache write ${MODEL.cacheWriteMultiplier}, output ${MODEL.outputMultiplier}.`,
@@ -265,3 +529,15 @@ out();
 
 writeFileSync(join(TOKENS_DIR, "REPORT.md"), `${lines.join("\n")}\n`);
 console.log(`wrote ${join(TOKENS_DIR, "REPORT.md")}`);
+
+// The README headline is rewritten from the same numbers, so it cannot drift.
+const README = join(TOKENS_DIR, "README.md");
+const START = "<!-- bench:headline:start -->";
+const END = "<!-- bench:headline:end -->";
+const readme = readFileSync(README, "utf8");
+const [from, to] = [readme.indexOf(START), readme.indexOf(END)];
+if (from < 0 || to < from) throw new Error(`README.md needs ${START} and ${END} markers`);
+writeFileSync(
+  README,
+  `${readme.slice(0, from + START.length)}\n\n${headline.join("\n")}\n\n${readme.slice(to)}`,
+);
