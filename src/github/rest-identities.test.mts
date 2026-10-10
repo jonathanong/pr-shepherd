@@ -4,6 +4,8 @@ import {
   aliasThreadFixAttempts,
   aliasThreadSeenMarkers,
   recordThreadIdentity,
+  recordRestIdentity,
+  resolveRestIdentity,
   resolveGraphqlThreadId,
   resolveRestThreadRoot,
 } from "./rest-identities.mts";
@@ -11,6 +13,19 @@ import type { FixAttemptsState } from "../state/fix-attempts.mts";
 import type { SeenMarker } from "../state/seen-comments.mts";
 
 describe("thread identity across transports", () => {
+  it("rejects a persisted identity of the wrong kind", async () => {
+    await recordRestIdentity(repo, 101, "check-node", 77, "check");
+    await expect(resolveRestIdentity("check-node", "thread")).rejects.toThrow(
+      "Invalid REST identity",
+    );
+  });
+
+  it("does not invent a GraphQL ID for a thread first read through REST", async () => {
+    await recordThreadIdentity(repo, 101, "rest-thread-11", 11);
+    await expect(resolveGraphqlThreadId("rest-thread-11")).rejects.toThrow(
+      "No GraphQL thread identity",
+    );
+  });
   it("keeps genuine opaque IDs when a REST snapshot later records the root", async () => {
     await recordThreadIdentity(repo, 101, "opaque-thread", 11);
     await recordThreadIdentity(repo, 101, "rest-thread-11", 11);

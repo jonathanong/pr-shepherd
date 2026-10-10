@@ -43,6 +43,31 @@ describe("REST complete pagination", () => {
       ),
     ).rejects.toThrow("100 of 101");
   });
+  it("rejects a counted collection that changes while paging", async () => {
+    await serve((request, response) => {
+      const second = request.path.includes("page=2");
+      if (!second) response.setHeader("link", nextLink(`${prefix}/runs`, 2));
+      response.end(JSON.stringify({ total_count: second ? 3 : 2, runs: [{ id: second ? 2 : 1 }] }));
+    });
+    await expect(
+      readRestPages(`${prefix}/runs`, (body) => restArray(restObject(body, "runs").runs, "runs")),
+    ).rejects.toThrow("changed during pagination");
+  });
+
+  it.each([
+    ["per_page=50&filter=all", "changed page size"],
+    ["per_page=100&filter=latest", "changed pagination filter"],
+  ])("rejects a Link that changes %s", async (query, reason) => {
+    await serve((_request, response) => {
+      response.setHeader(
+        "link",
+        `<https://api.github.com${prefix}/runs?${query}&page=2>; rel="next"`,
+      );
+      response.end('[{"id":1}]');
+    });
+    await expect(readRestPages(`${prefix}/runs?filter=all`)).rejects.toThrow(reason);
+    expect(wire.requests).toHaveLength(1);
+  });
   it("rejects foreign Link targets", async () => {
     await serve((_request, response) => {
       response.setHeader("link", '<https://attacker.example/steal?per_page=100>; rel="next"');

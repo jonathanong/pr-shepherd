@@ -5,6 +5,7 @@ import type { RawCheckRollup, RawSummaryCommit, RawSummaryPr } from "./poll-summ
 import { POLL_SUMMARY_CHECK_PAGE_QUERY } from "./queries.mts";
 
 type RawCheckContexts = RawCheckRollup["contexts"];
+type HydratedContexts = RawCheckContexts & { fullSnapshot?: true };
 
 interface CheckPageResponse {
   repository: {
@@ -40,7 +41,8 @@ async function hydrateCommitContexts(commit: RawSummaryCommit, repo: RepoInfo): 
   while (pageInfo.hasPreviousPage && pageInfo.startCursor) {
     const older = await fetchOlderContexts(commit.oid, pageInfo.startCursor, repo);
     if (!older) break;
-    nodes.unshift(...older.nodes);
+    if (older.fullSnapshot) nodes.splice(0, nodes.length, ...older.nodes);
+    else nodes.unshift(...older.nodes);
     pageInfo = older.pageInfo;
   }
   // A window that shifted between pages can repeat or skip contexts; the
@@ -59,7 +61,7 @@ async function fetchOlderContexts(
   oid: string,
   before: string,
   repo: RepoInfo,
-): Promise<RawCheckContexts | null> {
+): Promise<HydratedContexts | null> {
   return githubOperation(
     "PollSummaryCheckPage",
     async () => {
@@ -79,6 +81,7 @@ async function fetchOlderContexts(
     async () => {
       const checks = await readRestCommitChecks(oid, repo);
       return {
+        fullSnapshot: true,
         totalCount: checks.nodes.length,
         pageInfo: { hasPreviousPage: false },
         nodes: checks.nodes as RawCheckContexts["nodes"],

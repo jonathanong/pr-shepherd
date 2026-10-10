@@ -72,6 +72,24 @@ describe("formatPollSummaryResult", () => {
     expect(text).toContain("checks: 1 in progress");
   });
 
+  it("renders per-PR unavailable transport fields with their reasons", () => {
+    const text = formatPollSummaryResult(
+      result(
+        row({
+          transport: "rest",
+          transportUnavailable: [
+            { field: "reviewDecision", reason: "REST has no aggregate review-decision field" },
+          ],
+        }),
+        "waiting",
+      ),
+    );
+    expect(text).toContain("transport `rest`");
+    expect(text).toContain(
+      "unavailable `reviewDecision`: REST has no aggregate review-decision field",
+    );
+  });
+
   it("renders aggregate quota warning guidance", () => {
     const text = formatPollSummaryResult({
       ...result(row({ action: "wait", reasons: ["pending-or-unknown"] }), "waiting"),

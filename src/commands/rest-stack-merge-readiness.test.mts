@@ -11,6 +11,7 @@ import { fetchRawSummaryPr } from "../github/poll-summary.mts";
 import { fingerprintRawSummaryPr } from "../github/poll-summary-fingerprint.mts";
 import { writeReadyReceipt } from "../state/ready-receipts.mts";
 import { runApplyMerge } from "./apply-merge.mts";
+import { validateRestStackMergeReadiness } from "./rest-stack-merge-readiness.mts";
 
 const lowerSha = "a".repeat(40);
 const upperSha = "c".repeat(40);
@@ -22,7 +23,15 @@ const stack = {
 };
 
 async function stackedServer() {
-  const fixture = { upperBaseSha: lowerSha, upperHeadSha: upperSha, changeDuringValidation: false };
+  const fixture = {
+    upperBaseSha: lowerSha,
+    upperHeadSha: upperSha,
+    changeDuringValidation: false,
+    bottomState: "open",
+    bottomBase: "main",
+    upperReads: 0,
+    changeFinalTopology: false,
+  };
   await serve((request, response) => {
     const path = request.path.split("?")[0];
     if (path === `${prefix}/stacks`) response.end(JSON.stringify([stack]));
@@ -31,12 +40,16 @@ async function stackedServer() {
       response.end(
         JSON.stringify({
           ...pull,
+          state: fixture.bottomState,
           merged: false,
           head: { ...pull.head, sha: lowerSha },
-          base: { ref: "main", sha: "b".repeat(40) },
+          base: { ref: fixture.bottomBase, sha: "b".repeat(40) },
         }),
       );
-    else if (path === `${prefix}/pulls/102`)
+    else if (path === `${prefix}/pulls/102`) {
+      fixture.upperReads += 1;
+      if (fixture.changeFinalTopology && fixture.upperReads === 5)
+        fixture.upperHeadSha = "d".repeat(40);
       response.end(
         JSON.stringify({
           ...pull,
@@ -48,7 +61,7 @@ async function stackedServer() {
           base: { ref: "user-model", sha: fixture.upperBaseSha },
         }),
       );
-    else if (path === prefix) {
+    } else if (path === prefix) {
       if (fixture.changeDuringValidation) fixture.upperHeadSha = "d".repeat(40);
       response.end(
         '{"allow_merge_commit":true,"allow_squash_merge":true,"allow_rebase_merge":false}',
@@ -110,6 +123,35 @@ const apply = () =>
 const mutations = () => wire.requests.filter((request) => request.method !== "GET");
 
 describe("REST native-stack merge readiness at the HTTP boundary", () => {
+  it("rejects a guarded SHA that differs from the initial native topology", async () => {
+    await stackedServer();
+    await expect(
+      runWithGithubTransport("rest", () =>
+        validateRestStackMergeReadiness(102, repo, "e".repeat(40)),
+      ),
+    ).rejects.toThrow("Stack head changed");
+    expect(mutations()).toEqual([]);
+  });
+
+  it.each(["closed", "wrong-trunk"])("rejects an unsafe %s lower dependency", async (condition) => {
+    const fixture = await stackedServer();
+    if (condition === "closed") fixture.bottomState = "closed";
+    else fixture.bottomBase = "another-trunk";
+    await expect(apply()).rejects.toThrow(
+      condition === "closed" ? "closed or unverified" : "target the trunk",
+    );
+    expect(mutations()).toEqual([]);
+  });
+
+  it("rechecks native topology after valid receipts and rejects a last-read race", async () => {
+    const fixture = await stackedServer();
+    await certify([101, 102]);
+    fixture.upperReads = 0;
+    fixture.changeFinalTopology = true;
+    await expect(apply()).rejects.toThrow("Native stack changed while validating");
+    expect(mutations()).toEqual([]);
+  });
+
   it("admits the current complete prefix with receipts bound to real REST summary evidence", async () => {
     await stackedServer();
     await certify([101, 102]);

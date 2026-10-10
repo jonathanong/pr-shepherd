@@ -95,7 +95,10 @@ export async function applyRestReviewChunk(input: {
       let repo = input.repo;
       let pr = input.pr;
       if (!repo || pr === undefined) {
-        const identity = await resolveRestIdentity(op.id, "thread");
+        const identity = await resolveRestIdentity(
+          op.id,
+          op.kind === "dismiss" ? "review" : "thread",
+        );
         repo = identity.repo;
         pr = identity.pr;
       }

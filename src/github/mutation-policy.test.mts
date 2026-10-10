@@ -1,10 +1,18 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { canGenerateGithubMutation } from "./mutation-policy.mts";
+import type { GithubMutationOperation } from "./mutation-policy.mts";
 import { runWithGithubTransport } from "./transport.mts";
 
 afterEach(() => vi.unstubAllEnvs());
 
 describe("canGenerateGithubMutation", () => {
+  it("does not infer authorization for an unknown future REST operation", async () => {
+    await runWithGithubTransport("rest", async () => {
+      expect(
+        canGenerateGithubMutation(undefined, "future-operation" as GithubMutationOperation),
+      ).toBe(false);
+    });
+  });
   it("requires confirmed capability on GraphQL", async () => {
     vi.stubEnv("CLAUDE_CODE_REMOTE", "false");
     await runWithGithubTransport("graphql", async () => {

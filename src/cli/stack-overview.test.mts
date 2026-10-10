@@ -127,4 +127,22 @@ describe("projectStackOverview", () => {
     ];
     expect(projectStackOverview(result).prs[0]?.blocker).toBe("stale-ancestry");
   });
+
+  it("preserves transport gaps in the layer projection and rendered overview", () => {
+    const result = stack([
+      item({
+        transport: "rest",
+        transportUnavailable: [
+          { field: "queueMembership", reason: "No queue read endpoint was observed" },
+        ],
+      }),
+    ]);
+    const projected = projectStackOverview(result);
+    expect(projected.prs[0]?.transportUnavailable).toEqual([
+      { field: "queueMembership", reason: "No queue read endpoint was observed" },
+    ]);
+    expect(formatStackOverview(projected)).toContain(
+      "unavailable `queueMembership`: No queue read endpoint was observed",
+    );
+  });
 });
