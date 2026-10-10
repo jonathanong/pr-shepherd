@@ -1,0 +1,1950 @@
+﻿2026-10-02T05:08:26.0225557Z Current runner version: '2.337.0'
+2026-10-02T05:08:26.0248031Z ##[group]Runner Image Provisioner
+2026-10-02T05:08:26.0248781Z Hosted Compute Agent
+2026-10-02T05:08:26.0249355Z Version: 20260901.588
+2026-10-02T05:08:26.0249892Z Commit: f88ec8081b781fac6c440065ac7ff9e710ce3d0b
+2026-10-02T05:08:26.0250578Z Build Date: 2026-09-01T19:56:44Z
+2026-10-02T05:08:26.0251149Z Worker ID: {c9adb890-1224-4423-9603-f78649d2afa6}
+2026-10-02T05:08:26.0251741Z Azure Region: westus3
+2026-10-02T05:08:26.0252252Z ##[endgroup]
+2026-10-02T05:08:26.0253407Z ##[group]Operating System
+2026-10-02T05:08:26.0254034Z Ubuntu
+2026-10-02T05:08:26.0254540Z 24.04.5
+2026-10-02T05:08:26.0254963Z LTS
+2026-10-02T05:08:26.0255416Z ##[endgroup]
+2026-10-02T05:08:26.0255893Z ##[group]Runner Image
+2026-10-02T05:08:26.0256451Z Image: ubuntu-24.04
+2026-10-02T05:08:26.0256995Z Version: 20260927.320.1
+2026-10-02T05:08:26.0258049Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260927.320/images/ubuntu/Ubuntu2404-Readme.md
+2026-10-02T05:08:26.0259369Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260927.320
+2026-10-02T05:08:26.0260164Z ##[endgroup]
+2026-10-02T05:08:26.0261110Z ##[group]GITHUB_TOKEN Permissions
+2026-10-02T05:08:26.0262715Z Contents: read
+2026-10-02T05:08:26.0263290Z Metadata: read
+2026-10-02T05:08:26.0263902Z ##[endgroup]
+2026-10-02T05:08:26.0265819Z Secret source: Actions
+2026-10-02T05:08:26.0266626Z Cache mode: write
+2026-10-02T05:08:26.0267236Z Prepare workflow directory
+2026-10-02T05:08:26.0548627Z Prepare all required actions
+2026-10-02T05:08:26.0589808Z Getting action download info
+2026-10-02T05:08:26.3802161Z Download action repository 'actions/checkout@v7.0.1' (SHA:3d3c42e5aac5ba805825da76410c181273ba90b1)
+2026-10-02T05:08:26.4895408Z Download action repository 'actions/setup-node@v7' (SHA:820762786026740c76f36085b0efc47a31fe5020)
+2026-10-02T05:08:26.6064930Z Download action repository 'codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5' (SHA:303a32d7a59b442fa8d48b6a1cc6825c09c847a5)
+2026-10-02T05:08:26.9941517Z Getting action download info
+2026-10-02T05:08:27.1358367Z Download action repository 'actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd' (SHA:ed597411d8f924073f98dfc5c65a23a2325f34cd)
+2026-10-02T05:08:27.7036302Z Getting action download info
+2026-10-02T05:08:27.8636830Z Complete job name: lint / typecheck / test (24.x)
+2026-10-02T05:08:27.9340203Z ##[group]Run actions/checkout@v7.0.1
+2026-10-02T05:08:27.9340804Z with:
+2026-10-02T05:08:27.9341103Z   repository: jonathanong/pr-shepherd
+2026-10-02T05:08:27.9343914Z   token: ***
+2026-10-02T05:08:27.9344183Z   ssh-strict: true
+2026-10-02T05:08:27.9344450Z   ssh-user: git
+2026-10-02T05:08:27.9344721Z   persist-credentials: true
+2026-10-02T05:08:27.9345006Z   clean: true
+2026-10-02T05:08:27.9345283Z   sparse-checkout-cone-mode: true
+2026-10-02T05:08:27.9345590Z   fetch-depth: 1
+2026-10-02T05:08:27.9345855Z   fetch-tags: false
+2026-10-02T05:08:27.9346137Z   show-progress: true
+2026-10-02T05:08:27.9346448Z   lfs: false
+2026-10-02T05:08:27.9346711Z   submodules: false
+2026-10-02T05:08:27.9346978Z   set-safe-directory: true
+2026-10-02T05:08:27.9347276Z   allow-unsafe-pr-checkout: false
+2026-10-02T05:08:27.9347738Z ##[endgroup]
+2026-10-02T05:08:28.0213212Z Syncing repository: jonathanong/pr-shepherd
+2026-10-02T05:08:28.0214918Z ##[group]Getting Git version info
+2026-10-02T05:08:28.0215591Z Working directory is '/home/runner/work/pr-shepherd/pr-shepherd'
+2026-10-02T05:08:28.0216217Z [command]/usr/bin/git version
+2026-10-02T05:08:28.0282612Z git version 2.55.0
+2026-10-02T05:08:28.0299263Z ##[endgroup]
+2026-10-02T05:08:28.0308818Z Temporarily overriding HOME='/home/runner/work/_temp/3c30261f-197d-4e0e-9726-033e13c40313' before making global git config changes
+2026-10-02T05:08:28.0309967Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-02T05:08:28.0315695Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/pr-shepherd/pr-shepherd
+2026-10-02T05:08:28.0367319Z Deleting the contents of '/home/runner/work/pr-shepherd/pr-shepherd'
+2026-10-02T05:08:28.0370524Z ##[group]Determining repository object format
+2026-10-02T05:08:28.0371809Z ##[endgroup]
+2026-10-02T05:08:28.0372454Z ##[group]Initializing the repository
+2026-10-02T05:08:28.0375966Z [command]/usr/bin/git init /home/runner/work/pr-shepherd/pr-shepherd
+2026-10-02T05:08:28.0488625Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-10-02T05:08:28.0489829Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-10-02T05:08:28.0490879Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-10-02T05:08:28.0491544Z hint: call:
+2026-10-02T05:08:28.0491954Z hint:
+2026-10-02T05:08:28.0492322Z hint: 	git config --global init.defaultBranch <name>
+2026-10-02T05:08:28.0492740Z hint:
+2026-10-02T05:08:28.0493248Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-10-02T05:08:28.0494141Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-10-02T05:08:28.0494591Z hint:
+2026-10-02T05:08:28.0494907Z hint: 	git branch -m <name>
+2026-10-02T05:08:28.0495319Z hint:
+2026-10-02T05:08:28.0495867Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-10-02T05:08:28.0496521Z Initialized empty Git repository in /home/runner/work/pr-shepherd/pr-shepherd/.git/
+2026-10-02T05:08:28.0500148Z [command]/usr/bin/git remote add origin https://github.com/jonathanong/pr-shepherd
+2026-10-02T05:08:28.0579678Z ##[endgroup]
+2026-10-02T05:08:28.0580231Z ##[group]Disabling automatic garbage collection
+2026-10-02T05:08:28.0582931Z [command]/usr/bin/git config --local gc.auto 0
+2026-10-02T05:08:28.0618580Z ##[endgroup]
+2026-10-02T05:08:28.0619282Z ##[group]Setting up auth
+2026-10-02T05:08:28.0619844Z Removing SSH command configuration
+2026-10-02T05:08:28.0625690Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-02T05:08:28.0679354Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-02T05:08:28.1027866Z Removing HTTP extra header
+2026-10-02T05:08:28.1029084Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-02T05:08:28.1052117Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-02T05:08:28.1260701Z Removing includeIf entries pointing to credentials config files
+2026-10-02T05:08:28.1266089Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-02T05:08:28.1296431Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-02T05:08:28.1493647Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-b090014c-fba8-42bc-a33e-a6fb4b971369.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-10-02T05:08:28.1527121Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/pr-shepherd/pr-shepherd/.git.path /home/runner/work/_temp/git-credentials-b090014c-fba8-42bc-a33e-a6fb4b971369.config
+2026-10-02T05:08:28.1556755Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/pr-shepherd/pr-shepherd/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-b090014c-fba8-42bc-a33e-a6fb4b971369.config
+2026-10-02T05:08:28.1590833Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-b090014c-fba8-42bc-a33e-a6fb4b971369.config
+2026-10-02T05:08:28.1621026Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-b090014c-fba8-42bc-a33e-a6fb4b971369.config
+2026-10-02T05:08:28.1646885Z ##[endgroup]
+2026-10-02T05:08:28.1647383Z ##[group]Fetching the repository
+2026-10-02T05:08:28.1653112Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +652f08e410a617a8c4c337b730b1377176941b02:refs/remotes/pull/497/merge
+2026-10-02T05:08:29.2860205Z From https://github.com/jonathanong/pr-shepherd
+2026-10-02T05:08:29.2861862Z  * [new ref]         652f08e410a617a8c4c337b730b1377176941b02 -> pull/497/merge
+2026-10-02T05:08:29.2864693Z ##[endgroup]
+2026-10-02T05:08:29.2865116Z ##[group]Determining the checkout info
+2026-10-02T05:08:29.2865781Z ##[endgroup]
+2026-10-02T05:08:29.2871320Z [command]/usr/bin/git sparse-checkout disable
+2026-10-02T05:08:29.2918976Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-10-02T05:08:29.2946695Z ##[group]Checking out the ref
+2026-10-02T05:08:29.2975104Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/497/merge
+2026-10-02T05:08:29.3589328Z Note: switching to 'refs/remotes/pull/497/merge'.
+2026-10-02T05:08:29.3594742Z 
+2026-10-02T05:08:29.3595218Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-10-02T05:08:29.3595707Z changes and commit them, and you can discard any commits you make in this
+2026-10-02T05:08:29.3596302Z state without impacting any branches by switching back to a branch.
+2026-10-02T05:08:29.3596720Z 
+2026-10-02T05:08:29.3596989Z If you want to create a new branch to retain commits you create, you may
+2026-10-02T05:08:29.3597540Z do so (now or later) by using -c with the switch command. Example:
+2026-10-02T05:08:29.3597907Z 
+2026-10-02T05:08:29.3598010Z   git switch -c <new-branch-name>
+2026-10-02T05:08:29.3598159Z 
+2026-10-02T05:08:29.3598293Z Or undo this operation with:
+2026-10-02T05:08:29.3598512Z 
+2026-10-02T05:08:29.3598631Z   git switch -
+2026-10-02T05:08:29.3598858Z 
+2026-10-02T05:08:29.3599118Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-10-02T05:08:29.3599522Z 
+2026-10-02T05:08:29.3599979Z HEAD is now at 652f08e Merge 01101bcf51256d656f7518bb82aa1c311fbbb263 into bc010583d8dcdd820d442f7a2fbd5021a7374ff8
+2026-10-02T05:08:29.3601480Z ##[endgroup]
+2026-10-02T05:08:29.3641341Z [command]/usr/bin/git log -1 --format=%H
+2026-10-02T05:08:29.3671334Z 652f08e410a617a8c4c337b730b1377176941b02
+2026-10-02T05:08:29.3922607Z ##[group]Run actions/setup-node@v7
+2026-10-02T05:08:29.3922867Z with:
+2026-10-02T05:08:29.3923051Z   node-version: 24.x
+2026-10-02T05:08:29.3923229Z   cache: npm
+2026-10-02T05:08:29.3923401Z   check-latest: false
+2026-10-02T05:08:29.3925939Z   token: ***
+2026-10-02T05:08:29.3926133Z   package-manager-cache: true
+2026-10-02T05:08:29.3926375Z ##[endgroup]
+2026-10-02T05:08:29.5020612Z Found in cache @ /opt/hostedtoolcache/node/24.21.0/x64
+2026-10-02T05:08:29.5024339Z ##[group]Environment details
+2026-10-02T05:08:29.9260519Z node: v24.21.0
+2026-10-02T05:08:29.9260865Z npm: 11.19.0
+2026-10-02T05:08:29.9261158Z yarn: 1.22.22
+2026-10-02T05:08:29.9261837Z ##[endgroup]
+2026-10-02T05:08:29.9276485Z [command]/opt/hostedtoolcache/node/24.21.0/x64/bin/npm config get cache
+2026-10-02T05:08:30.4014142Z /home/runner/.npm
+2026-10-02T05:08:30.6355895Z Cache hit for: node-cache-Linux-x64-npm-81907ee8e0530a9917fcc648629fb2ac53fb4d0d3abed9386bcc23ba9a2c4395
+2026-10-02T05:08:31.8675546Z Received 29360128 of 44729171 (65.6%), 28.0 MBs/sec
+2026-10-02T05:08:32.0911141Z Received 44729171 of 44729171 (100.0%), 34.9 MBs/sec
+2026-10-02T05:08:32.0914574Z Cache Size: ~43 MB (44729171 B)
+2026-10-02T05:08:32.0995367Z [command]/usr/bin/tar -xf /home/runner/work/_temp/1040ae48-be85-4052-a4da-2ef15ead02c7/cache.tzst -P -C /home/runner/work/pr-shepherd/pr-shepherd --use-compress-program unzstd
+2026-10-02T05:08:32.1766418Z Cache restored successfully
+2026-10-02T05:08:32.1791273Z Cache restored from key: node-cache-Linux-x64-npm-81907ee8e0530a9917fcc648629fb2ac53fb4d0d3abed9386bcc23ba9a2c4395
+2026-10-02T05:08:32.1943022Z ##[group]Run npm ci --ignore-scripts
+2026-10-02T05:08:32.1943356Z [36;1mnpm ci --ignore-scripts[0m
+2026-10-02T05:08:32.2215344Z shell: /usr/bin/bash -e {0}
+2026-10-02T05:08:32.2215618Z ##[endgroup]
+2026-10-02T05:08:36.0137194Z 
+2026-10-02T05:08:36.0146546Z added 170 packages, and audited 171 packages in 4s
+2026-10-02T05:08:36.0146961Z 
+2026-10-02T05:08:36.0147451Z 56 packages are looking for funding
+2026-10-02T05:08:36.0147862Z   run `npm fund` for details
+2026-10-02T05:08:36.0158333Z 
+2026-10-02T05:08:36.0159020Z 1 moderate severity vulnerability
+2026-10-02T05:08:36.0159666Z 
+2026-10-02T05:08:36.0160127Z To address all issues, run:
+2026-10-02T05:08:36.0160489Z   npm audit fix
+2026-10-02T05:08:36.0160655Z 
+2026-10-02T05:08:36.0160790Z Run `npm audit` for details.
+2026-10-02T05:08:36.0635589Z ##[group]Run npm run build
+2026-10-02T05:08:36.0635846Z [36;1mnpm run build[0m
+2026-10-02T05:08:36.0692634Z shell: /usr/bin/bash -e {0}
+2026-10-02T05:08:36.0692876Z ##[endgroup]
+2026-10-02T05:08:36.1787665Z 
+2026-10-02T05:08:36.1788667Z > pr-shepherd@0.56.1 build
+2026-10-02T05:08:36.1788994Z > node scripts/build.mjs
+2026-10-02T05:08:36.1789168Z 
+2026-10-02T05:08:36.8484854Z ##[group]Run npm run lint
+2026-10-02T05:08:36.8485229Z [36;1mnpm run lint[0m
+2026-10-02T05:08:36.8539784Z shell: /usr/bin/bash -e {0}
+2026-10-02T05:08:36.8540020Z ##[endgroup]
+2026-10-02T05:08:36.9395996Z 
+2026-10-02T05:08:36.9396749Z > pr-shepherd@0.56.1 lint
+2026-10-02T05:08:36.9397611Z > oxlint src/ test-helpers/ fixtures/*.mts test-cases/ plugins/ .agents/plugins/ site/build.mjs site/serve.mjs site/lib/ && npm run --silent lint:dead-code
+2026-10-02T05:08:36.9398092Z 
+2026-10-02T05:08:37.0105620Z Found 0 warnings and 0 errors.
+2026-10-02T05:08:37.0106246Z Finished in 39ms on 815 files with 99 rules using 4 threads.
+2026-10-02T05:08:38.3283069Z Configuration hints (6)
+2026-10-02T05:08:38.3289330Z scripts/build.mjs                          knip.jsonc  Remove redundant entry pattern
+2026-10-02T05:08:38.3290283Z scripts/install-husky.mjs                  knip.jsonc  Remove redundant entry pattern
+2026-10-02T05:08:38.3291164Z scripts/strip-lcov-branches.mjs            knip.jsonc  Remove redundant entry pattern
+2026-10-02T05:08:38.3291961Z .github/scripts/sync-plugin-version.mjs    knip.jsonc  Remove redundant entry pattern
+2026-10-02T05:08:38.3292701Z site/build.mjs                             knip.jsonc  Remove redundant entry pattern
+2026-10-02T05:08:38.3293429Z site/serve.mjs                             knip.jsonc  Remove redundant entry pattern
+2026-10-02T05:08:39.1708486Z ##[group]Run npm run format:check
+2026-10-02T05:08:39.1708759Z [36;1mnpm run format:check[0m
+2026-10-02T05:08:39.1763518Z shell: /usr/bin/bash -e {0}
+2026-10-02T05:08:39.1763901Z ##[endgroup]
+2026-10-02T05:08:39.2589600Z 
+2026-10-02T05:08:39.2590335Z > pr-shepherd@0.56.1 format:check
+2026-10-02T05:08:39.2591561Z > oxfmt --check src/ test-helpers/ fixtures/*.mts test-cases/*.mts plugins/ .agents/plugins/ docs/ README.md site/build.mjs site/serve.mjs site/lib/
+2026-10-02T05:08:39.2592272Z 
+2026-10-02T05:08:39.3005595Z Checking formatting...
+2026-10-02T05:08:39.3005984Z 
+2026-10-02T05:08:40.5526371Z All matched files use the correct format.
+2026-10-02T05:08:40.5527366Z Finished in 1252ms on 883 files using 4 threads.
+2026-10-02T05:08:40.5530905Z No config found, using defaults. Please add a config file or try `oxfmt --init` if needed.
+2026-10-02T05:08:40.5864783Z ##[group]Run npm run typecheck
+2026-10-02T05:08:40.5865079Z [36;1mnpm run typecheck[0m
+2026-10-02T05:08:40.5920935Z shell: /usr/bin/bash -e {0}
+2026-10-02T05:08:40.5921188Z ##[endgroup]
+2026-10-02T05:08:40.6767741Z 
+2026-10-02T05:08:40.6768545Z > pr-shepherd@0.56.1 typecheck
+2026-10-02T05:08:40.6768967Z > tsc --noEmit
+2026-10-02T05:08:40.6769127Z 
+2026-10-02T05:08:41.3720342Z ##[group]Run node evals/generate.mjs
+2026-10-02T05:08:41.3720638Z [36;1mnode evals/generate.mjs[0m
+2026-10-02T05:08:41.3720984Z [36;1m# `git diff` alone ignores untracked files, so a generated-but-uncommitted[0m
+2026-10-02T05:08:41.3721428Z [36;1m# case directory would pass while the committed suite stays incomplete.[0m
+2026-10-02T05:08:41.3722057Z [36;1m# Staging first makes additions, deletions and modifications all visible.[0m
+2026-10-02T05:08:41.3722388Z [36;1mgit add -A -- evals/[0m
+2026-10-02T05:08:41.3722640Z [36;1mgit diff --cached --exit-code -- evals/ \[0m
+2026-10-02T05:08:41.3723053Z [36;1m  || { echo "::error::evals/ is out of sync - run 'node evals/generate.mjs' and commit the result"; exit 1; }[0m
+2026-10-02T05:08:41.3778259Z shell: /usr/bin/bash -e {0}
+2026-10-02T05:08:41.3778498Z ##[endgroup]
+2026-10-02T05:08:41.4155217Z 01-ci-in-progress-no-watch              3 graders  09-wait-in-progress-ci
+2026-10-02T05:08:41.4167443Z 02-mark-ready-continue                  3 graders  07-mark-ready-draft-clean
+2026-10-02T05:08:41.4181425Z 03-multi-category-fix                   5 graders  54-fix-code-multi-category-threads-comments-checks-changes
+2026-10-02T05:08:41.4190502Z 04-real-failure-no-blind-rerun          3 graders  61-fix-code-aggregate-ci-exit-code
+2026-10-02T05:08:41.4201668Z 05-cancelled-must-rerun                 3 graders  14-fix-code-cancelled-conclusion
+2026-10-02T05:08:41.4212458Z 06-fix-code-dismiss-stale-bot           4 graders  60-fix-code-bot-cr-not-dismissed
+2026-10-02T05:08:41.4221814Z 07-fix-code-bot-and-thread              3 graders  84-fix-code-bot-cr-with-thread
+2026-10-02T05:08:41.4240118Z 08-mergeability-diagnosis               4 graders  32-fix-code-pr-level-changes-requested
+2026-10-02T05:08:41.4249689Z 09-cancel-terminal-beats-work           3 graders  82-cancel-terminal-beats-all-work
+2026-10-02T05:08:41.4257810Z 10-external-check-no-handoff            2 graders  12-fix-code-failing-check-external
+2026-10-02T05:08:41.4265606Z 11-wait-no-work                         2 graders  24-wait-review-summary-already-surfaced
+2026-10-02T05:08:41.4276167Z 12-annotations-already-surfaced         3 graders  55-fix-code-failing-check-annotations-with-thread
+2026-10-02T05:08:41.4282870Z 13-neg-github-review-api                2 graders  (no fixture)
+2026-10-02T05:08:41.4292842Z 14-stack-layer-no-direct-merge          3 graders  85-fix-code-stacked-pr-route
+2026-10-02T05:08:41.4304250Z 15-stack-owned-layers-before-handoff    4 graders  102-aggregate-stack-mixed-escalate-autonomous-work
+2026-10-02T05:08:41.4312506Z 16-stack-all-owned-concurrent           3 graders  106-aggregate-stack-blocked-hooks-receipts
+2026-10-02T05:08:41.4321775Z 17-stack-parent-conflict-owned-only     3 graders  94-aggregate-stack-parent-conflict
+2026-10-02T05:08:41.4336706Z 18-stack-queued-lower-waits             3 graders  91-aggregate-stack-queued-lower-waits
+2026-10-02T05:08:41.4354912Z 19-stack-merge-prefix                   3 graders  90-aggregate-stack-stale-parent-merge
+2026-10-02T05:08:41.4356017Z 20-stack-closed-parent-escalate         2 graders  100-aggregate-stack-closed-parent
+2026-10-02T05:08:41.4360889Z 21-stack-all-terminal-stop              2 graders  87-aggregate-stack-all-terminal
+2026-10-02T05:08:41.4371220Z 22-stack-auto-ready-disabled-probe      4 graders  104-aggregate-stack-clean-draft-auto-ready-disabled
+2026-10-02T05:08:41.4381020Z 24-stack-merge-missing-extension        3 graders  97-aggregate-stack-full-merge
+2026-10-02T05:08:41.4391150Z 23-behind-base-rebase-hint              4 graders  73-fix-code-behind-base-hint
+2026-10-02T05:08:41.4398667Z 25-multi-pr-cancel-is-per-pr            2 graders  03-cancel-ready-delay-elapsed-clean
+2026-10-02T05:08:41.4409444Z 26-conflicts-rebase-without-asking      4 graders  27-fix-code-conflicts
+2026-10-02T05:08:41.4412341Z 
+2026-10-02T05:08:41.4412684Z 26 cases written to /home/runner/work/pr-shepherd/pr-shepherd/evals
+2026-10-02T05:08:41.4761419Z ##[group]Run npm run test:coverage
+2026-10-02T05:08:41.4761691Z [36;1mnpm run test:coverage[0m
+2026-10-02T05:08:41.4816765Z shell: /usr/bin/bash -e {0}
+2026-10-02T05:08:41.4817007Z ##[endgroup]
+2026-10-02T05:08:41.5723917Z 
+2026-10-02T05:08:41.5725035Z > pr-shepherd@0.56.1 test:coverage
+2026-10-02T05:08:41.5725953Z > vitest run --coverage && node scripts/strip-lcov-branches.mjs
+2026-10-02T05:08:41.5726599Z 
+2026-10-02T05:08:41.9056136Z 
+2026-10-02T05:08:41.9059084Z [1m[30m[46m RUN [49m[39m[22m [36mv5.0.1 [39m[90m/home/runner/work/pr-shepherd/pr-shepherd[39m
+2026-10-02T05:08:41.9059631Z       [2mCoverage enabled with [22m[33mv8[39m
+2026-10-02T05:08:41.9059808Z 
+2026-10-02T05:08:42.5457430Z  [32m✓[39m src/api.mock.test.mts [2m([22m[2m45 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+2026-10-02T05:08:42.8431100Z  [32m✓[39m src/commands/check-fingerprint.test.mts [2m([22m[2m36 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+2026-10-02T05:08:43.0064950Z  [32m✓[39m src/commands/iterate.runiterate-cancel.mock.test.mts [2m([22m[2m24 tests[22m[2m)[22m[32m 61[2mms[22m[39m
+2026-10-02T05:08:43.1545697Z  [32m✓[39m src/commands/poll-summary-instructions.test.mts [2m([22m[2m30 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-10-02T05:08:43.2697816Z  [32m✓[39m src/commands/iterate.render.buildfixinstructions.mock.test.mts [2m([22m[2m15 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+2026-10-02T05:08:43.4249695Z  [32m✓[39m src/github/batch.fetchprbatch-merge-queue-pagination.mock.test.mts [2m([22m[2m16 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-10-02T05:08:43.5080849Z  [32m✓[39m src/comments/resolve.applyresolveoptions-mutations.mock.test.mts [2m([22m[2m24 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+2026-10-02T05:08:43.6438610Z  [32m✓[39m src/mcp/server.test.mts [2m([22m[2m13 tests[22m[2m)[22m[32m 63[2mms[22m[39m
+2026-10-02T05:08:43.7379682Z  [32m✓[39m src/commands/check.runcheck-classification-auto-minimize.mock.test.mts [2m([22m[2m16 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+2026-10-02T05:08:43.8670963Z  [32m✓[39m src/commands/iterate.merge.mock.test.mts [2m([22m[2m13 tests[22m[2m)[22m[32m 73[2mms[22m[39m
+2026-10-02T05:08:43.9177287Z pr-shepherd: classification rule bad: threw during evaluation: boom — skipped
+2026-10-02T05:08:43.9192134Z pr-shepherd: classification rule bad: threw during evaluation: string error — skipped
+2026-10-02T05:08:43.9448849Z  [32m✓[39m src/classify/apply.test.mts [2m([22m[2m19 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+2026-10-02T05:08:43.9776134Z  [32m✓[39m src/commands/iterate.fix-code-ci-failure.authorization.mock.test.mts [2m([22m[2m16 tests[22m[2m)[22m[32m 61[2mms[22m[39m
+2026-10-02T05:08:44.1761180Z [aggregate poll tick 1 / +0s] #42 FIX_CODE, #43 FIX_CODE
+2026-10-02T05:08:44.1785354Z [aggregate poll tick 1 / +0s] #42 FIX_CODE
+2026-10-02T05:08:44.1808981Z  [32m✓[39m src/commands/iterate.render-resolve-cmd.buildresolvecommand-argv-shape.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+2026-10-02T05:08:44.1835744Z [aggregate poll tick 1 / +0s] GitHub secondary rate limit — retrying at 05:09:45Z (in 60s)
+2026-10-02T05:08:44.1864884Z [aggregate poll tick 1 / +0s] #42 WAIT, #43 WAIT
+2026-10-02T05:08:44.1902812Z [aggregate poll tick 1 / +0s] #42 WAIT, #43 WAIT
+2026-10-02T05:08:44.1905185Z [aggregate poll tick 1 / +0s] #42 WAIT, #43 WAIT
+2026-10-02T05:08:44.2035492Z  [32m✓[39m src/commands/poll-summary.mock.test.mts [2m([22m[2m14 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+2026-10-02T05:08:44.3066428Z  [32m✓[39m src/commands/iterate.merge-queue-deferral.mock.test.mts [2m([22m[2m10 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+2026-10-02T05:08:44.4917863Z  [32m✓[39m src/commands/mark-files-as-viewed.mock.test.mts [2m([22m[2m13 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-10-02T05:08:44.5624995Z  [32m✓[39m src/config/load.test.mts [2m([22m[2m27 tests[22m[2m)[22m[32m 168[2mms[22m[39m
+2026-10-02T05:08:44.7829531Z  [32m✓[39m src/github/poll-summary-queued-receipt.mock.test.mts [2m([22m[2m11 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+2026-10-02T05:08:44.7932893Z  [32m✓[39m src/commands/poll.runpoll-debounce.mock.test.mts [2m([22m[2m15 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+2026-10-02T05:08:44.8114146Z  [32m✓[39m src/cli-parser.iterate.main-iterate-text-format.lean-mode-summary-shows-non-zero-skipped-filtered-and-in-progress-counts.mock.test.mts [2m([22m[2m15 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+2026-10-02T05:08:45.0555415Z  [32m✓[39m src/cli/iterate-lean.projectiteratelean.test.mts [2m([22m[2m25 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:08:45.1882685Z  [32m✓[39m src/cli-parser.iterate.main-iterate-text-format.mock.test.mts [2m([22m[2m16 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+2026-10-02T05:08:45.2234282Z  [32m✓[39m src/cli-parser.iterate-fix.main-iterate-text-format-fix-code-and-checks.fix-code-renders.mock.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+2026-10-02T05:08:45.3938797Z  [32m✓[39m src/config/load.merge.test.mts [2m([22m[2m32 tests[22m[2m)[22m[32m 98[2mms[22m[39m
+2026-10-02T05:08:45.4515891Z  [32m✓[39m src/commands/journal/transform.test.mts [2m([22m[2m31 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+2026-10-02T05:08:45.4620281Z  [32m✓[39m src/journal/markdown.test.mts [2m([22m[2m19 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+2026-10-02T05:08:45.6166129Z  [32m✓[39m src/journal/public-api-boundaries.test.mts [2m([22m[2m33 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+2026-10-02T05:08:45.6248903Z  [32m✓[39m src/github/queries.test.mts [2m([22m[2m13 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:08:45.7585274Z  [32m✓[39m src/github/poll-summary-projector.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+2026-10-02T05:08:45.7991194Z  [32m✓[39m src/commands/poll-quota.test.mts [2m([22m[2m15 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-10-02T05:08:45.8451000Z  [32m✓[39m src/commands/stack-work.test.mts [2m([22m[2m13 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-10-02T05:08:45.9368631Z  [32m✓[39m src/commands/iterate/check-instructions.test.mts [2m([22m[2m21 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-10-02T05:08:46.0583036Z  [32m✓[39m src/commands/stack-drain.test.mts [2m([22m[2m17 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-10-02T05:08:46.1137005Z  [32m✓[39m src/commands/iterate.fix-code-conflicts.runiterate-fix-code-merge-conflicts.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+2026-10-02T05:08:46.1851647Z  [32m✓[39m src/github/batch-receipt-evidence.mock.test.mts [2m([22m[2m11 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-10-02T05:08:46.2462378Z  [32m✓[39m src/commands/rule-auto-resolve-format.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:08:46.3124145Z  [32m✓[39m src/journal/public-api.test.mts [2m([22m[2m22 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+2026-10-02T05:08:46.4193379Z  [32m✓[39m src/cli/iterate-instructions.test.mts [2m([22m[2m11 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-10-02T05:08:46.4386197Z  [32m✓[39m src/exit-codes.errortoexitcode.test.mts [2m([22m[2m27 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:08:46.5436451Z [aggregate poll tick 1 / +0s] GitHub GraphQL rate limit (0/5000) — retrying at 05:11:46Z (in 185s)
+2026-10-02T05:08:46.5508228Z [aggregate poll tick 1 / +0s] GitHub GraphQL rate limit (0/5000) — retrying at 05:11:46Z (in 185s)
+2026-10-02T05:08:46.5520346Z [aggregate poll tick 1 / +0s] GitHub REST core rate limit (0/5000) — retrying at 05:11:46Z (in 185s)
+2026-10-02T05:08:46.5586553Z [aggregate poll tick 1 / +0s] #7 WAIT, #8 WAIT
+2026-10-02T05:08:46.5597557Z [aggregate poll tick 2 / +60s] GitHub GraphQL rate limit (0/5000) — retrying at 07:55:26Z (in 9945s)
+2026-10-02T05:08:46.5795552Z  [32m✓[39m src/commands/poll-summary-rate-limit-probe.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+2026-10-02T05:08:46.6185026Z  [32m✓[39m src/github/fingerprint.test.mts [2m([22m[2m15 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-10-02T05:08:46.6368524Z  [32m✓[39m src/commands/iterate/api-usage.test.mts [2m([22m[2m15 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-10-02T05:08:46.8259067Z  [32m✓[39m src/cli/iterate-lean.projectiteratelean.fix-code-empty-payload-omits-all-empty-arrays-in-fix-block.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:08:46.8429759Z  [32m✓[39m src/checks/classify.test.mts [2m([22m[2m24 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:08:47.1427312Z  [32m✓[39m src/state/graphql-quota-warnings.test.mts [2m([22m[2m10 tests[22m[2m)[22m[33m 359[2mms[22m[39m
+2026-10-02T05:08:47.1432034Z  [32m✓[39m src/cli-parser.iterate.main-iterate.mock.test.mts [2m([22m[2m17 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+2026-10-02T05:08:47.1736015Z  [32m✓[39m src/commands/iterate/check-blocker-gate.test.mts [2m([22m[2m9 tests[22m[2m)[22m[32m 171[2mms[22m[39m
+2026-10-02T05:08:47.3390783Z  [32m✓[39m src/suggestions/patch.validatesuggestionadjacentrange.test.mts [2m([22m[2m14 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-10-02T05:08:47.3425766Z  [32m✓[39m src/suggestions/patch.validatesuggestionembeddedrange.test.mts [2m([22m[2m15 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+2026-10-02T05:08:47.3513641Z  [32m✓[39m src/skill-playbook-pointers.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+2026-10-02T05:08:47.5619356Z  [32m✓[39m src/github/poll-summary-annotation-probe.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-10-02T05:08:47.5860849Z  [32m✓[39m src/github/batch.fetchprbatch-thread-pagination.mock.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+2026-10-02T05:08:47.6950111Z  [32m✓[39m src/cli-parser.iterate-fix.thread-url-heading.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+2026-10-02T05:08:47.7336897Z  [32m✓[39m src/merge-status/requirements-extra.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:08:47.7726290Z  [32m✓[39m src/cli/args.validatesecondsdurationflag.test.mts [2m([22m[2m33 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-10-02T05:08:47.8811524Z pr-shepherd: classification rule /tmp/prs-classify-test-rGTx08/.pr-shepherd/classification/bad-export.mjs: default export is not a function — skipped
+2026-10-02T05:08:47.8850478Z pr-shepherd: classification rule /tmp/prs-classify-test-rPSAot/.pr-shepherd/classification/throw-on-load.mjs: failed to load: load error — skipped
+2026-10-02T05:08:47.9989871Z  [32m✓[39m src/github/http.rest.mock.test.mts [2m([22m[2m17 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+2026-10-02T05:08:48.0837635Z  [32m✓[39m src/cli-parser.main-journal.mock.test.mts [2m([22m[2m14 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-10-02T05:08:48.1407458Z  [32m✓[39m src/merge-status/requirements.test.mts [2m([22m[2m11 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:08:48.2583556Z  [32m✓[39m src/commands/journal.mock.test.mts [2m([22m[2m11 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:08:48.2934257Z pr-shepherd: classification rule /tmp/prs-classify-test-DE1fE0/.pr-shepherd/classification/enum-rule.mts: failed to load: TypeScript enum is not supported in strip-only mode — skipped
+2026-10-02T05:08:48.2977016Z pr-shepherd: classification rule /tmp/prs-classify-test-Rlr5Bw/.pr-shepherd/classification/throw-string.mjs: failed to load: not an error object — skipped
+2026-10-02T05:08:48.3067514Z  [32m✓[39m src/classify/loader.test.mts [2m([22m[2m15 tests[22m[2m)[22m[33m 448[2mms[22m[39m
+2026-10-02T05:08:48.3085099Z    [32m✓[39m loadRules [2m(9)[22m
+2026-10-02T05:08:48.3103885Z      [33m[2m✓[22m[39m skips .mts files that use unsupported runtime TypeScript syntax[33m 381[2mms[22m[39m
+2026-10-02T05:08:48.4179474Z  [32m✓[39m src/checks/triage.triagefailingchecks-logexcerpt.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+2026-10-02T05:08:48.4805977Z  [32m✓[39m src/suggestions/patch.validatesuggestionmixedsubrange.test.mts [2m([22m[2m13 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-10-02T05:08:48.5872329Z  [32m✓[39m src/commands/rule-auto-resolve.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:08:48.6086733Z  [32m✓[39m src/commands/iterate.classify.runiterate-review-summary-auto-minimize.mock.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 53[2mms[22m[39m
+2026-10-02T05:08:48.7591009Z  [32m✓[39m src/commands/check.runcheck-first-look-items.mock.test.mts [2m([22m[2m11 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+2026-10-02T05:08:48.7877338Z  [32m✓[39m src/commands/ready-delay.test.mts [2m([22m[2m13 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+2026-10-02T05:08:48.9735860Z  [32m✓[39m src/commands/iterate.check-blocker.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 62[2mms[22m[39m
+2026-10-02T05:08:49.0235419Z  [32m✓[39m src/github/batch-parsers.stale-cr-detection.mock.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:08:49.0986740Z  [32m✓[39m src/commands/iterate.ready-receipt-one-pr.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+2026-10-02T05:08:49.1544307Z  [32m✓[39m src/github/reply-thread-transcripts.mock.test.mts [2m([22m[2m10 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-10-02T05:08:49.2206133Z  [32m✓[39m src/github/check-annotations.fetchcheckrunannotations.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-10-02T05:08:49.2911466Z  [32m✓[39m src/cli/iterate-merge-formatter.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-10-02T05:08:49.4063889Z  [32m✓[39m src/github/batch-parsers-rules.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:08:49.4553095Z  [32m✓[39m src/commands/iterate.fix-code-unlocated-thread-skip.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+2026-10-02T05:08:49.4635465Z  [32m✓[39m src/github/poll-summary-fingerprint.test.mts [2m([22m[2m16 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-10-02T05:08:49.6367975Z  [32m✓[39m src/github/check-annotations-batch.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+2026-10-02T05:08:49.8111259Z  [32m✓[39m src/commands/iterate.stall.it-resets-firstseenat-when-fingerprint-changes-differe.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+2026-10-02T05:08:49.8219894Z  [32m✓[39m src/cli/check-blocker-handler.test.mts [2m([22m[2m15 tests[22m[2m)[22m[32m 55[2mms[22m[39m
+2026-10-02T05:08:49.8705337Z  [32m✓[39m src/cli/check-annotations.fix-formatter-rendering.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:08:50.1373290Z  [32m✓[39m src/commands/stack-stall.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+2026-10-02T05:08:50.1494408Z  [32m✓[39m src/commands/iterate.classify.approved-review-summary-minimize-filter.mock.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+2026-10-02T05:08:50.3614797Z  [32m✓[39m src/commands/iterate/unreported-required.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+2026-10-02T05:08:50.4005015Z  [32m✓[39m src/commands/poll-summary-quota.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+2026-10-02T05:08:50.5396463Z  [32m✓[39m src/comments/thread-visibility.test.mts [2m([22m[2m10 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:08:50.6478166Z  [32m✓[39m src/github/batch-parsers-author-type.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-10-02T05:08:50.7229976Z  [32m✓[39m src/checks/classify-superseded.test.mts [2m([22m[2m12 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:08:50.9007153Z  [32m✓[39m src/commands/check.runcheck-startup-failure-workflow-runs.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-10-02T05:08:50.9268956Z  [32m✓[39m src/commands/iterate.escalate.escalate-message-helpers.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+2026-10-02T05:08:51.2423632Z  [32m✓[39m src/cli-parser.poll.mock.test.mts [2m([22m[2m11 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+2026-10-02T05:08:51.2523726Z  [32m✓[39m src/commands/iterate.ready-receipt-delay.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 46[2mms[22m[39m
+2026-10-02T05:08:51.5440921Z  [32m✓[39m src/commands/iterate.render-humanmessage.runiterate-prescriptive-fields-escalate-humanmessage.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+2026-10-02T05:08:51.5596262Z  [32m✓[39m src/commands/iterate.escalate.runiterate-escalate-fix-thrash.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+2026-10-02T05:08:51.9003173Z  [32m✓[39m src/cli-parser.subcommand-help.mock.test.mts [2m([22m[2m30 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+2026-10-02T05:08:51.9234409Z  [32m✓[39m src/cli-parser.commit-suggestion.main-commit-suggestion.mock.test.mts [2m([22m[2m12 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-10-02T05:08:52.0358489Z  [32m✓[39m src/suggestions/patch.validatesuggestionlongwindow.test.mts [2m([22m[2m14 tests[22m[2m)[22m[33m 2047[2mms[22m[39m
+2026-10-02T05:08:52.0359726Z    [32m✓[39m getUnsafeSuggestionRangeReason — long adjacent rewrite windows [2m(14)[22m
+2026-10-02T05:08:52.0360744Z      [33m[2m✓[22m[39m accepts work at the similarity scan budget[33m 557[2mms[22m[39m
+2026-10-02T05:08:52.0361565Z      [33m[2m✓[22m[39m accepts a large retained-anchor extension after EOF[33m 627[2mms[22m[39m
+2026-10-02T05:08:52.0362434Z      [33m[2m✓[22m[39m accepts a large retained-anchor extension before BOF[33m 561[2mms[22m[39m
+2026-10-02T05:08:52.0805182Z  [32m✓[39m src/github/api-telemetry-aggregate.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:08:52.1096419Z  [32m✓[39m src/suggestions/patch.validatesuggestionambiguouscontext.test.mts [2m([22m[2m21 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:08:52.2493128Z  [32m✓[39m src/commands/iterate/thread-mutation-routing.test.mts [2m([22m[2m12 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:08:52.3147130Z [poll tick 1 / +0s] GitHub GraphQL rate limit (0/5000) — retrying at 05:11:52Z (in 187s)
+2026-10-02T05:08:52.3218819Z [poll tick 1 / +0s] GitHub REST core rate limit (0/5000) — retrying at 05:11:52Z (in 187s)
+2026-10-02T05:08:52.3239485Z [poll tick 1 / +0s] GitHub secondary rate limit — retrying at 05:11:53Z (in 180s)
+2026-10-02T05:08:52.3278922Z [poll tick 1 / +0s] GitHub GraphQL rate limit (0/5000) — retrying at 05:11:52Z (in 187s)
+2026-10-02T05:08:52.3280103Z [poll tick 1 / +0s] GitHub GraphQL rate limit (0/5000) — retrying at 05:11:52Z (in 187s)
+2026-10-02T05:08:52.3296284Z  [32m✓[39m src/commands/iterate.escalate.fix-attempt-counter.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+2026-10-02T05:08:52.3450888Z  [32m✓[39m src/commands/poll-rate-limit-probe.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 21[2mms[22m[39m
+2026-10-02T05:08:52.5506196Z  [32m✓[39m src/state/iterate-stall.test.mts [2m([22m[2m14 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+2026-10-02T05:08:52.5651421Z  [32m✓[39m src/github/batch-parsers.activity.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:08:52.6058337Z  [32m✓[39m src/cli-parser.iterate-fix.main-iterate-text-format-fix-code-and-checks.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-10-02T05:08:52.7278252Z  [32m✓[39m src/comments/thread-visibility.marker.test.mts [2m([22m[2m10 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:08:52.8035846Z  [32m✓[39m src/github/poll-summary-check-blockers.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-10-02T05:08:52.8910611Z [poll tick 1 / +0s] WAIT — 2 passing, 1 in-progress; next tick in 30s
+2026-10-02T05:08:52.8923211Z [poll tick 2 / +30s] WAIT — 2 passing, 1 in-progress; next tick in 30s
+2026-10-02T05:08:52.8939949Z [poll tick 1 / +0s] WAIT — 2 passing, 1 in-progress; next tick in 30s
+2026-10-02T05:08:52.9097794Z  [32m✓[39m src/commands/poll.until-terminal.mock.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+2026-10-02T05:08:52.9453267Z  [32m✓[39m src/commands/iterate/native-stack-rebase.test.mts [2m([22m[2m11 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:08:52.9895973Z  [32m✓[39m src/state/graphql-quota-warnings.fallback.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 219[2mms[22m[39m
+2026-10-02T05:08:53.1165602Z [poll tick 1 / +0s] GitHub GraphQL rate limit (0/5000) — retrying at 05:09:13Z (in 28s)
+2026-10-02T05:08:53.1182765Z [poll tick 1 / +28s] GitHub GraphQL rate limit (0/5000) — retrying at 05:09:13Z (in 15s)
+2026-10-02T05:08:53.1224574Z [poll tick 1 / +0s] GitHub secondary rate limit — retrying at 05:09:54Z (in 60s)
+2026-10-02T05:08:53.1232431Z [poll tick 1 / +60s] GitHub secondary rate limit — retrying at 05:11:54Z (in 120s)
+2026-10-02T05:08:53.1245733Z [poll tick 1 / +0s] GitHub secondary rate limit — retrying at 05:09:54Z (in 60s)
+2026-10-02T05:08:53.1282610Z [poll tick 1 / +60s] GitHub secondary rate limit — retrying at 05:11:54Z (in 120s)
+2026-10-02T05:08:53.1293642Z [poll tick 1 / +180s] GitHub secondary rate limit — retrying at 05:15:54Z (in 240s)
+2026-10-02T05:08:53.1297050Z [poll tick 1 / +420s] GitHub secondary rate limit — retrying at 05:23:54Z (in 480s)
+2026-10-02T05:08:53.1298372Z [poll tick 1 / +900s] GitHub secondary rate limit — retrying at 05:39:54Z (in 960s)
+2026-10-02T05:08:53.1300397Z [poll tick 1 / +1860s] GitHub secondary rate limit still exhausted at 05:40:54Z after 5 attempts with no progress
+2026-10-02T05:08:53.1301780Z [poll tick 1 / +0s] GitHub GraphQL rate limit (0/5000) — retrying at 05:09:13Z (in 28s)
+2026-10-02T05:08:53.1304053Z [poll tick 1 / +28s] GitHub GraphQL rate limit (0/5000) — retrying at 05:09:53Z (in 40s)
+2026-10-02T05:08:53.1441024Z  [32m✓[39m src/commands/poll-rate-limit-budget.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 23[2mms[22m[39m
+2026-10-02T05:08:53.1545005Z  [32m✓[39m src/commands/check.runcheck-blocked-clean-hand-off-to-humans.mock.test.mts [2m([22m[2m10 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+2026-10-02T05:08:53.2890552Z  [32m✓[39m src/commands/iterate.orchestrator.runiterate-triage-via-runcheck.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 47[2mms[22m[39m
+2026-10-02T05:08:53.3267630Z  [32m✓[39m src/suggestions/parse.test.mts [2m([22m[2m23 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-10-02T05:08:53.4521240Z pr-shepherd: log write failed (disabling log): Error: ENOENT: no such file or directory, open '/tmp/shepherd-log-test-59d3e208/acme/widgets/worktrees/test-worktree-abc12345.md'
+2026-10-02T05:08:53.4815740Z  [32m✓[39m src/log/log-file.test.mts [2m([22m[2m12 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+2026-10-02T05:08:53.5509680Z  [32m✓[39m src/github/http.graphql-internal-error.mock.test.mts [2m([22m[2m9 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+2026-10-02T05:08:53.6379400Z  [32m✓[39m src/cli-parser.main-journal-extract.test.mts [2m([22m[2m10 tests[22m[2m)[22m[32m 130[2mms[22m[39m
+2026-10-02T05:08:53.6856244Z  [32m✓[39m src/github/batch.page.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-10-02T05:08:53.8618894Z  [32m✓[39m src/commands/iterate.fix-code-conflicts.runiterate-native-stack-conflicts.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 45[2mms[22m[39m
+2026-10-02T05:08:53.8759879Z  [32m✓[39m src/commands/check-unreported.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:08:53.8771478Z  [32m✓[39m src/github/poll-summary-stack-resource-limit.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+2026-10-02T05:08:54.0886267Z  [32m✓[39m src/github/http.graphql-error-handling.mock.test.mts [2m([22m[2m12 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+2026-10-02T05:08:54.1365476Z  [32m✓[39m src/commands/check.runcheck-reviewsummaries-approvedreviews-pass-through.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+2026-10-02T05:08:54.1631448Z  [32m✓[39m src/github/poll-summary-stack.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 51[2mms[22m[39m
+2026-10-02T05:08:54.3170043Z  [32m✓[39m src/commands/check.runcheck-merge-queue-removal-freshness.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+2026-10-02T05:08:54.3268962Z  [32m✓[39m src/checks/log-excerpt.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:08:54.5596022Z  [32m✓[39m src/github/poll-summary-check-hydration.mock.test.mts [2m([22m[2m10 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:08:54.5751758Z  [32m✓[39m src/cli-parser.main-resolve.mock.test.mts [2m([22m[2m11 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+2026-10-02T05:08:54.6253404Z  [32m✓[39m src/commands/iterate.stall.ci-start-timeout.mock.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 62[2mms[22m[39m
+2026-10-02T05:08:54.7545976Z  [32m✓[39m src/github/suggestion-thread.mock.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-10-02T05:08:54.8904406Z  [32m✓[39m src/checks/triage.triagefailingchecks-related-jobs.mock.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+2026-10-02T05:08:54.9265834Z  [32m✓[39m src/cli-parser.iterate-fix.multi-paragraph-thread-body.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-10-02T05:08:55.0035262Z pr-shepherd: REST core quota is exhausted; optional Actions job and log enrichment is incomplete
+2026-10-02T05:08:55.0282246Z  [32m✓[39m src/checks/triage.ratelimit-remaining.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+2026-10-02T05:08:55.1213274Z  [32m✓[39m src/commands/poll.runpoll-tick-progress.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-10-02T05:08:55.1237875Z pr-shepherd: annotation fetch failed for 1 check on PR #42 (ignored): secondary rate limit
+2026-10-02T05:08:55.1445964Z  [32m✓[39m src/commands/check.runcheck-check-annotations.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+2026-10-02T05:08:55.2585311Z  [32m✓[39m src/github/batch-parsers.fetchprbatch-check-type-mapping.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-10-02T05:08:55.2885868Z  [32m✓[39m src/github/pagination.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:08:55.3711117Z  [32m✓[39m src/github/http.rest-conditional.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 46[2mms[22m[39m
+2026-10-02T05:08:55.5330686Z  [32m✓[39m src/commands/check.runcheck-unlocated-thread-visibility.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+2026-10-02T05:08:55.5508092Z  [32m✓[39m src/journal/reconcile.test.mts [2m([22m[2m16 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-10-02T05:08:55.6047708Z  [32m✓[39m src/cli-parser.main-journal-file-flag.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-10-02T05:08:55.7228181Z  [32m✓[39m src/suggestions/patch.trimreplacementtocontext.test.mts [2m([22m[2m9 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:08:55.7729585Z  [32m✓[39m src/github/batch.fetchprbatch-reviewsummaries.mock.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-10-02T05:08:55.9059739Z  [32m✓[39m src/state/seen-comments.loadseenmap.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+2026-10-02T05:08:55.9176094Z  [32m✓[39m src/commands/iterate.orchestrator.runiterate-stack-draft-hold.mock.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+2026-10-02T05:08:56.0072341Z  [32m✓[39m src/checks/triage.fetchstartupfailurechecks.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-10-02T05:08:56.0805236Z  [32m✓[39m src/log/setup.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-10-02T05:08:56.0941113Z  [32m✓[39m src/suggestions/patch.validatesuggestionunrelatedpair.test.mts [2m([22m[2m11 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-10-02T05:08:56.1935890Z [poll tick 1 / +0s] WAIT — 2 passing, 1 in-progress; next tick in 120s
+2026-10-02T05:08:56.2167796Z  [32m✓[39m src/commands/poll.quota-throttle.mock.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-10-02T05:08:56.3346466Z  [32m✓[39m src/github/poll-summary-mergeability.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+2026-10-02T05:08:56.3545844Z  [32m✓[39m src/checks/triage.triagefailingchecks-failedstep.mock.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+2026-10-02T05:08:56.5056990Z  [32m✓[39m src/github/poll-summary.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+2026-10-02T05:08:56.5345899Z  [32m✓[39m src/commands/iterate/stack-trunk-conflict.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:08:56.5348158Z  [32m✓[39m src/github/batch-parsers.merge-queue.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:08:56.6712061Z  [32m✓[39m src/suggestions/patch.buildunifieddiff.test.mts [2m([22m[2m10 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:08:56.7086417Z  [32m✓[39m src/github/poll-summary-route.test.mts [2m([22m[2m23 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-10-02T05:08:56.7404393Z  [32m✓[39m src/commands/check-annotations.attach.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:08:56.8604318Z  [32m✓[39m src/github/poll-summary-queue-removal.test.mts [2m([22m[2m10 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:08:56.9029634Z  [32m✓[39m src/github/poll-summary-unreported.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+2026-10-02T05:08:57.0918614Z  [32m✓[39m src/github/batch.fetchprbatch-checks-pagination.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-10-02T05:08:57.1277323Z pr-shepherd: failed to parse /tmp/shepherd-load-test-1EX3LQ/.pr-shepherdrc.yml: Invalid config: watch.graphqlQuotaWarnings[0] resolves to a non-finite poll interval
+2026-10-02T05:08:57.1310399Z pr-shepherd: failed to parse /tmp/shepherd-load-test-c136vC/.pr-shepherdrc.yml: Invalid config: watch.graphqlQuotaWarnings must be an array
+2026-10-02T05:08:57.1353040Z pr-shepherd: failed to parse /tmp/shepherd-load-test-fc5Y48/.pr-shepherdrc.yml: Invalid config: watch.graphqlQuotaWarnings[0] must be an object
+2026-10-02T05:08:57.1363146Z pr-shepherd: failed to parse /tmp/shepherd-load-test-Cyc5rm/.pr-shepherdrc.yml: Invalid config: watch.graphqlQuotaWarnings[0].remainingPercent must be an integer from 1 to 100
+2026-10-02T05:08:57.1380172Z pr-shepherd: failed to parse /tmp/shepherd-load-test-lixbbU/.pr-shepherdrc.yml: Invalid config: watch.graphqlQuotaWarnings[0].pollIntervalMinutes must be a positive number
+2026-10-02T05:08:57.1399226Z pr-shepherd: failed to parse /tmp/shepherd-load-test-XxGJLx/.pr-shepherdrc.yml: Invalid config: watch.graphqlQuotaWarnings[0] must define pollIntervalMinutes, pollIntervalFactor, or both
+2026-10-02T05:08:57.1420006Z pr-shepherd: failed to parse /tmp/shepherd-load-test-HbhWO4/.pr-shepherdrc.yml: Invalid config: watch.graphqlQuotaWarnings[0].pollIntervalFactor must be a number greater than or equal to 1
+2026-10-02T05:08:57.1443110Z pr-shepherd: failed to parse /tmp/shepherd-load-test-d0HJ3c/.pr-shepherdrc.yml: Invalid config: watch.graphqlQuotaWarnings has duplicate remainingPercent 20
+2026-10-02T05:08:57.1453115Z  [32m✓[39m src/cli-parser.clean.mock.test.mts [2m([22m[2m13 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+2026-10-02T05:08:57.1476095Z pr-shepherd: failed to parse /tmp/shepherd-load-test-czFKTD/.pr-shepherdrc.yml: Invalid config: watch.graphqlQuotaWarnings pollIntervalMinutes must not decrease as remainingPercent decreases
+2026-10-02T05:08:57.1488978Z pr-shepherd: failed to parse /tmp/shepherd-load-test-inLAAO/.pr-shepherdrc.yml: Invalid config: watch.graphqlQuotaWarnings pollIntervalMinutes must not decrease as remainingPercent decreases
+2026-10-02T05:08:57.1735919Z  [32m✓[39m src/config/load-quota-warnings.test.mts [2m([22m[2m16 tests[22m[2m)[22m[32m 88[2mms[22m[39m
+2026-10-02T05:08:57.2868467Z  [32m✓[39m src/cli/resolve-validators.test.mts [2m([22m[2m15 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-10-02T05:08:57.3687986Z  [32m✓[39m src/cli/poll-summary-formatter.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:08:57.3836303Z pr-shepherd: GraphQL non-fatal errors: You have exceeded a secondary rate limit
+2026-10-02T05:08:57.4097045Z  [32m✓[39m src/github/http.graphqlwithratelimit-header-parsing.mock.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+2026-10-02T05:08:57.5559072Z  [32m✓[39m src/commands/commit-suggestion.apply.runcommitsuggestion-output-shape.mock.test.mts [2m([22m[2m10 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-10-02T05:08:57.6026335Z  [32m✓[39m src/commands/iterate.base-checks.excludes-skipped-and-filtered-checks.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+2026-10-02T05:08:57.6050472Z [poll tick 1 / +0s] FIX_CODE — debounce 60s remaining
+2026-10-02T05:08:57.6065994Z [poll tick 2 / +30s] FIX_CODE — debounce 30s remaining
+2026-10-02T05:08:57.6164858Z [poll tick 1 / +0s] FIX_CODE — debounce 60s remaining
+2026-10-02T05:08:57.6170061Z [poll tick 2 / +30s] WAIT — 2 passing, 1 in-progress; next tick in 30s
+2026-10-02T05:08:57.6194637Z [poll tick 1 / +0s] FIX_CODE — debounce 60s remaining
+2026-10-02T05:08:57.6215245Z [poll tick 2 / +30s] FIX_CODE — debounce 30s remaining
+2026-10-02T05:08:57.6216181Z [poll tick 1 / +0s] FIX_CODE — debounce 60s remaining
+2026-10-02T05:08:57.6216998Z [poll tick 2 / +30s] FIX_CODE — debounce 30s remaining
+2026-10-02T05:08:57.6217764Z [poll tick 1 / +0s] FIX_CODE — debounce 60s remaining
+2026-10-02T05:08:57.6218511Z [poll tick 2 / +30s] FIX_CODE — debounce 30s remaining
+2026-10-02T05:08:57.6267627Z  [32m✓[39m src/commands/poll.until-terminal-quota-debounce.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+2026-10-02T05:08:57.7889172Z  [32m✓[39m src/github/http.resttext-redirect-handling.mock.test.mts [2m([22m[2m9 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+2026-10-02T05:08:57.8275884Z  [32m✓[39m src/github/batch.receipt-query.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-10-02T05:08:57.9196194Z  [32m✓[39m src/state/pr-fingerprint.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 133[2mms[22m[39m
+2026-10-02T05:08:57.9943082Z  [32m✓[39m src/cli/args.parsecommonargs-pr-number-detection.test.mts [2m([22m[2m21 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-10-02T05:08:58.0766548Z  [32m✓[39m src/commands/iterate.render-escalate-fields.runiterate-prescriptive-fields-resolvecommand-shape.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+2026-10-02T05:08:58.0955582Z  [32m✓[39m src/quota-warning.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+2026-10-02T05:08:58.1700564Z  [32m✓[39m src/github/queue-removal-freshness.test.mts [2m([22m[2m10 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:08:58.2855080Z  [32m✓[39m src/commands/resolve.runresolvemutate-forwards-options.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:08:58.3515096Z  [32m✓[39m src/commands/ready-mergeability.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:08:58.4594364Z  [32m✓[39m src/commands/iterate.unreported-required.runiterate.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 66[2mms[22m[39m
+2026-10-02T05:08:58.5332377Z  [32m✓[39m src/cli/first-look.list-and-suggestion-render-helpers.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:08:58.6155866Z  [32m✓[39m src/cli/body-truncate.test.mts [2m([22m[2m13 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:08:58.6622497Z  [32m✓[39m src/cli-parser.poll-config.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 72[2mms[22m[39m
+2026-10-02T05:08:58.6823000Z  [32m✓[39m src/github/batch-parse-suites.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:08:58.8255118Z  [32m✓[39m src/state/base.test.mts [2m([22m[2m19 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:08:58.8543197Z  [32m✓[39m src/cli/fix-formatter-extra.test.mts [2m([22m[2m9 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:08:58.9178390Z  [32m✓[39m src/commands/iterate.orchestrator.runiterate-mark-ready.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+2026-10-02T05:08:59.0221554Z  [32m✓[39m src/merge-status/derive.test.mts [2m([22m[2m15 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:08:59.1268201Z  [32m✓[39m src/commands/iterate.fix-code-passing-check-annotations.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+2026-10-02T05:08:59.2493450Z  [32m✓[39m src/commands/check.runcheck-skiptriage.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+2026-10-02T05:08:59.2915578Z  [32m✓[39m src/cli/iterate-flags.test.mts [2m([22m[2m11 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:08:59.3216015Z  [32m✓[39m src/cli-parser.poll-stack-interval.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 75[2mms[22m[39m
+2026-10-02T05:08:59.5099273Z  [32m✓[39m src/state/rest-cache.roundtrip.test.mts [2m([22m[2m10 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+2026-10-02T05:08:59.6059063Z  [32m✓[39m src/cli-parser.iterate-summary.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:08:59.7055667Z  [32m✓[39m src/journal/extract.test.mts [2m([22m[2m25 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+2026-10-02T05:08:59.8820518Z  [32m✓[39m src/commands/iterate.base-checks.runiterate-base-checks-carries-passing-failing-regression-mi.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+2026-10-02T05:09:00.0418761Z  [32m✓[39m src/cli/stack-overview-format.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:00.0566219Z  [32m✓[39m src/commands/iterate.repeated-workflow-branch-recovery.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 59[2mms[22m[39m
+2026-10-02T05:09:00.1012918Z  [32m✓[39m test-cases/format-parity.test.mts [2m([22m[2m117 tests[22m[2m)[22m[33m 380[2mms[22m[39m
+2026-10-02T05:09:00.2468760Z  [32m✓[39m src/comments/review-visibility.test.mts [2m([22m[2m9 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-10-02T05:09:00.2975953Z  [32m✓[39m src/github/fingerprint.fetch.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+2026-10-02T05:09:00.3446048Z  [32m✓[39m src/commands/iterate/stale-ancestry.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-10-02T05:09:00.4926444Z  [32m✓[39m src/suggestions/patch.validatesuggestionreplacementrange.test.mts [2m([22m[2m17 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-10-02T05:09:00.5485943Z  [32m✓[39m src/suggestions/patch.validatesuggestioninternaloverlap.test.mts [2m([22m[2m10 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:09:00.5512155Z  [32m✓[39m src/commands/iterate.fix-code-projection.runiterate-fix-code-agent-projection.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+2026-10-02T05:09:00.7346323Z  [32m✓[39m src/checks/classify-ignore.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-10-02T05:09:00.7486124Z  [32m✓[39m src/github/poll-summary-check-hydration-paths.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:00.7530268Z  [32m✓[39m src/commands/check.runcheck-first-look-comments.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+2026-10-02T05:09:00.9326513Z  [32m✓[39m src/suggestions/patch.buildunifieddiff.trims-duplicated-context-lines.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:00.9580586Z [aggregate poll tick 1 / +0s] GitHub GraphQL rate limit (0/5000) — retrying at 05:09:20Z (in 24s)
+2026-10-02T05:09:00.9593467Z [aggregate poll tick 2 / +24s] GitHub GraphQL rate limit (0/5000) — retrying at 05:09:20Z (in 15s)
+2026-10-02T05:09:00.9645836Z [aggregate poll tick 1 / +0s] GitHub GraphQL rate limit (0/5000) — retrying at 05:09:20Z (in 24s)
+2026-10-02T05:09:00.9647206Z [aggregate poll tick 2 / +24s] GitHub GraphQL rate limit (0/5000) — retrying at 05:10:00Z (in 40s)
+2026-10-02T05:09:00.9845253Z  [32m✓[39m src/commands/poll-summary-rate-limit-budget.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+2026-10-02T05:09:01.0375671Z  [32m✓[39m src/commands/iterate.ready-receipt-probe.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+2026-10-02T05:09:01.1266747Z  [32m✓[39m src/commands/commit-suggestion.runcommitsuggestion-preflight.mock.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-10-02T05:09:01.2019705Z  [32m✓[39m src/cli/stack-overview.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:01.2817975Z  [32m✓[39m src/commands/iterate.render.runiterate-prescriptive-fields-log-strings.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 45[2mms[22m[39m
+2026-10-02T05:09:01.4031789Z  [32m✓[39m src/commands/iterate.fix-code-check-annotation-markers.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+2026-10-02T05:09:01.4306076Z  [32m✓[39m src/state/check-blockers.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 74[2mms[22m[39m
+2026-10-02T05:09:01.5203481Z  [32m✓[39m src/commands/shepherd-journal.shepherd-journal-instruction-helpers.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:01.5655212Z  [32m✓[39m src/state/graphql-quota-policy.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:01.5915462Z  [32m✓[39m src/state/graphql-quota-policy.reset.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:01.7612932Z  [32m✓[39m src/github/batch.fetchprbatch-approvedreviews.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:09:01.8396969Z  [32m✓[39m src/commands/iterate.escalate.runiterate-escalate-pr-level-changes-requested-with-actionab.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-10-02T05:09:01.8962403Z  [32m✓[39m src/commands/iterate.classify.runiterate-review-summary-first-look-minimize.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-10-02T05:09:02.0304176Z  [32m✓[39m src/github/poll-summary-readiness.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:02.0941792Z  [32m✓[39m src/commands/iterate.fix-code-actionable.runiterate-fix-code-actionable-threads.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+2026-10-02T05:09:02.1140595Z  [32m✓[39m src/commands/check-receipt-context.test.mts [2m([22m[2m9 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+2026-10-02T05:09:02.2630719Z  [32m✓[39m src/commands/check.runcheck-classification-rules.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-10-02T05:09:02.2658433Z  [32m✓[39m src/state/ready-receipts.test.mts [2m([22m[2m12 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-10-02T05:09:02.3132340Z  [32m✓[39m src/index.mock.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 44[2mms[22m[39m
+2026-10-02T05:09:02.4745821Z  [32m✓[39m src/github/thread-comments.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:02.5348264Z  [32m✓[39m src/github/http.token-resolution.mock.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+2026-10-02T05:09:02.5772452Z  [32m✓[39m src/commands/iterate.steps.runiterate-timeout-cancelled-failures-route-to-fix-code.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 49[2mms[22m[39m
+2026-10-02T05:09:02.6647760Z  [32m✓[39m src/checks/log-excerpt-boundaries.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:02.7517854Z  [32m✓[39m src/commands/check-execution-context.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:02.7609610Z  [32m✓[39m src/github/batch-parsers.changesrequested-dedup.mock.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:09:02.9293058Z  [32m✓[39m src/checks/triage.joblog-cache.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+2026-10-02T05:09:02.9321636Z  [32m✓[39m src/log/session.formatresponseentry.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:02.9439462Z  [32m✓[39m src/commands/clean.runclean-all-repo.mock.test.mts [2m([22m[2m11 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+2026-10-02T05:09:03.0985734Z  [32m✓[39m src/commands/check-status.test.mts [2m([22m[2m10 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:03.1012580Z  [32m✓[39m src/commands/commit-suggestion.runcommitsuggestion-happy-path.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-10-02T05:09:03.1771820Z  [32m✓[39m src/config/load.cascade.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 72[2mms[22m[39m
+2026-10-02T05:09:03.2935725Z  [32m✓[39m src/commands/suggestion-patches.runsuggestionpatches.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:09:03.3186093Z  [32m✓[39m src/reporters/agent.toagentthread.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:03.4079026Z  [32m✓[39m src/commands/iterate.escalate.runiterate-escalate-pr-level-changes-requested.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+2026-10-02T05:09:03.4965885Z  [32m✓[39m src/comments/visible-comments.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:03.5194856Z  [32m✓[39m src/github/batch-parsers-author-association.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:03.6392389Z  [32m✓[39m src/github/poll-summary-projector-draft-command.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+2026-10-02T05:09:03.6905886Z  [32m✓[39m src/commands/clean.runclean-branch-current.mock.test.mts [2m([22m[2m9 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+2026-10-02T05:09:03.9096060Z  [32m✓[39m src/commands/iterate.stack-trunk-conflict.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+2026-10-02T05:09:03.9121447Z  [32m✓[39m src/config/load-poll.test.mts [2m([22m[2m17 tests[22m[2m)[22m[32m 95[2mms[22m[39m
+2026-10-02T05:09:03.9400673Z  [32m✓[39m src/cli/check-annotations.dedup-and-trivial-drop.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-10-02T05:09:04.1094925Z  [32m✓[39m src/commands/resolve.runresolvemutate-viewer-authorship.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:04.1335416Z  [32m✓[39m src/github/check-annotations.cache.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+2026-10-02T05:09:04.1558069Z  [32m✓[39m src/github/batch-parsers.summary.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:04.3362661Z  [32m✓[39m src/github/merge-target-rules.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:09:04.3504422Z  [32m✓[39m src/github/poll-summary-errors.mock.test.mts [2m([22m[2m10 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-10-02T05:09:04.4760153Z  [32m✓[39m src/commands/suggestion-patch-git.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 186[2mms[22m[39m
+2026-10-02T05:09:04.4955611Z  [32m✓[39m src/state/fix-attempts.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-10-02T05:09:04.5318665Z  [32m✓[39m src/cli/iterate-lean.projectiteratelean.projectiterateverbose-uses-default-options-for-fix-code-and-wait.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:04.6534128Z  [32m✓[39m src/commands/commit-suggestion.runcommitsuggestion-thread-classification.mock.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:09:04.6691106Z  [32m✓[39m src/cli/help-public-surface.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:04.7764113Z  [32m✓[39m src/github/batch-parsers.fetchprbatch-reviewthread-isminimized-mapping.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-10-02T05:09:04.8056057Z  [32m✓[39m src/cli/mutate-formatter.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:04.8468147Z  [32m✓[39m src/state/base.user-temp-dir.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-10-02T05:09:04.9436196Z  [32m✓[39m src/github/api-telemetry.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:05.0060637Z  [32m✓[39m src/cli/mark-files-as-viewed-formatter.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:05.0433129Z  [32m✓[39m src/commands/iterate.stall-state-unavailable.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-10-02T05:09:05.2452979Z  [32m✓[39m src/commands/iterate.render.startup-failure-instructions.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+2026-10-02T05:09:05.2646239Z  [32m✓[39m src/commands/iterate.render-resolve-cmd.renderresolvecommand-format.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+2026-10-02T05:09:05.3176291Z  [32m✓[39m src/commands/iterate.render-resolve-cmd.renderresolvecommand-placeholders.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+2026-10-02T05:09:05.5187443Z  [32m✓[39m src/github/poll-summary-ancestry.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 32[2mms[22m[39m
+2026-10-02T05:09:05.5438507Z [aggregate poll tick 1 / +0s] #1 WAIT, #2 WAIT
+2026-10-02T05:09:05.5483412Z [aggregate poll tick 2 / +60s] #1 WAIT, #2 WAIT
+2026-10-02T05:09:05.5497417Z [aggregate poll tick 3 / +120s] #1 WAIT, #2 WAIT
+2026-10-02T05:09:05.5731192Z  [32m✓[39m src/commands/poll-summary-stall.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+2026-10-02T05:09:05.6398276Z  [32m✓[39m src/cli-parser.main-resolve.formatmutateresult-renders-dismissed-reviews-unresolved-unminimized-and-.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-10-02T05:09:05.7549253Z  [32m✓[39m src/github/batch-parsers.check-timestamps.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-10-02T05:09:05.8411002Z  [32m✓[39m src/github/poll-summary-annotation-probe-receipt.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 23[2mms[22m[39m
+2026-10-02T05:09:05.8425823Z  [32m✓[39m src/commands/iterate/unreported-required-behind.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:06.0796499Z  [32m✓[39m src/commands/check.runcheck-merge-queue-deferred-seen-markers.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+2026-10-02T05:09:06.0976568Z  [32m✓[39m src/commands/iterate.fix-code-projection.external-status-instructions.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+2026-10-02T05:09:06.1685653Z  [32m✓[39m src/commands/iterate.fix-code-actionable.unchanged-headsha-keeps-attempt-count.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 36[2mms[22m[39m
+2026-10-02T05:09:06.2850768Z  [32m✓[39m src/checks/unreported-required.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:06.3056490Z  [32m✓[39m src/commands/check.runcheck-terminal-pr-state.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:06.3590779Z  [32m✓[39m src/commands/commit-suggestion.runcommitsuggestion-range-validation.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-10-02T05:09:06.4506432Z  [32m✓[39m src/commands/check-unreported-collect.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:06.5782636Z  [32m✓[39m src/commands/iterate/classify.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:06.6616193Z  [32m✓[39m src/cli-parser.iterate.main-iterate-text-format.branch-protection-header.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 17[2mms[22m[39m
+2026-10-02T05:09:06.6793121Z  [32m✓[39m src/cli/rerun-command.fix-formatter-rendering.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:09:06.7575969Z  [32m✓[39m src/commands/stack-layer-readiness.test.mts [2m([22m[2m18 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:06.8812794Z  [32m✓[39m src/cli/related-jobs-format.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-10-02T05:09:06.9958679Z  [32m✓[39m src/commands/iterate.escalate.iterate-helper-fallbacks.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+2026-10-02T05:09:07.0379860Z  [32m✓[39m src/cli-parser.default-poll-output.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-10-02T05:09:07.2186403Z  [32m✓[39m src/commands/iterate.conflicting-head-ci.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 62[2mms[22m[39m
+2026-10-02T05:09:07.3101362Z  [32m✓[39m src/commands/check.runcheck-ready-mergeability-recheck.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+2026-10-02T05:09:07.4490791Z  [32m✓[39m src/commands/clean.runclean-pr.mock.test.mts [2m([22m[2m9 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+2026-10-02T05:09:07.5410984Z  [32m✓[39m src/commands/shepherd-journal.instruction-heading-dedup.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:07.6519833Z  [32m✓[39m src/state/seen-comments.markseen-bodyhash-upsert.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+2026-10-02T05:09:07.6918987Z  [32m✓[39m src/cli/clean-formatter.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:07.8743678Z  [31m❯[39m test-cases/index.test.mts [2m([22m[2m117 tests[22m[2m | [22m[31m8 failed[39m[2m)[22m[33m 543[2mms[22m[39m
+2026-10-02T05:09:07.8785275Z    [31m❯[39m 01-cancel-merged [2m(1)[22m
+2026-10-02T05:09:07.8786038Z [31m     [31m×[31m snapshots match[39m[32m 49[2mms[22m[39m
+2026-10-02T05:09:07.8786604Z    [31m❯[39m 02-cancel-closed [2m(1)[22m
+2026-10-02T05:09:07.8787243Z [31m     [31m×[31m snapshots match[39m[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8787858Z    [31m❯[39m 03-cancel-ready-delay-elapsed-clean [2m(1)[22m
+2026-10-02T05:09:07.8788576Z [31m     [31m×[31m snapshots match[39m[32m 26[2mms[22m[39m
+2026-10-02T05:09:07.8789273Z    [31m❯[39m 04-cancel-ready-delay-blocked-review-required [2m(1)[22m
+2026-10-02T05:09:07.8789999Z [31m     [31m×[31m snapshots match[39m[32m 5[2mms[22m[39m
+2026-10-02T05:09:07.8790762Z    [31m❯[39m 05-cancel-ready-delay-blocked-insufficient-approvals [2m(1)[22m
+2026-10-02T05:09:07.8791548Z [31m     [31m×[31m snapshots match[39m[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8792179Z    [31m❯[39m 06-cancel-ready-delay-blocked-has-hooks [2m(1)[22m
+2026-10-02T05:09:07.8792874Z [31m     [31m×[31m snapshots match[39m[32m 8[2mms[22m[39m
+2026-10-02T05:09:07.8793461Z    [32m✓[39m 07-mark-ready-draft-clean [2m(1)[22m
+2026-10-02T05:09:07.8799363Z      [32m✓[39m snapshots match[32m 12[2mms[22m[39m
+2026-10-02T05:09:07.8800588Z    [32m✓[39m 08-wait-blocked-by-bot-review [2m(1)[22m
+2026-10-02T05:09:07.8801207Z      [32m✓[39m snapshots match[32m 9[2mms[22m[39m
+2026-10-02T05:09:07.8801758Z    [32m✓[39m 09-wait-in-progress-ci [2m(1)[22m
+2026-10-02T05:09:07.8802326Z      [32m✓[39m snapshots match[32m 5[2mms[22m[39m
+2026-10-02T05:09:07.8802877Z    [32m✓[39m 10-ready-delay-countdown [2m(1)[22m
+2026-10-02T05:09:07.8803431Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8804195Z    [32m✓[39m 100-aggregate-stack-closed-parent [2m(1)[22m
+2026-10-02T05:09:07.8805228Z      [32m✓[39m snapshots match[32m 6[2mms[22m[39m
+2026-10-02T05:09:07.8805858Z    [32m✓[39m 101-aggregate-stack-incomplete-handoff [2m(1)[22m
+2026-10-02T05:09:07.8806479Z      [32m✓[39m snapshots match[32m 2[2mms[22m[39m
+2026-10-02T05:09:07.8807196Z    [32m✓[39m 102-aggregate-stack-mixed-escalate-autonomous-work [2m(1)[22m
+2026-10-02T05:09:07.8807848Z      [32m✓[39m snapshots match[32m 5[2mms[22m[39m
+2026-10-02T05:09:07.8808483Z    [32m✓[39m 103-aggregate-stack-all-effective-cancel [2m(1)[22m
+2026-10-02T05:09:07.8809100Z      [32m✓[39m snapshots match[32m 2[2mms[22m[39m
+2026-10-02T05:09:07.8809819Z    [32m✓[39m 104-aggregate-stack-clean-draft-auto-ready-disabled [2m(1)[22m
+2026-10-02T05:09:07.8810509Z      [32m✓[39m snapshots match[32m 2[2mms[22m[39m
+2026-10-02T05:09:07.8811199Z    [32m✓[39m 105-aggregate-stack-draft-disabled-failing-check [2m(1)[22m
+2026-10-02T05:09:07.8811881Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8812533Z    [32m✓[39m 106-aggregate-stack-blocked-hooks-receipts [2m(1)[22m
+2026-10-02T05:09:07.8813161Z      [32m✓[39m snapshots match[32m 2[2mms[22m[39m
+2026-10-02T05:09:07.8813909Z    [32m✓[39m 11-fix-code-failing-check-github-actions [2m(1)[22m
+2026-10-02T05:09:07.8814540Z      [32m✓[39m snapshots match[32m 9[2mms[22m[39m
+2026-10-02T05:09:07.8815144Z    [32m✓[39m 112-aggregate-stack-single-layer-merge [2m(1)[22m
+2026-10-02T05:09:07.8815745Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8816354Z    [32m✓[39m 113-aggregate-stack-merged-after-command [2m(1)[22m
+2026-10-02T05:09:07.8816947Z      [32m✓[39m snapshots match[32m 2[2mms[22m[39m
+2026-10-02T05:09:07.8817556Z    [32m✓[39m 114-aggregate-stack-idle-draft-probes-wait [2m(1)[22m
+2026-10-02T05:09:07.8818142Z      [32m✓[39m snapshots match[32m 2[2mms[22m[39m
+2026-10-02T05:09:07.8818793Z    [32m✓[39m 115-aggregate-stack-held-draft-over-escalation [2m(1)[22m
+2026-10-02T05:09:07.8819462Z      [32m✓[39m snapshots match[32m 2[2mms[22m[39m
+2026-10-02T05:09:07.8820039Z    [32m✓[39m 116-aggregate-stack-draft-blocking-reviewer [2m(1)[22m
+2026-10-02T05:09:07.8820649Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8821252Z    [32m✓[39m 117-fix-code-conflicts-behind-base-hint [2m(1)[22m
+2026-10-02T05:09:07.8821839Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8822429Z    [32m✓[39m 12-fix-code-failing-check-external [2m(1)[22m
+2026-10-02T05:09:07.8823018Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8823560Z    [32m✓[39m 13-fix-code-startup-failure [2m(1)[22m
+2026-10-02T05:09:07.8829257Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8829883Z    [32m✓[39m 14-fix-code-cancelled-conclusion [2m(1)[22m
+2026-10-02T05:09:07.8830477Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8831114Z    [32m✓[39m 15-fix-code-cancel-failure-fallback [2m(1)[22m
+2026-10-02T05:09:07.8831726Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8832269Z    [32m✓[39m 16-fix-code-review-thread [2m(1)[22m
+2026-10-02T05:09:07.8832801Z      [32m✓[39m snapshots match[32m 6[2mms[22m[39m
+2026-10-02T05:09:07.8833392Z    [32m✓[39m 17-fix-code-review-thread-edited [2m(1)[22m
+2026-10-02T05:09:07.8834118Z      [32m✓[39m snapshots match[32m 7[2mms[22m[39m
+2026-10-02T05:09:07.8834966Z    [32m✓[39m 18-fix-code-review-thread-suggestion [2m(1)[22m
+2026-10-02T05:09:07.8835578Z      [32m✓[39m snapshots match[32m 6[2mms[22m[39m
+2026-10-02T05:09:07.8836285Z    [32m✓[39m 19-fix-code-review-thread-suggestion-nested-fence [2m(1)[22m
+2026-10-02T05:09:07.8837087Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8837748Z    [32m✓[39m 20-fix-code-resolution-only-thread [2m(1)[22m
+2026-10-02T05:09:07.8838334Z      [32m✓[39m snapshots match[32m 10[2mms[22m[39m
+2026-10-02T05:09:07.8839081Z    [32m✓[39m 21-fix-code-actionable-comment [2m(1)[22m
+2026-10-02T05:09:07.8839597Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8840217Z    [32m✓[39m 22-fix-code-review-summary-first-look [2m(1)[22m
+2026-10-02T05:09:07.8840830Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8841368Z    [32m✓[39m 23-fix-code-review-summary-edited [2m(1)[22m
+2026-10-02T05:09:07.8841890Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8842478Z    [32m✓[39m 24-wait-review-summary-already-surfaced [2m(1)[22m
+2026-10-02T05:09:07.8843058Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8843615Z    [32m✓[39m 25-fix-code-changes-requested-review [2m(1)[22m
+2026-10-02T05:09:07.8844395Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8845090Z    [32m✓[39m 26-fix-code-commented-review-dismiss-overlap-guard [2m(1)[22m
+2026-10-02T05:09:07.8845792Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8846435Z    [32m✓[39m 27-fix-code-conflicts [2m(1)[22m
+2026-10-02T05:09:07.8846973Z      [32m✓[39m snapshots match[32m 5[2mms[22m[39m
+2026-10-02T05:09:07.8847624Z    [32m✓[39m 28-fix-code-stale-graphql-clean-rest-dirty [2m(1)[22m
+2026-10-02T05:09:07.8848240Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8848800Z    [32m✓[39m 29-fix-code-review-only-no-cancel [2m(1)[22m
+2026-10-02T05:09:07.8849351Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8849845Z    [32m✓[39m 30-escalate-stall-timeout [2m(1)[22m
+2026-10-02T05:09:07.8850337Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8850843Z    [32m✓[39m 31-escalate-fix-thrash [2m(1)[22m
+2026-10-02T05:09:07.8851355Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8851908Z    [32m✓[39m 32-fix-code-pr-level-changes-requested [2m(1)[22m
+2026-10-02T05:09:07.8852515Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8853053Z    [32m✓[39m 33-fix-code-unlocated-thread-skip [2m(1)[22m
+2026-10-02T05:09:07.8853593Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8854440Z    [32m✓[39m 34-escalate-base-branch-unknown [2m(1)[22m
+2026-10-02T05:09:07.8855011Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8855598Z    [32m✓[39m 35-fix-code-minimize-bots-policy [2m(1)[22m
+2026-10-02T05:09:07.8856173Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8856760Z    [32m✓[39m 37-fix-code-all-three-summary-buckets [2m(1)[22m
+2026-10-02T05:09:07.8857342Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8857924Z    [32m✓[39m 38-fix-code-comment-only-no-cancel [2m(1)[22m
+2026-10-02T05:09:07.8858499Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8859188Z    [32m✓[39m 39-fix-code-conflicts-with-in-progress-no-cancel [2m(1)[22m
+2026-10-02T05:09:07.8859855Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8860578Z    [32m✓[39m 40-fix-code-changes-requested-review-only-in-progress [2m(1)[22m
+2026-10-02T05:09:07.8861268Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8861957Z    [32m✓[39m 41-fix-code-resolution-only-in-progress-no-cancel [2m(1)[22m
+2026-10-02T05:09:07.8862815Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8863386Z    [32m✓[39m 42-escalate-ci-start-stall [2m(1)[22m
+2026-10-02T05:09:07.8864094Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8864673Z    [32m✓[39m 42-fix-code-check-annotations [2m(1)[22m
+2026-10-02T05:09:07.8865174Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8865805Z    [32m✓[39m 42-fix-code-review-thread-conversation [2m(1)[22m
+2026-10-02T05:09:07.8866625Z      [32m✓[39m snapshots match[32m 9[2mms[22m[39m
+2026-10-02T05:09:07.8867263Z    [32m✓[39m 43-fix-code-check-annotations-seen-marker [2m(1)[22m
+2026-10-02T05:09:07.8867872Z      [32m✓[39m snapshots match[32m 5[2mms[22m[39m
+2026-10-02T05:09:07.8868458Z    [32m✓[39m 43-fix-code-resolved-thread-new-reply [2m(1)[22m
+2026-10-02T05:09:07.8869013Z      [32m✓[39m snapshots match[32m 5[2mms[22m[39m
+2026-10-02T05:09:07.8869619Z    [32m✓[39m 44-fix-code-seen-bot-thread-resurfaced [2m(1)[22m
+2026-10-02T05:09:07.8870177Z      [32m✓[39m snapshots match[32m 5[2mms[22m[39m
+2026-10-02T05:09:07.8870728Z    [32m✓[39m 45-fix-code-bot-threads-resolve-human-reply [2m(1)[22m
+2026-10-02T05:09:07.8874800Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8875351Z    [32m✓[39m 46-fix-code-bot-thread-no-sha [2m(1)[22m
+2026-10-02T05:09:07.8875922Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8876546Z    [32m✓[39m 46-fix-code-failing-check-with-thread [2m(1)[22m
+2026-10-02T05:09:07.8877178Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8877814Z    [31m❯[39m 47-cancel-bot-cr-superseded-by-approval [2m(1)[22m
+2026-10-02T05:09:07.8878528Z [31m     [31m×[31m snapshots match[39m[32m 5[2mms[22m[39m
+2026-10-02T05:09:07.8879205Z    [32m✓[39m 47-fix-code-failing-check-with-comment [2m(1)[22m
+2026-10-02T05:09:07.8879829Z      [32m✓[39m snapshots match[32m 6[2mms[22m[39m
+2026-10-02T05:09:07.8880552Z    [32m✓[39m 48-fix-code-failing-check-with-changes-requested [2m(1)[22m
+2026-10-02T05:09:07.8881242Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8881804Z    [32m✓[39m 49-fix-code-conflicts-with-thread [2m(1)[22m
+2026-10-02T05:09:07.8882347Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8882959Z    [32m✓[39m 50-fix-code-conflicts-with-changes-requested [2m(1)[22m
+2026-10-02T05:09:07.8883567Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8886011Z    [32m✓[39m 51-fix-code-suggestion-with-conflicts [2m(1)[22m
+2026-10-02T05:09:07.8886422Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8886837Z    [32m✓[39m 52-fix-code-edited-summary-with-conflicts [2m(1)[22m
+2026-10-02T05:09:07.8887227Z      [32m✓[39m snapshots match[32m 5[2mms[22m[39m
+2026-10-02T05:09:07.8887591Z    [32m✓[39m 53-fix-code-annotations-with-summary [2m(1)[22m
+2026-10-02T05:09:07.8887961Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8888422Z    [32m✓[39m 54-fix-code-multi-category-threads-comments-checks-changes [2m(1)[22m
+2026-10-02T05:09:07.8888852Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8889253Z    [32m✓[39m 55-fix-code-failing-check-annotations-with-thread [2m(1)[22m
+2026-10-02T05:09:07.8889650Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8889984Z    [32m✓[39m 56-wait-unstable-ignored-check [2m(1)[22m
+2026-10-02T05:09:07.8890325Z      [32m✓[39m snapshots match[32m 6[2mms[22m[39m
+2026-10-02T05:09:07.8890680Z    [32m✓[39m 57-fix-code-bot-cr-auto-dismiss [2m(1)[22m
+2026-10-02T05:09:07.8891015Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8891420Z    [32m✓[39m 58-fix-code-bot-cr-with-human-thread-split-command [2m(1)[22m
+2026-10-02T05:09:07.8891819Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8892374Z    [32m✓[39m 59-fix-code-bot-cr-resurfaced-stale [2m(1)[22m
+2026-10-02T05:09:07.8892730Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8893072Z    [32m✓[39m 60-fix-code-bot-cr-not-dismissed [2m(1)[22m
+2026-10-02T05:09:07.8893407Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8894005Z    [32m✓[39m 61-fix-code-aggregate-ci-exit-code [2m(1)[22m
+2026-10-02T05:09:07.8894541Z      [32m✓[39m snapshots match[32m 9[2mms[22m[39m
+2026-10-02T05:09:07.8895289Z    [32m✓[39m 62-wait-superseded-cancelled-check [2m(1)[22m
+2026-10-02T05:09:07.8895881Z      [32m✓[39m snapshots match[32m 6[2mms[22m[39m
+2026-10-02T05:09:07.8896460Z    [32m✓[39m 63-fix-code-conflicts-push-denied [2m(1)[22m
+2026-10-02T05:09:07.8896989Z      [32m✓[39m snapshots match[32m 6[2mms[22m[39m
+2026-10-02T05:09:07.8897461Z    [32m✓[39m 64-merge-ready-delay-elapsed [2m(1)[22m
+2026-10-02T05:09:07.8897990Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8898575Z    [32m✓[39m 64-wait-merge-queue-deferred-work [2m(1)[22m
+2026-10-02T05:09:07.8899145Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8899715Z    [32m✓[39m 65-merge-queue-required-command [2m(1)[22m
+2026-10-02T05:09:07.8900265Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8900799Z    [32m✓[39m 66-wait-merge-queue-active [2m(1)[22m
+2026-10-02T05:09:07.8901230Z      [32m✓[39m snapshots match[32m 5[2mms[22m[39m
+2026-10-02T05:09:07.8901563Z    [32m✓[39m 67-wait-auto-merge-enabled [2m(1)[22m
+2026-10-02T05:09:07.8901890Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8902232Z    [32m✓[39m 68-escalate-merge-queue-removed [2m(1)[22m
+2026-10-02T05:09:07.8902562Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8902961Z    [32m✓[39m 69-escalate-authorization-required-mark-ready [2m(1)[22m
+2026-10-02T05:09:07.8903337Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8903727Z    [32m✓[39m 70-escalate-check-follow-up-action-required [2m(1)[22m
+2026-10-02T05:09:07.8904308Z      [32m✓[39m snapshots match[32m 5[2mms[22m[39m
+2026-10-02T05:09:07.8904733Z    [32m✓[39m 71-escalate-check-follow-up-later-attempt [2m(1)[22m
+2026-10-02T05:09:07.8905219Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8905614Z    [32m✓[39m 72-fix-code-behind-base [2m(1)[22m
+2026-10-02T05:09:07.8906004Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8906356Z    [32m✓[39m 73-fix-code-behind-base-hint [2m(1)[22m
+2026-10-02T05:09:07.8906699Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8907062Z    [32m✓[39m 74-fix-code-later-attempt-behind-base [2m(1)[22m
+2026-10-02T05:09:07.8907412Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8907756Z    [32m✓[39m 75-fix-code-surfaced-approvals [2m(1)[22m
+2026-10-02T05:09:07.8908268Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8908624Z    [32m✓[39m 76-fix-code-approval-minimize-queue [2m(1)[22m
+2026-10-02T05:09:07.8908982Z      [32m✓[39m snapshots match[32m 6[2mms[22m[39m
+2026-10-02T05:09:07.8909365Z    [32m✓[39m 77-fix-code-approval-viewer-cannot-minimize [2m(1)[22m
+2026-10-02T05:09:07.8909742Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8910108Z    [32m✓[39m 78-wait-seen-human-thread-suppressed [2m(1)[22m
+2026-10-02T05:09:07.8910612Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8910943Z    [32m✓[39m 79-wait-no-auto-mark-ready [2m(1)[22m
+2026-10-02T05:09:07.8911264Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8911609Z    [32m✓[39m 80-wait-stall-timeout-disabled [2m(1)[22m
+2026-10-02T05:09:07.8911954Z      [32m✓[39m snapshots match[32m 4[2mms[22m[39m
+2026-10-02T05:09:07.8912260Z    [32m✓[39m 81-fix-code-verbose [2m(1)[22m
+2026-10-02T05:09:07.8912581Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8912929Z    [31m❯[39m 82-cancel-terminal-beats-all-work [2m(1)[22m
+2026-10-02T05:09:07.8913330Z [31m     [31m×[31m snapshots match[39m[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8913723Z    [32m✓[39m 83-fix-code-actionable-work-beats-merge [2m(1)[22m
+2026-10-02T05:09:07.8914296Z      [32m✓[39m snapshots match[32m 5[2mms[22m[39m
+2026-10-02T05:09:07.8914620Z    [32m✓[39m 84-fix-code-bot-cr-with-thread [2m(1)[22m
+2026-10-02T05:09:07.8914956Z      [32m✓[39m snapshots match[32m 5[2mms[22m[39m
+2026-10-02T05:09:07.8915283Z    [32m✓[39m 85-fix-code-stacked-pr-route [2m(1)[22m
+2026-10-02T05:09:07.8915607Z      [32m✓[39m snapshots match[32m 11[2mms[22m[39m
+2026-10-02T05:09:07.8915960Z    [32m✓[39m 86-aggregate-explicit-mixed-actions [2m(1)[22m
+2026-10-02T05:09:07.8916305Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8916640Z    [32m✓[39m 87-aggregate-stack-all-terminal [2m(1)[22m
+2026-10-02T05:09:07.8916978Z      [32m✓[39m snapshots match[32m 2[2mms[22m[39m
+2026-10-02T05:09:07.8917499Z    [32m✓[39m 88-aggregate-timeout-waiting [2m(1)[22m
+2026-10-02T05:09:07.8918007Z      [32m✓[39m snapshots match[32m 2[2mms[22m[39m
+2026-10-02T05:09:07.8918592Z    [32m✓[39m 89-aggregate-stack-stale-parent-no-merge [2m(1)[22m
+2026-10-02T05:09:07.8919211Z      [32m✓[39m snapshots match[32m 2[2mms[22m[39m
+2026-10-02T05:09:07.8919736Z    [32m✓[39m 90-aggregate-stack-stale-parent-merge [2m(1)[22m
+2026-10-02T05:09:07.8920319Z      [32m✓[39m snapshots match[32m 2[2mms[22m[39m
+2026-10-02T05:09:07.8920825Z    [32m✓[39m 91-aggregate-stack-queued-lower-waits [2m(1)[22m
+2026-10-02T05:09:07.8921333Z      [32m✓[39m snapshots match[32m 2[2mms[22m[39m
+2026-10-02T05:09:07.8921929Z    [32m✓[39m 92-fix-code-failing-check-first-failed-step [2m(1)[22m
+2026-10-02T05:09:07.8922501Z      [32m✓[39m snapshots match[32m 3[2mms[22m[39m
+2026-10-02T05:09:07.8923052Z    [32m✓[39m 93-aggregate-stack-parent-draft [2m(1)[22m
+2026-10-02T05:09:07.8923643Z      [32m✓[39m snapshots match[32m 2[2mms[22m[39m
+2026-10-02T05:09:07.8924551Z    [32m✓[39m 94-aggregate-stack-parent-conflict [2m(1)[22m
+2026-10-02T05:09:07.8925090Z      [32m✓[39m snapshots match[32m 2[2mms[22m[39m
+2026-10-02T05:09:07.8925694Z    [32m✓[39m 95-aggregate-stack-parent-failing-check [2m(1)[22m
+2026-10-02T05:09:07.8926276Z      [32m✓[39m snapshots match[32m 2[2mms[22m[39m
+2026-10-02T05:09:07.8926850Z    [32m✓[39m 96-aggregate-stack-ready-receipts [2m(1)[22m
+2026-10-02T05:09:07.8927404Z      [32m✓[39m snapshots match[32m 2[2mms[22m[39m
+2026-10-02T05:09:07.8927985Z    [32m✓[39m 97-aggregate-stack-full-merge [2m(1)[22m
+2026-10-02T05:09:07.8928519Z      [32m✓[39m snapshots match[32m 2[2mms[22m[39m
+2026-10-02T05:09:07.8929088Z    [32m✓[39m 98-aggregate-stack-merge-queue [2m(1)[22m
+2026-10-02T05:09:07.8929598Z      [32m✓[39m snapshots match[32m 2[2mms[22m[39m
+2026-10-02T05:09:07.8930291Z    [32m✓[39m 99-aggregate-stack-stale-child [2m(1)[22m
+2026-10-02T05:09:07.8930863Z      [32m✓[39m snapshots match[32m 1[2mms[22m[39m
+2026-10-02T05:09:07.8931965Z  [32m✓[39m src/cli/iterate-instructions.stack-draft-hold.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-10-02T05:09:07.9442543Z  [32m✓[39m src/checks/triage.triagefailingchecks-batch.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+2026-10-02T05:09:08.0797228Z  [32m✓[39m src/cli/args.default-poll-invocation-helpers.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:08.1316827Z  [32m✓[39m src/github/batch-parsers.fetchprbatch-workflow-id.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:08.1436120Z  [32m✓[39m src/commands/check-annotations.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:08.2599295Z  [32m✓[39m src/state/conflicting-head-seen.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 27[2mms[22m[39m
+2026-10-02T05:09:08.3076173Z  [32m✓[39m src/commands/resolve.runresolvemutate-configured-bot-thread.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:08.3170266Z  [32m✓[39m src/reporters/agent.toagentcheck.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:08.4588818Z  [32m✓[39m src/commands/poll-rate-limit-retry.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:09:08.5195634Z  [32m✓[39m src/github/batch-parsers.fetchprbatch-null-author-fallbacks.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:08.5961032Z  [32m✓[39m src/commands/iterate.fix-code-in-progress.protected-runs.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:09:08.7267488Z  [32m✓[39m src/checks/triage.jobs-etag.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+2026-10-02T05:09:08.7603975Z  [32m✓[39m src/github/batch-parsers-base-oid.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:08.8071230Z  [32m✓[39m src/comments/resolve.batch-alias-rate-limit-headers.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:08.9203949Z  [32m✓[39m src/cli/poll-summary-emitter.test.mts [2m([22m[2m10 tests[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-10-02T05:09:08.9536101Z  [32m✓[39m src/suggestions/patch.validatesuggestionunicode.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:09.0625431Z  [32m✓[39m src/commands/check.runcheck-configured-bot-thread-visibility.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+2026-10-02T05:09:09.1508684Z  [32m✓[39m src/github/graphql-internal-retry.test.mts [2m([22m[2m10 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+2026-10-02T05:09:09.1706877Z  [32m✓[39m src/checks/triage.startupfailure-etag.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+2026-10-02T05:09:09.2275382Z pr-shepherd: --stack cannot be combined with explicit PRs
+2026-10-02T05:09:09.2309209Z pr-shepherd: invalid --stack PR reference: (missing)
+2026-10-02T05:09:09.2311117Z pr-shepherd: invalid --stack PR reference: bad
+2026-10-02T05:09:09.2311659Z pr-shepherd: --stack may only be specified once
+2026-10-02T05:09:09.2312120Z pr-shepherd: --stack may only be specified once
+2026-10-02T05:09:09.2432641Z  [32m✓[39m src/cli/poll-targets.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-10-02T05:09:09.3292881Z  [32m✓[39m src/log/session.formatrequestentry.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:09.4263033Z  [32m✓[39m src/commands/clean.readdir-fallback.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:09.5222752Z  [32m✓[39m src/cli-parser.mark-files-as-viewed.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+2026-10-02T05:09:09.6110415Z  [32m✓[39m src/commands/iterate.classify.edited-review-summaries.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 40[2mms[22m[39m
+2026-10-02T05:09:09.6291140Z  [32m✓[39m src/github/check-annotations-batch-fallback.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-10-02T05:09:09.7796454Z  [32m✓[39m src/commands/iterate/fix-instruction-threads.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:09.7826553Z  [32m✓[39m src/github/poll-summary-raw.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:09.8912034Z  [32m✓[39m src/commands/check.runcheck-first-look-items.re-surfaces-edited-resolved-and-minimized-threads-and-minimized-comments.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 28[2mms[22m[39m
+2026-10-02T05:09:09.9425592Z  [32m✓[39m src/reporters/agent.toagentchecks.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:09.9516177Z  [32m✓[39m src/suggestions/patch.buildunifieddiff.emits-no-newline-marker-for-context-lines-before-the-hunk-when-last-line.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:10.1017301Z  [32m✓[39m src/config/merge-method.test.mts [2m([22m[2m9 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:10.1140266Z  [32m✓[39m src/suggestions/patch.validatesuggestionlinecount.test.mts [2m([22m[2m9 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:10.2790644Z  [32m✓[39m src/cli-parser.main-help.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-10-02T05:09:10.2808261Z  [32m✓[39m src/checks/conclusions.test.mts [2m([22m[2m11 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:10.3206477Z  [32m✓[39m src/github/poll-summary-projector-checks.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 28[2mms[22m[39m
+2026-10-02T05:09:10.4843070Z  [32m✓[39m src/cli/first-look.first-look-items-edited-flag-rendering.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-10-02T05:09:10.5860774Z  [32m✓[39m src/commands/iterate.stall.it-resets-firstseenat-when-unseen-annotations-appear.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 51[2mms[22m[39m
+2026-10-02T05:09:10.6716543Z  [32m✓[39m src/cli-parser.suggestion-patches.mock.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+2026-10-02T05:09:10.7145924Z  [32m✓[39m src/checks/triage.triagefailingchecks-noise-lines.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-10-02T05:09:10.7776845Z [poll tick 1 / +0s] GitHub secondary rate limit — retrying at 05:10:11Z (in 60s)
+2026-10-02T05:09:10.7813658Z [poll tick 1 / +0s] GitHub secondary rate limit — retrying at 05:10:11Z (in 60s)
+2026-10-02T05:09:10.7816333Z [poll tick 1 / +60s] GitHub secondary rate limit — retrying at 05:12:11Z (in 120s)
+2026-10-02T05:09:10.7958475Z  [32m✓[39m src/commands/poll.retry-after.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-10-02T05:09:10.8874830Z  [32m✓[39m src/commands/journal/transform-hardening.test.mts [2m([22m[2m16 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-10-02T05:09:10.9106742Z  [32m✓[39m src/state/seen-comments.readseenmarker.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+2026-10-02T05:09:11.0940212Z  [32m✓[39m src/state/rest-quota-warnings.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+2026-10-02T05:09:11.0969069Z  [32m✓[39m src/commands/iterate.stall.it-resets-firstseenat-when-inprogress-check-names-chan.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 31[2mms[22m[39m
+2026-10-02T05:09:11.2126304Z  [32m✓[39m src/commands/iterate.fix-code-actionable.journal-instruction-dedup.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 42[2mms[22m[39m
+2026-10-02T05:09:11.2950130Z  [32m✓[39m src/commands/log-file.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:11.3956247Z  [32m✓[39m src/cli-parser.poll-aggregate.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:09:11.4491898Z  [32m✓[39m src/config/load-compatibility.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 71[2mms[22m[39m
+2026-10-02T05:09:11.5365219Z  [32m✓[39m src/github/batch.fetchprbatch-pr-not-found-in-pagination-callbacks.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:11.6325793Z  [32m✓[39m src/util/worktree.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:11.6848272Z  [32m✓[39m src/commands/iterate.fix-code-projection.mixed-check-instruction-variants.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 42[2mms[22m[39m
+2026-10-02T05:09:11.7914650Z  [32m✓[39m src/commands/check.runcheck-computestatus-precedence.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+2026-10-02T05:09:11.8507299Z  [32m✓[39m src/github/api-telemetry-fingerprint.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:11.8735784Z  [32m✓[39m src/github/http.transport-retry.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+2026-10-02T05:09:12.0392088Z [poll tick 1 / +0s] WAIT — 1 passing, 0 in-progress — 300s until auto-cancel; next tick in 30s
+2026-10-02T05:09:12.0466238Z  [32m✓[39m src/cli/first-look.formatfixcoderesult-fallback-branches.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:12.0566427Z  [32m✓[39m src/suggestions/patch.trimreplacementduplicateanchor.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:12.0746319Z  [32m✓[39m src/commands/poll.pin-inferred-pr.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 45[2mms[22m[39m
+2026-10-02T05:09:12.1854796Z  [32m✓[39m src/commands/iterate/conflicting-head-ci.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:12.3026323Z  [32m✓[39m src/commands/poll-summary-rate-limit-retry.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:12.3956426Z  [32m✓[39m src/config/load-cli-command.test.mts [2m([22m[2m7 tests[22m[2m)[22m[32m 75[2mms[22m[39m
+2026-10-02T05:09:12.3976520Z  [32m✓[39m src/commands/iterate.stall.sub-minute-stall-renders-as-seconds.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-10-02T05:09:12.5318157Z  [32m✓[39m src/github/batch-parsers.fetchprbatch-extractrunid.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:12.6784474Z  [32m✓[39m src/commands/iterate.runiterate-cancel-on-merged-closed-pr.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-10-02T05:09:12.6926695Z  [32m✓[39m src/commands/iterate.stall.pr-head-fingerprint.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+2026-10-02T05:09:12.7752934Z  [32m✓[39m src/github/client.getcurrentprnumber.mock.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+2026-10-02T05:09:12.9189804Z  [32m✓[39m src/commands/check.runcheck-merge-queue-denied-rule-match.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:12.9702756Z  [32m✓[39m src/commands/iterate.stall.it-preserves-firstseenat-when-fingerprint-matches-and-.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-10-02T05:09:12.9885278Z  [32m✓[39m src/commands/iterate/render.branch-update-hint.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:13.1324737Z  [32m✓[39m src/state/seen-comments.classifyitem.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-10-02T05:09:13.1446345Z  [32m✓[39m src/github/client.get-update-pr-body.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+2026-10-02T05:09:13.1659798Z  [32m✓[39m src/suggestions/patch.validatesuggestionexactsubrange.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:13.2975844Z  [32m✓[39m src/comments/pending-ops.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:13.3356523Z  [32m✓[39m src/commands/poll.quiet-status.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 15[2mms[22m[39m
+2026-10-02T05:09:13.3485922Z  [32m✓[39m src/commands/resolve.runresolvemutate-authorization.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:13.5026317Z  [32m✓[39m src/cli/iterate-lean.author-provenance.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:13.5747975Z  [32m✓[39m src/commands/check.fingerprint-reuse.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 24[2mms[22m[39m
+2026-10-02T05:09:13.5806005Z  [32m✓[39m src/commands/iterate.render-resolve-cmd.renderresolvecommand.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+2026-10-02T05:09:13.7586011Z  [32m✓[39m src/github/viewer-authorship-parser.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:13.8134051Z  [32m✓[39m src/checks/triage.fetchstartupfailurechecks.warns-when-startup-failure-pagination-reaches-the-cap.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+2026-10-02T05:09:13.8181925Z  [32m✓[39m src/commands/iterate.stall.it-includes-resolution-only-threads-in-stall-timeout-e.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-10-02T05:09:13.9706068Z  [32m✓[39m src/commands/poll.rule-auto-resolve.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:09:14.1070844Z  [32m✓[39m src/commands/iterate.stall.it-writes-stall-state-on-first-call-no-stored-state-as.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 38[2mms[22m[39m
+2026-10-02T05:09:14.1234281Z  [32m✓[39m src/commands/iterate.stall.disabled-stall-timeout-refreshes-first-seen-at.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-10-02T05:09:14.2654324Z  [32m✓[39m src/commands/iterate.merge-removal.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-10-02T05:09:14.2805777Z  [32m✓[39m src/plugin-mcp-config.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:14.3449155Z  [32m✓[39m src/github/client.graphql-arg-building.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+2026-10-02T05:09:14.4351873Z  [32m✓[39m src/journal/markdown-html.test.mts [2m([22m[2m11 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:14.5173315Z [poll tick 1 / +0s] WAIT — 2 passing, 1 in-progress; next tick in 60s
+2026-10-02T05:09:14.5238391Z [poll tick 2 / +60s] WAIT — 2 passing, 1 in-progress; next tick in 60s
+2026-10-02T05:09:14.5250161Z [poll tick 3 / +120s] WAIT — 2 passing, 1 in-progress; next tick in 60s
+2026-10-02T05:09:14.5261819Z [poll tick 4 / +180s] WAIT — 2 passing, 1 in-progress; next tick in 60s
+2026-10-02T05:09:14.5262976Z [poll tick 1 / +0s] WAIT — 2 passing, 1 in-progress; next tick in 30s
+2026-10-02T05:09:14.5264121Z [poll tick 2 / +30s] WAIT — 2 passing, 1 in-progress; next tick in 30s
+2026-10-02T05:09:14.5274939Z [poll tick 1 / +0s] WAIT — 2 passing, 1 in-progress; next tick in 30s
+2026-10-02T05:09:14.5277258Z [poll tick 2 / +30s] WAIT — 2 passing, 1 in-progress; next tick in 30s
+2026-10-02T05:09:14.5515633Z  [32m✓[39m src/commands/poll.runpoll-timeout-returns-final-wait.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-10-02T05:09:14.5726550Z  [32m✓[39m src/commands/iterate.stall.ci-start-sub-minute-stall-renders-as-seconds.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 38[2mms[22m[39m
+2026-10-02T05:09:14.6376255Z  [32m✓[39m src/comments/resolve.autoresolveoutdated.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-10-02T05:09:14.8153993Z [poll tick 1 / +0s] WAIT — 2 passing, 1 in-progress; next tick in 30s
+2026-10-02T05:09:14.8165392Z [poll tick 2 / +30s] WAIT — 2 passing, 1 in-progress; next tick in 30s
+2026-10-02T05:09:14.8208273Z [poll tick 1 / +0s] WAIT — 2 passing, 1 in-progress; next tick in 30s
+2026-10-02T05:09:14.8336274Z  [32m✓[39m src/commands/poll.runpoll-loops-on-wait-then-stops.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-10-02T05:09:14.8596062Z  [32m✓[39m src/commands/iterate.escalate.runiterate-blocked-clean-hand-off-to-humans-via-ready-delay.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+2026-10-02T05:09:14.9210449Z  [32m✓[39m src/cli-parser.main-log-file.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:15.0335761Z  [32m✓[39m src/state/seen-comments.loadseenset.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+2026-10-02T05:09:15.1346096Z  [32m✓[39m src/commands/iterate.render.runiterate-has-hooks-derived-blocked.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 29[2mms[22m[39m
+2026-10-02T05:09:15.1779223Z  [32m✓[39m src/github/poll-summary-projector-blocking-reviewer.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 21[2mms[22m[39m
+2026-10-02T05:09:15.2780742Z  [32m✓[39m src/commands/iterate/parent-first.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-10-02T05:09:15.3385983Z  [32m✓[39m src/commands/iterate.stall.it-escalates-with-stall-timeout-when-threshold-exceede.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 33[2mms[22m[39m
+2026-10-02T05:09:15.4433437Z  [32m✓[39m src/commands/check.runcheck-merge-queue-deferral-post-refresh.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 31[2mms[22m[39m
+2026-10-02T05:09:15.4434734Z  [32m✓[39m src/util/markdown.test.mts [2m([22m[2m9 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:15.5981471Z  [32m✓[39m src/cli/iterate-checks-formatter.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:15.5983101Z  [32m✓[39m src/comments/marker.test.mts [2m([22m[2m8 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-10-02T05:09:15.6266217Z  [32m✓[39m src/commands/iterate.stall.it-resets-firstseenat-when-stored-firstseenat-is-in-th.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 33[2mms[22m[39m
+2026-10-02T05:09:15.8114657Z  [32m✓[39m src/cli/formatters.suggestion-patches.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:15.8955055Z  [32m✓[39m src/commands/iterate.escalate.runiterate-escalate-pr-level-changes-requested-suppressed-du.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 34[2mms[22m[39m
+2026-10-02T05:09:15.9143122Z  [32m✓[39m src/commands/iterate.steps.runiterate-cancelled-behind.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 36[2mms[22m[39m
+2026-10-02T05:09:16.0259197Z  [32m✓[39m src/github/client.getmergeablestate.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 30[2mms[22m[39m
+2026-10-02T05:09:16.0660403Z  [32m✓[39m src/pr-reference.test.mts [2m([22m[2m9 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:16.1105250Z  [32m✓[39m src/github/client.getrepoinfo-remote-url-parsing.mock.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:16.1956916Z  [32m✓[39m src/comments/review-thread-markers.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-10-02T05:09:16.2171946Z  [32m✓[39m src/github/fingerprint-fields.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:16.3250742Z  [32m✓[39m src/checks/triage.triagefailingchecks-job-info.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+2026-10-02T05:09:16.4296089Z  [32m✓[39m src/commands/check.runcheck-minimized-thread-filtering.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 21[2mms[22m[39m
+2026-10-02T05:09:16.4438356Z  [32m✓[39m src/cli/fix-code-verbose-body-cap.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:16.5760000Z  [32m✓[39m src/github/poll-summary-projector-stack-merge.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 19[2mms[22m[39m
+2026-10-02T05:09:16.5855406Z  [32m✓[39m src/state/seen-comments.markseen-fire-and-forget.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-10-02T05:09:16.6984712Z  [32m✓[39m src/checks/triage.triagefailingchecks-failedstep-non-success-conclusions.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+2026-10-02T05:09:16.7252991Z  [32m✓[39m src/state/ci-retrigger.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+2026-10-02T05:09:16.8225855Z  [32m✓[39m src/cli/first-look.review-summaries-edited-since-first-look-fix-formatter-rendering.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:16.8552185Z  [32m✓[39m src/cli/thread-conversation-top-vs-nested-budget.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:16.9097248Z pr-shepherd: failed to parse /tmp/shepherd-load-test-JpBRlY/.pr-shepherdrc.yml: Invalid config: checks.ignoreLogLines must be an array of strings
+2026-10-02T05:09:16.9161680Z pr-shepherd: failed to parse /tmp/shepherd-load-test-oIY9v6/.pr-shepherdrc.yml: Invalid config: checks.ignoreLogLines must be an array of strings
+2026-10-02T05:09:16.9185124Z pr-shepherd: failed to parse /tmp/shepherd-load-test-RzzvTn/.pr-shepherdrc.yml: Invalid config: checks.ignoreLogLines contains an invalid regular expression: [
+2026-10-02T05:09:16.9342370Z  [32m✓[39m src/config/load-ignore-log-lines.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 61[2mms[22m[39m
+2026-10-02T05:09:17.0182759Z  [32m✓[39m src/threads/transcript.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:17.0336040Z  [32m✓[39m src/commands/iterate.escalate.pending-review-commands.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-10-02T05:09:17.1417494Z  [32m✓[39m src/comments/resolve.applyresolveoptions-requiresha.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 12[2mms[22m[39m
+2026-10-02T05:09:17.2270243Z  [32m✓[39m src/state/seen-comments.hasseen-markseen-unsafe-key-segments.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 14[2mms[22m[39m
+2026-10-02T05:09:17.2295646Z  [32m✓[39m src/github/client.getprheadsha.mock.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+2026-10-02T05:09:17.3000281Z  [32m✓[39m src/cli/mark-files-as-viewed-flags.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:17.3888019Z  [32m✓[39m src/comments/minimize-policy.test.mts [2m([22m[2m11 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:17.4149810Z  [32m✓[39m src/github/poll-summary-unreported.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:17.4624808Z  [32m✓[39m src/commands/check-blocker-ref.test.mts [2m([22m[2m18 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:17.5462895Z  [32m✓[39m src/comments/thread-resolve-policy.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:17.6036513Z  [32m✓[39m src/commands/commit-suggestion.runcommitsuggestion-validation.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:17.7335722Z  [32m✓[39m src/commands/iterate.stall.it-clears-stall-state-on-cancel-ready-delay-elapsed-so.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 32[2mms[22m[39m
+2026-10-02T05:09:17.7620969Z  [32m✓[39m src/checks/triage.mergestartupfailurechecks.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:17.7966448Z  [32m✓[39m src/commands/commit-suggestion.runcommitsuggestion-file-read-failure.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:17.9350885Z  [32m✓[39m src/github/batch.fetchprbatch-reviewsummaries-pagination.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:17.9736410Z  [32m✓[39m src/github/batch-parsers.fetchprbatch-parsecreatedat.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:18.0431851Z  [32m✓[39m src/github/batch.fetchprbatch-comment-pagination.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:18.1210356Z [poll tick 1 / +0s] WAIT — 2 passing, 1 in-progress; next tick in 30s
+2026-10-02T05:09:18.1368228Z  [32m✓[39m src/commands/poll.held-stack-draft.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-10-02T05:09:18.1685973Z  [32m✓[39m src/commands/stack-merge-method.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:18.2696583Z  [32m✓[39m src/github/batch.fetchprbatch-changesrequestedreviews-pagination.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:18.3009050Z  [32m✓[39m src/cli/args.parseintstrict.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:18.3895419Z  [32m✓[39m src/github/client.graphqlwithratelimit-header-parsing.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 35[2mms[22m[39m
+2026-10-02T05:09:18.4575423Z  [32m✓[39m src/exit-codes.iterateresulttoexitcode.test.mts [2m([22m[2m9 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:18.4773016Z  [32m✓[39m src/cli/runner.test.mts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:18.5910805Z  [32m✓[39m src/comments/resolve.applyresolveoptions-validation.mock.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:18.6471901Z  [32m✓[39m src/state/seen-comments.markseen-hasseen-round-trip.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 19[2mms[22m[39m
+2026-10-02T05:09:18.6775828Z  [32m✓[39m src/cli/check-annotations.projectiteratelean.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:18.7395950Z  [32m✓[39m src/util/path-segment.test.mts [2m([22m[2m25 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:18.8734479Z  [32m✓[39m src/github/batch-parsers.fetchprbatch-team-reviewer-fallback.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:18.8755370Z  [32m✓[39m src/cli/actionable-comments-edited-rendering.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-10-02T05:09:18.9195420Z  [32m✓[39m src/cli/args.parsestatusprnumbers.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:19.0336035Z  [32m✓[39m src/cli/list-formatters.viewer-authored.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:19.0469655Z [poll tick 1 / +0s] WAIT — 2 passing, 1 in-progress; next tick in 2147484s
+2026-10-02T05:09:19.0591200Z  [32m✓[39m src/commands/poll.runpoll-clamps-oversized-timer.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-10-02T05:09:19.0784946Z  [32m✓[39m src/reporters/agent.viewer-authored.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:19.1911733Z  [32m✓[39m src/cli/error-format.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:19.2527749Z  [32m✓[39m src/cli/iterate-lean.projectiteratelean.escalate-review-summaries.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-10-02T05:09:19.3136549Z  [32m✓[39m src/github/client.graphql-error-handling.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+2026-10-02T05:09:19.4369359Z  [32m✓[39m src/commands/check.runcheck-unknown-merge-state.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 26[2mms[22m[39m
+2026-10-02T05:09:19.4795995Z  [32m✓[39m src/checks/triage.triagefailingchecks-no-runid.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:19.4804898Z  [32m✓[39m src/github/http-auth.fingerprint.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:19.6388509Z  [32m✓[39m src/cli/iterate-lean.rule-auto-resolve.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:19.6693677Z  [32m✓[39m src/mcp/index.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:19.6853364Z  [32m✓[39m src/comments/sha-poll.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 10[2mms[22m[39m
+2026-10-02T05:09:19.8321536Z  [32m✓[39m src/log/session.truncation.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:19.8332820Z  [32m✓[39m src/state/seen-comments.hasseen-default-state-dir.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:19.9433201Z  [32m✓[39m src/commands/iterate.runiterate-malformed-repo-format.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 33[2mms[22m[39m
+2026-10-02T05:09:20.0577656Z  [32m✓[39m src/checks/triage.triagefailingchecks-cancelled-short-circuits.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 25[2mms[22m[39m
+2026-10-02T05:09:20.1872652Z  [32m✓[39m src/github/batch-parsers.fetchprbatch-pr-not-found.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:20.2106242Z  [32m✓[39m src/cli-parser.main-version.mock.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+2026-10-02T05:09:20.2225744Z  [32m✓[39m src/util/pool.test.mts [2m([22m[2m3 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:20.3699956Z  [32m✓[39m src/reporters/agent.toagentcomment.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-10-02T05:09:20.3801738Z  [32m✓[39m src/comments/authors.test.mts [2m([22m[2m6 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:20.3826502Z  [32m✓[39m src/commands/poll.runpoll-propagates-errors.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:20.5264007Z  [32m✓[39m src/cli/args.getflag.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:20.5517961Z  [32m✓[39m src/state/seen-comments.hasseen-miss.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:20.6808908Z  [32m✓[39m src/commands/iterate.runiterate-wait.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 41[2mms[22m[39m
+2026-10-02T05:09:20.7153509Z  [32m✓[39m src/suggestions/range-anchor.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:20.8021627Z  [32m✓[39m src/commands/check.runcheck-blockedbyfilteredcheck.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 30[2mms[22m[39m
+2026-10-02T05:09:20.8729758Z  [32m✓[39m src/commands/resolve.runresolvemutate-other-human-resolve.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:20.9065219Z  [32m✓[39m src/mcp-stdio.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 11[2mms[22m[39m
+2026-10-02T05:09:20.9669587Z  [32m✓[39m src/classify/public-types.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-10-02T05:09:21.0812314Z  [32m✓[39m src/cli/args.parselist.test.mts [2m([22m[2m4 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:21.1196027Z  [32m✓[39m src/commands/check.runcheck-review-inline-thread-markers.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 25[2mms[22m[39m
+2026-10-02T05:09:21.2363541Z  [32m✓[39m src/cli/first-look.iterate-fixture-fallback.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-10-02T05:09:21.2586437Z  [32m✓[39m src/commands/iterate.escalate.runiterate-no-pr.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 37[2mms[22m[39m
+2026-10-02T05:09:21.3155316Z  [32m✓[39m src/commands/poll.runpoll-stops-on-mark-ready.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 9[2mms[22m[39m
+2026-10-02T05:09:21.4430039Z  [32m✓[39m src/commands/poll.runpoll-stops-on-cancel.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:21.4461820Z  [32m✓[39m src/config/load.behind-base-hint.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+2026-10-02T05:09:21.4725819Z  [32m✓[39m src/log/session.buildsessionheader.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 8[2mms[22m[39m
+2026-10-02T05:09:21.6100592Z  [32m✓[39m src/cli/safe-body-file.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 6[2mms[22m[39m
+2026-10-02T05:09:21.7119189Z  [32m✓[39m src/commands/check.head-check-suites.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 28[2mms[22m[39m
+2026-10-02T05:09:21.7895174Z  [32m✓[39m src/log/session.formatoutputentry.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:21.8240777Z  [32m✓[39m src/cli-parser.main-unknown-subcommand.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 13[2mms[22m[39m
+2026-10-02T05:09:21.8549832Z  [32m✓[39m src/github/viewer-authorship-query.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-10-02T05:09:21.9422515Z  [32m✓[39m src/cli/args.hasflag.test.mts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+2026-10-02T05:09:22.0013673Z  [32m✓[39m src/commands/resolve.runresolvemutate-no-pr.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:22.0108396Z  [32m✓[39m src/cli/journal-formatter.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 4[2mms[22m[39m
+2026-10-02T05:09:22.1167338Z  [32m✓[39m src/commands/check.runcheck-no-pr.mock.test.mts [2m([22m[2m1 test[22m[2m)[22m[32m 5[2mms[22m[39m
+2026-10-02T05:09:23.0474902Z 
+2026-10-02T05:09:23.0476185Z [31m⎯⎯⎯⎯⎯⎯⎯[39m[1m[41m Failed Tests 8 [49m[22m[31m⎯⎯⎯⎯⎯⎯⎯[39m
+2026-10-02T05:09:23.0476458Z 
+2026-10-02T05:09:23.0478474Z [41m[1m FAIL [22m[49m test-cases/index.test.mts[2m > [22m01-cancel-merged[2m > [22msnapshots match
+2026-10-02T05:09:23.0483020Z [31m[1mError[22m: Snapshot `01-cancel-merged > snapshots match 1` mismatched[39m
+2026-10-02T05:09:23.0483307Z 
+2026-10-02T05:09:23.0483433Z [32m- Expected[39m
+2026-10-02T05:09:23.0483947Z [31m+ Received[39m
+2026-10-02T05:09:23.0484117Z 
+2026-10-02T05:09:23.0484306Z [33m@@ -7,7 +7,7 @@[39m
+2026-10-02T05:09:23.0484492Z 
+2026-10-02T05:09:23.0484771Z [2m  CANCEL: PR #42 is merged — stopping[22m
+2026-10-02T05:09:23.0485030Z 
+2026-10-02T05:09:23.0485157Z [2m  ## Instructions[22m
+2026-10-02T05:09:23.0485289Z 
+2026-10-02T05:09:23.0485591Z [32m- 1. Stop [7m— the PR loop is complete. No further polling is needed[27m.[39m
+2026-10-02T05:09:23.0486441Z [31m+ 1. Stop [7mpolling this pull request — its poll is complete. Continue any remaining pull requests or issues from the original request[27m.[39m
+2026-10-02T05:09:23.0486856Z 
+2026-10-02T05:09:23.0486861Z 
+2026-10-02T05:09:23.0487106Z [36m [2m❯[22m test-cases/index.test.mts:[2m75:7[22m[39m
+2026-10-02T05:09:23.0507638Z     [90m 73|[39m       }
+2026-10-02T05:09:23.0507974Z     [90m 74|[39m
+2026-10-02T05:09:23.0508332Z     [90m 75|[39m       await expect(result.textOut).toMatchFileSnapshot(
+2026-10-02T05:09:23.0508797Z     [90m   |[39m       [31m^[39m
+2026-10-02T05:09:23.0509269Z     [90m 76|[39m         join(fixturesDir, "snapshots", name, "output.text.md"),
+2026-10-02T05:09:23.0509627Z     [90m 77|[39m       );
+2026-10-02T05:09:23.0509837Z 
+2026-10-02T05:09:23.0510113Z [31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯[22m[39m
+2026-10-02T05:09:23.0510366Z 
+2026-10-02T05:09:23.0517655Z [41m[1m FAIL [22m[49m test-cases/index.test.mts[2m > [22m02-cancel-closed[2m > [22msnapshots match
+2026-10-02T05:09:23.0518710Z [31m[1mError[22m: Snapshot `02-cancel-closed > snapshots match 1` mismatched[39m
+2026-10-02T05:09:23.0519128Z 
+2026-10-02T05:09:23.0519303Z [32m- Expected[39m
+2026-10-02T05:09:23.0519630Z [31m+ Received[39m
+2026-10-02T05:09:23.0519786Z 
+2026-10-02T05:09:23.0519958Z [33m@@ -7,7 +7,7 @@[39m
+2026-10-02T05:09:23.0520149Z 
+2026-10-02T05:09:23.0520431Z [2m  CANCEL: PR #42 is closed — stopping[22m
+2026-10-02T05:09:23.0520701Z 
+2026-10-02T05:09:23.0520880Z [2m  ## Instructions[22m
+2026-10-02T05:09:23.0521458Z 
+2026-10-02T05:09:23.0521958Z [32m- 1. Stop [7m— the PR loop is complete. No further polling is needed[27m.[39m
+2026-10-02T05:09:23.0523266Z [31m+ 1. Stop [7mpolling this pull request — its poll is complete. Continue any remaining pull requests or issues from the original request[27m.[39m
+2026-10-02T05:09:23.0524081Z 
+2026-10-02T05:09:23.0524088Z 
+2026-10-02T05:09:23.0524491Z [36m [2m❯[22m test-cases/index.test.mts:[2m75:7[22m[39m
+2026-10-02T05:09:23.0525130Z     [90m 73|[39m       }
+2026-10-02T05:09:23.0525443Z     [90m 74|[39m
+2026-10-02T05:09:23.0525832Z     [90m 75|[39m       await expect(result.textOut).toMatchFileSnapshot(
+2026-10-02T05:09:23.0526177Z     [90m   |[39m       [31m^[39m
+2026-10-02T05:09:23.0526545Z     [90m 76|[39m         join(fixturesDir, "snapshots", name, "output.text.md"),
+2026-10-02T05:09:23.0526871Z     [90m 77|[39m       );
+2026-10-02T05:09:23.0527005Z 
+2026-10-02T05:09:23.0527208Z [31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯[22m[39m
+2026-10-02T05:09:23.0527380Z 
+2026-10-02T05:09:23.0527840Z [41m[1m FAIL [22m[49m test-cases/index.test.mts[2m > [22m03-cancel-ready-delay-elapsed-clean[2m > [22msnapshots match
+2026-10-02T05:09:23.0528586Z [31m[1mError[22m: Snapshot `03-cancel-ready-delay-elapsed-clean > snapshots match 1` mismatched[39m
+2026-10-02T05:09:23.0528913Z 
+2026-10-02T05:09:23.0529026Z [32m- Expected[39m
+2026-10-02T05:09:23.0529239Z [31m+ Received[39m
+2026-10-02T05:09:23.0529349Z 
+2026-10-02T05:09:23.0529461Z [33m@@ -7,7 +7,7 @@[39m
+2026-10-02T05:09:23.0529582Z 
+2026-10-02T05:09:23.0529888Z [2m  CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping[22m
+2026-10-02T05:09:23.0530151Z 
+2026-10-02T05:09:23.0530267Z [2m  ## Instructions[22m
+2026-10-02T05:09:23.0530392Z 
+2026-10-02T05:09:23.0530689Z [32m- 1. Stop [7m— the PR loop is complete. No further polling is needed[27m.[39m
+2026-10-02T05:09:23.0531475Z [31m+ 1. Stop [7mpolling this pull request — its poll is complete. Continue any remaining pull requests or issues from the original request[27m.[39m
+2026-10-02T05:09:23.0531879Z 
+2026-10-02T05:09:23.0531884Z 
+2026-10-02T05:09:23.0532100Z [36m [2m❯[22m test-cases/index.test.mts:[2m75:7[22m[39m
+2026-10-02T05:09:23.0532391Z     [90m 73|[39m       }
+2026-10-02T05:09:23.0532593Z     [90m 74|[39m
+2026-10-02T05:09:23.0532910Z     [90m 75|[39m       await expect(result.textOut).toMatchFileSnapshot(
+2026-10-02T05:09:23.0533243Z     [90m   |[39m       [31m^[39m
+2026-10-02T05:09:23.0533613Z     [90m 76|[39m         join(fixturesDir, "snapshots", name, "output.text.md"),
+2026-10-02T05:09:23.0534210Z     [90m 77|[39m       );
+2026-10-02T05:09:23.0534406Z 
+2026-10-02T05:09:23.0534706Z [31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯[22m[39m
+2026-10-02T05:09:23.0534961Z 
+2026-10-02T05:09:23.0535812Z [41m[1m FAIL [22m[49m test-cases/index.test.mts[2m > [22m04-cancel-ready-delay-blocked-review-required[2m > [22msnapshots match
+2026-10-02T05:09:23.0536786Z [31m[1mError[22m: Snapshot `04-cancel-ready-delay-blocked-review-required > snapshots match 1` mismatched[39m
+2026-10-02T05:09:23.0537131Z 
+2026-10-02T05:09:23.0537242Z [32m- Expected[39m
+2026-10-02T05:09:23.0537455Z [31m+ Received[39m
+2026-10-02T05:09:23.0537565Z 
+2026-10-02T05:09:23.0537670Z [33m@@ -7,7 +7,7 @@[39m
+2026-10-02T05:09:23.0537794Z 
+2026-10-02T05:09:23.0538196Z [2m  CANCEL: PR #42 is awaiting human review or branch protection resolution — ready-delay elapsed, stopping[22m
+2026-10-02T05:09:23.0538522Z 
+2026-10-02T05:09:23.0538634Z [2m  ## Instructions[22m
+2026-10-02T05:09:23.0538760Z 
+2026-10-02T05:09:23.0539050Z [32m- 1. Stop [7m— the PR loop is complete. No further polling is needed[27m.[39m
+2026-10-02T05:09:23.0539820Z [31m+ 1. Stop [7mpolling this pull request — its poll is complete. Continue any remaining pull requests or issues from the original request[27m.[39m
+2026-10-02T05:09:23.0540220Z 
+2026-10-02T05:09:23.0540225Z 
+2026-10-02T05:09:23.0540437Z [36m [2m❯[22m test-cases/index.test.mts:[2m75:7[22m[39m
+2026-10-02T05:09:23.0540943Z     [90m 73|[39m       }
+2026-10-02T05:09:23.0541220Z     [90m 74|[39m
+2026-10-02T05:09:23.0541544Z     [90m 75|[39m       await expect(result.textOut).toMatchFileSnapshot(
+2026-10-02T05:09:23.0541884Z     [90m   |[39m       [31m^[39m
+2026-10-02T05:09:23.0542250Z     [90m 76|[39m         join(fixturesDir, "snapshots", name, "output.text.md"),
+2026-10-02T05:09:23.0542563Z     [90m 77|[39m       );
+2026-10-02T05:09:23.0542684Z 
+2026-10-02T05:09:23.0542980Z [31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯[22m[39m
+2026-10-02T05:09:23.0543132Z 
+2026-10-02T05:09:23.0543675Z [41m[1m FAIL [22m[49m test-cases/index.test.mts[2m > [22m05-cancel-ready-delay-blocked-insufficient-approvals[2m > [22msnapshots match
+2026-10-02T05:09:23.0544798Z [31m[1mError[22m: Snapshot `05-cancel-ready-delay-blocked-insufficient-approvals > snapshots match 1` mismatched[39m
+2026-10-02T05:09:23.0545163Z 
+2026-10-02T05:09:23.0545278Z [32m- Expected[39m
+2026-10-02T05:09:23.0545496Z [31m+ Received[39m
+2026-10-02T05:09:23.0545604Z 
+2026-10-02T05:09:23.0545718Z [33m@@ -7,7 +7,7 @@[39m
+2026-10-02T05:09:23.0545831Z 
+2026-10-02T05:09:23.0546241Z [2m  CANCEL: PR #42 is awaiting human review or branch protection resolution — ready-delay elapsed, stopping[22m
+2026-10-02T05:09:23.0546557Z 
+2026-10-02T05:09:23.0546669Z [2m  ## Instructions[22m
+2026-10-02T05:09:23.0546793Z 
+2026-10-02T05:09:23.0547087Z [32m- 1. Stop [7m— the PR loop is complete. No further polling is needed[27m.[39m
+2026-10-02T05:09:23.0547874Z [31m+ 1. Stop [7mpolling this pull request — its poll is complete. Continue any remaining pull requests or issues from the original request[27m.[39m
+2026-10-02T05:09:23.0548281Z 
+2026-10-02T05:09:23.0548285Z 
+2026-10-02T05:09:23.0548503Z [36m [2m❯[22m test-cases/index.test.mts:[2m75:7[22m[39m
+2026-10-02T05:09:23.0548783Z     [90m 73|[39m       }
+2026-10-02T05:09:23.0548990Z     [90m 74|[39m
+2026-10-02T05:09:23.0549310Z     [90m 75|[39m       await expect(result.textOut).toMatchFileSnapshot(
+2026-10-02T05:09:23.0549640Z     [90m   |[39m       [31m^[39m
+2026-10-02T05:09:23.0550000Z     [90m 76|[39m         join(fixturesDir, "snapshots", name, "output.text.md"),
+2026-10-02T05:09:23.0550302Z     [90m 77|[39m       );
+2026-10-02T05:09:23.0550424Z 
+2026-10-02T05:09:23.0550603Z [31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯[22m[39m
+2026-10-02T05:09:23.0550801Z 
+2026-10-02T05:09:23.0551354Z [41m[1m FAIL [22m[49m test-cases/index.test.mts[2m > [22m06-cancel-ready-delay-blocked-has-hooks[2m > [22msnapshots match
+2026-10-02T05:09:23.0552113Z [31m[1mError[22m: Snapshot `06-cancel-ready-delay-blocked-has-hooks > snapshots match 1` mismatched[39m
+2026-10-02T05:09:23.0552428Z 
+2026-10-02T05:09:23.0552539Z [32m- Expected[39m
+2026-10-02T05:09:23.0552742Z [31m+ Received[39m
+2026-10-02T05:09:23.0552848Z 
+2026-10-02T05:09:23.0552964Z [33m@@ -7,7 +7,7 @@[39m
+2026-10-02T05:09:23.0553079Z 
+2026-10-02T05:09:23.0553484Z [2m  CANCEL: PR #42 is awaiting human review or branch protection resolution — ready-delay elapsed, stopping[22m
+2026-10-02T05:09:23.0553938Z 
+2026-10-02T05:09:23.0554054Z [2m  ## Instructions[22m
+2026-10-02T05:09:23.0554211Z 
+2026-10-02T05:09:23.0554677Z [32m- 1. Stop [7m— the PR loop is complete. No further polling is needed[27m.[39m
+2026-10-02T05:09:23.0555635Z [31m+ 1. Stop [7mpolling this pull request — its poll is complete. Continue any remaining pull requests or issues from the original request[27m.[39m
+2026-10-02T05:09:23.0556040Z 
+2026-10-02T05:09:23.0556045Z 
+2026-10-02T05:09:23.0556260Z [36m [2m❯[22m test-cases/index.test.mts:[2m75:7[22m[39m
+2026-10-02T05:09:23.0556536Z     [90m 73|[39m       }
+2026-10-02T05:09:23.0556734Z     [90m 74|[39m
+2026-10-02T05:09:23.0557053Z     [90m 75|[39m       await expect(result.textOut).toMatchFileSnapshot(
+2026-10-02T05:09:23.0557373Z     [90m   |[39m       [31m^[39m
+2026-10-02T05:09:23.0557732Z     [90m 76|[39m         join(fixturesDir, "snapshots", name, "output.text.md"),
+2026-10-02T05:09:23.0558236Z     [90m 77|[39m       );
+2026-10-02T05:09:23.0558378Z 
+2026-10-02T05:09:23.0558566Z [31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯[22m[39m
+2026-10-02T05:09:23.0558724Z 
+2026-10-02T05:09:23.0559181Z [41m[1m FAIL [22m[49m test-cases/index.test.mts[2m > [22m47-cancel-bot-cr-superseded-by-approval[2m > [22msnapshots match
+2026-10-02T05:09:23.0559931Z [31m[1mError[22m: Snapshot `47-cancel-bot-cr-superseded-by-approval > snapshots match 1` mismatched[39m
+2026-10-02T05:09:23.0560347Z 
+2026-10-02T05:09:23.0560458Z [32m- Expected[39m
+2026-10-02T05:09:23.0560667Z [31m+ Received[39m
+2026-10-02T05:09:23.0560777Z 
+2026-10-02T05:09:23.0560888Z [33m@@ -7,7 +7,7 @@[39m
+2026-10-02T05:09:23.0561003Z 
+2026-10-02T05:09:23.0561293Z [2m  CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping[22m
+2026-10-02T05:09:23.0561681Z 
+2026-10-02T05:09:23.0561846Z [2m  ## Instructions[22m
+2026-10-02T05:09:23.0562037Z 
+2026-10-02T05:09:23.0562530Z [32m- 1. Stop [7m— the PR loop is complete. No further polling is needed[27m.[39m
+2026-10-02T05:09:23.0563478Z [31m+ 1. Stop [7mpolling this pull request — its poll is complete. Continue any remaining pull requests or issues from the original request[27m.[39m
+2026-10-02T05:09:23.0564094Z 
+2026-10-02T05:09:23.0564098Z 
+2026-10-02T05:09:23.0564329Z [36m [2m❯[22m test-cases/index.test.mts:[2m75:7[22m[39m
+2026-10-02T05:09:23.0564622Z     [90m 73|[39m       }
+2026-10-02T05:09:23.0564831Z     [90m 74|[39m
+2026-10-02T05:09:23.0565158Z     [90m 75|[39m       await expect(result.textOut).toMatchFileSnapshot(
+2026-10-02T05:09:23.0565484Z     [90m   |[39m       [31m^[39m
+2026-10-02T05:09:23.0565946Z     [90m 76|[39m         join(fixturesDir, "snapshots", name, "output.text.md"),
+2026-10-02T05:09:23.0566267Z     [90m 77|[39m       );
+2026-10-02T05:09:23.0566385Z 
+2026-10-02T05:09:23.0566569Z [31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯[22m[39m
+2026-10-02T05:09:23.0566728Z 
+2026-10-02T05:09:23.0567170Z [41m[1m FAIL [22m[49m test-cases/index.test.mts[2m > [22m82-cancel-terminal-beats-all-work[2m > [22msnapshots match
+2026-10-02T05:09:23.0567874Z [31m[1mError[22m: Snapshot `82-cancel-terminal-beats-all-work > snapshots match 1` mismatched[39m
+2026-10-02T05:09:23.0568165Z 
+2026-10-02T05:09:23.0568274Z [32m- Expected[39m
+2026-10-02T05:09:23.0568479Z [31m+ Received[39m
+2026-10-02T05:09:23.0568587Z 
+2026-10-02T05:09:23.0568698Z [33m@@ -7,7 +7,7 @@[39m
+2026-10-02T05:09:23.0568810Z 
+2026-10-02T05:09:23.0568990Z [2m  CANCEL: PR #42 is merged — stopping[22m
+2026-10-02T05:09:23.0569150Z 
+2026-10-02T05:09:23.0569263Z [2m  ## Instructions[22m
+2026-10-02T05:09:23.0569384Z 
+2026-10-02T05:09:23.0569713Z [32m- 1. Stop [7m— the PR loop is complete. No further polling is needed[27m.[39m
+2026-10-02T05:09:23.0570596Z [31m+ 1. Stop [7mpolling this pull request — its poll is complete. Continue any remaining pull requests or issues from the original request[27m.[39m
+2026-10-02T05:09:23.0571003Z 
+2026-10-02T05:09:23.0571008Z 
+2026-10-02T05:09:23.0571243Z [36m [2m❯[22m test-cases/index.test.mts:[2m75:7[22m[39m
+2026-10-02T05:09:23.0571537Z     [90m 73|[39m       }
+2026-10-02T05:09:23.0571744Z     [90m 74|[39m
+2026-10-02T05:09:23.0572059Z     [90m 75|[39m       await expect(result.textOut).toMatchFileSnapshot(
+2026-10-02T05:09:23.0572513Z     [90m   |[39m       [31m^[39m
+2026-10-02T05:09:23.0573097Z     [90m 76|[39m         join(fixturesDir, "snapshots", name, "output.text.md"),
+2026-10-02T05:09:23.0573608Z     [90m 77|[39m       );
+2026-10-02T05:09:23.0573745Z 
+2026-10-02T05:09:23.0574111Z [31m[2m⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯[22m[39m
+2026-10-02T05:09:23.0574270Z 
+2026-10-02T05:09:23.0574318Z 
+2026-10-02T05:09:23.0574503Z [2m  Snapshots [22m [1m[31m8 failed[39m[22m
+2026-10-02T05:09:23.0575023Z [2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m490 passed[39m[22m[90m (491)[39m
+2026-10-02T05:09:23.0575769Z [2m      Tests [22m [1m[31m8 failed[39m[22m[2m | [22m[1m[32m3355 passed[39m[22m[90m (3363)[39m
+2026-10-02T05:09:23.0576169Z [2m   Start at [22m 05:08:41
+2026-10-02T05:09:23.0582620Z [2m   Duration [22m 41.11s[2m (import 46%, tests 26%, worker 17%, transform 10%)[22m
+2026-10-02T05:09:23.0599431Z 
+2026-10-02T05:09:23.0600347Z [2m     Import [22m [33m804 modules were evaluated 1650 times[39m[2m · 27.08s total, 46% of tracked time[22m
+2026-10-02T05:09:23.0601331Z [2m            [22m [2m~2.23s faster with [22m[33misolate: false[39m[2m — shared modules are evaluated once per worker instead of once per file[22m
+2026-10-02T05:09:23.0602311Z [2m            [22m [2mlearn more: https://vitest.dev/guide/improving-performance#test-isolation[22m
+2026-10-02T05:09:23.0602606Z 
+2026-10-02T05:09:24.1453031Z JUNIT report written to /home/runner/work/pr-shepherd/pr-shepherd/test-results/junit.xml
+2026-10-02T05:09:24.2110494Z ##[error]Process completed with exit code 1.
+2026-10-02T05:09:24.2326296Z ##[group]Run codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5
+2026-10-02T05:09:24.2326629Z with:
+2026-10-02T05:09:24.2326804Z   use_oidc: true
+2026-10-02T05:09:24.2326992Z   report_type: test_results
+2026-10-02T05:09:24.2327201Z   files: ./test-results/junit.xml
+2026-10-02T05:09:24.2327415Z   cleanup: false
+2026-10-02T05:09:24.2327587Z   disable_file_fixes: false
+2026-10-02T05:09:24.2327781Z   disable_search: false
+2026-10-02T05:09:24.2327970Z   disable_safe_directory: false
+2026-10-02T05:09:24.2328172Z   disable_telem: false
+2026-10-02T05:09:24.2328366Z   dry_run: false
+2026-10-02T05:09:24.2328535Z   fail_ci_if_error: false
+2026-10-02T05:09:24.2328731Z   git_service: github
+2026-10-02T05:09:24.2328915Z   gcov_executable: gcov
+2026-10-02T05:09:24.2329115Z   handle_no_reports_found: false
+2026-10-02T05:09:24.2329325Z   recurse_submodules: false
+2026-10-02T05:09:24.2329527Z   run_command: upload-coverage
+2026-10-02T05:09:24.2329730Z   skip_validation: false
+2026-10-02T05:09:24.2329982Z   use_legacy_upload_endpoint: false
+2026-10-02T05:09:24.2330201Z   use_pypi: false
+2026-10-02T05:09:24.2330369Z   verbose: false
+2026-10-02T05:09:24.2330528Z   version: latest
+2026-10-02T05:09:24.2330702Z ##[endgroup]
+2026-10-02T05:09:24.2386773Z ##[start-action display=Check system dependencies;id=__codecov_codecov-action.__run]
+2026-10-02T05:09:24.2410605Z ##[group]Run missing_deps=""
+2026-10-02T05:09:24.2410871Z [36;1mmissing_deps=""[0m
+2026-10-02T05:09:24.2411062Z [36;1m[0m
+2026-10-02T05:09:24.2411249Z [36;1m# Check for always-required commands[0m
+2026-10-02T05:09:24.2411524Z [36;1mfor cmd in bash git curl; do[0m
+2026-10-02T05:09:24.2411784Z [36;1m  if ! command -v "$cmd" >/dev/null 2>&1; then[0m
+2026-10-02T05:09:24.2412064Z [36;1m    missing_deps="$missing_deps $cmd"[0m
+2026-10-02T05:09:24.2412294Z [36;1m  fi[0m
+2026-10-02T05:09:24.2412450Z [36;1mdone[0m
+2026-10-02T05:09:24.2412614Z [36;1m[0m
+2026-10-02T05:09:24.2412855Z [36;1m# Check for gpg only if validation is not being skipped[0m
+2026-10-02T05:09:24.2413180Z [36;1mif [ "$INPUT_SKIP_VALIDATION" != "true" ]; then[0m
+2026-10-02T05:09:24.2413462Z [36;1m  if ! command -v gpg >/dev/null 2>&1; then[0m
+2026-10-02T05:09:24.2413728Z [36;1m    missing_deps="$missing_deps gpg"[0m
+2026-10-02T05:09:24.2414093Z [36;1m  fi[0m
+2026-10-02T05:09:24.2414251Z [36;1mfi[0m
+2026-10-02T05:09:24.2414409Z [36;1m[0m
+2026-10-02T05:09:24.2414596Z [36;1m# Report missing required dependencies[0m
+2026-10-02T05:09:24.2414845Z [36;1mif [ -n "$missing_deps" ]; then[0m
+2026-10-02T05:09:24.2415168Z [36;1m  echo "Error: The following required dependencies are missing:$missing_deps"[0m
+2026-10-02T05:09:24.2415748Z [36;1m  echo "Please install these dependencies before using this action."[0m
+2026-10-02T05:09:24.2416050Z [36;1m  exit 1[0m
+2026-10-02T05:09:24.2416210Z [36;1mfi[0m
+2026-10-02T05:09:24.2416364Z [36;1m[0m
+2026-10-02T05:09:24.2416583Z [36;1mecho "All required system dependencies are available."[0m
+2026-10-02T05:09:24.2439408Z shell: /usr/bin/sh -e {0}
+2026-10-02T05:09:24.2439626Z env:
+2026-10-02T05:09:24.2439812Z   INPUT_SKIP_VALIDATION: false
+2026-10-02T05:09:24.2440021Z ##[endgroup]
+2026-10-02T05:09:24.2478843Z All required system dependencies are available.
+2026-10-02T05:09:24.2490334Z ##[end-action id=__codecov_codecov-action.__run;outcome=success;conclusion=success;duration_ms=10]
+2026-10-02T05:09:24.2492542Z ##[start-action display=Action version;id=__codecov_codecov-action.__run_2]
+2026-10-02T05:09:24.2508232Z ##[group]Run CC_ACTION_VERSION=$(cat ${GITHUB_ACTION_PATH}/src/version)
+2026-10-02T05:09:24.2508643Z [36;1mCC_ACTION_VERSION=$(cat ${GITHUB_ACTION_PATH}/src/version)[0m
+2026-10-02T05:09:24.2509031Z [36;1mecho -e "\033[0;32m==>\033[0m Running Action version $CC_ACTION_VERSION"[0m
+2026-10-02T05:09:24.2563281Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-02T05:09:24.2563568Z ##[endgroup]
+2026-10-02T05:09:24.2645395Z [0;32m==>[0m Running Action version 7.1.1
+2026-10-02T05:09:24.2650751Z ##[end-action id=__codecov_codecov-action.__run_2;outcome=success;conclusion=success;duration_ms=15]
+2026-10-02T05:09:24.2652899Z ##[start-action display=Set safe directory;id=__codecov_codecov-action.__run_3]
+2026-10-02T05:09:24.2686433Z ##[group]Run git config --global --add safe.directory "/home/runner/work/pr-shepherd/pr-shepherd"
+2026-10-02T05:09:24.2686976Z [36;1mgit config --global --add safe.directory "/home/runner/work/pr-shepherd/pr-shepherd"[0m
+2026-10-02T05:09:24.2687431Z [36;1mgit config --global --add safe.directory "$GITHUB_WORKSPACE"[0m
+2026-10-02T05:09:24.2736263Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-02T05:09:24.2736563Z ##[endgroup]
+2026-10-02T05:09:24.2843346Z ##[end-action id=__codecov_codecov-action.__run_3;outcome=success;conclusion=success;duration_ms=18]
+2026-10-02T05:09:24.2846676Z ##[start-action display=Set fork;id=__codecov_codecov-action.__run_4]
+2026-10-02T05:09:24.2860414Z ##[group]Run CC_FORK="false"
+2026-10-02T05:09:24.2860661Z [36;1mCC_FORK="false"[0m
+2026-10-02T05:09:24.2861117Z [36;1mif [ -n "$GITHUB_EVENT_PULL_REQUEST_HEAD_REPO_FULL_NAME" ] && [ "$GITHUB_EVENT_PULL_REQUEST_HEAD_REPO_FULL_NAME" != "$GITHUB_REPOSITORY" ];[0m
+2026-10-02T05:09:24.2861568Z [36;1mthen[0m
+2026-10-02T05:09:24.2861773Z [36;1m  echo -e "\033[0;32m==>\033[0m Fork detected"[0m
+2026-10-02T05:09:24.2862028Z [36;1m  CC_FORK="true"[0m
+2026-10-02T05:09:24.2862214Z [36;1mfi[0m
+2026-10-02T05:09:24.2862401Z [36;1mecho "CC_FORK=$CC_FORK" >> "$GITHUB_ENV"[0m
+2026-10-02T05:09:24.2909886Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-02T05:09:24.2910179Z env:
+2026-10-02T05:09:24.2910451Z   GITHUB_EVENT_PULL_REQUEST_HEAD_LABEL: jonathanong:docs/scope-cancel-to-pr-poll
+2026-10-02T05:09:24.2910843Z   GITHUB_EVENT_PULL_REQUEST_HEAD_REPO_FULL_NAME: jonathanong/pr-shepherd
+2026-10-02T05:09:24.2911157Z   GITHUB_REPOSITORY: jonathanong/pr-shepherd
+2026-10-02T05:09:24.2911378Z ##[endgroup]
+2026-10-02T05:09:24.2986197Z ##[end-action id=__codecov_codecov-action.__run_4;outcome=success;conclusion=success;duration_ms=13]
+2026-10-02T05:09:24.2988722Z ##[start-action display=Get OIDC token;id=__codecov_codecov-action.oidc]
+2026-10-02T05:09:24.3026949Z ##[group]Run actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+2026-10-02T05:09:24.3027265Z with:
+2026-10-02T05:09:24.3027757Z   script: if (process.env.CC_USE_OIDC === 'true' && process.env.CC_FORK != 'true') {
+  const id_token = await core.getIDToken(process.env.CC_OIDC_AUDIENCE)
+  return id_token
+}
+
+2026-10-02T05:09:24.3030334Z   github-token: ***
+2026-10-02T05:09:24.3030522Z   debug: false
+2026-10-02T05:09:24.3030866Z   user-agent: actions/github-script
+2026-10-02T05:09:24.3031093Z   result-encoding: json
+2026-10-02T05:09:24.3031281Z   retries: 0
+2026-10-02T05:09:24.3031485Z   retry-exempt-status-codes: 400,401,403,404,422
+2026-10-02T05:09:24.3031721Z env:
+2026-10-02T05:09:24.3031871Z   CC_FORK: false
+2026-10-02T05:09:24.3032061Z   CC_OIDC_AUDIENCE: https://codecov.io
+2026-10-02T05:09:24.3032303Z   CC_USE_OIDC: true
+2026-10-02T05:09:24.3032479Z ##[endgroup]
+2026-10-02T05:09:24.5776092Z ##[end-action id=__codecov_codecov-action.oidc;outcome=success;conclusion=success;duration_ms=278]
+2026-10-02T05:09:24.5783518Z ##[start-action display=Get and set token;id=__codecov_codecov-action.__run_5]
+2026-10-02T05:09:24.5798839Z ##[group]Run if [ "$INPUT_USE_OIDC" == 'true' ] && [ "$CC_FORK" != 'true' ];
+2026-10-02T05:09:24.5799241Z [36;1mif [ "$INPUT_USE_OIDC" == 'true' ] && [ "$CC_FORK" != 'true' ];[0m
+2026-10-02T05:09:24.5799521Z [36;1mthen[0m
+2026-10-02T05:09:24.5799737Z [36;1m  echo "CC_TOKEN=$CC_OIDC_TOKEN" >> "$GITHUB_ENV"[0m
+2026-10-02T05:09:24.5800044Z [36;1melif [ -n "$INPUT_CODECOV_TOKEN" ];[0m
+2026-10-02T05:09:24.5800270Z [36;1mthen[0m
+2026-10-02T05:09:24.5800484Z [36;1m  echo -e "\033[0;32m==>\033[0m Token set from env"[0m
+2026-10-02T05:09:24.5800813Z [36;1m    echo "CC_TOKEN=$INPUT_CODECOV_TOKEN" >> "$GITHUB_ENV"[0m
+2026-10-02T05:09:24.5801071Z [36;1melse[0m
+2026-10-02T05:09:24.5801393Z [36;1m  if [ -n "$INPUT_TOKEN" ];[0m
+2026-10-02T05:09:24.5801608Z [36;1m  then[0m
+2026-10-02T05:09:24.5801821Z [36;1m    echo -e "\033[0;32m==>\033[0m Token set from input"[0m
+2026-10-02T05:09:24.5802110Z [36;1m    CC_TOKEN=$(echo "$INPUT_TOKEN" | tr -d '\n')[0m
+2026-10-02T05:09:24.5802388Z [36;1m    echo "CC_TOKEN=$CC_TOKEN" >> "$GITHUB_ENV"[0m
+2026-10-02T05:09:24.5802621Z [36;1m  fi[0m
+2026-10-02T05:09:24.5802776Z [36;1mfi[0m
+2026-10-02T05:09:24.5857749Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-02T05:09:24.5858034Z env:
+2026-10-02T05:09:24.5858206Z   CC_FORK: false
+2026-10-02T05:09:24.5885649Z   CC_OIDC_TOKEN: "***"
+2026-10-02T05:09:24.5885881Z   CC_OIDC_AUDIENCE: https://codecov.io
+2026-10-02T05:09:24.5886126Z   INPUT_USE_OIDC: true
+2026-10-02T05:09:24.5886305Z   INPUT_TOKEN: 
+2026-10-02T05:09:24.5886475Z   INPUT_CODECOV_TOKEN: 
+2026-10-02T05:09:24.5886668Z ##[endgroup]
+2026-10-02T05:09:24.5969470Z ##[end-action id=__codecov_codecov-action.__run_5;outcome=success;conclusion=success;duration_ms=18]
+2026-10-02T05:09:24.5972933Z ##[start-action display=Override branch for forks;id=__codecov_codecov-action.__run_6]
+2026-10-02T05:09:24.5987945Z ##[group]Run if [ -z "$CC_BRANCH" ] && [ -z "$CC_TOKEN" ] && [ "$CC_FORK" == 'true' ]
+2026-10-02T05:09:24.5988364Z [36;1mif [ -z "$CC_BRANCH" ] && [ -z "$CC_TOKEN" ] && [ "$CC_FORK" == 'true' ][0m
+2026-10-02T05:09:24.5988656Z [36;1mthen[0m
+2026-10-02T05:09:24.5988992Z [36;1m  echo -e "\033[0;32m==>\033[0m Fork detected, setting branch to $GITHUB_EVENT_PULL_REQUEST_HEAD_LABEL"[0m
+2026-10-02T05:09:24.5989428Z [36;1m  TOKENLESS="$GITHUB_EVENT_PULL_REQUEST_HEAD_LABEL"[0m
+2026-10-02T05:09:24.5989745Z [36;1m  CC_BRANCH="$GITHUB_EVENT_PULL_REQUEST_HEAD_LABEL"[0m
+2026-10-02T05:09:24.5990030Z [36;1m  echo "TOKENLESS=$TOKENLESS" >> "$GITHUB_ENV"[0m
+2026-10-02T05:09:24.5990274Z [36;1mfi[0m
+2026-10-02T05:09:24.5990436Z [36;1m[0m
+2026-10-02T05:09:24.5990628Z [36;1mecho "CC_BRANCH=$CC_BRANCH" >> "$GITHUB_ENV"[0m
+2026-10-02T05:09:24.6044929Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-02T05:09:24.6045216Z env:
+2026-10-02T05:09:24.6045390Z   CC_FORK: false
+2026-10-02T05:09:24.6072719Z   CC_TOKEN: "***"
+2026-10-02T05:09:24.6072905Z   CC_BRANCH: 
+2026-10-02T05:09:24.6073197Z   GITHUB_EVENT_PULL_REQUEST_HEAD_LABEL: jonathanong:docs/scope-cancel-to-pr-poll
+2026-10-02T05:09:24.6073598Z   GITHUB_EVENT_PULL_REQUEST_HEAD_REPO_FULL_NAME: jonathanong/pr-shepherd
+2026-10-02T05:09:24.6074057Z   GITHUB_REPOSITORY: jonathanong/pr-shepherd
+2026-10-02T05:09:24.6074303Z ##[endgroup]
+2026-10-02T05:09:24.6156030Z ##[end-action id=__codecov_codecov-action.__run_6;outcome=success;conclusion=success;duration_ms=18]
+2026-10-02T05:09:24.6161341Z ##[start-action display=Override commits and pr for pull requests;id=__codecov_codecov-action.__run_7]
+2026-10-02T05:09:24.6176036Z ##[group]Run if [ -z "$CC_SHA" ];
+2026-10-02T05:09:24.6176289Z [36;1mif [ -z "$CC_SHA" ];[0m
+2026-10-02T05:09:24.6176500Z [36;1mthen[0m
+2026-10-02T05:09:24.6176719Z [36;1m  CC_SHA="$GITHUB_EVENT_PULL_REQUEST_HEAD_SHA"[0m
+2026-10-02T05:09:24.6176971Z [36;1mfi[0m
+2026-10-02T05:09:24.6177173Z [36;1mif [ -z "$CC_PR" ] && [ "$CC_FORK" == 'true' ];[0m
+2026-10-02T05:09:24.6177413Z [36;1mthen[0m
+2026-10-02T05:09:24.6177593Z [36;1m  CC_PR="$GITHUB_EVENT_NUMBER"[0m
+2026-10-02T05:09:24.6177812Z [36;1mfi[0m
+2026-10-02T05:09:24.6177969Z [36;1m[0m
+2026-10-02T05:09:24.6178155Z [36;1mecho "CC_SHA=$CC_SHA" >> "$GITHUB_ENV"[0m
+2026-10-02T05:09:24.6178413Z [36;1mecho "CC_PR=$CC_PR" >> "$GITHUB_ENV"[0m
+2026-10-02T05:09:24.6230686Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-02T05:09:24.6230982Z env:
+2026-10-02T05:09:24.6231184Z   CC_FORK: false
+2026-10-02T05:09:24.6258830Z   CC_TOKEN: "***"
+2026-10-02T05:09:24.6259017Z   CC_BRANCH: 
+2026-10-02T05:09:24.6259181Z   CC_PR: 
+2026-10-02T05:09:24.6259330Z   CC_SHA: 
+2026-10-02T05:09:24.6259503Z   GITHUB_EVENT_NAME: pull_request
+2026-10-02T05:09:24.6259724Z   GITHUB_EVENT_NUMBER: 497
+2026-10-02T05:09:24.6260227Z   GITHUB_EVENT_PULL_REQUEST_HEAD_SHA: 01101bcf51256d656f7518bb82aa1c311fbbb263
+2026-10-02T05:09:24.6260556Z ##[endgroup]
+2026-10-02T05:09:24.6342178Z ##[end-action id=__codecov_codecov-action.__run_7;outcome=success;conclusion=success;duration_ms=18]
+2026-10-02T05:09:24.6348545Z ##[start-action display=Upload coverage to Codecov;id=__codecov_codecov-action.__run_8]
+2026-10-02T05:09:24.6363620Z ##[group]Run ${GITHUB_ACTION_PATH}/dist/codecov.sh
+2026-10-02T05:09:24.6364172Z [36;1m${GITHUB_ACTION_PATH}/dist/codecov.sh[0m
+2026-10-02T05:09:24.6418829Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-02T05:09:24.6419140Z env:
+2026-10-02T05:09:24.6419314Z   CC_FORK: false
+2026-10-02T05:09:24.6446835Z   CC_TOKEN: "***"
+2026-10-02T05:09:24.6447040Z   CC_BRANCH: 
+2026-10-02T05:09:24.6447241Z   CC_SHA: 01101bcf51256d656f7518bb82aa1c311fbbb263
+2026-10-02T05:09:24.6447494Z   CC_PR: 
+2026-10-02T05:09:24.6447658Z   CC_BASE_SHA: 
+2026-10-02T05:09:24.6447824Z   CC_BINARY: 
+2026-10-02T05:09:24.6448002Z   CC_BUILD: 
+2026-10-02T05:09:24.6448163Z   CC_BUILD_URL: 
+2026-10-02T05:09:24.6448335Z   CC_CLEANUP: false
+2026-10-02T05:09:24.6448507Z   CC_CODE: 
+2026-10-02T05:09:24.6448675Z   CC_DIR: 
+2026-10-02T05:09:24.6448846Z   CC_DISABLE_FILE_FIXES: false
+2026-10-02T05:09:24.6449054Z   CC_DISABLE_SEARCH: false
+2026-10-02T05:09:24.6449255Z   CC_DISABLE_TELEM: false
+2026-10-02T05:09:24.6449440Z   CC_DRY_RUN: false
+2026-10-02T05:09:24.6449612Z   CC_ENTERPRISE_URL: 
+2026-10-02T05:09:24.6449793Z   CC_ENV: 
+2026-10-02T05:09:24.6449950Z   CC_EXCLUDES: 
+2026-10-02T05:09:24.6450126Z   CC_FAIL_ON_ERROR: false
+2026-10-02T05:09:24.6450325Z   CC_FILES: ./test-results/junit.xml
+2026-10-02T05:09:24.6450542Z   CC_FLAGS: 
+2026-10-02T05:09:24.6450697Z   CC_FORCE: 
+2026-10-02T05:09:24.6450853Z   CC_GCOV_ARGS: 
+2026-10-02T05:09:24.6451028Z   CC_GCOV_EXECUTABLE: gcov
+2026-10-02T05:09:24.6451214Z   CC_GCOV_IGNORE: 
+2026-10-02T05:09:24.6451378Z   CC_GCOV_INCLUDE: 
+2026-10-02T05:09:24.6451552Z   CC_GIT_SERVICE: github
+2026-10-02T05:09:24.6451765Z   CC_HANDLE_NO_REPORTS_FOUND: false
+2026-10-02T05:09:24.6451976Z   CC_JOB_CODE: 
+2026-10-02T05:09:24.6452140Z   CC_LEGACY: false
+2026-10-02T05:09:24.6452313Z   CC_NAME: 
+2026-10-02T05:09:24.6452474Z   CC_NETWORK_FILTER: 
+2026-10-02T05:09:24.6452653Z   CC_NETWORK_PREFIX: 
+2026-10-02T05:09:24.6452838Z   CC_NETWORK_ROOT_FOLDER: 
+2026-10-02T05:09:24.6453016Z   CC_OS: 
+2026-10-02T05:09:24.6453176Z   CC_PARENT_SHA: 
+2026-10-02T05:09:24.6453340Z   CC_PLUGINS: 
+2026-10-02T05:09:24.6453520Z   CC_RECURSE_SUBMODULES: false
+2026-10-02T05:09:24.6453724Z   CC_REPORT_TYPE: test_results
+2026-10-02T05:09:24.6454329Z   CC_RUN_CMD: upload-coverage
+2026-10-02T05:09:24.6454532Z   CC_SERVICE: github
+2026-10-02T05:09:24.6454714Z   CC_SKIP_VALIDATION: false
+2026-10-02T05:09:24.6454897Z   CC_SLUG: 
+2026-10-02T05:09:24.6455055Z   CC_SWIFT_PROJECT: 
+2026-10-02T05:09:24.6455234Z   CC_USE_PYPI: false
+2026-10-02T05:09:24.6455404Z   CC_VERBOSE: false
+2026-10-02T05:09:24.6455574Z   CC_VERSION: latest
+2026-10-02T05:09:24.6455759Z   CC_YML_PATH: 
+2026-10-02T05:09:24.6455926Z ##[endgroup]
+2026-10-02T05:09:24.6563919Z      _____          _
+2026-10-02T05:09:24.6564230Z     / ____|        | |
+2026-10-02T05:09:24.6564578Z    | |     ___   __| | ___  ___ _____   __
+2026-10-02T05:09:24.6564832Z    | |    / _ \ / _` |/ _ \/ __/ _ \ \ / /
+2026-10-02T05:09:24.6565076Z    | |___| (_) | (_| |  __/ (_| (_) \ V /
+2026-10-02T05:09:24.6565318Z     \_____\___/ \__,_|\___|\___\___/ \_/
+2026-10-02T05:09:24.6565810Z                            [0;31m Wrapper-0.3.1[0m
+2026-10-02T05:09:24.6566062Z                            
+2026-10-02T05:09:24.6611847Z [0;32m==>[0m Detected [0;36mlinux[0m
+2026-10-02T05:09:24.6612383Z [0;32m ->[0m Downloading [0;36mhttps://cli.codecov.io/latest/linux/codecov[0m
+2026-10-02T05:09:24.6682678Z   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+2026-10-02T05:09:24.6683424Z                                  Dload  Upload   Total   Spent    Left  Speed
+2026-10-02T05:09:24.6684317Z 
+2026-10-02T05:09:24.9653969Z   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+2026-10-02T05:09:25.1740822Z   9  9.9M    9  935k    0     0  3149k      0  0:00:03 --:--:--  0:00:03 3140k
+2026-10-02T05:09:25.1741500Z 100  9.9M  100  9.9M    0     0  19.6M      0 --:--:-- --:--:-- --:--:-- 19.6M
+2026-10-02T05:09:25.1763268Z [0;32m==>[0m Finishing downloading [0;36mlinux:latest[0m
+2026-10-02T05:09:25.2375403Z       Version: [0;36mv11.3.1[0m
+2026-10-02T05:09:25.2375802Z  
+2026-10-02T05:09:25.2434218Z gpg: directory '/home/runner/.gnupg' created
+2026-10-02T05:09:25.2435323Z gpg: keybox '/home/runner/.gnupg/pubring.kbx' created
+2026-10-02T05:09:25.4267445Z gpg: /home/runner/.gnupg/trustdb.gpg: trustdb created
+2026-10-02T05:09:25.4268179Z gpg: key 806BB28AED779869: public key "Codecov Uploader (Codecov Uploader Verification Key) <security@codecov.io>" imported
+2026-10-02T05:09:25.4389986Z gpg: Total number processed: 1
+2026-10-02T05:09:25.4390375Z gpg:               imported: 1
+2026-10-02T05:09:25.4395286Z [0;32m==>[0m Verifying GPG signature integrity
+2026-10-02T05:09:25.4396160Z [0;32m ->[0m Downloading [0;36mhttps://cli.codecov.io/latest/linux/codecov.SHA256SUM[0m
+2026-10-02T05:09:25.4396813Z [0;32m ->[0m Downloading [0;36mhttps://cli.codecov.io/latest/linux/codecov.SHA256SUM.sig[0m
+2026-10-02T05:09:25.4397180Z  
+2026-10-02T05:09:25.6270944Z gpg: Signature made Thu Jul  9 01:37:57 2026 UTC
+2026-10-02T05:09:25.6271610Z gpg:                using RSA key 27034E7FDB850E0BBC2C62FF806BB28AED779869
+2026-10-02T05:09:25.6272528Z gpg: Good signature from "Codecov Uploader (Codecov Uploader Verification Key) <security@codecov.io>" [unknown]
+2026-10-02T05:09:25.6273406Z gpg: WARNING: This key is not certified with a trusted signature!
+2026-10-02T05:09:25.6274326Z gpg:          There is no indication that the signature belongs to the owner.
+2026-10-02T05:09:25.6275046Z Primary key fingerprint: 2703 4E7F DB85 0E0B BC2C  62FF 806B B28A ED77 9869
+2026-10-02T05:09:25.6756161Z codecov: OK
+2026-10-02T05:09:25.6767133Z [0;32m==>[0m CLI integrity verified
+2026-10-02T05:09:25.6767428Z 
+2026-10-02T05:09:25.7334439Z [0;32m ->[0m Token length: 1931
+2026-10-02T05:09:25.7335062Z [0;32m==>[0m Running upload-coverage
+2026-10-02T05:09:25.7343503Z       [0;36m./codecov  upload-coverage -t <redacted> --git-service github --sha 01101bcf51256d656f7518bb82aa1c311fbbb263 --file ./test-results/junit.xml --gcov-executable gcov --report-type test_results[0m
+2026-10-02T05:09:26.0516305Z info - 2026-10-02 05:09:26,051 -- ci service found: github-actions
+2026-10-02T05:09:26.0858086Z info - 2026-10-02 05:09:26,085 -- Using token to create a commit for protected branch `docs/scope-cancel-to-pr-poll`
+2026-10-02T05:09:26.5711397Z info - 2026-10-02 05:09:26,570 -- Commit creating complete
+2026-10-02T05:09:26.7069954Z info - 2026-10-02 05:09:26,706 -- Found 1 test_results files to report
+2026-10-02T05:09:26.7070803Z info - 2026-10-02 05:09:26,706 -- > /home/runner/work/pr-shepherd/pr-shepherd/test-results/junit.xml
+2026-10-02T05:09:27.2383515Z info - 2026-10-02 05:09:27,238 -- Sending upload (147863 bytes) to storage
+2026-10-02T05:09:27.5629640Z info - 2026-10-02 05:09:27,562 -- Upload queued for processing complete
+2026-10-02T05:09:27.6652471Z ##[end-action id=__codecov_codecov-action.__run_8;outcome=success;conclusion=success;duration_ms=3030]
+2026-10-02T05:09:27.6853034Z ##[group]Run codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5
+2026-10-02T05:09:27.6853353Z with:
+2026-10-02T05:09:27.6853528Z   use_oidc: true
+2026-10-02T05:09:27.6853700Z   cleanup: false
+2026-10-02T05:09:27.6854051Z   disable_file_fixes: false
+2026-10-02T05:09:27.6854279Z   disable_search: false
+2026-10-02T05:09:27.6854471Z   disable_safe_directory: false
+2026-10-02T05:09:27.6854668Z   disable_telem: false
+2026-10-02T05:09:27.6854848Z   dry_run: false
+2026-10-02T05:09:27.6855027Z   fail_ci_if_error: false
+2026-10-02T05:09:27.6855220Z   git_service: github
+2026-10-02T05:09:27.6855397Z   gcov_executable: gcov
+2026-10-02T05:09:27.6855595Z   handle_no_reports_found: false
+2026-10-02T05:09:27.6855808Z   recurse_submodules: false
+2026-10-02T05:09:27.6856009Z   run_command: upload-coverage
+2026-10-02T05:09:27.6856219Z   skip_validation: false
+2026-10-02T05:09:27.6856417Z   use_legacy_upload_endpoint: false
+2026-10-02T05:09:27.6856626Z   use_pypi: false
+2026-10-02T05:09:27.6856846Z   verbose: false
+2026-10-02T05:09:27.6857015Z   version: latest
+2026-10-02T05:09:27.6857177Z env:
+2026-10-02T05:09:27.6857340Z   CC_FORK: false
+2026-10-02T05:09:27.6884693Z   CC_TOKEN: "***"
+2026-10-02T05:09:27.6884891Z   CC_BRANCH: 
+2026-10-02T05:09:27.6885088Z   CC_SHA: 01101bcf51256d656f7518bb82aa1c311fbbb263
+2026-10-02T05:09:27.6885331Z   CC_PR: 
+2026-10-02T05:09:27.6885495Z ##[endgroup]
+2026-10-02T05:09:27.6892301Z ##[start-action display=Check system dependencies;id=__codecov_codecov-action_2.__run]
+2026-10-02T05:09:27.6905876Z ##[group]Run missing_deps=""
+2026-10-02T05:09:27.6906117Z [36;1mmissing_deps=""[0m
+2026-10-02T05:09:27.6906311Z [36;1m[0m
+2026-10-02T05:09:27.6906503Z [36;1m# Check for always-required commands[0m
+2026-10-02T05:09:27.6906757Z [36;1mfor cmd in bash git curl; do[0m
+2026-10-02T05:09:27.6907012Z [36;1m  if ! command -v "$cmd" >/dev/null 2>&1; then[0m
+2026-10-02T05:09:27.6907274Z [36;1m    missing_deps="$missing_deps $cmd"[0m
+2026-10-02T05:09:27.6907508Z [36;1m  fi[0m
+2026-10-02T05:09:27.6907668Z [36;1mdone[0m
+2026-10-02T05:09:27.6907821Z [36;1m[0m
+2026-10-02T05:09:27.6908044Z [36;1m# Check for gpg only if validation is not being skipped[0m
+2026-10-02T05:09:27.6908346Z [36;1mif [ "$INPUT_SKIP_VALIDATION" != "true" ]; then[0m
+2026-10-02T05:09:27.6908618Z [36;1m  if ! command -v gpg >/dev/null 2>&1; then[0m
+2026-10-02T05:09:27.6908877Z [36;1m    missing_deps="$missing_deps gpg"[0m
+2026-10-02T05:09:27.6909099Z [36;1m  fi[0m
+2026-10-02T05:09:27.6909267Z [36;1mfi[0m
+2026-10-02T05:09:27.6909425Z [36;1m[0m
+2026-10-02T05:09:27.6909620Z [36;1m# Report missing required dependencies[0m
+2026-10-02T05:09:27.6909875Z [36;1mif [ -n "$missing_deps" ]; then[0m
+2026-10-02T05:09:27.6910202Z [36;1m  echo "Error: The following required dependencies are missing:$missing_deps"[0m
+2026-10-02T05:09:27.6910620Z [36;1m  echo "Please install these dependencies before using this action."[0m
+2026-10-02T05:09:27.6910914Z [36;1m  exit 1[0m
+2026-10-02T05:09:27.6911080Z [36;1mfi[0m
+2026-10-02T05:09:27.6911242Z [36;1m[0m
+2026-10-02T05:09:27.6911467Z [36;1mecho "All required system dependencies are available."[0m
+2026-10-02T05:09:27.6932757Z shell: /usr/bin/sh -e {0}
+2026-10-02T05:09:27.6932969Z env:
+2026-10-02T05:09:27.6933129Z   CC_FORK: false
+2026-10-02T05:09:27.6960582Z   CC_TOKEN: "***"
+2026-10-02T05:09:27.6960775Z   CC_BRANCH: 
+2026-10-02T05:09:27.6960972Z   CC_SHA: 01101bcf51256d656f7518bb82aa1c311fbbb263
+2026-10-02T05:09:27.6961221Z   CC_PR: 
+2026-10-02T05:09:27.6961394Z   INPUT_SKIP_VALIDATION: false
+2026-10-02T05:09:27.6961593Z ##[endgroup]
+2026-10-02T05:09:27.6996510Z All required system dependencies are available.
+2026-10-02T05:09:27.7001319Z ##[end-action id=__codecov_codecov-action_2.__run;outcome=success;conclusion=success;duration_ms=10]
+2026-10-02T05:09:27.7002963Z ##[start-action display=Action version;id=__codecov_codecov-action_2.__run_2]
+2026-10-02T05:09:27.7016393Z ##[group]Run CC_ACTION_VERSION=$(cat ${GITHUB_ACTION_PATH}/src/version)
+2026-10-02T05:09:27.7016913Z [36;1mCC_ACTION_VERSION=$(cat ${GITHUB_ACTION_PATH}/src/version)[0m
+2026-10-02T05:09:27.7017292Z [36;1mecho -e "\033[0;32m==>\033[0m Running Action version $CC_ACTION_VERSION"[0m
+2026-10-02T05:09:27.7068643Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-02T05:09:27.7068933Z env:
+2026-10-02T05:09:27.7069096Z   CC_FORK: false
+2026-10-02T05:09:27.7096894Z   CC_TOKEN: "***"
+2026-10-02T05:09:27.7097087Z   CC_BRANCH: 
+2026-10-02T05:09:27.7097303Z   CC_SHA: 01101bcf51256d656f7518bb82aa1c311fbbb263
+2026-10-02T05:09:27.7097530Z   CC_PR: 
+2026-10-02T05:09:27.7097683Z ##[endgroup]
+2026-10-02T05:09:27.7170752Z [0;32m==>[0m Running Action version 7.1.1
+2026-10-02T05:09:27.7175481Z ##[end-action id=__codecov_codecov-action_2.__run_2;outcome=success;conclusion=success;duration_ms=17]
+2026-10-02T05:09:27.7177196Z ##[start-action display=Set safe directory;id=__codecov_codecov-action_2.__run_3]
+2026-10-02T05:09:27.7192569Z ##[group]Run git config --global --add safe.directory "/home/runner/work/pr-shepherd/pr-shepherd"
+2026-10-02T05:09:27.7193095Z [36;1mgit config --global --add safe.directory "/home/runner/work/pr-shepherd/pr-shepherd"[0m
+2026-10-02T05:09:27.7193525Z [36;1mgit config --global --add safe.directory "$GITHUB_WORKSPACE"[0m
+2026-10-02T05:09:27.7239097Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-02T05:09:27.7239364Z env:
+2026-10-02T05:09:27.7239528Z   CC_FORK: false
+2026-10-02T05:09:27.7266844Z   CC_TOKEN: "***"
+2026-10-02T05:09:27.7267022Z   CC_BRANCH: 
+2026-10-02T05:09:27.7267225Z   CC_SHA: 01101bcf51256d656f7518bb82aa1c311fbbb263
+2026-10-02T05:09:27.7267465Z   CC_PR: 
+2026-10-02T05:09:27.7267625Z ##[endgroup]
+2026-10-02T05:09:27.7953172Z ##[end-action id=__codecov_codecov-action_2.__run_3;outcome=success;conclusion=success;duration_ms=77]
+2026-10-02T05:09:27.7956947Z ##[start-action display=Set fork;id=__codecov_codecov-action_2.__run_4]
+2026-10-02T05:09:27.7984217Z ##[group]Run CC_FORK="false"
+2026-10-02T05:09:27.7984478Z [36;1mCC_FORK="false"[0m
+2026-10-02T05:09:27.7984924Z [36;1mif [ -n "$GITHUB_EVENT_PULL_REQUEST_HEAD_REPO_FULL_NAME" ] && [ "$GITHUB_EVENT_PULL_REQUEST_HEAD_REPO_FULL_NAME" != "$GITHUB_REPOSITORY" ];[0m
+2026-10-02T05:09:27.7985384Z [36;1mthen[0m
+2026-10-02T05:09:27.7985595Z [36;1m  echo -e "\033[0;32m==>\033[0m Fork detected"[0m
+2026-10-02T05:09:27.7985871Z [36;1m  CC_FORK="true"[0m
+2026-10-02T05:09:27.7986064Z [36;1mfi[0m
+2026-10-02T05:09:27.7986260Z [36;1mecho "CC_FORK=$CC_FORK" >> "$GITHUB_ENV"[0m
+2026-10-02T05:09:27.8040236Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-02T05:09:27.8040518Z env:
+2026-10-02T05:09:27.8040692Z   CC_FORK: false
+2026-10-02T05:09:27.8068264Z   CC_TOKEN: "***"
+2026-10-02T05:09:27.8068458Z   CC_BRANCH: 
+2026-10-02T05:09:27.8068656Z   CC_SHA: 01101bcf51256d656f7518bb82aa1c311fbbb263
+2026-10-02T05:09:27.8068904Z   CC_PR: 
+2026-10-02T05:09:27.8069170Z   GITHUB_EVENT_PULL_REQUEST_HEAD_LABEL: jonathanong:docs/scope-cancel-to-pr-poll
+2026-10-02T05:09:27.8069582Z   GITHUB_EVENT_PULL_REQUEST_HEAD_REPO_FULL_NAME: jonathanong/pr-shepherd
+2026-10-02T05:09:27.8069900Z   GITHUB_REPOSITORY: jonathanong/pr-shepherd
+2026-10-02T05:09:27.8070128Z ##[endgroup]
+2026-10-02T05:09:27.8150339Z ##[end-action id=__codecov_codecov-action_2.__run_4;outcome=success;conclusion=success;duration_ms=19]
+2026-10-02T05:09:27.8154117Z ##[start-action display=Get OIDC token;id=__codecov_codecov-action_2.oidc]
+2026-10-02T05:09:27.8187028Z ##[group]Run actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd
+2026-10-02T05:09:27.8187334Z with:
+2026-10-02T05:09:27.8187816Z   script: if (process.env.CC_USE_OIDC === 'true' && process.env.CC_FORK != 'true') {
+  const id_token = await core.getIDToken(process.env.CC_OIDC_AUDIENCE)
+  return id_token
+}
+
+2026-10-02T05:09:27.8190380Z   github-token: ***
+2026-10-02T05:09:27.8190581Z   debug: false
+2026-10-02T05:09:27.8190775Z   user-agent: actions/github-script
+2026-10-02T05:09:27.8191004Z   result-encoding: json
+2026-10-02T05:09:27.8191198Z   retries: 0
+2026-10-02T05:09:27.8191547Z   retry-exempt-status-codes: 400,401,403,404,422
+2026-10-02T05:09:27.8191791Z env:
+2026-10-02T05:09:27.8191950Z   CC_FORK: false
+2026-10-02T05:09:27.8219265Z   CC_TOKEN: "***"
+2026-10-02T05:09:27.8219457Z   CC_BRANCH: 
+2026-10-02T05:09:27.8219656Z   CC_SHA: 01101bcf51256d656f7518bb82aa1c311fbbb263
+2026-10-02T05:09:27.8219916Z   CC_PR: 
+2026-10-02T05:09:27.8220107Z   CC_OIDC_AUDIENCE: https://codecov.io
+2026-10-02T05:09:27.8220334Z   CC_USE_OIDC: true
+2026-10-02T05:09:27.8220537Z ##[endgroup]
+2026-10-02T05:09:28.1128099Z ##[end-action id=__codecov_codecov-action_2.oidc;outcome=success;conclusion=success;duration_ms=297]
+2026-10-02T05:09:28.1131654Z ##[start-action display=Get and set token;id=__codecov_codecov-action_2.__run_5]
+2026-10-02T05:09:28.1146807Z ##[group]Run if [ "$INPUT_USE_OIDC" == 'true' ] && [ "$CC_FORK" != 'true' ];
+2026-10-02T05:09:28.1147192Z [36;1mif [ "$INPUT_USE_OIDC" == 'true' ] && [ "$CC_FORK" != 'true' ];[0m
+2026-10-02T05:09:28.1147477Z [36;1mthen[0m
+2026-10-02T05:09:28.1147711Z [36;1m  echo "CC_TOKEN=$CC_OIDC_TOKEN" >> "$GITHUB_ENV"[0m
+2026-10-02T05:09:28.1147987Z [36;1melif [ -n "$INPUT_CODECOV_TOKEN" ];[0m
+2026-10-02T05:09:28.1148208Z [36;1mthen[0m
+2026-10-02T05:09:28.1148416Z [36;1m  echo -e "\033[0;32m==>\033[0m Token set from env"[0m
+2026-10-02T05:09:28.1148757Z [36;1m    echo "CC_TOKEN=$INPUT_CODECOV_TOKEN" >> "$GITHUB_ENV"[0m
+2026-10-02T05:09:28.1149019Z [36;1melse[0m
+2026-10-02T05:09:28.1149194Z [36;1m  if [ -n "$INPUT_TOKEN" ];[0m
+2026-10-02T05:09:28.1149398Z [36;1m  then[0m
+2026-10-02T05:09:28.1149619Z [36;1m    echo -e "\033[0;32m==>\033[0m Token set from input"[0m
+2026-10-02T05:09:28.1149909Z [36;1m    CC_TOKEN=$(echo "$INPUT_TOKEN" | tr -d '\n')[0m
+2026-10-02T05:09:28.1150195Z [36;1m    echo "CC_TOKEN=$CC_TOKEN" >> "$GITHUB_ENV"[0m
+2026-10-02T05:09:28.1150443Z [36;1m  fi[0m
+2026-10-02T05:09:28.1150597Z [36;1mfi[0m
+2026-10-02T05:09:28.1203574Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-02T05:09:28.1204068Z env:
+2026-10-02T05:09:28.1204241Z   CC_FORK: false
+2026-10-02T05:09:28.1231413Z   CC_TOKEN: "***"
+2026-10-02T05:09:28.1231603Z   CC_BRANCH: 
+2026-10-02T05:09:28.1231801Z   CC_SHA: 01101bcf51256d656f7518bb82aa1c311fbbb263
+2026-10-02T05:09:28.1232038Z   CC_PR: 
+2026-10-02T05:09:28.1265460Z   CC_OIDC_TOKEN: "***"
+2026-10-02T05:09:28.1265689Z   CC_OIDC_AUDIENCE: https://codecov.io
+2026-10-02T05:09:28.1265920Z   INPUT_USE_OIDC: true
+2026-10-02T05:09:28.1266105Z   INPUT_TOKEN: 
+2026-10-02T05:09:28.1266288Z   INPUT_CODECOV_TOKEN: 
+2026-10-02T05:09:28.1266471Z ##[endgroup]
+2026-10-02T05:09:28.1342487Z ##[end-action id=__codecov_codecov-action_2.__run_5;outcome=success;conclusion=success;duration_ms=21]
+2026-10-02T05:09:28.1345460Z ##[start-action display=Override branch for forks;id=__codecov_codecov-action_2.__run_6]
+2026-10-02T05:09:28.1359250Z ##[group]Run if [ -z "$CC_BRANCH" ] && [ -z "$CC_TOKEN" ] && [ "$CC_FORK" == 'true' ]
+2026-10-02T05:09:28.1359662Z [36;1mif [ -z "$CC_BRANCH" ] && [ -z "$CC_TOKEN" ] && [ "$CC_FORK" == 'true' ][0m
+2026-10-02T05:09:28.1359953Z [36;1mthen[0m
+2026-10-02T05:09:28.1360287Z [36;1m  echo -e "\033[0;32m==>\033[0m Fork detected, setting branch to $GITHUB_EVENT_PULL_REQUEST_HEAD_LABEL"[0m
+2026-10-02T05:09:28.1360715Z [36;1m  TOKENLESS="$GITHUB_EVENT_PULL_REQUEST_HEAD_LABEL"[0m
+2026-10-02T05:09:28.1361150Z [36;1m  CC_BRANCH="$GITHUB_EVENT_PULL_REQUEST_HEAD_LABEL"[0m
+2026-10-02T05:09:28.1361447Z [36;1m  echo "TOKENLESS=$TOKENLESS" >> "$GITHUB_ENV"[0m
+2026-10-02T05:09:28.1361688Z [36;1mfi[0m
+2026-10-02T05:09:28.1361854Z [36;1m[0m
+2026-10-02T05:09:28.1362044Z [36;1mecho "CC_BRANCH=$CC_BRANCH" >> "$GITHUB_ENV"[0m
+2026-10-02T05:09:28.1408140Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-02T05:09:28.1408425Z env:
+2026-10-02T05:09:28.1408594Z   CC_FORK: false
+2026-10-02T05:09:28.1442183Z   CC_TOKEN: "***"
+2026-10-02T05:09:28.1442372Z   CC_BRANCH: 
+2026-10-02T05:09:28.1442582Z   CC_SHA: 01101bcf51256d656f7518bb82aa1c311fbbb263
+2026-10-02T05:09:28.1442988Z   CC_PR: 
+2026-10-02T05:09:28.1443271Z   GITHUB_EVENT_PULL_REQUEST_HEAD_LABEL: jonathanong:docs/scope-cancel-to-pr-poll
+2026-10-02T05:09:28.1443673Z   GITHUB_EVENT_PULL_REQUEST_HEAD_REPO_FULL_NAME: jonathanong/pr-shepherd
+2026-10-02T05:09:28.1444073Z   GITHUB_REPOSITORY: jonathanong/pr-shepherd
+2026-10-02T05:09:28.1444318Z ##[endgroup]
+2026-10-02T05:09:28.1514629Z ##[end-action id=__codecov_codecov-action_2.__run_6;outcome=success;conclusion=success;duration_ms=16]
+2026-10-02T05:09:28.1517929Z ##[start-action display=Override commits and pr for pull requests;id=__codecov_codecov-action_2.__run_7]
+2026-10-02T05:09:28.1531693Z ##[group]Run if [ -z "$CC_SHA" ];
+2026-10-02T05:09:28.1531933Z [36;1mif [ -z "$CC_SHA" ];[0m
+2026-10-02T05:09:28.1532132Z [36;1mthen[0m
+2026-10-02T05:09:28.1532356Z [36;1m  CC_SHA="$GITHUB_EVENT_PULL_REQUEST_HEAD_SHA"[0m
+2026-10-02T05:09:28.1532614Z [36;1mfi[0m
+2026-10-02T05:09:28.1532832Z [36;1mif [ -z "$CC_PR" ] && [ "$CC_FORK" == 'true' ];[0m
+2026-10-02T05:09:28.1533085Z [36;1mthen[0m
+2026-10-02T05:09:28.1533275Z [36;1m  CC_PR="$GITHUB_EVENT_NUMBER"[0m
+2026-10-02T05:09:28.1533496Z [36;1mfi[0m
+2026-10-02T05:09:28.1533655Z [36;1m[0m
+2026-10-02T05:09:28.1533997Z [36;1mecho "CC_SHA=$CC_SHA" >> "$GITHUB_ENV"[0m
+2026-10-02T05:09:28.1534286Z [36;1mecho "CC_PR=$CC_PR" >> "$GITHUB_ENV"[0m
+2026-10-02T05:09:28.1581391Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-02T05:09:28.1581684Z env:
+2026-10-02T05:09:28.1581847Z   CC_FORK: false
+2026-10-02T05:09:28.1615317Z   CC_TOKEN: "***"
+2026-10-02T05:09:28.1615510Z   CC_BRANCH: 
+2026-10-02T05:09:28.1615681Z   CC_SHA: 
+2026-10-02T05:09:28.1615837Z   CC_PR: 
+2026-10-02T05:09:28.1616006Z   GITHUB_EVENT_NAME: pull_request
+2026-10-02T05:09:28.1616237Z   GITHUB_EVENT_NUMBER: 497
+2026-10-02T05:09:28.1616531Z   GITHUB_EVENT_PULL_REQUEST_HEAD_SHA: 01101bcf51256d656f7518bb82aa1c311fbbb263
+2026-10-02T05:09:28.1616843Z ##[endgroup]
+2026-10-02T05:09:28.1691488Z ##[end-action id=__codecov_codecov-action_2.__run_7;outcome=success;conclusion=success;duration_ms=17]
+2026-10-02T05:09:28.1698494Z ##[start-action display=Upload coverage to Codecov;id=__codecov_codecov-action_2.__run_8]
+2026-10-02T05:09:28.1718953Z ##[group]Run ${GITHUB_ACTION_PATH}/dist/codecov.sh
+2026-10-02T05:09:28.1719416Z [36;1m${GITHUB_ACTION_PATH}/dist/codecov.sh[0m
+2026-10-02T05:09:28.1767936Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-10-02T05:09:28.1768230Z env:
+2026-10-02T05:09:28.1768404Z   CC_FORK: false
+2026-10-02T05:09:28.1801874Z   CC_TOKEN: "***"
+2026-10-02T05:09:28.1802085Z   CC_BRANCH: 
+2026-10-02T05:09:28.1802286Z   CC_SHA: 01101bcf51256d656f7518bb82aa1c311fbbb263
+2026-10-02T05:09:28.1802528Z   CC_PR: 
+2026-10-02T05:09:28.1802688Z   CC_BASE_SHA: 
+2026-10-02T05:09:28.1802858Z   CC_BINARY: 
+2026-10-02T05:09:28.1803013Z   CC_BUILD: 
+2026-10-02T05:09:28.1803175Z   CC_BUILD_URL: 
+2026-10-02T05:09:28.1803379Z   CC_CLEANUP: false
+2026-10-02T05:09:28.1803552Z   CC_CODE: 
+2026-10-02T05:09:28.1803714Z   CC_DIR: 
+2026-10-02T05:09:28.1804033Z   CC_DISABLE_FILE_FIXES: false
+2026-10-02T05:09:28.1804241Z   CC_DISABLE_SEARCH: false
+2026-10-02T05:09:28.1804448Z   CC_DISABLE_TELEM: false
+2026-10-02T05:09:28.1804634Z   CC_DRY_RUN: false
+2026-10-02T05:09:28.1804816Z   CC_ENTERPRISE_URL: 
+2026-10-02T05:09:28.1804988Z   CC_ENV: 
+2026-10-02T05:09:28.1805319Z   CC_EXCLUDES: 
+2026-10-02T05:09:28.1805494Z   CC_FAIL_ON_ERROR: false
+2026-10-02T05:09:28.1805675Z   CC_FILES: 
+2026-10-02T05:09:28.1805827Z   CC_FLAGS: 
+2026-10-02T05:09:28.1805984Z   CC_FORCE: 
+2026-10-02T05:09:28.1806137Z   CC_GCOV_ARGS: 
+2026-10-02T05:09:28.1806308Z   CC_GCOV_EXECUTABLE: gcov
+2026-10-02T05:09:28.1806500Z   CC_GCOV_IGNORE: 
+2026-10-02T05:09:28.1806671Z   CC_GCOV_INCLUDE: 
+2026-10-02T05:09:28.1806845Z   CC_GIT_SERVICE: github
+2026-10-02T05:09:28.1807050Z   CC_HANDLE_NO_REPORTS_FOUND: false
+2026-10-02T05:09:28.1807260Z   CC_JOB_CODE: 
+2026-10-02T05:09:28.1807431Z   CC_LEGACY: false
+2026-10-02T05:09:28.1807593Z   CC_NAME: 
+2026-10-02T05:09:28.1807754Z   CC_NETWORK_FILTER: 
+2026-10-02T05:09:28.1808044Z   CC_NETWORK_PREFIX: 
+2026-10-02T05:09:28.1808225Z   CC_NETWORK_ROOT_FOLDER: 
+2026-10-02T05:09:28.1808411Z   CC_OS: 
+2026-10-02T05:09:28.1808573Z   CC_PARENT_SHA: 
+2026-10-02T05:09:28.1808739Z   CC_PLUGINS: 
+2026-10-02T05:09:28.1808910Z   CC_RECURSE_SUBMODULES: false
+2026-10-02T05:09:28.1809119Z   CC_REPORT_TYPE: 
+2026-10-02T05:09:28.1809301Z   CC_RUN_CMD: upload-coverage
+2026-10-02T05:09:28.1809496Z   CC_SERVICE: github
+2026-10-02T05:09:28.1809680Z   CC_SKIP_VALIDATION: false
+2026-10-02T05:09:28.1809867Z   CC_SLUG: 
+2026-10-02T05:09:28.1810025Z   CC_SWIFT_PROJECT: 
+2026-10-02T05:09:28.1810203Z   CC_USE_PYPI: false
+2026-10-02T05:09:28.1810428Z   CC_VERBOSE: false
+2026-10-02T05:09:28.1810737Z   CC_VERSION: latest
+2026-10-02T05:09:28.1810969Z   CC_YML_PATH: 
+2026-10-02T05:09:28.1811391Z ##[endgroup]
+2026-10-02T05:09:28.1914562Z      _____          _
+2026-10-02T05:09:28.1914876Z     / ____|        | |
+2026-10-02T05:09:28.1915213Z    | |     ___   __| | ___  ___ _____   __
+2026-10-02T05:09:28.1915611Z    | |    / _ \ / _` |/ _ \/ __/ _ \ \ / /
+2026-10-02T05:09:28.1915986Z    | |___| (_) | (_| |  __/ (_| (_) \ V /
+2026-10-02T05:09:28.1916353Z     \_____\___/ \__,_|\___|\___\___/ \_/
+2026-10-02T05:09:28.1917025Z                            [0;31m Wrapper-0.3.1[0m
+2026-10-02T05:09:28.1917400Z                            
+2026-10-02T05:09:28.1956329Z [0;32m==>[0m Detected [0;36mlinux[0m
+2026-10-02T05:09:28.1956957Z [0;32m ->[0m Downloading [0;36mhttps://cli.codecov.io/latest/linux/codecov[0m
+2026-10-02T05:09:28.2001581Z   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+2026-10-02T05:09:28.2002289Z                                  Dload  Upload   Total   Spent    Left  Speed
+2026-10-02T05:09:28.2002627Z 
+2026-10-02T05:09:28.6985584Z   0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+2026-10-02T05:09:28.6986305Z 100  9.9M  100  9.9M    0     0  19.9M      0 --:--:-- --:--:-- --:--:-- 19.9M
+2026-10-02T05:09:28.7021252Z [0;32m==>[0m Finishing downloading [0;36mlinux:latest[0m
+2026-10-02T05:09:28.8227983Z       Version: [0;36mv11.3.1[0m
+2026-10-02T05:09:28.8228285Z  
+2026-10-02T05:09:29.0035003Z gpg: key 806BB28AED779869: "Codecov Uploader (Codecov Uploader Verification Key) <security@codecov.io>" not changed
+2026-10-02T05:09:29.0035575Z gpg: Total number processed: 1
+2026-10-02T05:09:29.0035831Z gpg:              unchanged: 1
+2026-10-02T05:09:29.0039356Z [0;32m==>[0m Verifying GPG signature integrity
+2026-10-02T05:09:29.0039959Z [0;32m ->[0m Downloading [0;36mhttps://cli.codecov.io/latest/linux/codecov.SHA256SUM[0m
+2026-10-02T05:09:29.0040679Z [0;32m ->[0m Downloading [0;36mhttps://cli.codecov.io/latest/linux/codecov.SHA256SUM.sig[0m
+2026-10-02T05:09:29.0041154Z  
+2026-10-02T05:09:29.1117806Z gpg: Signature made Thu Jul  9 01:37:57 2026 UTC
+2026-10-02T05:09:29.1118468Z gpg:                using RSA key 27034E7FDB850E0BBC2C62FF806BB28AED779869
+2026-10-02T05:09:29.1119442Z gpg: Good signature from "Codecov Uploader (Codecov Uploader Verification Key) <security@codecov.io>" [unknown]
+2026-10-02T05:09:29.1120303Z gpg: WARNING: This key is not certified with a trusted signature!
+2026-10-02T05:09:29.1120988Z gpg:          There is no indication that the signature belongs to the owner.
+2026-10-02T05:09:29.1121955Z Primary key fingerprint: 2703 4E7F DB85 0E0B BC2C  62FF 806B B28A ED77 9869
+2026-10-02T05:09:29.1568054Z codecov: OK
+2026-10-02T05:09:29.1578875Z [0;32m==>[0m CLI integrity verified
+2026-10-02T05:09:29.2099142Z 
+2026-10-02T05:09:29.2100127Z [0;32m ->[0m Token length: 1931
+2026-10-02T05:09:29.2100830Z [0;32m==>[0m Running upload-coverage
+2026-10-02T05:09:29.2109038Z       [0;36m./codecov  upload-coverage -t <redacted> --git-service github --sha 01101bcf51256d656f7518bb82aa1c311fbbb263 --gcov-executable gcov[0m
+2026-10-02T05:09:29.4875799Z info - 2026-10-02 05:09:29,487 -- ci service found: github-actions
+2026-10-02T05:09:29.5197523Z warning - 2026-10-02 05:09:29,519 -- xcrun is not installed or can't be found.
+2026-10-02T05:09:29.6074726Z warning - 2026-10-02 05:09:29,607 -- No gcov data found.
+2026-10-02T05:09:29.6077432Z warning - 2026-10-02 05:09:29,607 -- coverage.py is not installed or can't be found.
+2026-10-02T05:09:29.6510058Z info - 2026-10-02 05:09:29,650 -- Found 0 coverage files to report
+2026-10-02T05:09:29.6536923Z Error: No coverage reports found. Please make sure you're generating reports successfully.
+2026-10-02T05:09:29.7408385Z [0;31m==> Failed to run upload-coverage[0m
+2026-10-02T05:09:29.7416797Z ##[end-action id=__codecov_codecov-action_2.__run_8;outcome=success;conclusion=success;duration_ms=1571]
+2026-10-02T05:09:29.7491159Z Post job cleanup.
+2026-10-02T05:09:29.8181526Z [command]/usr/bin/git version
+2026-10-02T05:09:29.8212010Z git version 2.55.0
+2026-10-02T05:09:29.8232161Z Copying '/home/runner/.gitconfig' to '/home/runner/work/_temp/615b3b58-8da4-4a00-a8a3-09cf66929c07/.gitconfig'
+2026-10-02T05:09:29.8239524Z Temporarily overriding HOME='/home/runner/work/_temp/615b3b58-8da4-4a00-a8a3-09cf66929c07' before making global git config changes
+2026-10-02T05:09:29.8240625Z Adding repository directory to the temporary git global config as a safe directory
+2026-10-02T05:09:29.8243605Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/pr-shepherd/pr-shepherd
+2026-10-02T05:09:29.8699124Z Removing SSH command configuration
+2026-10-02T05:09:29.8705577Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-10-02T05:09:29.8739214Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-10-02T05:09:29.8938019Z Removing HTTP extra header
+2026-10-02T05:09:29.8942852Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-10-02T05:09:29.8973957Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-10-02T05:09:29.9163072Z Removing includeIf entries pointing to credentials config files
+2026-10-02T05:09:29.9168600Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-10-02T05:09:29.9195606Z includeif.gitdir:/home/runner/work/pr-shepherd/pr-shepherd/.git.path
+2026-10-02T05:09:29.9196234Z includeif.gitdir:/home/runner/work/pr-shepherd/pr-shepherd/.git/worktrees/*.path
+2026-10-02T05:09:29.9196714Z includeif.gitdir:/github/workspace/.git.path
+2026-10-02T05:09:29.9197127Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-10-02T05:09:29.9202913Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/pr-shepherd/pr-shepherd/.git.path
+2026-10-02T05:09:29.9224593Z /home/runner/work/_temp/git-credentials-b090014c-fba8-42bc-a33e-a6fb4b971369.config
+2026-10-02T05:09:29.9233488Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/pr-shepherd/pr-shepherd/.git.path \/home\/runner\/work\/_temp\/git\-credentials\-b090014c\-fba8\-42bc\-a33e\-a6fb4b971369\.config
+2026-10-02T05:09:29.9266851Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/pr-shepherd/pr-shepherd/.git/worktrees/*.path
+2026-10-02T05:09:29.9287890Z /home/runner/work/_temp/git-credentials-b090014c-fba8-42bc-a33e-a6fb4b971369.config
+2026-10-02T05:09:29.9296082Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/pr-shepherd/pr-shepherd/.git/worktrees/*.path \/home\/runner\/work\/_temp\/git\-credentials\-b090014c\-fba8\-42bc\-a33e\-a6fb4b971369\.config
+2026-10-02T05:09:29.9324806Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-10-02T05:09:29.9344128Z /github/runner_temp/git-credentials-b090014c-fba8-42bc-a33e-a6fb4b971369.config
+2026-10-02T05:09:29.9350178Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path \/github\/runner_temp\/git\-credentials\-b090014c\-fba8\-42bc\-a33e\-a6fb4b971369\.config
+2026-10-02T05:09:29.9377517Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-10-02T05:09:29.9395787Z /github/runner_temp/git-credentials-b090014c-fba8-42bc-a33e-a6fb4b971369.config
+2026-10-02T05:09:29.9401658Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path \/github\/runner_temp\/git\-credentials\-b090014c\-fba8\-42bc\-a33e\-a6fb4b971369\.config
+2026-10-02T05:09:29.9430443Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-10-02T05:09:29.9636932Z Removing credentials config '/home/runner/work/_temp/git-credentials-b090014c-fba8-42bc-a33e-a6fb4b971369.config'
+2026-10-02T05:09:29.9766704Z Cleaning up orphan processes

@@ -1,0 +1,81 @@
+{
+  "runId": 36967599241,
+  "name": "lint / typecheck / test (24.x)",
+  "steps": [
+    {
+      "number": 1,
+      "name": "Set up job",
+      "conclusion": "success"
+    },
+    {
+      "number": 2,
+      "name": "Run actions/checkout@v7.0.1",
+      "conclusion": "success"
+    },
+    {
+      "number": 3,
+      "name": "Run actions/setup-node@v7",
+      "conclusion": "success"
+    },
+    {
+      "number": 4,
+      "name": "Run npm ci --ignore-scripts",
+      "conclusion": "success"
+    },
+    {
+      "number": 5,
+      "name": "Run npm run build",
+      "conclusion": "success"
+    },
+    {
+      "number": 6,
+      "name": "Run npm run lint",
+      "conclusion": "success"
+    },
+    {
+      "number": 7,
+      "name": "Run npm run format:check",
+      "conclusion": "success"
+    },
+    {
+      "number": 8,
+      "name": "Run npm run typecheck",
+      "conclusion": "success"
+    },
+    {
+      "number": 9,
+      "name": "Eval cases are in sync with their snapshots",
+      "conclusion": "success"
+    },
+    {
+      "number": 10,
+      "name": "Run npm run test:coverage",
+      "conclusion": "failure"
+    },
+    {
+      "number": 11,
+      "name": "Upload test results to Codecov",
+      "conclusion": "success"
+    },
+    {
+      "number": 12,
+      "name": "Upload coverage to Codecov",
+      "conclusion": "success"
+    },
+    {
+      "number": 23,
+      "name": "Post Run actions/setup-node@v7",
+      "conclusion": "skipped"
+    },
+    {
+      "number": 24,
+      "name": "Post Run actions/checkout@v7.0.1",
+      "conclusion": "success"
+    },
+    {
+      "number": 25,
+      "name": "Complete job",
+      "conclusion": "success"
+    }
+  ]
+}
