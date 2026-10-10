@@ -4,7 +4,7 @@ runs: 3
 max_turns: 6
 timeout_seconds: 300
 allowed_tools: [Read, Glob, Grep, Skill]
-tags: [event-mode, wait]
+tags: [event-mode, wait, tier:guard]
 append_system_prompt: |
   You have no shell and no network access. Do not run shell commands, fetch
   anything over the network, or read repository files other than a reference
