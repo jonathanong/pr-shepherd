@@ -75,4 +75,4 @@ CLAUDE_CODE_EFFORT_LEVEL=low claude plugin eval . --model claude-sonnet-5-5 \
   calibration log.
 - [tokens/](tokens/README.md) is a separate, offline benchmark of what the work
   costs: tool calls, turns and tokens with pr-shepherd vs. the gh CLI or the
-  GitHub MCP server. Latest numbers are in [tokens/REPORT.md](tokens/REPORT.md).
+  GitHub MCP server, for single PRs and native stacks, merges included. Latest numbers are in [tokens/REPORT.md](tokens/REPORT.md).

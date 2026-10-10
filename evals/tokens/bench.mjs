@@ -15,6 +15,10 @@ import { SCENARIOS } from "./scenarios.mjs";
 
 const ARMS = ["shepherd", "gh", "mcp"];
 const METRICS = ["calls", "turns", "toolTokens", "ite"];
+const SESSIONS = {
+  pr: "Typical PR session",
+  stack: "Typical stack session",
+};
 
 const schemas = readJson("mcp-tool-schemas.json");
 const eagerTokens = tokens("x".repeat(schemas.eagerChars));
@@ -24,57 +28,71 @@ const rows = SCENARIOS.map((s) => {
   const result = Object.fromEntries(ARMS.map((a) => [a, cost(arms[a])]));
   // Sensitivity: the whole GitHub toolset in context on every request instead
   // of the few schemas the setup scenario loads on demand.
-  result.mcpEager =
-    s.id === "session-setup" ? cost([]) : cost(arms.mcp, { extraContext: eagerTokens });
-  return { id: s.id, title: s.title, note: s.note, weight: s.weight, ...result };
+  result.mcpEager = s.setup ? cost([]) : cost(arms.mcp, { extraContext: eagerTokens });
+  return {
+    id: s.id,
+    session: s.session,
+    setup: s.setup === true,
+    title: s.title,
+    note: s.note,
+    gaps: s.gaps ?? {},
+    weight: s.weight,
+    ...result,
+  };
 });
-
-const session = Object.fromEntries(
-  [...ARMS, "mcpEager"].map((a) => [
-    a,
-    Object.fromEntries(
-      [...METRICS, "truncated"].map((m) => [
-        m,
-        // Weights can be fractional; whole tokens read better than half ones.
-        m === "ite" || m === "toolTokens"
-          ? Math.round(rows.reduce((t, r) => t + r.weight * r[a][m], 0))
-          : round(rows.reduce((t, r) => t + r.weight * r[a][m], 0)),
-      ]),
-    ),
-  ]),
-);
 
 function round(n) {
   return Math.round(n * 10) / 10;
 }
 
+/** Weighted sums over one session's scenarios. */
+function totals(sessionRows) {
+  return Object.fromEntries(
+    [...ARMS, "mcpEager"].map((a) => [
+      a,
+      Object.fromEntries(
+        [...METRICS, "truncated"].map((m) => {
+          const sum = sessionRows.reduce((t, r) => t + r.weight * r[a][m], 0);
+          // Weights can be fractional; whole tokens read better than half ones.
+          return [m, m === "ite" || m === "toolTokens" ? Math.round(sum) : round(sum)];
+        }),
+      ),
+    ]),
+  );
+}
+
 /** Fraction of the baseline that pr-shepherd saves; negative means it costs more. */
 const saving = (base, ours) => (base === 0 ? (ours === 0 ? 0 : -Infinity) : 1 - ours / base);
 
-// Weighted mean of per-scenario savings, setup excluded (it is per session,
-// not per tick). Each scenario's saving is weighted by its baseline cost, so
-// the figure is the share of tick spend pr-shepherd removes.
-function weightedSaving(baseline, metric) {
-  const ticks = rows.filter((r) => r.id !== "session-setup");
-  const base = ticks.reduce((t, r) => t + r.weight * r[baseline][metric], 0);
-  const ours = ticks.reduce((t, r) => t + r.weight * r.shepherd[metric], 0);
-  return saving(base, ours);
-}
+const BASELINE_KEYS = ["gh", "mcp", "mcpEager"];
 
-const summary = Object.fromEntries(
-  ["gh", "mcp", "mcpEager"].map((b) => [
-    b,
-    {
-      session: Object.fromEntries(
-        METRICS.map((m) => [m, saving(session[b][m], session.shepherd[m])]),
-      ),
-      perTick: Object.fromEntries(METRICS.map((m) => [m, weightedSaving(b, m)])),
-    },
-  ]),
+const sessions = Object.fromEntries(
+  Object.keys(SESSIONS).map((key) => {
+    const sessionRows = rows.filter((r) => r.session === key);
+    const total = totals(sessionRows);
+    // Ticks exclude setup, which is paid once per session. A ratio of weighted
+    // sums weights each scenario by how often it occurs and by its baseline
+    // cost, so the figure is the share of tick spend pr-shepherd removes.
+    const ticks = totals(sessionRows.filter((r) => !r.setup));
+    const summary = Object.fromEntries(
+      BASELINE_KEYS.map((b) => [
+        b,
+        {
+          session: Object.fromEntries(
+            METRICS.map((m) => [m, saving(total[b][m], total.shepherd[m])]),
+          ),
+          perTick: Object.fromEntries(
+            METRICS.map((m) => [m, saving(ticks[b][m], ticks.shepherd[m])]),
+          ),
+        },
+      ]),
+    );
+    return [key, { total, summary }];
+  }),
 );
 
 if (process.argv.includes("--json")) {
-  console.log(JSON.stringify({ model: MODEL, eagerTokens, rows, session, summary }, null, 2));
+  console.log(JSON.stringify({ model: MODEL, eagerTokens, rows, sessions }, null, 2));
   process.exit(0);
 }
 
@@ -88,6 +106,16 @@ const BASELINES = { gh: "gh CLI", mcp: "GitHub MCP", mcpEager: "GitHub MCP, eage
 const lines = [];
 const out = (s = "") => lines.push(s);
 
+const savingTable = (summary) => {
+  out("| vs. baseline | tool calls | turns | tool tokens | cost (ITE) |");
+  out("| --- | --- | --- | --- | --- |");
+  for (const [b, label] of Object.entries(BASELINES)) {
+    const s = summary[b];
+    out(`| ${label} | ${pct(s.calls)} | ${pct(s.turns)} | ${pct(s.toolTokens)} | ${pct(s.ite)} |`);
+  }
+  out();
+};
+
 out("# Token-cost report");
 out();
 out("<!-- Generated by `node evals/tokens/bench.mjs`. Do not edit by hand. -->");
@@ -96,55 +124,56 @@ out(
   "Change in cost when an agent uses pr-shepherd instead of a baseline. A negative number means pr-shepherd costs less.",
 );
 out();
-out("## Typical PR session");
-out();
-out("Weighted sum of every scenario below, one-time setup included.");
-out();
-out("| vs. baseline | tool calls | turns | tool tokens | cost (ITE) |");
-out("| --- | --- | --- | --- | --- |");
-for (const [b, label] of Object.entries(BASELINES)) {
-  const s = summary[b].session;
-  out(`| ${label} | ${pct(s.calls)} | ${pct(s.turns)} | ${pct(s.toolTokens)} | ${pct(s.ite)} |`);
+
+for (const [key, title] of Object.entries(SESSIONS)) {
+  const { total, summary } = sessions[key];
+  out(`## ${title}`);
+  out();
+  out("Weighted sum of the session's scenarios below, one-time setup included.");
+  out();
+  savingTable(Object.fromEntries(BASELINE_KEYS.map((b) => [b, summary[b].session])));
+  out("Per tick, setup excluded:");
+  out();
+  savingTable(Object.fromEntries(BASELINE_KEYS.map((b) => [b, summary[b].perTick])));
+  out("| arm | tool calls | turns | tool tokens | cost (ITE) | truncated calls |");
+  out("| --- | --- | --- | --- | --- | --- |");
+  for (const [a, label] of Object.entries({ shepherd: "pr-shepherd", ...BASELINES })) {
+    const s = total[a];
+    out(
+      `| ${label} | ${num(s.calls)} | ${num(s.turns)} | ${num(s.toolTokens)} | ${num(s.ite)} | ${num(s.truncated)} |`,
+    );
+  }
+  out();
 }
-out();
-out("| arm | tool calls | turns | tool tokens | cost (ITE) | truncated calls |");
-out("| --- | --- | --- | --- | --- | --- |");
-for (const [a, label] of Object.entries({ shepherd: "pr-shepherd", ...BASELINES })) {
-  const s = session[a];
-  out(
-    `| ${label} | ${num(s.calls)} | ${num(s.turns)} | ${num(s.toolTokens)} | ${num(s.ite)} | ${num(s.truncated)} |`,
-  );
-}
-out();
-out("## Per tick");
-out();
-out("Weighted by how often each scenario occurs and by its baseline cost, setup excluded.");
-out();
-out("| vs. baseline | tool calls | turns | tool tokens | cost (ITE) |");
-out("| --- | --- | --- | --- | --- |");
-for (const [b, label] of Object.entries(BASELINES)) {
-  const s = summary[b].perTick;
-  out(`| ${label} | ${pct(s.calls)} | ${pct(s.turns)} | ${pct(s.toolTokens)} | ${pct(s.ite)} |`);
-}
-out();
+
 out("## Scenarios");
 out();
 out("Each cell is `turns · tool tokens · cost (ITE)`. Saving columns compare cost.");
 out();
-out("| scenario | weight | pr-shepherd | gh CLI | GitHub MCP | vs. gh | vs. MCP |");
-out("| --- | --- | --- | --- | --- | --- | --- |");
-const cell = (c) => `${c.turns} · ${num(c.toolTokens)} · ${num(c.ite)}${c.truncated ? " ✂" : ""}`;
-for (const r of rows) {
-  out(
-    `| \`${r.id}\` | ${r.weight} | ${cell(r.shepherd)} | ${cell(r.gh)} | ${cell(r.mcp)} | ${pct(saving(r.gh.ite, r.shepherd.ite))} | ${pct(saving(r.mcp.ite, r.shepherd.ite))} |`,
-  );
+const cell = (c, gap) =>
+  `${c.turns} · ${num(c.toolTokens)} · ${num(c.ite)}${c.truncated ? " ✂" : ""}${gap ? " †" : ""}`;
+for (const [key, title] of Object.entries(SESSIONS)) {
+  out(`### ${title}`);
+  out();
+  out("| scenario | weight | pr-shepherd | gh CLI | GitHub MCP | vs. gh | vs. MCP |");
+  out("| --- | --- | --- | --- | --- | --- | --- |");
+  for (const r of rows.filter((r) => r.session === key)) {
+    out(
+      `| \`${r.id}\` | ${r.weight} | ${cell(r.shepherd)} | ${cell(r.gh, r.gaps.gh)} | ${cell(r.mcp, r.gaps.mcp)} | ${pct(saving(r.gh.ite, r.shepherd.ite))} | ${pct(saving(r.mcp.ite, r.shepherd.ite))} |`,
+    );
+  }
+  out();
 }
-out();
+out("- ✂ marks a baseline call whose output the host truncated.");
 out(
-  "✂ marks a scenario where the host truncated a baseline call's output. gh has no setup cost, so its setup saving is n/a.",
+  "- † marks a baseline that cannot finish the step with its tools. Its cost covers only what it can do.",
 );
+out("- gh has no setup cost, so its setup saving is n/a.");
 out();
-for (const r of rows) out(`- \`${r.id}\` — ${r.title}. ${r.note}`);
+for (const r of rows) {
+  const gaps = Object.entries(r.gaps).map(([arm, gap]) => ` †${BASELINES[arm]}: ${gap}.`);
+  out(`- \`${r.id}\` — ${r.title}. ${r.note}${gaps.join("")}`);
+}
 out();
 out("## Model");
 out();

@@ -16,6 +16,8 @@ export const MCP_TOOLS_USED = [
   "add_reply_to_pull_request_comment",
   "resolve_review_thread",
   "update_pull_request",
+  "list_pull_requests",
+  "merge_pull_request",
 ];
 
 // --- model ------------------------------------------------------------------
@@ -75,10 +77,13 @@ const DEFAULT_BATCH = {
   checks: [],
 };
 
+/** A test-cases fixture's input.json. */
+export const fixtureInput = (name) =>
+  JSON.parse(readFileSync(join(FIXTURES, name, "input.json"), "utf8"));
+
 /** The GitHub state a fixture's snapshot was generated from. */
 export function fixtureState(name) {
-  const input = JSON.parse(readFileSync(join(FIXTURES, name, "input.json"), "utf8"));
-  return { ...DEFAULT_BATCH, ...input.batchData };
+  return { ...DEFAULT_BATCH, ...fixtureInput(name).batchData };
 }
 
 /**
@@ -254,6 +259,57 @@ export function ghLogFailed(log, jobName, stepName, stepStartPattern, stepEndPat
 
 export const tail = (text, n) => text.split("\n").slice(-n).join("\n");
 
+/** One `gh pr list --head|--base <branch> --state all --json …` result. */
+export const GH_LIST_FIELDS = "number,title,state,headRefName,baseRefName";
+export const ghPrList = (layers) =>
+  JSON.stringify(
+    layers.map((l) => ({
+      baseRefName: l.baseRefName,
+      headRefName: l.headRefName,
+      number: l.pr,
+      state: l.state,
+      title: l.title,
+    })),
+  );
+
+/**
+ * `gh api …/commits/<sha>/check-runs --jq` narrowed to failing runs: the only
+ * way to find the check-run IDs whose annotations to fetch.
+ */
+export function ghFailingCheckRuns(state, annotationsByCheck) {
+  return state.checks
+    .filter((c) => c.conclusion === "FAILURE")
+    .map((c, i) =>
+      JSON.stringify({
+        id: 30000000000 + i,
+        name: c.name,
+        output: {
+          title: c.name,
+          summary: `${(annotationsByCheck[c.id] ?? []).length} annotations`,
+          annotations_count: (annotationsByCheck[c.id] ?? []).length,
+        },
+      }),
+    )
+    .join("\n");
+}
+
+/** REST `GET /check-runs/<id>/annotations`, compact. */
+export const ghAnnotations = (annotations) =>
+  JSON.stringify(
+    annotations.map((a) => ({
+      path: a.path,
+      blob_href: a.blobUrl,
+      start_line: a.startLine,
+      start_column: a.startColumn ?? null,
+      end_line: a.endLine,
+      end_column: a.endColumn ?? null,
+      annotation_level: a.level.toLowerCase(),
+      title: a.title ?? "",
+      message: a.message,
+      raw_details: a.rawDetails ?? "",
+    })),
+  );
+
 // --- GitHub MCP arm -----------------------------------------------------------
 //
 // Shapes copied from real github-mcp-server responses (pull_request_read
@@ -388,6 +444,26 @@ export function mcpComments(state) {
     })),
   );
 }
+
+/** list_pull_requests with head|base filter and `fields: number,title,state,head,base`. */
+export const mcpPrList = (layers) =>
+  JSON.stringify(
+    layers.map((l) => ({
+      number: l.pr,
+      title: l.title,
+      state: l.state === "OPEN" ? "open" : "closed",
+      head: {
+        ref: l.headRefName,
+        sha: l.headRefOid,
+        repo: { full_name: l.repo, description: "Example repository" },
+      },
+      base: {
+        ref: l.baseRefName,
+        sha: "base123",
+        repo: { full_name: l.repo, description: "Example repository" },
+      },
+    })),
+  );
 
 /** get_job_logs with run_id + failed_only + return_content, default tail_lines 500. */
 export function mcpJobLogs(log, runId, jobId, jobName, tailLines = 500) {
