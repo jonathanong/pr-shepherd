@@ -8,6 +8,7 @@ import type {
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import { isKnownMergeStateStatus, transportReadinessGaps } from "./transport-evidence.mts";
 import { canGenerateGithubMutation } from "./mutation-policy.mts";
+import { getGithubTransport, isCcrTransport } from "./transport.mts";
 
 export function routePollSummary(
   raw: RawSummaryPr,
@@ -63,6 +64,9 @@ export function routePollSummary(
       !canGenerateGithubMutation(raw.viewerCanUpdate, "ready") &&
       (!autoMarkReadyDisabled || opts.stackPrNumber !== undefined)
     ) {
+      const unsupported =
+        getGithubTransport() === "rest" && raw.viewerCanUpdate !== false && !isCcrTransport();
+      if (unsupported) return { action: "escalate", reasons: ["transport-unsupported"] };
       return { action: "escalate", reasons: ["mark-ready-authorization-required"] };
     }
     return autoMarkReadyDisabled

@@ -33,7 +33,7 @@ Denied or unverifiable generated review replies, thread resolutions, bot-review 
 
 ### `transport-unsupported`
 
-The selected REST transport lacks an operation required by an autonomous action or explicit mutation. Shepherd names the unsupported operation and the affected item in the escalation. Generated comment minimization is a one-look skip; explicit `apply` minimization and file-view requests return an explicit unsupported-operation error. Merge-queue and ordinary merge operations are not presumed unsupported by REST.
+The selected REST transport lacks an operation required by an autonomous action or explicit mutation. Shepherd names the unsupported operation and the affected item in the escalation. Mark-ready without a CCR route uses this reason when authorization is unknown or allowed. Generated comment minimization is a one-look skip; explicit `apply` minimization and file-view requests return an explicit unsupported-operation error. Merge-queue and ordinary merge operations are not presumed unsupported by REST.
 
 ### `check-follow-up-unavailable`
 

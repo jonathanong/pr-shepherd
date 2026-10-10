@@ -20,6 +20,7 @@ import {
   replaceFailedMergeRequest,
   readMergeRequest,
   writeMergeRequest,
+  writeMergeRequestStatus,
   type MergeRequestRecord,
 } from "../state/merge-request.mts";
 
@@ -79,9 +80,11 @@ export async function runApplyMerge(input: ApplyMergeInput): Promise<ApplyMergeR
   if (pull.state !== "open" || pull.draft !== false)
     return failed("Pull request must be open and ready for review.");
   const replaceFailed =
-    existing?.response?.status === "failed" &&
+    existing &&
     !existing.uncertain &&
-    !sameMergeOptions(existing.options, options);
+    ((existing.response?.status === "failed" && !sameMergeOptions(existing.options, options)) ||
+      (existing.response?.status === "enqueued" &&
+        existing.options.requireSha !== options.requireSha));
   if (existing && !replaceFailed) {
     if (!sameMergeOptions(existing.options, options))
       return failed(
@@ -111,7 +114,7 @@ export async function runApplyMerge(input: ApplyMergeInput): Promise<ApplyMergeR
           "Asynchronous merge status does not match the persisted guarded request.",
           true,
         );
-      await writeMergeRequest(key, { ...existing, response });
+      await writeMergeRequestStatus(key, { ...existing, response });
       return project(response);
     } catch (error) {
       if (error instanceof GitHubRequestError && error.status === 404) {
@@ -132,7 +135,7 @@ export async function runApplyMerge(input: ApplyMergeInput): Promise<ApplyMergeR
       throw error;
     }
   }
-  const record: MergeRequestRecord = {
+  let record: MergeRequestRecord = {
     version: 1,
     options,
     startedAtUnix: Math.floor(Date.now() / 1000),
@@ -147,6 +150,8 @@ export async function runApplyMerge(input: ApplyMergeInput): Promise<ApplyMergeR
       "Another merge request is already being submitted; resume this command after its outcome is recorded.",
       true,
     );
+  // Recovery may have selected an older durable intent; retain its unique generation token.
+  record = (await readMergeRequest(key))!;
   let response: RestMergeResponse;
   try {
     response = await requestRestMerge(repo, pr, options);

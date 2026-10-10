@@ -10,6 +10,7 @@ import { runWithGithubTransport } from "../github/transport.mts";
 import { fetchRawSummaryPr } from "../github/poll-summary.mts";
 import { fingerprintRawSummaryPr } from "../github/poll-summary-fingerprint.mts";
 import { writeReadyReceipt } from "../state/ready-receipts.mts";
+import { claimMergeRequest, readMergeRequest } from "../state/merge-request.mts";
 import { runApplyMerge } from "./apply-merge.mts";
 import { validateRestStackMergeReadiness } from "./rest-stack-merge-readiness.mts";
 
@@ -161,11 +162,19 @@ describe("REST native-stack merge readiness at the HTTP boundary", () => {
     expect(wire.requests.some((request) => request.path === "/graphql")).toBe(false);
   });
 
-  it("rejects a missing lower-layer READY receipt before any mutation", async () => {
+  it("rejects a missing lower-layer READY receipt when replacing an old-head enqueue", async () => {
     await stackedServer();
     await certify([102]);
+    const key = { owner: repo.owner, repo: repo.name, pr: 102 };
+    await claimMergeRequest(key, {
+      version: 1,
+      options: { requireSha: "e".repeat(40), mergeAction: "direct_merge" },
+      startedAtUnix: 1,
+      response: { status: "enqueued", details: {} },
+    });
     await expect(apply()).rejects.toThrow("READY receipt");
     expect(mutations()).toHaveLength(0);
+    expect((await readMergeRequest(key))?.options.requireSha).toBe("e".repeat(40));
   });
 
   it("rejects a stale parent boundary before any mutation", async () => {

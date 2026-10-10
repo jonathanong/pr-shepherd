@@ -98,5 +98,5 @@ function finiteNumber(value: unknown): number | undefined {
 }
 
 export function isRateLimitMessage(message: string): boolean {
-  return /rate limit|rate-limit|secondary limit|secondary rate/i.test(message);
+  return /rate limit|rate-limit|secondary limit|secondary rate|abuse detection/i.test(message);
 }

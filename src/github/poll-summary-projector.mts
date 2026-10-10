@@ -25,7 +25,7 @@ export async function summarizePollSummaryPr(
   raw: RawSummaryPr,
   repo: RepoInfo,
   opts: PollSummaryCommandOptions,
-  viewerCanAdminister = false,
+  viewerCanAdminister: boolean | undefined = undefined,
   mergeTargetContexts?: readonly string[],
   viewerLogin: string | null = null,
 ): Promise<PollSummaryItem> {

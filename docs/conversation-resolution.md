@@ -66,7 +66,7 @@ Applies to threads already selected into the work set. `iterate.resolveOtherHuma
 
 Reply and paired resolve share the `apply review` command. A marker-ended resolve is the separate resolve-only command. Both use the thread id when GitHub has cleared the path or line.
 
-When GraphQL supplies capability fields, `viewerCanReply: false` or `viewerCanResolve: false` omits the generated mutation. REST has no equivalent capability fields, so an otherwise-eligible operation is attempted and GitHub's response is authoritative. An actual denial is surfaced once, then marker-gated until the body changes; review denials do not use `authorization-required` or count toward `fix-thrash`.
+When GraphQL supplies capability fields, `viewerCanReply: false` or `viewerCanResolve: false` omits the generated mutation. REST has no equivalent capability fields, so an otherwise-eligible operation is attempted and GitHub's response is authoritative. A definite, non-throttled REST 403 or 404 is surfaced once, then marker-gated until the body changes; review denials do not use `authorization-required` or count toward `fix-thrash`. Quota failures and uncertain mutation outcomes remain eligible for reconciliation.
 
 ## Current visibility matrix
 

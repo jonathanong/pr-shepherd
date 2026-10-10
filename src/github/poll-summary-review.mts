@@ -8,13 +8,14 @@ import type { ClassifyItem } from "../classify/types.mts";
 import type { PollSummaryReview } from "../types.mts";
 import type { RawAuthor, RawSummaryPr } from "./poll-summary-raw.mts";
 import { mutationWasDenied } from "../state/seen-comments.mts";
+import { canGenerateGithubMutation } from "./mutation-policy.mts";
 
 const THREAD_COMMENT_SEPARATOR = "\n\n--- thread comment ---\n\n";
 
 export async function summarizePollSummaryReview(
   raw: RawSummaryPr,
   seen: Map<string, SeenMarker>,
-  viewerCanAdminister: boolean,
+  viewerCanAdminister: boolean | undefined,
 ): Promise<PollSummaryReview> {
   const config = loadConfig();
   const bots = normalizeBotUsernames(config.botUsernames);
@@ -57,7 +58,9 @@ export async function summarizePollSummaryReview(
     const isBot =
       review.author?.__typename === "Bot" || bots.has(review.author?.login.toLowerCase() ?? "");
     if (
-      (isBot && viewerCanAdminister && !mutationWasDenied(review.id, review.body, seen)) ||
+      (isBot &&
+        canGenerateGithubMutation(viewerCanAdminister, "dismiss") &&
+        !mutationWasDenied(review.id, review.body, seen)) ||
       classifyItem(review.id, review.body, seen) !== "unchanged"
     )
       actionable += 1;

@@ -144,7 +144,7 @@ export async function applyRestReviewChunk(input: {
       const message = error instanceof Error ? error.message : String(error);
       result.errors.push({ message, path: [op.alias] });
       const stop = rateLimitFromError(error, message);
-      if (!stop && error instanceof GitHubRequestError && error.status === 403)
+      if (!stop && error instanceof GitHubRequestError && [403, 404].includes(error.status))
         await rememberDenied(input, op.id, op.kind);
       if (error instanceof GitHubRequestError) {
         result.rateLimit = error.rateLimit;

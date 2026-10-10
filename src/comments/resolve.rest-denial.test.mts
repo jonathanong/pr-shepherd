@@ -13,23 +13,26 @@ import { readRestFeedback } from "../github/rest-feedback-read.mts";
 import { threadTranscriptBody } from "../threads/transcript.mts";
 
 describe("REST server authorization results", () => {
-  it("retains a denied displayed revision when the follow-up feedback read also fails", async () => {
-    vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
-    const key = { owner: repo.owner, repo: repo.name, pr: 101 };
-    await markSeen(key, "rest-thread-11", "Displayed reviewer request");
-    await serve((_request, response) => {
-      response.statusCode = 403;
-      response.end('{"message":"Resource not accessible by integration"}');
-    });
-    const result = await runWithGithubTransport("rest", () =>
-      applyResolveOptions(101, repo, { resolveThreadIds: ["rest-thread-11"] }),
-    );
-    expect(result.errors).toEqual([expect.stringContaining("403")]);
-    const seen = await loadSeenMap(key);
-    expect(mutationWasDenied("rest-thread-11", "Displayed reviewer request", seen)).toBe(true);
-    expect(mutationWasDenied("rest-thread-11", "Edited reviewer request", seen)).toBe(false);
-    expect(wire.requests.filter(({ method }) => method === "POST")).toHaveLength(1);
-  });
+  it.each([403, 404])(
+    "retains a denied displayed revision after HTTP %i when the follow-up feedback read also fails",
+    async (status) => {
+      vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
+      const key = { owner: repo.owner, repo: repo.name, pr: 101 };
+      await markSeen(key, "rest-thread-11", "Displayed reviewer request");
+      await serve((_request, response) => {
+        response.statusCode = status;
+        response.end('{"message":"Resource not accessible by integration"}');
+      });
+      const result = await runWithGithubTransport("rest", () =>
+        applyResolveOptions(101, repo, { resolveThreadIds: ["rest-thread-11"] }),
+      );
+      expect(result.errors).toEqual([expect.stringContaining(String(status))]);
+      const seen = await loadSeenMap(key);
+      expect(mutationWasDenied("rest-thread-11", "Displayed reviewer request", seen)).toBe(true);
+      expect(mutationWasDenied("rest-thread-11", "Edited reviewer request", seen)).toBe(false);
+      expect(wire.requests.filter(({ method }) => method === "POST")).toHaveLength(1);
+    },
+  );
   it("records a definite denied resolve and suppresses retries until the feedback is edited", async () => {
     vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
     let body = "Reviewer request";

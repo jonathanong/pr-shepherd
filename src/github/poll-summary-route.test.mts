@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
@@ -6,6 +7,7 @@ vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 import type { PollSummaryChecks, PollSummaryReview } from "../types.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import { normalizePollSummaryState, routePollSummary } from "./poll-summary-route.mts";
+import { runWithGithubTransport } from "./transport.mts";
 
 function raw(overrides: Record<string, unknown> = {}): RawSummaryPr {
   return {
@@ -163,5 +165,37 @@ describe("routePollSummary", () => {
       action: "wait",
       reasons: ["draft-auto-mark-ready-disabled"],
     });
+  });
+
+  it("reports standard REST ready as unsupported while preserving known denials", async () => {
+    vi.stubEnv("CLAUDE_CODE_REMOTE", "");
+    try {
+      const unknown = await runWithGithubTransport("rest", async () =>
+        route({ transport: "rest", isDraft: true, viewerCanUpdate: undefined }),
+      );
+      const knownAllowed = await runWithGithubTransport("rest", async () =>
+        route({ transport: "rest", isDraft: true, viewerCanUpdate: true }),
+      );
+      const denied = await runWithGithubTransport("rest", async () =>
+        route({ transport: "rest", isDraft: true, viewerCanUpdate: false }),
+      );
+      expect([unknown, knownAllowed]).toEqual(
+        Array(2).fill({ action: "escalate", reasons: ["transport-unsupported"] }),
+      );
+      expect(denied).toEqual({
+        action: "escalate",
+        reasons: ["mark-ready-authorization-required"],
+      });
+      await expect(
+        runWithGithubTransport("graphql", async () =>
+          route({ isDraft: true, viewerCanUpdate: undefined }),
+        ),
+      ).resolves.toEqual({
+        action: "escalate",
+        reasons: ["mark-ready-authorization-required"],
+      });
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
