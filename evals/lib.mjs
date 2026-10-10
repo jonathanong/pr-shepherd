@@ -1,7 +1,14 @@
 // Shared framing, grader helpers and the case writer for generate.mjs.
 // See generate.mjs for why the cases look the way they do.
 
-import { mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
+import {
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+  rmSync,
+  existsSync,
+} from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -101,7 +108,10 @@ export const llm = (body, weight = 1) => ({
   body,
 });
 
-export const regex = (pattern, { match = "contains", weight = 1, flags = "i" } = {}) => ({
+export const regex = (
+  pattern,
+  { match = "contains", weight = 1, flags = "i" } = {},
+) => ({
   frontmatter: [
     `type: regex`,
     `target: last_message`,
@@ -205,8 +215,21 @@ export function writeCase(spec) {
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(join(dir, "graders"), { recursive: true });
 
-  const body = spec.fixture ? spec.shape(fixtureText(spec.fixture)) : spec.prompt;
-  const append = spec.fixture ? APPEND_SYSTEM_PROMPT : APPEND_SYSTEM_PROMPT_NEG;
+  // `transform` edits the recorded text before framing (e.g. to plant an
+  // injection in a real snapshot). `plan: true` asks for a plan without any CLI
+  // output, for cases that start from a user request alone.
+  let text = spec.fixture ? fixtureText(spec.fixture) : null;
+  if (text !== null && spec.transform) {
+    const changed = spec.transform(text);
+    // A transform whose search string stopped matching would silently leave the
+    // case without its planted content while CI still reports the suite in sync.
+    if (changed === text)
+      throw new Error(`${spec.slug}: transform changed nothing`);
+    text = changed;
+  }
+  const body = spec.fixture ? spec.shape(text) : spec.prompt;
+  const append =
+    spec.fixture || spec.plan ? APPEND_SYSTEM_PROMPT : APPEND_SYSTEM_PROMPT_NEG;
 
   const frontmatter = [
     "---",
@@ -243,7 +266,9 @@ export function writeCase(spec) {
 export function pruneStaleCases(keep) {
   const wanted = new Set(keep);
   const stale = readdirSync(EVALS_DIR, { withFileTypes: true })
-    .filter((e) => e.isDirectory() && /^\d{2}-/.test(e.name) && !wanted.has(e.name))
+    .filter(
+      (e) => e.isDirectory() && /^\d{2}-/.test(e.name) && !wanted.has(e.name),
+    )
     .map((e) => e.name);
 
   for (const name of stale) {
