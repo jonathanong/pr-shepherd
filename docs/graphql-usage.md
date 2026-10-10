@@ -89,6 +89,8 @@ An explicit multi-PR selection skips the topology query and uses `PollSummary` i
 | `apply check-blocker`                                                       | none when the PR number is passed                                                                                  | 0                                            |
 | `build-suggestion-patches` / `build-suggestion-patch` / `commit-suggestion` | `SuggestionThreads`                                                                                                | 1 for a handful of threads                   |
 
+For 1 to 20 GraphQL reply thread IDs, one `ApplyReviewPreflight` read replaces the first `ReplyThreadTranscripts`, `GetPrHeadSha`, and `ReplyRecoveryEvidence` reads. The standalone reads still run for anything it cannot verify.
+
 `clean`, `admin clean`, `log-file`, `admin log-file`, and `journal extract` do not call GitHub.
 
 The reply path reads only requested thread IDs to store seen-marker transcripts. GitHub still authorizes the mutation. One batch of at most 20 IDs is typically at the 1-point floor; long transcripts add page requests. Incomplete or mismatched threads do not get a marker, but their requested mutations still run.
@@ -110,6 +112,8 @@ One-PR `BatchPr` stays at the 1-point floor. Fewer review connections, a smaller
 6. **Done: keep the READY-receipt `BatchPr` at 1 point.** Each first-page context carries an `annotations(first: 1)` probe, so 100 contexts are 100 connection-requests. Adding the summary sibling made the receipt variant 192 requests (2 points) on every READY and CANCEL-candidate tick. Its first context page is now 50, which totals 142 (1 point). The ordinary `BatchPr` keeps 100.
 
 7. **Done: cache the base compare.** `BatchPr` selects the live base tip (`baseRef.target.oid`, an object field with no connection cost). The `BaseBehind` count for a non-stack head with unreported required checks is cached under that tip and the head commit, so a tick on which neither moved (including a fingerprint hit) drops from 2 points to 1. REST already answers the compare with a conditional request.
+
+8. **Done: one read before `apply review` replies.** `GetPrHeadSha`, `ReplyThreadTranscripts`, and `ReplyRecoveryEvidence` each cost 1 point on a reply with `--require-sha`. `ApplyReviewPreflight` reads all three in one request, so that command drops from 3 read points to 1. Anything it cannot verify falls back to the standalone read.
 
 Designs that are already at the floor and should stay:
 

@@ -112,6 +112,7 @@ export async function applyResolveOptions(
   pr: number,
   repo: RepoInfo,
   opts: ResolveOptions,
+  preflight?: { headSha?: string; evidence: Map<string, ReplyEvidence> },
 ): Promise<ResolveResult> {
   const resolveThreadIds = dedupeIds(opts.resolveThreadIds ?? []);
   const replyThreadIds = dedupeIds(opts.replyThreadIds ?? []);
@@ -130,7 +131,11 @@ export async function applyResolveOptions(
     throw new Error("--message is required when replying to threads or dismissing reviews");
   }
 
-  if (opts.requireSha) {
+  // A preflight that already saw the required head stands in for the first poll; its
+  // recovery evidence is used only when no poll wait separated it from the mutation.
+  const headConfirmed = !opts.requireSha || preflight?.headSha === opts.requireSha;
+  const preloadedEvidence = headConfirmed ? preflight?.evidence : undefined;
+  if (opts.requireSha && !headConfirmed) {
     // Verify GitHub received the commit before resolving — prevents auto-merge
     // before reviewers see the fix.
     await waitForSha(pr, repo, opts.requireSha);
@@ -148,6 +153,7 @@ export async function applyResolveOptions(
           { repo, pr },
           replyThreadIds.filter((id) => !known.includes(id)),
           opts.dismissMessage ?? "",
+          preloadedEvidence,
         )
       : []),
   ];
@@ -162,6 +168,7 @@ export async function applyResolveOptions(
     opts.dismissMessage ?? "",
     result,
     { repo, pr },
+    preloadedEvidence,
   );
 
   if (result.sessionRefusal)
@@ -260,6 +267,7 @@ async function bulkApply(
   dismissMessage: string,
   result: ResolveResult,
   context?: { repo: RepoInfo; pr: number },
+  firstChunkEvidence?: Map<string, ReplyEvidence>,
 ): Promise<void> {
   const allOps: ResolveMutationOp[] = [
     ...replyIds.map((id) => ({ kind: "p" as const, id })),
@@ -280,6 +288,7 @@ async function bulkApply(
       result,
       i + BULK_CHUNK_SIZE < allOps.length,
       context,
+      i === 0 ? firstChunkEvidence : undefined,
     );
     if (stopped) {
       setPendingOps(result, allOps.slice(i));
@@ -297,6 +306,7 @@ async function bulkApplyChunk(
   result: ResolveResult,
   hasPendingAfter: boolean,
   context?: { repo: RepoInfo; pr: number },
+  preloadedEvidence?: Map<string, ReplyEvidence>,
 ): Promise<boolean> {
   let data: Record<string, unknown> = {};
   let graphQlErrors: GraphQlErrorLike[] = [];
@@ -306,11 +316,15 @@ async function bulkApplyChunk(
   let graphqlMutationAttempted = false;
   let replyEvidence = new Map<string, ReplyEvidence>();
   if (context && replyIds.length && getGithubTransport() === "graphql") {
-    try {
-      replyEvidence = await readReplyRecoveryEvidence(context.repo, context.pr, replyIds);
-    } catch {
-      /* Preserve explicit mutation eligibility when recovery evidence is unavailable. */
-    }
+    // Evidence is all-or-nothing per batch, as the standalone read is.
+    if (replyIds.every((id) => preloadedEvidence?.has(id)))
+      replyEvidence = new Map(replyIds.map((id) => [id, preloadedEvidence!.get(id)!]));
+    else
+      try {
+        replyEvidence = await readReplyRecoveryEvidence(context.repo, context.pr, replyIds);
+      } catch {
+        /* Preserve explicit mutation eligibility when recovery evidence is unavailable. */
+      }
   }
   try {
     const resp = await githubOperation(

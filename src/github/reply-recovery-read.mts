@@ -22,22 +22,90 @@ interface Node {
   pullRequest: { number: number; repository: { nameWithOwner: string } };
   comments: Page;
 }
-interface Response {
-  viewer: { login: string };
+export interface ReplyEvidenceResponse {
+  viewer: { login: string } | null;
   nodes: Array<Node | null>;
 }
-const QUERY = `query ReplyRecoveryEvidence($ids: [ID!]!, $cursor: String) {
-  _shepherdRateLimit: rateLimit { cost limit nodeCount remaining resetAt used }
-  viewer { login }
-  nodes(ids: $ids) { ... on PullRequestReviewThread {
+/** Thread selection shared with the `apply review` preflight, which needs `$cursor: String`. */
+export const REPLY_EVIDENCE_THREAD_SELECTION = `... on PullRequestReviewThread {
     id pullRequest { number repository { nameWithOwner } }
     comments(first: 100, after: $cursor) {
       totalCount
       pageInfo { hasNextPage endCursor }
       nodes { id databaseId body author { login } }
     }
-  } }
+  }`;
+const QUERY = `query ReplyRecoveryEvidence($ids: [ID!]!, $cursor: String) {
+  _shepherdRateLimit: rateLimit { cost limit nodeCount remaining resetAt used }
+  viewer { login }
+  nodes(ids: $ids) { ${REPLY_EVIDENCE_THREAD_SELECTION} }
 }`;
+
+const readEvidencePage = (ids: string[], cursor: string | null) =>
+  graphqlWithRateLimit<ReplyEvidenceResponse>(QUERY, { ids, cursor });
+
+/**
+ * Complete evidence for one GraphQL thread, starting from a response that already holds its first
+ * comment page. Later pages use `ReplyRecoveryEvidence`. Throws when anything is unverifiable.
+ */
+export async function threadReplyEvidence(
+  repo: RepoInfo,
+  pr: number,
+  id: string,
+  first: ReplyEvidenceResponse,
+): Promise<ReplyEvidence> {
+  const viewer = first.viewer?.login;
+  if (typeof viewer !== "string" || !viewer)
+    throw new Error("Reply recovery viewer is unavailable");
+  let node = first.nodes.find((item) => item?.id === id);
+  const comments: ReplyEvidence["comments"] = [];
+  const cursors = new Set<string>();
+  const total = node?.comments?.totalCount;
+  const root = node?.comments?.nodes?.[0]?.databaseId;
+  const seenIds = new Set<string>();
+  for (let page = 0; page < 100; page++) {
+    if (
+      !node ||
+      node.pullRequest?.number !== pr ||
+      node.pullRequest.repository.nameWithOwner.toLowerCase() !==
+        `${repo.owner}/${repo.name}`.toLowerCase() ||
+      !node.comments?.pageInfo ||
+      typeof node.comments.pageInfo.hasNextPage !== "boolean" ||
+      !Array.isArray(node.comments.nodes) ||
+      !Number.isSafeInteger(total) ||
+      total! < 1 ||
+      node.comments.totalCount !== total
+    )
+      throw new Error("Reply recovery transcript is unavailable");
+    if (page === 0) {
+      if (!Number.isSafeInteger(root) || root! < 1)
+        throw new Error("Reply recovery root identity is unavailable");
+      await recordThreadIdentity(repo, pr, id, root!);
+    }
+    for (const comment of node.comments.nodes) {
+      if (
+        typeof comment.id !== "string" ||
+        !comment.id ||
+        seenIds.has(comment.id) ||
+        typeof comment.body !== "string" ||
+        (comment.author !== null && typeof comment.author?.login !== "string")
+      )
+        throw new Error("Reply recovery comment is incomplete");
+      seenIds.add(comment.id);
+      comments.push({ id: comment.id, body: comment.body, author: comment.author?.login ?? null });
+    }
+    if (!node.comments.pageInfo.hasNextPage && comments.length === total)
+      return { viewer, comments };
+    if (!node.comments.pageInfo.hasNextPage) break;
+    const cursor = node.comments.pageInfo.endCursor;
+    if (!cursor || cursors.has(cursor)) break;
+    cursors.add(cursor);
+    const next = await readEvidencePage([id], cursor);
+    if (next.data.viewer?.login !== viewer) throw new Error("Reply recovery viewer changed");
+    node = next.data.nodes.find((item) => item?.id === id);
+  }
+  throw new Error("Reply recovery transcript pagination is incomplete");
+}
 
 /** Complete, bounded evidence for one mutation batch; unavailable evidence never certifies a retry. */
 export async function readReplyRecoveryEvidence(
@@ -51,66 +119,16 @@ export async function readReplyRecoveryEvidence(
     "ReplyRecoveryEvidence",
     async () => {
       const ids = await Promise.all(requestedIds.map(resolveGraphqlThreadId));
-      const read = (pageIds: string[], cursor: string | null) =>
-        graphqlWithRateLimit<Response>(QUERY, { ids: pageIds, cursor });
-      const first = await read(ids, null);
+      const first = await readEvidencePage(ids, null);
       const viewer = first.data.viewer?.login;
       if (typeof viewer !== "string" || !viewer)
         throw new Error("Reply recovery viewer is unavailable");
-      const entries = await mapPool(ids, 4, async (id, index) => {
-        let node = first.data.nodes.find((item) => item?.id === id);
-        const comments: ReplyEvidence["comments"] = [];
-        const cursors = new Set<string>();
-        const total = node?.comments?.totalCount;
-        const root = node?.comments?.nodes?.[0]?.databaseId;
-        const seenIds = new Set<string>();
-        for (let page = 0; page < 100; page++) {
-          if (
-            !node ||
-            node.pullRequest?.number !== pr ||
-            node.pullRequest.repository.nameWithOwner.toLowerCase() !==
-              `${repo.owner}/${repo.name}`.toLowerCase() ||
-            !node.comments?.pageInfo ||
-            typeof node.comments.pageInfo.hasNextPage !== "boolean" ||
-            !Array.isArray(node.comments.nodes) ||
-            !Number.isSafeInteger(total) ||
-            total! < 1 ||
-            node.comments.totalCount !== total
-          )
-            throw new Error("Reply recovery transcript is unavailable");
-          if (page === 0) {
-            if (!Number.isSafeInteger(root) || root! < 1)
-              throw new Error("Reply recovery root identity is unavailable");
-            await recordThreadIdentity(repo, pr, id, root!);
-          }
-          for (const comment of node.comments.nodes) {
-            if (
-              typeof comment.id !== "string" ||
-              !comment.id ||
-              seenIds.has(comment.id) ||
-              typeof comment.body !== "string" ||
-              (comment.author !== null && typeof comment.author?.login !== "string")
-            )
-              throw new Error("Reply recovery comment is incomplete");
-            seenIds.add(comment.id);
-            comments.push({
-              id: comment.id,
-              body: comment.body,
-              author: comment.author?.login ?? null,
-            });
-          }
-          if (!node.comments.pageInfo.hasNextPage && comments.length === total)
-            return [requestedIds[index]!, { viewer, comments }] as const;
-          if (!node.comments.pageInfo.hasNextPage) break;
-          const cursor = node.comments.pageInfo.endCursor;
-          if (!cursor || cursors.has(cursor)) break;
-          cursors.add(cursor);
-          const next = await read([id], cursor);
-          if (next.data.viewer?.login !== viewer) throw new Error("Reply recovery viewer changed");
-          node = next.data.nodes.find((item) => item?.id === id);
-        }
-        throw new Error("Reply recovery transcript pagination is incomplete");
-      });
+      const entries = await mapPool(
+        ids,
+        4,
+        async (id, index) =>
+          [requestedIds[index]!, await threadReplyEvidence(repo, pr, id, first.data)] as const,
+      );
       return new Map(entries);
     },
     async () => {
