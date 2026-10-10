@@ -30,6 +30,7 @@ import {
   DATA_DIR,
   MODEL,
   READY_MERGEABILITY_REST,
+  SHEPHERD_CHANGED_TICK_GRAPHQL,
   SHEPHERD_TICK_API,
   apiTotals,
   cost,
@@ -779,10 +780,14 @@ function stepArms(pr, inv) {
           `pr-shepherd ${n} --interval 60s --timeout 4.5m --quiet-status`,
           fill(inv.outChars ?? 0),
           {
-            // A fingerprint miss costs 2 points, each later hit 1 (docs/graphql-usage.md);
-            // a READY tick re-reads mergeability over REST.
+            // Each tick is one point, and the first changed tick after a wait
+            // one more (docs/graphql-usage.md); a READY tick re-reads
+            // mergeability over REST. BatchPr's supplements are not charged:
+            // the logs do not say which state triggered them.
             api: {
-              graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + waits,
+              graphqlPoints:
+                SHEPHERD_TICK_API.graphqlPoints * inv.ticks +
+                (waits ? SHEPHERD_CHANGED_TICK_GRAPHQL : 0),
               restCore: inv.action === "READY" ? READY_MERGEABILITY_REST : 0,
             },
           },
@@ -1101,12 +1106,14 @@ function graphqlBreakdown(data) {
     `The model charges ${num(modeledPolls)} points for these polls (${per(modeledPolls)} per tick), ${num(gap)} short of the measured total. ${
       nonTick >= gap
         ? `The ${num(nonTick)} points outside the tick queries account for that gap.`
-        : `The ${num(nonTick)} points outside the tick queries do not account for it: the tick itself costs more than modeled. A real tick spent ${per(tickCost)} points (${num(tickCost)} over ${num(ticks)} ticks): the fingerprint and BatchPr ${num(fp + batchPr)} points (${per(fp + batchPr)} per tick), within the model's charge, plus ${num(supplements)} (${per(supplements)} per tick) for BatchPr's supplements (${[
+        : `The ${num(nonTick)} points outside the tick queries do not account for it: the tick itself costs more than modeled. A real tick spent ${per(tickCost)} points (${num(tickCost)} over ${num(ticks)} ticks): the fingerprint and BatchPr ${num(fp + batchPr)} points (${per(fp + batchPr)} per tick), ${fp + batchPr <= modeledPolls ? "within" : "above"} the model's charge, plus ${num(supplements)} (${per(supplements)} per tick) for BatchPr's supplements (${[
             ...batch.ops,
           ]
             .filter(([op]) => op !== "BatchPr")
             .map(([op, o]) => `${op} ${num(o.cost)}`)
-            .join(", ")}), which it does not.`
+            .join(
+              ", ",
+            )}), which the replay does not charge: the logs do not say which state triggered them, and the bench charges them only in scenarios whose state does.`
     }`,
   );
   return out;
