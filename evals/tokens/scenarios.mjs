@@ -28,6 +28,7 @@ import {
   REPO_ROOT,
   SHEPHERD_TICK_API,
   SHEPHERD_TICK_API_REST,
+  SHEPHERD_TICK_API_CLOUD,
   fixtureCommentId,
   ghThreadsCmd,
   ghViewCmd,
@@ -40,6 +41,7 @@ import {
   annotationBatchApi,
   stackTickApi,
   stackTickApiRest,
+  stackTickApiCloud,
   ghAnnotations,
   ghFailingCheckRuns,
   mcpPrList,
@@ -83,6 +85,7 @@ const shepherdTick = (out, phase = 1) => ({ phase, via: "bash", cmd: SHEPHERD_CM
 const REST_TRANSCRIPT_READ = 4;
 /** A standard REST reply: `/user`, one pull-comments page, then the POST. */
 const REST_REPLY_REQUESTS = 3;
+const CLOUD_TRANSCRIPT_READ = REST_TRANSCRIPT_READ + 1;
 
 /**
  * A tick that renders a failing job's log excerpt also lists the run's jobs
@@ -102,6 +105,9 @@ const FAILING_CHECK_TICK_API = {
   apiRest: rest(
     SHEPHERD_TICK_API_REST.restCore + ACTIONS_LOG_REST + FAILING_CHECK_ANNOTATIONS.restCore,
   ),
+  apiCloud: rest(
+    SHEPHERD_TICK_API_CLOUD.restCore + ACTIONS_LOG_REST + FAILING_CHECK_ANNOTATIONS.restCore,
+  ),
 };
 
 /**
@@ -112,6 +118,7 @@ const receiptTick = (out) => ({
   ...shepherdTick(out),
   api: SHEPHERD_RECEIPT_TICK_API,
   apiRest: SHEPHERD_TICK_API_REST,
+  apiCloud: SHEPHERD_TICK_API_CLOUD,
 });
 
 /** `apply review --require-sha`'s head read: `GetPrHeadSha` or one REST pull read. */
@@ -134,9 +141,12 @@ function shepherdApply(text, result, phase = 2) {
   // the POST (`REST_REPLY_REQUESTS`, src/comments/rest-reply.mts). The
   // thread-root lookup reads only the local identity cache. A resolve has no
   // standard REST route, so REST mode skips it (docs/graphql-usage.md,
-  // docs/escalations.md).
+  // docs/escalations.md). Cloud REST's transcript read adds
+  // `/ccr/review_threads`, and it resolves each thread with one CCR POST
+  // (src/comments/rest-review-mutations.mts).
   const replies = result.repliedThreads?.length ?? 0;
-  const mutations = replies + (result.resolvedThreads?.length ?? 0);
+  const resolves = result.resolvedThreads?.length ?? 0;
+  const mutations = replies + resolves;
   const replyChunks = Math.ceil(replies / 10);
   return {
     phase,
@@ -146,6 +156,12 @@ function shepherdApply(text, result, phase = 2) {
     api: gql(HEAD_SHA_READ + 1 + Math.ceil(mutations / 10) + replyChunks),
     apiRest: rest(
       HEAD_SHA_READ + (replies ? REST_TRANSCRIPT_READ : 0) + replies * REST_REPLY_REQUESTS,
+    ),
+    apiCloud: rest(
+      HEAD_SHA_READ +
+        (replies ? CLOUD_TRANSCRIPT_READ : 0) +
+        replies * REST_REPLY_REQUESTS +
+        resolves,
     ),
   };
 }
@@ -530,6 +546,7 @@ const PR_SCENARIOS = [
             continues: true,
             api: gql(polls * SHEPHERD_TICK_API.graphqlPoints + SHEPHERD_CHANGED_TICK_GRAPHQL),
             apiRest: rest(polls * SHEPHERD_TICK_API_REST.restCore),
+            apiCloud: rest(polls * SHEPHERD_TICK_API_CLOUD.restCore),
           },
         ],
         gh: [
@@ -672,7 +689,8 @@ const PR_SCENARIOS = [
         // mark-ready refuses a reused fingerprint). markReadyIfAuthorized then
         // sends one GraphQL mutation point. Standard REST has no ready-for-review
         // route, so after its read the tick escalates as transport-unsupported
-        // (mark-ready.mts). The cloud's CCR POST comes in #533.
+        // (mark-ready.mts). Cloud REST marks it ready with one POST to the CCR
+        // proxy's ready_for_review route, on top of the tick's read.
         shepherd: [
           {
             phase: 1,
@@ -682,6 +700,7 @@ const PR_SCENARIOS = [
             continues: true,
             api: gql(SHEPHERD_TICK_API.graphqlPoints + SHEPHERD_CHANGED_TICK_GRAPHQL + 1),
             apiRest: SHEPHERD_TICK_API_REST,
+            apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + 1),
           },
         ],
         gh: [
@@ -772,6 +791,7 @@ const PR_SCENARIOS = [
             // supplement on either transport.
             api: gql(SHEPHERD_TICK_API.graphqlPoints + annotationApi.graphqlPoints),
             apiRest: rest(SHEPHERD_TICK_API_REST.restCore + annotationApi.restCore),
+            apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + annotationApi.restCore),
           },
         ],
         gh: [
@@ -1048,6 +1068,8 @@ function settledOverview(layers, number) {
 const routedLayerTickApi = (stackSize) => ({
   api: gql(SHEPHERD_TICK_API.graphqlPoints + 2),
   apiRest: rest(SHEPHERD_TICK_API_REST.restCore + 1 + 3 + (5 + stackSize)),
+  // Cloud REST: the same reads on top of the cloud snapshot.
+  apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + 1 + 3 + (5 + stackSize)),
 });
 
 const stackCmd = (anchorPr, repo, flags = "") =>
@@ -1076,6 +1098,7 @@ const STACK_SCENARIOS = [
             out: snapshot(name),
             api: stackTickApi(layers.length),
             apiRest: stackTickApiRest(layers.length),
+            apiCloud: stackTickApiCloud(layers.length),
           },
           ...routed.map((l) => ({
             phase: 2,
@@ -1142,6 +1165,7 @@ const STACK_SCENARIOS = [
             // The initial stack tick.
             api: stackTickApi(layers.length),
             apiRest: stackTickApiRest(layers.length),
+            apiCloud: stackTickApiCloud(layers.length),
           },
           {
             phase: 1,
@@ -1154,6 +1178,7 @@ const STACK_SCENARIOS = [
             // come the remaining WAIT ticks and the tick that sees the queue settle.
             api: gql(ticks * stackTickApi(layers.length).graphqlPoints),
             apiRest: rest(ticks * stackTickApiRest(layers.length).restCore),
+            apiCloud: rest(ticks * stackTickApiCloud(layers.length).restCore),
           },
         ],
         gh: [
@@ -1197,6 +1222,7 @@ const STACK_SCENARIOS = [
             out: snapshot(name),
             api: stackTickApi(layers.length),
             apiRest: stackTickApiRest(layers.length),
+            apiCloud: stackTickApiCloud(layers.length),
           },
           {
             phase: 2,

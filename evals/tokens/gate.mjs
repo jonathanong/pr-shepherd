@@ -7,11 +7,12 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { TOKENS_DIR } from "./lib.mjs";
 
-/** Token metrics: the model gives both pr-shepherd transports the same output. */
+/** Token metrics: the model gives every pr-shepherd transport the same output. */
 export const TOKEN_METRICS = ["ite", "toolTokens", "turns", "calls"];
 /** Rate-limit metrics, one bucket each, gated per pr-shepherd transport. */
 export const API_METRICS = ["graphqlPoints", "restCore"];
-export const TRANSPORTS = { graphql: "shepherd", rest: "shepherdRest" };
+/** "rest" is standard REST; "cloud" is REST through the Claude Code cloud proxy. */
+export const TRANSPORTS = { graphql: "shepherd", rest: "shepherdRest", cloud: "shepherdCloud" };
 const TOKEN_BASELINES = ["gh", "mcp", "mcpEager"];
 // Eager MCP makes the same calls as MCP, so its rate-limit cost is MCP's.
 const API_BASELINES = ["gh", "mcp"];

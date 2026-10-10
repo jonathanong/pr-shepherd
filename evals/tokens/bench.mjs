@@ -19,6 +19,7 @@ import {
   SHEPHERD_CHANGED_TICK_GRAPHQL,
   SHEPHERD_TICK_API,
   SHEPHERD_TICK_API_REST,
+  SHEPHERD_TICK_API_CLOUD,
   TOKENS_DIR,
   annotationBatchApi,
   apiTotals,
@@ -125,6 +126,7 @@ function buildRow(s, strategy) {
   const api = {
     shepherd: apiTotals(arms.shepherd),
     shepherdRest: apiTotals(arms.shepherd, { transport: "rest" }),
+    shepherdCloud: apiTotals(arms.shepherd, { transport: "cloud" }),
     gh: apiTotals(arms.gh),
     mcp: apiTotals(arms.mcp),
   };
@@ -236,7 +238,7 @@ const sessions = Object.fromEntries(
 
 // --- rate-limit totals -----------------------------------------------------------
 
-const API_ARMS = ["shepherd", "shepherdRest", "gh", "mcp"];
+const API_ARMS = ["shepherd", "shepherdRest", "shepherdCloud", "gh", "mcp"];
 
 /** Weighted GraphQL points and REST core requests per session, per arm. */
 const apiSessions = Object.fromEntries(
@@ -258,6 +260,7 @@ const POLL_SECONDS = 60;
 const waitPerHour = {
   shepherdGraphql: (3600 / POLL_SECONDS) * SHEPHERD_TICK_API.graphqlPoints,
   shepherdRest: (3600 / POLL_SECONDS) * SHEPHERD_TICK_API_REST.restCore,
+  shepherdCloud: (3600 / POLL_SECONDS) * SHEPHERD_TICK_API_CLOUD.restCore,
   ghWatchGraphql: 3600 / POLL_SECONDS,
   mcpRest: (3600 / POLL_SECONDS) * 2,
 };
@@ -406,11 +409,11 @@ const headline = [
   "",
   "GitHub rate limit per session (deterministic, assumed; see the Method section):",
   "",
-  "| session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport |",
-  "| --- | --- | --- | --- |",
+  "| session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |",
+  "| --- | --- | --- | --- | --- |",
   ...Object.entries({ pr: "single PR", stack: "PR stack" }).map(([k, label]) => {
     const a = apiSessions[k];
-    return `| ${label} | ${num(a.shepherd.graphqlPoints)} / ${num(a.gh.graphqlPoints)} / ${num(a.mcp.graphqlPoints)} | ${num(a.shepherd.restCore)} / ${num(a.gh.restCore)} / ${num(a.mcp.restCore)} | ${num(a.shepherdRest.restCore)} core + ${num(a.shepherdRest.graphqlPoints)} points |`;
+    return `| ${label} | ${num(a.shepherd.graphqlPoints)} / ${num(a.gh.graphqlPoints)} / ${num(a.mcp.graphqlPoints)} | ${num(a.shepherd.restCore)} / ${num(a.gh.restCore)} / ${num(a.mcp.restCore)} | ${num(a.shepherdRest.restCore)} core + ${num(a.shepherdRest.graphqlPoints)} points | ${num(a.shepherdCloud.restCore)} core + ${num(a.shepherdCloud.graphqlPoints)} points |`;
   }),
 ];
 
@@ -426,8 +429,9 @@ out(
   `- **GitHub rate limit (assumed).** In a PR session pr-shepherd spends ${num(apiSessions.pr.shepherd.graphqlPoints)} GraphQL points and ${num(apiSessions.pr.shepherd.restCore)} REST requests; gh ${num(apiSessions.pr.gh.graphqlPoints)} and ${num(apiSessions.pr.gh.restCore)}; MCP ${num(apiSessions.pr.mcp.graphqlPoints)} and ${num(apiSessions.pr.mcp.restCore)}. GraphQL points ${apiPct("pr", "gh", "graphqlPoints")} vs. gh and ${apiPct("pr", "mcp", "graphqlPoints")} vs. MCP; REST requests ${apiPct("pr", "gh", "restCore")} and ${apiPct("pr", "mcp", "restCore")}.`,
 );
 out(
-  `- **Waiting on CI, per hour.** pr-shepherd spends ${waitPerHour.shepherdGraphql} GraphQL points on the GraphQL transport (one fingerprint hit per ${POLL_SECONDS}s poll) and about ${waitPerHour.shepherdRest} REST requests on the REST transport, which has no fingerprint shortcut. A \`gh pr checks --watch\` refresh costs ${waitPerHour.ghWatchGraphql} points; an MCP re-check about ${waitPerHour.mcpRest} requests.`,
+  `- **Waiting on CI, per hour.** pr-shepherd spends ${waitPerHour.shepherdGraphql} GraphQL points on the GraphQL transport (one fingerprint hit per ${POLL_SECONDS}s poll) and about ${waitPerHour.shepherdRest} REST requests on the REST transport (${waitPerHour.shepherdCloud} on cloud REST), which has no fingerprint shortcut. A \`gh pr checks --watch\` refresh costs ${waitPerHour.ghWatchGraphql} points; an MCP re-check about ${waitPerHour.mcpRest} requests.`,
 );
+const TRANSPORT_LABELS = { graphql: "GraphQL", rest: "REST", cloud: "cloud REST" };
 const lossCount = (issue) => losses.filter((l) => l.issue === issue).length;
 out(
   losses.length
@@ -439,7 +443,7 @@ if (losses.length) {
   out("### Losses");
   out();
   out(
-    'Every session and scenario where pr-shepherd costs strictly more than a baseline, on any gated metric. Token metrics are the same on both transports; rate-limit metrics are listed per transport. README.md "The gate" has the rules.',
+    'Every session and scenario where pr-shepherd costs strictly more than a baseline, on any gated metric. Token metrics are the same on both transports; rate-limit metrics are listed per transport (GraphQL, standard REST, and REST through the Claude Code cloud proxy). README.md "The gate" has the rules.',
   );
   out();
   out("| where | metric | vs. | pr-shepherd | baseline | change | issue |");
@@ -448,7 +452,7 @@ if (losses.length) {
     const where = l.where.startsWith("session:")
       ? `${SESSIONS[l.where.slice(8)]}`
       : `\`${l.where}\``;
-    const metric = `${METRIC_LABELS[l.metric]}${l.transport ? ` (${l.transport === "rest" ? "REST" : "GraphQL"} transport)` : ""}`;
+    const metric = `${METRIC_LABELS[l.metric]}${l.transport ? ` (${TRANSPORT_LABELS[l.transport]} transport)` : ""}`;
     out(
       `| ${where} | ${metric} | ${BASELINES[l.baseline]} | ${num(l.ours)} | ${num(l.theirs)} | ${pct(saving(l.theirs, l.ours))} | #${l.issue} |`,
     );
@@ -539,6 +543,7 @@ out("| --- | --- | --- | --- |");
 const API_LABELS = {
   shepherd: "pr-shepherd",
   shepherdRest: "pr-shepherd, REST transport",
+  shepherdCloud: "pr-shepherd, cloud REST",
   gh: "gh CLI",
   mcp: "GitHub MCP",
 };
@@ -551,17 +556,17 @@ for (const [key, title] of Object.entries(SESSIONS)) {
 out();
 out("Per scenario, `GraphQL points / REST core requests` for one occurrence.");
 out();
-out("| scenario | pr-shepherd | pr-shepherd, REST | gh CLI | GitHub MCP |");
-out("| --- | --- | --- | --- | --- |");
+out("| scenario | pr-shepherd | pr-shepherd, REST | pr-shepherd, cloud REST | gh CLI | GitHub MCP |");
+out("| --- | --- | --- | --- | --- | --- |");
 for (const r of rows.filter((r) => !r.setup)) {
   const c = (a) => `${num(r.api[a].graphqlPoints)} / ${num(r.api[a].restCore)}`;
   out(
-    `| \`${r.id}\` | ${c("shepherd")} | ${c("shepherdRest")} | ${c("gh")}${r.gaps.gh ? " †" : ""} | ${c("mcp")}${r.gaps.mcp ? " †" : ""} |`,
+    `| \`${r.id}\` | ${c("shepherd")} | ${c("shepherdRest")} | ${c("shepherdCloud")} | ${c("gh")}${r.gaps.gh ? " †" : ""} | ${c("mcp")}${r.gaps.mcp ? " †" : ""} |`,
   );
 }
 out();
 out(
-  `- Waiting on CI costs ${waitPerHour.shepherdGraphql} GraphQL points an hour for pr-shepherd (one fingerprint hit per ${POLL_SECONDS}s poll), about ${waitPerHour.shepherdRest} REST requests an hour on the REST transport, ${waitPerHour.ghWatchGraphql} points for \`gh pr checks --watch --interval ${POLL_SECONDS}\`, and about ${waitPerHour.mcpRest} REST requests for a one-minute MCP re-check.`,
+  `- Waiting on CI costs ${waitPerHour.shepherdGraphql} GraphQL points an hour for pr-shepherd (one fingerprint hit per ${POLL_SECONDS}s poll), about ${waitPerHour.shepherdRest} REST requests an hour on the REST transport (${waitPerHour.shepherdCloud} on cloud REST), ${waitPerHour.ghWatchGraphql} points for \`gh pr checks --watch --interval ${POLL_SECONDS}\`, and about ${waitPerHour.mcpRest} REST requests for a one-minute MCP re-check.`,
 );
 out(
   MCP_API.verified
@@ -569,7 +574,10 @@ out(
     : `- MCP tool costs are read from data/mcp-api-map.json. They have not been re-checked since the pin moved to ${MCP_API.source}.`,
 );
 out(
-  "- The REST-transport column resolves nothing by REST: a thread resolve has no REST route, so `apply review` there spends only its replies.",
+  "- The REST-transport column resolves nothing by REST: a thread resolve has no standard REST route, so `apply review` there spends only its replies, and ready-for-review escalates as transport-unsupported.",
+);
+out(
+  "- The cloud REST column is REST through the Claude Code cloud proxy (`CLAUDE_CODE_REMOTE=true`): each PR snapshot also reads `/ccr/review_threads` (one more request per PR per tick), and thread resolves and ready-for-review are one CCR POST each.",
 );
 out();
 out("### Live cross-check");
@@ -584,7 +592,7 @@ out("| --- | --- | --- | --- | --- | --- |");
 const MODEL_TICK = {
   "fingerprint miss": SHEPHERD_TICK_API.graphqlPoints + SHEPHERD_CHANGED_TICK_GRAPHQL,
   "fingerprint hit": SHEPHERD_TICK_API.graphqlPoints,
-  "REST tick": SHEPHERD_TICK_API_REST.restCore,
+  "explicit REST tick": SHEPHERD_TICK_API_REST.restCore,
 };
 for (const t of API_CHECK.ticks) {
   const key = t.transport === "rest" ? "restCore" : "graphqlPoints";
@@ -634,6 +642,9 @@ out(
 );
 out(
   "- The REST column is standard REST (no Claude Code cloud proxy): ready-for-review and thread resolves are unsupported there.",
+);
+out(
+  `- The cloud REST column is the same REST path through the Claude Code cloud proxy: ${SHEPHERD_TICK_API_CLOUD.restCore} requests per one-PR tick (the standard ${SHEPHERD_TICK_API_REST.restCore} plus \`/ccr/review_threads\`), 6 + 13 per layer on a stack, a 5-request transcript read before replies, and one CCR POST per thread resolve and per ready-for-review.`,
 );
 out(
   `- Price ratios to one uncached input token: cache read ${MODEL.cacheReadMultiplier}, cache write ${MODEL.cacheWriteMultiplier}, output ${MODEL.outputMultiplier}.`,

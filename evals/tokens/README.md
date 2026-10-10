@@ -20,10 +20,10 @@ Latest numbers: [REPORT.md](REPORT.md). Estimated cost per session
 
 GitHub rate limit per session (deterministic, assumed; see the Method section):
 
-| session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport |
-| --- | --- | --- | --- |
-| single PR | 42.5 / 36.5 / 12 | 3 / 9 / 78.3 | 332.3 core + 1.5 points |
-| PR stack | 42 / 27 / 12 | 2 / 6 / 74 | 540 core + 0 points |
+| session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
+| --- | --- | --- | --- | --- |
+| single PR | 42.5 / 36.5 / 12 | 3 / 9 / 78.3 | 332.3 core + 1.5 points | 359.8 core + 1.5 points |
+| PR stack | 42 / 27 / 12 | 2 / 6 / 74 | 540 core + 0 points | 570 core + 0 points |
 
 <!-- bench:headline:end -->
 
@@ -71,9 +71,10 @@ loss.
 - **Baselines.** gh, GitHub MCP and GitHub MCP with eager tools for the token
   metrics. Eager MCP makes the same calls as MCP, so the rate-limit metrics
   compare against gh and MCP.
-- **Transports.** The model gives pr-shepherd the same output on both
-  transports, so each token metric is one cell. Each rate-limit metric is gated
-  twice, for the GraphQL transport and for the REST transport.
+- **Transports.** The model gives pr-shepherd the same output on every
+  transport, so each token metric is one cell. Each rate-limit metric is gated
+  three times: for the GraphQL transport, for standard REST (`rest`) and for
+  REST through the Claude Code cloud proxy (`cloud`).
 - **Scopes.** Each session total, and each scenario on its own, so a loss on
   one step cannot hide in a session average.
 - **† steps.** A baseline that cannot finish a step (the † cells) is skipped on
@@ -232,8 +233,7 @@ are as good as these assumptions:
     the 1-point mutation, 3 points.
 - **pr-shepherd, REST transport.** This is standard REST (an explicit
   `--transport rest`, or `auto` after a GraphQL fallback outside the Claude
-  Code cloud). The cloud variant, where each snapshot also reads the CCR proxy,
-  comes in #533. REST has no fingerprint shortcut, so a poll is a full read.
+  Code cloud). REST has no fingerprint shortcut, so a poll is a full read.
   From `src/github/rest-stack-summary-sharing.test.mts`, a 10-layer stack tick
   is 126 requests, which this models as 6 shared plus 12 per layer. A routed
   non-root layer's one-PR tick adds the stack read, the trunk's protection,
@@ -252,6 +252,15 @@ are as good as these assumptions:
   transport-unsupported instead of marking the PR ready. The live check below
   had no failing check, so neither the job/log reads nor the annotation reads
   were measured.
+- **pr-shepherd, cloud REST.** The same REST path through the Claude Code
+  cloud proxy (`CLAUDE_CODE_REMOTE=true`, where `auto` starts on REST). Each
+  PR snapshot also reads `/ccr/review_threads`, so a one-PR tick is 15
+  requests and a stack tick is 6 shared plus 13 per layer. `apply review`'s
+  transcript read is 5 requests, and each thread resolve is one CCR POST
+  (`src/comments/rest-review-mutations.mts`). The `mark-ready` tick marks the
+  PR ready with one more CCR POST. Replies and a routed stack layer's extra
+  reads cost what they do on standard REST. The live check below ran outside the cloud,
+  so this arm is the measured 14-request tick plus the proxy read.
 - **gh:** `gh pr view`, the thread query and each `gh pr checks` refresh are
   one point; `--watch` is one point on start plus one per refresh; `gh pr ready` and
   `gh pr merge` are two (lookup and mutation); `gh run view --log-failed` is

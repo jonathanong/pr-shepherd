@@ -1,5 +1,5 @@
 {
-  "note": "Live `npx pr-shepherd iterate 522 --verbose --format=json` apiUsage, two ticks per transport from a fresh PR_SHEPHERD_STATE_DIR. bench.mjs compares these measurements with its per-tick model. Made read-only by a temporary untracked .pr-shepherdrc.yml (iterate.minimizeComments: none, actions.autoMinimizeSuppressed: false, actions.autoMarkReady: false) and a PR with no unresolved outdated threads; GraphQL unmeasuredRequestCount was 0 (no mutations) and the debug log shows only GET requests, all 200 (no conditional 304s). The REST one-PR tick was modeled at 12 requests before this check. CI had no failing check, so job and log triage reads were not exercised.",
+  "note": "Live `npx pr-shepherd iterate 522 --verbose --format=json` apiUsage, two ticks per transport from a fresh PR_SHEPHERD_STATE_DIR. bench.mjs compares these measurements with its per-tick model. Made read-only by a temporary untracked .pr-shepherdrc.yml (iterate.minimizeComments: none, actions.autoMinimizeSuppressed: false, actions.autoMarkReady: false) and a PR with no unresolved outdated threads; GraphQL unmeasuredRequestCount was 0 (no mutations) and the debug log shows only GET requests, all 200 (no conditional 304s). Run outside Claude Code cloud (CLAUDE_CODE_REMOTE unset), so the REST ticks are the explicit `--transport rest` path without the per-PR `/ccr/review_threads` read; the bench adds that read for its cloud REST arm. The REST one-PR tick was modeled at 12 requests before this check. CI had no failing check, so job and log triage reads were not exercised.",
   "date": "2026-10-10",
   "pr": "jonathanong/pr-shepherd#522",
   "prState": "open, not a draft, mergeStateStatus UNSTABLE, CI in progress, 0 unresolved threads, 4 unminimized COMMENTED reviews",
@@ -23,7 +23,7 @@
     {
       "transport": "rest",
       "tick": "first",
-      "model": "REST tick",
+      "model": "explicit REST tick",
       "action": "fix_code",
       "graphqlPoints": 0,
       "restCore": 17,
@@ -32,7 +32,7 @@
     {
       "transport": "rest",
       "tick": "second",
-      "model": "REST tick",
+      "model": "explicit REST tick",
       "action": "wait",
       "graphqlPoints": 0,
       "restCore": 14,

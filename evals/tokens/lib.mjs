@@ -679,13 +679,22 @@ export const SHEPHERD_RECEIPT_TICK_API = gql(2);
  * requests for one PR's full snapshot (pull, review comments, check runs,
  * protection, check suites, stacks, rules, issue comments, statuses, reviews,
  * workflow runs, viewer, repository, and a second pull read), counted at the
- * HTTP boundary of the REST iterate test routes, and measured live
- * (data/api-usage-check.json). None of them is conditional, so none can be a
- * free 304. The REST column models this transport only; the cloud (CCR)
- * variant, which adds `/ccr/review_threads` reads, the CCR ready-for-review
- * POST and resolve POSTs, comes in #533.
+ * HTTP boundary of the REST iterate test routes, and measured live with an
+ * explicit `--transport rest` (data/api-usage-check.json). None of them is
+ * conditional, so none can be a free 304. The cloud variant is its own arm
+ * (`SHEPHERD_TICK_API_CLOUD`).
  */
 export const SHEPHERD_TICK_API_REST = rest(14);
+/**
+ * Cloud REST: `auto` picks REST when CLAUDE_CODE_REMOTE=true, and each PR
+ * snapshot there also reads `/ccr/review_threads`
+ * (src/github/rest-feedback-read.mts), one more request per PR. The cloud
+ * proxy also supports the ready-for-review POST and one resolve POST per
+ * thread, which standard REST lacks. Calls whose REST cost differs carry an
+ * explicit `apiCloud`.
+ */
+export const CCR_REQUESTS_PER_PR = 1;
+export const SHEPHERD_TICK_API_CLOUD = rest(SHEPHERD_TICK_API_REST.restCore + CCR_REQUESTS_PER_PR);
 /** A stack tick: one topology query plus about 0.52 points per layer, at least 1. */
 export const stackTickApi = (layers) => gql(1 + Math.max(1, Math.round(0.52 * layers)));
 /**
@@ -693,9 +702,17 @@ export const stackTickApi = (layers) => gql(1 + Math.max(1, Math.round(0.52 * la
  * 10 layers without CLAUDE_CODE_REMOTE in rest-stack-summary-sharing.test.mts).
  */
 export const stackTickApiRest = (layers) => rest(6 + 12 * layers);
+/** Cloud REST stack tick: 6 shared plus 13 per layer (136 for 10 layers in the same test). */
+export const stackTickApiCloud = (layers) => rest(6 + (12 + CCR_REQUESTS_PER_PR) * layers);
 
-/** Rate-limit cost of one call, for pr-shepherd on the given transport. */
+/**
+ * Rate-limit cost of one call, for pr-shepherd on the given transport:
+ * "graphql", "rest" (standard REST) or "cloud" (REST through the CCR proxy).
+ */
 export function callApi(call, transport = "graphql") {
+  if (transport === "cloud" && call.apiCloud) return call.apiCloud;
+  if (transport === "cloud" && call.apiRest)
+    throw new Error(`call with a REST cost needs an apiCloud: ${call.cmd.slice(0, 80)}`);
   if (transport === "rest" && call.apiRest) return call.apiRest;
   if (call.api) return call.api;
   const cmd = call.cmd;
@@ -706,6 +723,7 @@ export function callApi(call, transport = "graphql") {
   if (/^(Skill|Read|ToolSearch) /.test(cmd) || /^sleep \d+$/.test(cmd)) return NO_API;
   if (/^pr-shepherd /.test(cmd)) {
     if (/ --stack /.test(cmd)) throw new Error(`stack tick needs an explicit api: ${cmd}`);
+    if (transport === "cloud") return SHEPHERD_TICK_API_CLOUD;
     return transport === "rest" ? SHEPHERD_TICK_API_REST : SHEPHERD_TICK_API;
   }
   if (/gh stack merge/.test(cmd)) return rest(2);
