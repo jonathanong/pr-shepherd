@@ -35,7 +35,9 @@ import {
   rest,
   SHEPHERD_CHANGED_TICK_GRAPHQL,
   SHEPHERD_TICK_API,
+  SHEPHERD_RECEIPT_TICK_API,
   SHEPHERD_TICK_API_REST,
+  annotationBatchApi,
   stackTickApi,
   stackTickApiRest,
   ghAnnotations,
@@ -73,19 +75,45 @@ const STACK_POLL_SECONDS = 120;
 
 const shepherdTick = (out, phase = 1) => ({ phase, via: "bash", cmd: SHEPHERD_CMD, out });
 
-/** REST requests `readRestFeedback` spends on a reply's transcript read. */
-const REST_TRANSCRIPT_READ = 5;
+/**
+ * REST requests `readRestFeedback` spends on a reply's transcript read on
+ * standard REST: pull comments, issue comments, reviews and /user. The cloud
+ * also reads `/ccr/review_threads`.
+ */
+const REST_TRANSCRIPT_READ = 4;
 
 /**
  * A tick that renders a failing job's log excerpt also lists the run's jobs
  * and reads the job log (`fetchJobs`, `fetchJobLogExcerpt`). Those are REST
- * calls on either transport, so they add to the tick's base cost.
+ * calls on either transport, so they add to the tick's base cost. The failed
+ * job is one annotated check run (the recorded job carries a "Process
+ * completed with exit code 1." annotation), so the tick also runs the
+ * annotation supplement.
  */
 const ACTIONS_LOG_REST = 2;
+const FAILING_CHECK_ANNOTATIONS = annotationBatchApi(1);
 const FAILING_CHECK_TICK_API = {
-  api: { ...SHEPHERD_TICK_API, restCore: SHEPHERD_TICK_API.restCore + ACTIONS_LOG_REST },
-  apiRest: rest(SHEPHERD_TICK_API_REST.restCore + ACTIONS_LOG_REST),
+  api: {
+    graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + FAILING_CHECK_ANNOTATIONS.graphqlPoints,
+    restCore: SHEPHERD_TICK_API.restCore + ACTIONS_LOG_REST,
+  },
+  apiRest: rest(
+    SHEPHERD_TICK_API_REST.restCore + ACTIONS_LOG_REST + FAILING_CHECK_ANNOTATIONS.restCore,
+  ),
 };
+
+/**
+ * The tick after an elapsed ready delay selects the READY-receipt sibling
+ * (`SHEPHERD_RECEIPT_TICK_API`); REST reads the same snapshot.
+ */
+const receiptTick = (out) => ({
+  ...shepherdTick(out),
+  api: SHEPHERD_RECEIPT_TICK_API,
+  apiRest: SHEPHERD_TICK_API_REST,
+});
+
+/** `apply review --require-sha`'s head read: `GetPrHeadSha` or one REST pull read. */
+const HEAD_SHA_READ = 1;
 
 /** Run the printed `apply review:` command and read its output. */
 function shepherdApply(text, result, phase = 2) {
@@ -94,11 +122,12 @@ function shepherdApply(text, result, phase = 2) {
   const filled = cmd
     .replace("$DISMISS_MESSAGE", "Renamed the variable as requested.")
     .replace("$HEAD_SHA", "0123456789abcdef0123456789abcdef01234567");
-  // GraphQL: one thread read plus one request per chunk of 10 mutations. REST:
-  // with replies, the transcript read (`readRestFeedback`: pull comments, issue
-  // comments, reviews, CCR review_threads and /user, one page each) plus one
-  // request per reply; the thread-root lookup reads only the local identity
-  // cache. A resolve has no REST route, so REST mode skips it
+  // Every printed command carries --require-sha, so `waitForSha` first reads
+  // the head SHA: one `GetPrHeadSha` point, or one REST pull read. GraphQL:
+  // then one thread read plus one request per chunk of 10 mutations. REST: with
+  // replies, the transcript read (`REST_TRANSCRIPT_READ`) plus one request per
+  // reply; the thread-root lookup reads only the local identity cache. A
+  // resolve has no standard REST route, so REST mode skips it
   // (docs/graphql-usage.md, docs/escalations.md).
   const replies = result.repliedThreads?.length ?? 0;
   const mutations = replies + (result.resolvedThreads?.length ?? 0);
@@ -107,8 +136,8 @@ function shepherdApply(text, result, phase = 2) {
     via: "bash",
     cmd: filled,
     out: formatMutateResult({ errors: [], ...result }),
-    api: gql(1 + Math.ceil(mutations / 10)),
-    apiRest: rest((replies ? REST_TRANSCRIPT_READ : 0) + replies),
+    api: gql(HEAD_SHA_READ + 1 + Math.ceil(mutations / 10)),
+    apiRest: rest(HEAD_SHA_READ + (replies ? REST_TRANSCRIPT_READ : 0) + replies),
   };
 }
 
@@ -631,9 +660,9 @@ const PR_SCENARIOS = [
         // rate limit: runPoll -> runIterate reads the PR snapshot first. That is
         // the first changed tick after a wait (a fingerprint miss, then BatchPr;
         // mark-ready refuses a reused fingerprint). markReadyIfAuthorized then
-        // sends one GraphQL mutation point, or on REST one POST to the CCR
-        // proxy's ready_for_review route (mark-ready.mts). Outside CCR, REST
-        // escalates as transport-unsupported.
+        // sends one GraphQL mutation point. Standard REST has no ready-for-review
+        // route, so after its read the tick escalates as transport-unsupported
+        // (mark-ready.mts). The cloud's CCR POST comes in #533.
         shepherd: [
           {
             phase: 1,
@@ -642,7 +671,7 @@ const PR_SCENARIOS = [
             out: "",
             continues: true,
             api: gql(SHEPHERD_TICK_API.graphqlPoints + SHEPHERD_CHANGED_TICK_GRAPHQL + 1),
-            apiRest: rest(SHEPHERD_TICK_API_REST.restCore + 1),
+            apiRest: SHEPHERD_TICK_API_REST,
           },
         ],
         gh: [
@@ -724,8 +753,17 @@ const PR_SCENARIOS = [
       const fixture = "42-fix-code-check-annotations";
       const state = fixtureState(fixture);
       const annotations = fixtureInput(fixture).checkAnnotationsByCheckId;
+      const annotationApi = annotationBatchApi(Object.keys(annotations).length);
       return {
-        shepherd: [shepherdTick(snapshot(fixture))],
+        shepherd: [
+          {
+            ...shepherdTick(snapshot(fixture)),
+            // The annotated check runs' first look runs the annotation
+            // supplement on either transport.
+            api: gql(SHEPHERD_TICK_API.graphqlPoints + annotationApi.graphqlPoints),
+            apiRest: rest(SHEPHERD_TICK_API_REST.restCore + annotationApi.restCore),
+          },
+        ],
         gh: [
           ...ghObserve(state),
           {
@@ -773,7 +811,7 @@ const PR_SCENARIOS = [
       const merged = "✓ Merged pull request owner/repo#42 (Fixture PR)\n";
       return {
         shepherd: [
-          shepherdTick(snapshot(fixture)),
+          receiptTick(snapshot(fixture)),
           {
             phase: 2,
             via: "bash",
@@ -808,7 +846,7 @@ const PR_SCENARIOS = [
         "✓ Pull request owner/repo#42 will be added to the merge queue for main when ready\n";
       return {
         shepherd: [
-          shepherdTick(snapshot(fixture)),
+          receiptTick(snapshot(fixture)),
           {
             phase: 2,
             via: "bash",

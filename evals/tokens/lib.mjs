@@ -640,16 +640,50 @@ export const SHEPHERD_TICK_API = gql(1);
  */
 export const SHEPHERD_CHANGED_TICK_GRAPHQL = 1;
 /**
- * REST has no fingerprint shortcut: 14 requests for one PR's full snapshot
- * (pull, review comments, check runs, protection, check suites, stacks, rules,
- * issue comments, statuses, reviews, workflow runs, viewer, repository, and a
- * second pull read), counted at the HTTP boundary of the REST iterate test
- * routes. None of them is conditional, so none can be a free 304.
+ * `BatchPr` supplement: a full tick whose completed check runs report
+ * annotations (`hasAnnotations`) that are not in the 1-hour per-check-run cache
+ * runs `CheckRunAnnotationsBatch`, 1 point per chunk of 20 uncached check runs
+ * (src/github/check-annotations-batch.mts). On REST each uncached check run is
+ * one annotation read. Charged only by scenarios whose check runs carry
+ * annotations.
+ */
+export const annotationBatchApi = (checkRuns) => ({
+  graphqlPoints: Math.ceil(checkRuns / 20),
+  restCore: checkRuns,
+});
+/**
+ * `BatchPr` supplement: a non-stack PR whose base has a required status context
+ * that no check has reported yet runs `BaseBehind` (1 point,
+ * src/github/merge-target-rules.mts) on full ticks and again on every
+ * fingerprint-hit tick. No scenario has an unreported required context, so
+ * none charges it.
+ */
+export const BASE_BEHIND_GRAPHQL = 1;
+/**
+ * Once an elapsed ready-delay marker or a stored READY receipt makes it likely
+ * to be needed, `BatchPr` also selects the `PollSummaryPr` receipt sibling:
+ * 2 points instead of 1 (docs/graphql-usage.md). REST derives the receipt from
+ * the same snapshot, so its tick does not change.
+ */
+export const SHEPHERD_RECEIPT_TICK_API = gql(2);
+/**
+ * Standard REST (an explicit `--transport rest`, or `auto` after a GraphQL
+ * fallback outside the Claude Code cloud). It has no fingerprint shortcut: 14
+ * requests for one PR's full snapshot (pull, review comments, check runs,
+ * protection, check suites, stacks, rules, issue comments, statuses, reviews,
+ * workflow runs, viewer, repository, and a second pull read), counted at the
+ * HTTP boundary of the REST iterate test routes. None of them is conditional,
+ * so none can be a free 304. The REST column models this transport only; the
+ * cloud (CCR) variant, which adds `/ccr/review_threads` reads, the CCR
+ * ready-for-review POST and resolve POSTs, comes in #533.
  */
 export const SHEPHERD_TICK_API_REST = rest(14);
 /** A stack tick: one topology query plus about 0.52 points per layer, at least 1. */
 export const stackTickApi = (layers) => gql(1 + Math.max(1, Math.round(0.52 * layers)));
-/** REST stack tick: about 6 shared requests plus 12 per layer (126 for 10 layers in rest-stack-summary-sharing.test.mts). */
+/**
+ * Standard REST stack tick: about 6 shared requests plus 12 per layer (126 for
+ * 10 layers without CLAUDE_CODE_REMOTE in rest-stack-summary-sharing.test.mts).
+ */
 export const stackTickApiRest = (layers) => rest(6 + 12 * layers);
 
 /** Rate-limit cost of one call, for pr-shepherd on the given transport. */

@@ -22,7 +22,7 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport |
 | --- | --- | --- | --- |
-| single PR | 33.5 / 34.5 / 11 | 3 / 9 / 78.3 | 321 core + 1.5 points |
+| single PR | 39 / 34.5 / 11 | 3 / 9 / 78.3 | 321.3 core + 1.5 points |
 | PR stack | 26 / 27 / 12 | 2 / 6 / 74 | 420 core + 0 points |
 
 <!-- bench:headline:end -->
@@ -33,8 +33,8 @@ the GitHub MCP server they also come from polling and stack discovery, which
 MCP has no shortcut for. A single fresh read-and-reply tick against gh is a
 wash: between 9% cheaper and 5% dearer. A PR that has already merged costs
 15% more to confirm than a state-first gh agent pays. On the GitHub rate limit,
-pr-shepherd spends about as many GraphQL points as gh and far fewer REST
-requests; against MCP it trades REST requests for GraphQL points. See "Where
+pr-shepherd spends more GraphQL points than gh on a single PR (about as many on
+a stack) and far fewer REST requests; against MCP it trades REST requests for GraphQL points. See "Where
 pr-shepherd does not save" and "Rate-limit assumptions".
 
 ## Run it
@@ -159,20 +159,38 @@ are as good as these assumptions:
     fingerprint, misses and reads `BatchPr`, so it is 2 (the wait scenario
     carries that extra point);
   - a stack tick is 1 topology point plus `max(1, round(0.52 × layers))`;
-  - `apply review` is one thread read plus one point per chunk of 10 mutations;
+  - `apply review` reads the head SHA for `--require-sha` (1 point), then
+    spends one thread read plus one point per chunk of 10 mutations;
   - a tick that renders a failing job's log excerpt also lists the run's jobs
     and reads the job log, two REST requests on either transport;
+  - `BatchPr`'s supplements are charged only where the scenario's state
+    triggers them. `CheckRunAnnotationsBatch` runs on a full tick whose
+    completed check runs report annotations that are not in the 1-hour
+    per-check-run cache: 1 point per 20 check runs. `failing-check` (the
+    recorded job carries an exit-code annotation) and `check-annotations` are
+    charged it. `BaseBehind` (1 point, on every tick including fingerprint
+    hits) runs while a non-stack PR's base has a required status context that
+    no check has reported yet; no scenario has that state, so none is charged;
+  - the tick after an elapsed ready delay (`merge`, `merge-queue`) selects the
+    READY-receipt summary sibling, 2 points instead of 1;
   - the guarded merge is 2 points (lookup and mutation);
   - the poll tick that marks a draft ready is a changed tick after a wait plus
-    the 1-point mutation, 3 points (on REST, a full read plus one CCR POST).
-- **pr-shepherd, REST transport.** REST has no fingerprint shortcut, so a poll
-  is a full read. From `src/github/rest-stack-summary-sharing.test.mts`, a
-  10-layer stack tick is 126 requests, which this models as 6 shared plus 12
-  per layer. A one-PR tick is 14 requests, counted at the HTTP boundary of the
-  REST iterate test routes; none is conditional, so none is a free 304. A
-  thread resolve has no REST route, so `apply review` there spends its replies plus, when it has any, a 5-request
-  transcript read (pull comments, issue comments, reviews, CCR review threads
-  and the viewer).
+    the 1-point mutation, 3 points.
+- **pr-shepherd, REST transport.** This is standard REST (an explicit
+  `--transport rest`, or `auto` after a GraphQL fallback outside the Claude
+  Code cloud). The cloud variant, where each snapshot also reads the CCR proxy,
+  comes in #533. REST has no fingerprint shortcut, so a poll is a full read.
+  From `src/github/rest-stack-summary-sharing.test.mts`, a 10-layer stack tick
+  is 126 requests, which this models as 6 shared plus 12 per layer. A one-PR
+  tick is 14 requests, counted at the HTTP boundary of the REST iterate test
+  routes; none is conditional, so none is a free 304. The `failing-check` and
+  `check-annotations` ticks add one annotation read per annotated check run.
+  `apply review` reads the pull for `--require-sha`; a thread resolve has no
+  standard REST route, so it then spends its replies plus, when it has any, a
+  4-request transcript read (pull comments, issue comments, reviews and the
+  viewer). Ready-for-review has no standard REST route either: the
+  `mark-ready` tick is its 14-request read, and it escalates as
+  transport-unsupported instead of marking the PR ready.
 - **gh:** `gh pr view`, the thread query and each `gh pr checks` refresh are
   one point; `--watch` is one point per refresh; `gh pr ready` and
   `gh pr merge` are two (lookup and mutation); `gh run view --log-failed` is
@@ -328,7 +346,10 @@ The levers, in order of size:
 - **Real rate-limit cost.** The GitHub API numbers are assumptions, and the MCP
   mapping is unverified. GraphQL point cost also depends on query shape and
   node counts, which a flat 1 or 2 points per call ignores. REST conditional
-  requests (ETag/304) are not modeled.
+  requests (ETag/304) are not modeled. Real sessions run the annotation
+  supplement more often than the bench: GitHub currently adds an
+  `ubuntu-latest` migration notice annotation to Actions jobs on that runner,
+  so each new set of completed check runs costs a point.
 - **What the MCP stack walk cannot see.** `stack-work` has MCP stop at the
   first layer whose base is the trunk, so a merged parent below a trunk-based
   layer is never read. That is cheaper for MCP and also a blind spot: it

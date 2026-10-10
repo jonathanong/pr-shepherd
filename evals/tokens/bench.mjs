@@ -12,11 +12,13 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import {
+  BASE_BEHIND_GRAPHQL,
   MCP_API,
   MODEL,
   SHEPHERD_TICK_API,
   SHEPHERD_TICK_API_REST,
   TOKENS_DIR,
+  annotationBatchApi,
   apiTotals,
   cost,
   readJson,
@@ -526,6 +528,12 @@ out(
     : "- Calibration: none recorded. Run `node evals/analyze.mjs --calibrate <results dir> --write` after a live eval run to compare measured tokens with the assumed ratio.",
 );
 out(`- Base context replayed each turn: ${num(MODEL.baseContextTokens)} tokens.`);
+out(
+  `- \`BatchPr\` supplements are charged where the scenario's state triggers them. \`CheckRunAnnotationsBatch\` is ${annotationBatchApi(1).graphqlPoints} point per 20 uncached annotated check runs (${annotationBatchApi(1).restCore} annotation read per check run on REST), in \`failing-check\` and \`check-annotations\`. The READY-receipt sibling makes the elapsed-ready-delay tick in \`merge\` and \`merge-queue\` 2 points. \`BaseBehind\` (${BASE_BEHIND_GRAPHQL} point on every tick while a required status context is unreported) matches no scenario's state, so none is charged it.`,
+);
+out(
+  "- The REST column is standard REST (no Claude Code cloud proxy): ready-for-review and thread resolves are unsupported there.",
+);
 out(
   `- Price ratios to one uncached input token: cache read ${MODEL.cacheReadMultiplier}, cache write ${MODEL.cacheWriteMultiplier}, output ${MODEL.outputMultiplier}.`,
 );

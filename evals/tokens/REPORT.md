@@ -9,7 +9,7 @@ Change in cost when an agent uses pr-shepherd instead of a baseline. A negative 
 - **Cost (ITE).** PR session −33% vs. gh and −74% vs. GitHub MCP; stack session −25% and −50%.
 - **Fixed vs. variable.** The skill and playbooks are 25% of pr-shepherd's PR-session cost and 32% of its stack-session cost; on variable cost alone it is −49% vs. gh in a PR session and −49% in a stack session.
 - **Biggest win and loss vs. gh.** `mark-ready` −100%; `merged` +15%.
-- **GitHub rate limit (assumed).** In a PR session pr-shepherd spends 33.5 GraphQL points and 3 REST requests; gh 34.5 and 9; MCP 11 and 78.3. GraphQL points −3% vs. gh and +205% vs. MCP; REST requests −67% and −96%.
+- **GitHub rate limit (assumed).** In a PR session pr-shepherd spends 39 GraphQL points and 3 REST requests; gh 34.5 and 9; MCP 11 and 78.3. GraphQL points +13% vs. gh and +255% vs. MCP; REST requests −67% and −96%.
 - **Waiting on CI, per hour.** pr-shepherd spends 60 GraphQL points on the GraphQL transport (one fingerprint hit per 60s poll) and about 840 REST requests on the REST transport, which has no fingerprint shortcut. A `gh pr checks --watch` refresh costs 60 points; an MCP re-check about 120 requests.
 
 ## Typical PR session
@@ -141,8 +141,8 @@ Rate-limit cost per session, weighted like the token numbers. **Deterministic an
 
 | session | arm | GraphQL points | REST core requests |
 | --- | --- | --- | --- |
-| Typical PR session | pr-shepherd | 33.5 | 3 |
-| Typical PR session | pr-shepherd, REST transport | 1.5 | 321 |
+| Typical PR session | pr-shepherd | 39 | 3 |
+| Typical PR session | pr-shepherd, REST transport | 1.5 | 321.3 |
 | Typical PR session | gh CLI | 34.5 | 9 |
 | Typical PR session | GitHub MCP | 11 | 78.3 |
 | Typical stack session | pr-shepherd | 26 | 2 |
@@ -155,18 +155,18 @@ Per scenario, `GraphQL points / REST core requests` for one occurrence.
 | scenario | pr-shepherd | pr-shepherd, REST | gh CLI | GitHub MCP |
 | --- | --- | --- | --- | --- |
 | `ci-wait` | 7 / 0 | 0 / 84 | 6 / 0 | 0 / 12 |
-| `failing-check` | 1 / 2 | 0 / 16 | 2 / 2 | 1 / 9 |
+| `failing-check` | 2 / 2 | 0 / 17 | 2 / 2 | 1 / 9 |
 | `bot-review-summary` | 1 / 0 | 0 / 14 | 2 / 0 | 1 / 5 |
-| `review-thread` | 3 / 0 | 0 / 20 | 2 / 1 | 1 / 6 |
-| `review-thread-with-history` | 3 / 0 | 0 / 20 | 2 / 1 | 1 / 6 |
-| `multi-category` | 3 / 2 | 0 / 22 | 2 / 3 | 1 / 10 |
-| `mark-ready` | 3 / 0 | 0 / 15 | 4 / 0 | 2 / 6 |
+| `review-thread` | 4 / 0 | 0 / 20 | 2 / 1 | 1 / 6 |
+| `review-thread-with-history` | 4 / 0 | 0 / 20 | 2 / 1 | 1 / 6 |
+| `multi-category` | 4 / 2 | 0 / 22 | 2 / 3 | 1 / 10 |
+| `mark-ready` | 3 / 0 | 0 / 14 | 4 / 0 | 2 / 6 |
 | `merged` | 1 / 0 | 0 / 14 | 1 / 0 | 0 / 1 |
-| `bot-threads` | 3 / 0 | 0 / 22 | 4 / 3 | 3 / 8 |
-| `check-annotations` | 1 / 0 | 0 / 14 | 2 / 2 | 1 / 5 † |
+| `bot-threads` | 4 / 0 | 0 / 22 | 4 / 3 | 3 / 8 |
+| `check-annotations` | 2 / 0 | 0 / 15 | 2 / 2 | 1 / 5 † |
 | `conflicts` | 1 / 0 | 0 / 14 | 2 / 0 | 1 / 5 |
-| `merge` | 3 / 0 | 2 / 14 | 4 / 0 | 1 / 6 |
-| `merge-queue` | 3 / 0 | 2 / 14 | 4 / 0 | 1 / 6 † |
+| `merge` | 4 / 0 | 2 / 14 | 4 / 0 | 1 / 6 |
+| `merge-queue` | 4 / 0 | 2 / 14 | 4 / 0 | 1 / 6 † |
 | `stack-work` | 8 / 0 | 0 / 134 | 8 / 1 | 4 / 25 |
 | `stack-queue-wait` | 8 / 0 | 0 / 120 | 7 / 1 | 2 / 12 † |
 | `stack-merge` | 2 / 2 | 0 / 32 | 4 / 3 | 2 / 12 † |
@@ -195,6 +195,8 @@ A baseline either fires every read in its first turn (parallel) or reads the PR'
 - Tokens: 3.5 characters per token for every arm.
 - Calibration: none recorded. Run `node evals/analyze.mjs --calibrate <results dir> --write` after a live eval run to compare measured tokens with the assumed ratio.
 - Base context replayed each turn: 30,000 tokens.
+- `BatchPr` supplements are charged where the scenario's state triggers them. `CheckRunAnnotationsBatch` is 1 point per 20 uncached annotated check runs (1 annotation read per check run on REST), in `failing-check` and `check-annotations`. The READY-receipt sibling makes the elapsed-ready-delay tick in `merge` and `merge-queue` 2 points. `BaseBehind` (1 point on every tick while a required status context is unreported) matches no scenario's state, so none is charged it.
+- The REST column is standard REST (no Claude Code cloud proxy): ready-for-review and thread resolves are unsupported there.
 - Price ratios to one uncached input token: cache read 0.1, cache write 1.25, output 5.
 - Host output caps: Bash 30,000 characters, MCP 25,000 tokens.
 - Eager GitHub MCP toolset: 50 tools, 15,155 tokens per request (github/github-mcp-server@eb47a99ddb866ca2b8a162920e6bda9521f33ebb).
