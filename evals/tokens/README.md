@@ -22,7 +22,7 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport |
 | --- | --- | --- | --- |
-| single PR | 37.5 / 34.5 / 11 | 1 / 9 / 78.3 | 251 core + 1.5 points |
+| single PR | 37.5 / 34.5 / 11 | 3 / 9 / 78.3 | 267 core + 1.5 points |
 | PR stack | 34 / 27 / 12 | 2 / 6 / 74 | 404 core + 0 points |
 
 <!-- bench:headline:end -->
@@ -158,12 +158,16 @@ are as good as these assumptions:
     1-point fingerprint hit;
   - a stack tick is 1 topology point plus `max(1, round(0.52 × layers))`;
   - `apply review` is one thread read plus one point per chunk of 10 mutations;
+  - a tick that renders a failing job's log excerpt also lists the run's jobs
+    and reads the job log, two REST requests on either transport;
   - the guarded merge is 2 points (lookup and mutation).
 - **pr-shepherd, REST transport.** REST has no fingerprint shortcut, so a poll
   is a full read. From `src/github/rest-stack-summary-sharing.test.mts`, a
   10-layer stack tick is 126 requests, which this models as 6 shared plus 12
   per layer. A one-PR tick is about 12. A thread resolve has no REST route, so
-  `apply review` there spends only its replies.
+  `apply review` there spends its replies plus, when it has any, a 5-request
+  transcript read (pull comments, issue comments, reviews, CCR review threads
+  and the viewer).
 - **gh:** `gh pr view`, the thread query and each `gh pr checks` refresh are
   one point; `--watch` is one point per refresh; `gh pr ready` and
   `gh pr merge` are two (lookup and mutation); `gh run view --log-failed` is

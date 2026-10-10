@@ -33,6 +33,8 @@ import {
   fixtureState,
   gql,
   rest,
+  SHEPHERD_TICK_API,
+  SHEPHERD_TICK_API_REST,
   stackTickApi,
   stackTickApiRest,
   ghAnnotations,
@@ -70,6 +72,20 @@ const STACK_POLL_SECONDS = 120;
 
 const shepherdTick = (out, phase = 1) => ({ phase, via: "bash", cmd: SHEPHERD_CMD, out });
 
+/** REST requests `readRestFeedback` spends on a reply's transcript read. */
+const REST_TRANSCRIPT_READ = 5;
+
+/**
+ * A tick that renders a failing job's log excerpt also lists the run's jobs
+ * and reads the job log (`fetchJobs`, `fetchJobLogExcerpt`). Those are REST
+ * calls on either transport, so they add to the tick's base cost.
+ */
+const ACTIONS_LOG_REST = 2;
+const FAILING_CHECK_TICK_API = {
+  api: { ...SHEPHERD_TICK_API, restCore: SHEPHERD_TICK_API.restCore + ACTIONS_LOG_REST },
+  apiRest: rest(SHEPHERD_TICK_API_REST.restCore + ACTIONS_LOG_REST),
+};
+
 /** Run the printed `apply review:` command and read its output. */
 function shepherdApply(text, result, phase = 2) {
   const cmd = text.match(/apply review: `([^`]+)`/)?.[1];
@@ -78,8 +94,11 @@ function shepherdApply(text, result, phase = 2) {
     .replace("$DISMISS_MESSAGE", "Renamed the variable as requested.")
     .replace("$HEAD_SHA", "0123456789abcdef0123456789abcdef01234567");
   // GraphQL: one thread read plus one request per chunk of 10 mutations. REST:
-  // one request per reply plus the thread read; a resolve has no REST route, so
-  // REST mode skips it (docs/graphql-usage.md, docs/escalations.md).
+  // with replies, the transcript read (`readRestFeedback`: pull comments, issue
+  // comments, reviews, CCR review_threads and /user, one page each) plus one
+  // request per reply; the thread-root lookup reads only the local identity
+  // cache. A resolve has no REST route, so REST mode skips it
+  // (docs/graphql-usage.md, docs/escalations.md).
   const replies = result.repliedThreads?.length ?? 0;
   const mutations = replies + (result.resolvedThreads?.length ?? 0);
   return {
@@ -88,7 +107,7 @@ function shepherdApply(text, result, phase = 2) {
     cmd: filled,
     out: formatMutateResult({ errors: [], ...result }),
     api: gql(1 + Math.ceil(mutations / 10)),
-    apiRest: rest(1 + replies),
+    apiRest: rest((replies ? REST_TRANSCRIPT_READ : 0) + replies),
   };
 }
 
@@ -506,7 +525,7 @@ const PR_SCENARIOS = [
     arms() {
       const state = failingCheckState();
       return {
-        shepherd: [shepherdTick(failingCheckOutput())],
+        shepherd: [{ ...shepherdTick(failingCheckOutput()), ...FAILING_CHECK_TICK_API }],
         gh: [...ghObserve(state), ghLogCall(2)],
         mcp: [...mcpObserve(state), ...mcpLogCalls(2)],
       };

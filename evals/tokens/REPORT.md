@@ -9,7 +9,7 @@ Change in cost when an agent uses pr-shepherd instead of a baseline. A negative 
 - **Cost (ITE).** PR session −33% vs. gh and −74% vs. GitHub MCP; stack session −25% and −50%.
 - **Fixed vs. variable.** The skill and playbooks are 25% of pr-shepherd's PR-session cost and 32% of its stack-session cost; on variable cost alone it is −49% vs. gh in a PR session and −49% in a stack session.
 - **Biggest win and loss vs. gh.** `mark-ready` −100%; `merged` +15%.
-- **GitHub rate limit (assumed).** In a PR session pr-shepherd spends 37.5 GraphQL points and 1 REST requests; gh 34.5 and 9; MCP 11 and 78.3. GraphQL points +9% vs. gh and +241% vs. MCP; REST requests −89% and −99%.
+- **GitHub rate limit (assumed).** In a PR session pr-shepherd spends 37.5 GraphQL points and 3 REST requests; gh 34.5 and 9; MCP 11 and 78.3. GraphQL points +9% vs. gh and +241% vs. MCP; REST requests −67% and −96%.
 - **Waiting on CI, per hour.** pr-shepherd spends 60 GraphQL points on the GraphQL transport (one fingerprint hit per 60s poll) and about 720 REST requests on the REST transport, which has no fingerprint shortcut. A `gh pr checks --watch` refresh costs 60 points; an MCP re-check about 120 requests.
 
 ## Typical PR session
@@ -141,8 +141,8 @@ Rate-limit cost per session, weighted like the token numbers. **Deterministic an
 
 | session | arm | GraphQL points | REST core requests |
 | --- | --- | --- | --- |
-| Typical PR session | pr-shepherd | 37.5 | 1 |
-| Typical PR session | pr-shepherd, REST transport | 1.5 | 251 |
+| Typical PR session | pr-shepherd | 37.5 | 3 |
+| Typical PR session | pr-shepherd, REST transport | 1.5 | 267 |
 | Typical PR session | gh CLI | 34.5 | 9 |
 | Typical PR session | GitHub MCP | 11 | 78.3 |
 | Typical stack session | pr-shepherd | 34 | 2 |
@@ -155,14 +155,14 @@ Per scenario, `GraphQL points / REST core requests` for one occurrence.
 | scenario | pr-shepherd | pr-shepherd, REST | gh CLI | GitHub MCP |
 | --- | --- | --- | --- | --- |
 | `ci-wait` | 6 / 0 | 0 / 72 | 6 / 0 | 0 / 12 |
-| `failing-check` | 2 / 0 | 0 / 12 | 2 / 2 | 1 / 9 |
+| `failing-check` | 2 / 2 | 0 / 14 | 2 / 2 | 1 / 9 |
 | `bot-review-summary` | 2 / 0 | 0 / 12 | 2 / 0 | 1 / 5 |
-| `review-thread` | 4 / 0 | 0 / 14 | 2 / 1 | 1 / 6 |
-| `review-thread-with-history` | 4 / 0 | 0 / 14 | 2 / 1 | 1 / 6 |
-| `multi-category` | 4 / 2 | 0 / 16 | 2 / 3 | 1 / 10 |
+| `review-thread` | 4 / 0 | 0 / 18 | 2 / 1 | 1 / 6 |
+| `review-thread-with-history` | 4 / 0 | 0 / 18 | 2 / 1 | 1 / 6 |
+| `multi-category` | 4 / 2 | 0 / 20 | 2 / 3 | 1 / 10 |
 | `mark-ready` | 1 / 0 | 0 / 1 | 4 / 0 | 2 / 6 |
 | `merged` | 2 / 0 | 0 / 12 | 1 / 0 | 0 / 1 |
-| `bot-threads` | 4 / 0 | 0 / 16 | 4 / 3 | 3 / 8 |
+| `bot-threads` | 4 / 0 | 0 / 20 | 4 / 3 | 3 / 8 |
 | `check-annotations` | 2 / 0 | 0 / 12 | 2 / 2 | 1 / 5 † |
 | `conflicts` | 2 / 0 | 0 / 12 | 2 / 0 | 1 / 5 |
 | `merge` | 4 / 0 | 2 / 12 | 4 / 0 | 1 / 6 |

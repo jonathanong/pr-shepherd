@@ -251,8 +251,13 @@ if (mode === "summary") {
   const ci = (iv) => (iv ? ` ${fmtCi(iv.ci)}` : "");
   const meanLine = (set, what) => {
     const iv = meanDeltaInterval(set);
-    return `**${fmt(mean(set.map(delta)))}**${iv ? ` ${fmtCi(iv)}` : ""} over ${set.length} ${what}`;
+    const oneRun = set.filter((c) => !caseInterval(c)).length;
+    const why = !iv && oneRun ? ` (no interval: ${oneRun} single-run cases)` : "";
+    return `**${fmt(mean(set.map(delta)))}**${iv ? ` ${fmtCi(iv)}` : ""} over ${set.length} ${what}${why}`;
   };
+  // A one-run case (the guard tier's cheap sweep) has no interval, so it can
+  // never be flagged above. Surface its raw negative Δ instead of hiding it.
+  const unflagged = withCi.filter((x) => !x.iv && delta(x.c) < 0);
 
   const model = A.suite?.model ?? cases[0]?.model ?? "model unrecorded";
   const judge = A.suite?.judgeModel ?? "judge unrecorded";
@@ -278,6 +283,12 @@ if (mode === "summary") {
         : "none") +
       ".",
   );
+  if (unflagged.length) {
+    console.log(
+      `- Negative Δ with fewer than 2 runs (no interval; re-run to confirm): ` +
+        `${unflagged.map((x) => `${short(x.c)} ${fmt(delta(x.c))}`).join(", ")}.`,
+    );
+  }
   console.log(`- At ceiling in both arms: ${ceiling} of ${cases.length}.`);
   console.log(
     `- Skill fired ${trig.fired}/${trig.total} (${pctOf(trig.fired, trig.total)}); ` +
