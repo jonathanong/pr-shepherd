@@ -31,8 +31,28 @@ describe("stack rerun step", () => {
   it("tells the caller to stop when every unready layer belongs to another author", () => {
     const result = withPollSummaryInstructions(stack([unowned(1, 1), unowned(2, 2)]), false);
     const text = result.instructions?.join("\n") ?? "";
-    expect(result.nextAction).toBe("shepherd");
+    expect(result.nextAction).toBe("escalate");
     expect(text).toContain(stop);
     expect(text).not.toContain("rerun this same `--stack` selector");
+  });
+
+  it("adds no quota cadence after the unowned-stack stop", () => {
+    const result = withPollSummaryInstructions(
+      {
+        ...stack([unowned(1, 1), unowned(2, 2)]),
+        quotaWarning: {
+          resource: "graphql",
+          thresholdPercent: 20,
+          remaining: 100,
+          limit: 1000,
+          resetAt: 2_000_000_000,
+          pollIntervalMinutes: 10,
+          pollTimeoutMinutes: 20,
+        },
+      },
+      false,
+    );
+    expect(result.nextAction).toBe("escalate");
+    expect(result.instructions?.at(-1)).toBe(`4. ${stop}`);
   });
 });

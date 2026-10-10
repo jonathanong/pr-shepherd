@@ -181,12 +181,12 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
     const instructions: string[] = [];
     appendAutonomousInstructions(instructions, work.sessions);
     appendMarkReadyInstructions(instructions, work.markReady);
-    appendStackRerunInstruction(
+    const action = appendStackRerunInstruction(
       instructions,
       [...work.sessions, ...work.markReady],
       "After the selected one-PR sessions, rerun this same `--stack` selector.",
     );
-    return { action: "shepherd", stackMergeable: false, instructions };
+    return { action, stackMergeable: false, instructions };
   }
 
   if (open.some((item) => item.isInMergeQueue)) {
@@ -212,16 +212,12 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
     const instructions: string[] = [];
     const sessions = open.filter((item) => item.action !== "cancel");
     appendAutonomousInstructions(instructions, sessions);
-    appendStackRerunInstruction(
+    const action = appendStackRerunInstruction(
       instructions,
       sessions,
       "After the selected one-PR sessions, rerun this same `--stack` selector.",
     );
-    return {
-      action: "shepherd",
-      stackMergeable,
-      instructions,
-    };
+    return { action, stackMergeable, instructions };
   }
 
   return retargetWaitPlan(open[0]!);

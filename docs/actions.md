@@ -53,7 +53,8 @@ as soon as that layer is clean; it does not wait for a lower layer's receipt. Re
 sessions for every owned layer that still has work are listed on the same tick. An unready stack
 returns stack-level `SHEPHERD` with exact one-PR Shepherd commands and asks the caller to rerun the
 same selector after those owned sessions. If every remaining session belongs to someone else, the
-overview is the result: do not shepherd those layers.
+overview is the result: the stack returns `ESCALATE` with no rerun, quota-cadence, or wake-up step,
+and the caller does not shepherd those layers.
 
 A layer whose only failing checks are deferred on an open external pull request or issue is `WAIT`
 (a probed row). The selector does not return `SHEPHERD` for that layer alone, so `--until-terminal`
@@ -163,9 +164,9 @@ Pass `--verbose` to get more debug state. In JSON mode, the output starts from t
 # PR #<N> [ACTION]
 
 **status** `<…>`[ · **merge** `<…>`][ · **reviewDecision** `<…>`][ · **state** `<…>`] · **repo** `<…>`
-**summary** <N> passing[, <N> skipped][, <N> filtered][, <N> inProgress][, <N> superseded][· **remainingSeconds** <N>][· **blockingBotReviewInProgress**][· **isDraft**][· **branch** behind PR base `<base>` | · **branch** conflicts with PR base `<base>` | · **branch** conflicts with stack trunk `<trunk>`]
-Approvals: <None|N[/M]> [Required|Not Required]
-Conversations Resolved: <Yes|No> [Required|Not Required]
+[**summary** <N> passing[, <N> skipped][, <N> filtered][, <N> inProgress][, <N> superseded]][· **remainingSeconds** <N>][· **blockingBotReviewInProgress**][· **isDraft**][· **branch** behind PR base `<base>` | · **branch** conflicts with PR base `<base>` | · **branch** conflicts with stack trunk `<trunk>`]
+[Approvals: <None|N[/M]> [Required|Not Required]]
+[Conversations Resolved: <Yes|No> [Required|Not Required]]
 [Merge queue: <No|position N STATE> [Required|Not Required]]
 [Stack: <n> (layer <pos>/<size>, base <ref>)]
 [other required-only merge-rule lines]
@@ -206,7 +207,8 @@ Conversations Resolved: <Yes|No> [Required|Not Required]
 
 Lean-mode rules for the summary line:
 
-- Zero counts (`skipped`, `filtered`, `inProgress`, `superseded`) are omitted.
+- Zero counts are omitted, `passing` included. When every count is zero, the `**summary**` label and the lean JSON `summary` field are omitted entirely.
+- `Approvals:` is omitted when there are no approvals and none are required; `Conversations Resolved:` is omitted when resolution is known not to be required. Lean JSON `mergeRequirements` drops the same entries.
 - `remainingSeconds` is shown only when the ready-delay timer is actively counting down (`status === "READY"` and `remainingSeconds > 0`).
 - `blockingBotReviewInProgress` and `isDraft` are shown only when `true`.
 - `shouldCancel` is never shown (it is fully implied by `action === "cancel"`).

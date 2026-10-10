@@ -10,7 +10,7 @@ Debounce ticks in the poll dispatcher (`pr-shepherd [PR] --debounce`, default: `
 
 ## Header
 
-Always present after a sweep, except that lean output omits `**merge**`/`mergeStateStatus` when it is `CLEAN` and `**state**`/`state` when it is `OPEN` (an absent field means that default):
+Always present after a sweep, except that lean output omits `**merge**`/`mergeStateStatus` when it is `CLEAN`, `**state**`/`state` when it is `OPEN`, and `**summary**`/`summary` when every count is zero (an absent field means that default):
 
 | Text          | JSON                                                                  | Meaning                                                                                     |
 | ------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
@@ -36,10 +36,12 @@ Shown when they apply:
 
 ## Merge requirements
 
-Always printed after a sweep:
+Printed after a sweep unless trivial:
 
-- `Approvals: <None\|N[/M]> [Required\|Not Required]`
-- `Conversations Resolved: <Yes\|No> [Required\|Not Required]`
+- `Approvals: <None\|N[/M]> [Required\|Not Required]`, omitted when there are no approvals and none are required.
+- `Conversations Resolved: <Yes\|No> [Required\|Not Required]`, omitted when resolution is known not to be required.
+
+Lean JSON `mergeRequirements` drops the same entries.
 
 Extra lines appear only when they apply (code-owner review, last-push approval, signed commits, linear history, branch up to date, required checks/deployments/workflows, code scanning, merge queue, stacks).
 

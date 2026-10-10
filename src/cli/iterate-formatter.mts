@@ -28,8 +28,8 @@ import { formatNextCheckLines, formatPollModeSegment } from "./next-check-format
  *   1. The H1 heading on line 1 contains `[<ACTION>]` — the action tag identifies
  *      the output for logging and validation. Behavior is driven by `## Instructions`,
  *      not by dispatching on the tag.
- *   2. `[FIX_CODE]` wraps the `resolve` command under `## Post-fix actions` in
- *      backticks — the skill extracts the backticked content for execution.
+ *   2. `[FIX_CODE]` prints the `apply review` command inline, in backticks, in its
+ *      `## Instructions` step; the agent runs that backticked command as printed.
  *   3. Every action except `cancel` ends with a `## Instructions` section — numbered
  *      `1.`, `2.`, … — that tells the agent exactly what to do with this output, with at
  *      least one step. `cancel` has no section: the `[CANCEL]` tag already means stop this
