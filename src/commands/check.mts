@@ -8,7 +8,7 @@ import {
 import { storePrFingerprint } from "../state/pr-fingerprint.mts";
 import { storeRestSnapshotReport } from "../state/rest-snapshot-report.mts";
 import { restSnapshotState, withRestConditionalScope } from "../github/rest-conditional-scope.mts";
-import { tryReuseFingerprintReport, tryReuseRestSnapshotReport } from "./check-fingerprint.mts";
+import { fingerprintReuser, tryReuseRestSnapshotReport } from "./check-fingerprint.mts";
 import { collectUnreportedRequired, refreshCachedUnreported } from "./check-unreported.mts";
 import { getRepoInfo, getCurrentPrNumber, type RepoInfo } from "../github/client.mts";
 import { classifyChecks, getCiVerdict } from "../checks/classify.mts";
@@ -128,16 +128,20 @@ async function runScopedCheck(
 ): Promise<ShepherdReport> {
   const config = loadConfig();
   const reuseFingerprint = opts.fingerprintCache === true;
-  if (reuseFingerprint) {
-    const cached = await tryReuseFingerprintReport(prNumber, repo, stateKey, config);
-    if (cached) return refreshCachedUnreported(cached, repo, context);
-  }
+  const reuse = reuseFingerprint
+    ? await fingerprintReuser(prNumber, repo, stateKey, config)
+    : undefined;
   const paginateApprovedReviews = config.iterate.minimizeApprovals;
   const includeReceiptSummary = (await context?.wantsReceiptSummary(prNumber, repo)) ?? false;
-  const result = await fetchPrBatch(prNumber, repo, {
+  const batchOptions = {
     paginateApprovedReviews,
     ...(includeReceiptSummary && { includeReceiptSummary: true }),
-  });
+  };
+  const fetched = reuse
+    ? await fetchPrBatch(prNumber, repo, batchOptions, reuse)
+    : await fetchPrBatch(prNumber, repo, batchOptions);
+  if ("reused" in fetched) return refreshCachedUnreported(fetched.reused, repo, context);
+  const result = fetched;
   context?.setReceiptSummary(result.receiptSummary ?? null);
   const restSnapshot = result.data.transport === "rest" ? restSnapshotState() : undefined;
   if (reuseFingerprint) {

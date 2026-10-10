@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("./check-fingerprint.mts", () => ({
-  tryReuseFingerprintReport: vi.fn().mockResolvedValue(null),
+  fingerprintReuser: vi.fn().mockResolvedValue(undefined),
   tryReuseRestSnapshotReport: vi.fn().mockResolvedValue(null),
 }));
 vi.mock("../state/rest-snapshot-report.mts", () => ({

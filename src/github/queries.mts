@@ -22,9 +22,6 @@ export const BATCH_PR_QUERY = withSharedFragments(gql("batch-pr.gql"));
 /** Slim @include follow-up for outstanding batch-query connections. */
 export const BATCH_PR_PAGE_QUERY = gql("batch-pr-page.gql");
 
-/** Cheap PR fingerprint used to skip an unchanged BatchPr snapshot. */
-export const PR_FINGERPRINT_QUERY = withSharedFragments(gql("pr-fingerprint.gql"));
-
 const POLL_SUMMARY_CHECK_CONTEXTS_FRAGMENT = gql("poll-summary-check-contexts.gql");
 
 /** Compact per-PR fields shared by explicit-list and native-stack summary queries. */

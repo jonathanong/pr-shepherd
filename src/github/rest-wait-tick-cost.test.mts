@@ -16,11 +16,13 @@ import { runWithGithubTransport } from "./transport.mts";
  * Charged-request budget of REST wait ticks, measured at the HTTP boundary. The fake answers
  * like GitHub's conditional reads, so a request is charged exactly when it is not a 304.
  */
-async function serveOnePr(state: { baseSha: string; baseStatus: number }) {
+async function serveOnePr(state: { baseSha: string; baseStatus: number; pending?: boolean }) {
   serveWithEtags();
-  const routes = restIterateRoutes({ pending: true });
+  const options = { pending: true };
+  const routes = restIterateRoutes(options);
   await serve((request, response) => {
     const path = request.path.split("?")[0]!;
+    options.pending = state.pending ?? true;
     if (path === "/repos/octocat/hello-world/branches/main") {
       response.statusCode = state.baseStatus;
       response.end(
@@ -72,6 +74,11 @@ describe("REST wait tick cost", () => {
       expect(notModified()).toHaveLength(14);
       expect(charged()).toEqual([]);
     }
+    // A returned tick rebuilds the report but its unchanged reads are still 304s.
+    log.length = 0;
+    const returned = await tick(false);
+    expect(returned).not.toHaveProperty("fingerprintReused");
+    expect(charged()).toEqual([]);
   });
 
   it("does not replay the report when only the base branch moved", async () => {
@@ -86,6 +93,22 @@ describe("REST wait tick cost", () => {
     expect(next).not.toHaveProperty("fingerprintReused");
     expect(charged().map((entry) => entry.path)).toEqual([
       "/repos/octocat/hello-world/branches/main",
+    ]);
+  });
+
+  it("charges only the changed check read on the tick where CI settles", async () => {
+    await freshLoadConfig();
+    const state = { baseSha: "bbb222", baseStatus: 200, pending: true };
+    await serveOnePr(state);
+    await tick(false);
+    state.pending = false;
+    log.length = 0;
+    const settled = await tick(false);
+    expect(settled.action).not.toBe("wait");
+    // The changed check list, then the READY candidate's live mergeability read.
+    expect(charged().map((entry) => entry.path.split("?")[0])).toEqual([
+      "/repos/octocat/hello-world/commits/aaa111/check-runs",
+      "/repos/octocat/hello-world/pulls/101",
     ]);
   });
 

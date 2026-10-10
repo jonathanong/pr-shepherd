@@ -70,11 +70,12 @@ function onlyReceiptSummaryErrors(errors?: GitHubGraphQlError[]): boolean {
 /**
  * Fetch all PR data needed for a `shepherd check` in one (or a few, if paginating) GraphQL requests.
  */
-async function fetchGraphqlPrBatch(
+async function fetchGraphqlPrBatch<T>(
   pr: number,
   repo: RepoInfo,
   opts: FetchPrBatchOptions = {},
-): Promise<BatchResult> {
+  reuse?: (fingerprint: PrFingerprint) => Promise<T | null>,
+): Promise<BatchResult | { reused: T }> {
   const variables = {
     owner: repo.owner,
     repo: repo.name,
@@ -103,6 +104,14 @@ async function fetchGraphqlPrBatch(
   }
 
   const raw = requireRawPr(result.data, pr, repo);
+  const fingerprint = fingerprintFromRaw(
+    raw,
+    result.data.repository?.viewerPermission ?? null,
+    result.data.viewer?.login ?? null,
+  );
+  // Decide reuse from the first page alone, before any supplement is paid for.
+  const reused = reuse && (await reuse(fingerprint));
+  if (reused) return { reused };
   const queueRateLimit = await hydrateMergeQueueChecks(raw, repo, result.rateLimit);
   const paged = await paginateBatchConnections(pr, repo, raw, opts, queueRateLimit);
   const threadPages = await hydrateThreadCommentPages(paged.threads, paged.rateLimit);
@@ -140,11 +149,7 @@ async function fetchGraphqlPrBatch(
   data.checks = mergeStartupFailureChecks(data.checks, parseSuiteStartupFailures(raw));
   return {
     data,
-    fingerprint: fingerprintFromRaw(
-      raw,
-      result.data.repository?.viewerPermission ?? null,
-      result.data.viewer?.login ?? null,
-    ),
+    fingerprint,
     rateLimit: threadPages.rateLimit ?? paged.rateLimit ?? result.rateLimit,
     ...(parseCheckSuitesComplete(raw) && { checkSuitesComplete: true }),
     ...(parseHeadCheckSuitesEmpty(raw) && { headCheckSuitesEmpty: true as const }),
@@ -160,14 +165,32 @@ function workflowSuites(raw: Parameters<typeof parseHeadWorkflowSuites>[0]): {
   return suites.length > 0 ? { headWorkflowSuites: suites } : {};
 }
 
+/**
+ * With `reuse`, the GraphQL first page's fingerprint is offered to it before any supplement
+ * runs; a non-null answer is returned as `{ reused }` instead of a snapshot. REST snapshots never
+ * call `reuse`: they have their own conditional-read reuse.
+ */
+export function fetchPrBatch<T>(
+  pr: number,
+  repo: RepoInfo,
+  opts: FetchPrBatchOptions,
+  reuse: (fingerprint: PrFingerprint) => Promise<T | null>,
+): Promise<BatchResult | { reused: T }>;
+// Last, so `Parameters<typeof fetchPrBatch>` keeps describing the ordinary snapshot read.
 export function fetchPrBatch(
   pr: number,
   repo: RepoInfo,
+  opts?: FetchPrBatchOptions,
+): Promise<BatchResult>;
+export function fetchPrBatch<T>(
+  pr: number,
+  repo: RepoInfo,
   opts: FetchPrBatchOptions = {},
-): Promise<BatchResult> {
+  reuse?: (fingerprint: PrFingerprint) => Promise<T | null>,
+): Promise<BatchResult | { reused: T }> {
   return githubOperation(
     "BatchPr",
-    () => runWithGithubTransport("graphql", () => fetchGraphqlPrBatch(pr, repo, opts)),
+    () => runWithGithubTransport("graphql", () => fetchGraphqlPrBatch(pr, repo, opts, reuse)),
     () => fetchRestPrBatch(pr, repo, opts),
   );
 }
