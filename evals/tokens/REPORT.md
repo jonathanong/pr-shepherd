@@ -10,24 +10,24 @@ Weighted sum of the session's scenarios below, one-time setup included.
 
 | vs. baseline | tool calls | turns | tool tokens | cost (ITE) |
 | --- | --- | --- | --- | --- |
-| gh CLI | −50% | −31% | −84% | −43% |
-| GitHub MCP | −75% | −52% | −83% | −53% |
-| GitHub MCP, eager tools | −74% | −51% | −82% | −64% |
+| gh CLI | −54% | −41% | −71% | −39% |
+| GitHub MCP | −77% | −60% | −87% | −64% |
+| GitHub MCP, eager tools | −77% | −59% | −87% | −70% |
 
 Per tick, setup excluded:
 
 | vs. baseline | tool calls | turns | tool tokens | cost (ITE) |
 | --- | --- | --- | --- | --- |
-| gh CLI | −58% | −38% | −89% | −50% |
-| GitHub MCP | −78% | −56% | −89% | −57% |
-| GitHub MCP, eager tools | −78% | −56% | −89% | −68% |
+| gh CLI | −64% | −48% | −78% | −46% |
+| GitHub MCP | −82% | −64% | −90% | −68% |
+| GitHub MCP, eager tools | −82% | −64% | −90% | −74% |
 
 | arm | tool calls | turns | tool tokens | cost (ITE) | truncated calls |
 | --- | --- | --- | --- | --- | --- |
-| pr-shepherd | 20.3 | 19.3 | 8,079 | 106,815 | 0 |
-| gh CLI | 40.8 | 27.8 | 49,092 | 186,478 | 0 |
-| GitHub MCP | 80.3 | 40.3 | 47,942 | 229,016 | 0 |
-| GitHub MCP, eager tools | 79.3 | 39.3 | 46,048 | 296,577 | 0 |
+| pr-shepherd | 18.8 | 16.8 | 11,483 | 108,180 | 0 |
+| gh CLI | 41.3 | 28.3 | 39,267 | 176,239 | 0 |
+| GitHub MCP | 82.3 | 42.3 | 90,983 | 302,607 | 1.5 |
+| GitHub MCP, eager tools | 81.3 | 41.3 | 89,089 | 363,301 | 1.5 |
 
 ## Typical stack session
 
@@ -35,23 +35,23 @@ Weighted sum of the session's scenarios below, one-time setup included.
 
 | vs. baseline | tool calls | turns | tool tokens | cost (ITE) |
 | --- | --- | --- | --- | --- |
-| gh CLI | −69% | −58% | +32% | −44% |
-| GitHub MCP | −83% | −60% | −43% | −52% |
-| GitHub MCP, eager tools | −83% | −58% | −35% | −63% |
+| gh CLI | −65% | −58% | +39% | −41% |
+| GitHub MCP | −81% | −60% | −40% | −51% |
+| GitHub MCP, eager tools | −81% | −58% | −32% | −61% |
 
 Per tick, setup excluded:
 
 | vs. baseline | tool calls | turns | tool tokens | cost (ITE) |
 | --- | --- | --- | --- | --- |
-| gh CLI | −73% | −67% | −3% | −55% |
-| GitHub MCP | −85% | −67% | −52% | −59% |
-| GitHub MCP, eager tools | −85% | −67% | −52% | −70% |
+| gh CLI | −73% | −67% | −3% | −52% |
+| GitHub MCP | −85% | −67% | −52% | −58% |
+| GitHub MCP, eager tools | −85% | −67% | −52% | −69% |
 
 | arm | tool calls | turns | tool tokens | cost (ITE) | truncated calls |
 | --- | --- | --- | --- | --- | --- |
-| pr-shepherd | 16 | 10 | 6,915 | 58,728 | 0 |
+| pr-shepherd | 18 | 10 | 7,277 | 62,112 | 0 |
 | gh CLI | 52 | 24 | 5,245 | 104,997 | 0 |
-| GitHub MCP | 95 | 25 | 12,051 | 123,075 | 0 |
+| GitHub MCP | 95 | 25 | 12,051 | 127,143 | 0 |
 | GitHub MCP, eager tools | 94 | 24 | 10,649 | 159,148 | 0 |
 
 ## Scenarios
@@ -62,49 +62,49 @@ Each cell is `turns · tool tokens · cost (ITE)`. Saving columns compare cost.
 
 | scenario | weight | pr-shepherd | gh CLI | GitHub MCP | vs. gh | vs. MCP |
 | --- | --- | --- | --- | --- | --- | --- |
-| `session-setup` | 1 | 2 · 2,906 · 12,966 | 0 · 0 · 0 | 1 · 1,894 · 8,593 | n/a | +51% |
-| `ci-wait` | 2 | 2 · 300 · 9,580 | 6 · 168 · 21,492 | 12 · 612 · 40,943 | −55% | −77% |
-| `failing-check` | 1 | 1 · 1,533 · 8,011 | 2 · 7,592 · 19,152 | 2 · 11,478 · 24,197 | −58% | −67% |
-| `bot-review-summary` | 1 | 1 · 269 · 6,431 | 1 · 344 · 6,990 | 1 · 611 · 7,409 | −8% | −13% |
-| `review-thread` | 1 | 2 · 510 · 10,062 | 2 · 2,758 · 13,185 | 2 · 578 · 10,619 | −24% | −5% |
-| `review-thread-with-history` | 1 | 2 · 510 · 10,062 | 2 · 11,020 · 24,338 | 2 · 10,031 · 23,380 | −59% | −57% |
-| `multi-category` | 0.5 | 2 · 694 · 10,305 | 2 · 2,998 · 13,509 | 2 · 915 · 11,074 | −24% | −7% |
-| `mark-ready` | 1 | 1 · 139 · 6,269 | 2 · 8,543 · 21,111 | 2 · 9,979 · 23,232 | −70% | −73% |
-| `merged` | 1 | 1 · 133 · 6,261 | 1 · 8,454 · 17,128 | 1 · 9,857 · 18,966 | −63% | −67% |
-| `bot-threads` | 1 | 2 · 666 · 10,368 | 2 · 8,058 · 20,477 | 2 · 1,068 · 11,890 | −49% | −13% |
-| `check-annotations` | 0.25 | 1 · 492 · 6,710 | 3 · 586 · 13,759 | 1 · 481 · 7,246 † | −51% | −7% |
-| `conflicts` | 0.5 | 1 · 203 · 6,349 | 1 · 259 · 6,884 | 1 · 483 · 7,249 | −8% | −12% |
-| `merge` | 0.5 | 2 · 269 · 9,565 | 2 · 280 · 9,971 | 2 · 531 · 10,487 | −4% | −9% |
-| `merge-queue` | 0.25 | 2 · 426 · 9,751 | 2 · 287 · 9,965 | 2 · 550 · 10,511 † | −2% | −7% |
+| `session-setup` | 1 | 2 · 3,006 · 13,131 | 0 · 0 · 0 | 1 · 1,894 · 8,593 | n/a | +53% |
+| `ci-wait` | 2 | 1 · 190 · 6,934 | 6 · 168 · 21,492 | 12 · 612 · 43,405 | −68% | −84% |
+| `failing-check` | 1 | 1 · 1,533 · 8,612 | 2 · 7,596 · 19,177 | 3 · 36,509 · 60,546 ✂ | −55% | −86% |
+| `bot-review-summary` | 1 | 1 · 269 · 7,032 | 1 · 344 · 6,990 | 1 · 611 · 7,788 | +1% | −10% |
+| `review-thread` | 1 | 2 · 510 · 10,964 | 2 · 305 · 10,133 | 2 · 578 · 11,187 | +8% | −2% |
+| `review-thread-with-history` | 1 | 2 · 510 · 10,964 | 2 · 8,567 · 21,287 | 2 · 10,031 · 23,948 | −48% | −54% |
+| `multi-category` | 0.5 | 3 · 8,020 · 24,556 | 3 · 7,871 · 23,494 | 4 · 36,934 · 68,225 ✂ | +5% | −64% |
+| `mark-ready` | 1 | 0 · 0 · 0 | 2 · 8,543 · 21,111 | 2 · 9,979 · 23,801 | −100% | −100% |
+| `merged` | 1 | 1 · 133 · 6,862 | 1 · 8,454 · 17,128 | 1 · 9,857 · 19,345 | −60% | −65% |
+| `bot-threads` | 1 | 2 · 666 · 11,270 | 2 · 699 · 11,323 | 2 · 1,068 · 12,459 | 0% | −10% |
+| `check-annotations` | 0.25 | 1 · 492 · 7,311 | 3 · 586 · 13,759 | 1 · 481 · 7,625 † | −47% | −4% |
+| `conflicts` | 0.5 | 1 · 203 · 6,950 | 1 · 259 · 6,884 | 1 · 483 · 7,628 | +1% | −9% |
+| `merge` | 0.5 | 2 · 269 · 10,466 | 2 · 280 · 9,971 | 2 · 531 · 11,055 | +5% | −5% |
+| `merge-queue` | 0.25 | 2 · 426 · 10,653 | 2 · 287 · 9,965 | 2 · 550 · 11,079 † | +7% | −4% |
 
 ### Typical stack session
 
 | scenario | weight | pr-shepherd | gh CLI | GitHub MCP | vs. gh | vs. MCP |
 | --- | --- | --- | --- | --- | --- | --- |
-| `stack-setup` | 1 | 2 · 1,827 · 11,558 | 0 · 0 · 0 | 1 · 1,402 · 7,878 | n/a | +47% |
-| `stack-work` | 2 | 2 · 2,158 · 12,371 | 6 · 1,576 · 26,281 | 6 · 3,065 · 29,041 | −53% | −57% |
-| `stack-queue-wait` | 2 | 1 · 226 · 6,403 | 3 · 669 · 14,324 | 3 · 1,391 · 15,617 | −55% | −59% |
-| `stack-merge` | 1 | 2 · 320 · 9,622 | 6 · 755 · 23,787 | 6 · 1,737 · 25,881 | −60% | −63% |
+| `stack-setup` | 1 | 2 · 2,189 · 12,100 | 0 · 0 · 0 | 1 · 1,402 · 7,878 | n/a | +54% |
+| `stack-work` | 2 | 2 · 2,158 · 13,027 | 6 · 1,576 · 26,281 | 6 · 3,065 · 30,023 | −50% | −57% |
+| `stack-queue-wait` | 2 | 1 · 226 · 6,840 | 3 · 669 · 14,324 | 3 · 1,391 · 16,178 | −52% | −58% |
+| `stack-merge` | 1 | 2 · 320 · 10,278 | 6 · 755 · 23,787 | 6 · 1,737 · 26,863 | −57% | −62% |
 
 - ✂ marks a baseline call whose output the host truncated.
 - † marks a baseline that cannot finish the step with its tools. Its cost covers only what it can do.
 - gh has no setup cost, so its setup saving is n/a.
 
-- `session-setup` — One-time setup. Skill + ci-failure-triage, review-mutations playbooks for shepherd; 6 on-demand tool schemas for MCP; nothing for gh.
-- `ci-wait` — Wait out one 6-minute CI run. Baselines re-check every 1m; shepherd's poll returns every 4.5m at most. MCP has no sleep, so each MCP poll is a Bash sleep plus a call.
-- `failing-check` — Triage a real failing CI job. Real 194 KB log of job 110714612462 (a vitest snapshot failure). gh tails the failed step; MCP uses get_job_logs' default 500-line tail.
+- `session-setup` — One-time setup. Skill + CI failure triage, Review-mutation mechanics, Shepherd Journal playbooks for shepherd; add_reply_to_pull_request_comment, get_job_logs, merge_pull_request, pull_request_read, resolve_review_thread, update_pull_request schemas for MCP; nothing for gh.
+- `ci-wait` — Wait out one 6-minute CI run. Baselines re-check every 1m. With --until-terminal, shepherd's one call blocks until CI settles and prints a stderr line per poll; its final result is the next scenario's tick, so that call is counted twice against shepherd. MCP has no sleep, so each MCP poll is a Bash sleep plus a call.
+- `failing-check` — Triage a real failing CI job. Real 194 KB log of job 110714612462 (a vitest snapshot failure). gh tails the failed step. MCP's default 500-line tail misses the failure, so it asks again for 1000 lines.
 - `bot-review-summary` — First look at a review summary. A COMMENTED review body arrives with green CI.
 - `review-thread` — Fix and reply to a review thread. Read the thread, then reply after the fix.
 - `review-thread-with-history` — Same thread, after a review round. As above, on a PR already carrying #505's real history: three bot reviews, two resolved threads, three bot issue comments.
-- `multi-category` — Thread, comment, failing check and changes-requested review at once. No log fetch in any arm: the fixture carries no log, so both arms see only the failed step.
-- `mark-ready` — Mark a clean draft ready. With #505's history. The shepherd CLI marks the PR ready itself.
+- `multi-category` — Thread, comment, failing check and changes-requested review at once. The output has no log excerpt, so the CI-triage playbook sends every arm to the failed log. All three read the real log from `failing-check`.
+- `mark-ready` — Mark a clean draft ready. With #505's history. Under --until-terminal the shepherd poll marks the PR ready and keeps polling without returning, so shepherd spends no call here.
 - `merged` — Notice the PR merged and stop. With #505's history.
 - `bot-threads` — Reply to one human and two bot threads, resolve the bot ones. Five mutations. Shepherd batches them into one `apply review`; the baselines issue each one. A REST reply echoes the full comment object back.
 - `check-annotations` — Failing external check with line annotations. gh must find the check-run ID, then fetch its annotations. The GitHub MCP server has no annotations tool. †GitHub MCP: cannot read check annotations.
 - `conflicts` — Branch conflicts with its base. Shepherd also relays the repository's configured branch-update hint.
 - `merge` — Merge a ready PR. Half of sessions run with --merge. Shepherd prints the guarded merge command.
 - `merge-queue` — Enqueue a ready PR on a merge-queue branch. `gh pr merge` enqueues on its own. The REST merge behind MCP's merge_pull_request is refused on a queue branch, and the GitHub MCP server has no enqueue tool. †GitHub MCP: cannot enqueue.
-- `stack-setup` — One-time setup. Skill + stack-merge playbooks for shepherd; 3 on-demand tool schemas for MCP; nothing for gh.
+- `stack-setup` — One-time setup. Skill + Review-mutation mechanics, Shepherd Journal, Stack merge playbooks for shepherd; list_pull_requests, merge_pull_request, pull_request_read schemas for MCP; nothing for gh.
 - `stack-work` — Six-layer stack: two merged parents, four owned layers with work. Fixture 130, from a real vouchington stack. Shepherd's overview routes four one-PR sessions, whose first ticks are counted here.
 - `stack-queue-wait` — Two-layer stack waiting in the merge queue. Fixture 98. Nothing to do but recheck.
 - `stack-merge` — Merge a ready two-layer stack. Fixture 97. Shepherd prints one `gh stack merge`. Without the extension, a baseline merges bottom-up and waits for GitHub to retarget the next layer.

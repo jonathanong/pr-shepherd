@@ -18,8 +18,10 @@
 // What no arm counts: the agent's own code edits, commits and pushes, and its
 // reasoning. Those are the same work whichever tool fetches the state.
 
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { runWithExecutionCwd } from "../../src/execution-context.mts";
 import { formatMutateResult } from "../../src/cli/mutate-formatter.mts";
 import { buildLogExcerpt } from "../../src/checks/log-excerpt.mts";
 import {
@@ -55,10 +57,8 @@ const SHEPHERD_CMD = `pr-shepherd ${PR} --until-terminal`;
 const HISTORY = readJson("history-pr505.json");
 
 // How long one CI run takes, and how often a baseline agent re-checks it.
-// pr-shepherd's poll returns after poll.timeoutSeconds (built-in 4.5m) at most.
 const CI_MINUTES = 6;
 const BASELINE_POLL_MINUTES = 1;
-const SHEPHERD_POLL_MINUTES = 4.5;
 
 // --- arms -------------------------------------------------------------------
 
@@ -125,13 +125,12 @@ const mcpObserve = (state, phase = 1) => [
   ),
 ];
 
-// A REST reply echoes the full review-comment object back.
-const REST_COMMENT = readData("rest-review-comment.json");
+// A REST reply echoes the full review-comment object back; `--silent` drops it.
 const ghReply = (commentId, phase = 2) => ({
   phase,
   via: "bash",
-  cmd: `gh api -X POST repos/owner/repo/pulls/42/comments/${commentId}/replies -f body='Renamed the variable as requested.'`,
-  out: JSON.stringify(JSON.parse(REST_COMMENT)),
+  cmd: `gh api --silent -X POST repos/owner/repo/pulls/42/comments/${commentId}/replies -f body='Renamed the variable as requested.'`,
+  out: "",
 });
 
 // github-mcp-server answers a reply with a MinimalResponse.
@@ -163,6 +162,23 @@ const mcpMerge = (pullNumber, sha, phase = 2) =>
   );
 
 // --- the real CI failure ----------------------------------------------------
+
+/**
+ * buildLogExcerpt applies `checks.ignoreLogLines` from the nearest
+ * .pr-shepherdrc.yml and the one in $HOME. Run it from an empty directory that
+ * is also $HOME, so a developer's own config cannot change the report.
+ */
+function excerptWithDefaultConfig(log) {
+  const dir = mkdtempSync(join(tmpdir(), "pr-shepherd-tokens-"));
+  const home = process.env.HOME;
+  process.env.HOME = dir;
+  try {
+    return runWithExecutionCwd(dir, () => buildLogExcerpt(log));
+  } finally {
+    process.env.HOME = home;
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
 
 const JOB_ID = 110714612462;
 const JOB_LOG = readData(`job-${JOB_ID}.txt`);
@@ -201,42 +217,100 @@ function failingCheckOutput() {
     "  > ##[error]Process completed with exit code 1.",
   ].join("\n");
   if (!text.includes(fixtureExcerpt)) throw new Error("snapshot 92 excerpt moved");
-  const real = buildLogExcerpt(JOB_LOG);
+  const real = excerptWithDefaultConfig(JOB_LOG);
   const rendered = [`  > ${FAILED_STEP}`, ...real.split("\n").map((l) => `  > ${l}`)].join("\n");
   return withRecordedIds(text.replace(fixtureExcerpt, rendered));
 }
 
-// --- scenarios --------------------------------------------------------------
+const GH_LOG_FAILED = ghLogFailed(
+  JOB_LOG,
+  JOB_NAME,
+  FAILED_STEP,
+  /##\[group\]Run npm run test:coverage/,
+  /##\[group\]Run codecov\//,
+);
+
+/** `gh run view --log-failed`, tailed: the failure summary ends the step. */
+const ghLogCall = (phase) => ({
+  phase,
+  via: "bash",
+  cmd: `gh run view ${RUN_ID} --log-failed -R owner/repo | tail -n 200`,
+  out: tail(GH_LOG_FAILED, 200),
+});
 
 /**
- * One-time cost per session: the skill and the playbooks a session's outputs
- * name for shepherd, on-demand tool schemas for MCP, nothing for gh.
+ * get_job_logs' default 500-line tail of this log is all Codecov upload and
+ * post-job steps. The first FAIL line sits 852 lines from the end, so the
+ * agent asks again for a 1000-line tail of the failed job.
  */
-function setupScenario({ id, session, playbooks, mcpTools }) {
+const mcpLogCalls = (phase) => [
+  mcpCall(
+    phase,
+    "get_job_logs",
+    { run_id: RUN_ID, failed_only: true, return_content: true },
+    mcpJobLogs(JOB_LOG, RUN_ID, JOB_ID, JOB_NAME),
+  ),
+  mcpCall(
+    phase + 1,
+    "get_job_logs",
+    { job_id: JOB_ID, return_content: true, tail_lines: 1000 },
+    mcpJobLogs(JOB_LOG, RUN_ID, JOB_ID, JOB_NAME, 1000),
+  ),
+];
+
+// --- scenarios --------------------------------------------------------------
+
+const SKILL_DIR = join(REPO_ROOT, "plugins", "pr-shepherd", "skills", "pr-shepherd");
+const readSkill = (p) => readFileSync(join(SKILL_DIR, p), "utf8");
+
+// SKILL.md links each playbook by the name outputs use: `- [Name](references/x.md)`.
+const PLAYBOOK_FILES = Object.fromEntries(
+  [...readSkill("SKILL.md").matchAll(/^- \[([^\]]+)\]\((references\/[^)]+)\)$/gm)].map((m) => [
+    m[1],
+    m[2],
+  ]),
+);
+
+/**
+ * One-time cost per session, derived from the session's other scenarios: the
+ * skill plus every playbook a shepherd output names (the skill reads each once),
+ * and the schema of every GitHub MCP tool the MCP arm calls. gh needs nothing.
+ */
+function setupScenario({ id, session }) {
   return {
     id,
     session,
     setup: true,
     weight: 1,
     title: "One-time setup",
-    note: `Skill + ${playbooks.map((p) => p.replace(".md", "")).join(", ")} playbooks for shepherd; ${mcpTools.length} on-demand tool schemas for MCP; nothing for gh.`,
     arms() {
-      const skillDir = join(REPO_ROOT, "plugins", "pr-shepherd", "skills", "pr-shepherd");
-      const read = (p) => readFileSync(join(skillDir, p), "utf8");
+      const ticks = SCENARIOS.filter((s) => s.session === session && !s.setup).map((s) => s.arms());
+      const shepherdText = ticks.flatMap((a) => a.shepherd.map((c) => c.out)).join("\n");
+      const playbooks = [
+        ...new Set([...shepherdText.matchAll(/Playbook: "([^"]+)"/g)].map((m) => m[1])),
+      ].sort();
+      const tools = [
+        ...new Set(
+          ticks.flatMap((a) =>
+            a.mcp.filter((c) => c.via === "mcp").map((c) => c.cmd.split(" ")[0]),
+          ),
+        ),
+      ].sort();
       const schemas = readJson("mcp-tool-schemas.json").tools;
       return {
+        note: `Skill + ${playbooks.join(", ")} playbooks for shepherd; ${tools.join(", ")} schemas for MCP; nothing for gh.`,
         shepherd: [
           {
             phase: 1,
             via: "bash",
             cmd: 'Skill {"skill":"pr-shepherd:pr-shepherd"}',
-            out: read("SKILL.md"),
+            out: readSkill("SKILL.md"),
           },
-          ...playbooks.map((p) => ({
+          ...playbooks.map((name) => ({
             phase: 2,
             via: "bash",
-            cmd: `Read references/${p}`,
-            out: read(`references/${p}`),
+            cmd: `Read ${PLAYBOOK_FILES[name]}`,
+            out: readSkill(PLAYBOOK_FILES[name]),
           })),
         ],
         gh: [],
@@ -244,8 +318,14 @@ function setupScenario({ id, session, playbooks, mcpTools }) {
           {
             phase: 1,
             via: "mcp",
-            cmd: `ToolSearch {"query":"select:${mcpTools.join(",")}"}`,
-            out: mcpTools.map((t) => schemas[t]).join("\n"),
+            cmd: `ToolSearch {"query":"select:${tools.join(",")}"}`,
+            out: tools
+              .map((t) => {
+                if (!schemas[t])
+                  throw new Error(`no recorded schema for ${t}; add it to MCP_TOOLS_USED`);
+                return schemas[t];
+              })
+              .join("\n"),
           },
         ],
       };
@@ -254,32 +334,25 @@ function setupScenario({ id, session, playbooks, mcpTools }) {
 }
 
 const PR_SCENARIOS = [
-  setupScenario({
-    id: "session-setup",
-    session: "pr",
-    playbooks: ["ci-failure-triage.md", "review-mutations.md"],
-    mcpTools: [
-      "pull_request_read",
-      "get_job_logs",
-      "add_reply_to_pull_request_comment",
-      "resolve_review_thread",
-      "update_pull_request",
-      "merge_pull_request",
-    ],
-  }),
+  setupScenario({ id: "session-setup", session: "pr" }),
 
   {
     id: "ci-wait",
     weight: 2,
     title: `Wait out one ${CI_MINUTES}-minute CI run`,
-    note: `Baselines re-check every ${BASELINE_POLL_MINUTES}m; shepherd's poll returns every ${SHEPHERD_POLL_MINUTES}m at most. MCP has no sleep, so each MCP poll is a Bash sleep plus a call.`,
+    note: `Baselines re-check every ${BASELINE_POLL_MINUTES}m. With --until-terminal, shepherd's one call blocks until CI settles and prints a stderr line per poll; its final result is the next scenario's tick, so that call is counted twice against shepherd. MCP has no sleep, so each MCP poll is a Bash sleep plus a call.`,
     arms() {
       const fixture = "09-wait-in-progress-ci";
       const state = fixtureState(fixture);
       const polls = Math.ceil(CI_MINUTES / BASELINE_POLL_MINUTES);
-      const ticks = Math.ceil(CI_MINUTES / SHEPHERD_POLL_MINUTES);
+      // poll-progress.mts, default (non-quiet) status: one line per WAIT tick.
+      const reason = snapshot(fixture).match(/^WAIT: (.+)$/m)[1];
+      const stderr = Array.from(
+        { length: polls },
+        (_, i) => `[poll tick ${i + 1} / +${i * 60}s] WAIT — ${reason}; next tick in 60s\n`,
+      ).join("");
       return {
-        shepherd: Array.from({ length: ticks }, (_, i) => shepherdTick(snapshot(fixture), i + 1)),
+        shepherd: [{ phase: 1, via: "bash", cmd: SHEPHERD_CMD, out: stderr }],
         gh: Array.from({ length: polls }, (_, i) => ({
           phase: i + 1,
           via: "bash",
@@ -303,36 +376,13 @@ const PR_SCENARIOS = [
     id: "failing-check",
     weight: 1,
     title: "Triage a real failing CI job",
-    note: `Real 194 KB log of job ${JOB_ID} (a vitest snapshot failure). gh tails the failed step; MCP uses get_job_logs' default 500-line tail.`,
+    note: `Real 194 KB log of job ${JOB_ID} (a vitest snapshot failure). gh tails the failed step. MCP's default 500-line tail misses the failure, so it asks again for 1000 lines.`,
     arms() {
       const state = failingCheckState();
-      const logFailed = ghLogFailed(
-        JOB_LOG,
-        JOB_NAME,
-        FAILED_STEP,
-        /##\[group\]Run npm run test:coverage/,
-        /##\[group\]Run codecov\//,
-      );
       return {
         shepherd: [shepherdTick(failingCheckOutput())],
-        gh: [
-          ...ghObserve(state),
-          {
-            phase: 2,
-            via: "bash",
-            cmd: `gh run view ${RUN_ID} --log-failed | tail -n 200`,
-            out: tail(logFailed, 200),
-          },
-        ],
-        mcp: [
-          ...mcpObserve(state),
-          mcpCall(
-            2,
-            "get_job_logs",
-            { run_id: RUN_ID, failed_only: true, return_content: true },
-            mcpJobLogs(JOB_LOG, RUN_ID, JOB_ID, JOB_NAME),
-          ),
-        ],
+        gh: [...ghObserve(state), ghLogCall(2)],
+        mcp: [...mcpObserve(state), ...mcpLogCalls(2)],
       };
     },
   },
@@ -391,15 +441,19 @@ const PR_SCENARIOS = [
     id: "multi-category",
     weight: 0.5,
     title: "Thread, comment, failing check and changes-requested review at once",
-    note: "No log fetch in any arm: the fixture carries no log, so both arms see only the failed step.",
+    note: "The output has no log excerpt, so the CI-triage playbook sends every arm to the failed log. All three read the real log from `failing-check`.",
     arms() {
       const fixture = "54-fix-code-multi-category-threads-comments-checks-changes";
       const state = fixtureState(fixture);
       const text = snapshot(fixture);
       return {
-        shepherd: [shepherdTick(text), shepherdApply(text, { repliedThreads: ["PRRT_multi"] })],
-        gh: [...ghObserve(state), ghReply(54)],
-        mcp: [...mcpObserve(state), mcpReply(54)],
+        shepherd: [
+          shepherdTick(text),
+          ghLogCall(2),
+          shepherdApply(text, { repliedThreads: ["PRRT_multi"] }, 3),
+        ],
+        gh: [...ghObserve(state), ghLogCall(2), ghReply(54, 3)],
+        mcp: [...mcpObserve(state), ...mcpLogCalls(2), mcpReply(54, 4)],
       };
     },
   },
@@ -408,12 +462,12 @@ const PR_SCENARIOS = [
     id: "mark-ready",
     weight: 1,
     title: "Mark a clean draft ready",
-    note: "With #505's history. The shepherd CLI marks the PR ready itself.",
+    note: "With #505's history. Under --until-terminal the shepherd poll marks the PR ready and keeps polling without returning, so shepherd spends no call here.",
     arms() {
       const fixture = "07-mark-ready-draft-clean";
       const state = withHistory(fixtureState(fixture), HISTORY);
       return {
-        shepherd: [shepherdTick(snapshot(fixture))],
+        shepherd: [],
         gh: [
           ...ghObserve(state),
           {
@@ -713,12 +767,7 @@ const stackTick = (name, anchorPr, repo, flags = "") => ({
 });
 
 const STACK_SCENARIOS = [
-  setupScenario({
-    id: "stack-setup",
-    session: "stack",
-    playbooks: ["stack-merge.md"],
-    mcpTools: ["pull_request_read", "list_pull_requests", "merge_pull_request"],
-  }),
+  setupScenario({ id: "stack-setup", session: "stack" }),
 
   {
     id: "stack-work",

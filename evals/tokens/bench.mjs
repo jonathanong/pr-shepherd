@@ -23,9 +23,22 @@ const SESSIONS = {
 const schemas = readJson("mcp-tool-schemas.json");
 const eagerTokens = tokens("x".repeat(schemas.eagerChars));
 
+// Setup output stays in context for the rest of the session: the skill and
+// playbooks for shepherd, the loaded tool schemas for MCP. Every later request
+// in that session carries it.
+const setupContext = Object.fromEntries(
+  SCENARIOS.filter((s) => s.setup).map((s) => {
+    const arms = s.arms();
+    return [s.session, Object.fromEntries(ARMS.map((a) => [a, cost(arms[a]).toolTokens]))];
+  }),
+);
+
 const rows = SCENARIOS.map((s) => {
   const arms = s.arms();
-  const result = Object.fromEntries(ARMS.map((a) => [a, cost(arms[a])]));
+  const carried = (arm) => (s.setup ? 0 : (setupContext[s.session]?.[arm] ?? 0));
+  const result = Object.fromEntries(
+    ARMS.map((a) => [a, cost(arms[a], { extraContext: carried(a) })]),
+  );
   // Sensitivity: the whole GitHub toolset in context on every request instead
   // of the few schemas the setup scenario loads on demand.
   result.mcpEager = s.setup ? cost([]) : cost(arms.mcp, { extraContext: eagerTokens });
@@ -34,7 +47,7 @@ const rows = SCENARIOS.map((s) => {
     session: s.session,
     setup: s.setup === true,
     title: s.title,
-    note: s.note,
+    note: arms.note ?? s.note,
     gaps: s.gaps ?? {},
     weight: s.weight,
     ...result,
@@ -98,8 +111,11 @@ if (process.argv.includes("--json")) {
 
 // --- report -----------------------------------------------------------------
 
-const pct = (f) =>
-  Number.isFinite(f) ? `${f >= 0 ? "−" : "+"}${Math.abs(Math.round(f * 100))}%` : "n/a";
+const pct = (f) => {
+  if (!Number.isFinite(f)) return "n/a";
+  const n = Math.round(f * 100);
+  return n === 0 ? "0%" : `${n > 0 ? "−" : "+"}${Math.abs(n)}%`;
+};
 const num = (n) => n.toLocaleString("en-US", { maximumFractionDigits: 1 });
 const BASELINES = { gh: "gh CLI", mcp: "GitHub MCP", mcpEager: "GitHub MCP, eager tools" };
 

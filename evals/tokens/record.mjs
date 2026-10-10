@@ -83,10 +83,6 @@ function recordHistory() {
     })),
   };
   writeFileSync(join(DATA_DIR, "history-pr505.json"), `${JSON.stringify(history, null, 2)}\n`);
-
-  // One real REST review-comment object: the response body of a REST reply.
-  const reply = reviewComments.find((c) => c.in_reply_to_id);
-  writeFileSync(join(DATA_DIR, "rest-review-comment.json"), `${JSON.stringify(reply, null, 2)}\n`);
 }
 
 function recordJobLog() {

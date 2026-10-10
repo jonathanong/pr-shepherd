@@ -12,11 +12,13 @@ Latest numbers: [REPORT.md](REPORT.md). Estimated cost per session:
 
 | session   | cost vs. gh | cost vs. MCP | turns vs. gh / MCP | tool tokens vs. gh / MCP |
 | --------- | ----------- | ------------ | ------------------ | ------------------------ |
-| single PR | **−43%**    | **−53%**     | −31% / −52%        | −84% / −83%              |
-| PR stack  | **−44%**    | **−52%**     | −58% / −60%        | +32% / −43%              |
+| single PR | **−39%**    | **−64%**     | −41% / −60%        | −71% / −87%              |
+| PR stack  | **−41%**    | **−51%**     | −58% / −60%        | +39% / −40%              |
 
-On stacks, pr-shepherd reads _more_ tokens than a terse gh baseline and wins
-on turns. See "Where pr-shepherd does not save".
+The savings are concentrated. Re-read review history, CI logs, CI polling and
+stacks account for nearly all of them. Against a frugal gh agent, a single
+fresh read-and-reply tick is a wash, or a few percent worse. See "Where
+pr-shepherd does not save".
 
 ## Run it
 
@@ -48,7 +50,8 @@ stack merge without the `gh stack` extension goes bottom-up, re-checking each
 layer's base after GitHub retargets it.
 
 Each baseline is a competent agent, not a straw man. The gh arm selects
-`--json` fields instead of dumping raw REST output, and tails the log. The MCP
+`--json` fields instead of dumping raw REST output, tails the log, and
+silences mutation responses with `gh api --silent`. The MCP
 arm loads tool schemas on demand.
 
 Where the content comes from:
@@ -66,7 +69,6 @@ Where the content comes from:
   - A 194 KB failed Actions log from this repository.
   - The review history of [jonathanong/pr-shepherd#505](https://github.com/jonathanong/pr-shepherd/pull/505):
     three bot reviewers, two resolved threads and 28 KB of bot comments.
-  - A real REST reply object.
   - github-mcp-server's own tool-definition snapshots.
 
 Each scenario reports four numbers per arm:
@@ -79,6 +81,15 @@ Each scenario reports four numbers per arm:
   cache (×0.1), writes new tokens to cache (×1.25), and pays output price (×5)
   for the commands it emits. The base context is 30k tokens. Turns cost money
   even when they fetch little; this column captures that.
+
+Setup output stays in context. The skill and playbooks for pr-shepherd, and
+the loaded schemas for MCP, ride along on every later request in the session.
+
+The pr-shepherd arm follows the skill and runs `--until-terminal`. That poll
+blocks through WAIT ticks, printing one stderr line per tick, and keeps going
+through MARK_READY. So a CI wait is one call, and marking a draft ready costs no
+call of its own. The blocking call's final result is the next scenario's tick,
+so that call is counted twice against pr-shepherd.
 
 The report has one total for a PR session and one for a stack session. Each
 total adds its own setup. The stack session counts only stack-level ticks; the
@@ -124,30 +135,30 @@ These are assumptions, not measurements. See "Next steps".
 - **Logs are excerpted.** On the real log, pr-shepherd's excerpt is about 1.1k
   tokens. `gh … --log-failed | tail -n 200` is about 7k. MCP's default
   500-line tail is about 11k, and none of it is the failure: on this log the
-  last 500 lines are all Codecov upload and post-job steps. An MCP agent would
-  need another call to find the error.
-- **Fewer turns.** One CLI call replaces two to five reads, and the poll replaces
-  minute-by-minute re-checks.
-
+  last 500 lines are all Codecov upload and post-job steps. The MCP arm asks
+  again for 1,000 lines, and the host truncates that at its 25k-token cap.
+- **Polling happens inside the CLI.** One blocking `--until-terminal` call
+  replaces a minute-by-minute re-check, and it carries on through MARK_READY.
 - **Stacks need one overview, not a walk.** A baseline needs one turn per layer
   to find the stack and one more to read it. pr-shepherd needs one call.
-- **Mutations are batched.** One `apply review` replaces a REST reply per thread
-  (each echoing a full comment object) plus a GraphQL resolve per thread.
 
 ## Where pr-shepherd does not save
 
-- **Setup.** The skill and its playbooks cost about 1.8–2.9k tokens once per
-  session. gh needs nothing.
-- **Lone WAIT ticks.** A pr-shepherd WAIT snapshot is larger than one
-  `gh pr checks` line. It wins only because it polls fewer times.
+- **Setup.** The skill and every playbook the session's outputs name cost
+  about 2.2–3.0k tokens. Those tokens then ride along on every later request.
+  gh needs nothing.
+- **Fresh single-step ticks against gh.** A frugal gh agent selects `--json`
+  fields and replies with `gh api --silent`. On these steps pr-shepherd costs
+  0–8% more than gh, because its Markdown output and carried skill context
+  outweigh the saved reads. Against MCP's five-reader observe, pr-shepherd
+  still saves 2–10% on each, and 64% on `multi-category`, where MCP's log
+  retries dominate. The steps:
+  - `bot-review-summary`, `review-thread`, `multi-category` and `bot-threads`;
+  - `conflicts`, `merge` and `merge-queue`.
 - **Stack token volume.** Each routed layer's first tick prints its own
-  instructions. In the stack session pr-shepherd reads 32% more tool tokens than
-  gh's terse per-layer reads. It still costs 44% less, because it takes 10 turns
+  instructions. In the stack session pr-shepherd reads 39% more tool tokens than
+  gh's terse per-layer reads. It still costs 41% less, because it takes 10 turns
   where gh takes 24.
-- **Simple steps.** `merge`, `merge-queue`, `conflicts` and `bot-review-summary`
-  save under 15%, as do a fresh `review-thread` and `multi-category` against
-  MCP. Each arm makes one read and at most one mutation, and nothing has piled
-  up yet to re-read.
 
 ## What this does not measure
 
