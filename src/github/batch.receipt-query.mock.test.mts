@@ -19,6 +19,15 @@ describe("conditional BatchPr READY evidence", () => {
     expect(BATCH_PR_QUERY).not.toContain("receiptSummary:");
   });
 
+  it("halves the batch's first context page so the sibling stays at the 1-point floor", () => {
+    // Each first-page context carries an annotations(first: 1) probe: 100 connection-requests.
+    // With the sibling's ~55 that totals 192 (2 points); 50 contexts bring it to 142 (1 point).
+    expect(BATCH_PR_QUERY.match(/contexts\(first: \d+\)/g)).toEqual(["contexts(first: 100)"]);
+    expect(BATCH_PR_RECEIPT_QUERY.match(/contexts\(first: \d+\)/g)).toEqual([
+      "contexts(first: 50)",
+    ]);
+  });
+
   it("selects the exact PollSummaryPr sibling only on an eligible full read", async () => {
     const raw = makeRawPr({
       baseRefOid: "base-1",

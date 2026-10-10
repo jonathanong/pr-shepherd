@@ -12,7 +12,7 @@ A user PAT is **5,000 points / hour**. One-PR polling is a small slice of that. 
 
 [GitHub's formula](https://docs.github.com/en/graphql/overview/rate-limits-and-query-limits-for-the-graphql-api): add up the connection-requests in the query AST (nested `first`/`last` multiply by the parent connection size; assume every connection fills its limit), divide by 100, and round to the nearest integer. The minimum is 1.
 
-`nodeCount` is the separate 500,000-node cap. An ordinary BatchPr-shaped query measured `nodeCount` 2,871 and `cost` 1. The conditional READY-receipt variant selects an exact compact summary sibling and can cost more.
+`nodeCount` is the separate 500,000-node cap. An ordinary BatchPr-shaped query measured `nodeCount` 2,871 and `cost` 1. The conditional READY-receipt variant selects an exact compact summary sibling (about 55 connection-requests) and reads only the first 50 batch contexts, so it also prices at 1 point (142 requests). A head with more than 50 contexts reads the rest with `BatchPrPage`.
 
 `annotations(first: 1)` nested under `contexts(last: 100)` is 100 connection-requests per rollup. GitHub prices the `last`, including when the rollup is empty. Two of those trees were about 2 points per PR once several PRs shared one query. The summary fragment no longer selects them.
 
@@ -107,7 +107,9 @@ One-PR `BatchPr` stays at the 1-point floor. Fewer review connections, a smaller
 
 5. **Done: take single annotations from `BatchPr`.** The `annotations(first: 1)` probe selects the full annotation fields. In the recorded debug logs, 109 of 110 `CheckRunAnnotationsBatch` requests read only runs with exactly one annotation, so a failing-check tick with annotations drops from 2 points to 1. Runs with more annotations still use the batch.
 
-6. **Done: cache the base compare.** `BatchPr` selects the live base tip (`baseRef.target.oid`, an object field with no connection cost). The `BaseBehind` count for a non-stack head with unreported required checks is cached under that tip and the head commit, so a tick on which neither moved (including a fingerprint hit) drops from 2 points to 1. REST already answers the compare with a conditional request.
+6. **Done: keep the READY-receipt `BatchPr` at 1 point.** Each first-page context carries an `annotations(first: 1)` probe, so 100 contexts are 100 connection-requests. Adding the summary sibling made the receipt variant 192 requests (2 points) on every READY and CANCEL-candidate tick. Its first context page is now 50, which totals 142 (1 point). The ordinary `BatchPr` keeps 100.
+
+7. **Done: cache the base compare.** `BatchPr` selects the live base tip (`baseRef.target.oid`, an object field with no connection cost). The `BaseBehind` count for a non-stack head with unreported required checks is cached under that tip and the head commit, so a tick on which neither moved (including a fingerprint hit) drops from 2 points to 1. REST already answers the compare with a conditional request.
 
 Designs that are already at the floor and should stay:
 
