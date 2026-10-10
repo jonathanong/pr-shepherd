@@ -1,0 +1,41 @@
+{
+  "description": "Positive direction of 08: branch protection requires one approving review and none exists, so Approvals renders [Required] and GitHub reports BLOCKED/REVIEW_REQUIRED. CI passes and there is no actionable feedback, so iterate waits inside the ready delay; nothing the agent can do in code unblocks it.",
+  "batchData": {
+    "mergeStateStatus": "BLOCKED",
+    "reviewDecision": "REVIEW_REQUIRED",
+    "branchRules": {
+      "requiredApprovingReviewCount": 1,
+      "requiresConversationResolution": false,
+      "requiresCodeOwnerReviews": false,
+      "requiresLastPushApproval": false,
+      "requiresCommitSignatures": false,
+      "requiresLinearHistory": false,
+      "requiresStrictStatusChecks": false,
+      "requiredStatusCheckContexts": [],
+      "requiredDeploymentEnvironments": [],
+      "requiresMergeQueue": false,
+      "requiresWorkflows": false,
+      "requiresCodeScanning": false
+    },
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "mergeableFallback": {
+    "mergeable": "MERGEABLE",
+    "mergeStateStatus": "BLOCKED"
+  },
+  "readyDelayState": {
+    "isReady": true,
+    "shouldCancel": false,
+    "remainingSeconds": 300
+  },
+  "expectedExitCode": 10
+}

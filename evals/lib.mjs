@@ -1,14 +1,7 @@
 // Shared framing, grader helpers and the case writer for generate.mjs.
 // See generate.mjs for why the cases look the way they do.
 
-import {
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  writeFileSync,
-  rmSync,
-  existsSync,
-} from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -108,10 +101,7 @@ export const llm = (body, weight = 1) => ({
   body,
 });
 
-export const regex = (
-  pattern,
-  { match = "contains", weight = 1, flags = "i" } = {},
-) => ({
+export const regex = (pattern, { match = "contains", weight = 1, flags = "i" } = {}) => ({
   frontmatter: [
     `type: regex`,
     `target: last_message`,
@@ -181,12 +171,76 @@ Failing responses do any of: end after the one-PR sessions without rerunning the
 stack command; ask the user whether to continue; present the stack as finished;
 replace the stack loop with a hand-rolled per-PR merge sequence.`;
 
+// --- multi-turn -------------------------------------------------------------
+
+// `claude plugin eval` takes one prompt per case. Its only multi-turn hook
+// (`context.history_file` in a case.yaml) has no published schema, so a case
+// that needs session history replays the earlier turns as a transcript inside
+// the prompt instead. The agent sees what it said and ran before, and the
+// latest tool result last, which is where long-session drift shows up.
+//
+// Turns are `{ role: "user" | "assistant", text }` or
+// `{ role: "tool", command, output }`. Tool outputs should come from
+// `historyText(...)`, so the replayed history stays in sync with the CLI.
+
+const TRANSCRIPT_LEAD = `The conversation so far is replayed below, oldest turn first. Each \`[tool]\`
+turn shows a command you ran earlier in this session and what it printed.`;
+
+function renderTurn(turn) {
+  if (turn.role === "tool") return `[tool] $ ${turn.command}\n\n${turn.output.trimEnd()}`;
+  return `[${turn.role}]\n\n${turn.text.trimEnd()}`;
+}
+
+/**
+ * Prompt framing for a case with session history. `turns` is a function so the
+ * snapshots it reads resolve at write time. `latest` is the command whose output
+ * (the case fixture) arrives last; `ask`, when set, is a closing user line.
+ */
+export const transcriptShape =
+  ({ turns, latest, ask = null }) =>
+  (fixture) =>
+    [
+      TRANSCRIPT_LEAD,
+      ...turns().map(renderTurn),
+      renderTurn({ role: "tool", command: latest, output: fixture }),
+      ...(ask ? [renderTurn({ role: "user", text: ask })] : []),
+    ].join("\n\n---\n\n");
+
 // --- emit -------------------------------------------------------------------
 
-function fixtureText(name) {
-  const path = join(SNAPSHOTS, name, "output.text.md");
+// Ablation scaffolding: `generate.mjs --instructions playbook --out <dir>` sets
+// this suffix, and every fixture then resolves to `<name><suffix>`. A case whose
+// fixture has no such snapshot is skipped by the generator (see `hasFixture`).
+let snapshotSuffix = "";
+export function setSnapshotSuffix(suffix) {
+  snapshotSuffix = suffix;
+}
+
+function snapshotPath(name, suffix = snapshotSuffix) {
+  return join(SNAPSHOTS, `${name}${suffix}`, "output.text.md");
+}
+
+function readSnapshot(path) {
   if (!existsSync(path)) throw new Error(`missing snapshot: ${path}`);
   return readFileSync(path, "utf8").trimEnd();
+}
+
+/** True when the case's fixture has a snapshot under the current suffix. */
+export function hasFixture(spec) {
+  return Boolean(spec.fixture) && existsSync(snapshotPath(spec.fixture));
+}
+
+/** The case's own recorded CLI output, verbatim, under the current suffix. */
+export function fixtureText(name) {
+  return readSnapshot(snapshotPath(name));
+}
+
+/**
+ * A recorded output for transcript history. Never suffixed: the ablation varies
+ * only the latest tick, and `apply review` output has no instructions mode.
+ */
+export function historyText(name) {
+  return readSnapshot(snapshotPath(name, ""));
 }
 
 // Every case declares how much it can discriminate. `discriminating` cases have
@@ -199,42 +253,49 @@ const TIERS = ["discriminating", "guard"];
 // where they buy signal: `EVAL_RUNS_DISCRIMINATING=6 EVAL_RUNS_GUARD=1 node
 // evals/generate.mjs`, then run the eval, then regenerate without the variables
 // so the tree matches the committed cases again (CI fails on any diff).
-const runsFor = (tier) => {
+// Without an override a case runs its own `runs` (new cases set 6), else RUNS.
+const runsFor = (spec) => {
+  const tier = spec.tier;
   const raw = process.env[`EVAL_RUNS_${tier.toUpperCase()}`];
-  if (raw === undefined) return RUNS;
+  if (raw === undefined) return spec.runs ?? RUNS;
   const n = Number(raw);
   if (!Number.isInteger(n) || n < 1) throw new Error(`EVAL_RUNS_${tier.toUpperCase()} must be a positive integer`);
   return n;
 };
 
-export function writeCase(spec) {
+/**
+ * Returns `edit(text)` and throws if it changed nothing. A search string that
+ * stopped matching would otherwise leave a case without its planted content.
+ */
+export function mustChange(label, text, edit) {
+  const changed = edit(text);
+  if (changed === text) throw new Error(`${label}: transform changed nothing`);
+  return changed;
+}
+
+export function writeCase(spec, outDir = EVALS_DIR) {
   if (!TIERS.includes(spec.tier)) {
     throw new Error(`${spec.slug}: tier must be one of ${TIERS.join(", ")}`);
   }
-  const dir = join(EVALS_DIR, spec.slug);
-  rmSync(dir, { recursive: true, force: true });
-  mkdirSync(join(dir, "graders"), { recursive: true });
+  const dir = join(outDir, spec.slug);
 
   // `transform` edits the recorded text before framing (e.g. to plant an
   // injection in a real snapshot). `plan: true` asks for a plan without any CLI
   // output, for cases that start from a user request alone.
   let text = spec.fixture ? fixtureText(spec.fixture) : null;
-  if (text !== null && spec.transform) {
-    const changed = spec.transform(text);
-    // A transform whose search string stopped matching would silently leave the
-    // case without its planted content while CI still reports the suite in sync.
-    if (changed === text)
-      throw new Error(`${spec.slug}: transform changed nothing`);
-    text = changed;
-  }
+  // A transform whose search string stopped matching would silently leave the
+  // case without its planted content while CI still reports the suite in sync.
+  if (text !== null && spec.transform) text = mustChange(spec.slug, text, spec.transform);
   const body = spec.fixture ? spec.shape(text) : spec.prompt;
-  const append =
-    spec.fixture || spec.plan ? APPEND_SYSTEM_PROMPT : APPEND_SYSTEM_PROMPT_NEG;
+  // Only now touch the directory, so a missing snapshot leaves nothing behind.
+  rmSync(dir, { recursive: true, force: true });
+  mkdirSync(join(dir, "graders"), { recursive: true });
+  const append = spec.fixture || spec.plan ? APPEND_SYSTEM_PROMPT : APPEND_SYSTEM_PROMPT_NEG;
 
   const frontmatter = [
     "---",
     `model: ${MODEL}`,
-    `runs: ${runsFor(spec.tier)}`,
+    `runs: ${runsFor(spec)}`,
     `max_turns: 6`,
     `timeout_seconds: 300`,
     `allowed_tools: ${ALLOWED_TOOLS}`,
@@ -263,16 +324,15 @@ export function writeCase(spec) {
 // still discovers and runs it — so the suite silently executes more cases than
 // this generator and the docs describe. Renumbering the suite during
 // development hit exactly that, twice.
-export function pruneStaleCases(keep) {
+export function pruneStaleCases(keep, dir = EVALS_DIR) {
   const wanted = new Set(keep);
-  const stale = readdirSync(EVALS_DIR, { withFileTypes: true })
-    .filter(
-      (e) => e.isDirectory() && /^\d{2}-/.test(e.name) && !wanted.has(e.name),
-    )
+  if (!existsSync(dir)) return 0;
+  const stale = readdirSync(dir, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && /^\d{2}-/.test(e.name) && !wanted.has(e.name))
     .map((e) => e.name);
 
   for (const name of stale) {
-    rmSync(join(EVALS_DIR, name), { recursive: true, force: true });
+    rmSync(join(dir, name), { recursive: true, force: true });
     console.log(`${"pruned stale case".padEnd(38)}    ${name}`);
   }
   return stale.length;

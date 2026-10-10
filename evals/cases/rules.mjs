@@ -3,9 +3,8 @@
 // `--merge` on a single PR, suggestion patches, the journal, queue ejection, the
 // REST "transport-unsupported" instruction and target inference.
 //
-// Cases needing a CLI snapshot that does not exist yet (a denied one-look
-// mutation, a proxy session refusal, a `[Required]` approval gate) are not here:
-// add the snapshot under test-cases/ first, then the case.
+// The cases that first needed a new CLI snapshot (a denied one-look mutation, a
+// proxy session refusal, a `[Required]` approval gate) are in deferred.mjs.
 
 import {
   ITERATES_AGAIN,

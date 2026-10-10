@@ -30,6 +30,10 @@ their names during development (see git history for
 `32-fix-code-pr-level-changes-requested`,
 `44-fix-code-seen-bot-thread-resurfaced`) with nothing catching it.
 
+`snapshots/apply-review-*/` have no fixture directory. `apply-review.test.mts` records them by
+driving `apply review`'s REST mutation path against a local GitHub wire, with the exit code
+appended to the text snapshot. The evals replay them as the turn before an iterate tick.
+
 Aggregate fixtures set `"mode": "aggregate"`, provide `aggregateSummary`, `expectedReason`, and
 the exact bare-poll `args`. Their directory name need not encode a singular action because aggregate
 rows can mix actions; the runner instead pins `mode: "summary"`, `reason`, exit-code parity, and both

@@ -11,6 +11,7 @@
  */
 
 import type { CancelReason, IterateResult } from "./types.mts";
+import type { ResolveResult } from "./comments/resolve.mts";
 
 export const EXIT = Object.freeze({
   /** `cancel` + `merged` or `ready-delay-elapsed` — shepherd finished cleanly. */
@@ -82,6 +83,15 @@ export function iterateResultToExitCode(result: IterateResult): number {
     case "merge":
       return EXIT.MERGE;
   }
+}
+
+/** Exit code for a completed `apply review` run: 77 on a session refusal, 75/69 on errors, else 0. */
+export function applyReviewResultToExitCode(
+  result: Pick<ResolveResult, "sessionRefusal" | "errors" | "rateLimit">,
+): number {
+  if (result.sessionRefusal) return EXIT.NOPERM;
+  if (result.errors.length > 0) return result.rateLimit ? EXIT.TEMPFAIL : EXIT.UNAVAILABLE;
+  return EXIT.OK;
 }
 
 export function errorToExitCode(err: unknown): number {

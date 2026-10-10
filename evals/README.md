@@ -3,8 +3,10 @@
 **Does an agent act correctly on pr-shepherd's output, and would it without the
 plugin?**
 
-34 cases replay real recorded pr-shepherd output, mostly from the states agents
-get wrong in real transcripts. Three others start from a request alone: one
+40 cases replay real recorded pr-shepherd output, mostly from the states agents
+get wrong in real transcripts. Five of those (`38`, `39`, `44`–`46`) also replay
+earlier turns of the session, to catch drift that a fresh context hides. Three
+others start from a request alone: one
 checks that the skill stays out of unrelated GitHub questions, and two check how
 a PR is created and targeted.
 
@@ -73,6 +75,9 @@ Cases are tagged `tier:discriminating` or `tier:guard`; spend `runs: 6` on the
 first and `runs: 1` on the second for a targeted run (see
 [EVALS.md](EVALS.md#tiers-and-run-recipes)). Only a Δ whose 95% bootstrap
 interval excludes 0 is a result.
+
+Cases 29–46 have not run live yet, so they start in the discriminating tier
+and the targeted run covers them.
 
 ## More
 
