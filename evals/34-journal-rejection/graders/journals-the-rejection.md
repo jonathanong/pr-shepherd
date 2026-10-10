@@ -6,4 +6,4 @@ flags: i
 weight: 1
 ---
 
-pr-shepherd(?:\s|\\\n)+apply(?:\s|\\\n)+journal(?:\s|\\\n)+https://github\.com/owner/repo/pull/42(?:\s|\\\n)+['"]-\s+(?!\s*<decision>)[^'"]+['"]
+pr-shepherd(?:[^\S\n]|\\\n)+apply(?:[^\S\n]|\\\n)+journal(?:[^\S\n]|\\\n)+https://github\.com/owner/repo/pull/42(?:[^\S\n]|\\\n)+['"]-\s+(?!\s*<decision>)[^'"]+['"]

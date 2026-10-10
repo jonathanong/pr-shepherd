@@ -6,4 +6,4 @@ flags: i
 weight: 1
 ---
 
-pr-shepherd(?:\s|\\\n)+--until-terminal
+pr-shepherd(?!(?:[^\n;&|]|\\\n)*?(?:https?://|#\d|(?:[^\S\n]|\\\n)\d+(?![^\s;&|])))(?:[^\S\n]|\\\n)+--until-terminal

@@ -6,4 +6,4 @@ flags: i
 weight: 1
 ---
 
-gh(?:\s|\\\n)+pr(?:\s|\\\n)+merge(?:\s|\\\n)+42(?:\s|\\\n)+--repo(?:\s|\\\n)+owner/repo(?:\s|\\\n)+--match-head-commit(?:\s|\\\n)+abc123(?:\s|\\\n)+--auto(?:\s|\\\n)+--merge
+gh(?:[^\S\n]|\\\n)+pr(?:[^\S\n]|\\\n)+merge(?:[^\S\n]|\\\n)+42(?:[^\S\n]|\\\n)+--repo(?:[^\S\n]|\\\n)+owner/repo(?:[^\S\n]|\\\n)+--match-head-commit(?:[^\S\n]|\\\n)+abc123(?:[^\S\n]|\\\n)+--auto(?:[^\S\n]|\\\n)+--merge
