@@ -118,15 +118,20 @@ describe("runIterateForMode", () => {
     expect(await runIterateForMode(opts)).toMatchObject({
       nextCheck: { reason: "stall-timeout", at: "2024-05-15T19:09:00Z" },
     });
-    expect(
-      await runIterateForMode({ ...(opts as object), stallTimeoutSeconds: 0 } as never),
-    ).toMatchObject({
-      nextCheck: { reason: "safety-net" },
-    });
+    const safetyNet = { nextCheck: { reason: "safety-net" } };
+    const noStall = { ...(opts as object), stallTimeoutSeconds: 0 } as never;
+    expect(await runIterateForMode(noStall)).toMatchObject(safetyNet);
     m.readStallState.mockResolvedValue({ ok: false });
-    expect(await runIterateForMode(opts)).toMatchObject({ nextCheck: { reason: "safety-net" } });
+    expect(await runIterateForMode(opts)).toMatchObject(safetyNet);
     m.runIterate.mockResolvedValue({ action: "wait", repo: "broken", pr: 42 });
-    expect(await runIterateForMode(opts)).toMatchObject({ nextCheck: { reason: "safety-net" } });
+    expect(await runIterateForMode(opts)).toMatchObject(safetyNet);
+    m.runIterate.mockImplementation(async (o: { stallDeadlineSink: object }) => {
+      Object.assign(o.stallDeadlineSink, { ciStartDeadlineSeconds: NOW / 1000 + 300 });
+      return { action: "wait", ...base };
+    });
+    expect(await runIterateForMode(opts)).toMatchObject({
+      nextCheck: { reason: "stall-timeout", at: "2024-05-15T19:12:00Z" },
+    });
   });
 
   it("rewrites only the fix_code continuation, plain or quota-aware", async () => {

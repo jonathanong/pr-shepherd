@@ -301,7 +301,7 @@ Quota warning, when a configured threshold is crossed on a non-terminal result:
 With `--poll-mode event` (or `poll.mode: event`, or `auto` under `CLAUDE_CODE_REMOTE=true`) Shepherd runs one tick and never sleeps. The action, exit code, and every section below are unchanged. Two additions apply; see [cloud.md](cloud.md) for the full contract.
 
 - **`pollMode`** is `"event"`. The text header repeats it as `**pollMode** \`event\``. It is omitted in poll mode.
-- **`nextCheck`** is `{ at, inSeconds, reason }`, printed as a `**nextCheck**` header line after `**activity**`. `reason` is `ready-delay`, `stall-timeout`, `merge-queue`, or `safety-net` (a backstop for a missed PR event). It is omitted for `cancel`, `escalate`, `merge`, `mark_ready`, a native-stack draft hold, and an all-terminal aggregate.
+- **`nextCheck`** is `{ at, inSeconds, reason }`, printed as a `**nextCheck**` header line after `**activity**`. `reason` is `ready-delay`, `stall-timeout` (the unchanged-state stall timer, or on `wait` the time the oldest unstarted check's age reaches the CI-start stall timeout), `merge-queue`, or `safety-net` (a backstop for a missed PR event). It is omitted for `cancel`, `escalate`, `merge`, `mark_ready`, a native-stack draft hold, and an aggregate that is all terminal or whose rows are all `cancel` or `escalate`.
 
 Instruction changes when `nextCheck` is present:
 

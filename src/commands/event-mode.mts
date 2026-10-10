@@ -17,6 +17,7 @@ import {
   type NextCheckCandidate,
 } from "./next-check.mts";
 import { isFixCodeContinuation } from "./iterate/check-instructions.mts";
+import { isHandedOffSelection } from "./poll-summary-explicit-instructions.mts";
 import { runIterate } from "./iterate/index.mts";
 import { resolvePollMode } from "./poll-mode.mts";
 import { readStackStallDeadline } from "./stack-stall.mts";
@@ -72,9 +73,18 @@ export function runAggregatePollForMode(
 
 async function runIterateEvent(opts: IterateCommandOptions): Promise<IterateResult> {
   const { pollMode: _pollMode, ...iterateOpts } = opts;
-  const result = await runIterate({ ...iterateOpts, persistSeen: true, fingerprintCache: false });
+  const sink: { ciStartDeadlineSeconds?: number } = {};
+  const result = await runIterate({
+    ...iterateOpts,
+    persistSeen: true,
+    fingerprintCache: false,
+    stallDeadlineSink: sink,
+  });
   const nowMs = Date.now();
-  const stallDeadlineSeconds = await readStallDeadline(result, opts.stallTimeoutSeconds);
+  const stallDeadlineSeconds = earliestDeadline(
+    await readStallDeadline(result, opts.stallTimeoutSeconds),
+    result.action === "wait" ? sink.ciStartDeadlineSeconds : undefined,
+  );
   const nextCheck = earliestNextCheck(
     nextCheckCandidates(
       {
@@ -99,6 +109,11 @@ async function runIterateEvent(opts: IterateCommandOptions): Promise<IterateResu
       ),
     },
   };
+}
+
+function earliestDeadline(...deadlines: (number | undefined)[]): number | undefined {
+  const known = deadlines.filter((d): d is number => d !== undefined);
+  return known.length > 0 ? Math.min(...known) : undefined;
 }
 
 /** When an unchanged state would trip the stall timeout, or undefined when no timer is running. */
@@ -142,6 +157,7 @@ function aggregateNextCheck(
   stallDeadlineSeconds: number | undefined,
 ): NextCheck | undefined {
   if (
+    isHandedOffSelection(result) ||
     result.reason === "all_terminal" ||
     result.nextAction === "cancel" ||
     result.nextAction === "escalate"

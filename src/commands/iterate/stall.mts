@@ -101,13 +101,19 @@ export async function applyStallGuard(
   prospectiveResult: IterateResult,
   report: ShepherdReport,
   reviewSummaryIds: string[],
+  stallDeadlineSink?: StallDeadlineSink,
 ): Promise<IterateResult> {
   const prReference = formatPrUrl(report.repo, prNumber);
   const nowSeconds = Math.floor(Date.now() / 1000);
-  const stalledChecks = findCiStartStalledChecks(report.checks.inProgress, nowSeconds, {
-    stallTimeoutSeconds,
-    action: prospectiveResult.action,
-  });
+  const ciStartOpts = { stallTimeoutSeconds, action: prospectiveResult.action };
+  const stalledChecks = findCiStartStalledChecks(report.checks.inProgress, nowSeconds, ciStartOpts);
+  if (stallDeadlineSink) {
+    stallDeadlineSink.ciStartDeadlineSeconds = ciStartStallDeadline(
+      report.checks.inProgress,
+      nowSeconds,
+      ciStartOpts,
+    );
+  }
   if (stalledChecks.length > 0) {
     const pending = pendingReviewCommandsFromResult(prospectiveResult);
     const stalledDuration = formatDurationApprox(
@@ -224,16 +230,48 @@ function stallStateUnavailable(
   };
 }
 
-function findCiStartStalledChecks(
+/** Internal out-parameter: when the earliest unstarted check would trip the CI-start stall. */
+export interface StallDeadlineSink {
+  ciStartDeadlineSeconds?: number;
+}
+
+interface CiStartOptions {
+  stallTimeoutSeconds: number;
+  action: IterateResult["action"];
+}
+
+function unstartedStallCandidates(
   checks: ClassifiedCheck[],
   nowSeconds: number,
-  opts: { stallTimeoutSeconds: number; action: IterateResult["action"] },
+  opts: CiStartOptions,
 ) {
   if (opts.stallTimeoutSeconds <= 0 || opts.action !== "wait") return [];
   return checks
     .filter((c) => isUnstartedCheck(c))
     .map((c) => toAgentStalledCheck(c, nowSeconds))
-    .filter((c) => c.createdAtUnix !== undefined && c.ageSeconds >= opts.stallTimeoutSeconds);
+    .filter((c) => c.createdAtUnix !== undefined);
+}
+
+function findCiStartStalledChecks(
+  checks: ClassifiedCheck[],
+  nowSeconds: number,
+  opts: CiStartOptions,
+) {
+  return unstartedStallCandidates(checks, nowSeconds, opts).filter(
+    (c) => c.ageSeconds >= opts.stallTimeoutSeconds,
+  );
+}
+
+/** Unix seconds at which the oldest unstarted check reaches the stall timeout, if any. */
+function ciStartStallDeadline(
+  checks: ClassifiedCheck[],
+  nowSeconds: number,
+  opts: CiStartOptions,
+): number | undefined {
+  const candidates = unstartedStallCandidates(checks, nowSeconds, opts);
+  if (candidates.length === 0) return undefined;
+  const maxAge = Math.max(...candidates.map((c) => c.ageSeconds));
+  return nowSeconds - maxAge + opts.stallTimeoutSeconds;
 }
 
 function isUnstartedCheck(check: ClassifiedCheck): boolean {

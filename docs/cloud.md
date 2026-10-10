@@ -23,11 +23,11 @@ An event-mode result carries `pollMode: "event"` and, when another tick is meani
 | `reason`    | `ready-delay`, `stall-timeout`, `merge-queue`, or `safety-net` |
 
 - `ready-delay`: the final ready-delay countdown ends at `at`. No event fires then.
-- `stall-timeout`: an unchanged state would trip the stall timeout at `at`. Used when it comes before the other deadline. For a `--stack` selector this is the stack-level stall timer, so an idle stack escalates on time instead of waiting for the safety net.
+- `stall-timeout`: an unchanged state would trip the stall timeout at `at`, or, on a `WAIT` tick, the oldest unstarted check's age (measured from its last update, else its creation) would reach the CI-start stall timeout. Used when it comes before the other deadline. For a `--stack` selector this is the stack-level stall timer, so an idle stack escalates on time instead of waiting for the safety net.
 - `merge-queue`: the PR is queued; recheck about every five minutes.
 - `safety-net`: a backstop about 50 minutes out for a missed event; a PR event usually wakes the session first. Used for every other non-terminal tick.
 
-`nextCheck` is omitted for `CANCEL`, `ESCALATE`, `MERGE`, `MARK_READY`, a native-stack draft hold, and an aggregate result whose PRs are all terminal. Text prints a `**nextCheck**` header line, JSON and MCP `structuredContent` carry the object, and the `## Instructions` steps name the same time. A stack or multi-PR selector reports one `nextCheck` for the whole selection, and every row `pollCommand` (including bounded draft probes) carries `--poll-mode event`.
+`nextCheck` is omitted for `CANCEL`, `ESCALATE`, `MERGE`, `MARK_READY`, a native-stack draft hold, and an aggregate result whose PRs are all terminal or every selected row is `CANCEL` or `ESCALATE`. Text prints a `**nextCheck**` header line, JSON and MCP `structuredContent` carry the object, and the `## Instructions` steps name the same time. A stack or multi-PR selector reports one `nextCheck` for the whole selection, and every row `pollCommand` (including bounded draft probes) carries `--poll-mode event`.
 
 A native-stack draft hold prints its `--stack` handoff with `--poll-mode event` plus one step telling the agent not to rerun the held one-PR session and to keep no wake-up for it; after the handoff the agent follows only the stack selector's output, which ends the turn and schedules the next tick through its own `nextCheck`.
 

@@ -231,6 +231,12 @@ export interface IterateCommandOptions extends GlobalOptions {
    * the public `IterateInput` in api.mts.
    */
   fingerprintCache?: boolean;
+  /**
+   * Internal. Event mode passes a sink that receives the CI-start stall deadline (oldest
+   * unstarted check age + stall timeout) so `nextCheck` can wake before it. Excluded from
+   * the public `IterateInput` in api.mts.
+   */
+  stallDeadlineSink?: { ciStartDeadlineSeconds?: number };
   /** Shepherd through readiness and emit the exact merge/queue command when ready. */
   merge?: boolean;
   /** Override `poll.mode` for this call. `auto` resolves to `event` when `CLAUDE_CODE_REMOTE=true`. */

@@ -125,6 +125,15 @@ describe("formatPollSummaryResult", () => {
     expect(text).toContain("3. After selected work completes");
   });
 
+  it("stops rerunning a selection whose rows are all CANCEL or ESCALATE", () => {
+    const text = formatPollSummaryResult({
+      ...result(row({ action: "escalate" }), "actionable"),
+      prs: [row({ action: "escalate" }), row({ pr: 43, action: "cancel" })],
+    });
+    expect(text).toContain("3. Stop after reporting each `ESCALATE` handoff");
+    expect(text).not.toContain("Run this aggregate poll again");
+  });
+
   it("renders ancestry for an explicit multi-PR selection", () => {
     const text = formatPollSummaryResult({
       ...result(row(), "actionable"),

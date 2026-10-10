@@ -61,7 +61,9 @@ Explicit PR sets and native stacks use a compact read-only summary rather than r
 one-PR iterator for every row. Aggregate polling returns when work is needed, every selected PR is
 complete, or timeout expires. Its Markdown, JSON, API, and MCP result contains one row per PR with
 raw state, bounded check/review counts, and routing context. Explicit PR sets include an exact
-one-PR `pollCommand` for each actionable row, which callers may handle independently.
+one-PR `pollCommand` for each actionable row, which callers may handle independently. When every
+selected row is `CANCEL` or `ESCALATE`, the instructions say to stop after reporting the handoffs
+instead of running the aggregate poll again.
 
 For a native stack, `--stack` never performs GitHub mutations. It never emits rebase or push
 commands. When any layer is draft, lacks a current one-PR READY receipt, conflicts, fails checks,

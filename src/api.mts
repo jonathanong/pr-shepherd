@@ -61,6 +61,7 @@ type IterateOptions = Omit<
   | "targetRepository"
   | "persistSeen"
   | "fingerprintCache"
+  | "stallDeadlineSink"
   | "deferQuotaWarning"
   | "quotaWarningMinimumPollIntervalMinutes"
 >;

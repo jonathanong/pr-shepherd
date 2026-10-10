@@ -271,6 +271,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
         buildUnreportedFixResult(base, report, unreportedRepair),
         reportForWork,
         reviewSummaryIds,
+        opts.stallDeadlineSink,
       ),
       blockerGate,
     );
@@ -363,6 +364,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
           receiptWait,
           reportForWork,
           reviewSummaryIds,
+          opts.stallDeadlineSink,
         ),
         blockerGate,
       );
@@ -411,6 +413,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
       wait,
       reportForWork,
       reviewSummaryIds,
+      opts.stallDeadlineSink,
     ),
     blockerGate,
   );

@@ -81,12 +81,34 @@ describe("aggregate event mode", () => {
       { reason: "all_terminal" },
       { nextAction: "cancel" },
       { nextAction: "escalate" },
+      {
+        reason: "actionable",
+        prs: [
+          { pr: 1, action: "cancel" },
+          { pr: 2, action: "escalate", remainingSeconds: 100 },
+        ],
+      },
     ]) {
       m.runPollSummary.mockResolvedValue(summary(over));
       const result = await runPollSummaryForMode({} as never);
       expect(result).toMatchObject({ pollMode: "event" });
       expect(result).not.toHaveProperty("nextCheck");
     }
+  });
+
+  it("keeps scheduling while any selected row can still act", async () => {
+    m.runPollSummary.mockResolvedValue(
+      summary({
+        reason: "actionable",
+        prs: [
+          { pr: 1, action: "escalate" },
+          { pr: 2, action: "wait" },
+        ],
+      }),
+    );
+    expect((await runPollSummaryForMode({} as never)).nextCheck).toMatchObject({
+      reason: "safety-net",
+    });
   });
 
   it("runs the tick with event mode so child poll commands carry it", async () => {
