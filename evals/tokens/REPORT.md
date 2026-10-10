@@ -380,17 +380,17 @@ Today's pr-shepherd runs on 8 real PRs (#520, #521, #522, #523, #530, #531, #532
 
 | PR | rounds | polls (ticks) | FIX_CODE | applies | threads | cost: pr-shepherd / gh / MCP | turns: pr-shepherd / gh / MCP | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| #520 | 4 | 15 (30) | 11 | 7 | 17 | 107,318 / 434,135 / 523,046 | 22 / 36 / 48 | 54 / 64 / 29 | 4 / 14 / 91 |
-| #521 | 4 | 9 (16) | 5 | 3 | 2 | 44,978 / 108,054 / 128,916 | 12 / 19 / 24 | 26 / 32 / 11 | 4 / 2 / 47 |
-| #522 | 3 | 14 (33) | 11 | 7 | 8 | 87,650 / 292,947 / 374,421 | 21 / 36 / 55 | 59 / 60 / 22 | 3 / 8 / 88 |
-| #523 | 5 | 12 (23) | 7 | 7 | 2 | 69,576 / 155,114 / 199,589 | 19 / 26 / 36 | 45 / 43 / 14 | 5 / 2 / 64 |
-| #530 | 3 | 8 (17) | 5 | 4 | 5 | 50,428 / 98,054 / 133,248 | 12 / 20 / 27 | 29 / 28 / 13 | 3 / 5 / 47 |
-| #531 | 1 | 4 (7) | 2 | 2 | 0 | 21,417 / 43,609 / 50,041 | 6 / 9 / 10 | 10 / 13 / 4 | 1 / 0 / 20 |
-| #532 | 2 | 6 (12) | 4 | 4 | 2 | 37,747 / 75,473 / 92,188 | 10 / 16 / 19 | 22 / 22 / 8 | 2 / 2 / 32 |
-| #533 | 1 | 3 (6) | 2 | 2 | 1 | 20,792 / 40,347 / 48,845 | 5 / 8 / 10 | 13 / 15 / 4 | 1 / 1 / 16 |
-| **all** | 23 | 71 (144) | 47 | 36 | 37 | 439,906 / 1,247,733 / 1,550,294 | 107 / 170 / 229 | 258 / 277 / 105 | 23 / 34 / 405 |
+| #520 | 4 | 15 (30) | 11 | 7 | 17 | 107,318 / 434,253 / 523,046 | 22 / 36 / 48 | 54 / 64 / 29 | 4 / 14 / 91 |
+| #521 | 4 | 9 (16) | 5 | 3 | 2 | 44,978 / 108,129 / 128,916 | 12 / 19 / 24 | 26 / 32 / 11 | 4 / 2 / 47 |
+| #522 | 3 | 14 (33) | 11 | 7 | 8 | 87,650 / 293,103 / 374,421 | 21 / 36 / 55 | 59 / 60 / 22 | 3 / 8 / 88 |
+| #523 | 5 | 12 (23) | 7 | 7 | 2 | 69,576 / 155,233 / 199,589 | 19 / 26 / 36 | 45 / 43 / 14 | 5 / 2 / 64 |
+| #530 | 3 | 8 (17) | 5 | 4 | 5 | 50,428 / 94,754 / 133,248 | 12 / 19 / 27 | 29 / 27 / 13 | 3 / 5 / 47 |
+| #531 | 1 | 4 (7) | 2 | 2 | 0 | 21,417 / 40,290 / 50,041 | 6 / 8 / 10 | 10 / 12 / 4 | 1 / 0 / 20 |
+| #532 | 2 | 6 (12) | 4 | 4 | 2 | 37,747 / 72,190 / 92,188 | 10 / 15 / 19 | 22 / 21 / 8 | 2 / 2 / 32 |
+| #533 | 1 | 3 (6) | 2 | 2 | 1 | 20,792 / 40,385 / 48,845 | 5 / 8 / 10 | 13 / 15 / 4 | 1 / 1 / 16 |
+| **all** | 23 | 71 (144) | 47 | 36 | 37 | 439,906 / 1,238,337 / 1,550,294 | 107 / 167 / 229 | 258 / 274 / 105 | 23 / 34 / 405 |
 
-Modeled cost of pr-shepherd vs. gh: −65%; vs. MCP: −72%. Tool tokens: −85% / −87%.
+Modeled cost of pr-shepherd vs. gh: −64%; vs. MCP: −72%. Tool tokens: −85% / −87%.
 
 Where modeled pr-shepherd costs more on a real PR. These are not gated: `--check` gates the synthetic sessions, where the same metrics are already pending.
 
@@ -401,14 +401,15 @@ Where modeled pr-shepherd costs more on a real PR. These are not gated: `--check
 - #523 graphqlPoints vs. gh: 45 vs. 43 (#525)
 - #523 restCore vs. gh: 5 vs. 2 (#525)
 - #523 graphqlPoints vs. MCP: 45 vs. 14 (#525)
-- #530 graphqlPoints vs. gh: 29 vs. 28 (#525)
+- #530 graphqlPoints vs. gh: 29 vs. 27 (#525)
 - #530 graphqlPoints vs. MCP: 29 vs. 13 (#525)
 - #531 restCore vs. gh: 1 vs. 0 (#525)
 - #531 graphqlPoints vs. MCP: 10 vs. 4 (#525)
+- #532 graphqlPoints vs. gh: 22 vs. 21 (#525)
 - #532 graphqlPoints vs. MCP: 22 vs. 8 (#525)
 - #533 graphqlPoints vs. MCP: 13 vs. 4 (#525)
 
-At the measured characters per token (pr-shepherd 2.19, gh and MCP 2.53; MCP's is unmeasured), modeled cost vs. gh: −67%; vs. MCP: −73%. Tool tokens: −82% / −85%. No PR's verdict flips.
+At the measured characters per token (pr-shepherd 2.19, gh and MCP 2.53; MCP's is unmeasured), modeled cost vs. gh: −66%; vs. MCP: −73%. Tool tokens: −82% / −85%. No PR's verdict flips.
 
 ### Calibration: measured vs. modeled pr-shepherd
 

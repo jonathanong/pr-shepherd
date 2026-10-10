@@ -449,7 +449,9 @@ token usage, never text, IDs or paths. The bench reads only that file.
   PR dumps hold only the statuses at dump time, so items turn resolved,
   minimized or dismissed as the timeline's applies reach them, earliest first:
   items the dump shows with that status, then (for applies after the dump)
-  items it does not. An `apply` that sent no mutation failed before applying
+  items it does not. Mutations past the dumped items hit nothing a baseline
+  observed, so the baselines skip them, which only flatters the baselines.
+  An `apply` that sent no mutation failed before applying
   anything: pr-shepherd pays for the attempt, and the baselines repeat
   nothing. Replayed commands keep the real ones' `--until-terminal` and
   `--require-sha`. Checks from
@@ -457,7 +459,9 @@ token usage, never text, IDs or paths. The bench reads only that file.
   with a check pending is a `gh pr checks --watch` refresh for gh; a wait with
   none pending (pr-shepherd's debounce) is a plain sleep, since `--watch`
   would return at once. Consecutive waits of one kind form one call, in
-  timeline order. The baselines' PR body leaves out the Shepherd
+  timeline order, and a watch is bounded by `timeout` to end with the poll,
+  since checks can still be pending when it returns. A REST-mode tick's
+  snapshot read is its pull request read. The baselines' PR body leaves out the Shepherd
   Journal block, which only pr-shepherd writes. Text sizes are their
   JSON-escaped lengths, since the baselines read them as JSON, and each
   thread comment's filler URL keeps its numeric `#discussion_r` anchor for

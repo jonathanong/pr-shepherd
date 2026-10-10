@@ -62,7 +62,12 @@ const secs = (iso) => Date.parse(iso) / 1000;
 const TICK_GAP_SECONDS = 30;
 /** An invocation with no log entry for this long has exited. */
 const IDLE_SECONDS = 150;
-const SNAPSHOT_OPS = new Set(["BatchPr", "PrFingerprint"]);
+/**
+ * A tick's snapshot reads: GraphQL's, or REST's pull read, which every REST
+ * tick starts with. In GraphQL mode the REST pull read is a READY tick's
+ * mergeability refresh, inside that tick's group.
+ */
+const SNAPSHOT_OPS = new Set(["BatchPr", "PrFingerprint", "RestPull"]);
 /** Mutation requests: GitHub reports no query cost for them. */
 const MUTATION_OPS = new Set(["BulkApply", "UpdatePrBody", "MarkPrReady"]);
 
@@ -148,7 +153,13 @@ function parseLog(text, scope, stats, until = Infinity) {
     } else if ((m = e.head.match(/^### #(\d+) (GraphQL|REST) request — (\S+) (\S+) · (\S+)$/))) {
       const k = Number(m[1]);
       const t = secs(m[5]);
-      const op = body.match(/^operation: `(\w+)`/m)?.[1] ?? (m[2] === "REST" ? "rest" : "graphql");
+      const op =
+        body.match(/^operation: `(\w+)`/m)?.[1] ??
+        (m[2] !== "REST"
+          ? "graphql"
+          : m[3] === "GET" && /\/pulls\/\d+$/.test(m[4])
+            ? "RestPull"
+            : "rest");
       const vars = body.match(/^variables:\n+```json\n([\s\S]*?)\n```/m)?.[1] ?? "";
       let pr = Number(vars.match(/"pr":\s*(\d+)/)?.[1]) || null;
       if (!pr && m[2] === "REST") pr = Number(m[4].match(/\/pulls\/(\d+)/)?.[1]) || null;
@@ -707,12 +718,13 @@ const statusOrder = (items, has) =>
 
 /**
  * The item indices one apply's `count` mutations hit: the next ones in
- * `statusAt`'s order. Past the dumped items, indices continue synthetically.
+ * `statusAt`'s order. Mutations past the dumped items hit nothing a baseline
+ * observed, so they are dropped rather than given invented IDs.
  */
 function applyTargets(pr, inv, items, has, key, count) {
   const before = appliedBy(pr, inv.t + inv.seconds, key) - inv.apply[key];
   const order = statusOrder(items, has);
-  return Array.from({ length: count }, (_, j) => order[before + j] ?? before + j);
+  return order.slice(before, before + count);
 }
 
 /** The PR's GitHub state at second `t`, rebuilt from sizes with filler text. */
@@ -872,9 +884,11 @@ function stepArms(pr, inv) {
     const ghWaits = runs.map(({ watch, prev, times }, i) =>
       watch
         ? // One query on start, then one per refresh, each reprinting the table.
+          // Checks can still be pending when the poll returns, so the watch is
+          // bounded to end with it.
           call(
             i + 1,
-            `gh pr checks ${n} -R owner/repo --watch --interval 60`,
+            `timeout ${times.at(-1) - prev} gh pr checks ${n} -R owner/repo --watch --interval 60`,
             [prev, ...times].map((t) => ghPrChecks(stateAt(pr, t))).join("\n"),
             { api: gql(times.length + 1) },
           )
