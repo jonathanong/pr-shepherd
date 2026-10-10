@@ -16,16 +16,23 @@ import { fetchReplyThreadTranscripts } from "./reply-thread-transcripts.mts";
 import { isCurrentSummaryReady } from "./poll-summary-readiness.mts";
 import { summarizePollSummaryChecks } from "./poll-summary-checks.mts";
 describe("REST high-level operation selection", () => {
-  async function snapshotServer(heads = ["aaa111"], states = ["clean"], withComments = true) {
+  async function snapshotServer(
+    heads = ["aaa111"],
+    states = ["clean"],
+    withComments = true,
+    autoMerges: Array<Record<string, unknown> | null> = [],
+  ) {
     let pulls = 0;
     await serve((request, response) => {
       const path = request.path.split("?")[0];
       if (path === `${prefix}/pulls/101`) {
         const revision = pulls++;
         const state = states[Math.min(revision, states.length - 1)]!;
+        const autoMerge = autoMerges[Math.min(revision, autoMerges.length - 1)];
         response.end(
           JSON.stringify({
             ...pull,
+            ...(autoMerges.length > 0 && { auto_merge: autoMerge }),
             head: { ...pull.head, sha: heads[Math.min(revision, heads.length - 1)] },
             mergeable: state !== "dirty",
             mergeable_state: state,
@@ -86,6 +93,32 @@ describe("REST high-level operation selection", () => {
     await expect(runWithGithubTransport("rest", () => fetchPrBatch(101, repo))).rejects.toThrow(
       "changed while REST snapshot",
     );
+    expect(wire.requests.filter((request) => request.path === `${prefix}/pulls/101`)).toHaveLength(
+      4,
+    );
+  });
+
+  it("projects REST auto-merge method and enabler without inventing an enable timestamp", async () => {
+    const autoMerge = { enabled_by: { login: "octocat" }, merge_method: "squash" };
+    await snapshotServer(["aaa111"], ["clean"], false, [autoMerge]);
+
+    const batch = await runWithGithubTransport("rest", () =>
+      fetchPrBatch(101, repo, { includeReceiptSummary: true }),
+    );
+    expect(batch.data.autoMergeRequest).toEqual({
+      mergeMethod: "SQUASH",
+      enabledBy: "octocat",
+    });
+    expect(batch.data.autoMergeRequest).not.toHaveProperty("enabledAtUnix");
+    expect(batch.receiptSummary?.autoMergeRequest).toEqual(batch.data.autoMergeRequest);
+  });
+
+  it("retries when REST auto-merge changes during the snapshot read", async () => {
+    const autoMerge = { enabled_by: { login: "octocat" }, merge_method: "squash" };
+    await snapshotServer(["aaa111"], ["clean"], false, [null, autoMerge, autoMerge]);
+
+    const batch = await runWithGithubTransport("rest", () => fetchPrBatch(101, repo));
+    expect(batch.data.autoMergeRequest).toEqual({ mergeMethod: "SQUASH", enabledBy: "octocat" });
     expect(wire.requests.filter((request) => request.path === `${prefix}/pulls/101`)).toHaveLength(
       4,
     );

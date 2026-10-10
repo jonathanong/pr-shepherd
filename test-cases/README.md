@@ -146,7 +146,7 @@ normalized batch. It covers pending CI, a cloud `--until-terminal` invocation
 resumed by a fresh transport scope with first-look feedback shown once before
 ready evidence is recorded, an unknown thread status escalating after its
 one-look display, and cloud CCR mark-ready. These scenarios also assert that
-REST ticks do not issue GraphQL requests. Keep the contract aligned with transport fallback, unknown
+REST ticks do not issue GraphQL requests. `rest-transport.quota-scenario.test.mts` verifies that an automatic poll reaches REST READY evidence after GraphQL exhaustion, both with quota headers and with a confirming REST quota probe, and retains that fallback for subsequent polls. Keep the contract aligned with transport fallback, unknown
 capabilities, pagination, partial-write denial, REST-to-GraphQL switching,
 async stack resume, and equivalent text/JSON/MCP projections as those
 integration cases are added.

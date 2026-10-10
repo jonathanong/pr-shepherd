@@ -73,7 +73,9 @@ export function restPullRefs(pull: RestPull) {
 }
 export function restPullRevision(pull: RestPull): string {
   return JSON.stringify([
+    pull.head.ref,
     pull.head.sha,
+    pull.base.ref,
     pull.base.sha,
     pull.updated_at,
     pull.state,
@@ -81,5 +83,6 @@ export function restPullRevision(pull: RestPull): string {
     pull.merged_at,
     pull.mergeable,
     pull.mergeable_state,
+    pull.auto_merge ?? null,
   ]);
 }

@@ -77,6 +77,8 @@ A definite failed merge request permits a replacement with changed options. A de
 
 A proxy session refusal stops the current review batch and subsequent `apply` operations. The review result preserves confirmed successes, includes the original proxy message in `sessionRefusal`, and lists pending IDs in the existing `unrepliedThreads`, `unresolvedThreads`, `unminimizedComments`, and `undismissedReviews` fields when nonempty. Its `instructions` array tells the caller to repair session repository access and retry only those pending IDs; any later operations did not run. No GitHub-denied marker is persisted for a session refusal. CLI text/JSON and MCP Markdown/structured output carry the same partial result; the CLI exits `77`.
 
+Retries of an uncertain GraphQL reply reconcile a fresh complete transcript against captured pre-write evidence. An exact confirmed reply is adopted without resubmission and remains available across subsequent batch failures. Unconfirmed or legacy intents expose targeted marker-file recovery instructions; see [uncertain reply recovery](comments.md#recovering-an-uncertain-reply).
+
 `getJournal({ pr })` fetches one PR body through the selected transport and returns the same typed result as
 `extractShepherdJournal(body)` without exposing the body or PR node ID. The API accepts a qualified
 reference or a numeric PR in the configured checkout repository. An absent journal returns

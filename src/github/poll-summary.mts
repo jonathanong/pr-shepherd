@@ -1,5 +1,5 @@
 import { readRestStackSummary } from "./rest-stack-summary.mts";
-import { githubOperation, runWithGithubTransport } from "./transport.mts";
+import { githubOperation, getGithubTransport, runWithGithubTransport } from "./transport.mts";
 import { fetchRestRawSummaryPr } from "./rest-batch-read.mts";
 import { mapPool } from "../util/pool.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
@@ -116,9 +116,10 @@ async function fetchStackSummary(
   repo: RepoInfo,
 ): Promise<FetchedPollSummary> {
   const anchor = opts.stackPrNumber!;
-  const topology = await readStackTopology(anchor, repo);
+  const topology =
+    getGithubTransport() === "rest" ? undefined : await readStackTopology(anchor, repo);
   const { stackNumber, stackSize, viewerLogin, viewerCanAdminister, ordered, allowedMergeMethods } =
-    await readStackSummary(anchor, repo, topology.stackSize);
+    await readStackSummary(anchor, repo, topology?.stackSize ?? 0);
   for (const pr of ordered) {
     await hydratePollSummaryChecks(pr, repo);
     await refreshUnknownSummaryMergeability(pr, repo);

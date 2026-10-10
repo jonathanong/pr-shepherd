@@ -73,8 +73,11 @@ export function routePollSummary(
       ? { action: "wait", reasons: ["draft-auto-mark-ready-disabled"] }
       : { action: "mark_ready", reasons: ["draft-appears-ready"] };
   }
-  if (opts.merge && raw.isInMergeQueue) {
-    return { action: "wait", reasons: ["already-in-merge-queue"] };
+  if (opts.merge && (raw.isInMergeQueue || raw.autoMergeRequest)) {
+    return {
+      action: "wait",
+      reasons: [raw.isInMergeQueue ? "already-in-merge-queue" : "already-auto-merging"],
+    };
   }
   if (opts.merge && raw.stack && opts.stackPrNumber === undefined) {
     return { action: "fix_code", reasons: ["authoritative-poll-required"] };

@@ -4,6 +4,7 @@ import { serveRestSnapshot } from "../../test-helpers/github/rest-snapshot.test-
 import { readRestStackSummary } from "./rest-stack-summary.mts";
 import { fetchPollSummary } from "./poll-summary.mts";
 import { runWithGithubTransport } from "./transport.mts";
+import { EXIT } from "../exit-codes.mts";
 
 const stack = {
   number: 42,
@@ -13,6 +14,17 @@ const stack = {
 };
 
 describe("REST native stack summary", () => {
+  it("rejects a standalone PR without spending requests on stack-member evidence", async () => {
+    await serveRestSnapshot();
+    await expect(readRestStackSummary(101, repo)).rejects.toMatchObject({
+      message: "PR #101 is not part of a native GitHub stack",
+      exitCode: EXIT.UNAVAILABLE,
+    });
+    expect(wire.requests.map(({ path }) => path.split("?")[0])).toEqual([
+      "/repos/octocat/hello-world/stacks",
+    ]);
+  });
+
   it("routes public stack polling through REST summaries and preserves their projection", async () => {
     await serveRestSnapshot({ stack });
     const result = await runWithGithubTransport("rest", () =>
@@ -56,7 +68,7 @@ describe("REST native stack summary", () => {
   it("rejects a stack member head that changes after the member snapshot", async () => {
     await serveRestSnapshot({
       stack,
-      pull: (read) => ({ head: { ...pull.head, sha: read > 3 ? "new-head" : pull.head.sha } }),
+      pull: (read) => ({ head: { ...pull.head, sha: read > 2 ? "new-head" : pull.head.sha } }),
     });
     await expect(readRestStackSummary(101, repo)).rejects.toThrow(
       "Native stack changed during REST summary read",

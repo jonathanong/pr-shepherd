@@ -5,6 +5,11 @@ import { isTransportError } from "./http-utils.mts";
 import { rateLimitKind } from "./rate-limit-kind.mts";
 import { parseGithubTransport, type GithubTransport } from "./transport-mode.mts";
 import { appendEntry } from "../log/log-file.mts";
+import {
+  hasMixedGraphQlQuotaErrors,
+  isPrimaryGraphQlQuotaExhausted,
+  needsGraphQlQuotaProbe,
+} from "./graphql-quota-probe.mts";
 
 export type { GithubTransport } from "./transport-mode.mts";
 
@@ -70,7 +75,9 @@ function responseMessage(error: GitHubRequestError): string {
   return raw.trim();
 }
 
-function fallbackReason(error: unknown): "refused" | "ccr" | "ambiguous" | undefined {
+type FallbackReason = "refused" | "ccr" | "ambiguous" | "probe";
+
+function fallbackReason(error: unknown): FallbackReason | undefined {
   if (isTransportError(error)) return "ambiguous";
   if (!(error instanceof GitHubRequestError)) return undefined;
   if (
@@ -94,12 +101,14 @@ function fallbackReason(error: unknown): "refused" | "ccr" | "ambiguous" | undef
   )
     return undefined;
   const throttle = rateLimitKind(error);
-  if (throttle === "secondary") return undefined;
   if (
     isRetryableGraphQlInternal(error.graphqlErrors) &&
     error.graphqlErrors?.some((entry) => !isRetryableGraphQlInternal([entry]))
   )
     return undefined;
+  if (hasMixedGraphQlQuotaErrors(error.graphqlErrors)) return undefined;
+  if (needsGraphQlQuotaProbe(error)) return "probe";
+  if (throttle === "secondary") return undefined;
   if (
     error.status === 403 &&
     responseMessage(error).includes("GitHub GraphQL is not available from Claude Code sessions")
@@ -140,8 +149,12 @@ export async function githubOperation<T>(
   try {
     return await graphql();
   } catch (error) {
-    const reason = fallbackReason(error);
+    let reason = fallbackReason(error);
     if (current.mode !== "auto" || reason === undefined) throw error;
+    if (reason === "probe") {
+      if (!(await isPrimaryGraphQlQuotaExhausted())) throw error;
+      reason = "refused";
+    }
     if (!current.state.fallback) {
       const message = `pr-shepherd: GitHub transport switched to REST after ${name} (${reason}).\n`;
       appendEntry(message);

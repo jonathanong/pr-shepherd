@@ -41,9 +41,12 @@ export function appendMergeQueueHeader(lines: string[], result: IterateResult): 
   if (queue.removalAcknowledged) parts.push("removal acknowledged");
   lines.push(`**merge queue** ${parts.join(" · ")}`);
   if (queue.autoMergeRequest) {
-    lines.push(
-      `**auto-merge** method \`${queue.autoMergeRequest.mergeMethod}\` · enabledAtUnix \`${queue.autoMergeRequest.enabledAtUnix}\`${queue.autoMergeRequest.enabledBy ? ` · by \`@${queue.autoMergeRequest.enabledBy}\`` : ""}`,
-    );
+    const autoMergeParts = [`method \`${queue.autoMergeRequest.mergeMethod}\``];
+    if (queue.autoMergeRequest.enabledAtUnix !== undefined)
+      autoMergeParts.push(`enabledAtUnix \`${queue.autoMergeRequest.enabledAtUnix}\``);
+    if (queue.autoMergeRequest.enabledBy)
+      autoMergeParts.push(`by \`@${queue.autoMergeRequest.enabledBy}\``);
+    lines.push(`**auto-merge** ${autoMergeParts.join(" · ")}`);
   }
   if (queue.latestRemoval) {
     const removal = queue.latestRemoval;

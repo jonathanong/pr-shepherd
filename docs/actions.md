@@ -474,6 +474,8 @@ A definite failed request can be replaced when the requested options change. A r
 
 After the caller runs an emitted auto-merge or queue command (or its fallback), iteration continues. An active auto-merge request or queue entry emits `WAIT` without ready-delay cancellation or generic stall escalation. Synthetic queue-commit `merge_group` failures emit `FIX_CODE` with their run/log context. With `--merge`, a removed entry with raw reason `failed_checks` whose failed check matches the current removal commit also emits a SHA-matched `requeue` plan, while native stacks emit an exact removal acknowledgment command and retain their aggregate merge route. Active entries, updated heads, mismatched removal commits, and manual, missing, or unknown removal reasons get neither recovery plan. Queue check contexts are fully paginated. A queue removal without an actionable failure emits `ESCALATE` with GitHub's raw reason, actor, time, queue commit, and parent commit IDs. Squash and rebase queue commits have one parent and still count as the current removal until a later push of the head (the earliest pull_request check time on that commit, or the head's committer time when no check time is available); see [`merge-queue-removed`](escalations.md#merge-queue-removed).
 
+REST retains an available `auto_merge` request as `mergeQueue.autoMergeRequest`, including `mergeMethod` and `enabledBy` when known. Its unavailable `enabledAtUnix` timestamp is omitted in JSON and Markdown. The aggregate merge-enabled route also waits with reason `already-auto-merging`.
+
 ---
 
 ## `cancel`

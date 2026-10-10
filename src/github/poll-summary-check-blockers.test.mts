@@ -149,12 +149,12 @@ describe("applyOpenCheckBlockers", () => {
     });
   });
 
-  it("propagates a blocker lookup rate limit", async () => {
+  it("propagates a blocker lookup secondary rate limit without fallback", async () => {
     await writeCheckBlocker(
       { owner: "acme", repo: "widgets", pr: 42 },
       { checkName: "backend-tests (1)", blocker: pull, recordedAt: 1 },
     );
-    const err = new GitHubRequestError("API rate limit exceeded", { status: 429 });
+    const err = new GitHubRequestError("You have exceeded a secondary rate limit", { status: 429 });
     mockGraphql.mockRejectedValue(err);
     await expect(
       applyOpenCheckBlockers(raw(), repo, routed, { failing: 1 }, {}, true),

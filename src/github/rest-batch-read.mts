@@ -7,17 +7,19 @@ import { markReadyAnnotationProbeComplete } from "./poll-summary-annotation-prob
 import { hydratePollSummaryChecks } from "./poll-summary-check-hydration.mts";
 import { GitHubRequestError } from "./errors.mts";
 import { EXIT } from "../exit-codes.mts";
+import type { RestSnapshotContext } from "./rest-snapshot-context.mts";
 /** REST uses multiple resources; retry a moving head/base once rather than combining revisions. */
 export async function fetchRestPrBatch(
   pr: number,
   repo: RepoInfo,
-  opts: { includeReceiptSummary?: boolean } = {},
+  opts: { includeReceiptSummary?: boolean; snapshotContext?: RestSnapshotContext } = {},
 ) {
   for (let attempt = 0; attempt < 2; attempt++) {
     const pull = await readRestPull(pr, repo);
-    const snapshot = await readRestSnapshot(pull, repo);
+    const snapshot = await readRestSnapshot(pull, repo, opts.snapshotContext);
     const latest = await readRestPull(pr, repo);
     if (restPullRevision(pull) !== restPullRevision(latest)) continue;
+    opts.snapshotContext?.recordPullRevision(pr, restPullRevision(latest));
     const receiptSummary = restSummary(
       snapshot.data,
       pull,
@@ -53,7 +55,14 @@ export async function fetchRestPrBatch(
     exitCodeOverride: EXIT.TEMPFAIL,
   });
 }
-export async function fetchRestRawSummaryPr(pr: number, repo: RepoInfo): Promise<RawSummaryPr> {
-  const snapshot = await fetchRestPrBatch(pr, repo, { includeReceiptSummary: true });
+export async function fetchRestRawSummaryPr(
+  pr: number,
+  repo: RepoInfo,
+  snapshotContext?: RestSnapshotContext,
+): Promise<RawSummaryPr> {
+  const snapshot = await fetchRestPrBatch(pr, repo, {
+    includeReceiptSummary: true,
+    snapshotContext,
+  });
   return snapshot.receiptSummary!;
 }

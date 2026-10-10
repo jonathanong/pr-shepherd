@@ -101,6 +101,12 @@ arrays for IDs that still need another run (`unresolvedThreads`,
 `unminimizedComments`, `undismissedReviews`), plus `rateLimit` metadata when
 GitHub provided retry or reset details.
 
+## Recovering an uncertain reply
+
+A GraphQL reply that loses its response or returns an ambiguous server error is not replayed through REST. Shepherd records the thread/message intent and any available pre-write viewer and comment-ID evidence. On retry, a fresh complete transcript can confirm exactly one new reply with that viewer and the exact Shepherd-marked body. Shepherd records the confirmed reply outcome, returns the thread in `repliedThreads`, and continues any requested resolution without posting the reply again. The confirmation remains durable across a later failure in the same batch.
+
+Missing, incomplete, or ambiguous transcript evidence cannot establish delivery. If the original thread has no known REST identity, its uncertain intent also blocks the same message through a new thread handle until that intent is reconciled; different messages remain independent. The error names only the marker files for the affected thread/message. After verifying that the reply was not delivered and no request is still in flight, remove those specific files and retry the pending operation. This targeted recovery also applies to legacy markers without pre-write evidence; other threads, messages, seen markers, and merge receipts remain intact.
+
 ## Applying reviewer suggestions
 
 For review threads whose body contains a ` ```suggestion ` fenced block, `iterate fix_code` attaches a parsed `suggestion` field (`{ startLine, endLine, lines, author }`). Shepherd builds each diff from the PR-head blob and returns nothing unless the ordered stream passes `git apply --check`. Neither MCP nor the CLI mutates the working tree or git history. Standalone patch output recommends local apply/stage/commit steps only; authorization-checked review mutations come from iterate output.

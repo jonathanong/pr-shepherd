@@ -1,4 +1,5 @@
 import type { RawBaseRef } from "./batch-raw-rules.mts";
+import type { AutoMergeRequestStatus } from "../types/merge-requirements.mts";
 
 export interface RawAuthor {
   __typename?: string;
@@ -94,6 +95,7 @@ export interface RawSummaryPr {
   reviewRequests?: { nodes: Array<{ requestedReviewer: RawAuthor | null }> };
   latestReviews?: { nodes: Array<{ state: string; author: RawAuthor | null }> };
   isInMergeQueue?: boolean;
+  autoMergeRequest?: AutoMergeRequestStatus | null;
   mergeQueueAdditions?: { nodes: Array<{ createdAt: string }> } | null;
   mergeQueueRemovals?: {
     nodes: Array<{

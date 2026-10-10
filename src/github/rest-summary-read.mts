@@ -30,6 +30,7 @@ export function restSummary(
     author: pull.user,
     state: data.state,
     isDraft: data.isDraft,
+    ...(data.autoMergeRequest && { autoMergeRequest: data.autoMergeRequest }),
     updatedAt: pull.updated_at,
     headRefName: data.headRefName,
     headRefOid: data.headRefOid,

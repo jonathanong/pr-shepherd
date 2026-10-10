@@ -25,7 +25,7 @@ export interface MergeQueueEntryStatus {
 }
 
 export interface AutoMergeRequestStatus {
-  enabledAtUnix: number;
+  enabledAtUnix?: number;
   mergeMethod: string;
   enabledBy?: string;
 }

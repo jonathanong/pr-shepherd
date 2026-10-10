@@ -96,6 +96,14 @@ describe("routePollSummary", () => {
       "already-in-merge-queue",
     ],
     [
+      { autoMergeRequest: { mergeMethod: "SQUASH" } },
+      { passing: 1 },
+      {},
+      { merge: true },
+      "wait",
+      "already-auto-merging",
+    ],
+    [
       { stack: { number: 1 } },
       { passing: 1 },
       {},

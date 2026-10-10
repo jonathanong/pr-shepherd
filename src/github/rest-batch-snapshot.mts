@@ -8,17 +8,22 @@ import { readRestStackMembership } from "./rest-stack-read.mts";
 import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
 import { parseCheckNodes } from "./batch-parse-checks.mts";
 import { parseBranchRules } from "./batch-parsers-rules.mts";
-import { readRest as rest, restRepoPath, restObject } from "./rest-reader-core.mts";
+import { readRest as rest, restRepoPath, restObject, restString } from "./rest-reader-core.mts";
 import { restLatestReviews, restPendingReviews } from "./rest-review-read.mts";
-export async function readRestSnapshot(pull: RestPull, repo: RepoInfo) {
+import type { RestSnapshotContext } from "./rest-snapshot-context.mts";
+export async function readRestSnapshot(
+  pull: RestPull,
+  repo: RepoInfo,
+  context?: RestSnapshotContext,
+) {
   const [feedback, checks, rules, stack] = await Promise.all([
     readRestFeedback(pull.number, repo),
     readRestCommitChecks(pull.head.sha, repo, pull.number),
-    readRestBranchRules(repo, pull.base.ref),
-    readRestStackMembership(pull.number, repo),
+    context ? context.readBranchRules(pull.base.ref) : readRestBranchRules(repo, pull.base.ref),
+    context ? Promise.resolve(context.stack) : readRestStackMembership(pull.number, repo),
   ]);
   const repository = restObject(
-    await rest<unknown>("GET", restRepoPath(repo)),
+    context?.repository ?? (await rest<unknown>("GET", restRepoPath(repo))),
     "repository merge settings",
   );
   const allowedMergeMethods = [
@@ -65,6 +70,22 @@ export async function readRestSnapshot(pull: RestPull, repo: RepoInfo) {
       pull.mergeable === true ? "MERGEABLE" : pull.mergeable === false ? "CONFLICTING" : "UNKNOWN",
     mergeStateStatus: pull.mergeable_state.toUpperCase() as BatchPrData["mergeStateStatus"],
     reviewDecision: null,
+    ...(pull.auto_merge !== undefined && {
+      autoMergeRequest: pull.auto_merge
+        ? {
+            mergeMethod: restString(
+              pull.auto_merge.merge_method,
+              "auto-merge merge_method",
+            ).toUpperCase(),
+            ...(pull.auto_merge.enabled_by?.login && {
+              enabledBy: restString(
+                pull.auto_merge.enabled_by.login,
+                "auto-merge enabled_by login",
+              ),
+            }),
+          }
+        : null,
+    }),
     headRepoWithOwner: pull.head.repo?.full_name ?? null,
     reviewRequests: requested,
     latestReviews: [...restPendingReviews(feedback.reviews), ...latestReviews.values()],
