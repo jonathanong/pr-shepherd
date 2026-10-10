@@ -50,11 +50,11 @@ Each case carries `tier:discriminating` or `tier:guard` in its tags, set in
 `cases/*.mjs` from the last full run.
 
 - `discriminating`: the arms separated on a full run (`01`, `02`, `04`, `05`,
-  `10`, `22`, `24`). These get the runs.
+  `10`, `22`, `24`). These get the runs. A case without a full run yet
+  (`29`–`37`) starts here too, so a targeted run measures it; `--summary` lists
+  it for demotion if its interval includes 0.
 - `guard`: both arms sit at ceiling, so the case only exists to notice a
-  regression. One run each is a cheap sweep. A case without a full run yet
-  (`29`–`37`) starts here; `--summary` lists it if a run shows it separating
-  the arms.
+  regression. One run each is a cheap sweep.
 
 `EVAL_RUNS_DISCRIMINATING` and `EVAL_RUNS_GUARD` override the per-case `runs`
 at generation time. Regenerate, run, then regenerate without the variables so
