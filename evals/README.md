@@ -73,3 +73,6 @@ CLAUDE_CODE_EFFORT_LEVEL=low claude plugin eval . --model claude-sonnet-5-5 \
   failure modes came from, what the suite does not measure, and next steps.
 - [HISTORY.md](HISTORY.md) has past runs, the measurement-noise floor, and the
   calibration log.
+- [tokens/](tokens/README.md) is a separate, offline benchmark of what the work
+  costs: tool calls, turns and tokens with pr-shepherd vs. the gh CLI or the
+  GitHub MCP server. Latest numbers are in [tokens/REPORT.md](tokens/REPORT.md).
