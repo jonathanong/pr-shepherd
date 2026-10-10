@@ -1,14 +1,7 @@
 // Shared framing, grader helpers and the case writer for generate.mjs.
 // See generate.mjs for why the cases look the way they do.
 
-import {
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  writeFileSync,
-  rmSync,
-  existsSync,
-} from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -108,10 +101,7 @@ export const llm = (body, weight = 1) => ({
   body,
 });
 
-export const regex = (
-  pattern,
-  { match = "contains", weight = 1, flags = "i" } = {},
-) => ({
+export const regex = (pattern, { match = "contains", weight = 1, flags = "i" } = {}) => ({
   frontmatter: [
     `type: regex`,
     `target: last_message`,
@@ -197,8 +187,7 @@ const TRANSCRIPT_LEAD = `The conversation so far is replayed below, oldest turn 
 turn shows a command you ran earlier in this session and what it printed.`;
 
 function renderTurn(turn) {
-  if (turn.role === "tool")
-    return `[tool] $ ${turn.command}\n\n${turn.output.trimEnd()}`;
+  if (turn.role === "tool") return `[tool] $ ${turn.command}\n\n${turn.output.trimEnd()}`;
   return `[${turn.role}]\n\n${turn.text.trimEnd()}`;
 }
 
@@ -296,14 +285,12 @@ export function writeCase(spec, outDir = EVALS_DIR) {
   let text = spec.fixture ? fixtureText(spec.fixture) : null;
   // A transform whose search string stopped matching would silently leave the
   // case without its planted content while CI still reports the suite in sync.
-  if (text !== null && spec.transform)
-    text = mustChange(spec.slug, text, spec.transform);
+  if (text !== null && spec.transform) text = mustChange(spec.slug, text, spec.transform);
   const body = spec.fixture ? spec.shape(text) : spec.prompt;
   // Only now touch the directory, so a missing snapshot leaves nothing behind.
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(join(dir, "graders"), { recursive: true });
-  const append =
-    spec.fixture || spec.plan ? APPEND_SYSTEM_PROMPT : APPEND_SYSTEM_PROMPT_NEG;
+  const append = spec.fixture || spec.plan ? APPEND_SYSTEM_PROMPT : APPEND_SYSTEM_PROMPT_NEG;
 
   const frontmatter = [
     "---",
@@ -337,16 +324,15 @@ export function writeCase(spec, outDir = EVALS_DIR) {
 // still discovers and runs it — so the suite silently executes more cases than
 // this generator and the docs describe. Renumbering the suite during
 // development hit exactly that, twice.
-export function pruneStaleCases(keep) {
+export function pruneStaleCases(keep, dir = EVALS_DIR) {
   const wanted = new Set(keep);
-  const stale = readdirSync(EVALS_DIR, { withFileTypes: true })
-    .filter(
-      (e) => e.isDirectory() && /^\d{2}-/.test(e.name) && !wanted.has(e.name),
-    )
+  if (!existsSync(dir)) return 0;
+  const stale = readdirSync(dir, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && /^\d{2}-/.test(e.name) && !wanted.has(e.name))
     .map((e) => e.name);
 
   for (const name of stale) {
-    rmSync(join(EVALS_DIR, name), { recursive: true, force: true });
+    rmSync(join(dir, name), { recursive: true, force: true });
     console.log(`${"pruned stale case".padEnd(38)}    ${name}`);
   }
   return stale.length;

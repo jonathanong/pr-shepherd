@@ -383,8 +383,10 @@ default). Until it lands, only the scaffolding exists:
    `"args": ["--instructions", "playbook"]`. Then run
    `npx vitest run test-cases -u` and review the new snapshots.
 2. Generate the playbook arm outside `evals/` (the default suite and its
-   pruning never see it). Cases without a `-playbook` snapshot are skipped and
-   listed. So are the fixture-less cases, which would match the inline arm.
+   pruning never see it); an `--out` inside `evals/` is rejected. Cases without
+   a `-playbook` snapshot are skipped and listed. So are the fixture-less cases,
+   which would match the inline arm. Case directories left in `--out` by an
+   earlier run that this run skipped are pruned.
    Transcript history stays inline; only the latest tick changes mode:
 
    ```sh

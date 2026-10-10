@@ -74,13 +74,13 @@
 // Ablation scaffolding (skill on/off × inline/playbook instructions): with
 // `--instructions playbook --out <dir>`, every case reads the
 // `<fixture>-playbook` snapshot instead (recorded with `iterate --instructions
-// playbook`) and is written under <dir>, outside evals/ so neither the default
-// suite nor its pruning sees it. Cases with no playbook snapshot are skipped and
-// listed. Transcript history stays inline. See EVALS.md "Ablation: inline vs
+// playbook`) and is written under <dir>, which must be outside evals/ so neither
+// the default suite nor its pruning sees it. Cases with no playbook snapshot are
+// skipped, listed, and pruned from <dir> if an earlier run wrote them. Transcript history stays inline. See EVALS.md "Ablation: inline vs
 // playbook instructions".
 
 import { parseArgs } from "node:util";
-import { resolve } from "node:path";
+import { isAbsolute, relative, resolve, sep } from "node:path";
 import { CORE_CASES } from "./cases/core.mjs";
 import { DEFERRED_CASES } from "./cases/deferred.mjs";
 import { MULTITURN_CASES } from "./cases/multiturn.mjs";
@@ -108,14 +108,21 @@ const { values: flags } = parseArgs({
 if (flags.instructions === "playbook") {
   if (!flags.out) throw new Error("--instructions playbook needs --out <dir> outside evals/");
   const outDir = resolve(flags.out);
+  // Writing into evals/ would overwrite canonical cases with playbook prompts.
+  const fromEvals = relative(EVALS_DIR, outDir);
+  const outside = fromEvals === ".." || fromEvals.startsWith(`..${sep}`) || isAbsolute(fromEvals);
+  if (!outside) throw new Error(`--out must be outside ${EVALS_DIR}, got ${outDir}`);
   setSnapshotSuffix("-playbook");
   // Fixture-less cases are skipped too: with no CLI output they match the inline arm.
   const ready = CASES.filter(hasFixture);
   for (const spec of ready) writeCase(spec, outDir);
   const written = ready.map((c) => c.slug);
   const skipped = slugs.filter((s) => !written.includes(s));
+  // A rerun into the same --out must not leave a skipped case for plugin eval to find.
+  const pruned = pruneStaleCases(written, outDir);
   console.log(
     `\n${written.length} playbook-mode cases written to ${outDir}` +
+      (pruned ? ` · ${pruned} stale case director${pruned === 1 ? "y" : "ies"} pruned` : "") +
       (skipped.length ? `\nskipped (no -playbook snapshot): ${skipped.join(", ")}` : ""),
   );
   process.exit(0);
@@ -127,7 +134,5 @@ for (const spec of CASES) writeCase(spec);
 const pruned = pruneStaleCases(slugs);
 console.log(
   `\n${CASES.length} cases written to ${EVALS_DIR}` +
-    (pruned
-      ? ` · ${pruned} stale case director${pruned === 1 ? "y" : "ies"} pruned`
-      : ""),
+    (pruned ? ` · ${pruned} stale case director${pruned === 1 ? "y" : "ies"} pruned` : ""),
 );
