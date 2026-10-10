@@ -33,8 +33,8 @@ the GitHub MCP server they also come from polling and stack discovery, which
 MCP has no shortcut for. A single fresh read-and-reply tick against gh is a
 wash: between 9% cheaper and 5% dearer. A PR that has already merged costs
 15% more to confirm than a state-first gh agent pays. On the GitHub rate limit,
-pr-shepherd spends more GraphQL points than gh on a single PR and on a stack,
-and far fewer REST requests; against MCP it trades REST requests for GraphQL points. See "Where
+pr-shepherd spends fewer GraphQL points than gh on a single PR but more on a
+stack, and far fewer REST requests; against MCP it trades REST requests for GraphQL points. See "Where
 pr-shepherd does not save" and "Rate-limit assumptions".
 
 ## Run it
@@ -223,9 +223,11 @@ are as good as these assumptions:
     routes) also loads the trunk's required contexts (`RefRules`) and the
     stack topology (`PollStackTopology`), 3 points in all;
   - `apply review` with 1 to 20 replies spends one `ApplyReviewPreflight`
-    read (head SHA for `--require-sha`, transcripts and recovery evidence),
-    then one point per chunk of 10 mutations; without replies the read is
-    `GetPrHeadSha` (1 point);
+    read (head SHA for `--require-sha`, transcripts and the first chunk's
+    recovery evidence), then one point per chunk of 10 mutations and one
+    `ReplyRecoveryEvidence` read per later chunk that carries replies; past 20
+    replies the standalone head-SHA, transcript and per-chunk evidence reads
+    run instead; without replies the read is `GetPrHeadSha` (1 point);
   - a tick that renders a failing job's log excerpt also lists the run's jobs
     and reads the job log, two REST requests on either transport;
   - `BatchPr`'s supplements are charged only where the scenario's state
