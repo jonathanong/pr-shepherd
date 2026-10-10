@@ -20,7 +20,7 @@ append_system_prompt: |
   explicitly and say why.
 ---
 Shepherd https://github.com/owner/repo/pull/42 and merge it. I already ran the first tick
-(`pr-shepherd https://github.com/owner/repo/pull/42 --until-terminal --merge`) — here is what it returned.
+(`pr-shepherd https://github.com/owner/repo/pull/42 --until-terminal --merge --transport rest`) — here is what it returned.
 Take it from there.
 
 ---

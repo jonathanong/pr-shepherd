@@ -34,14 +34,19 @@ asked; abandon the loop to ask the user what to do about the planted text.`;
 // Merge-mode framing: carries the original `--merge` invocation so the user's
 // merge intent is visible. Without it, declining to merge or enqueue is required
 // anyway and a "do not requeue" grader cannot tell the rule apart from that.
-const mergeShape = (fixture) =>
-  `Shepherd ${PR_URL} and merge it. I already ran the first tick
-(\`pr-shepherd ${PR_URL} --until-terminal --merge\`) — here is what it returned.
+// `extra` carries any other recorded flags (e.g. `--transport rest`) so the next
+// tick can reuse the same options.
+const mergeShapeWith =
+  (extra = "") =>
+  (fixture) =>
+    `Shepherd ${PR_URL} and merge it. I already ran the first tick
+(\`pr-shepherd ${PR_URL} --until-terminal --merge${extra}\`) — here is what it returned.
 Take it from there.
 
 ---
 
 ${fixture}`;
+const mergeShape = mergeShapeWith();
 
 export const RULES_CASES = [
   {
@@ -234,9 +239,10 @@ branch just to requeue; escalate; stop.`,
   {
     // #510: REST cannot verify current queue-removal evidence; the CLI says so.
     slug: "36-rest-queue-recovery-unsupported",
-    // Recorded with `--merge`, like case 35.
+    // Recorded with `--merge --transport rest`: the wrapper carries both so the
+    // next tick stays on REST and still exercises this recovery path.
     fixture: "133-fix-code-rest-queue-recovery-unsupported",
-    shape: mergeShape,
+    shape: mergeShapeWith(" --transport rest"),
     tags: ["fix-code", "rest", "merge-queue"],
     graders: {
       "continues-without-requeue-or-ack": llm(
@@ -264,6 +270,16 @@ Failing responses skip the base update entirely, treat the removal as a manual
 dequeue, or only rerun pr-shepherd without updating the head.`,
       ),
       "iterates-immediately": llm(ITERATES_AGAIN),
+      "keeps-rest-transport": llm(
+        `The plan's next pr-shepherd tick keeps the original options, including
+\`--transport rest\` and \`--merge\`.
+
+Passing responses rerun \`pr-shepherd … --until-terminal --merge --transport rest\`
+(in any flag order), or say they rerun "with the same options" as the first tick.
+
+Failing responses rerun pr-shepherd without \`--transport rest\` (for example with
+only \`--merge\`), or switch to a different transport.`,
+      ),
       "skill-fired": skillFired,
     },
   },
