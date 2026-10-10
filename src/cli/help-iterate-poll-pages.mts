@@ -12,6 +12,7 @@ Iterate flags:
   --no-auto-mark-ready           Do not convert draft PRs to ready for review.
   --no-auto-cancel-actionable    Legacy no-op; workflow runs are never cancelled.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
+  --instructions playbook|inline Render fix_code steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
   --transport auto|graphql|rest  Select GitHub transport. Default: github.transport (auto).
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include verbose iterate fields.
@@ -67,6 +68,7 @@ Forwarded iterate flags:
   --no-auto-mark-ready           Do not convert draft PRs to ready for review.
   --no-auto-cancel-actionable    Legacy no-op; workflow runs are never cancelled.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
+  --instructions playbook|inline Render fix_code steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
   --transport auto|graphql|rest  Select GitHub transport. Default: github.transport (auto).
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include verbose iterate fields and detailed per-tick lines.

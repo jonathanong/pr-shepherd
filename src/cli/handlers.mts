@@ -150,10 +150,9 @@ export async function handleSuggestionPatches(args: string[]): Promise<void> {
 
 export async function handleIterate(args: string[]): Promise<void> {
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
-  const cfg = loadConfig();
-
-  const flags = parseIterateFlags(extra, cfg);
-  if (flags.readyDelaySuffix === null || flags.stallTimeoutSuffix === null) return;
+  const flags = parseIterateFlags(extra, loadConfig());
+  const { readyDelaySuffix, stallTimeoutSuffix, instructions } = flags;
+  if (readyDelaySuffix === null || stallTimeoutSuffix === null || instructions === null) return;
 
   const result = await runIterate({
     ...globalOpts,
@@ -163,12 +162,13 @@ export async function handleIterate(args: string[]): Promise<void> {
     noAutoMarkReady: flags.noAutoMarkReady,
     noAutoCancelActionable: flags.noAutoCancelActionable,
     merge: flags.merge,
+    instructions,
   });
 
   emitIterateResult(result, {
     format: globalOpts.format,
     verbose: globalOpts.verbose ?? false,
-    readyDelaySuffix: flags.readyDelaySuffix ?? undefined,
+    readyDelaySuffix: readyDelaySuffix ?? undefined,
   });
 }
 

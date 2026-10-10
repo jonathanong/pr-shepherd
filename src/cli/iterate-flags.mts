@@ -1,4 +1,10 @@
-import type { loadConfig } from "../config/load.mts";
+import {
+  INSTRUCTION_STYLES,
+  isInstructionStyle,
+  type loadConfig,
+  type InstructionStyle,
+} from "../config/load.mts";
+import { EXIT } from "../exit-codes.mts";
 import { getFlag, hasFlag } from "./args.mts";
 import { parseDurationToSeconds } from "./duration.mts";
 import { validateSecondsDurationFlag } from "./duration-flag.mts";
@@ -15,6 +21,8 @@ interface IterateFlags {
   noAutoMarkReady: boolean;
   noAutoCancelActionable: boolean;
   merge: boolean;
+  /** `null` when `--instructions` was invalid (an error was already printed). */
+  instructions: InstructionStyle | null | undefined;
 }
 
 export function parseIterateFlags(
@@ -50,7 +58,9 @@ export function parseIterateFlags(
     cfg.iterate.stallTimeoutMinutes * 60,
     MINUTE_FLAG_OPTS,
   );
+  const instructions = parseInstructionsFlag(extra);
   return {
+    instructions,
     readyDelaySuffix,
     readyDelaySeconds,
     stallTimeoutSuffix,
@@ -59,4 +69,20 @@ export function parseIterateFlags(
     noAutoCancelActionable,
     merge,
   };
+}
+
+/** Validate `--instructions`. Returns `undefined` when absent, `null` after printing a usage error. */
+function parseInstructionsFlag(extra: string[]): InstructionStyle | null | undefined {
+  const value = getFlag(extra, "--instructions");
+  if (!hasInstructionsFlag(extra)) return undefined;
+  if (isInstructionStyle(value)) return value;
+  process.stderr.write(
+    `pr-shepherd: --instructions must be one of ${INSTRUCTION_STYLES.join(", ")}, got ${JSON.stringify(value ?? "")}\n`,
+  );
+  process.exitCode = EXIT.USAGE;
+  return null;
+}
+
+function hasInstructionsFlag(extra: string[]): boolean {
+  return extra.some((arg) => arg === "--instructions" || arg.startsWith("--instructions="));
 }

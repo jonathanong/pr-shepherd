@@ -19,6 +19,7 @@ export function pollCommandFields(
     args.push("--ready-delay", `${opts.readyDelaySeconds}s`);
   if (opts.stallTimeoutSeconds !== undefined)
     args.push("--stall-timeout", `${opts.stallTimeoutSeconds}s`);
+  if (opts.instructions) args.push("--instructions", opts.instructions);
   if (opts.noAutoMarkReady && !boundedDraft) args.push("--no-auto-mark-ready");
   const pollCommand = buildPrShepherdCommand(args).text;
   return boundedDraft ? { pollCommand, pollProbe: true } : { pollCommand };

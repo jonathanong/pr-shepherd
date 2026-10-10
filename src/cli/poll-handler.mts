@@ -25,7 +25,12 @@ export async function handlePoll(args: string[]): Promise<void> {
   const cfg = loadConfig();
 
   const flags = parseIterateFlags(extra, cfg);
-  if (flags.readyDelaySuffix === null || flags.stallTimeoutSuffix === null) return;
+  if (
+    flags.readyDelaySuffix === null ||
+    flags.stallTimeoutSuffix === null ||
+    flags.instructions === null
+  )
+    return;
 
   const intervalStr = getFlag(extra, "--interval");
   const intervalSuffix = validateSecondsDurationFlag(
@@ -82,6 +87,7 @@ export async function handlePoll(args: string[]): Promise<void> {
     noAutoMarkReady: flags.noAutoMarkReady,
     noAutoCancelActionable: flags.noAutoCancelActionable,
     merge: flags.merge,
+    instructions: flags.instructions,
     intervalSeconds,
     timeoutSeconds,
     debounceSeconds,

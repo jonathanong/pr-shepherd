@@ -138,6 +138,20 @@ describe("buildFixInstructions", () => {
       false,
       42,
       0,
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      undefined,
+      "",
+      false,
+      false,
+      false,
+      undefined,
+      undefined,
+      "inline",
     );
 
     const text = instructions.join("\n");
@@ -223,6 +237,20 @@ describe("buildFixInstructions", () => {
       false,
       42,
       0,
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      undefined,
+      "",
+      false,
+      false,
+      false,
+      undefined,
+      undefined,
+      "inline",
     );
 
     const text = instructions.join("\n");
@@ -265,6 +293,20 @@ describe("buildFixInstructions", () => {
       false,
       42,
       0,
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      undefined,
+      "",
+      false,
+      false,
+      false,
+      undefined,
+      undefined,
+      "inline",
     );
 
     const text = instructions.join("\n");

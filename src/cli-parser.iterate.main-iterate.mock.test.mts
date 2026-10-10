@@ -163,6 +163,21 @@ describe("main — iterate subcommand", () => {
     expect(getStderr()).toContain("invalid --ready-delay");
   });
 
+  it("invalid --instructions on the poll path exits before runIterate", async () => {
+    await main(["node", "shepherd", "42", "--instructions", "bogus"]);
+    expect(process.exitCode).toBe(EXIT.USAGE);
+    expect(mockRunIterate).not.toHaveBeenCalled();
+    expect(getStderr()).toContain("--instructions must be one of");
+  });
+
+  it("--instructions playbook on the poll path reaches runIterate", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
+    await main(["node", "shepherd", "42", "--instructions", "playbook"]);
+    expect(mockRunIterate).toHaveBeenCalledWith(
+      expect.objectContaining({ instructions: "playbook" }),
+    );
+  });
+
   it("--ready-delay without a value exits before runIterate", async () => {
     await main(["node", "shepherd", "iterate", "42", "--ready-delay", "--format=json"]);
     expect(process.exitCode).toBe(EXIT.USAGE);

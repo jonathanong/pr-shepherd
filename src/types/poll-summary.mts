@@ -125,4 +125,5 @@ export interface PollSummaryCommandOptions {
   stallTimeoutSeconds?: number;
   noAutoMarkReady?: boolean;
   noAutoCancelActionable?: boolean;
+  instructions?: import("../config/load.mts").InstructionStyle;
 }

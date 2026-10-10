@@ -19,6 +19,7 @@ import {
 } from "./cli/handlers.mts";
 import { handleJournal } from "./cli/journal-handler.mts";
 import { handleJournalExtract } from "./cli/journal-extract-handler.mts";
+import { handlePlaybook } from "./cli/playbook-handler.mts";
 import { handlePoll } from "./cli/poll-handler.mts";
 import {
   warnPrrcThreadIds,
@@ -46,6 +47,7 @@ export async function main(argv: string[]): Promise<void> {
     extracted.args[0] === "--version" ||
     extracted.args[0] === "-v" ||
     extracted.args[0] === "log-file" ||
+    extracted.args[0] === "playbook" ||
     (extracted.args[0] === "admin" && extracted.args[1] === "log-file") ||
     (extracted.args[0] === "journal" && extracted.args[1] === "extract")
   ) {
@@ -123,6 +125,12 @@ async function dispatch(argv: string[]): Promise<void> {
   };
   if (subcommand !== undefined && legacyReplacement[subcommand] !== undefined) {
     warnLegacyAlias(subcommand, legacyReplacement[subcommand]!);
+  }
+
+  // A local read of shipped files: no GitHub, git, or log I/O.
+  if (subcommand === "playbook") {
+    handlePlaybook(args.slice(1));
+    return;
   }
 
   // Initialize the per-worktree log and install a stdout tee.

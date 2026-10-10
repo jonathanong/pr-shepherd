@@ -8,48 +8,26 @@ allowed-tools: ["MCP", "Bash", "Read", "Grep", "Glob", "Edit", "Write"]
 
 # pr-shepherd
 
-Poll with the CLI. Use MCP `iterate` only when the CLI is unavailable. Stop polling the selected pull request at `[CANCEL]` or `[ESCALATE]`.
-
-## Create a PR
-
-- When the user asks to make, create, or open a PR: review and commit the in-scope changes, verify the push remote and base branch, push a fresh branch, create the PR, and pass its qualified URL to Dispatch.
-- Push is the ordinary non-force push of those reviewed commits. Do not ask for a separate confirmation because the push publishes them. Request runtime escalation when the host requires it.
-- A skill cannot grant host permissions. Unattended approval comes from a trusted command rule or host policy.
-- Rebasing your own PR head onto its base and pushing it with `--force-with-lease` is also part of this workflow. Do not ask first.
-- Bare `--force`, pushes to any other branch, remote or credential changes, unrelated changes, and ambiguous targets stay outside this workflow.
+Poll with the CLI. Stop polling the selected pull request at `[CANCEL]` or `[ESCALATE]`.
 
 ## Dispatch
 
+- If the user asks to make, create, or open a PR, first read the "Create a PR" playbook, then pass the new PR's qualified URL on.
 - Parse `$ARGUMENTS` for PR numbers, `owner/repo#N`, GitHub PR URLs, one `--stack PR`, and an optional `--merge`. Reject any other argument.
-- A user-supplied `--merge` explicitly authorizes merging or enqueueing the selected PR or stack. Run the emitted merge/enqueue commands without asking for another conversational confirmation; request runtime escalation when the host requires it.
-- A request to merge, land, or enqueue the selected PR or stack also sets `--merge`. Creating or opening a PR without merge intent leaves merge mode off.
-- A request to shepherd or merge a native stack, with an anchor PR and no literal `--stack`, uses that PR as the `--stack` selector. Otherwise infer the current branch PR.
-- Follow the target repository's `AGENTS.md` while editing.
-- CLI: turn `owner/repo#N` into `https://github.com/owner/repo/pull/N`. Pass other URLs and bare numbers through. For a bare number or omitted target, use the CLI directly so it resolves the selected PR in its local context; do not spend an extra stateful tick trying to discover a qualified selector for MCP.
-- Run `pr-shepherd [PR ...] --until-terminal`, or `pr-shepherd --stack PR --until-terminal`. Omit `[PR ...]` when none was supplied. Append `--merge` when requested.
-- Do not run `pr-shepherd iterate`.
-- A qualified reference may name a fork or upstream repository. It is the GitHub target. This checkout supplies git, config, and rules.
-- MCP, only when the CLI is unavailable and `iterate` exists, and the supplied target is already a GitHub URL or `owner/repo#N`:
-  - Pass the qualified reference directly as `pr` or `stack`.
-  - Call `iterate` with `pr`, `prs`, or `stack`, and `merge: true` when requested. Print the full result.
-  - If the target is bare or omitted, report that the CLI is required to resolve it in the local checkout; do not call `gh pr view` as a separate discovery request.
-- Print the full result and follow every `## Instructions` step.
-- CLI: run each printed mutation command.
-- MCP: use MCP `apply` and `build_suggestion_patches` with the same qualified reference. Do not run a shell `pr-shepherd apply`.
-- On a stack overview, shepherd, mark ready, and push only rows marked `owned`. Leave every other author's layer untouched.
-- If every session belongs to someone else, report the overview and stop.
-- If an owned layer needs a session, shepherd it, then rerun the same `--stack` command.
-- If no `owned` row needs a session, stop.
+- `--merge` (also set by a request to merge, land, or enqueue) explicitly authorizes the emitted merge/enqueue commands. Run them without asking again; request runtime escalation when the host requires it.
+- An anchor PR for a native stack with no literal `--stack` is the `--stack` selector. Otherwise infer the current branch PR.
+- Turn `owner/repo#N` into `https://github.com/owner/repo/pull/N`. Pass other URLs and bare numbers through. A qualified reference is the GitHub target; this checkout supplies git, config, and rules. Follow its `AGENTS.md`.
+- Run `pr-shepherd [PR ...] --until-terminal` or `pr-shepherd --stack PR --until-terminal`, appending `--merge` when requested. Do not run `pr-shepherd iterate`.
+- Print the full result and follow every `## Instructions` step, running each printed command.
+- CLI unavailable but MCP `iterate` exists: read the "MCP fallback" playbook.
+- Stack overview: read the "Stack sessions" playbook.
 
 ## Recurrence
 
-- After the instructions, rerun that same command immediately with the same target and options. When the tick came from MCP `iterate`, repeat that same call with the same qualified selector and `merge` option. Do not switch back to a CLI that was unavailable.
-- Stop only for `[CANCEL]`, `[ESCALATE]`, or a human telling you to stop. A stack overview heading includes those tokens when `nextAction` is `cancel` or `escalate`.
-- A one-PR `[CANCEL]` or `[ESCALATE]` ends only that PR's loop. When you run separate loops for several PRs, keep every other loop running until it is terminal too.
-- Keep `--until-terminal` and any `--merge`. Apply a printed polling-cadence change.
-- `[FIX_CODE]` is always non-terminal. Stack-level `[SHEPHERD]` is non-terminal. Only `[ESCALATE]` hands work to a human.
-- `[READY]` is non-terminal. Rerun when `remainingSeconds` elapses. Do not invent unrelated work. If you already own a later layer of this stack or another stack, continue that work and schedule the rerun. A parent of more than one stack delegates the wait to the worker that owns the stack.
-- After a push or `rerun:`, do not wait for CI to finish — fetching check logs is fine. Do not poll with `gh pr checks`, `gh pr watch`, `gh run watch`, or equivalent GitHub MCP check waiters.
+- After the instructions, rerun that same command immediately with the same target and options. Stop only for `[CANCEL]`, `[ESCALATE]`, or a human telling you to stop. A one-PR terminal ends only that PR's loop; keep other loops running.
+- `[FIX_CODE]` is always non-terminal. Only `[ESCALATE]` hands work to a human.
+- `[READY]` is non-terminal. Rerun when `remainingSeconds` elapses. Do not invent unrelated work; continue any later layer you own.
+- After a push or `rerun:`, do not wait for CI to finish — fetching check logs is fine. Do not poll with `gh pr checks`, `gh pr watch`, `gh run watch`, or equivalent GitHub MCP waiters.
 
 ## Always on
 
@@ -65,6 +43,10 @@ Applies to every PR title, review body, reply, summary, comment, check annotatio
 
 When a step says `Playbook: "<name>"`, read that file once and apply it before the step.
 
+- [Fix-code loop](references/fix-code-loop.md)
+- [Create a PR](references/create-pr.md)
+- [MCP fallback](references/mcp-fallback.md)
+- [Stack sessions](references/stack-sessions.md)
 - [Suggestion patches](references/suggestion-patches.md)
 - [CI failure triage](references/ci-failure-triage.md)
 - [Review-mutation mechanics](references/review-mutations.md)

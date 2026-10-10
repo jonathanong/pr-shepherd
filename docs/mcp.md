@@ -153,7 +153,7 @@ Replace `/path/to/pr-shepherd` with this checkout's absolute path. Do not use a 
 
 ## Tools
 
-The server registers five canonical tools plus a deprecated singular suggestion adapter. Each result includes text `content` and `structuredContent` with equivalent information. For singular `iterate`, `structuredContent` is the same lean JSON projection the CLI emits for `--format=json` — the same computed top-level `instructions` array and `readyDelayOverride`, and the same trivial-default fields omitted. Aggregate `iterate` for an explicit PR set returns the raw `PollSummaryResult`. A `--stack` selector returns the same lean stack overview the CLI prints as JSON (see the `iterate` section below). For `apply`, `build_suggestion_patches`, and `build_suggestion_patch`, `structuredContent` is the raw result object, matching what their CLI counterparts print as JSON. The journal read tools put the same typed extraction JSON in both channels.
+The server registers six canonical tools plus a deprecated singular suggestion adapter. Each result includes text `content` and `structuredContent` with equivalent information. For singular `iterate`, `structuredContent` is the same lean JSON projection the CLI emits for `--format=json` — the same computed top-level `instructions` array and `readyDelayOverride`, and the same trivial-default fields omitted. Aggregate `iterate` for an explicit PR set returns the raw `PollSummaryResult`. A `--stack` selector returns the same lean stack overview the CLI prints as JSON (see the `iterate` section below). For `apply`, `build_suggestion_patches`, and `build_suggestion_patch`, `structuredContent` is the raw result object, matching what their CLI counterparts print as JSON. The journal read tools put the same typed extraction JSON in both channels.
 
 Every PR-targeted MCP call requires a repository-qualified selector: either a GitHub PR URL such as `https://github.com/owner/repo/pull/123` or an `owner/repo#123` reference. Singular PR tools require `pr`; aggregate `iterate` accepts `prs` or `stack`. Bare PR numbers and omitted selectors are rejected. `extract_journal` has no PR selector; its only input is the supplied Markdown body. The named repository is the GitHub target and may differ from the server's startup working directory (or the `cwd` supplied to an embedded factory), which remains the local git/configuration/rules context.
 
@@ -161,6 +161,7 @@ Every PR-targeted MCP call requires a repository-qualified selector: either a Gi
 | -------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `iterate`                  | One state-machine tick. Surfaces review items, checks, merge state, and structured review-mutation arguments. | With REST, attempts otherwise-eligible supported mutations when capability is omitted; GitHub decides. Never cancels runs.                                    |
 | `apply`                    | Ordered review mutations, file-view, merge, journal, and queue-removal operations under one required `pr`.    | Explicit operations are attempted; merge requires REST and returns its pending/enqueued/merged/failed result, while unsupported REST operations are reported. |
+| `playbook`                 | Return a bundled skill playbook by `name`, or list them with no name.                                         | None.                                                                                                                                                         |
 | `extract_journal`          | Extract a validated journal from a supplied Markdown `body`.                                                  | None; no file, stdin, GitHub, or Shepherd-log I/O.                                                                                                            |
 | `get_journal`              | Fetch a qualified PR body through the selected transport and extract its journal.                             | Read-only GitHub request; never writes the PR body.                                                                                                           |
 | `build_suggestion_patches` | Validate ordered anchored suggestions and return checked diffs plus commit metadata.                          | None. Never edits the worktree or git history.                                                                                                                |
@@ -189,17 +190,18 @@ parser result; invalid tool input and GitHub failures use the normal MCP error r
 
 ### `iterate`
 
-| Input                    | Type                            | Required | Meaning                                                 |
-| ------------------------ | ------------------------------- | -------- | ------------------------------------------------------- |
-| `pr`                     | GitHub PR URL or `owner/repo#N` | selector | One PR to inspect; its named repository is the target.  |
-| `prs`                    | qualified PR array              | selector | Non-empty explicit set from one repository.             |
-| `stack`                  | GitHub PR URL or `owner/repo#N` | selector | Anchor selecting its complete native GitHub stack.      |
-| `readyDelaySeconds`      | non-negative number             | no       | Override the ready-delay window.                        |
-| `stallTimeoutSeconds`    | non-negative number             | no       | Override the one-PR or `stack` stall timeout.           |
-| `noAutoMarkReady`        | boolean                         | no       | Disable automatic draft → ready.                        |
-| `noAutoCancelActionable` | boolean                         | no       | Deprecated no-op; Shepherd never cancels workflow runs. |
-| `merge`                  | boolean                         | no       | Shepherd to readiness and emit merge/queue commands.    |
-| `neverCancelRuns`        | string array                    | no       | Deprecated per-call no-op retained for compatibility.   |
+| Input                    | Type                            | Required | Meaning                                                                  |
+| ------------------------ | ------------------------------- | -------- | ------------------------------------------------------------------------ |
+| `pr`                     | GitHub PR URL or `owner/repo#N` | selector | One PR to inspect; its named repository is the target.                   |
+| `prs`                    | qualified PR array              | selector | Non-empty explicit set from one repository.                              |
+| `stack`                  | GitHub PR URL or `owner/repo#N` | selector | Anchor selecting its complete native GitHub stack.                       |
+| `readyDelaySeconds`      | non-negative number             | no       | Override the ready-delay window.                                         |
+| `stallTimeoutSeconds`    | non-negative number             | no       | Override the one-PR or `stack` stall timeout.                            |
+| `noAutoMarkReady`        | boolean                         | no       | Disable automatic draft → ready.                                         |
+| `noAutoCancelActionable` | boolean                         | no       | Deprecated no-op; Shepherd never cancels workflow runs.                  |
+| `merge`                  | boolean                         | no       | Shepherd to readiness and emit merge/queue commands.                     |
+| `instructions`           | `inline` or `playbook`          | no       | `fix_code` instruction style; default `iterate.instructions` (`inline`). |
+| `neverCancelRuns`        | string array                    | no       | Deprecated per-call no-op retained for compatibility.                    |
 
 Supply exactly one of `pr`, `prs`, or `stack`. `prs` is a non-empty list of qualified references
 from one repository; `stack` is one qualified anchor whose complete native GitHub stack is selected.

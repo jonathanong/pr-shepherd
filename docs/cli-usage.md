@@ -19,6 +19,7 @@ pr-shepherd apply check-blocker [PR] --check <name> --blocked-by <ref>
 pr-shepherd apply check-blocker [PR] --check <name> --clear
 pr-shepherd apply queue-removal [PR] --require-sha SHA --queue-commit SHA --removed-at UNIX
 pr-shepherd journal extract --body-file <path>
+pr-shepherd playbook [name] [--format text|json]
 pr-shepherd build-suggestion-patches [PR] --thread-id ID --message MSG [groups...]
 pr-shepherd admin clean <pr|branch|current|repo|all> [value] [--dry-run] [--format text|json]
 pr-shepherd admin log-file [--format text|json]
@@ -27,6 +28,8 @@ pr-shepherd admin log-file [--format text|json]
 `PR` may be a number, `owner/repo#N`, or GitHub pull request URL. Multiple explicit PRs must resolve
 to one repository. `--stack PR` selects the complete native GitHub stack containing that PR and
 orders its entries bottom-to-top. When omitted, Shepherd infers the current branch's open PR.
+
+`playbook [name]` prints a bundled skill playbook (the reference files a step's playbook pointer names), so an agent without the skill installed can still read it. With no name it lists them; an unknown name exits 64 and lists the available ones. `--instructions playbook` makes `iterate` fold the invariant commit/push and journal steps of `fix_code` into one pointer to the "Fix-code loop" playbook; `inline` (the default, or `iterate.instructions`) prints them every tick.
 
 `apply journal --file <path>` reads the journal item from a file; `--file -` reads stdin. Provide either a positional `<item>` or `--file`, not both.
 
@@ -81,7 +84,7 @@ layer and the layers above it. Reconciliation continues until every layer merges
 `CANCEL`. JSON/MCP includes the same raw ancestry, routing context, `nextAction`, and instructions
 that Markdown renders.
 
-The polling flags are `--interval`, `--timeout`, `--debounce`, `--quiet-status`, `--no-quiet-status`, and `--until-terminal`. Their defaults come from `poll.intervalSeconds` (built-in 60), `poll.stackIntervalFactor` (built-in 2), `poll.timeoutSeconds` (270), `poll.debounceSeconds` (60), and `poll.quietStatus` (`false`) in `.pr-shepherdrc.yml`. One PR sleeps `poll.intervalSeconds`. A `--stack` or multi-PR poll sleeps that interval times `poll.stackIntervalFactor` (built-in 120s) unless `--interval` is set. Explicit flags override configuration, and `--interval` is not multiplied again. Each ordinary `WAIT` tick writes a stderr line naming what it is waiting on (the `WAIT` log's check counts and reason) unless quiet status is enabled; the final action remains the only stdout result. `--debounce` (`0` disables) is a settle window after the first `FIX_CODE` or stack-level `SHEPHERD`. Iterate flags are `--ready-delay`, `--stall-timeout`, `--merge`, `--no-auto-mark-ready`, `--format`, and `--verbose`. The legacy `--no-auto-cancel-actionable` flag remains accepted as a no-op. Durations accept `s`, `m`, and `h`; bare polling durations are seconds and bare iterate durations are minutes.
+The polling flags are `--interval`, `--timeout`, `--debounce`, `--quiet-status`, `--no-quiet-status`, and `--until-terminal`. Their defaults come from `poll.intervalSeconds` (built-in 60), `poll.stackIntervalFactor` (built-in 2), `poll.timeoutSeconds` (270), `poll.debounceSeconds` (60), and `poll.quietStatus` (`false`) in `.pr-shepherdrc.yml`. One PR sleeps `poll.intervalSeconds`. A `--stack` or multi-PR poll sleeps that interval times `poll.stackIntervalFactor` (built-in 120s) unless `--interval` is set. Explicit flags override configuration, and `--interval` is not multiplied again. Each ordinary `WAIT` tick writes a stderr line naming what it is waiting on (the `WAIT` log's check counts and reason) unless quiet status is enabled; the final action remains the only stdout result. `--debounce` (`0` disables) is a settle window after the first `FIX_CODE` or stack-level `SHEPHERD`. Iterate flags are `--ready-delay`, `--stall-timeout`, `--merge`, `--no-auto-mark-ready`, `--format`, and `--verbose`, and `--instructions inline|playbook`. The legacy `--no-auto-cancel-actionable` flag remains accepted as a no-op. Durations accept `s`, `m`, and `h`; bare polling durations are seconds and bare iterate durations are minutes.
 
 `admin clean` removes local state and `admin log-file` prints the append-only debug log path. They are shell administration commands, not MCP tools.
 

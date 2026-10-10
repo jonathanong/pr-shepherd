@@ -39,6 +39,7 @@ import { formatCliError, serializeGitHubRequestErrorDetails } from "../cli/error
 import { errorToExitCode, EXIT } from "../exit-codes.mts";
 import { formatApplyMergeResult } from "../cli/apply-merge-handler.mts";
 import { extractShepherdJournal } from "../journal/index.mts";
+import { formatPlaybookResult, runPlaybook } from "../commands/playbook.mts";
 
 export interface CreatePrShepherdMcpServerOptions extends CreatePrShepherdOptions {
   /** Optional injection point for embedding hosts and focused tests. */
@@ -65,6 +66,12 @@ const iterateInputSchema = z
     stallTimeoutSeconds: z.number().nonnegative().optional(),
     noAutoMarkReady: z.boolean().optional(),
     merge: z.boolean().optional(),
+    instructions: z
+      .enum(["playbook", "inline"])
+      .optional()
+      .describe(
+        "fix_code instruction style. inline (default) prints every step each tick; playbook folds commit, push and journal into the Fix-code loop playbook.",
+      ),
     noAutoCancelActionable: z
       .boolean()
       .optional()
@@ -287,6 +294,22 @@ export function createPrShepherdMcpServer(
         () => getShepherd().getJournal(requireRepositoryQualifiedPr(input) as GetJournalInput),
         JSON.stringify,
       ),
+  );
+
+  server.registerTool(
+    "playbook",
+    {
+      description:
+        "Return a playbook named by an instruction-step playbook pointer, from the package. Omit name to list playbooks. Read-only; no GitHub I/O.",
+      inputSchema: z.object({ name: z.string().optional() }),
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
+    },
+    async (input) => runTool(async () => runPlaybook(input.name), formatPlaybookResult),
   );
 
   server.registerTool(

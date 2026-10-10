@@ -135,6 +135,8 @@ pr-shepherd 42 --debounce 5m           # wait 5m after first FIX_CODE or stack S
 pr-shepherd 42 --ready-delay 15m
 pr-shepherd 42 --merge                  # request head-pinned auto-merge/queue; GitHub reports the result
 pr-shepherd iterate 42                 # single tick
+pr-shepherd 42 --instructions playbook # fold invariant fix_code steps into a playbook pointer (default: inline)
+pr-shepherd playbook "Fix-code loop"   # print a bundled skill playbook (no name lists them)
 pr-shepherd owner/repo#42              # poll a PR in an explicit repository
 pr-shepherd https://github.com/owner/repo/pull/42
 pr-shepherd 42 43 44                   # summarize an explicit same-repository set

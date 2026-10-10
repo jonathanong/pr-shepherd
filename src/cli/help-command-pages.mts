@@ -333,5 +333,21 @@ On POSIX, the final body-file path entry must be a readable regular file in a tr
 symlinks, FIFOs, devices, and unreadable paths exit 66. Unsupported platforms fail closed with exit 66.
 --help, -h                      Print this help and exit before any I/O.`,
 
+  playbook: `pr-shepherd playbook
+
+Print a playbook named by a playbook pointer in the output's ## Instructions. Playbooks ship with the
+package, so this works without the pr-shepherd skill installed. With no name, lists every playbook.
+This command performs no GitHub, git, or log I/O.
+
+Usage:
+  pr-shepherd playbook [name] [--format text|json]
+
+Flags:
+  --format text|json   Markdown text (default) or one JSON line: {"name","content"} or {"playbooks":[...]}.
+
+The name is case-insensitive; spaces and hyphens are equivalent ("Fix-code loop" and fix-code-loop match).
+Unknown names exit 64 and list the available playbooks.
+--help, -h                      Print this help and exit before any I/O.`,
+
   "log-file": LOG_FILE_USAGE,
 } as const;

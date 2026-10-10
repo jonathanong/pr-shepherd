@@ -31,6 +31,7 @@ Commands:
   journal extract      Extract a validated Shepherd Journal from a local PR-body file as JSON.
   build-suggestion-patches
                        Convert ordered GitHub suggestion threads into patches and commit instructions.
+  playbook             Print a playbook named by an instruction pointer.
   admin clean          Remove pr-shepherd state files.
   admin log-file       Print the per-worktree debug log path.
 
@@ -51,6 +52,7 @@ Iterate flags:
   --no-auto-mark-ready           Do not convert draft PRs to ready for review.
   --no-auto-cancel-actionable    Legacy no-op; workflow runs are never cancelled.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
+  --instructions playbook|inline Render fix_code steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
 
 Polling flags:
   --interval <duration>          Delay between WAIT ticks. Bare number = seconds. Default: poll.intervalSeconds (built-in 60s). Stack and multi-PR polls multiply that by poll.stackIntervalFactor (built-in 2) unless this flag is set.

@@ -12,6 +12,11 @@ export const SHEPHERD_JOURNAL_APPEND_HINT =
 
 export const SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE = `Read each body under \`## Review summaries (first look)\` and journal any warranted note before review mutations. ${playbookPointer("Shepherd Journal")}`;
 
+/** The concrete `apply journal` command. The placeholder is single-quoted so a substituted decision stays literal in the shell. */
+export function buildShepherdJournalCommand(prReference: string | number): string {
+  return `${buildPrShepherdCommand(["apply", "journal", String(prReference)]).text} '- <decision>'`;
+}
+
 /**
  * Build the Shepherd Journal instruction step. The reference-citation convention (link
  * threads/comments from their headings, cite reviews by ID) is invariant across every
@@ -19,7 +24,6 @@ export const SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE = `Read each body under \`## R
  * of being re-emitted every tick (see AGENTS.md "Keep skills and loop prompts minimal").
  */
 export function buildShepherdJournalInstruction(prReference: string | number): string {
-  // Single-quote the placeholder so a substituted decision stays literal in the shell.
-  const command = `${buildPrShepherdCommand(["apply", "journal", String(prReference)]).text} '- <decision>'`;
+  const command = buildShepherdJournalCommand(prReference);
   return `For any substantial decision or rejection, append \`- <decision>\` to Shepherd Journal with \`${command}\`. ${playbookPointer("Shepherd Journal")}`;
 }

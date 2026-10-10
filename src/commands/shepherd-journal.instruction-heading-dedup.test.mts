@@ -56,6 +56,10 @@ describe("shepherd journal instruction helpers", () => {
       "",
       false,
       true,
+      false,
+      undefined,
+      undefined,
+      "inline",
     );
 
     const text = instructions.join("\n");

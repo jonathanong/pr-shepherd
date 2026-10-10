@@ -13,6 +13,7 @@ const VALUE_FLAGS = new Set([
   "--format",
   "--ready-delay",
   "--stall-timeout",
+  "--instructions",
   "--interval",
   "--timeout",
   "--debounce",
