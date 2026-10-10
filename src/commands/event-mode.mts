@@ -106,7 +106,7 @@ async function readStallDeadline(
   result: IterateResult,
   stallTimeoutSeconds: number | undefined,
 ): Promise<number | undefined> {
-  if (!["wait", "fix_code", "mark_ready"].includes(result.action)) return undefined;
+  if (!["wait", "fix_code"].includes(result.action)) return undefined;
   const timeout = stallTimeoutSeconds ?? loadConfig().iterate.stallTimeoutMinutes * 60;
   const [owner, repo] = result.repo.split("/");
   if (timeout <= 0 || !owner || !repo) return undefined;
@@ -150,23 +150,15 @@ function aggregateNextCheck(
   }
   const candidates: NextCheckCandidate[] = result.prs
     .filter((item) => (item.remainingSeconds ?? 0) > 0)
-    .map((item) => ({
-      reason: "ready-delay" as const,
-      seconds: item.remainingSeconds!,
-      eventDriven: false,
-    }));
+    .map((item) => ({ reason: "ready-delay" as const, seconds: item.remainingSeconds! }));
   candidates.push(
     result.prs.some((item) => item.isInMergeQueue)
-      ? { reason: "merge-queue", seconds: MERGE_QUEUE_RECHECK_SECONDS, eventDriven: false }
-      : { reason: "safety-net", seconds: SAFETY_NET_SECONDS, eventDriven: true },
+      ? { reason: "merge-queue", seconds: MERGE_QUEUE_RECHECK_SECONDS }
+      : { reason: "safety-net", seconds: SAFETY_NET_SECONDS },
   );
   const nowMs = Date.now();
   if (stallDeadlineSeconds !== undefined) {
-    candidates.push({
-      reason: "stall-timeout",
-      seconds: stallDeadlineSeconds - nowMs / 1000,
-      eventDriven: false,
-    });
+    candidates.push({ reason: "stall-timeout", seconds: stallDeadlineSeconds - nowMs / 1000 });
   }
   return earliestNextCheck(candidates, nowMs);
 }

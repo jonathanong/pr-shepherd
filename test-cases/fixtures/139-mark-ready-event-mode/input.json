@@ -1,5 +1,5 @@
 {
-  "description": "Event mode after the CLI marks a draft ready ends the turn with a safety-net wake-up.",
+  "description": "Event mode after the CLI marks a draft ready omits nextCheck and reruns immediately so the next tick starts the ready-delay.",
   "args": [
     "--poll-mode",
     "event"

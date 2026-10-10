@@ -301,18 +301,19 @@ Quota warning, when a configured threshold is crossed on a non-terminal result:
 With `--poll-mode event` (or `poll.mode: event`, or `auto` under `CLAUDE_CODE_REMOTE=true`) Shepherd runs one tick and never sleeps. The action, exit code, and every section below are unchanged. Two additions apply; see [cloud.md](cloud.md) for the full contract.
 
 - **`pollMode`** is `"event"`. The text header repeats it as `**pollMode** \`event\``. It is omitted in poll mode.
-- **`nextCheck`** is `{ at, inSeconds, reason, eventDriven }`, printed as a `**nextCheck**` header line after `**activity**`. `reason` is `ready-delay`, `stall-timeout`, `merge-queue`, or `safety-net`; `eventDriven` is `true` only for `safety-net`. It is omitted for `cancel`, `escalate`, `merge`, a native-stack draft hold, and an all-terminal aggregate.
+- **`nextCheck`** is `{ at, inSeconds, reason }`, printed as a `**nextCheck**` header line after `**activity**`. `reason` is `ready-delay`, `stall-timeout`, `merge-queue`, or `safety-net` (a backstop for a missed PR event). It is omitted for `cancel`, `escalate`, `merge`, `mark_ready`, a native-stack draft hold, and an all-terminal aggregate.
 
 Instruction changes when `nextCheck` is present:
 
-- `ready`, `wait`, and `mark_ready` replace "iterate immediately" or "rerun when the timer elapses" with two steps: end the turn without sleeping (`Playbook: "Cloud event loop".`), then keep exactly one wake-up at `nextCheck.at` and rerun the same command on a PR event or that wake-up, acting only on Shepherd's output. The quota-aware polling-cadence sentence is not printed in event mode, since Shepherd is not polling; the quota warning itself still prints. A native-stack draft hold has no `nextCheck` and does not get these two steps; it uses the event-mode hold instructions below.
+- `ready` and `wait` replace "iterate immediately" or "rerun when the timer elapses" with two steps: end the turn without sleeping (`Playbook: "Cloud event loop".`), then keep exactly one wake-up at `nextCheck.at` and rerun the same command on a PR event or that wake-up, acting only on Shepherd's output. A safety-net wake-up is named `safety-net wake-up`. The quota-aware polling-cadence sentence is not printed in event mode, since Shepherd is not polling; the quota warning itself still prints. A native-stack draft hold has no `nextCheck` and does not get these two steps; it uses the event-mode hold instructions below.
+- `mark_ready` has no `nextCheck` and always prints the plain instruction to iterate immediately, without the quota-aware cadence sentence: the tick saw a draft, so only the next tick can start the ready-delay timer and schedule its deadline.
 - `fix_code` replaces its last step (`FIX_CODE_CONTINUATION`, or its quota-aware variant) with: rerun once after the fixes, then end the turn, keeping one wake-up at `nextCheck.at`.
 - In durable-state sessions (event mode or `CLAUDE_CODE_REMOTE=true`), a generated `apply review` command that replies carries `--adopt-existing-replies`, so rerunning it after a lost state directory adopts a reply GitHub already shows instead of posting it twice. A direct `apply review` without the flag forwards every supplied ID.
 - Aggregate (`--stack`, multi-PR) results append one numbered step with the same rule and carry one `nextCheck` for the selection. That `nextCheck` includes the stack stall deadline (`stall-timeout`), and every row `pollCommand` carries `--poll-mode event`.
-- A native-stack draft hold keeps its hold instruction as step 1, with the `--stack` handoff carrying `--poll-mode event`, and adds a second step: do not rerun this one-PR session and keep no wake-up for it (`Playbook: "Cloud event loop".`).
+- A native-stack draft hold keeps its hold instruction as step 1, with the `--stack` handoff carrying `--poll-mode event`, and adds a second step: do not rerun this one-PR session and keep no wake-up for it; after the handoff, follow only the stack selector's output, which ends the turn and schedules the next tick (`Playbook: "Cloud event loop".`).
 
 ```markdown
-**nextCheck** `2024-05-15T19:57:00Z` · in 3020s · reason `safety-net` · event-driven (a PR event may wake you sooner)
+**nextCheck** `2024-05-15T19:57:00Z` · in 3020s · reason `safety-net`
 
 ## Instructions
 

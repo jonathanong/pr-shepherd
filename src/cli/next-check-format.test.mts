@@ -14,7 +14,6 @@ describe("next-check formatting", () => {
         at: "2024-05-15T19:09:00Z",
         inSeconds: 140,
         reason: "ready-delay",
-        eventDriven: false,
       }),
     ).toEqual(["**nextCheck** `2024-05-15T19:09:00Z` · in 140s · reason `ready-delay`"]);
     expect(
@@ -22,8 +21,7 @@ describe("next-check formatting", () => {
         at: "2024-05-15T19:57:00Z",
         inSeconds: 3020,
         reason: "safety-net",
-        eventDriven: true,
-      })[0],
-    ).toContain("event-driven");
+      }),
+    ).toEqual(["**nextCheck** `2024-05-15T19:57:00Z` · in 3020s · reason `safety-net`"]);
   });
 });

@@ -42,10 +42,8 @@ export function buildSimpleIterateInstructions(
         "Non-terminal — no action needed this tick. Iterate immediately with the same options to continue.",
       ];
     case "mark_ready":
-      if (result.nextCheck) {
-        return ["The CLI marked the PR ready for review.", ...eventWaitSteps(result.nextCheck)];
-      }
-      if (result.quotaWarning) {
+      // Event mode reruns at once too: Shepherd is not polling, so no cadence applies.
+      if (result.quotaWarning && result.pollMode !== "event") {
         return [
           buildQuotaAwareContinuation(
             result.quotaWarning,
@@ -123,7 +121,7 @@ function buildStackDraftHoldInstructions(
   if (!event) return [step];
   return [
     step,
-    `Event mode: do not rerun this one-PR session and keep no wake-up for it. The stack selector's own \`nextCheck\` schedules the next tick. ${playbookPointer("Cloud event loop")}`,
+    `Event mode: do not rerun this one-PR session and keep no wake-up for it. After the handoff, follow only the stack selector's output; it ends the turn and schedules the next tick through its own \`nextCheck\`. ${playbookPointer("Cloud event loop")}`,
   ];
 }
 

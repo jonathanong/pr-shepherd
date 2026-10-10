@@ -2,7 +2,7 @@ import type { NextCheck } from "../types/next-check.mts";
 import { playbookPointer } from "./playbook-pointer.mts";
 
 function wakeUpClause(next: NextCheck): string {
-  const kind = next.eventDriven ? "safety-net wake-up" : "wake-up";
+  const kind = next.reason === "safety-net" ? "safety-net wake-up" : "wake-up";
   return `Keep exactly one ${kind} at \`${next.at}\` (\`${next.reason}\`).`;
 }
 

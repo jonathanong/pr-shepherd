@@ -16,30 +16,31 @@ In event mode `--interval`, `--timeout`, `--debounce`, `--quiet-status`, and `--
 
 An event-mode result carries `pollMode: "event"` and, when another tick is meaningful, a `nextCheck`:
 
-| Field         | Meaning                                                                        |
-| ------------- | ------------------------------------------------------------------------------ |
-| `at`          | RFC 3339 UTC time, rounded up to the minute                                    |
-| `inSeconds`   | Seconds from now until `at`                                                    |
-| `reason`      | `ready-delay`, `stall-timeout`, `merge-queue`, or `safety-net`                 |
-| `eventDriven` | `true` when a PR event is expected to wake you before `at` (only `safety-net`) |
+| Field       | Meaning                                                        |
+| ----------- | -------------------------------------------------------------- |
+| `at`        | RFC 3339 UTC time, rounded up to the minute                    |
+| `inSeconds` | Seconds from now until `at`                                    |
+| `reason`    | `ready-delay`, `stall-timeout`, `merge-queue`, or `safety-net` |
 
 - `ready-delay`: the final ready-delay countdown ends at `at`. No event fires then.
 - `stall-timeout`: an unchanged state would trip the stall timeout at `at`. Used when it comes before the other deadline. For a `--stack` selector this is the stack-level stall timer, so an idle stack escalates on time instead of waiting for the safety net.
 - `merge-queue`: the PR is queued; recheck about every five minutes.
-- `safety-net`: a backstop about 50 minutes out for a missed event. Used for every other non-terminal tick.
+- `safety-net`: a backstop about 50 minutes out for a missed event; a PR event usually wakes the session first. Used for every other non-terminal tick.
 
-`nextCheck` is omitted for `CANCEL`, `ESCALATE`, `MERGE`, a native-stack draft hold, and an aggregate result whose PRs are all terminal. Text prints a `**nextCheck**` header line, JSON and MCP `structuredContent` carry the object, and the `## Instructions` steps name the same time. A stack or multi-PR selector reports one `nextCheck` for the whole selection, and every row `pollCommand` (including bounded draft probes) carries `--poll-mode event`.
+`nextCheck` is omitted for `CANCEL`, `ESCALATE`, `MERGE`, `MARK_READY`, a native-stack draft hold, and an aggregate result whose PRs are all terminal. Text prints a `**nextCheck**` header line, JSON and MCP `structuredContent` carry the object, and the `## Instructions` steps name the same time. A stack or multi-PR selector reports one `nextCheck` for the whole selection, and every row `pollCommand` (including bounded draft probes) carries `--poll-mode event`.
 
-A native-stack draft hold prints its `--stack` handoff with `--poll-mode event` plus one step telling the agent not to rerun the held one-PR session and to keep no wake-up for it; the stack selector's own `nextCheck` schedules the next tick.
+A native-stack draft hold prints its `--stack` handoff with `--poll-mode event` plus one step telling the agent not to rerun the held one-PR session and to keep no wake-up for it; after the handoff the agent follows only the stack selector's output, which ends the turn and schedules the next tick through its own `nextCheck`.
 
-The instructions end with a "Cloud event loop" step pointing at the bundled playbook (`pr-shepherd playbook "Cloud event loop"`). It tells the agent to run one tick, end the turn without sleeping, act only on Shepherd's output, and keep exactly one wake-up at `nextCheck.at`. After `FIX_CODE` it reruns Shepherd once and ends the turn. That rewrite also replaces the quota-aware `FIX_CODE` continuation; the quota warning itself still prints.
+`MARK_READY` keeps the immediate rerun even in event mode. Its tick saw the PR as a draft, so the ready-delay timer was cleared rather than started; the next tick sees the PR ready, starts the timer, and reports its `ready-delay` deadline.
+
+The instructions end with a "Cloud event loop" step pointing at the bundled playbook (`pr-shepherd playbook "Cloud event loop"`). It tells the agent to run one tick, follow the printed instructions on when to rerun or end the turn without sleeping, act only on Shepherd's output, and keep exactly one wake-up at `nextCheck.at`. After `FIX_CODE` it reruns Shepherd once and ends the turn. That rewrite also replaces the quota-aware `FIX_CODE` continuation; the quota warning itself still prints.
 
 ## Durable state
 
 A cloud VM can be recycled between ticks, and its temp directory with it. When `PR_SHEPHERD_STATE_DIR` is unset, state moves to `<git-common-dir>/pr-shepherd-state` (found with the read-only `git rev-parse --git-common-dir`). It lives with the checkout rather than `TMPDIR`.
 
 - Under `CLAUDE_CODE_REMOTE=true` this applies to every command.
-- Otherwise it applies inside event-mode `iterate` and poll calls only. A local `apply` in the same checkout would use the temp directory, so set `PR_SHEPHERD_STATE_DIR` if you mix modes.
+- Otherwise it applies inside event-mode `iterate` and poll calls only, including their per-worktree log: the CLI resolves the poll mode before it opens the log. A local `apply` in the same checkout would use the temp directory, so set `PR_SHEPHERD_STATE_DIR` if you mix modes.
 - `PR_SHEPHERD_STATE_DIR` always wins.
 - Outside a git repository the temp directory is used.
 

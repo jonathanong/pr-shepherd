@@ -29,6 +29,7 @@ import {
 import { handleCheckBlocker } from "./cli/check-blocker-handler.mts";
 import { handleQueueRemoval } from "./cli/queue-removal-handler.mts";
 import { setupLog } from "./log/setup.mts";
+import { runInEventStateScope } from "./cli/event-state-scope.mts";
 import { handleApplyMerge } from "./cli/apply-merge-handler.mts";
 import { extractTransportArgs } from "./cli/transport-args.mts";
 import { parseGithubTransport } from "./github/transport-mode.mts";
@@ -132,6 +133,14 @@ async function dispatch(argv: string[]): Promise<void> {
     handlePlaybook(args.slice(1));
     return;
   }
+
+  // Event mode enters the durable state scope before the log resolves its path.
+  return runInEventStateScope(args, () => dispatchLogged(argv));
+}
+
+async function dispatchLogged(argv: string[]): Promise<void> {
+  const args = argv.slice(2);
+  const subcommand = args[0];
 
   // Initialize the per-worktree log and install a stdout tee.
   await setupLog(argv);

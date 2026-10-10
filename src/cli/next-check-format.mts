@@ -8,8 +8,5 @@ export function formatPollModeSegment(result: { pollMode?: "event" }): string {
 /** The header line naming the next wake-up, or nothing when none applies. */
 export function formatNextCheckLines(next: NextCheck | undefined): string[] {
   if (!next) return [];
-  const backstop = next.eventDriven ? " · event-driven (a PR event may wake you sooner)" : "";
-  return [
-    `**nextCheck** \`${next.at}\` · in ${next.inSeconds}s · reason \`${next.reason}\`${backstop}`,
-  ];
+  return [`**nextCheck** \`${next.at}\` · in ${next.inSeconds}s · reason \`${next.reason}\``];
 }

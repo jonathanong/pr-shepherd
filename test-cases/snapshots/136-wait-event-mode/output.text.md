@@ -5,7 +5,7 @@
 Approvals: None [Not Required]
 Conversations Resolved: Yes [Not Required]
 **activity** 0 commits · 0 review rounds · active: `CI / build`
-**nextCheck** `2024-05-15T19:57:00Z` · in 3020s · reason `safety-net` · event-driven (a PR event may wake you sooner)
+**nextCheck** `2024-05-15T19:57:00Z` · in 3020s · reason `safety-net`
 
 WAIT: 0 passing, 1 in-progress — active checks: CI / build
 

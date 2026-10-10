@@ -8,7 +8,6 @@ export type NextCheckReason = "ready-delay" | "stall-timeout" | "merge-queue" | 
 export interface NextCheck {
   at: string;
   inSeconds: number;
+  /** `safety-net` is a backstop for a missed GitHub event; the others are real deadlines. */
   reason: NextCheckReason;
-  /** True when a GitHub event is expected to wake the session before `at`; `at` is a backstop. */
-  eventDriven: boolean;
 }

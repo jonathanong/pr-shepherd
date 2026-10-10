@@ -6,13 +6,11 @@ const SAFETY: NextCheck = {
   at: "2024-05-15T19:57:00Z",
   inSeconds: 3020,
   reason: "safety-net",
-  eventDriven: true,
 };
 const DELAY: NextCheck = {
   at: "2024-05-15T19:09:00Z",
   inSeconds: 140,
   reason: "ready-delay",
-  eventDriven: false,
 };
 
 describe("event instructions", () => {

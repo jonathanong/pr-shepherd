@@ -103,7 +103,6 @@ describe("aggregate event mode", () => {
     expect(m.readStackStallDeadline).toHaveBeenCalledWith(expect.anything(), 3600);
     expect(result.nextCheck).toMatchObject({
       reason: "stall-timeout",
-      eventDriven: false,
     });
     expect(result.nextCheck!.inSeconds).toBeLessThanOrEqual(660);
     await runPollSummaryForMode({ stallTimeoutSeconds: 120 } as never);

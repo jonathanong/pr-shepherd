@@ -8,8 +8,6 @@ export const SAFETY_NET_SECONDS = 3000;
 export interface NextCheckCandidate {
   reason: NextCheckReason;
   seconds: number;
-  /** Whether a GitHub event is expected to arrive before this deadline. */
-  eventDriven: boolean;
 }
 
 /** The earliest candidate as a `NextCheck`, with `at` rounded up to a whole minute. */
@@ -24,7 +22,6 @@ export function earliestNextCheck(
     at: new Date(atMs).toISOString().replace(/\.\d{3}Z$/, "Z"),
     inSeconds: Math.max(0, Math.round((atMs - nowMs) / 1000)),
     reason: first.reason,
-    eventDriven: first.eventDriven,
   };
 }
 
@@ -40,30 +37,25 @@ interface NextCheckFacts {
   stallDeadlineSeconds?: number;
 }
 
-/** Deadlines for one PR, or none when no further tick of this session is meaningful. */
+/**
+ * Deadlines for one PR, or none when the caller must not wait for one. `mark_ready` has none:
+ * its tick saw a draft, so only an immediate rerun can start the ready-delay timer.
+ */
 export function nextCheckCandidates(facts: NextCheckFacts, nowMs: number): NextCheckCandidate[] {
-  if (["cancel", "escalate", "merge"].includes(facts.action) || facts.stackDraftHold) return [];
+  const terminal = ["cancel", "escalate", "merge", "mark_ready"].includes(facts.action);
+  if (terminal || facts.stackDraftHold) return [];
   const candidates: NextCheckCandidate[] = [];
   if (facts.action === "ready" && (facts.remainingSeconds ?? 0) > 0) {
-    candidates.push({
-      reason: "ready-delay",
-      seconds: facts.remainingSeconds!,
-      eventDriven: false,
-    });
+    candidates.push({ reason: "ready-delay", seconds: facts.remainingSeconds! });
   } else if (facts.queued && facts.action === "wait") {
-    candidates.push({
-      reason: "merge-queue",
-      seconds: MERGE_QUEUE_RECHECK_SECONDS,
-      eventDriven: false,
-    });
+    candidates.push({ reason: "merge-queue", seconds: MERGE_QUEUE_RECHECK_SECONDS });
   } else {
-    candidates.push({ reason: "safety-net", seconds: SAFETY_NET_SECONDS, eventDriven: true });
+    candidates.push({ reason: "safety-net", seconds: SAFETY_NET_SECONDS });
   }
   if (facts.stallDeadlineSeconds !== undefined) {
     candidates.push({
       reason: "stall-timeout",
       seconds: facts.stallDeadlineSeconds - nowMs / 1000,
-      eventDriven: false,
     });
   }
   return candidates;

@@ -85,7 +85,7 @@ describe("runIterateForMode", () => {
     expect(m.runIterate.mock.calls[0]![0]).not.toHaveProperty("pollMode");
     expect(result).toMatchObject({
       pollMode: "event",
-      nextCheck: { reason: "safety-net", eventDriven: true, at: "2024-05-15T19:57:00Z" },
+      nextCheck: { reason: "safety-net", at: "2024-05-15T19:57:00Z" },
     });
   });
 
@@ -96,16 +96,18 @@ describe("runIterateForMode", () => {
     });
     m.runIterate.mockResolvedValueOnce({ action: "wait", mergeQueue: { inQueue: true }, ...base });
     expect(await runIterateForMode(opts)).toMatchObject({
-      nextCheck: { reason: "merge-queue", eventDriven: false },
+      nextCheck: { reason: "merge-queue" },
     });
   });
 
-  it("omits nextCheck for terminal actions and a stack draft hold", async () => {
+  it("omits nextCheck for terminal actions, mark-ready, and a stack draft hold", async () => {
     m.runIterate.mockResolvedValueOnce({ action: "cancel", ...base });
     const cancel = await runIterateForMode(opts);
     expect(cancel).toMatchObject({ pollMode: "event" });
     expect(cancel).not.toHaveProperty("nextCheck");
     m.runIterate.mockResolvedValueOnce({ action: "wait", stackDraftHold: {}, ...base });
+    expect(await runIterateForMode(opts)).not.toHaveProperty("nextCheck");
+    m.runIterate.mockResolvedValueOnce({ action: "mark_ready", ...base });
     expect(await runIterateForMode(opts)).not.toHaveProperty("nextCheck");
   });
 
@@ -114,7 +116,7 @@ describe("runIterateForMode", () => {
     m.readStallState.mockResolvedValue({ ok: true, state: { firstSeenAt } });
     m.runIterate.mockResolvedValue({ action: "wait", ...base });
     expect(await runIterateForMode(opts)).toMatchObject({
-      nextCheck: { reason: "stall-timeout", eventDriven: false, at: "2024-05-15T19:09:00Z" },
+      nextCheck: { reason: "stall-timeout", at: "2024-05-15T19:09:00Z" },
     });
     expect(
       await runIterateForMode({ ...(opts as object), stallTimeoutSeconds: 0 } as never),

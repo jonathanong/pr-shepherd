@@ -1,5 +1,5 @@
 {
-  "description": "Event mode on in-progress CI runs one tick and reports an event-driven safety-net nextCheck.",
+  "description": "Event mode on in-progress CI runs one tick and reports a safety-net nextCheck.",
   "args": [
     "--poll-mode",
     "event"

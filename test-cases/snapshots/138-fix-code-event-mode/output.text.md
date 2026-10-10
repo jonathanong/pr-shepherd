@@ -4,7 +4,7 @@
 **summary** 0 passing
 Approvals: None [Not Required]
 Conversations Resolved: Yes [Not Required]
-**nextCheck** `2024-05-15T19:57:00Z` · in 3020s · reason `safety-net` · event-driven (a PR event may wake you sooner)
+**nextCheck** `2024-05-15T19:57:00Z` · in 3020s · reason `safety-net`
 
 ## Failing checks
 
