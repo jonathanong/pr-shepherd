@@ -1,6 +1,6 @@
 # PR #42 [WAIT]
 
-**status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo`
 **summary** 1 passing · **remainingSeconds** 600
 **transport** `rest`
 
@@ -10,11 +10,9 @@
 - `viewerAuthorization`: REST does not expose viewer capability fields
 - `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
 - `mergeQueue`: REST does not expose queue membership, entry or removal history
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
 Stack: 7 (layer 1/1, base main)
 
-WAIT: 1 passing, 0 in-progress
+WAIT: 1 passing
 
 ## Instructions
 

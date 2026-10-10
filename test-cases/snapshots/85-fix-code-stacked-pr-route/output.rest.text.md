@@ -1,6 +1,6 @@
 # PR #42 [FIX_CODE]
 
-**status** `READY` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**status** `READY` · **repo** `owner/repo`
 **summary** 1 passing
 **transport** `rest`
 
@@ -10,13 +10,7 @@
 - `viewerAuthorization`: REST does not expose viewer capability fields
 - `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
 - `mergeQueue`: REST does not expose queue membership, entry or removal history
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
 Stack: 7 (layer 2/3, base stack/7/1)
-
-## Post-fix actions
-
-- base: `main`
 
 ## Instructions
 

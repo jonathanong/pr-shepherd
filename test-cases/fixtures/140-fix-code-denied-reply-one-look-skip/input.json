@@ -1,6 +1,6 @@
 {
   "description": "REST tick after the apply review run snapshotted as apply-review-denied-reply, in which GitHub denied the reply to rest-thread-11 (markMutationDenied stored deniedMutationBodyHash for its unchanged body). The denied thread is a one-look skip: it is suppressed and omitted from the generated apply command, while the new thread rest-thread-12 gets ordinary FIX_CODE work. No escalation.",
-  "args": ["--transport", "rest"],
+  "transports": ["rest"],
   "batchData": {
     "reviewThreads": [
       {

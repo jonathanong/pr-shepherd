@@ -1,19 +1,18 @@
 # owner/repo stack #45 — actionable
 
-Stack: #45 · anchor PR #452 · 2 layers · mode `summary`
-stackMergeable: false
+anchor PR #452 · 2 layers · mode `summary`
 nextAction: shepherd
 
 ## Layers
 
-- [PR #451: Layer needing a decision](https://github.com/owner/repo/pull/451) — not shepherded · not mergeable (`fix-thrash`) · owned
+- [PR #451: Layer needing a decision](https://github.com/owner/repo/pull/451) — not mergeable (`fix-thrash`) · owned
   - OPEN · position 1/2 · base `main`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields
   - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
   - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
-- [PR #452: Held upper draft](https://github.com/owner/repo/pull/452) — not shepherded · not mergeable (`draft`) · owned
+- [PR #452: Held upper draft](https://github.com/owner/repo/pull/452) — not mergeable (`draft`) · owned
   - OPEN · draft · position 2/2 · base `needs-decision`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied

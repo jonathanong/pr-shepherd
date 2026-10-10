@@ -102,6 +102,12 @@ function assertOutcome(fixture: Fixture, result: RunResult, expected: Outcome): 
   }
 }
 
+/** Merged/closed CANCEL prints only the action, PR and reason (no transport evidence). */
+function isMinimalTerminalCancel(json: unknown): boolean {
+  const { action, reason } = json as { action?: string; reason?: string };
+  return action === "cancel" && (reason === "merged" || reason === "closed");
+}
+
 /** GraphQL results captured this run, reused by the REST comparison in the same file. */
 const graphqlResults = new Map<string, RunResult>();
 
@@ -125,10 +131,12 @@ for (const name of listFixtureNames()) {
       it("REST variant matches GraphQL or its REST snapshot", async () => {
         const result = await runVariant(fixture, "rest");
 
-        // The transport evidence block is the same canonical block on every REST output.
+        // The transport evidence block is the same canonical block on every REST output, except
+        // the minimal merged/closed CANCEL, which prints no report data at all.
         const json = JSON.parse(result.jsonOut) as unknown;
         const evidence = collectRestJsonEvidence(json);
-        expect(evidence.length, "REST JSON must carry transport evidence").toBeGreaterThan(0);
+        const terminal = isMinimalTerminalCancel(json);
+        expect(evidence.length > 0, "REST JSON must carry transport evidence").toBe(!terminal);
         for (const entry of evidence) {
           expect(entry).toEqual({
             transport: "rest",
@@ -140,7 +148,7 @@ for (const name of listFixtureNames()) {
             fixture.mode === "aggregate" ? CANONICAL_REST_ITEM_BLOCK : CANONICAL_REST_TEXT_BLOCK,
           ),
           "REST text must carry the canonical transport block",
-        ).toBe(true);
+        ).toBe(!terminal);
 
         const paths = restSnapshotPaths(snapshotDir);
         let sameAsGraphql = false;

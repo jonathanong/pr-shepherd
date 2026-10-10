@@ -1,7 +1,15 @@
 # PR #42 [ESCALATE]
 
-**status** `READY` · **repo** `owner/repo` · **pollMode** `event`
+**status** `READY` · **repo** `owner/repo`
 **summary** 1 passing · **remainingSeconds** 300 · **isDraft**
+**transport** `rest`
+
+## Unavailable transport fields
+
+- `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
+- `viewerAuthorization`: REST does not expose viewer capability fields
+- `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
+- `mergeQueue`: REST does not expose queue membership, entry or removal history
 
 ⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required
 

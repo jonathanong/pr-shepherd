@@ -1,6 +1,6 @@
 # PR #42 [FIX_CODE]
 
-**status** `UNRESOLVED_COMMENTS` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
+**status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo`
 **summary** 1 passing
 **transport** `rest`
 
@@ -10,8 +10,6 @@
 - `viewerAuthorization`: REST does not expose viewer capability fields
 - `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
 - `mergeQueue`: REST does not expose queue membership, entry or removal history
-Approvals: None [Not Required]
-Conversations Resolved: No [Not Required]
 
 ## Review threads
 
@@ -33,20 +31,11 @@ Conversations Resolved: No [Not Required]
 
 > Please refactor the auth module.
 
-## Post-fix actions
-
-- base: `main`
-- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids PRRT_thread1 --message "$DISMISS_MESSAGE" --require-sha "$HEAD_SHA"`
-
 ## Instructions
 
-1. Review each item under `## Review threads`, `## Changes-requested reviews` and decide whether it needs a code change.
-2. Read each body under `## Review summaries (first look)` and journal any warranted note before review mutations. Playbook: "Shepherd Journal".
-3. Apply every warranted review fix in each file referenced above.
-4. Read every body under `## Changes-requested reviews` and apply any warranted change.
-5. If you changed code, commit any remaining changes and push to the PR head branch. If you did not, do not commit.
-6. For any substantial decision or rejection, append `- <decision>` to Shepherd Journal with `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`. Playbook: "Shepherd Journal".
-7. If you did not change code, replace `$HEAD_SHA` with `$(git rev-parse HEAD)` (it must equal the remote PR head). If you did, use the pushed SHA.
-8. Replace `$DISMISS_MESSAGE` with one sentence describing what changed.
-9. Run the `apply review:` command above. Playbook: "Review-mutation mechanics".
-10. `[FIX_CODE]` is non-terminal. Iterate immediately with the same options.
+1. Fix each warranted item above.
+2. Read each body under `## Review summaries (first look)` and journal any warranted note before review mutations.
+3. Commit and push any code changes.
+4. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
+5. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids PRRT_thread1 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha "$(git rev-parse HEAD)"`
+6. `[FIX_CODE]` is non-terminal. Rerun the same command now.

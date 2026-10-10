@@ -715,8 +715,12 @@ async function runMain(args: string[]): Promise<{ out: string; exitCode: number 
   return { out, exitCode };
 }
 
-function transportArgs(transport: FixtureTransport): string[] {
-  return transport === "rest" ? ["--transport", "rest"] : [];
+function transportArgs(fixture: Fixture, transport: FixtureTransport): string[] {
+  if (transport !== "rest") return [];
+  // CLAUDE_CODE_REMOTE=true also selects event poll mode; pin poll mode so the REST variant
+  // differs from GraphQL only by transport, unless the fixture chooses a mode itself.
+  const pinMode = !(fixture.args ?? []).includes("--poll-mode");
+  return ["--transport", "rest", ...(pinMode ? ["--poll-mode", "poll"] : [])];
 }
 
 export async function captureRun(
@@ -726,8 +730,8 @@ export async function captureRun(
   const pr = String(fixture.batchData?.number ?? 42);
   const args =
     fixture.mode === "aggregate"
-      ? [...(fixture.args ?? ["42", "43", "--timeout", "0s"]), ...transportArgs(transport)]
-      : ["iterate", pr, ...(fixture.args ?? []), ...transportArgs(transport)];
+      ? [...(fixture.args ?? ["42", "43", "--timeout", "0s"]), ...transportArgs(fixture, transport)]
+      : ["iterate", pr, ...(fixture.args ?? []), ...transportArgs(fixture, transport)];
   const { out: textOut, exitCode } = await runMain(args);
   const { out: jsonOut, exitCode: jsonExitCode } = await runMain([...args, "--format=json"]);
   return { textOut, jsonOut, exitCode, jsonExitCode };
@@ -741,7 +745,7 @@ export async function captureTwoTickStallRun(
   fixture: Fixture,
   transport: FixtureTransport = "graphql",
 ): Promise<RunResult> {
-  const args = ["iterate", "42", ...(fixture.args ?? []), ...transportArgs(transport)];
+  const args = ["iterate", "42", ...(fixture.args ?? []), ...transportArgs(fixture, transport)];
 
   // Clear write history so we only inspect calls from this run's tick 1.
   mockWriteStallState.mockClear();

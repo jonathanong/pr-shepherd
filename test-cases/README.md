@@ -27,6 +27,10 @@ test-cases/snapshots/<NN>-<action>-<scenario>/output.rest.json    # generated, o
 
 Every fixture runs twice: once on GraphQL and once on REST (`--transport rest` with
 `CLAUDE_CODE_REMOTE=true`, the Claude Code cloud session that supplies complete CCR thread status).
+That environment also selects event poll mode, so the REST variant pins `--poll-mode poll` unless the
+fixture passes its own `--poll-mode`. It keeps the cloud session's durable state, so generated reply
+commands carry `--adopt-existing-replies`. Merged and closed CANCEL output is minimal on both
+transports and carries no transport evidence.
 The REST input is derived automatically from the GraphQL fixture by
 [`test-helpers/test-cases/rest-projection.mts`](../test-helpers/test-cases/rest-projection.mts):
 the batch keeps only the keys the production REST reader emits, so `reviewDecision` is `null`,
@@ -52,8 +56,12 @@ The action and exit code must match GraphQL unless the fixture declares `restDiv
 (`action`, `exitCode`, and for aggregate fixtures `reason`/`nextAction`, plus a mandatory `why`). The
 test fails if a declared divergence no longer diverges. Other fixture fields:
 
-- `transports: ["rest"]` runs only the REST variant (fixtures `133`–`135`, whose scenario exists only
-  on REST); such a fixture has only `output.rest.*` snapshots.
+- `transports: ["rest"]` runs only the REST variant (fixtures `133`–`135`, `140`, `141` and `143`,
+  whose scenario exists only on REST); such a fixture has only `output.rest.*` snapshots. Use it
+  instead of `args: ["--transport", "rest"]`, which would skip the REST batch projection.
+- `restErrorResponses` (path → `{ status, body }`) makes a REST route answer with an error, e.g. a
+  refused CCR mutation; `claudeCodeRemote` sets `CLAUDE_CODE_REMOTE=true` on a GraphQL run (the REST
+  variant always sets it).
 - `restCarryOver` lists GraphQL-only batch keys to keep in the REST projection, modeling evidence
   fetched by an earlier GraphQL tick that survives a switch to REST.
 

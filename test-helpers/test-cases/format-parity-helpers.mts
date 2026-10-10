@@ -18,6 +18,7 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
     "mergeStatus",
     "the raw enum discriminator is JSON-only; text instead renders the derived `**branch** behind/conflicts with PR base` phrasing or the `**reviewDecision**`/BLOCKED header segment (docs/actions.md, 'Note on mergeStatus in JSON lean mode')",
   ],
+  ["mergeRequirements.approvals.current", "rendered as `None` when 0, not the digit"],
   [
     "mergeRequirements.approvals.requiredCount",
     "rendered as `Not Required`/omitted when 0, not the digit",

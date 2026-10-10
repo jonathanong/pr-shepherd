@@ -1,6 +1,6 @@
 # PR #42 [ESCALATE]
 
-**status** `UNKNOWN` · **merge** `HAS_HOOKS` · **state** `OPEN` · **repo** `owner/repo`
+**status** `UNKNOWN` · **merge** `HAS_HOOKS` · **repo** `owner/repo`
 **summary** 1 passing
 **transport** `rest`
 
@@ -10,8 +10,6 @@
 - `viewerAuthorization`: REST does not expose viewer capability fields
 - `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
 - `mergeQueue`: REST does not expose queue membership, entry or removal history
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
 
 ⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required
 

@@ -1,7 +1,7 @@
 # PR #42 [WAIT]
 
-**status** `PENDING` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo`
-**summary** 0 passing · **blockingBotReviewInProgress**
+**status** `PENDING` · **repo** `owner/repo`
+**blockingBotReviewInProgress**
 **transport** `rest`
 
 ## Unavailable transport fields
@@ -10,10 +10,8 @@
 - `viewerAuthorization`: REST does not expose viewer capability fields
 - `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
 - `mergeQueue`: REST does not expose queue membership, entry or removal history
-Approvals: None [Not Required]
-Conversations Resolved: Yes [Not Required]
 
-WAIT: 0 passing, 0 in-progress
+WAIT: 600s until auto-cancel
 
 ## Instructions
 

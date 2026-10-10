@@ -1,12 +1,11 @@
 # owner/repo stack #42 — actionable
 
-Stack: #42 · anchor PR #421 · 1 layers · mode `summary`
-stackMergeable: false
+anchor PR #421 · 1 layers · mode `summary`
 nextAction: shepherd
 
 ## Layers
 
-- [PR #421: Clean draft](https://github.com/owner/repo/pull/421) — not shepherded · not mergeable (`draft`) · owned
+- [PR #421: Clean draft](https://github.com/owner/repo/pull/421) — not mergeable (`draft`) · owned
   - OPEN · draft · position 1/1 · base `main`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
