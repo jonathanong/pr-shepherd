@@ -85,7 +85,7 @@ describe("REST stack evidence shared within one summary tick", () => {
     expect(wire.requests).toHaveLength(126);
     expect(requestsFor(prefix)).toHaveLength(1);
     expect(requestsFor("/user")).toHaveLength(1);
-    expect(requestsFor(`${prefix}/branches/main/protection`)).toHaveLength(1);
+    expect(requestsFor(`${prefix}/branches/main`)).toHaveLength(1);
     expect(requestsFor(`${prefix}/rules/branches/main`)).toHaveLength(1);
     const secondPlan = withPollSummaryInstructions(
       { ...second, mode: "summary", repo: "octocat/hello-world", reason: "actionable" },
@@ -114,7 +114,7 @@ describe("REST stack evidence shared within one summary tick", () => {
     fixture.sameBase = true;
     const result = await readRestStackSummary(101, repo);
     expect(result.ordered).toHaveLength(2);
-    expect(requestsFor(`${prefix}/branches/main/protection`)).toHaveLength(1);
+    expect(requestsFor(`${prefix}/branches/main`)).toHaveLength(1);
     expect(requestsFor(`${prefix}/rules/branches/main`)).toHaveLength(1);
   });
 

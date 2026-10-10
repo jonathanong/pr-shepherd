@@ -1,6 +1,7 @@
 import { readRestStackSummary } from "./rest-stack-summary.mts";
 import { githubOperation, getGithubTransport, runWithGithubTransport } from "./transport.mts";
 import { readRestExplicitSummary } from "./rest-explicit-summary-read.mts";
+import { withRestConditionalScope } from "./rest-conditional-scope.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type {
   PollSummaryCommandOptions,
@@ -41,7 +42,7 @@ async function fetchSelectedPollSummary(
   repo: RepoInfo,
 ): Promise<FetchedPollSummary> {
   if (opts.stackPrNumber !== undefined) return fetchStackSummary(opts, repo);
-  const requested = deduplicate(opts.prNumbers ?? []);
+  const requested = [...new Set(opts.prNumbers ?? [])];
   if (requested.length === 0) {
     throw new ShepherdError("Aggregate poll requires at least two PRs or --stack <PR>", EXIT.USAGE);
   }
@@ -102,7 +103,11 @@ async function fetchExplicitChunk(
   return githubOperation(
     "PollSummary",
     () => runWithGithubTransport("graphql", () => fetchGraphqlExplicitChunk(prs, repo)),
-    async () => ({ prs: await readRestExplicitSummary(prs, repo) }),
+    async () => ({
+      prs: await withSummaryConditionalScope(repo, prs[0]!, () =>
+        readRestExplicitSummary(prs, repo),
+      ),
+    }),
   );
 }
 
@@ -165,10 +170,6 @@ async function readGraphqlStackSummary(
   }
 }
 
-function deduplicate(values: number[]): number[] {
-  return [...new Set(values)];
-}
-
 async function readStackSummary(
   anchor: number,
   repo: RepoInfo,
@@ -177,8 +178,13 @@ async function readStackSummary(
   return githubOperation(
     "PollStackSummary",
     () => readGraphqlStackSummary(anchor, repo, stackSize),
-    () => readRestStackSummary(anchor, repo),
+    () => withSummaryConditionalScope(repo, anchor, () => readRestStackSummary(anchor, repo)),
   );
+}
+
+/** REST summary reads are conditional under the anchor PR's state: an unchanged body is a free 304. */
+function withSummaryConditionalScope<T>(repo: RepoInfo, pr: number, read: () => Promise<T>) {
+  return withRestConditionalScope({ owner: repo.owner, repo: repo.name, pr }, read);
 }
 
 export function fetchPollSummary(

@@ -141,7 +141,7 @@ async function runScopedCheck(
   context?.setReceiptSummary(result.receiptSummary ?? null);
   const restSnapshot = result.data.transport === "rest" ? restSnapshotState() : undefined;
   if (reuseFingerprint) {
-    const reused = await tryReuseRestSnapshotReport(prNumber, repo, stateKey, config, restSnapshot);
+    const reused = await tryReuseRestSnapshotReport(stateKey, config, restSnapshot);
     if (reused) return refreshCachedUnreported(reused, repo, context);
   }
   let batchData = result.data;

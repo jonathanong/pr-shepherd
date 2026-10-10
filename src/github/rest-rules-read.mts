@@ -4,6 +4,7 @@ import { readRest as rest } from "./rest-reader-core.mts";
 import { GitHubRequestError } from "./errors.mts";
 import { rateLimitKind } from "./rate-limit-kind.mts";
 import { isRestSessionRefusal } from "./rest-session-refusal.mts";
+import { recordRestConditionalRead } from "./rest-conditional-scope.mts";
 import {
   readRestPages,
   restRepoPath,
@@ -16,47 +17,52 @@ import {
 export async function readRestBranchRules(
   repo: RepoInfo,
   branch: string,
-): Promise<{ baseRef?: RawBaseRef; unavailable: Array<{ field: string; reason: string }> }> {
+): Promise<{
+  baseRef?: RawBaseRef;
+  unavailable: Array<{ field: string; reason: string }>;
+}> {
   const path = `${restRepoPath(repo)}/branches/${encodeURIComponent(branch)}/protection`;
   let classic: RawBranchProtectionRule | null = null;
   const unavailable: Array<{ field: string; reason: string }> = [];
-  try {
-    const data = restObject(await rest<unknown>("GET", path), "branch protection");
-    const approvals =
-      data.required_pull_request_reviews == null
-        ? null
-        : restObject(data.required_pull_request_reviews, "required reviews");
-    const checks =
-      data.required_status_checks == null
-        ? null
-        : restObject(data.required_status_checks, "required checks");
-    classic = {
-      requiresApprovingReviews: approvals !== null,
-      requiredApprovingReviewCount: approvals
-        ? restNumber(approvals.required_approving_review_count, "required approval count")
-        : 0,
-      requiresConversationResolution: enabled(data.required_conversation_resolution),
-      requiresStatusChecks: checks !== null,
-      requiredStatusCheckContexts: checks
-        ? restArray(checks.contexts, "check contexts").map((context) =>
-            restString(context, "check context"),
-          )
-        : [],
-      requiresCodeOwnerReviews: approvals?.require_code_owner_reviews === true,
-      requireLastPushApproval: approvals?.require_last_push_approval === true,
-      requiresCommitSignatures: enabled(data.required_signatures),
-      requiresLinearHistory: enabled(data.required_linear_history),
-      requiresStrictStatusChecks: checks?.strict === true,
-    };
-  } catch (error) {
-    if (!isUnavailablePolicy(error)) throw error;
-    // Only GitHub's explicit unprotected response proves absence. A generic
-    // 404 may hide protection from a token without administration access.
-    if (!isUnprotectedBranch(error))
-      unavailable.push({
-        field: "branchProtection",
-        reason: `Classic branch protection unavailable (HTTP ${error.status})`,
-      });
+  if (!(await classicProtectionDisabled(repo, branch))) {
+    try {
+      const data = restObject(await rest<unknown>("GET", path), "branch protection");
+      const approvals =
+        data.required_pull_request_reviews == null
+          ? null
+          : restObject(data.required_pull_request_reviews, "required reviews");
+      const checks =
+        data.required_status_checks == null
+          ? null
+          : restObject(data.required_status_checks, "required checks");
+      classic = {
+        requiresApprovingReviews: approvals !== null,
+        requiredApprovingReviewCount: approvals
+          ? restNumber(approvals.required_approving_review_count, "required approval count")
+          : 0,
+        requiresConversationResolution: enabled(data.required_conversation_resolution),
+        requiresStatusChecks: checks !== null,
+        requiredStatusCheckContexts: checks
+          ? restArray(checks.contexts, "check contexts").map((context) =>
+              restString(context, "check context"),
+            )
+          : [],
+        requiresCodeOwnerReviews: approvals?.require_code_owner_reviews === true,
+        requireLastPushApproval: approvals?.require_last_push_approval === true,
+        requiresCommitSignatures: enabled(data.required_signatures),
+        requiresLinearHistory: enabled(data.required_linear_history),
+        requiresStrictStatusChecks: checks?.strict === true,
+      };
+    } catch (error) {
+      if (!isUnavailablePolicy(error)) throw error;
+      // Only GitHub's explicit unprotected response proves absence. A generic
+      // 404 may hide protection from a token without administration access.
+      if (!isUnprotectedBranch(error))
+        unavailable.push({
+          field: "branchProtection",
+          reason: `Classic branch protection unavailable (HTTP ${error.status})`,
+        });
+    }
   }
   let rules: RawRepositoryRule[] | undefined;
   try {
@@ -120,6 +126,30 @@ export async function readRestBranchRules(
         }
       : undefined;
   return { ...(baseRef && { baseRef }), unavailable };
+}
+/**
+ * The branch summary is conditional (a 304 costs no quota) while an unprotected branch's
+ * `/protection` 404 is charged on every read. Its `commit.sha` also makes a base push visible
+ * to REST snapshot reuse. `protection.enabled: false` is GitHub's own
+ * "Branch not protected" answer, so the charged read is skipped. Any other shape, including a
+ * summary hidden from the token, falls through to the authoritative `/protection` read.
+ */
+async function classicProtectionDisabled(repo: RepoInfo, branch: string): Promise<boolean> {
+  const path = `${restRepoPath(repo)}/branches/${encodeURIComponent(branch)}`;
+  let summary: unknown;
+  try {
+    summary = await rest<unknown>("GET", path);
+  } catch (error) {
+    if (!isUnavailablePolicy(error)) throw error;
+    // The summary's `commit.sha` is what tells snapshot reuse the base moved; without it, an
+    // unchanged pull body cannot prove mergeability, so the snapshot must not be replayed.
+    recordRestConditionalRead(path, false, undefined);
+    return false;
+  }
+  if (!summary || typeof summary !== "object" || Array.isArray(summary)) return false;
+  const protection = (summary as Record<string, unknown>).protection;
+  if (!protection || typeof protection !== "object" || Array.isArray(protection)) return false;
+  return (protection as Record<string, unknown>).enabled === false;
 }
 function isUnavailablePolicy(error: unknown): error is GitHubRequestError {
   return (

@@ -80,11 +80,12 @@ export async function tryReuseFingerprintReport(
 /**
  * REST counterpart of `tryReuseFingerprintReport`: after the snapshot reads, reuse the previous
  * report only when every conditional read came back 304 with the same validators it was built
- * from. One uncached pull read still confirms the mergeability GitHub computes lazily.
+ * from. No separate mergeability read is made. Mergeability moves when the head or the base
+ * moves: the head is in the pull body, and the base branch summary read by
+ * `readRestBranchRules` carries the base's `commit.sha`, so a base push answers 200 and blocks
+ * reuse. An unsettled `mergeable: null` pull body is never cached, so it cannot answer 304.
  */
 export async function tryReuseRestSnapshotReport(
-  prNumber: number,
-  repo: RepoInfo,
   stateKey: { owner: string; repo: string; pr: number },
   config: PrShepherdConfig,
   snapshot: RestSnapshotState | undefined,
@@ -94,10 +95,6 @@ export async function tryReuseRestSnapshotReport(
   if (cached === null || cached.snapshotDigest !== snapshot.digest) return null;
   if (cached.inputDigest !== fingerprintInputDigest(config)) return null;
   if (!reportAllowsFingerprintSkip(cached.report)) return null;
-  const live = await getMergeableState(prNumber, repo.owner, repo.name);
-  if (live.state === "MERGED" || live.state === "CLOSED") return null;
-  if (live.mergeable !== cached.report.mergeStatus.mergeable) return null;
-  if (live.mergeStateStatus !== cached.report.mergeStatus.mergeStateStatus) return null;
   return {
     ...stripReplayedRuleAutoResolve(cached.report),
     fingerprintReused: true,

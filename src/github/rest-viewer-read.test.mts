@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { repo } from "../../test-helpers/github/rest-read.test-support.mts";
+import { describe, expect, it, vi } from "vitest";
+import { repo, wire } from "../../test-helpers/github/rest-read.test-support.mts";
 import { serveViewerFeedback } from "../../test-helpers/github/rest-viewer-feedback.test-support.mts";
 import { readRestFeedback } from "./rest-feedback-read.mts";
 import { readRestViewerLogin } from "./rest-viewer-read.mts";
+import { withRestConditionalScope } from "./rest-conditional-scope.mts";
+import { _resetTokenCache } from "./http.mts";
 
 describe("optional REST authenticated viewer evidence", () => {
   it.each([401, 403, 404])(
@@ -57,6 +59,34 @@ describe("optional REST authenticated viewer evidence", () => {
       await expect(readRestFeedback(101, repo)).rejects.toMatchObject({ status });
     },
   );
+
+  it("remembers a denied viewer per credential inside a PR scope, for an hour", async () => {
+    const fixture = await serveViewerFeedback();
+    fixture.viewerStatus = 403;
+    fixture.viewer = { message: "Resource not accessible by integration" };
+    const key = { owner: "octocat", repo: "hello-world", pr: 101 };
+    const viewerReads = () => wire.requests.filter((request) => request.path === "/user").length;
+    await withRestConditionalScope(key, async () => {
+      expect(await readRestViewerLogin()).toBeNull();
+      expect(await readRestViewerLogin()).toBeNull();
+    });
+    expect(viewerReads()).toBe(1);
+    // Outside a PR scope there is nowhere to remember the denial.
+    expect(await readRestViewerLogin()).toBeNull();
+    expect(viewerReads()).toBe(2);
+    const now = Date.now();
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now + 60 * 60 * 1000);
+    await withRestConditionalScope(key, () => readRestViewerLogin());
+    clock.mockRestore();
+    expect(viewerReads()).toBe(3);
+    // A successful identity is never cached: it comes back as a free 304 instead.
+    fixture.viewerStatus = 200;
+    fixture.viewer = { login: "alice" };
+    vi.stubEnv("GH_TOKEN", "other-token");
+    _resetTokenCache();
+    await expect(withRestConditionalScope(key, () => readRestViewerLogin())).resolves.toBe("alice");
+    expect(viewerReads()).toBe(4);
+  });
 
   it("does not identify a deleted author as a real viewer named unknown", async () => {
     const fixture = await serveViewerFeedback();
