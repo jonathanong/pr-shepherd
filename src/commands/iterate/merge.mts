@@ -12,6 +12,11 @@ import { renderShellCommand, buildPrShepherdCommand } from "../../cli/runner.mts
 import { hasQueueRecoveryEvidence } from "./check-evidence.mts";
 import { isCiQueueRemovalReason } from "../../state/queue-removal-ack.mts";
 import { buildEscalateHumanMessage } from "./escalate.mts";
+import { getGithubTransport } from "../../github/transport.mts";
+
+interface QueueRecoveryUnavailable {
+  unavailable: string;
+}
 
 export function renderMergeCommand(command: { argv: string[] }): string {
   return renderShellCommand(command.argv);
@@ -22,9 +27,13 @@ export function buildRemovedQueueRecovery(
   report: ShepherdReport,
   checks: AgentCheck[],
   merge: boolean | undefined,
-): MergeCommandPlan | undefined {
+): MergeCommandPlan | QueueRecoveryUnavailable | undefined {
   if (report.mergeStatus.mergeRequirements?.stack) return undefined;
   if (!removedQueueRecoveryAvailable(report, checks, merge)) return undefined;
+  // REST cannot prove that a recorded enqueue was removed or that no later enqueue exists.
+  // Never offer a resume command as if it could authorize a fresh same-head submission.
+  const unsupported = unsupportedRestQueueRecovery(report);
+  if (unsupported) return unsupported;
   const plan = buildMergeCommandPlan({
     pr: report.pr,
     repo: report.repo,
@@ -39,10 +48,12 @@ export function buildRemovedQueueRecovery(
 export function buildStackQueueRemovalAcknowledgment(
   report: ShepherdReport,
   checks: AgentCheck[],
-): { argv: string[] } | undefined {
+): { argv: string[] } | QueueRecoveryUnavailable | undefined {
   if (!report.mergeStatus.mergeRequirements?.stack) return undefined;
   // This records a local disposition, without enqueueing; aggregate child sessions omit --merge.
   if (!removedQueueRecoveryAvailable(report, checks, true)) return undefined;
+  const unsupported = unsupportedRestQueueRecovery(report);
+  if (unsupported) return unsupported;
   const removal = report.mergeQueue!.latestRemoval!;
   return buildPrShepherdCommand([
     "apply",
@@ -55,6 +66,16 @@ export function buildStackQueueRemovalAcknowledgment(
     "--removed-at",
     String(removal.createdAtUnix),
   ]);
+}
+
+function unsupportedRestQueueRecovery(
+  report: ShepherdReport,
+): QueueRecoveryUnavailable | undefined {
+  if (report.transport !== "rest" && getGithubTransport() !== "rest") return undefined;
+  return {
+    unavailable:
+      "Queue recovery is transport-unsupported: REST cannot verify current merge-queue removal evidence. Continue the printed fix steps; requeue and removal acknowledgment require verified current removal evidence.",
+  };
 }
 
 function removedQueueRecoveryAvailable(

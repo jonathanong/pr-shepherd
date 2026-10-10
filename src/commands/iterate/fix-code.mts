@@ -489,11 +489,13 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
             bottomPr: report.stackBottomPr,
           })
         : undefined;
-  const requeue = buildRemovedQueueRecovery(report, failingAgentChecks, opts.merge);
-  const queueRemovalAcknowledgment = buildStackQueueRemovalAcknowledgment(
-    report,
-    failingAgentChecks,
-  );
+  const recovery = buildRemovedQueueRecovery(report, failingAgentChecks, opts.merge);
+  const requeue = recovery && !("unavailable" in recovery) ? recovery : undefined;
+  const acknowledgmentRecovery = buildStackQueueRemovalAcknowledgment(report, failingAgentChecks);
+  const queueRemovalAcknowledgment =
+    acknowledgmentRecovery && !("unavailable" in acknowledgmentRecovery)
+      ? acknowledgmentRecovery
+      : undefined;
   const queueEjection: QueueEjectionRecovery | undefined = !currentEjectionCommit(
     report,
     failingAgentChecks,
@@ -540,6 +542,9 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     stackRebase,
     queueEjection,
   );
+  if (recovery && "unavailable" in recovery) instructions.unshift(recovery.unavailable);
+  if (acknowledgmentRecovery && "unavailable" in acknowledgmentRecovery)
+    instructions.unshift(acknowledgmentRecovery.unavailable);
   if (failingAgentChecks.some((check) => releasedCheckNames.has(check.name))) {
     const completion = instructions.pop();
     instructions.push(buildReleasedBlockerInstruction(prNumber));

@@ -20,6 +20,32 @@ function moveHead() {
   harness.fixture.submitBody.details.expected_head_sha = nextHead;
 }
 describe("new guarded merge after an old enqueue", () => {
+  it("resumes repeated same-head queue commands as a recorded outcome without a fresh submission", async () => {
+    const queue = () =>
+      runWithGithubTransport("rest", () =>
+        runApplyMerge({ ...input, mergeAction: "merge_queue", mergeMethod: undefined }),
+      );
+    harness.fixture.submitBody = { status: "enqueued", details: { message: "Enqueued SHA" } };
+    await expect(queue()).resolves.toMatchObject({ status: "enqueued" });
+    harness.fixture.submitBody = pendingMerge();
+    const results = await Promise.all(Array.from({ length: 8 }, queue));
+    for (const result of results)
+      expect(result).toMatchObject({
+        status: "enqueued",
+        note: expect.stringContaining("current merge-queue membership is not confirmed"),
+      });
+    expect(submissions()).toHaveLength(1);
+    expect(submissions()[0]?.body).toEqual({
+      sha: input.requireSha,
+      merge_action: "merge_queue",
+      bypass_rules: false,
+    });
+    expect(await readMergeRequest(key)).toMatchObject({
+      options: { requireSha: input.requireSha, mergeAction: "merge_queue" },
+      response: { status: "enqueued" },
+    });
+  });
+
   it("allows only one fresh request for a verified new head after the old enqueue completed", async () => {
     harness.fixture.submitBody = { status: "enqueued", details: { message: "Enqueued old SHA" } };
     await apply();

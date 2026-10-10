@@ -8,6 +8,8 @@ REST may not provide every field available through GraphQL; unavailable fields s
 
 The observed Claude Code proxy contract includes `GET /pulls/{n}/ccr/review_threads`, `POST /pulls/{n}/ccr/comments/{comment_id}/resolve`, and `POST /pulls/{n}/ccr/ready_for_review`. These routes support thread reads, resolve, and mark-ready in REST mode. The corresponding unresolve, auto-merge, and convert-to-draft `ccr` routes have not had their request/response contracts verified, so Shepherd treats those operations as unsupported until they are recorded and implemented. REST also has no comment-minimize or file-view operation. Unsupported automatic cleanup is a surfaced one-look skip; an explicit requested operation returns a clear unsupported error or `transport-unsupported` handoff.
 
+REST does not expose current merge-queue removal history. If a tick carries previously fetched removal evidence after switching to REST, Shepherd still surfaces the failed checks, but reports automatic same-head queue recovery and native-stack removal acknowledgment as `transport-unsupported` rather than printing commands that cannot revalidate the removal. Repeating an existing same-head merge request only resumes the old enqueue result. A definite old-head enqueue can still be replaced after a fresh read verifies a changed PR head.
+
 Related: [graphql-usage.md](graphql-usage.md) (points per command), [authentication.md](authentication.md) (token pools), [configuration.md](configuration.md) (`watch.graphqlQuotaWarnings`), [debugging.md](debugging.md) (rate-limit exhaustion), [actions.md](actions.md) (quota-warning output).
 
 ## REST snapshot coverage

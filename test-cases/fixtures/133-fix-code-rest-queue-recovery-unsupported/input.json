@@ -1,0 +1,43 @@
+{
+  "description": "Previously fetched GraphQL removal evidence survives a switch to REST. Keep the failed merge-group check and explicit transport-unsupported reason in both formats, without a same-head requeue command that would resume an old enqueue result.",
+  "args": [
+    "--merge",
+    "--transport",
+    "rest"
+  ],
+  "batchData": {
+    "latestMergeQueueRemoval": {
+      "reason": "failed_checks",
+      "actor": "github-actions",
+      "createdAtUnix": 1715799000,
+      "beforeCommitOid": "queue-commit-1",
+      "beforeCommitParentOids": [
+        "abc123"
+      ]
+    },
+    "removedMergeQueueChecks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "source": "check_run",
+        "event": "merge_group",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/37106358227",
+        "runId": "37106358227",
+        "runAttempt": 1,
+        "workflowName": "CI",
+        "scope": "merge_group",
+        "commitOid": "queue-commit-1",
+        "logExcerpt": "OpenRouter HTTP 529: provider temporarily unavailable",
+        "jobName": "tests"
+      }
+    ],
+    "isMergeQueueEnabled": true
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}
