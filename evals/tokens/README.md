@@ -12,8 +12,8 @@ Latest numbers: [REPORT.md](REPORT.md). Estimated cost per session:
 
 | session   | cost vs. gh | cost vs. MCP | turns vs. gh / MCP | tool tokens vs. gh / MCP |
 | --------- | ----------- | ------------ | ------------------ | ------------------------ |
-| single PR | **−39%**    | **−75%**     | −14% / −67%        | −71% / −87%              |
-| PR stack  | **−30%**    | **−53%**     | −31% / −53%        | +34% / −25%              |
+| single PR | **−40%**    | **−75%**     | −14% / −66%        | −71% / −87%              |
+| PR stack  | **−25%**    | **−50%**     | −23% / −47%        | +41% / −24%              |
 
 The savings are concentrated. Against a frugal gh agent they come from
 re-read review history, CI logs, CI and merge-queue waits, and stack merges. Against
@@ -181,24 +181,24 @@ The report splits each session's cost in two:
 | session | pr-shepherd fixed share | variable tokens vs. gh | variable cost vs. gh |
 | ------- | ----------------------- | ---------------------- | -------------------- |
 | PR      | 25% of its cost         | −79%                   | −54%                 |
-| stack   | 34% of its cost         | −8%                    | −54%                 |
+| stack   | 31% of its cost         | −2%                    | −49%                 |
 
-The stack session's "+34% tool tokens vs. gh" is all fixed cost. pr-shepherd
+The stack session's "+41% tool tokens vs. gh" is all fixed cost. pr-shepherd
 loads about 2.2k tokens of skill and playbooks, and gh loads nothing. On
-variable tokens alone pr-shepherd reads 8% less than gh.
+variable tokens alone pr-shepherd reads 2% less than gh.
 
 Within the variable cost, `stack-work` is where pr-shepherd reads more than gh:
-2,254 tokens against 1,644.
+2,254 tokens against 1,598.
 
 - **Overview:** pr-shepherd's stack overview is about 600 tokens. gh's native
-  stacks call is about 350.
+  stacks call, projected with `--jq`, is about 260.
 - **Routed layers:** each layer pr-shepherd routes gets its own one-PR tick of
   about 450 tokens. About 250 of those are the fixed `## Instructions` block and
   60 the post-fix commands. gh's per-layer reads are 100–250 tokens, because the
   fixture layers each carry a single short thread.
 
 So on small layers, the per-output instruction boilerplate outweighs the
-content. pr-shepherd still costs 9% less on that row, because its commands are
+content. pr-shepherd still costs 11% less on that row, because its commands are
 shorter (output tokens cost 5×). It pulls ahead once layers carry real review
 history, which gh re-reads and pr-shepherd shows once.
 
@@ -223,10 +223,10 @@ The levers, in order of size:
   - `bot-review-summary`, `review-thread`, `multi-category` and `bot-threads`;
   - `conflicts`, `merge` and `merge-queue`.
 - **Stack token volume.** Each routed layer's first tick prints its own
-  instructions. In the stack session pr-shepherd reads 34% more tool tokens than
+  instructions. In the stack session pr-shepherd reads 41% more tool tokens than
   gh's terse per-layer reads, and routing work across the six-layer stack is
-  nearly even with gh (−9%). The session still costs 30% less, because
-  pr-shepherd takes 9 turns where gh takes 13.
+  nearly even with gh (−11%). The session still costs 25% less, because
+  pr-shepherd takes 10 turns where gh takes 13.
 
 ## What this does not measure
 

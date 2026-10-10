@@ -28,12 +28,29 @@ const eagerTokens = tokens("x".repeat(schemas.eagerChars));
 // reports, per later scenario, how much each arm has loaded by then.
 const carry = Object.assign({}, ...SCENARIOS.filter((s) => s.setup).map((s) => s.arms().carry));
 
+/** Sum cost results, each scaled by a weight. */
+function addCosts(parts) {
+  const keys = ["calls", "turns", "toolTokens", "ite", "truncated"];
+  return Object.fromEntries(
+    keys.map((k) => {
+      const sum = parts.reduce((t, [c, w]) => t + w * c[k], 0);
+      return [k, k === "ite" || k === "toolTokens" ? Math.round(sum) : Math.round(sum * 10) / 10];
+    }),
+  );
+}
+
 const rows = SCENARIOS.map((s) => {
   const arms = s.arms();
   const carried = (arm) => (s.setup ? 0 : (carry[s.id]?.[arm] ?? 0));
-  const result = Object.fromEntries(
-    ARMS.map((a) => [a, cost(arms[a], { extraContext: carried(a) })]),
-  );
+  // A setup row adds its lazy loads, each at the share of sessions that trigger it.
+  const armCost = (a) =>
+    s.setup
+      ? addCosts([
+          [cost(arms[a]), 1],
+          ...(arms.loads ?? []).filter((l) => l.arm === a).map((l) => [cost(l.calls), l.share]),
+        ])
+      : cost(arms[a], { extraContext: carried(a) });
+  const result = Object.fromEntries(ARMS.map((a) => [a, armCost(a)]));
   // Sensitivity: the whole GitHub toolset in context on every request instead
   // of the few schemas the setup scenario loads on demand.
   result.mcpEager = s.setup ? cost([]) : cost(arms.mcp, { extraContext: eagerTokens });

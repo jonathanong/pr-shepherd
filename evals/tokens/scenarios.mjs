@@ -299,9 +299,14 @@ const PLAYBOOK_FILES = Object.fromEntries(
  * it; each GitHub MCP tool's schema (via ToolSearch) when the MCP arm first
  * calls it. gh needs nothing.
  *
- * Every load is its own turn. `carry` gives, per scenario, the tokens each arm
- * has loaded by the end of that scenario; bench.mjs keeps them in context on
- * every request of that scenario.
+ * Each load is its own turn, returned in `loads` with a `share`: the chance
+ * the triggering scenario happens in a session (its weight, capped at 1). A
+ * load that only an optional step triggers is charged, and carried, at that
+ * step's share.
+ *
+ * `carry` gives, per scenario, the expected tokens each arm has in context
+ * from loads: a playbook only after the output that names it (so from the
+ * next scenario on), a tool schema from the call that needs it.
  */
 function setupScenario({ id, session }) {
   return {
@@ -316,57 +321,67 @@ function setupScenario({ id, session }) {
         if (!schemas[t]) throw new Error(`no recorded schema for ${t}; add it to MCP_TOOLS_USED`);
         return schemas[t];
       };
-      const skill = readSkill("SKILL.md");
-      const shepherd = [
-        { phase: 1, via: "bash", cmd: 'Skill {"skill":"pr-shepherd:pr-shepherd"}', out: skill },
-      ];
       // Context holds each load's command and result.
-      const size = (c) => tokens(c.cmd) + tokens(c.out);
-      const mcp = [];
+      const size = (calls) => calls.reduce((t, c) => t + tokens(c.cmd) + tokens(c.out), 0);
+      const skill = [
+        {
+          phase: 1,
+          via: "bash",
+          cmd: 'Skill {"skill":"pr-shepherd:pr-shepherd"}',
+          out: readSkill("SKILL.md"),
+        },
+      ];
+      const loads = [];
       const playbooks = new Set();
       const tools = new Set();
-      let shepherdTokens = size(shepherd[0]);
+      let shepherdTokens = size(skill);
       let mcpTokens = 0;
       const carry = {};
       for (const s of SCENARIOS.filter((x) => x.session === session && !x.setup)) {
         const arms = s.arms();
+        const share = Math.min(1, s.weight);
+        const before = shepherdTokens;
         const text = arms.shepherd.map((c) => c.out).join("\n");
         const named = [...new Set([...text.matchAll(/Playbook: "([^"]+)"/g)].map((m) => m[1]))];
-        const newPlaybooks = named.filter((n) => !playbooks.has(n)).sort();
-        if (newPlaybooks.length) {
-          const phase = shepherd.length + 1;
-          for (const name of newPlaybooks) {
+        const reads = named
+          .filter((n) => !playbooks.has(n))
+          .sort()
+          .map((name) => {
             playbooks.add(name);
-            const call = {
-              phase,
+            return {
+              phase: 1,
               via: "bash",
               cmd: `Read ${PLAYBOOK_FILES[name]}`,
               out: readSkill(PLAYBOOK_FILES[name]),
             };
-            shepherdTokens += size(call);
-            shepherd.push(call);
-          }
+          });
+        if (reads.length) {
+          loads.push({ arm: "shepherd", share, calls: reads });
+          shepherdTokens += share * size(reads);
         }
         const used = arms.mcp.filter((c) => c.via === "mcp").map((c) => c.cmd.split(" ")[0]);
         const newTools = [...new Set(used)].filter((t) => !tools.has(t)).sort();
         if (newTools.length) {
           newTools.forEach((t) => tools.add(t));
-          const call = {
-            phase: mcp.length + 1,
-            via: "mcp",
-            cmd: `ToolSearch {"query":"select:${newTools.join(",")}"}`,
-            out: newTools.map(schema).join("\n"),
-          };
-          mcpTokens += size(call);
-          mcp.push(call);
+          const search = [
+            {
+              phase: 1,
+              via: "mcp",
+              cmd: `ToolSearch {"query":"select:${newTools.join(",")}"}`,
+              out: newTools.map(schema).join("\n"),
+            },
+          ];
+          loads.push({ arm: "mcp", share, calls: search });
+          mcpTokens += share * size(search);
         }
-        carry[s.id] = { shepherd: shepherdTokens, gh: 0, mcp: mcpTokens };
+        carry[s.id] = { shepherd: before, gh: 0, mcp: mcpTokens };
       }
       return {
-        note: `Skill up front, then ${[...playbooks].join(", ")} playbooks as outputs first name them, for shepherd; ${[...tools].sort().join(", ")} schemas as MCP first calls them; nothing for gh.`,
-        shepherd,
+        note: `Skill up front, then ${[...playbooks].join(", ")} playbooks as outputs first name them, for shepherd; ${[...tools].sort().join(", ")} schemas as MCP first calls them; nothing for gh. Loads that only an optional step triggers count at that step's weight.`,
+        shepherd: skill,
         gh: [],
-        mcp,
+        mcp: [],
+        loads,
         carry,
       };
     },
@@ -397,7 +412,7 @@ const PR_SCENARIOS = [
           {
             phase: 1,
             via: "bash",
-            cmd: "gh pr checks 42 --watch --interval 60",
+            cmd: "gh pr checks 42 -R owner/repo --watch --interval 60",
             out: Array.from({ length: polls }, () => ghPrChecks(state)).join("\n"),
           },
         ],
@@ -771,7 +786,7 @@ function stackFixture(name) {
   return { layers, anchor, number: summary.selection.stackNumber };
 }
 
-/** One call to GitHub's native stack endpoint returns every layer in order. */
+/** One call to GitHub's native stack endpoint, projected with --jq, returns every layer in order. */
 function ghDiscover(layers, anchor, number) {
   const a = layers[anchor];
   const repo = STACK_REPO(a);
@@ -779,25 +794,18 @@ function ghDiscover(layers, anchor, number) {
     {
       phase: 1,
       via: "bash",
-      cmd: `gh api "repos/${repo}/stacks?pull_request=${a.pr}"`,
-      out: JSON.stringify([
-        {
-          id: 9000000 + number,
-          number,
-          node_id: `PRS_${number}`,
-          url: `https://api.github.com/repos/${repo}/stacks/${number}`,
-          base: { ref: layers[0].stack?.baseRefName ?? "main" },
-          open: true,
-          created_at: "2026-10-01T12:00:00Z",
-          pull_requests: layers.map((l) => ({
-            number: l.pr,
-            state: l.state === "OPEN" ? "open" : "closed",
-            draft: false,
-            merged_at: l.state === "MERGED" ? "2026-10-02T12:00:00Z" : null,
-            head: { ref: l.headRefName, sha: l.headRefOid },
-          })),
-        },
-      ]),
+      cmd: `gh api "repos/${repo}/stacks?pull_request=${a.pr}" --jq '.[] | {number, base: .base.ref, pull_requests: [.pull_requests[] | {number, state, merged_at, head: .head.ref, sha: .head.sha}]}'`,
+      out: JSON.stringify({
+        number,
+        base: layers[0].stack?.baseRefName ?? "main",
+        pull_requests: layers.map((l) => ({
+          number: l.pr,
+          state: l.state === "OPEN" ? "open" : "closed",
+          merged_at: l.state === "MERGED" ? "2026-10-02T12:00:00Z" : null,
+          head: l.headRefName,
+          sha: l.headRefOid,
+        })),
+      }),
     },
   ];
 }
@@ -853,7 +861,19 @@ function stackBaselines(name) {
     const reads = mcpObserve(layerState(l), mcpRead);
     mcp.push(...(l === layers[anchor] ? reads.filter((c) => !c.cmd.includes('"get"')) : reads));
   }
-  return { layers, anchor, gh, mcp };
+  return { layers, anchor, number, gh, mcp };
+}
+
+/** Fixture 87's all-merged stack overview, renumbered for another two-layer stack. */
+function settledOverview(layers, number) {
+  const [lower, upper] = layers;
+  return snapshot("87-aggregate-stack-all-terminal")
+    .replace("stack #7", `stack #${number}`)
+    .replace("Stack: #7", `Stack: #${number}`)
+    .replaceAll("PR #44", `PR #${upper.pr}`)
+    .replaceAll("PR #43", `PR #${lower.pr}`)
+    .replaceAll("/pull/44", `/pull/${upper.pr}`)
+    .replaceAll("/pull/43", `/pull/${lower.pr}`);
 }
 
 const stackCmd = (anchorPr, repo, flags = "") =>
@@ -894,11 +914,11 @@ const STACK_SCENARIOS = [
     session: "stack",
     weight: 1,
     title: `Two-layer stack: wait out a ${CI_MINUTES}-minute merge queue`,
-    note: `Fixture 98. With --until-terminal, shepherd's stack poll ignores its timeout and blocks until the queue settles, printing one stderr line per ${STACK_POLL_SECONDS}s tick; its final result is \`stack-merge\`'s overview, so here it adds only the stderr lines. gh finds the stack, reads both layers once, then re-checks queue state at the same ${STACK_POLL_SECONDS}s cadence with one GraphQL query. MCP cannot see queue state at all, so it stops after its reads.`,
+    note: `Fixture 98. With --until-terminal, shepherd's stack poll ignores its timeout and blocks until the queue settles, printing one stderr line per ${STACK_POLL_SECONDS}s tick; it returns once both layers merge, with the settled overview (fixture 87's all-terminal output, renumbered). gh finds the stack, reads both layers once, then re-checks queue state at the same ${STACK_POLL_SECONDS}s cadence with one GraphQL query. MCP cannot see queue state at all, so it stops after its reads.`,
     gaps: { mcp: "cannot see merge-queue membership" },
     arms() {
       const name = "98-aggregate-stack-merge-queue";
-      const { layers, anchor, gh, mcp } = stackBaselines(name);
+      const { layers, anchor, number, gh, mcp } = stackBaselines(name);
       const repo = STACK_REPO(layers[anchor]);
       const [owner, repoName] = repo.split("/");
       const ticks = Math.ceil((CI_MINUTES * 60) / STACK_POLL_SECONDS);
@@ -929,8 +949,12 @@ const STACK_SCENARIOS = [
       const ghStart = lastPhase(gh) + 1;
       return {
         shepherd: [
-          // The blocking call's final result is `stack-merge`'s overview.
-          { phase: 1, via: "bash", cmd: "", out: stderr, continues: true },
+          {
+            phase: 1,
+            via: "bash",
+            cmd: stackCmd(layers[anchor].pr, repo, " --merge"),
+            out: `${stderr}${settledOverview(layers, number)}`,
+          },
         ],
         gh: [
           ...gh,
