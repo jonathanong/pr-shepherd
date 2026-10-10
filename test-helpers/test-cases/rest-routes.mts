@@ -123,6 +123,15 @@ export function restRoutesForFixture(fixture, batchData: Record<string, any>) {
     if (method === "GET" && path.startsWith(`${prefix}/compare/`)) {
       return json({ behind_by: fixture.baseBehindBy ?? 0 });
     }
+    // Branch summary read before `/protection`; consistent with the unprotected 404 below.
+    const branch = path.match(new RegExp(`^${prefix}/branches/([^/]+)$`));
+    if (method === "GET" && branch) {
+      return json({
+        name: decodeURIComponent(branch[1]),
+        commit: { sha: batchData.baseRefOid ?? "base000" },
+        protection: { enabled: false },
+      });
+    }
     if (method === "GET" && /\/branches\/[^/]+\/protection$/.test(path)) {
       return json({ message: "Branch not protected" }, 404);
     }
