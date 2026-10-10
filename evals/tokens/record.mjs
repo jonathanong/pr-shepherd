@@ -54,7 +54,9 @@ const ghJson = (path) => JSON.parse(gh(path));
  */
 function recordThreads() {
   const [owner, name] = REPO.split("/");
-  const query = `query { repository(owner: "${owner}", name: "${name}") { pullRequest(number: ${HISTORY_PR}) { reviewThreads(first: 100) { nodes { path line isResolved isOutdated comments(first: 100) { nodes { databaseId } } } } } } }`;
+  // fullDatabaseId, not databaseId: review-comment IDs now exceed Int32, where
+  // the legacy databaseId is null.
+  const query = `query { repository(owner: "${owner}", name: "${name}") { pullRequest(number: ${HISTORY_PR}) { reviewThreads(first: 100) { nodes { path line isResolved isOutdated comments(first: 100) { nodes { fullDatabaseId } } } } } } }`;
   try {
     const out = JSON.parse(
       execFileSync("gh", ["api", "graphql", "-f", `query=${query}`], {
@@ -62,13 +64,17 @@ function recordThreads() {
         maxBuffer: 64 << 20,
       }),
     );
-    return out.data.repository.pullRequest.reviewThreads.nodes.map((t) => ({
+    const threads = out.data.repository.pullRequest.reviewThreads.nodes.map((t) => ({
       path: t.path,
       line: t.line,
       resolved: t.isResolved,
       outdated: t.isOutdated,
-      comment_ids: t.comments.nodes.map((c) => c.databaseId),
+      comment_ids: t.comments.nodes.map((c) => c.fullDatabaseId),
     }));
+    if (threads.some((t) => t.comment_ids.some((id) => id === null || id === undefined))) {
+      throw new Error("a review comment has no fullDatabaseId");
+    }
+    return threads;
   } catch (error) {
     console.error(`GraphQL review threads failed (${error.message.split("\n")[0]}); using REST`);
     // REST has no thread objects; this route groups comment IDs by thread.
@@ -84,7 +90,8 @@ function recordHistory() {
   const threads = recordThreads();
 
   const pull = ghJson(`${base}/pulls/${HISTORY_PR}`);
-  const byId = new Map(reviewComments.map((c) => [c.id, c]));
+  // GraphQL's BigInt fullDatabaseId arrives as a string, REST's id as a number.
+  const byId = new Map(reviewComments.map((c) => [String(c.id), c]));
   const comment = (c) => ({
     id: c.id,
     author: c.user.login,
@@ -101,7 +108,7 @@ function recordHistory() {
       line: t.line,
       isResolved: t.resolved,
       isOutdated: t.outdated,
-      comments: t.comment_ids.map((id) => comment(byId.get(id))),
+      comments: t.comment_ids.map((id) => comment(byId.get(String(id)))),
     })),
     comments: issueComments.map(comment),
     reviews: reviews.map((r) => ({
