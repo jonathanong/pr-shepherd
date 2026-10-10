@@ -604,7 +604,9 @@ const PR_SCENARIOS = [
       const fixture = "07-mark-ready-draft-clean";
       const state = withHistory(fixtureState(fixture), HISTORY);
       return {
-        // The poll's mark-ready mutation costs no call or tokens, only one point.
+        // The poll's mark-ready mutation costs no call or tokens: one GraphQL
+        // point, or on REST one POST to the CCR proxy's ready_for_review route
+        // (mark-ready.mts). Outside CCR, REST escalates as transport-unsupported.
         shepherd: [
           {
             phase: 1,
@@ -613,7 +615,7 @@ const PR_SCENARIOS = [
             out: "",
             continues: true,
             api: gql(1),
-            apiRest: gql(1),
+            apiRest: rest(1),
           },
         ],
         gh: [
@@ -1046,7 +1048,7 @@ const STACK_SCENARIOS = [
             via: "bash",
             cmd: stackCmd(layers[anchor].pr, repo, " --merge"),
             out: `${stderr}${settledOverview(layers, number)}`,
-            // One stack tick per poll; the first is a fingerprint miss, the rest hits.
+            // The initial stack tick.
             api: stackTickApi(layers.length),
             apiRest: stackTickApiRest(layers.length),
           },
@@ -1056,8 +1058,11 @@ const STACK_SCENARIOS = [
             cmd: "",
             out: "",
             continues: true,
-            api: gql(ticks - 1),
-            apiRest: rest((ticks - 1) * stackTickApiRest(layers.length).restCore),
+            // Stack ticks have no fingerprint shortcut: each runs PollStackTopology
+            // plus PollStackSummary (docs/graphql-usage.md). After the initial tick
+            // come the remaining WAIT ticks and the tick that sees the queue settle.
+            api: gql(ticks * stackTickApi(layers.length).graphqlPoints),
+            apiRest: rest(ticks * stackTickApiRest(layers.length).restCore),
           },
         ],
         gh: [

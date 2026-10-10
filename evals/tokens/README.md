@@ -22,8 +22,8 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport |
 | --- | --- | --- | --- |
-| single PR | 37.5 / 34.5 / 11 | 1 / 9 / 78.3 | 250 core + 2.5 points |
-| PR stack | 30 / 27 / 12 | 2 / 6 / 74 | 374 core + 0 points |
+| single PR | 37.5 / 34.5 / 11 | 1 / 9 / 78.3 | 251 core + 1.5 points |
+| PR stack | 34 / 27 / 12 | 2 / 6 / 74 | 404 core + 0 points |
 
 <!-- bench:headline:end -->
 

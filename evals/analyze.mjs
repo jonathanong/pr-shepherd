@@ -3,7 +3,8 @@
 //
 //   node evals/analyze.mjs <dir-a> <dir-b>      compare two tiers
 //   node evals/analyze.mjs --summary <dir>      paste-ready summary of one run
-//   node evals/analyze.mjs --calibrate <dir>    measured tokens vs. the bench's chars/token
+//   node evals/analyze.mjs --calibrate <dir> [--write]
+//                                               measured tokens vs. the bench's chars/token
 //
 // Reports per-case Δ side by side with a bootstrap 95% interval, the skill
 // trigger rate per tier, and a ceiling-adjusted mean Δ. Only a Δ whose interval
@@ -26,9 +27,12 @@ const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const USAGE =
   "usage: node evals/analyze.mjs <dir-a> <dir-b>\n" +
   "       node evals/analyze.mjs --summary <dir>\n" +
-  "       node evals/analyze.mjs --calibrate <dir>";
+  "       node evals/analyze.mjs --calibrate <dir> [--write]";
 
-const args = process.argv.slice(2);
+const argv = process.argv.slice(2);
+// --write is a calibrate-only flag; strip it before counting directory arguments.
+const write = argv[0] === "--calibrate" && argv.includes("--write");
+const args = write ? argv.filter((a) => a !== "--write") : argv;
 const mode =
   args[0] === "--summary" ? "summary" : args[0] === "--calibrate" ? "calibrate" : "compare";
 const dirs = mode === "compare" ? args : args.slice(1);
@@ -368,12 +372,12 @@ if (mode === "calibrate") {
   const charsPerToken = 1 / fit.slope;
   const benchRatio = 3.5;
   console.log(`measured chars/token (OLS over prompt size): ${charsPerToken.toFixed(2)}`);
-  console.log(`bench assumes ${benchRatio} chars/token → bench ${benchRatio > charsPerToken ? "undercounts" : "overcounts"} tokens by ${Math.abs(100 * (benchRatio / charsPerToken - 1)).toFixed(0)}%`);
+  console.log(`bench assumes ${benchRatio} chars/token → bench ${benchRatio > charsPerToken ? "undercounts" : "overcounts"} tokens by ${Math.abs(100 * (charsPerToken / benchRatio - 1)).toFixed(0)}%`);
   console.log(`fixed context (intercept): ${Math.round(fit.intercept).toLocaleString("en-US")} tokens per turn`);
   if (outputs.length) {
     console.log(`mean output tokens per run: ${Math.round(mean(outputs)).toLocaleString("en-US")}`);
   }
-  if (process.argv.includes("--write")) {
+  if (write) {
     // bench.mjs reads this file and prints it in REPORT.md's Model section.
     const target = join(dirname(fileURLToPath(import.meta.url)), "tokens", "data", "calibration.json");
     writeFileSync(

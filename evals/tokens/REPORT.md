@@ -142,11 +142,11 @@ Rate-limit cost per session, weighted like the token numbers. **Deterministic an
 | session | arm | GraphQL points | REST core requests |
 | --- | --- | --- | --- |
 | Typical PR session | pr-shepherd | 37.5 | 1 |
-| Typical PR session | pr-shepherd, REST transport | 2.5 | 250 |
+| Typical PR session | pr-shepherd, REST transport | 1.5 | 251 |
 | Typical PR session | gh CLI | 34.5 | 9 |
 | Typical PR session | GitHub MCP | 11 | 78.3 |
-| Typical stack session | pr-shepherd | 30 | 2 |
-| Typical stack session | pr-shepherd, REST transport | 0 | 374 |
+| Typical stack session | pr-shepherd | 34 | 2 |
+| Typical stack session | pr-shepherd, REST transport | 0 | 404 |
 | Typical stack session | gh CLI | 27 | 6 |
 | Typical stack session | GitHub MCP | 12 | 74 |
 
@@ -160,7 +160,7 @@ Per scenario, `GraphQL points / REST core requests` for one occurrence.
 | `review-thread` | 4 / 0 | 0 / 14 | 2 / 1 | 1 / 6 |
 | `review-thread-with-history` | 4 / 0 | 0 / 14 | 2 / 1 | 1 / 6 |
 | `multi-category` | 4 / 2 | 0 / 16 | 2 / 3 | 1 / 10 |
-| `mark-ready` | 1 / 0 | 1 / 0 | 4 / 0 | 2 / 6 |
+| `mark-ready` | 1 / 0 | 0 / 1 | 4 / 0 | 2 / 6 |
 | `merged` | 2 / 0 | 0 / 12 | 1 / 0 | 0 / 1 |
 | `bot-threads` | 4 / 0 | 0 / 16 | 4 / 3 | 3 / 8 |
 | `check-annotations` | 2 / 0 | 0 / 12 | 2 / 2 | 1 / 5 † |
@@ -168,7 +168,7 @@ Per scenario, `GraphQL points / REST core requests` for one occurrence.
 | `merge` | 4 / 0 | 2 / 12 | 4 / 0 | 1 / 6 |
 | `merge-queue` | 4 / 0 | 2 / 12 | 4 / 0 | 1 / 6 † |
 | `stack-work` | 12 / 0 | 0 / 126 | 8 / 1 | 4 / 25 |
-| `stack-queue-wait` | 4 / 0 | 0 / 90 | 7 / 1 | 2 / 12 † |
+| `stack-queue-wait` | 8 / 0 | 0 / 120 | 7 / 1 | 2 / 12 † |
 | `stack-merge` | 2 / 2 | 0 / 32 | 4 / 3 | 2 / 12 † |
 
 - Waiting on CI costs 60 GraphQL points an hour for pr-shepherd (one fingerprint hit per 60s poll), about 720 REST requests an hour on the REST transport, 60 points for `gh pr checks --watch --interval 60`, and about 120 REST requests for a one-minute MCP re-check.
