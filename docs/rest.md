@@ -42,6 +42,8 @@ The observed Claude Code proxy contract includes `GET /pulls/{n}/ccr/review_thre
 
 Native stacks use GitHub's `/stacks?pull_request=N` lookup followed by `/stacks/{number}`; an authoritative 404 is an error rather than evidence that the PR is a standalone branch. Generated REST stack merge commands bind the observed stack number, trunk, and ordered prefix with `--expected-stack`, so disappearing or changed membership cannot turn a stale stack command into a standalone merge.
 
+The stack topology read (membership before and after each layer's pull, plus the viewer) is conditional too, including when `iterate` runs it after the snapshot to check a layer's ancestry. It shares the layer's ETag cache, so its repeats of the snapshot's reads answer 304 and an unchanged layer tick charges none of them ([rest-usage.md](rest-usage.md#one-pr)).
+
 Native stack summaries and topology reads also preserve an unavailable viewer identity as unknown, including with GitHub App installation tokens. An explicitly guarded stack merge still validates complete membership, ancestry, and current READY receipts; GitHub decides whether the requested mutation is authorized.
 
 ## Viewer identity and PR discovery

@@ -1251,17 +1251,21 @@ function settledOverview(layers, number) {
  * A one-PR tick on a non-root native-stack layer. On GraphQL, `BatchPr`'s
  * first page carries the stack topology and the trunk's required contexts, so
  * the tick is the ordinary 1 point (src/github/graphql-stack-tick-cost.test.mts).
- * REST loads the trunk's branch protection, branch rules and a compare, and
- * the stack topology (the stack list and stack read twice, each layer's pull
- * and the viewer); REST's snapshot also reads the stack itself. Sources:
- * src/github/merge-target-rules.mts, src/commands/iterate/stale-ancestry.mts,
- * src/github/rest-stack-read.mts.
+ * REST's snapshot also reads the stack itself, then loads the trunk's branch
+ * summary, branch rules and a compare, and the stack topology (the stack list
+ * and stack read twice, each layer's pull and the viewer). The topology reads
+ * are conditional and share the layer's ETag cache, so on a cold cache only
+ * the other layers' pulls are charged (stackSize - 1); the rest replay the
+ * snapshot's validators (src/github/rest-stack-layer-tick-cost.test.mts).
+ * Sources: src/github/merge-target-rules.mts,
+ * src/commands/iterate/stale-ancestry.mts, src/github/rest-stack-read.mts.
  */
+const ROUTED_LAYER_EXTRA_READS = (stackSize) => 1 + 3 + (stackSize - 1);
 const routedLayerTickApi = (stackSize) => ({
   api: gql(SHEPHERD_TICK_API.graphqlPoints),
-  apiRest: rest(SHEPHERD_TICK_API_REST.restCore + 1 + 3 + (5 + stackSize)),
+  apiRest: rest(SHEPHERD_TICK_API_REST.restCore + ROUTED_LAYER_EXTRA_READS(stackSize)),
   // Cloud REST: the same reads on top of the cloud snapshot.
-  apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + 1 + 3 + (5 + stackSize)),
+  apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + ROUTED_LAYER_EXTRA_READS(stackSize)),
 });
 
 const stackCmd = (anchorPr, repo, flags = "") =>

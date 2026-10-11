@@ -26,10 +26,10 @@ Every session and scenario where pr-shepherd costs strictly more than a baseline
 | Typical PR session | REST core requests (cloud REST transport) | gh CLI | 212.3 | 9 | +2259% | #525 |
 | Typical PR session | REST core requests (cloud REST transport) | GitHub MCP | 212.3 | 78.3 | +171% | #525 |
 | Typical stack session | GraphQL points (GraphQL transport) | GitHub MCP | 17 | 12 | +42% | #525 |
-| Typical stack session | REST core requests (REST transport) | gh CLI | 480 | 6 | +7900% | #525 |
-| Typical stack session | REST core requests (REST transport) | GitHub MCP | 480 | 74 | +549% | #525 |
-| Typical stack session | REST core requests (cloud REST transport) | gh CLI | 510 | 6 | +8400% | #525 |
-| Typical stack session | REST core requests (cloud REST transport) | GitHub MCP | 510 | 74 | +589% | #525 |
+| Typical stack session | REST core requests (REST transport) | gh CLI | 432 | 6 | +7100% | #525 |
+| Typical stack session | REST core requests (REST transport) | GitHub MCP | 432 | 74 | +484% | #525 |
+| Typical stack session | REST core requests (cloud REST transport) | gh CLI | 462 | 6 | +7600% | #525 |
+| Typical stack session | REST core requests (cloud REST transport) | GitHub MCP | 462 | 74 | +524% | #525 |
 | `ci-wait` | REST core requests (REST transport) | GitHub MCP | 29 | 12 | +142% | #525 |
 | `ci-wait` | REST core requests (cloud REST transport) | GitHub MCP | 35 | 12 | +192% | #525 |
 | `failing-check` | REST core requests (REST transport) | gh CLI | 8 | 2 | +300% | #525 |
@@ -76,10 +76,10 @@ Every session and scenario where pr-shepherd costs strictly more than a baseline
 | `merge-queue` | REST core requests (REST transport) | gh CLI | 14 | 0 | n/a | #525 |
 | `merge-queue` | REST core requests (cloud REST transport) | gh CLI | 15 | 0 | n/a | #525 |
 | `stack-work` | GraphQL points (GraphQL transport) | GitHub MCP | 6 | 4 | +50% | #525 |
-| `stack-work` | REST core requests (REST transport) | gh CLI | 194 | 1 | +19300% | #525 |
-| `stack-work` | REST core requests (REST transport) | GitHub MCP | 194 | 25 | +676% | #525 |
-| `stack-work` | REST core requests (cloud REST transport) | gh CLI | 204 | 1 | +20300% | #525 |
-| `stack-work` | REST core requests (cloud REST transport) | GitHub MCP | 204 | 25 | +716% | #525 |
+| `stack-work` | REST core requests (REST transport) | gh CLI | 170 | 1 | +16900% | #525 |
+| `stack-work` | REST core requests (REST transport) | GitHub MCP | 170 | 25 | +580% | #525 |
+| `stack-work` | REST core requests (cloud REST transport) | gh CLI | 180 | 1 | +17900% | #525 |
+| `stack-work` | REST core requests (cloud REST transport) | GitHub MCP | 180 | 25 | +620% | #525 |
 | `stack-queue-wait` | REST core requests (REST transport) | gh CLI | 60 | 1 | +5900% | #525 |
 | `stack-queue-wait` | REST core requests (cloud REST transport) | gh CLI | 68 | 1 | +6700% | #525 |
 | `stack-merge` | REST core requests (REST transport) | gh CLI | 32 | 3 | +967% | #525 |
@@ -238,8 +238,8 @@ Rate-limit cost per session, weighted like the token numbers. **Deterministic an
 | Typical PR session | gh CLI | 36.5 | 9 |
 | Typical PR session | GitHub MCP | 12 | 78.3 |
 | Typical stack session | pr-shepherd | 17 | 2 |
-| Typical stack session | pr-shepherd, REST transport | 0 | 480 |
-| Typical stack session | pr-shepherd, cloud REST | 0 | 510 |
+| Typical stack session | pr-shepherd, REST transport | 0 | 432 |
+| Typical stack session | pr-shepherd, cloud REST | 0 | 462 |
 | Typical stack session | gh CLI | 27 | 6 |
 | Typical stack session | GitHub MCP | 12 | 74 |
 
@@ -260,7 +260,7 @@ Per scenario, `GraphQL points / REST core requests` for one occurrence.
 | `conflicts` | 1 / 0 | 0 / 3 | 0 / 4 | 2 / 0 | 1 / 5 |
 | `merge` | 3 / 1 | 2 / 14 | 2 / 15 | 4 / 0 | 1 / 6 |
 | `merge-queue` | 3 / 1 | 2 / 14 | 2 / 15 | 4 / 0 | 1 / 6 † |
-| `stack-work` | 6 / 0 | 0 / 194 | 0 / 204 | 8 / 1 | 4 / 25 |
+| `stack-work` | 6 / 0 | 0 / 170 | 0 / 180 | 8 / 1 | 4 / 25 |
 | `stack-queue-wait` | 4 / 0 | 0 / 60 | 0 / 68 | 7 / 1 | 2 / 12 † |
 | `stack-merge` | 1 / 2 | 0 / 32 | 0 / 34 | 4 / 3 | 2 / 12 † |
 
