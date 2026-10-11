@@ -26,7 +26,7 @@ export interface TelemetryAggregate {
     credentialFingerprint?: string;
   };
   rest: Map<string, RestTelemetryGroup>;
-  /** REST responses with no rate-limit sample at all (not 304s): the Claude Code proxy's `ccr` routes. */
+  /** Headerless REST responses (not 304s), kept out of every resource group: the proxy's `ccr` routes. */
   unmeteredRestRequestCount: number;
 }
 
@@ -69,7 +69,6 @@ export function aggregateEvents(events: SequencedApiTelemetryEvent[]): Telemetry
       continue;
     }
     if (event.rateLimit === undefined && !event.notModified) {
-      // Headerless (unmetered) responses stay out of every resource group.
       aggregate.unmeteredRestRequestCount += 1;
       continue;
     }
@@ -77,9 +76,8 @@ export function aggregateEvents(events: SequencedApiTelemetryEvent[]): Telemetry
     const group = aggregate.rest.get(resource) ?? { requestCount: 0, notModifiedCount: 0 };
     if (event.notModified) group.notModifiedCount += 1;
     else group.requestCount += 1;
-    if (event.rateLimit !== undefined) {
-      adoptRestRateLimit(group, event.rateLimit, event.credentialFingerprint, event.sequence);
-    }
+    const sample = event.rateLimit;
+    if (sample) adoptRestRateLimit(group, sample, event.credentialFingerprint, event.sequence);
     aggregate.rest.set(resource, group);
   }
   return aggregate;
