@@ -231,7 +231,8 @@ are as good as these assumptions:
     fingerprint read, so an unchanged wait poll is a 1-point hit and the first
     changed tick after a wait, a miss, continues the same request at 1 point;
   - an idle single-PR wait whose report is complete (not READY, not queued,
-    nothing to act on, no check running, a known merge status, no stack,
+    nothing to act on, no check running, a merge status GraphQL itself
+    settled (not one a REST mergeability refresh filled in), no stack,
     `poll.reconcileSeconds` above 0, at most 20 threads with none holding
     more than one comment, at most 100 comments and 100 reviews, and complete
     check-suite and rules pages; `src/commands/check-wait-detectors.mts` and
@@ -240,8 +241,10 @@ are as good as these assumptions:
     200, and entering the wait seeds all 8 once on a cold cache (8 requests
     when each resource fits one 100-entry page, more when one does not). Any
     other wait reads `BatchPr` every poll: 1 point while the PR fits its
-    first page, more past a first-page window. No modeled change ends
-    a detector-eligible wait: before each review, thread, base push or merge
+    first page, more past a first-page window, plus one REST mergeability
+    read a poll while GraphQL leaves the merge status UNKNOWN. No modeled
+    change ends a detector-eligible wait: before each review, thread, base
+    push or merge
     the PR is green and READY, which the detectors skip, and `ci-wait` has
     checks running. So every change tick is a plain `BatchPr` read, and the
     detectors appear only in the idle hour;

@@ -862,7 +862,8 @@ export const GRAPHQL_WAIT_DETECTORS = 8;
 /**
  * The detectors run only when the stored report is idle (detectorsCover in
  * src/commands/check-wait-detectors.mts): a single PR, open, not READY, not
- * queued, nothing to act on, no check still running, a known merge status,
+ * queued, nothing to act on, no check still running, a merge status settled
+ * by GraphQL itself (a REST mergeability refresh does not count),
  * `poll.reconcileSeconds` above 0, and a complete fingerprint
  * (src/commands/check-fingerprint.mts: at most 20 threads with none holding
  * more than one comment, at most 100 comments and 100 reviews, complete
