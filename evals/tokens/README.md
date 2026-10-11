@@ -22,8 +22,8 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
-| single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 185.8 core + 1.5 points | 212.3 core + 1.5 points |
-| PR stack | 17 / 27 / 12 | 2 / 6 / 74 | 432 core + 0 points | 462 core + 0 points |
+| single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 185.8 core + 1.5 points | 188.8 core + 1.5 points |
+| PR stack | 17 / 27 / 12 | 2 / 6 / 74 | 432 core + 0 points | 432 core + 0 points |
 
 <!-- bench:headline:end -->
 
@@ -337,16 +337,18 @@ are as good as these assumptions:
   were measured.
 - **pr-shepherd, cloud REST.** The same REST path through the Claude Code
   cloud proxy (`CLAUDE_CODE_REMOTE=true`, where `auto` starts on REST). Each
-  PR snapshot also reads `/ccr/review_threads`, so a one-PR tick is 15
-  requests and a stack tick is 6 shared plus 13 per layer. Whether the proxy
-  sends an ETag for that read is unverified, so the model assumes a charged 200
-  on every tick: an unchanged one-PR poll costs 1 request (its unchanged body
-  still lets the report be reused) and an unchanged stack poll 1 per layer. `apply review`'s
-  transcript read is 5 requests, and each thread resolve is one CCR POST
+  PR snapshot also reads `/ccr/review_threads`. A real cloud run (#529) showed
+  that the proxy answers that read with no ETag and no `X-RateLimit-*` headers
+  and does not charge it to `core`, so the model adds nothing for it: a one-PR
+  tick is 14 requests, a stack tick is 6 shared plus 12 per layer, and an
+  unchanged poll costs what it does on standard REST (pr-shepherd reports the
+  read as `apiUsage.unmeteredRestRequestCount`). `apply review`'s transcript
+  read is 4 requests, and each thread resolve is one CCR POST
   (`src/comments/rest-review-mutations.mts`). The `mark-ready` tick marks the
-  PR ready with one more CCR POST. Replies and a routed stack layer's extra
-  reads cost what they do on standard REST. The live check below ran outside the cloud,
-  so this arm is the measured 14-request tick plus the proxy read.
+  PR ready with one more CCR POST. Whether the proxy meters those POSTs is
+  unverified, so the model charges them. Replies and a routed stack layer's
+  extra reads cost what they do on standard REST. The live check below ran
+  outside the cloud, so this arm is the measured 14-request tick.
 - **gh:** `gh pr view`, the thread query and each `gh pr checks` refresh are
   one point; `--watch` is one point on start plus one per refresh; `gh pr ready` and
   `gh pr merge` are two (lookup and mutation); `gh run view --log-failed` is

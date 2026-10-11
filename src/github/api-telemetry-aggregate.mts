@@ -26,6 +26,8 @@ export interface TelemetryAggregate {
     credentialFingerprint?: string;
   };
   rest: Map<string, RestTelemetryGroup>;
+  /** Headerless REST responses (not 304s), kept out of every resource group: the proxy's `ccr` routes. */
+  unmeteredRestRequestCount: number;
 }
 
 export interface SequencedApiTelemetryEvent extends ApiTelemetryEvent {
@@ -45,6 +47,7 @@ export function emptyAggregate(): TelemetryAggregate {
     credentialSources: new Map(),
     graphql: { requestCount: 0, measuredQueryCost: 0, unmeasuredRequestCount: 0, nodeCount: 0 },
     rest: new Map(),
+    unmeteredRestRequestCount: 0,
   };
 }
 
@@ -65,13 +68,16 @@ export function aggregateEvents(events: SequencedApiTelemetryEvent[]): Telemetry
       }
       continue;
     }
+    if (event.rateLimit === undefined && !event.notModified) {
+      aggregate.unmeteredRestRequestCount += 1;
+      continue;
+    }
     const resource = event.rateLimit?.resource ?? (event.notModified ? "core" : "unknown");
     const group = aggregate.rest.get(resource) ?? { requestCount: 0, notModifiedCount: 0 };
     if (event.notModified) group.notModifiedCount += 1;
     else group.requestCount += 1;
-    if (event.rateLimit !== undefined) {
-      adoptRestRateLimit(group, event.rateLimit, event.credentialFingerprint, event.sequence);
-    }
+    const sample = event.rateLimit;
+    if (sample) adoptRestRateLimit(group, sample, event.credentialFingerprint, event.sequence);
     aggregate.rest.set(resource, group);
   }
   return aggregate;
@@ -89,6 +95,7 @@ export function mergeAggregate(target: TelemetryAggregate, source: TelemetryAggr
   target.graphql.measuredQueryCost += source.graphql.measuredQueryCost;
   target.graphql.unmeasuredRequestCount += source.graphql.unmeasuredRequestCount;
   target.graphql.nodeCount += source.graphql.nodeCount;
+  target.unmeteredRestRequestCount += source.unmeteredRestRequestCount;
   if (source.graphql.rateLimit !== undefined) {
     adoptGraphqlRateLimit(
       target.graphql,

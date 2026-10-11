@@ -5,6 +5,7 @@ import { GitHubRequestError, type GitHubGraphQlError } from "./errors.mts";
 import { isGraphQlMutationDocument, withGraphQlInternalRetry } from "./graphql-internal-retry.mts";
 import { githubFetch } from "./github-fetch.mts";
 import { formatGraphQlErrors, parseGraphQlPayload } from "./graphql-response.mts";
+import { CCR_GRAPHQL_REFUSAL_MESSAGE, isCcrGraphqlRefusal } from "./graphql-session-refusal.mts";
 import { makeAuthHeaders } from "./http-auth.mts";
 import { requestWithTokenRetry } from "./http-request.mts";
 import {
@@ -116,7 +117,9 @@ async function graphqlInner<T>(
       rateLimit: headerRateLimit ?? undefined,
     });
     throw new GitHubRequestError(
-      `GitHub GraphQL request failed: ${res.status} ${sanitizeBody(body)}`,
+      isCcrGraphqlRefusal(res.status, body)
+        ? CCR_GRAPHQL_REFUSAL_MESSAGE
+        : `GitHub GraphQL request failed: ${res.status} ${sanitizeBody(body)}`,
       {
         status: res.status,
         rateLimit: headerRateLimit ?? undefined,

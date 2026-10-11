@@ -137,18 +137,19 @@ export function summarizeApiTelemetry(): ApiUsage | undefined {
     .map(([source]) => source);
   const graphql = summarizeGraphql(selected.graphql);
   const rest = summarizeRest(selected.rest);
+  const unmeteredRestRequestCount = selected.unmeteredRestRequestCount;
   return {
     credentialSources,
     ...(graphql !== undefined && { graphql }),
     ...(rest.length > 0 && { rest }),
+    ...(unmeteredRestRequestCount > 0 && { unmeteredRestRequestCount }),
   };
 }
 
 function summarizeGraphql(selected: TelemetryAggregate["graphql"]): GraphqlApiUsage | undefined {
-  const rateLimit = selected.rateLimit;
-  if (rateLimit === undefined) return undefined;
+  if (selected.rateLimit === undefined) return undefined;
   return {
-    ...resourceUsage(rateLimit, selected.requestCount, "graphql"),
+    ...resourceUsage(selected.rateLimit, selected.requestCount, "graphql"),
     measuredQueryCost: selected.measuredQueryCost,
     unmeasuredRequestCount: selected.unmeasuredRequestCount,
     nodeCount: selected.nodeCount,
@@ -156,11 +157,11 @@ function summarizeGraphql(selected: TelemetryAggregate["graphql"]): GraphqlApiUs
 }
 
 function summarizeRest(selected: TelemetryAggregate["rest"]): ApiResourceUsage[] {
-  return [...selected.entries()].flatMap(([resource, group]) => {
-    return group.rateLimit
+  return [...selected.entries()].flatMap(([resource, group]) =>
+    group.rateLimit
       ? [resourceUsage(group.rateLimit, group.requestCount, resource, group.notModifiedCount)]
-      : [];
-  });
+      : [],
+  );
 }
 
 function resourceUsage(

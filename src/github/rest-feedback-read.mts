@@ -172,6 +172,10 @@ async function readRestThreadStatuses(path: string): Promise<RestThread[] | unde
     return statuses;
   } catch (error) {
     if (!(error instanceof GitHubRequestError) || error.status !== 404) throw error;
+    // The proxy answers a missing PR with 404 too; that is not an unavailable route.
+    if (/could not resolve to a pullrequest/i.test(error.responseMessage ?? error.message)) {
+      throw error;
+    }
     return undefined;
   }
 }
