@@ -13,6 +13,7 @@ import {
 import { readRestPull, restPullRefs } from "./rest-pr-core.mts";
 import { mapPool } from "../util/pool.mts";
 import { readRestViewerLogin } from "./rest-viewer-read.mts";
+import { currentRestConditionalKey, withRestConditionalScope } from "./rest-conditional-scope.mts";
 
 interface RestStack {
   number: number;
@@ -44,10 +45,21 @@ export async function readRestStackMembership(
     malformedRest("stack membership omitted anchor or repeated member");
   return stack;
 }
-export async function readRestStackTopology(
+/**
+ * Topology reads are conditional. Outside a PR snapshot (iterate's stale-ancestry check runs after
+ * the snapshot returns) they use the anchor PR's ETag cache, so reads the snapshot already made
+ * (the stack list, the stack, the anchor's pull, `/user`) and the repeat membership read answer 304.
+ */
+export function readRestStackTopology(
   anchor: number,
   repo: RepoInfo,
 ): Promise<StackRead<StackMemberRefs>> {
+  if (currentRestConditionalKey() !== undefined) return readTopology(anchor, repo);
+  return withRestConditionalScope({ owner: repo.owner, repo: repo.name, pr: anchor }, () =>
+    readTopology(anchor, repo),
+  );
+}
+async function readTopology(anchor: number, repo: RepoInfo): Promise<StackRead<StackMemberRefs>> {
   const stack = await readRestStackMembership(anchor, repo);
   if (!stack) throw new Error(`PR #${anchor} is not part of a native GitHub stack`);
   const ordered = await mapPool(stack.pull_requests, 4, async (pull) =>
