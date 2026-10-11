@@ -192,6 +192,8 @@ const CLOUD_TRANSCRIPT_READ = REST_TRANSCRIPT_READ + CCR_REQUESTS_PER_PR;
  * `BatchPr`'s probe page at no GraphQL cost; REST reads it separately.
  */
 const ACTIONS_LOG_REST = 2;
+/** `CI_SETTLE_CHANGED_READS` less the pull, whose draft `mergeable_state` does not move. */
+const DRAFT_CI_SETTLE_CHANGED_READS = CI_SETTLE_CHANGED_READS - 1;
 const FAILING_CHECK_ANNOTATIONS = annotationBatchApi(1, 1);
 /**
  * On REST this is the warm tick on which CI settles, the one `ci-wait`
@@ -215,23 +217,29 @@ const FAILING_CHECK_TICK_API = {
 
 /**
  * The tick after an elapsed ready delay selects the READY-receipt sibling
- * (`SHEPHERD_RECEIPT_TICK_API`); REST reads the same snapshot.
+ * (`SHEPHERD_RECEIPT_TICK_API`). REST reads the same snapshot, warm from the
+ * countdown's earlier READY tick on an unchanged PR, so every read and the
+ * READY refresh answer 304 (src/commands/apply-merge-warm-cost.test.mts;
+ * cloud: plus the unmetered `ccr/review_threads` read).
  */
 const receiptTick = (out) => ({
   ...shepherdTick(out),
   api: SHEPHERD_RECEIPT_TICK_API,
-  apiRest: SHEPHERD_TICK_API_REST,
-  apiCloud: SHEPHERD_TICK_API_CLOUD,
+  apiRest: SHEPHERD_WAIT_TICK_API_REST,
+  apiCloud: SHEPHERD_WAIT_TICK_API_CLOUD,
 });
 
 /**
  * On the REST transport the output prints `pr-shepherd apply merge … --transport rest` instead
  * of `gh pr merge` (`buildMergeCommandPlan` in src/commands/iterate/merge-plan.mts): a pull read,
- * the stack-membership read and one `PUT …/merge-async`, all unconditional and no GraphQL, for a
- * direct merge and an enqueue alike (src/commands/apply-merge-cost.test.mts). The model keeps one
- * output text for every transport, so only the cost changes.
+ * the stack-membership read and one `PUT …/merge-async`, and no GraphQL, for a direct merge and
+ * an enqueue alike. The two reads are conditional in the PR's ETag cache, which the tick that
+ * printed the command just filled, so they answer 304 and only the write is charged
+ * (src/commands/apply-merge-warm-cost.test.mts; 3 on a cold cache,
+ * src/commands/apply-merge-cost.test.mts). The model keeps one output text for every transport,
+ * so only the cost changes.
  */
-const APPLY_MERGE_REST = 3;
+const APPLY_MERGE_REST = 1;
 const shepherdMerge = (cmd, out) => ({
   phase: 2,
   via: "bash",
@@ -847,10 +855,13 @@ const PR_SCENARIOS = [
         // markReadyIfAuthorized then
         // sends one GraphQL mutation point. Standard REST has no ready-for-review
         // route, so after its read the tick escalates as transport-unsupported
-        // (mark-ready.mts). Cloud REST marks it ready with one POST to the CCR
-        // proxy's ready_for_review route, on top of the tick's read. On every
-        // transport the READY status re-reads mergeability over REST first (free on
-        // REST: the snapshot's pull read just stored it).
+        // (mark-ready.mts) without another request. Cloud REST marks it ready with
+        // one POST to the CCR proxy's ready_for_review route, on top of the tick's
+        // read. On every transport the READY status re-reads mergeability over REST
+        // first (free on REST: the snapshot's pull read just stored it). A draft's
+        // pull reports `mergeable_state: "draft"` however its checks end, so on REST
+        // the settle tick re-charges the CI reads but not the pull
+        // (src/github/rest-wait-tick-cost.test.mts).
         shepherd: [
           {
             phase: 1,
@@ -863,9 +874,9 @@ const PR_SCENARIOS = [
               restCore: READY_MERGEABILITY_REST,
             },
             // On REST this is the warm tick on which CI settles: only the CI reads re-charge.
-            apiRest: rest(CI_SETTLE_CHANGED_READS + readyMergeabilityRest("rest")),
+            apiRest: rest(DRAFT_CI_SETTLE_CHANGED_READS + readyMergeabilityRest("rest")),
             apiCloud: rest(
-              CI_SETTLE_CHANGED_READS +
+              DRAFT_CI_SETTLE_CHANGED_READS +
                 SHEPHERD_WAIT_TICK_API_CLOUD.restCore +
                 1 +
                 readyMergeabilityRest("cloud"),

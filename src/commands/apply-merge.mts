@@ -9,8 +9,8 @@ export { validateApplyMergeOptions } from "./apply-merge-options.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import { getCurrentPrNumber, getRepoInfo } from "../github/client.mts";
 import { GitHubRequestError } from "../github/errors.mts";
-import { rest } from "../github/rest-http.mts";
-import { restRepoPath } from "../github/rest-reader-core.mts";
+import { mergedResponse, readPull } from "./apply-merge-pull.mts";
+import { withRestConditionalScope } from "../github/rest-conditional-scope.mts";
 import { getGithubTransport } from "../github/transport.mts";
 import {
   getRestMerge,
@@ -39,14 +39,6 @@ export interface ApplyMergeResult extends RestMergeResponse {
   uncertain?: true;
   note?: string;
 }
-interface PullState {
-  state: string;
-  merged: boolean;
-  draft: boolean;
-  head: { sha: string };
-  merge_commit_sha?: string;
-}
-
 /** Submit one guarded asynchronous request, or resume its existing UUID without resubmitting. */
 export async function runApplyMerge(input: ApplyMergeInput): Promise<ApplyMergeResult> {
   validateApplyMergeOptions(input);
@@ -65,6 +57,18 @@ export async function runApplyMerge(input: ApplyMergeInput): Promise<ApplyMergeR
     );
   validateApplyMergeTarget(input, pr);
   const key = { owner: repo.owner, repo: repo.name, pr };
+  // The PR's own conditional scope: the pull and stack reads share the ETag cache the iterate tick
+  // that printed this command just filled, so an unchanged resource answers a free 304 whose
+  // stored body equals GitHub's current one. The merge-async GET and PUT stay unconditional.
+  return withRestConditionalScope(key, () => submitApplyMerge(input, repo, pr, key));
+}
+
+async function submitApplyMerge(
+  input: ApplyMergeInput,
+  repo: { owner: string; name: string },
+  pr: number,
+  key: { owner: string; repo: string; pr: number },
+): Promise<ApplyMergeResult> {
   const options: RestMergeOptions = {
     requireSha: input.requireSha,
     mergeAction: input.mergeAction,
@@ -73,15 +77,8 @@ export async function runApplyMerge(input: ApplyMergeInput): Promise<ApplyMergeR
   };
   const { failed, project } = mergeResultFactory(pr, repo, options);
   const existing = await readMergeRequest(key);
-  const pull = await rest<PullState>("GET", `${restRepoPath(repo)}/pulls/${pr}`);
-  if (pull.merged === true)
-    return project({
-      status: "merged",
-      details: {
-        message: "Pull request is merged.",
-        ...(pull.merge_commit_sha && { sha: pull.merge_commit_sha }),
-      },
-    });
+  const pull = await readPull(repo, pr);
+  if (pull.merged === true) return project(mergedResponse(pull, "Pull request is merged."));
   if (pull.head?.sha !== input.requireSha)
     return failed("Current PR head does not match --require-sha; no merge request was submitted.");
   if (pull.state !== "open" || pull.draft !== false)
@@ -125,15 +122,11 @@ export async function runApplyMerge(input: ApplyMergeInput): Promise<ApplyMergeR
       return project(response);
     } catch (error) {
       if (error instanceof GitHubRequestError && error.status === 404) {
-        const latest = await rest<PullState>("GET", `${restRepoPath(repo)}/pulls/${pr}`);
+        const latest = await readPull(repo, pr);
         if (latest.merged === true)
-          return project({
-            status: "merged",
-            details: {
-              message: "Pull request is merged; its asynchronous request has expired.",
-              ...(latest.merge_commit_sha && { sha: latest.merge_commit_sha }),
-            },
-          });
+          return project(
+            mergedResponse(latest, "Pull request is merged; its asynchronous request has expired."),
+          );
         return failed(
           "The asynchronous merge UUID expired or is unavailable. The PR is not merged; its request outcome is unknown and no duplicate was submitted.",
           true,
