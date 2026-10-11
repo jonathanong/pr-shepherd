@@ -31,7 +31,8 @@
     "timeoutSeconds": 270,
     "debounceSeconds": 60,
     "quietStatus": false,
-    "mode": "auto"
+    "mode": "auto",
+    "reconcileSeconds": 900
   },
   "watch": {
     "readyDelayMinutes": 10,

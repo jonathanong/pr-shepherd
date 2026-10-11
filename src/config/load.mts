@@ -54,6 +54,11 @@ interface PollConfig {
   debounceSeconds: number;
   quietStatus: boolean;
   mode: PollMode;
+  /**
+   * Longest gap between GraphQL snapshots while conditional REST reads report an idle PR
+   * unchanged. `0` disables the REST change detectors on the GraphQL transport.
+   */
+  reconcileSeconds: number;
 }
 
 export interface PrShepherdConfig {
@@ -334,6 +339,7 @@ function parsePollConfig(value: unknown): PollConfig {
   const intervalSeconds = parsePollDuration(record["intervalSeconds"], "intervalSeconds");
   const timeoutSeconds = parsePollDuration(record["timeoutSeconds"], "timeoutSeconds");
   const debounceSeconds = parsePollDuration(record["debounceSeconds"], "debounceSeconds", true);
+  const reconcileSeconds = parsePollDuration(record["reconcileSeconds"], "reconcileSeconds", true);
   const stackIntervalFactor = parseStackIntervalFactor(record["stackIntervalFactor"]);
   assertAggregateIntervalFits(intervalSeconds, stackIntervalFactor);
   const quietStatus = record["quietStatus"];
@@ -355,6 +361,7 @@ function parsePollConfig(value: unknown): PollConfig {
     debounceSeconds,
     quietStatus,
     mode,
+    reconcileSeconds,
   };
 }
 
@@ -514,6 +521,7 @@ const KNOWN_NESTED_KEYS: Record<string, ReadonlySet<string>> = {
     "debounceSeconds",
     "quietStatus",
     "mode",
+    "reconcileSeconds",
   ]),
   watch: new Set(["readyDelayMinutes", "graphqlQuotaWarnings"]),
   resolve: new Set(["shaPoll"]),

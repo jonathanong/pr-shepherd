@@ -8,6 +8,7 @@ const DEFAULT_POLL = {
   debounceSeconds: 60,
   quietStatus: false,
   mode: "auto",
+  reconcileSeconds: 900,
 };
 
 describe("loadConfig — poll defaults", () => {
@@ -37,6 +38,7 @@ describe("loadConfig — poll defaults", () => {
     ["interval", "poll:\n  intervalSeconds: 0"],
     ["timeout", "poll:\n  timeoutSeconds: -1"],
     ["debounce", "poll:\n  debounceSeconds: -1"],
+    ["reconcile", "poll:\n  reconcileSeconds: -1"],
     ["quiet status", "poll:\n  quietStatus: yes"],
     ["mode", "poll:\n  mode: sometimes"],
   ])("falls back to defaults for an invalid %s", async (_label, yaml) => {

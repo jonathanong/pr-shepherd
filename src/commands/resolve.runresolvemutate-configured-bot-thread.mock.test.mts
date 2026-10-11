@@ -24,6 +24,7 @@ describe("runResolveMutate — configured bot threads", () => {
         stackIntervalFactor: 2,
         timeoutSeconds: 270,
         debounceSeconds: 60,
+        reconcileSeconds: 900,
         quietStatus: false,
         mode: "auto",
       },

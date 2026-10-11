@@ -9,7 +9,7 @@ import type { ShepherdReport } from "../types.mts";
 import { stripReplayedRuleAutoResolve } from "./rule-auto-resolve-format.mts";
 import { getGithubTransport } from "../github/transport.mts";
 
-function reportAllowsFingerprintSkip(report: ShepherdReport): boolean {
+export function reportAllowsFingerprintSkip(report: ShepherdReport): boolean {
   if (report.status === "READY") return false;
   if (report.mergeStatus.state !== "OPEN") return false;
   if (report.mergeQueue?.inQueue === true) return false;
@@ -32,7 +32,7 @@ function reportAllowsFingerprintSkip(report: ShepherdReport): boolean {
 }
 
 /** Whether a fingerprint's windows cover everything it summarizes, so equality means unchanged. */
-function fingerprintIsComplete(fingerprint: PrFingerprint): boolean {
+export function fingerprintIsComplete(fingerprint: PrFingerprint): boolean {
   return (
     !fingerprint.isInMergeQueue &&
     fingerprint.checkSuitesComplete &&

@@ -17,6 +17,7 @@ import {
   BASE_BEHIND_GRAPHQL,
   DETECTOR_POLL_SECONDS,
   EVENT_DETECTORS,
+  GRAPHQL_WAIT_DETECTORS,
   MCP_API,
   RECONCILE_MINUTES,
   snapshot,
@@ -371,10 +372,12 @@ const perHour = (n, wake) => ({
 });
 const reconcilesPerHour = 60 / RECONCILE_MINUTES;
 const idleHour = {
+  // No check running (e.g. a requested bot review): the detectors answer 304
+  // and a BatchPr reconcile runs every RECONCILE_MINUTES.
   shepherd: {
-    graphqlPoints: waitPerHour.shepherdGraphql,
+    graphqlPoints: reconcilesPerHour * SHEPHERD_TICK_API.graphqlPoints,
     restCore: 0,
-    conditional: 0,
+    conditional: (3600 / POLL_SECONDS) * GRAPHQL_WAIT_DETECTORS,
     ...perHour(0, boundedWake),
   },
   shepherdBounded: {
@@ -682,7 +685,7 @@ out(
   `- **GitHub rate limit (assumed).** In a PR session pr-shepherd spends ${num(apiSessions.pr.shepherd.graphqlPoints)} GraphQL points and ${num(apiSessions.pr.shepherd.restCore)} REST requests; gh ${num(apiSessions.pr.gh.graphqlPoints)} and ${num(apiSessions.pr.gh.restCore)}; MCP ${num(apiSessions.pr.mcp.graphqlPoints)} and ${num(apiSessions.pr.mcp.restCore)}. GraphQL points ${apiPct("pr", "gh", "graphqlPoints")} vs. gh and ${apiPct("pr", "mcp", "graphqlPoints")} vs. MCP; REST requests ${apiPct("pr", "gh", "restCore")} and ${apiPct("pr", "mcp", "restCore")}.`,
 );
 out(
-  `- **Waiting on CI, per hour.** pr-shepherd spends ${waitPerHour.shepherdGraphql} GraphQL points on the GraphQL transport (one fingerprint hit per ${POLL_SECONDS}s poll) and about ${waitPerHour.shepherdRest} REST requests on the REST transport (${waitPerHour.shepherdCloud} on cloud REST), whose conditional reads charge only the check reads CI changes; an unchanged wait (no CI running) costs ${waitPerHour.shepherdRestIdle} REST requests an hour (${waitPerHour.shepherdCloudIdle} on cloud REST, the CCR thread read). A \`gh pr checks --watch\` refresh costs ${waitPerHour.ghWatchGraphql} points; an MCP re-check about ${waitPerHour.mcpRest} requests.`,
+  `- **Waiting on CI, per hour.** pr-shepherd spends ${waitPerHour.shepherdGraphql} GraphQL points on the GraphQL transport (one fingerprint hit per ${POLL_SECONDS}s poll) and about ${waitPerHour.shepherdRest} REST requests on the REST transport (${waitPerHour.shepherdCloud} on cloud REST), whose conditional reads charge only the check reads CI changes; an unchanged wait (no CI running) costs ${waitPerHour.shepherdRestIdle} REST requests an hour (${waitPerHour.shepherdCloudIdle} on cloud REST, the CCR thread read) and ${idleHour.shepherd.graphqlPoints} GraphQL points (a reconcile every ${RECONCILE_MINUTES} minutes between free conditional REST detector reads). A \`gh pr checks --watch\` refresh costs ${waitPerHour.ghWatchGraphql} points; an MCP re-check about ${waitPerHour.mcpRest} requests.`,
 );
 // The event arm's summary lines: its session totals against each arm, and
 // idle waiting per hour.
@@ -698,7 +701,7 @@ out(
   `- **Event arm (informational, assumed, not gated).** A background \`pr-shepherd wait\` with ETag change detectors (#544). ${evLine("pr", "PR session")}. ${evLine("stack", "Stack session")}. Each of its ${num(eventSessions.pr.wakes)} PR-session wakes (${num(eventSessions.stack.wakes)} on a stack) adds a request to read the background start, so it spends more turns and tokens than the blocking poll. The hypothetical hosted webhook proxy spends ${num(eventSessions.pr.api.eventProxy.graphqlPoints)} GraphQL points and ${num(eventSessions.pr.api.eventProxy.restCore)} REST core of the user's token in a PR session (${num(eventSessions.stack.api.eventProxy.graphqlPoints)} and ${num(eventSessions.stack.api.eventProxy.restCore)} on a stack), on the agent's own mutations and reads.`,
 );
 out(
-  `- **Idle waiting, per hour (assumed).** The poll arm's blocking \`--until-terminal\` call (the skill's mode, and the comparison that counts) spends ${idleHour.shepherd.graphqlPoints} GraphQL points and no turn; the legacy bounded \`--timeout 4.5m\` CLI mode, which the skill no longer uses, spends ${num(idleHour.shepherdBounded.graphqlPoints)} points (it returns every ${BOUNDED_POLL_SECONDS}s, after ${boundedTicks} ticks) and ${num(idleHour.shepherdBounded.wakes)} wakes (${num(idleHour.shepherdBounded.turns)} turns, ${num(idleHour.shepherdBounded.ite)} ITE). The event arm spends ${idleHour.event.graphqlPoints} points on ${num(idleHour.event.wakes)} reconcile snapshots and no REST (${num(idleHour.event.conditional)} conditional requests, all 304), with ${num(idleHour.event.turns)} turns (${num(idleHour.event.ite)} ITE). The hypothetical proxy spends nothing of the user's token, with the same wakes.`,
+  `- **Idle waiting, per hour (assumed).** The poll arm's blocking \`--until-terminal\` call (the skill's mode, and the comparison that counts) spends ${idleHour.shepherd.graphqlPoints} GraphQL points (a reconcile snapshot every ${RECONCILE_MINUTES} minutes; between them ${GRAPHQL_WAIT_DETECTORS} conditional REST detectors per poll answer 304, ${num(idleHour.shepherd.conditional)} an hour, when no check is running) and no turn; the legacy bounded \`--timeout 4.5m\` CLI mode, which the skill no longer uses, spends ${num(idleHour.shepherdBounded.graphqlPoints)} points (it returns every ${BOUNDED_POLL_SECONDS}s, after ${boundedTicks} ticks) and ${num(idleHour.shepherdBounded.wakes)} wakes (${num(idleHour.shepherdBounded.turns)} turns, ${num(idleHour.shepherdBounded.ite)} ITE). The event arm spends ${idleHour.event.graphqlPoints} points on ${num(idleHour.event.wakes)} reconcile snapshots and no REST (${num(idleHour.event.conditional)} conditional requests, all 304), with ${num(idleHour.event.turns)} turns (${num(idleHour.event.ite)} ITE). The hypothetical proxy spends nothing of the user's token, with the same wakes.`,
 );
 const TRANSPORT_LABELS = { graphql: "GraphQL", rest: "REST", cloud: "cloud REST" };
 const lossCount = (issue) => losses.filter((l) => l.issue === issue).length;
@@ -837,7 +840,7 @@ for (const r of rows.filter((r) => !r.setup)) {
 }
 out();
 out(
-  `- Waiting on CI costs ${waitPerHour.shepherdGraphql} GraphQL points an hour for pr-shepherd (one fingerprint hit per ${POLL_SECONDS}s poll), about ${waitPerHour.shepherdRest} REST requests an hour on the REST transport (${waitPerHour.shepherdCloud} on cloud REST; ${waitPerHour.shepherdRestIdle} and ${waitPerHour.shepherdCloudIdle} when nothing changes), ${waitPerHour.ghWatchGraphql} points for \`gh pr checks --watch --interval ${POLL_SECONDS}\`, and about ${waitPerHour.mcpRest} REST requests for a one-minute MCP re-check.`,
+  `- Waiting on CI costs ${waitPerHour.shepherdGraphql} GraphQL points an hour for pr-shepherd (one fingerprint hit per ${POLL_SECONDS}s poll), about ${waitPerHour.shepherdRest} REST requests an hour on the REST transport (${waitPerHour.shepherdCloud} on cloud REST; ${waitPerHour.shepherdRestIdle} and ${waitPerHour.shepherdCloudIdle} when nothing changes, and ${idleHour.shepherd.graphqlPoints} GraphQL points when no check is running), ${waitPerHour.ghWatchGraphql} points for \`gh pr checks --watch --interval ${POLL_SECONDS}\`, and about ${waitPerHour.mcpRest} REST requests for a one-minute MCP re-check.`,
 );
 out(
   MCP_API.verified

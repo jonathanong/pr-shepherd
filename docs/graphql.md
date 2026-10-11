@@ -214,6 +214,26 @@ Fingerprint skip is also refused — the tick runs `BatchPr` — when any of the
 - REST mergeability differs from the cached report, including reports whose mergeability fields already diverged from the GraphQL fingerprint (a prior REST refresh turned GraphQL `UNKNOWN` into `BEHIND` / `PENDING`). GraphQL can stay `UNKNOWN` after REST returns `CLEAN`; a later REST `CLEAN` must not keep a cached `PENDING` forever.
 - Classification inputs changed: `inputDigest` hashes report-shaping config (`ignoreChecks`, `botUsernames`, `iterate.*`, `watch.readyDelayMinutes`, `checks.*`, `mergeStatus.blockingReviewerLogins`, `actions.autoMinimizeSuppressed` / `autoMarkReady` / `neverCancelRuns` / `workWhileQueued`) plus **classification rule file contents**, not just paths.
 
+### Idle wait change detectors
+
+On the GraphQL transport, a poll continuation tick whose stored report could be fingerprint-reused, has no check in progress, has no unfinished Actions workflow, is not a native-stack layer, and has GraphQL-derived settled mergeability first runs conditional REST change detectors instead of `BatchPr`:
+
+- `GET /pulls/{n}`
+- the head's `check-runs?filter=latest`, `check-suites`, and `statuses`
+- `GET /pulls/{n}/reviews`, `/issues/{n}/comments`, and `/pulls/{n}/comments`
+- `GET /branches/{base}` (its `commit.sha` keys the cached base compare)
+
+They share the `rest-cache/` ETags described above, so an unchanged resource answers a free 304. When every detector answers 304 with the validators recorded beside the stored report, and the last GraphQL snapshot is younger than `poll.reconcileSeconds` (default 900), the stored report is replayed with no GraphQL request. Otherwise the tick runs `BatchPr` as usual (a fingerprint hit or a full snapshot) and records the detector validators it read beside the resulting report (`detectors` in `fingerprint.json`). The first eligible tick therefore seeds the detectors with charged reads. A detector failure never triggers a transport fallback; the tick just runs `BatchPr`. A secondary rate limit instead aborts the tick with exit 75 so polling backs off. `poll.reconcileSeconds: 0` disables the detectors.
+
+Changes the detectors cannot see are picked up at the next reconcile (at most `poll.reconcileSeconds` later) or by any other change:
+
+- review-thread resolution and unresolution (no REST body carries them);
+- branch rule or protection changes;
+- an enqueue into the merge queue by someone else;
+- GraphQL-only fields such as `reviewDecision` that change without touching the pull, a review, or a comment.
+
+The detectors do not run on a `READY` report (the ready-delay countdown always reads `BatchPr`), while any check is queued or running, or for native stacks.
+
 The cached fingerprint's own queue, count, completeness, and rule-window checks run before the live preflight. A cached snapshot that cannot qualify therefore goes directly to `BatchPr`. Within one iterate tick, a non-root native-stack layer reuses one topology for both the bottom merge target and the stale-ancestry check. It comes from that tick's `BatchPr` first page, including on a fingerprint hit, or from a fresh `PollStackTopology` past 50 entries; the next tick reads it again.
 
 ## REST fallbacks
@@ -225,6 +245,12 @@ The cached fingerprint's own queue, count, completeness, and rule-window checks 
 **Why:** GitHub computes `mergeable` asynchronously. GraphQL often returns UNKNOWN while the REST API already has the result. The REST endpoint (`GET /repos/{owner}/{repo}/pulls/{pull_number}`) returns the computed value faster. Its `state` and `merged_at` fields also let an already-required refresh detect a merge or close that raced the initial GraphQL snapshot; Shepherd does not make a separate terminal-state request.
 
 **Not called for:** Merged or closed PRs — REST also returns UNKNOWN for those, and the REST call would be wasted. `check.mts` guards this with `batchData.state === 'OPEN'`; the aggregate poll guards on the summary PR's `state`.
+
+### Idle wait detector reads
+
+**When:** a GraphQL-mode poll continuation tick whose stored report is an idle wait (see [Idle wait change detectors](#idle-wait-change-detectors)).
+
+**Why:** Eight conditional REST reads answer 304 for free while nothing changes, so an idle wait spends no GraphQL points until the reconcile interval elapses. Any other detector error falls through to the ordinary `BatchPr` tick on the GraphQL transport; it never switches transports. A secondary rate limit aborts the tick with exit 75.
 
 ### `getPrHeadSha`
 
@@ -278,6 +304,7 @@ The cached fingerprint's own queue, count, completeness, and rule-window checks 
 - `watch.graphqlQuotaWarnings` (default 30% → 2x, 20% → 5x, 10% → 10x the configured `poll.intervalSeconds`) emits a one-shot-per-worktree-per-credential-per-window `quotaWarning` on non-terminal results for GraphQL and, with the same bands, REST `core`. An older sample in that window does not warn again; a changed credential fingerprint does. Each REST resource uses the fingerprint of the credential that supplied its own quota sample. A credential change accepts that credential's current sample even when its remaining budget is higher before the previous reset. Bands can instead use absolute `pollIntervalMinutes`, or specify both and take the slower result. The skill / MCP caller is told to slow down. It recommends an explicit REST `gh api repos/OWNER/REPO/pulls/PR` read for incidental work only when REST core is still above those bands. When both budgets are low, one combined warning uses the later reset and does not recommend moving work between them.
 - The **poll dispatcher** (`pr-shepherd [PR]`, including `--until-terminal`, and aggregate `--stack` / multi-PR polls) also **applies** those bands: waiting sleeps use `max(effective interval, active band interval)` from the latest `apiUsage.graphql` remaining percent, every tick, even after the one-shot warning has already been claimed. Factors always use configured `poll.intervalSeconds` rather than an explicit flag or `poll.stackIntervalFactor`, preventing compounding; a slower explicit interval remains in force. Stack and multi-PR polls that omit `--interval` already use `poll.intervalSeconds * poll.stackIntervalFactor` (built-in 120s) as that effective interval, so with the defaults a stack sleeps 120s until a tighter band is slower than that. The active band is the crossed entry with the lowest `remainingPercent`, matching `quotaWarning`. Single-tick `iterate` and MCP `iterate` stay advisory — those callers own recurrence.
 - Unchanged ticks skip `BatchPr` when the fingerprint matches, CheckSuites are complete, and REST mergeability still agrees with the cached report, including reports whose mergeability was previously filled in by REST.
+- Idle wait ticks (no check running) skip `BatchPr` entirely while conditional REST change detectors answer 304, reconciling with GraphQL every `poll.reconcileSeconds` (default 900).
 - `BatchPr` loads the newest 20 review threads on the first page. GitHub prices the nested `comments` connection as one request per thread on that page, so 20 costs less than 100 on every full snapshot. Older threads still arrive on the slim page query.
 - In `auto` mode, proven primary GraphQL exhaustion switches the operation and subsequent work to REST. `--until-terminal` keeps polling while a remaining rate limit is the only failure, including forced `graphql` mode or exhausted REST core. An exhausted primary limit (`remaining` 0, GraphQL or REST core) sleeps until `resetAt`, then 5 seconds, then `resetAt % 5` extra seconds, so the retry does not land on the reset instant. An explicit `Retry-After` is still honored in full. A secondary limit without `Retry-After` waits 60, 120, 240, 480, then 960 seconds across five consecutive responses; a sixth exits 75 if there was no successful tick. A later primary `resetAt` clears the no-progress count. An unchanged or missing primary `resetAt` backs off 15s, then 30s, then 60s; its sixth consecutive response exits 75. A successful tick clears either budget. Bounded polls and single-tick `iterate` still fail with 75 on the first rate-limit error.
 - REST branch-policy reads propagate primary and secondary throttling, `Retry-After`, and session refusals. These responses cannot be treated as ordinary unavailable policy; polling retries throttling before making a readiness or merge decision.

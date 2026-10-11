@@ -9,6 +9,7 @@ import { storePrFingerprint } from "../state/pr-fingerprint.mts";
 import { storeRestSnapshotReport } from "../state/rest-snapshot-report.mts";
 import { restSnapshotState, withRestConditionalScope } from "../github/rest-conditional-scope.mts";
 import { fingerprintReuser, tryReuseRestSnapshotReport } from "./check-fingerprint.mts";
+import { readWaitDetectors, recordWaitDetectors } from "./check-wait-detectors.mts";
 import { collectUnreportedRequired, refreshCachedUnreported } from "./check-unreported.mts";
 import { getRepoInfo, getCurrentPrNumber, type RepoInfo } from "../github/client.mts";
 import { classifyChecks, getCiVerdict } from "../checks/classify.mts";
@@ -117,11 +118,18 @@ async function runScopedCheck(
 ): Promise<ShepherdReport> {
   const config = loadConfig();
   const reuseFingerprint = opts.fingerprintCache === true;
+  const paginateApprovedReviews = config.iterate.minimizeApprovals;
+  const includeReceiptSummary = (await context?.wantsReceiptSummary(prNumber, repo)) ?? false;
+  // GraphQL transport: conditional REST change detectors can replay an idle report for free.
+  const detectors =
+    reuseFingerprint && !includeReceiptSummary
+      ? await readWaitDetectors(prNumber, repo, stateKey, config)
+      : undefined;
+  if (detectors && "reused" in detectors)
+    return refreshCachedUnreported(detectors.reused, repo, context, detectors.baseTipOid);
   const reuse = reuseFingerprint
     ? await fingerprintReuser(prNumber, repo, stateKey, config)
     : undefined;
-  const paginateApprovedReviews = config.iterate.minimizeApprovals;
-  const includeReceiptSummary = (await context?.wantsReceiptSummary(prNumber, repo)) ?? false;
   const batchOptions = {
     paginateApprovedReviews,
     ...(includeReceiptSummary && { includeReceiptSummary: true }),
@@ -130,8 +138,10 @@ async function runScopedCheck(
     ? await fetchPrBatch(prNumber, repo, batchOptions, reuse)
     : await fetchPrBatch(prNumber, repo, batchOptions);
   if (fetched.stackEvidence) context?.seedStack(prNumber, repo, fetched.stackEvidence);
-  if ("reused" in fetched)
+  if ("reused" in fetched) {
+    await recordWaitDetectors(stateKey, config, detectors, undefined);
     return refreshCachedUnreported(fetched.reused, repo, context, fetched.baseTipOid);
+  }
   const result = fetched;
   context?.setReceiptSummary(result.receiptSummary ?? null);
   const restSnapshot = result.data.transport === "rest" ? restSnapshotState() : undefined;
@@ -707,6 +717,7 @@ async function runScopedCheck(
   };
   if (result.fingerprint) {
     await storePrFingerprint(stateKey, result.fingerprint, report, config);
+    await recordWaitDetectors(stateKey, config, detectors, result.fingerprint);
   }
   if (restSnapshot) await storeRestSnapshotReport(stateKey, restSnapshot.digest, report, config);
   return report;

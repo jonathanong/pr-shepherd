@@ -4,6 +4,10 @@ vi.mock("./check-fingerprint.mts", () => ({
   fingerprintReuser: vi.fn().mockResolvedValue(undefined),
   tryReuseRestSnapshotReport: vi.fn().mockResolvedValue(null),
 }));
+vi.mock("./check-wait-detectors.mts", () => ({
+  readWaitDetectors: vi.fn().mockResolvedValue(undefined),
+  recordWaitDetectors: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("../state/rest-snapshot-report.mts", () => ({
   storeRestSnapshotReport: vi.fn().mockResolvedValue(undefined),
 }));
