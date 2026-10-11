@@ -119,7 +119,10 @@ other is already a tie. A cost pr-shepherd chooses for a gain elsewhere (the
 wait detectors, a safety read) is a trade-off and stays pending until the owner
 keeps it as a correctness guard; the reason then names the guard. The READY
 mergeability read (#197) is one: GraphQL's mergeable state can lag, so the
-guard reads it from REST before every READY action.
+guard reads it from REST before every READY action. The owner also keeps
+`apply review --require-sha`'s preflight read and keeps replies and merges on
+GraphQL in GraphQL mode (#524), and keeps the shrunken skill's context carry
+(#523/#551), so the cells those costs decide are structural too.
 
 On a failure, `--check` prints each unlisted loss with its numbers and a
 paste-ready entry. Add one only for a regression you accept and track in an
@@ -697,7 +700,10 @@ explains the main ones.
 - **Confirming a merged PR.** A state-first gh agent runs one
   `gh pr view --json state,isDraft` and stops, about 24 tokens. pr-shepherd's
   command and one-line CANCEL are 21 tokens, but it carries the skill, so
-  `merged` costs 5% more than gh and 25% less than MCP.
+  `merged` costs 5% more than gh and 25% less than MCP. The owner accepts this
+  gap as the outcome of shrinking the skill (#523/#551): without the carried
+  skill and playbook the step would beat gh, and deleting SKILL.md entirely
+  would save only about 85 ITE.
 - **Stack token volume.** Each routed layer's first tick prints its own
   instructions. In the stack session pr-shepherd reads 42% more tool tokens than
   gh's terse per-layer reads, and routing work across the six-layer stack is
