@@ -4,6 +4,11 @@ import { runWithGithubTransport } from "../github/transport.mts";
 import { recordRestIdentity, recordThreadIdentity } from "../github/rest-identities.mts";
 import { applyResolveOptions, autoResolveThreads } from "./resolve.mts";
 import { addPrShepherdMarker } from "./marker.mts";
+import {
+  recordApiTelemetry,
+  summarizeApiTelemetry,
+  withApiTelemetryScope,
+} from "../github/api-telemetry.mts";
 import { runMarkFilesAsViewed } from "../commands/mark-files-as-viewed.mts";
 
 const apply = (opts: Parameters<typeof applyResolveOptions>[2]) =>
@@ -60,6 +65,26 @@ describe("REST user-directed review actions", () => {
     expect(wire.requests).toMatchObject([
       { method: "POST", path: `${prefix}/pulls/101/ccr/comments/11/resolve` },
     ]);
+  });
+  it("counts the headerless CCR resolve POST as unmetered, leaving core unchanged", async () => {
+    vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
+    await recordThreadIdentity(repo, 101, "PRRT_opaque", 11);
+    // Live #566: the proxy answered 200 with this body and no X-RateLimit-* headers.
+    await serve((_request, response) => response.end('{"comment_ids":[11],"resolved":true}'));
+    await withApiTelemetryScope(async () => {
+      const core = { resource: "core", limit: 5000, remaining: 4990, used: 10, resetAt: 1 };
+      recordApiTelemetry({ kind: "REST", method: "GET", authSource: "GH_TOKEN", rateLimit: core });
+      const before = summarizeApiTelemetry();
+      const resolve = () => autoResolveThreads(["PRRT_opaque"]);
+      expect(await runWithGithubTransport("rest", resolve)).toEqual({
+        resolved: ["PRRT_opaque"],
+        errors: [],
+      });
+      expect(wire.requests).toHaveLength(1);
+      const after = summarizeApiTelemetry();
+      expect(after?.rest).toEqual(before?.rest);
+      expect(after?.unmeteredRestRequestCount).toBe((before?.unmeteredRestRequestCount ?? 0) + 1);
+    });
   });
   it("reports unsupported explicit minimization and file-view operations without writes", async () => {
     await serve((_request, response) => response.end("{}"));

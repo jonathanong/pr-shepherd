@@ -63,6 +63,35 @@ describe("REST core quota samples that disagree within one tick", () => {
     });
   });
 
+  it("keeps the later reset window when one tick's responses alternate between two windows", async () => {
+    // Live #566 cloud tick: routes alternated between a window resetting at 09:36:06 (used ~540)
+    // and one resetting at 10:00:39 (used ~652). The later window is the one Shepherd reports.
+    const later = resetAt + 1473;
+    await withApiTelemetryScope(async () => {
+      proxySample(14460, 540);
+      proxySample(14348, 652, later);
+      proxySample(14460, 540);
+      proxySample(14348, 652, later);
+      expect(summarizeApiTelemetry()?.rest).toEqual([
+        {
+          resource: "core",
+          requestCount: 4,
+          limit: 15000,
+          used: 652,
+          remaining: 14348,
+          resetAt: later,
+        },
+      ]);
+    });
+    await withApiTelemetryScope(async () => {
+      proxySample(14348, 652, later);
+      proxySample(14460, 540);
+      expect(summarizeApiTelemetry()?.rest).toMatchObject([
+        { used: 652, remaining: 14348, resetAt: later },
+      ]);
+    });
+  });
+
   it("never merges GraphQL samples from different credentials", () => {
     const graphql = (sequence: number, fingerprint: string, remaining: number, used: number) => ({
       kind: "GraphQL" as const,

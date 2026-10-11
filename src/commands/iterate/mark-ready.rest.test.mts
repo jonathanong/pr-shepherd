@@ -3,6 +3,11 @@ import { wire, serve } from "../../../test-helpers/github/rest-read.test-support
 import { base, report } from "../../../test-helpers/github/mark-ready.test-support.mts";
 import { runWithGithubTransport } from "../../github/transport.mts";
 import { markReadyIfAuthorized } from "./mark-ready.mts";
+import {
+  recordApiTelemetry,
+  summarizeApiTelemetry,
+  withApiTelemetryScope,
+} from "../../github/api-telemetry.mts";
 
 const markReady = (value = report) =>
   runWithGithubTransport("rest", () => markReadyIfAuthorized(true, base, value));
@@ -14,6 +19,20 @@ describe("REST mark-ready authorization", () => {
     expect(wire.requests).toMatchObject([
       { method: "POST", path: "/repos/octocat/hello-world/pulls/101/ccr/ready_for_review" },
     ]);
+  });
+  it("counts the headerless ready_for_review POST as unmetered, leaving core unchanged", async () => {
+    vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
+    // Live #566: the proxy answered 200 {"draft":false} with no X-RateLimit-* headers.
+    await serve((_request, response) => response.end('{"draft":false}'));
+    await withApiTelemetryScope(async () => {
+      const core = { resource: "core", limit: 5000, remaining: 4990, used: 10, resetAt: 1 };
+      recordApiTelemetry({ kind: "REST", method: "GET", authSource: "GH_TOKEN", rateLimit: core });
+      const before = summarizeApiTelemetry();
+      expect(await markReady()).toMatchObject({ action: "mark_ready", markedReady: true });
+      const after = summarizeApiTelemetry();
+      expect(after?.rest).toEqual(before?.rest);
+      expect(after?.unmeteredRestRequestCount).toBe((before?.unmeteredRestRequestCount ?? 0) + 1);
+    });
   });
   it("escalates a definite server403 once as authorization-required", async () => {
     vi.stubEnv("CLAUDE_CODE_REMOTE", "true");

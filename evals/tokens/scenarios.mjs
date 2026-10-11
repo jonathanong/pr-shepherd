@@ -26,6 +26,7 @@ import { formatMutateResult } from "../../src/cli/mutate-formatter.mts";
 import { buildLogExcerpt } from "../../src/checks/log-excerpt.mts";
 import {
   CCR_REQUESTS_PER_PR,
+  CCR_WRITE_CORE,
   BACKGROUND_ACK,
   NO_API,
   REPO_ROOT,
@@ -272,7 +273,7 @@ function shepherdApply(text, result, phase = 2) {
   // standard REST route, so REST mode skips it (docs/graphql-usage.md,
   // docs/escalations.md). Cloud REST's transcript read adds the unmetered
   // `/ccr/review_threads`, and it resolves each thread with one CCR POST
-  // (src/comments/rest-review-mutations.mts).
+  // (src/comments/rest-review-mutations.mts), which is unmetered (`CCR_WRITE_CORE`).
   const replies = result.repliedThreads?.length ?? 0;
   const resolves = result.resolvedThreads?.length ?? 0;
   const mutations = replies + resolves;
@@ -289,7 +290,7 @@ function shepherdApply(text, result, phase = 2) {
       HEAD_SHA_READ +
         (replies ? CLOUD_TRANSCRIPT_READ : 0) +
         replies * REST_REPLY_REQUESTS +
-        resolves,
+        resolves * CCR_WRITE_CORE,
     ),
   };
 }
@@ -856,12 +857,12 @@ const PR_SCENARIOS = [
         // sends one GraphQL mutation point. Standard REST has no ready-for-review
         // route, so after its read the tick escalates as transport-unsupported
         // (mark-ready.mts) without another request. Cloud REST marks it ready with
-        // one POST to the CCR proxy's ready_for_review route, on top of the tick's
-        // read. On every transport the READY status re-reads mergeability over REST
-        // first (free on REST: the snapshot's pull read just stored it). A draft's
-        // pull reports `mergeable_state: "draft"` however its checks end, so on REST
-        // the settle tick re-charges the CI reads but not the pull
-        // (src/github/rest-wait-tick-cost.test.mts).
+        // one POST to the CCR proxy's ready_for_review route (unmetered,
+        // `CCR_WRITE_CORE`), on top of the tick's read. On every transport the READY
+        // status re-reads mergeability over REST first (free on REST: the snapshot's
+        // pull read just stored it). A draft's pull reports `mergeable_state: "draft"`
+        // however its checks end, so on REST the settle tick re-charges the CI reads
+        // but not the pull (src/github/rest-wait-tick-cost.test.mts).
         shepherd: [
           {
             phase: 1,
@@ -878,7 +879,7 @@ const PR_SCENARIOS = [
             apiCloud: rest(
               DRAFT_CI_SETTLE_CHANGED_READS +
                 SHEPHERD_WAIT_TICK_API_CLOUD.restCore +
-                1 +
+                CCR_WRITE_CORE +
                 readyMergeabilityRest("cloud"),
             ),
           },
