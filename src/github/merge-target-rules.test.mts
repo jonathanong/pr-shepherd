@@ -64,7 +64,8 @@ describe("loadMergeTargetStatus", () => {
         },
       } as Awaited<ReturnType<typeof graphqlWithRateLimit>>);
 
-      await expect(loadMergeTargetStatus({ ...input, pr })).resolves.toEqual({
+      const status = await loadMergeTargetStatus({ ...input, pr });
+      expect({ ...status, trunkBehindBy: await status.trunkBehindBy?.() }).toEqual({
         contexts: ["required-on-main"],
         trunkBehindBy: 13,
         stackBottomPr: 2547,

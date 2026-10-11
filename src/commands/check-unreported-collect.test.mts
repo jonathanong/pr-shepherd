@@ -65,7 +65,11 @@ describe("collectUnreportedRequired", () => {
   });
 
   it("does not compare a stack layer against its own parent", async () => {
-    target.mockResolvedValue({ contexts: ["backend"], trunkBehindBy: 2, stackBottomPr: 1 });
+    target.mockResolvedValue({
+      contexts: ["backend"],
+      trunkBehindBy: () => Promise.resolve(2),
+      stackBottomPr: 1,
+    });
     const fields = await collectUnreportedRequired({
       batchData: {
         baseRefName: "main",

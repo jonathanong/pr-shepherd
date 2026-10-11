@@ -8,6 +8,8 @@ export interface BaseBehindCacheOptions {
   stateKey: StateKey;
   /** Live base tip from the same tick's `BatchPr`; without it the cache is not read. */
   baseTipOid?: string;
+  /** Derived-state slot; a stack layer keeps its trunk compare apart from its base compare. */
+  slot?: "base-behind" | "trunk-behind";
 }
 
 interface BaseBehindEntry {
@@ -16,7 +18,6 @@ interface BaseBehindEntry {
   behindBy: number;
 }
 
-const BASE_BEHIND_CACHE = "base-behind";
 const COMMIT_OID = /^[0-9a-f]{40}$/;
 
 export async function cachedBaseBehind(
@@ -24,7 +25,7 @@ export async function cachedBaseBehind(
   headOid: string,
 ): Promise<number | undefined> {
   if (!cache?.baseTipOid || !COMMIT_OID.test(headOid)) return undefined;
-  const entry = await loadDerived<BaseBehindEntry>(cache.stateKey, BASE_BEHIND_CACHE);
+  const entry = await loadDerived<BaseBehindEntry>(cache.stateKey, cache.slot ?? "base-behind");
   const value = entry?.value;
   if (value?.baseTipOid !== cache.baseTipOid || value.headOid !== headOid) return undefined;
   return Number.isSafeInteger(value.behindBy) && value.behindBy >= 0 ? value.behindBy : undefined;
@@ -39,5 +40,5 @@ export async function storeBaseBehind(
 ): Promise<void> {
   if (!cache || !baseTipOid || !COMMIT_OID.test(headOid)) return;
   const entry: BaseBehindEntry = { baseTipOid, headOid, behindBy };
-  await storeDerived(cache.stateKey, BASE_BEHIND_CACHE, entry);
+  await storeDerived(cache.stateKey, cache.slot ?? "base-behind", entry);
 }

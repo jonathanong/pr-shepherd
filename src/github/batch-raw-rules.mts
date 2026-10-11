@@ -14,6 +14,7 @@ export interface RawBranchProtectionRule {
 }
 
 import type { RawContextNode } from "./batch-raw-types.mts";
+import type { StackMemberRefs } from "./stack-read.mts";
 
 interface RawCheckCommit {
   oid: string;
@@ -53,6 +54,18 @@ interface RawStack {
   number: number;
   size: number;
   baseRefName: string;
+  /** Selected only by `BatchPr`: the topology `PollStackTopology` would otherwise read. */
+  id?: string;
+  entries?: {
+    pageInfo: { hasNextPage: boolean; endCursor: string | null };
+    nodes: Array<{ position: number; pullRequest: StackMemberRefs | null } | null>;
+  };
+  /** Selected only by `BatchPr`: the bottom entry, whose base is normally the trunk. */
+  trunkEntry?: {
+    nodes: Array<{
+      pullRequest: { baseRefName: string; baseRef: RawBaseRef | null } | null;
+    } | null>;
+  };
 }
 
 export interface RawRepositoryRule {

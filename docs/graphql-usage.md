@@ -30,7 +30,7 @@ The "before" column is the poll-summary shape measured for [the usage write-up](
 | 20  | 50             | 9             | 51                | 10               | 1,530              | 300               |
 | 50  | 126            | 26            | 127               | 27               | 3,810              | 810               |
 
-A stack tick is the summary plus the 1-point `PollStackTopology` preflight. The preflight stays: GitHub prices `entries(first: N)`, so asking for 50 slots on a 2-PR stack would bill the empty slots. The second summary page exists only past 50 layers. A `Resource limits for this query exceeded` response halves that page down to one entry and rereads, so a wide check matrix can add summary pages beyond the table. Check contexts stay on the shared fragment: one layer is the same shape as an explicit summary, and `PollSummaryCheckPage` still completes a window past 100. Hours use the default stack interval, 120s, which is 30 ticks/hour.
+The "stack tick" columns are an anchor's first tick: the summary plus the 1-point `PollStackTopology` preflight. GitHub prices `entries(first: N)`, so asking for 50 slots on a 2-PR stack would bill the empty slots. Each summary stores the stack size under the anchor, so later ticks size the page from it and cost the summary column alone. A stack that grew since pages on for the new entries, asking only for the slots that remain. One that shrank overpays once. The second summary page exists only past 50 layers. A `Resource limits for this query exceeded` response halves that page down to one entry and rereads, so a wide check matrix can add summary pages beyond the table. Check contexts stay on the shared fragment: one layer is the same shape as an explicit summary, and `PollSummaryCheckPage` still completes a window past 100. Hours use the default stack interval, 120s, which is 30 ticks/hour.
 
 `fetchRawSummaryPr` uses the same fragment: 3 points before, 1 after. A check page past the first 100 contexts stays 1 point and no longer repeats the annotation probe.
 
@@ -57,7 +57,9 @@ Supplements on a full snapshot, usually 1 point each:
 - `ReviewThreadComments` — one request per extra page of a thread whose nested comments continue. Concurrency is 4.
 - `CommitCheckContexts` — when the PR is in the merge queue, or the latest removal still matches HEAD.
 - `CheckRunAnnotationsBatch` — one request per 20 uncached completed checks whose probe saw more than one annotation. A run with exactly one annotation takes its body from `BatchPr`'s `annotations(first: 1)` page at no extra cost. Cached for 1 hour per check-run id. Further pages use `CheckRunAnnotations`.
-- `PollStackTopology` — every iterate tick of a non-root native-stack layer, including fingerprint hits. One request per 50 entries.
+- `PollStackTopology` — a non-root native-stack layer of a stack past 50 entries, including fingerprint hits. One request per 50 entries. A smaller stack's topology rides on `BatchPr`'s first page.
+- `RefRules` — a native-stack layer whose `BatchPr` page did not carry the trunk's rules, because the bottom entry's base is not the trunk.
+- `BaseBehind` — a head with unreported required checks: the base compare and, on a native-stack layer, the trunk compare against the bottom open layer. Each is cached under its live tip and head, so it reruns only when one moves.
 - `UpperLayerConflictTarget` — a conflicting upper native-stack layer.
 - `CheckBlockerPull` or `CheckBlockerIssue` — one request per distinct blocker while a matching check is failing.
 - READY receipt evidence — when an existing receipt or elapsed ready-delay marker makes it likely to be needed, `BatchPr` selects the exact `PollSummaryPr` sibling and copies complete annotation totals from the batch check pages. An ordinary tick retains the original query. A resource-limited combined document or a field error confined to the optional sibling retries plain `BatchPr`. Incomplete or mismatched evidence, or a review mutation after the batch, uses `fetchRawSummaryPr` and its annotation probe.
@@ -70,7 +72,7 @@ On a measured ready PR (#481), the former path was three GraphQL requests and th
 
 `pr-shepherd --stack PR` and `pr-shepherd` with two or more PRs, including MCP aggregate `iterate`, read the summary. They do not run per-layer `BatchPr`. Each stack tick is:
 
-- `PollStackTopology` (1 point).
+- `PollStackTopology` (1 point), on the anchor's first summary only.
 - One `PollStackSummary` query at the after column above, paged only past 50 layers.
 - `PollSummaryAnnotationProbe` only for layers that otherwise look ready.
 
@@ -109,15 +111,21 @@ One-PR `BatchPr` stays at the 1-point floor. Fewer review connections, a smaller
 
 5. **Done: take single annotations from `BatchPr`.** The `annotations(first: 1)` probe selects the full annotation fields. In the recorded debug logs, 109 of 110 `CheckRunAnnotationsBatch` requests read only runs with exactly one annotation, so a failing-check tick with annotations drops from 2 points to 1. Runs with more annotations still use the batch.
 
-6. **Done: keep the READY-receipt `BatchPr` at 1 point.** Each first-page context carries an `annotations(first: 1)` probe, so 100 contexts are 100 connection-requests. Adding the summary sibling made the receipt variant 192 requests (2 points) on every READY and CANCEL-candidate tick. Its first context page is now 50, which totals 142 (1 point). The ordinary `BatchPr` keeps 100.
+6. **Done: keep the READY-receipt `BatchPr` at 1 point.** Each first-page context carries an `annotations(first: 1)` probe, so 100 contexts are 100 connection-requests. Adding the summary sibling made the receipt variant 192 requests (2 points) on every READY and CANCEL-candidate tick. Its first context page is now 50, which totals 145 with the stack selections below (1 point). The ordinary `BatchPr` keeps 100 and totals 140.
 
 7. **Done: cache the base compare.** `BatchPr` selects the live base tip (`baseRef.target.oid`, an object field with no connection cost). The `BaseBehind` count for a non-stack head with unreported required checks is cached under that tip and the head commit, so a tick on which neither moved (including a fingerprint hit) drops from 2 points to 1. REST already answers the compare with a conditional request.
 
 8. **Done: one read before `apply review` replies.** `GetPrHeadSha`, `ReplyThreadTranscripts`, and `ReplyRecoveryEvidence` each cost 1 point on a reply with `--require-sha`. `ApplyReviewPreflight` reads all three in one request, so that command drops from 3 read points to 1. Anything it cannot verify falls back to the standalone read.
 
+9. **Done: read a stack layer's topology and trunk rules in `BatchPr`.** A non-root layer tick paid 3 points: `BatchPr`, `RefRules` for the trunk's required contexts and compare, and `PollStackTopology` for the bottom open layer. `BatchPr`'s first page now selects `stack.entries(first: 50)` with link fields only, and `trunkEntry: entries(first: 1)` with the bottom entry's base rules and tip. Neither nests a connection under the 50 entries, so together they add 3 connection-requests and the page stays at 1 point. The trunk compare runs only when a required check is unreported, like the base compare, and is cached under the trunk tip and the bottom layer's head. A layer tick is now 1 point. A stack past 50 entries still reads the topology; a bottom entry based on another branch still reads `RefRules`.
+
+10. **Done: skip the stack summary's topology preflight after the first tick.** The preflight only sized `entries(first:)`. The size each summary observed is stored under the anchor, so a later tick runs the summary alone. Readiness never depends on the stored size: `readStack` still validates the full membership, and a later page asks only for the entries that remain.
+
+Not done: a whole-stack fingerprint that skips the summary. Check rollups, mergeability, queue entries, and annotation receipts change without bumping any layer's `updatedAt`, so a stack fingerprint would need most of the summary to be safe.
+
 Designs that are already at the floor and should stay:
 
-- The 1-point `PollStackTopology` preflight, so `entries(first:)` matches the stack instead of billing 50 empty slots.
+- Sizing `entries(first:)` to the stack instead of billing 50 empty slots.
 - Slim `BatchPrPage` follow-ups with combined cursors, instead of another full snapshot.
 - Annotation bodies in chunks of 20, cached for 1 hour. A chunk is 21 connection-requests, which prices as 1 point.
 - Merge-queue check rollups loaded only when the queue commit is current.

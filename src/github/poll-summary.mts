@@ -10,24 +10,16 @@ import type {
   PollSummaryStackAncestry,
 } from "../types.mts";
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
-import {
-  GitHubRequestError,
-  isRetryableGraphQlResourceLimit,
-  missingRepositoryError,
-} from "./errors.mts";
+import { missingRepositoryError } from "./errors.mts";
 import { hydratePollSummaryChecks } from "./poll-summary-check-hydration.mts";
 import { refreshUnknownSummaryMergeability } from "./poll-summary-mergeability.mts";
 import { summarizePollSummaryPr } from "./poll-summary-projector.mts";
 import { trunkRequiredContexts } from "./poll-summary-unreported.mts";
+import { loadStackSizeHint, storeStackSizeHint } from "./stack-size-hint.mts";
 import type { RawExplicitResponse, RawSummaryPr } from "./poll-summary-raw.mts";
-import { POLL_STACK_SUMMARY_QUERY, POLL_SUMMARY_FRAGMENT } from "./queries.mts";
-import {
-  MAX_STACK_ENTRIES_PER_PAGE,
-  readStack,
-  readStackTopology,
-  stackAncestryGaps,
-  type StackRead,
-} from "./stack-read.mts";
+import { POLL_SUMMARY_FRAGMENT } from "./queries.mts";
+import { readStackTopology, stackAncestryGaps, type StackRead } from "./stack-read.mts";
+import { readGraphqlStackSummary } from "./poll-summary-stack-page.mts";
 
 const MAX_EXPLICIT_PRS_PER_QUERY = 50;
 export interface FetchedPollSummary {
@@ -112,18 +104,23 @@ async function fetchExplicitChunk(
 }
 
 /**
- * Read the stack's topology first so the hydrated page requests only as many
- * entries as the stack holds: GitHub prices `first`, not the nodes returned.
+ * Size the hydrated page to the stack so it requests only as many entries as the
+ * stack holds: GitHub prices `first`, not the nodes returned. The size comes from
+ * the anchor's last summary; only its first summary reads the topology. A stack
+ * that has since grown pages on, and one that shrank overpays once.
  */
 async function fetchStackSummary(
   opts: PollSummaryCommandOptions,
   repo: RepoInfo,
 ): Promise<FetchedPollSummary> {
   const anchor = opts.stackPrNumber!;
-  const topology =
-    getGithubTransport() === "rest" ? undefined : await readStackTopology(anchor, repo);
+  const stateKey = { owner: repo.owner, repo: repo.name, pr: anchor };
+  const graphql = getGithubTransport() !== "rest";
+  const hint = graphql ? await loadStackSizeHint(stateKey) : 0;
+  const sizeHint = graphql && !hint ? (await readStackTopology(anchor, repo)).stackSize : hint;
   const { stackNumber, stackSize, viewerLogin, viewerCanAdminister, ordered, allowedMergeMethods } =
-    await readStackSummary(anchor, repo, topology?.stackSize ?? 0);
+    await readStackSummary(anchor, repo, sizeHint);
+  if (graphql && stackSize !== hint) await storeStackSizeHint(stateKey, stackSize);
   for (const pr of ordered) {
     await hydratePollSummaryChecks(pr, repo);
     await refreshUnknownSummaryMergeability(pr, repo);
@@ -140,34 +137,6 @@ async function fetchStackSummary(
     ...(stackAncestry.length > 0 && { stackAncestry }),
     ...(allowedMergeMethods && { allowedMergeMethods }),
   };
-}
-
-/**
- * A wide check matrix can blow GitHub's per-query resource limit on the full
- * page. Halve `first` down to one entry and let `readStack` follow `after`.
- * The shared summary fragment stays intact: one layer is the same shape as an
- * explicit summary, and check hydration still completes windows past 100.
- */
-async function readGraphqlStackSummary(
-  anchor: number,
-  repo: RepoInfo,
-  stackSize: number,
-): Promise<StackRead<RawSummaryPr>> {
-  let first = Math.min(stackSize, MAX_STACK_ENTRIES_PER_PAGE);
-  for (;;) {
-    try {
-      return await readStack<RawSummaryPr>(POLL_STACK_SUMMARY_QUERY, anchor, repo, { first });
-    } catch (err) {
-      if (
-        !(err instanceof GitHubRequestError) ||
-        !isRetryableGraphQlResourceLimit(err.graphqlErrors) ||
-        first <= 1
-      ) {
-        throw err;
-      }
-      first = Math.floor(first / 2);
-    }
-  }
 }
 
 async function readStackSummary(

@@ -44,12 +44,16 @@ export async function collectUnreportedRequired(
       pr: input.pr,
       baseRefName: input.batchData.baseRefName,
       headRefName: input.batchData.headRefName,
+      headRefOid: input.batchData.headRefOid,
       localContexts,
       stack: input.batchData.stack,
     },
     context,
   );
   const unreported = unreportedRequiredContexts(target.contexts, reportedCheckNames(input.checks));
+  // Like `baseBehindBy`, the trunk compare matters only to an unreported required check.
+  const trunkBehindBy =
+    unreported.length > 0 && target.trunkBehindBy ? await target.trunkBehindBy() : 0;
   const actionsRunning = actionsWorkflowInProgress(input.suites, new Set(input.relevantEvents));
   const baseBehindBy =
     unreported.length > 0 && !input.batchData.stack
@@ -66,8 +70,7 @@ export async function collectUnreportedRequired(
       : 0;
   return {
     ...(unreported.length > 0 && { unreportedRequiredChecks: unreported }),
-    ...(target.trunkBehindBy !== undefined &&
-      target.trunkBehindBy > 0 && { trunkBehindBy: target.trunkBehindBy }),
+    ...(trunkBehindBy > 0 && { trunkBehindBy }),
     ...(baseBehindBy > 0 && { baseBehindBy }),
     ...(actionsRunning && { actionsWorkflowInProgress: true as const }),
     ...(target.stackBottomPr !== undefined && { stackBottomPr: target.stackBottomPr }),
@@ -96,6 +99,7 @@ export async function refreshCachedUnreported(
       pr: report.pr,
       baseRefName: report.baseBranch,
       headRefName: report.headRefName,
+      ...(report.headSha && { headRefOid: report.headSha }),
       localContexts: report.mergeStatus.mergeRequirements?.requiredStatusChecks?.contexts ?? [],
       stack,
     },
@@ -108,9 +112,10 @@ export async function refreshCachedUnreported(
   const next: ShepherdReport = { ...report };
   if (unreported.length > 0) next.unreportedRequiredChecks = unreported;
   else delete next.unreportedRequiredChecks;
-  if (target.trunkBehindBy !== undefined && target.trunkBehindBy > 0) {
-    next.trunkBehindBy = target.trunkBehindBy;
-  } else delete next.trunkBehindBy;
+  const trunkBehindBy =
+    unreported.length > 0 && target.trunkBehindBy ? await target.trunkBehindBy() : 0;
+  if (trunkBehindBy > 0) next.trunkBehindBy = trunkBehindBy;
+  else delete next.trunkBehindBy;
   if (target.stackBottomPr !== undefined) next.stackBottomPr = target.stackBottomPr;
   if (unreported.length > 0 && next.status === "READY") next.status = "PENDING";
   return next;

@@ -3,6 +3,11 @@ import { beforeEach, expect, it, vi } from "vitest";
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
 vi.mock("./client.mts", () => ({ graphqlWithRateLimit: vi.fn() }));
+// Each read here starts cold; the anchor's stack-size hint has its own tests.
+vi.mock("./stack-size-hint.mts", () => ({
+  loadStackSizeHint: vi.fn(async () => 0),
+  storeStackSizeHint: vi.fn(async () => {}),
+}));
 vi.mock("../state/seen-comments.mts", () => ({
   loadSeenMap: vi.fn().mockResolvedValue(new Map()),
 }));

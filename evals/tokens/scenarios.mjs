@@ -46,6 +46,7 @@ import {
   SHEPHERD_RECEIPT_TICK_API,
   annotationBatchApi,
   stackTickApi,
+  stackWarmTickApi,
   stackTickApiRest,
   stackTickApiCloud,
   ghAnnotations,
@@ -1198,17 +1199,17 @@ function settledOverview(layers, number) {
 }
 
 /**
- * A one-PR tick on a non-root native-stack layer. Beside the ordinary
- * snapshot, every full tick loads the trunk's required contexts (`RefRules`;
- * on REST, branch protection, branch rules and a compare) and the stack
- * topology (`PollStackTopology`, shared with the stale-ancestry check; on
- * REST, the stack list and stack read twice, each layer's pull and the
- * viewer). REST's snapshot also reads the stack itself. Sources:
+ * A one-PR tick on a non-root native-stack layer. On GraphQL, `BatchPr`'s
+ * first page carries the stack topology and the trunk's required contexts, so
+ * the tick is the ordinary 1 point (src/github/graphql-stack-tick-cost.test.mts).
+ * REST loads the trunk's branch protection, branch rules and a compare, and
+ * the stack topology (the stack list and stack read twice, each layer's pull
+ * and the viewer); REST's snapshot also reads the stack itself. Sources:
  * src/github/merge-target-rules.mts, src/commands/iterate/stale-ancestry.mts,
  * src/github/rest-stack-read.mts.
  */
 const routedLayerTickApi = (stackSize) => ({
-  api: gql(SHEPHERD_TICK_API.graphqlPoints + 2),
+  api: gql(SHEPHERD_TICK_API.graphqlPoints),
   apiRest: rest(SHEPHERD_TICK_API_REST.restCore + 1 + 3 + (5 + stackSize)),
   // Cloud REST: the same reads on top of the cloud snapshot.
   apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + 1 + 3 + (5 + stackSize)),
@@ -1317,10 +1318,11 @@ const STACK_SCENARIOS = [
             cmd: "",
             out: "",
             continues: true,
-            // Stack ticks have no fingerprint shortcut: each runs PollStackTopology
-            // plus PollStackSummary (docs/graphql-usage.md). After the initial tick
+            // Stack ticks have no fingerprint shortcut, but only the anchor's first
+            // tick reads PollStackTopology; later ticks size PollStackSummary from
+            // the stored stack size (docs/graphql-usage.md). After the initial tick
             // come the remaining WAIT ticks and the tick that sees the queue settle.
-            api: gql(ticks * stackTickApi(layers.length).graphqlPoints),
+            api: gql(ticks * stackWarmTickApi(layers.length).graphqlPoints),
             apiRest: rest(ticks * stackTickApiRest(layers.length).restCore),
             apiCloud: rest(ticks * stackTickApiCloud(layers.length).restCore),
           },

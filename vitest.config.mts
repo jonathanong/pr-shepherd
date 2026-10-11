@@ -3,6 +3,7 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     include: ['src/**/*.{test,mock.test}.mts', 'test-cases/**/*.{test,mock.test}.mts'],
+    setupFiles: ['./test-helpers/state-dir.setup.mts'],
     reporters: process.env.CI ? ['default', 'junit'] : ['default'],
     outputFile: process.env.CI ? { junit: './test-results/junit.xml' } : undefined,
     coverage: {

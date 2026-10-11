@@ -17,7 +17,11 @@ import type { CheckExecutionContext } from "../commands/check-execution-context.
 
 export interface MergeTargetStatus {
   contexts: string[];
-  trunkBehindBy?: number;
+  /**
+   * Commits on the trunk that the bottom open layer does not contain. Present only for a
+   * native stack; callers load it only when a required check is unreported.
+   */
+  trunkBehindBy?: () => Promise<number>;
   stackBottomPr?: number;
 }
 
@@ -38,7 +42,9 @@ interface BaseBehindData {
 
 /**
  * Required status contexts for the branch GitHub actually merges into.
- * A native stack uses the trunk ref, and `behindBy` is that trunk against the bottom open layer.
+ * A native stack uses the trunk ref, and `trunkBehindBy` compares that trunk against the bottom
+ * open layer. The trunk rules and the stack topology come from this tick's `BatchPr` when the
+ * context holds them; otherwise `RefRules` and `PollStackTopology` read them.
  */
 export async function loadMergeTargetStatus(
   input: {
@@ -47,6 +53,8 @@ export async function loadMergeTargetStatus(
     pr: number;
     baseRefName: string;
     headRefName: string;
+    /** Head commit; preferred over the branch name for the trunk compare. */
+    headRefOid?: string;
     localContexts: readonly string[];
     stack?: { baseRefName: string } | null;
   },
@@ -55,21 +63,31 @@ export async function loadMergeTargetStatus(
   const trunk = input.stack?.baseRefName;
   if (!trunk) return { contexts: [...input.localContexts] };
 
-  let headRef = input.headRefName;
+  const repo = { owner: input.owner, name: input.name };
+  let headRef = input.headRefOid || input.headRefName;
   let stackBottomPr = input.pr;
   if (trunk !== input.baseRefName) {
-    const bottom = await bottomOpenLayer(
-      input.pr,
-      { owner: input.owner, name: input.name },
-      context,
-    );
+    const bottom = await bottomOpenLayer(input.pr, repo, context);
     headRef = bottom.headRefOid;
     stackBottomPr = bottom.number;
+  }
+  const embedded = context?.trunkRules(input.pr, repo, trunk);
+  if (embedded) {
+    return {
+      contexts: embedded.contexts,
+      trunkBehindBy: () =>
+        loadBaseBehindBy(input.owner, input.name, trunk, headRef, {
+          stateKey: { owner: input.owner, repo: input.name, pr: input.pr },
+          slot: "trunk-behind",
+          ...(embedded.tipOid && { baseTipOid: embedded.tipOid }),
+        }),
+      stackBottomPr,
+    };
   }
   const loaded = await loadRefRules(input.owner, input.name, `refs/heads/${trunk}`, headRef);
   return {
     contexts: loaded.contexts,
-    ...(loaded.behindBy > 0 && { trunkBehindBy: loaded.behindBy }),
+    trunkBehindBy: () => Promise.resolve(loaded.behindBy),
     stackBottomPr,
   };
 }

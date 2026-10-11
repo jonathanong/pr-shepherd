@@ -746,8 +746,12 @@ export function readyTick(call) {
   };
   return { ...call, api: add("graphql"), apiRest: add("rest"), apiCloud: add("cloud") };
 }
-/** A stack tick: one topology query plus about 0.52 points per layer, at least 1. */
-export const stackTickApi = (layers) => gql(1 + Math.max(1, Math.round(0.52 * layers)));
+/** A stack summary: about 0.52 points per layer, at least 1. */
+const stackSummaryPoints = (layers) => Math.max(1, Math.round(0.52 * layers));
+/** An anchor's first stack tick: one topology query to size the summary, then the summary. */
+export const stackTickApi = (layers) => gql(1 + stackSummaryPoints(layers));
+/** A later stack tick: the summary alone, sized from the size the first tick stored. */
+export const stackWarmTickApi = (layers) => gql(stackSummaryPoints(layers));
 /**
  * Standard REST stack tick: about 6 shared requests plus 12 per layer (126 for
  * 10 layers without CLAUDE_CODE_REMOTE in rest-stack-summary-sharing.test.mts).
