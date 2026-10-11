@@ -31,15 +31,17 @@ export function evaluateGraphqlQuotaWarning(
 ): { warning?: GraphqlQuotaWarning; state: GraphqlQuotaWarningState & { rearmEpoch: number } } {
   const windowRolled =
     previous !== null && sample.resetAt > previous.resetAt && observedAt >= previous.resetAt;
-  const rearm =
-    previous === null ||
-    previous.resource !== sample.resource ||
-    previous.limit !== sample.limit ||
-    windowRolled ||
-    fingerprintChanged(previous, sample);
-  // A sample whose own window already ended before the saved one is stale: keep the saved sample.
+  // A sample whose own window already ended before the saved one is stale, whatever its
+  // credential, resource, or limit: keep the saved sample and do not re-arm from it.
   const stale =
     previous !== null && sample.resetAt < previous.resetAt && observedAt >= sample.resetAt;
+  const rearm =
+    previous === null ||
+    (!stale &&
+      (previous.resource !== sample.resource ||
+        previous.limit !== sample.limit ||
+        windowRolled ||
+        fingerprintChanged(previous, sample)));
   // Same window: the lowest remaining and the highest used seen so far, so an older sample (or a
   // proxy route whose X-RateLimit-Used disagrees) never lowers the warning level.
   const effective =
@@ -59,7 +61,9 @@ export function evaluateGraphqlQuotaWarning(
   const newCrossed = crossed.filter((band) => !warned.has(band.remainingPercent));
   for (const band of crossed) warned.add(band.remainingPercent);
   const active = newCrossed.at(-1);
-  const credentialFingerprint = sample.credentialFingerprint ?? previous?.credentialFingerprint;
+  const credentialFingerprint = stale
+    ? previous?.credentialFingerprint
+    : (sample.credentialFingerprint ?? previous?.credentialFingerprint);
   const state: GraphqlQuotaWarningState & { rearmEpoch: number } = {
     resource: effective.resource,
     limit: effective.limit,

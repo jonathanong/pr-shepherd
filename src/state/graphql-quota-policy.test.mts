@@ -88,6 +88,16 @@ describe("evaluateGraphqlQuotaWarning", () => {
       lastUsed: 100,
       resetAt: saved.state.resetAt,
     });
+
+    const otherCredential = { ...stale, credentialFingerprint: fingerprintB, limit: 15000 };
+    const late = evaluateGraphqlQuotaWarning(bands, otherCredential, saved.state, stale.resetAt);
+    expect(late.warning).toBeUndefined();
+    expect(late.state).toMatchObject({
+      limit: 5000,
+      lastRemaining: 4900,
+      credentialFingerprint: fingerprintA,
+      rearmEpoch: saved.state.rearmEpoch,
+    });
   });
 
   it("still merges a jittered earlier reset whose window has not ended", () => {
