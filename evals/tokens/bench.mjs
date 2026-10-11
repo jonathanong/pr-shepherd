@@ -739,7 +739,7 @@ out(
 const TRANSPORT_LABELS = { graphql: "GraphQL", rest: "REST", cloud: "cloud REST" };
 const lossCount = (issue) => pendingLosses.filter((l) => l.issue === issue).length;
 const accepted = structuralLosses.length
-  ? ` ${structuralLosses.length} more are accepted as structural, since no plan can win them (Accepted structural losses below).`
+  ? ` ${structuralLosses.length} more are accepted as structural, since no plan can win them without dropping a correctness guard the owner keeps (Accepted structural losses below).`
   : "";
 out(
   pendingLosses.length
@@ -771,7 +771,7 @@ if (structuralLosses.length) {
   out("### Accepted structural losses");
   out();
   out(
-    "Losses no plan can win, each with its reason (pending-losses.json `structural`). `bench.mjs --check` does not fail on them, but fails when one is no longer a loss.",
+    "Losses no plan can win without dropping a correctness guard the owner keeps, each with its reason (pending-losses.json `structural`). `bench.mjs --check` does not fail on them, but fails when one is no longer a loss.",
   );
   out();
   out("| where | metric | vs. | pr-shepherd | baseline | change | reason |");

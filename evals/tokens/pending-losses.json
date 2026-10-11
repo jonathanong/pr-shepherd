@@ -1,5 +1,5 @@
 {
-  "note": "Temporary: every metric on which pr-shepherd is worse than a baseline today, each linked to the issue that removes it. `structural` lists the losses no plan can win, each with its reason; they are accepted and not on the temporary list. bench.mjs --check fails on a loss missing from both lists and on an entry in either that is no longer a loss. Remove entries as fixes land; `losses` must end empty (#524).",
+  "note": "Temporary: every metric on which pr-shepherd is worse than a baseline today, each linked to the issue that removes it. `structural` lists the losses no plan can win without dropping a correctness guard the owner keeps, each with its reason; they are accepted and not on the temporary list. bench.mjs --check fails on a loss missing from both lists and on an entry in either that is no longer a loss. Remove entries as fixes land; `losses` must end empty (#524).",
   "losses": [
     { "where": "session:pr", "metric": "graphqlPoints", "transport": "graphql", "baseline": "mcp", "issue": 525 },
     { "where": "session:pr", "metric": "restCore", "transport": "rest", "baseline": "gh", "issue": 525 },
