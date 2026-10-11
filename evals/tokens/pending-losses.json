@@ -47,7 +47,6 @@
     { "where": "mark-ready", "metric": "restCore", "transport": "cloud", "baseline": "gh", "issue": 525 },
     { "where": "mark-ready", "metric": "restCore", "transport": "cloud", "baseline": "mcp", "issue": 525 },
     { "where": "merged", "metric": "ite", "baseline": "gh", "issue": 528 },
-    { "where": "merged", "metric": "toolTokens", "baseline": "gh", "issue": 528 },
     { "where": "merged", "metric": "graphqlPoints", "transport": "graphql", "baseline": "mcp", "issue": 525 },
     { "where": "merged", "metric": "restCore", "transport": "rest", "baseline": "gh", "issue": 525 },
     { "where": "merged", "metric": "restCore", "transport": "rest", "baseline": "mcp", "issue": 525 },

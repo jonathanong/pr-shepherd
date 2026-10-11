@@ -343,8 +343,8 @@ const BOUNDED_TIMEOUT_SECONDS = 270;
 const BOUNDED_INTERVAL_SECONDS = 60;
 const boundedTicks = Math.floor(BOUNDED_TIMEOUT_SECONDS / BOUNDED_INTERVAL_SECONDS) + 1;
 const BOUNDED_POLL_SECONDS = (boundedTicks - 1) * BOUNDED_INTERVAL_SECONDS;
-const PR_URL = "https://github.com/owner/repo/pull/42";
-const PR_CMD = `pr-shepherd ${PR_URL}`;
+const PR_REF = "'owner/repo#42'";
+const PR_CMD = `pr-shepherd ${PR_REF}`;
 const idleCarry = BASE_CTX.carry["ci-wait"]?.shepherd ?? 0;
 const waitText = snapshot("09-wait-in-progress-ci");
 // poll-progress.mts, default (non-quiet) status: one line per sleeping tick.
@@ -360,7 +360,7 @@ const boundedWake = cost(
 );
 const reconcileWake = cost(
   [
-    { phase: 1, via: "bash", cmd: `pr-shepherd wait ${PR_URL}`, out: BACKGROUND_ACK },
+    { phase: 1, via: "bash", cmd: `pr-shepherd wait ${PR_REF}`, out: BACKGROUND_ACK },
     { phase: 2, via: "bash", notification: true, cmd: "", out: waitText },
   ],
   { extraContext: idleCarry },
