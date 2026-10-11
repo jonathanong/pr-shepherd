@@ -161,6 +161,12 @@ export function eventArm(arms) {
   return calls;
 }
 
+/**
+ * A poll tick. No modeled change ends a detector-eligible GraphQL wait (lib.mjs
+ * GRAPHQL_DETECTOR_SEED): before each review, thread, base push or merge the PR
+ * is green and READY, which the detectors skip, and `ci-wait` has checks
+ * running. So every change tick is a plain `BatchPr` read.
+ */
 const shepherdTick = (out, phase = 1) => ({ phase, via: "bash", cmd: SHEPHERD_CMD, out });
 
 /**

@@ -107,6 +107,17 @@ when a listed entry is no longer a loss, or links the wrong issue, so the list
 can only shrink. When a fix lands, delete its entries in the same change. The
 list is temporary: #524 closes when it is empty.
 
+Losses no plan can win are accepted in the same file's `structural` list. Each
+entry names its cell like a pending one and carries a one-line `reason` instead
+of an issue; `--check` fails on an entry without a reason. REPORT.md's Summary
+counts them apart and lists them under "Accepted structural losses" with their
+reasons. They do not fail `--check`, but an entry that is no longer a loss, or
+that is also on the pending list, does. Accept a cell only when you can state
+why every plan loses it, for example when gh spends no REST request and MCP no
+GraphQL point on the same step, so any read loses one of the two cells and the
+other is already a tie. A cost pr-shepherd chooses for a gain elsewhere (the
+wait detectors, a safety read) is a trade-off and stays pending.
+
 On a failure, `--check` prints each unlisted loss with its numbers and a
 paste-ready entry. Add one only for a regression you accept and track in an
 issue.
@@ -219,6 +230,24 @@ are as good as these assumptions:
   - every one-PR tick is 1 point (`BatchPr`). Its first page is the
     fingerprint read, so an unchanged wait poll is a 1-point hit and the first
     changed tick after a wait, a miss, continues the same request at 1 point;
+  - an idle single-PR wait whose report is complete (not READY, not queued,
+    nothing to act on, no check running, a merge status GraphQL itself
+    settled (not one a REST mergeability refresh filled in), no stack,
+    `poll.reconcileSeconds` above 0, at most 20 threads with none holding
+    more than one comment, at most 100 comments and 100 reviews, and complete
+    check-suite and rules pages; `src/commands/check-wait-detectors.mts` and
+    `src/commands/check-fingerprint.mts`) polls 8 conditional REST detectors
+    instead: a 304 is free, the tick on which one sees a change charges its
+    200, and entering the wait seeds all 8 once on a cold cache (8 requests
+    when each resource fits one 100-entry page, more when one does not). Any
+    other wait reads `BatchPr` every poll: 1 point while the PR fits its
+    first page, more past a first-page window, plus one REST mergeability
+    read a poll while GraphQL leaves the merge status UNKNOWN or the PR is
+    READY. No modeled change ends a detector-eligible wait: before each
+    review, thread, base push or merge the PR is green and READY, which the
+    detectors skip, and `ci-wait` has checks running. So every change tick is
+    a plain `BatchPr` read, and the detectors, seed included, appear only in
+    the idle hour;
   - a stack summary page is `max(1, round(0.36 × layers))`. The anchor's first
     tick reads a 4-entry page (1 point), then one page for any remaining
     layers; later ticks size the summary from the stack size the first one
@@ -410,8 +439,10 @@ by how far they move the result.
   itself (`apply review`, merges, log reads) cost what they cost in the poll
   arm.
 - **Idle hour (assumed).** The report also prices an hour where nothing
-  changes: the poll arm's blocking `--until-terminal` call (4 reconcile
-  points and 480 conditional detector reads that all answer 304, no turn,
+  changes: the poll arm's blocking `--until-terminal` call (the first hour of
+  the wait, seed included: 4 reconcile points, the first of them the entering
+  read; 8 seed requests, each detector's cold 200; and 472 later detector
+  reads that all answer 304; no turn,
   assuming no check is running, for example a requested bot review; a wait on
   running CI still spends a fingerprint point per poll), which is what the skill runs and the comparison that
   counts; the legacy bounded CLI mode, a `--timeout 4.5m` poll called again
