@@ -162,23 +162,12 @@ fragment PollSummaryPr on PullRequest {
       isResolved
       isOutdated
       path
-      rootComments: comments(first: 1) {
-        nodes {
-          id
-          body
-          url
-          viewerDidAuthor
-          authorAssociation
-          author {
-            __typename
-            login
-          }
-        }
-      }
-      comments(last: 5) {
+      # One window from the root: a second nested connection would cost 20 more
+      # connection-requests per PR. `hasPreviousPage` marks comments outside it.
+      comments(first: 5) {
         totalCount
         pageInfo {
-          hasPreviousPage
+          hasPreviousPage: hasNextPage
         }
         nodes {
           id

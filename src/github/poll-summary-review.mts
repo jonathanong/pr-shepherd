@@ -67,8 +67,11 @@ export async function summarizePollSummaryReview(
   }
 
   for (const thread of raw.reviewThreads.nodes) {
-    if (thread.comments.pageInfo.hasPreviousPage) incomplete = true;
-    const root = thread.rootComments?.nodes[0] ?? thread.comments.nodes[0];
+    // The window holds the first comments. Past it, a new reply leaves the window
+    // unchanged, so a long thread cannot prove it was seen.
+    const truncated = thread.comments.pageInfo.hasPreviousPage;
+    if (truncated) incomplete = true;
+    const root = thread.comments.nodes[0];
     const transcript = thread.comments.nodes
       .map((comment) => comment.body)
       .join(THREAD_COMMENT_SEPARATOR);
@@ -78,7 +81,7 @@ export async function summarizePollSummaryReview(
       (root?.viewerDidAuthor === true ||
         root?.author?.__typename === "Bot" ||
         bots.has(root?.author?.login.toLowerCase() ?? ""));
-    const unseen = classifyItem(thread.id, transcript, seen) !== "unchanged";
+    const unseen = truncated || classifyItem(thread.id, transcript, seen) !== "unchanged";
     if (
       (thread.isResolved === false && (repeatable || unseen)) ||
       (thread.isResolved === undefined && unseen) ||

@@ -1332,9 +1332,9 @@ const STACK_SCENARIOS = [
             cmd: "",
             out: "",
             continues: true,
-            // Stack ticks have no fingerprint shortcut, but only the anchor's first
-            // tick reads PollStackTopology; later ticks size PollStackSummary from
-            // the stored stack size (docs/graphql-usage.md). After the initial tick
+            // Stack ticks have no fingerprint shortcut. Only the anchor's first
+            // tick reads an unsized 4-entry page; later ticks size PollStackSummary
+            // from the stored stack size (docs/graphql-usage.md). After the initial tick
             // come the remaining WAIT ticks and the tick that sees the queue settle.
             // REST reads are conditional: the queue's CI runs on the merge group,
             // not the layers' heads, so the WAIT ticks are all 304 (cloud still

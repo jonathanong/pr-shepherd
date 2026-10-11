@@ -253,6 +253,49 @@ describe("summarizePollSummaryPr", () => {
     expect(graphqlUnknown.review).toEqual({ reviews: 1 });
   });
 
+  it("keeps a seen thread actionable once replies run past the comment window", async () => {
+    const bodies = ["1", "2", "3", "4", "5"];
+    const transcript = bodies.join("\n\n--- thread comment ---\n\n");
+    const seen = new Map<string, SeenMarker>([
+      ["long-thread", { seenAt: 1, bodyHash: hashBody(transcript) }],
+    ]);
+    vi.mocked(loadSeenMap).mockResolvedValueOnce(seen).mockResolvedValueOnce(seen);
+    const thread = (hasPreviousPage: boolean) =>
+      raw({
+        stack: null,
+        stackEntry: null,
+        isInMergeQueue: false,
+        reviewThreads: {
+          totalCount: 1,
+          pageInfo: { hasPreviousPage: false },
+          nodes: [
+            {
+              id: "long-thread",
+              isResolved: false,
+              isOutdated: false,
+              path: "src/a.ts",
+              comments: {
+                totalCount: hasPreviousPage ? 6 : 5,
+                pageInfo: { hasPreviousPage },
+                nodes: bodies.map((body) => ({
+                  id: `c${body}`,
+                  body,
+                  isMinimized: false,
+                  author: { login: "human" },
+                })),
+              },
+            },
+          ],
+        },
+      });
+
+    const settled = await summarizePollSummaryPr(thread(false), repo, {});
+    const grown = await summarizePollSummaryPr(thread(true), repo, {});
+
+    expect(settled.review).toEqual({ threads: 1 });
+    expect(grown.review).toEqual({ threads: 1, actionable: 1, incomplete: true });
+  });
+
   it("surfaces a current merge-queue removal with its raw reason and actor", async () => {
     const item = await summarizePollSummaryPr(
       raw({

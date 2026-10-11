@@ -35,7 +35,6 @@ export function fingerprintRawSummaryPr(raw: RawSummaryPr): string | null {
       ...raw.reviewThreads,
       nodes: raw.reviewThreads.nodes.map((thread) => ({
         ...thread,
-        rootComments: thread.rootComments && hideBodies(thread.rootComments),
         comments: hideBodies(thread.comments),
       })),
     },

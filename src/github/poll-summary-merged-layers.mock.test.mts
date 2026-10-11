@@ -38,7 +38,7 @@ beforeEach(() => {
 it("routes all four remaining layers by trunk checks after two lower layers merge", async () => {
   const nodes = partialStack();
   const page = summaryPage(nodes);
-  mockGraphql.mockResolvedValueOnce(page).mockResolvedValueOnce(page);
+  mockGraphql.mockResolvedValueOnce(page);
 
   const result = await fetchPollSummary(
     { stackPrNumber: 2629 },
@@ -61,7 +61,7 @@ it("routes all four remaining layers by trunk checks after two lower layers merg
       missing: ["tests", "build"],
     })),
   );
-  expect(mockGraphql).toHaveBeenCalledTimes(2);
+  expect(mockGraphql).toHaveBeenCalledTimes(1);
 });
 
 it.each(["unavailable", "absent"])(
@@ -73,12 +73,9 @@ it.each(["unavailable", "absent"])(
       for (const node of selected) node.pullRequest.baseRef = null;
     }
     const page = summaryPage(selected);
-    mockGraphql
-      .mockResolvedValueOnce(page)
-      .mockResolvedValueOnce(page)
-      .mockResolvedValueOnce({
-        data: { repository: { ref: { ...trunkRef, compare: { behindBy: 0 } } } },
-      });
+    mockGraphql.mockResolvedValueOnce(page).mockResolvedValueOnce({
+      data: { repository: { ref: { ...trunkRef, compare: { behindBy: 0 } } } },
+    });
 
     const result = await fetchPollSummary(
       { stackPrNumber: 2629 },
@@ -104,7 +101,7 @@ it("does not fetch trunk rules for a fully terminal stack", async () => {
     node.pullRequest.baseRef = null;
   }
   const page = summaryPage(nodes);
-  mockGraphql.mockResolvedValueOnce(page).mockResolvedValueOnce(page);
+  mockGraphql.mockResolvedValueOnce(page);
 
   const result = await fetchPollSummary(
     { stackPrNumber: 2629 },
@@ -112,7 +109,7 @@ it("does not fetch trunk rules for a fully terminal stack", async () => {
   );
 
   expect(result.prs.every((pr) => pr.action === "cancel")).toBe(true);
-  expect(mockGraphql).toHaveBeenCalledTimes(2);
+  expect(mockGraphql).toHaveBeenCalledTimes(1);
 });
 
 it("uses a known trunk ref with no required checks without a fallback fetch", async () => {
@@ -121,7 +118,7 @@ it("uses a known trunk ref with no required checks without a fallback fetch", as
     node.pullRequest.baseRef = { branchProtectionRule: null, rules: { nodes: [] } };
   }
   const page = summaryPage(nodes);
-  mockGraphql.mockResolvedValueOnce(page).mockResolvedValueOnce(page);
+  mockGraphql.mockResolvedValueOnce(page);
 
   const result = await fetchPollSummary(
     { stackPrNumber: 2629 },
@@ -134,5 +131,5 @@ it("uses a known trunk ref with no required checks without a fallback fetch", as
     undefined,
     undefined,
   ]);
-  expect(mockGraphql).toHaveBeenCalledTimes(2);
+  expect(mockGraphql).toHaveBeenCalledTimes(1);
 });

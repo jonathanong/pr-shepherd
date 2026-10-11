@@ -149,7 +149,6 @@ describe("fingerprintRawSummaryPr", () => {
               isResolved: true,
               isOutdated: false,
               path: "src/index.ts",
-              rootComments: { nodes: [node] },
               comments: connection,
             },
           ],

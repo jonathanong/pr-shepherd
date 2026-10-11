@@ -23,7 +23,7 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
 | single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 224 core + 1.5 points | 251.5 core + 1.5 points |
-| PR stack | 23 / 27 / 12 | 2 / 6 / 74 | 480 core + 0 points | 510 core + 0 points |
+| PR stack | 17 / 27 / 12 | 2 / 6 / 74 | 480 core + 0 points | 510 core + 0 points |
 
 <!-- bench:headline:end -->
 
@@ -219,9 +219,10 @@ are as good as these assumptions:
   - every one-PR tick is 1 point (`BatchPr`). Its first page is the
     fingerprint read, so an unchanged wait poll is a 1-point hit and the first
     changed tick after a wait, a miss, continues the same request at 1 point;
-  - a stack tick is `max(1, round(0.52 × layers))`, plus 1 topology point on
-    the anchor's first tick only; later ticks size the summary from the stack
-    size the first one stored;
+  - a stack summary page is `max(1, round(0.36 × layers))`. The anchor's first
+    tick reads a 4-entry page (1 point), then one page for any remaining
+    layers; later ticks size the summary from the stack size the first one
+    stored;
   - a one-PR tick on a non-root native-stack layer (the sessions `stack-work`
     routes) is 1 point: `BatchPr`'s first page carries the stack topology and
     the trunk's required contexts. The trunk compare (`BaseBehind`) runs only

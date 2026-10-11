@@ -18,7 +18,7 @@ import { trunkRequiredContexts } from "./poll-summary-unreported.mts";
 import { loadStackSizeHint, storeStackSizeHint } from "./stack-size-hint.mts";
 import type { RawExplicitResponse, RawSummaryPr } from "./poll-summary-raw.mts";
 import { POLL_SUMMARY_FRAGMENT } from "./queries.mts";
-import { readStackTopology, stackAncestryGaps, type StackRead } from "./stack-read.mts";
+import { stackAncestryGaps, type StackRead } from "./stack-read.mts";
 import { readGraphqlStackSummary } from "./poll-summary-stack-page.mts";
 
 const MAX_EXPLICIT_PRS_PER_QUERY = 50;
@@ -104,10 +104,18 @@ async function fetchExplicitChunk(
 }
 
 /**
+ * Entries on an unsized first summary page. GitHub prices `first`, not the
+ * nodes returned, and four layers are the most that still price at 1 point.
+ * Larger stacks page on, sized to the entries that remain.
+ */
+const UNSIZED_STACK_SUMMARY_FIRST = 4;
+
+/**
  * Size the hydrated page to the stack so it requests only as many entries as the
- * stack holds: GitHub prices `first`, not the nodes returned. The size comes from
- * the anchor's last summary; only its first summary reads the topology. A stack
- * that has since grown pages on, and one that shrank overpays once.
+ * stack holds. The size comes from the anchor's last summary; the first summary
+ * reads four entries and pages on, which never costs more than reading the
+ * topology first. A stack that has since grown pages on, and one that shrank
+ * overpays once.
  */
 async function fetchStackSummary(
   opts: PollSummaryCommandOptions,
@@ -117,7 +125,7 @@ async function fetchStackSummary(
   const stateKey = { owner: repo.owner, repo: repo.name, pr: anchor };
   const graphql = getGithubTransport() !== "rest";
   const hint = graphql ? await loadStackSizeHint(stateKey) : 0;
-  const sizeHint = graphql && !hint ? (await readStackTopology(anchor, repo)).stackSize : hint;
+  const sizeHint = hint || UNSIZED_STACK_SUMMARY_FIRST;
   const { stackNumber, stackSize, viewerLogin, viewerCanAdminister, ordered, allowedMergeMethods } =
     await readStackSummary(anchor, repo, sizeHint);
   if (graphql && stackSize !== hint) await storeStackSizeHint(stateKey, stackSize);

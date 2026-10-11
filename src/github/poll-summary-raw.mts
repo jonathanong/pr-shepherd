@@ -118,7 +118,10 @@ export interface RawSummaryPr {
     isResolved?: boolean;
     isOutdated?: boolean;
     path: string | null;
-    rootComments?: { nodes: RawSummaryComment[] };
+    /**
+     * The first comments from the root. `pageInfo.hasPreviousPage` is GraphQL's
+     * `hasNextPage` (aliased): true when comments exist outside this window.
+     */
     comments: SummaryConnection<RawSummaryComment>;
   }>;
   commits: { nodes: Array<{ commit: RawSummaryCommit }> };
