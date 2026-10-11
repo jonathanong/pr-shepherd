@@ -12,7 +12,7 @@ Change in cost when an agent uses pr-shepherd instead of a baseline. A negative 
 - **Waiting on CI, per hour.** pr-shepherd spends 60 GraphQL points on the GraphQL transport (one fingerprint hit per 60s poll) and about 180 REST requests on the REST transport (180 on cloud REST), whose conditional reads charge only the check reads CI changes; an unchanged wait (no CI running) costs 0 REST requests an hour (0 on cloud REST, the CCR thread read) and 4 GraphQL points (a reconcile every 15 minutes between free conditional REST detector reads). A `gh pr checks --watch` refresh costs 60 points; an MCP re-check about 120 requests.
 - **Event arm (informational, assumed, not gated).** A background `pr-shepherd wait` with ETag change detectors (#544). PR session: 18.8 (poll 30.8, gh 36.5, MCP 12) GraphQL points, 38 (poll 4.8, gh 9, MCP 78.3) REST requests, 22.8 (poll 14.8, gh 18.3, MCP 48.6) turns, 8,456 (poll 8,522, gh 30,934, MCP 77,005) tool tokens and 83,489 (poll 58,499, gh 100,341, MCP 258,773) ITE. Stack session: 14 (poll 17, gh 27, MCP 12) GraphQL points, 12 (poll 2, gh 6, MCP 74) REST requests, 12 (poll 8, gh 13, MCP 19) turns, 3,915 (poll 3,875, gh 5,133, MCP 9,478) tool tokens and 43,239 (poll 30,914, gh 56,002, MCP 83,549) ITE. Each of its 8 PR-session wakes (4 on a stack) adds a request to read the background start, so it spends more turns and tokens than the blocking poll. The hypothetical hosted webhook proxy spends 9.5 GraphQL points and 1 REST core of the user's token in a PR session (0 and 2 on a stack), on the agent's own mutations and reads.
 - **Idle waiting, per hour (assumed).** The poll arm's blocking `--until-terminal` call (the skill's mode, and the comparison that counts) spends 4 GraphQL points (a reconcile snapshot every 15 minutes; between them 8 conditional REST detectors per poll answer 304, 472 in the first hour, when no check is running; entering the wait seeds them once, 8 REST requests in that hour's total when each detector's resource fits one 100-entry page and more when one does not; a non-READY PR that skips them but whose `BatchPr` fits its first page, for example one with a thread holding a reply, spends 60 points an hour, and one past a first-page window (more than 20 threads, 100 comments or 100 reviews) more, since each poll also reads the further pages; a READY PR adds one REST mergeability read a poll) and no turn; the legacy bounded `--timeout 4.5m` CLI mode, which the skill no longer uses, spends 75 points (it returns every 240s, after 5 ticks) and 15 wakes (15 turns, 51,015 ITE). The event arm spends 4 points on 4 reconcile snapshots and no REST (300 conditional requests, all 304), with 8 turns (25,516 ITE). The hypothetical proxy spends nothing of the user's token, with the same wakes.
-- **Losses: 63 pending.** pr-shepherd costs more than a baseline on 63 gated cells below: 1 on tokens or turns (#528) and 62 on the GitHub rate limit (#525). Each is on the temporary pending list, pending-losses.json; `bench.mjs --check` fails on any other loss and on any listed one that is gone. 11 more are accepted as structural, since no plan can win them (Accepted structural losses below).
+- **Losses: 61 pending.** pr-shepherd costs more than a baseline on 61 gated cells below: 1 on tokens or turns (#528) and 60 on the GitHub rate limit (#525). Each is on the temporary pending list, pending-losses.json; `bench.mjs --check` fails on any other loss and on any listed one that is gone. 11 more are accepted as structural, since no plan can win them (Accepted structural losses below).
 
 ### Losses
 
@@ -21,10 +21,10 @@ Every session and scenario where pr-shepherd costs strictly more than a baseline
 | where | metric | vs. | pr-shepherd | baseline | change | issue |
 | --- | --- | --- | --- | --- | --- | --- |
 | Typical PR session | GraphQL points (GraphQL transport) | GitHub MCP | 30.8 | 12 | +157% | #525 |
-| Typical PR session | REST core requests (REST transport) | gh CLI | 185.8 | 9 | +1964% | #525 |
-| Typical PR session | REST core requests (REST transport) | GitHub MCP | 185.8 | 78.3 | +137% | #525 |
-| Typical PR session | REST core requests (cloud REST transport) | gh CLI | 188.8 | 9 | +1998% | #525 |
-| Typical PR session | REST core requests (cloud REST transport) | GitHub MCP | 188.8 | 78.3 | +141% | #525 |
+| Typical PR session | REST core requests (REST transport) | gh CLI | 188 | 9 | +1989% | #525 |
+| Typical PR session | REST core requests (REST transport) | GitHub MCP | 188 | 78.3 | +140% | #525 |
+| Typical PR session | REST core requests (cloud REST transport) | gh CLI | 191 | 9 | +2022% | #525 |
+| Typical PR session | REST core requests (cloud REST transport) | GitHub MCP | 191 | 78.3 | +144% | #525 |
 | Typical stack session | GraphQL points (GraphQL transport) | GitHub MCP | 17 | 12 | +42% | #525 |
 | Typical stack session | REST core requests (REST transport) | gh CLI | 432 | 6 | +7100% | #525 |
 | Typical stack session | REST core requests (REST transport) | GitHub MCP | 432 | 74 | +484% | #525 |
@@ -65,15 +65,13 @@ Every session and scenario where pr-shepherd costs strictly more than a baseline
 | `check-annotations` | REST core requests (cloud REST transport) | gh CLI | 15 | 2 | +650% | #525 |
 | `merge` | REST core requests (GraphQL transport) | gh CLI | 1 | 0 | n/a | #525 |
 | `merge` | GraphQL points (GraphQL transport) | GitHub MCP | 3 | 1 | +200% | #525 |
-| `merge` | REST core requests (REST transport) | gh CLI | 14 | 0 | n/a | #525 |
-| `merge` | GraphQL points (REST transport) | GitHub MCP | 2 | 1 | +100% | #525 |
-| `merge` | REST core requests (REST transport) | GitHub MCP | 14 | 6 | +133% | #525 |
-| `merge` | REST core requests (cloud REST transport) | gh CLI | 14 | 0 | n/a | #525 |
-| `merge` | GraphQL points (cloud REST transport) | GitHub MCP | 2 | 1 | +100% | #525 |
-| `merge` | REST core requests (cloud REST transport) | GitHub MCP | 14 | 6 | +133% | #525 |
+| `merge` | REST core requests (REST transport) | gh CLI | 17 | 0 | n/a | #525 |
+| `merge` | REST core requests (REST transport) | GitHub MCP | 17 | 6 | +183% | #525 |
+| `merge` | REST core requests (cloud REST transport) | gh CLI | 17 | 0 | n/a | #525 |
+| `merge` | REST core requests (cloud REST transport) | GitHub MCP | 17 | 6 | +183% | #525 |
 | `merge-queue` | REST core requests (GraphQL transport) | gh CLI | 1 | 0 | n/a | #525 |
-| `merge-queue` | REST core requests (REST transport) | gh CLI | 14 | 0 | n/a | #525 |
-| `merge-queue` | REST core requests (cloud REST transport) | gh CLI | 14 | 0 | n/a | #525 |
+| `merge-queue` | REST core requests (REST transport) | gh CLI | 17 | 0 | n/a | #525 |
+| `merge-queue` | REST core requests (cloud REST transport) | gh CLI | 17 | 0 | n/a | #525 |
 | `stack-work` | GraphQL points (GraphQL transport) | GitHub MCP | 6 | 4 | +50% | #525 |
 | `stack-work` | REST core requests (REST transport) | gh CLI | 170 | 1 | +16900% | #525 |
 | `stack-work` | REST core requests (REST transport) | GitHub MCP | 170 | 25 | +580% | #525 |
@@ -232,8 +230,8 @@ Rate-limit cost per session, weighted like the token numbers. **Deterministic an
 | session | arm | GraphQL points | REST core requests |
 | --- | --- | --- | --- |
 | Typical PR session | pr-shepherd | 30.8 | 4.8 |
-| Typical PR session | pr-shepherd, REST transport | 1.5 | 185.8 |
-| Typical PR session | pr-shepherd, cloud REST | 1.5 | 188.8 |
+| Typical PR session | pr-shepherd, REST transport | 0 | 188 |
+| Typical PR session | pr-shepherd, cloud REST | 0 | 191 |
 | Typical PR session | gh CLI | 36.5 | 9 |
 | Typical PR session | GitHub MCP | 12 | 78.3 |
 | Typical stack session | pr-shepherd | 17 | 2 |
@@ -257,8 +255,8 @@ Per scenario, `GraphQL points / REST core requests` for one occurrence.
 | `bot-threads` | 3 / 0 | 0 / 28 | 0 / 30 | 4 / 3 | 3 / 8 |
 | `check-annotations` | 2 / 0 | 0 / 15 | 0 / 15 | 2 / 2 | 1 / 5 † |
 | `conflicts` | 1 / 0 | 0 / 3 | 0 / 3 | 2 / 0 | 1 / 5 |
-| `merge` | 3 / 1 | 2 / 14 | 2 / 14 | 4 / 0 | 1 / 6 |
-| `merge-queue` | 3 / 1 | 2 / 14 | 2 / 14 | 4 / 0 | 1 / 6 † |
+| `merge` | 3 / 1 | 0 / 17 | 0 / 17 | 4 / 0 | 1 / 6 |
+| `merge-queue` | 3 / 1 | 0 / 17 | 0 / 17 | 4 / 0 | 1 / 6 † |
 | `stack-work` | 6 / 0 | 0 / 170 | 0 / 170 | 8 / 1 | 4 / 25 |
 | `stack-queue-wait` | 4 / 0 | 0 / 60 | 0 / 60 | 7 / 1 | 2 / 12 † |
 | `stack-merge` | 1 / 2 | 0 / 32 | 0 / 32 | 4 / 3 | 2 / 12 † |

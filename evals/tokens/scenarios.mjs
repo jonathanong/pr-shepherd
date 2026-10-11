@@ -225,6 +225,23 @@ const receiptTick = (out) => ({
 });
 
 /**
+ * On the REST transport the output prints `pr-shepherd apply merge … --transport rest` instead
+ * of `gh pr merge` (`buildMergeCommandPlan` in src/commands/iterate/merge-plan.mts): a pull read,
+ * the stack-membership read and one `PUT …/merge-async`, all unconditional and no GraphQL, for a
+ * direct merge and an enqueue alike (src/commands/apply-merge-cost.test.mts). The model keeps one
+ * output text for every transport, so only the cost changes.
+ */
+const APPLY_MERGE_REST = 3;
+const shepherdMerge = (cmd, out) => ({
+  phase: 2,
+  via: "bash",
+  cmd,
+  out,
+  apiRest: rest(APPLY_MERGE_REST),
+  apiCloud: rest(APPLY_MERGE_REST),
+});
+
+/**
  * Run the printed `apply review` command and read its output. Only `$DISMISS_MESSAGE` needs
  * filling; `--require-sha HEAD` runs as printed.
  */
@@ -1031,12 +1048,10 @@ const PR_SCENARIOS = [
         shepherd: [
           // The READY refresh stands in for the countdown's first READY tick, which pays it cold.
           readyTick(receiptTick(snapshot(fixture))),
-          {
-            phase: 2,
-            via: "bash",
-            cmd: "gh pr merge 42 --repo owner/repo --match-head-commit abc123 --auto --merge",
-            out: merged,
-          },
+          shepherdMerge(
+            "gh pr merge 42 --repo owner/repo --match-head-commit abc123 --auto --merge",
+            merged,
+          ),
         ],
         // nextCheck: the ready delay elapsed.
         event: { wake: "timer", detectors: 0 },
@@ -1069,12 +1084,7 @@ const PR_SCENARIOS = [
         shepherd: [
           // The READY refresh stands in for the countdown's first READY tick, which pays it cold.
           readyTick(receiptTick(snapshot(fixture))),
-          {
-            phase: 2,
-            via: "bash",
-            cmd: "gh pr merge 42 --repo owner/repo --match-head-commit abc123",
-            out: queued,
-          },
+          shepherdMerge("gh pr merge 42 --repo owner/repo --match-head-commit abc123", queued),
         ],
         // nextCheck: the ready delay elapsed.
         event: { wake: "timer", detectors: 0 },
