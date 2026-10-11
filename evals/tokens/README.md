@@ -22,7 +22,7 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
-| single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 209.3 core + 1.5 points | 235.8 core + 1.5 points |
+| single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 184.3 core + 1.5 points | 210.8 core + 1.5 points |
 | PR stack | 17 / 27 / 12 | 2 / 6 / 74 | 480 core + 0 points | 510 core + 0 points |
 
 <!-- bench:headline:end -->
@@ -297,8 +297,21 @@ are as good as these assumptions:
   check suites and workflow runs: a live `If-None-Match` probe of #548's CI
   charged 20 of Shepherd's reads over 7 rounds about 34s apart (2.9 a round,
   at most 7 when a bot review landed), so the model charges 3 on every
-  `ci-wait` poll after the first. A changed tick is charged as a full read,
-  an upper bound since only its changed reads are really charged.
+  `ci-wait` poll after the first. A few warm ticks with no push before them
+  are charged only for the reads that move
+  (`src/github/rest-changed-tick-cost.test.mts`):
+  - the tick on which CI settles (`mark-ready`) charges the five reads CI
+    moves (check runs, check suites, statuses, workflow runs and the pull),
+    the most the live probe charged on a round without bot comments;
+  - a base push that makes the PR conflict (`conflicts`) charges the pull,
+    the base branch and the merged-base lookup, 3;
+  - a READY tick after an unchanged READY tick (`merge`, `merge-queue`, whose
+    ready delay elapsed) is all 304s, 0.
+
+  Every other changed tick is charged as a full read, an upper bound since
+  only its changed reads are really charged. A push moves every read keyed by
+  the head SHA (check runs, check suites, statuses, workflow runs), so the
+  ticks after a fix keep that bound.
   From `src/github/rest-stack-summary-sharing.test.mts`, a 10-layer stack tick
   is 126 requests, which this models as 6 shared plus 12 per layer; an
   unchanged stack summary tick is all 304s, so `stack-queue-wait` charges only
@@ -315,7 +328,7 @@ are as good as these assumptions:
   transcript read (pull comments, issue comments, reviews and the viewer) and
   three requests per reply (`/user` and the pull comments, read so a lost
   response can be recovered, then the POST). Ready-for-review has no standard REST route either: the
-  `mark-ready` tick is its 14-request read (the mergeability refresh is a
+  `mark-ready` tick is its CI-settle read (the mergeability refresh is a
   304: the snapshot's own pull read stored that body a moment earlier), and it escalates as
   transport-unsupported instead of marking the PR ready. The live check below
   had no failing check, so neither the job/log reads nor the annotation reads
@@ -703,7 +716,8 @@ explains the main ones.
   sessions, from its debug logs; the baselines' is never measured. GraphQL point cost also depends on
   query shape and node counts, which a flat 1 or 2 points per call ignores.
   REST conditional requests (ETag/304) are modeled for pr-shepherd's REST
-  wait polls only (`ci-wait`, `stack-queue-wait`); every other REST tick is
+  wait polls (`ci-wait`, `stack-queue-wait`) and the warm `mark-ready`,
+  `conflicts`, `merge` and `merge-queue` ticks; every other REST tick is
   charged as a full read, an upper bound. Real sessions run the
   annotation supplement more often than the bench: GitHub currently adds an
   `ubuntu-latest` migration notice annotation to Actions jobs on that runner,

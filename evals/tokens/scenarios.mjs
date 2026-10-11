@@ -55,6 +55,9 @@ import {
   SHEPHERD_WAIT_TICK_API_REST,
   SHEPHERD_WAIT_TICK_API_CLOUD,
   CI_POLL_CHANGED_READS,
+  CI_SETTLE_CHANGED_READS,
+  CONFLICT_CHANGED_READS,
+  warmReadyTick,
   ghAnnotations,
   ghFailingCheckRuns,
   mcpPrList,
@@ -835,8 +838,14 @@ const PR_SCENARIOS = [
               graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + 1,
               restCore: READY_MERGEABILITY_REST,
             },
-            apiRest: rest(SHEPHERD_TICK_API_REST.restCore + readyMergeabilityRest("rest")),
-            apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + 1 + readyMergeabilityRest("cloud")),
+            // On REST this is the warm tick on which CI settles: only the CI reads re-charge.
+            apiRest: rest(CI_SETTLE_CHANGED_READS + readyMergeabilityRest("rest")),
+            apiCloud: rest(
+              CI_SETTLE_CHANGED_READS +
+                SHEPHERD_WAIT_TICK_API_CLOUD.restCore +
+                1 +
+                readyMergeabilityRest("cloud"),
+            ),
           },
         ],
         // The wait's in-process tick marks it ready, as the poll's does: a
@@ -986,7 +995,14 @@ const PR_SCENARIOS = [
       const fixture = "117-fix-code-conflicts-behind-base-hint";
       const state = fixtureState(fixture);
       return {
-        shepherd: [shepherdTick(snapshot(fixture))],
+        // A warm REST tick charges only the reads the base push moved.
+        shepherd: [
+          {
+            ...shepherdTick(snapshot(fixture)),
+            apiRest: rest(CONFLICT_CHANGED_READS),
+            apiCloud: rest(CONFLICT_CHANGED_READS + SHEPHERD_WAIT_TICK_API_CLOUD.restCore),
+          },
+        ],
         // The pull: its mergeable state turns dirty.
         event: { wake: "change", detectors: 1 },
         gh: ghObserve(state),
@@ -1007,7 +1023,7 @@ const PR_SCENARIOS = [
       return {
         shepherd: [
           // The READY refresh stands in for the countdown's first READY tick, which pays it cold.
-          readyTick(receiptTick(snapshot(fixture))),
+          warmReadyTick(readyTick(receiptTick(snapshot(fixture)))),
           {
             phase: 2,
             via: "bash",
@@ -1045,7 +1061,7 @@ const PR_SCENARIOS = [
       return {
         shepherd: [
           // The READY refresh stands in for the countdown's first READY tick, which pays it cold.
-          readyTick(receiptTick(snapshot(fixture))),
+          warmReadyTick(readyTick(receiptTick(snapshot(fixture)))),
           {
             phase: 2,
             via: "bash",

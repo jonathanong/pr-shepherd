@@ -738,6 +738,29 @@ export const SHEPHERD_WAIT_TICK_API_REST = rest(0);
  */
 export const CI_POLL_CHANGED_READS = 3;
 /**
+ * The REST tick on which CI settles, with no new feedback: at most the five reads CI moves
+ * (check runs, check suites, statuses, workflow runs and the pull, whose `mergeable_state`
+ * follows the checks). Every other read is a 304. The live probe above never charged more on a
+ * round without bot comments, and src/github/rest-wait-tick-cost.test.mts measures a settle
+ * that moved only the check runs.
+ */
+export const CI_SETTLE_CHANGED_READS = 5;
+/**
+ * A warm REST tick after a base push makes the PR conflict: the pull (its mergeable state turns
+ * dirty), the base branch summary, and the merged-base lookup a conflict runs. Every other read
+ * is a 304 (src/github/rest-changed-tick-cost.test.mts).
+ */
+export const CONFLICT_CHANGED_READS = 3;
+/**
+ * A REST READY tick after an unchanged READY tick, such as the one whose ready delay elapses:
+ * a READY report is rebuilt rather than replayed, but every read and the mergeability refresh
+ * answer 304, so it costs what an unchanged wait tick does
+ * (src/github/rest-changed-tick-cost.test.mts).
+ */
+export function warmReadyTick(call) {
+  return { ...call, apiRest: SHEPHERD_WAIT_TICK_API_REST, apiCloud: SHEPHERD_WAIT_TICK_API_CLOUD };
+}
+/**
  * Cloud REST: `auto` picks REST when CLAUDE_CODE_REMOTE=true, and each PR
  * snapshot there also reads `/ccr/review_threads`
  * (src/github/rest-feedback-read.mts), one more request per PR. The cloud
