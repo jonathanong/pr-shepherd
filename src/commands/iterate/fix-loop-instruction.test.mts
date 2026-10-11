@@ -89,7 +89,7 @@ describe("buildFixInstructions instruction style", () => {
     expect(text).not.toContain("with URLs or IDs");
     expect(text).not.toContain("$HEAD_SHA");
     expect(text).toContain("--require-sha HEAD");
-    expect(text).toContain("Rerun this command now.");
+    expect(text).toContain("Rerun Shepherd now.");
   });
 
   it("playbook style omits the journal clause without update permission", () => {

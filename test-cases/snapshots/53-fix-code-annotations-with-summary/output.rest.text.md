@@ -36,4 +36,4 @@
 4. Inspect every referenced range under `## Check annotations` and apply any warranted change.
 5. Commit and push any changes.
 6. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
-7. Rerun this command now.
+7. Rerun Shepherd now.

@@ -23,4 +23,4 @@ Stack: 7 (layer 1/1, base main)
 3. Triage the merge-queue ejection before any requeue. Update the stack from the latest base first: From a clean checkout of `owner/repo`, if `gh stack` does not track stack #7 locally, import it with `gh stack checkout 7`. Then check out the head branch of PR #42 and run `gh stack rebase`. Playbook: "Branch update". Run `acknowledge queue removal:` only if the failure does not reproduce on the updated head, neither the update nor a code change altered the head, and no other blocker remains. Playbook: "Merge queue ejection".
 4. If the base update or a fix changed the head, commit any remaining changes on the PR head branch and push the rewritten stack with `gh stack push`. If neither did, do not push.
 5. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
-6. Rerun this command now.
+6. Rerun Shepherd now.

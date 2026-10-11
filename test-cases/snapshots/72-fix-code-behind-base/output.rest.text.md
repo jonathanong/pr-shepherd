@@ -24,5 +24,5 @@
 1. Fix each warranted item.
 2. Commit and push any changes.
 3. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
-4. Set `$DISMISS_MESSAGE` to a one-line outcome; run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-1 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha HEAD`
-5. Rerun this command now.
+4. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-1 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha HEAD`
+5. Rerun Shepherd now.

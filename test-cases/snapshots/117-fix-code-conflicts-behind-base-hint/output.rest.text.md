@@ -16,4 +16,4 @@
 1. The branch has merge conflicts (see `**branch**` above). Resolve them before committing.
 2. The branch conflicts with PR base branch `main`. rebase --force-with-lease before pushing.
 3. Commit any remaining conflict-resolution changes and push to the PR head branch.
-4. Rerun this command now.
+4. Rerun Shepherd now.

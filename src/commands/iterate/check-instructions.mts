@@ -2,7 +2,7 @@ import type { AgentCheck, ResolveCommand, Review } from "../../types.mts";
 import { playbookPointer } from "../playbook-pointer.mts";
 
 // The `[FIX_CODE]` heading and the skill already say the action is non-terminal.
-const FIX_CODE_CONTINUATION = "Rerun this command now.";
+const FIX_CODE_CONTINUATION = "Rerun Shepherd now.";
 
 /** The `[FIX_CODE]` recurrence step, whether plain or rewritten by the quota warning. */
 export function isFixCodeContinuation(step: string): boolean {
@@ -76,7 +76,7 @@ export function buildResolveCommandInstruction(
   if (!resolveCommand.hasMutations) return [];
   if (resolveCommand.requiresDismissMessage) {
     return [
-      `Set \`$DISMISS_MESSAGE\` to a one-line outcome; run even if no code changed: \`${rendered}\``,
+      `\`$DISMISS_MESSAGE\`: one sentence on what changed. Run even if no code changed: \`${rendered}\``,
     ];
   }
   return [`Run, even if no code changed: \`${rendered}\``];

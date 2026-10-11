@@ -28,4 +28,4 @@ Stack: 7 (layer 1/1, base main)
 4. Triage the merge-queue ejection before any requeue. If the `**queue removal**` reason shows GitHub removed the entry itself, update the stack from the latest base first: Use the repository's stack-update procedure for native stack #7 in `owner/repo`, starting at bottom open layer PR #42 and preserving the ordered parent boundaries of every affected upper layer. Read membership with REST-backed Shepherd `--stack` output and update and push affected branches using the caller's git workflow. Playbook: "Branch update". If a person may have dequeued the PR, skip that update unless a conflict step above requires it. Shepherd printed no queue command for this session, so do not enqueue the PR. Playbook: "Merge queue ejection".
 5. If the base update or a fix changed any heads, commit the remaining changes and push every affected stack branch using the repository's stack-update procedure. If no heads changed, do not push.
 6. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
-7. Rerun this command now.
+7. Rerun Shepherd now.

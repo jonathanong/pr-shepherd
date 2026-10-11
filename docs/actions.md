@@ -622,8 +622,8 @@ Eligible **already-seen** `COMMENTED` review summaries (surfaced in a prior iter
 1. Fix each warranted item.
 2. Commit and push any changes.
 3. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
-4. Set `$DISMISS_MESSAGE` to a one-line outcome; run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha HEAD`
-5. Rerun this command now.
+4. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha HEAD`
+5. Rerun Shepherd now.
 ```
 
 The review mutation commands are printed inline in their instruction steps rather than as `## Post-fix actions` bullets. `--require-sha HEAD` makes `apply review` read the checkout's HEAD itself (a read-only `git rev-parse HEAD`), so it needs no substitution; run the command after any push so it equals the remote PR head. Run from another checkout (a qualified PR reference), that HEAD is unrelated: `apply review` then times out and its error says to rerun with the PR head SHA you pushed, naming the current head. `## Post-fix actions` remains only for `- base:` under `--verbose`, the merge-queue `requeue` / `requeue API fallback` commands, and the native-stack queue acknowledgment; it is omitted when empty.

@@ -70,12 +70,12 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
       expect(result.fix.resolveOnlyCommand?.argv).toContain("comment-1");
       expect(result.fix.instructions.join("\n")).toContain("Commit and push any changes.");
       expect(result.fix.instructions.join("\n")).toContain(
-        "Set `$DISMISS_MESSAGE` to a one-line outcome; run even if no code changed: `pr-shepherd apply review",
+        "`$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review",
       );
       expect(result.fix.instructions.join("\n")).toContain(
         "Run: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --minimize-comment-ids comment-1`",
       );
-      expect(result.fix.instructions.join("\n")).toContain("Rerun this command now.");
+      expect(result.fix.instructions.join("\n")).toContain("Rerun Shepherd now.");
     }
   });
 

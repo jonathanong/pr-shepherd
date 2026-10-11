@@ -42,4 +42,4 @@ to merge or enqueue the PR. Here is Shepherd's current output.
 1. Inspect every PR under `## Merged PRs matching the current base`. If this PR is the remaining layer intended for a merged parent's base branch, run `gh pr edit https://github.com/vouchington/vouchington/pull/2099 --base <verified-parent-base>` after replacing `<verified-parent-base>` with that parent's shell-quoted base branch, then rerun Shepherd immediately and follow its fresh instructions instead of the remaining steps here. Otherwise keep the current base and follow the remaining conflict-resolution steps.
 2. The branch has merge conflicts (see `**branch**` above). Resolve them before committing.
 3. Commit any remaining conflict-resolution changes and push to the PR head branch.
-4. Rerun this command now.
+4. Rerun Shepherd now.

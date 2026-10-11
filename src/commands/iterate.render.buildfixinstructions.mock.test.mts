@@ -25,7 +25,7 @@ describe("buildFixInstructions", () => {
       0,
     );
 
-    expect(instructions).toEqual(["Rerun this command now."]);
+    expect(instructions).toEqual(["Rerun Shepherd now."]);
   });
 
   it("points at the skill's Suggestion patches playbook instead of inlining refusal/drift mechanics", () => {
@@ -161,9 +161,9 @@ describe("buildFixInstructions", () => {
     // The SHA gate reads HEAD itself, so no $HEAD_SHA substitution step remains.
     expect(text).not.toContain("$HEAD_SHA");
     expect(instructions.at(-2)).toBe(
-      "Set `$DISMISS_MESSAGE` to a one-line outcome; run even if no code changed: `pr-shepherd resolve 42 --require-sha HEAD`",
+      "`$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd resolve 42 --require-sha HEAD`",
     );
-    expect(instructions.at(-1)).toBe("Rerun this command now.");
+    expect(instructions.at(-1)).toBe("Rerun Shepherd now.");
     expect(text).not.toContain("Stop this iteration");
     // Old prescriptive git commands gone
     expect(text).not.toContain("Commit changed files:");
@@ -255,7 +255,7 @@ describe("buildFixInstructions", () => {
     expect(text).not.toContain("git add");
     expect(text).not.toContain("git fetch origin");
     expect(text).not.toContain("git push --force-with-lease");
-    expect(text).toContain("Rerun this command now.");
+    expect(text).toContain("Rerun Shepherd now.");
   });
 
   it("agent-facing commit/rebase instruction always conditional regardless of review type", () => {
@@ -305,7 +305,7 @@ describe("buildFixInstructions", () => {
     expect(text).not.toContain("Rebase and push:");
     expect(text).not.toContain("git add");
     expect(text).not.toContain("git push --force-with-lease");
-    expect(text).toContain("Rerun this command now.");
+    expect(text).toContain("Rerun Shepherd now.");
   });
 
   it("includes annotation-only passing-check guidance without a failing-checks section", () => {

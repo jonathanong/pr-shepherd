@@ -15,4 +15,4 @@
 4. Rebase or otherwise update the PR branch from `main` according to repository conventions.
 5. Push the updated PR head branch before iterating immediately.
 6. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
-7. Rerun this command now.
+7. Rerun Shepherd now.

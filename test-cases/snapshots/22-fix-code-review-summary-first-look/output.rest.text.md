@@ -21,4 +21,4 @@
 
 1. Read each body under `## Review summaries (first look)` and journal any warranted note before review mutations.
 2. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
-3. Rerun this command now.
+3. Rerun Shepherd now.

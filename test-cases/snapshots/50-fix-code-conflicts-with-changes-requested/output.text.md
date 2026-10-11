@@ -15,4 +15,4 @@
 2. The branch has merge conflicts (see `**branch**` above). Resolve them before committing.
 3. Commit any remaining conflict-resolution changes and push to the PR head branch.
 4. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
-5. Rerun this command now.
+5. Rerun Shepherd now.

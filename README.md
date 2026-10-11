@@ -68,8 +68,8 @@ Example shape:
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
 3. Commit and push any changes.
 4. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal 123 '- <decision>'`
-5. Set `$DISMISS_MESSAGE` to a one-line outcome; run even if no code changed: `pr-shepherd apply review 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha HEAD`
-6. Rerun this command now.
+5. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha HEAD`
+6. Rerun Shepherd now.
 ```
 
 See [docs/actions.md](docs/actions.md) for the complete output contract and [docs/escalations.md](docs/escalations.md) for the exact finite human-handoff boundary. Iterate/poll PR outcomes use exit codes `0` and `10`–`16`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).

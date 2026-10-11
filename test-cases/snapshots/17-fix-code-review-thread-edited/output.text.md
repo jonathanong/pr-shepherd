@@ -17,5 +17,5 @@
 2. Read every item marked `[edited since first look]`, including edited summaries and edited first-look bullets, before deciding whether to resolve a matching thread.
 3. Review the threads under `## Review threads to resolve` before running the generated mutations.
 4. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
-5. Set `$DISMISS_MESSAGE` to a one-line outcome; run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_outdated --message "$DISMISS_MESSAGE"`
-6. Rerun this command now.
+5. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_outdated --message "$DISMISS_MESSAGE"`
+6. Rerun Shepherd now.

@@ -44,4 +44,4 @@ Merge queue: No [Required]
 3. Triage the merge-queue ejection before any requeue. If the `**queue removal**` reason shows GitHub removed the entry itself, update the PR head from the latest base first. If a person may have dequeued the PR, skip that update unless a conflict step above requires it. Shepherd printed no queue command for this session, so do not enqueue the PR. Playbook: "Merge queue ejection".
 4. If the base update or a fix changed the head, commit any remaining changes and push to the PR head branch. If neither did, do not push.
 5. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
-6. Rerun this command now.
+6. Rerun Shepherd now.

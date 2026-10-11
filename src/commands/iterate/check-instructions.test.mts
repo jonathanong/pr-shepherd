@@ -179,14 +179,14 @@ describe("buildResolveCommandInstruction", () => {
       rendered,
     );
     expect(instructions).toEqual([
-      "Set `$DISMISS_MESSAGE` to a one-line outcome; run even if no code changed: `pr-shepherd apply review 42`",
+      "`$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review 42`",
     ]);
     expect(instructions.join("\n")).not.toContain("$HEAD_SHA");
   });
 });
 
 describe("buildFixCompletionInstruction", () => {
-  const continuation = "Rerun this command now.";
+  const continuation = "Rerun Shepherd now.";
 
   it("hands control back without restating commit or push policy", () => {
     expect(buildFixCompletionInstruction()).toBe(continuation);
@@ -199,7 +199,7 @@ describe("buildFixCompletionInstruction", () => {
     check({ conclusion: "STARTUP_FAILURE", logExcerpt: undefined }),
   ])("never emits terminal handoff wording for a FIX_CODE completion", () => {
     const completion = buildFixCompletionInstruction();
-    expect(completion).toContain("Rerun this command now.");
+    expect(completion).toContain("Rerun Shepherd now.");
     expect(completion).not.toMatch(/hand[- ]?off|stop polling|human direction/i);
   });
 });

@@ -15,4 +15,4 @@
 2. Read every item marked `[edited since first look]`, including edited summaries and edited first-look bullets, before deciding whether to resolve a matching thread.
 3. Commit and push any changes.
 4. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
-5. Rerun this command now.
+5. Rerun Shepherd now.

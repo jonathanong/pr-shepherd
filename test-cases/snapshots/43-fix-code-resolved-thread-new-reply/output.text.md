@@ -18,4 +18,4 @@
 1. Review every item under `## First-look items` before acting.
 2. Read every item marked `[edited since first look]`, including edited summaries and edited first-look bullets, before deciding whether to resolve a matching thread.
 3. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
-4. Rerun this command now.
+4. Rerun Shepherd now.

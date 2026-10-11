@@ -37,5 +37,5 @@
 3. Inspect every referenced range under `## Check annotations` and apply any warranted change.
 4. Commit and push any changes.
 5. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
-6. Set `$DISMISS_MESSAGE` to a one-line outcome; run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-55 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha HEAD`
-7. Rerun this command now.
+6. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-55 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha HEAD`
+7. Rerun Shepherd now.

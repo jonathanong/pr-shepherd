@@ -19,4 +19,4 @@
 
 ## Instructions
 
-1. Rerun this command now.
+1. Rerun Shepherd now.
