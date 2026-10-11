@@ -1,0 +1,42 @@
+# The CheckRun fields BatchPr reads that the stack summary does not, for the
+# routed layers' handoffs. One request per run, so 100 runs price at 1 point.
+query StackHandoffCheckRuns($ids: [ID!]!) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
+  nodes(ids: $ids) {
+    __typename
+    ... on CheckRun {
+      id
+      title
+      summary
+      annotations(first: 1) {
+        totalCount
+        nodes {
+          fullDatabaseId
+          path
+          annotationLevel
+          title
+          message
+          rawDetails
+          blobUrl
+          location {
+            start {
+              line
+              column
+            }
+            end {
+              line
+              column
+            }
+          }
+        }
+      }
+    }
+  }
+}

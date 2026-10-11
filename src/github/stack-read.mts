@@ -7,6 +7,7 @@ import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import { missingRepositoryError } from "./errors.mts";
 import { POLL_STACK_TOPOLOGY_QUERY } from "./queries.mts";
 import { orderedStackMembers } from "./stack-order.mts";
+import { stackHandoffContext, type StackHandoffContext } from "./stack-handoff-context.mts";
 export { verifiedBottomOpenLayer } from "./stack-bottom.mts";
 
 /** GitHub's `first` ceiling for one native-stack entries page. */
@@ -25,6 +26,7 @@ export interface StackMemberRefs {
 interface RawStackResponse<Pr> {
   viewer?: { login: string } | null;
   repository: {
+    viewerPermission?: string | null;
     viewerCanAdminister: boolean;
     mergeCommitAllowed?: boolean;
     squashMergeAllowed?: boolean;
@@ -45,7 +47,7 @@ interface RawStackResponse<Pr> {
 }
 
 /** One complete, validated native-stack membership read. */
-export interface StackRead<Pr extends StackMemberRefs> {
+export interface StackRead<Pr extends StackMemberRefs> extends StackHandoffContext {
   stackNumber: number;
   stackSize: number;
   viewerLogin: string | null;
@@ -76,6 +78,7 @@ export async function readStack<Pr extends StackMemberRefs>(
   let stackSize = 0;
   let viewerCanAdminister = false;
   let viewerLogin: string | null = null;
+  let settings: NonNullable<RawStackResponse<Pr>["repository"]> | null = null;
   let allowedMergeMethods: MergeMethod[] | undefined;
   const entries: Array<{ position: number; pullRequest: Pr }> = [];
   do {
@@ -86,6 +89,7 @@ export async function readStack<Pr extends StackMemberRefs>(
     const repository = response.data.repository;
     if (!repository) throw missingRepositoryError(repo);
     viewerCanAdminister = repository.viewerCanAdminister;
+    settings = repository;
     allowedMergeMethods = readAllowedMergeMethods(repository) ?? allowedMergeMethods;
     if (!repository.pullRequest) {
       throw new ShepherdError(`PR #${anchor} not found`, EXIT.UNAVAILABLE);
@@ -139,13 +143,15 @@ export async function readStack<Pr extends StackMemberRefs>(
     }
   } while (after !== null);
 
+  const ordered = orderedStackMembers(entries, anchor, stackSize);
   return {
     stackNumber,
     stackSize,
     viewerLogin,
     viewerCanAdminister,
-    ordered: orderedStackMembers(entries, anchor, stackSize),
+    ordered,
     ...(allowedMergeMethods && { allowedMergeMethods }),
+    ...stackHandoffContext(settings!, stackId!, entries, ordered),
   };
 }
 

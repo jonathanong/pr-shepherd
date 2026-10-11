@@ -23,7 +23,7 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
 | single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 175 core + 0 points | 178 core + 0 points |
-| PR stack | 17 / 27 / 12 | 2 / 6 / 74 | 432 core + 0 points | 432 core + 0 points |
+| PR stack | 11 / 27 / 12 | 2 / 6 / 74 | 432 core + 0 points | 432 core + 0 points |
 
 <!-- bench:headline:end -->
 
@@ -306,21 +306,17 @@ are as good as these assumptions:
   `ci-wait` poll after the first. A few warm ticks, with no push since the
   last poll, are charged only for the reads that move
   (`src/github/rest-changed-tick-cost.test.mts`):
-  - the tick on which CI settles (`failing-check`, the tick `ci-wait`
-    returns) charges the five reads CI moves (check runs, check suites,
-    statuses, workflow runs and the pull), the most the live probe charged on
-    a round without bot comments; `failing-check` adds its job list, job log
-    and annotation reads, all fresh URLs. On `mark-ready` the PR is a draft,
-    whose pull reports `mergeable_state: "draft"` however its checks end, so
-    that tick charges the four CI reads and not the pull;
+  - the tick on which CI settles (`mark-ready`, and `failing-check`, the
+    tick `ci-wait` returns) charges the five reads CI moves (check runs,
+    check suites, statuses, workflow runs and the pull), the most the live
+    probe charged on a round without bot comments; `failing-check` adds its
+    job list, job log and annotation reads, all fresh URLs;
   - a base push that makes the PR conflict (`conflicts`) charges the pull,
     the base branch and the merged-base lookup, 3.
 
-  A READY tick after an unchanged READY tick is all 304s, so the tick after
-  an elapsed ready delay (`merge`, `merge-queue`) charges nothing: the
-  countdown's first READY tick is the CI-settle tick, already charged where
-  CI settles, and the cache stays warm through the countdown
-  (`src/commands/apply-merge-warm-cost.test.mts`). Every other changed tick is charged as a full read, an upper bound since
+  A READY tick after an unchanged READY tick is all 304s, but `merge` and
+  `merge-queue` model only one READY tick, standing in for the countdown's
+  cold first one, so they keep the full read. Every other changed tick is charged as a full read, an upper bound since
   only its changed reads are really charged. A push moves every read keyed by
   the head SHA (check runs, check suites, statuses, workflow runs), so the
   ticks after a fix keep that bound.
@@ -342,14 +338,11 @@ are as good as these assumptions:
   response can be recovered, then the POST). Ready-for-review has no standard REST route either: the
   `mark-ready` tick is its CI-settle read (the mergeability refresh is a
   304: the snapshot's own pull read stored that body a moment earlier), and it escalates as
-  transport-unsupported instead of marking the PR ready, with no further request. A READY tick prints
+  transport-unsupported instead of marking the PR ready. A READY tick prints
   `pr-shepherd apply merge … --transport rest` instead of `gh pr merge`, so
   the `merge` and `merge-queue` steps spend no GraphQL: a pull read, the
-  stack-membership read and one `PUT …/merge-async`. The two reads share the
-  PR's ETag cache with the tick that printed the command, so they answer 304
-  and only the write is charged, 1 request
-  (`src/commands/apply-merge-warm-cost.test.mts`; 3 on a cold cache,
-  `src/commands/apply-merge-cost.test.mts`). The live check below
+  stack-membership read and one `PUT …/merge-async`, 3 requests
+  (`src/commands/apply-merge-cost.test.mts`). The live check below
   had no failing check, so neither the job/log reads nor the annotation reads
   were measured.
 - **pr-shepherd, cloud REST.** The same REST path through the Claude Code

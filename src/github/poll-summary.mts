@@ -20,6 +20,8 @@ import type { RawExplicitResponse, RawSummaryPr } from "./poll-summary-raw.mts";
 import { POLL_SUMMARY_FRAGMENT } from "./queries.mts";
 import { stackAncestryGaps, type StackRead } from "./stack-read.mts";
 import { readGraphqlStackSummary } from "./poll-summary-stack-page.mts";
+import { stackHandoffSource } from "./stack-handoff.mts";
+import type { StackHandoffSource } from "./stack-handoff-page.mts";
 
 const MAX_EXPLICIT_PRS_PER_QUERY = 50;
 export interface FetchedPollSummary {
@@ -27,6 +29,8 @@ export interface FetchedPollSummary {
   prs: PollSummaryItem[];
   stackAncestry?: PollSummaryStackAncestry[];
   allowedMergeMethods?: import("../config/merge-method.mts").MergeMethod[];
+  /** GraphQL stack reads only: the raw layers a routing tick hands to its one-PR sessions. */
+  handoffSource?: StackHandoffSource;
 }
 
 async function fetchSelectedPollSummary(
@@ -126,13 +130,15 @@ async function fetchStackSummary(
   const graphql = getGithubTransport() !== "rest";
   const hint = graphql ? await loadStackSizeHint(stateKey) : 0;
   const sizeHint = hint || UNSIZED_STACK_SUMMARY_FIRST;
+  const read = await readStackSummary(anchor, repo, sizeHint);
   const { stackNumber, stackSize, viewerLogin, viewerCanAdminister, ordered, allowedMergeMethods } =
-    await readStackSummary(anchor, repo, sizeHint);
+    read;
   if (graphql && stackSize !== hint) await storeStackSizeHint(stateKey, stackSize);
   for (const pr of ordered) {
     await hydratePollSummaryChecks(pr, repo);
     await refreshUnknownSummaryMergeability(pr, repo);
   }
+  const handoffSource = getGithubTransport() === "rest" ? undefined : stackHandoffSource(read);
   const stackAncestry = stackAncestryGaps(ordered);
   const required = await trunkRequiredContexts(ordered, repo);
   return {
@@ -144,6 +150,7 @@ async function fetchStackSummary(
     ),
     ...(stackAncestry.length > 0 && { stackAncestry }),
     ...(allowedMergeMethods && { allowedMergeMethods }),
+    ...(handoffSource && { handoffSource }),
   };
 }
 

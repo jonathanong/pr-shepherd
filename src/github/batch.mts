@@ -28,6 +28,7 @@ import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import type { BatchPrData } from "../types.mts";
 import { fingerprintFromRaw, type PrFingerprint } from "./fingerprint.mts";
 import { stackEvidenceFromRaw, type BatchStackEvidence } from "./batch-stack-evidence.mts";
+import { takeStackHandoff } from "./stack-handoff.mts";
 
 export interface BatchResult {
   data: BatchPrData;
@@ -74,23 +75,10 @@ function onlyReceiptSummaryErrors(errors?: GitHubGraphQlError[]): boolean {
   );
 }
 
-/**
- * Fetch all PR data needed for a `shepherd check` in one (or a few, if paginating) GraphQL requests.
- */
-async function fetchGraphqlPrBatch<T>(
-  pr: number,
-  repo: RepoInfo,
-  opts: FetchPrBatchOptions = {},
-  reuse?: (fingerprint: PrFingerprint) => Promise<T | null>,
-): Promise<BatchResult | ReusedBatch<T>> {
-  const variables = {
-    owner: repo.owner,
-    repo: repo.name,
-    pr,
-  };
-  let result: Awaited<ReturnType<typeof graphqlWithRateLimit<RawBatchResponse>>>;
+async function readBatchFirstPage(pr: number, repo: RepoInfo, opts: FetchPrBatchOptions) {
+  const variables = { owner: repo.owner, repo: repo.name, pr };
   try {
-    result = await graphqlWithRateLimit<RawBatchResponse>(
+    return await graphqlWithRateLimit<RawBatchResponse>(
       opts.includeReceiptSummary ? BATCH_PR_RECEIPT_QUERY : BATCH_PR_QUERY,
       variables,
     );
@@ -107,9 +95,21 @@ async function fetchGraphqlPrBatch<T>(
       throw error;
     // Receipt evidence is optional; a resource-limited combined query or an
     // error confined to its sibling must not prevent the ordinary snapshot.
-    result = await graphqlWithRateLimit<RawBatchResponse>(BATCH_PR_QUERY, variables);
+    return graphqlWithRateLimit<RawBatchResponse>(BATCH_PR_QUERY, variables);
   }
+}
 
+/**
+ * Fetch all PR data needed for a `shepherd check` in one (or a few, if paginating) GraphQL requests.
+ */
+async function fetchGraphqlPrBatch<T>(
+  pr: number,
+  repo: RepoInfo,
+  opts: FetchPrBatchOptions = {},
+  reuse?: (fingerprint: PrFingerprint) => Promise<T | null>,
+): Promise<BatchResult | ReusedBatch<T>> {
+  const handoff = await takeStackHandoff(repo, pr); // a routed stack layer's first read
+  const result = handoff ? { data: handoff } : await readBatchFirstPage(pr, repo, opts);
   const raw = requireRawPr(result.data, pr, repo);
   const fingerprint = fingerprintFromRaw(
     raw,

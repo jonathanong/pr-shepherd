@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { withoutHandoffFields } from "./poll-summary-handoff-fields.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 
 /**
@@ -7,7 +8,8 @@ import type { RawSummaryPr } from "./poll-summary-raw.mts";
  * computed merge state are checked separately: including them here would
  * invalidate a READY receipt merely because a ready PR entered the queue.
  */
-export function fingerprintRawSummaryPr(raw: RawSummaryPr): string | null {
+export function fingerprintRawSummaryPr(summary: RawSummaryPr): string | null {
+  const raw = withoutHandoffFields(summary);
   if (!raw.updatedAt || !raw.headRefOid || !raw.baseRefOid) return null;
   const reviewTruncated =
     raw.comments.pageInfo.hasPreviousPage ||

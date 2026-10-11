@@ -16,10 +16,12 @@ fragment PollSummaryCheckContexts on StatusCheckRollupContextConnection {
       completedAt
       checkSuite {
         createdAt
+        updatedAt
         workflowRun {
           databaseId
           event
           createdAt
+          updatedAt
           workflow {
             databaseId
             name
@@ -30,6 +32,9 @@ fragment PollSummaryCheckContexts on StatusCheckRollupContextConnection {
     ... on StatusContext {
       context
       state
+      createdAt
+      targetUrl
+      description
     }
   }
 }
