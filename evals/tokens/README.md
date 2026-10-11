@@ -22,8 +22,8 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
-| single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 334 core + 1.5 points | 361.5 core + 1.5 points |
-| PR stack | 23 / 27 / 12 | 2 / 6 / 74 | 540 core + 0 points | 570 core + 0 points |
+| single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 224 core + 1.5 points | 251.5 core + 1.5 points |
+| PR stack | 23 / 27 / 12 | 2 / 6 / 74 | 480 core + 0 points | 510 core + 0 points |
 
 <!-- bench:headline:end -->
 
@@ -255,14 +255,25 @@ are as good as these assumptions:
     `mark-ready`, `merge` and `merge-queue`.
 - **pr-shepherd, REST transport.** This is standard REST (an explicit
   `--transport rest`, or `auto` after a GraphQL fallback outside the Claude
-  Code cloud). REST has no fingerprint shortcut, so a poll is a full read.
+  Code cloud). REST has no fingerprint shortcut, but every read is
+  conditional (`If-None-Match`) and a 304 is free, so an unchanged poll tick
+  is all 304s and reuses the stored report for 0 requests
+  (`src/github/rest-wait-tick-cost.test.mts`, and measured live below). While
+  CI runs, a poll re-charges only the reads that changed, mostly check runs,
+  check suites and workflow runs: a live `If-None-Match` probe of #548's CI
+  charged 20 of Shepherd's reads over 7 rounds about 34s apart (2.9 a round,
+  at most 7 when a bot review landed), so the model charges 3 on every
+  `ci-wait` poll after the first. A changed tick is charged as a full read,
+  an upper bound since only its changed reads are really charged.
   From `src/github/rest-stack-summary-sharing.test.mts`, a 10-layer stack tick
-  is 126 requests, which this models as 6 shared plus 12 per layer. A routed
+  is 126 requests, which this models as 6 shared plus 12 per layer; an
+  unchanged stack summary tick is all 304s, so `stack-queue-wait` charges only
+  its first and settling ticks. A routed
   non-root layer's one-PR tick adds the stack read, the trunk's protection,
   rules and compare, and the stack topology (the stack list and read twice,
   each layer's pull and the viewer). A one-PR
-  tick is 14 requests, counted at the HTTP boundary of the REST iterate test
-  routes and measured live (below); none is conditional, so none is a free 304. The `failing-check` and
+  tick is 14 reads, counted at the HTTP boundary of the REST iterate test
+  routes and measured live (below). The `failing-check` and
   `check-annotations` ticks add one annotation read per annotated check run.
   `apply review` reads the pull for `--require-sha`; a thread resolve has no
   standard REST route, so it then spends, when it has replies, a 4-request
@@ -277,7 +288,10 @@ are as good as these assumptions:
 - **pr-shepherd, cloud REST.** The same REST path through the Claude Code
   cloud proxy (`CLAUDE_CODE_REMOTE=true`, where `auto` starts on REST). Each
   PR snapshot also reads `/ccr/review_threads`, so a one-PR tick is 15
-  requests and a stack tick is 6 shared plus 13 per layer. `apply review`'s
+  requests and a stack tick is 6 shared plus 13 per layer. Whether the proxy
+  sends an ETag for that read is unverified, so the model assumes a charged 200
+  on every tick: an unchanged one-PR poll costs 1 request (its unchanged body
+  still lets the report be reused) and an unchanged stack poll 1 per layer. `apply review`'s
   transcript read is 5 requests, and each thread resolve is one CCR POST
   (`src/comments/rest-review-mutations.mts`). The `mark-ready` tick marks the
   PR ready with one more CCR POST. Replies and a routed stack layer's extra
@@ -313,11 +327,15 @@ tick is a full read and the check does not measure fingerprint hits or misses.
 Each first tick also read the annotations of three first-look check runs, so
 its model adds `annotationBatchApi(3)`. GraphQL took 2 points on the first tick
 (`BatchPr` plus one `CheckRunAnnotationsBatch` chunk) and 1 on the second, with
-no REST. REST took 17 requests on the first tick (14 plus three annotation
-reads) and 14 on the second, all `200`. All four match the model. The
-measurement predates single annotations being read from `BatchPr`, so the model
-treats those three runs as batch reads; re-measure to see whether they now cost
-nothing. REPORT.md
+no REST. That GraphQL measurement predates single annotations being read from
+`BatchPr`, so the model treats those three runs as batch reads; re-measure to
+see whether they now cost nothing. The #522 REST ticks (17 and 14 requests,
+all `200`) predate conditional REST reads, so REST was re-measured the same way
+on #548: 16 requests on the cold first tick (13 snapshot reads, three
+annotation reads, and the pull re-read as a free 304) against a modeled 17,
+and 0 requests with 14 not-modified reads on the unchanged second tick. A
+`--transport rest` poll's unchanged continuation tick reuses its report the
+same way. REPORT.md
 prints the table. Re-run it by hand when the transports change; CI makes no
 GitHub calls.
 
@@ -644,8 +662,9 @@ explains the main ones.
   PR. pr-shepherd's whole-session spend is measured only for the real
   sessions, from its debug logs; the baselines' is never measured. GraphQL point cost also depends on
   query shape and node counts, which a flat 1 or 2 points per call ignores.
-  REST conditional requests (ETag/304) are modeled only in the informational
-  event arm; the gated arms make none. Real sessions run the
+  REST conditional requests (ETag/304) are modeled for pr-shepherd's REST
+  wait polls only (`ci-wait`, `stack-queue-wait`); every other REST tick is
+  charged as a full read, an upper bound. Real sessions run the
   annotation supplement more often than the bench: GitHub currently adds an
   `ubuntu-latest` migration notice annotation to Actions jobs on that runner,
   so each new set of completed check runs costs a point.

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   serve,
   repo,
@@ -79,6 +79,22 @@ describe("REST wait tick cost", () => {
     const returned = await tick(false);
     expect(returned).not.toHaveProperty("fingerprintReused");
     expect(charged()).toEqual([]);
+  });
+
+  it("charges only the validator-less cloud thread read on unchanged cloud wait ticks", async () => {
+    vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
+    await freshLoadConfig();
+    await serveOnePr({ baseSha: "bbb222", baseStatus: 200 });
+    serveWithEtags((path) => path.endsWith("/ccr/review_threads"));
+    await tick(false);
+    for (let i = 0; i < 2; i++) {
+      log.length = 0;
+      const next = await tick(true);
+      expect(next).toMatchObject({ action: "wait", fingerprintReused: true });
+      expect(charged().map((entry) => entry.path.split("?")[0])).toEqual([
+        "/repos/octocat/hello-world/pulls/101/ccr/review_threads",
+      ]);
+    }
   });
 
   it("does not replay the report when only the base branch moved", async () => {

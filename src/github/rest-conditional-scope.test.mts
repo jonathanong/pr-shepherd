@@ -45,4 +45,19 @@ describe("REST conditional scope", () => {
     expect(result.after?.allNotModified).toBe(false);
     expect(result.after?.digest).not.toBe(result.before?.digest);
   });
+
+  it("validates a body without an ETag by its content", async () => {
+    const read = (body: unknown) =>
+      withRestConditionalScope(key, async () => {
+        recordRestConditionalRead("/a", true, "v1");
+        recordRestConditionalRead("/ccr", false, undefined, body);
+        return restSnapshotState();
+      });
+    const first = await read([{ resolved: false }]);
+    const same = await read([{ resolved: false }]);
+    const changed = await read([{ resolved: true }]);
+    expect(first?.allNotModified).toBe(true);
+    expect(same?.digest).toBe(first?.digest);
+    expect(changed?.digest).not.toBe(first?.digest);
+  });
 });

@@ -692,16 +692,31 @@ export const BASE_BEHIND_GRAPHQL = 1;
 export const SHEPHERD_RECEIPT_TICK_API = gql(1);
 /**
  * Standard REST (an explicit `--transport rest`, or `auto` after a GraphQL
- * fallback outside the Claude Code cloud). It has no fingerprint shortcut: 14
- * requests for one PR's full snapshot (pull, review comments, check runs,
- * protection, check suites, stacks, rules, issue comments, statuses, reviews,
- * workflow runs, viewer, repository, and a second pull read), counted at the
- * HTTP boundary of the REST iterate test routes, and measured live with an
- * explicit `--transport rest` (data/api-usage-check.json). None of them is
- * conditional, so none can be a free 304. The cloud variant is its own arm
- * (`SHEPHERD_TICK_API_CLOUD`).
+ * fallback outside the Claude Code cloud), a changed tick: 14 reads for one
+ * PR's snapshot (pull, review comments, check runs, base branch, check suites,
+ * stacks, rules, issue comments, statuses, reviews, workflow runs, viewer,
+ * repository, and a second pull read), counted at the HTTP boundary of the REST
+ * iterate test routes and measured live (data/api-usage-check.json). Every read
+ * is conditional and a 304 is free, so a changed tick is charged only for the
+ * reads whose resource changed; charging all 14 is an upper bound (a cold
+ * cache). The cloud variant is its own arm (`SHEPHERD_TICK_API_CLOUD`).
  */
 export const SHEPHERD_TICK_API_REST = rest(14);
+/**
+ * An unchanged REST poll tick: every read is a 304 and the stored report is
+ * reused (src/github/rest-wait-tick-cost.test.mts, and 0 charged of 14 reads
+ * live in data/api-usage-check.json).
+ */
+export const SHEPHERD_WAIT_TICK_API_REST = rest(0);
+/**
+ * Reads a REST poll tick re-charges while CI runs, on average: mostly the check
+ * runs, check suites and workflow runs, and sometimes the pull (its
+ * `mergeable_state` moves as checks finish), statuses and feedback lists. A
+ * live If-None-Match probe of #548's CI (data/api-usage-check.json) charged
+ * 20 of Shepherd's reads over 7 rounds (2.9 a round, at most 7 when a bot
+ * review landed). The probe ran about 34s apart, not the 60s poll interval.
+ */
+export const CI_POLL_CHANGED_READS = 3;
 /**
  * Cloud REST: `auto` picks REST when CLAUDE_CODE_REMOTE=true, and each PR
  * snapshot there also reads `/ccr/review_threads`
@@ -712,6 +727,14 @@ export const SHEPHERD_TICK_API_REST = rest(14);
  */
 export const CCR_REQUESTS_PER_PR = 1;
 export const SHEPHERD_TICK_API_CLOUD = rest(SHEPHERD_TICK_API_REST.restCore + CCR_REQUESTS_PER_PR);
+/**
+ * An unchanged cloud poll tick. The CCR thread read may carry no ETag (unverified),
+ * so it is assumed a charged 200 every tick; an unchanged body still lets the
+ * report be reused (src/github/rest-conditional-scope.mts).
+ */
+export const SHEPHERD_WAIT_TICK_API_CLOUD = rest(
+  SHEPHERD_WAIT_TICK_API_REST.restCore + CCR_REQUESTS_PER_PR,
+);
 /**
  * A tick whose status is READY re-reads the PR's mergeability over REST before
  * acting (refreshReadyMergeability in src/commands/check.mts), on either
@@ -759,6 +782,13 @@ export const stackWarmTickApi = (layers) => gql(stackSummaryPoints(layers));
 export const stackTickApiRest = (layers) => rest(6 + 12 * layers);
 /** Cloud REST stack tick: 6 shared plus 13 per layer (136 for 10 layers in the same test). */
 export const stackTickApiCloud = (layers) => rest(6 + (12 + CCR_REQUESTS_PER_PR) * layers);
+/**
+ * An unchanged REST stack summary tick: every read is a 304 (0 of 126 charged for
+ * 10 layers in src/github/rest-wait-tick-cost.test.mts). On cloud REST each layer's
+ * validator-less CCR thread read is still charged.
+ */
+export const stackWaitTickApiRest = () => rest(0);
+export const stackWaitTickApiCloud = (layers) => rest(CCR_REQUESTS_PER_PR * layers);
 
 // --- event arm (informational, not gated) ---------------------------------------
 //
