@@ -42,6 +42,8 @@ Exhausting GraphQL does not exhaust REST, and vice versa.
 
 `graphqlWithRateLimit` (in `github/graphql-http.mts`, re-exported from `http.mts` / `client.mts`) and `restWithRateLimit` parse `x-ratelimit-remaining` / `x-ratelimit-limit` / `x-ratelimit-reset` (and `Retry-After` when present). Failed REST calls throw `GitHubRequestError` with that metadata. The headers are merged with GraphQL's `rateLimit` selection in `github/api-telemetry.mts`, so ordinary requests need no extra quota call.
 
+One tick can see two reset windows for the same resource: for example, the Claude Code proxy's responses can come from two different `core` windows (live run #566 saw window A with `used` 540, then window B, resetting later, with `used` 652). `apiUsage` and `quotaWarning` report the sample from the window that resets later, regardless of which has more `remaining`, and never combine samples from different windows. Within one window the most conservative sample wins (see [Quota warnings and cadence](#quota-warnings-and-cadence)). In that example the reported `core` budget is window B's: `remaining` 14348 of 15000 at B's reset.
+
 ## Per-tick budget
 
 The built-in single-PR poll interval is **60s** (`poll.intervalSeconds`). `--stack` and multi-PR polls default to that interval times `poll.stackIntervalFactor` (built-in **2**, so **120s**) because each tick reads the stack summary, whose cost grows with the number of PRs. An explicit `--interval` overrides either default and is not multiplied again. Ready-delay is **10 minutes**.
@@ -52,6 +54,8 @@ The built-in single-PR poll interval is **60s** (`poll.intervalSeconds`). `--sta
 | One PR, unchanged wait tick | 1 point (fingerprint hit), or 0 points and 0 core requests while the idle wait detectors all answer 304, with one `BatchPr` per `poll.reconcileSeconds` | 0 requests (a Claude Code cloud session also sends the unmetered `ccr` thread read)                                                                                                              |
 | `--stack` summary           | `PollStackSummary`, about 0.36 points per layer (minimum 1); the anchor's first tick reads 4 entries per page                                           | 126 requests for 10 layers without validators, 104 charged on a cold cache; 0 when unchanged (cloud also sends one unmetered `ccr` thread read per layer)                                        |
 | Detail                      | [graphql-usage.md](graphql-usage.md), [graphql.md](graphql.md#per-tick-budget)                                                                          | [rest-usage.md](rest-usage.md)                                                                                                                                                                   |
+
+On REST, a bot that edits its PR status comment in place also costs session time: REST cannot minimize the comment, so each edit re-surfaces it as an edited item, which returns `FIX_CODE` and restarts the ready delay. See [rest.md](rest.md#bot-status-comment-edits).
 
 ## Quota warnings and cadence
 

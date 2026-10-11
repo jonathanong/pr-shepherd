@@ -759,11 +759,16 @@ export const CONFLICT_CHANGED_READS = 3;
  * X-RateLimit-* headers and does not charge it to `core`, so it adds no core
  * requests here (pr-shepherd reports it as `apiUsage.unmeteredRestRequestCount`).
  * The cloud proxy also supports the ready-for-review POST and one resolve POST
- * per thread, which standard REST lacks; those stay charged, because their
- * metering is unverified. Calls whose REST cost differs carry an explicit
- * `apiCloud`.
+ * per thread, which standard REST lacks. Cloud run #566 showed both answer 200
+ * with no X-RateLimit-* headers, the same evidence as the thread read, so they are
+ * modeled as unmetered too (`CCR_WRITE_CORE`; pr-shepherd reports them as
+ * unmetered: src/commands/iterate/mark-ready.rest.test.mts,
+ * src/comments/resolve.rest.test.mts). Header absence shows no observable core
+ * charge, not a measured zero; revisit if a before/after quota read disagrees.
+ * Calls whose REST cost differs carry an explicit `apiCloud`.
  */
 export const CCR_REQUESTS_PER_PR = 0;
+export const CCR_WRITE_CORE = 0;
 export const SHEPHERD_TICK_API_CLOUD = rest(SHEPHERD_TICK_API_REST.restCore + CCR_REQUESTS_PER_PR);
 /**
  * An unchanged cloud poll tick. The CCR thread read carries no ETag, so it is a
