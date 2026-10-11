@@ -329,6 +329,19 @@ describe("public API", () => {
     });
   });
 
+  it("resolves review_mutations requireSha HEAD to this checkout's commit", async () => {
+    mockRunResolveMutate.mockResolvedValue({ resolvedThreads: ["PRRT_one"] });
+    await createPrShepherd().apply({
+      pr: 7,
+      operations: [
+        { type: "review_mutations", resolveThreadIds: ["PRRT_one"], requireSha: "HEAD" },
+      ],
+    });
+    expect(mockRunResolveMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ requireSha: expect.stringMatching(/^[0-9a-f]{40}$/) }),
+    );
+  });
+
   it("preserves operation order, translates message, and reports completed work after a failure", async () => {
     mockRunResolveMutate.mockResolvedValue({ resolvedThreads: ["PRRT_one"] });
     mockRunMarkFilesAsViewed.mockRejectedValue(new Error("GitHub unavailable"));

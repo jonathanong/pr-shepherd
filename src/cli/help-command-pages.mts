@@ -212,7 +212,7 @@ Flags:
   --dismiss-review-ids <ids>      Comma-separated review IDs to dismiss.
   --message <text>                Reply/dismiss message. Required with --reply-thread-ids
                                   or --dismiss-review-ids.
-  --require-sha <sha>             Wait until GitHub reports this PR head SHA before mutating.
+  --require-sha <sha>             Wait until GitHub reports this PR head SHA (or HEAD) before mutating.
                                   Must be a full 40-character lowercase hex SHA, or HEAD for this
                                   checkout's commit. Local HEAD is valid only when it equals the
                                   current remote PR head.
