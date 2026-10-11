@@ -1,7 +1,8 @@
 {
-  "note": "Live `npx pr-shepherd iterate 522 --verbose --format=json` apiUsage, two one-shot ticks per transport from a fresh PR_SHEPHERD_STATE_DIR. A one-shot iterate never uses the fingerprint cache (only the poll path passes fingerprintCache), so every tick is a full read and these ticks do not measure the fingerprint hit or miss costs. bench.mjs compares these measurements with its per-tick model. Made read-only by a temporary untracked .pr-shepherdrc.yml (iterate.minimizeComments: none, actions.autoMinimizeSuppressed: false, actions.autoMarkReady: false) and a PR with no unresolved outdated threads; GraphQL unmeasuredRequestCount was 0 (no mutations) and the debug log shows only GET requests, all 200 (no conditional 304s). Run outside Claude Code cloud (CLAUDE_CODE_REMOTE unset), so the REST ticks are the explicit `--transport rest` path without the per-PR `/ccr/review_threads` read; the bench adds that read for its cloud REST arm. The REST one-PR tick was modeled at 12 requests before this check. CI had no failing check, so job and log triage reads were not exercised.",
+  "note": "Live `npx pr-shepherd iterate 522 --verbose --format=json` apiUsage, two one-shot ticks per transport from a fresh PR_SHEPHERD_STATE_DIR. A one-shot iterate never uses the fingerprint cache (only the poll path passes fingerprintCache), so every tick is a full read and these ticks do not measure the fingerprint hit or miss costs. bench.mjs compares these measurements with its per-tick model. Made read-only by a temporary untracked .pr-shepherdrc.yml (iterate.minimizeComments: none, actions.autoMinimizeSuppressed: false, actions.autoMarkReady: false) and a PR with no unresolved outdated threads; GraphQL unmeasuredRequestCount was 0 (no mutations) and the debug log shows only GET requests, all 200 (no conditional 304s). Run outside Claude Code cloud (CLAUDE_CODE_REMOTE unset), so the REST ticks are the explicit `--transport rest` path without the per-PR `/ccr/review_threads` read; the bench adds that read for its cloud REST arm. The REST one-PR tick was modeled at 12 requests before this check. CI had no failing check, so job and log triage reads were not exercised. The REST ticks were re-measured the same way on jonathanong/pr-shepherd#548 at db6a628, after REST reads became conditional; the #522 REST ticks (17 and 14 requests, all 200) predate that. A live If-None-Match probe of #548's own CI (pull, check runs, check suites, combined status, statuses, reviews, issue and review comments, base branch, workflow runs; 8 rounds about 34s apart) answered 304 for every unchanged resource, and while CI ran at most three check reads (check runs, check suites, workflow runs) changed per round.",
   "date": "2026-10-10",
   "pr": "jonathanong/pr-shepherd#522",
+  "restPr": "jonathanong/pr-shepherd#548",
   "prState": "open, not a draft, mergeStateStatus UNSTABLE, CI in progress, 0 unresolved threads, 4 unminimized COMMENTED reviews",
   "ticks": [
     {
@@ -30,17 +31,19 @@
       "annotationCheckRuns": 3,
       "action": "fix_code",
       "graphqlPoints": 0,
-      "restCore": 17,
-      "detail": "the 14 snapshot requests plus 3 check-run annotation reads on first look"
+      "restCore": 16,
+      "notModified": 1,
+      "detail": "#548 at db6a628, cold cache: 13 snapshot reads (the base branch summary reported protection disabled, so no protection read) plus 3 check-run annotation reads on first look, all 200; the end-of-snapshot pull re-read was a free 304"
     },
     {
       "transport": "rest",
       "tick": "second",
-      "model": "full REST tick",
-      "action": "wait",
+      "model": "unchanged REST tick",
+      "action": "fix_code",
       "graphqlPoints": 0,
-      "restCore": 14,
-      "detail": "pulls/522 (twice: snapshot and mergeability refresh), review comments, check runs, check suites, statuses, actions runs, branch protection (404), branch rules, stacks, issue comments, reviews, /user, the repository"
+      "restCore": 0,
+      "notModified": 14,
+      "detail": "#548, nothing changed: all 14 reads answered 304, so no core request was charged"
     }
   ]
 }

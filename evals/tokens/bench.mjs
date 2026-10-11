@@ -25,6 +25,9 @@ import {
   SHEPHERD_TICK_API,
   SHEPHERD_TICK_API_REST,
   SHEPHERD_TICK_API_CLOUD,
+  SHEPHERD_WAIT_TICK_API_REST,
+  SHEPHERD_WAIT_TICK_API_CLOUD,
+  CI_POLL_CHANGED_READS,
   TOKENS_DIR,
   annotationBatchApi,
   apiTotals,
@@ -277,12 +280,18 @@ const apiSessions = Object.fromEntries(
 );
 
 // Waiting on CI: pr-shepherd polls every 60s (poll.intervalSeconds). A
-// fingerprint hit is 1 GraphQL point; REST has no shortcut (a full read).
+// fingerprint hit is 1 GraphQL point. A REST poll's reads are conditional: an
+// unchanged one is all 304s, and while CI runs only the changed check reads are
+// charged (plus the CCR thread read on cloud).
 const POLL_SECONDS = 60;
 const waitPerHour = {
   shepherdGraphql: (3600 / POLL_SECONDS) * SHEPHERD_TICK_API.graphqlPoints,
-  shepherdRest: (3600 / POLL_SECONDS) * SHEPHERD_TICK_API_REST.restCore,
-  shepherdCloud: (3600 / POLL_SECONDS) * SHEPHERD_TICK_API_CLOUD.restCore,
+  shepherdRest:
+    (3600 / POLL_SECONDS) * (SHEPHERD_WAIT_TICK_API_REST.restCore + CI_POLL_CHANGED_READS),
+  shepherdCloud:
+    (3600 / POLL_SECONDS) * (SHEPHERD_WAIT_TICK_API_CLOUD.restCore + CI_POLL_CHANGED_READS),
+  shepherdRestIdle: (3600 / POLL_SECONDS) * SHEPHERD_WAIT_TICK_API_REST.restCore,
+  shepherdCloudIdle: (3600 / POLL_SECONDS) * SHEPHERD_WAIT_TICK_API_CLOUD.restCore,
   ghWatchGraphql: 3600 / POLL_SECONDS,
   mcpRest: (3600 / POLL_SECONDS) * 2,
 };
@@ -673,7 +682,7 @@ out(
   `- **GitHub rate limit (assumed).** In a PR session pr-shepherd spends ${num(apiSessions.pr.shepherd.graphqlPoints)} GraphQL points and ${num(apiSessions.pr.shepherd.restCore)} REST requests; gh ${num(apiSessions.pr.gh.graphqlPoints)} and ${num(apiSessions.pr.gh.restCore)}; MCP ${num(apiSessions.pr.mcp.graphqlPoints)} and ${num(apiSessions.pr.mcp.restCore)}. GraphQL points ${apiPct("pr", "gh", "graphqlPoints")} vs. gh and ${apiPct("pr", "mcp", "graphqlPoints")} vs. MCP; REST requests ${apiPct("pr", "gh", "restCore")} and ${apiPct("pr", "mcp", "restCore")}.`,
 );
 out(
-  `- **Waiting on CI, per hour.** pr-shepherd spends ${waitPerHour.shepherdGraphql} GraphQL points on the GraphQL transport (one fingerprint hit per ${POLL_SECONDS}s poll) and about ${waitPerHour.shepherdRest} REST requests on the REST transport (${waitPerHour.shepherdCloud} on cloud REST), which has no fingerprint shortcut. A \`gh pr checks --watch\` refresh costs ${waitPerHour.ghWatchGraphql} points; an MCP re-check about ${waitPerHour.mcpRest} requests.`,
+  `- **Waiting on CI, per hour.** pr-shepherd spends ${waitPerHour.shepherdGraphql} GraphQL points on the GraphQL transport (one fingerprint hit per ${POLL_SECONDS}s poll) and about ${waitPerHour.shepherdRest} REST requests on the REST transport (${waitPerHour.shepherdCloud} on cloud REST), whose conditional reads charge only the check reads CI changes; an unchanged wait (no CI running) costs ${waitPerHour.shepherdRestIdle} REST requests an hour (${waitPerHour.shepherdCloudIdle} on cloud REST, the CCR thread read). A \`gh pr checks --watch\` refresh costs ${waitPerHour.ghWatchGraphql} points; an MCP re-check about ${waitPerHour.mcpRest} requests.`,
 );
 // The event arm's summary lines: its session totals against each arm, and
 // idle waiting per hour.
@@ -828,7 +837,7 @@ for (const r of rows.filter((r) => !r.setup)) {
 }
 out();
 out(
-  `- Waiting on CI costs ${waitPerHour.shepherdGraphql} GraphQL points an hour for pr-shepherd (one fingerprint hit per ${POLL_SECONDS}s poll), about ${waitPerHour.shepherdRest} REST requests an hour on the REST transport (${waitPerHour.shepherdCloud} on cloud REST), ${waitPerHour.ghWatchGraphql} points for \`gh pr checks --watch --interval ${POLL_SECONDS}\`, and about ${waitPerHour.mcpRest} REST requests for a one-minute MCP re-check.`,
+  `- Waiting on CI costs ${waitPerHour.shepherdGraphql} GraphQL points an hour for pr-shepherd (one fingerprint hit per ${POLL_SECONDS}s poll), about ${waitPerHour.shepherdRest} REST requests an hour on the REST transport (${waitPerHour.shepherdCloud} on cloud REST; ${waitPerHour.shepherdRestIdle} and ${waitPerHour.shepherdCloudIdle} when nothing changes), ${waitPerHour.ghWatchGraphql} points for \`gh pr checks --watch --interval ${POLL_SECONDS}\`, and about ${waitPerHour.mcpRest} REST requests for a one-minute MCP re-check.`,
 );
 out(
   MCP_API.verified
@@ -845,7 +854,7 @@ out();
 out("### Live cross-check");
 out();
 out(
-  `Measured \`apiUsage\` from \`pr-shepherd iterate --verbose\` on ${API_CHECK.pr} (${API_CHECK.date}; ${API_CHECK.prState}), two one-shot ticks per transport from fresh state, against the model. A one-shot \`iterate\` skips the fingerprint cache, so each tick is a full read; a first tick's model adds its first-look annotation reads.`,
+  `Measured \`apiUsage\` from \`pr-shepherd iterate --verbose\` on ${API_CHECK.pr} (${API_CHECK.date}; ${API_CHECK.prState}), two one-shot ticks per transport from fresh state, against the model; the REST ticks were re-measured on ${API_CHECK.restPr} after REST reads became conditional. A one-shot \`iterate\` skips the fingerprint cache, so each GraphQL tick is a full read; a REST tick still sends its conditional reads, so an unchanged second tick is all 304s. A first tick's model adds its first-look annotation reads.`,
 );
 out();
 out("| transport | tick | action | measured points / requests | model | measured ÷ model |");
@@ -857,6 +866,7 @@ out("| --- | --- | --- | --- | --- | --- |");
 const MODEL_TICK = {
   "full GraphQL tick": SHEPHERD_TICK_API,
   "full REST tick": SHEPHERD_TICK_API_REST,
+  "unchanged REST tick": SHEPHERD_WAIT_TICK_API_REST,
 };
 for (const t of API_CHECK.ticks) {
   const key = t.transport === "rest" ? "restCore" : "graphqlPoints";
@@ -865,7 +875,7 @@ for (const t of API_CHECK.ticks) {
   const model =
     base[key] + (t.annotationCheckRuns ? annotationBatchApi(t.annotationCheckRuns)[key] : 0);
   out(
-    `| ${t.transport} | ${t.tick} (${t.model}) | \`${t.action}\` | ${num(t[key])} | ${num(model)} | ${(t[key] / model).toFixed(2)} |`,
+    `| ${t.transport} | ${t.tick} (${t.model}) | \`${t.action}\` | ${num(t[key])} | ${num(model)} | ${model ? (t[key] / model).toFixed(2) : t[key] ? "∞" : "—"} |`,
   );
 }
 out();
@@ -1034,10 +1044,10 @@ out(
   `- \`BatchPr\` supplements are charged where the scenario's state triggers them. \`CheckRunAnnotationsBatch\` is ${annotationBatchApi(2).graphqlPoints} point per 20 uncached check runs with more than one annotation (${annotationBatchApi(1).restCore} annotation read per annotated check run on REST), in \`check-annotations\`; a run with one annotation, as in \`failing-check\`, costs ${annotationBatchApi(1, 1).graphqlPoints} GraphQL points. The READY-receipt sibling keeps the elapsed-ready-delay tick in \`merge\` and \`merge-queue\` at ${SHEPHERD_RECEIPT_TICK_API.graphqlPoints} point. \`BaseBehind\` (${BASE_BEHIND_GRAPHQL} point whenever the base tip or head moves while a required status context is unreported) matches no scenario's state, so none is charged it.`,
 );
 out(
-  "- The REST column is standard REST (no Claude Code cloud proxy): ready-for-review and thread resolves are unsupported there.",
+  `- The REST column is standard REST (no Claude Code cloud proxy): ready-for-review and thread resolves are unsupported there. Every REST read is conditional, so an unchanged poll tick is all 304s (${SHEPHERD_WAIT_TICK_API_REST.restCore} requests) and a poll while CI runs re-charges at most ${CI_POLL_CHANGED_READS} check reads; a changed tick is charged as a full ${SHEPHERD_TICK_API_REST.restCore}-request read, an upper bound.`,
 );
 out(
-  `- The cloud REST column is the same REST path through the Claude Code cloud proxy: ${SHEPHERD_TICK_API_CLOUD.restCore} requests per one-PR tick (the standard ${SHEPHERD_TICK_API_REST.restCore} plus \`/ccr/review_threads\`), 6 + 13 per layer on a stack, a 5-request transcript read before replies, and one CCR POST per thread resolve and per ready-for-review.`,
+  `- The cloud REST column is the same REST path through the Claude Code cloud proxy: ${SHEPHERD_TICK_API_CLOUD.restCore} requests per changed one-PR tick (the standard ${SHEPHERD_TICK_API_REST.restCore} plus \`/ccr/review_threads\`) and ${SHEPHERD_WAIT_TICK_API_CLOUD.restCore} per unchanged one (the CCR read, assumed to carry no ETag), 6 + 13 per layer on a changed stack tick and 1 per layer on an unchanged one, a 5-request transcript read before replies, and one CCR POST per thread resolve and per ready-for-review.`,
 );
 out(
   `- Price ratios to one uncached input token: cache read ${MODEL.cacheReadMultiplier}, cache write ${MODEL.cacheWriteMultiplier}, output ${MODEL.outputMultiplier}.`,

@@ -49,6 +49,11 @@ import {
   stackWarmTickApi,
   stackTickApiRest,
   stackTickApiCloud,
+  stackWaitTickApiRest,
+  stackWaitTickApiCloud,
+  SHEPHERD_WAIT_TICK_API_REST,
+  SHEPHERD_WAIT_TICK_API_CLOUD,
+  CI_POLL_CHANGED_READS,
   ghAnnotations,
   ghFailingCheckRuns,
   mcpPrList,
@@ -621,10 +626,13 @@ const PR_SCENARIOS = [
       ).join("");
       return {
         // Each poll is 1 GraphQL point (the cold first tick's BatchPr, then a
-        // fingerprint hit on BatchPr's first page), or a full REST read. The
-        // tick this call returns, the next scenario's, is the first changed
-        // tick after the wait: a miss continues the same BatchPr request, so it
-        // costs the base tick and nothing is charged here for it.
+        // fingerprint hit on BatchPr's first page). On REST the first poll is
+        // a full read and each later one re-charges only the check reads CI
+        // changed (every other read is a free 304); cloud adds the CCR thread
+        // read per poll. The tick this call returns, the next scenario's, is
+        // the first changed tick after the wait: a miss continues the same
+        // BatchPr request, so it costs the base tick and nothing is charged
+        // here for it.
         shepherd: [
           {
             phase: 1,
@@ -633,8 +641,14 @@ const PR_SCENARIOS = [
             out: stderr,
             continues: true,
             api: gql(polls * SHEPHERD_TICK_API.graphqlPoints),
-            apiRest: rest(polls * SHEPHERD_TICK_API_REST.restCore),
-            apiCloud: rest(polls * SHEPHERD_TICK_API_CLOUD.restCore),
+            apiRest: rest(
+              SHEPHERD_TICK_API_REST.restCore +
+                (polls - 1) * (SHEPHERD_WAIT_TICK_API_REST.restCore + CI_POLL_CHANGED_READS),
+            ),
+            apiCloud: rest(
+              SHEPHERD_TICK_API_CLOUD.restCore +
+                (polls - 1) * (SHEPHERD_WAIT_TICK_API_CLOUD.restCore + CI_POLL_CHANGED_READS),
+            ),
           },
         ],
         // No snapshot while CI runs. The new head's check runs are a fresh URL
@@ -1322,9 +1336,19 @@ const STACK_SCENARIOS = [
             // tick reads PollStackTopology; later ticks size PollStackSummary from
             // the stored stack size (docs/graphql-usage.md). After the initial tick
             // come the remaining WAIT ticks and the tick that sees the queue settle.
+            // REST reads are conditional: the queue's CI runs on the merge group,
+            // not the layers' heads, so the WAIT ticks are all 304 (cloud still
+            // charges each layer's CCR thread read) and only the settling tick,
+            // charged as a full read, sees the merged pulls.
             api: gql(ticks * stackWarmTickApi(layers.length).graphqlPoints),
-            apiRest: rest(ticks * stackTickApiRest(layers.length).restCore),
-            apiCloud: rest(ticks * stackTickApiCloud(layers.length).restCore),
+            apiRest: rest(
+              (ticks - 1) * stackWaitTickApiRest(layers.length).restCore +
+                stackTickApiRest(layers.length).restCore,
+            ),
+            apiCloud: rest(
+              (ticks - 1) * stackWaitTickApiCloud(layers.length).restCore +
+                stackTickApiCloud(layers.length).restCore,
+            ),
           },
         ],
         // No stack ticks while the queue runs: each layer's pull turns merged
