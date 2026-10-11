@@ -22,7 +22,7 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
-| single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 224 core + 1.5 points | 251.5 core + 1.5 points |
+| single PR | 30.8 / 36.5 / 12 | 10.8 / 9 / 78.3 | 224 core + 1.5 points | 251.5 core + 1.5 points |
 | PR stack | 17 / 27 / 12 | 2 / 6 / 74 | 480 core + 0 points | 510 core + 0 points |
 
 <!-- bench:headline:end -->
@@ -106,6 +106,17 @@ REPORT.md's Summary prints every loss with its numbers. `--check` also fails
 when a listed entry is no longer a loss, or links the wrong issue, so the list
 can only shrink. When a fix lands, delete its entries in the same change. The
 list is temporary: #524 closes when it is empty.
+
+Losses no plan can win are accepted in the same file's `structural` list. Each
+entry names its cell like a pending one and carries a one-line `reason` instead
+of an issue; `--check` fails on an entry without a reason. REPORT.md's Summary
+counts them apart and lists them under "Accepted structural losses" with their
+reasons. They do not fail `--check`, but an entry that is no longer a loss, or
+that is also on the pending list, does. Accept a cell only when you can state
+why every plan loses it, for example when gh spends no REST request and MCP no
+GraphQL point on the same step, so any read loses one of the two cells and the
+other is already a tie. A cost pr-shepherd chooses for a gain elsewhere (the
+wait detectors, a safety read) is a trade-off and stays pending.
 
 On a failure, `--check` prints each unlisted loss with its numbers and a
 paste-ready entry. Add one only for a regression you accept and track in an
@@ -219,6 +230,16 @@ are as good as these assumptions:
   - every one-PR tick is 1 point (`BatchPr`). Its first page is the
     fingerprint read, so an unchanged wait poll is a 1-point hit and the first
     changed tick after a wait, a miss, continues the same request at 1 point;
+  - an idle single-PR wait whose report is complete (not READY, nothing to
+    act on, no check running, no stack, and no thread holding more than one
+    comment) polls 8 conditional REST detectors instead
+    (`src/commands/check-wait-detectors.mts`): a 304 is free, and the tick on
+    which one sees the change charges that detector's 200 plus the 1-point
+    read. `bot-review-summary` charges one (the reviews), `review-thread`,
+    `bot-threads` and `conflicts` two (reviews and review comments, or the
+    pull and the base branch). Entering the wait seeds every detector once,
+    an upper bound of 8 requests reported with the idle hour, not charged to
+    a scenario. A wait outside those conditions reads `BatchPr` every poll;
   - a stack summary page is `max(1, round(0.36 × layers))`. The anchor's first
     tick reads a 4-entry page (1 point), then one page for any remaining
     layers; later ticks size the summary from the stack size the first one

@@ -1,7 +1,8 @@
 // The bench gate: every metric on which pr-shepherd is worse than a baseline,
-// per session and per scenario. `bench.mjs --check` fails on a loss that is not
-// on the pending list (pending-losses.json), and on a pending entry that is no
-// longer a loss, so the list can only shrink. README.md "The gate" has the rules.
+// per session and per scenario. `bench.mjs --check` fails on a loss that is
+// neither pending nor accepted as structural (pending-losses.json), and on a
+// listed entry that is no longer a loss, so both lists can only shrink.
+// README.md "The gate" has the rules.
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -86,19 +87,27 @@ export function findLosses({ rows, sessions, apiSessions }) {
   return losses;
 }
 
-export const readPending = () => JSON.parse(readFileSync(PENDING_PATH, "utf8")).losses;
+/**
+ * pending-losses.json: `losses` are pending, each linked to the issue that
+ * removes it; `structural` are accepted, each with the `reason` no plan can
+ * win it.
+ */
+export function readGateLists() {
+  const json = JSON.parse(readFileSync(PENDING_PATH, "utf8"));
+  return { pending: json.losses, structural: json.structural ?? [] };
+}
 
-/** Compare the live losses with the pending list. */
-export function checkPending(losses, pending) {
+/** Compare the live losses with the pending and structural lists. */
+export function checkPending(losses, pending, structural = []) {
   const live = new Map(losses.map((l) => [lossKey(l), l]));
-  const listed = new Map(pending.map((p) => [lossKey(p), p]));
+  const listed = [...pending, ...structural];
+  const keys = new Set(listed.map(lossKey));
   return {
-    unlisted: losses.filter((l) => !listed.has(lossKey(l))),
-    stale: pending.filter((p) => !live.has(lossKey(p))),
-    wrongIssue: pending.filter(
-      (p) => live.has(lossKey(p)) && p.issue !== ISSUE_FOR[p.metric],
-    ),
-    duplicate: pending.filter((p, i) => pending.findIndex((q) => lossKey(q) === lossKey(p)) !== i),
+    unlisted: losses.filter((l) => !keys.has(lossKey(l))),
+    stale: listed.filter((p) => !live.has(lossKey(p))),
+    wrongIssue: pending.filter((p) => live.has(lossKey(p)) && p.issue !== ISSUE_FOR[p.metric]),
+    duplicate: listed.filter((p, i) => listed.findIndex((q) => lossKey(q) === lossKey(p)) !== i),
+    missingReason: structural.filter((s) => typeof s.reason !== "string" || !s.reason.trim()),
   };
 }
 

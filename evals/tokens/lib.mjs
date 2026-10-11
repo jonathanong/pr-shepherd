@@ -540,9 +540,7 @@ const resultCharsPerToken = (call) =>
  * schema text, counted at the input ratio like the eager toolset.
  */
 export const outTokens = (call) =>
-  call.schema
-    ? inputTokens(call.out)
-    : Math.ceil(call.out.length / resultCharsPerToken(call));
+  call.schema ? inputTokens(call.out) : Math.ceil(call.out.length / resultCharsPerToken(call));
 
 /** Apply the host's per-call output cap: truncate Bash, reject MCP. */
 function capped(call) {
@@ -861,6 +859,31 @@ export const RECONCILE_MINUTES = 15;
  * (src/github/graphql-wait-detectors.test.mts).
  */
 export const GRAPHQL_WAIT_DETECTORS = 8;
+/**
+ * The detectors run only when the stored report is idle (detectorsCover in
+ * src/commands/check-wait-detectors.mts): a single PR, open, not READY, nothing
+ * to act on, no check still running, and a complete fingerprint, which
+ * excludes any thread holding more than one comment. Otherwise every poll tick
+ * reads `BatchPr` (a fingerprint hit, 1 point).
+ *
+ * Entering an idle wait costs one seeding round: the first detector round
+ * after the idle report is built has no stored digest, so every detector read
+ * is a charged 200 on a cold cache and the tick still reads `BatchPr`
+ * (src/github/graphql-wait-detectors.test.mts). Charging all eight is an upper
+ * bound: a warm validator whose resource has not moved since the last idle
+ * wait answers 304, but after a push the pull and the three head-keyed reads
+ * always change. Like the rest of an idle wait, the seed is reported with the
+ * idle hour, not charged to a scenario.
+ */
+export const GRAPHQL_DETECTOR_SEED = {
+  graphqlPoints: SHEPHERD_TICK_API.graphqlPoints,
+  restCore: GRAPHQL_WAIT_DETECTORS,
+};
+/**
+ * The tick on which `changed` detectors see the change that ends an idle wait
+ * charges their 200s before the `BatchPr` read the scenario already counts.
+ */
+export const graphqlIdleWaitApi = (changed) => rest(changed);
 /**
  * What the host returns when the agent starts `wait` in the background. The
  * agent's next request reads it and ends the turn, so every wake costs one

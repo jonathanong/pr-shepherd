@@ -18,6 +18,7 @@ import {
   DETECTOR_POLL_SECONDS,
   EVENT_DETECTORS,
   GRAPHQL_WAIT_DETECTORS,
+  GRAPHQL_DETECTOR_SEED,
   MCP_API,
   RECONCILE_MINUTES,
   snapshot,
@@ -39,7 +40,7 @@ import {
   tokens,
 } from "./lib.mjs";
 import { SCENARIOS, eventArm } from "./scenarios.mjs";
-import { checkPending, findLosses, lossKey, pendingEntry, readPending } from "./gate.mjs";
+import { checkPending, findLosses, lossKey, pendingEntry, readGateLists } from "./gate.mjs";
 import { atCharsPerToken, measuredCharsPerToken, realSessionsSection } from "./sessions.mjs";
 
 const ARMS = ["shepherd", "gh", "mcp"];
@@ -380,6 +381,14 @@ const idleHour = {
     conditional: (3600 / POLL_SECONDS) * GRAPHQL_WAIT_DETECTORS,
     ...perHour(0, boundedWake),
   },
+  // The detectors do not apply (lib.mjs GRAPHQL_DETECTOR_SEED), e.g. a thread
+  // holds a reply: every poll reads BatchPr, a fingerprint hit.
+  shepherdNoDetectors: {
+    graphqlPoints: (3600 / POLL_SECONDS) * SHEPHERD_TICK_API.graphqlPoints,
+    restCore: 0,
+    conditional: 0,
+    ...perHour(0, boundedWake),
+  },
   shepherdBounded: {
     graphqlPoints: round(
       (3600 / BOUNDED_POLL_SECONDS) * boundedTicks * SHEPHERD_TICK_API.graphqlPoints,
@@ -455,9 +464,9 @@ const rowsAtCpt = (cpt, exclude = new Set(), cliCpt = null) =>
         eagerTokens: inputTokens("x".repeat(schemas.eagerChars)),
         exclude,
       };
-      return pickRows(
-        Object.fromEntries(STRATEGIES.map((st) => [st, buildRows(st, ctx)])),
-      ).filter((r) => !exclude.has(r.id));
+      return pickRows(Object.fromEntries(STRATEGIES.map((st) => [st, buildRows(st, ctx)]))).filter(
+        (r) => !exclude.has(r.id),
+      );
     },
     cliCpt,
   );
@@ -527,17 +536,26 @@ const cptFlips = BASELINE_KEYS.flatMap((b) => {
   ).filter((l) => !baseLossKeys.has(lossKey(l)) && !before.has(lossKey(l)));
 }).map((l) => ({ ...l, where: `chars-per-token:${l.where}` }));
 const losses = [...baseLosses, ...cptFlips];
-const pending = readPending();
+const { pending, structural } = readGateLists();
+const structuralKeys = new Map(structural.map((s) => [lossKey(s), s]));
+const pendingLosses = losses.filter((l) => !structuralKeys.has(lossKey(l)));
+const structuralLosses = losses.filter((l) => structuralKeys.has(lossKey(l)));
 
 if (process.argv.includes("--check")) {
-  const { unlisted, stale, wrongIssue, duplicate } = checkPending(losses, pending);
-  const fail = unlisted.length + stale.length + wrongIssue.length + duplicate.length > 0;
+  const { unlisted, stale, wrongIssue, duplicate, missingReason } = checkPending(
+    losses,
+    pending,
+    structural,
+  );
+  const fail =
+    unlisted.length + stale.length + wrongIssue.length + duplicate.length + missingReason.length >
+    0;
   console.log(
-    `bench gate: ${losses.length} losses vs. a baseline, ${pending.length} pending entries`,
+    `bench gate: ${losses.length} losses vs. a baseline, ${pending.length} pending entries, ${structural.length} accepted as structural`,
   );
   if (unlisted.length) {
     console.error(
-      `\n✗ ${unlisted.length} loss(es) not on the pending list. Fix them, or add these to evals/tokens/pending-losses.json:`,
+      `\n✗ ${unlisted.length} loss(es) neither pending nor structural. Fix them, or add these to evals/tokens/pending-losses.json:`,
     );
     for (const l of unlisted) console.error(`  ${lossKey(l)}: ${l.ours} vs ${l.theirs}`);
     console.error("");
@@ -545,7 +563,7 @@ if (process.argv.includes("--check")) {
   }
   if (stale.length) {
     console.error(
-      `\n✗ ${stale.length} pending entr(y/ies) no longer a loss. Remove them from evals/tokens/pending-losses.json:`,
+      `\n✗ ${stale.length} pending or structural entr(y/ies) no longer a loss. Remove them from evals/tokens/pending-losses.json:`,
     );
     for (const p of stale) console.error(`  ${lossKey(p)}`);
   }
@@ -554,10 +572,14 @@ if (process.argv.includes("--check")) {
     for (const p of wrongIssue) console.error(`  ${lossKey(p)}: #${p.issue}`);
   }
   if (duplicate.length) {
-    console.error(`\n✗ ${duplicate.length} duplicate pending entr(y/ies):`);
+    console.error(`\n✗ ${duplicate.length} duplicate pending or structural entr(y/ies):`);
     for (const p of duplicate) console.error(`  ${lossKey(p)}`);
   }
-  if (!fail) console.log("✓ every loss is pending; no pending entry is stale");
+  if (missingReason.length) {
+    console.error(`\n✗ ${missingReason.length} structural entr(y/ies) without a reason:`);
+    for (const s of missingReason) console.error(`  ${lossKey(s)}`);
+  }
+  if (!fail) console.log("✓ every loss is pending or structural; no entry is stale");
   process.exit(fail ? 1 : 0);
 }
 
@@ -705,32 +727,51 @@ out(
   `- **Event arm (informational, assumed, not gated).** A background \`pr-shepherd wait\` with ETag change detectors (#544). ${evLine("pr", "PR session")}. ${evLine("stack", "Stack session")}. Each of its ${num(eventSessions.pr.wakes)} PR-session wakes (${num(eventSessions.stack.wakes)} on a stack) adds a request to read the background start, so it spends more turns and tokens than the blocking poll. The hypothetical hosted webhook proxy spends ${num(eventSessions.pr.api.eventProxy.graphqlPoints)} GraphQL points and ${num(eventSessions.pr.api.eventProxy.restCore)} REST core of the user's token in a PR session (${num(eventSessions.stack.api.eventProxy.graphqlPoints)} and ${num(eventSessions.stack.api.eventProxy.restCore)} on a stack), on the agent's own mutations and reads.`,
 );
 out(
-  `- **Idle waiting, per hour (assumed).** The poll arm's blocking \`--until-terminal\` call (the skill's mode, and the comparison that counts) spends ${idleHour.shepherd.graphqlPoints} GraphQL points (a reconcile snapshot every ${RECONCILE_MINUTES} minutes; between them ${GRAPHQL_WAIT_DETECTORS} conditional REST detectors per poll answer 304, ${num(idleHour.shepherd.conditional)} an hour, when no check is running) and no turn; the legacy bounded \`--timeout 4.5m\` CLI mode, which the skill no longer uses, spends ${num(idleHour.shepherdBounded.graphqlPoints)} points (it returns every ${BOUNDED_POLL_SECONDS}s, after ${boundedTicks} ticks) and ${num(idleHour.shepherdBounded.wakes)} wakes (${num(idleHour.shepherdBounded.turns)} turns, ${num(idleHour.shepherdBounded.ite)} ITE). The event arm spends ${idleHour.event.graphqlPoints} points on ${num(idleHour.event.wakes)} reconcile snapshots and no REST (${num(idleHour.event.conditional)} conditional requests, all 304), with ${num(idleHour.event.turns)} turns (${num(idleHour.event.ite)} ITE). The hypothetical proxy spends nothing of the user's token, with the same wakes.`,
+  `- **Idle waiting, per hour (assumed).** The poll arm's blocking \`--until-terminal\` call (the skill's mode, and the comparison that counts) spends ${idleHour.shepherd.graphqlPoints} GraphQL points (a reconcile snapshot every ${RECONCILE_MINUTES} minutes; between them ${GRAPHQL_WAIT_DETECTORS} conditional REST detectors per poll answer 304, ${num(idleHour.shepherd.conditional)} an hour, when no check is running; entering the wait seeds them once, up to ${GRAPHQL_DETECTOR_SEED.restCore} REST requests, and a PR whose threads hold a reply skips them for ${num(idleHour.shepherdNoDetectors.graphqlPoints)} points an hour) and no turn; the legacy bounded \`--timeout 4.5m\` CLI mode, which the skill no longer uses, spends ${num(idleHour.shepherdBounded.graphqlPoints)} points (it returns every ${BOUNDED_POLL_SECONDS}s, after ${boundedTicks} ticks) and ${num(idleHour.shepherdBounded.wakes)} wakes (${num(idleHour.shepherdBounded.turns)} turns, ${num(idleHour.shepherdBounded.ite)} ITE). The event arm spends ${idleHour.event.graphqlPoints} points on ${num(idleHour.event.wakes)} reconcile snapshots and no REST (${num(idleHour.event.conditional)} conditional requests, all 304), with ${num(idleHour.event.turns)} turns (${num(idleHour.event.ite)} ITE). The hypothetical proxy spends nothing of the user's token, with the same wakes.`,
 );
 const TRANSPORT_LABELS = { graphql: "GraphQL", rest: "REST", cloud: "cloud REST" };
-const lossCount = (issue) => losses.filter((l) => l.issue === issue).length;
+const lossCount = (issue) => pendingLosses.filter((l) => l.issue === issue).length;
+const accepted = structuralLosses.length
+  ? ` ${structuralLosses.length} more are accepted as structural, since no plan can win them (Accepted structural losses below).`
+  : "";
 out(
-  losses.length
-    ? `- **Losses: ${losses.length}.** pr-shepherd costs more than a baseline on ${losses.length} gated cells below: ${lossCount(528)} on tokens or turns (#528) and ${lossCount(525)} on the GitHub rate limit (#525). Each is on the temporary pending list, pending-losses.json; \`bench.mjs --check\` fails on any other loss and on any listed one that is gone.`
-    : "- **Losses: none.** pr-shepherd costs no more than any baseline on any gated metric.",
+  pendingLosses.length
+    ? `- **Losses: ${pendingLosses.length} pending.** pr-shepherd costs more than a baseline on ${pendingLosses.length} gated cells below: ${lossCount(528)} on tokens or turns (#528) and ${lossCount(525)} on the GitHub rate limit (#525). Each is on the temporary pending list, pending-losses.json; \`bench.mjs --check\` fails on any other loss and on any listed one that is gone.${accepted}`
+    : `- **Losses: none pending.** pr-shepherd costs no more than any baseline on any gated metric it can win.${accepted}`,
 );
 out();
-if (losses.length) {
+const lossWhere = (l) =>
+  l.where.startsWith("session:") ? `${SESSIONS[l.where.slice(8)]}` : `\`${l.where}\``;
+const lossMetric = (l) =>
+  `${METRIC_LABELS[l.metric]}${l.transport ? ` (${TRANSPORT_LABELS[l.transport]} transport)` : ""}`;
+if (pendingLosses.length) {
   out("### Losses");
   out();
   out(
-    'Every session and scenario where pr-shepherd costs strictly more than a baseline, on any gated metric. Token metrics are the same on both transports; rate-limit metrics are listed per transport (GraphQL, standard REST, and REST through the Claude Code cloud proxy). README.md "The gate" has the rules.',
+    'Every session and scenario where pr-shepherd costs strictly more than a baseline, on any gated metric, apart from the accepted structural losses. Token metrics are the same on both transports; rate-limit metrics are listed per transport (GraphQL, standard REST, and REST through the Claude Code cloud proxy). README.md "The gate" has the rules.',
   );
   out();
   out("| where | metric | vs. | pr-shepherd | baseline | change | issue |");
   out("| --- | --- | --- | --- | --- | --- | --- |");
-  for (const l of losses) {
-    const where = l.where.startsWith("session:")
-      ? `${SESSIONS[l.where.slice(8)]}`
-      : `\`${l.where}\``;
-    const metric = `${METRIC_LABELS[l.metric]}${l.transport ? ` (${TRANSPORT_LABELS[l.transport]} transport)` : ""}`;
+  for (const l of pendingLosses) {
     out(
-      `| ${where} | ${metric} | ${BASELINES[l.baseline]} | ${num(l.ours)} | ${num(l.theirs)} | ${pct(saving(l.theirs, l.ours))} | #${l.issue} |`,
+      `| ${lossWhere(l)} | ${lossMetric(l)} | ${BASELINES[l.baseline]} | ${num(l.ours)} | ${num(l.theirs)} | ${pct(saving(l.theirs, l.ours))} | #${l.issue} |`,
+    );
+  }
+  out();
+}
+if (structuralLosses.length) {
+  out("### Accepted structural losses");
+  out();
+  out(
+    "Losses no plan can win, each with its reason (pending-losses.json `structural`). `bench.mjs --check` does not fail on them, but fails when one is no longer a loss.",
+  );
+  out();
+  out("| where | metric | vs. | pr-shepherd | baseline | change | reason |");
+  out("| --- | --- | --- | --- | --- | --- | --- |");
+  for (const l of structuralLosses) {
+    out(
+      `| ${lossWhere(l)} | ${lossMetric(l)} | ${BASELINES[l.baseline]} | ${num(l.ours)} | ${num(l.theirs)} | ${pct(saving(l.theirs, l.ours))} | ${structuralKeys.get(lossKey(l)).reason} |`,
     );
   }
   out();
@@ -938,6 +979,8 @@ out(
 out("| --- | --- | --- | --- | --- | --- | --- |");
 for (const [a, label] of Object.entries({
   shepherd: "pr-shepherd poll, `--until-terminal` (the skill)",
+  shepherdNoDetectors:
+    "pr-shepherd poll, `--until-terminal`, without detectors (a thread with a reply)",
   shepherdBounded: "pr-shepherd poll, legacy bounded `--timeout 4.5m` (not the skill)",
   event: "event",
   eventProxy: "event, hosted webhook proxy (hypothetical)",
@@ -948,6 +991,9 @@ for (const [a, label] of Object.entries({
   );
 }
 out();
+out(
+  `- pr-shepherd's GraphQL poll runs its ${GRAPHQL_WAIT_DETECTORS} detectors only on an idle single-PR report whose fingerprint is complete: not READY, nothing to act on, no check running, no stack, and no thread holding more than one comment. Otherwise each poll reads \`BatchPr\` (the row without detectors). Entering an idle wait seeds the detectors once: up to ${GRAPHQL_DETECTOR_SEED.restCore} REST core requests (every detector a 200 on a cold cache) and a ${GRAPHQL_DETECTOR_SEED.graphqlPoints}-point \`BatchPr\` read. The tick on which a detector sees the change that ends the wait charges that detector's 200, in the scenario.`,
+);
 out(
   `- Wakes: \`change\` is a detector change, \`timer\` an elapsed \`nextCheck\` (here the ready delay), \`none\` a step the wait handles in process, as the poll does. Each wake costs one more request than the poll arm, which reads the background start's acknowledgement.`,
 );
