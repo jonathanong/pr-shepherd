@@ -77,7 +77,8 @@ import {
 } from "./lib.mjs";
 
 const PR = "https://github.com/owner/repo/pull/42";
-const SHEPHERD_CMD = `pr-shepherd ${PR} --until-terminal`;
+// The skill passes a qualified PR as quoted `'owner/repo#N'` (SKILL.md), like gh's `42 -R owner/repo`.
+const SHEPHERD_CMD = `pr-shepherd 'owner/repo#42' --until-terminal`;
 const HISTORY = readJson("history-pr505.json");
 
 // How long one CI run takes, and how often a baseline agent re-checks it.
@@ -1230,7 +1231,7 @@ const routedLayerTickApi = (stackSize) => ({
 });
 
 const stackCmd = (anchorPr, repo, flags = "") =>
-  `pr-shepherd --stack https://github.com/${repo}/pull/${anchorPr} --until-terminal${flags}`;
+  `pr-shepherd --stack '${repo}#${anchorPr}' --until-terminal${flags}`;
 
 const STACK_SCENARIOS = [
   setupScenario({ id: "stack-setup", session: "stack" }),

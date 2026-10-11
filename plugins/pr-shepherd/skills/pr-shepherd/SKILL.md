@@ -11,7 +11,7 @@ allowed-tools: ["MCP", "Bash", "Read", "Grep", "Glob", "Edit", "Write"]
 ## Dispatch
 
 - To make, create, or open a PR, first read the "Create a PR" playbook, then pass the new PR's URL on.
-- `$ARGUMENTS`: PR numbers, PR URLs, `owner/repo#N` (pass as `https://github.com/owner/repo/pull/N`), one `--stack PR`, and an optional `--merge`. Reject anything else. A native stack's anchor PR is the `--stack` selector. With no PR, use the current branch's PR. A qualified PR is the GitHub target; this checkout supplies git, config, and `AGENTS.md`.
+- `$ARGUMENTS`: PR numbers, PR URLs and `owner/repo#N` (pass both as quoted `'owner/repo#N'`), one `--stack PR`, and an optional `--merge`. Reject anything else. A native stack's anchor PR is the `--stack` selector. With no PR, use the current branch's PR. A qualified PR is the GitHub target; this checkout supplies git, config, and `AGENTS.md`.
 - `--merge`, or a request to merge, land, or enqueue, authorizes the printed merge/enqueue commands. Run them without asking again; request runtime escalation when the host requires it.
 - Run `pr-shepherd [PR ...] --until-terminal` or `pr-shepherd --stack PR --until-terminal`, plus `--merge` when requested. Do not run `pr-shepherd iterate`.
 - Print the full result and follow every `## Instructions` step, running each printed command with every ID it lists. When a step says `Playbook: "<name>"`, read that playbook once first.
