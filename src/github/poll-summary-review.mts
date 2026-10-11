@@ -129,5 +129,8 @@ function isSuppressed(
     ...(raw?.url && { url: raw.url }),
     ...(kind === "review-thread" && { path }),
   } as ClassifyItem;
-  return applyRules(rules, item).suppress === true;
+  const action = applyRules(rules, item);
+  // An auto-resolve match is hidden only once the full check minimizes or resolves it, or
+  // surfaces a denied mutation once; until then it stays actionable so that check runs.
+  return action.suppress === true && (action.autoResolve !== true || kind === "changes-requested");
 }
