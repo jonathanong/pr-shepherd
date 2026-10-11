@@ -77,6 +77,33 @@ describe("evaluateGraphqlQuotaWarning", () => {
     expect(next.state.rearmEpoch).toBe(first.state.rearmEpoch);
   });
 
+  it("ignores a stale sample from an already ended earlier window", () => {
+    const saved = evaluateGraphqlQuotaWarning(bands, sample(4900, 100), null);
+    const stale = { ...sample(10, 4990), resetAt: saved.state.resetAt - 3600 };
+    const next = evaluateGraphqlQuotaWarning(bands, stale, saved.state, saved.state.resetAt - 60);
+
+    expect(next.warning).toBeUndefined();
+    expect(next.state).toMatchObject({
+      lastRemaining: 4900,
+      lastUsed: 100,
+      resetAt: saved.state.resetAt,
+    });
+  });
+
+  it("still merges a jittered earlier reset whose window has not ended", () => {
+    const saved = evaluateGraphqlQuotaWarning(bands, sample(4900, 100), null);
+    const jittered = { ...sample(900, 4100), resetAt: saved.state.resetAt - 1 };
+    const next = evaluateGraphqlQuotaWarning(
+      bands,
+      jittered,
+      saved.state,
+      saved.state.resetAt - 60,
+    );
+
+    expect(next.warning?.thresholdPercent).toBe(20);
+    expect(next.state).toMatchObject({ lastRemaining: 900, resetAt: saved.state.resetAt });
+  });
+
   it("re-arms when the credential fingerprint changes in the same window", () => {
     const first = evaluateGraphqlQuotaWarning(bands, sample(1200, 3800), null);
     const switched = evaluateGraphqlQuotaWarning(

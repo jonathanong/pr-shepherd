@@ -126,7 +126,13 @@ function adoptGraphqlRateLimit(
   candidate: RateLimitInfo,
   fingerprint: string | undefined,
 ): void {
-  const next = selectAuthoritativeRateLimit(graphql.rateLimit, candidate);
+  // Two credentials' samples are compared whole, never mixed: a mixed sample would be
+  // attributed to whichever credential supplied the changed half.
+  const sameCredential =
+    fingerprint === undefined ||
+    graphql.credentialFingerprint === undefined ||
+    fingerprint === graphql.credentialFingerprint;
+  const next = selectAuthoritativeRateLimit(graphql.rateLimit, candidate, sameCredential);
   if (next !== graphql.rateLimit) graphql.credentialFingerprint = fingerprint;
   graphql.rateLimit = next;
 }
@@ -175,11 +181,13 @@ function adoptRestRateLimit(
 function selectAuthoritativeRateLimit(
   current: RateLimitInfo | undefined,
   candidate: RateLimitInfo,
+  sameCredential = true,
 ): RateLimitInfo {
   if (current === undefined) return { ...candidate };
   if (candidate.resetAt !== current.resetAt) {
     return candidate.resetAt > current.resetAt ? { ...candidate } : current;
   }
+  if (!sameCredential) return candidate.remaining < current.remaining ? { ...candidate } : current;
   const merged = mostConservativeSample(current, candidate);
   return merged.remaining === current.remaining && merged.used === current.used ? current : merged;
 }

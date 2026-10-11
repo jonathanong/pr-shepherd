@@ -37,15 +37,20 @@ export function evaluateGraphqlQuotaWarning(
     previous.limit !== sample.limit ||
     windowRolled ||
     fingerprintChanged(previous, sample);
+  // A sample whose own window already ended before the saved one is stale: keep the saved sample.
+  const stale =
+    previous !== null && sample.resetAt < previous.resetAt && observedAt >= sample.resetAt;
   // Same window: the lowest remaining and the highest used seen so far, so an older sample (or a
   // proxy route whose X-RateLimit-Used disagrees) never lowers the warning level.
   const effective =
     rearm || previous === null
       ? sample
-      : {
-          ...mostConservativeSample(savedSample(previous), sample),
-          resetAt: Math.max(previous.resetAt, sample.resetAt),
-        };
+      : stale
+        ? savedSample(previous)
+        : {
+            ...mostConservativeSample(savedSample(previous), sample),
+            resetAt: Math.max(previous.resetAt, sample.resetAt),
+          };
   const warned = new Set(rearm || previous === null ? [] : previous.warnedThresholds);
   const rearmEpoch = rearm ? (previous?.rearmEpoch ?? 0) + 1 : (previous?.rearmEpoch ?? 0);
   const crossed = bands.filter(

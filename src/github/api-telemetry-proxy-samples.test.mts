@@ -4,6 +4,7 @@ import {
   summarizeApiTelemetry,
   withApiTelemetryScope,
 } from "./api-telemetry.mts";
+import { aggregateEvents } from "./api-telemetry-aggregate.mts";
 
 const resetAt = 1_700_000_000;
 
@@ -60,5 +61,29 @@ describe("REST core quota samples that disagree within one tick", () => {
         { used: 10, remaining: 14990, resetAt: resetAt + 3600 },
       ]);
     });
+  });
+
+  it("never merges GraphQL samples from different credentials", () => {
+    const graphql = (sequence: number, fingerprint: string, remaining: number, used: number) => ({
+      kind: "GraphQL" as const,
+      method: "POST",
+      authSource: "GH_TOKEN",
+      sequence,
+      credentialFingerprint: fingerprint,
+      rateLimit: { resource: "graphql", limit: 5000, remaining, used, resetAt },
+    });
+    const aggregate = aggregateEvents([
+      graphql(1, "a".repeat(16), 1200, 3800),
+      graphql(2, "b".repeat(16), 4900, 3900),
+    ]);
+
+    expect(aggregate.graphql.rateLimit).toMatchObject({ remaining: 1200, used: 3800 });
+    expect(aggregate.graphql.credentialFingerprint).toBe("a".repeat(16));
+    const lower = aggregateEvents([
+      graphql(1, "a".repeat(16), 1200, 3800),
+      graphql(2, "b".repeat(16), 900, 3700),
+    ]);
+    expect(lower.graphql.rateLimit).toMatchObject({ remaining: 900, used: 3700 });
+    expect(lower.graphql.credentialFingerprint).toBe("b".repeat(16));
   });
 });
