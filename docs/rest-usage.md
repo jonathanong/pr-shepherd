@@ -42,7 +42,7 @@ The snapshot reads are listed in [rest.md](rest.md#snapshot-coverage). The 14 re
 
 Supplements on a tick, each one request unless noted:
 
-- Annotations: one read per uncached completed check run that reports annotations (_modeled_ in the token bench's `annotationBatchApi`).
+- Annotations: one read per uncached completed check run that reports annotations, plus one per extra page past 100 annotations (_modeled_ in the token bench's `annotationBatchApi`).
 - Failed job log excerpt: the run's jobs list (more pages past 100 jobs) and the job log, the same two requests as on GraphQL.
 - Check blockers: one `GET /issues/{n}` or `GET /pulls/{n}` per distinct blocker while a matching check is failing.
 - READY candidate: one live mergeability `GET /pulls/{n}` before acting.
@@ -55,7 +55,7 @@ A non-root native-stack layer's one-PR tick also reads the stack, the trunk's br
 
 `pr-shepherd --stack PR` and `pr-shepherd` with two or more PRs read the summary, not per-layer snapshots.
 
-A `--stack` summary reads repository settings, the viewer, stack membership, and branch policy once per tick and shares them across layers ([rest.md](rest.md#shared-stack-tick-evidence)). The table below covers that path.
+A `--stack` summary shares evidence across layers within one tick ([rest.md](rest.md#shared-stack-tick-evidence)): the repository and the viewer are read once, stack membership is read before and after the layers to reject a moving stack, and branch policy is read once per distinct target branch. The table below covers that path.
 
 An explicit list of PRs (`pr-shepherd 12 34 56`) shares only the viewer. Each PR reads its own repository settings, stack lookup, and branch policy, so a tick sends about 1 + 13 × N requests for single-page lists and unprotected bases (one more per PR in a cloud session), and conditional reads keep an unchanged tick at 0 charged (N in cloud) (_modeled_ from `src/github/rest-explicit-summary-read.mts`; no boundary test asserts it).
 
