@@ -15,7 +15,9 @@ The counts below are asserted at the HTTP boundary by these tests. Each fake ser
 | `src/github/rest-wait-tick-cost.test.mts` "charges the cold snapshot once and nothing on unchanged wait ticks"                                      | One-PR tick: 14 reads, 13 charged cold (the closing pull re-read is a 304); unchanged continuation and returned ticks: 0 charged of 14 |
 | `src/github/rest-wait-tick-cost.test.mts` "charges only the validator-less cloud thread read on unchanged cloud wait ticks"                         | Cloud unchanged tick: only `ccr/review_threads` is charged                                                                             |
 | `src/github/rest-wait-tick-cost.test.mts` "does not replay the report when only the base branch moved"                                              | A base push: only `GET /branches/{base}` is charged                                                                                    |
-| `src/github/rest-wait-tick-cost.test.mts` "charges only the changed check read on the tick where CI settles"                                        | CI settles: the check-runs read plus the READY candidate's mergeability pull read                                                      |
+| `src/github/rest-wait-tick-cost.test.mts` "charges only the changed check read on the tick where CI settles"                                        | CI settles: only the check-runs read; the READY candidate's mergeability pull read is a 304                                            |
+| `src/github/rest-terminal-batch.test.mts` "answers a merged PR from the first pull read"                                                            | Merged PR: one pull read, nothing else                                                                                                 |
+| `src/github/graphql-ready-refresh-cost.test.mts` "charges the first READY refresh and replays an unchanged pull for free"                           | GraphQL mode: the first READY mergeability read is charged; a later READY tick on an unchanged pull is a 304                           |
 | `src/github/rest-wait-tick-cost.test.mts` "charges nothing on an unchanged 10-layer stack summary tick"                                             | 10-layer stack: 104 charged cold, 0 unchanged, 1 when one shared resource changes                                                      |
 | `src/github/rest-stack-summary-sharing.test.mts` "keeps complete 10-layer snapshots within the HTTP request budget"                                 | 10-layer stack without validators: 126 requests, 136 in a cloud session                                                                |
 | `src/commands/iterate/check-blocker-gate.rest.test.mts` "reads raw issue/pull state, deduplicates shared blockers and releases merged dependencies" | One `GET` per distinct check blocker                                                                                                   |
@@ -26,15 +28,16 @@ The token bench models the same counts for whole sessions (`evals/tokens/lib.mjs
 
 ## One PR
 
-| Tick                                                                   | Requests sent | Charged                                              |
-| ---------------------------------------------------------------------- | ------------- | ---------------------------------------------------- |
-| Cold cache (first tick in a state directory)                           | 14            | 13 (the closing pull re-read is a 304)               |
-| `pr-shepherd [PR]` / `poll`, unchanged continuation tick               | 14            | 0; the stored report is reused                       |
-| Tick returned to the caller, `iterate`, MCP `iterate`, nothing changed | 14            | 0; the report is rebuilt from 304 bodies             |
-| Base branch moved                                                      | 14            | 1 (`GET /branches/{base}`)                           |
-| CI settles to a READY candidate                                        | 14 + 1        | 2 (check runs, then the live mergeability pull read) |
-| Changed tick, general case                                             | 14            | only the reads whose resource changed                |
-| Claude Code cloud session, any of the above                            | +1            | +1 (`ccr/review_threads` carries no ETag)            |
+| Tick                                                                   | Requests sent | Charged                                                                                                                     |
+| ---------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| Cold cache (first tick in a state directory)                           | 14            | 13 (the closing pull re-read is a 304)                                                                                      |
+| `pr-shepherd [PR]` / `poll`, unchanged continuation tick               | 14            | 0; the stored report is reused                                                                                              |
+| Tick returned to the caller, `iterate`, MCP `iterate`, nothing changed | 14            | 0; the report is rebuilt from 304 bodies                                                                                    |
+| Base branch moved                                                      | 14            | 1 (`GET /branches/{base}`)                                                                                                  |
+| CI settles to a READY candidate                                        | 14 + 1        | 1 (check runs) when `mergeable_state` did not change; 2 when it did (the snapshot pull read is a 200 and the refresh a 304) |
+| Merged PR (a closed, unmerged PR reads the full snapshot)              | 1             | 1 (the pull; cloud sessions too)                                                                                            |
+| Changed tick, general case                                             | 14            | only the reads whose resource changed                                                                                       |
+| Claude Code cloud session, any of the above except a merged PR         | +1            | +1 (`ccr/review_threads` carries no ETag)                                                                                   |
 
 Unlike GraphQL, where every tick returned to the caller pays for `BatchPr`, a REST tick that rebuilds its report still charges only the reads that changed.
 
@@ -45,7 +48,7 @@ Supplements on a tick, each one request unless noted:
 - Annotations: one read per uncached completed check run that reports annotations, plus one per extra page past 100 annotations (_modeled_ in the token bench's `annotationBatchApi`).
 - Failed job log excerpt: the run's jobs list (more pages past 100 jobs) and the job log, the same two requests as on GraphQL.
 - Check blockers: one `GET /issues/{n}` or `GET /pulls/{n}` per distinct blocker while a matching check is failing.
-- READY candidate: one live mergeability `GET /pulls/{n}` before acting.
+- READY candidate: one live mergeability `GET /pulls/{n}` before acting. It is conditional and shares the pull's ETag, so it is a free 304 unless the pull changed since the snapshot read it.
 - Mark-ready: one `POST /pulls/{n}/ccr/ready_for_review` in a cloud session. Standard REST has no ready-for-review route and escalates `transport-unsupported` instead.
 - Rule auto-resolve: one `POST /pulls/{n}/ccr/comments/{id}/resolve` per thread matched by a classification rule, in a cloud session. When any succeed, the journal update follows: a pull read, then a `PATCH /pulls/{n}` when the body changes. Rule auto-minimize is unsupported on REST.
 

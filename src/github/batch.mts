@@ -29,7 +29,7 @@ import type { BatchPrData } from "../types.mts";
 import { fingerprintFromRaw, type PrFingerprint } from "./fingerprint.mts";
 import { stackEvidenceFromRaw, type BatchStackEvidence } from "./batch-stack-evidence.mts";
 
-interface BatchResult {
+export interface BatchResult {
   data: BatchPrData;
   fingerprint?: PrFingerprint;
   rateLimit?: RateLimitInfo;
@@ -59,6 +59,7 @@ interface FetchPrBatchOptions {
    */
   paginateApprovedReviews?: boolean;
   includeReceiptSummary?: boolean;
+  terminalShortCircuit?: boolean; // REST: a merged PR stops at its first pull read
 }
 
 function onlyReceiptSummaryErrors(errors?: GitHubGraphQlError[]): boolean {

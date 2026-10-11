@@ -132,6 +132,7 @@ async function runScopedCheck(
     : undefined;
   const batchOptions = {
     paginateApprovedReviews,
+    terminalShortCircuit: true,
     ...(includeReceiptSummary && { includeReceiptSummary: true }),
   };
   const fetched = reuse

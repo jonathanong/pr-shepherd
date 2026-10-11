@@ -758,8 +758,9 @@ export const SHEPHERD_WAIT_TICK_API_CLOUD = rest(
 /**
  * A tick whose status is READY re-reads the PR's mergeability over REST before
  * acting (refreshReadyMergeability in src/commands/check.mts), on either
- * transport. The real sessions measured exactly one such request on each of
- * their 21 READY polls (data/real-sessions.json).
+ * transport. The real sessions, recorded before the read became conditional,
+ * measured exactly one such request on each of their 21 READY polls
+ * (data/real-sessions.json). See `readyMergeabilityRest` for what is charged now.
  */
 /** `apply review --require-sha`'s head read: `GetPrHeadSha` or one REST pull read. */
 export const HEAD_SHA_READ = 1;
@@ -781,11 +782,22 @@ export function applyReviewGraphqlReads({ replies, requireSha }) {
 }
 
 export const READY_MERGEABILITY_REST = 1;
+/**
+ * The refresh is a conditional pull read sharing the pull's ETag (getMergeableState in
+ * src/github/client.mts). On REST the snapshot's own pull read stored a settled READY body a
+ * moment earlier, so the refresh is a free 304 (src/github/rest-wait-tick-cost.test.mts). On
+ * GraphQL the first READY tick pays it cold, and a later READY tick on an unchanged pull is a
+ * free 304 (src/github/graphql-ready-refresh-cost.test.mts). The scenarios do not model the
+ * countdown's first READY tick separately, so each GraphQL READY step keeps that one charge.
+ */
+export function readyMergeabilityRest(transport) {
+  return transport === "graphql" ? READY_MERGEABILITY_REST : 0;
+}
 /** `call`, a READY tick: its cost on every transport plus the mergeability refresh. */
 export function readyTick(call) {
   const add = (transport) => {
     const a = callApi(call, transport);
-    return { ...a, restCore: a.restCore + READY_MERGEABILITY_REST };
+    return { ...a, restCore: a.restCore + readyMergeabilityRest(transport) };
   };
   return { ...call, api: add("graphql"), apiRest: add("rest"), apiCloud: add("cloud") };
 }

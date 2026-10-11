@@ -121,11 +121,14 @@ describe("REST wait tick cost", () => {
     log.length = 0;
     const settled = await tick(false);
     expect(settled.action).not.toBe("wait");
-    // The changed check list, then the READY candidate's live mergeability read.
+    // Only the changed check list: the READY candidate's live mergeability read shares the
+    // pull's ETag, so an unchanged pull answers 304.
     expect(charged().map((entry) => entry.path.split("?")[0])).toEqual([
       "/repos/octocat/hello-world/commits/aaa111/check-runs",
-      "/repos/octocat/hello-world/pulls/101",
     ]);
+    expect(notModified().map((entry) => entry.path)).toContain(
+      "/repos/octocat/hello-world/pulls/101",
+    );
   });
 
   it("does not replay the report when the base branch summary is unavailable", async () => {

@@ -1,5 +1,14 @@
 import type { BatchPrData, MergeStatusResult, ShepherdReport } from "../types.mts";
 
+/** A merged PR answered from its first REST pull read never read reviews, threads or rules. */
+const requirementsUnread = (batchData: BatchPrData) =>
+  (batchData.transportUnavailable ?? []).some(({ field }) => field === "mergeRequirements");
+
+function withoutRequirements(mergeStatus: MergeStatusResult): MergeStatusResult {
+  const { mergeRequirements: _unread, ...rest } = mergeStatus;
+  return rest;
+}
+
 export function buildTerminalReport(
   prNumber: number,
   repo: { owner: string; name: string },
@@ -18,7 +27,7 @@ export function buildTerminalReport(
     repo: `${repo.owner}/${repo.name}`,
     status,
     baseBranch: batchData.baseRefName,
-    mergeStatus,
+    mergeStatus: requirementsUnread(batchData) ? withoutRequirements(mergeStatus) : mergeStatus,
     checks: {
       passing: [],
       failing: [],
