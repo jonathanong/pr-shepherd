@@ -5,7 +5,6 @@ import {
   type WorkflowSuiteSnapshot,
 } from "../checks/unreported-required.mts";
 import { loadBaseBehindBy, loadMergeTargetStatus } from "../github/merge-target-rules.mts";
-import { withTrunkRequiredContexts } from "../merge-status/required-check-requirements.mts";
 import type { BatchPrData, CheckRun, ShepherdReport } from "../types.mts";
 import type { RepoInfo } from "../github/client.mts";
 import type { CheckExecutionContext } from "./check-execution-context.mts";
@@ -85,17 +84,20 @@ export async function collectUnreportedRequired(
 
 /**
  * A fingerprint hit can keep a stale trunk `behindBy`. Refresh the trunk compare
- * and the required-context diff without refetching the whole batch.
+ * and the required-context diff without refetching the whole batch. Returns null
+ * when the trunk's required contexts changed: they decide how checks classify, so
+ * the cached report cannot be patched and the caller must check afresh.
  */
 export async function refreshCachedUnreported(
   report: ShepherdReport,
   repo: RepoInfo,
   context?: CheckExecutionContext,
   baseTipOid?: string,
-): Promise<ShepherdReport> {
+): Promise<ShepherdReport | null> {
   const stack = report.mergeStatus?.mergeRequirements?.stack;
   if (!report.headRefName) return report;
   if (!stack) return refreshBaseBehind(report, repo, baseTipOid);
+  const cached = report.mergeStatus.mergeRequirements?.requiredStatusChecks?.contexts ?? [];
   const target = await loadMergeTargetStatus(
     {
       owner: repo.owner,
@@ -104,19 +106,17 @@ export async function refreshCachedUnreported(
       baseRefName: report.baseBranch,
       headRefName: report.headRefName,
       ...(report.headSha && { headRefOid: report.headSha }),
-      localContexts: report.mergeStatus.mergeRequirements?.requiredStatusChecks?.contexts ?? [],
+      localContexts: cached,
       stack,
     },
     context,
   );
+  if (!sameContexts(cached, target.contexts)) return null;
   const unreported = unreportedRequiredContexts(
     target.contexts,
     reportedCheckNames(reportChecks(report)),
   );
-  const next: ShepherdReport = {
-    ...report,
-    mergeStatus: withTrunkRequiredContexts(report.mergeStatus, target.contexts),
-  };
+  const next: ShepherdReport = { ...report };
   if (unreported.length > 0) next.unreportedRequiredChecks = unreported;
   else delete next.unreportedRequiredChecks;
   const trunkBehindBy =
@@ -164,4 +164,9 @@ function reportChecks(report: ShepherdReport): { name: string }[] {
     ...(report.checks.ignored ?? []),
     ...(report.checks.supersededNames ?? []).map((name) => ({ name })),
   ];
+}
+
+function sameContexts(a: readonly string[], b: readonly string[]): boolean {
+  const set = new Set(a.map((c) => c.trim()));
+  return a.length === b.length && b.every((c) => set.has(c.trim()));
 }

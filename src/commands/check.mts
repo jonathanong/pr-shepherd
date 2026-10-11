@@ -122,12 +122,16 @@ async function runScopedCheck(
   const paginateApprovedReviews = config.iterate.minimizeApprovals;
   const includeReceiptSummary = (await context?.wantsReceiptSummary(prNumber, repo)) ?? false;
   // GraphQL transport: conditional REST change detectors can replay an idle report for free.
+  // Changed trunk rules invalidate a cached report; check again without reuse.
+  const refreshReused = async (cached: ShepherdReport, baseTipOid?: string) =>
+    (await refreshCachedUnreported(cached, repo, context, baseTipOid)) ??
+    runScopedCheck({ ...opts, fingerprintCache: false }, context, repo, prNumber, stateKey);
   const detectors =
     reuseFingerprint && !includeReceiptSummary
       ? await readWaitDetectors(prNumber, repo, stateKey, config)
       : undefined;
   if (detectors && "reused" in detectors)
-    return refreshCachedUnreported(detectors.reused, repo, context, detectors.baseTipOid);
+    return refreshReused(detectors.reused, detectors.baseTipOid);
   const reuse = reuseFingerprint
     ? await fingerprintReuser(prNumber, repo, stateKey, config)
     : undefined;
@@ -142,14 +146,14 @@ async function runScopedCheck(
   if (fetched.stackEvidence) context?.seedStack(prNumber, repo, fetched.stackEvidence);
   if ("reused" in fetched) {
     await recordWaitDetectors(stateKey, config, detectors, undefined);
-    return refreshCachedUnreported(fetched.reused, repo, context, fetched.baseTipOid);
+    return refreshReused(fetched.reused, fetched.baseTipOid);
   }
   const result = fetched;
   context?.setReceiptSummary(result.receiptSummary ?? null);
   const restSnapshot = result.data.transport === "rest" ? restSnapshotState() : undefined;
   if (reuseFingerprint) {
     const reused = await tryReuseRestSnapshotReport(stateKey, config, restSnapshot);
-    if (reused) return refreshCachedUnreported(reused, repo, context);
+    if (reused) return refreshReused(reused);
   }
   let batchData = result.data;
   const unknownRefresh = await refreshUnknownMergeability(prNumber, repo, batchData);
