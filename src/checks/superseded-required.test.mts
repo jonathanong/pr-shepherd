@@ -45,4 +45,20 @@ describe("cancelled required contexts (github/gh-stack#466)", () => {
     );
     expect(classified.find((c) => c.conclusion === "CANCELLED")?.category).toBe("superseded");
   });
+
+  it("keeps a required cancellation failing when the newer run lacks that context", () => {
+    const classified = classifyChecks(
+      [check({ runId: "100" }), check({ name: "deploy", conclusion: "SUCCESS", runId: "200" })],
+      { requiredContexts: ["web"] },
+    );
+    expect(classified.find((c) => c.conclusion === "CANCELLED")?.category).toBe("failing");
+  });
+
+  it("still supersedes that shape for a context that is not required", () => {
+    const classified = classifyChecks(
+      [check({ runId: "100" }), check({ name: "deploy", conclusion: "SUCCESS", runId: "200" })],
+      { requiredContexts: ["static"] },
+    );
+    expect(classified.find((c) => c.conclusion === "CANCELLED")?.category).toBe("superseded");
+  });
 });

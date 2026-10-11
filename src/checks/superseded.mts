@@ -42,6 +42,7 @@ function validTimes(check: CheckRun, requireOrdered = true): boolean {
  *
  * The lower-ID form never covers a required context: GitHub's required gate reads the
  * latest (highest-ID) run, so that cancellation still fails it (github/gh-stack#466).
+ * Neither does a newer run that lacks the context, for the same reason.
  */
 export function buildSupersededIndices(
   checks: CheckRun[],
@@ -64,13 +65,16 @@ export function buildSupersededIndices(
     const group = groupKeyOf(cancelled);
     const runId = runIds[index];
     if (group === undefined || runId === undefined) return;
+    const isRequired = required.has(cancelled.name.trim());
     if (maxRunIdByGroup.get(group)! > runId) {
-      superseded.add(index);
+      // A required context is covered only by a newer run of the same context.
+      if (!isRequired || hasNewerSameName(checks, runIds, cancelled, group, runId))
+        superseded.add(index);
       return;
     }
 
     if (
-      required.has(cancelled.name.trim()) ||
+      isRequired ||
       cancelled.status !== "COMPLETED" ||
       !cancelled.workflowId ||
       cancelled.event === null ||
@@ -97,4 +101,20 @@ export function buildSupersededIndices(
     if (covered) superseded.add(index);
   });
   return superseded;
+}
+
+function hasNewerSameName(
+  checks: CheckRun[],
+  runIds: (number | undefined)[],
+  cancelled: CheckRun,
+  group: string,
+  runId: number,
+): boolean {
+  return checks.some(
+    (check, index) =>
+      runIds[index] !== undefined &&
+      runIds[index] > runId &&
+      check.name.trim() === cancelled.name.trim() &&
+      groupKeyOf(check) === group,
+  );
 }
