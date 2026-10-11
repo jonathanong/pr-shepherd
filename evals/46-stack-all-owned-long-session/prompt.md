@@ -34,21 +34,21 @@ Shepherd https://github.com/owner/repo/pull/42 until it's ready for review.
 
 # PR #42 [FIX_CODE]
 
-**status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo`
+**status** `UNRESOLVED_COMMENTS`
 
 ## Review threads
 
-### [threadId=PRRT_active](https://github.com/owner/repo/pull/42#discussion_r1) — `src/index.ts:42` (@reviewer · User)
+### [threadId=PRRT_active](https://github.com/owner/repo/pull/42#discussion_r1) — `src/index.ts:42` (@reviewer)
 
 > Please rename this variable to be more descriptive.
 
 ## Instructions
 
-1. Fix each warranted item above.
-2. Commit and push any code changes.
-3. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
-4. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_active --message "$DISMISS_MESSAGE" --require-sha "$(git rev-parse HEAD)"`
-5. `[FIX_CODE]` is non-terminal. Rerun the same command now.
+1. Fix each warranted item.
+2. Commit and push any changes.
+3. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
+4. Set `$DISMISS_MESSAGE` to a one-line outcome; run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_active --message "$DISMISS_MESSAGE" --require-sha HEAD`
+5. Rerun this command now.
 
 ---
 
@@ -112,12 +112,12 @@ nextAction: shepherd
 
 ## Layers
 
-- [PR #441: Blocked receipt](https://github.com/owner/repo/pull/441) — shepherded · not mergeable (`merge-state`) · owned
-  - OPEN · position 1/3 · base `main`
-- [PR #442: Hooks receipt](https://github.com/owner/repo/pull/442) — shepherded · not mergeable (`merge-state`) · owned
-  - OPEN · position 2/3 · base `blocked`
-- [PR #443: Pending CI receipt](https://github.com/owner/repo/pull/443) — shepherded · not mergeable (`checks-in-progress`) · owned
-  - OPEN · position 3/3 · base `hooks` · 1 in progress
+- PR #441: Blocked receipt — shepherded · not mergeable (`merge-state`) · owned
+  - OPEN · base `main`
+- PR #442: Hooks receipt — shepherded · not mergeable (`merge-state`) · owned
+  - OPEN · base `blocked`
+- PR #443: Pending CI receipt — shepherded · not mergeable (`checks-in-progress`) · owned
+  - OPEN · base `hooks` · 1 in progress
 
 ## Instructions
 

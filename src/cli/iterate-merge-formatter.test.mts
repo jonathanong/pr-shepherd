@@ -109,10 +109,10 @@ describe("iterate merge formatting", () => {
 
     const queue = formatMergeAction("header", mergeResult("queue"));
     expect(queue).toContain("queue API fallback");
-    expect(queue).toContain("If the gh CLI says auto-merge is disabled");
+    expect(queue).toContain("If gh says auto-merge is disabled");
     expect(queue).toContain("Then iterate immediately");
 
-    expect(formatIterateResult(mergeResult("queue"))).toContain("## Merge command");
+    expect(formatIterateResult(mergeResult("queue"))).not.toContain("## Merge command");
     expect(projectIterateLean(mergeResult("queue"))).toMatchObject({
       merge: { mode: "queue" },
     });

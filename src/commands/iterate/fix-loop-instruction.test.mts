@@ -12,7 +12,7 @@ const resolveCommand = {
 describe("buildPushJournalSteps playbook fold", () => {
   it("folds commit, journal, and the playbook pointer into one step", () => {
     const text = buildPushJournalSteps("playbook", 42, true, true).join("\n");
-    expect(text).toContain("Commit and push any code changes.");
+    expect(text).toContain("Commit and push any changes.");
     expect(text).toContain("pr-shepherd apply journal 42 '- <decision>'");
     expect(text).toContain(`Playbook: "Fix-code loop".`);
     expect(text).toContain('CLI: `pr-shepherd playbook "Fix-code loop"`.');
@@ -27,12 +27,12 @@ describe("buildPushJournalSteps playbook fold", () => {
     expect(text).not.toContain("Commit and push");
     expect(text).not.toContain("Fix-code loop");
     expect(text).toContain("pr-shepherd apply journal 42 '- <decision>'");
-    expect(text).toContain("citing item URLs or review IDs");
+    expect(text).toContain("with URLs or IDs");
   });
 
   it("omits the journal clause when the journal step does not apply", () => {
     const text = buildPushJournalSteps("playbook", 42, true, false).join("\n");
-    expect(text).toContain("Commit and push any code changes.");
+    expect(text).toContain("Commit and push any changes.");
     expect(text).not.toContain("apply journal");
     expect(text).toContain('Playbook: "Fix-code loop".');
   });
@@ -86,24 +86,22 @@ describe("buildFixInstructions instruction style", () => {
   it("playbook style replaces the commit and journal steps with one pointer", () => {
     const text = call("playbook", true).join("\n");
     expect(text).toContain('Playbook: "Fix-code loop"');
-    expect(text).not.toContain("citing item URLs or review IDs");
+    expect(text).not.toContain("with URLs or IDs");
     expect(text).not.toContain("$HEAD_SHA");
-    expect(text).toContain('--require-sha "$(git rev-parse HEAD)"');
-    expect(text).toContain("`[FIX_CODE]` is non-terminal");
+    expect(text).toContain("--require-sha HEAD");
+    expect(text).toContain("Rerun this command now.");
   });
 
   it("playbook style omits the journal clause without update permission", () => {
     const text = call("playbook", false).join("\n");
-    expect(text).toContain("Commit and push any code changes.");
+    expect(text).toContain("Commit and push any changes.");
     expect(text).not.toContain("apply journal");
   });
 
   it("inline style keeps the full text", () => {
     const text = call("inline", true).join("\n");
     expect(text).not.toContain("Fix-code loop");
-    expect(text).toContain("Commit and push any code changes.");
-    expect(text).toContain(
-      "Journal substantial decisions or rejections, citing item URLs or review IDs",
-    );
+    expect(text).toContain("Commit and push any changes.");
+    expect(text).toContain("Journal key decisions or rejections with URLs or IDs");
   });
 });

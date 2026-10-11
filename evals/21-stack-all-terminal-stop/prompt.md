@@ -33,10 +33,10 @@ nextAction: cancel
 
 ## Layers
 
-- [PR #43: Stack base](https://github.com/owner/repo/pull/43)
-  - MERGED · position 1/2 · base `main`
-- [PR #44: Stack tip](https://github.com/owner/repo/pull/44)
-  - MERGED · position 2/2 · base `stack-base`
+- PR #43: Stack base
+  - MERGED · base `main`
+- PR #44: Stack tip
+  - MERGED · base `stack-base`
 
 ## Instructions
 

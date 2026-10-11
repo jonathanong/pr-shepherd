@@ -1,11 +1,12 @@
 import type { AgentCheck, ResolveCommand, Review } from "../../types.mts";
 import { playbookPointer } from "../playbook-pointer.mts";
 
-const FIX_CODE_CONTINUATION = "`[FIX_CODE]` is non-terminal. Rerun the same command now.";
+// The `[FIX_CODE]` heading and the skill already say the action is non-terminal.
+const FIX_CODE_CONTINUATION = "Rerun this command now.";
 
 /** The `[FIX_CODE]` recurrence step, whether plain or rewritten by the quota warning. */
 export function isFixCodeContinuation(step: string): boolean {
-  return /\[FIX_CODE\].*non-terminal/i.test(step);
+  return step === FIX_CODE_CONTINUATION || /\[FIX_CODE\].*non-terminal/i.test(step);
 }
 
 /** Build the stale-CR step for `## Changes-requested reviews`. Empty when no human CR is stale. */
@@ -75,7 +76,7 @@ export function buildResolveCommandInstruction(
   if (!resolveCommand.hasMutations) return [];
   if (resolveCommand.requiresDismissMessage) {
     return [
-      `Set \`$DISMISS_MESSAGE\` to one sentence on what changed and run, even if no code changed: \`${rendered}\``,
+      `Set \`$DISMISS_MESSAGE\` to a one-line outcome; run even if no code changed: \`${rendered}\``,
     ];
   }
   return [`Run, even if no code changed: \`${rendered}\``];

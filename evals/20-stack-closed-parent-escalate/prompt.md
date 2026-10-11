@@ -32,10 +32,10 @@ nextAction: escalate
 
 ## Layers
 
-- [PR #371: Closed foundation](https://github.com/owner/repo/pull/371)
-  - CLOSED · position 1/2 · base `main`
-- [PR #372: Open child](https://github.com/owner/repo/pull/372) — shepherded · mergeable
-  - OPEN · position 2/2 · base `foundation`
+- PR #371: Closed foundation
+  - CLOSED · base `main`
+- PR #372: Open child — shepherded · mergeable
+  - OPEN · base `foundation`
 
 ## Instructions
 

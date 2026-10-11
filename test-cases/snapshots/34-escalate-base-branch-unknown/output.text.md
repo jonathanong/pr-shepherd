@@ -18,7 +18,7 @@ Could not determine the PR's base branch (GraphQL batch returned an empty base b
 
 ## Pending review commands
 
-- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_base --message "$DISMISS_MESSAGE" --require-sha "$(git rev-parse HEAD)"`
+- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_base --message "$DISMISS_MESSAGE" --require-sha HEAD`
 
 ---
 

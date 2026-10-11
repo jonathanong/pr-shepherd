@@ -3,7 +3,7 @@ import { inlineCode } from "../util/markdown.mts";
 import { buildQuotaAwareContinuation } from "../quota-warning.mts";
 import { formatPrUrl } from "../pr-reference.mts";
 import { AUTO_MARK_READY_DISABLED_HOLD } from "../commands/stack-work.mts";
-import { buildPrShepherdCommand } from "./runner.mts";
+import { buildPrShepherdCommand, renderShellCommand } from "./runner.mts";
 import { eventWaitSteps } from "../commands/event-instructions.mts";
 import { playbookPointer } from "../commands/playbook-pointer.mts";
 
@@ -54,32 +54,34 @@ export function buildSimpleIterateInstructions(
         "The CLI marked the PR ready for review. Iterate immediately with the same options to continue.",
       ];
     case "merge": {
+      // The commands are inline, so no separate `## Merge command` section repeats them.
+      const command = inlineCode(renderShellCommand(result.merge.command.argv));
       if (result.merge.mode === "rest" && result.nextCheck)
         return [
-          "Run the `REST merge` command shown above exactly as printed; `enqueued` is not merged.",
+          `Run the REST merge command exactly as printed: ${command}. \`enqueued\` is not merged.`,
           ...eventWaitSteps(result.nextCheck),
         ];
       if (result.merge.mode === "rest")
         return [
-          "Run the `REST merge` command shown above exactly as printed. If its status is `pending`, rerun that same command at the configured polling cadence to resume the recorded request; `enqueued` is not merged.",
+          `Run the REST merge command exactly as printed: ${command}. If its status is \`pending\`, rerun that same command at the configured polling cadence to resume the recorded request; \`enqueued\` is not merged.`,
           "Then iterate with the same options until GitHub confirms the PR merged or needs work.",
         ];
       const instructions = [
-        `Run the \`${result.merge.mode === "queue" ? "merge queue" : "auto-merge"}\` command shown above exactly as printed.`,
+        `Run the ${result.merge.mode === "queue" ? "merge queue" : "auto-merge"} command exactly as printed: ${command}.`,
       ];
       if (result.merge.mode === "queue" && result.merge.queueApiFallbackCommand) {
         instructions.push(
-          `If the gh CLI says auto-merge is disabled instead of adding the PR to the queue, run the \`queue API fallback\` command shown above.`,
+          `If gh says auto-merge is disabled instead of adding the PR to the queue, run the queue API fallback: ${inlineCode(renderShellCommand(result.merge.queueApiFallbackCommand.argv))}.`,
         );
       } else if (result.merge.fallbackCommand) {
         instructions.push(
-          `Only if GitHub reports that auto-merge is unavailable, run the \`plain merge fallback\` command shown above.`,
+          `Only if GitHub reports that auto-merge is unavailable, run the plain merge fallback: ${inlineCode(renderShellCommand(result.merge.fallbackCommand.argv))}.`,
         );
       }
       instructions.push(
         result.quotaWarning
           ? buildQuotaAwareContinuation(result.quotaWarning, "After running the merge command.")
-          : "Then iterate immediately with the same options to monitor until the PR merges or needs work.",
+          : "Then iterate immediately with the same options until the PR merges or needs work.",
       );
       return instructions;
     }

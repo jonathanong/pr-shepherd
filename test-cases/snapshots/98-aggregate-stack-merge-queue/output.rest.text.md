@@ -6,15 +6,15 @@ nextAction: merge
 
 ## Layers
 
-- [PR #351: Queued foundation](https://github.com/owner/repo/pull/351) — shepherded · mergeable
-  - OPEN · position 1/2 · base `main`
+- PR #351: Queued foundation — shepherded · mergeable
+  - OPEN · base `main`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields
   - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
   - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
-- [PR #352: Queued child](https://github.com/owner/repo/pull/352) — shepherded · mergeable
-  - OPEN · position 2/2 · base `foundation`
+- PR #352: Queued child — shepherded · mergeable
+  - OPEN · base `foundation`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields

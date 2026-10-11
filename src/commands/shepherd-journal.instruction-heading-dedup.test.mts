@@ -68,8 +68,8 @@ describe("shepherd journal instruction helpers", () => {
     expect(text).toContain("pr-shepherd apply journal 42");
     expect(text).not.toContain("idempotent");
     // The citation convention is a short inline clause, not a separate playbook read.
-    expect(text).toContain("citing item URLs or review IDs");
-    expect(countMentions(text, "Journal substantial decisions")).toBe(1);
+    expect(text).toContain("with URLs or IDs");
+    expect(countMentions(text, "Journal key decisions")).toBe(1);
   });
   it("buildShepherdJournalInstruction remains de-duped when reused across multiple instruction blocks", () => {
     const first = buildShepherdJournalInstruction(42);
@@ -78,7 +78,7 @@ describe("shepherd journal instruction helpers", () => {
     // Each call emits one journal step — 2 total across two independent calls.
     // What this test guards is that reusing the function doesn't fabricate an extra
     // "## Shepherd Journal" markdown heading of its own.
-    expect(countMentions(merged, "Journal substantial decisions")).toBe(2);
+    expect(countMentions(merged, "Journal key decisions")).toBe(2);
     expect(merged).not.toContain(`## ${SHEPHERD_JOURNAL_SECTION}`);
     expect(first).not.toContain("`## Shepherd Journal` entry");
     expect(second).not.toContain("`## Shepherd Journal` entry");

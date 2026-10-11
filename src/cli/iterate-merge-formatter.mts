@@ -1,6 +1,5 @@
 import type { IterateDeferredWork, IterateResult, IterateResultMerge } from "../types.mts";
-import { renderMergeCommand } from "../commands/iterate/merge.mts";
-import { inlineCode, joinSections } from "../util/markdown.mts";
+import { joinSections } from "../util/markdown.mts";
 import { buildSimpleIterateInstructions, numberInstructions } from "./iterate-instructions.mts";
 
 /** One inline rollup line of the non-CI work held back while the PR sits in the merge queue. */
@@ -19,9 +18,27 @@ export function formatDeferredWorkLine(dw: IterateDeferredWork): string {
   return `**deferred (in merge queue)** ${parts.join(", ")}`;
 }
 
+/**
+ * True when `mergeQueue` adds nothing to the `Merge queue:` requirement line: it carries only
+ * `enabled`/`inQueue`, the queue is required (so enabled), and membership matches. Text and JSON
+ * both omit it then.
+ */
+export function isRedundantMergeQueue(result: IterateResult): boolean {
+  const queue = result.mergeQueue;
+  const req = result.mergeRequirements?.mergeQueue;
+  if (!queue || !req) return false;
+  return (
+    Object.keys(queue).every((k) => k === "enabled" || k === "inQueue") &&
+    queue.enabled &&
+    req.required &&
+    req.enabled === true &&
+    req.inQueue === queue.inQueue
+  );
+}
+
 export function appendMergeQueueHeader(lines: string[], result: IterateResult): void {
   const queue = result.mergeQueue;
-  if (!queue) return;
+  if (!queue || isRedundantMergeQueue(result)) return;
   const parts = [`enabled \`${queue.enabled}\``, `inQueue \`${queue.inQueue}\``];
   if (queue.entry) {
     parts.push(`state \`${queue.entry.state}\``, `position \`${queue.entry.position}\``);
@@ -57,22 +74,8 @@ export function appendMergeQueueHeader(lines: string[], result: IterateResult): 
 }
 
 export function formatMergeAction(header: string, result: IterateResultMerge): string {
-  const commandLines = [
-    `- ${result.merge.mode === "rest" ? "REST merge" : result.merge.mode === "queue" ? "merge queue" : "auto-merge"}: ${inlineCode(renderMergeCommand(result.merge.command))}`,
-  ];
-  if (result.merge.fallbackCommand) {
-    commandLines.push(
-      `- plain merge fallback: ${inlineCode(renderMergeCommand(result.merge.fallbackCommand))}`,
-    );
-  }
-  if (result.merge.queueApiFallbackCommand) {
-    commandLines.push(
-      `- queue API fallback: ${inlineCode(renderMergeCommand(result.merge.queueApiFallbackCommand))}`,
-    );
-  }
   return joinSections([
     header,
-    `## Merge command\n\n${commandLines.join("\n")}`,
     `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
   ]);
 }

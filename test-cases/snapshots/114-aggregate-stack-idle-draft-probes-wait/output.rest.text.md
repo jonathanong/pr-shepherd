@@ -5,15 +5,15 @@ nextAction: shepherd
 
 ## Layers
 
-- [PR #441: Draft with pending CI](https://github.com/owner/repo/pull/441) — not mergeable (`draft`) · owned
-  - OPEN · draft · position 1/2 · base `main`
+- PR #441: Draft with pending CI — not mergeable (`draft`) · owned
+  - OPEN · draft · base `main`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields
   - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
   - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
-- [PR #442: Upper draft](https://github.com/owner/repo/pull/442) — not mergeable (`draft`) · owned
-  - OPEN · draft · position 2/2 · base `draft-pending`
+- PR #442: Upper draft — not mergeable (`draft`) · owned
+  - OPEN · draft · base `draft-pending`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields

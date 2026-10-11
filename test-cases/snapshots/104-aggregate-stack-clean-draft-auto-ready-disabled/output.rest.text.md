@@ -5,8 +5,8 @@ nextAction: shepherd
 
 ## Layers
 
-- [PR #421: Clean draft](https://github.com/owner/repo/pull/421) — not mergeable (`draft`) · owned
-  - OPEN · draft · position 1/1 · base `main`
+- PR #421: Clean draft — not mergeable (`draft`) · owned
+  - OPEN · draft · base `main`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields

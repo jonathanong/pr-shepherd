@@ -56,7 +56,7 @@
 //      skipped the generated `apply review:` command entirely.
 //   3. Halting on a non-terminal action (MARK_READY, FIX_CODE) and handing back
 //      to the human.
-//   4. Treating `[rerun authorized]` as a recommendation, rerunning a real
+//   4. Treating a printed `rerun:` command as a recommendation, rerunning a real
 //      failure — and rerunning again after it reproduced identically.
 //
 // Two assumptions the corpus disproved, so nothing here tests them:

@@ -11,6 +11,7 @@ import { formatTransportEvidence } from "./transport-formatter.mts";
 import type { StackLayerView } from "./stack-layer-view.mts";
 import type { NextCheck } from "../types/next-check.mts";
 import { formatNextCheckLines } from "./next-check-format.mts";
+import { formatPrUrl } from "../pr-reference.mts";
 
 export interface StackOverview {
   transport?: "rest";
@@ -128,7 +129,7 @@ export function formatStackOverview(overview: StackOverview): string {
     "",
     "## Layers",
     "",
-    ...overview.prs.flatMap(formatLayerLines),
+    ...overview.prs.flatMap((layer, i) => formatLayerLines(layer, i, overview)),
     ...formatTransportEvidence(overview),
   ];
   if (overview.stackAncestry?.length) {
@@ -149,7 +150,9 @@ export function formatStackOverview(overview: StackOverview): string {
   return lines.join("\n");
 }
 
-function formatLayerLines(layer: StackLayerView): string[] {
+// `inOrder`: the list index shows the position; a row links only a URL the repo/number don't imply.
+function formatLayerLines(layer: StackLayerView, index: number, overview: StackOverview): string[] {
+  const inOrder = layer.position === index + 1 && layer.stackSize === overview.selection.stackSize;
   const facts = [
     layer.shepherded ? "shepherded" : undefined,
     layer.mergeable === undefined
@@ -167,7 +170,7 @@ function formatLayerLines(layer: StackLayerView): string[] {
     layer.requiresMergeQueue !== undefined
       ? `merge queue ${layer.requiresMergeQueue ? "required" : "not required"}`
       : undefined,
-    layer.position !== undefined && layer.stackSize !== undefined
+    !inOrder && layer.position !== undefined && layer.stackSize !== undefined
       ? `position ${layer.position}/${layer.stackSize}`
       : undefined,
     `base \`${layer.baseRefName}\``,
@@ -181,7 +184,7 @@ function formatLayerLines(layer: StackLayerView): string[] {
       : undefined,
   ].filter((detail): detail is string => detail !== undefined);
   return [
-    `- [PR #${layer.pr}: ${layer.title}](${layer.url})${facts.length > 0 ? ` — ${facts.join(" · ")}` : ""}`,
+    `- ${layer.url === formatPrUrl(overview.repo, layer.pr) ? `PR #${layer.pr}: ${layer.title}` : `[PR #${layer.pr}: ${layer.title}](${layer.url})`}${facts.length > 0 ? ` — ${facts.join(" · ")}` : ""}`,
     `  - ${details.join(" · ")}`,
     ...(layer.transport ? [`  - transport \`${layer.transport}\``] : []),
     ...(layer.transportUnavailable ?? []).map(

@@ -117,7 +117,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
       expect(result.fix.checks).toHaveLength(0);
       expect(result.cancelled).toHaveLength(0);
       const joined = result.fix.instructions.join("\n");
-      expect(joined).toContain("`[FIX_CODE]` is non-terminal");
+      expect(joined).toContain("Rerun this command now.");
       expect(joined).not.toContain("## Cancelled runs");
     }
   });

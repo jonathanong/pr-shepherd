@@ -27,16 +27,16 @@ import { buildPushJournalSteps } from "./fix-loop-instruction.mts";
 import type { InstructionStyle } from "../../config/load.mts";
 
 /**
- * Render a resolve command as a shell snippet. Appends `--require-sha "$(git rev-parse HEAD)"`
- * when set: run after the push step, the local HEAD is the pushed PR head, and `apply review`
- * rejects the mutations if it is not. The caller's shell runs that read-only git command.
+ * Render a resolve command as a shell snippet. Appends `--require-sha HEAD` when set: run after
+ * the push step, the local HEAD is the pushed PR head, and `apply review` rejects the mutations
+ * if it is not. `apply review` reads that HEAD itself with a read-only `git rev-parse HEAD`.
  */
 export function renderResolveCommand(rc: ResolveCommand): string {
   const command = renderShellCommand(rc.argv);
   return rc.requiresHeadSha ? `${command} ${REQUIRE_HEAD_SHA}` : command;
 }
 
-const REQUIRE_HEAD_SHA = `--require-sha "$(git rev-parse HEAD)"`;
+const REQUIRE_HEAD_SHA = "--require-sha HEAD";
 
 export function buildFixInstructions(
   threads: AgentThread[],
@@ -88,7 +88,7 @@ export function buildFixInstructions(
     actionableComments.length > 0;
 
   // Start with interpretation. The agent decides what raw feedback warrants a code change.
-  if (hasNonConflictHints) instructions.push("Fix each warranted item above.");
+  if (hasNonConflictHints) instructions.push("Fix each warranted item.");
   // A conflicting native stack layer follows the printed gh-stack route, so it omits the hint.
   const branchUpdateHint = buildBehindBaseHintInstruction(baseBranch, behindBaseHint, {
     isBehind,

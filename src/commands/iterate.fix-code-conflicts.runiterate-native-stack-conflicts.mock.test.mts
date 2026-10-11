@@ -77,7 +77,7 @@ describe("runIterate — fix_code (native stack merge conflicts)", () => {
     expect(instructions).toContain(
       "Commit any remaining changes on the PR head branch and push the rewritten stack with `gh stack push`.",
     );
-    expect(instructions.at(-1)).toBe("`[FIX_CODE]` is non-terminal. Rerun the same command now.");
+    expect(instructions.at(-1)).toBe("Rerun this command now.");
     const joined = instructions.join("\n");
     expect(joined).not.toContain("check out the parent stack branch `main`");
     expect(joined).not.toContain("Resolve them before committing.");
@@ -125,6 +125,6 @@ describe("runIterate — fix_code (native stack merge conflicts)", () => {
     expect(joined.match(/gh stack rebase --upstack --no-trunk/g)).toHaveLength(1);
     expect(joined).not.toContain("records base `feature-parent` at `parent-old`");
     expect(joined).toContain("push the rewritten stack with `gh stack push`");
-    expect(instructions.at(-1)).toMatch(/rerun the same command now/i);
+    expect(instructions.at(-1)).toMatch(/rerun this command now/i);
   });
 });

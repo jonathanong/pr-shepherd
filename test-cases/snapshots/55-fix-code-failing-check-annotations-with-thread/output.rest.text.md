@@ -1,6 +1,6 @@
 # PR #42 [FIX_CODE]
 
-**status** `FAILING` · **repo** `owner/repo`
+**status** `FAILING`
 **transport** `rest`
 
 ## Unavailable transport fields
@@ -12,9 +12,9 @@
 
 ## Review threads
 
-### [threadId=rest-thread-55](https://github.com/owner/repo/pull/42#discussion_r55) — `src/util/parse.ts:18` (@reviewer · User)
+### [threadId=rest-thread-55](https://github.com/owner/repo/pull/42#discussion_r55) — `src/util/parse.ts:18` (@reviewer)
 
-#### [commentId=PRRC_55](https://github.com/owner/repo/pull/42#discussion_r55) (@reviewer · User)
+#### [commentId=PRRC_55](https://github.com/owner/repo/pull/42#discussion_r55) (@reviewer)
 
 > Same edge case the analyzer flagged — please handle empty input.
 
@@ -32,10 +32,10 @@
 
 ## Instructions
 
-1. Fix each warranted item above.
+1. Fix each warranted item.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
 3. Inspect every referenced range under `## Check annotations` and apply any warranted change.
-4. Commit and push any code changes.
-5. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
-6. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-55 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha "$(git rev-parse HEAD)"`
-7. `[FIX_CODE]` is non-terminal. Rerun the same command now.
+4. Commit and push any changes.
+5. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
+6. Set `$DISMISS_MESSAGE` to a one-line outcome; run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-55 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha HEAD`
+7. Rerun this command now.

@@ -5,22 +5,22 @@ nextAction: shepherd
 
 ## Layers
 
-- [PR #401: Human handoff](https://github.com/owner/repo/pull/401) — not mergeable (`draft`)
-  - OPEN · draft · position 1/3 · base `main`
+- PR #401: Human handoff — not mergeable (`draft`)
+  - OPEN · draft · base `main`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields
   - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
   - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
-- [PR #402: Independent review work](https://github.com/owner/repo/pull/402) — mergeable · owned
-  - OPEN · position 2/3 · base `foundation`
+- PR #402: Independent review work — mergeable · owned
+  - OPEN · base `foundation`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields
   - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
   - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
-- [PR #403: Pending CI](https://github.com/owner/repo/pull/403) — not mergeable (`checks-in-progress`) · owned
-  - OPEN · position 3/3 · base `review-work` · 1 in progress
+- PR #403: Pending CI — not mergeable (`checks-in-progress`) · owned
+  - OPEN · base `review-work` · 1 in progress
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields

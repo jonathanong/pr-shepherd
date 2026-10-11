@@ -1,6 +1,6 @@
 # PR #42 [FIX_CODE]
 
-**status** `READY` · **repo** `owner/repo`
+**status** `READY`
 **summary** 1 passing
 **transport** `rest`
 

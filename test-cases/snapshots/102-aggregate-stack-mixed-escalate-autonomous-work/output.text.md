@@ -5,12 +5,12 @@ nextAction: shepherd
 
 ## Layers
 
-- [PR #401: Human handoff](https://github.com/owner/repo/pull/401) — not mergeable (`mark-ready-authorization-required`)
-  - OPEN · draft · position 1/3 · base `main`
-- [PR #402: Independent review work](https://github.com/owner/repo/pull/402) — mergeable · owned
-  - OPEN · position 2/3 · base `foundation`
-- [PR #403: Pending CI](https://github.com/owner/repo/pull/403) — not mergeable (`checks-in-progress`) · owned
-  - OPEN · position 3/3 · base `review-work` · 1 in progress
+- PR #401: Human handoff — not mergeable (`mark-ready-authorization-required`)
+  - OPEN · draft · base `main`
+- PR #402: Independent review work — mergeable · owned
+  - OPEN · base `foundation`
+- PR #403: Pending CI — not mergeable (`checks-in-progress`) · owned
+  - OPEN · base `review-work` · 1 in progress
 
 ## Instructions
 

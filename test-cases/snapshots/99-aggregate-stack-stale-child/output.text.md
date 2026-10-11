@@ -5,10 +5,10 @@ nextAction: shepherd
 
 ## Layers
 
-- [PR #361: Verified foundation](https://github.com/owner/repo/pull/361) — shepherded · mergeable
-  - OPEN · position 1/2 · base `main`
-- [PR #362: Stale child](https://github.com/owner/repo/pull/362) — shepherded · not mergeable (`stale-ancestry`) · owned
-  - OPEN · position 2/2 · base `foundation`
+- PR #361: Verified foundation — shepherded · mergeable
+  - OPEN · base `main`
+- PR #362: Stale child — shepherded · not mergeable (`stale-ancestry`) · owned
+  - OPEN · base `foundation`
 
 ## Stack ancestry
 

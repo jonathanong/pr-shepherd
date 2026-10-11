@@ -22,10 +22,10 @@ export function warnPrrcThreadIds(ids: string[]): string[] {
 }
 
 export function validateRequireSha(sha: string | undefined): boolean {
-  if (sha === undefined) return true;
+  if (sha === undefined || sha === "HEAD") return true;
   if (/^[0-9a-f]{40}$/.test(sha)) return true;
   process.stderr.write(
-    `pr-shepherd: apply review: --require-sha must be a full 40-character lowercase hex SHA, got "${sha}". Short SHAs will never match GitHub's headRefOid. Use $(git rev-parse HEAD) to get the full SHA.\n`,
+    `pr-shepherd: apply review: --require-sha must be HEAD or a full 40-character lowercase hex SHA, got "${sha}". Short SHAs will never match GitHub's headRefOid.\n`,
   );
   process.exitCode = EXIT.DATAERR;
   return false;

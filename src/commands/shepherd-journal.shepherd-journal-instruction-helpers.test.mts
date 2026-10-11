@@ -17,7 +17,7 @@ describe("shepherd journal instruction helpers", () => {
     const text = buildShepherdJournalInstruction(42);
 
     expect(text).toBe(
-      "Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal 42 '- <decision>'`",
+      "Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal 42 '- <decision>'`",
     );
     expect(text).not.toContain("idempotent");
     expect(text).not.toContain(SHEPHERD_JOURNAL_SECTION);
@@ -83,9 +83,9 @@ describe("shepherd journal instruction helpers", () => {
     expect(text).not.toContain("idempotent");
     // Citation conventions (cite item URLs or review IDs) stay inline: a separate playbook
     // read would cost more than the clause.
-    expect(text).toContain("citing item URLs or review IDs");
+    expect(text).toContain("with URLs or IDs");
     expect(text).toContain(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
-    expect(countMentions(text, "Journal substantial decisions")).toBe(1);
+    expect(countMentions(text, "Journal key decisions")).toBe(1);
     expect(text).not.toContain("`## Shepherd Journal` entry");
   });
   it("omits Shepherd Journal recommendations when update permission is not established", () => {

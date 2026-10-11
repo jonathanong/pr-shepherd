@@ -32,10 +32,10 @@ nextAction: shepherd
 
 ## Layers
 
-- [PR #311: Conflicting foundation](https://github.com/owner/repo/pull/311) — not mergeable (`conflicting`) · owned
-  - OPEN · position 1/2 · base `main`
-- [PR #312: Verified child](https://github.com/owner/repo/pull/312) — shepherded · mergeable
-  - OPEN · position 2/2 · base `foundation`
+- PR #311: Conflicting foundation — not mergeable (`conflicting`) · owned
+  - OPEN · base `main`
+- PR #312: Verified child — shepherded · mergeable
+  - OPEN · base `foundation`
 
 ## Instructions
 

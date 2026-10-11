@@ -4,6 +4,7 @@ import { adaptIterateLog, buildSimpleIterateInstructions } from "./iterate-instr
 import { projectRuleAutoResolve } from "../commands/rule-auto-resolve-format.mts";
 import { projectMergeRequirements } from "../merge-status/requirements-format.mts";
 import { branchSegmentShowsBase } from "./iterate-branch-segment.mts";
+import { isRedundantMergeQueue } from "./iterate-merge-formatter.mts";
 interface IterateProjectionOptions {
   readyDelaySuffix?: string;
 }
@@ -81,7 +82,7 @@ export function projectIterateLean(
     }),
     ...(result.branchProtection !== null && { branchProtection: result.branchProtection }),
     ...(mergeRequirements && { mergeRequirements }),
-    ...(result.mergeQueue && { mergeQueue: result.mergeQueue }),
+    ...(result.mergeQueue && !isRedundantMergeQueue(result) && { mergeQueue: result.mergeQueue }),
     ...(hasActivity && {
       activity: {
         commitCount: activity.commitCount,

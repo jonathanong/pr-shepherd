@@ -80,6 +80,30 @@ describe("main — resolve", () => {
     );
   });
 
+  it("resolves --require-sha HEAD to this checkout's commit before mutating", async () => {
+    mockRunResolveMutate.mockResolvedValue({
+      repliedThreads: [],
+      resolvedThreads: ["t-1"],
+      minimizedComments: [],
+      dismissedReviews: [],
+      errors: [],
+    });
+    await main([
+      "node",
+      "shepherd",
+      "apply",
+      "review",
+      "42",
+      "--resolve-thread-ids",
+      "t-1",
+      "--require-sha",
+      "HEAD",
+    ]);
+    expect(mockRunResolveMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ requireSha: expect.stringMatching(/^[0-9a-f]{40}$/) }),
+    );
+  });
+
   it("calls runResolveMutate when --resolve-thread-ids is given", async () => {
     mockRunResolveMutate.mockResolvedValue({
       repliedThreads: [],
@@ -126,11 +150,11 @@ describe("main — resolve", () => {
     await main(["node", "shepherd", "resolve", "42", "--minimize-comment-ids", "c-1,c-2,c-3,c-4"]);
 
     const out = getStdout();
-    expect(out).toContain("Minimized comments (2): c-1, c-2");
+    expect(out).toContain("Minimized comments: c-1, c-2");
     expect(out).toContain("Stopped: GitHub rate limit hit");
     expect(out).toContain("retry after 60s");
     expect(out).toContain("reset at 2023-11-14T22:13:20.000Z");
-    expect(out).toContain("Not minimized due to rate limit (2): c-3, c-4");
+    expect(out).toContain("Not minimized due to rate limit: c-3, c-4");
     expect(out).not.toContain("Errors:");
   });
   it("formatMutateResult renders rate-limit stop without optional limit details", async () => {

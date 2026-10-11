@@ -6,15 +6,15 @@ nextAction: merge
 
 ## Layers
 
-- [PR #341: Verified foundation](https://github.com/owner/repo/pull/341) — shepherded · mergeable
-  - OPEN · merge queue required · position 1/2 · base `main`
+- PR #341: Verified foundation — shepherded · mergeable
+  - OPEN · merge queue required · base `main`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields
   - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
   - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
-- [PR #342: Verified child](https://github.com/owner/repo/pull/342) — shepherded · mergeable
-  - OPEN · merge queue required · position 2/2 · base `foundation`
+- PR #342: Verified child — shepherded · mergeable
+  - OPEN · merge queue required · base `foundation`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields

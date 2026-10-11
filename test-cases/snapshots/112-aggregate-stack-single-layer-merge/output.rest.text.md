@@ -6,8 +6,8 @@ nextAction: merge
 
 ## Layers
 
-- [PR #501: Verified single layer](https://github.com/owner/repo/pull/501) — shepherded · mergeable
-  - OPEN · position 1/1 · base `main`
+- PR #501: Verified single layer — shepherded · mergeable
+  - OPEN · base `main`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields

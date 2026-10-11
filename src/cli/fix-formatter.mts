@@ -111,9 +111,8 @@ export function formatFixCodeResult(
       const scopeTag = ch.scope
         ? ` [scope: ${ch.scope}${ch.commitOid ? `, commit: ${ch.commitOid}` : ""}]`
         : "";
-      const rerunTag = ch.rerunCommand ? " [rerun authorized]" : "";
       const lines = [
-        `- ${locator} — \`${workflowPrefix}${jobLabel}\`${conclusionTag}${attemptTag}${scopeTag}${rerunTag}`,
+        `- ${locator} — \`${workflowPrefix}${jobLabel}\`${conclusionTag}${attemptTag}${scopeTag}`,
       ];
       if (ch.conclusion !== "CANCELLED") {
         if (ch.failedStep) lines.push(`  > ${ch.failedStep}`);

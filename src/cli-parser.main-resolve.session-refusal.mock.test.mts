@@ -55,9 +55,9 @@ describe("apply review session refusals", () => {
           unrepliedThreads: ["thread-2"],
         });
       } else {
-        expect(out).toContain("Replied to threads (1): thread-1");
+        expect(out).toContain("Replied to threads: thread-1");
         expect(out).toContain("Stopped: GitHub session access refused");
-        expect(out).toContain("Not replied due to session access (1): thread-2");
+        expect(out).toContain("Not replied due to session access: thread-2");
         expect(out).toContain("Retry only the pending IDs listed above.");
       }
     },

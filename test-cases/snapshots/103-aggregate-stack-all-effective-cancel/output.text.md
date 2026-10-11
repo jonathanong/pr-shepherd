@@ -6,12 +6,12 @@ nextAction: cancel
 
 ## Layers
 
-- [PR #411: Verified base](https://github.com/owner/repo/pull/411) — shepherded · mergeable
-  - OPEN · position 1/3 · base `main`
-- [PR #412: Verified middle](https://github.com/owner/repo/pull/412) — shepherded · mergeable
-  - OPEN · position 2/3 · base `base`
-- [PR #413: Verified tip](https://github.com/owner/repo/pull/413) — shepherded · mergeable
-  - OPEN · position 3/3 · base `middle`
+- PR #411: Verified base — shepherded · mergeable
+  - OPEN · base `main`
+- PR #412: Verified middle — shepherded · mergeable
+  - OPEN · base `base`
+- PR #413: Verified tip — shepherded · mergeable
+  - OPEN · base `middle`
 
 ## Instructions
 

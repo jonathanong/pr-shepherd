@@ -32,16 +32,16 @@ nextAction: merge
 
 ## Layers
 
-- [PR #507: docs: clarify service account credential rotation](https://github.com/jonathanong/auto-harness/pull/507) — shepherded
-  - MERGED · position 1/5 · base `main`
-- [PR #508: feat(host): mint per-session GitHub App tokens](https://github.com/jonathanong/auto-harness/pull/508)
-  - MERGED · position 2/5 · base `main`
-- [PR #510: [codex] add verified custom webhook ingress](https://github.com/jonathanong/auto-harness/pull/510) — shepherded · mergeable
-  - OPEN · position 3/5 · base `main`
-- [PR #511: [codex] add GitHub trigger and pull-ref foundation](https://github.com/jonathanong/auto-harness/pull/511) — shepherded · mergeable
-  - OPEN · position 4/5 · base `codex/webhook-platform`
-- [PR #518: [codex] add GitHub App comment ingress](https://github.com/jonathanong/auto-harness/pull/518) — not mergeable (`stale-ancestry`) · owned
-  - OPEN · position 5/5 · base `codex/github-ingress-foundation`
+- PR #507: docs: clarify service account credential rotation — shepherded
+  - MERGED · base `main`
+- PR #508: feat(host): mint per-session GitHub App tokens
+  - MERGED · base `main`
+- PR #510: [codex] add verified custom webhook ingress — shepherded · mergeable
+  - OPEN · base `main`
+- PR #511: [codex] add GitHub trigger and pull-ref foundation — shepherded · mergeable
+  - OPEN · base `codex/webhook-platform`
+- PR #518: [codex] add GitHub App comment ingress — not mergeable (`stale-ancestry`) · owned
+  - OPEN · base `codex/github-ingress-foundation`
 
 ## Stack ancestry
 

@@ -72,11 +72,11 @@ describe("main — iterate text format (fix_code and checks)", () => {
     );
     expect(out).toContain("> first full body\n> second line");
     expect(out).toContain(
-      "#### [commentId=PRRC_2](https://github.com/owner/repo/pull/1#discussion_r2) (@maintainer · User · OWNER)",
+      "#### [commentId=PRRC_2](https://github.com/owner/repo/pull/1#discussion_r2) (@maintainer · OWNER)",
     );
     expect(out).toContain("> reply body");
     expect(out).toContain(
-      "#### [commentId=PRRC_3](https://github.com/owner/repo/pull/1#discussion_r3) (@drive-by · User · NONE)",
+      "#### [commentId=PRRC_3](https://github.com/owner/repo/pull/1#discussion_r3) (@drive-by · NONE)",
     );
     expect(out).toContain("> outsider reply");
     expect(out).toContain(

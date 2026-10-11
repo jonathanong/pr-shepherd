@@ -1,6 +1,6 @@
 # PR #42 [FIX_CODE]
 
-**status** `PENDING` · **merge** `BLOCKED` · **repo** `owner/repo`
+**status** `PENDING` · **merge** `BLOCKED`
 **transport** `rest`
 
 ## Unavailable transport fields
@@ -23,8 +23,8 @@
 
 ## Instructions
 
-1. Fix each warranted item above.
-2. Commit and push any code changes.
-3. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
-4. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --message "$DISMISS_MESSAGE" --dismiss-review-ids PRR_bot_cr --require-sha "$(git rev-parse HEAD)"`
-5. `[FIX_CODE]` is non-terminal. Rerun the same command now.
+1. Fix each warranted item.
+2. Commit and push any changes.
+3. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
+4. Set `$DISMISS_MESSAGE` to a one-line outcome; run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --message "$DISMISS_MESSAGE" --dismiss-review-ids PRR_bot_cr --require-sha HEAD`
+5. Rerun this command now.

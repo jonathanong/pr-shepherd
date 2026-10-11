@@ -33,15 +33,15 @@ describe("formatMutateResult", () => {
       }),
     );
 
-    expect(output).toContain("Replied to threads (1): thread-1");
-    expect(output).toContain("Resolved threads (1): thread-2");
-    expect(output).toContain("Minimized comments (1): comment-1");
-    expect(output).toContain("Dismissed reviews (1): review-1");
-    expect(output).toContain("Skipped dismissals (1): review-2");
-    expect(output).toContain("Skipped human thread resolves (1): thread-3");
-    expect(output).toContain("Skipped human minimizes (1): comment-2");
-    expect(output).toContain("Skipped human review dismissals (1): review-3");
-    expect(output).toContain("Skipped non-human/unknown thread replies (1): thread-4");
+    expect(output).toContain("Replied to threads: thread-1");
+    expect(output).toContain("Resolved threads: thread-2");
+    expect(output).toContain("Minimized comments: comment-1");
+    expect(output).toContain("Dismissed reviews: review-1");
+    expect(output).toContain("Skipped dismissals: review-2");
+    expect(output).toContain("Skipped human thread resolves: thread-3");
+    expect(output).toContain("Skipped human minimizes: comment-2");
+    expect(output).toContain("Skipped human review dismissals: review-3");
+    expect(output).toContain("Skipped non-human/unknown thread replies: thread-4");
   });
 
   it("renders rate limit details, pending ids, and non-rate-limit errors", () => {
@@ -65,10 +65,10 @@ describe("formatMutateResult", () => {
     expect(output).toContain(
       "Stopped: GitHub rate limit hit — secondary limit (retry after 60s, remaining 0/5000, reset at 2023-11-14T22:13:20.000Z)",
     );
-    expect(output).toContain("Not replied due to rate limit (1): thread-1");
-    expect(output).toContain("Not resolved due to rate limit (1): thread-2");
-    expect(output).toContain("Not minimized due to rate limit (1): comment-1");
-    expect(output).toContain("Not dismissed due to rate limit (1): review-1");
+    expect(output).toContain("Not replied due to rate limit: thread-1");
+    expect(output).toContain("Not resolved due to rate limit: thread-2");
+    expect(output).toContain("Not minimized due to rate limit: comment-1");
+    expect(output).toContain("Not dismissed due to rate limit: review-1");
     expect(output).toContain("Errors:\n  thread-1: reply returned null");
     expect(output).not.toContain("rate limit: secondary limit");
   });
@@ -97,10 +97,10 @@ describe("formatMutateResult", () => {
       }),
     );
 
-    expect(output).toContain("Replied to threads (1): thread-1");
+    expect(output).toContain("Replied to threads: thread-1");
     expect(output).toContain("Stopped: GitHub session access refused — proxy refusal details");
-    expect(output).toContain("Not replied due to session access (1): thread-2");
-    expect(output).toContain("Not resolved due to session access (1): thread-3");
+    expect(output).toContain("Not replied due to session access: thread-2");
+    expect(output).toContain("Not resolved due to session access: thread-3");
     expect(output).toContain(
       "## Instructions\n\n1. Restore GitHub access for this session using the proxy instructions above.\n2. Retry only the pending IDs listed above.",
     );

@@ -3,9 +3,7 @@ import { renderAuthor, renderThreadBullet } from "./list-formatters.mts";
 
 describe("viewer-authored formatting", () => {
   it("renders the viewer-authored marker alongside author metadata", () => {
-    expect(renderAuthor("alice", "User", "MEMBER", true)).toBe(
-      "@alice · User · MEMBER · viewer-authored",
-    );
+    expect(renderAuthor("alice", "User", "MEMBER", true)).toBe("@alice · MEMBER · viewer-authored");
   });
 
   it("renders viewer-authored markers on thread and transcript entries", () => {
@@ -30,7 +28,7 @@ describe("viewer-authored formatting", () => {
       ],
     });
 
-    expect(output).toContain("@alice · User · viewer-authored");
+    expect(output).toContain("@alice · viewer-authored");
     expect(output).toContain("`commentId=c-viewer`");
   });
 });

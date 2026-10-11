@@ -46,7 +46,7 @@ describe("renderResolveCommand", () => {
     // The SHA gate reads HEAD itself, so it needs no substitution.
     expect(joined).toContain('"$DISMISS_MESSAGE"');
     expect(joined).not.toContain("$HEAD_SHA");
-    expect(joined.endsWith('--require-sha "$(git rev-parse HEAD)"')).toBe(true);
+    expect(joined.endsWith("--require-sha HEAD")).toBe(true);
   });
 
   it("never emits a $HEAD_SHA placeholder (regardless of requiresHeadSha)", () => {

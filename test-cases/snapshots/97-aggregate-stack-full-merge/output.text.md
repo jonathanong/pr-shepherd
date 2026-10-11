@@ -6,10 +6,10 @@ nextAction: merge
 
 ## Layers
 
-- [PR #341: Verified foundation](https://github.com/owner/repo/pull/341) — shepherded · mergeable
-  - OPEN · position 1/2 · base `main`
-- [PR #342: Verified child](https://github.com/owner/repo/pull/342) — shepherded · mergeable
-  - OPEN · position 2/2 · base `foundation`
+- PR #341: Verified foundation — shepherded · mergeable
+  - OPEN · base `main`
+- PR #342: Verified child — shepherded · mergeable
+  - OPEN · base `foundation`
 
 ## Instructions
 

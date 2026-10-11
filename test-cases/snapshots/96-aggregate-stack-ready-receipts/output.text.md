@@ -6,10 +6,10 @@ nextAction: cancel
 
 ## Layers
 
-- [PR #331: Verified foundation](https://github.com/owner/repo/pull/331) — shepherded · mergeable
-  - OPEN · position 1/2 · base `main`
-- [PR #332: Verified child](https://github.com/owner/repo/pull/332) — shepherded · mergeable
-  - OPEN · position 2/2 · base `foundation`
+- PR #331: Verified foundation — shepherded · mergeable
+  - OPEN · base `main`
+- PR #332: Verified child — shepherded · mergeable
+  - OPEN · base `foundation`
 
 ## Instructions
 

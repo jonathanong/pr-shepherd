@@ -5,8 +5,8 @@ nextAction: wait
 
 ## Layers
 
-- [PR #461: Draft awaiting review](https://github.com/owner/repo/pull/461) — not mergeable (`draft`) · owned
-  - OPEN · draft · position 1/1 · base `main`
+- PR #461: Draft awaiting review — not mergeable (`draft`) · owned
+  - OPEN · draft · base `main`
 
 ## Instructions
 

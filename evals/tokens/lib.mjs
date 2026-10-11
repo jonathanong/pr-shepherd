@@ -517,10 +517,32 @@ export const mcpOversizeError = (call) =>
   `Error: MCP tool "${call.cmd.split(" ")[0]}" response (${tokens(call.out)} tokens) exceeds maximum allowed tokens (${MODEL.mcpOutputCapTokens}). Please use pagination, filtering, or limit parameters to reduce the response size.`;
 
 /**
+ * Whether a call's result is pr-shepherd's own output: a pr-shepherd command,
+ * or a commandless tail or wake notification of one. Mirrors the CLI matcher
+ * the real-session fit uses for its pr-shepherd sample (sessions.mjs). A gh
+ * call, a skill load or a playbook Read in the shepherd arm is not.
+ */
+export const isShepherdOutput = (call) =>
+  !call.cmd || /^(?:npx (?:--prefix \S+ )?)?pr-shepherd(?=\s)/.test(call.cmd);
+
+/**
+ * Characters per token for a call's result: `MODEL.cliCharsPerToken`, when a
+ * sensitivity run sets it, for pr-shepherd's own output; the model's ratio
+ * for everything else.
+ */
+const resultCharsPerToken = (call) =>
+  MODEL.cliCharsPerToken != null && isShepherdOutput(call)
+    ? MODEL.cliCharsPerToken
+    : MODEL.charsPerToken;
+
+/**
  * Tokens of a call's result. A `schema` result (a ToolSearch load) is tool
  * schema text, counted at the input ratio like the eager toolset.
  */
-export const outTokens = (call) => (call.schema ? inputTokens(call.out) : tokens(call.out));
+export const outTokens = (call) =>
+  call.schema
+    ? inputTokens(call.out)
+    : Math.ceil(call.out.length / resultCharsPerToken(call));
 
 /** Apply the host's per-call output cap: truncate Bash, reject MCP. */
 function capped(call) {
@@ -534,7 +556,7 @@ function capped(call) {
       truncated: rejected,
     };
   }
-  const cap = Math.ceil(MODEL.bashOutputCapChars / MODEL.charsPerToken);
+  const cap = Math.ceil(MODEL.bashOutputCapChars / resultCharsPerToken(call));
   return { cmdTokens, outTokens: Math.min(raw, cap), truncated: raw > cap };
 }
 

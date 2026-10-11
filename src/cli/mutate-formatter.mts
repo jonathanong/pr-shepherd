@@ -1,7 +1,7 @@
 import type { ResolveResult } from "../comments/resolve.mts";
 
 function pushIds(lines: string[], label: string, ids: string[] | undefined): void {
-  if (ids?.length) lines.push(`${label} (${ids.length}): ${ids.join(", ")}`);
+  if (ids?.length) lines.push(`${label}: ${ids.join(", ")}`);
 }
 
 function formatRateLimit(result: ResolveResult): string | null {

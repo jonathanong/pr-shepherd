@@ -32,7 +32,7 @@ The same thread(s) remain unresolved after their pending review commands were re
 
 ## Pending review commands
 
-- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-10 --message "$DISMISS_MESSAGE" --adopt-existing-replies --resolve-thread-ids rest-thread-10 --require-sha "$(git rev-parse HEAD)"`
+- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-10 --message "$DISMISS_MESSAGE" --adopt-existing-replies --resolve-thread-ids rest-thread-10 --require-sha HEAD`
 
 ---
 

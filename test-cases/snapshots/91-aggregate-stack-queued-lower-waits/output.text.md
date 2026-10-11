@@ -6,10 +6,10 @@ nextAction: wait
 
 ## Layers
 
-- [PR #201: Base layer queued](https://github.com/owner/repo/pull/201) — shepherded · mergeable
-  - OPEN · in merge queue · position 1/2 · base `main`
-- [PR #202: Ready upper layer](https://github.com/owner/repo/pull/202) — shepherded · mergeable
-  - OPEN · position 2/2 · base `feature-base`
+- PR #201: Base layer queued — shepherded · mergeable
+  - OPEN · in merge queue · base `main`
+- PR #202: Ready upper layer — shepherded · mergeable
+  - OPEN · base `feature-base`
 
 ## Instructions
 
