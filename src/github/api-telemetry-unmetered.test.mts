@@ -55,9 +55,14 @@ describe("REST requests without rate-limit headers", () => {
         authSource: "GH_TOKEN",
         rateLimit: unnamed,
       });
+      expect(summarizeApiTelemetry()).not.toHaveProperty("unmeteredRestRequestCount");
+      // A headerless response in the same command stays out of the metered `unknown` group.
+      recordApiTelemetry({ kind: "REST", method: "GET", authSource: "GH_TOKEN" });
       const usage = summarizeApiTelemetry();
-      expect(usage?.rest).toMatchObject([{ resource: "unknown", requestCount: 1 }]);
-      expect(usage).not.toHaveProperty("unmeteredRestRequestCount");
+      expect(usage?.rest).toEqual([
+        expect.objectContaining({ resource: "unknown", requestCount: 1 }),
+      ]);
+      expect(usage?.unmeteredRestRequestCount).toBe(1);
     });
   });
 
