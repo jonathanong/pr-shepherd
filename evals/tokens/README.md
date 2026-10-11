@@ -22,7 +22,7 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
-| single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 194.8 core + 1.5 points | 221.3 core + 1.5 points |
+| single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 185.8 core + 1.5 points | 212.3 core + 1.5 points |
 | PR stack | 17 / 27 / 12 | 2 / 6 / 74 | 480 core + 0 points | 510 core + 0 points |
 
 <!-- bench:headline:end -->
@@ -297,12 +297,14 @@ are as good as these assumptions:
   check suites and workflow runs: a live `If-None-Match` probe of #548's CI
   charged 20 of Shepherd's reads over 7 rounds about 34s apart (2.9 a round,
   at most 7 when a bot review landed), so the model charges 3 on every
-  `ci-wait` poll after the first. A few warm ticks with no push before them
-  are charged only for the reads that move
+  `ci-wait` poll after the first. A few warm ticks, with no push since the
+  last poll, are charged only for the reads that move
   (`src/github/rest-changed-tick-cost.test.mts`):
-  - the tick on which CI settles (`mark-ready`) charges the five reads CI
-    moves (check runs, check suites, statuses, workflow runs and the pull),
-    the most the live probe charged on a round without bot comments;
+  - the tick on which CI settles (`mark-ready`, and `failing-check`, the
+    tick `ci-wait` returns) charges the five reads CI moves (check runs,
+    check suites, statuses, workflow runs and the pull), the most the live
+    probe charged on a round without bot comments; `failing-check` adds its
+    job list, job log and annotation reads, all fresh URLs;
   - a base push that makes the PR conflict (`conflicts`) charges the pull,
     the base branch and the merged-base lookup, 3.
 

@@ -192,16 +192,23 @@ const CLOUD_TRANSCRIPT_READ = REST_TRANSCRIPT_READ + 1;
  */
 const ACTIONS_LOG_REST = 2;
 const FAILING_CHECK_ANNOTATIONS = annotationBatchApi(1, 1);
+/**
+ * On REST this is the warm tick on which CI settles, the one `ci-wait`
+ * returns: its polls already paid the cold read after the push, so only the
+ * reads CI moves re-charge, as on `mark-ready`. The job list, the job log and
+ * the new check run's annotations are fresh URLs and stay charged.
+ */
 const FAILING_CHECK_TICK_API = {
   api: {
     graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + FAILING_CHECK_ANNOTATIONS.graphqlPoints,
     restCore: SHEPHERD_TICK_API.restCore + ACTIONS_LOG_REST,
   },
-  apiRest: rest(
-    SHEPHERD_TICK_API_REST.restCore + ACTIONS_LOG_REST + FAILING_CHECK_ANNOTATIONS.restCore,
-  ),
+  apiRest: rest(CI_SETTLE_CHANGED_READS + ACTIONS_LOG_REST + FAILING_CHECK_ANNOTATIONS.restCore),
   apiCloud: rest(
-    SHEPHERD_TICK_API_CLOUD.restCore + ACTIONS_LOG_REST + FAILING_CHECK_ANNOTATIONS.restCore,
+    CI_SETTLE_CHANGED_READS +
+      SHEPHERD_WAIT_TICK_API_CLOUD.restCore +
+      ACTIONS_LOG_REST +
+      FAILING_CHECK_ANNOTATIONS.restCore,
   ),
 };
 
