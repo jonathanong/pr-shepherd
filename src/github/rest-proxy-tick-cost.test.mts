@@ -156,10 +156,10 @@ describe("REST cloud proxy tick cost", () => {
       return summarizeApiTelemetry();
     });
     // The reported telemetry agrees with the wire log, not just the fake server's classification.
-    expect(usage.rest?.find(({ resource }) => resource === "core")).toMatchObject({
+    expect(usage?.rest?.find(({ resource }) => resource === "core")).toMatchObject({
       requestCount: 5,
     });
-    expect(usage.unmeteredRestRequestCount).toBe(2);
+    expect(usage?.unmeteredRestRequestCount).toBe(2);
     expect(metered()).toEqual([
       `${prefix}/pulls/101`,
       `${prefix}/branches/main`,
