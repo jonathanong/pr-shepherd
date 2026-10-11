@@ -68,7 +68,7 @@ export async function summarizePollSummaryReview(
 
   for (const thread of raw.reviewThreads.nodes) {
     if (thread.comments.pageInfo.hasPreviousPage) incomplete = true;
-    const root = thread.rootComments?.nodes[0] ?? thread.comments.nodes[0];
+    const root = thread.comments.nodes[0];
     const transcript = thread.comments.nodes
       .map((comment) => comment.body)
       .join(THREAD_COMMENT_SEPARATOR);

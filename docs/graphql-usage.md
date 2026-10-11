@@ -14,7 +14,7 @@ Per-tick request counts are asserted at the HTTP boundary by `src/github/graphql
 
 [GitHub's formula](https://docs.github.com/en/graphql/overview/rate-limits-and-query-limits-for-the-graphql-api): add up the connection-requests in the query AST (nested `first`/`last` multiply by the parent connection size; assume every connection fills its limit), divide by 100, and round to the nearest integer. The minimum is 1.
 
-`nodeCount` is the separate 500,000-node cap. An ordinary BatchPr-shaped query measured `nodeCount` 2,871 and `cost` 1. The conditional READY-receipt variant selects an exact compact summary sibling (about 55 connection-requests) and reads only the first 50 batch contexts, so it also prices at 1 point (142 requests). A head with more than 50 contexts reads the rest with `BatchPrPage`.
+`nodeCount` is the separate 500,000-node cap. An ordinary BatchPr-shaped query measured `nodeCount` 2,871 and `cost` 1. The conditional READY-receipt variant selects an exact compact summary sibling (about 36 connection-requests) and reads only the first 50 batch contexts, so it also prices at 1 point (about 125 requests). A head with more than 50 contexts reads the rest with `BatchPrPage`.
 
 `annotations(first: 1)` nested under `contexts(last: 100)` is 100 connection-requests per rollup. GitHub prices the `last`, including when the rollup is empty. Two of those trees were about 2 points per PR once several PRs shared one query. The summary fragment no longer selects them.
 
@@ -22,17 +22,17 @@ Mutations cannot select `rateLimit.cost`. Shepherd counts them as `unmeasuredReq
 
 ## Measured query costs
 
-The "before" column is the poll-summary shape measured for [the usage write-up](https://github.com/jonathanong/pr-shepherd/pull/466), including both annotation probes. 1, 5, and 10 PRs were measured; 20 and 50 used `round(252 × N / 100)` (about 50 and 126). The "after" column drops both probes. That drop was measured at 10 PRs (25 → 5) and 20 PRs (49 → 9, shown as 50 → 9 against the published before figure). 1, 5, and 50 use `round(52 × N / 100)` with a minimum of 1: each removed probe is 100 connection-requests. Author `{ login }` and the query-root `viewer { login }` are objects, not connections, and add less than 1 point at 10 PRs.
+The "#466" column is the poll-summary shape measured for [the usage write-up](https://github.com/jonathanong/pr-shepherd/pull/466), including both annotation probes (1, 5, and 10 PRs measured; 20 and 50 used `round(252 × N / 100)`). Recommendation 1 dropped both probes, leaving about 56 connection-requests per PR: 28 points at 50 PRs. Recommendation 11 reads each review thread's comments through one connection instead of two, leaving 36 per PR. The "now" columns are `rateLimit(dryRun: true)` costs measured for 1, 5, 10, 20, and 50 PRs with the current fragment. Author `{ login }` and the query-root `viewer { login }` are objects, not connections, and add less than 1 point at 10 PRs.
 
-| PRs | Summary before | Summary after | Stack tick before | Stack tick after | Points/hour before | Points/hour after |
-| --- | -------------- | ------------- | ----------------- | ---------------- | ------------------ | ----------------- |
-| 1   | 3              | 1             | 4                 | 2                | 120                | 60                |
-| 5   | 13             | 3             | 14                | 4                | 420                | 120               |
-| 10  | 25             | 5             | 26                | 6                | 780                | 180               |
-| 20  | 50             | 9             | 51                | 10               | 1,530              | 300               |
-| 50  | 126            | 26            | 127               | 27               | 3,810              | 810               |
+| PRs | Summary, #466 | Summary, recommendation 1 | Summary now | First stack tick, recommendation 10 | First stack tick now | Points/hour now |
+| --- | ------------- | ------------------------- | ----------- | ----------------------------------- | -------------------- | --------------- |
+| 1   | 3             | 1                         | 1           | 2                                   | 1                    | 30              |
+| 5   | 13            | 3                         | 2           | 4                                   | 2                    | 60              |
+| 10  | 25            | 6                         | 4           | 7                                   | 3                    | 120             |
+| 20  | 50            | 11                        | 7           | 12                                  | 7                    | 210             |
+| 50  | 126           | 28                        | 18          | 29                                  | 18                   | 540             |
 
-The "stack tick" columns are an anchor's first tick: the summary plus the 1-point `PollStackTopology` preflight. GitHub prices `entries(first: N)`, so asking for 50 slots on a 2-PR stack would bill the empty slots. Each summary stores the stack size under the anchor, so later ticks size the page from it and cost the summary column alone. A stack that grew since pages on for the new entries, asking only for the slots that remain. One that shrank overpays once. The second summary page exists only past 50 layers. A `Resource limits for this query exceeded` response halves that page down to one entry and rereads, so a wide check matrix can add summary pages beyond the table. Check contexts stay on the shared fragment: one layer is the same shape as an explicit summary, and `PollSummaryCheckPage` still completes a window past 100. Hours use the default stack interval, 120s, which is 30 ticks/hour.
+The "first stack tick" columns are an anchor's first tick. GitHub prices `entries(first: N)`, so asking for 50 slots on a 2-PR stack would bill the empty slots. Recommendation 10 read the 1-point `PollStackTopology` preflight to size the summary. Now the first summary page asks for 4 entries, the most that price at 1 point, and a larger stack pages on for only the entries that remain. Each summary stores the stack size under the anchor, so later ticks size the page from it and cost the summary column alone. A stack that grew since pages on for the new entries. One that shrank overpays once. The second summary page otherwise exists only past 50 layers. A `Resource limits for this query exceeded` response halves that page down to one entry and rereads, so a wide check matrix can add summary pages beyond the table. Check contexts stay on the shared fragment: one layer is the same shape as an explicit summary, and `PollSummaryCheckPage` still completes a window past 100. Hours use the default stack interval, 120s, which is 30 ticks/hour.
 
 `fetchRawSummaryPr` uses the same fragment: 3 points before, 1 after. A check page past the first 100 contexts stays 1 point and no longer repeats the annotation probe.
 
@@ -77,11 +77,10 @@ On a measured ready PR (#481), the former path was three GraphQL requests and th
 
 `pr-shepherd --stack PR` and `pr-shepherd` with two or more PRs, including MCP aggregate `iterate`, read the summary. They do not run per-layer `BatchPr`. Each stack tick is:
 
-- `PollStackTopology` (1 point), on the anchor's first summary only.
-- One `PollStackSummary` query at the after column above, paged only past 50 layers.
+- One `PollStackSummary` query at the "summary now" column above. The anchor's first tick reads 4 entries, then pages on for the rest; later ticks page only past 50 layers.
 - `PollSummaryAnnotationProbe` only for layers that otherwise look ready.
 
-An explicit multi-PR selection skips the topology query and uses `PollSummary` in chunks of 50. The one-PR sessions the summary hands off to are separate spend.
+An explicit multi-PR selection uses `PollSummary` in chunks of 50. The one-PR sessions the summary hands off to are separate spend.
 
 ### Mutations and one-shot reads
 
@@ -116,7 +115,7 @@ One-PR `BatchPr` stays at the 1-point floor. Fewer review connections, a smaller
 
 5. **Done: take single annotations from `BatchPr`.** The `annotations(first: 1)` probe selects the full annotation fields. In the recorded debug logs, 109 of 110 `CheckRunAnnotationsBatch` requests read only runs with exactly one annotation, so a failing-check tick with annotations drops from 2 points to 1. Runs with more annotations still use the batch.
 
-6. **Done: keep the READY-receipt `BatchPr` at 1 point.** Each first-page context carries an `annotations(first: 1)` probe, so 100 contexts are 100 connection-requests. Adding the summary sibling made the receipt variant 192 requests (2 points) on every READY and CANCEL-candidate tick. Its first context page is now 50, which totals 145 with the stack selections below (1 point). The ordinary `BatchPr` keeps 100 and totals 140.
+6. **Done: keep the READY-receipt `BatchPr` at 1 point.** Each first-page context carries an `annotations(first: 1)` probe, so 100 contexts are 100 connection-requests. Adding the summary sibling made the receipt variant 192 requests (2 points) on every READY and CANCEL-candidate tick. Its first context page is now 50, which totals 145 with the stack selections below (1 point), and about 125 since recommendation 11. The ordinary `BatchPr` keeps 100 and totals 140.
 
 7. **Done: cache the base compare.** `BatchPr` selects the live base tip (`baseRef.target.oid`, an object field with no connection cost). The `BaseBehind` count for a non-stack head with unreported required checks is cached under that tip and the head commit, so a tick on which neither moved (including a fingerprint hit) drops from 2 points to 1. REST already answers the compare with a conditional request.
 
@@ -125,6 +124,8 @@ One-PR `BatchPr` stays at the 1-point floor. Fewer review connections, a smaller
 9. **Done: read a stack layer's topology and trunk rules in `BatchPr`.** A non-root layer tick paid 3 points: `BatchPr`, `RefRules` for the trunk's required contexts and compare, and `PollStackTopology` for the bottom open layer. `BatchPr`'s first page now selects `stack.entries(first: 50)` with link fields only, and `trunkEntry: entries(first: 1)` with the bottom entry's base rules and tip. Neither nests a connection under the 50 entries, so together they add 3 connection-requests and the page stays at 1 point. The trunk compare runs only when a required check is unreported, like the base compare, and is cached under the trunk tip and the bottom layer's head. A layer tick is now 1 point. A stack past 50 entries still reads the topology; a bottom entry based on another branch still reads `RefRules`.
 
 10. **Done: skip the stack summary's topology preflight after the first tick.** The preflight only sized `entries(first:)`. The size each summary observed is stored under the anchor, so a later tick runs the summary alone. Readiness never depends on the stored size: `readStack` still validates the full membership, and a later page asks only for the entries that remain.
+
+11. **Done: one comment window per summary thread, and no topology preflight.** The summary fragment read each review thread's root with `comments(first: 1)` and its newest five with `comments(last: 5)`. Each nests under `reviewThreads(last: 20)`, so the pair cost 40 of about 56 connection-requests per PR. One `comments(first: 5)` window keeps the root as its first node and flags any comment outside it, as the `last: 5` window did, at 36 per PR: a 6-layer stack summary drops from 3 points to 2. A thread longer than five comments was already incomplete and already differs from its full-transcript seen marker, so it still counts as actionable unless a rule suppresses it; that rule now sees the real root. At 36 per PR, 4 entries price at 1 point, so an unsized first summary page asks for 4 and pages on instead of reading `PollStackTopology` first: never more points than topology plus an exact-size summary, and 1 less for stacks of up to 10 layers. Stored READY receipts for PRs with review threads change fingerprint once after the upgrade, because the hashed thread shape changed.
 
 Not done: a whole-stack fingerprint that skips the summary. Check rollups, mergeability, queue entries, and annotation receipts change without bumping any layer's `updatedAt`, so a stack fingerprint would need most of the summary to be safe.
 

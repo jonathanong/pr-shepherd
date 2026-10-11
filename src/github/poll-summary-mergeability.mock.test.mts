@@ -65,7 +65,7 @@ beforeEach(() => vi.clearAllMocks());
 describe("refreshUnknownSummaryMergeability", () => {
   it("routes a stack layer as a conflict when REST resolves GraphQL's UNKNOWN", async () => {
     const page = stackPage([{ position: 1, pullRequest: rawPr(43) }]);
-    mockGraphql.mockResolvedValueOnce(page).mockResolvedValueOnce(page);
+    mockGraphql.mockResolvedValueOnce(page);
     mockRest.mockResolvedValue({
       mergeable: "CONFLICTING",
       mergeStateStatus: "DIRTY",

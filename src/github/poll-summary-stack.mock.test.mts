@@ -13,7 +13,8 @@ vi.mock("../state/seen-comments.mts", async (importOriginal) => {
 
 import { graphqlWithRateLimit } from "./client.mts";
 import { fetchPollSummary } from "./poll-summary.mts";
-import { POLL_STACK_SUMMARY_QUERY, POLL_STACK_TOPOLOGY_QUERY } from "./queries.mts";
+import { POLL_STACK_SUMMARY_QUERY } from "./queries.mts";
+import { loadStackSizeHint } from "./stack-size-hint.mts";
 
 const mockGraphql = vi.mocked(graphqlWithRateLimit);
 const repo = { owner: "acme", name: "widgets" };
@@ -78,19 +79,14 @@ function stackPage(
 beforeEach(() => vi.clearAllMocks());
 
 describe("fetchPollSummary native stack reads", () => {
-  it("reads topology first, then sizes the hydrated page to the stack", async () => {
+  it("reads an unsized stack in one four-entry summary page, without a topology read", async () => {
     const reversed = [member(44, 2), member(43, 1)];
-    mockGraphql
-      .mockResolvedValueOnce(stackPage(2, reversed))
-      .mockResolvedValueOnce(stackPage(2, reversed));
+    mockGraphql.mockResolvedValueOnce(stackPage(2, reversed));
 
     const result = await fetchPollSummary({ stackPrNumber: 44 }, repo);
 
     const base = { owner: "acme", repo: "widgets", anchor: 44, after: null };
-    expect(mockGraphql.mock.calls).toEqual([
-      [POLL_STACK_TOPOLOGY_QUERY, base],
-      [POLL_STACK_SUMMARY_QUERY, { ...base, first: 2 }],
-    ]);
+    expect(mockGraphql.mock.calls).toEqual([[POLL_STACK_SUMMARY_QUERY, { ...base, first: 4 }]]);
     expect(result.selection).toEqual({ kind: "stack", anchor: 44, stackNumber: 7, stackSize: 2 });
     expect(result.prs.map((item) => item.pr)).toEqual([43, 44]);
     expect(result.stackAncestry).toBeUndefined();
@@ -120,19 +116,33 @@ describe("fetchPollSummary native stack reads", () => {
   it("caps the hydrated page at 50 entries and asks a later page only for the entries that remain", async () => {
     const members = Array.from({ length: 51 }, (_, index) => member(101 + index, index + 1));
     const [first50, last] = [members.slice(0, 50), members.slice(50)];
+    vi.mocked(loadStackSizeHint).mockResolvedValueOnce(51);
     mockGraphql
-      .mockResolvedValueOnce(stackPage(51, first50, "topology-2"))
-      .mockResolvedValueOnce(stackPage(51, last))
       .mockResolvedValueOnce(stackPage(51, first50, "summary-2"))
       .mockResolvedValueOnce(stackPage(51, last));
 
     const result = await fetchPollSummary({ stackPrNumber: 101 }, repo);
 
     const variables = mockGraphql.mock.calls.map((call) => call[1]);
-    expect(variables[1]).toMatchObject({ after: "topology-2" });
-    expect(variables[1]).not.toHaveProperty("first");
-    expect(variables[2]).toMatchObject({ first: 50, after: null });
-    expect(variables[3]).toMatchObject({ first: 1, after: "summary-2" });
+    expect(variables).toEqual([
+      expect.objectContaining({ first: 50, after: null }),
+      expect.objectContaining({ first: 1, after: "summary-2" }),
+    ]);
+    expect(result.prs.map((item) => item.pr)).toEqual(members.map((m) => m.pullRequest.number));
+  });
+
+  it("pages an unsized stack past four entries for only the entries that remain", async () => {
+    const members = Array.from({ length: 6 }, (_, index) => member(101 + index, index + 1));
+    mockGraphql
+      .mockResolvedValueOnce(stackPage(6, members.slice(0, 4), "summary-2"))
+      .mockResolvedValueOnce(stackPage(6, members.slice(4)));
+
+    const result = await fetchPollSummary({ stackPrNumber: 101 }, repo);
+
+    expect(mockGraphql.mock.calls.map((call) => call[1])).toEqual([
+      expect.objectContaining({ first: 4, after: null }),
+      expect.objectContaining({ first: 2, after: "summary-2" }),
+    ]);
     expect(result.prs.map((item) => item.pr)).toEqual(members.map((m) => m.pullRequest.number));
   });
 });

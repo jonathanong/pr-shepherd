@@ -11,7 +11,7 @@ vi.mock("../state/seen-comments.mts", async (importOriginal) => {
 
 import { graphqlWithRateLimit } from "./client.mts";
 import { fetchPollSummary } from "./poll-summary.mts";
-import { POLL_STACK_SUMMARY_QUERY, POLL_STACK_TOPOLOGY_QUERY } from "./queries.mts";
+import { POLL_STACK_SUMMARY_QUERY } from "./queries.mts";
 import { loadStackSizeHint } from "./stack-size-hint.mts";
 import { storeDerived } from "../state/rest-cache.mts";
 
@@ -82,7 +82,7 @@ afterEach(async () => {
 });
 
 describe("stack summary size hint", () => {
-  it("reads the topology only for the anchor's first summary", async () => {
+  it("reads an unsized first page, then sizes later summaries from the stored hint", async () => {
     mockGraphql.mockResolvedValue(stackPage(2, two));
 
     await fetchPollSummary({ stackPrNumber: 44 }, repo);
@@ -90,8 +90,7 @@ describe("stack summary size hint", () => {
     await fetchPollSummary({ stackPrNumber: 44 }, repo);
 
     expect(mockGraphql.mock.calls).toEqual([
-      [POLL_STACK_TOPOLOGY_QUERY, base],
-      [POLL_STACK_SUMMARY_QUERY, { ...base, first: 2 }],
+      [POLL_STACK_SUMMARY_QUERY, { ...base, first: 4 }],
       [POLL_STACK_SUMMARY_QUERY, { ...base, first: 2 }],
     ]);
   });

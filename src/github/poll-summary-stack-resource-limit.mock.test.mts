@@ -89,14 +89,12 @@ beforeEach(() => vi.clearAllMocks());
 describe("stack summary resource limits", () => {
   it("halves the page and merges the same layers as a clean single-page read", async () => {
     const nodes = [member(43, 1), member(44, 2)];
-    mockGraphql
-      .mockResolvedValueOnce(stackPage(2, nodes))
-      .mockResolvedValueOnce(stackPage(2, nodes));
+    mockGraphql.mockResolvedValueOnce(stackPage(2, nodes));
     const clean = await fetchPollSummary({ stackPrNumber: 44 }, repo);
 
     mockGraphql.mockReset();
     mockGraphql
-      .mockResolvedValueOnce(stackPage(2, nodes))
+      .mockRejectedValueOnce(resourceLimit())
       .mockRejectedValueOnce(resourceLimit())
       .mockResolvedValueOnce(stackPage(2, [nodes[0]], "page-2"))
       .mockResolvedValueOnce(stackPage(2, [nodes[1]]));
@@ -104,7 +102,7 @@ describe("stack summary resource limits", () => {
 
     expect(shrunk).toEqual(clean);
     expect(mockGraphql.mock.calls.map((call) => call[1])).toEqual([
-      { owner: "acme", repo: "widgets", anchor: 44, after: null },
+      { owner: "acme", repo: "widgets", anchor: 44, after: null, first: 4 },
       { owner: "acme", repo: "widgets", anchor: 44, after: null, first: 2 },
       { owner: "acme", repo: "widgets", anchor: 44, after: null, first: 1 },
       { owner: "acme", repo: "widgets", anchor: 44, after: "page-2", first: 1 },
@@ -112,22 +110,20 @@ describe("stack summary resource limits", () => {
   });
 
   it("exits TEMPFAIL when a one-entry page still hits the resource limit", async () => {
-    const nodes = [member(43, 1), member(44, 2)];
-    mockGraphql.mockResolvedValueOnce(stackPage(2, nodes)).mockRejectedValue(resourceLimit());
+    mockGraphql.mockRejectedValue(resourceLimit());
 
     await expect(fetchPollSummary({ stackPrNumber: 44 }, repo)).rejects.toMatchObject({
       exitCode: EXIT.TEMPFAIL,
       message: expect.stringMatching(/Resource limits for this query exceeded/),
     });
     expect(mockGraphql.mock.calls.map((call) => call[1])).toEqual([
-      { owner: "acme", repo: "widgets", anchor: 44, after: null },
+      { owner: "acme", repo: "widgets", anchor: 44, after: null, first: 4 },
       { owner: "acme", repo: "widgets", anchor: 44, after: null, first: 2 },
       { owner: "acme", repo: "widgets", anchor: 44, after: null, first: 1 },
     ]);
   });
 
   it("does not shrink the page for a permission error", async () => {
-    const nodes = [member(43, 1), member(44, 2)];
     const denied = new GitHubRequestError(
       "GitHub GraphQL error: Resource not accessible by integration",
       {
@@ -135,11 +131,11 @@ describe("stack summary resource limits", () => {
         graphqlErrors: [{ message: "Resource not accessible by integration" }],
       },
     );
-    mockGraphql.mockResolvedValueOnce(stackPage(2, nodes)).mockRejectedValueOnce(denied);
+    mockGraphql.mockRejectedValueOnce(denied);
 
     await expect(fetchPollSummary({ stackPrNumber: 44 }, repo)).rejects.toMatchObject({
       exitCode: EXIT.NOPERM,
     });
-    expect(mockGraphql).toHaveBeenCalledTimes(2);
+    expect(mockGraphql).toHaveBeenCalledTimes(1);
   });
 });

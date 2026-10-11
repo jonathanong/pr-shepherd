@@ -791,10 +791,21 @@ export function readyTick(call) {
   };
   return { ...call, api: add("graphql"), apiRest: add("rest"), apiCloud: add("cloud") };
 }
-/** A stack summary: about 0.52 points per layer, at least 1. */
-const stackSummaryPoints = (layers) => Math.max(1, Math.round(0.52 * layers));
-/** An anchor's first stack tick: one topology query to size the summary, then the summary. */
-export const stackTickApi = (layers) => gql(1 + stackSummaryPoints(layers));
+/**
+ * A stack summary page: 36 connection-requests per layer, at least 1 point
+ * (measured with rateLimit(dryRun: true); docs/graphql-usage.md).
+ */
+const stackSummaryPoints = (layers) => Math.max(1, Math.round(0.36 * layers));
+/** Entries on an anchor's first, unsized summary page (poll-summary.mts). */
+const UNSIZED_STACK_SUMMARY_FIRST = 4;
+/** An anchor's first stack tick: a 4-entry summary page, then one page for the rest. */
+export const stackTickApi = (layers) =>
+  gql(
+    stackSummaryPoints(Math.min(layers, UNSIZED_STACK_SUMMARY_FIRST)) +
+      (layers > UNSIZED_STACK_SUMMARY_FIRST
+        ? stackSummaryPoints(layers - UNSIZED_STACK_SUMMARY_FIRST)
+        : 0),
+  );
 /** A later stack tick: the summary alone, sized from the size the first tick stored. */
 export const stackWarmTickApi = (layers) => gql(stackSummaryPoints(layers));
 /**
