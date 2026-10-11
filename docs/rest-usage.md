@@ -22,7 +22,7 @@ The counts below are asserted at the HTTP boundary by these tests. Each fake ser
 | `src/commands/iterate/mark-ready.rest.test.mts` "attempts cloud ready-for-review with unknown capability and trusts draft:false"                    | Cloud mark-ready: one request, the `ccr/ready_for_review` POST                                                                         |
 | `src/comments/resolve.rest.test.mts` "uses persisted opaque node identities and forwards replies, CCR resolution and dismissals"                    | Reply, CCR resolve, and dismissal each send one write (reads before the write are not asserted)                                        |
 
-The token bench models the same counts for whole sessions (`evals/tokens/lib.mjs`: `SHEPHERD_TICK_API_REST`, `SHEPHERD_TICK_API_CLOUD`, `stackTickApiRest`, `stackTickApiCloud`), and records a live cross-check in `evals/tokens/data/api-usage-check.json`: on #548, 16 requests on a cold first tick (13 snapshot reads, three annotation reads, and the pull re-read as a free 304), then 0 requests with 14 not-modified reads on the unchanged second tick. Rows below marked _modeled_ come from that bench rather than a boundary test.
+The token bench models the same counts for whole sessions (`evals/tokens/lib.mjs`: `SHEPHERD_TICK_API_REST`, `SHEPHERD_TICK_API_CLOUD`, `stackTickApiRest`, `stackTickApiCloud`), and records a live cross-check in `evals/tokens/data/api-usage-check.json`: on #548, 16 charged requests on a cold first tick (13 snapshot reads and three annotation reads), plus one free 304 for the pull re-read, then 0 charged requests with 14 not-modified reads on the unchanged second tick. Rows below marked _modeled_ come from that bench rather than a boundary test.
 
 ## One PR
 
