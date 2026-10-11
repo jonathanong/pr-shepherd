@@ -6,12 +6,14 @@ import { runApplyMerge } from "./apply-merge.mts";
 /**
  * Request budget of the REST-mode merge command the iterate output prints on the REST transport
  * (`buildMergeCommandPlan` in src/commands/iterate/merge-plan.mts), measured at the HTTP
- * boundary. It sends no GraphQL request, and none of its reads is conditional, so every request
- * is charged. evals/tokens/scenarios.mjs (`APPLY_MERGE_REST`) charges this count.
+ * boundary. It sends no GraphQL request. Its pull and stack reads are conditional in the PR's
+ * ETag cache, but on a cold cache nothing is stored, so all three are sent without a validator
+ * and charged. After the iterate tick that printed the command they answer 304
+ * (apply-merge-warm-cost.test.mts), which is what evals/tokens/scenarios.mjs charges.
  */
 describe("apply merge request budget", () => {
   it.each(["direct_merge", "merge_queue"] as const)(
-    "spends three REST requests and no GraphQL on an unstacked %s",
+    "spends three REST requests and no GraphQL on an unstacked %s with a cold cache",
     async (mergeAction) => {
       await runWithGithubTransport("rest", () =>
         runApplyMerge({

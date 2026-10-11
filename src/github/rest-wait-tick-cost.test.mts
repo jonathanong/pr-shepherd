@@ -16,9 +16,14 @@ import { runWithGithubTransport } from "./transport.mts";
  * Charged-request budget of REST wait ticks, measured at the HTTP boundary. The fake answers
  * like GitHub's conditional reads, so a request is charged exactly when it is not a 304.
  */
-async function serveOnePr(state: { baseSha: string; baseStatus: number; pending?: boolean }) {
+async function serveOnePr(state: {
+  baseSha: string;
+  baseStatus: number;
+  pending?: boolean;
+  draft?: boolean;
+}) {
   serveWithEtags();
-  const options = { pending: true };
+  const options = { pending: true, draft: state.draft ?? false };
   const routes = restIterateRoutes(options);
   await serve((request, response) => {
     const path = request.path.split("?")[0]!;
@@ -40,7 +45,7 @@ async function serveOnePr(state: { baseSha: string; baseStatus: number; pending?
   });
 }
 
-const tick = (fingerprintCache: boolean) =>
+const tick = (fingerprintCache: boolean, noAutoMarkReady = true) =>
   runWithGithubTransport("rest", () =>
     runIterate({
       prNumber: 101,
@@ -48,7 +53,7 @@ const tick = (fingerprintCache: boolean) =>
       format: "json",
       readyDelaySeconds: 0,
       stallTimeoutSeconds: 0,
-      noAutoMarkReady: true,
+      noAutoMarkReady,
       fingerprintCache,
     }),
   );
@@ -129,6 +134,27 @@ describe("REST wait tick cost", () => {
     expect(notModified().map((entry) => entry.path)).toContain(
       "/repos/octocat/hello-world/pulls/101",
     );
+  });
+
+  it("sends nothing past the snapshot when a settled draft escalates mark-ready", async () => {
+    await freshLoadConfig();
+    const state = { baseSha: "bbb222", baseStatus: 200, pending: true, draft: true };
+    await serveOnePr(state);
+    await tick(false, false);
+    state.pending = false;
+    log.length = 0;
+    const settled = await tick(false, false);
+    // Standard REST has no ready-for-review route: the draft escalates without a request. A
+    // draft's pull reports `mergeable_state: "draft"` whatever its checks do, so the pull and the
+    // READY refresh stay 304s; only the check list CI moved is charged.
+    expect(settled).toMatchObject({
+      action: "escalate",
+      escalate: { triggers: ["transport-unsupported"] },
+    });
+    expect(charged().map((entry) => entry.path.split("?")[0])).toEqual([
+      "/repos/octocat/hello-world/commits/aaa111/check-runs",
+    ]);
+    expect(log.filter((entry) => entry.path.includes("ready_for_review"))).toEqual([]);
   });
 
   it("does not replay the report when the base branch summary is unavailable", async () => {
