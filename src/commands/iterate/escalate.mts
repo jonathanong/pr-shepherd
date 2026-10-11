@@ -187,8 +187,17 @@ export function buildEscalateHumanMessage(
       const loc = t.path ? `\`${t.path}:${t.line ?? "?"}\`` : "(no location)";
       lines.push(`- thread \`${t.id}\` — ${loc} (${renderEscalateAuthor(t)}):`);
       lines.push("");
-      for (const bodyLine of t.body.split("\n")) lines.push(`  > ${bodyLine}`);
-      lines.push("");
+      if (!t.comments?.length) {
+        for (const bodyLine of t.body.split("\n")) lines.push(`  > ${bodyLine}`);
+        lines.push("");
+        continue;
+      }
+      // The transcript starts with the root comment, whose body is the thread body.
+      for (const c of t.comments) {
+        lines.push(`  - comment \`${c.id}\` (${renderEscalateAuthor(c)}):`, "");
+        for (const bodyLine of c.body.split("\n")) lines.push(`    > ${bodyLine}`);
+        lines.push("");
+      }
     }
     for (const r of escalate.changesRequestedReviews) {
       lines.push(`- review \`${r.id}\` (${renderEscalateAuthor(r)}):`);
