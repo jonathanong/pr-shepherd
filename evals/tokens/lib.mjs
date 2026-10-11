@@ -861,33 +861,26 @@ export const RECONCILE_MINUTES = 15;
 export const GRAPHQL_WAIT_DETECTORS = 8;
 /**
  * The detectors run only when the stored report is idle (detectorsCover in
- * src/commands/check-wait-detectors.mts): a single PR, open, not READY, nothing
- * to act on, no check still running, and a complete fingerprint, which
- * excludes any thread holding more than one comment. Otherwise every poll tick
- * reads `BatchPr` (a fingerprint hit, 1 point).
+ * src/commands/check-wait-detectors.mts): a single PR, open, not READY, not
+ * queued, nothing to act on, no check still running, a known merge status,
+ * `poll.reconcileSeconds` above 0, and a complete fingerprint
+ * (src/commands/check-fingerprint.mts: at most 20 threads with none holding
+ * more than one comment, at most 100 comments and 100 reviews, complete
+ * check-suite and rules pages). Otherwise every poll tick reads `BatchPr` (a
+ * fingerprint hit, 1 point). No modeled scenario's change ends such a wait,
+ * so the detectors appear only in the idle hour.
  *
  * Entering an idle wait costs one seeding round: the first detector round
  * after the idle report is built has no stored digest, so every detector read
  * is a charged 200 on a cold cache and the tick still reads `BatchPr`
- * (src/github/graphql-wait-detectors.test.mts). Charging all eight is an upper
- * bound: a warm validator whose resource has not moved since the last idle
- * wait answers 304, but after a push the pull and the three head-keyed reads
- * always change. Eight is one request per detector: a PR whose check runs,
- * suites or statuses span more than one 100-entry page pays a request per
- * page. Each scenario whose change ends an idle wait is charged the seed's
- * REST requests; its `BatchPr` read is one of the wait's own polls, which no
- * scenario charges on either side (the idle hour prices them).
+ * (src/github/graphql-wait-detectors.test.mts). Eight is one request per
+ * detector, an upper bound with warm validators and a lower one when check
+ * runs, suites or statuses span more than one 100-entry page.
  */
 export const GRAPHQL_DETECTOR_SEED = {
   graphqlPoints: SHEPHERD_TICK_API.graphqlPoints,
   restCore: GRAPHQL_WAIT_DETECTORS,
 };
-/**
- * An idle wait ended by a change: the seed's cold detector reads, then the
- * `changed` detectors' 200s on the tick that sees the change, before the
- * `BatchPr` read the scenario already counts.
- */
-export const graphqlIdleWaitApi = (changed) => rest(GRAPHQL_DETECTOR_SEED.restCore + changed);
 /**
  * What the host returns when the agent starts `wait` in the background. The
  * agent's next request reads it and ends the turn, so every wake costs one

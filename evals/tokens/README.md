@@ -22,7 +22,7 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
-| single PR | 30.8 / 36.5 / 12 | 38.8 / 9 / 78.3 | 224 core + 1.5 points | 251.5 core + 1.5 points |
+| single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 224 core + 1.5 points | 251.5 core + 1.5 points |
 | PR stack | 17 / 27 / 12 | 2 / 6 / 74 | 480 core + 0 points | 510 core + 0 points |
 
 <!-- bench:headline:end -->
@@ -231,21 +231,18 @@ are as good as these assumptions:
     fingerprint read, so an unchanged wait poll is a 1-point hit and the first
     changed tick after a wait, a miss, continues the same request at 1 point;
   - an idle single-PR wait whose report is complete (not READY, not queued,
-    nothing to act on, no check running, no stack, at most 20 threads with
-    none holding more than one comment, at most 100 comments and 100
-    reviews, and complete check-suite and rules pages;
+    nothing to act on, no check running, a known merge status, no stack,
+    `poll.reconcileSeconds` above 0, at most 20 threads with none holding
+    more than one comment, at most 100 comments and 100 reviews, and complete
+    check-suite and rules pages; `src/commands/check-wait-detectors.mts` and
     `src/commands/check-fingerprint.mts`) polls 8 conditional REST detectors
-    instead
-    (`src/commands/check-wait-detectors.mts`): a 304 is free, and the tick on
-    which one sees the change charges that detector's 200 plus the 1-point
-    read. `bot-review-summary` charges one (the reviews), `review-thread`,
-    `bot-threads` and `conflicts` two (reviews and review comments, or the
-    pull and the base branch). Entering the wait seeds every detector once
-    on a cold cache, 8 requests that each of those scenarios is also charged
-    (an upper bound when the validators are warm, a lower one when check
-    runs, suites or statuses span more than one 100-entry page). The seed's
-    `BatchPr` read is one of the wait's polls, which no scenario charges. A
-    wait outside those conditions reads `BatchPr` every poll;
+    instead: a 304 is free, the tick on which one sees a change charges its
+    200, and entering the wait seeds all 8 once on a cold cache (one page
+    each). Any other wait reads `BatchPr` every poll. No modeled change ends
+    a detector-eligible wait: before each review, thread, base push or merge
+    the PR is green and READY, which the detectors skip, and `ci-wait` has
+    checks running. So every change tick is a plain `BatchPr` read, and the
+    detectors appear only in the idle hour;
   - a stack summary page is `max(1, round(0.36 × layers))`. The anchor's first
     tick reads a 4-entry page (1 point), then one page for any remaining
     layers; later ticks size the summary from the stack size the first one

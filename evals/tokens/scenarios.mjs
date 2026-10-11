@@ -54,7 +54,6 @@ import {
   SHEPHERD_WAIT_TICK_API_REST,
   SHEPHERD_WAIT_TICK_API_CLOUD,
   CI_POLL_CHANGED_READS,
-  graphqlIdleWaitApi,
   ghAnnotations,
   ghFailingCheckRuns,
   mcpPrList,
@@ -147,8 +146,7 @@ export function eventArm(arms) {
           notification: true,
           cmd: "",
           out: e.out ?? c.out,
-          // The wait charges its own detectors above, not the poll's idle wait.
-          api: withoutIdleWait(c),
+          api: callApi(c),
           apiProxy: NO_API,
         },
       );
@@ -163,38 +161,13 @@ export function eventArm(arms) {
   return calls;
 }
 
-const shepherdTick = (out, phase = 1) => ({ phase, via: "bash", cmd: SHEPHERD_CMD, out });
-
 /**
- * The poll's tick that ends an idle wait on the GraphQL transport: it also
- * pays the `changed` detector 200s that see the change (lib.mjs
- * `graphqlIdleWaitApi`). The REST arms keep their cost, since their changed
- * tick is already charged as a full read.
+ * A poll tick. No modeled change ends a detector-eligible GraphQL wait (lib.mjs
+ * GRAPHQL_DETECTOR_SEED): before each review, thread, base push or merge the PR
+ * is green and READY, which the detectors skip, and `ci-wait` has checks
+ * running. So every change tick is a plain `BatchPr` read.
  */
-function afterIdleWait(call, changed) {
-  const idleWaitApi = graphqlIdleWaitApi(changed);
-  const tick = callApi(call);
-  return {
-    ...call,
-    api: {
-      graphqlPoints: tick.graphqlPoints + idleWaitApi.graphqlPoints,
-      restCore: tick.restCore + idleWaitApi.restCore,
-    },
-    apiRest: callApi(call, "rest"),
-    apiCloud: callApi(call, "cloud"),
-    idleWaitApi,
-  };
-}
-
-/** A call's GraphQL-transport cost without the poll's idle wait. */
-function withoutIdleWait(call) {
-  const a = callApi(call);
-  if (!call.idleWaitApi) return a;
-  return {
-    graphqlPoints: a.graphqlPoints - call.idleWaitApi.graphqlPoints,
-    restCore: a.restCore - call.idleWaitApi.restCore,
-  };
-}
+const shepherdTick = (out, phase = 1) => ({ phase, via: "bash", cmd: SHEPHERD_CMD, out });
 
 /**
  * REST requests `readRestFeedback` spends on a reply's transcript read on
@@ -748,8 +721,7 @@ const PR_SCENARIOS = [
       const fixture = "22-fix-code-review-summary-first-look";
       const state = fixtureState(fixture);
       return {
-        // The review ends an idle wait: the reviews detector sees it.
-        shepherd: [afterIdleWait(shepherdTick(snapshot(fixture)), 1)],
+        shepherd: [shepherdTick(snapshot(fixture))],
         // Reviews.
         event: { wake: "change", detectors: 1 },
         gh: ghObserve(state),
@@ -768,12 +740,7 @@ const PR_SCENARIOS = [
       const state = fixtureState(fixture);
       const text = snapshot(fixture);
       return {
-        // The review ends an idle wait: the reviews and review-comments
-        // detectors see it. The reply's echo lands in the next idle wait's seed.
-        shepherd: [
-          afterIdleWait(shepherdTick(text), 2),
-          shepherdApply(text, { repliedThreads: ["PRRT_active"] }),
-        ],
+        shepherd: [shepherdTick(text), shepherdApply(text, { repliedThreads: ["PRRT_active"] })],
         // Reviews and review comments, then review comments again for the reply.
         event: { wake: "change", detectors: 3 },
         gh: [...ghObserve(state), ghReply(fixtureCommentId(0))],
@@ -792,9 +759,6 @@ const PR_SCENARIOS = [
       const state = withHistory(fixtureState(fixture), HISTORY);
       const text = snapshot(fixture);
       return {
-        // No idle-wait detectors: the history's resolved threads hold more
-        // than one comment, so the fingerprint is incomplete and the wait
-        // reads BatchPr every tick instead (lib.mjs GRAPHQL_DETECTOR_SEED).
         shepherd: [shepherdTick(text), shepherdApply(text, { repliedThreads: ["PRRT_active"] })],
         // Reviews and review comments, then review comments again for the reply.
         event: { wake: "change", detectors: 3 },
@@ -920,8 +884,6 @@ const PR_SCENARIOS = [
       const fixture = "01-cancel-merged";
       const state = withHistory(fixtureState(fixture), HISTORY);
       return {
-        // No idle-wait detectors: a READY report, or the history's
-        // multi-comment threads, keeps the wait on BatchPr.
         shepherd: [shepherdTick(snapshot(fixture))],
         // The pull.
         event: { wake: "change", detectors: 1 },
@@ -942,10 +904,8 @@ const PR_SCENARIOS = [
       const threads = ["PRRT_human", "PRRT_bot", "PRRT_bracket_bot"];
       const bots = ["PRRT_bot", "PRRT_bracket_bot"];
       return {
-        // The reviews end an idle wait: the reviews and review-comments
-        // detectors see them.
         shepherd: [
-          afterIdleWait(shepherdTick(text), 2),
+          shepherdTick(text),
           shepherdApply(text, { repliedThreads: threads, resolvedThreads: bots }),
         ],
         // Reviews and review comments, then review comments again for the
@@ -1022,9 +982,7 @@ const PR_SCENARIOS = [
       const fixture = "117-fix-code-conflicts-behind-base-hint";
       const state = fixtureState(fixture);
       return {
-        // The base push ends an idle wait: the base-branch and pull detectors
-        // see it.
-        shepherd: [afterIdleWait(shepherdTick(snapshot(fixture)), 2)],
+        shepherd: [shepherdTick(snapshot(fixture))],
         // The pull: its mergeable state turns dirty.
         event: { wake: "change", detectors: 1 },
         gh: ghObserve(state),

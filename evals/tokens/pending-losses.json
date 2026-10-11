@@ -65,16 +65,7 @@
     { "where": "stack-merge", "metric": "restCore", "transport": "rest", "baseline": "gh", "issue": 525 },
     { "where": "stack-merge", "metric": "restCore", "transport": "cloud", "baseline": "gh", "issue": 525 },
     { "where": "mark-ready", "metric": "restCore", "transport": "graphql", "baseline": "gh", "issue": 525 },
-    { "where": "merge-queue", "metric": "restCore", "transport": "graphql", "baseline": "gh", "issue": 525 },
-    { "where": "session:pr", "metric": "restCore", "transport": "graphql", "baseline": "gh", "issue": 525 },
-    { "where": "bot-review-summary", "metric": "restCore", "transport": "graphql", "baseline": "gh", "issue": 525 },
-    { "where": "review-thread", "metric": "restCore", "transport": "graphql", "baseline": "gh", "issue": 525 },
-    { "where": "conflicts", "metric": "restCore", "transport": "graphql", "baseline": "gh", "issue": 525 },
-    { "where": "bot-review-summary", "metric": "restCore", "transport": "graphql", "baseline": "mcp", "issue": 525 },
-    { "where": "review-thread", "metric": "restCore", "transport": "graphql", "baseline": "mcp", "issue": 525 },
-    { "where": "bot-threads", "metric": "restCore", "transport": "graphql", "baseline": "gh", "issue": 525 },
-    { "where": "bot-threads", "metric": "restCore", "transport": "graphql", "baseline": "mcp", "issue": 525 },
-    { "where": "conflicts", "metric": "restCore", "transport": "graphql", "baseline": "mcp", "issue": 525 }
+    { "where": "merge-queue", "metric": "restCore", "transport": "graphql", "baseline": "gh", "issue": 525 }
   ],
   "structural": [
     { "where": "ci-wait", "metric": "graphqlPoints", "transport": "graphql", "baseline": "mcp", "reason": "MCP spends no GraphQL point here and gh no REST request, so any plan's reads lose one of the two cells; pr-shepherd ties gh on REST." },
