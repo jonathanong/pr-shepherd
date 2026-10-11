@@ -88,12 +88,7 @@ export interface MergeRequirements {
     contexts: string[];
     /** Required contexts whose live run failed. Omitted when empty. */
     failing?: string[];
-    /**
-     * Required contexts with a cancelled run that a newer run superseded. GitHub still counts
-     * the cancelled run against the gate. Omitted when empty.
-     */
-    cancelled?: string[];
-    /** Required contexts still running. Omitted when empty. */
+    /** Required contexts still running, or whose only runs were superseded. Omitted when empty. */
     pending?: string[];
   };
   requiredDeployments?: { environments: string[] };

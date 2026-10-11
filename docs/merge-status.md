@@ -50,7 +50,7 @@ Printed only when they apply:
 | `Merge queue: …`                              | `mergeQueue`                       | Required, enabled, or already in queue                                                    |
 | `Stack: <n> (layer <pos>/<size>, base <ref>)` | `stack`                            | GitHub stack membership                                                                   |
 
-`requiredStatusChecks` reports only contexts that are not passing: a native-stack layer uses the stack trunk's required contexts, since its own base branch may carry no rules. Text appends ` — failing: …; cancelled: …; pending: …` and JSON adds `failing`, `cancelled`, and `pending` arrays, each omitted when empty. A context with no run at all is reported as `unreportedRequiredChecks`, not here. `cancelled` names a context with a cancelled run that a newer run superseded: GitHub still counts that run against the gate ([github/gh-stack#466](https://github.com/github/gh-stack/issues/466)), so the PR does not enter `READY`. Each non-empty group is also added to the blocked reason.
+`requiredStatusChecks.contexts` lists the merge target's required contexts. A native-stack layer uses the stack trunk's contexts, since its own base branch may carry no rules. Text prints their count and appends ` — failing: …; pending: …` naming the contexts that are not passing; JSON carries the same names in `failing` and `pending` arrays, each omitted when empty. A context with no run at all is reported as `unreportedRequiredChecks`, not here.
 
 The agent should read these lines instead of inferring a required review from `reviewDecision`. `REVIEW_REQUIRED` with no `Approvals:` line (none required) means GitHub is not waiting on an approval.
 

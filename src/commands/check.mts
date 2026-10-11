@@ -10,7 +10,6 @@ import { storeRestSnapshotReport } from "../state/rest-snapshot-report.mts";
 import { restSnapshotState, withRestConditionalScope } from "../github/rest-conditional-scope.mts";
 import { fingerprintReuser, tryReuseRestSnapshotReport } from "./check-fingerprint.mts";
 import { readWaitDetectors, recordWaitDetectors } from "./check-wait-detectors.mts";
-import { evaluateRequiredChecks } from "../checks/required-check-state.mts";
 import { withRequiredCheckState } from "../merge-status/required-check-requirements.mts";
 import { collectUnreportedRequired, refreshCachedUnreported } from "./check-unreported.mts";
 import { getRepoInfo, getCurrentPrNumber, type RepoInfo } from "../github/client.mts";
@@ -179,7 +178,21 @@ async function runScopedCheck(
           triageBudget,
         );
   const allChecks = mergeStartupFailureChecks(batchData.checks, startupFailureChecks);
-  const classifiedPrChecks = classifyChecks(allChecks);
+  const unreported = await collectUnreportedRequired(
+    {
+      batchData,
+      checks: allChecks,
+      suites: result.headWorkflowSuites ?? [],
+      owner: repo.owner,
+      name: repo.name,
+      pr: prNumber,
+      relevantEvents: config.checks.ciTriggerEvents,
+    },
+    context,
+  );
+  const classifiedPrChecks = classifyChecks(allChecks, {
+    requiredContexts: unreported.requiredContexts,
+  });
   const latestRemoval = batchData.latestMergeQueueRemoval;
   // `timelineItems(last: 1, ...)` returns the single most recent removal regardless of age, so
   // a PR removed from the queue once, long ago, and never re-added keeps returning that same
@@ -408,29 +421,13 @@ async function runScopedCheck(
     );
   }).length;
   const approvedReviews = approvedReviewVisibility.visible;
-  const unreported = await collectUnreportedRequired(
-    {
-      batchData,
-      checks: allChecks,
-      suites: result.headWorkflowSuites ?? [],
-      owner: repo.owner,
-      name: repo.name,
-      pr: prNumber,
-      relevantEvents: config.checks.ciTriggerEvents,
-    },
-    context,
-  );
-  // A superseded cancelled run still fails its required gate on GitHub (github/gh-stack#466).
-  const hasUnmetRequired =
-    unreported.hasUnreportedRequired ||
-    evaluateRequiredChecks(unreported.requiredContexts, classifiedPrChecks).cancelled.length > 0;
   let status = computeStatus(
     verdict,
     threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
     visibleCommentClassification.actionable.length,
     mergeStatus,
     changesRequestedReviewCount,
-    hasUnmetRequired,
+    unreported.hasUnreportedRequired,
   );
   status = enforceTransportReadiness(status, batchData);
 
@@ -448,7 +445,7 @@ async function runScopedCheck(
       threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
       visibleCommentClassification.actionable.length,
       changesRequestedReviewCount,
-      hasUnmetRequired,
+      unreported.hasUnreportedRequired,
     );
     batchData = refreshed.batchData;
     mergeStatus = refreshed.mergeStatus;

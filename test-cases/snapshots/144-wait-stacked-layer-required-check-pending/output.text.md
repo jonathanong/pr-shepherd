@@ -6,7 +6,7 @@ Required status checks: 3 [Required] — pending: web
 Stack: 2688 (layer 2/2, base main)
 **activity** 0 commits · 0 review rounds · active: `web`
 
-WAIT: 2 passing, 1 in-progress — active checks: web — required checks pending: web
+WAIT: 2 passing, 1 in-progress — active checks: web — awaiting human review or branch protection
 
 ## Instructions
 

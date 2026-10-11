@@ -5,7 +5,8 @@ import type { ClassifiedCheck } from "../types/check-classification.mts";
 /**
  * Attach the merge target's required contexts, and which of them are not passing, to
  * `mergeRequirements`. A native-stack layer's own base can carry no rules, so these
- * contexts come from the stack trunk and replace whatever the base reported.
+ * contexts come from the stack trunk and replace whatever the base reported. With no
+ * target contexts the status is returned unchanged.
  */
 export function withRequiredCheckState(
   mergeStatus: MergeStatusResult,
@@ -14,7 +15,7 @@ export function withRequiredCheckState(
 ): MergeStatusResult {
   const requirements = mergeStatus.mergeRequirements;
   if (!requirements || contexts.length === 0) return mergeStatus;
-  const { failing, cancelled, pending } = evaluateRequiredChecks(contexts, checks);
+  const { failing, pending } = evaluateRequiredChecks(contexts, checks);
   return {
     ...mergeStatus,
     mergeRequirements: {
@@ -22,7 +23,6 @@ export function withRequiredCheckState(
       requiredStatusChecks: {
         contexts: [...contexts],
         ...(failing.length > 0 && { failing }),
-        ...(cancelled.length > 0 && { cancelled }),
         ...(pending.length > 0 && { pending }),
       },
     },

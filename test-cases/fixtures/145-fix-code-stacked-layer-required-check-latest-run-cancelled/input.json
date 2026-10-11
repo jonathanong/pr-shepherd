@@ -1,5 +1,5 @@
 {
-  "description": "Duplicate CI runs from a stack push (github/gh-stack#466): every required trunk context on the head has a cancelled run and a newer successful run of the same workflow. GitHub still counts the cancelled runs and reports the PR BLOCKED. Shepherd must name every required context as cancelled instead of treating the newer successes as green.",
+  "description": "Duplicate CI runs from a stack push (github/gh-stack#466): each required trunk context on the head has a cancelled run with the higher run ID and a lower-ID success that ran later. GitHub's required gate reads the latest (highest-ID) run, so the PR is BLOCKED. Shepherd must keep those cancellations as failing checks with a rerun command, not supersede them.",
   "repository": {
     "owner": "vouchington",
     "name": "vouchington"
@@ -29,54 +29,72 @@
         "status": "COMPLETED",
         "conclusion": "CANCELLED",
         "event": "pull_request",
-        "detailsUrl": "https://github.com/vouchington/vouchington/actions/runs/100/job/100",
-        "runId": "100",
-        "workflowId": "11"
+        "detailsUrl": "https://github.com/vouchington/vouchington/actions/runs/200/job/200",
+        "runId": "200",
+        "workflowId": "11",
+        "startedAtUnix": 1791700000,
+        "completedAtUnix": 1791700005,
+        "workflowName": "static"
       },
       {
         "name": "static",
         "status": "COMPLETED",
         "conclusion": "SUCCESS",
         "event": "pull_request",
-        "detailsUrl": "https://github.com/vouchington/vouchington/actions/runs/200/job/200",
-        "runId": "200",
-        "workflowId": "11"
+        "detailsUrl": "https://github.com/vouchington/vouchington/actions/runs/100/job/100",
+        "runId": "100",
+        "workflowId": "11",
+        "startedAtUnix": 1791700030,
+        "completedAtUnix": 1791700300,
+        "workflowName": "static"
       },
       {
         "name": "web",
         "status": "COMPLETED",
         "conclusion": "CANCELLED",
-        "event": "pull_request",
-        "detailsUrl": "https://github.com/vouchington/vouchington/actions/runs/101/job/101",
-        "runId": "101",
-        "workflowId": "12"
-      },
-      {
-        "name": "web",
-        "status": "COMPLETED",
-        "conclusion": "SUCCESS",
         "event": "pull_request",
         "detailsUrl": "https://github.com/vouchington/vouchington/actions/runs/201/job/201",
         "runId": "201",
-        "workflowId": "12"
+        "workflowId": "12",
+        "startedAtUnix": 1791700000,
+        "completedAtUnix": 1791700005,
+        "workflowName": "web"
+      },
+      {
+        "name": "web",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/vouchington/vouchington/actions/runs/101/job/101",
+        "runId": "101",
+        "workflowId": "12",
+        "startedAtUnix": 1791700030,
+        "completedAtUnix": 1791700300,
+        "workflowName": "web"
       },
       {
         "name": "gitleaks",
         "status": "COMPLETED",
         "conclusion": "CANCELLED",
         "event": "pull_request",
-        "detailsUrl": "https://github.com/vouchington/vouchington/actions/runs/102/job/102",
-        "runId": "102",
-        "workflowId": "13"
+        "detailsUrl": "https://github.com/vouchington/vouchington/actions/runs/202/job/202",
+        "runId": "202",
+        "workflowId": "13",
+        "startedAtUnix": 1791700000,
+        "completedAtUnix": 1791700005,
+        "workflowName": "gitleaks"
       },
       {
         "name": "gitleaks",
         "status": "COMPLETED",
         "conclusion": "SUCCESS",
         "event": "pull_request",
-        "detailsUrl": "https://github.com/vouchington/vouchington/actions/runs/202/job/202",
-        "runId": "202",
-        "workflowId": "13"
+        "detailsUrl": "https://github.com/vouchington/vouchington/actions/runs/102/job/102",
+        "runId": "102",
+        "workflowId": "13",
+        "startedAtUnix": 1791700030,
+        "completedAtUnix": 1791700300,
+        "workflowName": "gitleaks"
       }
     ]
   },
@@ -109,5 +127,5 @@
     "shouldCancel": false,
     "remainingSeconds": 600
   },
-  "expectedExitCode": 10
+  "expectedExitCode": 12
 }

@@ -7,7 +7,7 @@ export function computeStatus(
   unresolvedComments: number,
   mergeStatus: MergeStatusResult,
   changesRequestedReviews: number,
-  hasUnmetRequired = false,
+  hasUnreportedRequired = false,
 ): ShepherdStatus {
   // Merge conflicts are always terminal regardless of CI state.
   if (mergeStatus.status === "CONFLICTS") return "FAILING";
@@ -35,7 +35,7 @@ export function computeStatus(
     changesRequestedReviews === 0 &&
     (mergeStatus.status === "BLOCKED" || mergeStatus.status === "UNSTABLE") &&
     !mergeStatus.blockingBotReviewInProgress &&
-    !hasUnmetRequired
+    !hasUnreportedRequired
   ) {
     return "READY";
   }
@@ -52,10 +52,10 @@ export function computeStatus(
   if (
     (mergeStatus.status === "CLEAN" || mergeStatus.status === "DRAFT") &&
     verdict.allPassed &&
-    !hasUnmetRequired
+    !hasUnreportedRequired
   )
     return "READY";
-  if (hasUnmetRequired && (mergeStatus.status === "CLEAN" || mergeStatus.status === "DRAFT"))
+  if (hasUnreportedRequired && (mergeStatus.status === "CLEAN" || mergeStatus.status === "DRAFT"))
     return "PENDING";
   return "UNKNOWN";
 }

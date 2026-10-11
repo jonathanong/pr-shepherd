@@ -39,8 +39,15 @@ function validTimes(check: CheckRun, requireOrdered = true): boolean {
  * when its matching successful job actually started and completed later. Cancelled
  * wrappers can report completion before start; compare both observed boundaries
  * without treating that reversed interval as a successful execution.
+ *
+ * The lower-ID form never covers a required context: GitHub's required gate reads the
+ * latest (highest-ID) run, so that cancellation still fails it (github/gh-stack#466).
  */
-export function buildSupersededIndices(checks: CheckRun[]): Set<number> {
+export function buildSupersededIndices(
+  checks: CheckRun[],
+  requiredContexts: readonly string[] = [],
+): Set<number> {
+  const required = new Set(requiredContexts.map((context) => context.trim()));
   const maxRunIdByGroup = new Map<string, number>();
   const runIds = checks.map(numericRunId);
   checks.forEach((check, index) => {
@@ -63,6 +70,7 @@ export function buildSupersededIndices(checks: CheckRun[]): Set<number> {
     }
 
     if (
+      required.has(cancelled.name.trim()) ||
       cancelled.status !== "COMPLETED" ||
       !cancelled.workflowId ||
       cancelled.event === null ||
