@@ -19,6 +19,7 @@ describe("runResolveMutate — configured bot threads", () => {
       cliCommand: ["pr-shepherd"],
       botUsernames: ["coderabbitai"],
       ignoreChecks: [],
+      standardRules: [],
       poll: {
         intervalSeconds: 60,
         stackIntervalFactor: 2,

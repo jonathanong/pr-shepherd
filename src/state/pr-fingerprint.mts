@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 import { resolvePrStatePath } from "./base.mts";
 import { discoverRuleFiles } from "../classify/loader.mts";
 import { getEffectiveCwd } from "../execution-context.mts";
@@ -28,6 +29,21 @@ export interface StoredWaitDetectors {
   fullAt: number;
 }
 
+let packageVersion: string | undefined;
+
+/** Bundled standard rules change with the package, so their digest input is its version. */
+function readPackageVersion(): string {
+  if (packageVersion !== undefined) return packageVersion;
+  try {
+    const pkgUrl = new URL("../../package.json", import.meta.url);
+    const pkg = JSON.parse(readFileSync(fileURLToPath(pkgUrl), "utf8")) as { version?: unknown };
+    packageVersion = typeof pkg.version === "string" ? pkg.version : "unknown";
+  } catch {
+    packageVersion = "unknown";
+  }
+  return packageVersion;
+}
+
 export function fingerprintInputDigest(config: PrShepherdConfig): string {
   const hash = createHash("sha256");
   hash.update(
@@ -44,6 +60,10 @@ export function fingerprintInputDigest(config: PrShepherdConfig): string {
         neverCancelRuns: config.actions.neverCancelRuns,
         workWhileQueued: config.actions.workWhileQueued,
       },
+      standardRules:
+        (config.standardRules?.length ?? 0) > 0
+          ? { names: config.standardRules, version: readPackageVersion() }
+          : undefined,
     }),
   );
   for (const file of discoverRuleFiles(getEffectiveCwd())) {

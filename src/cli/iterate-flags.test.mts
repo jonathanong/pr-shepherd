@@ -17,6 +17,7 @@ function defaultConfig(): PrShepherdConfig {
     cliCommand: ["pr-shepherd"],
     botUsernames: [],
     ignoreChecks: [],
+    standardRules: [],
     poll: {
       intervalSeconds: 60,
       stackIntervalFactor: 2,

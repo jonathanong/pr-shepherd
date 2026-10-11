@@ -320,6 +320,17 @@ For guided noise reduction, use the plugin's `reduce-pr-noise` skill. It loads f
 
 ### Classification rules
 
+For common vendor bot noise (CodeRabbit and Gemini rate-limit notices, Codex usage-limit and review boilerplate, Codecov reports, and more), enable the bundled rules instead of writing your own:
+
+```yaml
+# .pr-shepherdrc.yml
+classify:
+  standard:
+    all: true
+```
+
+See [`classify.standard`](docs/configuration.md#classifystandard--default-) for the rule list and per-rule overrides. Write custom rules for repository-specific policy.
+
 Drop `.ts` / `.mts` / `.mjs` / `.js` files under `.pr-shepherd/classification/` to suppress and/or auto-resolve specific bot comments — useful for silencing repetitive noise like rate-limit notices from `gemini-code-assist` or "Reviews paused" from `coderabbitai`.
 
 ```ts

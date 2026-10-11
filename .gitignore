@@ -5,7 +5,6 @@ node_modules/
 bin/
 .DS_Store
 *.log
-.pr-shepherdrc.yml
 .husky/_/
 .agent-retrospectives/
 .codex/worktrees/

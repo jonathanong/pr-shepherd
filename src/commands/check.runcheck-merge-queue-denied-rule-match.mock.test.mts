@@ -3,9 +3,8 @@ import { describe, it, expect, vi } from "vitest";
 // Not mocked by check.test-support.mts (no existing check.mts test exercises the
 // classify-rule pipeline), so this file adds its own minimal mock: one rule that
 // suppresses + auto-resolves a single thread ID, independent of the real filesystem.
-vi.mock("../../src/classify/loader.mts", () => ({
-  discoverRuleFiles: () => ["fake-rule.mts"],
-  loadRules: () =>
+vi.mock("../../src/classify/loader.mts", () => {
+  const load = () =>
     Promise.resolve([
       {
         name: "fake-rule",
@@ -13,8 +12,9 @@ vi.mock("../../src/classify/loader.mts", () => ({
         rule: (item: { id: string }) =>
           item.id === "t-denied" ? { suppress: true, autoResolve: true } : null,
       },
-    ]),
-}));
+    ]);
+  return { discoverRuleFiles: () => ["fake-rule.mts"], loadRules: load, loadClassifyRules: load };
+});
 
 import {
   registerHooks,
