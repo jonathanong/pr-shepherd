@@ -37,7 +37,7 @@ The token bench models the same counts for whole sessions (`evals/tokens/lib.mjs
 | CI settles to a READY candidate                                        | 14 + 1        | 1 (check runs) when `mergeable_state` did not change; 2 when it did (the snapshot pull read is a 200 and the refresh a 304) |
 | Merged PR (a closed, unmerged PR reads the full snapshot)              | 1             | 1 (the pull; cloud sessions too)                                                                                            |
 | Changed tick, general case                                             | 14            | only the reads whose resource changed                                                                                       |
-| Claude Code cloud session, any of the above                            | +1            | +1 (`ccr/review_threads` carries no ETag)                                                                                   |
+| Claude Code cloud session, any of the above except a merged PR         | +1            | +1 (`ccr/review_threads` carries no ETag)                                                                                   |
 
 Unlike GraphQL, where every tick returned to the caller pays for `BatchPr`, a REST tick that rebuilds its report still charges only the reads that changed.
 
