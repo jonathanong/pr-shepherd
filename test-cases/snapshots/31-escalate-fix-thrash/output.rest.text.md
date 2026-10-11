@@ -19,18 +19,20 @@ The same thread(s) remain unresolved after their pending review commands were re
 
 ## Items needing attention
 
-- thread `PRRT_thrash` — `src/auth.ts:88` (@coderabbitai · Bot):
+- thread `rest-thread-10` — `src/auth.ts:88` (@coderabbitai · Bot):
 
-  > This authentication logic is too complex, please simplify.
+  - comment `PRRC_10` (@coderabbitai · Bot):
+
+    > This authentication logic is too complex, please simplify.
 
 
 ## Fix attempts
 
-- thread `PRRT_thrash` pending commands returned 3 times
+- thread `rest-thread-10` pending commands returned 3 times
 
 ## Pending review commands
 
-- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids PRRT_thrash --message "$DISMISS_MESSAGE" --adopt-existing-replies --resolve-thread-ids PRRT_thrash --require-sha "$(git rev-parse HEAD)"`
+- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-10 --message "$DISMISS_MESSAGE" --adopt-existing-replies --resolve-thread-ids rest-thread-10 --require-sha "$(git rev-parse HEAD)"`
 
 ---
 

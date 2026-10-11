@@ -48,7 +48,7 @@ Shepherd https://github.com/owner/repo/pull/42 through to a terminal state. This
 
 ### [threadId=rest-thread-11](https://github.com/owner/repo/pull/42#discussion_r11) — `src/index.ts:42` (@maintainer · User)
 
-#### [commentId=rest-thread-11](https://github.com/owner/repo/pull/42#discussion_r11) (@maintainer · User)
+#### [commentId=PRRC_11](https://github.com/owner/repo/pull/42#discussion_r11) (@maintainer · User)
 
 > Please rename this variable to be more descriptive.
 
@@ -102,7 +102,7 @@ The reply to `rest-thread-11` failed with a 403. Running the next tick.
 
 ### [threadId=rest-thread-12](https://github.com/owner/repo/pull/42#discussion_r12) — `src/retry.ts:17` (@reviewer · User)
 
-#### [commentId=rest-thread-12](https://github.com/owner/repo/pull/42#discussion_r12) (@reviewer · User)
+#### [commentId=PRRC_12](https://github.com/owner/repo/pull/42#discussion_r12) (@reviewer · User)
 
 > Please add a regression test for the retry limit.
 

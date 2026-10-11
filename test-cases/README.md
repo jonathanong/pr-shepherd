@@ -35,7 +35,11 @@ The REST input is derived automatically from the GraphQL fixture by
 [`test-helpers/test-cases/rest-projection.mts`](../test-helpers/test-cases/rest-projection.mts):
 the batch keeps only the keys the production REST reader emits, so `reviewDecision` is `null`,
 viewer capabilities are unknown, queue membership and removal history are absent, and threads always
-carry their full transcript. Branch policy stays readable and equal to the GraphQL policy. REST reads
+carry their full transcript. Threads take the REST reader's `rest-thread-<root comment ID>` handle,
+with the root taken from the `#discussion_rN` URL (or a synthetic root unique in the fixture). The
+fixture's seen markers and fix attempts stay keyed by GraphQL thread IDs: the harness records each
+GraphQL ID against its root, as an earlier GraphQL tick would have, so every REST variant runs the
+REST→GraphQL thread alias path. Branch policy stays readable and equal to the GraphQL policy. REST reads
 go through mocked `fetch` routes
 ([`rest-routes.mts`](../test-helpers/test-cases/rest-routes.mts)); an unrouted REST request or any
 GraphQL request during a REST run fails the test. `rest-projection.test.mts` runs the real REST
@@ -64,9 +68,14 @@ test fails if a declared divergence no longer diverges. Other fixture fields:
 - `restCarryOver` lists GraphQL-only batch keys to keep in the REST projection, modeling evidence
   fetched by an earlier GraphQL tick that survives a switch to REST.
 
-Aggregate fixtures model summary rows directly, so their REST projection strips only raw GraphQL-only
-fields (`reviewDecision`, `isInMergeQueue`, `queueRemoval`); a row's precomputed `action` and
-`reasons` are kept as written. `test-cases/format-parity.test.mts` and
+Aggregate fixtures model summary rows directly. Their REST projection
+([`rest-summary-projection.mts`](../test-helpers/test-cases/rest-summary-projection.mts)) strips the
+GraphQL-only fields (`reviewDecision`, `isInMergeQueue`, `queueRemoval`), then routes each row's
+inputs through the real `routePollSummary` twice: as GraphQL read them (including queue membership
+and a denied mark-ready capability) and as REST reads them. A row whose two routes differ takes the
+REST route and its recomputed poll command; a READY receipt REST evidence cannot certify is dropped.
+Rows that route identically keep their written `action` and `reasons`, including projector overlays
+such as `ready-delay` or `blocking-reviewer-in-progress`. `test-cases/format-parity.test.mts` and
 `src/skill-playbook-pointers.test.mts` cover both variants.
 
 `<action>` must be one of `cancel`, `wait`, `fix-code`, `mark-ready`,

@@ -12,9 +12,9 @@
 
 ## Review threads
 
-### [threadId=PRRT_with_annotations](https://github.com/owner/repo/pull/42#discussion_r55) — `src/util/parse.ts:18` (@reviewer · User)
+### [threadId=rest-thread-55](https://github.com/owner/repo/pull/42#discussion_r55) — `src/util/parse.ts:18` (@reviewer · User)
 
-#### [commentId=PRRT_with_annotations](https://github.com/owner/repo/pull/42#discussion_r55) (@reviewer · User)
+#### [commentId=PRRC_55](https://github.com/owner/repo/pull/42#discussion_r55) (@reviewer · User)
 
 > Same edge case the analyzer flagged — please handle empty input.
 
@@ -37,5 +37,5 @@
 3. Inspect every referenced range under `## Check annotations` and apply any warranted change.
 4. Commit and push any code changes.
 5. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
-6. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids PRRT_with_annotations --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha "$(git rev-parse HEAD)"`
+6. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-55 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha "$(git rev-parse HEAD)"`
 7. `[FIX_CODE]` is non-terminal. Rerun the same command now.

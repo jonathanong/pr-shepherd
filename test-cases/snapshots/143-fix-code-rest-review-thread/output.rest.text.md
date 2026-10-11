@@ -14,7 +14,7 @@
 
 ### [threadId=rest-thread-11](https://github.com/owner/repo/pull/42#discussion_r11) — `src/index.ts:42` (@maintainer · User)
 
-#### [commentId=rest-thread-11](https://github.com/owner/repo/pull/42#discussion_r11) (@maintainer · User)
+#### [commentId=PRRC_11](https://github.com/owner/repo/pull/42#discussion_r11) (@maintainer · User)
 
 > Please rename this variable to be more descriptive.
 

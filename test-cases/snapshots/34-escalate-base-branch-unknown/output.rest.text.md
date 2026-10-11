@@ -19,14 +19,16 @@ Could not determine the PR's base branch (GraphQL batch returned an empty base b
 
 ## Items needing attention
 
-- thread `PRRT_base` — `src/main.ts:1` (@reviewer · User):
+- thread `rest-thread-30` — `src/main.ts:1` (@reviewer · User):
 
-  > Please fix the import order.
+  - comment `PRRC_30` (@reviewer · User):
+
+    > Please fix the import order.
 
 
 ## Pending review commands
 
-- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids PRRT_base --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha "$(git rev-parse HEAD)"`
+- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-30 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha "$(git rev-parse HEAD)"`
 
 ---
 

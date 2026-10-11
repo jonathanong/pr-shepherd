@@ -12,9 +12,9 @@
 
 ## Review threads
 
-### [threadId=PRRT_multi](https://github.com/owner/repo/pull/42#discussion_r54) — `src/index.ts:30` (@reviewer · User)
+### [threadId=rest-thread-54](https://github.com/owner/repo/pull/42#discussion_r54) — `src/index.ts:30` (@reviewer · User)
 
-#### [commentId=PRRT_multi](https://github.com/owner/repo/pull/42#discussion_r54) (@reviewer · User)
+#### [commentId=PRRC_54](https://github.com/owner/repo/pull/42#discussion_r54) (@reviewer · User)
 
 > Extract this into a helper.
 
@@ -42,5 +42,5 @@
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
 3. Commit and push any code changes.
 4. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
-5. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids PRRT_multi --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha "$(git rev-parse HEAD)"`
+5. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-54 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha "$(git rev-parse HEAD)"`
 6. `[FIX_CODE]` is non-terminal. Rerun the same command now.

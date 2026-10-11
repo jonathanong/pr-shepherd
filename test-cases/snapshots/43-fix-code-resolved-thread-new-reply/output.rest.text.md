@@ -13,7 +13,7 @@
 
 ## First-look items (1) — acknowledge status before acting
 
-- `threadId=PRRT_resolved_reply` [↗](https://github.com/owner/repo/pull/42#discussion_r200) `src/thread-comments.ts:36` (@reviewer · User) [status: resolved, edited]
+- `threadId=rest-thread-200` [↗](https://github.com/owner/repo/pull/42#discussion_r200) `src/thread-comments.ts:36` (@reviewer · User) [status: resolved, edited]
   - `commentId=PRRC_resolved_1` [↗](https://github.com/owner/repo/pull/42#discussion_r200) (@reviewer · User)
     > Original concern.
   - `commentId=PRRC_resolved_2` [↗](https://github.com/owner/repo/pull/42#discussion_r201) (@author · User)

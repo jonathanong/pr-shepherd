@@ -13,9 +13,9 @@
 
 ## Review threads
 
-### [threadId=PRRT_conflict_thread](https://github.com/owner/repo/pull/42#discussion_r49) — `src/merge.ts:8` (@reviewer · User)
+### [threadId=rest-thread-49](https://github.com/owner/repo/pull/42#discussion_r49) — `src/merge.ts:8` (@reviewer · User)
 
-#### [commentId=PRRT_conflict_thread](https://github.com/owner/repo/pull/42#discussion_r49) (@reviewer · User)
+#### [commentId=PRRC_49](https://github.com/owner/repo/pull/42#discussion_r49) (@reviewer · User)
 
 > Rename this helper before merging.
 
@@ -25,5 +25,5 @@
 2. The branch has merge conflicts (see `**branch**` above). Resolve them before committing.
 3. Commit any remaining conflict-resolution changes and push to the PR head branch before review mutations.
 4. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
-5. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids PRRT_conflict_thread --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha "$(git rev-parse HEAD)"`
+5. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-49 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha "$(git rev-parse HEAD)"`
 6. `[FIX_CODE]` is non-terminal. Rerun the same command now.

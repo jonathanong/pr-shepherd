@@ -15,6 +15,7 @@
  */
 import { REST_BATCH_UNAVAILABLE } from "../../src/github/rest-batch-unavailable.mts";
 import { mergeStartupFailureChecks } from "../../src/checks/startup-failures.mts";
+import { restThreadRoots } from "./rest-thread-roots.mts";
 
 /** Top-level `BatchPrData` keys `readRestSnapshot` can emit. */
 export const REST_BATCH_KEYS = new Set([
@@ -108,12 +109,15 @@ function pick(value: Record<string, unknown>, keys: Set<string>): Record<string,
   return Object.fromEntries(Object.entries(value).filter(([key]) => keys.has(key)));
 }
 
-function projectThread(thread) {
+function projectThread(thread, root: string) {
   const projected = pick(thread, REST_THREAD_KEYS);
+  projected.id = `rest-thread-${root}`;
   // `readRestFeedback` always returns the full transcript, root comment first. Fixtures that
   // omit `comments` describe a single-comment thread, so the root comment is rebuilt from the
-  // thread's own fields rather than leaving the transcript unknown.
-  const comments = Array.isArray(thread.comments) ? thread.comments : [{ ...thread }];
+  // thread's own fields, with a review-comment node ID rather than the thread's handle.
+  const comments = Array.isArray(thread.comments)
+    ? thread.comments
+    : [{ ...thread, id: `PRRC_${root}` }];
   projected.comments = comments.map((comment) => pick(comment, REST_THREAD_COMMENT_KEYS));
   return projected;
 }
@@ -128,7 +132,9 @@ export function projectBatchToRest(
     if (key in batchData) projected[key] = batchData[key];
   }
   projected.reviewDecision = null;
-  projected.reviewThreads = (batchData.reviewThreads ?? []).map(projectThread);
+  const threads = batchData.reviewThreads ?? [];
+  const roots = restThreadRoots(threads);
+  projected.reviewThreads = threads.map((thread, index) => projectThread(thread, roots[index]));
   projected.comments = (batchData.comments ?? []).map((comment) =>
     pick(comment, REST_COMMENT_KEYS),
   );
@@ -159,39 +165,5 @@ export function restBatchEnvelope(
     headWorkflowSuites,
     checkSuitesComplete: true,
     ...(!hasCheckRuns && headWorkflowSuites.length === 0 && { headCheckSuitesEmpty: true }),
-  };
-}
-
-/** Raw summary keys that the REST summary reader never sets from GraphQL-only evidence. */
-export function projectRawSummaryToRest(raw: Record<string, unknown>): Record<string, unknown> {
-  const {
-    isInMergeQueue: _isInMergeQueue,
-    mergeQueueAdditions: _additions,
-    mergeQueueRemovals: _removals,
-    viewerCanUpdate: _viewerCanUpdate,
-    lifecycleEvents: _lifecycleEvents,
-    ...rest
-  } = raw;
-  return {
-    ...rest,
-    reviewDecision: null,
-    mergeQueueEntry: null,
-    transport: "rest",
-    transportUnavailable: [...REST_BATCH_UNAVAILABLE],
-  };
-}
-
-/** Aggregate rows: the projector cannot carry GraphQL-only review, queue, or removal fields. */
-export function projectSummaryItemToRest(item: Record<string, unknown>): Record<string, unknown> {
-  const {
-    reviewDecision: _reviewDecision,
-    isInMergeQueue: _isInMergeQueue,
-    queueRemoval: _queueRemoval,
-    ...rest
-  } = item;
-  return {
-    ...rest,
-    transport: "rest",
-    transportUnavailable: [...REST_BATCH_UNAVAILABLE],
   };
 }
