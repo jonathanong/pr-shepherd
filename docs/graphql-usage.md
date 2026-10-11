@@ -8,7 +8,7 @@ A user PAT is **5,000 points / hour**. One-PR polling is a small slice of that. 
 
 `--verbose` prints command-scoped `apiUsage.graphql.measuredQueryCost`. That figure is authoritative for a live response. The numbers below are `rateLimit.cost` for the static query shape. Extra pages add their own cost.
 
-Per-tick request counts are asserted at the HTTP boundary by `src/github/graphql-wait-tick-cost.test.mts` ("spends one BatchPr request per wait tick, reused or not"), `src/github/graphql-wait-detectors.test.mts` ("charges nothing on an unchanged idle wait tick"), `src/github/graphql-stack-tick-cost.test.mts` ("reads a layer above the trunk in one BatchPr request, cold or reused"), and `src/github/graphql-base-behind-tick-cost.test.mts` ("reads the base compare once per base tip and head"). Change those tests and this page together.
+Per-tick request counts are asserted at the HTTP boundary by `src/github/graphql-wait-tick-cost.test.mts` ("spends one BatchPr request per wait tick, reused or not"), `src/github/graphql-wait-detectors.test.mts` ("charges nothing on an unchanged idle wait tick"), `src/github/graphql-stack-tick-cost.test.mts` ("reads a layer above the trunk in one BatchPr request, cold or reused"), `src/github/graphql-stack-handoff-cost.test.mts` ("routes layers on one summary read plus check-run details; their first ticks read nothing"), and `src/github/graphql-base-behind-tick-cost.test.mts` ("reads the base compare once per base tip and head"). Change those tests and this page together.
 
 ## How a point is counted
 
@@ -51,6 +51,7 @@ Costs below assume the PR number was passed. Omitting it adds 1 point for `PrNum
 | Same tick, fingerprint miss                                              | `BatchPr`                                 | 1, plus supplements |
 | Tick returned to the caller, last bounded tick, FIX_CODE debounce        | `BatchPr` (fingerprint reuse is off)      | 1, plus supplements |
 | `iterate`, MCP `iterate` for one PR                                      | `BatchPr` every call                      | 1, plus supplements |
+| First tick of a stack layer the stack tick routed, within 2 minutes      | The stack tick's handoff, no request      | 0, plus supplements |
 
 `BatchPr`'s first page is the fingerprint read: a hit returns the stored report before any supplement, and a miss continues the same request. There is no separate pre-check, so a hit and a miss cost the same 1 point when there are no supplements. At the default 60s interval, that is about 60 points/hour either way, a small share of 5,000. A thread among the newest 20 with more than one comment disables reuse; such a tick costs 1 point plus any supplements.
 
@@ -79,8 +80,9 @@ On a measured ready PR (#481), the former path was three GraphQL requests and th
 
 - One `PollStackSummary` query at the "summary now" column above. The anchor's first tick reads 4 entries, then pages on for the rest; later ticks page only past 50 layers.
 - `PollSummaryAnnotationProbe` only for layers that otherwise look ready.
+- `StackHandoffCheckRuns` only on a tick that routes owned layers to their one-PR sessions: one `nodes(ids:)` read per 100 check runs on those layers, 1 point each (measured). It fills in the check-run titles, summaries, and first annotations the summary does not select, so each routed layer's first `BatchPr` page can be handed off (recommendation 12).
 
-An explicit multi-PR selection uses `PollSummary` in chunks of 50. The one-PR sessions the summary hands off to are separate spend.
+An explicit multi-PR selection uses `PollSummary` in chunks of 50. The one-PR sessions the summary hands off to are separate spend, except each routed layer's first tick, which reads the stack tick's handoff instead of `BatchPr`.
 
 ### Mutations and one-shot reads
 
@@ -126,6 +128,8 @@ One-PR `BatchPr` stays at the 1-point floor. Fewer review connections, a smaller
 10. **Done: skip the stack summary's topology preflight after the first tick.** The preflight only sized `entries(first:)`. The size each summary observed is stored under the anchor, so a later tick runs the summary alone. Readiness never depends on the stored size: `readStack` still validates the full membership, and a later page asks only for the entries that remain.
 
 11. **Done: one comment window per summary thread, and no topology preflight.** The summary fragment read each review thread's root with `comments(first: 1)` and its newest five with `comments(last: 5)`. Each nests under `reviewThreads(last: 20)`, so the pair cost 40 of about 56 connection-requests per PR. One `comments(first: 5)` window keeps the root as its first node and flags any comment outside it, as the `last: 5` window did, at 36 per PR: a 6-layer stack summary drops from 3 points to 2. A thread longer than five comments was already incomplete and already differs from its full-transcript seen marker, so it still counts as actionable unless a rule suppresses it; that rule now sees the real root. At 36 per PR, 4 entries price at 1 point, so an unsized first summary page asks for 4 and pages on instead of reading `PollStackTopology` first: never more points than topology plus an exact-size summary, and 1 less for stacks of up to 10 layers. Stored READY receipts for PRs with review threads change fingerprint once after the upgrade, because the hashed thread shape changed.
+
+12. **Done: routed stack layers reuse the stack tick's read.** A stack tick that routed four owned layers paid 2 points, then each layer's first one-PR tick paid 1 more for a `BatchPr` that re-read what the summary had just read: 6 points. The summary fragment now also selects the scalar and object fields `BatchPr`'s first page needs (viewer capabilities, the head repository, review and comment timestamps, thread capabilities and lines, check-suite workflow runs, the base tip). None is a connection, so the summary keeps its price. On a tick that routes layers, one `StackHandoffCheckRuns` read adds the check-run titles, summaries, and first annotations, and each routed layer whose summary covers every `BatchPr` first-page window gets that page stored under its PR. The layer's next `BatchPr` read takes it instead of asking GitHub: once only (the read deletes it), within 2 minutes of the summary, and only for the same head. Every later stack tick clears the handoff of each layer it does not hand off again, so a layer the newer read stopped routing reads `BatchPr`. A wider, queued, or queue-removed layer has no handoff and reads `BatchPr` as before; so does every later tick, including the FIX_CODE debounce re-read. `stack-work` drops from 6 points to 3. The REST transport has no handoff. READY-receipt fingerprints leave the new fields out, so a bot editing a hidden comment does not invalidate a receipt. The one exception is thread comments' `isMinimized`, which the fingerprint uses to hide minimized bodies, as it already did for comments and reviews. Stored READY receipts for PRs with review threads therefore change fingerprint once after the upgrade.
 
 Not done: a whole-stack fingerprint that skips the summary. Check rollups, mergeability, queue entries, and annotation receipts change without bumping any layer's `updatedAt`, so a stack fingerprint would need most of the summary to be safe.
 

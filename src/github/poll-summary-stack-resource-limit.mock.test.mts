@@ -100,7 +100,11 @@ describe("stack summary resource limits", () => {
       .mockResolvedValueOnce(stackPage(2, [nodes[1]]));
     const shrunk = await fetchPollSummary({ stackPrNumber: 44 }, repo);
 
-    expect(shrunk).toEqual(clean);
+    // Same layers; only the handoff's read time differs.
+    expect({ ...shrunk, handoffSource: { ...shrunk.handoffSource, readAt: 0 } }).toEqual({
+      ...clean,
+      handoffSource: { ...clean.handoffSource, readAt: 0 },
+    });
     expect(mockGraphql.mock.calls.map((call) => call[1])).toEqual([
       { owner: "acme", repo: "widgets", anchor: 44, after: null, first: 4 },
       { owner: "acme", repo: "widgets", anchor: 44, after: null, first: 2 },

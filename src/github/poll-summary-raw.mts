@@ -14,6 +14,15 @@ interface RawSummaryComment {
   authorAssociation?: string;
   url?: string;
   author: RawAuthor | null;
+  /** GraphQL handoff fields; absent on REST summaries. */
+  viewerCanMinimize?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  pullRequestReview?: { id: string } | null;
+  path?: string | null;
+  line?: number | null;
+  startLine?: number | null;
+  commit?: { oid: string } | null;
 }
 
 interface SummaryConnection<T> {
@@ -29,21 +38,30 @@ type RawCheckContext =
       name: string;
       status: string;
       conclusion: string | null;
-      detailsUrl?: string;
+      detailsUrl?: string | null;
       startedAt?: string | null;
       completedAt?: string | null;
       annotations?: { totalCount: number };
       checkSuite: {
         createdAt?: string | null;
+        updatedAt?: string | null;
         workflowRun: {
           databaseId?: string | number;
           event: string;
           createdAt?: string | null;
+          updatedAt?: string | null;
           workflow?: { name: string; databaseId: string | number } | null;
         } | null;
       } | null;
     }
-  | { __typename: "StatusContext"; context: string; state: string };
+  | {
+      __typename: "StatusContext";
+      context: string;
+      state: string;
+      createdAt?: string;
+      targetUrl?: string | null;
+      description?: string | null;
+    };
 
 interface RawCheckContexts {
   totalCount: number;
@@ -53,6 +71,7 @@ interface RawCheckContexts {
 }
 
 export interface RawCheckRollup {
+  state?: string | null;
   contexts: RawCheckContexts;
 }
 
@@ -62,10 +81,17 @@ export interface RawSummaryCommit {
   committedDate?: string;
   statusCheckRollup: RawCheckRollup | null;
   checkSuites?: {
+    pageInfo?: { hasNextPage: boolean };
     nodes: Array<{
+      id?: string;
       status?: string | null;
       conclusion: string | null;
-      workflowRun: { event: string | null } | null;
+      workflowRun: {
+        databaseId?: number | null;
+        event: string | null;
+        url?: string | null;
+        workflow?: { name: string | null } | null;
+      } | null;
     }>;
   } | null;
 }
@@ -73,6 +99,18 @@ export interface RawSummaryCommit {
 export interface RawSummaryPr {
   transport?: "rest";
   transportUnavailable?: Array<{ field: string; reason: string }>;
+  /** GraphQL handoff fields (see `stack-handoff.mts`); absent on REST summaries. */
+  id?: string;
+  viewerDidAuthor?: boolean;
+  viewerCanEnableAutoMerge?: boolean;
+  viewerCanEditFiles?: boolean;
+  headRepository?: { nameWithOwner: string; viewerPermission: string | null } | null;
+  isMergeQueueEnabled?: boolean;
+  batchAutoMergeRequest?: {
+    enabledAt: string;
+    mergeMethod: string;
+    enabledBy?: { login: string } | null;
+  } | null;
   number: number;
   title: string;
   url: string;
@@ -92,7 +130,9 @@ export interface RawSummaryPr {
   mergeable: string;
   mergeStateStatus: string;
   reviewDecision: string | null;
-  reviewRequests?: { nodes: Array<{ requestedReviewer: RawAuthor | null }> };
+  reviewRequests?: {
+    nodes: Array<{ requestedReviewer: (Partial<RawAuthor> & { name?: string }) | null }>;
+  };
   latestReviews?: { nodes: Array<{ state: string; author: RawAuthor | null }> };
   isInMergeQueue?: boolean;
   autoMergeRequest?: AutoMergeRequestStatus | null;
@@ -117,14 +157,18 @@ export interface RawSummaryPr {
     id: string;
     isResolved?: boolean;
     isOutdated?: boolean;
+    viewerCanReply?: boolean;
+    viewerCanResolve?: boolean;
     path: string | null;
+    line?: number | null;
+    startLine?: number | null;
     /**
      * The first comments from the root. `pageInfo.hasPreviousPage` is GraphQL's
      * `hasNextPage` (aliased): true when comments exist outside this window.
      */
     comments: SummaryConnection<RawSummaryComment>;
   }>;
-  commits: { nodes: Array<{ commit: RawSummaryCommit }> };
+  commits: { totalCount?: number; nodes: Array<{ commit: RawSummaryCommit }> };
 }
 
 export interface RawExplicitResponse {

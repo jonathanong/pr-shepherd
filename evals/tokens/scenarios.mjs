@@ -1270,9 +1270,13 @@ function settledOverview(layers, number) {
 }
 
 /**
- * A one-PR tick on a non-root native-stack layer. On GraphQL, `BatchPr`'s
- * first page carries the stack topology and the trunk's required contexts, so
- * the tick is the ordinary 1 point (src/github/graphql-stack-tick-cost.test.mts).
+ * A routed layer's first one-PR tick. On GraphQL it is free: the stack tick
+ * that routed it already read the layer and handed that read off, so the tick
+ * sends no request (src/github/graphql-stack-handoff-cost.test.mts). The stack
+ * tick pays for the handoff with one `StackHandoffCheckRuns` read per 100 check
+ * runs on the routed layers, 1 point each; one page is assumed, since the
+ * fixture records no check counts. Later ticks read `BatchPr`, the ordinary
+ * 1 point (src/github/graphql-stack-tick-cost.test.mts).
  * REST's snapshot also reads the stack itself, then loads the trunk's branch
  * summary, branch rules and a compare, and the stack topology (the stack list
  * and stack read twice, each layer's pull and the viewer). The topology reads
@@ -1283,8 +1287,9 @@ function settledOverview(layers, number) {
  * src/commands/iterate/stale-ancestry.mts, src/github/rest-stack-read.mts.
  */
 const ROUTED_LAYER_EXTRA_READS = (stackSize) => 1 + 3 + (stackSize - 1);
+const HANDOFF_CHECK_RUNS_POINTS = 1;
 const routedLayerTickApi = (stackSize) => ({
-  api: gql(SHEPHERD_TICK_API.graphqlPoints),
+  api: gql(0),
   apiRest: rest(SHEPHERD_TICK_API_REST.restCore + ROUTED_LAYER_EXTRA_READS(stackSize)),
   // Cloud REST: the same reads on top of the cloud snapshot.
   apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + ROUTED_LAYER_EXTRA_READS(stackSize)),
@@ -1314,7 +1319,7 @@ const STACK_SCENARIOS = [
             via: "bash",
             cmd: stackCmd(layers[anchor].pr, repo),
             out: snapshot(name),
-            api: stackTickApi(layers.length),
+            api: gql(stackTickApi(layers.length).graphqlPoints + HANDOFF_CHECK_RUNS_POINTS),
             apiRest: stackTickApiRest(layers.length),
             apiCloud: stackTickApiCloud(layers.length),
           },

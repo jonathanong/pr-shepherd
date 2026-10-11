@@ -184,8 +184,10 @@ function detectBlockingReviewer(raw: RawSummaryPr): boolean {
   const prefixes = (loadConfig().mergeStatus?.blockingReviewerLogins ?? []).map((login) =>
     login.toLowerCase(),
   );
-  const matches = (author: { login: string } | null): boolean =>
-    author !== null && prefixes.some((prefix) => author.login.toLowerCase().startsWith(prefix));
+  // A team reviewer has a name, not a login, so it never matches a login prefix.
+  const matches = (author: { login?: string } | null): boolean =>
+    typeof author?.login === "string" &&
+    prefixes.some((prefix) => author.login!.toLowerCase().startsWith(prefix));
   return (
     (raw.reviewRequests?.nodes ?? []).some((request) => matches(request.requestedReviewer)) ||
     (raw.latestReviews?.nodes ?? []).some(

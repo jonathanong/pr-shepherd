@@ -1,4 +1,7 @@
 fragment PollSummaryPr on PullRequest {
+  # Scalars and objects below marked "handoff" add no connection, so the stack
+  # summary keeps its price; they let a routed layer's first tick skip BatchPr.
+  id
   number
   title
   url
@@ -10,12 +13,33 @@ fragment PollSummaryPr on PullRequest {
   updatedAt
   isDraft
   viewerCanUpdate
+  # handoff
+  viewerDidAuthor
+  viewerCanEnableAutoMerge
+  viewerCanEditFiles
+  headRepository {
+    nameWithOwner
+    viewerPermission
+  }
+  isMergeQueueEnabled
+  # Aliased: the summary's own `autoMergeRequest` is the REST-projected status.
+  batchAutoMergeRequest: autoMergeRequest {
+    enabledAt
+    mergeMethod
+    enabledBy {
+      login
+    }
+  }
   headRefName
   headRefOid
   baseRefName
   baseRefOid
   baseRef {
     ...RefRules
+    # handoff: the live base tip
+    target {
+      oid
+    }
   }
   mergeable
   mergeStateStatus
@@ -52,6 +76,9 @@ fragment PollSummaryPr on PullRequest {
         }
         ... on Mannequin {
           login
+        }
+        ... on Team {
+          name
         }
       }
     }
@@ -127,12 +154,15 @@ fragment PollSummaryPr on PullRequest {
       id
       body
       isMinimized
+      viewerCanMinimize
       url
       authorAssociation
       author {
         __typename
         login
       }
+      createdAt
+      updatedAt
     }
   }
   reviews(last: 100) {
@@ -145,10 +175,17 @@ fragment PollSummaryPr on PullRequest {
       body
       state
       isMinimized
+      viewerCanMinimize
       authorAssociation
       author {
         __typename
         login
+      }
+      createdAt
+      updatedAt
+      url
+      commit {
+        oid
       }
     }
   }
@@ -161,7 +198,11 @@ fragment PollSummaryPr on PullRequest {
       id
       isResolved
       isOutdated
+      viewerCanReply
+      viewerCanResolve
       path
+      line
+      startLine
       # One window from the root: a second nested connection would cost 20 more
       # connection-requests per PR. `hasPreviousPage` marks comments outside it.
       comments(first: 5) {
@@ -171,6 +212,7 @@ fragment PollSummaryPr on PullRequest {
         }
         nodes {
           id
+          isMinimized
           body
           url
           authorAssociation
@@ -179,25 +221,44 @@ fragment PollSummaryPr on PullRequest {
             __typename
             login
           }
+          pullRequestReview {
+            id
+          }
+          path
+          line
+          startLine
+          createdAt
+          updatedAt
         }
       }
     }
   }
   commits(last: 1) {
+    totalCount
     nodes {
       commit {
         oid
         committedDate
         checkSuites(first: 50) {
+          pageInfo {
+            hasNextPage
+          }
           nodes {
+            id
             status
             conclusion
             workflowRun {
+              databaseId
               event
+              url
+              workflow {
+                name
+              }
             }
           }
         }
         statusCheckRollup {
+          state
           contexts(last: 100) {
             ...PollSummaryCheckContexts
           }

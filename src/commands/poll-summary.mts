@@ -5,6 +5,9 @@ import { getRepoInfo } from "../github/client.mts";
 import { getGithubTransport } from "../github/transport.mts";
 import { withApiTelemetryScope, summarizeApiTelemetry } from "../github/api-telemetry.mts";
 import { fetchPollSummary } from "../github/poll-summary.mts";
+import { writeStackHandoffs } from "../github/stack-handoff.mts";
+import type { StackHandoffSource } from "../github/stack-handoff-page.mts";
+import type { RepoInfo } from "../github/client.mts";
 import { sleep } from "../util/sleep.mts";
 import { aggregateQuotaWarning, carryQuotaWarning, quotaPollIntervalMs } from "./poll-quota.mts";
 import { aggregateCancelFromPulls, aggregateRateLimitTargets } from "./poll-rate-limit-cancel.mts";
@@ -24,14 +27,50 @@ export interface AggregatePollCommandOptions extends PollSummaryCommandOptions {
   untilTerminal?: boolean;
 }
 export function runPollSummary(opts: PollSummaryCommandOptions): Promise<PollSummaryResult> {
-  return withApiTelemetryScope(async () => attachUsage(await runPollSummaryCore(opts), opts.merge));
+  return withApiTelemetryScope(async () => {
+    const tick = await readPollSummaryTick(opts);
+    await handOffRoutedLayers(tick);
+    return attachUsage(tick.result, opts.merge);
+  });
 }
 
 export function runAggregatePoll(opts: AggregatePollCommandOptions): Promise<PollSummaryResult> {
   return withApiTelemetryScope(() => runAggregatePollCore(opts));
 }
 
+interface PollSummaryTick {
+  result: PollSummaryResult;
+  repo: RepoInfo;
+  handoffSource?: StackHandoffSource;
+}
+
 async function runPollSummaryCore(opts: PollSummaryCommandOptions): Promise<PollSummaryResult> {
+  return (await readPollSummaryTick(opts)).result;
+}
+
+/**
+ * The stack tick that routes owned layers to their one-PR sessions hands each
+ * routed layer this tick's read of it, so that session's first read is free.
+ * Every other tick clears earlier handoffs: a newer read supersedes them.
+ */
+async function handOffRoutedLayers(tick: PollSummaryTick): Promise<void> {
+  const { result, handoffSource } = tick;
+  if (!handoffSource) return;
+  const routing = result.nextAction === "shepherd" && result.reason !== "waiting";
+  const routed = routing
+    ? result.prs
+        .filter(
+          (item) =>
+            item.state === "OPEN" &&
+            item.pollCommand !== undefined &&
+            !["cancel", "wait", "escalate"].includes(item.action),
+        )
+        .map((item) => item.pr)
+    : [];
+  await writeStackHandoffs(handoffSource, routed, tick.repo);
+}
+
+async function readPollSummaryTick(opts: PollSummaryCommandOptions): Promise<PollSummaryTick> {
   const repo = opts.targetRepository ?? (await getRepoInfo());
   const fetched = await fetchPollSummary(opts, repo);
   const allTerminal = fetched.prs.every((item) => item.action === "cancel");
@@ -48,11 +87,12 @@ async function runPollSummaryCore(opts: PollSummaryCommandOptions): Promise<Poll
     },
     opts.merge === true,
   );
-  return applyStackStallGuard(
+  const result = await applyStackStallGuard(
     planned,
     repo,
     opts.stallTimeoutSeconds ?? loadConfig().iterate.stallTimeoutMinutes * 60,
   );
+  return { result, repo, ...(fetched.handoffSource && { handoffSource: fetched.handoffSource }) };
 }
 
 async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<PollSummaryResult> {
@@ -64,6 +104,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
   let tick = 0;
   let debounceUntil: number | null = null;
   let last: PollSummaryResult | undefined;
+  let lastTick: PollSummaryTick | undefined;
   let lastStatusSignature: string | null = null;
   const rateLimitRetry = createUntilTerminalRateLimitRetry();
   let pendingQuotaWarning: PollSummaryResult["quotaWarning"];
@@ -71,7 +112,8 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
   while (true) {
     tick += 1;
     try {
-      last = await runPollSummaryCore(opts);
+      lastTick = await readPollSummaryTick(opts);
+      last = lastTick.result;
       rateLimitRetry.reset();
     } catch (error) {
       pendingQuotaWarning = carryQuotaWarning(pendingQuotaWarning, undefined);
@@ -165,7 +207,8 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
     }
 
     if (hasFix) {
-      if (debounceMs === 0)
+      if (debounceMs === 0 || Date.now() >= (debounceUntil ??= Date.now() + debounceMs)) {
+        await handOffRoutedLayers(lastTick!);
         return attachUsage(
           {
             ...last,
@@ -174,16 +217,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
           },
           opts.merge,
         );
-      debounceUntil ??= Date.now() + debounceMs;
-      if (Date.now() >= debounceUntil)
-        return attachUsage(
-          {
-            ...last,
-            reason: "actionable",
-            ...(pendingQuotaWarning && { quotaWarning: pendingQuotaWarning }),
-          },
-          opts.merge,
-        );
+      }
     } else {
       debounceUntil = null;
       if (opts.untilTerminal && pendingQuotaWarning) {

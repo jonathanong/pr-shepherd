@@ -107,3 +107,6 @@ export const GET_PR_BODY_QUERY = gql("get-pr-body.gql");
 
 /** Update the PR body. */
 export const UPDATE_PR_BODY_MUTATION = gql("update-pr-body.gql");
+
+/** CheckRun titles, summaries, and first annotations for routed stack-layer handoffs. */
+export const STACK_HANDOFF_CHECK_RUNS_QUERY = gql("stack-handoff-check-runs.gql");
