@@ -55,6 +55,8 @@ import {
   SHEPHERD_WAIT_TICK_API_REST,
   SHEPHERD_WAIT_TICK_API_CLOUD,
   CI_POLL_CHANGED_READS,
+  CI_SETTLE_CHANGED_READS,
+  CONFLICT_CHANGED_READS,
   ghAnnotations,
   ghFailingCheckRuns,
   mcpPrList,
@@ -190,16 +192,23 @@ const CLOUD_TRANSCRIPT_READ = REST_TRANSCRIPT_READ + 1;
  */
 const ACTIONS_LOG_REST = 2;
 const FAILING_CHECK_ANNOTATIONS = annotationBatchApi(1, 1);
+/**
+ * On REST this is the warm tick on which CI settles, the one `ci-wait`
+ * returns: its polls already paid the cold read after the push, so only the
+ * reads CI moves re-charge, as on `mark-ready`. The job list, the job log and
+ * the new check run's annotations are fresh URLs and stay charged.
+ */
 const FAILING_CHECK_TICK_API = {
   api: {
     graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + FAILING_CHECK_ANNOTATIONS.graphqlPoints,
     restCore: SHEPHERD_TICK_API.restCore + ACTIONS_LOG_REST,
   },
-  apiRest: rest(
-    SHEPHERD_TICK_API_REST.restCore + ACTIONS_LOG_REST + FAILING_CHECK_ANNOTATIONS.restCore,
-  ),
+  apiRest: rest(CI_SETTLE_CHANGED_READS + ACTIONS_LOG_REST + FAILING_CHECK_ANNOTATIONS.restCore),
   apiCloud: rest(
-    SHEPHERD_TICK_API_CLOUD.restCore + ACTIONS_LOG_REST + FAILING_CHECK_ANNOTATIONS.restCore,
+    CI_SETTLE_CHANGED_READS +
+      SHEPHERD_WAIT_TICK_API_CLOUD.restCore +
+      ACTIONS_LOG_REST +
+      FAILING_CHECK_ANNOTATIONS.restCore,
   ),
 };
 
@@ -835,8 +844,14 @@ const PR_SCENARIOS = [
               graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + 1,
               restCore: READY_MERGEABILITY_REST,
             },
-            apiRest: rest(SHEPHERD_TICK_API_REST.restCore + readyMergeabilityRest("rest")),
-            apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + 1 + readyMergeabilityRest("cloud")),
+            // On REST this is the warm tick on which CI settles: only the CI reads re-charge.
+            apiRest: rest(CI_SETTLE_CHANGED_READS + readyMergeabilityRest("rest")),
+            apiCloud: rest(
+              CI_SETTLE_CHANGED_READS +
+                SHEPHERD_WAIT_TICK_API_CLOUD.restCore +
+                1 +
+                readyMergeabilityRest("cloud"),
+            ),
           },
         ],
         // The wait's in-process tick marks it ready, as the poll's does: a
@@ -986,7 +1001,14 @@ const PR_SCENARIOS = [
       const fixture = "117-fix-code-conflicts-behind-base-hint";
       const state = fixtureState(fixture);
       return {
-        shepherd: [shepherdTick(snapshot(fixture))],
+        // A warm REST tick charges only the reads the base push moved.
+        shepherd: [
+          {
+            ...shepherdTick(snapshot(fixture)),
+            apiRest: rest(CONFLICT_CHANGED_READS),
+            apiCloud: rest(CONFLICT_CHANGED_READS + SHEPHERD_WAIT_TICK_API_CLOUD.restCore),
+          },
+        ],
         // The pull: its mergeable state turns dirty.
         event: { wake: "change", detectors: 1 },
         gh: ghObserve(state),
