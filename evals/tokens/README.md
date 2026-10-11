@@ -230,9 +230,12 @@ are as good as these assumptions:
   - every one-PR tick is 1 point (`BatchPr`). Its first page is the
     fingerprint read, so an unchanged wait poll is a 1-point hit and the first
     changed tick after a wait, a miss, continues the same request at 1 point;
-  - an idle single-PR wait whose report is complete (not READY, nothing to
-    act on, no check running, no stack, and no thread holding more than one
-    comment) polls 8 conditional REST detectors instead
+  - an idle single-PR wait whose report is complete (not READY, not queued,
+    nothing to act on, no check running, no stack, at most 20 threads with
+    none holding more than one comment, at most 100 comments and 100
+    reviews, and complete check-suite and rules pages;
+    `src/commands/check-fingerprint.mts`) polls 8 conditional REST detectors
+    instead
     (`src/commands/check-wait-detectors.mts`): a 304 is free, and the tick on
     which one sees the change charges that detector's 200 plus the 1-point
     read. `bot-review-summary` charges one (the reviews), `review-thread`,
