@@ -22,7 +22,7 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
-| single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 185.8 core + 1.5 points | 188.8 core + 1.5 points |
+| single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 188 core + 0 points | 191 core + 0 points |
 | PR stack | 17 / 27 / 12 | 2 / 6 / 74 | 432 core + 0 points | 432 core + 0 points |
 
 <!-- bench:headline:end -->
@@ -332,7 +332,11 @@ are as good as these assumptions:
   response can be recovered, then the POST). Ready-for-review has no standard REST route either: the
   `mark-ready` tick is its CI-settle read (the mergeability refresh is a
   304: the snapshot's own pull read stored that body a moment earlier), and it escalates as
-  transport-unsupported instead of marking the PR ready. The live check below
+  transport-unsupported instead of marking the PR ready. A READY tick prints
+  `pr-shepherd apply merge … --transport rest` instead of `gh pr merge`, so
+  the `merge` and `merge-queue` steps spend no GraphQL: a pull read, the
+  stack-membership read and one `PUT …/merge-async`, 3 requests
+  (`src/commands/apply-merge-cost.test.mts`). The live check below
   had no failing check, so neither the job/log reads nor the annotation reads
   were measured.
 - **pr-shepherd, cloud REST.** The same REST path through the Claude Code
