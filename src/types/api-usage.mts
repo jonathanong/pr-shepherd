@@ -35,6 +35,11 @@ export interface ApiUsage {
   credentialSources: string[];
   graphql?: GraphqlApiUsage;
   rest?: ApiResourceUsage[];
+  /**
+   * REST responses that carried no rate-limit headers, so no pool reported a charge (the Claude
+   * Code proxy's `ccr` routes). Omitted when 0.
+   */
+  unmeteredRestRequestCount?: number;
 }
 
 export interface GraphqlQuotaWarning {

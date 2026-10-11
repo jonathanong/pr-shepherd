@@ -25,6 +25,7 @@ import { runWithExecutionCwd } from "../../src/execution-context.mts";
 import { formatMutateResult } from "../../src/cli/mutate-formatter.mts";
 import { buildLogExcerpt } from "../../src/checks/log-excerpt.mts";
 import {
+  CCR_REQUESTS_PER_PR,
   BACKGROUND_ACK,
   NO_API,
   REPO_ROOT,
@@ -175,12 +176,12 @@ const shepherdTick = (out, phase = 1) => ({ phase, via: "bash", cmd: SHEPHERD_CM
 /**
  * REST requests `readRestFeedback` spends on a reply's transcript read on
  * standard REST: pull comments, issue comments, reviews and /user. The cloud
- * also reads `/ccr/review_threads`.
+ * also reads `/ccr/review_threads`, which is unmetered (`CCR_REQUESTS_PER_PR`).
  */
 const REST_TRANSCRIPT_READ = 4;
 /** A standard REST reply: `/user`, one pull-comments page, then the POST. */
 const REST_REPLY_REQUESTS = 3;
-const CLOUD_TRANSCRIPT_READ = REST_TRANSCRIPT_READ + 1;
+const CLOUD_TRANSCRIPT_READ = REST_TRANSCRIPT_READ + CCR_REQUESTS_PER_PR;
 
 /**
  * A tick that renders a failing job's log excerpt also lists the run's jobs
@@ -244,7 +245,7 @@ function shepherdApply(text, result, phase = 2) {
   // the POST (`REST_REPLY_REQUESTS`, src/comments/rest-reply.mts). The
   // thread-root lookup reads only the local identity cache. A resolve has no
   // standard REST route, so REST mode skips it (docs/graphql-usage.md,
-  // docs/escalations.md). Cloud REST's transcript read adds
+  // docs/escalations.md). Cloud REST's transcript read adds the unmetered
   // `/ccr/review_threads`, and it resolves each thread with one CCR POST
   // (src/comments/rest-review-mutations.mts).
   const replies = result.repliedThreads?.length ?? 0;
@@ -645,8 +646,8 @@ const PR_SCENARIOS = [
         // Each poll is 1 GraphQL point (the cold first tick's BatchPr, then a
         // fingerprint hit on BatchPr's first page). On REST the first poll is
         // a full read and each later one re-charges only the check reads CI
-        // changed (every other read is a free 304); cloud adds the CCR thread
-        // read per poll. The tick this call returns, the next scenario's, is
+        // changed (every other read is a free 304); cloud also sends the
+        // unmetered CCR thread read per poll. The tick this call returns, the next scenario's, is
         // the first changed tick after the wait: a miss continues the same
         // BatchPr request, so it costs the base tick and nothing is charged
         // here for it.
@@ -1377,7 +1378,7 @@ const STACK_SCENARIOS = [
             // come the remaining WAIT ticks and the tick that sees the queue settle.
             // REST reads are conditional: the queue's CI runs on the merge group,
             // not the layers' heads, so the WAIT ticks are all 304 (cloud still
-            // charges each layer's CCR thread read) and only the settling tick,
+            // sends each layer's unmetered CCR thread read) and only the settling tick,
             // charged as a full read, sees the merged pulls.
             api: gql(ticks * stackWarmTickApi(layers.length).graphqlPoints),
             apiRest: rest(

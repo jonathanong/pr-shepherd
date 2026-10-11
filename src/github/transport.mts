@@ -3,6 +3,7 @@ import { loadConfig } from "../config/load.mts";
 import { GitHubRequestError, isRetryableGraphQlInternal } from "./errors.mts";
 import { isTransportError } from "./http-utils.mts";
 import { rateLimitKind } from "./rate-limit-kind.mts";
+import { isCcrGraphqlRefusal } from "./graphql-session-refusal.mts";
 import { parseGithubTransport, type GithubTransport } from "./transport-mode.mts";
 import { appendEntry } from "../log/log-file.mts";
 import {
@@ -109,12 +110,7 @@ function fallbackReason(error: unknown): FallbackReason | undefined {
   if (hasMixedGraphQlQuotaErrors(error.graphqlErrors)) return undefined;
   if (needsGraphQlQuotaProbe(error)) return "probe";
   if (throttle === "secondary") return undefined;
-  if (
-    error.status === 403 &&
-    responseMessage(error).includes("GitHub GraphQL is not available from Claude Code sessions")
-  ) {
-    return "ccr";
-  }
+  if (isCcrGraphqlRefusal(error.status, responseMessage(error))) return "ccr";
   // Exhausting the quota does not prove an INTERNAL/5xx mutation was refused.
   if (error.status >= 500 || isRetryableGraphQlInternal(error.graphqlErrors)) return "ambiguous";
   if (

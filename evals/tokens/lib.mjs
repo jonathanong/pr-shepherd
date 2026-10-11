@@ -754,17 +754,21 @@ export const CONFLICT_CHANGED_READS = 3;
 /**
  * Cloud REST: `auto` picks REST when CLAUDE_CODE_REMOTE=true, and each PR
  * snapshot there also reads `/ccr/review_threads`
- * (src/github/rest-feedback-read.mts), one more request per PR. The cloud
- * proxy also supports the ready-for-review POST and one resolve POST per
- * thread, which standard REST lacks. Calls whose REST cost differs carry an
- * explicit `apiCloud`.
+ * (src/github/rest-feedback-read.mts), one more request sent per PR. A real
+ * cloud run (#529) showed that the proxy answers that read with no ETag and no
+ * X-RateLimit-* headers and does not charge it to `core`, so it adds no core
+ * requests here (pr-shepherd reports it as `apiUsage.unmeteredRestRequestCount`).
+ * The cloud proxy also supports the ready-for-review POST and one resolve POST
+ * per thread, which standard REST lacks; those stay charged, because their
+ * metering is unverified. Calls whose REST cost differs carry an explicit
+ * `apiCloud`.
  */
-export const CCR_REQUESTS_PER_PR = 1;
+export const CCR_REQUESTS_PER_PR = 0;
 export const SHEPHERD_TICK_API_CLOUD = rest(SHEPHERD_TICK_API_REST.restCore + CCR_REQUESTS_PER_PR);
 /**
- * An unchanged cloud poll tick. The CCR thread read may carry no ETag (unverified),
- * so it is assumed a charged 200 every tick; an unchanged body still lets the
- * report be reused (src/github/rest-conditional-scope.mts).
+ * An unchanged cloud poll tick. The CCR thread read carries no ETag, so it is a
+ * 200 every tick, but it is unmetered; an unchanged body still lets the report
+ * be reused (src/github/rest-conditional-scope.mts).
  */
 export const SHEPHERD_WAIT_TICK_API_CLOUD = rest(
   SHEPHERD_WAIT_TICK_API_REST.restCore + CCR_REQUESTS_PER_PR,
@@ -837,12 +841,15 @@ export const stackWarmTickApi = (layers) => gql(stackSummaryPoints(layers));
  * 10 layers without CLAUDE_CODE_REMOTE in rest-stack-summary-sharing.test.mts).
  */
 export const stackTickApiRest = (layers) => rest(6 + 12 * layers);
-/** Cloud REST stack tick: 6 shared plus 13 per layer (136 for 10 layers in the same test). */
+/**
+ * Cloud REST stack tick: the same core charge. The test sends 136 requests for 10
+ * layers, but each layer's extra `ccr/review_threads` read is unmetered.
+ */
 export const stackTickApiCloud = (layers) => rest(6 + (12 + CCR_REQUESTS_PER_PR) * layers);
 /**
  * An unchanged REST stack summary tick: every read is a 304 (0 of 126 charged for
  * 10 layers in src/github/rest-wait-tick-cost.test.mts). On cloud REST each layer's
- * validator-less CCR thread read is still charged.
+ * validator-less CCR thread read is still sent, but it is unmetered.
  */
 export const stackWaitTickApiRest = () => rest(0);
 export const stackWaitTickApiCloud = (layers) => rest(CCR_REQUESTS_PER_PR * layers);

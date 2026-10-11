@@ -59,5 +59,10 @@ export function formatApiUsage(usage: ApiUsage | undefined): string | null {
     );
   }
   for (const resource of usage.rest ?? []) lines.push(formatResource(resource));
+  if (usage.unmeteredRestRequestCount !== undefined) {
+    lines.push(
+      `- REST requests without rate-limit headers (unmetered): ${usage.unmeteredRestRequestCount}`,
+    );
+  }
   return lines.join("\n");
 }

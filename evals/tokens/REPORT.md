@@ -9,10 +9,10 @@ Change in cost when an agent uses pr-shepherd instead of a baseline. A negative 
 - **Cost (ITE).** PR session −42% vs. gh and −77% vs. GitHub MCP; stack session −45% and −63%.
 - **Fixed vs. variable.** The skill and playbooks are 17% of pr-shepherd's PR-session cost and 15% of its stack-session cost; on variable cost alone it is −52% vs. gh in a PR session and −53% in a stack session.
 - **GitHub rate limit (assumed).** In a PR session pr-shepherd spends 30.8 GraphQL points and 4.8 REST requests; gh 36.5 and 9; MCP 12 and 78.3. GraphQL points −16% vs. gh and +157% vs. MCP; REST requests −47% and −94%.
-- **Waiting on CI, per hour.** pr-shepherd spends 60 GraphQL points on the GraphQL transport (one fingerprint hit per 60s poll) and about 180 REST requests on the REST transport (240 on cloud REST), whose conditional reads charge only the check reads CI changes; an unchanged wait (no CI running) costs 0 REST requests an hour (60 on cloud REST, the CCR thread read) and 4 GraphQL points (a reconcile every 15 minutes between free conditional REST detector reads). A `gh pr checks --watch` refresh costs 60 points; an MCP re-check about 120 requests.
+- **Waiting on CI, per hour.** pr-shepherd spends 60 GraphQL points on the GraphQL transport (one fingerprint hit per 60s poll) and about 180 REST requests on the REST transport (180 on cloud REST), whose conditional reads charge only the check reads CI changes; an unchanged wait (no CI running) costs 0 REST requests an hour (0 on cloud REST, the CCR thread read) and 4 GraphQL points (a reconcile every 15 minutes between free conditional REST detector reads). A `gh pr checks --watch` refresh costs 60 points; an MCP re-check about 120 requests.
 - **Event arm (informational, assumed, not gated).** A background `pr-shepherd wait` with ETag change detectors (#544). PR session: 18.8 (poll 30.8, gh 36.5, MCP 12) GraphQL points, 38 (poll 4.8, gh 9, MCP 78.3) REST requests, 22.8 (poll 14.8, gh 18.3, MCP 48.6) turns, 8,456 (poll 8,522, gh 30,934, MCP 77,005) tool tokens and 83,489 (poll 58,499, gh 100,341, MCP 258,773) ITE. Stack session: 14 (poll 17, gh 27, MCP 12) GraphQL points, 12 (poll 2, gh 6, MCP 74) REST requests, 12 (poll 8, gh 13, MCP 19) turns, 3,915 (poll 3,875, gh 5,133, MCP 9,478) tool tokens and 43,239 (poll 30,914, gh 56,002, MCP 83,549) ITE. Each of its 8 PR-session wakes (4 on a stack) adds a request to read the background start, so it spends more turns and tokens than the blocking poll. The hypothetical hosted webhook proxy spends 9.5 GraphQL points and 1 REST core of the user's token in a PR session (0 and 2 on a stack), on the agent's own mutations and reads.
 - **Idle waiting, per hour (assumed).** The poll arm's blocking `--until-terminal` call (the skill's mode, and the comparison that counts) spends 4 GraphQL points (a reconcile snapshot every 15 minutes; between them 8 conditional REST detectors per poll answer 304, 472 in the first hour, when no check is running; entering the wait seeds them once, 8 REST requests in that hour's total when each detector's resource fits one 100-entry page and more when one does not; a non-READY PR that skips them but whose `BatchPr` fits its first page, for example one with a thread holding a reply, spends 60 points an hour, and one past a first-page window (more than 20 threads, 100 comments or 100 reviews) more, since each poll also reads the further pages; a READY PR adds one REST mergeability read a poll) and no turn; the legacy bounded `--timeout 4.5m` CLI mode, which the skill no longer uses, spends 75 points (it returns every 240s, after 5 ticks) and 15 wakes (15 turns, 51,015 ITE). The event arm spends 4 points on 4 reconcile snapshots and no REST (300 conditional requests, all 304), with 8 turns (25,516 ITE). The hypothetical proxy spends nothing of the user's token, with the same wakes.
-- **Losses: 64 pending.** pr-shepherd costs more than a baseline on 64 gated cells below: 1 on tokens or turns (#528) and 63 on the GitHub rate limit (#525). Each is on the temporary pending list, pending-losses.json; `bench.mjs --check` fails on any other loss and on any listed one that is gone. 11 more are accepted as structural, since no plan can win them (Accepted structural losses below).
+- **Losses: 63 pending.** pr-shepherd costs more than a baseline on 63 gated cells below: 1 on tokens or turns (#528) and 62 on the GitHub rate limit (#525). Each is on the temporary pending list, pending-losses.json; `bench.mjs --check` fails on any other loss and on any listed one that is gone. 11 more are accepted as structural, since no plan can win them (Accepted structural losses below).
 
 ### Losses
 
@@ -23,67 +23,66 @@ Every session and scenario where pr-shepherd costs strictly more than a baseline
 | Typical PR session | GraphQL points (GraphQL transport) | GitHub MCP | 30.8 | 12 | +157% | #525 |
 | Typical PR session | REST core requests (REST transport) | gh CLI | 185.8 | 9 | +1964% | #525 |
 | Typical PR session | REST core requests (REST transport) | GitHub MCP | 185.8 | 78.3 | +137% | #525 |
-| Typical PR session | REST core requests (cloud REST transport) | gh CLI | 212.3 | 9 | +2259% | #525 |
-| Typical PR session | REST core requests (cloud REST transport) | GitHub MCP | 212.3 | 78.3 | +171% | #525 |
+| Typical PR session | REST core requests (cloud REST transport) | gh CLI | 188.8 | 9 | +1998% | #525 |
+| Typical PR session | REST core requests (cloud REST transport) | GitHub MCP | 188.8 | 78.3 | +141% | #525 |
 | Typical stack session | GraphQL points (GraphQL transport) | GitHub MCP | 17 | 12 | +42% | #525 |
 | Typical stack session | REST core requests (REST transport) | gh CLI | 432 | 6 | +7100% | #525 |
 | Typical stack session | REST core requests (REST transport) | GitHub MCP | 432 | 74 | +484% | #525 |
-| Typical stack session | REST core requests (cloud REST transport) | gh CLI | 462 | 6 | +7600% | #525 |
-| Typical stack session | REST core requests (cloud REST transport) | GitHub MCP | 462 | 74 | +524% | #525 |
+| Typical stack session | REST core requests (cloud REST transport) | gh CLI | 432 | 6 | +7100% | #525 |
+| Typical stack session | REST core requests (cloud REST transport) | GitHub MCP | 432 | 74 | +484% | #525 |
 | `ci-wait` | REST core requests (REST transport) | GitHub MCP | 29 | 12 | +142% | #525 |
-| `ci-wait` | REST core requests (cloud REST transport) | GitHub MCP | 35 | 12 | +192% | #525 |
+| `ci-wait` | REST core requests (cloud REST transport) | GitHub MCP | 29 | 12 | +142% | #525 |
 | `failing-check` | REST core requests (REST transport) | gh CLI | 8 | 2 | +300% | #525 |
-| `failing-check` | REST core requests (cloud REST transport) | gh CLI | 9 | 2 | +350% | #525 |
+| `failing-check` | REST core requests (cloud REST transport) | gh CLI | 8 | 2 | +300% | #525 |
 | `bot-review-summary` | REST core requests (REST transport) | GitHub MCP | 14 | 5 | +180% | #525 |
-| `bot-review-summary` | REST core requests (cloud REST transport) | GitHub MCP | 15 | 5 | +200% | #525 |
+| `bot-review-summary` | REST core requests (cloud REST transport) | GitHub MCP | 14 | 5 | +180% | #525 |
 | `review-thread` | GraphQL points (GraphQL transport) | gh CLI | 3 | 2 | +50% | #525 |
 | `review-thread` | GraphQL points (GraphQL transport) | GitHub MCP | 3 | 1 | +200% | #525 |
 | `review-thread` | REST core requests (REST transport) | gh CLI | 22 | 1 | +2100% | #525 |
 | `review-thread` | REST core requests (REST transport) | GitHub MCP | 22 | 6 | +267% | #525 |
-| `review-thread` | REST core requests (cloud REST transport) | gh CLI | 24 | 1 | +2300% | #525 |
-| `review-thread` | REST core requests (cloud REST transport) | GitHub MCP | 24 | 6 | +300% | #525 |
+| `review-thread` | REST core requests (cloud REST transport) | gh CLI | 22 | 1 | +2100% | #525 |
+| `review-thread` | REST core requests (cloud REST transport) | GitHub MCP | 22 | 6 | +267% | #525 |
 | `review-thread-with-history` | GraphQL points (GraphQL transport) | gh CLI | 3 | 2 | +50% | #525 |
 | `review-thread-with-history` | GraphQL points (GraphQL transport) | GitHub MCP | 3 | 1 | +200% | #525 |
 | `review-thread-with-history` | REST core requests (REST transport) | gh CLI | 22 | 1 | +2100% | #525 |
 | `review-thread-with-history` | REST core requests (REST transport) | GitHub MCP | 22 | 6 | +267% | #525 |
-| `review-thread-with-history` | REST core requests (cloud REST transport) | gh CLI | 24 | 1 | +2300% | #525 |
-| `review-thread-with-history` | REST core requests (cloud REST transport) | GitHub MCP | 24 | 6 | +300% | #525 |
+| `review-thread-with-history` | REST core requests (cloud REST transport) | gh CLI | 22 | 1 | +2100% | #525 |
+| `review-thread-with-history` | REST core requests (cloud REST transport) | GitHub MCP | 22 | 6 | +267% | #525 |
 | `multi-category` | GraphQL points (GraphQL transport) | gh CLI | 3 | 2 | +50% | #525 |
 | `multi-category` | GraphQL points (GraphQL transport) | GitHub MCP | 3 | 1 | +200% | #525 |
 | `multi-category` | REST core requests (REST transport) | gh CLI | 24 | 3 | +700% | #525 |
 | `multi-category` | REST core requests (REST transport) | GitHub MCP | 24 | 10 | +140% | #525 |
-| `multi-category` | REST core requests (cloud REST transport) | gh CLI | 26 | 3 | +767% | #525 |
-| `multi-category` | REST core requests (cloud REST transport) | GitHub MCP | 26 | 10 | +160% | #525 |
+| `multi-category` | REST core requests (cloud REST transport) | gh CLI | 24 | 3 | +700% | #525 |
+| `multi-category` | REST core requests (cloud REST transport) | GitHub MCP | 24 | 10 | +140% | #525 |
 | `mark-ready` | REST core requests (GraphQL transport) | gh CLI | 1 | 0 | n/a | #525 |
 | `mark-ready` | REST core requests (REST transport) | gh CLI | 5 | 0 | n/a | #525 |
-| `mark-ready` | REST core requests (cloud REST transport) | GitHub MCP | 7 | 6 | +17% | #525 |
 | `merged` | cost (ITE) | gh CLI | 3,247 | 3,100 | +5% | #528 |
 | `bot-threads` | REST core requests (REST transport) | gh CLI | 28 | 3 | +833% | #525 |
 | `bot-threads` | REST core requests (REST transport) | GitHub MCP | 28 | 8 | +250% | #525 |
-| `bot-threads` | REST core requests (cloud REST transport) | gh CLI | 32 | 3 | +967% | #525 |
-| `bot-threads` | REST core requests (cloud REST transport) | GitHub MCP | 32 | 8 | +300% | #525 |
+| `bot-threads` | REST core requests (cloud REST transport) | gh CLI | 30 | 3 | +900% | #525 |
+| `bot-threads` | REST core requests (cloud REST transport) | GitHub MCP | 30 | 8 | +275% | #525 |
 | `check-annotations` | REST core requests (REST transport) | gh CLI | 15 | 2 | +650% | #525 |
-| `check-annotations` | REST core requests (cloud REST transport) | gh CLI | 16 | 2 | +700% | #525 |
+| `check-annotations` | REST core requests (cloud REST transport) | gh CLI | 15 | 2 | +650% | #525 |
 | `merge` | REST core requests (GraphQL transport) | gh CLI | 1 | 0 | n/a | #525 |
 | `merge` | GraphQL points (GraphQL transport) | GitHub MCP | 3 | 1 | +200% | #525 |
 | `merge` | REST core requests (REST transport) | gh CLI | 14 | 0 | n/a | #525 |
 | `merge` | GraphQL points (REST transport) | GitHub MCP | 2 | 1 | +100% | #525 |
 | `merge` | REST core requests (REST transport) | GitHub MCP | 14 | 6 | +133% | #525 |
-| `merge` | REST core requests (cloud REST transport) | gh CLI | 15 | 0 | n/a | #525 |
+| `merge` | REST core requests (cloud REST transport) | gh CLI | 14 | 0 | n/a | #525 |
 | `merge` | GraphQL points (cloud REST transport) | GitHub MCP | 2 | 1 | +100% | #525 |
-| `merge` | REST core requests (cloud REST transport) | GitHub MCP | 15 | 6 | +150% | #525 |
+| `merge` | REST core requests (cloud REST transport) | GitHub MCP | 14 | 6 | +133% | #525 |
 | `merge-queue` | REST core requests (GraphQL transport) | gh CLI | 1 | 0 | n/a | #525 |
 | `merge-queue` | REST core requests (REST transport) | gh CLI | 14 | 0 | n/a | #525 |
-| `merge-queue` | REST core requests (cloud REST transport) | gh CLI | 15 | 0 | n/a | #525 |
+| `merge-queue` | REST core requests (cloud REST transport) | gh CLI | 14 | 0 | n/a | #525 |
 | `stack-work` | GraphQL points (GraphQL transport) | GitHub MCP | 6 | 4 | +50% | #525 |
 | `stack-work` | REST core requests (REST transport) | gh CLI | 170 | 1 | +16900% | #525 |
 | `stack-work` | REST core requests (REST transport) | GitHub MCP | 170 | 25 | +580% | #525 |
-| `stack-work` | REST core requests (cloud REST transport) | gh CLI | 180 | 1 | +17900% | #525 |
-| `stack-work` | REST core requests (cloud REST transport) | GitHub MCP | 180 | 25 | +620% | #525 |
+| `stack-work` | REST core requests (cloud REST transport) | gh CLI | 170 | 1 | +16900% | #525 |
+| `stack-work` | REST core requests (cloud REST transport) | GitHub MCP | 170 | 25 | +580% | #525 |
 | `stack-queue-wait` | REST core requests (REST transport) | gh CLI | 60 | 1 | +5900% | #525 |
-| `stack-queue-wait` | REST core requests (cloud REST transport) | gh CLI | 68 | 1 | +6700% | #525 |
+| `stack-queue-wait` | REST core requests (cloud REST transport) | gh CLI | 60 | 1 | +5900% | #525 |
 | `stack-merge` | REST core requests (REST transport) | gh CLI | 32 | 3 | +967% | #525 |
-| `stack-merge` | REST core requests (cloud REST transport) | gh CLI | 34 | 3 | +1033% | #525 |
+| `stack-merge` | REST core requests (cloud REST transport) | gh CLI | 32 | 3 | +967% | #525 |
 
 ### Accepted structural losses
 
@@ -93,15 +92,15 @@ Losses no plan can win, each with its reason (pending-losses.json `structural`).
 | --- | --- | --- | --- | --- | --- | --- |
 | `ci-wait` | GraphQL points (GraphQL transport) | GitHub MCP | 6 | 0 | n/a | MCP spends no GraphQL point here and gh no REST request, so any plan's reads lose one of the two cells; pr-shepherd ties gh on REST. |
 | `ci-wait` | REST core requests (REST transport) | gh CLI | 29 | 0 | n/a | On this step the checks settle, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
-| `ci-wait` | REST core requests (cloud REST transport) | gh CLI | 35 | 0 | n/a | On this step the checks settle, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
+| `ci-wait` | REST core requests (cloud REST transport) | gh CLI | 29 | 0 | n/a | On this step the checks settle, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
 | `bot-review-summary` | REST core requests (REST transport) | gh CLI | 14 | 0 | n/a | On this step a review arrives, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
-| `bot-review-summary` | REST core requests (cloud REST transport) | gh CLI | 15 | 0 | n/a | On this step a review arrives, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
-| `mark-ready` | REST core requests (cloud REST transport) | gh CLI | 7 | 0 | n/a | Cloud REST has no GraphQL, so marking the PR ready is a REST POST (the CCR proxy's ready_for_review route), at least one request, and gh spends none here. |
+| `bot-review-summary` | REST core requests (cloud REST transport) | gh CLI | 14 | 0 | n/a | On this step a review arrives, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
+| `mark-ready` | REST core requests (cloud REST transport) | gh CLI | 6 | 0 | n/a | Cloud REST has no GraphQL, so marking the PR ready is a REST POST (the CCR proxy's ready_for_review route), at least one request, and gh spends none here. |
 | `merged` | GraphQL points (GraphQL transport) | GitHub MCP | 1 | 0 | n/a | MCP spends no GraphQL point here and gh no REST request, so any plan's reads lose one of the two cells; pr-shepherd ties gh on REST. |
 | `merged` | REST core requests (REST transport) | gh CLI | 1 | 0 | n/a | On this step the PR merges, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
 | `merged` | REST core requests (cloud REST transport) | gh CLI | 1 | 0 | n/a | On this step the PR merges, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
 | `conflicts` | REST core requests (REST transport) | gh CLI | 3 | 0 | n/a | On this step the base moves, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
-| `conflicts` | REST core requests (cloud REST transport) | gh CLI | 4 | 0 | n/a | On this step the base moves, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
+| `conflicts` | REST core requests (cloud REST transport) | gh CLI | 3 | 0 | n/a | On this step the base moves, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
 
 ## Typical PR session
 
@@ -234,12 +233,12 @@ Rate-limit cost per session, weighted like the token numbers. **Deterministic an
 | --- | --- | --- | --- |
 | Typical PR session | pr-shepherd | 30.8 | 4.8 |
 | Typical PR session | pr-shepherd, REST transport | 1.5 | 185.8 |
-| Typical PR session | pr-shepherd, cloud REST | 1.5 | 212.3 |
+| Typical PR session | pr-shepherd, cloud REST | 1.5 | 188.8 |
 | Typical PR session | gh CLI | 36.5 | 9 |
 | Typical PR session | GitHub MCP | 12 | 78.3 |
 | Typical stack session | pr-shepherd | 17 | 2 |
 | Typical stack session | pr-shepherd, REST transport | 0 | 432 |
-| Typical stack session | pr-shepherd, cloud REST | 0 | 462 |
+| Typical stack session | pr-shepherd, cloud REST | 0 | 432 |
 | Typical stack session | gh CLI | 27 | 6 |
 | Typical stack session | GitHub MCP | 12 | 74 |
 
@@ -247,27 +246,27 @@ Per scenario, `GraphQL points / REST core requests` for one occurrence.
 
 | scenario | pr-shepherd | pr-shepherd, REST | pr-shepherd, cloud REST | gh CLI | GitHub MCP |
 | --- | --- | --- | --- | --- | --- |
-| `ci-wait` | 6 / 0 | 0 / 29 | 0 / 35 | 7 / 0 | 0 / 12 |
-| `failing-check` | 1 / 2 | 0 / 8 | 0 / 9 | 2 / 2 | 1 / 9 |
-| `bot-review-summary` | 1 / 0 | 0 / 14 | 0 / 15 | 2 / 0 | 1 / 5 |
-| `review-thread` | 3 / 0 | 0 / 22 | 0 / 24 | 2 / 1 | 1 / 6 |
-| `review-thread-with-history` | 3 / 0 | 0 / 22 | 0 / 24 | 2 / 1 | 1 / 6 |
-| `multi-category` | 3 / 2 | 0 / 24 | 0 / 26 | 2 / 3 | 1 / 10 |
-| `mark-ready` | 2 / 1 | 0 / 5 | 0 / 7 | 4 / 0 | 3 / 6 |
+| `ci-wait` | 6 / 0 | 0 / 29 | 0 / 29 | 7 / 0 | 0 / 12 |
+| `failing-check` | 1 / 2 | 0 / 8 | 0 / 8 | 2 / 2 | 1 / 9 |
+| `bot-review-summary` | 1 / 0 | 0 / 14 | 0 / 14 | 2 / 0 | 1 / 5 |
+| `review-thread` | 3 / 0 | 0 / 22 | 0 / 22 | 2 / 1 | 1 / 6 |
+| `review-thread-with-history` | 3 / 0 | 0 / 22 | 0 / 22 | 2 / 1 | 1 / 6 |
+| `multi-category` | 3 / 2 | 0 / 24 | 0 / 24 | 2 / 3 | 1 / 10 |
+| `mark-ready` | 2 / 1 | 0 / 5 | 0 / 6 | 4 / 0 | 3 / 6 |
 | `merged` | 1 / 0 | 0 / 1 | 0 / 1 | 1 / 0 | 0 / 1 |
-| `bot-threads` | 3 / 0 | 0 / 28 | 0 / 32 | 4 / 3 | 3 / 8 |
-| `check-annotations` | 2 / 0 | 0 / 15 | 0 / 16 | 2 / 2 | 1 / 5 † |
-| `conflicts` | 1 / 0 | 0 / 3 | 0 / 4 | 2 / 0 | 1 / 5 |
-| `merge` | 3 / 1 | 2 / 14 | 2 / 15 | 4 / 0 | 1 / 6 |
-| `merge-queue` | 3 / 1 | 2 / 14 | 2 / 15 | 4 / 0 | 1 / 6 † |
-| `stack-work` | 6 / 0 | 0 / 170 | 0 / 180 | 8 / 1 | 4 / 25 |
-| `stack-queue-wait` | 4 / 0 | 0 / 60 | 0 / 68 | 7 / 1 | 2 / 12 † |
-| `stack-merge` | 1 / 2 | 0 / 32 | 0 / 34 | 4 / 3 | 2 / 12 † |
+| `bot-threads` | 3 / 0 | 0 / 28 | 0 / 30 | 4 / 3 | 3 / 8 |
+| `check-annotations` | 2 / 0 | 0 / 15 | 0 / 15 | 2 / 2 | 1 / 5 † |
+| `conflicts` | 1 / 0 | 0 / 3 | 0 / 3 | 2 / 0 | 1 / 5 |
+| `merge` | 3 / 1 | 2 / 14 | 2 / 14 | 4 / 0 | 1 / 6 |
+| `merge-queue` | 3 / 1 | 2 / 14 | 2 / 14 | 4 / 0 | 1 / 6 † |
+| `stack-work` | 6 / 0 | 0 / 170 | 0 / 170 | 8 / 1 | 4 / 25 |
+| `stack-queue-wait` | 4 / 0 | 0 / 60 | 0 / 60 | 7 / 1 | 2 / 12 † |
+| `stack-merge` | 1 / 2 | 0 / 32 | 0 / 32 | 4 / 3 | 2 / 12 † |
 
-- Waiting on CI costs 60 GraphQL points an hour for pr-shepherd (one fingerprint hit per 60s poll), about 180 REST requests an hour on the REST transport (240 on cloud REST; 0 and 60 when nothing changes, and 4 GraphQL points when no check is running), 60 points for `gh pr checks --watch --interval 60`, and about 120 REST requests for a one-minute MCP re-check.
+- Waiting on CI costs 60 GraphQL points an hour for pr-shepherd (one fingerprint hit per 60s poll), about 180 REST requests an hour on the REST transport (180 on cloud REST; 0 and 0 when nothing changes, and 4 GraphQL points when no check is running), 60 points for `gh pr checks --watch --interval 60`, and about 120 REST requests for a one-minute MCP re-check.
 - MCP tool costs are read from data/mcp-api-map.json, checked against each tool's handler in github/github-mcp-server@eb47a99ddb866ca2b8a162920e6bda9521f33ebb (default configuration: lockdown and IFC labels off).
 - The REST-transport column resolves nothing by REST: a thread resolve has no standard REST route, so `apply review` there spends only its replies, and ready-for-review escalates as transport-unsupported.
-- The cloud REST column is REST through the Claude Code cloud proxy (`CLAUDE_CODE_REMOTE=true`): each PR snapshot also reads `/ccr/review_threads` (one more request per PR per tick), and thread resolves and ready-for-review are one CCR POST each.
+- The cloud REST column is REST through the Claude Code cloud proxy (`CLAUDE_CODE_REMOTE=true`): each PR snapshot also reads `/ccr/review_threads` (one more request per PR per tick, not metered against `core`), and thread resolves and ready-for-review are one CCR POST each (counted as charged; their metering is unverified).
 
 ### Live cross-check
 
@@ -467,7 +466,7 @@ The coordinating session spent 729,407 on pr-shepherd for these PRs, 244,833 on 
 - Base context replayed each turn: 30,000 tokens.
 - `BatchPr` supplements are charged where the scenario's state triggers them. `CheckRunAnnotationsBatch` is 1 point per 20 uncached check runs with more than one annotation (1 annotation read per annotated check run on REST), in `check-annotations`; a run with one annotation, as in `failing-check`, costs 0 GraphQL points. The READY-receipt sibling keeps the elapsed-ready-delay tick in `merge` and `merge-queue` at 1 point. `BaseBehind` (1 point whenever the base tip or head moves while a required status context is unreported) matches no scenario's state, so none is charged it.
 - The REST column is standard REST (no Claude Code cloud proxy): ready-for-review and thread resolves are unsupported there. Every REST read is conditional, so an unchanged poll tick is all 304s (0 requests) and a poll while CI runs re-charges the reads that changed, 3 on average (measured); the tick on which CI settles re-charges the 5 reads CI moves (plus the READY mergeability refresh when it settles to READY, or the job list, job log and annotation reads when a check fails), and a base push that makes the PR conflict re-charges 3; any other changed tick is charged as a full 14-request read, an upper bound.
-- The cloud REST column is the same REST path through the Claude Code cloud proxy: 15 requests per changed one-PR tick (the standard 14 plus `/ccr/review_threads`) and 1 per unchanged one (the CCR read, assumed to carry no ETag; the warm CI-settle and conflict ticks add it to their changed reads), 6 + 13 per layer on a changed stack tick and 1 per layer on an unchanged one, a 5-request transcript read before replies, and one CCR POST per thread resolve and per ready-for-review.
+- The cloud REST column is the same REST path through the Claude Code cloud proxy: 14 requests per changed one-PR tick and 0 per unchanged one, the same as standard REST: the extra `/ccr/review_threads` read on every tick carries no ETag but is not metered against `core` (observed in a cloud run). A changed stack tick is 6 + 12 per layer and an unchanged one 0, a transcript read before replies is 4 requests, and each thread resolve and ready-for-review is one CCR POST (counted as charged; their metering is unverified).
 - Price ratios to one uncached input token: cache read 0.1, cache write 1.25, output 5.
 - Host output caps: Bash 30,000 characters, MCP 25,000 tokens.
 - Eager GitHub MCP toolset: 50 tools, 15,155 tokens per request (github/github-mcp-server@eb47a99ddb866ca2b8a162920e6bda9521f33ebb).

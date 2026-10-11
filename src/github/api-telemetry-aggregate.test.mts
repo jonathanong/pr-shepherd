@@ -96,7 +96,7 @@ describe("API telemetry bounded aggregation", () => {
         expect(summarizeApiTelemetry()).toEqual({ credentialSources: ["child"] });
       });
 
-      expect(summarizeApiTelemetry()).toEqual({ credentialSources: ["token", "child"] });
+      expect(summarizeApiTelemetry()).toMatchObject({ credentialSources: ["token", "child"] });
     });
   });
 

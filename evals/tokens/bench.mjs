@@ -286,7 +286,7 @@ const apiSessions = Object.fromEntries(
 // Waiting on CI: pr-shepherd polls every 60s (poll.intervalSeconds). A
 // fingerprint hit is 1 GraphQL point. A REST poll's reads are conditional: an
 // unchanged one is all 304s, and while CI runs only the changed check reads are
-// charged (plus the CCR thread read on cloud).
+// charged (cloud also sends the unmetered CCR thread read).
 const POLL_SECONDS = 60;
 const waitPerHour = {
   shepherdGraphql: (3600 / POLL_SECONDS) * SHEPHERD_TICK_API.graphqlPoints,
@@ -903,7 +903,7 @@ out(
   "- The REST-transport column resolves nothing by REST: a thread resolve has no standard REST route, so `apply review` there spends only its replies, and ready-for-review escalates as transport-unsupported.",
 );
 out(
-  "- The cloud REST column is REST through the Claude Code cloud proxy (`CLAUDE_CODE_REMOTE=true`): each PR snapshot also reads `/ccr/review_threads` (one more request per PR per tick), and thread resolves and ready-for-review are one CCR POST each.",
+  "- The cloud REST column is REST through the Claude Code cloud proxy (`CLAUDE_CODE_REMOTE=true`): each PR snapshot also reads `/ccr/review_threads` (one more request per PR per tick, not metered against `core`), and thread resolves and ready-for-review are one CCR POST each (counted as charged; their metering is unverified).",
 );
 out();
 out("### Live cross-check");
@@ -1107,7 +1107,7 @@ out(
   `- The REST column is standard REST (no Claude Code cloud proxy): ready-for-review and thread resolves are unsupported there. Every REST read is conditional, so an unchanged poll tick is all 304s (${SHEPHERD_WAIT_TICK_API_REST.restCore} requests) and a poll while CI runs re-charges the reads that changed, ${CI_POLL_CHANGED_READS} on average (measured); the tick on which CI settles re-charges the ${CI_SETTLE_CHANGED_READS} reads CI moves (plus the READY mergeability refresh when it settles to READY, or the job list, job log and annotation reads when a check fails), and a base push that makes the PR conflict re-charges ${CONFLICT_CHANGED_READS}; any other changed tick is charged as a full ${SHEPHERD_TICK_API_REST.restCore}-request read, an upper bound.`,
 );
 out(
-  `- The cloud REST column is the same REST path through the Claude Code cloud proxy: ${SHEPHERD_TICK_API_CLOUD.restCore} requests per changed one-PR tick (the standard ${SHEPHERD_TICK_API_REST.restCore} plus \`/ccr/review_threads\`) and ${SHEPHERD_WAIT_TICK_API_CLOUD.restCore} per unchanged one (the CCR read, assumed to carry no ETag; the warm CI-settle and conflict ticks add it to their changed reads), 6 + 13 per layer on a changed stack tick and 1 per layer on an unchanged one, a 5-request transcript read before replies, and one CCR POST per thread resolve and per ready-for-review.`,
+  `- The cloud REST column is the same REST path through the Claude Code cloud proxy: ${SHEPHERD_TICK_API_CLOUD.restCore} requests per changed one-PR tick and ${SHEPHERD_WAIT_TICK_API_CLOUD.restCore} per unchanged one, the same as standard REST: the extra \`/ccr/review_threads\` read on every tick carries no ETag but is not metered against \`core\` (observed in a cloud run). A changed stack tick is 6 + 12 per layer and an unchanged one 0, a transcript read before replies is 4 requests, and each thread resolve and ready-for-review is one CCR POST (counted as charged; their metering is unverified).`,
 );
 out(
   `- Price ratios to one uncached input token: cache read ${MODEL.cacheReadMultiplier}, cache write ${MODEL.cacheWriteMultiplier}, output ${MODEL.outputMultiplier}.`,
