@@ -291,7 +291,7 @@ Quota warning, when a configured threshold is crossed on a non-terminal result:
 - An unbounded `--until-terminal` poll still returns the first warning so the skill can slow down and rerun with `--interval`.
 - Single-tick `iterate` / MCP do not sleep.
 - Terminal `cancel` and `escalate` do not warn. `[FIX_CODE]` and stack-level `[SHEPHERD]` still can, because they are non-terminal.
-- Usage, cost, and fingerprint skip: [graphql.md](graphql.md).
+- Usage, cost, and fingerprint skip: [github-api.md](github-api.md) and [graphql.md](graphql.md).
 
 `--until-terminal` rate-limit retry:
 

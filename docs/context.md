@@ -4,7 +4,7 @@
 
 This is the context counterpart to [actions.md](actions.md). One `iterate` tick (or one poll that ends on an iterate result) surfaces the fields below so the agent does not need a second GitHub fan-out to reconstruct PR state.
 
-How the data is fetched: [graphql.md](graphql.md). How it becomes an action: [iterate-flow.md](iterate-flow.md).
+How the data is fetched: [github-api.md](github-api.md) ([graphql.md](graphql.md), [rest.md](rest.md)). How it becomes an action: [iterate-flow.md](iterate-flow.md).
 
 Debounce ticks in the poll dispatcher (`pr-shepherd [PR] --debounce`, default: `poll.debounceSeconds`; built-in 1m) run `iterate` with `persistSeen: false`. Seen markers and first-look suppression are deferred until the post-window tick, so late comments are not marked seen before the agent-facing result.
 

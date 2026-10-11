@@ -4,7 +4,7 @@
 
 pr-shepherd's agent integration is a local stdio MCP server. It shares command implementations, GitHub token resolution, and cascading `.pr-shepherdrc.yml` files with the CLI. Tools gather PR context (`iterate`), apply deterministic GitHub mutations (`apply`), build checked suggestion patches (`build_suggestion_patches`), and read Shepherd Journals (`extract_journal`, `get_journal`). The calling client owns recurrence and any git mutations.
 
-The server uses `github.transport` from configuration or its equivalent `transport: "auto"|"graphql"|"rest"` option. `auto` starts with REST in Claude Code cloud sessions and GraphQL elsewhere, with the same limited fallback triggers as the CLI. REST results may omit GraphQL-only fields; unavailable context stays unknown, and unsupported operations are reported explicitly. See [GitHub API transport](graphql.md#shepherd-graphql).
+The server uses `github.transport` from configuration or its equivalent `transport: "auto"|"graphql"|"rest"` option. `auto` starts with REST in Claude Code cloud sessions and GraphQL elsewhere, with the same limited fallback triggers as the CLI. REST results may omit GraphQL-only fields; unavailable context stays unknown, and unsupported operations are reported explicitly. See [GitHub API transport](github-api.md#transport-selection).
 
 The published binary is `pr-shepherd-mcp` from the `pr-shepherd` npm package:
 

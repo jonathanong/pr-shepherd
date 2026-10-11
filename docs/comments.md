@@ -4,7 +4,7 @@
 
 This is the review/comment spec for **context gathering** (what is surfaced) and the mutation table used by **deterministic actions** (`apply review`).
 
-The selected API transport determines which review operations are available. REST can expose review-thread state through its supported review-thread route, but it does not provide every GraphQL mutation. Missing REST fields stay unknown. An otherwise-eligible mutation with unknown viewer capability is attempted and GitHub's response is authoritative. REST comment minimization is unsupported: generated minimization is surfaced as a one-look skip, while an explicit `apply` request reports an unsupported-operation error. See [GitHub API transport](graphql.md#shepherd-graphql) for transport selection and [transport-unsupported](escalations.md#transport-unsupported) for handoff behavior.
+The selected API transport determines which review operations are available. REST can expose review-thread state through its supported review-thread route, but it does not provide every GraphQL mutation. Missing REST fields stay unknown. An otherwise-eligible mutation with unknown viewer capability is attempted and GitHub's response is authoritative. REST comment minimization is unsupported: generated minimization is surfaced as a one-look skip, while an explicit `apply` request reports an unsupported-operation error. See [GitHub API transport](github-api.md#transport-selection) for transport selection and [transport-unsupported](escalations.md#transport-unsupported) for handoff behavior.
 
 ## Review threads vs PR comments
 
