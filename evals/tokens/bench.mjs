@@ -21,6 +21,7 @@ import {
   RECONCILE_MINUTES,
   snapshot,
   MODEL,
+  SHEPHERD_RECEIPT_TICK_API,
   SHEPHERD_TICK_API,
   SHEPHERD_TICK_API_REST,
   SHEPHERD_TICK_API_CLOUD,
@@ -1030,7 +1031,7 @@ out(
 );
 out(`- Base context replayed each turn: ${num(MODEL.baseContextTokens)} tokens.`);
 out(
-  `- \`BatchPr\` supplements are charged where the scenario's state triggers them. \`CheckRunAnnotationsBatch\` is ${annotationBatchApi(1).graphqlPoints} point per 20 uncached annotated check runs (${annotationBatchApi(1).restCore} annotation read per check run on REST), in \`failing-check\` and \`check-annotations\`. The READY-receipt sibling makes the elapsed-ready-delay tick in \`merge\` and \`merge-queue\` 2 points. \`BaseBehind\` (${BASE_BEHIND_GRAPHQL} point on every tick while a required status context is unreported) matches no scenario's state, so none is charged it.`,
+  `- \`BatchPr\` supplements are charged where the scenario's state triggers them. \`CheckRunAnnotationsBatch\` is ${annotationBatchApi(2).graphqlPoints} point per 20 uncached check runs with more than one annotation (${annotationBatchApi(1).restCore} annotation read per annotated check run on REST), in \`check-annotations\`; a run with one annotation, as in \`failing-check\`, costs ${annotationBatchApi(1, 1).graphqlPoints} GraphQL points. The READY-receipt sibling keeps the elapsed-ready-delay tick in \`merge\` and \`merge-queue\` at ${SHEPHERD_RECEIPT_TICK_API.graphqlPoints} point. \`BaseBehind\` (${BASE_BEHIND_GRAPHQL} point whenever the base tip or head moves while a required status context is unreported) matches no scenario's state, so none is charged it.`,
 );
 out(
   "- The REST column is standard REST (no Claude Code cloud proxy): ready-for-review and thread resolves are unsupported there.",
