@@ -41,8 +41,10 @@ export function formatMergeRequirementLines(req: MergeRequirements): string[] {
     lines.push(`Branch up to date: ${value} ${REQUIRED}`);
   }
   if (req.requiredStatusChecks) {
-    const names = req.requiredStatusChecks.contexts.join(", ");
-    lines.push(`Required status checks: ${names} ${REQUIRED}`);
+    // A stack layer's contexts come from the trunk, not the base the reader sees, so name them.
+    const { contexts } = req.requiredStatusChecks;
+    const value = req.stack ? contexts.join(", ") : contexts.length;
+    lines.push(`Required status checks: ${value} ${REQUIRED}`);
   }
   if (req.requiredDeployments) {
     const envs = req.requiredDeployments.environments.join(", ");
