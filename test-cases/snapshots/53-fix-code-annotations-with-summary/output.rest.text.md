@@ -1,6 +1,6 @@
 # PR #42 [FIX_CODE]
 
-**status** `FAILING` · **repo** `owner/repo`
+**status** `FAILING`
 **transport** `rest`
 
 ## Unavailable transport fields
@@ -24,16 +24,16 @@
 
 ## Review summaries (first look)
 
-### `reviewId=PRR_summary_with_annotations` (@reviewer · User)
+### `reviewId=PRR_summary_with_annotations` (@reviewer)
 
 > Static analysis flagged a couple of spots — see the inline annotations.
 
 ## Instructions
 
-1. Fix each warranted item above.
+1. Fix each warranted item.
 2. Read each body under `## Review summaries (first look)` and journal any warranted note before review mutations.
 3. Triage `## Failing checks`. Playbook: "CI failure triage".
 4. Inspect every referenced range under `## Check annotations` and apply any warranted change.
-5. Commit and push any code changes.
-6. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
-7. `[FIX_CODE]` is non-terminal. Rerun the same command now.
+5. Commit and push any changes.
+6. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
+7. Rerun Shepherd now.

@@ -6,10 +6,10 @@ nextAction: wait
 
 ## Layers
 
-- [PR #351: Queued foundation](https://github.com/owner/repo/pull/351) — shepherded · mergeable
-  - OPEN · in merge queue · position 1/2 · base `main`
-- [PR #352: Queued child](https://github.com/owner/repo/pull/352) — shepherded · mergeable
-  - OPEN · in merge queue · position 2/2 · base `foundation`
+- PR #351: Queued foundation — shepherded · mergeable
+  - OPEN · in merge queue · base `main`
+- PR #352: Queued child — shepherded · mergeable
+  - OPEN · in merge queue · base `foundation`
 
 ## Instructions
 

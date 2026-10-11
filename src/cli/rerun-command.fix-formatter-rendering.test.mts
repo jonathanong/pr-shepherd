@@ -5,7 +5,7 @@ import { makeIterateResult } from "../../fixtures/cli-parser.iterate-fixtures.mt
 import type { IterateResult } from "../types.mts";
 
 describe("## Failing checks — authorized rerun rendering", () => {
-  it("renders the [rerun authorized] tag and rerun command when rerunCommand is set", () => {
+  it("renders the rerun command, with no separate tag, when rerunCommand is set", () => {
     const result: IterateResult = { ...makeIterateResult("fix_code") };
     if (result.action !== "fix_code") throw new Error("expected fix_code fixture");
     result.fix.checks = [
@@ -20,13 +20,11 @@ describe("## Failing checks — authorized rerun rendering", () => {
 
     const output = formatIterateResult(result);
 
-    expect(output).toContain(
-      "- `33295262562` — `tests` [conclusion: CANCELLED] [rerun authorized]",
-    );
+    expect(output).toContain("- `33295262562` — `tests` [conclusion: CANCELLED]\n");
     expect(output).toContain("  rerun: `gh run rerun 33295262562 -R owner/repo`");
   });
 
-  it("prints the rerun command once per distinct runId, tagging every sharing bullet", () => {
+  it("prints the rerun command once per distinct runId", () => {
     const result: IterateResult = { ...makeIterateResult("fix_code") };
     if (result.action !== "fix_code") throw new Error("expected fix_code fixture");
     result.fix.checks = [
@@ -48,13 +46,12 @@ describe("## Failing checks — authorized rerun rendering", () => {
 
     const output = formatIterateResult(result);
 
-    expect(output.match(/\[rerun authorized\]/g)).toHaveLength(2);
     expect(output.match(/rerun: `gh run rerun 999 -R owner\/repo`/g)).toHaveLength(1);
     expect(output.indexOf("rerun:")).toBeGreaterThan(output.indexOf("unit (ubuntu)"));
     expect(output.indexOf("rerun:")).toBeLessThan(output.indexOf("unit (macos)"));
   });
 
-  it("omits the tag and rerun line when rerunCommand is not set", () => {
+  it("omits the rerun line when rerunCommand is not set", () => {
     const result: IterateResult = { ...makeIterateResult("fix_code") };
     if (result.action !== "fix_code") throw new Error("expected fix_code fixture");
     result.fix.checks = [

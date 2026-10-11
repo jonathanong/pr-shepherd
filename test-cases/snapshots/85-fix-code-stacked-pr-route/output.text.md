@@ -1,6 +1,6 @@
 # PR #42 [FIX_CODE]
 
-**status** `READY` · **repo** `owner/repo`
+**status** `READY`
 **summary** 1 passing
 Stack: 7 (layer 2/3, base stack/7/1)
 

@@ -56,7 +56,8 @@ Flags:
   --minimize-comment-ids <ids>    Comma-separated issue/review comment IDs to minimize.
   --dismiss-review-ids <ids>      Comma-separated review IDs to dismiss.
   --message <text>                Reply/dismiss message. Required with reply or dismiss IDs.
-  --require-sha <sha>             Wait for this full 40-character lowercase PR head SHA.
+  --require-sha <sha>             Wait for this full 40-character lowercase PR head SHA, or HEAD
+                                  for this checkout's commit.
   --adopt-existing-replies        Generated durable-state commands only: count a thread whose last
                                   comment is already this exact Shepherd reply from you as replied
                                   instead of posting it again. Omit it to forward every reply ID.
@@ -211,9 +212,10 @@ Flags:
   --dismiss-review-ids <ids>      Comma-separated review IDs to dismiss.
   --message <text>                Reply/dismiss message. Required with --reply-thread-ids
                                   or --dismiss-review-ids.
-  --require-sha <sha>             Wait until GitHub reports this PR head SHA before mutating.
-                                  Must be a full 40-character lowercase hex SHA. Local HEAD is valid
-                                  only when it equals the current remote PR head.
+  --require-sha <sha>             Wait until GitHub reports this PR head SHA (or HEAD) before mutating.
+                                  Must be a full 40-character lowercase hex SHA, or HEAD for this
+                                  checkout's commit. Local HEAD is valid only when it equals the
+                                  current remote PR head.
   --format text|json              Output format. Default: text.
   --help, -h                      Print this help and exit before GitHub I/O.
 

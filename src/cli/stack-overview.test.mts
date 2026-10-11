@@ -58,8 +58,27 @@ describe("projectStackOverview", () => {
     expect(overview.prs[0]?.mergeable).toBeUndefined();
     expect(overview.prs[0]?.blocker).toBeUndefined();
     expect(formatStackOverview(overview)).toContain(
-      "- [PR #321: Foundation](https://github.com/acme/widgets/pull/321)\n  - MERGED",
+      "- PR #321: Foundation\n  - MERGED · position 1/2 · base `main`",
     );
+  });
+
+  it("links a row only when its URL differs and omits a position the list order shows", () => {
+    const overview = projectStackOverview(
+      stack([item({ url: "https://github.example.com/acme/widgets/pull/321" })]),
+    );
+    overview.selection = { ...overview.selection, stackSize: 2 };
+    overview.prs.push({
+      ...overview.prs[0]!,
+      pr: 322,
+      position: 2,
+      url: "https://github.com/acme/widgets/pull/322",
+    });
+    const text = formatStackOverview(overview);
+    expect(text).toContain(
+      "- [PR #321: Foundation](https://github.example.com/acme/widgets/pull/321)",
+    );
+    expect(text).toContain("- PR #322: Foundation");
+    expect(text).not.toContain("position");
   });
 
   it("emits stackMergeable only when true", () => {
@@ -113,7 +132,7 @@ describe("projectStackOverview", () => {
     expect(JSON.stringify(overview)).not.toContain("headRefOid");
     expect(JSON.stringify(overview)).not.toContain("pollCommand");
     expect(formatStackOverview(overview)).toContain(
-      "](https://github.com/acme/widgets/pull/321) — not mergeable (`queue-removal`)",
+      "- PR #321: Foundation — not mergeable (`queue-removal`)",
     );
     expect(formatStackOverview(overview)).not.toContain("shepherded");
     expect(formatStackOverview(overview)).toContain(

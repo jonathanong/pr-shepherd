@@ -94,6 +94,11 @@ describe("validateRequireSha", () => {
     expect(stderrSpy).not.toHaveBeenCalled();
   });
 
+  it("accepts HEAD, which the CLI resolves to this checkout's commit", () => {
+    expect(validateRequireSha("HEAD")).toBe(true);
+    expect(stderrSpy).not.toHaveBeenCalled();
+  });
+
   it("returns true for a valid 40-char lowercase hex SHA", () => {
     expect(validateRequireSha("a".repeat(40))).toBe(true);
     expect(stderrSpy).not.toHaveBeenCalled();

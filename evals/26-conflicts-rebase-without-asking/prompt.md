@@ -36,4 +36,4 @@ here is what it returned. Take it from there.
 
 1. The branch has merge conflicts (see `**branch**` above). Resolve them before committing.
 2. Commit any remaining conflict-resolution changes and push to the PR head branch.
-3. `[FIX_CODE]` is non-terminal. Rerun the same command now.
+3. Rerun Shepherd now.

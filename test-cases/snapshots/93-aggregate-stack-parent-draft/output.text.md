@@ -5,10 +5,10 @@ nextAction: shepherd
 
 ## Layers
 
-- [PR #301: Draft foundation](https://github.com/owner/repo/pull/301) — not mergeable (`draft`) · owned
-  - OPEN · draft · position 1/2 · base `main`
-- [PR #302: Ready-looking child](https://github.com/owner/repo/pull/302) — shepherded · mergeable
-  - OPEN · position 2/2 · base `foundation`
+- PR #301: Draft foundation — not mergeable (`draft`) · owned
+  - OPEN · draft · base `main`
+- PR #302: Ready-looking child — shepherded · mergeable
+  - OPEN · base `foundation`
 
 ## Instructions
 

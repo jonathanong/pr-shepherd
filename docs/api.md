@@ -32,7 +32,7 @@ const applied = await shepherd.apply({
       type: "review_mutations",
       replyThreadIds: ["PRRT_…"],
       message: "Fixed the naming.",
-      requireSha: "<40-char lowercase sha>",
+      requireSha: "HEAD", // this checkout's commit, or a 40-char lowercase sha
     },
   ],
 });
@@ -70,7 +70,7 @@ until all layers merge and the stack returns `CANCEL`.
 Aggregate selectors never perform mutations or emit rebase/push commands. The caller owns recurrence
 and follows the returned instructions.
 
-`apply` runs `operations` in list order after validating every operation. Types: `merge`, `review_mutations`, `mark_files_viewed`, `append_journal`, and `acknowledge_queue_removal`. `merge` requires `requireSha` (a full 40-character lowercase SHA) and `mergeAction` (`direct_merge`, `merge_queue`, or `default`); `mergeMethod` (`merge`, `squash`, or `rebase`) is valid only for `direct_merge`. It requires REST transport, either from the client/API `transport` option or `input.transport`. A merge result carries `{ pr, repo, status, details, uncertain? }`; `status` is `pending`, `enqueued`, `merged`, or `failed`. Pending and enqueued results are not merged. The CLI prints the same result as text or JSON and rerunning the same request resumes its persisted UUID without resubmission. `details` may include `message`, `uuid`, `expected_head_sha`, `merge_action`, `merge_method`, `bypass_rules`, and merged `sha`; `uncertain: true` marks an outcome that needs reconciliation before another request.
+`apply` runs `operations` in list order after validating every operation. Types: `merge`, `review_mutations`, `mark_files_viewed`, `append_journal`, and `acknowledge_queue_removal`. `review_mutations.requireSha` is `HEAD` (this checkout's commit, read with `git rev-parse HEAD`) or a full 40-character lowercase SHA; the mutations wait until GitHub reports that PR head. `merge` requires `requireSha` (a full 40-character lowercase SHA) and `mergeAction` (`direct_merge`, `merge_queue`, or `default`); `mergeMethod` (`merge`, `squash`, or `rebase`) is valid only for `direct_merge`. It requires REST transport, either from the client/API `transport` option or `input.transport`. A merge result carries `{ pr, repo, status, details, uncertain? }`; `status` is `pending`, `enqueued`, `merged`, or `failed`. Pending and enqueued results are not merged. The CLI prints the same result as text or JSON and rerunning the same request resumes its persisted UUID without resubmission. `details` may include `message`, `uuid`, `expected_head_sha`, `merge_action`, `merge_method`, `bypass_rules`, and merged `sha`; `uncertain: true` marks an outcome that needs reconciliation before another request.
 
 A definite failed merge request permits a replacement with changed options. A definite `enqueued` result permits a new request only after the PR head changes and a fresh read verifies the new `requireSha`; pending or uncertain requests cannot be replaced. Repeating the same-head request returns its recorded result rather than enqueueing again. REST cannot verify current merge-queue removal history, so automatic same-head queue recovery is explicitly unsupported and never emits that repeated request as a recovery command. Interrupted local replacements resume their persisted intent safely, while a submission whose outcome is unknown is never repeated.
 

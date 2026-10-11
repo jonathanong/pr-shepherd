@@ -5,8 +5,8 @@ nextAction: shepherd
 
 ## Layers
 
-- [PR #431: Draft CI failure](https://github.com/owner/repo/pull/431) — not mergeable (`draft`) · owned
-  - OPEN · draft · position 1/1 · base `main`
+- PR #431: Draft CI failure — not mergeable (`draft`) · owned
+  - OPEN · draft · base `main`
 
 ## Instructions
 

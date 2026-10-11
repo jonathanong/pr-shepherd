@@ -83,16 +83,6 @@
     { "where": "stack-merge", "metric": "restCore", "transport": "rest", "baseline": "gh", "issue": 525 },
     { "where": "stack-merge", "metric": "restCore", "transport": "cloud", "baseline": "gh", "issue": 525 },
     { "where": "mark-ready", "metric": "restCore", "transport": "graphql", "baseline": "gh", "issue": 525 },
-    { "where": "merge-queue", "metric": "restCore", "transport": "graphql", "baseline": "gh", "issue": 525 },
-    { "where": "chars-per-token:session:stack", "metric": "toolTokens", "baseline": "gh", "issue": 528 },
-    { "where": "chars-per-token:review-thread", "metric": "ite", "baseline": "gh", "issue": 528 },
-    { "where": "chars-per-token:review-thread", "metric": "toolTokens", "baseline": "gh", "issue": 528 },
-    { "where": "chars-per-token:multi-category", "metric": "ite", "baseline": "gh", "issue": 528 },
-    { "where": "chars-per-token:multi-category", "metric": "toolTokens", "baseline": "gh", "issue": 528 },
-    { "where": "chars-per-token:merge-queue", "metric": "ite", "baseline": "gh", "issue": 528 },
-    { "where": "chars-per-token:merge-queue", "metric": "toolTokens", "baseline": "gh", "issue": 528 },
-    { "where": "chars-per-token:stack-work", "metric": "toolTokens", "baseline": "gh", "issue": 528 },
-    { "where": "chars-per-token:stack-setup", "metric": "ite", "baseline": "mcp", "issue": 528 },
-    { "where": "chars-per-token:stack-setup", "metric": "toolTokens", "baseline": "mcp", "issue": 528 }
+    { "where": "merge-queue", "metric": "restCore", "transport": "graphql", "baseline": "gh", "issue": 525 }
   ]
 }

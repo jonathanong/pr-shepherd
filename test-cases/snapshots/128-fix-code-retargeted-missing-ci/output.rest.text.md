@@ -19,4 +19,4 @@ Merge queue: Unknown [Required]
 1. This branch is not behind `main`. No CI checks are running, and required checks have not passed: `static`, `backend`, `web`, `cloudflare-worker`, `lambdas`, `tooling`, `gitleaks`.
 2. Retrigger workflows once for this head: run `gh api --method PATCH repos/vouchington/vouchington/pulls/2099 -f state=closed`, then run `gh api --method PATCH repos/vouchington/vouchington/pulls/2099 -f state=open`.
 3. If those checks are still missing on the next poll, investigate why the workflows did not start. Do not close the PR again. Shepherd escalates with `required-checks-unreported` when this remains the only blocker.
-4. `[FIX_CODE]` is non-terminal. Rerun the same command now.
+4. Rerun Shepherd now.

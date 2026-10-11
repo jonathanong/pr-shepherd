@@ -6,8 +6,8 @@ nextAction: merge
 
 ## Layers
 
-- [PR #501: Verified single layer](https://github.com/owner/repo/pull/501) — shepherded · mergeable
-  - OPEN · position 1/1 · base `main`
+- PR #501: Verified single layer — shepherded · mergeable
+  - OPEN · base `main`
 
 ## Instructions
 

@@ -23,7 +23,7 @@ describe("edited actionable comment rendering", () => {
 
     const out = formatFixCodeResult("# PR #42 [FIX_CODE]", result);
 
-    expect(out).toContain("### `commentId=c-edited` (@alice · User) [edited since first look]");
+    expect(out).toContain("### `commentId=c-edited` (@alice) [edited since first look]");
     expect(out).toContain("Items marked `[edited since first look]`");
   });
 });

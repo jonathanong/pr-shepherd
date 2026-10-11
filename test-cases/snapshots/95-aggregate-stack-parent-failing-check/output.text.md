@@ -5,10 +5,10 @@ nextAction: shepherd
 
 ## Layers
 
-- [PR #321: CI failure](https://github.com/owner/repo/pull/321) — not mergeable (`failing-checks`) · owned
-  - OPEN · position 1/2 · base `main` · 1 failing
-- [PR #322: Verified child](https://github.com/owner/repo/pull/322) — shepherded · mergeable
-  - OPEN · position 2/2 · base `foundation`
+- PR #321: CI failure — not mergeable (`failing-checks`) · owned
+  - OPEN · base `main` · 1 failing
+- PR #322: Verified child — shepherded · mergeable
+  - OPEN · base `foundation`
 
 ## Instructions
 

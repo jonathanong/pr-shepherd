@@ -6,8 +6,8 @@ nextAction: cancel
 
 ## Layers
 
-- [PR #501: Merged single layer](https://github.com/owner/repo/pull/501)
-  - MERGED · position 1/1 · base `main`
+- PR #501: Merged single layer
+  - MERGED · base `main`
 
 ## Instructions
 

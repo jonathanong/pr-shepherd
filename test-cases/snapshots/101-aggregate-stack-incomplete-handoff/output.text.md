@@ -5,10 +5,10 @@ nextAction: shepherd
 
 ## Layers
 
-- [PR #381: Verified foundation](https://github.com/owner/repo/pull/381) — shepherded · mergeable
-  - OPEN · position 1/2 · base `main`
-- [PR #382: Unverified child](https://github.com/owner/repo/pull/382) — mergeable · owned
-  - OPEN · position 2/2 · base `foundation`
+- PR #381: Verified foundation — shepherded · mergeable
+  - OPEN · base `main`
+- PR #382: Unverified child — mergeable · owned
+  - OPEN · base `foundation`
 
 ## Instructions
 

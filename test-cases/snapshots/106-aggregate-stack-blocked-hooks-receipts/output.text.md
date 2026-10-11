@@ -5,12 +5,12 @@ nextAction: shepherd
 
 ## Layers
 
-- [PR #441: Blocked receipt](https://github.com/owner/repo/pull/441) — shepherded · not mergeable (`merge-state`) · owned
-  - OPEN · position 1/3 · base `main`
-- [PR #442: Hooks receipt](https://github.com/owner/repo/pull/442) — shepherded · not mergeable (`merge-state`) · owned
-  - OPEN · position 2/3 · base `blocked`
-- [PR #443: Pending CI receipt](https://github.com/owner/repo/pull/443) — shepherded · not mergeable (`checks-in-progress`) · owned
-  - OPEN · position 3/3 · base `hooks` · 1 in progress
+- PR #441: Blocked receipt — shepherded · not mergeable (`merge-state`) · owned
+  - OPEN · base `main`
+- PR #442: Hooks receipt — shepherded · not mergeable (`merge-state`) · owned
+  - OPEN · base `blocked`
+- PR #443: Pending CI receipt — shepherded · not mergeable (`checks-in-progress`) · owned
+  - OPEN · base `hooks` · 1 in progress
 
 ## Instructions
 

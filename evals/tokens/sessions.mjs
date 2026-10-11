@@ -1112,18 +1112,21 @@ export function measuredCharsPerToken(data = readJson(REAL_SESSIONS_FILE)) {
 /**
  * Run `fn` with result tokens counted at `cpt` characters each (the model's own
  * when null). Commands and schemas keep the model's ratio: `cpt` is measured
- * on tool results only.
+ * on tool results only. `cliCpt`, when given, counts pr-shepherd's own output
+ * (lib.mjs's isShepherdOutput) at its own ratio instead.
  */
-export function atCharsPerToken(cpt, fn) {
+export function atCharsPerToken(cpt, fn, cliCpt = null) {
   if (cpt == null) return fn();
   const saved = MODEL.charsPerToken;
   MODEL.inputCharsPerToken = saved;
   MODEL.charsPerToken = cpt;
+  if (cliCpt != null) MODEL.cliCharsPerToken = cliCpt;
   try {
     return fn();
   } finally {
     MODEL.charsPerToken = saved;
     delete MODEL.inputCharsPerToken;
+    delete MODEL.cliCharsPerToken;
   }
 }
 

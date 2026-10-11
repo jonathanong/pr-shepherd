@@ -140,9 +140,7 @@ describe("native stack rebase instructions", () => {
         rebase,
       )[1],
     ).toBe(rebase);
-    expect(buildFixCompletionInstruction()).toBe(
-      "`[FIX_CODE]` is non-terminal. Rerun the same command now.",
-    );
+    expect(buildFixCompletionInstruction()).toBe("Rerun Shepherd now.");
   });
 
   it("routes repeated-workflow behind recovery and SHA-gated completion through the stack", () => {
@@ -162,8 +160,6 @@ describe("native stack rebase instructions", () => {
       "The workflow rerun still fails while the branch is behind PR base branch `main`. Inspect the current base branch for an existing fix before choosing a remediation.",
       rebase,
     ]);
-    expect(buildFixCompletionInstruction()).toBe(
-      "`[FIX_CODE]` is non-terminal. Rerun the same command now.",
-    );
+    expect(buildFixCompletionInstruction()).toBe("Rerun Shepherd now.");
   });
 });

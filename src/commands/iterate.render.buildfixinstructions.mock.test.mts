@@ -25,7 +25,7 @@ describe("buildFixInstructions", () => {
       0,
     );
 
-    expect(instructions).toEqual(["`[FIX_CODE]` is non-terminal. Rerun the same command now."]);
+    expect(instructions).toEqual(["Rerun Shepherd now."]);
   });
 
   it("points at the skill's Suggestion patches playbook instead of inlining refusal/drift mechanics", () => {
@@ -153,17 +153,17 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(instructions[0]).toBe("Fix each warranted item above.");
-    expect(text).toContain("Commit and push any code changes.");
+    expect(instructions[0]).toBe("Fix each warranted item.");
+    expect(text).toContain("Commit and push any changes.");
     // CLI no longer prescribes rebase mechanics — that is the caller's convention.
     expect(text).not.toContain("rebase onto");
     // $DISMISS_MESSAGE substitution stays CLI-side because the command is invalid without it.
     // The SHA gate reads HEAD itself, so no $HEAD_SHA substitution step remains.
     expect(text).not.toContain("$HEAD_SHA");
     expect(instructions.at(-2)).toBe(
-      'Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd resolve 42 --require-sha "$(git rev-parse HEAD)"`',
+      "`$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd resolve 42 --require-sha HEAD`",
     );
-    expect(instructions.at(-1)).toBe("`[FIX_CODE]` is non-terminal. Rerun the same command now.");
+    expect(instructions.at(-1)).toBe("Rerun Shepherd now.");
     expect(text).not.toContain("Stop this iteration");
     // Old prescriptive git commands gone
     expect(text).not.toContain("Commit changed files:");
@@ -200,7 +200,7 @@ describe("buildFixInstructions", () => {
     expect(text).not.toContain("$HEAD_SHA");
     expect(text).not.toContain("$DISMISS_MESSAGE");
     expect(text).toContain(
-      'Run, even if no code changed: `pr-shepherd resolve 42 --require-sha "$(git rev-parse HEAD)"`',
+      "Run, even if no code changed: `pr-shepherd resolve 42 --require-sha HEAD`",
     );
   });
 
@@ -244,18 +244,18 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).toContain("Commit and push any code changes.");
+    expect(text).toContain("Commit and push any changes.");
     // CLI no longer prescribes rebase mechanics or names origin/main
     expect(text).not.toContain("rebase onto");
     expect(text).not.toContain("origin/main");
     // The printed command reads HEAD itself, so it needs no $HEAD_SHA substitution.
-    expect(text).toContain('--require-sha "$(git rev-parse HEAD)"');
+    expect(text).toContain("--require-sha HEAD");
     expect(text).not.toContain("$HEAD_SHA");
     // No prescriptive git command lines
     expect(text).not.toContain("git add");
     expect(text).not.toContain("git fetch origin");
     expect(text).not.toContain("git push --force-with-lease");
-    expect(text).toContain("`[FIX_CODE]` is non-terminal. Rerun the same command now.");
+    expect(text).toContain("Rerun Shepherd now.");
   });
 
   it("agent-facing commit/rebase instruction always conditional regardless of review type", () => {
@@ -298,14 +298,14 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(instructions[0]).toBe("Fix each warranted item above.");
-    expect(text).toContain("Commit and push any code changes.");
+    expect(instructions[0]).toBe("Fix each warranted item.");
+    expect(text).toContain("Commit and push any changes.");
     // No old prescriptive commands
     expect(text).not.toContain("Commit changed files:");
     expect(text).not.toContain("Rebase and push:");
     expect(text).not.toContain("git add");
     expect(text).not.toContain("git push --force-with-lease");
-    expect(text).toContain("`[FIX_CODE]` is non-terminal. Rerun the same command now.");
+    expect(text).toContain("Rerun Shepherd now.");
   });
 
   it("includes annotation-only passing-check guidance without a failing-checks section", () => {

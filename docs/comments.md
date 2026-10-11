@@ -28,7 +28,7 @@ Shepherd surfaces author and viewer-provenance fields instead of deriving a trus
 - `authorAssociation` is GitHub's raw relationship between the author and repository: `COLLABORATOR`, `CONTRIBUTOR`, `FIRST_TIMER`, `FIRST_TIME_CONTRIBUTOR`, `MANNEQUIN`, `MEMBER`, `NONE`, or `OWNER`.
 - `viewerDidAuthor: true` records that the authenticated viewer authored an inline comment. GraphQL supplies the flag directly; REST compares the actual comment author's login with the authenticated `/user` identity. It is emitted only when true, and remains omitted when REST cannot identify the viewer. For a review thread, the original inline comment's value establishes whether the viewer owns that feedback; a viewer-authored reply does not grant ownership of someone else's root.
 
-These fields are optional provenance, not an authentication or safety verdict. Live GitHub results populate them when GitHub returns the fields. Text output appends them to the author label, for example `@alice · User · MEMBER · viewer-authored`; JSON exposes the same raw values as `authorAssociation` and true-only `viewerDidAuthor`. In thread transcripts, every comment and reply carries its own author fields, so a maintainer reply does not lend its provenance to an outsider's comment (or vice versa). `authorAssociation` is also available to custom classification rules, but Shepherd's built-in human/bot routing does not use it; only `viewerDidAuthor: true` grants the narrow human reply-and-resolve exception described below.
+These fields are optional provenance, not an authentication or safety verdict. Live GitHub results populate them when GitHub returns the fields. Text output appends them to the author label, for example `@alice · MEMBER · viewer-authored` (the default `User` author type is left unlabeled; `@ci[bot] · Bot` names the others); JSON exposes the same raw values as `authorAssociation` and true-only `viewerDidAuthor`. In thread transcripts, every comment and reply carries its own author fields, so a maintainer reply does not lend its provenance to an outsider's comment (or vice versa). `authorAssociation` is also available to custom classification rules, but Shepherd's built-in human/bot routing does not use it; only `viewerDidAuthor: true` grants the narrow human reply-and-resolve exception described below.
 
 ## `isOutdated` flag
 
@@ -74,7 +74,7 @@ State module: `src/state/seen-comments.mts`.
 
 ## `--require-sha` polling
 
-When `pr-shepherd apply review --require-sha <SHA>` is used, shepherd polls the GraphQL `get-pr-head-sha.gql` query for `headRefOid` until it matches `expectedSha`, then issues the resolve/minimize/dismiss mutations. With reply thread IDs, the `ApplyReviewPreflight` read's `headRefOid` serves as the first poll.
+When `pr-shepherd apply review --require-sha <SHA>` is used, shepherd polls the GraphQL `get-pr-head-sha.gql` query for `headRefOid` until it matches `expectedSha`, then issues the resolve/minimize/dismiss mutations. `--require-sha HEAD` (and the MCP/library `review_mutations.requireSha: "HEAD"`) uses this checkout's commit, read with `git rev-parse HEAD`; generated instructions print that form because the step runs right after the push. With reply thread IDs, the `ApplyReviewPreflight` read's `headRefOid` serves as the first poll.
 
 **Why:** Mutations must not race a push GitHub has not yet acknowledged. The poll waits until `headRefOid` matches the expected SHA, then fires. Shepherd never merges PRs; this guard only delays review mutations.
 

@@ -105,7 +105,33 @@ export interface ConditionalLossyPath {
   isExempt: (container: unknown, json: unknown) => boolean;
 }
 
+const DEFAULT_AUTHOR_TYPE_PATHS = [
+  ...["threads", "firstLookThreads", "resolutionOnlyThreads"].flatMap((k) => [
+    `fix.${k}[].authorType`,
+    `fix.${k}[].comments[].authorType`,
+  ]),
+  ...["actionableComments", "changesRequestedReviews", "firstLookSummaries", "editedSummaries"].map(
+    (k) => `fix.${k}[].authorType`,
+  ),
+];
+
 export const CONDITIONAL_LOSSY_PATHS: ConditionalLossyPath[] = [
+  ...DEFAULT_AUTHOR_TYPE_PATHS.map((path) => ({
+    path,
+    description: "text labels only non-default author types; `User` is the unlabeled default",
+    isExempt: (container: unknown) =>
+      (container as { authorType?: unknown } | null)?.authorType === "User",
+  })),
+  {
+    path: "prs[].url",
+    description:
+      "a stack overview row omits its link when the URL is the one the header repo and PR number imply",
+    isExempt: (container, json) => {
+      const layer = container as { pr?: unknown; url?: unknown } | null;
+      const repo = (json as { repo?: unknown } | null)?.repo;
+      return layer?.url === `https://github.com/${String(repo)}/pull/${String(layer?.pr)}`;
+    },
+  },
   {
     path: "prs[].title",
     description: "aggregate Markdown safely escapes externally supplied PR title text",

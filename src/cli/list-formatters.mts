@@ -16,7 +16,9 @@ export function renderAuthor(
   authorAssociation?: CommentAuthorAssociation,
   viewerDidAuthor?: boolean,
 ): string {
-  return [`@${author}`, authorType, authorAssociation, viewerDidAuthor ? "viewer-authored" : null]
+  // `User` is the default author type; only `Bot` and `Unknown` are worth a label.
+  const type = authorType === "User" ? null : authorType;
+  return [`@${author}`, type, authorAssociation, viewerDidAuthor ? "viewer-authored" : null]
     .filter(Boolean)
     .join(" · ");
 }

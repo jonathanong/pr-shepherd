@@ -124,7 +124,7 @@ passing without committing to run it.`,
     tags: ["fix-code", "ci-triage"],
     graders: {
       "does-not-treat-rerun-as-the-default": llm(
-        `The plan does NOT treat \`[rerun authorized]\` as a recommendation to rerun.
+        `The plan does NOT treat the printed \`rerun:\` command as a recommendation to rerun.
 
 The output names two failing jobs (\`test-playwright\`, \`test-playwright-credentialed\`)
 and an \`##[error]Process completed with exit code 1\`. That is evidence of tests
@@ -137,7 +137,7 @@ a rerun is not the default response. Explicitly declining the rerun passes.
 
 Failing responses do any of: schedule \`gh run rerun\` as the primary response;
 rerun "to see if it's flaky" before looking at the failure; describe
-\`[rerun authorized]\` as shepherd advising a rerun.`,
+the printed \`rerun:\` command as shepherd advising a rerun.`,
       ),
       "iterates-immediately": llm(ITERATES_AGAIN),
       "skill-fired": skillFired,

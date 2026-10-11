@@ -20,6 +20,7 @@ import { branchStateSegment } from "./iterate-branch-segment.mts";
 import { insertRuleAutoResolveSection } from "../commands/rule-auto-resolve-format.mts";
 import { formatTransportEvidence } from "./transport-formatter.mts";
 import { formatNextCheckLines, formatPollModeSegment } from "./next-check-format.mts";
+import { formatPrUrl } from "../pr-reference.mts";
 
 /**
  * Format an IterateResult as human-readable Markdown.
@@ -44,8 +45,21 @@ export function formatIterateResult(
 ): string {
   const verbose = opts?.verbose ?? false;
   const readyDelaySuffix = opts?.readyDelaySuffix;
+  const repoSeg = ` · **repo** \`${result.repo}\``;
+  // Lean: the repo segment repeats what a generated command's PR URL or `--repo` flag already
+  // shows. Only the CLI-generated `## Instructions` section counts: review bodies and logs above
+  // it are untrusted and may name any repository.
+  const dropRepeatedRepo = (full: string): string => {
+    if (verbose) return full;
+    const instructions = full.slice(full.lastIndexOf("\n## Instructions\n") + 1);
+    const generated =
+      instructions.startsWith("## Instructions\n") &&
+      (instructions.includes(formatPrUrl(result.repo, result.pr)) ||
+        instructions.includes(`--repo ${result.repo} `));
+    return generated ? full.replace(repoSeg, "") : full;
+  };
   const finish = (text: string): string =>
-    insertRuleAutoResolveSection(text, result.ruleAutoResolve);
+    dropRepeatedRepo(insertRuleAutoResolveSection(text, result.ruleAutoResolve));
 
   const heading = `# PR #${result.pr} [${result.action.toUpperCase()}]`;
   const reviewDecisionSeg =
@@ -60,7 +74,7 @@ export function formatIterateResult(
       ? ` · **merge** \`${result.mergeStateStatus}\``
       : "";
   const stateSeg = verbose || result.state !== "OPEN" ? ` · **state** \`${result.state}\`` : "";
-  const baseLine = `**status** \`${result.status}\`${mergeSeg}${reviewDecisionSeg}${stateSeg} · **repo** \`${result.repo}\`${baseBranchSeg}${formatPollModeSegment(result)}`;
+  const baseLine = `**status** \`${result.status}\`${mergeSeg}${reviewDecisionSeg}${stateSeg}${repoSeg}${baseBranchSeg}${formatPollModeSegment(result)}`;
 
   const branchSeg = branchStateSegment(result);
   let summaryLine: string | null;
@@ -136,12 +150,14 @@ export function formatIterateResult(
 
   switch (result.action) {
     case "ready":
-      return joinSections([
-        header,
-        ...telemetrySections,
-        adaptIterateLog(result.log),
-        `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
-      ]);
+      return dropRepeatedRepo(
+        joinSections([
+          header,
+          ...telemetrySections,
+          adaptIterateLog(result.log),
+          `## Instructions\n\n${numberInstructions(buildSimpleIterateInstructions(result))}`,
+        ]),
+      );
 
     case "wait": {
       const waitLines = [header, ...telemetrySections, adaptIterateLog(result.log)];

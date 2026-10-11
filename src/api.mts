@@ -42,6 +42,7 @@ import type {
   PollSummaryResult,
 } from "./types.mts";
 import { getPullRequestBody, getRepoInfo } from "./github/client.mts";
+import { getLocalHeadSha } from "./commands/suggestion-patch-git.mts";
 import { extractShepherdJournal, type ShepherdJournalExtraction } from "./journal/index.mts";
 
 export interface CreatePrShepherdOptions {
@@ -88,6 +89,7 @@ export interface ReviewMutationsOperation {
   dismissReviewIds?: string[];
   /** Required when replying to a thread or dismissing a review. */
   message?: string;
+  /** `HEAD` (this checkout's commit) or a full SHA the PR head must match before mutating. */
   requireSha?: string;
 }
 
@@ -273,6 +275,9 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
                 const { type: _type, message, ...options } = operation;
                 const result = await runResolveMutate({
                   ...options,
+                  // `HEAD` names this checkout's commit, the same form the printed CLI command uses.
+                  requireSha:
+                    options.requireSha === "HEAD" ? await getLocalHeadSha() : options.requireSha,
                   prNumber,
                   targetRepository,
                   dismissMessage: message,
@@ -494,9 +499,13 @@ function validateReviewMutations(operation: ReviewMutationsOperation): void {
   if (operation.message !== undefined && typeof operation.message !== "string") {
     throw new PrShepherdValidationError("review_mutations.message must be a string");
   }
-  if (operation.requireSha !== undefined && !/^[0-9a-f]{40}$/.test(operation.requireSha)) {
+  if (
+    operation.requireSha !== undefined &&
+    operation.requireSha !== "HEAD" &&
+    !/^[0-9a-f]{40}$/.test(operation.requireSha)
+  ) {
     throw new PrShepherdValidationError(
-      "review_mutations.requireSha must be a full 40-character lowercase hex SHA",
+      "review_mutations.requireSha must be HEAD or a full 40-character lowercase hex SHA",
     );
   }
 }

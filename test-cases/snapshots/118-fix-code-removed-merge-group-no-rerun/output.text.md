@@ -1,6 +1,6 @@
 # PR #42 [FIX_CODE]
 
-**status** `FAILING` · **repo** `owner/repo`
+**status** `FAILING`
 Merge queue: No [Required]
 **merge queue** enabled `true` · inQueue `false` · checkCommit `queue-commit-1`
 **queue removal** reason `failed_checks` · createdAtUnix `1715799000` · actor `@github-actions` · commit `queue-commit-1` · parents `abc123`
@@ -17,9 +17,9 @@ Merge queue: No [Required]
 
 ## Instructions
 
-1. Fix each warranted item above.
+1. Fix each warranted item.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
 3. Triage the merge-queue ejection before any requeue. Update the PR head from the latest base first. Run `requeue:` only if the failure does not reproduce on the updated head, neither the update nor a code change altered the head, and no other blocker remains. If gh reports auto-merge is disabled, run `requeue API fallback:` instead. Playbook: "Merge queue ejection".
 4. If the base update or a fix changed the head, commit any remaining changes and push to the PR head branch. If neither did, do not push.
-5. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
-6. `[FIX_CODE]` is non-terminal. Rerun the same command now.
+5. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
+6. Rerun Shepherd now.

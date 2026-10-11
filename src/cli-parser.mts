@@ -35,6 +35,7 @@ import {
   runInPollModeScope,
 } from "./cli/event-state-scope.mts";
 import { handleApplyMerge } from "./cli/apply-merge-handler.mts";
+import { getLocalHeadSha } from "./commands/suggestion-patch-git.mts";
 import { extractTransportArgs } from "./cli/transport-args.mts";
 import { parseGithubTransport } from "./github/transport-mode.mts";
 import { runWithGithubTransport } from "./github/transport.mts";
@@ -323,7 +324,8 @@ async function handleResolve(
     minimizeCommentIds,
     dismissReviewIds,
     dismissMessage,
-    requireSha,
+    // `HEAD` reads this checkout's commit (read-only `git rev-parse HEAD`), as the shell would.
+    requireSha: requireSha === "HEAD" ? await getLocalHeadSha() : requireSha,
     ...(adoptExistingReplies && { adoptExistingReplies }),
   });
   process.stdout.write(

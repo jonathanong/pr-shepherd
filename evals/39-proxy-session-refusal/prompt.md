@@ -34,7 +34,7 @@ Shepherd https://github.com/owner/repo/pull/42 through to a terminal state. This
 
 # PR #42 [FIX_CODE]
 
-**status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo`
+**status** `UNRESOLVED_COMMENTS`
 **transport** `rest`
 
 ## Unavailable transport fields
@@ -46,19 +46,19 @@ Shepherd https://github.com/owner/repo/pull/42 through to a terminal state. This
 
 ## Review threads
 
-### [threadId=rest-thread-11](https://github.com/owner/repo/pull/42#discussion_r11) — `src/index.ts:42` (@maintainer · User)
+### [threadId=rest-thread-11](https://github.com/owner/repo/pull/42#discussion_r11) — `src/index.ts:42` (@maintainer)
 
-#### [commentId=PRRC_11](https://github.com/owner/repo/pull/42#discussion_r11) (@maintainer · User)
+#### [commentId=PRRC_11](https://github.com/owner/repo/pull/42#discussion_r11) (@maintainer)
 
 > Please rename this variable to be more descriptive.
 
 ## Instructions
 
-1. Fix each warranted item above.
-2. Commit and push any code changes.
-3. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
-4. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-11 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha "$(git rev-parse HEAD)"`
-5. `[FIX_CODE]` is non-terminal. Rerun the same command now.
+1. Fix each warranted item.
+2. Commit and push any changes.
+3. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
+4. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-11 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha HEAD`
+5. Rerun Shepherd now.
 
 ---
 
@@ -72,7 +72,7 @@ Renamed `val` to `retryLimit` in `src/index.ts`, committed it and pushed
 [tool] $ pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-11 --message "Renamed the variable." --require-sha 9f3c2ab61d4e0b8a7c5f3e2d1c0b9a8f7e6d5c4b
 
 Stopped: GitHub session access refused — GitHub REST POST /repos/owner/repo/pulls/42/comments/11/replies failed: 403 {"message":"GitHub access to this repository is not enabled for this session. Use add_repo to request access. If add_repo answers that read access is already available and you need GitHub API or write access, call add_repo again with access:\"push\".","documentation_url":"https://docs.anthropic.com/en/docs/claude-code/github-actions"}
-Not replied due to session access (1): rest-thread-11
+Not replied due to session access: rest-thread-11
 ## Instructions
 
 1. Restore GitHub access for this session using the proxy instructions above.

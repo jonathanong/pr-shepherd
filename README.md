@@ -53,7 +53,7 @@ Example shape:
 
 ## Review threads
 
-### `threadId=PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate/index.mts:42` (@alice · User · MEMBER)
+### `threadId=PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate/index.mts:42` (@alice · MEMBER)
 
 > The variable name is misleading.
 
@@ -64,12 +64,12 @@ Example shape:
 
 ## Instructions
 
-1. Fix each warranted item above.
+1. Fix each warranted item.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
-3. Commit and push any code changes.
-4. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal 123 '- <decision>'`
-5. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha "$(git rev-parse HEAD)"`
-6. `[FIX_CODE]` is non-terminal. Rerun the same command now.
+3. Commit and push any changes.
+4. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal 123 '- <decision>'`
+5. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha HEAD`
+6. Rerun Shepherd now.
 ```
 
 See [docs/actions.md](docs/actions.md) for the complete output contract and [docs/escalations.md](docs/escalations.md) for the exact finite human-handoff boundary. Iterate/poll PR outcomes use exit codes `0` and `10`–`16`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).

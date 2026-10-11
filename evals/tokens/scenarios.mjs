@@ -208,7 +208,7 @@ const receiptTick = (out) => ({
 
 /**
  * Run the printed `apply review` command and read its output. Only `$DISMISS_MESSAGE` needs
- * filling; `--require-sha "$(git rev-parse HEAD)"` runs as printed.
+ * filling; `--require-sha HEAD` runs as printed.
  */
 function shepherdApply(text, result, phase = 2) {
   const cmd = text.match(/`(pr-shepherd apply review [^`]+)`/)?.[1];

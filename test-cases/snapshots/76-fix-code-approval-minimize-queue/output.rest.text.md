@@ -19,4 +19,4 @@
 
 ## Instructions
 
-1. `[FIX_CODE]` is non-terminal. Rerun the same command now.
+1. Rerun Shepherd now.

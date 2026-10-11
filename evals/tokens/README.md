@@ -15,8 +15,8 @@ Latest numbers: [REPORT.md](REPORT.md). Estimated cost per session
 
 | session | cost vs. gh | cost vs. MCP | turns vs. gh / MCP | tool tokens vs. gh / MCP |
 | --- | --- | --- | --- | --- |
-| single PR | **−41%** | **−77%** | −19% / −70% | −71% / −89% |
-| PR stack | **−43%** | **−62%** | −38% / −58% | −13% / −53% |
+| single PR | **−41%** | **−77%** | −19% / −70% | −72% / −89% |
+| PR stack | **−45%** | **−63%** | −38% / −58% | −24% / −59% |
 
 GitHub rate limit per session (deterministic, assumed; see the Method section):
 
@@ -87,8 +87,9 @@ loss.
   totals, which include setup. Setup makes no GitHub call, so it has no
   rate-limit cells.
 - **Characters per token.** The token cells are gated a second time with
-  pr-shepherd's output counted at its measured characters per token and both
-  baselines at the measured ratio for tool output overall (REPORT.md's
+  pr-shepherd's own results counted at its measured characters per token and
+  every other tool result (both baselines, plus the gh logs and skill reads in
+  pr-shepherd's arm) at the measured ratio for tool output overall (REPORT.md's
   "Sensitivity: measured characters per token"). A cell that is a loss only
   there is listed with a `chars-per-token:` prefix on its scope. The real
   sessions themselves are not gated.

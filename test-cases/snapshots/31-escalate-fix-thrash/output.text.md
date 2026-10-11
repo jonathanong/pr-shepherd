@@ -22,7 +22,7 @@ The same thread(s) remain unresolved after their pending review commands were re
 
 ## Pending review commands
 
-- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_thrash --message "$DISMISS_MESSAGE" --resolve-thread-ids PRRT_thrash --require-sha "$(git rev-parse HEAD)"`
+- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_thrash --message "$DISMISS_MESSAGE" --resolve-thread-ids PRRT_thrash --require-sha HEAD`
 
 ---
 

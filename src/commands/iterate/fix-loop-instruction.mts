@@ -15,7 +15,7 @@ const FIX_CODE_LOOP_PLAYBOOK = "Fix-code loop";
  * journal command stay in the per-tick output. `inline` style never calls this.
  */
 function buildFixLoopInstruction(prReference: string | number, journal: boolean): string {
-  const parts = ["Commit and push any code changes."];
+  const parts = ["Commit and push any changes."];
   if (journal)
     parts.push(
       `Journal substantial decisions or rejections with \`${buildShepherdJournalCommand(prReference)}\`.`,
@@ -41,7 +41,7 @@ export function buildPushJournalSteps(
   if (style === "playbook" && genericPush)
     return [buildFixLoopInstruction(prReference, wantsJournal)];
   const steps: string[] = [];
-  if (genericPush) steps.push("Commit and push any code changes.");
+  if (genericPush) steps.push("Commit and push any changes.");
   if (wantsJournal) steps.push(buildShepherdJournalInstruction(prReference));
   return steps;
 }
