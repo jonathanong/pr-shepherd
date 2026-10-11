@@ -34,7 +34,7 @@ let linuxUserStateBase: string | null | undefined;
  * `TMPDIR` at their own directory (e.g. `/tmp/claude-<uid>`). Use `/tmp/pr-shepherd-state-<uid>`
  * instead so sandboxed and unsandboxed runs share state. `/tmp` is shared by every user, so the
  * directory must be a real directory (not a symlink) owned by this user and not writable by
- * anyone else; it must also be writable from this process. Otherwise fall back to `TMPDIR`.
+ * anyone else; it must also be readable, writable, and searchable from this process. Otherwise fall back to `TMPDIR`.
  */
 function readLinuxUserStateBase(): string | null {
   if (process.platform !== "linux" || typeof process.getuid !== "function") return null;
@@ -48,7 +48,7 @@ function readLinuxUserStateBase(): string | null {
   try {
     const stat = lstatSync(dir);
     if (!stat.isDirectory() || stat.uid !== uid || (stat.mode & 0o022) !== 0) return null;
-    accessSync(dir, constants.W_OK);
+    accessSync(dir, constants.R_OK | constants.W_OK | constants.X_OK);
     return dir;
   } catch {
     return null;

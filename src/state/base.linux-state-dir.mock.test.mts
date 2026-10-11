@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { constants } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -73,6 +74,10 @@ describe("resolveStateBase — Linux shared per-user directory", () => {
     expect(resolveStateBase()).toBe(SHARED);
     expect(fsMock.mkdirSync).toHaveBeenCalledTimes(1);
     expect(fsMock.mkdirSync).toHaveBeenCalledWith(SHARED, { mode: 0o700 });
+    expect(fsMock.accessSync).toHaveBeenCalledWith(
+      SHARED,
+      constants.R_OK | constants.W_OK | constants.X_OK,
+    );
     expect(mockExecFileSync).not.toHaveBeenCalled();
   });
 
@@ -106,7 +111,7 @@ describe("resolveStateBase — Linux shared per-user directory", () => {
     expect(fsMock.lstatSync).not.toHaveBeenCalled();
   });
 
-  it("falls back to os.tmpdir() when the existing directory is not writable here", async () => {
+  it("falls back to os.tmpdir() when the existing directory is not accessible here", async () => {
     mkdirThrows("EEXIST");
     fsMock.accessSync.mockImplementation(() => {
       throw errno("EROFS");
