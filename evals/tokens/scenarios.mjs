@@ -57,7 +57,6 @@ import {
   CI_POLL_CHANGED_READS,
   CI_SETTLE_CHANGED_READS,
   CONFLICT_CHANGED_READS,
-  warmReadyTick,
   ghAnnotations,
   ghFailingCheckRuns,
   mcpPrList,
@@ -1023,7 +1022,7 @@ const PR_SCENARIOS = [
       return {
         shepherd: [
           // The READY refresh stands in for the countdown's first READY tick, which pays it cold.
-          warmReadyTick(readyTick(receiptTick(snapshot(fixture)))),
+          readyTick(receiptTick(snapshot(fixture))),
           {
             phase: 2,
             via: "bash",
@@ -1061,7 +1060,7 @@ const PR_SCENARIOS = [
       return {
         shepherd: [
           // The READY refresh stands in for the countdown's first READY tick, which pays it cold.
-          warmReadyTick(readyTick(receiptTick(snapshot(fixture)))),
+          readyTick(receiptTick(snapshot(fixture))),
           {
             phase: 2,
             via: "bash",

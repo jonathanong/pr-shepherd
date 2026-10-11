@@ -22,7 +22,7 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
-| single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 184.3 core + 1.5 points | 210.8 core + 1.5 points |
+| single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 194.8 core + 1.5 points | 221.3 core + 1.5 points |
 | PR stack | 17 / 27 / 12 | 2 / 6 / 74 | 480 core + 0 points | 510 core + 0 points |
 
 <!-- bench:headline:end -->
@@ -304,11 +304,11 @@ are as good as these assumptions:
     moves (check runs, check suites, statuses, workflow runs and the pull),
     the most the live probe charged on a round without bot comments;
   - a base push that makes the PR conflict (`conflicts`) charges the pull,
-    the base branch and the merged-base lookup, 3;
-  - a READY tick after an unchanged READY tick (`merge`, `merge-queue`, whose
-    ready delay elapsed) is all 304s, 0.
+    the base branch and the merged-base lookup, 3.
 
-  Every other changed tick is charged as a full read, an upper bound since
+  A READY tick after an unchanged READY tick is all 304s, but `merge` and
+  `merge-queue` model only one READY tick, standing in for the countdown's
+  cold first one, so they keep the full read. Every other changed tick is charged as a full read, an upper bound since
   only its changed reads are really charged. A push moves every read keyed by
   the head SHA (check runs, check suites, statuses, workflow runs), so the
   ticks after a fix keep that bound.
@@ -716,8 +716,8 @@ explains the main ones.
   sessions, from its debug logs; the baselines' is never measured. GraphQL point cost also depends on
   query shape and node counts, which a flat 1 or 2 points per call ignores.
   REST conditional requests (ETag/304) are modeled for pr-shepherd's REST
-  wait polls (`ci-wait`, `stack-queue-wait`) and the warm `mark-ready`,
-  `conflicts`, `merge` and `merge-queue` ticks; every other REST tick is
+  wait polls (`ci-wait`, `stack-queue-wait`) and the warm `mark-ready` and
+  `conflicts` ticks; every other REST tick is
   charged as a full read, an upper bound. Real sessions run the
   annotation supplement more often than the bench: GitHub currently adds an
   `ubuntu-latest` migration notice annotation to Actions jobs on that runner,
