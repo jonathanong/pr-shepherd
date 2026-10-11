@@ -5,7 +5,7 @@
 //
 //   node evals/tokens/bench.mjs           # rewrite REPORT.md
 //   node evals/tokens/bench.mjs --json    # print the raw numbers instead
-//   node evals/tokens/bench.mjs --check   # fail on a loss not in pending-losses.json
+//   node evals/tokens/bench.mjs --check   # fail on a loss not accepted in pending-losses.json
 //
 // Method and limits: README.md. Scenarios: scenarios.mjs. Cost model: lib.mjs.
 
@@ -42,7 +42,7 @@ import {
   tokens,
 } from "./lib.mjs";
 import { SCENARIOS, eventArm } from "./scenarios.mjs";
-import { checkPending, findLosses, lossKey, pendingEntry, readGateLists } from "./gate.mjs";
+import { checkPending, findLosses, lossKey, readGateLists, structuralEntry } from "./gate.mjs";
 import { atCharsPerToken, measuredCharsPerToken, realSessionsSection } from "./sessions.mjs";
 
 const ARMS = ["shepherd", "gh", "mcp"];
@@ -549,30 +549,41 @@ const pendingLosses = losses.filter((l) => !structuralKeys.has(lossKey(l)));
 const structuralLosses = losses.filter((l) => structuralKeys.has(lossKey(l)));
 
 if (process.argv.includes("--check")) {
-  const { unlisted, stale, wrongIssue, duplicate, missingReason } = checkPending(
+  const { unlisted, stale, pending: pendingEntries, wrongIssue, duplicate, missingReason } = checkPending(
     losses,
     pending,
     structural,
   );
   const fail =
-    unlisted.length + stale.length + wrongIssue.length + duplicate.length + missingReason.length >
+    unlisted.length +
+      stale.length +
+      pendingEntries.length +
+      wrongIssue.length +
+      duplicate.length +
+      missingReason.length >
     0;
   console.log(
     `bench gate: ${losses.length} losses vs. a baseline, ${pending.length} pending entries, ${structural.length} accepted as structural`,
   );
   if (unlisted.length) {
     console.error(
-      `\n✗ ${unlisted.length} loss(es) neither pending nor structural. Fix them, or add these to evals/tokens/pending-losses.json:`,
+      `\n✗ ${unlisted.length} loss(es) not accepted as structural. Fix them, or, with an owner decision or a floor no plan can beat, add these to the \`structural\` list in evals/tokens/pending-losses.json with that reason (README.md "The gate"):`,
     );
     for (const l of unlisted) console.error(`  ${lossKey(l)}: ${l.ours} vs ${l.theirs}`);
     console.error("");
-    for (const l of unlisted) console.error(`    ${JSON.stringify(pendingEntry(l))},`);
+    for (const l of unlisted) console.error(`    ${JSON.stringify(structuralEntry(l))},`);
   }
   if (stale.length) {
     console.error(
       `\n✗ ${stale.length} pending or structural entr(y/ies) no longer a loss. Remove them from evals/tokens/pending-losses.json:`,
     );
     for (const p of stale) console.error(`  ${lossKey(p)}`);
+  }
+  if (pendingEntries.length) {
+    console.error(
+      `\n✗ ${pendingEntries.length} pending entr(y/ies). The pending list must stay empty: fix each loss, or accept it as structural with an owner-decision or floor reason:`,
+    );
+    for (const p of pendingEntries) console.error(`  ${lossKey(p)}`);
   }
   if (wrongIssue.length) {
     console.error(`\n✗ ${wrongIssue.length} pending entr(y/ies) link the wrong issue:`);
@@ -586,7 +597,7 @@ if (process.argv.includes("--check")) {
     console.error(`\n✗ ${missingReason.length} structural entr(y/ies) without a reason:`);
     for (const s of missingReason) console.error(`  ${lossKey(s)}`);
   }
-  if (!fail) console.log("✓ every loss is pending or structural; no entry is stale");
+  if (!fail) console.log("✓ every loss is structural with a reason; nothing pending; no entry is stale");
   process.exit(fail ? 1 : 0);
 }
 
@@ -739,12 +750,12 @@ out(
 const TRANSPORT_LABELS = { graphql: "GraphQL", rest: "REST", cloud: "cloud REST" };
 const lossCount = (issue) => pendingLosses.filter((l) => l.issue === issue).length;
 const accepted = structuralLosses.length
-  ? ` ${structuralLosses.length} more are accepted as structural, since no plan can win them without dropping a correctness guard the owner keeps (Accepted structural losses below).`
+  ? ` ${structuralLosses.length}${pendingLosses.length ? " more" : ""} are accepted as structural, each with its reason: an owner decision or a floor no plan can beat (Accepted structural losses below).`
   : "";
 out(
   pendingLosses.length
-    ? `- **Losses: ${pendingLosses.length} pending.** pr-shepherd costs more than a baseline on ${pendingLosses.length} gated cells below: ${lossCount(528)} on tokens or turns (#528) and ${lossCount(525)} on the GitHub rate limit (#525). Each is on the temporary pending list, pending-losses.json; \`bench.mjs --check\` fails on any other loss and on any listed one that is gone.${accepted}`
-    : `- **Losses: none pending.** pr-shepherd costs no more than any baseline on any gated metric it can win.${accepted}`,
+    ? `- **Losses: ${pendingLosses.length} pending.** pr-shepherd costs more than a baseline on ${pendingLosses.length} gated cells below: ${lossCount(528)} on tokens or turns (#528) and ${lossCount(525)} on the GitHub rate limit (#525). \`bench.mjs --check\` fails until each is fixed or accepted as structural.${accepted}`
+    : `- **Losses: none pending.** \`bench.mjs --check\` fails on any loss not accepted as structural.${accepted}`,
 );
 out();
 const lossWhere = (l) =>
@@ -771,7 +782,7 @@ if (structuralLosses.length) {
   out("### Accepted structural losses");
   out();
   out(
-    "Losses no plan can win without dropping a correctness guard the owner keeps, each with its reason (pending-losses.json `structural`). `bench.mjs --check` does not fail on them, but fails when one is no longer a loss.",
+    "Losses accepted with a written reason (pending-losses.json `structural`): an owner decision, such as a correctness guard the owner keeps or the decision not to chase both gh and MCP on the rate limit, or a floor no plan can beat. `bench.mjs --check` does not fail on them, but fails when one is no longer a loss.",
   );
   out();
   out("| where | metric | vs. | pr-shepherd | baseline | change | reason |");
@@ -1079,7 +1090,7 @@ else {
   out();
   if (cptFlips.length) {
     out(
-      "Verdicts, per session and per scenario, that flip to a loss at the measured ratios. They are gated like any other loss and pending in `pending-losses.json` under `chars-per-token:`:",
+      "Verdicts, per session and per scenario, that flip to a loss at the measured ratios. They are gated like any other loss, under `chars-per-token:` in `pending-losses.json`:",
     );
     out();
     for (const l of cptFlips)
