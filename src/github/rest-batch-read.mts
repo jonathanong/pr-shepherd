@@ -3,7 +3,7 @@ import type { BatchResult } from "./batch.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import { readRestPull, restPullRevision } from "./rest-pr-core.mts";
 import { readRestSnapshot } from "./rest-batch-snapshot.mts";
-import { isRestPullTerminal, restTerminalBatchData } from "./rest-terminal-batch.mts";
+import { isRestPullMerged, restMergedBatchData } from "./rest-terminal-batch.mts";
 import { restSummary } from "./rest-summary-read.mts";
 import { markReadyAnnotationProbeComplete } from "./poll-summary-annotation-probe.mts";
 import { hydratePollSummaryChecks } from "./poll-summary-check-hydration.mts";
@@ -23,8 +23,8 @@ export async function fetchRestPrBatch(
 ): Promise<BatchResult> {
   for (let attempt = 0; attempt < 2; attempt++) {
     const pull = await readRestPull(pr, repo);
-    if (opts.terminalShortCircuit && !opts.includeReceiptSummary && isRestPullTerminal(pull)) {
-      return { data: restTerminalBatchData(pull), checkSuitesComplete: true };
+    if (opts.terminalShortCircuit && isRestPullMerged(pull)) {
+      return { data: restMergedBatchData(pull), checkSuitesComplete: true };
     }
     const snapshot = await readRestSnapshot(pull, repo, opts.snapshotContext, opts.viewerLogin);
     const latest = await readRestPull(pr, repo);

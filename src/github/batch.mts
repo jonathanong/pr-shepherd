@@ -59,7 +59,7 @@ interface FetchPrBatchOptions {
    */
   paginateApprovedReviews?: boolean;
   includeReceiptSummary?: boolean;
-  terminalShortCircuit?: boolean; // REST: a merged/closed PR stops at its first pull read
+  terminalShortCircuit?: boolean; // REST: a merged PR stops at its first pull read
 }
 
 function onlyReceiptSummaryErrors(errors?: GitHubGraphQlError[]): boolean {

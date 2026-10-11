@@ -2,7 +2,6 @@ import { describe, expect, it, vi } from "vitest";
 import {
   serve,
   repo,
-  pull,
   serveWithEtags,
   etagResponses as log,
 } from "../../test-helpers/github/rest-read.test-support.mts";
@@ -130,28 +129,6 @@ describe("REST wait tick cost", () => {
     expect(notModified().map((entry) => entry.path)).toContain(
       "/repos/octocat/hello-world/pulls/101",
     );
-  });
-
-  it("answers a merged PR from the first pull read", async () => {
-    await freshLoadConfig();
-    serveWithEtags();
-    const routes = restIterateRoutes();
-    await serve((request, response) => {
-      if (request.path.split("?")[0] === "/repos/octocat/hello-world/pulls/101") {
-        response.end(
-          JSON.stringify({
-            ...pull,
-            state: "closed",
-            merged_at: "2026-01-01T00:00:00Z",
-            mergeable: null,
-            mergeable_state: "unknown",
-          }),
-        );
-      } else void routes(request, response);
-    });
-    const merged = await tick(false);
-    expect(merged).toMatchObject({ action: "cancel", reason: "merged" });
-    expect(log.map((entry) => entry.path)).toEqual(["/repos/octocat/hello-world/pulls/101"]);
   });
 
   it("does not replay the report when the base branch summary is unavailable", async () => {

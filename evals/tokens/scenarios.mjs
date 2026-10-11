@@ -887,7 +887,7 @@ const PR_SCENARIOS = [
       const state = withHistory(fixtureState(fixture), HISTORY);
       return {
         // REST answers a merged PR from its first pull read (rest-terminal-batch.mts;
-        // src/github/rest-wait-tick-cost.test.mts), skipping the cloud CCR read too.
+        // src/github/rest-terminal-batch.test.mts), skipping the cloud CCR read too.
         shepherd: [{ ...shepherdTick(snapshot(fixture)), apiRest: rest(1), apiCloud: rest(1) }],
         // The pull.
         event: { wake: "change", detectors: 1 },
