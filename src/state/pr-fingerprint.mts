@@ -9,7 +9,7 @@ import type { PrFingerprint } from "../github/fingerprint.mts";
 import type { PrShepherdConfig } from "../config/load.mts";
 import type { ShepherdReport } from "../types.mts";
 
-const VERSION = 3;
+const VERSION = 4;
 
 export interface StoredPrFingerprint {
   version: number;

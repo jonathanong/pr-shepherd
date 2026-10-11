@@ -41,8 +41,8 @@ export function formatMergeRequirementLines(req: MergeRequirements): string[] {
     lines.push(`Branch up to date: ${value} ${REQUIRED}`);
   }
   if (req.requiredStatusChecks) {
-    const n = req.requiredStatusChecks.contexts.length;
-    lines.push(`Required status checks: ${n} ${REQUIRED}`);
+    const names = req.requiredStatusChecks.contexts.join(", ");
+    lines.push(`Required status checks: ${names} ${REQUIRED}`);
   }
   if (req.requiredDeployments) {
     const envs = req.requiredDeployments.environments.join(", ");

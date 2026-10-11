@@ -30,19 +30,26 @@ export async function trunkRequiredContexts(
   return loaded.contexts;
 }
 
-/** Record missing required contexts. A running Actions workflow does not clear the names. */
-export function applyUnreportedRequiredChecks(
+/** Required contexts of the layer's merge target: the trunk's for a stack layer when known. */
+export function summaryRequiredContexts(
   raw: RawSummaryPr,
-  checks: PollSummaryChecks,
   mergeTargetContexts: readonly string[] | undefined,
-): void {
+): string[] {
   const trunk = raw.stack?.baseRefName;
-  const required = selectMergeTargetContexts({
+  return selectMergeTargetContexts({
     localContexts: parseBranchRules(raw.baseRef).requiredStatusCheckContexts,
     ...(mergeTargetContexts !== undefined && { trunkContexts: mergeTargetContexts }),
     baseRefName: raw.baseRefName,
     ...(trunk !== undefined && mergeTargetContexts !== undefined && { trunkRefName: trunk }),
   });
+}
+
+/** Record missing required contexts. A running Actions workflow does not clear the names. */
+export function applyUnreportedRequiredChecks(
+  raw: RawSummaryPr,
+  checks: PollSummaryChecks,
+  required: readonly string[],
+): void {
   const missing = unreportedRequiredContexts(required, reportedNames(raw));
   if (missing.length === 0) return;
   checks.unreportedRequired = missing;

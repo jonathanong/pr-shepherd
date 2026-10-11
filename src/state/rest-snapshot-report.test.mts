@@ -35,7 +35,7 @@ describe("rest snapshot report state", () => {
   it("round-trips the report with its digests", async () => {
     await storeRestSnapshotReport(key, "snap", report, config);
     await expect(loadRestSnapshotReport(key)).resolves.toEqual({
-      version: 1,
+      version: 2,
       inputDigest: fingerprintInputDigest(config),
       snapshotDigest: "snap",
       report,
@@ -52,7 +52,7 @@ describe("rest snapshot report state", () => {
     await writeFile(
       path,
       JSON.stringify({
-        version: 1,
+        version: 2,
         inputDigest: "d",
         snapshotDigest: "s",
         report: null,

@@ -239,6 +239,8 @@ export interface Fixture {
   repository?: { owner: string; name: string };
   /** Raw merged-base lookup rows for a conflicting PR with no native stack. */
   mergedBasePullRequests?: unknown[];
+  /** Required status contexts on the native-stack trunk (`main`); every other branch has no rules. */
+  trunkRequiredContexts?: string[];
   /** Raw native-stack entries, bottom-to-top, including merged parents and retained base refs. */
   stackTopology?: unknown[];
   /** Parsed head check-suite rows; a queued third-party suite has workflowRun:null. */
@@ -434,6 +436,7 @@ function graphqlForBatch(
   batchData: Record<string, any>,
   baseBehindBy: number,
   stackTopology?: unknown[],
+  trunkRequiredContexts?: string[],
 ) {
   if (query.includes("query BaseBehind")) {
     return { data: { repository: { ref: { compare: { behindBy: baseBehindBy } } } } };
@@ -445,7 +448,9 @@ function graphqlForBatch(
           ref: {
             name: "main",
             prefix: "refs/heads/",
-            branchProtectionRule: null,
+            branchProtectionRule: trunkRequiredContexts
+              ? { requiresStatusChecks: true, requiredStatusCheckContexts: trunkRequiredContexts }
+              : null,
             rules: { nodes: [] },
             compare: { behindBy: 0 },
           },
@@ -516,6 +521,7 @@ export function applyFixture(fixture: Fixture, transport: FixtureTransport = "gr
         batchData,
         fixture.baseBehindBy ?? 0,
         fixture.stackTopology,
+        fixture.trunkRequiredContexts,
       ),
     );
   });

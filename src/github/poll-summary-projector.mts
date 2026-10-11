@@ -19,7 +19,10 @@ import { isCurrentSummaryReady } from "./poll-summary-readiness.mts";
 import { applyOpenCheckBlockers } from "./poll-summary-check-blockers.mts";
 import { normalizePollSummaryState, routePollSummary } from "./poll-summary-route.mts";
 import { hydrateReadyAnnotationProbe, readyFingerprint } from "./poll-summary-annotation-probe.mts";
-import { applyUnreportedRequiredChecks } from "./poll-summary-unreported.mts";
+import {
+  applyUnreportedRequiredChecks,
+  summaryRequiredContexts,
+} from "./poll-summary-unreported.mts";
 import { aliasThreadSeenMarkers } from "./rest-identities.mts";
 import { restQueueRequirement } from "./poll-summary-rest-queue.mts";
 export async function summarizePollSummaryPr(
@@ -38,8 +41,9 @@ export async function summarizePollSummaryPr(
     raw.reviewThreads.nodes.map(({ id }) => id),
     seen,
   );
-  const checks = summarizePollSummaryChecks(raw);
-  applyUnreportedRequiredChecks(raw, checks, mergeTargetContexts);
+  const required = summaryRequiredContexts(raw, mergeTargetContexts);
+  const checks = summarizePollSummaryChecks(raw, required);
+  applyUnreportedRequiredChecks(raw, checks, required);
   const review = await summarizePollSummaryReview(raw, seen, viewerCanAdminister);
   const blockingReviewerInProgress = detectBlockingReviewer(raw);
   const removalEvent = currentQueueRemovalEvent(raw);
@@ -118,6 +122,7 @@ export async function summarizePollSummaryPr(
     checks,
     review,
     opts.stackPrNumber !== undefined,
+    required,
   );
   action = blocked.action;
   reasons = blocked.reasons;

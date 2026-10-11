@@ -150,3 +150,30 @@ it("leaves reported required checks on the ordinary blocked wait", async () => {
   expect(item.reasons).toEqual(["pending-or-unknown"]);
   expect(item.checks?.unreportedRequired).toBeUndefined();
 });
+
+const gitleaksRun = (runId: number, conclusion: string, startedAt: string) => ({
+  ...passed("gitleaks"),
+  conclusion,
+  startedAt,
+  completedAt: startedAt,
+  checkSuite: {
+    workflowRun: { databaseId: runId, event: "pull_request", workflow: { databaseId: 7 } },
+  },
+});
+
+it.each([
+  { contexts: trunk, failing: 1, superseded: undefined },
+  { contexts: undefined, failing: undefined, superseded: 1 },
+])("classifies a higher-ID trunk-required cancellation by trunk contexts", async (t) => {
+  const cancelledFirst = gitleaksRun(200, "CANCELLED", "2026-10-04T07:54:23Z");
+  const laterSuccess = gitleaksRun(100, "SUCCESS", "2026-10-04T07:54:28Z");
+  const item = await summarizePollSummaryPr(
+    blockedLayer([passed("tests"), passed("build"), cancelledFirst, laterSuccess]),
+    { owner: "acme", name: "widgets" },
+    {},
+    false,
+    t.contexts,
+  );
+  expect(item.checks?.failing).toBe(t.failing);
+  expect(item.checks?.superseded).toBe(t.superseded);
+});

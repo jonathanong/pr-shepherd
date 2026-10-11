@@ -40,7 +40,7 @@ function report(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       mergeStateStatus: "BLOCKED",
       mergeRequirements: {
         stack: { number: 7, size: 2, position: 2, baseRefName: "main" },
-        requiredStatusChecks: { contexts: ["build"] },
+        requiredStatusChecks: { contexts: ["build", "tests", "gitleaks"] },
       },
     },
     unreportedRequiredChecks: ["old"],
@@ -64,24 +64,35 @@ describe("refreshCachedUnreported", () => {
 
     const next = await refreshCachedUnreported(report(), { owner: "acme", name: "widgets" });
 
-    expect(next.status).toBe("PENDING");
-    expect(next.unreportedRequiredChecks).toEqual(["build", "tests"]);
-    expect(next.trunkBehindBy).toBe(6);
-    expect(next.stackBottomPr).toBe(613);
+    expect(next!.status).toBe("PENDING");
+    expect(next!.unreportedRequiredChecks).toEqual(["build", "tests"]);
+    expect(next!.trunkBehindBy).toBe(6);
+    expect(next!.stackBottomPr).toBe(613);
   });
 
   it("clears the cached names once every required context has a check", async () => {
-    target.mockResolvedValue({ contexts: ["gitleaks"], stackBottomPr: 613 });
+    target.mockResolvedValue({ contexts: ["gitleaks", "build", "tests"], stackBottomPr: 613 });
+    const cached = report({ status: "PENDING" });
+    cached.checks.supersededNames = ["build", "tests"];
 
-    const next = await refreshCachedUnreported(report({ status: "PENDING" }), {
-      owner: "acme",
-      name: "widgets",
-    });
+    const next = await refreshCachedUnreported(cached, { owner: "acme", name: "widgets" });
 
-    expect(next.unreportedRequiredChecks).toBeUndefined();
-    expect(next.trunkBehindBy).toBeUndefined();
-    expect(next.stackBottomPr).toBe(613);
-    expect(next.status).toBe("PENDING");
+    expect(next!.unreportedRequiredChecks).toBeUndefined();
+    expect(next!.trunkBehindBy).toBeUndefined();
+    expect(next!.stackBottomPr).toBe(613);
+    expect(next!.status).toBe("PENDING");
+  });
+
+  it("asks for a fresh check when the trunk's required contexts changed", async () => {
+    target.mockResolvedValue({ contexts: ["build", "gitleaks"], stackBottomPr: 613 });
+
+    expect(await refreshCachedUnreported(report(), { owner: "acme", name: "widgets" })).toBeNull();
+  });
+
+  it("compares contexts as sets, so a duplicate cannot mask a removed one", async () => {
+    target.mockResolvedValue({ contexts: ["build", "build", "gitleaks"], stackBottomPr: 613 });
+
+    expect(await refreshCachedUnreported(report(), { owner: "acme", name: "widgets" })).toBeNull();
   });
 
   it("refreshes a non-stack base compare without a second batch", async () => {
@@ -110,8 +121,8 @@ describe("refreshCachedUnreported", () => {
       stateKey: { owner: "acme", repo: "widgets", pr: expect.any(Number) },
       baseTipOid: "b".repeat(40),
     });
-    expect(next.baseBehindBy).toBe(93);
-    expect(next.unreportedRequiredChecks).toEqual(["old"]);
+    expect(next!.baseBehindBy).toBe(93);
+    expect(next!.unreportedRequiredChecks).toEqual(["old"]);
   });
 
   it("drops a stale base compare once the required checks have reported", async () => {
@@ -133,7 +144,7 @@ describe("refreshCachedUnreported", () => {
       { owner: "acme", name: "widgets" },
     );
     expect(behind).not.toHaveBeenCalled();
-    expect(next.baseBehindBy).toBeUndefined();
+    expect(next!.baseBehindBy).toBeUndefined();
   });
 
   it("clears the base compare when the head has caught up", async () => {
@@ -154,7 +165,7 @@ describe("refreshCachedUnreported", () => {
       }),
       { owner: "acme", name: "widgets" },
     );
-    expect(next.baseBehindBy).toBeUndefined();
+    expect(next!.baseBehindBy).toBeUndefined();
   });
 
   it("does not compare a branch name when the head commit is unknown", async () => {
@@ -176,6 +187,6 @@ describe("refreshCachedUnreported", () => {
       { owner: "acme", name: "widgets" },
     );
     expect(behind).not.toHaveBeenCalled();
-    expect(next.baseBehindBy).toBe(4);
+    expect(next!.baseBehindBy).toBe(4);
   });
 });

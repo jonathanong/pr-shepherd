@@ -42,7 +42,7 @@ describe("pr-fingerprint state", () => {
     const fingerprint = testFingerprint({ headRefOid: "deadbeef" });
     await storePrFingerprint(key, fingerprint, report, config);
     await expect(loadPrFingerprint(key)).resolves.toEqual({
-      version: 3,
+      version: 4,
       inputDigest: fingerprintInputDigest(config),
       fingerprint,
       report,

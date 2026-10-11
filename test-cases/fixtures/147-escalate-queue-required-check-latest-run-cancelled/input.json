@@ -1,0 +1,89 @@
+{
+  "restDivergence": {
+    "action": "wait",
+    "exitCode": 10,
+    "why": "REST cannot read merge-queue removal history or queue-commit checks, so the cancelled queue run is invisible and the green head looks READY."
+  },
+  "description": "The PR was removed from the merge queue for failed checks. On the queue commit, the required `web` context has a cancelled run with the higher run ID and a lower-ID success that ran later. GitHub's required gate reads the latest (highest-ID) run, so Shepherd keeps that queue cancellation as a concrete failure (merge_group has no autonomous rerun, so it escalates check-follow-up-unavailable naming run 200) instead of superseding it and escalating merge-queue-removed with no failing check.",
+  "args": [
+    "--merge"
+  ],
+  "batchData": {
+    "baseRefName": "main",
+    "branchRules": {
+      "requiredApprovingReviewCount": 0,
+      "requiresConversationResolution": false,
+      "requiresCodeOwnerReviews": false,
+      "requiresLastPushApproval": false,
+      "requiresCommitSignatures": false,
+      "requiresLinearHistory": false,
+      "requiresStrictStatusChecks": false,
+      "requiredStatusCheckContexts": [
+        "web"
+      ],
+      "requiredDeploymentEnvironments": [],
+      "requiresMergeQueue": true,
+      "requiresWorkflows": false,
+      "requiresCodeScanning": false
+    },
+    "latestMergeQueueRemoval": {
+      "reason": "failed_checks",
+      "actor": "github-actions",
+      "createdAtUnix": 1715799000,
+      "beforeCommitOid": "queue-commit-1",
+      "beforeCommitParentOids": [
+        "abc123"
+      ]
+    },
+    "removedMergeQueueChecks": [
+      {
+        "name": "web",
+        "status": "COMPLETED",
+        "conclusion": "CANCELLED",
+        "event": "merge_group",
+        "scope": "merge_group",
+        "commitOid": "queue-commit-1",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/200/job/200",
+        "runId": "200",
+        "workflowId": "12",
+        "workflowName": "web",
+        "startedAtUnix": 1715798000,
+        "completedAtUnix": 1715798005
+      },
+      {
+        "name": "web",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "merge_group",
+        "scope": "merge_group",
+        "commitOid": "queue-commit-1",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100/job/100",
+        "runId": "100",
+        "workflowId": "12",
+        "workflowName": "web",
+        "startedAtUnix": 1715798030,
+        "completedAtUnix": 1715798300
+      }
+    ],
+    "checks": [
+      {
+        "name": "web",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/90/job/90",
+        "runId": "90",
+        "workflowId": "12",
+        "workflowName": "web",
+        "startedAtUnix": 1715797000,
+        "completedAtUnix": 1715797300
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 13
+}

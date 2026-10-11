@@ -10,6 +10,8 @@ import type { RepoInfo } from "../github/client.mts";
 import type { CheckExecutionContext } from "./check-execution-context.mts";
 
 export interface UnreportedRequiredFields {
+  /** Required contexts of the merge target: the stack trunk for a native-stack layer. */
+  requiredContexts: string[];
   unreportedRequiredChecks?: string[];
   trunkBehindBy?: number;
   /** Commits on the PR base that this head does not contain. Omitted when zero or a stack. */
@@ -69,6 +71,7 @@ export async function collectUnreportedRequired(
         )
       : 0;
   return {
+    requiredContexts: target.contexts,
     ...(unreported.length > 0 && { unreportedRequiredChecks: unreported }),
     ...(trunkBehindBy > 0 && { trunkBehindBy }),
     ...(baseBehindBy > 0 && { baseBehindBy }),
@@ -81,17 +84,20 @@ export async function collectUnreportedRequired(
 
 /**
  * A fingerprint hit can keep a stale trunk `behindBy`. Refresh the trunk compare
- * and the required-context diff without refetching the whole batch.
+ * and the required-context diff without refetching the whole batch. Returns null
+ * when the trunk's required contexts changed: they decide how checks classify, so
+ * the cached report cannot be patched and the caller must check afresh.
  */
 export async function refreshCachedUnreported(
   report: ShepherdReport,
   repo: RepoInfo,
   context?: CheckExecutionContext,
   baseTipOid?: string,
-): Promise<ShepherdReport> {
+): Promise<ShepherdReport | null> {
   const stack = report.mergeStatus?.mergeRequirements?.stack;
   if (!report.headRefName) return report;
   if (!stack) return refreshBaseBehind(report, repo, baseTipOid);
+  const cached = report.mergeStatus.mergeRequirements?.requiredStatusChecks?.contexts ?? [];
   const target = await loadMergeTargetStatus(
     {
       owner: repo.owner,
@@ -100,11 +106,12 @@ export async function refreshCachedUnreported(
       baseRefName: report.baseBranch,
       headRefName: report.headRefName,
       ...(report.headSha && { headRefOid: report.headSha }),
-      localContexts: report.mergeStatus.mergeRequirements?.requiredStatusChecks?.contexts ?? [],
+      localContexts: cached,
       stack,
     },
     context,
   );
+  if (!sameContexts(cached, target.contexts)) return null;
   const unreported = unreportedRequiredContexts(
     target.contexts,
     reportedCheckNames(reportChecks(report)),
@@ -157,4 +164,10 @@ function reportChecks(report: ShepherdReport): { name: string }[] {
     ...(report.checks.ignored ?? []),
     ...(report.checks.supersededNames ?? []).map((name) => ({ name })),
   ];
+}
+
+function sameContexts(a: readonly string[], b: readonly string[]): boolean {
+  const left = new Set(a.map((c) => c.trim()));
+  const right = new Set(b.map((c) => c.trim()));
+  return left.size === right.size && [...right].every((c) => left.has(c));
 }

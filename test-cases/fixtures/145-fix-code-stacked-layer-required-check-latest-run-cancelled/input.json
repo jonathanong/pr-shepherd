@@ -1,0 +1,131 @@
+{
+  "description": "Duplicate CI runs from a stack push (github/gh-stack#466): each required trunk context on the head has a cancelled run with the higher run ID and a lower-ID success that ran later. GitHub's required gate reads the latest (highest-ID) run, so the PR is BLOCKED. Shepherd must keep those cancellations as failing checks with a rerun command, not supersede them.",
+  "repository": {
+    "owner": "vouchington",
+    "name": "vouchington"
+  },
+  "trunkRequiredContexts": [
+    "static",
+    "web",
+    "gitleaks"
+  ],
+  "batchData": {
+    "number": 2687,
+    "headRefName": "fix/media-replay-concurrent-cursors",
+    "headRefOid": "cc74f59feac8909829d8cb75d9ca2c00647ac95e",
+    "baseRefName": "sol/2508-uuid-replay-postmerge",
+    "baseRefOid": "2222222222222222222222222222222222222222",
+    "mergeable": "MERGEABLE",
+    "mergeStateStatus": "BLOCKED",
+    "stack": {
+      "number": 2688,
+      "size": 2,
+      "position": 2,
+      "baseRefName": "main"
+    },
+    "checks": [
+      {
+        "name": "static",
+        "status": "COMPLETED",
+        "conclusion": "CANCELLED",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/vouchington/vouchington/actions/runs/200/job/200",
+        "runId": "200",
+        "workflowId": "11",
+        "startedAtUnix": 1791700000,
+        "completedAtUnix": 1791700005,
+        "workflowName": "static"
+      },
+      {
+        "name": "static",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/vouchington/vouchington/actions/runs/100/job/100",
+        "runId": "100",
+        "workflowId": "11",
+        "startedAtUnix": 1791700030,
+        "completedAtUnix": 1791700300,
+        "workflowName": "static"
+      },
+      {
+        "name": "web",
+        "status": "COMPLETED",
+        "conclusion": "CANCELLED",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/vouchington/vouchington/actions/runs/201/job/201",
+        "runId": "201",
+        "workflowId": "12",
+        "startedAtUnix": 1791700000,
+        "completedAtUnix": 1791700005,
+        "workflowName": "web"
+      },
+      {
+        "name": "web",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/vouchington/vouchington/actions/runs/101/job/101",
+        "runId": "101",
+        "workflowId": "12",
+        "startedAtUnix": 1791700030,
+        "completedAtUnix": 1791700300,
+        "workflowName": "web"
+      },
+      {
+        "name": "gitleaks",
+        "status": "COMPLETED",
+        "conclusion": "CANCELLED",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/vouchington/vouchington/actions/runs/202/job/202",
+        "runId": "202",
+        "workflowId": "13",
+        "startedAtUnix": 1791700000,
+        "completedAtUnix": 1791700005,
+        "workflowName": "gitleaks"
+      },
+      {
+        "name": "gitleaks",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/vouchington/vouchington/actions/runs/102/job/102",
+        "runId": "102",
+        "workflowId": "13",
+        "startedAtUnix": 1791700030,
+        "completedAtUnix": 1791700300,
+        "workflowName": "gitleaks"
+      }
+    ]
+  },
+  "stackTopology": [
+    {
+      "position": 1,
+      "pullRequest": {
+        "number": 2672,
+        "state": "OPEN",
+        "headRefName": "sol/2508-uuid-replay-postmerge",
+        "headRefOid": "2222222222222222222222222222222222222222",
+        "baseRefName": "main",
+        "baseRefOid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "position": 2,
+      "pullRequest": {
+        "number": 2687,
+        "state": "OPEN",
+        "headRefName": "fix/media-replay-concurrent-cursors",
+        "headRefOid": "cc74f59feac8909829d8cb75d9ca2c00647ac95e",
+        "baseRefName": "sol/2508-uuid-replay-postmerge",
+        "baseRefOid": "2222222222222222222222222222222222222222"
+      }
+    }
+  ],
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

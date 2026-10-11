@@ -10,6 +10,7 @@ import { storeRestSnapshotReport } from "../state/rest-snapshot-report.mts";
 import { restSnapshotState, withRestConditionalScope } from "../github/rest-conditional-scope.mts";
 import { fingerprintReuser, tryReuseRestSnapshotReport } from "./check-fingerprint.mts";
 import { readWaitDetectors, recordWaitDetectors } from "./check-wait-detectors.mts";
+import { withTrunkRequiredContexts } from "../merge-status/required-check-requirements.mts";
 import { collectUnreportedRequired, refreshCachedUnreported } from "./check-unreported.mts";
 import { getRepoInfo, getCurrentPrNumber, type RepoInfo } from "../github/client.mts";
 import { classifyChecks, getCiVerdict } from "../checks/classify.mts";
@@ -121,12 +122,16 @@ async function runScopedCheck(
   const paginateApprovedReviews = config.iterate.minimizeApprovals;
   const includeReceiptSummary = (await context?.wantsReceiptSummary(prNumber, repo)) ?? false;
   // GraphQL transport: conditional REST change detectors can replay an idle report for free.
+  // Changed trunk rules invalidate a cached report; check again without reuse.
+  const refreshReused = async (cached: ShepherdReport, baseTipOid?: string) =>
+    (await refreshCachedUnreported(cached, repo, context, baseTipOid)) ??
+    runScopedCheck({ ...opts, fingerprintCache: false }, context, repo, prNumber, stateKey);
   const detectors =
     reuseFingerprint && !includeReceiptSummary
       ? await readWaitDetectors(prNumber, repo, stateKey, config)
       : undefined;
   if (detectors && "reused" in detectors)
-    return refreshCachedUnreported(detectors.reused, repo, context, detectors.baseTipOid);
+    return refreshReused(detectors.reused, detectors.baseTipOid);
   const reuse = reuseFingerprint
     ? await fingerprintReuser(prNumber, repo, stateKey, config)
     : undefined;
@@ -141,14 +146,14 @@ async function runScopedCheck(
   if (fetched.stackEvidence) context?.seedStack(prNumber, repo, fetched.stackEvidence);
   if ("reused" in fetched) {
     await recordWaitDetectors(stateKey, config, detectors, undefined);
-    return refreshCachedUnreported(fetched.reused, repo, context, fetched.baseTipOid);
+    return refreshReused(fetched.reused, fetched.baseTipOid);
   }
   const result = fetched;
   context?.setReceiptSummary(result.receiptSummary ?? null);
   const restSnapshot = result.data.transport === "rest" ? restSnapshotState() : undefined;
   if (reuseFingerprint) {
     const reused = await tryReuseRestSnapshotReport(stateKey, config, restSnapshot);
-    if (reused) return refreshCachedUnreported(reused, repo, context);
+    if (reused) return refreshReused(reused);
   }
   let batchData = result.data;
   const unknownRefresh = await refreshUnknownMergeability(prNumber, repo, batchData);
@@ -177,7 +182,21 @@ async function runScopedCheck(
           triageBudget,
         );
   const allChecks = mergeStartupFailureChecks(batchData.checks, startupFailureChecks);
-  const classifiedPrChecks = classifyChecks(allChecks);
+  const unreported = await collectUnreportedRequired(
+    {
+      batchData,
+      checks: allChecks,
+      suites: result.headWorkflowSuites ?? [],
+      owner: repo.owner,
+      name: repo.name,
+      pr: prNumber,
+      relevantEvents: config.checks.ciTriggerEvents,
+    },
+    context,
+  );
+  const classifiedPrChecks = classifyChecks(allChecks, {
+    requiredContexts: unreported.requiredContexts,
+  });
   const latestRemoval = batchData.latestMergeQueueRemoval;
   // `timelineItems(last: 1, ...)` returns the single most recent removal regardless of age, so
   // a PR removed from the queue once, long ago, and never re-added keeps returning that same
@@ -229,6 +248,7 @@ async function runScopedCheck(
   // synthetic queue-commit source.
   const classifiedQueueChecks = classifyChecks(queueRawChecks, {
     additionalRelevantEvents: ["merge_group"],
+    requiredContexts: unreported.requiredContexts,
   });
   const classifiedChecks = [...classifiedPrChecks, ...classifiedQueueChecks];
   const verdict = getCiVerdict(classifiedChecks);
@@ -406,18 +426,6 @@ async function runScopedCheck(
     );
   }).length;
   const approvedReviews = approvedReviewVisibility.visible;
-  const unreported = await collectUnreportedRequired(
-    {
-      batchData,
-      checks: allChecks,
-      suites: result.headWorkflowSuites ?? [],
-      owner: repo.owner,
-      name: repo.name,
-      pr: prNumber,
-      relevantEvents: config.checks.ciTriggerEvents,
-    },
-    context,
-  );
   let status = computeStatus(
     verdict,
     threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
@@ -602,6 +610,7 @@ async function runScopedCheck(
     ...authorizedRuleAutoResolveThreadIds,
     ...[...deniedRuleAutoResolveThreadIds].filter((id) => visibleMutationThreadIds.has(id)),
   ];
+  mergeStatus = withTrunkRequiredContexts(mergeStatus, unreported.requiredContexts);
   const blockedByFilteredCheck = isBlockedByFilteredCheck(mergeStatus, verdict);
   const queueCommit = batchData.isInMergeQueue
     ? batchData.mergeQueueEntry?.headCommitOid

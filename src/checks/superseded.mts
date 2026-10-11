@@ -39,8 +39,16 @@ function validTimes(check: CheckRun, requireOrdered = true): boolean {
  * when its matching successful job actually started and completed later. Cancelled
  * wrappers can report completion before start; compare both observed boundaries
  * without treating that reversed interval as a successful execution.
+ *
+ * The lower-ID form never covers a required context: GitHub's required gate reads the
+ * latest (highest-ID) run, so that cancellation still fails it (github/gh-stack#466).
+ * Neither does a newer run that lacks the context, for the same reason.
  */
-export function buildSupersededIndices(checks: CheckRun[]): Set<number> {
+export function buildSupersededIndices(
+  checks: CheckRun[],
+  requiredContexts: readonly string[] = [],
+): Set<number> {
+  const required = new Set(requiredContexts.map((context) => context.trim()));
   const maxRunIdByGroup = new Map<string, number>();
   const runIds = checks.map(numericRunId);
   checks.forEach((check, index) => {
@@ -57,12 +65,16 @@ export function buildSupersededIndices(checks: CheckRun[]): Set<number> {
     const group = groupKeyOf(cancelled);
     const runId = runIds[index];
     if (group === undefined || runId === undefined) return;
+    const isRequired = required.has(cancelled.name.trim());
     if (maxRunIdByGroup.get(group)! > runId) {
-      superseded.add(index);
+      // A required context is covered only by a newer run of the same context.
+      if (!isRequired || hasNewerSameName(checks, runIds, cancelled, group, runId))
+        superseded.add(index);
       return;
     }
 
     if (
+      isRequired ||
       cancelled.status !== "COMPLETED" ||
       !cancelled.workflowId ||
       cancelled.event === null ||
@@ -89,4 +101,20 @@ export function buildSupersededIndices(checks: CheckRun[]): Set<number> {
     if (covered) superseded.add(index);
   });
   return superseded;
+}
+
+function hasNewerSameName(
+  checks: CheckRun[],
+  runIds: (number | undefined)[],
+  cancelled: CheckRun,
+  group: string,
+  runId: number,
+): boolean {
+  return checks.some(
+    (check, index) =>
+      runIds[index] !== undefined &&
+      runIds[index] > runId &&
+      check.name.trim() === cancelled.name.trim() &&
+      groupKeyOf(check) === group,
+  );
 }

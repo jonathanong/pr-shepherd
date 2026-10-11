@@ -26,7 +26,7 @@ import picomatch from "picomatch";
  */
 export function classifyChecks(
   checks: CheckRun[],
-  opts: { additionalRelevantEvents?: string[] } = {},
+  opts: { additionalRelevantEvents?: string[]; requiredContexts?: readonly string[] } = {},
 ): ClassifiedCheck[] {
   const config = loadConfig();
   const relevantEvents = new Set([
@@ -36,7 +36,7 @@ export function classifyChecks(
   const isIgnored = buildMatcher(config.ignoreChecks ?? []);
   const isProtected = buildMatcher(config.actions.neverCancelRuns ?? []);
   const protectedRunIds = buildProtectedRunIds(checks, isProtected);
-  const supersededIndices = buildSupersededIndices(checks);
+  const supersededIndices = buildSupersededIndices(checks, opts.requiredContexts);
   return checks.map((c, index) => {
     if (isIgnored(c.name) && !isProtectedCheck(c, protectedRunIds)) {
       return { ...c, category: "ignored" as const };

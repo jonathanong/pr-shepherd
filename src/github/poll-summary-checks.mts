@@ -3,10 +3,13 @@ import type { CheckRun, PollSummaryChecks } from "../types.mts";
 import { parseCreatedAt } from "./batch-parser-helpers.mts";
 import type { RawCheckRollup, RawSummaryPr } from "./poll-summary-raw.mts";
 
-export function summarizePollSummaryChecks(raw: RawSummaryPr): PollSummaryChecks {
+export function summarizePollSummaryChecks(
+  raw: RawSummaryPr,
+  requiredContexts?: readonly string[],
+): PollSummaryChecks {
   const rollups = summaryRollups(raw);
   const counts: Record<string, number> = {};
-  for (const check of classifiedSummaryChecks(raw)) {
+  for (const check of classifiedSummaryChecks(raw, requiredContexts)) {
     const key = {
       passed: "passing",
       failing: "failing",
@@ -26,8 +29,11 @@ export function summarizePollSummaryChecks(raw: RawSummaryPr): PollSummaryChecks
 }
 
 /** Names of failing checks in the loaded summary rollup. */
-export function failingSummaryCheckNames(raw: RawSummaryPr): string[] {
-  return classifiedSummaryChecks(raw)
+export function failingSummaryCheckNames(
+  raw: RawSummaryPr,
+  requiredContexts?: readonly string[],
+): string[] {
+  return classifiedSummaryChecks(raw, requiredContexts)
     .filter((check) => check.category === "failing")
     .map((check) => check.name);
 }
@@ -42,13 +48,13 @@ function summaryRollups(raw: RawSummaryPr) {
   ].flatMap(({ rollup, scope }) => (rollup ? [{ rollup, scope }] : []));
 }
 
-function classifiedSummaryChecks(raw: RawSummaryPr) {
+function classifiedSummaryChecks(raw: RawSummaryPr, requiredContexts?: readonly string[]) {
   // A successful check on the queue commit cannot cover a PR-head cancellation, or vice versa.
   return summaryRollups(raw).flatMap(({ rollup, scope }) =>
-    classifyChecks(
-      checkRuns(rollup, scope),
-      scope === "merge_group" ? { additionalRelevantEvents: ["merge_group"] } : {},
-    ),
+    classifyChecks(checkRuns(rollup, scope), {
+      ...(scope === "merge_group" && { additionalRelevantEvents: ["merge_group"] }),
+      ...(requiredContexts && { requiredContexts }),
+    }),
   );
 }
 

@@ -6,7 +6,7 @@ import { fingerprintInputDigest } from "./pr-fingerprint.mts";
 import type { PrShepherdConfig } from "../config/load.mts";
 import type { ShepherdReport } from "../types.mts";
 
-const VERSION = 1;
+const VERSION = 2;
 
 /**
  * The last REST-transport report plus the digest of the conditional-read snapshot it was built
