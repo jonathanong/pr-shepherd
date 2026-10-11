@@ -355,7 +355,19 @@
     "kind": "pr-comment",
     "author": "kilo-code-bot",
     "synthetic": true,
-    "body": "**Code Review Summary**\n\nStatus: No Issues Found | Recommendation: Merge",
+    "body": "## Code Review Summary\n\n**Status:** No Issues Found | **Recommendation:** Merge\n\n### Files Reviewed (2 files)\n- `src/a.ts`\n- `src/b.ts`",
+    "expect": {
+      "suppress": true,
+      "autoResolve": true
+    }
+  },
+  {
+    "name": "kilo-no-issues-plain",
+    "rule": "kilo-no-issues",
+    "kind": "review-summary",
+    "author": "kilo-code-bot",
+    "synthetic": true,
+    "body": "Status: ✅ No Issues Found | Recommendation: Merge",
     "expect": {
       "suppress": true,
       "autoResolve": true

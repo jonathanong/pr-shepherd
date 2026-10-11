@@ -152,5 +152,19 @@
     "author": "chatgpt-codex-connector",
     "url": "https://github.com/jonathanong/no-mistakes/pull/1841",
     "body": "\n### 💡 Codex Review\n\nhttps://github.com/jonathanong/no-mistakes/blob/403b43c38d9e687598a58465aa444b261ffbb5d8/crates/no-mistakes/src/codebase/postgres/embedded/walk/variants/switch/labels.rs#L44-L45\n**<sub><sub>![P2 Badge](https://img.shields.io/badge/P2-yellow?style=flat)</sub></sub>  Skip generator bodies when resolving call/apply**\n\nWhen the receiver is a generator function expression, `.call()` or `.apply()` only creates an iterator and does not execute the function body. Traversing it here nevertheless treats assignments inside that suspended body as switch-label writes, so a later guard-dependent SQL call becomes unnecessarily opaque, producing a spurious `unanalyzable` finding or hiding the finite SQL check when `unanalyzableSql: ignore` is configured. Check `function.generator` before walking the body and add a fixture-backed regression for this invocation form.\n\nAGENTS.md reference: [AGENTS.md:L92-L94](https://github.com/jonathanong/no-mistakes/blob/403b43c38d9e687598a58465aa444b261ffbb5d8/AGENTS.md#L92-L94)\n    \n\n<details> <summary>ℹ️ About Codex in GitHub</summary>\n<br/>\n\n[Your team has set up Codex to review pull requests in this repo](https://chatgpt.com/codex/cloud/settings/general). Reviews are triggered when you\n- Open a pull request for review\n- Mark a draft as ready\n- Comment \"@codex review\".\n\nIf Codex has suggestions, it will comment; otherwise it will react with 👍.\n\n\n\n\nCodex can also answer questions or update the PR. Try commenting \"@codex address that feedback\".\n            \n</details>"
+  },
+  {
+    "name": "kilo-no-issues-with-warning-section",
+    "kind": "pr-comment",
+    "author": "kilo-code-bot",
+    "synthetic": true,
+    "body": "## Code Review Summary\n\n**Status:** No Issues Found | **Recommendation:** Merge\n\n### Warning\n\n`retry()` swallows the abort signal."
+  },
+  {
+    "name": "kilo-issues-found",
+    "kind": "pr-comment",
+    "author": "kilo-code-bot",
+    "synthetic": true,
+    "body": "## Code Review Summary\n\n**Status:** 2 Issues Found | **Recommendation:** Address before merge\n\nNo issues found in `src/a.ts`."
   }
 ]

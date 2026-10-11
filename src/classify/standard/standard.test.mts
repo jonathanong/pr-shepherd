@@ -30,7 +30,7 @@ const item = (f: Fixture, overrides: Partial<ClassifyItem> = {}): ClassifyItem =
   }) as ClassifyItem;
 
 /** Rules whose whole comment is a generated report, so trailing headings are part of it. */
-const WHOLE_REPORT_RULES = new Set(["codecov-report", "kilo-no-issues"]);
+const WHOLE_REPORT_RULES = new Set(["codecov-report"]);
 
 const matches = (i: ClassifyItem) =>
   STANDARD_RULE_NAMES.filter((name) => STANDARD_RULES[name]!(i) != null);
