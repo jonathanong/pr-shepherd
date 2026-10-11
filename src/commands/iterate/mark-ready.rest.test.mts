@@ -8,6 +8,8 @@ import {
   summarizeApiTelemetry,
   withApiTelemetryScope,
 } from "../../github/api-telemetry.mts";
+import { formatIterateResult } from "../../cli/iterate-formatter.mts";
+import { projectIterateLean } from "../../cli/iterate-lean.mts";
 
 const markReady = (value = report) =>
   runWithGithubTransport("rest", () => markReadyIfAuthorized(true, base, value));
@@ -34,6 +36,33 @@ describe("REST mark-ready authorization", () => {
       expect(after?.unmeteredRestRequestCount).toBe((before?.unmeteredRestRequestCount ?? 0) + 1);
     });
   });
+  it("reports the confirmed conversion as no longer a draft in JSON and text", async () => {
+    vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
+    await serve((_request, response) => response.end('{"draft":false}'));
+    const result = (await markReady())!;
+    expect(result).toMatchObject({ action: "mark_ready", markedReady: true, isDraft: false });
+    expect(projectIterateLean(result)).not.toHaveProperty("isDraft");
+    expect(formatIterateResult(result)).not.toContain("**isDraft**");
+    expect(formatIterateResult(result, { verbose: true })).toContain("**isDraft** false");
+  });
+  it.each([
+    ["CLEAN", "CLEAN", "CLEAN"],
+    ["DRAFT", "UNKNOWN", "UNKNOWN"],
+    ["BLOCKED", "BLOCKED", "BLOCKED"],
+  ] as const)(
+    "re-derives a DRAFT merge status from raw %s",
+    async (raw, mergeStateStatus, status) => {
+      vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
+      await serve((_request, response) => response.end('{"draft":false}'));
+      const draft = { ...base, mergeStatus: "DRAFT" as const, mergeStateStatus: raw };
+      const result = (await runWithGithubTransport("rest", () =>
+        markReadyIfAuthorized(true, draft, report),
+      ))!;
+      expect(result).toMatchObject({ mergeStateStatus, mergeStatus: status });
+      expect(formatIterateResult(result)).not.toContain("DRAFT");
+      expect(JSON.stringify(projectIterateLean(result))).not.toContain("DRAFT");
+    },
+  );
   it("escalates a definite server403 once as authorization-required", async () => {
     vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
     await serve((_request, response) => {
@@ -120,6 +149,7 @@ describe("REST mark-ready authorization", () => {
     expect(await markReady({ ...report, fingerprintReused: true })).toMatchObject({
       action: "mark_ready",
       markedReady: false,
+      isDraft: true,
     });
     expect(wire.requests).toEqual([]);
     await expect(markReady()).rejects.toThrow("did not confirm draft:false");

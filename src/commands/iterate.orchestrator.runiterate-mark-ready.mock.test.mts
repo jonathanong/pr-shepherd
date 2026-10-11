@@ -39,6 +39,8 @@ describe("runIterate — mark_ready", () => {
     if (result.action === "mark_ready") {
       expect(result.markedReady).toBe(true);
     }
+    // The snapshot saw a draft, but the mutation just converted it.
+    expect(result.isDraft).toBe(false);
 
     // markPullRequestReadyForReview is a GraphQL mutation — verify a /graphql fetch was made
     const graphqlCalls = (mockFetch.mock.calls as Array<[string, RequestInit]>).filter(([url]) =>
@@ -72,6 +74,7 @@ describe("runIterate — mark_ready", () => {
     const result = await runIterate(makeOpts());
     expect(result.action).toBe("mark_ready");
     if (result.action === "mark_ready") expect(result.markedReady).toBe(false);
+    expect(result.isDraft).toBe(true);
     const graphqlCalls = (mockFetch.mock.calls as Array<[string, RequestInit]>).filter(([url]) =>
       url.endsWith("/graphql"),
     );
