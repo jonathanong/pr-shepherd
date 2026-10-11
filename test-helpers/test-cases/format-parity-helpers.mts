@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 /**
  * Shared helpers for test-cases/format-parity.test.mts — split out to stay under the repo's
  * 200-line-per-file cap. See that file for the invariant this enforces.
@@ -18,10 +17,6 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
   [
     "mergeStatus",
     "the raw enum discriminator is JSON-only; text instead renders the derived `**branch** behind/conflicts with PR base` phrasing or the `**reviewDecision**`/BLOCKED header segment (docs/actions.md, 'Note on mergeStatus in JSON lean mode')",
-  ],
-  [
-    "mergeRequirements.requiredStatusChecks.contexts[]",
-    "text prints the required-context count; a passing context is noise, and every context that is not passing is named in the same line (failing, pending) or as an unreported required check",
   ],
   [
     "mergeRequirements.approvals.requiredCount",

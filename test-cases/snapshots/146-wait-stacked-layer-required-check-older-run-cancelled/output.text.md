@@ -2,7 +2,7 @@
 
 **status** `READY` · **repo** `vouchington/vouchington`
 **summary** 3 passing, 3 superseded · **remainingSeconds** 600
-Required status checks: 3 [Required]
+Required status checks: static, web, gitleaks [Required]
 Stack: 2688 (layer 2/2, base main)
 **superseded** `static`, `web`, `gitleaks`
 

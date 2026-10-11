@@ -41,12 +41,8 @@ export function formatMergeRequirementLines(req: MergeRequirements): string[] {
     lines.push(`Branch up to date: ${value} ${REQUIRED}`);
   }
   if (req.requiredStatusChecks) {
-    const { contexts, ...notPassing } = req.requiredStatusChecks;
-    const detail = (["failing", "pending"] as const)
-      .filter((key) => (notPassing[key]?.length ?? 0) > 0)
-      .map((key) => `${key}: ${notPassing[key]!.join(", ")}`);
-    const suffix = detail.length > 0 ? ` — ${detail.join("; ")}` : "";
-    lines.push(`Required status checks: ${contexts.length} ${REQUIRED}${suffix}`);
+    const names = req.requiredStatusChecks.contexts.join(", ");
+    lines.push(`Required status checks: ${names} ${REQUIRED}`);
   }
   if (req.requiredDeployments) {
     const envs = req.requiredDeployments.environments.join(", ");

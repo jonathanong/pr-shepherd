@@ -5,6 +5,7 @@ import {
   type WorkflowSuiteSnapshot,
 } from "../checks/unreported-required.mts";
 import { loadBaseBehindBy, loadMergeTargetStatus } from "../github/merge-target-rules.mts";
+import { withTrunkRequiredContexts } from "../merge-status/required-check-requirements.mts";
 import type { BatchPrData, CheckRun, ShepherdReport } from "../types.mts";
 import type { RepoInfo } from "../github/client.mts";
 import type { CheckExecutionContext } from "./check-execution-context.mts";
@@ -112,7 +113,10 @@ export async function refreshCachedUnreported(
     target.contexts,
     reportedCheckNames(reportChecks(report)),
   );
-  const next: ShepherdReport = { ...report };
+  const next: ShepherdReport = {
+    ...report,
+    mergeStatus: withTrunkRequiredContexts(report.mergeStatus, target.contexts),
+  };
   if (unreported.length > 0) next.unreportedRequiredChecks = unreported;
   else delete next.unreportedRequiredChecks;
   const trunkBehindBy =

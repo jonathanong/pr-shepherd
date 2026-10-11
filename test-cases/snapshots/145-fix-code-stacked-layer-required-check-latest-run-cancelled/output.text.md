@@ -2,7 +2,7 @@
 
 **status** `FAILING` · **merge** `BLOCKED` · **reviewDecision** `APPROVED`
 **summary** 3 passing
-Required status checks: 3 [Required] — failing: static, web, gitleaks
+Required status checks: static, web, gitleaks [Required]
 Stack: 2688 (layer 2/2, base main)
 
 ## Failing checks

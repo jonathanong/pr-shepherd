@@ -84,13 +84,7 @@ export interface MergeRequirements {
   signedCommits?: { required: true };
   linearHistory?: { required: true };
   branchUpToDate?: { current: boolean; required: true };
-  requiredStatusChecks?: {
-    contexts: string[];
-    /** Required contexts whose live run failed. Omitted when empty. */
-    failing?: string[];
-    /** Required contexts still running, or whose only runs were superseded. Omitted when empty. */
-    pending?: string[];
-  };
+  requiredStatusChecks?: { contexts: string[] };
   requiredDeployments?: { environments: string[] };
   requiredWorkflows?: { required: true };
   codeScanning?: { required: true };

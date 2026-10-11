@@ -1,30 +1,20 @@
-import { evaluateRequiredChecks } from "../checks/required-check-state.mts";
 import type { MergeStatusResult } from "../types.mts";
-import type { ClassifiedCheck } from "../types/check-classification.mts";
 
 /**
- * Attach the merge target's required contexts, and which of them are not passing, to
- * `mergeRequirements`. A native-stack layer's own base can carry no rules, so these
- * contexts come from the stack trunk and replace whatever the base reported. With no
- * target contexts the status is returned unchanged.
+ * A native-stack layer merges under the stack trunk's rules, not its parent branch's, so
+ * replace the parent's required contexts with the trunk's. A trunk with none clears them.
+ * Any other PR keeps the contexts derived from its own base.
  */
-export function withRequiredCheckState(
+export function withTrunkRequiredContexts(
   mergeStatus: MergeStatusResult,
   contexts: readonly string[],
-  checks: readonly ClassifiedCheck[],
 ): MergeStatusResult {
   const requirements = mergeStatus.mergeRequirements;
-  if (!requirements || contexts.length === 0) return mergeStatus;
-  const { failing, pending } = evaluateRequiredChecks(contexts, checks);
+  if (!requirements?.stack) return mergeStatus;
+  const { requiredStatusChecks: _parent, ...rest } = requirements;
   return {
     ...mergeStatus,
-    mergeRequirements: {
-      ...requirements,
-      requiredStatusChecks: {
-        contexts: [...contexts],
-        ...(failing.length > 0 && { failing }),
-        ...(pending.length > 0 && { pending }),
-      },
-    },
+    mergeRequirements:
+      contexts.length > 0 ? { ...rest, requiredStatusChecks: { contexts: [...contexts] } } : rest,
   };
 }

@@ -135,7 +135,7 @@ describe("formatMergeRequirementLines extra branches", () => {
         "Signed commits: [Required]",
         "Linear history: [Required]",
         "Branch up to date: Yes [Required]",
-        "Required status checks: 1 [Required]",
+        "Required status checks: ci [Required]",
         "Required deployments: prod [Required]",
         "Required workflows: [Required]",
         "Code scanning: [Required]",

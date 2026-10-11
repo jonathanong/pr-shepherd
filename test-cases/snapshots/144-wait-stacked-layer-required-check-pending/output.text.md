@@ -2,7 +2,7 @@
 
 **status** `IN_PROGRESS` · **merge** `BLOCKED` · **reviewDecision** `APPROVED` · **repo** `vouchington/vouchington`
 **summary** 2 passing, 1 inProgress
-Required status checks: 3 [Required] — pending: web
+Required status checks: static, web, gitleaks [Required]
 Stack: 2688 (layer 2/2, base main)
 **activity** 0 commits · 0 review rounds · active: `web`
 
