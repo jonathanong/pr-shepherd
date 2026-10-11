@@ -520,6 +520,8 @@ Stops polling this pull request — no further iterations for this PR are needed
 
 `cancel` has no `## Instructions` section and no JSON `instructions`: the `[CANCEL]` tag already means stop this PR's loop, and continuing the rest of the original request is the skill's invariant recurrence rule. Merged and closed PRs are terminal, so their default output is only the heading; no status, check, review, or merge-requirement data can change the next step. The lean JSON matches it: `{ "action": "cancel", "pr": 42, "reason": "merged" }` (plus `ruleAutoResolve` when that ran). `--verbose` keeps the full header, status lines, and `CANCEL: PR #42 is merged — stopping` / `CANCEL: PR #42 is closed — stopping` log line.
 
+On the REST transport a merged PR is answered from its first pull read, so a verbose merged cancel has no merge-requirement lines and no JSON `mergeRequirements`. `transportUnavailable` lists `branchProtection` and `mergeRequirements` as `not read for a merged pull request`. A closed, unmerged PR reads the full snapshot.
+
 A `ready-delay-elapsed` cancel (`# PR #42 [CANCEL] — ready-delay-elapsed`) keeps the full header and its body line: `CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping`. When merge is still `BLOCKED` after the delay, the body uses a specific unmet-requirement note when one is known (`awaiting 1 approval`, `in merge queue position 2`, …) and otherwise `is awaiting human review or branch protection resolution` — it does not guess from `reviewDecision` alone.
 
 A `ready-delay-elapsed` cancel carries the same `**merge queue** …` header line (raw enabled/inQueue/entry/removal fields, see the header block above) as every other action when `mergeQueue` is present, matching JSON output.
