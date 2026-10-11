@@ -286,6 +286,7 @@ Quota warning, when a configured threshold is crossed on a non-terminal result:
 - The shipped skill keeps `--until-terminal`, omits `--timeout`, and applies the cadence before it reruns.
 - A single-tick CLI, API, or MCP caller waits before the next tick.
 - The warning fires once per worktree (or process, when there is no worktree), credential, and quota window.
+- Within a window the block reports the lowest `remaining` and the highest `used` seen, even when they come from different responses.
 - An older sample saved later in that window does not warn again. A different credential fingerprint re-arms it.
 - Every `WAIT` / `MARK_READY` sleep uses `max(effective interval, resolved band interval)` from the latest GraphQL remaining percent, including after the one-shot warning.
 - An unbounded `--until-terminal` poll still returns the first warning so the skill can slow down and rerun with `--interval`.

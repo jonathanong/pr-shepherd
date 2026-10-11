@@ -1,5 +1,6 @@
 import type { ApiTelemetryEvent } from "./api-telemetry.mts";
 import type { RateLimitInfo } from "./http-utils.mts";
+import { mostConservativeSample } from "./rate-limit-sample.mts";
 
 interface RestTelemetryGroup {
   /** Quota-consuming requests; 304 Not Modified responses are tallied separately. */
@@ -179,12 +180,6 @@ function selectAuthoritativeRateLimit(
   if (candidate.resetAt !== current.resetAt) {
     return candidate.resetAt > current.resetAt ? { ...candidate } : current;
   }
-  if (candidate.remaining !== current.remaining) {
-    return candidate.remaining < current.remaining ? { ...candidate } : current;
-  }
-  if (candidate.used !== current.used) {
-    if (candidate.used === undefined) return current;
-    if (current.used === undefined || candidate.used > current.used) return { ...candidate };
-  }
-  return current;
+  const merged = mostConservativeSample(current, candidate);
+  return merged.remaining === current.remaining && merged.used === current.used ? current : merged;
 }

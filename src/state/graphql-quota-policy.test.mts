@@ -67,6 +67,16 @@ describe("evaluateGraphqlQuotaWarning", () => {
     expect(older.state.credentialFingerprint).toBe(fingerprintA);
   });
 
+  it("warns from the lowest remaining when a same-window sample reports a lower used", () => {
+    // Proxy routes can disagree on X-RateLimit-Used within one window.
+    const first = evaluateGraphqlQuotaWarning(bands, sample(1200, 3800), null);
+    const next = evaluateGraphqlQuotaWarning(bands, sample(950, 3700), first.state);
+
+    expect(next.warning).toMatchObject({ thresholdPercent: 20, remaining: 950, used: 3800 });
+    expect(next.state).toMatchObject({ lastRemaining: 950, lastUsed: 3800 });
+    expect(next.state.rearmEpoch).toBe(first.state.rearmEpoch);
+  });
+
   it("re-arms when the credential fingerprint changes in the same window", () => {
     const first = evaluateGraphqlQuotaWarning(bands, sample(1200, 3800), null);
     const switched = evaluateGraphqlQuotaWarning(
