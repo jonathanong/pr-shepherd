@@ -143,13 +143,13 @@ describe("REST feedback preserves review ownership and stale routing through pol
     });
     expect(first.fix.resolveCommand.argv).not.toContain("--dismiss-review-ids");
     const next = await tick();
+    // The missing aggregate reviewDecision is not a readiness gap: branch policy plus latest
+    // reviews still report the unmet approval, and the closed stale review is not reopened.
     expect(next).toMatchObject({
-      action: "escalate",
-      escalate: {
-        triggers: ["transport-unsupported"],
-        changesRequestedReviews: [],
-        suggestion: expect.stringContaining("reviewDecision"),
-      },
+      action: "wait",
+      mergeStatus: "BLOCKED",
+      log: "WAIT: awaiting 1 approval",
+      mergeRequirements: { approvals: { current: 0, requiredCount: 1 } },
     });
     assertReadOnlyRest();
   });

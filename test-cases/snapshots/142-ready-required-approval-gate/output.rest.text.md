@@ -1,7 +1,7 @@
-# PR #42 [ESCALATE]
+# PR #42 [READY]
 
-**status** `UNKNOWN` · **merge** `BLOCKED` · **repo** `owner/repo`
-**summary** 1 passing
+**status** `READY` · **merge** `BLOCKED` · **repo** `owner/repo`
+**summary** 1 passing · **remainingSeconds** 300
 **transport** `rest`
 
 ## Unavailable transport fields
@@ -12,16 +12,8 @@
 - `mergeQueue`: REST does not expose queue membership, entry or removal history
 Approvals: None [Required]
 
-⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required
-
-**Triggers:** `transport-unsupported`
-
-reviewDecision: REST does not expose an aggregate review decision; latest review states are supplied
-
----
-
-After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-shepherd 42` to resume.
+READY: PR #42 is ready — 300s of ready-delay remaining — 1 passing — awaiting 1 approval
 
 ## Instructions
 
-1. Stop — human direction is required before automated polling can resume.
+1. PR #42 is ready. Ready-delay has 300s left. Rerun this command when the timer elapses. Do not invent unrelated work.

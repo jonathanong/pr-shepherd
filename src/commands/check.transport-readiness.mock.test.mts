@@ -6,6 +6,7 @@ import {
   makeComment,
   makeThread,
   mockFetchPrBatch,
+  mockGetMergeableState,
   mockLoadSeenMap,
 } from "../../test-helpers/commands/check.test-support.mts";
 import { runCheck } from "./check.mts";
@@ -37,6 +38,42 @@ describe("REST complete-evidence readiness", () => {
     const report = await runWithGithubTransport("rest", () => runCheck(BASE_OPTS));
     expect(report.status).toBe("UNKNOWN");
     expect(report.threads.firstLook).toMatchObject([{ id: "t1", firstLookStatus: "resolved" }]);
+  });
+
+  // reviewDecision is never a readiness input (approvals come from branch policy and latest
+  // reviews), so its absence must not turn a non-CLEAN READY into UNKNOWN on REST.
+  it.each(["BLOCKED", "UNSTABLE"] as const)(
+    "keeps %s READY when only the aggregate reviewDecision is unavailable",
+    async (mergeStateStatus) => {
+      mockGetMergeableState.mockResolvedValue({ mergeable: "MERGEABLE", mergeStateStatus });
+      mockFetchPrBatch.mockResolvedValue({
+        data: makeBatchData({
+          mergeStateStatus,
+          reviewDecision: null,
+          transport: "rest",
+          transportUnavailable: [{ field: "reviewDecision", reason: "REST has no aggregate" }],
+        }),
+      });
+      const report = await runWithGithubTransport("rest", () => runCheck(BASE_OPTS));
+      expect(report.status).toBe("READY");
+    },
+  );
+
+  it("still rejects a non-CLEAN READY whose branch policy is unavailable", async () => {
+    mockGetMergeableState.mockResolvedValue({
+      mergeable: "MERGEABLE",
+      mergeStateStatus: "BLOCKED",
+    });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        mergeStateStatus: "BLOCKED",
+        reviewDecision: null,
+        transport: "rest",
+        transportUnavailable: [{ field: "branchProtection", reason: "HTTP 403" }],
+      }),
+    });
+    const report = await runWithGithubTransport("rest", () => runCheck(BASE_OPTS));
+    expect(report.status).toBe("UNKNOWN");
   });
 
   it("suppresses denied comment minimization and bot dismissal until their bodies change", async () => {

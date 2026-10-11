@@ -37,10 +37,5 @@
     "shouldCancel": false,
     "remainingSeconds": 300
   },
-  "expectedExitCode": 10,
-  "restDivergence": {
-    "action": "escalate",
-    "exitCode": 13,
-    "why": "REST exposes no aggregate reviewDecision, so a BLOCKED merge state cannot prove READY; the PR is UNKNOWN and escalates transport-unsupported instead of waiting in the ready delay."
-  }
+  "expectedExitCode": 10
 }

@@ -7,7 +7,8 @@
  * all decision logic, and both text + JSON formatters.
  */
 import { vi, beforeEach, afterEach } from "vitest";
-import { readFileSync, readdirSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import builtinConfig from "../../src/config.json" with { type: "json" };
@@ -778,8 +779,13 @@ export async function captureTwoTickStallRun(
 // ---------------------------------------------------------------------------
 
 export function registerHarnessBefore(): void {
+  let stateDir: string | undefined;
   beforeEach(() => {
     vi.clearAllMocks();
+    // Unmocked state (REST identity associations, conditional caches) lives in a per-test
+    // directory so one fixture's recorded handles cannot leak into another.
+    stateDir = mkdtempSync(join(tmpdir(), "pr-shepherd-fixture-"));
+    process.env.PR_SHEPHERD_STATE_DIR = stateDir;
     process.exitCode = undefined;
     process.env.GH_TOKEN = "test-token";
     vi.useFakeTimers();
@@ -803,6 +809,8 @@ export function registerHarnessBefore(): void {
     vi.useRealTimers();
     delete process.env.GH_TOKEN;
     delete process.env.CLAUDE_CODE_REMOTE;
+    delete process.env.PR_SHEPHERD_STATE_DIR;
+    if (stateDir) rmSync(stateDir, { recursive: true, force: true });
     process.exitCode = undefined;
   });
 }

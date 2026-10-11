@@ -33,6 +33,7 @@ import {
 } from "./ready-mergeability.mts";
 import { loadSeenMap, markSeen, classifyItem, mutationWasDenied } from "../state/seen-comments.mts";
 import { aliasThreadSeenMarkers } from "../github/rest-identities.mts";
+import { transportReadinessGaps } from "../github/transport-evidence.mts";
 import { canGenerateGithubMutation } from "../github/mutation-policy.mts";
 import { threadTranscriptBody } from "../threads/transcript.mts";
 import { classifyThreadVisibility } from "../comments/thread-visibility.mts";
@@ -66,7 +67,6 @@ import type {
 
 function enforceTransportReadiness(status: ShepherdStatus, data: BatchPrData): ShepherdStatus {
   if (status !== "READY" || data.transport !== "rest") return status;
-  const unavailable = data.transportUnavailable ?? [];
   if (
     data.reviewThreads.some(
       (thread) =>
@@ -76,18 +76,7 @@ function enforceTransportReadiness(status: ShepherdStatus, data: BatchPrData): S
     )
   )
     return "UNKNOWN";
-  if (
-    unavailable.some(({ field }) =>
-      /^(reviewThreads(?:\.|$)|reviewTranscripts(?:\.|$)|changesRequestedReviews(?:\.|$)|reviewSummaries(?:\.|$)|checks(?:\.|$)|checkRuns(?:\.|$)|checkSuites(?:\.|$)|checkAnnotations(?:\.|$)|annotations(?:\.|$)|nativeStack(?:\.|$))/.test(
-        field,
-      ),
-    )
-  )
-    return "UNKNOWN";
-  const missingPolicy = unavailable.some(({ field }) =>
-    /^(reviewDecision|branchProtection|branchRules|mergeRequirements)(?:\.|$)/.test(field),
-  );
-  if (missingPolicy && data.mergeStateStatus !== "CLEAN") return "UNKNOWN";
+  if (transportReadinessGaps(data, data.mergeStateStatus).length > 0) return "UNKNOWN";
   return status;
 }
 

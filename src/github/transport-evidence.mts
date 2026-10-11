@@ -17,7 +17,12 @@ export function isKnownMergeStateStatus(status: string): boolean {
   ].includes(status);
 }
 
-/** Missing feedback cannot certify readiness, even when GitHub reports CLEAN. */
+/**
+ * Missing feedback cannot certify readiness, even when GitHub reports CLEAN. Missing branch policy
+ * blocks only a non-CLEAN state, whose unmet requirements Shepherd derives from that policy. The
+ * aggregate `reviewDecision` is never a readiness input on either transport (approvals come from
+ * branch policy plus latest reviews), so its absence alone is not a gap.
+ */
 export function transportReadinessGaps(
   value: TransportEvidence,
   mergeStateStatus: string,
@@ -29,7 +34,7 @@ export function transportReadinessGaps(
         field,
       ) ||
       (mergeStateStatus !== "CLEAN" &&
-        ["reviewDecision", "branchProtection", "branchRules", "mergeRequirements"].some(
+        ["branchProtection", "branchRules", "mergeRequirements"].some(
           (policy) => field === policy || field.startsWith(`${policy}.`),
         )),
   );
