@@ -373,17 +373,21 @@ const perHour = (n, wake) => ({
 });
 const reconcilesPerHour = 60 / RECONCILE_MINUTES;
 const idleHour = {
-  // No check running (e.g. a requested bot review): the detectors answer 304
-  // and a BatchPr reconcile runs every RECONCILE_MINUTES.
+  // The first hour of an idle wait with no check running (e.g. a requested
+  // bot review): the entering BatchPr read (the hour's first reconcile) seeds
+  // the detectors, whose first poll is cold 200s; every later detector read
+  // answers 304, and a BatchPr reconcile runs every RECONCILE_MINUTES.
   shepherd: {
     graphqlPoints: reconcilesPerHour * SHEPHERD_TICK_API.graphqlPoints,
-    restCore: 0,
-    conditional: (3600 / POLL_SECONDS) * GRAPHQL_WAIT_DETECTORS,
+    restCore: GRAPHQL_DETECTOR_SEED.restCore,
+    conditional: (3600 / POLL_SECONDS) * GRAPHQL_WAIT_DETECTORS - GRAPHQL_DETECTOR_SEED.restCore,
     ...perHour(0, boundedWake),
   },
-  // The detectors do not apply (lib.mjs GRAPHQL_DETECTOR_SEED), e.g. a thread
-  // holds a reply: every poll reads BatchPr, 1 point while the PR fits its
-  // first page (an incomplete fingerprint is a full read, not a hit).
+  // The detectors do not apply to a non-READY PR (lib.mjs
+  // GRAPHQL_DETECTOR_SEED), e.g. a thread holds a reply: every poll reads
+  // BatchPr, 1 point while the PR fits its first page (an incomplete
+  // fingerprint is a full read, not a hit). A READY PR also re-reads
+  // mergeability over REST every poll, which this row excludes.
   shepherdNoDetectors: {
     graphqlPoints: (3600 / POLL_SECONDS) * SHEPHERD_TICK_API.graphqlPoints,
     restCore: 0,
@@ -728,7 +732,7 @@ out(
   `- **Event arm (informational, assumed, not gated).** A background \`pr-shepherd wait\` with ETag change detectors (#544). ${evLine("pr", "PR session")}. ${evLine("stack", "Stack session")}. Each of its ${num(eventSessions.pr.wakes)} PR-session wakes (${num(eventSessions.stack.wakes)} on a stack) adds a request to read the background start, so it spends more turns and tokens than the blocking poll. The hypothetical hosted webhook proxy spends ${num(eventSessions.pr.api.eventProxy.graphqlPoints)} GraphQL points and ${num(eventSessions.pr.api.eventProxy.restCore)} REST core of the user's token in a PR session (${num(eventSessions.stack.api.eventProxy.graphqlPoints)} and ${num(eventSessions.stack.api.eventProxy.restCore)} on a stack), on the agent's own mutations and reads.`,
 );
 out(
-  `- **Idle waiting, per hour (assumed).** The poll arm's blocking \`--until-terminal\` call (the skill's mode, and the comparison that counts) spends ${idleHour.shepherd.graphqlPoints} GraphQL points (a reconcile snapshot every ${RECONCILE_MINUTES} minutes; between them ${GRAPHQL_WAIT_DETECTORS} conditional REST detectors per poll answer 304, ${num(idleHour.shepherd.conditional)} an hour, when no check is running; entering the wait seeds them once, ${GRAPHQL_DETECTOR_SEED.restCore} REST requests when each detector's resource fits one 100-entry page and more when one does not; a PR that skips them but whose \`BatchPr\` fits its first page, for example one with a thread holding a reply, spends ${num(idleHour.shepherdNoDetectors.graphqlPoints)} points an hour, and one past a first-page window (more than 20 threads, 100 comments or 100 reviews) more, since each poll also reads the further pages) and no turn; the legacy bounded \`--timeout 4.5m\` CLI mode, which the skill no longer uses, spends ${num(idleHour.shepherdBounded.graphqlPoints)} points (it returns every ${BOUNDED_POLL_SECONDS}s, after ${boundedTicks} ticks) and ${num(idleHour.shepherdBounded.wakes)} wakes (${num(idleHour.shepherdBounded.turns)} turns, ${num(idleHour.shepherdBounded.ite)} ITE). The event arm spends ${idleHour.event.graphqlPoints} points on ${num(idleHour.event.wakes)} reconcile snapshots and no REST (${num(idleHour.event.conditional)} conditional requests, all 304), with ${num(idleHour.event.turns)} turns (${num(idleHour.event.ite)} ITE). The hypothetical proxy spends nothing of the user's token, with the same wakes.`,
+  `- **Idle waiting, per hour (assumed).** The poll arm's blocking \`--until-terminal\` call (the skill's mode, and the comparison that counts) spends ${idleHour.shepherd.graphqlPoints} GraphQL points (a reconcile snapshot every ${RECONCILE_MINUTES} minutes; between them ${GRAPHQL_WAIT_DETECTORS} conditional REST detectors per poll answer 304, ${num(idleHour.shepherd.conditional)} in the first hour, when no check is running; entering the wait seeds them once, ${num(idleHour.shepherd.restCore)} REST requests in that hour's total when each detector's resource fits one 100-entry page and more when one does not; a non-READY PR that skips them but whose \`BatchPr\` fits its first page, for example one with a thread holding a reply, spends ${num(idleHour.shepherdNoDetectors.graphqlPoints)} points an hour, and one past a first-page window (more than 20 threads, 100 comments or 100 reviews) more, since each poll also reads the further pages; a READY PR adds one REST mergeability read a poll) and no turn; the legacy bounded \`--timeout 4.5m\` CLI mode, which the skill no longer uses, spends ${num(idleHour.shepherdBounded.graphqlPoints)} points (it returns every ${BOUNDED_POLL_SECONDS}s, after ${boundedTicks} ticks) and ${num(idleHour.shepherdBounded.wakes)} wakes (${num(idleHour.shepherdBounded.turns)} turns, ${num(idleHour.shepherdBounded.ite)} ITE). The event arm spends ${idleHour.event.graphqlPoints} points on ${num(idleHour.event.wakes)} reconcile snapshots and no REST (${num(idleHour.event.conditional)} conditional requests, all 304), with ${num(idleHour.event.turns)} turns (${num(idleHour.event.ite)} ITE). The hypothetical proxy spends nothing of the user's token, with the same wakes.`,
 );
 const TRANSPORT_LABELS = { graphql: "GraphQL", rest: "REST", cloud: "cloud REST" };
 const lossCount = (issue) => pendingLosses.filter((l) => l.issue === issue).length;
@@ -979,9 +983,9 @@ out(
 );
 out("| --- | --- | --- | --- | --- | --- | --- |");
 for (const [a, label] of Object.entries({
-  shepherd: "pr-shepherd poll, `--until-terminal` (the skill)",
+  shepherd: "pr-shepherd poll, `--until-terminal` (the skill), first hour, seed included",
   shepherdNoDetectors:
-    "pr-shepherd poll, `--until-terminal`, without detectors, one-page reads (e.g. a thread with a reply)",
+    "pr-shepherd poll, `--until-terminal`, without detectors, not READY, one-page reads (e.g. a thread with a reply)",
   shepherdBounded: "pr-shepherd poll, legacy bounded `--timeout 4.5m` (not the skill)",
   event: "event",
   eventProxy: "event, hosted webhook proxy (hypothetical)",
@@ -993,7 +997,7 @@ for (const [a, label] of Object.entries({
 }
 out();
 out(
-  `- pr-shepherd's GraphQL poll runs its ${GRAPHQL_WAIT_DETECTORS} detectors only on an idle single-PR report whose fingerprint is complete: not READY, not queued, nothing to act on, no check running, a merge status GraphQL itself settled (not one a REST mergeability refresh filled in), no stack, \`poll.reconcileSeconds\` above 0, at most 20 threads with none holding more than one comment, at most 100 comments and 100 reviews, and complete check-suite and rules pages. Otherwise each poll reads \`BatchPr\`: 1 point while the PR fits its first page (the row without detectors), more past a first-page window, plus one REST mergeability read a poll while GraphQL leaves the merge status UNKNOWN. Entering an idle wait seeds the detectors once: ${GRAPHQL_DETECTOR_SEED.restCore} REST core requests (every detector a 200 on a cold cache, when each resource fits one 100-entry page; another page is another request) beside a ${GRAPHQL_DETECTOR_SEED.graphqlPoints}-point \`BatchPr\` read. No scenario's change ends a detector-eligible wait (the PR is READY before each one, or \`ci-wait\` has checks running), so no scenario charges them.`,
+  `- pr-shepherd's GraphQL poll runs its ${GRAPHQL_WAIT_DETECTORS} detectors only on an idle single-PR report whose fingerprint is complete: not READY, not queued, nothing to act on, no check running, a merge status GraphQL itself settled (not one a REST mergeability refresh filled in), no stack, \`poll.reconcileSeconds\` above 0, at most 20 threads with none holding more than one comment, at most 100 comments and 100 reviews, and complete check-suite and rules pages. Otherwise each poll reads \`BatchPr\`: 1 point while the PR fits its first page (the row without detectors), more past a first-page window, plus one REST mergeability read a poll while GraphQL leaves the merge status UNKNOWN or the PR is READY (the row without detectors is a non-READY PR). Entering an idle wait seeds the detectors once: ${GRAPHQL_DETECTOR_SEED.restCore} REST core requests (every detector a 200 on a cold cache, when each resource fits one 100-entry page; another page is another request) beside a ${GRAPHQL_DETECTOR_SEED.graphqlPoints}-point \`BatchPr\` read. No scenario's change ends a detector-eligible wait (the PR is READY before each one, or \`ci-wait\` has checks running), so no scenario charges them.`,
 );
 out(
   `- Wakes: \`change\` is a detector change, \`timer\` an elapsed \`nextCheck\` (here the ready delay), \`none\` a step the wait handles in process, as the poll does. Each wake costs one more request than the poll arm, which reads the background start's acknowledgement.`,

@@ -11,8 +11,8 @@ Change in cost when an agent uses pr-shepherd instead of a baseline. A negative 
 - **GitHub rate limit (assumed).** In a PR session pr-shepherd spends 30.8 GraphQL points and 4.8 REST requests; gh 36.5 and 9; MCP 12 and 78.3. GraphQL points −16% vs. gh and +157% vs. MCP; REST requests −47% and −94%.
 - **Waiting on CI, per hour.** pr-shepherd spends 60 GraphQL points on the GraphQL transport (one fingerprint hit per 60s poll) and about 180 REST requests on the REST transport (240 on cloud REST), whose conditional reads charge only the check reads CI changes; an unchanged wait (no CI running) costs 0 REST requests an hour (60 on cloud REST, the CCR thread read) and 4 GraphQL points (a reconcile every 15 minutes between free conditional REST detector reads). A `gh pr checks --watch` refresh costs 60 points; an MCP re-check about 120 requests.
 - **Event arm (informational, assumed, not gated).** A background `pr-shepherd wait` with ETag change detectors (#544). PR session: 18.8 (poll 30.8, gh 36.5, MCP 12) GraphQL points, 38 (poll 4.8, gh 9, MCP 78.3) REST requests, 22.8 (poll 14.8, gh 18.3, MCP 48.6) turns, 8,456 (poll 8,522, gh 30,934, MCP 77,005) tool tokens and 83,489 (poll 58,499, gh 100,341, MCP 258,773) ITE. Stack session: 14 (poll 17, gh 27, MCP 12) GraphQL points, 12 (poll 2, gh 6, MCP 74) REST requests, 12 (poll 8, gh 13, MCP 19) turns, 3,915 (poll 3,875, gh 5,133, MCP 9,478) tool tokens and 43,239 (poll 30,914, gh 56,002, MCP 83,549) ITE. Each of its 8 PR-session wakes (4 on a stack) adds a request to read the background start, so it spends more turns and tokens than the blocking poll. The hypothetical hosted webhook proxy spends 9.5 GraphQL points and 1 REST core of the user's token in a PR session (0 and 2 on a stack), on the agent's own mutations and reads.
-- **Idle waiting, per hour (assumed).** The poll arm's blocking `--until-terminal` call (the skill's mode, and the comparison that counts) spends 4 GraphQL points (a reconcile snapshot every 15 minutes; between them 8 conditional REST detectors per poll answer 304, 480 an hour, when no check is running; entering the wait seeds them once, 8 REST requests when each detector's resource fits one 100-entry page and more when one does not; a PR that skips them but whose `BatchPr` fits its first page, for example one with a thread holding a reply, spends 60 points an hour, and one past a first-page window (more than 20 threads, 100 comments or 100 reviews) more, since each poll also reads the further pages) and no turn; the legacy bounded `--timeout 4.5m` CLI mode, which the skill no longer uses, spends 75 points (it returns every 240s, after 5 ticks) and 15 wakes (15 turns, 51,015 ITE). The event arm spends 4 points on 4 reconcile snapshots and no REST (300 conditional requests, all 304), with 8 turns (25,516 ITE). The hypothetical proxy spends nothing of the user's token, with the same wakes.
-- **Losses: 65 pending.** pr-shepherd costs more than a baseline on 65 gated cells below: 1 on tokens or turns (#528) and 64 on the GitHub rate limit (#525). Each is on the temporary pending list, pending-losses.json; `bench.mjs --check` fails on any other loss and on any listed one that is gone. 17 more are accepted as structural, since no plan can win them (Accepted structural losses below).
+- **Idle waiting, per hour (assumed).** The poll arm's blocking `--until-terminal` call (the skill's mode, and the comparison that counts) spends 4 GraphQL points (a reconcile snapshot every 15 minutes; between them 8 conditional REST detectors per poll answer 304, 472 in the first hour, when no check is running; entering the wait seeds them once, 8 REST requests in that hour's total when each detector's resource fits one 100-entry page and more when one does not; a non-READY PR that skips them but whose `BatchPr` fits its first page, for example one with a thread holding a reply, spends 60 points an hour, and one past a first-page window (more than 20 threads, 100 comments or 100 reviews) more, since each poll also reads the further pages; a READY PR adds one REST mergeability read a poll) and no turn; the legacy bounded `--timeout 4.5m` CLI mode, which the skill no longer uses, spends 75 points (it returns every 240s, after 5 ticks) and 15 wakes (15 turns, 51,015 ITE). The event arm spends 4 points on 4 reconcile snapshots and no REST (300 conditional requests, all 304), with 8 turns (25,516 ITE). The hypothetical proxy spends nothing of the user's token, with the same wakes.
+- **Losses: 70 pending.** pr-shepherd costs more than a baseline on 70 gated cells below: 1 on tokens or turns (#528) and 69 on the GitHub rate limit (#525). Each is on the temporary pending list, pending-losses.json; `bench.mjs --check` fails on any other loss and on any listed one that is gone. 12 more are accepted as structural, since no plan can win them (Accepted structural losses below).
 
 ### Losses
 
@@ -57,6 +57,7 @@ Every session and scenario where pr-shepherd costs strictly more than a baseline
 | `multi-category` | REST core requests (cloud REST transport) | gh CLI | 26 | 3 | +767% | #525 |
 | `multi-category` | REST core requests (cloud REST transport) | GitHub MCP | 26 | 10 | +160% | #525 |
 | `mark-ready` | REST core requests (GraphQL transport) | gh CLI | 1 | 0 | n/a | #525 |
+| `mark-ready` | REST core requests (REST transport) | gh CLI | 15 | 0 | n/a | #525 |
 | `mark-ready` | REST core requests (REST transport) | GitHub MCP | 15 | 6 | +150% | #525 |
 | `mark-ready` | REST core requests (cloud REST transport) | GitHub MCP | 17 | 6 | +183% | #525 |
 | `merged` | cost (ITE) | gh CLI | 3,247 | 3,100 | +5% | #528 |
@@ -71,11 +72,15 @@ Every session and scenario where pr-shepherd costs strictly more than a baseline
 | `conflicts` | REST core requests (REST transport) | GitHub MCP | 14 | 5 | +180% | #525 |
 | `conflicts` | REST core requests (cloud REST transport) | GitHub MCP | 15 | 5 | +200% | #525 |
 | `merge` | REST core requests (GraphQL transport) | gh CLI | 1 | 0 | n/a | #525 |
+| `merge` | REST core requests (REST transport) | gh CLI | 15 | 0 | n/a | #525 |
 | `merge` | GraphQL points (REST transport) | GitHub MCP | 2 | 1 | +100% | #525 |
 | `merge` | REST core requests (REST transport) | GitHub MCP | 15 | 6 | +150% | #525 |
+| `merge` | REST core requests (cloud REST transport) | gh CLI | 16 | 0 | n/a | #525 |
 | `merge` | GraphQL points (cloud REST transport) | GitHub MCP | 2 | 1 | +100% | #525 |
 | `merge` | REST core requests (cloud REST transport) | GitHub MCP | 16 | 6 | +167% | #525 |
 | `merge-queue` | REST core requests (GraphQL transport) | gh CLI | 1 | 0 | n/a | #525 |
+| `merge-queue` | REST core requests (REST transport) | gh CLI | 15 | 0 | n/a | #525 |
+| `merge-queue` | REST core requests (cloud REST transport) | gh CLI | 16 | 0 | n/a | #525 |
 | `stack-work` | GraphQL points (GraphQL transport) | GitHub MCP | 6 | 4 | +50% | #525 |
 | `stack-work` | REST core requests (REST transport) | gh CLI | 194 | 1 | +19300% | #525 |
 | `stack-work` | REST core requests (REST transport) | GitHub MCP | 194 | 25 | +676% | #525 |
@@ -93,22 +98,17 @@ Losses no plan can win, each with its reason (pending-losses.json `structural`).
 | where | metric | vs. | pr-shepherd | baseline | change | reason |
 | --- | --- | --- | --- | --- | --- | --- |
 | `ci-wait` | GraphQL points (GraphQL transport) | GitHub MCP | 6 | 0 | n/a | MCP spends no GraphQL point here and gh no REST request, so any plan's reads lose one of the two cells; pr-shepherd ties gh on REST. |
-| `ci-wait` | REST core requests (REST transport) | gh CLI | 29 | 0 | n/a | On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here. |
-| `ci-wait` | REST core requests (cloud REST transport) | gh CLI | 35 | 0 | n/a | On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here. |
-| `bot-review-summary` | REST core requests (REST transport) | gh CLI | 14 | 0 | n/a | On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here. |
-| `bot-review-summary` | REST core requests (cloud REST transport) | gh CLI | 15 | 0 | n/a | On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here. |
-| `mark-ready` | REST core requests (REST transport) | gh CLI | 15 | 0 | n/a | On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here. |
-| `mark-ready` | REST core requests (cloud REST transport) | gh CLI | 17 | 0 | n/a | On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here. |
+| `ci-wait` | REST core requests (REST transport) | gh CLI | 29 | 0 | n/a | On this step the checks settle, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
+| `ci-wait` | REST core requests (cloud REST transport) | gh CLI | 35 | 0 | n/a | On this step the checks settle, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
+| `bot-review-summary` | REST core requests (REST transport) | gh CLI | 14 | 0 | n/a | On this step a review arrives, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
+| `bot-review-summary` | REST core requests (cloud REST transport) | gh CLI | 15 | 0 | n/a | On this step a review arrives, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
+| `mark-ready` | REST core requests (cloud REST transport) | gh CLI | 17 | 0 | n/a | Cloud REST has no GraphQL, so marking the PR ready is a REST POST (the CCR proxy's ready_for_review route), at least one request, and gh spends none here. |
 | `merged` | GraphQL points (GraphQL transport) | GitHub MCP | 1 | 0 | n/a | MCP spends no GraphQL point here and gh no REST request, so any plan's reads lose one of the two cells; pr-shepherd ties gh on REST. |
-| `merged` | REST core requests (REST transport) | gh CLI | 14 | 0 | n/a | On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here. |
-| `merged` | REST core requests (cloud REST transport) | gh CLI | 15 | 0 | n/a | On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here. |
-| `conflicts` | REST core requests (REST transport) | gh CLI | 14 | 0 | n/a | On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here. |
-| `conflicts` | REST core requests (cloud REST transport) | gh CLI | 15 | 0 | n/a | On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here. |
+| `merged` | REST core requests (REST transport) | gh CLI | 14 | 0 | n/a | On this step the PR merges, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
+| `merged` | REST core requests (cloud REST transport) | gh CLI | 15 | 0 | n/a | On this step the PR merges, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
+| `conflicts` | REST core requests (REST transport) | gh CLI | 14 | 0 | n/a | On this step the base moves, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
+| `conflicts` | REST core requests (cloud REST transport) | gh CLI | 15 | 0 | n/a | On this step the base moves, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here. |
 | `merge` | GraphQL points (GraphQL transport) | GitHub MCP | 3 | 1 | +200% | The read and the merge are at least two requests: with no REST request (gh spends none) that is at least 2 points against MCP's 1, so no plan wins this cell and REST vs. gh together; the REST cell stays pending. |
-| `merge` | REST core requests (REST transport) | gh CLI | 15 | 0 | n/a | On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here. |
-| `merge` | REST core requests (cloud REST transport) | gh CLI | 16 | 0 | n/a | On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here. |
-| `merge-queue` | REST core requests (REST transport) | gh CLI | 15 | 0 | n/a | On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here. |
-| `merge-queue` | REST core requests (cloud REST transport) | gh CLI | 16 | 0 | n/a | On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here. |
 
 ## Typical PR session
 
@@ -334,13 +334,13 @@ An idle hour, while nothing changes:
 
 | arm | GraphQL points | REST core requests | conditional requests (304) | wakes | turns | cost (ITE) |
 | --- | --- | --- | --- | --- | --- | --- |
-| pr-shepherd poll, `--until-terminal` (the skill) | 4 | 0 | 480 | 0 | 0 | 0 |
-| pr-shepherd poll, `--until-terminal`, without detectors, one-page reads (e.g. a thread with a reply) | 60 | 0 | 0 | 0 | 0 | 0 |
+| pr-shepherd poll, `--until-terminal` (the skill), first hour, seed included | 4 | 8 | 472 | 0 | 0 | 0 |
+| pr-shepherd poll, `--until-terminal`, without detectors, not READY, one-page reads (e.g. a thread with a reply) | 60 | 0 | 0 | 0 | 0 | 0 |
 | pr-shepherd poll, legacy bounded `--timeout 4.5m` (not the skill) | 75 | 0 | 0 | 15 | 15 | 51,015 |
 | event | 4 | 0 | 300 | 4 | 8 | 25,516 |
 | event, hosted webhook proxy (hypothetical) | 0 | 0 | 0 | 4 | 8 | 25,516 |
 
-- pr-shepherd's GraphQL poll runs its 8 detectors only on an idle single-PR report whose fingerprint is complete: not READY, not queued, nothing to act on, no check running, a merge status GraphQL itself settled (not one a REST mergeability refresh filled in), no stack, `poll.reconcileSeconds` above 0, at most 20 threads with none holding more than one comment, at most 100 comments and 100 reviews, and complete check-suite and rules pages. Otherwise each poll reads `BatchPr`: 1 point while the PR fits its first page (the row without detectors), more past a first-page window, plus one REST mergeability read a poll while GraphQL leaves the merge status UNKNOWN. Entering an idle wait seeds the detectors once: 8 REST core requests (every detector a 200 on a cold cache, when each resource fits one 100-entry page; another page is another request) beside a 1-point `BatchPr` read. No scenario's change ends a detector-eligible wait (the PR is READY before each one, or `ci-wait` has checks running), so no scenario charges them.
+- pr-shepherd's GraphQL poll runs its 8 detectors only on an idle single-PR report whose fingerprint is complete: not READY, not queued, nothing to act on, no check running, a merge status GraphQL itself settled (not one a REST mergeability refresh filled in), no stack, `poll.reconcileSeconds` above 0, at most 20 threads with none holding more than one comment, at most 100 comments and 100 reviews, and complete check-suite and rules pages. Otherwise each poll reads `BatchPr`: 1 point while the PR fits its first page (the row without detectors), more past a first-page window, plus one REST mergeability read a poll while GraphQL leaves the merge status UNKNOWN or the PR is READY (the row without detectors is a non-READY PR). Entering an idle wait seeds the detectors once: 8 REST core requests (every detector a 200 on a cold cache, when each resource fits one 100-entry page; another page is another request) beside a 1-point `BatchPr` read. No scenario's change ends a detector-eligible wait (the PR is READY before each one, or `ci-wait` has checks running), so no scenario charges them.
 - Wakes: `change` is a detector change, `timer` an elapsed `nextCheck` (here the ready delay), `none` a step the wait handles in process, as the poll does. Each wake costs one more request than the poll arm, which reads the background start's acknowledgement.
 - Detectors: 5 conditional REST reads per PR every 60s (`pulls/{n}`, `commits/{head}/check-runs`, `pulls/{n}/reviews`, `issues/{n}/comments`, `pulls/{n}/comments`). A 304 costs no primary rate limit, only latency; a 200 is one REST core request. A change wakes the agent with one full snapshot, at the poll arm's GraphQL tick cost with no fingerprint miss.
 - Reconcile: a full snapshot 15 minutes after the last one, which wakes the agent. No modeled wait is that long, so the sessions have none; the idle hour has 4.

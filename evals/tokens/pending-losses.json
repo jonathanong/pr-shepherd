@@ -55,6 +55,8 @@
     { "where": "merge", "metric": "restCore", "transport": "rest", "baseline": "mcp", "issue": 525 },
     { "where": "merge", "metric": "graphqlPoints", "transport": "cloud", "baseline": "mcp", "issue": 525 },
     { "where": "merge", "metric": "restCore", "transport": "cloud", "baseline": "mcp", "issue": 525 },
+    { "where": "merge", "metric": "restCore", "transport": "rest", "baseline": "gh", "issue": 525 },
+    { "where": "merge", "metric": "restCore", "transport": "cloud", "baseline": "gh", "issue": 525 },
     { "where": "stack-work", "metric": "graphqlPoints", "transport": "graphql", "baseline": "mcp", "issue": 525 },
     { "where": "stack-work", "metric": "restCore", "transport": "rest", "baseline": "gh", "issue": 525 },
     { "where": "stack-work", "metric": "restCore", "transport": "rest", "baseline": "mcp", "issue": 525 },
@@ -65,25 +67,23 @@
     { "where": "stack-merge", "metric": "restCore", "transport": "rest", "baseline": "gh", "issue": 525 },
     { "where": "stack-merge", "metric": "restCore", "transport": "cloud", "baseline": "gh", "issue": 525 },
     { "where": "mark-ready", "metric": "restCore", "transport": "graphql", "baseline": "gh", "issue": 525 },
-    { "where": "merge-queue", "metric": "restCore", "transport": "graphql", "baseline": "gh", "issue": 525 }
+    { "where": "mark-ready", "metric": "restCore", "transport": "rest", "baseline": "gh", "issue": 525 },
+    { "where": "merge-queue", "metric": "restCore", "transport": "graphql", "baseline": "gh", "issue": 525 },
+    { "where": "merge-queue", "metric": "restCore", "transport": "rest", "baseline": "gh", "issue": 525 },
+    { "where": "merge-queue", "metric": "restCore", "transport": "cloud", "baseline": "gh", "issue": 525 }
   ],
   "structural": [
     { "where": "ci-wait", "metric": "graphqlPoints", "transport": "graphql", "baseline": "mcp", "reason": "MCP spends no GraphQL point here and gh no REST request, so any plan's reads lose one of the two cells; pr-shepherd ties gh on REST." },
     { "where": "merged", "metric": "graphqlPoints", "transport": "graphql", "baseline": "mcp", "reason": "MCP spends no GraphQL point here and gh no REST request, so any plan's reads lose one of the two cells; pr-shepherd ties gh on REST." },
     { "where": "merge", "metric": "graphqlPoints", "transport": "graphql", "baseline": "mcp", "reason": "The read and the merge are at least two requests: with no REST request (gh spends none) that is at least 2 points against MCP's 1, so no plan wins this cell and REST vs. gh together; the REST cell stays pending." },
-    { "where": "ci-wait", "metric": "restCore", "transport": "rest", "baseline": "gh", "reason": "On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here." },
-    { "where": "ci-wait", "metric": "restCore", "transport": "cloud", "baseline": "gh", "reason": "On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here." },
-    { "where": "bot-review-summary", "metric": "restCore", "transport": "rest", "baseline": "gh", "reason": "On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here." },
-    { "where": "bot-review-summary", "metric": "restCore", "transport": "cloud", "baseline": "gh", "reason": "On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here." },
-    { "where": "mark-ready", "metric": "restCore", "transport": "rest", "baseline": "gh", "reason": "On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here." },
-    { "where": "mark-ready", "metric": "restCore", "transport": "cloud", "baseline": "gh", "reason": "On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here." },
-    { "where": "merged", "metric": "restCore", "transport": "rest", "baseline": "gh", "reason": "On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here." },
-    { "where": "merged", "metric": "restCore", "transport": "cloud", "baseline": "gh", "reason": "On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here." },
-    { "where": "conflicts", "metric": "restCore", "transport": "rest", "baseline": "gh", "reason": "On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here." },
-    { "where": "conflicts", "metric": "restCore", "transport": "cloud", "baseline": "gh", "reason": "On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here." },
-    { "where": "merge", "metric": "restCore", "transport": "rest", "baseline": "gh", "reason": "On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here." },
-    { "where": "merge", "metric": "restCore", "transport": "cloud", "baseline": "gh", "reason": "On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here." },
-    { "where": "merge-queue", "metric": "restCore", "transport": "rest", "baseline": "gh", "reason": "On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here." },
-    { "where": "merge-queue", "metric": "restCore", "transport": "cloud", "baseline": "gh", "reason": "On the REST transport pr-shepherd reads the PR over REST, at least one request, and gh spends none here." }
+    { "where": "ci-wait", "metric": "restCore", "transport": "rest", "baseline": "gh", "reason": "On this step the checks settle, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here." },
+    { "where": "ci-wait", "metric": "restCore", "transport": "cloud", "baseline": "gh", "reason": "On this step the checks settle, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here." },
+    { "where": "bot-review-summary", "metric": "restCore", "transport": "rest", "baseline": "gh", "reason": "On this step a review arrives, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here." },
+    { "where": "bot-review-summary", "metric": "restCore", "transport": "cloud", "baseline": "gh", "reason": "On this step a review arrives, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here." },
+    { "where": "mark-ready", "metric": "restCore", "transport": "cloud", "baseline": "gh", "reason": "Cloud REST has no GraphQL, so marking the PR ready is a REST POST (the CCR proxy's ready_for_review route), at least one request, and gh spends none here." },
+    { "where": "merged", "metric": "restCore", "transport": "rest", "baseline": "gh", "reason": "On this step the PR merges, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here." },
+    { "where": "merged", "metric": "restCore", "transport": "cloud", "baseline": "gh", "reason": "On this step the PR merges, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here." },
+    { "where": "conflicts", "metric": "restCore", "transport": "rest", "baseline": "gh", "reason": "On this step the base moves, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here." },
+    { "where": "conflicts", "metric": "restCore", "transport": "cloud", "baseline": "gh", "reason": "On this step the base moves, so a REST read that sees it is at least one 200 (only an unchanged resource answers a free 304), and gh spends no REST request here." }
   ]
 }

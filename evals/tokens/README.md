@@ -242,12 +242,12 @@ are as good as these assumptions:
     when each resource fits one 100-entry page, more when one does not). Any
     other wait reads `BatchPr` every poll: 1 point while the PR fits its
     first page, more past a first-page window, plus one REST mergeability
-    read a poll while GraphQL leaves the merge status UNKNOWN. No modeled
-    change ends a detector-eligible wait: before each review, thread, base
-    push or merge
-    the PR is green and READY, which the detectors skip, and `ci-wait` has
-    checks running. So every change tick is a plain `BatchPr` read, and the
-    detectors appear only in the idle hour;
+    read a poll while GraphQL leaves the merge status UNKNOWN or the PR is
+    READY. No modeled change ends a detector-eligible wait: before each
+    review, thread, base push or merge the PR is green and READY, which the
+    detectors skip, and `ci-wait` has checks running. So every change tick is
+    a plain `BatchPr` read, and the detectors, seed included, appear only in
+    the idle hour;
   - a stack summary page is `max(1, round(0.36 × layers))`. The anchor's first
     tick reads a 4-entry page (1 point), then one page for any remaining
     layers; later ticks size the summary from the stack size the first one
@@ -439,8 +439,10 @@ by how far they move the result.
   itself (`apply review`, merges, log reads) cost what they cost in the poll
   arm.
 - **Idle hour (assumed).** The report also prices an hour where nothing
-  changes: the poll arm's blocking `--until-terminal` call (4 reconcile
-  points and 480 conditional detector reads that all answer 304, no turn,
+  changes: the poll arm's blocking `--until-terminal` call (the first hour of
+  the wait, seed included: 4 reconcile points, the first of them the entering
+  read; 8 seed requests, each detector's cold 200; and 472 later detector
+  reads that all answer 304; no turn,
   assuming no check is running, for example a requested bot review; a wait on
   running CI still spends a fingerprint point per poll), which is what the skill runs and the comparison that
   counts; the legacy bounded CLI mode, a `--timeout 4.5m` poll called again
