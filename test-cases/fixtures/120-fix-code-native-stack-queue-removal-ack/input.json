@@ -1,4 +1,9 @@
 {
+  "restDivergence": {
+    "action": "wait",
+    "exitCode": 10,
+    "why": "REST cannot read merge-queue removal history, so the removed merge-group failure is invisible and the head looks READY; 133/134 cover REST with carried-over removal evidence."
+  },
   "description": "A native-stack layer was ejected for unrelated CI. Emit an exact head/queue-commit/removal-time acknowledgment command, never a direct enqueue or merge. After acknowledgment the one-PR session revalidates source readiness, and the aggregate selector still checks the complete lower prefix. The aggregate child session omits --merge and still gets local acknowledgment.",
   "args": [],
   "batchData": {

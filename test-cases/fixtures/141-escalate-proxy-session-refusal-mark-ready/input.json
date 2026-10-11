@@ -1,6 +1,6 @@
 {
   "description": "Claude Code cloud session (CLAUDE_CODE_REMOTE=true) on REST: the draft PR is clean and ready, so Shepherd attempts the CCR ready_for_review mutation. The proxy refuses with a session-access message (not a GitHub permission denial). markReadyIfAuthorized escalates with transport-unsupported and quotes the proxy message verbatim, instead of authorization-required.",
-  "args": ["--transport", "rest"],
+  "transports": ["rest"],
   "claudeCodeRemote": true,
   "restErrorResponses": {
     "/repos/owner/repo/pulls/42/ccr/ready_for_review": {

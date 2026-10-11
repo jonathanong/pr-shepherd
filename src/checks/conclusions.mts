@@ -12,10 +12,18 @@ const RERUN_CAPABLE_PERMISSIONS = new Set<NonNullable<ViewerAuthorization["repos
  * (`actions: write`, which rides with push access). The rerun runs against the base
  * repo where the run lives, so `repositoryPermission` — not `headRepositoryPermission`,
  * which covers fork push access — is the right field to gate on.
+ *
+ * REST exposes no viewer capability fields, so on a REST snapshot an unknown role does not deny
+ * the rerun: the recommended `gh run rerun` is attempted and GitHub's response decides. A role
+ * GitHub did report still gates the rerun.
  */
-export function canRerunWorkflows(auth: ViewerAuthorization | undefined): boolean {
+export function canRerunWorkflows(
+  auth: ViewerAuthorization | undefined,
+  transport?: "rest",
+): boolean {
   const permission = auth?.repositoryPermission;
-  return permission != null && RERUN_CAPABLE_PERMISSIONS.has(permission);
+  if (permission === undefined) return transport === "rest";
+  return permission !== null && RERUN_CAPABLE_PERMISSIONS.has(permission);
 }
 
 /** True for conclusions that belong under `## Failing checks` (not success/skipped/neutral). */

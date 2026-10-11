@@ -301,7 +301,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const threads = report.threads.actionable.map(toAgentThread);
   const resolutionOnlyThreads = report.threads.resolutionOnly;
   const actionableComments = report.comments.actionable.map(toAgentComment);
-  const rerunAuthorized = canRerunWorkflows(report.viewerAuthorization);
+  const rerunAuthorized = canRerunWorkflows(report.viewerAuthorization, report.transport);
   // A workflow run can only be rerun once it has fully completed; a runId still present among
   // in-progress checks (a sibling job from the same run) is not yet eligible.
   const inProgressWorkflowRunIds = new Set(
@@ -555,8 +555,13 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     instructions.unshift(...repairInstructions);
   }
   if (mergedBasePullRequests.length > 0) {
+    // `gh pr edit` goes through GraphQL; REST callers retarget with the pulls PATCH endpoint.
+    const retarget =
+      report.transport === "rest"
+        ? `gh api --method PATCH repos/${report.repo}/pulls/${prNumber} -f base=<verified-parent-base>`
+        : `gh pr edit ${prReference} --base <verified-parent-base>`;
     instructions.unshift(
-      `Inspect every PR under \`## Merged PRs matching the current base\`. If this PR is the remaining layer intended for a merged parent's base branch, run \`gh pr edit ${prReference} --base <verified-parent-base>\` after replacing \`<verified-parent-base>\` with that parent's shell-quoted base branch, then rerun Shepherd immediately and follow its fresh instructions instead of the remaining steps here. Otherwise keep the current base and follow the remaining conflict-resolution steps.`,
+      `Inspect every PR under \`## Merged PRs matching the current base\`. If this PR is the remaining layer intended for a merged parent's base branch, run \`${retarget}\` after replacing \`<verified-parent-base>\` with that parent's shell-quoted base branch, then rerun Shepherd immediately and follow its fresh instructions instead of the remaining steps here. Otherwise keep the current base and follow the remaining conflict-resolution steps.`,
     );
   }
   const checkRunCount = countReportedChecks(report.checks);

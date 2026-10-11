@@ -1,4 +1,10 @@
 {
+  "restDivergence": {
+    "exitCode": 0,
+    "reason": "all_terminal",
+    "nextAction": "cancel",
+    "why": "REST cannot see merge-queue membership, so the queued READY layers look terminal and the stack selector cancels instead of waiting on the queue."
+  },
   "mode": "aggregate",
   "description": "Without --merge, a queued stack remains non-terminal until every layer merges or GitHub ejects one; aggregate reprojects queued CANCEL rows as WAIT.",
   "args": [

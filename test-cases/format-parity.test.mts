@@ -18,6 +18,7 @@ import {
   listFixtureNames,
   loadFixture,
   applyFixture,
+  fixtureTransports,
   captureRun,
   captureTwoTickStallRun,
 } from "../test-helpers/test-cases/harness.mts";
@@ -34,12 +35,15 @@ const usedAllowlistPaths = new Set<string>();
 const usedConditionalPaths = new Set<string>();
 
 describe("text/json output parity", () => {
-  for (const name of listFixtureNames()) {
-    it(`${name}: every JSON leaf appears in text, or is in TEXT_LOSSY_PATHS`, async () => {
+  const cases = listFixtureNames().flatMap((name) =>
+    fixtureTransports(loadFixture(name)).map((transport) => ({ name, transport })),
+  );
+  for (const { name, transport } of cases) {
+    it(`${name} (${transport}): every JSON leaf appears in text, or is in TEXT_LOSSY_PATHS`, async () => {
       const fixture = loadFixture(name);
-      applyFixture(fixture);
+      applyFixture(fixture, transport);
       const run = fixture.stallMode === "two-tick" ? captureTwoTickStallRun : captureRun;
-      const result = await run(fixture);
+      const result = await run(fixture, transport);
       const json = JSON.parse(result.jsonOut);
       const text = normalizeText(result.textOut);
 

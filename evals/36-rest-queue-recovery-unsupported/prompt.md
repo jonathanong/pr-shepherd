@@ -28,7 +28,15 @@ Take it from there.
 # PR #42 [FIX_CODE]
 
 **status** `FAILING` · **repo** `owner/repo`
-Merge queue: No [Required]
+**transport** `rest`
+
+## Unavailable transport fields
+
+- `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
+- `viewerAuthorization`: REST does not expose viewer capability fields
+- `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
+- `mergeQueue`: REST does not expose queue membership, entry or removal history
+Merge queue: Unknown [Required]
 **merge queue** enabled `true` · inQueue `false` · checkCommit `queue-commit-1`
 **queue removal** reason `failed_checks` · createdAtUnix `1715799000` · actor `@github-actions` · commit `queue-commit-1` · parents `abc123`
 
@@ -44,4 +52,5 @@ Merge queue: No [Required]
 3. Triage `## Failing checks`. Playbook: "CI failure triage".
 4. Triage the merge-queue ejection before any requeue. If the `**queue removal**` reason shows GitHub removed the entry itself, update the PR head from the latest base first. If a person may have dequeued the PR, skip that update unless a conflict step above requires it. Shepherd printed no queue command for this session, so do not enqueue the PR. Playbook: "Merge queue ejection".
 5. If the base update or a fix changed the head, commit any remaining changes and push to the PR head branch. If neither did, do not push.
-6. `[FIX_CODE]` is non-terminal. Rerun the same command now.
+6. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
+7. `[FIX_CODE]` is non-terminal. Rerun the same command now.

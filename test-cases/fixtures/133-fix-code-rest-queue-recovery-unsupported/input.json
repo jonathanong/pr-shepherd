@@ -1,10 +1,8 @@
 {
   "description": "Previously fetched GraphQL removal evidence survives a switch to REST. Keep the failed merge-group check and explicit transport-unsupported reason in both formats, without a same-head requeue command that would resume an old enqueue result.",
-  "args": [
-    "--merge",
-    "--transport",
-    "rest"
-  ],
+  "transports": ["rest"],
+  "restCarryOver": ["latestMergeQueueRemoval", "removedMergeQueueChecks", "isMergeQueueEnabled"],
+  "args": ["--merge"],
   "batchData": {
     "latestMergeQueueRemoval": {
       "reason": "failed_checks",

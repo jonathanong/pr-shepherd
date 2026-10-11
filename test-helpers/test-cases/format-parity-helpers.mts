@@ -18,6 +18,7 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
     "mergeStatus",
     "the raw enum discriminator is JSON-only; text instead renders the derived `**branch** behind/conflicts with PR base` phrasing or the `**reviewDecision**`/BLOCKED header segment (docs/actions.md, 'Note on mergeStatus in JSON lean mode')",
   ],
+  ["mergeRequirements.approvals.current", "rendered as `None` when 0, not the digit"],
   [
     "mergeRequirements.approvals.requiredCount",
     "rendered as `Not Required`/omitted when 0, not the digit",
@@ -58,6 +59,10 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
   ["fix.firstLookThreads[].createdAtUnix", "same"],
   ["fix.firstLookThreads[].comments[].createdAtUnix", "same, for transcript replies"],
   [
+    "fix.resolutionOnlyThreads[].comments[].createdAtUnix",
+    "same, for transcript replies (the REST reader always returns the full transcript)",
+  ],
+  [
     "escalate.stalledChecks[].createdAtUnix",
     "rendered as a relative 'waiting N minutes' duration, not a raw timestamp",
   ],
@@ -73,6 +78,10 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
   [
     "escalate.unresolvedThreads[].url",
     "the escalate 'Items needing attention' bullet omits the thread URL (id + location + author + body only)",
+  ],
+  [
+    "escalate.unresolvedThreads[].comments[].url",
+    "same, for transcript replies (the REST reader always returns the full transcript)",
   ],
   [
     "escalate.authorization[].reason",

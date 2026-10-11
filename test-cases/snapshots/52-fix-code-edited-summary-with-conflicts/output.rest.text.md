@@ -1,0 +1,26 @@
+# PR #42 [FIX_CODE]
+
+**status** `FAILING` · **merge** `DIRTY` · **repo** `owner/repo`
+**branch** conflicts with PR base `main`
+**transport** `rest`
+
+## Unavailable transport fields
+
+- `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
+- `viewerAuthorization`: REST does not expose viewer capability fields
+- `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
+- `mergeQueue`: REST does not expose queue membership, entry or removal history
+
+## Review summaries (edited since first look — already minimized; do not re-minimize)
+
+### `reviewId=PRR_edit_conflict` (@reviewer · User)
+
+> Re-reviewed after the rebase: the conflict resolution looks mostly right, one nit left.
+
+## Instructions
+
+1. The branch has merge conflicts (see `**branch**` above). Resolve them before committing.
+2. Read every item marked `[edited since first look]`, including edited summaries and edited first-look bullets, before deciding whether to resolve a matching thread.
+3. Commit any remaining conflict-resolution changes and push to the PR head branch.
+4. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
+5. `[FIX_CODE]` is non-terminal. Rerun the same command now.

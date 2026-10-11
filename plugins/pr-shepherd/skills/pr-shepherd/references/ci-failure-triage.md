@@ -3,7 +3,7 @@
 Apply when a step says `Playbook: "CI failure triage"`. Use the excerpts and tags already printed; fetch a job log only under the gate-job rule below. An `external` check with a URL may be opened or reproduced.
 
 - A specific `[conclusion: …]` tag wins over the general GitHub Actions rule.
-- `[rerun authorized]` with a `rerun:` command means Shepherd verified Actions rerun access (WRITE+) and an original attempt. Run it at most once, even when matrix bullets share its run id. An `[attempt: N]` check never gets another rerun; its excerpt is still investigation work, and without usable evidence it escalates when nothing else remains.
+- `[rerun authorized]` with a `rerun:` command means Shepherd verified Actions rerun access (WRITE+) and an original attempt. On the REST transport the role is unknown, so GitHub's response to the rerun decides. Run it at most once, even when matrix bullets share its run id. An `[attempt: N]` check never gets another rerun; its excerpt is still investigation work, and without usable evidence it escalates when nothing else remains.
 - In-progress runs, `ACTION_REQUIRED`, non-Actions run ids, and runs without attempt metadata never get `[rerun authorized]`.
 - `scope: merge_group` never gets a rerun: it cannot restore the queue entry and overwrites the evidence. Fix the PR head if the failure is this PR's. Otherwise apply the Merge queue ejection playbook a printed ejection step names; with no ejection step the entry is still queued, so make no queue mutation and iterate until GitHub reports the removal.
 - Do not invent a handoff from `[FIX_CODE]`. Shepherd escalates when nothing autonomous remains.

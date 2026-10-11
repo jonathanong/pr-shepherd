@@ -1,4 +1,9 @@
 {
+  "restDivergence": {
+    "action": "wait",
+    "exitCode": 10,
+    "why": "REST cannot read merge-queue removal history, so the removed merge-group failure is invisible and the head looks READY; 133/134 cover REST with carried-over removal evidence."
+  },
   "description": "A required first-attempt merge-group Actions check failed and GitHub removed the queue entry. The viewer has rerun capability, but rerunning cannot restore the entry and would overwrite its failure evidence. Preserve the queue commit and log excerpt in both formats without rerun authorization or a rerun command.",
   "args": [
     "--merge"

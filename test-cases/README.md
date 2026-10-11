@@ -19,7 +19,56 @@ adding a fixture.
 test-cases/fixtures/<NN>-<action>-<scenario>/input.json     # the Fixture object
 test-cases/snapshots/<NN>-<action>-<scenario>/output.text.md # generated
 test-cases/snapshots/<NN>-<action>-<scenario>/output.json    # generated
+test-cases/snapshots/<NN>-<action>-<scenario>/output.rest.text.md # generated, only when REST differs
+test-cases/snapshots/<NN>-<action>-<scenario>/output.rest.json    # generated, only when REST differs
 ```
+
+## Transport variants
+
+Every fixture runs twice: once on GraphQL and once on REST (`--transport rest` with
+`CLAUDE_CODE_REMOTE=true`, the Claude Code cloud session that supplies complete CCR thread status).
+That environment also selects event poll mode, so the REST variant pins `--poll-mode poll` unless the
+fixture passes its own `--poll-mode`. It keeps the cloud session's durable state, so generated reply
+commands carry `--adopt-existing-replies`. Merged and closed CANCEL output is minimal on both
+transports and carries no transport evidence.
+The REST input is derived automatically from the GraphQL fixture by
+[`test-helpers/test-cases/rest-projection.mts`](../test-helpers/test-cases/rest-projection.mts):
+the batch keeps only the keys the production REST reader emits, so `reviewDecision` is `null`,
+viewer capabilities are unknown, queue membership and removal history are absent, and threads always
+carry their full transcript. Branch policy stays readable and equal to the GraphQL policy. REST reads
+go through mocked `fetch` routes
+([`rest-routes.mts`](../test-helpers/test-cases/rest-routes.mts)); an unrouted REST request or any
+GraphQL request during a REST run fails the test. `rest-projection.test.mts` runs the real REST
+reader with every field populated and pins the projection allowlists to its output, so a reader change
+cannot silently skew the REST variants.
+
+The REST test first asserts that the output carries the canonical transport evidence (the
+`**transport** \`rest\`` line and `## Unavailable transport fields` in text, per-row `transport` and
+`unavailable` lines in aggregate text, `transport`/`transportUnavailable` in JSON). It then strips that
+evidence and compares the rest with the GraphQL output:
+
+- If the two are equal, no `output.rest.*` file may exist (a leftover one fails the test).
+- Otherwise the raw REST output is snapshotted to `output.rest.text.md` / `output.rest.json`. Most
+  differences are follow-up commands carrying `--transport rest`, REST merge/mark-ready/stack routes,
+  and fields REST cannot read. Review these snapshots by eye like any other.
+
+The action and exit code must match GraphQL unless the fixture declares `restDivergence`
+(`action`, `exitCode`, and for aggregate fixtures `reason`/`nextAction`, plus a mandatory `why`). The
+test fails if a declared divergence no longer diverges. Other fixture fields:
+
+- `transports: ["rest"]` runs only the REST variant (fixtures `133`–`135`, `140`, `141` and `143`,
+  whose scenario exists only on REST); such a fixture has only `output.rest.*` snapshots. Use it
+  instead of `args: ["--transport", "rest"]`, which would skip the REST batch projection.
+- `restErrorResponses` (path → `{ status, body }`) makes a REST route answer with an error, e.g. a
+  refused CCR mutation; `claudeCodeRemote` sets `CLAUDE_CODE_REMOTE=true` on a GraphQL run (the REST
+  variant always sets it).
+- `restCarryOver` lists GraphQL-only batch keys to keep in the REST projection, modeling evidence
+  fetched by an earlier GraphQL tick that survives a switch to REST.
+
+Aggregate fixtures model summary rows directly, so their REST projection strips only raw GraphQL-only
+fields (`reviewDecision`, `isInMergeQueue`, `queueRemoval`); a row's precomputed `action` and
+`reasons` are kept as written. `test-cases/format-parity.test.mts` and
+`src/skill-playbook-pointers.test.mts` cover both variants.
 
 `<action>` must be one of `cancel`, `wait`, `fix-code`, `mark-ready`,
 `escalate`, `merge` (hyphenated) and must match what iterate actually emits —
@@ -121,10 +170,13 @@ There is no generator. The procedure:
    [`docs/exit-codes.md`](../docs/exit-codes.md) and the decision table in
    [`docs/iterate-flow.md`](../docs/iterate-flow.md) — don't just paste
    whatever the first run produces).
-2. Run `npx vitest run test-cases`. `toMatchFileSnapshot` **writes** the two
+2. Run `npx vitest run test-cases`. `toMatchFileSnapshot` **writes** the
    missing snapshot files silently on a local run — it does not fail. **Read
-   both generated files by eye before committing.** A wrong snapshot is a
-   passing test until someone reads it.
+   every generated file by eye before committing**, including any
+   `output.rest.*` pair. A wrong snapshot is a passing test until someone reads
+   it. If the REST action legitimately differs, add `restDivergence` with its
+   reason (see "Transport variants"). Vitest also writes a snapshot when the
+   test fails, so delete stale `output.rest.*` files before regenerating.
 3. If the fixture's Markdown output uses a `Playbook: "<name>".` pointer,
    `<name>` must match a `###` heading in
    [`plugins/pr-shepherd/skills/pr-shepherd/SKILL.md`](../plugins/pr-shepherd/skills/pr-shepherd/SKILL.md)
@@ -135,7 +187,7 @@ There is no generator. The procedure:
    or [`docs/escalations.md`](../docs/escalations.md) doesn't describe, that's
    a documentation bug to fix in the same change — not a snapshot to bless
    (see the repo `AGENTS.md`, "Documentation").
-5. Commit `input.json` and both generated snapshot files together.
+5. Commit `input.json` and all generated snapshot files together.
 
 In CI, `vitest` fails on a missing or stale snapshot instead of writing it
 (`process.env.CI`, set automatically by GitHub Actions) — so a fixture with no
@@ -153,7 +205,7 @@ one-look display, and cloud CCR mark-ready. These scenarios also assert that
 REST ticks do not issue GraphQL requests. `rest-transport.quota-scenario.test.mts` verifies that an automatic poll reaches REST READY evidence after GraphQL exhaustion, both with quota headers and with a confirming REST quota probe, and retains that fallback for subsequent polls. A fallback with unknown-status feedback shows the review once and refuses READY until complete evidence is available. Keep the contract aligned with transport fallback, unknown
 capabilities, pagination, partial-write denial, REST-to-GraphQL switching,
 async stack resume, and equivalent text/JSON/MCP projections as those
-integration cases are added. Fixtures `133` and `134` carry earlier GraphQL queue-removal evidence into REST mode and verify that failed checks remain visible, text and JSON explain unsupported recovery, and no stale same-head requeue or unvalidatable stack acknowledgment command is printed.
+integration cases are added. REST-only fixtures `133` and `134` carry earlier GraphQL queue-removal evidence into REST mode and verify that failed checks remain visible, text and JSON explain unsupported recovery, and no stale same-head requeue or unvalidatable stack acknowledgment command is printed.
 
 `rest-transport.journal-scenario.test.mts` drives ordered library and MCP journal operations through real local HTTP. The GraphQL body read succeeds, its write exhausts quota, and REST completes the write using the read's PR identity. Header-based and probe-confirmed exhaustion are covered. A repeated journal entry causes no duplicate write, subsequent reads retain REST fallback, and MCP structured and Markdown results describe the same operations.
 

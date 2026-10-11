@@ -76,6 +76,17 @@ describe("runIterate merged base context", () => {
     expect(text).toContain(`1. ${lean.fix.instructions[0]}`);
   });
 
+  it("retargets through the REST pulls endpoint on the REST transport", async () => {
+    lookup.mockResolvedValue([parent]);
+    mockRunCheck.mockResolvedValue({ ...conflictReport(), transport: "rest" });
+    const result = await runIterate(makeOpts());
+    if (result.action !== "fix_code") throw new Error("expected fix_code");
+    expect(result.fix.instructions[0]).toContain(
+      "gh api --method PATCH repos/owner/repo/pulls/42 -f base=<verified-parent-base>",
+    );
+    expect(result.fix.instructions.join("\n")).not.toContain("gh pr edit");
+  });
+
   it("skips the lookup outside non-stack conflicts with an exact base OID", async () => {
     lookup.mockClear();
     const report = conflictReport();

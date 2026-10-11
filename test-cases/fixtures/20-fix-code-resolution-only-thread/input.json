@@ -1,4 +1,9 @@
 {
+  "restDivergence": {
+    "action": "wait",
+    "exitCode": 10,
+    "why": "REST exposes no thread minimization state, so the minimized thread is an ordinary already-seen unresolved thread and stays suppressed (as in 78) instead of being queued for resolution."
+  },
   "batchData": {
     "reviewThreads": [
       {

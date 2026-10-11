@@ -1,4 +1,9 @@
 {
+  "restDivergence": {
+    "action": "escalate",
+    "exitCode": 13,
+    "why": "REST exposes no aggregate reviewDecision, so a non-CLEAN merge state cannot prove READY; the PR is UNKNOWN and escalates transport-unsupported instead of completing its ready-delay."
+  },
   "batchData": {
     "mergeStateStatus": "BLOCKED",
     "reviewDecision": "REVIEW_REQUIRED",

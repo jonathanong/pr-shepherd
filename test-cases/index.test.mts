@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 
 import {
   registerHarnessBefore,
@@ -9,7 +10,20 @@ import {
   applyFixture,
   captureRun,
   captureTwoTickStallRun,
+  fixtureTransports,
+  type Fixture,
+  type FixtureTransport,
 } from "../test-helpers/test-cases/harness.mts";
+import {
+  CANONICAL_REST_ITEM_BLOCK,
+  CANONICAL_REST_TEXT_BLOCK,
+  collectRestJsonEvidence,
+  hasRestSnapshot,
+  restSnapshotPaths,
+  stripRestJsonEvidence,
+  stripRestTextEvidence,
+} from "../test-helpers/test-cases/rest-variant.mts";
+import { REST_BATCH_UNAVAILABLE } from "../src/github/rest-batch-unavailable.mts";
 
 registerHarnessBefore();
 
@@ -40,44 +54,141 @@ function actionFromFixtureName(name: string): string {
   return match[1];
 }
 
+interface RunResult {
+  textOut: string;
+  jsonOut: string;
+  exitCode: number;
+  jsonExitCode: number;
+}
+
+interface Outcome {
+  exitCode: number;
+  action?: string;
+  reason?: string;
+  nextAction?: string;
+}
+
+async function runVariant(fixture: Fixture, transport: FixtureTransport): Promise<RunResult> {
+  applyFixture(fixture, transport);
+  const run = fixture.stallMode === "two-tick" ? captureTwoTickStallRun : captureRun;
+  const result = await run(fixture, transport);
+  expect(result.textOut, "text output must not be empty").toBeTruthy();
+  expect(result.jsonOut, "json output must not be empty").toBeTruthy();
+  expect(result.jsonExitCode, "text and json exit codes must agree").toBe(result.exitCode);
+  return result;
+}
+
+/** What the fixture's directory name and expectations promise (the GraphQL outcome). */
+function expectedOutcome(name: string, fixture: Fixture): Outcome {
+  if (fixture.mode === "aggregate") {
+    return {
+      exitCode: fixture.expectedExitCode,
+      reason: fixture.expectedReason,
+      ...(fixture.expectedNextAction !== undefined && { nextAction: fixture.expectedNextAction }),
+    };
+  }
+  return { exitCode: fixture.expectedExitCode, action: actionFromFixtureName(name) };
+}
+
+function assertOutcome(fixture: Fixture, result: RunResult, expected: Outcome): void {
+  expect(result.exitCode, "exit code must match docs/exit-codes.md").toBe(expected.exitCode);
+  const json = JSON.parse(result.jsonOut) as Record<string, unknown>;
+  if (fixture.mode === "aggregate") {
+    expect(json.mode).toBe("summary");
+    expect(json.reason).toBe(expected.reason);
+    if (expected.nextAction !== undefined) expect(json.nextAction).toBe(expected.nextAction);
+  } else {
+    expect(json.action, `fixture name must match the emitted action`).toBe(expected.action);
+  }
+}
+
+/** Merged/closed CANCEL prints only the action, PR and reason (no transport evidence). */
+function isMinimalTerminalCancel(json: unknown): boolean {
+  const { action, reason } = json as { action?: string; reason?: string };
+  return action === "cancel" && (reason === "merged" || reason === "closed");
+}
+
+/** GraphQL results captured this run, reused by the REST comparison in the same file. */
+const graphqlResults = new Map<string, RunResult>();
+
 for (const name of listFixtureNames()) {
+  const fixture = loadFixture(name);
+  const transports = fixtureTransports(fixture);
+  const snapshotDir = join(fixturesDir, "snapshots", name);
+
   describe(name, () => {
-    it("snapshots match", async () => {
-      const fixture = loadFixture(name);
-      applyFixture(fixture);
-      const run = fixture.stallMode === "two-tick" ? captureTwoTickStallRun : captureRun;
-      const result = await run(fixture);
+    if (transports.includes("graphql")) {
+      it("snapshots match", async () => {
+        const result = await runVariant(fixture, "graphql");
+        graphqlResults.set(name, result);
+        assertOutcome(fixture, result, expectedOutcome(name, fixture));
+        await expect(result.textOut).toMatchFileSnapshot(join(snapshotDir, "output.text.md"));
+        await expect(result.jsonOut).toMatchFileSnapshot(join(snapshotDir, "output.json"));
+      });
+    }
 
-      expect(result.textOut, "text output must not be empty").toBeTruthy();
-      expect(result.jsonOut, "json output must not be empty").toBeTruthy();
-      expect(result.jsonExitCode, "text and json exit codes must agree").toBe(result.exitCode);
-      expect(result.exitCode, "exit code must match docs/exit-codes.md").toBe(
-        fixture.expectedExitCode,
-      );
-      const json = JSON.parse(result.jsonOut) as {
-        action?: string;
-        mode?: string;
-        reason?: string;
-        nextAction?: string;
-      };
-      if (fixture.mode === "aggregate") {
-        expect(json.mode).toBe("summary");
-        expect(json.reason).toBe(fixture.expectedReason);
-        if (fixture.expectedNextAction !== undefined) {
-          expect(json.nextAction).toBe(fixture.expectedNextAction);
+    if (transports.includes("rest")) {
+      it("REST variant matches GraphQL or its REST snapshot", async () => {
+        const result = await runVariant(fixture, "rest");
+
+        // The transport evidence block is the same canonical block on every REST output, except
+        // the minimal merged/closed CANCEL, which prints no report data at all.
+        const json = JSON.parse(result.jsonOut) as unknown;
+        const evidence = collectRestJsonEvidence(json);
+        const terminal = isMinimalTerminalCancel(json);
+        expect(evidence.length > 0, "REST JSON must carry transport evidence").toBe(!terminal);
+        for (const entry of evidence) {
+          expect(entry).toEqual({
+            transport: "rest",
+            transportUnavailable: [...REST_BATCH_UNAVAILABLE],
+          });
         }
-      } else {
-        expect(json.action, `fixture name must match the emitted action`).toBe(
-          actionFromFixtureName(name),
-        );
-      }
+        expect(
+          result.textOut.includes(
+            fixture.mode === "aggregate" ? CANONICAL_REST_ITEM_BLOCK : CANONICAL_REST_TEXT_BLOCK,
+          ),
+          "REST text must carry the canonical transport block",
+        ).toBe(!terminal);
 
-      await expect(result.textOut).toMatchFileSnapshot(
-        join(fixturesDir, "snapshots", name, "output.text.md"),
-      );
-      await expect(result.jsonOut).toMatchFileSnapshot(
-        join(fixturesDir, "snapshots", name, "output.json"),
-      );
-    });
+        const paths = restSnapshotPaths(snapshotDir);
+        let sameAsGraphql = false;
+        if (transports.includes("graphql")) {
+          const graphql = graphqlResults.get(name) ?? (await runVariant(fixture, "graphql"));
+          const sameText = stripRestTextEvidence(result.textOut) === graphql.textOut;
+          const sameJson = isDeepStrictEqual(
+            stripRestJsonEvidence(json),
+            JSON.parse(graphql.jsonOut),
+          );
+          sameAsGraphql = sameText && sameJson;
+        }
+        if (sameAsGraphql) {
+          expect(
+            hasRestSnapshot(snapshotDir),
+            "REST output now equals GraphQL output apart from the transport block; " +
+              "delete the stale output.rest.* snapshot files",
+          ).toBe(false);
+        } else {
+          await expect(result.textOut).toMatchFileSnapshot(paths.text);
+          await expect(result.jsonOut).toMatchFileSnapshot(paths.json);
+        }
+
+        // Outcome: same as GraphQL unless an explained divergence is declared, and a declared
+        // divergence must actually occur.
+        const graphqlOutcome = expectedOutcome(name, fixture);
+        const divergence = fixture.restDivergence;
+        if (divergence) {
+          expect(divergence.why, "restDivergence.why must explain the difference").toBeTruthy();
+          const { why: _why, ...overrides } = divergence;
+          const restOutcome = { ...graphqlOutcome, ...overrides };
+          expect(
+            isDeepStrictEqual(restOutcome, graphqlOutcome),
+            "restDivergence must change the action, exit code, reason, or next action",
+          ).toBe(false);
+          assertOutcome(fixture, result, restOutcome);
+        } else {
+          assertOutcome(fixture, result, graphqlOutcome);
+        }
+      });
+    }
   });
 }
