@@ -259,9 +259,10 @@ are as good as these assumptions:
   conditional (`If-None-Match`) and a 304 is free, so an unchanged poll tick
   is all 304s and reuses the stored report for 0 requests
   (`src/github/rest-wait-tick-cost.test.mts`, and measured live below). While
-  CI runs, a poll re-charges only the check reads CI changed: at most three
-  (check runs, check suites, workflow runs) per round in a live
-  `If-None-Match` probe of #548's CI, which the model charges on every
+  CI runs, a poll re-charges only the reads that changed, mostly check runs,
+  check suites and workflow runs: a live `If-None-Match` probe of #548's CI
+  charged 20 of Shepherd's reads over 7 rounds about 34s apart (2.9 a round,
+  at most 7 when a bot review landed), so the model charges 3 on every
   `ci-wait` poll after the first. A changed tick is charged as a full read,
   an upper bound since only its changed reads are really charged.
   From `src/github/rest-stack-summary-sharing.test.mts`, a 10-layer stack tick

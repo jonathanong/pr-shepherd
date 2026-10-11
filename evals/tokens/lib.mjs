@@ -709,10 +709,12 @@ export const SHEPHERD_TICK_API_REST = rest(14);
  */
 export const SHEPHERD_WAIT_TICK_API_REST = rest(0);
 /**
- * Reads a REST poll tick re-charges while CI runs: the check runs, check suites
- * and workflow runs, whose bodies change as jobs start and finish. Upper bound
- * from a live If-None-Match probe of #548's CI (data/api-usage-check.json),
- * where no round changed more than these three; most rounds changed fewer.
+ * Reads a REST poll tick re-charges while CI runs, on average: mostly the check
+ * runs, check suites and workflow runs, and sometimes the pull (its
+ * `mergeable_state` moves as checks finish), statuses and feedback lists. A
+ * live If-None-Match probe of #548's CI (data/api-usage-check.json) charged
+ * 20 of Shepherd's reads over 7 rounds (2.9 a round, at most 7 when a bot
+ * review landed). The probe ran about 34s apart, not the 60s poll interval.
  */
 export const CI_POLL_CHANGED_READS = 3;
 /**
