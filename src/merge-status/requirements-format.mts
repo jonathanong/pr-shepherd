@@ -41,8 +41,12 @@ export function formatMergeRequirementLines(req: MergeRequirements): string[] {
     lines.push(`Branch up to date: ${value} ${REQUIRED}`);
   }
   if (req.requiredStatusChecks) {
-    const n = req.requiredStatusChecks.contexts.length;
-    lines.push(`Required status checks: ${n} ${REQUIRED}`);
+    const { contexts, ...notPassing } = req.requiredStatusChecks;
+    const detail = (["failing", "pending"] as const)
+      .filter((key) => (notPassing[key]?.length ?? 0) > 0)
+      .map((key) => `${key}: ${notPassing[key]!.join(", ")}`);
+    const suffix = detail.length > 0 ? ` — ${detail.join("; ")}` : "";
+    lines.push(`Required status checks: ${contexts.length} ${REQUIRED}${suffix}`);
   }
   if (req.requiredDeployments) {
     const envs = req.requiredDeployments.environments.join(", ");
@@ -74,6 +78,11 @@ export function blockedReasonFromRequirements(req: MergeRequirements | undefined
   }
   if (req.branchUpToDate && !req.branchUpToDate.current) {
     unmet.push("branch is behind base");
+  }
+  const checks = req.requiredStatusChecks;
+  for (const key of ["failing", "pending"] as const) {
+    const names = checks?.[key] ?? [];
+    if (names.length > 0) unmet.push(`required checks ${key}: ${names.join(", ")}`);
   }
   if (req.mergeQueue?.inQueue) {
     const pos = req.mergeQueue.position != null ? ` position ${req.mergeQueue.position}` : "";

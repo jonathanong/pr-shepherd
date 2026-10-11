@@ -135,6 +135,20 @@ export function restRoutesForFixture(fixture, batchData: Record<string, any>) {
     if (method === "GET" && /\/branches\/[^/]+\/protection$/.test(path)) {
       return json({ message: "Branch not protected" }, 404);
     }
+    if (
+      method === "GET" &&
+      path === `${prefix}/rules/branches/main` &&
+      fixture.trunkRequiredContexts
+    ) {
+      return json([
+        {
+          type: "required_status_checks",
+          parameters: {
+            required_status_checks: fixture.trunkRequiredContexts.map((context) => ({ context })),
+          },
+        },
+      ]);
+    }
     if (method === "GET" && path.startsWith(`${prefix}/rules/branches/`)) {
       return json([]);
     }

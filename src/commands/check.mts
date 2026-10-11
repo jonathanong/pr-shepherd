@@ -10,6 +10,7 @@ import { storeRestSnapshotReport } from "../state/rest-snapshot-report.mts";
 import { restSnapshotState, withRestConditionalScope } from "../github/rest-conditional-scope.mts";
 import { fingerprintReuser, tryReuseRestSnapshotReport } from "./check-fingerprint.mts";
 import { readWaitDetectors, recordWaitDetectors } from "./check-wait-detectors.mts";
+import { withRequiredCheckState } from "../merge-status/required-check-requirements.mts";
 import { collectUnreportedRequired, refreshCachedUnreported } from "./check-unreported.mts";
 import { getRepoInfo, getCurrentPrNumber, type RepoInfo } from "../github/client.mts";
 import { classifyChecks, getCiVerdict } from "../checks/classify.mts";
@@ -602,6 +603,11 @@ async function runScopedCheck(
     ...authorizedRuleAutoResolveThreadIds,
     ...[...deniedRuleAutoResolveThreadIds].filter((id) => visibleMutationThreadIds.has(id)),
   ];
+  mergeStatus = withRequiredCheckState(
+    mergeStatus,
+    unreported.requiredContexts,
+    classifiedPrChecks,
+  );
   const blockedByFilteredCheck = isBlockedByFilteredCheck(mergeStatus, verdict);
   const queueCommit = batchData.isInMergeQueue
     ? batchData.mergeQueueEntry?.headCommitOid

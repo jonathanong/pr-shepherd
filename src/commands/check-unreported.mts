@@ -10,6 +10,8 @@ import type { RepoInfo } from "../github/client.mts";
 import type { CheckExecutionContext } from "./check-execution-context.mts";
 
 export interface UnreportedRequiredFields {
+  /** Required contexts of the merge target: the stack trunk for a native-stack layer. */
+  requiredContexts: string[];
   unreportedRequiredChecks?: string[];
   trunkBehindBy?: number;
   /** Commits on the PR base that this head does not contain. Omitted when zero or a stack. */
@@ -69,6 +71,7 @@ export async function collectUnreportedRequired(
         )
       : 0;
   return {
+    requiredContexts: target.contexts,
     ...(unreported.length > 0 && { unreportedRequiredChecks: unreported }),
     ...(trunkBehindBy > 0 && { trunkBehindBy }),
     ...(baseBehindBy > 0 && { baseBehindBy }),
