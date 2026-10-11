@@ -144,7 +144,14 @@ async function readRestRequest<T>(
     const result = await restWithRateLimit<T>(method, path, body, {
       conditional: { key, name: path, shouldStore: isSettledBody, revalidate },
     });
-    recordRestConditionalRead(path, result.status === 304, result.etag);
+    const unvalidated =
+      result.status !== 304 && result.etag === undefined && isSettledBody(result.data);
+    recordRestConditionalRead(
+      path,
+      result.status === 304,
+      result.etag,
+      unvalidated ? result.data : undefined,
+    );
     return result;
   } finally {
     const waiting = pendingRequests.shift();

@@ -53,6 +53,7 @@ beforeEach(async () => {
   vi.stubEnv("HTTP_PROXY", "");
   _resetTokenCache();
   conditionalEtags = false;
+  withoutEtag = () => false;
   etagResponses.length = 0;
 });
 afterEach(async () => {
@@ -62,14 +63,17 @@ afterEach(async () => {
   await rm(directory, { recursive: true, force: true });
 });
 let conditionalEtags = false;
+let withoutEtag: (path: string) => boolean = () => false;
 /** Wire responses recorded by `serveWithEtags`; a charged request is any entry that is not 304. */
 export const etagResponses: Array<{ status: number; path: string }> = [];
 /**
  * Make the next `serve` answer like GitHub's conditional reads: every 200 GET carries a
- * body-hash ETag and a matching `If-None-Match` gets a bodiless 304.
+ * body-hash ETag and a matching `If-None-Match` gets a bodiless 304. Paths matched by
+ * `noEtag` answer like a route that sends no validator (always a charged 200).
  */
-export function serveWithEtags(): void {
+export function serveWithEtags(noEtag?: (path: string) => boolean): void {
   conditionalEtags = true;
+  withoutEtag = noEtag ?? (() => false);
 }
 export async function serve(reply: Parameters<typeof githubWire>[0]) {
   wire = await githubWire(conditionalEtags ? withEtags(reply) : reply);
@@ -79,7 +83,11 @@ function withEtags(reply: Parameters<typeof githubWire>[0]): Parameters<typeof g
   return (request, response) => {
     const end = response.end.bind(response) as (body?: string) => void;
     (response as unknown as { end: (body?: string) => void }).end = (body?: string) => {
-      if (response.statusCode === 200 && request.method === "GET") {
+      if (
+        response.statusCode === 200 &&
+        request.method === "GET" &&
+        !withoutEtag(request.path.split("?")[0]!)
+      ) {
         const etag = `"${createHash("sha256").update(String(body)).digest("hex").slice(0, 16)}"`;
         response.setHeader("etag", etag);
         if (request.headers?.["if-none-match"] === etag) {
