@@ -285,6 +285,23 @@ describe("stack handoffs", () => {
     expect(await takeStackHandoff(repo, 102)).toBeNull();
   });
 
+  it("clears earlier handoffs for layers a newer read no longer routes", async () => {
+    const model = stackModel();
+    await graphql(model);
+    await write(sourceOf(model), [101, 102]);
+    wire.requests.length = 0;
+    await write(sourceOf(model), [101]);
+    expect(await takeStackHandoff(repo, 102)).toBeNull();
+    expect(await takeStackHandoff(repo, 101)).not.toBeNull();
+
+    await write(sourceOf(model), [101, 102]);
+    wire.requests.length = 0;
+    await write(sourceOf(model), []);
+    expect(wire.requests).toEqual([]);
+    expect(await takeStackHandoff(repo, 101)).toBeNull();
+    expect(await takeStackHandoff(repo, 102)).toBeNull();
+  });
+
   it("stores nothing when the check-run read fails or misses a run", async () => {
     const model = stackModel();
     await graphql(model);

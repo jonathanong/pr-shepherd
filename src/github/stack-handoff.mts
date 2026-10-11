@@ -57,7 +57,8 @@ export function stackHandoffSource(read: StackRead<RawSummaryPr>): StackHandoffS
 }
 
 /**
- * Store a handoff for each routed layer whose summary is complete. Check-run titles,
+ * Store a handoff for each routed layer whose summary is complete, and clear any
+ * earlier handoff for every other layer this read covers. Check-run titles,
  * summaries, and first annotations are not in the summary, so one `nodes(ids:)`
  * read per 100 runs fills them in. Best effort: a failed read stores nothing.
  */
@@ -70,10 +71,9 @@ export async function writeStackHandoffs(
   const candidates = source.layers.filter(
     (layer) => routed.includes(layer.number) && summaryComplete(layer, source),
   );
+  // This read supersedes every earlier handoff, including for layers no longer routed.
   for (const layer of source.layers) {
-    if (routed.includes(layer.number) && !candidates.includes(layer)) {
-      await clearStackHandoff(repo, layer.number);
-    }
+    if (!candidates.includes(layer)) await clearStackHandoff(repo, layer.number);
   }
   if (candidates.length === 0) return;
   const runIds = [...new Set(candidates.flatMap(checkRunIds))];

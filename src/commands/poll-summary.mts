@@ -51,19 +51,23 @@ async function runPollSummaryCore(opts: PollSummaryCommandOptions): Promise<Poll
 /**
  * The stack tick that routes owned layers to their one-PR sessions hands each
  * routed layer this tick's read of it, so that session's first read is free.
+ * Every other tick clears earlier handoffs: a newer read supersedes them.
  */
 async function handOffRoutedLayers(tick: PollSummaryTick): Promise<void> {
   const { result, handoffSource } = tick;
-  if (!handoffSource || result.nextAction !== "shepherd" || result.reason === "waiting") return;
-  const routed = result.prs
-    .filter(
-      (item) =>
-        item.state === "OPEN" &&
-        item.pollCommand !== undefined &&
-        !["cancel", "wait", "escalate"].includes(item.action),
-    )
-    .map((item) => item.pr);
-  if (routed.length > 0) await writeStackHandoffs(handoffSource, routed, tick.repo);
+  if (!handoffSource) return;
+  const routing = result.nextAction === "shepherd" && result.reason !== "waiting";
+  const routed = routing
+    ? result.prs
+        .filter(
+          (item) =>
+            item.state === "OPEN" &&
+            item.pollCommand !== undefined &&
+            !["cancel", "wait", "escalate"].includes(item.action),
+        )
+        .map((item) => item.pr)
+    : [];
+  await writeStackHandoffs(handoffSource, routed, tick.repo);
 }
 
 async function readPollSummaryTick(opts: PollSummaryCommandOptions): Promise<PollSummaryTick> {
