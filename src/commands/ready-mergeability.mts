@@ -33,7 +33,7 @@ export async function refreshReadyMergeability(
   unresolvedThreads: number,
   unresolvedComments: number,
   changesRequestedCount: number,
-  hasUnreportedRequired = false,
+  hasUnmetRequired = false,
 ): Promise<ReadyMergeabilityRefresh> {
   const refreshedBatchData = await readMergeability(prNumber, repo, batchData);
   const mergeStatus = deriveMergeStatus(refreshedBatchData);
@@ -43,7 +43,7 @@ export async function refreshReadyMergeability(
     unresolvedComments,
     mergeStatus,
     changesRequestedCount,
-    hasUnreportedRequired,
+    hasUnmetRequired,
   );
   return { batchData: refreshedBatchData, mergeStatus, status };
 }

@@ -46,12 +46,24 @@ function layerStatus(): MergeStatusResult {
 const TRUNK_CONTEXTS = ["static", "web", "gitleaks"];
 
 describe("evaluateRequiredChecks", () => {
-  it("treats a newer success as superseding an older cancelled run of the same workflow", () => {
+  it("reports a cancelled run as cancelled even when a newer run of the same workflow passed", () => {
     const checks = classifyChecks([
       check({ name: "web", conclusion: "CANCELLED", runId: "1" }),
       check({ name: "web", conclusion: "SUCCESS", runId: "2" }),
     ]);
-    expect(evaluateRequiredChecks(["web"], checks)).toEqual({ failing: [], pending: [] });
+    expect(evaluateRequiredChecks(["web"], checks)).toEqual({
+      failing: [],
+      cancelled: ["web"],
+      pending: [],
+    });
+  });
+
+  it("reports a live failure as failing even when the context also has a superseded cancel", () => {
+    const checks = classifyChecks([
+      check({ name: "web", conclusion: "CANCELLED", runId: "1" }),
+      check({ name: "web", conclusion: "FAILURE", runId: "2" }),
+    ]);
+    expect(evaluateRequiredChecks(["web"], checks).failing).toEqual(["web"]);
   });
 
   it("groups failing and pending contexts, ignoring passing ones and contexts with no run", () => {
@@ -67,11 +79,12 @@ describe("evaluateRequiredChecks", () => {
     ]);
     expect(evaluateRequiredChecks(["static", "web", "gitleaks", "tooling"], checks)).toEqual({
       failing: ["static"],
+      cancelled: [],
       pending: ["web"],
     });
   });
 
-  it("reports a context pending when every run was superseded and no replacement reported", () => {
+  it("reports a context cancelled when its only run was superseded by another job's run", () => {
     const checks = classifyChecks([
       check({
         name: "web",
@@ -86,12 +99,12 @@ describe("evaluateRequiredChecks", () => {
         runId: "2",
       }),
     ]);
-    expect(evaluateRequiredChecks(["web"], checks).pending).toEqual(["web"]);
+    expect(evaluateRequiredChecks(["web"], checks).cancelled).toEqual(["web"]);
   });
 });
 
 describe("stacked layer required checks (rule-less parent base)", () => {
-  it("reports the trunk's required contexts as passing, not blocking", () => {
+  it("blocks on duplicate runs: each context has a cancelled run and a newer success", () => {
     const checks = classifyChecks(
       TRUNK_CONTEXTS.flatMap((name, i) => [
         check({
@@ -111,7 +124,22 @@ describe("stacked layer required checks (rule-less parent base)", () => {
     const { mergeRequirements } = withRequiredCheckState(layerStatus(), TRUNK_CONTEXTS, checks);
     expect(mergeRequirements?.requiredStatusChecks).toEqual({
       contexts: TRUNK_CONTEXTS,
+      cancelled: TRUNK_CONTEXTS,
     });
+    expect(formatMergeRequirementLines(mergeRequirements!)).toContain(
+      "Required status checks: 3 [Required] — cancelled: static, web, gitleaks",
+    );
+    expect(blockedReasonFromRequirements(mergeRequirements)).toBe(
+      "required checks cancelled: static, web, gitleaks",
+    );
+  });
+
+  it("reports the trunk's required contexts as passing when every run passed", () => {
+    const checks = classifyChecks(
+      TRUNK_CONTEXTS.map((name, i) => check({ name, workflowId: String(i), runId: String(i) })),
+    );
+    const { mergeRequirements } = withRequiredCheckState(layerStatus(), TRUNK_CONTEXTS, checks);
+    expect(mergeRequirements?.requiredStatusChecks).toEqual({ contexts: TRUNK_CONTEXTS });
     expect(formatMergeRequirementLines(mergeRequirements!)).toContain(
       "Required status checks: 3 [Required]",
     );

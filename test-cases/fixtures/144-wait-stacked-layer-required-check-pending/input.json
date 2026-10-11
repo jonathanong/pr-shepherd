@@ -1,7 +1,14 @@
 {
-  "description": "Layer 2 of a native stack targets its parent's branch, which carries no rules; the required status checks live on the stack trunk (main). `static` was cancelled and rerun green, `gitleaks` passed, and `web` is still running. Shepherd must read the trunk's required contexts, ignore the superseded cancel, and name `web` as the pending required check that keeps the PR BLOCKED.",
-  "repository": { "owner": "vouchington", "name": "vouchington" },
-  "trunkRequiredContexts": ["static", "web", "gitleaks"],
+  "description": "Layer 2 of a native stack targets its parent's branch, which carries no rules; the required status checks live on the stack trunk (main). `static` and `gitleaks` passed and `web` is still running. Shepherd must read the trunk's required contexts and name `web` as the pending required check that keeps the PR BLOCKED.",
+  "repository": {
+    "owner": "vouchington",
+    "name": "vouchington"
+  },
+  "trunkRequiredContexts": [
+    "static",
+    "web",
+    "gitleaks"
+  ],
   "batchData": {
     "number": 2687,
     "headRefName": "fix/media-replay-concurrent-cursors",
@@ -10,17 +17,13 @@
     "baseRefOid": "2222222222222222222222222222222222222222",
     "mergeable": "MERGEABLE",
     "mergeStateStatus": "BLOCKED",
-    "stack": { "number": 2688, "size": 2, "position": 2, "baseRefName": "main" },
+    "stack": {
+      "number": 2688,
+      "size": 2,
+      "position": 2,
+      "baseRefName": "main"
+    },
     "checks": [
-      {
-        "name": "static",
-        "status": "COMPLETED",
-        "conclusion": "CANCELLED",
-        "event": "pull_request",
-        "detailsUrl": "https://github.com/vouchington/vouchington/actions/runs/101/job/1",
-        "runId": "101",
-        "workflowId": "11"
-      },
       {
         "name": "static",
         "status": "COMPLETED",

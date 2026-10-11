@@ -10,6 +10,7 @@ import { storeRestSnapshotReport } from "../state/rest-snapshot-report.mts";
 import { restSnapshotState, withRestConditionalScope } from "../github/rest-conditional-scope.mts";
 import { fingerprintReuser, tryReuseRestSnapshotReport } from "./check-fingerprint.mts";
 import { readWaitDetectors, recordWaitDetectors } from "./check-wait-detectors.mts";
+import { evaluateRequiredChecks } from "../checks/required-check-state.mts";
 import { withRequiredCheckState } from "../merge-status/required-check-requirements.mts";
 import { collectUnreportedRequired, refreshCachedUnreported } from "./check-unreported.mts";
 import { getRepoInfo, getCurrentPrNumber, type RepoInfo } from "../github/client.mts";
@@ -419,13 +420,17 @@ async function runScopedCheck(
     },
     context,
   );
+  // A superseded cancelled run still fails its required gate on GitHub (github/gh-stack#466).
+  const hasUnmetRequired =
+    unreported.hasUnreportedRequired ||
+    evaluateRequiredChecks(unreported.requiredContexts, classifiedPrChecks).cancelled.length > 0;
   let status = computeStatus(
     verdict,
     threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
     visibleCommentClassification.actionable.length,
     mergeStatus,
     changesRequestedReviewCount,
-    unreported.hasUnreportedRequired,
+    hasUnmetRequired,
   );
   status = enforceTransportReadiness(status, batchData);
 
@@ -443,7 +448,7 @@ async function runScopedCheck(
       threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
       visibleCommentClassification.actionable.length,
       changesRequestedReviewCount,
-      unreported.hasUnreportedRequired,
+      hasUnmetRequired,
     );
     batchData = refreshed.batchData;
     mergeStatus = refreshed.mergeStatus;

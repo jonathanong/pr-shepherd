@@ -14,7 +14,7 @@ export function withRequiredCheckState(
 ): MergeStatusResult {
   const requirements = mergeStatus.mergeRequirements;
   if (!requirements || contexts.length === 0) return mergeStatus;
-  const { failing, pending } = evaluateRequiredChecks(contexts, checks);
+  const { failing, cancelled, pending } = evaluateRequiredChecks(contexts, checks);
   return {
     ...mergeStatus,
     mergeRequirements: {
@@ -22,6 +22,7 @@ export function withRequiredCheckState(
       requiredStatusChecks: {
         contexts: [...contexts],
         ...(failing.length > 0 && { failing }),
+        ...(cancelled.length > 0 && { cancelled }),
         ...(pending.length > 0 && { pending }),
       },
     },

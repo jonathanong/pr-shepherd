@@ -42,7 +42,7 @@ export function formatMergeRequirementLines(req: MergeRequirements): string[] {
   }
   if (req.requiredStatusChecks) {
     const { contexts, ...notPassing } = req.requiredStatusChecks;
-    const detail = (["failing", "pending"] as const)
+    const detail = (["failing", "cancelled", "pending"] as const)
       .filter((key) => (notPassing[key]?.length ?? 0) > 0)
       .map((key) => `${key}: ${notPassing[key]!.join(", ")}`);
     const suffix = detail.length > 0 ? ` — ${detail.join("; ")}` : "";
@@ -80,7 +80,7 @@ export function blockedReasonFromRequirements(req: MergeRequirements | undefined
     unmet.push("branch is behind base");
   }
   const checks = req.requiredStatusChecks;
-  for (const key of ["failing", "pending"] as const) {
+  for (const key of ["failing", "cancelled", "pending"] as const) {
     const names = checks?.[key] ?? [];
     if (names.length > 0) unmet.push(`required checks ${key}: ${names.join(", ")}`);
   }

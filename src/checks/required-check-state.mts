@@ -6,13 +6,16 @@ import type { ClassifiedCheck } from "../types/check-classification.mts";
  */
 export interface RequiredCheckState {
   failing: string[];
+  /** Contexts with a superseded cancelled run: GitHub still counts it against the gate. */
+  cancelled: string[];
   pending: string[];
 }
 
 /**
- * Evaluate each required context against the head's classified checks. A newer run
- * supersedes an older cancelled one, so only live (non-superseded) runs decide.
- * A context whose every run is superseded is pending: its replacement has not reported.
+ * Evaluate each required context against the head's classified checks. GitHub evaluates
+ * every run of a required context on the head commit, so a cancelled run still fails the
+ * gate even when a newer run of the same workflow passed (duplicate runs from one push,
+ * see github/gh-stack#466). Precedence: failing, then cancelled, then pending.
  */
 export function evaluateRequiredChecks(
   contexts: readonly string[],
@@ -24,7 +27,7 @@ export function evaluateRequiredChecks(
     if (!name) continue;
     byName.set(name, [...(byName.get(name) ?? []), check]);
   }
-  const state: RequiredCheckState = { failing: [], pending: [] };
+  const state: RequiredCheckState = { failing: [], cancelled: [], pending: [] };
   const seen = new Set<string>();
   for (const raw of contexts) {
     const context = raw.trim();
@@ -32,11 +35,9 @@ export function evaluateRequiredChecks(
     seen.add(context);
     const runs = byName.get(context);
     if (!runs) continue;
-    const live = runs.filter((run) => run.category !== "superseded");
-    if (live.some((run) => run.category === "failing")) state.failing.push(context);
-    else if (live.length === 0 || live.some((run) => run.category === "in_progress")) {
-      state.pending.push(context);
-    }
+    if (runs.some((run) => run.category === "failing")) state.failing.push(context);
+    else if (runs.some((run) => run.category === "superseded")) state.cancelled.push(context);
+    else if (runs.some((run) => run.category === "in_progress")) state.pending.push(context);
   }
   return state;
 }
