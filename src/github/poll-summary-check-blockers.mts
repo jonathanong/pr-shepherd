@@ -18,10 +18,11 @@ export async function applyOpenCheckBlockers(
   checks: PollSummaryChecks,
   review: PollSummaryReview,
   stack: boolean,
+  requiredContexts?: readonly string[],
 ): Promise<Routed & { pollProbe?: true }> {
   if (routed.action !== "fix_code" || !routed.reasons.includes("failing-checks")) return routed;
   if ((review.actionable ?? 0) > 0 || checks.incomplete) return routed;
-  const names = failingSummaryCheckNames(raw);
+  const names = failingSummaryCheckNames(raw, requiredContexts);
   if (names.length === 0) return routed;
   const gate = await resolveCheckBlockerGate(
     { owner: repo.owner, repo: repo.name, pr: raw.number },
