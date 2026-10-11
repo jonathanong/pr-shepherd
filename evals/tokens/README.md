@@ -237,8 +237,10 @@ are as good as these assumptions:
     check-suite and rules pages; `src/commands/check-wait-detectors.mts` and
     `src/commands/check-fingerprint.mts`) polls 8 conditional REST detectors
     instead: a 304 is free, the tick on which one sees a change charges its
-    200, and entering the wait seeds all 8 once on a cold cache (one page
-    each). Any other wait reads `BatchPr` every poll. No modeled change ends
+    200, and entering the wait seeds all 8 once on a cold cache (8 requests
+    when each resource fits one 100-entry page, more when one does not). Any
+    other wait reads `BatchPr` every poll: 1 point while the PR fits its
+    first page, more past a first-page window. No modeled change ends
     a detector-eligible wait: before each review, thread, base push or merge
     the PR is green and READY, which the detectors skip, and `ci-wait` has
     checks running. So every change tick is a plain `BatchPr` read, and the
