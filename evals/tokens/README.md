@@ -22,7 +22,7 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
-| single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 224 core + 1.5 points | 251.5 core + 1.5 points |
+| single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 209.3 core + 1.5 points | 235.8 core + 1.5 points |
 | PR stack | 17 / 27 / 12 | 2 / 6 / 74 | 480 core + 0 points | 510 core + 0 points |
 
 <!-- bench:headline:end -->
@@ -281,9 +281,12 @@ are as good as these assumptions:
   - the poll tick that marks a draft ready is a changed tick after a wait plus
     the 1-point mutation, 2 points;
   - a READY tick re-reads the PR's mergeability with one REST request before
-    acting, on every transport (`refreshReadyMergeability`). The real sessions
-    measured exactly one on each of their 21 READY polls. It is charged to
-    `mark-ready`, `merge` and `merge-queue`.
+    acting, on every transport (`refreshReadyMergeability`). The real sessions,
+    recorded before the read became conditional, measured exactly one on each
+    of their 21 READY polls. It is charged to `mark-ready`, `merge` and
+    `merge-queue`, standing in for the countdown's first READY tick, which
+    stores the pull's ETag cold; later READY ticks on an unchanged pull are
+    free 304s (`src/github/graphql-ready-refresh-cost.test.mts`).
 - **pr-shepherd, REST transport** (`docs/rest-usage.md`). This is standard REST (an explicit
   `--transport rest`, or `auto` after a GraphQL fallback outside the Claude
   Code cloud). REST has no fingerprint shortcut, but every read is
@@ -304,15 +307,16 @@ are as good as these assumptions:
   rules and compare, and the stack topology (the stack list and read twice,
   each layer's pull and the viewer). A one-PR
   tick is 14 reads, counted at the HTTP boundary of the REST iterate test
-  routes and measured live (below). The `failing-check` and
+  routes and measured live (below). A merged PR's tick stops after its first
+  pull read, 1 request on REST and cloud REST alike. The `failing-check` and
   `check-annotations` ticks add one annotation read per annotated check run.
   `apply review` reads the pull for `--require-sha`; a thread resolve has no
   standard REST route, so it then spends, when it has replies, a 4-request
   transcript read (pull comments, issue comments, reviews and the viewer) and
   three requests per reply (`/user` and the pull comments, read so a lost
   response can be recovered, then the POST). Ready-for-review has no standard REST route either: the
-  `mark-ready` tick is its 14-request read plus the mergeability refresh (15
-  requests), and it escalates as
+  `mark-ready` tick is its 14-request read (the mergeability refresh is a
+  304: the snapshot's own pull read stored that body a moment earlier), and it escalates as
   transport-unsupported instead of marking the PR ready. The live check below
   had no failing check, so neither the job/log reads nor the annotation reads
   were measured.
@@ -533,8 +537,9 @@ token usage, never text, IDs or paths. The bench reads only that file.
   thread comment's filler URL keeps its numeric `#discussion_r` anchor for
   MCP's reply tool.
 - **pr-shepherd's charge.** A poll pays one point per tick, since a
-  fingerprint miss continues the same `BatchPr` request, and on a READY or
-  ready-delay CANCEL tick one REST mergeability refresh; the ready-delay
+  fingerprint miss continues the same `BatchPr` request, and on its first
+  READY tick one REST mergeability refresh (later READY ticks on an unchanged
+  pull replay it as a free 304); the ready-delay
   CANCEL's receipt query is also one point. An `apply review` with 1 to 20
   replies pays one `ApplyReviewPreflight` read, which also confirms the head
   SHA and carries the transcripts and the first chunk's recovery evidence,
@@ -667,8 +672,8 @@ explains the main ones.
   - `conflicts`, `merge` and `merge-queue`.
 - **Confirming a merged PR.** A state-first gh agent runs one
   `gh pr view --json state,isDraft` and stops, about 24 tokens. pr-shepherd's
-  tick is 133 tokens and carries the skill, so `merged` costs 15% more than
-  gh and 18% less than MCP.
+  command and one-line CANCEL are 21 tokens, but it carries the skill, so
+  `merged` costs 5% more than gh and 25% less than MCP.
 - **Stack token volume.** Each routed layer's first tick prints its own
   instructions. In the stack session pr-shepherd reads 42% more tool tokens than
   gh's terse per-layer reads, and routing work across the six-layer stack is

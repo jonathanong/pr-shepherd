@@ -10,7 +10,7 @@ Related: [rest-usage.md](rest-usage.md) (core requests per command and per tick)
 
 REST reads use the core API pool and paginate list endpoints with `per_page=100` and GitHub's `Link` header. A full snapshot repeats the core PR read at the end and retries once when the head, base, or revision changes during pagination. REST does not use the GraphQL first-page fingerprint, because the REST snapshot cannot provide all policy, capability, and queue inputs needed to validate a cached report; it reuses reports through [conditional reads](#conditional-reads) instead.
 
-A one-PR snapshot reads the pull, review comments, issue comments, reviews, the head's check runs, check suites, and statuses, Actions workflow runs, the base branch summary, the base branch rules, the stack lookup, the repository, the viewer (`/user`), and the pull again at the end. In a Claude Code cloud session it also reads `GET /pulls/{n}/ccr/review_threads`. Counts are in [rest-usage.md](rest-usage.md).
+A one-PR snapshot reads the pull, review comments, issue comments, reviews, the head's check runs, check suites, and statuses, Actions workflow runs, the base branch summary, the base branch rules, the stack lookup, the repository, the viewer (`/user`), and the pull again at the end. In a Claude Code cloud session it also reads `GET /pulls/{n}/ccr/review_threads`. When the first pull read shows the PR merged or closed, an `iterate` tick stops there: the `CANCEL` reports only identity and merge state, so the other reads would be discarded unread. Counts are in [rest-usage.md](rest-usage.md).
 
 ## Conditional reads
 

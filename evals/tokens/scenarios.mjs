@@ -34,6 +34,7 @@ import {
   HEAD_SHA_READ,
   applyReviewGraphqlReads,
   READY_MERGEABILITY_REST,
+  readyMergeabilityRest,
   readyTick,
   SHEPHERD_TICK_API_CLOUD,
   fixtureCommentId,
@@ -821,7 +822,8 @@ const PR_SCENARIOS = [
         // route, so after its read the tick escalates as transport-unsupported
         // (mark-ready.mts). Cloud REST marks it ready with one POST to the CCR
         // proxy's ready_for_review route, on top of the tick's read. On every
-        // transport the READY status re-reads mergeability over REST first.
+        // transport the READY status re-reads mergeability over REST first (free on
+        // REST: the snapshot's pull read just stored it).
         shepherd: [
           {
             phase: 1,
@@ -833,8 +835,8 @@ const PR_SCENARIOS = [
               graphqlPoints: SHEPHERD_TICK_API.graphqlPoints + 1,
               restCore: READY_MERGEABILITY_REST,
             },
-            apiRest: rest(SHEPHERD_TICK_API_REST.restCore + READY_MERGEABILITY_REST),
-            apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + 1 + READY_MERGEABILITY_REST),
+            apiRest: rest(SHEPHERD_TICK_API_REST.restCore + readyMergeabilityRest("rest")),
+            apiCloud: rest(SHEPHERD_TICK_API_CLOUD.restCore + 1 + readyMergeabilityRest("cloud")),
           },
         ],
         // The wait's in-process tick marks it ready, as the poll's does: a
@@ -884,7 +886,9 @@ const PR_SCENARIOS = [
       const fixture = "01-cancel-merged";
       const state = withHistory(fixtureState(fixture), HISTORY);
       return {
-        shepherd: [shepherdTick(snapshot(fixture))],
+        // REST answers a merged PR from its first pull read (rest-terminal-batch.mts;
+        // src/github/rest-wait-tick-cost.test.mts), skipping the cloud CCR read too.
+        shepherd: [{ ...shepherdTick(snapshot(fixture)), apiRest: rest(1), apiCloud: rest(1) }],
         // The pull.
         event: { wake: "change", detectors: 1 },
         gh: ghObserve(state),
@@ -1002,6 +1006,7 @@ const PR_SCENARIOS = [
       const merged = "✓ Merged pull request owner/repo#42 (Fixture PR)\n";
       return {
         shepherd: [
+          // The tick before the ready delay elapsed was READY too, so the refresh replays a 304.
           readyTick(receiptTick(snapshot(fixture))),
           {
             phase: 2,
@@ -1039,6 +1044,7 @@ const PR_SCENARIOS = [
         "✓ Pull request owner/repo#42 will be added to the merge queue for main when ready\n";
       return {
         shepherd: [
+          // The tick before the ready delay elapsed was READY too, so the refresh replays a 304.
           readyTick(receiptTick(snapshot(fixture))),
           {
             phase: 2,

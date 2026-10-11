@@ -1,6 +1,7 @@
 import { githubOperation } from "./transport.mts";
 import { readRestPull } from "./rest-pr-core.mts";
 import {
+  readRest,
   readRestPages,
   restRepoPath,
   restObject,
@@ -152,7 +153,7 @@ async function updateGraphqlPullRequestBody(pullRequestId: string, body: string)
  * Fetches PR state, `mergeable`, and `mergeStateStatus` via the REST API.
  *
  * Used when the GraphQL API returns `UNKNOWN` for mergeability or before a
- * READY state. The same response carries state so a concurrent merge or
+ * READY state. The read is conditional inside a PR's REST conditional scope. The same response carries state so a concurrent merge or
  * close can supersede the earlier GraphQL snapshot without another request.
  */
 export async function getMergeableState(
@@ -164,12 +165,14 @@ export async function getMergeableState(
   mergeStateStatus: MergeStateStatus;
   state?: "OPEN" | "CLOSED" | "MERGED";
 }> {
-  const data = await rest<{
+  // Inside a PR's conditional scope this shares the pull's ETag with the snapshot and wait
+  // detectors: a 304 proves GitHub's current mergeability equals the stored settled body.
+  const data = await readRest<{
     mergeable: boolean | null;
     mergeable_state: string;
     state?: string;
     merged_at?: string | null;
-  }>("GET", `/repos/${owner}/${repo}/pulls/${pr}`);
+  }>("GET", `${restRepoPath({ owner, name: repo })}/pulls/${pr}`);
 
   const mergeable: MergeableState =
     data.mergeable === true ? "MERGEABLE" : data.mergeable === false ? "CONFLICTING" : "UNKNOWN";
