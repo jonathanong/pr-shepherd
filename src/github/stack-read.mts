@@ -6,6 +6,7 @@ import type { PollSummaryStackAncestry } from "../types.mts";
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import { missingRepositoryError } from "./errors.mts";
 import { POLL_STACK_TOPOLOGY_QUERY } from "./queries.mts";
+import { orderedStackMembers } from "./stack-order.mts";
 export { verifiedBottomOpenLayer } from "./stack-bottom.mts";
 
 /** GitHub's `first` ceiling for one native-stack entries page. */
@@ -64,8 +65,11 @@ export async function readStack<Pr extends StackMemberRefs>(
   query: string,
   anchor: number,
   repo: RepoInfo,
-  variables: Record<string, unknown> = {},
+  initialVariables: Record<string, unknown> = {},
+  /** Largest `first` a later page may request; defaults to the first page's `first`. */
+  pageCeiling?: number,
 ): Promise<StackRead<Pr>> {
+  let variables = initialVariables;
   let after: string | null = null;
   let stackId: string | null = null;
   let stackNumber = 0;
@@ -125,25 +129,22 @@ export async function readStack<Pr extends StackMemberRefs>(
       );
     }
     after = pageInfo.hasNextPage ? pageInfo.endCursor : null;
+    // A later page never asks for more slots than remain: GitHub prices `first`.
+    if (after !== null && typeof variables.first === "number") {
+      const ceiling = pageCeiling ?? variables.first;
+      variables = {
+        ...variables,
+        first: Math.max(1, Math.min(ceiling, stackSize - entries.length)),
+      };
+    }
   } while (after !== null);
 
-  const unique = new Map<number, { position: number; pullRequest: Pr }>();
-  for (const entry of entries) unique.set(entry.pullRequest.number, entry);
-  if (!unique.has(anchor) || unique.size !== stackSize) {
-    throw new ShepherdError(
-      `GitHub returned incomplete stack membership (${unique.size} of ${stackSize} entries)`,
-      EXIT.TEMPFAIL,
-    );
-  }
-  const ordered = [...unique.values()]
-    .sort((left, right) => left.position - right.position)
-    .map((entry) => entry.pullRequest);
   return {
     stackNumber,
     stackSize,
     viewerLogin,
     viewerCanAdminister,
-    ordered,
+    ordered: orderedStackMembers(entries, anchor, stackSize),
     ...(allowedMergeMethods && { allowedMergeMethods }),
   };
 }

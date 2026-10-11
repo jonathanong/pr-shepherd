@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   parseCheckSuitesComplete,
   parseHeadCheckSuitesEmpty,
-  parseHeadWorkflowSuites,
+  workflowSuites,
   parseSuiteStartupFailures,
 } from "./batch-parse-suites.mts";
 import type { RawPr } from "./batch-raw-types.mts";
@@ -126,7 +126,7 @@ describe("parseSuiteStartupFailures", () => {
   });
 });
 
-describe("parseHeadWorkflowSuites", () => {
+describe("workflowSuites", () => {
   it("keeps Actions suites and drops apps with no workflow run", () => {
     const raw = withSuites({
       pageInfo: { hasNextPage: false },
@@ -144,8 +144,18 @@ describe("parseHeadWorkflowSuites", () => {
         },
       ],
     });
-    expect(parseHeadWorkflowSuites(raw)).toEqual([
-      { status: "IN_PROGRESS", conclusion: null, workflowRun: { event: "pull_request" } },
-    ]);
+    expect(workflowSuites(raw)).toEqual({
+      headWorkflowSuites: [
+        { status: "IN_PROGRESS", conclusion: null, workflowRun: { event: "pull_request" } },
+      ],
+    });
+  });
+
+  it("omits the field when the head has no Actions suite", () => {
+    const raw = withSuites({
+      pageInfo: { hasNextPage: false },
+      nodes: [{ conclusion: null, status: "QUEUED", workflowRun: null }],
+    });
+    expect(workflowSuites(raw)).toEqual({});
   });
 });

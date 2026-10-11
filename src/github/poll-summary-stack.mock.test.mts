@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./client.mts", () => ({ graphqlWithRateLimit: vi.fn() }));
+// Each read here starts cold; the anchor's stack-size hint has its own tests.
+vi.mock("./stack-size-hint.mts", () => ({
+  loadStackSizeHint: vi.fn(async () => 0),
+  storeStackSizeHint: vi.fn(async () => {}),
+}));
 vi.mock("../state/seen-comments.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../state/seen-comments.mts")>();
   return { ...actual, loadSeenMap: vi.fn().mockResolvedValue(new Map()) };
@@ -112,7 +117,7 @@ describe("fetchPollSummary native stack reads", () => {
     expect(mismatch.prs[0]?.owned).toBeUndefined();
   });
 
-  it("caps the hydrated page at 50 entries and follows every cursor", async () => {
+  it("caps the hydrated page at 50 entries and asks a later page only for the entries that remain", async () => {
     const members = Array.from({ length: 51 }, (_, index) => member(101 + index, index + 1));
     const [first50, last] = [members.slice(0, 50), members.slice(50)];
     mockGraphql
@@ -127,7 +132,7 @@ describe("fetchPollSummary native stack reads", () => {
     expect(variables[1]).toMatchObject({ after: "topology-2" });
     expect(variables[1]).not.toHaveProperty("first");
     expect(variables[2]).toMatchObject({ first: 50, after: null });
-    expect(variables[3]).toMatchObject({ first: 50, after: "summary-2" });
+    expect(variables[3]).toMatchObject({ first: 1, after: "summary-2" });
     expect(result.prs.map((item) => item.pr)).toEqual(members.map((m) => m.pullRequest.number));
   });
 });

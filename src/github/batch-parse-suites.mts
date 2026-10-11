@@ -13,7 +13,7 @@ export function parseHeadCheckSuitesEmpty(raw: RawPr): boolean {
 }
 
 /** Actions suites on the head. Third-party suites with no workflow run are omitted. */
-export function parseHeadWorkflowSuites(raw: RawPr): WorkflowSuiteSnapshot[] {
+function parseHeadWorkflowSuites(raw: RawPr): WorkflowSuiteSnapshot[] {
   const nodes = raw.commits.nodes[0]?.commit.checkSuites?.nodes ?? [];
   return nodes.flatMap((node) => {
     if (!node.workflowRun) return [];
@@ -47,4 +47,10 @@ export function parseSuiteStartupFailures(raw: RawPr): CheckRun[] {
       },
     ];
   });
+}
+
+/** `headWorkflowSuites`, omitted when the head has none. */
+export function workflowSuites(raw: RawPr): { headWorkflowSuites?: WorkflowSuiteSnapshot[] } {
+  const suites = parseHeadWorkflowSuites(raw);
+  return suites.length > 0 ? { headWorkflowSuites: suites } : {};
 }

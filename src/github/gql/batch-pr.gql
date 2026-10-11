@@ -108,10 +108,45 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
           }
         }
       }
+      # Native-stack topology and trunk rules ride along so a stack layer needs no
+      # separate PollStackTopology or RefRules read. Neither nested selection
+      # multiplies a connection by 50, so together they add about 3 requests.
       stack {
+        id
         number
         size
         baseRefName
+        entries(first: 50) {
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          nodes {
+            position
+            pullRequest {
+              number
+              state
+              headRefName
+              headRefOid
+              baseRefName
+              baseRefOid
+            }
+          }
+        }
+        # The bottom entry's base is the trunk: its rules and live tip.
+        trunkEntry: entries(first: 1) {
+          nodes {
+            pullRequest {
+              baseRefName
+              baseRef {
+                ...RefRules
+                target {
+                  oid
+                }
+              }
+            }
+          }
+        }
       }
       stackEntry {
         position

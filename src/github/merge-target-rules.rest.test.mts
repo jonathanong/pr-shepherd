@@ -59,9 +59,14 @@ describe("REST merge targets after a merged stack prefix", () => {
 
   it.each([102, 103])("uses the verified bottom open OID for PR #%i", async (pr) => {
     await stackServer();
-    expect(
-      await runWithGithubTransport("rest", () => loadMergeTargetStatus({ ...input, pr })),
-    ).toEqual({ contexts: ["trunk-required"], trunkBehindBy: 7, stackBottomPr: 102 });
+    const status = await runWithGithubTransport("rest", () =>
+      loadMergeTargetStatus({ ...input, pr }),
+    );
+    expect({ ...status, trunkBehindBy: await status.trunkBehindBy?.() }).toEqual({
+      contexts: ["trunk-required"],
+      trunkBehindBy: 7,
+      stackBottomPr: 102,
+    });
     expect(wire.requests.filter((request) => request.path.includes("/compare/"))).toMatchObject([
       { path: `${prefix}/compare/main...ccc333` },
     ]);

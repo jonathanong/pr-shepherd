@@ -15,7 +15,7 @@ import { parseRawPr } from "./batch-parsers.mts";
 import {
   parseCheckSuitesComplete,
   parseHeadCheckSuitesEmpty,
-  parseHeadWorkflowSuites,
+  workflowSuites,
   parseSuiteStartupFailures,
 } from "./batch-parse-suites.mts";
 import type { WorkflowSuiteSnapshot } from "../checks/unreported-required.mts";
@@ -27,6 +27,7 @@ import type { RawBatchResponse } from "./batch-raw-types.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import type { BatchPrData } from "../types.mts";
 import { fingerprintFromRaw, type PrFingerprint } from "./fingerprint.mts";
+import { stackEvidenceFromRaw, type BatchStackEvidence } from "./batch-stack-evidence.mts";
 
 interface BatchResult {
   data: BatchPrData;
@@ -40,10 +41,12 @@ interface BatchResult {
   headWorkflowSuites?: WorkflowSuiteSnapshot[];
   /** Internal READY-receipt evidence from the same request, if complete. */
   receiptSummary?: RawSummaryPr;
+  /** Native-stack topology and trunk rules from the same first page, if complete. */
+  stackEvidence?: BatchStackEvidence;
 }
 
-/** A fingerprint hit, plus the live base tip from the same first page. */
-type ReusedBatch<T> = { reused: T; baseTipOid?: string };
+/** A fingerprint hit, plus the live base tip and stack evidence from the same first page. */
+type ReusedBatch<T> = { reused: T; baseTipOid?: string; stackEvidence?: BatchStackEvidence };
 
 interface FetchPrBatchOptions {
   /**
@@ -115,7 +118,9 @@ async function fetchGraphqlPrBatch<T>(
   // Decide reuse from the first page alone, before any supplement is paid for.
   const reused = reuse && (await reuse(fingerprint));
   const baseTipOid = raw.baseRef?.target?.oid;
-  if (reused) return { reused, ...(baseTipOid && { baseTipOid }) };
+  const stackEvidence = stackEvidenceFromRaw(raw, result.data);
+  if (reused)
+    return { reused, ...(baseTipOid && { baseTipOid }), ...(stackEvidence && { stackEvidence }) };
   const queueRateLimit = await hydrateMergeQueueChecks(raw, repo, result.rateLimit);
   const paged = await paginateBatchConnections(pr, repo, raw, opts, queueRateLimit);
   const threadPages = await hydrateThreadCommentPages(paged.threads, paged.rateLimit);
@@ -159,14 +164,8 @@ async function fetchGraphqlPrBatch<T>(
     ...(parseHeadCheckSuitesEmpty(raw) && { headCheckSuitesEmpty: true as const }),
     ...workflowSuites(raw),
     ...(receiptSummary && { receiptSummary }),
+    ...(stackEvidence && { stackEvidence }),
   };
-}
-
-function workflowSuites(raw: Parameters<typeof parseHeadWorkflowSuites>[0]): {
-  headWorkflowSuites?: WorkflowSuiteSnapshot[];
-} {
-  const suites = parseHeadWorkflowSuites(raw);
-  return suites.length > 0 ? { headWorkflowSuites: suites } : {};
 }
 
 /**

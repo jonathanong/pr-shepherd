@@ -594,6 +594,7 @@ Required checks that never reported:
 - Shepherd stays on `WAIT` while a relevant check run is in progress, or a check suite with a `workflowRun` is not completed. A `QUEUED` suite with no workflow run does not count.
 - The instruction says no CI is running and names the required checks that have not passed.
 - A non-stack PR loads `baseRef.compare(headRef).behindBy` against the head commit OID when those contexts are missing, including when `mergeStateStatus` is `BLOCKED`.
+- A native-stack layer loads the trunk compare against the bottom open layer's head under the same condition. Neither compare runs while every required context has reported.
 - If that compare, the trunk compare, or derived merge status is `BEHIND`, the instruction states the commit count and says to rebase and push. On a native stack that is `gh stack rebase` then `gh stack push`. Otherwise rebase onto the PR base. That push is how the missing checks start.
 - If the push does not start them, investigate. Do not close and reopen first.
 - Once the branch is current, Shepherd instructs the caller to run `gh pr close <pr> -R <repo>` and `gh pr reopen <pr> -R <repo>` once for that head. The marker records that the instruction was returned; it does not verify the caller ran it.

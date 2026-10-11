@@ -58,7 +58,7 @@ describe("refreshCachedUnreported", () => {
   it("refreshes a stale trunk compare and keeps READY from hiding missing checks", async () => {
     target.mockResolvedValue({
       contexts: ["build", "tests", "gitleaks"],
-      trunkBehindBy: 6,
+      trunkBehindBy: () => Promise.resolve(6),
       stackBottomPr: 613,
     });
 

@@ -23,7 +23,7 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
 | single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 334 core + 1.5 points | 361.5 core + 1.5 points |
-| PR stack | 42 / 27 / 12 | 2 / 6 / 74 | 540 core + 0 points | 570 core + 0 points |
+| PR stack | 23 / 27 / 12 | 2 / 6 / 74 | 540 core + 0 points | 570 core + 0 points |
 
 <!-- bench:headline:end -->
 
@@ -218,10 +218,13 @@ are as good as these assumptions:
   - every one-PR tick is 1 point (`BatchPr`). Its first page is the
     fingerprint read, so an unchanged wait poll is a 1-point hit and the first
     changed tick after a wait, a miss, continues the same request at 1 point;
-  - a stack tick is 1 topology point plus `max(1, round(0.52 × layers))`;
+  - a stack tick is `max(1, round(0.52 × layers))`, plus 1 topology point on
+    the anchor's first tick only; later ticks size the summary from the stack
+    size the first one stored;
   - a one-PR tick on a non-root native-stack layer (the sessions `stack-work`
-    routes) also loads the trunk's required contexts (`RefRules`) and the
-    stack topology (`PollStackTopology`), 3 points in all;
+    routes) is 1 point: `BatchPr`'s first page carries the stack topology and
+    the trunk's required contexts. The trunk compare (`BaseBehind`) runs only
+    while a required check is unreported, which no scenario has;
   - `apply review` with 1 to 20 replies spends one `ApplyReviewPreflight`
     read (head SHA for `--require-sha`, transcripts and the first chunk's
     recovery evidence), then one point per chunk of 10 mutations and one

@@ -140,6 +140,7 @@ async function runScopedCheck(
   const fetched = reuse
     ? await fetchPrBatch(prNumber, repo, batchOptions, reuse)
     : await fetchPrBatch(prNumber, repo, batchOptions);
+  if (fetched.stackEvidence) context?.seedStack(prNumber, repo, fetched.stackEvidence);
   if ("reused" in fetched)
     return refreshCachedUnreported(fetched.reused, repo, context, fetched.baseTipOid);
   const result = fetched;
