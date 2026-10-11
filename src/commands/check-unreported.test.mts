@@ -89,6 +89,12 @@ describe("refreshCachedUnreported", () => {
     expect(await refreshCachedUnreported(report(), { owner: "acme", name: "widgets" })).toBeNull();
   });
 
+  it("compares contexts as sets, so a duplicate cannot mask a removed one", async () => {
+    target.mockResolvedValue({ contexts: ["build", "build", "gitleaks"], stackBottomPr: 613 });
+
+    expect(await refreshCachedUnreported(report(), { owner: "acme", name: "widgets" })).toBeNull();
+  });
+
   it("refreshes a non-stack base compare without a second batch", async () => {
     behind.mockResolvedValue(93);
     const next = await refreshCachedUnreported(

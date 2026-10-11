@@ -167,6 +167,7 @@ function reportChecks(report: ShepherdReport): { name: string }[] {
 }
 
 function sameContexts(a: readonly string[], b: readonly string[]): boolean {
-  const set = new Set(a.map((c) => c.trim()));
-  return a.length === b.length && b.every((c) => set.has(c.trim()));
+  const left = new Set(a.map((c) => c.trim()));
+  const right = new Set(b.map((c) => c.trim()));
+  return left.size === right.size && [...right].every((c) => left.has(c));
 }
