@@ -1006,7 +1006,7 @@ const PR_SCENARIOS = [
       const merged = "✓ Merged pull request owner/repo#42 (Fixture PR)\n";
       return {
         shepherd: [
-          // The tick before the ready delay elapsed was READY too, so the refresh replays a 304.
+          // The READY refresh stands in for the countdown's first READY tick, which pays it cold.
           readyTick(receiptTick(snapshot(fixture))),
           {
             phase: 2,
@@ -1044,7 +1044,7 @@ const PR_SCENARIOS = [
         "✓ Pull request owner/repo#42 will be added to the merge queue for main when ready\n";
       return {
         shepherd: [
-          // The tick before the ready delay elapsed was READY too, so the refresh replays a 304.
+          // The READY refresh stands in for the countdown's first READY tick, which pays it cold.
           readyTick(receiptTick(snapshot(fixture))),
           {
             phase: 2,
