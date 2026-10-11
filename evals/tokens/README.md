@@ -408,8 +408,10 @@ by how far they move the result.
   itself (`apply review`, merges, log reads) cost what they cost in the poll
   arm.
 - **Idle hour (assumed).** The report also prices an hour where nothing
-  changes: the poll arm's blocking `--until-terminal` call (60 fingerprint
-  points, no turn), which is what the skill runs and the comparison that
+  changes: the poll arm's blocking `--until-terminal` call (4 reconcile
+  points and 480 conditional detector reads that all answer 304, no turn,
+  assuming no check is running, for example a requested bot review; a wait on
+  running CI still spends a fingerprint point per poll), which is what the skill runs and the comparison that
   counts; the legacy bounded CLI mode, a `--timeout 4.5m` poll called again
   each time it returns (one turn each), which the skill no longer uses and is
   shown only for reference; and the event arm (4 reconcile wakes of two requests each, 300 conditional

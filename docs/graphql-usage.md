@@ -42,14 +42,17 @@ Costs below assume the PR number was passed. Omitting it adds 1 point for `PrNum
 
 ### One PR
 
-| Command                                                           | What runs                            | Typical points      |
-| ----------------------------------------------------------------- | ------------------------------------ | ------------------- |
-| `pr-shepherd [PR]` / `poll`, continuation tick, fingerprint hit   | `BatchPr` first page only            | 1                   |
-| Same tick, fingerprint miss                                       | `BatchPr`                            | 1, plus supplements |
-| Tick returned to the caller, last bounded tick, FIX_CODE debounce | `BatchPr` (fingerprint reuse is off) | 1, plus supplements |
-| `iterate`, MCP `iterate` for one PR                               | `BatchPr` every call                 | 1, plus supplements |
+| Command                                                                  | What runs                                 | Typical points      |
+| ------------------------------------------------------------------------ | ----------------------------------------- | ------------------- |
+| `pr-shepherd [PR]` / `poll`, idle continuation tick, detectors unchanged | Conditional REST detectors only (all 304) | 0                   |
+| `pr-shepherd [PR]` / `poll`, continuation tick, fingerprint hit          | `BatchPr` first page only                 | 1                   |
+| Same tick, fingerprint miss                                              | `BatchPr`                                 | 1, plus supplements |
+| Tick returned to the caller, last bounded tick, FIX_CODE debounce        | `BatchPr` (fingerprint reuse is off)      | 1, plus supplements |
+| `iterate`, MCP `iterate` for one PR                                      | `BatchPr` every call                      | 1, plus supplements |
 
 `BatchPr`'s first page is the fingerprint read: a hit returns the stored report before any supplement, and a miss continues the same request. There is no separate pre-check, so a hit and a miss cost the same 1 point when there are no supplements. At the default 60s interval, that is about 60 points/hour either way, a small share of 5,000. A thread among the newest 20 with more than one comment disables reuse; such a tick costs 1 point plus any supplements.
+
+An idle wait costs less. When the stored report has no check still running (for example, CI finished and a requested bot review is pending), a continuation tick first makes eight conditional REST reads (see [graphql.md](graphql.md#idle-wait-change-detectors)). If every one answers 304 and the last GraphQL snapshot is younger than `poll.reconcileSeconds` (default 900), the tick spends no GraphQL points and no core requests. A changed read costs that read plus the ordinary `BatchPr` tick. The first idle tick seeds the detectors with eight charged core reads. An hour of unchanged idle waiting therefore costs about 4 points (one reconcile `BatchPr` per 15 minutes) instead of 60.
 
 Supplements on a full snapshot, usually 1 point each:
 

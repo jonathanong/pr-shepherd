@@ -16,6 +16,16 @@ export interface StoredPrFingerprint {
   inputDigest: string;
   fingerprint: PrFingerprint;
   report: ShepherdReport;
+  /**
+   * Conditional REST change detectors read before the GraphQL snapshot that produced
+   * `report`, and when that snapshot ran (unix ms). Dropped whenever the report is rewritten.
+   */
+  detectors?: StoredWaitDetectors;
+}
+
+export interface StoredWaitDetectors {
+  digest: string;
+  fullAt: number;
 }
 
 export function fingerprintInputDigest(config: PrShepherdConfig): string {
@@ -70,17 +80,32 @@ export async function storePrFingerprint(
   report: ShepherdReport,
   config: PrShepherdConfig,
 ): Promise<void> {
+  await writeStored(key, {
+    version: VERSION,
+    inputDigest: fingerprintInputDigest(config),
+    fingerprint,
+    report,
+  });
+}
+
+/** Record the detector digest read before this tick's GraphQL snapshot beside its report. */
+export async function attachWaitDetectors(
+  key: { owner: string; repo: string; pr: number },
+  stored: StoredPrFingerprint,
+  detectors: StoredWaitDetectors,
+): Promise<void> {
+  await writeStored(key, { ...stored, detectors });
+}
+
+async function writeStored(
+  key: { owner: string; repo: string; pr: number },
+  payload: StoredPrFingerprint,
+): Promise<void> {
   const path = resolvePrStatePath(key, "fingerprint.json");
   let tmp: string | undefined;
   try {
     await mkdir(dirname(path), { recursive: true });
     tmp = `${path}.${randomUUID()}.tmp`;
-    const payload: StoredPrFingerprint = {
-      version: VERSION,
-      inputDigest: fingerprintInputDigest(config),
-      fingerprint,
-      report,
-    };
     await writeFile(tmp, `${JSON.stringify(payload)}\n`, "utf8");
     await rename(tmp, path);
     tmp = undefined;

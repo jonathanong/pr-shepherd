@@ -22,6 +22,7 @@ function defaultConfig(): PrShepherdConfig {
       stackIntervalFactor: 2,
       timeoutSeconds: 270,
       debounceSeconds: 60,
+      reconcileSeconds: 900,
       quietStatus: false,
       mode: "auto",
     },

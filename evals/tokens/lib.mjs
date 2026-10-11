@@ -820,6 +820,15 @@ export const DETECTOR_200 = rest(1);
 /** A full snapshot every this many minutes since the last one, which also wakes the agent. */
 export const RECONCILE_MINUTES = 15;
 /**
+ * GraphQL transport, idle wait (no check running, e.g. a requested bot review):
+ * each poll tick first makes these conditional REST reads
+ * (src/commands/check-wait-detectors.mts). While all answer 304 the stored
+ * report is replayed with no GraphQL request; a `BatchPr` tick runs only every
+ * `poll.reconcileSeconds` (900, i.e. RECONCILE_MINUTES) or on a change
+ * (src/github/graphql-wait-detectors.test.mts).
+ */
+export const GRAPHQL_WAIT_DETECTORS = 8;
+/**
  * What the host returns when the agent starts `wait` in the background. The
  * agent's next request reads it and ends the turn, so every wake costs one
  * more request than the poll arm's blocking call.
