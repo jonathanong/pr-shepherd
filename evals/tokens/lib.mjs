@@ -872,18 +872,22 @@ export const GRAPHQL_WAIT_DETECTORS = 8;
  * (src/github/graphql-wait-detectors.test.mts). Charging all eight is an upper
  * bound: a warm validator whose resource has not moved since the last idle
  * wait answers 304, but after a push the pull and the three head-keyed reads
- * always change. Like the rest of an idle wait, the seed is reported with the
- * idle hour, not charged to a scenario.
+ * always change. Eight is one request per detector: a PR whose check runs,
+ * suites or statuses span more than one 100-entry page pays a request per
+ * page. Each scenario whose change ends an idle wait is charged the seed's
+ * REST requests; its `BatchPr` read is one of the wait's own polls, which no
+ * scenario charges on either side (the idle hour prices them).
  */
 export const GRAPHQL_DETECTOR_SEED = {
   graphqlPoints: SHEPHERD_TICK_API.graphqlPoints,
   restCore: GRAPHQL_WAIT_DETECTORS,
 };
 /**
- * The tick on which `changed` detectors see the change that ends an idle wait
- * charges their 200s before the `BatchPr` read the scenario already counts.
+ * An idle wait ended by a change: the seed's cold detector reads, then the
+ * `changed` detectors' 200s on the tick that sees the change, before the
+ * `BatchPr` read the scenario already counts.
  */
-export const graphqlIdleWaitApi = (changed) => rest(changed);
+export const graphqlIdleWaitApi = (changed) => rest(GRAPHQL_DETECTOR_SEED.restCore + changed);
 /**
  * What the host returns when the agent starts `wait` in the background. The
  * agent's next request reads it and ends the turn, so every wake costs one

@@ -22,7 +22,7 @@ GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
-| single PR | 30.8 / 36.5 / 12 | 10.8 / 9 / 78.3 | 224 core + 1.5 points | 251.5 core + 1.5 points |
+| single PR | 30.8 / 36.5 / 12 | 38.8 / 9 / 78.3 | 224 core + 1.5 points | 251.5 core + 1.5 points |
 | PR stack | 17 / 27 / 12 | 2 / 6 / 74 | 480 core + 0 points | 510 core + 0 points |
 
 <!-- bench:headline:end -->
@@ -237,9 +237,12 @@ are as good as these assumptions:
     which one sees the change charges that detector's 200 plus the 1-point
     read. `bot-review-summary` charges one (the reviews), `review-thread`,
     `bot-threads` and `conflicts` two (reviews and review comments, or the
-    pull and the base branch). Entering the wait seeds every detector once,
-    an upper bound of 8 requests reported with the idle hour, not charged to
-    a scenario. A wait outside those conditions reads `BatchPr` every poll;
+    pull and the base branch). Entering the wait seeds every detector once
+    on a cold cache, 8 requests that each of those scenarios is also charged
+    (an upper bound when the validators are warm, a lower one when check
+    runs, suites or statuses span more than one 100-entry page). The seed's
+    `BatchPr` read is one of the wait's polls, which no scenario charges. A
+    wait outside those conditions reads `BatchPr` every poll;
   - a stack summary page is `max(1, round(0.36 × layers))`. The anchor's first
     tick reads a 4-entry page (1 point), then one page for any remaining
     layers; later ticks size the summary from the stack size the first one
