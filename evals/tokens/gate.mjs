@@ -90,7 +90,7 @@ export function findLosses({ rows, sessions, apiSessions }) {
 /**
  * pending-losses.json: `losses` are pending, each linked to the issue that
  * removes it; `structural` are accepted, each with the `reason` no plan can
- * win it.
+ * win it (or the correctness guard the owner keeps that forces it).
  */
 export function readGateLists() {
   const json = JSON.parse(readFileSync(PENDING_PATH, "utf8"));

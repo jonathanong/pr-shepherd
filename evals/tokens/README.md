@@ -116,7 +116,10 @@ that is also on the pending list, does. Accept a cell only when you can state
 why every plan loses it, for example when gh spends no REST request and MCP no
 GraphQL point on the same step, so any read loses one of the two cells and the
 other is already a tie. A cost pr-shepherd chooses for a gain elsewhere (the
-wait detectors, a safety read) is a trade-off and stays pending.
+wait detectors, a safety read) is a trade-off and stays pending until the owner
+keeps it as a correctness guard; the reason then names the guard. The READY
+mergeability read (#197) is one: GraphQL's mergeable state can lag, so the
+guard reads it from REST before every READY action.
 
 On a failure, `--check` prints each unlisted loss with its numbers and a
 paste-ready entry. Add one only for a regression you accept and track in an
