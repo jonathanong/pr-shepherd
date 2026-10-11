@@ -427,7 +427,7 @@ Converts a draft PR to ready for review.
 
 **CLI side-effects:** Calls the selected transport's mark-ready operation when it is otherwise eligible. GraphQL remains fail-closed unless `viewerCanUpdate: true`; a false or unavailable GraphQL capability does not attempt the mutation. REST omits viewer capabilities, so on the supported cloud CCR route Shepherd attempts mark-ready and lets GitHub's response decide. An actual denial returns `authorization-required` with action `mark-ready`; an unavailable route returns `transport-unsupported`.
 
-**Draft state:** when GitHub confirms the conversion (`markedReady: true`), the result reports `isDraft: false`, so JSON omits `isDraft` and the summary line drops `**isDraft**` (`--verbose` prints `**isDraft** false`). The other merge-state fields still show the snapshot read before the conversion. When a reused snapshot skips the conversion (`markedReady: false`), the PR is still a draft and `isDraft` stays `true`.
+**Draft state:** when GitHub confirms the conversion (`markedReady: true`), the result reports `isDraft: false`, so JSON omits `isDraft` and the summary line drops `**isDraft**` (`--verbose` prints `**isDraft** false`). A `mergeStatus` of `DRAFT` is re-derived from the raw `mergeStateStatus` as for a non-draft PR (`CLEAN` stays `CLEAN` and is omitted). A raw `mergeStateStatus` of `DRAFT` has not been recomputed yet, so both fields report `UNKNOWN`. The other fields still show the snapshot read before the conversion. When a reused snapshot skips the conversion (`markedReady: false`), the PR is still a draft and `isDraft` stays `true`.
 
 **Exit code:** 11
 

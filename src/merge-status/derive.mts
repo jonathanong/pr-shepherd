@@ -34,18 +34,8 @@ export function deriveMergeStatus(pr: BatchPrData): MergeStatusResult {
     status = "CONFLICTS";
   } else if (pr.isDraft || pr.mergeStateStatus === "DRAFT") {
     status = "DRAFT";
-  } else if (pr.mergeStateStatus === "BEHIND") {
-    status = "BEHIND";
-  } else if (pr.mergeStateStatus === "BLOCKED" || pr.mergeStateStatus === "HAS_HOOKS") {
-    status = "BLOCKED";
-  } else if (pr.mergeStateStatus === "UNSTABLE") {
-    status = "UNSTABLE";
-  } else if (pr.mergeStateStatus === "UNKNOWN") {
-    status = "UNKNOWN";
-  } else if (pr.mergeStateStatus === "CLEAN") {
-    status = "CLEAN";
   } else {
-    status = "UNKNOWN";
+    status = nonDraftMergeStatus(pr.mergeStateStatus);
   }
 
   return {
@@ -58,6 +48,25 @@ export function deriveMergeStatus(pr: BatchPrData): MergeStatusResult {
     mergeStateStatus: pr.mergeStateStatus,
     mergeRequirements: deriveMergeRequirements(pr),
   };
+}
+
+/** Steps 5–9 of the ladder: the status of a non-draft PR without conflicts. */
+export function nonDraftMergeStatus(
+  mergeStateStatus: BatchPrData["mergeStateStatus"],
+): MergeStatusResult["status"] {
+  switch (mergeStateStatus) {
+    case "BEHIND":
+      return "BEHIND";
+    case "BLOCKED":
+    case "HAS_HOOKS":
+      return "BLOCKED";
+    case "UNSTABLE":
+      return "UNSTABLE";
+    case "CLEAN":
+      return "CLEAN";
+    default:
+      return "UNKNOWN";
+  }
 }
 
 // ---------------------------------------------------------------------------

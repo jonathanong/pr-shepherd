@@ -9,6 +9,7 @@ import { UnsupportedRestOperationError } from "../../github/unsupported-rest.mts
 import { GitHubRequestError } from "../../github/errors.mts";
 import { isRestSessionRefusal } from "../../github/rest-session-refusal.mts";
 import { rateLimitKind } from "../../github/rate-limit-kind.mts";
+import { nonDraftMergeStatus } from "../../merge-status/derive.mts";
 
 export async function markReadyIfAuthorized(
   enabled: boolean,
@@ -51,9 +52,14 @@ export async function markReadyIfAuthorized(
         { mutation: true },
       );
       // The snapshot predates the conversion; GitHub just confirmed the PR is no longer a draft.
+      // A raw DRAFT merge state has not been recomputed yet, so it becomes UNKNOWN.
+      const mergeStateStatus =
+        base.mergeStateStatus === "DRAFT" ? "UNKNOWN" : base.mergeStateStatus;
       return {
         ...base,
         isDraft: false,
+        mergeStateStatus,
+        ...(base.mergeStatus === "DRAFT" && { mergeStatus: nonDraftMergeStatus(mergeStateStatus) }),
         action: "mark_ready",
         markedReady: true,
         log: `MARKED READY: PR #${report.pr} converted from draft to ready for review`,

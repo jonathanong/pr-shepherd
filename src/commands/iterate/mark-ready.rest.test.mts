@@ -45,6 +45,24 @@ describe("REST mark-ready authorization", () => {
     expect(formatIterateResult(result)).not.toContain("**isDraft**");
     expect(formatIterateResult(result, { verbose: true })).toContain("**isDraft** false");
   });
+  it.each([
+    ["CLEAN", "CLEAN", "CLEAN"],
+    ["DRAFT", "UNKNOWN", "UNKNOWN"],
+    ["BLOCKED", "BLOCKED", "BLOCKED"],
+  ] as const)(
+    "re-derives a DRAFT merge status from raw %s",
+    async (raw, mergeStateStatus, status) => {
+      vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
+      await serve((_request, response) => response.end('{"draft":false}'));
+      const draft = { ...base, mergeStatus: "DRAFT" as const, mergeStateStatus: raw };
+      const result = (await runWithGithubTransport("rest", () =>
+        markReadyIfAuthorized(true, draft, report),
+      ))!;
+      expect(result).toMatchObject({ mergeStateStatus, mergeStatus: status });
+      expect(formatIterateResult(result)).not.toContain("DRAFT");
+      expect(JSON.stringify(projectIterateLean(result))).not.toContain("DRAFT");
+    },
+  );
   it("escalates a definite server403 once as authorization-required", async () => {
     vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
     await serve((_request, response) => {
