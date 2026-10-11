@@ -35,7 +35,11 @@ The REST input is derived automatically from the GraphQL fixture by
 [`test-helpers/test-cases/rest-projection.mts`](../test-helpers/test-cases/rest-projection.mts):
 the batch keeps only the keys the production REST reader emits, so `reviewDecision` is `null`,
 viewer capabilities are unknown, queue membership and removal history are absent, and threads always
-carry their full transcript. Branch policy stays readable and equal to the GraphQL policy. REST reads
+carry their full transcript. Threads take the REST reader's `rest-thread-<root comment ID>` handle,
+with the root taken from the `#discussion_rN` URL (or a synthetic root unique in the fixture). The
+fixture's seen markers and fix attempts stay keyed by GraphQL thread IDs: the harness records each
+GraphQL ID against its root, as an earlier GraphQL tick would have, so every REST variant runs the
+REST→GraphQL thread alias path. Branch policy stays readable and equal to the GraphQL policy. REST reads
 go through mocked `fetch` routes
 ([`rest-routes.mts`](../test-helpers/test-cases/rest-routes.mts)); an unrouted REST request or any
 GraphQL request during a REST run fails the test. `rest-projection.test.mts` runs the real REST
@@ -43,8 +47,7 @@ reader with every field populated and pins the projection allowlists to its outp
 cannot silently skew the REST variants.
 
 The REST test first asserts that the output carries the canonical transport evidence (the
-`**transport** \`rest\`` line and `## Unavailable transport fields` in text, per-row `transport` and
-`unavailable` lines in aggregate text, `transport`/`transportUnavailable` in JSON). It then strips that
+`**transport** \`rest\``line and`## Unavailable transport fields`in text, per-row`transport`and`unavailable`lines in aggregate text,`transport`/`transportUnavailable` in JSON). It then strips that
 evidence and compares the rest with the GraphQL output:
 
 - If the two are equal, no `output.rest.*` file may exist (a leftover one fails the test).
@@ -65,9 +68,14 @@ test fails if a declared divergence no longer diverges. Other fixture fields:
 - `restCarryOver` lists GraphQL-only batch keys to keep in the REST projection, modeling evidence
   fetched by an earlier GraphQL tick that survives a switch to REST.
 
-Aggregate fixtures model summary rows directly, so their REST projection strips only raw GraphQL-only
-fields (`reviewDecision`, `isInMergeQueue`, `queueRemoval`); a row's precomputed `action` and
-`reasons` are kept as written. `test-cases/format-parity.test.mts` and
+Aggregate fixtures model summary rows directly. Their REST projection
+([`rest-summary-projection.mts`](../test-helpers/test-cases/rest-summary-projection.mts)) strips the
+GraphQL-only fields (`reviewDecision`, `isInMergeQueue`, `queueRemoval`), then routes each row's
+inputs through the real `routePollSummary` twice: as GraphQL read them (including queue membership
+and a denied mark-ready capability) and as REST reads them. A row whose two routes differ takes the
+REST route and its recomputed poll command; a READY receipt REST evidence cannot certify is dropped.
+Rows that route identically keep their written `action` and `reasons`, including projector overlays
+such as `ready-delay` or `blocking-reviewer-in-progress`. `test-cases/format-parity.test.mts` and
 `src/skill-playbook-pointers.test.mts` cover both variants.
 
 `<action>` must be one of `cancel`, `wait`, `fix-code`, `mark-ready`,
@@ -211,6 +219,6 @@ integration cases are added. REST-only fixtures `133` and `134` carry earlier Gr
 
 `rest-transport.stack-guard-scenario.test.mts` forwards an expected-stack guard through library and MCP apply operations to real local HTTP. A disappeared stack rejects a new submission without a write. An already-pending UUID resumes by reading its status, while a dropped or changed guard returns an uncertain failure without a duplicate submission. Fixture `135` verifies equivalent CLI text/JSON commands for a REST queue prefix with its full stack guard, even when the configured direct method is disabled.
 
-`rest-transport.feedback-routing-scenario.test.mts` drives real REST polling with authenticated viewer identity and complete CCR thread status. A viewer-owned thread stays eligible for resolve-only retry after a marked reply and finishes after resolution. Another human's root remains reply-only when the viewer authored a later reply. An older human review with closed associated feedback is shown once as stale and asks for re-review. A remaining blocked review gate reports unavailable aggregate review evidence explicitly, without resurfacing that review as active fix work. Text and JSON retain matching ownership and stale-review evidence.
+`rest-transport.feedback-routing-scenario.test.mts` drives real REST polling with authenticated viewer identity and complete CCR thread status. A viewer-owned thread stays eligible for resolve-only retry after a marked reply and finishes after resolution. Another human's root remains reply-only when the viewer authored a later reply. An older human review with closed associated feedback is shown once as stale and asks for re-review. A remaining blocked review gate waits on the approval that branch protection still requires (the missing aggregate `reviewDecision` is not a readiness gap), without resurfacing that review as active fix work. Text and JSON retain matching ownership and stale-review evidence.
 
 `rest-transport.policy-backoff-scenario.test.mts` exhausts GraphQL, then throttles either REST branch-policy endpoint. Primary exhaustion, secondary throttling, and explicit `Retry-After` reach polling backoff before a successful retry finishes with complete readiness evidence. Only sleep is replaced; the transport, HTTP responses, and polling decisions run together. Subsequent attempts stay on REST and perform no writes.

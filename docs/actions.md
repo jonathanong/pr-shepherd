@@ -880,7 +880,11 @@ The same thread(s) remain unresolved after their pending commands were returned 
 
 ## Items needing attention
 
-- thread `PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate/index.mts:42` (@alice): The variable name is misleading
+- thread `PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate/index.mts:42` (@alice):
+
+  - comment `PRRC_kwDOSGizTs6abc12` (@alice):
+
+    > The variable name is misleading
 
 ## Fix attempts
 
@@ -899,6 +903,8 @@ After completing manual fixes, resume only after every required remote update ha
 1. Stop polling. Ask the user whether to run the pending review commands shown above.
 2. If yes, set any `$DISMISS_MESSAGE` to a one-sentence disposition, run every pending command from the pushed PR head, then rerun Shepherd with the same options.
 ```
+
+Under `## Items needing attention`, each thread lists its full transcript (`escalate.unresolvedThreads[].comments`), one comment per bullet with its comment ID, root comment first. A thread without a transcript shows its body directly.
 
 The block after the base-fields line (separated by a blank line) is `escalate.humanMessage` in JSON — ready to print verbatim.
 

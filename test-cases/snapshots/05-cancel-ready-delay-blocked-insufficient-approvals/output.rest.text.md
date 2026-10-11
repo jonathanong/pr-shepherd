@@ -1,6 +1,6 @@
-# PR #42 [ESCALATE]
+# PR #42 [CANCEL] — ready-delay-elapsed
 
-**status** `UNKNOWN` · **merge** `BLOCKED` · **repo** `owner/repo`
+**status** `READY` · **merge** `BLOCKED` · **repo** `owner/repo`
 **summary** 1 passing
 **transport** `rest`
 
@@ -11,16 +11,4 @@
 - `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
 - `mergeQueue`: REST does not expose queue membership, entry or removal history
 
-⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required
-
-**Triggers:** `transport-unsupported`
-
-reviewDecision: REST does not expose an aggregate review decision; latest review states are supplied
-
----
-
-After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-shepherd 42` to resume.
-
-## Instructions
-
-1. Stop — human direction is required before automated polling can resume.
+CANCEL: PR #42 is awaiting human review or branch protection resolution — ready-delay elapsed, stopping

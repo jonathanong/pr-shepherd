@@ -13,9 +13,9 @@
 
 ## Review threads
 
-### [threadId=PRRT_behind_hint](https://github.com/owner/repo/pull/42#discussion_r1) — `src/index.ts:42` (@reviewer · User)
+### [threadId=rest-thread-1](https://github.com/owner/repo/pull/42#discussion_r1) — `src/index.ts:42` (@reviewer · User)
 
-#### [commentId=PRRT_behind_hint](https://github.com/owner/repo/pull/42#discussion_r1) (@reviewer · User)
+#### [commentId=PRRC_1](https://github.com/owner/repo/pull/42#discussion_r1) (@reviewer · User)
 
 > Please rename this variable to be more descriptive.
 
@@ -25,5 +25,5 @@
 2. The branch is behind PR base branch `main`. rebase --force-with-lease before pushing.
 3. Commit and push any code changes.
 4. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
-5. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids PRRT_behind_hint --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha "$(git rev-parse HEAD)"`
+5. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-1 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha "$(git rev-parse HEAD)"`
 6. `[FIX_CODE]` is non-terminal. Rerun the same command now.

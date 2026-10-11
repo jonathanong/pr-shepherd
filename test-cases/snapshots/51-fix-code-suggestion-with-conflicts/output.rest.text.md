@@ -13,9 +13,9 @@
 
 ## Review threads
 
-### [threadId=PRRT_suggest_conflict](https://github.com/owner/repo/pull/42#discussion_r51) — `src/config.ts:12` (@reviewer · User) [suggestion]
+### [threadId=rest-thread-51](https://github.com/owner/repo/pull/42#discussion_r51) — `src/config.ts:12` (@reviewer · User) [suggestion]
 
-#### [commentId=PRRT_suggest_conflict](https://github.com/owner/repo/pull/42#discussion_r51) (@reviewer · User)
+#### [commentId=PRRC_51](https://github.com/owner/repo/pull/42#discussion_r51) (@reviewer · User)
 
 > Use a named constant:
 > ```suggestion
@@ -34,5 +34,5 @@ const DEFAULT_TIMEOUT_MS = 5000;
 3. For every `[suggestion]` thread under `## Review threads`, run one `pr-shepherd build-suggestion-patches https://github.com/owner/repo/pull/42 --thread-id "<id>" --message "<one-sentence headline>" --format=json --transport rest`, repeating `--thread-id` and `--message` in displayed order. Playbook: "Suggestion patches".
 4. Commit any remaining conflict-resolution changes and push to the PR head branch before review mutations.
 5. Journal substantial decisions or rejections, citing item URLs or review IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
-6. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids PRRT_suggest_conflict --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha "$(git rev-parse HEAD)"`
+6. Set `$DISMISS_MESSAGE` to one sentence on what changed and run, even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-51 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha "$(git rev-parse HEAD)"`
 7. `[FIX_CODE]` is non-terminal. Rerun the same command now.

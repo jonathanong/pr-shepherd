@@ -7,17 +7,15 @@
  * all decision logic, and both text + JSON formatters.
  */
 import { vi, beforeEach, afterEach } from "vitest";
-import { readFileSync, readdirSync } from "node:fs";
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import builtinConfig from "../../src/config.json" with { type: "json" };
 import { testFingerprint } from "../github/fingerprint-fixture.mts";
-import {
-  projectBatchToRest,
-  projectRawSummaryToRest,
-  projectSummaryItemToRest,
-  restBatchEnvelope,
-} from "./rest-projection.mts";
+import { projectBatchToRest, restBatchEnvelope } from "./rest-projection.mts";
+import { projectRawSummaryToRest, projectSummaryItemToRest } from "./rest-summary-projection.mts";
+import { restThreadRoots } from "./rest-thread-roots.mts";
 import { restRoutesForFixture, stackLayerRows } from "./rest-routes.mts";
 
 // ---------------------------------------------------------------------------
@@ -136,7 +134,8 @@ vi.mock("../../src/state/ci-retrigger.mts", async (importOriginal) => ({
 import { main } from "../../src/cli-parser.mts";
 import { fetchPrBatch } from "../../src/github/batch.mts";
 import { fetchPollSummary } from "../../src/github/poll-summary.mts";
-import { getMergeableState, getRepoInfo } from "../../src/github/client.mts";
+import { getMergeableState, getRepoInfo, type RepoInfo } from "../../src/github/client.mts";
+import { recordThreadIdentity } from "../../src/github/rest-identities.mts";
 import { triageFailingChecks, fetchStartupFailureChecks } from "../../src/checks/triage.mts";
 import { fetchCheckRunAnnotationsBatch } from "../../src/github/check-annotations-batch.mts";
 import { autoResolveOutdated } from "../../src/comments/resolve.mts";
@@ -561,15 +560,27 @@ export function applyFixture(fixture: Fixture, transport: FixtureTransport = "gr
       startupFailureChecks: stampInitialRunAttempt(fixture.startupFailureChecks ?? []),
       carryOver: fixture.restCarryOver,
     });
-    mockFetchPrBatch.mockResolvedValue(
-      restBatchEnvelope(restData, fixture.headWorkflowSuites ?? []),
-    );
+    const envelope = restBatchEnvelope(restData, fixture.headWorkflowSuites ?? []);
+    const threads = (batchData.reviewThreads ?? []) as Array<Record<string, unknown>>;
+    const roots = restThreadRoots(threads);
+    mockFetchPrBatch.mockImplementation(async (pr: number, repo: RepoInfo) => {
+      // Fixture seen markers and fix attempts are keyed by GraphQL thread IDs: they model an
+      // earlier GraphQL tick, which recorded each thread's GraphQL ID against its root comment.
+      // The REST reader then records the `rest-thread-<root>` handle for the same thread.
+      for (const [index, thread] of threads.entries()) {
+        const id = String(thread.id);
+        if (!id.startsWith("rest-thread-")) await recordThreadIdentity(repo, pr, id, roots[index]);
+        await recordThreadIdentity(repo, pr, `rest-thread-${roots[index]}`, roots[index]);
+      }
+      return envelope;
+    });
     mockFetchRawSummaryPr.mockResolvedValue(projectRawSummaryToRest(rawSummaryForBatch(restData)));
     if (fixture.aggregateSummary) {
-      mockFetchPollSummary.mockResolvedValue({
-        ...fixture.aggregateSummary,
-        prs: fixture.aggregateSummary.prs.map(projectSummaryItemToRest),
-      });
+      const summary = fixture.aggregateSummary;
+      mockFetchPollSummary.mockImplementation(async (opts) => ({
+        ...summary,
+        prs: await Promise.all(summary.prs.map((row) => projectSummaryItemToRest(row, opts))),
+      }));
     }
   } else {
     mockFetchPrBatch.mockResolvedValue({
@@ -778,8 +789,13 @@ export async function captureTwoTickStallRun(
 // ---------------------------------------------------------------------------
 
 export function registerHarnessBefore(): void {
+  let stateDir: string | undefined;
   beforeEach(() => {
     vi.clearAllMocks();
+    // Unmocked state (REST identity associations, conditional caches) lives in a per-test
+    // directory so one fixture's recorded handles cannot leak into another.
+    stateDir = mkdtempSync(join(tmpdir(), "pr-shepherd-fixture-"));
+    process.env.PR_SHEPHERD_STATE_DIR = stateDir;
     process.exitCode = undefined;
     process.env.GH_TOKEN = "test-token";
     vi.useFakeTimers();
@@ -803,6 +819,8 @@ export function registerHarnessBefore(): void {
     vi.useRealTimers();
     delete process.env.GH_TOKEN;
     delete process.env.CLAUDE_CODE_REMOTE;
+    delete process.env.PR_SHEPHERD_STATE_DIR;
+    if (stateDir) rmSync(stateDir, { recursive: true, force: true });
     process.exitCode = undefined;
   });
 }

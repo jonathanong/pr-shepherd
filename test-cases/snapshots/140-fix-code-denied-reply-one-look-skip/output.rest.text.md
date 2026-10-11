@@ -14,7 +14,7 @@
 
 ### [threadId=rest-thread-12](https://github.com/owner/repo/pull/42#discussion_r12) — `src/retry.ts:17` (@reviewer · User)
 
-#### [commentId=rest-thread-12](https://github.com/owner/repo/pull/42#discussion_r12) (@reviewer · User)
+#### [commentId=PRRC_12](https://github.com/owner/repo/pull/42#discussion_r12) (@reviewer · User)
 
 > Please add a regression test for the retry limit.
 
