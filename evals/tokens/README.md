@@ -42,7 +42,7 @@ pr-shepherd does not save" and "Rate-limit assumptions".
 ```sh
 node evals/tokens/bench.mjs          # rewrite REPORT.md
 node evals/tokens/bench.mjs --json   # raw numbers
-node evals/tokens/bench.mjs --check  # the gate: fail on a loss not in pending-losses.json
+node evals/tokens/bench.mjs --check  # the gate: fail on a loss not accepted in pending-losses.json
 ```
 
 It is offline and deterministic. CI regenerates REPORT.md next to the eval
@@ -62,8 +62,11 @@ print 4.00 characters per token and a 3,000-token intercept. Never run it with
 ## The gate
 
 The goal is for pr-shepherd to cost less than every baseline on every metric.
+LLM tokens and cost (ITE and tool tokens) are the primary metrics; the GitHub
+rate limit (GraphQL points and REST core requests) is secondary and only needs
+to stay at or below gh wherever a lower cost is achievable.
 `bench.mjs --check` exits nonzero when pr-shepherd is strictly worse than a
-baseline on any gated cell that the pending list does not name. A tie is not a
+baseline on any gated cell that is not accepted as structural. A tie is not a
 loss.
 
 - **Metrics.** Cost (ITE), tool tokens, turns and tool calls; GraphQL points and
@@ -98,35 +101,47 @@ The event arm ("Event arm" below) is informational and not gated. It lives in
 its own report section, outside the session and rate-limit totals that
 `--check` reads, so it adds no loss and removes none.
 
-Today's losses are listed in [pending-losses.json](pending-losses.json). Each
-entry names its scope, metric, transport (rate-limit metrics only) and
-baseline, and links the issue that removes it: #528 for tokens and turns, #525
-for the rate limit. Entries carry no numbers, so a change in size is not churn;
-REPORT.md's Summary prints every loss with its numbers. `--check` also fails
-when a listed entry is no longer a loss, or links the wrong issue, so the list
-can only shrink. When a fix lands, delete its entries in the same change. The
-list is temporary: #524 closes when it is empty.
+Losses are recorded in [pending-losses.json](pending-losses.json). Each entry
+names its scope, metric, transport (rate-limit metrics only) and baseline.
+Entries carry no numbers, so a change in size is not churn; REPORT.md's
+Summary prints every loss with its numbers.
 
-Losses no plan can win are accepted in the same file's `structural` list. Each
-entry names its cell like a pending one and carries a one-line `reason` instead
-of an issue; `--check` fails on an entry without a reason. REPORT.md's Summary
-counts them apart and lists them under "Accepted structural losses" with their
-reasons. They do not fail `--check`, but an entry that is no longer a loss, or
-that is also on the pending list, does. Accept a cell only when you can state
-why every plan loses it, for example when gh spends no REST request and MCP no
-GraphQL point on the same step, so any read loses one of the two cells and the
-other is already a tie. A cost pr-shepherd chooses for a gain elsewhere (the
-wait detectors, a safety read) is a trade-off and stays pending until the owner
-keeps it as a correctness guard; the reason then names the guard. The READY
-mergeability read (#197) is one: GraphQL's mergeable state can lag, so the
-guard reads it from REST before every READY action. The owner also keeps
-`apply review --require-sha`'s preflight read and keeps replies and merges on
-GraphQL in GraphQL mode (#524), and keeps the shrunken skill's context carry
-(#523/#551), so the cells those costs decide are structural too.
+- **Pending losses must be empty.** The file's `losses` list is the old
+  temporary list (#524); `--check` fails on any entry in it. A loss is either
+  fixed or accepted as structural.
+- **Structural losses need a reason.** Each `structural` entry carries a
+  one-line `reason` that is either an owner decision or a floor: a proof that
+  every plan pays more than the baseline on that cell, for example when gh
+  spends no REST request and MCP no GraphQL point on the same step, so any
+  read loses one of the two cells. `--check` fails on an entry without a
+  reason, on an entry that is no longer a loss, and on a duplicate, so the
+  list can only shrink. REPORT.md's Summary counts them apart and lists them
+  under "Accepted structural losses" with their reasons.
+- **Token and cost losses need an explicit owner decision.** ITE and tool
+  tokens are the primary metrics: a loss on them is never accepted on a floor
+  argument alone. Today only `merged` ITE vs gh is accepted, as the outcome of
+  shrinking the skill (#523/#551).
+- **Rate-limit losses may be accepted with a written reason.** The owner's
+  decisions so far:
+  - The READY mergeability read (#197): GraphQL's mergeable state can lag, so
+    the guard reads it from REST before every READY action.
+  - `apply review --require-sha`'s preflight read, and replies and merges stay
+    on GraphQL in GraphQL mode (#524).
+  - gh is the primary rate-limit baseline, and pr-shepherd does not chase both
+    gh and MCP (#525). MCP observes with about five REST reads and no GraphQL
+    point. pr-shepherd's REST snapshot is broader on purpose (startup-failure
+    detection, check suites, workflow runs, stack topology and review state),
+    and on the GraphQL transport it targets gh's GraphQL use. So the cells
+    where only MCP is cheaper on the rate limit are accepted, as are the REST
+    vs gh cells where the broader snapshot is the only cost above the floor.
 
-On a failure, `--check` prints each unlisted loss with its numbers and a
-paste-ready entry. Add one only for a regression you accept and track in an
-issue.
+A cost pr-shepherd chooses for a gain elsewhere (the wait detectors, a safety
+read) is a trade-off and is only accepted once the owner keeps it; the reason
+then names the decision.
+
+On a failure, `--check` prints each unaccepted loss with its numbers and a
+paste-ready structural entry. Fix the regression instead; add the entry only
+with an owner decision or a floor, written into its `reason`.
 
 ## Method
 
@@ -704,6 +719,11 @@ explains the main ones.
   gap as the outcome of shrinking the skill (#523/#551): without the carried
   skill and playbook the step would beat gh, and deleting SKILL.md entirely
   would save only about 85 ITE.
+- **The rate limit against MCP.** On the REST transport pr-shepherd spends
+  several times MCP's REST requests per tick (the stack session most), and on
+  the GraphQL transport it spends GraphQL points where MCP spends none. Its
+  REST snapshot is broader on purpose, and gh is the rate-limit baseline it
+  targets, so the owner accepts these cells (#525).
 - **Stack token volume.** Each routed layer's first tick prints its own
   instructions. In the stack session pr-shepherd reads 42% more tool tokens than
   gh's terse per-layer reads, and routing work across the six-layer stack is

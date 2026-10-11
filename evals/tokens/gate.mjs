@@ -1,8 +1,8 @@
 // The bench gate: every metric on which pr-shepherd is worse than a baseline,
 // per session and per scenario. `bench.mjs --check` fails on a loss that is
-// neither pending nor accepted as structural (pending-losses.json), and on a
-// listed entry that is no longer a loss, so both lists can only shrink.
-// README.md "The gate" has the rules.
+// not accepted as structural (pending-losses.json), on any pending entry (the
+// pending list must stay empty), and on a listed entry that is no longer a
+// loss. README.md "The gate" has the rules.
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -88,9 +88,9 @@ export function findLosses({ rows, sessions, apiSessions }) {
 }
 
 /**
- * pending-losses.json: `losses` are pending, each linked to the issue that
- * removes it; `structural` are accepted, each with the `reason` no plan can
- * win it (or the correctness guard the owner keeps that forces it).
+ * pending-losses.json: `losses` are pending and must stay empty (#524);
+ * `structural` are accepted, each with a `reason`: an owner decision or a
+ * floor no plan can beat.
  */
 export function readGateLists() {
   const json = JSON.parse(readFileSync(PENDING_PATH, "utf8"));
@@ -105,17 +105,18 @@ export function checkPending(losses, pending, structural = []) {
   return {
     unlisted: losses.filter((l) => !keys.has(lossKey(l))),
     stale: listed.filter((p) => !live.has(lossKey(p))),
+    pending: [...pending],
     wrongIssue: pending.filter((p) => live.has(lossKey(p)) && p.issue !== ISSUE_FOR[p.metric]),
     duplicate: listed.filter((p, i) => listed.findIndex((q) => lossKey(q) === lossKey(p)) !== i),
     missingReason: structural.filter((s) => typeof s.reason !== "string" || !s.reason.trim()),
   };
 }
 
-/** A pending-list entry for a loss, as it should appear in pending-losses.json. */
-export const pendingEntry = (l) => ({
+/** A structural entry for a loss, as it would appear in pending-losses.json. */
+export const structuralEntry = (l) => ({
   where: l.where,
   metric: l.metric,
   ...(l.transport && { transport: l.transport }),
   baseline: l.baseline,
-  issue: l.issue,
+  reason: "<owner decision or floor>",
 });

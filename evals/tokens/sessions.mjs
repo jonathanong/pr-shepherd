@@ -1390,7 +1390,7 @@ export function realSessionsSection({ rows, data } = realSessions()) {
   const losses = realSessionLosses(rows);
   if (losses.length) {
     out.push(
-      "Where modeled pr-shepherd costs more on a real PR. These are not gated: `--check` gates the synthetic sessions, where the same metrics are already pending.",
+      "Where modeled pr-shepherd costs more on a real PR. These are not gated: `--check` gates the synthetic sessions, where the same metrics are already gated.",
       "",
     );
     for (const l of losses)
