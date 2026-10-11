@@ -65,7 +65,7 @@ describe("resolveStateBase — default location", () => {
   });
 
   it("uses os.tmpdir() on other platforms without spawning getconf", async () => {
-    setPlatform("linux");
+    setPlatform("win32");
     const resolveStateBase = await loadResolveStateBase();
 
     expect(resolveStateBase()).toBe(join(tmpdir(), "pr-shepherd-state"));

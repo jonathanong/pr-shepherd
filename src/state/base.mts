@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { accessSync, constants, lstatSync, mkdirSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { tmpdir } from "node:os";
 import { SAFE_PR_NUMBER, SAFE_SEGMENT } from "../util/path-segment.mts";
@@ -25,11 +26,42 @@ function readDarwinUserTempDir(): string | null {
   }
 }
 
+/** Read once per process; null when the platform is not Linux or the shared base is unusable. */
+let linuxUserStateBase: string | null | undefined;
+
+/**
+ * Linux has no per-user temp dir independent of `TMPDIR`, and sandboxed agent shells point
+ * `TMPDIR` at their own directory (e.g. `/tmp/claude-<uid>`). Use `/tmp/pr-shepherd-state-<uid>`
+ * instead so sandboxed and unsandboxed runs share state. `/tmp` is shared by every user, so the
+ * directory must be a real directory (not a symlink) owned by this user and not writable by
+ * anyone else; it must also be readable, writable, and searchable from this process. Otherwise fall back to `TMPDIR`.
+ */
+function readLinuxUserStateBase(): string | null {
+  if (process.platform !== "linux" || typeof process.getuid !== "function") return null;
+  const uid = process.getuid();
+  const dir = join("/tmp", `pr-shepherd-state-${uid}`);
+  try {
+    mkdirSync(dir, { mode: 0o700 });
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "EEXIST") return null;
+  }
+  try {
+    const stat = lstatSync(dir);
+    if (!stat.isDirectory() || stat.uid !== uid || (stat.mode & 0o022) !== 0) return null;
+    accessSync(dir, constants.R_OK | constants.W_OK | constants.X_OK);
+    return dir;
+  } catch {
+    return null;
+  }
+}
+
 export function resolveStateBase(): string {
   const envDir = process.env["PR_SHEPHERD_STATE_DIR"];
   if (envDir) return envDir;
   const durable = resolveDurableStateBase();
   if (durable) return durable;
+  if (linuxUserStateBase === undefined) linuxUserStateBase = readLinuxUserStateBase();
+  if (linuxUserStateBase) return linuxUserStateBase;
   if (darwinUserTempDir === undefined) darwinUserTempDir = readDarwinUserTempDir();
   return join(darwinUserTempDir ?? tmpdir(), "pr-shepherd-state");
 }
