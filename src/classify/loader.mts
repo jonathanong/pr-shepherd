@@ -3,6 +3,7 @@ import { join, dirname, extname, basename } from "node:path";
 import { homedir } from "node:os";
 import { pathToFileURL } from "node:url";
 import type { ClassifyRule } from "./types.mts";
+import { STANDARD_RULES } from "./standard/index.mts";
 
 export interface LoadedRule {
   name: string;
@@ -63,6 +64,25 @@ export async function loadRules(files: string[]): Promise<LoadedRule[]> {
   }
   ruleCache.set(cacheKey, rules);
   return rules;
+}
+
+/** Bundled rules enabled by `classify.standard`, named `standard:<rule>`. */
+function standardRules(names: readonly string[]): LoadedRule[] {
+  return names.flatMap((name) => {
+    const rule = STANDARD_RULES[name];
+    return rule === undefined
+      ? []
+      : [{ name: `standard:${name}`, file: `pr-shepherd:standard/${name}`, rule }];
+  });
+}
+
+/** Local `.pr-shepherd/classification/` rules followed by the enabled bundled rules. */
+export async function loadClassifyRules(
+  cwd: string,
+  standardRuleNames: readonly string[] = [],
+): Promise<LoadedRule[]> {
+  const local = await loadRules(discoverRuleFiles(cwd));
+  return [...local, ...standardRules(standardRuleNames)];
 }
 
 /** Reset the rule cache — for use in tests. */

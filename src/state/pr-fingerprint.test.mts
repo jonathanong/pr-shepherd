@@ -79,6 +79,11 @@ describe("pr-fingerprint state", () => {
     expect(fingerprintInputDigest(other)).not.toBe(fingerprintInputDigest(config));
   });
 
+  it("changes digest when enabled standard classification rules change", () => {
+    const enabled = { ...config, standardRules: ["codecov-report"] } as PrShepherdConfig;
+    expect(fingerprintInputDigest(enabled)).not.toBe(fingerprintInputDigest(config));
+  });
+
   it("changes digest when classification rule file contents change", async () => {
     const rulesDir = join(testStateDir, ".pr-shepherd", "classification");
     await mkdir(rulesDir, { recursive: true });

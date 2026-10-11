@@ -54,7 +54,7 @@ import {
   buildThreadMutationRouting,
   threadHasAuthorizedMutation,
 } from "./iterate/thread-mutation-routing.mts";
-import { discoverRuleFiles, loadRules } from "../classify/loader.mts";
+import { loadClassifyRules } from "../classify/loader.mts";
 import { buildClassifyIndex, partitionBatch, type BatchPartition } from "../classify/apply.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import { getEffectiveCwd } from "../execution-context.mts";
@@ -285,7 +285,7 @@ async function runScopedCheck(
   ): boolean =>
     !mutationWasDenied(id, body, seenMap) && canGenerateGithubMutation(capability, operation);
   const botUsernames = normalizeBotUsernames(config.botUsernames);
-  const ruleSet = await loadRules(discoverRuleFiles(getEffectiveCwd()));
+  const ruleSet = await loadClassifyRules(getEffectiveCwd(), config.standardRules);
   const classifyIndex = buildClassifyIndex(ruleSet, batchData);
   const partition = partitionBatch(classifyIndex, batchData);
   const merged = await attachAndMergeCheckAnnotations(

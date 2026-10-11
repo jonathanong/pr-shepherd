@@ -8,6 +8,7 @@ import { getEffectiveCwd } from "../execution-context.mts";
 import { findMergeStrategies } from "./merge-command-args.mts";
 import { parseMergeMethod, type MergeMethod } from "./merge-method.mts";
 import { parseGithubTransport, type GithubTransport } from "../github/transport-mode.mts";
+import { STANDARD_RULE_NAMES } from "../classify/standard/index.mts";
 
 const MINIMIZE_COMMENTS_POLICIES = ["all", "bots", "users", "none"] as const;
 
@@ -64,8 +65,13 @@ interface PollConfig {
 export interface PrShepherdConfig {
   /** GitHub API settings; auto prefers GraphQL outside Claude Code cloud sessions. */
   github?: { transport?: GithubTransport };
-  /** Optional user classification configuration; preserved for rule consumers. */
+  /**
+   * Optional user classification configuration; preserved for rule consumers. Shepherd reads
+   * only `classify.standard`, a map of bundled rule name (or `all`) to boolean.
+   */
   classify?: unknown;
+  /** Bundled classification rules enabled by `classify.standard`, resolved and sorted by name. */
+  standardRules: string[];
   /** Argv prefix for every pr-shepherd command Shepherd emits, e.g. `["pnpm", "exec", "pr-shepherd"]`. */
   cliCommand: string[];
   /** GitHub logins that should be treated as bots even when GitHub reports User/Unknown. */
@@ -566,6 +572,41 @@ function warnUnknownConfigKeys(config: Record<string, unknown>): void {
 
 const rawDefaults = builtins as unknown as Record<string, unknown>;
 
+/**
+ * Resolves `classify.standard` (`{ all?: boolean, <rule>?: boolean }`) to enabled rule names.
+ * A named entry overrides `all`. Unknown names and non-boolean values warn and are ignored.
+ */
+function parseStandardRules(classify: unknown): string[] {
+  if (classify === null || typeof classify !== "object" || Array.isArray(classify)) return [];
+  const standard = (classify as Record<string, unknown>)["standard"];
+  if (standard === undefined) return [];
+  if (standard === null || typeof standard !== "object" || Array.isArray(standard)) {
+    process.stderr.write(
+      "pr-shepherd: config: classify.standard must be a map of rule name to boolean; ignored.\n",
+    );
+    return [];
+  }
+  const entries = standard as Record<string, unknown>;
+  const flags = new Map<string, boolean>();
+  for (const [name, value] of Object.entries(entries)) {
+    if (name !== "all" && !STANDARD_RULE_NAMES.includes(name)) {
+      process.stderr.write(
+        `pr-shepherd: config: unknown standard classification rule "classify.standard.${name}" ignored.\n`,
+      );
+      continue;
+    }
+    if (typeof value !== "boolean") {
+      process.stderr.write(
+        `pr-shepherd: config: classify.standard.${name} must be a boolean; ignored.\n`,
+      );
+      continue;
+    }
+    flags.set(name, value);
+  }
+  const all = flags.get("all") ?? false;
+  return STANDARD_RULE_NAMES.filter((name) => flags.get(name) ?? all).sort();
+}
+
 function parseConfig(value: Record<string, unknown>, normalizeMergeArgs = true): PrShepherdConfig {
   const config = value as unknown as PrShepherdConfig;
   const github = value["github"];
@@ -601,6 +642,7 @@ function parseConfig(value: Record<string, unknown>, normalizeMergeArgs = true):
   );
   config.iterate.instructions = parseInstructionStyle(config.iterate.instructions);
   config.checks.ignoreLogLines = parseIgnoreLogLines(config.checks.ignoreLogLines);
+  config.standardRules = parseStandardRules(config.classify);
   return config;
 }
 

@@ -1,6 +1,6 @@
 import { normalizeBotUsernames } from "../comments/authors.mts";
 import { applyRules } from "../classify/apply.mts";
-import { discoverRuleFiles, loadRules } from "../classify/loader.mts";
+import { loadClassifyRules } from "../classify/loader.mts";
 import { loadConfig } from "../config/load.mts";
 import { getEffectiveCwd } from "../execution-context.mts";
 import { classifyItem, type SeenMarker } from "../state/seen-comments.mts";
@@ -19,7 +19,7 @@ export async function summarizePollSummaryReview(
 ): Promise<PollSummaryReview> {
   const config = loadConfig();
   const bots = normalizeBotUsernames(config.botUsernames);
-  const rules = await loadRules(discoverRuleFiles(getEffectiveCwd()));
+  const rules = await loadClassifyRules(getEffectiveCwd(), config.standardRules);
   let actionable = 0;
   let incomplete =
     raw.comments.pageInfo.hasPreviousPage ||
@@ -129,5 +129,8 @@ function isSuppressed(
     ...(raw?.url && { url: raw.url }),
     ...(kind === "review-thread" && { path }),
   } as ClassifyItem;
-  return applyRules(rules, item).suppress === true;
+  const action = applyRules(rules, item);
+  // An auto-resolve match is hidden only once the full check minimizes or resolves it, or
+  // surfaces a denied mutation once; until then it stays actionable so that check runs.
+  return action.suppress === true && (action.autoResolve !== true || kind === "changes-requested");
 }

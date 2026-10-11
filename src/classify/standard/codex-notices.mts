@@ -1,0 +1,47 @@
+import type { ClassifyRule } from "../types.mts";
+import { isBotItem } from "./author.mts";
+
+const QUOTA_NOTICES = [
+  /^You have reached your Codex usage limits for security reviews\. Please try again later\.$/,
+  /^You have reached your Codex usage limits for code reviews\. You can see your limits in the \[Codex usage dashboard\]\(https:\/\/chatgpt.com\/codex\/cloud\/settings\/usage\)\.(?:\nTo continue using code reviews, add credits to your account and enable them for code reviews in your \[settings\]\(https:\/\/chatgpt.com\/codex\/cloud\/settings\/code-review\)\.)?$/,
+  /^Codex usage limits have been reached for code reviews\. Please check with the admins of this repo to increase the limits by adding credits\.\nRepo admins can enable using credits for code reviews in their \[settings\]\(https:\/\/chatgpt.com\/codex\/cloud\/settings\/code-review\)\.$/,
+  /^Codex usage limits have been reached\. Please try again later\.$/,
+];
+
+const ABOUT_BLOCK =
+  /\n\n<details> <summary>ℹ️ About Codex (?:in GitHub|security reviews in GitHub)<\/summary>[\s\S]*?<\/details>$/;
+
+const ACTIVITY_SUMMARY =
+  /^<!-- codex-pull-request-review-summary -->\n(?:<!-- codex-security-review:v1 \{[^\n]*\} -->\n)?\n?## Codex Review Summary\n\nThis comment shows the latest Codex review activity on this pull request\.\n\n\| Review \| Status \| Commit \| Review trigger \|\n\| --- \| --- \| --- \| --- \|\n(?:\|[^\n]+\|\n?)+$/;
+
+const CLEAN_REVIEW =
+  /^Codex Review: Didn't find any major issues\. (?:Bravo\.|Breezy!|Hooray!|:\+1:)\n\n\*\*Reviewed commit:\*\* `[a-f0-9]+`$/;
+
+const CLEAN_SECURITY =
+  /^### 🛡️ Codex Security Review(?: · _Automatically triggered_)?\n\nSecurity review completed\. No security issues were found in this pull request\.\n\n\*\*Reviewed commit:\*\* `[a-f0-9]+`\n\n\[View security finding report\]\(https:\/\/chatgpt.com\/codex\/cloud\/tasks\/[a-zA-Z0-9_]+\)\n\n_Only the user who started this review can view the report in Codex\._$/;
+
+/**
+ * Codex quota notices, the review-activity status table, and no-findings notices. Each pattern
+ * matches the whole comment, so a notice with any appended finding stays visible.
+ */
+const rule: ClassifyRule = (item) => {
+  if (!isBotItem(item, ["chatgpt-codex-connector"], ["pr-comment", "review-summary"])) {
+    return null;
+  }
+  const body = item.body.trim();
+  if (QUOTA_NOTICES.some((notice) => notice.test(body))) {
+    return { autoResolve: true, suppress: true, reason: "Codex usage-limit notice" };
+  }
+  if (item.kind !== "pr-comment") return null;
+  // Strip only the trailing About block; extra findings after it stay visible.
+  const content = body.replace(ABOUT_BLOCK, "").trim();
+  if (ACTIVITY_SUMMARY.test(content)) {
+    return { autoResolve: true, suppress: true, reason: "Codex review-activity table" };
+  }
+  if (CLEAN_REVIEW.test(content) || CLEAN_SECURITY.test(content)) {
+    return { autoResolve: true, suppress: true, reason: "Codex no-findings notice" };
+  }
+  return null;
+};
+
+export default rule;

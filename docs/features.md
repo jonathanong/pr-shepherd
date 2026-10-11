@@ -29,6 +29,7 @@ Shepherd does two jobs: **gather all context for a PR**, then **emit one determi
 
 - `.pr-shepherdrc.yml` files cascade (cwd up to `$HOME`, including a user-level `$HOME/.pr-shepherdrc.yml`); closer files override farther ones. See [configuration.md](configuration.md).
 - Classification rules under `.pr-shepherd/classification/` (`pr-shepherd/classify` types).
+- Opt-in bundled classification rules for common vendor bot noise (`classify.standard` in `.pr-shepherdrc.yml`).
 - Auth via `GH_TOKEN`, `GITHUB_TOKEN`, `gh auth token`, then `GITHUB_PERSONAL_ACCESS_TOKEN`.
 - `PR_SHEPHERD_STATE_DIR`, `PR_SHEPHERD_LOG_DISABLED=1`, `PR_SHEPHERD_LOG_MAX_BODY`.
 - `pr-shepherd admin log-file` prints the per-worktree debug log path.

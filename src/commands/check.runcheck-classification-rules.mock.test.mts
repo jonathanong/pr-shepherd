@@ -9,9 +9,8 @@ import {
 import { runCheck } from "./check.mts";
 import type { ClassifyItem } from "../classify/types.mts";
 
-vi.mock("../classify/loader.mts", () => ({
-  discoverRuleFiles: vi.fn().mockReturnValue(["fake-rule.mjs"]),
-  loadRules: vi.fn().mockResolvedValue([
+vi.mock("../classify/loader.mts", () => {
+  const rules = [
     {
       name: "test-rule",
       file: "fake-rule.mjs",
@@ -21,8 +20,13 @@ vi.mock("../classify/loader.mts", () => ({
         return null;
       },
     },
-  ]),
-}));
+  ];
+  return {
+    discoverRuleFiles: vi.fn().mockReturnValue(["fake-rule.mjs"]),
+    loadRules: vi.fn().mockResolvedValue(rules),
+    loadClassifyRules: vi.fn().mockResolvedValue(rules),
+  };
+});
 
 registerHooks();
 

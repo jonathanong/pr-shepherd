@@ -28,6 +28,18 @@ export interface StoredWaitDetectors {
   fullAt: number;
 }
 
+let packageVersion: string | undefined;
+
+/** Bundled standard rules change with the package, so their digest input is its version. */
+function readPackageVersion(): string {
+  packageVersion ??= (
+    JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8")) as {
+      version: string;
+    }
+  ).version;
+  return packageVersion;
+}
+
 export function fingerprintInputDigest(config: PrShepherdConfig): string {
   const hash = createHash("sha256");
   hash.update(
@@ -44,6 +56,10 @@ export function fingerprintInputDigest(config: PrShepherdConfig): string {
         neverCancelRuns: config.actions.neverCancelRuns,
         workWhileQueued: config.actions.workWhileQueued,
       },
+      standardRules:
+        (config.standardRules?.length ?? 0) > 0
+          ? { names: config.standardRules, version: readPackageVersion() }
+          : undefined,
     }),
   );
   for (const file of discoverRuleFiles(getEffectiveCwd())) {

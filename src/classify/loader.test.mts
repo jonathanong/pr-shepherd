@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { discoverRuleFiles, loadRules, _resetRuleCache } from "./loader.mts";
+import { discoverRuleFiles, loadClassifyRules, loadRules, _resetRuleCache } from "./loader.mts";
 
 let tmpDir: string;
 let classificationDir: string;
@@ -174,5 +174,18 @@ console.log(rules.length);`,
     writeFileSync(file, "throw 'not an error object';");
     const rules = await loadRules([file]);
     expect(rules).toHaveLength(0);
+  });
+});
+
+describe("loadClassifyRules", () => {
+  it("appends enabled standard rules after local rules", async () => {
+    writeFileSync(join(classificationDir, "local.mjs"), "export default () => null;");
+    const rules = await loadClassifyRules(tmpDir, ["codecov-report"]);
+    expect(rules.map((r) => r.name)).toEqual(["local", "standard:codecov-report"]);
+    expect(rules[1]?.file).toBe("pr-shepherd:standard/codecov-report");
+  });
+
+  it("loads only local rules when no standard rules are enabled", async () => {
+    expect(await loadClassifyRules(tmpDir)).toEqual([]);
   });
 });

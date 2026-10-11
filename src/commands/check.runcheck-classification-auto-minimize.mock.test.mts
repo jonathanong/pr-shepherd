@@ -21,16 +21,20 @@ import { buildIterateBase } from "./iterate/base.mts";
 import type { ClassifyItem } from "../classify/types.mts";
 import type { IterateResult, ShepherdReport } from "../types.mts";
 
-vi.mock("../classify/loader.mts", () => ({
-  discoverRuleFiles: vi.fn().mockReturnValue(["fake-rule.mjs"]),
-  loadRules: vi.fn().mockResolvedValue([
+vi.mock("../classify/loader.mts", () => {
+  const rules = [
     {
       name: "auto-minimize-rule",
       file: "auto-minimize-rule.mjs",
       rule: classifyNoiseForAutoMinimizeTests,
     },
-  ]),
-}));
+  ];
+  return {
+    discoverRuleFiles: vi.fn().mockReturnValue(["fake-rule.mjs"]),
+    loadRules: vi.fn().mockResolvedValue(rules),
+    loadClassifyRules: vi.fn().mockResolvedValue(rules),
+  };
+});
 
 registerHooks();
 

@@ -122,6 +122,7 @@ actions:
 | `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                                                                                                                                                                                                                                                    |
 | `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR-head CI; merge-queue `merge_group` checks are included automatically                                                                                                                                                                                                                                                      |
 | `checks.ignoreLogLines`              | `[]`                                      | Regex patterns matched against each raw CI log line; matching lines are dropped from `## Failing checks` log excerpts and from check-annotation dedup                                                                                                                                                                                                         |
+| `classify.standard`                  | `{}`                                      | Opt-in bundled classification rules for common bot noise: `all: true` enables every rule, and a named entry (`codecov-report: false`) overrides `all`. See [`classify.standard`](#classifystandard--default-)                                                                                                                                                 |
 | `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                                                                                                                                                                                                                                                                        |
 | `merge.method`                       | unset                                     | Preferred method: `merge`, `squash`, or `rebase`. Used only when the repository allows it. A strategy flag in `commandArgs` must name the same method.                                                                                                                                                                                                        |
 
@@ -347,6 +348,33 @@ A list of reviewer login prefixes (case-insensitive, matched with `startsWith`).
 Add other review bots (e.g. `sonar`, `codeclimate`, `reviewdog`) if they submit GitHub reviews that must complete before the PR is mergeable.
 
 ---
+
+## `classify.standard` — default `{}`
+
+Bundled [classification rules](actions.md#classification-rules) for vendor bot noise that most repositories want hidden. They run after the local `.pr-shepherd/classification/` rules, ship with the package, and update when you upgrade it. Nothing is enabled by default:
+
+```yaml
+classify:
+  standard:
+    all: true # enable every bundled rule
+    codecov-report: false # a named entry overrides `all`
+```
+
+The value is a map so it deep-merges across the rc cascade. Unknown rule names and non-boolean values print a warning on stderr and are ignored. Each match is reported with the rule name `standard:<rule>`.
+
+| Rule                        | Matches                                                                                                                                                                                                | Action            |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------- |
+| `coderabbit-notices`        | CodeRabbit PR comments that contain only a rate-limit, review-limit, draft-skipped, review-skipped (any reason), too-many-files, or review-in-progress notice, or a reply to a `@coderabbitai` command | suppress          |
+| `coderabbit-review-summary` | CodeRabbit `Actionable comments posted: N` review summaries whose findings are all inline threads (no caution, outside-diff, nitpick, duplicate, or additional sections)                               | suppress, resolve |
+| `codecov-report`            | Codecov coverage report PR comments (coverage gates still report through their status checks)                                                                                                          | suppress, resolve |
+| `codex-notices`             | Codex usage-limit notices, the review-activity table, and the no-findings code or security review comments                                                                                             | suppress, resolve |
+| `codex-review-summary`      | Bare `💡 Codex Review` review summaries whose findings are all inline threads                                                                                                                          | suppress, resolve |
+| `dependabot-notices`        | Dependabot's "already up-to-date" and "updatable in another way" replies                                                                                                                               | suppress, resolve |
+| `gemini-notices`            | Gemini Code Assist daily-quota and review-limit notices without a review heading                                                                                                                       | suppress, resolve |
+| `kilo-no-issues`            | Kilo Code reports whose status reads "No Issues Found" with no other section headings                                                                                                                  | suppress, resolve |
+| `sourcery-notices`          | Sourcery private-repo upsell and weekly rate-limit notices without a review heading                                                                                                                    | suppress, resolve |
+
+Every rule requires GitHub to report the author as a bot, matches both GraphQL (`coderabbitai`) and REST (`coderabbitai[bot]`) logins, and never matches inline review threads. "Resolve" means `autoResolve: true`, so with [`actions.autoMinimizeSuppressed`](#actionsautominimizesuppressed--default-true) the comment is also minimized on GitHub. `coderabbit-notices` is suppress-only because CodeRabbit later edits that comment into its walkthrough; the comment stays visible on GitHub and only leaves the agent's queue.
 
 ## `actions`
 
