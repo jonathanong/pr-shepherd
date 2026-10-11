@@ -43,14 +43,14 @@ Printed only when they apply:
 | `Signed commits: [Required]`                  | `signedCommits`                    | `requiresCommitSignatures`                                                                |
 | `Linear history: [Required]`                  | `linearHistory`                    | `requiresLinearHistory`                                                                   |
 | `Branch up to date: Yes\|No [Required]`       | `branchUpToDate`                   | **Only** when `requiresStrictStatusChecks`. `current` is `mergeStateStatus !== "BEHIND"`. |
-| `Required status checks: N [Required]`        | `requiredStatusChecks.contexts`    | Non-empty required contexts                                                               |
+| `Required status checks: a, b [Required]`     | `requiredStatusChecks.contexts`    | Non-empty required contexts                                                               |
 | `Required deployments: … [Required]`          | `requiredDeployments.environments` | Non-empty environments                                                                    |
 | `Required workflows: [Required]`              | `requiredWorkflows`                | `requiresWorkflows`                                                                       |
 | `Code scanning: [Required]`                   | `codeScanning`                     | `requiresCodeScanning`                                                                    |
 | `Merge queue: …`                              | `mergeQueue`                       | Required, enabled, or already in queue                                                    |
 | `Stack: <n> (layer <pos>/<size>, base <ref>)` | `stack`                            | GitHub stack membership                                                                   |
 
-`requiredStatusChecks.contexts` lists the merge target's required contexts. Text prints their count, except on a native-stack layer, where it names them: a layer uses the stack trunk's contexts instead of its parent branch's, since its own base branch may carry no rules, and a trunk with none omits the entry. Each context's run state is in the checks sections, and a context with no run at all is reported as `unreportedRequiredChecks`.
+`requiredStatusChecks.contexts` lists the merge target's required contexts, named in both text and JSON. A native-stack layer uses the stack trunk's contexts instead of its parent branch's, since its own base branch may carry no rules, and a trunk with none omits the entry. Each context's run state is in the checks sections, and a context with no run at all is reported as `unreportedRequiredChecks`.
 
 The agent should read these lines instead of inferring a required review from `reviewDecision`. `REVIEW_REQUIRED` with no `Approvals:` line (none required) means GitHub is not waiting on an approval.
 

@@ -10,7 +10,7 @@
 - `viewerAuthorization`: REST does not expose viewer capability fields
 - `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
 - `mergeQueue`: REST does not expose queue membership, entry or removal history
-Required status checks: 1 [Required]
+Required status checks: web [Required]
 Merge queue: Unknown [Required]
 
 WAIT: 1 passing

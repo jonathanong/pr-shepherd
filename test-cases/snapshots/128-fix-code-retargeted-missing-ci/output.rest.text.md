@@ -10,7 +10,7 @@
 - `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
 - `mergeQueue`: REST does not expose queue membership, entry or removal history
 Linear history: [Required]
-Required status checks: 7 [Required]
+Required status checks: static, backend, web, cloudflare-worker, lambdas, tooling, gitleaks [Required]
 Merge queue: Unknown [Required]
 **unreported required** `static`, `backend`, `web`, `cloudflare-worker`, `lambdas`, `tooling`, `gitleaks`
 

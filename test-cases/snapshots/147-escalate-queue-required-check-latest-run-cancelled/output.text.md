@@ -2,7 +2,7 @@
 
 **status** `FAILING` · **repo** `owner/repo`
 **summary** 2 passing
-Required status checks: 1 [Required]
+Required status checks: web [Required]
 Merge queue: No [Required]
 **merge queue** enabled `false` · inQueue `false` · checkCommit `queue-commit-1`
 **queue removal** reason `failed_checks` · createdAtUnix `1715799000` · actor `@github-actions` · commit `queue-commit-1` · parents `abc123`

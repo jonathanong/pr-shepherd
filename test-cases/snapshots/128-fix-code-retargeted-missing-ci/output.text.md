@@ -2,7 +2,7 @@
 
 **status** `PENDING` · **merge** `BLOCKED` · **reviewDecision** `APPROVED` · **repo** `vouchington/vouchington`
 Linear history: [Required]
-Required status checks: 7 [Required]
+Required status checks: static, backend, web, cloudflare-worker, lambdas, tooling, gitleaks [Required]
 Merge queue: No [Required]
 **unreported required** `static`, `backend`, `web`, `cloudflare-worker`, `lambdas`, `tooling`, `gitleaks`
 
