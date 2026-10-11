@@ -91,10 +91,10 @@ The state directory is `$PR_SHEPHERD_STATE_DIR` when set; see [configuration.md]
 **Fix options:**
 
 1. Read the fatal error's resource, remaining/limit, reset time, and credential source. Response headers are authoritative; no extra `/rate_limit` request is needed.
-2. Use `--verbose` for command-scoped API usage, or inspect the per-worktree log for every response's quota headers and credential source. See [graphql.md](graphql.md) for the operation catalog and how to tell primary quota exhaustion from a secondary-limit `Retry-After`.
+2. Use `--verbose` for command-scoped API usage, or inspect the per-worktree log for every response's quota headers and credential source. See [github-api.md](github-api.md#how-to-read-spend) for how to tell primary quota exhaustion from a secondary-limit `Retry-After`, and [graphql.md](graphql.md) or [rest.md](rest.md) for each transport's reads.
 3. Follow a `quotaWarning` interval when present. Configure the bands with `watch.graphqlQuotaWarnings`, using factors of `poll.intervalSeconds`, absolute minutes, or both. The poll dispatcher applies those intervals on `WAIT` / `MARK_READY` sleeps; single-tick `iterate` / MCP still only recommend.
 4. For quota isolation, use a GitHub App installation access token or a different GitHub user — same-user PATs share the user's GraphQL pool with GitHub MCP / `gh api graphql` ([authentication.md](authentication.md)).
-5. `--until-terminal` keeps polling through an exhausted primary limit until the reset (plus a short margin) and exits 75 only after five attempts that do not move the reset time. One stderr line names the resource and that reset time. A bounded poll still fails with 75 immediately. See [graphql.md](graphql.md).
+5. `--until-terminal` keeps polling through an exhausted primary limit until the reset (plus a short margin) and exits 75 only after five attempts that do not move the reset time. One stderr line names the resource and that reset time. A bounded poll still fails with 75 immediately. See [github-api.md](github-api.md#rate-limit-backoff).
 6. For `resolve` mutate output, retry only the IDs listed under `Not resolved`,
    `Not minimized`, or `Not dismissed`; IDs listed as completed already succeeded.
 

@@ -254,7 +254,7 @@ are as good as these assumptions:
     acting, on every transport (`refreshReadyMergeability`). The real sessions
     measured exactly one on each of their 21 READY polls. It is charged to
     `mark-ready`, `merge` and `merge-queue`.
-- **pr-shepherd, REST transport.** This is standard REST (an explicit
+- **pr-shepherd, REST transport** (`docs/rest-usage.md`). This is standard REST (an explicit
   `--transport rest`, or `auto` after a GraphQL fallback outside the Claude
   Code cloud). REST has no fingerprint shortcut, but every read is
   conditional (`If-None-Match`) and a 304 is free, so an unchanged poll tick

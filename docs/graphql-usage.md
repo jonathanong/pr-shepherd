@@ -1,12 +1,14 @@
 # GraphQL usage by command
 
-[← README](../README.md) | [graphql.md](graphql.md)
+[← README](../README.md) | [graphql.md](graphql.md) | [github-api.md](github-api.md)
 
-This page is **what each GraphQL command spends** against GitHub's primary point budget. In REST mode, usage is reported against the separate REST `core` pool, and these GraphQL cost estimates do not apply. Automatic fallback can move the remainder of a process from GraphQL to REST; see [transport selection](graphql.md#shepherd-graphql).
+This page is **what each GraphQL command spends** against GitHub's primary point budget. On the REST transport, usage is counted against the separate REST `core` pool instead; see [rest-usage.md](rest-usage.md). Automatic fallback can move the remainder of a process from GraphQL to REST; see [transport selection](github-api.md#transport-selection).
 
 A user PAT is **5,000 points / hour**. One-PR polling is a small slice of that. Aggregate polls are not.
 
 `--verbose` prints command-scoped `apiUsage.graphql.measuredQueryCost`. That figure is authoritative for a live response. The numbers below are `rateLimit.cost` for the static query shape. Extra pages add their own cost.
+
+Per-tick request counts are asserted at the HTTP boundary by `src/github/graphql-wait-tick-cost.test.mts` ("spends one BatchPr request per wait tick, reused or not"), `src/github/graphql-wait-detectors.test.mts` ("charges nothing on an unchanged idle wait tick"), `src/github/graphql-stack-tick-cost.test.mts` ("reads a layer above the trunk in one BatchPr request, cold or reused"), and `src/github/graphql-base-behind-tick-cost.test.mts` ("reads the base compare once per base tip and head"). Change those tests and this page together.
 
 ## How a point is counted
 
@@ -16,7 +18,7 @@ A user PAT is **5,000 points / hour**. One-PR polling is a small slice of that. 
 
 `annotations(first: 1)` nested under `contexts(last: 100)` is 100 connection-requests per rollup. GitHub prices the `last`, including when the rollup is empty. Two of those trees were about 2 points per PR once several PRs shared one query. The summary fragment no longer selects them.
 
-Mutations cannot select `rateLimit.cost`. Shepherd counts them as `unmeasuredRequestCount`. Secondary limits bill a GraphQL mutation at 5 points; that pool is separate from the hourly primary budget. See [graphql.md](graphql.md).
+Mutations cannot select `rateLimit.cost`. Shepherd counts them as `unmeasuredRequestCount`. Secondary limits bill a GraphQL mutation at 5 points; that pool is separate from the hourly primary budget. See [github-api.md](github-api.md#github-metering).
 
 ## Measured query costs
 
@@ -137,4 +139,4 @@ Designs that are already at the floor and should stay:
 - REST for job logs, startup-failure runs, and mergeability. That pool is separate.
 - Mutation chunks of 10. Primary `cost` is unavailable; secondary limits bill each mutation request at 5 points.
 
-REST transport: conditional reads that return `304 Not Modified` cost no core quota and appear as `apiUsage.rest.<resource>.notModified` under `--verbose`. See [graphql.md](graphql.md).
+REST transport costs, including conditional reads that return `304 Not Modified` for no core quota, are in [rest-usage.md](rest-usage.md).

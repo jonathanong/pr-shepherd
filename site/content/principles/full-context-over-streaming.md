@@ -6,7 +6,9 @@ docs:
   - path: "docs/context.md"
     label: "context.md — everything one iterate tick surfaces"
   - path: "docs/graphql.md"
-    label: "graphql.md — batch query, cost, quota, REST supplements"
+    label: "graphql.md — batch query, cost, fingerprint skip"
+  - path: "docs/github-api.md"
+    label: "github-api.md — transports, quota, rate-limit backoff"
   - path: "docs/skills.md#recurrence"
     label: "skills.md — why CI-only waiters are the wrong tool"
 ---
