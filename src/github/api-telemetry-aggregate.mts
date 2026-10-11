@@ -26,6 +26,8 @@ export interface TelemetryAggregate {
     credentialFingerprint?: string;
   };
   rest: Map<string, RestTelemetryGroup>;
+  /** REST responses with no rate-limit sample at all (not 304s): the Claude Code proxy's `ccr` routes. */
+  unmeteredRestRequestCount: number;
 }
 
 export interface SequencedApiTelemetryEvent extends ApiTelemetryEvent {
@@ -45,6 +47,7 @@ export function emptyAggregate(): TelemetryAggregate {
     credentialSources: new Map(),
     graphql: { requestCount: 0, measuredQueryCost: 0, unmeasuredRequestCount: 0, nodeCount: 0 },
     rest: new Map(),
+    unmeteredRestRequestCount: 0,
   };
 }
 
@@ -71,7 +74,7 @@ export function aggregateEvents(events: SequencedApiTelemetryEvent[]): Telemetry
     else group.requestCount += 1;
     if (event.rateLimit !== undefined) {
       adoptRestRateLimit(group, event.rateLimit, event.credentialFingerprint, event.sequence);
-    }
+    } else if (!event.notModified) aggregate.unmeteredRestRequestCount += 1;
     aggregate.rest.set(resource, group);
   }
   return aggregate;
@@ -89,6 +92,7 @@ export function mergeAggregate(target: TelemetryAggregate, source: TelemetryAggr
   target.graphql.measuredQueryCost += source.graphql.measuredQueryCost;
   target.graphql.unmeasuredRequestCount += source.graphql.unmeasuredRequestCount;
   target.graphql.nodeCount += source.graphql.nodeCount;
+  target.unmeteredRestRequestCount += source.unmeteredRestRequestCount;
   if (source.graphql.rateLimit !== undefined) {
     adoptGraphqlRateLimit(
       target.graphql,

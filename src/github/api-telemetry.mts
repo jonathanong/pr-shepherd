@@ -137,7 +137,7 @@ export function summarizeApiTelemetry(): ApiUsage | undefined {
     .map(([source]) => source);
   const graphql = summarizeGraphql(selected.graphql);
   const rest = summarizeRest(selected.rest);
-  const unmeteredRestRequestCount = selected.rest.get("unknown")?.requestCount ?? 0;
+  const unmeteredRestRequestCount = selected.unmeteredRestRequestCount;
   return {
     credentialSources,
     ...(graphql !== undefined && { graphql }),

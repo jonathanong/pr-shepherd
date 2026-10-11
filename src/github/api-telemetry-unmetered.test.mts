@@ -46,6 +46,21 @@ describe("REST requests without rate-limit headers", () => {
     });
   });
 
+  it("does not count a metered response that only lacks a resource name", async () => {
+    await withApiTelemetryScope(async () => {
+      const { resource: _resource, ...unnamed } = core;
+      recordApiTelemetry({
+        kind: "REST",
+        method: "GET",
+        authSource: "GH_TOKEN",
+        rateLimit: unnamed,
+      });
+      const usage = summarizeApiTelemetry();
+      expect(usage?.rest).toMatchObject([{ resource: "unknown", requestCount: 1 }]);
+      expect(usage).not.toHaveProperty("unmeteredRestRequestCount");
+    });
+  });
+
   it("reports an unmetered-only command and omits the field when every request was metered", async () => {
     await withApiTelemetryScope(async () => {
       recordApiTelemetry({ kind: "REST", method: "GET", authSource: "GH_TOKEN" });
