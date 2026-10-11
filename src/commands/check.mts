@@ -248,6 +248,7 @@ async function runScopedCheck(
   // synthetic queue-commit source.
   const classifiedQueueChecks = classifyChecks(queueRawChecks, {
     additionalRelevantEvents: ["merge_group"],
+    requiredContexts: unreported.requiredContexts,
   });
   const classifiedChecks = [...classifiedPrChecks, ...classifiedQueueChecks];
   const verdict = getCiVerdict(classifiedChecks);
