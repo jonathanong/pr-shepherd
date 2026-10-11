@@ -50,7 +50,7 @@ The built-in single-PR poll interval is **60s** (`poll.intervalSeconds`). `--sta
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | One PR, changed tick        | 1 point (`BatchPr`), plus supplements                                                                                                                   | 14 core requests for an unprotected base and single-page lists (13 charged on a cold cache), plus one per extra page and one for a protected base; only reads whose resource changed are charged |
 | One PR, unchanged wait tick | 1 point (fingerprint hit), or 0 points and 0 core requests while the idle wait detectors all answer 304, with one `BatchPr` per `poll.reconcileSeconds` | 0 requests (1 in a Claude Code cloud session, for the `ccr` thread read)                                                                                                                         |
-| `--stack` summary           | `PollStackSummary`, about 0.52 points per layer (minimum 1), plus 1 topology point on the anchor's first tick                                           | 126 requests for 10 layers without validators (136 in cloud), 104 charged on a cold cache; 0 when unchanged                                                                                      |
+| `--stack` summary           | `PollStackSummary`, about 0.52 points per layer (minimum 1), plus 1 topology point on the anchor's first tick                                           | 126 requests for 10 layers without validators (136 in cloud), 104 charged on a cold cache; 0 when unchanged (10, one `ccr` thread read per layer, in cloud)                                      |
 | Detail                      | [graphql-usage.md](graphql-usage.md), [graphql.md](graphql.md#per-tick-budget)                                                                          | [rest-usage.md](rest-usage.md)                                                                                                                                                                   |
 
 ## Quota warnings and cadence
@@ -69,7 +69,7 @@ The built-in single-PR poll interval is **60s** (`poll.intervalSeconds`). `--sta
 ## How to read spend
 
 1. Pass `--verbose` on iterate or poll. Markdown adds `## GitHub API usage`; JSON includes `apiUsage`.
-2. `npx pr-shepherd log-file` — each response line carries quota headers, cost (GraphQL), and credential source.
+2. `npx pr-shepherd admin log-file` — each response line carries quota headers, cost (GraphQL), and credential source.
 3. A `quotaWarning` / `## GitHub API quota warning` block is the primary remaining% crossing a configured band. It is **not** emitted for secondary limits.
 4. Exit code 75 with `Retry-After` and a `secondary rate limit` message is a burst throttle, not an empty hourly bucket. Back off; do not assume REST is also exhausted.
 
