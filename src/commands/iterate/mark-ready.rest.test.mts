@@ -8,6 +8,8 @@ import {
   summarizeApiTelemetry,
   withApiTelemetryScope,
 } from "../../github/api-telemetry.mts";
+import { formatIterateResult } from "../../cli/iterate-formatter.mts";
+import { projectIterateLean } from "../../cli/iterate-lean.mts";
 
 const markReady = (value = report) =>
   runWithGithubTransport("rest", () => markReadyIfAuthorized(true, base, value));
@@ -33,6 +35,15 @@ describe("REST mark-ready authorization", () => {
       expect(after?.rest).toEqual(before?.rest);
       expect(after?.unmeteredRestRequestCount).toBe((before?.unmeteredRestRequestCount ?? 0) + 1);
     });
+  });
+  it("reports the confirmed conversion as no longer a draft in JSON and text", async () => {
+    vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
+    await serve((_request, response) => response.end('{"draft":false}'));
+    const result = (await markReady())!;
+    expect(result).toMatchObject({ action: "mark_ready", markedReady: true, isDraft: false });
+    expect(projectIterateLean(result)).not.toHaveProperty("isDraft");
+    expect(formatIterateResult(result)).not.toContain("**isDraft**");
+    expect(formatIterateResult(result, { verbose: true })).toContain("**isDraft** false");
   });
   it("escalates a definite server403 once as authorization-required", async () => {
     vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
@@ -120,6 +131,7 @@ describe("REST mark-ready authorization", () => {
     expect(await markReady({ ...report, fingerprintReused: true })).toMatchObject({
       action: "mark_ready",
       markedReady: false,
+      isDraft: true,
     });
     expect(wire.requests).toEqual([]);
     await expect(markReady()).rejects.toThrow("did not confirm draft:false");

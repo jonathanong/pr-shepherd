@@ -50,8 +50,10 @@ export async function markReadyIfAuthorized(
         },
         { mutation: true },
       );
+      // The snapshot predates the conversion; GitHub just confirmed the PR is no longer a draft.
       return {
         ...base,
+        isDraft: false,
         action: "mark_ready",
         markedReady: true,
         log: `MARKED READY: PR #${report.pr} converted from draft to ready for review`,

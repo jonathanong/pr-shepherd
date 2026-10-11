@@ -1,7 +1,7 @@
 # PR #42 [MARK_READY]
 
 **status** `READY` · **repo** `owner/repo` · **pollMode** `event`
-**summary** 1 passing · **remainingSeconds** 300 · **isDraft**
+**summary** 1 passing · **remainingSeconds** 300
 
 MARKED READY: PR #42 converted from draft to ready for review
 
