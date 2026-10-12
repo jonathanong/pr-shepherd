@@ -48,3 +48,38 @@ describe("summarizePollSummaryReview — classification rules", () => {
     });
   });
 });
+
+describe("auto-resolution evidence for compact thread certification", () => {
+  it("accepts only a complete resolved auto-resolve match", async () => {
+    for (const [isResolved, truncated, expected] of [
+      [true, false, undefined],
+      [false, false, 1],
+      [undefined, false, 1],
+      [true, true, 1],
+    ] as const) {
+      const input = raw([]);
+      input.reviewThreads = {
+        totalCount: 1,
+        pageInfo: { hasPreviousPage: false },
+        nodes: [
+          {
+            id: "thread-auto-resolve",
+            isResolved,
+            isOutdated: false,
+            path: "src/example.mts",
+            comments: {
+              totalCount: 1,
+              pageInfo: { hasPreviousPage: truncated },
+              nodes: [
+                { id: "comment-auto-resolve", body: "minimize", author: bot, isMinimized: false },
+              ],
+            },
+          },
+        ],
+      } as RawSummaryPr["reviewThreads"];
+      const result = await summarizePollSummaryReview(input, new Map(), true);
+      expect(result.actionable).toBe(expected);
+      expect(result.incomplete).toBe(truncated ? true : undefined);
+    }
+  });
+});
