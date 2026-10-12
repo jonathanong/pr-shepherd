@@ -59,11 +59,11 @@ Do not infer “must wait for an approval” from `reviewDecision`. `REVIEW_REQU
 
 Thread handling (full matrix in [conversation-resolution.md](conversation-resolution.md)):
 
-- Unmarked bot threads and the viewer's own threads are replied to and resolved.
+- Unmarked bot and other non-human threads, and the viewer's own threads, are replied to and resolved.
 - Unmarked other-human threads are reply-only unless `iterate.resolveOtherHumanThreads` is `outdated` or `always`.
 - A leading `<!-- pr-shepherd -->` marker on the latest comment identifies an automated reply regardless of author, so a marked thread is resolve-only on retry.
 - `resolutionOnlyThreads` therefore holds unresolved outdated or minimized threads and marked retry threads.
-- Bot threads, comments, and eligible summaries can be resolved or minimized. Already-minimized `COMMENTED` reviews are not fetched, so their bodies never enter the seen-marker gate.
+- Non-human threads can be resolved, and eligible non-human comments and summaries can be minimized. Human items are never minimized. Already-minimized `COMMENTED` reviews are not fetched, so their bodies never enter the seen-marker gate.
 
 ## CI context
 

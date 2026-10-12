@@ -50,7 +50,7 @@ Shepherd works best on PRs that use required status checks and conversation reso
 - Push access to the PR head branch is a usage precondition. GitHub viewer fields do not create a separate push handoff.
 - The CLI never mutates git. It prints commit and push steps for the agent.
 - Every thread, comment, and review summary is surfaced at least once, even when it is already outdated, resolved, or minimized. Edited items re-surface. The exception is a `COMMENTED` review minimized before the first tick, which is not fetched.
-- Unmarked bot threads and the viewer's own threads are replied to and resolved. Other humans' threads are reply-only unless `iterate.resolveOtherHumanThreads` is `outdated` or `always`. Human items are never minimized. See [conversation-resolution.md](conversation-resolution.md).
+- Unmarked bot and other non-human threads, and the viewer's own threads, are replied to and resolved. Other humans' threads are reply-only unless `iterate.resolveOtherHumanThreads` is `outdated` or `always`. Human items are never minimized. See [conversation-resolution.md](conversation-resolution.md).
 - Shepherd recognizes its own reply only by a leading `<!-- pr-shepherd -->` marker. A marked thread is resolve-only on retry.
 - Review summaries are not minimized while their inline threads are still unresolved.
 - Clean drafts are marked ready unless `actions.autoMarkReady: false` or `--no-auto-mark-ready` is set.
