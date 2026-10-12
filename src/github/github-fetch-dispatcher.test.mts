@@ -1,7 +1,8 @@
 import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
+import { readLegacyDispatcher, restoreLegacyDispatcher } from "./legacy-dispatcher.mts";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -25,6 +26,29 @@ async function runFreshProcess(script: string): Promise<void> {
 }
 
 describe("Undici dispatcher slot", () => {
+  it("clears a writable legacy slot when the host had none", () => {
+    const saved = readLegacyDispatcher();
+    if (!saved) {
+      restoreLegacyDispatcher(undefined);
+      expect(readLegacyDispatcher()).toBeUndefined();
+    }
+    if (!saved?.writable) {
+      Object.defineProperty(globalThis, Symbol.for("undici.globalDispatcher.1"), {
+        value: { dispatch: () => false },
+        writable: true,
+        enumerable: false,
+        configurable: true,
+      });
+    }
+    try {
+      restoreLegacyDispatcher(undefined);
+      expect(readLegacyDispatcher()?.value).toBeUndefined();
+    } finally {
+      if (saved) Object.defineProperty(globalThis, Symbol.for("undici.globalDispatcher.1"), saved);
+      else Reflect.deleteProperty(globalThis, Symbol.for("undici.globalDispatcher.1"));
+    }
+  });
+
   it("keeps the host legacy dispatcher and still lets setGlobalDispatcher replace it", async () => {
     await runFreshProcess(`
       const legacy = Symbol.for("undici.globalDispatcher.1");
