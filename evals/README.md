@@ -81,8 +81,9 @@ first and `runs: 1` on the second for a targeted run (see
 [EVALS.md](EVALS.md#tiers-and-run-recipes)). Only a Δ whose 95% bootstrap
 interval excludes 0 is a result.
 
-Cases 29–52 have not run live yet, so they start in the discriminating tier
-and the targeted run covers them.
+Cases 29–52 first ran live in a targeted run on 2026-10-12: mean Δ +0.19
+over 52 cases, with no case below 0. See
+[EVALS.md](EVALS.md#targeted-run-2026-10-12-sonnet-55-low-runs-61).
 
 ## More
 

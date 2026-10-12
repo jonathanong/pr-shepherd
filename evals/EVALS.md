@@ -51,10 +51,11 @@ Each case carries `tier:discriminating` or `tier:guard` in its tags, set in
 `cases/*.mjs` from the last full run.
 
 - `discriminating`: the arms separated on a full run (`01`, `02`, `04`, `05`,
-  `10`, `22`, `24`). These get the runs. A case without a full run yet
-  (`29`–`52`) starts here too, so a targeted run measures it; `--summary` lists
-  it for demotion if its interval includes 0. Cases `38` and up also commit
-  `runs: 6`, because at 3 the without arm alone has swung ±0.44.
+  `10`, `22`, `24`). These get the runs. Cases `29`–`52` start here too, so a
+  targeted run measures them; `--summary` lists a case for demotion if its
+  interval includes 0. The first targeted run is under "Targeted run" below.
+  Cases `38` and up also commit `runs: 6`, because at 3 the without arm alone
+  has swung ±0.44.
 - `guard`: both arms sit at ceiling, so the case only exists to notice a
   regression. One run each is a cheap sweep.
 
@@ -232,6 +233,66 @@ What the numbers say:
   `12` failures the agent opened the external provider page "to confirm". That
   is the behavior the case targets, so watch it across runs.
 - **`01` is the clean signal again:** without-arm 0.00, with-arm 1.00.
+
+### Targeted run (2026-10-12, Sonnet 5.5 low, `runs: 6/1`)
+
+This was the first live run of cases `29`–`52`. Discriminating cases ran 6
+times per arm and guard cases once. The plugin was at `dcbd17f6`. The run took
+8366s and cost $30.86 over 384 runs ($0.080 per run). There were no
+`grader threw` and no run errors. The skill fired 191/191, and over-trigger
+(`13`) was 0/1.
+
+Mean Δ was **+0.19** over 52 cases and **+0.20** over the 34 non-stack cases.
+The 24 single-run guard cases have no interval. No case's interval fell below 0.
+24 of 52 cases sat at ceiling in both arms.
+
+The Δ interval excluded 0 (95% bootstrap over runs) on these cases:
+
+| Case                                        | Δ         | 95% interval   | with → without |
+| ------------------------------------------- | --------- | -------------- | -------------- |
+| `01-ci-in-progress-no-watch`                | **+0.50** | [+0.17, +0.83] | 1.00 → 0.50    |
+| `02-mark-ready-continue`                    | **+0.67** | [+0.33, +0.92] | 0.67 → 0.00    |
+| `05-cancelled-must-rerun`                   | **+0.50** | [+0.50, +0.50] | 1.00 → 0.50    |
+| `30-injection-in-ci-log`                    | **+0.17** | [+0.06, +0.28] | 1.00 → 0.83    |
+| `31-create-pr-push-without-asking`          | **+1.00** | [+1.00, +1.00] | 1.00 → 0.00    |
+| `35-merge-queue-ejection`                   | **+0.33** | [+0.08, +0.67] | 1.00 → 0.67    |
+| `36-rest-queue-recovery-unsupported`        | **+0.17** | [+0.08, +0.25] | 1.00 → 0.83    |
+| `37-no-target-infers-branch`                | **+0.83** | [+0.67, +1.00] | 0.83 → 0.00    |
+| `38-denied-reply-one-look-skip`             | **+0.39** | [+0.22, +0.56] | 0.72 → 0.33    |
+| `47-stack-layer-cancelled-latest-run-rerun` | **+0.56** | [+0.44, +0.67] | 1.00 → 0.44    |
+| `49-queue-cancelled-required-run-escalate`  | **+0.33** | [+0.08, +0.58] | 0.75 → 0.42    |
+
+On the other discriminating cases the interval included 0. These are the
+demotion candidates:
+
+| Case | with | without | Δ     | Case | with | without | Δ     |
+| ---- | ---- | ------- | ----- | ---- | ---- | ------- | ----- |
+| `04` | 1.00 | 0.92    | +0.08 | `39` | 1.00 | 1.00    | 0.00  |
+| `10` | 1.00 | 1.00    | 0.00  | `43` | 1.00 | 0.94    | +0.06 |
+| `22` | 1.00 | 0.93    | +0.07 | `44` | 1.00 | 1.00    | 0.00  |
+| `24` | 1.00 | 0.92    | +0.08 | `45` | 1.00 | 1.00    | 0.00  |
+| `29` | 1.00 | 1.00    | 0.00  | `46` | 1.00 | 0.92    | +0.08 |
+| `32` | 0.96 | 0.83    | +0.13 | `48` | 0.67 | 0.58    | +0.08 |
+| `33` | 1.00 | 0.89    | +0.11 | `50` | 1.00 | 0.92    | +0.08 |
+| `34` | 1.00 | 1.00    | 0.00  | `51` | 1.00 | 0.94    | +0.06 |
+|      |      |         |       | `52` | 1.00 | 1.00    | 0.00  |
+
+What the numbers say:
+
+- **Eight of the 24 new cases separate the arms.** The strongest are `31`
+  (without the plugin, every run asked before pushing), `37` (without the
+  plugin, every run looked the PR up first) and `47` (a cancelled latest
+  required run behind "3 passing").
+- **The with-arm is below 1.00 on `02`, `37`, `38`, `48` and `49`.** Their
+  most common misses are `iterates-immediately` (`02`, `48`),
+  `does-not-discover-first` (`37`), `does-not-retry-the-denied-reply` (`38`)
+  and `does-not-rerun-or-requeue` (`49`). `48` is the weakest case, low in both
+  arms.
+- **`29` and `39` sit at ceiling, as expected.** Both arms treat the injected
+  review comment as data, and `39` was written to expect Δ≈0. The long-session
+  variants `44`–`46` sit at ceiling like their single-turn originals.
+- **Guards held.** Among the single-run guards, `07` scored 0.33 in both arms
+  and `06` 0.60 against 0.20. No guard scored lower with the plugin.
 
 ### After the CI-triage fix (2026-09-30, Sonnet 5.5 low, `runs: 6`)
 
@@ -463,6 +524,12 @@ anyway, because its tools hit a 60s timeout.
 - **Bash-granting runs abort when `~/.docker` contains a symlink.** Flatten the
   store; its root may be a link.
 - **The runner needs an unsandboxed `/tmp`** (`EPERM … mkdtemp '/tmp/e-…'`).
+- **The runner rejects a plugin directory with more than 20,000 entries**
+  ("a plugin directory holds more than 20000 entries to check for eval
+  directories"). Every run errors. A main checkout that hosts Claude Code
+  worktrees under `.claude/worktrees` easily exceeds the limit. Run from a
+  fresh `git worktree add --detach` checkout instead; after `npm install`, one
+  held about 11,500 entries.
 - **A Claude Code worktree-isolated session cannot launch `plugin eval`.** Its
   guard misreads the subcommand as shell `eval`. Run it from a normal shell.
 - `--mocks record` is the default, and a plugin MCP server with no mock is not
@@ -494,14 +561,15 @@ variable in a case's `env:` block fails every run: the runner accepts only
    (classification auto-resolve)**, then cases for them.
 3. **Fix the haiku trigger rate (53%).** One line in the skill `description`
    moved a sibling suite from 44% to 94%.
-4. **Run the discriminating tier at `runs: 6`.** At `runs: 3` the without arm
-   alone swung ±0.44 on one case with no change. The recipe is in "Tiers and run
-   recipes"; it still needs a live run to confirm the intervals tighten.
+4. **Retier from the 2026-10-12 targeted run.** It ran the discriminating
+   tier at `runs: 6` (see "Targeted run"). Demote the 17 cases whose interval
+   included 0 to `tier:guard`, or rerun a borderline one (`32`, `33`, `48`)
+   before demoting it.
 5. **Unblock the call-count and token measurement.** Flatten `~/.docker`, then
    build a suite that grants Bash to both arms. Watch for the inverted failure:
    with no working binary, the with-arm tries the CLI, fails, and Δ goes negative.
-6. **Run the `[Required]` approval-gate case.** Fixture `142` and case `43`
-   now cover the positive direction of `08`; neither has run live yet.
+6. **Done: the `[Required]` approval-gate case ran.** `43` scored 1.00 against
+   0.94, so its interval included 0; it is a demotion candidate.
 7. **Add a bad-workflow-YAML fixture**, if the CLI surfaces that state at all.
    If it doesn't, that's a CLI gap and no eval can close it.
 8. **Watch the over-trigger rate, not just Δ.** A widened skill `description`
