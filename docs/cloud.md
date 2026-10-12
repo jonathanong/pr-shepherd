@@ -1,60 +1,85 @@
 # Cloud and event mode
 
-Shepherd normally owns the wait: `pr-shepherd [PR]` sleeps between `WAIT` ticks and returns on a terminal action or `FIX_CODE`. A Claude Code cloud session works differently. It is woken by PR events (comments, reviews, check runs, pushes) and by scheduled wake-ups, and a turn that sleeps wastes the session. **Event mode** moves the wait out of Shepherd and into the session.
+[← README](../README.md) | [actions.md](actions.md)
+
+How Shepherd runs in a Claude Code cloud session, where the session is woken by PR events and scheduled wake-ups instead of sleeping in a poll loop. For anyone running Shepherd in the cloud or wiring it into an event-driven host.
+
+Normally `pr-shepherd [PR]` sleeps between `WAIT` ticks and returns on a terminal action or `FIX_CODE`. In a cloud session a sleeping turn wastes the session, so **event mode** moves the wait out of Shepherd and into the session.
+
+```mermaid
+flowchart LR
+  W[PR event or wake-up] --> T[Run one Shepherd tick]
+  T --> I[Follow the printed Instructions]
+  I -->|FIX_CODE| F[Fix, push, rerun once] --> E
+  I -->|other non-terminal| E[Keep one wake-up at nextCheck.at, end turn]
+  I -->|CANCEL / ESCALATE| X[Stop]
+  E --> W
+```
 
 ## Choosing the mode
 
-`poll.mode` is `auto` (default), `poll`, or `event`. The CLI flag `--poll-mode`, the MCP `iterate` input `pollMode`, and the library option `pollMode` select the same values and win over configuration.
+`poll.mode` is `auto` (default), `poll`, or `event`. The CLI `--poll-mode`, MCP `iterate` input `pollMode`, and library option `pollMode` take the same values and override configuration.
 
-- `poll`: the existing behavior. The poll dispatcher loops, sleeps, and debounces.
-- `event`: one tick per invocation. No sleeping, no debounce.
-- `auto`: `event` when `CLAUDE_CODE_REMOTE=true`, otherwise `poll`.
+| Mode    | Behavior                                                 |
+| ------- | -------------------------------------------------------- |
+| `poll`  | The poll dispatcher loops, sleeps, and debounces         |
+| `event` | One tick per invocation; no sleeping, no debounce        |
+| `auto`  | `event` when `CLAUDE_CODE_REMOTE=true`, otherwise `poll` |
 
-In event mode `--interval`, `--timeout`, `--debounce`, `--quiet-status`, and `--until-terminal` have no effect. `pr-shepherd [PR]`, `pr-shepherd iterate`, `--stack`, and multi-PR selectors all run exactly one tick. Seen markers are written immediately (as `iterate` does), and the fingerprint cache is not used, so every tick is rebuilt from GitHub plus Shepherd's saved state.
+In event mode, `--interval`, `--timeout`, `--debounce`, `--quiet-status`, and `--until-terminal` have no effect. `pr-shepherd [PR]`, `iterate`, `--stack`, and multi-PR selectors each run exactly one tick. Seen markers are written immediately (as `iterate` does) and the fingerprint cache is not used, so every tick is rebuilt from GitHub plus Shepherd's saved state.
 
 ## `nextCheck`
 
-An event-mode result carries `pollMode: "event"` and, when another tick is meaningful, a `nextCheck`:
+An event-mode result carries `pollMode: "event"` and, when another tick is meaningful, `nextCheck`:
 
-| Field       | Meaning                                                                         |
-| ----------- | ------------------------------------------------------------------------------- |
-| `at`        | RFC 3339 UTC time, rounded up to the minute                                     |
-| `inSeconds` | Seconds from now until `at`                                                     |
-| `reason`    | `ready-delay`, `stall-timeout`, `merge-queue`, `merge-pending`, or `safety-net` |
+| Field       | Meaning                                     |
+| ----------- | ------------------------------------------- |
+| `at`        | RFC 3339 UTC time, rounded up to the minute |
+| `inSeconds` | Seconds from now until `at`                 |
+| `reason`    | One of the reasons below                    |
 
-- `ready-delay`: the final ready-delay countdown ends at `at`. No event fires then.
-- `stall-timeout`: an unchanged state would trip the stall timeout at `at`, or, on a `WAIT` tick, the oldest unstarted check's age (measured from its last update, else its creation) would reach the CI-start stall timeout. Used when it comes before the other deadline. For a `--stack` selector this is the stack-level stall timer, so an idle stack escalates on time instead of waiting for the safety net.
-- `merge-queue`: the PR is queued; recheck about every five minutes.
-- `merge-pending`: a printed merge request can stay `pending` (a one-PR REST merge, or a stack merge); recheck about every five minutes so the rerun resumes it.
-- `safety-net`: a backstop about 50 minutes out for a missed event; a PR event usually wakes the session first. Used for every other non-terminal tick.
+| `reason`        | When                                                                                                                                                                                                                                             | Recheck               |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------- |
+| `ready-delay`   | The final ready-delay countdown ends at `at`; no event fires then                                                                                                                                                                                | at the deadline       |
+| `stall-timeout` | An unchanged state would trip the stall timeout, or (on `WAIT`) the oldest unstarted check, aged from its last update or else creation, would reach the CI-start stall timeout, and that comes first. For `--stack`, the stack-level stall timer | at the deadline       |
+| `merge-queue`   | The PR is queued                                                                                                                                                                                                                                 | about every 5 minutes |
+| `merge-pending` | A printed merge request can stay `pending` (one-PR REST merge, or a stack merge), so the rerun resumes it                                                                                                                                        | about every 5 minutes |
+| `safety-net`    | Every other non-terminal tick; a backstop for a missed event                                                                                                                                                                                     | about 50 minutes      |
 
-`nextCheck` is omitted for `CANCEL`, `ESCALATE`, a `MERGE` whose command is not a REST merge, `MARK_READY`, a native-stack draft hold, and an aggregate result whose PRs are all terminal or every selected row is `CANCEL` or `ESCALATE`. Text prints a `**nextCheck**` header line, JSON and MCP `structuredContent` carry the object, and the `## Instructions` steps name the same time. A stack or multi-PR selector reports one `nextCheck` for the whole selection, and every row `pollCommand` (including bounded draft probes) carries `--poll-mode event`.
+`nextCheck` is omitted for `CANCEL`, `ESCALATE`, a `MERGE` whose command is not a REST merge, `MARK_READY`, a native-stack draft hold, and an aggregate result whose PRs are all terminal or whose rows are all `CANCEL` or `ESCALATE`.
 
-Stack steps that would recheck "at the configured polling cadence" drop that sentence in event mode, and a pending REST stack merge reruns after the wake-up, so the appended event step is the only timing rule.
+Text prints a `**nextCheck**` header line; JSON and MCP `structuredContent` carry the object; `## Instructions` names the same time. A stack or multi-PR selector reports one `nextCheck` for the selection, and every row `pollCommand` (including bounded draft probes) carries `--poll-mode event`.
 
-A native-stack draft hold prints its `--stack` handoff with `--poll-mode event` plus one step telling the agent not to rerun the held one-PR session and to keep no wake-up for it; after the handoff the agent follows only the stack selector's output, which ends the turn and schedules the next tick through its own `nextCheck`.
+Event-mode special cases:
 
-`MARK_READY` keeps the immediate rerun even in event mode. Its tick saw the PR as a draft, so the ready-delay timer was cleared rather than started; the next tick sees the PR ready, starts the timer, and reports its `ready-delay` deadline.
+- Stack steps drop "at the configured polling cadence", and a pending REST stack merge reruns after the wake-up, so the appended event step is the only timing rule.
+- A native-stack draft hold prints its `--stack` handoff with `--poll-mode event`, plus a step not to rerun the held one-PR session or keep a wake-up for it. After the handoff the agent follows only the stack selector's output and its `nextCheck`.
+- `MARK_READY` keeps its immediate rerun: that tick saw a draft, so the ready-delay timer was cleared; the next tick sees the PR ready, starts the timer, and reports the `ready-delay` deadline.
 
-The instructions end with a "Cloud event loop" step pointing at the bundled playbook (`pr-shepherd playbook "Cloud event loop"`). It tells the agent to run one tick, follow the printed instructions on when to rerun or end the turn without sleeping, act only on Shepherd's output, and keep exactly one wake-up at `nextCheck.at`. After `FIX_CODE` it reruns Shepherd once and ends the turn. That rewrite also replaces the quota-aware `FIX_CODE` continuation; the quota warning itself still prints.
+The instructions end with a "Cloud event loop" step naming the bundled playbook (`pr-shepherd playbook "Cloud event loop"`): run one tick, follow the printed instructions on when to rerun or end the turn without sleeping, act only on Shepherd's output, and keep exactly one wake-up at `nextCheck.at`. After `FIX_CODE` it reruns Shepherd once and ends the turn. This replaces the quota-aware `FIX_CODE` continuation; the quota warning itself still prints.
 
 ## Durable state
 
-A cloud VM can be recycled between ticks, and its temp directory with it. When `PR_SHEPHERD_STATE_DIR` is unset, state moves to `<git-common-dir>/pr-shepherd-state` (found with the read-only `git rev-parse --git-common-dir`). It lives with the checkout rather than `TMPDIR`.
+A cloud VM can be recycled between ticks, taking its temp directory with it. When `PR_SHEPHERD_STATE_DIR` is unset, state moves to `<git-common-dir>/pr-shepherd-state` (found with read-only `git rev-parse --git-common-dir`), alongside the checkout instead of under `TMPDIR`.
 
-- Under `CLAUDE_CODE_REMOTE=true` this applies to every command.
-- Otherwise it applies inside event-mode `iterate` and poll calls only, including their per-worktree log: the CLI resolves the poll mode before it opens the log. `pr-shepherd log-file` resolves the same mode from `poll.mode` and its own `--poll-mode` flag, so `pr-shepherd log-file --poll-mode event` prints the log an explicit event tick writes. `pr-shepherd admin clean` resolves the mode the same way, so with `poll.mode: event` (or `--poll-mode event`) it removes the durable event state rather than the temp directory. Both reject an invalid `--poll-mode` value with a usage error. A local `apply` in the same checkout would use the temp directory, so set `PR_SHEPHERD_STATE_DIR` if you mix modes.
-- `PR_SHEPHERD_STATE_DIR` always wins.
-- Outside a git repository the temp directory is used.
+| Situation                                                | State directory            |
+| -------------------------------------------------------- | -------------------------- |
+| `PR_SHEPHERD_STATE_DIR` set                              | that directory, always     |
+| `CLAUDE_CODE_REMOTE=true`                                | durable, for every command |
+| Event-mode `iterate` and poll calls, including their log | durable                    |
+| Other commands outside `CLAUDE_CODE_REMOTE`              | temp directory             |
+| Outside a git repository                                 | temp directory             |
+
+The CLI resolves the poll mode before opening the per-worktree log. `pr-shepherd log-file` and `pr-shepherd admin clean` resolve it the same way from `poll.mode` and their own `--poll-mode`, so `log-file --poll-mode event` prints the log an event tick writes, and `admin clean` with event mode removes the durable state. Both reject an invalid `--poll-mode` with a usage error. A local `apply` in the same checkout uses the temp directory, so set `PR_SHEPHERD_STATE_DIR` if you mix modes.
 
 ## Duplicate-reply scan
 
-If the state directory is lost between ticks, the uncertain-reply record that normally prevents a duplicate reply is lost with it. In durable-state sessions, the `apply review` reply command that `iterate` generates carries `--adopt-existing-replies`. With that flag, before posting replies Shepherd reads the target threads and skips any whose last comment is already this exact Shepherd reply (including the hidden marker) from the authenticated viewer. It treats that as already posted, as with a confirmed reply in [comments.md](comments.md#recovering-an-uncertain-reply).
+Losing the state directory also loses the uncertain-reply record that prevents duplicate replies. In durable-state sessions, the `apply review` reply command that `iterate` generates carries `--adopt-existing-replies`. Before posting, Shepherd reads the target threads and skips any whose last comment is already this exact Shepherd reply (hidden marker included) from the authenticated viewer, treating it as posted ([comments.md](comments.md#recovering-an-uncertain-reply)).
 
-A direct, user-directed `apply review` without the flag never runs the scan: it forwards every supplied reply ID to GitHub, even in a cloud session.
-
-The scan runs for every reply batch of a flagged command that has no local uncertain-reply record, not only when the whole state directory is empty, because other state files are written before replies. It costs one extra read per batch of ten threads. A failed read never blocks the reply.
+- The scan runs for every reply batch without a local uncertain-reply record, not only when the state directory is empty, because other state files are written before replies.
+- It costs one extra read per batch of ten threads. A failed read never blocks the reply.
+- A user-directed `apply review` without the flag never scans; it forwards every supplied reply ID, even in the cloud.
 
 ## What is not verified
 
-Event delivery, wake-up scheduling, and routine APIs are host features. Shepherd prints the time and the rule; the session chooses the mechanism. The playbook does not assume a scheduler exists and tells the agent to say so if none does.
+Event delivery, wake-up scheduling, and routine APIs are host features. Shepherd prints the time and the rule; the session picks the mechanism. The playbook does not assume a scheduler exists and tells the agent to say so if none does.
