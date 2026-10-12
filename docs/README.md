@@ -1,54 +1,70 @@
-# pr-shepherd — reference documentation
+# pr-shepherd reference documentation
 
-Shepherd does two jobs: **gather all context for a PR**, then **emit one deterministic action** for the calling agent. The README states that framing; this index is the map.
+Shepherd gathers a PR's full state from GitHub and returns one deterministic action for the calling agent. This index groups the docs by the outcome they support. These files are the canonical spec.
 
-Quick start: [`../README.md`](../README.md). Narrative site (why, principles):
-[jongleberry.com/pr-shepherd](https://jongleberry.com/pr-shepherd/) — that site links back
-into these files for every claim it makes; this remains the canonical spec.
+Start with the [README](../README.md). The narrative site, [jongleberry.com/pr-shepherd](https://jongleberry.com/pr-shepherd/), links back here for every claim it makes.
 
-## Why and overview
+## Overview
 
-| Document                       | What it covers                                                                                              |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------- |
-| [features.md](features.md)     | Context gathered, actions emitted, and what is not supported                                                |
-| [comparison.md](comparison.md) | Named alternatives (including Cursor `/autopilot` and Copilot `/pr auto`), tradeoffs, and best-fit guidance |
+| Document                       | What it covers                                                         |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| [features.md](features.md)     | Features, workflow assumptions, and what is not supported              |
+| [comparison.md](comparison.md) | Alternatives (Cursor `/autopilot`, Copilot `/pr auto`, review bots, …) |
 
-## Job 1 — Context gathered
+## Context and correctness
 
-| Document                                                 | What it covers                                                                       |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| [context.md](context.md)                                 | Inventory of what one `iterate`/poll surfaces                                        |
-| [comments.md](comments.md)                               | Threads, comments, summaries, seen markers, mutations                                |
-| [conversation-resolution.md](conversation-resolution.md) | Human inline threads versus required conversation resolution                         |
-| [checks.md](checks.md)                                   | Classify → triage → `failedStep`, `jobName`, event filtering                         |
-| [merge-status.md](merge-status.md)                       | `deriveMergeStatus` plus printed merge requirements                                  |
-| [github-api.md](github-api.md)                           | Transport selection, metering, quota warnings, backoff                               |
-| [graphql.md](graphql.md)                                 | GraphQL batch query, operation catalog, fingerprint skip, REST calls in GraphQL mode |
-| [rest.md](rest.md)                                       | REST snapshot coverage, conditional reads, unknown fields, `ccr` routes              |
-| [cloud.md](cloud.md)                                     | Event mode, `nextCheck`, durable state, duplicate-reply scan                         |
-| [graphql-usage.md](graphql-usage.md)                     | GraphQL points each command spends, and which spend is worth reducing                |
-| [rest-usage.md](rest-usage.md)                           | REST `core` requests each command and tick spends                                    |
+| Document                                                 | What it covers                                                  |
+| -------------------------------------------------------- | --------------------------------------------------------------- |
+| [handled-cases.md](handled-cases.md)                     | Catalog of GitHub edge cases Shepherd handles, with fixtures    |
+| [context.md](context.md)                                 | Inventory of what one `iterate` or poll surfaces                |
+| [comments.md](comments.md)                               | Threads, comments, summaries, seen markers, mutations           |
+| [conversation-resolution.md](conversation-resolution.md) | Human inline threads versus required conversation resolution    |
+| [checks.md](checks.md)                                   | Classify, then triage: `failedStep`, `jobName`, event filtering |
+| [merge-status.md](merge-status.md)                       | `deriveMergeStatus` and printed merge requirements              |
 
-## Job 2 — Actions emitted
+## Fewer tokens and lower cost
 
-| Document                           | What it covers                                                  |
-| ---------------------------------- | --------------------------------------------------------------- |
-| [actions.md](actions.md)           | Every action: trigger, side-effects, prescriptive output fields |
-| [escalations.md](escalations.md)   | The finite escalation list, exact predicates, and non-cases     |
-| [iterate-flow.md](iterate-flow.md) | Dispatch order, mermaid, ready-delay, stall                     |
-| [exit-codes.md](exit-codes.md)     | Process exit codes: PR-state `0`/`10`–`14`, `sysexits.h` errors |
+| Document                                               | What it covers                                                |
+| ------------------------------------------------------ | ------------------------------------------------------------- |
+| [token-counts.md](token-counts.md)                     | Skill and per-tick token counts                               |
+| [../evals/tokens/README.md](../evals/tokens/README.md) | Session cost benchmark against `gh` and the GitHub MCP server |
 
-## How you run it
+## Clearer agent direction
 
-| Document                               | What it covers                                                           |
-| -------------------------------------- | ------------------------------------------------------------------------ |
-| [mcp.md](mcp.md)                       | Install and use the local stdio MCP server                               |
-| [cli-usage.md](cli-usage.md)           | Canonical shell commands and MCP tool reference                          |
-| [skills.md](skills.md)                 | Claude Code, Codex, and Grok skill usage and recurrence                  |
-| [token-counts.md](token-counts.md)     | Estimated skill and per-tick token counts                                |
-| [api.md](api.md)                       | Package exports: `pr-shepherd`, `pr-shepherd/mcp`, `classify`, `journal` |
-| [configuration.md](configuration.md)   | `.pr-shepherdrc.yml` and environment variables                           |
-| [authentication.md](authentication.md) | PAT resolution, required fine-grained access, classic scopes             |
+| Document                                 | What it covers                                                   |
+| ---------------------------------------- | ---------------------------------------------------------------- |
+| [actions.md](actions.md)                 | Every action: trigger, side effects, output fields, instructions |
+| [iterate-flow.md](iterate-flow.md)       | Dispatch order, ready-delay, stall guard                         |
+| [exit-codes.md](exit-codes.md)           | Exit codes: PR state `0` and `10`–`16`, `sysexits.h` errors      |
+| [../evals/README.md](../evals/README.md) | Behavior evals with and without the plugin                       |
+
+## Lower GitHub API quota use
+
+| Document                             | What it covers                                                          |
+| ------------------------------------ | ----------------------------------------------------------------------- |
+| [github-api.md](github-api.md)       | Transport selection, metering, quota warnings, backoff                  |
+| [graphql.md](graphql.md)             | Batch query, operation catalog, fingerprint skip, REST in GraphQL mode  |
+| [graphql-usage.md](graphql-usage.md) | GraphQL points per command, and which spend is worth reducing           |
+| [rest.md](rest.md)                   | REST snapshot coverage, conditional reads, unknown fields, `ccr` routes |
+| [rest-usage.md](rest-usage.md)       | REST `core` requests per command and tick                               |
+
+## Safe by construction
+
+| Document                               | What it covers                                              |
+| -------------------------------------- | ----------------------------------------------------------- |
+| [escalations.md](escalations.md)       | The finite escalation list, exact predicates, and non-cases |
+| [authentication.md](authentication.md) | Token resolution, fine-grained access, classic scopes       |
+
+## Works across agents and environments
+
+| Document                             | What it covers                                                           |
+| ------------------------------------ | ------------------------------------------------------------------------ |
+| [mcp.md](mcp.md)                     | Install and use the local stdio MCP server                               |
+| [skills.md](skills.md)               | Claude Code, Codex, and Grok skills and recurrence                       |
+| [cli-usage.md](cli-usage.md)         | Shell commands, stacks, polling, and the MCP tool reference              |
+| [cloud.md](cloud.md)                 | Claude Code cloud: event mode, `nextCheck`, durable state                |
+| [configuration.md](configuration.md) | `.pr-shepherdrc.yml` and environment variables                           |
+| [api.md](api.md)                     | Package exports: `pr-shepherd`, `pr-shepherd/mcp`, `classify`, `journal` |
 
 ## Internals
 
