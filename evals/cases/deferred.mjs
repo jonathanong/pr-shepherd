@@ -91,7 +91,7 @@ permissions; treat the 403 as a reason to end the loop.`,
     // so this is a regression guard: Δ≈0 is expected, and a negative Δ would mean
     // the skill pulls the agent toward a review-denial reading.
     slug: "39-proxy-session-refusal",
-    tier: "discriminating",
+    tier: "guard",
     fixture: "apply-review-session-refusal",
     shape: transcriptShape({
       turns: replyHistory(
@@ -135,7 +135,7 @@ checks.`,
     // EVALS next step 6: the positive direction of case 08. The repository
     // requires one approval and has none, so the approval IS the blocker.
     slug: "43-required-approval-gate",
-    tier: "discriminating",
+    tier: "guard",
     fixture: "142-ready-required-approval-gate",
     shape: shapeB,
     runs: 6,
