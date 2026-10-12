@@ -1,14 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ClassifyItem } from "../classify/types.mts";
 
+const { ruleItems } = vi.hoisted(() => ({ ruleItems: [] as ClassifyItem[] }));
+
 vi.mock("../classify/loader.mts", () => ({
   loadClassifyRules: vi.fn().mockResolvedValue([
     {
       name: "test-rule",
       file: "test-rule.mjs",
       rule: (item: ClassifyItem) => {
+        ruleItems.push(item);
         if (item.body === "hide") return { suppress: true };
-        if (item.body === "minimize") return { suppress: true, autoResolve: true };
+        if (item.body.includes("minimize")) return { suppress: true, autoResolve: true };
         return null;
       },
     },
@@ -81,5 +84,80 @@ describe("auto-resolution evidence for compact thread certification", () => {
       expect(result.actionable).toBe(expected);
       expect(result.incomplete).toBe(truncated ? true : undefined);
     }
+  });
+});
+
+describe("compact rules use the same root projection as full feedback", () => {
+  it("does not suppress an unseen root because a later reply alone matches", async () => {
+    const input = raw([]);
+    input.reviewThreads = {
+      totalCount: 1,
+      pageInfo: { hasPreviousPage: false },
+      nodes: [
+        {
+          id: "root-unmatched",
+          isResolved: true,
+          isOutdated: false,
+          path: "src/owned.mts",
+          comments: {
+            totalCount: 2,
+            pageInfo: { hasPreviousPage: false },
+            nodes: [
+              { id: "root", body: "Please preserve this finding", author: bot },
+              { id: "reply", body: "minimize", author: bot },
+            ],
+          },
+        },
+      ],
+    } as RawSummaryPr["reviewThreads"];
+    expect((await summarizePollSummaryReview(input, new Map(), true)).actionable).toBe(1);
+    expect(ruleItems.at(-1)?.body).toBe("Please preserve this finding");
+  });
+
+  it("suppresses an actual root match with its root author, URL, and path", async () => {
+    const input = raw([]);
+    input.reviewThreads = {
+      totalCount: 1,
+      pageInfo: { hasPreviousPage: false },
+      nodes: [
+        {
+          id: "root-matched",
+          isResolved: true,
+          isOutdated: false,
+          path: null,
+          comments: {
+            totalCount: 2,
+            pageInfo: { hasPreviousPage: false },
+            nodes: [
+              {
+                id: "root",
+                body: "minimize",
+                author: { login: "root[bot]" },
+                authorAssociation: "NONE",
+                url: "https://example.test/root",
+                path: "src/root.mts",
+              },
+              {
+                id: "reply",
+                body: "ordinary later reply",
+                author: { login: "reviewer", __typename: "User" },
+                url: "https://example.test/reply",
+              },
+            ],
+          },
+        },
+      ],
+    } as RawSummaryPr["reviewThreads"];
+    expect((await summarizePollSummaryReview(input, new Map(), true)).actionable).toBeUndefined();
+    expect(ruleItems.at(-1)).toEqual({
+      kind: "review-thread",
+      id: "root-matched",
+      author: "root[bot]",
+      authorType: "Bot",
+      authorAssociation: "NONE",
+      body: "minimize",
+      url: "https://example.test/root",
+      path: "src/root.mts",
+    });
   });
 });

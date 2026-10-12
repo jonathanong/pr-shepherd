@@ -1,5 +1,6 @@
 import { normalizeBotUsernames } from "../comments/authors.mts";
 import { applyRules } from "../classify/apply.mts";
+import { normalizeAuthorType } from "../comments/authors.mts";
 import { loadClassifyRules } from "../classify/loader.mts";
 import { loadConfig } from "../config/load.mts";
 import { getEffectiveCwd } from "../execution-context.mts";
@@ -88,8 +89,8 @@ export async function summarizePollSummaryReview(
         "review-thread",
         root,
         thread.id,
-        thread.path,
-        transcript,
+        thread.path ?? root?.path ?? null,
+        root?.body ?? "",
         completeResolved,
       )
     )
@@ -126,6 +127,7 @@ function isSuppressed(
         author: RawAuthor | null;
         authorAssociation?: string;
         url?: string;
+        path?: string | null;
       }
     | undefined,
   id = raw?.id ?? "unknown",
@@ -137,15 +139,10 @@ function isSuppressed(
     kind,
     id,
     author: raw?.author?.login ?? "unknown",
-    authorType:
-      raw?.author?.__typename === "Bot"
-        ? "Bot"
-        : raw?.author?.__typename === "User"
-          ? "User"
-          : "Unknown",
-    ...(raw?.authorAssociation && { authorAssociation: raw.authorAssociation }),
+    authorType: normalizeAuthorType(raw?.author?.__typename, raw?.author?.login),
+    ...(raw?.authorAssociation !== undefined && { authorAssociation: raw.authorAssociation }),
     body,
-    ...(raw?.url && { url: raw.url }),
+    ...(kind === "review-thread" ? { url: raw?.url ?? "" } : raw?.url ? { url: raw.url } : {}),
     ...(kind === "review-thread" && { path }),
   } as ClassifyItem;
   const action = applyRules(rules, item);
