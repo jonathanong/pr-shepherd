@@ -2,9 +2,14 @@ import { createServer } from "node:http";
 import { connect, type AddressInfo } from "node:net";
 import type { Duplex } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getGlobalDispatcher } from "undici";
 import { githubWire } from "../../test-helpers/github/transport-wire.mts";
 import { githubFetch } from "./github-fetch.mts";
+
+const legacyDispatcherSlot = Symbol.for("undici.globalDispatcher.1");
+
+function legacyDispatcher(): unknown {
+  return Object.getOwnPropertyDescriptor(globalThis, legacyDispatcherSlot)?.value;
+}
 
 const cleanup: Array<() => Promise<void>> = [];
 afterEach(async () => {
@@ -62,12 +67,31 @@ describe("GitHub HTTP proxy routing", () => {
     const proxy = await proxyTo(origin.origin);
     cleanup.push(origin.close);
     vi.stubEnv("HTTP_PROXY", proxy.url);
-    const dispatcher = getGlobalDispatcher();
+    const hostDispatcher = legacyDispatcher();
     const result = await githubFetch("http://github.invalid/rest");
     expect(await result.json()).toEqual({ proxied: true });
     expect(proxy.tunnels).toEqual(["github.invalid:80"]);
     expect(origin.requests[0]?.path).toBe("/rest");
+    expect(legacyDispatcher()).toBe(hostDispatcher);
+    const { getGlobalDispatcher } = await import("undici");
+    const dispatcher = getGlobalDispatcher();
+    expect(await (await githubFetch("http://github.invalid/again")).json()).toEqual({
+      proxied: true,
+    });
     expect(getGlobalDispatcher()).toBe(dispatcher);
+    expect(legacyDispatcher()).toBe(hostDispatcher);
+    vi.stubEnv("HTTP_PROXY", undefined);
+    const body = JSON.stringify({ direct: true });
+    const direct = await fetch(`${origin.origin}/direct`, {
+      method: "POST",
+      body,
+      headers: {
+        "content-type": "application/json",
+        "content-length": String(Buffer.byteLength(body)),
+      },
+    });
+    expect(await direct.json()).toEqual({ proxied: true });
+    expect(legacyDispatcher()).toBe(hostDispatcher);
   });
 
   it("honors lowercase precedence and NO_PROXY bypass without disabling unrelated hosts", async () => {

@@ -357,7 +357,7 @@ Ready-to-use examples for common patterns are in [`examples/classification/`](ex
 
 ## Requirements
 
-- Node.js >= 22.18.0, Bun, or Deno
+- Node.js >= 22.19.0, Bun, or Deno
 - A GitHub token or authenticated `gh` CLI with the [required repository access](docs/authentication.md). A classic PAT needs the `repo` scope for complete operation.
 - `git`
 
