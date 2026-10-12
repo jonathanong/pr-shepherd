@@ -27,6 +27,8 @@ Symptoms, causes, and fixes for common pr-shepherd failures, plus where to find 
 | HTTP 401/403                                                                                              | 77   |
 | GraphQL `errors[].message` matching "resource not accessible" (field-level PAT scope failure, HTTP 200)   | 77   |
 | 403 with `Retry-After` or a secondary-rate-limit message; HTTP 200 GraphQL error naming a secondary limit | 75   |
+| HTTP 5xx; HTTP 200 GraphQL `INTERNAL` or `RESOURCE_LIMITS_EXCEEDED` error                                 | 75   |
+| Malformed GraphQL or REST response shape                                                                  | 70   |
 | Any other GraphQL error                                                                                   | 69   |
 
 The message may include the GraphQL field path GitHub denied.
