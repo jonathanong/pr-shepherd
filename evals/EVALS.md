@@ -52,7 +52,7 @@ Each case carries `tier:discriminating` or `tier:guard` in its tags, set in
 
 - `discriminating`: the arms separated on a full run (`01`, `02`, `04`, `05`,
   `10`, `22`, `24`). These get the runs. A case without a full run yet
-  (`29`–`46`) starts here too, so a targeted run measures it; `--summary` lists
+  (`29`–`52`) starts here too, so a targeted run measures it; `--summary` lists
   it for demotion if its interval includes 0. Cases `38` and up also commit
   `runs: 6`, because at 3 the without arm alone has swung ±0.44.
 - `guard`: both arms sit at ceiling, so the case only exists to notice a
@@ -106,8 +106,11 @@ Layout:
 - `cases/cloud.mjs`: cases 40–42, the cloud event loop (event mode).
 - `cases/multiturn.mjs`: cases 44–46, long-session variants of ceiling cases
   (see "Multi-turn cases").
+- `cases/stack-fixes.mjs`: cases 47–52, agent behavior on the output of recent
+  native-stack fixes (#509, #567, merge-queue removal of a stack layer, the
+  REST stack queue guard).
 
-A case may also set `runs` (default 3). Cases 38, 39 and 43–46 use 6.
+A case may also set `runs` (default 3). Cases 38, 39 and 43–52 use 6.
 
 Case numbers are stable. Add new cases at the end instead of renumbering.
 
@@ -168,6 +171,12 @@ third arm.
 | `44-multi-pr-cancel-long-session`           | `03`    | `25` after earlier ticks on both PRs                                                 |
 | `45-stack-handoff-long-session`             | `102`   | `15` after a finished one-PR session                                                 |
 | `46-stack-all-owned-long-session`           | `106`   | `16` after a finished one-PR session                                                 |
+| `47-stack-layer-cancelled-latest-run-rerun` | `145`   | Latest required run `CANCELLED` despite "3 passing": run every printed `rerun:`      |
+| `48-stack-layer-superseded-no-rerun`        | `146`   | Mirror of `47`: superseded cancellations need no rerun; iterate                      |
+| `49-queue-cancelled-required-run-escalate`  | `147`   | Cancelled `merge_group` run escalates: hand off, no rerun or requeue                 |
+| `50-stack-merged-parent-retarget-wait`      | `131`   | Under `--merge`, wait for GitHub to retarget the bottom layer; no merge or base edit |
+| `51-stack-queue-removal-ack-route`          | `120`   | Stack queue removal: `gh stack rebase`, ack only on an unchanged head                |
+| `52-rest-stack-merge-queue`                 | `135`   | REST stack queue merge: run the printed `apply merge`, not `gh stack merge`          |
 
 "apply" is `test-cases/snapshots/apply-review-session-refusal`, an
 `apply review` output recorded by `test-cases/apply-review.test.mts` through
@@ -478,10 +487,9 @@ variable in a case's `env:` block fails every run: the runner accepts only
 
 ## Next steps
 
-1. **Add a stack Branch-update fixture.** No snapshot emits the
-   `Playbook: "Branch update"` route (`gh stack checkout` / `rebase` / `push`),
-   so the "rebase the whole stack, never one layer" rule is only covered
-   indirectly by `17`. Add the CLI snapshot first, then the case.
+1. **Done: stack Branch-update cases.** Fixtures `129` and `120` emit the
+   `Playbook: "Branch update"` route (`gh stack checkout` / `rebase` / `push`);
+   `28` and `51` grade it.
 2. **Add fixtures for #463 (check blocked by another PR) and #471
    (classification auto-resolve)**, then cases for them.
 3. **Fix the haiku trigger rate (53%).** One line in the skill `description`
@@ -513,4 +521,5 @@ variable in a case's `env:` block fails every run: the runner accepts only
     no longer needed.
 12. **More playbook-only stack cases.** `24` shows the pattern: stack rules
     printed in the output sit at ceiling, and rules found only in a playbook
-    discriminate. Next candidate: a merge-queue ejection (fixture `98`).
+    discriminate. `51` covers a native-stack merge-queue ejection (fixture
+    `120`); fixture `98` is still uncovered.

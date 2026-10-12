@@ -3,7 +3,7 @@
 **Does an agent act correctly on pr-shepherd's output, and would it without the
 plugin?**
 
-40 cases replay real recorded pr-shepherd output, mostly from the states agents
+46 cases replay real recorded pr-shepherd output, mostly from the states agents
 get wrong in real transcripts. Five of those (`38`, `39`, `44`–`46`) also replay
 earlier turns of the session, to catch drift that a fresh context hides. Three
 others start from a request alone: one
@@ -16,8 +16,13 @@ a PR is created and targeted.
   or skipping the generated `apply review:` command.
 - **Stacks:** leaving layers unshepherded, merging a middle layer directly,
   rewriting a queued layer, or stopping at a lower layer's handoff while owned
-  layers still have work, or treating a merged parent's retained base as a
-  reason to stop reviewing the remaining layers.
+  layers still have work, treating a merged parent's retained base as a
+  reason to stop reviewing the remaining layers, or merging before GitHub
+  retargets the bottom open layer.
+- **Stack CI and queue:** calling a stack layer green when its latest required
+  run was cancelled, rerunning a superseded cancellation, rerunning or
+  requeueing a merge-group failure, or bypassing the printed `gh stack` route
+  after a queue removal or the REST `apply merge` route.
 
 Each case runs twice: with the plugin and without it. The headline number is
 **Δ = with − without**. Δ isolates what the plugin adds over the model on its
@@ -76,7 +81,7 @@ first and `runs: 1` on the second for a targeted run (see
 [EVALS.md](EVALS.md#tiers-and-run-recipes)). Only a Δ whose 95% bootstrap
 interval excludes 0 is a result.
 
-Cases 29–46 have not run live yet, so they start in the discriminating tier
+Cases 29–52 have not run live yet, so they start in the discriminating tier
 and the targeted run covers them.
 
 ## More

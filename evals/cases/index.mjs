@@ -6,6 +6,7 @@ import { MULTITURN_CASES } from "./multiturn.mjs";
 import { RECENT_CASES } from "./recent.mjs";
 import { RULES_CASES } from "./rules.mjs";
 import { STACK_CASES } from "./stack.mjs";
+import { STACK_FIXES_CASES } from "./stack-fixes.mjs";
 
 export const CASES = [
   ...CORE_CASES,
@@ -15,4 +16,5 @@ export const CASES = [
   ...DEFERRED_CASES,
   ...CLOUD_CASES,
   ...MULTITURN_CASES,
+  ...STACK_FIXES_CASES,
 ];
