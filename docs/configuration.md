@@ -282,7 +282,7 @@ poll:
 | `reconcileSeconds`    | non-negative finite         | GraphQL transport: an idle `WAIT` tick (no check running) replays the stored report when all conditional REST change detectors answer 304 and the last GraphQL snapshot is younger than this. `0` disables the detectors. See [idle-wait change detectors](graphql.md#idle-wait-change-detectors). |
 | `mode`                | `auto` \| `poll` \| `event` | `event` runs one tick with no sleeping or debounce and reports `nextCheck`; `auto` picks `event` when `CLAUDE_CODE_REMOTE=true`.                                                                                                                                                                   |
 
-Quota-warning bands are multiples of the configured `intervalSeconds` only, so neither `--interval` nor the stack factor compounds into them. The dispatcher sleeps the slower of the effective interval and the active band; with built-in defaults a stack sleeps 120s until a band is slower.
+Factor-based quota-warning bands use the configured `intervalSeconds`; neither `--interval` nor the stack factor compounds into them. `pollIntervalMinutes` sets an absolute minimum cadence. The dispatcher sleeps the slower of the effective interval and the active band; with built-in defaults a stack sleeps 120s until a band is slower.
 
 ## `watch`
 
@@ -458,6 +458,7 @@ actions:
 | `GH_TOKEN` / `GITHUB_TOKEN` / `GITHUB_PERSONAL_ACCESS_TOKEN` | GitHub token. Order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` (needs the `gh` CLI) → `GITHUB_PERSONAL_ACCESS_TOKEN`. Required access: [authentication.md](authentication.md). |
 | `CLAUDE_CODE_REMOTE`                                         | `true` makes `github.transport: auto` start with REST, `poll.mode: auto` select `event`, and state default to durable storage.                                                     |
 | `HTTPS_PROXY` / `HTTP_PROXY` (or lowercase)                  | Route GitHub requests through a proxy, for both transports. Lowercase takes precedence.                                                                                            |
+| `NO_PROXY` (or lowercase)                                    | Hosts that bypass the proxy. Lowercase takes precedence.                                                                                                                           |
 
 Default state directory when `PR_SHEPHERD_STATE_DIR` is unset:
 

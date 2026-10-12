@@ -49,7 +49,7 @@ Shepherd does not turn this into `wait` or a retry: incomplete GraphQL read data
 pr-shepherd <PR> --format=json
 ```
 
-A merged PR returns `{"action":"cancel","pr":<N>,"reason":"merged"}` (`--verbose` adds `"status":"MERGED"` and `"state":"MERGED"`). If it still returns `wait`, check that `report.mergeStatus.state` is set correctly in `--verbose` JSON. If it returns `cancel` with a status other than `MERGED` or `CLOSED`, check that `runCheck` short-circuits terminal PRs (`commands/check-terminal-report.mts`) before CI and comment processing.
+A merged PR returns for example `{"action":"cancel","pr":42,"reason":"merged"}` (`--verbose` adds `"status":"MERGED"` and `"state":"MERGED"`). If it still returns `wait`, check that `report.mergeStatus.state` is set correctly in `--verbose` JSON. If it returns `cancel` with a status other than `MERGED` or `CLOSED`, check that `runCheck` short-circuits terminal PRs (`commands/check-terminal-report.mts`) before CI and comment processing.
 
 ### "Loop stuck in WAIT, status UNKNOWN"
 
