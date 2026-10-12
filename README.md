@@ -41,9 +41,11 @@ Without Shepherd, an agent fans out across `gh`, the GitHub MCP server, and Grap
 One `iterate` call returns everything the agent needs about the PR:
 
 - review threads with replies, PR comments, and review summaries;
-- each CI failure with its failed step and a log excerpt;
+- each CI failure, with its failed step and a log excerpt when triage can fetch them;
 - mergeability and the actual merge requirements;
 - first-look, outdated, and edited items, and stack topology.
+
+One exception: a `COMMENTED` review that was already minimized before the first tick is not fetched.
 
 The agent reasons less and misses less. [docs/handled-cases.md](docs/handled-cases.md) catalogs the GitHub edge cases this covers. Two examples:
 
@@ -62,7 +64,7 @@ Batching, noise filtering, fingerprint skips, seen markers, and lean output cut 
 These are offline estimates at 3.5 characters per token over recorded sessions, not measured billing. Two cases do not save money:
 
 - A single fresh read-and-reply tick is roughly even with `gh`.
-- Confirming an already-merged PR costs about 15% more.
+- Confirming an already-merged PR costs about 5% more ([report](evals/tokens/REPORT.md)).
 
 ### Clearer agent direction
 
@@ -79,7 +81,7 @@ Waiting is where most quota goes, and where Shepherd saves the most. By default 
 
 - Each tick is one batched GraphQL query (1 point). When nothing changed, the fingerprint skip returns the stored report from that same query.
 - While CI runs, that is about 60 points an hour per PR, against about 360 for `gh pr checks --watch` at its default interval. The token bench models `gh` refreshing every 60 seconds, which ties Shepherd at 60 ([report](evals/tokens/REPORT.md)).
-- When no check is running, conditional REST change detectors run first. A `304` consumes no primary quota. An hour of unchanged idle waiting costs about 4 GraphQL points instead of 60 ([graphql-usage.md](docs/graphql-usage.md)).
+- When no check is running, conditional REST change detectors run first. A `304` consumes no primary quota. An hour of unchanged idle waiting costs about 4 GraphQL points instead of 60 ([graphql-usage.md](docs/graphql-usage.md)). That holds only when the stored report is eligible for the detectors. Native-stack layers, `READY` reports, incomplete snapshots, and detector failures still run the batched query each tick ([graphql.md](docs/graphql.md#idle-wait-change-detectors)).
 
 Fewer requests help on both tiers. The GitHub MCP server issues one or more REST requests per tool call, so unbatched calls drain `core` and the per-minute pool faster.
 
@@ -101,7 +103,7 @@ See [docs/graphql-usage.md](docs/graphql-usage.md) and [docs/rest-usage.md](docs
 - The CLI runs read-only git only. It emits patches and commit commands for the agent to run ([AGENTS.md](AGENTS.md#git-operations)).
 - Shepherd never merges by itself. With `--merge`, it emits a merge or queue command for the agent to run. The command is head-pinned for a single PR and guarded by READY receipts for a stack.
 - Human handoff is a [finite escalation list](docs/escalations.md).
-- Review titles, comments, and CI logs are treated as untrusted data.
+- The shipped skill tells the agent to treat review titles, comments, and CI logs as untrusted data. Shell and other MCP callers must apply that rule themselves.
 - A denied reply or resolve is a one-look skip, not a retry loop.
 
 ### Works across agents and environments
@@ -121,7 +123,7 @@ See [docs/graphql-usage.md](docs/graphql-usage.md) and [docs/rest-usage.md](docs
 
 1. **Install the MCP server and the CLI.** See [Install](#install) below.
 2. **Write your policy into a skill or agent instruction.** Examples: "skip non-blocking review comments", "reply instead of fixing nits", "never merge". Shepherd reports state and the next action. Your instructions decide how the agent treats each comment. The shipped `pr-shepherd` skill is a thin dispatcher you can wrap ([docs/skills.md](docs/skills.md)).
-3. **Configure Shepherd.** In `.pr-shepherdrc.yml`, turn on the bundled classification rules. They drop known bot noise before it reaches the agent, which saves more tokens and tool calls. See [docs/configuration.md](docs/configuration.md#classifystandard--default-).
+3. **Configure Shepherd.** In `.pr-shepherdrc.yml`, turn on the bundled classification rules. They drop known bot noise before it reaches the agent, which saves more tokens and tool calls. With the default `actions.autoMinimizeSuppressed: true`, several rules also minimize matching comments on GitHub and log a Shepherd Journal entry; set it to `false` to keep comments untouched. See [docs/configuration.md](docs/configuration.md#classifystandard--default-).
 
    ```yaml
    classify:
@@ -166,7 +168,7 @@ Requirements:
 ```
 
 ```sh
-pr-shepherd 42                       # shell: poll until there is work or a terminal state
+pr-shepherd 42                       # shell: poll for work (270s cap; --until-terminal removes it)
 ```
 
 Leave out the PR number to use the current branch. Example `FIX_CODE` output:
