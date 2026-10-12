@@ -55,13 +55,14 @@ Each case carries `tier:discriminating` or `tier:guard` in its tags, set in
   fails (`07`, `48`), or a single guard run moved by +0.25 or more (`06`,
   `11`, `18`, `21`, `27`, `28`). These get the runs. A new case starts here
   too, so a targeted run measures it; `--summary` lists it for demotion if its
-  interval includes 0. Cases `38` and up also commit `runs: 6`, because at 3
-  the without arm alone has swung ±0.44.
+  interval includes 0.
 - `guard`: everything else. Both arms sit at or near ceiling, so the case only
   exists to notice a regression. One run each is a cheap sweep.
 
 `EVAL_RUNS_DISCRIMINATING` and `EVAL_RUNS_GUARD` override the per-case `runs`
-(a case's own `runs`, else 3) at generation time. Regenerate, run, then
+(a case's own `runs`, else 3) at generation time. Cases `38`, `39` and
+`43`–`52` commit their own `runs: 6`, whatever their tier, because at 3 the
+without arm alone has swung ±0.44; `40`–`42` do not. Regenerate, run, then
 regenerate without the variables so the tree matches the committed cases:
 
 ```sh
@@ -71,7 +72,7 @@ CLAUDE_CODE_EFFORT_LEVEL=low claude plugin eval . --model claude-sonnet-5-5 \
   --ablation with-without --judge-model opus --no-publish
 node evals/generate.mjs        # restore the committed suite
 
-# Full sweep: the committed runs (3, or the case's own 6 on 38 and up).
+# Full sweep: the committed runs (3, or the case's own 6).
 node evals/generate.mjs
 ```
 
