@@ -22,7 +22,7 @@ Log excerpts are omitted for `CANCELLED` and `STARTUP_FAILURE`. The full field i
 
 | Feature                        | Notes                                                                                                                                                                              | Spec                                                         |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| One action per tick            | `WAIT`, `READY`, `MARK_READY`, `MERGE`, `CANCEL`, `ESCALATE`, or `FIX_CODE`, with numbered `## Instructions`                                                                       | [actions.md](actions.md), [iterate-flow.md](iterate-flow.md) |
+| One action per tick            | `WAIT`, `READY`, `MARK_READY`, `MERGE`, `CANCEL`, `ESCALATE`, or `FIX_CODE`; all but `CANCEL` carry numbered `## Instructions`                                                     | [actions.md](actions.md), [iterate-flow.md](iterate-flow.md) |
 | Review mutations               | `apply review` batches reply / resolve / minimize / dismiss. Generated IDs are capability-filtered; explicit IDs are attempted                                                     | [comments.md](comments.md#mutation-types)                    |
 | Suggestion patches             | `build_suggestion_patches` returns ordered, apply-checked patches and commit metadata. It never writes files or mutates git                                                        | [actions.md](actions.md)                                     |
 | Mark ready, ready-delay, merge | Optional `MARK_READY` for clean drafts; a ready-delay before `CANCEL`; with `--merge`, a merge or queue command for the agent (head-pinned for one PR, READY receipts for a stack) | [actions.md](actions.md)                                     |
@@ -54,7 +54,7 @@ Shepherd works best on PRs that use required status checks and conversation reso
 - Shepherd recognizes its own reply only by a leading `<!-- pr-shepherd -->` marker. A marked thread is resolve-only on retry.
 - Review summaries are not minimized while their inline threads are still unresolved.
 - Clean drafts are marked ready unless `actions.autoMarkReady: false` or `--no-auto-mark-ready` is set.
-- With `--merge`, review work is deferred while the PR is in the merge queue, because a push would eject it. Set `actions.workWhileQueued: true` to act anyway. Failing checks and conflicts are never deferred.
+- With `--merge` on the GraphQL transport, review work is deferred while the PR is in the merge queue, because a push would eject it. Set `actions.workWhileQueued: true` to act anyway. Failing checks and conflicts are never deferred. REST cannot see queue membership, so it does not defer.
 - With REST, viewer capability is unknown. Otherwise-eligible mutations are attempted and GitHub's response decides.
 - `BEHIND` is status, not a rebase. The agent updates the branch when it chooses.
 
@@ -63,7 +63,7 @@ Shepherd works best on PRs that use required status checks and conversation reso
 - No long-running daemon. MCP clients call `iterate` again; the shell poll is bounded.
 - No merging or branch updates by Shepherd itself, and no continuous rebasing.
 - No edits to the working tree. Suggestion patches are returned, not applied.
-- No classification of comments as actionable or noise, and no rerun-versus-fix decision for CI. The agent decides.
+- No judgment of which comments are actionable, and no rerun-versus-fix decision for CI. The agent decides. Only configured `classify` rules suppress matching noise.
 - No automatic edits for threads without a file location.
 - Already-minimized `COMMENTED` reviews are not fetched.
 - GitHub only. No GitLab, Bitbucket, or Azure DevOps.
