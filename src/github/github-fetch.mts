@@ -1,6 +1,6 @@
 import type { Dispatcher } from "undici";
 
-const currentDispatcherSlot = Symbol.for("undici.globalDispatcher.2");
+const legacyDispatcherSlot = Symbol.for("undici.globalDispatcher.1");
 
 let proxyAgent: Dispatcher | undefined;
 let proxyConfiguration: string | undefined;
@@ -8,15 +8,22 @@ let undiciModule: Promise<typeof import("undici")> | undefined;
 
 /**
  * Undici 8's import installs a default agent and copies it onto the legacy
- * dispatcher slot that Node 22's fetch still reads. A non-writable v2 slot
- * makes that bootstrap keep a fallback agent instead, so the legacy slot stays
- * with the host. Node 24+ already occupy the v2 slot before user code runs.
+ * dispatcher slot that Node 22 and 24's fetch still reads. Put the host's
+ * value back afterwards. The current slot stays writable, so a later
+ * setGlobalDispatcher() can replace it and mirror that change onto fetch.
  */
-function keepBundledFetchDispatcher(): void {
-  if (Object.getOwnPropertyDescriptor(globalThis, currentDispatcherSlot)) return;
-  Object.defineProperty(globalThis, currentDispatcherSlot, {
+function restoreLegacyDispatcher(previous: PropertyDescriptor | undefined): void {
+  if (previous) {
+    Object.defineProperty(globalThis, legacyDispatcherSlot, previous);
+    return;
+  }
+  const installed = Object.getOwnPropertyDescriptor(globalThis, legacyDispatcherSlot);
+  // Undici defines this property as non-configurable, so absence can only be
+  // represented by clearing the value.
+  if (!installed?.writable) return;
+  Object.defineProperty(globalThis, legacyDispatcherSlot, {
     value: undefined,
-    writable: false,
+    writable: true,
     enumerable: false,
     configurable: false,
   });
@@ -24,8 +31,12 @@ function keepBundledFetchDispatcher(): void {
 
 function loadUndici(): Promise<typeof import("undici")> {
   undiciModule ??= (async () => {
-    keepBundledFetchDispatcher();
-    return import("undici");
+    const previous = Object.getOwnPropertyDescriptor(globalThis, legacyDispatcherSlot);
+    try {
+      return await import("undici");
+    } finally {
+      restoreLegacyDispatcher(previous);
+    }
   })();
   return undiciModule;
 }
