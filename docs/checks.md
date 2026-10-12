@@ -2,139 +2,176 @@
 
 [← README](../README.md) | [context.md](context.md)
 
-This is how CI **context** is classified and triaged for the agent. Shepherd surfaces failures and excerpts; it does not decide rerun-versus-code-fix.
+How Shepherd classifies CI checks and what failure context it surfaces to the agent. For readers of iterate's checks sections and contributors changing CI logic. Shepherd surfaces failures and log excerpts; it does not decide rerun versus code fix.
 
 ## Classification pipeline
 
-CI check runs flow through three stages: supplement → classify → triage.
-
-**Note on cancelled workflows:** when a workflow's concurrency group evicts an in-flight run (a second push, or a second trigger of the same push, cancels the earlier run on the same commit), GitHub leaves behind `CANCELLED` check runs from the evicted run. See "Concurrency-superseded CANCELLED checks" below — these are reclassified as `superseded`, not `failing`.
+```mermaid
+flowchart LR
+  S0[Stage 0: supplement startup failures] --> S1[Stage 1: classify]
+  S1 --> V[getCiVerdict]
+  S1 -->|failing| S2[Stage 2: triage]
+  S2 --> R[report.checks.failing]
+```
 
 ### Stage 0: Supplement startup failures (`checks/triage.mts`)
 
-GitHub can complete a workflow run with `conclusion === "startup_failure"` before it creates any job or check-run context. Those runs may be absent from GraphQL `statusCheckRollup`. The batch query reads `commit.checkSuites` and merges suites whose `conclusion` is `STARTUP_FAILURE` into the check list.
+A workflow run can end with `conclusion: startup_failure` before it creates any job or check-run context, so it may be missing from GraphQL `statusCheckRollup`. The batch query reads `commit.checkSuites` and merges suites whose `conclusion` is `STARTUP_FAILURE` into the check list (`checks/startup-failures.mts`).
 
 REST `GET /repos/{owner}/{repo}/actions/runs?head_sha=<sha>&status=startup_failure` runs only when that CheckSuite page is missing or truncated (`hasNextPage`):
 
-- Runs are kept only when the REST `pull_requests` association includes the current PR number and head SHA, because the endpoint is repository-wide for the commit SHA.
-- Each returned run is mapped to a `CheckRun` with `conclusion: "STARTUP_FAILURE"`, the run ID, the run URL, the raw event, the workflow name, and `display_title` as `summary`.
-- If the same run ID already exists in the GraphQL check list, the startup-failure conclusion updates that entry instead of adding a duplicate.
-- The REST supplement is best-effort. If the Actions runs request fails, Shepherd logs a warning and continues with the GraphQL check data already fetched.
+- The endpoint is repository-wide for the SHA, so runs are kept only when the REST `pull_requests` association includes this PR number and head SHA.
+- Each run becomes a `CheckRun` with `conclusion: "STARTUP_FAILURE"`, the run ID, run URL, raw event, workflow name, and `display_title` as `summary`.
+- A run ID already in the GraphQL list is updated in place, not duplicated.
+- The supplement is best-effort: a failed request logs a warning and keeps the GraphQL data. A secondary rate limit aborts the tick with exit 75 instead ([graphql.md](graphql.md#startup-failure-checksuites-graphql--actions-rest-fallback)).
 
 ### Stage 1: Classify (`checks/classify.mts`)
 
-Each check run is assigned a `CheckCategory`:
+Each check gets one `CheckCategory`. Rules apply in this order; the first match wins.
 
-| `CheckCategory` | Condition                                                                                                                                                          |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `passed`        | `status === 'COMPLETED'` and `conclusion === 'SUCCESS'`                                                                                                            |
-| `failing`       | `status === 'COMPLETED'` and `conclusion` in `{FAILURE, TIMED_OUT, CANCELLED, STARTUP_FAILURE, ACTION_REQUIRED}`, and not reclassified as `superseded` (see below) |
-| `superseded`    | `conclusion === 'CANCELLED'` and matching newer-run evidence exists in the same commit context — see below                                                         |
-| `in_progress`   | `status` in `{IN_PROGRESS, QUEUED, WAITING, PENDING, REQUESTED}`                                                                                                   |
-| `skipped`       | `conclusion` in `{SKIPPED, NEUTRAL}` — reported but do not block readiness                                                                                         |
-| `ignored`       | Matches `ignoreChecks`, unless the same Actions run is protected by `actions.neverCancelRuns`                                                                      |
-| `filtered`      | Triggered by a non-PR event (see event filter below)                                                                                                               |
+| Order | `CheckCategory` | Condition                                                                                                                                  |
+| ----- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1     | `ignored`       | Name matches `ignoreChecks`, unless its Actions run is protected by `actions.neverCancelRuns` ([precedence](#ignoreprotection-precedence)) |
+| 2     | `filtered`      | Triggered by an event not in `checks.ciTriggerEvents` ([event filter](#event-filter)). Status contexts (`event: null`) are never filtered  |
+| 3     | `in_progress`   | `status` is anything but `COMPLETED`                                                                                                       |
+| 4     | `skipped`       | `conclusion` is `SKIPPED` or `NEUTRAL`; reported, never blocks readiness                                                                   |
+| 5     | `passed`        | `conclusion` is `SUCCESS`                                                                                                                  |
+| 6     | `failing`       | Any other conclusion: `FAILURE`, `TIMED_OUT`, `CANCELLED`, `ACTION_REQUIRED`, `STARTUP_FAILURE`, `STALE`                                   |
+| 7     | `superseded`    | A `failing` check whose conclusion is `CANCELLED` and that has newer-run evidence ([below](#concurrency-superseded-cancelled-checks))      |
 
 ### Ignore/protection precedence
 
-`ignoreChecks` matches the raw check name (`CheckRun.name` or `StatusContext.context`) and removes matching checks from the CI verdict. For backward compatibility, the legacy cancellation-named `actions.neverCancelRuns` key takes precedence when it matches the workflow name or check name for that run. It only keeps matching checks visible and blocking readiness; Shepherd never cancels workflow runs.
+`ignoreChecks` matches the raw check name (`CheckRun.name` or `StatusContext.context`), case-insensitively, and removes matches from the CI verdict. The legacy cancellation-named `actions.neverCancelRuns` takes precedence when it matches the workflow name or check name of any check in that Actions run: the run's checks stay visible and blocking. Shepherd never cancels workflow runs.
 
-`actions.neverCancelRuns` does not bypass the event filter. A protected workflow triggered by `workflow_dispatch`, `push`, or another non-PR event still needs that event listed in `checks.ciTriggerEvents` if it should count toward readiness.
+`actions.neverCancelRuns` does not bypass the event filter. A protected workflow triggered by `workflow_dispatch`, `push`, or another non-PR event counts toward readiness only if that event is in `checks.ciTriggerEvents`.
 
 ### Event filter
 
-Only checks triggered by events in `checks.ciTriggerEvents` (default: `pull_request`, `pull_request_target`) count toward the PR-head CI verdict. Checks triggered by `push`, `schedule`, `merge_group`, `workflow_dispatch`, or any other event are classified as `filtered` there. When a PR is in a merge queue—or has just been removed—Shepherd separately reads the synthetic queue commit and accepts `merge_group` checks for that commit only. Queue checks retain `scope: "merge_group"` and `commitOid` so they are not confused with PR-head checks.
+Only checks triggered by `checks.ciTriggerEvents` (default `pull_request`, `pull_request_target`) count toward the PR-head verdict; `push`, `schedule`, `merge_group`, `workflow_dispatch`, and anything else are `filtered`. When a PR is in a merge queue, or was just removed, Shepherd separately reads the synthetic queue commit and accepts `merge_group` checks for that commit only. Queue checks carry `scope: "merge_group"` and `commitOid` so they are not confused with PR-head checks.
 
-Filtered checks appear in `report.checks.filtered` and `report.checks.filteredNames` but do not block the READY verdict. The `blockedByFilteredCheck` flag is set when the merge state is BLOCKED and the only failing checks are filtered ones — this surfaces as a hint in the reporter output.
+Filtered checks appear in `report.checks.filtered` and `filteredNames` and never block READY. `blockedByFilteredCheck` is set when the merge state is `BLOCKED` and the only failing checks are filtered; the reporter shows it as a hint.
 
 ### Concurrency-superseded CANCELLED checks
 
-GitHub Actions concurrency groups cancel an in-flight workflow run when a newer run of the same workflow starts on the same commit — most commonly when a push fires the workflow twice in quick succession, or a second push lands before the first run finishes. The evicted run's check runs complete with `conclusion === "CANCELLED"`, but GitHub branch protection resolves required status checks by **latest run per name** and merges past them once the newer run's checks pass. Treating every `CANCELLED` check as `failing` would make shepherd block on PRs GitHub itself considers mergeable.
+A concurrency group cancels an in-flight run when a newer run of the same workflow starts on the same commit (a double trigger, or a second push before the first run ends). The evicted run's checks complete `CANCELLED`, but branch protection resolves required checks by latest run per name, so GitHub merges once the newer run passes. Shepherd matches that by reclassifying the cancelled check as `superseded`.
 
-Shepherd groups check runs by workflow — keyed on the Actions workflow's numeric `databaseId` (`workflowId`), falling back to the workflow display name (`workflowName`) when the ID is unavailable for the run-ID rule. A check is reclassified from `failing` to `superseded` only when its own `conclusion` is `CANCELLED` and one of these forms of newer-run evidence is present:
+Checks are grouped by workflow: the Actions workflow `databaseId` (`workflowId`), falling back to `workflowName` for the run-ID rule. A `CANCELLED` check becomes `superseded` when either holds:
 
-- A check in the same workflow, event, scope, and commit has a strictly greater numeric `runId`.
-- A completed `SUCCESS` check has the same exact check name, stable workflow ID, event, scope, and commit, and both its start and completion timestamps are strictly later than the cancelled check's. This evidence requires a distinct, lower numeric `runId` on the successful check, non-null matching event, and finite positive timestamps. The successful check must complete at or after its start. A cancelled wrapper may report completion before start; both recorded boundaries still require strictly later matching success timestamps.
+| Evidence      | Requirements                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Higher run ID | A check in the same workflow, event, scope, and commit has a strictly greater numeric `runId`                                                                                                                                                                                                                                                                                                                   |
+| Later success | A completed `SUCCESS` check with the same exact name, stable workflow ID, non-null event, scope, and commit; a distinct, lower numeric `runId`; finite positive timestamps; its start and completion both strictly later than the cancelled check's, and its own completion at or after its start. A cancelled wrapper may report completion before start; both of its recorded boundaries must still be beaten |
 
-The timestamp case covers duplicated triggers whose run IDs were allocated in a different order from when the runs actually started. It establishes only the observed run ordering in the loaded same-commit check context; it does not prove that both events used an identical PR base.
+The later-success rule covers duplicated triggers whose run IDs were allocated out of start order. It proves only the observed run order in the loaded same-commit context, not that both events used the same PR base.
 
-This is deliberately narrow:
+Limits:
 
-- Only `CANCELLED` is ever reclassified. A real `FAILURE`/`TIMED_OUT`/`STARTUP_FAILURE` on an older run is never masked, even if a newer run exists (the newer run may not re-emit that check at all, e.g. under path filtering).
-- A cancelled run remains `failing` unless either the same-event/scope/commit higher-run-ID rule applies or the precise later-execution success evidence above is present. A greatest-ID cancellation can therefore be superseded when a lower-ID success proves it started and completed later; without either form of evidence it stays `failing`, and Shepherd recommends an authorized rerun or returns `ESCALATE` when no autonomous follow-up remains.
-- Timestamp evidence must be strict on both start and completion, and it only applies to an exact-name successful check from the same workflow ID, event, and scope. It changes Shepherd's local check classification; it does not change or remove checks from GitHub's status rollup.
-- Checks with no workflow identity (`workflowId` and `workflowName` both absent) or no numeric `runId` — external `StatusContext` checks, and `STARTUP_FAILURE` synthetics from the Stage 0 supplement — never participate; they can neither be marked superseded nor count as evidence of a newer run.
+- Only `CANCELLED` is reclassified. An older `FAILURE`, `TIMED_OUT`, or `STARTUP_FAILURE` is never masked; the newer run may not re-emit that check (for example under path filtering).
+- Without either form of evidence a cancelled check stays `failing`, including a greatest-ID cancellation. Shepherd then recommends an authorized rerun or returns `ESCALATE` when no autonomous follow-up remains.
+- Checks with no workflow identity (`workflowId` and `workflowName` both absent) or no numeric `runId` never participate as either side. That covers external `StatusContext` checks and Stage 0 `STARTUP_FAILURE` synthetics.
+- Reclassification is local to Shepherd; GitHub's status rollup is unchanged.
 
-`superseded` checks are excluded from `getCiVerdict`'s `relevant` tally (same as `filtered`/`skipped`/`ignored`) and from `report.checks.failing` — they are never triaged (no jobs/logs API call) and never appear under `## Failing checks`. They are surfaced only as a `supersededNames` list for transparency.
+`superseded` checks are excluded from the verdict and from `report.checks.failing`, are never triaged (no jobs or logs call), never appear under `## Failing checks`, and are listed only in `supersededNames`.
 
 ### Empty-check set
 
-When all checks are filtered or skipped (e.g., docs-only PRs that only trigger push checks), `getCiVerdict` returns `allPassed: true`. This prevents shepherd from blocking READY on PRs that have no relevant CI.
+When every check is filtered or skipped (for example a docs-only PR that triggers only push checks), `getCiVerdict` returns `allPassed: true`, so READY is not blocked by CI that does not apply. `hasChecks` stays false; see [merge-status.md](merge-status.md#computestatus--shepherdstatus) for how that gates READY on a `BLOCKED` PR.
 
 ### Unreported required checks
 
-A required status context with no check run and no status context is a different gap. Other checks can be green, so `allPassed` is still true, and the missing names are not rows in the rollup. Shepherd loads the required contexts from the merge target. For a native stack that target is the stack trunk (`stack.baseRefName`), the same rules GitHub applies to every layer, not the upper layer's parent branch. The newest check or status of a name counts: a later success supersedes an older cancelled run of that name.
+A required status context with no check run and no status context at all is a different gap: the other checks can be green (`allPassed` stays true) and the missing names are not rows in the rollup. Shepherd loads the required contexts from the merge target. For a native stack that is the stack trunk (`stack.baseRefName`), the rules GitHub applies to every layer, not the upper layer's parent branch. The newest check or status of a name counts: a later success supersedes an older cancelled run.
 
-Merged lower layers do not prevent this lookup when the lowest open PR retains its merged
-parent's base branch. One-PR checks compare the trunk with the lowest open layer's head commit
-from the validated stack order after verifying that every lower layer merged. Closed or unknown
-lower states cannot designate an open child as the bottom. Aggregate summaries reuse the current trunk ref's rules from a
-retained trunk-based member, including a merged member, or fetch the trunk ref directly when
-none is available. They never substitute the merged parent's branch rules for the trunk rules.
+Merged lower layers do not block this lookup when the lowest open PR still targets its merged parent's branch. One-PR checks verify that every lower layer merged, then compare the trunk with the lowest open layer's head from the validated stack order; closed or unknown lower states cannot designate an open child as the bottom. Aggregate summaries reuse the trunk's rules from a retained trunk-based member (merged members included) or fetch the trunk ref directly, never substituting the merged parent's rules.
 
-When those contexts are missing and no relevant Actions workflow is still running, `iterate` returns `FIX_CODE` immediately. An in-progress or queued check run, or a check suite that has a `workflowRun` and is not completed, means CI is in progress and the action stays `WAIT`. A suite with no workflow run that stays `QUEUED` does not count. `computeStatus` stays `PENDING` in this gap, including when `mergeStateStatus` is `BLOCKED` and every reported check passed, so ready-delay does not start.
+| Situation                                                                                      | Result                                                                                                                                                                     |
+| ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A check run in progress or queued, or a check suite with a `workflowRun` that is not completed | `WAIT` (CI is in progress). A queued suite without a workflow run does not count                                                                                           |
+| Contexts missing, no relevant Actions workflow running                                         | `FIX_CODE` immediately; `computeStatus` stays `PENDING`, even when `BLOCKED` and every reported check passed, so ready-delay does not start                                |
+| Branch behind (base compare, trunk compare, or merge status `BEHIND`)                          | Instruction states the commit count and tells the caller to rebase and push; that push starts the checks. Stays `FIX_CODE`, writes no marker                               |
+| Branch current, contexts still missing                                                         | Shepherd closes and reopens the PR once for that head and tells the caller to investigate why workflows did not start. Records head and context set in `ci-retrigger.json` |
+| Same head on the next tick, still missing                                                      | `ESCALATE` with `required-checks-unreported`                                                                                                                               |
 
-The instruction says no CI checks are running and names the required checks that have not passed. A non-stack PR loads `baseRef.compare(headRef).behindBy` for that gap, using the head commit OID so a fork branch name is not resolved in the base repository. The count is cached in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/` keyed on the live base tip (`baseRef.target.oid` from `BatchPr`) and the head commit, so a repeat tick reads it again only when either moves. A native-stack layer compares the stack trunk against the bottom open layer's head under the same condition, cached separately under the trunk tip and that head. The compare runs including when `mergeStateStatus` is `BLOCKED` because a conversation or an expected check is also open. If that compare or the stack trunk compare is behind, or the derived merge status is `BEHIND`, the instruction states the commit count and tells the caller to rebase and push. That push is how the missing checks start. If they are still missing after the branch is current, Shepherd closes and reopens the PR once for that head and tells the caller to investigate why the workflows did not start. The head and context set are stored in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/ci-retrigger.json`. The next tick on that same head escalates with `required-checks-unreported` instead of closing the PR again. A branch that is still behind stays on `FIX_CODE` and does not write that marker. Being behind is not its own action once the required checks have reported.
+The instruction says no CI checks are running and names the required checks that have not passed. To decide "behind", a non-stack PR loads `baseRef.compare(headRef).behindBy` using the head commit OID (so a fork branch name is not resolved in the base repository). A native-stack layer compares the stack trunk against the bottom open layer's head. Both compares run only while a required check is unreported, including when `mergeStateStatus` is `BLOCKED` for another reason, and are cached in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/` keyed on the live tip (`baseRef.target.oid` from `BatchPr`, or the trunk tip) and the head, so they rerun only when one moves. Being behind is not its own action once required checks have reported.
 
-JSON and text both list `unreportedRequiredChecks`. `baseBehindBy` is included when the PR base compare is behind, and text also prints `**behind**`. `trunkBehindBy` is included when the trunk compare is behind. Both compares run only while a required check is unreported. All three are omitted when empty. A `--stack` summary routes the layer as `fix_code` with reason `unreported-required-checks` instead of an idle wait, and prints the names on that layer. `actionsWorkflowInProgress` is set only when a relevant Actions suite has not completed.
+Output, each field omitted when empty:
+
+| Field                       | When                                                         |
+| --------------------------- | ------------------------------------------------------------ |
+| `unreportedRequiredChecks`  | Required contexts with no run                                |
+| `baseBehindBy`              | The PR base compare is behind; text also prints `**behind**` |
+| `trunkBehindBy`             | The trunk compare is behind                                  |
+| `actionsWorkflowInProgress` | A relevant Actions suite has not completed                   |
+
+A `--stack` summary routes the layer as `fix_code` with reason `unreported-required-checks` instead of an idle wait and prints the names on that layer.
 
 ### `getCiVerdict`
 
-Returns:
+"Relevant" means not `filtered`, `skipped`, `ignored`, or `superseded`.
 
-- `anyFailing` — true if any non-filtered, non-superseded check is in the `failing` category
-- `anyInProgress` — true if any non-filtered, non-superseded check is in the `in_progress` category
-- `allPassed` — true if no failing and no in-progress relevant checks
-- `filteredNames` — names of filtered checks
-- `ignoredNames` — names of checks suppressed by `ignoreChecks`
-- `supersededNames` — names of `CANCELLED` checks reclassified as `superseded`
+| Field             | Value                                                    |
+| ----------------- | -------------------------------------------------------- |
+| `anyFailing`      | A relevant check is `failing`                            |
+| `anyInProgress`   | A relevant check is `in_progress`                        |
+| `allPassed`       | No relevant check is failing or in progress              |
+| `hasChecks`       | At least one relevant check exists                       |
+| `filteredNames`   | Names of `filtered` checks                               |
+| `ignoredNames`    | Names of checks suppressed by `ignoreChecks`             |
+| `supersededNames` | Names of `CANCELLED` checks reclassified as `superseded` |
 
 ## Stage 2: Triage (`checks/triage.mts`)
 
-For each failing check, triage fetches additional context from the GitHub Actions API:
+For each failing check, triage adds context from the GitHub Actions API:
 
-- **`workflowName`** — the workflow that owns the failing job (from `jobs?filter=latest`).
-- **`jobName`** — the name of the matched job (falls back to the check name when not available).
-- **`failedStep`** — the first step whose conclusion is not `success`, `skipped`, or `neutral` (e.g. a step with `failure` or `timed_out` conclusion).
-- **`runAttempt`** — GitHub's `run_attempt`, used to ensure Shepherd recommends at most one rerun. Attempt 1 is omitted from agent output as the trivial default; later attempts are rendered as `[attempt: N]`.
-- **`logExcerpt`** — bounded failure context from the matched failed job log, fetched from `GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs`. The excerpt is the first failed step's visible output: the collapsed `##[group]Run`/`Post` command block (script echo, `with:`, `env:`, `shell:`) is dropped, and later steps plus post-job cleanup (`Post job cleanup.`, `Cleaning up orphan processes`) are clipped. For aggregate jobs that print a `Job results` JSON block, Shepherd emits the non-success job results plus the exit-code/error line. A step over 4000 characters is suffix-truncated so the error line is kept. When the log has no step groups, Shepherd falls back to lines around the first error (still clipping post-job cleanup). The fetch is best-effort; missing or inaccessible logs leave the field omitted.
-- **`relatedJobs`** — other failed jobs (`failure`/`timed_out`, max 5) from the same workflow run that are not surfaced as their own failing check, each `{ name, conclusion, failedStep?, logExcerpt? }` with the same excerpt rules as `logExcerpt`. Attached once per run, to its first failing check, so a gate job's failure shows its children's errors. Log reads use the same job-log cache and REST read budget as `logExcerpt`.
-- **`annotations`** — marker-gated inline annotations from completed `CheckRun` checks (any conclusion). The batch query probes `annotations(first: 1)` so Shepherd only paginates a CheckRun that actually has annotations. Those bodies are loaded together: one `nodes(ids:)` request per 20 uncached check runs, then the single-check query only when `hasNextPage` is set. Annotation `message` and `rawDetails` fields are capped independently before text and JSON output. Each annotation is surfaced once per PR; there is no resolve/minimize mutation. The current `check` result preserves successful-check annotations as raw context and marks them seen, while `iterate` treats the successful parent conclusion as authoritative regardless of classification bucket and does not turn those annotations into `FIX_CODE`.
+| Field          | Content                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workflowName` | Workflow that owns the failing job (from `jobs?filter=latest`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `jobName`      | Matched job name; falls back to the check name                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `failedStep`   | First step whose conclusion is not `success`, `skipped`, or `neutral`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `runAttempt`   | GitHub's `run_attempt`, so Shepherd recommends at most one rerun. Attempt 1 is omitted; later attempts render as `[attempt: N]`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `logExcerpt`   | From `GET /repos/{owner}/{repo}/actions/jobs/{job_id}/logs`: the first failed step's visible output. The collapsed `##[group]Run` / `Post` command block (script echo, `with:`, `env:`, `shell:`), later steps, and post-job cleanup (`Post job cleanup.`, `Cleaning up orphan processes`) are dropped. An aggregate job printing a `Job results` JSON block yields its non-success results plus the exit-code or error line. A step over 4,000 characters is suffix-truncated so the error line survives. A log with no step groups falls back to lines around the first error. Best-effort: missing or inaccessible logs omit the field |
+| `relatedJobs`  | Up to 5 other `failure` / `timed_out` jobs from the same run that are not their own failing check, each `{ name, conclusion, failedStep?, logExcerpt? }` with the same excerpt rules. Attached once per run, to its first failing check, so a gate job shows its children's errors. Shares the job-log cache and REST read budget                                                                                                                                                                                                                                                                                                         |
+| `annotations`  | Marker-gated inline annotations from completed `CheckRun`s of any conclusion. See [annotations](#annotations)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
-Checks with `conclusion === "CANCELLED"` fetch job metadata only to recover `run_attempt`; they never fetch a log excerpt. Checks with `conclusion === "STARTUP_FAILURE"` receive `run_attempt` from the workflow-runs response and skip the jobs/logs calls. Cancelled output carries a `[conclusion: CANCELLED]` tag. Startup-failure output carries a `[conclusion: STARTUP_FAILURE]` tag and may include the workflow run display title as `summary`. Ordinary failures use only the bounded evidence included by Shepherd. A later failed attempt never receives a second rerun command, but a nonblank included log excerpt still provides autonomous `FIX_CODE` investigation work. When a check has no included evidence or authorized first-attempt rerun, Shepherd lets any other autonomous work complete under `FIX_CODE`, including refreshing a behind/conflicting branch after a later workflow attempt. It returns `ESCALATE` if that check remains the only blocker after no autonomous path remains.
+By conclusion:
+
+| Conclusion        | Triage                                                                                    | Tag                             |
+| ----------------- | ----------------------------------------------------------------------------------------- | ------------------------------- |
+| `CANCELLED`       | Job metadata only, to recover `run_attempt`; never a log excerpt                          | `[conclusion: CANCELLED]`       |
+| `STARTUP_FAILURE` | `run_attempt` from the workflow-runs response; no jobs or logs calls; may carry `summary` | `[conclusion: STARTUP_FAILURE]` |
+| Other failures    | Jobs, `failedStep`, `logExcerpt`, `relatedJobs`                                           | none                            |
+
+Ordinary failures use only the bounded evidence Shepherd includes. A later failed attempt never gets a second rerun command, but a nonblank log excerpt still makes it autonomous `FIX_CODE` investigation work. When a check has neither included evidence nor an authorized first-attempt rerun, Shepherd lets other autonomous work finish under `FIX_CODE` (including refreshing a behind or conflicting branch after a later attempt) and returns `ESCALATE` only if that check is the last blocker with no autonomous path left.
+
+### Annotations
+
+The batch query probes `annotations(first: 1)`, so Shepherd paginates only check runs that have annotations. Bodies are loaded together, one `nodes(ids:)` request per 20 uncached check runs, then the single-check query only when `hasNextPage` is set (costs in [graphql.md](graphql.md#check-run-annotation-bodies)). `message` and `rawDetails` are capped independently before text and JSON output. Each annotation is surfaced once per PR; there is no resolve or minimize mutation.
+
+`check` keeps successful-check annotations as raw context and marks them seen. `iterate` treats a successful parent conclusion as authoritative regardless of bucket and does not turn those annotations into `FIX_CODE`.
 
 ## Report output
 
-`report.checks` has these fields:
+`report.checks`:
 
-| Field                    | Content                                                                                                                                      |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `passing`                | Classified checks with `category === 'passed'`                                                                                               |
-| `failing`                | Triaged failing checks — with `workflowName`, `jobName`, `failedStep`, `logExcerpt`, `relatedJobs` (non-cancelled, non-startup-failure only) |
-| `inProgress`             | Checks with `category === 'in_progress'`                                                                                                     |
-| `skipped`                | Checks with `category === 'skipped'`                                                                                                         |
-| `filtered`               | Checks excluded by event filter                                                                                                              |
-| `ignored`                | Ignored checks that still carry unseen annotations; omitted when empty                                                                       |
-| `filteredNames`          | Names of filtered checks (for reporter display)                                                                                              |
-| `blockedByFilteredCheck` | True when BLOCKED state is caused by a filtered check                                                                                        |
-| `ignoredNames`           | Names of checks suppressed by `ignoreChecks`; omitted when empty                                                                             |
-| `supersededNames`        | Names of `CANCELLED` checks reclassified as `superseded`; omitted when empty                                                                 |
+| Field                    | Content                                                                                                                                                        |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `passing`                | `category === 'passed'`                                                                                                                                        |
+| `failing`                | Triaged failing checks, with `workflowName`, `jobName`, `failedStep`, `logExcerpt`, `relatedJobs` (excerpt fields only for non-cancelled, non-startup-failure) |
+| `inProgress`             | `category === 'in_progress'`                                                                                                                                   |
+| `skipped`                | `category === 'skipped'`                                                                                                                                       |
+| `filtered`               | Excluded by the event filter                                                                                                                                   |
+| `ignored`                | Ignored checks that still carry unseen annotations; omitted when empty                                                                                         |
+| `filteredNames`          | Names of filtered checks                                                                                                                                       |
+| `blockedByFilteredCheck` | `BLOCKED` state is caused by a filtered check                                                                                                                  |
+| `ignoredNames`           | Suppressed by `ignoreChecks`; omitted when empty                                                                                                               |
+| `supersededNames`        | `CANCELLED` checks reclassified as `superseded`; omitted when empty                                                                                            |
 
-Pending CI checks also carry raw timing when GitHub exposes it:
+Pending checks also carry raw timing when GitHub exposes it:
 
-- `source` — `check_run`, `status_context`, or `startup_failure`.
-- `createdAtUnix` — check-suite/workflow-run creation time for check runs, or status-context creation time for external statuses.
-- `startedAtUnix` — check-run start time when present.
-- `updatedAtUnix` — check-suite/workflow-run update time when present.
+| Field           | Content                                                                                  |
+| --------------- | ---------------------------------------------------------------------------------------- |
+| `source`        | `check_run`, `status_context`, or `startup_failure`                                      |
+| `createdAtUnix` | Check-suite / workflow-run creation for check runs; status-context creation for statuses |
+| `startedAtUnix` | Check-run start, when present                                                            |
+| `updatedAtUnix` | Check-suite / workflow-run update, when present                                          |
 
-Iterate uses these raw fields to escalate with `stall-timeout` when relevant CI remains pending/unstarted longer than `iterate.stallTimeoutMinutes`. A required context that never created a check run is not that timer: it takes the unreported-required `FIX_CODE` path, then `required-checks-unreported`.
+Iterate escalates with `stall-timeout` when relevant CI stays pending or unstarted longer than `iterate.stallTimeoutMinutes`. A required context that never created a check run does not use that timer; it takes the [unreported-required](#unreported-required-checks) path.

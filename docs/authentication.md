@@ -2,41 +2,49 @@
 
 [← README](../README.md)
 
-A token with the permissions below is required so Shepherd can **gather PR context** and **apply review mutations**. Without it, iterate fails before emitting an action.
+Which credential Shepherd uses, what permissions it needs, and how quota is shared between tokens. For anyone setting up a token or debugging a permission failure. Without a usable token, iterate fails before emitting an action.
 
-pr-shepherd accepts a GitHub personal access token (PAT) from the environment or uses the authenticated GitHub CLI. Token resolution order is:
+## Token resolution
 
-1. `GH_TOKEN`
-2. `GITHUB_TOKEN`
-3. `gh auth token`
-4. `GITHUB_PERSONAL_ACCESS_TOKEN`
+| Order | Source                         |
+| ----- | ------------------------------ |
+| 1     | `GH_TOKEN`                     |
+| 2     | `GITHUB_TOKEN`                 |
+| 3     | `gh auth token`                |
+| 4     | `GITHUB_PERSONAL_ACCESS_TOKEN` |
 
-Verbose API telemetry and GitHub request failures report the selected source label, never the token value. GraphQL and REST requests in one process use the same resolved credential. GitHub meters GraphQL separately from REST `core`. User access tokens, including PATs, share that GitHub **user's** GraphQL point budget even when they are separate tokens — a second PAT for Shepherd does not isolate quota from GitHub MCP or `gh api graphql` if both belong to the same user. A GitHub App **installation** access token uses installation-scoped accounting (GitHub App _user_ access tokens do not). Use an installation token or a different GitHub user when quota isolation is required; a dedicated PAT is still useful for least-privilege and audit. Quota behavior: [github-api.md](github-api.md). Operation catalogs: [graphql.md](graphql.md) and [rest.md](rest.md).
+GraphQL and REST requests in one process use the same resolved credential. Verbose telemetry and request failures report the source label, never the token value.
 
-The CLI, library, and MCP support `github.transport: auto|graphql|rest` (`--transport` in the CLI). `auto` starts with REST when `CLAUDE_CODE_REMOTE=true`; otherwise it starts with GraphQL. It switches to REST only after the recognized Claude Code GraphQL 403, primary GraphQL exhaustion, or an outage after bounded retries. Bad credentials, ordinary permissions/query errors, and secondary rate limits do not trigger fallback. In Claude Code cloud sessions, the environment token may be a placeholder: do not validate it locally or treat `gh auth status` as authoritative. Send requests through the configured `HTTP_PROXY`/`HTTPS_PROXY` and let the proxy supply credentials. Node's HTTP client must honor the environment proxy and its CA bundle; TLS verification remains enabled.
+Transport selection (`github.transport`, `--transport`) is in [github-api.md](github-api.md#transport-selection). In Claude Code cloud sessions the environment token may be a placeholder: do not validate it locally or trust `gh auth status`. Requests go through the configured `HTTP_PROXY`/`HTTPS_PROXY`, which supplies credentials; Node's HTTP client honors the proxy and its CA bundle, and TLS verification stays on.
 
-Fine-grained PATs are recommended. Select the repository that contains the pull request and grant these repository permissions for the complete pr-shepherd workflow:
+## Quota sharing
 
-| Permission      | Access         | Used for                                                                                                                                                                                                                                                    |
-| --------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Metadata        | Read           | Repository identity and other baseline repository metadata. GitHub includes this permission automatically.                                                                                                                                                  |
-| Contents        | Read           | Commit, branch, and repository content context. pr-shepherd itself never pushes through the GitHub API.                                                                                                                                                     |
-| Pull requests   | Read and write | Read PR state, files, reviews, and review threads. GraphQL capabilities filter generated mutations; REST attempts otherwise-eligible supported operations with unknown capability. Explicit `apply` operations are attempted and GitHub reports the result. |
-| Issues          | Read and write | Read, reply to, and minimize PR conversation comments, which GitHub exposes through issue-comment APIs.                                                                                                                                                     |
-| Actions         | Read           | Read workflow runs, jobs, and logs. Shepherd does not rerun or cancel workflow runs.                                                                                                                                                                        |
-| Commit statuses | Read           | Read third-party commit status contexts included in the PR status rollup.                                                                                                                                                                                   |
+GitHub meters GraphQL separately from REST `core` ([github-api.md](github-api.md#github-metering)).
 
-The requested token scope is not proof that the current viewer may perform an action. GraphQL capability fields can filter generated actions. REST has no matching viewer-capability fields, so an otherwise eligible mutation with unknown capability is attempted and GitHub's response is authoritative. Denied automatic review mutations are shown once and skipped without increasing fix-attempt counts; a denied automatic mark-ready action escalates with `authorization-required`. Explicit `apply` requests are always attempted according to their transport contract.
+| Token                                | GraphQL budget                                                                                     |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| User access tokens, including PATs   | The user's budget, shared by every token of that user (GitHub MCP, `gh api graphql`, a second PAT) |
+| GitHub App user access token         | The user's budget                                                                                  |
+| GitHub App installation access token | Installation-scoped                                                                                |
 
-The token owner must also have enough access to perform the requested operation in the repository. Organization approval, SAML SSO authorization, and repository-selection policies can restrict a token independently of its listed permissions.
+For quota isolation use an installation token or a different GitHub user. A dedicated PAT still helps least privilege and audit.
 
-A Claude Code proxy session refusal is separate from a GitHub permission denial. Responses naming `not enabled for this session`, `sessions are bound`, or an Anthropic documentation URL stop review mutations with exit `77` and preserve the proxy's message. They do not mark the review item denied, so retrying after session access is repaired works without editing the comment. A proxy refusal during mark-ready uses `transport-unsupported` and quotes the same message. Follow the proxy's repository-access instructions; when it requests API or write access, call `add_repo` with `access: "push"`.
+## Permissions
 
-Cloud VM rebuilds can erase the default temporary state directory, including pending reply and merge receipts. Set `PR_SHEPHERD_STATE_DIR` to persistent storage when available so lost-response recovery retains its evidence across rebuilds.
+Fine-grained PATs are recommended. Select the repository that contains the PR and grant:
 
-Fine-grained PATs do not expose a separate **Checks** permission. Use **Actions** access for GitHub Actions check runs and logs, and **Commit statuses: Read** for status contexts. The fine-grained **Workflows** permission controls changes to workflow files; it does not grant access to workflow runs and is not required by pr-shepherd.
+| Permission      | Access         | Used for                                                                           |
+| --------------- | -------------- | ---------------------------------------------------------------------------------- |
+| Metadata        | Read           | Repository identity; GitHub includes it automatically                              |
+| Contents        | Read           | Commit, branch, and content context. Shepherd never pushes through the API         |
+| Pull requests   | Read and write | PR state, files, reviews, review threads, and review mutations                     |
+| Issues          | Read and write | Reading, replying to, and minimizing PR conversation comments (issue-comment APIs) |
+| Actions         | Read           | Workflow runs, jobs, and logs. Shepherd never reruns or cancels runs               |
+| Commit statuses | Read           | Third-party status contexts in the PR rollup                                       |
 
-For a classic PAT, grant the `repo` scope for complete operation, including private repositories.
+Fine-grained PATs have no separate Checks permission: Actions covers Actions check runs and logs, and Commit statuses covers status contexts. The Workflows permission controls workflow-file changes, not runs, and is not needed. For a classic PAT, grant `repo`.
+
+The token owner also needs repository access for the operation; organization approval, SAML SSO, and repository-selection policies can restrict a token independently of its permissions.
 
 GitHub references:
 
@@ -45,8 +53,26 @@ GitHub references:
 - [Workflow runs API permissions](https://docs.github.com/en/rest/actions/workflow-runs)
 - [Commit statuses API permissions](https://docs.github.com/en/rest/commits/statuses)
 
+## Capabilities versus scope
+
+Token scope does not prove the viewer may perform an action.
+
+| Case                             | Behavior                                                                        |
+| -------------------------------- | ------------------------------------------------------------------------------- |
+| GraphQL capability fields        | Filter generated mutations                                                      |
+| REST (no capability fields)      | Otherwise-eligible supported mutations are attempted; GitHub's response decides |
+| Denied automatic review mutation | Shown once and skipped; does not count toward fix attempts                      |
+| Denied automatic mark-ready      | `ESCALATE` with `authorization-required`                                        |
+| Explicit `apply`                 | Always attempted per its transport contract                                     |
+
+## Claude Code proxy refusals
+
+A proxy session refusal differs from a GitHub permission denial. Responses naming `not enabled for this session`, `sessions are bound`, or an Anthropic documentation URL stop review mutations with exit `77` and keep the proxy's message. They do not mark the item denied, so a retry after access is repaired works without editing the comment. A refusal during mark-ready uses `transport-unsupported` and quotes the message. Follow the proxy's repository-access instructions; when it asks for API or write access, call `add_repo` with `access: "push"`.
+
+Cloud VM rebuilds can erase the default temp state directory, including pending reply and merge receipts. Set `PR_SHEPHERD_STATE_DIR` to persistent storage when available ([cloud.md](cloud.md#durable-state)).
+
 ## Permission failures
 
-Missing access commonly appears as a `403 Resource not accessible by personal access token` error. Read failures are fatal because partial PR, review, or check data could produce an unsafe state transition. `iterate` and `poll` exit `77` (`EX_NOPERM`) instead of emitting `wait`, `retry`, or another action from an incomplete snapshot. The recognized Claude Code GraphQL-blocked response is a transport switch, not a generic permission failure; a secondary rate limit still exits `75` (`EX_TEMPFAIL`) and does not switch transports. See [exit-codes.md](exit-codes.md).
+Missing access usually shows as `403 Resource not accessible by personal access token`. Read failures are fatal, because partial PR, review, or check data could drive an unsafe transition: `iterate` and `poll` exit `77` (`EX_NOPERM`) instead of emitting an action from an incomplete snapshot. The recognized Claude Code GraphQL-blocked response is a transport switch, not a permission failure; a secondary rate limit exits `75` (`EX_TEMPFAIL`) without switching. See [exit-codes.md](exit-codes.md).
 
-Check the error's GraphQL path to identify the affected field, update the token permission or repository selection, and retry. Use `pr-shepherd admin log-file` to locate the request log when more context is needed.
+To fix: read the error's GraphQL path to find the field, update the token permission or repository selection, and retry. `pr-shepherd admin log-file` locates the request log.
