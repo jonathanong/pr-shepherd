@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
-import { readLegacyDispatcher, restoreLegacyDispatcher } from "./legacy-dispatcher.mts";
+import { loadUndiciKeepingLegacyDispatcher } from "./legacy-dispatcher.mts";
 
 const execFileAsync = promisify(execFile);
 const repoRoot = fileURLToPath(new URL("../..", import.meta.url));
@@ -25,28 +25,73 @@ async function runFreshProcess(script: string): Promise<void> {
   );
 }
 
+function writable(value: unknown): PropertyDescriptor {
+  return { value, writable: true, enumerable: false, configurable: true };
+}
+
 describe("Undici dispatcher slot", () => {
-  it("clears a writable legacy slot when the host had none", () => {
-    const saved = readLegacyDispatcher();
-    if (!saved) {
-      restoreLegacyDispatcher(undefined);
-      expect(readLegacyDispatcher()).toBeUndefined();
-    }
-    if (!saved?.writable) {
-      Object.defineProperty(globalThis, Symbol.for("undici.globalDispatcher.1"), {
-        value: { dispatch: () => false },
-        writable: true,
+  it("puts the host dispatcher back when a load replaces it", () => {
+    const slot = Symbol("restore-host");
+    const host = { dispatch: () => true };
+    Object.defineProperty(globalThis, slot, writable(host));
+    const loaded = loadUndiciKeepingLegacyDispatcher(() => {
+      Object.defineProperty(globalThis, slot, writable({ dispatch: () => false }));
+      return "loaded";
+    }, slot);
+    expect(loaded).toBe("loaded");
+    expect(Object.getOwnPropertyDescriptor(globalThis, slot)?.value).toBe(host);
+    Reflect.deleteProperty(globalThis, slot);
+  });
+
+  it("leaves the host dispatcher in place when a load does not change it", () => {
+    const slot = Symbol("unchanged-host");
+    const host = { dispatch: () => true };
+    Object.defineProperty(globalThis, slot, writable(host));
+    expect(loadUndiciKeepingLegacyDispatcher(() => "same", slot)).toBe("same");
+    expect(Object.getOwnPropertyDescriptor(globalThis, slot)?.value).toBe(host);
+    Reflect.deleteProperty(globalThis, slot);
+  });
+
+  it("restores the host dispatcher when loading throws", () => {
+    const slot = Symbol("throw-host");
+    const host = { dispatch: () => true };
+    Object.defineProperty(globalThis, slot, writable(host));
+    expect(() =>
+      loadUndiciKeepingLegacyDispatcher(() => {
+        Object.defineProperty(globalThis, slot, writable({ dispatch: () => false }));
+        throw new Error("load failed");
+      }, slot),
+    ).toThrow("load failed");
+    expect(Object.getOwnPropertyDescriptor(globalThis, slot)?.value).toBe(host);
+    Reflect.deleteProperty(globalThis, slot);
+  });
+
+  it("clears a writable slot created by the load when the host had none", () => {
+    const slot = Symbol("clear-created");
+    const created = { dispatch: () => false };
+    expect(
+      loadUndiciKeepingLegacyDispatcher(() => {
+        Object.defineProperty(globalThis, slot, writable(created));
+        return "loaded";
+      }, slot),
+    ).toBe("loaded");
+    expect(Object.getOwnPropertyDescriptor(globalThis, slot)?.value).toBeUndefined();
+  });
+
+  it("leaves a frozen slot created by the load when the host had none", () => {
+    const slot = Symbol("frozen-created");
+    const created = { dispatch: () => false };
+    loadUndiciKeepingLegacyDispatcher(() => {
+      Object.defineProperty(globalThis, slot, {
+        value: created,
+        writable: false,
         enumerable: false,
         configurable: true,
       });
-    }
-    try {
-      restoreLegacyDispatcher(undefined);
-      expect(readLegacyDispatcher()?.value).toBeUndefined();
-    } finally {
-      if (saved) Object.defineProperty(globalThis, Symbol.for("undici.globalDispatcher.1"), saved);
-      else Reflect.deleteProperty(globalThis, Symbol.for("undici.globalDispatcher.1"));
-    }
+      return "loaded";
+    }, slot);
+    expect(Object.getOwnPropertyDescriptor(globalThis, slot)?.value).toBe(created);
+    Reflect.deleteProperty(globalThis, slot);
   });
 
   it("keeps the host legacy dispatcher and still lets setGlobalDispatcher replace it", async () => {

@@ -136,4 +136,25 @@ describe("GitHub HTTP proxy routing", () => {
     });
     expect(second.tunnels).toEqual(["github.invalid:80"]);
   });
+
+  it("tunnels through the captured proxy when the environment changes before construction", async () => {
+    resetProxyEnvironment();
+    const origin = await githubWire((_request, response) =>
+      response.end(JSON.stringify({ proxied: true })),
+    );
+    const proxy = await proxyTo(origin.origin);
+    const decoy = await proxyTo(origin.origin);
+    cleanup.push(origin.close);
+    vi.stubEnv("HTTP_PROXY", decoy.url);
+    const undici = await import("undici");
+    const { createCapturedProxyAgent } = await import("./captured-proxy-agent.mts");
+    const agent = createCapturedProxyAgent(undici, proxy.url, proxy.url);
+    cleanup.push(async () => {
+      await agent.close();
+    });
+    const response = await undici.fetch("http://github.invalid/captured", { dispatcher: agent });
+    expect(await response.json()).toEqual({ proxied: true });
+    expect(proxy.tunnels).toEqual(["github.invalid:80"]);
+    expect(decoy.tunnels).toEqual([]);
+  });
 });
