@@ -34,7 +34,7 @@ pr-shepherd gathers a PR's state and emits one next action for a coding agent yo
 ## Where pr-shepherd differs
 
 - **A program, not a prompt.** `/autopilot` and homegrown "land this PR" skills keep the loop in the model: refresh with `gh pr view` / `gh pr checks`, skip resolved threads, classify comments in the prompt. Shepherd returns raw-enough fields plus one action and numbered instructions. The agent still decides what needs a code change.
-- **Carries existing reviewer intent.** Review bots create new findings. Shepherd surfaces every existing item at least once, including outdated, resolved, minimized, and later-edited ones. See [handled-cases.md](handled-cases.md).
+- **Carries existing reviewer intent.** Review bots create new findings. Shepherd surfaces every existing item at least once, including outdated, resolved, minimized, and later-edited ones. The exception is a `COMMENTED` review minimized before the first tick. See [handled-cases.md](handled-cases.md).
 - **Leaves judgement and git with the caller.** Shepherd never runs mutating git commands or silently applies changes.
 - **Portable.** The same action model is available through the CLI and MCP, so Claude Code, Codex, Grok, and other clients can use it. The client owns recurrence; there is no hosted background worker.
 - **One caller-side constraint.** The always-on untrusted-input rule treats titles, comments, and logs as data. It does not classify nits or add an escalation trigger.
