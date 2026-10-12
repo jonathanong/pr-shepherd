@@ -1,5 +1,6 @@
 import { normalizeBotUsernames } from "../comments/authors.mts";
 import { applyRules } from "../classify/apply.mts";
+import { normalizeAuthorType } from "../comments/authors.mts";
 import { loadClassifyRules } from "../classify/loader.mts";
 import { loadConfig } from "../config/load.mts";
 import { getEffectiveCwd } from "../execution-context.mts";
@@ -9,6 +10,7 @@ import type { PollSummaryReview } from "../types.mts";
 import type { RawAuthor, RawSummaryPr } from "./poll-summary-raw.mts";
 import { mutationWasDenied } from "../state/seen-comments.mts";
 import { canGenerateGithubMutation } from "./mutation-policy.mts";
+import { threadEndedByShepherd } from "../comments/marker.mts";
 
 const THREAD_COMMENT_SEPARATOR = "\n\n--- thread comment ---\n\n";
 
@@ -75,7 +77,24 @@ export async function summarizePollSummaryReview(
     const transcript = thread.comments.nodes
       .map((comment) => comment.body)
       .join(THREAD_COMMENT_SEPARATOR);
-    if (isSuppressed(rules, "review-thread", root, thread.id, thread.path, transcript)) continue;
+    const completeResolved = thread.isResolved === true && !truncated;
+    if (
+      completeResolved &&
+      threadEndedByShepherd({ body: root?.body ?? "", comments: thread.comments.nodes })
+    )
+      continue;
+    if (
+      isSuppressed(
+        rules,
+        "review-thread",
+        root,
+        thread.id,
+        thread.path ?? root?.path ?? null,
+        root?.body ?? "",
+        completeResolved,
+      )
+    )
+      continue;
     const repeatable =
       !mutationWasDenied(thread.id, transcript, seen) &&
       (root?.viewerDidAuthor === true ||
@@ -108,29 +127,29 @@ function isSuppressed(
         author: RawAuthor | null;
         authorAssociation?: string;
         url?: string;
+        path?: string | null;
       }
     | undefined,
   id = raw?.id ?? "unknown",
   path?: string | null,
   body = raw?.body ?? "",
+  autoResolveSatisfied = false,
 ): boolean {
   const item = {
     kind,
     id,
     author: raw?.author?.login ?? "unknown",
-    authorType:
-      raw?.author?.__typename === "Bot"
-        ? "Bot"
-        : raw?.author?.__typename === "User"
-          ? "User"
-          : "Unknown",
-    ...(raw?.authorAssociation && { authorAssociation: raw.authorAssociation }),
+    authorType: normalizeAuthorType(raw?.author?.__typename, raw?.author?.login),
+    ...(raw?.authorAssociation !== undefined && { authorAssociation: raw.authorAssociation }),
     body,
-    ...(raw?.url && { url: raw.url }),
+    ...(kind === "review-thread" ? { url: raw?.url ?? "" } : raw?.url ? { url: raw.url } : {}),
     ...(kind === "review-thread" && { path }),
   } as ClassifyItem;
   const action = applyRules(rules, item);
   // An auto-resolve match is hidden only once the full check minimizes or resolves it, or
   // surfaces a denied mutation once; until then it stays actionable so that check runs.
-  return action.suppress === true && (action.autoResolve !== true || kind === "changes-requested");
+  return (
+    action.suppress === true &&
+    (action.autoResolve !== true || kind === "changes-requested" || autoResolveSatisfied)
+  );
 }
