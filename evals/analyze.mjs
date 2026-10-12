@@ -32,7 +32,7 @@ import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CASES } from "./cases/index.mjs";
-import { hasFixture, setSnapshotSuffix } from "./lib.mjs";
+import { AREA_WEIGHTS, hasFixture, setSnapshotSuffix } from "./lib.mjs";
 import { bootstrapDeltas, excludesZero, interval, mean, ols, seedOf } from "./stats.mjs";
 
 const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -107,6 +107,20 @@ function meanDeltaInterval(cases) {
   return interval(per[0].draws.map((_, i) => mean(per.map((p) => p.draws[i]))));
 }
 
+/** Mean of `xs` weighted by `ws`. */
+const weightedMean = (xs, ws) => {
+  const den = ws.reduce((s, w) => s + w, 0);
+  return den ? xs.reduce((s, x, i) => s + x * ws[i], 0) / den : 0;
+};
+
+/** Like meanDeltaInterval, but each case counts by its area weight. */
+function weightedDeltaInterval(cases) {
+  const per = cases.map(caseInterval);
+  if (!cases.length || per.some((p) => !p)) return null;
+  const ws = cases.map(areaWeight);
+  return interval(per[0].draws.map((_, i) => weightedMean(per.map((p) => p.draws[i]), ws)));
+}
+
 // Classify should-NOT-fire cases from the `neg` tag in their prompt frontmatter,
 // not from the slug. A negative case added or renamed without the literal "-neg-"
 // substring would otherwise be counted as a fire case: its skill activations
@@ -132,6 +146,13 @@ const tierOf = (c) =>
     ?.find((t) => t.startsWith("tier:"))
     ?.slice(5) ?? null;
 const isStack = (c) => /(^|-)stack-/.test(c.name);
+// A case whose directory is gone (or predates the `area` tag) counts as `github`,
+// the heaviest area, so an untagged case is never quietly discounted.
+const areaOf = (c) =>
+  frontmatterTags(c)
+    ?.find((t) => t.startsWith("area:"))
+    ?.slice(5) ?? "github";
+const areaWeight = (c) => AREA_WEIGHTS[areaOf(c)] ?? AREA_WEIGHTS.github;
 
 const delta = (c) => c.aggregates.delta ?? c.aggregates.score - c.aggregates.scoreWithout;
 const withS = (c) => c.aggregates.score;
@@ -285,6 +306,23 @@ if (mode === "summary") {
     `**${model}, ${judge} judge, \`runs: ${perCaseRuns || "?"}\`${when ? ` (${when})` : ""}**`,
   );
   console.log();
+  const wIv = weightedDeltaInterval(cases);
+  const weights = Object.entries(AREA_WEIGHTS)
+    .map(([a, w]) => `${a} ×${w}`)
+    .join(", ");
+  console.log(
+    `- Weighted mean Δ **${fmt(weightedMean(cases.map(delta), cases.map(areaWeight)))}**` +
+      `${wIv ? ` ${fmtCi(wIv)}` : ""} (${weights}).`,
+  );
+  console.log(
+    `- By area: ` +
+      Object.keys(AREA_WEIGHTS)
+        .map((a) => [a, cases.filter((c) => areaOf(c) === a)])
+        .filter(([, set]) => set.length)
+        .map(([a, set]) => `${a} ${meanLine(set, "cases")}`)
+        .join("; ") +
+      ".",
+  );
   console.log(`- Mean Δ ${meanLine(cases, "cases")}; ${meanLine(nonStack, "non-stack cases")}.`);
   console.log(
     `- Δ interval excludes 0 (95% bootstrap over runs): ` +

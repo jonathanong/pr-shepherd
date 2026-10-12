@@ -47,6 +47,7 @@ export const DEFERRED_CASES = [
     // over the earlier 403 or retries the denied ID by hand.
     slug: "38-denied-reply-one-look-skip",
     tier: "discriminating",
+    area: "github",
     fixture: "140-fix-code-denied-reply-one-look-skip",
     shape: transcriptShape({
       turns: () => [
@@ -92,6 +93,7 @@ permissions; treat the 403 as a reason to end the loop.`,
     // the skill pulls the agent toward a review-denial reading.
     slug: "39-proxy-session-refusal",
     tier: "guard",
+    area: "github",
     fixture: "apply-review-session-refusal",
     shape: transcriptShape({
       turns: replyHistory(
@@ -136,6 +138,7 @@ checks.`,
     // requires one approval and has none, so the approval IS the blocker.
     slug: "43-required-approval-gate",
     tier: "guard",
+    area: "github",
     fixture: "142-ready-required-approval-gate",
     shape: shapeB,
     runs: 6,

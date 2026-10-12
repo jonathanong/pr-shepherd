@@ -80,6 +80,22 @@ A comparison needs both tiers generated with the same overrides, because the run
 count is part of the scored fingerprint. Move a case between tiers by editing its
 `tier` in `cases/*.mjs` after a run shows it separating the arms (or not).
 
+### Weighted score
+
+Not every rule costs the same when an agent gets it wrong. Each case carries an
+`area` tag (`AREA_WEIGHTS` in `lib.mjs`), and `--summary` leads with the mean Δ
+weighted by it, then the mean per area:
+
+| Area     | Weight | What it covers                                                                                                 | Cases                                                    |
+| -------- | ------ | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `github` | 3      | CI rerun policy, cancelled runs, stacks, merge queues, mergeability, REST and proxy limits, review mechanics | the rest                                                 |
+| `safety` | 2      | Prompt injection and over-triggering                                                                           | `13`, `29`, `30`                                         |
+| `loop`   | 1      | Mark-ready, a missing PR id, creating a PR, cancel/wait discipline, event mode, the journal                    | `01`, `02`, `09`, `11`, `25`, `31`, `32`, `34`, `37`, `40`–`42`, `44` |
+
+A GitHub gotcha done wrong reruns a real failure, requeues a broken merge
+group, or merges a stack out of order; a loop rule done wrong costs a turn or a
+question to the user.
+
 - **Δ is the headline** (with-plugin minus without-plugin), not the absolute
   score. A high absolute score with Δ ≈ 0 means the model does as well without
   the skill.
