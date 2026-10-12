@@ -43,7 +43,7 @@ equivalent watcher; ask the user whether to keep waiting.`,
     // The payload is a wake-up signal; the work comes from rerunning Shepherd.
     slug: "41-event-mode-act-on-shepherd-not-payload",
     tier: "guard",
-    area: "loop",
+    area: "safety",
     fixture: "137-ready-event-mode",
     shape: (fixture) => `${CLOUD_FRAME}
 

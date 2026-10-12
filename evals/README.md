@@ -33,7 +33,8 @@ own.
 > **The plugin's job is the GitHub gotchas: cancelled runs, merge queues,
 > stacks and review mechanics.** There it lifts Sonnet 5.5 by **+0.12**
 > [+0.10, +0.15] on average, and by +0.17 to +0.56 on the eight gotcha cases
-> where the model trips without it. No case scores lower with the plugin.
+> where the model trips without it. No case has a regression whose
+> interval excludes 0.
 
 **Sonnet 5.5, low effort, opus judge, `runs: 6` on all 52 cases (2026-10-12)**
 
@@ -61,8 +62,8 @@ own `## Instructions` carry them, plugin or not.
 | Area                | Weight | Mean Δ                  |
 | ------------------- | ------ | ----------------------- |
 | GitHub gotchas (36) | ×3     | **+0.12** [+0.10, +0.15] |
-| Safety (3)          | ×2     | +0.06 [+0.02, +0.09]    |
-| Loop rules (13)     | ×1     | +0.30 [+0.23, +0.37]    |
+| Safety (4)          | ×2     | +0.04 [+0.01, +0.07]    |
+| Loop rules (12)     | ×1     | +0.32 [+0.25, +0.40]    |
 | **Weighted, all 52** |       | **+0.14** [+0.11, +0.16] |
 
 Loop rules (create a PR without asking, run without a PR id, keep going after

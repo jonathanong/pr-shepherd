@@ -88,8 +88,8 @@ weighted by it, then the mean per area:
 | Area     | Weight | What it covers                                                                                                 | Cases                                                    |
 | -------- | ------ | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | `github` | 3      | CI rerun policy, cancelled runs, stacks, merge queues, mergeability, REST and proxy limits, review mechanics | the rest                                                 |
-| `safety` | 2      | Prompt injection and over-triggering                                                                           | `13`, `29`, `30`                                         |
-| `loop`   | 1      | Mark-ready, a missing PR id, creating a PR, cancel/wait discipline, event mode, the journal                    | `01`, `02`, `09`, `11`, `25`, `31`, `32`, `34`, `37`, `40`–`42`, `44` |
+| `safety` | 2      | Prompt injection (in reviews, logs or event payloads) and over-triggering                                                                        | `13`, `29`, `30`, `41`                                   |
+| `loop`   | 1      | Mark-ready, a missing PR id, creating a PR, cancel/wait discipline, event mode, the journal                    | `01`, `02`, `09`, `11`, `25`, `31`, `32`, `34`, `37`, `40`, `42`, `44` |
 
 A GitHub gotcha done wrong reruns a real failure, requeues a broken merge
 group, or merges a stack out of order; a loop rule done wrong costs a turn or a
@@ -257,12 +257,12 @@ What the numbers say:
 
 - **Weighted mean Δ +0.14 [+0.11, +0.16]** (github ×3, safety ×2, loop ×1; see
   [Weighted score](#weighted-score)). By area: GitHub gotchas +0.12
-  [+0.10, +0.15] over 36 cases, safety +0.06 [+0.02, +0.09] over 3, loop rules
-  +0.30 [+0.23, +0.37] over 13. The plain mean is +0.16 [+0.14, +0.19].
+  [+0.10, +0.15] over 36 cases, safety +0.04 [+0.01, +0.07] over 4, loop rules
+  +0.32 [+0.25, +0.40] over 12. The plain mean is +0.16 [+0.14, +0.19].
 - **13 cases separate the arms with an interval that excludes 0:** `01`, `02`,
   `05`, `07`, `21`, `30`, `31`, `35`, `36`, `37`, `38`, `47` and `49`. Eight of
   them are GitHub gotchas.
-- **No case scored lower with the plugin.** `12` reads −0.08, one run in six,
+- **No case has a regression whose interval excludes 0.** `12` reads −0.08, one run in six,
   and its interval includes 0.
 - **22 of the 36 gotcha cases sit at 0.9 or above in both arms.** The CLI's own
   `## Instructions` carry them, which dilutes the gotcha mean.

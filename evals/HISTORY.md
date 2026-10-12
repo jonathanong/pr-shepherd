@@ -15,7 +15,7 @@ current results see [README.md](README.md). For the suite design see
   `28` moved by +0.25 or more on one run and fell back to within noise on six.
   `07` rose from 0.33 to 0.89 with the plugin and now separates.
 - Added the per-case `area` tag and the weighted headline (github ×3, safety
-  ×2, loop ×1): +0.14 overall, +0.12 on GitHub gotchas, +0.30 on loop rules.
+  ×2, loop ×1): +0.14 overall, +0.12 on GitHub gotchas, +0.32 on loop rules.
 - Tiers reset again: discriminating if the interval excludes 0 or the with-arm
   is below 0.9. `18` moved to guard.
 

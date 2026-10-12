@@ -146,13 +146,14 @@ const tierOf = (c) =>
     ?.find((t) => t.startsWith("tier:"))
     ?.slice(5) ?? null;
 const isStack = (c) => /(^|-)stack-/.test(c.name);
-// A case whose directory is gone (or predates the `area` tag) counts as `github`,
-// the heaviest area, so an untagged case is never quietly discounted.
+// A case whose directory is gone (or predates the `area` tag) has no known area.
+// It weighs 0, so it drops out of the weighted mean instead of being assigned a
+// guessed weight, and the summary lists it as untagged.
 const areaOf = (c) =>
   frontmatterTags(c)
     ?.find((t) => t.startsWith("area:"))
-    ?.slice(5) ?? "github";
-const areaWeight = (c) => AREA_WEIGHTS[areaOf(c)] ?? AREA_WEIGHTS.github;
+    ?.slice(5) ?? null;
+const areaWeight = (c) => AREA_WEIGHTS[areaOf(c)] ?? 0;
 
 const delta = (c) => c.aggregates.delta ?? c.aggregates.score - c.aggregates.scoreWithout;
 const withS = (c) => c.aggregates.score;
@@ -323,6 +324,12 @@ if (mode === "summary") {
         .join("; ") +
       ".",
   );
+  const untagged = cases.filter((c) => !areaWeight(c));
+  if (untagged.length) {
+    console.log(
+      `- No known area, left out of the weighted mean: ${untagged.map(short).join(", ")}.`,
+    );
+  }
   console.log(`- Mean Δ ${meanLine(cases, "cases")}; ${meanLine(nonStack, "non-stack cases")}.`);
   console.log(
     `- Δ interval excludes 0 (95% bootstrap over runs): ` +
