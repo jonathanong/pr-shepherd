@@ -61,6 +61,7 @@ describe("standard classification rules", () => {
       expect(matches(item(f, { author: "octocat" }))).toEqual([]);
       expect(matches(item(f, { authorType: "User" }))).toEqual([]);
       expect(matches(item(f, { authorType: "Unknown" }))).toEqual([]);
+      expect(matches(item(f, { kind: "review-summary" }))).toEqual([]);
       expect(matches(item(f, { kind: "review-thread" }))).toEqual([]);
       expect(matches(item(f, { kind: "changes-requested" }))).toEqual([]);
     });

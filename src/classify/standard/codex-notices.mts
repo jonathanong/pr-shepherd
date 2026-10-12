@@ -21,18 +21,16 @@ const CLEAN_SECURITY =
   /^### 🛡️ Codex Security Review(?: · _Automatically triggered_)?\n\nSecurity review completed\. No security issues were found in this pull request\.\n\n\*\*Reviewed commit:\*\* `[a-f0-9]+`\n\n\[View security finding report\]\(https:\/\/chatgpt.com\/codex\/cloud\/tasks\/[a-zA-Z0-9_]+\)\n\n_Only the user who started this review can view the report in Codex\._$/;
 
 /**
- * Codex quota notices, the review-activity status table, and no-findings notices. Each pattern
- * matches the whole comment, so a notice with any appended finding stays visible.
+ * Codex quota notices, the review-activity status table, and no-findings notices on conversation
+ * comments. Each pattern matches the whole comment, so a notice with any appended finding stays
+ * visible. Review summaries and inline comments are left for the normal review path.
  */
 const rule: ClassifyRule = (item) => {
-  if (!isBotItem(item, ["chatgpt-codex-connector"], ["pr-comment", "review-summary"])) {
-    return null;
-  }
+  if (!isBotItem(item, ["chatgpt-codex-connector"], ["pr-comment"])) return null;
   const body = item.body.trim();
   if (QUOTA_NOTICES.some((notice) => notice.test(body))) {
     return { autoResolve: true, suppress: true, reason: "Codex usage-limit notice" };
   }
-  if (item.kind !== "pr-comment") return null;
   // Strip only the trailing About block; extra findings after it stay visible.
   const content = body.replace(ABOUT_BLOCK, "").trim();
   if (ACTIVITY_SUMMARY.test(content)) {
