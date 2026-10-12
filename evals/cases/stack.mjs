@@ -153,7 +153,7 @@ from its base alone outside the #311 session; merge #311 or #312.`,
 
   {
     slug: "18-stack-queued-lower-waits",
-    tier: "discriminating",
+    tier: "guard",
     area: "github",
     fixture: "91-aggregate-stack-queued-lower-waits",
     shape: stackShape(repoPr(202)),

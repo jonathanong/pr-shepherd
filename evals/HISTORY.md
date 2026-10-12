@@ -6,6 +6,19 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [EVALS.md](EVALS.md).
 
+## 2026-10-12: guard rerun at `runs: 6`, weighted score
+
+- Reran the 24 single-run guards at `runs: 6` ($20.40, mean Δ +0.09 over
+  those 24), so every case now has an interval. Combined with the targeted run:
+  plain mean Δ +0.16 over 52 cases, skill fired 306/306.
+- Of the six single-run promotions, `21` and `11` held up; `06`, `18`, `27` and
+  `28` moved by +0.25 or more on one run and fell back to within noise on six.
+  `07` rose from 0.33 to 0.89 with the plugin and now separates.
+- Added the per-case `area` tag and the weighted headline (github ×3, safety
+  ×2, loop ×1): +0.14 overall, +0.12 on GitHub gotchas, +0.30 on loop rules.
+- Tiers reset again: discriminating if the interval excludes 0 or the with-arm
+  is below 0.9. `18` moved to guard.
+
 ## 2026-10-12: first targeted run, cases 29–52 live
 
 - First run of the tiered recipe (`runs: 6` discriminating, `runs: 1` guard)

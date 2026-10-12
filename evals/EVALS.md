@@ -51,9 +51,8 @@ Each case carries `tier:discriminating` or `tier:guard` in its tags, set in
 `cases/*.mjs` from the last full run.
 
 - `discriminating`: the arms separated with an interval that excludes 0
-  (`01`, `02`, `05`, `30`, `31`, `35`–`38`, `47`, `49`), the with-arm still
-  fails (`07`, `48`), or a single guard run moved by +0.25 or more (`06`,
-  `11`, `18`, `21`, `27`, `28`). These get the runs. A new case starts here
+  (`01`, `02`, `05`, `07`, `21`, `30`, `31`, `35`–`38`, `47`, `49`), or the
+  with-arm is below 0.9 (`06`, `11`, `27`, `28`, `48`). These get the runs. A new case starts here
   too, so a targeted run measures it; `--summary` lists it for demotion if its
   interval includes 0.
 - `guard`: everything else. Both arms sit at or near ceiling, so the case only
@@ -215,63 +214,66 @@ the behavior (see the calibration log in HISTORY.md).
 ## Latest full results
 
 Sonnet 5.5, `CLAUDE_CODE_EFFORT_LEVEL=low`, opus judge, 2026-10-12, on `main`
-at `dcbd17f6` (plugin source `58bc3cb0e895`). This was the targeted recipe:
-`runs: 6` on discriminating cases and `runs: 1` on guards. It made 384 runs in
-8366s and cost $30.86 ($0.080 per run). No `grader threw`, no run errors.
-`claude plugin eval` exited 1, but the run completed and wrote its report.
+at `dcbd17f6` (plugin source `58bc3cb0e895`), `runs: 6` on all 52 cases. Two
+runs on the same plugin source make up this table: the targeted run (the 28
+discriminating cases at `runs: 6`, guards at `runs: 1`) and a rerun of the 24
+single-run guards at `runs: 6`, whose results replace their single runs.
+Together they cost $51.26 for 672 runs ($0.076 per run); the table counts
+624, without the 48 single runs the rerun replaced. No
+`grader threw`, no run errors.
 
 | Case | runs | with | without | Δ     | Case | runs | with | without | Δ     |
 | ---- | ---- | ---- | ------- | ----- | ---- | ---- | ---- | ------- | ----- |
-| `01` | 6    | 1.00 | 0.50    | +0.50 | `27` | 1    | 1.00 | 0.75    | +0.25 |
-| `02` | 6    | 0.67 | 0.00    | +0.67 | `28` | 1    | 1.00 | 0.67    | +0.33 |
-| `03` | 1    | 1.00 | 1.00    | 0.00  | `29` | 6    | 1.00 | 1.00    | 0.00  |
-| `04` | 6    | 1.00 | 0.92    | +0.08 | `30` | 6    | 1.00 | 0.83    | +0.17 |
-| `05` | 6    | 1.00 | 0.50    | +0.50 | `31` | 6    | 1.00 | 0.00    | +1.00 |
-| `06` | 1    | 0.60 | 0.20    | +0.40 | `32` | 6    | 0.96 | 0.83    | +0.13 |
-| `07` | 1    | 0.33 | 0.33    | 0.00  | `33` | 6    | 1.00 | 0.89    | +0.11 |
-| `08` | 1    | 1.00 | 1.00    | 0.00  | `34` | 6    | 1.00 | 1.00    | 0.00  |
-| `09` | 1    | 1.00 | 1.00    | 0.00  | `35` | 6    | 1.00 | 0.67    | +0.33 |
-| `10` | 6    | 1.00 | 1.00    | 0.00  | `36` | 6    | 1.00 | 0.83    | +0.17 |
-| `11` | 1    | 1.00 | 0.00    | +1.00 | `37` | 6    | 0.83 | 0.00    | +0.83 |
-| `12` | 1    | 1.00 | 1.00    | 0.00  | `38` | 6    | 0.72 | 0.33    | +0.39 |
-| `13` | 1    | 1.00 | 1.00    | 0.00  | `39` | 6    | 1.00 | 1.00    | 0.00  |
-| `14` | 1    | 1.00 | 1.00    | 0.00  | `40` | 1    | 1.00 | 1.00    | 0.00  |
-| `15` | 1    | 1.00 | 1.00    | 0.00  | `41` | 1    | 1.00 | 1.00    | 0.00  |
-| `16` | 1    | 1.00 | 1.00    | 0.00  | `42` | 1    | 1.00 | 1.00    | 0.00  |
-| `17` | 1    | 1.00 | 1.00    | 0.00  | `43` | 6    | 1.00 | 0.94    | +0.06 |
-| `18` | 1    | 1.00 | 0.50    | +0.50 | `44` | 6    | 1.00 | 1.00    | 0.00  |
-| `19` | 1    | 1.00 | 1.00    | 0.00  | `45` | 6    | 1.00 | 1.00    | 0.00  |
-| `20` | 1    | 1.00 | 1.00    | 0.00  | `46` | 6    | 1.00 | 0.92    | +0.08 |
-| `21` | 1    | 1.00 | 0.00    | +1.00 | `47` | 6    | 1.00 | 0.44    | +0.56 |
-| `22` | 6    | 1.00 | 0.93    | +0.07 | `48` | 6    | 0.67 | 0.58    | +0.08 |
-| `23` | 1    | 1.00 | 1.00    | 0.00  | `49` | 6    | 0.75 | 0.42    | +0.33 |
-| `24` | 6    | 1.00 | 0.92    | +0.08 | `50` | 6    | 1.00 | 0.92    | +0.08 |
-| `25` | 1    | 1.00 | 1.00    | 0.00  | `51` | 6    | 1.00 | 0.94    | +0.06 |
-| `26` | 1    | 1.00 | 1.00    | 0.00  | `52` | 6    | 1.00 | 1.00    | 0.00  |
+| `01` | 6 | 1.00 | 0.50 | +0.50 | `27` | 6 | 0.79 | 0.79 | 0.00 |
+| `02` | 6 | 0.67 | 0.00 | +0.67 | `28` | 6 | 0.78 | 0.67 | +0.11 |
+| `03` | 6 | 1.00 | 1.00 | 0.00 | `29` | 6 | 1.00 | 1.00 | 0.00 |
+| `04` | 6 | 1.00 | 0.92 | +0.08 | `30` | 6 | 1.00 | 0.83 | +0.17 |
+| `05` | 6 | 1.00 | 0.50 | +0.50 | `31` | 6 | 1.00 | 0.00 | +1.00 |
+| `06` | 6 | 0.47 | 0.40 | +0.07 | `32` | 6 | 0.96 | 0.83 | +0.13 |
+| `07` | 6 | 0.89 | 0.33 | +0.56 | `33` | 6 | 1.00 | 0.89 | +0.11 |
+| `08` | 6 | 1.00 | 1.00 | 0.00 | `34` | 6 | 1.00 | 1.00 | 0.00 |
+| `09` | 6 | 0.92 | 0.83 | +0.08 | `35` | 6 | 1.00 | 0.67 | +0.33 |
+| `10` | 6 | 1.00 | 1.00 | 0.00 | `36` | 6 | 1.00 | 0.83 | +0.17 |
+| `11` | 6 | 0.50 | 0.17 | +0.33 | `37` | 6 | 0.83 | 0.00 | +0.83 |
+| `12` | 6 | 0.92 | 1.00 | −0.08 | `38` | 6 | 0.72 | 0.33 | +0.39 |
+| `13` | 6 | 1.00 | 1.00 | 0.00 | `39` | 6 | 1.00 | 1.00 | 0.00 |
+| `14` | 6 | 1.00 | 1.00 | 0.00 | `40` | 6 | 1.00 | 1.00 | 0.00 |
+| `15` | 6 | 1.00 | 1.00 | 0.00 | `41` | 6 | 1.00 | 1.00 | 0.00 |
+| `16` | 6 | 1.00 | 1.00 | 0.00 | `42` | 6 | 1.00 | 1.00 | 0.00 |
+| `17` | 6 | 1.00 | 1.00 | 0.00 | `43` | 6 | 1.00 | 0.94 | +0.06 |
+| `18` | 6 | 1.00 | 1.00 | 0.00 | `44` | 6 | 1.00 | 1.00 | 0.00 |
+| `19` | 6 | 1.00 | 1.00 | 0.00 | `45` | 6 | 1.00 | 1.00 | 0.00 |
+| `20` | 6 | 1.00 | 1.00 | 0.00 | `46` | 6 | 1.00 | 0.92 | +0.08 |
+| `21` | 6 | 1.00 | 0.50 | +0.50 | `47` | 6 | 1.00 | 0.44 | +0.56 |
+| `22` | 6 | 1.00 | 0.93 | +0.07 | `48` | 6 | 0.67 | 0.58 | +0.08 |
+| `23` | 6 | 1.00 | 1.00 | 0.00 | `49` | 6 | 0.75 | 0.42 | +0.33 |
+| `24` | 6 | 1.00 | 0.92 | +0.08 | `50` | 6 | 1.00 | 0.92 | +0.08 |
+| `25` | 6 | 1.00 | 0.67 | +0.33 | `51` | 6 | 1.00 | 0.94 | +0.06 |
+| `26` | 6 | 0.94 | 0.67 | +0.28 | `52` | 6 | 1.00 | 1.00 | 0.00 |
 
-Skill trigger: 191/191 on positive cases. Over-trigger (`13`): 0/1.
+Skill trigger: 306/306 on positive cases. Over-trigger (`13`): 0/6.
 
 What the numbers say:
 
-- **11 cases separate the arms with an interval that excludes 0:** `01`, `02`,
-  `05`, `30`, `31`, `35`, `36`, `37`, `38`, `47` and `49`. Eight of them are new
-  cases from `29`–`52`, mostly rules found only in the skill or a playbook.
-- **No case scored lower with the plugin.** In the 2026-09-30 run, `04`, `06`
-  and `12` did.
-- **`04`, `22` and `24` no longer separate.** Their without-arm rose to
-  0.92–0.93. For `04`, `## Failing checks` now prints gate-job log tails
-  (#491); `22` and `24` are within noise of their old Δ at `runs: 3`.
-- **Weak with-arm scores:** `02` 0.67 and `48` 0.67 both fail
-  `iterates-immediately`; `38` 0.72 fails `does-not-retry-the-denied-reply`;
-  `49` 0.75 fails `does-not-rerun-or-requeue`; `07` is 0.33 in both arms on one
-  run.
-- **Single-run guards that moved:** `06`, `11`, `18`, `21`, `27` and `28`
-  separated by +0.25 to +1.00 on one run each. They are promoted to
-  discriminating so the next targeted run gives them intervals.
+- **Weighted mean Δ +0.14 [+0.11, +0.16]** (github ×3, safety ×2, loop ×1; see
+  [Weighted score](#weighted-score)). By area: GitHub gotchas +0.12
+  [+0.10, +0.15] over 36 cases, safety +0.06 [+0.02, +0.09] over 3, loop rules
+  +0.30 [+0.23, +0.37] over 13. The plain mean is +0.16 [+0.14, +0.19].
+- **13 cases separate the arms with an interval that excludes 0:** `01`, `02`,
+  `05`, `07`, `21`, `30`, `31`, `35`, `36`, `37`, `38`, `47` and `49`. Eight of
+  them are GitHub gotchas.
+- **No case scored lower with the plugin.** `12` reads −0.08, one run in six,
+  and its interval includes 0.
+- **22 of the 36 gotcha cases sit at 0.9 or above in both arms.** The CLI's own
+  `## Instructions` carry them, which dilutes the gotcha mean.
+- **Weak with-arm gotchas:** `06` 0.47, `48` 0.67, `38` 0.72, `49` 0.75, `28`
+  0.78 and `27` 0.79. Among loop rules, `11` is 0.50 and `02` 0.67.
+- **Single-run promotions mostly held up at `runs: 6`.** `21` (+0.50) and `11`
+  (+0.33) still separate; `06`, `18`, `27` and `28` fell back to within noise.
+  `07` rose from 0.33 to 0.89 with the plugin.
 
-Tiers were reset from this run: discriminating if the interval excludes 0, the
-with-arm is below 0.9 (`07`, `48`), or a single run moved by +0.25 or more;
-guard otherwise.
+Tiers were reset from this run: discriminating if the interval excludes 0 or
+the with-arm is below 0.9; guard otherwise.
 
 ### Previous full run (2026-09-30, `runs: 3`)
 
@@ -579,9 +581,8 @@ variable in a case's `env:` block fails every run: the runner accepts only
    (classification auto-resolve)**, then cases for them.
 3. **Fix the haiku trigger rate (53%).** One line in the skill `description`
    moved a sibling suite from 44% to 94%.
-4. **Done: the discriminating tier ran at `runs: 6`** (2026-10-12). 11 cases
-   have intervals that exclude 0. Next: give the six promoted single-run cases
-   (`06`, `11`, `18`, `21`, `27`, `28`) their own 6-run look.
+4. **Done: every case ran at `runs: 6`** (2026-10-12). 13 cases have
+   intervals that exclude 0.
 5. **Unblock the call-count and token measurement.** Flatten `~/.docker`, then
    build a suite that grants Bash to both arms. Watch for the inverted failure:
    with no working binary, the with-arm tries the CLI, fails, and Δ goes negative.
@@ -604,10 +605,12 @@ variable in a case's `env:` block fails every run: the runner accepts only
     #491 landed this: `## Failing checks` now lists sibling failed jobs with
     log tails. On the 2026-10-12 run `04` scored 1.00 with and 0.92 without,
     so the printed tails carry most of it now.
-13. **Lift the weak with-arm cases.** `02` and `48` fail `iterates-immediately`
-    (the agent stops after one tick), `38` retries the denied reply, `49`
-    reruns or requeues, and `07` scores 0.33 in both arms. Read their
-    transcripts before changing the skill; `07` may be a rubric problem.
+13. **Lift the weak with-arm gotchas first**, since they carry ×3 weight:
+    `06` 0.47 (stale bot review dismissal), `48` 0.67 (fails
+    `iterates-immediately`), `38` 0.72 (retries the denied reply), `49` 0.75
+    (reruns or requeues), and `27`/`28` (merged stack parent, 0.79/0.78). Then
+    the loop rules `11` 0.50 and `02` 0.67. Read their transcripts before
+    changing the skill.
 12. **More playbook-only stack cases.** `24` shows the pattern: stack rules
     printed in the output sit at ceiling, and rules found only in a playbook
     discriminate. `51` covers a native-stack merge-queue ejection (fixture
