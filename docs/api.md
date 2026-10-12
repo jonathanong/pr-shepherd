@@ -191,7 +191,7 @@ const server = createPrShepherdMcpServer({ cwd: "/path/to/repo" });
 await runPrShepherdMcpStdio({ cwd: "/path/to/repo" });
 ```
 
-`createPrShepherdMcpServer` accepts an optional `shepherd` for tests and exposes `iterate`, `apply`, `build_suggestion_patches`, `extract_journal`, and `get_journal`, plus the deprecated singular adapter. Host install and tool schemas: [mcp.md](mcp.md).
+`createPrShepherdMcpServer` accepts an optional `shepherd` for tests and exposes `iterate`, `apply`, `build_suggestion_patches`, `extract_journal`, `get_journal`, and `playbook`, plus the deprecated singular adapter. Host install and tool schemas: [mcp.md](mcp.md).
 
 - PR-targeted tools require a repository-qualified reference and reject bare or omitted ones. `iterate` takes exactly one of `pr`, `prs`, or `stack`; the others require `pr`.
 - That repository is the GitHub target and may differ from the factory's `cwd`, which still supplies local git, config, and rules context.

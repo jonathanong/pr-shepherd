@@ -112,13 +112,14 @@ Every PR-targeted call requires a repository-qualified selector: a GitHub PR URL
 
 Each result has Markdown `content` and `structuredContent` produced from the same projection, so the two channels carry equivalent information.
 
-| Tool / selector                                               | `structuredContent`                                                                               |
-| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `iterate` with `pr`                                           | The CLI's lean `--format=json` projection of `IterateResult`, not the raw object (details below). |
-| `iterate` with `prs`                                          | The raw `PollSummaryResult`.                                                                      |
-| `iterate` with `stack`                                        | The lean stack overview the CLI prints as JSON; Markdown is rendered from the same projection.    |
-| `apply`, `build_suggestion_patches`, `build_suggestion_patch` | The raw result object, matching their CLI JSON output.                                            |
-| `extract_journal`, `get_journal`, `playbook`                  | The same JSON in both channels.                                                                   |
+| Tool / selector                                               | `structuredContent`                                                                                                                |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `iterate` with `pr`                                           | The CLI's lean `--format=json` projection of `IterateResult`, not the raw object (details below).                                  |
+| `iterate` with `prs`                                          | The raw `PollSummaryResult`.                                                                                                       |
+| `iterate` with `stack`                                        | The lean stack overview the CLI prints as JSON; Markdown is rendered from the same projection.                                     |
+| `apply`, `build_suggestion_patches`, `build_suggestion_patch` | The raw result object, matching their CLI JSON output.                                                                             |
+| `extract_journal`, `get_journal`                              | The same JSON in both channels.                                                                                                    |
+| `playbook`                                                    | The result object. Markdown `content` is the playbook body for a named playbook, or a bullet list of names when `name` is omitted. |
 
 The single-PR `iterate` projection omits trivial-default fields (including `state` when `OPEN` and `mergeStateStatus` when `CLEAN`, like the text header) and adds `readyDelayOverride` when `readyDelaySeconds` was supplied. Every action except `fix_code` and `cancel` gets a computed top-level `instructions` array; `fix_code` carries its steps under `fix.instructions`, and `cancel` has none. A clean PR whose ready-delay is still counting returns action `ready` with `remainingSeconds`. Action semantics, instruction text, and the full field contract live in [actions.md](actions.md).
 
