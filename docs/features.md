@@ -6,15 +6,15 @@ What Shepherd does, the workflow it assumes, and what it does not do. The outcom
 
 ## Context gathered
 
-| Area         | What one tick surfaces                                                                                                                        | Spec                                                                     |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Review items | Inline threads (full transcript), PR comments, `COMMENTED` summaries, `APPROVED` and `CHANGES_REQUESTED` reviews                              | [comments.md](comments.md)                                               |
-| Visibility   | First-look outdated, resolved, and minimized items; edited bodies re-surface                                                                  | [comments.md](comments.md#first-look-items-comment-visibility-invariant) |
-| Provenance   | Raw `authorAssociation`, true-only `viewerDidAuthor`, and `authorType`. No trust label is derived                                             | [comments.md](comments.md#trust-and-author-provenance)                   |
-| CI           | Checks classified passed / failing / in progress / skipped / filtered / ignored / superseded, with `jobName`, `failedStep`, and a log excerpt | [checks.md](checks.md)                                                   |
-| Mergeability | `CLEAN`, `BEHIND`, `CONFLICTS`, `BLOCKED`, `UNSTABLE`, `DRAFT`, `UNKNOWN`, plus the merge requirements that apply                             | [merge-status.md](merge-status.md)                                       |
-| Stacks       | Native-stack topology, ancestry, ownership, and READY receipts for every layer                                                                | [cli-usage.md](cli-usage.md)                                             |
-| Transport    | GraphQL by default; REST in cloud sessions or after a recognized GraphQL failure. Fields REST lacks stay unknown                              | [github-api.md](github-api.md), [rest.md](rest.md)                       |
+| Area         | What one tick surfaces                                                                                                                                                   | Spec                                                                     |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Review items | Inline threads (full transcript), PR comments, `COMMENTED` summaries, `APPROVED` and `CHANGES_REQUESTED` reviews                                                         | [comments.md](comments.md)                                               |
+| Visibility   | First-look outdated, resolved, and minimized items; edited bodies re-surface                                                                                             | [comments.md](comments.md#first-look-items-comment-visibility-invariant) |
+| Provenance   | Raw `authorAssociation`, true-only `viewerDidAuthor`, and `authorType`. No trust label is derived                                                                        | [comments.md](comments.md#trust-and-author-provenance)                   |
+| CI           | Checks classified passed / failing / in progress / skipped / filtered / ignored / superseded, with `jobName`, `failedStep`, and a log excerpt when triage can fetch them | [checks.md](checks.md)                                                   |
+| Mergeability | `CLEAN`, `BEHIND`, `CONFLICTS`, `BLOCKED`, `UNSTABLE`, `DRAFT`, `UNKNOWN`, plus the merge requirements that apply                                                        | [merge-status.md](merge-status.md)                                       |
+| Stacks       | Native-stack topology, ancestry, ownership, and READY receipts for every layer                                                                                           | [cli-usage.md](cli-usage.md)                                             |
+| Transport    | GraphQL by default; REST in cloud sessions or after a recognized GraphQL failure. Fields REST lacks stay unknown                                                         | [github-api.md](github-api.md), [rest.md](rest.md)                       |
 
 Log excerpts are omitted for `CANCELLED` and `STARTUP_FAILURE`. The full field inventory is in [context.md](context.md).
 
@@ -31,7 +31,7 @@ Log excerpts are omitted for `CANCELLED` and `STARTUP_FAILURE`. The full field i
 | Shepherd Journal               | Idempotent decision log in the PR body, with a pure extraction API                                                                                                                 | [api.md](api.md)                                             |
 | Exit codes                     | `0` and `10`–`16` for PR state; `64`–`78` for command and GitHub failures                                                                                                          | [exit-codes.md](exit-codes.md)                               |
 
-Interfaces: the MCP tools `iterate`, `apply`, `build_suggestion_patches`, `extract_journal`, and `get_journal` ([mcp.md](mcp.md)), and the CLI `pr-shepherd [PR]` and `pr-shepherd iterate [PR]` ([cli-usage.md](cli-usage.md)).
+Interfaces: the MCP tools `iterate`, `apply`, `build_suggestion_patches`, `extract_journal`, `get_journal`, and `playbook` ([mcp.md](mcp.md)), and the CLI `pr-shepherd [PR]` and `pr-shepherd iterate [PR]` ([cli-usage.md](cli-usage.md)).
 
 ## Configuration
 
@@ -49,7 +49,7 @@ Shepherd works best on PRs that use required status checks and conversation reso
 
 - Push access to the PR head branch is a usage precondition. GitHub viewer fields do not create a separate push handoff.
 - The CLI never mutates git. It prints commit and push steps for the agent.
-- Every thread, comment, and review summary is surfaced at least once, even when it is already outdated, resolved, or minimized. Edited items re-surface.
+- Every thread, comment, and review summary is surfaced at least once, even when it is already outdated, resolved, or minimized. Edited items re-surface. The exception is a `COMMENTED` review minimized before the first tick, which is not fetched.
 - Unmarked bot threads and the viewer's own threads are replied to and resolved. Other humans' threads are reply-only unless `iterate.resolveOtherHumanThreads` is `outdated` or `always`. Human items are never minimized. See [conversation-resolution.md](conversation-resolution.md).
 - Shepherd recognizes its own reply only by a leading `<!-- pr-shepherd -->` marker. A marked thread is resolve-only on retry.
 - Review summaries are not minimized while their inline threads are still unresolved.
