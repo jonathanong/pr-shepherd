@@ -116,8 +116,8 @@ const weightedMean = (xs, ws) => {
 /** Like meanDeltaInterval, but each case counts by its area weight. */
 function weightedDeltaInterval(cases) {
   const per = cases.map(caseInterval);
-  if (!cases.length || per.some((p) => !p)) return null;
   const ws = cases.map(areaWeight);
+  if (!ws.some(Boolean) || per.some((p) => !p)) return null;
   return interval(per[0].draws.map((_, i) => weightedMean(per.map((p) => p.draws[i]), ws)));
 }
 
@@ -307,23 +307,27 @@ if (mode === "summary") {
     `**${model}, ${judge} judge, \`runs: ${perCaseRuns || "?"}\`${when ? ` (${when})` : ""}**`,
   );
   console.log();
-  const wIv = weightedDeltaInterval(cases);
-  const weights = Object.entries(AREA_WEIGHTS)
-    .map(([a, w]) => `${a} ×${w}`)
-    .join(", ");
-  console.log(
-    `- Weighted mean Δ **${fmt(weightedMean(cases.map(delta), cases.map(areaWeight)))}**` +
-      `${wIv ? ` ${fmtCi(wIv)}` : ""} (${weights}).`,
-  );
-  console.log(
-    `- By area: ` +
-      Object.keys(AREA_WEIGHTS)
-        .map((a) => [a, cases.filter((c) => areaOf(c) === a)])
-        .filter(([, set]) => set.length)
-        .map(([a, set]) => `${a} ${meanLine(set, "cases")}`)
-        .join("; ") +
-      ".",
-  );
+  // With no case in a known area there is no weighted mean to report; printing
+  // the zero-denominator fallback would present +0.00 as a measurement.
+  if (cases.some(areaWeight)) {
+    const wIv = weightedDeltaInterval(cases);
+    const weights = Object.entries(AREA_WEIGHTS)
+      .map(([a, w]) => `${a} ×${w}`)
+      .join(", ");
+    console.log(
+      `- Weighted mean Δ **${fmt(weightedMean(cases.map(delta), cases.map(areaWeight)))}**` +
+        `${wIv ? ` ${fmtCi(wIv)}` : ""} (${weights}).`,
+    );
+    console.log(
+      `- By area: ` +
+        Object.keys(AREA_WEIGHTS)
+          .map((a) => [a, cases.filter((c) => areaOf(c) === a)])
+          .filter(([, set]) => set.length)
+          .map(([a, set]) => `${a} ${meanLine(set, "cases")}`)
+          .join("; ") +
+        ".",
+    );
+  }
   const untagged = cases.filter((c) => !areaWeight(c));
   if (untagged.length) {
     console.log(
