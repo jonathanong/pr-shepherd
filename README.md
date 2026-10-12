@@ -1,12 +1,27 @@
 # pr-shepherd
 
-Drive a pull request to merge-ready with a coding agent. Shepherd fetches the PR's state from GitHub and tells the agent the one next step. It works with Claude Code, Codex, Grok, and any stdio MCP client.
+Drive a pull request to merge-ready with a coding agent. It works with Claude Code, Codex, Grok, and any stdio MCP client.
+
+**Estimated per PR session: −42% cost and −19% turns vs. `gh`, −77% cost vs. the GitHub MCP server. While waiting on CI: ~60 GraphQL points an hour vs. ~360 for `gh pr checks --watch`.**
+
+## Outcomes
+
+| Outcome                                                                 | Headline                                                                                                                   | Evidence                                                                 |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [Context and correctness](#context-and-correctness)                     | 60 GitHub edge cases cataloged, backed by 147 scenario fixtures                                                            | [Handled cases](docs/handled-cases.md)                                   |
+| [Fewer tokens, lower cost](#fewer-tokens-and-lower-cost)                | Cost −42% vs. `gh` and −77% vs. MCP per PR session; turns −19% / −70% (estimates)                                          | [Token bench](evals/tokens/README.md)                                    |
+| [Clearer agent direction](#clearer-agent-direction)                     | One of 7 actions per tick; eval Δ +0.09 over 23 cases, +1.00 on the CI-wait case                                           | [Behavior evals](evals/README.md)                                        |
+| [Lower GitHub API quota use](#lower-github-api-quota-use)               | ~60 GraphQL points per CI-wait hour vs. ~360 for `gh`; ~4 when idle. REST core per PR session 4.8 vs. 9 (`gh`), 78.3 (MCP) | [GitHub API](docs/github-api.md), [GraphQL usage](docs/graphql-usage.md) |
+| [Safe by construction](#safe-by-construction)                           | 0 git mutations; human handoff limited to 10 escalation triggers                                                           | [Escalations](docs/escalations.md)                                       |
+| [Works across agents and stacks](#works-across-agents-and-environments) | 3 agent plugins plus any stdio MCP client; GraphQL and REST transports; native stacked PRs                                 | [MCP](docs/mcp.md), [cloud](docs/cloud.md)                               |
 
 **[jongleberry.com/pr-shepherd](https://jongleberry.com/pr-shepherd/)** covers the why and the design principles.
 
-## Why
+## What it does
 
-An agent finishing a PR should think about code. Without Shepherd it fans out across `gh`, the GitHub MCP server, and GraphQL to rebuild PR state. Then it guesses what to do next. It misses outdated or edited comments, misreads cancelled CI, and blocks on `gh run watch`.
+- Gathers the PR's review items, CI failures, and merge requirements in one call.
+- Returns one action with numbered instructions and exact commands.
+- Never mutates git. The agent edits, commits, pushes, and decides what each comment deserves.
 
 ```mermaid
 flowchart LR
@@ -17,16 +32,9 @@ flowchart LR
   A -->|fix, push, run the printed commands| G
 ```
 
-## Outcomes
+Without Shepherd, an agent fans out across `gh`, the GitHub MCP server, and GraphQL to rebuild PR state, then guesses the next step. Details for each outcome follow; more features are in [docs/features.md](docs/features.md).
 
-| Outcome                                                                 | How                                                                              | Evidence                                    |
-| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------- |
-| [Context and correctness](#context-and-correctness)                     | One call returns every review item, CI failure, and merge requirement            | [Handled edge cases](docs/handled-cases.md) |
-| [Fewer tokens, lower cost](#fewer-tokens-and-lower-cost)                | Batched reads, filtering, seen markers, lean output                              | [Token bench](evals/tokens/README.md)       |
-| [Clearer agent direction](#clearer-agent-direction)                     | One deterministic action per tick with exact commands                            | [Behavior evals](evals/README.md)           |
-| [Lower GitHub API quota use](#lower-github-api-quota-use)               | One batched query per tick, fingerprint skips, conditional REST reads            | [GitHub API](docs/github-api.md)            |
-| [Safe by construction](#safe-by-construction)                           | Read-only git, no merge unless asked, finite escalations, untrusted review input | [Escalations](docs/escalations.md)          |
-| [Works across agents and stacks](#works-across-agents-and-environments) | MCP, CLI, plugin skills, cloud REST transport, native stacked PRs                | [MCP](docs/mcp.md), [cloud](docs/cloud.md)  |
+## Outcome details
 
 ### Context and correctness
 
@@ -58,7 +66,7 @@ These are offline estimates at 3.5 characters per token over recorded sessions, 
 
 ### Clearer agent direction
 
-Each tick returns exactly one action: `WAIT`, `READY`, `MARK_READY`, `FIX_CODE`, `MERGE`, `CANCEL`, or `ESCALATE`. Numbered `## Instructions` and exact commands come with it, so the agent does not invent policy. In the [behavior evals](evals/README.md), Sonnet 5.5 at low effort scored a mean Δ (with − without plugin) of **+0.09** across 23 cases, and **+0.13** on the 14 non-stack cases. The largest gain is **+1.00**: without the plugin, the agent blocked on `gh run watch` in every run. The skill fired in 64 of 66 runs where it should have. Cases 29–46 have not run live yet. See [docs/actions.md](docs/actions.md) for the output contract.
+Each tick returns exactly one action: `WAIT`, `READY`, `MARK_READY`, `FIX_CODE`, `MERGE`, `CANCEL`, or `ESCALATE`. Numbered `## Instructions` and exact commands come with it, so the agent does not invent policy. In the [behavior evals](evals/README.md), Sonnet 5.5 at low effort scored a mean Δ (with − without plugin) of **+0.09** across 23 cases, and **+0.13** on the 14 non-stack cases. The largest gain is **+1.00**: without the plugin, the agent blocked on `gh run watch` in every run. The skill fired in 64 of 66 runs where it should have. Cases 29–52 have not run live yet. See [docs/actions.md](docs/actions.md) for the output contract.
 
 ### Lower GitHub API quota use
 
@@ -70,7 +78,7 @@ GitHub meters two tiers ([details](docs/github-api.md#github-metering)):
 Waiting is where most quota goes, and where Shepherd saves the most. By default `gh pr checks --watch` refreshes every 10 seconds, at 1 GraphQL point per refresh. That is about 360 points an hour for each watched PR, so a few agents waiting on CI can drain the shared 5,000-point hourly budget. Shepherd polls every 60 seconds by default:
 
 - Each tick is one batched GraphQL query (1 point). When nothing changed, the fingerprint skip returns the stored report from that same query.
-- While CI runs, that is about 60 points an hour per PR, against about 360 for `gh pr checks --watch`.
+- While CI runs, that is about 60 points an hour per PR, against about 360 for `gh pr checks --watch` at its default interval. The token bench models `gh` refreshing every 60 seconds, which ties Shepherd at 60 ([report](evals/tokens/REPORT.md)).
 - When no check is running, conditional REST change detectors run first. A `304` consumes no primary quota. An hour of unchanged idle waiting costs about 4 GraphQL points instead of 60 ([graphql-usage.md](docs/graphql-usage.md)).
 
 Fewer requests help on both tiers. The GitHub MCP server issues one or more REST requests per tool call, so unbatched calls drain `core` and the per-minute pool faster.
