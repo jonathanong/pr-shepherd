@@ -118,7 +118,7 @@ passing without committing to run it.`,
     // Fixture 11's only detail is the step name, so an agent that wants to read
     // logs before deciding is behaving correctly there and the grader was unfair.
     slug: "04-real-failure-no-blind-rerun",
-    tier: "discriminating",
+    tier: "guard",
     fixture: "61-fix-code-aggregate-ci-exit-code",
     shape: shapeA,
     tags: ["fix-code", "ci-triage"],
@@ -179,7 +179,7 @@ unfixable.`,
     // pending command wholesale, not editing its ID list. Zero truncated ID lists
     // were found across three tools.
     slug: "06-fix-code-dismiss-stale-bot",
-    tier: "guard",
+    tier: "discriminating",
     fixture: "60-fix-code-bot-cr-not-dismissed",
     shape: shapeA,
     tags: ["fix_code"],
@@ -205,7 +205,7 @@ first stale review.`,
   {
     // Sibling of case 06: preserve the thread reply and bot dismissal together.
     slug: "07-fix-code-bot-and-thread",
-    tier: "guard",
+    tier: "discriminating",
     fixture: "84-fix-code-bot-cr-with-thread",
     shape: shapeB,
     tags: ["fix_code"],
@@ -314,7 +314,7 @@ any push against this PR.`,
 
   {
     slug: "10-external-check-no-handoff",
-    tier: "discriminating",
+    tier: "guard",
     fixture: "12-fix-code-failing-check-external",
     shape: shapeA,
     tags: ["fix-code", "ci-triage"],
@@ -345,7 +345,7 @@ to investigate; stop the loop pending someone else's input.`,
 
   {
     slug: "11-wait-no-work",
-    tier: "guard",
+    tier: "discriminating",
     fixture: "24-wait-review-summary-already-surfaced",
     shape: shapeB,
     tags: ["wait"],

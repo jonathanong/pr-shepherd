@@ -6,6 +6,21 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [EVALS.md](EVALS.md).
 
+## 2026-10-12: first targeted run, cases 29–52 live
+
+- First run of the tiered recipe (`runs: 6` discriminating, `runs: 1` guard)
+  and the first live run of cases `29`–`52`. Sonnet 5.5 low, opus judge, on
+  `dcbd17f6`: 384 runs, $30.86, mean Δ +0.19 over 52 cases, no plugin
+  regressions, skill fired 191/191.
+- Eight new cases separate the arms: `30`, `31`, `35`–`38`, `47`, `49`.
+- Former discriminating cases `04`, `10`, `22` and `24` no longer separate.
+  The 2026-09-30 negatives on `04`, `06` and `12` did not recur.
+- Tiers were reset from this run (see EVALS.md "Tiers and run recipes"): 15
+  cases moved to guard and 7 single-run or weak cases moved to discriminating.
+- The recipe failed from the main checkout: the runner refuses a plugin
+  directory with more than 20000 entries, and `.claude/worktrees` held about
+  526k. It ran from a fresh detached worktree instead.
+
 ## 2026-09-30: Sonnet 5.5 at low effort, stack cases
 
 - The agent model moved from `claude-opus-5` in the case frontmatter (overridden

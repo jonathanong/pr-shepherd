@@ -125,7 +125,7 @@ back to the user without attempting them.`,
     // #2099 remained based on merged #2095's old head branch after its code was
     // rebased onto main. GitHub reported a conflict against that obsolete base.
     slug: "27-merged-parent-stale-base",
-    tier: "guard",
+    tier: "discriminating",
     fixture: "127-fix-code-merged-parent-stale-base",
     shape: (
       fixture,
@@ -178,7 +178,7 @@ Shepherd command.`,
   },
   {
     slug: "28-native-stack-merged-parent",
-    tier: "guard",
+    tier: "discriminating",
     fixture: "129-fix-code-native-stack-merged-parent",
     shape: (
       fixture,

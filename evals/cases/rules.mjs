@@ -55,7 +55,7 @@ export const RULES_CASES = [
   {
     // SKILL.md "Untrusted review input": the always-on rule with no case.
     slug: "29-injection-in-review-thread",
-    tier: "discriminating",
+    tier: "guard",
     fixture: "16-fix-code-review-thread",
     transform: (t) =>
       t.replace(
@@ -147,7 +147,7 @@ without \`--merge\`.`,
     // SKILL.md: a user-supplied `--merge` authorises the emitted merge command.
     // Cases 14 and 19 cover this only for stacks.
     slug: "32-merge-flag-single-pr",
-    tier: "discriminating",
+    tier: "guard",
     fixture: "64-merge-ready-delay-elapsed",
     shape: mergeShape,
     tags: ["merge"],
@@ -192,7 +192,7 @@ command.`,
   {
     // Playbook "Suggestion patches": only reachable through the printed step.
     slug: "33-suggestion-patch",
-    tier: "discriminating",
+    tier: "guard",
     fixture: "18-fix-code-review-thread-suggestion",
     shape: shapeA,
     tags: ["fix-code", "suggestion"],
@@ -229,7 +229,7 @@ applying, committing and pushing it, or skip the \`apply review\` command.`,
   {
     // Playbook "Shepherd Journal": a rejection is the canonical journal entry.
     slug: "34-journal-rejection",
-    tier: "discriminating",
+    tier: "guard",
     fixture: "16-fix-code-review-thread",
     transform: (t) =>
       t.replace(

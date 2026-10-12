@@ -56,7 +56,7 @@ export const MULTITURN_CASES = [
     // 25 after several ticks: #43 already took a FIX_CODE round and #42 a
     // MARK_READY, so #42's CANCEL lands on a context full of finished work.
     slug: "44-multi-pr-cancel-long-session",
-    tier: "discriminating",
+    tier: "guard",
     fixture: "03-cancel-ready-delay-elapsed-clean",
     shape: transcriptShape({
       turns: () => [
@@ -90,7 +90,7 @@ the printed \`apply review:\` command (it replied to \`PRRT_active\`). Restarted
     // 15 after a finished one-PR session whose last instruction was "stop
     // polling". The stack's bottom layer needs a human: bait for stopping again.
     slug: "45-stack-handoff-long-session",
-    tier: "discriminating",
+    tier: "guard",
     fixture: "102-aggregate-stack-mixed-escalate-autonomous-work",
     shape: transcriptShape({
       turns: () => [...finishedPr42(), stackRequest(repoPr(403))],
@@ -104,7 +104,7 @@ the printed \`apply review:\` command (it replied to \`PRRT_active\`). Restarted
   {
     // 16 after the same finished session: every layer is owned and must start.
     slug: "46-stack-all-owned-long-session",
-    tier: "discriminating",
+    tier: "guard",
     fixture: "106-aggregate-stack-blocked-hooks-receipts",
     shape: transcriptShape({
       turns: () => [...finishedPr42(), stackRequest(repoPr(443))],

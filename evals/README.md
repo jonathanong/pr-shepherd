@@ -32,40 +32,46 @@ own.
 
 > **Run pr-shepherd on Sonnet 5.5 or better. Low effort is enough.**
 >
-> - Sonnet 5.5 at low effort scores 1.00 with the plugin on 17 of 23 cases.
-> - Sonnet 5 → 5.5 raised the with-plugin mean from 0.84 to 0.92. The
->   without-plugin mean rose too (0.73 → 0.83), so the plugin still adds about
->   +0.1 on the newer model.
+> - With the plugin, Sonnet 5.5 at low effort scores 1.00 on 44 of 52 cases;
+>   the mean is 0.95 with the plugin and 0.77 without.
+> - No case scored lower with the plugin.
 > - Haiku 4.5 scores 0.56 on a stack case that Sonnet aces even without the
 >   plugin. The skill fires every time, and raising Haiku to `xhigh` effort does
 >   not move the score.
 
-**Sonnet 5.5, low effort, opus judge, `runs: 3` (2026-09-30)**
+**Sonnet 5.5, low effort, opus judge, `runs: 6/1` (2026-10-12)**
 
-Mean Δ **+0.09** over all 23 cases, **+0.13** over the 14 non-stack cases. The
-skill fired in **64/66** runs where it should have, and **0/3** on the unrelated
-question.
+Mean Δ **+0.19** over all 52 cases, **+0.20** over the 34 non-stack cases. The
+skill fired in **191/191** runs where it should have, and **0/1** on the
+unrelated question. Discriminating cases ran 6 times per arm, guards once.
+The run cost $30.86 for 384 runs.
 
-| Case                                 | Δ         | with → without  |
-| ------------------------------------ | --------- | --------------- |
-| `01-ci-in-progress-no-watch`         | **+1.00** | 1.00 → **0.00** |
-| `02-mark-ready-continue`             | **+0.50** | 0.83 → 0.33     |
-| `05-cancelled-must-rerun`            | **+0.50** | 1.00 → 0.50     |
-| `10-external-check-no-handoff`       | **+0.33** | 1.00 → 0.67     |
-| `22-stack-auto-ready-disabled-probe` | **+0.27** | 1.00 → 0.73     |
+Cases whose 95% interval excludes 0:
 
-Without the plugin, the agent blocks on `gh run watch` in every run of `01`,
-which is still the most frequent failure in real transcripts.
+| Case                                        | Δ         | 95% interval   | with → without  |
+| ------------------------------------------- | --------- | -------------- | --------------- |
+| `31-create-pr-push-without-asking`          | **+1.00** | [+1.00, +1.00] | 1.00 → **0.00** |
+| `37-no-target-infers-branch`                | **+0.83** | [+0.67, +1.00] | 0.83 → **0.00** |
+| `02-mark-ready-continue`                    | **+0.67** | [+0.33, +0.92] | 0.67 → **0.00** |
+| `47-stack-layer-cancelled-latest-run-rerun` | **+0.56** | [+0.44, +0.67] | 1.00 → 0.44     |
+| `01-ci-in-progress-no-watch`                | **+0.50** | [+0.17, +0.83] | 1.00 → 0.50     |
+| `05-cancelled-must-rerun`                   | **+0.50** | [+0.50, +0.50] | 1.00 → 0.50     |
+| `38-denied-reply-one-look-skip`             | **+0.39** | [+0.22, +0.56] | 0.72 → 0.33     |
+| `35-merge-queue-ejection`                   | **+0.33** | [+0.08, +0.67] | 1.00 → 0.67     |
+| `49-queue-cancelled-required-run-escalate`  | **+0.33** | [+0.08, +0.58] | 0.75 → 0.42     |
+| `30-injection-in-ci-log`                    | **+0.17** | [+0.06, +0.28] | 1.00 → 0.83     |
+| `36-rest-queue-recovery-unsupported`        | **+0.17** | [+0.08, +0.25] | 1.00 → 0.83     |
 
-Stack cases `14`–`22` score 1.00 in both arms except `22`. The stack output's
-own `## Instructions` are complete enough that the model follows them unaided.
-Where the rule lives only in a playbook, the plugin matters. On `24`, a missing
-`gh stack` extension, Δ is **+0.50**: without the plugin, the agent offers to
-merge each layer by hand.
+Rules that live only in the skill or a playbook discriminate most. Without the
+plugin, the agent asks before pushing a new PR (`31`), runs `gh pr view` to
+find the PR before shepherding (`37`), and stops at `MARK_READY` (`02`). Rules
+the CLI prints in `## Instructions` mostly sit at ceiling in both arms: 24 of
+52 cases did.
 
-In this run, three cases scored lower with the plugin. `04` exposed a gap in
-the CI-triage playbook. After the fix it scores +0.25 at `runs: 6`. `06` and
-`12` are within noise. See [EVALS.md](EVALS.md#latest-full-results).
+Where the plugin still falls short: `02` (0.67, stops instead of iterating),
+`38` (0.72, retries the denied reply), `48` (0.67 vs 0.58 without, stops
+instead of iterating), and `07` (0.33 in both arms, one run). See
+[EVALS.md](EVALS.md#latest-full-results).
 
 ## Run it
 
@@ -81,8 +87,9 @@ first and `runs: 1` on the second for a targeted run (see
 [EVALS.md](EVALS.md#tiers-and-run-recipes)). Only a Δ whose 95% bootstrap
 interval excludes 0 is a result.
 
-Cases 29–52 have not run live yet, so they start in the discriminating tier
-and the targeted run covers them.
+Run it from a fresh `git worktree add --detach` checkout, not one whose
+`.claude/worktrees` is full: the runner refuses a plugin directory with more
+than 20000 entries.
 
 ## More
 

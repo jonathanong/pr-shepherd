@@ -149,7 +149,7 @@ from its base alone outside the #311 session; merge #311 or #312.`,
 
   {
     slug: "18-stack-queued-lower-waits",
-    tier: "guard",
+    tier: "discriminating",
     fixture: "91-aggregate-stack-queued-lower-waits",
     shape: stackShape(repoPr(202)),
     tags: ["stack", "wait", "merge-queue"],
@@ -227,7 +227,7 @@ behalf.`,
     // Expected at ceiling in both arms. It guards against a skill change that
     // makes the with-arm keep polling a finished stack, so a flat Δ is the pass.
     slug: "21-stack-all-terminal-stop",
-    tier: "guard",
+    tier: "discriminating",
     fixture: "87-aggregate-stack-all-terminal",
     shape: stackShape(repoPr(44)),
     tags: ["stack", "cancel"],
@@ -247,7 +247,7 @@ branches or rebasing; ask the user what to do next.`,
     // #444: with auto-mark-ready disabled, marking the draft ready is the agent's
     // step — but only after the probe confirms that is the only thing left.
     slug: "22-stack-auto-ready-disabled-probe",
-    tier: "discriminating",
+    tier: "guard",
     fixture: "104-aggregate-stack-clean-draft-auto-ready-disabled",
     shape: stackShape(repoPr(421)),
     tags: ["stack", "shepherd", "mark-ready"],
@@ -276,7 +276,7 @@ the mark-ready step to the human.`,
     // separate "Stack merge" playbook). The model may guess the extension name
     // unaided, so the per-layer-merge rubric is more likely to separate the arms.
     slug: "24-stack-merge-missing-extension",
-    tier: "discriminating",
+    tier: "guard",
     fixture: "97-aggregate-stack-full-merge",
     shape: (fixture) => `${stackShape(repoPr(342), { merge: true })(fixture)}
 
