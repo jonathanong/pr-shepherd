@@ -70,15 +70,15 @@ sequenceDiagram
     participant G as Active goal
     participant S as pr-shepherd
     U->>G: /goal /pr-shepherd
-    G->>S: pr-shepherd <PR> --until-terminal
+    G->>S: pr-shepherd PR --until-terminal
     Note over S: fetch, classify, dispatch<br/>ordinary WAIT / MARK_READY keep polling
     S-->>G: action + data
     alt FIX_CODE
         G->>G: fix, commit, push, apply review
-        G->>S: pr-shepherd <PR> --until-terminal
+        G->>S: pr-shepherd PR --until-terminal
     else MERGE or quota warning
         G->>G: follow instructions
-        G->>S: pr-shepherd <PR> --until-terminal
+        G->>S: pr-shepherd PR --until-terminal
     else CANCEL or ESCALATE
         Note over G: this PR's loop ends
     end
