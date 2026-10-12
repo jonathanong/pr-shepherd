@@ -2,9 +2,16 @@
 
 [← README](../README.md)
 
-pr-shepherd loads every `.pr-shepherdrc.yml` starting from the current working directory and walking toward `$HOME`, then deep-merges them ESLint-style: closer files override farther ones, nested objects merge, and arrays replace. `$HOME/.pr-shepherdrc.yml` is always included as the farthest user-level overlay when it exists, even if the working directory is outside `$HOME`. When cwd is outside `$HOME`, the walk includes ancestor directories of cwd but stops before the filesystem root, so `/.pr-shepherdrc.yml` cannot override the user file. All fields are optional — built-in defaults apply when omitted. The MCP server and CLI read the same files. These knobs tune what context is gathered (ignore checks, bot usernames, classification) and which actions iterate may take automatically.
+Every `.pr-shepherdrc.yml` key and environment variable Shepherd reads, with defaults and effects. For repository owners and anyone tuning how Shepherd gathers context and which actions `iterate` may take automatically.
 
-For example, a user-level file at `$HOME/.pr-shepherdrc.yml` can set personal defaults, and a project file can override only the keys it cares about:
+## How files load
+
+The CLI and MCP server read the same files:
+
+1. Every `.pr-shepherdrc.yml` from the current working directory up toward `$HOME`.
+2. `$HOME/.pr-shepherdrc.yml`, always, as the farthest user-level overlay — even when cwd is outside `$HOME`. In that case the walk covers cwd's ancestors but stops before the filesystem root, so `/.pr-shepherdrc.yml` cannot override the user file.
+
+Files deep-merge ESLint-style: closer files override farther ones, nested objects merge, and arrays replace. Every field is optional; built-in defaults fill the rest.
 
 ```yaml
 # ~/.pr-shepherdrc.yml
@@ -18,7 +25,14 @@ iterate:
   fixAttemptsPerThread: 5
 ```
 
-From the repo, the merged result keeps `ignoreChecks` and `stallTimeoutMinutes` from `$HOME` and uses `fixAttemptsPerThread: 5` from the project file. Built-in defaults fill every other key. If both files set `ignoreChecks`, the closer file's list replaces the farther one.
+From the repo, the result keeps `ignoreChecks` and `stallTimeoutMinutes` from `$HOME` and takes `fixAttemptsPerThread: 5` from the project file. If both files set `ignoreChecks`, the closer list replaces the farther one.
+
+Validation:
+
+- An unknown key, or an unknown key under a known group, prints a stderr warning and is ignored.
+- A file that fails to parse as YAML prints a stderr warning and is skipped; the other files still apply.
+- Any other invalid value (wrong type, bad regex, out-of-range number, …) prints a stderr warning, and the **whole merged config** falls back to built-in defaults. Exception: a malformed `classify.standard` map or entry warns and is ignored on its own.
+- Deprecated `actions.autoResolveOutdated` and `actions.commitSuggestions` are accepted, warned about, and ignored.
 
 ## Example
 
@@ -92,54 +106,62 @@ actions:
   workWhileQueued: false # set true to act on non-CI work immediately instead of waiting until the PR leaves the merge queue
 ```
 
----
-
 ## All supported keys
 
-| Key                                  | Default                                   | Purpose                                                                                                                                                                                                                                                                                                                                                       |
-| ------------------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `github.transport`                   | `"auto"`                                  | GitHub API transport: `auto`, `graphql`, or `rest`. `auto` uses REST in Claude Code cloud sessions and has narrowly scoped fallback triggers; see [GitHub API transport](#github-api-transport).                                                                                                                                                              |
-| `cliCommand`                         | `["pr-shepherd"]`                         | Argv prefix for every `pr-shepherd` command Shepherd emits; set it when the CLI is a project dependency rather than a global install                                                                                                                                                                                                                          |
-| `botUsernames`                       | Known code-review bot logins              | GitHub logins treated as bots for repeat unresolved-thread visibility even when GitHub reports them as `User` or `Unknown`                                                                                                                                                                                                                                    |
-| `ignoreChecks`                       | `[]`                                      | Case-insensitive globs that exclude check/status contexts from CI decisions and details while retaining their names in the ignored rollup                                                                                                                                                                                                                     |
-| `iterate.fixAttemptsPerThread`       | `3`                                       | Caller-visible `FIX_CODE` deliveries allowed for one unchanged unresolved thread body before the following tick escalates                                                                                                                                                                                                                                     |
-| `iterate.stallTimeoutMinutes`        | `60`                                      | Minutes the loop may repeat the same action without progress, or CI may stay pending without starting, before `escalate` with `stall-timeout`; `0` disables                                                                                                                                                                                                   |
-| `iterate.minimizeApprovals`          | `false`                                   | Opt in to also minimize APPROVED-state reviews (also enables >50-approval pagination).                                                                                                                                                                                                                                                                        |
-| `iterate.minimizeComments`           | `"all"`                                   | Which non-human GitHub author classes to minimize for PR comments and review summaries: `all`, `bots`, or `none`; humans are never minimized.                                                                                                                                                                                                                 |
-| `iterate.behindBaseHint`             | `""`                                      | One-liner shown on `fix_code` when the branch is behind or conflicts with its base; empty omits the hint entirely                                                                                                                                                                                                                                             |
-| `iterate.resolveOtherHumanThreads`   | `"none"`                                  | When to resolve other-human inline threads after a reply: `none` (reply-only), `outdated` (also resolve when GitHub reports outdated), or `always`                                                                                                                                                                                                            |
-| `iterate.instructions`               | `"inline"`                                | How `fix_code` prints the invariant commit/push and journal steps: `inline` every tick, or `playbook` (one pointer to the "Fix-code loop" playbook plus the concrete journal command). Overridden by `--instructions` and the MCP `instructions` input. Inline is the default because the token bench measured playbook as a net cost for the typical session |
-| `poll.mode`                          | `"auto"`                                  | `auto`, `poll`, or `event`. `event` runs one tick with no sleeping or debounce and reports `nextCheck`; `auto` picks `event` when `CLAUDE_CODE_REMOTE=true`. Overridden by `--poll-mode` and the MCP/library `pollMode` option. See [cloud.md](cloud.md)                                                                                                      |
-| `poll.intervalSeconds`               | `60`                                      | Default delay between `WAIT` ticks for one PR; overridden by `--interval`                                                                                                                                                                                                                                                                                     |
-| `poll.stackIntervalFactor`           | `2`                                       | Multiplier for --stack and multi-PR sleeps (`intervalSeconds` × this). `--interval` overrides it and is not multiplied                                                                                                                                                                                                                                        |
-| `poll.timeoutSeconds`                | `270`                                     | Default wall-clock cap for bounded `WAIT` polling; overridden by `--timeout` and ignored by `--until-terminal`                                                                                                                                                                                                                                                |
-| `poll.debounceSeconds`               | `60`                                      | Default settle window after the first `FIX_CODE`; overridden by `--debounce`; `0` disables                                                                                                                                                                                                                                                                    |
-| `poll.quietStatus`                   | `false`                                   | Whether unchanged `WAIT` snapshots are hidden by default; overridden by `--quiet-status` or `--no-quiet-status`                                                                                                                                                                                                                                               |
-| `poll.reconcileSeconds`              | `900`                                     | GraphQL transport: max age of a GraphQL snapshot an idle `WAIT` tick may replay when its REST change detectors are unchanged; `0` disables                                                                                                                                                                                                                    |
-| `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the monitor loop cancels                                                                                                                                                                                                                                                                                                     |
-| `watch.graphqlQuotaWarnings`         | `30% → 2x, 20% → 5x, 10% → 10x`           | One-time per-worktree GraphQL and REST core quota warnings, and the minimum poll intervals the poll dispatcher applies; `[]` disables                                                                                                                                                                                                                         |
-| `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval when waiting for `--require-sha` to land on GitHub                                                                                                                                                                                                                                                                                              |
-| `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up                                                                                                                                                                                                                                                                                                                    |
-| `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR-head CI; merge-queue `merge_group` checks are included automatically                                                                                                                                                                                                                                                      |
-| `checks.ignoreLogLines`              | `[]`                                      | Regex patterns matched against each raw CI log line; matching lines are dropped from `## Failing checks` log excerpts and from check-annotation dedup                                                                                                                                                                                                         |
-| `classify.standard`                  | `{}`                                      | Opt-in bundled classification rules for common bot noise: `all: true` enables every rule, and a named entry (`codecov-report: false`) overrides `all`. See [`classify.standard`](#classifystandard--default-)                                                                                                                                                 |
-| `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer logins whose pending review or outstanding review request blocks `mark_ready`                                                                                                                                                                                                                                                                        |
-| `merge.method`                       | unset                                     | Preferred method: `merge`, `squash`, or `rebase`. Used only when the repository allows it. A strategy flag in `commandArgs` must name the same method.                                                                                                                                                                                                        |
+Built-in defaults live in `src/config.json`.
+
+| Key                                  | Default                                   | Purpose                                                                                                                                                 |
+| ------------------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `github.transport`                   | `"auto"`                                  | `auto`, `graphql`, or `rest`. See [GitHub API transport](#github-api-transport).                                                                        |
+| `cliCommand`                         | `["pr-shepherd"]`                         | Argv prefix for every `pr-shepherd` command Shepherd emits.                                                                                             |
+| `botUsernames`                       | Known code-review bot logins              | Logins treated as bots even when GitHub reports `User` or `Unknown`.                                                                                    |
+| `ignoreChecks`                       | `[]`                                      | Case-insensitive globs excluded from CI decisions; names stay in the ignored rollup.                                                                    |
+| `iterate.fixAttemptsPerThread`       | `3`                                       | Caller-visible `FIX_CODE` deliveries of one unchanged unresolved thread before the next tick escalates.                                                 |
+| `iterate.stallTimeoutMinutes`        | `60`                                      | Minutes without progress, or of unstarted CI, before `escalate` / `stall-timeout`; `0` disables.                                                        |
+| `iterate.minimizeApprovals`          | `false`                                   | Also minimize `APPROVED` reviews (and paginate past 50 approvals).                                                                                      |
+| `iterate.minimizeComments`           | `"all"`                                   | Non-human author classes to minimize: `all`, `bots`, or `none`. Humans are never minimized.                                                             |
+| `iterate.behindBaseHint`             | `""`                                      | One-liner on `fix_code` when the branch is behind or conflicts with its base; empty omits it.                                                           |
+| `iterate.resolveOtherHumanThreads`   | `"none"`                                  | When to resolve other-human threads after a reply: `none`, `outdated`, or `always`.                                                                     |
+| `iterate.instructions`               | `"inline"`                                | `inline` or `playbook` for the `fix_code` commit/push and journal steps. Overridden by `--instructions` and the MCP `instructions` input.               |
+| `poll.mode`                          | `"auto"`                                  | `auto`, `poll`, or `event`. Overridden by `--poll-mode` and the MCP/library `pollMode` option.                                                          |
+| `poll.intervalSeconds`               | `60`                                      | Delay between `WAIT` ticks for one PR; overridden by `--interval`.                                                                                      |
+| `poll.stackIntervalFactor`           | `2`                                       | Multiplier for `--stack` and multi-PR sleeps; `--interval` overrides it and is not multiplied.                                                          |
+| `poll.timeoutSeconds`                | `270`                                     | Wall-clock cap for bounded `WAIT` polling; overridden by `--timeout`, ignored by `--until-terminal`.                                                    |
+| `poll.debounceSeconds`               | `60`                                      | Settle window after the first `FIX_CODE`; overridden by `--debounce`; `0` disables.                                                                     |
+| `poll.quietStatus`                   | `false`                                   | Hide unchanged `WAIT` snapshots; overridden by `--quiet-status` / `--no-quiet-status`.                                                                  |
+| `poll.reconcileSeconds`              | `900`                                     | GraphQL transport: max age of a snapshot an idle `WAIT` tick may replay when REST change detectors are unchanged; `0` disables.                         |
+| `watch.readyDelayMinutes`            | `10`                                      | Settle window after READY before the loop cancels or merges.                                                                                            |
+| `watch.graphqlQuotaWarnings`         | `30% → 2x, 20% → 5x, 10% → 10x`           | GraphQL and REST core quota warning bands and minimum poll intervals; `[]` disables.                                                                    |
+| `resolve.shaPoll.intervalMs`         | `2000`                                    | Poll interval while waiting for `--require-sha` to land on GitHub.                                                                                      |
+| `resolve.shaPoll.maxAttempts`        | `10`                                      | Max `--require-sha` polls before giving up.                                                                                                             |
+| `checks.ciTriggerEvents`             | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR-head CI; queue `merge_group` checks are included automatically.                                                     |
+| `checks.ignoreLogLines`              | `[]`                                      | Regexes; matching raw CI log lines are dropped from `## Failing checks` excerpts and annotation dedup.                                                  |
+| `classify.standard`                  | `{}`                                      | Opt-in bundled classification rules for common bot noise.                                                                                               |
+| `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer login prefixes whose pending review or request blocks `mark_ready`.                                                                            |
+| `merge.method`                       | unset                                     | Preferred method: `merge`, `squash`, or `rebase`, used only when the repository allows it. A strategy flag in `commandArgs` must name the same.         |
+| `merge.commandArgs`                  | `[]`                                      | Extra options for ordinary `gh pr merge` commands; not used for queue commands. Its strategy flag is the preferred method when `merge.method` is unset. |
+| `actions.autoMinimizeSuppressed`     | `true`                                    | Resolve/minimize classification matches with both flags, then print, report, and journal the result.                                                    |
+| `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean ready state.                                                                                          |
+| `actions.neverCancelRuns`            | `[]`                                      | Legacy name; matching checks stay visible despite `ignoreChecks`. Shepherd never cancels runs.                                                          |
+| `actions.workWhileQueued`            | `false`                                   | Act on non-CI work immediately while the PR is in the merge queue instead of deferring it.                                                              |
 
 ## GitHub API transport
 
-Set `github.transport` in `.pr-shepherdrc.yml`, or pass `--transport auto|graphql|rest` to the CLI. The library and MCP accept the equivalent transport option. The default `auto` starts with REST when `CLAUDE_CODE_REMOTE=true`; elsewhere it starts with GraphQL. It switches to REST for the rest of the process only when GraphQL is blocked by the recognized Claude Code 403, the primary GraphQL budget is exhausted, or an outage persists after bounded retries. Credential failures, ordinary permission or query errors, and secondary throttling do not switch transports. Proxy configuration is honored for either transport.
+Set `github.transport`, pass `--transport auto|graphql|rest` to the CLI, or pass the equivalent library/MCP option.
 
-REST can return less context than GraphQL. Missing REST fields remain unknown; readiness may still be established from a clean merge state, complete CI, and complete feedback evidence even when `reviewDecision` or branch-protection data is unavailable. `reviewDecision` is never a readiness input, so its absence does not block a non-clean state (for example `BLOCKED` awaiting an approval, `UNSTABLE`, or `HAS_HOOKS`) either; unreadable branch protection or rulesets still prevent READY for a non-clean state. See [authentication](authentication.md) for cloud-session credential behavior and [GitHub API](github-api.md) for transport limits and usage.
-| `merge.commandArgs` | `[]` | Extra options for ordinary `gh pr merge` commands. Not used for merge-queue commands. A strategy flag here is the preferred method when `merge.method` is unset. |
-| `actions.autoMinimizeSuppressed` | `true` | Resolve/minimize classification matches with both flags, then print, report, and journal the result |
-| `actions.autoMarkReady` | `true` | Emit `mark_ready` when a draft PR reaches a clean ready state |
-| `actions.neverCancelRuns` | `[]` | Legacy cancellation-named patterns; matching checks remain visible despite `ignoreChecks`, but Shepherd never cancels runs |
-| `actions.workWhileQueued` | `false` | When `true`, act on non-CI actionable work immediately even while the PR is in the merge queue, instead of deferring it until the PR leaves the queue |
+| Mode      | Behavior                                                                                                                                                                                                                          |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auto`    | REST when `CLAUDE_CODE_REMOTE=true`; otherwise GraphQL, switching to REST for the rest of the process only on the recognized Claude Code 403, exhausted primary GraphQL budget, or an outage that persists after bounded retries. |
+| `graphql` | GraphQL only.                                                                                                                                                                                                                     |
+| `rest`    | REST only.                                                                                                                                                                                                                        |
+
+Credential failures, ordinary permission or query errors, and secondary throttling never switch transports. Proxy configuration is honored for both.
+
+REST can return less context than GraphQL; missing fields stay unknown. A clean merge state with complete CI and complete feedback evidence can be READY without `reviewDecision` or branch-protection data. `reviewDecision` is never a readiness input, so its absence does not block a non-clean state (for example `BLOCKED` awaiting an approval, `UNSTABLE`, or `HAS_HOOKS`) either; unreadable branch protection or rulesets still prevent READY for a non-clean state. Cloud credentials: [authentication.md](authentication.md). Transport limits and usage: [github-api.md](github-api.md).
 
 ## `cliCommand` — default `["pr-shepherd"]`
 
-Argv prefix for every `pr-shepherd` command Shepherd emits: follow-up `--stack` and per-PR session commands, `apply review` and `apply journal` mutations, and commit-suggestion commands, in Markdown, JSON, and MCP output alike. The default assumes `pr-shepherd` is on `PATH`. A repository that pins pr-shepherd as a dependency should set its package-manager launcher so agents run the pinned version instead of whatever global install `PATH` resolves first:
+Argv prefix for every `pr-shepherd` command Shepherd emits — follow-up `--stack` and per-PR session commands, `apply review` and `apply journal` mutations, and commit-suggestion commands — in Markdown, JSON, and MCP output. The default assumes `pr-shepherd` is on `PATH`. A repository that pins pr-shepherd as a dependency should set its launcher so agents run the pinned version:
 
 ```yaml
 cliCommand:
@@ -148,23 +170,21 @@ cliCommand:
   - pr-shepherd
 ```
 
-The value must be a non-empty list of non-empty strings; any other value is rejected like every other invalid key. Shepherd shell-quotes each launcher argument when it renders command text.
+The value must be a non-empty list of non-empty strings. Shepherd shell-quotes each argument when it renders command text.
 
 ## `botUsernames`
 
-Top-level list of GitHub logins that Shepherd treats as bot authors in addition to GitHub-detected bots (`authorType: Bot`) and logins containing `[bot]`.
+Logins Shepherd treats as bot authors, in addition to GitHub-detected bots (`authorType: Bot`) and logins containing `[bot]`. Matching is case-insensitive, and a trailing `[bot]` is equivalent to the bare login. The default lists common code-review bots (see `src/config.json`).
 
-Configured bot threads are returned on every tick until resolved, even if their transcript is unchanged and already seen. Configured bot comments and reviews also follow bot minimization/routing policy when eligible. Viewer-authored human threads also stay visible until resolved. Other-human active threads remain marker-gated so Shepherd does not repeatedly return unchanged feedback unless `iterate.resolveOtherHumanThreads` is `always`.
-
-Matching is case-insensitive and treats a trailing `[bot]` suffix as equivalent to the bare login.
+| Thread author                | Returned each tick?                                                                                         |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Bot (detected or configured) | Yes, until resolved, even when unchanged and already seen. Comments and reviews follow bot minimize policy. |
+| Viewer-authored human        | Yes, until resolved.                                                                                        |
+| Other human                  | Marker-gated: shown again only when changed, unless `iterate.resolveOtherHumanThreads` is `always`.         |
 
 ## `ignoreChecks`
 
-Top-level list of case-insensitive glob patterns for GitHub check/status context names Shepherd should ignore for CI decisions. Ignored checks do not affect readiness, detailed check summaries, triage, or stall detection. Their names remain in the `ignoredNames` JSON field and the `**ignored**` text rollup.
-
-For GitHub Actions check runs, `actions.neverCancelRuns` takes precedence over `ignoreChecks` when it matches the workflow name or raw check name for the same run. Use this when a protected long-running workflow has child job names that would otherwise match `ignoreChecks`.
-
-Use exact names for one context, or glob patterns when a service emits multiple related contexts:
+Case-insensitive globs over Shepherd's normalized check name (`CheckRun.name` or `StatusContext.context`, not the workflow display name). Ignored checks do not affect readiness, detailed check summaries, triage, or stall detection. Their names stay in the `ignoredNames` JSON field and the `**ignored**` text rollup.
 
 ```yaml
 ignoreChecks:
@@ -172,82 +192,75 @@ ignoreChecks:
   - "Preview Deploy *"
 ```
 
-The pattern is matched against Shepherd's normalized check name (`CheckRun.name` or `StatusContext.context`), not the workflow display name.
+For a GitHub Actions run, an `actions.neverCancelRuns` match on its workflow name or raw check name takes precedence, keeping a protected workflow's child jobs visible.
 
 ## `iterate`
 
 ### `iterate.fixAttemptsPerThread` — default `3`
 
-Maximum number of caller-visible `fix_code` results that may return the same surfaced review thread body without it being resolved or changed. Each result repeats the pending review commands. After the configured number of results has been delivered, the next unchanged tick escalates and retains those commands. Internal polling/debounce ticks do not count.
+How many caller-visible `fix_code` results may return the same thread body while it stays unresolved and unchanged. Each repeats the pending review commands; the next unchanged tick escalates with `fix-thrash` and keeps those commands. Internal polling/debounce ticks and threads suppressed by seen markers do not count. The counter is keyed by the thread transcript hash, so an edit or reply resets it.
 
-The counter is keyed by the thread transcript hash. If the author edits or replies in the thread, the hash changes and the per-thread counter resets. Threads suppressed by seen markers do not increment this counter.
-
-- **Raise** for complex threads that may require multiple fix-push-review cycles.
-- **Lower** if you want to escalate to human review sooner.
+Raise it for threads that need several fix-push-review cycles; lower it to escalate sooner.
 
 ### `iterate.stallTimeoutMinutes` — default `60`
 
-Maximum number of minutes the monitor loop will repeat the same action without material progress before escalating with the `stall-timeout` trigger. "Material progress" means any change to: HEAD SHA, the set of failing check names, actionable thread/comment/review IDs, or the review-summary minimize bucket.
+Minutes the loop may repeat without material progress before escalating with `stall-timeout`. Progress means a change to the HEAD SHA, the failing check names, actionable thread/comment/review IDs, or the review-summary minimize bucket; any change resets the timer.
 
-The same timeout also applies to CI that has not started: relevant queued/requested/waiting check runs, or pending external status contexts, escalate when their latest source activity time is older than this threshold and no start timestamp exists. For check runs, Shepherd uses `updatedAtUnix` when GitHub exposes it and falls back to `createdAtUnix`.
+The same threshold covers CI that never starts: relevant queued/requested/waiting check runs, or pending external status contexts, with no start timestamp whose latest activity (`updatedAtUnix` when GitHub exposes it, else `createdAtUnix`) is older than the threshold. A `--stack` selection whose layers can only wait uses it for its own timer; see [`stall-timeout`](escalations.md#stall-timeout).
 
-The stall timer resets automatically whenever the fingerprint changes (new commit, resolved thread, different CI failure, etc.).
+Override per invocation with `--stall-timeout <duration>`: a bare number is minutes, or use an `s`/`m`/`h` suffix (`--stall-timeout 90s`, `--stall-timeout 1h`). `--stall-timeout 0` disables stall detection.
 
-A `--stack` selection whose remaining layers can only wait uses the same threshold for its own stack-level timer; see [`stall-timeout`](escalations.md#stall-timeout).
-
-Override per-invocation with `--stall-timeout <duration>` (e.g. `--stall-timeout 1h`, `--stall-timeout 90s`, `--stall-timeout 0` to disable). A bare number is minutes; an explicit `s`/`m`/`h` suffix always works.
-
-- **Raise** for workflows where CI can legitimately take longer than 60 minutes without any state change.
-- **Lower** if you want faster escalation when a PR gets stuck.
-- **Set to `0`** to disable stall detection entirely.
+<a id="iterateminimizeapprovals"></a>
 
 ### `iterate.minimizeApprovals` — default `false`
 
-Non-human `COMMENTED` review summaries can be minimized by the `iterate` loop. Human-authored summaries are surfaced through seen markers and are never minimized. Review summary IDs are returned in the `iterate` mutation plan and applied with the MCP `apply` tool. Rendered under `## Review IDs to minimize queue` in the iterate markdown output.
-`iterate.minimizeComments` controls which authors are eligible for that minimization.
+Also minimize `APPROVED` reviews (`pr approve` clicks, with or without a body). Off by default because approvals are a signal you usually want visible; turn it on for long-running PRs where stale approvals pile up. `iterate.minimizeComments` still filters which approval authors qualify.
 
-Opt in to also minimize `APPROVED`-state reviews (`pr approve` clicks with or without a body). Off by default because approvals are an affirmative signal you usually want to keep visible. Flip to `true` for long-running PRs where stale approvals pile up. When enabled, `iterate.minimizeComments` still filters which approval authors are minimized; approvals excluded by that policy are surfaced instead.
+| Setting           | Behavior                                                                                                                                                                                                                                                                           |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `false` (default) | Approvals render under `## Approvals (surfaced — not minimized)` only when iterate is already emitting output for other work; alone they do not turn `wait` into that section. They never enter `--minimize-comment-ids`. `fetchPrBatch` reads only the first 50 approved reviews. |
+| `true`            | All approvals are fetched. One that cannot be minimized (excluded by policy, no GraphQL capability, or REST, which cannot minimize) gets a one-time `FIX_CODE` visibility tick, stays out of `--minimize-comment-ids`, and is marker-gated afterward.                              |
 
-When `false` (default), approval reviews are surfaced under `## Approvals (surfaced — not minimized)` only in iterate output that is already being emitted for other actionable work (for example, alongside a `fix_code` payload). They remain visible and are not passed to `--minimize-comment-ids`, but approvals by themselves do not cause iterate to emit that section instead of returning `wait`.
+Non-human `COMMENTED` review summaries are minimized independently of this key: their IDs appear under `## Review IDs to minimize queue` and are applied through the `apply` command or MCP `apply` tool. Human summaries are surfaced through seen markers and never minimized.
 
-When `true`, an approval that cannot be minimized because policy excludes it, GraphQL reports no capability, or the selected transport does not support minimization produces a one-time `FIX_CODE` visibility tick. It remains absent from `--minimize-comment-ids` and is marker-gated afterward. REST does not support comment minimization.
-
-> Perf note: when this is `false` (default), `fetchPrBatch` does not paginate beyond the first 50 approved reviews. Turn it on to fetch all approvals.
+<a id="iterateminimizecomments"></a>
 
 ### `iterate.minimizeComments` — default `"all"`
 
-Controls which non-human GitHub-classified author types are passed to `--minimize-comment-ids` for minimizable PR comments, `COMMENTED` review summaries, and approval reviews when `iterate.minimizeApprovals` is enabled. A human author is `authorType: User` with no `[bot]` in the login; human-authored items are never minimized.
+Which non-human authors' items go to `--minimize-comment-ids`: minimizable PR comments, `COMMENTED` review summaries, and (with `iterate.minimizeApprovals`) approvals. A human is `authorType: User` without `[bot]` in the login and is never minimized.
 
-- `"all"` minimizes Bot and Unknown authors.
-- `"bots"` minimizes only GitHub `Bot` authors.
-- `"none"` surfaces minimizable comments/reviews but does not auto-minimize them.
+| Value    | Minimizes                        |
+| -------- | -------------------------------- |
+| `"all"`  | `Bot` and `Unknown` authors      |
+| `"bots"` | GitHub `Bot` authors only        |
+| `"none"` | Nothing; items are surfaced only |
 
-Items excluded by this policy still go through seen markers: Shepherd surfaces them the first time it sees them, writes a body hash marker, suppresses unchanged repeats on later ticks, and re-surfaces them if the author edits the body in place.
+The deprecated `"users"` value warns and is treated as `"none"`. Excluded items still pass the seen-marker gate: surfaced once, suppressed while unchanged, re-surfaced when edited.
 
 ### `iterate.behindBaseHint` — default `""`
 
-One-liner added to the `fix_code` instructions when the branch is behind its base (`mergeStatus: "BEHIND"`) or conflicts with it (`mergeStatus: "CONFLICTS"`, shown right after the merge-conflicts step and omitted on a native stack layer) — e.g. `"rebase --force-with-lease"`, `"merge the main branch"`, or `"see .agents/skills/agent-workflow/git-and-prs.md"`. Shepherd never decides the convention itself (see [`docs/actions.md`](actions.md) on why rebase/merge mechanics are intentionally left to the caller) — it only echoes back whatever pointer you configure here.
+One-liner added to `fix_code` instructions when the branch is behind (`mergeStatus: "BEHIND"`) or conflicts with (`mergeStatus: "CONFLICTS"`) its base — for example `"rebase --force-with-lease"`, `"merge the main branch"`, or `"see .agents/skills/agent-workflow/git-and-prs.md"`. The conflict hint follows the merge-conflicts step and is omitted on a conflicting native stack layer. Shepherd never picks the git mechanics; it only echoes this pointer (see [actions.md](actions.md)). Empty omits the hint.
 
-Empty (default) omits the hint entirely.
+<a id="iterateresolveotherhumanthreads"></a>
 
 ### `iterate.resolveOtherHumanThreads` — default `"none"`
 
-Controls when Shepherd resolves **other-human** inline threads (User authors that are not in `botUsernames`) after it replies. Bot/non-human threads and viewer-authored human threads always reply-and-resolve, including when GitHub has cleared the source line.
+When Shepherd resolves **other-human** inline threads (`User` authors not in `botUsernames`) after replying. Bot/non-human and viewer-authored threads always reply-and-resolve, even after GitHub clears the source line.
 
-- `"none"` (default) — other humans stay reply-only. A marker-ended other-human thread is already acknowledged and has no further mutation.
-- `"outdated"` — other humans still always get a reply when unmarked; Shepherd also resolves when GitHub reports `isOutdated: true`. Marker-ended outdated other-human threads become resolve-only retries.
-- `"always"` — other humans use the same reply-and-resolve pairing as own comments, including marker-ended resolve-only retries.
+| Value              | Unmarked other-human thread                 | Marker-ended other-human thread   |
+| ------------------ | ------------------------------------------- | --------------------------------- |
+| `"none"` (default) | Reply only                                  | Already acknowledged; no mutation |
+| `"outdated"`       | Reply; also resolve when `isOutdated: true` | Resolve-only retry when outdated  |
+| `"always"`         | Reply and resolve                           | Resolve-only retry                |
 
 ```yaml
 iterate:
   resolveOtherHumanThreads: outdated
 ```
 
----
-
 ## `poll`
 
-Configures defaults for the polling CLI. Explicit command-line flags take precedence, so a repository can establish a normal cadence without preventing a caller from choosing a different one:
+Defaults for the polling CLI (`pr-shepherd [PR]` and `pr-shepherd poll`); explicit flags win. Single-tick `iterate` and MCP calls do not poll, and event mode (`poll.mode`) ignores these settings — see [cloud.md](cloud.md).
 
 ```yaml
 poll:
@@ -259,65 +272,68 @@ poll:
   reconcileSeconds: 900
 ```
 
-`intervalSeconds` and `timeoutSeconds` must be positive finite numbers. `stackIntervalFactor` must be a finite number greater than or equal to 1 (built-in `2`). Their product, converted to milliseconds, must be finite and at most 2147483647 (the largest timer delay); a larger product is invalid and the whole config falls back to the built-in defaults. `debounceSeconds` must be a non-negative finite number; `0` disables the post-`FIX_CODE` settle window. `quietStatus` defaults to `false`, preserving the ordinary status line for every `WAIT` tick. Use `--quiet-status` to hide unchanged snapshots for one invocation or `--no-quiet-status` to override a configured `true` value. `reconcileSeconds` must be a non-negative finite number (built-in `900`). On the GraphQL transport, an idle `WAIT` tick (no check running) replays the stored report when conditional REST change detectors all answer 304 and the last GraphQL snapshot is younger than this; `0` disables the detectors so every tick reads GraphQL. See [graphql.md](graphql.md#idle-wait-change-detectors).
+| Key                   | Constraint                  | Notes                                                                                                                                                                                                                                                                                              |
+| --------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `intervalSeconds`     | positive finite             | One PR, including `--until-terminal`, sleeps this or `--interval`.                                                                                                                                                                                                                                 |
+| `stackIntervalFactor` | finite, ≥ 1                 | A stack or multi-PR poll without `--interval` sleeps `intervalSeconds * stackIntervalFactor` (not rounded). `intervalSeconds × factor` in ms must be ≤ 2147483647.                                                                                                                                 |
+| `timeoutSeconds`      | positive finite             | `--until-terminal` ignores it, as it ignores `--timeout`.                                                                                                                                                                                                                                          |
+| `debounceSeconds`     | non-negative finite         | `0` disables the post-`FIX_CODE` settle window.                                                                                                                                                                                                                                                    |
+| `quietStatus`         | boolean                     | `false` keeps the status line on every `WAIT` tick. `--quiet-status` / `--no-quiet-status` override per run.                                                                                                                                                                                       |
+| `reconcileSeconds`    | non-negative finite         | GraphQL transport: an idle `WAIT` tick (no check running) replays the stored report when all conditional REST change detectors answer 304 and the last GraphQL snapshot is younger than this. `0` disables the detectors. See [idle-wait change detectors](graphql.md#idle-wait-change-detectors). |
+| `mode`                | `auto` \| `poll` \| `event` | `event` runs one tick with no sleeping or debounce and reports `nextCheck`; `auto` picks `event` when `CLAUDE_CODE_REMOTE=true`.                                                                                                                                                                   |
 
-One PR, including `--until-terminal`, sleeps `intervalSeconds` or the explicit `--interval`. A stack or multi-PR poll sleeps `intervalSeconds * stackIntervalFactor` when `--interval` is omitted. The flag is that invocation's interval and is not multiplied again. The product stays a positive finite number of seconds and is not rounded. Quota-warning bands stay multiples of configured `intervalSeconds` only, so the stack factor does not compound into them. The dispatcher sleeps the slower of the effective interval and the active band: with the built-in defaults a stack sleeps 120s until a tighter band is slower than that.
-
-These settings affect `pr-shepherd [PR]` and `pr-shepherd poll`. Single-tick `iterate` and MCP calls do not poll. In event mode (`poll.mode`) these settings have no effect; see [cloud.md](cloud.md). `--until-terminal` ignores the bounded timeout, as it does when the timeout comes from `--timeout`.
-
----
+Quota-warning bands are multiples of the configured `intervalSeconds` only, so neither `--interval` nor the stack factor compounds into them. The dispatcher sleeps the slower of the effective interval and the active band; with built-in defaults a stack sleeps 120s until a band is slower.
 
 ## `watch`
 
 ### `watch.readyDelayMinutes` — default `10`
 
-After the PR first reaches a clean READY state (checks green, no Shepherd-visible work, no blocking bot review pending), Shepherd continues to loop for this many minutes before cancelling. This settle window gives reviewers time to request changes or for a configured blocking reviewer to finish.
-
-The ready-delay countdown resets if the PR drops out of that ready state or its head changes at any tick. A newly surfaced hidden PR comment is acknowledged without resetting it. Lifecycle: [iterate-flow.md](iterate-flow.md#2-ready-delay).
+After the PR first reaches a clean READY state (checks green, no Shepherd-visible work, no blocking bot review pending), Shepherd keeps looping this many minutes before cancelling (or merging with `--merge`), giving reviewers and blocking bots time to act. The countdown restarts if the PR leaves that state or its head changes; a newly surfaced hidden PR comment does not reset it. Lifecycle: [iterate-flow.md](iterate-flow.md#2-ready-delay).
 
 ### `watch.graphqlQuotaWarnings`
 
-Configures low-GraphQL-quota warning bands. Each entry maps a remaining percentage to a recommended minimum polling cadence using `pollIntervalFactor`, `pollIntervalMinutes`, or both. A factor is multiplied by the configured `poll.intervalSeconds`; it does not use an invocation's explicit `--interval`, so repeated warnings cannot compound. When both forms are present, Shepherd uses the slower result.
+Low-quota warning bands. Each entry maps `remainingPercent` (an integer 1–100, unique per list) to a minimum polling cadence via `pollIntervalFactor` (≥ 1, multiplied by configured `poll.intervalSeconds`, never by `--interval`), `pollIntervalMinutes` (positive), or both (the slower wins). The resolved interval must not decrease as remaining quota falls. `[]` disables warnings.
 
-The defaults are 30% → 2x, 20% → 5x, and 10% → 10x. With the built-in 60-second interval these preserve the previous 2-, 5-, and 10-minute cadence; with `poll.intervalSeconds: 120` they become 4, 10, and 20 minutes. Set the array to `[]` to disable warnings. Factors must be at least `1`, minute values must be positive, and the resolved interval must not decrease as remaining quota falls; invalid bands fall back to the defaults.
+| Remaining | Default factor | At `intervalSeconds: 60` | At `intervalSeconds: 120` |
+| --------- | -------------- | ------------------------ | ------------------------- |
+| 30%       | 2x             | 2 min                    | 4 min                     |
+| 20%       | 5x             | 5 min                    | 10 min                    |
+| 10%       | 10x            | 10 min                   | 20 min                    |
 
-Shepherd evaluates the authoritative GraphQL response headers without making an extra rate-limit request. When a band is crossed, the next non-terminal agent-visible result includes the raw quota state and transport-specific continuation guidance. Bounded CLI guidance uses a timeout twice the recommended interval; MCP and single-tick callers are told how long to wait before the next call.
+How it behaves:
 
-For normal cadence waits, the poll dispatcher (`pr-shepherd [PR]`, including `--until-terminal`, and aggregate `--stack` / multi-PR polls) applies the matching band: `max(effective interval, resolved band interval)`. A post-`FIX_CODE` or stack `SHEPHERD` debounce wait uses the remaining debounce window and is not quota-band adjusted. The effective interval is the explicit `--interval` when that flag is set; otherwise it is `poll.intervalSeconds` for one PR and `poll.intervalSeconds * poll.stackIntervalFactor` for a stack or multi-PR poll. Bands stay factored from configured `poll.intervalSeconds` only — not from `--interval` and not from the stack factor — so those multipliers do not compound. With the built-in defaults a stack therefore sleeps 120s until a tighter band is slower than that (the 30% band is also 120s; 20% and 10% are 5 and 10 minutes). The active band is the crossed entry with the lowest `remainingPercent`. A slower explicit interval is preserved in both sleep behavior and warning instructions. The throttle runs even after the one-shot warning has already been claimed for the window. Single-tick `iterate` and MCP `iterate` do not sleep — those callers own recurrence and only see the warning text. `--until-terminal` keeps polling through an exhausted primary limit until the reset plus a short margin, honors an explicit `Retry-After` in full, and exits 75 only after repeated attempts that do not move the reset time. A bounded poll still fails with 75 on the first rate-limit error. See [github-api.md](github-api.md#quota-warnings-and-cadence).
+- Shepherd reads authoritative GraphQL and REST core response headers; it makes no extra rate-limit request.
+- When a band is crossed, the next non-terminal agent-visible result carries the raw quota state and continuation guidance. Bounded CLI guidance uses a timeout twice the recommended interval; MCP and single-tick callers are told how long to wait.
+- The poll dispatcher (`pr-shepherd [PR]`, `--until-terminal`, aggregate `--stack` / multi-PR) sleeps `max(effective interval, resolved band interval)` on every normal wait, even after the one-shot warning. The effective interval is `--interval` when set, else `poll.intervalSeconds` (one PR) or `poll.intervalSeconds * poll.stackIntervalFactor` (stack or multi-PR). The active band is the crossed entry with the lowest `remainingPercent`. A slower explicit interval is kept in both sleep and instructions.
+- A post-`FIX_CODE` or stack `SHEPHERD` debounce wait uses the remaining debounce window and is not band-adjusted.
+- Each band warns once per worktree and quota window. A new window starts when GitHub's used count falls, the remaining count rises, or the reset timestamp advances after the prior deadline passed; an earlier reset adjustment does not re-arm. If the first response is already below several bands, only the lowest warns and the higher ones are recorded as crossed.
+- Single-tick `iterate` and MCP `iterate` never sleep; callers own recurrence.
 
-Each band warns once per worktree and quota window. A new window is detected when GitHub's used count falls, remaining count rises, or GitHub advances the reset timestamp after the prior reset deadline has passed. A reset-time adjustment before the prior deadline does not re-arm warnings. If the first observed response is already below multiple bands, Shepherd emits only the lowest applicable band and records the higher bands as crossed.
-
----
+On rate limits, `--until-terminal` keeps polling through an exhausted primary limit until the reset plus a short margin, honors an explicit `Retry-After` in full, and exits 75 only after repeated attempts that do not move the reset time. A bounded poll exits 75 on the first rate-limit error. See [github-api.md](github-api.md#quota-warnings-and-cadence).
 
 ## `resolve`
 
 ### `resolve.shaPoll`
 
-Controls the push-safety polling used when `requireSha` is passed to an MCP `apply` `review_mutations` operation (or the CLI `apply review` command).
+Push-safety polling used when `requireSha` is passed to an MCP `apply` `review_mutations` operation or the CLI `apply review` command.
 
 #### `resolve.shaPoll.maxAttempts` — default `10`
 
-Maximum polling attempts before giving up and throwing. At the default interval of 2000ms, this means up to ~18 seconds of waiting for GitHub to acknowledge the push.
+Attempts before giving up and throwing — about 18 seconds at the default interval.
 
 #### `resolve.shaPoll.intervalMs` — default `2000`
 
-Milliseconds between each poll attempt.
-
----
+Milliseconds between attempts.
 
 ## `checks`
 
 ### `checks.ciTriggerEvents` — default `["pull_request", "pull_request_target"]`
 
-Only check runs triggered by one of these events count toward PR-head CI readiness. Runs from `push`, `schedule`, `workflow_dispatch`, `merge_group`, etc. are classified as `filtered` on that commit. Merge-queue commits are a separate source: their `merge_group` checks are included automatically while queued and after an ejection.
-
-Common additions:
-
-- Remove `pull_request_target` for repos that don't use it (reduces noise).
+Only check runs triggered by these events count toward PR-head CI readiness. Runs from `push`, `schedule`, `workflow_dispatch`, `merge_group`, etc. are `filtered` on that commit. Merge-queue commits are a separate source: their `merge_group` checks are included automatically while queued and after an ejection. Repositories that never use `pull_request_target` can remove it to reduce noise.
 
 ### `checks.ignoreLogLines` — default `[]`
 
-Regex patterns (source strings) matched against each raw CI log line after ANSI/timestamp cleanup and first-failed-step isolation (run-command group and post-step cleanup already dropped; remaining group markers stripped). A matching line is dropped from `## Failing checks` log excerpts and consequently is not available for check-annotation deduplication either. Empty by default — Shepherd ships no built-in noise patterns, since what counts as noise is specific to each project's CI toolchain (test runner, build system).
+Regex source strings matched against each raw CI log line after ANSI/timestamp cleanup and first-failed-step isolation (run-command group and post-step cleanup dropped, remaining group markers stripped). Matching lines are dropped from `## Failing checks` excerpts and so are unavailable for check-annotation dedup. Shepherd ships no built-in patterns; noise is specific to each toolchain.
 
 ```yaml
 checks:
@@ -327,31 +343,42 @@ checks:
     - "^Duration\\s+[\\d.]+m?s\\b"
 ```
 
-An invalid regex anywhere in the list falls back to the previous/default config for the whole file, with a warning to stderr — the same behavior as every other validated config key.
-
----
+An invalid regex is an invalid value (see [How files load](#how-files-load)).
 
 ## `merge`
 
-`merge.method` is the preferred merge method. `merge.commandArgs` is appended only to ordinary auto/direct `gh pr merge` commands emitted by `--merge`. Shepherd rejects the PR selector, `--repo`/`-R`, auto-mode controls (`--auto`/`--disable-auto`), `--match-head-commit`, privilege bypass via `--admin`, help flags (`--help`/`-h`), and file-reading body options (`--body-file`/`-F`), including attached short-option values. Select at most one of `--merge`/`-m`, `--squash`/`-s`, or `--rebase`/`-r`; boolean assignments such as `--squash=true` and safe short boolean bundles such as `-sd` are recognized. That strategy flag and `merge.method` must name the same method. When neither is set, a one-PR command uses the first repository-allowed method in the order merge, squash, rebase, and a stack command prefers squash, then merge, then rebase. A configured method the repository disables is not suggested for a direct request. When the repository enables no method, Shepherd reports that constraint for a command that needs one. Queue commands omit every configured option because the queue controls the merge method and does not accept branch deletion. REST queue requests do not validate the unused direct method, including for a native-stack prefix.
+`merge.method` is the preferred merge method. `merge.commandArgs` is appended only to ordinary auto/direct `gh pr merge` commands emitted by `--merge`; queue commands omit every configured option because the queue controls the method and rejects branch deletion.
 
-There is no config key to opt out of stack detection: when GitHub's batch query reports the PR is part of a native stack, a ready singular `--merge` poll returns non-terminal `FIX_CODE` directing the agent to the verified `--stack <PR URL> --until-terminal --merge` flow, so `merge.commandArgs` is never consulted for that PR. Native `--stack` selectors do not perform mutations: unready layers return stack-level `SHEPHERD` with one-PR routing, queued stacks return `WAIT`, and terminal READY or merged stacks return `CANCEL`. Closed or unverified topology returns `ESCALATE` for human direction only once no shepherdable layer remains; mixed states return `SHEPHERD` and retain the human blocker in the rows and instructions. A `--stack --merge` result returns `MERGE` for the highest ready prefix, then `CANCEL` only after every layer merges. See [merge-status.md](merge-status.md#merge-requirements) and [escalations.md#native-stack-merge-routing](escalations.md#native-stack-merge-routing).
+`merge.commandArgs` rejects:
 
----
+- the PR selector and `--repo`/`-R`;
+- `--auto`/`--disable-auto` and `--match-head-commit`;
+- `--admin`;
+- `--help`/`-h`;
+- `--body-file`/`-F`, including attached short-option values.
+
+Select at most one of `--merge`/`-m`, `--squash`/`-s`, or `--rebase`/`-r`. Boolean assignments (`--squash=true`) and safe short bundles (`-sd`) are recognized. That flag and `merge.method` must name the same method.
+
+Method selection when neither is set:
+
+| Command | Preference order      |
+| ------- | --------------------- |
+| One PR  | merge, squash, rebase |
+| Stack   | squash, merge, rebase |
+
+Only repository-allowed methods are suggested for a direct request. When the repository enables none, a command that needs one reports that constraint (`merge-method-unavailable`). REST queue requests do not validate the unused direct method, including for a native-stack prefix.
+
+There is no key to opt out of stack detection. When GitHub reports the PR is in a native stack, a ready singular `--merge` poll returns non-terminal `FIX_CODE` pointing at `--stack <PR URL> --until-terminal --merge`, and `merge.commandArgs` is never consulted for that PR. `--stack --merge` returns `MERGE` for the highest ready prefix, then `CANCEL` once every layer merges. Stack routing (`SHEPHERD`, `WAIT`, `MERGE`, `CANCEL`, `ESCALATE`): [actions.md](actions.md), [merge-status.md](merge-status.md#merge-requirements), and [`native-stack-merge-routing`](escalations.md#native-stack-merge-routing).
 
 ## `mergeStatus`
 
 ### `mergeStatus.blockingReviewerLogins` — default `["copilot"]`
 
-A list of reviewer login prefixes (case-insensitive, matched with `startsWith`). When any reviewer matching one of these prefixes has a pending review request or a `PENDING` review state, shepherd treats the PR as `BLOCKED` and does not mark it ready for review.
-
-Add other review bots (e.g. `sonar`, `codeclimate`, `reviewdog`) if they submit GitHub reviews that must complete before the PR is mergeable.
-
----
+Case-insensitive reviewer login prefixes (matched with `startsWith`). While a matching reviewer has a pending review request or a `PENDING` review, Shepherd treats the PR as `BLOCKED` and does not mark it ready. Add other review bots (e.g. `sonar`, `codeclimate`, `reviewdog`) whose reviews must finish first.
 
 ## `classify.standard` — default `{}`
 
-Bundled [classification rules](actions.md#classification-rules) for vendor bot noise that most repositories want hidden. They run after the local `.pr-shepherd/classification/` rules, ship with the package, and update when you upgrade it. Nothing is enabled by default:
+Bundled [classification rules](actions.md#classification-rules) for vendor bot noise. They run after local `.pr-shepherd/classification/` rules, ship with the package, and update when you upgrade. Nothing is enabled by default:
 
 ```yaml
 classify:
@@ -360,7 +387,7 @@ classify:
     codecov-report: false # a named entry overrides `all`
 ```
 
-The value is a map so it deep-merges across the rc cascade. Unknown rule names and non-boolean values print a warning on stderr and are ignored. Each match is reported with the rule name `standard:<rule>`.
+The value is a map so it deep-merges across files. Unknown rule names and non-boolean values warn on stderr and are ignored. Each match reports the rule name `standard:<rule>`.
 
 | Rule                 | Matches                                                                                                                                                                                                          | Action            |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
@@ -372,31 +399,36 @@ The value is a map so it deep-merges across the rc cascade. Unknown rule names a
 | `kilo-no-issues`     | Kilo Code reports whose status reads "No Issues Found" with no other section headings                                                                                                                            | suppress, resolve |
 | `sourcery-notices`   | Sourcery private-repo upsell and weekly rate-limit notices without a review heading                                                                                                                              | suppress, resolve |
 
-Every rule requires GitHub to report the author as a bot and matches both GraphQL (`coderabbitai`) and REST (`coderabbitai[bot]`) logins. Bundled rules match conversation comments only. The same text on a review summary or an inline review comment stays visible and follows the normal review path. `coderabbit-review-summary` and `codex-review-summary` are no longer rule names; a config that still sets them warns and ignores them. "Resolve" means `autoResolve: true`, so with [`actions.autoMinimizeSuppressed`](#actionsautominimizesuppressed--default-true) the comment is also minimized on GitHub. `coderabbit-notices` is suppress-only because CodeRabbit later edits that comment into its walkthrough; the comment stays visible on GitHub and only leaves the agent's queue.
+- Every rule requires GitHub to report the author as a bot and matches both GraphQL (`coderabbitai`) and REST (`coderabbitai[bot]`) logins.
+- Rules match conversation comments only; the same text on a review summary or inline review comment follows the normal review path.
+- `coderabbit-review-summary` and `codex-review-summary` are no longer rule names; setting them warns and is ignored.
+- "Resolve" means `autoResolve: true`, so with [`actions.autoMinimizeSuppressed`](#actionsautominimizesuppressed--default-true) the comment is also minimized on GitHub.
+- `coderabbit-notices` is suppress-only because CodeRabbit later edits that comment into its walkthrough; it stays visible on GitHub and only leaves the agent's queue.
 
 ## `actions`
 
-These flags control whether shepherd automatically performs each class of mutation during an `iterate` tick. Some actions also have `--no-auto-*` CLI flags for per-invocation overrides.
+Whether `iterate` performs each class of mutation itself. Some have `--no-auto-*` CLI flags for per-invocation overrides.
 
 ### `actions.autoMinimizeSuppressed` — default `true`
 
-When `true`, Shepherd attempts supported resolve/minimize mutations for classification-rule matches that set both `suppress: true` and `autoResolve: true`, then removes successful IDs from the agent-facing queues before `iterate` decides whether to emit `fix_code`. REST omits viewer capabilities, so supported otherwise-eligible mutations are attempted and GitHub's response decides the outcome; GraphQL mutations remain fail-closed unless the capability is explicitly true. Each confirmed success is copied onto `threads.autoResolved` or `comments.autoMinimized` (with the rule `reason`, when one was set), printed in `## Classification auto-resolve` / `ruleAutoResolve`, and appended as one Shepherd Journal list item for the token login. Failures stay in `ruleAutoResolveIds`, `comments.minimizeIds`, or `ruleAutoResolveReviewSummaryIds` where retry is supported, and each failure is listed in that same section. A journal read or write failure is reported there too and does not undo a successful mutation. Denied review operations are surfaced once and skipped; REST minimization is unsupported and is surfaced as a one-look skip.
+Applies only to classification-rule matches that set both `suppress: true` and `autoResolve: true`. Ordinary `iterate.minimizeComments` queues and `autoResolve` rules without `suppress` always go through the generated `apply review` command.
 
-When `false`, Shepherd does not call the mutation, write the journal, or print the line. Supported IDs stay on the generated `apply review` command; unsupported REST minimization is surfaced as a one-look skip without an unusable command.
+When `true`, Shepherd attempts the supported resolve/minimize mutations and removes successful IDs from the agent-facing queues before deciding whether to emit `fix_code`:
 
-This applies only to explicit classification-rule auto-resolve matches. Ordinary `iterate.minimizeComments` policy queues and `autoResolve: true` rules without `suppress: true` still flow through the generated `apply review` command.
+- GraphQL mutations are fail-closed unless the capability is explicitly true. REST omits capabilities, so otherwise-eligible mutations are attempted and GitHub decides.
+- Each confirmed success is copied to `threads.autoResolved` or `comments.autoMinimized` (with the rule `reason`, if set), printed in `## Classification auto-resolve` / `ruleAutoResolve`, and appended as one Shepherd Journal item for the token login. See [actions.md](actions.md).
+- Failures stay in `ruleAutoResolveIds`, `comments.minimizeIds`, or `ruleAutoResolveReviewSummaryIds` where retry is supported, and are listed in the same section. A journal read or write failure is reported there and does not undo a successful mutation.
+- Denied review operations are surfaced once and skipped; REST minimization is unsupported and surfaced as a one-look skip.
+
+When `false`, Shepherd does not mutate, journal, or print the line. Supported IDs stay on the generated `apply review` command; unsupported REST minimization is a one-look skip without an unusable command.
 
 ### `actions.autoMarkReady` — default `true`
 
-When `true`, shepherd converts a draft PR to ready-for-review once all checks pass, no Shepherd-visible work remains, no configured blocking review is in progress, and the ready-delay has not yet elapsed. After the ready-delay elapses, the loop emits `cancel` instead.
-
-Disabling stops only the poll loop's own transition. A `--stack` selection then lists a clean, unblocked draft layer's `gh pr ready` step for the agent after that layer's bounded probe; see [actions.md](actions.md).
+When `true`, Shepherd converts a draft PR to ready for review once checks pass, no Shepherd-visible work remains, no configured blocking review is in progress, and the ready-delay has not elapsed (after it elapses the loop emits `cancel`). Disabling stops only the poll loop's own transition: a `--stack` selection then lists a clean, unblocked draft layer's `gh pr ready` step for the agent after that layer's bounded probe; see [actions.md](actions.md).
 
 ### `actions.neverCancelRuns` — default `[]`
 
-Legacy cancellation-named compatibility key. Shepherd no longer cancels or recommends cancelling workflow runs because GitHub exposes no exact viewer capability for that action. The patterns still keep matching Actions checks visible when `ignoreChecks` would otherwise hide them.
-
-Use this for workflows where sibling jobs should be allowed to finish even after one job fails:
+Legacy, cancellation-named key. Shepherd never cancels or recommends cancelling workflow runs, because GitHub exposes no exact viewer capability for it. Matching Actions runs stay visible — and can block readiness — even when a raw job name matches `ignoreChecks`. Use it for workflows whose sibling jobs should keep running after one fails:
 
 ```yaml
 actions:
@@ -404,28 +436,36 @@ actions:
     - "Final Code Review"
 ```
 
-For backward compatibility, a matching run remains visible and can block readiness even if a raw job name also matches `ignoreChecks`.
-
 ### `actions.workWhileQueued` — default `false`
 
-When `false` (default), `iterate --merge` defers non-CI actionable work — review threads, PR comments, `CHANGES_REQUESTED` reviews, and review summaries — while the PR sits in the merge queue, since a Shepherd-initiated push right now would eject it from the queue. The tick emits `WAIT` with raw counts of what is held back (see [`docs/actions.md`](actions.md#wait)). Failing checks, unseen check-run annotations, and merge conflicts are never deferred — they always route to `fix_code` immediately regardless of this setting, since GitHub is already acting on the queue for those.
+When `false`, `iterate --merge` defers non-CI work — review threads, PR comments, `CHANGES_REQUESTED` reviews, and review summaries — while the PR is in the merge queue, because a push would eject it. The tick is `WAIT` with raw counts of held work (see [`wait`](actions.md#wait)). Failing checks, unseen check-run annotations, and merge conflicts are never deferred and always route to `fix_code`.
 
-Set to `true` to restore the pre-existing behavior: actionable work is handled immediately even while the PR is queued.
+Set `true` to handle that work immediately even while queued:
 
 ```yaml
 actions:
   workWhileQueued: true
 ```
 
----
-
 ## Environment variables
 
-| Variable                                                     | Effect                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `PR_SHEPHERD_STATE_DIR`                                      | Override the loop-state base directory. Under `CLAUDE_CODE_REMOTE=true` (and inside event-mode ticks) the default is `<git-common-dir>/pr-shepherd-state`, see [cloud.md](cloud.md#durable-state). Otherwise default: `pr-shepherd-state` in the macOS per-user temp dir (`getconf DARWIN_USER_TEMP_DIR`) rather than `$TMPDIR`, so sandboxed and unsandboxed runs share state. On Linux, `/tmp/pr-shepherd-state-<uid>` (created mode `0700`; used only when it is a real directory owned by you, not group- or world-writable, and readable, writable, and searchable from the current process, else `$TMPDIR/pr-shepherd-state`). `os.tmpdir()` on other platforms |
-| `PR_SHEPHERD_LOG_DISABLED`                                   | Set to `1` to disable the per-worktree debug log                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `PR_SHEPHERD_LOG_MAX_BODY`                                   | Max characters of each logged HTTP body (default `262144`). Larger bodies are truncated.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| `GH_TOKEN` / `GITHUB_TOKEN` / `GITHUB_PERSONAL_ACCESS_TOKEN` | GitHub auth token. Resolution order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` fallback (requires `gh` CLI) → `GITHUB_PERSONAL_ACCESS_TOKEN`. See [authentication.md](authentication.md) for required PAT access.                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Variable                                                     | Effect                                                                                                                                                                             |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `PR_SHEPHERD_STATE_DIR`                                      | Override the loop-state base directory (defaults below).                                                                                                                           |
+| `PR_SHEPHERD_LOG_DISABLED`                                   | `1` disables the per-worktree debug log.                                                                                                                                           |
+| `CI`                                                         | Any value other than empty, `0`, or `false` also disables the debug log.                                                                                                           |
+| `PR_SHEPHERD_LOG_MAX_BODY`                                   | Max characters of each logged HTTP body (default `262144`); larger bodies are truncated.                                                                                           |
+| `GH_TOKEN` / `GITHUB_TOKEN` / `GITHUB_PERSONAL_ACCESS_TOKEN` | GitHub token. Order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` (needs the `gh` CLI) → `GITHUB_PERSONAL_ACCESS_TOKEN`. Required access: [authentication.md](authentication.md). |
+| `CLAUDE_CODE_REMOTE`                                         | `true` makes `github.transport: auto` start with REST, `poll.mode: auto` select `event`, and state default to durable storage.                                                     |
+| `HTTPS_PROXY` / `HTTP_PROXY` (or lowercase)                  | Route GitHub requests through a proxy, for both transports. Lowercase takes precedence.                                                                                            |
 
-Per-repository files live at `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/`. Owner and repository are separate directories, so names that contain hyphens cannot collide. Directories written by older builds as `<owner>-<repo>` are left in place and are no longer read. The next run starts clean: seen comments can surface once, and ready-delay starts over. `pr-shepherd admin clean all` removes the whole base, including those leftover directories.
+Default state directory when `PR_SHEPHERD_STATE_DIR` is unset:
+
+| Context                                          | Default                                                                                                                                                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `CLAUDE_CODE_REMOTE=true`, or an event-mode tick | `<git-common-dir>/pr-shepherd-state` ([durable state](cloud.md#durable-state))                                                                                                                   |
+| macOS                                            | `pr-shepherd-state` in the per-user temp dir (`getconf DARWIN_USER_TEMP_DIR`), not `$TMPDIR`, so sandboxed and unsandboxed runs share state                                                      |
+| Linux                                            | `/tmp/pr-shepherd-state-<uid>` (created mode `0700`) when it is a real directory you own, not group- or world-writable, and readable, writable, and searchable; else `$TMPDIR/pr-shepherd-state` |
+| Other platforms                                  | `os.tmpdir()`                                                                                                                                                                                    |
+
+Per-repository files live at `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/`; separate owner and repository directories keep hyphenated names from colliding. Directories written by older builds as `<owner>-<repo>` are no longer read, so the first run after upgrading starts clean (seen comments can surface once, ready-delay restarts). `pr-shepherd admin clean all` removes the whole base, including those leftovers.

@@ -2,9 +2,14 @@
 
 [← README](../README.md)
 
-The `pr-shepherd` npm package exports four entry points. `pr-shepherd/journal` is pure and does not read GitHub, resolve tokens, or load configuration.
+The TypeScript entry points of the `pr-shepherd` npm package and what each method accepts and returns. For developers embedding Shepherd in their own tools; MCP host setup is in [mcp.md](mcp.md).
 
-Install the MCP server: [mcp.md](mcp.md). Classification rules: [configuration.md](configuration.md).
+| Entry point            | Exports                                                                                          | I/O                                              |
+| ---------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
+| `pr-shepherd`          | `createPrShepherd`, `PrShepherdValidationError`, `PartialApplyError`                             | GitHub, local git, configuration                 |
+| `pr-shepherd/journal`  | `extractShepherdJournal`, `reconcileShepherdJournal`, `appendJournalItem`, `validateJournalItem` | None — pure; no GitHub, tokens, or configuration |
+| `pr-shepherd/mcp`      | `createPrShepherdMcpServer`, `runPrShepherdMcpStdio`                                             | Same as `pr-shepherd`                            |
+| `pr-shepherd/classify` | `ClassifyRule`, `ClassifyItem` types                                                             | None                                             |
 
 ## `pr-shepherd`
 
@@ -45,7 +50,7 @@ const patches = await shepherd.buildSuggestionPatches({
 });
 ```
 
-`createPrShepherd({ cwd, transport })` returns the canonical methods below plus a deprecated singular adapter. `transport` accepts `auto`, `graphql`, or `rest` and selects the same GitHub API transport as the CLI `--transport` option and `github.transport` configuration key. The MCP server accepts the equivalent option. In `auto`, Claude Code cloud sessions start with REST; other environments start with GraphQL and use the documented fallback triggers. REST fields or operations that are unavailable remain explicit unknowns or surfaced unsupported outcomes.
+`createPrShepherd({ cwd, transport })` returns these methods:
 
 | Method                                               | Same as                                |
 | ---------------------------------------------------- | -------------------------------------- |
@@ -55,47 +60,95 @@ const patches = await shepherd.buildSuggestionPatches({
 | `buildSuggestionPatches({ pr, suggestions })`        | MCP `build_suggestion_patches`         |
 | `buildSuggestionPatch({ pr, threadId, message, … })` | Deprecated one-item compatibility path |
 
-For a singular programmatic API call, `pr` can be a positive number, repository-qualified `owner/repo#N`, or GitHub pull-request URL. `getJournal` requires `pr`; the other methods retain current-branch inference when omitted. A repository-qualified reference is authoritative for GitHub reads and mutations and may name a repository other than the configured `cwd`. `cwd` remains the source of local git state, configuration, classification-rule lookups, and per-worktree debug logging.
+`transport` (`auto`, `graphql`, `rest`) is the same choice as the CLI `--transport` option and the [`github.transport`](configuration.md#github-api-transport) key; the MCP server accepts the equivalent option. In `auto`, Claude Code cloud sessions start with REST and other environments start with GraphQL and use the documented fallback triggers. REST fields or operations that are unavailable stay explicit unknowns or surface as unsupported outcomes.
 
-`iterate` also accepts exactly one aggregate selector: non-empty `prs` or `stack`. Every selected
-reference must resolve to one repository. Aggregate calls perform one compact, read-only summary
-tick and return `PollSummaryResult`; they do not mark review items seen, maintain ready-delay state,
-or perform GitHub mutations. Native-stack aggregate actions are stack-level `SHEPHERD` for autonomous
-unready layers, `WAIT` for queued stacks or layers that can only wait (until an unchanged idle wait reaches `stallTimeoutSeconds` and returns `ESCALATE` with `stall-timeout`), and `CANCEL` for terminal READY or merged state. Every layer that still has work
-gets a one-PR Shepherd instruction on that tick. Closed or unverified topology produces `ESCALATE` for human direction only once no
-one-PR Shepherd session remains; a mixed state returns `SHEPHERD` and surfaces the human blocker. With `--stack
---merge`, the highest ready prefix whose bottom open layer targets the stack base produces `MERGE`
-with `gh stack merge <PR number>` for that prefix; after running it, the caller rechecks
-until all layers merge and the stack returns `CANCEL`.
-Aggregate selectors never perform mutations or emit rebase/push commands. The caller owns recurrence
-and follows the returned instructions.
+### PR references and `cwd`
 
-`apply` runs `operations` in list order after validating every operation. Types: `merge`, `review_mutations`, `mark_files_viewed`, `append_journal`, and `acknowledge_queue_removal`. `review_mutations.requireSha` is `HEAD` (this checkout's commit, read with `git rev-parse HEAD`) or a full 40-character lowercase SHA; the mutations wait until GitHub reports that PR head. `merge` requires `requireSha` (a full 40-character lowercase SHA) and `mergeAction` (`direct_merge`, `merge_queue`, or `default`); `mergeMethod` (`merge`, `squash`, or `rebase`) is valid only for `direct_merge`. It requires REST transport, either from the client/API `transport` option or `input.transport`. A merge result carries `{ pr, repo, status, details, uncertain? }`; `status` is `pending`, `enqueued`, `merged`, or `failed`. Pending and enqueued results are not merged. The CLI prints the same result as text or JSON and rerunning the same request resumes its persisted UUID without resubmission. `details` may include `message`, `uuid`, `expected_head_sha`, `merge_action`, `merge_method`, `bypass_rules`, and merged `sha`; `uncertain: true` marks an outcome that needs reconciliation before another request.
+- `pr` is a positive number, `owner/repo#N`, or a GitHub pull-request URL.
+- `getJournal` requires `pr`; the other methods infer the current branch's PR when it is omitted.
+- A repository-qualified reference is authoritative for GitHub reads and mutations and may name a repository other than `cwd`.
+- `cwd` supplies local git state, configuration, classification-rule lookups, and per-worktree debug logging.
 
-A definite failed merge request permits a replacement with changed options. A definite `enqueued` result permits a new request only after the PR head changes and a fresh read verifies the new `requireSha`; pending or uncertain requests cannot be replaced. Repeating the same-head request returns its recorded result rather than enqueueing again. REST cannot verify current merge-queue removal history, so automatic same-head queue recovery is explicitly unsupported and never emits that repeated request as a recovery command. Interrupted local replacements resume their persisted intent safely, while a submission whose outcome is unknown is never repeated.
+### `iterate`
 
-An HTTP `400` or `409` merge rejection without the asynchronous result envelope remains a definite failure. A malformed successful response remains uncertain, because GitHub may have accepted the merge request.
+A singular call returns the raw `IterateResult`. `pollMode` (`auto`, `poll`, `event`) selects the event-mode tick described in [cloud.md](cloud.md); the result then carries `pollMode: "event"` and, when another tick is meaningful, `nextCheck { at, inSeconds, reason }`.
 
-Native-stack merge operations also accept `expectedStack: { number, baseRefName, prefix }`. `number` is the positive stack number, `baseRefName` is its trunk, and `prefix` is the observed ordered lower prefix through the requested PR. Each entry is `{ pr, headRefName, headRefOid, baseRefName }`, with a unique positive PR number and full lowercase head SHA. The final entry must match the requested PR and `requireSha`. Generated REST stack commands carry the same object as `--expected-stack '<JSON>'`. Missing membership or changed stack identity, trunk, prefix, or parent refs rejects the request before submission. Current READY receipts and topology are also revalidated. The guard is persisted with the merge intent; changing or dropping it cannot bypass pending or uncertain request protection.
+Alternatively, pass exactly one aggregate selector — non-empty `prs` or `stack`. Every reference must resolve to one repository. An aggregate call runs one compact, read-only summary tick and returns `PollSummaryResult`. It does not mark review items seen, keep ready-delay state, perform GitHub mutations, or emit rebase/push commands. The caller owns recurrence and follows the returned instructions.
 
-`pollMode` (`auto`, `poll`, `event`) on `iterate` selects the event-mode tick described in [cloud.md](cloud.md); the result then carries `pollMode: "event"` and, when another tick is meaningful, `nextCheck { at, inSeconds, reason }`.
+| Native-stack action | When                                                                                                                                                                                                           |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SHEPHERD`          | Some layer is unready and autonomous. Every layer with work gets a one-PR Shepherd instruction; a mixed state also surfaces any human blocker.                                                                 |
+| `WAIT`              | The stack is queued, or its layers can only wait. An unchanged idle wait that reaches `stallTimeoutSeconds` returns `ESCALATE` with `stall-timeout`.                                                           |
+| `ESCALATE`          | Closed or unverified topology needs human direction, and no one-PR Shepherd session remains.                                                                                                                   |
+| `MERGE`             | With `--stack --merge`: the highest ready prefix whose bottom open layer targets the stack base. Run `gh stack merge <PR number>` for that prefix, then recheck until every layer merges and `CANCEL` returns. |
+| `CANCEL`            | Terminal READY or merged state.                                                                                                                                                                                |
 
-`mark_files_viewed` performs the requested mutations where the selected transport supports them and surfaces GitHub's per-file results; REST currently reports the operation as explicitly unsupported. Direct review operations forward explicitly supplied IDs without iterate's author, capability, or current-state policy; direct journal operations likewise honor explicit caller intent. GitHub is authoritative for authorization and mutation validity. Replies and dismissals require `message`.
+### `apply`
 
-A proxy session refusal stops the current review batch and subsequent `apply` operations. The review result preserves confirmed successes, includes the original proxy message in `sessionRefusal`, and lists pending IDs in the existing `unrepliedThreads`, `unresolvedThreads`, `unminimizedComments`, and `undismissedReviews` fields when nonempty. Its `instructions` array tells the caller to repair session repository access and retry only those pending IDs; any later operations did not run. No GitHub-denied marker is persisted for a session refusal. CLI text/JSON and MCP Markdown/structured output carry the same partial result; the CLI exits `77`.
+`apply` validates every operation, then runs them in list order. A validation failure throws `PrShepherdValidationError` before any GitHub mutation. A failure after earlier operations succeeded throws `PartialApplyError` with `failedIndex` and `completed`.
 
-Retries of an uncertain GraphQL reply reconcile a fresh complete transcript against captured pre-write evidence. An exact confirmed reply is adopted without resubmission and remains available across subsequent batch failures. Unconfirmed or legacy intents expose targeted marker-file recovery instructions; see [uncertain reply recovery](comments.md#recovering-an-uncertain-reply).
+| Operation                   | Fields                                                                                                  | Notes                                                                                                                                                                                                      |
+| --------------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `merge`                     | `requireSha` (full lowercase SHA), `mergeAction`, optional `mergeMethod`, optional `expectedStack`      | `mergeAction` is `direct_merge`, `merge_queue`, or `default`; `mergeMethod` (`merge`, `squash`, `rebase`) only for `direct_merge`. Requires REST, from the client `transport` option or `input.transport`. |
+| `review_mutations`          | `resolveThreadIds`, `replyThreadIds`, `minimizeCommentIds`, `dismissReviewIds`, `message`, `requireSha` | `message` is required for replies and dismissals. `requireSha` is `HEAD` (read with `git rev-parse HEAD`) or a full 40-character lowercase SHA; mutations wait until GitHub reports that PR head.          |
+| `mark_files_viewed`         | `files`, `tests`, `matchPatterns`                                                                       | Surfaces GitHub's per-file results. REST reports it as explicitly unsupported.                                                                                                                             |
+| `append_journal`            | `item`, optional `dryRun`                                                                               | Honors explicit caller intent.                                                                                                                                                                             |
+| `acknowledge_queue_removal` | `requireSha`, `queueCommitOid` (full SHAs), `removedAtUnix` (positive safe integer)                     | Records a local acknowledgment of the current native-stack CI removal; never enqueues or merges. REST returns a transport-unsupported error before GitHub I/O.                                             |
 
-`getJournal({ pr })` fetches one PR body through the selected transport and returns the same typed result as
-`extractShepherdJournal(body)` without exposing the body or PR node ID. The API accepts a qualified
-reference or a numeric PR in the configured checkout repository. An absent journal returns
-`{ ok: true, journal: null }`; malformed journal content returns `{ ok: false, error }`.
+Direct review operations forward every supplied ID without iterate's author, capability, or current-state filtering; GitHub is authoritative for authorization and mutation validity.
 
-Validation failures throw `PrShepherdValidationError` before any GitHub mutation. If a later apply operation fails after earlier ones succeeded, Shepherd throws `PartialApplyError` with `failedIndex` and `completed`.
+#### Merge results
 
-`buildSuggestionPatches` returns an ordered patch list plus per-patch commit metadata and shared instructions. It accepts one or more `{ threadId, message, description? }` items, builds against the fetched PR-head blobs, permits a clean local descendant of that head, and returns nothing unless the ordered stream passes `git apply --check`. It never writes a patch file or mutates git. `buildSuggestionPatch` remains temporarily as a deprecated one-item adapter.
+A merge result is `{ pr, repo, status, details, uncertain? }`:
 
-`acknowledge_queue_removal` requires `requireSha` (the full current head SHA), `queueCommitOid` (the full removed queue commit SHA), and `removedAtUnix` (a positive safe-integer Unix timestamp). It validates the current native-stack CI removal before recording a local acknowledgment; it does not enqueue or merge. REST cannot verify this removal history and returns an explicit transport-unsupported error before GitHub I/O. The result contains `pr`, `repo`, and `acknowledgment` with `headSha`, `queueCommitOid`, and `removedAtUnix`. Fresh source checks, a current READY receipt, and aggregate lower-layer checks remain required for stack recovery.
+| Field       | Values                                                                                                            |
+| ----------- | ----------------------------------------------------------------------------------------------------------------- |
+| `status`    | `pending`, `enqueued`, `merged`, or `failed`. Pending and enqueued are not merged.                                |
+| `details`   | May include `message`, `uuid`, `expected_head_sha`, `merge_action`, `merge_method`, `bypass_rules`, merged `sha`. |
+| `uncertain` | `uncertain: true` marks an outcome that needs reconciliation before another request.                              |
+
+The CLI prints the same result as text or JSON. Rerunning the same request resumes its persisted UUID without resubmitting, and returns the recorded result rather than enqueueing again.
+
+| Prior outcome                                      | Treatment                                                                                  |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Definite `failed`                                  | Replacement with changed options allowed.                                                  |
+| Definite `enqueued`                                | Replacement only after the PR head changes and a fresh read verifies the new `requireSha`. |
+| `pending` or `uncertain`                           | Cannot be replaced.                                                                        |
+| HTTP `400`/`409` without the async result envelope | Definite failure.                                                                          |
+| Malformed successful response                      | Uncertain — GitHub may have accepted it.                                                   |
+
+REST cannot verify merge-queue removal history, so automatic same-head queue recovery is unsupported and never emitted as a recovery command. Interrupted local replacements resume their persisted intent; a submission with an unknown outcome is never repeated.
+
+Native-stack merges also accept `expectedStack: { number, baseRefName, prefix }`:
+
+- `number` is the positive stack number; `baseRefName` is its trunk.
+- `prefix` is the observed ordered lower prefix through the requested PR. Each entry is `{ pr, headRefName, headRefOid, baseRefName }` with a unique positive PR number and full lowercase head SHA. The final entry must match the requested PR and `requireSha`.
+- Generated REST stack commands pass the same object as `--expected-stack '<JSON>'`.
+- Missing membership or a changed stack identity, trunk, prefix, or parent ref rejects the request before submission; current READY receipts and topology are also revalidated.
+- The guard is persisted with the merge intent, so changing or dropping it cannot bypass pending or uncertain request protection.
+
+#### Queue-removal acknowledgment
+
+The `acknowledge_queue_removal` result contains `pr`, `repo`, and `acknowledgment` with `headSha`, `queueCommitOid`, and `removedAtUnix`. Stack recovery still requires fresh source checks, a current READY receipt, and aggregate lower-layer checks.
+
+#### Session refusals and uncertain replies
+
+A proxy session refusal stops the current review batch and every later `apply` operation. The review result keeps confirmed successes, carries the proxy message in `sessionRefusal`, and lists pending IDs in `unrepliedThreads`, `unresolvedThreads`, `unminimizedComments`, and `undismissedReviews` when nonempty. Its `instructions` tell the caller to repair session repository access and retry only those IDs. No GitHub-denied marker is persisted. CLI text/JSON and MCP Markdown/structured output carry the same partial result; the CLI exits `77`.
+
+Retrying an uncertain GraphQL reply reconciles a fresh complete transcript against captured pre-write evidence. An exact confirmed reply is adopted without resubmission and survives later batch failures. Unconfirmed or legacy intents get targeted marker-file recovery instructions; see [uncertain reply recovery](comments.md#recovering-an-uncertain-reply).
+
+### `getJournal`
+
+Fetches one PR body through the selected transport and returns the same result as `extractShepherdJournal(body)`, without exposing the body or PR node ID. Accepts a qualified reference or a numeric PR in the checkout repository.
+
+| Journal   | Result                        |
+| --------- | ----------------------------- |
+| Absent    | `{ ok: true, journal: null }` |
+| Malformed | `{ ok: false, error }`        |
+
+### `buildSuggestionPatches`
+
+Accepts one or more `{ threadId, message, description? }` items and returns an ordered patch list with per-patch commit metadata and shared instructions. It builds against the fetched PR-head blobs, permits a clean local descendant of that head, and returns nothing unless the ordered stream passes `git apply --check`. It never writes a patch file or mutates git. `buildSuggestionPatch` is a deprecated one-item adapter.
 
 ## `pr-shepherd/journal`
 
@@ -120,16 +173,14 @@ const updatedBody = validation.ok
   : result.body;
 ```
 
-`extractShepherdJournal(body)` returns the one visible structural journal as
-`{ ok: true, journal: { format, entries } }`, or `{ ok: true, journal: null }` when none exists.
-Each entry retains its leading hyphen-and-space marker and continuation indentation, with line endings
-normalized to LF. Empty journals return `entries: []`; malformed, duplicate, mixed, nested, or
-unrecognized journal content returns `{ ok: false, error }`. Journal-shaped examples inside fenced
-code, comments, raw HTML, quotes, and list containers are ignored.
+| Function                                           | Returns                                                                                                                                                                                                                        |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `extractShepherdJournal(body)`                     | `{ ok: true, journal: { format, entries } }` for the one visible structural journal; `{ ok: true, journal: null }` when none; `{ ok: false, error }` for malformed, duplicate, mixed, nested, or unrecognized journal content. |
+| `reconcileShepherdJournal(suppliedBody, liveBody)` | `{ ok: true, body } \| { ok: false, error }`. Appends a non-empty live journal verbatim when the supplied body omits it; fails closed on malformed, duplicate, ambiguous, or canonical-to-legacy-downgrade containers.         |
+| `appendJournalItem(body, item)`                    | Creates or migrates the canonical details container and idempotently appends one item.                                                                                                                                         |
+| `validateJournalItem(text)`                        | Discriminated validation result for a `- <text>` item.                                                                                                                                                                         |
 
-`reconcileShepherdJournal(suppliedBody, liveBody)` ensures a supplied body preserves every live Shepherd Journal item. If the supplied body omits a non-empty live journal, the function appends that container verbatim. It fails closed for malformed, duplicate, ambiguous, or canonical-to-legacy-downgrade containers. Its discriminated result is `{ ok: true, body } | { ok: false, error }`.
-
-`appendJournalItem` creates or migrates the canonical details container and idempotently appends one item. `validateJournalItem` returns a discriminated validation result for a `- <text>` journal item. Both functions are pure.
+Extracted entries keep their leading hyphen-and-space marker and continuation indentation, with line endings normalized to LF; an empty journal returns `entries: []`. Journal-shaped examples inside fenced code, comments, raw HTML, quotes, and list containers are ignored.
 
 ## `pr-shepherd/mcp`
 
@@ -140,9 +191,12 @@ const server = createPrShepherdMcpServer({ cwd: "/path/to/repo" });
 await runPrShepherdMcpStdio({ cwd: "/path/to/repo" });
 ```
 
-`createPrShepherdMcpServer` accepts an optional `shepherd` for tests. The public factory exposes `iterate`, `apply`, `build_suggestion_patches`, `extract_journal`, and `get_journal` plus the deprecated singular adapter. MCP tools that target a PR require a repository-qualified reference; `iterate` accepts exactly one of `pr`, `prs`, or `stack`, while the other PR-targeted tools require `pr`. `extract_journal` instead requires only a Markdown `body` string and performs no GitHub, file, stdin, or Shepherd-log I/O. Bare and omitted PR references are rejected by PR-targeted tools. The explicit repository is the GitHub target and may differ from the factory's `cwd`, which still supplies the local git/config/rules context. Host install and tool schemas: [mcp.md](mcp.md).
+`createPrShepherdMcpServer` accepts an optional `shepherd` for tests and exposes `iterate`, `apply`, `build_suggestion_patches`, `extract_journal`, and `get_journal`, plus the deprecated singular adapter. Host install and tool schemas: [mcp.md](mcp.md).
 
-`createPrShepherd().iterate()` returns the raw `IterateResult` for a singular selector and a raw `PollSummaryResult` for aggregate `prs` or `stack` selectors. For singular MCP `iterate`, `structuredContent` is instead the lean JSON projection described in [mcp.md](mcp.md), matching CLI `--format=json`; aggregate MCP `structuredContent` remains the raw `PollSummaryResult`.
+- PR-targeted tools require a repository-qualified reference and reject bare or omitted ones. `iterate` takes exactly one of `pr`, `prs`, or `stack`; the others require `pr`.
+- That repository is the GitHub target and may differ from the factory's `cwd`, which still supplies local git, config, and rules context.
+- `extract_journal` takes only a Markdown `body` string and performs no GitHub, file, stdin, or Shepherd-log I/O.
+- Singular MCP `iterate` returns the lean JSON projection (matching CLI `--format=json`) as `structuredContent`; aggregate `structuredContent` is the raw `PollSummaryResult`.
 
 ## `pr-shepherd/classify`
 
@@ -157,4 +211,4 @@ const rule: ClassifyRule = (item) => {
 export default rule;
 ```
 
-Drop rule files under `.pr-shepherd/classification/`. `ClassifyItem` includes `kind`, `id`, `author`, `authorType`, optional `authorAssociation`, and `body`. Loading rules and `suppress` / `autoResolve` behavior: [configuration.md](configuration.md).
+Drop rule files under `.pr-shepherd/classification/`. `ClassifyItem` has `kind`, `id`, `author`, `authorType`, optional `authorAssociation`, and `body`. Rule loading and `suppress` / `autoResolve` behavior: [classification rules](actions.md#classification-rules).
