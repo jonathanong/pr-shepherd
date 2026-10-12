@@ -16,8 +16,10 @@ describe("loadConfig — classify.standard", () => {
     writeRc("classify:\n  standard:\n    all: true\n    codecov-report: false\n");
     const loadConfig = await freshLoadConfig();
     const rules = loadConfig().standardRules;
-    expect(rules).toContain("codex-review-summary");
+    expect(rules).toContain("codex-notices");
     expect(rules).not.toContain("codecov-report");
+    expect(rules).not.toContain("codex-review-summary");
+    expect(rules).not.toContain("coderabbit-review-summary");
   });
 
   it("merges the rule map across the rc cascade and keeps other classify keys", async () => {

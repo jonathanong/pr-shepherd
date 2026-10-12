@@ -934,7 +934,7 @@ Rules from multiple files combine permissively: `suppress` and `autoResolve` are
 
 Files starting with `_` or `.` are ignored. The loader walks up from `cwd` looking for `.pr-shepherd/classification/`, stopping at the home directory. Unlike `.pr-shepherdrc.yml`, only the first classification directory found is used. TypeScript rule files (`.ts` / `.mts`) are loaded by the runtime's native TypeScript support, so keep them to erasable syntax such as type annotations and `import type`. Runtime TypeScript features that need transpilation, such as enums, namespaces, parameter properties, and decorators, are not supported. Use `.mts` for portable ESM rules across Node, Bun, and Deno.
 
-Bundled rules for common vendor bot noise can be enabled with [`classify.standard`](configuration.md#classifystandard--default-) instead; they run after the local rules. Example rules for common bot-noise patterns are in [`examples/classification/`](../examples/classification/).
+Bundled rules for common vendor bot noise can be enabled with [`classify.standard`](configuration.md#classifystandard--default-) instead; they run after the local rules and match conversation comments only. Review summaries and inline review comments stay on the normal review path. Example rules for common bot-noise patterns are in [`examples/classification/`](../examples/classification/).
 
 ## Classification auto-resolve
 

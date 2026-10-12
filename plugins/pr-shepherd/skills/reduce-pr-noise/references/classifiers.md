@@ -2,7 +2,7 @@
 
 Use a classification rule when the unwanted item has a recognizable author and message pattern. Inspect a representative item first so the rule does not hide other feedback from the same bot. Prefer an existing settings control for polling- or output-wide behavior.
 
-Check the bundled rules first. Under `classify.standard` in `.pr-shepherdrc.yml`, `all: true` enables every rule, and a named boolean such as `codecov-report: false` overrides `all`. They cover vendor bot notices: `coderabbit-notices`, `coderabbit-review-summary`, `codecov-report`, `codex-notices`, `codex-review-summary`, `dependabot-notices`, `gemini-notices`, `kilo-no-issues`, and `sourcery-notices`. Write a custom rule only when no bundled rule fits.
+Check the bundled rules first. Under `classify.standard` in `.pr-shepherdrc.yml`, `all: true` enables every rule, and a named boolean such as `codecov-report: false` overrides `all`. They cover vendor bot notices on conversation comments only: `coderabbit-notices`, `codecov-report`, `codex-notices`, `dependabot-notices`, `gemini-notices`, `kilo-no-issues`, and `sourcery-notices`. They do not match review summaries or inline review comments. Write a custom rule only when no bundled rule fits.
 
 Place an `.mts` file in `.pr-shepherd/classification/` in the project. Shepherd uses the first classification directory on the working directory's ancestor chain; it stops at the home directory if reached, otherwise at the filesystem root. A home-level rule directory is not discovered when the project is outside the home tree. Rule directories do not merge. Files ending in `.ts`, `.mts`, `.mjs`, or `.js` load, except names beginning with `_` or `.`. An `.mts` rule can use erasable TypeScript syntax and `import type`, without transpilation-only features such as enums.
 
@@ -12,7 +12,7 @@ Each file default-exports a `ClassifyRule` from `pr-shepherd/classify`. A rule r
 import type { ClassifyRule } from "pr-shepherd/classify";
 
 const rule: ClassifyRule = (item) => {
-  if (item.kind !== "pr-comment" && item.kind !== "review-summary") return null;
+  if (item.kind !== "pr-comment") return null;
   if (item.author.toLowerCase() !== "gemini-code-assist") return null;
   if (!/^You have reached your daily quota limit\b/i.test(item.body)) return null;
   return { suppress: true };
