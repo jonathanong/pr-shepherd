@@ -8,7 +8,7 @@ Method:
 
 - Tokenizer: `o200k_base` (gpt-tokenizer). Claude and Codex counts differ.
 - Counts are estimates of the checked-in text, not a live meter.
-- The corpus is the 135 `test-cases/snapshots/*/output.text.md` files. Median is the mean of the two central values, rounded.
+- The corpus is the 135 `test-cases/snapshots/*/output.text.md` files. Median is the middle value (the mean of the two central values when the count is even), rounded.
 - Full output includes review bodies and log excerpts, which vary by PR. `## Instructions` is the stable per-tick cost.
 
 Refresh this file when `SKILL.md`, a skill reference, or iterate `## Instructions` text changes.
@@ -53,7 +53,7 @@ The stack merge example prints its `gh stack` extension check inline instead of 
 
 ## Before on-demand playbooks
 
-Measured against the parent of `ad9bf2cd`, when every playbook lived in `SKILL.md` and iterate repeated that prose. That corpus had 126 snapshots against 135 now, so compare medians and means, not sums.
+Measured against the parent of `ad9bf2cd`, when every playbook lived in `SKILL.md` and iterate repeated that prose. That corpus had 126 snapshots against 135 now, so compare medians and means, not sums. The Before figures are carried over as originally recorded, and that record does not give the mean's denominator: 18,481 ÷ 159 implies about 116 snapshots with `## Instructions`, not all 126.
 
 | Measure                   | Before | Current |
 | ------------------------- | -----: | ------: |
