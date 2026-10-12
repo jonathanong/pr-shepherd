@@ -1,6 +1,6 @@
 # What one tick gathers
 
-[← README](../README.md)
+[← docs index](README.md) | [README](../README.md)
 
 This is the context counterpart to [actions.md](actions.md). One `iterate` tick (or one poll that ends on an iterate result) surfaces the fields below so the agent does not need a second GitHub fan-out to reconstruct PR state.
 
@@ -57,7 +57,13 @@ Do not infer “must wait for an approval” from `reviewDecision`. `REVIEW_REQU
 | First-look / edited / outdated / resolved / minimized items (seen-marker gate)                             | [comments.md](comments.md#first-look-items-comment-visibility-invariant) |
 | `authorType` (`User` / `Bot` / `Unknown`), raw GitHub `authorAssociation`, and true-only `viewerDidAuthor` | [comments.md](comments.md#trust-and-author-provenance)                   |
 
-An unmarked human inline thread authored by the authenticated viewer is replied to and resolved; bot/non-human threads use the same pairing. An unmarked other-human thread remains reply-only unless `iterate.resolveOtherHumanThreads` is `outdated` or `always`. A leading `<!-- pr-shepherd -->` marker on the latest comment identifies an automated reply regardless of account author, so a marked thread that is still being resolved is resolve-only on retry. `resolutionOnlyThreads` therefore includes unresolved outdated/minimized threads and active marked retry threads. Bot/non-human threads, comments, and eligible summaries can be resolved or minimized. Already-minimized `COMMENTED` reviews are not fetched (bodies never enter the seen-marker gate).
+Thread handling (full matrix in [conversation-resolution.md](conversation-resolution.md)):
+
+- Unmarked bot and other non-human threads, and the viewer's own threads, are replied to and resolved.
+- Unmarked other-human threads are reply-only unless `iterate.resolveOtherHumanThreads` is `outdated` or `always`.
+- A leading `<!-- pr-shepherd -->` marker on the latest comment identifies an automated reply regardless of author, so a marked thread is resolve-only on retry.
+- `resolutionOnlyThreads` therefore holds unresolved outdated or minimized threads and marked retry threads.
+- Non-human threads can be resolved, and eligible non-human comments and summaries can be minimized. Human items are never minimized. Already-minimized `COMMENTED` reviews are not fetched, so their bodies never enter the seen-marker gate.
 
 ## CI context
 

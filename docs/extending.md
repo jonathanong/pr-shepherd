@@ -2,9 +2,14 @@
 
 [← README](../README.md) | [architecture.md](architecture.md)
 
-Four recipes for common extension patterns.
+Step-by-step recipes for contributors adding a subcommand, action, check category, mutation, or config constant. Paths are relative to `src/`; see [architecture.md](architecture.md) for module boundaries.
 
----
+## Recipe 0: Add a new subcommand
+
+1. **Implement it** in `commands/<name>.mts` and wire a handler into `cli-parser.mts`.
+2. **Add help** — add a `COMMAND_USAGE` entry in `cli/help-command-pages.mts`, then start the handler with `if (maybePrintHelp(args, "<key>")) return;` so `--help`/`-h` prints usage and exits 0 before any I/O or validation.
+3. **Expose it** through `api.mts` and `mcp/server.mts` if agents need it, keeping MCP `structuredContent` and Markdown content on the same projection.
+4. **Document it** in [cli-usage.md](cli-usage.md) (and [mcp.md](mcp.md) for a new tool).
 
 ## Recipe 1: Add a new action
 
@@ -14,7 +19,7 @@ Four recipes for common extension patterns.
    export type ShepherdAction = 'wait' | ... | 'my_action'
    ```
 
-2. **Add the result interface** — in `types/iterate.mts`, add:
+2. **Add the result interface** — in `types/iterate.mts`, then add it to the `IterateResult` union:
 
    ```ts
    export interface IterateResultMyAction extends IterateResultBase {
@@ -23,77 +28,45 @@ Four recipes for common extension patterns.
    }
    ```
 
-   Add it to the `IterateResult` union.
-
-3. **Add the dispatch step** — in `commands/iterate/index.mts`, insert a new numbered step in the decision chain. Return the new result shape.
-
-4. **Add the formatter** — in `cli/iterate-formatter.mts`, add a `case "my_action":` branch that emits the action-specific body and a numbered `## Instructions` section. The iterate skill follows those steps verbatim — no changes to `plugins/pr-shepherd/skills/pr-shepherd/SKILL.md` are required.
-
-5. **Add tests** — in `commands/iterate.mock.test.mts`, add a `describe('runIterate — my_action')` block.
-
----
+3. **Add the dispatch step** — in `commands/iterate/index.mts` (`runIterateCore`), insert the new step in the decision chain and return the new result shape. Keep [iterate-flow.md](iterate-flow.md) in sync.
+4. **Map the exit code** — add a case to `iterateResultToExitCode` in `exit-codes.mts` and update [exit-codes.md](exit-codes.md).
+5. **Add the formatter** — in `cli/iterate-formatter.mts`, add a `case "my_action":` branch that emits the body and a numbered `## Instructions` section, plus the lean JSON projection in `cli/iterate-lean.mts`. The skill follows those steps verbatim, so `plugins/pr-shepherd/skills/pr-shepherd/SKILL.md` needs no change.
+6. **Document the output** in [actions.md](actions.md) in the same PR — it is the canonical spec for iterate output.
+7. **Add tests** — a `commands/iterate.<topic>.mock.test.mts` file with a `describe('runIterate — my_action')` block, plus a `test-cases/fixtures/` scenario with JSON and Markdown snapshots.
 
 ## Recipe 2: Add a new check classifier category
 
 1. **Add the type** — in `types/check-classification.mts`, add to the `CheckCategory` union:
 
    ```ts
-   export type CheckCategory = 'passed' | 'failing' | ... | 'my_category'
+   type CheckCategory = 'passed' | 'failing' | ... | 'my_category'
    ```
 
-2. **Add the classification branch** — in `checks/classify.mts`, add a branch in the `classifyCheck` function:
+2. **Add the classification branch** — in `checks/classify.mts`, add a branch in the per-check `classify` function used by `classifyChecks`:
 
    ```ts
    if (someCondition(check)) return { ...check, category: "my_category" };
    ```
 
-3. **Update `getCiVerdict`** — decide whether the new category counts as failing, in-progress, or neither.
-
-4. **Add tests** — in `checks/classify.test.mts`, add test cases covering the new category.
-
----
+3. **Update `getCiVerdict`** — decide whether the category counts as failing, in-progress, or neither.
+4. **Add tests** in `checks/classify.test.mts`.
 
 ## Recipe 3: Add a new mutation
 
-1. **Add the GraphQL file** — create `src/github/gql/my-mutation.gql` with the mutation string.
-
-2. **Add the loader** — in `github/queries.mts`, load and export the new mutation:
+1. **Add the GraphQL file** — `github/gql/my-mutation.gql`.
+2. **Add the loader** — in `github/queries.mts`:
 
    ```ts
    export const myMutation = gql("my-mutation.gql");
    ```
 
-3. **Add the function** — in `comments/resolve.mts`, add a new exported function that calls the mutation via `graphqlWithRateLimit`.
-
-4. **Add to `ResolveOptions`** — if the mutation is triggered by `resolve` command options, add the relevant field to `ResolveOptions` in `types/report.mts`.
-
-5. **Add tests** — in `comments/resolve.mock.test.mts`, add test cases.
-
----
+3. **Add the function** — in `comments/resolve.mts`, an exported function that calls the mutation via `graphqlWithRateLimit` (from `github/client.mts`).
+4. **Handle REST** — add the REST path (see `comments/rest-review-mutations.mts`) or throw `UnsupportedRestOperationError` from `github/unsupported-rest.mts`, so REST mode surfaces an explicit unsupported result instead of silently skipping. See [api.md](api.md).
+5. **Add to `ResolveOptions`** in `types/report.mts` if `apply review` options trigger it.
+6. **Add tests** — `comments/resolve.<topic>.mock.test.mts`.
 
 ## Recipe 4: Change tunable constants
 
-All tunable constants live in `src/config.json`. Edit there — do not hardcode values in `.mts` source files.
+Defaults live in `src/config.json`; do not hardcode values in `.mts` files. Add the key's type to `PrShepherdConfig` and validation in `config/load.mts`, and document it in [configuration.md](configuration.md).
 
-```json
-{
-  "iterate": {
-    "fixAttemptsPerThread": 3,
-    "stallTimeoutMinutes": 60,
-    "minimizeApprovals": false,
-    "minimizeComments": "all",
-    "behindBaseHint": ""
-  },
-  "watch": { "readyDelayMinutes": 10 },
-  "resolve": {
-    "shaPoll": { "maxAttempts": 10, "intervalMs": 2000 }
-  },
-  "actions": {
-    "autoMinimizeSuppressed": true,
-    "autoMarkReady": true,
-    "neverCancelRuns": []
-  }
-}
-```
-
-Modules that need config should call `loadConfig()` from `src/config/load.mts` rather than importing `config.json` directly. This ensures cascading `.pr-shepherdrc.yml` overrides are honoured.
+Read config through `loadConfig()` from `src/config/load.mts`, never by importing `config.json` directly, so cascading `.pr-shepherdrc.yml` overrides apply.

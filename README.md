@@ -1,51 +1,179 @@
 # pr-shepherd
 
-Autonomous PR CI monitor and review-comment resolver for agentic coding tools, including Claude Code and Codex.
+Drive a pull request to merge-ready with a coding agent. It works with Claude Code, Codex, Grok, and any stdio MCP client.
 
-**[jongleberry.com/pr-shepherd](https://jongleberry.com/pr-shepherd/)** — the why and the principles behind the design, for humans and agents.
+**Estimated per PR session: −42% cost and −19% turns vs. `gh`, −77% cost vs. the GitHub MCP server. While waiting on CI: ~60 GraphQL points an hour vs. ~360 for `gh pr checks --watch`.**
 
-## Why
+## Outcomes
 
-An agent finishing a PR should think about code, not reconstruct GitHub state or invent a next-step policy each tick. Without Shepherd it fans out across GitHub MCP, `gh`, and GraphQL, then guesses what to do with the result.
+| Outcome                                                                 | Headline                                                                                                                   | Evidence                                                                 |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [Context and correctness](#context-and-correctness)                     | 60 GitHub edge cases cataloged, backed by 147 scenario fixtures                                                            | [Handled cases](docs/handled-cases.md)                                   |
+| [Fewer tokens, lower cost](#fewer-tokens-and-lower-cost)                | Cost −42% vs. `gh` and −77% vs. MCP per PR session; turns −19% / −70% (estimates)                                          | [Token bench](evals/tokens/README.md)                                    |
+| [Clearer agent direction](#clearer-agent-direction)                     | One action per tick (7 for a single PR); eval Δ +0.09 over 23 cases, +1.00 on the CI-wait case                             | [Behavior evals](evals/README.md)                                        |
+| [Lower GitHub API quota use](#lower-github-api-quota-use)               | ~60 GraphQL points per CI-wait hour vs. ~360 for `gh`; ~4 when idle. REST core per PR session 4.8 vs. 9 (`gh`), 78.3 (MCP) | [GitHub API](docs/github-api.md), [GraphQL usage](docs/graphql-usage.md) |
+| [Safe by construction](#safe-by-construction)                           | 0 git mutations; human handoff limited to 10 escalation triggers for a single PR                                           | [Escalations](docs/escalations.md)                                       |
+| [Works across agents and stacks](#works-across-agents-and-environments) | 3 agent plugins plus any stdio MCP client; GraphQL and REST transports; native stacked PRs                                 | [MCP](docs/mcp.md), [cloud](docs/cloud.md)                               |
+
+**[jongleberry.com/pr-shepherd](https://jongleberry.com/pr-shepherd/)** covers the why and the design principles.
 
 ## What it does
 
-1. **Gather all context for a PR** in one invocation: review threads, comments, replies, summaries, CI, mergeability, merge requirements, first-look / outdated / edited items, and author provenance.
-2. **Provide deterministic actions for the agent**: exactly one of `WAIT`, `MARK_READY`, `FIX_CODE`, `MERGE`, `CANCEL`, or `ESCALATE`, plus numbered `## Instructions` and explicit commands. The agent still decides whether a comment or CI failure needs a code change. Shepherd does not classify signal vs noise and does not mutate git.
+- Gathers the PR's review items, CI failures, and merge requirements in one call.
+- Returns one action with numbered instructions and exact commands. `CANCEL` ends the loop and carries none.
+- Never mutates git. The agent edits, commits, pushes, and decides what each comment deserves.
 
-Highlights:
+```mermaid
+flowchart LR
+  A[Agent] -->|iterate PR| S[pr-shepherd]
+  S -->|batched, conditional reads| G[(GitHub)]
+  G --> S
+  S -->|one action + numbered instructions| A
+  A -->|fix, push, run the printed commands| G
+```
 
-- GraphQL by default, with a supported REST transport for Claude Code cloud sessions and narrowly defined automatic fallback. REST may expose less context; missing fields remain unknown. MCP `iterate` is one tick and the client owns recurrence; `--debounce` is a poll-dispatcher settle window, not an MCP tool.
-- CI summaries include failed checks, and the failed job/step plus a log excerpt when triage can fetch them. Job and log details are omitted for `STARTUP_FAILURE` and `CANCELLED`; agents may still inspect logs.
-- Handles GitHub comment types (comments, threads, replies) and their states, including first-look, outdated, resolved, minimized, and edited.
-- `apply` batches resolve / reply / minimize / dismiss. `build_suggestion_patches` validates and returns ordered diffs without mutating git.
-- `BEHIND` is mergeability information, not a rebase or a guarantee that the next push is at the default-branch tip. The agent can update the branch before pushing.
+Without Shepherd, an agent fans out across `gh`, the GitHub MCP server, and GraphQL to rebuild PR state, then guesses the next step. Details for each outcome follow; more features are in [docs/features.md](docs/features.md).
 
-Full reference: [docs/README.md](docs/README.md). Feature matrix: [docs/features.md](docs/features.md).
+## Outcome details
 
-## How It Works
+### Context and correctness
 
-`pr-shepherd` moves deterministic PR orchestration into a local MCP server, with a CLI for shells and CI. Both interfaces fetch the same GitHub state, emit raw-enough context, and return a numbered plan for the calling agent to follow.
+One `iterate` call returns everything the agent needs about the PR:
 
-The MCP server exposes `iterate`, `apply`, `build_suggestion_patches`, `extract_journal`, and `get_journal`. `apply` accepts ordered review mutations, file-view mutations, and journal entries; the deprecated singular suggestion tool remains temporarily as an adapter. PR-targeted MCP calls require a repository-qualified `pr`: a GitHub PR URL or `owner/repo#N`; the explicit repository is the target for GitHub I/O, even when it differs from the local checkout. `extract_journal` takes a Markdown body string and performs no I/O. The CLI and programmatic API also retain bare-number and current-branch PR discovery. The shipped skills are thin dispatchers for those tools.
+- review threads with replies, PR comments, and review summaries;
+- each CI failure, with its failed step and a log excerpt when triage can fetch them;
+- mergeability and the actual merge requirements;
+- first-look, outdated, and edited items, and stack topology.
 
-Each tick returns exactly one action:
+One exception: a `COMMENTED` review that was already minimized before the first tick is not fetched.
 
-- `WAIT` — no immediate action; continue with the next poll.
-- `MARK_READY` — the CLI converted an eligible draft PR to ready; continue polling.
-- `FIX_CODE` — agent work is required; complete it, push when needed, then continue polling. Push access to the PR head branch is a usage precondition.
-- `MERGE` — run the emitted head-pinned merge or queue command for the selected transport. GitHub is authoritative for the result and reports any authorization failure. Queue operations can use REST.
-- `CANCEL` — stop polling this pull request because it merged, closed, or completed its ready-delay. It prints no instructions; continue any remaining pull requests or issues from the original request.
-- `ESCALATE` — stop polling until a human provides direction. Native stacks reach this only after their autonomous one-PR sessions are exhausted.
+The agent reasons less and misses less. [docs/handled-cases.md](docs/handled-cases.md) catalogs the GitHub edge cases this covers. Two examples:
 
-Native-stack summaries additionally use stack-level `SHEPHERD`: run the listed one-PR sessions,
-then recheck the stack. It is not a per-PR `FIX_CODE` action.
+- On a stack layer, the latest run of a required check can be cancelled while an older run passed. GitHub still blocks the merge ([#567](https://github.com/jonathanong/pr-shepherd/pull/567), [gh-stack#466](https://github.com/github/gh-stack/issues/466)).
+- A comment can be resolved or edited after the agent first read it.
 
-Example shape:
+### Fewer tokens and lower cost
+
+Batching, noise filtering, fingerprint skips, seen markers, and lean output cut tokens and agent turns. Estimated cost per session from the [token bench](evals/tokens/README.md) ([report](evals/tokens/REPORT.md)):
+
+| Session   | Cost vs. `gh` | Cost vs. GitHub MCP |
+| --------- | ------------: | ------------------: |
+| Single PR |      **−42%** |            **−77%** |
+| PR stack  |      **−45%** |            **−63%** |
+
+These are offline estimates at 3.5 characters per token over recorded sessions, not measured billing. Two cases do not save money:
+
+- A single fresh read-and-reply tick is roughly even with `gh`.
+- Confirming an already-merged PR costs about 5% more ([report](evals/tokens/REPORT.md)).
+
+### Clearer agent direction
+
+For a single PR, each tick returns exactly one action: `WAIT`, `READY`, `MARK_READY`, `FIX_CODE`, `MERGE`, `CANCEL`, or `ESCALATE`. A `--stack` poll can also return `SHEPHERD`, which starts one-PR sessions for owned layers. Every action except `CANCEL` comes with numbered `## Instructions` and exact commands, so the agent does not invent policy. In the [behavior evals](evals/README.md), Sonnet 5.5 at low effort scored a mean Δ (with − without plugin) of **+0.09** across 23 cases, and **+0.13** on the 14 non-stack cases. The largest gain is **+1.00**: without the plugin, the agent blocked on `gh run watch` in every run. The skill fired in 64 of 66 runs where it should have. Cases 29–52 have not run live yet. See [docs/actions.md](docs/actions.md) for the output contract.
+
+### Lower GitHub API quota use
+
+GitHub meters two tiers ([details](docs/github-api.md#github-metering)):
+
+- Primary hourly budgets: GraphQL points and REST `core` requests.
+- Secondary limits: per-minute points, where each GraphQL query or REST `GET` costs 1 and each mutation costs 5, plus concurrency and content-creation limits.
+
+Waiting is where most quota goes, and where Shepherd saves the most. By default `gh pr checks --watch` refreshes every 10 seconds, at 1 GraphQL point per refresh. That is about 360 points an hour for each watched PR, so a few agents waiting on CI can drain the shared 5,000-point hourly budget. Shepherd polls every 60 seconds by default:
+
+- A typical tick is one batched GraphQL query (1 point). Large or paginated PRs add supplement queries. When nothing changed, the fingerprint skip returns the stored report from that same query.
+- While CI runs, that is about 60 points an hour for a typical PR, against about 360 for `gh pr checks --watch` at its default interval. The token bench models `gh` refreshing every 60 seconds, which ties Shepherd at 60 ([report](evals/tokens/REPORT.md)).
+- When no check is running, conditional REST change detectors run first. A `304` consumes no primary quota. An hour of unchanged idle waiting costs about 4 GraphQL points instead of 60 ([graphql-usage.md](docs/graphql-usage.md)). That holds only when the stored report is eligible for the detectors. Native-stack layers, `READY` reports, incomplete snapshots, and detector failures still run the batched query each tick ([graphql.md](docs/graphql.md#idle-wait-change-detectors)).
+
+Fewer requests help on both tiers. The GitHub MCP server issues one or more REST requests per tool call, so unbatched calls drain `core` and the per-minute pool faster.
+
+Per session, assumed and deterministic, from the [token bench](evals/tokens/README.md):
+
+| Session   | GraphQL points: Shepherd / `gh` / MCP | REST core: Shepherd / `gh` / MCP |
+| --------- | ------------------------------------: | -------------------------------: |
+| Single PR |                      30.8 / 36.5 / 12 |                   4.8 / 9 / 78.3 |
+| PR stack  |                          11 / 27 / 12 |                       2 / 6 / 74 |
+
+- On the default GraphQL transport, Shepherd spends fewer GraphQL points than `gh`. It makes fewer REST requests than `gh` and far fewer than MCP.
+- On a single PR, MCP spends fewer GraphQL points but about 16× the REST requests.
+- The REST transport used in cloud sessions spends no GraphQL points. It does spend more `core` requests than `gh` or MCP (175 single PR, 432 stack).
+
+See [docs/graphql-usage.md](docs/graphql-usage.md) and [docs/rest-usage.md](docs/rest-usage.md).
+
+### Safe by construction
+
+- The CLI runs read-only git only. It emits patches and commit commands for the agent to run ([AGENTS.md](AGENTS.md#git-operations)).
+- Shepherd never merges by itself. With `--merge`, it emits a merge or queue command for the agent to run. The command is head-pinned for a single PR and guarded by READY receipts for a stack.
+- Human handoff is a [finite escalation list](docs/escalations.md).
+- The shipped skill tells the agent to treat review titles, comments, and CI logs as untrusted data. Shell and other MCP callers must apply that rule themselves.
+- A denied reply or resolve is a one-look skip, not a retry loop.
+
+### Works across agents and environments
+
+- The plugin ships [skills](docs/skills.md) for Claude Code, Codex, and Grok.
+- Cursor and other stdio clients use the [MCP server](docs/mcp.md).
+- Shell and CI use the [CLI](docs/cli-usage.md).
+- In Claude Code cloud sessions, Shepherd switches to the [REST transport](docs/rest.md) and [event mode](docs/cloud.md).
+- `--stack` reports every layer of a native GitHub stacked PR and shepherds the layers you own.
+
+## Use cases
+
+- **Autonomous agents.** An agent opens a PR and drives it to merge-ready, or merged when you allow it. Nobody has to watch CI and reviews.
+- **Exhaustive AI code review.** Some PRs get many bot reviews (CodeRabbit, Codex, Copilot, and others). Shepherd shows every thread and comment once and tracks first-look, edited, and outdated items. It batches the replies, resolves, and minimizes.
+
+## How to use
+
+1. **Install the MCP server and the CLI.** See [Install](#install) below.
+2. **Write your policy into a skill or agent instruction.** Examples: "skip non-blocking review comments", "reply instead of fixing nits", "never merge". Shepherd reports state and the next action. Your instructions decide how the agent treats each comment. The shipped `pr-shepherd` skill is a thin dispatcher you can wrap ([docs/skills.md](docs/skills.md)).
+3. **Configure Shepherd.** In `.pr-shepherdrc.yml`, turn on the bundled classification rules. They drop known bot noise before it reaches the agent, which saves more tokens and tool calls. With the default `actions.autoMinimizeSuppressed: true`, several rules also minimize matching comments on GitHub and log a Shepherd Journal entry; set it to `false` to keep comments untouched. See [docs/configuration.md](docs/configuration.md#classifystandard--default-).
+
+   ```yaml
+   classify:
+     standard:
+       all: true
+   ```
+
+## Install
+
+The plugin starts the version-matched `pr-shepherd-mcp` server automatically.
+
+```bash
+# Claude Code
+claude /plugin marketplace add jonathanong/pr-shepherd
+claude /plugin install pr-shepherd
+
+# Codex (then enable the pr-shepherd plugin)
+codex plugin marketplace add jonathanong/pr-shepherd
+
+# Grok
+grok plugin marketplace add jonathanong/pr-shepherd
+grok plugin install pr-shepherd --trust
+
+# CLI, for shells and CI
+npm install -g pr-shepherd
+```
+
+For the MCP server without the plugin, or a local checkout, see [docs/mcp.md](docs/mcp.md).
+
+Requirements:
+
+- Node.js >= 22.19.0, Bun, or Deno
+- `git`
+- A GitHub token or an authenticated `gh` CLI with [the required access](docs/authentication.md)
+
+## Quick start
 
 ```text
-> pr-shepherd 123
+/goal /pr-shepherd:pr-shepherd 42    # Claude Code
+/goal $pr-shepherd 42                # Codex
+/pr-shepherd 42                      # Grok
+```
 
+```sh
+pr-shepherd 42                       # shell: poll for work (270s cap; --until-terminal removes it)
+```
+
+Leave out the PR number to use the current branch. Example `FIX_CODE` output:
+
+```text
 # PR #123 [FIX_CODE]
 
 **status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo`
@@ -72,304 +200,21 @@ Example shape:
 6. Rerun Shepherd now.
 ```
 
-See [docs/actions.md](docs/actions.md) for the complete output contract and [docs/escalations.md](docs/escalations.md) for the exact finite human-handoff boundary. Iterate/poll PR outcomes use exit codes `0` and `10`–`16`; command and GitHub failures use `sysexits.h` codes — [docs/exit-codes.md](docs/exit-codes.md).
-
-## Workflow Assumptions
-
-This system is opinionated and works best with PRs that use required status checks and conversation resolution.
-
-- A human inline thread whose original comment has `viewerDidAuthor: true` is replied to and resolved when its latest comment is unmarked. Bot/non-human threads use the same reply-and-resolve pairing. An unmarked other-human inline thread remains reply-only unless `iterate.resolveOtherHumanThreads` is `outdated` or `always`. Human items are never minimized.
-- Detected bots, configured `botUsernames`, and viewer-authored human review threads are returned until resolved when the required mutation is authorized. Reply and resolve mutations use the thread ID, so they still run when GitHub has cleared the source line. Unauthorized threads are surfaced once and then marker-gated until edited. Bot/non-human threads, PR comments, and review summaries can be resolved or minimized when eligible. Review summaries are not minimized while known inline child threads from that review remain unresolved.
-- Shepherd identifies its own latest reply only when that comment begins `<!-- pr-shepherd -->`, not from author equality. A marked viewer-authored thread can be resolved without another reply as a retry.
-- Every review thread/comment/review summary is surfaced at least once, even if already outdated, resolved, or minimized; edited items re-surface through seen markers.
-- Draft PRs can be marked ready automatically when clean; disable with `actions.autoMarkReady: false` or `--no-auto-mark-ready`.
-- With `--merge`, actionable review threads/comments/reviews/summaries are held back (`WAIT`, with raw deferred-work counts) while a PR sits in the merge queue, since a Shepherd-initiated push would eject it; set `actions.workWhileQueued: true` to act on them immediately instead. Failing checks and merge conflicts are never deferred.
-- The CLI never performs git mutations itself — it only emits commit/push instructions for the agent to run. Push access to the PR head is a usage precondition; GitHub viewer fields do not create a separate push-authorization handoff.
-- Generated iterate mutations use capability fields when the transport supplies them. With REST, capability is unknown and otherwise eligible mutations are attempted; GitHub's response is authoritative. Explicit `apply` operations forward the caller's requested IDs and surface GitHub's result.
-- `build_suggestion_patches` turns one or more ordered GitHub suggestion threads into checked patches and commit metadata, but never edits the working tree or git history. Local HEAD may be ahead when the live PR head is its ancestor.
-
-## Usage
-
-### Iterate A PR
-
-Claude Code:
-
-```text
-/goal /pr-shepherd:pr-shepherd        # infer PR from current branch
-/goal /pr-shepherd:pr-shepherd 42
-```
-
-Codex:
-
-```text
-/goal $pr-shepherd        # infer PR from current branch
-/goal $pr-shepherd 42
-```
-
-Grok:
-
-```text
-/pr-shepherd                          # infer PR from current branch
-/pr-shepherd 42
-```
-
-MCP clients call `iterate` once per tick, then use `apply` for review/file/journal mutations and validated queue-removal acknowledgments and `build_suggestion_patches` for anchored suggestions. To read journal entries, call `extract_journal` with a body already in hand or `get_journal` with a repository-qualified PR reference. `iterate` returns the same structured action data as the CLI, including its review mutation arguments. The client owns recurrence, so this works consistently in Codex, Claude Code, Grok, and any other stdio MCP client.
-
-The CLI remains useful for shell workflows. Its canonical polling form is:
-
-```sh
-pr-shepherd 42                         # poll until non-WAIT or timeout
-pr-shepherd 42 --interval 60s --timeout 270s
-pr-shepherd 42 --quiet-status          # print only changed WAIT status snapshots
-pr-shepherd 42 --until-terminal        # continue through WAIT/MARK_READY until work or terminal state
-pr-shepherd 42 --debounce 5m           # wait 5m after first FIX_CODE or stack SHEPHERD, then return one batched tick
-pr-shepherd 42 --ready-delay 15m
-pr-shepherd 42 --merge                  # request head-pinned auto-merge/queue; GitHub reports the result
-pr-shepherd iterate 42                 # single tick
-pr-shepherd 42 --instructions playbook # fold invariant fix_code steps into a playbook pointer (default: inline)
-pr-shepherd 42 --poll-mode event       # one tick, no sleeping; prints nextCheck (default under CLAUDE_CODE_REMOTE=true)
-pr-shepherd playbook "Fix-code loop"   # print a bundled skill playbook (no name lists them)
-pr-shepherd owner/repo#42              # poll a PR in an explicit repository
-pr-shepherd https://github.com/owner/repo/pull/42
-pr-shepherd 42 43 44                   # summarize an explicit same-repository set
-pr-shepherd --stack 43                 # summarize every PR in a native GitHub stack
-```
-
-A user-supplied `--merge` authorizes the agent to run the emitted merge/enqueue commands for the
-selected PRs or stack without another conversational confirmation. Host permission checks still apply.
-
-Multi-PR and `--stack` polling use compact, read-only summaries from the selected transport.
-GraphQL mode uses GraphQL summaries; REST mode preserves unavailable fields as unknown. They return when work is
-needed, every selected PR is complete, the bounded timeout expires, or `--until-terminal` crosses a
-configured GraphQL quota-warning band. Explicit PR sets give each actionable row an exact single-PR
-`pollCommand`, so independent rows can proceed before the next aggregate poll.
-
-Native-stack rows are ordered bottom-to-top. `--stack` never performs a mutation itself. Every
-row marks ownership by comparing its author with the authenticated viewer; REST reads `/user`
-for that identity without inferring viewer permissions. Sessions act only on rows marked `owned`. Every
-owned layer that still has work gets its own one-PR session on the same tick, including a clean draft
-whose session marks it ready. Layers do not wait for a lower layer's READY receipt, so their
-ready-delays overlap. With automatic mark-ready disabled, the instructions ask the agent to mark
-a clean draft ready after its probe. A queued stack, or one whose remaining layers can only wait,
-returns `WAIT`; an idle `WAIT` that stays unchanged past the stall timeout returns `ESCALATE` with
-`stall-timeout`. A terminal READY or fully merged stack returns `CANCEL`. Closed or unverified
-topology returns `ESCALATE` for human direction after any other shepherdable PRs are handled;
-until then, `SHEPHERD` remains the immediate action and lists the human blockers too.
-
-With `--stack --merge`, the highest open layer whose open lower layers all have current READY
-receipts, and whose bottom open layer GitHub has retargeted onto the stack base, returns `MERGE`
-with the transport-specific stack merge command and allowed method. GraphQL mode uses
-`gh stack merge <that PR number> --yes`; REST mode uses the SHA-pinned
-`pr-shepherd apply merge` command, using the trunk's known queue policy even when the named layer
-targets its parent branch. The command binds the observed stack, trunk, and ordered prefix with
-`--expected-stack` and rejects a changed stack before submission. Unknown REST queue policy uses
-`default` without a merge method. Known queue requests omit the configured direct merge method.
-That lands the named layer and every
-unmerged layer below it. When the base uses a merge queue, the same command queues the prefix
-together and GitHub evaluates each layer from the bottom; a failure ejects that layer and those
-above it. For a `failed_checks` removal on the layer's first ejection, the one-PR session emits a head-, queue-commit-, and timestamp-pinned local acknowledgment command; run it only when the failure does not reproduce after updating from the latest base, the head did not change, and no source changes or other blockers remain. Fresh source checks and a new READY receipt then let the aggregate selector recover the eligible prefix. Manual or stale removals cannot use this path. Layers above the prefix keep their one-PR sessions. After the merge, GitHub retargets
-the next layer, so the rerun continues until the stack returns `CANCEL`. API and MCP aggregate
-calls perform one summary tick and leave recurrence to the caller.
-
-Polling defaults can be set under `poll` in `.pr-shepherdrc.yml`: `intervalSeconds` (built-in 60 for one PR), `stackIntervalFactor` (built-in 2, so `--stack` and multi-PR polls wait 120s), `timeoutSeconds`, `debounceSeconds`, `quietStatus`, and `reconcileSeconds` (built-in 900; the longest an idle GraphQL wait replays its last snapshot while REST change detectors are unchanged). Explicit `--interval` overrides either period for that invocation and is not multiplied. Other explicit flags override configuration, including `--no-quiet-status` when a shared config enables quiet output. Quiet status remains off by default. Quota-warning bands stay multiples of `intervalSeconds`; the dispatcher sleeps the slower of the effective interval and the active band, so a default stack waits 120s until a tighter band is slower than that.
-
-### Apply Review And Journal Changes, Or Select Files
-
-Use `apply` with ordered operations to reply/resolve/minimize/dismiss review items, mark selected changed files as viewed, append an idempotent Shepherd Journal item, or record a validated native-stack CI queue-removal acknowledgment. Explicit operations are attempted and surface GitHub's per-operation results; generated iterate guidance remains capability-filtered. Use `build_suggestion_patches` to turn ordered review suggestions into checked patches and commit metadata; it never changes the worktree or git history.
-
-### Extract Shepherd Journal Entries
-
-The pure `pr-shepherd/journal` entry point can extract one validated journal without GitHub access:
-
-```ts
-import { extractShepherdJournal } from "pr-shepherd/journal";
-
-const result = extractShepherdJournal(prBody);
-if (!result.ok) throw new Error(result.error);
-
-for (const entry of result.journal?.entries ?? []) console.log(entry);
-```
-
-The result identifies canonical `details` versus historical `legacy` H2 journals and returns each
-complete Markdown list item with LF line endings. It fails closed for malformed or ambiguous
-containers and ignores journal-shaped examples hidden in Markdown constructs. The full journal API,
-including append and reconciliation helpers, is documented in [docs/api.md](docs/api.md).
-
-MCP clients can call `extract_journal({ body: prBody })` for the same pure result without writing a
-file, or `get_journal({ pr: "owner/repo#123" })` to fetch a PR body through the selected
-transport and extract it.
-Both return the typed extraction JSON in `structuredContent` and `content`; neither mutates the PR.
-
-For shell automation that already has a PR body, use the equivalent local-only command:
-
-```sh
-pr-shepherd journal extract --body-file pr-body.md
-```
-
-It writes one JSON line containing the typed extraction result. It never reads GitHub credentials,
-configuration, or Shepherd logs. On POSIX, its final body-file path entry must be a readable regular
-file in a trusted parent directory; symlinks, FIFOs, and devices are rejected with exit code 66.
-Unsupported platforms fail closed with that same exit code.
-
-### Clean Local State
-
-In Claude Code cloud sessions, [event mode](docs/cloud.md) runs one tick per event or wake-up instead of sleeping, and the default state directory moves into the repository's common directory.
-
-`pr-shepherd` stores seen markers, fix-attempt counters, stall fingerprints, ready-delay markers, and logs under `$PR_SHEPHERD_STATE_DIR` (default: `pr-shepherd-state` in the per-user temp dir; see [configuration](docs/configuration.md#environment-variables)).
-
-```sh
-pr-shepherd admin clean current
-pr-shepherd admin clean repo
-pr-shepherd admin clean all --dry-run
-pr-shepherd admin log-file
-```
-
-## Install
-
-The plugin launches the version-matched `pr-shepherd-mcp` binary from the `pr-shepherd` npm package automatically. Install the `pr-shepherd` CLI separately only when you want the shell interface.
-
-To register the MCP server without the plugin, or to wire a local checkout, see [docs/mcp.md](docs/mcp.md).
-
-### Claude Code
-
-```bash
-claude /plugin marketplace add jonathanong/pr-shepherd
-claude /plugin install pr-shepherd
-```
-
-### Codex
-
-```bash
-codex plugin marketplace add jonathanong/pr-shepherd
-```
-
-Or pin a ref:
-
-```bash
-codex plugin marketplace add jonathanong/pr-shepherd --ref main
-```
-
-For local development:
-
-```bash
-git clone https://github.com/jonathanong/pr-shepherd ~/.codex/plugin-sources/pr-shepherd
-codex plugin marketplace add ~/.codex/plugin-sources/pr-shepherd
-```
-
-After adding the marketplace, install/enable the `pr-shepherd` plugin from Codex. The marketplace root must contain `.agents/plugins/marketplace.json` and `plugins/pr-shepherd/`.
-
-### Grok
-
-```bash
-grok plugin marketplace add jonathanong/pr-shepherd
-grok plugin install pr-shepherd --trust
-```
-
-Grok starts a plugin's MCP server only after the plugin is trusted. Confirm with `grok mcp list` or `/mcps`.
-
-### MCP server only
-
-Any stdio MCP client can run the published binary without installing the plugin:
-
-```bash
-claude mcp add --transport stdio --scope user pr-shepherd -- \
-  npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
-codex mcp add pr-shepherd -- \
-  npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
-grok mcp add pr-shepherd -- \
-  npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
-```
-
-Replace `<version>` with a published version. Full config-file examples, tool schemas, and local-checkout wiring are in [docs/mcp.md](docs/mcp.md).
-
-## Configuration
-
-Create `.pr-shepherdrc.yml` in your project root, an ancestor directory, or `$HOME`. Every file on the walk is deep-merged; closer directories override farther ones.
-
-```yaml
-cliCommand: [pnpm, exec, pr-shepherd] # launcher for emitted commands; defaults to [pr-shepherd]
-ignoreChecks:
-  - "Kilo Code Review"
-iterate:
-  fixAttemptsPerThread: 5
-  stallTimeoutMinutes: 60
-  minimizeApprovals: false
-  minimizeComments: all # all | bots | none
-checks:
-  ciTriggerEvents:
-    - pull_request
-    - pull_request_target
-merge:
-  method: squash
-  commandArgs:
-    - --delete-branch
-actions:
-  autoMinimizeSuppressed: true
-  autoMarkReady: false
-```
-
-Environment variables:
-
-- `GH_TOKEN` / `GITHUB_TOKEN` / `GITHUB_PERSONAL_ACCESS_TOKEN` for auth; `gh auth token` is used as a fallback. See [GitHub authentication and token access](docs/authentication.md) for required PAT permissions.
-- `PR_SHEPHERD_STATE_DIR` to override state and log location.
-- `PR_SHEPHERD_LOG_DISABLED=1` to disable per-worktree debug logging.
-
-See [docs/configuration.md](docs/configuration.md) for the full reference.
-
-For guided noise reduction, use the plugin's `reduce-pr-noise` skill. It loads focused guidance for bot-comment classifiers or settings only when relevant; see [docs/skills.md](docs/skills.md).
-
-### Classification rules
-
-For common vendor bot noise (CodeRabbit and Gemini rate-limit notices, Codex usage-limit and review boilerplate, Codecov reports, and more), enable the bundled rules instead of writing your own:
-
-```yaml
-# .pr-shepherdrc.yml
-classify:
-  standard:
-    all: true
-```
-
-See [`classify.standard`](docs/configuration.md#classifystandard--default-) for the rule list and per-rule overrides. Write custom rules for repository-specific policy.
-
-Drop `.ts` / `.mts` / `.mjs` / `.js` files under `.pr-shepherd/classification/` to suppress and/or auto-resolve specific bot comments — useful for silencing repetitive noise like rate-limit notices from `gemini-code-assist` or "Reviews paused" from `coderabbitai`.
-
-```ts
-// .pr-shepherd/classification/gemini-quota.mts
-import type { ClassifyRule } from "pr-shepherd/classify";
-
-const rule: ClassifyRule = (item) => {
-  if (item.author !== "gemini-code-assist") return null;
-  if (!/You have reached your daily quota limit/i.test(item.body)) return null;
-  return { suppress: true, autoResolve: true };
-};
-export default rule;
-```
-
-`suppress: true` hides the item from agent output. `autoResolve: true` queues it for the minimize/resolve mutation. `reason` is an optional note. When both flags apply together and `actions.autoMinimizeSuppressed` is `true` (the default), Shepherd attempts supported operations and relies on GitHub's response when capability is unknown. Confirmed successes are recorded on `threads.autoResolved` and `comments.autoMinimized`, printed once as `## Classification auto-resolve` before `## Instructions` (the same `ruleAutoResolve` object in JSON), and appended as one Shepherd Journal list item attributed to the token login. Distinct rule reasons are included. Failed IDs stay on the generated `apply review` command, and each failure is an extra bullet in that section. A journal write failure is reported the same way and does not undo the GitHub resolve or minimize. `actions.autoMinimizeSuppressed: false` leaves the IDs on that command and does not mutate, journal, or print the line. Denied review mutations are surfaced once then skipped; REST comment minimization is unsupported and is surfaced as a one-look skip. See [transport behavior](docs/rest.md).
-
-TypeScript rules are loaded by the runtime's native TypeScript support; keep them to erasable syntax such as type annotations and `import type`. Runtime TypeScript features that need transpilation, such as enums, namespaces, parameter properties, and decorators, are not supported. Use `.mts` for portable ESM rules across Node, Bun, and Deno.
-
-Ready-to-use examples for common patterns are in [`examples/classification/`](examples/classification/).
-
-## CLI aliases
-
-`poll`, `resolve`, `build-suggestion-patch`, `commit-suggestion`, `mark-files-as-viewed`, `journal`, `clean`, and `log-file` are CLI aliases or deprecated adapters. Prefer default polling/`iterate` in a shell and the MCP `iterate`, `apply`, and `build_suggestion_patches` tools in an agent client.
-
-## Requirements
-
-- Node.js >= 22.19.0, Bun, or Deno
-- A GitHub token or authenticated `gh` CLI with the [required repository access](docs/authentication.md). A classic PAT needs the `repo` scope for complete operation.
-- `git`
-
-## Docs
-
-Full reference, grouped by the two jobs (gather context / emit actions): [docs/README.md](docs/README.md).
-
-## Harness Ecosystem
-
-This is part of the following harness ecosystem:
-
-- [auto-harness](https://github.com/jonathanong/auto-harness) - non-interactive agent CLI orchestration across sandboxes
-- [agent-blackboard](https://github.com/jonathanong/agent-blackboard) - session-scoped telemetry for autonomous agents
-- [pr-shepherd](https://github.com/jonathanong/pr-shepherd) - autonomous pull request shepherd
-- [no-mistakes](https://github.com/jonathanong/no-mistakes) - deterministic AST-based codebase intelligence, test selection, and linting for agents
+## Documentation
+
+| Topic                                        | Doc                                                                                                  |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Index of every doc                           | [docs/README.md](docs/README.md)                                                                     |
+| Features, workflow assumptions, limits       | [docs/features.md](docs/features.md)                                                                 |
+| Commands, flags, stacks, polling             | [docs/cli-usage.md](docs/cli-usage.md)                                                               |
+| Actions and exit codes                       | [docs/actions.md](docs/actions.md), [docs/exit-codes.md](docs/exit-codes.md)                         |
+| Configuration and classification rules       | [docs/configuration.md](docs/configuration.md), [examples/classification/](examples/classification/) |
+| Journal, library API                         | [docs/api.md](docs/api.md)                                                                           |
+| Compared with Cursor, Copilot, CodeRabbit, … | [docs/comparison.md](docs/comparison.md)                                                             |
+
+## Harness ecosystem
+
+- [auto-harness](https://github.com/jonathanong/auto-harness): non-interactive agent CLI orchestration across sandboxes
+- [agent-blackboard](https://github.com/jonathanong/agent-blackboard): session-scoped telemetry for autonomous agents
+- [pr-shepherd](https://github.com/jonathanong/pr-shepherd): autonomous pull request shepherd
+- [no-mistakes](https://github.com/jonathanong/no-mistakes): deterministic AST-based codebase intelligence, test selection, and linting for agents

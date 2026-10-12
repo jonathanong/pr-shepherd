@@ -31,10 +31,10 @@ The savings are concentrated. Against a frugal gh agent they come from
 re-read review history, CI logs, CI and merge-queue waits, and stack merges. Against
 the GitHub MCP server they also come from polling and stack discovery, which
 MCP has no shortcut for. A single fresh read-and-reply tick against gh is a
-wash: between 9% cheaper and 5% dearer. A PR that has already merged costs
-15% more to confirm than a state-first gh agent pays. On the GitHub rate limit,
-pr-shepherd spends fewer GraphQL points than gh on a single PR but more on a
-stack, and far fewer REST requests; against MCP it trades REST requests for GraphQL points. See "Where
+wash: 4% cheaper. A PR that has already merged costs 5% more to confirm than
+a state-first gh agent pays. On the GitHub rate limit, pr-shepherd spends
+fewer GraphQL points and far fewer REST requests than gh on both a single PR
+and a stack; against MCP it trades REST requests for GraphQL points. See "Where
 pr-shepherd does not save" and "Rate-limit assumptions".
 
 ## Run it
@@ -201,7 +201,13 @@ Each scenario reports four numbers per arm:
   for the commands it emits. The base context is 30k tokens. Turns cost money
   even when they fetch little; this column captures that. The request that
   reads one step's last results also emits the next step's first call, so it
-  is charged once, to the next step.
+  is charged once, to the next step. Two assumptions apply to every arm:
+  - **The prompt cache is always warm.** The cache lives 5 minutes or more,
+    and no wait is charged for expiring it. A longer wait (a blocking
+    `gh pr checks --watch`, a ready-delay) can re-write the whole context at
+    ×1.25 instead of reading it at ×0.1.
+  - **No thinking tokens.** A turn pays only for the commands it emits. See
+    "Reasoning tokens" under "What this does not measure".
 
 Setup loads lazily, in scenario order, as an agent would:
 
@@ -741,7 +747,9 @@ explains the main ones.
   unmeasured and taken as the overall one.
 - **Reasoning tokens.** The baselines must also classify raw state (Is this
   thread already handled? Is this failure a flake?), work pr-shepherd's output
-  has already done. This benchmark counts none of it.
+  has already done. This benchmark counts none of it, on any arm.
+- **Cache expiry.** Every turn reads a warm cache. Waits past the cache
+  lifetime (5 minutes or more) would re-write the context; none is charged.
 - **Wrong turns.** The behavior evals show the baselines blocking on
   `gh run watch`, stopping early or rerunning real failures. Each of those costs
   more than any row here.

@@ -2,19 +2,21 @@
 
 [← README](../README.md) | [comments.md](comments.md) | [escalations.md](escalations.md)
 
-GitHub can require every review thread to be resolved before merge. Shepherd already replies to human inline threads. It resolves them only for the authenticated viewer's own threads, and for other humans when [`iterate.resolveOtherHumanThreads`](configuration.md#iterateresolveotherhumanthreads) says so. That enum does not read the branch rule.
+How Shepherd replies to and resolves inline review threads by author class, how that interacts with GitHub's "require conversation resolution" branch rule, and where the current behavior differs from a requested policy. For contributors working on thread routing and for anyone debugging a PR that is `READY` while GitHub still says conversations block the merge.
 
-Requested policy, not implemented:
+Shepherd replies to human inline threads. It resolves them only for the authenticated viewer's own threads, and for other humans when [`iterate.resolveOtherHumanThreads`](configuration.md#iterateresolveotherhumanthreads--default-none) allows it. That enum does not read the branch rule.
 
-- When the base branch requires conversation resolution, reply to every human inline thread and resolve it once a Shepherd reply is in place. That is the viewer-authored pairing: reply and resolve in one `apply review` command, then a resolve-only retry when the marker is already present and the thread is still open.
-- When the base branch does not require conversation resolution, keep today's enum.
+**Requested policy, not implemented:**
+
+- When the base branch requires conversation resolution, reply to every human inline thread and resolve it once a Shepherd reply is in place (the viewer-authored pairing: reply and resolve in one `apply review`, then a resolve-only retry while the marker is present and the thread is open).
+- When it does not, keep the enum.
 - When the next step is a decision Shepherd cannot make, `ESCALATE`.
 
-The matrices below are the current behavior, then that requested policy against the same rows.
+The matrices below show current behavior, then the requested policy against the same rows.
 
 ## What "human inline" means
 
-A row is one GitHub review thread (`pullRequest.reviewThreads`), which is the unit conversation resolution blocks on. The class is the original inline comment. Later replies do not move the thread into another class. `viewerDidAuthor: true` is read from that original comment.
+A row is one GitHub review thread (`pullRequest.reviewThreads`), the unit conversation resolution blocks on. The class comes from the original inline comment; later replies do not change it.
 
 | Class           | Predicate                                                                                                           |
 | --------------- | ------------------------------------------------------------------------------------------------------------------- |
@@ -23,11 +25,11 @@ A row is one GitHub review thread (`pullRequest.reviewThreads`), which is the un
 | Viewer-authored | `viewerDidAuthor: true`, `authorType: User`, login does not contain `[bot]`, login is not in `botUsernames`         |
 | Other human     | `authorType: User`, login does not contain `[bot]`, login is not in `botUsernames`, and `viewerDidAuthor` is absent |
 
-A Shepherd reply is a latest comment whose body begins `<!-- pr-shepherd -->`. "Marker-ended" below means that prefix is present and GitHub still reports `isResolved: false`.
+A Shepherd reply is a latest comment whose body begins `<!-- pr-shepherd -->`. "Marker-ended" means that prefix is present and GitHub still reports `isResolved: false`.
 
 ## Where the requirement is read
 
-`requiresConversationResolution` is folded in `parseBranchRules` (`src/github/batch-parsers-rules.mts`):
+`parseBranchRules` (`src/github/batch-parsers-rules.mts`) folds `requiresConversationResolution` from:
 
 | Source                                                            | Sets the folded flag |
 | ----------------------------------------------------------------- | -------------------- |
@@ -36,23 +38,24 @@ A Shepherd reply is a latest comment whose body begins `<!-- pr-shepherd -->`. "
 | Ruleset type `REQUIRED_REVIEW_THREAD_RESOLUTION`                  | yes                  |
 | Missing `baseRef`                                                 | flag stays false     |
 
-`branchProtection` on the iterate result is the classic rule only (`src/github/branch-protection.mts`). A ruleset-only requirement is visible on `mergeRequirements.conversationsResolved.required` and can be absent from `branchProtection.requiresConversationResolution`.
+`branchProtection` on the iterate result is the classic rule only (`src/github/branch-protection.mts`). A ruleset-only requirement shows on `mergeRequirements.conversationsResolved.required` and can be absent from `branchProtection.requiresConversationResolution`.
 
-| Consumer                                                             | Uses the folded flag |
-| -------------------------------------------------------------------- | -------------------- |
-| `Conversations Resolved:` line (`deriveMergeRequirements`)           | yes                  |
-| `WAIT` / ready-delay `CANCEL` note (`blockedReasonFromRequirements`) | yes                  |
-| Fallback `**required**` header when `mergeRequirements` is absent    | classic object only  |
-| `classifyThreadVisibility`                                           | no                   |
-| `buildThreadMutationRouting`                                         | no                   |
-| `computeStatus`                                                      | no                   |
-| `ESCALATE` trigger list                                              | no                   |
+| Consumer                                                                                                                                   | Uses the folded flag |
+| ------------------------------------------------------------------------------------------------------------------------------------------ | -------------------- |
+| `Conversations Resolved:` line (`deriveMergeRequirements`)                                                                                 | yes                  |
+| `WAIT` / ready-delay `CANCEL` note (`blockedReasonFromRequirements`)                                                                       | yes                  |
+| Compact READY certification with a truncated review sample (`poll-summary-readiness.mts`, see [graphql.md](graphql.md#poll-summary-reads)) | yes                  |
+| Fallback `**required**` header when `mergeRequirements` is absent                                                                          | classic object only  |
+| `classifyThreadVisibility`                                                                                                                 | no                   |
+| `buildThreadMutationRouting`                                                                                                               | no                   |
+| `computeStatus`                                                                                                                            | no                   |
+| `ESCALATE` trigger list                                                                                                                    | no                   |
 
-`computeStatus` counts threads still in `actionable` plus `resolutionOnly`. `unresolvedCount` on the requirements line counts every fetched thread with `isResolved: false`. After an other-human thread leaves the work set, ShepherdStatus can be `READY` while `Conversations Resolved: No [Required]` is still true.
+`computeStatus` counts threads still in `actionable` plus `resolutionOnly`. `unresolvedCount` on the requirements line counts every fetched thread with `isResolved: false`. So once an other-human thread leaves the work set, ShepherdStatus can be `READY` while `Conversations Resolved: No [Required]` is still printed.
 
 ## Current mutation matrix
 
-Applies to threads already selected into the work set. `iterate.resolveOtherHumanThreads` defaults to `none`. Classification rules with `autoResolve: true` add a standalone resolve for that thread id even at `none`; an unmarked thread is still replied to.
+For threads already in the work set. `iterate.resolveOtherHumanThreads` defaults to `none`.
 
 | Class                                       | Unmarked          | Marker-ended |
 | ------------------------------------------- | ----------------- | ------------ |
@@ -64,13 +67,13 @@ Applies to threads already selected into the work set. `iterate.resolveOtherHuma
 | Other human, `outdated`, thread is current  | reply             | no mutation  |
 | Other human, `always`                       | reply and resolve | resolve only |
 
-Reply and paired resolve share the `apply review` command. A marker-ended resolve is the separate resolve-only command. Both use the thread id when GitHub has cleared the path or line.
-
-When GraphQL supplies capability fields, `viewerCanReply: false` or `viewerCanResolve: false` omits the generated mutation. REST has no equivalent capability fields, so an otherwise-eligible operation is attempted and GitHub's response is authoritative. A definite, non-throttled REST 403 or 404 is surfaced once, then marker-gated until the body changes; review denials do not use `authorization-required` or count toward `fix-thrash`. Quota failures and uncertain mutation outcomes remain eligible for reconciliation.
+- Reply and paired resolve share one `apply review` command; a marker-ended resolve is the separate resolve-only command. Both use the thread ID, so they work after GitHub clears the path or line.
+- A classification rule with `autoResolve: true` adds a standalone resolve for that thread even at `none`; an unmarked thread is still replied to.
+- On GraphQL, `viewerCanReply: false` or `viewerCanResolve: false` omits the generated mutation. REST has no capability fields, so an otherwise-eligible operation is attempted and GitHub decides. A definite, non-throttled REST 403 or 404 is surfaced once, then marker-gated until the body changes; review denials do not use `authorization-required` or count toward `fix-thrash`. Quota failures and uncertain outcomes stay eligible for reconciliation.
 
 ## Current visibility matrix
 
-"Every tick" means the thread stays in `FIX_CODE` until GitHub reports `isResolved: true`, provided the mutation it needs is authorized. "Until seen" means the seen-marker gate: first look, again when the transcript changes, then omitted while the transcript is unchanged.
+"Every tick": the thread stays in `FIX_CODE` until GitHub reports `isResolved: true`, provided its mutation is authorized. "Until seen": the seen-marker gate (first look, again when the transcript changes, then omitted while unchanged).
 
 | Class                   | Active, unmarked | Active, marker-ended                 | Outdated or minimized, unmarked | Outdated or minimized, marker-ended  |
 | ----------------------- | ---------------- | ------------------------------------ | ------------------------------- | ------------------------------------ |
@@ -81,13 +84,11 @@ When GraphQL supplies capability fields, `viewerCanReply: false` or `viewerCanRe
 | Other human, `outdated` | until seen       | left unresolved; no further mutation | every tick                      | every tick (resolve)                 |
 | Other human, `always`   | every tick       | resolution-only, every tick          | every tick                      | every tick                           |
 
-Resolved threads are out of both mutation sets. A resolved thread whose latest comment is not a Shepherd reply is first-look once. Human authors are never minimized.
-
-`iterate.resolveOtherHumanThreads: always` is the only current setting that replies and resolves every other-human inline thread. It does so on every branch, including branches whose folded flag is false.
+Resolved threads are out of both mutation sets; one whose latest comment is not a Shepherd reply is first-look once. Human authors are never minimized. `always` is the only current setting that replies to and resolves every other-human thread, on every branch, including branches whose folded flag is false.
 
 ## Requirement versus outcome
 
-This is an unresolved other-human thread after the Shepherd reply lands. The enum is `iterate.resolveOtherHumanThreads`. "Dropped" means the thread is in neither `actionable` nor `resolutionOnly`. A later push that marks a current thread outdated uses the outdated row on the next tick.
+An unresolved other-human thread after the Shepherd reply lands. "Dropped" means the thread is in neither `actionable` nor `resolutionOnly`. A later push that makes a current thread outdated uses the outdated row on the next tick.
 
 | Requires resolution | Enum       | Thread              | After the Shepherd reply                   | When no other work remains                                                                            |
 | ------------------- | ---------- | ------------------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
@@ -100,11 +101,11 @@ This is an unresolved other-human thread after the Shepherd reply lands. The enu
 | yes                 | `outdated` | outdated            | stays until resolve succeeds               | `READY` once that thread is resolved and no other fetched thread is open                              |
 | yes                 | `always`   | current or outdated | stays until resolve succeeds               | `READY` once every fetched thread is resolved                                                         |
 
-`unresolvedCount` is fetched threads with `isResolved: false`, including threads the enum leaves open. A successful batch pages with `reviewThreads(last:)` until `hasPreviousPage` is false. ShepherdStatus uses the visible work set.
+`unresolvedCount` includes threads the enum leaves open. A successful batch pages `reviewThreads(last:)` until `hasPreviousPage` is false.
 
 ## Requested policy matrix
 
-"Match" is whether that row's current behavior already does the requested cell. The default enum is `none`. `always` is a separate row because it resolves other humans on every branch.
+"Match" says whether current behavior already does the requested cell.
 
 | Condition                                       | Requested behavior                            | Current behavior                                                                                | Match |
 | ----------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----- |
@@ -115,11 +116,11 @@ This is an unresolved other-human thread after the Shepherd reply lands. The enu
 | Resolution not required, `always`               | keep that configured behavior                 | reply and resolve other humans on branches that do not require resolution                       | yes   |
 | A decision remains                              | `ESCALATE`                                    | decision stays inside `FIX_CODE`, or the loop ends in `CANCEL` / `fix-thrash` / `stall-timeout` | no    |
 
-The required-resolution row for other humans is the gap. `always` replies and resolves those threads on every branch. The requested switch is the folded flag.
+The gap is the required-resolution, other-human row; the requested switch is the folded flag.
 
 ## Decisions and escalation
 
-[escalations.md](escalations.md) is a closed trigger list. None of the triggers is "this human inline thread needs a decision" or "conversation resolution is required."
+[escalations.md](escalations.md) is a closed trigger list; none of its triggers is "this human inline thread needs a decision" or "conversation resolution is required."
 
 | Situation                                                                                                 | Current action                                                                                                       | Trigger         |
 | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | --------------- |
@@ -130,13 +131,13 @@ The required-resolution row for other humans is the gap. `always` replies and re
 | `WAIT` or `FIX_CODE` fingerprint unchanged through an enabled stall timeout                               | handoff                                                                                                              | `stall-timeout` |
 | Folded flag is false because `baseRef` was missing                                                        | enum applies; requirements show conversation resolution not required                                                 | none            |
 
-`ambiguousComments` on an escalation payload is the actionable top-level PR comment list copied onto some handoffs. Inline threads are copied separately as `unresolvedThreads`. The field name is not an escalation trigger.
+`ambiguousComments` on an escalation payload is the actionable top-level PR comment list copied onto some handoffs; inline threads are copied separately as `unresolvedThreads`. The field name is not a trigger.
 
-The requested "if a decision needs to be made, escalate" cell has no predicate in the code. The two choices that show up in this feature are: whether an inline comment warrants a code change, and what to do when GitHub will not let the viewer resolve a thread the branch requires to be resolved. Both stay off the escalation list.
+The requested "escalate when a decision is needed" has no predicate in code. The two decisions this feature raises (whether an inline comment warrants a code change, and what to do when GitHub will not let the viewer resolve a thread the branch requires resolved) both stay off the escalation list.
 
 ## Surfaces outside this policy
 
-Conversation resolution is a review-thread rule. These surfaces keep their own routing on every branch.
+Conversation resolution is a review-thread rule. Other surfaces keep their own routing on every branch.
 
 | Surface                    | Reply              | Resolve / hide                                                                                       |
 | -------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------- |
@@ -157,4 +158,4 @@ Conversation resolution is a review-thread rule. These surfaces keep their own r
 | Folded branch rule                       | `src/github/batch-parsers-rules.mts`                                            |
 | Printed requirement and cancel phrase    | `src/merge-status/requirements.mts`, `src/merge-status/requirements-format.mts` |
 | ShepherdStatus from the visible work set | `src/commands/check-status.mts`, called from `src/commands/check.mts`           |
-| Escalation triggers                      | `docs/escalations.md`, `src/commands/iterate/escalate.mts`                      |
+| Escalation triggers                      | [escalations.md](escalations.md), `src/commands/iterate/escalate.mts`           |

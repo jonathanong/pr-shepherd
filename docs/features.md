@@ -1,60 +1,69 @@
-# pr-shepherd feature matrix
+# pr-shepherd features
 
-Shepherd does two jobs: **gather all context for a PR**, then **emit one deterministic action** for the calling agent.
+[← docs index](README.md) | [README](../README.md)
+
+What Shepherd does, the workflow it assumes, and what it does not do. The outcomes and their evidence are on the [README](../README.md#outcomes). Edge cases are listed in [handled-cases.md](handled-cases.md).
 
 ## Context gathered
 
-- GraphQL by default, with a REST transport for Claude Code cloud sessions and narrowly defined fallback after GraphQL blocking, primary exhaustion, or a bounded outage. REST leaves unavailable fields unknown, while text, JSON, and MCP outputs preserve equivalent information for the selected transport. See [github-api.md](github-api.md) and [context.md](context.md).
-- Surfaces inline review threads (full transcript), top-level PR comments, `COMMENTED` summaries, `APPROVED` reviews, and `CHANGES_REQUESTED` reviews. See [comments.md](comments.md).
-- Surfaces GitHub's raw `authorAssociation` and true-only `viewerDidAuthor`, plus Shepherd `authorType`, without deriving a trust label.
-- First-look tracking for outdated/resolved/minimized items; edited bodies re-surface. Poll debounce ticks do not persist seen markers until the post-window tick.
-- Classifies checks (passed / failing / in_progress / skipped / filtered / ignored / superseded) with optional `failedStep`, `jobName`, and a bounded log excerpt. Excerpts are omitted for `CANCELLED` and `STARTUP_FAILURE`. See [checks.md](checks.md).
-- Reads mergeability (`CLEAN`, `BEHIND`, `CONFLICTS`, `BLOCKED`, `UNSTABLE`, `DRAFT`, `UNKNOWN`) and prints merge requirements (approvals, conversation resolution, and extra rules only when they apply). Do not infer “must wait for an approval” from `reviewDecision`. See [merge-status.md](merge-status.md).
-- `BEHIND` is status information, not a rebase.
+| Area         | What one tick surfaces                                                                                                                                                   | Spec                                                                     |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| Review items | Inline threads (full transcript), PR comments, `COMMENTED` summaries, `APPROVED` and `CHANGES_REQUESTED` reviews                                                         | [comments.md](comments.md)                                               |
+| Visibility   | First-look outdated, resolved, and minimized items; edited bodies re-surface                                                                                             | [comments.md](comments.md#first-look-items-comment-visibility-invariant) |
+| Provenance   | Raw `authorAssociation`, true-only `viewerDidAuthor`, and `authorType`. No trust label is derived                                                                        | [comments.md](comments.md#trust-and-author-provenance)                   |
+| CI           | Checks classified passed / failing / in progress / skipped / filtered / ignored / superseded, with `jobName`, `failedStep`, and a log excerpt when triage can fetch them | [checks.md](checks.md)                                                   |
+| Mergeability | `CLEAN`, `BEHIND`, `CONFLICTS`, `BLOCKED`, `UNSTABLE`, `DRAFT`, `UNKNOWN`, plus the merge requirements that apply                                                        | [merge-status.md](merge-status.md)                                       |
+| Stacks       | Native-stack topology, ancestry, ownership, and READY receipts for every layer                                                                                           | [cli-usage.md](cli-usage.md)                                             |
+| Transport    | GraphQL by default; REST in cloud sessions or after a recognized GraphQL failure. Fields REST lacks stay unknown                                                         | [github-api.md](github-api.md), [rest.md](rest.md)                       |
+
+Log excerpts are omitted for `CANCELLED` and `STARTUP_FAILURE`. The full field inventory is in [context.md](context.md).
 
 ## Actions emitted
 
-- Exactly one action per tick: `WAIT`, `READY`, `MARK_READY`, `MERGE`, `CANCEL`, `ESCALATE`, or `FIX_CODE`. See [actions.md](actions.md) and [iterate-flow.md](iterate-flow.md).
-- Canonical local stdio MCP tools: `iterate`, `apply`, and `build_suggestion_patches`, plus a deprecated singular suggestion adapter. Shell: `pr-shepherd [PR]` (bounded poll) and `pr-shepherd iterate [PR]` (one tick). See [mcp.md](mcp.md) and [cli-usage.md](cli-usage.md).
-- Poll `--debounce` (default: `poll.debounceSeconds`; built-in 1m) so `FIX_CODE` waits a settle window, still iterating at `--interval`, then returns one batched tick. MCP `iterate` has no debounce.
-- Compact, read-only aggregate polling for explicit same-repository PR lists and complete native GitHub stacks, with one-PR READY receipts, a concurrent session for every layer that has work, raw ancestry detection, and an agent-run `gh stack merge` of the highest ready prefix when merge is requested.
-- `--format text|json`, `--verbose` (poll and iterate), `--version`/`-v`, `--ready-delay`, `--stall-timeout`, `--merge`, `--no-auto-mark-ready`. The legacy `--no-auto-cancel-actionable` flag remains accepted but is a no-op because Shepherd does not cancel workflow runs.
-- Capability-aware generated iterate actions: review IDs and automatic cleanup are filtered using raw viewer capability fields and batched in groups of 10. Explicit `apply` review/journal/file-view operations are attempted and surface GitHub's results; file-view requests invoke `markFileAsViewed`.
-- `build_suggestion_patches` emits an ordered, apply-checked patch list plus per-patch commit metadata. It does not write patch files or mutate git.
-- Surfaces GitHub Actions failure context without recommending cancel/rerun operations, whose viewer authorization GitHub does not expose exactly.
-- Optional `mark_ready` for eligible draft PRs. Ready-delay then `CANCEL` from a clean ready state.
-- Process exit codes `0` / `10`–`16` for PR-state actions; `64`–`78` for command/GitHub failures. See [exit-codes.md](exit-codes.md).
+| Feature                        | Notes                                                                                                                                                                              | Spec                                                         |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| One action per tick            | `WAIT`, `READY`, `MARK_READY`, `MERGE`, `CANCEL`, `ESCALATE`, or `FIX_CODE`; all but `CANCEL` carry numbered `## Instructions`                                                     | [actions.md](actions.md), [iterate-flow.md](iterate-flow.md) |
+| Review mutations               | `apply review` batches reply / resolve / minimize / dismiss. Generated IDs are capability-filtered; explicit IDs are attempted                                                     | [comments.md](comments.md#mutation-types)                    |
+| Suggestion patches             | `build_suggestion_patches` returns ordered, apply-checked patches and commit metadata. It never writes files or mutates git                                                        | [actions.md](actions.md)                                     |
+| Mark ready, ready-delay, merge | Optional `MARK_READY` for clean drafts; a ready-delay before `CANCEL`; with `--merge`, a merge or queue command for the agent (head-pinned for one PR, READY receipts for a stack) | [actions.md](actions.md)                                     |
+| Poll debounce                  | `--debounce` (default 1m) holds `FIX_CODE` for a settle window and returns one batched tick. MCP `iterate` has no debounce                                                         | [cli-usage.md](cli-usage.md)                                 |
+| Multi-PR and stack polling     | Compact read-only summaries; one concurrent session per owned layer with work; `gh stack merge` of the ready prefix                                                                | [cli-usage.md](cli-usage.md)                                 |
+| Shepherd Journal               | Idempotent decision log in the PR body, with a pure extraction API                                                                                                                 | [api.md](api.md)                                             |
+| Exit codes                     | `0` and `10`–`16` for PR state; `64`–`78` for command and GitHub failures                                                                                                          | [exit-codes.md](exit-codes.md)                               |
+
+Interfaces: the MCP tools `iterate`, `apply`, `build_suggestion_patches`, `extract_journal`, `get_journal`, and `playbook` ([mcp.md](mcp.md)), and the CLI `pr-shepherd [PR]` and `pr-shepherd iterate [PR]` ([cli-usage.md](cli-usage.md)).
 
 ## Configuration
 
-- `.pr-shepherdrc.yml` files cascade (cwd up to `$HOME`, including a user-level `$HOME/.pr-shepherdrc.yml`); closer files override farther ones. See [configuration.md](configuration.md).
-- Classification rules under `.pr-shepherd/classification/` (`pr-shepherd/classify` types).
-- Opt-in bundled classification rules for common vendor bot noise (`classify.standard` in `.pr-shepherdrc.yml`).
-- Auth via `GH_TOKEN`, `GITHUB_TOKEN`, `gh auth token`, then `GITHUB_PERSONAL_ACCESS_TOKEN`.
-- `PR_SHEPHERD_STATE_DIR`, `PR_SHEPHERD_LOG_DISABLED=1`, `PR_SHEPHERD_LOG_MAX_BODY`.
-- `pr-shepherd admin log-file` prints the per-worktree debug log path.
+| Setting                                                                           | Spec                                                                                   |
+| --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `.pr-shepherdrc.yml`, cascaded from cwd to `$HOME`                                | [configuration.md](configuration.md)                                                   |
+| Bundled vendor-noise rules (`classify.standard`)                                  | [configuration.md](configuration.md#classifystandard--default-)                        |
+| Custom rules in `.pr-shepherd/classification/`                                    | [actions.md](actions.md#classification-rules), [examples](../examples/classification/) |
+| Auth: `GH_TOKEN`, `GITHUB_TOKEN`, `gh auth token`, `GITHUB_PERSONAL_ACCESS_TOKEN` | [authentication.md](authentication.md)                                                 |
+| `PR_SHEPHERD_STATE_DIR`, `PR_SHEPHERD_LOG_DISABLED`, `PR_SHEPHERD_LOG_MAX_BODY`   | [configuration.md](configuration.md#environment-variables)                             |
+
+## Workflow assumptions
+
+Shepherd works best on PRs that use required status checks and conversation resolution.
+
+- Push access to the PR head branch is a usage precondition. GitHub viewer fields do not create a separate push handoff.
+- The CLI never mutates git. It prints commit and push steps for the agent.
+- Every thread, comment, and review summary is surfaced at least once, even when it is already outdated, resolved, or minimized. Edited items re-surface. The exception is a `COMMENTED` review minimized before the first tick, which is not fetched.
+- Unmarked bot and other non-human threads, and the viewer's own threads, are replied to and resolved. Other humans' threads are reply-only unless `iterate.resolveOtherHumanThreads` is `outdated` or `always`. Human items are never minimized. See [conversation-resolution.md](conversation-resolution.md).
+- Shepherd recognizes its own reply only by a leading `<!-- pr-shepherd -->` marker. A marked thread is resolve-only on retry.
+- Review summaries are not minimized while their inline threads are still unresolved.
+- Clean drafts are marked ready unless `actions.autoMarkReady: false` or `--no-auto-mark-ready` is set.
+- With `--merge` on the GraphQL transport, review work is deferred while the PR is in the merge queue, because a push would eject it. Set `actions.workWhileQueued: true` to act anyway. Failing checks and conflicts are never deferred. REST cannot see queue membership, so it does not defer.
+- With REST, viewer capability is unknown. Otherwise-eligible mutations are attempted and GitHub's response decides.
+- `BEHIND` is status, not a rebase. The agent updates the branch when it chooses.
 
 ## Not supported
 
-- Does not run as a long-running daemon; MCP clients call `iterate` again after actionable output, while the shell poll dispatcher remains bounded.
-- Does not merge PRs or merge branches itself.
-- Does not continuously rebase branches outside required conflict-resolution scenarios. `BEHIND` is reported; the agent updates the branch.
-- Does not modify files or apply suggestion patches to the working tree; it only emits what to run.
-- Does not guarantee CI rerun-versus-code-fix decisions; it surfaces failures and delegates action choice to the caller.
-- Replies to unmarked other-human inline threads without resolving or minimizing them unless `iterate.resolveOtherHumanThreads` is `outdated` or `always`; pairs reply-and-resolve for unmarked bot/non-human and viewer-authored human feedback, with marker-ended retries resolving only. Marker-ended other-human threads are already acknowledged at the default `none` setting.
-- Does not auto-classify every surfaced thread/comment as `actionable` vs `informational`; it exposes raw structured triage data.
-- Does not automatically apply edits for threads without line/locatable references.
-- Does not minimize already-hidden/sticky comment content beyond existing CLI mutation paths. Already-minimized `COMMENTED` reviews are not fetched.
-- Does not support hidden unknown/unsupported subcommands; unknown input returns usage and non-zero exit.
-- Does not support unknown GitHub API domains without explicit `rest()` exceptions documented by implementation constraints.
-
-## References
-
-- Command surface: [cli-usage.md](cli-usage.md)
-- MCP server: [mcp.md](mcp.md)
-- Programmatic API: [api.md](api.md)
-- Action model: [actions.md](actions.md), [iterate-flow.md](iterate-flow.md)
-- Context inventory: [context.md](context.md)
-- Configuration: [configuration.md](configuration.md)
-- Comments: [comments.md](comments.md)
-- Conversation resolution vs human inline threads: [conversation-resolution.md](conversation-resolution.md)
+- No long-running daemon. MCP clients call `iterate` again; the shell poll is bounded.
+- No merging or branch updates by Shepherd itself, and no continuous rebasing.
+- No edits to the working tree. Suggestion patches are returned, not applied.
+- No judgment of which comments are actionable, and no rerun-versus-fix decision for CI. The agent decides. Only configured `classify` rules suppress matching noise.
+- No automatic edits for threads without a file location.
+- Already-minimized `COMMENTED` reviews are not fetched.
+- GitHub only. No GitLab, Bitbucket, or Azure DevOps.

@@ -1,124 +1,172 @@
 # Escalation boundary
 
-`ESCALATE` is Shepherd's explicit human-handoff action. For a singular PR it uses the closed trigger
-union below. Native-stack aggregate reconciliation remains read-only: autonomous unready layers
-return stack-level `SHEPHERD`, queued stacks return `WAIT`, and terminal READY or merged stacks return `CANCEL`.
-Aggregate `ESCALATE` is reserved for genuine human decisions such as closed or unverified topology,
-after no autonomous one-PR Shepherd session remains.
-Aggregate mode never performs a mutation; a `--stack --merge` result emits an agent-run
-`gh stack merge` command for the highest ready prefix.
+`ESCALATE` is Shepherd's only human handoff. This page is the canonical, closed list of escalation triggers (the `EscalateTrigger` union in `src/types/escalate.mts`) and their exact predicates, for maintainers and for agents deciding what to hand to a human. Output shape is in [actions.md](actions.md#escalate).
 
-| Trigger                       | Exact condition                                                                                                                                                                                      |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `authorization-required`      | An otherwise-eligible automatic mark-ready operation is denied by GitHub. Unknown REST capability is attempted; explicit merge/enqueue requests are also attempted and surface GitHub's response.    |
-| `check-follow-up-unavailable` | At least one remaining failing check has no autonomous follow-up, and no other autonomous work remains in the tick.                                                                                  |
-| `fix-thrash`                  | A retryable, located review thread remains unchanged and unresolved after appearing in `iterate.fixAttemptsPerThread` caller-visible `FIX_CODE` results; the following unchanged tick escalates.     |
-| `base-branch-unknown`         | The GraphQL base branch is empty or unsafe and the current tick has work that could require a push, so Shepherd cannot name a safe rebase target.                                                    |
-| `merge-queue-removed`         | Merge mode is enabled, GitHub reports a queue removal, the head has not changed since removal, no queue/auto-merge state remains, and no earlier branch found an actionable failure or concrete fix. |
-| `merge-method-unavailable`    | Merge mode is enabled, and the configured merge method is disabled on the repository, or the repository enables no merge method. Shepherd does not print a `gh pr merge` command.                    |
-| `stall-timeout`               | An enabled timeout expires for CI that never starts, an unchanged `WAIT`/`FIX_CODE` state fingerprint, or a `--stack` selection whose layers can only wait.                                          |
-| `required-checks-unreported`  | Required merge-target contexts still have no check run after one close/reopen of a current head, and no Actions workflow is running. A behind base stays on rebase-and-push.                         |
-| `stall-state-unavailable`     | An enabled stall timeout cannot read or write its timer. The tick hands off instead of treating the failure as a new first sighting.                                                                 |
-| `transport-unsupported`       | The selected transport cannot perform an operation needed for the requested action, and Shepherd cannot safely represent it as a one-look skip or explicit apply error.                              |
+## Triggers
+
+| Trigger                       | Fires when                                                                                                                                                  | What the human does                                                                    |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `authorization-required`      | GitHub denied an otherwise-eligible automatic mark-ready operation (or GraphQL capability was false/unavailable and failed closed).                         | Grant update access or mark the PR ready by hand.                                      |
+| `transport-unsupported`       | The selected transport cannot perform an operation the action needs, and it cannot be represented as a one-look skip or explicit apply error.               | Rerun on a transport that supports it, or do the operation by hand.                    |
+| `check-follow-up-unavailable` | Every remaining failing check has no autonomous follow-up, and no other autonomous work remains.                                                            | Inspect the check (approve, rerun, or fix CI) and resume.                              |
+| `fix-thrash`                  | A retryable, located review thread stays unchanged and unresolved after `iterate.fixAttemptsPerThread` caller-visible `FIX_CODE` results.                   | Decide the thread; optionally run the retained pending review commands.                |
+| `base-branch-unknown`         | The GraphQL base branch is empty or unsafe, and the tick has work that could require a push.                                                                | Fix the PR base, then resume.                                                          |
+| `merge-queue-removed`         | Merge mode is on, GitHub reports a current queue removal on an unchanged head, nothing is queued or auto-merging, and no actionable failure explains it.    | Read GitHub's raw removal reason and decide whether to requeue.                        |
+| `merge-method-unavailable`    | Merge mode is on and the method Shepherd would print is disabled on the repository, or the repository enables no merge method. No merge command is printed. | Fix `merge.method` / `merge.commandArgs` or repository merge settings.                 |
+| `stall-timeout`               | An enabled timeout expires: CI never starts, a `WAIT`/`FIX_CODE` fingerprint stays unchanged, or a `--stack` selection's layers can only wait.              | Investigate why nothing moves.                                                         |
+| `required-checks-unreported`  | Required merge-target contexts still have no check run after one close/reopen of the current head, and no Actions workflow is running.                      | Fix the workflow (path filters are the usual cause) so it emits the required contexts. |
+| `stall-state-unavailable`     | An enabled stall timeout cannot read or write its timer file.                                                                                               | Fix `PR_SHEPHERD_STATE_DIR` or its permissions, then resume.                           |
+
+Any escalation from a tick with automatically selected review mutations keeps every non-empty resolve-only and `apply review` command under `pendingReviewCommands` (Markdown: `## Pending review commands`). This includes `fix-thrash`, `base-branch-unknown`, and stall conversions. Polling still pauses; the commands stay available for human-directed recovery.
+
+## Stack-level outcomes
+
+Native-stack aggregate reconciliation (`--stack`) is read-only and never mutates GitHub.
+
+| Stack state                                                                                       | Result                                                     |
+| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Owned layers still have autonomous work                                                           | `SHEPHERD` (non-terminal), with human blockers surfaced    |
+| Every remaining layer can only wait, or the stack is queued                                       | `WAIT`                                                     |
+| `--merge` and a ready prefix whose bottom open layer targets base                                 | `MERGE` with an agent-run `gh stack merge` for that prefix |
+| Every open layer READY without `--merge`, or every layer merged                                   | `CANCEL`                                                   |
+| A human decision remains (closed or unverified topology) and no autonomous one-PR session remains | `ESCALATE`                                                 |
+
+Stack ticks can also escalate with `stall-timeout`, `stall-state-unavailable`, or `merge-method-unavailable`; see the predicates below and [actions.md](actions.md#shepherd-actions).
 
 ## Complete predicates
 
 ### `authorization-required`
 
-This trigger covers an automatic mark-ready operation that GitHub denied:
+Automatic mark-ready was selected for an otherwise-ready draft, Shepherd attempted the selected transport's operation, and GitHub denied it. When GraphQL returns `viewerCanUpdate: false`, Shepherd hands off without attempting. REST has no capability field, so on the supported cloud CCR route it attempts and uses GitHub's response.
 
-1. Mark ready: automatic mark-ready was selected for an otherwise-ready draft PR, Shepherd attempted the selected transport's operation, and GitHub denied it. When GraphQL returns `viewerCanUpdate: false`, Shepherd can hand off without attempting. REST has no equivalent capability field, so it attempts and uses GitHub's response.
+Not this trigger:
 
-A mark-ready rate limit remains retryable, including a message-only secondary throttle with a nonempty or absent primary quota sample. It does not create an authorization handoff; `--until-terminal` applies the normal throttle backoff.
-
-Denied or unverifiable generated review replies, thread resolutions, bot-review dismissals, and automatic cleanup do not escalate. Shepherd surfaces the affected item once, omits the generated mutation, records that first-look output in its normal debug log, and suppresses the unchanged item on later ticks. Explicit `apply` review, journal, file-view, and merge/enqueue operations are attempted; GitHub's response is authoritative. Push access is also not an escalation trigger; it is a precondition for using Shepherd on the PR.
+- A mark-ready rate limit stays retryable, including a message-only secondary throttle with a nonempty or absent primary quota sample; `--until-terminal` applies the normal throttle backoff.
+- Denied or unverifiable generated review replies, thread resolutions, bot-review dismissals, and automatic cleanup. Shepherd surfaces the item once, omits the generated mutation, records the first look in its debug log, and suppresses the unchanged item later.
+- Explicit `apply` review, journal, file-view, and merge/enqueue operations. They are attempted and GitHub's response is authoritative.
+- Push access. It is a precondition for using Shepherd on the PR.
 
 ### `transport-unsupported`
 
-The selected REST transport lacks an operation required by an autonomous action or explicit mutation. Shepherd names the unsupported operation and the affected item in the escalation. Mark-ready without a CCR route uses this reason when authorization is unknown or allowed. Generated comment minimization is a one-look skip; explicit `apply` minimization and file-view requests return an explicit unsupported-operation error. Merge-queue and ordinary merge operations are not presumed unsupported by REST. REST cannot verify current queue-removal history: otherwise-eligible same-head recovery or native-stack acknowledgment stays `FIX_CODE` for the failed checks with an explicit unsupported instruction and no recovery command. An explicit REST `apply queue-removal` returns an unsupported-operation error.
+The selected REST transport lacks an operation required by an autonomous action or explicit mutation. The escalation names the operation and the affected item.
 
-A cloud proxy session-access refusal during mark-ready also uses this trigger and preserves the proxy message, including its repository-access instructions. Review mutations stop with exit `77` instead of recording the target as GitHub-denied; repairing session access makes the unchanged item retryable.
+| Operation on REST                                                                   | Outcome                                                                                                                                               |
+| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mark-ready without a CCR route (authorization unknown or allowed)                   | `ESCALATE` / `transport-unsupported`                                                                                                                  |
+| Required readiness fields REST cannot supply (no CI in progress, merge state known) | `ESCALATE` / `transport-unsupported`, naming each field and reason                                                                                    |
+| Generated comment minimization                                                      | One-look skip                                                                                                                                         |
+| Explicit `apply` minimization or file-view                                          | Explicit unsupported-operation error                                                                                                                  |
+| Merge-queue and ordinary merge                                                      | Supported; not presumed unsupported                                                                                                                   |
+| Same-head queue recovery or native-stack acknowledgment                             | Stays `FIX_CODE` for the failed checks, with an explicit unsupported instruction and no recovery command (REST cannot verify current removal history) |
+| Explicit `apply queue-removal`                                                      | Unsupported-operation error                                                                                                                           |
+
+A cloud proxy session-access refusal during mark-ready also uses this trigger and quotes the proxy message, including its repository-access instructions. Review mutations instead stop with exit `77` without recording the target as GitHub-denied; repairing session access makes the unchanged item retryable.
 
 ### `check-follow-up-unavailable`
 
 At least one remaining failing check has no `rerunCommand` and is one of:
 
-- a GitHub Actions check whose `runAttempt` is greater than 1 and has no nonblank included log excerpt, meaning Shepherd's single rerun allowance is exhausted with no usable failure evidence (unless a behind/conflicting branch still provides a branch-refresh path);
+- a GitHub Actions check with `runAttempt` greater than 1 and no nonblank included log excerpt (Shepherd's single rerun allowance is spent with no usable evidence), unless a behind/conflicting branch still provides a branch-refresh path;
 - `ACTION_REQUIRED`, `CANCELLED`, or `STARTUP_FAILURE`;
-- a check with `runId === null` and an empty or whitespace-only `detailsUrl`; or
-- a check with a non-null run ID but no nonblank included `logExcerpt` (or `relatedJobs[].logExcerpt`).
+- a check with `runId === null` and an empty or whitespace-only `detailsUrl`;
+- a check with a run ID but no nonblank included `logExcerpt` (or `relatedJobs[].logExcerpt`).
 
-The trigger fires only when no autonomous work or newly surfaced one-look item remains: no conflicts, behind-base recovery for a later workflow attempt, currently surfaced actionable or resolution-only threads, actionable comments, pending comment minimizations, actionable changes-requested reviews, queued/first-look/edited review summaries, first-look threads/comments, actionable annotations, another failing check with an autonomous path, or a failed job whose workflow run still has an in-progress job. An unauthorized review item can therefore postpone this escalation for its one visibility tick; after its seen marker suppresses it, the manual-only check may escalate on the next tick. An authorized bot, viewer-authored, or configured other-human thread with a generated mutation is repeatable work even without a source location. A stale human `CHANGES_REQUESTED` review does not postpone the handoff, but it is preserved in the escalation payload so the human sees every remaining blocker.
+It fires only when no autonomous work or newly surfaced one-look item remains: no conflicts, behind-base recovery for a later workflow attempt, surfaced actionable or resolution-only threads, actionable comments, pending comment minimizations, actionable changes-requested reviews, queued/first-look/edited review summaries, first-look threads/comments, actionable annotations, another failing check with an autonomous path, or a failed job whose workflow run still has an in-progress job.
 
-A failing external check with `runId === null` and a non-empty `detailsUrl` stays `FIX_CODE`. Codecov is the regression case: its URL is an autonomous investigation path even without a GitHub Actions run ID.
+- An unauthorized review item postpones the escalation for its one visibility tick; once its seen marker suppresses it, the manual-only check can escalate next tick.
+- An authorized bot, viewer-authored, or configured other-human thread with a generated mutation is repeatable work even without a source location.
+- A stale human `CHANGES_REQUESTED` review does not postpone the handoff, but it is kept in the payload so the human sees every blocker.
+- A failing external check with `runId === null` and a non-empty `detailsUrl` stays `FIX_CODE`: the URL is an autonomous investigation path (Codecov is the regression case).
+- `escalate.checks[]` keeps the raw check details for the human.
 
 ### `fix-thrash`
 
-The thread must be retryable: it has a non-null path and line and every required review mutation is authorized. Attempts advance only when a `FIX_CODE` result containing that thread is returned to the caller; internal poll/debounce ticks do not count. Editing the body resets that thread's attempt count. The configured number of `FIX_CODE` results all include the pending review commands, and the following unchanged tick escalates with those commands retained under `pendingReviewCommands`.
-
-Active threads without a source location do not count toward `fix-thrash`. Unauthorized review mutations are surfaced once, then suppressed. Authorized reply/resolve mutations still run by thread ID when GitHub has cleared the path or line, without counting toward `fix-thrash`.
-
-Any escalation produced from a tick that has automatically selected review mutations retains all non-empty `resolve-only` and `apply review` commands. This includes review work accompanying `fix-thrash`, `base-branch-unknown`, and a stall conversion. The escalation still pauses automated polling; the commands remain available for the human-directed recovery. Authorized bot `CHANGES_REQUESTED` dismissals remain repeatable `FIX_CODE` work, even after the stall window; the agent runs the emitted command without a human handoff.
+- The thread must be retryable: non-null path and line, and every required review mutation authorized.
+- Attempts advance only when a `FIX_CODE` result containing the thread is returned to the caller. Internal poll/debounce ticks do not count.
+- Editing the thread body resets its count.
+- Each of the configured `FIX_CODE` results repeats the pending review commands; the next unchanged tick escalates and retains them under `pendingReviewCommands`.
+- Threads without a source location, threads suppressed by seen markers, and threads with unauthorized required mutations do not count. Unauthorized mutations are surfaced once, then suppressed. Authorized reply/resolve mutations still run by thread ID after GitHub clears the path or line.
+- Authorized bot `CHANGES_REQUESTED` dismissals remain repeatable `FIX_CODE` work, even after the stall window; the agent runs the emitted command without a handoff.
 
 ### `base-branch-unknown`
 
-The GraphQL base branch is empty or contains characters outside `[A-Za-z0-9._/-]`, and a push is plausible because the tick contains a retryable actionable or resolution-only thread, failing check, actionable annotation, conflict, actionable changes-requested review, or actionable comment. Skipped review mutations and unlocated threads do not make a push plausible.
+The GraphQL base branch is empty or contains characters outside `[A-Za-z0-9._/-]`, and a push is plausible: the tick has a retryable actionable or resolution-only thread, failing check, actionable annotation, conflict, actionable changes-requested review, or actionable comment. Skipped review mutations and unlocated threads do not make a push plausible. Rebasing onto the wrong base is worse than pausing.
 
 ### `merge-queue-removed`
 
-All of the following are true:
+All of these hold:
 
 - merge mode is enabled;
 - no queue or auto-merge state is active;
-- GitHub reports a latest merge-queue removal;
-- the PR head was not updated after that removal, **and this is verifiable** — GitHub's `timelineItems(last: 1, ...)` keeps returning the single most recent removal event regardless of age, so a PR removed from the queue once and never re-added would otherwise re-trigger this escalation forever. A merge-commit queue lists the PR head as a parent of the removed queue commit, so a later push is visible when that head is no longer a parent. A squash or rebase queue commit has a single parent on the base and does not list the PR head; that removal stays current until this head reached the PR after the removal. Shepherd reads that from the earliest `pull_request` or `pull_request_target` check suite time on the head commit, using the workflow-run time when the suite time is absent, and falls back to the head's committer time only when neither is available. A later head-ref force-push supersedes either time, since an older commit force-pushed back keeps its earlier check suites and committer time. A force-push after the removal also makes a merge-commit removal stale even when its parents list the head, since that SHA was pushed back for a new attempt. When GitHub omits the removed queue commit for that event (for example after it is garbage collected), freshness cannot be checked; Shepherd treats that as stale/updated and does not escalate. A newer enqueue also clears it. The raw removal fields still render in the merge-queue header on every tick regardless of this check; and
+- GitHub reports a latest merge-queue removal, newer than the latest enqueue;
+- the PR head has verifiably not changed since that removal;
 - no earlier actionable-work branch supplied a concrete fix.
 
-Failing queue CI is actionable and therefore stays `FIX_CODE`; it does not trigger `merge-queue-removed`. GitHub exposes the removal reason as a raw lowercase string. Observed values are `failed_checks`, `merge_conflict`, `invalid_merge_commit`, `stack_invalidated`, and `merged`; only `failed_checks` qualifies for the requeue plan or native-stack acknowledgment. The escalation preserves GitHub's raw removal reason, actor, timestamp, queue commit, and parent OIDs when available.
+Freshness check (GitHub's `timelineItems(last: 1, ...)` returns the latest removal regardless of age, so without it one old removal would escalate forever):
+
+| Queue commit shape                 | Removal is stale when                                                                                                                                                                                                                                                                  |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Merge commit (PR head is a parent) | The head is no longer a parent, or a head-ref force-push happened after the removal (that SHA was pushed back for a new attempt).                                                                                                                                                      |
+| Squash or rebase (single parent)   | The current head reached the PR after the removal. Shepherd dates that by the earliest `pull_request` or `pull_request_target` check suite on the head (workflow-run time if the suite time is absent), then the head's committer time; a later head-ref force-push supersedes either. |
+| Removed queue commit unavailable   | Always (freshness cannot be checked, for example after garbage collection).                                                                                                                                                                                                            |
+
+A newer enqueue also clears the removal. The raw removal fields still render in the merge-queue header every tick.
+
+Failing queue CI is actionable and stays `FIX_CODE`. GitHub's removal reason is a raw lowercase string; observed values are `failed_checks`, `merge_conflict`, `invalid_merge_commit`, `stack_invalidated`, and `merged`. Only `failed_checks` qualifies for the requeue plan or native-stack acknowledgment. The escalation keeps GitHub's raw reason, actor, timestamp, queue commit, and parent OIDs when available.
 
 ### Native-stack merge routing
 
-Native-stack membership is not an escalation. When a one-PR `--merge` poll reaches its ready delay, it writes the layer's READY receipt and returns non-terminal `FIX_CODE` with `pr-shepherd --stack <PR URL> --until-terminal --merge`. This applies at every position, including position 1: `--auto` is rejected server-side on stacked PRs, and a plain `gh pr merge` fallback would land a mid-stack layer into its still-unmerged parent rather than the stack trunk.
+Native-stack membership is not an escalation.
 
-The aggregate selector reconciles every open layer's READY receipt and linear ancestry, then returns stack-level `SHEPHERD` for every layer that still has work, `WAIT` when every remaining layer can only wait or the stack is queued, `MERGE` with `gh stack merge` for the highest ready prefix when `--merge` is set, `CANCEL` once every open layer is READY without `--merge` or after every layer merges, and `ESCALATE` only for a genuine human decision after autonomous sessions are exhausted. It never performs a mutation.
+1. When a one-PR `--merge` poll reaches its ready delay, it writes the layer's READY receipt and returns non-terminal `FIX_CODE` with `pr-shepherd --stack <PR URL> --until-terminal --merge`. This applies at every position, including position 1: `--auto` is rejected server-side on stacked PRs, and a plain `gh pr merge` fallback would land a mid-stack layer into its unmerged parent instead of the stack trunk.
+2. The aggregate selector reconciles every open layer's READY receipt and linear ancestry and returns one of the [stack-level outcomes](#stack-level-outcomes).
+3. A clean draft is marked ready by its own session without waiting for lower layers. Closed or unverified topology is surfaced during `SHEPHERD` while another layer can proceed; otherwise it returns `ESCALATE`.
+4. With a ready prefix whose bottom open layer targets the stack base, `--stack --merge` returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge <PR number> --yes` and the allowed method flag for the highest ready layer. Rerun the same selector until every layer merges and it returns `CANCEL`. If the repository allows no method for that command, it returns `ESCALATE` with `merge-method-unavailable`.
 
-For aggregate `--stack` polling, a clean draft is marked ready by its own session without waiting for lower layers. Closed or unverified topology is surfaced during `SHEPHERD` when another layer can still proceed; otherwise it returns `ESCALATE` for human direction. If `--stack --merge` finds a ready prefix whose bottom open layer targets the stack base, it returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge <PR number> --yes` and the allowed method flag for that highest ready layer; rerun the same selector until every layer merges and it returns `CANCEL`. A repository that allows no method for that command returns `ESCALATE` with `merge-method-unavailable`.
-
-**Detection caveat:** GitHub's stack field is a public-preview API and can be absent even for a genuinely stacked PR — for example when Stacked PRs are disabled on the repository. An absent `stack` field is therefore not proof the PR isn't stacked; it only means Shepherd has no signal either way. Shepherd has no other reliable signal to distinguish an ordinary feature branch from an undetectable stacked PR (comparing the base branch to the repository's default branch false-positives on any PR that targets a non-default branch for ordinary reasons), so it does not attempt to infer stackedness beyond this field. This is a known gap, not a silently accepted risk: absence of the field only means the ordinary merge path proceeds, it does not confirm the PR is safe to merge with a plain `gh pr merge --auto`.
+**Detection caveat:** GitHub's `stack` field is a public-preview API and can be absent even for a stacked PR (for example when Stacked PRs are disabled on the repository). Absence means no signal, not "not stacked". Shepherd does not infer stackedness otherwise (comparing the base to the default branch false-positives on any PR targeting a non-default branch). This is a known gap: absence only lets the ordinary merge path proceed; it does not confirm a plain `gh pr merge --auto` is safe.
 
 ### `merge-method-unavailable`
 
-`--merge` is enabled and Shepherd is about to print a merge command, but the method it would use is not allowed. That is either `merge.method` (or the strategy flag in `merge.commandArgs`) naming a method the repository disables, or a repository with merge commits, squash, and rebase all disabled. The result names the allowed methods and does not include a merge command. REST queue requests omit the direct method and do not escalate for a disabled method they never use. When REST queue policy is unknown, a configured direct method still escalates because it cannot safely be applied to a `default` request.
+`--merge` is enabled and Shepherd is about to print a merge command, but the method is not allowed: `merge.method` (or the strategy flag in `merge.commandArgs`) names a method the repository disables, or the repository disables merge commits, squash, and rebase. The result names the allowed methods and has no merge command.
+
+- REST queue requests omit the direct method, so a disabled method never escalates them.
+- When REST queue policy is unknown, a configured direct method still escalates: it cannot safely be applied to a `default` request.
 
 ### `stall-timeout`
 
-There are two paths:
+| Path         | Condition                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| CI start     | The prospective result is `WAIT`, and an external status context — or a `PENDING`, `QUEUED`, `REQUESTED`, or `WAITING` check run with no start time — stays unstarted for the threshold.                                                                                                                                                                                       |
+| Stable state | The prospective result is `WAIT` or `FIX_CODE`, the stored fingerprint is unchanged, and its nonnegative age reaches the threshold. The fingerprint covers the action, the PR head commit GitHub reports (not the local `HEAD`), PR/merge/draft state, failing and in-progress checks, the latest merge-queue removal commit, actionable item IDs, and actionable annotations. |
+| `--stack`    | Every remaining layer's bounded probe can only report waiting ([the idle `WAIT`](actions.md#shepherd-actions)), so no one-PR session runs.                                                                                                                                                                                                                                     |
 
-- CI-start path: the timeout is enabled, the prospective result is `WAIT`, and an external status context—or a `PENDING`, `QUEUED`, `REQUESTED`, or `WAITING` check run with no start time—remains unstarted for at least the threshold.
-- Stable-state path: the timeout is enabled, the prospective result is `WAIT` or `FIX_CODE`, the stored fingerprint is unchanged, its age is nonnegative, and that age reaches the threshold. The fingerprint covers the action, the PR head commit GitHub reports (not the local checkout's `HEAD`), PR/merge/draft state, failing and in-progress checks, the latest merge-queue removal commit, actionable item IDs, and actionable annotations.
-
-A changed fingerprint resets the timer. Disabling the timeout refreshes state and never escalates. A native-stack draft whose wait is the disabled mark-ready hold uses this same guard.
-
-A `--stack` selection has a third path. When every remaining layer's bounded probe can only report waiting ([the idle `WAIT`](actions.md#shepherd-actions)), no one-PR session runs, so the selector keeps its own timer in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/stack-<number>/stack-stall.json`. It fingerprints the summary status plus each layer's head commit, draft state, READY receipt, reasons. Every aggregate tick shares that timer, whether it comes from `--until-terminal`, a bounded poll, or MCP. A changed fingerprint resets it, and any other stack plan or a disabled timeout clears it. Once an unchanged idle `WAIT` reaches the threshold, the selector returns `ESCALATE` with a `stall-timeout` instruction that names each waiting layer and why it waits.
+- The threshold is `iterate.stallTimeoutMinutes` (default 60) or `--stall-timeout`. A changed fingerprint resets the timer. A disabled timeout refreshes state and never escalates.
+- A native-stack draft held by disabled mark-ready uses the same guard.
+- The stack timer lives in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/stack-<number>/stack-stall.json`. It fingerprints the summary status plus each layer's head commit, draft state, READY receipt, and reasons. Every aggregate tick shares it (`--until-terminal`, a bounded poll, or MCP). A changed fingerprint resets it; any other stack plan or a disabled timeout clears it. The escalation names each waiting layer and why it waits.
 
 ### `required-checks-unreported`
 
-The merge target requires one or more status contexts that have no check run and no status context on the head, no relevant Actions workflow is running, and Shepherd already emitted one close/reopen for that same head and context set. The marker is `ci-retrigger.json` under the PR state directory. A second close will not create a job the workflow does not emit. Path filters are the usual cause.
+The merge target requires status contexts with no check run and no status context on the head, no relevant Actions workflow is running, and Shepherd already emitted one close/reopen for that same head and context set (marker: `ci-retrigger.json` in the PR state directory). A second close will not create a job the workflow does not emit; path filters are the usual cause.
 
-This is immediate. It does not wait for `stall-timeout`. Rebase and push stays the `FIX_CODE` action while the stack trunk compare is behind, the PR base compare (`baseBehindBy`) is behind, or the derived merge status is `BEHIND`. `mergeStateStatus` `BLOCKED` does not hide that compare. That path does not write the marker, so a repeated rebase still uses the ordinary stall timer. If the push does not start the checks, the next current head investigates and then takes this trigger. Failing checks, merge conflicts, and an in-progress Actions workflow do not take this trigger. Other autonomous review work on the same tick stays `FIX_CODE` without a second close; the trigger fires once that work is gone and the contexts are still missing.
+- This fires immediately; it does not wait for `stall-timeout`.
+- While the stack trunk compare is behind, the PR base compare (`baseBehindBy`) is behind, or the derived merge status is `BEHIND`, rebase and push stays the `FIX_CODE` action. `mergeStateStatus` `BLOCKED` does not hide that compare. That path writes no marker, so a repeated rebase uses the ordinary stall timer. If the push does not start the checks, the next current head investigates and then takes this trigger.
+- Failing checks, merge conflicts, and an in-progress Actions workflow never take this trigger.
+- Other autonomous review work on the same tick stays `FIX_CODE` without a second close; the trigger fires once that work is gone and the contexts are still missing.
 
 ### `stall-state-unavailable`
 
-The stall timeout is enabled, and the one-PR timer (`iterate-stall.json`) or the stack timer (`stack-stall.json`) cannot be read or written. A missing file is a normal first sighting. `ENOENT` is that miss. Any other read error, an unsafe state key, or a failed write of a new or reset timer is this trigger. Corrupt JSON is a miss, so one successful rewrite starts the timer again.
+The stall timeout is enabled, and the one-PR timer (`iterate-stall.json`) or the stack timer (`stack-stall.json`) cannot be read or written.
 
-The escalation suggestion quotes the filesystem error and tells the caller to fix `PR_SHEPHERD_STATE_DIR` or the directory permissions, then resume. `--stall-timeout 0` does not use this trigger: the guard is off, and the original action stands. A `--stack` selection returns the same handoff as one instruction, `` `stall-state-unavailable` ``, naming the error. Disabling the timeout, or switching to a plan that is not an idle wait, still clears the timer on a best-effort basis.
+- A missing file (`ENOENT`) is a normal first sighting. Corrupt JSON is also a miss, so one successful rewrite restarts the timer.
+- Any other read error, an unsafe state key, or a failed write of a new or reset timer is this trigger.
+- The suggestion quotes the filesystem error and says to fix `PR_SHEPHERD_STATE_DIR` or the directory permissions, then resume. A `--stack` selection returns the same handoff as one instruction, `` `stall-state-unavailable` ``, naming the error.
+- `--stall-timeout 0` turns the guard off, so the original action stands. Disabling the timeout, or switching to a plan that is not an idle wait, still clears the timer on a best-effort basis.
 
 ## Non-escalating outcomes
 
-- `FIX_CODE` is always non-terminal: perform the emitted work and iterate immediately.
-- Stack-level `SHEPHERD` is always non-terminal: complete the listed one-PR sessions and reselect
-  the stack before any remaining human handoff.
+- `FIX_CODE` is always non-terminal: do the emitted work and iterate immediately.
+- Stack-level `SHEPHERD` is always non-terminal: complete the listed one-PR sessions and reselect the stack before any remaining human handoff.
 - Closed or merged PRs return `CANCEL`, not `ESCALATE`.
-- Ordinary non-force pushes do not produce `authorization-required`.
+- Ordinary non-force pushes never produce `authorization-required`.
 - Missing-location threads and unauthorized review mutations are surfaced/logged once and skipped.
-- Failing queue CI and URL-backed external checks remain actionable `FIX_CODE` work.
+- Failing queue CI and URL-backed external checks stay actionable `FIX_CODE` work.

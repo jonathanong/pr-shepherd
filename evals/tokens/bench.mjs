@@ -1124,6 +1124,12 @@ out(
   `- Price ratios to one uncached input token: cache read ${MODEL.cacheReadMultiplier}, cache write ${MODEL.cacheWriteMultiplier}, output ${MODEL.outputMultiplier}.`,
 );
 out(
+  "- Prompt cache: always warm. Every turn re-reads the carried context at the cache-read price; no wait expires it. The cache lives 5 minutes or more, so a wait longer than that (a blocking `gh pr checks --watch`, a ready-delay) can re-write the whole context at the cache-write price on any arm. That is not charged.",
+);
+out(
+  "- Thinking tokens: none, on every arm. A turn is charged only for the commands it emits. Baselines that must classify raw GitHub state likely think more than an agent following printed instructions; that is not charged.",
+);
+out(
   `- Host output caps: Bash ${num(MODEL.bashOutputCapChars)} characters, MCP ${num(MODEL.mcpOutputCapTokens)} tokens.`,
 );
 out(
