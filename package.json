@@ -79,7 +79,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
     "picomatch": "^4.0.4",
-    "undici": "^7.30.0",
+    "undici": "^8.11.2",
     "yaml": "^2.7.0",
     "zod": "^4.4.3"
   },
@@ -96,6 +96,6 @@
     "vitest": "^5.0.0"
   },
   "engines": {
-    "node": ">=22.18.0"
+    "node": ">=22.19.0"
   }
 }
