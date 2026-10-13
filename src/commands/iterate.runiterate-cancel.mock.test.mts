@@ -470,6 +470,74 @@ describe("runIterate — cancel", () => {
     expect(mockClearReadyDelay).not.toHaveBeenCalled();
   });
 
+  describe("a stack layer GitHub reports BLOCKED", () => {
+    function blockedLayer() {
+      mockRunCheck.mockResolvedValue(
+        makeReport({
+          status: "READY",
+          headSha: "head-1",
+          baseRefOid: "base-1",
+          mergeStatus: {
+            ...makeReport().mergeStatus,
+            status: "BLOCKED",
+            mergeStateStatus: "BLOCKED",
+            mergeRequirements: stackRequirements(),
+          },
+        }),
+      );
+      mockUpdateReadyDelay.mockResolvedValue({
+        isReady: true,
+        shouldCancel: true,
+        remainingSeconds: 0,
+      });
+      mockFetchRawSummaryPr.mockResolvedValue({
+        ...rawReadySnapshot,
+        mergeStateStatus: "BLOCKED",
+      });
+    }
+
+    it("ends its one-PR session without a receipt when --merge is off", async () => {
+      blockedLayer();
+
+      const result = await runIterate(makeOpts());
+
+      expect(result).toMatchObject({
+        action: "cancel",
+        reason: "ready-delay-elapsed",
+        log: expect.stringContaining("awaiting human review or branch protection"),
+      });
+      expect(mockWriteReadyReceipt).not.toHaveBeenCalled();
+      expect(mockClearReadyDelay).toHaveBeenCalledWith(42, "owner", "repo");
+    });
+
+    it("waits with the BLOCKED reason under --merge", async () => {
+      blockedLayer();
+
+      const result = await runIterate(makeOpts({ merge: true }));
+
+      expect(result).toMatchObject({
+        action: "wait",
+        shouldCancel: false,
+        log: expect.stringContaining("GitHub reports BLOCKED"),
+      });
+      expect(mockWriteReadyReceipt).not.toHaveBeenCalled();
+      expect(mockClearReadyDelay).not.toHaveBeenCalled();
+    });
+
+    it("still waits when the fresh snapshot has other gaps", async () => {
+      blockedLayer();
+      mockSummarizePollSummaryPr.mockResolvedValue({ checks: { failing: 1 }, review: {} });
+
+      const result = await runIterate(makeOpts());
+
+      expect(result).toMatchObject({
+        action: "wait",
+        log: expect.stringContaining("could not be persisted"),
+      });
+      expect(mockClearReadyDelay).not.toHaveBeenCalled();
+    });
+  });
+
   it("fails closed before fetching when the current stack report lacks its base OID", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
