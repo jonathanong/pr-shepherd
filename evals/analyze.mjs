@@ -115,9 +115,11 @@ const weightedMean = (xs, ws) => {
 
 /** Like meanDeltaInterval, but each case counts by its area weight. */
 function weightedDeltaInterval(cases) {
-  const per = cases.map(caseInterval);
-  const ws = cases.map(areaWeight);
-  if (!ws.some(Boolean) || per.some((p) => !p)) return null;
+  // Zero-weight cases do not enter the mean, so they cannot block its interval.
+  const weighted = cases.filter(areaWeight);
+  const per = weighted.map(caseInterval);
+  const ws = weighted.map(areaWeight);
+  if (!weighted.length || per.some((p) => !p)) return null;
   return interval(per[0].draws.map((_, i) => weightedMean(per.map((p) => p.draws[i]), ws)));
 }
 
@@ -364,23 +366,21 @@ if (mode === "summary") {
     `- Cost $${A.costUsd.toFixed(2)} over ${runs} runs ($${(A.costUsd / Math.max(runs, 1)).toFixed(3)} per run).`,
   );
 
-  // Drift between the declared tiers and what this run measured.
-  const demoted = withCi.filter(
-    (x) => tierOf(x.c) === "discriminating" && !(x.iv && excludesZero(x.iv.ci)),
-  );
-  const promoted = withCi.filter(
-    (x) => tierOf(x.c) === "guard" && x.iv && excludesZero(x.iv.ci),
-  );
+  // Drift between the declared tiers and what this run measured. A case earns
+  // the runs if its interval excludes 0 or its with-arm is still below 0.9.
+  const earnsRuns = (x) => (x.iv && excludesZero(x.iv.ci)) || withS(x.c) < 0.9;
+  const demoted = withCi.filter((x) => tierOf(x.c) === "discriminating" && !earnsRuns(x));
+  const promoted = withCi.filter((x) => tierOf(x.c) === "guard" && earnsRuns(x));
   if (demoted.length || promoted.length) {
     console.log();
     if (demoted.length) {
       console.log(
-        `Tagged discriminating, interval includes 0 this run: ${demoted.map((x) => short(x.c)).join(", ")}.`,
+        `Tagged discriminating, interval includes 0 and with-arm ≥ 0.9 this run: ${demoted.map((x) => short(x.c)).join(", ")}.`,
       );
     }
     if (promoted.length) {
       console.log(
-        `Tagged guard, interval excludes 0 this run (consider promoting): ${promoted.map((x) => short(x.c)).join(", ")}.`,
+        `Tagged guard, interval excludes 0 or with-arm < 0.9 this run (consider promoting): ${promoted.map((x) => short(x.c)).join(", ")}.`,
       );
     }
   }
