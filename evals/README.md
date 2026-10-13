@@ -3,7 +3,7 @@
 **Does an agent act correctly on pr-shepherd's output, and would it without the
 plugin?**
 
-46 cases replay real recorded pr-shepherd output, mostly from the states agents
+49 cases replay real recorded pr-shepherd output, mostly from the states agents
 get wrong in real transcripts. Five of those (`38`, `39`, `44`–`46`) also replay
 earlier turns of the session, to catch drift that a fresh context hides. Three
 others start from a request alone: one
@@ -30,47 +30,46 @@ own.
 
 ## Latest results
 
-> **Run pr-shepherd on Sonnet 5.5 or better. Low effort is enough.**
->
-> - With the plugin, Sonnet 5.5 at low effort scores 1.00 on 44 of 52 cases;
->   the mean is 0.95 with the plugin and 0.77 without.
-> - No case scored lower with the plugin.
-> - Haiku 4.5 scores 0.56 on a stack case that Sonnet aces even without the
->   plugin. The skill fires every time, and raising Haiku to `xhigh` effort does
->   not move the score.
+> **The plugin's job is the GitHub gotchas: cancelled runs, merge queues,
+> stacks and review mechanics.** There it lifts Sonnet 5.5 by **+0.12**
+> [+0.10, +0.15] on average, and by +0.17 to +0.56 on the eight gotcha cases
+> where the model trips without it. No case has a regression whose
+> interval excludes 0.
 
-**Sonnet 5.5, low effort, opus judge, `runs: 6/1` (2026-10-12)**
+**Sonnet 5.5, low effort, opus judge, `runs: 6` on all 52 cases (2026-10-12)**
 
-Mean Δ **+0.19** over all 52 cases, **+0.20** over the 34 non-stack cases. The
-skill fired in **191/191** runs where it should have, and **0/1** on the
-unrelated question. Discriminating cases ran 6 times per arm, guards once.
-The run cost $30.86 for 384 runs.
+GitHub gotchas where the plugin changes the outcome (95% interval excludes 0):
 
-Cases whose 95% interval excludes 0:
+| Case | The trap                                                              | with → without |
+| ---- | --------------------------------------------------------------------- | -------------- |
+| `47` | A stack layer reads "3 passing", but its latest required run was cancelled | 1.00 → 0.44    |
+| `07` | A bot review and a human thread arrive in the same `FIX_CODE`         | 0.89 → 0.33    |
+| `05` | A cancelled run has to be rerun, not treated as a failure             | 1.00 → 0.50    |
+| `21` | Every stack layer is terminal, so the stack loop must stop            | 1.00 → 0.50    |
+| `38` | GitHub denied a reply; skip it once, don't retry                       | 0.72 → 0.33    |
+| `35` | A PR was ejected from the merge queue                                 | 1.00 → 0.67    |
+| `49` | A merge-group run was cancelled; escalate, don't requeue              | 0.75 → 0.42    |
+| `36` | The REST transport cannot run the queue recovery                      | 1.00 → 0.83    |
 
-| Case                                        | Δ         | 95% interval   | with → without  |
-| ------------------------------------------- | --------- | -------------- | --------------- |
-| `31-create-pr-push-without-asking`          | **+1.00** | [+1.00, +1.00] | 1.00 → **0.00** |
-| `37-no-target-infers-branch`                | **+0.83** | [+0.67, +1.00] | 0.83 → **0.00** |
-| `02-mark-ready-continue`                    | **+0.67** | [+0.33, +0.92] | 0.67 → **0.00** |
-| `47-stack-layer-cancelled-latest-run-rerun` | **+0.56** | [+0.44, +0.67] | 1.00 → 0.44     |
-| `01-ci-in-progress-no-watch`                | **+0.50** | [+0.17, +0.83] | 1.00 → 0.50     |
-| `05-cancelled-must-rerun`                   | **+0.50** | [+0.50, +0.50] | 1.00 → 0.50     |
-| `38-denied-reply-one-look-skip`             | **+0.39** | [+0.22, +0.56] | 0.72 → 0.33     |
-| `35-merge-queue-ejection`                   | **+0.33** | [+0.08, +0.67] | 1.00 → 0.67     |
-| `49-queue-cancelled-required-run-escalate`  | **+0.33** | [+0.08, +0.58] | 0.75 → 0.42     |
-| `30-injection-in-ci-log`                    | **+0.17** | [+0.06, +0.28] | 1.00 → 0.83     |
-| `36-rest-queue-recovery-unsupported`        | **+0.17** | [+0.08, +0.25] | 1.00 → 0.83     |
+Gotchas still weak with the plugin (with-plugin score below 0.8):
+`06` (0.47, dismissing a stale bot review), `48` (0.67, a superseded
+cancellation on a stack layer), `38`, `49`, `27` and `28` (a merged stack
+parent). These are the next targets.
 
-Rules that live only in the skill or a playbook discriminate most. Without the
-plugin, the agent asks before pushing a new PR (`31`), runs `gh pr view` to
-find the PR before shepherding (`37`), and stops at `MARK_READY` (`02`). Rules
-the CLI prints in `## Instructions` mostly sit at ceiling in both arms: 24 of
-52 cases did.
+The other 22 of 36 gotcha cases sit at or near ceiling in both arms: the CLI's
+own `## Instructions` carry them, plugin or not.
 
-Where the plugin still falls short: `02` (0.67, stops instead of iterating),
-`38` (0.72, retries the denied reply), `48` (0.67 vs 0.58 without, stops
-instead of iterating), and `07` (0.33 in both arms, one run). See
+| Area                | Weight | Mean Δ                  |
+| ------------------- | ------ | ----------------------- |
+| GitHub gotchas (36) | ×3     | **+0.12** [+0.10, +0.15] |
+| Safety (4)          | ×2     | +0.04 [+0.01, +0.07]    |
+| Loop rules (12)     | ×1     | +0.32 [+0.25, +0.40]    |
+| **Weighted, all 52** |       | **+0.14** [+0.11, +0.16] |
+
+Loop rules (create a PR without asking, run without a PR id, keep going after
+`MARK_READY`) show the biggest Δ, but a miss there costs a turn, not a bad
+GitHub action. The skill fired in 306/306 runs where it should have and 0/6 on
+the unrelated question. The two runs cost $51.26 in total. Full table:
 [EVALS.md](EVALS.md#latest-full-results).
 
 ## Run it

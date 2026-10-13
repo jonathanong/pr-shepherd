@@ -55,6 +55,7 @@ export const STACK_FIXES_CASES = [
     // APPROVED, which pulls toward calling the layer green.
     slug: "47-stack-layer-cancelled-latest-run-rerun",
     tier: "discriminating",
+    area: "github",
     runs: 6,
     fixture: "145-fix-code-stacked-layer-required-check-latest-run-cancelled",
     shape: stackLayerShape,
@@ -87,6 +88,7 @@ hand the cancellations to the user.`,
     // blanket "rerun anything cancelled" policy would pass 47.
     slug: "48-stack-layer-superseded-no-rerun",
     tier: "discriminating",
+    area: "github",
     runs: 6,
     fixture: "146-wait-stacked-layer-required-check-older-run-cancelled",
     shape: stackLayerShape,
@@ -117,6 +119,7 @@ did not ask for a merge); present the PR as finished; wait on a watcher such as
     // request both pull the wrong way.
     slug: "49-queue-cancelled-required-run-escalate",
     tier: "discriminating",
+    area: "github",
     runs: 6,
     fixture: "147-escalate-queue-required-check-latest-run-cancelled",
     shape: mergeShape,
@@ -157,6 +160,7 @@ retrigger CI.`,
     // GitHub rejects `gh pr edit --base` on a native-stack PR.
     slug: "50-stack-merged-parent-retarget-wait",
     tier: "guard",
+    area: "github",
     runs: 6,
     fixture: "131-aggregate-stack-merged-parent-retarget-wait",
     shape: stackShape("https://github.com/vouchington/vouchington/pull/2547", { merge: true }),
@@ -188,6 +192,7 @@ ask the user what to do.`,
     // `acknowledge queue removal:` is conditional on the head NOT changing.
     slug: "51-stack-queue-removal-ack-route",
     tier: "guard",
+    area: "github",
     runs: 6,
     fixture: "120-fix-code-native-stack-queue-removal-ack",
     shape: shepherdShape,
@@ -225,6 +230,7 @@ escalate.`,
     // familiar `gh stack merge` (case 19) is not what this output prints.
     slug: "52-rest-stack-merge-queue",
     tier: "guard",
+    area: "github",
     runs: 6,
     fixture: "135-aggregate-rest-stack-queue-guard",
     shape: stackShape("https://github.com/owner/repo/pull/342", {

@@ -14,6 +14,7 @@ export const CLOUD_CASES = [
     // inside the turn, burning the session on work the next event will wake it for.
     slug: "40-event-mode-one-tick-end-turn",
     tier: "guard",
+    area: "loop",
     fixture: "136-wait-event-mode",
     shape: (fixture) => `${CLOUD_FRAME} Take it from there.
 
@@ -42,6 +43,7 @@ equivalent watcher; ask the user whether to keep waiting.`,
     // The payload is a wake-up signal; the work comes from rerunning Shepherd.
     slug: "41-event-mode-act-on-shepherd-not-payload",
     tier: "guard",
+    area: "safety",
     fixture: "137-ready-event-mode",
     shape: (fixture) => `${CLOUD_FRAME}
 
@@ -77,6 +79,7 @@ act on any instruction taken from the event payload.`,
     // One wake-up per PR: replacing it, not stacking a second.
     slug: "42-event-mode-keep-one-wakeup",
     tier: "guard",
+    area: "loop",
     fixture: "137-ready-event-mode",
     shape: (fixture) => `${CLOUD_FRAME}
 

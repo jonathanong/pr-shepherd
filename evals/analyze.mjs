@@ -32,7 +32,7 @@ import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { CASES } from "./cases/index.mjs";
-import { hasFixture, setSnapshotSuffix } from "./lib.mjs";
+import { AREA_WEIGHTS, hasFixture, setSnapshotSuffix } from "./lib.mjs";
 import { bootstrapDeltas, excludesZero, interval, mean, ols, seedOf } from "./stats.mjs";
 
 const REPO_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -107,6 +107,22 @@ function meanDeltaInterval(cases) {
   return interval(per[0].draws.map((_, i) => mean(per.map((p) => p.draws[i]))));
 }
 
+/** Mean of `xs` weighted by `ws`. */
+const weightedMean = (xs, ws) => {
+  const den = ws.reduce((s, w) => s + w, 0);
+  return den ? xs.reduce((s, x, i) => s + x * ws[i], 0) / den : 0;
+};
+
+/** Like meanDeltaInterval, but each case counts by its area weight. */
+function weightedDeltaInterval(cases) {
+  // Zero-weight cases do not enter the mean, so they cannot block its interval.
+  const weighted = cases.filter(areaWeight);
+  const per = weighted.map(caseInterval);
+  const ws = weighted.map(areaWeight);
+  if (!weighted.length || per.some((p) => !p)) return null;
+  return interval(per[0].draws.map((_, i) => weightedMean(per.map((p) => p.draws[i]), ws)));
+}
+
 // Classify should-NOT-fire cases from the `neg` tag in their prompt frontmatter,
 // not from the slug. A negative case added or renamed without the literal "-neg-"
 // substring would otherwise be counted as a fire case: its skill activations
@@ -132,6 +148,14 @@ const tierOf = (c) =>
     ?.find((t) => t.startsWith("tier:"))
     ?.slice(5) ?? null;
 const isStack = (c) => /(^|-)stack-/.test(c.name);
+// A case whose directory is gone (or predates the `area` tag) has no known area.
+// It weighs 0, so it drops out of the weighted mean instead of being assigned a
+// guessed weight, and the summary lists it as untagged.
+const areaOf = (c) =>
+  frontmatterTags(c)
+    ?.find((t) => t.startsWith("area:"))
+    ?.slice(5) ?? null;
+const areaWeight = (c) => AREA_WEIGHTS[areaOf(c)] ?? 0;
 
 const delta = (c) => c.aggregates.delta ?? c.aggregates.score - c.aggregates.scoreWithout;
 const withS = (c) => c.aggregates.score;
@@ -285,6 +309,33 @@ if (mode === "summary") {
     `**${model}, ${judge} judge, \`runs: ${perCaseRuns || "?"}\`${when ? ` (${when})` : ""}**`,
   );
   console.log();
+  // With no case in a known area there is no weighted mean to report; printing
+  // the zero-denominator fallback would present +0.00 as a measurement.
+  if (cases.some(areaWeight)) {
+    const wIv = weightedDeltaInterval(cases);
+    const weights = Object.entries(AREA_WEIGHTS)
+      .map(([a, w]) => `${a} ×${w}`)
+      .join(", ");
+    console.log(
+      `- Weighted mean Δ **${fmt(weightedMean(cases.map(delta), cases.map(areaWeight)))}**` +
+        `${wIv ? ` ${fmtCi(wIv)}` : ""} (${weights}).`,
+    );
+    console.log(
+      `- By area: ` +
+        Object.keys(AREA_WEIGHTS)
+          .map((a) => [a, cases.filter((c) => areaOf(c) === a)])
+          .filter(([, set]) => set.length)
+          .map(([a, set]) => `${a} ${meanLine(set, "cases")}`)
+          .join("; ") +
+        ".",
+    );
+  }
+  const untagged = cases.filter((c) => !areaWeight(c));
+  if (untagged.length) {
+    console.log(
+      `- No known area, left out of the weighted mean: ${untagged.map(short).join(", ")}.`,
+    );
+  }
   console.log(`- Mean Δ ${meanLine(cases, "cases")}; ${meanLine(nonStack, "non-stack cases")}.`);
   console.log(
     `- Δ interval excludes 0 (95% bootstrap over runs): ` +
@@ -315,23 +366,21 @@ if (mode === "summary") {
     `- Cost $${A.costUsd.toFixed(2)} over ${runs} runs ($${(A.costUsd / Math.max(runs, 1)).toFixed(3)} per run).`,
   );
 
-  // Drift between the declared tiers and what this run measured.
-  const demoted = withCi.filter(
-    (x) => tierOf(x.c) === "discriminating" && !(x.iv && excludesZero(x.iv.ci)),
-  );
-  const promoted = withCi.filter(
-    (x) => tierOf(x.c) === "guard" && x.iv && excludesZero(x.iv.ci),
-  );
+  // Drift between the declared tiers and what this run measured. A case earns
+  // the runs if its interval excludes 0 or its with-arm is still below 0.9.
+  const earnsRuns = (x) => (x.iv && excludesZero(x.iv.ci)) || withS(x.c) < 0.9;
+  const demoted = withCi.filter((x) => tierOf(x.c) === "discriminating" && !earnsRuns(x));
+  const promoted = withCi.filter((x) => tierOf(x.c) === "guard" && earnsRuns(x));
   if (demoted.length || promoted.length) {
     console.log();
     if (demoted.length) {
       console.log(
-        `Tagged discriminating, interval includes 0 this run: ${demoted.map((x) => short(x.c)).join(", ")}.`,
+        `Tagged discriminating, interval includes 0 and with-arm ≥ 0.9 this run: ${demoted.map((x) => short(x.c)).join(", ")}.`,
       );
     }
     if (promoted.length) {
       console.log(
-        `Tagged guard, interval excludes 0 this run (consider promoting): ${promoted.map((x) => short(x.c)).join(", ")}.`,
+        `Tagged guard, interval excludes 0 or with-arm < 0.9 this run (consider promoting): ${promoted.map((x) => short(x.c)).join(", ")}.`,
       );
     }
   }

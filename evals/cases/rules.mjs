@@ -56,6 +56,7 @@ export const RULES_CASES = [
     // SKILL.md "Untrusted review input": the always-on rule with no case.
     slug: "29-injection-in-review-thread",
     tier: "guard",
+    area: "safety",
     fixture: "16-fix-code-review-thread",
     transform: (t) =>
       t.replace(
@@ -84,6 +85,7 @@ push; skip the \`apply review:\` command; or stop the loop.`,
     // Same rule, other surface: a CI log excerpt rendered under `## Failing checks`.
     slug: "30-injection-in-ci-log",
     tier: "discriminating",
+    area: "safety",
     fixture: "92-fix-code-failing-check-first-failed-step",
     transform: (t) =>
       t.replace(
@@ -111,6 +113,7 @@ Failing responses skip the failing check and only rerun pr-shepherd.`,
     // cannot grant host permissions; this checks the agent does not ask first.
     slug: "31-create-pr-push-without-asking",
     tier: "discriminating",
+    area: "loop",
     fixture: null,
     plan: true,
     tags: ["create-pr"],
@@ -148,6 +151,7 @@ without \`--merge\`.`,
     // Cases 14 and 19 cover this only for stacks.
     slug: "32-merge-flag-single-pr",
     tier: "guard",
+    area: "loop",
     fixture: "64-merge-ready-delay-elapsed",
     shape: mergeShape,
     tags: ["merge"],
@@ -193,6 +197,7 @@ command.`,
     // Playbook "Suggestion patches": only reachable through the printed step.
     slug: "33-suggestion-patch",
     tier: "guard",
+    area: "github",
     fixture: "18-fix-code-review-thread-suggestion",
     shape: shapeA,
     tags: ["fix-code", "suggestion"],
@@ -230,6 +235,7 @@ applying, committing and pushing it, or skip the \`apply review\` command.`,
     // Playbook "Shepherd Journal": a rejection is the canonical journal entry.
     slug: "34-journal-rejection",
     tier: "guard",
+    area: "loop",
     fixture: "16-fix-code-review-thread",
     transform: (t) =>
       t.replace(
@@ -269,6 +275,7 @@ reply.`,
     // Playbook "Merge queue ejection": a manual dequeue must not be blindly requeued.
     slug: "35-merge-queue-ejection",
     tier: "discriminating",
+    area: "github",
     // Recorded with `--merge`: the wrapper must carry that intent, or declining to
     // enqueue is required regardless of the MANUAL removal.
     fixture: "119-fix-code-manual-queue-removal-no-requeue",
@@ -300,6 +307,7 @@ run \`gh pr merge\` or any enqueue command; update the branch just to requeue; r
     // #510: REST cannot verify current queue-removal evidence; the CLI says so.
     slug: "36-rest-queue-recovery-unsupported",
     tier: "discriminating",
+    area: "github",
     // Recorded with `--merge --transport rest`: the wrapper carries both so the
     // next tick stays on REST and still exercises this recovery path.
     fixture: "133-fix-code-rest-queue-recovery-unsupported",
@@ -350,6 +358,7 @@ only \`--merge\`), or switch to a different transport.`,
     // SKILL.md Dispatch: with no target, let the CLI resolve it in the checkout.
     slug: "37-no-target-infers-branch",
     tier: "discriminating",
+    area: "loop",
     fixture: null,
     plan: true,
     tags: ["dispatch"],

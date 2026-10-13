@@ -254,6 +254,14 @@ export function historyText(name) {
 // notice a regression, so one run each is enough. See EVALS.md "Runs recipes".
 const TIERS = ["discriminating", "guard"];
 
+// Every case also declares what kind of rule it tests, and `analyze.mjs` weights
+// the headline mean Δ by it. GitHub gotchas (CI rerun policy, cancelled runs,
+// stacks, merge queues, mergeability, transport limits, review mechanics) are
+// the costly mistakes, so they count most; loop conventions (mark-ready, a
+// missing PR id, creating a PR, cancel/wait discipline) count least. See EVALS.md
+// "Weighted score".
+export const AREA_WEIGHTS = { github: 3, safety: 2, loop: 1 };
+
 // The committed suite runs every case 3 times. A targeted run can spend runs
 // where they buy signal: `EVAL_RUNS_DISCRIMINATING=6 EVAL_RUNS_GUARD=1 node
 // evals/generate.mjs`, then run the eval, then regenerate without the variables
@@ -282,6 +290,9 @@ export function writeCase(spec, outDir = EVALS_DIR) {
   if (!TIERS.includes(spec.tier)) {
     throw new Error(`${spec.slug}: tier must be one of ${TIERS.join(", ")}`);
   }
+  if (!Object.hasOwn(AREA_WEIGHTS, spec.area)) {
+    throw new Error(`${spec.slug}: area must be one of ${Object.keys(AREA_WEIGHTS).join(", ")}`);
+  }
   const dir = join(outDir, spec.slug);
 
   // `transform` edits the recorded text before framing (e.g. to plant an
@@ -304,7 +315,7 @@ export function writeCase(spec, outDir = EVALS_DIR) {
     `max_turns: 6`,
     `timeout_seconds: 300`,
     `allowed_tools: ${ALLOWED_TOOLS}`,
-    `tags: [${[...spec.tags, `tier:${spec.tier}`].join(", ")}]`,
+    `tags: [${[...spec.tags, `tier:${spec.tier}`, `area:${spec.area}`].join(", ")}]`,
     `append_system_prompt: |`,
     ...append.split("\n").map((l) => (l ? `  ${l}` : "")),
     "---",

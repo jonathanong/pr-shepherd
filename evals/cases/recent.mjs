@@ -9,6 +9,7 @@ export const RECENT_CASES = [
     // fix, so it is easy to push the fix and skip the rebase.
     slug: "23-behind-base-rebase-hint",
     tier: "guard",
+    area: "github",
     fixture: "73-fix-code-behind-base-hint",
     shape: shapeA,
     tags: ["fix-code", "behind-base"],
@@ -48,6 +49,7 @@ thread through the GitHub UI instead.`,
     // PR's loop, not the task.
     slug: "25-multi-pr-cancel-is-per-pr",
     tier: "guard",
+    area: "loop",
     fixture: "03-cancel-ready-delay-elapsed-clean",
     // The framing mirrors the real shape: the request is old, and what arrives is
     // one background loop's result with nothing about the other PR's state.
@@ -94,6 +96,7 @@ did not ask for a merge).`,
     // What the skill adds is permission: lease-push your own head without asking.
     slug: "26-conflicts-rebase-without-asking",
     tier: "guard",
+    area: "github",
     fixture: "27-fix-code-conflicts",
     shape: (
       fixture,
@@ -126,6 +129,7 @@ back to the user without attempting them.`,
     // rebased onto main. GitHub reported a conflict against that obsolete base.
     slug: "27-merged-parent-stale-base",
     tier: "discriminating",
+    area: "github",
     fixture: "127-fix-code-merged-parent-stale-base",
     shape: (
       fixture,
@@ -179,6 +183,7 @@ Shepherd command.`,
   {
     slug: "28-native-stack-merged-parent",
     tier: "discriminating",
+    area: "github",
     fixture: "129-fix-code-native-stack-merged-parent",
     shape: (
       fixture,
