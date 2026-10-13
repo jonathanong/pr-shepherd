@@ -31,9 +31,10 @@ own.
 ## Latest results
 
 > **The plugin's job is the GitHub gotchas: cancelled runs, merge queues,
-> stacks and review mechanics.** There it lifts Sonnet 5.5 by **+0.12**
-> [+0.10, +0.15] on average, and by +0.17 to +0.56 on the eight gotcha cases
-> where the model trips without it. No case has a regression whose
+> stacks and review mechanics.** There Sonnet 5.5 scores **0.94** with the
+> plugin and 0.82 without it (Δ +0.12 [+0.10, +0.15]), about two-thirds fewer
+> missed checks. On the eight gotcha cases where the model trips without it,
+> the score goes from 0.50 to 0.92. No case has a regression whose
 > interval excludes 0.
 
 **Sonnet 5.5, low effort, opus judge, `runs: 6` on all 52 cases (2026-10-12)**
