@@ -3,7 +3,7 @@ name: pr-shepherd
 description: 'Create or iterate a GitHub pull request with pr-shepherd (MCP or CLI). Use for requests like "make a PR and use pr-shepherd", "iterate PR #123", or "run pr-shepherd until this PR is ready".'
 user-invocable: true
 argument-hint: "[PR number or URL | --stack PR] [--merge]"
-allowed-tools: ["MCP", "Bash(npx pr-shepherd:*)", "Bash(pr-shepherd:*)", "Read", "Grep", "Glob"]
+allowed-tools: MCP, Bash(npx pr-shepherd:*), Bash(pnpm exec pr-shepherd:*), Bash(pnpm dlx pr-shepherd:*), Bash(bunx pr-shepherd:*), Bash(pr-shepherd:*)
 ---
 
 # pr-shepherd

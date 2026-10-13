@@ -3,18 +3,7 @@ name: reduce-pr-noise
 description: Reduce repetitive pr-shepherd output by configuring bot-comment classification rules or existing noise settings. Use for requests to silence a specific bot notice, quiet polling, trim CI logs, or tune comment visibility; use pr-shepherd for PR iteration itself.
 user-invocable: true
 argument-hint: "[noisy bot comment or output]"
-allowed-tools:
-  [
-    "Bash(npx pr-shepherd:*)",
-    "Bash(pr-shepherd:*)",
-    "Read",
-    "Grep",
-    "Glob",
-    "Edit(**/.pr-shepherdrc.yml)",
-    "Write(**/.pr-shepherdrc.yml)",
-    "Edit(~/.pr-shepherdrc.yml)",
-    "Write(~/.pr-shepherdrc.yml)",
-  ]
+allowed-tools: Bash(npx pr-shepherd:*), Bash(pnpm exec pr-shepherd:*), Bash(pnpm dlx pr-shepherd:*), Bash(bunx pr-shepherd:*), Bash(pr-shepherd:*), Edit(**/.pr-shepherdrc.yml), Write(**/.pr-shepherdrc.yml), Edit(~/.pr-shepherdrc.yml), Write(~/.pr-shepherdrc.yml)
 ---
 
 # Reduce pr-shepherd noise
