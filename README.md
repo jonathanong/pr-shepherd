@@ -6,14 +6,14 @@ Drive a pull request to merge-ready with a coding agent. It works with Claude Co
 
 ## Outcomes
 
-| Outcome                                                                 | Headline                                                                                                                             | Evidence                                                                 |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| [Context and correctness](#context-and-correctness)                     | 60 GitHub edge cases cataloged, backed by 147 scenario fixtures                                                                      | [Handled cases](docs/handled-cases.md)                                   |
-| [Fewer tokens, lower cost](#fewer-tokens-and-lower-cost)                | Cost −42% vs. `gh` and −77% vs. MCP per PR session; turns −19% / −70% (estimates)                                                    | [Token bench](evals/tokens/README.md)                                    |
-| [Clearer agent direction](#clearer-agent-direction)                     | One action per tick (7 for a single PR); eval Δ +0.12 on GitHub gotchas (cancelled runs, merge queues, stacks), up to +0.56 per case | [Behavior evals](evals/README.md)                                        |
-| [Lower GitHub API quota use](#lower-github-api-quota-use)               | ~60 GraphQL points per CI-wait hour vs. ~360 for `gh`; ~4 when idle. REST core per PR session 4.8 vs. 9 (`gh`), 78.3 (MCP)           | [GitHub API](docs/github-api.md), [GraphQL usage](docs/graphql-usage.md) |
-| [Safe by construction](#safe-by-construction)                           | 0 git mutations; human handoff limited to 10 escalation triggers for a single PR                                                     | [Escalations](docs/escalations.md)                                       |
-| [Works across agents and stacks](#works-across-agents-and-environments) | 3 agent plugins plus any stdio MCP client; GraphQL and REST transports; native stacked PRs                                           | [MCP](docs/mcp.md), [cloud](docs/cloud.md)                               |
+| Outcome                                                                 | Headline                                                                                                                          | Evidence                                                                 |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [Context and correctness](#context-and-correctness)                     | 60 GitHub edge cases cataloged, backed by 147 scenario fixtures; on 8 of them, evals show the agent does worse without the plugin | [Handled cases](docs/handled-cases.md)                                   |
+| [Fewer tokens, lower cost](#fewer-tokens-and-lower-cost)                | Cost −42% vs. `gh` and −77% vs. MCP per PR session; turns −19% / −70% (estimates)                                                 | [Token bench](evals/tokens/README.md)                                    |
+| [Clearer agent direction](#clearer-agent-direction)                     | GitHub gotchas (cancelled runs, merge queues, stacks): eval score 0.82 → 0.94, about two-thirds fewer misses                      | [Behavior evals](evals/README.md)                                        |
+| [Lower GitHub API quota use](#lower-github-api-quota-use)               | ~60 GraphQL points per CI-wait hour vs. ~360 for `gh`; ~4 when idle. REST core per PR session 4.8 vs. 9 (`gh`), 78.3 (MCP)        | [GitHub API](docs/github-api.md), [GraphQL usage](docs/graphql-usage.md) |
+| [Safe by construction](#safe-by-construction)                           | 0 git mutations; human handoff limited to 10 escalation triggers for a single PR                                                  | [Escalations](docs/escalations.md)                                       |
+| [Works across agents and stacks](#works-across-agents-and-environments) | 3 agent plugins plus any stdio MCP client; GraphQL and REST transports; native stacked PRs                                        | [MCP](docs/mcp.md), [cloud](docs/cloud.md)                               |
 
 **[jongleberry.com/pr-shepherd](https://jongleberry.com/pr-shepherd/)** covers the why and the design principles.
 
@@ -47,10 +47,18 @@ One `iterate` call returns everything the agent needs about the PR:
 
 One exception: a `COMMENTED` review that was already minimized before the first tick is not fetched.
 
-The agent reasons less and misses less. [docs/handled-cases.md](docs/handled-cases.md) catalogs the GitHub edge cases this covers. Two examples:
+The agent reasons less and misses less. [docs/handled-cases.md](docs/handled-cases.md) catalogs the GitHub edge cases this covers. These are the gotchas where the [behavior evals](evals/README.md) measured the agent going wrong without the plugin (score with vs. without):
 
-- On a stack layer, the latest run of a required check can be cancelled while an older run passed. GitHub still blocks the merge ([#567](https://github.com/jonathanong/pr-shepherd/pull/567), [gh-stack#466](https://github.com/github/gh-stack/issues/466)).
-- A comment can be resolved or edited after the agent first read it.
+| GitHub gotcha                                                                                                                                                                                                                                            | With | Without |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---: | ------: |
+| On a stack layer, the latest run of a required check was cancelled while an older run passed. GitHub still blocks the merge ([#567](https://github.com/jonathanong/pr-shepherd/pull/567), [gh-stack#466](https://github.com/github/gh-stack/issues/466)) | 1.00 |    0.44 |
+| A bot `CHANGES_REQUESTED` review and a human thread arrive together                                                                                                                                                                                      | 0.89 |    0.33 |
+| A cancelled run needs a rerun, not a code fix                                                                                                                                                                                                            | 1.00 |    0.50 |
+| Every stack layer is merged, so the loop must stop                                                                                                                                                                                                       | 1.00 |    0.50 |
+| GitHub denied a reply: skip it once instead of retrying                                                                                                                                                                                                  | 0.72 |    0.33 |
+| A maintainer removed the PR from the merge queue                                                                                                                                                                                                         | 1.00 |    0.67 |
+| A required run was cancelled in the merge queue: escalate, don't requeue                                                                                                                                                                                 | 0.75 |    0.42 |
+| The REST transport cannot run the queue recovery                                                                                                                                                                                                         | 1.00 |    0.83 |
 
 ### Fewer tokens and lower cost
 
@@ -68,7 +76,7 @@ These are offline estimates at 3.5 characters per token over recorded sessions, 
 
 ### Clearer agent direction
 
-For a single PR, each tick returns exactly one action: `WAIT`, `READY`, `MARK_READY`, `FIX_CODE`, `MERGE`, `CANCEL`, or `ESCALATE`. A `--stack` poll can also return `SHEPHERD`, which starts one-PR sessions for owned layers. Every action except `CANCEL` comes with numbered `## Instructions` and exact commands, so the agent does not invent policy. In the [behavior evals](evals/README.md), Sonnet 5.5 at low effort gains a mean Δ (with − without plugin) of **+0.12** on the 36 GitHub-gotcha cases, and up to **+0.56** where the model trips on its own: a stack layer whose latest required run was cancelled, a bot review alongside a human thread, a cancelled run that needs a rerun, an ejection from the merge queue. Weighted toward those gotchas, the mean Δ over all 52 cases is **+0.14**, and no case has a regression whose interval excludes 0. See [docs/actions.md](docs/actions.md) for the output contract.
+For a single PR, each tick returns exactly one action: `WAIT`, `READY`, `MARK_READY`, `FIX_CODE`, `MERGE`, `CANCEL`, or `ESCALATE`. A `--stack` poll can also return `SHEPHERD`, which starts one-PR sessions for owned layers. Every action except `CANCEL` comes with numbered `## Instructions` and exact commands, so the agent does not invent policy. In the [behavior evals](evals/README.md), Sonnet 5.5 at low effort scores **0.94** with the plugin and **0.82** without it on the 36 GitHub-gotcha cases, so it misses about two-thirds fewer graded checks (0.18 → 0.06). On the eight gotchas listed under [Context and correctness](#context-and-correctness) it goes from 0.50 to 0.92. Weighted toward those gotchas, the mean Δ over all 52 cases is **+0.14**, and no case has a regression whose interval excludes 0. See [docs/actions.md](docs/actions.md) for the output contract.
 
 ### Lower GitHub API quota use
 
