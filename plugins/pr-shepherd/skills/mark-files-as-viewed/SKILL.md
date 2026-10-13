@@ -3,7 +3,7 @@ name: mark-files-as-viewed
 description: "Mark selected changed pull-request files as viewed with pr-shepherd (MCP or CLI)."
 user-invocable: true
 argument-hint: "[PR number or URL] [files|tests|--tests|--match REGEX]"
-allowed-tools: ["MCP", "Bash", "Read", "Grep", "Glob"]
+allowed-tools: ["MCP", "Bash(npx pr-shepherd:*)", "Bash(pr-shepherd:*)", "Read", "Grep", "Glob"]
 ---
 
 # mark-files-as-viewed
