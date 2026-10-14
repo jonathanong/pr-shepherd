@@ -29,9 +29,28 @@ describe("plugin MCP configuration", () => {
   it("registers host-appropriate MCP configs in both plugin manifests", () => {
     const codex = readJson("plugins/pr-shepherd/.codex-plugin/plugin.json");
     const claude = readJson(".claude-plugin/plugin.json");
+    const claudeDirectory = readJson("plugins/pr-shepherd/.claude-plugin/plugin.json");
 
     expect(codex.mcpServers).toBe("./.codex.mcp.json");
     expect(claude.mcpServers).toBe("./plugins/pr-shepherd/.mcp.json");
+    expect(claudeDirectory.mcpServers).toBe("./.mcp.json");
+    expect(claudeDirectory.skills).toBe("./skills/");
+  });
+
+  it("keeps both Claude plugin manifests on the package version", () => {
+    const pkg = readJson("package.json") as { version: string };
+    expect(readJson(".claude-plugin/plugin.json").version).toBe(pkg.version);
+    expect(readJson("plugins/pr-shepherd/.claude-plugin/plugin.json").version).toBe(pkg.version);
+  });
+
+  it("points the Claude marketplace at the self-contained plugin directory", () => {
+    const marketplace = readJson(".claude-plugin/marketplace.json") as {
+      plugins: Array<{ name: string; source: unknown }>;
+    };
+
+    expect(marketplace.plugins).toEqual([
+      expect.objectContaining({ name: "pr-shepherd", source: "./plugins/pr-shepherd" }),
+    ]);
   });
 
   it("registers a Grok marketplace that points at the plugin with MCP config", () => {

@@ -2,7 +2,11 @@ import { execFileSync } from "child_process";
 import { readFileSync, writeFileSync } from "fs";
 
 const version = JSON.parse(readFileSync("package.json", "utf8")).version;
-const pluginPaths = [".claude-plugin/plugin.json", "plugins/pr-shepherd/.codex-plugin/plugin.json"];
+const pluginPaths = [
+  ".claude-plugin/plugin.json",
+  "plugins/pr-shepherd/.claude-plugin/plugin.json",
+  "plugins/pr-shepherd/.codex-plugin/plugin.json",
+];
 const mcpPaths = ["plugins/pr-shepherd/.mcp.json", "plugins/pr-shepherd/.codex.mcp.json"];
 
 for (const pluginPath of pluginPaths) {
