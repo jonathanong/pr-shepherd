@@ -186,6 +186,26 @@ describe("runIterate — one-PR READY receipt", () => {
     });
   });
 
+  it("voids a queued receipt when a minimized comment is edited into new feedback", async () => {
+    mockRunCheck.mockResolvedValue(
+      onePrReport({
+        mergeQueue: { enabled: true, inQueue: true },
+        comments: {
+          actionable: [],
+          firstLook: [{ ...hiddenNotice, body: "New finding", edited: true }],
+        },
+      }),
+    );
+
+    await runIterate(makeOpts());
+
+    expect(mockClearReadyReceipt).toHaveBeenCalledWith(key);
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
+      headSha: "head-1",
+      alreadyElapsed: false,
+    });
+  });
+
   it("restarts the countdown for new activity on a resolved thread", async () => {
     const thread = { ...makeThread(), firstLookStatus: "resolved" as const };
     mockRunCheck.mockResolvedValue(

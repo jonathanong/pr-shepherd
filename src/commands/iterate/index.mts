@@ -526,12 +526,16 @@ async function revalidateReadyReceipt(
     report.mergeStatus.state === "OPEN" &&
     !report.mergeStatus.isDraft &&
     Boolean(report.headSha && report.baseRefOid);
+  const editedMinimizedFeedback = report.comments.firstLook.some(
+    (comment) => comment.isMinimized && comment.edited === true,
+  );
   if (
     report.mergeStatus.state !== "OPEN" ||
     report.mergeStatus.isDraft ||
     !report.headSha ||
     !report.baseRefOid ||
     transportReadinessGaps(report, report.mergeStatus.mergeStateStatus).length > 0 ||
+    editedMinimizedFeedback ||
     (!retainQueuedReceipt && (report.status !== "READY" || hasReadinessWork))
   ) {
     await clearReadyReceipt(key);
