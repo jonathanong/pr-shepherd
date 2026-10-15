@@ -57,7 +57,7 @@ Human-authored threads must stay visible. Shepherd later pairs reply-and-resolve
 
 `updateReadyDelay(pr, isCleanReadyState, readyDelaySeconds, owner, repo, options)` reads and writes `ready-since.txt`. Default delay is 10 minutes (`watch.readyDelayMinutes` or `--ready-delay`).
 
-A **clean ready state** is `status === "READY"`, `hasReadinessWork` false, and no active auto-merge or merge-queue state being handled. It includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending). `hasReadinessWork` is every [step 3](#3-actionable-work) category except hidden PR comments (`report.comments.firstLook`): those still route to `fix_code` for acknowledgement, but bots keep editing hidden notices after a PR settles, so they never restart the countdown or void a READY receipt.
+A **clean ready state** is `status === "READY"`, `hasReadinessWork` false, and no active auto-merge or merge-queue state being handled. It includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending). An initial first look at a hidden PR comment routes to `fix_code` for acknowledgement without restarting the countdown or voiding a READY receipt. An edited minimized comment that no longer matches a noise rule is readiness work: its new body surfaces, the countdown restarts, and the receipt is cleared.
 
 ```mermaid
 stateDiagram-v2
@@ -99,7 +99,7 @@ The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completio
 - `report.threads.ruleAutoResolveIds` is non-empty
 - `report.comments.actionable.length > 0`
 - `report.comments.minimizeIds` is non-empty
-- `report.comments.firstLook.length > 0` (hidden PR comments; acknowledge-only, excluded from `hasReadinessWork`, see [step 2](#2-ready-delay))
+- `report.comments.firstLook.length > 0` (hidden PR comments; edited bodies count as `hasReadinessWork`, while initial acknowledgement does not; see [step 2](#2-ready-delay))
 - `report.changesRequestedReviews.length > 0`
 - `report.checks.failing.length > 0`
 - `report.mergeStatus.status === 'CONFLICTS'`

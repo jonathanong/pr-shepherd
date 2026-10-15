@@ -131,15 +131,16 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     const unminimized = selfMinimizeIds.filter((id) => !minimizedIds.has(id));
     if (unminimized.length > 0) reviewSummaryIds = [...reviewSummaryIds, ...unminimized];
   }
-  // Hidden PR comments surface once so the agent can acknowledge them, but
-  // they are not readiness evidence: bots keep editing hidden notices after a
-  // PR settles. They never restart the ready-delay or void a READY receipt.
+  // A first look at an already-minimized comment is only an acknowledgment.
+  // An edited body that no longer matches a noise rule may carry new feedback;
+  // it must restart the ready delay and void an existing READY receipt.
   const hasReadinessWork =
     report.threads.actionable.length > 0 ||
     report.threads.resolutionOnly.length > 0 ||
     report.threads.firstLook.length > 0 ||
     (report.threads.ruleAutoResolveIds?.length ?? 0) > 0 ||
     report.comments.actionable.length > 0 ||
+    report.comments.firstLook.some((comment) => comment.edited === true) ||
     (report.comments.minimizeIds?.length ?? 0) > 0 ||
     report.changesRequestedReviews.length > 0 ||
     hasCheckDrivenActionableWork(reportForWork.checks, report.mergeStatus.status) ||

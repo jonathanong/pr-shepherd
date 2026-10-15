@@ -79,6 +79,23 @@ describe("standard classification rules", () => {
     expect(matches(item(f))).toEqual([]);
   });
 
+  it.each(["gemini-notices", "sourcery-notices", "kilo-no-issues"])(
+    "keeps appended plain-prose findings visible for %s",
+    (ruleName) => {
+      for (const fixture of notices.filter((notice) => notice.rule === ruleName)) {
+        const body = `${fixture.body}\n\nI found a bug in the authorization check.`;
+        expect(matches(item(fixture, { body }))).toEqual([]);
+      }
+    },
+  );
+
+  it("keeps a Kilo report with an inconsistent file count visible", () => {
+    const fixture = notices.find((notice) => notice.name === "kilo-no-issues")!;
+    expect(matches(item(fixture, { body: fixture.body.replace("2 files", "3 files") }))).toEqual(
+      [],
+    );
+  });
+
   it.each([
     "👀 [View the Auto Harness session](https://d2itfsupognuru.cloudfront.net/sessions/sess-9fff9246).\n\n<!-- auto-harness-session:sess-deadbeef -->",
     "👀 [View the Auto Harness session](https://example.com/sessions/sess-9fff9246).\n\n<!-- auto-harness-session:sess-9fff9246 -->",

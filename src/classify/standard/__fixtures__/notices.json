@@ -324,6 +324,18 @@
     }
   },
   {
+    "name": "sourcery-no-access-with-namespace",
+    "rule": "sourcery-notices",
+    "kind": "pr-comment",
+    "author": "sourcery-ai",
+    "synthetic": true,
+    "body": "Hi @octocat! 👋\n\nYour private repo does not have access to Sourcery.\n\nPlease [upgrade](https://app.sourcery.ai/login?connection=github&git_namespace_id=311973835&from_surface=github_bot&intent=private_repo_upsell) to continue using Sourcery ✨",
+    "expect": {
+      "suppress": true,
+      "autoResolve": true
+    }
+  },
+  {
     "name": "sourcery-rate-limit",
     "rule": "sourcery-notices",
     "kind": "pr-comment",
