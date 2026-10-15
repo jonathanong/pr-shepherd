@@ -96,6 +96,12 @@ describe("standard classification rules", () => {
     );
   });
 
+  it("keeps a Codex activity table with appended feedback visible", () => {
+    const fixture = notices.find((notice) => notice.name === "codex-activity-with-state")!;
+    const body = `${fixture.body}\n\nI found a bug in the authorization check.`;
+    expect(matches(item(fixture, { body }))).toEqual([]);
+  });
+
   it("does not match marker-only bodies", () => {
     for (const body of [
       "<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->",

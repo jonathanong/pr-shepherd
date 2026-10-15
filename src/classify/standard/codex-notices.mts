@@ -12,7 +12,7 @@ const ABOUT_BLOCK =
   /\n\n<details> <summary>ℹ️ About Codex (?:in GitHub|security reviews in GitHub)<\/summary>[\s\S]*?<\/details>$/;
 
 const ACTIVITY_SUMMARY =
-  /^<!-- codex-pull-request-review-summary -->\n(?:<!-- codex-security-review:v1 \{[^\n]*\} -->\n)?\n?## Codex Review Summary\n\nThis comment shows the latest Codex review activity on this pull request\.\n\n\| Review \| Status \| Commit \| Review trigger \|\n\| --- \| --- \| --- \| --- \|\n(?:\|[^\n]+\|\n?)+$/;
+  /^<!-- codex-pull-request-review-summary -->\n(?:<!-- codex-review-state:v1 \{[^\n]*\} -->\n)?(?:<!-- codex-security-review:v1 \{[^\n]*\} -->\n)?\n?## Codex Review Summary\n\nThis comment shows the latest Codex review activity on this pull request\.\n\n\| Review \| Status \| Commit \| Review trigger \|\n\| --- \| --- \| --- \| --- \|\n(?:\|[^\n]+\|\n?)+$/;
 
 const CLEAN_REVIEW =
   /^Codex Review: Didn't find any major issues\. (?:Bravo\.|Breezy!|Hooray!|:\+1:)\n\n\*\*Reviewed commit:\*\* `[a-f0-9]+`$/;
