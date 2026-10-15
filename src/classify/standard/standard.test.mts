@@ -102,6 +102,34 @@ describe("standard classification rules", () => {
     expect(matches(item(fixture, { body }))).toEqual([]);
   });
 
+  it("keeps CodeRabbit progress with finishing-touch UI visible when feedback or UI changes", () => {
+    const fixture = notices.find(
+      (notice) => notice.name === "coderabbit-progress-with-finishing-touch",
+    )!;
+    const body = fixture.body;
+    expect(
+      matches(item(fixture, { body: `${body}\n\nI found a bug in the authorization check.` })),
+    ).toEqual([]);
+    expect(
+      matches(
+        item(fixture, {
+          body: body.replace(
+            "\n\n<!-- finishing_touch_checkbox_start -->",
+            "\n\nI found a bug in the authorization check.\n\n<!-- finishing_touch_checkbox_start -->",
+          ),
+        }),
+      ),
+    ).toEqual([]);
+    expect(
+      matches(item(fixture, { body: body.replace("✨ Finishing Touches", "✨ Review finding") })),
+    ).toEqual([]);
+    expect(
+      matches(
+        item(fixture, { body: body.replace("Autofix</strong>", "Fix authorization</strong>") }),
+      ),
+    ).toEqual([]);
+  });
+
   it("does not match marker-only bodies", () => {
     for (const body of [
       "<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->",
