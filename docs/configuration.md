@@ -389,21 +389,22 @@ classify:
 
 The value is a map so it deep-merges across files. Unknown rule names and non-boolean values warn on stderr and are ignored. Each match reports the rule name `standard:<rule>`.
 
-| Rule                 | Matches                                                                                                                                                                                                          | Action            |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
-| `coderabbit-notices` | CodeRabbit conversation comments that contain only a rate-limit, review-limit, draft-skipped, review-skipped (any reason), too-many-files, or review-in-progress notice, or a reply to a `@coderabbitai` command | suppress          |
-| `codecov-report`     | Codecov coverage report conversation comments (coverage gates still report through their status checks)                                                                                                          | suppress, resolve |
-| `codex-notices`      | Codex usage-limit notices, the review-activity table, and the no-findings code or security review conversation comments                                                                                          | suppress, resolve |
-| `dependabot-notices` | Dependabot's "already up-to-date" and "updatable in another way" replies                                                                                                                                         | suppress, resolve |
-| `gemini-notices`     | Gemini Code Assist daily-quota and review-limit notices without a review heading                                                                                                                                 | suppress, resolve |
-| `kilo-no-issues`     | Kilo Code reports whose status reads "No Issues Found" with no other section headings                                                                                                                            | suppress, resolve |
-| `sourcery-notices`   | Sourcery private-repo upsell and weekly rate-limit notices without a review heading                                                                                                                              | suppress, resolve |
+| Rule                   | Matches                                                                                                                                                                                                          | Action            |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- |
+| `auto-harness-session` | GitHub Actions conversation comments consisting only of an Auto Harness session link and a matching session marker                                                                                               | suppress, resolve |
+| `coderabbit-notices`   | CodeRabbit conversation comments that contain only a rate-limit, review-limit, draft-skipped, review-skipped (any reason), too-many-files, or review-in-progress notice, or a reply to a `@coderabbitai` command | suppress, resolve |
+| `codecov-report`       | Codecov coverage report conversation comments (coverage gates still report through their status checks)                                                                                                          | suppress, resolve |
+| `codex-notices`        | Codex usage-limit notices, the review-activity table, and the no-findings code or security review conversation comments                                                                                          | suppress, resolve |
+| `dependabot-notices`   | Dependabot's "already up-to-date" and "updatable in another way" replies                                                                                                                                         | suppress, resolve |
+| `gemini-notices`       | Gemini Code Assist daily-quota and review-limit notices without a review heading                                                                                                                                 | suppress, resolve |
+| `kilo-no-issues`       | Kilo Code reports whose status reads "No Issues Found" with no other section headings                                                                                                                            | suppress, resolve |
+| `sourcery-notices`     | Sourcery private-repo upsell and weekly rate-limit notices without a review heading                                                                                                                              | suppress, resolve |
 
 - Every rule requires GitHub to report the author as a bot and matches both GraphQL (`coderabbitai`) and REST (`coderabbitai[bot]`) logins.
 - Rules match conversation comments only; the same text on a review summary or inline review comment follows the normal review path.
 - `coderabbit-review-summary` and `codex-review-summary` are no longer rule names; setting them warns and is ignored.
 - "Resolve" means `autoResolve: true`, so with [`actions.autoMinimizeSuppressed`](#actionsautominimizesuppressed--default-true) the comment is also minimized on GitHub.
-- `coderabbit-notices` is suppress-only because CodeRabbit later edits that comment into its walkthrough; it stays visible on GitHub and only leaves the agent's queue.
+- A CodeRabbit progress comment may later be edited into a walkthrough. Shepherd reclassifies the current body on every fetch; an edited walkthrough no longer matches `coderabbit-notices` and appears to the agent as an edited, minimized first-look comment. It stays minimized on GitHub.
 
 ## `actions`
 

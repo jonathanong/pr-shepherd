@@ -21,12 +21,19 @@ import { buildIterateBase } from "./iterate/base.mts";
 import type { ClassifyItem } from "../classify/types.mts";
 import type { IterateResult, ShepherdReport } from "../types.mts";
 
-vi.mock("../classify/loader.mts", () => {
+vi.mock("../classify/loader.mts", async () => {
+  const { default: coderabbitNotices } =
+    await import("../classify/standard/coderabbit-notices.mts");
   const rules = [
     {
       name: "auto-minimize-rule",
       file: "auto-minimize-rule.mjs",
       rule: classifyNoiseForAutoMinimizeTests,
+    },
+    {
+      name: "standard:coderabbit-notices",
+      file: "pr-shepherd:standard/coderabbit-notices",
+      rule: coderabbitNotices,
     },
   ];
   return {
@@ -82,6 +89,51 @@ describe("runCheck — classification auto-minimize", () => {
     expect(report.comments.autoMinimized).toEqual([
       { id: "c-bot", kind: "pr-comment", ruleReason: "review-bot suppressed" },
     ]);
+  });
+
+  it("surfaces a CodeRabbit walkthrough edited from a minimized progress notice", async () => {
+    const id = "c-coderabbit-progress";
+    const progress =
+      "<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->";
+    const walkthrough = "## Walkthrough\n\nThis change may skip the authorization check.";
+    const comment = makeComment({
+      id,
+      author: "coderabbitai",
+      authorType: "Bot" as const,
+      body: progress,
+      isMinimized: false,
+    });
+    mockAutoMinimizeComments.mockResolvedValue({ minimized: [id], errors: [] });
+    mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ comments: [comment] }) });
+
+    const first = await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: true });
+
+    expect(mockAutoMinimizeComments).toHaveBeenCalledWith([id]);
+    expect(first.comments.actionable).toEqual([]);
+    expect(first.comments.autoMinimized).toEqual([
+      expect.objectContaining({ id, kind: "pr-comment" }),
+    ]);
+
+    mockAutoMinimizeComments.mockClear();
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([[id, { seenAt: 1000, bodyHash: hashBody(progress) }]]),
+    );
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({ comments: [{ ...comment, body: walkthrough, isMinimized: true }] }),
+    });
+
+    const edited = await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: true });
+
+    expect(edited.comments.firstLook).toEqual([
+      expect.objectContaining({
+        id,
+        body: walkthrough,
+        edited: true,
+        firstLookStatus: "minimized",
+      }),
+    ]);
+    expect(edited.comments.autoMinimized).toBeUndefined();
+    expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
   });
 
   it("keeps failed suppressed auto-resolve pr-comments in minimizeIds", async () => {

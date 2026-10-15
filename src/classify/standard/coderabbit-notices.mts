@@ -34,15 +34,19 @@ function isQuotedNotice(quoted: string): boolean {
 
 /**
  * CodeRabbit progress, rate-limit, review-skipped and draft notices, plus its "Action not
- * completed" command replies. The summarize comment is later edited in place into the PR
- * walkthrough, so the rule only hides it from agent output and never minimizes it.
+ * completed" command replies. If the comment is later edited into a PR walkthrough, its new
+ * body no longer matches and Shepherd surfaces the edited minimized comment to the agent.
  */
 const rule: ClassifyRule = (item) => {
   if (!isBotItem(item, ["coderabbitai"], ["pr-comment"])) return null;
   const body = stripChrome(item.body);
   const quoted = body.match(NOTICE_ENVELOPE)?.[2]?.trim();
   if (!(quoted && isQuotedNotice(quoted)) && !COMMAND_REPLY.test(body)) return null;
-  return { suppress: true, reason: "CodeRabbit progress, review-limit, or skipped-review notice" };
+  return {
+    autoResolve: true,
+    suppress: true,
+    reason: "CodeRabbit progress, review-limit, or skipped-review notice",
+  };
 };
 
 export default rule;
