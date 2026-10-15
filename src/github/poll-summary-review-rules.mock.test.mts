@@ -50,6 +50,28 @@ describe("summarizePollSummaryReview — classification rules", () => {
       comments: 1,
     });
   });
+
+  it("routes a minimized notice edited into feedback, but ignores noise and unchanged feedback", async () => {
+    const seen = new Map<string, SeenMarker>([
+      ["c0", { seenAt: 1, bodyHash: hashBody("minimize") }],
+    ]);
+    const minimized = (body: string): RawSummaryPr => {
+      const input = raw([body]);
+      input.comments.nodes[0]!.isMinimized = true;
+      return input;
+    };
+
+    expect(
+      (await summarizePollSummaryReview(minimized("minimize again"), seen, true)).actionable,
+    ).toBeUndefined();
+    expect(
+      (await summarizePollSummaryReview(minimized("New finding"), seen, true)).actionable,
+    ).toBe(1);
+    seen.set("c0", { seenAt: 1, bodyHash: hashBody("New finding") });
+    expect(
+      (await summarizePollSummaryReview(minimized("New finding"), seen, true)).actionable,
+    ).toBeUndefined();
+  });
 });
 
 describe("auto-resolution evidence for compact thread certification", () => {

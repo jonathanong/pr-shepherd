@@ -57,7 +57,7 @@ Human-authored threads must stay visible. Shepherd later pairs reply-and-resolve
 
 `updateReadyDelay(pr, isCleanReadyState, readyDelaySeconds, owner, repo, options)` reads and writes `ready-since.txt`. Default delay is 10 minutes (`watch.readyDelayMinutes` or `--ready-delay`).
 
-A **clean ready state** is `status === "READY"`, `hasReadinessWork` false, and no active auto-merge or merge-queue state being handled. It includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending). `hasReadinessWork` is every [step 3](#3-actionable-work) category except hidden PR comments (`report.comments.firstLook`): those still route to `fix_code` for acknowledgement, but bots keep editing hidden notices after a PR settles, so they never restart the countdown or void a READY receipt.
+A **clean ready state** is `status === "READY"`, `hasReadinessWork` false, and no active auto-merge or merge-queue state being handled. It includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending). An initial first look at a hidden PR comment routes to `fix_code` for acknowledgement without restarting the countdown or voiding a READY receipt. An edited minimized comment that no longer matches a noise rule is readiness work: its new body surfaces, the countdown restarts, and the receipt is cleared.
 
 ```mermaid
 stateDiagram-v2
@@ -83,7 +83,7 @@ stateDiagram-v2
 
 - Unclean sweeps include non-READY status, failing CI, conflicts, unresolved comments, review-summary minimization, and first-look threads and summaries.
 - The elapsed marker stays until `cancel` or `merge` consumes it, so a hidden-comment acknowledgement tick does not restart the wait.
-- A current READY receipt (same head, base, and readiness evidence) already proves the delay elapsed, so a clean sweep returns `shouldCancel: true` without a marker (`alreadyElapsed`). Rerunning a READY PR — for example with `--merge` after a `ready-delay-elapsed` cancel — does not restart the countdown. When the head, base, or evidence moved, the receipt is cleared and the countdown restarts. Edits to hidden comment and review bodies are not readiness evidence.
+- A current READY receipt (same head, base, and readiness evidence) already proves the delay elapsed, so a clean sweep returns `shouldCancel: true` without a marker (`alreadyElapsed`). Rerunning a READY PR — for example with `--merge` after a `ready-delay-elapsed` cancel — does not restart the countdown. When the head, base, or evidence moved, the receipt is cleared and the countdown restarts. Hidden comment and review bodies are omitted from the receipt fingerprint, but a full poll reclassifies edited minimized PR comments. If the edited body no longer matches a noise rule, it becomes readiness work and clears the receipt.
 - Before a READY sweep reaches this step, `runCheck` does one fresh REST mergeability read (unless the UNKNOWN fallback already did). If it reports `CONFLICTING`/`DIRTY`, the sweep becomes `FAILING`/`CONFLICTS`, resets the marker, and routes to `fix_code`.
 - Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/ready-since.txt` (`<unix seconds> <head SHA>`). A future timestamp (clock skew), another head, or a marker without a head is reset to now.
 
@@ -99,7 +99,7 @@ The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completio
 - `report.threads.ruleAutoResolveIds` is non-empty
 - `report.comments.actionable.length > 0`
 - `report.comments.minimizeIds` is non-empty
-- `report.comments.firstLook.length > 0` (hidden PR comments; acknowledge-only, excluded from `hasReadinessWork`, see [step 2](#2-ready-delay))
+- `report.comments.firstLook.length > 0` (hidden PR comments; edited bodies count as `hasReadinessWork`, while initial acknowledgement does not; see [step 2](#2-ready-delay))
 - `report.changesRequestedReviews.length > 0`
 - `report.checks.failing.length > 0`
 - `report.mergeStatus.status === 'CONFLICTS'`

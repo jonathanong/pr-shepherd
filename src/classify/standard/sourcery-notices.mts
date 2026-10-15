@@ -1,18 +1,19 @@
 import type { ClassifyRule } from "../types.mts";
 import { isBotItem } from "./author.mts";
 
-/**
- * Sourcery's private-repo upsell and weekly rate-limit notices on conversation comments. A real review opens
- * with a Markdown heading ("Reviewer's Guide", "Summary by Sourcery"); the notices carry none,
- * so a heading means genuine feedback that merely quotes the phrase.
- */
+const NO_ACCESS =
+  /^Hi @[A-Za-z0-9-]+! 👋\n\nYour private repo does not have access to Sourcery\.\n\nPlease \[upgrade\]\(https:\/\/app\.sourcery\.ai\/login\?connection=github(?:&git_namespace_id=\d+)?&from_surface=github_bot&intent=private_repo_upsell\) to continue using Sourcery ✨$/;
+const RATE_LIMIT =
+  /^Sorry @[A-Za-z0-9-]+, you have reached your weekly rate limit for Sourcery\. Please try again later\.$/;
+
+/** Complete Sourcery private-repo upsell and weekly rate-limit notices. */
 const rule: ClassifyRule = (item) => {
   if (!isBotItem(item, ["sourcery-ai"], ["pr-comment"])) return null;
-  if (/^#{1,6}\s/m.test(item.body)) return null;
-  if (/does not have access to Sourcery/i.test(item.body)) {
+  const body = item.body.trim();
+  if (NO_ACCESS.test(body)) {
     return { autoResolve: true, suppress: true, reason: "Sourcery no-access upsell" };
   }
-  if (/reached your weekly rate limit/i.test(item.body)) {
+  if (RATE_LIMIT.test(body)) {
     return { autoResolve: true, suppress: true, reason: "Sourcery rate-limit notice" };
   }
   return null;

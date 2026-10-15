@@ -79,6 +79,57 @@ describe("standard classification rules", () => {
     expect(matches(item(f))).toEqual([]);
   });
 
+  it.each(["gemini-notices", "sourcery-notices", "kilo-no-issues"])(
+    "keeps appended plain-prose findings visible for %s",
+    (ruleName) => {
+      for (const fixture of notices.filter((notice) => notice.rule === ruleName)) {
+        const body = `${fixture.body}\n\nI found a bug in the authorization check.`;
+        expect(matches(item(fixture, { body }))).toEqual([]);
+      }
+    },
+  );
+
+  it("keeps a Kilo report with an inconsistent file count visible", () => {
+    const fixture = notices.find((notice) => notice.name === "kilo-no-issues")!;
+    expect(matches(item(fixture, { body: fixture.body.replace("2 files", "3 files") }))).toEqual(
+      [],
+    );
+  });
+
+  it("keeps a Codex activity table with appended feedback visible", () => {
+    const fixture = notices.find((notice) => notice.name === "codex-activity-with-state")!;
+    const body = `${fixture.body}\n\nI found a bug in the authorization check.`;
+    expect(matches(item(fixture, { body }))).toEqual([]);
+  });
+
+  it("keeps CodeRabbit progress with finishing-touch UI visible when feedback or UI changes", () => {
+    const fixture = notices.find(
+      (notice) => notice.name === "coderabbit-progress-with-finishing-touch",
+    )!;
+    const body = fixture.body;
+    expect(
+      matches(item(fixture, { body: `${body}\n\nI found a bug in the authorization check.` })),
+    ).toEqual([]);
+    expect(
+      matches(
+        item(fixture, {
+          body: body.replace(
+            "\n\n<!-- finishing_touch_checkbox_start -->",
+            "\n\nI found a bug in the authorization check.\n\n<!-- finishing_touch_checkbox_start -->",
+          ),
+        }),
+      ),
+    ).toEqual([]);
+    expect(
+      matches(item(fixture, { body: body.replace("✨ Finishing Touches", "✨ Review finding") })),
+    ).toEqual([]);
+    expect(
+      matches(
+        item(fixture, { body: body.replace("Autofix</strong>", "Fix authorization</strong>") }),
+      ),
+    ).toEqual([]);
+  });
+
   it("does not match marker-only bodies", () => {
     for (const body of [
       "<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->",

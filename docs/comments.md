@@ -103,7 +103,7 @@ flowchart TD
 | Review markers | When GitHub links an inline thread to a parent review, the review's marker records sorted `inlineThreadIds`, so summary minimization can wait for known children without per-review lookups |
 | Implementation | `src/state/seen-comments.mts`                                                                                                                                                               |
 
-In `iterate fix_code` output, first-look items appear as a `## First-look items` section in text and as `firstLookThreads` / `firstLookComments` in JSON. Hidden PR comments in `firstLookComments` are acknowledge-only: bots keep editing hidden notices after a PR settles, so they never restart the [ready delay](iterate-flow.md#2-ready-delay) or void a READY receipt.
+In `iterate fix_code` output, first-look items appear as a `## First-look items` section in text and as `firstLookThreads` / `firstLookComments` in JSON. An initial first look at a hidden PR comment is acknowledgement-only. If a minimized notice is later edited into text that no longer matches a noise rule, Shepherd surfaces the edited body, restarts the [ready delay](iterate-flow.md#2-ready-delay), and clears a READY receipt. The GitHub comment stays minimized.
 
 First-look items are for acknowledging status. A first-look thread that also appears in `resolutionOnly` or `actionable` is already in the generated mutation when routing authorizes it; do not pass first-look-only IDs to mutation flags.
 

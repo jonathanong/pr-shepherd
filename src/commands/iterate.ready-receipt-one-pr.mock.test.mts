@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { mockFetchRawSummaryPr, mockFingerprintRawSummaryPr, mockSummarizePollSummaryPr } =
@@ -163,6 +164,46 @@ describe("runIterate — one-PR READY receipt", () => {
     });
     expect(mockClearReadyReceipt).not.toHaveBeenCalled();
     expect(mockClearReadyDelay).not.toHaveBeenCalled();
+  });
+
+  it("voids a receipt when a minimized comment is edited into new feedback", async () => {
+    mockRunCheck.mockResolvedValue(
+      onePrReport({
+        comments: {
+          actionable: [],
+          firstLook: [{ ...hiddenNotice, body: "New finding", edited: true }],
+        },
+      }),
+    );
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("fix_code");
+    expect(mockClearReadyReceipt).toHaveBeenCalledWith(key);
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
+      headSha: "head-1",
+      alreadyElapsed: false,
+    });
+  });
+
+  it("voids a queued receipt when a minimized comment is edited into new feedback", async () => {
+    mockRunCheck.mockResolvedValue(
+      onePrReport({
+        mergeQueue: { enabled: true, inQueue: true },
+        comments: {
+          actionable: [],
+          firstLook: [{ ...hiddenNotice, body: "New finding", edited: true }],
+        },
+      }),
+    );
+
+    await runIterate(makeOpts());
+
+    expect(mockClearReadyReceipt).toHaveBeenCalledWith(key);
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
+      headSha: "head-1",
+      alreadyElapsed: false,
+    });
   });
 
   it("restarts the countdown for new activity on a resolved thread", async () => {

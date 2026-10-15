@@ -30,8 +30,15 @@ export async function summarizePollSummaryReview(
 
   for (const comment of raw.comments.nodes) {
     if (
-      !comment.isMinimized &&
-      !isSuppressed(rules, "pr-comment", comment) &&
+      !isSuppressed(
+        rules,
+        "pr-comment",
+        comment,
+        comment.id,
+        undefined,
+        comment.body,
+        comment.isMinimized,
+      ) &&
       classifyItem(comment.id, comment.body, seen) !== "unchanged"
     )
       actionable += 1;
