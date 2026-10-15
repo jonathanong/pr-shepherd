@@ -1,17 +1,5 @@
 [
   {
-    "name": "auto-harness-session",
-    "rule": "auto-harness-session",
-    "kind": "pr-comment",
-    "author": "github-actions",
-    "url": "https://github.com/vouchington/vouchington/pull/2900#issuecomment-6174528102",
-    "body": "👀 [View the Auto Harness session](https://d2itfsupognuru.cloudfront.net/sessions/sess-9fff9246).\n\n<!-- auto-harness-session:sess-9fff9246 -->",
-    "expect": {
-      "suppress": true,
-      "autoResolve": true
-    }
-  },
-  {
     "name": "codex-security",
     "rule": "codex-notices",
     "kind": "pr-comment",

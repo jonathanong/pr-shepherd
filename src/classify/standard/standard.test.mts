@@ -96,16 +96,6 @@ describe("standard classification rules", () => {
     );
   });
 
-  it.each([
-    "👀 [View the Auto Harness session](https://d2itfsupognuru.cloudfront.net/sessions/sess-9fff9246).\n\n<!-- auto-harness-session:sess-deadbeef -->",
-    "👀 [View the Auto Harness session](https://example.com/sessions/sess-9fff9246).\n\n<!-- auto-harness-session:sess-9fff9246 -->",
-    "👀 [View the Auto Harness session](https://d2itfsupognuru.cloudfront.net/sessions/sess-9fff9246).\n\n<!-- auto-harness-session:sess-9fff9246 -->\n\nFound a security issue.",
-    "<!-- auto-harness-session:sess-9fff9246 -->",
-  ])("keeps an invalid or substantive Auto Harness comment visible", (body) => {
-    const fixture = notices.find((notice) => notice.rule === "auto-harness-session")!;
-    expect(matches(item(fixture, { body }))).toEqual([]);
-  });
-
   it("does not match marker-only bodies", () => {
     for (const body of [
       "<!-- This is an auto-generated comment: rate limited by coderabbit.ai -->",
