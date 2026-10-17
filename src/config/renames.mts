@@ -80,5 +80,13 @@ function describeNestedKey(path: readonly PathSegment[], value: unknown): string
     return [`\`${formatPath(path)}\` → \`${to}\`${note === undefined ? "" : ` (${note}`}`];
   }
   if (!isPlainObject(value)) return [];
-  return Object.entries(value).flatMap(([key, child]) => describeNestedKey([...path, key], child));
+  const children = Object.entries(value).map(([key, child]) => {
+    const childPath = [...path, key];
+    return { childPath, hints: describeNestedKey(childPath, child) };
+  });
+  // A section with no old keys is reported whole; otherwise every other child is reported too.
+  if (children.every(({ hints }) => hints.length === 0)) return [];
+  return children.flatMap(({ childPath, hints }) =>
+    hints.length > 0 ? hints : [`unknown key \`${formatPath(childPath)}\``],
+  );
 }
