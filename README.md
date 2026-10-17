@@ -212,6 +212,7 @@ Leave out the PR number to use the current branch.
 | Configuration and classification rules       | [docs/configuration.md](docs/configuration.md), [examples/classification/](examples/classification/) |
 | Journal, library API                         | [docs/api.md](docs/api.md)                                                                           |
 | Compared with Cursor, Copilot, CodeRabbit, … | [docs/comparison.md](docs/comparison.md)                                                             |
+| Upgrading from 0.x                           | [docs/migrating-to-v1.md](docs/migrating-to-v1.md)                                                   |
 
 ## Harness ecosystem
 
