@@ -893,7 +893,7 @@ export const RECONCILE_MINUTES = 15;
  * each poll tick first makes these conditional REST reads
  * (src/commands/check-wait-detectors.mts). While all answer 304 the stored
  * report is replayed with no GraphQL request; a `BatchPr` tick runs only every
- * `poll.reconcileSeconds` (900, i.e. RECONCILE_MINUTES) or on a change
+ * `poll.reconcile-seconds` (900, i.e. RECONCILE_MINUTES) or on a change
  * (src/github/graphql-wait-detectors.test.mts).
  */
 export const GRAPHQL_WAIT_DETECTORS = 8;
@@ -902,7 +902,7 @@ export const GRAPHQL_WAIT_DETECTORS = 8;
  * src/commands/check-wait-detectors.mts): a single PR, open, not READY, not
  * queued, nothing to act on, no check still running, a merge status settled
  * by GraphQL itself (a REST mergeability refresh does not count),
- * `poll.reconcileSeconds` above 0, and a complete fingerprint
+ * `poll.reconcile-seconds` above 0, and a complete fingerprint
  * (src/commands/check-fingerprint.mts: at most 20 threads with none holding
  * more than one comment, at most 100 comments and 100 reviews, complete
  * check-suite and rules pages). Otherwise every poll tick reads `BatchPr` (a

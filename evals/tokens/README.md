@@ -260,7 +260,7 @@ are as good as these assumptions:
   - an idle single-PR wait whose report is complete (not READY, not queued,
     nothing to act on, no check running, a merge status GraphQL itself
     settled (not one a REST mergeability refresh filled in), no stack,
-    `poll.reconcileSeconds` above 0, at most 20 threads with none holding
+    `poll.reconcile-seconds` above 0, at most 20 threads with none holding
     more than one comment, at most 100 comments and 100 reviews, and complete
     check-suite and rules pages; `src/commands/check-wait-detectors.mts` and
     `src/commands/check-fingerprint.mts`) polls 8 conditional REST detectors
@@ -402,8 +402,8 @@ are as good as these assumptions:
 **Live cross-check.** [data/api-usage-check.json](data/api-usage-check.json)
 records `npx pr-shepherd iterate 522 --verbose --format=json` run twice per
 transport from a fresh `PR_SHEPHERD_STATE_DIR`. A temporary untracked
-`.pr-shepherdrc.yml` (`iterate.minimizeComments: none`,
-`actions.autoMinimizeSuppressed: false`, `actions.autoMarkReady: false`) and a
+`.pr-shepherdrc.yml` (`iterate.minimize-comments: none`,
+`actions.auto-minimize-suppressed: false`, `mark-ready.auto: false`) and a
 PR with no unresolved outdated threads kept the runs read-only. A one-shot
 `iterate` never uses the fingerprint cache (only the poll path does), so every
 tick is a full read and the check does not measure fingerprint hits or misses.

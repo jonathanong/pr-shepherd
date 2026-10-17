@@ -39,7 +39,7 @@ const mockMergeable = vi.mocked(getMergeableState);
 const REPO = { owner: "owner", name: "repo" };
 const KEY = { owner: "owner", repo: "repo", pr: 42 };
 const FP = testFingerprint();
-const CONFIG = testShepherdConfig({ botUsernames: ["coderabbitai"] });
+const CONFIG = testShepherdConfig({ "bot-usernames": ["coderabbitai"] });
 
 function stored(report: ShepherdReport) {
   return {

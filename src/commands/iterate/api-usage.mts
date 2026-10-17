@@ -24,7 +24,7 @@ export async function attachApiUsage(
   if (quotaWarning === undefined && shouldWarn(result) && (apiUsage.graphql || core)) {
     const [owner, repo] = result.repo.split("/");
     if (owner && repo) {
-      const bands = loadConfig().watch.graphqlQuotaWarnings.map((band) => ({
+      const bands = loadConfig().quotaWarningBands.map((band) => ({
         ...band,
         pollIntervalMinutes: Math.max(band.pollIntervalMinutes, minimumPollIntervalMinutes),
       }));

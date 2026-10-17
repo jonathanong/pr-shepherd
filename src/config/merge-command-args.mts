@@ -22,7 +22,7 @@ export function findMergeStrategies(args: string[]): string[] {
     const assignment = longAssignment ?? shortAssignment;
     if (assignment) {
       if (assignment[2] !== "true" && assignment[2] !== "false") {
-        throw new Error(`Invalid config: merge.commandArgs strategy ${arg} must use true or false`);
+        throw new Error(`strategy ${arg} must use true or false`);
       }
       if (assignment[2] === "true") {
         strategies.push(MERGE_STRATEGY_FLAGS.get(assignment[1]) as string);
@@ -41,7 +41,7 @@ export function findMergeStrategies(args: string[]): string[] {
 
     if (/^-[dmrs].+/.test(arg)) {
       throw new Error(
-        `Invalid config: merge.commandArgs cannot safely parse compound short option ${arg}; use separate flags or long options`,
+        `cannot safely parse compound short option ${arg}; use separate flags or long options`,
       );
     }
   }

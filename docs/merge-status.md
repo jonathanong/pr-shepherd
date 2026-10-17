@@ -119,7 +119,7 @@ GitHub often reports `mergeable` and `mergeStateStatus` as `UNKNOWN` after a mer
 
 ## Blocking-bot review detection
 
-`detectBlockingBotReview(pr)` returns true when either holds, matching logins case-insensitively by prefix against `mergeStatus.blockingReviewerLogins` (default `["copilot"]`, set in `.pr-shepherdrc.yml`):
+`detectBlockingBotReview(pr)` returns true when either holds, matching logins case-insensitively by prefix against `mark-ready.blocking-reviewer-logins` (default `[]`, set in `.pr-shepherdrc.yml`):
 
 1. Any `reviewRequest` login matches.
 2. Any `latestReview` login matches and its `state` is `PENDING`.

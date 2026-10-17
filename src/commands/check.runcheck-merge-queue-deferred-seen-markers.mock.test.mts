@@ -31,10 +31,7 @@ describe("runCheck — merge-queue deferred seen markers", () => {
   });
 
   it("marks the same new thread seen once workWhileQueued is enabled (not deferred)", async () => {
-    mockLoadConfig.mockReturnValue({
-      ...defaultConfig(),
-      actions: { ...defaultConfig().actions, workWhileQueued: true },
-    });
+    mockLoadConfig.mockReturnValue(defaultConfig({ actions: { "work-while-queued": true } }));
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
         isInMergeQueue: true,

@@ -20,7 +20,11 @@ function buildFixLoopInstruction(prReference: string | number, journal: boolean)
     parts.push(
       `Journal substantial decisions or rejections with \`${buildShepherdJournalCommand(prReference)}\`.`,
     );
-  const cli = renderShellCommand([...loadConfig().cliCommand, "playbook", FIX_CODE_LOOP_PLAYBOOK]);
+  const cli = renderShellCommand([
+    ...loadConfig()["cli-command"],
+    "playbook",
+    FIX_CODE_LOOP_PLAYBOOK,
+  ]);
   parts.push(`${playbookPointer(FIX_CODE_LOOP_PLAYBOOK)} CLI: \`${cli}\`.`);
   return parts.join(" ");
 }

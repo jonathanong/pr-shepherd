@@ -1,44 +1,40 @@
-import { describe, expect, it, vi } from "vitest";
-import { freshLoadConfig, writeRc } from "../../test-helpers/config/load-test-support.mts";
+import { describe, expect, it } from "vitest";
+import { expectConfigError, writeRc } from "../../test-helpers/config/load-test-support.mts";
 
 describe("loadConfig — removed and unknown keys", () => {
-  it("rejects the removed minimizeComments users value", async () => {
-    writeRc("iterate:\n  minimizeComments: users\n");
-    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    const config = await freshLoadConfig();
-
-    expect(config().iterate.minimizeComments).toBe("all");
-    expect(stderr.mock.calls.map((call) => call[0]).join("")).toContain(
-      'iterate.minimizeComments must be one of "all", "bots", or "none", got "users"',
-    );
+  it("rejects the removed minimize-comments users value", async () => {
+    writeRc("iterate:\n  minimize-comments: users\n");
+    await expectConfigError("`iterate.minimize-comments`", '"all"|"bots"|"none"');
   });
 
-  it("warns about removed action keys as unknown", async () => {
+  it("rejects removed action keys as unknown", async () => {
     writeRc("actions:\n  autoResolveOutdated: false\n  commitSuggestions: false\n");
-    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    const config = await freshLoadConfig();
-    const result = config();
-
-    expect(result.actions).not.toHaveProperty("autoResolveOutdated");
-    expect(stderr.mock.calls.map((call) => call[0]).join("")).toContain(
-      'unknown key "actions.autoResolveOutdated" ignored',
+    await expectConfigError(
+      "unknown key `actions.autoResolveOutdated`",
+      "unknown key `actions.commitSuggestions`",
     );
   });
 
-  it("warns for unknown keys while preserving classify", async () => {
+  it("rejects unknown keys in every section, including classify", async () => {
     writeRc("classify:\n  custom: true\nunknownSetting: true\nactions:\n  unknownAction: true\n");
-    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    const config = await freshLoadConfig();
-    const result = config();
+    await expectConfigError(
+      "unknown key `classify.custom`",
+      "unknown key `unknownSetting`",
+      "unknown key `actions.unknownAction`",
+    );
+  });
 
-    expect(result.classify).toEqual({ custom: true });
-    expect(stderr.mock.calls.map((call) => call[0]).join("")).toContain(
-      'unknown key "unknownSetting" ignored',
+  it("reports unknown siblings alongside rename hints in an old section", async () => {
+    writeRc("watch:\n  readyDelayMinutes: 5\n  sparkle: true\n");
+    await expectConfigError(
+      "`watch.readyDelayMinutes` → `iterate.ready-delay-minutes`",
+      "unknown key `watch.sparkle`",
     );
-    expect(stderr.mock.calls.map((call) => call[0]).join("")).not.toContain("classify");
-    expect(result.actions).not.toHaveProperty("unknownAction");
-    expect(stderr.mock.calls.map((call) => call[0]).join("")).toContain(
-      'unknown key "actions.unknownAction" ignored',
-    );
+  });
+
+  it("reports an old section without any renamed keys as one unknown key", async () => {
+    writeRc("watch:\n  sparkle: true\n");
+    const message = await expectConfigError("unknown key `watch`");
+    expect(message).not.toContain("watch.sparkle");
   });
 });

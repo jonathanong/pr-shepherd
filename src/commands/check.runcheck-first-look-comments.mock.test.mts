@@ -27,7 +27,7 @@ describe("runCheck — first-look comments", () => {
   });
   it("marker-gates visible comments excluded by minimizeComments policy", async () => {
     const cfg = defaultConfig();
-    cfg.iterate.minimizeComments = "bots";
+    cfg.iterate["minimize-comments"] = "bots";
     mockLoadConfig.mockReturnValue(cfg);
     const human = makeComment({
       id: "c-human",
@@ -57,7 +57,7 @@ describe("runCheck — first-look comments", () => {
   });
   it("suppresses minimized bot comment that was already seen as actionable", async () => {
     const cfg = defaultConfig();
-    cfg.iterate.minimizeComments = "bots";
+    cfg.iterate["minimize-comments"] = "bots";
     mockLoadConfig.mockReturnValue(cfg);
     const bot = makeComment({
       id: "c-bot",
@@ -77,7 +77,7 @@ describe("runCheck — first-look comments", () => {
   });
   it("suppresses unchanged visible comments excluded by minimizeComments policy", async () => {
     const cfg = defaultConfig();
-    cfg.iterate.minimizeComments = "bots";
+    cfg.iterate["minimize-comments"] = "bots";
     mockLoadConfig.mockReturnValue(cfg);
     const human = makeComment({
       id: "c-human",
@@ -96,7 +96,7 @@ describe("runCheck — first-look comments", () => {
   });
   it("re-surfaces edited visible comments excluded by minimizeComments policy", async () => {
     const cfg = defaultConfig();
-    cfg.iterate.minimizeComments = "none";
+    cfg.iterate["minimize-comments"] = "none";
     mockLoadConfig.mockReturnValue(cfg);
     const comment = makeComment({ id: "c-human", authorType: "User", body: "new text" });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ comments: [comment] }) });

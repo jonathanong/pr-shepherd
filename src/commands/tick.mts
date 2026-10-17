@@ -106,7 +106,7 @@ async function readStallDeadline(
   stallTimeoutSeconds: number | undefined,
 ): Promise<number | undefined> {
   if (result.action !== "wait") return undefined;
-  const timeout = stallTimeoutSeconds ?? loadConfig().iterate.stallTimeoutMinutes * 60;
+  const timeout = stallTimeoutSeconds ?? loadConfig().iterate["stall-timeout-minutes"] * 60;
   const [owner, repo] = result.repo.split("/");
   if (timeout <= 0 || !owner || !repo) return undefined;
   const read = await readStallState({ owner, repo, pr: result.pr });
@@ -119,7 +119,7 @@ async function withAggregateNextCheck(
 ): Promise<PollSummaryResult> {
   const stallDeadlineSeconds = await readStackStallDeadline(
     result,
-    opts.stallTimeoutSeconds ?? loadConfig().iterate.stallTimeoutMinutes * 60,
+    opts.stallTimeoutSeconds ?? loadConfig().iterate["stall-timeout-minutes"] * 60,
   );
   const nextCheck = aggregateNextCheck(result, stallDeadlineSeconds);
   if (!nextCheck) return result;

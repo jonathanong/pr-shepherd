@@ -29,25 +29,25 @@ REST `GET /repos/{owner}/{repo}/actions/runs?head_sha=<sha>&status=startup_failu
 
 Each check gets one `CheckCategory`. Rules apply in this order; the first match wins.
 
-| Order | `CheckCategory` | Condition                                                                                                                                  |
-| ----- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1     | `ignored`       | Name matches `ignoreChecks`, unless its Actions run is protected by `actions.neverCancelRuns` ([precedence](#ignoreprotection-precedence)) |
-| 2     | `filtered`      | Triggered by an event not in `checks.ciTriggerEvents` ([event filter](#event-filter)). Status contexts (`event: null`) are never filtered  |
-| 3     | `in_progress`   | `status` is anything but `COMPLETED`                                                                                                       |
-| 4     | `skipped`       | `conclusion` is `SKIPPED` or `NEUTRAL`; reported, never blocks readiness                                                                   |
-| 5     | `passed`        | `conclusion` is `SUCCESS`                                                                                                                  |
-| 6     | `failing`       | Any other conclusion: `FAILURE`, `TIMED_OUT`, `CANCELLED`, `ACTION_REQUIRED`, `STARTUP_FAILURE`, `STALE`                                   |
-| 7     | `superseded`    | A `failing` check whose conclusion is `CANCELLED` and that has newer-run evidence ([below](#concurrency-superseded-cancelled-checks))      |
+| Order | `CheckCategory` | Condition                                                                                                                                   |
+| ----- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `ignored`       | Name matches `checks.ignore`, unless its Actions run is protected by `checks.never-ignore` ([precedence](#ignoreprotection-precedence))     |
+| 2     | `filtered`      | Triggered by an event not in `checks.ci-trigger-events` ([event filter](#event-filter)). Status contexts (`event: null`) are never filtered |
+| 3     | `in_progress`   | `status` is anything but `COMPLETED`                                                                                                        |
+| 4     | `skipped`       | `conclusion` is `SKIPPED` or `NEUTRAL`; reported, never blocks readiness                                                                    |
+| 5     | `passed`        | `conclusion` is `SUCCESS`                                                                                                                   |
+| 6     | `failing`       | Any other conclusion: `FAILURE`, `TIMED_OUT`, `CANCELLED`, `ACTION_REQUIRED`, `STARTUP_FAILURE`, `STALE`                                    |
+| 7     | `superseded`    | A `failing` check whose conclusion is `CANCELLED` and that has newer-run evidence ([below](#concurrency-superseded-cancelled-checks))       |
 
 ### Ignore/protection precedence
 
-`ignoreChecks` matches the raw check name (`CheckRun.name` or `StatusContext.context`), case-insensitively, and removes matches from the CI verdict. The legacy cancellation-named `actions.neverCancelRuns` takes precedence when it matches the workflow name or check name of any check in that Actions run: the run's checks stay visible and blocking. Shepherd never cancels workflow runs.
+`checks.ignore` matches the raw check name (`CheckRun.name` or `StatusContext.context`), case-insensitively, and removes matches from the CI verdict. The legacy cancellation-named `checks.never-ignore` takes precedence when it matches the workflow name or check name of any check in that Actions run: the run's checks stay visible and blocking. Shepherd never cancels workflow runs.
 
-`actions.neverCancelRuns` does not bypass the event filter. A protected workflow triggered by `workflow_dispatch`, `push`, or another non-PR event counts toward readiness only if that event is in `checks.ciTriggerEvents`.
+`checks.never-ignore` does not bypass the event filter. A protected workflow triggered by `workflow_dispatch`, `push`, or another non-PR event counts toward readiness only if that event is in `checks.ci-trigger-events`.
 
 ### Event filter
 
-Only checks triggered by `checks.ciTriggerEvents` (default `pull_request`, `pull_request_target`) count toward the PR-head verdict; `push`, `schedule`, `merge_group`, `workflow_dispatch`, and anything else are `filtered`. When a PR is in a merge queue, or was just removed, Shepherd separately reads the synthetic queue commit and accepts `merge_group` checks for that commit only. Queue checks carry `scope: "merge_group"` and `commitOid` so they are not confused with PR-head checks.
+Only checks triggered by `checks.ci-trigger-events` (default `pull_request`, `pull_request_target`) count toward the PR-head verdict; `push`, `schedule`, `merge_group`, `workflow_dispatch`, and anything else are `filtered`. When a PR is in a merge queue, or was just removed, Shepherd separately reads the synthetic queue commit and accepts `merge_group` checks for that commit only. Queue checks carry `scope: "merge_group"` and `commitOid` so they are not confused with PR-head checks.
 
 Filtered checks appear in `report.checks.filtered` and `filteredNames` and never block READY. `blockedByFilteredCheck` is set when the merge state is `BLOCKED` and the only failing checks are filtered; the reporter shows it as a hint.
 
@@ -115,7 +115,7 @@ A `stack` summary routes the layer as `fix_code` with reason `unreported-require
 | `allPassed`       | No relevant check is failing or in progress              |
 | `hasChecks`       | At least one relevant check exists                       |
 | `filteredNames`   | Names of `filtered` checks                               |
-| `ignoredNames`    | Names of checks suppressed by `ignoreChecks`             |
+| `ignoredNames`    | Names of checks suppressed by `checks.ignore`            |
 | `supersededNames` | Names of `CANCELLED` checks reclassified as `superseded` |
 
 ## Stage 2: Triage (`checks/triage.mts`)
@@ -162,7 +162,7 @@ The batch query probes `annotations(first: 1)`, so Shepherd paginates only check
 | `ignored`                | Ignored checks that still carry unseen annotations; omitted when empty                                                                                         |
 | `filteredNames`          | Names of filtered checks                                                                                                                                       |
 | `blockedByFilteredCheck` | `BLOCKED` state is caused by a filtered check                                                                                                                  |
-| `ignoredNames`           | Suppressed by `ignoreChecks`; omitted when empty                                                                                                               |
+| `ignoredNames`           | Suppressed by `checks.ignore`; omitted when empty                                                                                                              |
 | `supersededNames`        | `CANCELLED` checks reclassified as `superseded`; omitted when empty                                                                                            |
 
 Pending checks also carry raw timing when GitHub exposes it:
@@ -174,4 +174,4 @@ Pending checks also carry raw timing when GitHub exposes it:
 | `startedAtUnix` | Check-run start, when present                                                            |
 | `updatedAtUnix` | Check-suite / workflow-run update, when present                                          |
 
-Iterate escalates with `stall-timeout` when relevant CI stays pending or unstarted longer than `iterate.stallTimeoutMinutes`. A required context that never created a check run does not use that timer; it takes the [unreported-required](#unreported-required-checks) path.
+Iterate escalates with `stall-timeout` when relevant CI stays pending or unstarted longer than `iterate.stall-timeout-minutes`. A required context that never created a check run does not use that timer; it takes the [unreported-required](#unreported-required-checks) path.

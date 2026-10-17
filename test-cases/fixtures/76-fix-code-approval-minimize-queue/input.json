@@ -12,7 +12,7 @@
   },
   "config": {
     "iterate": {
-      "minimizeApprovals": true
+      "minimize-approvals": true
     }
   },
   "readyDelayState": {

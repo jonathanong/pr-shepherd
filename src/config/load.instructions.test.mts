@@ -1,5 +1,9 @@
-import { describe, it, expect, vi } from "vitest";
-import { freshLoadConfig, writeRc } from "../../test-helpers/config/load-test-support.mts";
+import { describe, it, expect } from "vitest";
+import {
+  expectConfigError,
+  freshLoadConfig,
+  writeRc,
+} from "../../test-helpers/config/load-test-support.mts";
 
 describe("loadConfig — iterate.instructions", () => {
   it("defaults to inline", async () => {
@@ -15,17 +19,6 @@ describe("loadConfig — iterate.instructions", () => {
 
   it("rejects an unknown style", async () => {
     writeRc("iterate:\n  instructions: verbose\n");
-    const loadConfig = await freshLoadConfig();
-    const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    try {
-      expect(loadConfig().iterate.instructions).toBe("inline");
-      expect(write).toHaveBeenCalledWith(
-        expect.stringContaining(
-          'Invalid config: iterate.instructions must be "playbook" or "inline", got "verbose"',
-        ),
-      );
-    } finally {
-      write.mockRestore();
-    }
+    await expectConfigError("`iterate.instructions`");
   });
 });

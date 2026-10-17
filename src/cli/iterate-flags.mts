@@ -1,9 +1,9 @@
+import type { loadConfig } from "../config/load.mts";
 import {
   INSTRUCTION_STYLES,
   isInstructionStyle,
-  type loadConfig,
   type InstructionStyle,
-} from "../config/load.mts";
+} from "../config/resolve.mts";
 import { EXIT } from "../exit-codes.mts";
 import { getFlag, hasFlag } from "./args.mts";
 import { parseDurationToSeconds } from "./duration.mts";
@@ -47,7 +47,7 @@ export function parseIterateFlags(
   );
   const readyDelaySeconds = parseDurationToSeconds(
     readyDelaySuffix ?? "",
-    cfg.watch.readyDelayMinutes * 60,
+    cfg.iterate["ready-delay-minutes"] * 60,
     MINUTE_FLAG_OPTS,
   );
   const noAutoMarkReady = hasFlag(extra, "--no-auto-mark-ready");
@@ -62,7 +62,7 @@ export function parseIterateFlags(
   );
   const stallTimeoutSeconds = parseDurationToSeconds(
     stallTimeoutSuffix ?? "",
-    cfg.iterate.stallTimeoutMinutes * 60,
+    cfg.iterate["stall-timeout-minutes"] * 60,
     MINUTE_FLAG_OPTS,
   );
   const instructions = parseInstructionsFlag(extra);

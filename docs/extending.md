@@ -67,6 +67,6 @@ Step-by-step recipes for contributors adding a subcommand, action, check categor
 
 ## Recipe 4: Change tunable constants
 
-Defaults live in `src/config.json`; do not hardcode values in `.mts` files. Add the key's type to `PrShepherdConfig` and validation in `config/load.mts`, and document it in [configuration.md](configuration.md).
+Keys, defaults, and validation live in the zod schema in `src/config/schema.mts`; do not hardcode values elsewhere. Add the key there (kebab-case, with the unit in duration names), regenerate `pr-shepherd.schema.json` with `UPDATE_CONFIG_SCHEMA=1 npx vitest run src/config/schema-json.test.mts`, record any renamed key in `src/config/renames.mts`, and document it in [configuration.md](configuration.md).
 
 Read config through `loadConfig()` from `src/config/load.mts`, never by importing `config.json` directly, so cascading `.pr-shepherdrc.yml` overrides apply.

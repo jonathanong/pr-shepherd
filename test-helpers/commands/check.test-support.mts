@@ -1,5 +1,6 @@
 /* eslint-disable max-lines */
 import { vi, beforeEach } from "vitest";
+import { testConfig } from "../config/test-config.mts";
 
 vi.mock("../../src/github/batch.mts", () => ({ fetchPrBatch: vi.fn() }));
 vi.mock("../../src/state/pr-fingerprint.mts", () => ({
@@ -84,28 +85,16 @@ const mockAutoMinimizeComments = vi.mocked(autoMinimizeComments);
 
 const BASE_OPTS = { format: "text" as const };
 
-function defaultConfig() {
-  return {
-    botUsernames: ["coderabbitai"],
-    ignoreChecks: [],
-    iterate: {
-      fixAttemptsPerThread: 3,
-      stallTimeoutMinutes: 60,
-      minimizeApprovals: false,
-      minimizeComments: "all" as "all" | "bots" | "none",
-      behindBaseHint: "",
-      resolveOtherHumanThreads: "none" as const,
-    },
-    watch: { readyDelayMinutes: 10 },
-    resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 } },
-    checks: { ciTriggerEvents: ["pull_request", "pull_request_target"] },
-    mergeStatus: { blockingReviewerLogins: ["copilot"] },
-    actions: {
-      autoMinimizeSuppressed: true,
-      autoMarkReady: true,
-      neverCancelRuns: [],
-    },
-  };
+/** Test baseline: the built-in defaults plus the values these suites were written against. */
+const BASE_TEST_CONFIG = {
+  "bot-usernames": ["coderabbitai"],
+  iterate: { "minimize-comments": "all", "ready-delay-minutes": 10 },
+  "mark-ready": { "blocking-reviewer-logins": ["copilot"] },
+};
+
+/** The suite baseline config with `overlay` (rc-file shape) deep-merged on top. */
+function defaultConfig(overlay: Record<string, unknown> = {}) {
+  return testConfig(BASE_TEST_CONFIG, overlay);
 }
 
 function makeCheck(overrides: Partial<ClassifiedCheck> = {}): ClassifiedCheck {

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { testConfig } from "../../test-helpers/config/test-config.mts";
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
@@ -15,12 +16,8 @@ const baseCheck: CheckRun = {
   runId: null,
 };
 
-function config(ignoreChecks: string[] = []) {
-  return {
-    ignoreChecks,
-    checks: { ciTriggerEvents: ["pull_request", "pull_request_target"] },
-    actions: { neverCancelRuns: [] },
-  };
+function config(ignore: string[] = [], neverIgnore: string[] = []) {
+  return testConfig({ checks: { ignore, "never-ignore": neverIgnore } });
 }
 
 beforeEach(() => {
@@ -44,10 +41,7 @@ describe("classifyChecks — ignoreChecks", () => {
   });
 
   it("does not ignore a GitHub Actions check protected by workflow name", () => {
-    mockLoadConfig.mockReturnValue({
-      ...config(["Claude Code Review"]),
-      actions: { neverCancelRuns: ["Final Code Review"] },
-    });
+    mockLoadConfig.mockReturnValue(config(["Claude Code Review"], ["Final Code Review"]));
     const classified = classifyChecks([
       {
         ...baseCheck,
@@ -65,10 +59,7 @@ describe("classifyChecks — ignoreChecks", () => {
   });
 
   it("does not ignore a GitHub Actions check in the same run as a protected sibling check", () => {
-    mockLoadConfig.mockReturnValue({
-      ...config(["Claude Code Review"]),
-      actions: { neverCancelRuns: ["Select final review"] },
-    });
+    mockLoadConfig.mockReturnValue(config(["Claude Code Review"], ["Select final review"]));
     const classified = classifyChecks([
       {
         ...baseCheck,
@@ -107,10 +98,7 @@ describe("classifyChecks — ignoreChecks", () => {
   });
 
   it("handles null workflow metadata while checking protected matches", () => {
-    mockLoadConfig.mockReturnValue({
-      ...config(["Claude Code Review"]),
-      actions: { neverCancelRuns: ["Final Code Review"] },
-    });
+    mockLoadConfig.mockReturnValue(config(["Claude Code Review"], ["Final Code Review"]));
     const classified = classifyChecks([
       {
         ...baseCheck,

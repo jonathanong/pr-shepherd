@@ -52,6 +52,11 @@ describe("updateReadyDelay", () => {
     expect((await readFile(markerPath(), "utf8")).split(" ")[1]).toBe("head-a");
   });
 
+  it("fires shouldCancel on the first READY call when the delay is 0 (v1 default)", async () => {
+    const state = await updateReadyDelay(PR, true, 0, OWNER, REPO, HEAD);
+    expect(state).toEqual({ isReady: true, shouldCancel: true, remainingSeconds: 0 });
+  });
+
   it("fires shouldCancel when delay has elapsed on the same head", async () => {
     await writeMarker(`${secondsAgo(DELAY + 5)} head-a`);
 

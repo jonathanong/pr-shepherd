@@ -33,7 +33,7 @@ describe("runCheck — skipTriage", () => {
   });
 
   it("does not triage checks matched by ignoreChecks", async () => {
-    mockLoadConfig.mockReturnValue({ ...defaultConfig(), ignoreChecks: ["kilo*"] });
+    mockLoadConfig.mockReturnValue(defaultConfig({ checks: { ignore: ["kilo*"] } }));
     const ignoredCheck = makeCheck({ name: "Kilo Code Review", conclusion: "FAILURE" });
     const passingCheck = makeCheck({ name: "tests", conclusion: "SUCCESS" });
     mockFetchPrBatch.mockResolvedValue({
@@ -46,14 +46,11 @@ describe("runCheck — skipTriage", () => {
   });
 
   it("keeps protected workflow checks visible even when the raw job name is ignored", async () => {
-    mockLoadConfig.mockReturnValue({
-      ...defaultConfig(),
-      ignoreChecks: ["Claude Code Review"],
-      actions: {
-        ...defaultConfig().actions,
-        neverCancelRuns: ["Final Code Review"],
-      },
-    });
+    mockLoadConfig.mockReturnValue(
+      defaultConfig({
+        checks: { ignore: ["Claude Code Review"], "never-ignore": ["Final Code Review"] },
+      }),
+    );
     const protectedCheck = makeCheck({
       name: "Claude Code Review",
       workflowName: "Final Code Review",
@@ -99,10 +96,9 @@ describe("runCheck — skipTriage", () => {
   });
 
   it("treats UNSTABLE with only ignored failures as ready without actionable failing checks", async () => {
-    mockLoadConfig.mockReturnValue({
-      ...defaultConfig(),
-      ignoreChecks: ["Final Code Review / Claude Code Review"],
-    });
+    mockLoadConfig.mockReturnValue(
+      defaultConfig({ checks: { ignore: ["Final Code Review / Claude Code Review"] } }),
+    );
     const ignoredCheck = makeCheck({
       name: "Final Code Review / Claude Code Review",
       conclusion: "FAILURE",

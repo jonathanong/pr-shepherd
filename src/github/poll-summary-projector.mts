@@ -60,7 +60,7 @@ export async function summarizePollSummaryPr(
   const appearsReady = reasons.includes("appears-ready");
   if (opts.stackPrNumber === undefined) {
     const readyDelaySeconds =
-      opts.readyDelaySeconds ?? (loadConfig().watch?.readyDelayMinutes ?? 10) * 60;
+      opts.readyDelaySeconds ?? loadConfig().iterate["ready-delay-minutes"] * 60;
     const readyState = await updateReadyDelay(
       raw.number,
       appearsReady,
@@ -181,7 +181,7 @@ function projectQueueRemoval(
 }
 
 function detectBlockingReviewer(raw: RawSummaryPr): boolean {
-  const prefixes = (loadConfig().mergeStatus?.blockingReviewerLogins ?? []).map((login) =>
+  const prefixes = loadConfig()["mark-ready"]["blocking-reviewer-logins"].map((login) =>
     login.toLowerCase(),
   );
   // A team reviewer has a name, not a login, so it never matches a login prefix.

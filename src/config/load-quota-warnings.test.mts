@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { freshLoadConfig, writeRc } from "../../test-helpers/config/load-test-support.mts";
+import {
+  expectConfigError,
+  freshLoadConfig,
+  writeRc,
+} from "../../test-helpers/config/load-test-support.mts";
 
 describe("loadConfig — GraphQL quota warnings", () => {
   it("defaults to 30/20/10 percent with 2/5/10 minute intervals", async () => {
     const loadConfig = await freshLoadConfig();
-    expect(loadConfig().watch.graphqlQuotaWarnings).toEqual([
+    expect(loadConfig().quotaWarningBands).toEqual([
       { remainingPercent: 30, pollIntervalMinutes: 2 },
       { remainingPercent: 20, pollIntervalMinutes: 5 },
       { remainingPercent: 10, pollIntervalMinutes: 10 },
@@ -13,19 +17,19 @@ describe("loadConfig — GraphQL quota warnings", () => {
 
   it("accepts custom bands and sorts them descending", async () => {
     writeRc(
-      "watch:\n  graphqlQuotaWarnings:\n    - remainingPercent: 5\n      pollIntervalMinutes: 20\n    - remainingPercent: 40\n      pollIntervalMinutes: 3\n",
+      "poll:\n  quota-warnings:\n    - remaining-percent: 5\n      interval-minutes: 20\n    - remaining-percent: 40\n      interval-minutes: 3\n",
     );
     const loadConfig = await freshLoadConfig();
-    expect(loadConfig().watch.graphqlQuotaWarnings).toEqual([
+    expect(loadConfig().quotaWarningBands).toEqual([
       { remainingPercent: 40, pollIntervalMinutes: 3 },
       { remainingPercent: 5, pollIntervalMinutes: 20 },
     ]);
   });
 
   it("scales factor bands from the configured poll interval", async () => {
-    writeRc("poll:\n  intervalSeconds: 120\n");
+    writeRc("poll:\n  interval-seconds: 120\n");
     const loadConfig = await freshLoadConfig();
-    expect(loadConfig().watch.graphqlQuotaWarnings).toEqual([
+    expect(loadConfig().quotaWarningBands).toEqual([
       { remainingPercent: 30, pollIntervalMinutes: 4 },
       { remainingPercent: 20, pollIntervalMinutes: 10 },
       { remainingPercent: 10, pollIntervalMinutes: 20 },
@@ -34,10 +38,10 @@ describe("loadConfig — GraphQL quota warnings", () => {
 
   it("accepts factor-only bands", async () => {
     writeRc(
-      "poll:\n  intervalSeconds: 90\nwatch:\n  graphqlQuotaWarnings:\n    - remainingPercent: 40\n      pollIntervalFactor: 2\n    - remainingPercent: 5\n      pollIntervalFactor: 4\n",
+      "poll:\n  interval-seconds: 90\n  quota-warnings:\n    - remaining-percent: 40\n      interval-factor: 2\n    - remaining-percent: 5\n      interval-factor: 4\n",
     );
     const loadConfig = await freshLoadConfig();
-    expect(loadConfig().watch.graphqlQuotaWarnings).toEqual([
+    expect(loadConfig().quotaWarningBands).toEqual([
       { remainingPercent: 40, pollIntervalMinutes: 3 },
       { remainingPercent: 5, pollIntervalMinutes: 6 },
     ]);
@@ -45,10 +49,10 @@ describe("loadConfig — GraphQL quota warnings", () => {
 
   it("uses the stricter absolute or factor floor when both are configured", async () => {
     writeRc(
-      "poll:\n  intervalSeconds: 120\nwatch:\n  graphqlQuotaWarnings:\n    - remainingPercent: 30\n      pollIntervalMinutes: 3\n      pollIntervalFactor: 2\n    - remainingPercent: 10\n      pollIntervalMinutes: 30\n      pollIntervalFactor: 10\n",
+      "poll:\n  interval-seconds: 120\n  quota-warnings:\n    - remaining-percent: 30\n      interval-minutes: 3\n      interval-factor: 2\n    - remaining-percent: 10\n      interval-minutes: 30\n      interval-factor: 10\n",
     );
     const loadConfig = await freshLoadConfig();
-    expect(loadConfig().watch.graphqlQuotaWarnings).toEqual([
+    expect(loadConfig().quotaWarningBands).toEqual([
       { remainingPercent: 30, pollIntervalMinutes: 4 },
       { remainingPercent: 10, pollIntervalMinutes: 30 },
     ]);
@@ -56,49 +60,38 @@ describe("loadConfig — GraphQL quota warnings", () => {
 
   it("rejects a factor calculation that overflows", async () => {
     writeRc(
-      "poll:\n  intervalSeconds: 60\nwatch:\n  graphqlQuotaWarnings:\n    - remainingPercent: 30\n      pollIntervalFactor: 1e308\n",
+      "poll:\n  interval-seconds: 60\n  quota-warnings:\n    - remaining-percent: 30\n      interval-factor: 1e308\n",
     );
-    const loadConfig = await freshLoadConfig();
-    expect(loadConfig().watch.graphqlQuotaWarnings).toEqual([
-      { remainingPercent: 30, pollIntervalMinutes: 2 },
-      { remainingPercent: 20, pollIntervalMinutes: 5 },
-      { remainingPercent: 10, pollIntervalMinutes: 10 },
-    ]);
+    await expectConfigError("`poll.quota-warnings[0]`: resolves to a non-finite poll interval");
   });
 
   it("can be disabled with an empty array", async () => {
-    writeRc("watch:\n  graphqlQuotaWarnings: []\n");
+    writeRc("poll:\n  quota-warnings: []\n");
     const loadConfig = await freshLoadConfig();
-    expect(loadConfig().watch.graphqlQuotaWarnings).toEqual([]);
+    expect(loadConfig().quotaWarningBands).toEqual([]);
   });
 
   it.each([
     ["non-array value", "disabled"],
     ["non-object band", "\n    - disabled"],
-    ["remaining percent", "\n    - remainingPercent: 0\n      pollIntervalMinutes: 2"],
-    ["poll interval", "\n    - remainingPercent: 20\n      pollIntervalMinutes: 0"],
-    ["missing interval policy", "\n    - remainingPercent: 20"],
-    ["poll interval factor", "\n    - remainingPercent: 20\n      pollIntervalFactor: 0.5"],
+    ["remaining percent", "\n    - remaining-percent: 0\n      interval-minutes: 2"],
+    ["poll interval", "\n    - remaining-percent: 20\n      interval-minutes: 0"],
+    ["missing interval policy", "\n    - remaining-percent: 20"],
+    ["poll interval factor", "\n    - remaining-percent: 20\n      interval-factor: 0.5"],
     [
       "duplicate threshold",
-      "\n    - remainingPercent: 20\n      pollIntervalMinutes: 2\n    - remainingPercent: 20\n      pollIntervalMinutes: 5",
+      "\n    - remaining-percent: 20\n      interval-minutes: 2\n    - remaining-percent: 20\n      interval-minutes: 5",
     ],
     [
       "decreasing interval",
-      "\n    - remainingPercent: 40\n      pollIntervalMinutes: 20\n    - remainingPercent: 5\n      pollIntervalMinutes: 1",
+      "\n    - remaining-percent: 40\n      interval-minutes: 20\n    - remaining-percent: 5\n      interval-minutes: 1",
     ],
     [
       "decreasing resolved factor interval",
-      "\n    - remainingPercent: 40\n      pollIntervalFactor: 10\n    - remainingPercent: 5\n      pollIntervalFactor: 2",
+      "\n    - remaining-percent: 40\n      interval-factor: 10\n    - remaining-percent: 5\n      interval-factor: 2",
     ],
-  ])("falls back to defaults for an invalid %s", async (_label, bands) => {
-    writeRc(`watch:\n  graphqlQuotaWarnings:${bands.startsWith("\n") ? "" : " "}${bands}\n`);
-    const loadConfig = await freshLoadConfig();
-
-    expect(loadConfig().watch.graphqlQuotaWarnings).toEqual([
-      { remainingPercent: 30, pollIntervalMinutes: 2 },
-      { remainingPercent: 20, pollIntervalMinutes: 5 },
-      { remainingPercent: 10, pollIntervalMinutes: 10 },
-    ]);
+  ])("rejects an invalid %s", async (_label, bands) => {
+    writeRc(`poll:\n  quota-warnings:${bands.startsWith("\n") ? "" : " "}${bands}\n`);
+    await expectConfigError("`poll.quota-warnings");
   });
 });

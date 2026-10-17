@@ -19,6 +19,6 @@ export function shouldMinimizeAuthor(
     case "none":
       return false;
     default:
-      throw new Error(`Invalid minimizeComments policy: ${String(policy)}`);
+      throw new Error(`Invalid iterate.minimize-comments policy: ${String(policy)}`);
   }
 }

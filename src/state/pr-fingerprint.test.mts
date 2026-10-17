@@ -42,7 +42,7 @@ describe("pr-fingerprint state", () => {
     const fingerprint = testFingerprint({ headRefOid: "deadbeef" });
     await storePrFingerprint(key, fingerprint, report, config);
     await expect(loadPrFingerprint(key)).resolves.toEqual({
-      version: 4,
+      version: 5,
       inputDigest: fingerprintInputDigest(config),
       fingerprint,
       report,
@@ -72,9 +72,8 @@ describe("pr-fingerprint state", () => {
   it("changes digest when report-shaping config changes", () => {
     const other = {
       ...config,
-      checks: { ...config.checks, ciTriggerEvents: ["push"] },
-      actions: { ...config.actions, neverCancelRuns: ["lint"] },
-      mergeStatus: { blockingReviewerLogins: ["coderabbit"] },
+      checks: { ...config.checks, "ci-trigger-events": ["push"], "never-ignore": ["lint"] },
+      "mark-ready": { ...config["mark-ready"], "blocking-reviewer-logins": ["coderabbit"] },
     } as PrShepherdConfig;
     expect(fingerprintInputDigest(other)).not.toBe(fingerprintInputDigest(config));
   });

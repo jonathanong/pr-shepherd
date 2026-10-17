@@ -54,7 +54,7 @@
   },
   "config": {
     "iterate": {
-      "minimizeComments": "bots"
+      "minimize-comments": "bots"
     }
   },
   "readyDelayState": {

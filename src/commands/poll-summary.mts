@@ -90,7 +90,7 @@ async function readPollSummaryTick(opts: PollSummaryCommandOptions): Promise<Pol
   const result = await applyStackStallGuard(
     planned,
     repo,
-    opts.stallTimeoutSeconds ?? loadConfig().iterate.stallTimeoutMinutes * 60,
+    opts.stallTimeoutSeconds ?? loadConfig().iterate["stall-timeout-minutes"] * 60,
   );
   return { result, repo, ...(fetched.handoffSource && { handoffSource: fetched.handoffSource }) };
 }
@@ -99,7 +99,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
   const intervalMs = Math.min(opts.intervalSeconds * 1000, MAX_TIMER_MS);
   const timeoutMs = Math.min(opts.timeoutSeconds * 1000, MAX_TIMER_MS);
   const debounceMs = Math.min((opts.debounceSeconds ?? 60) * 1000, MAX_TIMER_MS);
-  const quotaBands = loadConfig().watch.graphqlQuotaWarnings;
+  const quotaBands = loadConfig().quotaWarningBands;
   const start = Date.now();
   let tick = 0;
   let debounceUntil: number | null = null;
