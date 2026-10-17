@@ -4,6 +4,7 @@ import { runIterateForMode } from "../commands/event-mode.mts";
 import { loadConfig } from "../config/load.mts";
 import { EXIT } from "../exit-codes.mts";
 import { parseCommonArgs } from "./args.mts";
+import { rejectUnknownFlags } from "./unknown-flags.mts";
 import { USAGE } from "./help.mts";
 import { formatSuggestionPatchesResult, formatMarkFilesAsViewedResult } from "./formatters.mts";
 import { parseSuggestionPatchGroups } from "./suggestion-patch-flags.mts";
@@ -31,7 +32,17 @@ export async function handleSuggestionPatches(args: string[]): Promise<void> {
   );
 }
 
+const ITERATE_FLAGS = [
+  "--ready-delay",
+  "--stall-timeout",
+  "--no-auto-mark-ready",
+  "--merge",
+  "--instructions",
+  "--poll-mode",
+];
+
 export async function handleIterate(args: string[]): Promise<void> {
+  if (rejectUnknownFlags(args, "iterate", ITERATE_FLAGS)) return;
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
   const flags = parseIterateFlags(extra, loadConfig());
   if (hasInvalidIterateFlags(flags)) return;
