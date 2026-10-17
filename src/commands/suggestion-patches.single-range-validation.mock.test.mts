@@ -8,13 +8,13 @@ import {
   mockReadFile,
   registerHooks,
   setupHappyPath,
-} from "../../test-helpers/commands/commit-suggestion.test-support.mts";
+  runSingleSuggestion,
+} from "../../test-helpers/commands/suggestion-patches.single.test-support.mts";
 import { EXIT } from "../exit-codes.mts";
-import { runCommitSuggestion } from "./commit-suggestion.mts";
 
 registerHooks();
 
-describe("runCommitSuggestion — suggestion range validation", () => {
+describe("runSuggestionPatches (single) — suggestion range validation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
@@ -40,7 +40,7 @@ describe("runCommitSuggestion — suggestion range validation", () => {
     mockReadFile.mockResolvedValue(originalContent as never);
 
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toMatchObject({
       exitCode: EXIT.UNAVAILABLE,
       message: expect.stringContaining("src/foo.ts:49"),
@@ -75,7 +75,7 @@ describe("runCommitSuggestion — suggestion range validation", () => {
     mockReadFile.mockResolvedValue(originalContent as never);
 
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toMatchObject({
       exitCode: EXIT.UNAVAILABLE,
       message: expect.stringContaining("partially rewrites a source block before"),

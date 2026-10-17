@@ -24,7 +24,8 @@ describe("main — resolve", () => {
     await main([
       "node",
       "shepherd",
-      "resolve",
+      "apply",
+      "review",
       "42",
       "--dismiss-review-ids",
       "r-1,r-2",
@@ -39,31 +40,6 @@ describe("main — resolve", () => {
     expect(out).toContain("Not dismissed due to rate limit: r-2");
     expect(process.exitCode ?? 0).toBe(0);
   });
-  it("formatMutateResult renders skipped dismissals", async () => {
-    mockRunResolveMutate.mockResolvedValue({
-      resolvedThreads: [],
-      repliedThreads: [],
-      minimizedComments: [],
-      dismissedReviews: ["r-1"],
-      errors: [],
-      skippedDismissals: ["r-2", "r-3"],
-    });
-
-    await main([
-      "node",
-      "shepherd",
-      "resolve",
-      "42",
-      "--dismiss-review-ids",
-      "r-1,r-2,r-3",
-      "--message",
-      "done",
-    ]);
-
-    const out = getStdout();
-    expect(out).toContain("Dismissed reviews: r-1");
-    expect(out).toContain("Skipped dismissals: r-2, r-3");
-  });
   it("formatMutateResult renders non-rate-limit errors", async () => {
     mockRunResolveMutate.mockResolvedValue({
       resolvedThreads: [],
@@ -73,7 +49,7 @@ describe("main — resolve", () => {
       errors: ["t-1: nope"],
     });
 
-    await main(["node", "shepherd", "resolve", "42", "--resolve-thread-ids", "t-1"]);
+    await main(["node", "shepherd", "apply", "review", "42", "--resolve-thread-ids", "t-1"]);
 
     expect(getStdout()).toContain("Errors:\n  t-1: nope");
     expect(process.exitCode).toBe(69);
@@ -92,7 +68,8 @@ describe("main — resolve", () => {
     await main([
       "node",
       "shepherd",
-      "resolve",
+      "apply",
+      "review",
       "42",
       "--resolve-thread-ids",
       "t-1,t-2",

@@ -34,24 +34,6 @@ export interface ResolveResult {
   minimizedComments: string[];
   dismissedReviews: string[];
   errors: string[];
-  /** @deprecated Direct apply forwards every supplied dismissal ID to GitHub. */
-  skippedDismissals?: string[];
-  /** @deprecated Direct apply no longer applies author policy. */
-  skippedHumanResolves?: string[];
-  /** @deprecated Direct apply no longer applies author policy. */
-  skippedHumanMinimizes?: string[];
-  /** @deprecated Direct apply no longer applies author policy. */
-  skippedHumanDismissals?: string[];
-  /** @deprecated Direct apply forwards every supplied reply ID to GitHub. */
-  skippedNonHumanReplies?: string[];
-  /** @deprecated Direct apply requests now rely on GitHub's mutation response. */
-  skippedUnauthorizedReplies?: string[];
-  /** @deprecated Direct apply requests now rely on GitHub's mutation response. */
-  skippedUnauthorizedResolves?: string[];
-  /** @deprecated Direct apply requests now rely on GitHub's mutation response. */
-  skippedUnauthorizedMinimizes?: string[];
-  /** @deprecated Direct apply requests now rely on GitHub's mutation response. */
-  skippedUnauthorizedDismissals?: string[];
   rateLimit?: ResolveRateLimitStop;
   sessionRefusal?: string;
   instructions?: string[];
@@ -178,13 +160,6 @@ export async function applyResolveOptions(
     ];
 
   return result;
-}
-
-/** @deprecated Compatibility alias; use `autoResolveThreads`. */
-export async function autoResolveOutdated(
-  threadIds: string[],
-): Promise<{ resolved: string[]; errors: string[] }> {
-  return autoResolveThreads(threadIds);
 }
 
 export async function autoResolveThreads(

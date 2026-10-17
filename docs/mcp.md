@@ -90,7 +90,7 @@ Replace `/path/to/pr-shepherd` with this checkout's absolute path. Do not use a 
 
 ## Tools
 
-The server registers six canonical tools plus a deprecated singular suggestion adapter. Hosts namespace tool names with the server name (`pr-shepherd__iterate` in Grok, `mcp__pr-shepherd__iterate` in some Claude setups); the names below are the server-registered ones.
+The server registers six tools. Hosts namespace tool names with the server name (`pr-shepherd__iterate` in Grok, `mcp__pr-shepherd__iterate` in some Claude setups); the names below are the server-registered ones.
 
 | Tool                       | CLI counterpart                                                                      | Side effects                                                                                                                                                                                                         |
 | -------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -100,7 +100,6 @@ The server registers six canonical tools plus a deprecated singular suggestion a
 | `extract_journal`          | `pr-shepherd journal extract` (from a `body` string, not a file)                     | None; no file, stdin, GitHub, or Shepherd-log I/O.                                                                                                                                                                   |
 | `get_journal`              | none                                                                                 | Read-only fetch of the PR body through the selected transport; never writes it.                                                                                                                                      |
 | `build_suggestion_patches` | `pr-shepherd build-suggestion-patches`                                               | None. Never edits the worktree or git history.                                                                                                                                                                       |
-| `build_suggestion_patch`   | deprecated `build-suggestion-patch`                                                  | Deprecated one-item adapter; use `build_suggestion_patches` with a one-item `suggestions` array.                                                                                                                     |
 
 `admin clean` and `admin log-file` have no MCP tool.
 
@@ -112,14 +111,14 @@ Every PR-targeted call requires a repository-qualified selector: a GitHub PR URL
 
 Each result has Markdown `content` and `structuredContent` produced from the same projection, so the two channels carry equivalent information.
 
-| Tool / selector                                               | `structuredContent`                                                                                                                |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `iterate` with `pr`                                           | The CLI's lean `--format=json` projection of `IterateResult`, not the raw object (details below).                                  |
-| `iterate` with `prs`                                          | The raw `PollSummaryResult`.                                                                                                       |
-| `iterate` with `stack`                                        | The lean stack overview the CLI prints as JSON; Markdown is rendered from the same projection.                                     |
-| `apply`, `build_suggestion_patches`, `build_suggestion_patch` | The raw result object, matching their CLI JSON output.                                                                             |
-| `extract_journal`, `get_journal`                              | The same JSON in both channels.                                                                                                    |
-| `playbook`                                                    | The result object. Markdown `content` is the playbook body for a named playbook, or a bullet list of names when `name` is omitted. |
+| Tool / selector                     | `structuredContent`                                                                                                                |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `iterate` with `pr`                 | The CLI's lean `--format=json` projection of `IterateResult`, not the raw object (details below).                                  |
+| `iterate` with `prs`                | The raw `PollSummaryResult`.                                                                                                       |
+| `iterate` with `stack`              | The lean stack overview the CLI prints as JSON; Markdown is rendered from the same projection.                                     |
+| `apply`, `build_suggestion_patches` | The raw result object, matching their CLI JSON output.                                                                             |
+| `extract_journal`, `get_journal`    | The same JSON in both channels.                                                                                                    |
+| `playbook`                          | The result object. Markdown `content` is the playbook body for a named playbook, or a bullet list of names when `name` is omitted. |
 
 The single-PR `iterate` projection omits trivial-default fields (including `state` when `OPEN` and `mergeStateStatus` when `CLEAN`, like the text header) and adds `readyDelayOverride` when `readyDelaySeconds` was supplied. Every action except `fix_code` and `cancel` gets a computed top-level `instructions` array; `fix_code` carries its steps under `fix.instructions`, and `cancel` has none. A clean PR whose ready-delay is still counting returns action `ready` with `remainingSeconds`. Action semantics, instruction text, and the full field contract live in [actions.md](actions.md).
 
@@ -135,20 +134,18 @@ The single-PR `iterate` projection omits trivial-default fields (including `stat
 
 Supply exactly one of `pr`, `prs`, or `stack`.
 
-| Input                    | Type                            | Meaning                                                                                                                     |
-| ------------------------ | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `pr`                     | GitHub PR URL or `owner/repo#N` | Selector: one PR to inspect.                                                                                                |
-| `prs`                    | qualified PR array              | Selector: non-empty explicit set from one repository.                                                                       |
-| `stack`                  | GitHub PR URL or `owner/repo#N` | Selector: anchor of its complete native GitHub stack.                                                                       |
-| `readyDelaySeconds`      | non-negative number             | Override the ready-delay window.                                                                                            |
-| `stallTimeoutSeconds`    | non-negative number             | Override the one-PR or `stack` stall timeout.                                                                               |
-| `noAutoMarkReady`        | boolean                         | Disable automatic draft → ready.                                                                                            |
-| `merge`                  | boolean                         | Shepherd to readiness and emit merge/queue commands.                                                                        |
-| `instructions`           | `inline` or `playbook`          | `fix_code` instruction style; default `iterate.instructions` (`inline`).                                                    |
-| `pollMode`               | `auto`, `poll`, or `event`      | Event mode adds `pollMode` and `nextCheck` and event-mode instruction steps; default `poll.mode`. See [cloud.md](cloud.md). |
-| `transport`              | `auto`, `graphql`, or `rest`    | Override `github.transport` for this call.                                                                                  |
-| `noAutoCancelActionable` | boolean                         | Deprecated no-op; Shepherd never cancels workflow runs.                                                                     |
-| `neverCancelRuns`        | string array                    | Deprecated per-call no-op retained for compatibility.                                                                       |
+| Input                 | Type                            | Meaning                                                                                                                     |
+| --------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `pr`                  | GitHub PR URL or `owner/repo#N` | Selector: one PR to inspect.                                                                                                |
+| `prs`                 | qualified PR array              | Selector: non-empty explicit set from one repository.                                                                       |
+| `stack`               | GitHub PR URL or `owner/repo#N` | Selector: anchor of its complete native GitHub stack.                                                                       |
+| `readyDelaySeconds`   | non-negative number             | Override the ready-delay window.                                                                                            |
+| `stallTimeoutSeconds` | non-negative number             | Override the one-PR or `stack` stall timeout.                                                                               |
+| `noAutoMarkReady`     | boolean                         | Disable automatic draft → ready.                                                                                            |
+| `merge`               | boolean                         | Shepherd to readiness and emit merge/queue commands.                                                                        |
+| `instructions`        | `inline` or `playbook`          | `fix_code` instruction style; default `iterate.instructions` (`inline`).                                                    |
+| `pollMode`            | `auto`, `poll`, or `event`      | Event mode adds `pollMode` and `nextCheck` and event-mode instruction steps; default `poll.mode`. See [cloud.md](cloud.md). |
+| `transport`           | `auto`, `graphql`, or `rest`    | Override `github.transport` for this call.                                                                                  |
 
 Aggregate selectors return one compact, read-only summary tick:
 
@@ -225,7 +222,7 @@ It validates current GitHub evidence before writing local state and does not enq
 
 GitHub's anchored line range at the fetched PR head is authoritative. A clean local descendant is accepted only when the full ordered patch stream passes `git apply --check`; otherwise inspect the current source and reviewer intent manually.
 
-The result includes ordered `patches[]` entries with thread, path, range, author, patch, files-to-stage, and commit metadata, plus shared `postActionInstructions`. Apply and commit each patch in order. Shepherd does not recommend a push or review mutation from this standalone result because it cannot verify those authorizations; use the originating iterate output for authorization-checked actions. `build_suggestion_patch` takes the same inputs for one suggestion.
+The result includes ordered `patches[]` entries with thread, path, range, author, patch, files-to-stage, and commit metadata, plus shared `postActionInstructions`. Apply and commit each patch in order. Shepherd does not recommend a push or review mutation from this standalone result because it cannot verify those authorizations; use the originating iterate output for authorization-checked actions.
 
 ### `extract_journal`, `get_journal`, and `playbook`
 
@@ -300,7 +297,7 @@ const server = createPrShepherdMcpServer({ cwd: "/path/to/repo" });
 await runPrShepherdMcpStdio({ cwd: "/path/to/repo" });
 ```
 
-`createPrShepherdMcpServer` also accepts `transport` and an optional `shepherd` for tests or alternate transports. It exposes the same seven tools: `iterate`, `apply`, `playbook`, `build_suggestion_patches`, `extract_journal`, `get_journal`, and the deprecated singular adapter.
+`createPrShepherdMcpServer` also accepts `transport` and an optional `shepherd` for tests or alternate transports. It exposes the same six tools: `iterate`, `apply`, `playbook`, `build_suggestion_patches`, `extract_journal`, and `get_journal`.
 
 ## Related docs
 

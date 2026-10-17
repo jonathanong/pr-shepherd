@@ -47,12 +47,10 @@ export function buildFixInstructions(
   resolveCommand: ResolveCommand,
   hasConflicts: boolean,
   prReference: string | number,
-  _cancelledCount: number,
   firstLookThreads: FirstLookThread[] = [],
   firstLookComments: FirstLookComment[] = [],
   firstLookSummaries: Review[] = [],
   editedSummaries: Review[] = [],
-  _inProgressRunIds: string[] = [],
   resolutionOnlyThreads: ReviewThread[] = [],
   resolveOnlyCommand?: ResolveCommand,
   behindBaseHint = "", // iterate.behindBaseHint — see buildBehindBaseHintInstruction

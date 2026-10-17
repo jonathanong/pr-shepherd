@@ -48,12 +48,9 @@ function buildStackedRouteResult(
         `PR #${report.pr} is layer ${stack.position} of ${stack.size} in native stack #${stack.number}; do not run \`gh pr merge\` for this layer.`,
         `Run ${inlineCode(buildPrShepherdCommand(["--stack", prUrl, "--until-terminal", "--merge"]).text)} to reconcile the stack and run each bottom-layer merge command it emits.`,
       ],
-      inProgressRunIds: [],
-      protectedRuns: [],
       firstLookThreads: [],
       firstLookComments: [],
     },
-    cancelled: [],
   };
 }
 export function buildReadyMergeOutcome(

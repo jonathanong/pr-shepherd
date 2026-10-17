@@ -140,12 +140,9 @@ export function buildUnreportedFixResult(
         hasMutations: false,
       },
       instructions: [...instructions, buildFixCompletionInstruction()],
-      inProgressRunIds: [],
-      protectedRuns: [],
       firstLookThreads: [],
       firstLookComments: [],
     },
-    cancelled: [],
   };
 }
 

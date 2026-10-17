@@ -15,7 +15,7 @@ vi.mock("../../src/github/reply-recovery-read.mts", () => ({
   readReplyRecoveryEvidence: vi.fn(async () => new Map()),
 }));
 
-import { applyResolveOptions, autoResolveOutdated } from "../../src/comments/resolve.mts";
+import { applyResolveOptions } from "../../src/comments/resolve.mts";
 import { graphqlWithRateLimit, getPrHeadSha } from "../../src/github/client.mts";
 
 const mockGraphql = vi.mocked(graphqlWithRateLimit);
@@ -61,7 +61,6 @@ export function registerHooks(): void {
 export {
   REPO,
   applyResolveOptions,
-  autoResolveOutdated,
   getPrHeadSha,
   graphqlWithRateLimit,
   makeBulkResponse,

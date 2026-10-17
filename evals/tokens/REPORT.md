@@ -280,18 +280,18 @@ A local session where a background `pr-shepherd wait` replaces the blocking poll
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Typical PR session | event | 18.8 | 38 | 22.8 | 14.8 | 8,487 | 83,592 |
 | Typical PR session | event, hosted webhook proxy (hypothetical) | 9.5 | 1 | 22.8 | 14.8 | 8,487 | 83,592 |
-| Typical PR session | pr-shepherd poll | 30.8 | 4.8 | 14.8 | 14.8 | 8,553 | 58,578 |
+| Typical PR session | pr-shepherd polling | 30.8 | 4.8 | 14.8 | 14.8 | 8,553 | 58,578 |
 | Typical PR session | gh CLI | 36.5 | 9 | 18.3 | 30.3 | 30,934 | 100,341 |
 | Typical PR session | GitHub MCP | 12 | 78.3 | 48.6 | 84.6 | 77,005 | 258,773 |
 | Typical stack session | event | 8 | 12 | 12 | 14 | 3,946 | 43,311 |
 | Typical stack session | event, hosted webhook proxy (hypothetical) | 0 | 2 | 12 | 14 | 3,946 | 43,311 |
-| Typical stack session | pr-shepherd poll | 11 | 2 | 8 | 14 | 3,906 | 30,976 |
+| Typical stack session | pr-shepherd polling | 11 | 2 | 8 | 14 | 3,906 | 30,976 |
 | Typical stack session | gh CLI | 27 | 6 | 13 | 33 | 5,133 | 56,002 |
 | Typical stack session | GitHub MCP | 12 | 74 | 19 | 75 | 9,478 | 83,549 |
 
 Per scenario, `GraphQL points / REST core requests · turns` for one occurrence. The proxy column counts only the user's token; its turns are the event arm's.
 
-| scenario | weight | wake | pr-shepherd poll | event | event, proxy |
+| scenario | weight | wake | pr-shepherd polling | event | event, proxy |
 | --- | --- | --- | --- | --- | --- |
 | `ci-wait` | 2 | none | 6 / 0 · 0 | 0 / 9 · 0 | 0 / 0 |
 | `failing-check` | 1 | change | 1 / 2 · 1 | 1 / 2 · 2 | 0 / 0 |
@@ -314,9 +314,9 @@ An idle hour, while nothing changes:
 
 | arm | GraphQL points | REST core requests | conditional requests (304) | wakes | turns | cost (ITE) |
 | --- | --- | --- | --- | --- | --- | --- |
-| pr-shepherd poll, `--until-terminal` (the skill), first hour, seed included | 4 | 8 | 472 | 0 | 0 | 0 |
-| pr-shepherd poll, `--until-terminal`, without detectors, not READY, one-page reads (e.g. a thread with a reply) | 60 | 0 | 0 | 0 | 0 | 0 |
-| pr-shepherd poll, legacy bounded `--timeout 4.5m` (not the skill) | 75 | 0 | 0 | 15 | 15 | 51,075 |
+| pr-shepherd polling, `--until-terminal` (the skill), first hour, seed included | 4 | 8 | 472 | 0 | 0 | 0 |
+| pr-shepherd polling, `--until-terminal`, without detectors, not READY, one-page reads (e.g. a thread with a reply) | 60 | 0 | 0 | 0 | 0 | 0 |
+| pr-shepherd polling, legacy bounded `--timeout 4.5m` (not the skill) | 75 | 0 | 0 | 15 | 15 | 51,075 |
 | event | 4 | 0 | 300 | 4 | 8 | 25,540 |
 | event, hosted webhook proxy (hypothetical) | 0 | 0 | 0 | 4 | 8 | 25,540 |
 

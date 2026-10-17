@@ -25,7 +25,6 @@ vi.mock("../../src/github/check-annotations-batch.mts", () => ({
   }),
 }));
 vi.mock("../../src/comments/resolve.mts", () => ({
-  autoResolveOutdated: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
   autoResolveThreads: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
   autoMinimizeComments: vi.fn().mockResolvedValue({ minimized: [], errors: [] }),
 }));
@@ -52,11 +51,7 @@ import {
 import { fetchStartupFailureChecks, triageFailingChecks } from "../../src/checks/triage.mts";
 import { fetchCheckRunAnnotationsBatch } from "../../src/github/check-annotations-batch.mts";
 import { loadSeenMap, markSeen, markReviewInlineThreads } from "../../src/state/seen-comments.mts";
-import {
-  autoResolveOutdated,
-  autoResolveThreads,
-  autoMinimizeComments,
-} from "../../src/comments/resolve.mts";
+import { autoResolveThreads, autoMinimizeComments } from "../../src/comments/resolve.mts";
 import type {
   BatchPrData,
   CheckAnnotation,
@@ -84,7 +79,6 @@ function annotationBatch(id: string, items: CheckAnnotation[]) {
 const mockLoadSeenMap = vi.mocked(loadSeenMap);
 const mockMarkSeen = vi.mocked(markSeen);
 const mockMarkReviewInlineThreads = vi.mocked(markReviewInlineThreads);
-const mockAutoResolveOutdated = vi.mocked(autoResolveOutdated);
 const mockAutoResolveThreads = vi.mocked(autoResolveThreads);
 const mockAutoMinimizeComments = vi.mocked(autoMinimizeComments);
 
@@ -98,7 +92,7 @@ function defaultConfig() {
       fixAttemptsPerThread: 3,
       stallTimeoutMinutes: 60,
       minimizeApprovals: false,
-      minimizeComments: "all" as "all" | "bots" | "users" | "none",
+      minimizeComments: "all" as "all" | "bots" | "none",
       behindBaseHint: "",
       resolveOtherHumanThreads: "none" as const,
     },
@@ -107,10 +101,8 @@ function defaultConfig() {
     checks: { ciTriggerEvents: ["pull_request", "pull_request_target"] },
     mergeStatus: { blockingReviewerLogins: ["copilot"] },
     actions: {
-      autoResolveOutdated: true,
       autoMinimizeSuppressed: true,
       autoMarkReady: true,
-      commitSuggestions: true,
       neverCancelRuns: [],
     },
   };
@@ -240,7 +232,6 @@ export {
   makeCheck,
   makeComment,
   makeThread,
-  mockAutoResolveOutdated,
   mockAutoResolveThreads,
   mockAutoMinimizeComments,
   mockFetchPrBatch,

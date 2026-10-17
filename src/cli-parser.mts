@@ -8,11 +8,11 @@ import { runResolveMutate } from "./commands/resolve.mts";
 import { runLogFile } from "./commands/log-file.mts";
 import { handleClean } from "./cli/clean-handler.mts";
 import { parseCommonArgs, getFlag, hasFlag, parseList } from "./cli/args.mts";
+import { rejectUnknownFlags } from "./cli/unknown-flags.mts";
 import { isDefaultPollInvocation, validateDefaultPollArgs } from "./cli/default-poll.mts";
 import { USAGE, helpKeyForArgs, maybePrintHelp } from "./cli/help.mts";
 import { formatMutateResult } from "./cli/formatters.mts";
 import {
-  handleCommitSuggestion,
   handleSuggestionPatches,
   handleIterate,
   handleMarkFilesAsViewed,
@@ -52,7 +52,6 @@ export async function main(argv: string[]): Promise<void> {
     extracted.args.some((arg) => arg === "--help" || arg === "-h") ||
     extracted.args[0] === "--version" ||
     extracted.args[0] === "-v" ||
-    extracted.args[0] === "log-file" ||
     extracted.args[0] === "playbook" ||
     (extracted.args[0] === "admin" && extracted.args[1] === "log-file") ||
     (extracted.args[0] === "journal" && extracted.args[1] === "extract")
@@ -90,13 +89,7 @@ async function dispatch(argv: string[]): Promise<void> {
     return;
   }
 
-  // log-file must run before the stdout tee and log init to avoid recursion.
-  if (subcommand === "log-file") {
-    await handleLogFile(args.slice(1));
-    return;
-  }
-
-  // Extraction deliberately precedes legacy warnings and logging: it is a local,
+  // Extraction deliberately precedes logging: it is a local,
   // GitHub/config/log-free read path for automation that already has a PR body.
   if (subcommand === "journal" && args[1] === "extract") {
     await handleJournalExtract(args.slice(2));
@@ -107,7 +100,7 @@ async function dispatch(argv: string[]): Promise<void> {
   // command namespace. Keep this before setupLog because log-file reads the
   // log path and must not initialize/tee the log it is reporting.
   if (subcommand === "admin" && args[1] === "log-file") {
-    await handleLogFile(args.slice(2), "admin log-file");
+    await handleLogFile(args.slice(2));
     return;
   }
 
@@ -119,18 +112,6 @@ async function dispatch(argv: string[]): Promise<void> {
       process.stdout.write(`${USAGE[helpKeyForArgs(args)]}\n`);
     }
     return;
-  }
-
-  const legacyReplacement: Record<string, string> = {
-    poll: "pr-shepherd [PR] (the default PR polling command)",
-    resolve: "apply review",
-    "mark-files-as-viewed": "apply files",
-    journal: "apply journal",
-    "build-suggestion-patch": "build-suggestion-patches",
-    "commit-suggestion": "build-suggestion-patches",
-  };
-  if (subcommand !== undefined && legacyReplacement[subcommand] !== undefined) {
-    warnLegacyAlias(subcommand, legacyReplacement[subcommand]!);
   }
 
   // A local read of shipped files: no GitHub, git, or log I/O.
@@ -163,32 +144,11 @@ async function dispatchLogged(argv: string[]): Promise<void> {
     case "build-suggestion-patches":
       await handleSuggestionPatches(args.slice(1));
       break;
-    case "build-suggestion-patch":
-      await handleCommitSuggestion(args.slice(1));
-      break;
     case "admin":
       await handleAdmin(args.slice(1));
       break;
-    case "resolve":
-      await handleResolve(args.slice(1), "resolve");
-      break;
-    case "commit-suggestion":
-      await handleCommitSuggestion(args.slice(1), "commit-suggestion");
-      break;
-    case "mark-files-as-viewed":
-      await handleMarkFilesAsViewed(args.slice(1), "mark-files-as-viewed");
-      break;
     case "iterate":
       await handleIterate(args.slice(1));
-      break;
-    case "poll":
-      await handlePoll(args.slice(1));
-      break;
-    case "clean":
-      await handleClean(args.slice(1), "clean");
-      break;
-    case "journal":
-      await handleJournal(args.slice(1), "journal");
       break;
     default:
       process.stderr.write(`Unknown subcommand: ${subcommand ?? "(none)"}\n`);
@@ -196,12 +156,6 @@ async function dispatchLogged(argv: string[]): Promise<void> {
       process.exitCode = EXIT.USAGE;
       return;
   }
-}
-
-function warnLegacyAlias(alias: string, replacement: string): void {
-  process.stderr.write(
-    `pr-shepherd: ${alias} is deprecated; use ${replacement.startsWith("pr-shepherd") ? replacement : `pr-shepherd ${replacement}`} instead.\n`,
-  );
 }
 
 async function handleApply(args: string[]): Promise<void> {
@@ -254,12 +208,9 @@ function readVersion(): string {
 // Subcommand handlers
 // ---------------------------------------------------------------------------
 
-async function handleLogFile(
-  args: string[],
-  usageKey: "log-file" | "admin log-file" = "log-file",
-): Promise<void> {
-  if (maybePrintHelp(args, usageKey)) return;
-  if (rejectInvalidPollModeFlag(args, usageKey)) return;
+async function handleLogFile(args: string[]): Promise<void> {
+  if (maybePrintHelp(args, "admin log-file")) return;
+  if (rejectInvalidPollModeFlag(args, "admin log-file")) return;
   const jsonOut =
     args.some((a) => a === "--format=json") ||
     (() => {
@@ -272,15 +223,24 @@ async function handleLogFile(
     const result = await runInPollModeScope(args, () => runLogFile());
     process.stdout.write(jsonOut ? `${JSON.stringify(result, null, 2)}\n` : `${result.path}\n`);
   } catch (e) {
-    process.stderr.write(`pr-shepherd: log-file: ${String(e)}\n`);
+    process.stderr.write(`pr-shepherd: admin log-file: ${String(e)}\n`);
     process.exitCode = errorToExitCode(e);
   }
 }
 
-async function handleResolve(
-  args: string[],
-  command: "apply review" | "resolve" = "apply review",
-): Promise<void> {
+const APPLY_REVIEW_FLAGS = [
+  "--resolve-thread-ids",
+  "--reply-thread-ids",
+  "--minimize-comment-ids",
+  "--dismiss-review-ids",
+  "--message",
+  "--require-sha",
+  "--adopt-existing-replies",
+];
+
+async function handleResolve(args: string[]): Promise<void> {
+  const command = "apply review";
+  if (rejectUnknownFlags(args, command, APPLY_REVIEW_FLAGS)) return;
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
 
   const resolveThreadIds = parseList(getFlag(extra, "--resolve-thread-ids"));
@@ -294,14 +254,6 @@ async function handleResolve(
   warnPrrcThreadIds(resolveThreadIds);
   if (!validateRequireSha(requireSha)) return;
   if (rejectPrrcMinimizeIds(minimizeCommentIds).length > 0) return;
-
-  if (hasFlag(extra, "--fetch")) {
-    process.stderr.write(
-      `pr-shepherd: ${command}: --fetch has been removed; run pr-shepherd iterate to fetch the next action.\n`,
-    );
-    process.exitCode = EXIT.USAGE;
-    return;
-  }
 
   const hasAction =
     resolveThreadIds.length > 0 ||

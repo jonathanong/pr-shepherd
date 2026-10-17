@@ -4,9 +4,6 @@ vi.mock("../src/commands/check.mts", () => ({ runCheck: vi.fn() }));
 vi.mock("../src/commands/resolve.mts", () => ({
   runResolveMutate: vi.fn(),
 }));
-vi.mock("../src/commands/commit-suggestion.mts", () => ({
-  runCommitSuggestion: vi.fn(),
-}));
 vi.mock("../src/commands/iterate/index.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../src/commands/iterate/index.mts")>();
   return { ...actual, runIterate: vi.fn() };

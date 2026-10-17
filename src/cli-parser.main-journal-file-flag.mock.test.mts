@@ -8,7 +8,6 @@ const { mockRunJournal } = vi.hoisted(() => ({ mockRunJournal: vi.fn() }));
 vi.mock("./commands/journal/index.mts", () => ({ runJournal: mockRunJournal }));
 vi.mock("./commands/resolve.mts", () => ({ runResolveMutate: vi.fn() }));
 vi.mock("./commands/log-file.mts", () => ({ runLogFile: vi.fn() }));
-vi.mock("./commands/commit-suggestion.mts", () => ({ runCommitSuggestion: vi.fn() }));
 vi.mock("./commands/mark-files-as-viewed.mts", () => ({ runMarkFilesAsViewed: vi.fn() }));
 vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./commands/iterate/index.mts")>();
@@ -56,7 +55,7 @@ describe("main — journal --file", () => {
     const filePath = join(dir, "entry.md");
     writeFileSync(filePath, "- Decision from file.\n");
     try {
-      await main(["node", "shepherd", "journal", "42", "--file", filePath]);
+      await main(["node", "shepherd", "apply", "journal", "42", "--file", filePath]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -71,7 +70,7 @@ describe("main — journal --file", () => {
     const filePath = join(dir, "empty.md");
     writeFileSync(filePath, "");
     try {
-      await main(["node", "shepherd", "journal", "42", "--file", filePath]);
+      await main(["node", "shepherd", "apply", "journal", "42", "--file", filePath]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -84,7 +83,7 @@ describe("main — journal --file", () => {
     const filePath = join(dir, "entry.md");
     writeFileSync(filePath, "- Decision via equals form.\n");
     try {
-      await main(["node", "shepherd", "journal", "42", `--file=${filePath}`]);
+      await main(["node", "shepherd", "apply", "journal", "42", `--file=${filePath}`]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -96,7 +95,7 @@ describe("main — journal --file", () => {
   it("reads the entry from stdin when --file is -", async () => {
     const restore = mockStdin("- Decision from stdin with `backticks`.\n");
     try {
-      await main(["node", "shepherd", "journal", "42", "--file", "-"]);
+      await main(["node", "shepherd", "apply", "journal", "42", "--file", "-"]);
     } finally {
       restore();
     }
@@ -106,7 +105,16 @@ describe("main — journal --file", () => {
   });
 
   it("errors when both a positional entry and --file are given", async () => {
-    await main(["node", "shepherd", "journal", "42", "- Decision.", "--file", "somefile.md"]);
+    await main([
+      "node",
+      "shepherd",
+      "apply",
+      "journal",
+      "42",
+      "- Decision.",
+      "--file",
+      "somefile.md",
+    ]);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("not both"));
     expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunJournal).not.toHaveBeenCalled();
@@ -116,6 +124,7 @@ describe("main — journal --file", () => {
     await main([
       "node",
       "shepherd",
+      "apply",
       "journal",
       "42",
       "--file",

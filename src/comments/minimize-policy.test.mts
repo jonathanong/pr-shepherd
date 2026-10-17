@@ -10,8 +10,6 @@ describe("shouldMinimizeAuthor", () => {
     ["all", "Unknown", "app", true],
     ["bots", "Bot", "app", true],
     ["bots", "User", "alice", false],
-    ["users", "User", "alice", false],
-    ["users", "Bot", "app", false],
     ["none", "Bot", "app", false],
     ["all", "Bot", "github-actions[bot]", true],
   ] as const)("policy %s author %s/%s -> %s", (policy, authorType, author, expected) => {

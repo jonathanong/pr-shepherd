@@ -139,7 +139,6 @@ describe("runJournal — explicit intent", () => {
 
     const result = await runJournal({ prNumber: 42, rawItem: "- Note.", dryRun: false });
 
-    expect(result.authorizationSkipped).toBeUndefined();
     expect(result.mutated).toBe(true);
     expect(mockUpdatePullRequestBody).toHaveBeenCalledOnce();
   });

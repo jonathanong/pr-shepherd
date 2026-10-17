@@ -16,8 +16,6 @@ export function shouldMinimizeAuthor(
       return authorType !== "User" || isConfiguredBot;
     case "bots":
       return isConfiguredBot;
-    case "users":
-      return false;
     case "none":
       return false;
     default:

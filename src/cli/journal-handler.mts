@@ -6,10 +6,8 @@ import { parseCliPrReference, resolveParsedPrTarget } from "../pr-reference.mts"
 import { USAGE } from "./help.mts";
 import { formatJournalResult } from "./journal-formatter.mts";
 
-export async function handleJournal(
-  args: string[],
-  command: "apply journal" | "journal" = "apply journal",
-): Promise<void> {
+export async function handleJournal(args: string[]): Promise<void> {
+  const command = "apply journal";
   for (const a of args) {
     if (!a.startsWith("--")) continue;
     if (a === "--dry-run" || a === "--format" || a.startsWith("--format=")) continue;

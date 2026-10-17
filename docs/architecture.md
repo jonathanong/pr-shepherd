@@ -56,7 +56,7 @@ src/
 ├── cli/                   # argument parsing, help pages, Markdown formatters
 ├── mcp/
 │   ├── server.mts         # iterate, apply, extract_journal, get_journal, playbook,
-│   │                      #   build_suggestion_patches, build_suggestion_patch tools
+│   │                      #   build_suggestion_patches tools
 │   └── index.mts          # createPrShepherdMcpServer / runPrShepherdMcpStdio
 │
 ├── commands/              # one file (or dir) per subcommand

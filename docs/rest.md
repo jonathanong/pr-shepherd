@@ -82,7 +82,7 @@ The unverified routes are advertised in the proxy's GraphQL refusal (`403`, "Git
 
 ## Thread IDs
 
-REST names a thread `rest-thread-<rootCommentId>` (the numeric ID of its first inline comment), because REST routes return no thread node IDs. Pass these as printed to `apply review` / `resolve`; on REST they resolve to the root comment. If an earlier GraphQL tick recorded the thread's `PRRT_…` ID, the two are aliased: seen markers and fix-attempt counts carry over, and GraphQL mode translates the ID. Without a recorded alias, GraphQL mode fails with `No GraphQL thread identity for <id>; use --transport rest`.
+REST names a thread `rest-thread-<rootCommentId>` (the numeric ID of its first inline comment), because REST routes return no thread node IDs. Pass these as printed to `apply review`; on REST they resolve to the root comment. If an earlier GraphQL tick recorded the thread's `PRRT_…` ID, the two are aliased: seen markers and fix-attempt counts carry over, and GraphQL mode translates the ID. Without a recorded alias, GraphQL mode fails with `No GraphQL thread identity for <id>; use --transport rest`.
 
 ## Bot status-comment edits
 

@@ -9,10 +9,10 @@ import {
   mockFetchBatch,
   mockGetCurrentBranch,
   mockReadFile,
-} from "../../test-helpers/commands/commit-suggestion.apply.test-support.mts";
-import { runCommitSuggestion } from "./commit-suggestion.mts";
+  runSingleSuggestion,
+} from "../../test-helpers/commands/suggestion-patches.single-apply.test-support.mts";
 
-describe("runCommitSuggestion — output shape", () => {
+describe("runSuggestionPatches (single) — output shape", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
@@ -27,18 +27,17 @@ describe("runCommitSuggestion — output shape", () => {
     });
   });
 
-  it("postActionInstructions step 1 mentions the file path and line range", async () => {
-    const result = await runCommitSuggestion({
+  it("postActionInstructions step 1 mentions the file path", async () => {
+    const result = await runSingleSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
       message: "rename x",
     });
     expect(result.postActionInstructions[0]).toContain("src/foo.ts");
-    expect(result.postActionInstructions[0]).toContain("line 5");
   });
 
   it("postActionInstructions step 2 stages the exact file", async () => {
-    const result = await runCommitSuggestion({
+    const result = await runSingleSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
       message: "rename x",
@@ -48,7 +47,7 @@ describe("runCommitSuggestion — output shape", () => {
   });
 
   it("postActionInstructions step 3 includes the literal commit message", async () => {
-    const result = await runCommitSuggestion({
+    const result = await runSingleSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
       message: "rename x to const",
@@ -57,39 +56,40 @@ describe("runCommitSuggestion — output shape", () => {
     expect(result.postActionInstructions[2]).toContain("rename x to const");
   });
 
-  it("postActionInstructions step 4 defers to authorization-checked iterate output", async () => {
-    const result = await runCommitSuggestion({
+  it("postActionInstructions step 4 does not recommend a push", async () => {
+    const result = await runSingleSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
       message: "fix",
     });
-    expect(result.postActionInstructions[3]).toContain("authorization-checked");
-    expect(result.postActionInstructions[3]).toContain("PRRT_x");
+    expect(result.postActionInstructions[3]).toContain("does not recommend a push");
   });
 
-  it("postActionInstructions step 5 does not recommend git push", async () => {
-    const result = await runCommitSuggestion({
+  it("postActionInstructions step 5 defers to authorization-checked iterate output", async () => {
+    const result = await runSingleSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
       message: "fix",
     });
-    expect(result.postActionInstructions[4]).toContain("does not recommend a push");
+    expect(result.postActionInstructions[4]).toContain("authorization-checked");
+    expect(result.postActionInstructions[4]).toContain("PRRT_x");
   });
 
-  it("multi-line range label in step 1 uses en-dash notation", async () => {
+  it("multi-line suggestions report the full line range", async () => {
     mockFetchBatch.mockResolvedValue({
       data: makeBatch([makeThread({ line: 7, startLine: 5 })]),
     });
-    const result = await runCommitSuggestion({
+    const result = await runSingleSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
       message: "fix",
     });
-    expect(result.postActionInstructions[0]).toContain("lines 5–7");
+    expect(result.startLine).toBe(5);
+    expect(result.endLine).toBe(7);
   });
 
   it("commitBody contains Co-authored-by with correct author login", async () => {
-    const result = await runCommitSuggestion({
+    const result = await runSingleSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
       message: "fix",
@@ -98,7 +98,7 @@ describe("runCommitSuggestion — output shape", () => {
   });
 
   it("commitBody prepends description before Co-authored-by with blank separator", async () => {
-    const result = await runCommitSuggestion({
+    const result = await runSingleSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
       message: "fix",
@@ -110,7 +110,7 @@ describe("runCommitSuggestion — output shape", () => {
   });
 
   it("filesToStage contains only the thread's file path", async () => {
-    const result = await runCommitSuggestion({
+    const result = await runSingleSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
       message: "fix",
@@ -119,7 +119,7 @@ describe("runCommitSuggestion — output shape", () => {
   });
 
   it("patch contains the unified diff with the replacement line", async () => {
-    const result = await runCommitSuggestion({
+    const result = await runSingleSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
       message: "fix",

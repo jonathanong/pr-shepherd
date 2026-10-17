@@ -34,14 +34,14 @@ const ERROR_RESULT = {
 
 describe("main — clean dispatch", () => {
   it("writes usage to stderr and exits EX_USAGE when no variant given", async () => {
-    await main(["node", "shepherd", "clean"]);
+    await main(["node", "shepherd", "admin", "clean"]);
     expect(getStderr()).toContain("Usage:");
     expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunClean).not.toHaveBeenCalled();
   });
 
   it("writes usage to stderr and exits EX_USAGE for unknown variant", async () => {
-    await main(["node", "shepherd", "clean", "unknown"]);
+    await main(["node", "shepherd", "admin", "clean", "unknown"]);
     expect(getStderr()).toContain("Usage:");
     expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunClean).not.toHaveBeenCalled();
@@ -49,7 +49,7 @@ describe("main — clean dispatch", () => {
 
   it("calls runClean with variant and writes text output on success", async () => {
     mockRunClean.mockResolvedValue(OK_RESULT);
-    await main(["node", "shepherd", "clean", "all"]);
+    await main(["node", "shepherd", "admin", "clean", "all"]);
     expect(mockRunClean).toHaveBeenCalledWith(
       expect.objectContaining({ variant: "all", dryRun: false }),
     );
@@ -67,14 +67,14 @@ describe("main — clean dispatch", () => {
 
   it("writes error to stderr and exits EX_SOFTWARE when runClean returns ok=false", async () => {
     mockRunClean.mockResolvedValue(ERROR_RESULT);
-    await main(["node", "shepherd", "clean", "pr"]);
+    await main(["node", "shepherd", "admin", "clean", "pr"]);
     expect(getStderr()).toContain("No open PR found");
     expect(process.exitCode).toBe(EXIT.SOFTWARE);
   });
 
   it("outputs JSON when --format=json is passed (combined form)", async () => {
     mockRunClean.mockResolvedValue(OK_RESULT);
-    await main(["node", "shepherd", "clean", "all", "--format=json"]);
+    await main(["node", "shepherd", "admin", "clean", "all", "--format=json"]);
     const out = getStdout();
     const parsed = JSON.parse(out);
     expect(parsed.ok).toBe(true);
@@ -83,7 +83,7 @@ describe("main — clean dispatch", () => {
 
   it("outputs JSON when --format json is passed (two-token form)", async () => {
     mockRunClean.mockResolvedValue(OK_RESULT);
-    await main(["node", "shepherd", "clean", "all", "--format", "json"]);
+    await main(["node", "shepherd", "admin", "clean", "all", "--format", "json"]);
     const out = getStdout();
     const parsed = JSON.parse(out);
     expect(parsed.ok).toBe(true);
@@ -91,18 +91,18 @@ describe("main — clean dispatch", () => {
 
   it("does not treat 'json' as the positional value when --format json is used", async () => {
     mockRunClean.mockResolvedValue(OK_RESULT);
-    await main(["node", "shepherd", "clean", "all", "--format", "json"]);
+    await main(["node", "shepherd", "admin", "clean", "all", "--format", "json"]);
     expect(mockRunClean).toHaveBeenCalledWith(expect.objectContaining({ value: undefined }));
   });
 
   it("passes --dry-run flag to runClean", async () => {
     mockRunClean.mockResolvedValue({ ...OK_RESULT, dryRun: true });
-    await main(["node", "shepherd", "clean", "all", "--dry-run"]);
+    await main(["node", "shepherd", "admin", "clean", "all", "--dry-run"]);
     expect(mockRunClean).toHaveBeenCalledWith(expect.objectContaining({ dryRun: true }));
   });
 
   it("writes error to stderr and exits EX_USAGE for extra positional arguments", async () => {
-    await main(["node", "shepherd", "clean", "pr", "42", "99"]);
+    await main(["node", "shepherd", "admin", "clean", "pr", "42", "99"]);
     expect(getStderr()).toContain("too many positional");
     expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunClean).not.toHaveBeenCalled();
@@ -110,21 +110,21 @@ describe("main — clean dispatch", () => {
 
   it("passes positional value for pr variant", async () => {
     mockRunClean.mockResolvedValue({ ...OK_RESULT, variant: "pr" });
-    await main(["node", "shepherd", "clean", "pr", "42"]);
+    await main(["node", "shepherd", "admin", "clean", "pr", "42"]);
     expect(mockRunClean).toHaveBeenCalledWith(
       expect.objectContaining({ variant: "pr", value: "42" }),
     );
   });
 
   it("writes error to stderr and exits EX_USAGE for unknown flag", async () => {
-    await main(["node", "shepherd", "clean", "all", "--dryrun"]);
+    await main(["node", "shepherd", "admin", "clean", "all", "--dryrun"]);
     expect(getStderr()).toContain("unknown flag");
     expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunClean).not.toHaveBeenCalled();
   });
 
   it("writes error to stderr and exits EX_USAGE for invalid --format value", async () => {
-    await main(["node", "shepherd", "clean", "all", "--format", "xml"]);
+    await main(["node", "shepherd", "admin", "clean", "all", "--format", "xml"]);
     expect(getStderr()).toContain("invalid --format value");
     expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunClean).not.toHaveBeenCalled();
@@ -144,7 +144,7 @@ describe("main — clean poll-mode scope", () => {
       return { ...OK_RESULT, variant: "pr" };
     });
     await main(["node", "shepherd", "admin", "clean", "pr", "42", "--poll-mode", "event"]);
-    await main(["node", "shepherd", "clean", "all", "--poll-mode=poll"]);
+    await main(["node", "shepherd", "admin", "clean", "all", "--poll-mode=poll"]);
     expect(durable).toEqual([true, false]);
     expect(mockRunClean).toHaveBeenNthCalledWith(
       1,
@@ -154,9 +154,9 @@ describe("main — clean poll-mode scope", () => {
   });
 
   it("rejects an invalid --poll-mode value with a usage error", async () => {
-    await main(["node", "shepherd", "clean", "all", "--poll-mode", "evnet"]);
+    await main(["node", "shepherd", "admin", "clean", "all", "--poll-mode", "evnet"]);
     expect(getStderr()).toContain(
-      'pr-shepherd: clean: --poll-mode must be one of auto, poll, event, got "evnet"',
+      'pr-shepherd: admin clean: --poll-mode must be one of auto, poll, event, got "evnet"',
     );
     expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunClean).not.toHaveBeenCalled();

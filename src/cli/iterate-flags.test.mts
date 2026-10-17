@@ -66,7 +66,6 @@ describe("parseIterateFlags", () => {
     expect(flags.stallTimeoutSuffix).toBeUndefined();
     expect(flags.stallTimeoutSeconds).toBe(3600); // 60m * 60
     expect(flags.noAutoMarkReady).toBe(false);
-    expect(flags.noAutoCancelActionable).toBe(false);
     expect(flags.merge).toBe(false);
   });
 
@@ -109,11 +108,6 @@ describe("parseIterateFlags", () => {
   it("parses --no-auto-mark-ready", () => {
     const flags = parseIterateFlags(["--no-auto-mark-ready"], defaultConfig());
     expect(flags.noAutoMarkReady).toBe(true);
-  });
-
-  it("parses --no-auto-cancel-actionable", () => {
-    const flags = parseIterateFlags(["--no-auto-cancel-actionable"], defaultConfig());
-    expect(flags.noAutoCancelActionable).toBe(true);
   });
 
   it("parses --merge", () => {

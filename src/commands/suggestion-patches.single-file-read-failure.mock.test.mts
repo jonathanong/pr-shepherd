@@ -9,12 +9,12 @@ import {
   mockFetchBatch,
   mockGetCurrentBranch,
   mockReadFile,
-} from "../../test-helpers/commands/commit-suggestion.test-support.mts";
-import { runCommitSuggestion } from "./commit-suggestion.mts";
+  runSingleSuggestion,
+} from "../../test-helpers/commands/suggestion-patches.single.test-support.mts";
 
 registerHooks();
 
-describe("runCommitSuggestion — file read failure", () => {
+describe("runSuggestionPatches (single) — file read failure", () => {
   it("propagates the underlying readFile error when file cannot be read", async () => {
     vi.clearAllMocks();
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
@@ -29,7 +29,7 @@ describe("runCommitSuggestion — file read failure", () => {
     );
 
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("ENOENT");
   });
 });

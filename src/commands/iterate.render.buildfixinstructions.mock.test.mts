@@ -22,7 +22,6 @@ describe("buildFixInstructions", () => {
       },
       false,
       42,
-      0,
     );
 
     expect(instructions).toEqual(["Rerun Shepherd now."]);
@@ -63,7 +62,6 @@ describe("buildFixInstructions", () => {
       },
       false,
       42,
-      0,
     );
 
     const text = instructions.join("\n");
@@ -89,7 +87,6 @@ describe("buildFixInstructions", () => {
       },
       false,
       42,
-      0,
       [
         {
           id: "t-edited",
@@ -135,8 +132,6 @@ describe("buildFixInstructions", () => {
       },
       false,
       42,
-      0,
-      [],
       [],
       [],
       [],
@@ -193,7 +188,6 @@ describe("buildFixInstructions", () => {
       },
       false,
       42,
-      0,
     );
 
     const text = instructions.join("\n");
@@ -226,8 +220,6 @@ describe("buildFixInstructions", () => {
       },
       false,
       42,
-      0,
-      [],
       [],
       [],
       [],
@@ -280,8 +272,6 @@ describe("buildFixInstructions", () => {
       },
       false,
       42,
-      0,
-      [],
       [],
       [],
       [],
@@ -340,7 +330,6 @@ describe("buildFixInstructions", () => {
       },
       false,
       42,
-      0,
     );
 
     const text = instructions.join("\n");
@@ -382,7 +371,6 @@ describe("buildFixInstructions", () => {
       },
       false,
       42,
-      0,
     );
 
     const text = instructions.join("\n");
@@ -405,8 +393,6 @@ describe("buildFixInstructions", () => {
       },
       false,
       42,
-      0,
-      [],
       [],
       [],
       [],
@@ -448,8 +434,6 @@ describe("buildFixInstructions", () => {
       },
       false,
       42,
-      0,
-      [],
       [],
       [],
       [],
@@ -485,7 +469,6 @@ describe("buildFixInstructions", () => {
       },
       false,
       42,
-      0,
     );
 
     const text = instructions.join("\n");
@@ -507,8 +490,6 @@ describe("buildFixInstructions", () => {
       },
       false,
       42,
-      0,
-      [],
       [],
       [],
       [],
@@ -538,8 +519,6 @@ describe("buildFixInstructions", () => {
       },
       false,
       42,
-      0,
-      [],
       [],
       [],
       [],
@@ -579,7 +558,6 @@ describe("buildFixInstructions", () => {
       },
       false,
       42,
-      0,
     );
 
     expect(instructions.join("\n")).toContain(

@@ -5,7 +5,7 @@ import {
   mockRunSuggestionPatches,
   registerHooks,
   stderrSpy,
-} from "../test-helpers/cli-parser.commit-suggestion.test-support.mts";
+} from "../test-helpers/cli-parser.suggestion-patches.test-support.mts";
 import { main } from "./cli-parser.mts";
 import { parseSuggestionPatchGroups } from "./cli/suggestion-patch-flags.mts";
 import { EXIT } from "./exit-codes.mts";

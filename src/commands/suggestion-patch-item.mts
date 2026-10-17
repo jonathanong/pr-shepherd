@@ -84,23 +84,6 @@ export function buildSuggestionPatchItem({
   };
 }
 
-export function buildSingularInstructions(
-  patch: SuggestionPatchResult,
-  prReference: string | number,
-): string[] {
-  const range =
-    patch.startLine === patch.endLine
-      ? `line ${patch.startLine}`
-      : `lines ${patch.startLine}–${patch.endLine}`;
-  return [
-    `Apply the patch to \`${patch.path}\`: run \`git apply\` with the diff shown above, or edit the file directly using the line range (${range}).`,
-    `Stage the file: \`git add -- ${quotePath(patch.path)}\``,
-    `Commit: \`${buildCommitCommand(patch)}\``,
-    `Use the originating iterate output for any authorization-checked GitHub review action for thread \`${patch.threadId}\` on ${String(prReference)}.`,
-    "Shepherd cannot verify authorization for the Git credential that would push this branch, so this output does not recommend a push.",
-  ];
-}
-
 export function buildCommitCommand(patch: SuggestionPatchResult): string {
   return [
     "git commit",

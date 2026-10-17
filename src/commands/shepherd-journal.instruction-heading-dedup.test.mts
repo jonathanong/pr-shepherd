@@ -38,7 +38,6 @@ describe("shepherd journal instruction helpers", () => {
       resolveCommand,
       false,
       42,
-      0,
       [],
       [],
       [
@@ -49,7 +48,6 @@ describe("shepherd journal instruction helpers", () => {
           body: "New first-look summary.",
         },
       ],
-      [],
       [],
       [],
       undefined,

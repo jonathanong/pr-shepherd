@@ -32,7 +32,6 @@ Validation:
 - An unknown key, or an unknown key under a known group, prints a stderr warning and is ignored.
 - A file that fails to parse as YAML prints a stderr warning and is skipped; the other files still apply.
 - Any other invalid value (wrong type, bad regex, out-of-range number, …) prints a stderr warning, and the **whole merged config** falls back to built-in defaults. Exception: a malformed `classify.standard` map or entry warns and is ignored on its own.
-- Deprecated `actions.autoResolveOutdated` and `actions.commitSuggestions` are accepted, warned about, and ignored.
 
 ## Example
 
@@ -161,7 +160,7 @@ REST can return less context than GraphQL; missing fields stay unknown. A clean 
 
 ## `cliCommand` — default `["pr-shepherd"]`
 
-Argv prefix for every `pr-shepherd` command Shepherd emits — follow-up `--stack` and per-PR session commands, `apply review` and `apply journal` mutations, and commit-suggestion commands — in Markdown, JSON, and MCP output. The default assumes `pr-shepherd` is on `PATH`. A repository that pins pr-shepherd as a dependency should set its launcher so agents run the pinned version:
+Argv prefix for every `pr-shepherd` command Shepherd emits — follow-up `--stack` and per-PR session commands, `apply review` and `apply journal` mutations, and `build-suggestion-patches` commands — in Markdown, JSON, and MCP output. The default assumes `pr-shepherd` is on `PATH`. A repository that pins pr-shepherd as a dependency should set its launcher so agents run the pinned version:
 
 ```yaml
 cliCommand:
@@ -235,7 +234,7 @@ Which non-human authors' items go to `--minimize-comment-ids`: minimizable PR co
 | `"bots"` | GitHub `Bot` authors only        |
 | `"none"` | Nothing; items are surfaced only |
 
-The deprecated `"users"` value warns and is treated as `"none"`. Excluded items still pass the seen-marker gate: surfaced once, suppressed while unchanged, re-surfaced when edited.
+Excluded items still pass the seen-marker gate: surfaced once, suppressed while unchanged, re-surfaced when edited.
 
 ### `iterate.behindBaseHint` — default `""`
 
@@ -260,7 +259,7 @@ iterate:
 
 ## `poll`
 
-Defaults for the polling CLI (`pr-shepherd [PR]` and `pr-shepherd poll`); explicit flags win. Single-tick `iterate` and MCP calls do not poll, and event mode (`poll.mode`) ignores these settings — see [cloud.md](cloud.md).
+Defaults for the polling CLI (`pr-shepherd [PR]`); explicit flags win. Single-tick `iterate` and MCP calls do not poll, and event mode (`poll.mode`) ignores these settings — see [cloud.md](cloud.md).
 
 ```yaml
 poll:
@@ -401,7 +400,6 @@ The value is a map so it deep-merges across files. Unknown rule names and non-bo
 
 - Every rule requires GitHub to report the author as a bot and matches both GraphQL (`coderabbitai`) and REST (`coderabbitai[bot]`) logins.
 - Rules match conversation comments only; the same text on a review summary or inline review comment follows the normal review path.
-- `coderabbit-review-summary` and `codex-review-summary` are no longer rule names; setting them warns and is ignored.
 - "Resolve" means `autoResolve: true`, so with [`actions.autoMinimizeSuppressed`](#actionsautominimizesuppressed--default-true) the comment is also minimized on GitHub.
 - A CodeRabbit progress comment may later be edited into a walkthrough. Shepherd reclassifies the current body on every fetch; an edited walkthrough no longer matches `coderabbit-notices` and appears to the agent as an edited, minimized first-look comment. It stays minimized on GitHub.
 

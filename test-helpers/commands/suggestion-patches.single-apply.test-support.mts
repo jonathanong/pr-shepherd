@@ -36,10 +36,26 @@ vi.mock("../../src/github/suggestion-thread.mts", () => ({
   fetchSuggestionThreads: vi.fn(),
 }));
 
-import { runCommitSuggestion } from "../../src/commands/commit-suggestion.mts";
+import { runSuggestionPatches } from "../../src/commands/suggestion-patches.mts";
 import { getCurrentBranch } from "../../src/github/client.mts";
 import { fetchSuggestionThreads } from "../../src/github/suggestion-thread.mts";
-import type { ReviewThread, BatchPrData } from "../../src/types.mts";
+import type { ReviewThread, BatchPrData, GlobalOptions } from "../../src/types.mts";
+/** Runs one suggestion through the batch command and flattens its single patch with the batch envelope. */
+async function runSingleSuggestion(
+  opts: GlobalOptions & { threadId: string; message: string; description?: string },
+) {
+  const { threadId, message, description, ...globalOpts } = opts;
+  const result = await runSuggestionPatches({
+    ...globalOpts,
+    suggestions: [{ threadId, message, ...(description !== undefined && { description }) }],
+  });
+  return {
+    ...result.patches[0]!,
+    pr: result.pr,
+    repo: result.repo,
+    postActionInstructions: result.postActionInstructions,
+  };
+}
 
 const mockGetCurrentBranch = vi.mocked(getCurrentBranch);
 const mockFetchSuggestionThreads = vi.mocked(fetchSuggestionThreads);
@@ -132,6 +148,6 @@ export {
   mockFetchBatch,
   mockGetCurrentBranch,
   mockReadFile,
-  runCommitSuggestion,
+  runSingleSuggestion,
 };
 export type { BatchPrData, ReviewThread };
