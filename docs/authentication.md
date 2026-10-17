@@ -73,6 +73,6 @@ Cloud VM rebuilds can erase the default temp state directory, including pending 
 
 ## Permission failures
 
-Missing access usually shows as `403 Resource not accessible by personal access token`. Read failures are fatal, because partial PR, review, or check data could drive an unsafe transition: `iterate` and `poll` exit `77` (`EX_NOPERM`) instead of emitting an action from an incomplete snapshot. The recognized Claude Code GraphQL-blocked response is a transport switch, not a permission failure; a secondary rate limit exits `75` (`EX_TEMPFAIL`) without switching. See [exit-codes.md](exit-codes.md).
+Missing access usually shows as `403 Resource not accessible by personal access token`. Read failures are fatal, because partial PR, review, or check data could drive an unsafe transition: `iterate` and `pr-shepherd [PR]` exit `77` (`EX_NOPERM`) instead of emitting an action from an incomplete snapshot. The recognized Claude Code GraphQL-blocked response is a transport switch, not a permission failure; a secondary rate limit exits `75` (`EX_TEMPFAIL`) without switching. See [exit-codes.md](exit-codes.md).
 
 To fix: read the error's GraphQL path to find the field, update the token permission or repository selection, and retry. `pr-shepherd admin log-file` locates the request log.

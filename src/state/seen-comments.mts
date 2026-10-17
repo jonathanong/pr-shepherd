@@ -187,7 +187,8 @@ async function writeSeenMarker(
     const unchanged = Object.entries(markerFields).every(([field, value]) =>
       markerFieldEqual(existing?.[field], value),
     );
-    if (existing !== null && unchanged) return;
+    // A marker without its `id` is ignored by loadSeenMap, so rewrite it even when unchanged.
+    if (existing !== null && unchanged && existing.id === id) return;
     const seenAt = existing?.seenAt ?? Date.now();
     tmp = `${path}.${randomUUID()}.tmp`;
     // Store `id` in the payload so loadSeenMap can key by the original ID
