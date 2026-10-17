@@ -9,5 +9,5 @@ After the base change, the plan immediately reruns
 and follows its fresh output. It does not run the old output's remaining
 conflict-resolution steps first.
 
-Failing responses stop after `gh pr edit`, rerun a native-stack selector,
+Failing responses stop after `gh pr edit`, rerun a native-`stack` command,
 or use an unqualified PR number from another checkout.

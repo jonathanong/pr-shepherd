@@ -144,7 +144,7 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
       appendStackRerunInstruction(
         instructions,
         [...runnableCandidates, ...work.markReady],
-        "After the listed one-PR sessions, rerun this same `--stack` selector. Stop for the human handoff only when no autonomous shepherding remains.",
+        "After the listed one-PR sessions, rerun this same `stack` command. Stop for the human handoff only when no autonomous shepherding remains.",
       );
     }
     return { action: stop ? "escalate" : "shepherd", stackMergeable: false, instructions };
@@ -172,7 +172,7 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
         appendStackRerunInstruction(
           instructions,
           [...runnableCandidates, ...work.markReady],
-          "After the listed one-PR sessions, rerun this same `--stack` selector. Stop for the human handoff only when no autonomous shepherding remains.",
+          "After the listed one-PR sessions, rerun this same `stack` command. Stop for the human handoff only when no autonomous shepherding remains.",
         );
       }
       return { action: ownedWork ? "shepherd" : "escalate", stackMergeable: false, instructions };
@@ -184,7 +184,7 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
     const action = appendStackRerunInstruction(
       instructions,
       [...work.sessions, ...work.markReady],
-      "After the selected one-PR sessions, rerun this same `--stack` selector.",
+      "After the selected one-PR sessions, rerun this same `stack` command.",
     );
     return { action, stackMergeable: false, instructions };
   }
@@ -215,7 +215,7 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
     const action = appendStackRerunInstruction(
       instructions,
       sessions,
-      "After the selected one-PR sessions, rerun this same `--stack` selector.",
+      "After the selected one-PR sessions, rerun this same `stack` command.",
     );
     return { action, stackMergeable, instructions };
   }

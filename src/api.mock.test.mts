@@ -11,6 +11,7 @@ const {
   mockGetPullRequestBody,
   mockRunPollSummary,
   mockApplyQueueRemovalAck,
+  mockApplyCheckBlocker,
 } = vi.hoisted(() => ({
   mockRunSuggestionPatches: vi.fn(),
   mockRunIterate: vi.fn(),
@@ -21,6 +22,7 @@ const {
   mockGetPullRequestBody: vi.fn(),
   mockRunPollSummary: vi.fn(),
   mockApplyQueueRemovalAck: vi.fn(),
+  mockApplyCheckBlocker: vi.fn(),
 }));
 
 vi.mock("./commands/suggestion-patches.mts", () => ({
@@ -36,6 +38,13 @@ vi.mock("./commands/resolve-mutate.mts", () => ({ runResolveMutate: mockRunResol
 vi.mock("./commands/apply-queue-removal.mts", () => ({
   applyQueueRemovalAck: mockApplyQueueRemovalAck,
 }));
+vi.mock("./commands/apply-check-blocker.mts", () => ({
+  applyCheckBlocker: mockApplyCheckBlocker,
+}));
+vi.mock("./state/iterate-stall.mts", () => ({
+  readStallState: async () => ({ ok: true, state: null }),
+}));
+vi.mock("./commands/stack-stall.mts", () => ({ readStackStallDeadline: async () => undefined }));
 vi.mock("./github/client.mts", () => ({
   getRepoInfo: mockGetRepoInfo,
   getPullRequestBody: mockGetPullRequestBody,
@@ -48,22 +57,34 @@ import {
   PrShepherdValidationError,
 } from "./api.mts";
 
+const WAIT = { action: "wait", repo: "openai/pr-shepherd", pr: 42 };
+const SUMMARY = {
+  mode: "summary",
+  repo: "openai/pr-shepherd",
+  selection: { kind: "prs", requested: [42, 43] },
+  reason: "all_terminal",
+  prs: [],
+};
+
 beforeEach(() => {
   vi.clearAllMocks();
+  mockRunIterate.mockResolvedValue(WAIT);
+  mockRunPollSummary.mockResolvedValue(SUMMARY);
   mockGetRepoInfo.mockResolvedValue({ owner: "openai", name: "pr-shepherd" });
   mockGetPullRequestBody.mockResolvedValue({ nodeId: "PR_42", body: "" });
 });
 
 describe("public API", () => {
   it("exposes the supported operations and translates a GitHub PR URL", async () => {
-    mockRunIterate.mockResolvedValue({ action: "wait" });
+    mockRunIterate.mockResolvedValue(WAIT);
     const shepherd = createPrShepherd();
 
     expect(Object.keys(shepherd).sort()).toEqual([
       "apply",
-      "buildSuggestionPatches",
       "getJournal",
       "iterate",
+      "stack",
+      "suggest",
     ]);
     await shepherd.iterate({ pr: "https://github.com/openai/pr-shepherd/pull/42" });
 
@@ -73,7 +94,7 @@ describe("public API", () => {
   });
 
   it("accepts an owner/repo#number shorthand and translates it", async () => {
-    mockRunIterate.mockResolvedValue({ action: "wait" });
+    mockRunIterate.mockResolvedValue(WAIT);
     const shepherd = createPrShepherd();
 
     await shepherd.iterate({ pr: "openai/pr-shepherd#42" });
@@ -141,8 +162,8 @@ describe("public API", () => {
     expect(mockGetPullRequestBody).not.toHaveBeenCalled();
   });
 
-  it("routes plural and native-stack iterate inputs to one read-only summary tick", async () => {
-    mockRunPollSummary.mockResolvedValue({ mode: "summary", prs: [] });
+  it("routes plural iterate and stack inputs to one read-only summary tick", async () => {
+    mockRunPollSummary.mockResolvedValue(SUMMARY);
     const shepherd = createPrShepherd();
 
     await shepherd.iterate({ prs: ["openai/pr-shepherd#42", "openai/pr-shepherd#43"] });
@@ -151,7 +172,7 @@ describe("public API", () => {
       targetRepository: { owner: "openai", name: "pr-shepherd" },
     });
 
-    await shepherd.iterate({ stack: "openai/pr-shepherd#43", merge: true });
+    await shepherd.stack({ pr: "openai/pr-shepherd#43", merge: true });
     expect(mockRunPollSummary).toHaveBeenLastCalledWith({
       stackPrNumber: 43,
       targetRepository: { owner: "openai", name: "pr-shepherd" },
@@ -181,9 +202,7 @@ describe("public API", () => {
     await expect(shepherd.iterate({ pr: 42, prs: [43] } as never)).rejects.toThrow(
       "mutually exclusive",
     );
-    await expect(shepherd.iterate({ prs: [42], stack: 43 } as never)).rejects.toThrow(
-      "mutually exclusive",
-    );
+    await expect(shepherd.stack({} as never)).rejects.toThrow("stack requires a PR reference");
     expect(mockRunPollSummary).not.toHaveBeenCalled();
     expect(mockRunIterate).not.toHaveBeenCalled();
   });
@@ -222,7 +241,7 @@ describe("public API", () => {
     ["a numeric PR", { pr: 42 }],
     ["an omitted PR", {}],
   ])("keeps API compatibility for %s", async (_label, input) => {
-    mockRunIterate.mockResolvedValue({ action: "wait" });
+    mockRunIterate.mockResolvedValue(WAIT);
     const shepherd = createPrShepherd();
 
     await shepherd.iterate(input);
@@ -323,6 +342,28 @@ describe("public API", () => {
     });
   });
 
+  it("routes check_blocker set and clear operations to the shared helper", async () => {
+    mockApplyCheckBlocker.mockResolvedValue({ checkName: "e2e" });
+    await createPrShepherd().apply({
+      pr: "acme/widgets#42",
+      operations: [
+        { type: "check_blocker", check: "e2e", blockedBy: "acme/widgets#7" },
+        { type: "check_blocker", check: "e2e", clear: true },
+      ],
+    });
+    const target = { prNumber: 42, targetRepository: { owner: "acme", name: "widgets" } };
+    expect(mockApplyCheckBlocker).toHaveBeenNthCalledWith(1, {
+      ...target,
+      checkName: "e2e",
+      blocker: expect.objectContaining({ owner: "acme", name: "widgets", number: 7 }),
+    });
+    expect(mockApplyCheckBlocker).toHaveBeenNthCalledWith(2, {
+      ...target,
+      checkName: "e2e",
+      clear: true,
+    });
+  });
+
   it("resolves review_mutations requireSha HEAD to this checkout's commit", async () => {
     mockRunResolveMutate.mockResolvedValue({ resolvedThreads: ["PRRT_one"] });
     await createPrShepherd().apply({
@@ -420,7 +461,7 @@ describe("public API", () => {
       ],
     });
 
-    await shepherd.buildSuggestionPatches({
+    await shepherd.suggest({
       pr: 9,
       suggestions: [{ threadId: "PRRT_two", message: "apply suggestion", description: "Covered." }],
     });
@@ -458,7 +499,7 @@ describe("public API", () => {
         { type: "append_journal", item: "- Routed to fork." },
       ],
     });
-    await shepherd.buildSuggestionPatches({
+    await shepherd.suggest({
       pr,
       suggestions: [{ threadId: "PRRT_two", message: "Apply it" }],
     });
@@ -515,6 +556,19 @@ describe("public API", () => {
     ],
     ["unsupported operation", { operations: [{ type: "unknown" }] }],
     ["empty review mutation", { operations: [{ type: "review_mutations" }] }],
+    ["check_blocker without check", { operations: [{ type: "check_blocker", clear: true }] }],
+    [
+      "check_blocker with a non-boolean clear",
+      { operations: [{ type: "check_blocker", check: "e2e", clear: "yes" }] },
+    ],
+    [
+      "check_blocker with blockedBy and clear",
+      { operations: [{ type: "check_blocker", check: "e2e", blockedBy: "a/b#1", clear: true }] },
+    ],
+    [
+      "check_blocker with a malformed blockedBy",
+      { operations: [{ type: "check_blocker", check: "e2e", blockedBy: "nope" }] },
+    ],
     [
       "invalid queue-removal head SHA",
       {
@@ -605,8 +659,6 @@ describe("public API", () => {
       },
     ],
   ])("validates suggestion patches input: %s", (_label, input) => {
-    expect(() => createPrShepherd().buildSuggestionPatches(input as never)).toThrow(
-      PrShepherdValidationError,
-    );
+    expect(() => createPrShepherd().suggest(input as never)).toThrow(PrShepherdValidationError);
   });
 });

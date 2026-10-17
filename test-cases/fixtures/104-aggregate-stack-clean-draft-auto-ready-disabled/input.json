@@ -1,7 +1,7 @@
 {
   "description": "A clean draft whose automatic transition is disabled becomes the agent's ready-for-review step: run the bounded probe, then mark the draft ready when it reports WAIT. No human decision is required.",
   "mode": "aggregate",
-  "args": ["--stack", "https://github.com/owner/repo/pull/421", "--no-auto-mark-ready", "--debounce", "0s"],
+  "args": ["stack", "https://github.com/owner/repo/pull/421", "--no-auto-mark-ready", "--debounce", "0s"],
   "expectedExitCode": 16,
   "expectedNextAction": "shepherd",
   "expectedReason": "actionable",

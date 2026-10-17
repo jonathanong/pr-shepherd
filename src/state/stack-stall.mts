@@ -1,5 +1,5 @@
 /**
- * Persistent stall-detection state for an aggregate `--stack` selection whose open layers can
+ * Persistent stall-detection state for an aggregate `stack` selection whose open layers can
  * only wait. Keyed by native stack number because the anchor PR can merge or change.
  *
  * State lives in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/stack-<number>/stack-stall.json`.

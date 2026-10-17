@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 
 const { mockFind } = vi.hoisted(() => ({ mockFind: vi.fn() }));
 vi.mock("./existing-reply-scan.mts", () => ({ findExistingReplies: mockFind }));
@@ -8,7 +8,7 @@ import {
   REPO,
   mockGraphql,
 } from "../../test-helpers/comments/resolve.test-support.mts";
-import { runWithDurableState } from "../state/durable-state.mts";
+import { runWithGithubTransport } from "../github/transport.mts";
 import { applyResolveOptions } from "./resolve.mts";
 
 registerHooks();
@@ -18,9 +18,15 @@ beforeEach(() => {
   mockFind.mockResolvedValue(["t-1"]);
 });
 
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
+
 describe("applyResolveOptions — existing-reply adoption", () => {
   it("forwards every supplied reply ID on a direct apply request, even with durable state", async () => {
-    const result = await runWithDurableState(() =>
+    // A cloud session keeps durable state; pin GraphQL so the mutation goes through the mock.
+    vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
+    const result = await runWithGithubTransport("graphql", () =>
       applyResolveOptions(1, REPO, {
         replyThreadIds: ["t-1"],
         dismissMessage: "Addressed.",

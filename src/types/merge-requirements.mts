@@ -60,7 +60,7 @@ export type StackLayerBlockReason =
 
 /**
  * A native stack draft stays in draft on a WAIT tick because this session will not
- * mark it ready. The caller returns to the stack selector.
+ * mark it ready. The caller returns to the stack command.
  */
 export type StackDraftHold = { kind: "auto-mark-ready-disabled" };
 

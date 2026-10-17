@@ -102,7 +102,7 @@ Output, each field omitted when empty:
 | `trunkBehindBy`             | The trunk compare is behind                                  |
 | `actionsWorkflowInProgress` | A relevant Actions suite has not completed                   |
 
-A `--stack` summary routes the layer as `fix_code` with reason `unreported-required-checks` instead of an idle wait and prints the names on that layer.
+A `stack` summary routes the layer as `fix_code` with reason `unreported-required-checks` instead of an idle wait and prints the names on that layer.
 
 ### `getCiVerdict`
 

@@ -96,7 +96,7 @@ the printed \`apply review:\` command (it replied to \`PRRT_active\`). Restarted
     fixture: "102-aggregate-stack-mixed-escalate-autonomous-work",
     shape: transcriptShape({
       turns: () => [...finishedPr42(), stackRequest(repoPr(403))],
-      latest: `pr-shepherd --stack ${repoPr(403)} --until-terminal`,
+      latest: `pr-shepherd stack ${repoPr(403)} --until-terminal`,
     }),
     runs: 6,
     tags: ["stack", "shepherd", "escalate", "multi-turn"],
@@ -111,7 +111,7 @@ the printed \`apply review:\` command (it replied to \`PRRT_active\`). Restarted
     fixture: "106-aggregate-stack-blocked-hooks-receipts",
     shape: transcriptShape({
       turns: () => [...finishedPr42(), stackRequest(repoPr(443))],
-      latest: `pr-shepherd --stack ${repoPr(443)} --until-terminal`,
+      latest: `pr-shepherd stack ${repoPr(443)} --until-terminal`,
     }),
     runs: 6,
     tags: ["stack", "shepherd", "multi-turn"],

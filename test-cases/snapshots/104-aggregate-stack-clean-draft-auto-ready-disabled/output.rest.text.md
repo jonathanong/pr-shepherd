@@ -16,4 +16,4 @@ nextAction: shepherd
 ## Instructions
 
 1. Run `pr-shepherd https://github.com/owner/repo/pull/421 --timeout 1s --debounce 0s --no-auto-mark-ready` first for PR #421. If it returns `[WAIT]` saying the draft is held only because automatic mark-ready is disabled, run `pr-shepherd iterate https://github.com/owner/repo/pull/421 --transport rest` to authorize the CCR ready transition; otherwise follow the probe's instructions.
-2. After the selected one-PR sessions, rerun this same `--stack` selector.
+2. After the selected one-PR sessions, rerun this same `stack` command.

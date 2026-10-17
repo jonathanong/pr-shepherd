@@ -308,7 +308,7 @@ describe("runIterate — cancel", () => {
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       expect(result.fix.instructions.join("\n")).toContain(
-        "pr-shepherd --stack https://github.com/owner/repo/pull/42 --until-terminal --merge",
+        "pr-shepherd stack https://github.com/owner/repo/pull/42 --until-terminal --merge",
       );
     }
   });
@@ -397,7 +397,7 @@ describe("runIterate — cancel", () => {
       }
       expect(result.action).toBe("fix_code");
       if (result.action === "fix_code") {
-        expect(result.fix.instructions.join("\n")).toContain("--stack");
+        expect(result.fix.instructions.join("\n")).toContain("pr-shepherd stack ");
         expect(result.fix.requeue).toBeUndefined();
       }
 

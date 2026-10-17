@@ -92,7 +92,7 @@ function guardMember(member: StackMemberRefs) {
 
 function fail(message: string): never {
   throw new ShepherdError(
-    `${message}; rerun the --stack --merge selector before applying this request`,
+    `${message}; rerun \`pr-shepherd stack <PR> --merge\` before applying this request`,
     EXIT.UNAVAILABLE,
   );
 }

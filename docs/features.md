@@ -24,14 +24,14 @@ Log excerpts are omitted for `CANCELLED` and `STARTUP_FAILURE`. The full field i
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
 | One action per tick            | `WAIT`, `READY`, `MARK_READY`, `MERGE`, `CANCEL`, `ESCALATE`, or `FIX_CODE`; all but `CANCEL` carry numbered `## Instructions`                                                     | [actions.md](actions.md), [iterate-flow.md](iterate-flow.md) |
 | Review mutations               | `apply review` batches reply / resolve / minimize / dismiss. Generated IDs are capability-filtered; explicit IDs are attempted                                                     | [comments.md](comments.md#mutation-types)                    |
-| Suggestion patches             | `build_suggestion_patches` returns ordered, apply-checked patches and commit metadata. It never writes files or mutates git                                                        | [actions.md](actions.md)                                     |
+| Suggestion patches             | `suggest` returns ordered, apply-checked patches and commit metadata. It never writes files or mutates git                                                                         | [actions.md](actions.md)                                     |
 | Mark ready, ready-delay, merge | Optional `MARK_READY` for clean drafts; a ready-delay before `CANCEL`; with `--merge`, a merge or queue command for the agent (head-pinned for one PR, READY receipts for a stack) | [actions.md](actions.md)                                     |
 | Poll debounce                  | `--debounce` (default 1m) holds `FIX_CODE` for a settle window and returns one batched tick. MCP `iterate` has no debounce                                                         | [cli-usage.md](cli-usage.md)                                 |
 | Multi-PR and stack polling     | Compact read-only summaries; one concurrent session per owned layer with work; `gh stack merge` of the ready prefix                                                                | [cli-usage.md](cli-usage.md)                                 |
 | Shepherd Journal               | Idempotent decision log in the PR body, with a pure extraction API                                                                                                                 | [api.md](api.md)                                             |
 | Exit codes                     | `0` and `10`–`16` for PR state; `64`–`78` for command and GitHub failures                                                                                                          | [exit-codes.md](exit-codes.md)                               |
 
-Interfaces: the MCP tools `iterate`, `apply`, `build_suggestion_patches`, `extract_journal`, `get_journal`, and `playbook` ([mcp.md](mcp.md)), and the CLI `pr-shepherd [PR]` and `pr-shepherd iterate [PR]` ([cli-usage.md](cli-usage.md)).
+Interfaces: the MCP tools `iterate`, `apply`, `suggest`, `extract_journal`, `get_journal`, and `playbook` ([mcp.md](mcp.md)), and the CLI `pr-shepherd [PR]` and `pr-shepherd iterate [PR]` ([cli-usage.md](cli-usage.md)).
 
 ## Configuration
 

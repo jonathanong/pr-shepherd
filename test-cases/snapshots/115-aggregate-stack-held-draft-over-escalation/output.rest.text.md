@@ -24,4 +24,4 @@ nextAction: shepherd
 
 1. Run `pr-shepherd https://github.com/owner/repo/pull/452 --timeout 1s --debounce 0s --no-auto-mark-ready` first for PR #452. If it returns `[WAIT]` saying the draft is held only because automatic mark-ready is disabled, run `pr-shepherd iterate https://github.com/owner/repo/pull/452 --transport rest` to authorize the CCR ready transition; otherwise follow the probe's instructions.
 2. PR #451 requires human action (fix-thrash). Keep shepherding other PRs before the handoff.
-3. After the listed one-PR sessions, rerun this same `--stack` selector. Stop for the human handoff only when no autonomous shepherding remains.
+3. After the listed one-PR sessions, rerun this same `stack` command. Stop for the human handoff only when no autonomous shepherding remains.

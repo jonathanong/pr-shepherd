@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import { LOG_FILE_USAGE } from "./help-log-file-page.mts";
-import { DEFAULT_USAGE, ITERATE_USAGE } from "./help-iterate-poll-pages.mts";
+import { DEFAULT_USAGE, ITERATE_USAGE, STACK_USAGE } from "./help-iterate-poll-pages.mts";
 
 export const COMMAND_USAGE = {
   default: DEFAULT_USAGE,
@@ -128,13 +128,13 @@ Usage:
 --format text|json        Output format. Default: text.
 --help, -h                Print this help and exit before any I/O.`,
 
-  "build-suggestion-patches": `pr-shepherd build-suggestion-patches
+  suggest: `pr-shepherd suggest
 
 Build an ordered list of patches and commit instructions from GitHub review suggestions.
 The command does not edit files or mutate git history.
 
 Usage:
-  pr-shepherd build-suggestion-patches [PR]
+  pr-shepherd suggest [PR]
     --thread-id ID --message MSG [--description DESC]
     [--thread-id ID --message MSG [--description DESC] ...]
     [--format text|json]
@@ -162,21 +162,22 @@ Run 'pr-shepherd admin <clean|log-file> --help' for command-specific details.
 Remove pr-shepherd state files from PR_SHEPHERD_STATE_DIR.
 
 Usage:
-  pr-shepherd admin clean pr [number] [--dry-run] [--format text|json] [--poll-mode auto|poll|event]
-  pr-shepherd admin clean branch [name] [--dry-run] [--format text|json] [--poll-mode auto|poll|event]
-  pr-shepherd admin clean current [--dry-run] [--format text|json] [--poll-mode auto|poll|event]
-  pr-shepherd admin clean repo [--dry-run] [--format text|json] [--poll-mode auto|poll|event]
-  pr-shepherd admin clean all [--dry-run] [--format text|json] [--poll-mode auto|poll|event]
+  pr-shepherd admin clean pr [number] [--dry-run] [--format text|json]
+  pr-shepherd admin clean branch [name] [--dry-run] [--format text|json]
+  pr-shepherd admin clean current [--dry-run] [--format text|json]
+  pr-shepherd admin clean repo [--dry-run] [--format text|json]
+  pr-shepherd admin clean all [--dry-run] [--format text|json]
 
 Variants remove state for one PR, branch, current branch, repository, or all repositories.
 Use --dry-run to preview paths without removing them.
---poll-mode auto|poll|event      Clean the state for that poll mode; event mode keeps it in durable
-                                state under the git common directory. Default: poll.mode (auto).
+When CLAUDE_CODE_REMOTE=true, state is the durable copy under the git common directory.
 --help, -h                      Print this help and exit before any cleanup.`,
 
   "admin log-file": LOG_FILE_USAGE,
 
   iterate: ITERATE_USAGE,
+
+  stack: STACK_USAGE,
 
   "journal extract": `pr-shepherd journal extract
 

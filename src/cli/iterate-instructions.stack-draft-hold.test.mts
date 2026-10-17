@@ -5,7 +5,7 @@ import { formatIterateResult } from "./iterate-formatter.mts";
 import { projectIterateLean } from "./iterate-lean.mts";
 
 const handoff =
-  "a `--stack` selector listed this session, finish that selector's remaining steps and rerun it with its original flags; otherwise run `pr-shepherd --stack https://github.com/owner/repo/pull/42 --until-terminal`, adding `--merge` when merging was requested.";
+  "a `stack` command listed this session, finish that command's remaining steps and rerun it with its original flags; otherwise run `pr-shepherd stack https://github.com/owner/repo/pull/42 --until-terminal`, adding `--merge` when merging was requested. After the handoff, follow only the `stack` command's output.";
 
 function heldWait(stackDraftHold: StackDraftHold): IterateResult {
   const wait = makeIterateResult("wait");
@@ -26,9 +26,9 @@ function leanInstructions(result: IterateResult): string[] {
 }
 
 describe("held native stack draft WAIT instructions", () => {
-  it("returns a disabled mark-ready hold to the stack selector", () => {
+  it("returns a disabled mark-ready hold to the stack command", () => {
     expect(leanInstructions(heldWait({ kind: "auto-mark-ready-disabled" }))).toEqual([
-      `PR #42 stays in draft because automatic mark-ready is disabled for this session, so repeating this one-PR session cannot advance it. If ${handoff}`,
+      `PR #42 stays in draft because automatic mark-ready is disabled for this session, so repeating this one-PR session cannot advance it: do not rerun it or keep a wake-up for it. If ${handoff}`,
     ]);
   });
 
@@ -50,22 +50,6 @@ describe("held native stack draft WAIT instructions", () => {
     expect(instruction).toMatch(/^PR #42 stays in draft because automatic mark-ready is disabled/);
     expect(instruction).toContain("no more often than every 5 minutes");
     expect(instruction).not.toContain("Non-terminal — no action needed this tick");
-  });
-
-  it("hands an event-mode hold to the stack selector without rerunning this session", () => {
-    const result = {
-      ...heldWait({ kind: "auto-mark-ready-disabled" }),
-      pollMode: "event",
-    };
-    const steps = leanInstructions(result as IterateResult);
-    expect(steps).toHaveLength(2);
-    expect(steps[0]).toContain(
-      "`pr-shepherd --stack https://github.com/owner/repo/pull/42 --until-terminal --poll-mode event`",
-    );
-    expect(steps[1]).toMatch(
-      /^Event mode: do not rerun this one-PR session and keep no wake-up for it\./,
-    );
-    expect(steps[1]).toContain('Playbook: "Cloud event loop"');
   });
 
   it("omits the hold from an ordinary WAIT", () => {

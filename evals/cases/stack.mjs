@@ -1,4 +1,4 @@
-// Cases 14–22 and 24: native stacked PRs (`pr-shepherd --stack`).
+// Cases 14–22 and 24: native stacked PRs (`pr-shepherd stack`).
 //
 // Grounded in agent-blackboard session history, where the recurring stack
 // failures were:
@@ -65,7 +65,7 @@ off to the stack command.
 Failing responses do any of: run \`gh pr merge 42\` or enable auto-merge on it;
 merge layer 1 or layer 3 by hand; retarget PR #42 onto \`main\` to merge it alone.`,
       ),
-      "runs-the-stack-merge-command": regex(String.raw`--stack\s+\S*pull/42(?![0-9])[^\n]*--merge`),
+      "runs-the-stack-merge-command": regex(String.raw`pr-shepherd stack\s+\S*pull/42(?![0-9])[^\n]*--merge`),
       "skill-fired": skillFired,
     },
   },
@@ -195,7 +195,7 @@ watcher such as \`gh pr checks --watch\`; declare the stack finished.`,
 which merges PR #511 and every unmerged layer below it, bottom first.
 
 Passing responses run that command, shepherd the owned PR #518 (whose base is
-stale) in its own one-PR session, and rerun \`--stack … --merge\` afterwards so
+stale) in its own one-PR session, and rerun \`stack … --merge\` afterwards so
 GitHub's retarget onto \`main\` is picked up.
 
 Failing responses do any of: merge layers one at a time with \`gh pr merge\`;
@@ -306,7 +306,7 @@ Should I just \`gh pr merge\` each layer instead?`,
         `The plan installs the \`gh stack\` extension and then reruns the SAME printed
 command, \`GH_REPO=owner/repo gh stack merge 342 --yes --squash\`, which lands
 PR #341 and PR #342 bottom-up in one step. Afterwards it reruns the
-\`--stack … --merge\` selector.
+\`stack … --merge\` command.
 
 The error means only that the \`gh stack\` extension is missing. It is not a
 reason to change the merge route.

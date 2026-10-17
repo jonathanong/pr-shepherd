@@ -13,7 +13,7 @@
 | `base-branch-unknown`         | The GraphQL base branch is empty or unsafe, and the tick has work that could require a push.                                                                | Fix the PR base, then resume.                                                          |
 | `merge-queue-removed`         | Merge mode is on, GitHub reports a current queue removal on an unchanged head, nothing is queued or auto-merging, and no actionable failure explains it.    | Read GitHub's raw removal reason and decide whether to requeue.                        |
 | `merge-method-unavailable`    | Merge mode is on and the method Shepherd would print is disabled on the repository, or the repository enables no merge method. No merge command is printed. | Fix `merge.method` / `merge.commandArgs` or repository merge settings.                 |
-| `stall-timeout`               | An enabled timeout expires: CI never starts, a `WAIT`/`FIX_CODE` fingerprint stays unchanged, or a `--stack` selection's layers can only wait.              | Investigate why nothing moves.                                                         |
+| `stall-timeout`               | An enabled timeout expires: CI never starts, a `WAIT`/`FIX_CODE` fingerprint stays unchanged, or a `stack` selection's layers can only wait.                | Investigate why nothing moves.                                                         |
 | `required-checks-unreported`  | Required merge-target contexts still have no check run after one close/reopen of the current head, and no Actions workflow is running.                      | Fix the workflow (path filters are the usual cause) so it emits the required contexts. |
 | `stall-state-unavailable`     | An enabled stall timeout cannot read or write its timer file.                                                                                               | Fix `PR_SHEPHERD_STATE_DIR` or its permissions, then resume.                           |
 
@@ -21,7 +21,7 @@ Any escalation from a tick with automatically selected review mutations keeps ev
 
 ## Stack-level outcomes
 
-Native-stack aggregate reconciliation (`--stack`) is read-only and never mutates GitHub.
+Native-stack aggregate reconciliation (`stack`) is read-only and never mutates GitHub.
 
 | Stack state                                                                                       | Result                                                     |
 | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
@@ -118,10 +118,10 @@ Failing queue CI is actionable and stays `FIX_CODE`. GitHub's removal reason is 
 
 Native-stack membership is not an escalation.
 
-1. When a one-PR `--merge` poll reaches its ready delay, it writes the layer's READY receipt and returns non-terminal `FIX_CODE` with `pr-shepherd --stack <PR URL> --until-terminal --merge`. This applies at every position, including position 1: `--auto` is rejected server-side on stacked PRs, and a plain `gh pr merge` fallback would land a mid-stack layer into its unmerged parent instead of the stack trunk.
-2. The aggregate selector reconciles every open layer's READY receipt and linear ancestry and returns one of the [stack-level outcomes](#stack-level-outcomes).
+1. When a one-PR `--merge` poll reaches its ready delay, it writes the layer's READY receipt and returns non-terminal `FIX_CODE` with `pr-shepherd stack <PR URL> --until-terminal --merge`. This applies at every position, including position 1: `--auto` is rejected server-side on stacked PRs, and a plain `gh pr merge` fallback would land a mid-stack layer into its unmerged parent instead of the stack trunk.
+2. The aggregate command reconciles every open layer's READY receipt and linear ancestry and returns one of the [stack-level outcomes](#stack-level-outcomes).
 3. A clean draft is marked ready by its own session without waiting for lower layers. Closed or unverified topology is surfaced during `SHEPHERD` while another layer can proceed; otherwise it returns `ESCALATE`.
-4. With a ready prefix whose bottom open layer targets the stack base, `--stack --merge` returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge <PR number> --yes` and the allowed method flag for the highest ready layer. Rerun the same selector until every layer merges and it returns `CANCEL`. If the repository allows no method for that command, it returns `ESCALATE` with `merge-method-unavailable`.
+4. With a ready prefix whose bottom open layer targets the stack base, `stack --merge` returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge <PR number> --yes` and the allowed method flag for the highest ready layer. Rerun the same command until every layer merges and it returns `CANCEL`. If the repository allows no method for that command, it returns `ESCALATE` with `merge-method-unavailable`.
 
 **Detection caveat:** GitHub's `stack` field is a public-preview API and can be absent even for a stacked PR (for example when Stacked PRs are disabled on the repository). Absence means no signal, not "not stacked". Shepherd does not infer stackedness otherwise (comparing the base to the default branch false-positives on any PR targeting a non-default branch). This is a known gap: absence only lets the ordinary merge path proceed; it does not confirm a plain `gh pr merge --auto` is safe.
 
@@ -138,7 +138,7 @@ Native-stack membership is not an escalation.
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | CI start     | The prospective result is `WAIT`, and an external status context — or a `PENDING`, `QUEUED`, `REQUESTED`, or `WAITING` check run with no start time — stays unstarted for the threshold.                                                                                                                                                                                       |
 | Stable state | The prospective result is `WAIT` or `FIX_CODE`, the stored fingerprint is unchanged, and its nonnegative age reaches the threshold. The fingerprint covers the action, the PR head commit GitHub reports (not the local `HEAD`), PR/merge/draft state, failing and in-progress checks, the latest merge-queue removal commit, actionable item IDs, and actionable annotations. |
-| `--stack`    | Every remaining layer's bounded probe can only report waiting ([the idle `WAIT`](actions.md#shepherd-actions)), so no one-PR session runs.                                                                                                                                                                                                                                     |
+| `stack`      | Every remaining layer's bounded probe can only report waiting ([the idle `WAIT`](actions.md#shepherd-actions)), so no one-PR session runs.                                                                                                                                                                                                                                     |
 
 - The threshold is `iterate.stallTimeoutMinutes` (default 60) or `--stall-timeout`. A changed fingerprint resets the timer. A disabled timeout refreshes state and never escalates.
 - A native-stack draft held by disabled mark-ready uses the same guard.
@@ -159,7 +159,7 @@ The stall timeout is enabled, and the one-PR timer (`iterate-stall.json`) or the
 
 - A missing file (`ENOENT`) is a normal first sighting. Corrupt JSON is also a miss, so one successful rewrite restarts the timer.
 - Any other read error, an unsafe state key, or a failed write of a new or reset timer is this trigger.
-- The suggestion quotes the filesystem error and says to fix `PR_SHEPHERD_STATE_DIR` or the directory permissions, then resume. A `--stack` selection returns the same handoff as one instruction, `` `stall-state-unavailable` ``, naming the error.
+- The suggestion quotes the filesystem error and says to fix `PR_SHEPHERD_STATE_DIR` or the directory permissions, then resume. A `stack` selection returns the same handoff as one instruction, `` `stall-state-unavailable` ``, naming the error.
 - `--stall-timeout 0` turns the guard off, so the original action stands. Disabling the timeout, or switching to a plan that is not an idle wait, still clears the timer on a best-effort basis.
 
 ## Non-escalating outcomes

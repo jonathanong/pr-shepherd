@@ -1,7 +1,7 @@
 import { getRepoInfo, getCurrentPrNumber, getCurrentBranch } from "../github/client.mts";
 import { fetchSuggestionThreads } from "../github/suggestion-thread.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
-import type { BuildSuggestionPatchesResult, GlobalOptions } from "../types.mts";
+import type { SuggestResult, GlobalOptions } from "../types.mts";
 import {
   buildCommitCommand,
   buildSuggestionPatchItem,
@@ -21,9 +21,7 @@ export interface SuggestionPatchesOptions extends GlobalOptions {
   suggestions: readonly SuggestionPatchRequest[];
 }
 
-export async function runSuggestionPatches(
-  opts: SuggestionPatchesOptions,
-): Promise<BuildSuggestionPatchesResult> {
+export async function runSuggestionPatches(opts: SuggestionPatchesOptions): Promise<SuggestResult> {
   validateRequests(opts.suggestions);
   const repo = opts.targetRepository ?? (await getRepoInfo());
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
@@ -53,7 +51,7 @@ export async function runSuggestionPatches(
   if (status !== "") {
     throw new ShepherdError(
       `Suggestion target files have uncommitted changes:\n${status}\n` +
-        "Commit or stash them before running build-suggestion-patches.",
+        "Commit or stash them before running suggest.",
       EXIT.UNAVAILABLE,
     );
   }
@@ -158,7 +156,7 @@ async function readOriginals(
   return new Map(entries);
 }
 
-function buildBatchInstructions(patches: BuildSuggestionPatchesResult["patches"]): string[] {
+function buildBatchInstructions(patches: SuggestResult["patches"]): string[] {
   const patchInstructions = patches.flatMap((patch, index) => [
     `Apply patch ${index + 1} to \`${patch.path}\` using \`git apply\`.`,
     `Stage patch ${index + 1}: \`git add -- ${quotePath(patch.path)}\``,

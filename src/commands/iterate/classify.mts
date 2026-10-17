@@ -94,7 +94,7 @@ export function classifyReviewSummaries(
 }
 
 /**
- * A durable-state session (event mode or a cloud session) can lose its uncertain-reply records
+ * A durable-state (cloud) session can lose its uncertain-reply records
  * between ticks. Its generated reply command opts in to adopting a reply GitHub already shows,
  * so rerunning the same printed command cannot double-post. Direct apply requests never do.
  */

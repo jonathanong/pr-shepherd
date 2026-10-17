@@ -242,7 +242,7 @@ describe("native-stack reconciliation", () => {
     expect(result.prs.map((item) => item.action)).toEqual(["escalate", "fix_code"]);
     expect(result.instructions?.join("\n")).toContain("PR #1");
     expect(result.instructions?.join("\n")).toContain("pull/2 --until-terminal`.");
-    expect(result.instructions?.join("\n")).toContain("rerun this same `--stack` selector");
+    expect(result.instructions?.join("\n")).toContain("rerun this same `stack` command");
   });
 
   it("keeps a pure human ESCALATE terminal when no autonomous session remains", () => {
@@ -261,7 +261,7 @@ describe("native-stack reconciliation", () => {
 
     expect(result.nextAction).toBe("escalate");
     expect(result.instructions?.join("\n")).toContain("PR #1 requires human action");
-    expect(result.instructions?.join("\n")).not.toContain("rerun this same `--stack` selector");
+    expect(result.instructions?.join("\n")).not.toContain("rerun this same `stack` command");
   });
 
   it("keeps available one-PR routes when a human decision and a missing command coexist", () => {
@@ -281,7 +281,7 @@ describe("native-stack reconciliation", () => {
     expect(result.instructions?.join("\n")).toContain("pull/3 --until-terminal");
     expect(result.instructions?.join("\n")).toContain("PR #2 needs a one-PR session");
     expect(result.instructions?.join("\n")).toContain("PR #1 requires human action");
-    expect(result.instructions?.join("\n")).toContain("rerun this same `--stack` selector");
+    expect(result.instructions?.join("\n")).toContain("rerun this same `stack` command");
   });
 
   it("routes stale ancestry to a one-PR session", () => {
@@ -419,6 +419,6 @@ describe("native-stack reconciliation", () => {
     );
     expect(result).toMatchObject({ nextAction: "escalate", stackMergeable: false });
     expect(result.instructions?.join("\n")).toContain("could not produce its command");
-    expect(result.instructions?.join("\n")).not.toContain("rerun this same `--stack` selector");
+    expect(result.instructions?.join("\n")).not.toContain("rerun this same `stack` command");
   });
 });

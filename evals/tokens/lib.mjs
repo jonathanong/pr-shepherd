@@ -948,7 +948,7 @@ export function callApi(call, transport = "graphql") {
   }
   if (/^(Skill|Read|ToolSearch) /.test(cmd) || /^sleep \d+$/.test(cmd)) return NO_API;
   if (/^pr-shepherd /.test(cmd)) {
-    if (/ --stack /.test(cmd)) throw new Error(`stack tick needs an explicit api: ${cmd}`);
+    if (/^pr-shepherd stack /.test(cmd)) throw new Error(`stack tick needs an explicit api: ${cmd}`);
     if (transport === "cloud") return SHEPHERD_TICK_API_CLOUD;
     return transport === "rest" ? SHEPHERD_TICK_API_REST : SHEPHERD_TICK_API;
   }

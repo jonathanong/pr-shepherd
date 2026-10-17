@@ -70,7 +70,7 @@ export const UPPER_LAYER_CONFLICT_TARGET_QUERY = gql("upper-layer-conflict-targe
 /** Merged PRs whose head may be the stale base of a non-stack conflict. */
 export const MERGED_BASE_PULL_REQUESTS_QUERY = gql("merged-base-pull-requests.gql");
 
-/** PR head fields plus the requested review threads for `build-suggestion-patches`. */
+/** PR head fields plus the requested review threads for `suggest`. */
 export const SUGGESTION_THREADS_QUERY = gql("suggestion-threads.gql");
 
 /** Fetches additional comments for a single review thread when its nested connection paginates. */

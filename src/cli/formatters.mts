@@ -5,9 +5,9 @@ export { formatMarkFilesAsViewedResult } from "./mark-files-as-viewed-formatter.
 export { formatMutateResult } from "./mutate-formatter.mts";
 
 import { safeFence } from "./fence.mts";
-import type { BuildSuggestionPatchesResult, SuggestionPatchResult } from "../types.mts";
+import type { SuggestResult, SuggestionPatchResult } from "../types.mts";
 
-export function formatSuggestionPatchesResult(result: BuildSuggestionPatchesResult): string {
+export function formatSuggestionPatchesResult(result: SuggestResult): string {
   const lines = [`Suggestion patches for PR #${result.pr}:`, `  repo: ${result.repo}`];
   result.patches.forEach((patch, index) => {
     lines.push("", ...formatPatch(patch, `## Patch ${index + 1}`).split("\n"));

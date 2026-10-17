@@ -92,9 +92,7 @@ export interface IterateResultBase {
   apiUsage?: ApiUsage;
   quotaWarning?: GraphqlQuotaWarning;
   fingerprintReused?: true;
-  /** Set to `event` when this result came from event mode: one tick, no sleeping. Omitted in poll mode. */
-  pollMode?: "event";
-  /** Event mode only: when to come back if no GitHub event arrives first. Omitted for terminal actions. */
+  /** Single ticks only: when to come back if no GitHub event arrives first. Omitted for `fix_code` and terminal actions. */
   nextCheck?: NextCheck;
   /** Classification-rule resolve/minimize applied during this fetch. Omitted when nothing happened. */
   ruleAutoResolve?: RuleAutoResolveReport;
@@ -222,15 +220,13 @@ export interface IterateCommandOptions extends GlobalOptions {
    */
   fingerprintCache?: boolean;
   /**
-   * Internal. Event mode passes a sink that receives the CI-start stall deadline (oldest
+   * Internal. A single tick passes a sink that receives the CI-start stall deadline (oldest
    * unstarted check age + stall timeout) so `nextCheck` can wake before it. Excluded from
    * the public `IterateInput` in api.mts.
    */
   stallDeadlineSink?: { ciStartDeadlineSeconds?: number };
   /** Shepherd through readiness and emit the exact merge/queue command when ready. */
   merge?: boolean;
-  /** Override `poll.mode` for this call. `auto` resolves to `event` when `CLAUDE_CODE_REMOTE=true`. */
-  pollMode?: import("../config/load.mts").PollMode;
   /** Override `iterate.instructions` for this call. */
   instructions?: import("../config/load.mts").InstructionStyle;
   /**
