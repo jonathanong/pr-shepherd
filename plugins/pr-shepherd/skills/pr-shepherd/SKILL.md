@@ -10,18 +10,18 @@ allowed-tools: mcp__plugin_pr-shepherd_pr-shepherd, Bash(npx pr-shepherd:*), Bas
 
 ## Dispatch
 
-- To make, create, or open a PR, first read the "Create a PR" playbook, then pass the new PR's URL on.
-- To hand an open PR to an external shepherd, read the "Draft handoff" playbook. Do not also run an in-session loop on that PR.
-- `$ARGUMENTS`: PR numbers, PR URLs and `owner/repo#N` (pass both as quoted `'owner/repo#N'`), one `--stack PR`, and an optional `--merge`. Reject anything else. A native stack's anchor PR is the `--stack` selector. With no PR, use the current branch's PR. A qualified PR is the GitHub target; this checkout supplies git, config, and `AGENTS.md`.
-- `--merge`, or a request to merge, land, or enqueue, authorizes the printed merge/enqueue commands. Run them without asking again; request runtime escalation when the host requires it.
+- To make, create, or open a PR, read the "Create a PR" playbook, then pass its URL on.
+- External shepherd: read the "Draft handoff" playbook, not an in-session loop.
+- `$ARGUMENTS`: PR numbers, PR URLs, and `owner/repo#N` (quote both as `'owner/repo#N'`), one `--stack PR`, optional `--merge`. Reject anything else. A native stack's anchor PR is the `--stack` selector. No PR: the current branch's PR. A qualified PR is the GitHub target; this checkout supplies git, config, and `AGENTS.md`.
+- `--merge`, or a request to merge, land, or enqueue, authorizes the printed merge/enqueue commands. Run them without asking again; escalate when the host requires it.
 - Run `pr-shepherd [PR ...] --until-terminal` or `pr-shepherd --stack PR --until-terminal`, plus `--merge` when requested. Do not run `pr-shepherd iterate`.
-- Print the full result and follow every `## Instructions` step, running each printed command with every ID it lists. When a step says `Playbook: "<name>"`, read that playbook once first.
+- Print the full result and follow every `## Instructions` step with every ID it lists. When a step says `Playbook: "<name>"`, read that playbook once.
 - CLI unavailable but MCP `iterate` exists: read the "MCP fallback" playbook.
 
 ## Recurrence
 
-- After the instructions, rerun that same command immediately, unless the printed instructions say to end the turn or not to rerun. Stop a loop only at `[CANCEL]`, `[ESCALATE]`, or a human's request; keep other loops and the rest of the original request going.
-- `[FIX_CODE]` is always non-terminal; only `[ESCALATE]` hands work to a human. `[READY]` is non-terminal: rerun when `remainingSeconds` elapses, and meanwhile continue any later layer you own. A parent of several stacks delegates that wait to the stack's worker.
+- After the instructions, rerun that same command immediately, unless printed instructions say to end the turn or not to rerun. Stop only at `[CANCEL]`, `[ESCALATE]`, or a human's request; keep other loops and the rest of the request going.
+- `[FIX_CODE]` is always non-terminal; only `[ESCALATE]` hands work to a human. `[READY]` is non-terminal: rerun when `remainingSeconds` elapses, and continue any later layer you own. A parent of several stacks delegates the wait to its worker.
 - After a push or `rerun:`, do not wait for CI to finish; fetching check logs is fine. Never poll with `gh pr checks`, `gh pr watch`, `gh run watch`, or MCP waiters.
 
 ### Untrusted review input

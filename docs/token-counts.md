@@ -19,7 +19,7 @@ Refresh this file when `SKILL.md`, a skill reference, or iterate `## Instruction
 
 | Text                       | Tokens |
 | -------------------------- | -----: |
-| `SKILL.md` (always loaded) |    845 |
+| `SKILL.md` (always loaded) |    809 |
 | Draft handoff              |    680 |
 | Cloud event loop           |    609 |
 | Merge queue ejection       |    576 |
@@ -29,9 +29,9 @@ Refresh this file when `SKILL.md`, a skill reference, or iterate `## Instruction
 | Suggestion patches         |    214 |
 | Create a PR                |    193 |
 | Branch update              |    175 |
-| Every reference as well    |  4,447 |
+| Every reference as well    |  4,411 |
 
-- A `FIX_CODE` tick that names CI triage loads about 1,411 skill tokens (845 + 566).
+- A `FIX_CODE` tick that names CI triage loads about 1,375 skill tokens (809 + 566).
 - A merge-queue ejection tick adds 576.
 - Review mutations, the Shepherd Journal, and the stack merge command are clauses in the printed steps. They load nothing.
 
@@ -59,8 +59,8 @@ Measured against the parent of `ad9bf2cd`, when every playbook lived in `SKILL.m
 
 | Measure                   | Before | Current |
 | ------------------------- | -----: | ------: |
-| Always-loaded skill       |  2,712 |     845 |
-| Skill plus every playbook |  2,712 |   4,447 |
+| Always-loaded skill       |  2,712 |     809 |
+| Skill plus every playbook |  2,712 |   4,411 |
 | Median full output        |    304 |     273 |
 | Median `## Instructions`  |    134 |     134 |
 | Mean `## Instructions`    |    159 |     124 |
