@@ -132,7 +132,7 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
       remainingSeconds: 300,
     });
 
-    const result = await runIterate(makeOpts({ noAutoCancelActionable: true }));
+    const result = await runIterate(makeOpts());
 
     expect(result.checks).toEqual([
       expect.objectContaining({

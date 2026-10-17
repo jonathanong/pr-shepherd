@@ -4,7 +4,7 @@ import {
   BASE_OPTS,
   makeBatchData,
   makeCheck,
-  mockAutoResolveOutdated,
+  mockAutoResolveThreads,
   mockFetchPrBatch,
   mockGetMergeableState,
   makeThread,
@@ -93,12 +93,12 @@ describe("runCheck — BLOCKED + clean ready state", () => {
         reviewThreads: [outdated],
       }),
     });
-    mockAutoResolveOutdated.mockResolvedValue({ resolved: ["t-auto"], errors: [] });
+    mockAutoResolveThreads.mockResolvedValue({ resolved: ["t-auto"], errors: [] });
 
     const report = await runCheck({ ...BASE_OPTS, autoResolve: true });
 
     expect(report.status).toBe("PENDING");
-    expect(mockAutoResolveOutdated).not.toHaveBeenCalled();
+    expect(mockAutoResolveThreads).not.toHaveBeenCalled();
     expect(report.threads.resolutionOnly.map((t) => t.id)).toEqual(["t-auto"]);
     expect(report.threads.firstLook[0]?.autoResolved).toBeUndefined();
   });

@@ -12,7 +12,7 @@ import {
 } from "./list-formatters.mts";
 import { BODY_TRUNCATE_MAX_CHARS } from "./body-truncate.mts";
 import { numberInstructions } from "./iterate-instructions.mts";
-import { renderCheckAnnotation, renderProtectedRun } from "./fix-formatter-extra.mts";
+import { renderCheckAnnotation } from "./fix-formatter-extra.mts";
 import { renderRelatedJobLines } from "./related-jobs-format.mts";
 import { isFailingAgentCheck } from "../checks/conclusions.mts";
 import type { IterateResultFixCode } from "../types.mts";
@@ -226,20 +226,6 @@ export function formatFixCodeResult(
         verbose,
       ).join("\n"),
     );
-  }
-
-  if (result.fix.inProgressRunIds.length > 0) {
-    sections.push("## In-progress runs");
-    sections.push(result.fix.inProgressRunIds.map((id) => `- \`${id}\``).join("\n"));
-  }
-
-  if (result.fix.protectedRuns.length > 0) {
-    sections.push("## Protected runs", result.fix.protectedRuns.map(renderProtectedRun).join("\n"));
-  }
-
-  if (result.cancelled.length > 0) {
-    sections.push("## Cancelled runs");
-    sections.push(result.cancelled.map((id) => `- \`${id}\``).join("\n"));
   }
 
   // The review mutation commands render inline in their `## Instructions` steps.

@@ -72,7 +72,7 @@ describe("runResolveMutate — configured bot threads", () => {
       }),
     });
 
-    const result = await runResolveMutate({
+    await runResolveMutate({
       ...BASE_OPTS,
       resolveThreadIds: ["t-coderabbit"],
       replyThreadIds: ["t-coderabbit"],
@@ -91,6 +91,5 @@ describe("runResolveMutate — configured bot threads", () => {
         dismissReviewIds: ["r-coderabbit"],
       }),
     );
-    expect(result.skippedNonHumanReplies).toBeUndefined();
   });
 });

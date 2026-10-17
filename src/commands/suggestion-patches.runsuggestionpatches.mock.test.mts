@@ -10,7 +10,7 @@ import {
   mockGetCurrentBranch,
   mockReadFile,
   registerHooks,
-} from "../../test-helpers/commands/commit-suggestion.test-support.mts";
+} from "../../test-helpers/commands/suggestion-patches.single.test-support.mts";
 import { runSuggestionPatches } from "./suggestion-patches.mts";
 
 registerHooks();

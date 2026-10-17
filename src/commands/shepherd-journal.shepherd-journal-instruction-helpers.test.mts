@@ -53,7 +53,6 @@ describe("shepherd journal instruction helpers", () => {
       resolveCommand,
       false,
       42,
-      0,
       [],
       [],
       [
@@ -64,7 +63,6 @@ describe("shepherd journal instruction helpers", () => {
           body: "Looks good overall with one suggestion.",
         },
       ],
-      [],
       [],
       [],
       undefined,
@@ -96,7 +94,7 @@ describe("shepherd journal instruction helpers", () => {
       hasMutations: true,
     };
 
-    const instructions = buildFixInstructions([], [], [], [], "main", resolveCommand, false, 42, 0);
+    const instructions = buildFixInstructions([], [], [], [], "main", resolveCommand, false, 42);
 
     expect(instructions.join("\n")).not.toContain("pr-shepherd apply journal");
   });
@@ -108,7 +106,7 @@ describe("shepherd journal instruction helpers", () => {
       hasMutations: false,
     };
 
-    const instructions = buildFixInstructions([], [], [], [], "main", resolveCommand, false, 42, 0);
+    const instructions = buildFixInstructions([], [], [], [], "main", resolveCommand, false, 42);
 
     const text = instructions.join("\n");
     expect(text).not.toContain("pr-shepherd apply journal");

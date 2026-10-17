@@ -2,7 +2,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
-  mockRunCommitSuggestion,
   mockRunSuggestionPatches,
   mockRunIterate,
   mockRunJournal,
@@ -13,7 +12,6 @@ const {
   mockRunPollSummary,
   mockApplyQueueRemovalAck,
 } = vi.hoisted(() => ({
-  mockRunCommitSuggestion: vi.fn(),
   mockRunSuggestionPatches: vi.fn(),
   mockRunIterate: vi.fn(),
   mockRunJournal: vi.fn(),
@@ -25,9 +23,6 @@ const {
   mockApplyQueueRemovalAck: vi.fn(),
 }));
 
-vi.mock("./commands/commit-suggestion.mts", () => ({
-  runCommitSuggestion: mockRunCommitSuggestion,
-}));
 vi.mock("./commands/suggestion-patches.mts", () => ({
   runSuggestionPatches: mockRunSuggestionPatches,
 }));
@@ -66,7 +61,6 @@ describe("public API", () => {
 
     expect(Object.keys(shepherd).sort()).toEqual([
       "apply",
-      "buildSuggestionPatch",
       "buildSuggestionPatches",
       "getJournal",
       "iterate",
@@ -405,7 +399,6 @@ describe("public API", () => {
     mockRunResolveMutate.mockResolvedValue({ resolvedThreads: ["PRRT_one"] });
     mockRunMarkFilesAsViewed.mockResolvedValue({ markedPaths: ["src/api.mts"] });
     mockRunJournal.mockResolvedValue({ prNumber: 9, mutated: true });
-    mockRunCommitSuggestion.mockResolvedValue({ threadId: "PRRT_two" });
     mockRunSuggestionPatches.mockResolvedValue({ patches: [{ threadId: "PRRT_two" }] });
     mockGetRepoInfo.mockResolvedValue({ owner: "acme", name: "widgets" });
     const shepherd = createPrShepherd({ cwd: "." });
@@ -427,12 +420,6 @@ describe("public API", () => {
       ],
     });
 
-    await shepherd.buildSuggestionPatch({
-      pr: 9,
-      threadId: "PRRT_two",
-      message: "apply suggestion",
-      description: "Keep the API covered.",
-    });
     await shepherd.buildSuggestionPatches({
       pr: 9,
       suggestions: [{ threadId: "PRRT_two", message: "apply suggestion", description: "Covered." }],
@@ -443,9 +430,6 @@ describe("public API", () => {
     );
     expect(mockRunJournal).toHaveBeenCalledWith(
       expect.objectContaining({ prNumber: 9, dryRun: true }),
-    );
-    expect(mockRunCommitSuggestion).toHaveBeenCalledWith(
-      expect.objectContaining({ prNumber: 9, threadId: "PRRT_two", format: "json" }),
     );
     expect(mockRunSuggestionPatches).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -462,7 +446,6 @@ describe("public API", () => {
     mockRunResolveMutate.mockResolvedValue({ resolvedThreads: ["PRRT_one"] });
     mockRunMarkFilesAsViewed.mockResolvedValue({ markedPaths: ["src/api.mts"] });
     mockRunJournal.mockResolvedValue({ prNumber: 42, mutated: true });
-    mockRunCommitSuggestion.mockResolvedValue({ threadId: "PRRT_two" });
     mockRunSuggestionPatches.mockResolvedValue({ patches: [{ threadId: "PRRT_two" }] });
     const shepherd = createPrShepherd({ cwd: "." });
     const pr = "https://github.com/fork/widgets/pull/42";
@@ -475,7 +458,6 @@ describe("public API", () => {
         { type: "append_journal", item: "- Routed to fork." },
       ],
     });
-    await shepherd.buildSuggestionPatch({ pr, threadId: "PRRT_two", message: "Apply it" });
     await shepherd.buildSuggestionPatches({
       pr,
       suggestions: [{ threadId: "PRRT_two", message: "Apply it" }],
@@ -489,9 +471,6 @@ describe("public API", () => {
       expect.objectContaining({ prNumber: 42, targetRepository: target }),
     );
     expect(mockRunJournal).toHaveBeenCalledWith(
-      expect.objectContaining({ prNumber: 42, targetRepository: target }),
-    );
-    expect(mockRunCommitSuggestion).toHaveBeenCalledWith(
       expect.objectContaining({ prNumber: 42, targetRepository: target }),
     );
     expect(mockRunSuggestionPatches).toHaveBeenCalledWith(
@@ -603,17 +582,6 @@ describe("public API", () => {
     ["invalid PR", { pr: "not-a-url", operations: [{ type: "mark_files_viewed", tests: true }] }],
   ])("rejects %s before mutation", async (_label, input) => {
     await expect(createPrShepherd().apply(input as never)).rejects.toBeInstanceOf(
-      PrShepherdValidationError,
-    );
-  });
-
-  it.each([
-    ["missing thread", { threadId: " ", message: "message" }],
-    ["missing message", { threadId: "PRRT_one", message: " " }],
-    ["invalid description", { threadId: "PRRT_one", message: "message", description: 1 }],
-    ["invalid PR number", { pr: 0, threadId: "PRRT_one", message: "message" }],
-  ])("validates suggestion patch input: %s", (_label, input) => {
-    expect(() => createPrShepherd().buildSuggestionPatch(input as never)).toThrow(
       PrShepherdValidationError,
     );
   });

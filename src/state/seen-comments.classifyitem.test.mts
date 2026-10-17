@@ -45,7 +45,7 @@ describe("classifyItem", () => {
     expect(classifyItem("id1", "body", map)).toBe("unchanged");
   });
 
-  it("returns 'unchanged' for legacy marker without bodyHash", () => {
+  it("returns 'unchanged' for a marker without bodyHash", () => {
     const map = new Map([["id1", { seenAt: 1000 }]]);
     expect(classifyItem("id1", "any body", map)).toBe("unchanged");
   });

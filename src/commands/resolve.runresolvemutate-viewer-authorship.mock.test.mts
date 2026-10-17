@@ -27,7 +27,7 @@ describe("runResolveMutate — viewer-authored human threads", () => {
       }),
     });
 
-    const result = await runResolveMutate({
+    await runResolveMutate({
       ...BASE_OPTS,
       replyThreadIds: ["t-viewer"],
       resolveThreadIds: ["t-viewer"],
@@ -42,7 +42,6 @@ describe("runResolveMutate — viewer-authored human threads", () => {
         resolveThreadIds: ["t-viewer"],
       }),
     );
-    expect(result.skippedHumanResolves).toBeUndefined();
   });
 
   it("forwards an unmarked viewer-authored human resolve without a paired reply", async () => {
@@ -59,7 +58,7 @@ describe("runResolveMutate — viewer-authored human threads", () => {
       }),
     });
 
-    const result = await runResolveMutate({
+    await runResolveMutate({
       ...BASE_OPTS,
       resolveThreadIds: ["t-viewer"],
     });
@@ -69,7 +68,6 @@ describe("runResolveMutate — viewer-authored human threads", () => {
       { owner: "owner", name: "repo" },
       expect.objectContaining({ resolveThreadIds: ["t-viewer"] }),
     );
-    expect(result.skippedHumanResolves).toBeUndefined();
   });
 
   it("allows a marker-ended viewer-authored human resolve without another reply", async () => {
@@ -108,7 +106,7 @@ describe("runResolveMutate — viewer-authored human threads", () => {
       }),
     });
 
-    const result = await runResolveMutate({
+    await runResolveMutate({
       ...BASE_OPTS,
       resolveThreadIds: ["t-viewer"],
     });
@@ -118,6 +116,5 @@ describe("runResolveMutate — viewer-authored human threads", () => {
       { owner: "owner", name: "repo" },
       expect.objectContaining({ resolveThreadIds: ["t-viewer"] }),
     );
-    expect(result.skippedHumanResolves).toBeUndefined();
   });
 });

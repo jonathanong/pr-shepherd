@@ -89,7 +89,6 @@ vi.mock("../../src/github/check-annotations-batch.mts", () => ({
   }),
 }));
 vi.mock("../../src/comments/resolve.mts", () => ({
-  autoResolveOutdated: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
   autoResolveThreads: vi.fn().mockResolvedValue({ resolved: [], errors: [] }),
   autoMinimizeComments: vi.fn().mockResolvedValue({ minimized: [], errors: [] }),
   applyResolveOptions: vi.fn().mockResolvedValue(undefined),
@@ -138,7 +137,6 @@ import { getMergeableState, getRepoInfo, type RepoInfo } from "../../src/github/
 import { recordThreadIdentity } from "../../src/github/rest-identities.mts";
 import { triageFailingChecks, fetchStartupFailureChecks } from "../../src/checks/triage.mts";
 import { fetchCheckRunAnnotationsBatch } from "../../src/github/check-annotations-batch.mts";
-import { autoResolveOutdated } from "../../src/comments/resolve.mts";
 import { loadSeenMap, markSeen } from "../../src/state/seen-comments.mts";
 import { readQueueRemovalAcknowledgment } from "../../src/state/queue-removal-ack.mts";
 import { updateReadyDelay } from "../../src/commands/ready-delay.mts";
@@ -156,7 +154,6 @@ const mockGetRepoInfo = vi.mocked(getRepoInfo);
 const mockTriageFailingChecks = vi.mocked(triageFailingChecks);
 const mockFetchStartupFailureChecks = vi.mocked(fetchStartupFailureChecks);
 const mockFetchCheckRunAnnotationsBatch = vi.mocked(fetchCheckRunAnnotationsBatch);
-const mockAutoResolveOutdated = vi.mocked(autoResolveOutdated);
 const mockLoadSeenMap = vi.mocked(loadSeenMap);
 const mockMarkSeen = vi.mocked(markSeen);
 const mockUpdateReadyDelay = vi.mocked(updateReadyDelay);
@@ -632,8 +629,6 @@ export function applyFixture(fixture: Fixture, transport: FixtureTransport = "gr
     mockLoadSeenMap.mockResolvedValue(new Map());
   }
   mockMarkSeen.mockResolvedValue(undefined);
-
-  mockAutoResolveOutdated.mockResolvedValue({ resolved: [], errors: [] });
 
   mockUpdateReadyDelay.mockResolvedValue(fixture.readyDelayState ?? DEFAULT_READY_STATE);
 

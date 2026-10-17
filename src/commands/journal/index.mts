@@ -19,11 +19,9 @@ export interface JournalResult {
   sectionExisted: boolean;
   dryRun: boolean;
   previewBody?: string;
-  /** @deprecated Explicit journal requests now rely on GitHub's mutation response. */
-  authorizationSkipped?: "denied-or-unverifiable";
 }
 
-/** @deprecated Hidden implementation for standalone `journal`; use `apply journal`. */
+/** Implementation for `apply journal`. */
 export async function runJournal(opts: RunJournalOptions): Promise<JournalResult> {
   const validation = validateJournalItem(opts.rawItem);
   if (!validation.ok) {

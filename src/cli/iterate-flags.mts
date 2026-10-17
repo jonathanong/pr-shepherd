@@ -22,7 +22,6 @@ interface IterateFlags {
   stallTimeoutSuffix: string | undefined | null;
   stallTimeoutSeconds: number;
   noAutoMarkReady: boolean;
-  noAutoCancelActionable: boolean;
   merge: boolean;
   /** `null` when `--instructions` was invalid (an error was already printed). */
   instructions: InstructionStyle | null | undefined;
@@ -58,7 +57,6 @@ export function parseIterateFlags(
     MINUTE_FLAG_OPTS,
   );
   const noAutoMarkReady = hasFlag(extra, "--no-auto-mark-ready");
-  const noAutoCancelActionable = hasFlag(extra, "--no-auto-cancel-actionable");
   const merge = hasFlag(extra, "--merge");
   const stallTimeoutStr = getFlag(extra, "--stall-timeout");
   const stallTimeoutSuffix = validateSecondsDurationFlag(
@@ -82,7 +80,6 @@ export function parseIterateFlags(
     stallTimeoutSuffix,
     stallTimeoutSeconds,
     noAutoMarkReady,
-    noAutoCancelActionable,
     merge,
   };
 }

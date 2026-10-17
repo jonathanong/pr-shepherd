@@ -8,7 +8,6 @@ vi.mock("./commands/check.mts", () => ({ runCheck: vi.fn() }));
 vi.mock("./commands/resolve.mts", () => ({
   runResolveMutate: vi.fn(),
 }));
-vi.mock("./commands/commit-suggestion.mts", () => ({ runCommitSuggestion: vi.fn() }));
 vi.mock("./commands/suggestion-patches.mts", () => ({ runSuggestionPatches: vi.fn() }));
 vi.mock("./commands/mark-files-as-viewed.mts", () => ({ runMarkFilesAsViewed: vi.fn() }));
 vi.mock("./commands/clean.mts", () => ({ runClean: vi.fn() }));
@@ -20,11 +19,9 @@ vi.mock("./github/client.mts", () => ({
 
 import { main } from "./cli-parser.mts";
 import { runIterate } from "./commands/iterate/index.mts";
-import { runCommitSuggestion } from "./commands/commit-suggestion.mts";
 import { runSuggestionPatches } from "./commands/suggestion-patches.mts";
 
 const mockRunIterate = vi.mocked(runIterate);
-const mockRunCommitSuggestion = vi.mocked(runCommitSuggestion);
 const mockRunSuggestionPatches = vi.mocked(runSuggestionPatches);
 
 let stdoutSpy: ReturnType<typeof vi.spyOn>;
@@ -48,33 +45,29 @@ afterEach(() => {
 });
 
 const SUBCOMMANDS = [
-  "resolve",
-  "commit-suggestion",
+  "apply review",
+  "apply files",
+  "apply journal",
   "build-suggestion-patches",
-  "mark-files-as-viewed",
   "iterate",
-  "poll",
-  "clean",
-  "journal",
-  "log-file",
+  "admin clean",
+  "admin log-file",
 ] as const;
 
 const HELP_EXPECTATIONS: Record<(typeof SUBCOMMANDS)[number], string[]> = {
-  resolve: ["action flag is required", "--resolve-thread-ids", "--require-sha", "Exit code:"],
-  "commit-suggestion": ["Preconditions:", "--thread-id", "--description", "Exit codes:"],
+  "apply review": ["action flag is required", "--resolve-thread-ids", "--require-sha"],
+  "apply files": ["Selectors:", "--tests", "--match"],
+  "apply journal": ["Shepherd Journal", "--dry-run", "--file"],
   "build-suggestion-patches": ["Each --thread-id", "--message", "git apply --check"],
-  "mark-files-as-viewed": ["Selectors:", "--tests", "--match", "Exit code:"],
   iterate: ["Actions:", "FIX_CODE", "--stall-timeout", "Exit codes:"],
-  poll: ["Poll flags:", "--interval", "--timeout", "--until-terminal", "Forwarded iterate flags:"],
-  clean: ["Variants:", "pr [number]", "branch [name]", "--dry-run"],
-  journal: ["Shepherd Journal", "--dry-run", "Exit code:"],
-  "log-file": ["Environment:", "PR_SHEPHERD_LOG_DISABLED", "PR_SHEPHERD_STATE_DIR"],
+  "admin clean": ["pr [number]", "branch [name]", "--dry-run"],
+  "admin log-file": ["Environment:", "PR_SHEPHERD_LOG_DISABLED", "PR_SHEPHERD_STATE_DIR"],
 };
 
 for (const sub of SUBCOMMANDS) {
   describe(`${sub} --help / -h`, () => {
     it(`prints usage for '${sub} --help' and exits 0`, async () => {
-      await main(["node", "shepherd", sub, "--help"]);
+      await main(["node", "shepherd", ...sub.split(" "), "--help"]);
       const out = getStdout();
       expect(out).toContain("Usage:");
       for (const expected of HELP_EXPECTATIONS[sub]) {
@@ -85,7 +78,7 @@ for (const sub of SUBCOMMANDS) {
     });
 
     it(`prints usage for '${sub} -h' and exits 0`, async () => {
-      await main(["node", "shepherd", sub, "-h"]);
+      await main(["node", "shepherd", ...sub.split(" "), "-h"]);
       const out = getStdout();
       expect(out).toContain("Usage:");
       for (const expected of HELP_EXPECTATIONS[sub]) {
@@ -96,9 +89,8 @@ for (const sub of SUBCOMMANDS) {
     });
 
     it(`does not perform real work for '${sub} --help'`, async () => {
-      await main(["node", "shepherd", sub, "--help"]);
+      await main(["node", "shepherd", ...sub.split(" "), "--help"]);
       expect(mockRunIterate).not.toHaveBeenCalled();
-      expect(mockRunCommitSuggestion).not.toHaveBeenCalled();
       expect(mockRunSuggestionPatches).not.toHaveBeenCalled();
     });
   });

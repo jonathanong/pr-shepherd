@@ -16,7 +16,7 @@ describe("main — resolve", () => {
     message: string,
     exitCode: number,
   ): Promise<void> {
-    await main(["node", "shepherd", "resolve", "42", ...args]);
+    await main(["node", "shepherd", "apply", "review", "42", ...args]);
     expect(mockRunResolveMutate).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(exitCode);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining(message));
@@ -24,7 +24,6 @@ describe("main — resolve", () => {
 
   it.each([
     ["no action flags", [], "an action flag is required", EXIT.USAGE],
-    ["--fetch", ["--fetch"], "--fetch has been removed", EXIT.USAGE],
     ["only --message", ["--message", "Done"], "an action flag is required", EXIT.USAGE],
     [
       "empty action ID list",
@@ -50,12 +49,12 @@ describe("main — resolve", () => {
       dismissedReviews: [],
       errors: [],
     });
-    await main(["node", "shepherd", "resolve", "42", "--resolve-thread-ids", "PRRC_1"]);
+    await main(["node", "shepherd", "apply", "review", "42", "--resolve-thread-ids", "PRRC_1"]);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("comment IDs (PRRC_*)"));
     expect(mockRunResolveMutate).toHaveBeenCalledTimes(1);
   });
 
-  it("accepts a valid 40-char SHA with only the alias deprecation warning", async () => {
+  it("accepts a valid 40-char SHA without warnings", async () => {
     mockRunResolveMutate.mockResolvedValue({
       repliedThreads: [],
       resolvedThreads: ["PRRT_1"],
@@ -67,7 +66,8 @@ describe("main — resolve", () => {
     await main([
       "node",
       "shepherd",
-      "resolve",
+      "apply",
+      "review",
       "42",
       "--resolve-thread-ids",
       "PRRT_1",
@@ -75,9 +75,7 @@ describe("main — resolve", () => {
       sha,
     ]);
     expect(mockRunResolveMutate).toHaveBeenCalledTimes(1);
-    expect(stderrSpy).toHaveBeenCalledWith(
-      "pr-shepherd: resolve is deprecated; use pr-shepherd apply review instead.\n",
-    );
+    expect(stderrSpy).not.toHaveBeenCalled();
   });
 
   it("resolves --require-sha HEAD to this checkout's commit before mutating", async () => {
@@ -112,7 +110,7 @@ describe("main — resolve", () => {
       dismissedReviews: [],
       errors: [],
     });
-    await main(["node", "shepherd", "resolve", "42", "--resolve-thread-ids", "t-1"]);
+    await main(["node", "shepherd", "apply", "review", "42", "--resolve-thread-ids", "t-1"]);
     expect(mockRunResolveMutate).toHaveBeenCalledTimes(1);
   });
 
@@ -147,7 +145,15 @@ describe("main — resolve", () => {
       unminimizedComments: ["c-3", "c-4"],
     });
 
-    await main(["node", "shepherd", "resolve", "42", "--minimize-comment-ids", "c-1,c-2,c-3,c-4"]);
+    await main([
+      "node",
+      "shepherd",
+      "apply",
+      "review",
+      "42",
+      "--minimize-comment-ids",
+      "c-1,c-2,c-3,c-4",
+    ]);
 
     const out = getStdout();
     expect(out).toContain("Minimized comments: c-1, c-2");
@@ -167,7 +173,7 @@ describe("main — resolve", () => {
       rateLimit: { message: "secondary limit" },
     });
 
-    await main(["node", "shepherd", "resolve", "42", "--resolve-thread-ids", "t-1"]);
+    await main(["node", "shepherd", "apply", "review", "42", "--resolve-thread-ids", "t-1"]);
 
     const out = getStdout();
     expect(out).toContain("Stopped: GitHub rate limit hit — secondary limit");

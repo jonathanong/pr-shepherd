@@ -162,7 +162,6 @@ export function projectIterateLean(
       return {
         ...base,
         ...(result.checks.length > 0 && { checks: result.checks }),
-        ...(result.cancelled.length > 0 && { cancelled: result.cancelled }),
         fix: {
           ...(result.fix.threads.length > 0 && { threads: result.fix.threads }),
           ...(result.fix.resolutionOnlyThreads.length > 0 && {
@@ -188,12 +187,6 @@ export function projectIterateLean(
           }),
           ...(result.fix.firstLookComments.length > 0 && {
             firstLookComments: result.fix.firstLookComments,
-          }),
-          ...(result.fix.inProgressRunIds.length > 0 && {
-            inProgressRunIds: result.fix.inProgressRunIds,
-          }),
-          ...(result.fix.protectedRuns.length > 0 && {
-            protectedRuns: result.fix.protectedRuns,
           }),
           ...(result.fix.requeue && { requeue: result.fix.requeue }),
           ...(result.fix.queueRemovalAcknowledgment && {

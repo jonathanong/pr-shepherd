@@ -8,12 +8,12 @@ import {
   mockFetchBatch,
   mockGetCurrentBranch,
   setupHappyPath,
-} from "../../test-helpers/commands/commit-suggestion.test-support.mts";
-import { runCommitSuggestion } from "./commit-suggestion.mts";
+  runSingleSuggestion,
+} from "../../test-helpers/commands/suggestion-patches.single.test-support.mts";
 
 registerHooks();
 
-describe("runCommitSuggestion — happy path", () => {
+describe("runSuggestionPatches (single) — happy path", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
@@ -21,7 +21,7 @@ describe("runCommitSuggestion — happy path", () => {
   });
 
   it("returns patch, commitMessage, commitBody, filesToStage, postActionInstructions", async () => {
-    const result = await runCommitSuggestion({
+    const result = await runSingleSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
       message: "apply suggestion",
@@ -40,7 +40,7 @@ describe("runCommitSuggestion — happy path", () => {
   });
 
   it("only invokes git apply in read-only check mode", async () => {
-    await runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" });
+    await runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" });
 
     const mutatingCalls = mockExecFile.mock.calls.filter(
       (call) =>
@@ -57,7 +57,7 @@ describe("runCommitSuggestion — happy path", () => {
   });
 
   it("prepends --description to commitBody before Co-authored-by", async () => {
-    const result = await runCommitSuggestion({
+    const result = await runSingleSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
       message: "apply suggestion",
@@ -71,7 +71,7 @@ describe("runCommitSuggestion — happy path", () => {
   });
 
   it("postActionInstructions include git add, git commit, and apply-review steps", async () => {
-    const result = await runCommitSuggestion({
+    const result = await runSingleSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
       message: "fix",
@@ -79,7 +79,7 @@ describe("runCommitSuggestion — happy path", () => {
     const joined = result.postActionInstructions.join("\n");
     expect(joined).toContain("git add");
     expect(joined).toContain("git commit");
-    expect(joined).toContain("authorization-checked GitHub review action");
+    expect(joined).toContain("authorization-checked `apply review`");
     expect(joined).toContain("does not recommend a push");
   });
 
@@ -94,7 +94,7 @@ describe("runCommitSuggestion — happy path", () => {
       ]),
     });
 
-    const result = await runCommitSuggestion({
+    const result = await runSingleSuggestion({
       ...GLOBAL_OPTS,
       threadId: "PRRT_x",
       message: "fix",

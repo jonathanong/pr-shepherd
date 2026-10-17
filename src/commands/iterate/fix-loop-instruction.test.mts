@@ -66,8 +66,6 @@ describe("buildFixInstructions instruction style", () => {
       resolveCommand,
       false,
       42,
-      0,
-      [],
       [],
       [],
       [],

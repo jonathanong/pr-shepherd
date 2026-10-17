@@ -8,12 +8,12 @@ import {
   mockExecFile,
   mockFetchBatch,
   mockGetCurrentBranch,
-} from "../../test-helpers/commands/commit-suggestion.test-support.mts";
-import { runCommitSuggestion } from "./commit-suggestion.mts";
+  runSingleSuggestion,
+} from "../../test-helpers/commands/suggestion-patches.single.test-support.mts";
 
 registerHooks();
 
-describe("runCommitSuggestion — thread classification", () => {
+describe("runSuggestionPatches (single) — thread classification", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
@@ -26,7 +26,7 @@ describe("runCommitSuggestion — thread classification", () => {
   it("throws when thread not found on PR", async () => {
     mockFetchBatch.mockResolvedValue({ data: makeBatch([]) });
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_missing", message: "fix" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_missing", message: "fix" }),
     ).rejects.toThrow("not found on PR");
   });
 
@@ -36,7 +36,7 @@ describe("runCommitSuggestion — thread classification", () => {
       rateLimit: undefined,
     });
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("already resolved");
   });
 
@@ -46,7 +46,7 @@ describe("runCommitSuggestion — thread classification", () => {
       rateLimit: undefined,
     });
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("outdated");
   });
 
@@ -56,7 +56,7 @@ describe("runCommitSuggestion — thread classification", () => {
       rateLimit: undefined,
     });
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("minimized");
   });
 
@@ -66,7 +66,7 @@ describe("runCommitSuggestion — thread classification", () => {
       rateLimit: undefined,
     });
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("no file/line anchor");
   });
 
@@ -76,7 +76,7 @@ describe("runCommitSuggestion — thread classification", () => {
       rateLimit: undefined,
     });
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("no suggestion block");
   });
 
@@ -87,7 +87,7 @@ describe("runCommitSuggestion — thread classification", () => {
       rateLimit: undefined,
     });
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("nested suggestion fencing");
   });
 });

@@ -112,16 +112,16 @@ READY-receipt fingerprints leave the handoff fields out, so a bot editing a hidd
 
 ### Mutations and one-shot reads
 
-| Command                                                                     | What runs                                                                                                          | Typical points                               |
-| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
-| `apply review` / `resolve`, with reply IDs                                  | `ReplyThreadTranscripts` per 20 requested IDs, plus pages only for long transcripts, then `BulkApply` chunks of 10 | 1 or more for the read; mutations unmeasured |
-| `apply review` / `resolve`, without replies                                 | `BulkApply` only, plus up to 10 × `GetPrHeadSha` when `--require-sha` is set                                       | unmeasured, plus 1 per SHA poll              |
-| `apply files` / `mark-files-as-viewed`                                      | `files(first: 100)` per page, then `markFileAsViewed` chunks of 10                                                 | 1 per file page; mutations unmeasured        |
-| `apply journal` / `journal`                                                 | `GetPrBody`, then `UpdatePrBody` when the body changes and this is not `--dry-run`                                 | 1, plus an unmeasured mutation               |
-| MCP `get_journal`                                                           | `GetPrBody` once, then local extraction                                                                            | 1                                            |
-| MCP `extract_journal`                                                       | local extraction from the supplied body                                                                            | 0                                            |
-| `apply check-blocker`                                                       | none when the PR number is passed                                                                                  | 0                                            |
-| `build-suggestion-patches` / `build-suggestion-patch` / `commit-suggestion` | `SuggestionThreads`                                                                                                | 1 for a handful of threads                   |
+| Command                                     | What runs                                                                                                          | Typical points                               |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
+| `apply review` / `resolve`, with reply IDs  | `ReplyThreadTranscripts` per 20 requested IDs, plus pages only for long transcripts, then `BulkApply` chunks of 10 | 1 or more for the read; mutations unmeasured |
+| `apply review` / `resolve`, without replies | `BulkApply` only, plus up to 10 × `GetPrHeadSha` when `--require-sha` is set                                       | unmeasured, plus 1 per SHA poll              |
+| `apply files` / `mark-files-as-viewed`      | `files(first: 100)` per page, then `markFileAsViewed` chunks of 10                                                 | 1 per file page; mutations unmeasured        |
+| `apply journal` / `journal`                 | `GetPrBody`, then `UpdatePrBody` when the body changes and this is not `--dry-run`                                 | 1, plus an unmeasured mutation               |
+| MCP `get_journal`                           | `GetPrBody` once, then local extraction                                                                            | 1                                            |
+| MCP `extract_journal`                       | local extraction from the supplied body                                                                            | 0                                            |
+| `apply check-blocker`                       | none when the PR number is passed                                                                                  | 0                                            |
+| `build-suggestion-patches`                  | `SuggestionThreads`                                                                                                | 1 for a handful of threads                   |
 
 - For 1 to 20 GraphQL reply thread IDs, one `ApplyReviewPreflight` read replaces the first `ReplyThreadTranscripts`, `GetPrHeadSha`, and `ReplyRecoveryEvidence` reads (3 read points down to 1); standalone reads still run for anything it cannot verify.
 - [`runResolveMutate`](../src/commands/resolve-mutate.mts) reads only requested reply thread IDs (`nodes(ids:)`) to store seen-marker transcripts; GitHub still authorizes the mutation. Incomplete or mismatched threads get no marker, but their mutations still run.

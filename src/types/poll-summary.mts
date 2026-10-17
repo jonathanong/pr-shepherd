@@ -129,7 +129,6 @@ export interface PollSummaryCommandOptions {
   readyDelaySeconds?: number;
   stallTimeoutSeconds?: number;
   noAutoMarkReady?: boolean;
-  noAutoCancelActionable?: boolean;
   instructions?: import("../config/load.mts").InstructionStyle;
   /** Override `poll.mode` for this call. `auto` resolves to `event` when `CLAUDE_CODE_REMOTE=true`. */
   pollMode?: import("../config/load.mts").PollMode;

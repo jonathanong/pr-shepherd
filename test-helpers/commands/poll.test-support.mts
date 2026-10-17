@@ -171,12 +171,9 @@ function makeFixCodeResult(): IterateResult {
         hasMutations: false,
       },
       instructions: ["`[FIX_CODE]` is non-terminal. Continue with the next poll."],
-      inProgressRunIds: [],
-      protectedRuns: [],
       firstLookThreads: [],
       firstLookComments: [],
     },
-    cancelled: [],
   } as unknown as IterateResult;
 }
 function registerPollHooks(): void {

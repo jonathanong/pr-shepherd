@@ -8,7 +8,7 @@ Symptoms, causes, and fixes for common pr-shepherd failures, plus where to find 
 
 | What                    | Where                                                                                                                                                                                |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Per-worktree debug log  | `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/worktrees/<basename>-<sha8>.md`; print the path with `pr-shepherd log-file` (or `pr-shepherd admin log-file`)                                 |
+| Per-worktree debug log  | `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/worktrees/<basename>-<sha8>.md`; print the path with `pr-shepherd admin log-file`                                                             |
 | Disable the log         | `PR_SHEPHERD_LOG_DISABLED=1`, or a truthy `CI` (anything but empty, `0`, or `false`)                                                                                                 |
 | Logged HTTP body cap    | `PR_SHEPHERD_LOG_MAX_BODY` (default `262144` characters)                                                                                                                             |
 | Per-PR state            | `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/` — `ready-since.txt`, `ready-receipt.json`, `seen/`, stall and fix-attempt files. List with `pr-shepherd admin clean current --dry-run` |

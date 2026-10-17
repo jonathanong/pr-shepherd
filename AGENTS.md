@@ -10,6 +10,16 @@ The CLI's job is to fetch and present raw-enough data; the agent's job is to int
 
 State-machine actions (`fix_code`, `cancel`, `mark_ready`, `wait`, `escalate`) and convenience rollups required by skill instructions (`ShepherdStatus`, `ShepherdMergeStatus`) are not classifications — they're either state transitions or summaries of raw state and stay in the CLI.
 
+### v1 API principles
+
+From v1.0.0 on, the public surface (CLI commands and flags, MCP tools, the library API, config keys, and JSON output) follows these rules:
+
+1. **No compatibility shims.** Remove a renamed or retired command, flag, field, or config key outright instead of keeping a deprecated alias, adapter, or always-empty field. The one exception is config: a removed or renamed key may fail with an error that names its replacement. That hint lives only on the error path and never makes the old key work.
+2. **Distinct modes are distinct commands.** Use a flag for a variant of the same operation, such as one PR versus several, or text versus JSON. Use a separate subcommand when the mode changes the inputs, outputs, and lifecycle, as `stack` does.
+3. **Config looks like GitHub Actions.** Keys are kebab-case. Durations carry their unit in the key name (`interval-seconds`, `timeout-minutes`) and are never milliseconds. Unknown keys and invalid values are hard errors, not warnings followed by a silent fallback.
+4. **Conservative defaults.** A default should be the least surprising choice for a new repository. Opt-in behavior (ready delays, blocking reviewers, aggressive minimization) stays off or minimal until configured. Internal tuning keys may stay, but their defaults must be safe on their own.
+5. **Action names describe the caller's job.** Name an action after what the caller must do, not after one way of doing it. For example, `triage` replaces `fix_code` because the work does not always change code.
+
 ## Setup
 
 **Before any `npx pr-shepherd` or `/pr-shepherd:*` invocation in this worktree**, verify `bin/` and `node_modules/` exist. If either is missing, run this source checkout's package-manager install command. This checkout uses npm (`package-lock.json`), so run:
@@ -42,7 +52,7 @@ All git invocations from the CLI must be read-only (`status`, `rev-parse`, `log`
 
 **Why:** mutating `git` subprocesses can leave `.git/index.lock` behind on hook failure, breaking every subsequent operation in the worktree until cleaned up by hand. The calling agent already owns the git lifecycle and has the retry / cleanup / sandbox-bypass machinery to handle this correctly.
 
-Instead, emit a suggestion: build the patch / commit message / file list and return it in the result, with a `## Instructions` block telling the caller what to run. The canonical example is `commit-suggestion` — it produces the patch and suggested git commands; the agent executes them.
+Instead, emit a suggestion: build the patch / commit message / file list and return it in the result, with a `## Instructions` block telling the caller what to run. The canonical example is `build-suggestion-patches` — it produces the patches and suggested git commands; the agent executes them.
 
 ### Push access is a usage precondition
 
@@ -101,7 +111,7 @@ To avoid re-surfacing items on every fetch, a per-item "seen" marker is
 written after first display. Markers live at:
 
 ```
-$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/seen/<id>.json
+$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/seen/<sha256(id)>.json
 ```
 
 The per-worktree debug log lives as a peer at:
@@ -110,10 +120,12 @@ The per-worktree debug log lives as a peer at:
 $PR_SHEPHERD_STATE_DIR/<owner>/<repo>/worktrees/<basename>-<sha8>.md
 ```
 
-Print the path with `npx pr-shepherd log-file`. Disable with `PR_SHEPHERD_LOG_DISABLED=1`.
+Print the path with `npx pr-shepherd admin log-file`. Disable with `PR_SHEPHERD_LOG_DISABLED=1`.
 
-One file per id — file existence is the marker. The JSON payload is
-`{ "seenAt": <unix>, "bodyHash": "<16-hex-chars>" }` (SHA-256 of the item's
+One file per id (the filename hashes the id so IDs differing only in case do
+not collide on case-insensitive filesystems) — file existence is the marker.
+The JSON payload is
+`{ "seenAt": <unix>, "bodyHash": "<16-hex-chars>", "id": "<id>" }` (SHA-256 of the item's
 body, truncated); the schema is intentionally open so future fields
 (classification, agent-reply, etc.) can be added without breaking readers.
 Do not adopt formats that lock the schema (empty touch files, a single
@@ -124,10 +136,11 @@ candidate item is in the seen set but its current body hashes differently
 from the stored hash, Shepherd re-surfaces it as an "edited" item. The item
 is tagged `[status: …, edited]` or rendered under a new
 `## … (edited since first look)` section. The marker hash is updated after
-display; the original `seenAt` is preserved. Legacy markers without
-`bodyHash` are treated conservatively as unchanged and are not re-surfaced.
+display; the original `seenAt` is preserved. A marker without `bodyHash`
+(and without review `inlineThreadIds`) is treated conservatively as
+unchanged and is not re-surfaced. Markers without an `id` field are ignored.
 
-Writes are no longer O_EXCL: `markSeen` reads any existing marker to
+Writes are not O_EXCL: `markSeen` reads any existing marker to
 preserve `seenAt`, then writes with `flag: "w"`. Under concurrent runs the
 last writer's hash wins — acceptable because both writes carry valid current
 state.
@@ -136,7 +149,7 @@ Any new code path that filters threads or comments by `isResolved`,
 `isOutdated`, or `isMinimized` must route them through the seen-marker gate
 before suppression — never drop them outright.
 
-**Non-minimized `COMMENTED` review summaries** are now gated: `check.mts`
+**Non-minimized `COMMENTED` review summaries** are gated: `check.mts`
 splits `batchData.reviewSummaries` into three buckets:
 
 - `firstLookSummaries` — never seen before; body rendered, ID in `--minimize-comment-ids`.
@@ -151,10 +164,9 @@ surfaced on first encounter and again whenever the author edits it.
 `batch-parsers.mts` filters them out before any gate runs (`!r.isMinimized`),
 so their bodies are never fetched. This remains future work.
 
-Implementation lives in `src/state/seen-comments.mts`. The call sites are
-`src/commands/resolve.mts` (surfaced in `resolve --fetch` output under
-`## First-look items`) and `src/commands/check.mts` (surfaced in iterate's
-`fix_code` output under `## Review summaries (first look — to be minimized)`).
+Implementation lives in `src/state/seen-comments.mts`. The main call site is
+`src/commands/check.mts`, surfaced in iterate's `fix_code` output under
+`## First-look items` and `## Review summaries (first look)`.
 
 **Merge-queue deferral exception:** when `iterate` defers non-CI actionable
 work because the PR is queued (`actions.workWhileQueued` is `false`, the

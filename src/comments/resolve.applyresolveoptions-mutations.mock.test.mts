@@ -120,7 +120,6 @@ describe("applyResolveOptions — mutations", () => {
     });
 
     expect(result.dismissedReviews).toEqual(["PRR_1", "PRR_2"]);
-    expect(result.skippedDismissals).toBeUndefined();
     expect(result.errors).toEqual([]);
     const doc = mockGraphql.mock.calls[0]?.[0] as string;
     expect(doc).toContain(

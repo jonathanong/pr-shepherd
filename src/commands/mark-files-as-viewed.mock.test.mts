@@ -40,7 +40,6 @@ describe("runMarkFilesAsViewed", () => {
     expect(result.matchedPaths).toEqual(["src/a.ts"]);
     expect(result.markedPaths).toEqual(["src/a.ts"]);
     expect(result.missingPaths).toEqual(["src/missing.ts"]);
-    expect(result.authorizationSkipped).toBeUndefined();
     expect(mockGraphql).toHaveBeenCalledTimes(1);
     expect(mockGraphqlWithRateLimit).toHaveBeenCalledWith(
       expect.stringContaining(
@@ -59,7 +58,6 @@ describe("runMarkFilesAsViewed", () => {
     const result = await runMarkFilesAsViewed({ format: "text", files: [], tests: true });
 
     expect(result.alreadyViewedPaths).toEqual(["tests/a.test.ts"]);
-    expect(result.authorizationSkipped).toBeUndefined();
     expect(mockGraphqlWithRateLimit).not.toHaveBeenCalled();
   });
 

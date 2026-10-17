@@ -64,10 +64,7 @@ export function makeIterateResult(
         ],
         firstLookThreads: [],
         firstLookComments: [],
-        inProgressRunIds: [],
-        protectedRuns: [],
       },
-      cancelled: [],
     };
   }
   if (action === "cancel")

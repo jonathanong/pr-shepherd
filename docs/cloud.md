@@ -70,7 +70,7 @@ A cloud VM can be recycled between ticks, taking its temp directory with it. Whe
 | Other commands outside `CLAUDE_CODE_REMOTE`              | temp directory             |
 | Outside a git repository                                 | temp directory             |
 
-The CLI resolves the poll mode before opening the per-worktree log. `pr-shepherd log-file` and `pr-shepherd admin clean` resolve it the same way from `poll.mode` and their own `--poll-mode`, so `log-file --poll-mode event` prints the log an event tick writes, and `admin clean` with event mode removes the durable state. Both reject an invalid `--poll-mode` with a usage error. A local `apply` in the same checkout uses the temp directory, so set `PR_SHEPHERD_STATE_DIR` if you mix modes.
+The CLI resolves the poll mode before opening the per-worktree log. `pr-shepherd admin log-file` and `pr-shepherd admin clean` resolve it the same way from `poll.mode` and their own `--poll-mode`, so `admin log-file --poll-mode event` prints the log an event tick writes, and `admin clean` with event mode removes the durable state. Both reject an invalid `--poll-mode` with a usage error. A local `apply` in the same checkout uses the temp directory, so set `PR_SHEPHERD_STATE_DIR` if you mix modes.
 
 ## Duplicate-reply scan
 

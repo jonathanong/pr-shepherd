@@ -18,18 +18,13 @@ describe("formatMutateResult", () => {
     expect(formatMutateResult(makeResult())).toBe("");
   });
 
-  it("renders successful and skipped mutation ids", () => {
+  it("renders successful mutation ids", () => {
     const output = formatMutateResult(
       makeResult({
         repliedThreads: ["thread-1"],
         resolvedThreads: ["thread-2"],
         minimizedComments: ["comment-1"],
         dismissedReviews: ["review-1"],
-        skippedDismissals: ["review-2"],
-        skippedHumanResolves: ["thread-3"],
-        skippedHumanMinimizes: ["comment-2"],
-        skippedHumanDismissals: ["review-3"],
-        skippedNonHumanReplies: ["thread-4"],
       }),
     );
 
@@ -37,11 +32,6 @@ describe("formatMutateResult", () => {
     expect(output).toContain("Resolved threads: thread-2");
     expect(output).toContain("Minimized comments: comment-1");
     expect(output).toContain("Dismissed reviews: review-1");
-    expect(output).toContain("Skipped dismissals: review-2");
-    expect(output).toContain("Skipped human thread resolves: thread-3");
-    expect(output).toContain("Skipped human minimizes: comment-2");
-    expect(output).toContain("Skipped human review dismissals: review-3");
-    expect(output).toContain("Skipped non-human/unknown thread replies: thread-4");
   });
 
   it("renders rate limit details, pending ids, and non-rate-limit errors", () => {
