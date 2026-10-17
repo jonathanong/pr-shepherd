@@ -180,7 +180,7 @@ const updatedBody = validation.ok
 | `appendJournalItem(body, item)`                    | Creates or migrates the canonical details container and idempotently appends one item.                                                                                                                                         |
 | `validateJournalItem(text)`                        | Discriminated validation result for a `- <text>` item.                                                                                                                                                                         |
 
-Extracted entries keep their leading hyphen-and-space marker and continuation indentation, with line endings normalized to LF; an empty journal returns `entries: []`. Journal-shaped examples inside fenced code, comments, raw HTML, quotes, and list containers are ignored.
+Extracted entries keep their leading hyphen-and-space marker and continuation indentation, with line endings normalized to LF; an empty journal returns `entries: []`. Journal-shaped examples inside fenced code, comments, raw HTML, quotes, and list containers are ignored. `<details>` tags inside raw HTML blocks still count toward nesting, so bodies such as Dependabot release notes, whose `</details>` closers follow HTML without a blank line, reconcile normally.
 
 ## `pr-shepherd/mcp`
 

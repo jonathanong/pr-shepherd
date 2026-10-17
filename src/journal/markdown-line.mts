@@ -12,7 +12,8 @@ import {
 } from "./markdown-html.mts";
 import { backtickRuns, nextBacktickRun, nextCodeOpener } from "./markdown-backticks.mts";
 import { isIndentedCode, structuralDetailsStart } from "./markdown-structure.mts";
-type MarkdownLine = { ignored: boolean; nested: boolean; visiblePrefix: string };
+/** `rawHtml` marks lines inside a blank-line-terminated raw HTML block, whose tags still render. */
+type MarkdownLine = { ignored: boolean; nested: boolean; rawHtml: boolean; visiblePrefix: string };
 type MarkdownScan = { lines: MarkdownLine[]; safeAtEof: boolean };
 /** Return whether a Markdown line starts a block that interrupts inline content. */
 export function isMarkdownBlockStart(line: string): boolean {
@@ -52,8 +53,8 @@ function scanMarkdown(lines: string[]): MarkdownScan {
     const container = resolveMarkdownContainer(line, activeContainer);
     activeContainer = container.tokens;
     const nested = container.tokens.length > 0;
-    const push = (ignored: boolean, visiblePrefix: string) =>
-      result.push({ ignored, nested, visiblePrefix });
+    const push = (ignored: boolean, visiblePrefix: string, rawHtml = false) =>
+      result.push({ ignored, nested, rawHtml, visiblePrefix });
     if (indentedCodeContainer) {
       if (stripMarkdownContainer(line, indentedCodeContainer) !== null) {
         push(true, "");
@@ -70,7 +71,7 @@ function scanMarkdown(lines: string[]): MarkdownScan {
       else {
         const end = rawHtmlEnd(html, content);
         if (end === null) {
-          push(true, "");
+          push(true, "", html.kind === "blank-line");
           continue;
         }
         html = null;
@@ -119,7 +120,7 @@ function scanMarkdown(lines: string[]): MarkdownScan {
         const end = rawHtmlEnd(openingHtml, content);
         if (end === null) {
           html = openingHtml;
-          push(true, "");
+          push(true, "", openingHtml.kind === "blank-line");
           continue;
         }
         allowCodeOpeners = false;
