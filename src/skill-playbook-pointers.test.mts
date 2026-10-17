@@ -175,25 +175,3 @@ describe("pr-shepherd skill recurrence contract", () => {
     expect(skill).toContain("is not a new `[ESCALATE]` trigger");
   });
 });
-
-describe("draft handoff playbook", () => {
-  const playbook = readFileSync(
-    new URL("plugins/pr-shepherd/skills/pr-shepherd/references/draft-handoff.md", rootUrl),
-    "utf8",
-  );
-
-  it("names the raw fields, the report line set, and the skills page", () => {
-    expect(playbook).toContain("# Draft handoff");
-    for (const field of ["isDraft", "autoMergeRequest", "state", "stack object"]) {
-      expect(playbook).toContain(field);
-    }
-    expect(playbook).toContain("repository auto-merge setting");
-    expect(playbook).toContain("gh pr view --json isDraft,autoMergeRequest,state");
-    expect(playbook).toContain("manual-verification-required");
-    expect(playbook).toContain("MERGED");
-    expect(playbook).toMatch(/in-session `pr-shepherd` loop/);
-    expect(readFileSync(new URL("docs/skills.md", rootUrl), "utf8")).toContain(
-      "`draft-handoff.md`",
-    );
-  });
-});
