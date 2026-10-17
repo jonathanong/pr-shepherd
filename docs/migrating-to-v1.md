@@ -23,7 +23,7 @@ Two config files in the same directory is an error. The merge order is unchanged
 
 In 0.x, an invalid config logged a `failed to parse` warning and fell back to the built-in defaults. In v1, Shepherd validates config before any GitHub call and exits with code `78` (`EX_CONFIG`) on any of these:
 
-- an unknown key, including every pre-v1 key
+- an unknown key, including every renamed or removed pre-v1 key (`github.transport`, `iterate.instructions`, `merge.method`, and `classify.standard` keep their names and stay valid)
 - a value of the wrong type or out of range
 - an invalid regex
 - a YAML syntax error
@@ -127,6 +127,8 @@ The npm package now ships `pr-shepherd.schema.json`, generated from the same val
 # yaml-language-server: $schema=./node_modules/pr-shepherd/pr-shepherd.schema.json
 ```
 
+The path is relative to the config file, so in `.pr-shepherd/config.yml` use `../node_modules/pr-shepherd/pr-shepherd.schema.json`.
+
 Every key, default, and per-key section is in [configuration.md](configuration.md).
 
 ## Commands
@@ -162,6 +164,8 @@ Most of these aliases printed a deprecation warning in 0.x. In v1 they are all u
 | `pr-shepherd log-file`                 | `pr-shepherd admin log-file`  |
 
 `pr-shepherd journal extract --body-file <path>` remains.
+
+`suggest` is batch-shaped. Scripts that read the JSON from `build-suggestion-patch` or `commit-suggestion` must read `threadId`, `path`, `patch`, and the other per-suggestion fields from `patches[0]` instead of the top level, and its instructions cover the whole batch.
 
 ### Removed flags
 
@@ -244,4 +248,4 @@ The first run after the upgrade starts partly clean. Nothing needs to be deleted
 - **The stored PR fingerprint is discarded.** Its version changed, so the first tick per PR runs the full batched query instead of skipping on an unchanged fingerprint.
 - **Local event-mode state is no longer read.** 0.x event mode (`--poll-mode event`, `poll.mode: event`, or the MCP and library `pollMode: "event"`) kept seen markers, stall timers, and reply records under `<git-common-dir>/pr-shepherd-state` on any machine. v1 uses that directory only when `CLAUDE_CODE_REMOTE=true`. A local `iterate` uses the normal state directory, so state written by local event-mode runs is not carried over.
 
-Triage attempt counts (`fix-attempts.json`) and merge requests carry over. To start fully clean, run `pr-shepherd admin clean all`.
+Triage attempt counts (`fix-attempts.json`) and merge requests carry over when the state directory is unchanged. Local event-mode runs kept them under `<git-common-dir>/pr-shepherd-state`, so after such runs they start fresh with the rest of that state, and an earlier triage attempt may be repeated once. To start fully clean, run `pr-shepherd admin clean all`.
