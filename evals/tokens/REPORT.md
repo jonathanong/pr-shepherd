@@ -88,7 +88,7 @@ Losses accepted with a written reason (pending-losses.json `structural`): an own
 | `stack-queue-wait` | REST core requests (cloud REST transport) | gh CLI | 60 | 1 | +5900% | Without GraphQL any plan reads the stack (a cold 200, which gh also pays) and then a 200 that sees the layers merge, at least 2 REST requests, and gh spends 1 (the stack lookup; its queue polls are GraphQL). |
 | `stack-merge` | REST core requests (REST transport) | gh CLI | 32 | 3 | +967% | Owner decision (#525): gh merges with the stack lookup, the `merge-async` PUT and one poll, 3 REST requests, without reading any layer's state; the floor without GraphQL is 2 (the cold stack lookup and the merge write). pr-shepherd's REST stack tick reads each layer's snapshot (check suites, workflow runs and review state) before it prints the merge, and the owner keeps that snapshot rather than narrowing it to gh's reads. |
 | `stack-merge` | REST core requests (cloud REST transport) | gh CLI | 32 | 3 | +967% | Owner decision (#525): gh merges with the stack lookup, the `merge-async` PUT and one poll, 3 REST requests, without reading any layer's state; the floor without GraphQL is 2 (the cold stack lookup and the merge write). pr-shepherd's REST stack tick reads each layer's snapshot (check suites, workflow runs and review state) before it prints the merge, and the owner keeps that snapshot rather than narrowing it to gh's reads. |
-| `chars-per-token:stack-setup` | tool tokens | GitHub MCP | 1,210 | 1,192 | +2% | Owner decision (#596): the skills' `allowed-tools` pre-approve the pnpm (`pnpm exec`, `pnpm dlx`) and bun (`bunx`) launchers alongside npx so those users are not prompted on every CLI call. At the measured chars-per-token ratio the extra frontmatter puts one-time setup a few tokens above GitHub MCP; the owner keeps the launchers. |
+| `chars-per-token:stack-setup` | tool tokens | GitHub MCP | 1,209 | 1,192 | +1% | Owner decision (#596): the skills' `allowed-tools` pre-approve the pnpm (`pnpm exec`, `pnpm dlx`) and bun (`bunx`) launchers alongside npx so those users are not prompted on every CLI call. At the measured chars-per-token ratio the extra frontmatter puts one-time setup a few tokens above GitHub MCP; the owner keeps the launchers. |
 
 ## Typical PR session
 
@@ -353,25 +353,25 @@ An arm that gains a truncated or rejected call at the measured ratios no longer 
 | session | metric | vs. | characters per token | pr-shepherd | baseline | saving |
 | --- | --- | --- | --- | --- | --- | --- |
 | Typical PR session | cost (ITE) | gh CLI | 3.5 for every arm | 58,565 | 100,341 | −42% |
-| Typical PR session | cost (ITE) | gh CLI | 2.26 / 2.53 | 63,865 | 114,509 | −44% |
+| Typical PR session | cost (ITE) | gh CLI | 2.26 / 2.53 | 63,859 | 114,509 | −44% |
 | Typical PR session | cost (ITE) | GitHub MCP | 3.5 for every arm | 40,256 | 168,019 | −76% |
-| Typical PR session | cost (ITE) | GitHub MCP | 2.26 / 2.53 (unmeasured) | 42,101 | 179,405 | −77% |
+| Typical PR session | cost (ITE) | GitHub MCP | 2.26 / 2.53 (unmeasured) | 42,099 | 179,405 | −77% |
 | Typical PR session | tool tokens | gh CLI | 3.5 for every arm | 8,548 | 30,934 | −72% |
-| Typical PR session | tool tokens | gh CLI | 2.26 / 2.53 | 12,191 | 42,262 | −71% |
+| Typical PR session | tool tokens | gh CLI | 2.26 / 2.53 | 12,190 | 42,262 | −71% |
 | Typical PR session | tool tokens | GitHub MCP | 3.5 for every arm | 2,767 | 26,629 | −90% |
-| Typical PR session | tool tokens | GitHub MCP | 2.26 / 2.53 (unmeasured) | 3,960 | 35,626 | −89% |
+| Typical PR session | tool tokens | GitHub MCP | 2.26 / 2.53 (unmeasured) | 3,959 | 35,626 | −89% |
 | Typical stack session | cost (ITE) | gh CLI | 3.5 for every arm | 30,939 | 56,002 | −45% |
-| Typical stack session | cost (ITE) | gh CLI | 2.26 / 2.53 | 33,453 | 57,528 | −42% |
+| Typical stack session | cost (ITE) | gh CLI | 2.26 / 2.53 | 33,451 | 57,528 | −42% |
 | Typical stack session | cost (ITE) | GitHub MCP | 3.5 for every arm | 30,939 | 83,549 | −63% |
-| Typical stack session | cost (ITE) | GitHub MCP | 2.26 / 2.53 (unmeasured) | 33,453 | 86,528 | −61% |
+| Typical stack session | cost (ITE) | GitHub MCP | 2.26 / 2.53 (unmeasured) | 33,451 | 86,528 | −61% |
 | Typical stack session | tool tokens | gh CLI | 3.5 for every arm | 3,895 | 5,133 | −24% |
-| Typical stack session | tool tokens | gh CLI | 2.26 / 2.53 | 5,720 | 6,310 | −9% |
+| Typical stack session | tool tokens | gh CLI | 2.26 / 2.53 | 5,719 | 6,310 | −9% |
 | Typical stack session | tool tokens | GitHub MCP | 3.5 for every arm | 3,895 | 9,478 | −59% |
-| Typical stack session | tool tokens | GitHub MCP | 2.26 / 2.53 (unmeasured) | 5,720 | 11,729 | −51% |
+| Typical stack session | tool tokens | GitHub MCP | 2.26 / 2.53 (unmeasured) | 5,719 | 11,729 | −51% |
 
 Verdicts, per session and per scenario, that flip to a loss at the measured ratios. They are gated like any other loss, under `chars-per-token:` in `pending-losses.json`:
 
-- stack-setup: tool tokens vs. GitHub MCP, 1,210 vs. 1,192 (#528)
+- stack-setup: tool tokens vs. GitHub MCP, 1,209 vs. 1,192 (#528)
 
 ## Real sessions
 
