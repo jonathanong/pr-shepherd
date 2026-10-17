@@ -1,6 +1,6 @@
 ---
 title: "pr-shepherd"
-description: "Drive a pull request to merge-ready with your coding agent. One call gathers the whole PR; one action says what to do next. Works with Claude Code, Codex, Grok, and any MCP client."
+description: "Drive a pull request to merge-ready with your coding agent. One call gathers the whole PR; one action says what to do next. Works with Claude Code, Codex, Grok, and any stdio MCP client."
 docs:
   - path: "README.md"
     label: "README — outcomes, evidence, and install"
@@ -13,7 +13,7 @@ docs:
 
 # Get your agent's PRs to merge-ready
 
-<p class="tagline">Your coding agent fixes the code. Shepherd tells it what GitHub wants next: every review comment, every failing check, and every merge requirement in one call.</p>
+<p class="tagline">Your coding agent fixes the code. Shepherd tells it what GitHub wants next: every review comment, every failing check, and the merge requirements GitHub reports, in one call.</p>
 </div>
 
 **About 42% cheaper per PR than `gh` and 77% cheaper than the GitHub MCP server.** Waiting on
@@ -58,21 +58,21 @@ summary 3 passing
 <div class="card-grid">
 
 - [**It sees the whole PR**](docs/handled-cases.md) One call returns review threads, comments,
-  CI failures with log excerpts, and the real merge requirements. It handles 60 GitHub edge
+  CI failures with log excerpts when available, and the real merge requirements. It handles 60 GitHub edge
   cases, like a cancelled run that needs a rerun rather than a code fix.
 - [**It costs less to run**](https://github.com/jonathanong/pr-shepherd/blob/main/evals/tokens/README.md)
   An estimated 42% lower cost per PR session than `gh`, and 77% lower than the GitHub MCP
   server.
 - [**Your agent knows what to do next**](https://github.com/jonathanong/pr-shepherd/blob/main/evals/README.md)
-  Every tick ends in one action with numbered steps. On tricky GitHub cases, eval scores
+  Every tick ends in one action, and every action but `CANCEL` comes with numbered steps. On tricky GitHub cases, eval scores
   rise from 0.82 to 0.94, about two-thirds fewer misses.
 - [**It's easy on your rate limit**](docs/github-api.md) Waiting on CI costs about 60
   GraphQL points an hour, against about 360 for `gh pr checks --watch`. Idle waits cost
   about 4.
 - [**It never touches your git**](docs/escalations.md) Shepherd runs zero git mutations and
   never merges on its own. It hands off to a human only for 10 specific reasons.
-- [**It works with your agent**](docs/mcp.md) Plugins for Claude Code, Codex, and Grok, an
-  MCP server for any other client, and a CLI for shells and CI. Native stacked PRs are
+- [**It works with your agent**](docs/mcp.md) Plugins for Claude Code, Codex, and Grok, a
+  local stdio MCP server for other clients, and a CLI for shells and CI. Native stacked PRs are
   supported.
 
 </div>
@@ -92,8 +92,11 @@ action:
 <li>ESCALATE</li>
 </ul>
 
-The agent follows the printed steps, pushes, and asks again until the PR is ready. It still
-decides what each comment deserves, and only `ESCALATE` needs a human.
+A `--stack` poll can also return `SHEPHERD`, which starts a session for each stack layer you own.
+
+The agent follows the printed steps, pushes, and asks again. `READY` means a clean PR is
+settling; the loop ends at `CANCEL`, or at `ESCALATE` when a human is needed. The agent
+still decides what each comment deserves.
 
 ## Install
 
@@ -118,7 +121,7 @@ claude /plugin install pr-shepherd
 codex plugin marketplace add jonathanong/pr-shepherd
 ```
 
-Then enable the `pr-shepherd` plugin in Codex.
+Then install and enable the `pr-shepherd` plugin in Codex.
 
 </div>
 
