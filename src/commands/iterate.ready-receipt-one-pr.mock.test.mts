@@ -59,6 +59,7 @@ const hiddenNotice = {
   isMinimized: true,
   firstLookStatus: "minimized" as const,
 };
+const humanNotice = { ...hiddenNotice, author: "reviewer", authorType: "User" as const };
 
 function onePrReport(overrides: Parameters<typeof makeReport>[0] = {}) {
   return makeReport({ status: "READY", headSha: "head-1", baseRefOid: "base-1", ...overrides });
@@ -171,7 +172,7 @@ describe("runIterate — one-PR READY receipt", () => {
       onePrReport({
         comments: {
           actionable: [],
-          firstLook: [{ ...hiddenNotice, body: "New finding", edited: true }],
+          firstLook: [{ ...humanNotice, body: "New finding", edited: true }],
         },
       }),
     );
@@ -192,7 +193,7 @@ describe("runIterate — one-PR READY receipt", () => {
         mergeQueue: { enabled: true, inQueue: true },
         comments: {
           actionable: [],
-          firstLook: [{ ...hiddenNotice, body: "New finding", edited: true }],
+          firstLook: [{ ...humanNotice, body: "New finding", edited: true }],
         },
       }),
     );
@@ -205,6 +206,36 @@ describe("runIterate — one-PR READY receipt", () => {
       alreadyElapsed: false,
     });
   });
+
+  it.each([
+    ["a Bot author", hiddenNotice],
+    [
+      "a configured bot username",
+      { ...hiddenNotice, author: "coderabbitai", authorType: "User" as const },
+    ],
+  ])(
+    "keeps the countdown and the receipt when %s re-edits a minimized comment",
+    async (_name, notice) => {
+      mockRunCheck.mockResolvedValue(
+        onePrReport({
+          comments: {
+            actionable: [],
+            firstLook: [{ ...notice, body: "Regenerated", edited: true }],
+          },
+        }),
+      );
+
+      const result = await runIterate(makeOpts());
+
+      expect(result.action).toBe("fix_code");
+      expect(mockClearReadyReceipt).not.toHaveBeenCalled();
+      expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, true, 600, "owner", "repo", {
+        headSha: "head-1",
+        alreadyElapsed: true,
+      });
+      expect(mockClearReadyDelay).not.toHaveBeenCalled();
+    },
+  );
 
   it("restarts the countdown for new activity on a resolved thread", async () => {
     const thread = { ...makeThread(), firstLookStatus: "resolved" as const };
