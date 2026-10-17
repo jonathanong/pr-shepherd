@@ -11,7 +11,6 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import builtinConfig from "../../src/config.json" with { type: "json" };
 import { testFingerprint } from "../github/fingerprint-fixture.mts";
 import { projectBatchToRest, restBatchEnvelope } from "./rest-projection.mts";
 import { projectRawSummaryToRest, projectSummaryItemToRest } from "./rest-summary-projection.mts";
@@ -134,6 +133,7 @@ vi.mock("../../src/state/ci-retrigger.mts", async (importOriginal) => ({
 // ---------------------------------------------------------------------------
 
 import { main } from "../../src/cli-parser.mts";
+import { resolveConfig } from "../../src/config/resolve.mts";
 import { fetchPrBatch } from "../../src/github/batch.mts";
 import { fetchPollSummary } from "../../src/github/poll-summary.mts";
 import { getMergeableState, getRepoInfo, type RepoInfo } from "../../src/github/client.mts";
@@ -273,7 +273,7 @@ export interface Fixture {
   checkAnnotationsByCheckId?: Record<string, unknown[]>;
   /** Return value of loadSeenMap() — keys are item IDs. */
   seenMap?: Record<string, { seenAt: number; bodyHash: string; deniedMutationBodyHash?: string }>;
-  /** Deep-merged on top of defaultConfig(). */
+  /** Config-file overlay (kebab-case keys), validated and resolved like a `.pr-shepherdrc.yml`. */
   config?: Record<string, unknown>;
   /** Return value of updateReadyDelay(). */
   readyDelayState?: { isReady: boolean; shouldCancel: boolean; remainingSeconds: number };
@@ -349,13 +349,12 @@ const DEFAULT_BATCH = {
 };
 
 /**
- * Deep clone of the shipped built-in defaults (src/config.json) — the same object
- * src/config/load.mts falls back to when no .pr-shepherdrc.yml is found. Cloning the real
- * defaults (rather than hand-copying them) means the harness cannot silently drift from
- * production, as it previously did (see test-cases/README.md).
+ * The resolved built-in defaults, from the same schema src/config/load.mts uses when no config
+ * file is found. Using the real schema (rather than hand-copying defaults) means the harness
+ * cannot silently drift from production, as it previously did (see test-cases/README.md).
  */
 export function defaultConfig() {
-  return structuredClone(builtinConfig);
+  return resolveConfig({});
 }
 
 const DEFAULT_READY_STATE = { isReady: false, shouldCancel: false, remainingSeconds: 600 };
@@ -495,10 +494,9 @@ export function applyFixture(fixture: Fixture, transport: FixtureTransport = "gr
   vi.mocked(readQueueRemovalAcknowledgment).mockResolvedValue(
     fixture.queueRemovalAcknowledgment ?? null,
   );
-  const baseCfg = defaultConfig() as unknown as Record<string, unknown>;
   let overlayCfg: Record<string, unknown> = {};
   if (fixture.stallTimeoutMinutes !== undefined) {
-    overlayCfg.iterate = { stallTimeoutMinutes: fixture.stallTimeoutMinutes };
+    overlayCfg.iterate = { "stall-timeout-minutes": fixture.stallTimeoutMinutes };
   }
   if (fixture.config) {
     // deepMerge, not Object.assign: a plain assign would let fixture.config.iterate replace
@@ -506,7 +504,8 @@ export function applyFixture(fixture: Fixture, transport: FixtureTransport = "gr
     // whenever a fixture used both knobs.
     overlayCfg = deepMerge(overlayCfg, fixture.config);
   }
-  const cfg = Object.keys(overlayCfg).length > 0 ? deepMerge(baseCfg, overlayCfg) : baseCfg;
+  // Fixture config uses the config-file format and runs through the real strict schema.
+  const cfg = resolveConfig(overlayCfg, "fixture config");
   mockLoadConfig.mockReturnValue(cfg);
 
   const batchData = fixture.batchData

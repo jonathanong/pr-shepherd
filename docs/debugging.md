@@ -63,7 +63,7 @@ A merged PR returns for example `{"action":"cancel","pr":42,"reason":"merged"}` 
 
 ### "Loop fires cancel immediately"
 
-**Symptom:** The loop emits `action: cancel` on the first tick, before the ready-delay (default 10 minutes) of READY.
+**Symptom:** The loop emits `action: cancel` on the first tick, before any ready-delay countdown. The ready delay defaults to 0 (no countdown); set `iterate.ready-delay-minutes` to add one.
 
 **Cause:** A stale `ready-since.txt` from a previous run is old enough to trigger `shouldCancel`. (A current READY receipt also completes the ready-delay immediately by design; see [actions.md](actions.md).)
 
@@ -97,7 +97,7 @@ rm /var/folders/ab/xyz/T/pr-shepherd-state/acme/myrepo/42/ready-since.txt
 
 1. Read the fatal error's resource, remaining/limit, reset time, and credential source. Response headers are authoritative; no extra `/rate_limit` request is needed.
 2. Use `--verbose` for command-scoped API usage, or the per-worktree log for every response's quota headers and credential source. See [github-api.md](github-api.md#how-to-read-spend) to tell primary exhaustion from a secondary-limit `Retry-After`, and [graphql.md](graphql.md) or [rest.md](rest.md) for each transport's reads.
-3. Follow a `quotaWarning` interval when present. Configure bands with `watch.graphqlQuotaWarnings` (factors of `poll.intervalSeconds`, absolute minutes, or both). The poll dispatcher applies them on `WAIT` / `MARK_READY` sleeps; single-tick `iterate` / MCP only recommend.
+3. Follow a `quotaWarning` interval when present. Configure bands with `poll.quota-warnings` (factors of `poll.interval-seconds`, absolute minutes, or both). The poll dispatcher applies them on `WAIT` / `MARK_READY` sleeps; single-tick `iterate` / MCP only recommend.
 4. For quota isolation, use a GitHub App installation access token or a different GitHub user. Same-user PATs share the user's GraphQL pool with GitHub MCP and `gh api graphql` ([authentication.md](authentication.md)).
 5. `--until-terminal` keeps polling through an exhausted primary limit until the reset (plus a short margin) and exits `75` only after five attempts that do not move the reset time, writing one stderr line with the resource and reset time. A bounded poll fails with `75` immediately. See [github-api.md](github-api.md#rate-limit-backoff).
 6. For `apply review` output, retry only the IDs listed under `Not replied`, `Not resolved`, `Not minimized`, or `Not dismissed` (`due to rate limit`); IDs listed as completed already succeeded.

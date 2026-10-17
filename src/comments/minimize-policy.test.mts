@@ -18,7 +18,7 @@ describe("shouldMinimizeAuthor", () => {
 
   it("throws for invalid runtime policies", () => {
     expect(() => shouldMinimizeAuthor("Bot", "bot" as never)).toThrow(
-      "Invalid minimizeComments policy: bot",
+      "Invalid iterate.minimize-comments policy: bot",
     );
   });
 

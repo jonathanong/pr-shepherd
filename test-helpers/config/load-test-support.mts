@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, vi } from "vitest";
+import { afterEach, beforeEach, expect, vi } from "vitest";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -40,6 +40,21 @@ export function writeRcAt(relativeDir: string, contents: string): void {
 
 export function removeRc(): void {
   rmSync(join(tmpDir, RC));
+}
+
+/** Assert that loading the current tree fails as a config error naming every `fragment`. */
+export async function expectConfigError(...fragments: string[]): Promise<string> {
+  const loadConfig = await freshLoadConfig();
+  let caught: unknown;
+  try {
+    loadConfig();
+  } catch (error) {
+    caught = error;
+  }
+  expect(caught).toMatchObject({ name: "ShepherdError", exitCode: 78 });
+  const message = (caught as Error).message;
+  for (const fragment of fragments) expect(message).toContain(fragment);
+  return message;
 }
 
 export function tmpPath(...segments: string[]): string {

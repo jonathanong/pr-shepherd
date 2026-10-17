@@ -4,7 +4,7 @@
 
 How Shepherd replies to and resolves inline review threads by author class, how that interacts with GitHub's "require conversation resolution" branch rule, and where the current behavior differs from a requested policy. For contributors working on thread routing and for anyone debugging a PR that is `READY` while GitHub still says conversations block the merge.
 
-Shepherd replies to human inline threads. It resolves them only for the authenticated viewer's own threads, and for other humans when [`iterate.resolveOtherHumanThreads`](configuration.md#iterateresolveotherhumanthreads--default-none) allows it. That enum does not read the branch rule.
+Shepherd replies to human inline threads. It resolves them only for the authenticated viewer's own threads, and for other humans when [`iterate.resolve-other-human-threads`](configuration.md#iterateresolve-other-human-threads--default-none) allows it. That enum does not read the branch rule.
 
 **Requested policy, not implemented:**
 
@@ -18,12 +18,12 @@ The matrices below show current behavior, then the requested policy against the 
 
 A row is one GitHub review thread (`pullRequest.reviewThreads`), the unit conversation resolution blocks on. The class comes from the original inline comment; later replies do not change it.
 
-| Class           | Predicate                                                                                                           |
-| --------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Detected bot    | `authorType: Bot`, a login containing `[bot]`, or a login listed in top-level `botUsernames`                        |
-| Unknown         | `authorType: Unknown`, and not a detected bot                                                                       |
-| Viewer-authored | `viewerDidAuthor: true`, `authorType: User`, login does not contain `[bot]`, login is not in `botUsernames`         |
-| Other human     | `authorType: User`, login does not contain `[bot]`, login is not in `botUsernames`, and `viewerDidAuthor` is absent |
+| Class           | Predicate                                                                                                            |
+| --------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Detected bot    | `authorType: Bot`, a login containing `[bot]`, or a login listed in top-level `bot-usernames`                        |
+| Unknown         | `authorType: Unknown`, and not a detected bot                                                                        |
+| Viewer-authored | `viewerDidAuthor: true`, `authorType: User`, login does not contain `[bot]`, login is not in `bot-usernames`         |
+| Other human     | `authorType: User`, login does not contain `[bot]`, login is not in `bot-usernames`, and `viewerDidAuthor` is absent |
 
 A Shepherd reply is a latest comment whose body begins `<!-- pr-shepherd -->`. "Marker-ended" means that prefix is present and GitHub still reports `isResolved: false`.
 
@@ -55,7 +55,7 @@ A Shepherd reply is a latest comment whose body begins `<!-- pr-shepherd -->`. "
 
 ## Current mutation matrix
 
-For threads already in the work set. `iterate.resolveOtherHumanThreads` defaults to `none`.
+For threads already in the work set. `iterate.resolve-other-human-threads` defaults to `none`.
 
 | Class                                       | Unmarked          | Marker-ended |
 | ------------------------------------------- | ----------------- | ------------ |
@@ -122,14 +122,14 @@ The gap is the required-resolution, other-human row; the requested switch is the
 
 [escalations.md](escalations.md) is a closed trigger list; none of its triggers is "this human inline thread needs a decision" or "conversation resolution is required."
 
-| Situation                                                                                                 | Current action                                                                                                       | Trigger         |
-| --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | --------------- |
-| Choose a code edit versus an acknowledgment reply                                                         | `FIX_CODE`. Instructions say to decide, then run the generated review mutation even when no code change is warranted | none            |
-| GraphQL reports `viewerCanReply` or `viewerCanResolve` false; or GitHub denies the REST attempt           | surface once, omit/retry no generated mutation, suppress until the transcript changes                                | none            |
-| Resolution required, other-human thread already replied to, enum leaves it open                           | thread leaves the work set; ready-delay `CANCEL` names `unresolved conversations are required`                       | none            |
-| Located thread stays in the work set for `iterate.fixAttemptsPerThread` caller-visible `FIX_CODE` results | following unchanged tick                                                                                             | `fix-thrash`    |
-| `WAIT` or `FIX_CODE` fingerprint unchanged through an enabled stall timeout                               | handoff                                                                                                              | `stall-timeout` |
-| Folded flag is false because `baseRef` was missing                                                        | enum applies; requirements show conversation resolution not required                                                 | none            |
+| Situation                                                                                                       | Current action                                                                                                       | Trigger         |
+| --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | --------------- |
+| Choose a code edit versus an acknowledgment reply                                                               | `FIX_CODE`. Instructions say to decide, then run the generated review mutation even when no code change is warranted | none            |
+| GraphQL reports `viewerCanReply` or `viewerCanResolve` false; or GitHub denies the REST attempt                 | surface once, omit/retry no generated mutation, suppress until the transcript changes                                | none            |
+| Resolution required, other-human thread already replied to, enum leaves it open                                 | thread leaves the work set; ready-delay `CANCEL` names `unresolved conversations are required`                       | none            |
+| Located thread stays in the work set for `iterate.triage-attempts-per-thread` caller-visible `FIX_CODE` results | following unchanged tick                                                                                             | `fix-thrash`    |
+| `WAIT` or `FIX_CODE` fingerprint unchanged through an enabled stall timeout                                     | handoff                                                                                                              | `stall-timeout` |
+| Folded flag is false because `baseRef` was missing                                                              | enum applies; requirements show conversation resolution not required                                                 | none            |
 
 `ambiguousComments` on an escalation payload is the actionable top-level PR comment list copied onto some handoffs; inline threads are copied separately as `unresolvedThreads`. The field name is not a trigger.
 
@@ -142,9 +142,9 @@ Conversation resolution is a review-thread rule. Other surfaces keep their own r
 | Surface                    | Reply              | Resolve / hide                                                                                       |
 | -------------------------- | ------------------ | ---------------------------------------------------------------------------------------------------- |
 | Inline review thread       | generated reply    | resolve per the mutation matrix                                                                      |
-| Top-level PR comment       | no generated reply | minimize non-humans per `iterate.minimizeComments`; humans are marker-gated and never minimized      |
+| Top-level PR comment       | no generated reply | minimize non-humans per `iterate.minimize-comments`; humans are marker-gated and never minimized     |
 | `COMMENTED` review summary | no generated reply | minimize eligible non-humans after known inline child threads are resolved                           |
-| `APPROVED` review          | no generated reply | minimize only when `iterate.minimizeApprovals` is on and the author is eligible                      |
+| `APPROVED` review          | no generated reply | minimize only when `iterate.minimize-approvals` is on and the author is eligible                     |
 | Human `CHANGES_REQUESTED`  | no generated reply | left in place; the review stays on the status count after its body is unchanged                      |
 | Bot `CHANGES_REQUESTED`    | no generated reply | dismiss when GraphQL reports `viewerCanAdminister: true`; REST attempts and trusts GitHub's response |
 

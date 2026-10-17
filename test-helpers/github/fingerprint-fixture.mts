@@ -1,30 +1,18 @@
 import type { PrFingerprint } from "../../src/github/fingerprint.mts";
 import type { PrShepherdConfig } from "../../src/config/load.mts";
+import { testConfig } from "../config/test-config.mts";
 
-export function testShepherdConfig(overrides: Partial<PrShepherdConfig> = {}): PrShepherdConfig {
-  return {
-    botUsernames: [],
-    ignoreChecks: [],
-    iterate: {
-      fixAttemptsPerThread: 3,
-      stallTimeoutMinutes: 60,
-      minimizeApprovals: false,
-      minimizeComments: "all",
-      behindBaseHint: "",
-      resolveOtherHumanThreads: "none",
+/** The fingerprint suites' baseline config with an rc-shape `overlay` deep-merged on top. */
+export function testShepherdConfig(overlay: Record<string, unknown> = {}): PrShepherdConfig {
+  return testConfig(
+    {
+      "bot-usernames": [],
+      iterate: { "minimize-comments": "all", "ready-delay-minutes": 10 },
+      poll: { "quota-warnings": [] },
+      checks: { "ci-trigger-events": ["pull_request"] },
     },
-    watch: { readyDelayMinutes: 10, graphqlQuotaWarnings: [] },
-    resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 } },
-    checks: { ciTriggerEvents: ["pull_request"], ignoreLogLines: [] },
-    mergeStatus: { blockingReviewerLogins: [] },
-    actions: {
-      autoMinimizeSuppressed: true,
-      autoMarkReady: true,
-      neverCancelRuns: [],
-      workWhileQueued: false,
-    },
-    ...overrides,
-  } as PrShepherdConfig;
+    overlay,
+  );
 }
 
 export function testFingerprint(overrides: Partial<PrFingerprint> = {}): PrFingerprint {

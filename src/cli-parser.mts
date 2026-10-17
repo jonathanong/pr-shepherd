@@ -3,7 +3,13 @@
 
 import { readFileSync } from "node:fs";
 
-import { EXIT, applyReviewResultToExitCode, errorToExitCode } from "./exit-codes.mts";
+import {
+  EXIT,
+  ShepherdError,
+  applyReviewResultToExitCode,
+  errorToExitCode,
+} from "./exit-codes.mts";
+import { loadConfig } from "./config/load.mts";
 import { runResolveMutate } from "./commands/resolve.mts";
 import { runLogFile } from "./commands/log-file.mts";
 import { handleClean } from "./cli/clean-handler.mts";
@@ -58,6 +64,15 @@ export async function main(argv: string[]): Promise<void> {
       `pr-shepherd: ${error instanceof Error ? error.message : String(error)}\n`,
     );
     process.exitCode = EXIT.USAGE;
+    return;
+  }
+  // Validate config before any GitHub work, so a bad or pre-v1 config file exits 78 up front.
+  try {
+    loadConfig();
+  } catch (error) {
+    if (!(error instanceof ShepherdError)) throw error;
+    process.stderr.write(`pr-shepherd: ${error.message}\n`);
+    process.exitCode = error.exitCode;
     return;
   }
   return runWithGithubTransport(mode, () => dispatch(dispatched), {

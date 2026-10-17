@@ -116,7 +116,7 @@ describe("runCheck — unlocated and viewer-authored thread visibility", () => {
     "keeps an already-seen outdated %s bot thread as resolution-only work without a line",
     async (_kind, author, authorType, botUsernames) => {
       const cfg = defaultConfig();
-      cfg.botUsernames = botUsernames;
+      cfg["bot-usernames"] = botUsernames;
       mockLoadConfig.mockReturnValue(cfg);
       const outdated = makeThread({
         id: "t-outdated-bot",

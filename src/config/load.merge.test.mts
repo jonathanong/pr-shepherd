@@ -1,5 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
-import { freshLoadConfig, writeRc } from "../../test-helpers/config/load-test-support.mts";
+import { describe, expect, it } from "vitest";
+import {
+  expectConfigError,
+  freshLoadConfig,
+  tmpPath,
+  writeRc,
+  writeRcAt,
+} from "../../test-helpers/config/load-test-support.mts";
 import { buildMergeCommandPlan, unavailableMergeResult } from "../commands/iterate/merge.mts";
 import type { IterateResultBase } from "../types.mts";
 
@@ -16,23 +22,23 @@ function mergeArgv(allowed?: Array<"merge" | "squash" | "rebase">): string[] {
   return plan.command.argv;
 }
 
-describe("loadConfig — merge.commandArgs", () => {
+describe("loadConfig — merge.command-args", () => {
   it("defaults to empty", async () => {
     const loadConfig = await freshLoadConfig();
-    expect(loadConfig().merge?.commandArgs).toEqual([]);
+    expect(loadConfig().merge["command-args"]).toEqual([]);
   });
 
   it("keeps command args without a strategy until the command is built", async () => {
-    writeRc("merge:\n  commandArgs:\n    - --delete-branch\n");
+    writeRc("merge:\n  command-args:\n    - --delete-branch\n");
     const loadConfig = await freshLoadConfig();
-    expect(loadConfig().merge?.commandArgs).toEqual(["--delete-branch"]);
+    expect(loadConfig().merge["command-args"]).toEqual(["--delete-branch"]);
     expect(mergeArgv()).toEqual(expect.arrayContaining(["--delete-branch", "--merge"]));
   });
 
   it("preserves one configured merge strategy", async () => {
-    writeRc("merge:\n  commandArgs:\n    - --squash\n    - --delete-branch\n");
+    writeRc("merge:\n  command-args:\n    - --squash\n    - --delete-branch\n");
     const loadConfig = await freshLoadConfig();
-    expect(loadConfig().merge?.commandArgs).toEqual(["--squash", "--delete-branch"]);
+    expect(loadConfig().merge["command-args"]).toEqual(["--squash", "--delete-branch"]);
     expect(mergeArgv()).toContain("--squash");
   });
 
@@ -55,25 +61,22 @@ describe("loadConfig — merge.commandArgs", () => {
     ["--squash=true", ["--squash=true"]],
     ["-sd", ["-sd"]],
   ])("recognizes compound strategy form %s", async (arg, expected) => {
-    writeRc(`merge:\n  commandArgs:\n    - ${arg}\n`);
+    writeRc(`merge:\n  command-args:\n    - ${arg}\n`);
     const loadConfig = await freshLoadConfig();
-    expect(loadConfig().merge?.commandArgs).toEqual(expected);
+    expect(loadConfig().merge["command-args"]).toEqual(expected);
     expect(mergeArgv()).not.toContain("--merge");
   });
 
   it("treats an explicitly false strategy as inactive", async () => {
-    writeRc("merge:\n  commandArgs:\n    - --squash=false\n");
+    writeRc("merge:\n  command-args:\n    - --squash=false\n");
     const loadConfig = await freshLoadConfig();
-    expect(loadConfig().merge?.commandArgs).toEqual(["--squash=false"]);
+    expect(loadConfig().merge["command-args"]).toEqual(["--squash=false"]);
     expect(mergeArgv()).toContain("--merge");
   });
 
-  it("rejects Shepherd-owned args and falls back to defaults", async () => {
-    writeRc("merge:\n  commandArgs:\n    - --repo=other/repo\n");
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    const loadConfig = await freshLoadConfig();
-    expect(loadConfig().merge?.commandArgs).toEqual([]);
-    expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain("Shepherd-owned");
+  it("rejects Shepherd-owned args", async () => {
+    writeRc("merge:\n  command-args:\n    - --repo=other/repo\n");
+    await expectConfigError(".pr-shepherdrc.yml", "`merge.command-args`", "Shepherd-owned");
   });
 
   it.each([
@@ -87,48 +90,37 @@ describe("loadConfig — merge.commandArgs", () => {
     "-h=true",
     "-hwat",
   ])("rejects unsafe %s", async (flag) => {
-    writeRc(`merge:\n  commandArgs:\n    - ${flag}\n    - /sensitive/path\n`);
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    const loadConfig = await freshLoadConfig();
-    expect(loadConfig().merge?.commandArgs).toEqual([]);
-    expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain("Shepherd-owned");
+    writeRc(`merge:\n  command-args:\n    - ${flag}\n    - /sensitive/path\n`);
+    await expectConfigError(".pr-shepherdrc.yml", "`merge.command-args`", "Shepherd-owned");
   });
 
   it.each(["-Rattacker/repo", "-F/sensitive/path", "--disable-auto"])(
     "rejects attached or conflicting %s",
     async (arg) => {
-      writeRc(`merge:\n  commandArgs:\n    - ${arg}\n`);
-      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-      const loadConfig = await freshLoadConfig();
-      expect(loadConfig().merge?.commandArgs).toEqual([]);
-      expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain("Shepherd-owned");
+      writeRc(`merge:\n  command-args:\n    - ${arg}\n`);
+      await expectConfigError("`merge.command-args`");
     },
   );
 
-  it("rejects a non-array commandArgs value", async () => {
-    writeRc("merge:\n  commandArgs: --delete-branch\n");
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    const loadConfig = await freshLoadConfig();
-    expect(loadConfig().merge?.commandArgs).toEqual([]);
-    expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain("array of strings");
+  it("rejects a non-array command-args value", async () => {
+    writeRc("merge:\n  command-args: --delete-branch\n");
+    await expectConfigError(".pr-shepherdrc.yml", "`merge.command-args`", "expected array");
   });
 
-  it("rejects multiple strategies and falls back to defaults", async () => {
-    writeRc("merge:\n  commandArgs:\n    - --squash\n    - --rebase\n");
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    const loadConfig = await freshLoadConfig();
-    expect(loadConfig().merge?.commandArgs).toEqual([]);
-    expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain("multiple merge strategies");
+  it("rejects multiple strategies", async () => {
+    writeRc("merge:\n  command-args:\n    - --squash\n    - --rebase\n");
+    await expectConfigError(
+      ".pr-shepherdrc.yml",
+      "`merge.command-args`",
+      "multiple merge strategies",
+    );
   });
 
   it.each(["-ms", "--squash=true\n    - --rebase"])(
     "rejects compound multiple strategies in %s",
     async (args) => {
-      writeRc(`merge:\n  commandArgs:\n    - ${args}\n`);
-      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-      const loadConfig = await freshLoadConfig();
-      expect(loadConfig().merge?.commandArgs).toEqual([]);
-      expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain("multiple merge strategies");
+      writeRc(`merge:\n  command-args:\n    - ${args}\n`);
+      await expectConfigError("`merge.command-args`");
     },
   );
 
@@ -147,12 +139,18 @@ describe("loadConfig — merge.commandArgs", () => {
   });
 
   it("rejects a method that disagrees with commandArgs", async () => {
-    writeRc("merge:\n  method: merge\n  commandArgs:\n    - --squash\n");
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    const loadConfig = await freshLoadConfig();
-    expect(loadConfig().merge?.method).toBeUndefined();
-    expect(loadConfig().merge?.commandArgs).toEqual([]);
-    expect(stderrSpy.mock.calls.map((c) => c[0]).join("")).toContain("conflicts");
+    writeRc("merge:\n  method: merge\n  command-args:\n    - --squash\n");
+    await expectConfigError(".pr-shepherdrc.yml", "`merge.command-args`", "conflicts");
+  });
+
+  it("checks method and command-args together after merging files", async () => {
+    writeRc("merge:\n  method: merge\n");
+    writeRcAt("nested", "merge:\n  command-args:\n    - --squash\n");
+    process.chdir(tmpPath("nested"));
+    await expectConfigError(
+      `invalid config in ${tmpPath("nested", ".pr-shepherdrc.yml")}, ${tmpPath(".pr-shepherdrc.yml")}`,
+      "`merge.method` merge conflicts with the `merge.command-args` strategy squash",
+    );
   });
 
   it("escalates when the selected method is unavailable", () => {
@@ -188,11 +186,8 @@ describe("loadConfig — merge.commandArgs", () => {
   it.each(["--squash=maybe", "-sfoo", "-dR"])(
     "rejects ambiguous strategy syntax %s",
     async (arg) => {
-      writeRc(`merge:\n  commandArgs:\n    - ${arg}\n`);
-      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-      const loadConfig = await freshLoadConfig();
-      expect(loadConfig().merge?.commandArgs).toEqual([]);
-      expect(stderrSpy).toHaveBeenCalled();
+      writeRc(`merge:\n  command-args:\n    - ${arg}\n`);
+      await expectConfigError("`merge.command-args`");
     },
   );
 });

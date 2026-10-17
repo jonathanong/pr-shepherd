@@ -15,7 +15,7 @@ registerIterateHooks();
 describe("runIterate — triage via runCheck", () => {
   it("passes autoMinimizeSuppressed config into runCheck", async () => {
     const cfg = defaultConfig();
-    cfg.actions.autoMinimizeSuppressed = false;
+    cfg.actions["auto-minimize-suppressed"] = false;
     mockLoadConfig.mockReturnValue(cfg);
     mockRunCheck.mockResolvedValue(makeReport());
 

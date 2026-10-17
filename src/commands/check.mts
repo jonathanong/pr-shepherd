@@ -119,7 +119,7 @@ async function runScopedCheck(
 ): Promise<ShepherdReport> {
   const config = loadConfig();
   const reuseFingerprint = opts.fingerprintCache === true;
-  const paginateApprovedReviews = config.iterate.minimizeApprovals;
+  const paginateApprovedReviews = config.iterate["minimize-approvals"];
   const includeReceiptSummary = (await context?.wantsReceiptSummary(prNumber, repo)) ?? false;
   // GraphQL transport: conditional REST change detectors can replay an idle report for free.
   // Changed trunk rules invalidate a cached report; check again without reuse.
@@ -190,7 +190,7 @@ async function runScopedCheck(
       owner: repo.owner,
       name: repo.name,
       pr: prNumber,
-      relevantEvents: config.checks.ciTriggerEvents,
+      relevantEvents: config.checks["ci-trigger-events"],
     },
     context,
   );
@@ -284,7 +284,7 @@ async function runScopedCheck(
     operation: "reply" | "resolve" | "dismiss" | "minimize" | "view",
   ): boolean =>
     !mutationWasDenied(id, body, seenMap) && canGenerateGithubMutation(capability, operation);
-  const botUsernames = normalizeBotUsernames(config.botUsernames);
+  const botUsernames = normalizeBotUsernames(config["bot-usernames"]);
   const ruleSet = await loadClassifyRules(getEffectiveCwd(), config.standardRules);
   const classifyIndex = buildClassifyIndex(ruleSet, batchData);
   const partition = partitionBatch(classifyIndex, batchData);
@@ -314,7 +314,7 @@ async function runScopedCheck(
       (c) => !partition.suppressedCommentIds.has(c.id) || deniedRuleAutoResolveCommentIds.has(c.id),
     ),
     seenMap,
-    config.iterate.minimizeComments,
+    config.iterate["minimize-comments"],
     botUsernames,
     new Set(
       batchData.comments
@@ -339,7 +339,7 @@ async function runScopedCheck(
   const visibleThreadCandidates = batchData.reviewThreads.filter(
     (t) => !partition.suppressedThreadIds.has(t.id) || deniedRuleAutoResolveThreadIds.has(t.id),
   );
-  const resolveOtherHumanThreads = config.iterate.resolveOtherHumanThreads ?? "none";
+  const resolveOtherHumanThreads = config.iterate["resolve-other-human-threads"] ?? "none";
   const threadMutationRouting = buildThreadMutationRouting(
     visibleThreadCandidates,
     botUsernames,
@@ -483,7 +483,7 @@ async function runScopedCheck(
   const deferWhileQueued =
     opts.merge === true &&
     batchData.isInMergeQueue === true &&
-    config.actions.workWhileQueued !== true &&
+    config.actions["work-while-queued"] !== true &&
     !hasCheckDrivenActionableWork(
       {
         failing: merged.failing,

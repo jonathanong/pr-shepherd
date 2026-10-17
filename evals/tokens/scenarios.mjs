@@ -89,7 +89,7 @@ const HISTORY = readJson("history-pr505.json");
 // How long one CI run takes, and how often a baseline agent re-checks it.
 const CI_MINUTES = 6;
 const BASELINE_POLL_MINUTES = 1;
-// A stack poll sleeps poll.intervalSeconds × poll.stackIntervalFactor (60s × 2).
+// A stack poll sleeps poll.interval-seconds × poll.stack-interval-factor (60s × 2).
 const STACK_POLL_SECONDS = 120;
 
 // --- arms -------------------------------------------------------------------
@@ -405,7 +405,7 @@ const mcpMerge = (pullNumber, sha, { phase = 2, method = "merge", repo } = {}) =
 // --- the real CI failure ----------------------------------------------------
 
 /**
- * buildLogExcerpt applies `checks.ignoreLogLines` from the nearest
+ * buildLogExcerpt applies `checks.ignore-log-lines` from the nearest
  * .pr-shepherdrc.yml and the one in $HOME. Run it from an empty directory that
  * is also $HOME, so a developer's own config cannot change the report.
  */

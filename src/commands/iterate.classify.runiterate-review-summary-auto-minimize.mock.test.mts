@@ -136,7 +136,7 @@ describe("runIterate — review summary auto-minimize", () => {
   });
   it("minimizes only GitHub-classified bot summaries when minimizeComments=bots", async () => {
     const cfg = defaultConfig();
-    cfg.iterate.minimizeComments = "bots";
+    cfg.iterate["minimize-comments"] = "bots";
     mockLoadConfig.mockReturnValue(cfg);
     mockRunCheck.mockResolvedValue(
       makeReport({

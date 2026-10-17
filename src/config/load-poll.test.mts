@@ -1,13 +1,22 @@
-import { describe, expect, it, vi } from "vitest";
-import { freshLoadConfig, writeRc } from "../../test-helpers/config/load-test-support.mts";
+import { describe, expect, it } from "vitest";
+import {
+  expectConfigError,
+  freshLoadConfig,
+  writeRc,
+} from "../../test-helpers/config/load-test-support.mts";
 
 const DEFAULT_POLL = {
-  intervalSeconds: 60,
-  stackIntervalFactor: 2,
-  timeoutSeconds: 270,
-  debounceSeconds: 60,
-  quietStatus: false,
-  reconcileSeconds: 900,
+  "interval-seconds": 60,
+  "stack-interval-factor": 2,
+  "timeout-seconds": 270,
+  "debounce-seconds": 60,
+  "quiet-status": false,
+  "reconcile-seconds": 900,
+  "quota-warnings": [
+    { "remaining-percent": 30, "interval-factor": 2 },
+    { "remaining-percent": 20, "interval-factor": 5 },
+    { "remaining-percent": 10, "interval-factor": 10 },
+  ],
 };
 
 describe("loadConfig — poll defaults", () => {
@@ -17,62 +26,54 @@ describe("loadConfig — poll defaults", () => {
   });
 
   it("deep-merges configured poll defaults", async () => {
-    writeRc("poll:\n  intervalSeconds: 120\n  quietStatus: true\n");
+    writeRc("poll:\n  interval-seconds: 120\n  quiet-status: true\n");
     const loadConfig = await freshLoadConfig();
     expect(loadConfig().poll).toEqual({
       ...DEFAULT_POLL,
-      intervalSeconds: 120,
-      quietStatus: true,
+      "interval-seconds": 120,
+      "quiet-status": true,
     });
   });
 
   it.each([
     ["poll object", "poll: disabled"],
-    ["interval", "poll:\n  intervalSeconds: 0"],
-    ["timeout", "poll:\n  timeoutSeconds: -1"],
-    ["debounce", "poll:\n  debounceSeconds: -1"],
-    ["reconcile", "poll:\n  reconcileSeconds: -1"],
-    ["quiet status", "poll:\n  quietStatus: yes"],
-  ])("falls back to defaults for an invalid %s", async (_label, yaml) => {
+    ["interval", "poll:\n  interval-seconds: 0"],
+    ["timeout", "poll:\n  timeout-seconds: -1"],
+    ["debounce", "poll:\n  debounce-seconds: -1"],
+    ["reconcile", "poll:\n  reconcile-seconds: -1"],
+    ["quiet status", "poll:\n  quiet-status: yes"],
+  ])("rejects an invalid %s", async (_label, yaml) => {
     writeRc(`${yaml}\n`);
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    const loadConfig = await freshLoadConfig();
-
-    expect(loadConfig().poll).toEqual(DEFAULT_POLL);
-    expect(stderrSpy.mock.calls.map((call) => call[0]).join("")).toContain("Invalid config: poll");
+    await expectConfigError("`poll");
   });
 
   it("allows debounce to be disabled", async () => {
-    writeRc("poll:\n  debounceSeconds: 0\n");
+    writeRc("poll:\n  debounce-seconds: 0\n");
     const loadConfig = await freshLoadConfig();
-    expect(loadConfig().poll.debounceSeconds).toBe(0);
+    expect(loadConfig().poll["debounce-seconds"]).toBe(0);
   });
 
-  it("keeps the default factor when an rc sets only intervalSeconds", async () => {
-    writeRc("poll:\n  intervalSeconds: 90\n");
+  it("keeps the default factor when an rc sets only interval-seconds", async () => {
+    writeRc("poll:\n  interval-seconds: 90\n");
     const loadConfig = await freshLoadConfig();
-    expect(loadConfig().poll.intervalSeconds).toBe(90);
-    expect(loadConfig().poll.stackIntervalFactor).toBe(2);
+    expect(loadConfig().poll["interval-seconds"]).toBe(90);
+    expect(loadConfig().poll["stack-interval-factor"]).toBe(2);
   });
 
   it.each([
     ["custom", "3", 3],
     ["fractional", "1.5", 1.5],
     ["minimum", "1", 1],
-  ])("accepts a %s stackIntervalFactor", async (_label, yaml, expected) => {
-    writeRc(`poll:\n  stackIntervalFactor: ${yaml}\n`);
+  ])("accepts a %s stack-interval-factor", async (_label, yaml, expected) => {
+    writeRc(`poll:\n  stack-interval-factor: ${yaml}\n`);
     const loadConfig = await freshLoadConfig();
-    expect(loadConfig().poll.stackIntervalFactor).toBe(expected);
+    expect(loadConfig().poll["stack-interval-factor"]).toBe(expected);
   });
 
   it("rejects a stack interval that exceeds the timer limit", async () => {
-    writeRc("poll:\n  intervalSeconds: 60\n  stackIntervalFactor: 40000\n");
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    const loadConfig = await freshLoadConfig();
-
-    expect(loadConfig().poll).toEqual(DEFAULT_POLL);
-    expect(stderrSpy.mock.calls.map((call) => call[0]).join("")).toContain(
-      "must be finite and at most 2147483647 milliseconds",
+    writeRc("poll:\n  interval-seconds: 60\n  stack-interval-factor: 40000\n");
+    await expectConfigError(
+      "`poll.interval-seconds` × `poll.stack-interval-factor` must be at most 2147483.647 seconds",
     );
   });
 
@@ -81,14 +82,8 @@ describe("loadConfig — poll defaults", () => {
     ["negative", "-2"],
     ["non-finite", "!!float .nan"],
     ["infinite", "!!float .inf"],
-  ])("rejects a %s stackIntervalFactor", async (_label, yaml) => {
-    writeRc(`poll:\n  stackIntervalFactor: ${yaml}\n`);
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-    const loadConfig = await freshLoadConfig();
-
-    expect(loadConfig().poll).toEqual(DEFAULT_POLL);
-    expect(stderrSpy.mock.calls.map((call) => call[0]).join("")).toContain(
-      "Invalid config: poll.stackIntervalFactor must be a finite number greater than or equal to 1",
-    );
+  ])("rejects a %s stack-interval-factor", async (_label, yaml) => {
+    writeRc(`poll:\n  stack-interval-factor: ${yaml}\n`);
+    await expectConfigError("`poll.stack-interval-factor`");
   });
 });

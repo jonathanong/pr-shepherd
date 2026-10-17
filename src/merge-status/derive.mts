@@ -77,7 +77,9 @@ function detectBlockingBotReview(pr: BatchPrData): boolean {
   // A blocking bot review is "in progress" when:
   //   1. Any reviewRequest has a login starting with one of the configured prefixes, OR
   //   2. Any latestReview has such a login AND state == "PENDING"
-  const prefixes = loadConfig().mergeStatus.blockingReviewerLogins.map((l) => l.toLowerCase());
+  const prefixes = loadConfig()["mark-ready"]["blocking-reviewer-logins"].map((l) =>
+    l.toLowerCase(),
+  );
   const isBlocking = (login: string) => prefixes.some((p) => login.toLowerCase().startsWith(p));
 
   const requested = pr.reviewRequests.some((r) => isBlocking(r.login));

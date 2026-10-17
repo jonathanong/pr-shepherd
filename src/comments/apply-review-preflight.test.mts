@@ -46,8 +46,7 @@ describe("apply review preflight", () => {
     await harness({ head: "b".repeat(40) });
     const { loadConfig } = await import("../config/load.mts");
     const config = loadConfig();
-    const poll = config.resolve.shaPoll;
-    Object.assign(poll, { intervalMs: 0, maxAttempts: 2 });
+    Object.assign(config.apply, { "sha-poll-interval-seconds": 0, "sha-poll-max-attempts": 2 });
 
     await expect(applyReview(["PRRT_a"], HEAD)).rejects.toThrow("head SHA has not updated");
     expect(operations()).not.toContain("BulkApply");

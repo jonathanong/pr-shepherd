@@ -6,7 +6,7 @@ This is the context counterpart to [actions.md](actions.md). One `iterate` tick 
 
 How the data is fetched: [github-api.md](github-api.md) ([graphql.md](graphql.md), [rest.md](rest.md)). How it becomes an action: [iterate-flow.md](iterate-flow.md).
 
-Debounce ticks in the poll dispatcher (`pr-shepherd [PR] --debounce`, default: `poll.debounceSeconds`; built-in 1m) run `iterate` with `persistSeen: false`. Seen markers and first-look suppression are deferred until the post-window tick, so late comments are not marked seen before the agent-facing result.
+Debounce ticks in the poll dispatcher (`pr-shepherd [PR] --debounce`, default: `poll.debounce-seconds`; built-in 1m) run `iterate` with `persistSeen: false`. Seen markers and first-look suppression are deferred until the post-window tick, so late comments are not marked seen before the agent-facing result.
 
 ## Header
 
@@ -60,7 +60,7 @@ Do not infer “must wait for an approval” from `reviewDecision`. `REVIEW_REQU
 Thread handling (full matrix in [conversation-resolution.md](conversation-resolution.md)):
 
 - Unmarked bot and other non-human threads, and the viewer's own threads, are replied to and resolved.
-- Unmarked other-human threads are reply-only unless `iterate.resolveOtherHumanThreads` is `outdated` or `always`.
+- Unmarked other-human threads are reply-only unless `iterate.resolve-other-human-threads` is `outdated` or `always`.
 - A leading `<!-- pr-shepherd -->` marker on the latest comment identifies an automated reply regardless of author, so a marked thread is resolve-only on retry.
 - `resolutionOnlyThreads` therefore holds unresolved outdated or minimized threads and marked retry threads.
 - Non-human threads can be resolved, and eligible non-human comments and summaries can be minimized. Human items are never minimized. Already-minimized `COMMENTED` reviews are not fetched, so their bodies never enter the seen-marker gate.

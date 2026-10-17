@@ -1,5 +1,6 @@
 /* eslint-disable max-lines */
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { testConfig } from "../../test-helpers/config/test-config.mts";
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
@@ -33,7 +34,7 @@ function route(
 
 describe("routePollSummary", () => {
   beforeEach(() => {
-    mockLoadConfig.mockReturnValue({ actions: { autoMarkReady: true, workWhileQueued: false } });
+    mockLoadConfig.mockReturnValue(testConfig());
   });
   it.each([
     [
@@ -192,7 +193,7 @@ describe("routePollSummary", () => {
   });
 
   it("honors configured auto-mark-ready disablement", () => {
-    mockLoadConfig.mockReturnValue({ actions: { autoMarkReady: false, workWhileQueued: false } });
+    mockLoadConfig.mockReturnValue(testConfig({ "mark-ready": { auto: false } }));
     expect(route({ isDraft: true })).toEqual({
       action: "wait",
       reasons: ["draft-auto-mark-ready-disabled"],

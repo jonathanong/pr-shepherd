@@ -2,7 +2,6 @@ import { findMergeStrategies } from "./merge-command-args.mts";
 
 export type MergeMethod = "merge" | "squash" | "rebase";
 
-const MERGE_METHODS = new Set<MergeMethod>(["merge", "squash", "rebase"]);
 const METHOD_ORDER: readonly MergeMethod[] = ["merge", "squash", "rebase"];
 
 export interface RepositoryMergeSettings {
@@ -30,18 +29,11 @@ export function readAllowedMergeMethods(
   return allowed;
 }
 
-export function parseMergeMethod(value: unknown): MergeMethod {
-  if (typeof value === "string" && MERGE_METHODS.has(value as MergeMethod)) {
-    return value as MergeMethod;
-  }
-  throw new Error("Invalid config: merge.method must be merge, squash, or rebase");
-}
-
 export function configuredMergeMethod(merge: {
   method?: MergeMethod;
-  commandArgs?: string[];
+  "command-args": string[];
 }): MergeMethod | null {
-  const fromArgs = findMergeStrategies(merge.commandArgs ?? [])[0] as MergeMethod | undefined;
+  const fromArgs = findMergeStrategies(merge["command-args"])[0] as MergeMethod | undefined;
   return merge.method ?? fromArgs ?? null;
 }
 
