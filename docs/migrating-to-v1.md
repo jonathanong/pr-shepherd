@@ -21,7 +21,7 @@ Two config files in the same directory is an error. The merge order is unchanged
 
 ### Strict validation
 
-In 0.x, an invalid config logged a `failed to parse` warning and fell back to the built-in defaults. In v1, Shepherd validates config before any GitHub call and exits with code `78` (`EX_CONFIG`) on any of these:
+In 0.x, problems were mostly warnings. A file with a YAML syntax error was skipped while other files still merged, and an unknown key was dropped while the rest of its file applied. Only a merged config that failed validation fell back entirely to the built-in defaults. So an old warning does not always mean every configured value was inactive. In v1, Shepherd validates config before any GitHub call and exits with code `78` (`EX_CONFIG`) on any of these:
 
 - an unknown key, including every renamed or removed pre-v1 key (`github.transport`, `iterate.instructions`, `merge.method`, and `classify.standard` keep their names and stay valid)
 - a value of the wrong type or out of range
@@ -145,7 +145,7 @@ Every key, default, and per-key section is in [configuration.md](configuration.m
 
 - `stack` owns the `shepherd` action and exit code `16`. Passing `--stack` to the default command or to `iterate` now exits `64` with an error that names `pr-shepherd stack <PR>`.
 - `iterate` is always one tick, accepts several same-repository PRs for one aggregate tick, and prints `nextCheck`: when to rerun if no GitHub event arrives first. It behaves like 0.x `--poll-mode event`. It never sleeps or debounces, and it writes seen markers immediately. See [cloud.md](cloud.md).
-- `--poll-mode` and `poll.mode` are removed. `--poll-mode` exits `64` with an error that names the replacement. There is no mode to configure. The default command `pr-shepherd [PR ...]` and `stack` always loop, except in a Claude Code cloud session (`CLAUDE_CODE_REMOTE=true`), where they run one tick.
+- `--poll-mode` and `poll.mode` are removed. `--poll-mode` exits `64` with an error that names the replacement. There is no mode to configure. The default command `pr-shepherd [PR ...]` and `stack` loop by default. They run one tick in a Claude Code cloud session (`CLAUDE_CODE_REMOTE=true`), and `stack` also runs one tick with `--once`.
 - Multi-PR polling is unchanged: `pr-shepherd 1 2 3`.
 
 ### Removed aliases
@@ -248,4 +248,4 @@ The first run after the upgrade starts partly clean. Nothing needs to be deleted
 - **The stored PR fingerprint is discarded.** Its version changed, so the first tick per PR runs the full batched query instead of skipping on an unchanged fingerprint.
 - **Local event-mode state is no longer read.** 0.x event mode (`--poll-mode event`, `poll.mode: event`, or the MCP and library `pollMode: "event"`) kept seen markers, stall timers, and reply records under `<git-common-dir>/pr-shepherd-state` on any machine. v1 uses that directory only when `CLAUDE_CODE_REMOTE=true`. A local `iterate` uses the normal state directory, so state written by local event-mode runs is not carried over.
 
-Triage attempt counts (`fix-attempts.json`) and merge requests carry over when the state directory is unchanged. Local event-mode runs kept them under `<git-common-dir>/pr-shepherd-state`, so after such runs they start fresh with the rest of that state, and an earlier triage attempt may be repeated once. To start fully clean, run `pr-shepherd admin clean all`.
+Triage attempt counts (`fix-attempts.json`) and merge requests carry over when the state directory is unchanged. Local event-mode runs kept them under `<git-common-dir>/pr-shepherd-state`, so after such runs they start fresh with the rest of that state. The full per-thread budget (`iterate.triage-attempts-per-thread`, default 3) starts over, so an unchanged thread can come back in that many more `TRIAGE` results before Shepherd escalates. To start fully clean, run `pr-shepherd admin clean all`. That cleans the normal state directory only. If you used local event mode, also delete the legacy directory, which would otherwise come back into use under `CLAUDE_CODE_REMOTE=true`: `rm -rf "$(git rev-parse --git-common-dir)/pr-shepherd-state"`.
