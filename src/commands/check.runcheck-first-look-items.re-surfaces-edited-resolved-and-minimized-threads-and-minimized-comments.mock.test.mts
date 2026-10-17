@@ -56,6 +56,26 @@ describe("runCheck — first-look items", () => {
       ["c-minimized", "minimized", true],
     ]);
   });
+  it("surfaces an edited minimized comment once per distinct body", async () => {
+    const seen = new Map([["c-min", { seenAt: 1000, bodyHash: hashBody("summary v1") }]]);
+    mockLoadSeenMap.mockImplementation(async () => new Map(seen));
+    mockMarkSeen.mockImplementation(async (_key: unknown, id: string, body: string) => {
+      seen.set(id, { seenAt: seen.get(id)?.seenAt ?? 2000, bodyHash: hashBody(body) });
+    });
+    const runWithBody = async (body: string) => {
+      mockFetchPrBatch.mockResolvedValue({
+        data: makeBatchData({
+          comments: [makeComment({ id: "c-min", author: "coderabbitai", isMinimized: true, body })],
+        }),
+      });
+      return (await runCheck(BASE_OPTS)).comments.firstLook.map((c) => [c.id, c.edited]);
+    };
+
+    expect(await runWithBody("summary v2")).toEqual([["c-min", true]]);
+    expect(await runWithBody("summary v2")).toEqual([]);
+    expect(await runWithBody("summary v3")).toEqual([["c-min", true]]);
+    expect(await runWithBody("summary v3")).toEqual([]);
+  });
   it("calls markSeen for each first-look item with the item body", async () => {
     const outdated = makeThread({ id: "t-outdated", isOutdated: true, body: "fix this" });
     const minimized = makeComment({ id: "c-min", isMinimized: true, body: "nit" });

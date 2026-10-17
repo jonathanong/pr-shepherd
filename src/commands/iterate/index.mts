@@ -9,7 +9,7 @@ import { classifyReviewSummaries } from "./classify.mts";
 import { applyStallGuard } from "./stall.mts";
 import { clearStallState } from "../../state/iterate-stall.mts";
 import { handleFixCode } from "./fix-code.mts";
-import { normalizeBotUsernames } from "../../comments/authors.mts";
+import { isConfiguredBotAuthor, normalizeBotUsernames } from "../../comments/authors.mts";
 import { autoMinimizeComments } from "../../comments/resolve.mts";
 import { hasCheckDrivenActionableWork } from "../check-annotations.mts";
 import { buildReadyMergeOutcome, handleActiveMergeState } from "./merge-state.mts";
@@ -132,15 +132,23 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     if (unminimized.length > 0) reviewSummaryIds = [...reviewSummaryIds, ...unminimized];
   }
   // A first look at an already-minimized comment is only an acknowledgment.
-  // An edited body that no longer matches a noise rule may carry new feedback;
-  // it must restart the ready delay and void an existing READY receipt.
+  // A non-bot edit that no longer matches a noise rule may carry new feedback;
+  // it must restart the ready delay and void an existing READY receipt. Bots
+  // regenerate minimized summaries on their own, so their edits surface for
+  // acknowledgment without restarting the countdown.
+  const editedMinimizedFeedback = report.comments.firstLook.some(
+    (comment) =>
+      comment.isMinimized === true &&
+      comment.edited === true &&
+      !isConfiguredBotAuthor(comment, botUsernames),
+  );
   const hasReadinessWork =
     report.threads.actionable.length > 0 ||
     report.threads.resolutionOnly.length > 0 ||
     report.threads.firstLook.length > 0 ||
     (report.threads.ruleAutoResolveIds?.length ?? 0) > 0 ||
     report.comments.actionable.length > 0 ||
-    report.comments.firstLook.some((comment) => comment.edited === true) ||
+    editedMinimizedFeedback ||
     (report.comments.minimizeIds?.length ?? 0) > 0 ||
     report.changesRequestedReviews.length > 0 ||
     hasCheckDrivenActionableWork(reportForWork.checks, report.mergeStatus.status) ||
@@ -173,6 +181,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     receiptKey,
     report,
     hasReadinessWork,
+    editedMinimizedFeedback,
     checkContext,
   );
   const headSha = report.headSha ?? "unknown";
@@ -517,6 +526,7 @@ async function revalidateReadyReceipt(
   key: { owner: string; repo: string; pr: number },
   report: Awaited<ReturnType<typeof runCheck>>,
   hasReadinessWork: boolean,
+  editedMinimizedFeedback: boolean,
   context?: ReturnType<typeof createCheckExecutionContext>,
 ): Promise<boolean> {
   const receipt = await readReadyReceipt(key);
@@ -526,9 +536,6 @@ async function revalidateReadyReceipt(
     report.mergeStatus.state === "OPEN" &&
     !report.mergeStatus.isDraft &&
     Boolean(report.headSha && report.baseRefOid);
-  const editedMinimizedFeedback = report.comments.firstLook.some(
-    (comment) => comment.isMinimized && comment.edited === true,
-  );
   if (
     report.mergeStatus.state !== "OPEN" ||
     report.mergeStatus.isDraft ||
