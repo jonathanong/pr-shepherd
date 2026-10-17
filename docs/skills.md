@@ -26,17 +26,17 @@ Skills are thin dispatchers. They parse arguments, call the CLI or MCP, print th
 - Rebasing your own PR head onto its base and pushing it with `--force-with-lease` is part of this workflow; do not ask first. Bare `--force`, pushes to any other branch, remote or credential changes, unrelated changes, and ambiguous targets stay outside it.
 - If the CLI is unavailable, read the "MCP fallback" playbook (MCP `iterate`, then MCP `apply` and `suggest`). Do not run a shell `pr-shepherd apply` there. After a CLI poll, run the printed apply command.
 
-| Playbook             | Reference file                                                 |
-| -------------------- | -------------------------------------------------------------- |
-| Triage loop        | `triage-loop.md` (only named with `--instructions playbook`) |
-| Create a PR          | `create-pr.md`                                                 |
-| Draft handoff        | `draft-handoff.md`                                             |
-| MCP fallback         | `mcp-fallback.md`                                              |
-| Suggestion patches   | `suggestion-patches.md`                                        |
-| CI failure triage    | `ci-failure-triage.md`                                         |
-| Branch update        | `branch-update.md`                                             |
-| Merge queue ejection | `merge-queue-ejection.md`                                      |
-| Event loop           | `event-loop.md`                                                |
+| Playbook             | Reference file                                               |
+| -------------------- | ------------------------------------------------------------ |
+| Triage loop          | `triage-loop.md` (only named with `--instructions playbook`) |
+| Create a PR          | `create-pr.md`                                               |
+| Draft handoff        | `draft-handoff.md`                                           |
+| MCP fallback         | `mcp-fallback.md`                                            |
+| Suggestion patches   | `suggestion-patches.md`                                      |
+| CI failure triage    | `ci-failure-triage.md`                                       |
+| Branch update        | `branch-update.md`                                           |
+| Merge queue ejection | `merge-queue-ejection.md`                                    |
+| Event loop           | `event-loop.md`                                              |
 
 Install the plugin (skills plus the version-matched MCP server) or register `pr-shepherd-mcp` yourself; see [mcp.md](mcp.md). The CLI path needs `pr-shepherd` on `PATH`.
 
@@ -44,12 +44,12 @@ Install the plugin (skills plus the version-matched MCP server) or register `pr-
 
 Canonical command: `pr-shepherd [PR] --until-terminal`. Bare `pr-shepherd [PR]` stays the bounded poll for direct shell use (see [cli-usage.md](cli-usage.md)).
 
-| The poll...   | When                                                                                                                                                     |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| keeps polling | Ordinary `WAIT` and `MARK_READY`.                                                                                                                        |
-| returns       | `READY` while a clean ready-delay counts down.                                                                                                           |
+| The poll...   | When                                                                                                                                                   |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| keeps polling | Ordinary `WAIT` and `MARK_READY`.                                                                                                                      |
+| returns       | `READY` while a clean ready-delay counts down.                                                                                                         |
 | returns       | `TRIAGE` and stack-level `SHEPHERD` after `--debounce` (default 1m; `0` disables), which batches late review comments and CI failures into one result. |
-| returns       | `MERGE`, any non-terminal result that carries a quota warning, and terminal `CANCEL` or `ESCALATE`.                                                      |
+| returns       | `MERGE`, any non-terminal result that carries a quota warning, and terminal `CANCEL` or `ESCALATE`.                                                    |
 
 MCP `iterate` is the fallback when the CLI is unavailable. It has no debounce and returns one tick; the caller repeats ticks and does not poll forever. An MCP tick repeats the same `iterate` call and does not switch back to a CLI that was unavailable.
 

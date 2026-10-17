@@ -24,7 +24,7 @@ Refresh this file when `SKILL.md`, a skill reference, or iterate `## Instruction
 | Cloud event loop           |    609 |
 | Merge queue ejection       |    576 |
 | CI failure triage          |    566 |
-| Triage loop              |    374 |
+| Triage loop                |    374 |
 | MCP fallback               |    215 |
 | Suggestion patches         |    214 |
 | Create a PR                |    193 |
@@ -45,11 +45,11 @@ Refresh this file when `SKILL.md`, a skill reference, or iterate `## Instruction
 | Mean `## Instructions`                        |    124 |
 | Sum of `## Instructions` across 135 snapshots | 16,786 |
 
-| Snapshot                                                                                 | Full output | `## Instructions` |
-| ---------------------------------------------------------------------------------------- | ----------: | ----------------: |
+| Snapshot                                                                             | Full output | `## Instructions` |
+| ------------------------------------------------------------------------------------ | ----------: | ----------------: |
 | Multi-category `TRIAGE` (`54-triage-multi-category-threads-comments-checks-changes`) |         573 |               269 |
-| Ready delay (`10-ready-delay-countdown`)                                                 |         130 |                36 |
-| Stack merge (`97-aggregate-stack-full-merge`)                                            |         271 |               143 |
+| Ready delay (`10-ready-delay-countdown`)                                             |         130 |                36 |
+| Stack merge (`97-aggregate-stack-full-merge`)                                        |         271 |               143 |
 
 The stack merge example prints its `gh stack` extension check inline instead of naming a playbook.
 
@@ -65,6 +65,6 @@ Measured against the parent of `ad9bf2cd`, when every playbook lived in `SKILL.m
 | Median `## Instructions`  |    134 |     134 |
 | Mean `## Instructions`    |    159 |     124 |
 | Sum of `## Instructions`  | 18,481 |  16,786 |
-| Multi-category `TRIAGE` |    432 |     269 |
+| Multi-category `TRIAGE`   |    432 |     269 |
 | Ready delay               |     56 |      36 |
 | Stack merge               |    163 |     143 |

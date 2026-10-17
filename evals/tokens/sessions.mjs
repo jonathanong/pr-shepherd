@@ -1185,12 +1185,12 @@ export function realSessions(data = readJson(REAL_SESSIONS_FILE), cpt = {}) {
       polls: polls.length,
       applies: steps.length - polls.length,
       ticks: polls.reduce((s, i) => s + i.ticks, 0),
-      triage: polls.filter((i) => i.action === "TRIAGE").length,
+      triage: polls.filter((i) => recordedAction(i.action) === "TRIAGE").length,
       // TRIAGE polls that ended with a failed check: a baseline would fetch
       // the failed job's log, which the replay does not model.
       failedCheckFixes: polls.filter(
         (i) =>
-          i.action === "TRIAGE" &&
+          recordedAction(i.action) === "TRIAGE" &&
           stateAt(pr, i.t + i.seconds).checks.some((k) => k.conclusion === "FAILURE"),
       ).length,
       threads: pr.content.threads.length,

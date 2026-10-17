@@ -25,7 +25,7 @@ Actions:
   WAIT        No immediate action; continue with the next poll.
   MARK_READY  Draft PR was marked ready; continue with the next poll.
   READY       Clean PR is inside the ready-delay. Schedule the rerun for when remainingSeconds elapses. Do not invent unrelated work. Already-owned later work may continue.
-  TRIAGE    Agent action is required; follow the instructions, then continue polling.
+  TRIAGE      Agent action is required; follow the instructions, then continue polling.
   CANCEL      Stop polling this pull request: merged/closed or ready-delay elapsed. Continue remaining work from the original request.
   ESCALATE    Stop polling until a human provides direction.
   MERGE       Run the emitted merge/queue command, then continue monitoring.
