@@ -122,8 +122,8 @@ export function buildUnreportedFixResult(
   const prUrl = formatPrUrl(report.repo, report.pr);
   return {
     ...base,
-    action: "fix_code",
-    fix: {
+    action: "triage",
+    triage: {
       threads: [],
       resolutionOnlyThreads: [],
       actionableComments: [],

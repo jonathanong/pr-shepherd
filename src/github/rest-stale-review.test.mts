@@ -77,7 +77,7 @@ describe("REST stale changes-requested reviews", () => {
   });
 
   it.each([
-    { name: "stale", commit: previousHead, action: "fix_code" },
+    { name: "stale", commit: previousHead, action: "triage" },
     { name: "current", commit: currentHead, action: "escalate" },
   ])("excludes only $name human review from push-requiring work", async ({ commit, action }) => {
     await serveStaleReviewFixture({ base: "unsafe;base", reviews: [review(1, commit)] });
@@ -94,8 +94,8 @@ describe("REST stale changes-requested reviews", () => {
     expect(result.action).toBe(action);
     if (result.action === "escalate")
       expect(result.escalate.triggers).toContain("base-branch-unknown");
-    else if (result.action === "fix_code")
-      expect(result.fix.instructions.join("\n")).toContain("Ask the reviewer to re-review");
+    else if (result.action === "triage")
+      expect(result.triage.instructions.join("\n")).toContain("Ask the reviewer to re-review");
   });
 
   it("surfaces stale human feedback with re-review instructions and no automated dismissal", async () => {
@@ -110,15 +110,17 @@ describe("REST stale changes-requested reviews", () => {
         noAutoMarkReady: true,
       }),
     );
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") throw new Error(`Unexpected action ${result.action}`);
-    expect(result.fix.changesRequestedReviews).toMatchObject([{ id: "PRR_1", staleReview: true }]);
-    expect(result.fix.resolveCommand.hasMutations).toBe(false);
-    expect(result.fix.resolveCommand.argv).not.toContain("--dismiss-review-ids");
-    expect(result.fix.instructions.join("\n")).toContain("Ask the reviewer to re-review");
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") throw new Error(`Unexpected action ${result.action}`);
+    expect(result.triage.changesRequestedReviews).toMatchObject([
+      { id: "PRR_1", staleReview: true },
+    ]);
+    expect(result.triage.resolveCommand.hasMutations).toBe(false);
+    expect(result.triage.resolveCommand.argv).not.toContain("--dismiss-review-ids");
+    expect(result.triage.instructions.join("\n")).toContain("Ask the reviewer to re-review");
     expect(formatIterateResult(result)).toContain("ask reviewer to re-review or dismiss");
     expect(projectIterateLean(result)).toMatchObject({
-      fix: { changesRequestedReviews: [{ staleReview: true, commitOid: previousHead }] },
+      triage: { changesRequestedReviews: [{ staleReview: true, commitOid: previousHead }] },
     });
     expect(wire.requests.every(({ method }) => method === "GET")).toBe(true);
   });

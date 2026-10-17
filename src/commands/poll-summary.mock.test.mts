@@ -88,7 +88,7 @@ describe("aggregate poll recurrence", () => {
   it("returns actionable as soon as any row needs work", async () => {
     mockFetch.mockResolvedValue({
       selection: { kind: "prs", requested: [42, 43] },
-      prs: [row(42, "wait"), row(43, "fix_code")],
+      prs: [row(42, "wait"), row(43, "triage")],
     });
 
     await expect(runAggregatePoll(opts)).resolves.toMatchObject({ reason: "actionable" });
@@ -99,11 +99,11 @@ describe("aggregate poll recurrence", () => {
       selection: { kind: "stack", anchor: 43, stackNumber: 1, stackSize: 2 },
       prs: [
         {
-          ...row(42, "fix_code"),
+          ...row(42, "triage"),
           owned: true,
           stack: { number: 1, size: 2, position: 1, baseRefName: "main" },
         },
-        { ...row(43, "fix_code"), stack: { number: 1, size: 2, position: 2, baseRefName: "main" } },
+        { ...row(43, "triage"), stack: { number: 1, size: 2, position: 2, baseRefName: "main" } },
       ],
     });
 
@@ -129,11 +129,11 @@ describe("aggregate poll recurrence", () => {
       selection: { kind: "stack", anchor: 43, stackNumber: 1, stackSize: 2 },
       prs: [
         {
-          ...row(42, "fix_code"),
+          ...row(42, "triage"),
           owned: true,
           stack: { number: 1, size: 2, position: 1, baseRefName: "main" },
         },
-        { ...row(43, "fix_code"), stack: { number: 1, size: 2, position: 2, baseRefName: "main" } },
+        { ...row(43, "triage"), stack: { number: 1, size: 2, position: 2, baseRefName: "main" } },
       ],
     });
 
@@ -166,7 +166,7 @@ describe("aggregate poll recurrence", () => {
     });
     mockFetch.mockResolvedValue({
       selection: { kind: "prs", requested: [42] },
-      prs: [row(42, "fix_code")],
+      prs: [row(42, "triage")],
     });
     const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     await expect(
@@ -184,7 +184,7 @@ describe("aggregate poll recurrence", () => {
     });
     mockFetch.mockResolvedValue({
       selection: { kind: "prs", requested: [42] },
-      prs: [row(42, "fix_code")],
+      prs: [row(42, "triage")],
     });
 
     await expect(

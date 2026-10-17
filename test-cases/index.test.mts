@@ -30,13 +30,13 @@ registerHarnessBefore();
 const fixturesDir = fileURLToPath(new URL("./", import.meta.url));
 
 /**
- * The action slug encoded in a fixture's directory name (e.g. "16-fix-code-review-thread" ->
- * "fix_code") must match the action iterate actually emits. Without this guard a fixture can
+ * The action slug encoded in a fixture's directory name (e.g. "16-triage-review-thread" ->
+ * "triage") must match the action iterate actually emits. Without this guard a fixture can
  * silently drift from what its name promises — see the three fixtures documented in
  * test-cases/README.md that this guard would have caught.
  */
 const NAME_ACTION_SLUGS: ReadonlyArray<[prefix: string, action: string]> = [
-  ["fix-code-", "fix_code"],
+  ["triage-", "triage"],
   ["mark-ready-", "mark_ready"],
   ["cancel-", "cancel"],
   ["ready-", "ready"],

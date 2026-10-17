@@ -86,7 +86,7 @@ describe("runIterate — merge-queue work deferral", () => {
 
     mockLoadConfig.mockReturnValue(defaultConfig({ actions: { "work-while-queued": true } }));
     const immediate = await runIterate(makeOpts({ merge: true }));
-    expect(immediate.action).toBe("fix_code");
+    expect(immediate.action).toBe("triage");
   });
 
   it("does not act on actionable work while queued without --merge (queue awareness stays off)", async () => {
@@ -109,10 +109,10 @@ describe("runIterate — merge-queue work deferral", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
   });
 
-  it("does not escalate fix-thrash while deferred, but escalates once the PR leaves the queue", async () => {
+  it("does not escalate triage-thrash while deferred, but escalates once the PR leaves the queue", async () => {
     mockReadFixAttempts.mockResolvedValue({
       headSha: "abc123",
       threadAttempts: { "thread-1": 3 },
@@ -144,11 +144,11 @@ describe("runIterate — merge-queue work deferral", () => {
     const poppedResult = await runIterate(makeOpts({ merge: true }));
     expect(poppedResult.action).toBe("escalate");
     if (poppedResult.action === "escalate") {
-      expect(poppedResult.escalate.triggers).toContain("fix-thrash");
+      expect(poppedResult.escalate.triggers).toContain("triage-thrash");
     }
   });
 
-  it("still routes a failing merge-group check to fix_code immediately while queued", async () => {
+  it("still routes a failing merge-group check to triage immediately while queued", async () => {
     mockRunCheck.mockResolvedValue(
       queuedReport({
         checks: {
@@ -184,10 +184,10 @@ describe("runIterate — merge-queue work deferral", () => {
 
     const result = await runIterate(makeOpts({ merge: true }));
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
   });
 
-  it("still routes a CONFLICTS merge state to fix_code immediately while queued", async () => {
+  it("still routes a CONFLICTS merge state to triage immediately while queued", async () => {
     mockRunCheck.mockResolvedValue(
       queuedReport({
         mergeStatus: {
@@ -209,7 +209,7 @@ describe("runIterate — merge-queue work deferral", () => {
 
     const result = await runIterate(makeOpts({ merge: true }));
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
   });
 
   it("counts surfaced approvals toward deferredWork.reviewSummaries when minimizeApprovals is enabled", async () => {
@@ -265,7 +265,7 @@ describe("runIterate — merge-queue work deferral", () => {
 
     const result = await runIterate(makeOpts({ merge: true }));
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
   });
 
   it("dedupes overlapping thread/comment/summary buckets by ID instead of double-counting", async () => {

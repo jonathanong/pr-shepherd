@@ -140,9 +140,9 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
         logExcerpt: '"test-playwright": {"result": "failure"}',
       }),
     ]);
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
-      expect(result.fix.checks[0]?.logExcerpt).toBe('"test-playwright": {"result": "failure"}');
+    expect(result.action).toBe("triage");
+    if (result.action === "triage") {
+      expect(result.triage.checks[0]?.logExcerpt).toBe('"test-playwright": {"result": "failure"}');
     }
   });
 });

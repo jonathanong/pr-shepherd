@@ -1,5 +1,5 @@
 {
-  "description": "A human escalation coexists with independent FIX_CODE and WAIT row work; the aggregate dispatches Shepherd sessions first while retaining the human-action evidence for the next stack poll.",
+  "description": "A human escalation coexists with independent TRIAGE and WAIT row work; the aggregate dispatches Shepherd sessions first while retaining the human-action evidence for the next stack poll.",
   "mode": "aggregate",
   "args": ["stack", "https://github.com/owner/repo/pull/403", "--debounce", "0s"],
   "expectedExitCode": 16,
@@ -16,7 +16,7 @@
       },
       {
         "pr": 402, "repo": "owner/repo", "title": "Independent review work", "url": "https://github.com/owner/repo/pull/402",
-        "action": "fix_code", "reasons": ["review-work"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "action": "triage", "reasons": ["review-work"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
         "headRefName": "review-work", "headRefOid": "4022222222222222222222222222222222222222", "baseRefName": "foundation",
         "stack": { "number": 40, "size": 3, "position": 2, "baseRefName": "main" },
         "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/402 --until-terminal"

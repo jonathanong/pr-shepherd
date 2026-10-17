@@ -22,7 +22,7 @@ export const EXIT = Object.freeze({
   /** Draft PR converted to ready for review. */
   MARK_READY: 11,
   /** Agent work required. */
-  FIX_CODE: 12,
+  TRIAGE: 12,
   /** Human attention required. */
   ESCALATE: 13,
   /** `cancel` + `closed` — PR closed without merging. */
@@ -76,8 +76,8 @@ export function iterateResultToExitCode(result: IterateResult): number {
       return EXIT.WAIT;
     case "mark_ready":
       return EXIT.MARK_READY;
-    case "fix_code":
-      return EXIT.FIX_CODE;
+    case "triage":
+      return EXIT.TRIAGE;
     case "escalate":
       return EXIT.ESCALATE;
     case "merge":

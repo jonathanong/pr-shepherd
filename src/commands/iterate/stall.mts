@@ -19,12 +19,14 @@ import type {
 function pendingReviewCommandsFromResult(
   result: IterateResult,
 ): EscalateDetails["pendingReviewCommands"] | undefined {
-  if (result.action !== "fix_code") return undefined;
+  if (result.action !== "triage") return undefined;
   const pending = {
-    ...(result.fix.resolveOnlyCommand?.hasMutations && {
-      resolveOnlyCommand: result.fix.resolveOnlyCommand,
+    ...(result.triage.resolveOnlyCommand?.hasMutations && {
+      resolveOnlyCommand: result.triage.resolveOnlyCommand,
     }),
-    ...(result.fix.resolveCommand.hasMutations && { resolveCommand: result.fix.resolveCommand }),
+    ...(result.triage.resolveCommand.hasMutations && {
+      resolveCommand: result.triage.resolveCommand,
+    }),
   };
   return Object.keys(pending).length > 0 ? pending : undefined;
 }
@@ -32,13 +34,13 @@ function pendingReviewCommandsFromResult(
 function surfacedSummariesFromResult(
   result: IterateResult,
 ): Pick<EscalateDetails, "firstLookSummaries" | "editedSummaries"> {
-  if (result.action !== "fix_code") return {};
+  if (result.action !== "triage") return {};
   return {
-    ...(result.fix.firstLookSummaries.length > 0 && {
-      firstLookSummaries: result.fix.firstLookSummaries,
+    ...(result.triage.firstLookSummaries.length > 0 && {
+      firstLookSummaries: result.triage.firstLookSummaries,
     }),
-    ...(result.fix.editedSummaries.length > 0 && {
-      editedSummaries: result.fix.editedSummaries,
+    ...(result.triage.editedSummaries.length > 0 && {
+      editedSummaries: result.triage.editedSummaries,
     }),
   };
 }

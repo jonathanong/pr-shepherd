@@ -51,15 +51,15 @@ Iterate flags:
   --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
   --no-auto-mark-ready           Do not convert draft PRs to ready for review.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
-  --instructions playbook|inline Render fix_code steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
+  --instructions playbook|inline Render triage steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
 
 Polling flags (looping commands; in a Claude Code cloud session, CLAUDE_CODE_REMOTE=true, they run one tick like iterate):
   --interval <duration>          Delay between WAIT ticks. Bare number = seconds. Default: poll.interval-seconds (built-in 60s). Stack and multi-PR polls multiply that by poll.stack-interval-factor (built-in 2) unless this flag is set.
   --timeout <duration>           Poll wall-clock cap for WAIT ticks. Bare number = seconds. Default: poll.timeout-seconds (built-in 4.5m).
-  --debounce <duration>          Settle window after first FIX_CODE or stack SHEPHERD before returning. Bare number = seconds. Default: poll.debounce-seconds (built-in 60s). 0 disables.
+  --debounce <duration>          Settle window after first TRIAGE or stack SHEPHERD before returning. Bare number = seconds. Default: poll.debounce-seconds (built-in 60s). 0 disables.
   --quiet-status                 Print only changed WAIT snapshots. Overrides poll.quiet-status.
   --no-quiet-status              Print every WAIT snapshot. Overrides poll.quiet-status.
-  --until-terminal               Continue through WAIT/MARK_READY until READY/FIX_CODE/MERGE/CANCEL/ESCALATE or stack SHEPHERD.
+  --until-terminal               Continue through WAIT/MARK_READY until READY/TRIAGE/MERGE/CANCEL/ESCALATE or stack SHEPHERD.
 
 Clean variants:
   pr [number]          Remove state for one PR. Defaults to current branch PR.
@@ -72,7 +72,7 @@ Exit codes: 0 done, 10-19 PR state, 64-78 shepherd failed (sysexits.h).
   0   CANCEL (merged or ready-delay elapsed)
   10  WAIT or READY
   11  MARK_READY
-  12  FIX_CODE
+  12  TRIAGE
   13  ESCALATE
   14  CANCEL (closed without merging)
   15  MERGE

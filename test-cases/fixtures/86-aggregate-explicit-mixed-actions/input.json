@@ -12,7 +12,7 @@
         "repo": "owner/repo",
         "title": "Fix <unsafe> & flaky CI",
         "url": "https://github.com/owner/repo/pull/42",
-        "action": "fix_code",
+        "action": "triage",
         "reasons": ["failing-checks"],
         "state": "OPEN",
         "mergeable": "MERGEABLE",

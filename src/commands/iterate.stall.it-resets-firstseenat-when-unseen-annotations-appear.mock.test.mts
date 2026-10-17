@@ -44,7 +44,7 @@ function failingReport(annotations?: ClassifiedCheck["annotations"]) {
 }
 
 describe("runIterate — stall fingerprint includes unseen annotations", () => {
-  it("resets firstSeenAt when unseen annotation IDs appear on an otherwise unchanged fix_code tick", async () => {
+  it("resets firstSeenAt when unseen annotation IDs appear on an otherwise unchanged triage tick", async () => {
     mockRunCheck.mockResolvedValue(failingReport());
     mockReadStallState.mockResolvedValue({ ok: true, state: null });
     await runIterate(makeOpts30mStall());
@@ -70,7 +70,7 @@ describe("runIterate — stall fingerprint includes unseen annotations", () => {
 
     const result = await runIterate(makeOpts30mStall());
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     const written = mockWriteStallState.mock.calls[0]![1] as StallState;
     expect(written.firstSeenAt).toBe(NOW);
     expect(written.fingerprint).not.toBe(fp1);

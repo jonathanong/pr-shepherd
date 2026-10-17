@@ -7,26 +7,26 @@ describe("runPlaybook", () => {
     const result = runPlaybook();
     expect(result).toHaveProperty("playbooks");
     const names = (result as { playbooks: string[] }).playbooks;
-    expect(names).toContain("Fix-code loop");
+    expect(names).toContain("Triage loop");
     expect(names).toContain("CI failure triage");
     expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
     expect(runPlaybook("  ")).toEqual(result);
   });
 
   it("resolves by name, case-insensitively, and by file slug", () => {
-    const byName = runPlaybook("Fix-code loop");
-    expect(byName).toMatchObject({ name: "Fix-code loop" });
-    expect(runPlaybook("fix-code loop")).toEqual(byName);
-    expect(runPlaybook("fix-code-loop")).toEqual(byName);
+    const byName = runPlaybook("Triage loop");
+    expect(byName).toMatchObject({ name: "Triage loop" });
+    expect(runPlaybook("triage loop")).toEqual(byName);
+    expect(runPlaybook("triage-loop")).toEqual(byName);
     expect(runPlaybook("ci failure triage")).toMatchObject({
       name: "CI failure triage",
     });
   });
 
-  it("conditions the Fix-code loop journal step on a printed apply journal command", () => {
+  it("conditions the Triage loop journal step on a printed apply journal command", () => {
     // Playbook-style fix ticks omit the journal command without update permission, so the
     // playbook must not tell the caller to journal unconditionally.
-    const { content } = runPlaybook("Fix-code loop") as { content: string };
+    const { content } = runPlaybook("Triage loop") as { content: string };
     expect(content).toContain(
       "Only when the step that names this playbook prints an `apply journal` command",
     );
@@ -41,7 +41,7 @@ describe("runPlaybook", () => {
       expect(error).toBeInstanceOf(ShepherdError);
       expect((error as ShepherdError).exitCode).toBe(EXIT.USAGE);
       expect(String(error)).toContain('Unknown playbook "nope"');
-      expect(String(error)).toContain('"Fix-code loop"');
+      expect(String(error)).toContain('"Triage loop"');
     }
   });
 });

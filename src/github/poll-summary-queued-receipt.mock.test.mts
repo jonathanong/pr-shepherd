@@ -156,7 +156,7 @@ describe("queued READY receipt projection", () => {
 
     expect(fingerprintRawSummaryPr(edited)).toBe(fingerprintRawSummaryPr(original));
     const finding = await summarizePollSummaryPr(edited, repo, { stackPrNumber: 42, merge: true });
-    expect(finding).toMatchObject({ action: "fix_code", review: { actionable: 1 } });
+    expect(finding).toMatchObject({ action: "triage", review: { actionable: 1 } });
     expect(finding.readyReceipt).toBeUndefined();
 
     const stillNoise = await summarizePollSummaryPr(withComment("noise again"), repo, {
@@ -243,7 +243,7 @@ describe("queued READY receipt projection", () => {
       { stackPrNumber: 42, merge: true },
     );
     expect(item.readyReceipt).toBeUndefined();
-    expect(item.action).toBe("fix_code");
+    expect(item.action).toBe("triage");
   });
 
   it("invalidates on changed review evidence even while queued", async () => {

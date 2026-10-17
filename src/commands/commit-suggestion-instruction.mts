@@ -3,7 +3,7 @@ import { playbookPointer } from "./playbook-pointer.mts";
 
 /**
  * Build the `suggest` instruction step for agent consumers.
- * Currently emitted by iterate `fix_code` for suggestion review threads. The CLI keeps
+ * Currently emitted by iterate `triage` for suggestion review threads. The CLI keeps
  * only the trigger and the concrete command; refusal/drift handling is invariant across
  * every invocation, so it lives in the pr-shepherd skill's "Suggestion patches" playbook
  * instead of being re-emitted every tick (see AGENTS.md "Keep skills and loop prompts

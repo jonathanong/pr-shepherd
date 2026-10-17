@@ -41,7 +41,7 @@ Emitted by `iterate` and the default `pr-shepherd [PR]` once a report was fetche
 | ---- | --------------- | -------------------------------------------------------------------- | --------- |
 | 10   | `wait`, `ready` | Nothing to do yet, or a clean PR whose ready-delay is still counting | No        |
 | 11   | `mark_ready`    | Draft PR was converted to ready for review                           | No        |
-| 12   | `fix_code`      | Agent work required — see the printed instructions                   | No        |
+| 12   | `triage`        | Agent work required — see the printed instructions                   | No        |
 | 13   | `escalate`      | Human attention required                                             | Yes       |
 | 14   | `cancel`        | PR closed without merging (`reason: "closed"`)                       | Yes       |
 | 15   | `merge`         | Run the emitted merge or merge-queue command                         | No        |
@@ -49,11 +49,11 @@ Emitted by `iterate` and the default `pr-shepherd [PR]` once a report was fetche
 
 - **`wait` and `ready` (10) are not errors and not a signal to give up.** `wait` means nothing is actionable right now, including when `poll --timeout` gives up mid-wait and prints the last `wait` tick. `ready` means the PR is clean with `remainingSeconds` of ready-delay left; `--until-terminal` returns it instead of sleeping through the countdown. A `set -e` script that asks "is the PR done?" should treat 10 like 12/13/16: not finished. Only `0` is a successful terminal state.
 - `mark_ready` (11) is non-terminal. `pr-shepherd [PR]` stops on it by default; `--until-terminal` keeps polling through it.
-- `fix_code` (12) is always non-terminal: complete the printed work, then repeat the same CLI command (or schedule another MCP `iterate` tick).
+- `triage` (12) is always non-terminal: complete the printed work, then repeat the same CLI command (or schedule another MCP `iterate` tick).
 - `shepherd` (16) is stack-level and non-terminal: complete the listed one-PR sessions and rerun the same `stack` command. A mixed stack may surface human blockers on this tick; it returns `escalate` only once no shepherdable session remains.
 - `escalate` (13) is the only human handoff.
 
-**Aggregate commands.** Explicit multi-PR polling returns the highest-priority row outcome, in this order: `escalate`, `fix_code`, `merge`, `mark_ready`, `wait`, closed-only `cancel`, then successful `cancel`. Native `stack` returns `shepherd` (16) for autonomous one-PR work, `wait` (10) for queue progress, `cancel` (0) for completed readiness, and `escalate` (13) only when a human decision remains with no autonomous one-PR work. The full row list prints regardless of the aggregate action.
+**Aggregate commands.** Explicit multi-PR polling returns the highest-priority row outcome, in this order: `escalate`, `triage`, `merge`, `mark_ready`, `wait`, closed-only `cancel`, then successful `cancel`. Native `stack` returns `shepherd` (16) for autonomous one-PR work, `wait` (10) for queue progress, `cancel` (0) for completed readiness, and `escalate` (13) only when a human decision remains with no autonomous one-PR work. The full row list prints regardless of the aggregate action.
 
 ## 64–78 — shepherd failed (`sysexits.h`)
 

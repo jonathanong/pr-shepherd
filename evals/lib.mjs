@@ -133,7 +133,7 @@ export const skillFired = {
 };
 
 // Reused verbatim across the non-terminal cases. Halting on a non-terminal action
-// is failure mode 3 and shows up for WAIT, MARK_READY and FIX_CODE alike.
+// is failure mode 3 and shows up for WAIT, MARK_READY and TRIAGE alike.
 export const ITERATES_AGAIN = `The plan commits to running pr-shepherd again to continue the loop, rather than
 stopping to report, to ask permission, or to wait for something.
 

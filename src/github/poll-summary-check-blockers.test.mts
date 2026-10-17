@@ -24,7 +24,7 @@ import { summarizePollSummaryPr } from "./poll-summary-projector.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 
 const repo = { owner: "acme", name: "widgets" };
-const routed = { action: "fix_code" as const, reasons: ["failing-checks"] };
+const routed = { action: "triage" as const, reasons: ["failing-checks"] };
 const pull = { owner: "acme", name: "widgets", number: 9, kind: "pull" as const };
 let stateDir = "";
 
@@ -139,7 +139,7 @@ describe("applyOpenCheckBlockers", () => {
       {},
       true,
     );
-    expect(mixed.action).toBe("fix_code");
+    expect(mixed.action).toBe("triage");
     const item = await summarizePollSummaryPr(raw(), repo, { stackPrNumber: 42 });
     expect(item).toMatchObject({
       action: "wait",

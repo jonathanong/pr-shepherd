@@ -247,7 +247,7 @@ describe("summarizePollSummaryPr", () => {
     );
 
     expect(restUnknown.review).toEqual({ reviews: 1, actionable: 1 });
-    expect(restUnknown.action).toBe("fix_code");
+    expect(restUnknown.action).toBe("triage");
     expect(restDenied.review).toEqual({ reviews: 1 });
     expect(restMutationDenied.review).toEqual({ reviews: 1 });
     expect(graphqlUnknown.review).toEqual({ reviews: 1 });

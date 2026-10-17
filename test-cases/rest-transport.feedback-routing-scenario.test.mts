@@ -84,14 +84,14 @@ describe("REST feedback preserves review ownership and stale routing through pol
   it("keeps a viewer-owned thread resolveable after a marked reply, then finishes after resolution", async () => {
     const fixture = await feedbackRoutes();
     const first = await tick();
-    expect(first.action).toBe("fix_code");
-    if (first.action !== "fix_code") throw new Error("expected active review work");
-    expect(first.fix.threads[0]).toMatchObject({ viewerDidAuthor: true });
-    expect(first.fix.resolveCommand.argv).toContain("--reply-thread-ids");
-    expect(first.fix.resolveCommand.argv).toContain("--resolve-thread-ids");
+    expect(first.action).toBe("triage");
+    if (first.action !== "triage") throw new Error("expected active review work");
+    expect(first.triage.threads[0]).toMatchObject({ viewerDidAuthor: true });
+    expect(first.triage.resolveCommand.argv).toContain("--reply-thread-ids");
+    expect(first.triage.resolveCommand.argv).toContain("--resolve-thread-ids");
     expect(formatIterateResult(first)).toContain("viewer-authored");
     expect(projectIterateLean(first)).toMatchObject({
-      fix: { threads: [{ viewerDidAuthor: true }] },
+      triage: { threads: [{ viewerDidAuthor: true }] },
     });
 
     fixture.inline.push({
@@ -100,10 +100,10 @@ describe("REST feedback preserves review ownership and stale routing through pol
       body: addPrShepherdMarker("The feedback is satisfied."),
     });
     const retry = await tick();
-    expect(retry.action).toBe("fix_code");
-    if (retry.action !== "fix_code") throw new Error("expected pending resolution");
-    expect(retry.fix.resolutionOnlyThreads[0]).toMatchObject({ viewerDidAuthor: true });
-    const retryCommand = retry.fix.resolveOnlyCommand ?? retry.fix.resolveCommand;
+    expect(retry.action).toBe("triage");
+    if (retry.action !== "triage") throw new Error("expected pending resolution");
+    expect(retry.triage.resolutionOnlyThreads[0]).toMatchObject({ viewerDidAuthor: true });
+    const retryCommand = retry.triage.resolveOnlyCommand ?? retry.triage.resolveCommand;
     expect(retryCommand.argv).toContain("--resolve-thread-ids");
     expect(retryCommand.argv).not.toContain("--reply-thread-ids");
     fixture.resolved = true;
@@ -120,28 +120,30 @@ describe("REST feedback preserves review ownership and stale routing through pol
     fixture.inline[0]!.user = { login: "another-reviewer", type: "User" };
     fixture.inline.push({ ...comment(12, 11), pull_request_review_id: 77 });
     const result = await tick();
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") throw new Error("expected active review work");
-    const thread = result.fix.threads[0]!;
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") throw new Error("expected active review work");
+    const thread = result.triage.threads[0]!;
     expect(thread).not.toHaveProperty("viewerDidAuthor");
     expect(thread.comments?.[1]).toMatchObject({ viewerDidAuthor: true });
-    expect(result.fix.resolveCommand.argv).toContain("--reply-thread-ids");
-    expect(result.fix.resolveCommand.argv).not.toContain("--resolve-thread-ids");
+    expect(result.triage.resolveCommand.argv).toContain("--reply-thread-ids");
+    expect(result.triage.resolveCommand.argv).not.toContain("--resolve-thread-ids");
     assertReadOnlyRest();
   });
 
   it("shows a stale human review once and preserves the remaining review gate without reopening feedback", async () => {
     await feedbackRoutes(true);
     const first = await tick();
-    expect(first.action).toBe("fix_code");
-    if (first.action !== "fix_code") throw new Error("expected first-look review context");
-    expect(first.fix.changesRequestedReviews).toMatchObject([{ id: "PRR_77", staleReview: true }]);
-    expect(first.fix.instructions.join("\n")).toContain("Ask the reviewer to re-review");
+    expect(first.action).toBe("triage");
+    if (first.action !== "triage") throw new Error("expected first-look review context");
+    expect(first.triage.changesRequestedReviews).toMatchObject([
+      { id: "PRR_77", staleReview: true },
+    ]);
+    expect(first.triage.instructions.join("\n")).toContain("Ask the reviewer to re-review");
     expect(formatIterateResult(first)).toContain("ask reviewer to re-review or dismiss");
     expect(projectIterateLean(first)).toMatchObject({
-      fix: { changesRequestedReviews: [{ staleReview: true }] },
+      triage: { changesRequestedReviews: [{ staleReview: true }] },
     });
-    expect(first.fix.resolveCommand.argv).not.toContain("--dismiss-review-ids");
+    expect(first.triage.resolveCommand.argv).not.toContain("--dismiss-review-ids");
     const next = await tick();
     // The missing aggregate reviewDecision is not a readiness gap: branch policy plus latest
     // reviews still report the unmet approval, and the closed stale review is not reopened.

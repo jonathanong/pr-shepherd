@@ -158,7 +158,7 @@ describe("runIterate — one-PR READY receipt", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, true, 600, "owner", "repo", {
       headSha: "head-1",
       alreadyElapsed: true,
@@ -179,7 +179,7 @@ describe("runIterate — one-PR READY receipt", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(mockClearReadyReceipt).toHaveBeenCalledWith(key);
     expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
       headSha: "head-1",
@@ -227,7 +227,7 @@ describe("runIterate — one-PR READY receipt", () => {
 
       const result = await runIterate(makeOpts());
 
-      expect(result.action).toBe("fix_code");
+      expect(result.action).toBe("triage");
       expect(mockClearReadyReceipt).not.toHaveBeenCalled();
       expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, true, 600, "owner", "repo", {
         headSha: "head-1",
@@ -253,7 +253,7 @@ describe("runIterate — one-PR READY receipt", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(mockClearReadyReceipt).toHaveBeenCalledWith(key);
     expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
       headSha: "head-1",

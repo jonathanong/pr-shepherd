@@ -166,7 +166,7 @@ An unchanged poll continuation tick stops after `BatchPr`'s first page, before a
 
 The fingerprint covers: head SHA, `updatedAt`, comment/thread/review counts, comment and review `updatedAt` revisions, latest thread-comment revisions, latest comment/review ids, check-rollup state, check-suite identity and completeness, merge/queue flags, merge policy, stack membership, and viewer login. Its windows match the first page: the latest 20 threads (first 100 comments each), 100 PR comments, and 100 reviews. New or edited review items change it, so the [comment visibility invariant](comments.md#first-look-items-comment-visibility-invariant) holds; a different viewer login is a miss.
 
-Reuse is internal to poll. The tick returned to the caller always runs `BatchPr`: the last bounded-poll tick, `FIX_CODE` debounce ticks, the post-debounce return tick, and every single-tick `iterate` / MCP call. The skip is also refused when:
+Reuse is internal to poll. The tick returned to the caller always runs `BatchPr`: the last bounded-poll tick, `TRIAGE` debounce ticks, the post-debounce return tick, and every single-tick `iterate` / MCP call. The skip is also refused when:
 
 | Condition                                                                                                                           | Why                                                                                                                                                                |
 | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

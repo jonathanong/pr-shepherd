@@ -28,7 +28,7 @@ Skills are thin dispatchers. They parse arguments, call the CLI or MCP, print th
 
 | Playbook             | Reference file                                                 |
 | -------------------- | -------------------------------------------------------------- |
-| Fix-code loop        | `fix-code-loop.md` (only named with `--instructions playbook`) |
+| Triage loop        | `triage-loop.md` (only named with `--instructions playbook`) |
 | Create a PR          | `create-pr.md`                                                 |
 | Draft handoff        | `draft-handoff.md`                                             |
 | MCP fallback         | `mcp-fallback.md`                                              |
@@ -48,7 +48,7 @@ Canonical command: `pr-shepherd [PR] --until-terminal`. Bare `pr-shepherd [PR]` 
 | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | keeps polling | Ordinary `WAIT` and `MARK_READY`.                                                                                                                        |
 | returns       | `READY` while a clean ready-delay counts down.                                                                                                           |
-| returns       | `FIX_CODE` and stack-level `SHEPHERD` after `--debounce` (default 1m; `0` disables), which batches late review comments and CI failures into one result. |
+| returns       | `TRIAGE` and stack-level `SHEPHERD` after `--debounce` (default 1m; `0` disables), which batches late review comments and CI failures into one result. |
 | returns       | `MERGE`, any non-terminal result that carries a quota warning, and terminal `CANCEL` or `ESCALATE`.                                                      |
 
 MCP `iterate` is the fallback when the CLI is unavailable. It has no debounce and returns one tick; the caller repeats ticks and does not poll forever. An MCP tick repeats the same `iterate` call and does not switch back to a CLI that was unavailable.
@@ -56,7 +56,7 @@ MCP `iterate` is the fallback when the CLI is unavailable. It has no debounce an
 After `## Instructions`, rerun the same command unless the action is `[CANCEL]` or `[ESCALATE]`, the printed instructions say to end the turn or not to rerun (a single tick), or a human says stop.
 
 - `[READY]` is non-terminal. Rerun when `remainingSeconds` elapses. Do not invent unrelated work.
-- `[FIX_CODE]` and stack-level `[SHEPHERD]` are always non-terminal.
+- `[TRIAGE]` and stack-level `[SHEPHERD]` are always non-terminal.
 - Run an emitted `[MERGE]` command before the next invocation.
 - A quota warning can return `WAIT` or `MARK_READY` to change cadence. That is non-terminal.
 - `[CANCEL]` ends polling this pull request and prints no instructions. Only `[ESCALATE]` hands work to a human. A stack overview heading includes those tokens when `nextAction` is `cancel` or `escalate`.
@@ -75,7 +75,7 @@ sequenceDiagram
     G->>S: pr-shepherd PR --until-terminal
     Note over S: fetch, classify, dispatch<br/>ordinary WAIT / MARK_READY keep polling
     S-->>G: action + data
-    alt FIX_CODE
+    alt TRIAGE
         G->>G: fix, commit, push, apply review
         G->>S: pr-shepherd PR --until-terminal
     else MERGE or quota warning

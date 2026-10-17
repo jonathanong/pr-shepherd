@@ -33,7 +33,7 @@ const THREAD = {
   createdAtUnix: NOW - 3600,
 };
 
-describe("runIterate — escalate (fix-thrash)", () => {
+describe("runIterate — escalate (triage-thrash)", () => {
   it("increments attempt count for unchanged thread body and writes body hash", async () => {
     // A caller-visible tick increments the unchanged body count.
     mockReadFixAttempts.mockResolvedValue({
@@ -61,7 +61,7 @@ describe("runIterate — escalate (fix-thrash)", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(mockWriteFixAttempts).toHaveBeenCalledOnce();
     const [, written] = mockWriteFixAttempts.mock.calls[0]!;
     expect(written.threadAttempts["thread-1"]).toBe(2);
@@ -93,7 +93,7 @@ describe("runIterate — escalate (fix-thrash)", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     const [, written] = mockWriteFixAttempts.mock.calls[0]!;
     expect(written.threadAttempts["thread-1"]).toBe(1);
     expect(written.threadBodyHashes?.["thread-1"]).toBe(hashBody("new body"));
@@ -124,7 +124,7 @@ describe("runIterate — escalate (fix-thrash)", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     const [, written] = mockWriteFixAttempts.mock.calls[0]!;
     expect(written.threadAttempts["thread-1"]).toBe(1);
     expect(written.threadBodyHashes?.["thread-1"]).toBe(hashBody("new body"));
@@ -156,11 +156,11 @@ describe("runIterate — escalate (fix-thrash)", () => {
 
     const result = await runIterate(makeOpts({ persistSeen: false }));
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(mockWriteFixAttempts).not.toHaveBeenCalled();
   });
 
-  it("does not count a tick that escalates before returning FIX_CODE", async () => {
+  it("does not count a tick that escalates before returning TRIAGE", async () => {
     mockReadFixAttempts.mockResolvedValue({
       headSha: "abc123",
       threadAttempts: { "thread-1": 1 },

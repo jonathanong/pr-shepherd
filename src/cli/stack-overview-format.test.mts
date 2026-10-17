@@ -44,7 +44,7 @@ describe("formatStackOverview", () => {
       item({
         pr: 322,
         action: "escalate",
-        reasons: ["appears-ready", "fix-thrash"],
+        reasons: ["appears-ready", "triage-thrash"],
         isDraft: true,
         checks: { incomplete: true },
         authorLogin: "bob",
@@ -96,7 +96,7 @@ describe("formatStackOverview", () => {
     };
     const overview = projectStackOverview(result);
     expect(overview.prs[0]).toMatchObject({
-      blocker: "fix-thrash",
+      blocker: "triage-thrash",
       isDraft: true,
       author: "bob",
     });

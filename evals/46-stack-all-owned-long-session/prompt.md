@@ -32,7 +32,7 @@ Shepherd https://github.com/owner/repo/pull/42 until it's ready for review.
 
 [tool] $ pr-shepherd https://github.com/owner/repo/pull/42 --until-terminal
 
-# PR #42 [FIX_CODE]
+# PR #42 [TRIAGE]
 
 **status** `UNRESOLVED_COMMENTS`
 

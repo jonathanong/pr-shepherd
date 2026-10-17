@@ -82,10 +82,10 @@ export function checkEscalateTriggers(
   const triggers: EscalateTrigger[] = [];
   const maxAttempts = loadConfig().iterate["triage-attempts-per-thread"];
 
-  // Trigger 1: fix thrash — same thread dispatched too many times without resolving.
+  // Trigger 1: triage thrash — same thread dispatched too many times without resolving.
   const thrashThreads = actionableThreads.filter((t) => (threadAttempts[t.id] ?? 0) >= maxAttempts);
   if (thrashThreads.length > 0) {
-    triggers.push("fix-thrash");
+    triggers.push("triage-thrash");
   }
 
   return {
@@ -303,9 +303,9 @@ export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: st
     const reason = detail ? ` (${detail})` : "";
     return `Could not determine the PR's base branch${reason} — automated rebases are paused because branch safety is unclear. Run the rebase manually against the PR's real target branch.`;
   }
-  if (triggers.includes("fix-thrash")) {
+  if (triggers.includes("triage-thrash")) {
     const attempts = loadConfig().iterate["triage-attempts-per-thread"];
-    return `The same thread(s) remain unresolved after their pending review commands were returned for ${attempts} FIX_CODE ticks. Automated iteration is paused for a manual decision.`;
+    return `The same thread(s) remain unresolved after their pending review commands were returned for ${attempts} TRIAGE ticks. Automated iteration is paused for a manual decision.`;
   }
   return "Ambiguous state — automated handling cannot proceed safely. Inspect the PR and act manually.";
 }

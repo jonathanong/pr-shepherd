@@ -56,7 +56,7 @@ export function classifyReviewSummaries(
   // so their minimize IDs ride in the agent-facing apply command. Seen summaries
   // (already surfaced in a prior tick) have no new content to show — the CLI
   // self-minimizes them in-process (selfMinimizeIds) instead of routing a
-  // cosmetic-only mutation through fix_code (issue #313). Edited summaries are
+  // cosmetic-only mutation through triage (issue #313). Edited summaries are
   // excluded entirely: they are already minimized server-side (body changed after
   // minimize was applied).
   const minimizeIds = summaries.firstLook.filter(eligible).map((r) => r.id);

@@ -111,10 +111,10 @@ describe("runIterateTick", () => {
     });
   });
 
-  it("returns fix_code unchanged and without nextCheck", async () => {
-    const fixCode = { action: "fix_code", fix: { instructions: ["Rerun Shepherd now."] }, ...base };
-    m.runIterate.mockResolvedValue(fixCode);
-    expect(await runIterateTick(opts)).toBe(fixCode);
+  it("returns triage unchanged and without nextCheck", async () => {
+    const triage = { action: "triage", triage: { instructions: ["Rerun Shepherd now."] }, ...base };
+    m.runIterate.mockResolvedValue(triage);
+    expect(await runIterateTick(opts)).toBe(triage);
   });
 });
 

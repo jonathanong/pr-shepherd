@@ -17,8 +17,8 @@ registerIterateHooks();
 // ---------------------------------------------------------------------------
 
 describe("runIterate — review summary auto-minimize", () => {
-  it("editedSummaries are surfaced in fix_code (triggered by the edit); the seen summary self-minimizes instead of joining the queue", async () => {
-    // The edited summary triggers fix_code on its own; the seen summary has no new
+  it("editedSummaries are surfaced in triage (triggered by the edit); the seen summary self-minimizes instead of joining the queue", async () => {
+    // The edited summary triggers triage on its own; the seen summary has no new
     // content to surface, so the CLI self-minimizes it in-process (issue #313)
     // rather than routing it through the agent-facing resolve command.
     const seenSummary = makeReview("PRR_SEEN", "copilot", "Old review.");
@@ -35,12 +35,12 @@ describe("runIterate — review summary auto-minimize", () => {
     const result = await runIterate(makeOpts());
 
     expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_SEEN"]);
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
 
-    expect(result.fix.editedSummaries).toEqual([editedSummary]);
-    expect(result.fix.reviewSummaryIds).toEqual([]);
-    expect(result.fix.instructions.join("\n")).toContain("edited since first look");
+    expect(result.triage.editedSummaries).toEqual([editedSummary]);
+    expect(result.triage.reviewSummaryIds).toEqual([]);
+    expect(result.triage.instructions.join("\n")).toContain("edited since first look");
   });
   it("surfaces body in firstLookSummaries when summary comes from report.firstLookSummaries", async () => {
     const summary = makeReview("PRR_FL", "copilot", "Nice work.");
@@ -53,10 +53,10 @@ describe("runIterate — review summary auto-minimize", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
 
-    expect(result.fix.firstLookSummaries).toEqual([summary]);
-    expect(result.fix.reviewSummaryIds).toContain("PRR_FL");
+    expect(result.triage.firstLookSummaries).toEqual([summary]);
+    expect(result.triage.reviewSummaryIds).toContain("PRR_FL");
   });
 });

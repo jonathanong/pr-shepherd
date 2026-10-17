@@ -54,14 +54,14 @@ describe("runIterate merged base context", () => {
       baseRefName: "parent",
       baseRefOid: parent.headRefOid,
     });
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") throw new Error("expected fix_code");
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") throw new Error("expected triage");
     expect(result.mergedBasePullRequests).toEqual([parent]);
-    expect(result.fix.instructions[0]).toContain(
+    expect(result.triage.instructions[0]).toContain(
       "gh pr edit https://github.com/owner/repo/pull/42",
     );
-    expect(result.fix.instructions[0]).toContain("rerun Shepherd immediately");
-    expect(result.fix.instructions.join("\n")).toContain("Resolve them before committing");
+    expect(result.triage.instructions[0]).toContain("rerun Shepherd immediately");
+    expect(result.triage.instructions.join("\n")).toContain("Resolve them before committing");
     const text = formatIterateResult(result);
     expect(text).toContain("## Merged PRs matching the current base\n\n");
     for (const value of Object.values(parent).filter((value) => typeof value === "string")) {
@@ -70,21 +70,21 @@ describe("runIterate merged base context", () => {
     expect(text).toContain(parent.headRepository.nameWithOwner);
     const lean = projectIterateLean(result) as {
       mergedBasePullRequests: unknown[];
-      fix: { instructions: string[] };
+      triage: { instructions: string[] };
     };
     expect(lean.mergedBasePullRequests).toEqual([parent]);
-    expect(text).toContain(`1. ${lean.fix.instructions[0]}`);
+    expect(text).toContain(`1. ${lean.triage.instructions[0]}`);
   });
 
   it("retargets through the REST pulls endpoint on the REST transport", async () => {
     lookup.mockResolvedValue([parent]);
     mockRunCheck.mockResolvedValue({ ...conflictReport(), transport: "rest" });
     const result = await runIterate(makeOpts());
-    if (result.action !== "fix_code") throw new Error("expected fix_code");
-    expect(result.fix.instructions[0]).toContain(
+    if (result.action !== "triage") throw new Error("expected triage");
+    expect(result.triage.instructions[0]).toContain(
       "gh api --method PATCH repos/owner/repo/pulls/42 -f base=<verified-parent-base>",
     );
-    expect(result.fix.instructions.join("\n")).not.toContain("gh pr edit");
+    expect(result.triage.instructions.join("\n")).not.toContain("gh pr edit");
   });
 
   it("skips the lookup outside non-stack conflicts with an exact base OID", async () => {
@@ -106,7 +106,7 @@ describe("runIterate merged base context", () => {
     };
     mockRunCheck.mockResolvedValue(report);
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(lookup).not.toHaveBeenCalled();
   });
 
@@ -135,7 +135,7 @@ describe("runIterate merged base context", () => {
     };
     mockRunCheck.mockResolvedValue(report);
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(lookup).not.toHaveBeenCalled();
   });
 
@@ -143,11 +143,11 @@ describe("runIterate merged base context", () => {
     lookup.mockResolvedValue([]);
     mockRunCheck.mockResolvedValue(conflictReport());
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") throw new Error("expected fix_code");
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") throw new Error("expected triage");
     expect(result.mergedBasePullRequests).toBeUndefined();
-    expect(result.fix.instructions.join("\n")).toContain("Resolve them before committing");
-    expect(result.fix.instructions.join("\n")).not.toContain("gh pr edit");
+    expect(result.triage.instructions.join("\n")).toContain("Resolve them before committing");
+    expect(result.triage.instructions.join("\n")).not.toContain("gh pr edit");
     expect(formatIterateResult(result)).not.toContain("## Merged PRs matching the current base");
     expect(projectIterateLean(result)).not.toHaveProperty("mergedBasePullRequests");
   });

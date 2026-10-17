@@ -29,7 +29,7 @@ describe("runIterate — review summary auto-minimize", () => {
     authorType: "User" as const,
   };
 
-  it("self-minimizes an already-seen bot summary in-process and does not route to fix_code", async () => {
+  it("self-minimizes an already-seen bot summary in-process and does not route to triage", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary] }));
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: false,
@@ -80,11 +80,11 @@ describe("runIterate — review summary auto-minimize", () => {
     const result = await runIterate(makeOpts());
 
     expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.reviewSummaryIds).toEqual([]);
-    expect(result.fix.resolveCommand.argv).not.toContain("PRR_BOT");
-    expect(result.fix.resolveCommand.resolveThreadIds).toEqual(["thread-child"]);
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.reviewSummaryIds).toEqual([]);
+    expect(result.triage.resolveCommand.argv).not.toContain("PRR_BOT");
+    expect(result.triage.resolveCommand.resolveThreadIds).toEqual(["thread-child"]);
   });
   it("classifies the `*[bot]` login suffix as a bot", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [bracketBotSummary] }));

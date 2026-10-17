@@ -40,6 +40,7 @@ import {
   readJson,
   inputTokens,
   tokens,
+  recordedAction,
 } from "./lib.mjs";
 import { SCENARIOS, eventArm } from "./scenarios.mjs";
 import { checkPending, findLosses, lossKey, readGateLists, structuralEntry } from "./gate.mjs";
@@ -941,7 +942,7 @@ for (const t of API_CHECK.ticks) {
   const model =
     base[key] + (t.annotationCheckRuns ? annotationBatchApi(t.annotationCheckRuns)[key] : 0);
   out(
-    `| ${t.transport} | ${t.tick} (${t.model}) | \`${t.action}\` | ${num(t[key])} | ${num(model)} | ${model ? (t[key] / model).toFixed(2) : t[key] ? "∞" : "—"} |`,
+    `| ${t.transport} | ${t.tick} (${t.model}) | \`${recordedAction(t.action)}\` | ${num(t[key])} | ${num(model)} | ${model ? (t[key] / model).toFixed(2) : t[key] ? "∞" : "—"} |`,
   );
 }
 out();

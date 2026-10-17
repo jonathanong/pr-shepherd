@@ -148,8 +148,8 @@ third arm.
 | `03-multi-category-fix`                     | `54`    | Four categories at once, none dropped                                                |
 | `04-real-failure-no-blind-rerun`            | `61`    | `[rerun authorized]` is not a recommendation                                         |
 | `05-cancelled-must-rerun`                   | `14`    | `CANCELLED` _must_ rerun (mirror of 04)                                              |
-| `06-fix-code-dismiss-stale-bot`             | `60`    | Authorized stale bot dismissals stay autonomous                                      |
-| `07-fix-code-bot-and-thread`                | `84`    | Preserve both review-thread and bot-review work                                      |
+| `06-triage-dismiss-stale-bot`             | `60`    | Authorized stale bot dismissals stay autonomous                                      |
+| `07-triage-bot-and-thread`                | `84`    | Preserve both review-thread and bot-review work                                      |
 | `08-mergeability-diagnosis`                 | `32`    | `[Not Required]` is not a blocker                                                    |
 | `09-cancel-terminal-beats-work`             | `82`    | Merged PR needs nothing                                                              |
 | `10-external-check-no-handoff`              | `12`    | External URL is not an escalation trigger                                            |
@@ -398,7 +398,7 @@ transcripts. By frequency:
    distinct user prompts had to add "do not use gh pr checks". → `01`
 2. **Claiming a PR is terminal while `CHANGES_REQUESTED` stands**, having skipped
    the generated `apply review:` command. → `03`
-3. **Halting on a non-terminal action** (`MARK_READY`, `FIX_CODE`). → `02`
+3. **Halting on a non-terminal action** (`MARK_READY`, `TRIAGE`). → `02`
 4. **Treating `[rerun authorized]` as a recommendation.** → `04`
 
 Stack cases 14–22 and the rebase case 23 came from agent-blackboard session

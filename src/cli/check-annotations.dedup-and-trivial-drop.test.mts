@@ -6,9 +6,9 @@ import type { IterateResult } from "../types.mts";
 
 describe("## Check annotations — trivial drop and log dedup", () => {
   it("omits the whole section when every annotation is a bare exit-code message", () => {
-    const result: IterateResult = { ...makeIterateResult("fix_code") };
-    if (result.action !== "fix_code") throw new Error("expected fix_code fixture");
-    result.fix.checks = [
+    const result: IterateResult = { ...makeIterateResult("triage") };
+    if (result.action !== "triage") throw new Error("expected triage fixture");
+    result.triage.checks = [
       {
         name: "build",
         runId: "1",
@@ -33,9 +33,9 @@ describe("## Check annotations — trivial drop and log dedup", () => {
   });
 
   it("keeps a check's other annotations and heading when only one is trivial", () => {
-    const result: IterateResult = { ...makeIterateResult("fix_code") };
-    if (result.action !== "fix_code") throw new Error("expected fix_code fixture");
-    result.fix.checks = [
+    const result: IterateResult = { ...makeIterateResult("triage") };
+    if (result.action !== "triage") throw new Error("expected triage fixture");
+    result.triage.checks = [
       {
         name: "build",
         runId: "1",
@@ -71,9 +71,9 @@ describe("## Check annotations — trivial drop and log dedup", () => {
   });
 
   it("suppresses an annotation body that duplicates the check's log excerpt", () => {
-    const result: IterateResult = { ...makeIterateResult("fix_code") };
-    if (result.action !== "fix_code") throw new Error("expected fix_code fixture");
-    result.fix.checks = [
+    const result: IterateResult = { ...makeIterateResult("triage") };
+    if (result.action !== "triage") throw new Error("expected triage fixture");
+    result.triage.checks = [
       {
         name: "tests",
         runId: "1",

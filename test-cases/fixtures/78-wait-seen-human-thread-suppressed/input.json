@@ -1,5 +1,5 @@
 {
-  "description": "The human-active-thread mirror of 44-fix-code-seen-bot-thread-resurfaced: same single-comment thread body ('Previously seen bot feedback.') and the same seenMap bodyHash (429c3afa322b7b2b, sha256 of that exact body), but authorType is User instead of Bot. Human active threads are marker-gated — once seen and unchanged, they are suppressed on later ticks, unlike bot/non-human threads which are re-surfaced every tick regardless. With nothing else actionable, this tick is wait.",
+  "description": "The human-active-thread mirror of 44-triage-seen-bot-thread-resurfaced: same single-comment thread body ('Previously seen bot feedback.') and the same seenMap bodyHash (429c3afa322b7b2b, sha256 of that exact body), but authorType is User instead of Bot. Human active threads are marker-gated — once seen and unchanged, they are suppressed on later ticks, unlike bot/non-human threads which are re-surfaced every tick regardless. With nothing else actionable, this tick is wait.",
   "batchData": {
     "reviewThreads": [
       {

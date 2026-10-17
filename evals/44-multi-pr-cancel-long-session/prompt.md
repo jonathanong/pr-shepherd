@@ -39,7 +39,7 @@ Opened https://github.com/owner/repo/pull/42 (#101) and https://github.com/owner
 
 [tool] $ pr-shepherd https://github.com/owner/repo/pull/43 --until-terminal
 
-# PR #43 [FIX_CODE]
+# PR #43 [TRIAGE]
 
 **status** `UNRESOLVED_COMMENTS`
 

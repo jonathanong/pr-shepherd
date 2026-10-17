@@ -54,7 +54,7 @@
 //      This is the dominant failure and the biggest context sink in the loop.
 //   2. Claiming a PR is terminal while CHANGES_REQUESTED still stands, having
 //      skipped the generated `apply review:` command entirely.
-//   3. Halting on a non-terminal action (MARK_READY, FIX_CODE) and handing back
+//   3. Halting on a non-terminal action (MARK_READY, TRIAGE) and handing back
 //      to the human.
 //   4. Treating a printed `rerun:` command as a recommendation, rerunning a real
 //      failure — and rerunning again after it reproduced identically.

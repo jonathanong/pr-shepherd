@@ -4,7 +4,7 @@
 
 ## Pull requests
 
-- [PR #42: Fix &lt;unsafe&gt; &amp; flaky CI](https://github.com/owner/repo/pull/42) [FIX_CODE]
+- [PR #42: Fix &lt;unsafe&gt; &amp; flaky CI](https://github.com/owner/repo/pull/42) [TRIAGE]
   - state `OPEN` · mergeable `MERGEABLE` · merge `UNSTABLE`
   - head `fix-ci` at `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa` · base `main`
   - checks: 2 passing, 1 failing, 1 superseded, incomplete

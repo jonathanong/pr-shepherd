@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import type { IterateResult } from "../types.mts";
-import { formatFixCodeResult } from "./fix-formatter.mts";
+import { formatTriageResult } from "./triage-formatter.mts";
 import { formatRelevantChecks } from "./iterate-checks-formatter.mts";
 import { joinSections } from "../util/markdown.mts";
 import {
@@ -29,7 +29,7 @@ import { formatPrUrl } from "../pr-reference.mts";
  *   1. The H1 heading on line 1 contains `[<ACTION>]` — the action tag identifies
  *      the output for logging and validation. Behavior is driven by `## Instructions`,
  *      not by dispatching on the tag.
- *   2. `[FIX_CODE]` prints the `apply review` command inline, in backticks, in its
+ *   2. `[TRIAGE]` prints the `apply review` command inline, in backticks, in its
  *      `## Instructions` step; the agent runs that backticked command as printed.
  *   3. Every action except `cancel` ends with a `## Instructions` section — numbered
  *      `1.`, `2.`, … — that tells the agent exactly what to do with this output, with at
@@ -231,9 +231,9 @@ export function formatIterateResult(
         ]),
       );
 
-    case "fix_code":
+    case "triage":
       return finish(
-        formatFixCodeResult(joinSections([header, ...telemetrySections]), result, { verbose }),
+        formatTriageResult(joinSections([header, ...telemetrySections]), result, { verbose }),
       );
   }
 }

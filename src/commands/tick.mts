@@ -38,8 +38,8 @@ export async function runIterateTick(opts: IterateCommandOptions): Promise<Itera
     fingerprintCache: false,
     stallDeadlineSink: sink,
   });
-  // `[FIX_CODE]` already reruns at once, and that rerun reports its own `nextCheck`.
-  if (result.action === "fix_code") return result;
+  // `[TRIAGE]` already reruns at once, and that rerun reports its own `nextCheck`.
+  if (result.action === "triage") return result;
   // A held draft hands off to the stack command, which must stay a single tick as well.
   if (result.action === "wait" && result.stackDraftHold) {
     return { ...result, stackDraftHold: { ...result.stackDraftHold, once: true } };

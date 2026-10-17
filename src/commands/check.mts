@@ -478,7 +478,7 @@ async function runScopedCheck(
   // persisting seen markers for it now would make it silently vanish from every later tick
   // once it's no longer "new" or "edited", even after the PR leaves the queue. A queued PR
   // that also has check-driven work (failing checks, actionable annotations, conflicts) is
-  // NOT deferred — index.mts still renders these items via fix_code — so this must stay false
+  // NOT deferred — index.mts still renders these items via triage — so this must stay false
   // in that case too, or their seen markers would be suppressed while actually being shown.
   const deferWhileQueued =
     opts.merge === true &&

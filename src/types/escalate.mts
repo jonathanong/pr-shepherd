@@ -5,7 +5,7 @@ import type { MergeQueueRemovalStatus } from "./merge-requirements.mts";
 
 export type EscalateTrigger =
   | "transport-unsupported"
-  | "fix-thrash"
+  | "triage-thrash"
   | "base-branch-unknown"
   | "stall-timeout"
   | "required-checks-unreported"

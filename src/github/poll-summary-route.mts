@@ -22,21 +22,21 @@ export function routePollSummary(
     return { action: "cancel", reasons: [state.toLowerCase()] };
   }
   if (raw.mergeable === "CONFLICTING" || raw.mergeStateStatus === "DIRTY") {
-    return { action: "fix_code", reasons: ["merge-conflicts"] };
+    return { action: "triage", reasons: ["merge-conflicts"] };
   }
-  if ((checks.failing ?? 0) > 0) return { action: "fix_code", reasons: ["failing-checks"] };
+  if ((checks.failing ?? 0) > 0) return { action: "triage", reasons: ["failing-checks"] };
   if ((review.actionable ?? 0) > 0) {
     if (opts.merge && raw.isInMergeQueue && config.actions["work-while-queued"] !== true) {
       return { action: "wait", reasons: ["review-work-deferred-while-queued"] };
     }
-    return { action: "fix_code", reasons: ["review-work"] };
+    return { action: "triage", reasons: ["review-work"] };
   }
   if (
     (checks.unreportedRequired?.length ?? 0) > 0 &&
     checks.actionsWorkflowInProgress !== true &&
     (checks.inProgress ?? 0) === 0
   ) {
-    return { action: "fix_code", reasons: ["unreported-required-checks"] };
+    return { action: "triage", reasons: ["unreported-required-checks"] };
   }
   if (
     (checks.inProgress ?? 0) > 0 ||
@@ -80,7 +80,7 @@ export function routePollSummary(
     };
   }
   if (opts.merge && raw.stack && opts.stackPrNumber === undefined) {
-    return { action: "fix_code", reasons: ["authoritative-poll-required"] };
+    return { action: "triage", reasons: ["authoritative-poll-required"] };
   }
   if (opts.merge && raw.stack) {
     return { action: "merge", reasons: ["appears-ready"] };

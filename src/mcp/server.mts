@@ -65,7 +65,7 @@ const tickOptionsSchema = {
     .enum(["playbook", "inline"])
     .optional()
     .describe(
-      "fix_code instruction style. inline (default) prints every step each tick; playbook folds commit, push and journal into the Fix-code loop playbook.",
+      "triage instruction style. inline (default) prints every step each tick; playbook folds commit, push and journal into the Triage loop playbook.",
     ),
 };
 

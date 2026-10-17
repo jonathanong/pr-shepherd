@@ -77,9 +77,9 @@ describe("runIterate conflicting head with no CI", () => {
       remainingSeconds: 600,
     });
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.instructions.join("\n")).toContain("did not start pull_request workflows");
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.instructions.join("\n")).toContain("did not start pull_request workflows");
   });
 
   it("omits the note while the head commit is still inside the grace period", async () => {
@@ -90,9 +90,9 @@ describe("runIterate conflicting head with no CI", () => {
       remainingSeconds: 600,
     });
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.instructions.join("\n")).not.toContain(
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.instructions.join("\n")).not.toContain(
       "did not start pull_request workflows",
     );
   });

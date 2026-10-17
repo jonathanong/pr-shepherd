@@ -54,7 +54,7 @@ or re-fetch what it was hiding.
 Two categories are exempt because they are not classifications of ambiguous signal — they
 are the state machine's own vocabulary:
 
-- **State-machine actions** — `wait`, `fix_code`, `mark_ready`, `merge`, `cancel`,
+- **State-machine actions** — `wait`, `triage`, `mark_ready`, `merge`, `cancel`,
   `escalate` — are transitions with a fixed, published trigger table (see
   [Deterministic orchestration, agentic judgment](/principles/deterministic-over-agentic/)),
   not a judgment call about the PR's content.

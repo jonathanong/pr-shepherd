@@ -213,7 +213,7 @@ procedure while inventing no mutation, which the rubric passed 3–0. The regex
 punished the string, not the behaviour.
 
 **Full run 1 — two rubrics masked the strongest finding.** `iterates-immediately`
-required the plan to _"end by"_ iterating, which is right for `FIX_CODE` but wrong
+required the plan to _"end by"_ iterating, which is right for `TRIAGE` but wrong
 for `WAIT`/`MARK_READY` where re-running as step 1 is correct.
 `treats-mark-ready-as-non-terminal` said "Nothing is being asked here except to
 continue", inviting the judge to fail any elaborate answer. Underneath them,

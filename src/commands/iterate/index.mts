@@ -8,7 +8,7 @@ import { buildWaitLog, buildTerminalCancelResult, blockedCancelNote } from "./he
 import { classifyReviewSummaries } from "./classify.mts";
 import { applyStallGuard } from "./stall.mts";
 import { clearStallState } from "../../state/iterate-stall.mts";
-import { handleFixCode } from "./fix-code.mts";
+import { handleTriage } from "./triage.mts";
 import { isConfiguredBotAuthor, normalizeBotUsernames } from "../../comments/authors.mts";
 import { autoMinimizeComments } from "../../comments/resolve.mts";
 import { hasCheckDrivenActionableWork } from "../check-annotations.mts";
@@ -223,7 +223,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     config.actions["work-while-queued"] !== true;
 
   if (hasActionableWork && !(deferWhileQueued && !checkDrivenActionableWork)) {
-    return handleFixCode({
+    return handleTriage({
       base,
       report: reportForWork,
       opts: { ...opts, prNumber },
@@ -247,7 +247,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   }
 
   if (unreportedRepair.length > 0 && staleAncestry) {
-    return handleFixCode({
+    return handleTriage({
       base,
       report: reportForWork,
       opts: { ...opts, prNumber },
@@ -300,7 +300,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
   if (mergeStateResult) return annotateBlockedWait(mergeStateResult, blockerGate);
 
   if (staleAncestry) {
-    return handleFixCode({
+    return handleTriage({
       base,
       report: reportForWork,
       opts: { ...opts, prNumber },

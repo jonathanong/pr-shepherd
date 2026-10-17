@@ -197,7 +197,7 @@ describe("buildFixCompletionInstruction", () => {
     check({ runId: null, detailsUrl: null }),
     check({ conclusion: "ACTION_REQUIRED", logExcerpt: undefined }),
     check({ conclusion: "STARTUP_FAILURE", logExcerpt: undefined }),
-  ])("never emits terminal handoff wording for a FIX_CODE completion", () => {
+  ])("never emits terminal handoff wording for a TRIAGE completion", () => {
     const completion = buildFixCompletionInstruction();
     expect(completion).toContain("Rerun Shepherd now.");
     expect(completion).not.toMatch(/hand[- ]?off|stop polling|human direction/i);

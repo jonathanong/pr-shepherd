@@ -4,7 +4,7 @@ runs: 6
 max_turns: 6
 timeout_seconds: 300
 allowed_tools: [Read, Glob, Grep, Skill]
-tags: [stack, fix-code, ci-triage, tier:discriminating, area:github]
+tags: [stack, triage, ci-triage, tier:discriminating, area:github]
 append_system_prompt: |
   You have no shell and no network access. Do not run shell commands, fetch
   anything over the network, or read repository files other than a reference
@@ -25,7 +25,7 @@ already ran the first tick — here is what it returned. Take it from there.
 
 ---
 
-# PR #2687 [FIX_CODE]
+# PR #2687 [TRIAGE]
 
 **status** `FAILING` · **merge** `BLOCKED` · **reviewDecision** `APPROVED`
 **summary** 3 passing

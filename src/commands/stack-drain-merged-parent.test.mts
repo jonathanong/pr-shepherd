@@ -20,7 +20,7 @@ describe("native stack with merged lower layers", () => {
           ...(index < 2
             ? { state: "MERGED", reasons: ["merged"] }
             : hasWork
-              ? { action: "fix_code", reasons: ["actionable-reviews"] }
+              ? { action: "triage", reasons: ["actionable-reviews"] }
               : ready),
         }),
       );

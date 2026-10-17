@@ -68,7 +68,7 @@ describe("runIterate — triage via runCheck", () => {
     expect(result.status).toBe("MERGED");
   });
 
-  it("returns fix_code for CONFLICTS even with a failing check (CONFLICTS is always actionable)", async () => {
+  it("returns triage for CONFLICTS even with a failing check (CONFLICTS is always actionable)", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "FAILING",
@@ -110,7 +110,7 @@ describe("runIterate — triage via runCheck", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
   });
 
   it("surfaces failing check in fix payload with name and runId", async () => {
@@ -146,15 +146,15 @@ describe("runIterate — triage via runCheck", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
-      expect(result.fix.checks).toHaveLength(1);
-      expect(result.fix.checks[0]?.name).toBe("typecheck");
-      expect(result.fix.checks[0]?.runId).toBe("run-3");
+    expect(result.action).toBe("triage");
+    if (result.action === "triage") {
+      expect(result.triage.checks).toHaveLength(1);
+      expect(result.triage.checks[0]?.name).toBe("typecheck");
+      expect(result.triage.checks[0]?.runId).toBe("run-3");
     }
   });
 
-  it("does not return fix_code when ignored checks are the only unstable signal", async () => {
+  it("does not return triage when ignored checks are the only unstable signal", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "READY",

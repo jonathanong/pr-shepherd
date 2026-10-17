@@ -11,7 +11,7 @@ import { runIterate } from "./iterate/index.mts";
 registerIterateHooks();
 
 describe("runIterate — prescriptive fields: log strings", () => {
-  it("fix_code startup failure data carries `conclusion: STARTUP_FAILURE`; instructions no longer prescribe --log-failed/--failed", async () => {
+  it("triage startup failure data carries `conclusion: STARTUP_FAILURE`; instructions no longer prescribe --log-failed/--failed", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "FAILING",
@@ -46,16 +46,16 @@ describe("runIterate — prescriptive fields: log strings", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    expect(result.action).toBe("triage");
+    if (result.action === "triage") {
       // The `[conclusion: STARTUP_FAILURE]` tag still round-trips as data (rendered in the
-      // `## Failing checks` section by fix-formatter.mts) so the skill's "CI failure
+      // `## Failing checks` section by triage-formatter.mts) so the skill's "CI failure
       // triage" playbook — which limits follow-up work to already included evidence
       // <runId>` without --log-failed/--failed for this conclusion — can key off it. That
       // per-conclusion distinction is no longer testable at the CLI-instruction level; it
       // moved out of `## Instructions` entirely.
-      expect(result.fix.checks.some((c) => c.conclusion === "STARTUP_FAILURE")).toBe(true);
-      const joined = result.fix.instructions.join("\n");
+      expect(result.triage.checks.some((c) => c.conclusion === "STARTUP_FAILURE")).toBe(true);
+      const joined = result.triage.instructions.join("\n");
       expect(joined).toContain("Triage `## Failing checks`");
       expect(joined).not.toContain("gh run view <runId> --log-failed");
       expect(joined).not.toContain("gh run rerun <runId> --failed");

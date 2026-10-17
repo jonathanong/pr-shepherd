@@ -1,6 +1,6 @@
 import type { RelevantCheck } from "../types.mts";
 import { renderRelatedJobLines } from "./related-jobs-format.mts";
-import { renderCheckAnnotation } from "./fix-formatter-extra.mts";
+import { renderCheckAnnotation } from "./triage-formatter-extra.mts";
 
 export function formatRelevantChecks(checks: RelevantCheck[]): string | null {
   if (checks.length === 0) return null;
