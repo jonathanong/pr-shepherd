@@ -24,7 +24,7 @@ export interface StallStateStore<Key> {
 }
 
 /**
- * `{fingerprint, firstSeenAt}` files behind the one-PR and `--stack` stall guards.
+ * `{fingerprint, firstSeenAt}` files behind the one-PR and `stack` stall guards.
  * A missing file is a miss. An unwritable directory or an unsafe key is a persistence failure
  * so the caller can hand off instead of treating every tick as the first sighting.
  * `ENOENT` is the only read error treated as a miss. Corrupt JSON is also a miss, so one

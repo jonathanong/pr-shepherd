@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type { BuildSuggestionPatchesResult } from "../types.mts";
+import type { SuggestResult } from "../types.mts";
 import { formatSuggestionPatchesResult } from "./formatters.mts";
 
-const RESULT: BuildSuggestionPatchesResult = {
+const RESULT: SuggestResult = {
   pr: 42,
   repo: "owner/repo",
   patches: [

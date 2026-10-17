@@ -1,7 +1,7 @@
 {
   "description": "Every open native-stack layer has a current READY receipt and an effective CANCEL action, so the aggregate stack may finish successfully.",
   "mode": "aggregate",
-  "args": ["--stack", "https://github.com/owner/repo/pull/413"],
+  "args": ["stack", "https://github.com/owner/repo/pull/413"],
   "expectedExitCode": 0,
   "expectedNextAction": "cancel",
   "expectedReason": "all_terminal",

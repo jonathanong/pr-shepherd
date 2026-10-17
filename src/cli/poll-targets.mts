@@ -8,27 +8,27 @@ import {
   type ParsedPrReference,
 } from "../pr-reference.mts";
 import type { GlobalOptions } from "../types.mts";
+import { rejectRemovedFlags } from "./removed-flags.mts";
 
 const VALUE_FLAGS = new Set([
   "--format",
   "--ready-delay",
   "--stall-timeout",
   "--instructions",
-  "--poll-mode",
   "--interval",
   "--timeout",
   "--debounce",
-  "--stack",
 ]);
 
 export interface ParsedPollTargets {
   refs: ParsedPrReference[];
-  stack: ParsedPrReference | undefined;
   global: GlobalOptions;
   extra: string[];
 }
 
+/** Splits PR references from flags. Returns null after printing a usage error. */
 export function parsePollTargets(args: string[]): ParsedPollTargets | null {
+  if (rejectRemovedFlags(args)) return null;
   const { values } = parseArgs({
     args,
     strict: false,
@@ -37,20 +37,12 @@ export function parsePollTargets(args: string[]): ParsedPollTargets | null {
   });
   const consumed = new Set<number>();
   const refs: ParsedPrReference[] = [];
-  let stack: ParsedPrReference | undefined;
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index]!;
     if (VALUE_FLAGS.has(arg)) {
-      if (arg === "--format" || arg === "--stack") {
+      if (arg === "--format") {
         consumed.add(index);
         if (index + 1 < args.length) consumed.add(index + 1);
-      }
-      if (arg === "--stack") {
-        const parsed = parseCliPrReference(args[index + 1] ?? "");
-        if (!parsed)
-          return usage(`invalid --stack PR reference: ${args[index + 1] ?? "(missing)"}`);
-        if (stack) return usage("--stack may only be specified once");
-        stack = parsed;
       }
       index += 1;
       continue;
@@ -58,13 +50,7 @@ export function parsePollTargets(args: string[]): ParsedPollTargets | null {
     const equals = arg.indexOf("=");
     const name = equals < 0 ? arg : arg.slice(0, equals);
     if (VALUE_FLAGS.has(name)) {
-      if (name === "--format" || name === "--stack") consumed.add(index);
-      if (name === "--stack") {
-        const parsed = parseCliPrReference(arg.slice(equals + 1));
-        if (!parsed) return usage(`invalid --stack PR reference: ${arg.slice(equals + 1)}`);
-        if (stack) return usage("--stack may only be specified once");
-        stack = parsed;
-      }
+      if (name === "--format") consumed.add(index);
       continue;
     }
     if (arg === "--verbose") {
@@ -77,22 +63,20 @@ export function parsePollTargets(args: string[]): ParsedPollTargets | null {
     refs.push(parsed);
     consumed.add(index);
   }
-  if (stack && refs.length > 0) return usage("--stack cannot be combined with explicit PRs");
   const format = (values.format ?? "text") as "text" | "json";
   return {
     refs,
-    stack,
     global: { format, verbose: values.verbose === true },
     extra: args.filter((_, index) => !consumed.has(index)),
   };
 }
 
+/** Resolves PR references that must all name one repository. */
 export async function resolvePollTargets(parsed: ParsedPollTargets): Promise<{
   prNumbers: number[];
-  stackPrNumber?: number;
   targetRepository?: RepoInfo;
 }> {
-  const all = parsed.stack ? [parsed.stack] : parsed.refs;
+  const all = parsed.refs;
   if (all.length === 0) return { prNumbers: [] };
   const checkoutRepo = all.some((ref) => ref.repository === undefined)
     ? await getRepoInfo()
@@ -113,15 +97,7 @@ export async function resolvePollTargets(parsed: ParsedPollTargets): Promise<{
     selectedRepo = repo;
     if (!prNumbers.includes(target.prNumber)) prNumbers.push(target.prNumber);
   }
-  return parsed.stack
-    ? { prNumbers: [], stackPrNumber: prNumbers[0], targetRepository: selectedRepo }
-    : { prNumbers, targetRepository: selectedRepo };
-}
-
-function usage(message: string): null {
-  process.stderr.write(`pr-shepherd: ${message}\n`);
-  process.exitCode = EXIT.USAGE;
-  return null;
+  return { prNumbers, targetRepository: selectedRepo };
 }
 
 function usageThrow(message: string): never {

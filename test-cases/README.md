@@ -27,8 +27,8 @@ test-cases/snapshots/<NN>-<action>-<scenario>/output.rest.json    # generated, o
 
 Every fixture runs twice: once on GraphQL and once on REST (`--transport rest` with
 `CLAUDE_CODE_REMOTE=true`, the Claude Code cloud session that supplies complete CCR thread status).
-That environment also selects event poll mode, so the REST variant pins `--poll-mode poll` unless the
-fixture passes its own `--poll-mode`. It keeps the cloud session's durable state, so generated reply
+That environment also makes looping commands run one tick, so the harness mocks that switch off and
+the REST variant differs from GraphQL only by transport. It keeps the cloud session's durable state, so generated reply
 commands carry `--adopt-existing-replies`. Merged and closed CANCEL output is minimal on both
 transports and carries no transport evidence.
 The REST input is derived automatically from the GraphQL fixture by

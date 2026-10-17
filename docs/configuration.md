@@ -124,9 +124,8 @@ Built-in defaults live in `src/config.json`.
 | `iterate.resolveOtherHumanThreads`   | `"none"`                                  | When to resolve other-human threads after a reply: `none`, `outdated`, or `always`.                                                                     |
 | `iterate.instructions`               | `"inline"`                                | `inline` or `playbook` for the `fix_code` commit/push instructions. Overridden by `--instructions` and the MCP `instructions` input.                    |
 | `iterate.reviewOutputMaxChars`       | `50000`                                   | Per-tick character budget for review-item bodies on `fix_code`; `0` disables. See [Review output budget](actions.md#review-output-budget).              |
-| `poll.mode`                          | `"auto"`                                  | `auto`, `poll`, or `event`. Overridden by `--poll-mode` and the MCP/library `pollMode` option.                                                          |
 | `poll.intervalSeconds`               | `60`                                      | Delay between `WAIT` ticks for one PR; overridden by `--interval`.                                                                                      |
-| `poll.stackIntervalFactor`           | `2`                                       | Multiplier for `--stack` and multi-PR sleeps; `--interval` overrides it and is not multiplied.                                                          |
+| `poll.stackIntervalFactor`           | `2`                                       | Multiplier for `stack` and multi-PR sleeps; `--interval` overrides it and is not multiplied.                                                            |
 | `poll.timeoutSeconds`                | `270`                                     | Wall-clock cap for bounded `WAIT` polling; overridden by `--timeout`, ignored by `--until-terminal`.                                                    |
 | `poll.debounceSeconds`               | `60`                                      | Settle window after the first `FIX_CODE`; overridden by `--debounce`; `0` disables.                                                                     |
 | `poll.quietStatus`                   | `false`                                   | Hide unchanged `WAIT` snapshots; overridden by `--quiet-status` / `--no-quiet-status`.                                                                  |
@@ -162,7 +161,7 @@ REST can return less context than GraphQL; missing fields stay unknown. A clean 
 
 ## `cliCommand` — default `["pr-shepherd"]`
 
-Argv prefix for every `pr-shepherd` command Shepherd emits — follow-up `--stack` and per-PR session commands, `apply review` and `apply journal` mutations, and `build-suggestion-patches` commands — in Markdown, JSON, and MCP output. The default assumes `pr-shepherd` is on `PATH`. A repository that pins pr-shepherd as a dependency should set its launcher so agents run the pinned version:
+Argv prefix for every `pr-shepherd` command Shepherd emits — follow-up `stack` and per-PR session commands, `apply review` and `apply journal` mutations, and `suggest` commands — in Markdown, JSON, and MCP output. The default assumes `pr-shepherd` is on `PATH`. A repository that pins pr-shepherd as a dependency should set its launcher so agents run the pinned version:
 
 ```yaml
 cliCommand:
@@ -207,7 +206,7 @@ Raise it for threads that need several fix-push-review cycles; lower it to escal
 
 Minutes the loop may repeat without material progress before escalating with `stall-timeout`. Progress means a change to the HEAD SHA, the failing check names, actionable thread/comment/review IDs, or the review-summary minimize bucket; any change resets the timer.
 
-The same threshold covers CI that never starts: relevant queued/requested/waiting check runs, or pending external status contexts, with no start timestamp whose latest activity (`updatedAtUnix` when GitHub exposes it, else `createdAtUnix`) is older than the threshold. A `--stack` selection whose layers can only wait uses it for its own timer; see [`stall-timeout`](escalations.md#stall-timeout).
+The same threshold covers CI that never starts: relevant queued/requested/waiting check runs, or pending external status contexts, with no start timestamp whose latest activity (`updatedAtUnix` when GitHub exposes it, else `createdAtUnix`) is older than the threshold. A `stack` selection whose layers can only wait uses it for its own timer; see [`stall-timeout`](escalations.md#stall-timeout).
 
 Override per invocation with `--stall-timeout <duration>`: a bare number is minutes, or use an `s`/`m`/`h` suffix (`--stall-timeout 90s`, `--stall-timeout 1h`). `--stall-timeout 0` disables stall detection.
 
@@ -265,7 +264,7 @@ iterate:
 
 ## `poll`
 
-Defaults for the polling CLI (`pr-shepherd [PR]`); explicit flags win. Single-tick `iterate` and MCP calls do not poll, and event mode (`poll.mode`) ignores these settings — see [cloud.md](cloud.md).
+Defaults for the polling CLI (`pr-shepherd [PR]`); explicit flags win. Single ticks (`iterate`, `stack --once`, MCP and library calls, and every command when `CLAUDE_CODE_REMOTE=true`) do not poll and ignore these settings — see [cloud.md](cloud.md).
 
 ```yaml
 poll:
@@ -277,15 +276,14 @@ poll:
   reconcileSeconds: 900
 ```
 
-| Key                   | Constraint                  | Notes                                                                                                                                                                                                                                                                                              |
-| --------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `intervalSeconds`     | positive finite             | One PR, including `--until-terminal`, sleeps this or `--interval`.                                                                                                                                                                                                                                 |
-| `stackIntervalFactor` | finite, ≥ 1                 | A stack or multi-PR poll without `--interval` sleeps `intervalSeconds * stackIntervalFactor` (not rounded). `intervalSeconds × factor` in ms must be ≤ 2147483647.                                                                                                                                 |
-| `timeoutSeconds`      | positive finite             | `--until-terminal` ignores it, as it ignores `--timeout`.                                                                                                                                                                                                                                          |
-| `debounceSeconds`     | non-negative finite         | `0` disables the post-`FIX_CODE` settle window.                                                                                                                                                                                                                                                    |
-| `quietStatus`         | boolean                     | `false` keeps the status line on every `WAIT` tick. `--quiet-status` / `--no-quiet-status` override per run.                                                                                                                                                                                       |
-| `reconcileSeconds`    | non-negative finite         | GraphQL transport: an idle `WAIT` tick (no check running) replays the stored report when all conditional REST change detectors answer 304 and the last GraphQL snapshot is younger than this. `0` disables the detectors. See [idle-wait change detectors](graphql.md#idle-wait-change-detectors). |
-| `mode`                | `auto` \| `poll` \| `event` | `event` runs one tick with no sleeping or debounce and reports `nextCheck`; `auto` picks `event` when `CLAUDE_CODE_REMOTE=true`.                                                                                                                                                                   |
+| Key                   | Constraint          | Notes                                                                                                                                                                                                                                                                                              |
+| --------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `intervalSeconds`     | positive finite     | One PR, including `--until-terminal`, sleeps this or `--interval`.                                                                                                                                                                                                                                 |
+| `stackIntervalFactor` | finite, ≥ 1         | A stack or multi-PR poll without `--interval` sleeps `intervalSeconds * stackIntervalFactor` (not rounded). `intervalSeconds × factor` in ms must be ≤ 2147483647.                                                                                                                                 |
+| `timeoutSeconds`      | positive finite     | `--until-terminal` ignores it, as it ignores `--timeout`.                                                                                                                                                                                                                                          |
+| `debounceSeconds`     | non-negative finite | `0` disables the post-`FIX_CODE` settle window.                                                                                                                                                                                                                                                    |
+| `quietStatus`         | boolean             | `false` keeps the status line on every `WAIT` tick. `--quiet-status` / `--no-quiet-status` override per run.                                                                                                                                                                                       |
+| `reconcileSeconds`    | non-negative finite | GraphQL transport: an idle `WAIT` tick (no check running) replays the stored report when all conditional REST change detectors answer 304 and the last GraphQL snapshot is younger than this. `0` disables the detectors. See [idle-wait change detectors](graphql.md#idle-wait-change-detectors). |
 
 Factor-based quota-warning bands use the configured `intervalSeconds`; neither `--interval` nor the stack factor compounds into them. `pollIntervalMinutes` sets an absolute minimum cadence. The dispatcher sleeps the slower of the effective interval and the active band; with built-in defaults a stack sleeps 120s until a band is slower.
 
@@ -309,7 +307,7 @@ How it behaves:
 
 - Shepherd reads authoritative GraphQL and REST core response headers; it makes no extra rate-limit request.
 - When a band is crossed, the next non-terminal agent-visible result carries the raw quota state and continuation guidance. Bounded CLI guidance uses a timeout twice the recommended interval; MCP and single-tick callers are told how long to wait.
-- The poll dispatcher (`pr-shepherd [PR]`, `--until-terminal`, aggregate `--stack` / multi-PR) sleeps `max(effective interval, resolved band interval)` on every normal wait, even after the one-shot warning. The effective interval is `--interval` when set, else `poll.intervalSeconds` (one PR) or `poll.intervalSeconds * poll.stackIntervalFactor` (stack or multi-PR). The active band is the crossed entry with the lowest `remainingPercent`. A slower explicit interval is kept in both sleep and instructions.
+- The poll dispatcher (`pr-shepherd [PR]`, `--until-terminal`, aggregate `stack` / multi-PR) sleeps `max(effective interval, resolved band interval)` on every normal wait, even after the one-shot warning. The effective interval is `--interval` when set, else `poll.intervalSeconds` (one PR) or `poll.intervalSeconds * poll.stackIntervalFactor` (stack or multi-PR). The active band is the crossed entry with the lowest `remainingPercent`. A slower explicit interval is kept in both sleep and instructions.
 - A post-`FIX_CODE` or stack `SHEPHERD` debounce wait uses the remaining debounce window and is not band-adjusted.
 - Each band warns once per worktree and quota window. A new window starts when GitHub's used count falls, the remaining count rises, or the reset timestamp advances after the prior deadline passed; an earlier reset adjustment does not re-arm. If the first response is already below several bands, only the lowest warns and the higher ones are recorded as crossed.
 - Single-tick `iterate` and MCP `iterate` never sleep; callers own recurrence.
@@ -373,7 +371,7 @@ Method selection when neither is set:
 
 Only repository-allowed methods are suggested for a direct request. When the repository enables none, a command that needs one reports that constraint (`merge-method-unavailable`). REST queue requests do not validate the unused direct method, including for a native-stack prefix.
 
-There is no key to opt out of stack detection. When GitHub reports the PR is in a native stack, a ready singular `--merge` poll returns non-terminal `FIX_CODE` pointing at `--stack <PR URL> --until-terminal --merge`, and `merge.commandArgs` is never consulted for that PR. `--stack --merge` returns `MERGE` for the highest ready prefix, then `CANCEL` once every layer merges. Stack routing (`SHEPHERD`, `WAIT`, `MERGE`, `CANCEL`, `ESCALATE`): [actions.md](actions.md), [merge-status.md](merge-status.md#merge-requirements), and [`native-stack-merge-routing`](escalations.md#native-stack-merge-routing).
+There is no key to opt out of stack detection. When GitHub reports the PR is in a native stack, a ready singular `--merge` poll returns non-terminal `FIX_CODE` pointing at `pr-shepherd stack <PR URL> --until-terminal --merge`, and `merge.commandArgs` is never consulted for that PR. `stack --merge` returns `MERGE` for the highest ready prefix, then `CANCEL` once every layer merges. Stack routing (`SHEPHERD`, `WAIT`, `MERGE`, `CANCEL`, `ESCALATE`): [actions.md](actions.md), [merge-status.md](merge-status.md#merge-requirements), and [`native-stack-merge-routing`](escalations.md#native-stack-merge-routing).
 
 ## `mergeStatus`
 
@@ -428,7 +426,7 @@ When `false`, Shepherd does not mutate or print the line. Supported IDs stay on 
 
 ### `actions.autoMarkReady` — default `true`
 
-When `true`, Shepherd converts a draft PR to ready for review once checks pass, no Shepherd-visible work remains, no configured blocking review is in progress, and the ready-delay has not elapsed (after it elapses the loop emits `cancel`). When disabled, a clean draft remains in draft and ends its one-PR session with `CANCEL` (`auto-mark-ready-disabled`, exit 0), without a ready-delay countdown or stall guard. Pending CI, bot review, and other actionable work still runs first. A stack selector continues independent work and eligible ready-prefix merges, then returns `CANCEL` when only clean disabled drafts remain; it never asks the agent to promote them. See [actions.md](actions.md).
+When `true`, Shepherd converts a draft PR to ready for review once checks pass, no Shepherd-visible work remains, no configured blocking review is in progress, and the ready-delay has not elapsed (after it elapses the loop emits `cancel`). When disabled, a clean draft remains in draft and ends its one-PR session with `CANCEL` (`auto-mark-ready-disabled`, exit 0), without a ready-delay countdown or stall guard. Pending CI, bot review, and other actionable work still runs first. A `stack` command continues independent work and eligible ready-prefix merges, then returns `CANCEL` when only clean disabled drafts remain; it never asks the agent to promote them. See [actions.md](actions.md).
 
 ### `actions.neverCancelRuns` — default `[]`
 
@@ -460,17 +458,17 @@ actions:
 | `CI`                                                         | Any value other than empty, `0`, or `false` also disables the debug log.                                                                                                           |
 | `PR_SHEPHERD_LOG_MAX_BODY`                                   | Max characters of each logged HTTP body (default `262144`); larger bodies are truncated.                                                                                           |
 | `GH_TOKEN` / `GITHUB_TOKEN` / `GITHUB_PERSONAL_ACCESS_TOKEN` | GitHub token. Order: `GH_TOKEN` → `GITHUB_TOKEN` → `gh auth token` (needs the `gh` CLI) → `GITHUB_PERSONAL_ACCESS_TOKEN`. Required access: [authentication.md](authentication.md). |
-| `CLAUDE_CODE_REMOTE`                                         | `true` makes `github.transport: auto` start with REST, `poll.mode: auto` select `event`, and state default to durable storage.                                                     |
+| `CLAUDE_CODE_REMOTE`                                         | `true` makes `github.transport: auto` start with REST, the default command and `stack` run one tick instead of polling, and state default to durable storage.                      |
 | `HTTPS_PROXY` / `HTTP_PROXY` (or lowercase)                  | Route GitHub requests through a proxy, for both transports. Lowercase takes precedence.                                                                                            |
 | `NO_PROXY` (or lowercase)                                    | Hosts that bypass the proxy. Lowercase takes precedence.                                                                                                                           |
 
 Default state directory when `PR_SHEPHERD_STATE_DIR` is unset:
 
-| Context                                          | Default                                                                                                                                                                                          |
-| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `CLAUDE_CODE_REMOTE=true`, or an event-mode tick | `<git-common-dir>/pr-shepherd-state` ([durable state](cloud.md#durable-state))                                                                                                                   |
-| macOS                                            | `pr-shepherd-state` in the per-user temp dir (`getconf DARWIN_USER_TEMP_DIR`), not `$TMPDIR`, so sandboxed and unsandboxed runs share state                                                      |
-| Linux                                            | `/tmp/pr-shepherd-state-<uid>` (created mode `0700`) when it is a real directory you own, not group- or world-writable, and readable, writable, and searchable; else `$TMPDIR/pr-shepherd-state` |
-| Other platforms                                  | `os.tmpdir()`                                                                                                                                                                                    |
+| Context                   | Default                                                                                                                                                                                          |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `CLAUDE_CODE_REMOTE=true` | `<git-common-dir>/pr-shepherd-state` ([durable state](cloud.md#durable-state))                                                                                                                   |
+| macOS                     | `pr-shepherd-state` in the per-user temp dir (`getconf DARWIN_USER_TEMP_DIR`), not `$TMPDIR`, so sandboxed and unsandboxed runs share state                                                      |
+| Linux                     | `/tmp/pr-shepherd-state-<uid>` (created mode `0700`) when it is a real directory you own, not group- or world-writable, and readable, writable, and searchable; else `$TMPDIR/pr-shepherd-state` |
+| Other platforms           | `os.tmpdir()`                                                                                                                                                                                    |
 
 Per-repository files live at `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/`; separate owner and repository directories keep hyphenated names from colliding. Directories written by older builds as `<owner>-<repo>` are no longer read, so the first run after upgrading starts clean (seen comments can surface once, ready-delay restarts). `pr-shepherd admin clean all` removes the whole base, including those leftovers.

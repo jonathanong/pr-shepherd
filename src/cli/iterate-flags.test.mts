@@ -7,7 +7,7 @@ vi.mock("../config/load.mts", async (importOriginal) => ({
 }));
 
 import type { loadConfig } from "../config/load.mts";
-import { hasInvalidIterateFlags, parseIterateFlags } from "./iterate-flags.mts";
+import { parseIterateFlags } from "./iterate-flags.mts";
 import { EXIT } from "../exit-codes.mts";
 
 type PrShepherdConfig = ReturnType<typeof loadConfig>;
@@ -25,7 +25,6 @@ function defaultConfig(): PrShepherdConfig {
       debounceSeconds: 60,
       reconcileSeconds: 900,
       quietStatus: false,
-      mode: "auto",
     },
     watch: { readyDelayMinutes: 10, graphqlQuotaWarnings: [] },
     iterate: {
@@ -141,18 +140,5 @@ describe("parseIterateFlags", () => {
     const flags = parseIterateFlags(["--ready-delay", "bad"], defaultConfig());
     expect(flags.readyDelaySuffix).toBeNull();
     stderrSpy.mockRestore();
-  });
-
-  it("parses --poll-mode in both forms and rejects bad values", () => {
-    expect(parseIterateFlags([], defaultConfig()).pollMode).toBeUndefined();
-    expect(parseIterateFlags(["--poll-mode", "event"], defaultConfig()).pollMode).toBe("event");
-    expect(parseIterateFlags(["--poll-mode=poll"], defaultConfig()).pollMode).toBe("poll");
-    const write = vi.spyOn(process.stderr, "write").mockReturnValue(true);
-    const flags = parseIterateFlags(["--poll-mode", "bogus"], defaultConfig());
-    expect(flags.pollMode).toBeNull();
-    expect(hasInvalidIterateFlags(flags)).toBe(true);
-    expect(process.exitCode).toBe(EXIT.USAGE);
-    expect(write.mock.calls.join("")).toContain("--poll-mode must be one of auto, poll, event");
-    write.mockRestore();
   });
 });

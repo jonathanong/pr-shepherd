@@ -1,14 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { formatNextCheckLines, formatPollModeSegment } from "./next-check-format.mts";
+import { formatNextCheckLines } from "./next-check-format.mts";
 
 describe("next-check formatting", () => {
   it("omits everything when not applicable", () => {
-    expect(formatPollModeSegment({})).toBe("");
     expect(formatNextCheckLines(undefined)).toEqual([]);
   });
 
-  it("renders poll mode and the next check", () => {
-    expect(formatPollModeSegment({ pollMode: "event" })).toBe(" · **pollMode** `event`");
+  it("renders the next check", () => {
     expect(
       formatNextCheckLines({
         at: "2024-05-15T19:09:00Z",

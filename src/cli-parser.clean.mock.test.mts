@@ -131,33 +131,28 @@ describe("main — clean dispatch", () => {
   });
 });
 
-describe("main — clean poll-mode scope", () => {
+describe("main — clean durable state scope", () => {
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it("cleans inside the durable state scope when --poll-mode resolves to event", async () => {
-    vi.stubEnv("CLAUDE_CODE_REMOTE", "");
+  it("cleans inside the durable state scope only in a cloud session", async () => {
     const durable: boolean[] = [];
     mockRunClean.mockImplementation(async () => {
       durable.push(durableStateRequested());
       return { ...OK_RESULT, variant: "pr" };
     });
-    await main(["node", "shepherd", "admin", "clean", "pr", "42", "--poll-mode", "event"]);
-    await main(["node", "shepherd", "admin", "clean", "all", "--poll-mode=poll"]);
+    vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
+    await main(["node", "shepherd", "admin", "clean", "pr", "42"]);
+    vi.stubEnv("CLAUDE_CODE_REMOTE", "");
+    await main(["node", "shepherd", "admin", "clean", "all"]);
     expect(durable).toEqual([true, false]);
-    expect(mockRunClean).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({ variant: "pr", value: "42" }),
-    );
     expect(process.exitCode).toBeUndefined();
   });
 
-  it("rejects an invalid --poll-mode value with a usage error", async () => {
-    await main(["node", "shepherd", "admin", "clean", "all", "--poll-mode", "evnet"]);
-    expect(getStderr()).toContain(
-      'pr-shepherd: admin clean: --poll-mode must be one of auto, poll, event, got "evnet"',
-    );
+  it("rejects the removed --poll-mode flag", async () => {
+    await main(["node", "shepherd", "admin", "clean", "all", "--poll-mode", "event"]);
+    expect(getStderr()).toContain('pr-shepherd: admin clean: unknown flag: "--poll-mode"');
     expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunClean).not.toHaveBeenCalled();
   });

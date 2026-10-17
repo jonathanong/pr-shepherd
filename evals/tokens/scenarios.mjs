@@ -1352,7 +1352,7 @@ const routedLayerTickApi = (stackSize) => ({
 });
 
 const stackCmd = (anchorPr, repo, flags = "") =>
-  `pr-shepherd --stack '${repo}#${anchorPr}' --until-terminal${flags}`;
+  `pr-shepherd stack '${repo}#${anchorPr}' --until-terminal${flags}`;
 
 const STACK_SCENARIOS = [
   setupScenario({ id: "stack-setup", session: "stack" }),

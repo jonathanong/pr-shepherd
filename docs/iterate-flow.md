@@ -38,7 +38,7 @@ flowchart TD
   SG -.->|stalled| E4(["escalate: stall-timeout"])
 ```
 
-The shipped skill runs `pr-shepherd [PR] --until-terminal`, not `pr-shepherd iterate`. That poll stays inside ordinary `WAIT` and `MARK_READY`, and returns `READY` (ready-delay counting), `FIX_CODE` (after its `--debounce` window), `MERGE`, any non-terminal quota warning, or terminal `CANCEL` / `ESCALATE`. After following `## Instructions`, the skill reruns the same command unless it got `CANCEL` or `ESCALATE`, the instructions say to end the turn or not to rerun (event mode), or a human says stop. The bare `pr-shepherd [PR]` stays bounded for direct CLI users; MCP `iterate` returns one tick with no debounce, and its caller owns recurrence.
+The shipped skill runs `pr-shepherd [PR] --until-terminal`, not `pr-shepherd iterate`. That poll stays inside ordinary `WAIT` and `MARK_READY`, and returns `READY` (ready-delay counting), `FIX_CODE` (after its `--debounce` window), `MERGE`, any non-terminal quota warning, or terminal `CANCEL` / `ESCALATE`. After following `## Instructions`, the skill reruns the same command unless it got `CANCEL` or `ESCALATE`, the instructions say to end the turn or not to rerun (a single tick), or a human says stop. The bare `pr-shepherd [PR]` stays bounded for direct CLI users; MCP `iterate` returns one tick with no debounce, and its caller owns recurrence.
 
 ## Steps
 
@@ -154,14 +154,14 @@ There is no `mergeStateStatus === "CLEAN"` requirement: a draft whose derived st
 
 ### 6. Ready-delay completion
 
-- **Elapsed** (`readyState.shouldCancel`, non-draft): writes the READY receipt (the one a later stack read calls shepherded), clears the marker and stall state, then emits `merge` when `--merge` is set (transport-aware, head-pinned merge or queue commands; native stacks route to the `--stack` selector instead; not gated on `viewerCanEnableAutoMerge` — GitHub reports authorization or policy failures), otherwise `cancel` with `reason: "ready-delay-elapsed"`. On a native-stack layer whose receipt cannot be written, it emits `wait` (through the stall guard) and keeps the marker so the next tick retries.
+- **Elapsed** (`readyState.shouldCancel`, non-draft): writes the READY receipt (the one a later stack read calls shepherded), clears the marker and stall state, then emits `merge` when `--merge` is set (transport-aware, head-pinned merge or queue commands; native stacks route to the `stack` command instead; not gated on `viewerCanEnableAutoMerge` — GitHub reports authorization or policy failures), otherwise `cancel` with `reason: "ready-delay-elapsed"`. On a native-stack layer whose receipt cannot be written, it emits `wait` (through the stall guard) and keeps the marker so the next tick retries.
 - **Counting** (`isReady`, not `shouldCancel`, `remainingSeconds > 0`): emits `action: 'ready'` and clears stall state. `--until-terminal` returns it instead of sleeping; the stall guard does not apply.
 
 ### 7. Wait
 
 **Fallthrough:** nothing actionable, no terminal state, no ready-delay elapsed or counting, not marking ready. A clean draft with auto mark-ready disabled returns `cancel` before this fallthrough.
 
-A draft native stack layer is marked ready by its own session as soon as that layer is clean when auto mark-ready is enabled; it does not wait for lower layers. With auto mark-ready disabled, the selector processes independent actionable layers and eligible ready-prefix merges, then returns `CANCEL` when only clean disabled drafts remain. It never instructs the agent to mark those drafts ready.
+A draft native stack layer is marked ready by its own session as soon as that layer is clean when auto mark-ready is enabled; it does not wait for lower layers. With auto mark-ready disabled, the `stack` command processes independent actionable layers and eligible ready-prefix merges, then returns `CANCEL` when only clean disabled drafts remain. It never instructs the agent to mark those drafts ready.
 
 **Emits:** `action: 'wait'`, through the stall guard.
 

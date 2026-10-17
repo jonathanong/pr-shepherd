@@ -28,14 +28,7 @@ describe("poll target parsing", () => {
     });
   });
 
-  it("parses a native stack anchor and rejects mixed selectors", async () => {
-    const parsed = parsePollTargets(["--stack", "acme/widgets#43", "--debounce=0"])!;
-    expect(parsed.extra).toEqual(["--debounce=0"]);
-    await expect(resolvePollTargets(parsed)).resolves.toEqual({
-      prNumbers: [],
-      stackPrNumber: 43,
-      targetRepository: { owner: "acme", name: "widgets" },
-    });
+  it("rejects the removed --stack flag with a pointer to the stack command", () => {
     expect(parsePollTargets(["42", "--stack", "43"])).toBeNull();
     expect(process.exitCode).toBe(EXIT.USAGE);
   });
@@ -50,11 +43,9 @@ describe("poll target parsing", () => {
     await expect(resolvePollTargets(parsed)).resolves.toMatchObject({ prNumbers: [42, 43] });
   });
 
-  it("validates separate and inline stack selectors", () => {
+  it("rejects every --stack spelling", () => {
     expect(parsePollTargets(["--stack"])).toBeNull();
-    expect(parsePollTargets(["--stack=bad"])).toBeNull();
-    expect(parsePollTargets(["--stack=42", "--stack=43"])).toBeNull();
-    expect(parsePollTargets(["--stack", "42", "--stack", "43"])).toBeNull();
+    expect(parsePollTargets(["--stack=42"])).toBeNull();
     expect(process.exitCode).toBe(EXIT.USAGE);
   });
 

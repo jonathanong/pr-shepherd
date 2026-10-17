@@ -4,7 +4,7 @@ runs: 3
 max_turns: 6
 timeout_seconds: 300
 allowed_tools: [Read, Glob, Grep, Skill]
-tags: [event-mode, wait, tier:guard, area:loop]
+tags: [single-tick, wait, tier:guard, area:loop]
 append_system_prompt: |
   You have no shell and no network access. Do not run shell commands, fetch
   anything over the network, or read repository files other than a reference
@@ -20,14 +20,14 @@ append_system_prompt: |
   explicitly and say why.
 ---
 You are running in a Claude Code cloud session subscribed to PR activity for
-https://github.com/owner/repo/pull/42. I already ran `pr-shepherd https://github.com/owner/repo/pull/42` — it was configured for event mode and
+https://github.com/owner/repo/pull/42. I already ran `pr-shepherd https://github.com/owner/repo/pull/42` — it ran one tick and
 returned the output below. Take it from there.
 
 ---
 
 # PR #42 [WAIT]
 
-**status** `IN_PROGRESS` · **repo** `owner/repo` · **pollMode** `event`
+**status** `IN_PROGRESS` · **repo** `owner/repo`
 **summary** 1 inProgress
 **activity** 0 commits · 0 review rounds · active: `CI / build`
 **nextCheck** `2024-05-15T19:57:00Z` · in 3020s · reason `safety-net`
@@ -37,5 +37,5 @@ WAIT: 1 in-progress — active checks: CI / build
 ## Instructions
 
 1. Non-terminal — no action needed this tick.
-2. Event mode: end this turn now without sleeping or polling. Playbook: "Cloud event loop".
+2. End this turn now without sleeping or polling. Playbook: "Event loop".
 3. Keep exactly one safety-net wake-up at `2024-05-15T19:57:00Z` (`safety-net`). When a PR event or that wake-up arrives, rerun this command with the same options and act only on Shepherd's output, never on the event payload.

@@ -2,21 +2,20 @@ import { EXIT } from "../exit-codes.mts";
 import { parsePrNumber } from "./args.mts";
 import { validateDefaultArgs } from "./validate-default-args.mts";
 import { USAGE } from "./help.mts";
+import { isRemovedFlag, rejectRemovedFlags } from "./removed-flags.mts";
 
-const DEFAULT_POLL_FLAGS_WITH_VALUES = new Set([
+export const DEFAULT_POLL_FLAGS_WITH_VALUES = new Set([
   "--transport",
   "--format",
   "--ready-delay",
   "--stall-timeout",
   "--instructions",
-  "--poll-mode",
   "--interval",
   "--timeout",
   "--debounce",
-  "--stack",
 ]);
 
-const DEFAULT_POLL_BOOLEAN_FLAGS = new Set([
+export const DEFAULT_POLL_BOOLEAN_FLAGS = new Set([
   "--verbose",
   "--no-auto-mark-ready",
   "--quiet-status",
@@ -33,6 +32,7 @@ export function isDefaultPollInvocation(subcommand: string | undefined): boolean
 }
 
 export function validateDefaultPollArgs(args: string[]): boolean {
+  if (rejectRemovedFlags(args)) return false;
   return validateDefaultArgs(
     args,
     DEFAULT_POLL_FLAGS_WITH_VALUES,
@@ -43,7 +43,12 @@ export function validateDefaultPollArgs(args: string[]): boolean {
 
 function isDefaultPollFlag(arg: string): boolean {
   const name = arg.split("=", 1)[0]!;
-  return DEFAULT_POLL_FLAGS_WITH_VALUES.has(name) || DEFAULT_POLL_BOOLEAN_FLAGS.has(arg);
+  // A removed flag routes here so its usage error names the replacement.
+  return (
+    DEFAULT_POLL_FLAGS_WITH_VALUES.has(name) ||
+    DEFAULT_POLL_BOOLEAN_FLAGS.has(arg) ||
+    isRemovedFlag(arg)
+  );
 }
 
 function writeDefaultUsageError(arg: string): void {

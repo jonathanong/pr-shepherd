@@ -114,9 +114,7 @@ export interface PollSummaryResult {
   instructions?: string[];
   apiUsage?: ApiUsage;
   quotaWarning?: GraphqlQuotaWarning;
-  /** `event` when this aggregate result came from event mode. Omitted in poll mode. */
-  pollMode?: "event";
-  /** Event mode only: when to come back if no GitHub event arrives first. */
+  /** Single ticks only: when to come back if no GitHub event arrives first. */
   nextCheck?: NextCheck;
 }
 
@@ -130,6 +128,4 @@ export interface PollSummaryCommandOptions {
   stallTimeoutSeconds?: number;
   noAutoMarkReady?: boolean;
   instructions?: import("../config/load.mts").InstructionStyle;
-  /** Override `poll.mode` for this call. `auto` resolves to `event` when `CLAUDE_CODE_REMOTE=true`. */
-  pollMode?: import("../config/load.mts").PollMode;
 }

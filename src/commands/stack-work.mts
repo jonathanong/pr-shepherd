@@ -1,6 +1,6 @@
 import type { PollSummaryItem } from "../types.mts";
 
-/** How the stack selector routes the autonomous layers that still need work. */
+/** How the stack command routes the autonomous layers that still need work. */
 export interface StackWork {
   /** Layers that need a one-PR Shepherd session, with or without a known command. */
   sessions: PollSummaryItem[];
@@ -49,7 +49,7 @@ function isProbed(item: PollSummaryItem): boolean {
 }
 
 /**
- * Work exists, but every routed layer belongs to another author: rerunning the stack selector
+ * Work exists, but every routed layer belongs to another author: rerunning the stack command
  * cannot change anything, so the caller reports the overview and stops instead.
  */
 function onlyUnownedWork(layers: PollSummaryItem[]): boolean {
@@ -57,7 +57,7 @@ function onlyUnownedWork(layers: PollSummaryItem[]): boolean {
 }
 
 /**
- * The closing step after routed sessions: rerun the selector, or stop when nothing is owned.
+ * The closing step after routed sessions: rerun the stack command, or stop when nothing is owned.
  * Returns the plan action: a stop is a handoff, so no rerun, quota cadence, or wake-up follows it.
  */
 export function appendStackRerunInstruction(

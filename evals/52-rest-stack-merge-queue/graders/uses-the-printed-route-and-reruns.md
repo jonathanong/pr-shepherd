@@ -8,7 +8,7 @@ The plan runs the printed `pr-shepherd apply merge …/pull/342 … --transport 
 command as printed, including its `--require-sha`, `--merge-action merge_queue`
 and `--expected-stack` arguments. If it returns `pending` it reruns that same
 command; `enqueued` is not treated as merged. Afterwards it reruns
-`pr-shepherd --stack … --until-terminal --merge --transport rest` (in any flag
+`pr-shepherd stack … --until-terminal --merge --transport rest` (in any flag
 order, or "with the same options").
 
 Failing responses do any of: replace the printed command with `gh stack merge`,

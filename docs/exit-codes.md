@@ -51,14 +51,14 @@ Emitted by `iterate` and the default `pr-shepherd [PR]` once a report was fetche
 - **`wait` and `ready` (10) are not errors and not a signal to give up.** `wait` means nothing is actionable right now, including when `poll --timeout` gives up mid-wait and prints the last `wait` tick. `ready` means the PR is clean with `remainingSeconds` of ready-delay left; `--until-terminal` returns it instead of sleeping through the countdown. A `set -e` script that asks "is the PR done?" should treat 10 like 12/13/16: not finished. Only `0` is a successful terminal state.
 - `mark_ready` (11) is non-terminal. `pr-shepherd [PR]` stops on it by default; `--until-terminal` keeps polling through it.
 - `fix_code` (12) is always non-terminal: complete the printed work, then repeat the same CLI command (or schedule another MCP `iterate` tick).
-- `shepherd` (16) is stack-level and non-terminal: complete the listed one-PR sessions and rerun the same `--stack` selector. A mixed stack may surface human blockers on this tick; it returns `escalate` only once no shepherdable session remains.
+- `shepherd` (16) is stack-level and non-terminal: complete the listed one-PR sessions and rerun the same `stack` command. A mixed stack may surface human blockers on this tick; it returns `escalate` only once no shepherdable session remains.
 - `escalate` (13) is the only human handoff.
 
-**Aggregate selectors.** Explicit multi-PR polling returns the highest-priority row outcome, in this order: `escalate`, `fix_code`, `merge`, `mark_ready`, `wait`, closed-only `cancel`, then successful `cancel`. Native `--stack` returns `shepherd` (16) for autonomous one-PR work, `wait` (10) for queue progress, `cancel` (0) when ready layers are complete, when only clean drafts remain under disabled auto mark-ready (row reason `draft-auto-mark-ready-disabled`), or when all layers merged, and `escalate` (13) only when a human decision remains with no autonomous one-PR work. The full row list prints regardless of the aggregate action.
+**Aggregate commands.** Explicit multi-PR polling returns the highest-priority row outcome, in this order: `escalate`, `fix_code`, `merge`, `mark_ready`, `wait`, closed-only `cancel`, then successful `cancel`. Native `stack` returns `shepherd` (16) for autonomous one-PR work, `wait` (10) for queue progress, `cancel` (0) when ready layers are complete, when only clean drafts remain under disabled auto mark-ready (row reason `draft-auto-mark-ready-disabled`), or when all layers merged, and `escalate` (13) only when a human decision remains with no autonomous one-PR work. The full row list prints regardless of the aggregate action.
 
 ## 64–78 — shepherd failed (`sysexits.h`)
 
-Standard BSD `sysexits.h` codes (`/usr/include/sysexits.h`), uniform across every subcommand: `iterate`, `apply`, `build-suggestion-patches`, and the `admin` commands.
+Standard BSD `sysexits.h` codes (`/usr/include/sysexits.h`), uniform across every subcommand: `iterate`, `apply`, `suggest`, and the `admin` commands.
 
 | Code | Name             | When                                                                                                                                                                                                                                                                                |
 | ---- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -83,7 +83,7 @@ Standard BSD `sysexits.h` codes (`/usr/include/sysexits.h`), uniform across ever
 | `apply review` with one or more failed operations                                                  | 69   | `75` when the result reports a rate-limit stop. The complete result still prints.                                                                                                                                                                   |
 | Malformed `.pr-shepherdrc.yml`                                                                     | —    | Not fatal: logs a `failed to parse` warning to stderr and falls back to built-in defaults (intentional, tested). `78` is reserved in case this becomes fatal.                                                                                       |
 
-`apply`, `build-suggestion-patches`, and `admin` commands never emit 0/10–19 PR-state codes — those are specific to `IterateResult`. They exit `0` on success and a `sysexits.h` code on failure; each command's `--help` lists the codes it can realistically hit.
+`apply`, `suggest`, and `admin` commands never emit 0/10–19 PR-state codes — those are specific to `IterateResult`. They exit `0` on success and a `sysexits.h` code on failure; each command's `--help` lists the codes it can realistically hit.
 
 ### How GitHub errors are classified
 
@@ -98,7 +98,7 @@ A malformed GraphQL response (wrong shape, a null node where one is required) is
 **GraphQL engine crashes** arrive at HTTP 200 with `data: null` and `Something went wrong while executing your query … Please include <id> when reporting this issue.`, sometimes with `errors[].type` or `errors[].extensions.code` set to `INTERNAL` (checked independently — a nonempty non-`INTERNAL` `type` does not hide `extensions.code`). Retrying the same query often succeeds, so they map to `75`.
 
 - The GraphQL client retries read operations twice (500ms, then 1500ms) before surfacing the failure. The same retry covers `Resource limits for this query exceeded` (message, `type`, or `extensions.code` `RESOURCE_LIMITS_EXCEEDED`), even with partial `data`.
-- A `--stack` summary that still hits the resource limit halves `entries(first:)` down to 1 and pages with `after`; a failing one-entry page surfaces `75` with GitHub's message.
+- A `stack` summary that still hits the resource limit halves `entries(first:)` down to 1 and pages with `after`; a failing one-entry page surfaces `75` with GitHub's message.
 - Mutations are never retried: an INTERNAL or resource-limit error after GitHub applied a write (`addPullRequestReviewThreadReply`, mark-ready) would duplicate the side effect.
 - A response that also carries `Retry-After` or an exhausted rate limit skips the short delays and surfaces `75` immediately.
 - The GraphQL layer keeps `type` and `extensions` on `graphqlErrors` so classification can use them.

@@ -17,7 +17,8 @@ function toolsOf(iterate = vi.fn()) {
     shepherd: {
       iterate,
       apply: vi.fn(),
-      buildSuggestionPatches: vi.fn(),
+      stack: vi.fn(),
+      suggest: vi.fn(),
       getJournal: vi.fn(),
     },
   });

@@ -38,30 +38,22 @@ describe("main — log-file", () => {
     expect(JSON.parse(getStdout())).toEqual({ path: "/tmp/shepherd.md" });
   });
 
-  it("resolves the event-mode log path inside the durable state scope", async () => {
-    vi.stubEnv("CLAUDE_CODE_REMOTE", "");
+  it("resolves the log path inside the durable state scope only in a cloud session", async () => {
     const durable: boolean[] = [];
     mockRunLogFile.mockImplementation(async () => {
       durable.push(durableStateRequested());
       return { path: "/tmp/shepherd.md" };
     });
-    await main(["node", "shepherd", "admin", "log-file", "--poll-mode", "event"]);
-    await main(["node", "shepherd", "admin", "log-file", "--poll-mode", "poll"]);
+    vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
+    await main(["node", "shepherd", "admin", "log-file"]);
+    vi.stubEnv("CLAUDE_CODE_REMOTE", "");
+    await main(["node", "shepherd", "admin", "log-file"]);
     vi.unstubAllEnvs();
     expect(durable).toEqual([true, false]);
   });
 
-  it("rejects an invalid --poll-mode value with a usage error", async () => {
-    await main(["node", "shepherd", "admin", "log-file", "--poll-mode", "evnet"]);
-    expect(stderrSpy).toHaveBeenCalledWith(
-      'pr-shepherd: admin log-file: --poll-mode must be one of auto, poll, event, got "evnet"\n',
-    );
-    expect(process.exitCode).toBe(EXIT.USAGE);
-    expect(mockRunLogFile).not.toHaveBeenCalled();
-  });
-
-  it("rejects a --poll-mode flag with no value", async () => {
-    await main(["node", "shepherd", "admin", "log-file", "--poll-mode"]);
+  it("rejects the removed --poll-mode flag", async () => {
+    await main(["node", "shepherd", "admin", "log-file", "--poll-mode", "event"]);
     expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunLogFile).not.toHaveBeenCalled();
   });

@@ -6,4 +6,4 @@ flags: i
 weight: 1
 ---
 
---stack\s+\S*pull/42(?![0-9])[^\n]*--merge
+pr-shepherd stack\s+\S*pull/42(?![0-9])[^\n]*--merge

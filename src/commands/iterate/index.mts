@@ -397,7 +397,7 @@ async function runIterateCore(
     const receipt = receiptCurrent
       ? "written"
       : await recordReadyReceipt(receiptKey, report, checkContext);
-    // Aggregate --stack routing trusts only a layer's receipt, so an unwritten
+    // Aggregate `stack` routing trusts only a layer's receipt, so an unwritten
     // one keeps the elapsed marker and retries next tick. A one-PR receipt
     // only lets a rerun skip the wait, so its failure never changes the action.
     // A layer GitHub reports BLOCKED gets no receipt, so aggregate routing

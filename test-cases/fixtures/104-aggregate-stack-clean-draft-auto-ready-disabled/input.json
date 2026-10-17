@@ -1,7 +1,7 @@
 {
   "description": "A clean draft whose automatic ready transition is disabled stops stack shepherding without promoting the draft or polling until stall-timeout.",
   "mode": "aggregate",
-  "args": ["--stack", "https://github.com/owner/repo/pull/421", "--no-auto-mark-ready", "--debounce", "0s"],
+  "args": ["stack", "https://github.com/owner/repo/pull/421", "--no-auto-mark-ready", "--debounce", "0s"],
   "expectedExitCode": 0,
   "expectedNextAction": "cancel",
   "expectedReason": "all_terminal",

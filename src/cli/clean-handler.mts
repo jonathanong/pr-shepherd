@@ -2,7 +2,6 @@ import { runClean, type CleanVariant } from "../commands/clean.mts";
 import { EXIT } from "../exit-codes.mts";
 import { USAGE } from "./help.mts";
 import { formatCleanResult } from "./formatters.mts";
-import { rejectInvalidPollModeFlag, runInPollModeScope } from "./event-state-scope.mts";
 
 const CLEAN_VARIANTS = new Set<string>(["pr", "branch", "current", "repo", "all"]);
 
@@ -22,7 +21,6 @@ export async function handleClean(args: string[]): Promise<void> {
   for (const a of rest) {
     if (!a.startsWith("--")) continue;
     if (a === "--dry-run" || a === "--format" || a.startsWith("--format=")) continue;
-    if (a === "--poll-mode" || a.startsWith("--poll-mode=")) continue;
     process.stderr.write(`pr-shepherd: ${command}: unknown flag: "${a}"\n`);
     process.exitCode = EXIT.USAGE;
     return;
@@ -44,20 +42,13 @@ export async function handleClean(args: string[]): Promise<void> {
     return;
   }
 
-  if (rejectInvalidPollModeFlag(rest, command)) return;
-
   const jsonOut = formatValue === "json";
   const dryRun = rest.includes("--dry-run");
-  // Skip values consumed by --format <value> / --poll-mode <value> so they aren't positionals.
+  // Skip values consumed by --format <value> so they aren't positionals.
   const flagConsumedIndices = new Set<number>();
   if (fmtIdx !== -1 && fmtIdx + 1 < rest.length && !rest[fmtIdx + 1]!.startsWith("--")) {
     flagConsumedIndices.add(fmtIdx);
     flagConsumedIndices.add(fmtIdx + 1);
-  }
-  const pollModeIdx = rest.indexOf("--poll-mode");
-  if (pollModeIdx !== -1) {
-    flagConsumedIndices.add(pollModeIdx);
-    flagConsumedIndices.add(pollModeIdx + 1);
   }
   const positionals = rest.filter((a, i) => !flagConsumedIndices.has(i) && !a.startsWith("--"));
   if (positionals.length > 1) {
@@ -69,10 +60,7 @@ export async function handleClean(args: string[]): Promise<void> {
   }
   const value = positionals[0];
 
-  // Event mode keeps its state under the durable state base; clean must target that same scope.
-  const result = await runInPollModeScope(rest, () =>
-    runClean({ variant: variant as CleanVariant, value, dryRun }),
-  );
+  const result = await runClean({ variant: variant as CleanVariant, value, dryRun });
 
   if (!result.ok) {
     process.stderr.write(`pr-shepherd: ${command}: ${result.error}\n`);

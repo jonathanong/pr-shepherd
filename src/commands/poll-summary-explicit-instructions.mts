@@ -39,7 +39,7 @@ export function explicitInstructions(result: PollSummaryResult): string[] {
     ];
   }
   if (result.reason === "waiting" || result.reason === "timeout") {
-    return ["1. Run this aggregate selector again when the caller is ready to recheck."];
+    return ["1. Run this aggregate command again when the caller is ready to recheck."];
   }
   const instructions = [
     "1. Choose each non-WAIT, non-CANCEL row that can proceed independently and run or delegate its exact `pollCommand`.",

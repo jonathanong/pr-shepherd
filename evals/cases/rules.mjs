@@ -205,7 +205,7 @@ command.`,
       "builds-the-suggestion-patch": regex(
         // The message must be non-empty, quoted or not.
         cmd(
-          "build-suggestion-patches",
+          "suggest",
           PR_URL.replace(/[.]/g, String.raw`\.`),
           "--thread-id",
           `["']?PRRT_suggest["']?`,
@@ -214,7 +214,7 @@ command.`,
         ),
       ),
       "applies-the-patch-and-follows-through": llm(
-        `The CLI only builds the patch. After \`build-suggestion-patches\`, the plan
+        `The CLI only builds the patch. After \`suggest\`, the plan
 applies the returned patch, commits and pushes it to the PR head branch, then
 runs the printed \`apply review\` command from the pushed checkout, so its
 \`--require-sha\` resolves to the pushed SHA, with \`$DISMISS_MESSAGE\` replaced by

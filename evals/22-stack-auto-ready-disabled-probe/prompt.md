@@ -20,7 +20,7 @@ append_system_prompt: |
   explicitly and say why.
 ---
 Shepherd the native PR stack anchored at https://github.com/owner/repo/pull/421.
-I already ran the first tick (`pr-shepherd --stack https://github.com/owner/repo/pull/421 --until-terminal`) —
+I already ran the first tick (`pr-shepherd stack https://github.com/owner/repo/pull/421 --until-terminal`) —
 here is what it returned. Take it from there.
 
 ---

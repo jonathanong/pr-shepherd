@@ -156,10 +156,10 @@ describe("formatPollSummaryResult", () => {
 
   it("tells one-shot and timed-out callers to recheck", () => {
     expect(formatPollSummaryResult(result(row({ action: "wait" }), "waiting"))).toContain(
-      "Run this aggregate selector again",
+      "Run this aggregate command again",
     );
     expect(formatPollSummaryResult(result(row({ action: "wait" }), "timeout"))).toContain(
-      "Run this aggregate selector again",
+      "Run this aggregate command again",
     );
   });
 });

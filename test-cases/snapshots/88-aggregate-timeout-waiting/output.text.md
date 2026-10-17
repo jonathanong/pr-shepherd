@@ -16,4 +16,4 @@
 
 ## Instructions
 
-1. Run this aggregate selector again when the caller is ready to recheck.
+1. Run this aggregate command again when the caller is ready to recheck.

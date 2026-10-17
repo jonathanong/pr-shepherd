@@ -14,7 +14,7 @@ export interface SuggestionPatchResult {
   filesToStage: string[];
 }
 
-export interface BuildSuggestionPatchesResult {
+export interface SuggestResult {
   pr: number;
   repo: string;
   /** Suggestion patches in caller-supplied application order. */

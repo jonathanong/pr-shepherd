@@ -24,7 +24,7 @@ Skills are thin dispatchers. They parse arguments, call the CLI or MCP, print th
 - To hand an open PR to an external shepherd, read the "Draft handoff" playbook. The adapter supplies the activation gate, the dispatch call, and the immediate checkpoint. Do not run that path and an in-session loop on the same PR.
 - A skill cannot grant host permissions. Unattended approval comes from a trusted command rule or host policy.
 - Rebasing your own PR head onto its base and pushing it with `--force-with-lease` is part of this workflow; do not ask first. Bare `--force`, pushes to any other branch, remote or credential changes, unrelated changes, and ambiguous targets stay outside it.
-- If the CLI is unavailable, read the "MCP fallback" playbook (MCP `iterate`, then MCP `apply` and `build_suggestion_patches`). Do not run a shell `pr-shepherd apply` there. After a CLI poll, run the printed apply command.
+- If the CLI is unavailable, read the "MCP fallback" playbook (MCP `iterate`, then MCP `apply` and `suggest`). Do not run a shell `pr-shepherd apply` there. After a CLI poll, run the printed apply command.
 
 | Playbook             | Reference file                                                 |
 | -------------------- | -------------------------------------------------------------- |
@@ -36,7 +36,7 @@ Skills are thin dispatchers. They parse arguments, call the CLI or MCP, print th
 | CI failure triage    | `ci-failure-triage.md`                                         |
 | Branch update        | `branch-update.md`                                             |
 | Merge queue ejection | `merge-queue-ejection.md`                                      |
-| Cloud event loop     | `cloud-event-loop.md`                                          |
+| Event loop           | `event-loop.md`                                                |
 
 Install the plugin (skills plus the version-matched MCP server) or register `pr-shepherd-mcp` yourself; see [mcp.md](mcp.md). The CLI path needs `pr-shepherd` on `PATH`.
 
@@ -53,7 +53,7 @@ Canonical command: `pr-shepherd [PR] --until-terminal`. Bare `pr-shepherd [PR]` 
 
 MCP `iterate` is the fallback when the CLI is unavailable. It has no debounce and returns one tick; the caller repeats ticks and does not poll forever. An MCP tick repeats the same `iterate` call and does not switch back to a CLI that was unavailable.
 
-After `## Instructions`, rerun the same command unless the action is `[CANCEL]` or `[ESCALATE]`, the printed instructions say to end the turn or not to rerun (event mode), or a human says stop.
+After `## Instructions`, rerun the same command unless the action is `[CANCEL]` or `[ESCALATE]`, the printed instructions say to end the turn or not to rerun (a single tick), or a human says stop.
 
 - `[READY]` is non-terminal. Rerun when `remainingSeconds` elapses. Do not invent unrelated work.
 - `[FIX_CODE]` and stack-level `[SHEPHERD]` are always non-terminal.
@@ -89,7 +89,7 @@ sequenceDiagram
 Merge and stacks:
 
 - A request to merge, land, or enqueue a selected PR or native stack sets `--merge` even without the flag. Creating or opening a PR without merge intent leaves merge mode off.
-- For a native stack, an anchor PR selects `--stack PR`. A merge request reconciles one-PR READY receipts and merges the highest ready prefix with `gh stack merge`.
+- For a native stack, an anchor PR runs `pr-shepherd stack PR`. A merge request reconciles one-PR READY receipts and merges the highest ready prefix with `gh stack merge`.
 - Review and CI sessions can run at the same time. A clean draft is marked ready without waiting for lower layers. A queued stack stays non-terminal until every layer is merged.
 - Ready-delay defaults to 10 minutes (`watch.readyDelayMinutes`). See [iterate-flow.md](iterate-flow.md#2-ready-delay) and [configuration.md](configuration.md).
 
@@ -164,5 +164,5 @@ Do not attach Cursor `/autopilot`, or a `gh pr checks` / `gh pr watch` skill, in
 
 - CLI `pr-shepherd` or MCP `iterate` returns the next action and capability-filtered review-mutation arguments.
 - MCP `apply`, or the CLI `apply` command named in the output, runs ordered review mutations, `mark_files_viewed`, or `append_journal`, and surfaces GitHub's results.
-- `build_suggestion_patches` validates ordered patches for anchored suggestions.
+- `suggest` validates ordered patches for anchored suggestions.
 - The PR-operation skills leave that policy in the printed output.

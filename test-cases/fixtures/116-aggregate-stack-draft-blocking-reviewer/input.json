@@ -1,8 +1,8 @@
 {
-  "description": "A disabled draft waiting on a configured blocking reviewer is not offered to the agent to mark ready; the selector waits for that review.",
+  "description": "A disabled draft waiting on a configured blocking reviewer is not offered to the agent to mark ready; the command waits for that review.",
   "mode": "aggregate",
   "args": [
-    "--stack",
+    "stack",
     "https://github.com/owner/repo/pull/461",
     "--no-auto-mark-ready",
     "--timeout",

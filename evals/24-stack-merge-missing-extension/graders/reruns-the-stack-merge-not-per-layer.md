@@ -7,7 +7,7 @@ weight: 1
 The plan installs the `gh stack` extension and then reruns the SAME printed
 command, `GH_REPO=owner/repo gh stack merge 342 --yes --squash`, which lands
 PR #341 and PR #342 bottom-up in one step. Afterwards it reruns the
-`--stack … --merge` selector.
+`stack … --merge` command.
 
 The error means only that the `gh stack` extension is missing. It is not a
 reason to change the merge route.

@@ -29,7 +29,7 @@ function text(result: { instructions?: string[] }): string {
   return result.instructions?.join("\n") ?? "";
 }
 
-describe("stack selector agent work", () => {
+describe("stack command agent work", () => {
   it("leaves a clean disabled draft held while an upper draft keeps its session", () => {
     const result = withPollSummaryInstructions(
       stack([disabledDraft(1, 1), row(2, 2, { isDraft: true })]),

@@ -9,7 +9,7 @@ import { summaryStatusSignature } from "./poll-summary-signature.mts";
 import { describeIdleLayers } from "./stack-drain.mts";
 
 /**
- * A `--stack` plan that can only wait never reruns its layers' one-PR sessions, so their own
+ * A `stack` plan that can only wait never reruns its layers' one-PR sessions, so their own
  * stall guards cannot fire. Escalate `stall-timeout` once that idle plan's fingerprint stays
  * unchanged for `stallTimeoutSeconds`; any other plan, or `0`, clears the timer. When the enabled
  * timer cannot be read or written, escalate `stall-state-unavailable` instead of restarting it.
@@ -52,7 +52,7 @@ export async function applyStackStallGuard(
 
 /**
  * Unix seconds when an unchanged idle stack plan trips `stall-timeout`, or undefined when no
- * stack timer is running. Event mode schedules its next tick no later than this.
+ * stack timer is running. A single tick schedules its next tick no later than this.
  */
 export async function readStackStallDeadline(
   result: PollSummaryResult,

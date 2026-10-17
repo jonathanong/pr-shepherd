@@ -20,7 +20,7 @@ append_system_prompt: |
   explicitly and say why.
 ---
 Shepherd the native PR stack anchored at https://github.com/owner/repo/pull/312.
-I already ran the first tick (`pr-shepherd --stack https://github.com/owner/repo/pull/312 --until-terminal`) —
+I already ran the first tick (`pr-shepherd stack https://github.com/owner/repo/pull/312 --until-terminal`) —
 here is what it returned. Take it from there.
 
 ---
@@ -41,4 +41,4 @@ nextAction: shepherd
 
 1. Start or delegate concurrent one-PR sessions only for `owned` rows. Leave other layers untouched.
 2. Run `pr-shepherd https://github.com/owner/repo/pull/311 --until-terminal`.
-3. After the selected one-PR sessions, rerun this same `--stack` selector.
+3. After the selected one-PR sessions, rerun this same `stack` command.

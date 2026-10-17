@@ -1,7 +1,7 @@
 {
   "mode": "aggregate",
   "description": "Live GitHub stack #514 with --merge: #507 and #508 are merged, and #518's CLEAN PR base is stale. Aggregate merges the ready bottom layer #510 by PR number, routes the stale child to its one-PR session, and never prescribes a rebase.",
-  "args": ["--stack", "https://github.com/jonathanong/auto-harness/pull/518", "--debounce", "0s", "--merge"],
+  "args": ["stack", "https://github.com/jonathanong/auto-harness/pull/518", "--debounce", "0s", "--merge"],
   "expectedReason": "actionable",
   "expectedExitCode": 15,
   "expectedNextAction": "merge",

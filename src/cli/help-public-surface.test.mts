@@ -8,14 +8,18 @@ describe("public CLI help surface", () => {
     expect(USAGE.top).toContain("pr-shepherd apply files");
     expect(USAGE.top).toContain("pr-shepherd apply journal");
     expect(USAGE.top).toContain("pr-shepherd journal extract --body-file <path>");
-    expect(USAGE.top).toContain("pr-shepherd build-suggestion-patches");
+    expect(USAGE.top).toContain("pr-shepherd suggest");
     expect(USAGE.top).toContain("pr-shepherd admin clean");
     expect(USAGE.top).toContain("pr-shepherd admin log-file");
     for (const legacy of ["pr-shepherd poll", "pr-shepherd resolve", "pr-shepherd journal [PR]"]) {
       expect(USAGE.top).not.toContain(legacy);
     }
     expect(USAGE.default).toContain("Usage:\n  pr-shepherd [PR ...] [poll-flags] [iterate-flags]");
-    expect(USAGE.default).toContain("pr-shepherd --stack PR");
+    expect(USAGE.top).toContain("pr-shepherd stack PR [--once]");
+    expect(USAGE.default).toContain("Use 'pr-shepherd stack PR' for a native GitHub stack.");
+    expect(USAGE.default).not.toContain("--stack");
+    expect(USAGE.default).not.toContain("--poll-mode");
+    expect(USAGE.stack).toContain("pr-shepherd stack PR [--once]");
     expect(USAGE.default).not.toContain("[PR] [PR]");
     expect(USAGE.default).not.toContain("pr-shepherd poll");
     expect(USAGE.top).toContain("--debounce");
@@ -31,6 +35,7 @@ describe("public CLI help surface", () => {
       "clean",
       "journal",
       "log-file",
+      "build-suggestion-patches",
     ]) {
       expect(USAGE).not.toHaveProperty([removed]);
     }
@@ -38,11 +43,16 @@ describe("public CLI help surface", () => {
     expect(USAGE.top).toContain("15  MERGE");
   });
 
-  it("lists every PR-state exit code on the top-level and default pages", () => {
+  it("lists every PR-state exit code on the top-level, default, and stack pages", () => {
     const prStateCodes = Object.values(EXIT).filter((code) => code < 20);
-    for (const page of [USAGE.top, USAGE.default]) {
-      const exitBlock = page.slice(page.indexOf("Exit codes:"));
-      for (const code of prStateCodes) {
+    for (const [page, codes] of [
+      [USAGE.top, prStateCodes],
+      // SHEPHERD is stack-only, so the default page omits it.
+      [USAGE.default, prStateCodes.filter((code) => code !== EXIT.SHEPHERD)],
+      [USAGE.stack, [EXIT.SHEPHERD]],
+    ] as const) {
+      const exitBlock = page!.slice(page!.indexOf("Exit codes:"));
+      for (const code of codes) {
         expect(exitBlock).toMatch(new RegExp(`^ {2}${code} +[A-Z_]+`, "m"));
       }
     }

@@ -21,9 +21,12 @@ describe("main — iterate text format", () => {
     expect(out).toMatch(/^# PR #42 \[WAIT\]\n/);
     expect(out).toContain("WAIT: 0 passing, 1 in-progress");
     expect(out).toContain("## Instructions");
+    // iterate is one tick: a WAIT ends the turn and names its safety-net wake-up.
+    expect(out).toContain("**nextCheck** `");
     expect(out).toContain(
-      "1. Non-terminal — no action needed this tick. Iterate immediately with the same options to continue.",
+      '1. Non-terminal — no action needed this tick.\n2. End this turn now without sleeping or polling. Playbook: "Event loop".\n3. Keep exactly one safety-net wake-up at `',
     );
+    expect(out).not.toContain("Iterate immediately");
   });
   it("mark_ready: heading includes [MARK_READY] tag and ## Instructions with end-iteration step", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("mark_ready"));
@@ -77,7 +80,7 @@ describe("main — iterate text format", () => {
     );
     // The override is surfaced once on the summary line; the instruction stays a plain no-op.
     expect(out).toContain("**ready-delay** `15m` (override)");
-    expect(out).toContain("1. Non-terminal — no action needed this tick. Iterate immediately");
+    expect(out).toContain("1. Non-terminal — no action needed this tick.\n2. End this turn now");
     expect(out).not.toContain("Recheck");
     expect(out).not.toContain("auto-cancel");
   });
@@ -119,8 +122,11 @@ describe("main — iterate text format", () => {
     const parsed = JSON.parse(out);
     expect(parsed.action).toBe("wait");
     expect(parsed.pr).toBe(42);
+    expect(parsed.nextCheck).toMatchObject({ reason: "safety-net" });
     expect(parsed.instructions).toEqual([
-      "Non-terminal — no action needed this tick. Iterate immediately with the same options to continue.",
+      "Non-terminal — no action needed this tick.",
+      'End this turn now without sleeping or polling. Playbook: "Event loop".',
+      expect.stringMatching(/^Keep exactly one safety-net wake-up at `/),
     ]);
   });
   it("cancel json: emits reason field so consumers can branch without parsing log", async () => {
