@@ -47,13 +47,17 @@ const positive = () => z.number().positive();
 const nonNegative = () => z.number().nonnegative();
 const positiveInt = () => z.number().int().positive();
 
-const regexPattern = z.string().superRefine((pattern, ctx) => {
-  try {
-    new RegExp(pattern);
-  } catch {
-    ctx.addIssue({ code: "custom", message: `invalid regular expression: ${pattern}` });
-  }
-});
+const regexPattern = z
+  .string()
+  .superRefine((pattern, ctx) => {
+    try {
+      new RegExp(pattern);
+    } catch {
+      ctx.addIssue({ code: "custom", message: `invalid regular expression: ${pattern}` });
+    }
+  })
+  // `z.toJSONSchema` drops the refine, so let editors check the pattern.
+  .meta({ format: "regex" });
 
 const mergeCommandArgs = strings().superRefine((args, ctx) => {
   for (const arg of args) {
