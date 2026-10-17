@@ -12,7 +12,7 @@ describe("iterateResultToExitCode", () => {
     ["wait", EXIT.WAIT],
     ["ready", EXIT.WAIT],
     ["mark_ready", EXIT.MARK_READY],
-    ["fix_code", EXIT.FIX_CODE],
+    ["triage", EXIT.TRIAGE],
     ["escalate", EXIT.ESCALATE],
     ["merge", EXIT.MERGE],
   ])("%s -> %d", (action, code) => {

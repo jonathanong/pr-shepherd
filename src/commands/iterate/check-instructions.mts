@@ -1,12 +1,12 @@
 import type { AgentCheck, ResolveCommand, Review } from "../../types.mts";
 import { playbookPointer } from "../playbook-pointer.mts";
 
-// The `[FIX_CODE]` heading and the skill already say the action is non-terminal.
-const FIX_CODE_CONTINUATION = "Rerun Shepherd now.";
+// The `[TRIAGE]` heading and the skill already say the action is non-terminal.
+const TRIAGE_CONTINUATION = "Rerun Shepherd now.";
 
-/** The `[FIX_CODE]` recurrence step, whether plain or rewritten by the quota warning. */
-export function isFixCodeContinuation(step: string): boolean {
-  return step === FIX_CODE_CONTINUATION || /\[FIX_CODE\].*non-terminal/i.test(step);
+/** The `[TRIAGE]` recurrence step, whether plain or rewritten by the quota warning. */
+export function isTriageContinuation(step: string): boolean {
+  return step === TRIAGE_CONTINUATION || /\[TRIAGE\].*non-terminal/i.test(step);
 }
 
 /** Build the stale-CR step for `## Changes-requested reviews`. Empty when no human CR is stale. */
@@ -105,6 +105,6 @@ export function buildReviewSubsetInstruction(reviewItems: {
 
 /** Recurrence only. Commit, push, rerun, and SHA steps are earlier instructions. */
 export function buildFixCompletionInstruction(): string {
-  return FIX_CODE_CONTINUATION;
+  return TRIAGE_CONTINUATION;
 }
 import { getGithubTransport } from "../../github/transport.mts";

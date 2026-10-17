@@ -121,7 +121,7 @@ Each result has Markdown `content` and `structuredContent` produced from the sam
 | `extract_journal`, `get_journal` | The same JSON in both channels.                                                                                                    |
 | `playbook`                       | The result object. Markdown `content` is the playbook body for a named playbook, or a bullet list of names when `name` is omitted. |
 
-The single-PR `iterate` projection omits trivial-default fields (including `state` when `OPEN` and `mergeStateStatus` when `CLEAN`, like the text header) and adds `readyDelayOverride` when `readyDelaySeconds` was supplied. Every action except `fix_code` and `cancel` gets a computed top-level `instructions` array; `fix_code` carries its steps under `fix.instructions`, and `cancel` has none. A clean PR whose ready-delay is still counting returns action `ready` with `remainingSeconds`. Action semantics, instruction text, and the full field contract live in [actions.md](actions.md).
+The single-PR `iterate` projection omits trivial-default fields (including `state` when `OPEN` and `mergeStateStatus` when `CLEAN`, like the text header) and adds `readyDelayOverride` when `readyDelaySeconds` was supplied. Every action except `triage` and `cancel` gets a computed top-level `instructions` array; `triage` carries its steps under `triage.instructions`, and `cancel` has none. A clean PR whose ready-delay is still counting returns action `ready` with `remainingSeconds`. Action semantics, instruction text, and the full field contract live in [actions.md](actions.md).
 
 ### Review workflow
 
@@ -135,16 +135,16 @@ The single-PR `iterate` projection omits trivial-default fields (including `stat
 
 Supply exactly one of `pr` or `prs`. The call always runs one tick and returns `nextCheck` unless nothing remains to wait for ([cloud.md](cloud.md#nextcheck)).
 
-| Input                 | Type                            | Meaning                                                                  |
-| --------------------- | ------------------------------- | ------------------------------------------------------------------------ |
-| `pr`                  | GitHub PR URL or `owner/repo#N` | Selector: one PR to inspect.                                             |
-| `prs`                 | qualified PR array              | Selector: non-empty explicit set from one repository.                    |
-| `readyDelaySeconds`   | non-negative number             | Override the ready-delay window.                                         |
-| `stallTimeoutSeconds` | non-negative number             | Override the one-PR or `stack` stall timeout.                            |
-| `noAutoMarkReady`     | boolean                         | Disable automatic draft → ready.                                         |
-| `merge`               | boolean                         | Shepherd to readiness and emit merge/queue commands.                     |
-| `instructions`        | `inline` or `playbook`          | `fix_code` instruction style; default `iterate.instructions` (`inline`). |
-| `transport`           | `auto`, `graphql`, or `rest`    | Override `github.transport` for this call.                               |
+| Input                 | Type                            | Meaning                                                                |
+| --------------------- | ------------------------------- | ---------------------------------------------------------------------- |
+| `pr`                  | GitHub PR URL or `owner/repo#N` | Selector: one PR to inspect.                                           |
+| `prs`                 | qualified PR array              | Selector: non-empty explicit set from one repository.                  |
+| `readyDelaySeconds`   | non-negative number             | Override the ready-delay window.                                       |
+| `stallTimeoutSeconds` | non-negative number             | Override the one-PR or `stack` stall timeout.                          |
+| `noAutoMarkReady`     | boolean                         | Disable automatic draft → ready.                                       |
+| `merge`               | boolean                         | Shepherd to readiness and emit merge/queue commands.                   |
+| `instructions`        | `inline` or `playbook`          | `triage` instruction style; default `iterate.instructions` (`inline`). |
+| `transport`           | `auto`, `graphql`, or `rest`    | Override `github.transport` for this call.                             |
 
 Aggregate commands return one compact, read-only summary tick:
 
@@ -271,7 +271,7 @@ A tool that sleeps across ticks would risk that ceiling on at least two of three
 1. Call `iterate` with a repository-qualified `pr`.
 2. Follow the returned `## Instructions`.
 3. For `WAIT` or `READY`, call `iterate` again on a PR event or at `nextCheck.at`; for `MARK_READY`, call it again immediately. Do not wait for CI with `gh pr checks`, `gh pr watch`, `gh run watch`, or equivalent GitHub MCP check waiters; fetching check logs is fine.
-4. For `FIX_CODE`, finish the code/review work, then call `iterate` immediately. Do not wait for CI to finish first.
+4. For `TRIAGE`, finish the code/review work, then call `iterate` immediately. Do not wait for CI to finish first.
 5. For `MERGE`, run the returned command (and only the conditionally documented fallback), then call `iterate` immediately.
 6. Stop on `CANCEL` or `ESCALATE`. For the `stack` tool, `SHEPHERD` means run the listed one-PR sessions and call `stack` again; human blockers may already be visible, but the command returns `ESCALATE` only after autonomous shepherding is exhausted.
 

@@ -79,7 +79,7 @@ describe("nextCheckCandidates", () => {
     const safety = [{ reason: "safety-net", seconds: SAFETY_NET_SECONDS }];
     expect(nextCheckCandidates({ action: "wait" }, NOW_MS)).toEqual(safety);
     expect(nextCheckCandidates({ action: "ready", remainingSeconds: 0 }, NOW_MS)).toEqual(safety);
-    expect(nextCheckCandidates({ action: "fix_code", queued: true }, NOW_MS)).toEqual(safety);
+    expect(nextCheckCandidates({ action: "triage", queued: true }, NOW_MS)).toEqual(safety);
   });
 
   it("adds a stall-timeout deadline relative to now", () => {

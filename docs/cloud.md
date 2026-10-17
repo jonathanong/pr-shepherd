@@ -4,13 +4,13 @@
 
 How Shepherd runs when the session, not Shepherd, owns the wait: one tick per invocation, woken by PR events and scheduled wake-ups instead of sleeping in a poll loop. For anyone running Shepherd in a Claude Code cloud session, through MCP or the library, or wiring it into an event-driven host.
 
-The default command `pr-shepherd [PR]` and `pr-shepherd stack PR` sleep between `WAIT` ticks and return on a terminal action or `FIX_CODE`. A single tick moves the wait out of Shepherd and into the session.
+The default command `pr-shepherd [PR]` and `pr-shepherd stack PR` sleep between `WAIT` ticks and return on a terminal action or `TRIAGE`. A single tick moves the wait out of Shepherd and into the session.
 
 ```mermaid
 flowchart LR
   W[PR event or wake-up] --> T[Run one Shepherd tick]
   T --> I[Follow the printed Instructions]
-  I -->|FIX_CODE| F[Fix, push, rerun once] --> E
+  I -->|TRIAGE| F[Fix, push, rerun once] --> E
   I -->|other non-terminal| E[Keep one wake-up at nextCheck.at, end turn]
   I -->|CANCEL / ESCALATE| X[Stop]
   E --> W
@@ -45,7 +45,7 @@ A tick's result carries `nextCheck` when another tick is meaningful:
 | `merge-pending` | A printed merge request can stay `pending` (one-PR REST merge, or a stack merge), so the rerun resumes it                                                                                                                                      | about every 5 minutes |
 | `safety-net`    | Every other non-terminal tick; a backstop for a missed event                                                                                                                                                                                   | about 50 minutes      |
 
-`nextCheck` is omitted for `FIX_CODE` (its immediate rerun reports one), `CANCEL`, `ESCALATE`, a `MERGE` whose command is not a REST merge, `MARK_READY`, and an aggregate result whose PRs are all terminal, whose rows are all `CANCEL` or `ESCALATE`, or whose only remaining work is final draft-verification probes. The probe instructions say when to stop or rerun the command.
+`nextCheck` is omitted for `TRIAGE` (its immediate rerun reports one), `CANCEL`, `ESCALATE`, a `MERGE` whose command is not a REST merge, `MARK_READY`, and an aggregate result whose PRs are all terminal, whose rows are all `CANCEL` or `ESCALATE`, or whose only remaining work is final draft-verification probes. The probe instructions say when to stop or rerun the command.
 
 Text prints a `**nextCheck**` header line; JSON and MCP `structuredContent` carry the object; `## Instructions` names the same time. A stack or multi-PR tick reports one `nextCheck` for the selection.
 

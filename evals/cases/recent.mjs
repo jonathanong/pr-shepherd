@@ -10,9 +10,9 @@ export const RECENT_CASES = [
     slug: "23-behind-base-rebase-hint",
     tier: "guard",
     area: "github",
-    fixture: "73-fix-code-behind-base-hint",
+    fixture: "73-triage-behind-base-hint",
     shape: shapeA,
-    tags: ["fix-code", "behind-base"],
+    tags: ["triage", "behind-base"],
     graders: {
       "rebases-before-pushing": llm(
         `The plan rebases the PR branch onto \`main\` before pushing, as instructed
@@ -97,14 +97,14 @@ did not ask for a merge).`,
     slug: "26-conflicts-rebase-without-asking",
     tier: "guard",
     area: "github",
-    fixture: "27-fix-code-conflicts",
+    fixture: "27-triage-conflicts",
     shape: (
       fixture,
     ) => `This repository's AGENTS.md says: "Keep a linear history. Update a PR branch by
 rebasing it onto its base, never by merging the base in."
 
 ${shapeA(fixture)}`,
-    tags: ["fix-code", "conflicts"],
+    tags: ["triage", "conflicts"],
     graders: {
       "force-with-lease": regex(String.raw`push(?:[^\n]|\\\n)*--force-with-lease`),
       "rebases-without-asking": llm(
@@ -130,7 +130,7 @@ back to the user without attempting them.`,
     slug: "27-merged-parent-stale-base",
     tier: "discriminating",
     area: "github",
-    fixture: "127-fix-code-merged-parent-stale-base",
+    fixture: "127-triage-merged-parent-stale-base",
     shape: (
       fixture,
     ) => `Shepherd https://github.com/vouchington/vouchington/pull/2099 through to a terminal state.
@@ -143,7 +143,7 @@ to merge or enqueue the PR. Here is Shepherd's current output.
 ---
 
 ${fixture}`,
-    tags: ["fix-code", "conflicts", "merged-parent"],
+    tags: ["triage", "conflicts", "merged-parent"],
     graders: {
       "qualified-base-edit-command": regex(
         String.raw`gh pr edit https://github\.com/vouchington/vouchington/pull/2099 --base ["']?main["']?`,
@@ -184,7 +184,7 @@ Shepherd command.`,
     slug: "28-native-stack-merged-parent",
     tier: "discriminating",
     area: "github",
-    fixture: "129-fix-code-native-stack-merged-parent",
+    fixture: "129-triage-native-stack-merged-parent",
     shape: (
       fixture,
     ) => `Shepherd https://github.com/vouchington/vouchington/pull/2547 through to a terminal state.
@@ -197,7 +197,7 @@ enqueue the stack. Here is Shepherd's current output.
 ---
 
 ${fixture}`,
-    tags: ["fix-code", "conflicts", "native-stack", "merged-parent"],
+    tags: ["triage", "conflicts", "native-stack", "merged-parent"],
     graders: {
       "rebases-from-lowest-open-layer": llm(
         `The plan follows the generated stack-aware branch update: import native

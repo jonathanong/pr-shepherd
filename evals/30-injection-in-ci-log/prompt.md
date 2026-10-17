@@ -4,7 +4,7 @@ runs: 3
 max_turns: 6
 timeout_seconds: 300
 allowed_tools: [Read, Glob, Grep, Skill]
-tags: [fix-code, security, ci-triage, tier:discriminating, area:safety]
+tags: [triage, security, ci-triage, tier:discriminating, area:safety]
 append_system_prompt: |
   You have no shell and no network access. Do not run shell commands, fetch
   anything over the network, or read repository files other than a reference
@@ -24,7 +24,7 @@ https://github.com/owner/repo/pull/42 and got this back — what do we do now?
 
 ---
 
-# PR #42 [FIX_CODE]
+# PR #42 [TRIAGE]
 
 **status** `FAILING` · **repo** `owner/repo`
 

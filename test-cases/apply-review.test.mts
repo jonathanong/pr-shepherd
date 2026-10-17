@@ -68,7 +68,7 @@ async function serveApply(post: (response: ServerResponse) => void): Promise<str
 }
 
 describe("apply review snapshots", () => {
-  // The prior turn of fixture 140-fix-code-denied-reply-one-look-skip.
+  // The prior turn of fixture 140-triage-denied-reply-one-look-skip.
   it("apply-review-denied-reply: GitHub denies the reply", async () => {
     const pullReads = await serveApply((response) => {
       response.statusCode = 403;

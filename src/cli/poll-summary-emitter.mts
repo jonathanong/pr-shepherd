@@ -34,7 +34,7 @@ function pollSummaryExitCode(result: PollSummaryResult): number {
   }
   const actions = new Set<ShepherdAction>(result.prs.map((item) => item.action));
   if (actions.has("escalate")) return EXIT.ESCALATE;
-  if (actions.has("fix_code")) return EXIT.FIX_CODE;
+  if (actions.has("triage")) return EXIT.TRIAGE;
   if (actions.has("merge")) return EXIT.MERGE;
   if (actions.has("mark_ready")) return EXIT.MARK_READY;
   if (actions.has("wait")) return EXIT.WAIT;

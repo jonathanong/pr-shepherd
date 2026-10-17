@@ -9,15 +9,15 @@
 | `authorization-required`      | GitHub denied an otherwise-eligible automatic mark-ready operation (or GraphQL capability was false/unavailable and failed closed).                         | Grant update access or mark the PR ready by hand.                                      |
 | `transport-unsupported`       | The selected transport cannot perform an operation the action needs, and it cannot be represented as a one-look skip or explicit apply error.               | Rerun on a transport that supports it, or do the operation by hand.                    |
 | `check-follow-up-unavailable` | Every remaining failing check has no autonomous follow-up, and no other autonomous work remains.                                                            | Inspect the check (approve, rerun, or fix CI) and resume.                              |
-| `fix-thrash`                  | A retryable, located review thread stays unchanged and unresolved after `iterate.triage-attempts-per-thread` caller-visible `FIX_CODE` results.             | Decide the thread; optionally run the retained pending review commands.                |
+| `triage-thrash`               | A retryable, located review thread stays unchanged and unresolved after `iterate.triage-attempts-per-thread` caller-visible `TRIAGE` results.               | Decide the thread; optionally run the retained pending review commands.                |
 | `base-branch-unknown`         | The GraphQL base branch is empty or unsafe, and the tick has work that could require a push.                                                                | Fix the PR base, then resume.                                                          |
 | `merge-queue-removed`         | Merge mode is on, GitHub reports a current queue removal on an unchanged head, nothing is queued or auto-merging, and no actionable failure explains it.    | Read GitHub's raw removal reason and decide whether to requeue.                        |
 | `merge-method-unavailable`    | Merge mode is on and the method Shepherd would print is disabled on the repository, or the repository enables no merge method. No merge command is printed. | Fix `merge.method` / `merge.command-args` or repository merge settings.                |
-| `stall-timeout`               | An enabled timeout expires: CI never starts, a `WAIT`/`FIX_CODE` fingerprint stays unchanged, or a `stack` selection's layers can only wait.                | Investigate why nothing moves.                                                         |
+| `stall-timeout`               | An enabled timeout expires: CI never starts, a `WAIT`/`TRIAGE` fingerprint stays unchanged, or a `stack` selection's layers can only wait.                  | Investigate why nothing moves.                                                         |
 | `required-checks-unreported`  | Required merge-target contexts still have no check run after one close/reopen of the current head, and no Actions workflow is running.                      | Fix the workflow (path filters are the usual cause) so it emits the required contexts. |
 | `stall-state-unavailable`     | An enabled stall timeout cannot read or write its timer file.                                                                                               | Fix `PR_SHEPHERD_STATE_DIR` or its permissions, then resume.                           |
 
-Any escalation from a tick with automatically selected review mutations keeps every non-empty resolve-only and `apply review` command under `pendingReviewCommands` (Markdown: `## Pending review commands`). This includes `fix-thrash`, `base-branch-unknown`, and stall conversions. Polling still pauses; the commands stay available for human-directed recovery.
+Any escalation from a tick with automatically selected review mutations keeps every non-empty resolve-only and `apply review` command under `pendingReviewCommands` (Markdown: `## Pending review commands`). This includes `triage-thrash`, `base-branch-unknown`, and stall conversions. Polling still pauses; the commands stay available for human-directed recovery.
 
 ## Stack-level outcomes
 
@@ -50,15 +50,15 @@ Not this trigger:
 
 The selected REST transport lacks an operation required by an autonomous action or explicit mutation. The escalation names the operation and the affected item.
 
-| Operation on REST                                                                   | Outcome                                                                                                                                               |
-| ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Mark-ready without a CCR route (authorization unknown or allowed)                   | `ESCALATE` / `transport-unsupported`                                                                                                                  |
-| Required readiness fields REST cannot supply (no CI in progress, merge state known) | `ESCALATE` / `transport-unsupported`, naming each field and reason                                                                                    |
-| Generated comment minimization                                                      | One-look skip                                                                                                                                         |
-| Explicit `apply` minimization or file-view                                          | Explicit unsupported-operation error                                                                                                                  |
-| Merge-queue and ordinary merge                                                      | Supported; not presumed unsupported                                                                                                                   |
-| Same-head queue recovery or native-stack acknowledgment                             | Stays `FIX_CODE` for the failed checks, with an explicit unsupported instruction and no recovery command (REST cannot verify current removal history) |
-| Explicit `apply queue-removal`                                                      | Unsupported-operation error                                                                                                                           |
+| Operation on REST                                                                   | Outcome                                                                                                                                             |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Mark-ready without a CCR route (authorization unknown or allowed)                   | `ESCALATE` / `transport-unsupported`                                                                                                                |
+| Required readiness fields REST cannot supply (no CI in progress, merge state known) | `ESCALATE` / `transport-unsupported`, naming each field and reason                                                                                  |
+| Generated comment minimization                                                      | One-look skip                                                                                                                                       |
+| Explicit `apply` minimization or file-view                                          | Explicit unsupported-operation error                                                                                                                |
+| Merge-queue and ordinary merge                                                      | Supported; not presumed unsupported                                                                                                                 |
+| Same-head queue recovery or native-stack acknowledgment                             | Stays `TRIAGE` for the failed checks, with an explicit unsupported instruction and no recovery command (REST cannot verify current removal history) |
+| Explicit `apply queue-removal`                                                      | Unsupported-operation error                                                                                                                         |
 
 A cloud proxy session-access refusal during mark-ready also uses this trigger and quotes the proxy message, including its repository-access instructions. Review mutations instead stop with exit `77` without recording the target as GitHub-denied; repairing session access makes the unchanged item retryable.
 
@@ -76,17 +76,17 @@ It fires only when no autonomous work or newly surfaced one-look item remains: n
 - An unauthorized review item postpones the escalation for its one visibility tick; once its seen marker suppresses it, the manual-only check can escalate next tick.
 - An authorized bot, viewer-authored, or configured other-human thread with a generated mutation is repeatable work even without a source location.
 - A stale human `CHANGES_REQUESTED` review does not postpone the handoff, but it is kept in the payload so the human sees every blocker.
-- A failing external check with `runId === null` and a non-empty `detailsUrl` stays `FIX_CODE`: the URL is an autonomous investigation path (Codecov is the regression case).
+- A failing external check with `runId === null` and a non-empty `detailsUrl` stays `TRIAGE`: the URL is an autonomous investigation path (Codecov is the regression case).
 - `escalate.checks[]` keeps the raw check details for the human.
 
-### `fix-thrash`
+### `triage-thrash`
 
 - The thread must be retryable: non-null path and line, and every required review mutation authorized.
-- Attempts advance only when a `FIX_CODE` result containing the thread is returned to the caller. Internal poll/debounce ticks do not count.
+- Attempts advance only when a `TRIAGE` result containing the thread is returned to the caller. Internal poll/debounce ticks do not count.
 - Editing the thread body resets its count.
-- Each of the configured `FIX_CODE` results repeats the pending review commands; the next unchanged tick escalates and retains them under `pendingReviewCommands`.
+- Each of the configured `TRIAGE` results repeats the pending review commands; the next unchanged tick escalates and retains them under `pendingReviewCommands`.
 - Threads without a source location, threads suppressed by seen markers, and threads with unauthorized required mutations do not count. Unauthorized mutations are surfaced once, then suppressed. Authorized reply/resolve mutations still run by thread ID after GitHub clears the path or line.
-- Authorized bot `CHANGES_REQUESTED` dismissals remain repeatable `FIX_CODE` work, even after the stall window; the agent runs the emitted command without a handoff.
+- Authorized bot `CHANGES_REQUESTED` dismissals remain repeatable `TRIAGE` work, even after the stall window; the agent runs the emitted command without a handoff.
 
 ### `base-branch-unknown`
 
@@ -112,13 +112,13 @@ Freshness check (GitHub's `timelineItems(last: 1, ...)` returns the latest remov
 
 A newer enqueue also clears the removal. The raw removal fields still render in the merge-queue header every tick.
 
-Failing queue CI is actionable and stays `FIX_CODE`. GitHub's removal reason is a raw lowercase string; observed values are `failed_checks`, `merge_conflict`, `invalid_merge_commit`, `stack_invalidated`, and `merged`. Only `failed_checks` qualifies for the requeue plan or native-stack acknowledgment. The escalation keeps GitHub's raw reason, actor, timestamp, queue commit, and parent OIDs when available.
+Failing queue CI is actionable and stays `TRIAGE`. GitHub's removal reason is a raw lowercase string; observed values are `failed_checks`, `merge_conflict`, `invalid_merge_commit`, `stack_invalidated`, and `merged`. Only `failed_checks` qualifies for the requeue plan or native-stack acknowledgment. The escalation keeps GitHub's raw reason, actor, timestamp, queue commit, and parent OIDs when available.
 
 ### Native-stack merge routing
 
 Native-stack membership is not an escalation.
 
-1. When a one-PR `--merge` poll reaches its ready delay, it writes the layer's READY receipt and returns non-terminal `FIX_CODE` with `pr-shepherd stack <PR URL> --until-terminal --merge`. This applies at every position, including position 1: `--auto` is rejected server-side on stacked PRs, and a plain `gh pr merge` fallback would land a mid-stack layer into its unmerged parent instead of the stack trunk.
+1. When a one-PR `--merge` poll reaches its ready delay, it writes the layer's READY receipt and returns non-terminal `TRIAGE` with `pr-shepherd stack <PR URL> --until-terminal --merge`. This applies at every position, including position 1: `--auto` is rejected server-side on stacked PRs, and a plain `gh pr merge` fallback would land a mid-stack layer into its unmerged parent instead of the stack trunk.
 2. The aggregate command reconciles every open layer's READY receipt and linear ancestry and returns one of the [stack-level outcomes](#stack-level-outcomes).
 3. A clean draft is marked ready by its own session without waiting for lower layers. Closed or unverified topology is surfaced during `SHEPHERD` while another layer can proceed; otherwise it returns `ESCALATE`.
 4. With a ready prefix whose bottom open layer targets the stack base, `stack --merge` returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge <PR number> --yes` and the allowed method flag for the highest ready layer. Rerun the same command until every layer merges and it returns `CANCEL`. If the repository allows no method for that command, it returns `ESCALATE` with `merge-method-unavailable`.
@@ -134,11 +134,11 @@ Native-stack membership is not an escalation.
 
 ### `stall-timeout`
 
-| Path         | Condition                                                                                                                                                                                                                                                                                                                                                                      |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| CI start     | The prospective result is `WAIT`, and an external status context — or a `PENDING`, `QUEUED`, `REQUESTED`, or `WAITING` check run with no start time — stays unstarted for the threshold.                                                                                                                                                                                       |
-| Stable state | The prospective result is `WAIT` or `FIX_CODE`, the stored fingerprint is unchanged, and its nonnegative age reaches the threshold. The fingerprint covers the action, the PR head commit GitHub reports (not the local `HEAD`), PR/merge/draft state, failing and in-progress checks, the latest merge-queue removal commit, actionable item IDs, and actionable annotations. |
-| `stack`      | Every remaining layer's bounded probe can only report waiting ([the idle `WAIT`](actions.md#shepherd-actions)), so no one-PR session runs.                                                                                                                                                                                                                                     |
+| Path         | Condition                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CI start     | The prospective result is `WAIT`, and an external status context — or a `PENDING`, `QUEUED`, `REQUESTED`, or `WAITING` check run with no start time — stays unstarted for the threshold.                                                                                                                                                                                     |
+| Stable state | The prospective result is `WAIT` or `TRIAGE`, the stored fingerprint is unchanged, and its nonnegative age reaches the threshold. The fingerprint covers the action, the PR head commit GitHub reports (not the local `HEAD`), PR/merge/draft state, failing and in-progress checks, the latest merge-queue removal commit, actionable item IDs, and actionable annotations. |
+| `stack`      | Every remaining layer's bounded probe can only report waiting ([the idle `WAIT`](actions.md#shepherd-actions)), so no one-PR session runs.                                                                                                                                                                                                                                   |
 
 - The threshold is `iterate.stall-timeout-minutes` (default 60) or `--stall-timeout`. A changed fingerprint resets the timer. A disabled timeout refreshes state and never escalates.
 - A clean native-stack draft with automatic mark-ready disabled returns `CANCEL` before the stall guard.
@@ -149,9 +149,9 @@ Native-stack membership is not an escalation.
 The merge target requires status contexts with no check run and no status context on the head, no relevant Actions workflow is running, and Shepherd already emitted one close/reopen for that same head and context set (marker: `ci-retrigger.json` in the PR state directory). A second close will not create a job the workflow does not emit; path filters are the usual cause.
 
 - This fires immediately; it does not wait for `stall-timeout`.
-- While the stack trunk compare is behind, the PR base compare (`baseBehindBy`) is behind, or the derived merge status is `BEHIND`, rebase and push stays the `FIX_CODE` action. `mergeStateStatus` `BLOCKED` does not hide that compare. That path writes no marker, so a repeated rebase uses the ordinary stall timer. If the push does not start the checks, the next current head investigates and then takes this trigger.
+- While the stack trunk compare is behind, the PR base compare (`baseBehindBy`) is behind, or the derived merge status is `BEHIND`, rebase and push stays the `TRIAGE` action. `mergeStateStatus` `BLOCKED` does not hide that compare. That path writes no marker, so a repeated rebase uses the ordinary stall timer. If the push does not start the checks, the next current head investigates and then takes this trigger.
 - Failing checks, merge conflicts, and an in-progress Actions workflow never take this trigger.
-- Other autonomous review work on the same tick stays `FIX_CODE` without a second close; the trigger fires once that work is gone and the contexts are still missing.
+- Other autonomous review work on the same tick stays `TRIAGE` without a second close; the trigger fires once that work is gone and the contexts are still missing.
 
 ### `stall-state-unavailable`
 
@@ -164,9 +164,9 @@ The stall timeout is enabled, and the one-PR timer (`iterate-stall.json`) or the
 
 ## Non-escalating outcomes
 
-- `FIX_CODE` is always non-terminal: do the emitted work and iterate immediately.
+- `TRIAGE` is always non-terminal: do the emitted work and iterate immediately.
 - Stack-level `SHEPHERD` is always non-terminal: complete the listed one-PR sessions and reselect the stack before any remaining human handoff.
 - Closed or merged PRs return `CANCEL`, not `ESCALATE`.
 - Ordinary non-force pushes never produce `authorization-required`.
 - Missing-location threads and unauthorized review mutations are surfaced/logged once and skipped.
-- Failing queue CI and URL-backed external checks stay actionable `FIX_CODE` work.
+- Failing queue CI and URL-backed external checks stay actionable `TRIAGE` work.

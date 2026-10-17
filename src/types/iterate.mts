@@ -30,7 +30,7 @@ import type { NextCheck } from "./next-check.mts";
 export type ShepherdAction =
   | "wait"
   | "ready"
-  | "fix_code"
+  | "triage"
   | "mark_ready"
   | "merge"
   | "cancel"
@@ -96,7 +96,7 @@ export interface IterateResultBase {
   apiUsage?: ApiUsage;
   quotaWarning?: GraphqlQuotaWarning;
   fingerprintReused?: true;
-  /** Single ticks only: when to come back if no GitHub event arrives first. Omitted for `fix_code` and terminal actions. */
+  /** Single ticks only: when to come back if no GitHub event arrives first. Omitted for `triage` and terminal actions. */
   nextCheck?: NextCheck;
   /** Classification-rule resolve/minimize applied during this fetch. Omitted when nothing happened. */
   ruleAutoResolve?: RuleAutoResolveReport;
@@ -145,10 +145,10 @@ export interface ResolveCommand {
 }
 
 /**
- * Default fix_code variant: agent applies edits locally, commits when needed,
+ * Default triage variant: agent applies edits locally, commits when needed,
  * then runs the pre-built apply command. Emitted under `## Post-fix actions`.
  */
-interface FixRebaseAndPush {
+interface TriageDetails {
   threads: AgentThread[];
   /** Unresolved threads that should be resolved on GitHub without requiring code edits. */
   resolutionOnlyThreads: ReviewThread[];
@@ -182,9 +182,9 @@ interface FixRebaseAndPush {
   reviewItems?: { shown: number; total: number };
 }
 
-export interface IterateResultFixCode extends IterateResultBase {
-  action: "fix_code";
-  fix: FixRebaseAndPush;
+export interface IterateResultTriage extends IterateResultBase {
+  action: "triage";
+  triage: TriageDetails;
 }
 
 interface IterateResultMarkReady extends IterateResultBase {
@@ -207,7 +207,7 @@ export type IterateResult =
   | IterateResultWait
   | IterateResultReady
   | IterateResultCancel
-  | IterateResultFixCode
+  | IterateResultTriage
   | IterateResultMarkReady
   | IterateResultMerge
   | IterateResultEscalate;
@@ -229,7 +229,7 @@ export interface IterateCommandOptions extends GlobalOptions {
   /**
    * Internal. `true` allows fingerprint reuse of a previous WAIT-shaped report.
    * Poll sets this only for internal WAIT/MARK_READY continuation ticks — never the
-   * tick returned to the caller, never FIX_CODE debounce, never single-tick iterate.
+   * tick returned to the caller, never TRIAGE debounce, never single-tick iterate.
    * Writes still happen after a full fetch so the next poll can skip. Excluded from
    * the public `IterateInput` in api.mts.
    */

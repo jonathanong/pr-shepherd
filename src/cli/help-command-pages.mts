@@ -205,7 +205,7 @@ Usage:
 Flags:
   --format text|json   Markdown text (default) or one JSON line: {"name","content"} or {"playbooks":[...]}.
 
-The name is case-insensitive; spaces and hyphens are equivalent ("Fix-code loop" and fix-code-loop match).
+The name is case-insensitive; spaces and hyphens are equivalent ("Triage loop" and triage-loop match).
 Unknown names exit 64 and list the available playbooks.
 --help, -h                      Print this help and exit before any I/O.`,
 } as const;

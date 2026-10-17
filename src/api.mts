@@ -48,7 +48,7 @@ import type {
 export type {
   CancelReason,
   IterateResult,
-  IterateResultFixCode,
+  IterateResultTriage,
   IterateResultMerge,
   NextCheck,
   PollSummaryItem,

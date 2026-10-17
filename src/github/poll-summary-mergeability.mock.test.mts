@@ -77,7 +77,7 @@ describe("refreshUnknownSummaryMergeability", () => {
     expect(mockRest).toHaveBeenCalledWith(43, "acme", "widgets");
     expect(result.prs[0]).toMatchObject({
       pr: 43,
-      action: "fix_code",
+      action: "triage",
       reasons: ["merge-conflicts"],
       mergeable: "CONFLICTING",
       mergeStateStatus: "DIRTY",

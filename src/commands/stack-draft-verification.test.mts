@@ -5,7 +5,7 @@ import { withPollSummaryInstructions } from "./poll-summary-instructions.mts";
 function verification(pr: number, position: number) {
   return row(pr, position, {
     isDraft: true,
-    action: "fix_code",
+    action: "triage",
     reasons: ["draft-readiness-verification-required"],
     review: { incomplete: true },
     pollCommand: `pr-shepherd https://github.com/acme/widgets/pull/${pr} --timeout 1s --debounce 0s --no-auto-mark-ready`,
@@ -53,7 +53,7 @@ describe("stack draft verification", () => {
 
   it("stops after final verification beside a human handoff", () => {
     const result = withPollSummaryInstructions(
-      stack([row(1, 1, { action: "escalate", reasons: ["fix-thrash"] }), verification(2, 2)]),
+      stack([row(1, 1, { action: "escalate", reasons: ["triage-thrash"] }), verification(2, 2)]),
       false,
     );
     expect(result.nextAction).toBe("shepherd");

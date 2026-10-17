@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   makeCancelResult,
-  makeFixCodeResult,
+  makeTriageResult,
   makeWaitResult,
   mockRunIterate,
   registerPollHooks,
@@ -34,9 +34,9 @@ function runUntilTerminalPoll() {
 describe("runPoll — until-terminal quota warnings during debounce", () => {
   it("returns a fix warning only after a persisted post-debounce tick", async () => {
     mockRunIterate
-      .mockResolvedValueOnce({ ...makeFixCodeResult(), quotaWarning })
-      .mockResolvedValueOnce(makeFixCodeResult())
-      .mockResolvedValueOnce(makeFixCodeResult());
+      .mockResolvedValueOnce({ ...makeTriageResult(), quotaWarning })
+      .mockResolvedValueOnce(makeTriageResult())
+      .mockResolvedValueOnce(makeTriageResult());
 
     const pollPromise = runUntilTerminalPoll();
     await vi.advanceTimersByTimeAsync(60_000);
@@ -45,13 +45,13 @@ describe("runPoll — until-terminal quota warnings during debounce", () => {
     expect(mockRunIterate).toHaveBeenCalledTimes(3);
     expect(mockRunIterate.mock.calls[0]?.[0].persistSeen).toBe(false);
     expect(mockRunIterate.mock.calls[2]?.[0].persistSeen).toBe(true);
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(result.quotaWarning).toEqual(quotaWarning);
   });
 
   it("keeps debounce state through interim waits before returning the warning", async () => {
     mockRunIterate
-      .mockResolvedValueOnce({ ...makeFixCodeResult(), quotaWarning })
+      .mockResolvedValueOnce({ ...makeTriageResult(), quotaWarning })
       .mockResolvedValueOnce(makeWaitResult())
       .mockResolvedValueOnce(makeWaitResult());
 
@@ -74,9 +74,9 @@ describe("runPoll — until-terminal quota warnings during debounce", () => {
       pollTimeoutMinutes: 20,
     };
     mockRunIterate
-      .mockResolvedValueOnce({ ...makeFixCodeResult(), quotaWarning })
-      .mockResolvedValueOnce({ ...makeFixCodeResult(), quotaWarning: stricterWarning })
-      .mockResolvedValueOnce(makeFixCodeResult());
+      .mockResolvedValueOnce({ ...makeTriageResult(), quotaWarning })
+      .mockResolvedValueOnce({ ...makeTriageResult(), quotaWarning: stricterWarning })
+      .mockResolvedValueOnce(makeTriageResult());
 
     const pollPromise = runUntilTerminalPoll();
     await vi.advanceTimersByTimeAsync(60_000);
@@ -107,26 +107,26 @@ describe("runPoll — until-terminal quota warnings during debounce", () => {
     expect(mockRunIterate.mock.calls[1]?.[0]).toMatchObject({ fingerprintCache: false });
   });
 
-  it("debounces FIX_CODE discovered while refreshing a quota-warning WAIT", async () => {
+  it("debounces TRIAGE discovered while refreshing a quota-warning WAIT", async () => {
     mockRunIterate
       .mockResolvedValueOnce({
         ...makeWaitResult({ quotaWarning }),
         fingerprintReused: true as const,
       })
-      .mockResolvedValue(makeFixCodeResult());
+      .mockResolvedValue(makeTriageResult());
 
     const pollPromise = runUntilTerminalPoll();
     await vi.advanceTimersByTimeAsync(60_000);
     const result = await pollPromise;
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(mockRunIterate.mock.calls.at(-1)?.[0]).toMatchObject({ persistSeen: true });
   });
 
   it("lets a terminal result win without a pending fix warning", async () => {
     mockRunIterate
-      .mockResolvedValueOnce({ ...makeFixCodeResult(), quotaWarning })
-      .mockResolvedValueOnce(makeFixCodeResult())
+      .mockResolvedValueOnce({ ...makeTriageResult(), quotaWarning })
+      .mockResolvedValueOnce(makeTriageResult())
       .mockResolvedValueOnce(makeCancelResult());
 
     const pollPromise = runUntilTerminalPoll();

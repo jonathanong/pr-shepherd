@@ -1,0 +1,29 @@
+# PR #42 [TRIAGE]
+
+**status** `PENDING` · **merge** `BEHIND`
+**branch** behind PR base `main`
+**transport** `rest`
+
+## Unavailable transport fields
+
+- `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
+- `viewerAuthorization`: REST does not expose viewer capability fields
+- `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
+- `mergeQueue`: REST does not expose queue membership, entry or removal history
+
+## Review threads
+
+### [threadId=rest-thread-1](https://github.com/owner/repo/pull/42#discussion_r1) — `src/index.ts:42` (@reviewer)
+
+#### [commentId=PRRC_1](https://github.com/owner/repo/pull/42#discussion_r1) (@reviewer)
+
+> Please rename this variable to be more descriptive.
+
+## Instructions
+
+1. Fix each warranted item.
+2. The branch is behind PR base branch `main`. rebase --force-with-lease before pushing.
+3. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <reason>'`.
+4. Commit and push any changes.
+5. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-1 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha HEAD`
+6. Rerun Shepherd now.

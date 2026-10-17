@@ -30,7 +30,7 @@ export function earliestNextCheck(
 
 interface NextCheckFacts {
   /** The action Shepherd returned for this tick. */
-  action: "wait" | "ready" | "mark_ready" | "fix_code" | "merge" | "cancel" | "escalate";
+  action: "wait" | "ready" | "mark_ready" | "triage" | "merge" | "cancel" | "escalate";
   /** Ready-delay seconds left; only meaningful for `ready`. */
   remainingSeconds?: number;
   queued?: boolean;

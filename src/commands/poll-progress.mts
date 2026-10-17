@@ -82,7 +82,7 @@ export function writeDebounceProgress(tick: number, elapsedMs: number, remaining
   const elapsedSeconds = Math.round(elapsedMs / 1000);
   const remainingSeconds = Math.round(remainingMs / 1000);
   process.stderr.write(
-    `[poll tick ${tick} / +${elapsedSeconds}s] FIX_CODE — debounce ${remainingSeconds}s remaining\n`,
+    `[poll tick ${tick} / +${elapsedSeconds}s] TRIAGE — debounce ${remainingSeconds}s remaining\n`,
   );
 }
 

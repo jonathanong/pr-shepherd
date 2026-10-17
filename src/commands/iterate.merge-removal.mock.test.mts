@@ -18,16 +18,16 @@ describe("runIterate — merge queue removal", () => {
       mockRunCheck.mockResolvedValue(removedEntryReport("OpenRouter HTTP 529"));
 
       const result = await runIterate(makeOpts({ merge }));
-      expect(result.action).toBe("fix_code");
-      if (result.action !== "fix_code") return;
-      expect(result.fix.checks[0]).toMatchObject({
+      expect(result.action).toBe("triage");
+      if (result.action !== "triage") return;
+      expect(result.triage.checks[0]).toMatchObject({
         scope: "merge_group",
         commitOid: "queue-commit",
         logExcerpt: "OpenRouter HTTP 529",
       });
-      expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
+      expect(result.triage.checks[0]?.rerunCommand).toBeUndefined();
       if (merge) {
-        expect(result.fix.requeue?.command.argv).toEqual([
+        expect(result.triage.requeue?.command.argv).toEqual([
           "gh",
           "pr",
           "merge",
@@ -37,11 +37,11 @@ describe("runIterate — merge queue removal", () => {
           "--match-head-commit",
           "abc123",
         ]);
-        expect(result.fix.requeue?.queueApiFallbackCommand?.argv).toContain(
+        expect(result.triage.requeue?.queueApiFallbackCommand?.argv).toContain(
           "expectedHeadOid=abc123",
         );
       } else {
-        expect(result.fix.requeue).toBeUndefined();
+        expect(result.triage.requeue).toBeUndefined();
       }
       const text = formatIterateResult(result);
       expect(text).toContain("OpenRouter HTTP 529");
@@ -68,10 +68,10 @@ describe("runIterate — merge queue removal", () => {
       }
       mockRunCheck.mockResolvedValue(report);
       const result = await runIterate(makeOpts({ merge: true }));
-      expect(result.action).toBe("fix_code");
-      if (result.action !== "fix_code") return;
-      expect(result.fix.requeue).toBeUndefined();
-      expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
+      expect(result.action).toBe("triage");
+      if (result.action !== "triage") return;
+      expect(result.triage.requeue).toBeUndefined();
+      expect(result.triage.checks[0]?.rerunCommand).toBeUndefined();
     },
   );
 
@@ -96,10 +96,10 @@ describe("runIterate — merge queue removal", () => {
       report.mergeQueue!.latestRemoval!.reason = reason;
       mockRunCheck.mockResolvedValue(report);
       const result = await runIterate(makeOpts({ merge: true }));
-      expect(result.action).toBe("fix_code");
-      if (result.action !== "fix_code") return;
-      expect(result.fix.requeue).toBeUndefined();
-      expect(result.fix.checks[0]?.logExcerpt).toBe("OpenRouter HTTP 529");
+      expect(result.action).toBe("triage");
+      if (result.action !== "triage") return;
+      expect(result.triage.requeue).toBeUndefined();
+      expect(result.triage.checks[0]?.logExcerpt).toBe("OpenRouter HTTP 529");
       expect(formatIterateResult(result)).not.toContain("- requeue:");
     },
   );

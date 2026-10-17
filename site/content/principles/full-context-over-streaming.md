@@ -57,7 +57,7 @@ This part is specific to the shell poll dispatcher (`pr-shepherd [PR]` /
 Full context isn't just about the read path — it's about not acting on a half-finished
 picture. `--debounce` (default 1 minute) gives the poller a settle window after the first
 sign of actionable work: if a review comment and a CI failure both land within that
-window, it reports them together as one `FIX_CODE`, instead of sending the agent back
+window, it reports them together as one `TRIAGE`, instead of sending the agent back
 twice.
 
 This is also why debounce ticks defer writing "seen" markers until the window closes —

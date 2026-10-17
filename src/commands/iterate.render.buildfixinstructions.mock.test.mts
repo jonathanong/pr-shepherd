@@ -7,7 +7,7 @@ import { buildFixInstructions } from "./iterate/render.mts";
 registerIterateHooks();
 
 describe("buildFixInstructions", () => {
-  it("keeps an otherwise empty fix_code action non-terminal", () => {
+  it("keeps an otherwise empty triage action non-terminal", () => {
     const instructions = buildFixInstructions(
       [],
       [],

@@ -43,8 +43,8 @@ export async function runIterateTick(opts: IterateCommandOptions): Promise<Itera
     fingerprintCache: false,
     stallDeadlineSink: sink,
   });
-  // `[FIX_CODE]` already reruns at once, and that rerun reports its own `nextCheck`.
-  if (result.action === "fix_code") return result;
+  // `[TRIAGE]` already reruns at once, and that rerun reports its own `nextCheck`.
+  if (result.action === "triage") return result;
   const nowMs = Date.now();
   const stallDeadlineSeconds = earliestDeadline(
     await readStallDeadline(result, opts.stallTimeoutSeconds),

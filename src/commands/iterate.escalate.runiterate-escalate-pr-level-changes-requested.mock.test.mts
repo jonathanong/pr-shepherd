@@ -12,7 +12,7 @@ import { runIterate } from "./iterate/index.mts";
 registerIterateHooks();
 
 // ---------------------------------------------------------------------------
-// CHANGES_REQUESTED reviews without inline threads → fix_code (not escalate)
+// CHANGES_REQUESTED reviews without inline threads → triage (not escalate)
 // ---------------------------------------------------------------------------
 
 const RESOLUTION_ONLY_THREAD = {
@@ -30,8 +30,8 @@ const RESOLUTION_ONLY_THREAD = {
   createdAtUnix: NOW - 3600,
 };
 
-describe("runIterate — CHANGES_REQUESTED review with no inline threads routes to fix_code", () => {
-  it("emits fix_code with --dismiss-review-ids when changesRequestedReviews exist and no inline threads or CI failures", async () => {
+describe("runIterate — CHANGES_REQUESTED review with no inline threads routes to triage", () => {
+  it("emits triage with --dismiss-review-ids when changesRequestedReviews exist and no inline threads or CI failures", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
@@ -56,13 +56,13 @@ describe("runIterate — CHANGES_REQUESTED review with no inline threads routes 
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
-      expect(result.fix.changesRequestedReviews).toHaveLength(1);
+    expect(result.action).toBe("triage");
+    if (result.action === "triage") {
+      expect(result.triage.changesRequestedReviews).toHaveLength(1);
       // Non-human CR reviews are auto-dismissed after the agent pushes a fix.
-      expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
-      expect(result.fix.resolveCommand.argv).toContain("review-1");
-      expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
+      expect(result.triage.resolveCommand.argv).toContain("--dismiss-review-ids");
+      expect(result.triage.resolveCommand.argv).toContain("review-1");
+      expect(result.triage.resolveCommand.requiresDismissMessage).toBe(true);
     }
   });
 
@@ -91,14 +91,14 @@ describe("runIterate — CHANGES_REQUESTED review with no inline threads routes 
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
-      expect(result.fix.resolveCommand.argv).toContain("--reply-thread-ids");
-      expect(result.fix.resolveCommand.argv).toContain("thread-resolution-only");
-      expect(result.fix.resolveCommand.resolveThreadIds).toBeUndefined();
+    expect(result.action).toBe("triage");
+    if (result.action === "triage") {
+      expect(result.triage.resolveCommand.argv).toContain("--reply-thread-ids");
+      expect(result.triage.resolveCommand.argv).toContain("thread-resolution-only");
+      expect(result.triage.resolveCommand.resolveThreadIds).toBeUndefined();
       // The authorized non-human CR dismissal remains actionable on its own.
-      expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
-      expect(result.fix.resolveCommand.argv).toContain("review-1");
+      expect(result.triage.resolveCommand.argv).toContain("--dismiss-review-ids");
+      expect(result.triage.resolveCommand.argv).toContain("review-1");
     }
   });
 });

@@ -25,7 +25,7 @@ CI costs about 60 GraphQL points an hour instead of 360.
 ```text
 $ pr-shepherd 123
 
-# PR #123 [FIX_CODE]
+# PR #123 [TRIAGE]
 
 status UNRESOLVED_COMMENTS · repo owner/repo
 summary 3 passing
@@ -87,7 +87,7 @@ action:
 <li>WAIT</li>
 <li>READY</li>
 <li>MARK_READY</li>
-<li>FIX_CODE</li>
+<li>TRIAGE</li>
 <li>MERGE</li>
 <li>CANCEL</li>
 <li>ESCALATE</li>

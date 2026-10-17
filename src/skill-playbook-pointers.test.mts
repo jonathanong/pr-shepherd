@@ -164,7 +164,7 @@ describe("pr-shepherd skill recurrence contract", () => {
   });
 
   it("reserves human hand-off for ESCALATE", () => {
-    expect(skill).toContain("`[FIX_CODE]` is always non-terminal");
+    expect(skill).toContain("`[TRIAGE]` is always non-terminal");
     expect(skill).toMatch(/only `\[ESCALATE\]` hands work to a human/i);
     expect(skill).not.toContain("instructions require a human handoff");
   });

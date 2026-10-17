@@ -182,7 +182,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
     const hasFix =
       last.selection.kind === "stack"
         ? last.nextAction === "shepherd" && last.reason !== "waiting"
-        : last.prs.some((item) => item.action === "fix_code");
+        : last.prs.some((item) => item.action === "triage");
     const warning = await aggregateQuotaWarning(last, quotaBands, opts.intervalSeconds);
     pendingQuotaWarning = carryQuotaWarning(pendingQuotaWarning, warning);
     if (allTerminal) {
@@ -274,7 +274,7 @@ function attachUsage(result: PollSummaryResult, mergeRequested?: boolean): PollS
   const enriched = apiUsage ? { ...result, apiUsage } : result;
   // A disappeared native stack is an aggregate-level terminal handoff. Keep
   // that explicit escalation intact even when the one-PR fallback contains
-  // open orphan rows that would otherwise be re-planned as fix_code.
+  // open orphan rows that would otherwise be re-planned as triage.
   if (enriched.selection.kind === "stack" && enriched.nextAction === "escalate") {
     return enriched;
   }

@@ -57,7 +57,7 @@ describe("REST cloud bot status-comment edits on a READY PR", () => {
       );
 
     // First look surfaces the comment once; it cannot be minimized over REST.
-    expect(await tick()).toMatchObject({ action: "fix_code" });
+    expect(await tick()).toMatchObject({ action: "triage" });
     expect(await tick()).toMatchObject({ status: "READY", remainingSeconds: 600 });
     vi.setSystemTime(new Date("2026-10-09T09:05:00Z"));
     expect(await tick()).toMatchObject({ status: "READY", remainingSeconds: 300 });

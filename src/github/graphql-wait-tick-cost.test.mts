@@ -155,7 +155,7 @@ describe("GraphQL wait tick cost", () => {
     await freshLoadConfig();
     await servePr({ updatedAt: "2026-10-09T00:00:00Z", threadComments: 2, state: "OPEN" });
     // The first look surfaces the resolved thread once; after that the PR is only waiting.
-    expect((await measure(false)).report.action).toBe("fix_code");
+    expect((await measure(false)).report.action).toBe("triage");
     expect((await measure(false)).report.action).toBe("wait");
     const next = await measure(true);
     expect(next.report.action).toBe("wait");

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { FirstLookComment, FirstLookThread } from "../types/report.mts";
-import { formatFixCodeResult } from "./fix-formatter.mts";
+import { formatTriageResult } from "./triage-formatter.mts";
 import { makeIterateResult } from "../../fixtures/cli-parser.iterate-fixtures.mts";
 import type { IterateResult } from "../types.mts";
 
@@ -31,10 +31,10 @@ const FL_THREAD_OUTDATED_AUTO: FirstLookThread = {
 describe("## First-look items — edited flag rendering", () => {
   it("renders [status: outdated, auto-resolved, edited] for an edited+autoResolved thread", () => {
     const editedThread: FirstLookThread = { ...FL_THREAD_OUTDATED_AUTO, edited: true };
-    const result: IterateResult = { ...makeIterateResult("fix_code") };
-    if (result.action !== "fix_code") throw new Error("unreachable");
-    result.fix = { ...result.fix, firstLookThreads: [editedThread], firstLookComments: [] };
-    const output = formatFixCodeResult("# PR #42 [FIX_CODE]", result);
+    const result: IterateResult = { ...makeIterateResult("triage") };
+    if (result.action !== "triage") throw new Error("unreachable");
+    result.triage = { ...result.triage, firstLookThreads: [editedThread], firstLookComments: [] };
+    const output = formatTriageResult("# PR #42 [TRIAGE]", result);
     expect(output).toContain("[status: outdated, auto-resolved, edited]");
   });
 
@@ -49,10 +49,10 @@ describe("## First-look items — edited flag rendering", () => {
       createdAtUnix: 0,
       firstLookStatus: "minimized",
     };
-    const result: IterateResult = { ...makeIterateResult("fix_code") };
-    if (result.action !== "fix_code") throw new Error("unreachable");
-    result.fix = { ...result.fix, firstLookThreads: [], firstLookComments: [comment] };
-    const output = formatFixCodeResult("# PR #42 [FIX_CODE]", result);
+    const result: IterateResult = { ...makeIterateResult("triage") };
+    if (result.action !== "triage") throw new Error("unreachable");
+    result.triage = { ...result.triage, firstLookThreads: [], firstLookComments: [comment] };
+    const output = formatTriageResult("# PR #42 [TRIAGE]", result);
     expect(output).toContain("`commentId=IC_fl1`");
     expect(output).toContain("[status: minimized]");
   });

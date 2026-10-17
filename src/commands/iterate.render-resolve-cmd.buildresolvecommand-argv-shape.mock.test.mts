@@ -51,11 +51,11 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     });
 
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
-      expect(result.fix.resolveCommand.argv).not.toContain("$HEAD_SHA");
-      expect(result.fix.resolveCommand.argv).not.toContain("--require-sha");
-      expect(result.fix.resolveCommand.requiresHeadSha).toBe(true);
+    expect(result.action).toBe("triage");
+    if (result.action === "triage") {
+      expect(result.triage.resolveCommand.argv).not.toContain("$HEAD_SHA");
+      expect(result.triage.resolveCommand.argv).not.toContain("--require-sha");
+      expect(result.triage.resolveCommand.requiresHeadSha).toBe(true);
     }
   });
 
@@ -116,25 +116,25 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     });
 
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
 
     const replyThreadArg =
-      result.fix.resolveCommand.argv[
-        result.fix.resolveCommand.argv.indexOf("--reply-thread-ids") + 1
+      result.triage.resolveCommand.argv[
+        result.triage.resolveCommand.argv.indexOf("--reply-thread-ids") + 1
       ];
     expect(replyThreadArg).toBe("thread-1,res-thread-1");
     // minimize IDs split to resolveOnlyCommand — not in the reply command
-    expect(result.fix.resolveCommand.argv).not.toContain("--minimize-comment-ids");
-    expect(result.fix.resolveOnlyCommand?.argv).toContain("--minimize-comment-ids");
-    expect(result.fix.resolveOnlyCommand?.argv).toContain("PRR_DUP");
+    expect(result.triage.resolveCommand.argv).not.toContain("--minimize-comment-ids");
+    expect(result.triage.resolveOnlyCommand?.argv).toContain("--minimize-comment-ids");
+    expect(result.triage.resolveOnlyCommand?.argv).toContain("PRR_DUP");
     // Bot CR review is dismissed in the reply command (same command that has --message).
-    expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
-    expect(result.fix.resolveCommand.argv).toContain("PRR_DUP");
-    expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
+    expect(result.triage.resolveCommand.argv).toContain("--dismiss-review-ids");
+    expect(result.triage.resolveCommand.argv).toContain("PRR_DUP");
+    expect(result.triage.resolveCommand.requiresDismissMessage).toBe(true);
   });
 
-  it("routes pr-level bot CR reviews to fix_code with --dismiss-review-ids", async () => {
+  it("routes pr-level bot CR reviews to triage with --dismiss-review-ids", async () => {
     // A CHANGES_REQUESTED review has its own distinct ID — it is not also in reviewSummaries.
     mockRunCheck.mockResolvedValue(
       makeReport({
@@ -156,13 +156,13 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     });
 
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    expect(result.action).toBe("triage");
+    if (result.action === "triage") {
       // Non-human (Unknown) CR reviews are auto-dismissed after the agent pushes a fix.
-      expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
-      expect(result.fix.resolveCommand.argv).toContain("PRR_CHANGES");
-      expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
-      expect(result.fix.changesRequestedReviews).toHaveLength(1);
+      expect(result.triage.resolveCommand.argv).toContain("--dismiss-review-ids");
+      expect(result.triage.resolveCommand.argv).toContain("PRR_CHANGES");
+      expect(result.triage.resolveCommand.requiresDismissMessage).toBe(true);
+      expect(result.triage.changesRequestedReviews).toHaveLength(1);
     }
   });
 
@@ -187,12 +187,12 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     });
 
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
 
-    expect(result.fix.resolveCommand.argv).not.toContain("--dismiss-review-ids");
-    expect(result.fix.resolveCommand.argv).not.toContain("PRR_HUMAN");
-    expect(result.fix.changesRequestedReviews).toHaveLength(1);
+    expect(result.triage.resolveCommand.argv).not.toContain("--dismiss-review-ids");
+    expect(result.triage.resolveCommand.argv).not.toContain("PRR_HUMAN");
+    expect(result.triage.changesRequestedReviews).toHaveLength(1);
   });
 
   it("pairs bot and viewer-authored replies with resolves; other humans stay reply-only", async () => {
@@ -264,10 +264,10 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     });
 
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
 
-    const argv = result.fix.resolveCommand.argv;
+    const argv = result.triage.resolveCommand.argv;
     expect(argv).toContain("--reply-thread-ids");
     expect(argv).toContain(
       "thread-human,thread-viewer-human,thread-bot,thread-bracket-bot,thread-configured-bot",
@@ -276,22 +276,22 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     expect(argv).toContain(
       "thread-viewer-human,thread-bot,thread-bracket-bot,thread-configured-bot",
     );
-    expect(result.fix.resolveCommand.replyThreadIds).toEqual([
+    expect(result.triage.resolveCommand.replyThreadIds).toEqual([
       "thread-human",
       "thread-viewer-human",
       "thread-bot",
       "thread-bracket-bot",
       "thread-configured-bot",
     ]);
-    expect(result.fix.resolveCommand.resolveThreadIds).toEqual([
+    expect(result.triage.resolveCommand.resolveThreadIds).toEqual([
       "thread-viewer-human",
       "thread-bot",
       "thread-bracket-bot",
       "thread-configured-bot",
     ]);
-    expect(result.fix.resolveOnlyCommand).toBeUndefined();
-    expect(result.fix.resolveCommand.requiresDismissMessage).toBe(true);
-    expect(result.fix.resolveCommand.hasMutations).toBe(true);
+    expect(result.triage.resolveOnlyCommand).toBeUndefined();
+    expect(result.triage.resolveCommand.requiresDismissMessage).toBe(true);
+    expect(result.triage.resolveCommand.hasMutations).toBe(true);
   });
 
   it("routes a marker-ended viewer-authored human thread to resolve without another reply", async () => {
@@ -351,12 +351,12 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
     });
 
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
 
-    expect(result.fix.resolveCommand.replyThreadIds).toBeUndefined();
-    expect(result.fix.resolveCommand.resolveThreadIds).toEqual(["thread-viewer-marked"]);
-    expect(result.fix.resolveCommand.requiresDismissMessage).toBe(false);
-    expect(result.fix.resolveCommand.requiresHeadSha).toBe(false);
+    expect(result.triage.resolveCommand.replyThreadIds).toBeUndefined();
+    expect(result.triage.resolveCommand.resolveThreadIds).toEqual(["thread-viewer-marked"]);
+    expect(result.triage.resolveCommand.requiresDismissMessage).toBe(false);
+    expect(result.triage.resolveCommand.requiresHeadSha).toBe(false);
   });
 });

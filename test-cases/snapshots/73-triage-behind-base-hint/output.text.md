@@ -1,0 +1,19 @@
+# PR #42 [TRIAGE]
+
+**status** `PENDING` · **merge** `BEHIND`
+**branch** behind PR base `main`
+
+## Review threads
+
+### [threadId=PRRT_behind_hint](https://github.com/owner/repo/pull/42#discussion_r1) — `src/index.ts:42` (@reviewer)
+
+> Please rename this variable to be more descriptive.
+
+## Instructions
+
+1. Fix each warranted item.
+2. The branch is behind PR base branch `main`. rebase --force-with-lease before pushing.
+3. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <reason>'`.
+4. Commit and push any changes.
+5. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_behind_hint --message "$DISMISS_MESSAGE" --require-sha HEAD`
+6. Rerun Shepherd now.

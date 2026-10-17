@@ -86,7 +86,7 @@ describe("draft stack poll commands", () => {
       noAutoMarkReady: true,
     });
     expect(item).toMatchObject({
-      action: "fix_code",
+      action: "triage",
       reasons: ["draft-readiness-verification-required"],
       pollProbe: true,
       review: { incomplete: true },

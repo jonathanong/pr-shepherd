@@ -21,7 +21,7 @@ export function projectIterateLean(
   opts?: IterateProjectionOptions,
 ): unknown {
   const readyDelaySuffix = opts?.readyDelaySuffix;
-  const simpleInstructions = (r: Exclude<IterateResult, { action: "fix_code" }>) =>
+  const simpleInstructions = (r: Exclude<IterateResult, { action: "triage" }>) =>
     buildSimpleIterateInstructions(r);
   const activity = result.activity ?? {
     commitCount: 0,
@@ -155,51 +155,51 @@ export function projectIterateLean(
         merge: result.merge,
         instructions: simpleInstructions(result),
       };
-    case "fix_code":
+    case "triage":
       return {
         ...base,
-        // Passing checks stay summary counts and failures stay in `fix.checks`, as in lean text.
-        fix: {
-          ...(result.fix.threads.length > 0 && { threads: result.fix.threads }),
-          ...(result.fix.resolutionOnlyThreads.length > 0 && {
-            resolutionOnlyThreads: result.fix.resolutionOnlyThreads,
+        // Passing checks stay summary counts and failures stay in `triage.checks`, as in lean text.
+        triage: {
+          ...(result.triage.threads.length > 0 && { threads: result.triage.threads }),
+          ...(result.triage.resolutionOnlyThreads.length > 0 && {
+            resolutionOnlyThreads: result.triage.resolutionOnlyThreads,
           }),
-          ...(result.fix.actionableComments.length > 0 && {
-            actionableComments: result.fix.actionableComments,
+          ...(result.triage.actionableComments.length > 0 && {
+            actionableComments: result.triage.actionableComments,
           }),
-          ...(result.fix.reviewSummaryIds.length > 0 && {
-            reviewSummaryIds: result.fix.reviewSummaryIds,
+          ...(result.triage.reviewSummaryIds.length > 0 && {
+            reviewSummaryIds: result.triage.reviewSummaryIds,
           }),
-          ...(result.fix.firstLookSummaries.length > 0 && {
-            firstLookSummaries: result.fix.firstLookSummaries,
+          ...(result.triage.firstLookSummaries.length > 0 && {
+            firstLookSummaries: result.triage.firstLookSummaries,
           }),
-          ...(result.fix.editedSummaries.length > 0 && {
-            editedSummaries: result.fix.editedSummaries,
+          ...(result.triage.editedSummaries.length > 0 && {
+            editedSummaries: result.triage.editedSummaries,
           }),
-          ...(result.fix.surfacedApprovals.length > 0 && {
-            surfacedApprovals: result.fix.surfacedApprovals,
+          ...(result.triage.surfacedApprovals.length > 0 && {
+            surfacedApprovals: result.triage.surfacedApprovals,
           }),
-          ...(result.fix.firstLookThreads.length > 0 && {
-            firstLookThreads: result.fix.firstLookThreads,
+          ...(result.triage.firstLookThreads.length > 0 && {
+            firstLookThreads: result.triage.firstLookThreads,
           }),
-          ...(result.fix.firstLookComments.length > 0 && {
-            firstLookComments: result.fix.firstLookComments,
+          ...(result.triage.firstLookComments.length > 0 && {
+            firstLookComments: result.triage.firstLookComments,
           }),
-          ...(result.fix.requeue && { requeue: result.fix.requeue }),
-          ...(result.fix.queueRemovalAcknowledgment && {
-            queueRemovalAcknowledgment: result.fix.queueRemovalAcknowledgment,
+          ...(result.triage.requeue && { requeue: result.triage.requeue }),
+          ...(result.triage.queueRemovalAcknowledgment && {
+            queueRemovalAcknowledgment: result.triage.queueRemovalAcknowledgment,
           }),
-          ...(result.fix.checks.length > 0 && { checks: result.fix.checks }),
-          ...(result.fix.changesRequestedReviews.length > 0 && {
-            changesRequestedReviews: result.fix.changesRequestedReviews,
+          ...(result.triage.checks.length > 0 && { checks: result.triage.checks }),
+          ...(result.triage.changesRequestedReviews.length > 0 && {
+            changesRequestedReviews: result.triage.changesRequestedReviews,
           }),
-          resolveCommand: result.fix.resolveCommand,
-          ...(result.fix.resolveOnlyCommand && {
-            resolveOnlyCommand: result.fix.resolveOnlyCommand,
+          resolveCommand: result.triage.resolveCommand,
+          ...(result.triage.resolveOnlyCommand && {
+            resolveOnlyCommand: result.triage.resolveOnlyCommand,
           }),
-          ...(result.fix.reviewItems && { reviewItems: result.fix.reviewItems }),
-          ...(result.fix.instructions.length > 0 && {
-            instructions: result.fix.instructions,
+          ...(result.triage.reviewItems && { reviewItems: result.triage.reviewItems }),
+          ...(result.triage.instructions.length > 0 && {
+            instructions: result.triage.instructions,
           }),
         },
       };

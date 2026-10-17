@@ -69,11 +69,11 @@ For threads already in the work set. `iterate.resolve-other-human-threads` defau
 
 - Reply and paired resolve share one `apply review` command; a marker-ended resolve is the separate resolve-only command. Both use the thread ID, so they work after GitHub clears the path or line.
 - A classification rule with `autoResolve: true` adds a standalone resolve for that thread even at `none`; an unmarked thread is still replied to.
-- On GraphQL, `viewerCanReply: false` or `viewerCanResolve: false` omits the generated mutation. REST has no capability fields, so an otherwise-eligible operation is attempted and GitHub decides. A definite, non-throttled REST 403 or 404 is surfaced once, then marker-gated until the body changes; review denials do not use `authorization-required` or count toward `fix-thrash`. Quota failures and uncertain outcomes stay eligible for reconciliation.
+- On GraphQL, `viewerCanReply: false` or `viewerCanResolve: false` omits the generated mutation. REST has no capability fields, so an otherwise-eligible operation is attempted and GitHub decides. A definite, non-throttled REST 403 or 404 is surfaced once, then marker-gated until the body changes; review denials do not use `authorization-required` or count toward `triage-thrash`. Quota failures and uncertain outcomes stay eligible for reconciliation.
 
 ## Current visibility matrix
 
-"Every tick": the thread stays in `FIX_CODE` until GitHub reports `isResolved: true`, provided its mutation is authorized. "Until seen": the seen-marker gate (first look, again when the transcript changes, then omitted while unchanged).
+"Every tick": the thread stays in `TRIAGE` until GitHub reports `isResolved: true`, provided its mutation is authorized. "Until seen": the seen-marker gate (first look, again when the transcript changes, then omitted while unchanged).
 
 | Class                   | Active, unmarked | Active, marker-ended                 | Outdated or minimized, unmarked | Outdated or minimized, marker-ended  |
 | ----------------------- | ---------------- | ------------------------------------ | ------------------------------- | ------------------------------------ |
@@ -107,14 +107,14 @@ An unresolved other-human thread after the Shepherd reply lands. "Dropped" means
 
 "Match" says whether current behavior already does the requested cell.
 
-| Condition                                       | Requested behavior                            | Current behavior                                                                                | Match |
-| ----------------------------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------- | ----- |
-| Resolution required, viewer-authored human      | reply; resolve once the Shepherd reply exists | reply and resolve, including marker-ended retry                                                 | yes   |
-| Resolution required, other human, any freshness | reply; resolve once the Shepherd reply exists | reply; resolve only when the enum is `outdated` (outdated threads) or `always` (every thread)   | no    |
-| Resolution required, detected bot or Unknown    | unchanged                                     | reply and resolve; Unknown active threads are until-seen unless marker-ended                    | yes   |
-| Resolution not required, any human              | keep the enum                                 | enum, default reply-only for other humans                                                       | yes   |
-| Resolution not required, `always`               | keep that configured behavior                 | reply and resolve other humans on branches that do not require resolution                       | yes   |
-| A decision remains                              | `ESCALATE`                                    | decision stays inside `FIX_CODE`, or the loop ends in `CANCEL` / `fix-thrash` / `stall-timeout` | no    |
+| Condition                                       | Requested behavior                            | Current behavior                                                                                 | Match |
+| ----------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----- |
+| Resolution required, viewer-authored human      | reply; resolve once the Shepherd reply exists | reply and resolve, including marker-ended retry                                                  | yes   |
+| Resolution required, other human, any freshness | reply; resolve once the Shepherd reply exists | reply; resolve only when the enum is `outdated` (outdated threads) or `always` (every thread)    | no    |
+| Resolution required, detected bot or Unknown    | unchanged                                     | reply and resolve; Unknown active threads are until-seen unless marker-ended                     | yes   |
+| Resolution not required, any human              | keep the enum                                 | enum, default reply-only for other humans                                                        | yes   |
+| Resolution not required, `always`               | keep that configured behavior                 | reply and resolve other humans on branches that do not require resolution                        | yes   |
+| A decision remains                              | `ESCALATE`                                    | decision stays inside `TRIAGE`, or the loop ends in `CANCEL` / `triage-thrash` / `stall-timeout` | no    |
 
 The gap is the required-resolution, other-human row; the requested switch is the folded flag.
 
@@ -122,14 +122,14 @@ The gap is the required-resolution, other-human row; the requested switch is the
 
 [escalations.md](escalations.md) is a closed trigger list; none of its triggers is "this human inline thread needs a decision" or "conversation resolution is required."
 
-| Situation                                                                                                       | Current action                                                                                                       | Trigger         |
-| --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | --------------- |
-| Choose a code edit versus an acknowledgment reply                                                               | `FIX_CODE`. Instructions say to decide, then run the generated review mutation even when no code change is warranted | none            |
-| GraphQL reports `viewerCanReply` or `viewerCanResolve` false; or GitHub denies the REST attempt                 | surface once, omit/retry no generated mutation, suppress until the transcript changes                                | none            |
-| Resolution required, other-human thread already replied to, enum leaves it open                                 | thread leaves the work set; ready-delay `CANCEL` names `unresolved conversations are required`                       | none            |
-| Located thread stays in the work set for `iterate.triage-attempts-per-thread` caller-visible `FIX_CODE` results | following unchanged tick                                                                                             | `fix-thrash`    |
-| `WAIT` or `FIX_CODE` fingerprint unchanged through an enabled stall timeout                                     | handoff                                                                                                              | `stall-timeout` |
-| Folded flag is false because `baseRef` was missing                                                              | enum applies; requirements show conversation resolution not required                                                 | none            |
+| Situation                                                                                                     | Current action                                                                                                     | Trigger         |
+| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | --------------- |
+| Choose a code edit versus an acknowledgment reply                                                             | `TRIAGE`. Instructions say to decide, then run the generated review mutation even when no code change is warranted | none            |
+| GraphQL reports `viewerCanReply` or `viewerCanResolve` false; or GitHub denies the REST attempt               | surface once, omit/retry no generated mutation, suppress until the transcript changes                              | none            |
+| Resolution required, other-human thread already replied to, enum leaves it open                               | thread leaves the work set; ready-delay `CANCEL` names `unresolved conversations are required`                     | none            |
+| Located thread stays in the work set for `iterate.triage-attempts-per-thread` caller-visible `TRIAGE` results | following unchanged tick                                                                                           | `triage-thrash` |
+| `WAIT` or `TRIAGE` fingerprint unchanged through an enabled stall timeout                                     | handoff                                                                                                            | `stall-timeout` |
+| Folded flag is false because `baseRef` was missing                                                            | enum applies; requirements show conversation resolution not required                                               | none            |
 
 `ambiguousComments` on an escalation payload is the actionable top-level PR comment list copied onto some handoffs; inline threads are copied separately as `unresolvedThreads`. The field name is not a trigger.
 

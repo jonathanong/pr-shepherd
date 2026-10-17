@@ -95,7 +95,7 @@ describe("applyStackStallGuard", () => {
 
   it("clears the timer when the plan has agent work", async () => {
     await applyStackStallGuard(idleStack(), repo, 600);
-    const working = idleStack({ action: "fix_code", reasons: ["failing-checks"] });
+    const working = idleStack({ action: "triage", reasons: ["failing-checks"] });
     expect(working.idle).toBeUndefined();
     await expect(applyStackStallGuard(working, repo, 600)).resolves.toBe(working.result);
     await expect(readStackStallState(key)).resolves.toEqual({ ok: true, state: null });

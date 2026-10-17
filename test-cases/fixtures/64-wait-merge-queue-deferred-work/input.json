@@ -1,8 +1,8 @@
 {
   "restDivergence": {
-    "action": "fix_code",
+    "action": "triage",
     "exitCode": 12,
-    "why": "REST cannot see merge-queue membership, so the review thread is surfaced as ordinary FIX_CODE work instead of being deferred while queued."
+    "why": "REST cannot see merge-queue membership, so the review thread is surfaced as ordinary TRIAGE work instead of being deferred while queued."
   },
   "batchData": {
     "isMergeQueueEnabled": true,

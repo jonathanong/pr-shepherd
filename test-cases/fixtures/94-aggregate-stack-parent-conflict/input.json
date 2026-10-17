@@ -10,7 +10,7 @@
     "prs": [
       {
         "pr": 311, "repo": "owner/repo", "title": "Conflicting foundation", "url": "https://github.com/owner/repo/pull/311",
-        "action": "fix_code", "reasons": ["merge-conflicts"], "state": "OPEN", "mergeable": "CONFLICTING", "mergeStateStatus": "DIRTY",
+        "action": "triage", "reasons": ["merge-conflicts"], "state": "OPEN", "mergeable": "CONFLICTING", "mergeStateStatus": "DIRTY",
         "headRefName": "foundation", "headRefOid": "b111111111111111111111111111111111111111", "baseRefName": "main",
         "stack": { "number": 32, "size": 2, "position": 1, "baseRefName": "main" },
         "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/311 --until-terminal"

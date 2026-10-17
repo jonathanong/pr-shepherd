@@ -23,9 +23,9 @@ describe("GraphQL quota exhaustion during an automatic poll", () => {
       });
     await runWithGithubTransport("auto", async () => {
       const first = await poll();
-      expect(first).toMatchObject({ action: "fix_code", transport: "rest" });
-      if (first.action !== "fix_code") throw new Error("expected first-look feedback");
-      expect(first.fix.firstLookThreads).toMatchObject([{ firstLookStatus: "unknown" }]);
+      expect(first).toMatchObject({ action: "triage", transport: "rest" });
+      if (first.action !== "triage") throw new Error("expected first-look feedback");
+      expect(first.triage.firstLookThreads).toMatchObject([{ firstLookStatus: "unknown" }]);
       expect(await poll()).toMatchObject({
         action: "escalate",
         transport: "rest",

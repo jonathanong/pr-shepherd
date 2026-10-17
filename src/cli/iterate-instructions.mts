@@ -5,7 +5,7 @@ import { renderShellCommand } from "./runner.mts";
 import { tickWaitSteps } from "../commands/tick-instructions.mts";
 
 export function buildSimpleIterateInstructions(
-  result: Exclude<IterateResult, { action: "fix_code" }>,
+  result: Exclude<IterateResult, { action: "triage" }>,
 ): string[] {
   switch (result.action) {
     case "ready": {
