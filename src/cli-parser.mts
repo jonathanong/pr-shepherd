@@ -8,6 +8,7 @@ import { runResolveMutate } from "./commands/resolve.mts";
 import { runLogFile } from "./commands/log-file.mts";
 import { handleClean } from "./cli/clean-handler.mts";
 import { parseCommonArgs, getFlag, hasFlag, parseList } from "./cli/args.mts";
+import { rejectUnknownFlags } from "./cli/unknown-flags.mts";
 import { isDefaultPollInvocation, validateDefaultPollArgs } from "./cli/default-poll.mts";
 import { USAGE, helpKeyForArgs, maybePrintHelp } from "./cli/help.mts";
 import { formatMutateResult } from "./cli/formatters.mts";
@@ -227,8 +228,19 @@ async function handleLogFile(args: string[]): Promise<void> {
   }
 }
 
+const APPLY_REVIEW_FLAGS = [
+  "--resolve-thread-ids",
+  "--reply-thread-ids",
+  "--minimize-comment-ids",
+  "--dismiss-review-ids",
+  "--message",
+  "--require-sha",
+  "--adopt-existing-replies",
+];
+
 async function handleResolve(args: string[]): Promise<void> {
   const command = "apply review";
+  if (rejectUnknownFlags(args, command, APPLY_REVIEW_FLAGS)) return;
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
 
   const resolveThreadIds = parseList(getFlag(extra, "--resolve-thread-ids"));
