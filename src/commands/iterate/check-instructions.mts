@@ -18,7 +18,7 @@ export function buildCrStaleClause(reviews: Review[]): string {
 
 /**
  * Build the optional branch-update hint. Empty unless the branch is behind or conflicts with its
- * base and the user configured a non-blank `iterate.behindBaseHint` — the CLI never prescribes
+ * base and the user configured a non-blank `iterate.behind-base-hint` — the CLI never prescribes
  * rebase/merge mechanics itself (see "Keep skills and loop prompts minimal" in AGENTS.md); this
  * only echoes back the caller's own configured pointer. `hint` is trimmed and type-checked at the
  * point of use (rather than at config load) so a malformed rc file value (non-string, or

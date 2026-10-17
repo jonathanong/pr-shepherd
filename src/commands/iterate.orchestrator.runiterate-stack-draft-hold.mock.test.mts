@@ -86,7 +86,7 @@ describe("runIterate — held native stack drafts", () => {
   it("stops when configuration disables automatic mark-ready, even with merge requested", async () => {
     mockLoadConfig.mockReturnValue({
       ...defaultConfig(),
-      actions: { ...defaultConfig().actions, autoMarkReady: false },
+      "mark-ready": { ...defaultConfig()["mark-ready"], auto: false },
     });
     await expect(runDraft(undefined, { merge: true })).resolves.toMatchObject({
       action: "cancel",
@@ -95,10 +95,7 @@ describe("runIterate — held native stack drafts", () => {
   });
 
   it("does not hold a pending stack draft when automatic mark-ready is disabled", async () => {
-    mockLoadConfig.mockReturnValue({
-      ...defaultConfig(),
-      actions: { ...defaultConfig().actions, autoMarkReady: false },
-    });
+    mockLoadConfig.mockReturnValue(defaultConfig({ "mark-ready": { auto: false } }));
 
     await expect(runDraft(bottomLayer, {}, "IN_PROGRESS")).resolves.toMatchObject({
       action: "wait",

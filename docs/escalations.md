@@ -9,10 +9,10 @@
 | `authorization-required`      | GitHub denied an otherwise-eligible automatic mark-ready operation (or GraphQL capability was false/unavailable and failed closed).                         | Grant update access or mark the PR ready by hand.                                      |
 | `transport-unsupported`       | The selected transport cannot perform an operation the action needs, and it cannot be represented as a one-look skip or explicit apply error.               | Rerun on a transport that supports it, or do the operation by hand.                    |
 | `check-follow-up-unavailable` | Every remaining failing check has no autonomous follow-up, and no other autonomous work remains.                                                            | Inspect the check (approve, rerun, or fix CI) and resume.                              |
-| `fix-thrash`                  | A retryable, located review thread stays unchanged and unresolved after `iterate.fixAttemptsPerThread` caller-visible `FIX_CODE` results.                   | Decide the thread; optionally run the retained pending review commands.                |
+| `fix-thrash`                  | A retryable, located review thread stays unchanged and unresolved after `iterate.triage-attempts-per-thread` caller-visible `FIX_CODE` results.             | Decide the thread; optionally run the retained pending review commands.                |
 | `base-branch-unknown`         | The GraphQL base branch is empty or unsafe, and the tick has work that could require a push.                                                                | Fix the PR base, then resume.                                                          |
 | `merge-queue-removed`         | Merge mode is on, GitHub reports a current queue removal on an unchanged head, nothing is queued or auto-merging, and no actionable failure explains it.    | Read GitHub's raw removal reason and decide whether to requeue.                        |
-| `merge-method-unavailable`    | Merge mode is on and the method Shepherd would print is disabled on the repository, or the repository enables no merge method. No merge command is printed. | Fix `merge.method` / `merge.commandArgs` or repository merge settings.                 |
+| `merge-method-unavailable`    | Merge mode is on and the method Shepherd would print is disabled on the repository, or the repository enables no merge method. No merge command is printed. | Fix `merge.method` / `merge.command-args` or repository merge settings.                |
 | `stall-timeout`               | An enabled timeout expires: CI never starts, a `WAIT`/`FIX_CODE` fingerprint stays unchanged, or a `stack` selection's layers can only wait.                | Investigate why nothing moves.                                                         |
 | `required-checks-unreported`  | Required merge-target contexts still have no check run after one close/reopen of the current head, and no Actions workflow is running.                      | Fix the workflow (path filters are the usual cause) so it emits the required contexts. |
 | `stall-state-unavailable`     | An enabled stall timeout cannot read or write its timer file.                                                                                               | Fix `PR_SHEPHERD_STATE_DIR` or its permissions, then resume.                           |
@@ -127,7 +127,7 @@ Native-stack membership is not an escalation.
 
 ### `merge-method-unavailable`
 
-`--merge` is enabled and Shepherd is about to print a merge command, but the method is not allowed: `merge.method` (or the strategy flag in `merge.commandArgs`) names a method the repository disables, or the repository disables merge commits, squash, and rebase. The result names the allowed methods and has no merge command.
+`--merge` is enabled and Shepherd is about to print a merge command, but the method is not allowed: `merge.method` (or the strategy flag in `merge.command-args`) names a method the repository disables, or the repository disables merge commits, squash, and rebase. The result names the allowed methods and has no merge command.
 
 - REST queue requests omit the direct method, so a disabled method never escalates them.
 - When REST queue policy is unknown, a configured direct method still escalates: it cannot safely be applied to a `default` request.
@@ -140,7 +140,7 @@ Native-stack membership is not an escalation.
 | Stable state | The prospective result is `WAIT` or `FIX_CODE`, the stored fingerprint is unchanged, and its nonnegative age reaches the threshold. The fingerprint covers the action, the PR head commit GitHub reports (not the local `HEAD`), PR/merge/draft state, failing and in-progress checks, the latest merge-queue removal commit, actionable item IDs, and actionable annotations. |
 | `stack`      | Every remaining layer's bounded probe can only report waiting ([the idle `WAIT`](actions.md#shepherd-actions)), so no one-PR session runs.                                                                                                                                                                                                                                     |
 
-- The threshold is `iterate.stallTimeoutMinutes` (default 60) or `--stall-timeout`. A changed fingerprint resets the timer. A disabled timeout refreshes state and never escalates.
+- The threshold is `iterate.stall-timeout-minutes` (default 60) or `--stall-timeout`. A changed fingerprint resets the timer. A disabled timeout refreshes state and never escalates.
 - A clean native-stack draft with automatic mark-ready disabled returns `CANCEL` before the stall guard.
 - The stack timer lives in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/stack-<number>/stack-stall.json`. It fingerprints the summary status plus each layer's head commit, draft state, READY receipt, and reasons. Every aggregate tick shares it (`--until-terminal`, a bounded poll, or MCP). A changed fingerprint resets it; any other stack plan or a disabled timeout clears it. The escalation names each waiting layer and why it waits.
 

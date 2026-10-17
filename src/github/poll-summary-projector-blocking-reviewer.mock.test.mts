@@ -1,5 +1,15 @@
 import { expect, it, vi } from "vitest";
 
+// Pin the reviewer these tests were written against; the v1 default blocks no one.
+vi.mock("../config/load.mts", async (importOriginal) => {
+  const { testConfig } = await import("../../test-helpers/config/test-config.mts");
+  const config = testConfig({ "mark-ready": { "blocking-reviewer-logins": ["copilot"] } });
+  return {
+    ...(await importOriginal<typeof import("../config/load.mts")>()),
+    loadConfig: () => config,
+  };
+});
+
 vi.mock("../state/seen-comments.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../state/seen-comments.mts")>();
   return { ...actual, loadSeenMap: vi.fn().mockResolvedValue(new Map()) };

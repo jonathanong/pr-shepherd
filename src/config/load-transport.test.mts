@@ -1,5 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
-import { freshLoadConfig, writeRc } from "../../test-helpers/config/load-test-support.mts";
+import { describe, expect, it } from "vitest";
+import {
+  expectConfigError,
+  freshLoadConfig,
+  writeRc,
+} from "../../test-helpers/config/load-test-support.mts";
 
 describe("loadConfig — github.transport", () => {
   it("defaults to auto", async () => {
@@ -15,10 +19,7 @@ describe("loadConfig — github.transport", () => {
     "rejects invalid nested configuration %s",
     async (yaml) => {
       writeRc(`${yaml}\n`);
-      const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
-      const loadConfig = await freshLoadConfig();
-      expect(loadConfig().github?.transport).toBe("auto");
-      expect(stderr).toHaveBeenCalled();
+      await expectConfigError("`github");
     },
   );
 });

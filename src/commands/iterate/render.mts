@@ -52,7 +52,7 @@ export function buildFixInstructions(
   editedSummaries: Review[] = [],
   resolutionOnlyThreads: ReviewThread[] = [],
   resolveOnlyCommand?: ResolveCommand,
-  behindBaseHint = "", // iterate.behindBaseHint — see buildBehindBaseHintInstruction
+  behindBaseHint = "", // iterate.behind-base-hint — see buildBehindBaseHintInstruction
   isBehind = false,
   _viewerCanUpdate = false,
   hasExhaustedWorkflowRerun = false,

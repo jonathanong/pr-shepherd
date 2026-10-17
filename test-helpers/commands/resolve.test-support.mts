@@ -36,19 +36,10 @@ vi.mock("../../src/comments/resolve.mts", () => ({
   applyResolveOptions: vi.fn(),
 }));
 
-vi.mock("../../src/config/load.mts", () => ({
-  loadConfig: vi.fn().mockReturnValue({
-    botUsernames: ["coderabbitai"],
-    resolve: {
-      shaPoll: { intervalMs: 2000, maxAttempts: 10 },
-    },
-    actions: {
-      autoMinimizeSuppressed: true,
-      autoMarkReady: true,
-      neverCancelRuns: [],
-    },
-  }),
-}));
+vi.mock("../../src/config/load.mts", async () => {
+  const { testConfig } = await import("../config/test-config.mts");
+  return { loadConfig: vi.fn().mockReturnValue(testConfig({ "bot-usernames": ["coderabbitai"] })) };
+});
 
 import { runResolveMutate } from "../../src/commands/resolve.mts";
 import { getCurrentPrNumber } from "../../src/github/client.mts";

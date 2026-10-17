@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { testConfig } from "../../test-helpers/config/test-config.mts";
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
@@ -88,11 +89,7 @@ function raw(head: RawCheckRollup | null, queue: RawCheckRollup | null = null): 
 }
 
 beforeEach(() => {
-  mockLoadConfig.mockReturnValue({
-    ignoreChecks: [],
-    checks: { ciTriggerEvents: ["pull_request"] },
-    actions: { neverCancelRuns: [] },
-  });
+  mockLoadConfig.mockReturnValue(testConfig({ checks: { "ci-trigger-events": ["pull_request"] } }));
 });
 
 describe("compact check chronology", () => {

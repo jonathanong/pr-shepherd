@@ -1,4 +1,5 @@
 import { vi, beforeEach, afterEach } from "vitest";
+import { testConfig } from "../config/test-config.mts";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -239,33 +240,16 @@ function makeReview(id: string, author: string, body: string): Review {
   return { id, author, authorType: "Unknown", viewerCanMinimize: true, body };
 }
 
-function defaultConfig() {
-  return {
-    cliCommand: ["pr-shepherd"],
-    botUsernames: ["coderabbitai"],
-    ignoreChecks: [],
-    iterate: {
-      fixAttemptsPerThread: 3,
-      stallTimeoutMinutes: 60,
-      minimizeApprovals: false,
-      minimizeComments: "all" as "all" | "bots" | "none",
-      behindBaseHint: "",
-      resolveOtherHumanThreads: "none" as const,
-    },
-    watch: { readyDelayMinutes: 10 },
-    resolve: {
-      concurrency: 4,
-      shaPoll: { intervalMs: 2000, maxAttempts: 10 },
-    },
-    checks: { ciTriggerEvents: ["pull_request", "pull_request_target"] },
-    mergeStatus: { blockingReviewerLogins: ["copilot"] },
-    actions: {
-      autoMinimizeSuppressed: true,
-      autoMarkReady: true,
-      neverCancelRuns: [] as string[],
-      workWhileQueued: false,
-    },
-  };
+/** Test baseline: the built-in defaults plus the values these suites were written against. */
+const BASE_TEST_CONFIG = {
+  "bot-usernames": ["coderabbitai"],
+  iterate: { "minimize-comments": "all", "ready-delay-minutes": 10 },
+  "mark-ready": { "blocking-reviewer-logins": ["copilot"] },
+};
+
+/** The suite baseline config with `overlay` (rc-file shape) deep-merged on top. */
+function defaultConfig(overlay: Record<string, unknown> = {}) {
+  return testConfig(BASE_TEST_CONFIG, overlay);
 }
 
 function registerIterateHooks(config = defaultConfig): void {

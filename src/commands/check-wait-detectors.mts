@@ -103,7 +103,7 @@ export async function readWaitDetectors(
   config: PrShepherdConfig,
   now = Date.now(),
 ): Promise<WaitDetectorResult | undefined> {
-  const reconcileMs = config.poll.reconcileSeconds * 1000;
+  const reconcileMs = config.poll["reconcile-seconds"] * 1000;
   if (reconcileMs === 0 || getGithubTransport() === "rest") return undefined;
   const stored = await loadPrFingerprint(stateKey);
   if (stored === null || stored.inputDigest !== fingerprintInputDigest(config)) return undefined;

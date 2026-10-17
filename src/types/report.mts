@@ -93,7 +93,7 @@ export interface ShepherdReport {
     ignored?: ClassifiedCheck[];
     filteredNames: string[];
     blockedByFilteredCheck: boolean;
-    ignoredNames?: string[]; // Suppressed by ignoreChecks config; omitted when empty.
+    ignoredNames?: string[]; // Suppressed by checks.ignore config; omitted when empty.
     supersededNames?: string[]; // CANCELLED, superseded by a newer same-workflow run; omitted when empty.
   };
   threads: {

@@ -82,10 +82,10 @@ function parseLoopOptions(
     hasFlag(extra, "--interval"),
   );
   if (intervalSuffix === null) return null;
-  let intervalSeconds = parseDurationToSeconds(intervalSuffix ?? "", cfg.poll.intervalSeconds);
+  let intervalSeconds = parseDurationToSeconds(intervalSuffix ?? "", cfg.poll["interval-seconds"]);
   // `--interval` is the invocation interval. Only an omitted flag is scaled, and only for aggregates.
   if (isAggregate && intervalSuffix === undefined) {
-    intervalSeconds *= cfg.poll.stackIntervalFactor;
+    intervalSeconds *= cfg.poll["stack-interval-factor"];
   }
 
   const timeoutStr = getFlag(extra, "--timeout");
@@ -96,7 +96,7 @@ function parseLoopOptions(
     hasFlag(extra, "--timeout"),
   );
   if (timeoutSuffix === null) return null;
-  const timeoutSeconds = parseDurationToSeconds(timeoutSuffix ?? "", cfg.poll.timeoutSeconds);
+  const timeoutSeconds = parseDurationToSeconds(timeoutSuffix ?? "", cfg.poll["timeout-seconds"]);
 
   const debounceStr = getFlag(extra, "--debounce");
   const debounceSuffix = validateSecondsDurationFlag(
@@ -107,9 +107,13 @@ function parseLoopOptions(
     { allowZero: true },
   );
   if (debounceSuffix === null) return null;
-  const debounceSeconds = parseDurationToSeconds(debounceSuffix ?? "", cfg.poll.debounceSeconds, {
-    allowZero: true,
-  });
+  const debounceSeconds = parseDurationToSeconds(
+    debounceSuffix ?? "",
+    cfg.poll["debounce-seconds"],
+    {
+      allowZero: true,
+    },
+  );
 
   const quietStatusFlag = hasFlag(extra, "--quiet-status");
   const noQuietStatusFlag = hasFlag(extra, "--no-quiet-status");
@@ -120,7 +124,7 @@ function parseLoopOptions(
     process.exitCode = EXIT.USAGE;
     return null;
   }
-  const quietStatus = quietStatusFlag || (!noQuietStatusFlag && cfg.poll.quietStatus);
+  const quietStatus = quietStatusFlag || (!noQuietStatusFlag && cfg.poll["quiet-status"]);
 
   return {
     readyDelaySuffix: flags.readyDelaySuffix ?? undefined,

@@ -21,8 +21,8 @@ registerIterateHooks();
 
 function configureApprovalMinimization(minimizeComments: "all" | "bots" | "none"): void {
   const cfg = defaultConfig();
-  cfg.iterate.minimizeApprovals = true;
-  cfg.iterate.minimizeComments = minimizeComments;
+  cfg.iterate["minimize-approvals"] = true;
+  cfg.iterate["minimize-comments"] = minimizeComments;
   mockLoadConfig.mockReturnValue(cfg);
 }
 
@@ -47,7 +47,7 @@ describe("runIterate — review summary auto-minimize", () => {
   });
   it("includes APPROVED reviews in minimize list when cfg.minimizeApprovals is true", async () => {
     const cfg = defaultConfig();
-    cfg.iterate.minimizeApprovals = true;
+    cfg.iterate["minimize-approvals"] = true;
     mockLoadConfig.mockReturnValue(cfg);
     mockRunCheck.mockResolvedValue(
       makeReport({

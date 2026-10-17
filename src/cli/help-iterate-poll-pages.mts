@@ -9,7 +9,7 @@ Usage:
   pr-shepherd iterate [PR ...] [iterate-flags]
 
 Iterate flags:
-  --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Example: 15m.
+  --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Default: iterate.ready-delay-minutes (built-in 0). Example: 15m.
   --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
   --no-auto-mark-ready           Leave draft PRs in draft; stop when otherwise ready.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
@@ -48,7 +48,7 @@ Aggregate mode returns when any row needs work, every row is terminal, or timeou
 When CLAUDE_CODE_REMOTE=true, the command runs one tick like iterate and prints nextCheck instead.
 Poll exits as soon as iterate returns READY, MARK_READY, CANCEL, or ESCALATE, or when timeout
 returns the last WAIT result. FIX_CODE starts a --debounce settle window (default:
-poll.debounceSeconds; built-in 1m): poll keeps
+poll.debounce-seconds; built-in 1m): poll keeps
 iterating at --interval, then runs one more tick after the window and returns that result.
 With --until-terminal or --merge, poll also continues through MARK_READY.
 
@@ -58,15 +58,15 @@ Usage:
 Use 'pr-shepherd stack PR' for a native GitHub stack.
 
 Poll flags:
-  --interval <duration>          Sleep between WAIT ticks. Bare number = seconds. Default: poll.intervalSeconds (built-in 60s). Stack and multi-PR polls multiply that by poll.stackIntervalFactor (built-in 2) unless this flag is set.
-  --timeout <duration>           Maximum wall-clock wait for WAIT ticks. Bare number = seconds. Default: poll.timeoutSeconds (built-in 4.5m).
-  --debounce <duration>          Settle window after first FIX_CODE or stack SHEPHERD before returning. Bare number = seconds. Default: poll.debounceSeconds (built-in 60s). 0 disables.
-  --quiet-status                 Print only changed WAIT snapshots. Overrides poll.quietStatus.
-  --no-quiet-status              Print every WAIT snapshot. Overrides poll.quietStatus.
+  --interval <duration>          Sleep between WAIT ticks. Bare number = seconds. Default: poll.interval-seconds (built-in 60s). Stack and multi-PR polls multiply that by poll.stack-interval-factor (built-in 2) unless this flag is set.
+  --timeout <duration>           Maximum wall-clock wait for WAIT ticks. Bare number = seconds. Default: poll.timeout-seconds (built-in 4.5m).
+  --debounce <duration>          Settle window after first FIX_CODE or stack SHEPHERD before returning. Bare number = seconds. Default: poll.debounce-seconds (built-in 60s). 0 disables.
+  --quiet-status                 Print only changed WAIT snapshots. Overrides poll.quiet-status.
+  --no-quiet-status              Print every WAIT snapshot. Overrides poll.quiet-status.
   --until-terminal               Continue through WAIT/MARK_READY until READY/FIX_CODE/MERGE/CANCEL/ESCALATE or stack SHEPHERD.
 
 Forwarded iterate flags:
-  --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Example: 15m.
+  --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Default: iterate.ready-delay-minutes (built-in 0). Example: 15m.
   --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
   --no-auto-mark-ready           Leave draft PRs in draft; stop when otherwise ready.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
@@ -79,7 +79,7 @@ Forwarded iterate flags:
 Durations accept s/m/h suffixes: 30s, 4.5m, 1h. A bare number uses each flag's default unit (seconds
 for --interval/--timeout/--debounce, minutes for --ready-delay/--stall-timeout); decimals are allowed only with
 an explicit unit (4.5m).
-Each WAIT tick writes a stderr line naming what it is waiting on by default; poll.quietStatus can change that default, --quiet-status/--no-quiet-status override it, and --verbose emits detailed per-tick lines.
+Each WAIT tick writes a stderr line naming what it is waiting on by default; poll.quiet-status can change that default, --quiet-status/--no-quiet-status override it, and --verbose emits detailed per-tick lines.
 FIX_CODE debounce writes a remaining-seconds line to stderr. --timeout does not cut an in-flight debounce short.
 With --until-terminal, --timeout is ignored for WAIT ticks and polling continues until READY, FIX_CODE, MERGE, CANCEL, or ESCALATE. With --merge, --timeout still bounds WAIT ticks; it only continues through MARK_READY while polling remains within that timeout.
 
@@ -108,15 +108,15 @@ Stack flags:
   --once                         Run one aggregate tick without sleeping; poll flags are ignored.
 
 Poll flags:
-  --interval <duration>          Sleep between WAIT ticks. Bare number = seconds. Default: poll.intervalSeconds (built-in 60s) multiplied by poll.stackIntervalFactor (built-in 2) unless this flag is set.
-  --timeout <duration>           Maximum wall-clock wait for WAIT ticks. Bare number = seconds. Default: poll.timeoutSeconds (built-in 4.5m).
-  --debounce <duration>          Settle window after the first SHEPHERD before returning. Bare number = seconds. Default: poll.debounceSeconds (built-in 60s). 0 disables.
-  --quiet-status                 Print only changed WAIT snapshots. Overrides poll.quietStatus.
-  --no-quiet-status              Print every WAIT snapshot. Overrides poll.quietStatus.
+  --interval <duration>          Sleep between WAIT ticks. Bare number = seconds. Default: poll.interval-seconds (built-in 60s) multiplied by poll.stack-interval-factor (built-in 2) unless this flag is set.
+  --timeout <duration>           Maximum wall-clock wait for WAIT ticks. Bare number = seconds. Default: poll.timeout-seconds (built-in 4.5m).
+  --debounce <duration>          Settle window after the first SHEPHERD before returning. Bare number = seconds. Default: poll.debounce-seconds (built-in 60s). 0 disables.
+  --quiet-status                 Print only changed WAIT snapshots. Overrides poll.quiet-status.
+  --no-quiet-status              Print every WAIT snapshot. Overrides poll.quiet-status.
   --until-terminal               Continue through WAIT until SHEPHERD, MERGE, CANCEL, or ESCALATE.
 
 Forwarded iterate flags:
-  --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Example: 15m.
+  --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Default: iterate.ready-delay-minutes (built-in 0). Example: 15m.
   --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
   --no-auto-mark-ready           Do not convert draft PRs to ready for review.
   --merge                        Shepherd through readiness, then emit the stack merge commands.

@@ -46,7 +46,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
   const timeoutMs = Math.min(timeoutSeconds * 1000, MAX_TIMER_MS);
   const debounceSeconds = debounceSecondsOpt ?? DEFAULT_POLL_DEBOUNCE_SECONDS;
   const debounceMs = Math.min(debounceSeconds * 1000, MAX_TIMER_MS);
-  const quotaBands = loadConfig().watch.graphqlQuotaWarnings;
+  const quotaBands = loadConfig().quotaWarningBands;
   const start = Date.now();
   let tick = 0;
   let lastResult: IterateResult | undefined;

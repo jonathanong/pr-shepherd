@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   repo,
   prefix,
@@ -49,7 +49,12 @@ async function seed(state: IdlePrState) {
   expect(charged()).toEqual([...IDLE_PR_DETECTORS, "/graphql"]);
 }
 
+/** The idle PR waits on Copilot, so configure it as a blocking reviewer (v1 blocks no one). */
+const BLOCKING_RC = "mark-ready:\n  blocking-reviewer-logins: [copilot]\n";
+
 describe("GraphQL idle wait detectors", () => {
+  beforeEach(() => writeRc(BLOCKING_RC));
+
   it("charges nothing on an unchanged idle wait tick", async () => {
     await freshLoadConfig();
     await seed(idlePrState());
@@ -88,7 +93,7 @@ describe("GraphQL idle wait detectors", () => {
   });
 
   it("does not run detectors when reconcileSeconds is 0", async () => {
-    writeRc("poll:\n  reconcileSeconds: 0\n");
+    writeRc(`${BLOCKING_RC}poll:\n  reconcile-seconds: 0\n`);
     await freshLoadConfig();
     await serveIdlePr(idlePrState());
     await tick(false);

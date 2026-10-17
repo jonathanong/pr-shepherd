@@ -24,7 +24,7 @@ flowchart TD
   AM -->|removal| E2(["escalate: merge-queue-removed"])
   AM -->|no| TG{"REST readiness gaps?"}
   TG -->|yes| E3(["escalate: transport-unsupported"])
-  TG -->|no| MR{"5. READY + draft +<br/>!blockingBotReview + autoMarkReady?"}
+  TG -->|no| MR{"5. READY + draft +<br/>!blockingBotReview + mark-ready.auto?"}
   MR -->|yes| MRA(["mark_ready"])
   MR -->|no + disabled + clean draft| CAN3(["cancel: auto-mark-ready-disabled"])
   MR -->|no + other| SC{"6. ready-delay elapsed<br/>(non-draft)?"}
@@ -46,7 +46,7 @@ The shipped skill runs `pr-shepherd [PR] --until-terminal`, not `pr-shepherd ite
 
 `runCheck({ autoResolve: true })` fires one GraphQL batch query (CI checks, review threads, PR comments, merge state, branch rules). A merged or closed PR returns a terminal report immediately. Otherwise outdated threads are surfaced without being resolved, and eligible already-seen `COMMENTED` review summaries are minimized in-process.
 
-Human-authored threads must stay visible. Shepherd later pairs reply-and-resolve for unmarked bot/non-human threads and unmarked viewer-authored human feedback; unmarked other-human threads stay reply-only unless `iterate.resolveOtherHumanThreads` allows resolve. `resolutionOnly` also carries active marker-ended retry threads that are still being resolved.
+Human-authored threads must stay visible. Shepherd later pairs reply-and-resolve for unmarked bot/non-human threads and unmarked viewer-authored human feedback; unmarked other-human threads stay reply-only unless `iterate.resolve-other-human-threads` allows resolve. `resolutionOnly` also carries active marker-ended retry threads that are still being resolved.
 
 ### 1.5. Terminal state — PR merged or closed
 
@@ -56,7 +56,7 @@ Human-authored threads must stay visible. Shepherd later pairs reply-and-resolve
 
 ### 2. Ready-delay
 
-`updateReadyDelay(pr, isCleanReadyState, readyDelaySeconds, owner, repo, options)` reads and writes `ready-since.txt`. Default delay is 10 minutes (`watch.readyDelayMinutes` or `--ready-delay`).
+`updateReadyDelay(pr, isCleanReadyState, readyDelaySeconds, owner, repo, options)` reads and writes `ready-since.txt`. Default delay is 0, meaning no countdown (`iterate.ready-delay-minutes` or `--ready-delay`).
 
 A **clean ready state** is `status === "READY"`, `hasReadinessWork` false, and no active auto-merge or merge-queue state being handled. It includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending). An initial first look at a hidden PR comment routes to `fix_code` for acknowledgement without restarting the countdown or voiding a READY receipt. An edited PR comment (a conversation comment, minimized or not, from any author) never blocks readiness: it does not route to `fix_code`, restart the ready delay, or clear a READY receipt. Iterate holds it during `wait` and `ready` without writing its marker, then shows it once under `## Edited comments` on the next other action, such as the `cancel` or `merge` that ends the delay (see [Edited comments](actions.md#edited-comments)). Bots such as CodeRabbit regenerate summaries on their own after a PR settles, often in reply to a PR-body journal edit, so an edit cannot be readiness evidence.
 
@@ -130,7 +130,7 @@ The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completio
 - Stale-boundary repair, and a behind layer whose workflow rerun already failed, use the same transport-appropriate stack update and push.
 - A conflicting head with a complete empty check-suite page and no check runs gets a note that GitHub did not start `pull_request` workflows, once Shepherd has seen that head for at least 2 minutes. Commit time is not used (GitHub's Commit object has no push timestamp). An unreadable seen marker omits the note.
 
-**Deferred while queued.** With `--merge`, the PR in the merge queue, and `actions.workWhileQueued` not `true`, everything above **except** `checks.failing`, `mergeStatus.status === 'CONFLICTS'`, and check-run annotations stops counting — a Shepherd-initiated push would eject the PR. That work falls through to [step 4](#4-active-merge-and-queue-removal), which reports it as `deferredWork` counts on the `wait` result.
+**Deferred while queued.** With `--merge`, the PR in the merge queue, and `actions.work-while-queued` not `true`, everything above **except** `checks.failing`, `mergeStatus.status === 'CONFLICTS'`, and check-run annotations stops counting — a Shepherd-initiated push would eject the PR. That work falls through to [step 4](#4-active-merge-and-queue-removal), which reports it as `deferredWork` counts on the `wait` result.
 
 **Side-effects:** none. Shepherd never cancels workflow runs (GitHub exposes no exact viewer capability for cancellation); it only surfaces failure context.
 
@@ -144,7 +144,7 @@ The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completio
 
 ### 5. Mark ready
 
-**Check:** `report.status === 'READY'` AND `isDraft` AND `!blockingBotReviewInProgress` AND `config.actions.autoMarkReady` (disable with `--no-auto-mark-ready`).
+**Check:** `report.status === 'READY'` AND `isDraft` AND `!blockingBotReviewInProgress` AND `mark-ready.auto` (disable with `--no-auto-mark-ready`).
 
 There is no `mergeStateStatus === "CLEAN"` requirement: a draft whose derived status is `DRAFT` (even one that is also behind) can be marked ready when the Shepherd status is `READY`. This runs before the ready-delay completion, and that completion never applies to a draft. When auto mark-ready is disabled, a clean draft instead returns `cancel` with reason `auto-mark-ready-disabled` and exit 0; the PR remains a draft, with no ready-delay countdown or stall guard.
 
@@ -185,22 +185,22 @@ Applies to ordinary `wait` and `fix_code` after the action is chosen — not to 
 
 Exit codes `0`/`10`–`15` report one-PR state; see [exit-codes.md](exit-codes.md) for stack-level `16` and the `sysexits.h` codes when a step fails before reaching a row.
 
-| Step  | Condition                                                                    | Action                                          | Exit code |
-| ----- | ---------------------------------------------------------------------------- | ----------------------------------------------- | --------- |
-| 1.5   | `state === 'MERGED'`                                                         | `cancel`                                        | 0         |
-| 1.5   | `state === 'CLOSED'`                                                         | `cancel`                                        | 14        |
-| 3     | Required contexts still unreported after one close/reopen, nothing running   | `escalate` (`required-checks-unreported`)       | 13        |
-| 3     | `hasActionableWork`, unreported-required repair, or stale stack ancestry     | `fix_code`                                      | 12        |
-| 3     | Only checks without autonomous follow-up                                     | `escalate` (`check-follow-up-unavailable`)      | 13        |
-| 3     | Same thread remains after `fixAttemptsPerThread` returned `FIX_CODE` results | `escalate` (`fix-thrash`) with pending commands | 13        |
-| 4     | Only non-CI work while queued (`--merge`, in queue, `!workWhileQueued`)      | `wait` with `deferredWork`                      | 10        |
-| 4     | Auto-merge or merge queue active                                             | `wait`                                          | 10        |
-| 4     | `--merge`, current queue removal, no actionable failure                      | `escalate` (`merge-queue-removed`)              | 13        |
-| 4     | REST readiness gaps                                                          | `escalate` (`transport-unsupported`)            | 13        |
-| 5     | READY + isDraft + !blockingBotReview + autoMarkReady                         | `mark_ready`                                    | 11        |
-| 5     | Clean draft + auto mark-ready disabled                                       | `cancel` (`auto-mark-ready-disabled`)           | 0         |
-| 6     | `shouldCancel` + `--merge`                                                   | `merge`                                         | 15        |
-| 6     | `shouldCancel` without `--merge`                                             | `cancel`                                        | 0         |
-| 6     | Ready-delay counting                                                         | `ready`                                         | 10        |
-| 7     | Fallthrough                                                                  | `wait`                                          | 10        |
-| guard | Same fingerprint for ≥ `stallTimeoutMinutes` on `fix_code` or `wait`         | `escalate` (`stall-timeout`)                    | 13        |
+| Step  | Condition                                                                                  | Action                                          | Exit code |
+| ----- | ------------------------------------------------------------------------------------------ | ----------------------------------------------- | --------- |
+| 1.5   | `state === 'MERGED'`                                                                       | `cancel`                                        | 0         |
+| 1.5   | `state === 'CLOSED'`                                                                       | `cancel`                                        | 14        |
+| 3     | Required contexts still unreported after one close/reopen, nothing running                 | `escalate` (`required-checks-unreported`)       | 13        |
+| 3     | `hasActionableWork`, unreported-required repair, or stale stack ancestry                   | `fix_code`                                      | 12        |
+| 3     | Only checks without autonomous follow-up                                                   | `escalate` (`check-follow-up-unavailable`)      | 13        |
+| 3     | Same thread remains after `iterate.triage-attempts-per-thread` returned `FIX_CODE` results | `escalate` (`fix-thrash`) with pending commands | 13        |
+| 4     | Only non-CI work while queued (`--merge`, in queue, `!work-while-queued`)                  | `wait` with `deferredWork`                      | 10        |
+| 4     | Auto-merge or merge queue active                                                           | `wait`                                          | 10        |
+| 4     | `--merge`, current queue removal, no actionable failure                                    | `escalate` (`merge-queue-removed`)              | 13        |
+| 4     | REST readiness gaps                                                                        | `escalate` (`transport-unsupported`)            | 13        |
+| 5     | READY + isDraft + !blockingBotReview + mark-ready.auto                                     | `mark_ready`                                    | 11        |
+| 5     | Clean draft + auto mark-ready disabled                                                     | `cancel` (`auto-mark-ready-disabled`)           | 0         |
+| 6     | `shouldCancel` + `--merge`                                                                 | `merge`                                         | 15        |
+| 6     | `shouldCancel` without `--merge`                                                           | `cancel`                                        | 0         |
+| 6     | Ready-delay counting                                                                       | `ready`                                         | 10        |
+| 7     | Fallthrough                                                                                | `wait`                                          | 10        |
+| guard | Same fingerprint for ≥ `iterate.stall-timeout-minutes` on `fix_code` or `wait`             | `escalate` (`stall-timeout`)                    | 13        |

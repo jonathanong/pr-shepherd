@@ -1,4 +1,9 @@
 {
+  "config": {
+    "mark-ready": {
+      "blocking-reviewer-logins": ["copilot"]
+    }
+  },
   "batchData": {
     "reviewRequests": [
       {

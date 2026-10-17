@@ -1,4 +1,5 @@
 import { vi, beforeEach, afterEach } from "vitest";
+import { testConfig } from "../config/test-config.mts";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -133,26 +134,15 @@ export function registerHooks(): void {
   beforeEach(() => {
     vi.clearAllMocks();
     mockExecFile.mockResolvedValue({ stdout: "abc1234\n", stderr: "" });
-    mockLoadConfig.mockReturnValue({
-      cliCommand: ["pr-shepherd"],
-      iterate: {
-        fixAttemptsPerThread: 3,
-        stallTimeoutMinutes: 60,
-        minimizeApprovals: false,
-      },
-      watch: { readyDelayMinutes: 10 },
-      resolve: {
-        concurrency: 4,
-        shaPoll: { intervalMs: 2000, maxAttempts: 10 },
-      },
-      checks: { ciTriggerEvents: ["pull_request"] },
-      mergeStatus: { blockingReviewerLogins: [] },
-      actions: {
-        autoMinimizeSuppressed: false,
-        autoMarkReady: false,
-        neverCancelRuns: [],
-      },
-    });
+    mockLoadConfig.mockReturnValue(
+      testConfig({
+        "bot-usernames": [],
+        iterate: { "ready-delay-minutes": 10 },
+        checks: { "ci-trigger-events": ["pull_request"] },
+        "mark-ready": { auto: false },
+        actions: { "auto-minimize-suppressed": false },
+      }),
+    );
     mockReadFixAttempts.mockResolvedValue(null);
     mockWriteFixAttempts.mockResolvedValue(undefined);
     mockReadStallState.mockResolvedValue({ ok: true, state: null });

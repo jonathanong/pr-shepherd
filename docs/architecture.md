@@ -50,8 +50,8 @@ src/
 ├── cli-parser.mts         # argv dispatch
 ├── types.mts              # barrel for types/*
 ├── exit-codes.mts         # EXIT map — see docs/exit-codes.md
-├── config.json            # default config values
-├── config/                # cascading RC loader (load.mts)
+├── config/schema.mts      # config keys, defaults, validation (zod)
+├── config/                # cascading RC loader (load.mts), renames.mts
 │
 ├── cli/                   # argument parsing, help pages, Markdown formatters
 ├── mcp/
@@ -134,6 +134,6 @@ Type-only imports do not create runtime cycles. Never add an upward runtime impo
 | New merge state derivation rule  | `merge-status/derive.mts`                                                |
 | New merge-requirement field      | `merge-status/requirements.mts` + `requirements-format.mts`              |
 | New MCP/API operation            | `api.mts` + `mcp/server.mts`                                             |
-| New tunable constant             | `config.json` + `PrShepherdConfig` in `config/load.mts`                  |
+| New tunable constant             | `config/schema.mts` (+ regenerate `pr-shepherd.schema.json`)             |
 | New shared type                  | `types/github.mts`, `types/iterate.mts`, or `types/report.mts`           |
 | New exit code                    | `EXIT` map in `exit-codes.mts` + [exit-codes.md](exit-codes.md)          |

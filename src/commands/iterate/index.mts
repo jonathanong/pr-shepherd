@@ -78,9 +78,10 @@ async function runIterateCore(
   tick: IterateTick,
 ): Promise<IterateResult> {
   const config = loadConfig();
-  const botUsernames = normalizeBotUsernames(config.botUsernames);
-  const readyDelaySeconds = opts.readyDelaySeconds ?? config.watch.readyDelayMinutes * 60;
-  const stallTimeoutSeconds = opts.stallTimeoutSeconds ?? config.iterate.stallTimeoutMinutes * 60;
+  const botUsernames = normalizeBotUsernames(config["bot-usernames"]);
+  const readyDelaySeconds = opts.readyDelaySeconds ?? config.iterate["ready-delay-minutes"] * 60;
+  const stallTimeoutSeconds =
+    opts.stallTimeoutSeconds ?? config.iterate["stall-timeout-minutes"] * 60;
 
   const prNumber = opts.prNumber ?? (await getCurrentPrNumber());
   if (prNumber === null) {
@@ -97,8 +98,8 @@ async function runIterateCore(
       prNumber,
       // Outdated Shepherd-visible threads are always resolved by iterate.
       autoResolve: true,
-      autoMinimizeSuppressed: config.actions.autoMinimizeSuppressed,
-      reviewOutputMaxChars: config.iterate.reviewOutputMaxChars,
+      autoMinimizeSuppressed: config.actions["auto-minimize-suppressed"],
+      reviewOutputMaxChars: config.iterate["review-output-max-chars"],
     },
     checkContext,
   );
@@ -146,8 +147,8 @@ async function runIterateCore(
         edited: report.editedSummaries,
       },
       report.approvedReviews,
-      config.iterate.minimizeApprovals,
-      config.iterate.minimizeComments,
+      config.iterate["minimize-approvals"],
+      config.iterate["minimize-comments"],
       botUsernames,
       [
         ...report.threads.actionable,
@@ -186,7 +187,7 @@ async function runIterateCore(
     reviewSummaryIds.length > 0 ||
     firstLookSummaries.length > 0 ||
     editedSummaries.length > 0 ||
-    (config.iterate.minimizeApprovals && surfacedApprovals.length > 0);
+    (config.iterate["minimize-approvals"] && surfacedApprovals.length > 0);
   const hasActionableWork = hasReadinessWork || report.comments.firstLook.length > 0;
 
   const activeMerge = Boolean(
@@ -252,7 +253,7 @@ async function runIterateCore(
   const deferWhileQueued =
     opts.merge === true &&
     report.mergeQueue?.inQueue === true &&
-    config.actions.workWhileQueued !== true;
+    config.actions["work-while-queued"] !== true;
 
   if (hasActionableWork && !(deferWhileQueued && !checkDrivenActionableWork)) {
     return handleFixCode({
@@ -327,7 +328,7 @@ async function runIterateCore(
     firstLookSummaries,
     editedSummaries,
     surfacedApprovals,
-    minimizeApprovals: config.iterate.minimizeApprovals,
+    minimizeApprovals: config.iterate["minimize-approvals"],
   });
   if (mergeStateResult) return annotateBlockedWait(mergeStateResult, blockerGate);
 
@@ -377,7 +378,7 @@ async function runIterateCore(
       escalate: { ...escalation, humanMessage: buildEscalateHumanMessage(escalation, report.pr) },
     };
   }
-  const autoMarkReady = !opts.noAutoMarkReady && config.actions.autoMarkReady;
+  const autoMarkReady = !opts.noAutoMarkReady && config["mark-ready"].auto;
   if (canMarkReady && !autoMarkReady) {
     await clearReadyDelay(report.pr, repoOwner, repoName);
     await clearStallState(stallKey);

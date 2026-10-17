@@ -28,7 +28,7 @@ describe("runIterate — review summary auto-minimize (first look)", () => {
 
   it("surfaces first-look summaries without minimization when minimizeComments=none", async () => {
     const cfg = defaultConfig();
-    cfg.iterate.minimizeComments = "none";
+    cfg.iterate["minimize-comments"] = "none";
     mockLoadConfig.mockReturnValue(cfg);
     const summary = { id: "PRR_FL", author: "alice", authorType: "User" as const, body: "FYI" };
     mockRunCheck.mockResolvedValue(makeReport({ firstLookSummaries: [summary] }));

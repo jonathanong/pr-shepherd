@@ -1,170 +1,55 @@
-/* eslint-disable max-lines */
 import { readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
 import { parse } from "yaml";
-import builtins from "../config.json" with { type: "json" };
 import { getEffectiveCwd } from "../execution-context.mts";
-import { findMergeStrategies } from "./merge-command-args.mts";
-import { parseMergeMethod, type MergeMethod } from "./merge-method.mts";
-import { parseGithubTransport, type GithubTransport } from "../github/transport-mode.mts";
-import { STANDARD_RULE_NAMES } from "../classify/standard/index.mts";
+import { EXIT, ShepherdError } from "../exit-codes.mts";
+import { configError, issueLines, resolveConfig, type PrShepherdConfig } from "./resolve.mts";
+import { configSchema } from "./schema.mts";
 
-const MINIMIZE_COMMENTS_POLICIES = ["all", "bots", "none"] as const;
+export type {
+  GraphqlQuotaWarningBand,
+  InstructionStyle,
+  MinimizeCommentsPolicy,
+  PrShepherdConfig,
+  ResolveOtherHumanThreads,
+} from "./resolve.mts";
 
-export type MinimizeCommentsPolicy = (typeof MINIMIZE_COMMENTS_POLICIES)[number];
+/** Accepted config file names, checked in every directory from cwd up to `$HOME`. */
+const CONFIG_FILE_NAMES = [
+  ".pr-shepherdrc.yml",
+  ".pr-shepherdrc.yaml",
+  join(".pr-shepherd", "config.yml"),
+  join(".pr-shepherd", "config.yaml"),
+];
 
-const RESOLVE_OTHER_HUMAN_THREADS = ["none", "outdated", "always"] as const;
-
-export type ResolveOtherHumanThreads = (typeof RESOLVE_OTHER_HUMAN_THREADS)[number];
-
-export const INSTRUCTION_STYLES = ["playbook", "inline"] as const;
+function configFileIn(dir: string): string | undefined {
+  const found = CONFIG_FILE_NAMES.map((name) => join(dir, name)).filter(
+    (candidate) => statSync(candidate, { throwIfNoEntry: false })?.isFile() === true,
+  );
+  if (found.length > 1) {
+    throw new ShepherdError(
+      `multiple config files in ${dir}: ${found.join(", ")}. Keep exactly one.`,
+      EXIT.USAGE,
+    );
+  }
+  return found[0];
+}
 
 /**
- * How `fix_code` `## Instructions` render invariant procedure text. `inline` (default)
- * prints every step each tick; `playbook` points at the shipped "Fix-code loop" playbook.
+ * Collect config files from `startDir` toward `$HOME` (closest first). The `$HOME` file is
+ * always included when it exists, even if cwd is outside the home directory. The walk never
+ * includes the filesystem root, so a root-level file cannot override the user-level file.
  */
-export type InstructionStyle = (typeof INSTRUCTION_STYLES)[number];
-
-export function isInstructionStyle(value: unknown): value is InstructionStyle {
-  return INSTRUCTION_STYLES.some((style) => style === value);
-}
-
-export interface GraphqlQuotaWarningBand {
-  remainingPercent: number;
-  pollIntervalMinutes: number;
-}
-
-interface PollConfig {
-  intervalSeconds: number;
-  /** Multiplier for aggregate polls when `--interval` is omitted. Finite and at least 1. */
-  stackIntervalFactor: number;
-  timeoutSeconds: number;
-  debounceSeconds: number;
-  quietStatus: boolean;
-  /**
-   * Longest gap between GraphQL snapshots while conditional REST reads report an idle PR
-   * unchanged. `0` disables the REST change detectors on the GraphQL transport.
-   */
-  reconcileSeconds: number;
-}
-
-export interface PrShepherdConfig {
-  /** GitHub API settings; auto prefers GraphQL outside Claude Code cloud sessions. */
-  github?: { transport?: GithubTransport };
-  /**
-   * Optional user classification configuration; preserved for rule consumers. Shepherd reads
-   * only `classify.standard`, a map of bundled rule name (or `all`) to boolean.
-   */
-  classify?: unknown;
-  /** Bundled classification rules enabled by `classify.standard`, resolved and sorted by name. */
-  standardRules: string[];
-  /** Argv prefix for every pr-shepherd command Shepherd emits, e.g. `["pnpm", "exec", "pr-shepherd"]`. */
-  cliCommand: string[];
-  /** GitHub logins that should be treated as bots even when GitHub reports User/Unknown. */
-  botUsernames: string[];
-  /** Case-insensitive glob patterns for check/status context names Shepherd should ignore. */
-  ignoreChecks: string[];
-  iterate: {
-    fixAttemptsPerThread: number;
-    stallTimeoutMinutes: number;
-    /**
-     * When `true`, APPROVED-state reviews are also eligible for minimization — defaults to `false`
-     * so approvals stay visible. `minimizeComments` still filters by GitHub author type.
-     */
-    minimizeApprovals: boolean;
-    /**
-     * Which GitHub author classes should be auto-minimized for minimizable PR comments and review
-     * summaries. Items excluded by this policy are still surfaced once (and after edits) via seen
-     * markers so they do not repeat forever.
-     */
-    minimizeComments: MinimizeCommentsPolicy;
-    /**
-     * One-liner hint appended to the `fix_code` push instruction when the branch is behind its
-     * base — e.g. "rebase --force-with-lease" or "see .agents/skills/git-and-prs.md". Empty
-     * (default) omits the hint entirely; the CLI never prescribes rebase/merge mechanics itself.
-     */
-    behindBaseHint: string;
-    /**
-     * Per-tick budget for review-item bodies in `fix_code` output, in characters. Over budget,
-     * iterate shows a priority-ordered subset and holds the rest (unmarked) for later ticks.
-     * `0` disables the cap.
-     */
-    reviewOutputMaxChars: number;
-    /**
-     * When to resolve other-human inline threads after Shepherd replies. Own and bot threads
-     * always reply-and-resolve. `none` (default) keeps other humans reply-only; `outdated`
-     * also resolves when GitHub reports `isOutdated`; `always` pairs reply-and-resolve.
-     */
-    resolveOtherHumanThreads: ResolveOtherHumanThreads;
-    /**
-     * `inline` (default) prints the commit/push step of `fix_code` instructions
-     * every tick; `playbook` folds it into one `Playbook: "Fix-code loop"` pointer. The
-     * default is inline because the token bench measured playbook as a net cost: it adds a read. The `--instructions` flag and MCP `instructions` input override per call.
-     */
-    instructions: InstructionStyle;
-  };
-  poll: PollConfig;
-  watch: {
-    readyDelayMinutes: number;
-    graphqlQuotaWarnings: GraphqlQuotaWarningBand[];
-  };
-  resolve: {
-    shaPoll: {
-      intervalMs: number;
-      maxAttempts: number;
-    };
-  };
-  checks: {
-    ciTriggerEvents: string[];
-    /** Regex patterns matched against each raw log line; matching lines are dropped from log excerpts. Empty by default — no lines are stripped unless configured. */
-    ignoreLogLines: string[];
-  };
-  mergeStatus: {
-    blockingReviewerLogins: string[];
-  };
-  merge?: {
-    /** Preferred merge method. Used only when the repository allows it. */
-    method?: MergeMethod;
-    /** Options added to ordinary `gh pr merge` commands. Queue commands never use these. */
-    commandArgs: string[];
-  };
-  actions: {
-    autoMinimizeSuppressed: boolean;
-    autoMarkReady: boolean;
-    /** Legacy-named patterns that keep matching Actions checks visible despite ignoreChecks. */
-    neverCancelRuns: string[];
-    /**
-     * When `false` (default), `iterate --merge` defers non-CI actionable work
-     * (review threads, comments, changes-requested reviews, review summaries)
-     * while the PR sits in the merge queue, since a Shepherd-initiated push
-     * would eject it. When `true`, restores pre-existing behavior: actionable
-     * work is handled immediately regardless of queue membership.
-     */
-    workWhileQueued: boolean;
-  };
-}
-
-const RC_FILENAME = ".pr-shepherdrc.yml";
-
-/**
- * Collect `.pr-shepherdrc.yml` files from `startDir` toward `$HOME` (closest first).
- * `$HOME/.pr-shepherdrc.yml` is always included when it exists, even if cwd is
- * outside the home directory. The walk never includes the filesystem root, so a
- * `/.pr-shepherdrc.yml` cannot override the user-level file.
- */
-function collectRcFiles(startDir: string): string[] {
+function collectConfigFiles(startDir: string): string[] {
   const home = resolve(homedir());
-  const seen = new Set<string>();
   const files: string[] = [];
-
+  const visited = new Set<string>();
   const add = (dir: string): void => {
-    const candidate = resolve(join(dir, RC_FILENAME));
-    if (seen.has(candidate)) return;
-    if (statSync(candidate, { throwIfNoEntry: false })?.isFile()) {
-      seen.add(candidate);
-      files.push(candidate);
-    }
+    if (visited.has(dir)) return;
+    visited.add(dir);
+    const file = configFileIn(dir);
+    if (file !== undefined) files.push(file);
   };
 
   let current = resolve(startDir);
@@ -177,511 +62,60 @@ function collectRcFiles(startDir: string): string[] {
   return files;
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 function deepMerge(
   base: Record<string, unknown>,
   override: Record<string, unknown>,
 ): Record<string, unknown> {
   const result: Record<string, unknown> = { ...base };
-  for (const key of Object.keys(override)) {
-    const overVal = override[key];
+  for (const [key, overVal] of Object.entries(override)) {
     const baseVal = base[key];
-    if (
-      overVal !== null &&
-      typeof overVal === "object" &&
-      !Array.isArray(overVal) &&
-      typeof baseVal === "object" &&
-      baseVal !== null &&
-      !Array.isArray(baseVal)
-    ) {
-      result[key] = deepMerge(
-        baseVal as Record<string, unknown>,
-        overVal as Record<string, unknown>,
-      );
-    } else if (overVal !== undefined) {
-      result[key] = overVal;
-    }
+    result[key] =
+      isPlainObject(overVal) && isPlainObject(baseVal) ? deepMerge(baseVal, overVal) : overVal;
   }
   return result;
 }
 
-function isMinimizeCommentsPolicy(value: unknown): value is MinimizeCommentsPolicy {
-  return MINIMIZE_COMMENTS_POLICIES.some((policy) => policy === value);
-}
-
-function parseMinimizeCommentsPolicy(value: unknown): MinimizeCommentsPolicy {
-  if (isMinimizeCommentsPolicy(value)) return value;
-  throw new Error(
-    `Invalid config: iterate.minimizeComments must be one of "all", "bots", or "none", got ${JSON.stringify(value)}`,
-  );
-}
-
-function parseResolveOtherHumanThreads(value: unknown): ResolveOtherHumanThreads {
-  if (
-    typeof value === "string" &&
-    (RESOLVE_OTHER_HUMAN_THREADS as readonly string[]).includes(value)
-  ) {
-    return value as ResolveOtherHumanThreads;
+/** Parse and validate one config file without applying defaults. */
+function readConfigFile(file: string): Record<string, unknown> {
+  let raw: unknown;
+  try {
+    raw = parse(readFileSync(file, "utf8")) ?? {};
+  } catch (err) {
+    throw configError(file, [err instanceof Error ? err.message : String(err)]);
   }
-  throw new Error(
-    `Invalid config: iterate.resolveOtherHumanThreads must be one of "none", "outdated", or "always", got ${JSON.stringify(value)}`,
-  );
-}
-
-function parseInstructionStyle(value: unknown): InstructionStyle {
-  if (isInstructionStyle(value)) return value;
-  throw new Error(
-    `Invalid config: iterate.instructions must be "playbook" or "inline", got ${JSON.stringify(value)}`,
-  );
-}
-
-function parseReviewOutputMaxChars(value: unknown): number {
-  if (typeof value === "number" && Number.isInteger(value) && value >= 0) return value;
-  throw new Error(
-    `Invalid config: iterate.reviewOutputMaxChars must be a non-negative integer, got ${JSON.stringify(value)}`,
-  );
-}
-
-function parseCliCommand(value: unknown): string[] {
-  if (
-    !Array.isArray(value) ||
-    value.length === 0 ||
-    !value.every((arg) => typeof arg === "string" && arg.trim() !== "")
-  ) {
-    throw new Error("Invalid config: cliCommand must be a non-empty array of non-empty strings");
-  }
-  return value;
-}
-
-function parseBotUsernames(value: unknown): string[] {
-  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
-    throw new Error(`Invalid config: botUsernames must be an array of strings`);
-  }
-  return value;
-}
-
-function parseIgnoreChecks(value: unknown): string[] {
-  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
-    throw new Error(`Invalid config: ignoreChecks must be an array of strings`);
-  }
-  return value;
-}
-
-function parseNeverCancelRuns(value: unknown): string[] {
-  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
-    throw new Error(`Invalid config: actions.neverCancelRuns must be an array of strings`);
-  }
-  return value;
-}
-
-function parseIgnoreLogLines(value: unknown): string[] {
-  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
-    throw new Error(`Invalid config: checks.ignoreLogLines must be an array of strings`);
-  }
-  for (const pattern of value) {
-    try {
-      new RegExp(pattern);
-    } catch {
-      throw new Error(
-        `Invalid config: checks.ignoreLogLines contains an invalid regular expression: ${pattern}`,
-      );
-    }
-  }
-  return value;
-}
-
-const SHEPHERD_OWNED_MERGE_FLAGS = [
-  "--repo",
-  "-R",
-  "--auto",
-  "--disable-auto",
-  "--match-head-commit",
-  "--admin",
-  "--body-file",
-  "-F",
-  "--help",
-  "-h",
-];
-
-function parseMergeCommandArgs(value: unknown): string[] {
-  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
-    throw new Error("Invalid config: merge.commandArgs must be an array of strings");
-  }
-  for (const arg of value) {
-    if (
-      SHEPHERD_OWNED_MERGE_FLAGS.some(
-        (flag) =>
-          arg === flag ||
-          arg.startsWith(`${flag}=`) ||
-          (flag.startsWith("-") && !flag.startsWith("--") && arg.startsWith(flag)),
-      )
-    ) {
-      throw new Error(`Invalid config: merge.commandArgs cannot include Shepherd-owned ${arg}`);
-    }
-  }
-  const strategies = findMergeStrategies(value);
-  if (strategies.length > 1) {
-    throw new Error(
-      `Invalid config: merge.commandArgs includes multiple merge strategies: ${strategies.join(", ")}`,
+  if (!isPlainObject(raw)) throw configError(file, ["the top level must be a mapping"]);
+  const result = configSchema.safeParse(raw);
+  if (!result.success) {
+    throw configError(
+      file,
+      result.error.issues.flatMap((issue) => issueLines(issue, raw)),
     );
   }
-  return [...value];
+  return raw;
 }
-
-function parsePollConfig(value: unknown): PollConfig {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("Invalid config: poll must be a plain object");
-  }
-  const record = value as Record<string, unknown>;
-  const intervalSeconds = parsePollDuration(record["intervalSeconds"], "intervalSeconds");
-  const timeoutSeconds = parsePollDuration(record["timeoutSeconds"], "timeoutSeconds");
-  const debounceSeconds = parsePollDuration(record["debounceSeconds"], "debounceSeconds", true);
-  const reconcileSeconds = parsePollDuration(record["reconcileSeconds"], "reconcileSeconds", true);
-  const stackIntervalFactor = parseStackIntervalFactor(record["stackIntervalFactor"]);
-  assertAggregateIntervalFits(intervalSeconds, stackIntervalFactor);
-  const quietStatus = record["quietStatus"];
-  if (typeof quietStatus !== "boolean") {
-    throw new Error(
-      `Invalid config: poll.quietStatus must be a boolean, got ${JSON.stringify(quietStatus)}`,
-    );
-  }
-  return {
-    intervalSeconds,
-    stackIntervalFactor,
-    timeoutSeconds,
-    debounceSeconds,
-    quietStatus,
-    reconcileSeconds,
-  };
-}
-
-function parseStackIntervalFactor(value: unknown): number {
-  if (typeof value !== "number" || !Number.isFinite(value) || value < 1) {
-    throw new Error(
-      `Invalid config: poll.stackIntervalFactor must be a finite number greater than or equal to 1, got ${JSON.stringify(value)}`,
-    );
-  }
-  return value;
-}
-
-/** Largest `setTimeout` delay. A bigger aggregate sleep would clamp to ~24.8 days. */
-const MAX_POLL_INTERVAL_MS = 2 ** 31 - 1;
-
-function assertAggregateIntervalFits(intervalSeconds: number, factor: number): void {
-  const ms = intervalSeconds * factor * 1000;
-  if (!Number.isFinite(ms) || ms > MAX_POLL_INTERVAL_MS) {
-    throw new Error(
-      `Invalid config: poll.intervalSeconds * poll.stackIntervalFactor must be finite and at most ${MAX_POLL_INTERVAL_MS} milliseconds, got ${JSON.stringify(ms)}`,
-    );
-  }
-}
-
-function parsePollDuration(value: unknown, key: string, allowZero = false): number {
-  if (
-    typeof value !== "number" ||
-    !Number.isFinite(value) ||
-    (allowZero ? value < 0 : value <= 0)
-  ) {
-    const range = allowZero ? "a non-negative" : "a positive";
-    throw new Error(
-      `Invalid config: poll.${key} must be ${range} finite number, got ${JSON.stringify(value)}`,
-    );
-  }
-  return value;
-}
-
-function parseGraphqlQuotaWarnings(
-  value: unknown,
-  pollIntervalSeconds: number,
-): GraphqlQuotaWarningBand[] {
-  if (!Array.isArray(value)) {
-    throw new Error("Invalid config: watch.graphqlQuotaWarnings must be an array");
-  }
-  const seen = new Set<number>();
-  const parsed = value.map((item, index) => {
-    if (item === null || typeof item !== "object" || Array.isArray(item)) {
-      throw new Error(`Invalid config: watch.graphqlQuotaWarnings[${index}] must be an object`);
-    }
-    const record = item as Record<string, unknown>;
-    const remainingPercent = record["remainingPercent"];
-    const pollIntervalMinutes = record["pollIntervalMinutes"];
-    const pollIntervalFactor = record["pollIntervalFactor"];
-    if (
-      typeof remainingPercent !== "number" ||
-      !Number.isInteger(remainingPercent) ||
-      remainingPercent < 1 ||
-      remainingPercent > 100
-    ) {
-      throw new Error(
-        `Invalid config: watch.graphqlQuotaWarnings[${index}].remainingPercent must be an integer from 1 to 100`,
-      );
-    }
-    if (pollIntervalMinutes === undefined && pollIntervalFactor === undefined) {
-      throw new Error(
-        `Invalid config: watch.graphqlQuotaWarnings[${index}] must define pollIntervalMinutes, pollIntervalFactor, or both`,
-      );
-    }
-    if (
-      pollIntervalMinutes !== undefined &&
-      (typeof pollIntervalMinutes !== "number" ||
-        !Number.isFinite(pollIntervalMinutes) ||
-        pollIntervalMinutes <= 0)
-    ) {
-      throw new Error(
-        `Invalid config: watch.graphqlQuotaWarnings[${index}].pollIntervalMinutes must be a positive number`,
-      );
-    }
-    if (
-      pollIntervalFactor !== undefined &&
-      (typeof pollIntervalFactor !== "number" ||
-        !Number.isFinite(pollIntervalFactor) ||
-        pollIntervalFactor < 1)
-    ) {
-      throw new Error(
-        `Invalid config: watch.graphqlQuotaWarnings[${index}].pollIntervalFactor must be a number greater than or equal to 1`,
-      );
-    }
-    if (seen.has(remainingPercent)) {
-      throw new Error(
-        `Invalid config: watch.graphqlQuotaWarnings has duplicate remainingPercent ${remainingPercent}`,
-      );
-    }
-    seen.add(remainingPercent);
-    const factorMinutes =
-      typeof pollIntervalFactor === "number" ? (pollIntervalSeconds * pollIntervalFactor) / 60 : 0;
-    const absoluteMinutes = typeof pollIntervalMinutes === "number" ? pollIntervalMinutes : 0;
-    const resolvedPollIntervalMinutes = Math.max(absoluteMinutes, factorMinutes);
-    if (!Number.isFinite(resolvedPollIntervalMinutes)) {
-      throw new Error(
-        `Invalid config: watch.graphqlQuotaWarnings[${index}] resolves to a non-finite poll interval`,
-      );
-    }
-    return {
-      remainingPercent,
-      pollIntervalMinutes: resolvedPollIntervalMinutes,
-    };
-  });
-  parsed.sort((left, right) => right.remainingPercent - left.remainingPercent);
-  for (let index = 1; index < parsed.length; index += 1) {
-    const previous = parsed[index - 1];
-    const current = parsed[index];
-    if (
-      previous !== undefined &&
-      current !== undefined &&
-      current.pollIntervalMinutes < previous.pollIntervalMinutes
-    ) {
-      throw new Error(
-        "Invalid config: watch.graphqlQuotaWarnings pollIntervalMinutes must not decrease as remainingPercent decreases",
-      );
-    }
-  }
-  return parsed;
-}
-
-const KNOWN_CONFIG_KEYS = new Set([
-  "github",
-  "classify",
-  "cliCommand",
-  "botUsernames",
-  "ignoreChecks",
-  "iterate",
-  "poll",
-  "watch",
-  "resolve",
-  "checks",
-  "mergeStatus",
-  "merge",
-  "actions",
-]);
-const KNOWN_NESTED_KEYS: Record<string, ReadonlySet<string>> = {
-  github: new Set(["transport"]),
-  iterate: new Set([
-    "fixAttemptsPerThread",
-    "stallTimeoutMinutes",
-    "minimizeApprovals",
-    "minimizeComments",
-    "behindBaseHint",
-    "resolveOtherHumanThreads",
-    "instructions",
-    "reviewOutputMaxChars",
-  ]),
-  poll: new Set([
-    "intervalSeconds",
-    "stackIntervalFactor",
-    "timeoutSeconds",
-    "debounceSeconds",
-    "quietStatus",
-    "reconcileSeconds",
-  ]),
-  watch: new Set(["readyDelayMinutes", "graphqlQuotaWarnings"]),
-  resolve: new Set(["shaPoll"]),
-  checks: new Set(["ciTriggerEvents", "ignoreLogLines"]),
-  mergeStatus: new Set(["blockingReviewerLogins"]),
-  merge: new Set(["commandArgs", "method"]),
-  actions: new Set([
-    "autoMinimizeSuppressed",
-    "autoMarkReady",
-    "neverCancelRuns",
-    "workWhileQueued",
-  ]),
-};
-
-function warnUnknownConfigKeys(config: Record<string, unknown>): void {
-  for (const key of Object.keys(config)) {
-    if (!KNOWN_CONFIG_KEYS.has(key)) {
-      process.stderr.write(`pr-shepherd: config: unknown key "${key}" ignored.\n`);
-      delete config[key];
-      continue;
-    }
-    const value = config[key];
-    const nested = KNOWN_NESTED_KEYS[key];
-    if (
-      nested === undefined ||
-      value === null ||
-      typeof value !== "object" ||
-      Array.isArray(value)
-    ) {
-      continue;
-    }
-    for (const child of Object.keys(value as Record<string, unknown>)) {
-      if (!nested.has(child)) {
-        process.stderr.write(`pr-shepherd: config: unknown key "${key}.${child}" ignored.\n`);
-        delete (value as Record<string, unknown>)[child];
-      }
-    }
-  }
-}
-
-const rawDefaults = builtins as unknown as Record<string, unknown>;
-
-/**
- * Resolves `classify.standard` (`{ all?: boolean, <rule>?: boolean }`) to enabled rule names.
- * A named entry overrides `all`. Unknown names and non-boolean values warn and are ignored.
- */
-function parseStandardRules(classify: unknown): string[] {
-  if (classify === null || typeof classify !== "object" || Array.isArray(classify)) return [];
-  const standard = (classify as Record<string, unknown>)["standard"];
-  if (standard === undefined) return [];
-  if (standard === null || typeof standard !== "object" || Array.isArray(standard)) {
-    process.stderr.write(
-      "pr-shepherd: config: classify.standard must be a map of rule name to boolean; ignored.\n",
-    );
-    return [];
-  }
-  const entries = standard as Record<string, unknown>;
-  const flags = new Map<string, boolean>();
-  for (const [name, value] of Object.entries(entries)) {
-    if (name !== "all" && !STANDARD_RULE_NAMES.includes(name)) {
-      process.stderr.write(
-        `pr-shepherd: config: unknown standard classification rule "classify.standard.${name}" ignored.\n`,
-      );
-      continue;
-    }
-    if (typeof value !== "boolean") {
-      process.stderr.write(
-        `pr-shepherd: config: classify.standard.${name} must be a boolean; ignored.\n`,
-      );
-      continue;
-    }
-    flags.set(name, value);
-  }
-  const all = flags.get("all") ?? false;
-  return STANDARD_RULE_NAMES.filter((name) => flags.get(name) ?? all).sort();
-}
-
-function parseConfig(value: Record<string, unknown>, normalizeMergeArgs = true): PrShepherdConfig {
-  const config = value as unknown as PrShepherdConfig;
-  const github = value["github"];
-  if (github === null || typeof github !== "object" || Array.isArray(github)) {
-    throw new Error("Invalid config: github must be a plain object");
-  }
-  config.github = {
-    transport: parseGithubTransport((github as Record<string, unknown>)["transport"] ?? "auto"),
-  };
-  config.cliCommand = parseCliCommand(config.cliCommand);
-  config.botUsernames = parseBotUsernames(config.botUsernames);
-  config.ignoreChecks = parseIgnoreChecks(config.ignoreChecks);
-  config.actions.neverCancelRuns = parseNeverCancelRuns(config.actions.neverCancelRuns);
-  if (config.merge && normalizeMergeArgs) {
-    config.merge.commandArgs = parseMergeCommandArgs(config.merge.commandArgs);
-    if (config.merge.method !== undefined)
-      config.merge.method = parseMergeMethod(config.merge.method);
-    const fromArgs = findMergeStrategies(config.merge.commandArgs)[0];
-    if (config.merge.method && fromArgs && fromArgs !== config.merge.method) {
-      throw new Error(
-        `Invalid config: merge.method ${config.merge.method} conflicts with merge.commandArgs strategy ${fromArgs}`,
-      );
-    }
-  }
-  config.poll = parsePollConfig(config.poll);
-  config.watch.graphqlQuotaWarnings = parseGraphqlQuotaWarnings(
-    config.watch.graphqlQuotaWarnings,
-    config.poll.intervalSeconds,
-  );
-  config.iterate.minimizeComments = parseMinimizeCommentsPolicy(config.iterate.minimizeComments);
-  config.iterate.resolveOtherHumanThreads = parseResolveOtherHumanThreads(
-    config.iterate.resolveOtherHumanThreads,
-  );
-  config.iterate.instructions = parseInstructionStyle(config.iterate.instructions);
-  config.iterate.reviewOutputMaxChars = parseReviewOutputMaxChars(
-    config.iterate.reviewOutputMaxChars,
-  );
-  config.checks.ignoreLogLines = parseIgnoreLogLines(config.checks.ignoreLogLines);
-  config.standardRules = parseStandardRules(config.classify);
-  return config;
-}
-
-const defaults = parseConfig(structuredClone(rawDefaults), false);
 
 const configCache = new Map<string, PrShepherdConfig>();
 
-function readRcFile(rcPath: string): Record<string, unknown> | null {
-  try {
-    const raw = readFileSync(rcPath, "utf8");
-    const parsed = (parse(raw) ?? {}) as Record<string, unknown>;
-    warnUnknownConfigKeys(parsed);
-    return parsed;
-  } catch (err) {
-    process.stderr.write(
-      `pr-shepherd: failed to parse ${rcPath}: ${err instanceof Error ? err.message : String(err)}\n`,
-    );
-    return null;
-  }
-}
-
+/**
+ * Load the config for the effective cwd: built-in defaults, then `$HOME`, then each ancestor
+ * down to cwd, closest file winning. Any invalid file throws a `ShepherdError` (exit 64).
+ */
 export function loadConfig(): PrShepherdConfig {
   const cwd = getEffectiveCwd();
-  if (configCache.has(cwd)) return configCache.get(cwd)!;
+  const cached = configCache.get(cwd);
+  if (cached !== undefined) return cached;
 
-  const rcPaths = collectRcFiles(cwd);
-  if (rcPaths.length === 0) {
-    configCache.set(cwd, defaults);
-    return defaults;
-  }
-
-  try {
-    // Farthest file first so closer directories override, ESLint-style.
-    let overlay: Record<string, unknown> = {};
-    let loaded = false;
-    for (const rcPath of [...rcPaths].reverse()) {
-      const parsed = readRcFile(rcPath);
-      if (parsed === null) continue;
-      overlay = deepMerge(overlay, parsed);
-      loaded = true;
-    }
-    if (!loaded) {
-      configCache.set(cwd, defaults);
-      return defaults;
-    }
-    const config = parseConfig(deepMerge(structuredClone(rawDefaults), overlay));
-    configCache.set(cwd, config);
-    return config;
-  } catch (err) {
-    process.stderr.write(
-      `pr-shepherd: failed to parse ${rcPaths[0]}: ${err instanceof Error ? err.message : String(err)}\n`,
-    );
-    configCache.set(cwd, defaults);
-    return defaults;
-  }
+  const files = collectConfigFiles(cwd);
+  // Farthest file first so closer directories override, ESLint-style.
+  let overlay: Record<string, unknown> = {};
+  for (const file of [...files].reverse()) overlay = deepMerge(overlay, readConfigFile(file));
+  const config = resolveConfig(overlay, files.length > 0 ? files.join(", ") : undefined);
+  configCache.set(cwd, config);
+  return config;
 }
 
 /** Reset the config cache — for use in tests that change directories. */

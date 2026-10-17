@@ -83,7 +83,7 @@ export interface IterateResultBase {
    */
   checks: RelevantCheck[];
   inProgressChecks?: ActiveCheck[];
-  ignoredNames?: string[]; // Suppressed by ignoreChecks config; omitted when empty.
+  ignoredNames?: string[]; // Suppressed by checks.ignore config; omitted when empty.
   supersededNames?: string[]; // CANCELLED, superseded by a newer same-workflow run; omitted when empty.
   /** Required merge-target contexts with no check run and no status context. Omitted when empty. */
   unreportedRequiredChecks?: string[];
@@ -160,7 +160,7 @@ interface FixRebaseAndPush {
   firstLookSummaries: Review[];
   /** COMMENTED review summaries whose body changed since the agent first saw them. Body shown inline; IDs not in `reviewSummaryIds`. */
   editedSummaries: Review[];
-  /** APPROVED-state reviews surfaced for visibility (when `iterate.minimizeApprovals` is false). */
+  /** APPROVED-state reviews surfaced for visibility (when `iterate.minimize-approvals` is false). */
   surfacedApprovals: Review[];
   checks: AgentCheck[];
   changesRequestedReviews: Review[];
