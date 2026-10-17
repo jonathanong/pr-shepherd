@@ -58,6 +58,7 @@ export async function runIterateTick(opts: IterateCommandOptions): Promise<Itera
       nowMs,
     ),
     nowMs,
+    quotaFloorSeconds(result.quotaWarning),
   );
   return nextCheck ? { ...result, nextCheck } : result;
 }
@@ -173,5 +174,9 @@ function aggregateNextCheck(
   if (stallDeadlineSeconds !== undefined) {
     candidates.push({ reason: "stall-timeout", seconds: stallDeadlineSeconds - nowMs / 1000 });
   }
-  return earliestNextCheck(candidates, nowMs);
+  return earliestNextCheck(candidates, nowMs, quotaFloorSeconds(result.quotaWarning));
+}
+
+function quotaFloorSeconds(warning: { pollIntervalMinutes: number } | undefined): number {
+  return warning === undefined ? 0 : warning.pollIntervalMinutes * 60;
 }

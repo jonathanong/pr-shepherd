@@ -46,6 +46,18 @@ describe("aggregate tick", () => {
     expect(result.instructions![1]).toMatch(/^2\. End this turn now/);
   });
 
+  it("holds the wake-up until the quota warning's interval", async () => {
+    m.runPollSummary.mockResolvedValue(
+      summary({
+        prs: [{ pr: 1, isInMergeQueue: true }],
+        quotaWarning: { pollIntervalMinutes: 10 },
+      }),
+    );
+    const result = await runPollSummaryTick({} as never);
+    expect(result.nextCheck).toMatchObject({ reason: "merge-queue" });
+    expect(result.nextCheck!.inSeconds).toBeGreaterThanOrEqual(600);
+  });
+
   it("prefers a ready-delay countdown and a queue wait", async () => {
     m.runPollSummary.mockResolvedValue(
       summary({

@@ -14,10 +14,13 @@ export interface NextCheckCandidate {
 export function earliestNextCheck(
   candidates: NextCheckCandidate[],
   nowMs: number = Date.now(),
+  minimumSeconds = 0,
 ): NextCheck | undefined {
   const first = [...candidates].sort((a, b) => a.seconds - b.seconds)[0];
   if (!first) return undefined;
-  const atMs = Math.ceil((nowMs + Math.max(0, first.seconds) * 1000) / 60_000) * 60_000;
+  // A quota warning's interval is a floor: no wake-up may come sooner than it permits.
+  const seconds = Math.max(0, first.seconds, minimumSeconds);
+  const atMs = Math.ceil((nowMs + seconds * 1000) / 60_000) * 60_000;
   return {
     at: new Date(atMs).toISOString().replace(/\.\d{3}Z$/, "Z"),
     inSeconds: Math.max(0, Math.round((atMs - nowMs) / 1000)),
