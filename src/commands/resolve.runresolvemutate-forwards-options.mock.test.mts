@@ -14,7 +14,7 @@ registerHooks();
 
 describe("runResolveMutate — forwards options", () => {
   it("forwards every requested mutation ID without fetching current review state", async () => {
-    const firstResult = await runResolveMutate({
+    await runResolveMutate({
       ...BASE_OPTS,
       resolveThreadIds: ["t-1"],
       minimizeCommentIds: ["c-1"],
@@ -34,7 +34,6 @@ describe("runResolveMutate — forwards options", () => {
         requireSha: "sha-abc",
       }),
     );
-    expect(firstResult.skippedDismissals).toBeUndefined();
     expect(mockFetchPrBatch).not.toHaveBeenCalled();
   });
 
@@ -47,7 +46,7 @@ describe("runResolveMutate — forwards options", () => {
       errors: [],
     });
 
-    const result = await runResolveMutate({
+    await runResolveMutate({
       ...BASE_OPTS,
       resolveThreadIds: ["t-human", "t-bot"],
       minimizeCommentIds: ["c-human", "c-bot"],
@@ -64,9 +63,6 @@ describe("runResolveMutate — forwards options", () => {
         dismissReviewIds: ["r-human", "r-bot"],
       }),
     );
-    expect(result.skippedHumanResolves).toBeUndefined();
-    expect(result.skippedHumanMinimizes).toBeUndefined();
-    expect(result.skippedHumanDismissals).toBeUndefined();
   });
 
   it("forwards every requested reply ID without using the current batch as a filter", async () => {
@@ -79,7 +75,7 @@ describe("runResolveMutate — forwards options", () => {
       errors: [],
     });
 
-    const result = await runResolveMutate({
+    await runResolveMutate({
       ...BASE_OPTS,
       replyThreadIds: ["t-human", "t-bot", "t-typo"],
       dismissMessage: "done",
@@ -92,7 +88,6 @@ describe("runResolveMutate — forwards options", () => {
         replyThreadIds: ["t-human", "t-bot", "t-typo"],
       }),
     );
-    expect(result.skippedNonHumanReplies).toBeUndefined();
     expect(mockFetchReplyThreadTranscripts).toHaveBeenCalledWith(
       42,
       { owner: "owner", name: "repo" },

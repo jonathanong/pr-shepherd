@@ -19,7 +19,7 @@ registerIterateHooks();
 // Review summary minimize — issue #70
 // ---------------------------------------------------------------------------
 
-function configureApprovalMinimization(minimizeComments: "all" | "bots" | "users" | "none"): void {
+function configureApprovalMinimization(minimizeComments: "all" | "bots" | "none"): void {
   const cfg = defaultConfig();
   cfg.iterate.minimizeApprovals = true;
   cfg.iterate.minimizeComments = minimizeComments;

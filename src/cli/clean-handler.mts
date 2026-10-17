@@ -6,11 +6,9 @@ import { rejectInvalidPollModeFlag, runInPollModeScope } from "./event-state-sco
 
 const CLEAN_VARIANTS = new Set<string>(["pr", "branch", "current", "repo", "all"]);
 
-export async function handleClean(
-  args: string[],
-  command: "admin clean" | "clean" = "admin clean",
-): Promise<void> {
-  const usage = command === "admin clean" ? USAGE["admin clean"] : USAGE.clean;
+export async function handleClean(args: string[]): Promise<void> {
+  const command = "admin clean";
+  const usage = USAGE["admin clean"];
   const variant = args[0];
 
   if (!variant || !CLEAN_VARIANTS.has(variant)) {

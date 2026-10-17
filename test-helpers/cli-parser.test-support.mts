@@ -8,9 +8,6 @@ vi.mock("../src/commands/resolve.mts", () => ({
 vi.mock("../src/commands/log-file.mts", () => ({
   runLogFile: vi.fn(),
 }));
-vi.mock("../src/commands/commit-suggestion.mts", () => ({
-  runCommitSuggestion: vi.fn(),
-}));
 vi.mock("../src/commands/mark-files-as-viewed.mts", () => ({
   runMarkFilesAsViewed: vi.fn(),
 }));

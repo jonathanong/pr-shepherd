@@ -89,16 +89,13 @@ async function runIterateCore(
       EXIT.UNAVAILABLE,
     );
   }
-  const neverCancelRuns = opts.neverCancelRuns ?? config.actions.neverCancelRuns;
   const checkContext = createCheckExecutionContext(readyDelaySeconds);
 
   const report = await runCheck(
     {
       ...opts,
       prNumber,
-      // Outdated Shepherd-visible threads are always resolved by iterate. The
-      // old actions.autoResolveOutdated switch is retained only as an ignored
-      // compatibility key in the config loader.
+      // Outdated Shepherd-visible threads are always resolved by iterate.
       autoResolve: true,
       autoMinimizeSuppressed: config.actions.autoMinimizeSuppressed,
       reviewOutputMaxChars: config.iterate.reviewOutputMaxChars,
@@ -261,7 +258,7 @@ async function runIterateCore(
     return handleFixCode({
       base,
       report: reportForWork,
-      opts: { ...opts, prNumber, neverCancelRuns },
+      opts: { ...opts, prNumber },
       headSha,
       stallKey,
       prNumber,
@@ -285,7 +282,7 @@ async function runIterateCore(
     return handleFixCode({
       base,
       report: reportForWork,
-      opts: { ...opts, prNumber, neverCancelRuns },
+      opts: { ...opts, prNumber },
       headSha,
       stallKey,
       prNumber,
@@ -338,7 +335,7 @@ async function runIterateCore(
     return handleFixCode({
       base,
       report: reportForWork,
-      opts: { ...opts, prNumber, neverCancelRuns },
+      opts: { ...opts, prNumber },
       headSha,
       stallKey,
       prNumber,

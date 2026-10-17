@@ -14,13 +14,13 @@ registerHooks();
 describe("main — log-file", () => {
   it("prints the log path as text without initializing normal command dispatch", async () => {
     mockRunLogFile.mockResolvedValue({ path: "/tmp/shepherd.md" });
-    await main(["node", "shepherd", "log-file"]);
+    await main(["node", "shepherd", "admin", "log-file"]);
     expect(getStdout()).toBe("/tmp/shepherd.md\n");
   });
 
   it("prints the log path as JSON for --format=json", async () => {
     mockRunLogFile.mockResolvedValue({ path: "/tmp/shepherd.md" });
-    await main(["node", "shepherd", "log-file", "--format=json"]);
+    await main(["node", "shepherd", "admin", "log-file", "--format=json"]);
     expect(JSON.parse(getStdout())).toEqual({ path: "/tmp/shepherd.md" });
   });
 
@@ -34,7 +34,7 @@ describe("main — log-file", () => {
 
   it("prints the log path as JSON for --format json", async () => {
     mockRunLogFile.mockResolvedValue({ path: "/tmp/shepherd.md" });
-    await main(["node", "shepherd", "log-file", "--format", "json"]);
+    await main(["node", "shepherd", "admin", "log-file", "--format", "json"]);
     expect(JSON.parse(getStdout())).toEqual({ path: "/tmp/shepherd.md" });
   });
 
@@ -45,16 +45,16 @@ describe("main — log-file", () => {
       durable.push(durableStateRequested());
       return { path: "/tmp/shepherd.md" };
     });
-    await main(["node", "shepherd", "log-file", "--poll-mode", "event"]);
+    await main(["node", "shepherd", "admin", "log-file", "--poll-mode", "event"]);
     await main(["node", "shepherd", "admin", "log-file", "--poll-mode", "poll"]);
     vi.unstubAllEnvs();
     expect(durable).toEqual([true, false]);
   });
 
   it("rejects an invalid --poll-mode value with a usage error", async () => {
-    await main(["node", "shepherd", "log-file", "--poll-mode", "evnet"]);
+    await main(["node", "shepherd", "admin", "log-file", "--poll-mode", "evnet"]);
     expect(stderrSpy).toHaveBeenCalledWith(
-      'pr-shepherd: log-file: --poll-mode must be one of auto, poll, event, got "evnet"\n',
+      'pr-shepherd: admin log-file: --poll-mode must be one of auto, poll, event, got "evnet"\n',
     );
     expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunLogFile).not.toHaveBeenCalled();
@@ -68,8 +68,8 @@ describe("main — log-file", () => {
 
   it("reports log-file errors and sets exitCode", async () => {
     mockRunLogFile.mockRejectedValue(new Error("not in repo"));
-    await main(["node", "shepherd", "log-file"]);
-    expect(stderrSpy).toHaveBeenCalledWith("pr-shepherd: log-file: Error: not in repo\n");
+    await main(["node", "shepherd", "admin", "log-file"]);
+    expect(stderrSpy).toHaveBeenCalledWith("pr-shepherd: admin log-file: Error: not in repo\n");
     expect(process.exitCode).toBe(EXIT.SOFTWARE);
   });
 });

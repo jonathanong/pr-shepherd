@@ -52,13 +52,12 @@ const patches = await shepherd.buildSuggestionPatches({
 
 `createPrShepherd({ cwd, transport })` returns these methods:
 
-| Method                                               | Same as                                |
-| ---------------------------------------------------- | -------------------------------------- |
-| `iterate(input?)`                                    | MCP `iterate` / `pr-shepherd iterate`  |
-| `apply({ pr, operations })`                          | MCP `apply`                            |
-| `getJournal({ pr })`                                 | MCP `get_journal`                      |
-| `buildSuggestionPatches({ pr, suggestions })`        | MCP `build_suggestion_patches`         |
-| `buildSuggestionPatch({ pr, threadId, message, … })` | Deprecated one-item compatibility path |
+| Method                                        | Same as                               |
+| --------------------------------------------- | ------------------------------------- |
+| `iterate(input?)`                             | MCP `iterate` / `pr-shepherd iterate` |
+| `apply({ pr, operations })`                   | MCP `apply`                           |
+| `getJournal({ pr })`                          | MCP `get_journal`                     |
+| `buildSuggestionPatches({ pr, suggestions })` | MCP `build_suggestion_patches`        |
 
 `transport` (`auto`, `graphql`, `rest`) is the same choice as the CLI `--transport` option and the [`github.transport`](configuration.md#github-api-transport) key; the MCP server accepts the equivalent option. In `auto`, Claude Code cloud sessions start with REST and other environments start with GraphQL and use the documented fallback triggers. REST fields or operations that are unavailable stay explicit unknowns or surface as unsupported outcomes.
 
@@ -135,7 +134,7 @@ The `acknowledge_queue_removal` result contains `pr`, `repo`, and `acknowledgmen
 
 A proxy session refusal stops the current review batch and every later `apply` operation. The review result keeps confirmed successes, carries the proxy message in `sessionRefusal`, and lists pending IDs in `unrepliedThreads`, `unresolvedThreads`, `unminimizedComments`, and `undismissedReviews` when nonempty. Its `instructions` tell the caller to repair session repository access and retry only those IDs. No GitHub-denied marker is persisted. CLI text/JSON and MCP Markdown/structured output carry the same partial result; the CLI exits `77`.
 
-Retrying an uncertain GraphQL reply reconciles a fresh complete transcript against captured pre-write evidence. An exact confirmed reply is adopted without resubmission and survives later batch failures. Unconfirmed or legacy intents get targeted marker-file recovery instructions; see [uncertain reply recovery](comments.md#recovering-an-uncertain-reply).
+Retrying an uncertain GraphQL reply reconciles a fresh complete transcript against captured pre-write evidence. An exact confirmed reply is adopted without resubmission and survives later batch failures. Unconfirmed intents, including those without pre-write evidence, get targeted marker-file recovery instructions; see [uncertain reply recovery](comments.md#recovering-an-uncertain-reply).
 
 ### `getJournal`
 
@@ -148,7 +147,7 @@ Fetches one PR body through the selected transport and returns the same result a
 
 ### `buildSuggestionPatches`
 
-Accepts one or more `{ threadId, message, description? }` items and returns an ordered patch list with per-patch commit metadata and shared instructions. It builds against the fetched PR-head blobs, permits a clean local descendant of that head, and returns nothing unless the ordered stream passes `git apply --check`. It never writes a patch file or mutates git. `buildSuggestionPatch` is a deprecated one-item adapter.
+Accepts one or more `{ threadId, message, description? }` items and returns an ordered patch list with per-patch commit metadata and shared instructions. It builds against the fetched PR-head blobs, permits a clean local descendant of that head, and returns nothing unless the ordered stream passes `git apply --check`. It never writes a patch file or mutates git.
 
 ## `pr-shepherd/journal`
 
@@ -191,7 +190,7 @@ const server = createPrShepherdMcpServer({ cwd: "/path/to/repo" });
 await runPrShepherdMcpStdio({ cwd: "/path/to/repo" });
 ```
 
-`createPrShepherdMcpServer` accepts an optional `shepherd` for tests and exposes `iterate`, `apply`, `build_suggestion_patches`, `extract_journal`, `get_journal`, and `playbook`, plus the deprecated singular adapter. Host install and tool schemas: [mcp.md](mcp.md).
+`createPrShepherdMcpServer` accepts an optional `shepherd` for tests and exposes `iterate`, `apply`, `build_suggestion_patches`, `extract_journal`, `get_journal`, and `playbook`. Host install and tool schemas: [mcp.md](mcp.md).
 
 - PR-targeted tools require a repository-qualified reference and reject bare or omitted ones. `iterate` takes exactly one of `pr`, `prs`, or `stack`; the others require `pr`.
 - That repository is the GitHub target and may differ from the factory's `cwd`, which still supplies local git, config, and rules context.

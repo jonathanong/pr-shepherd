@@ -79,7 +79,6 @@ export async function handlePoll(args: string[]): Promise<void> {
     readyDelaySeconds: flags.readyDelaySeconds,
     stallTimeoutSeconds: flags.stallTimeoutSeconds,
     noAutoMarkReady: flags.noAutoMarkReady,
-    noAutoCancelActionable: flags.noAutoCancelActionable,
     merge: flags.merge,
     instructions: flags.instructions ?? undefined,
     pollMode: flags.pollMode ?? undefined,

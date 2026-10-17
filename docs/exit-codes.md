@@ -58,7 +58,7 @@ Emitted by `iterate` and `poll` (including the default `pr-shepherd [PR]`) once 
 
 ## 64–78 — shepherd failed (`sysexits.h`)
 
-Standard BSD `sysexits.h` codes (`/usr/include/sysexits.h`), uniform across every subcommand: `iterate`, `apply`, `build-suggestion-patches` (and its deprecated singular adapter), and the `admin` commands.
+Standard BSD `sysexits.h` codes (`/usr/include/sysexits.h`), uniform across every subcommand: `iterate`, `apply`, `build-suggestion-patches`, and the `admin` commands.
 
 | Code | Name             | When                                                                                                                                                                                                                                                                                |
 | ---- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

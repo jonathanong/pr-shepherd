@@ -22,11 +22,3 @@ export interface BuildSuggestionPatchesResult {
   /** Steps for applying and committing every patch; branch updates require separate authorization. */
   postActionInstructions: string[];
 }
-
-/** Compatibility result for the singular suggestion-patch adapter. */
-export interface CommitSuggestionResult extends SuggestionPatchResult {
-  pr: number;
-  repo: string;
-  /** Numbered steps for the deprecated singular workflow. */
-  postActionInstructions: string[];
-}

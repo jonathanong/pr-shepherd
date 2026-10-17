@@ -1,5 +1,5 @@
 import { blockquote } from "./list-formatters.mts";
-import type { CheckAnnotation, IterateResultFixCode } from "../types.mts";
+import type { CheckAnnotation } from "../types.mts";
 
 // A bare "Process completed with exit code N." on its own carries nothing beyond
 // the check's own [conclusion: FAILURE] tag, so the whole annotation is dropped.
@@ -28,15 +28,6 @@ export function renderCheckAnnotation(a: CheckAnnotation, logExcerpt?: string): 
 // text is also in the check's log excerpt, only the blockquote body is redundant.
 function duplicatesLog(text: string, logExcerpt?: string): boolean {
   return logExcerpt !== undefined && logExcerpt.includes(text.trim());
-}
-
-export function renderProtectedRun(
-  run: IterateResultFixCode["fix"]["protectedRuns"][number],
-): string {
-  const label = run.workflowName
-    ? `${run.workflowName} (${run.checkNames.join(", ")})`
-    : run.checkNames.join(", ");
-  return `- \`${run.runId}\` — \`${label}\` [matched: \`${run.matchedPattern}\`]`;
 }
 
 function renderAnnotationRange(a: CheckAnnotation): string {

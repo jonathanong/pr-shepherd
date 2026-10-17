@@ -9,12 +9,12 @@ import {
   mockFetchBatch,
   mockGetCurrentBranch,
   mockGetCurrentPrNumber,
-} from "../../test-helpers/commands/commit-suggestion.test-support.mts";
-import { runCommitSuggestion } from "./commit-suggestion.mts";
+  runSingleSuggestion,
+} from "../../test-helpers/commands/suggestion-patches.single.test-support.mts";
 
 registerHooks();
 
-describe("runCommitSuggestion — preflight", () => {
+describe("runSuggestionPatches (single) — preflight", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
@@ -25,7 +25,7 @@ describe("runCommitSuggestion — preflight", () => {
     mockGetCurrentPrNumber.mockResolvedValueOnce(null);
     mockExecFile.mockImplementation(() => makeGitSuccess(""));
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("No open PR found");
   });
 
@@ -33,7 +33,7 @@ describe("runCommitSuggestion — preflight", () => {
     mockGetCurrentBranch.mockResolvedValue("wrong-branch");
     mockExecFile.mockImplementation(() => makeGitSuccess("headsha\n"));
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow('does not match PR head branch "feature/foo"');
   });
 
@@ -46,7 +46,7 @@ describe("runCommitSuggestion — preflight", () => {
       return makeGitSuccess("");
     });
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("is not PR head headsha or its descendant");
   });
 
@@ -56,7 +56,7 @@ describe("runCommitSuggestion — preflight", () => {
     });
     mockExecFile.mockImplementation(() => makeGitSuccess("headsha\n"));
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("head repository is unavailable");
   });
 
@@ -67,7 +67,7 @@ describe("runCommitSuggestion — preflight", () => {
       return makeGitSuccess("");
     });
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("uncommitted changes");
   });
 
@@ -80,7 +80,7 @@ describe("runCommitSuggestion — preflight", () => {
       return makeGitSuccess("");
     });
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("path escapes the working tree");
   });
 
@@ -93,7 +93,7 @@ describe("runCommitSuggestion — preflight", () => {
       return makeGitSuccess("");
     });
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "fix" }),
     ).rejects.toThrow("path escapes the working tree");
   });
 });

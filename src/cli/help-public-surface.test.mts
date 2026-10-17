@@ -18,29 +18,35 @@ describe("public CLI help surface", () => {
     expect(USAGE.default).toContain("pr-shepherd --stack PR");
     expect(USAGE.default).not.toContain("[PR] [PR]");
     expect(USAGE.default).not.toContain("pr-shepherd poll");
-    expect(USAGE.poll).toContain(
-      "Usage:\n  pr-shepherd poll [PR ...] [poll-flags] [iterate-flags]",
-    );
-    expect(USAGE.poll).toContain("pr-shepherd poll --stack PR");
     expect(USAGE.top).toContain("--debounce");
     expect(USAGE.default).toContain("--debounce");
-    expect(USAGE.poll).toContain("--debounce");
     expect(USAGE.top).toContain("Mark selected changed files as viewed");
     expect(USAGE["apply files"]).toContain("Mark selected changed files as viewed");
-    expect(USAGE["mark-files-as-viewed"]).toContain("marking selected PR files as viewed");
+    for (const removed of [
+      "poll",
+      "resolve",
+      "commit-suggestion",
+      "build-suggestion-patch",
+      "mark-files-as-viewed",
+      "clean",
+      "journal",
+      "log-file",
+    ]) {
+      expect(USAGE).not.toHaveProperty([removed]);
+    }
     expect(USAGE.top).toContain("--merge");
     expect(USAGE.top).toContain("15  MERGE");
   });
 
-  it("lists every PR-state exit code on the top-level and poll pages", () => {
+  it("lists every PR-state exit code on the top-level and default pages", () => {
     const prStateCodes = Object.values(EXIT).filter((code) => code < 20);
-    for (const page of [USAGE.top, USAGE.poll, USAGE.default]) {
+    for (const page of [USAGE.top, USAGE.default]) {
       const exitBlock = page.slice(page.indexOf("Exit codes:"));
       for (const code of prStateCodes) {
         expect(exitBlock).toMatch(new RegExp(`^ {2}${code} +[A-Z_]+`, "m"));
       }
     }
-    for (const page of [USAGE.top, USAGE.poll]) {
+    for (const page of [USAGE.top, USAGE.default]) {
       expect(page).toContain("until READY/FIX_CODE/MERGE/CANCEL/ESCALATE or stack SHEPHERD.");
       expect(page).toContain(
         "Settle window after first FIX_CODE or stack SHEPHERD before returning.",

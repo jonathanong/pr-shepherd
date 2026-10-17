@@ -215,7 +215,6 @@ async function handleFixCodeTick(ctx: HandleFixCodeContext): Promise<IterateResu
   const retryableActionableThreads = mutationActionableThreads.filter(
     (thread) => thread.path !== null && thread.line !== null,
   );
-  const protectedRuns: [] = [];
   const stored = await readFixAttempts({ owner: repoOwner, repo: repoName, pr: prNumber });
   await aliasThreadFixAttempts(
     { owner: repoOwner, name: repoName },
@@ -307,7 +306,6 @@ async function handleFixCodeTick(ctx: HandleFixCodeContext): Promise<IterateResu
   // it does not confirm the credential executing `gh` has that scope; an unauthorized rerun
   // simply fails when the agent runs it, the same residual risk as every other CLI-recommended
   // git/gh mutation in this codebase.
-  const cancelled: string[] = [];
   const baseLookup = validateBaseBranch(report.baseBranch);
   const threads = report.threads.actionable.map(toAgentThread);
   const resolutionOnlyThreads = report.threads.resolutionOnly;
@@ -358,10 +356,6 @@ async function handleFixCodeTick(ctx: HandleFixCodeContext): Promise<IterateResu
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
   const isBehind = report.mergeStatus.status === "BEHIND";
   const { behindBaseHint, instructions: configuredInstructions } = loadConfig().iterate;
-  // Only surface in-progress runs when a push is plausible — resolution-only and
-  // summary-only iterations have no path to a push, so listing runs would prompt
-  // unnecessary cancellation.
-  const inProgressRunIds: string[] = [];
   const commentMinimizeIds = report.comments.minimizeIds ?? actionableComments.map((c) => c.id);
   const belongsToActiveWorkflowRun = (check: AgentCheck): boolean =>
     check.runId !== null && inProgressWorkflowRunIds.has(check.runId);
@@ -539,12 +533,10 @@ async function handleFixCodeTick(ctx: HandleFixCodeContext): Promise<IterateResu
     resolveCommand,
     hasConflicts,
     prReference,
-    cancelled.length,
     firstLookThreads,
     firstLookComments,
     firstLookSummaries,
     editedSummaries,
-    inProgressRunIds,
     resolutionOnlyThreads,
     resolveOnlyCommand,
     behindBaseHint,
@@ -625,11 +617,8 @@ async function handleFixCodeTick(ctx: HandleFixCodeContext): Promise<IterateResu
       instructions,
       firstLookThreads,
       firstLookComments,
-      inProgressRunIds,
-      protectedRuns,
       ...(report.reviewItems && { reviewItems: report.reviewItems }),
     },
-    cancelled,
   } as IterateResult;
   const result = await applyStallGuard(
     stallKey,

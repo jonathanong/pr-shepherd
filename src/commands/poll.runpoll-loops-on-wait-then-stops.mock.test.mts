@@ -42,7 +42,6 @@ describe("runPoll — loops on wait then stops", () => {
       readyDelaySeconds: 600,
       stallTimeoutSeconds: 1800,
       noAutoMarkReady: true,
-      noAutoCancelActionable: true,
       intervalSeconds: 30,
       timeoutSeconds: 300,
     });
@@ -57,7 +56,6 @@ describe("runPoll — loops on wait then stops", () => {
         readyDelaySeconds: 600,
         stallTimeoutSeconds: 1800,
         noAutoMarkReady: true,
-        noAutoCancelActionable: true,
       }),
     );
   });

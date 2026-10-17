@@ -4,9 +4,6 @@ vi.mock("../src/commands/check.mts", () => ({ runCheck: vi.fn() }));
 vi.mock("../src/commands/resolve.mts", () => ({
   runResolveMutate: vi.fn(),
 }));
-vi.mock("../src/commands/commit-suggestion.mts", () => ({
-  runCommitSuggestion: vi.fn(),
-}));
 vi.mock("../src/commands/suggestion-patches.mts", () => ({
   runSuggestionPatches: vi.fn(),
 }));
@@ -19,10 +16,8 @@ vi.mock("../src/github/client.mts", () => ({
 }));
 
 import { main } from "../src/cli-parser.mts";
-import { runCommitSuggestion } from "../src/commands/commit-suggestion.mts";
 import { runSuggestionPatches } from "../src/commands/suggestion-patches.mts";
 
-const mockRunCommitSuggestion = vi.mocked(runCommitSuggestion);
 const mockRunSuggestionPatches = vi.mocked(runSuggestionPatches);
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -37,27 +32,6 @@ function getStdout(): string {
 // Fixtures
 // ---------------------------------------------------------------------------
 
-const SUGGESTION_RESULT = {
-  pr: 42,
-  repo: "owner/repo",
-  threadId: "t1",
-  path: "a.ts",
-  startLine: 5,
-  endLine: 5,
-  author: "alice",
-  patch: "--- a/a.ts\n+++ b/a.ts\n@@ -5,1 +5,1 @@\n-old\n+new\n",
-  commitMessage: "apply fix",
-  commitBody: "Co-authored-by: alice <alice@users.noreply.github.com>",
-  filesToStage: ["a.ts"],
-  postActionInstructions: [
-    "Apply the patch to `a.ts`: run `git apply` with the diff shown above.",
-    "Stage the file: `git add -- a.ts`",
-    'Commit: `git commit -m "apply fix" -m "Co-authored-by: alice <alice@users.noreply.github.com>"`',
-    "Resolve the thread on GitHub: `pr-shepherd apply review 42 --resolve-thread-ids t1`",
-    "Push when ready: `git push` (or `git push --force-with-lease` after rebasing).",
-  ],
-};
-
 const SUGGESTIONS_RESULT = {
   pr: 42,
   repo: "owner/repo",
@@ -68,9 +42,9 @@ const SUGGESTIONS_RESULT = {
       startLine: 5,
       endLine: 5,
       author: "alice",
-      patch: SUGGESTION_RESULT.patch,
+      patch: "--- a/a.ts\n+++ b/a.ts\n@@ -5,1 +5,1 @@\n-old\n+new\n",
       commitMessage: "apply fix",
-      commitBody: SUGGESTION_RESULT.commitBody,
+      commitBody: "Co-authored-by: alice <alice@users.noreply.github.com>",
       filesToStage: ["a.ts"],
     },
   ],
@@ -78,7 +52,7 @@ const SUGGESTIONS_RESULT = {
 };
 
 // ---------------------------------------------------------------------------
-// commit-suggestion dispatch
+// build-suggestion-patches dispatch
 // ---------------------------------------------------------------------------
 
 export function registerHooks(): void {
@@ -96,13 +70,10 @@ export function registerHooks(): void {
 }
 
 export {
-  SUGGESTION_RESULT,
   SUGGESTIONS_RESULT,
   getStdout,
   main,
-  mockRunCommitSuggestion,
   mockRunSuggestionPatches,
-  runCommitSuggestion,
   runSuggestionPatches,
   stderrSpy,
   stdoutSpy,

@@ -7,7 +7,6 @@ import { z } from "zod";
 import {
   createPrShepherd,
   type ApplyInput,
-  type BuildSuggestionPatchInput,
   type BuildSuggestionPatchesInput,
   type CreatePrShepherdOptions,
   type GetJournalInput,
@@ -25,7 +24,6 @@ import {
 } from "../pr-reference.mts";
 import { formatJournalResult } from "../cli/journal-formatter.mts";
 import {
-  formatCommitSuggestionResult,
   formatSuggestionPatchesResult,
   formatIterateResult,
   formatMarkFilesAsViewedResult,
@@ -78,14 +76,6 @@ const iterateInputSchema = z
       .describe(
         "Overrides poll.mode. event returns one tick with pollMode and nextCheck so the caller owns the wake-up; auto (default) selects event when CLAUDE_CODE_REMOTE=true.",
       ),
-    noAutoCancelActionable: z
-      .boolean()
-      .optional()
-      .describe("Deprecated no-op; Shepherd never cancels workflow runs."),
-    neverCancelRuns: z
-      .array(z.string())
-      .optional()
-      .describe("Deprecated per-call no-op retained for compatibility."),
   })
   .refine(
     (input) =>
@@ -172,14 +162,6 @@ const applyInputSchema = z.object({
       ]),
     )
     .min(1),
-});
-
-const suggestionPatchInputSchema = z.object({
-  transport,
-  pr,
-  threadId: z.string().min(1),
-  message: z.string().min(1),
-  description: z.string().optional(),
 });
 
 const suggestionPatchesInputSchema = z.object({
@@ -340,28 +322,6 @@ export function createPrShepherdMcpServer(
       ),
   );
 
-  server.registerTool(
-    "build_suggestion_patch",
-    {
-      description: "Deprecated: use build_suggestion_patches with a one-item suggestions array.",
-      inputSchema: suggestionPatchInputSchema,
-      annotations: {
-        readOnlyHint: true,
-        destructiveHint: false,
-        idempotentHint: true,
-        openWorldHint: true,
-      },
-    },
-    async (input) =>
-      runTool(
-        () =>
-          getShepherd().buildSuggestionPatch(
-            requireRepositoryQualifiedPr(input) as BuildSuggestionPatchInput,
-          ),
-        formatCommitSuggestionResult,
-      ),
-  );
-
   return server;
 }
 
@@ -426,7 +386,7 @@ function toolResult(structured: unknown, text: string) {
 
 /**
  * `project` mirrors the CLI's `--format=json` treatment of the same result. Tools
- * whose CLI JSON is the raw result object (apply, build_suggestion_patch(es) — see
+ * whose CLI JSON is the raw result object (apply, build_suggestion_patches — see
  * handlers.mts and cli-parser.mts, which JSON.stringify the result directly) omit
  * `project` and return the result unchanged, matching their own CLI JSON output.
  */

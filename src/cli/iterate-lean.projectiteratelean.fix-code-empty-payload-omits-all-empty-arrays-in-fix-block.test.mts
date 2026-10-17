@@ -13,7 +13,6 @@ describe("projectIterateLean", () => {
   it("fix_code (empty payload): omits all empty arrays in fix block", () => {
     const lean = projectIterateLean(makeIterateResult("fix_code")) as Record<string, unknown>;
     expect(lean.action).toBe("fix_code");
-    expect(lean.cancelled).toBeUndefined();
     expect(lean.checks).toBeUndefined();
     const fix = lean.fix as Record<string, unknown>;
     expect(fix.threads).toBeUndefined();
@@ -24,7 +23,6 @@ describe("projectIterateLean", () => {
     expect(fix.firstLookComments).toBeUndefined();
     expect(fix.checks).toBeUndefined();
     expect(fix.changesRequestedReviews).toBeUndefined();
-    expect(fix.protectedRuns).toBeUndefined();
     // fixture has one default instruction ("End this iteration."), so it is present
     expect((fix.instructions as unknown[]).length).toBe(1);
     // resolveCommand always present
@@ -114,16 +112,6 @@ describe("projectIterateLean", () => {
     result.checks = [
       { name: "lint", conclusion: "FAILURE" as const, runId: "r2", detailsUrl: null },
     ];
-    result.cancelled = ["run-1"];
-    result.fix.inProgressRunIds = ["run-2"];
-    result.fix.protectedRuns = [
-      {
-        runId: "run-final-review",
-        matchedPattern: "Final Code Review",
-        workflowName: "Final Code Review",
-        checkNames: ["DeepSeek Code Review"],
-      },
-    ];
 
     const lean = projectIterateLean(result) as Record<string, unknown>;
     const fix = lean.fix as Record<string, unknown>;
@@ -138,10 +126,7 @@ describe("projectIterateLean", () => {
     expect((fix.surfacedApprovals as unknown[]).length).toBe(1);
     expect((fix.firstLookThreads as unknown[]).length).toBe(1);
     expect((fix.firstLookComments as unknown[]).length).toBe(1);
-    expect((fix.inProgressRunIds as unknown[]).length).toBe(1);
-    expect((fix.protectedRuns as unknown[]).length).toBe(1);
     expect((fix.changesRequestedReviews as unknown[]).length).toBe(1);
-    expect((lean.cancelled as unknown[]).length).toBe(1);
   });
   it("projectIterateVerbose passes fix_code instructions through unchanged (no recheck appended)", () => {
     const result = makeIterateResult("fix_code");

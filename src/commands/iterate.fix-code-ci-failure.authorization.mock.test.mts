@@ -107,8 +107,6 @@ describe("fix_code — GitHub Actions authorization", () => {
 
     expect(result.action).toBe("fix_code");
     if (result.action !== "fix_code") return;
-    expect(result.cancelled).toEqual([]);
-    expect(result.fix.inProgressRunIds).toEqual([]);
     expect(result.fix.instructions.join("\n")).not.toContain("gh run cancel");
     expect(mockFetch).not.toHaveBeenCalled();
   });
