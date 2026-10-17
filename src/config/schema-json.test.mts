@@ -32,6 +32,25 @@ describe("pr-shepherd.schema.json", () => {
     });
     expect(Object.keys(schema["properties"] as object)).toContain("mark-ready");
   });
+
+  it("states the runtime's blank launcher and Shepherd-owned merge-arg checks", () => {
+    const { properties } = configJsonSchema() as {
+      properties: {
+        "cli-command": { items: { pattern: string } };
+        merge: { properties: { "command-args": { items: { not: { pattern: string } } } } };
+      };
+    };
+    const nonBlank = new RegExp(properties["cli-command"].items.pattern);
+    expect(["npx", " x "].every((arg) => nonBlank.test(arg))).toBe(true);
+    expect(["", "  "].some((arg) => nonBlank.test(arg))).toBe(false);
+
+    const owned = new RegExp(properties.merge.properties["command-args"].items.not.pattern);
+    const accepted = (arg: string) =>
+      configSchema.shape.merge.safeParse({ "command-args": [arg] }).success;
+    for (const arg of ["--repo", "--repo=o/r", "-Ro/r", "--admin", "-h", "--autofoo", "--squash"]) {
+      expect(owned.test(arg)).toBe(!accepted(arg));
+    }
+  });
 });
 
 describe("shipped config examples", () => {
