@@ -28,15 +28,15 @@ afterEach(() => {
 });
 
 describe("main — config validation", () => {
-  it("exits 64 with the config error before dispatching", async () => {
+  it("exits 78 with the config error before dispatching", async () => {
     mockLoadConfig.mockImplementation(() => {
       throw new ShepherdError(
         "invalid config in /repo/.pr-shepherdrc.yml:\n  - `watch.readyDelayMinutes` → `iterate.ready-delay-minutes`",
-        EXIT.USAGE,
+        EXIT.CONFIG,
       );
     });
     await main(["node", "shepherd", "log-file"]);
-    expect(process.exitCode).toBe(64);
+    expect(process.exitCode).toBe(78);
     expect(stderr).toHaveBeenCalledWith(
       expect.stringContaining(
         "pr-shepherd: invalid config in /repo/.pr-shepherdrc.yml:\n  - `watch.readyDelayMinutes` → `iterate.ready-delay-minutes`",
@@ -47,7 +47,7 @@ describe("main — config validation", () => {
 
   it("still prints help when the config is invalid", async () => {
     mockLoadConfig.mockImplementation(() => {
-      throw new ShepherdError("invalid config", EXIT.USAGE);
+      throw new ShepherdError("invalid config", EXIT.CONFIG);
     });
     await main(["node", "shepherd", "iterate", "--help"]);
     expect(process.exitCode).toBeUndefined();

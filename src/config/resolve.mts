@@ -59,7 +59,7 @@ export function issueLines(issue: z.core.$ZodIssue, raw: unknown): string[] {
 export function configError(source: string, lines: string[]): ShepherdError {
   return new ShepherdError(
     `invalid config in ${source}:\n${lines.map((line) => `  - ${line}`).join("\n")}`,
-    EXIT.USAGE,
+    EXIT.CONFIG,
   );
 }
 

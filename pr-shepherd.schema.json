@@ -212,7 +212,19 @@
             "required": [
               "remaining-percent"
             ],
-            "additionalProperties": false
+            "additionalProperties": false,
+            "anyOf": [
+              {
+                "required": [
+                  "interval-minutes"
+                ]
+              },
+              {
+                "required": [
+                  "interval-factor"
+                ]
+              }
+            ]
           }
         }
       },

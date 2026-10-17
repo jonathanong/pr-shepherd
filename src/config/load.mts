@@ -30,7 +30,7 @@ function configFileIn(dir: string): string | undefined {
   if (found.length > 1) {
     throw new ShepherdError(
       `multiple config files in ${dir}: ${found.join(", ")}. Keep exactly one.`,
-      EXIT.USAGE,
+      EXIT.CONFIG,
     );
   }
   return found[0];
@@ -102,7 +102,7 @@ const configCache = new Map<string, PrShepherdConfig>();
 
 /**
  * Load the config for the effective cwd: built-in defaults, then `$HOME`, then each ancestor
- * down to cwd, closest file winning. Any invalid file throws a `ShepherdError` (exit 64).
+ * down to cwd, closest file winning. Any invalid file throws a `ShepherdError` (exit 78).
  */
 export function loadConfig(): PrShepherdConfig {
   const cwd = getEffectiveCwd();

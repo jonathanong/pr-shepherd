@@ -53,7 +53,7 @@ Config follows the conventions of GitHub Actions workflow files:
 - A duration key carries its unit in its name, such as `interval-seconds` or `ready-delay-minutes`. No key takes milliseconds.
 - Validation is strict. A bad config never falls back silently.
 
-Shepherd validates config before it makes any GitHub call. Any of the following makes it exit with code `64` (usage error):
+Shepherd validates config before it makes any GitHub call. Any of the following makes it exit with code `78` (`EX_CONFIG`):
 
 - an unknown key
 - a value of the wrong type or out of range
