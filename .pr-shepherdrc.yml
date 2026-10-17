@@ -1,4 +1,4 @@
-# yaml-language-server: $schema=./node_modules/pr-shepherd/pr-shepherd.schema.json
+# yaml-language-server: $schema=./pr-shepherd.schema.json
 classify:
   standard:
     all: true
