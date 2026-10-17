@@ -46,8 +46,8 @@ summary 3 passing
 1. Fix each warranted item.
 2. Triage ## Failing checks. Playbook: "CI failure triage".
 3. Commit and push any changes.
-4. Journal key decisions: pr-shepherd apply journal 123 '- <decision>'
-5. Reply to the thread: pr-shepherd apply review 123 --reply-thread-ids …
+4. Journal key decisions or rejections with URLs or IDs: pr-shepherd apply journal 123 '- <decision>'
+5. $DISMISS_MESSAGE: one sentence on what changed. Run even if no code changed: pr-shepherd apply review 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha HEAD
 6. Rerun Shepherd now.
 ```
 
@@ -67,10 +67,11 @@ summary 3 passing
   Every tick ends in one action, and every action but `CANCEL` comes with numbered steps. On tricky GitHub cases, eval scores
   rise from 0.82 to 0.94, about two-thirds fewer misses.
 - [**It's easy on your rate limit**](docs/github-api.md) Waiting on CI costs about 60
-  GraphQL points an hour, against about 360 for `gh pr checks --watch`. Idle waits cost
-  about 4.
+  GraphQL points an hour, against about 360 for `gh pr checks --watch`. Unchanged idle
+  waits can cost as little as 4.
 - [**It never touches your git**](docs/escalations.md) Shepherd runs zero git mutations and
-  never merges on its own. It hands off to a human only for 10 specific reasons.
+  never merges on its own. For a single PR, it hands off to a human only for 10 specific
+  reasons.
 - [**It works with your agent**](docs/mcp.md) Plugins for Claude Code, Codex, and Grok, a
   local stdio MCP server for other clients, and a CLI for shells and CI. Native stacked PRs are
   supported.
