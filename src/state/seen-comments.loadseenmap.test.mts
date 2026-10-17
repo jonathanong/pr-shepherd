@@ -42,6 +42,20 @@ describe("loadSeenMap", () => {
     expect(map.size).toBe(0);
   });
 
+  it("backfills the id on a marker that lacks one, even when the body is unchanged", async () => {
+    await markSeen(testKey, testId, "body text");
+    const dir = join(testStateDir, testKey.owner, testKey.repo, String(testKey.pr), "seen");
+    const [file] = await readdir(dir);
+    await writeFile(
+      join(dir, file!),
+      JSON.stringify({ seenAt: 1234, bodyHash: hashBody("body text") }),
+      "utf8",
+    );
+    expect((await loadSeenMap(testKey)).size).toBe(0);
+    await markSeen(testKey, testId, "body text");
+    expect((await loadSeenMap(testKey)).get(testId)?.seenAt).toBe(1234);
+  });
+
   it("maps both IDs independently when they differ only in case — no collision on case-insensitive FS", async () => {
     // GitHub base64 IDs can produce pairs like `ChG7F` vs `ChG7f` that differ
     // only in case. On macOS APFS (case-insensitive) these would map to the
