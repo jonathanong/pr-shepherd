@@ -40,6 +40,10 @@ export async function runIterateTick(opts: IterateCommandOptions): Promise<Itera
   });
   // `[FIX_CODE]` already reruns at once, and that rerun reports its own `nextCheck`.
   if (result.action === "fix_code") return result;
+  // A held draft hands off to the stack command, which must stay a single tick as well.
+  if (result.action === "wait" && result.stackDraftHold) {
+    return { ...result, stackDraftHold: { ...result.stackDraftHold, once: true } };
+  }
   const nowMs = Date.now();
   const stallDeadlineSeconds = earliestDeadline(
     await readStallDeadline(result, opts.stallTimeoutSeconds),
@@ -67,7 +71,7 @@ export async function runIterateTick(opts: IterateCommandOptions): Promise<Itera
 export async function runPollSummaryTick(
   opts: PollSummaryCommandOptions,
 ): Promise<PollSummaryResult> {
-  return withAggregateNextCheck(await runPollSummary(opts), opts);
+  return withAggregateNextCheck(await runPollSummary({ ...opts, tick: true }), opts);
 }
 
 /** The default command: the sleeping loop, or one tick in a cloud session. */

@@ -78,8 +78,12 @@ describe("runIterateTick", () => {
   it("omits nextCheck for terminal actions, mark-ready, and a stack draft hold", async () => {
     m.runIterate.mockResolvedValueOnce({ action: "cancel", ...base });
     expect(await runIterateTick(opts)).not.toHaveProperty("nextCheck");
-    m.runIterate.mockResolvedValueOnce({ action: "wait", stackDraftHold: {}, ...base });
-    expect(await runIterateTick(opts)).not.toHaveProperty("nextCheck");
+    const hold = { kind: "auto-mark-ready-disabled" };
+    m.runIterate.mockResolvedValueOnce({ action: "wait", stackDraftHold: hold, ...base });
+    const held = await runIterateTick(opts);
+    expect(held).not.toHaveProperty("nextCheck");
+    // The held draft's stack handoff must stay a single tick too.
+    expect(held).toMatchObject({ stackDraftHold: { ...hold, once: true } });
     m.runIterate.mockResolvedValueOnce({ action: "mark_ready", ...base });
     expect(await runIterateTick(opts)).not.toHaveProperty("nextCheck");
   });
@@ -163,6 +167,7 @@ describe("runAggregatePollCommand", () => {
     vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
     await runAggregatePollCommand({ prNumbers: [1, 2] } as never);
     expect(m.runPollSummary).toHaveBeenCalledTimes(1);
+    expect(m.runPollSummary).toHaveBeenCalledWith(expect.objectContaining({ tick: true }));
     expect(m.runAggregatePoll).toHaveBeenCalledTimes(1);
   });
 });

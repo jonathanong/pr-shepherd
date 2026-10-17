@@ -15,3 +15,19 @@ describe("pollCommandFields --instructions", () => {
     expect(pollCommandFields("o/r", 7, false, {}).pollCommand).not.toContain("--instructions");
   });
 });
+
+describe("pollCommandFields single ticks", () => {
+  it("routes each PR to one iterate tick instead of a sleeping poll", () => {
+    const fields = pollCommandFields("o/r", 7, false, { tick: true, readyDelaySeconds: 60 });
+    expect(fields).toEqual({
+      pollCommand: "pr-shepherd iterate https://github.com/o/r/pull/7 --ready-delay 60s",
+    });
+  });
+
+  it("keeps a bounded draft probe as one iterate tick without loop flags", () => {
+    expect(pollCommandFields("o/r", 7, true, { tick: true, noAutoMarkReady: true })).toEqual({
+      pollCommand: "pr-shepherd iterate https://github.com/o/r/pull/7 --no-auto-mark-ready",
+      pollProbe: true,
+    });
+  });
+});

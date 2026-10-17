@@ -128,4 +128,6 @@ export interface PollSummaryCommandOptions {
   stallTimeoutSeconds?: number;
   noAutoMarkReady?: boolean;
   instructions?: import("../config/load.mts").InstructionStyle;
+  /** Set by single ticks, so the one-PR commands they print are single ticks too. */
+  tick?: boolean;
 }

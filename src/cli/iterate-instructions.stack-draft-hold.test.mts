@@ -32,6 +32,15 @@ describe("held native stack draft WAIT instructions", () => {
     ]);
   });
 
+  it("hands a single tick's hold to one stack tick", () => {
+    const [instruction] = leanInstructions(
+      heldWait({ kind: "auto-mark-ready-disabled", once: true }),
+    );
+    expect(instruction).toContain(
+      "run `pr-shepherd stack https://github.com/owner/repo/pull/42 --once`",
+    );
+  });
+
   it("keeps the stack handoff ahead of quota-aware cadence advice", () => {
     const result: IterateResult = {
       ...heldWait({ kind: "auto-mark-ready-disabled" }),

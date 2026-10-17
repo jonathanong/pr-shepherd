@@ -169,12 +169,14 @@ describe("public API", () => {
     await shepherd.iterate({ prs: ["openai/pr-shepherd#42", "openai/pr-shepherd#43"] });
     expect(mockRunPollSummary).toHaveBeenLastCalledWith({
       prNumbers: [42, 43],
+      tick: true,
       targetRepository: { owner: "openai", name: "pr-shepherd" },
     });
 
     await shepherd.stack({ pr: "openai/pr-shepherd#43", merge: true });
     expect(mockRunPollSummary).toHaveBeenLastCalledWith({
       stackPrNumber: 43,
+      tick: true,
       targetRepository: { owner: "openai", name: "pr-shepherd" },
       merge: true,
     });

@@ -52,7 +52,8 @@ Text prints a `**nextCheck**` header line; JSON and MCP `structuredContent` carr
 Tick special cases:
 
 - Stack steps drop "at the configured polling cadence", and a pending REST stack merge reruns after the wake-up, so the appended tick step is the only timing rule.
-- A native-stack draft hold prints its `pr-shepherd stack` handoff, plus a step not to rerun the held one-PR session or keep a wake-up for it. After the handoff the agent follows only the `stack` command's output and its `nextCheck`.
+- A stack or multi-PR tick routes each row to one `pr-shepherd iterate` tick, not a sleeping `--until-terminal` poll.
+- A native-stack draft hold prints its `pr-shepherd stack … --once` handoff, plus a step not to rerun the held one-PR session or keep a wake-up for it. After the handoff the agent follows only the `stack` command's output and its `nextCheck`.
 - `MARK_READY` keeps its immediate rerun: that tick saw a draft, so the ready-delay timer was cleared; the next tick sees the PR ready, starts the timer, and reports the `ready-delay` deadline.
 
 Waiting instructions end with a step naming the bundled "Event loop" playbook (`pr-shepherd playbook "Event loop"`): end the turn without sleeping, act only on Shepherd's output, and keep exactly one wake-up at `nextCheck.at`.

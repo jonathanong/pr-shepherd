@@ -110,7 +110,7 @@ function buildStackDraftHoldInstructions(
   const stackCommand = buildPrShepherdCommand([
     "stack",
     formatPrUrl(result.repo, result.pr),
-    "--until-terminal",
+    hold.once ? "--once" : "--until-terminal",
   ]).text;
   const handoff = `a \`stack\` command listed this session, finish that command's remaining steps and rerun it with its original flags; otherwise run ${inlineCode(stackCommand)}, adding \`--merge\` when merging was requested.`;
   const reason =

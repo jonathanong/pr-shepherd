@@ -310,7 +310,9 @@ Instruction changes when `nextCheck` is present:
 | REST `merge`    | The merge command step without the polling-cadence sentence, then the same two steps with a `merge-pending` wake-up; the rerun reprints the command, which resumes a pending request.                                                                                                                                                                                                                                                                                |
 | Aggregate       | One appended numbered step with the same rule and one `nextCheck` for the selection, including the stack stall deadline (`stall-timeout`) and, when a stack merge is printed, a `merge-pending` recheck. Stack steps drop "Recheck at the configured polling cadence", and a pending REST stack merge reruns after the wake-up instead of at the polling cadence.                                                                                                    |
 
-`mark_ready`, `fix_code`, and the native-stack draft hold print the same instructions as a sleeping poll: `mark_ready` and `fix_code` rerun at once, unless the result carries a quota warning, in which case the continuation says to wait at least the configured quota interval before the next tick. A draft hold hands off to the `stack` command.
+`mark_ready`, `fix_code`, and the native-stack draft hold print the same instructions as a sleeping poll: `mark_ready` and `fix_code` rerun at once, unless the result carries a quota warning, in which case the continuation says to wait at least the configured quota interval before the next tick. A draft hold hands off to one `stack --once` tick and carries `"once": true` in its `stackDraftHold`.
+
+An aggregate tick routes each row's `pollCommand` to one `iterate` tick (`pr-shepherd iterate <PR-URL>` plus the forwarded `--ready-delay`, `--stall-timeout`, `--instructions`, `--merge`, and `--no-auto-mark-ready` flags) instead of a sleeping `--until-terminal` poll; a bounded draft probe becomes `iterate <PR-URL> --no-auto-mark-ready`.
 
 In cloud sessions (`CLAUDE_CODE_REMOTE=true`), a generated `apply review` command that replies carries `--adopt-existing-replies`, so rerunning it after a lost state directory adopts a reply GitHub already shows instead of posting it twice. A direct `apply review` without the flag forwards every supplied ID.
 
@@ -391,6 +393,7 @@ WAIT: 1 in-progress — active checks: CI / build
 **Disabled mark-ready on a native stack draft:** a draft native stack layer whose session will not mark it ready carries `stackDraftHold` in JSON:
 
 - `{ "kind": "auto-mark-ready-disabled" }` — the session or configuration disables automatic mark-ready, as in the `stack` command's bounded draft probes. This `READY` hold confirms the `stack` command's ready-for-review step for the agent.
+- `once: true` is added on a single tick, whose handoff runs `pr-shepherd stack <PR-URL> --once` instead of `--until-terminal`.
 
 A clean draft is marked ready by its own session even when lower layers are still in progress. Repeating the disabled-hold session cannot mark the draft ready, so the single instruction replaces "iterate immediately" with a stack hand-off (quota cadence advice is appended when a warning applies). The hold keeps the ordinary poll loop and stall guard.
 
