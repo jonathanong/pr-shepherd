@@ -92,7 +92,7 @@ did not ask for a merge).`,
     // duplicate PR? you could've just rebased it". Rebasing your own PR head and
     // pushing --force-with-lease is in scope; bare --force is not.
     // Rebase-vs-merge is the repository's convention, not the skill's (the CLI
-    // only relays it via iterate.behindBaseHint, #492), so the prompt states it.
+    // only relays it via iterate.behind-base-hint, #492), so the prompt states it.
     // What the skill adds is permission: lease-push your own head without asking.
     slug: "26-conflicts-rebase-without-asking",
     tier: "guard",

@@ -34,7 +34,7 @@ export function buildMergeCommandPlan(
   input: MergePlanInput,
 ): MergeCommandPlan | MergeMethodUnavailable {
   if (input.transport === "rest" || getGithubTransport() === "rest") {
-    const configured = configuredMergeMethod(loadConfig().merge ?? {});
+    const configured = configuredMergeMethod(loadConfig().merge);
     if (!input.queue && input.queueKnown !== true && configured)
       return {
         unavailable:
@@ -98,10 +98,10 @@ export function buildMergeCommandPlan(
   }
 
   const mergeConfig = loadConfig().merge;
-  const configuredArgs = mergeConfig?.commandArgs ?? [];
+  const configuredArgs = mergeConfig["command-args"];
   const decision = chooseMergeMethod({
     allowed: input.allowedMergeMethods,
-    configured: configuredMergeMethod(mergeConfig ?? {}),
+    configured: configuredMergeMethod(mergeConfig),
     fallback: "merge",
   });
   if ("unavailable" in decision) return decision;

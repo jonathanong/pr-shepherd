@@ -21,7 +21,7 @@
   },
   "config": {
     "iterate": {
-      "behindBaseHint": "rebase --force-with-lease"
+      "behind-base-hint": "rebase --force-with-lease"
     }
   },
   "readyDelayState": {

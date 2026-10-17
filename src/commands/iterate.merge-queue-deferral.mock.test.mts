@@ -64,7 +64,7 @@ describe("runIterate — merge-queue work deferral", () => {
     }
   });
 
-  it("acts immediately on actionable work while queued when actions.workWhileQueued is true (same report, config toggle flips the action)", async () => {
+  it("acts immediately on actionable work while queued when actions.work-while-queued is true (same report, config toggle flips the action)", async () => {
     const report = queuedReport({
       threads: {
         actionable: [THREAD],
@@ -84,10 +84,7 @@ describe("runIterate — merge-queue work deferral", () => {
     const deferred = await runIterate(makeOpts({ merge: true }));
     expect(deferred.action).toBe("wait");
 
-    mockLoadConfig.mockReturnValue({
-      ...defaultConfig(),
-      actions: { ...defaultConfig().actions, workWhileQueued: true },
-    });
+    mockLoadConfig.mockReturnValue(defaultConfig({ actions: { "work-while-queued": true } }));
     const immediate = await runIterate(makeOpts({ merge: true }));
     expect(immediate.action).toBe("fix_code");
   });
@@ -216,10 +213,7 @@ describe("runIterate — merge-queue work deferral", () => {
   });
 
   it("counts surfaced approvals toward deferredWork.reviewSummaries when minimizeApprovals is enabled", async () => {
-    mockLoadConfig.mockReturnValue({
-      ...defaultConfig(),
-      iterate: { ...defaultConfig().iterate, minimizeApprovals: true },
-    });
+    mockLoadConfig.mockReturnValue(defaultConfig({ iterate: { "minimize-approvals": true } }));
     mockRunCheck.mockResolvedValue(
       queuedReport({
         approvedReviews: [

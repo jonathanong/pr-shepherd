@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { pollConfig } = vi.hoisted(() => ({
   pollConfig: {
-    intervalSeconds: 60,
-    stackIntervalFactor: 2,
-    timeoutSeconds: 270,
-    debounceSeconds: 60,
-    quietStatus: false,
+    "interval-seconds": 60,
+    "stack-interval-factor": 2,
+    "timeout-seconds": 270,
+    "debounce-seconds": 60,
+    "quiet-status": false,
   },
 }));
 
@@ -22,8 +22,7 @@ vi.mock("./github/client.mts", () => ({
 vi.mock("./config/load.mts", () => ({
   loadConfig: () => ({
     poll: pollConfig,
-    watch: { readyDelayMinutes: 10 },
-    iterate: { stallTimeoutMinutes: 60 },
+    iterate: { "ready-delay-minutes": 10, "stall-timeout-minutes": 60 },
   }),
 }));
 
@@ -41,11 +40,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   process.exitCode = undefined;
   Object.assign(pollConfig, {
-    intervalSeconds: 60,
-    stackIntervalFactor: 2,
-    timeoutSeconds: 270,
-    debounceSeconds: 60,
-    quietStatus: false,
+    "interval-seconds": 60,
+    "stack-interval-factor": 2,
+    "timeout-seconds": 270,
+    "debounce-seconds": 60,
+    "quiet-status": false,
   });
   stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
@@ -61,10 +60,10 @@ afterEach(() => {
 describe("main — configured poll defaults", () => {
   it("uses configured durations and quiet-status", async () => {
     Object.assign(pollConfig, {
-      intervalSeconds: 2,
-      timeoutSeconds: 5,
-      debounceSeconds: 0,
-      quietStatus: true,
+      "interval-seconds": 2,
+      "timeout-seconds": 5,
+      "debounce-seconds": 0,
+      "quiet-status": true,
     });
     mockRunIterate
       .mockResolvedValueOnce(makeIterateResult("wait"))
@@ -83,10 +82,10 @@ describe("main — configured poll defaults", () => {
 
   it("lets explicit duration flags override configured defaults", async () => {
     Object.assign(pollConfig, {
-      intervalSeconds: 120,
-      timeoutSeconds: 120,
-      debounceSeconds: 0,
-      quietStatus: false,
+      "interval-seconds": 120,
+      "timeout-seconds": 120,
+      "debounce-seconds": 0,
+      "quiet-status": false,
     });
     mockRunIterate
       .mockResolvedValueOnce(makeIterateResult("wait"))
@@ -111,10 +110,10 @@ describe("main — configured poll defaults", () => {
 
   it("lets --no-quiet-status override configured quiet output", async () => {
     Object.assign(pollConfig, {
-      intervalSeconds: 1,
-      timeoutSeconds: 3,
-      debounceSeconds: 0,
-      quietStatus: true,
+      "interval-seconds": 1,
+      "timeout-seconds": 3,
+      "debounce-seconds": 0,
+      "quiet-status": true,
     });
     mockRunIterate
       .mockResolvedValueOnce(makeIterateResult("wait"))

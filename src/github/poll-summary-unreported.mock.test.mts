@@ -1,4 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
+import { testConfig } from "../../test-helpers/config/test-config.mts";
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
@@ -11,13 +12,9 @@ import type { RawSummaryPr } from "./poll-summary-raw.mts";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockLoadConfig.mockReturnValue({
-    cliCommand: ["pr-shepherd"],
-    botUsernames: [],
-    ignoreChecks: [],
-    checks: { ciTriggerEvents: ["pull_request"] },
-    actions: { autoMarkReady: true, workWhileQueued: false, neverCancelRuns: [] },
-  });
+  mockLoadConfig.mockReturnValue(
+    testConfig({ "bot-usernames": [], checks: { "ci-trigger-events": ["pull_request"] } }),
+  );
 });
 
 function blockedLayer(nodes: Array<Record<string, unknown>>, checkSuites?: unknown): RawSummaryPr {

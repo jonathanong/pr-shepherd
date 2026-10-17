@@ -19,14 +19,14 @@ A review thread carries its root comment fields (`body`, `author`, `url`, and `r
 
 `iterate` minimizes `COMMENTED` review summaries and visible PR comments through `--minimize-comment-ids` only when:
 
-- the item's `authorType` matches [`iterate.minimizeComments`](configuration.md#iterateminimizecomments--default-all) (top-level [`botUsernames`](configuration.md#botusernames) extends which authors count as bots, for minimization as well as thread visibility and resolve routing);
+- the item's `authorType` matches [`iterate.minimize-comments`](configuration.md#iterateminimize-comments--default-bots) (top-level [`bot-usernames`](configuration.md#bot-usernames) extends which authors count as bots, for minimization as well as thread visibility and resolve routing);
 - for a review summary, no known inline child thread from the same review is still unresolved.
 
-Human-authored items are never minimized. [`iterate.minimizeApprovals`](configuration.md#iterateminimizeapprovals--default-false) adds `APPROVED` reviews to minimization (default off); it does not affect whether `approvedReviews` is reported.
+Human-authored items are never minimized. [`iterate.minimize-approvals`](configuration.md#iterateminimize-approvals--default-false) adds `APPROVED` reviews to minimization (default off); it does not affect whether `approvedReviews` is reported.
 
 ### Classification auto-resolve
 
-A classification rule with both `suppress: true` and `autoResolve: true` is applied in-process when [`actions.autoMinimizeSuppressed`](configuration.md#actionsautominimizesuppressed--default-true) is on (the default). Where the transport supports the operation Shepherd attempts it and GitHub's response is authoritative.
+A classification rule with both `suppress: true` and `autoResolve: true` is applied in-process when [`actions.auto-minimize-suppressed`](configuration.md#actionsauto-minimize-suppressed--default-true) is on (the default). Where the transport supports the operation Shepherd attempts it and GitHub's response is authoritative.
 
 | Outcome                      | Where it lands                                                                                                                                    |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -36,7 +36,7 @@ A classification rule with both `suppress: true` and `autoResolve: true` is appl
 | Not confirmed by GitHub      | ID stays on the `apply review` handoff, with the error under that section                                                                         |
 | REST minimization            | Unsupported: a one-look skip, or a clear unsupported-operation error for an explicit `apply`                                                      |
 
-With `actions.autoMinimizeSuppressed: false`, the IDs stay on the handoff and Shepherd does not mutate, journal, or print the section.
+With `actions.auto-minimize-suppressed: false`, the IDs stay on the handoff and Shepherd does not mutate, journal, or print the section.
 
 ### Transport differences
 
@@ -62,19 +62,19 @@ GitHub sets `isOutdated: true` when the commit a thread was attached to has been
 
 ## Outdated-thread path
 
-Outdated threads are fetched in `batch.mts` and surface under `report.threads.resolutionOnly` until GitHub reports `isResolved: true`. Seen markers suppress repeated body display but never remove an unresolved outdated or minimized thread from mutation routing. Reply and resolve use the thread ID, so they work after GitHub clears the obsolete path or line. Routing per author class is in [conversation-resolution.md](conversation-resolution.md#current-mutation-matrix); other-human resolve follows [`iterate.resolveOtherHumanThreads`](configuration.md#iterateresolveotherhumanthreads--default-none).
+Outdated threads are fetched in `batch.mts` and surface under `report.threads.resolutionOnly` until GitHub reports `isResolved: true`. Seen markers suppress repeated body display but never remove an unresolved outdated or minimized thread from mutation routing. Reply and resolve use the thread ID, so they work after GitHub clears the obsolete path or line. Routing per author class is in [conversation-resolution.md](conversation-resolution.md#current-mutation-matrix); other-human resolve follows [`iterate.resolve-other-human-threads`](configuration.md#iterateresolve-other-human-threads--default-none).
 
 ## Actionable triage is LLM-side
 
 Shepherd does **not** classify threads as actionable versus informational; the agent decides what to fix. Shepherd surfaces:
 
-| Report field             | Contents                                                                                                                                                  |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `threads.actionable`     | Active threads: not outdated, unresolved, not minimized                                                                                                   |
-| `threads.resolutionOnly` | Unresolved outdated or minimized threads, plus active marker-ended threads still being resolved so a prior reply can be retried                           |
-| `comments.actionable`    | Visible (non-minimized) PR comments. Comments excluded by `iterate.minimizeComments` are marker-gated, so unchanged seen comments drop out on later ticks |
+| Report field             | Contents                                                                                                                                                   |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `threads.actionable`     | Active threads: not outdated, unresolved, not minimized                                                                                                    |
+| `threads.resolutionOnly` | Unresolved outdated or minimized threads, plus active marker-ended threads still being resolved so a prior reply can be retried                            |
+| `comments.actionable`    | Visible (non-minimized) PR comments. Comments excluded by `iterate.minimize-comments` are marker-gated, so unchanged seen comments drop out on later ticks |
 
-Active other-human threads drop out once their transcript is seen, until it changes, unless `iterate.resolveOtherHumanThreads` is `always`. Active bot, non-human, and viewer-authored threads return every tick until resolved, so Shepherd keeps asking for the generated mutation.
+Active other-human threads drop out once their transcript is seen, until it changes, unless `iterate.resolve-other-human-threads` is `always`. Active bot, non-human, and viewer-authored threads return every tick until resolved, so Shepherd keeps asking for the generated mutation.
 
 After evaluating a thread, the agent runs the generated review mutation even when the feedback is advisory, already satisfied, or needs no code change. Shepherd prefixes every thread reply with `<!-- pr-shepherd -->`. That leading marker, not author equality, identifies a Shepherd reply: it prevents a second reply and permits a later resolve-only retry if an earlier resolve failed.
 
@@ -113,7 +113,7 @@ First-look items are for acknowledging status. A first-look thread that also app
 
 - `--require-sha HEAD` (and MCP/library `review_mutations.requireSha: "HEAD"`) uses this checkout's commit via `git rev-parse HEAD`. Generated instructions print that form because the step runs right after the push.
 - With reply thread IDs, the `ApplyReviewPreflight` read's `headRefOid` is the first poll.
-- Retries up to `resolve.shaPoll.maxAttempts` times, `resolve.shaPoll.intervalMs` apart (default 10 × 2s). Any exception is retried; the last one is re-thrown.
+- Retries up to `apply.sha-poll-max-attempts` times, `apply.sha-poll-interval-seconds` apart (default 10 × 2s). Any exception is retried; the last one is re-thrown.
 
 ## Mutation types
 

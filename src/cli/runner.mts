@@ -6,14 +6,14 @@ interface PrShepherdCommand {
   text: string;
 }
 
-/** Every emitted pr-shepherd command starts with the configured `cliCommand` launcher. */
+/** Every emitted pr-shepherd command starts with the configured `cli-command` launcher. */
 export function buildPrShepherdCommand(args: string[]): PrShepherdCommand {
   const transport =
     getGithubTransport() === "rest" &&
     !args.some((arg) => arg === "--transport" || arg.startsWith("--transport="))
       ? ["--transport", "rest"]
       : [];
-  const argv = [...loadConfig().cliCommand, ...args, ...transport];
+  const argv = [...loadConfig()["cli-command"], ...args, ...transport];
   return { argv, text: renderShellCommand(argv) };
 }
 

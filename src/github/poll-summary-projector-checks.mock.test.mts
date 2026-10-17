@@ -1,4 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
+import { testConfig } from "../../test-helpers/config/test-config.mts";
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
@@ -26,13 +27,12 @@ const rollup = (name: string, conclusion: string) => ({
 });
 
 beforeEach(() => {
-  mockLoadConfig.mockReturnValue({
-    cliCommand: ["pr-shepherd"],
-    botUsernames: [],
-    ignoreChecks: ["ignored *"],
-    checks: { ciTriggerEvents: ["pull_request"] },
-    actions: { autoMarkReady: true, workWhileQueued: false, neverCancelRuns: [] },
-  });
+  mockLoadConfig.mockReturnValue(
+    testConfig({
+      "bot-usernames": [],
+      checks: { ignore: ["ignored *"], "ci-trigger-events": ["pull_request"] },
+    }),
+  );
 });
 
 it("omits ignored failures and includes merge-queue checks", async () => {

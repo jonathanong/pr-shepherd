@@ -1,5 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+// Pin the pre-v1 ready delay and blocking reviewer these tests were written against.
+vi.mock("../config/load.mts", async (importOriginal) => {
+  const { testConfig } = await import("../../test-helpers/config/test-config.mts");
+  const config = testConfig({
+    iterate: { "ready-delay-minutes": 10 },
+    "mark-ready": { "blocking-reviewer-logins": ["copilot"] },
+  });
+  return {
+    ...(await importOriginal<typeof import("../config/load.mts")>()),
+    loadConfig: () => config,
+  };
+});
+
 vi.mock("./client.mts", () => ({ graphqlWithRateLimit: vi.fn() }));
 vi.mock("../state/seen-comments.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../state/seen-comments.mts")>();

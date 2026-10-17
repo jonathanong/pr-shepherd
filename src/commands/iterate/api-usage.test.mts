@@ -72,7 +72,7 @@ function fixCodeResult(instructions?: string[]): FixCodeResult {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  mockLoadConfig.mockReturnValue({ watch: { graphqlQuotaWarnings: bands } } as PrShepherdConfig);
+  mockLoadConfig.mockReturnValue({ quotaWarningBands: bands } as PrShepherdConfig);
   mockSummarizeApiTelemetry.mockReturnValue(apiUsage);
   mockEvaluateQuotaWarning.mockResolvedValue(undefined);
 });

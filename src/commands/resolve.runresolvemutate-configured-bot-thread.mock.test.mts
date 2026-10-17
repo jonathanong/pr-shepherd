@@ -10,44 +10,24 @@ import {
   mockLoadConfig,
 } from "../../test-helpers/commands/resolve.test-support.mts";
 import { runResolveMutate } from "./resolve.mts";
+import { testConfig } from "../../test-helpers/config/test-config.mts";
 
 registerHooks();
 
 describe("runResolveMutate — configured bot threads", () => {
   it("treats configured bot thread authors as non-human for mutations", async () => {
-    mockLoadConfig.mockReturnValue({
-      cliCommand: ["pr-shepherd"],
-      botUsernames: ["coderabbitai"],
-      ignoreChecks: [],
-      standardRules: [],
-      poll: {
-        intervalSeconds: 60,
-        stackIntervalFactor: 2,
-        timeoutSeconds: 270,
-        debounceSeconds: 60,
-        reconcileSeconds: 900,
-        quietStatus: false,
-      },
-      resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 } },
-      actions: {
-        autoMinimizeSuppressed: true,
-        autoMarkReady: true,
-        neverCancelRuns: [],
-        workWhileQueued: false,
-      },
-      iterate: {
-        fixAttemptsPerThread: 3,
-        stallTimeoutMinutes: 60,
-        minimizeApprovals: false,
-        minimizeComments: "all",
-        behindBaseHint: "",
-        resolveOtherHumanThreads: "none",
-        instructions: "playbook",
-      },
-      watch: { readyDelayMinutes: 10, graphqlQuotaWarnings: [] },
-      checks: { ciTriggerEvents: ["pull_request", "pull_request_target"], ignoreLogLines: [] },
-      mergeStatus: { blockingReviewerLogins: ["copilot"] },
-    });
+    mockLoadConfig.mockReturnValue(
+      testConfig({
+        "bot-usernames": ["coderabbitai"],
+        iterate: {
+          "minimize-comments": "all",
+          "ready-delay-minutes": 10,
+          instructions: "playbook",
+        },
+        poll: { "quota-warnings": [] },
+        "mark-ready": { "blocking-reviewer-logins": ["copilot"] },
+      }),
+    );
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
         comments: [

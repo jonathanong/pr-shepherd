@@ -168,7 +168,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   );
   const allThreads = [...report.threads.actionable, ...report.threads.resolutionOnly];
   const ruleAutoResolveIds = new Set(ruleAutoResolveThreadIds ?? []);
-  const resolveOtherHumanThreads = loadConfig().iterate.resolveOtherHumanThreads ?? "none";
+  const resolveOtherHumanThreads = loadConfig().iterate["resolve-other-human-threads"] ?? "none";
   const routedThreadMutations = buildThreadMutationRouting(
     allThreads,
     botUsernames,
@@ -344,7 +344,8 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
   const { changesRequestedReviews } = report;
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
   const isBehind = report.mergeStatus.status === "BEHIND";
-  const { behindBaseHint, instructions: configuredInstructions } = loadConfig().iterate;
+  const { "behind-base-hint": behindBaseHint, instructions: configuredInstructions } =
+    loadConfig().iterate;
   const commentMinimizeIds = report.comments.minimizeIds ?? actionableComments.map((c) => c.id);
   const belongsToActiveWorkflowRun = (check: AgentCheck): boolean =>
     check.runId !== null && inProgressWorkflowRunIds.has(check.runId);

@@ -19,7 +19,7 @@ const opts = { pr: 42, repo: { owner: "owner", repo: "repo" } } as never;
 
 beforeEach(() => {
   for (const fn of Object.values(m)) fn.mockReset();
-  m.loadConfig.mockReturnValue({ iterate: { stallTimeoutMinutes: 60 } });
+  m.loadConfig.mockReturnValue({ iterate: { "stall-timeout-minutes": 60 } });
   m.readStallState.mockResolvedValue({ ok: true, state: null });
   vi.stubEnv("CLAUDE_CODE_REMOTE", "");
 });

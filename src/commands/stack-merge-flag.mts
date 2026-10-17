@@ -9,5 +9,5 @@ import {
 export function stackMergeFlag(
   allowed: readonly MergeMethod[] | undefined,
 ): { flag: string } | { unavailable: string } {
-  return mergeMethodFlag(allowed, "squash", configuredMergeMethod(loadConfig().merge ?? {}));
+  return mergeMethodFlag(allowed, "squash", configuredMergeMethod(loadConfig().merge));
 }

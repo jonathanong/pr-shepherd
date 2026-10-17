@@ -30,11 +30,11 @@ export function classifyChecks(
 ): ClassifiedCheck[] {
   const config = loadConfig();
   const relevantEvents = new Set([
-    ...config.checks.ciTriggerEvents,
+    ...config.checks["ci-trigger-events"],
     ...(opts.additionalRelevantEvents ?? []),
   ]);
-  const isIgnored = buildMatcher(config.ignoreChecks ?? []);
-  const isProtected = buildMatcher(config.actions.neverCancelRuns ?? []);
+  const isIgnored = buildMatcher(config.checks.ignore ?? []);
+  const isProtected = buildMatcher(config.checks["never-ignore"] ?? []);
   const protectedRunIds = buildProtectedRunIds(checks, isProtected);
   const supersededIndices = buildSupersededIndices(checks, opts.requiredContexts);
   return checks.map((c, index) => {
@@ -81,7 +81,7 @@ function checkMatchesProtection(check: CheckRun, isProtected: (name: string) => 
 
 function classify(check: CheckRun, relevantEvents: Set<string>): ClassifiedCheck {
   // Filter: runs from non-PR events don't count toward PR readiness.
-  // event === null means a commit StatusContext — these are always relevant regardless of ciTriggerEvents.
+  // event === null means a commit StatusContext — these are always relevant regardless of checks.ci-trigger-events.
   if (check.event !== null && !relevantEvents.has(check.event)) {
     return { ...check, category: "filtered" };
   }
@@ -122,7 +122,7 @@ export interface CiVerdict {
   anyFailing: boolean;
   /** Names of checks that were filtered out (triggered by non-PR events). */
   filteredNames: string[];
-  /** Names of checks suppressed by the user's ignoreChecks config. */
+  /** Names of checks suppressed by the user's checks.ignore config. */
   ignoredNames: string[];
   /** Names of CANCELLED checks covered by another run of the same workflow and event. */
   supersededNames: string[];

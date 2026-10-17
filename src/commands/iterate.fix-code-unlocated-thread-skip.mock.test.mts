@@ -159,10 +159,9 @@ describe("runIterate — unlocated review threads", () => {
   });
 
   it("resolves an outdated unlocated other-human thread when the enum is outdated", async () => {
-    mockLoadConfig.mockReturnValue({
-      ...defaultConfig(),
-      iterate: { ...defaultConfig().iterate, resolveOtherHumanThreads: "outdated" },
-    });
+    mockLoadConfig.mockReturnValue(
+      defaultConfig({ iterate: { "resolve-other-human-threads": "outdated" } }),
+    );
     const outdated = {
       ...THREAD,
       id: "thread-outdated-human",

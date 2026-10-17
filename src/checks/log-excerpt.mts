@@ -179,7 +179,7 @@ function truncateTail(text: string, keep?: string): string {
 }
 
 function compileIgnoreLogLinePatterns(): RegExp[] {
-  return loadConfig().checks.ignoreLogLines.map((pattern) => new RegExp(pattern));
+  return loadConfig().checks["ignore-log-lines"].map((pattern) => new RegExp(pattern));
 }
 
 function isNoiseLine(line: string, patterns: RegExp[]): boolean {

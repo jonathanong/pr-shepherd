@@ -48,6 +48,14 @@ describe("receipt evidence query gating", () => {
     expect(await readFile(markerPath(), "utf8")).toBe(`${now - 600} head-a`);
   });
 
+  it("requests evidence for a same-second marker when the ready delay is 0 (v1 default)", async () => {
+    const context = createCheckExecutionContext(0);
+    expect(await context.wantsReceiptSummary(key.pr, repo)).toBe(false);
+    await writeMarker(`${now} head-a`);
+    expect(await context.wantsReceiptSummary(key.pr, repo)).toBe(true);
+    expect(await readFile(markerPath(), "utf8")).toBe(`${now} head-a`);
+  });
+
   it("requests evidence for a persisted v1 receipt before any countdown elapses", async () => {
     await writeReadyReceipt({
       version: 1,

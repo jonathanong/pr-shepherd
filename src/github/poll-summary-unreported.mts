@@ -54,7 +54,7 @@ export function applyUnreportedRequiredChecks(
   if (missing.length === 0) return;
   checks.unreportedRequired = missing;
   const suites = raw.commits.nodes[0]?.commit.checkSuites?.nodes ?? [];
-  if (actionsWorkflowInProgress(suites, new Set(loadConfig().checks.ciTriggerEvents))) {
+  if (actionsWorkflowInProgress(suites, new Set(loadConfig().checks["ci-trigger-events"]))) {
     checks.actionsWorkflowInProgress = true;
   }
 }

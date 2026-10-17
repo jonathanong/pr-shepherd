@@ -22,7 +22,7 @@ import { runPollSummaryTick } from "./tick.mts";
 
 beforeEach(() => {
   for (const fn of Object.values(m)) fn.mockReset();
-  m.loadConfig.mockReturnValue({ iterate: { stallTimeoutMinutes: 60 } });
+  m.loadConfig.mockReturnValue({ iterate: { "stall-timeout-minutes": 60 } });
   m.readStackStallDeadline.mockResolvedValue(undefined);
 });
 afterEach(() => {
