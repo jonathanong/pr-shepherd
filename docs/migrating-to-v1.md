@@ -30,7 +30,7 @@ In 0.x, problems were mostly warnings. A file with a YAML syntax error was skipp
 - a top level that is not a mapping
 - more than one config file in one directory
 
-The message names the file and the key path of every problem. A pre-v1 key never takes effect, but the error names the key that replaced it:
+Shepherd stops at the first invalid file. The message names that file and the key path of each problem in it, but a YAML syntax error, a non-mapping top level, or a duplicate config file has no key path. Fix it and rerun to see problems in later files, such as a repository config after `~/.pr-shepherdrc.yml`. A pre-v1 key never takes effect, but the error names the key that replaced it:
 
 ```text
 pr-shepherd: invalid config in /repo/.pr-shepherdrc.yml:
