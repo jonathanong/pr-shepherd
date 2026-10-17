@@ -973,3 +973,10 @@ export function apiTotals(calls, { transport = "graphql" } = {}) {
     { ...NO_API },
   );
 }
+
+/**
+ * Recorded data (job logs, api-usage-check.json) predates the v1 rename of the
+ * old action to `triage`; map its recorded name, in either case, to the current one.
+ */
+export const recordedAction = (action) =>
+  action === "FIX_CODE" ? "TRIAGE" : action === "fix_code" ? "triage" : action;

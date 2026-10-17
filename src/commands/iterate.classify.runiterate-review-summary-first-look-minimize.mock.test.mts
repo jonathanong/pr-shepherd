@@ -18,7 +18,7 @@ registerIterateHooks();
 // Review summary minimize — first-look cases, plus the self-minimize failure
 // fallback (issue #313).
 //
-// First-look summaries still need one fix_code tick to surface their body,
+// First-look summaries still need one triage tick to surface their body,
 // unlike already-seen summaries which self-minimize in-process (see
 // iterate.classify.runiterate-review-summary-auto-minimize.mock.test.mts).
 // ---------------------------------------------------------------------------
@@ -41,13 +41,13 @@ describe("runIterate — review summary auto-minimize (first look)", () => {
     const result = await runIterate(makeOpts());
 
     expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.firstLookSummaries).toEqual([{ viewerCanMinimize: true, ...summary }]);
-    expect(result.fix.reviewSummaryIds).toEqual([]);
-    expect(result.fix.resolveCommand.hasMutations).toBe(false);
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.firstLookSummaries).toEqual([{ viewerCanMinimize: true, ...summary }]);
+    expect(result.triage.reviewSummaryIds).toEqual([]);
+    expect(result.triage.resolveCommand.hasMutations).toBe(false);
   });
-  it("surfaces a first-look bot summary body under fix_code and includes it in the resolve command", async () => {
+  it("surfaces a first-look bot summary body under triage and includes it in the resolve command", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ firstLookSummaries: [botSummary] }));
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: false,
@@ -58,12 +58,12 @@ describe("runIterate — review summary auto-minimize (first look)", () => {
     const result = await runIterate(makeOpts());
 
     expect(mockAutoMinimizeComments).not.toHaveBeenCalled();
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.firstLookSummaries).toEqual([botSummary]);
-    expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
-    expect(result.fix.resolveCommand.argv).toContain("--minimize-comment-ids");
-    expect(result.fix.resolveCommand.argv).toContain("PRR_BOT");
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.firstLookSummaries).toEqual([botSummary]);
+    expect(result.triage.reviewSummaryIds).toEqual(["PRR_BOT"]);
+    expect(result.triage.resolveCommand.argv).toContain("--minimize-comment-ids");
+    expect(result.triage.resolveCommand.argv).toContain("PRR_BOT");
   });
   it("falls back to the agent-facing resolve command when self-minimize does not confirm success", async () => {
     // autoMinimizeComments reports per-ID failures via `errors`/`minimized` rather
@@ -83,9 +83,9 @@ describe("runIterate — review summary auto-minimize (first look)", () => {
     const result = await runIterate(makeOpts());
 
     expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.reviewSummaryIds).toEqual(["PRR_BOT"]);
-    expect(result.fix.resolveCommand.argv).toContain("PRR_BOT");
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.reviewSummaryIds).toEqual(["PRR_BOT"]);
+    expect(result.triage.resolveCommand.argv).toContain("PRR_BOT");
   });
 });

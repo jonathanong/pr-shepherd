@@ -49,7 +49,7 @@ describe("native-stack reconciliation", () => {
       false,
     );
     expect(result).toMatchObject({ nextAction: "shepherd", stackMergeable: false });
-    expect(result.prs[0]).toMatchObject({ action: "fix_code" });
+    expect(result.prs[0]).toMatchObject({ action: "triage" });
   });
 
   it.each([
@@ -61,7 +61,7 @@ describe("native-stack reconciliation", () => {
       true,
     );
     expect(result).toMatchObject({ nextAction: "shepherd", stackMergeable: false });
-    expect(result.prs[0]).toMatchObject({ action: "fix_code" });
+    expect(result.prs[0]).toMatchObject({ action: "triage" });
   });
 
   it("reprojects an effective queued CANCEL as WAIT without --merge", () => {
@@ -125,7 +125,7 @@ describe("native-stack reconciliation", () => {
         sized(1, { readyReceipt: true }),
         sized(2, { readyReceipt: true }),
         sized(3, { readyReceipt: true }),
-        sized(4, { action: "fix_code", reasons: ["review-work"], review: { actionable: 1 } }),
+        sized(4, { action: "triage", reasons: ["review-work"], review: { actionable: 1 } }),
       ]),
       true,
     );
@@ -139,12 +139,12 @@ describe("native-stack reconciliation", () => {
   it("keeps a clean upper draft's mark-ready session while a lower layer is failing", () => {
     const result = withPollSummaryInstructions(
       stack([
-        row(1, 1, { action: "fix_code", reasons: ["failing-checks"], checks: { failing: 1 } }),
+        row(1, 1, { action: "triage", reasons: ["failing-checks"], checks: { failing: 1 } }),
         row(2, 2, { isDraft: true, action: "mark_ready" }),
       ]),
       false,
     );
-    expect(result.prs.map((item) => item.action)).toEqual(["fix_code", "mark_ready"]);
+    expect(result.prs.map((item) => item.action)).toEqual(["triage", "mark_ready"]);
     const body = result.instructions?.join("\n") ?? "";
     expect(body).toContain("pull/1 --until-terminal");
     expect(body).toContain("pull/2 --until-terminal");
@@ -157,12 +157,12 @@ describe("native-stack reconciliation", () => {
       stack([
         row(1, 1, { isDraft: true, action: "mark_ready" }),
         row(2, 2, { readyReceipt: true }),
-        row(3, 3, { action: "fix_code", reasons: ["review-work"] }),
+        row(3, 3, { action: "triage", reasons: ["review-work"] }),
       ]),
       false,
     );
     expect(result).toMatchObject({ nextAction: "shepherd", stackMergeable: false });
-    expect(result.prs.map((item) => item.action)).toEqual(["mark_ready", "cancel", "fix_code"]);
+    expect(result.prs.map((item) => item.action)).toEqual(["mark_ready", "cancel", "triage"]);
     expect(result.instructions?.join("\n")).toContain("pull/1 --until-terminal`.");
     expect(result.instructions?.join("\n")).toContain("pull/3 --until-terminal`.");
     expect(result.instructions?.join("\n")).not.toContain("Keep upper draft");
@@ -185,7 +185,7 @@ describe("native-stack reconciliation", () => {
     const result = withPollSummaryInstructions(
       stack([
         row(1, 1, {
-          action: "fix_code",
+          action: "triage",
           reasons: ["merge-conflicts"],
           mergeable: "CONFLICTING",
           mergeStateStatus: "DIRTY",
@@ -218,7 +218,7 @@ describe("native-stack reconciliation", () => {
       false,
     );
     expect(result).toMatchObject({ nextAction: "shepherd", stackMergeable: false });
-    expect(result.prs[0]?.action).toBe("fix_code");
+    expect(result.prs[0]?.action).toBe("triage");
     expect(result.instructions?.join("\n")).toContain("pull/1 --until-terminal`.");
   });
 
@@ -232,14 +232,14 @@ describe("native-stack reconciliation", () => {
           pollCommand: undefined,
         }),
         row(2, 2, {
-          action: "fix_code",
+          action: "triage",
           reasons: ["review-work"],
         }),
       ]),
       false,
     );
     expect(result).toMatchObject({ nextAction: "shepherd", stackMergeable: false });
-    expect(result.prs.map((item) => item.action)).toEqual(["escalate", "fix_code"]);
+    expect(result.prs.map((item) => item.action)).toEqual(["escalate", "triage"]);
     expect(result.instructions?.join("\n")).toContain("PR #1");
     expect(result.instructions?.join("\n")).toContain("pull/2 --until-terminal`.");
     expect(result.instructions?.join("\n")).toContain("rerun this same `stack` command");
@@ -272,8 +272,8 @@ describe("native-stack reconciliation", () => {
           reasons: ["mark-ready-authorization-required"],
           isDraft: true,
         }),
-        row(2, 2, { action: "fix_code", pollCommand: undefined }),
-        row(3, 3, { action: "fix_code" }),
+        row(2, 2, { action: "triage", pollCommand: undefined }),
+        row(3, 3, { action: "triage" }),
       ]),
       false,
     );

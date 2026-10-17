@@ -21,9 +21,9 @@ describe("queue recovery evidence", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.queueRemovalAcknowledgment?.argv).toEqual([
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.queueRemovalAcknowledgment?.argv).toEqual([
       "pr-shepherd",
       "apply",
       "queue-removal",
@@ -35,7 +35,7 @@ describe("queue recovery evidence", () => {
       "--removed-at",
       "1700000000",
     ]);
-    expect(result.fix.requeue).toBeUndefined();
+    expect(result.triage.requeue).toBeUndefined();
   });
 
   it.each([false, true])(
@@ -57,14 +57,14 @@ describe("queue recovery evidence", () => {
 
       const result = await runIterate(makeOpts({ merge: true }));
 
-      expect(result.action).toBe("fix_code");
-      if (result.action !== "fix_code") return;
+      expect(result.action).toBe("triage");
+      if (result.action !== "triage") return;
       if (stack) {
-        expect(result.fix.queueRemovalAcknowledgment).toBeDefined();
-        expect(result.fix.requeue).toBeUndefined();
+        expect(result.triage.queueRemovalAcknowledgment).toBeDefined();
+        expect(result.triage.requeue).toBeUndefined();
       } else {
-        expect(result.fix.requeue).toBeDefined();
-        expect(result.fix.queueRemovalAcknowledgment).toBeUndefined();
+        expect(result.triage.requeue).toBeDefined();
+        expect(result.triage.queueRemovalAcknowledgment).toBeUndefined();
       }
     },
   );
@@ -117,10 +117,10 @@ describe("queue recovery evidence", () => {
         };
       mockRunCheck.mockResolvedValue(report);
       const result = await runIterate(makeOpts({ merge: true }));
-      expect(result.action).toBe("fix_code");
-      if (result.action !== "fix_code") return;
-      expect(result.fix.requeue).toBeUndefined();
-      expect(result.fix.queueRemovalAcknowledgment).toBeUndefined();
+      expect(result.action).toBe("triage");
+      if (result.action !== "triage") return;
+      expect(result.triage.requeue).toBeUndefined();
+      expect(result.triage.queueRemovalAcknowledgment).toBeUndefined();
     },
   );
 
@@ -131,10 +131,10 @@ describe("queue recovery evidence", () => {
 
     const result = await runIterate(makeOpts({ merge: true }));
 
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.requeue).toBeUndefined();
-    expect(result.fix.instructions.join("\n")).toContain("so do not enqueue the PR.");
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.requeue).toBeUndefined();
+    expect(result.triage.instructions.join("\n")).toContain("so do not enqueue the PR.");
   });
 
   it("withholds requeue while the branch has conflicts", async () => {
@@ -144,9 +144,9 @@ describe("queue recovery evidence", () => {
 
     const result = await runIterate(makeOpts({ merge: true }));
 
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.requeue).toBeUndefined();
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.requeue).toBeUndefined();
   });
 });
 

@@ -120,7 +120,7 @@ iterate:
   ready-delay-minutes: 10 # settle window after the PR first becomes READY; 0 (default) disables
   minimize-approvals: false # set true to also minimize APPROVED-state reviews
   minimize-comments: bots # all | bots | none
-  behind-base-hint: "rebase --force-with-lease" # one-liner shown on fix_code when behind or conflicting with base
+  behind-base-hint: "rebase --force-with-lease" # one-liner shown on triage when behind or conflicting with base
   resolve-other-human-threads: none # none | outdated | always
   instructions: inline # inline | playbook
 
@@ -128,7 +128,7 @@ poll:
   interval-seconds: 120 # single-PR delay between WAIT ticks
   stack-interval-factor: 2 # stack and multi-PR polls sleep interval-seconds times this
   timeout-seconds: 270 # default bounded WAIT timeout; ignored by --until-terminal
-  debounce-seconds: 60 # settle window after first FIX_CODE; 0 disables
+  debounce-seconds: 60 # settle window after first TRIAGE; 0 disables
   quiet-status: false # unchanged WAIT snapshots remain visible by default
   reconcile-seconds: 900 # max age of a GraphQL snapshot replayed on idle waits; 0 disables
   quota-warnings:
@@ -174,18 +174,18 @@ classify:
 | `checks.never-ignore`                 | `[]`                                      | Actions workflows or checks that stay visible even when they match `checks.ignore`.                                                                     |
 | `checks.ci-trigger-events`            | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR-head CI. Merge-queue `merge_group` checks are included automatically.                                               |
 | `checks.ignore-log-lines`             | `[]`                                      | Regexes. Matching raw CI log lines are dropped from `## Failing checks` excerpts and from annotation dedup.                                             |
-| `iterate.triage-attempts-per-thread`  | `3`                                       | Number of caller-visible `FIX_CODE` deliveries of one unchanged, unresolved thread before the next tick escalates.                                      |
+| `iterate.triage-attempts-per-thread`  | `3`                                       | Number of caller-visible `TRIAGE` deliveries of one unchanged, unresolved thread before the next tick escalates.                                        |
 | `iterate.stall-timeout-minutes`       | `60`                                      | Minutes without progress, or of CI that has not started, before `escalate` / `stall-timeout`; `0` disables.                                             |
 | `iterate.ready-delay-minutes`         | `0`                                       | Settle window after READY before the loop cancels or merges. `0` cancels or merges as soon as the PR is READY.                                          |
 | `iterate.minimize-approvals`          | `false`                                   | Also minimize `APPROVED` reviews, and fetch approvals past the first 50.                                                                                |
 | `iterate.minimize-comments`           | `"bots"`                                  | Non-human author classes to minimize: `all`, `bots`, or `none`. Humans are never minimized.                                                             |
-| `iterate.behind-base-hint`            | `""`                                      | One-liner on `fix_code` when the branch is behind or conflicts with its base. Empty omits it.                                                           |
+| `iterate.behind-base-hint`            | `""`                                      | One-liner on `triage` when the branch is behind or conflicts with its base. Empty omits it.                                                             |
 | `iterate.resolve-other-human-threads` | `"none"`                                  | When to resolve other humans' threads after a reply: `none`, `outdated`, or `always`.                                                                   |
-| `iterate.instructions`                | `"inline"`                                | `inline` or `playbook` for the `fix_code` commit/push and journal steps. `--instructions` and the MCP `instructions` input override it.                 |
+| `iterate.instructions`                | `"inline"`                                | `inline` or `playbook` for the `triage` commit/push and journal steps. `--instructions` and the MCP `instructions` input override it.                   |
 | `poll.interval-seconds`               | `60`                                      | Delay between `WAIT` ticks for one PR. `--interval` overrides it.                                                                                       |
 | `poll.stack-interval-factor`          | `2`                                       | Multiplier for `stack` and multi-PR sleeps. `--interval` overrides it and is not multiplied.                                                            |
 | `poll.timeout-seconds`                | `270`                                     | Wall-clock cap for bounded `WAIT` polling. `--timeout` overrides it; `--until-terminal` ignores it.                                                     |
-| `poll.debounce-seconds`               | `60`                                      | Settle window after the first `FIX_CODE`. `--debounce` overrides it; `0` disables it.                                                                   |
+| `poll.debounce-seconds`               | `60`                                      | Settle window after the first `TRIAGE`. `--debounce` overrides it; `0` disables it.                                                                     |
 | `poll.quiet-status`                   | `false`                                   | Hide unchanged `WAIT` snapshots. `--quiet-status` / `--no-quiet-status` override it.                                                                    |
 | `poll.reconcile-seconds`              | `900`                                     | GraphQL transport: the maximum age of a snapshot an idle `WAIT` tick may replay when REST change detectors are unchanged. `0` disables it.              |
 | `poll.quota-warnings`                 | `30% → 2x, 20% → 5x, 10% → 10x`           | Warning bands for the GraphQL and REST core quotas, each with a minimum poll interval. `[]` disables them.                                              |
@@ -375,10 +375,10 @@ An invalid regex is a validation error (see [Validation](#validation)).
 
 ### `iterate.triage-attempts-per-thread` — default `3`
 
-The number of caller-visible `fix_code` results that may return the same thread body while it stays unresolved and unchanged. It must be a positive integer.
+The number of caller-visible `triage` results that may return the same thread body while it stays unresolved and unchanged. It must be a positive integer.
 
 - Each of those results repeats the pending review commands.
-- The next unchanged tick escalates with `fix-thrash`, still carrying those commands.
+- The next unchanged tick escalates with `triage-thrash`, still carrying those commands.
 - Internal polling and debounce ticks do not count, and neither do threads suppressed by seen markers.
 - The counter is keyed by the thread transcript hash, so an edit or a reply resets it.
 
@@ -433,10 +433,10 @@ iterate:
 
 Also minimize `APPROVED` reviews, meaning `pr approve` clicks with or without a body. It is off by default because you usually want approvals visible. Turn it on for long-running PRs where stale approvals pile up. `iterate.minimize-comments` still decides which approval authors qualify.
 
-| Setting           | Behavior                                                                                                                                                                                                                                                                                                                       |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `false` (default) | Approvals render under `## Approvals (surfaced — not minimized)`, but only when iterate is already emitting output for other work; approvals alone do not turn `wait` into that section. They never enter `--minimize-comment-ids`. `fetchPrBatch` reads only the first 50 approved reviews.                                   |
-| `true`            | All approvals are fetched. An approval that cannot be minimized gets a one-time `FIX_CODE` visibility tick, stays out of `--minimize-comment-ids`, and is gated by seen markers afterward. An approval cannot be minimized when policy excludes it, when there is no GraphQL capability, or under REST, which cannot minimize. |
+| Setting           | Behavior                                                                                                                                                                                                                                                                                                                     |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `false` (default) | Approvals render under `## Approvals (surfaced — not minimized)`, but only when iterate is already emitting output for other work; approvals alone do not turn `wait` into that section. They never enter `--minimize-comment-ids`. `fetchPrBatch` reads only the first 50 approved reviews.                                 |
+| `true`            | All approvals are fetched. An approval that cannot be minimized gets a one-time `TRIAGE` visibility tick, stays out of `--minimize-comment-ids`, and is gated by seen markers afterward. An approval cannot be minimized when policy excludes it, when there is no GraphQL capability, or under REST, which cannot minimize. |
 
 Non-human `COMMENTED` review summaries are minimized independently of this key. Their IDs appear under `## Review IDs to minimize queue` and are applied through the `apply` command or the MCP `apply` tool. Human summaries are surfaced through seen markers and are never minimized.
 
@@ -462,7 +462,7 @@ Excluded items still pass the seen-marker gate. They are surfaced once, suppress
 
 ### `iterate.behind-base-hint` — default `""`
 
-A one-liner added to the `fix_code` instructions when the branch is behind its base (`mergeStatus: "BEHIND"`) or conflicts with it (`mergeStatus: "CONFLICTS"`). Examples:
+A one-liner added to the `triage` instructions when the branch is behind its base (`mergeStatus: "BEHIND"`) or conflicts with it (`mergeStatus: "CONFLICTS"`). Examples:
 
 - `"rebase --force-with-lease"`
 - `"merge the main branch"`
@@ -493,7 +493,7 @@ iterate:
 
 ### `iterate.instructions` — default `"inline"`
 
-`inline` prints every `fix_code` commit/push and journal step on every tick. `playbook` points at the shipped "Fix-code loop" playbook instead. `--instructions` and the MCP `instructions` input override it.
+`inline` prints every `triage` commit/push and journal step on every tick. `playbook` points at the shipped "Triage loop" playbook instead. `--instructions` and the MCP `instructions` input override it.
 
 ## `poll`
 
@@ -523,7 +523,7 @@ poll:
 | `interval-seconds`      | positive      | A single PR, including with `--until-terminal`, sleeps this long, or for `--interval` when that is set.                                                                                                                                                                                                        |
 | `stack-interval-factor` | ≥ 1           | A stack or multi-PR poll without `--interval` sleeps `interval-seconds × stack-interval-factor`, not rounded. The product must be at most `2147483.647` seconds.                                                                                                                                               |
 | `timeout-seconds`       | positive      | `--until-terminal` ignores it, as it ignores `--timeout`.                                                                                                                                                                                                                                                      |
-| `debounce-seconds`      | non-negative  | `0` disables the settle window after `FIX_CODE`.                                                                                                                                                                                                                                                               |
+| `debounce-seconds`      | non-negative  | `0` disables the settle window after `TRIAGE`.                                                                                                                                                                                                                                                                 |
 | `quiet-status`          | boolean       | `false` keeps the status line on every `WAIT` tick. `--quiet-status` / `--no-quiet-status` override it for one run.                                                                                                                                                                                            |
 | `reconcile-seconds`     | non-negative  | GraphQL transport only. An idle `WAIT` tick, with no check running, replays the stored report when every conditional REST change detector answers 304 and the last GraphQL snapshot is younger than this. `0` disables the detectors. See [idle-wait change detectors](graphql.md#idle-wait-change-detectors). |
 | `quota-warnings`        | list of bands | See [`poll.quota-warnings`](#pollquota-warnings).                                                                                                                                                                                                                                                              |
@@ -567,7 +567,7 @@ How it behaves:
   - The active band is the crossed entry with the lowest `remaining-percent`.
   - A slower explicit interval is kept, in both the sleep and the instructions.
   - With built-in defaults, a stack sleeps 120s until a band is slower.
-- A debounce wait after `FIX_CODE`, or a stack `SHEPHERD` debounce wait, uses the remaining debounce window and is not adjusted for bands.
+- A debounce wait after `TRIAGE`, or a stack `SHEPHERD` debounce wait, uses the remaining debounce window and is not adjusted for bands.
 - Each band warns once per worktree and per quota window.
   - A new window starts when GitHub's used count falls, the remaining count rises, or the reset timestamp advances after the prior deadline has passed. An earlier adjustment to the reset time does not re-arm the warning.
   - If the first response is already below several bands, only the lowest one warns. The higher ones are recorded as crossed.
@@ -653,7 +653,7 @@ When neither is set, Shepherd picks a method in this order:
 
 There is no key to opt out of stack detection. When GitHub reports that the PR is in a native stack:
 
-- A ready singular `--merge` poll returns `FIX_CODE`, which is not terminal, pointing at `pr-shepherd stack <PR URL> --until-terminal --merge`. `merge.command-args` is never consulted for that PR.
+- A ready singular `--merge` poll returns `TRIAGE`, which is not terminal, pointing at `pr-shepherd stack <PR URL> --until-terminal --merge`. `merge.command-args` is never consulted for that PR.
 - `stack --merge` returns `MERGE` for the highest ready prefix, then `CANCEL` once every layer has merged.
 
 For stack routing (`SHEPHERD`, `WAIT`, `MERGE`, `CANCEL`, `ESCALATE`), see [actions.md](actions.md), [merge-status.md](merge-status.md#merge-requirements), and [`native-stack-merge-routing`](escalations.md#native-stack-merge-routing).
@@ -704,7 +704,7 @@ This applies only to classification-rule matches that set both `suppress: true` 
 - the ordinary `iterate.minimize-comments` queues;
 - `autoResolve` rules without `suppress`.
 
-When `true`, Shepherd attempts the supported resolve and minimize mutations. It removes the IDs that succeed from the queues the agent sees before deciding whether to emit `fix_code`.
+When `true`, Shepherd attempts the supported resolve and minimize mutations. It removes the IDs that succeed from the queues the agent sees before deciding whether to emit `triage`.
 
 - GraphQL mutations fail closed unless the capability is explicitly true. REST omits capabilities, so mutations that are otherwise eligible are attempted and GitHub decides.
 - Each confirmed success is:
@@ -726,7 +726,7 @@ When `false`, `iterate --merge` defers non-CI work while the PR is in the merge 
 - `CHANGES_REQUESTED` reviews;
 - review summaries.
 
-The tick is `WAIT`, carrying raw counts of the held work (see [`wait`](actions.md#wait)). These are never deferred and always route to `fix_code`:
+The tick is `WAIT`, carrying raw counts of the held work (see [`wait`](actions.md#wait)). These are never deferred and always route to `triage`:
 
 - failing checks;
 - check-run annotations not yet seen;

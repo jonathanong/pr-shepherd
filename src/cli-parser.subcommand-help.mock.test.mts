@@ -59,7 +59,7 @@ const HELP_EXPECTATIONS: Record<(typeof SUBCOMMANDS)[number], string[]> = {
   "apply files": ["Selectors:", "--tests", "--match"],
   "apply journal": ["Shepherd Journal", "--dry-run", "--file"],
   suggest: ["Each --thread-id", "--message", "git apply --check"],
-  iterate: ["Actions:", "FIX_CODE", "--stall-timeout", "Exit codes:"],
+  iterate: ["Actions:", "TRIAGE", "--stall-timeout", "Exit codes:"],
   "admin clean": ["pr [number]", "branch [name]", "--dry-run"],
   "admin log-file": ["Environment:", "PR_SHEPHERD_LOG_DISABLED", "PR_SHEPHERD_STATE_DIR"],
 };

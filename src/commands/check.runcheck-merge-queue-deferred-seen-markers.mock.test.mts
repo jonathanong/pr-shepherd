@@ -47,7 +47,7 @@ describe("runCheck — merge-queue deferred seen markers", () => {
 
   it("marks a new thread seen while queued when a failing check also makes this tick non-deferred", async () => {
     // A queued PR with a failing check is NOT deferred (index.mts still renders review items
-    // via fix_code for it), so its seen markers must not be suppressed just because the PR
+    // via triage for it), so its seen markers must not be suppressed just because the PR
     // happens to be queued.
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({

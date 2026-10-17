@@ -32,7 +32,7 @@ const replyHistory = (intro) => () => [
     role: "user",
     text: `Shepherd ${PR_URL} through to a terminal state. ${intro}`,
   },
-  { role: "tool", command: TICK, output: historyText("143-fix-code-rest-review-thread") },
+  { role: "tool", command: TICK, output: historyText("143-triage-rest-review-thread") },
   {
     role: "assistant",
     text: `Renamed \`val\` to \`retryLimit\` in \`src/index.ts\`, committed it and pushed
@@ -48,7 +48,7 @@ export const DEFERRED_CASES = [
     slug: "38-denied-reply-one-look-skip",
     tier: "discriminating",
     area: "github",
-    fixture: "140-fix-code-denied-reply-one-look-skip",
+    fixture: "140-triage-denied-reply-one-look-skip",
     shape: transcriptShape({
       turns: () => [
         ...replyHistory("This environment uses the REST transport.")(),
@@ -61,7 +61,7 @@ export const DEFERRED_CASES = [
       latest: TICK,
     }),
     runs: 6,
-    tags: ["fix-code", "rest", "review-mutation", "multi-turn"],
+    tags: ["triage", "rest", "review-mutation", "multi-turn"],
     graders: {
       "runs-the-apply-for-the-new-thread": regex(
         String.raw`--reply-thread-ids\s+["']?rest-thread-12(?![\w,-])`,
@@ -102,7 +102,7 @@ permissions; treat the 403 as a reason to end the loop.`,
       latest: APPLY,
     }),
     runs: 6,
-    tags: ["fix-code", "rest", "cloud", "regression-guard", "multi-turn"],
+    tags: ["triage", "rest", "cloud", "regression-guard", "multi-turn"],
     graders: {
       "requests-push-access": regex(`add_repo`),
       "restores-access-then-retries-pending": llm(

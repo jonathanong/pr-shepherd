@@ -146,7 +146,7 @@ describe("runIterate — cancel", () => {
     expect(result.remainingSeconds).toBe(0);
   });
 
-  it("does not cancel from a stale ready-delay marker when READY has fix_code work", async () => {
+  it("does not cancel from a stale ready-delay marker when READY has triage work", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         firstLookSummaries: [
@@ -171,7 +171,7 @@ describe("runIterate — cancel", () => {
       headSha: "unknown",
       alreadyElapsed: false,
     });
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(result.shouldCancel).toBe(false);
   });
 
@@ -193,10 +193,10 @@ describe("runIterate — cancel", () => {
       headSha: "unknown",
       alreadyElapsed: false,
     });
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
-      expect(result.fix.reviewSummaryIds).toHaveLength(0);
-      expect(result.fix.resolveCommand.hasMutations).toBe(true);
+    expect(result.action).toBe("triage");
+    if (result.action === "triage") {
+      expect(result.triage.reviewSummaryIds).toHaveLength(0);
+      expect(result.triage.resolveCommand.hasMutations).toBe(true);
     }
   });
 
@@ -305,9 +305,9 @@ describe("runIterate — cancel", () => {
     const result = await runIterate(makeOpts({ merge: true }));
 
     expect(mockWriteReadyReceipt).toHaveBeenCalledTimes(1);
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
-      expect(result.fix.instructions.join("\n")).toContain(
+    expect(result.action).toBe("triage");
+    if (result.action === "triage") {
+      expect(result.triage.instructions.join("\n")).toContain(
         "pr-shepherd stack https://github.com/owner/repo/pull/42 --until-terminal --merge",
       );
     }
@@ -332,7 +332,7 @@ describe("runIterate — cancel", () => {
     const result = await runIterate(makeOpts({ merge: true }));
 
     expect(result).toMatchObject({ action: "wait", shouldCancel: false });
-    expect(result.action).not.toBe("fix_code");
+    expect(result.action).not.toBe("triage");
   });
 
   it.each(["same", "newer", "manual", "different-commit", "queued"])(
@@ -395,10 +395,10 @@ describe("runIterate — cancel", () => {
         expect(mockWriteReadyReceipt).not.toHaveBeenCalled();
         return;
       }
-      expect(result.action).toBe("fix_code");
-      if (result.action === "fix_code") {
-        expect(result.fix.instructions.join("\n")).toContain("pr-shepherd stack ");
-        expect(result.fix.requeue).toBeUndefined();
+      expect(result.action).toBe("triage");
+      if (result.action === "triage") {
+        expect(result.triage.instructions.join("\n")).toContain("pr-shepherd stack ");
+        expect(result.triage.requeue).toBeUndefined();
       }
 
       expect(mockWriteReadyReceipt).toHaveBeenCalledWith(
@@ -792,7 +792,7 @@ describe("runIterate — cancel", () => {
     expect(mockClearReadyReceipt).toHaveBeenCalledWith({ owner: "owner", repo: "repo", pr: 42 });
   });
 
-  it("routes a verified stale stack boundary through fix_code repair instructions", async () => {
+  it("routes a verified stale stack boundary through triage repair instructions", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "READY",
@@ -816,10 +816,12 @@ describe("runIterate — cancel", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
-      expect(result.fix.instructions.join("\n")).toContain("gh stack rebase --upstack --no-trunk");
-      expect(result.fix.instructions.join("\n")).toContain("gh stack push");
+    expect(result.action).toBe("triage");
+    if (result.action === "triage") {
+      expect(result.triage.instructions.join("\n")).toContain(
+        "gh stack rebase --upstack --no-trunk",
+      );
+      expect(result.triage.instructions.join("\n")).toContain("gh stack push");
     }
   });
 
@@ -851,7 +853,7 @@ describe("runIterate — cancel", () => {
       headSha: "head-1",
       alreadyElapsed: false,
     });
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(result.action).not.toBe("cancel");
   });
 });

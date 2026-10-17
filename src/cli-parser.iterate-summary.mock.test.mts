@@ -22,7 +22,7 @@ const mockRunIterate = vi.mocked(runIterate);
 let stdoutSpy: any;
 let stderrSpy: any;
 
-function makeFixCodeResult(): IterateResult & { action: "fix_code" } {
+function makeTriageResult(): IterateResult & { action: "triage" } {
   return {
     pr: 42,
     repo: "owner/repo",
@@ -39,8 +39,8 @@ function makeFixCodeResult(): IterateResult & { action: "fix_code" } {
     baseBranch: "main",
     branchProtection: null,
     checks: [],
-    action: "fix_code",
-    fix: {
+    action: "triage",
+    triage: {
       threads: [],
       resolutionOnlyThreads: [],
       actionableComments: [],
@@ -82,8 +82,8 @@ afterEach(() => {
 
 describe("main — iterate summary field rendering in ## Failing checks", () => {
   it("summary blockquote rendered when present, omitted when absent", async () => {
-    const result = makeFixCodeResult();
-    result.fix.checks = [
+    const result = makeTriageResult();
+    result.triage.checks = [
       {
         name: "codecov/patch",
         runId: null,
@@ -112,8 +112,8 @@ describe("main — iterate summary field rendering in ## Failing checks", () => 
   });
 
   it("failedStep blockquote rendered when present", async () => {
-    const result = makeFixCodeResult();
-    result.fix.checks = [
+    const result = makeTriageResult();
+    result.triage.checks = [
       {
         name: "lint / typecheck / test (22.x)",
         runId: "run-99",

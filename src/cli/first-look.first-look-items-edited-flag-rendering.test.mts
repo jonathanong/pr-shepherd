@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { FirstLookThread, FirstLookComment } from "../types/report.mts";
-import { formatFixCodeResult } from "./fix-formatter.mts";
+import { formatTriageResult } from "./triage-formatter.mts";
 import { makeIterateResult } from "../../fixtures/cli-parser.iterate-fixtures.mts";
 import type { IterateResult } from "../types.mts";
 
@@ -42,20 +42,20 @@ const FL_COMMENT: FirstLookComment = {
 describe("## First-look items — edited flag rendering", () => {
   it("renders [status: outdated, auto-resolved, edited] for an edited+autoResolved thread", () => {
     const editedThread: FirstLookThread = { ...FL_THREAD_OUTDATED_AUTO, edited: true };
-    const result: IterateResult = { ...makeIterateResult("fix_code") };
-    if (result.action !== "fix_code") throw new Error("unreachable");
-    result.fix = { ...result.fix, firstLookThreads: [editedThread], firstLookComments: [] };
-    const output = formatFixCodeResult("# PR #42 [FIX_CODE]", result);
+    const result: IterateResult = { ...makeIterateResult("triage") };
+    if (result.action !== "triage") throw new Error("unreachable");
+    result.triage = { ...result.triage, firstLookThreads: [editedThread], firstLookComments: [] };
+    const output = formatTriageResult("# PR #42 [TRIAGE]", result);
     expect(output).toContain("[status: outdated, auto-resolved, edited]");
   });
 
   it("renders [status: minimized, edited] for an edited comment", () => {
     const editedComment: FirstLookComment = { ...FL_COMMENT, edited: true };
 
-    const iterResult: IterateResult = { ...makeIterateResult("fix_code") };
-    if (iterResult.action !== "fix_code") throw new Error("unreachable");
-    iterResult.fix = { ...iterResult.fix, firstLookComments: [editedComment] };
-    expect(formatFixCodeResult("# PR #42 [FIX_CODE]", iterResult)).toContain(
+    const iterResult: IterateResult = { ...makeIterateResult("triage") };
+    if (iterResult.action !== "triage") throw new Error("unreachable");
+    iterResult.triage = { ...iterResult.triage, firstLookComments: [editedComment] };
+    expect(formatTriageResult("# PR #42 [TRIAGE]", iterResult)).toContain(
       "[status: minimized, edited]",
     );
   });

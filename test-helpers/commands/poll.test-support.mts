@@ -127,9 +127,9 @@ function makeEscalateResult(): IterateResult {
   } as unknown as IterateResult;
 }
 
-function makeFixCodeResult(): IterateResult {
+function makeTriageResult(): IterateResult {
   return {
-    action: "fix_code",
+    action: "triage",
     pr: 42,
     repo: "owner/repo",
     status: "UNRESOLVED_COMMENTS",
@@ -152,7 +152,7 @@ function makeFixCodeResult(): IterateResult {
       latestCommitCommittedAtUnix: 1_700_000_000,
       reviewItemsSinceLatestCommit: [],
     },
-    fix: {
+    triage: {
       threads: [],
       resolutionOnlyThreads: [],
       actionableComments: [],
@@ -168,7 +168,7 @@ function makeFixCodeResult(): IterateResult {
         requiresDismissMessage: false,
         hasMutations: false,
       },
-      instructions: ["`[FIX_CODE]` is non-terminal. Continue with the next poll."],
+      instructions: ["`[TRIAGE]` is non-terminal. Continue with the next poll."],
       firstLookThreads: [],
       firstLookComments: [],
     },
@@ -189,7 +189,7 @@ export {
   makeWaitResult,
   makeCancelResult,
   makeMarkReadyResult,
-  makeFixCodeResult,
+  makeTriageResult,
   makeEscalateResult,
   registerPollHooks,
 };

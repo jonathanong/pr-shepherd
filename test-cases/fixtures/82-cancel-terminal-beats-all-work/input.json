@@ -1,5 +1,5 @@
 {
-  "description": "The PR is MERGED while also carrying an unresolved thread, a conflicting merge state, and a failing check — all independently sufficient to trigger fix_code. runIterateCore checks report.mergeStatus.state !== 'OPEN' first (step 1.5) and returns cancel/merged before any actionable-work check runs, regardless of what else the batch contains.",
+  "description": "The PR is MERGED while also carrying an unresolved thread, a conflicting merge state, and a failing check — all independently sufficient to trigger triage. runIterateCore checks report.mergeStatus.state !== 'OPEN' first (step 1.5) and returns cancel/merged before any actionable-work check runs, regardless of what else the batch contains.",
   "batchData": {
     "state": "MERGED",
     "mergeable": "CONFLICTING",

@@ -70,7 +70,7 @@ The single-PR poll interval is 60s (`poll.interval-seconds`). `stack` and multi-
 | `stack` summary             | `PollStackSummary`, about 0.36 points per layer (minimum 1); the anchor's first tick reads 4 entries per page                                            | 126 requests for 10 layers without validators, 104 charged on a cold cache; 0 when unchanged (cloud also sends one unmetered `ccr` thread read per layer)                                        |
 | Detail                      | [graphql-usage.md](graphql-usage.md), [graphql.md](graphql.md#per-tick-budget)                                                                           | [rest-usage.md](rest-usage.md)                                                                                                                                                                   |
 
-On REST, a bot that edits its PR status comment in place also costs session time: each edit returns `FIX_CODE` and restarts the ready delay ([rest.md](rest.md#bot-status-comment-edits)).
+On REST, a bot that edits its PR status comment in place also costs session time: each edit returns `TRIAGE` and restarts the ready delay ([rest.md](rest.md#bot-status-comment-edits)).
 
 ## Quota warnings and cadence
 

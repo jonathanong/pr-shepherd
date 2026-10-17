@@ -135,8 +135,8 @@ describe("annotateBlockedWait", () => {
 
   it("names the blocker once on WAIT and leaves other results alone", () => {
     expect(annotateBlockedWait(wait, null)).toBe(wait);
-    expect(annotateBlockedWait({ action: "fix_code" } as IterateResult, gate)).toMatchObject({
-      action: "fix_code",
+    expect(annotateBlockedWait({ action: "triage" } as IterateResult, gate)).toMatchObject({
+      action: "triage",
     });
     expect(annotateBlockedWait(wait, { ...gate, openBlockers: [] })).toBe(wait);
     const annotated = annotateBlockedWait(wait, gate);

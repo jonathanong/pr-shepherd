@@ -22,10 +22,10 @@ const as43 = (name) =>
 
 const loop = (url) => `pr-shepherd ${url} --until-terminal`;
 
-/** A finished one-PR session: FIX_CODE, MARK_READY, then CANCEL for PR #42. */
+/** A finished one-PR session: TRIAGE, MARK_READY, then CANCEL for PR #42. */
 const finishedPr42 = () => [
   { role: "user", text: `Shepherd ${PR_URL} until it's ready for review.` },
-  { role: "tool", command: loop(PR_URL), output: historyText("16-fix-code-review-thread") },
+  { role: "tool", command: loop(PR_URL), output: historyText("16-triage-review-thread") },
   {
     role: "assistant",
     text: `Renamed the variable in \`src/index.ts\`, committed, pushed \`5d1e0a7\` and ran
@@ -53,7 +53,7 @@ const repoPr = (n) => `https://github.com/owner/repo/pull/${n}`;
 
 export const MULTITURN_CASES = [
   {
-    // 25 after several ticks: #43 already took a FIX_CODE round and #42 a
+    // 25 after several ticks: #43 already took a TRIAGE round and #42 a
     // MARK_READY, so #42's CANCEL lands on a context full of finished work.
     slug: "44-multi-pr-cancel-long-session",
     tier: "guard",
@@ -67,7 +67,7 @@ export const MULTITURN_CASES = [
           text: `Opened ${PR_URL} (#101) and ${PR_URL_43} (#102). Started
 \`${loop(PR_URL)}\` and \`${loop(PR_URL_43)}\` in the background.`,
         },
-        { role: "tool", command: loop(PR_URL_43), output: as43("16-fix-code-review-thread") },
+        { role: "tool", command: loop(PR_URL_43), output: as43("16-triage-review-thread") },
         {
           role: "assistant",
           text: `Renamed the variable in #43's \`src/index.ts\`, committed, pushed \`c41b7e2\` and ran

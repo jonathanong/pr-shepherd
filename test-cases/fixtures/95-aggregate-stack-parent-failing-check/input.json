@@ -10,7 +10,7 @@
     "prs": [
       {
         "pr": 321, "repo": "owner/repo", "title": "CI failure", "url": "https://github.com/owner/repo/pull/321",
-        "action": "fix_code", "reasons": ["failing-checks"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "UNSTABLE",
+        "action": "triage", "reasons": ["failing-checks"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "UNSTABLE",
         "headRefName": "foundation", "headRefOid": "c111111111111111111111111111111111111111", "baseRefName": "main", "checks": { "passing": 1, "failing": 1 },
         "stack": { "number": 33, "size": 2, "position": 1, "baseRefName": "main" },
         "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/321 --until-terminal"

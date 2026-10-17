@@ -57,9 +57,9 @@ describe("public CLI help surface", () => {
       }
     }
     for (const page of [USAGE.top, USAGE.default]) {
-      expect(page).toContain("until READY/FIX_CODE/MERGE/CANCEL/ESCALATE or stack SHEPHERD.");
+      expect(page).toContain("until READY/TRIAGE/MERGE/CANCEL/ESCALATE or stack SHEPHERD.");
       expect(page).toContain(
-        "Settle window after first FIX_CODE or stack SHEPHERD before returning.",
+        "Settle window after first TRIAGE or stack SHEPHERD before returning.",
       );
     }
   });

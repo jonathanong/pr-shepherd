@@ -39,11 +39,11 @@ export function makeIterateResult(
     };
   if (action === "mark_ready")
     return { ...base, action: "mark_ready", markedReady: true, log: "MARKED READY: PR 42" };
-  if (action === "fix_code") {
+  if (action === "triage") {
     return {
       ...base,
-      action: "fix_code",
-      fix: {
+      action: "triage",
+      triage: {
         threads: [],
         resolutionOnlyThreads: [],
         actionableComments: [],
@@ -60,7 +60,7 @@ export function makeIterateResult(
           hasMutations: false,
         },
         instructions: [
-          "`[FIX_CODE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.",
+          "`[TRIAGE]` is non-terminal. After completing these steps, continue with the next poll using the same interface and mode: rerun the current `pr-shepherd` CLI invocation with its flags, or call MCP `iterate` again.",
         ],
         firstLookThreads: [],
         firstLookComments: [],

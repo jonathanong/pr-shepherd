@@ -4,7 +4,7 @@ import {
   mockRunIterate,
   makeWaitResult,
   makeCancelResult,
-  makeFixCodeResult,
+  makeTriageResult,
   makeEscalateResult,
   registerPollHooks,
 } from "../../test-helpers/commands/poll.test-support.mts";
@@ -33,7 +33,7 @@ function persistSeenAt(index: number): boolean | undefined {
   return arg?.persistSeen;
 }
 
-describe("runPoll — FIX_CODE debounce", () => {
+describe("runPoll — TRIAGE debounce", () => {
   let stderrSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
@@ -43,26 +43,26 @@ describe("runPoll — FIX_CODE debounce", () => {
     stderrSpy.mockRestore();
   });
 
-  it("defaults to a 60s window: first FIX_CODE is not returned until a later persist tick", async () => {
-    mockRunIterate.mockResolvedValue(makeFixCodeResult());
+  it("defaults to a 60s window: first TRIAGE is not returned until a later persist tick", async () => {
+    mockRunIterate.mockResolvedValue(makeTriageResult());
 
     const pollPromise = runPoll(pollOpts({ intervalSeconds: 60 }));
     await vi.advanceTimersByTimeAsync(60_000);
     const result = await pollPromise;
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
     expect(persistSeenAt(0)).toBe(false);
     expect(persistSeenAt(1)).toBe(true);
   });
 
   it("keeps polling at --interval during a 5m debounce window", async () => {
-    mockRunIterate.mockResolvedValue(makeFixCodeResult());
+    mockRunIterate.mockResolvedValue(makeTriageResult());
     const pollPromise = runPoll(pollOpts({ intervalSeconds: 60, debounceSeconds: 300 }));
     for (let i = 0; i < 5; i += 1) await vi.advanceTimersByTimeAsync(60_000);
     const result = await pollPromise;
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(mockRunIterate).toHaveBeenCalledTimes(6);
     for (let i = 0; i < 5; i += 1) expect(persistSeenAt(i)).toBe(false);
     expect(persistSeenAt(5)).toBe(true);
@@ -101,17 +101,17 @@ describe("runPoll — FIX_CODE debounce", () => {
     expect(mockRunIterate.mock.calls[1]?.[0]).toMatchObject({ fingerprintCache: false });
   });
 
-  it("returns the first FIX_CODE immediately when debounce is 0", async () => {
-    mockRunIterate.mockResolvedValue(makeFixCodeResult());
+  it("returns the first TRIAGE immediately when debounce is 0", async () => {
+    mockRunIterate.mockResolvedValue(makeTriageResult());
     const result = await runPoll(pollOpts({ debounceSeconds: 0 }));
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(mockRunIterate).toHaveBeenCalledTimes(1);
     expect(persistSeenAt(0)).toBe(true);
   });
 
   it("returns CANCEL immediately during the debounce window", async () => {
-    mockRunIterate.mockResolvedValueOnce(makeFixCodeResult()).mockResolvedValue(makeCancelResult());
+    mockRunIterate.mockResolvedValueOnce(makeTriageResult()).mockResolvedValue(makeCancelResult());
     const pollPromise = runPoll(pollOpts({ debounceSeconds: 60 }));
     await vi.advanceTimersByTimeAsync(30_000);
 
@@ -121,7 +121,7 @@ describe("runPoll — FIX_CODE debounce", () => {
 
   it("returns ESCALATE immediately during the debounce window", async () => {
     mockRunIterate
-      .mockResolvedValueOnce(makeFixCodeResult())
+      .mockResolvedValueOnce(makeTriageResult())
       .mockResolvedValue(makeEscalateResult());
     const pollPromise = runPoll(pollOpts({ debounceSeconds: 60 }));
     await vi.advanceTimersByTimeAsync(30_000);
@@ -132,7 +132,7 @@ describe("runPoll — FIX_CODE debounce", () => {
 
   it("clears debounce and resumes WAIT polling when work disappears", async () => {
     mockRunIterate
-      .mockResolvedValueOnce(makeFixCodeResult())
+      .mockResolvedValueOnce(makeTriageResult())
       .mockResolvedValueOnce(makeWaitResult())
       .mockResolvedValue(makeCancelResult());
     const pollPromise = runPoll(pollOpts({ debounceSeconds: 60 }));
@@ -144,30 +144,30 @@ describe("runPoll — FIX_CODE debounce", () => {
   });
 
   it("does not let --timeout cut an in-flight debounce short", async () => {
-    mockRunIterate.mockResolvedValue(makeFixCodeResult());
+    mockRunIterate.mockResolvedValue(makeTriageResult());
     const pollPromise = runPoll(pollOpts({ timeoutSeconds: 1, debounceSeconds: 60 }));
     await vi.advanceTimersByTimeAsync(60_000);
 
-    expect((await pollPromise).action).toBe("fix_code");
+    expect((await pollPromise).action).toBe("triage");
     expect(mockRunIterate).toHaveBeenCalledTimes(3);
     expect(persistSeenAt(2)).toBe(true);
   });
 
   it("sleeps min(interval, remaining) for the last debounce slice", async () => {
-    mockRunIterate.mockResolvedValue(makeFixCodeResult());
+    mockRunIterate.mockResolvedValue(makeTriageResult());
     const pollPromise = runPoll(
       pollOpts({ intervalSeconds: 60, timeoutSeconds: 300, debounceSeconds: 90 }),
     );
     await vi.advanceTimersByTimeAsync(60_000);
     await vi.advanceTimersByTimeAsync(30_000);
 
-    expect((await pollPromise).action).toBe("fix_code");
+    expect((await pollPromise).action).toBe("triage");
     expect(mockRunIterate).toHaveBeenCalledTimes(3);
     expect(persistSeenAt(2)).toBe(true);
   });
 
   it("returns the post-debounce WAIT instead of re-entering the WAIT loop", async () => {
-    mockRunIterate.mockResolvedValueOnce(makeFixCodeResult()).mockResolvedValue(makeWaitResult());
+    mockRunIterate.mockResolvedValueOnce(makeTriageResult()).mockResolvedValue(makeWaitResult());
     const pollPromise = runPoll(pollOpts({ intervalSeconds: 60, debounceSeconds: 60 }));
     await vi.advanceTimersByTimeAsync(60_000);
 
@@ -175,12 +175,12 @@ describe("runPoll — FIX_CODE debounce", () => {
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
   });
 
-  it("persists seen when a FIX_CODE iterate starts before debounceUntil and finishes after", async () => {
+  it("persists seen when a TRIAGE iterate starts before debounceUntil and finishes after", async () => {
     mockRunIterate.mockImplementation(async () => {
       if (mockRunIterate.mock.calls.length === 2) {
         await new Promise((resolve) => setTimeout(resolve, 2_000));
       }
-      return makeFixCodeResult();
+      return makeTriageResult();
     });
 
     const pollPromise = runPoll(pollOpts({ intervalSeconds: 4, debounceSeconds: 5 }));
@@ -188,7 +188,7 @@ describe("runPoll — FIX_CODE debounce", () => {
     await vi.advanceTimersByTimeAsync(2_000);
     const result = await pollPromise;
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(mockRunIterate).toHaveBeenCalledTimes(3);
     expect(persistSeenAt(0)).toBe(false);
     expect(persistSeenAt(1)).toBe(false);
@@ -196,24 +196,24 @@ describe("runPoll — FIX_CODE debounce", () => {
   });
 
   it("writes debounce progress after the newline-terminated WAIT liveness line", async () => {
-    mockRunIterate.mockResolvedValueOnce(makeWaitResult()).mockResolvedValue(makeFixCodeResult());
+    mockRunIterate.mockResolvedValueOnce(makeWaitResult()).mockResolvedValue(makeTriageResult());
     const pollPromise = runPoll(pollOpts({ intervalSeconds: 30, debounceSeconds: 60 }));
     await vi.advanceTimersByTimeAsync(30_000);
     await vi.advanceTimersByTimeAsync(60_000);
     await pollPromise;
     expect(stderrSpy.mock.calls.map((args: unknown[]) => String(args[0])).join("")).toContain(
       "[poll tick 1 / +0s] WAIT — 2 passing, 1 in-progress\n" +
-        "[poll tick 2 / +30s] FIX_CODE — debounce 60s remaining\n",
+        "[poll tick 2 / +30s] TRIAGE — debounce 60s remaining\n",
     );
   });
 
   it("writes a debounce remaining line to stderr", async () => {
-    mockRunIterate.mockResolvedValue(makeFixCodeResult());
+    mockRunIterate.mockResolvedValue(makeTriageResult());
     const pollPromise = runPoll(pollOpts({ intervalSeconds: 60, debounceSeconds: 60 }));
     await vi.advanceTimersByTimeAsync(60_000);
     await pollPromise;
     expect(stderrSpy.mock.calls.map((args: unknown[]) => String(args[0])).join("")).toContain(
-      "FIX_CODE — debounce 60s remaining",
+      "TRIAGE — debounce 60s remaining",
     );
   });
 });

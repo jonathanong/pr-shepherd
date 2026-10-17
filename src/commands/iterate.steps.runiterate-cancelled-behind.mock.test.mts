@@ -11,7 +11,7 @@ import { runIterate } from "./iterate/index.mts";
 registerIterateHooks();
 
 describe("runIterate — cancelled + BEHIND", () => {
-  it("routes cancelled failure to fix_code (not rebase) when branch is BEHIND", async () => {
+  it("routes cancelled failure to triage (not rebase) when branch is BEHIND", async () => {
     const cancelledCheck = {
       name: "ci",
       status: "COMPLETED" as const,
@@ -53,7 +53,7 @@ describe("runIterate — cancelled + BEHIND", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(result.mergeStateStatus).toBe("BEHIND");
   });
 });

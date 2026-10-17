@@ -48,7 +48,7 @@ export function planPollSummary(
       const layer = needsOwnSession
         ? {
             ...item,
-            action: "fix_code" as const,
+            action: "triage" as const,
             reasons: [
               ...item.reasons,
               staleChildren.has(item.pr) ? "stale-ancestry" : "ready-receipt-required",

@@ -8,7 +8,7 @@ import { pagesInSection, topLevelSections } from "./pages.mjs";
 const SUMMARY =
   "pr-shepherd gathers all context for a GitHub pull request in one poll and returns " +
   "exactly one deterministic next action for a calling agent: WAIT, READY, MARK_READY, " +
-  "FIX_CODE, MERGE, CANCEL, or ESCALATE. It never classifies signal vs. noise and never mutates git " +
+  "TRIAGE, MERGE, CANCEL, or ESCALATE. It never classifies signal vs. noise and never mutates git " +
   "itself — the calling agent decides, and Shepherd only emits what to run.";
 
 function sectionLabel(page) {

@@ -36,7 +36,7 @@ describe("runIterate — unreported required checks", () => {
     await rm(dir, { recursive: true, force: true });
   });
 
-  it("returns fix_code when required checks never started", async () => {
+  it("returns triage when required checks never started", async () => {
     dir = await mkdtemp(join(tmpdir(), "pr-shepherd-unreported-"));
     previous = process.env["PR_SHEPHERD_STATE_DIR"];
     process.env["PR_SHEPHERD_STATE_DIR"] = dir;
@@ -52,14 +52,14 @@ describe("runIterate — unreported required checks", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") throw new Error("expected fix_code");
-    const instructions = result.fix.instructions.join("\n");
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") throw new Error("expected triage");
+    const instructions = result.triage.instructions.join("\n");
     expect(instructions).toContain("The stack trunk is behind by 2 commits.");
     expect(instructions).toContain("No CI checks are running, and required checks have not passed");
     expect(instructions).toContain("Rebase onto `main` and push.");
     expect(instructions).not.toContain("gh pr close 42");
-    expect(result.fix.checks).toEqual([]);
+    expect(result.triage.checks).toEqual([]);
     const text = formatIterateResult(result);
     expect(text).toContain("**unreported required** `build`, `tests`");
     expect(text).toContain("**trunk behind** `2`");
@@ -84,10 +84,10 @@ describe("runIterate — unreported required checks", () => {
     const firstPresented = await runIterate(makeOpts({ persistSeen: true }));
     const nextPresented = await runIterate(makeOpts({ persistSeen: true }));
 
-    expect(preview.action).toBe("fix_code");
-    expect(firstPresented.action).toBe("fix_code");
-    if (firstPresented.action !== "fix_code") throw new Error("expected fix_code");
-    expect(firstPresented.fix.instructions.join("\n")).toContain("gh pr close 42");
+    expect(preview.action).toBe("triage");
+    expect(firstPresented.action).toBe("triage");
+    if (firstPresented.action !== "triage") throw new Error("expected triage");
+    expect(firstPresented.triage.instructions.join("\n")).toContain("gh pr close 42");
     expect(nextPresented.action).toBe("escalate");
   });
 
@@ -119,9 +119,9 @@ describe("runIterate — unreported required checks", () => {
 
     await vi.advanceTimersByTimeAsync(60_000);
     const result = await resultPromise;
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") throw new Error("expected fix_code");
-    expect(result.fix.instructions.join("\n")).toContain("gh pr close 42");
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") throw new Error("expected triage");
+    expect(result.triage.instructions.join("\n")).toContain("gh pr close 42");
     expect(mockRunCheck).toHaveBeenCalledTimes(2);
     expect(await readCiRetrigger({ owner: "owner", repo: "repo", pr: 42 })).toMatchObject({
       headSha: "e".repeat(40),
@@ -153,7 +153,7 @@ describe("runIterate — unreported required checks", () => {
     );
 
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     const text = formatIterateResult(result);
     expect(text).toContain("**behind** `93`");
     expect(text).toContain("This branch is behind `main` by 93 commits.");
@@ -178,9 +178,9 @@ describe("runIterate — unreported required checks", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") throw new Error("expected fix_code");
-    const text = result.fix.instructions.join("\n");
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") throw new Error("expected triage");
+    const text = result.triage.instructions.join("\n");
     expect(text).toContain("`build`");
     expect(text).toContain("Parent boundary is stale.");
   });

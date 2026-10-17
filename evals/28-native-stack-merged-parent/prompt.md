@@ -4,7 +4,7 @@ runs: 3
 max_turns: 6
 timeout_seconds: 300
 allowed_tools: [Read, Glob, Grep, Skill]
-tags: [fix-code, conflicts, native-stack, merged-parent, tier:discriminating, area:github]
+tags: [triage, conflicts, native-stack, merged-parent, tier:discriminating, area:github]
 append_system_prompt: |
   You have no shell and no network access. Do not run shell commands, fetch
   anything over the network, or read repository files other than a reference
@@ -28,7 +28,7 @@ enqueue the stack. Here is Shepherd's current output.
 
 ---
 
-# PR #2547 [FIX_CODE]
+# PR #2547 [TRIAGE]
 
 **status** `FAILING` · **merge** `DIRTY` · **repo** `vouchington/vouchington`
 **branch** conflicts with stack trunk `main`

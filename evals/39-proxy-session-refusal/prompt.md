@@ -4,7 +4,7 @@ runs: 6
 max_turns: 6
 timeout_seconds: 300
 allowed_tools: [Read, Glob, Grep, Skill]
-tags: [fix-code, rest, cloud, regression-guard, multi-turn, tier:guard, area:github]
+tags: [triage, rest, cloud, regression-guard, multi-turn, tier:guard, area:github]
 append_system_prompt: |
   You have no shell and no network access. Do not run shell commands, fetch
   anything over the network, or read repository files other than a reference
@@ -32,7 +32,7 @@ Shepherd https://github.com/owner/repo/pull/42 through to a terminal state. This
 
 [tool] $ pr-shepherd https://github.com/owner/repo/pull/42 --until-terminal --transport rest
 
-# PR #42 [FIX_CODE]
+# PR #42 [TRIAGE]
 
 **status** `UNRESOLVED_COMMENTS`
 **transport** `rest`

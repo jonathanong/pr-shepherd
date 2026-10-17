@@ -74,10 +74,10 @@ async function runBranchRecovery(
 
   const result = await runIterate(makeOpts());
 
-  expect(result.action).toBe("fix_code");
-  if (result.action !== "fix_code") throw new Error("expected fix_code branch recovery");
-  expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
-  return result.fix.instructions;
+  expect(result.action).toBe("triage");
+  if (result.action !== "triage") throw new Error("expected triage branch recovery");
+  expect(result.triage.checks[0]?.rerunCommand).toBeUndefined();
+  return result.triage.instructions;
 }
 
 describe("runIterate — repeated workflow branch recovery", () => {

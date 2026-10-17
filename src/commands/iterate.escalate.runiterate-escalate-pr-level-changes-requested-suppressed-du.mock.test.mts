@@ -14,8 +14,8 @@ registerIterateHooks();
 // Escalate
 // ---------------------------------------------------------------------------
 
-describe("runIterate — CHANGES_REQUESTED review with merge CONFLICTS routes to fix_code", () => {
-  it("routes to fix_code when changesRequestedReviews + merge CONFLICTS (rebase + dismiss)", async () => {
+describe("runIterate — CHANGES_REQUESTED review with merge CONFLICTS routes to triage", () => {
+  it("routes to triage when changesRequestedReviews + merge CONFLICTS (rebase + dismiss)", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "FAILING",
@@ -49,6 +49,6 @@ describe("runIterate — CHANGES_REQUESTED review with merge CONFLICTS routes to
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
   });
 });

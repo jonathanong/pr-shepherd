@@ -23,7 +23,7 @@ import { buildCommitSuggestionInstruction } from "../commit-suggestion-instructi
 import { partitionFixThreads } from "./fix-instruction-threads.mts";
 import { buildBranchPushInstruction, buildConflictInstruction } from "./native-stack-rebase.mts";
 import { queueEjectionSteps, type QueueEjectionRecovery } from "./queue-recovery-instructions.mts";
-import { buildPushJournalSteps } from "./fix-loop-instruction.mts";
+import { buildPushJournalSteps } from "./triage-loop-instruction.mts";
 import type { InstructionStyle } from "../../config/load.mts";
 
 /**

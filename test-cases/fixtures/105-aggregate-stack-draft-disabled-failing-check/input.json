@@ -1,5 +1,5 @@
 {
-  "description": "Disabling automatic draft readiness does not escalate a concrete CI failure: the failing draft remains a bounded one-PR FIX_CODE session.",
+  "description": "Disabling automatic draft readiness does not escalate a concrete CI failure: the failing draft remains a bounded one-PR TRIAGE session.",
   "mode": "aggregate",
   "args": ["stack", "https://github.com/owner/repo/pull/431", "--no-auto-mark-ready", "--debounce", "0s"],
   "expectedExitCode": 16,
@@ -10,7 +10,7 @@
     "prs": [
       {
         "pr": 431, "repo": "owner/repo", "title": "Draft CI failure", "url": "https://github.com/owner/repo/pull/431",
-        "action": "fix_code", "reasons": ["failing-checks"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "UNSTABLE",
+        "action": "triage", "reasons": ["failing-checks"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "UNSTABLE",
         "headRefName": "draft-failing", "headRefOid": "4311111111111111111111111111111111111111", "baseRefName": "main", "isDraft": true,
         "checks": { "failing": 1 }, "stack": { "number": 43, "size": 1, "position": 1, "baseRefName": "main" },
         "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/431 --timeout 1s --debounce 0s --no-auto-mark-ready", "pollProbe": true

@@ -625,7 +625,7 @@ token usage, never text, IDs or paths. The bench reads only that file.
   they make at least as many calls as pr-shepherd; setup and unsupported
   steps can have pr-shepherd making more, so the report claims it only when
   every step passes that check.
-- **No CI logs for the baselines.** A FIX_CODE poll that ended with a failed
+- **No CI logs for the baselines.** A TRIAGE poll that ended with a failed
   check would send a baseline to the failed job's log, but the data has no
   real log sizes, so the replay gives gh and MCP no log call. The report
   counts those polls.

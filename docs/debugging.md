@@ -81,7 +81,7 @@ rm /var/folders/ab/xyz/T/pr-shepherd-state/acme/myrepo/42/ready-since.txt
 
 ### "First-look items keep coming back during debounce"
 
-**Symptom:** During a `pr-shepherd [PR]` poll, intermediate `FIX_CODE` ticks inside `--debounce` re-surface the same first-look comments.
+**Symptom:** During a `pr-shepherd [PR]` poll, intermediate `TRIAGE` ticks inside `--debounce` re-surface the same first-look comments.
 
 **Cause:** Debounce ticks run `iterate` with `persistSeen: false`. Seen markers are written only on the post-window tick the agent sees.
 

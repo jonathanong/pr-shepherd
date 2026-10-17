@@ -20,7 +20,7 @@ export async function applyOpenCheckBlockers(
   stack: boolean,
   requiredContexts?: readonly string[],
 ): Promise<Routed & { pollProbe?: true }> {
-  if (routed.action !== "fix_code" || !routed.reasons.includes("failing-checks")) return routed;
+  if (routed.action !== "triage" || !routed.reasons.includes("failing-checks")) return routed;
   if ((review.actionable ?? 0) > 0 || checks.incomplete) return routed;
   const names = failingSummaryCheckNames(raw, requiredContexts);
   if (names.length === 0) return routed;

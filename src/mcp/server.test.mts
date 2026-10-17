@@ -415,7 +415,7 @@ describe("pr-shepherd MCP server", () => {
           repo: "openai/pr-shepherd",
           title: "Fix widgets",
           url: "https://github.com/openai/pr-shepherd/pull/3",
-          action: "fix_code" as const,
+          action: "triage" as const,
           reasons: ["failing-checks"],
           state: "OPEN" as const,
           mergeable: "MERGEABLE" as const,

@@ -108,7 +108,7 @@ describe("fetchPollSummary", () => {
     expect(result.selection).toEqual({ kind: "prs", requested: [42, 43] });
     expect(result.prs.map(({ pr, action }) => ({ pr, action }))).toEqual([
       { pr: 42, action: "cancel" },
-      { pr: 43, action: "fix_code" },
+      { pr: 43, action: "triage" },
     ]);
     expect(result.prs[0]).toMatchObject({
       mergeable: "MERGEABLE",

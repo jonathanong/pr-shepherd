@@ -48,9 +48,9 @@ export const STACK_CASES = [
     slug: "14-stack-layer-no-direct-merge",
     tier: "guard",
     area: "github",
-    fixture: "85-fix-code-stacked-pr-route",
+    fixture: "85-triage-stacked-pr-route",
     shape: mergeOnePr,
-    tags: ["stack", "fix-code", "merge"],
+    tags: ["stack", "triage", "merge"],
     graders: {
       "does-not-merge-the-layer-directly": llm(
         `The plan does NOT merge PR #42 directly.

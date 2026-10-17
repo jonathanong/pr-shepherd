@@ -69,7 +69,7 @@ const passed = (name: string) => ({
 
 const trunk = ["tests", "build", "gitleaks"];
 
-it("routes an upper layer with unreported trunk checks to fix_code", async () => {
+it("routes an upper layer with unreported trunk checks to triage", async () => {
   const item = await summarizePollSummaryPr(
     blockedLayer(
       [passed("CodeRabbit"), passed("gitleaks"), passed("Label PRs"), passed("Lint Links")],
@@ -80,7 +80,7 @@ it("routes an upper layer with unreported trunk checks to fix_code", async () =>
     false,
     trunk,
   );
-  expect(item.action).toBe("fix_code");
+  expect(item.action).toBe("triage");
   expect(item.reasons).toEqual(["unreported-required-checks"]);
   expect(item.checks?.unreportedRequired).toEqual(["tests", "build"]);
 });
@@ -117,7 +117,7 @@ it("does not treat a third-party queued suite as running CI", async () => {
     false,
     trunk,
   );
-  expect(item.action).toBe("fix_code");
+  expect(item.action).toBe("triage");
   expect(item.checks?.actionsWorkflowInProgress).toBeUndefined();
 });
 

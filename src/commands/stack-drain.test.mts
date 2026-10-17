@@ -14,7 +14,7 @@ describe("bottom-layer stack drain", () => {
     const result = withPollSummaryInstructions(
       stack([
         row(1, 1, {
-          action: "fix_code",
+          action: "triage",
           reasons: ["queue-removal"],
           queueRemoval: {
             reason: "failed_checks",
@@ -51,7 +51,7 @@ describe("bottom-layer stack drain", () => {
       stack([
         row(1, 1, ready),
         row(2, 2),
-        row(3, 3, { isDraft: true, action: "fix_code", reasons: ["review-work"] }),
+        row(3, 3, { isDraft: true, action: "triage", reasons: ["review-work"] }),
       ]),
       true,
     );
@@ -64,14 +64,14 @@ describe("bottom-layer stack drain", () => {
 
   it("merges a ready bottom beneath an escalated upper layer", () => {
     const result = withPollSummaryInstructions(
-      stack([row(1, 1, ready), row(2, 2, { action: "escalate", reasons: ["fix-thrash"] })]),
+      stack([row(1, 1, ready), row(2, 2, { action: "escalate", reasons: ["triage-thrash"] })]),
       true,
     );
     expect(result.nextAction).toBe("merge");
     expect(result.instructions?.[0]).toContain("gh stack merge 1 --yes --squash");
     expect(text(result)).not.toContain("pull/2 --until-terminal");
     expect(text(result)).toContain(
-      "PR #2 requires human action (fix-thrash). Keep shepherding other PRs before the handoff.",
+      "PR #2 requires human action (triage-thrash). Keep shepherding other PRs before the handoff.",
     );
   });
 

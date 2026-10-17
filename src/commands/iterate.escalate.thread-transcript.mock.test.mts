@@ -8,7 +8,7 @@ describe("escalate thread transcripts", () => {
   it("renders every comment of a thread transcript with its comment ID", () => {
     const message = buildEscalateHumanMessage(
       {
-        triggers: ["fix-thrash"],
+        triggers: ["triage-thrash"],
         unresolvedThreads: [
           {
             id: "PRRT_1",

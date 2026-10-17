@@ -26,7 +26,7 @@ export interface MergeQueueReport {
  * (`actions.work-while-queued` is `false`, the default) — a Shepherd-initiated push
  * or mutation right now would eject the PR. Omitted entirely once every count is
  * zero. Not emitted for checks/annotations/conflicts: those always surface via
- * `fix_code` immediately regardless of queue membership.
+ * `triage` immediately regardless of queue membership.
  */
 export interface IterateDeferredWork {
   /** Unique review threads across actionable, resolution-only, first-look, and rule-auto-resolve. */

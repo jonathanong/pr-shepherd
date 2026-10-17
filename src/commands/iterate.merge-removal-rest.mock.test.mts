@@ -23,17 +23,17 @@ describe("REST merge-queue recovery evidence", () => {
         state === "rest-snapshot" ? "graphql" : "rest",
         () => runIterate(makeOpts({ merge: true })),
       );
-      expect(result.action).toBe("fix_code");
-      if (result.action !== "fix_code") return;
-      expect(result.fix.requeue).toBeUndefined();
-      expect(result.fix.checks[0]?.logExcerpt).toBe("OpenRouter HTTP 529");
-      const instruction = result.fix.instructions.find((step) =>
+      expect(result.action).toBe("triage");
+      if (result.action !== "triage") return;
+      expect(result.triage.requeue).toBeUndefined();
+      expect(result.triage.checks[0]?.logExcerpt).toBe("OpenRouter HTTP 529");
+      const instruction = result.triage.instructions.find((step) =>
         step.includes("transport-unsupported"),
       );
       expect(instruction).toContain("REST cannot verify current merge-queue removal");
       expect(formatIterateResult(result)).toContain(instruction);
       expect(projectIterateLean(result)).toMatchObject({
-        fix: { instructions: expect.arrayContaining([instruction]) },
+        triage: { instructions: expect.arrayContaining([instruction]) },
       });
       expect(formatIterateResult(result)).not.toContain("- requeue:");
     },
@@ -59,17 +59,17 @@ describe("REST merge-queue recovery evidence", () => {
         state === "rest-snapshot" ? "graphql" : "rest",
         () => runIterate(makeOpts({ merge })),
       );
-      expect(result.action).toBe("fix_code");
-      if (result.action !== "fix_code") return;
-      expect(result.fix.requeue).toBeUndefined();
-      expect(result.fix.queueRemovalAcknowledgment).toBeUndefined();
-      const instruction = result.fix.instructions.find((step) =>
+      expect(result.action).toBe("triage");
+      if (result.action !== "triage") return;
+      expect(result.triage.requeue).toBeUndefined();
+      expect(result.triage.queueRemovalAcknowledgment).toBeUndefined();
+      const instruction = result.triage.instructions.find((step) =>
         step.includes("transport-unsupported"),
       );
       expect(instruction).toContain("removal acknowledgment require verified current removal");
       expect(formatIterateResult(result)).toContain(instruction);
       expect(projectIterateLean(result)).toMatchObject({
-        fix: { instructions: expect.arrayContaining([instruction]) },
+        triage: { instructions: expect.arrayContaining([instruction]) },
       });
       expect(formatIterateResult(result)).not.toContain("- acknowledge queue removal:");
     },

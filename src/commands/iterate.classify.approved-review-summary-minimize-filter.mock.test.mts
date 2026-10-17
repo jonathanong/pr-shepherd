@@ -62,9 +62,9 @@ describe("runIterate — review summary auto-minimize", () => {
       remainingSeconds: 600,
     });
     const result = await runIterate(makeOpts());
-    if (result.action !== "fix_code") return;
+    if (result.action !== "triage") return;
 
-    expect(result.fix.reviewSummaryIds).toEqual(["PRR_AP"]);
+    expect(result.triage.reviewSummaryIds).toEqual(["PRR_AP"]);
   });
   it("filters APPROVED reviews through minimizeComments when approval minimization is enabled", async () => {
     configureApprovalMinimization("bots");
@@ -78,10 +78,10 @@ describe("runIterate — review summary auto-minimize", () => {
     );
 
     const result = await runIterate(makeOpts());
-    if (result.action !== "fix_code") return;
+    if (result.action !== "triage") return;
 
-    expect(result.fix.reviewSummaryIds).toEqual(["PRR_AP_BOT"]);
-    expect(result.fix.surfacedApprovals.map((r) => r.id)).toEqual(["PRR_AP_USER"]);
+    expect(result.triage.reviewSummaryIds).toEqual(["PRR_AP_BOT"]);
+    expect(result.triage.surfacedApprovals.map((r) => r.id)).toEqual(["PRR_AP_USER"]);
   });
   it("surfaces non-human APPROVED reviews when approval minimization is enabled but policy excludes them", async () => {
     configureApprovalMinimization("none");
@@ -95,11 +95,14 @@ describe("runIterate — review summary auto-minimize", () => {
     );
 
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
 
-    expect(result.fix.reviewSummaryIds).toEqual([]);
-    expect(result.fix.surfacedApprovals.map((r) => r.id)).toEqual(["PRR_AP_BOT", "PRR_AP_UNKNOWN"]);
+    expect(result.triage.reviewSummaryIds).toEqual([]);
+    expect(result.triage.surfacedApprovals.map((r) => r.id)).toEqual([
+      "PRR_AP_BOT",
+      "PRR_AP_UNKNOWN",
+    ]);
   });
   it("surfaces an approval when minimization is authorized by policy but denied by GitHub", async () => {
     configureApprovalMinimization("bots");
@@ -119,13 +122,13 @@ describe("runIterate — review summary auto-minimize", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.reviewSummaryIds).toEqual([]);
-    expect(result.fix.surfacedApprovals.map((review) => review.id)).toEqual(["PRR_AP_DENIED"]);
-    expect(result.fix.resolveCommand.argv).not.toContain("--minimize-comment-ids");
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.reviewSummaryIds).toEqual([]);
+    expect(result.triage.surfacedApprovals.map((review) => review.id)).toEqual(["PRR_AP_DENIED"]);
+    expect(result.triage.resolveCommand.argv).not.toContain("--minimize-comment-ids");
   });
-  it("summary-only PR self-minimizes in-process and does not route to fix_code (issue #313)", async () => {
+  it("summary-only PR self-minimizes in-process and does not route to triage (issue #313)", async () => {
     mockRunCheck.mockResolvedValue(makeReport({ reviewSummaries: [botSummary] }));
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: false,
@@ -163,9 +166,9 @@ describe("runIterate — review summary auto-minimize", () => {
     const result = await runIterate(makeOpts());
 
     expect(mockAutoMinimizeComments).toHaveBeenCalledWith(["PRR_BOT"]);
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
 
-    expect(result.fix.reviewSummaryIds).toEqual([]);
+    expect(result.triage.reviewSummaryIds).toEqual([]);
   });
 });

@@ -29,16 +29,16 @@ it("shows lower review blockers before merging an individually ready upper layer
 
 describe("native stack after its two lower layers merge", () => {
   it("rebases the actual bottom open layer onto trunk despite its retained parent base", async () => {
-    const fixture = loadFixture("129-fix-code-native-stack-merged-parent");
+    const fixture = loadFixture("129-triage-native-stack-merged-parent");
     applyFixture(fixture);
     const result = await captureRun(fixture);
     const json = JSON.parse(result.jsonOut);
 
     expect(result.exitCode).toBe(12);
     expect(result.jsonExitCode).toBe(result.exitCode);
-    expect(json.action).toBe("fix_code");
+    expect(json.action).toBe("triage");
     expect(json.stackTrunkConflict).toBe("main");
-    for (const output of [result.textOut, json.fix.instructions.join("\n")]) {
+    for (const output of [result.textOut, json.triage.instructions.join("\n")]) {
       expect(output).toContain("`gh stack checkout 2535`");
       expect(output).toContain("head branch of PR #2547 and run `gh stack rebase`");
       expect(output).toContain("`gh stack push`");

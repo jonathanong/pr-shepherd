@@ -67,7 +67,7 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
     if (result.action === "escalate") {
       const { humanMessage } = result.escalate;
       expect(humanMessage).toMatch(/paused/i);
-      expect(humanMessage).toMatch(/fix-thrash/);
+      expect(humanMessage).toMatch(/triage-thrash/);
       expect(humanMessage).toMatch(/thread-1/);
       expect(humanMessage).toMatch(/src\/foo\.mts/);
       expect(humanMessage).toMatch(
@@ -79,7 +79,7 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
     }
   });
 
-  it("escalates with base-branch-unknown when fix_code needs a push but baseBranch is empty", async () => {
+  it("escalates with base-branch-unknown when triage needs a push but baseBranch is empty", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "UNRESOLVED_COMMENTS",
@@ -109,7 +109,7 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
   });
 
   it("escalates with base-branch-unknown on CONFLICTS-only when baseBranch is empty (no resolve IDs, but rebase still needed)", async () => {
-    // Guards the `|| hasConflicts` branch of the fix_code base-branch-unknown
+    // Guards the `|| hasConflicts` branch of the triage base-branch-unknown
     // gate. Without it, a CONFLICTS-only PR with no threads/comments/checks/
     // reviews would silently rebase onto `main` when the base branch was
     // invalid, because resolveCommand.requiresHeadSha is false (nothing to

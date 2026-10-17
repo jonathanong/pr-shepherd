@@ -191,7 +191,7 @@ export interface AgentComment {
   edited?: boolean;
 }
 
-/** Check shape emitted to the iterate agent under `fix_code` or check escalation. */
+/** Check shape emitted to the iterate agent under `triage` or check escalation. */
 export interface AgentCheck {
   name: string;
   runId: string | null;

@@ -16,7 +16,7 @@ flowchart TD
   RD --> UR{"required contexts unreported<br/>after one reopen?"}
   UR -->|yes| E1(["escalate: required-checks-unreported"])
   UR -->|no| AW{"3. actionable work<br/>(not deferred while queued)?"}
-  AW -->|yes| FIX(["fix_code<br/>(or escalate from handleFixCode)"])
+  AW -->|yes| FIX(["triage<br/>(or escalate from handleTriage)"])
   AW -->|no| URR{"unreported-required repair<br/>or stale stack ancestry?"}
   URR -->|yes| FIX
   URR -->|no| AM{"4. auto-merge / queue active,<br/>or current queue removal?"}
@@ -37,7 +37,7 @@ flowchart TD
   SG -.->|stalled| E4(["escalate: stall-timeout"])
 ```
 
-The shipped skill runs `pr-shepherd [PR] --until-terminal`, not `pr-shepherd iterate`. That poll stays inside ordinary `WAIT` and `MARK_READY`, and returns `READY` (ready-delay counting), `FIX_CODE` (after its `--debounce` window), `MERGE`, any non-terminal quota warning, or terminal `CANCEL` / `ESCALATE`. After following `## Instructions`, the skill reruns the same command unless it got `CANCEL` or `ESCALATE`, the instructions say to end the turn or not to rerun (a single tick), or a human says stop. The bare `pr-shepherd [PR]` stays bounded for direct CLI users; MCP `iterate` returns one tick with no debounce, and its caller owns recurrence.
+The shipped skill runs `pr-shepherd [PR] --until-terminal`, not `pr-shepherd iterate`. That poll stays inside ordinary `WAIT` and `MARK_READY`, and returns `READY` (ready-delay counting), `TRIAGE` (after its `--debounce` window), `MERGE`, any non-terminal quota warning, or terminal `CANCEL` / `ESCALATE`. After following `## Instructions`, the skill reruns the same command unless it got `CANCEL` or `ESCALATE`, the instructions say to end the turn or not to rerun (a single tick), or a human says stop. The bare `pr-shepherd [PR]` stays bounded for direct CLI users; MCP `iterate` returns one tick with no debounce, and its caller owns recurrence.
 
 ## Steps
 
@@ -57,7 +57,7 @@ Human-authored threads must stay visible. Shepherd later pairs reply-and-resolve
 
 `updateReadyDelay(pr, isCleanReadyState, readyDelaySeconds, owner, repo, options)` reads and writes `ready-since.txt`. Default delay is 0, meaning no countdown (`iterate.ready-delay-minutes` or `--ready-delay`).
 
-A **clean ready state** is `status === "READY"`, `hasReadinessWork` false, and no active auto-merge or merge-queue state being handled. It includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending). An initial first look at a hidden PR comment routes to `fix_code` for acknowledgement without restarting the countdown or voiding a READY receipt. An edited minimized comment that no longer matches a noise rule always surfaces its new body. When a non-bot author made the edit, it is readiness work: the countdown restarts and the receipt is cleared. Bot edits are acknowledgement-only, because bots such as CodeRabbit regenerate minimized summaries on their own after a PR settles.
+A **clean ready state** is `status === "READY"`, `hasReadinessWork` false, and no active auto-merge or merge-queue state being handled. It includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending). An initial first look at a hidden PR comment routes to `triage` for acknowledgement without restarting the countdown or voiding a READY receipt. An edited minimized comment that no longer matches a noise rule always surfaces its new body. When a non-bot author made the edit, it is readiness work: the countdown restarts and the receipt is cleared. Bot edits are acknowledgement-only, because bots such as CodeRabbit regenerate minimized summaries on their own after a PR settles.
 
 ```mermaid
 stateDiagram-v2
@@ -84,7 +84,7 @@ stateDiagram-v2
 - Unclean sweeps include non-READY status, failing CI, conflicts, unresolved comments, review-summary minimization, and first-look threads and summaries.
 - The elapsed marker stays until `cancel` or `merge` consumes it, so a hidden-comment acknowledgement tick does not restart the wait.
 - A current READY receipt (same head, base, and readiness evidence) already proves the delay elapsed, so a clean sweep returns `shouldCancel: true` without a marker (`alreadyElapsed`). Rerunning a READY PR — for example with `--merge` after a `ready-delay-elapsed` cancel — does not restart the countdown. When the head, base, or evidence moved, the receipt is cleared and the countdown restarts. Hidden comment and review bodies are omitted from the receipt fingerprint, but a full poll reclassifies edited minimized PR comments. If a non-bot edit no longer matches a noise rule, it becomes readiness work and clears the receipt. Bot edits keep the receipt.
-- Before a READY sweep reaches this step, `runCheck` does one fresh REST mergeability read (unless the UNKNOWN fallback already did). If it reports `CONFLICTING`/`DIRTY`, the sweep becomes `FAILING`/`CONFLICTS`, resets the marker, and routes to `fix_code`.
+- Before a READY sweep reaches this step, `runCheck` does one fresh REST mergeability read (unless the UNKNOWN fallback already did). If it reports `CONFLICTING`/`DIRTY`, the sweep becomes `FAILING`/`CONFLICTS`, resets the marker, and routes to `triage`.
 - Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/ready-since.txt` (`<unix seconds> <head SHA>`). A future timestamp (clock skew), another head, or a marker without a head is reset to now.
 
 The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completion).
@@ -105,14 +105,14 @@ The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completio
 - `report.mergeStatus.status === 'CONFLICTS'`
 - pending review-summary IDs, first-look summaries, or edited summaries
 
-**Required contexts never reported.** Just before this check, `planUnreportedRequired` runs. If the one close/reopen for this head was already emitted and the contexts are still missing with nothing running, the tick escalates with `required-checks-unreported`. Otherwise its repair steps (rebase/push or close/reopen) ride on the `fix_code` result; with no other work they produce their own `fix_code` through the stall guard. A verified stale native-stack boundary also produces `fix_code`, after the active-merge check in [step 4](#4-active-merge-and-queue-removal).
+**Required contexts never reported.** Just before this check, `planUnreportedRequired` runs. If the one close/reopen for this head was already emitted and the contexts are still missing with nothing running, the tick escalates with `required-checks-unreported`. Otherwise its repair steps (rebase/push or close/reopen) ride on the `triage` result; with no other work they produce their own `triage` through the stall guard. A verified stale native-stack boundary also produces `triage`, after the active-merge check in [step 4](#4-active-merge-and-queue-removal).
 
 **Failing checks.** All failing checks route here — including timeout, cancelled, startup-failure, flaky, and `merge_group` checks from the active/latest queue commit — except a check recorded as blocked on an external pull request or issue that is still open.
 
-- That blocked check does not count toward this step, gets no `rerun:` command, and does not increment fix-attempt or fix-thrash. If it was the only cause, the tick is `wait` and the log names the blocker (`owner/name#N`).
+- That blocked check does not count toward this step, gets no `rerun:` command, and does not increment fix-attempt or triage-thrash. If it was the only cause, the tick is `wait` and the log names the blocker (`owner/name#N`).
 - Once the blocker is merged or closed, the check stays here and `## Instructions` says to update the PR branch from its base (for example `gh pr update-branch <pr> --rebase`) and not to rerun the job.
 - Queue checks are classified separately from PR-head checks, so supersession never crosses commit boundaries.
-- The `fix` payload carries `conclusion` for each failing check. `workflowName`, `jobName`, `failedStep`, `logExcerpt`, and `relatedJobs` are populated only when triage runs (not for cancelled or startup-failure checks).
+- The `triage` payload carries `conclusion` for each failing check. `workflowName`, `jobName`, `failedStep`, `logExcerpt`, and `relatedJobs` are populated only when triage runs (not for cancelled or startup-failure checks).
 
 **Conflicts.** CONFLICTS is included so conflicts and review comments are handled in one tick. Iterate surfaces raw `**branch**` state and does not prescribe how to rebase a standalone PR. A native stack layer (`mergeRequirements.stack`) is the exception, because updating one layer from its base strands every layer above it:
 
@@ -133,7 +133,7 @@ The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completio
 
 **Side-effects:** none. Shepherd never cancels workflow runs (GitHub exposes no exact viewer capability for cancellation); it only surfaces failure context.
 
-**Emits:** `action: 'fix_code'`. A non-empty external check URL is an autonomous investigation path and stays `fix_code`. If no other autonomous work remains and every failing check needs a human-only action or lacks usable evidence and an authorized rerun, `handleFixCode` emits `escalate` with `check-follow-up-unavailable` and the raw check context. It can also escalate with `fix-thrash` or `base-branch-unknown`. Every `fix_code` is non-terminal and runs through the [stall guard](#stall-guard).
+**Emits:** `action: 'triage'`. A non-empty external check URL is an autonomous investigation path and stays `triage`. If no other autonomous work remains and every failing check needs a human-only action or lacks usable evidence and an authorized rerun, `handleTriage` emits `escalate` with `check-follow-up-unavailable` and the raw check context. It can also escalate with `triage-thrash` or `base-branch-unknown`. Every `triage` is non-terminal and runs through the [stall guard](#stall-guard).
 
 ### 4. Active merge and queue removal
 
@@ -166,7 +166,7 @@ A draft native stack layer is marked ready by its own session as soon as that la
 
 ### Stall guard
 
-Applies to ordinary `wait` and `fix_code` after the action is chosen — not to `ready`, active merge waits, `merge`, `cancel`, `mark_ready`, or `escalate`. A disabled mark-ready hold is an ordinary wait and uses the guard.
+Applies to ordinary `wait` and `triage` after the action is chosen — not to `ready`, active merge waits, `merge`, `cancel`, `mark_ready`, or `escalate`. A disabled mark-ready hold is an ordinary wait and uses the guard.
 
 **Fingerprint:** PR head SHA from GitHub (not the local checkout), action, `status`, `mergeStateStatus`, `state`, `isDraft`, sorted failing-check names + conclusions, sorted actionable thread/comment/review IDs, sorted review-summary minimize IDs. Stored at `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/iterate-stall.json`.
 
@@ -184,21 +184,21 @@ Applies to ordinary `wait` and `fix_code` after the action is chosen — not to 
 
 Exit codes `0`/`10`–`15` report one-PR state; see [exit-codes.md](exit-codes.md) for stack-level `16` and the `sysexits.h` codes when a step fails before reaching a row.
 
-| Step  | Condition                                                                                  | Action                                          | Exit code |
-| ----- | ------------------------------------------------------------------------------------------ | ----------------------------------------------- | --------- |
-| 1.5   | `state === 'MERGED'`                                                                       | `cancel`                                        | 0         |
-| 1.5   | `state === 'CLOSED'`                                                                       | `cancel`                                        | 14        |
-| 3     | Required contexts still unreported after one close/reopen, nothing running                 | `escalate` (`required-checks-unreported`)       | 13        |
-| 3     | `hasActionableWork`, unreported-required repair, or stale stack ancestry                   | `fix_code`                                      | 12        |
-| 3     | Only checks without autonomous follow-up                                                   | `escalate` (`check-follow-up-unavailable`)      | 13        |
-| 3     | Same thread remains after `iterate.triage-attempts-per-thread` returned `FIX_CODE` results | `escalate` (`fix-thrash`) with pending commands | 13        |
-| 4     | Only non-CI work while queued (`--merge`, in queue, `!work-while-queued`)                  | `wait` with `deferredWork`                      | 10        |
-| 4     | Auto-merge or merge queue active                                                           | `wait`                                          | 10        |
-| 4     | `--merge`, current queue removal, no actionable failure                                    | `escalate` (`merge-queue-removed`)              | 13        |
-| 4     | REST readiness gaps                                                                        | `escalate` (`transport-unsupported`)            | 13        |
-| 5     | READY + isDraft + !blockingBotReview + mark-ready.auto                                     | `mark_ready`                                    | 11        |
-| 6     | `shouldCancel` + `--merge`                                                                 | `merge`                                         | 15        |
-| 6     | `shouldCancel` without `--merge`                                                           | `cancel`                                        | 0         |
-| 6     | Ready-delay counting                                                                       | `ready`                                         | 10        |
-| 7     | Fallthrough                                                                                | `wait`                                          | 10        |
-| guard | Same fingerprint for ≥ `iterate.stall-timeout-minutes` on `fix_code` or `wait`             | `escalate` (`stall-timeout`)                    | 13        |
+| Step  | Condition                                                                                | Action                                             | Exit code |
+| ----- | ---------------------------------------------------------------------------------------- | -------------------------------------------------- | --------- |
+| 1.5   | `state === 'MERGED'`                                                                     | `cancel`                                           | 0         |
+| 1.5   | `state === 'CLOSED'`                                                                     | `cancel`                                           | 14        |
+| 3     | Required contexts still unreported after one close/reopen, nothing running               | `escalate` (`required-checks-unreported`)          | 13        |
+| 3     | `hasActionableWork`, unreported-required repair, or stale stack ancestry                 | `triage`                                           | 12        |
+| 3     | Only checks without autonomous follow-up                                                 | `escalate` (`check-follow-up-unavailable`)         | 13        |
+| 3     | Same thread remains after `iterate.triage-attempts-per-thread` returned `TRIAGE` results | `escalate` (`triage-thrash`) with pending commands | 13        |
+| 4     | Only non-CI work while queued (`--merge`, in queue, `!work-while-queued`)                | `wait` with `deferredWork`                         | 10        |
+| 4     | Auto-merge or merge queue active                                                         | `wait`                                             | 10        |
+| 4     | `--merge`, current queue removal, no actionable failure                                  | `escalate` (`merge-queue-removed`)                 | 13        |
+| 4     | REST readiness gaps                                                                      | `escalate` (`transport-unsupported`)               | 13        |
+| 5     | READY + isDraft + !blockingBotReview + mark-ready.auto                                   | `mark_ready`                                       | 11        |
+| 6     | `shouldCancel` + `--merge`                                                               | `merge`                                            | 15        |
+| 6     | `shouldCancel` without `--merge`                                                         | `cancel`                                           | 0         |
+| 6     | Ready-delay counting                                                                     | `ready`                                            | 10        |
+| 7     | Fallthrough                                                                              | `wait`                                             | 10        |
+| guard | Same fingerprint for ≥ `iterate.stall-timeout-minutes` on `triage` or `wait`             | `escalate` (`stall-timeout`)                       | 13        |

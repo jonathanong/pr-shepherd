@@ -4,7 +4,7 @@ runs: 6
 max_turns: 6
 timeout_seconds: 300
 allowed_tools: [Read, Glob, Grep, Skill]
-tags: [stack, fix-code, merge-queue, tier:guard, area:github]
+tags: [stack, triage, merge-queue, tier:guard, area:github]
 append_system_prompt: |
   You have no shell and no network access. Do not run shell commands, fetch
   anything over the network, or read repository files other than a reference
@@ -24,7 +24,7 @@ here is what it returned. Take it from there.
 
 ---
 
-# PR #42 [FIX_CODE]
+# PR #42 [TRIAGE]
 
 **status** `FAILING`
 **summary** 1 passing

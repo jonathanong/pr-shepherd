@@ -8,7 +8,7 @@ import { runIterate } from "./index.mts";
 /**
  * Pins current behavior seen in live cloud run #566: REST cannot minimize, so a bot that edits
  * its status comment in place (a rate-limit notice, a "review running" summary) re-surfaces it as
- * an edited first-look item. On a READY PR that tick is FIX_CODE and restarts the ready delay.
+ * an edited first-look item. On a READY PR that tick is TRIAGE and restarts the ready delay.
  */
 const bot = { login: "coderabbitai[bot]", type: "Bot" };
 
@@ -30,7 +30,7 @@ afterEach(() => {
 });
 
 describe("REST cloud bot status-comment edits on a READY PR", () => {
-  it("re-surfaces the edit as FIX_CODE and restarts the ready delay", async () => {
+  it("re-surfaces the edit as TRIAGE and restarts the ready delay", async () => {
     vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-09T09:00:00Z"));
@@ -57,7 +57,7 @@ describe("REST cloud bot status-comment edits on a READY PR", () => {
       );
 
     // First look surfaces the comment once; it cannot be minimized over REST.
-    expect(await tick()).toMatchObject({ action: "fix_code" });
+    expect(await tick()).toMatchObject({ action: "triage" });
     expect(await tick()).toMatchObject({ status: "READY", remainingSeconds: 600 });
     vi.setSystemTime(new Date("2026-10-09T09:05:00Z"));
     expect(await tick()).toMatchObject({ status: "READY", remainingSeconds: 300 });
@@ -65,8 +65,8 @@ describe("REST cloud bot status-comment edits on a READY PR", () => {
     live.body = "Rate limit exceeded; review paused.";
     const edited = await tick();
     expect(edited).toMatchObject({
-      action: "fix_code",
-      fix: {
+      action: "triage",
+      triage: {
         actionableComments: [
           { id: "IC_501", body: "Rate limit exceeded; review paused.", edited: true },
         ],

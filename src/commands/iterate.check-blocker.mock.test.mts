@@ -99,11 +99,11 @@ describe("check blockers during iterate", () => {
       data: { repository: { pullRequest: { state: "OPEN", merged: false } } },
     });
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.checks.map((check) => check.name)).toEqual(["lint"]);
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.checks.map((check) => check.name)).toEqual(["lint"]);
     expect(formatIterateResult(result)).not.toContain("backend-tests (1)");
-    expect(result.fix.checks.some((check) => check.rerunCommand?.includes("123"))).toBe(false);
+    expect(result.triage.checks.some((check) => check.rerunCommand?.includes("123"))).toBe(false);
   });
 
   it.each([
@@ -113,13 +113,13 @@ describe("check blockers during iterate", () => {
     await prepare([failing("backend-tests (1)", "123")], blocker, "backend-tests (1)", "BEHIND");
     mockGraphql.mockResolvedValue({ data: body });
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    const instructions = result.fix.instructions.join("\n");
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    const instructions = result.triage.instructions.join("\n");
     expect(instructions).toContain("gh pr update-branch 42 --rebase");
     expect(instructions).toContain("Do not rerun the job");
     expect(instructions).not.toContain("rerun:");
-    expect(result.fix.checks[0]?.rerunCommand).toBeUndefined();
+    expect(result.triage.checks[0]?.rerunCommand).toBeUndefined();
     expect(formatIterateResult(result)).not.toContain("rerun:");
   });
 
@@ -129,11 +129,11 @@ describe("check blockers during iterate", () => {
       data: { repository: { pullRequest: { state: "MERGED", merged: true } } },
     });
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    const instructions = result.fix.instructions.join("\n");
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    const instructions = result.triage.instructions.join("\n");
     expect(instructions).not.toContain("gh pr update-branch");
-    expect(result.fix.checks[0]?.rerunCommand).toContain("gh run rerun 123");
+    expect(result.triage.checks[0]?.rerunCommand).toContain("gh run rerun 123");
   });
 
   it("propagates a lookup rate limit and keeps other lookup errors visible", async () => {
@@ -145,10 +145,10 @@ describe("check blockers during iterate", () => {
     mockGraphql.mockRejectedValueOnce(new Error("boom"));
     const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.checks.map((check) => check.name)).toEqual(["backend-tests (1)"]);
-    expect(result.fix.checks[0]?.rerunCommand).toContain("gh run rerun 123");
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.checks.map((check) => check.name)).toEqual(["backend-tests (1)"]);
+    expect(result.triage.checks[0]?.rerunCommand).toContain("gh run rerun 123");
     expect(stderr.mock.calls.map((call) => String(call[0])).join("")).toContain(
       "check blocker lookup failed for acme/widgets#9 (ignored): boom",
     );
