@@ -28,6 +28,16 @@ describe("poll target parsing", () => {
     });
   });
 
+  it("rejects a malformed PR reference instead of dropping it", () => {
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    expect(parsePollTargets(["42", "not-a-pr"])).toBeNull();
+    expect(process.exitCode).toBe(EXIT.USAGE);
+    expect(stderr.mock.calls.map((call) => call[0]).join("")).toContain(
+      'invalid PR reference "not-a-pr"',
+    );
+    stderr.mockRestore();
+  });
+
   it("rejects the removed --stack flag with a pointer to the stack command", () => {
     expect(parsePollTargets(["42", "--stack", "43"])).toBeNull();
     expect(process.exitCode).toBe(EXIT.USAGE);

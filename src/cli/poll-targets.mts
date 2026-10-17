@@ -59,7 +59,12 @@ export function parsePollTargets(args: string[]): ParsedPollTargets | null {
     }
     if (arg.startsWith("--")) continue;
     const parsed = parseCliPrReference(arg);
-    if (!parsed) continue;
+    if (!parsed) {
+      // A typo must not silently drop a PR from an exact multi-PR selection.
+      process.stderr.write(`pr-shepherd: invalid PR reference "${arg}".\n`);
+      process.exitCode = EXIT.USAGE;
+      return null;
+    }
     refs.push(parsed);
     consumed.add(index);
   }

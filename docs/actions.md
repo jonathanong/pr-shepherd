@@ -289,7 +289,7 @@ The lowest open layer is selected by native-stack order, even when GitHub still 
 
 `pr-shepherd iterate`, `stack --once`, the MCP and library `iterate` and `stack`, and the looping commands inside a Claude Code cloud session (`CLAUDE_CODE_REMOTE=true`) run one tick and never sleep. The action, exit code, and every section below are unchanged. One field is added; see [cloud.md](cloud.md) for the full contract.
 
-- **`nextCheck`** is `{ at, inSeconds, reason }`, printed as a `**nextCheck**` header line after `**activity**`. It is omitted for `fix_code` (its rerun reports one; a quota warning delays that rerun), `cancel`, `escalate`, a `merge` whose command is not a REST merge, `mark_ready`, and an aggregate that is all terminal, has only `cancel`/`escalate` rows, or has only final draft-verification probes alongside terminal rows. A looping command that sleeps never prints it.
+- **`nextCheck`** is `{ at, inSeconds, reason }`, printed as a `**nextCheck**` header line after `**activity**`. When the result carries a quota warning, `at` is never sooner than the warning's poll interval. It is omitted for `fix_code` (its rerun reports one; a quota warning delays that rerun), `cancel`, `escalate`, a `merge` whose command is not a REST merge, `mark_ready`, and an aggregate that is all terminal, has only `cancel`/`escalate` rows, or has only final draft-verification probes alongside terminal rows. A looping command that sleeps never prints it.
 
 | `nextCheck.reason` | Meaning                                                                                                                     |
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------- |

@@ -52,6 +52,18 @@ describe("runIterateTick", () => {
     });
   });
 
+  it("holds a queued wake-up until the quota warning's interval", async () => {
+    m.runIterate.mockResolvedValue({
+      action: "wait",
+      mergeQueue: { inQueue: true },
+      quotaWarning: { pollIntervalMinutes: 10 },
+      ...base,
+    });
+    expect(await runIterateTick(opts)).toMatchObject({
+      nextCheck: { reason: "merge-queue", at: "2024-05-15T19:17:00Z", inSeconds: 600 },
+    });
+  });
+
   it("reports ready-delay and merge-queue deadlines", async () => {
     m.runIterate.mockResolvedValueOnce({ action: "ready", remainingSeconds: 127, ...base });
     expect(await runIterateTick(opts)).toMatchObject({
