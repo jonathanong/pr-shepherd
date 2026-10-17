@@ -402,17 +402,19 @@ Today's pr-shepherd runs on 8 real PRs (#520, #521, #522, #523, #530, #531, #532
 
 **Steps without a captured output are left out.** 2 invocations (#523: 1, #531: 1) have no output in the debug logs, so their result size is unknown. The modeled columns leave them out on every arm rather than replay pr-shepherd's result as empty.
 
+**The baselines fetch no CI logs.** 2 TRIAGE polls (#530: 2) ended with a failed check. pr-shepherd's measured output includes the failure context it printed, but the replay gives gh and MCP no `gh run view --log-failed` or `get_job_logs` call: the data holds no real log sizes, and borrowing the scenarios' fixture log would replay another PR's log. This leaves the baselines cheaper than they would be.
+
 | PR | rounds | polls (ticks) | TRIAGE | applies | threads | cost: pr-shepherd / gh / MCP | turns: pr-shepherd / gh / MCP | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| #520 | 4 | 15 (30) | 0 | 7 | 17 | 107,318 / 461,021 / 580,120 | 22 / 44 / 62 | 45 / 72 / 29 | 4 / 14 / 119 |
-| #521 | 4 | 9 (16) | 0 | 3 | 2 | 44,978 / 118,167 / 157,236 | 12 / 22 / 31 | 21 / 35 / 11 | 4 / 2 / 61 |
-| #522 | 3 | 14 (33) | 0 | 7 | 8 | 87,650 / 313,179 / 431,320 | 21 / 42 / 69 | 45 / 66 / 22 | 3 / 8 / 116 |
-| #523 | 5 | 12 (23) | 0 | 7 | 2 | 66,194 / 168,616 / 240,214 | 18 / 30 / 46 | 37 / 47 / 14 | 5 / 2 / 84 |
-| #530 | 3 | 8 (17) | 0 | 4 | 5 | 50,428 / 116,601 / 160,695 | 12 / 26 / 35 | 23 / 34 / 13 | 3 / 5 / 63 |
-| #531 | 1 | 4 (7) | 0 | 2 | 0 | 18,304 / 37,305 / 44,516 | 5 / 8 / 9 | 7 / 12 / 3 | 1 / 0 / 19 |
-| #532 | 2 | 6 (12) | 0 | 4 | 2 | 37,747 / 85,574 / 116,618 | 10 / 19 / 25 | 18 / 25 / 8 | 2 / 2 / 44 |
-| #533 | 1 | 3 (6) | 0 | 2 | 1 | 20,792 / 43,731 / 60,936 | 5 / 9 / 13 | 10 / 16 / 4 | 1 / 1 / 22 |
-| **all** | 23 | 71 (144) | 0 | 36 | 37 | 433,411 / 1,344,194 / 1,791,655 | 105 / 200 / 290 | 206 / 307 / 104 | 23 / 34 / 528 |
+| #520 | 4 | 15 (30) | 11 | 7 | 17 | 107,318 / 461,021 / 580,120 | 22 / 44 / 62 | 45 / 72 / 29 | 4 / 14 / 119 |
+| #521 | 4 | 9 (16) | 5 | 3 | 2 | 44,978 / 118,167 / 157,236 | 12 / 22 / 31 | 21 / 35 / 11 | 4 / 2 / 61 |
+| #522 | 3 | 14 (33) | 11 | 7 | 8 | 87,650 / 313,179 / 431,320 | 21 / 42 / 69 | 45 / 66 / 22 | 3 / 8 / 116 |
+| #523 | 5 | 12 (23) | 7 | 7 | 2 | 66,194 / 168,616 / 240,214 | 18 / 30 / 46 | 37 / 47 / 14 | 5 / 2 / 84 |
+| #530 | 3 | 8 (17) | 5 | 4 | 5 | 50,428 / 116,601 / 160,695 | 12 / 26 / 35 | 23 / 34 / 13 | 3 / 5 / 63 |
+| #531 | 1 | 4 (7) | 2 | 2 | 0 | 18,304 / 37,305 / 44,516 | 5 / 8 / 9 | 7 / 12 / 3 | 1 / 0 / 19 |
+| #532 | 2 | 6 (12) | 4 | 4 | 2 | 37,747 / 85,574 / 116,618 | 10 / 19 / 25 | 18 / 25 / 8 | 2 / 2 / 44 |
+| #533 | 1 | 3 (6) | 2 | 2 | 1 | 20,792 / 43,731 / 60,936 | 5 / 9 / 13 | 10 / 16 / 4 | 1 / 1 / 22 |
+| **all** | 23 | 71 (144) | 47 | 36 | 37 | 433,411 / 1,344,194 / 1,791,655 | 105 / 200 / 290 | 206 / 307 / 104 | 23 / 34 / 528 |
 
 Modeled cost of pr-shepherd vs. gh: −68%; vs. MCP: −76%. Tool tokens: −85% / −88%.
 
