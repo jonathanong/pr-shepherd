@@ -21,6 +21,7 @@ Skills are thin dispatchers. They parse arguments, call the CLI or MCP, print th
 - Accept a bare number, `owner/repo#N`, or a GitHub PR URL. A qualified reference can name a fork or upstream repository; this checkout supplies git, config, and rules.
 - Run `pr-shepherd [PR] --until-terminal`. Do not run `pr-shepherd iterate`.
 - To make, create, or open a PR, read the "Create a PR" playbook: non-force push the reviewed in-scope commits, then create the PR. Do not ask for a separate confirmation because the push publishes those commits.
+- To hand an open PR to an external shepherd, read the "Draft handoff" playbook. The adapter supplies the activation gate, the dispatch call, and the immediate checkpoint. Do not run that path and an in-session loop on the same PR.
 - A skill cannot grant host permissions. Unattended approval comes from a trusted command rule or host policy.
 - Rebasing your own PR head onto its base and pushing it with `--force-with-lease` is part of this workflow; do not ask first. Bare `--force`, pushes to any other branch, remote or credential changes, unrelated changes, and ambiguous targets stay outside it.
 - If the CLI is unavailable, read the "MCP fallback" playbook (MCP `iterate`, then MCP `apply` and `build_suggestion_patches`). Do not run a shell `pr-shepherd apply` there. After a CLI poll, run the printed apply command.
@@ -29,6 +30,7 @@ Skills are thin dispatchers. They parse arguments, call the CLI or MCP, print th
 | -------------------- | -------------------------------------------------------------- |
 | Fix-code loop        | `fix-code-loop.md` (only named with `--instructions playbook`) |
 | Create a PR          | `create-pr.md`                                                 |
+| Draft handoff        | `draft-handoff.md`                                             |
 | MCP fallback         | `mcp-fallback.md`                                              |
 | Suggestion patches   | `suggestion-patches.md`                                        |
 | CI failure triage    | `ci-failure-triage.md`                                         |

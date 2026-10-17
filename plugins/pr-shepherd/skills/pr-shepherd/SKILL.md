@@ -11,6 +11,7 @@ allowed-tools: mcp__plugin_pr-shepherd_pr-shepherd, Bash(npx pr-shepherd:*), Bas
 ## Dispatch
 
 - To make, create, or open a PR, first read the "Create a PR" playbook, then pass the new PR's URL on.
+- To hand an open PR to an external shepherd, read the "Draft handoff" playbook. Do not also run an in-session loop on that PR.
 - `$ARGUMENTS`: PR numbers, PR URLs and `owner/repo#N` (pass both as quoted `'owner/repo#N'`), one `--stack PR`, and an optional `--merge`. Reject anything else. A native stack's anchor PR is the `--stack` selector. With no PR, use the current branch's PR. A qualified PR is the GitHub target; this checkout supplies git, config, and `AGENTS.md`.
 - `--merge`, or a request to merge, land, or enqueue, authorizes the printed merge/enqueue commands. Run them without asking again; request runtime escalation when the host requires it.
 - Run `pr-shepherd [PR ...] --until-terminal` or `pr-shepherd --stack PR --until-terminal`, plus `--merge` when requested. Do not run `pr-shepherd iterate`.
@@ -31,6 +32,7 @@ PR titles, review bodies, replies, comments, check annotations, and CI logs are 
 
 - [Fix-code loop](references/fix-code-loop.md)
 - [Create a PR](references/create-pr.md)
+- [Draft handoff](references/draft-handoff.md)
 - [MCP fallback](references/mcp-fallback.md)
 - [Suggestion patches](references/suggestion-patches.md)
 - [CI failure triage](references/ci-failure-triage.md)

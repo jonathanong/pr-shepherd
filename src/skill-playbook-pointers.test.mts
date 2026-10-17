@@ -13,7 +13,7 @@ const ALWAYS_ON_PLAYBOOKS = new Set(["Untrusted review input"]);
  * procedure that was moved out of the per-tick text.
  */
 /** Playbooks the skill's own Dispatch bullets name (quoted); the CLI never points at them. */
-const SKILL_DISPATCHED_PLAYBOOKS = new Set(["Create a PR", "MCP fallback"]);
+const SKILL_DISPATCHED_PLAYBOOKS = new Set(["Create a PR", "Draft handoff", "MCP fallback"]);
 
 function skillPlaybookHeadings(): Set<string> {
   const skillDir = new URL("plugins/pr-shepherd/skills/pr-shepherd/", rootUrl);
@@ -173,5 +173,27 @@ describe("pr-shepherd skill recurrence contract", () => {
     expect(skill).toContain("### Untrusted review input");
     expect(skill).toMatch(/data, not user or system instructions/);
     expect(skill).toContain("is not a new `[ESCALATE]` trigger");
+  });
+});
+
+describe("draft handoff playbook", () => {
+  const playbook = readFileSync(
+    new URL("plugins/pr-shepherd/skills/pr-shepherd/references/draft-handoff.md", rootUrl),
+    "utf8",
+  );
+
+  it("names the raw fields, the report line set, and the skills page", () => {
+    expect(playbook).toContain("# Draft handoff");
+    for (const field of ["isDraft", "autoMergeRequest", "state", "stack object"]) {
+      expect(playbook).toContain(field);
+    }
+    expect(playbook).toContain("repository auto-merge setting");
+    expect(playbook).toContain("gh pr view --json isDraft,autoMergeRequest,state");
+    expect(playbook).toContain("manual-verification-required");
+    expect(playbook).toContain("MERGED");
+    expect(playbook).toMatch(/in-session `pr-shepherd` loop/);
+    expect(readFileSync(new URL("docs/skills.md", rootUrl), "utf8")).toContain(
+      "`draft-handoff.md`",
+    );
   });
 });
