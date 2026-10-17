@@ -42,7 +42,7 @@ export function removeRc(): void {
   rmSync(join(tmpDir, RC));
 }
 
-/** Assert that loading the current tree fails as a usage error naming every `fragment`. */
+/** Assert that loading the current tree fails as a config error naming every `fragment`. */
 export async function expectConfigError(...fragments: string[]): Promise<string> {
   const loadConfig = await freshLoadConfig();
   let caught: unknown;
@@ -51,7 +51,7 @@ export async function expectConfigError(...fragments: string[]): Promise<string>
   } catch (error) {
     caught = error;
   }
-  expect(caught).toMatchObject({ name: "ShepherdError", exitCode: 64 });
+  expect(caught).toMatchObject({ name: "ShepherdError", exitCode: 78 });
   const message = (caught as Error).message;
   for (const fragment of fragments) expect(message).toContain(fragment);
   return message;

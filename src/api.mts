@@ -30,6 +30,7 @@ import {
   type ApplyQueueRemovalResult,
 } from "./commands/apply-queue-removal.mts";
 import { runWithExecutionCwd } from "./execution-context.mts";
+import { loadConfig } from "./config/load.mts";
 import {
   parsePrReference,
   normalizeRepositoryIdentity,
@@ -244,7 +245,11 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
     input: { transport?: GithubTransport },
     work: () => Promise<T>,
   ): Promise<T> {
-    return runWithExecutionCwd(cwd, () => transportRunner(work, input?.transport));
+    // Validate config first, as the CLI does, so a bad or pre-v1 file rejects before GitHub I/O.
+    return runWithExecutionCwd(cwd, async () => {
+      loadConfig();
+      return transportRunner(work, input?.transport);
+    });
   }
 
   function iterate(input?: SingleIterateInput): Promise<IterateResult>;

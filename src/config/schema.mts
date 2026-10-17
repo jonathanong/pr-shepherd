@@ -89,7 +89,9 @@ const quotaWarningBand = z
   .refine(
     (band) => band["interval-minutes"] !== undefined || band["interval-factor"] !== undefined,
     { message: "must define interval-minutes, interval-factor, or both" },
-  );
+  )
+  // `z.toJSONSchema` drops the refine, so state the same requirement for editors.
+  .meta({ anyOf: [{ required: ["interval-minutes"] }, { required: ["interval-factor"] }] });
 
 const quotaWarnings = z.array(quotaWarningBand).superRefine((bands, ctx) => {
   const seen = new Set<number>();

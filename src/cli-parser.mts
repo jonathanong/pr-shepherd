@@ -66,7 +66,7 @@ export async function main(argv: string[]): Promise<void> {
     process.exitCode = EXIT.USAGE;
     return;
   }
-  // Validate config before any GitHub work, so a bad or pre-v1 config file exits 64 up front.
+  // Validate config before any GitHub work, so a bad or pre-v1 config file exits 78 up front.
   try {
     loadConfig();
   } catch (error) {
