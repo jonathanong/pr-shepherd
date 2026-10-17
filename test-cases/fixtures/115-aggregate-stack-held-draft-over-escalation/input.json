@@ -1,8 +1,8 @@
 {
-  "description": "A clean upper draft is still the agent's mark-ready step when a lower layer needs a human. The selector lists that step and then the handoff.",
+  "description": "A clean upper draft is still the agent's mark-ready step when a lower layer needs a human. The command lists that step and then the handoff.",
   "mode": "aggregate",
   "args": [
-    "--stack",
+    "stack",
     "https://github.com/owner/repo/pull/452",
     "--no-auto-mark-ready",
     "--debounce",

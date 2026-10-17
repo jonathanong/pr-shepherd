@@ -17,4 +17,4 @@ nextAction: merge
 ## Instructions
 
 1. PR #501 is the highest ready layer of native stack #50. Run `pr-shepherd apply merge https://github.com/owner/repo/pull/501 --require-sha 5011111111111111111111111111111111111111 --merge-action default --expected-stack '{"number":50,"baseRefName":"main","prefix":[{"pr":501,"headRefName":"single","headRefOid":"5011111111111111111111111111111111111111","baseRefName":"main"}]}' --transport rest` to request merging that layer alone. If status is `pending`, rerun that command at the configured cadence to resume its UUID. `enqueued` is not merged. Shepherd revalidates every open lower layer's READY receipt before submission.
-2. After the merge attempt, rerun this same `--stack --merge` selector; GitHub retargets the next layer onto `main`. Shepherd any layer that GitHub rejects or ejects.
+2. After the merge attempt, rerun this same `stack --merge` command; GitHub retargets the next layer onto `main`. Shepherd any layer that GitHub rejects or ejects.

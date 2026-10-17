@@ -79,7 +79,7 @@ Thread handling (full matrix in [conversation-resolution.md](conversation-resolu
 Context gathering also emits the arguments for later mutations so the agent does not reconstruct them:
 
 - `apply review` command, printed inline in its instruction step (reply / resolve / minimize / dismiss, with an optional resolve-only `Run:` step)
-- grouped `build_suggestion_patches` inputs when threads contain ` ```suggestion ` fences
+- grouped `suggest` inputs when threads contain ` ```suggestion ` fences
 - Journal instruction for large decisions
 
 Those commands are actions, documented in [actions.md](actions.md) and [cli-usage.md](cli-usage.md).

@@ -65,7 +65,7 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).toContain("build-suggestion-patches");
+    expect(text).toContain("suggest");
     expect(text).toContain('Playbook: "Suggestion patches".');
     expect(text.match(/Playbook: "Suggestion patches"/g)).toHaveLength(1);
     expect(text).not.toContain("refuses because the suggestion is unsafe");

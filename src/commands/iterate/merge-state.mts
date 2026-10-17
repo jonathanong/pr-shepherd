@@ -17,7 +17,7 @@ type StallKey = { owner: string; repo: string; pr: number };
 
 /**
  * A one-PR poll cannot prove the layers below it merged or that its PR number is a safe merge
- * selector. Route it through the aggregate stack selector, which merges one bottom layer at a time.
+ * selector. Route it through the aggregate stack command, which merges one bottom layer at a time.
  */
 function buildStackedRouteResult(
   base: IterateResultBase,
@@ -46,7 +46,7 @@ function buildStackedRouteResult(
       },
       instructions: [
         `PR #${report.pr} is layer ${stack.position} of ${stack.size} in native stack #${stack.number}; do not run \`gh pr merge\` for this layer.`,
-        `Run ${inlineCode(buildPrShepherdCommand(["--stack", prUrl, "--until-terminal", "--merge"]).text)} to reconcile the stack and run each bottom-layer merge command it emits.`,
+        `Run ${inlineCode(buildPrShepherdCommand(["stack", prUrl, "--until-terminal", "--merge"]).text)} to reconcile the stack and run each bottom-layer merge command it emits.`,
       ],
       firstLookThreads: [],
       firstLookComments: [],

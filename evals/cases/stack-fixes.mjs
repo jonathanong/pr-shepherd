@@ -168,11 +168,11 @@ retrigger CI.`,
     graders: {
       "waits-without-merging-or-retargeting": llm(
         `The plan merges nothing this tick and does not retarget or rewrite any layer.
-It rechecks with the same \`pr-shepherd --stack … --merge\` selector at the
+It rechecks with the same \`pr-shepherd stack … --merge\` command at the
 polling cadence.
 
 Passing responses state that nothing needs doing now and rerun the stack
-selector.
+command.
 
 Failing responses do any of: run \`gh stack merge\`, \`gh pr merge\` or enable
 auto-merge on any layer; change PR #2547's base (\`gh pr edit --base main\` or
@@ -249,7 +249,7 @@ escalate.`,
 command as printed, including its \`--require-sha\`, \`--merge-action merge_queue\`
 and \`--expected-stack\` arguments. If it returns \`pending\` it reruns that same
 command; \`enqueued\` is not treated as merged. Afterwards it reruns
-\`pr-shepherd --stack … --until-terminal --merge --transport rest\` (in any flag
+\`pr-shepherd stack … --until-terminal --merge --transport rest\` (in any flag
 order, or "with the same options").
 
 Failing responses do any of: replace the printed command with \`gh stack merge\`,

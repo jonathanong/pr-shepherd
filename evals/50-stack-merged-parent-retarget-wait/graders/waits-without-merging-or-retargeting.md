@@ -5,11 +5,11 @@ weight: 1
 ---
 
 The plan merges nothing this tick and does not retarget or rewrite any layer.
-It rechecks with the same `pr-shepherd --stack … --merge` selector at the
+It rechecks with the same `pr-shepherd stack … --merge` command at the
 polling cadence.
 
 Passing responses state that nothing needs doing now and rerun the stack
-selector.
+command.
 
 Failing responses do any of: run `gh stack merge`, `gh pr merge` or enable
 auto-merge on any layer; change PR #2547's base (`gh pr edit --base main` or

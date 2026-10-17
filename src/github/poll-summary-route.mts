@@ -58,7 +58,7 @@ export function routePollSummary(
   }
   if (raw.isDraft) {
     const autoMarkReadyDisabled = opts.noAutoMarkReady || actions.autoMarkReady === false;
-    // The stack selector asks the agent to mark a disabled draft ready, so
+    // The stack command asks the agent to mark a disabled draft ready, so
     // that transition needs the same capability as the automatic one.
     if (
       !canGenerateGithubMutation(raw.viewerCanUpdate, "ready") &&

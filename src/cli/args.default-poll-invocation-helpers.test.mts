@@ -72,7 +72,7 @@ describe("default poll invocation helpers", () => {
 
   it("accepts multiple PRs and rejects unknown args", () => {
     expect(validateDefaultPollArgs(["42", "43"])).toBe(true);
-    expect(validateDefaultPollArgs(["--stack", "42"])).toBe(true);
+    expect(validateDefaultPollArgs(["--stack", "42"])).toBe(false);
     expect(validateDefaultPollArgs(["--unknown"])).toBe(false);
   });
 });

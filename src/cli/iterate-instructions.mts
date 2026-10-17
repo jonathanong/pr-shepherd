@@ -4,8 +4,7 @@ import { buildQuotaAwareContinuation } from "../quota-warning.mts";
 import { formatPrUrl } from "../pr-reference.mts";
 import { AUTO_MARK_READY_DISABLED_HOLD } from "../commands/stack-work.mts";
 import { buildPrShepherdCommand, renderShellCommand } from "./runner.mts";
-import { eventWaitSteps } from "../commands/event-instructions.mts";
-import { playbookPointer } from "../commands/playbook-pointer.mts";
+import { tickWaitSteps } from "../commands/tick-instructions.mts";
 
 export function buildSimpleIterateInstructions(
   result: Exclude<IterateResult, { action: "fix_code" }>,
@@ -15,7 +14,7 @@ export function buildSimpleIterateInstructions(
       if (result.nextCheck) {
         return [
           `PR #${result.pr} is ready. Ready-delay has ${result.remainingSeconds}s left. Do not invent unrelated work.`,
-          ...eventWaitSteps(result.nextCheck),
+          ...tickWaitSteps(result.nextCheck),
         ];
       }
       const sentence = `PR #${result.pr} is ready. Ready-delay has ${result.remainingSeconds}s left. Rerun this command when the timer elapses. Do not invent unrelated work.`;
@@ -27,7 +26,7 @@ export function buildSimpleIterateInstructions(
       if (result.stackDraftHold)
         return buildStackDraftHoldInstructions(result, result.stackDraftHold);
       if (result.nextCheck) {
-        return ["Non-terminal — no action needed this tick.", ...eventWaitSteps(result.nextCheck)];
+        return ["Non-terminal — no action needed this tick.", ...tickWaitSteps(result.nextCheck)];
       }
       if (result.quotaWarning) {
         return [
@@ -41,8 +40,7 @@ export function buildSimpleIterateInstructions(
         "Non-terminal — no action needed this tick. Iterate immediately with the same options to continue.",
       ];
     case "mark_ready":
-      // Event mode reruns at once too: Shepherd is not polling, so no cadence applies.
-      if (result.quotaWarning && result.pollMode !== "event") {
+      if (result.quotaWarning) {
         return [
           buildQuotaAwareContinuation(
             result.quotaWarning,
@@ -59,7 +57,7 @@ export function buildSimpleIterateInstructions(
       if (result.merge.mode === "rest" && result.nextCheck)
         return [
           `Run the REST merge command exactly as printed: ${command}. \`enqueued\` is not merged.`,
-          ...eventWaitSteps(result.nextCheck),
+          ...tickWaitSteps(result.nextCheck),
         ];
       if (result.merge.mode === "rest")
         return [
@@ -103,30 +101,25 @@ export function buildSimpleIterateInstructions(
 
 /**
  * A held stack draft cannot advance by repeating its one-PR session, so hand control back
- * to the stack selector instead of asking for another immediate iteration.
+ * to the stack command instead of asking for another immediate iteration.
  */
 function buildStackDraftHoldInstructions(
   result: Extract<IterateResult, { action: "wait" }>,
   hold: StackDraftHold,
 ): string[] {
-  const event = result.pollMode === "event";
   const stackCommand = buildPrShepherdCommand([
-    "--stack",
+    "stack",
     formatPrUrl(result.repo, result.pr),
-    "--until-terminal",
-    ...(event ? ["--poll-mode", "event"] : []),
+    hold.once ? "--once" : "--until-terminal",
   ]).text;
-  const handoff = `a \`--stack\` selector listed this session, finish that selector's remaining steps and rerun it with its original flags; otherwise run ${inlineCode(stackCommand)}, adding \`--merge\` when merging was requested.`;
+  const handoff = `a \`stack\` command listed this session, finish that command's remaining steps and rerun it with its original flags; otherwise run ${inlineCode(stackCommand)}, adding \`--merge\` when merging was requested.`;
   const reason =
     hold.kind === "auto-mark-ready-disabled" ? AUTO_MARK_READY_DISABLED_HOLD : hold.kind;
-  const instruction = `PR #${result.pr} stays in draft because ${reason}, so repeating this one-PR session cannot advance it. If ${handoff}`;
-  const step = result.quotaWarning
-    ? buildQuotaAwareContinuation(result.quotaWarning, instruction)
-    : instruction;
-  if (!event) return [step];
+  const instruction = `PR #${result.pr} stays in draft because ${reason}, so repeating this one-PR session cannot advance it: do not rerun it or keep a wake-up for it. If ${handoff} After the handoff, follow only the \`stack\` command's output.`;
   return [
-    step,
-    `Event mode: do not rerun this one-PR session and keep no wake-up for it. After the handoff, follow only the stack selector's output; it ends the turn and schedules the next tick through its own \`nextCheck\`. ${playbookPointer("Cloud event loop")}`,
+    result.quotaWarning
+      ? buildQuotaAwareContinuation(result.quotaWarning, instruction)
+      : instruction,
   ];
 }
 

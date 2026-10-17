@@ -20,7 +20,7 @@ append_system_prompt: |
   explicitly and say why.
 ---
 Shepherd the native PR stack anchored at https://github.com/owner/repo/pull/342 and merge it.
-I already ran the first tick (`pr-shepherd --stack https://github.com/owner/repo/pull/342 --until-terminal --merge`) —
+I already ran the first tick (`pr-shepherd stack https://github.com/owner/repo/pull/342 --until-terminal --merge`) —
 here is what it returned. Take it from there.
 
 ---
@@ -41,7 +41,7 @@ nextAction: merge
 ## Instructions
 
 1. PR #342 is the highest open layer of stack #35 in `owner/repo` whose open lower layers are all ready. Run `GH_REPO=owner/repo gh stack merge 342 --yes --squash` to merge PR #342 and every unmerged layer below it. If `gh stack` is an unknown command, run `gh extension install github/gh-stack`, then rerun that merge command. Do not rebase, push, or run `gh stack push`.
-2. After the merge attempt, rerun this same `--stack --merge` selector; GitHub retargets the next layer onto `main`. Shepherd any layer that GitHub rejects or ejects.
+2. After the merge attempt, rerun this same `stack --merge` command; GitHub retargets the next layer onto `main`. Shepherd any layer that GitHub rejects or ejects.
 
 ---
 

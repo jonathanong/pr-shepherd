@@ -12,7 +12,12 @@ import type { RestMergeAction, RestMergeStackGuard } from "./github/rest-merge.m
 export type { RestMergeStackGuard } from "./github/rest-merge.mts";
 import type { MergeMethod } from "./config/merge-method.mts";
 import { runSuggestionPatches } from "./commands/suggestion-patches.mts";
-import { runIterateForMode, runPollSummaryForMode } from "./commands/event-mode.mts";
+import { runIterateTick, runPollSummaryTick } from "./commands/tick.mts";
+import {
+  applyCheckBlocker,
+  type CheckBlockerCommandResult,
+} from "./commands/apply-check-blocker.mts";
+import { parseBlockedByRef } from "./commands/check-blocker-ref.mts";
 import { runJournal, type JournalResult } from "./commands/journal/index.mts";
 import { validateJournalItem } from "./commands/journal/transform.mts";
 import {
@@ -34,11 +39,33 @@ import {
 } from "./pr-reference.mts";
 import type { ResolveResult } from "./comments/resolve.mts";
 import type {
-  BuildSuggestionPatchesResult,
+  SuggestResult,
   IterateCommandOptions,
   IterateResult,
   PollSummaryResult,
 } from "./types.mts";
+export type {
+  CancelReason,
+  IterateResult,
+  IterateResultFixCode,
+  IterateResultMerge,
+  NextCheck,
+  PollSummaryItem,
+  PollSummaryResult,
+  ShepherdAction,
+  ShepherdMergeStatus,
+  ShepherdStatus,
+  StackNextAction,
+  SuggestResult,
+  SuggestionPatchResult,
+} from "./types.mts";
+export type { ApplyMergeResult } from "./commands/apply-merge.mts";
+export type { MarkFilesAsViewedResult } from "./commands/mark-files-as-viewed.mts";
+export type { ApplyQueueRemovalResult } from "./commands/apply-queue-removal.mts";
+export type { CheckBlockerCommandResult } from "./commands/apply-check-blocker.mts";
+export type { JournalResult } from "./commands/journal/index.mts";
+export type { ResolveResult } from "./comments/resolve.mts";
+export type { ShepherdJournalExtraction } from "./journal/index.mts";
 import { getPullRequestBody, getRepoInfo } from "./github/client.mts";
 import { getLocalHeadSha } from "./commands/suggestion-patch-git.mts";
 import { extractShepherdJournal, type ShepherdJournalExtraction } from "./journal/index.mts";
@@ -68,16 +95,15 @@ type IterateOptions = Omit<
 export type SingleIterateInput = IterateOptions & {
   pr?: PrReference;
   prs?: never;
-  stack?: never;
 };
 
-export type AggregateIterateInput = IterateOptions &
-  (
-    | { prs: PrReference[]; pr?: never; stack?: never }
-    | { stack: PrReference; pr?: never; prs?: never }
-  );
+/** One aggregate tick over several PRs from one repository. */
+export type MultiIterateInput = IterateOptions & { prs: PrReference[]; pr?: never };
 
-export type IterateInput = SingleIterateInput | AggregateIterateInput;
+export type IterateInput = SingleIterateInput | MultiIterateInput;
+
+/** One aggregate tick over the native stack containing `pr`. */
+export type StackInput = IterateOptions & { pr: PrReference };
 
 export interface ReviewMutationsOperation {
   type: "review_mutations";
@@ -112,6 +138,15 @@ export interface AcknowledgeQueueRemovalOperation {
   removedAtUnix: number;
 }
 
+export interface CheckBlockerOperation {
+  /** Record (`blockedBy`) or clear (`clear: true`) an external blocker for one failing check. */
+  type: "check_blocker";
+  check: string;
+  /** PR/issue URL, `owner/repo#N`, or `issue:owner/repo#N`. */
+  blockedBy?: string;
+  clear?: boolean;
+}
+
 export interface MergeOperation {
   type: "merge";
   requireSha: string;
@@ -126,7 +161,8 @@ export type ApplyOperation =
   | ReviewMutationsOperation
   | MarkFilesViewedOperation
   | AppendJournalOperation
-  | AcknowledgeQueueRemovalOperation;
+  | AcknowledgeQueueRemovalOperation
+  | CheckBlockerOperation;
 
 export interface ApplyInput {
   transport?: GithubTransport;
@@ -140,7 +176,8 @@ export type ApplyOperationResult =
   | { type: "review_mutations"; result: ResolveResult }
   | { type: "mark_files_viewed"; result: MarkFilesAsViewedResult }
   | { type: "append_journal"; result: JournalResult }
-  | { type: "acknowledge_queue_removal"; result: ApplyQueueRemovalResult };
+  | { type: "acknowledge_queue_removal"; result: ApplyQueueRemovalResult }
+  | { type: "check_blocker"; result: CheckBlockerCommandResult };
 
 export interface ApplyResult {
   operations: ApplyOperationResult[];
@@ -152,7 +189,7 @@ export interface SuggestionPatchInput {
   description?: string;
 }
 
-export interface BuildSuggestionPatchesInput {
+export interface SuggestInput {
   transport?: GithubTransport;
   pr?: PrReference;
   suggestions: SuggestionPatchInput[];
@@ -165,10 +202,11 @@ export interface GetJournalInput {
 
 export interface PrShepherd {
   iterate(input?: SingleIterateInput): Promise<IterateResult>;
-  iterate(input: AggregateIterateInput): Promise<PollSummaryResult>;
+  iterate(input: MultiIterateInput): Promise<PollSummaryResult>;
   iterate(input: IterateInput): Promise<IterateResult | PollSummaryResult>;
+  stack(input: StackInput): Promise<PollSummaryResult>;
   apply(input: ApplyInput): Promise<ApplyResult>;
-  buildSuggestionPatches(input: BuildSuggestionPatchesInput): Promise<BuildSuggestionPatchesResult>;
+  suggest(input: SuggestInput): Promise<SuggestResult>;
   getJournal(input: GetJournalInput): Promise<ShepherdJournalExtraction>;
 }
 
@@ -196,7 +234,7 @@ export class PartialApplyError extends Error {
 
 /**
  * Creates the programmatic API. The returned object intentionally exposes only
- * read/plan, ordered apply, and suggestion-patch operations.
+ * read/plan (`iterate`, `stack`), ordered apply, and suggestion-patch (`suggest`) operations.
  */
 export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrShepherd {
   const cwd = options.cwd === undefined ? undefined : resolve(options.cwd);
@@ -209,23 +247,41 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
   }
 
   function iterate(input?: SingleIterateInput): Promise<IterateResult>;
-  function iterate(input: AggregateIterateInput): Promise<PollSummaryResult>;
+  function iterate(input: MultiIterateInput): Promise<PollSummaryResult>;
   function iterate(input: IterateInput): Promise<IterateResult | PollSummaryResult>;
   function iterate(input: IterateInput = {}): Promise<IterateResult | PollSummaryResult> {
     return runInClient(input, async () => {
-      validateIterateSelectors(input);
-      if ("prs" in input || "stack" in input) {
-        const target = await resolveAggregateIterateInput(input as AggregateIterateInput);
-        return runPollSummaryForMode(target);
+      if ("pr" in input && "prs" in input) {
+        throw new PrShepherdValidationError("iterate pr and prs selectors are mutually exclusive");
       }
-      const { pr: _pr, ...iterateOptions } = input;
+      if ("prs" in input) {
+        const { prs, pr: _pr, ...options } = input as MultiIterateInput;
+        const { numbers, repository } = await resolveSameRepositoryRefs(prs, "iterate.prs");
+        return runPollSummaryTick({ ...options, prNumbers: numbers, targetRepository: repository });
+      }
+      const { pr: _pr, prs: _prs, ...iterateOptions } = input;
       const target = resolvePrReference(input.pr);
-      return runIterateForMode({ ...iterateOptions, ...target, format: "json" });
+      return runIterateTick({ ...iterateOptions, ...target, format: "json" });
     });
   }
 
   return Object.freeze({
     iterate,
+
+    stack(input: StackInput) {
+      return runInClient(input ?? {}, async () => {
+        if (!input || input.pr === undefined) {
+          throw new PrShepherdValidationError("stack requires a PR reference");
+        }
+        const { pr, ...options } = input;
+        const { numbers, repository } = await resolveSameRepositoryRefs([pr], "stack.pr");
+        return runPollSummaryTick({
+          ...options,
+          stackPrNumber: numbers[0],
+          targetRepository: repository,
+        });
+      });
+    },
 
     getJournal(input: GetJournalInput) {
       return runInClient(input, async () => {
@@ -297,6 +353,18 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
                 results.push({ type: operation.type, result });
                 break;
               }
+              case "check_blocker": {
+                const result = await applyCheckBlocker({
+                  prNumber,
+                  targetRepository,
+                  checkName: operation.check,
+                  ...(operation.clear
+                    ? { clear: true as const }
+                    : { blocker: parseBlockedByRef(operation.blockedBy!)! }),
+                });
+                results.push({ type: operation.type, result });
+                break;
+              }
               case "acknowledge_queue_removal": {
                 const result = await applyQueueRemovalAck({
                   prNumber,
@@ -318,8 +386,8 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
       });
     },
 
-    buildSuggestionPatches(input: BuildSuggestionPatchesInput) {
-      validateSuggestionPatchesInput(input);
+    suggest(input: SuggestInput) {
+      validateSuggestInput(input);
       const { pr: _pr, ...options } = input;
       return runInClient(input, async () => {
         const target = resolvePrReference(input.pr);
@@ -329,12 +397,12 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
   });
 }
 
-async function resolveAggregateIterateInput(
-  input: AggregateIterateInput,
-): Promise<import("./types.mts").PollSummaryCommandOptions> {
-  const refs = "prs" in input ? input.prs : [input.stack];
-  if (!refs || refs.length === 0) {
-    throw new PrShepherdValidationError("iterate.prs must contain at least one PR reference");
+async function resolveSameRepositoryRefs(
+  refs: PrReference[] | undefined,
+  label: string,
+): Promise<{ numbers: number[]; repository: { owner: string; name: string } }> {
+  if (!Array.isArray(refs) || refs.length === 0) {
+    throw new PrShepherdValidationError(`${label} must contain at least one PR reference`);
   }
   const parsedRefs = refs.map((ref) => {
     const parsed = parsePrReference(ref);
@@ -364,19 +432,7 @@ async function resolveAggregateIterateInput(
     repository = nextRepository;
     if (!numbers.includes(prNumber)) numbers.push(prNumber);
   }
-  const { pr: _pr, prs: _prs, stack: _stack, ...options } = input;
-  return "prs" in input
-    ? { ...options, prNumbers: numbers, targetRepository: repository }
-    : { ...options, stackPrNumber: numbers[0], targetRepository: repository };
-}
-
-function validateIterateSelectors(input: IterateInput): void {
-  const selectorCount = ["pr", "prs", "stack"].filter((key) => key in input).length;
-  if (selectorCount > 1) {
-    throw new PrShepherdValidationError(
-      "iterate pr, prs, and stack selectors are mutually exclusive",
-    );
-  }
+  return { numbers, repository: repository! };
 }
 
 function validateApplyInput(input: ApplyInput): void {
@@ -425,6 +481,27 @@ function validateOperation(operation: ApplyOperation): void {
       {
         const validation = validateJournalItem(operation.item);
         if (!validation.ok) throw new PrShepherdValidationError(validation.error);
+      }
+      return;
+    case "check_blocker":
+      if (typeof operation.check !== "string" || operation.check === "") {
+        throw new PrShepherdValidationError("check_blocker.check must be the exact check name");
+      }
+      if (operation.clear !== undefined && typeof operation.clear !== "boolean") {
+        throw new PrShepherdValidationError("check_blocker.clear must be a boolean");
+      }
+      if (operation.clear === true && operation.blockedBy !== undefined) {
+        throw new PrShepherdValidationError(
+          "check_blocker takes either blockedBy or clear, not both",
+        );
+      }
+      if (
+        operation.clear !== true &&
+        (typeof operation.blockedBy !== "string" || !parseBlockedByRef(operation.blockedBy))
+      ) {
+        throw new PrShepherdValidationError(
+          "check_blocker.blockedBy must be a PR/issue URL, owner/repo#N, or issue:owner/repo#N",
+        );
       }
       return;
     case "acknowledge_queue_removal":
@@ -516,11 +593,9 @@ function validateMarkFilesViewed(operation: MarkFilesViewedOperation): void {
   }
 }
 
-function validateSuggestionPatchesInput(input: BuildSuggestionPatchesInput): void {
+function validateSuggestInput(input: SuggestInput): void {
   if (!input || !Array.isArray(input.suggestions) || input.suggestions.length === 0) {
-    throw new PrShepherdValidationError(
-      "buildSuggestionPatches.suggestions must be a non-empty array",
-    );
+    throw new PrShepherdValidationError("suggest.suggestions must be a non-empty array");
   }
   const seen = new Set<string>();
   for (const suggestion of input.suggestions) {

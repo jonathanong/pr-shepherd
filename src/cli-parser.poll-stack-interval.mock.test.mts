@@ -95,7 +95,7 @@ describe("poll interval periods", () => {
   });
 
   it("sleeps intervalSeconds times the factor for a stack without --interval", async () => {
-    await main(["node", "shepherd", "--stack", "43"]);
+    await main(["node", "shepherd", "stack", "43"]);
 
     expect(mockRunAggregatePoll).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -115,7 +115,7 @@ describe("poll interval periods", () => {
   });
 
   it("does not multiply an explicit --interval on a stack", async () => {
-    await main(["node", "shepherd", "--stack", "43", "--interval", "15"]);
+    await main(["node", "shepherd", "stack", "43", "--interval", "15"]);
 
     expect(mockRunAggregatePoll).toHaveBeenCalledWith(
       expect.objectContaining({ stackPrNumber: 43, intervalSeconds: 15 }),
@@ -125,7 +125,7 @@ describe("poll interval periods", () => {
   it("keeps a fractional stack product instead of rounding it to zero", async () => {
     Object.assign(pollConfig, { intervalSeconds: 0.2, stackIntervalFactor: 2 });
 
-    await main(["node", "shepherd", "--stack", "43"]);
+    await main(["node", "shepherd", "stack", "43"]);
 
     expect(mockRunAggregatePoll).toHaveBeenCalledWith(
       expect.objectContaining({ intervalSeconds: 0.4 }),

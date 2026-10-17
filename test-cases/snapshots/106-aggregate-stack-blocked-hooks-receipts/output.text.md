@@ -18,4 +18,4 @@ nextAction: shepherd
 2. Run `pr-shepherd https://github.com/owner/repo/pull/441 --until-terminal`.
 3. Run `pr-shepherd https://github.com/owner/repo/pull/442 --until-terminal`.
 4. Run `pr-shepherd https://github.com/owner/repo/pull/443 --until-terminal`.
-5. After the selected one-PR sessions, rerun this same `--stack` selector.
+5. After the selected one-PR sessions, rerun this same `stack` command.

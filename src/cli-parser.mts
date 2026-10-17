@@ -12,15 +12,11 @@ import { rejectUnknownFlags } from "./cli/unknown-flags.mts";
 import { isDefaultPollInvocation, validateDefaultPollArgs } from "./cli/default-poll.mts";
 import { USAGE, helpKeyForArgs, maybePrintHelp } from "./cli/help.mts";
 import { formatMutateResult } from "./cli/formatters.mts";
-import {
-  handleSuggestionPatches,
-  handleIterate,
-  handleMarkFilesAsViewed,
-} from "./cli/handlers.mts";
+import { handleSuggest, handleIterate, handleMarkFilesAsViewed } from "./cli/handlers.mts";
 import { handleJournal } from "./cli/journal-handler.mts";
 import { handleJournalExtract } from "./cli/journal-extract-handler.mts";
 import { handlePlaybook } from "./cli/playbook-handler.mts";
-import { handlePoll } from "./cli/poll-handler.mts";
+import { handlePoll, handleStack } from "./cli/poll-handler.mts";
 import {
   warnPrrcThreadIds,
   validateRequireSha,
@@ -29,11 +25,6 @@ import {
 import { handleCheckBlocker } from "./cli/check-blocker-handler.mts";
 import { handleQueueRemoval } from "./cli/queue-removal-handler.mts";
 import { setupLog } from "./log/setup.mts";
-import {
-  rejectInvalidPollModeFlag,
-  runInEventStateScope,
-  runInPollModeScope,
-} from "./cli/event-state-scope.mts";
 import { handleApplyMerge } from "./cli/apply-merge-handler.mts";
 import { getLocalHeadSha } from "./commands/suggestion-patch-git.mts";
 import { extractTransportArgs } from "./cli/transport-args.mts";
@@ -120,8 +111,7 @@ async function dispatch(argv: string[]): Promise<void> {
     return;
   }
 
-  // Event mode enters the durable state scope before the log resolves its path.
-  return runInEventStateScope(args, () => dispatchLogged(argv));
+  return dispatchLogged(argv);
 }
 
 async function dispatchLogged(argv: string[]): Promise<void> {
@@ -141,8 +131,11 @@ async function dispatchLogged(argv: string[]): Promise<void> {
     case "apply":
       await handleApply(args.slice(1));
       break;
-    case "build-suggestion-patches":
-      await handleSuggestionPatches(args.slice(1));
+    case "suggest":
+      await handleSuggest(args.slice(1));
+      break;
+    case "stack":
+      await handleStack(args.slice(1));
       break;
     case "admin":
       await handleAdmin(args.slice(1));
@@ -210,7 +203,7 @@ function readVersion(): string {
 
 async function handleLogFile(args: string[]): Promise<void> {
   if (maybePrintHelp(args, "admin log-file")) return;
-  if (rejectInvalidPollModeFlag(args, "admin log-file")) return;
+  if (rejectUnknownFlags(args, "admin log-file", [])) return;
   const jsonOut =
     args.some((a) => a === "--format=json") ||
     (() => {
@@ -219,8 +212,7 @@ async function handleLogFile(args: string[]): Promise<void> {
     })();
 
   try {
-    // Report the log the matching tick writes: event mode keeps it in durable state.
-    const result = await runInPollModeScope(args, () => runLogFile());
+    const result = await runLogFile();
     process.stdout.write(jsonOut ? `${JSON.stringify(result, null, 2)}\n` : `${result.path}\n`);
   } catch (e) {
     process.stderr.write(`pr-shepherd: admin log-file: ${String(e)}\n`);

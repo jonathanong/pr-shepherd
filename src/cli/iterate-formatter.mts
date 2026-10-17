@@ -19,7 +19,7 @@ import { formatActivityLine } from "./iterate-activity-formatter.mts";
 import { branchStateSegment } from "./iterate-branch-segment.mts";
 import { insertRuleAutoResolveSection } from "../commands/rule-auto-resolve-format.mts";
 import { formatTransportEvidence } from "./transport-formatter.mts";
-import { formatNextCheckLines, formatPollModeSegment } from "./next-check-format.mts";
+import { formatNextCheckLines } from "./next-check-format.mts";
 import { formatPrUrl } from "../pr-reference.mts";
 
 /**
@@ -74,7 +74,7 @@ export function formatIterateResult(
       ? ` · **merge** \`${result.mergeStateStatus}\``
       : "";
   const stateSeg = verbose || result.state !== "OPEN" ? ` · **state** \`${result.state}\`` : "";
-  const baseLine = `**status** \`${result.status}\`${mergeSeg}${reviewDecisionSeg}${stateSeg}${repoSeg}${baseBranchSeg}${formatPollModeSegment(result)}`;
+  const baseLine = `**status** \`${result.status}\`${mergeSeg}${reviewDecisionSeg}${stateSeg}${repoSeg}${baseBranchSeg}`;
 
   const branchSeg = branchStateSegment(result);
   let summaryLine: string | null;

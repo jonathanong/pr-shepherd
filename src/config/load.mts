@@ -30,18 +30,6 @@ export function isInstructionStyle(value: unknown): value is InstructionStyle {
   return INSTRUCTION_STYLES.some((style) => style === value);
 }
 
-export const POLL_MODES = ["auto", "poll", "event"] as const;
-
-/**
- * `poll` blocks and loops. `event` runs one tick and reports `nextCheck`. `auto` resolves to
- * `event` when `CLAUDE_CODE_REMOTE=true` and to `poll` everywhere else.
- */
-export type PollMode = (typeof POLL_MODES)[number];
-
-export function isPollMode(value: unknown): value is PollMode {
-  return POLL_MODES.some((mode) => mode === value);
-}
-
 export interface GraphqlQuotaWarningBand {
   remainingPercent: number;
   pollIntervalMinutes: number;
@@ -54,7 +42,6 @@ interface PollConfig {
   timeoutSeconds: number;
   debounceSeconds: number;
   quietStatus: boolean;
-  mode: PollMode;
   /**
    * Longest gap between GraphQL snapshots while conditional REST reads report an idle PR
    * unchanged. `0` disables the REST change detectors on the GraphQL transport.
@@ -344,19 +331,12 @@ function parsePollConfig(value: unknown): PollConfig {
       `Invalid config: poll.quietStatus must be a boolean, got ${JSON.stringify(quietStatus)}`,
     );
   }
-  const mode = record["mode"];
-  if (!isPollMode(mode)) {
-    throw new Error(
-      `Invalid config: poll.mode must be one of ${POLL_MODES.join(", ")}, got ${JSON.stringify(mode)}`,
-    );
-  }
   return {
     intervalSeconds,
     stackIntervalFactor,
     timeoutSeconds,
     debounceSeconds,
     quietStatus,
-    mode,
     reconcileSeconds,
   };
 }
@@ -516,7 +496,6 @@ const KNOWN_NESTED_KEYS: Record<string, ReadonlySet<string>> = {
     "timeoutSeconds",
     "debounceSeconds",
     "quietStatus",
-    "mode",
     "reconcileSeconds",
   ]),
   watch: new Set(["readyDelayMinutes", "graphqlQuotaWarnings"]),

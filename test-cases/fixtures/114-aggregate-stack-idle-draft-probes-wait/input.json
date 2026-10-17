@@ -2,7 +2,7 @@
   "description": "A clean upper draft is marked ready by the agent while a lower draft is still waiting on CI. The lower probe stays idle; the upper draft is not held.",
   "mode": "aggregate",
   "args": [
-    "--stack",
+    "stack",
     "https://github.com/owner/repo/pull/442",
     "--no-auto-mark-ready",
     "--debounce",

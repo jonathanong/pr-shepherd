@@ -36,7 +36,7 @@ npm install
 
 `--format=json` and `--format=text` (default) must surface equivalent information. Every field exposed in JSON output should have a corresponding representation in text output, and vice versa. Do not add data to one format without updating the other.
 
-The invariant extends to MCP: a tool's `structuredContent` and its Markdown `content` must be produced from the same projection options, so the two channels surface equivalent information. Tools whose CLI counterpart prints the raw result as JSON (`apply`, `build_suggestion_patches`) return that raw result unprojected in `structuredContent`.
+The invariant extends to MCP: a tool's `structuredContent` and its Markdown `content` must be produced from the same projection options, so the two channels surface equivalent information. Tools whose CLI counterpart prints the raw result as JSON (`apply`, `suggest`) return that raw result unprojected in `structuredContent`.
 
 ## GitHub API
 
@@ -52,7 +52,7 @@ All git invocations from the CLI must be read-only (`status`, `rev-parse`, `log`
 
 **Why:** mutating `git` subprocesses can leave `.git/index.lock` behind on hook failure, breaking every subsequent operation in the worktree until cleaned up by hand. The calling agent already owns the git lifecycle and has the retry / cleanup / sandbox-bypass machinery to handle this correctly.
 
-Instead, emit a suggestion: build the patch / commit message / file list and return it in the result, with a `## Instructions` block telling the caller what to run. The canonical example is `build-suggestion-patches` — it produces the patches and suggested git commands; the agent executes them.
+Instead, emit a suggestion: build the patch / commit message / file list and return it in the result, with a `## Instructions` block telling the caller what to run. The canonical example is `suggest` — it produces the patches and suggested git commands; the agent executes them.
 
 ### Push access is a usage precondition
 

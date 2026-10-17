@@ -11,22 +11,23 @@ describe("pollCommandFields --instructions", () => {
     );
   });
 
-  it("carries event mode into row commands and bounded draft probes", () => {
-    expect(pollCommandFields("o/r", 7, false, { pollMode: "event" }).pollCommand).toContain(
-      "--until-terminal --poll-mode event",
-    );
-    const probe = pollCommandFields("o/r", 7, true, {
-      pollMode: "event",
-      noAutoMarkReady: true,
-    });
-    expect(probe).toMatchObject({ pollProbe: true });
-    expect(probe.pollCommand).toContain("--poll-mode event");
-    expect(pollCommandFields("o/r", 7, false, { pollMode: "poll" }).pollCommand).not.toContain(
-      "--poll-mode",
-    );
-  });
-
   it("omits the flag when no style was requested", () => {
     expect(pollCommandFields("o/r", 7, false, {}).pollCommand).not.toContain("--instructions");
+  });
+});
+
+describe("pollCommandFields single ticks", () => {
+  it("routes each PR to one iterate tick instead of a sleeping poll", () => {
+    const fields = pollCommandFields("o/r", 7, false, { tick: true, readyDelaySeconds: 60 });
+    expect(fields).toEqual({
+      pollCommand: "pr-shepherd iterate https://github.com/o/r/pull/7 --ready-delay 60s",
+    });
+  });
+
+  it("keeps a bounded draft probe as one iterate tick without loop flags", () => {
+    expect(pollCommandFields("o/r", 7, true, { tick: true, noAutoMarkReady: true })).toEqual({
+      pollCommand: "pr-shepherd iterate https://github.com/o/r/pull/7 --no-auto-mark-ready",
+      pollProbe: true,
+    });
   });
 });

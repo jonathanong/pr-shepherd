@@ -1,7 +1,7 @@
 {
   "description": "A closed-unmerged dependency below an open child is a human-only escalation, never an aggregate repair or merge instruction.",
   "mode": "aggregate",
-  "args": ["--stack", "https://github.com/owner/repo/pull/372", "--debounce", "0s"],
+  "args": ["stack", "https://github.com/owner/repo/pull/372", "--debounce", "0s"],
   "expectedExitCode": 13,
   "expectedNextAction": "escalate",
   "expectedReason": "actionable",

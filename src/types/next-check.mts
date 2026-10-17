@@ -7,7 +7,7 @@ export type NextCheckReason =
   | "safety-net";
 
 /**
- * Event mode runs one tick, so the caller owns the next wake-up. `at` is an RFC3339 UTC time
+ * A single tick does not poll, so the caller owns the next wake-up. `at` is an RFC3339 UTC time
  * rounded up to the minute; `inSeconds` is measured from the same instant the tick ran.
  */
 export interface NextCheck {

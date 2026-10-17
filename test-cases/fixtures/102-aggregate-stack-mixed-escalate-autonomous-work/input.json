@@ -1,7 +1,7 @@
 {
   "description": "A human escalation coexists with independent FIX_CODE and WAIT row work; the aggregate dispatches Shepherd sessions first while retaining the human-action evidence for the next stack poll.",
   "mode": "aggregate",
-  "args": ["--stack", "https://github.com/owner/repo/pull/403", "--debounce", "0s"],
+  "args": ["stack", "https://github.com/owner/repo/pull/403", "--debounce", "0s"],
   "expectedExitCode": 16,
   "expectedNextAction": "shepherd",
   "expectedReason": "actionable",

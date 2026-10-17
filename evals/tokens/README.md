@@ -150,7 +150,7 @@ stack's life. It is played three ways over **identical GitHub content**:
 
 | arm         | what the agent runs                                                                                                                                                                                                                                                  |
 | ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| pr-shepherd | `pr-shepherd <PR> --until-terminal` or `pr-shepherd --stack <PR> --until-terminal`, then the printed `apply review`, merge or `gh stack merge` command when there is one                                                                                             |
+| pr-shepherd | `pr-shepherd <PR> --until-terminal` or `pr-shepherd stack <PR> --until-terminal`, then the printed `apply review`, merge or `gh stack merge` command when there is one                                                                                             |
 | gh CLI      | `gh pr view --json <fields>` plus one `gh api graphql` thread query per PR per tick, then whatever the step needs: `gh run view --log-failed \| tail -n 200`, check-run annotations, `gh api … /replies`, a GraphQL resolve per thread, `gh pr ready`, `gh pr merge` |
 | GitHub MCP  | five `pull_request_read` calls per PR per tick (`get`, `get_check_runs`, `get_review_comments`, `get_reviews`, `get_comments`), then `get_job_logs`, `add_reply_…`, `resolve_review_thread`, `update_pull_request`, `merge_pull_request`                             |
 
@@ -432,8 +432,8 @@ The event arm models a local (non-cloud) session that waits without polling
 the full snapshot. A blocking `pr-shepherd wait` runs in the background and
 wakes the agent only on a relevant change or at `nextCheck`. That command does
 not exist yet; this is a costing for the webhook/event source brainstorm,
-#544. It is not the cloud event mode (`poll.mode`,
-[docs/cloud.md](../../docs/cloud.md)), where the host wakes the session on PR
+#544. It is not the cloud single-tick loop
+([docs/cloud.md](../../docs/cloud.md)), where the host wakes the session on PR
 events and Shepherd runs one tick per wake; this arm models a local session
 whose wait detects changes itself. The arm is informational: it is not gated (see "The gate") and has its
 own REPORT.md section and Summary lines. `eventArm` in

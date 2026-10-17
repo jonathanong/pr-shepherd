@@ -11,7 +11,7 @@
   },
   "description": "All four open native-stack layers have READY receipts after the two lower layers merged. With --merge, the bottom open PR still targets its merged parent instead of main, so wait for GitHub retargeting and emit no stack merge command.",
   "args": [
-    "--stack",
+    "stack",
     "https://github.com/vouchington/vouchington/pull/2547",
     "--merge",
     "--timeout",

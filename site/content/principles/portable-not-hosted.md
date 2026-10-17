@@ -17,7 +17,7 @@ MCP server — that any caller can run, inspect, and kill.
 ## One state machine, three ways in
 
 The CLI, the MCP server, and the programmatic `pr-shepherd` package all resolve to the
-same `iterate`/`apply`/`build_suggestion_patches` behavior, sharing the same command
+same `iterate`/`apply`/`suggest` behavior, sharing the same command
 implementations and token resolution underneath:
 
 > A version-matched stdio server is the canonical agent integration; it shares command

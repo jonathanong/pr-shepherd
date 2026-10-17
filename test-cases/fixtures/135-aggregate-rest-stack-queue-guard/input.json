@@ -2,7 +2,7 @@
   "description": "A REST native-stack queue request binds its observed stack and prefix, and ignores a configured direct method the repository disables.",
   "mode": "aggregate",
   "args": [
-    "--stack",
+    "stack",
     "https://github.com/owner/repo/pull/342",
     "--merge",
     "--debounce",

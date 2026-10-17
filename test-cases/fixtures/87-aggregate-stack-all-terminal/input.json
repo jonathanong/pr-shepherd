@@ -1,7 +1,7 @@
 {
   "mode": "aggregate",
   "description": "A complete native stack whose rows are merged returns all-terminal in bottom-to-top order.",
-  "args": ["--stack", "44"],
+  "args": ["stack", "44"],
   "expectedReason": "all_terminal",
   "expectedExitCode": 0,
   "expectedNextAction": "cancel",

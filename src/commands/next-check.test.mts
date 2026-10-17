@@ -13,6 +13,14 @@ describe("earliestNextCheck", () => {
     expect(earliestNextCheck([], NOW_MS)).toBeUndefined();
   });
 
+  it("never schedules sooner than a minimum interval", () => {
+    expect(earliestNextCheck([{ reason: "merge-queue", seconds: 300 }], NOW_MS, 600)).toEqual({
+      at: "2024-05-15T19:18:00Z",
+      inSeconds: 660,
+      reason: "merge-queue",
+    });
+  });
+
   it("picks the soonest candidate and rounds up to the minute", () => {
     const next = earliestNextCheck(
       [

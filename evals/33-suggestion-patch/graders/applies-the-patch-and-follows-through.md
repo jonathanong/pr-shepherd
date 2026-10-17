@@ -4,7 +4,7 @@ focus: last_message
 weight: 1
 ---
 
-The CLI only builds the patch. After `build-suggestion-patches`, the plan
+The CLI only builds the patch. After `suggest`, the plan
 applies the returned patch, commits and pushes it to the PR head branch, then
 runs the printed `apply review` command from the pushed checkout, so its
 `--require-sha` resolves to the pushed SHA, with `$DISMISS_MESSAGE` replaced by

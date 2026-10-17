@@ -31,7 +31,7 @@ export function buildNativeStackRebaseInstruction(
         : "trunk" in start
           ? `trunk \`${start.trunk}\``
           : `bottom open layer PR #${start.bottomPr}`;
-    return `Use the repository's stack-update procedure for native stack #${stackNumber} in \`${repo}\`, starting at ${boundary} and preserving the ordered parent boundaries of every affected upper layer. Read membership with REST-backed Shepherd \`--stack\` output and update and push affected branches using the caller's git workflow. ${playbookPointer("Branch update")}`;
+    return `Use the repository's stack-update procedure for native stack #${stackNumber} in \`${repo}\`, starting at ${boundary} and preserving the ordered parent boundaries of every affected upper layer. Read membership with REST-backed Shepherd \`stack\` output and update and push affected branches using the caller's git workflow. ${playbookPointer("Branch update")}`;
   }
   const [checkout, command] =
     "parentBranch" in start

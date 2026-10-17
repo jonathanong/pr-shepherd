@@ -52,7 +52,7 @@ A summary thread with more than five comments is incomplete and differs from its
 
 ## Usage by command
 
-Costs assume the PR number was passed; inferring it from the branch adds 1 point (`PrNumberByBranch`). MCP `iterate`, `apply`, and `build_suggestion_patches` use the same paths as the CLI.
+Costs assume the PR number was passed; inferring it from the branch adds 1 point (`PrNumberByBranch`). MCP `iterate`, `apply`, and `suggest` use the same paths as the CLI.
 
 ### One PR
 
@@ -90,7 +90,7 @@ On a measured ready PR (#481), the receipt evidence took one request and 2 point
 
 ### Several PRs
 
-`pr-shepherd --stack PR`, `pr-shepherd` with two or more PRs, and MCP aggregate `iterate` read the summary, not per-layer `BatchPr`. An explicit multi-PR selection uses `PollSummary` in chunks of 50. Each stack tick is:
+`pr-shepherd stack PR`, `pr-shepherd` with two or more PRs, and MCP aggregate `iterate` read the summary, not per-layer `BatchPr`. An explicit multi-PR selection uses `PollSummary` in chunks of 50. Each stack tick is:
 
 - One `PollStackSummary` at the "Summary" cost above (4 entries on the anchor's first tick, then the rest).
 - `PollSummaryAnnotationProbe` only for layers that otherwise look ready.
@@ -121,7 +121,7 @@ READY-receipt fingerprints leave the handoff fields out, so a bot editing a hidd
 | MCP `get_journal`               | `GetPrBody` once, then local extraction                                                                            | 1                                            |
 | MCP `extract_journal`           | local extraction from the supplied body                                                                            | 0                                            |
 | `apply check-blocker`           | none when the PR number is passed                                                                                  | 0                                            |
-| `build-suggestion-patches`      | `SuggestionThreads`                                                                                                | 1 for a handful of threads                   |
+| `suggest`                       | `SuggestionThreads`                                                                                                | 1 for a handful of threads                   |
 
 - For 1 to 20 GraphQL reply thread IDs, one `ApplyReviewPreflight` read replaces the first `ReplyThreadTranscripts`, `GetPrHeadSha`, and `ReplyRecoveryEvidence` reads (3 read points down to 1); standalone reads still run for anything it cannot verify.
 - [`runResolveMutate`](../src/commands/resolve-mutate.mts) reads only requested reply thread IDs (`nodes(ids:)`) to store seen-marker transcripts; GitHub still authorizes the mutation. Incomplete or mismatched threads get no marker, but their mutations still run.
