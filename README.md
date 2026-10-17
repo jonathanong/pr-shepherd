@@ -4,6 +4,43 @@ Drive a pull request to merge-ready with a coding agent. It works with Claude Co
 
 **Estimated per PR session: −42% cost and −19% turns vs. `gh`, −77% cost vs. the GitHub MCP server. While waiting on CI: ~60 GraphQL points an hour vs. ~360 for `gh pr checks --watch`.**
 
+## What it does
+
+- Gathers the PR's review items, CI failures, and merge requirements in one call.
+- Returns one action with numbered instructions and exact commands. `CANCEL` ends the loop and carries none.
+- Never mutates git. The agent edits, commits, pushes, and decides what each comment deserves.
+
+```text
+$ pr-shepherd 123
+
+# PR #123 [FIX_CODE]
+
+**status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo`
+**summary** 3 passing
+
+## Review threads
+
+### `threadId=PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate/index.mts:42` (@alice · MEMBER)
+
+> The variable name is misleading.
+
+## Failing checks
+
+- `24697658766` — `CI › lint / typecheck / test (22.x)` [conclusion: FAILURE]
+  > oxfmt
+
+## Instructions
+
+1. Fix each warranted item.
+2. Triage `## Failing checks`. Playbook: "CI failure triage".
+3. Commit and push any changes.
+4. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal 123 '- <decision>'`
+5. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha HEAD`
+6. Rerun Shepherd now.
+```
+
+More features are in [docs/features.md](docs/features.md).
+
 ## Outcomes
 
 | Outcome                                                                 | Headline                                                                                                                          | Evidence                                                                 |
@@ -16,23 +53,6 @@ Drive a pull request to merge-ready with a coding agent. It works with Claude Co
 | [Works across agents and stacks](#works-across-agents-and-environments) | 3 agent plugins plus any stdio MCP client; GraphQL and REST transports; native stacked PRs                                        | [MCP](docs/mcp.md), [cloud](docs/cloud.md)                               |
 
 **[jongleberry.com/pr-shepherd](https://jongleberry.com/pr-shepherd/)** covers the why and the design principles.
-
-## What it does
-
-- Gathers the PR's review items, CI failures, and merge requirements in one call.
-- Returns one action with numbered instructions and exact commands. `CANCEL` ends the loop and carries none.
-- Never mutates git. The agent edits, commits, pushes, and decides what each comment deserves.
-
-```mermaid
-flowchart LR
-  A[Agent] -->|iterate PR| S[pr-shepherd]
-  S -->|batched, conditional reads| G[(GitHub)]
-  G --> S
-  S -->|one action + numbered instructions| A
-  A -->|fix, push, run the printed commands| G
-```
-
-Without Shepherd, an agent fans out across `gh`, the GitHub MCP server, and GraphQL to rebuild PR state, then guesses the next step. Details for each outcome follow; more features are in [docs/features.md](docs/features.md).
 
 ## Outcome details
 
@@ -179,34 +199,7 @@ Requirements:
 pr-shepherd 42                       # shell: poll for work (270s cap; --until-terminal removes it)
 ```
 
-Leave out the PR number to use the current branch. Example `FIX_CODE` output:
-
-```text
-# PR #123 [FIX_CODE]
-
-**status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo`
-**summary** 3 passing
-
-## Review threads
-
-### `threadId=PRRT_kwDOSGizTs58XB1L` — `src/commands/iterate/index.mts:42` (@alice · MEMBER)
-
-> The variable name is misleading.
-
-## Failing checks
-
-- `24697658766` — `CI › lint / typecheck / test (22.x)` [conclusion: FAILURE]
-  > oxfmt
-
-## Instructions
-
-1. Fix each warranted item.
-2. Triage `## Failing checks`. Playbook: "CI failure triage".
-3. Commit and push any changes.
-4. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal 123 '- <decision>'`
-5. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha HEAD`
-6. Rerun Shepherd now.
-```
+Leave out the PR number to use the current branch.
 
 ## Documentation
 

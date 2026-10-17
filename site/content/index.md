@@ -1,7 +1,9 @@
 ---
 title: "pr-shepherd"
-description: "Deterministic Draft → Merged PRs for agents. Gather all PR context in one poll, get back exactly one next action."
+description: "Drive a pull request to merge-ready with your coding agent. One call gathers the whole PR; one action says what to do next. Works with Claude Code, Codex, Grok, and any MCP client."
 docs:
+  - path: "README.md"
+    label: "README — outcomes, evidence, and install"
   - path: "docs/README.md"
     label: "Full documentation index"
 ---
@@ -9,24 +11,23 @@ docs:
 <div class="hero">
 <p class="kicker">for agents finishing pull requests</p>
 
-# Deterministic Draft → Merged PRs for agents
+# Get your agent's PRs to merge-ready
 
-<p class="tagline">An agent finishing a PR should think about code, not reconstruct GitHub state or invent a next-step policy each tick.</p>
+<p class="tagline">Your coding agent fixes the code. Shepherd tells it what GitHub wants next: every review comment, every failing check, and every merge requirement in one call.</p>
 </div>
 
-Without Shepherd it fans out across GitHub MCP, `gh`, and GraphQL, then guesses what to do
-with the result. Shepherd does two jobs instead: **gather all context for a PR** in one
-invocation, then **emit exactly one deterministic action** for the calling agent to run.
+**About 42% cheaper per PR than `gh` and 77% cheaper than the GitHub MCP server.** Waiting on
+CI costs about 60 GraphQL points an hour instead of 360.
 
 <div class="terminal">
 <div class="terminal-bar"><span></span><span></span><span></span></div>
 
 ```text
-$ pr-shepherd 123 --merge
+$ pr-shepherd 123
 
 # PR #123 [FIX_CODE]
 
-status  UNRESOLVED_COMMENTS · merge  CLEAN · state  OPEN
+status UNRESOLVED_COMMENTS · repo owner/repo
 summary 3 passing
 
 ## Review threads
@@ -38,28 +39,52 @@ summary 3 passing
 ## Failing checks
 
 - CI › lint / typecheck / test (22.x) [conclusion: FAILURE]
+  > oxfmt
 
 ## Instructions
 
-1. Review each item under Review threads and Failing checks and decide
-   whether it needs a code change.
-2. Apply every warranted fix, then push to the PR head branch.
-3. Run the generated review-mutation command, then iterate again.
+1. Fix each warranted item.
+2. Triage ## Failing checks. Playbook: "CI failure triage".
+3. Commit and push any changes.
+4. Journal key decisions: pr-shepherd apply journal 123 '- <decision>'
+5. Reply to the thread: pr-shepherd apply review 123 --reply-thread-ids …
+6. Rerun Shepherd now.
 ```
 
 </div>
 
-The agent still decides whether a comment or a CI failure needs a code change — Shepherd
-does not classify signal vs. noise, and it never mutates git itself. It only tells you
-what happened and what to run next.
+## What you get
 
-## Six actions, nothing else
+<div class="card-grid">
 
-Every `iterate` tick — CLI, MCP, or the programmatic API — collapses to exactly one of
-these. There is no seventh action and no "it depends."
+- [**It sees the whole PR**](docs/handled-cases.md) One call returns review threads, comments,
+  CI failures with log excerpts, and the real merge requirements. It handles 60 GitHub edge
+  cases, like a cancelled run that needs a rerun rather than a code fix.
+- [**It costs less to run**](https://github.com/jonathanong/pr-shepherd/blob/main/evals/tokens/README.md)
+  An estimated 42% lower cost per PR session than `gh`, and 77% lower than the GitHub MCP
+  server.
+- [**Your agent knows what to do next**](https://github.com/jonathanong/pr-shepherd/blob/main/evals/README.md)
+  Every tick ends in one action with numbered steps. On tricky GitHub cases, eval scores
+  rise from 0.82 to 0.94, about two-thirds fewer misses.
+- [**It's easy on your rate limit**](docs/github-api.md) Waiting on CI costs about 60
+  GraphQL points an hour, against about 360 for `gh pr checks --watch`. Idle waits cost
+  about 4.
+- [**It never touches your git**](docs/escalations.md) Shepherd runs zero git mutations and
+  never merges on its own. It hands off to a human only for 10 specific reasons.
+- [**It works with your agent**](docs/mcp.md) Plugins for Claude Code, Codex, and Grok, an
+  MCP server for any other client, and a CLI for shells and CI. Native stacked PRs are
+  supported.
+
+</div>
+
+## How it works
+
+Your agent asks Shepherd about a PR. Shepherd reads GitHub and answers with exactly one
+action:
 
 <ul class="action-badges">
 <li>WAIT</li>
+<li>READY</li>
 <li>MARK_READY</li>
 <li>FIX_CODE</li>
 <li>MERGE</li>
@@ -67,11 +92,8 @@ these. There is no seventh action and no "it depends."
 <li>ESCALATE</li>
 </ul>
 
-`FIX_CODE` is the only action that means a code change is needed. `MERGE` also hands work
-back — it emits a head-pinned merge or enqueue command for the agent to run, rather than
-merging itself — so iteration continues after both. Only `ESCALATE` hands the PR to a
-human; `CANCEL` just stops polling — merged, closed, or a clean PR that settled through its
-ready-delay.
+The agent follows the printed steps, pushes, and asks again until the PR is ready. It still
+decides what each comment deserves, and only `ESCALATE` needs a human.
 
 ## Install
 
@@ -96,8 +118,7 @@ claude /plugin install pr-shepherd
 codex plugin marketplace add jonathanong/pr-shepherd
 ```
 
-Then install/enable `pr-shepherd` from Codex — adding the marketplace alone doesn't
-install the plugin.
+Then enable the `pr-shepherd` plugin in Codex.
 
 </div>
 
@@ -122,17 +143,27 @@ npx --yes --package pr-shepherd@latest pr-shepherd-mcp
 
 </div>
 
+<div class="install-method">
+
+**CLI, for shells and CI**
+
+```bash
+npm install -g pr-shepherd
+```
+
 </div>
+
+</div>
+
+Then ask your agent to shepherd a PR, for example `/goal /pr-shepherd:pr-shepherd 42` in
+Claude Code.
 
 ## Where to go next
 
 <div class="card-grid">
 
-- [**Principles**](/principles/) — the beliefs behind the design: why full context beats
-  streaming, and why deterministic orchestration and agentic judgment are a split, not a
-  hierarchy.
-- [**Full documentation**](docs/README.md) — the exhaustive, agent-facing spec every page
-  on this site links out to for the details.
-- [**GitHub**](https://github.com/jonathanong/pr-shepherd) — source, issues, and releases.
+- [**README**](README.md) The outcomes in detail, with the evidence behind each number.
+- [**Principles**](/principles/) The beliefs behind the design.
+- [**GitHub**](https://github.com/jonathanong/pr-shepherd) Source, issues, and releases.
 
 </div>
