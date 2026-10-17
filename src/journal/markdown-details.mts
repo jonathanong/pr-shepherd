@@ -25,21 +25,34 @@ export type RawHtmlState = {
   mode: "comment" | "data" | "raw-text" | "tag";
   quote: '"' | "'" | null;
   rawTag: string | null;
+  terminator: RegExp;
 };
 
-export const rawHtmlState = (): RawHtmlState => ({ mode: "data", quote: null, rawTag: null });
+export const rawHtmlState = (): RawHtmlState => ({
+  mode: "data",
+  quote: null,
+  rawTag: null,
+  terminator: /--!?>/,
+});
+
+// Comments, CDATA sections, and bogus comments such as `<!x>`, `<?x>`, and `</ x>`.
+const COMMENTS: Array<[RegExp, RegExp]> = [
+  [/^<!--/, /--!?>/],
+  [/^<!\[CDATA\[/, /\]\]>/],
+  [/^<(?:[!?]|\/[^A-Za-z>])/, />/],
+];
 
 /**
  * Return `1` per `<details>` opener and `-1` per closer that the browser
- * creates from a raw HTML block line. Tags inside comments, raw-text elements,
- * and (possibly multiline) attribute values do not count.
+ * creates from a raw HTML block line. Tags inside comments, CDATA, raw-text
+ * elements, and (possibly multiline) attribute values do not count.
  */
 export function rawDetailsTags(line: string, state: RawHtmlState): Array<1 | -1> {
   const tags: Array<1 | -1> = [];
   let i = 0;
   while (i < line.length) {
     if (state.mode === "comment") {
-      const end = /--!?>/.exec(line.slice(i));
+      const end = state.terminator.exec(line.slice(i));
       if (!end) break;
       state.mode = "data";
       i += end.index + end[0].length;
@@ -58,12 +71,17 @@ export function rawDetailsTags(line: string, state: RawHtmlState): Array<1 | -1>
     } else {
       const open = line.indexOf("<", i);
       if (open === -1) break;
-      if (line.startsWith("<!--", open)) {
+      const comment = COMMENTS.map(
+        ([start, end]) => [start.exec(line.slice(open)), end] as const,
+      ).find(([start]) => start);
+      if (comment) {
         state.mode = "comment";
-        i = open + 4;
+        state.terminator = comment[1];
+        i = open + comment[0]![0].length;
         continue;
       }
-      const tag = /^<(\/?)([A-Za-z][A-Za-z0-9-]*)/.exec(line.slice(open));
+      // Tag names run until whitespace, `/`, or `>`, so `details:x` is not `details`.
+      const tag = /^<(\/?)([A-Za-z][^\s/>]*)/.exec(line.slice(open));
       if (!tag) {
         i = open + 1;
         continue;
