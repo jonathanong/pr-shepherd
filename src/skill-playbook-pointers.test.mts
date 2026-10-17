@@ -13,7 +13,7 @@ const ALWAYS_ON_PLAYBOOKS = new Set(["Untrusted review input"]);
  * procedure that was moved out of the per-tick text.
  */
 /** Playbooks the skill's own Dispatch bullets name (quoted); the CLI never points at them. */
-const SKILL_DISPATCHED_PLAYBOOKS = new Set(["Create a PR", "MCP fallback"]);
+const SKILL_DISPATCHED_PLAYBOOKS = new Set(["Create a PR", "Draft handoff", "MCP fallback"]);
 
 function skillPlaybookHeadings(): Set<string> {
   const skillDir = new URL("plugins/pr-shepherd/skills/pr-shepherd/", rootUrl);
