@@ -1,10 +1,8 @@
-import { detailsTags, type DetailsDepth, rawDetailsTags } from "./markdown-details.mts";
+import { detailsTags, rawDetailsTags, rawHtmlState } from "./markdown-details.mts";
+import { CLOSE, closeJournalContainer, JOURNAL_SUMMARY, LEGACY } from "./journal-container.mts";
 import { isSafeMarkdownInsertionPoint, scanMarkdownLines } from "./markdown-line.mts";
 import { setextParagraphStart } from "./markdown-setext.mts";
-const LEGACY = /^ {0,3}##[ \t]+Shepherd[ \t]+Journal(?:[ \t]+#+)?[ \t]*$/;
-const JOURNAL_SUMMARY = /^<summary>\s*Shepherd\s+Journal\b/i;
 const SETEXT = /^ {0,3}(?:=+|-+)[ \t]*$/;
-const CLOSE = "</details>";
 const OPEN = "<details>";
 const SUMMARY = "<summary>Shepherd Journal</summary>";
 const stripCr = (s: string): string => s.replace(/\r$/, "");
@@ -18,35 +16,11 @@ export type ShepherdJournalBounds = {
   format: "details" | "legacy";
   start: number;
 };
-function close(
-  lines: string[],
-  syntax: ReturnType<typeof scanMarkdownLines>,
-  start: number,
-): number | null {
-  const depth: DetailsDepth = { outer: 1, raw: 0 };
-  for (let i = start; i < lines.length; i++) {
-    if (syntax[i]!.nested) continue;
-    if (syntax[i]!.rawHtml) {
-      if (rawDetailsTags(lines[i]!, depth) && depth.outer === 0) return null;
-      continue;
-    }
-    depth.raw = 0;
-    if (syntax[i]!.ignored) continue;
-    const visible = syntax[i]!.visiblePrefix;
-    if (JOURNAL_SUMMARY.test(visible.trimStart()) || LEGACY.test(visible)) return null;
-    depth.outer += detailsTags(visible, false);
-    const closes = detailsTags(visible, true);
-    if (closes) {
-      depth.outer -= closes;
-      if (depth.outer <= 0) return depth.outer === 0 && lines[i] === CLOSE ? i : null;
-    }
-  }
-  return null;
-}
 export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | null | "error" {
   const syntax = scanMarkdownLines(lines);
   const found: ShepherdJournalBounds[] = [];
-  const depth: DetailsDepth = { outer: 0, raw: 0 };
+  let detailsDepth = 0;
+  let html = rawHtmlState();
   let legacy: ShepherdJournalBounds | null = null;
   for (let i = 0; i < lines.length; i++) {
     if (
@@ -61,27 +35,34 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
     }
     if (syntax[i]!.nested) continue;
     if (syntax[i]!.rawHtml) {
-      rawDetailsTags(lines[i]!, depth);
+      // Raw-HTML details stay open past the block; stray closers are ignored, as in the browser.
+      for (const tag of rawDetailsTags(lines[i]!, html))
+        detailsDepth = Math.max(0, detailsDepth + tag);
       continue;
     }
-    depth.raw = 0;
+    html = rawHtmlState();
     if (syntax[i]!.ignored) continue;
     const visible = syntax[i]!.visiblePrefix;
-    depth.outer += detailsTags(visible, false);
+    detailsDepth += detailsTags(visible, false);
     const closes = detailsTags(visible, true);
     if (closes) {
-      if (depth.outer >= closes) {
-        depth.outer -= closes;
+      if (detailsDepth >= closes) {
+        detailsDepth -= closes;
         continue;
       }
       return "error";
     }
     if (JOURNAL_SUMMARY.test(visible.trimStart())) {
-      if (depth.outer !== 1 || lines[i] !== SUMMARY || lines[i - 1] !== OPEN || lines[i + 1] !== "")
+      if (
+        detailsDepth !== 1 ||
+        lines[i] !== SUMMARY ||
+        lines[i - 1] !== OPEN ||
+        lines[i + 1] !== ""
+      )
         return "error";
-      const end = close(lines, syntax, i + 2);
+      const end = closeJournalContainer(lines, syntax, i + 2);
       if (end === null) return "error";
-      depth.outer--;
+      detailsDepth--;
       found.push({
         contentEnd: end,
         contentStart: i + 2,
@@ -93,7 +74,7 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
       continue;
     }
     if (LEGACY.test(visible)) {
-      if (depth.outer !== 0 || legacy) return "error";
+      if (detailsDepth !== 0 || legacy) return "error";
       legacy = {
         contentEnd: lines.length,
         contentStart: i + 1,
@@ -110,7 +91,7 @@ export function scanShepherdJournal(lines: string[]): ShepherdJournalBounds | nu
     }
     if (legacy && legacy.end === lines.length && lines[i]!.trim() === CLOSE) return "error";
   }
-  return depth.outer !== 0 || found.length > 1 ? "error" : (found[0] ?? null);
+  return detailsDepth !== 0 || found.length > 1 ? "error" : (found[0] ?? null);
 }
 function trim(lines: string[]): string[] {
   let a = 0;

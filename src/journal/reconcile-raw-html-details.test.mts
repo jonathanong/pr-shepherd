@@ -47,6 +47,27 @@ describe("reconcileShepherdJournal with <details> closed inside raw HTML blocks"
     expect(reconcileShepherdJournal("New body", live)).toMatchObject({ ok: false });
   });
 
+  it.each([
+    ["a comment", "<div><!-- </details> -->"],
+    ["a multiline comment", "<div><!--\n</details>\n-->"],
+    ["a raw-text element", "<div><script>\n</details>\n</script>"],
+    ["a multiline quoted attribute", '<div title="\n</details>\n">'],
+  ])("ignores closers inside %s in raw HTML", (_, raw) => {
+    const live = `<details>\n<summary>Notes</summary>\n\n${raw}\n\n</details>\n\n${journal(["- Keep me."])}`;
+    expect(reconcileShepherdJournal("New body", live)).toEqual({
+      body: `New body\n\n${journal(["- Keep me."])}`,
+      ok: true,
+    });
+  });
+
+  it("keeps raw-HTML details open across the raw block's closing blank line", () => {
+    const live = `<details>\n<summary>Notes</summary>\n\n<div></details><details>\n\n${journal(["- Nested."])}`;
+    expect(reconcileShepherdJournal("New body", live)).toMatchObject({ ok: false });
+    expect(reconcileShepherdJournal("New body", "<div></details><details>\n\nText.")).toMatchObject(
+      { ok: false },
+    );
+  });
+
   it("ignores stray raw-HTML closers without an open details block", () => {
     const live = `<p>x</p>\n</details>\n\n${journal(["- Keep me."])}`;
     expect(reconcileShepherdJournal("New body", live)).toEqual({
