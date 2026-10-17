@@ -289,7 +289,7 @@ The lowest open layer is selected by native-stack order, even when GitHub still 
 
 `pr-shepherd iterate`, `stack --once`, the MCP and library `iterate` and `stack`, and the looping commands inside a Claude Code cloud session (`CLAUDE_CODE_REMOTE=true`) run one tick and never sleep. The action, exit code, and every section below are unchanged. One field is added; see [cloud.md](cloud.md) for the full contract.
 
-- **`nextCheck`** is `{ at, inSeconds, reason }`, printed as a `**nextCheck**` header line after `**activity**`. It is omitted for `fix_code` (its immediate rerun reports one), `cancel`, `escalate`, a `merge` whose command is not a REST merge, `mark_ready`, and an aggregate that is all terminal, has only `cancel`/`escalate` rows, or has only final draft-verification probes alongside terminal rows. A looping command that sleeps never prints it.
+- **`nextCheck`** is `{ at, inSeconds, reason }`, printed as a `**nextCheck**` header line after `**activity**`. It is omitted for `fix_code` (its rerun reports one; a quota warning delays that rerun), `cancel`, `escalate`, a `merge` whose command is not a REST merge, `mark_ready`, and an aggregate that is all terminal, has only `cancel`/`escalate` rows, or has only final draft-verification probes alongside terminal rows. A looping command that sleeps never prints it.
 
 | `nextCheck.reason` | Meaning                                                                                                                     |
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
@@ -308,7 +308,7 @@ Instruction changes when `nextCheck` is present:
 | Aggregate            | One appended numbered step with the same rule and one `nextCheck` for the selection, including the stack stall deadline (`stall-timeout`) and, when a stack merge is printed, a `merge-pending` recheck. Stack steps drop "Recheck at the configured polling cadence", and a pending REST stack merge reruns after the wake-up instead of at the polling cadence.                                                                                                    |
 | Clean disabled draft | Returns `CANCEL` with no `nextCheck`; the aggregate command handles other layers and ends when only these terminal drafts remain.                                                                                                                                                                                                                                                                                                                                    |
 
-`mark_ready`, `fix_code`, and the native-stack draft hold print the same instructions as a sleeping poll: `mark_ready` and `fix_code` rerun at once, and a draft hold hands off to the `stack` command.
+`mark_ready`, `fix_code`, and the native-stack draft hold print the same instructions as a sleeping poll: `mark_ready` and `fix_code` rerun at once, unless the result carries a quota warning, in which case the continuation says to wait at least the configured quota interval before the next tick. A draft hold hands off to the `stack` command.
 
 In cloud sessions (`CLAUDE_CODE_REMOTE=true`), a generated `apply review` command that replies carries `--adopt-existing-replies`, so rerunning it after a lost state directory adopts a reply GitHub already shows instead of posting it twice. A direct `apply review` without the flag forwards every supplied ID.
 
