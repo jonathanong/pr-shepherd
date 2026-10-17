@@ -25,7 +25,8 @@
       "minItems": 1,
       "type": "array",
       "items": {
-        "type": "string"
+        "type": "string",
+        "pattern": "\\S"
       }
     },
     "bot-usernames": {
@@ -283,7 +284,10 @@
           "default": [],
           "type": "array",
           "items": {
-            "type": "string"
+            "type": "string",
+            "not": {
+              "pattern": "^(?:--repo(?:=|$)|-R|--auto(?:=|$)|--disable-auto(?:=|$)|--match-head-commit(?:=|$)|--admin(?:=|$)|--body-file(?:=|$)|-F|--help(?:=|$)|-h)"
+            }
           }
         }
       },

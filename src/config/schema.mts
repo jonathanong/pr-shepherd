@@ -59,30 +59,40 @@ const regexPattern = z
   // `z.toJSONSchema` drops the refine, so let editors check the pattern.
   .meta({ format: "regex" });
 
-const mergeCommandArgs = strings().superRefine((args, ctx) => {
-  for (const arg of args) {
-    const owned = SHEPHERD_OWNED_MERGE_FLAGS.some(
-      (flag) =>
-        arg === flag ||
-        arg.startsWith(`${flag}=`) ||
-        (flag.startsWith("-") && !flag.startsWith("--") && arg.startsWith(flag)),
-    );
-    if (owned) ctx.addIssue({ code: "custom", message: `cannot include Shepherd-owned ${arg}` });
-  }
-  let strategies: string[];
-  try {
-    strategies = findMergeStrategies(args);
-  } catch (err) {
-    ctx.addIssue({ code: "custom", message: err instanceof Error ? err.message : String(err) });
-    return;
-  }
-  if (strategies.length > 1) {
-    ctx.addIssue({
-      code: "custom",
-      message: `includes multiple merge strategies: ${strategies.join(", ")}`,
-    });
-  }
-});
+const escapeRegex = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// The same Shepherd-owned flag test as the refine below, stated for editors: the exact flag or
+// `--flag=value`, and any argument that starts with a short flag.
+const SHEPHERD_OWNED_MERGE_FLAG_PATTERN = `^(?:${SHEPHERD_OWNED_MERGE_FLAGS.map((flag) =>
+  flag.startsWith("--") ? `${escapeRegex(flag)}(?:=|$)` : escapeRegex(flag),
+).join("|")})`;
+
+const mergeCommandArgs = z
+  .array(z.string().meta({ not: { pattern: SHEPHERD_OWNED_MERGE_FLAG_PATTERN } }))
+  .superRefine((args, ctx) => {
+    for (const arg of args) {
+      const owned = SHEPHERD_OWNED_MERGE_FLAGS.some(
+        (flag) =>
+          arg === flag ||
+          arg.startsWith(`${flag}=`) ||
+          (flag.startsWith("-") && !flag.startsWith("--") && arg.startsWith(flag)),
+      );
+      if (owned) ctx.addIssue({ code: "custom", message: `cannot include Shepherd-owned ${arg}` });
+    }
+    let strategies: string[];
+    try {
+      strategies = findMergeStrategies(args);
+    } catch (err) {
+      ctx.addIssue({ code: "custom", message: err instanceof Error ? err.message : String(err) });
+      return;
+    }
+    if (strategies.length > 1) {
+      ctx.addIssue({
+        code: "custom",
+        message: `includes multiple merge strategies: ${strategies.join(", ")}`,
+      });
+    }
+  });
 
 const quotaWarningBand = z
   .strictObject({
@@ -115,7 +125,7 @@ export const configSchema = z.strictObject({
     .strictObject({ transport: z.enum(["auto", "graphql", "rest"]).default("auto") })
     .prefault({}),
   "cli-command": z
-    .array(z.string().refine((arg) => arg.trim() !== "", "must be a non-empty string"))
+    .array(z.string().regex(/\S/, "must be a non-empty string"))
     .min(1)
     .default(() => ["pr-shepherd"]),
   "bot-usernames": strings().default(() => [...DEFAULT_BOT_USERNAMES]),
