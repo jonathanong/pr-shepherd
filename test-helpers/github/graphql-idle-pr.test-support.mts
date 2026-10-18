@@ -10,6 +10,11 @@ export interface IdlePrState {
   branchFailures: number;
   branchThrottled?: boolean;
   checkStatus: "COMPLETED" | "IN_PROGRESS";
+  /**
+   * The `ci` check run was re-run: REST's latest check run is attempt 2 in progress and the
+   * GraphQL context shows it running, while the aggregate rollup and suite still read SUCCESS.
+   */
+  rerun?: boolean;
 }
 
 export const idlePrState = (): IdlePrState => ({
@@ -23,6 +28,7 @@ const page = { pageInfo: { hasPreviousPage: false, startCursor: null }, nodes: [
 function idlePr(live: IdlePrState) {
   const done = live.checkStatus === "COMPLETED";
   const check = { status: live.checkStatus, conclusion: done ? "SUCCESS" : null };
+  const context = live.rerun ? { status: "IN_PROGRESS", conclusion: null } : check;
   return makeRawPr({
     number: 101,
     mergeable: "MERGEABLE",
@@ -44,7 +50,7 @@ function idlePr(live: IdlePrState) {
               state: done ? "SUCCESS" : "PENDING",
               contexts: {
                 pageInfo: { hasNextPage: false, endCursor: null },
-                nodes: [{ __typename: "CheckRun", id: "CR_1", name: "ci", ...check }],
+                nodes: [{ __typename: "CheckRun", id: "CR_1", name: "ci", ...context }],
               },
             },
             checkSuites: {
@@ -57,6 +63,11 @@ function idlePr(live: IdlePrState) {
     },
   });
 }
+
+const rerunChecks = {
+  total_count: 1,
+  check_runs: [{ id: 2, name: "ci", status: "in_progress", conclusion: null, run_attempt: 2 }],
+};
 
 /** The detector reads, in the order an idle wait tick makes them. */
 export const IDLE_PR_DETECTORS = [
@@ -78,7 +89,7 @@ export async function serveIdlePr(live: IdlePrState): Promise<void> {
     else if (path === `${prefix}/pulls/101`)
       response.end(JSON.stringify({ ...pull, mergeable_state: "blocked" }));
     else if (path === `${prefix}/commits/aaa111/check-runs`)
-      response.end(JSON.stringify({ total_count: 0, check_runs: [] }));
+      response.end(JSON.stringify(live.rerun ? rerunChecks : { total_count: 0, check_runs: [] }));
     else if (path === `${prefix}/commits/aaa111/check-suites`)
       response.end(JSON.stringify({ total_count: 0, check_suites: [] }));
     else if (path === `${prefix}/pulls/101/reviews`) response.end(JSON.stringify(live.reviews));

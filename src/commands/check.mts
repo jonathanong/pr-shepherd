@@ -133,9 +133,14 @@ async function runScopedCheck(
       : undefined;
   if (detectors && "reused" in detectors)
     return refreshReused(detectors.reused, detectors.baseTipOid);
-  const reuse = reuseFingerprint
-    ? await fingerprintReuser(prNumber, repo, stateKey, config)
-    : undefined;
+  // A detector change, or a first seeding read, means the stored report may predate what the
+  // detectors saw; an unchanged first-page fingerprint cannot vouch for it (it omits
+  // per-check-run fields), so take a full snapshot instead.
+  const detectorsChanged = detectors !== undefined && "changed" in detectors;
+  const reuse =
+    reuseFingerprint && !detectorsChanged
+      ? await fingerprintReuser(prNumber, repo, stateKey, config)
+      : undefined;
   const batchOptions = {
     paginateApprovedReviews,
     terminalShortCircuit: true,

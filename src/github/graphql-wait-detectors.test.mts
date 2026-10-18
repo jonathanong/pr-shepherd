@@ -37,14 +37,15 @@ const tick = (fingerprintCache: boolean, mode: "graphql" | "auto" = "graphql") =
 const charged = () =>
   log.filter((entry) => entry.status !== 304).map((entry) => entry.path.split("?")[0]);
 
-/** Cold tick, then the seeding tick: detectors read cold beside one fingerprint-hit BatchPr. */
+/** Cold tick, then the seeding tick: detectors read cold beside one full BatchPr snapshot. */
 async function seed(state: IdlePrState) {
   await serveIdlePr(state);
   const cold = await tick(false);
   expect(cold.report.action).toBe("wait");
   expect(charged()).toEqual(["/graphql"]);
   const seeding = await tick(true);
-  expect(seeding.report).toMatchObject({ action: "wait", fingerprintReused: true });
+  expect(seeding.report.action).toBe("wait");
+  expect(seeding.report.fingerprintReused).toBeUndefined();
   expect(charged()).toEqual([...IDLE_PR_DETECTORS, "/graphql"]);
 }
 

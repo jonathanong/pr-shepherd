@@ -186,7 +186,9 @@ A GraphQL-mode poll continuation runs conditional REST detectors instead of `Bat
 flowchart TD
   A[Eligible continuation tick] --> B[8 conditional REST reads]
   B -->|all 304 and last GraphQL snapshot younger than poll.reconcileSeconds| C[Replay stored report, no GraphQL]
-  B -->|any change, stale, or error| D[BatchPr: fingerprint hit or full snapshot]
+  B -->|same digest but stale, or error| D[BatchPr: fingerprint hit or full snapshot]
+  B -->|no digest recorded yet, or digest changed| G[BatchPr: full snapshot, no fingerprint reuse]
+  G --> E
   D --> E[Record detector validators in fingerprint.json]
   B -->|secondary rate limit| F[Exit 75]
 ```
@@ -198,7 +200,7 @@ flowchart TD
 | `GET /pulls/{n}/reviews`, `/issues/{n}/comments`, `/pulls/{n}/comments` |                                           |
 | `GET /branches/{base}`                                                  | `commit.sha` keys the cached base compare |
 
-They share the REST transport's `rest-cache/` ETags ([conditional reads](rest.md#conditional-reads)), so unchanged resources answer free 304s. The first eligible tick seeds them with charged reads. A detector failure never triggers a transport fallback. `poll.reconcileSeconds` defaults to 900; `0` disables the detectors.
+They share the REST transport's `rest-cache/` ETags ([conditional reads](rest.md#conditional-reads)), so unchanged resources answer free 304s. The first eligible tick seeds them with charged reads. When no digest is recorded beside the stored report yet (that seeding tick), or the detectors differ from the recorded digest, the stored report may predate what they read, so the tick skips fingerprint reuse and builds a full snapshot: the first-page fingerprint summarizes only the aggregate check rollup and suites, so a re-run check run can change the detectors without changing it. The digest is then recorded beside the fresh report, never beside an older one. A detector-eligible fingerprint is complete, so that full snapshot is the same single first page (1 point) as a fingerprint hit. A detector failure never triggers a transport fallback. `poll.reconcileSeconds` defaults to 900; `0` disables the detectors.
 
 Not visible to detectors, so picked up at the next reconcile or any other change: thread resolution and unresolution, branch rule or protection changes, someone else enqueuing the PR, and GraphQL-only fields such as `reviewDecision`.
 

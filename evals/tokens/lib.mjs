@@ -911,7 +911,10 @@ export const GRAPHQL_WAIT_DETECTORS = 8;
  *
  * Entering an idle wait costs one seeding round: the first detector round
  * after the idle report is built has no stored digest, so every detector read
- * is a charged 200 on a cold cache and the tick still reads `BatchPr`
+ * is a charged 200 on a cold cache and the tick still reads `BatchPr`. With
+ * no stored digest the tick skips fingerprint reuse and builds a full snapshot
+ * (issue #614), but a detector-eligible fingerprint is complete, so that full
+ * read is the same one first page, 1 point, as a fingerprint hit
  * (src/github/graphql-wait-detectors.test.mts). Eight is one request per
  * detector, an upper bound with warm validators and a lower one when check
  * runs, suites or statuses span more than one 100-entry page.
