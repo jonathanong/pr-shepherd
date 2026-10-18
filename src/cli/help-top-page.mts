@@ -49,7 +49,7 @@ Common flags:
 Iterate flags:
   --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Example: 15m.
   --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
-  --no-auto-mark-ready           Do not convert draft PRs to ready for review.
+  --no-auto-mark-ready           Leave draft PRs in draft; stop when otherwise ready.
   --no-auto-cancel-actionable    Legacy no-op; workflow runs are never cancelled.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
   --instructions playbook|inline Render fix_code steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
@@ -70,7 +70,7 @@ Clean variants:
   all                  Remove all pr-shepherd state.
 
 Exit codes: 0 done, 10-19 PR state, 64-78 shepherd failed (sysexits.h).
-  0   CANCEL (merged or ready-delay elapsed)
+  0   CANCEL (merged, ready-delay elapsed, or clean draft left in draft by disabled auto mark-ready)
   10  WAIT or READY
   11  MARK_READY
   12  FIX_CODE

@@ -3,7 +3,7 @@ import { row, stack } from "../../test-helpers/commands/poll-summary-stack.test-
 import { freshLoadConfig, writeRc } from "../../test-helpers/config/load-test-support.mts";
 import { runWithGithubTransport } from "../github/transport.mts";
 import { planPrefixDrain } from "./stack-drain.mts";
-import { appendMarkReadyInstructions, splitStackWork } from "./stack-work.mts";
+import { splitStackWork } from "./stack-work.mts";
 import {
   buildBranchPushInstruction,
   buildNativeStackRebaseInstruction,
@@ -29,7 +29,7 @@ describe("REST native stack instructions", () => {
     expect(push).toContain("If no heads changed, do not push");
   });
 
-  it("authorizes a cloud ready transition only after the bounded disabled-draft probe", () => {
+  it("holds a clean disabled cloud draft without a ready transition", () => {
     const draft = row(101, 1, {
       transport: "rest",
       isDraft: true,
@@ -39,12 +39,8 @@ describe("REST native stack instructions", () => {
       pollCommand: "pr-shepherd probe-101",
     });
     const work = splitStackWork([draft], new Set());
-    const instructions: string[] = [];
-    appendMarkReadyInstructions(instructions, work.markReady);
-    expect(instructions).toHaveLength(1);
-    expect(instructions[0]).toContain("Run `pr-shepherd probe-101` first");
-    expect(instructions[0]).toContain("pull/101 --transport rest");
-    expect(instructions[0]).toContain("otherwise follow the probe's instructions");
+    expect(work.held).toEqual([draft]);
+    expect(work.sessions).toEqual([]);
   });
 
   it("requests a guarded merge of the ready prefix without GraphQL commands", async () => {

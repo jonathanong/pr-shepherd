@@ -1,5 +1,5 @@
 {
-  "description": "A clean upper draft is marked ready by the agent while a lower draft is still waiting on CI. The lower probe stays idle; the upper draft is not held.",
+  "description": "A clean upper draft stays held while a lower draft is still waiting on CI. The selector continues to wait only for the pending lower layer.",
   "mode": "aggregate",
   "args": [
     "--stack",
@@ -12,9 +12,9 @@
     "--interval",
     "2s"
   ],
-  "expectedReason": "actionable",
-  "expectedExitCode": 16,
-  "expectedNextAction": "shepherd",
+  "expectedReason": "timeout",
+  "expectedExitCode": 10,
+  "expectedNextAction": "wait",
   "aggregateSummary": {
     "selection": {
       "kind": "stack",
@@ -56,7 +56,7 @@
         "repo": "owner/repo",
         "title": "Upper draft",
         "url": "https://github.com/owner/repo/pull/442",
-        "action": "wait",
+        "action": "cancel",
         "reasons": [
           "draft-auto-mark-ready-disabled"
         ],
@@ -73,8 +73,7 @@
           "position": 2,
           "baseRefName": "main"
         },
-        "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/442 --timeout 1s --debounce 0s --no-auto-mark-ready",
-        "pollProbe": true
+        "owned": true
       }
     ]
   }

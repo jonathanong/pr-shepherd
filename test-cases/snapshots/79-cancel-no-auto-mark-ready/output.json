@@ -1,0 +1,1 @@
+{"action":"cancel","pr":42,"repo":"owner/repo","status":"READY","mergeStatus":"DRAFT","isDraft":true,"summary":{"passing":1},"reason":"auto-mark-ready-disabled","log":"CANCEL: PR #42 stays in draft because automatic mark-ready is disabled — stopping"}

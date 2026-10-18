@@ -164,7 +164,7 @@ third arm.
 | `19-stack-merge-prefix`                     | `90`    | `gh stack merge <prefix>`, shepherd the stale tip, rerun                             |
 | `20-stack-closed-parent-escalate`           | `100`   | Closed parent: stop and ask, don't pick a repair                                     |
 | `21-stack-all-terminal-stop`                | `87`    | Every layer merged: stop (ceiling guard; flat Δ expected)                            |
-| `22-stack-auto-ready-disabled-probe`        | `104`   | Probe first; `gh pr ready` only on the described `WAIT`                              |
+| `22-stack-auto-ready-disabled-probe`        | `104`   | Clean draft with auto-mark-ready disabled: stop; no ready command or repeat probe   |
 | `23-behind-base-rebase-hint`                | `73`    | Rebase `--force-with-lease` before pushing the review fix                            |
 | `24-stack-merge-missing-extension`          | `97`    | Missing `gh stack`: install it, don't merge per layer                                |
 | `25-multi-pr-cancel-is-per-pr`              | `03`    | One PR's `CANCEL` ends only its loop; keep shepherding #43                           |

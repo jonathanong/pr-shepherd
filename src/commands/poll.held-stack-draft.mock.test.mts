@@ -1,36 +1,32 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   mockRunIterate,
-  makeWaitResult,
   makeCancelResult,
   registerPollHooks,
 } from "../../test-helpers/commands/poll.test-support.mts";
 import { runPoll } from "./poll.mts";
-import type { IterateResult, StackDraftHold } from "../types.mts";
 
 registerPollHooks();
 
-function heldWait(stackDraftHold: StackDraftHold): IterateResult {
-  return makeWaitResult({ stackDraftHold } as Partial<IterateResult>);
-}
-
-describe("runPoll — held native stack drafts", () => {
-  it.each([["a session without automatic mark-ready", { kind: "auto-mark-ready-disabled" }]] as [
-    string,
-    StackDraftHold,
-  ][])("keeps polling a draft held by %s", async (_case, hold) => {
-    mockRunIterate.mockResolvedValueOnce(heldWait(hold)).mockResolvedValue(makeCancelResult());
-
-    const pollPromise = runPoll({
-      prNumber: 42,
-      format: "text",
-      intervalSeconds: 30,
-      timeoutSeconds: 300,
-      untilTerminal: true,
+describe("runPoll — automatic mark-ready disabled", () => {
+  it("returns a clean draft stop immediately without another poll", async () => {
+    mockRunIterate.mockResolvedValue({
+      ...makeCancelResult(),
+      action: "cancel",
+      reason: "auto-mark-ready-disabled",
+      log: "CANCEL: automatic mark-ready disabled",
+      isDraft: true,
     });
-    await vi.advanceTimersByTimeAsync(30_000);
 
-    await expect(pollPromise).resolves.toMatchObject({ action: "cancel" });
-    expect(mockRunIterate).toHaveBeenCalledTimes(2);
+    await expect(
+      runPoll({
+        prNumber: 42,
+        format: "text",
+        intervalSeconds: 30,
+        timeoutSeconds: 300,
+        untilTerminal: true,
+      }),
+    ).resolves.toMatchObject({ action: "cancel", reason: "auto-mark-ready-disabled" });
+    expect(mockRunIterate).toHaveBeenCalledTimes(1);
   });
 });

@@ -30,16 +30,13 @@ function text(result: { instructions?: string[] }): string {
 }
 
 describe("stack selector agent work", () => {
-  it("hands a disabled draft's ready transition to the agent while an upper draft keeps its session", () => {
+  it("leaves a clean disabled draft held while an upper draft keeps its session", () => {
     const result = withPollSummaryInstructions(
       stack([disabledDraft(1, 1), row(2, 2, { isDraft: true })]),
       false,
     );
     expect(result).toMatchObject({ nextAction: "shepherd", reason: "actionable" });
-    expect(text(result)).toContain(`Run \`${probe(1)}\` first.`);
-    expect(text(result)).toContain(
-      "If it returns `[WAIT]` saying PR #1 stays in draft because automatic mark-ready is disabled for this session, run `gh pr ready 1 -R acme/widgets`; otherwise complete its instructions and leave PR #1 in draft this round.",
-    );
+    expect(text(result)).not.toContain("gh pr ready");
     expect(text(result)).toContain("pull/2 --until-terminal");
     expect(text(result)).not.toContain("human action");
   });
@@ -103,47 +100,61 @@ describe("stack selector agent work", () => {
     expect(text(result)).toContain("Keep shepherding other PRs before the handoff.");
   });
 
-  it("marks a draft ready before a human handoff on another layer", () => {
+  it("stops for a human handoff on another layer without promoting a held draft", () => {
     const result = withPollSummaryInstructions(
       stack([disabledDraft(1, 1), row(2, 2, { action: "escalate", reasons: ["fix-thrash"] })]),
       false,
     );
-    expect(result.nextAction).toBe("shepherd");
-    expect(text(result)).toContain("gh pr ready 1 -R acme/widgets");
-    expect(text(result)).toContain("Keep shepherding other PRs before the handoff.");
+    expect(result.nextAction).toBe("escalate");
+    expect(text(result)).not.toContain("gh pr ready");
   });
 
   it("keeps a stale-ancestry child's session instead of marking it ready", () => {
     const result = withPollSummaryInstructions(
-      stack([row(1, 1, ready), row(2, 2, ready), disabledDraft(3, 3)], true),
+      stack([row(1, 1, ready), row(2, 2, ready), disabledDraft(3, 3, { action: "cancel" })], true),
       false,
     );
     expect(result.nextAction).toBe("shepherd");
+    expect(result.prs[2]).toMatchObject({
+      action: "fix_code",
+      reasons: ["draft-auto-mark-ready-disabled", "stale-ancestry"],
+    });
     expect(text(result)).toContain(`Run \`${probe(3)}\`.`);
     expect(text(result)).not.toContain("gh pr ready");
   });
 
-  it("lists the ready-for-review step beside a bottom-layer merge", () => {
+  it("merges a ready prefix without promoting the held draft above it", () => {
     const result = withPollSummaryInstructions(
       stack([row(1, 1, ready), disabledDraft(2, 2), row(3, 3, { isDraft: true })]),
       true,
     );
     expect(result.nextAction).toBe("merge");
     expect(text(result)).toContain("gh stack merge 1 --yes --squash");
-    expect(text(result)).toContain("gh pr ready 2 -R acme/widgets");
+    expect(text(result)).not.toContain("gh pr ready");
     expect(text(result)).toContain("pull/3 --until-terminal");
   });
 
-  it("marks a draft ready before asking about a layer without a command", () => {
+  it("leaves a held draft while asking about a layer without a command", () => {
     const result = withPollSummaryInstructions(
       stack([disabledDraft(1, 1), row(2, 2, { pollCommand: undefined })]),
       false,
     );
-    expect(result.nextAction).toBe("shepherd");
-    expect(text(result)).toContain("gh pr ready 1 -R acme/widgets");
+    expect(result.nextAction).toBe("escalate");
+    expect(text(result)).not.toContain("gh pr ready");
     expect(text(result)).toContain(
-      "PR #2 needs a one-PR session, but Shepherd could not produce its command. After autonomous shepherding, ask for direction.",
+      "PR #2 needs a one-PR session, but Shepherd could not produce its command. Stop and ask for direction.",
     );
+  });
+
+  it("stops when every open layer is a clean draft held by disabled mark-ready", () => {
+    const result = withPollSummaryInstructions(
+      stack([disabledDraft(1, 1), disabledDraft(2, 2)]),
+      false,
+    );
+    expect(result).toMatchObject({ nextAction: "cancel", reason: "all_terminal" });
+    expect(text(result)).toContain("Stop shepherding this stack");
+    expect(text(result)).not.toContain("gh pr ready");
+    expect(text(result)).not.toContain("rerun");
   });
 });
 
@@ -172,12 +183,12 @@ describe("deferred check blockers", () => {
 });
 
 describe("splitStackWork", () => {
-  it("keeps a probe with work, or a flag without a command, as a session", () => {
+  it("keeps a probe with work as a session and a clean draft without a command held", () => {
     const failing = disabledDraft(1, 1, { action: "fix_code", reasons: ["failing-checks"] });
     const noCommand = disabledDraft(2, 2, { pollCommand: undefined });
     expect(splitStackWork([failing, noCommand], new Set())).toEqual({
-      sessions: [failing, noCommand],
-      markReady: [],
+      sessions: [failing],
+      held: [noCommand],
       idle: [],
     });
   });

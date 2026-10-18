@@ -22,6 +22,7 @@ describe("iterateResultToExitCode", () => {
   it.each<[CancelReason, number]>([
     ["merged", EXIT.OK],
     ["ready-delay-elapsed", EXIT.OK],
+    ["auto-mark-ready-disabled", EXIT.OK],
     ["closed", EXIT.CLOSED],
   ])("cancel + %s -> %d", (reason, code) => {
     expect(iterateResultToExitCode(makeIterateResult("cancel", reason))).toBe(code);

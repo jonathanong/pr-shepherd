@@ -3,7 +3,7 @@ export { findHumanHandoffs, appendHumanHandoffInstructions } from "./stack-hando
 import { stackMergeFlag } from "./stack-merge-flag.mts";
 import type { PollSummaryItem, PollSummaryResult, StackNextAction } from "../types.mts";
 import { stackLayerBlockReason } from "./stack-layer-readiness.mts";
-import { appendMarkReadyInstructions, splitStackWork } from "./stack-work.mts";
+import { splitStackWork } from "./stack-work.mts";
 import { getGithubTransport } from "../github/transport.mts";
 import { buildMergeCommandPlan, renderMergeCommand } from "./iterate/merge.mts";
 
@@ -107,7 +107,6 @@ export function planPrefixDrain(
     instructions[0] = `1. PR #${top.pr} is the highest open layer of stack #${top.stack.number} in \`${result.repo}\` whose open lower layers are all ready. Run \`GH_REPO=${result.repo} gh stack merge ${top.pr} --yes ${method.flag}\` to merge ${span}. If \`gh stack\` is an unknown command, run \`gh extension install github/gh-stack\`, then rerun that merge command. Do not rebase, push, or run \`gh stack push\`.`;
   }
   appendAutonomousInstructions(instructions, above.sessions);
-  appendMarkReadyInstructions(instructions, above.markReady);
   const handoffs = findHumanHandoffs(result);
   if (handoffs) appendHumanHandoffInstructions(instructions, handoffs, false);
   instructions.push(

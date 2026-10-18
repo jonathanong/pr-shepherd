@@ -46,7 +46,7 @@ describe("nextCheckCandidates", () => {
     for (const action of ["cancel", "escalate", "merge", "mark_ready"] as const) {
       expect(nextCheckCandidates({ action }, NOW_MS)).toEqual([]);
     }
-    expect(nextCheckCandidates({ action: "wait", stackDraftHold: true }, NOW_MS)).toEqual([]);
+    expect(nextCheckCandidates({ action: "cancel" }, NOW_MS)).toEqual([]);
   });
 
   it("uses ready-delay for a ready countdown", () => {

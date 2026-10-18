@@ -1,6 +1,8 @@
 {
-  "description": "Same clean/draft/ready state as 07-mark-ready-draft-clean, but the caller passed --no-auto-mark-ready. canMarkReady is still true, but opts.noAutoMarkReady short-circuits markReadyIfAuthorized, so iterate falls through to the ready-delay check and, since the timer has not elapsed, to an ordinary wait instead of mark_ready.",
-  "args": ["--no-auto-mark-ready"],
+  "description": "Clean draft with --no-auto-mark-ready stops immediately with cancel reason auto-mark-ready-disabled, leaving the PR in draft without waiting for ready delay or stall timeout.",
+  "args": [
+    "--no-auto-mark-ready"
+  ],
   "batchData": {
     "isDraft": true,
     "mergeStateStatus": "CLEAN",
@@ -20,5 +22,5 @@
     "shouldCancel": false,
     "remainingSeconds": 300
   },
-  "expectedExitCode": 10
+  "expectedExitCode": 0
 }

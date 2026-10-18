@@ -422,3 +422,60 @@ describe("native-stack reconciliation", () => {
     expect(result.instructions?.join("\n")).not.toContain("rerun this same `--stack` selector");
   });
 });
+
+describe("explicit selection with disabled mark-ready", () => {
+  const held = row(1, 1, {
+    isDraft: true,
+    action: "cancel",
+    reasons: ["draft-auto-mark-ready-disabled"],
+    pollCommand: undefined,
+  });
+
+  it("stops an all-held selection without suggesting a ready transition", () => {
+    const result = withPollSummaryInstructions(
+      {
+        ...stack([held]),
+        selection: { kind: "prs", requested: [1] },
+        reason: "all_terminal",
+      },
+      false,
+    );
+    expect(result.instructions).toEqual([
+      "1. Stop — every selected PR is complete for this Shepherd run.",
+    ]);
+  });
+
+  it("still routes independent work next to a held draft", () => {
+    const result = withPollSummaryInstructions(
+      {
+        ...stack([held, row(2, 2, { action: "fix_code", reasons: ["failing-checks"] })]),
+        selection: { kind: "prs", requested: [1, 2] },
+        reason: "actionable",
+      },
+      false,
+    );
+    expect(result.instructions?.join("\n")).toContain("each non-WAIT, non-CANCEL row");
+    expect(result.instructions?.join("\n")).not.toContain("gh pr ready");
+  });
+
+  it("stops after a clean final verification probe", () => {
+    const verification = row(2, 2, {
+      isDraft: true,
+      action: "fix_code",
+      reasons: ["draft-readiness-verification-required"],
+      pollCommand:
+        "pr-shepherd https://github.com/acme/widgets/pull/2 --timeout 1s --no-auto-mark-ready",
+      pollProbe: true,
+    });
+    const result = withPollSummaryInstructions(
+      {
+        ...stack([held, verification]),
+        selection: { kind: "prs", requested: [1, 2] },
+        reason: "actionable",
+      },
+      false,
+    );
+    expect(result.instructions?.[2]).toContain("If every draft verification probe returns");
+    expect(result.instructions?.[2]).toContain("stop this selection");
+  });
+});

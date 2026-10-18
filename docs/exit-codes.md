@@ -26,12 +26,13 @@ Codes 10–19 sit above the single-digit range and below the `sysexits.h` block,
 
 ## 0 — done
 
-| Code | `action` / `reason`              |
-| ---- | -------------------------------- |
-| 0    | `cancel` / `merged`              |
-| 0    | `cancel` / `ready-delay-elapsed` |
+| Code | `action` / `reason`                   |
+| ---- | ------------------------------------- |
+| 0    | `cancel` / `merged`                   |
+| 0    | `cancel` / `ready-delay-elapsed`      |
+| 0    | `cancel` / `auto-mark-ready-disabled` |
 
-POSIX has one success code, so both clean finishes share it. The `reason` field distinguishes them in text (`[CANCEL] — merged`) and JSON (`"reason": "merged"`).
+POSIX has one success code, so clean finishes share it. The `reason` field distinguishes them in text and JSON. A clean draft canceled because auto mark-ready is disabled remains a draft and skips the ready-delay countdown and stall guard.
 
 ## 10–19 — PR state
 
@@ -53,7 +54,7 @@ Emitted by `iterate` and `poll` (including the default `pr-shepherd [PR]`) once 
 - `shepherd` (16) is stack-level and non-terminal: complete the listed one-PR sessions and rerun the same `--stack` selector. A mixed stack may surface human blockers on this tick; it returns `escalate` only once no shepherdable session remains.
 - `escalate` (13) is the only human handoff.
 
-**Aggregate selectors.** Explicit multi-PR polling returns the highest-priority row outcome, in this order: `escalate`, `fix_code`, `merge`, `mark_ready`, `wait`, closed-only `cancel`, then successful `cancel`. Native `--stack` returns `shepherd` (16) for autonomous one-PR work, `wait` (10) for queue progress, `cancel` (0) for completed readiness, and `escalate` (13) only when a human decision remains with no autonomous one-PR work. The full row list prints regardless of the aggregate action.
+**Aggregate selectors.** Explicit multi-PR polling returns the highest-priority row outcome, in this order: `escalate`, `fix_code`, `merge`, `mark_ready`, `wait`, closed-only `cancel`, then successful `cancel`. Native `--stack` returns `shepherd` (16) for autonomous one-PR work, `wait` (10) for queue progress, `cancel` (0) when ready layers are complete, when only clean drafts remain under disabled auto mark-ready (row reason `draft-auto-mark-ready-disabled`), or when all layers merged, and `escalate` (13) only when a human decision remains with no autonomous one-PR work. The full row list prints regardless of the aggregate action.
 
 ## 64–78 — shepherd failed (`sysexits.h`)
 

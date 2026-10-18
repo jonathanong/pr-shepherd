@@ -26,7 +26,8 @@ flowchart TD
   TG -->|yes| E3(["escalate: transport-unsupported"])
   TG -->|no| MR{"5. READY + draft +<br/>!blockingBotReview + autoMarkReady?"}
   MR -->|yes| MRA(["mark_ready"])
-  MR -->|no| SC{"6. ready-delay elapsed<br/>(non-draft)?"}
+  MR -->|no + disabled + clean draft| CAN3(["cancel: auto-mark-ready-disabled"])
+  MR -->|no + other| SC{"6. ready-delay elapsed<br/>(non-draft)?"}
   SC -->|"yes + --merge"| MG(["merge"])
   SC -->|yes| CAN2(["cancel: ready-delay-elapsed"])
   SC -->|no| CD{"ready-delay counting?"}
@@ -145,7 +146,7 @@ The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completio
 
 **Check:** `report.status === 'READY'` AND `isDraft` AND `!blockingBotReviewInProgress` AND `config.actions.autoMarkReady` (disable with `--no-auto-mark-ready`).
 
-There is no `mergeStateStatus === "CLEAN"` requirement: a draft whose derived status is `DRAFT` (even one that is also behind) can be marked ready when the Shepherd status is `READY`. This runs before the ready-delay completion, and that completion never applies to a draft.
+There is no `mergeStateStatus === "CLEAN"` requirement: a draft whose derived status is `DRAFT` (even one that is also behind) can be marked ready when the Shepherd status is `READY`. This runs before the ready-delay completion, and that completion never applies to a draft. When auto mark-ready is disabled, a clean draft instead returns `cancel` with reason `auto-mark-ready-disabled` and exit 0; the PR remains a draft, with no ready-delay countdown or stall guard.
 
 **Side-effects:** the selected transport's mark-ready operation. REST uses the supported CCR route; an unavailable route escalates with `transport-unsupported`, and a denial with `authorization-required`.
 
@@ -158,15 +159,15 @@ There is no `mergeStateStatus === "CLEAN"` requirement: a draft whose derived st
 
 ### 7. Wait
 
-**Fallthrough:** nothing actionable, no terminal state, no ready-delay elapsed or counting, not marking ready.
+**Fallthrough:** nothing actionable, no terminal state, no ready-delay elapsed or counting, not marking ready. A clean draft with auto mark-ready disabled returns `cancel` before this fallthrough.
 
-A draft native stack layer is marked ready by its own session as soon as that layer is clean; it does not wait for lower layers. When the draft is clean (`READY`, no blocking bot review in progress) but `--no-auto-mark-ready` or `actions.autoMarkReady: false` applies, the wait carries the hold `{ kind: 'auto-mark-ready-disabled' }`, and its instructions return to the `--stack` selector instead of another one-PR iteration.
+A draft native stack layer is marked ready by its own session as soon as that layer is clean when auto mark-ready is enabled; it does not wait for lower layers. With auto mark-ready disabled, the selector processes independent actionable layers and eligible ready-prefix merges, then returns `CANCEL` when only clean disabled drafts remain. It never instructs the agent to mark those drafts ready.
 
 **Emits:** `action: 'wait'`, through the stall guard.
 
 ### Stall guard
 
-Applies to ordinary `wait` and `fix_code` after the action is chosen — not to `ready`, active merge waits, `merge`, `cancel`, `mark_ready`, or `escalate`. A disabled mark-ready hold is an ordinary wait and uses the guard.
+Applies to ordinary `wait` and `fix_code` after the action is chosen — not to `ready`, active merge waits, `merge`, `cancel`, `mark_ready`, or `escalate`. A clean draft with automatic mark-ready disabled returns `cancel` before this path and does not use the guard.
 
 **Fingerprint:** PR head SHA from GitHub (not the local checkout), action, `status`, `mergeStateStatus`, `state`, `isDraft`, sorted failing-check names + conclusions, sorted actionable thread/comment/review IDs, sorted review-summary minimize IDs. Stored at `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/iterate-stall.json`.
 
@@ -197,6 +198,7 @@ Exit codes `0`/`10`–`15` report one-PR state; see [exit-codes.md](exit-codes.m
 | 4     | `--merge`, current queue removal, no actionable failure                      | `escalate` (`merge-queue-removed`)              | 13        |
 | 4     | REST readiness gaps                                                          | `escalate` (`transport-unsupported`)            | 13        |
 | 5     | READY + isDraft + !blockingBotReview + autoMarkReady                         | `mark_ready`                                    | 11        |
+| 5     | Clean draft + auto mark-ready disabled                                       | `cancel` (`auto-mark-ready-disabled`)           | 0         |
 | 6     | `shouldCancel` + `--merge`                                                   | `merge`                                         | 15        |
 | 6     | `shouldCancel` without `--merge`                                             | `cancel`                                        | 0         |
 | 6     | Ready-delay counting                                                         | `ready`                                         | 10        |

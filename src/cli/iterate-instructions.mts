@@ -1,11 +1,8 @@
-import type { IterateResult, StackDraftHold } from "../types.mts";
+import type { IterateResult } from "../types.mts";
 import { inlineCode } from "../util/markdown.mts";
 import { buildQuotaAwareContinuation } from "../quota-warning.mts";
-import { formatPrUrl } from "../pr-reference.mts";
-import { AUTO_MARK_READY_DISABLED_HOLD } from "../commands/stack-work.mts";
-import { buildPrShepherdCommand, renderShellCommand } from "./runner.mts";
+import { renderShellCommand } from "./runner.mts";
 import { eventWaitSteps } from "../commands/event-instructions.mts";
-import { playbookPointer } from "../commands/playbook-pointer.mts";
 
 export function buildSimpleIterateInstructions(
   result: Exclude<IterateResult, { action: "fix_code" }>,
@@ -24,8 +21,6 @@ export function buildSimpleIterateInstructions(
       ];
     }
     case "wait":
-      if (result.stackDraftHold)
-        return buildStackDraftHoldInstructions(result, result.stackDraftHold);
       if (result.nextCheck) {
         return ["Non-terminal — no action needed this tick.", ...eventWaitSteps(result.nextCheck)];
       }
@@ -99,35 +94,6 @@ export function buildSimpleIterateInstructions(
       ];
     }
   }
-}
-
-/**
- * A held stack draft cannot advance by repeating its one-PR session, so hand control back
- * to the stack selector instead of asking for another immediate iteration.
- */
-function buildStackDraftHoldInstructions(
-  result: Extract<IterateResult, { action: "wait" }>,
-  hold: StackDraftHold,
-): string[] {
-  const event = result.pollMode === "event";
-  const stackCommand = buildPrShepherdCommand([
-    "--stack",
-    formatPrUrl(result.repo, result.pr),
-    "--until-terminal",
-    ...(event ? ["--poll-mode", "event"] : []),
-  ]).text;
-  const handoff = `a \`--stack\` selector listed this session, finish that selector's remaining steps and rerun it with its original flags; otherwise run ${inlineCode(stackCommand)}, adding \`--merge\` when merging was requested.`;
-  const reason =
-    hold.kind === "auto-mark-ready-disabled" ? AUTO_MARK_READY_DISABLED_HOLD : hold.kind;
-  const instruction = `PR #${result.pr} stays in draft because ${reason}, so repeating this one-PR session cannot advance it. If ${handoff}`;
-  const step = result.quotaWarning
-    ? buildQuotaAwareContinuation(result.quotaWarning, instruction)
-    : instruction;
-  if (!event) return [step];
-  return [
-    step,
-    `Event mode: do not rerun this one-PR session and keep no wake-up for it. After the handoff, follow only the stack selector's output; it ends the turn and schedules the next tick through its own \`nextCheck\`. ${playbookPointer("Cloud event loop")}`,
-  ];
 }
 
 export function adaptIterateLog(log: string): string {

@@ -17,7 +17,10 @@ import {
   type NextCheckCandidate,
 } from "./next-check.mts";
 import { isFixCodeContinuation } from "./iterate/check-instructions.mts";
-import { isHandedOffSelection } from "./poll-summary-explicit-instructions.mts";
+import {
+  isHandedOffSelection,
+  onlyDraftVerificationSelection,
+} from "./poll-summary-explicit-instructions.mts";
 import { runIterate } from "./iterate/index.mts";
 import { resolvePollMode } from "./poll-mode.mts";
 import { readStackStallDeadline } from "./stack-stall.mts";
@@ -92,7 +95,6 @@ async function runIterateEvent(opts: IterateCommandOptions): Promise<IterateResu
         remainingSeconds: result.remainingSeconds,
         queued: result.mergeQueue?.inQueue === true,
         restMerge: result.action === "merge" && result.merge.mode === "rest",
-        stackDraftHold: result.action === "wait" && result.stackDraftHold !== undefined,
         stallDeadlineSeconds,
       },
       nowMs,
@@ -153,11 +155,7 @@ async function withAggregateNextCheck(
   };
 }
 
-/**
- * Event mode replaces polling: the appended event step owns the next wake-up, so a stack
- * step's "recheck at the configured polling cadence" would contradict it. A pending stack
- * merge resumes on that wake-up instead.
- */
+/** The appended event step owns timing, including pending stack merges. */
 function withoutPollingCadence(step: string): string {
   return step
     .replace(/ Recheck(?: them)? at the configured polling cadence\./g, "")
@@ -173,6 +171,7 @@ function aggregateNextCheck(
 ): NextCheck | undefined {
   if (
     isHandedOffSelection(result) ||
+    (onlyDraftVerificationSelection(result) && result.nextAction !== "merge") ||
     result.reason === "all_terminal" ||
     result.nextAction === "cancel" ||
     result.nextAction === "escalate"

@@ -53,7 +53,7 @@ Shepherd works best on PRs that use required status checks and conversation reso
 - Unmarked bot and other non-human threads, and the viewer's own threads, are replied to and resolved. Other humans' threads are reply-only unless `iterate.resolveOtherHumanThreads` is `outdated` or `always`. Human items are never minimized. See [conversation-resolution.md](conversation-resolution.md).
 - Shepherd recognizes its own reply only by a leading `<!-- pr-shepherd -->` marker. A marked thread is resolve-only on retry.
 - Review summaries are not minimized while their inline threads are still unresolved.
-- Clean drafts are marked ready unless `actions.autoMarkReady: false` or `--no-auto-mark-ready` is set.
+- Clean drafts are marked ready unless `actions.autoMarkReady: false` or `--no-auto-mark-ready` is set; when disabled, a clean draft remains in draft and returns `CANCEL` after its pending work is handled.
 - With `--merge` on the GraphQL transport, review work is deferred while the PR is in the merge queue, because a push would eject it. Set `actions.workWhileQueued: true` to act anyway. Failing checks and conflicts are never deferred. REST cannot see queue membership, so it does not defer.
 - With REST, viewer capability is unknown. Otherwise-eligible mutations are attempted and GitHub's response decides.
 - `BEHIND` is status, not a rebase. The agent updates the branch when it chooses.

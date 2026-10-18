@@ -29,7 +29,6 @@ import {
   readReadyReceipt,
   writeReadyReceipt,
 } from "../../state/ready-receipts.mts";
-import { stackDraftHold } from "./parent-first.mts";
 import { findStaleNativeStackAncestry } from "./stale-ancestry.mts";
 import { annotateBlockedWait, resolveCheckBlockerGate } from "./check-blocker-gate.mts";
 import { buildUnreportedFixResult, planUnreportedRequired } from "./unreported-required.mts";
@@ -348,6 +347,18 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     };
   }
   const autoMarkReady = !opts.noAutoMarkReady && config.actions.autoMarkReady;
+  if (canMarkReady && !autoMarkReady) {
+    await clearReadyDelay(report.pr, repoOwner, repoName);
+    await clearStallState(stallKey);
+    return {
+      ...base,
+      action: "cancel",
+      reason: "auto-mark-ready-disabled",
+      shouldCancel: false,
+      remainingSeconds: 0,
+      log: `CANCEL: PR #${base.pr} stays in draft because automatic mark-ready is disabled — stopping`,
+    };
+  }
   const markReadyResult = await markReadyIfAuthorized(canMarkReady && autoMarkReady, base, report);
   if (markReadyResult) return markReadyResult;
 
@@ -414,12 +425,10 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     };
   }
 
-  const hold = stackDraftHold(report, autoMarkReady);
   const wait = {
     ...base,
     action: "wait" as const,
     log: buildWaitLog(base),
-    ...(hold && { stackDraftHold: hold }),
   } as IterateResult;
   return annotateBlockedWait(
     await applyStallGuard(

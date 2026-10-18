@@ -135,7 +135,6 @@ export function projectIterateLean(
             Object.entries(result.deferredWork).filter(([, n]) => n > 0),
           ),
         }),
-        ...(result.stackDraftHold && { stackDraftHold: result.stackDraftHold }),
         log: adaptIterateLog(result.log),
         instructions: simpleInstructions(result),
       };

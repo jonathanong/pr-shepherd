@@ -23,13 +23,13 @@ Any escalation from a tick with automatically selected review mutations keeps ev
 
 Native-stack aggregate reconciliation (`--stack`) is read-only and never mutates GitHub.
 
-| Stack state                                                                                       | Result                                                     |
-| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| Owned layers still have autonomous work                                                           | `SHEPHERD` (non-terminal), with human blockers surfaced    |
-| Every remaining layer can only wait, or the stack is queued                                       | `WAIT`                                                     |
-| `--merge` and a ready prefix whose bottom open layer targets base                                 | `MERGE` with an agent-run `gh stack merge` for that prefix |
-| Every open layer READY without `--merge`, or every layer merged                                   | `CANCEL`                                                   |
-| A human decision remains (closed or unverified topology) and no autonomous one-PR session remains | `ESCALATE`                                                 |
+| Stack state                                                                                                                                                    | Result                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Owned layers still have autonomous work                                                                                                                        | `SHEPHERD` (non-terminal), with human blockers surfaced    |
+| Every remaining layer can only wait, or the stack is queued                                                                                                    | `WAIT`                                                     |
+| `--merge` and a ready prefix whose bottom open layer targets base                                                                                              | `MERGE` with an agent-run `gh stack merge` for that prefix |
+| Every open layer READY without `--merge`, only clean drafts with auto mark-ready disabled (row reason `draft-auto-mark-ready-disabled`), or every layer merged | `CANCEL`                                                   |
+| A human decision remains (closed or unverified topology) and no autonomous one-PR session remains                                                              | `ESCALATE`                                                 |
 
 Stack ticks can also escalate with `stall-timeout`, `stall-state-unavailable`, or `merge-method-unavailable`; see the predicates below and [actions.md](actions.md#shepherd-actions).
 
@@ -141,7 +141,7 @@ Native-stack membership is not an escalation.
 | `--stack`    | Every remaining layer's bounded probe can only report waiting ([the idle `WAIT`](actions.md#shepherd-actions)), so no one-PR session runs.                                                                                                                                                                                                                                     |
 
 - The threshold is `iterate.stallTimeoutMinutes` (default 60) or `--stall-timeout`. A changed fingerprint resets the timer. A disabled timeout refreshes state and never escalates.
-- A native-stack draft held by disabled mark-ready uses the same guard.
+- A clean native-stack draft with automatic mark-ready disabled returns `CANCEL` before the stall guard.
 - The stack timer lives in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/stack-<number>/stack-stall.json`. It fingerprints the summary status plus each layer's head commit, draft state, READY receipt, and reasons. Every aggregate tick shares it (`--until-terminal`, a bounded poll, or MCP). A changed fingerprint resets it; any other stack plan or a disabled timeout clears it. The escalation names each waiting layer and why it waits.
 
 ### `required-checks-unreported`

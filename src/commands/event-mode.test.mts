@@ -100,12 +100,12 @@ describe("runIterateForMode", () => {
     });
   });
 
-  it("omits nextCheck for terminal actions, mark-ready, and a stack draft hold", async () => {
-    m.runIterate.mockResolvedValueOnce({ action: "cancel", ...base });
-    const cancel = await runIterateForMode(opts);
-    expect(cancel).toMatchObject({ pollMode: "event" });
-    expect(cancel).not.toHaveProperty("nextCheck");
-    m.runIterate.mockResolvedValueOnce({ action: "wait", stackDraftHold: {}, ...base });
+  it("omits nextCheck for terminal actions and mark-ready", async () => {
+    m.runIterate.mockResolvedValueOnce({
+      action: "cancel",
+      reason: "auto-mark-ready-disabled",
+      ...base,
+    });
     expect(await runIterateForMode(opts)).not.toHaveProperty("nextCheck");
     m.runIterate.mockResolvedValueOnce({ action: "mark_ready", ...base });
     expect(await runIterateForMode(opts)).not.toHaveProperty("nextCheck");

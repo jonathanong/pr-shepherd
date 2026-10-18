@@ -75,6 +75,15 @@ the unrelated question. The two runs cost $51.26 in total. Full table:
 
 ## Run it
 
+When CLI output changes, regenerate the recorded prompts and token report before
+pushing. `npm test` does not check whether these generated files are in sync.
+
+```sh
+node evals/generate.mjs
+node evals/tokens/bench.mjs
+node evals/tokens/bench.mjs --check
+```
+
 ```sh
 node evals/generate.mjs
 CLAUDE_CODE_EFFORT_LEVEL=low claude plugin eval . --model claude-sonnet-5-5 \
