@@ -1,7 +1,4 @@
-/**
- * Shared helpers for test-cases/format-parity.test.mts — split out to stay under the repo's
- * 200-line-per-file cap. See that file for the invariant this enforces.
- */
+/** Shared helpers for test-cases/format-parity.test.mts (see it for the invariant). */
 
 /**
  * Paths (dot-separated; array indices collapsed to "[]") whose JSON leaf value is legitimately
@@ -49,13 +46,10 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
     "fix.resolutionOnlyThreads[].createdAtUnix",
     "raw bookkeeping timestamp on the thread's top comment; never rendered as a date",
   ],
-  ["fix.firstLookThreads[].createdAtUnix", "same"],
-  [
-    "fix.changesRequestedReviews[].createdAtUnix",
-    "raw bookkeeping timestamp (review-output budget ordering); never rendered as a date",
-  ],
-  ["fix.firstLookSummaries[].createdAtUnix", "same"],
-  ["fix.firstLookComments[].createdAtUnix", "same"],
+  // Same, for the other review items (the review-output budget orders by them).
+  ...["firstLookThreads", "changesRequestedReviews", "firstLookSummaries", "firstLookComments"].map(
+    (k): [string, string] => [`fix.${k}[].createdAtUnix`, "same"],
+  ),
   ["fix.firstLookThreads[].comments[].createdAtUnix", "same, for transcript replies"],
   [
     "fix.resolutionOnlyThreads[].comments[].createdAtUnix",
