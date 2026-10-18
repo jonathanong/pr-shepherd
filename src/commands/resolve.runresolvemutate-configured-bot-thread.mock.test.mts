@@ -42,6 +42,7 @@ describe("runResolveMutate — configured bot threads", () => {
         minimizeApprovals: false,
         minimizeComments: "all",
         behindBaseHint: "",
+        reviewOutputMaxChars: 50000,
         resolveOtherHumanThreads: "none",
         instructions: "playbook",
       },

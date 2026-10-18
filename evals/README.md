@@ -3,7 +3,7 @@
 **Does an agent act correctly on pr-shepherd's output, and would it without the
 plugin?**
 
-49 cases replay real recorded pr-shepherd output, mostly from the states agents
+50 cases replay real recorded pr-shepherd output, mostly from the states agents
 get wrong in real transcripts. Five of those (`38`, `39`, `44`–`46`) also replay
 earlier turns of the session, to catch drift that a fresh context hides. Three
 others start from a request alone: one
@@ -13,7 +13,8 @@ a PR is created and targeted.
 - **CI:** blocking on `gh run watch` instead of letting Shepherd poll, rerunning
   real failures, fetching pages the output already summarized.
 - **Loop:** stopping on non-terminal actions like `MARK_READY` and `FIX_CODE`,
-  or skipping the generated `apply review:` command.
+  skipping the generated `apply review:` command, or fetching review items
+  Shepherd held back for a later tick.
 - **Stacks:** leaving layers unshepherded, merging a middle layer directly,
   rewriting a queued layer, or stopping at a lower layer's handoff while owned
   layers still have work, treating a merged parent's retained base as a

@@ -23,7 +23,8 @@
     "minimizeComments": "all",
     "behindBaseHint": "",
     "resolveOtherHumanThreads": "none",
-    "instructions": "inline"
+    "instructions": "inline",
+    "reviewOutputMaxChars": 50000
   },
   "poll": {
     "intervalSeconds": 60,

@@ -60,7 +60,7 @@ Each case carries `tier:discriminating` or `tier:guard` in its tags, set in
 
 `EVAL_RUNS_DISCRIMINATING` and `EVAL_RUNS_GUARD` override the per-case `runs`
 (a case's own `runs`, else 3) at generation time. Cases `38`, `39` and
-`43`–`52` commit their own `runs: 6`, whatever their tier, because at 3 the
+`43`–`53` commit their own `runs: 6`, whatever their tier, because at 3 the
 without arm alone has swung ±0.44; `40`–`42` do not. Regenerate, run, then
 regenerate without the variables so the tree matches the committed cases:
 
@@ -127,8 +127,10 @@ Layout:
 - `cases/stack-fixes.mjs`: cases 47–52, agent behavior on the output of recent
   native-stack fixes (#509, #567, merge-queue removal of a stack layer, the
   REST stack queue guard).
+- `cases/review-budget.mjs`: case 53, the per-tick review output budget
+  (`iterate.reviewOutputMaxChars`).
 
-A case may also set `runs` (default 3). Cases 38, 39 and 43–52 use 6.
+A case may also set `runs` (default 3). Cases 38, 39 and 43–53 use 6.
 
 Case numbers are stable. Add new cases at the end instead of renumbering.
 
@@ -195,6 +197,7 @@ third arm.
 | `50-stack-merged-parent-retarget-wait`      | `131`   | Under `--merge`, wait for GitHub to retarget the bottom layer; no merge or base edit |
 | `51-stack-queue-removal-ack-route`          | `120`   | Stack queue removal: `gh stack rebase`, ack only on an unchanged head                |
 | `52-rest-stack-merge-queue`                 | `135`   | REST stack queue merge: run the printed `apply merge`, not `gh stack merge`          |
+| `53-fix-code-review-subset` | `152` | Review output budget subset: apply the printed IDs, rerun, don't fetch held items |
 
 "apply" is `test-cases/snapshots/apply-review-session-refusal`, an
 `apply review` output recorded by `test-cases/apply-review.test.mts` through

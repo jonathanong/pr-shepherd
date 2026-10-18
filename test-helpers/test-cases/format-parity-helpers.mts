@@ -50,6 +50,12 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
     "raw bookkeeping timestamp on the thread's top comment; never rendered as a date",
   ],
   ["fix.firstLookThreads[].createdAtUnix", "same"],
+  [
+    "fix.changesRequestedReviews[].createdAtUnix",
+    "raw bookkeeping timestamp (review-output budget ordering); never rendered as a date",
+  ],
+  ["fix.firstLookSummaries[].createdAtUnix", "same"],
+  ["fix.firstLookComments[].createdAtUnix", "same"],
   ["fix.firstLookThreads[].comments[].createdAtUnix", "same, for transcript replies"],
   [
     "fix.resolutionOnlyThreads[].comments[].createdAtUnix",

@@ -177,6 +177,17 @@ marked seen while hidden, then silently and permanently excluded from
 `actionable`/`firstLook` once its body stops changing — even after the PR
 leaves the queue.
 
+**Review output budget exception:** when `iterate.reviewOutputMaxChars`
+holds review items back on a `fix_code` tick (see `### Review output budget`
+in [`docs/actions.md`](docs/actions.md)), the held items are absent from the
+output and from every generated ID, so `check.mts` does not write their seen
+markers on that tick. They are shown on a later tick, which preserves "at
+least once". Starvation note: items that come back every tick (an active bot
+or viewer-authored thread that stays unresolved, a stale bot
+changes-requested review) take
+budget first each tick; the at-least-one rule and the caller resolving shown
+items keep the queue moving, and the cap is disabled with `0`.
+
 ## Keep skills and loop prompts minimal
 
 Skills (`plugins/pr-shepherd/skills/*/SKILL.md`) and `/loop` prompts should be thin dispatchers with this shape:

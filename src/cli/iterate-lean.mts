@@ -205,6 +205,7 @@ export function projectIterateLean(
           ...(result.fix.resolveOnlyCommand && {
             resolveOnlyCommand: result.fix.resolveOnlyCommand,
           }),
+          ...(result.fix.reviewItems && { reviewItems: result.fix.reviewItems }),
           ...(result.fix.instructions.length > 0 && {
             instructions: result.fix.instructions,
           }),

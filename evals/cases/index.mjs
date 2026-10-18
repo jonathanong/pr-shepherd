@@ -4,6 +4,7 @@ import { CORE_CASES } from "./core.mjs";
 import { DEFERRED_CASES } from "./deferred.mjs";
 import { MULTITURN_CASES } from "./multiturn.mjs";
 import { RECENT_CASES } from "./recent.mjs";
+import { REVIEW_BUDGET_CASES } from "./review-budget.mjs";
 import { RULES_CASES } from "./rules.mjs";
 import { STACK_CASES } from "./stack.mjs";
 import { STACK_FIXES_CASES } from "./stack-fixes.mjs";
@@ -17,4 +18,5 @@ export const CASES = [
   ...CLOUD_CASES,
   ...MULTITURN_CASES,
   ...STACK_FIXES_CASES,
+  ...REVIEW_BUDGET_CASES,
 ];

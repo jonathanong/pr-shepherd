@@ -44,6 +44,7 @@ import {
   classifyChangesRequestedReviewsForDisplay,
 } from "../comments/review-visibility.mts";
 import { applySuppressedRuleAutoResolve } from "./rule-auto-resolve.mts";
+import { applyReviewOutputBudget } from "./check-review-budget.mts";
 import { markReviewInlineThreadMarkers } from "../comments/review-thread-markers.mts";
 import {
   isConfiguredBotAuthor,
@@ -90,6 +91,8 @@ type CheckOptions = GlobalOptions & {
   persistSeen?: boolean;
   fingerprintCache?: boolean;
   merge?: boolean;
+  /** Per-tick review-item body budget (`iterate.reviewOutputMaxChars`). Omitted or 0: no cap. */
+  reviewOutputMaxChars?: number;
 };
 
 export async function runCheck(
@@ -436,7 +439,6 @@ async function runScopedCheck(
       visibleChangesRequestedIds.has(review.id)
     );
   }).length;
-  const approvedReviews = approvedReviewVisibility.visible;
   let status = computeStatus(
     verdict,
     threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
@@ -505,6 +507,19 @@ async function runScopedCheck(
       },
       mergeStatus.status,
     );
+  // A deferred tick shows no review items, so it is never capped; its seen markers stay unwritten.
+  const { buckets: budgeted, rollup: reviewItems } = applyReviewOutputBudget(
+    {
+      changesRequested: changesRequestedReviewVisibility,
+      threads: threadVisibility,
+      comments: visibleCommentClassification,
+      firstLookComments,
+      firstLookSummaries,
+      editedSummaries,
+      editedComments,
+    },
+    deferWhileQueued ? 0 : (opts.reviewOutputMaxChars ?? 0),
+  );
   if (opts.persistSeen !== false) {
     const successfulAnnotations = [
       ...merged.passing,
@@ -517,17 +532,15 @@ async function runScopedCheck(
     const deferredMarkSeen = deferWhileQueued
       ? []
       : [
-          ...firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
-          ...threadVisibility.toMarkSeen.map((t) =>
+          ...budgeted.firstLookComments.map((c) => markSeen(stateKey, c.id, c.body)),
+          ...budgeted.threads.toMarkSeen.map((t) =>
             markSeen(stateKey, t.id, threadTranscriptBody(t)),
           ),
-          ...visibleCommentClassification.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
-          ...[...firstLookSummaries, ...editedSummaries].map((r) =>
+          ...budgeted.comments.toMarkSeen.map((c) => markSeen(stateKey, c.id, c.body)),
+          ...[...budgeted.firstLookSummaries, ...budgeted.editedSummaries].map((r) =>
             markSeen(stateKey, r.id, r.body),
           ),
-          ...changesRequestedReviewVisibility.toMarkSeen.map((r) =>
-            markSeen(stateKey, r.id, r.body),
-          ),
+          ...budgeted.changesRequested.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
           ...approvedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
         ];
     await Promise.allSettled([
@@ -611,7 +624,7 @@ async function runScopedCheck(
     batch: batchData,
   });
   const visibleMutationThreadIds = new Set(
-    [...threadVisibility.activeThreads, ...threadVisibility.resolutionOnlyThreads].map(
+    [...budgeted.threads.activeThreads, ...budgeted.threads.resolutionOnlyThreads].map(
       (thread) => thread.id,
     ),
   );
@@ -665,28 +678,29 @@ async function runScopedCheck(
       }),
     },
     threads: {
-      actionable: threadVisibility.activeThreads,
-      resolutionOnly: threadVisibility.resolutionOnlyThreads,
+      actionable: budgeted.threads.activeThreads,
+      resolutionOnly: budgeted.threads.resolutionOnlyThreads,
       autoResolved,
       autoResolveErrors,
       ...(errorReasons.length > 0 && { autoResolveErrorReasons: errorReasons }),
-      firstLook: threadVisibility.firstLookThreads,
+      firstLook: budgeted.threads.firstLookThreads,
       ...(ruleAutoResolveThreadIds.length > 0
         ? { ruleAutoResolveIds: ruleAutoResolveThreadIds }
         : undefined),
     },
     comments: {
-      actionable: visibleCommentClassification.actionable,
-      minimizeIds: [...visibleCommentClassification.minimizeIds, ...ruleAutoResolveCommentIds],
-      firstLook: firstLookComments,
-      ...(editedComments.length > 0 && { edited: editedComments }),
+      actionable: budgeted.comments.actionable,
+      minimizeIds: [...budgeted.comments.minimizeIds, ...ruleAutoResolveCommentIds],
+      firstLook: budgeted.firstLookComments,
+      ...(budgeted.editedComments.length > 0 && { edited: budgeted.editedComments }),
       ...(autoMinimized.length > 0 && { autoMinimized }),
     },
-    changesRequestedReviews,
+    changesRequestedReviews: budgeted.changesRequested.visible,
     reviewSummaries: seenSummaries,
-    firstLookSummaries,
-    editedSummaries,
-    approvedReviews,
+    firstLookSummaries: budgeted.firstLookSummaries,
+    editedSummaries: budgeted.editedSummaries,
+    approvedReviews: approvedReviewVisibility.visible,
+    ...(reviewItems && { reviewItems }),
     ...(ruleAutoResolveReviewSummaryIds.length > 0
       ? { ruleAutoResolveReviewSummaryIds }
       : undefined),

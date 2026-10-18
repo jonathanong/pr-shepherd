@@ -99,6 +99,12 @@ export interface PrShepherdConfig {
      */
     behindBaseHint: string;
     /**
+     * Per-tick budget for review-item bodies in `fix_code` output, in characters. Over budget,
+     * iterate shows a priority-ordered subset and holds the rest (unmarked) for later ticks.
+     * `0` disables the cap.
+     */
+    reviewOutputMaxChars: number;
+    /**
      * When to resolve other-human inline threads after Shepherd replies. Own and bot threads
      * always reply-and-resolve. `none` (default) keeps other humans reply-only; `outdated`
      * also resolves when GitHub reports `isOutdated`; `always` pairs reply-and-resolve.
@@ -248,6 +254,13 @@ function parseInstructionStyle(value: unknown): InstructionStyle {
   if (isInstructionStyle(value)) return value;
   throw new Error(
     `Invalid config: iterate.instructions must be "playbook" or "inline", got ${JSON.stringify(value)}`,
+  );
+}
+
+function parseReviewOutputMaxChars(value: unknown): number {
+  if (typeof value === "number" && Number.isInteger(value) && value >= 0) return value;
+  throw new Error(
+    `Invalid config: iterate.reviewOutputMaxChars must be a non-negative integer, got ${JSON.stringify(value)}`,
   );
 }
 
@@ -519,6 +532,7 @@ const KNOWN_NESTED_KEYS: Record<string, ReadonlySet<string>> = {
     "behindBaseHint",
     "resolveOtherHumanThreads",
     "instructions",
+    "reviewOutputMaxChars",
   ]),
   poll: new Set([
     "intervalSeconds",
@@ -641,6 +655,9 @@ function parseConfig(value: Record<string, unknown>, normalizeMergeArgs = true):
     config.iterate.resolveOtherHumanThreads,
   );
   config.iterate.instructions = parseInstructionStyle(config.iterate.instructions);
+  config.iterate.reviewOutputMaxChars = parseReviewOutputMaxChars(
+    config.iterate.reviewOutputMaxChars,
+  );
   config.checks.ignoreLogLines = parseIgnoreLogLines(config.checks.ignoreLogLines);
   config.standardRules = parseStandardRules(config.classify);
   return config;
