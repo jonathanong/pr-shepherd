@@ -67,7 +67,8 @@ async function attachEditedComments(
   const seen = await loadSeenMap(key);
   const edited = candidates.filter((c) => classifyItem(c.id, c.body, seen) === "edited");
   if (edited.length === 0) return result;
-  if (opts.persistSeen !== false)
+  // Poll discards only debounced fix_code ticks; any other action is returned to the caller.
+  if (opts.persistSeen !== false || result.action !== "fix_code")
     await Promise.allSettled(edited.map((c) => markSeen(key, c.id, c.body)));
   return { ...result, editedComments: edited };
 }

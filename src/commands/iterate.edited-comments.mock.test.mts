@@ -122,8 +122,41 @@ describe("runIterate — edited PR comments", () => {
     expect(result.editedComments?.map((c) => c.id)).toEqual(["c-fix"]);
   });
 
-  it("shows but does not mark the edit on a discarded poll tick", async () => {
-    mockRunCheck.mockResolvedValue(await readyReportWithEdit("c-debounce"));
+  it("shows but does not mark the edit on a discarded debounced fix_code tick", async () => {
+    mockRunCheck.mockResolvedValue(
+      await readyReportWithEdit("c-debounce", {
+        status: "UNRESOLVED_COMMENTS",
+        comments: {
+          actionable: [
+            {
+              id: "c-new2",
+              isMinimized: false,
+              author: "alice",
+              authorType: "User",
+              body: "Please add a test.",
+              url: "",
+              createdAtUnix: 0,
+            },
+          ],
+          firstLook: [],
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts({ persistSeen: false }));
+
+    expect(result.action).toBe("fix_code");
+    expect(result.editedComments?.map((c) => c.id)).toEqual(["c-debounce"]);
+    expect(await storedHash("c-debounce")).toBe(hashBody("original"));
+  });
+
+  it("marks the edit on a returned poll tick even before the debounce starts", async () => {
+    mockRunCheck.mockResolvedValue(await readyReportWithEdit("c-poll-cancel"));
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: true,
       shouldCancel: true,
@@ -132,8 +165,8 @@ describe("runIterate — edited PR comments", () => {
 
     const result = await runIterate(makeOpts({ persistSeen: false }));
 
-    expect(result.editedComments?.map((c) => c.id)).toEqual(["c-debounce"]);
-    expect(await storedHash("c-debounce")).toBe(hashBody("original"));
+    expect(result.editedComments?.map((c) => c.id)).toEqual(["c-poll-cancel"]);
+    expect(await storedHash("c-poll-cancel")).toBe(hashBody("regenerated"));
   });
 
   it("omits and does not mark the edit when the PR is merged", async () => {

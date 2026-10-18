@@ -25,6 +25,12 @@ export function classifyVisibleComments(
   const toMarkSeen: ActionableComment[] = [];
   const edited: EditedComment[] = [];
   for (const c of comments.filter((comment) => !comment.isMinimized)) {
+    const cls = classifyItem(c.id, c.body, seenMap);
+    // An edit is never readiness work, even when the comment is eligible for minimization.
+    if (cls === "edited") {
+      edited.push({ ...c, edited: true });
+      continue;
+    }
     if (
       !deniedMinimizeIds.has(c.id) &&
       canGenerateGithubMutation(c.viewerCanMinimize, "minimize") &&
@@ -35,12 +41,7 @@ export function classifyVisibleComments(
       toMarkSeen.push(c); // prevents re-surfacing as first-look after GitHub marks it minimized
       continue;
     }
-    const cls = classifyItem(c.id, c.body, seenMap);
     if (cls === "unchanged") continue;
-    if (cls === "edited") {
-      edited.push({ ...c, edited: true });
-      continue;
-    }
     actionable.push(c);
     toMarkSeen.push(c);
   }

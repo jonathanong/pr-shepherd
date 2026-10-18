@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { insertEditedCommentsSection, projectEditedComments } from "./edited-comments-format.mts";
+import { projectIterateVerbose } from "./iterate-verbose.mts";
+import { makeIterateResult } from "../../fixtures/cli-parser.iterate-fixtures.mts";
 import type { EditedComment } from "../types.mts";
 
 const minimized: EditedComment = {
@@ -69,5 +71,15 @@ describe("edited comments section", () => {
       },
       { id: "IC_human", author: "alice", authorType: "User", body: "Typo fixed.", url: "" },
     ]);
+  });
+
+  it("uses the same projection in verbose JSON", () => {
+    for (const action of ["fix_code", "escalate"] as const) {
+      const result = { ...makeIterateResult(action), editedComments: [minimized] };
+      expect(projectIterateVerbose(result)).toMatchObject({
+        editedComments: projectEditedComments([minimized]),
+      });
+      expect(JSON.stringify(projectIterateVerbose(result))).not.toContain("createdAtUnix");
+    }
   });
 });

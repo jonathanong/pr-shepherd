@@ -101,4 +101,15 @@ describe("classifyVisibleComments", () => {
     expect(result.toMarkSeen).toEqual([]);
     expect(result.edited).toEqual([{ ...comment, edited: true }]);
   });
+
+  it("holds an edit outside readiness work even when the comment is eligible for minimization", () => {
+    const comment = makeComment({ id: "c-bot", authorType: "Bot", body: "new body" });
+    const seenMap = new Map([["c-bot", { seenAt: 1000, bodyHash: hashBody("old body") }]]);
+
+    const result = classifyVisibleComments([comment], seenMap, "bots");
+
+    expect(result.actionable).toEqual([]);
+    expect(result.minimizeIds).toEqual([]);
+    expect(result.edited).toEqual([{ ...comment, edited: true }]);
+  });
 });

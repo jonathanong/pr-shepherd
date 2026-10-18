@@ -919,7 +919,7 @@ The `ClassifyItem` union covers four kinds: `"review-thread"`, `"pr-comment"`, `
 
 A PR comment (conversation comment) whose body changed after Shepherd showed it is informational. Edits to review summaries, changes-requested reviews, and inline thread comments are still review work and keep their own sections.
 
-- An edited PR comment never blocks readiness. It does not route to `fix_code`, restart the ready delay, or clear a READY receipt, whether a human or a bot edited it and whether or not it is minimized.
+- An edited PR comment never blocks readiness. It does not route to `fix_code`, restart the ready delay, or clear a READY receipt, whether a human or a bot edited it and whether or not it is minimized. A visible comment that is eligible for auto-minimization is queued for minimization only after its edit has been shown.
 - During `wait` and `ready`, iterate holds the edit: no section, no field, and no seen-marker write.
 - On the next other action (`fix_code`, `mark_ready`, `merge`, `escalate`, or the `ready-delay-elapsed` / `auto-mark-ready-disabled` `cancel`), iterate prints `## Edited comments (N) — informational; edits do not block readiness` immediately before `## Instructions`, or at the end when the action has none. It then writes the markers, so each edit appears once. A poll tick whose output is discarded (fix_code debounce) shows the edit without writing markers. Merged and closed `cancel` results omit it.
 - Each item is `### [commentId=<id>](<url>) (<author>) [status: minimized, edited]` for a minimized comment, or `[edited since first look]` for a visible one, followed by the new body as a blockquote (truncated unless `--verbose`).
