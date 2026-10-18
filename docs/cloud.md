@@ -52,6 +52,7 @@ Text prints a `**nextCheck**` header line; JSON and MCP `structuredContent` carr
 Tick special cases:
 
 - Stack steps drop "at the configured polling cadence", and a pending REST stack merge reruns after the wake-up, so the appended tick step is the only timing rule.
+- A stack or multi-PR tick routes each row to one `pr-shepherd iterate` tick, not a sleeping `--until-terminal` poll.
 - A clean draft with auto mark-ready disabled returns `CANCEL` without a wake-up. A `stack` command continues other layer work and schedules any next tick from the remaining layers.
 - `MARK_READY` keeps its immediate rerun: that tick saw a draft, so the ready-delay timer was cleared; the next tick sees the PR ready, starts the timer, and reports the `ready-delay` deadline.
 

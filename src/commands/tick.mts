@@ -69,7 +69,7 @@ export async function runIterateTick(opts: IterateCommandOptions): Promise<Itera
 export async function runPollSummaryTick(
   opts: PollSummaryCommandOptions,
 ): Promise<PollSummaryResult> {
-  return withAggregateNextCheck(await runPollSummary(opts), opts);
+  return withAggregateNextCheck(await runPollSummary({ ...opts, tick: true }), opts);
 }
 
 /** The default command: the sleeping loop, or one tick in a cloud session. */

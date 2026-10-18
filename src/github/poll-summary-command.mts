@@ -11,9 +11,13 @@ export function pollCommandFields(
   const autoMarkReadyDisabled =
     opts.noAutoMarkReady || loadConfig().actions.autoMarkReady === false;
   const boundedDraft = isDraft && autoMarkReadyDisabled;
-  const args = boundedDraft
-    ? [formatPrUrl(repo, pr), "--timeout", "1s", "--debounce", "0s", "--no-auto-mark-ready"]
-    : [formatPrUrl(repo, pr), "--until-terminal"];
+  const url = formatPrUrl(repo, pr);
+  // A single tick routes each PR to one `iterate` tick rather than a sleeping poll.
+  const args = opts.tick
+    ? ["iterate", url, ...(boundedDraft ? ["--no-auto-mark-ready"] : [])]
+    : boundedDraft
+      ? [url, "--timeout", "1s", "--debounce", "0s", "--no-auto-mark-ready"]
+      : [url, "--until-terminal"];
   if (opts.merge && opts.stackPrNumber === undefined) args.push("--merge");
   if (opts.readyDelaySeconds !== undefined)
     args.push("--ready-delay", `${opts.readyDelaySeconds}s`);

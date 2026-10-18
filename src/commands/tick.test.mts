@@ -165,6 +165,7 @@ describe("runAggregatePollCommand", () => {
     vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
     await runAggregatePollCommand({ prNumbers: [1, 2] } as never);
     expect(m.runPollSummary).toHaveBeenCalledTimes(1);
+    expect(m.runPollSummary).toHaveBeenCalledWith(expect.objectContaining({ tick: true }));
     expect(m.runAggregatePoll).toHaveBeenCalledTimes(1);
   });
 });
