@@ -141,7 +141,7 @@ Native-stack membership is not an escalation.
 | `--stack`    | Every remaining layer's bounded probe can only report waiting ([the idle `WAIT`](actions.md#shepherd-actions)), so no one-PR session runs.                                                                                                                                                                                                                                     |
 
 - The threshold is `iterate.stallTimeoutMinutes` (default 60) or `--stall-timeout`. A changed fingerprint resets the timer. A disabled timeout refreshes state and never escalates.
-- A native-stack draft held by disabled mark-ready uses the same guard.
+- A clean native-stack draft with automatic mark-ready disabled returns `CANCEL` before the stall guard.
 - The stack timer lives in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/stack-<number>/stack-stall.json`. It fingerprints the summary status plus each layer's head commit, draft state, READY receipt, and reasons. Every aggregate tick shares it (`--until-terminal`, a bounded poll, or MCP). A changed fingerprint resets it; any other stack plan or a disabled timeout clears it. The escalation names each waiting layer and why it waits.
 
 ### `required-checks-unreported`

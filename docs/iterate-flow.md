@@ -167,7 +167,7 @@ A draft native stack layer is marked ready by its own session as soon as that la
 
 ### Stall guard
 
-Applies to ordinary `wait` and `fix_code` after the action is chosen — not to `ready`, active merge waits, `merge`, `cancel`, `mark_ready`, or `escalate`. A disabled mark-ready hold is an ordinary wait and uses the guard.
+Applies to ordinary `wait` and `fix_code` after the action is chosen — not to `ready`, active merge waits, `merge`, `cancel`, `mark_ready`, or `escalate`. A clean draft with automatic mark-ready disabled returns `cancel` before this path and does not use the guard.
 
 **Fingerprint:** PR head SHA from GitHub (not the local checkout), action, `status`, `mergeStateStatus`, `state`, `isDraft`, sorted failing-check names + conclusions, sorted actionable thread/comment/review IDs, sorted review-summary minimize IDs. Stored at `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/iterate-stall.json`.
 
