@@ -15,14 +15,14 @@ Latest numbers: [REPORT.md](REPORT.md). Estimated cost per session
 
 | session | cost vs. gh | cost vs. MCP | turns vs. gh / MCP | tool tokens vs. gh / MCP |
 | --- | --- | --- | --- | --- |
-| single PR | **−43%** | **−77%** | −19% / −69% | −74% / −89% |
+| single PR | **−42%** | **−77%** | −17% / −68% | −73% / −89% |
 | PR stack | **−45%** | **−63%** | −38% / −58% | −24% / −59% |
 
 GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
-| single PR | 31 / 37 / 12.3 | 4.8 / 9 / 79.5 | 178.5 core + 0 points | 178.5 core + 0 points |
+| single PR | 33.3 / 37.2 / 12.4 | 4.8 / 15 / 86 | 201.7 core + 0 points | 201.7 core + 0 points |
 | PR stack | 11 / 27 / 12 | 2 / 6 / 74 | 432 core + 0 points | 432 core + 0 points |
 
 <!-- bench:headline:end -->

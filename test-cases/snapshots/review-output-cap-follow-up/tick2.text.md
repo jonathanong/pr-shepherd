@@ -7,7 +7,7 @@
 
 ## Review threads
 
-### [threadId=PRRT_active060](https://github.com/owner/repo/pull/42#discussion_r1060) — `src/module4.ts:70` (@reviewer)
+### [threadId=PRRT_active060](https://github.com/owner/repo/pull/42#discussion_r1060) — `src/module4.ts:70` (@reviewer) [reviewId=PRR_summary001]
 
 > Thread 060: guard the empty input before indexing, and add a test for it.
 

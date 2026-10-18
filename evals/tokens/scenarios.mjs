@@ -174,7 +174,7 @@ export function eventArm(arms) {
  */
 const shepherdTick = (out, phase = 1) => ({ phase, via: "bash", cmd: SHEPHERD_CMD, out });
 
-/** A later tick of fixture 152, recorded by test-cases/review-output-cap.test.mts. */
+/** A later tick of fixture 155, recorded by test-cases/review-output-cap.test.mts. */
 const followUpTick = (n) =>
   readFileSync(
     join(REPO_ROOT, "test-cases", "snapshots", "review-output-cap-follow-up", `tick${n}.text.md`),
@@ -1003,9 +1003,9 @@ const PR_SCENARIOS = [
     id: "review-deluge",
     weight: 0.1,
     title: "Work through 115 review items under the review output budget",
-    note: "Fixture 152 at a 3000-character `iterate.reviewOutputMaxChars`: 60 active threads, 25 comments, 2 changes-requested reviews, 6 summaries and 22 first-look or edited items. Shepherd shows them in three batches (40, 42, 33) and replies to each batch's threads with one `apply review`; the baselines read everything at once and reply to all 60 threads one by one.",
+    note: "Fixture 155 at a 3000-character `iterate.reviewOutputMaxChars`: 60 active threads, 25 comments, 2 changes-requested reviews, 6 summaries and 22 first-look or edited items. Shepherd shows them in three batches (40, 42, 33) and replies to each batch's threads with one `apply review`; the baselines read everything at once and reply to all 60 threads one by one.",
     arms() {
-      const fixture = "152-fix-code-review-output-capped";
+      const fixture = "155-fix-code-review-output-capped";
       const state = fixtureState(fixture);
       const ticks = [snapshot(fixture), followUpTick(2), followUpTick(3)];
       const repliesIn = (text) =>

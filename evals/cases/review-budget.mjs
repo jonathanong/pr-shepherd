@@ -1,6 +1,6 @@
 // Case 53: the per-tick review output budget (`iterate.reviewOutputMaxChars`).
 //
-// Fixture 152 holds 115 review items against a 3000-character budget, so the
+// Fixture 155 holds 115 review items against a 3000-character budget, so the
 // FIX_CODE output shows 40 of them (two changes-requested reviews and the 38
 // oldest active threads) and prints a subset step. The held items are absent
 // from the output and from the generated `apply review` IDs. Two failures are
@@ -16,7 +16,7 @@ export const REVIEW_BUDGET_CASES = [
     tier: "discriminating",
     area: "github",
     runs: 6,
-    fixture: "152-fix-code-review-output-capped",
+    fixture: "155-fix-code-review-output-capped",
     shape: shapeA,
     tags: ["fix-code", "review-budget"],
     graders: {

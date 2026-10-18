@@ -15,6 +15,7 @@
         "authorType": "User",
         "body": "Thread 060: guard the empty input before indexing, and add a test for it.",
         "url": "https://github.com/owner/repo/pull/42#discussion_r1060",
+        "reviewId": "PRR_summary001",
         "createdAtUnix": 1715001600
       },
       {
