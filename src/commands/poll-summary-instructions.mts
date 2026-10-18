@@ -185,8 +185,7 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
       return { action: ownedWork ? "shepherd" : "escalate", stackMergeable: false, instructions };
     }
     if (!agentWork) {
-      if (work.idle.length > 0) return idleWaitPlan(work.idle);
-      if (work.held.length > 0) {
+      if (work.held.length > 0 && work.idle.length === 0) {
         return {
           action: "cancel",
           stackMergeable: false,
