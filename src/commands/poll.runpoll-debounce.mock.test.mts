@@ -54,6 +54,10 @@ describe("runPoll — FIX_CODE debounce", () => {
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
     expect(persistSeenAt(0)).toBe(false);
     expect(persistSeenAt(1)).toBe(true);
+    expect(mockRunIterate.mock.calls.map((c) => c[0].deferEditedCommentMarkers)).toEqual([
+      true,
+      true,
+    ]);
   });
 
   it("keeps polling at --interval during a 5m debounce window", async () => {

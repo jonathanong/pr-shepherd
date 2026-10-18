@@ -8,6 +8,7 @@ import type {
   ShepherdStatus,
   FirstLookThread,
   FirstLookComment,
+  EditedComment,
   RuleAutoResolveReport,
 } from "./report.mts";
 import type { ActiveCheck, PrActivitySummary } from "./activity.mts";
@@ -99,6 +100,11 @@ export interface IterateResultBase {
   nextCheck?: NextCheck;
   /** Classification-rule resolve/minimize applied during this fetch. Omitted when nothing happened. */
   ruleAutoResolve?: RuleAutoResolveReport;
+  /**
+   * PR comments edited since Shepherd last showed them. Edits never block readiness, so they are
+   * held during `wait`/`ready` and shown once on the next other action. Omitted when empty.
+   */
+  editedComments?: EditedComment[];
 }
 
 interface IterateResultWait extends IterateResultBase {
@@ -222,6 +228,11 @@ export interface IterateCommandOptions extends GlobalOptions {
    * only by `runPollCore`; excluded from the public `IterateInput` in api.mts.
    */
   persistSeen?: boolean;
+  /**
+   * Internal. `true` attaches edited comments without writing their markers; the poll loop
+   * writes them for the one result it returns. Set only by `runPollCore`.
+   */
+  deferEditedCommentMarkers?: boolean;
   /**
    * Internal. `true` allows fingerprint reuse of a previous WAIT-shaped report.
    * Poll sets this only for internal WAIT/MARK_READY continuation ticks — never the

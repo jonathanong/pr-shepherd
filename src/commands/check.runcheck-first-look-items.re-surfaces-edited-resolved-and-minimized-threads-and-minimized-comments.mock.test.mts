@@ -15,7 +15,7 @@ import { runCheck } from "./check.mts";
 registerHooks();
 
 describe("runCheck — first-look items", () => {
-  it("re-surfaces edited resolved and minimized threads and minimized comments", async () => {
+  it("re-surfaces edited resolved and minimized threads and holds edited minimized comments", async () => {
     const resolved = makeThread({
       id: "t-resolved",
       isResolved: true,
@@ -52,29 +52,32 @@ describe("runCheck — first-look items", () => {
       ["t-resolved", "resolved", true],
       ["t-minimized", "minimized", true],
     ]);
-    expect(report.comments.firstLook.map((c) => [c.id, c.firstLookStatus, c.edited])).toEqual([
-      ["c-minimized", "minimized", true],
+    expect(report.comments.firstLook).toEqual([]);
+    expect(report.comments.edited?.map((c) => [c.id, c.isMinimized, c.edited])).toEqual([
+      ["c-minimized", true, true],
     ]);
+    expect(report.comments.actionable).toEqual([]);
+    expect(mockMarkSeen).not.toHaveBeenCalledWith(expect.any(Object), "c-minimized", "comment new");
   });
-  it("surfaces an edited minimized comment once per distinct body", async () => {
+  it("keeps reporting an edited comment until iterate writes its marker", async () => {
     const seen = new Map([["c-min", { seenAt: 1000, bodyHash: hashBody("summary v1") }]]);
     mockLoadSeenMap.mockImplementation(async () => new Map(seen));
-    mockMarkSeen.mockImplementation(async (_key: unknown, id: string, body: string) => {
-      seen.set(id, { seenAt: seen.get(id)?.seenAt ?? 2000, bodyHash: hashBody(body) });
+    mockFetchPrBatch.mockResolvedValue({
+      data: makeBatchData({
+        comments: [
+          makeComment({
+            id: "c-min",
+            author: "coderabbitai",
+            isMinimized: true,
+            body: "summary v2",
+          }),
+        ],
+      }),
     });
-    const runWithBody = async (body: string) => {
-      mockFetchPrBatch.mockResolvedValue({
-        data: makeBatchData({
-          comments: [makeComment({ id: "c-min", author: "coderabbitai", isMinimized: true, body })],
-        }),
-      });
-      return (await runCheck(BASE_OPTS)).comments.firstLook.map((c) => [c.id, c.edited]);
-    };
 
-    expect(await runWithBody("summary v2")).toEqual([["c-min", true]]);
-    expect(await runWithBody("summary v2")).toEqual([]);
-    expect(await runWithBody("summary v3")).toEqual([["c-min", true]]);
-    expect(await runWithBody("summary v3")).toEqual([]);
+    expect((await runCheck(BASE_OPTS)).comments.edited?.map((c) => c.id)).toEqual(["c-min"]);
+    expect((await runCheck(BASE_OPTS)).comments.edited?.map((c) => c.id)).toEqual(["c-min"]);
+    expect(mockMarkSeen).not.toHaveBeenCalled();
   });
   it("calls markSeen for each first-look item with the item body", async () => {
     const outdated = makeThread({ id: "t-outdated", isOutdated: true, body: "fix this" });

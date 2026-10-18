@@ -113,6 +113,7 @@ const DEFAULT_AUTHOR_TYPE_PATHS = [
   ...["actionableComments", "changesRequestedReviews", "firstLookSummaries", "editedSummaries"].map(
     (k) => `fix.${k}[].authorType`,
   ),
+  "editedComments[].authorType",
 ];
 
 export const CONDITIONAL_LOSSY_PATHS: ConditionalLossyPath[] = [

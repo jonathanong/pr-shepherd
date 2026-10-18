@@ -1,0 +1,56 @@
+{
+  "description": "The ready delay elapsed on a clean PR while a minimized bot comment and a visible human comment carry edits Shepherd has not shown. The edits do not block readiness: iterate still cancels and shows each edit once under `## Edited comments`.",
+  "batchData": {
+    "comments": [
+      {
+        "id": "IC_bot_summary",
+        "author": "coderabbitai",
+        "authorType": "Bot",
+        "body": "<!-- walkthrough -->\nWalkthrough updated after the latest PR description edit.",
+        "url": "https://github.com/owner/repo/pull/42#issuecomment-2",
+        "createdAtUnix": 1715600000,
+        "isMinimized": true
+      },
+      {
+        "id": "IC_human_edit",
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Looks good overall. (edit: typo fixed)",
+        "url": "https://github.com/owner/repo/pull/42#issuecomment-3",
+        "createdAtUnix": 1715650000,
+        "isMinimized": false
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "seenMap": {
+    "IC_bot_summary": {
+      "seenAt": 1715000000,
+      "bodyHash": "aaaaaaaaaaaaaaaa"
+    },
+    "IC_human_edit": {
+      "seenAt": 1715000000,
+      "bodyHash": "aaaaaaaaaaaaaaaa"
+    }
+  },
+  "config": {
+    "iterate": {
+      "minimizeComments": "none"
+    }
+  },
+  "readyDelayState": {
+    "isReady": true,
+    "shouldCancel": true,
+    "remainingSeconds": 0
+  },
+  "expectedExitCode": 0
+}

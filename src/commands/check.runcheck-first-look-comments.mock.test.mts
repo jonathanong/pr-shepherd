@@ -94,7 +94,7 @@ describe("runCheck — first-look comments", () => {
     expect(report.comments.actionable).toEqual([]);
     expect(report.comments.minimizeIds).toEqual([]);
   });
-  it("re-surfaces edited visible comments excluded by minimizeComments policy", async () => {
+  it("holds edited visible comments excluded by minimizeComments policy for iterate", async () => {
     const cfg = defaultConfig();
     cfg.iterate.minimizeComments = "none";
     mockLoadConfig.mockReturnValue(cfg);
@@ -106,8 +106,9 @@ describe("runCheck — first-look comments", () => {
 
     const report = await runCheck(BASE_OPTS);
 
-    expect(report.comments.actionable).toMatchObject([{ id: "c-human", edited: true }]);
+    expect(report.comments.actionable).toEqual([]);
+    expect(report.comments.edited).toMatchObject([{ id: "c-human", edited: true }]);
     expect(report.comments.minimizeIds).toEqual([]);
-    expect(mockMarkSeen).toHaveBeenCalledWith(expect.any(Object), "c-human", "new text");
+    expect(mockMarkSeen).not.toHaveBeenCalledWith(expect.any(Object), "c-human", "new text");
   });
 });

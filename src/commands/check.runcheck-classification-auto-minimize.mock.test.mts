@@ -91,7 +91,7 @@ describe("runCheck — classification auto-minimize", () => {
     ]);
   });
 
-  it("surfaces a CodeRabbit walkthrough edited from a minimized progress notice", async () => {
+  it("holds a CodeRabbit walkthrough edited from a minimized progress notice as an edit", async () => {
     const id = "c-coderabbit-progress";
     const progress =
       "<!-- This is an auto-generated comment: review in progress by coderabbit.ai -->\n> Currently processing new changes in this PR. This may take a few minutes, please wait...\n<!-- end of auto-generated comment: review in progress by coderabbit.ai -->";
@@ -124,13 +124,9 @@ describe("runCheck — classification auto-minimize", () => {
 
     const edited = await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: true });
 
-    expect(edited.comments.firstLook).toEqual([
-      expect.objectContaining({
-        id,
-        body: walkthrough,
-        edited: true,
-        firstLookStatus: "minimized",
-      }),
+    expect(edited.comments.firstLook).toEqual([]);
+    expect(edited.comments.edited).toEqual([
+      expect.objectContaining({ id, body: walkthrough, edited: true, isMinimized: true }),
     ]);
     expect(edited.comments.autoMinimized).toBeUndefined();
     expect(mockAutoMinimizeComments).not.toHaveBeenCalled();

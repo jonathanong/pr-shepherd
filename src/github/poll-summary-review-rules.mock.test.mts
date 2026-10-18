@@ -51,7 +51,7 @@ describe("summarizePollSummaryReview — classification rules", () => {
     });
   });
 
-  it("routes a minimized notice edited into feedback, but ignores noise and unchanged feedback", async () => {
+  it("never routes an edited comment, but routes a new one", async () => {
     const seen = new Map<string, SeenMarker>([
       ["c0", { seenAt: 1, bodyHash: hashBody("minimize") }],
     ]);
@@ -66,11 +66,13 @@ describe("summarizePollSummaryReview — classification rules", () => {
     ).toBeUndefined();
     expect(
       (await summarizePollSummaryReview(minimized("New finding"), seen, true)).actionable,
-    ).toBe(1);
-    seen.set("c0", { seenAt: 1, bodyHash: hashBody("New finding") });
-    expect(
-      (await summarizePollSummaryReview(minimized("New finding"), seen, true)).actionable,
     ).toBeUndefined();
+    expect((await summarizePollSummaryReview(raw(["New finding"]), seen, true)).actionable).toBe(
+      undefined,
+    );
+    expect(
+      (await summarizePollSummaryReview(minimized("New finding"), new Map(), true)).actionable,
+    ).toBe(1);
   });
 });
 

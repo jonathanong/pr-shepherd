@@ -58,7 +58,7 @@ Human-authored threads must stay visible. Shepherd later pairs reply-and-resolve
 
 `updateReadyDelay(pr, isCleanReadyState, readyDelaySeconds, owner, repo, options)` reads and writes `ready-since.txt`. Default delay is 10 minutes (`watch.readyDelayMinutes` or `--ready-delay`).
 
-A **clean ready state** is `status === "READY"`, `hasReadinessWork` false, and no active auto-merge or merge-queue state being handled. It includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending). An initial first look at a hidden PR comment routes to `fix_code` for acknowledgement without restarting the countdown or voiding a READY receipt. An edited minimized comment that no longer matches a noise rule always surfaces its new body. When a non-bot author made the edit, it is readiness work: the countdown restarts and the receipt is cleared. Bot edits are acknowledgement-only, because bots such as CodeRabbit regenerate minimized summaries on their own after a PR settles.
+A **clean ready state** is `status === "READY"`, `hasReadinessWork` false, and no active auto-merge or merge-queue state being handled. It includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending). An initial first look at a hidden PR comment routes to `fix_code` for acknowledgement without restarting the countdown or voiding a READY receipt. An edited PR comment (a conversation comment, minimized or not, from any author) never blocks readiness: it does not route to `fix_code`, restart the ready delay, or clear a READY receipt. Iterate holds it during `wait` and `ready` without writing its marker, then shows it once under `## Edited comments` on the next other action, such as the `cancel` or `merge` that ends the delay (see [Edited comments](actions.md#edited-comments)). Bots such as CodeRabbit regenerate summaries on their own after a PR settles, often in reply to a PR-body journal edit, so an edit cannot be readiness evidence.
 
 ```mermaid
 stateDiagram-v2
@@ -84,7 +84,7 @@ stateDiagram-v2
 
 - Unclean sweeps include non-READY status, failing CI, conflicts, unresolved comments, review-summary minimization, and first-look threads and summaries.
 - The elapsed marker stays until `cancel` or `merge` consumes it, so a hidden-comment acknowledgement tick does not restart the wait.
-- A current READY receipt (same head, base, and readiness evidence) already proves the delay elapsed, so a clean sweep returns `shouldCancel: true` without a marker (`alreadyElapsed`). Rerunning a READY PR — for example with `--merge` after a `ready-delay-elapsed` cancel — does not restart the countdown. When the head, base, or evidence moved, the receipt is cleared and the countdown restarts. Hidden comment and review bodies are omitted from the receipt fingerprint, but a full poll reclassifies edited minimized PR comments. If a non-bot edit no longer matches a noise rule, it becomes readiness work and clears the receipt. Bot edits keep the receipt.
+- A current READY receipt (same head, base, and readiness evidence) already proves the delay elapsed, so a clean sweep returns `shouldCancel: true` without a marker (`alreadyElapsed`). Rerunning a READY PR — for example with `--merge` after a `ready-delay-elapsed` cancel — does not restart the countdown. When the head, base, or evidence moved, the receipt is cleared and the countdown restarts. PR comment bodies and hidden review bodies are omitted from the receipt fingerprint, and comment IDs still bind new comments. An edited PR comment keeps the receipt.
 - Before a READY sweep reaches this step, `runCheck` does one fresh REST mergeability read (unless the UNKNOWN fallback already did). If it reports `CONFLICTING`/`DIRTY`, the sweep becomes `FAILING`/`CONFLICTS`, resets the marker, and routes to `fix_code`.
 - Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/ready-since.txt` (`<unix seconds> <head SHA>`). A future timestamp (clock skew), another head, or a marker without a head is reset to now.
 
@@ -100,7 +100,7 @@ The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completio
 - `report.threads.ruleAutoResolveIds` is non-empty
 - `report.comments.actionable.length > 0`
 - `report.comments.minimizeIds` is non-empty
-- `report.comments.firstLook.length > 0` (hidden PR comments; non-bot edited bodies count as `hasReadinessWork`, while initial acknowledgement and bot edits do not; see [step 2](#2-ready-delay))
+- `report.comments.firstLook.length > 0` (an initial look at a hidden PR comment; not `hasReadinessWork`, see [step 2](#2-ready-delay)). Edited PR comments (`report.comments.edited`) never route here.
 - `report.changesRequestedReviews.length > 0`
 - `report.checks.failing.length > 0`
 - `report.mergeStatus.status === 'CONFLICTS'`

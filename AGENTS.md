@@ -127,6 +127,14 @@ is tagged `[status: …, edited]` or rendered under a new
 display; the original `seenAt` is preserved. Legacy markers without
 `bodyHash` are treated conservatively as unchanged and are not re-surfaced.
 
+**Edited PR comments** (conversation comments, minimized or not) are the
+exception to "marker updated after display": they never block readiness.
+`check.mts` reports them in `comments.edited` without writing markers;
+`iterate` holds them during `wait`/`ready`, then shows them once under
+`## Edited comments` on the next other action and writes the markers then.
+Edited review summaries, changes-requested reviews, and thread comments keep
+the normal gate.
+
 Writes are no longer O_EXCL: `markSeen` reads any existing marker to
 preserve `seenAt`, then writes with `flag: "w"`. Under concurrent runs the
 last writer's hash wins — acceptable because both writes carry valid current

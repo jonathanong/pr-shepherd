@@ -2,6 +2,7 @@
 import type { IterateResult } from "../types.mts";
 import { adaptIterateLog, buildSimpleIterateInstructions } from "./iterate-instructions.mts";
 import { projectRuleAutoResolve } from "../commands/rule-auto-resolve-format.mts";
+import { projectEditedComments } from "./edited-comments-format.mts";
 import { projectMergeRequirements } from "../merge-status/requirements-format.mts";
 import { branchSegmentShowsBase } from "./iterate-branch-segment.mts";
 import { isRedundantMergeQueue } from "./iterate-merge-formatter.mts";
@@ -116,6 +117,9 @@ export function projectIterateLean(
     ...(result.nextCheck && { nextCheck: result.nextCheck }),
     ...(result.ruleAutoResolve && {
       ruleAutoResolve: projectRuleAutoResolve(result.ruleAutoResolve),
+    }),
+    ...(result.editedComments?.length && {
+      editedComments: projectEditedComments(result.editedComments),
     }),
   };
 

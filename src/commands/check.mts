@@ -63,6 +63,7 @@ import type {
   ShepherdReport,
   ClassifiedCheck,
   FirstLookComment,
+  EditedComment,
   BatchPrData,
   ShepherdStatus,
 } from "../types.mts";
@@ -364,12 +365,17 @@ async function runScopedCheck(
     repeatableThreadIds,
     resolveOtherHumanThreads,
   );
-  const firstLookComments: FirstLookComment[] = minimizedCommentCandidates.flatMap((c) => {
-    const cls = classifyItem(c.id, c.body, seenMap);
-    if (cls === "unchanged") return [];
-    const base = { ...c, firstLookStatus: "minimized" as const };
-    return cls === "edited" ? [{ ...base, edited: true as const }] : [base];
-  });
+  const firstLookComments: FirstLookComment[] = minimizedCommentCandidates
+    .filter((c) => classifyItem(c.id, c.body, seenMap) === "new")
+    .map((c) => ({ ...c, firstLookStatus: "minimized" as const }));
+  // Edited PR comments never block readiness. Iterate shows them on the next action that is not
+  // wait/ready and writes their markers then, so an edit is never marked seen while hidden.
+  const editedComments: EditedComment[] = [
+    ...minimizedCommentCandidates
+      .filter((c) => classifyItem(c.id, c.body, seenMap) === "edited")
+      .map((c) => ({ ...c, edited: true as const })),
+    ...visibleCommentClassification.edited,
+  ];
   const firstLookSummaries: typeof batchData.reviewSummaries = [];
   const editedSummaries: typeof batchData.reviewSummaries = [];
   const seenSummaries: typeof batchData.reviewSummaries = [];
@@ -668,6 +674,7 @@ async function runScopedCheck(
       actionable: visibleCommentClassification.actionable,
       minimizeIds: [...visibleCommentClassification.minimizeIds, ...ruleAutoResolveCommentIds],
       firstLook: firstLookComments,
+      ...(editedComments.length > 0 && { edited: editedComments }),
       ...(autoMinimized.length > 0 && { autoMinimized }),
     },
     changesRequestedReviews,

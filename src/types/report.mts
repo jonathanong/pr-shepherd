@@ -39,10 +39,15 @@ export interface FirstLookThread extends ReviewThread {
 
 export interface FirstLookComment extends PrComment {
   firstLookStatus: "minimized";
-  edited?: boolean;
 }
 
-export type ActionableComment = PrComment & { edited?: boolean };
+export type ActionableComment = PrComment;
+
+/**
+ * A seen PR comment whose body changed since Shepherd last showed it. An edit is not readiness
+ * work: iterate shows it once on the next action that is not `wait` or `ready`.
+ */
+export type EditedComment = PrComment & { edited: true };
 
 export type ShepherdStatus =
   | "MERGED"
@@ -110,6 +115,8 @@ export interface ShepherdReport {
     minimizeIds?: string[];
     /** First-look items — minimized comments not yet seen by the agent. */
     firstLook: FirstLookComment[];
+    /** Seen PR comments (minimized or not) whose body changed. Not marked seen by check. Omitted when empty. */
+    edited?: EditedComment[];
     /** PR comments and review summaries minimized by a suppress+autoResolve rule this fetch. */
     autoMinimized?: AutoMinimizedItem[];
   };
@@ -188,7 +195,6 @@ export interface AgentComment {
   authorAssociation?: import("./github.mts").CommentAuthorAssociation;
   body: string;
   url: string;
-  edited?: boolean;
 }
 
 /** Check shape emitted to the iterate agent under `fix_code` or check escalation. */

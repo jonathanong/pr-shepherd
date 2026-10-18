@@ -175,10 +175,6 @@ export function renderCommentBullet(
   return `- \`commentId=${c.id}\`${link} (${renderAuthor(c.author, c.authorType, c.authorAssociation)})${statusSuffix}: ${renderBodyPreview(c.body)}`;
 }
 
-export function renderEditedCommentTag(c: { edited?: boolean }): string | undefined {
-  return c.edited ? "[edited since first look]" : undefined;
-}
-
 export function renderReviewBullet(
   r: {
     id: string;
@@ -242,8 +238,7 @@ export function buildFirstLookBullets(
     );
   }
   for (const c of firstLookComments) {
-    const editedSuffix = c.edited ? ", edited" : "";
-    bullets.push(renderCommentBullet(c, { statusTag: `[status: minimized${editedSuffix}]` }));
+    bullets.push(renderCommentBullet(c, { statusTag: "[status: minimized]" }));
   }
   return bullets;
 }

@@ -55,7 +55,7 @@ export function toAgentThread(t: ReviewThread): AgentThread {
   };
 }
 
-export function toAgentComment(c: PrComment & { edited?: boolean }): AgentComment {
+export function toAgentComment(c: PrComment): AgentComment {
   return {
     id: c.id,
     ...(c.viewerCanMinimize === false && { viewerCanMinimize: false }),
@@ -64,7 +64,6 @@ export function toAgentComment(c: PrComment & { edited?: boolean }): AgentCommen
     ...(c.authorAssociation !== undefined && { authorAssociation: c.authorAssociation }),
     body: c.body,
     url: c.url,
-    ...(c.edited === true && { edited: true }),
   };
 }
 

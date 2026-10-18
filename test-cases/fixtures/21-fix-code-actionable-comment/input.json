@@ -22,12 +22,6 @@
       }
     ]
   },
-  "seenMap": {
-    "IC_actionable": {
-      "seenAt": 1715000000,
-      "bodyHash": "8e22713a82072892"
-    }
-  },
   "config": {
     "iterate": {
       "minimizeComments": "none"

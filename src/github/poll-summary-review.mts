@@ -39,7 +39,8 @@ export async function summarizePollSummaryReview(
         comment.body,
         comment.isMinimized,
       ) &&
-      classifyItem(comment.id, comment.body, seen) !== "unchanged"
+      // An edited PR comment is shown once by iterate but never blocks readiness.
+      classifyItem(comment.id, comment.body, seen) === "new"
     )
       actionable += 1;
   }

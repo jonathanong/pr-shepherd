@@ -76,7 +76,7 @@ describe("REST complete-evidence readiness", () => {
     expect(report.status).toBe("UNKNOWN");
   });
 
-  it("suppresses denied comment minimization and bot dismissal until their bodies change", async () => {
+  it("suppresses denied comment minimization and bot dismissal until their bodies change, showing a comment edit first", async () => {
     const comment = makeComment();
     const review = {
       id: "review-denied",
@@ -107,7 +107,24 @@ describe("REST complete-evidence readiness", () => {
       }),
     });
     const edited = await runCheck(BASE_OPTS);
-    expect(edited.comments.minimizeIds).toContain(comment.id);
+    // A comment edit is informational first; the review edit is readiness work.
+    expect(edited.comments.edited).toMatchObject([{ id: comment.id }]);
+    expect(edited.comments.minimizeIds ?? []).toEqual([]);
     expect(edited.changesRequestedReviews).toMatchObject([{ id: review.id, edited: true }]);
+    // Once iterate shows the edit and updates its marker, the denial no longer matches the body.
+    mockLoadSeenMap.mockResolvedValue(
+      new Map([
+        [
+          comment.id,
+          {
+            seenAt: 1,
+            bodyHash: hashBody("edited comment"),
+            deniedMutationBodyHash: hashBody(comment.body),
+          },
+        ],
+      ]),
+    );
+    const retried = await runCheck(BASE_OPTS);
+    expect(retried.comments.minimizeIds).toContain(comment.id);
   });
 });
