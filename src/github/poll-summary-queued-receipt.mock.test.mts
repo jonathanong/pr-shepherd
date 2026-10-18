@@ -121,51 +121,50 @@ beforeEach(() => {
 });
 
 describe("queued READY receipt projection", () => {
-  it("routes an edited minimized notice to review even when its receipt fingerprint is unchanged", async () => {
-    const comment = (body: string) => ({
-      id: "notice-1",
-      body,
-      author: { login: "notice-bot", __typename: "Bot" },
-      isMinimized: true,
-    });
-    const withComment = (body: string) =>
-      raw({
-        comments: {
-          totalCount: 1,
-          pageInfo: { hasPreviousPage: false },
-          nodes: [comment(body)],
-        },
+  it.each([true, false])(
+    "keeps the receipt when a comment (minimized: %s) is edited into new feedback",
+    async (isMinimized) => {
+      const comment = (body: string) => ({
+        id: "notice-1",
+        body,
+        author: { login: "notice-bot", __typename: "Bot" },
+        isMinimized,
       });
-    const original = withComment("noise");
-    const edited = withComment("New finding");
-    vi.mocked(readReadyReceipt).mockResolvedValue({
-      version: 1,
-      owner: repo.owner,
-      repo: repo.name,
-      pr: 42,
-      headRefOid: head,
-      baseRefOid: base,
-      status: "READY",
-      isDraft: false,
-      readinessFingerprint: fingerprintRawSummaryPr(original)!,
-      recordedAtUnix: 1,
-    });
-    vi.mocked(loadSeenMap).mockResolvedValue(
-      new Map([["notice-1", { seenAt: 1, bodyHash: hashBody("noise") }]]),
-    );
+      const withComment = (body: string) =>
+        raw({
+          comments: {
+            totalCount: 1,
+            pageInfo: { hasPreviousPage: false },
+            nodes: [comment(body)],
+          },
+        });
+      const original = withComment("noise");
+      const edited = withComment("New finding");
+      vi.mocked(readReadyReceipt).mockResolvedValue({
+        version: 1,
+        owner: repo.owner,
+        repo: repo.name,
+        pr: 42,
+        headRefOid: head,
+        baseRefOid: base,
+        status: "READY",
+        isDraft: false,
+        readinessFingerprint: fingerprintRawSummaryPr(original)!,
+        recordedAtUnix: 1,
+      });
+      vi.mocked(loadSeenMap).mockResolvedValue(
+        new Map([["notice-1", { seenAt: 1, bodyHash: hashBody("noise") }]]),
+      );
 
-    expect(fingerprintRawSummaryPr(edited)).toBe(fingerprintRawSummaryPr(original));
-    const finding = await summarizePollSummaryPr(edited, repo, { stackPrNumber: 42, merge: true });
-    expect(finding).toMatchObject({ action: "fix_code", review: { actionable: 1 } });
-    expect(finding.readyReceipt).toBeUndefined();
-
-    const stillNoise = await summarizePollSummaryPr(withComment("noise again"), repo, {
-      stackPrNumber: 42,
-      merge: true,
-    });
-    expect(stillNoise.readyReceipt).toBe(true);
-    expect(stillNoise.review?.actionable).toBeUndefined();
-  });
+      expect(fingerprintRawSummaryPr(edited)).toBe(fingerprintRawSummaryPr(original));
+      const finding = await summarizePollSummaryPr(edited, repo, {
+        stackPrNumber: 42,
+        merge: true,
+      });
+      expect(finding.readyReceipt).toBe(true);
+      expect(finding.review?.actionable).toBeUndefined();
+    },
+  );
 
   it("retains a completed receipt while the merge-group check runs", async () => {
     const item = await summarizePollSummaryPr(

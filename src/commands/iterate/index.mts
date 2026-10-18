@@ -9,13 +9,14 @@ import { classifyReviewSummaries } from "./classify.mts";
 import { applyStallGuard } from "./stall.mts";
 import { clearStallState } from "../../state/iterate-stall.mts";
 import { handleFixCode } from "./fix-code.mts";
-import { isConfiguredBotAuthor, normalizeBotUsernames } from "../../comments/authors.mts";
+import { normalizeBotUsernames } from "../../comments/authors.mts";
 import { autoMinimizeComments } from "../../comments/resolve.mts";
 import { hasCheckDrivenActionableWork } from "../check-annotations.mts";
 import { buildReadyMergeOutcome, handleActiveMergeState } from "./merge-state.mts";
 import { buildIterateBase } from "./base.mts";
 import { markReadyIfAuthorized } from "./mark-ready.mts";
-import type { IterateCommandOptions, IterateResult } from "../../types.mts";
+import type { IterateCommandOptions, IterateResult, ShepherdReport } from "../../types.mts";
+import { classifyItem, loadSeenMap, markSeen } from "../../state/seen-comments.mts";
 import { withIterateApiUsage } from "./run.mts";
 import { fetchRawSummaryPr } from "../../github/poll-summary.mts";
 import { summarizePollSummaryPr } from "../../github/poll-summary-projector.mts";
@@ -37,10 +38,44 @@ import { transportReadinessGaps } from "../../github/transport-evidence.mts";
 import { buildEscalateHumanMessage } from "./escalate.mts";
 
 export function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
-  return withIterateApiUsage(opts, () => runIterateCore(opts));
+  return withIterateApiUsage(opts, async () => {
+    const tick: IterateTick = {};
+    return attachEditedComments(await runIterateCore(opts, tick), tick, opts);
+  });
 }
 
-async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResult> {
+interface IterateTick {
+  report?: ShepherdReport;
+}
+
+// Edited PR comments are not readiness work. Hold them while the PR waits or counts down, and show
+// each once on any other action (including MERGE after the ready delay), writing its marker then.
+// A replayed cached report can carry edits already shown, so re-check the current markers.
+async function attachEditedComments(
+  result: IterateResult,
+  tick: IterateTick,
+  opts: IterateCommandOptions,
+): Promise<IterateResult> {
+  const candidates = tick.report?.comments.edited ?? [];
+  if (candidates.length === 0 || result.action === "wait" || result.action === "ready")
+    return result;
+  if (result.action === "cancel" && (result.reason === "merged" || result.reason === "closed"))
+    return result;
+  const [owner, repo] = result.repo.split("/");
+  if (!owner || !repo) return result;
+  const key = { owner, repo, pr: result.pr };
+  const seen = await loadSeenMap(key);
+  const edited = candidates.filter((c) => classifyItem(c.id, c.body, seen) === "edited");
+  if (edited.length === 0) return result;
+  if (opts.persistSeen !== false)
+    await Promise.allSettled(edited.map((c) => markSeen(key, c.id, c.body)));
+  return { ...result, editedComments: edited };
+}
+
+async function runIterateCore(
+  opts: IterateCommandOptions,
+  tick: IterateTick,
+): Promise<IterateResult> {
   const config = loadConfig();
   const botUsernames = normalizeBotUsernames(config.botUsernames);
   const readyDelaySeconds = opts.readyDelaySeconds ?? config.watch.readyDelayMinutes * 60;
@@ -68,6 +103,7 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     },
     checkContext,
   );
+  tick.report = report;
 
   const [repoOwner, repoName] = report.repo.split("/");
   if (!repoOwner || !repoName) {
@@ -130,24 +166,14 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     const unminimized = selfMinimizeIds.filter((id) => !minimizedIds.has(id));
     if (unminimized.length > 0) reviewSummaryIds = [...reviewSummaryIds, ...unminimized];
   }
-  // A first look at an already-minimized comment is only an acknowledgment.
-  // A non-bot edit that no longer matches a noise rule may carry new feedback;
-  // it must restart the ready delay and void an existing READY receipt. Bots
-  // regenerate minimized summaries on their own, so their edits surface for
-  // acknowledgment without restarting the countdown.
-  const editedMinimizedFeedback = report.comments.firstLook.some(
-    (comment) =>
-      comment.isMinimized === true &&
-      comment.edited === true &&
-      !isConfiguredBotAuthor(comment, botUsernames),
-  );
+  // A first look at an already-minimized comment is only an acknowledgment. Edited PR comments
+  // (report.comments.edited) are neither: they never block readiness or restart the ready delay.
   const hasReadinessWork =
     report.threads.actionable.length > 0 ||
     report.threads.resolutionOnly.length > 0 ||
     report.threads.firstLook.length > 0 ||
     (report.threads.ruleAutoResolveIds?.length ?? 0) > 0 ||
     report.comments.actionable.length > 0 ||
-    editedMinimizedFeedback ||
     (report.comments.minimizeIds?.length ?? 0) > 0 ||
     report.changesRequestedReviews.length > 0 ||
     hasCheckDrivenActionableWork(reportForWork.checks, report.mergeStatus.status) ||
@@ -180,7 +206,6 @@ async function runIterateCore(opts: IterateCommandOptions): Promise<IterateResul
     receiptKey,
     report,
     hasReadinessWork,
-    editedMinimizedFeedback,
     checkContext,
   );
   const headSha = report.headSha ?? "unknown";
@@ -535,7 +560,6 @@ async function revalidateReadyReceipt(
   key: { owner: string; repo: string; pr: number },
   report: Awaited<ReturnType<typeof runCheck>>,
   hasReadinessWork: boolean,
-  editedMinimizedFeedback: boolean,
   context?: ReturnType<typeof createCheckExecutionContext>,
 ): Promise<boolean> {
   const receipt = await readReadyReceipt(key);
@@ -551,7 +575,6 @@ async function revalidateReadyReceipt(
     !report.headSha ||
     !report.baseRefOid ||
     transportReadinessGaps(report, report.mergeStatus.mergeStateStatus).length > 0 ||
-    editedMinimizedFeedback ||
     (!retainQueuedReceipt && (report.status !== "READY" || hasReadinessWork))
   ) {
     await clearReadyReceipt(key);

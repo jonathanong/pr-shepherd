@@ -235,7 +235,7 @@ Which non-human authors' items go to `--minimize-comment-ids`: minimizable PR co
 | `"bots"` | GitHub `Bot` authors only        |
 | `"none"` | Nothing; items are surfaced only |
 
-The deprecated `"users"` value warns and is treated as `"none"`. Excluded items still pass the seen-marker gate: surfaced once, suppressed while unchanged, re-surfaced when edited.
+The deprecated `"users"` value warns and is treated as `"none"`. Excluded items still pass the seen-marker gate: surfaced once, suppressed while unchanged, and shown once more as an [edited comment](actions.md#edited-comments) when edited.
 
 ### `iterate.behindBaseHint` — default `""`
 
@@ -403,7 +403,7 @@ The value is a map so it deep-merges across files. Unknown rule names and non-bo
 - Rules match conversation comments only; the same text on a review summary or inline review comment follows the normal review path.
 - `coderabbit-review-summary` and `codex-review-summary` are no longer rule names; setting them warns and is ignored.
 - "Resolve" means `autoResolve: true`, so with [`actions.autoMinimizeSuppressed`](#actionsautominimizesuppressed--default-true) the comment is also minimized on GitHub.
-- A CodeRabbit progress comment may later be edited into a walkthrough. Shepherd reclassifies the current body on every fetch; an edited walkthrough no longer matches `coderabbit-notices` and appears to the agent as an edited, minimized first-look comment. It stays minimized on GitHub.
+- A CodeRabbit progress comment may later be edited into a walkthrough. Shepherd reclassifies the current body on every fetch; an edited walkthrough no longer matches `coderabbit-notices` and is shown once as an [edited comment](actions.md#edited-comments) when readiness work is next reported. It never blocks readiness and stays minimized on GitHub.
 
 ## `actions`
 

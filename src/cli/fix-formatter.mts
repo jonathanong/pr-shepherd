@@ -82,10 +82,9 @@ export function formatFixCodeResult(
     sections.push("## Actionable comments");
     for (const c of result.fix.actionableComments) {
       const heading = c.url ? `[commentId=${c.id}](${c.url})` : `\`commentId=${c.id}\``;
-      const editedMarker = c.edited ? " [edited since first look]" : "";
       const authorizationMarker = c.viewerCanMinimize === false ? " [viewer cannot minimize]" : "";
       sections.push(
-        `### ${heading} (${renderAuthor(c.author, c.authorType, c.authorAssociation)})${authorizationMarker}${editedMarker}`,
+        `### ${heading} (${renderAuthor(c.author, c.authorType, c.authorAssociation)})${authorizationMarker}`,
       );
       sections.push(blockquote(c.body, topCap, c.url));
     }

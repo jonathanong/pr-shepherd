@@ -6,9 +6,9 @@ import { runWithGithubTransport } from "../../github/transport.mts";
 import { runIterate } from "./index.mts";
 
 /**
- * Pins current behavior seen in live cloud run #566: REST cannot minimize, so a bot that edits
- * its status comment in place (a rate-limit notice, a "review running" summary) re-surfaces it as
- * an edited first-look item. On a READY PR that tick is FIX_CODE and restarts the ready delay.
+ * Live cloud run #566 and issue #611: REST cannot minimize, so a bot keeps editing its status
+ * comment in place (a rate-limit notice, a "review running" summary). An edited PR comment never
+ * blocks readiness: the countdown continues, and the edit is shown once when the delay elapses.
  */
 const bot = { login: "coderabbitai[bot]", type: "Bot" };
 
@@ -30,7 +30,7 @@ afterEach(() => {
 });
 
 describe("REST cloud bot status-comment edits on a READY PR", () => {
-  it("re-surfaces the edit as FIX_CODE and restarts the ready delay", async () => {
+  it("keeps the ready delay running and shows the edit once when it elapses", async () => {
     vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-09T09:00:00Z"));
@@ -63,17 +63,20 @@ describe("REST cloud bot status-comment edits on a READY PR", () => {
     expect(await tick()).toMatchObject({ status: "READY", remainingSeconds: 300 });
 
     live.body = "Rate limit exceeded; review paused.";
-    const edited = await tick();
-    expect(edited).toMatchObject({
-      action: "fix_code",
-      fix: {
-        actionableComments: [
-          { id: "IC_501", body: "Rate limit exceeded; review paused.", edited: true },
-        ],
-      },
-    });
+    const held = await tick();
+    expect(held).toMatchObject({ action: "ready", remainingSeconds: 300 });
+    expect(held).not.toHaveProperty("editedComments");
+    live.body = "Review paused again.";
+    vi.setSystemTime(new Date("2026-10-09T09:08:00Z"));
+    expect(await tick()).toMatchObject({ action: "ready", remainingSeconds: 120 });
 
-    // The unchanged next tick is READY again, but the 600s countdown starts over.
-    expect(await tick()).toMatchObject({ status: "READY", remainingSeconds: 600 });
+    vi.setSystemTime(new Date("2026-10-09T09:10:00Z"));
+    expect(await tick()).toMatchObject({
+      action: "cancel",
+      reason: "ready-delay-elapsed",
+      editedComments: [{ id: "IC_501", body: "Review paused again.", edited: true }],
+    });
+    // The edit was shown once; the next tick does not repeat it.
+    expect(await tick()).not.toHaveProperty("editedComments");
   });
 });

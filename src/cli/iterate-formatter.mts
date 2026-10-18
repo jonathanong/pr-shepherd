@@ -1,4 +1,5 @@
 /* eslint-disable max-lines */
+import { insertEditedCommentsSection } from "./edited-comments-format.mts";
 import type { IterateResult } from "../types.mts";
 import { formatFixCodeResult } from "./fix-formatter.mts";
 import { formatRelevantChecks } from "./iterate-checks-formatter.mts";
@@ -59,7 +60,13 @@ export function formatIterateResult(
     return generated ? full.replace(repoSeg, "") : full;
   };
   const finish = (text: string): string =>
-    dropRepeatedRepo(insertRuleAutoResolveSection(text, result.ruleAutoResolve));
+    dropRepeatedRepo(
+      insertEditedCommentsSection(
+        insertRuleAutoResolveSection(text, result.ruleAutoResolve),
+        result.editedComments,
+        verbose,
+      ),
+    );
 
   const heading = `# PR #${result.pr} [${result.action.toUpperCase()}]`;
   const reviewDecisionSeg =

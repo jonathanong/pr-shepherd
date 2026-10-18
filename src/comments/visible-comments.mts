@@ -1,7 +1,7 @@
 import { shouldMinimizeAuthor } from "./minimize-policy.mts";
 import { classifyItem, type SeenMarker } from "../state/seen-comments.mts";
 import type { MinimizeCommentsPolicy } from "../config/load.mts";
-import type { ActionableComment, PrComment } from "../types.mts";
+import type { ActionableComment, EditedComment, PrComment } from "../types.mts";
 import type { NormalizedBotUsernames } from "./authors.mts";
 import { canGenerateGithubMutation } from "../github/mutation-policy.mts";
 
@@ -9,6 +9,8 @@ interface VisibleCommentClassification {
   actionable: ActionableComment[];
   minimizeIds: string[];
   toMarkSeen: ActionableComment[];
+  /** Seen comments whose body changed. Not readiness work; iterate surfaces and marks them. */
+  edited: EditedComment[];
 }
 
 export function classifyVisibleComments(
@@ -21,6 +23,7 @@ export function classifyVisibleComments(
   const actionable: ActionableComment[] = [];
   const minimizeIds: string[] = [];
   const toMarkSeen: ActionableComment[] = [];
+  const edited: EditedComment[] = [];
   for (const c of comments.filter((comment) => !comment.isMinimized)) {
     if (
       !deniedMinimizeIds.has(c.id) &&
@@ -34,9 +37,12 @@ export function classifyVisibleComments(
     }
     const cls = classifyItem(c.id, c.body, seenMap);
     if (cls === "unchanged") continue;
-    const comment = cls === "edited" ? { ...c, edited: true as const } : c;
-    actionable.push(comment);
-    toMarkSeen.push(comment);
+    if (cls === "edited") {
+      edited.push({ ...c, edited: true });
+      continue;
+    }
+    actionable.push(c);
+    toMarkSeen.push(c);
   }
-  return { actionable, minimizeIds, toMarkSeen };
+  return { actionable, minimizeIds, toMarkSeen, edited };
 }

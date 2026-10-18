@@ -86,7 +86,7 @@ REST names a thread `rest-thread-<rootCommentId>` (the numeric ID of its first i
 
 ## Bot status-comment edits
 
-REST cannot minimize, so a first-look PR comment stays visible. A bot that edits its status comment in place (a "review in progress" summary, a rate-limit notice) changes the body hash; the next tick re-surfaces it as an edited item (`edited: true`) and returns `FIX_CODE`. On a READY PR that also restarts the [ready delay](configuration.md), since any non-READY tick clears the countdown. In live cloud run #566 every CodeRabbit status edit cost one `FIX_CODE` tick and a fresh 10-minute countdown. This follows the [comment visibility invariant](../AGENTS.md#comment-visibility-invariant) and is pinned by `src/commands/iterate/rest-bot-comment-edit.test.mts`.
+REST cannot minimize, so a first-look PR comment stays visible. A bot that edits its status comment in place (a "review in progress" summary, a rate-limit notice) changes the body hash. In live cloud run #566 every such CodeRabbit edit used to cost one `FIX_CODE` tick and a fresh 10-minute countdown. An edited PR comment now never blocks readiness: the countdown keeps running, and the latest body is shown once under [`## Edited comments`](actions.md#edited-comments) when the delay elapses. This follows the [comment visibility invariant](../AGENTS.md#comment-visibility-invariant) and is pinned by `src/commands/iterate/rest-bot-comment-edit.test.mts`.
 
 ## Stack lookup and the `--expected-stack` guard
 

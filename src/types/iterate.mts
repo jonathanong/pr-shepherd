@@ -8,6 +8,7 @@ import type {
   ShepherdStatus,
   FirstLookThread,
   FirstLookComment,
+  EditedComment,
   RuleAutoResolveReport,
 } from "./report.mts";
 import type { ActiveCheck, PrActivitySummary } from "./activity.mts";
@@ -99,6 +100,11 @@ export interface IterateResultBase {
   nextCheck?: NextCheck;
   /** Classification-rule resolve/minimize applied during this fetch. Omitted when nothing happened. */
   ruleAutoResolve?: RuleAutoResolveReport;
+  /**
+   * PR comments edited since Shepherd last showed them. Edits never block readiness, so they are
+   * held during `wait`/`ready` and shown once on the next other action. Omitted when empty.
+   */
+  editedComments?: EditedComment[];
 }
 
 interface IterateResultWait extends IterateResultBase {

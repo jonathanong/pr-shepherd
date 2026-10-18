@@ -90,14 +90,15 @@ describe("classifyVisibleComments", () => {
     expect(result.toMarkSeen).toEqual([]);
   });
 
-  it("re-surfaces edited non-auto-minimized comments", () => {
+  it("holds edited non-auto-minimized comments outside readiness work", () => {
     const comment = makeComment({ id: "c-human", body: "new body" });
     const seenMap = new Map([["c-human", { seenAt: 1000, bodyHash: hashBody("old body") }]]);
 
     const result = classifyVisibleComments([comment], seenMap, "none");
 
-    expect(result.actionable).toEqual([{ ...comment, edited: true }]);
+    expect(result.actionable).toEqual([]);
     expect(result.minimizeIds).toEqual([]);
-    expect(result.toMarkSeen).toEqual([{ ...comment, edited: true }]);
+    expect(result.toMarkSeen).toEqual([]);
+    expect(result.edited).toEqual([{ ...comment, edited: true }]);
   });
 });

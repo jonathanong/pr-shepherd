@@ -95,7 +95,8 @@ describe("buildFixInstructions instruction style", () => {
       body: "regenerated summary",
       isMinimized: true,
       firstLookStatus: "minimized",
-      edited: true,
+      url: "",
+      createdAtUnix: 0,
     } as FirstLookComment;
     const instructions = buildFixInstructions(
       [],

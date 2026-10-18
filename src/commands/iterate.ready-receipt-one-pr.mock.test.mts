@@ -167,75 +167,28 @@ describe("runIterate — one-PR READY receipt", () => {
     expect(mockClearReadyDelay).not.toHaveBeenCalled();
   });
 
-  it("voids a receipt when a minimized comment is edited into new feedback", async () => {
-    mockRunCheck.mockResolvedValue(
-      onePrReport({
-        comments: {
-          actionable: [],
-          firstLook: [{ ...humanNotice, body: "New finding", edited: true }],
-        },
-      }),
-    );
-
-    const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("fix_code");
-    expect(mockClearReadyReceipt).toHaveBeenCalledWith(key);
-    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
-      headSha: "head-1",
-      alreadyElapsed: false,
-    });
-  });
-
-  it("voids a queued receipt when a minimized comment is edited into new feedback", async () => {
-    mockRunCheck.mockResolvedValue(
-      onePrReport({
-        mergeQueue: { enabled: true, inQueue: true },
-        comments: {
-          actionable: [],
-          firstLook: [{ ...humanNotice, body: "New finding", edited: true }],
-        },
-      }),
-    );
-
-    await runIterate(makeOpts());
-
-    expect(mockClearReadyReceipt).toHaveBeenCalledWith(key);
-    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, false, 600, "owner", "repo", {
-      headSha: "head-1",
-      alreadyElapsed: false,
-    });
-  });
-
   it.each([
-    ["a Bot author", hiddenNotice],
-    [
-      "a configured bot username",
-      { ...hiddenNotice, author: "coderabbitai", authorType: "User" as const },
-    ],
-  ])(
-    "keeps the countdown and the receipt when %s re-edits a minimized comment",
-    async (_name, notice) => {
-      mockRunCheck.mockResolvedValue(
-        onePrReport({
-          comments: {
-            actionable: [],
-            firstLook: [{ ...notice, body: "Regenerated", edited: true }],
-          },
-        }),
-      );
+    ["a human edits a minimized comment", { ...humanNotice, body: "New finding" }],
+    ["a human edits a visible comment", { ...humanNotice, isMinimized: false, body: "Typo" }],
+    ["a Bot re-edits a minimized comment", { ...hiddenNotice, body: "Regenerated" }],
+  ])("keeps the countdown and the receipt when %s", async (_name, notice) => {
+    const { firstLookStatus: _status, ...comment } = notice;
+    mockRunCheck.mockResolvedValue(
+      onePrReport({
+        mergeQueue: { enabled: true, inQueue: false },
+        comments: { actionable: [], firstLook: [], edited: [{ ...comment, edited: true }] },
+      }),
+    );
 
-      const result = await runIterate(makeOpts());
+    const result = await runIterate(makeOpts({ merge: true }));
 
-      expect(result.action).toBe("fix_code");
-      expect(mockClearReadyReceipt).not.toHaveBeenCalled();
-      expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, true, 600, "owner", "repo", {
-        headSha: "head-1",
-        alreadyElapsed: true,
-      });
-      expect(mockClearReadyDelay).not.toHaveBeenCalled();
-    },
-  );
+    expect(result.action).toBe("merge");
+    expect(mockClearReadyReceipt).not.toHaveBeenCalled();
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(42, true, 600, "owner", "repo", {
+      headSha: "head-1",
+      alreadyElapsed: true,
+    });
+  });
 
   it("restarts the countdown for new activity on a resolved thread", async () => {
     const thread = { ...makeThread(), firstLookStatus: "resolved" as const };

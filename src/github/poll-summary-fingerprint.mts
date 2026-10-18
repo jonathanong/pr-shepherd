@@ -31,7 +31,11 @@ export function fingerprintRawSummaryPr(summary: RawSummaryPr): string | null {
     // Omitted bodies cannot participate in the hash. Bind truncated evidence
     // to the PR revision instead, so updates require a fresh full review poll.
     ...(reviewTruncated && { reviewUpdatedAt: raw.updatedAt }),
-    comments: hideBodies(raw.comments),
+    // A PR comment edit is not readiness evidence; its ID still binds new comments.
+    comments: {
+      ...raw.comments,
+      nodes: raw.comments.nodes.map(({ body: _body, ...node }) => node),
+    },
     reviews: hideBodies(raw.reviews),
     reviewThreads: {
       ...raw.reviewThreads,

@@ -1,0 +1,52 @@
+{
+  "description": "A new human PR comment needs triage while an older bot comment was edited since Shepherd showed it. The new comment drives FIX_CODE; the edit rides along once under `## Edited comments` as informational context.",
+  "batchData": {
+    "comments": [
+      {
+        "id": "IC_bot_summary",
+        "author": "coderabbitai",
+        "authorType": "Bot",
+        "body": "<!-- walkthrough -->\nWalkthrough updated after the latest PR description edit.",
+        "url": "https://github.com/owner/repo/pull/42#issuecomment-2",
+        "createdAtUnix": 1715600000,
+        "isMinimized": true
+      },
+      {
+        "id": "IC_new",
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Please add a regression test for the empty-list case.",
+        "url": "https://github.com/owner/repo/pull/42#issuecomment-4",
+        "createdAtUnix": 1715700000,
+        "isMinimized": false
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "seenMap": {
+    "IC_bot_summary": {
+      "seenAt": 1715000000,
+      "bodyHash": "aaaaaaaaaaaaaaaa"
+    }
+  },
+  "config": {
+    "iterate": {
+      "minimizeComments": "none"
+    }
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

@@ -104,11 +104,7 @@ export function buildFixInstructions(
     instructions.push("Review every item under `## First-look items` before acting.");
   if (firstLookSummaries.length > 0)
     instructions.push("Read each body under `## Review summaries (first look)` before acting.");
-  const editedTotal =
-    editedSummaries.length +
-    actionableComments.filter((c) => c.edited).length +
-    firstLookThreads.filter((t) => t.edited).length +
-    firstLookComments.filter((c) => c.edited).length;
+  const editedTotal = editedSummaries.length + firstLookThreads.filter((t) => t.edited).length;
   if (editedTotal > 0)
     instructions.push(
       "Read every item marked `[edited since first look]`, including edited summaries and edited first-look bullets, before deciding whether to resolve a matching thread.",

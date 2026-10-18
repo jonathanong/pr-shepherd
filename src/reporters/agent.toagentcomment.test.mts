@@ -15,7 +15,7 @@ const comment: PrComment = {
 
 describe("toAgentComment", () => {
   it("keeps id/author/body and drops isMinimized/createdAtUnix", () => {
-    const result = toAgentComment({ ...comment, edited: true });
+    const result = toAgentComment(comment);
     expect(result).toEqual({
       id: "c-1",
       author: "bob",
@@ -23,7 +23,6 @@ describe("toAgentComment", () => {
       authorAssociation: "NONE",
       body: "Consider renaming.",
       url: "",
-      edited: true,
     });
     expect(result).not.toHaveProperty("isMinimized");
     expect(result).not.toHaveProperty("createdAtUnix");

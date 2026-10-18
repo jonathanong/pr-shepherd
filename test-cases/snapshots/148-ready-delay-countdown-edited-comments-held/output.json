@@ -1,0 +1,1 @@
+{"action":"ready","pr":42,"repo":"owner/repo","status":"READY","summary":{"passing":1},"remainingSeconds":127,"log":"READY: PR #42 is ready — 127s of ready-delay remaining — 1 passing","instructions":["PR #42 is ready. Ready-delay has 127s left. Rerun this command when the timer elapses. Do not invent unrelated work."]}
