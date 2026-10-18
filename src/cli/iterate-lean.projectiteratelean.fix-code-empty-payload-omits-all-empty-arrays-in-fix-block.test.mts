@@ -130,7 +130,7 @@ describe("projectIterateLean", () => {
     expect((fix.threads as unknown[]).length).toBe(1);
     expect((fix.resolutionOnlyThreads as unknown[]).length).toBe(1);
     expect((fix.checks as unknown[]).length).toBe(1);
-    expect((lean.checks as unknown[]).length).toBe(1);
+    expect(lean.checks).toBeUndefined();
     expect((fix.instructions as unknown[]).length).toBe(1);
     expect((fix.actionableComments as unknown[]).length).toBe(1);
     expect((fix.reviewSummaryIds as unknown[]).length).toBe(1);

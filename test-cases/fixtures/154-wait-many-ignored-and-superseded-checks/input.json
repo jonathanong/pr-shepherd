@@ -1,0 +1,273 @@
+{
+  "batchData": {
+    "checks": [
+      {
+        "name": "Suite 1 / build",
+        "status": "COMPLETED",
+        "conclusion": "CANCELLED",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/1100",
+        "runId": "1100",
+        "workflowId": "10",
+        "workflowName": "Suite 1",
+        "createdAtUnix": 1715700000,
+        "startedAtUnix": 1715700001,
+        "completedAtUnix": 1715700002
+      },
+      {
+        "name": "Suite 1 / build",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/1000",
+        "runId": "1000",
+        "workflowId": "10",
+        "workflowName": "Suite 1",
+        "createdAtUnix": 1715700003,
+        "startedAtUnix": 1715700004,
+        "completedAtUnix": 1715700005
+      },
+      {
+        "name": "Suite 2 / build",
+        "status": "COMPLETED",
+        "conclusion": "CANCELLED",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/1101",
+        "runId": "1101",
+        "workflowId": "11",
+        "workflowName": "Suite 2",
+        "createdAtUnix": 1715700010,
+        "startedAtUnix": 1715700011,
+        "completedAtUnix": 1715700012
+      },
+      {
+        "name": "Suite 2 / build",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/1001",
+        "runId": "1001",
+        "workflowId": "11",
+        "workflowName": "Suite 2",
+        "createdAtUnix": 1715700013,
+        "startedAtUnix": 1715700014,
+        "completedAtUnix": 1715700015
+      },
+      {
+        "name": "Suite 3 / build",
+        "status": "COMPLETED",
+        "conclusion": "CANCELLED",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/1102",
+        "runId": "1102",
+        "workflowId": "12",
+        "workflowName": "Suite 3",
+        "createdAtUnix": 1715700020,
+        "startedAtUnix": 1715700021,
+        "completedAtUnix": 1715700022
+      },
+      {
+        "name": "Suite 3 / build",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/1002",
+        "runId": "1002",
+        "workflowId": "12",
+        "workflowName": "Suite 3",
+        "createdAtUnix": 1715700023,
+        "startedAtUnix": 1715700024,
+        "completedAtUnix": 1715700025
+      },
+      {
+        "name": "Suite 4 / build",
+        "status": "COMPLETED",
+        "conclusion": "CANCELLED",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/1103",
+        "runId": "1103",
+        "workflowId": "13",
+        "workflowName": "Suite 4",
+        "createdAtUnix": 1715700030,
+        "startedAtUnix": 1715700031,
+        "completedAtUnix": 1715700032
+      },
+      {
+        "name": "Suite 4 / build",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/1003",
+        "runId": "1003",
+        "workflowId": "13",
+        "workflowName": "Suite 4",
+        "createdAtUnix": 1715700033,
+        "startedAtUnix": 1715700034,
+        "completedAtUnix": 1715700035
+      },
+      {
+        "name": "Suite 5 / build",
+        "status": "COMPLETED",
+        "conclusion": "CANCELLED",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/1104",
+        "runId": "1104",
+        "workflowId": "14",
+        "workflowName": "Suite 5",
+        "createdAtUnix": 1715700040,
+        "startedAtUnix": 1715700041,
+        "completedAtUnix": 1715700042
+      },
+      {
+        "name": "Suite 5 / build",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/1004",
+        "runId": "1004",
+        "workflowId": "14",
+        "workflowName": "Suite 5",
+        "createdAtUnix": 1715700043,
+        "startedAtUnix": 1715700044,
+        "completedAtUnix": 1715700045
+      },
+      {
+        "name": "Suite 6 / build",
+        "status": "COMPLETED",
+        "conclusion": "CANCELLED",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/1105",
+        "runId": "1105",
+        "workflowId": "15",
+        "workflowName": "Suite 6",
+        "createdAtUnix": 1715700050,
+        "startedAtUnix": 1715700051,
+        "completedAtUnix": 1715700052
+      },
+      {
+        "name": "Suite 6 / build",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/1005",
+        "runId": "1005",
+        "workflowId": "15",
+        "workflowName": "Suite 6",
+        "createdAtUnix": 1715700053,
+        "startedAtUnix": 1715700054,
+        "completedAtUnix": 1715700055
+      },
+      {
+        "name": "Suite 7 / build",
+        "status": "COMPLETED",
+        "conclusion": "CANCELLED",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/1106",
+        "runId": "1106",
+        "workflowId": "16",
+        "workflowName": "Suite 7",
+        "createdAtUnix": 1715700060,
+        "startedAtUnix": 1715700061,
+        "completedAtUnix": 1715700062
+      },
+      {
+        "name": "Suite 7 / build",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/1006",
+        "runId": "1006",
+        "workflowId": "16",
+        "workflowName": "Suite 7",
+        "createdAtUnix": 1715700063,
+        "startedAtUnix": 1715700064,
+        "completedAtUnix": 1715700065
+      },
+      {
+        "name": "Bot Review 1",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/900",
+        "runId": "900"
+      },
+      {
+        "name": "Bot Review 2",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/901",
+        "runId": "901"
+      },
+      {
+        "name": "Bot Review 3",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/902",
+        "runId": "902"
+      },
+      {
+        "name": "Bot Review 4",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/903",
+        "runId": "903"
+      },
+      {
+        "name": "Bot Review 5",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/904",
+        "runId": "904"
+      },
+      {
+        "name": "Bot Review 6",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/905",
+        "runId": "905"
+      },
+      {
+        "name": "Bot Review 7",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/906",
+        "runId": "906"
+      },
+      {
+        "name": "Integration / tests",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/1200",
+        "runId": "1200",
+        "workflowId": "99",
+        "workflowName": "Integration",
+        "createdAtUnix": 1715700100,
+        "startedAtUnix": 1715700101
+      }
+    ]
+  },
+  "config": {
+    "ignoreChecks": [
+      "Bot Review 1",
+      "Bot Review 2",
+      "Bot Review 3",
+      "Bot Review 4",
+      "Bot Review 5",
+      "Bot Review 6",
+      "Bot Review 7"
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 10
+}

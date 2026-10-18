@@ -59,7 +59,7 @@ The bare command accepts `--interval`/`--timeout`/`--debounce`/`--quiet-status`/
 ### `--verbose`
 
 - **JSON:** starts from the full `IterateResult` shape (all fields, including `baseBranch`, `checks`, `shouldCancel`, `mergeStatus: "CLEAN"`, and command-scoped `apiUsage`), then applies the same instruction projection as lean JSON: actions other than `fix_code` and `cancel` get a top-level `instructions` array (`cancel` has none), and `fix.instructions` may be rewritten.
-- **Markdown:** restores the full header summary line (all five counts, `remainingSeconds`, `blockingBotReviewInProgress`, `isDraft`, and `shouldCancel`) and adds `## GitHub API usage`: credential source labels, request counts, the latest authoritative quota state by resource, exact measured GraphQL query cost, and, when nonzero, the count of REST responses without rate-limit headers (`apiUsage.unmeteredRestRequestCount`, such as the Claude Code proxy's `ccr/review_threads` read). GraphQL mutations remain counted as unmeasured because GitHub exposes `rateLimit` only on the query root. Verbose mode also adds base `checks` on every action, rendered under `## Checks`.
+- **Markdown:** restores the full header summary line (all six counts, `remainingSeconds`, `blockingBotReviewInProgress`, `isDraft`, and `shouldCancel`) and adds `## GitHub API usage`: credential source labels, request counts, the latest authoritative quota state by resource, exact measured GraphQL query cost, and, when nonzero, the count of REST responses without rate-limit headers (`apiUsage.unmeteredRestRequestCount`, such as the Claude Code proxy's `ccr/review_threads` read). GraphQL mutations remain counted as unmeasured because GitHub exposes `rateLimit` only on the query root. Verbose mode also adds base `checks` on every action, rendered under `## Checks`, and lists every name on the `**ignored**`, `**superseded**`, and `**activity** active:` lines instead of capping them at five.
 
 Markdown and JSON use different representations but surface equivalent action information; MCP structured and Markdown content use the same projection options. Lean mode is the default because most fields are `false`/`0`/`[]` on a typical healthy tick.
 
@@ -73,15 +73,15 @@ Every one-PR action, default lean format:
 # PR #<N> [ACTION]
 
 **status** `<…>`[ · **merge** `<…>`][ · **reviewDecision** `<…>`][ · **state** `<…>`][ · **repo** `<…>`]
-[**summary** <N> passing[, <N> skipped][, <N> filtered][, <N> inProgress][, <N> superseded]][· **remainingSeconds** <N>][· **blockingBotReviewInProgress**][· **isDraft**][· **branch** behind PR base `<base>` | · **branch** conflicts with PR base `<base>` | · **branch** conflicts with stack trunk `<trunk>`]
+[**summary** <N> passing[, <N> skipped][, <N> filtered][, <N> inProgress][, <N> queued][, <N> superseded]][· **remainingSeconds** <N>][· **blockingBotReviewInProgress**][· **isDraft**][· **branch** behind PR base `<base>` | · **branch** conflicts with PR base `<base>` | · **branch** conflicts with stack trunk `<trunk>`]
 [Approvals: <None|N[/M]> [Required|Not Required]]
 [Conversations Resolved: <Yes|No> [Required|Not Required]]
 [Merge queue: <No|position N STATE> [Required|Not Required]]
 [Stack: <n> (layer <pos>/<size>, base <ref>)]
 [other required-only merge-rule lines]
-[**ignored** `<check-name>`, …]
-[**superseded** `<check-name>`, …]
-[**activity** <N> commits · <N> review rounds[ · <N> review items since latest commit][ · active: `<check>`, …]]
+[**ignored** `<check-name>`, …[, +<N> more]]
+[**superseded** `<check-name>`, …[, +<N> more]]
+[**activity** <N> commits · <N> review rounds[ · <N> review items since latest commit][ · active: `<check>`, …[, +<N> more]]]
 [**merge queue** enabled `<bool>` · inQueue `<bool>`[ · state `<state>` · position `<N>`][ · checkCommit `<oid>`][ · head updated after removal][ · removals on this head `<N>`][ · removal acknowledged]]
 [**auto-merge** method `<method>` · enabledAtUnix `<unix>`[ · by `@<login>`]]
 [**queue removal** reason `<reason>` · createdAtUnix `<unix>`[ · actor `@<login>`][ · commit `<oid>`][ · parents `<oid,...>`]]
@@ -113,26 +113,27 @@ Every one-PR action, default lean format:
 
 ### Lean header rules
 
-| Field                                    | Shown when                                                                                                                                                                                            |
-| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `**merge**` / JSON `mergeStateStatus`    | Not `CLEAN`. An absent field means `CLEAN`.                                                                                                                                                           |
-| `**state**` / JSON `state`               | Not `OPEN`.                                                                                                                                                                                           |
-| `**repo**`                               | `## Instructions` does not already print this PR's URL or a `--repo <owner/repo>` command. JSON always keeps `repo`; `--verbose` always prints it.                                                    |
-| `**reviewDecision**`                     | The derived merge status is `BLOCKED`.                                                                                                                                                                |
-| `**summary**` counts                     | Nonzero (`passing` included). When every count is zero, the label and lean JSON `summary` are omitted.                                                                                                |
-| `remainingSeconds`                       | The ready-delay timer is counting (`status === "READY"` and `remainingSeconds > 0`).                                                                                                                  |
-| `blockingBotReviewInProgress`, `isDraft` | `true`.                                                                                                                                                                                               |
-| `shouldCancel`                           | Never in lean output (implied by `action === "cancel"`).                                                                                                                                              |
-| `**branch**`                             | `mergeStatus` is `BEHIND` or `CONFLICTS`, so the agent can decide on a rebase without another fetch.                                                                                                  |
-| `Approvals:`                             | Approvals exist or are required. Lean JSON `mergeRequirements` drops the same entries.                                                                                                                |
-| `Conversations Resolved:`                | Resolution is required or not known to be unrequired.                                                                                                                                                 |
-| Extra merge-rule lines                   | They apply: code-owner review, last-push approval, signed commits, linear history, branch up to date, required status checks, deployments, workflows, code scanning, merge queue, GitHub stacks.      |
-| `**merge queue**` / JSON `mergeQueue`    | It adds something to the `Merge queue: … [Required]` rule line (it is omitted when the queue is required and enabled, membership matches, and no entry, removal, or acknowledgment field is present). |
-| Author type in labels                    | Not `User` (for example `@bot[bot] · Bot`); JSON keeps `authorType`.                                                                                                                                  |
+| Field                                    | Shown when                                                                                                                                                                                                                                   |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `**merge**` / JSON `mergeStateStatus`    | Not `CLEAN`. An absent field means `CLEAN`.                                                                                                                                                                                                  |
+| `**state**` / JSON `state`               | Not `OPEN`.                                                                                                                                                                                                                                  |
+| `**repo**`                               | `## Instructions` does not already print this PR's URL or a `--repo <owner/repo>` command. JSON always keeps `repo`; `--verbose` always prints it.                                                                                           |
+| `**reviewDecision**`                     | The derived merge status is `BLOCKED`.                                                                                                                                                                                                       |
+| `**summary**` counts                     | Nonzero (`passing` included). When every count is zero, the label and lean JSON `summary` are omitted. `inProgress` counts `IN_PROGRESS` checks; `queued` counts `QUEUED`, `WAITING`, `PENDING`, and `REQUESTED` checks (raw GitHub status). |
+| `remainingSeconds`                       | The ready-delay timer is counting (`status === "READY"` and `remainingSeconds > 0`).                                                                                                                                                         |
+| `blockingBotReviewInProgress`, `isDraft` | `true`.                                                                                                                                                                                                                                      |
+| `shouldCancel`                           | Never in lean output (implied by `action === "cancel"`).                                                                                                                                                                                     |
+| `**branch**`                             | `mergeStatus` is `BEHIND` or `CONFLICTS`, so the agent can decide on a rebase without another fetch.                                                                                                                                         |
+| `Approvals:`                             | Approvals exist or are required. Lean JSON `mergeRequirements` drops the same entries.                                                                                                                                                       |
+| `Conversations Resolved:`                | Resolution is required or not known to be unrequired.                                                                                                                                                                                        |
+| Extra merge-rule lines                   | They apply: code-owner review, last-push approval, signed commits, linear history, branch up to date, required status checks, deployments, workflows, code scanning, merge queue, GitHub stacks.                                             |
+| `**merge queue**` / JSON `mergeQueue`    | It adds something to the `Merge queue: … [Required]` rule line (it is omitted when the queue is required and enabled, membership matches, and no entry, removal, or acknowledgment field is present).                                        |
+| Author type in labels                    | Not `User` (for example `@bot[bot] · Bot`); JSON keeps `authorType`.                                                                                                                                                                         |
 
 - After a sweep, iterate prints `Approvals:` and `Conversations Resolved:` (current vs required) unless the rule is trivial, as the table above describes. Read those instead of inferring a required review from `reviewDecision`: `REVIEW_REQUIRED` with no `Approvals:` line (none required) means GitHub is not waiting on an approval.
 - A test result with no `mergeRequirements` still gets a fallback `**required**` line from `requiredStatusCheckContexts`. Live iterate uses `mergeRequirements` and omits that line.
-- Lean mode prints passing checks only as the `**summary**` count. Failing detail is `## Failing checks` on `[FIX_CODE]`, or the escalation's items when follow-up is unavailable; lean JSON uses `fix.checks[]` or `escalate.checks[]`.
+- Lean mode prints passing checks only as the `**summary**` count. Failing detail is `## Failing checks` on `[FIX_CODE]`, or the escalation's items when follow-up is unavailable; lean JSON uses `fix.checks[]` or `escalate.checks[]` and has no top-level `checks` array (`--verbose` JSON keeps it).
+- Lean output caps the `**ignored**`, `**superseded**`, and `**activity** active:` lists at five names and appends `+<N> more`. Lean JSON caps `ignoredNames`, `supersededNames`, and `inProgressChecks` the same way and carries the hidden count as `ignoredNamesMore`, `supersededNamesMore`, and `inProgressChecksMore`, each only when nonzero. The `WAIT:` log's `active checks:` list uses the same cap and suffix in both formats.
 
 ### Note on mergeStatus in JSON lean mode
 
@@ -140,7 +141,7 @@ Lean JSON emits raw `mergeStateStatus` when it is not `CLEAN`, plus derived `mer
 
 ### `ignored` and `superseded` lines
 
-**`ignored`** (Markdown and JSON `ignoredNames`) appears only when a check matched `ignoreChecks`. It lists the suppressed check names. Those checks do not affect the CI verdict, the `inProgress` count, or stall detection; an ignored check's pending or failing state does not drive stall-timeout escalation. If `mergeStateStatus` is `UNSTABLE` and every non-ignored check passed, the PR is `READY`, same as `BLOCKED` with passing CI.
+**`ignored`** (Markdown and JSON `ignoredNames`) appears only when a check matched `ignoreChecks`. It lists the suppressed check names. Those checks do not affect the CI verdict, the `inProgress` or `queued` counts, or stall detection; an ignored check's pending or failing state does not drive stall-timeout escalation. If `mergeStateStatus` is `UNSTABLE` and every non-ignored check passed, the PR is `READY`, same as `BLOCKED` with passing CI.
 
 **`superseded`** (Markdown and JSON `supersededNames`) appears only when a `CANCELLED` check has newer-run evidence in the same loaded commit context — concurrency-group eviction from a new push or a second trigger of the same push.
 

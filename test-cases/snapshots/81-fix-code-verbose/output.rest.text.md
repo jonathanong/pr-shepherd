@@ -1,7 +1,7 @@
 # PR #42 [FIX_CODE]
 
 **status** `FAILING` · **merge** `CLEAN` · **state** `OPEN` · **repo** `owner/repo` · **baseBranch** `main`
-**summary** 0 passing, 0 skipped, 0 filtered, 0 inProgress, 0 superseded · **remainingSeconds** 600 · **blockingBotReviewInProgress** false · **isDraft** false · **shouldCancel** false
+**summary** 0 passing, 0 skipped, 0 filtered, 0 inProgress, 0 queued, 0 superseded · **remainingSeconds** 600 · **blockingBotReviewInProgress** false · **isDraft** false · **shouldCancel** false
 **transport** `rest`
 
 ## Unavailable transport fields

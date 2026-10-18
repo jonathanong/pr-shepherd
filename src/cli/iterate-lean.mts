@@ -6,6 +6,7 @@ import { projectEditedComments } from "./edited-comments-format.mts";
 import { projectMergeRequirements } from "../merge-status/requirements-format.mts";
 import { branchSegmentShowsBase } from "./iterate-branch-segment.mts";
 import { isRedundantMergeQueue } from "./iterate-merge-formatter.mts";
+import { capList } from "../util/cap-list.mts";
 interface IterateProjectionOptions {
   readyDelaySuffix?: string;
 }
@@ -44,7 +45,7 @@ export function projectIterateLean(
     };
   }
   const counts = Object.fromEntries(
-    (["passing", "skipped", "filtered", "inProgress", "superseded"] as const)
+    (["passing", "skipped", "filtered", "inProgress", "queued", "superseded"] as const)
       .filter((k) => result.summary[k] > 0)
       .map((k) => [k, result.summary[k]]),
   );
@@ -96,15 +97,9 @@ export function projectIterateLean(
         }),
       },
     }),
-    ...((result.inProgressChecks?.length ?? 0) > 0 && {
-      inProgressChecks: result.inProgressChecks,
-    }),
-    ...((result.ignoredNames?.length ?? 0) > 0 && {
-      ignoredNames: result.ignoredNames,
-    }),
-    ...((result.supersededNames?.length ?? 0) > 0 && {
-      supersededNames: result.supersededNames,
-    }),
+    ...cappedList("inProgressChecks", result.inProgressChecks),
+    ...cappedList("ignoredNames", result.ignoredNames),
+    ...cappedList("supersededNames", result.supersededNames),
     ...((result.unreportedRequiredChecks?.length ?? 0) > 0 && {
       unreportedRequiredChecks: result.unreportedRequiredChecks,
     }),
@@ -164,7 +159,7 @@ export function projectIterateLean(
     case "fix_code":
       return {
         ...base,
-        ...(result.checks.length > 0 && { checks: result.checks }),
+        // Passing checks stay summary counts and failures stay in `fix.checks`, as in lean text.
         ...(result.cancelled.length > 0 && { cancelled: result.cancelled }),
         fix: {
           ...(result.fix.threads.length > 0 && { threads: result.fix.threads }),
@@ -265,6 +260,13 @@ export function projectIterateLean(
         instructions: simpleInstructions(result),
       };
   }
+}
+
+/** `{ [key]: first 5, [key + "More"]: hidden count }`, matching the capped Markdown lists. */
+function cappedList<T>(key: string, items: readonly T[] | undefined): Record<string, unknown> {
+  if (!items || items.length === 0) return {};
+  const { shown, hidden } = capList(items);
+  return { [key]: shown, ...(hidden > 0 && { [`${key}More`]: hidden }) };
 }
 
 export { projectIterateVerbose } from "./iterate-verbose.mts";

@@ -7,13 +7,19 @@ import type {
   ShepherdReport,
 } from "../../types.mts";
 import { blockedReasonFromRequirements } from "../../merge-status/requirements-format.mts";
+import { capList, moreSuffix } from "../../util/cap-list.mts";
+
+/** GitHub statuses for a check that has not started running yet. */
+const QUEUED_STATUSES = new Set(["QUEUED", "WAITING", "PENDING", "REQUESTED"]);
 
 export function buildSummary(report: ShepherdReport): IterateResultSummary {
+  const queued = report.checks.inProgress.filter((c) => QUEUED_STATUSES.has(c.status)).length;
   return {
     passing: report.checks.passing.length,
     skipped: report.checks.skipped.length,
     filtered: report.checks.filtered.length,
-    inProgress: report.checks.inProgress.length,
+    inProgress: report.checks.inProgress.length - queued,
+    queued,
     superseded: report.checks.supersededNames?.length ?? 0,
   };
 }
@@ -125,16 +131,13 @@ export function buildWaitLog(base: IterateResultBase): string {
   const counts = [
     ...(summary.passing > 0 ? [`${summary.passing} passing`] : []),
     ...(summary.inProgress > 0 ? [`${summary.inProgress} in-progress`] : []),
+    ...(summary.queued > 0 ? [`${summary.queued} queued`] : []),
   ];
   const parts: string[] = counts.length > 0 ? [counts.join(", ")] : [];
 
   if ((base.inProgressChecks?.length ?? 0) > 0) {
-    parts.push(
-      `active checks: ${base
-        .inProgressChecks!.slice(0, 5)
-        .map((c) => c.name)
-        .join(", ")}`,
-    );
+    const { shown, hidden } = capList(base.inProgressChecks!);
+    parts.push(`active checks: ${shown.map((c) => c.name).join(", ")}${moreSuffix(hidden)}`);
   }
 
   switch (base.mergeStatus) {

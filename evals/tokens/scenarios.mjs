@@ -975,6 +975,24 @@ const PR_SCENARIOS = [
   },
 
   {
+    id: "large-check-matrix",
+    weight: 0.25,
+    title: "CI still running in a 122-check matrix",
+    note: "111 passing shards, eight running and three queued checks. Shepherd prints passing checks as one summary count and caps the active list at five; gh and MCP read every check run.",
+    arms() {
+      const fixture = "153-wait-many-in-progress-and-queued-checks";
+      const state = fixtureState(fixture);
+      return {
+        shepherd: [shepherdTick(snapshot(fixture))],
+        // Check runs.
+        event: { wake: "change", detectors: 1 },
+        gh: ghObserve(state),
+        mcp: mcpObserve(state),
+      };
+    },
+  },
+
+  {
     id: "check-annotations",
     weight: 0.25,
     title: "Failing external check with line annotations",
