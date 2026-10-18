@@ -154,6 +154,7 @@ See [docs/graphql-usage.md](docs/graphql-usage.md) and [docs/rest-usage.md](docs
 3. **Configure Shepherd.** In `.pr-shepherdrc.yml`, turn on the bundled classification rules. They drop known bot noise before it reaches the agent, which saves more tokens and tool calls. With the default `actions.auto-minimize-suppressed: true`, several rules also minimize matching comments on GitHub and surface the mutation result without editing the PR body. See [docs/configuration.md](docs/configuration.md#classifystandard--default-).
 
    ```yaml
+   version: 1
    classify:
      standard:
        all: true

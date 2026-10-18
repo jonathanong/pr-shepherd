@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { resolveConfig } from "./resolve.mts";
 import { z } from "zod";
-import { configSchema } from "./schema.mts";
+import { configFileSchema, configSchema } from "./schema.mts";
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const SCHEMA_FILE = join(ROOT, "pr-shepherd.schema.json");
@@ -12,7 +12,7 @@ const SCHEMA_FILE = join(ROOT, "pr-shepherd.schema.json");
 /** The JSON Schema shipped as `pr-shepherd.schema.json` for editor autocompletion. */
 function configJsonSchema(): Record<string, unknown> {
   return {
-    ...z.toJSONSchema(configSchema, { io: "input", target: "draft-2020-12" }),
+    ...z.toJSONSchema(configFileSchema, { io: "input", target: "draft-2020-12" }),
     title: "pr-shepherd configuration",
   };
 }

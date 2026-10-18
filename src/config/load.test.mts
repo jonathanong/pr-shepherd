@@ -6,6 +6,7 @@ import {
   freshLoadConfig,
   removeRc,
   tmpPath,
+  writeRawRc,
   writeRc,
 } from "../../test-helpers/config/load-test-support.mts";
 
@@ -137,7 +138,7 @@ describe("loadConfig — invalid values", () => {
   });
 
   it.each(["- a\n- b\n", "just a string\n"])("rejects a non-mapping top level %j", async (yaml) => {
-    writeRc(yaml);
+    writeRawRc(yaml);
     await expectConfigError("the top level must be a mapping");
   });
 
@@ -203,7 +204,7 @@ describe("loadConfig — file discovery", () => {
     "reads %s",
     async (name) => {
       mkdirSync(tmpPath(".pr-shepherd"), { recursive: true });
-      writeFileSync(tmpPath(name), "iterate:\n  ready-delay-minutes: 4\n");
+      writeFileSync(tmpPath(name), "version: 1\niterate:\n  ready-delay-minutes: 4\n");
       const loadConfig = await freshLoadConfig();
       expect(loadConfig().iterate["ready-delay-minutes"]).toBe(4);
     },
@@ -212,7 +213,10 @@ describe("loadConfig — file discovery", () => {
   it("rejects two config files in one directory", async () => {
     writeRc("iterate:\n  ready-delay-minutes: 1\n");
     mkdirSync(tmpPath(".pr-shepherd"), { recursive: true });
-    writeFileSync(tmpPath(".pr-shepherd", "config.yml"), "iterate:\n  ready-delay-minutes: 2\n");
+    writeFileSync(
+      tmpPath(".pr-shepherd", "config.yml"),
+      "version: 1\niterate:\n  ready-delay-minutes: 2\n",
+    );
     const message = await expectConfigError("multiple config files in", "Keep exactly one.");
     expect(message).toContain(tmpPath(".pr-shepherdrc.yml"));
     expect(message).toContain(tmpPath(".pr-shepherd", "config.yml"));

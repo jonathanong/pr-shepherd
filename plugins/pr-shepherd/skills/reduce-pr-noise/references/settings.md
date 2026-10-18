@@ -1,6 +1,6 @@
 # Noise settings
 
-Inspect the unwanted Shepherd output, any active config files, and the built-in defaults before editing. A config file is `.pr-shepherdrc.yml`, `.pr-shepherdrc.yaml`, `.pr-shepherd/config.yml`, or `.pr-shepherd/config.yaml`; one directory may hold only one of them, so edit the existing file instead of adding another name beside it. Shepherd deep-merges files from the user's home directory through the working directory: closer scalar values win, nested maps merge, and closer arrays replace farther arrays. Put shared policy in the project file and personal preferences in the home file. Preserve unrelated values and existing list entries when changing an array.
+Inspect the unwanted Shepherd output, any active config files, and the built-in defaults before editing. A config file is `.pr-shepherdrc.yml`, `.pr-shepherdrc.yaml`, `.pr-shepherd/config.yml`, or `.pr-shepherd/config.yaml`; one directory may hold only one of them, so edit the existing file instead of adding another name beside it. A new file starts with `version: 1`, and an existing non-empty file already has it. Shepherd deep-merges files from the user's home directory through the working directory: closer scalar values win, nested maps merge, and closer arrays replace farther arrays. Put shared policy in the project file and personal preferences in the home file. Preserve unrelated values and existing list entries when changing an array.
 
 Choose the narrowest control for the observed source:
 

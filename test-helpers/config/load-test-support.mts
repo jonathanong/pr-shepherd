@@ -28,14 +28,24 @@ export async function freshLoadConfig() {
   return mod.loadConfig;
 }
 
+/** Prepend `version: 1` unless the contents are empty or already set a top-level `version`. */
+function versioned(contents: string): string {
+  return contents === "" || /^version:/m.test(contents) ? contents : `version: 1\n${contents}`;
+}
+
 export function writeRc(contents: string): void {
+  writeFileSync(join(tmpDir, RC), versioned(contents));
+}
+
+/** Write the rc file exactly as given, without the `version: 1` line. */
+export function writeRawRc(contents: string): void {
   writeFileSync(join(tmpDir, RC), contents);
 }
 
 export function writeRcAt(relativeDir: string, contents: string): void {
   const dir = relativeDir === "" ? tmpDir : join(tmpDir, relativeDir);
   mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, RC), contents);
+  writeFileSync(join(dir, RC), versioned(contents));
 }
 
 export function removeRc(): void {

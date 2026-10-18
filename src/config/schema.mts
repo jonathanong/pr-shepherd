@@ -5,9 +5,8 @@ import { findMergeStrategies } from "./merge-command-args.mts";
 /**
  * The strict v1 `.pr-shepherdrc.yml` schema. Keys are kebab-case, durations carry their unit in
  * the key name, and unknown keys or invalid values are hard errors. The defaults declared here
- * are the built-in defaults; `pr-shepherd.schema.json` is generated from this schema.
+ * are the built-in defaults; `pr-shepherd.schema.json` is generated from `configFileSchema`.
  */
-
 const DEFAULT_BOT_USERNAMES = [
   "chatgpt-connector",
   "openai-codex",
@@ -120,7 +119,11 @@ const quotaWarnings = z.array(quotaWarningBand).superRefine((bands, ctx) => {
 
 const standardRuleName = z.enum(["all", ...STANDARD_RULE_NAMES] as [string, ...string[]]);
 
+/** The config format version this release reads. It tracks the package's semver major. */
+export const CONFIG_VERSION = 1;
+// The merged config: `version` is optional because the built-in defaults come from no file.
 export const configSchema = z.strictObject({
+  version: z.literal(CONFIG_VERSION).optional(),
   github: z
     .strictObject({ transport: z.enum(["auto", "graphql", "rest"]).default("auto") })
     .prefault({}),
@@ -191,5 +194,8 @@ export const configSchema = z.strictObject({
     })
     .prefault({}),
 });
+
+/** One non-empty config file on disk, which must declare `version`. */
+export const configFileSchema = configSchema.extend({ version: z.literal(CONFIG_VERSION) });
 
 export type ConfigFile = z.output<typeof configSchema>;

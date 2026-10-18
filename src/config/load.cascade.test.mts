@@ -82,7 +82,10 @@ describe("loadConfig — cascade deep-merge", () => {
     writeRc("iterate:\n  triage-attempts-per-thread: 50\n  stall-timeout-minutes: 90\n");
     const outside = mkdtempSync(join(tmpdir(), "shepherd-outside-home-"));
     try {
-      writeFileSync(join(outside, ".pr-shepherdrc.yml"), "iterate:\n  stall-timeout-minutes: 15\n");
+      writeFileSync(
+        join(outside, ".pr-shepherdrc.yml"),
+        "version: 1\niterate:\n  stall-timeout-minutes: 15\n",
+      );
       process.chdir(outside);
       const loadConfig = await freshLoadConfig();
       const result = loadConfig();

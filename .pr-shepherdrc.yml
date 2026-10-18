@@ -1,4 +1,5 @@
 # yaml-language-server: $schema=./pr-shepherd.schema.json
+version: 1
 classify:
   standard:
     all: true

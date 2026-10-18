@@ -28,10 +28,11 @@ Files deep-merge ESLint-style:
 - Nested objects merge key by key.
 - Arrays replace each other rather than combining.
 
-Every key is optional. The built-in defaults fill in anything you leave out. They are declared in `src/config/schema.mts`.
+Every non-empty file starts with `version: 1` (see [Version](#version)). Every other key is optional. The built-in defaults fill in anything you leave out. They are declared in `src/config/schema.mts`.
 
 ```text
 # ~/.pr-shepherdrc.yml
+version: 1
 checks:
   ignore:
     - "Kilo*"
@@ -39,6 +40,7 @@ iterate:
   stall-timeout-minutes: 90
 
 # <repo>/.pr-shepherdrc.yml
+version: 1
 iterate:
   triage-attempts-per-thread: 5
 ```
@@ -55,6 +57,7 @@ Config follows the conventions of GitHub Actions workflow files:
 
 Shepherd validates config before it makes any GitHub call. Any of the following makes it exit with code `78` (`EX_CONFIG`):
 
+- a missing or unsupported `version`
 - an unknown key
 - a value of the wrong type or out of range
 - an invalid regex
@@ -79,6 +82,14 @@ When one of these checks fails, the message lists every contributing file.
 
 A key from before v1 never takes effect. Instead, the error names the key that replaced it, for example `` `watch.readyDelayMinutes` → `iterate.ready-delay-minutes` ``. The full table is in [Migrating from pre-v1 keys](#migrating-from-pre-v1-keys).
 
+### Version
+
+`version` is the config format version, and it matches the semver major of the pr-shepherd release that reads it. This release reads `version: 1`. Files from 0.x have no `version`; add `version: 1` when you rename their keys.
+
+- A non-empty file without `version` is an error. An empty file needs none.
+- A file with a higher version, such as `version: 2`, fails with a message saying it needs a newer pr-shepherd. Shepherd reports nothing else about that file, because a newer format may add or rename keys.
+- Any other value is an error.
+
 ### Editor autocompletion
 
 The npm package ships a JSON Schema, `pr-shepherd.schema.json`, generated from the same validator Shepherd uses. To get completion and inline validation from editors that use the YAML language server, add this first line to your config file:
@@ -92,6 +103,8 @@ Adjust the relative path for files outside the repository root, or for a global 
 ## Example
 
 ```yaml
+version: 1
+
 cli-command:
   - pnpm
   - exec

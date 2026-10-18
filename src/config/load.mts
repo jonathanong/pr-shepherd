@@ -5,7 +5,7 @@ import { parse } from "yaml";
 import { getEffectiveCwd } from "../execution-context.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import { configError, issueLines, resolveConfig, type PrShepherdConfig } from "./resolve.mts";
-import { configSchema } from "./schema.mts";
+import { CONFIG_VERSION, configFileSchema } from "./schema.mts";
 
 export type {
   GraphqlQuotaWarningBand,
@@ -88,14 +88,33 @@ function readConfigFile(file: string): Record<string, unknown> {
     throw configError(file, [err instanceof Error ? err.message : String(err)]);
   }
   if (!isPlainObject(raw)) throw configError(file, ["the top level must be a mapping"]);
-  const result = configSchema.safeParse(raw);
+  // An empty file sets nothing, so it needs no version.
+  if (Object.keys(raw).length === 0) return raw;
+  const version = raw["version"];
+  // A newer format may rename or add keys, so report only the version mismatch.
+  if (typeof version === "number" && Number.isInteger(version) && version > CONFIG_VERSION) {
+    throw configError(file, [
+      `\`version: ${version}\` needs a newer pr-shepherd; this release reads config version ${CONFIG_VERSION}`,
+    ]);
+  }
+  const result = configFileSchema.safeParse(raw);
   if (!result.success) {
     throw configError(
       file,
-      result.error.issues.flatMap((issue) => issueLines(issue, raw)),
+      result.error.issues.flatMap((issue) =>
+        issue.path.length === 1 && issue.path[0] === "version"
+          ? [versionIssue(version)]
+          : issueLines(issue, raw),
+      ),
     );
   }
   return raw;
+}
+
+function versionIssue(version: unknown): string {
+  return version === undefined
+    ? `\`version\` is required: add \`version: ${CONFIG_VERSION}\` (0.x config files have none; see docs/migrating-to-v1.md)`
+    : `\`version\` must be ${CONFIG_VERSION}`;
 }
 
 const configCache = new Map<string, PrShepherdConfig>();

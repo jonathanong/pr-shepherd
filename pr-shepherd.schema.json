@@ -2,6 +2,10 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "properties": {
+    "version": {
+      "type": "number",
+      "const": 1
+    },
     "github": {
       "default": {},
       "type": "object",
@@ -336,6 +340,9 @@
       "additionalProperties": false
     }
   },
+  "required": [
+    "version"
+  ],
   "additionalProperties": false,
   "title": "pr-shepherd configuration"
 }
