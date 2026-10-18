@@ -135,4 +135,18 @@ describe("runIterate — edited PR comments", () => {
     expect(result.editedComments?.map((c) => c.id)).toEqual(["c-debounce"]);
     expect(await storedHash("c-debounce")).toBe(hashBody("original"));
   });
+
+  it("omits and does not mark the edit when the PR is merged", async () => {
+    const report = await readyReportWithEdit("c-merged");
+    mockRunCheck.mockResolvedValue({
+      ...report,
+      mergeStatus: { ...report.mergeStatus, state: "MERGED" },
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result).toMatchObject({ action: "cancel", reason: "merged" });
+    expect(result).not.toHaveProperty("editedComments");
+    expect(await storedHash("c-merged")).toBe(hashBody("original"));
+  });
 });

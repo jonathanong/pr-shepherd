@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { FirstLookThread } from "../types/report.mts";
+import type { FirstLookComment, FirstLookThread } from "../types/report.mts";
 import { formatFixCodeResult } from "./fix-formatter.mts";
 import { makeIterateResult } from "../../fixtures/cli-parser.iterate-fixtures.mts";
 import type { IterateResult } from "../types.mts";
@@ -36,5 +36,24 @@ describe("## First-look items — edited flag rendering", () => {
     result.fix = { ...result.fix, firstLookThreads: [editedThread], firstLookComments: [] };
     const output = formatFixCodeResult("# PR #42 [FIX_CODE]", result);
     expect(output).toContain("[status: outdated, auto-resolved, edited]");
+  });
+
+  it("renders a first-look minimized comment as [status: minimized]", () => {
+    const comment: FirstLookComment = {
+      id: "IC_fl1",
+      isMinimized: true,
+      author: "coderabbitai",
+      authorType: "Bot",
+      body: "walkthrough",
+      url: "",
+      createdAtUnix: 0,
+      firstLookStatus: "minimized",
+    };
+    const result: IterateResult = { ...makeIterateResult("fix_code") };
+    if (result.action !== "fix_code") throw new Error("unreachable");
+    result.fix = { ...result.fix, firstLookThreads: [], firstLookComments: [comment] };
+    const output = formatFixCodeResult("# PR #42 [FIX_CODE]", result);
+    expect(output).toContain("`commentId=IC_fl1`");
+    expect(output).toContain("[status: minimized]");
   });
 });
