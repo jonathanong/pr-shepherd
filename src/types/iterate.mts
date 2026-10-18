@@ -185,6 +185,8 @@ interface FixRebaseAndPush {
   firstLookThreads: FirstLookThread[];
   /** First-look comments — previously hidden, surfaced for acknowledgment only. */
   firstLookComments: FirstLookComment[];
+  /** Set only when `iterate.reviewOutputMaxChars` held review items back: `shown` of `total`. */
+  reviewItems?: { shown: number; total: number };
 }
 
 export interface IterateResultFixCode extends IterateResultBase {

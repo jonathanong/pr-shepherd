@@ -24,7 +24,10 @@ import {
   currentEjectionCommit,
   type QueueEjectionRecovery,
 } from "./queue-recovery-instructions.mts";
-import { buildReleasedBlockerInstruction } from "./check-instructions.mts";
+import {
+  buildReleasedBlockerInstruction,
+  buildReviewSubsetInstruction,
+} from "./check-instructions.mts";
 import { buildNativeStackLayerRebase } from "./native-stack-rebase.mts";
 import { lookupUpperLayerTrunkConflict } from "./stack-trunk-conflict.mts";
 import { lookupMergedBasePullRequests } from "./merged-base-pull-requests.mts";
@@ -142,6 +145,14 @@ function pendingReviewCommands(
 }
 
 export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateResult> {
+  const result = await handleFixCodeTick(ctx);
+  // Every escalation from a capped tick carries the rollup: the reader sees a subset.
+  const { reviewItems } = ctx.report;
+  if (result.action !== "escalate" || reviewItems === undefined) return result;
+  return { ...result, escalate: { ...result.escalate, reviewItems } };
+}
+
+async function handleFixCodeTick(ctx: HandleFixCodeContext): Promise<IterateResult> {
   const {
     base,
     report,
@@ -380,6 +391,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     editedSummaries.length > 0 ||
     report.threads.firstLook.length > 0 ||
     report.comments.firstLook.length > 0 ||
+    report.reviewItems !== undefined ||
     checks.some((check) => (check.annotations?.length ?? 0) > 0) ||
     failingAgentChecks.some(
       (check) =>
@@ -551,6 +563,11 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
     instructions.push(buildReleasedBlockerInstruction(prNumber));
     if (completion !== undefined) instructions.push(completion);
   }
+  if (report.reviewItems) {
+    const completion = instructions.pop();
+    instructions.push(buildReviewSubsetInstruction(report.reviewItems));
+    if (completion !== undefined) instructions.push(completion);
+  }
   if (repairInstructions && repairInstructions.length > 0) {
     instructions.unshift(...repairInstructions);
   }
@@ -610,6 +627,7 @@ export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateR
       firstLookComments,
       inProgressRunIds,
       protectedRuns,
+      ...(report.reviewItems && { reviewItems: report.reviewItems }),
     },
     cancelled,
   } as IterateResult;

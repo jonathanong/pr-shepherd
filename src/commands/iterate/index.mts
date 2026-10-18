@@ -101,6 +101,7 @@ async function runIterateCore(
       // compatibility key in the config loader.
       autoResolve: true,
       autoMinimizeSuppressed: config.actions.autoMinimizeSuppressed,
+      reviewOutputMaxChars: config.iterate.reviewOutputMaxChars,
     },
     checkContext,
   );
@@ -151,7 +152,11 @@ async function runIterateCore(
       config.iterate.minimizeApprovals,
       config.iterate.minimizeComments,
       botUsernames,
-      [...report.threads.actionable, ...report.threads.resolutionOnly],
+      [
+        ...report.threads.actionable,
+        ...report.threads.resolutionOnly,
+        ...(report.heldThreadReviewIds ?? []).map((reviewId) => ({ reviewId })),
+      ],
       report.ruleAutoResolveReviewSummaryIds,
     );
   // Minimize already-seen review summaries in-process so they never become agent-facing work.
@@ -169,7 +174,10 @@ async function runIterateCore(
   }
   // A first look at an already-minimized comment is only an acknowledgment. Edited PR comments
   // (report.comments.edited) are neither: they never block readiness or restart the ready delay.
+  // Review items held back by iterate.reviewOutputMaxChars keep the PR out of ready/merge: a
+  // capped tick that shows only first-look comments still counts, since held work follows.
   const hasReadinessWork =
+    (report.reviewItems !== undefined && report.comments.firstLook.length > 0) ||
     report.threads.actionable.length > 0 ||
     report.threads.resolutionOnly.length > 0 ||
     report.threads.firstLook.length > 0 ||

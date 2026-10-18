@@ -27,6 +27,10 @@ export function formatFixCodeResult(
   const verbose = opts.verbose ?? false;
   const topCap = verbose ? undefined : BODY_TRUNCATE_MAX_CHARS;
   const sections: string[] = [header];
+  if (result.fix.reviewItems) {
+    const { shown, total } = result.fix.reviewItems;
+    sections.push(`**showing** ${shown} of ${total} review items`);
+  }
 
   if (result.mergedBasePullRequests?.length) {
     sections.push("## Merged PRs matching the current base");

@@ -174,6 +174,13 @@ export function eventArm(arms) {
  */
 const shepherdTick = (out, phase = 1) => ({ phase, via: "bash", cmd: SHEPHERD_CMD, out });
 
+/** A later tick of fixture 155, recorded by test-cases/review-output-cap.test.mts. */
+const followUpTick = (n) =>
+  readFileSync(
+    join(REPO_ROOT, "test-cases", "snapshots", "review-output-cap-follow-up", `tick${n}.text.md`),
+    "utf8",
+  ).trimEnd();
+
 /**
  * REST requests `readRestFeedback` spends on a reply's transcript read on
  * standard REST: pull comments, issue comments, reviews and /user. The cloud
@@ -988,6 +995,36 @@ const PR_SCENARIOS = [
         event: { wake: "change", detectors: 1 },
         gh: ghObserve(state),
         mcp: mcpObserve(state),
+      };
+    },
+  },
+
+  {
+    id: "review-deluge",
+    weight: 0.1,
+    title: "Work through 115 review items under the review output budget",
+    note: "Fixture 155 at a 3000-character `iterate.reviewOutputMaxChars`: 60 active threads, 25 comments, 2 changes-requested reviews, 6 summaries and 22 first-look or edited items. Shepherd shows them in three batches (40, 42, 33) and replies to each batch's threads with one `apply review`; the baselines read everything at once and reply to all 60 threads one by one.",
+    arms() {
+      const fixture = "155-fix-code-review-output-capped";
+      const state = fixtureState(fixture);
+      const ticks = [snapshot(fixture), followUpTick(2), followUpTick(3)];
+      const repliesIn = (text) =>
+        text.match(/--reply-thread-ids (\S+)/)?.[1].split(",") ?? [];
+      const shepherd = [];
+      for (const text of ticks) {
+        shepherd.push(shepherdTick(text, shepherd.length + 1));
+        const replied = repliesIn(text);
+        if (replied.length)
+          shepherd.push(shepherdApply(text, { repliedThreads: replied }, shepherd.length + 1));
+      }
+      const active = state.reviewThreads.filter((t) => !t.isResolved);
+      return {
+        shepherd,
+        // Reviews, review comments and issue comments, then review comments
+        // again for the replies.
+        event: { wake: "change", detectors: 4 },
+        gh: [...ghObserve(state), ...active.map((_, i) => ghReply(fixtureCommentId(i)))],
+        mcp: [...mcpObserve(state), ...active.map((_, i) => mcpReply(fixtureCommentId(i)))],
       };
     },
   },

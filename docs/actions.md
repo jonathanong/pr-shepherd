@@ -681,7 +681,7 @@ Shepherd recognizes its own reply only when the latest visible comment begins `<
 
 ### Section order
 
-1. Heading + base fields (always present).
+1. Heading + base fields (always present), then `**showing** <shown> of <total> review items` only when the [review output budget](#review-output-budget) held items back this tick.
 2. `## Review threads` — active unresolved threads.
    - Other-human active threads are marker-gated unless `iterate.resolveOtherHumanThreads` is `always`: a previously seen thread whose transcript changed is rendered again with `[edited since first look]`, while unchanged seen other-human threads are suppressed until markers are cleared. GitHub-detected bots, logins in top-level `botUsernames`, and viewer-authored human threads are returned every tick until resolved, even when unchanged.
    - After evaluating each thread, the agent runs every generated review-mutation command even when no code change is warranted (routing per [Review routing](#review-routing)).
@@ -733,6 +733,29 @@ Sections 3–17 are omitted when empty.
 - The cut point snaps to a line boundary outside any ` ``` ` or `~~~` fence; if no fence-safe cut exists, the body is left uncapped.
 - `--verbose` renders bodies uncapped. **JSON is never capped:** `body` fields always carry the full text, so a capped Markdown body's pointer and the JSON `body` agree.
 
+### Review output budget
+
+`iterate.reviewOutputMaxChars` (default `50000`, `0` disables it) caps how many characters of review-item bodies one `fix_code` tick shows. Every item is still fetched; the budget only decides which are shown this tick. Review items are changes-requested reviews, active and resolution-only threads, actionable PR comments, first-look threads and comments, first-look and edited review summaries, and edited comments. A thread costs its full transcript; any other item costs its body. Approvals, already-seen summaries queued for minimization, and rule-suppressed items are not budgeted.
+
+When every item fits, the output is unchanged. Otherwise Shepherd shows items in this priority order until the next item would exceed the budget, always showing at least one:
+
+1. Changes-requested reviews.
+2. Active and resolution-only threads, and actionable PR comments.
+3. First-look threads and comments.
+4. First-look and edited review summaries.
+5. Edited comments.
+
+Within a group, items go oldest first (unknown ages last). Selection stops at the first item that does not fit; it does not skip ahead to a smaller one.
+
+A held item is absent from every section, from the generated `apply review` IDs, and from the JSON. Its seen marker is not written, so a later tick shows it. The tick prints `**showing** <shown> of <total> review items` below the base fields (JSON `fix.reviewItems: { shown, total }`) and adds this step before `Rerun Shepherd now.`:
+
+```markdown
+5. This is a subset: 40 of 115 review items are shown, and only their IDs are in the commands above. After handling these items, rerun Shepherd for the next batch; do not fetch the held items yourself.
+6. Rerun Shepherd now.
+```
+
+While review items are held, the action stays `fix_code`; it is never `ready`, `mark_ready`, or `merge`. Edited comments are held only when other review items are held too, because edits never block readiness ([Edited comments](#edited-comments)). If every other item fits, all edited comments are shown, even past the budget, so a ready or terminal tick never leaves an edit unshown. While a held unresolved thread waits, its parent review summary is not minimized. If the tick escalates instead, the escalation shows the same subset and carries the rollup (`escalate.reviewItems`, the same `**showing**` line); the held items stay unmarked, so the next run shows them. A merge-queue deferral tick is never capped, because it shows no review items. Items that repeat every tick (bot threads and stale bot changes-requested reviews with authorized mutations) take budget on every tick until they are resolved or dismissed. The `check` command is never capped.
+
 ### `fix_code` JSON
 
 The JSON payload exposes the same data under `fix.{threads, resolutionOnlyThreads, actionableComments, reviewSummaryIds, firstLookSummaries, editedSummaries, surfacedApprovals, checks, changesRequestedReviews, resolveCommand, resolveOnlyCommand, instructions, firstLookThreads, firstLookComments, inProgressRunIds, protectedRuns}` plus top-level `baseBranch`, `branchProtection` (on `IterateResultBase`, not under `fix`; omitted in lean JSON when `null`, always present in verbose JSON), and `cancelled`. In lean JSON, empty `fix.*` arrays, empty `cancelled`, absent `resolveOnlyCommand`, and unavailable optional fields are omitted; `--verbose` includes all fields.
@@ -746,6 +769,7 @@ The JSON payload exposes the same data under `fix.{threads, resolutionOnlyThread
 | `firstLookSummaries`, `editedSummaries`          | Full `Review` objects for first-seen and edited summaries; edited IDs are **NOT** in `reviewSummaryIds`.                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `changesRequestedReviews`, `surfacedApprovals`   | Marker-gated: unchanged bodies are suppressed, edited bodies re-surface.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `firstLookThreads`, `firstLookComments`          | Informational unless the same thread appears in `resolutionOnlyThreads`.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `reviewItems`                                    | `{ shown, total }`, only when the [review output budget](#review-output-budget) held review items back this tick.                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | `resolveCommand`                                 | `argv` starts with the configured [`cliCommand`](configuration.md#clicommand--default-pr-shepherd) argv (default `["pr-shepherd", …]`); carries `requiresDismissMessage` / `requiresHeadSha`.                                                                                                                                                                                                                                                                                                                                     |
 | `resolveOnlyCommand`                             | Present when resolve-thread and minimize-comment mutations are split from the reply command (including a marked retry still being resolved); `requiresHeadSha: false`, no `$DISMISS_MESSAGE` placeholder.                                                                                                                                                                                                                                                                                                                         |
 | `checks[]`                                       | Raw check fields; `logExcerpt` when Shepherd fetched a bounded excerpt; `runAttempt` when later than 1; `relatedJobs: [{ name, conclusion, failedStep?, logExcerpt? }]` (the sibling failed jobs, also on `escalate` checks); `rerunCommand` on every eligible check (not deduplicated, unlike Markdown's once-per-`runId` `rerun:` line).                                                                                                                                                                                        |
@@ -886,6 +910,7 @@ After completing manual fixes, resume only after every required remote update ha
 | `escalate.mergeQueueRemoval`                              | For a merge-queue removal: `createdAtUnix` plus any available raw `reason`, `actor`, `beforeCommitOid`, and `beforeCommitParentOids`.                                                                                                                                    |
 | `escalate.pendingReviewCommands`                          | When a result with automatically selected review mutations becomes an escalation: its non-empty `resolveOnlyCommand` and/or `resolveCommand`. Markdown renders the same argv under `## Pending review commands`.                                                         |
 | `escalate.firstLookSummaries`, `escalate.editedSummaries` | Review-summary bodies that must be surfaced on that tick, including before a pending minimization.                                                                                                                                                                       |
+| `escalate.reviewItems`                                    | When the escalating tick held review items under [the review output budget](#review-output-budget): `{ shown, total }`. Markdown renders `**showing** <shown> of <total> review items` below the base fields.                                                            |
 
 **What the skill does:** Follow `## Instructions`: pause automatic polling, preserve the displayed commands, and use them if the human directs recovery.
 

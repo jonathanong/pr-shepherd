@@ -205,6 +205,7 @@ export function projectIterateLean(
           ...(result.fix.resolveOnlyCommand && {
             resolveOnlyCommand: result.fix.resolveOnlyCommand,
           }),
+          ...(result.fix.reviewItems && { reviewItems: result.fix.reviewItems }),
           ...(result.fix.instructions.length > 0 && {
             instructions: result.fix.instructions,
           }),
@@ -244,6 +245,7 @@ export function projectIterateLean(
             result.escalate.thrashHistory.length > 0 && {
               thrashHistory: result.escalate.thrashHistory,
             }),
+          ...(result.escalate.reviewItems && { reviewItems: result.escalate.reviewItems }),
           ...(result.escalate.mergeQueueRemoval && {
             mergeQueueRemoval: result.escalate.mergeQueueRemoval,
           }),

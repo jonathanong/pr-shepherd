@@ -1,7 +1,4 @@
-/**
- * Shared helpers for test-cases/format-parity.test.mts — split out to stay under the repo's
- * 200-line-per-file cap. See that file for the invariant this enforces.
- */
+/** Shared helpers for test-cases/format-parity.test.mts (see it for the invariant). */
 
 /**
  * Paths (dot-separated; array indices collapsed to "[]") whose JSON leaf value is legitimately
@@ -49,7 +46,11 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
     "fix.resolutionOnlyThreads[].createdAtUnix",
     "raw bookkeeping timestamp on the thread's top comment; never rendered as a date",
   ],
-  ["fix.firstLookThreads[].createdAtUnix", "same"],
+  // Same, for the other review items (the review-output budget orders by them).
+  ...["firstLookThreads", "changesRequestedReviews", "firstLookSummaries", "firstLookComments"].map(
+    (k): [string, string] => [`fix.${k}[].createdAtUnix`, "same"],
+  ),
+  ["escalate.changesRequestedReviews[].createdAtUnix", "same"],
   ["fix.firstLookThreads[].comments[].createdAtUnix", "same, for transcript replies"],
   [
     "fix.resolutionOnlyThreads[].comments[].createdAtUnix",
@@ -72,6 +73,7 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
     "escalate.unresolvedThreads[].url",
     "the escalate 'Items needing attention' bullet omits the thread URL (id + location + author + body only)",
   ],
+  ["escalate.ambiguousComments[].url", "same as escalate.unresolvedThreads[].url"],
   [
     "escalate.unresolvedThreads[].comments[].url",
     "same, for transcript replies (the REST reader always returns the full transcript)",

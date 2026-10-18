@@ -34,6 +34,7 @@ function defaultConfig(): PrShepherdConfig {
       minimizeApprovals: false,
       minimizeComments: "bots",
       behindBaseHint: "",
+      reviewOutputMaxChars: 50000,
       resolveOtherHumanThreads: "none",
       instructions: "playbook",
     },

@@ -95,6 +95,14 @@ export function buildReleasedBlockerInstruction(prNumber: number): string {
     : `Update this PR branch from its base with \`gh pr update-branch ${prNumber} --rebase\`. Do not rerun the job; a rerun retests the old merge ref.`;
 }
 
+/** `iterate.reviewOutputMaxChars` held review items back; the rerun step that follows shows them. */
+export function buildReviewSubsetInstruction(reviewItems: {
+  shown: number;
+  total: number;
+}): string {
+  return `This is a subset: ${reviewItems.shown} of ${reviewItems.total} review items are shown, and only their IDs are in the commands above. After handling these items, rerun Shepherd for the next batch; do not fetch the held items yourself.`;
+}
+
 /** Recurrence only. Commit, push, rerun, and SHA steps are earlier instructions. */
 export function buildFixCompletionInstruction(): string {
   return FIX_CODE_CONTINUATION;

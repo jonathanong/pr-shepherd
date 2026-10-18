@@ -41,6 +41,12 @@ export interface EscalateDetails {
   checks?: AgentCheck[];
   stalledChecks?: AgentStalledCheck[];
   thrashHistory?: Array<{ threadId: string; attempts: number }>;
+  /**
+   * Set only when `iterate.reviewOutputMaxChars` held review items back on the tick that
+   * escalated: `shown` of `total` review items appear here. The held items stay unmarked, so the
+   * next run shows them.
+   */
+  reviewItems?: { shown: number; total: number };
   /** Review mutations generated for this tick, retained so an escalation cannot strand them. */
   pendingReviewCommands?: {
     resolveOnlyCommand?: ResolveCommand;

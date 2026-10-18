@@ -59,6 +59,7 @@ iterate:
   behindBaseHint: "rebase --force-with-lease" # one-liner shown on fix_code when behind or conflicting with base
   resolveOtherHumanThreads: none # none | outdated | always
   instructions: inline # inline | playbook
+  reviewOutputMaxChars: 50000 # per-tick review-body budget on fix_code; 0 disables
 
 poll:
   intervalSeconds: 120 # single-PR delay between WAIT ticks
@@ -123,6 +124,7 @@ Built-in defaults live in `src/config.json`.
 | `iterate.behindBaseHint`             | `""`                                      | One-liner on `fix_code` when the branch is behind or conflicts with its base; empty omits it.                                                           |
 | `iterate.resolveOtherHumanThreads`   | `"none"`                                  | When to resolve other-human threads after a reply: `none`, `outdated`, or `always`.                                                                     |
 | `iterate.instructions`               | `"inline"`                                | `inline` or `playbook` for the `fix_code` commit/push instructions. Overridden by `--instructions` and the MCP `instructions` input.                    |
+| `iterate.reviewOutputMaxChars`       | `50000`                                   | Per-tick character budget for review-item bodies on `fix_code`; `0` disables. See [Review output budget](actions.md#review-output-budget).              |
 | `poll.mode`                          | `"auto"`                                  | `auto`, `poll`, or `event`. Overridden by `--poll-mode` and the MCP/library `pollMode` option.                                                          |
 | `poll.intervalSeconds`               | `60`                                      | Delay between `WAIT` ticks for one PR; overridden by `--interval`.                                                                                      |
 | `poll.stackIntervalFactor`           | `2`                                       | Multiplier for `--stack` and multi-PR sleeps; `--interval` overrides it and is not multiplied.                                                          |
@@ -240,6 +242,10 @@ The deprecated `"users"` value warns and is treated as `"none"`. Excluded items 
 ### `iterate.behindBaseHint` — default `""`
 
 One-liner added to `fix_code` instructions when the branch is behind (`mergeStatus: "BEHIND"`) or conflicts with (`mergeStatus: "CONFLICTS"`) its base — for example `"rebase --force-with-lease"`, `"merge the main branch"`, or `"see .agents/skills/agent-workflow/git-and-prs.md"`. The conflict hint follows the merge-conflicts step and is omitted on a conflicting native stack layer. Shepherd never picks the git mechanics; it only echoes this pointer (see [actions.md](actions.md)). Empty omits the hint.
+
+### `iterate.reviewOutputMaxChars` — default `50000`
+
+Per-tick budget, in characters, for the review-item bodies a `fix_code` result shows: changes-requested reviews first, then active threads and PR comments, first-look items, review summaries, and edited comments, oldest first within each group. Shepherd shows items until the next one would exceed the budget, always at least one. Held items are left out of the output, the generated IDs, and the seen markers, so the next run shows them; the result carries a `**showing** N of M review items` line (JSON `fix.reviewItems`) and a rerun step. `0` disables the cap. See [Review output budget](actions.md#review-output-budget).
 
 <a id="iterateresolveotherhumanthreads"></a>
 

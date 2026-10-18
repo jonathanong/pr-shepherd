@@ -36,7 +36,7 @@ export function classifyReviewSummaries(
   minimizeApprovals: boolean,
   minimizeComments: MinimizeCommentsPolicy | undefined = "all",
   botUsernames: NormalizedBotUsernames = new Set(),
-  unresolvedThreads: ReviewThread[] = [],
+  unresolvedThreads: ReadonlyArray<Pick<ReviewThread, "reviewId">> = [],
   ruleAutoResolveIds: string[] = [],
 ): {
   minimizeIds: string[];
