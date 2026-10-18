@@ -245,6 +245,7 @@ export function projectIterateLean(
             result.escalate.thrashHistory.length > 0 && {
               thrashHistory: result.escalate.thrashHistory,
             }),
+          ...(result.escalate.reviewItems && { reviewItems: result.escalate.reviewItems }),
           ...(result.escalate.mergeQueueRemoval && {
             mergeQueueRemoval: result.escalate.mergeQueueRemoval,
           }),

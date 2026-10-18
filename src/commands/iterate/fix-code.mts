@@ -145,6 +145,14 @@ function pendingReviewCommands(
 }
 
 export async function handleFixCode(ctx: HandleFixCodeContext): Promise<IterateResult> {
+  const result = await handleFixCodeTick(ctx);
+  // Every escalation from a capped tick carries the rollup: the reader sees a subset.
+  const { reviewItems } = ctx.report;
+  if (result.action !== "escalate" || reviewItems === undefined) return result;
+  return { ...result, escalate: { ...result.escalate, reviewItems } };
+}
+
+async function handleFixCodeTick(ctx: HandleFixCodeContext): Promise<IterateResult> {
   const {
     base,
     report,

@@ -50,6 +50,7 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
   ...["firstLookThreads", "changesRequestedReviews", "firstLookSummaries", "firstLookComments"].map(
     (k): [string, string] => [`fix.${k}[].createdAtUnix`, "same"],
   ),
+  ["escalate.changesRequestedReviews[].createdAtUnix", "same"],
   ["fix.firstLookThreads[].comments[].createdAtUnix", "same, for transcript replies"],
   [
     "fix.resolutionOnlyThreads[].comments[].createdAtUnix",
@@ -72,6 +73,7 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
     "escalate.unresolvedThreads[].url",
     "the escalate 'Items needing attention' bullet omits the thread URL (id + location + author + body only)",
   ],
+  ["escalate.ambiguousComments[].url", "same as escalate.unresolvedThreads[].url"],
   [
     "escalate.unresolvedThreads[].comments[].url",
     "same, for transcript replies (the REST reader always returns the full transcript)",

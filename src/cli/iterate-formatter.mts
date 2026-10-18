@@ -219,6 +219,11 @@ export function formatIterateResult(
       return finish(
         joinSections([
           header,
+          ...(result.escalate.reviewItems
+            ? [
+                `**showing** ${result.escalate.reviewItems.shown} of ${result.escalate.reviewItems.total} review items`,
+              ]
+            : []),
           ...(apiUsage ? [apiUsage] : []),
           ...(verboseChecks ? [verboseChecks] : []),
           result.escalate.humanMessage,
