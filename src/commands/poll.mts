@@ -1,5 +1,6 @@
 import { runIterate } from "./iterate/index.mts";
 import { pollTickSeenOptions } from "./poll-seen-options.mts";
+import { markEditedCommentsSeen } from "./iterate/edited-comment-markers.mts";
 import type { IterateCommandOptions, IterateResult } from "../types.mts";
 import { sleep } from "../util/sleep.mts";
 import { withPollApiUsage } from "./poll-run.mts";
@@ -61,7 +62,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
   while (true) {
     tick += 1;
     const pastDebounce = debounceUntil !== null && Date.now() >= debounceUntil;
-    const seenOptions = pollTickSeenOptions(debounceSeconds, pastDebounce, swallowsMarkReady);
+    const seenOptions = pollTickSeenOptions(debounceSeconds, pastDebounce);
     const remainingBefore = untilTerminal
       ? Number.POSITIVE_INFINITY
       : timeoutMs - (Date.now() - start);
@@ -161,7 +162,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       await sleep(sleepMs);
       continue;
     }
-    if (lastResult.action === "mark_ready" && seenOptions.discardedActions.includes("mark_ready")) {
+    if (swallowsMarkReady && lastResult.action === "mark_ready" && !pastDebounce) {
       debounceUntil = null;
       const elapsedMs = Date.now() - start;
       const sleepMs = quotaPollIntervalMs(
@@ -195,5 +196,5 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
     await refreshIfReturning();
     break;
   }
-  return lastResult!;
+  return markEditedCommentsSeen(lastResult!);
 }

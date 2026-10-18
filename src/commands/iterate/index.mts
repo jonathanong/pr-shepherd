@@ -16,7 +16,7 @@ import { buildReadyMergeOutcome, handleActiveMergeState } from "./merge-state.mt
 import { buildIterateBase } from "./base.mts";
 import { markReadyIfAuthorized } from "./mark-ready.mts";
 import type { IterateCommandOptions, IterateResult, ShepherdReport } from "../../types.mts";
-import { classifyItem, loadSeenMap, markSeen } from "../../state/seen-comments.mts";
+import { classifyItem, loadSeenMap } from "../../state/seen-comments.mts";
 import { withIterateApiUsage } from "./run.mts";
 import { fetchRawSummaryPr } from "../../github/poll-summary.mts";
 import { summarizePollSummaryPr } from "../../github/poll-summary-projector.mts";
@@ -36,6 +36,7 @@ import { buildUnreportedFixResult, planUnreportedRequired } from "./unreported-r
 import { createCheckExecutionContext } from "../check-execution-context.mts";
 import { transportReadinessGaps } from "../../github/transport-evidence.mts";
 import { buildEscalateHumanMessage } from "./escalate.mts";
+import { markEditedCommentsSeen } from "./edited-comment-markers.mts";
 
 export function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
   return withIterateApiUsage(opts, async () => {
@@ -48,9 +49,9 @@ interface IterateTick {
   report?: ShepherdReport;
 }
 
-// Edited PR comments are not readiness work. Hold them while the PR waits or counts down, or when
-// the poll loop will discard the result, and show each once on any other action (including MERGE
-// after the ready delay), writing its marker then.
+// Edited PR comments are not readiness work. Hold them while the PR waits or counts down, and show
+// each once on any other action (including MERGE after the ready delay), writing its marker then.
+// The poll loop defers the write to the result it returns, since it can discard or refresh a tick.
 // A replayed cached report can carry edits already shown, so re-check the current markers.
 async function attachEditedComments(
   result: IterateResult,
@@ -58,12 +59,7 @@ async function attachEditedComments(
   opts: IterateCommandOptions,
 ): Promise<IterateResult> {
   const candidates = tick.report?.comments.edited ?? [];
-  if (
-    candidates.length === 0 ||
-    result.action === "wait" ||
-    result.action === "ready" ||
-    opts.discardedActions?.includes(result.action)
-  )
+  if (candidates.length === 0 || result.action === "wait" || result.action === "ready")
     return result;
   if (result.action === "cancel" && (result.reason === "merged" || result.reason === "closed"))
     return result;
@@ -73,8 +69,8 @@ async function attachEditedComments(
   const seen = await loadSeenMap(key);
   const edited = candidates.filter((c) => classifyItem(c.id, c.body, seen) === "edited");
   if (edited.length === 0) return result;
-  await Promise.allSettled(edited.map((c) => markSeen(key, c.id, c.body)));
-  return { ...result, editedComments: edited };
+  const withEdits = { ...result, editedComments: edited };
+  return opts.deferEditedCommentMarkers ? withEdits : markEditedCommentsSeen(withEdits);
 }
 
 async function runIterateCore(

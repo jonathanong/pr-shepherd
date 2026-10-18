@@ -61,7 +61,7 @@ type IterateOptions = Omit<
   | "prNumber"
   | "targetRepository"
   | "persistSeen"
-  | "discardedActions"
+  | "deferEditedCommentMarkers"
   | "fingerprintCache"
   | "stallDeadlineSink"
   | "deferQuotaWarning"
