@@ -252,8 +252,7 @@ branches or rebasing; ask the user what to do next.`,
   },
 
   {
-    // #444: with auto-mark-ready disabled, marking the draft ready is the agent's
-    // step — but only after the probe confirms that is the only thing left.
+    // #444: a clean draft with auto-mark-ready disabled ends the stack loop.
     slug: "22-stack-auto-ready-disabled-probe",
     tier: "guard",
     area: "github",
@@ -261,19 +260,21 @@ branches or rebasing; ask the user what to do next.`,
     shape: stackShape(repoPr(421)),
     tags: ["stack", "shepherd", "mark-ready"],
     graders: {
-      "probes-before-marking-ready": llm(
-        `The plan runs the printed probe
-(\`pr-shepherd … /pull/421 --timeout 1s --debounce 0s --no-auto-mark-ready\`)
-FIRST, and runs \`gh pr ready 421 -R owner/repo\` only if that probe returns the
-described \`[WAIT]\`. Otherwise it completes the probe's instructions and leaves
-PR #421 in draft this round.
+      "stops-clean-draft-stack": llm(
+        `The plan treats the stack's \`[CANCEL] — all_terminal\` result as terminal
+and stops shepherding it. PR #421 is clean but remains in draft because automatic
+mark-ready is disabled; there is no further work or human handoff in this tick.
 
-Failing responses do any of: run \`gh pr ready\` unconditionally or before the
-probe; skip marking ready entirely even when the probe returns that WAIT; hand
-the mark-ready step to the human.`,
+Failing responses continue polling, rerun the stack selector, start a one-PR
+session for #421, or ask the user to decide what to do next.`,
       ),
-      "names-the-ready-command": regex(String.raw`gh pr ready\s+421(?![0-9])`, { weight: 0.5 }),
-      "iterates-the-stack": llm(ITERATES_STACK_AGAIN),
+      "leaves-the-draft-unmodified": llm(
+        `The plan leaves PR #421 in draft. It does not run \`gh pr ready\`, enable
+automatic mark-ready, or perform another mutation to make the PR ready.
+
+Failing responses mark #421 ready, propose a ready command as a next step, or
+override the disabled setting.`,
+      ),
       "skill-fired": skillFired,
     },
   },
