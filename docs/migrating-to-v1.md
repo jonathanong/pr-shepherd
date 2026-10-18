@@ -2,7 +2,7 @@
 
 [← README](../README.md) | [configuration.md](configuration.md)
 
-This page lists every breaking change between pr-shepherd 0.x (0.59.3) and 1.0.0, and what to change. It is for anyone who upgrades a repository config, a script, an MCP client, or a library caller. v1 keeps no compatibility aliases. An old command, flag, field, or tool name fails or is simply absent. Old config keys, `--stack`, and `--poll-mode` fail with an error that names the replacement.
+This page lists every breaking change between pr-shepherd 0.x (0.59.3) and 1.0.0, and what to change. It is for anyone who upgrades a repository config, a script, an MCP client, or a library caller. v1 keeps no compatibility aliases. An old command, flag, field, or tool name fails or is simply absent. Renamed config keys fail with an error that names the new key. `--stack` and `--poll-mode` on the default command, `iterate`, or `stack` fail with an error that names the replacement. Removed keys with no replacement, and `--poll-mode` on other commands, fail as unknown.
 
 If you use only the shipped plugin and skill, upgrade the plugin and migrate your config files. The skill already emits the v1 commands.
 
@@ -149,7 +149,7 @@ Every key, default, and per-key section is in [configuration.md](configuration.m
 | Playbook `Cloud event loop` (`cloud-event-loop`)                       | `Event loop` (`event-loop`)                                      |
 
 - `stack` owns the `shepherd` action and exit code `16`. Passing `--stack` to the default command or to `iterate` now exits `64` with an error that names `pr-shepherd stack <PR>`.
-- `iterate` is always one tick, accepts several same-repository PRs for one aggregate tick, and prints `nextCheck`: when to rerun if no GitHub event arrives first. It behaves like 0.x `--poll-mode event`. It never sleeps or debounces, and it writes seen markers immediately. See [cloud.md](cloud.md).
+- `iterate` is always one tick, accepts several same-repository PRs for one aggregate tick, and prints `nextCheck` when the action waits: when to rerun if no GitHub event arrives first (see the omissions below). It behaves like 0.x `--poll-mode event`. It never sleeps or debounces, and it writes seen markers immediately. See [cloud.md](cloud.md).
 - `--poll-mode` and `poll.mode` are removed. On the default command, `iterate`, and `stack`, `--poll-mode` exits `64` with an error that names the replacement. On `admin clean` and `admin log-file` it is just an unknown flag (exit `64`), so drop it there. There is no mode to configure. The default command `pr-shepherd [PR ...]` and `stack` loop by default. They run one tick in a Claude Code cloud session (`CLAUDE_CODE_REMOTE=true`), and `stack` also runs one tick with `--once`.
 - Multi-PR polling is unchanged: `pr-shepherd 1 2 3`.
 
