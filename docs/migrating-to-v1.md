@@ -2,7 +2,7 @@
 
 [← README](../README.md) | [configuration.md](configuration.md)
 
-This page lists every breaking change between pr-shepherd 0.x (0.59.1) and 1.0.0, and what to change. It is for anyone who upgrades a repository config, a script, an MCP client, or a library caller. v1 keeps no compatibility aliases. An old command, flag, field, or tool name fails or is simply absent. Old config keys, `--stack`, and `--poll-mode` fail with an error that names the replacement.
+This page lists every breaking change between pr-shepherd 0.x (0.59.3) and 1.0.0, and what to change. It is for anyone who upgrades a repository config, a script, an MCP client, or a library caller. v1 keeps no compatibility aliases. An old command, flag, field, or tool name fails or is simply absent. Old config keys, `--stack`, and `--poll-mode` fail with an error that names the replacement.
 
 If you use only the shipped plugin and skill, upgrade the plugin and migrate your config files. The skill already emits the v1 commands.
 
@@ -18,6 +18,10 @@ Each directory may hold **one** config file, using any of these names:
 - `.pr-shepherd/config.yaml` (new)
 
 Two config files in the same directory is an error. The merge order is unchanged: built-in defaults, then `$HOME`, then each ancestor down to cwd, with the closest file winning. Your `~/.pr-shepherdrc.yml` applies to every repository, so migrate it too. Details: [How files load](configuration.md#how-files-load).
+
+### Format version
+
+Every non-empty config file must now start with `version: 1`. 0.x files have none, so add it when you rename their keys. A non-empty file without it fails with exit code `78`. An empty file needs none. A higher version, such as `version: 2`, fails with a message saying the file needs a newer pr-shepherd. Details: [Version](configuration.md#version).
 
 ### Strict validation
 
@@ -90,6 +94,7 @@ These have no replacement:
 A migrated file looks like this:
 
 ```yaml
+version: 1
 checks:
   ignore:
     - "Kilo*"
