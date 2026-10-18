@@ -754,7 +754,7 @@ A held item is absent from every section, from the generated `apply review` IDs,
 6. Rerun Shepherd now.
 ```
 
-While non-edited review items are held, the action stays `fix_code`; it is never `ready`, `mark_ready`, or `merge`. Held edited comments alone do not force `fix_code`, because edits never block readiness: they wait for the next action that is not `wait` or `ready`, as described in [Edited comments](#edited-comments). A merge-queue deferral tick is never capped, because it shows no review items. Items that repeat every tick (bot threads and stale bot changes-requested reviews with authorized mutations) take budget on every tick until they are resolved or dismissed. The `check` command is never capped.
+While review items are held, the action stays `fix_code`; it is never `ready`, `mark_ready`, or `merge`. Edited comments are held only when other review items are held too, because edits never block readiness ([Edited comments](#edited-comments)). If every other item fits, all edited comments are shown, even past the budget, so a ready or terminal tick never leaves an edit unshown. While a held unresolved thread waits, its parent review summary is not minimized. A merge-queue deferral tick is never capped, because it shows no review items. Items that repeat every tick (bot threads and stale bot changes-requested reviews with authorized mutations) take budget on every tick until they are resolved or dismissed. The `check` command is never capped.
 
 ### `fix_code` JSON
 

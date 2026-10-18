@@ -135,6 +135,11 @@ export interface ShepherdReport {
    * from the generated mutation IDs, and from the seen markers written this tick.
    */
   reviewItems?: { shown: number; total: number };
+  /**
+   * Internal, iterate-only: parent review IDs of unresolved threads held by the budget. Their
+   * summaries are not minimized this tick. Not rendered.
+   */
+  heldThreadReviewIds?: string[];
   /** COMMENTED review summary IDs matched by user rules with autoResolve:true — minimized without surfacing to agent. */
   ruleAutoResolveReviewSummaryIds?: string[];
   /** Branch protection rule for the PR's base branch. Null when no rule exists or the base ref is unavailable. */

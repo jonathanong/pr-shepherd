@@ -508,7 +508,11 @@ async function runScopedCheck(
       mergeStatus.status,
     );
   // A deferred tick shows no review items, so it is never capped; its seen markers stay unwritten.
-  const { buckets: budgeted, rollup: reviewItems } = applyReviewOutputBudget(
+  const {
+    buckets: budgeted,
+    rollup: reviewItems,
+    heldThreadReviewIds,
+  } = applyReviewOutputBudget(
     {
       changesRequested: changesRequestedReviewVisibility,
       threads: threadVisibility,
@@ -701,6 +705,7 @@ async function runScopedCheck(
     editedSummaries: budgeted.editedSummaries,
     approvedReviews: approvedReviewVisibility.visible,
     ...(reviewItems && { reviewItems }),
+    ...(heldThreadReviewIds && { heldThreadReviewIds }),
     ...(ruleAutoResolveReviewSummaryIds.length > 0
       ? { ruleAutoResolveReviewSummaryIds }
       : undefined),

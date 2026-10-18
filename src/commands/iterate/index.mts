@@ -152,7 +152,11 @@ async function runIterateCore(
       config.iterate.minimizeApprovals,
       config.iterate.minimizeComments,
       botUsernames,
-      [...report.threads.actionable, ...report.threads.resolutionOnly],
+      [
+        ...report.threads.actionable,
+        ...report.threads.resolutionOnly,
+        ...(report.heldThreadReviewIds ?? []).map((reviewId) => ({ reviewId })),
+      ],
       report.ruleAutoResolveReviewSummaryIds,
     );
   // Minimize already-seen review summaries in-process so they never become agent-facing work.

@@ -66,6 +66,8 @@ export function selectReviewOutput(
     used += item.cost;
   }
   const held = new Set(ordered.filter((item) => !shown.has(item.id)).map((item) => item.id));
+  // The at-least-one rule can show every item despite the budget: nothing is held, no rollup.
+  if (held.size === 0) return KEEP_ALL;
   return {
     keep: (id) => !held.has(id),
     rollup: { shown: shown.size, total: ordered.length },

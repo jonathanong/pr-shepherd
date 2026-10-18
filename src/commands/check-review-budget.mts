@@ -50,11 +50,14 @@ const threadItem = (thread: ReviewThread): BudgetItem => ({
  * Approved reviews are opt-in minimize targets, not review work, and are never held.
  * Held items leave every list — the report, the generated mutation IDs, and the seen-marker
  * writes — so the next tick shows them. `rollup` is set only when something was held.
+ * Edited comments are held only alongside other held work: edits never block readiness, so a
+ * ready or terminal tick must not leave some of them unshown. `heldThreadReviewIds` names the
+ * parent reviews of held unresolved threads, which must not be minimized while those wait.
  */
 export function applyReviewOutputBudget(
   buckets: ReviewOutputBuckets,
   maxChars: number,
-): { buckets: ReviewOutputBuckets; rollup?: ReviewItemRollup } {
+): { buckets: ReviewOutputBuckets; rollup?: ReviewItemRollup; heldThreadReviewIds?: string[] } {
   const { changesRequested, threads, comments } = buckets;
   const selection = selectReviewOutput(
     [
@@ -71,6 +74,20 @@ export function applyReviewOutputBudget(
     maxChars,
   );
   if (selection.rollup === undefined) return { buckets };
+  const nonEditedIds = [
+    ...changesRequested.visible,
+    ...threads.activeThreads,
+    ...threads.resolutionOnlyThreads,
+    ...comments.actionable,
+    ...threads.firstLookThreads,
+    ...buckets.firstLookComments,
+    ...buckets.firstLookSummaries,
+    ...buckets.editedSummaries,
+  ].map((item) => item.id);
+  if (nonEditedIds.every(selection.keep)) return { buckets };
+  const heldThreadReviewIds = [...threads.activeThreads, ...threads.resolutionOnlyThreads]
+    .filter((thread) => !selection.keep(thread.id))
+    .flatMap((thread) => (thread.reviewId !== undefined ? [thread.reviewId] : []));
   const keep = <T extends { id: string }>(items: T[]): T[] =>
     items.filter((item) => selection.keep(item.id));
   return {
@@ -96,5 +113,6 @@ export function applyReviewOutputBudget(
       editedComments: keep(buckets.editedComments),
     },
     rollup: selection.rollup,
+    ...(heldThreadReviewIds.length > 0 && { heldThreadReviewIds }),
   };
 }

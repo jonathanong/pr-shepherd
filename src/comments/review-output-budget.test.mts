@@ -56,6 +56,12 @@ describe("selectReviewOutput", () => {
     expect(sel.rollup).toEqual({ shown: 1, total: 2 });
   });
 
+  it("emits no rollup when the at-least-one rule shows every item", () => {
+    const sel = selectReviewOutput([[item("only", 500, 1)]], 10);
+    expect(sel.rollup).toBeUndefined();
+    expect(sel.keep("only")).toBe(true);
+  });
+
   it("charges an ID once, in its first group, and keeps unbudgeted IDs", () => {
     const sel = selectReviewOutput([[item("t", 10, 1)], [item("t", 10, 1), item("u", 10, 2)]], 15);
     expect(sel.rollup).toEqual({ shown: 1, total: 2 });
