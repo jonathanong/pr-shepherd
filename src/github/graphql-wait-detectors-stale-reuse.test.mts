@@ -31,16 +31,28 @@ const running = (report: Awaited<ReturnType<typeof tick>>) =>
   report.checks.inProgress.map((check) => check.name);
 
 describe("GraphQL idle wait detectors beside an unchanged aggregate fingerprint", () => {
-  it("still reuses the fingerprint-cached report while priming the detectors", async () => {
+  it("takes a full snapshot while seeding the detectors, then replays it for free", async () => {
     await freshLoadConfig();
     await serveIdlePr(idlePrState());
     await tick(false);
-    const priming = await tick(true);
-    expect(priming.fingerprintReused).toBe(true);
+    const seeding = await tick(true);
+    expect(seeding.fingerprintReused).toBeUndefined();
     expect(charged()).toEqual([...IDLE_PR_DETECTORS, "/graphql"]);
     const replay = await tick(true);
     expect(replay.fingerprintReused).toBe(true);
     expect(charged()).toEqual([]);
+  });
+
+  it("does not reuse a report that predates a rerun begun before the seeding tick", async () => {
+    await freshLoadConfig();
+    const state = idlePrState();
+    await serveIdlePr(state);
+    await tick(false);
+    state.rerun = true;
+    const seeding = await tick(true);
+    expect(seeding.fingerprintReused).toBeUndefined();
+    expect(running(seeding)).toEqual(["ci"]);
+    expect(running(await tick(true))).toEqual(["ci"]);
   });
 
   it("takes a fresh snapshot when the latest check run changed, and keeps it next tick", async () => {

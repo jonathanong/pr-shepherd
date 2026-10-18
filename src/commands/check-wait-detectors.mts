@@ -29,9 +29,10 @@ type StateKey = { owner: string; repo: string; pr: number };
  * Outcome of the GraphQL transport's REST change detectors. `reused` replays the stored report
  * without any GraphQL request. Otherwise `digest` is what the detectors read before this tick's
  * GraphQL snapshot, recorded beside the new report by `recordWaitDetectors`. `changed` is set
- * when a digest was stored before and this read differs from it: the stored report predates a
- * change the detectors saw, so the tick must not reuse it through the GraphQL fingerprint
- * either. First-time priming (no stored digest) leaves `changed` unset.
+ * when this read differs from the digest stored beside the report, or no digest is stored yet
+ * (the seeding tick): the stored report may predate what the detectors saw, so the tick must
+ * not reuse it through the GraphQL fingerprint either. A same-digest read past
+ * `poll.reconcileSeconds` leaves `changed` unset.
  */
 export type WaitDetectorResult =
   | { reused: ShepherdReport; baseTipOid: string }
@@ -131,7 +132,7 @@ export async function readWaitDetectors(
       baseTipOid: observed.baseTipOid,
     };
   }
-  const changed = previous !== undefined && previous.digest !== state.digest;
+  const changed = previous?.digest !== state.digest;
   return { digest: state.digest, readAt: now, ...(changed && { changed: true as const }) };
 }
 

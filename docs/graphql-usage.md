@@ -67,7 +67,7 @@ Costs assume the PR number was passed; inferring it from the branch adds 1 point
 
 `BatchPr`'s first page is the fingerprint read, so a hit and a miss cost the same 1 point when there are no supplements: about 60 points/hour at the default 60s interval. A thread among the newest 20 with more than one comment disables reuse.
 
-An idle wait (no check running, for example a pending bot review after CI finished) first makes eight conditional REST reads ([graphql.md](graphql.md#idle-wait-change-detectors)). If all answer 304 within `poll.reconcileSeconds` (default 900) of the last GraphQL snapshot, the tick spends no points and no core requests; a changed read costs that read plus a full `BatchPr` snapshot (no fingerprint hit), and the first idle tick seeds eight charged core reads. An hour of unchanged idle waiting costs about 4 points (one reconcile per 15 minutes) instead of 60.
+An idle wait (no check running, for example a pending bot review after CI finished) first makes eight conditional REST reads ([graphql.md](graphql.md#idle-wait-change-detectors)). If all answer 304 within `poll.reconcileSeconds` (default 900) of the last GraphQL snapshot, the tick spends no points and no core requests; a changed read costs that read plus a full `BatchPr` snapshot (no fingerprint hit), and the first idle tick seeds eight charged core reads beside a full `BatchPr` snapshot (one first page, 1 point). An hour of unchanged idle waiting costs about 4 points (one reconcile per 15 minutes) instead of 60.
 
 Supplements on a full snapshot, usually 1 point each:
 
