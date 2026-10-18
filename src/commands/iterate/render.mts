@@ -8,7 +8,7 @@ import type {
   FirstLookComment,
   ReviewThread,
 } from "../../types.mts";
-import { renderShellCommand } from "../../cli/runner.mts";
+import { buildPrShepherdCommand, renderShellCommand } from "../../cli/runner.mts";
 import {
   buildFailingCheckInstructions,
   buildCrStaleClause,
@@ -17,13 +17,12 @@ import {
   buildResolveCommandInstruction,
   buildFixCompletionInstruction,
 } from "./check-instructions.mts";
-import { SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE } from "../shepherd-journal.mts";
 import { isFailingAgentCheck } from "../../checks/conclusions.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
 import { partitionFixThreads } from "./fix-instruction-threads.mts";
 import { buildBranchPushInstruction, buildConflictInstruction } from "./native-stack-rebase.mts";
 import { queueEjectionSteps, type QueueEjectionRecovery } from "./queue-recovery-instructions.mts";
-import { buildPushJournalSteps } from "./fix-loop-instruction.mts";
+import { buildPushSteps } from "./fix-loop-instruction.mts";
 import type { InstructionStyle } from "../../config/load.mts";
 
 /**
@@ -57,7 +56,7 @@ export function buildFixInstructions(
   resolveOnlyCommand?: ResolveCommand,
   behindBaseHint = "", // iterate.behindBaseHint — see buildBehindBaseHintInstruction
   isBehind = false,
-  viewerCanUpdate = false,
+  _viewerCanUpdate = false,
   hasExhaustedWorkflowRerun = false,
   stackRebase?: string, // native stack layers rebase with gh-stack, not branch by branch
   queueEjection?: QueueEjectionRecovery, // current merge-queue removal with failing queue checks
@@ -103,8 +102,8 @@ export function buildFixInstructions(
   const firstLookTotal = firstLookThreads.length + firstLookComments.length;
   if (firstLookTotal > 0)
     instructions.push("Review every item under `## First-look items` before acting.");
-  if (firstLookSummaries.length > 0 && viewerCanUpdate)
-    instructions.push(SHEPHERD_JOURNAL_FIRST_LOOK_GUIDANCE);
+  if (firstLookSummaries.length > 0)
+    instructions.push("Read each body under `## Review summaries (first look)` before acting.");
   const editedTotal =
     editedSummaries.length +
     actionableComments.filter((c) => c.edited).length +
@@ -145,26 +144,32 @@ export function buildFixInstructions(
 
   if (!hintWithConflictStep) instructions.push(...branchUpdateHint);
 
+  const hasReviewFeedback =
+    threads.length > 0 ||
+    resolutionOnlyThreads.length > 0 ||
+    firstLookThreads.length > 0 ||
+    changesRequestedReviews.length > 0 ||
+    actionableComments.length > 0 ||
+    firstLookSummaries.length > 0 ||
+    editedSummaries.length > 0;
+  if (hasReviewFeedback) {
+    const journalCommand = buildPrShepherdCommand(["apply", "journal", String(prReference)]).text;
+    instructions.push(
+      `Optional: If you reject a code review suggestion, journal why: \`${journalCommand} '- <reason>'\`.`,
+    );
+  }
+
   const hasReviewMutations =
     resolveCommand.hasMutations || resolveOnlyCommand?.hasMutations === true;
   const mutationSuffix = hasReviewMutations ? " before review mutations" : "";
   const genericPush = !(branchRecovery || queueEjection) && hasNonConflictHints;
-  const wantsJournal =
-    viewerCanUpdate &&
-    (hasReviewMutations ||
-      hasNonConflictHints ||
-      firstLookTotal > 0 ||
-      firstLookSummaries.length > 0 ||
-      editedTotal > 0);
 
   if (branchRecovery || queueEjection) {
     instructions.push(
       buildBranchPushInstruction(stackRebase, hasConflicts, mutationSuffix, !branchRecovery),
     );
   }
-  instructions.push(
-    ...buildPushJournalSteps(instructionStyle, prReference, genericPush, wantsJournal),
-  );
+  instructions.push(...buildPushSteps(instructionStyle, genericPush));
 
   if (resolveOnlyCommand?.hasMutations)
     instructions.push(`Run: \`${renderResolveCommand(resolveOnlyCommand)}\``);

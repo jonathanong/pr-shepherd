@@ -81,6 +81,6 @@ Context gathering also emits the arguments for later mutations so the agent does
 
 - `apply review` command, printed inline in its instruction step (reply / resolve / minimize / dismiss, with an optional resolve-only `Run:` step)
 - grouped `build_suggestion_patches` inputs when threads contain ` ```suggestion ` fences
-- Journal instruction for large decisions
+- Optional `apply journal` advisory for recording why a code review suggestion is rejected
 
 Those commands are actions, documented in [actions.md](actions.md) and [cli-usage.md](cli-usage.md).

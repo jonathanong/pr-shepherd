@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildResolveCommand } from "./classify.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
-import { buildShepherdJournalInstruction } from "../shepherd-journal.mts";
 import { addPrShepherdMarker } from "../../comments/marker.mts";
 import { runWithDurableState } from "../../state/durable-state.mts";
 import type { AgentThread, ReviewThread } from "../../types.mts";
@@ -42,12 +41,9 @@ describe("iterate follow-up references", () => {
     ]);
   });
 
-  it("uses the full PR URL for suggestion and journal follow-up instructions", () => {
+  it("uses the full PR URL for suggestion follow-up instructions", () => {
     expect(buildCommitSuggestionInstruction(FORK_PR, "## Review threads")).toContain(
       `pr-shepherd build-suggestion-patches ${FORK_PR}`,
-    );
-    expect(buildShepherdJournalInstruction(FORK_PR)).toContain(
-      `pr-shepherd apply journal ${FORK_PR}`,
     );
   });
 });

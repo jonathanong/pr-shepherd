@@ -25,7 +25,7 @@
 1. Fix each warranted item.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
 3. Inspect every referenced range under `## Check annotations` and apply any warranted change.
-4. Commit and push any changes.
-5. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
+4. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <reason>'`.
+5. Commit and push any changes.
 6. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_with_annotations --message "$DISMISS_MESSAGE" --require-sha HEAD`
 7. Rerun Shepherd now.

@@ -12,7 +12,7 @@ import { runIterate } from "./iterate/index.mts";
 registerIterateHooks();
 
 describe("runIterate — fix_code (actionable threads)", () => {
-  it("includes one Shepherd Journal instruction when a failing check and first-look comment are present", async () => {
+  it("requires no journal update when a failing check and first-look comment are present", async () => {
     const actionableComment = {
       id: "comment-1",
       isMinimized: false,
@@ -73,8 +73,9 @@ describe("runIterate — fix_code (actionable threads)", () => {
       expect(result.fix.checks).toHaveLength(1);
       const joined = result.fix.instructions.join("\n");
       const mentions = joined.match(/Journal key decisions/g)?.length ?? 0;
-      expect(mentions).toBe(1);
-      expect(joined).toContain("pr-shepherd apply journal");
+      expect(mentions).toBe(0);
+      expect(joined).toContain("Optional: If you reject a code review suggestion");
+      expect(joined.match(/pr-shepherd apply journal/g)).toHaveLength(1);
     }
   });
 });

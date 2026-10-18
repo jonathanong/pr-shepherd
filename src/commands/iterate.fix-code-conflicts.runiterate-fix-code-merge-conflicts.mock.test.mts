@@ -152,7 +152,8 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       expect(result.fix.resolveOnlyCommand).toBeUndefined();
       const joined = result.fix.instructions.join("\n");
       expect(joined).not.toContain("git commit");
-      expect(joined).toContain("pr-shepherd apply journal"); // shepherd journal
+      expect(joined).toContain("Optional: If you reject a code review suggestion");
+      expect(joined).toContain("pr-shepherd apply journal");
       expect(joined).toContain("The branch has merge conflicts (see `**branch**` above)");
       expect(joined).toContain(
         "Commit any remaining conflict-resolution changes and push to the PR head branch before review mutations.",
@@ -181,7 +182,8 @@ describe("runIterate — fix_code (merge conflicts)", () => {
       expect(result.fix.resolveOnlyCommand).toBeUndefined();
       const joined = result.fix.instructions.join("\n");
       expect(joined).not.toContain("git commit");
-      expect(joined).toContain("pr-shepherd apply journal"); // shepherd journal
+      expect(joined).toContain("Optional: If you reject a code review suggestion");
+      expect(joined).toContain("pr-shepherd apply journal");
       expect(joined).toContain("The branch has merge conflicts (see `**branch**` above)");
       expect(joined).toContain(
         "Commit any remaining conflict-resolution changes and push to the PR head branch before review mutations.",

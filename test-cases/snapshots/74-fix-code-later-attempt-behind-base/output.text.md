@@ -1,6 +1,6 @@
 # PR #42 [FIX_CODE]
 
-**status** `FAILING` · **merge** `BEHIND`
+**status** `FAILING` · **merge** `BEHIND` · **repo** `owner/repo`
 **branch** behind PR base `main`
 
 ## Failing checks
@@ -14,5 +14,4 @@
 3. The workflow rerun still fails while the branch is behind PR base branch `main`. Inspect the current base branch for an existing fix before choosing a remediation.
 4. Rebase or otherwise update the PR branch from `main` according to repository conventions.
 5. Push the updated PR head branch before iterating immediately.
-6. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
-7. Rerun Shepherd now.
+6. Rerun Shepherd now.

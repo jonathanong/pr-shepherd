@@ -316,12 +316,11 @@ describe("runCheck — classification auto-minimize", () => {
     expect(report.threads.ruleAutoResolveIds ?? []).not.toContain(thread.id);
   });
 
-  it("records confirmed resolutions in iterate output and the Shepherd Journal", async () => {
+  it("records confirmed resolutions in iterate output without editing the PR body", async () => {
     mockAutoResolveThreads.mockResolvedValue({ resolved: ["t-bot"], errors: [] });
     mockAutoMinimizeComments.mockResolvedValue({ minimized: ["c-bot"], errors: [] });
     mockFetchPrBatch.mockResolvedValue({
       data: makeBatchData({
-        viewerLogin: "alice",
         comments: [{ ...botComment(), url: "https://github.com/o/r/pull/1#issuecomment-1" }],
         reviewThreads: [{ ...botThread(), url: "https://github.com/o/r/pull/1#discussion_r1" }],
       }),
@@ -338,27 +337,7 @@ describe("runCheck — classification auto-minimize", () => {
       text.indexOf("## Instructions"),
     );
     expect(text).toContain(summary);
-    expect(mockUpdatePullRequestBody).toHaveBeenCalledWith(
-      "PR_kgDOAAA",
-      expect.stringContaining(
-        "- auto-resolved 1 thread, minimized 1 comment as @alice (rule: review-bot suppressed): https://github.com/o/r/pull/1#discussion_r1, https://github.com/o/r/pull/1#issuecomment-1",
-      ),
-    );
-  });
-
-  it("reports a journal failure without rejecting the check", async () => {
-    mockAutoResolveThreads.mockResolvedValue({ resolved: ["t-bot"], errors: [] });
-    mockUpdatePullRequestBody.mockRejectedValue(new Error("body write failed"));
-    mockFetchPrBatch.mockResolvedValue({
-      data: makeBatchData({ reviewThreads: [botThread()] }),
-    });
-
-    const report = await runCheck({ ...BASE_OPTS, autoMinimizeSuppressed: true });
-
-    expect(report.threads.autoResolved.map((item) => item.id)).toEqual(["t-bot"]);
-    expect(report.threads.autoResolveErrors).toEqual([
-      "journal: body write failed (rule: review-bot suppressed)",
-    ]);
+    expect(mockUpdatePullRequestBody).not.toHaveBeenCalled();
   });
 });
 

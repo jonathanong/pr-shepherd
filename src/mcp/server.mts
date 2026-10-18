@@ -70,7 +70,7 @@ const iterateInputSchema = z
       .enum(["playbook", "inline"])
       .optional()
       .describe(
-        "fix_code instruction style. inline (default) prints every step each tick; playbook folds commit, push and journal into the Fix-code loop playbook.",
+        "fix_code instruction style. inline (default) prints every step each tick; playbook folds commit and push into the Fix-code loop playbook.",
       ),
     pollMode: z
       .enum(["auto", "poll", "event"])

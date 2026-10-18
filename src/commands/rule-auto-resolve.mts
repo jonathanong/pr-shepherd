@@ -1,16 +1,12 @@
 import type { BatchPartition } from "../classify/apply.mts";
 import { autoMinimizeComments, autoResolveThreads } from "../comments/resolve.mts";
-import { runJournal } from "./journal/index.mts";
 import type { AutoMinimizedItem, AutoResolvedThread, BatchPrData } from "../types.mts";
 import { canGenerateGithubMutation } from "../github/mutation-policy.mts";
 import {
   decorateAutoResolveError,
-  formatRuleAutoResolveJournalItem,
   minimizedItem,
-  reasonClause,
   reasonsForError,
   resolvedThread,
-  ruleAutoResolveBody,
   uniqueReasons,
 } from "./rule-auto-resolve-format.mts";
 
@@ -48,19 +44,10 @@ function decorateErrors(
   );
 }
 
-function successReasons(
-  ids: readonly string[],
-  ruleReasons: BatchPartition["ruleReasons"],
-): string[] {
-  return uniqueReasons(ids.flatMap((id) => [...(ruleReasons.get(id) ?? [])]));
-}
-
 export async function applySuppressedRuleAutoResolve(input: {
   enabled: boolean;
   partition: BatchPartition;
   batch: BatchPrData;
-  prNumber: number;
-  repo: { owner: string; name: string };
 }): Promise<RuleAutoResolveApplied> {
   if (!input.enabled) {
     return {
@@ -141,8 +128,6 @@ export async function applySuppressedRuleAutoResolve(input: {
       reasonsForError(error, threadIds, input.partition.ruleReasons),
     ),
   ]);
-  const journalError = await journalSuccesses(input, autoResolved, autoMinimized);
-  if (journalError) autoResolveErrors.push(journalError);
   return {
     threadIds: input.partition.ruleAutoResolveThreadIds.filter((id) => !resolvedSet.has(id)),
     commentIds: input.partition.ruleAutoResolveCommentIds.filter((id) => !minimizedSet.has(id)),
@@ -154,46 +139,4 @@ export async function applySuppressedRuleAutoResolve(input: {
     autoResolveErrors,
     errorReasons,
   };
-}
-
-async function journalSuccesses(
-  input: {
-    batch: BatchPrData;
-    prNumber: number;
-    repo: { owner: string; name: string };
-    partition: BatchPartition;
-  },
-  autoResolved: AutoResolvedThread[],
-  autoMinimized: AutoMinimizedItem[],
-): Promise<string | undefined> {
-  const body = ruleAutoResolveBody({
-    threads: autoResolved.length,
-    comments: autoMinimized.filter((item) => item.kind === "pr-comment").length,
-    reviewSummaries: autoMinimized.filter((item) => item.kind === "review-summary").length,
-  });
-  if (!body) return undefined;
-  const ids = [...autoResolved.map((thread) => thread.id), ...autoMinimized.map((item) => item.id)];
-  const reasons = successReasons(ids, input.partition.ruleReasons);
-  const item = formatRuleAutoResolveJournalItem({
-    body,
-    reasons,
-    ...(input.batch.viewerLogin ? { viewerLogin: input.batch.viewerLogin } : {}),
-    urls: [
-      ...autoResolved.map((thread) => thread.url),
-      ...autoMinimized.map((item) => item.url ?? ""),
-    ],
-  });
-  try {
-    await runJournal({
-      prNumber: input.prNumber,
-      targetRepository: { owner: input.repo.owner, name: input.repo.name },
-      rawItem: item,
-      dryRun: false,
-    });
-    return undefined;
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    const clause = reasonClause(reasons);
-    return clause ? `journal: ${message} ${clause}` : `journal: ${message}`;
-  }
 }

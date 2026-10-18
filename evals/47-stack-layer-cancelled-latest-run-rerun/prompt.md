@@ -27,7 +27,7 @@ already ran the first tick — here is what it returned. Take it from there.
 
 # PR #2687 [FIX_CODE]
 
-**status** `FAILING` · **merge** `BLOCKED` · **reviewDecision** `APPROVED`
+**status** `FAILING` · **merge** `BLOCKED` · **reviewDecision** `APPROVED` · **repo** `vouchington/vouchington`
 **summary** 3 passing
 Required status checks: static, web, gitleaks [Required]
 Stack: 2688 (layer 2/2, base main)
@@ -48,5 +48,4 @@ Stack: 2688 (layer 2/2, base main)
 1. Fix each warranted item.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
 3. Commit and push any changes.
-4. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/vouchington/vouchington/pull/2687 '- <decision>'`
-5. Rerun Shepherd now.
+4. Rerun Shepherd now.

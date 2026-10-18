@@ -58,7 +58,7 @@ describe("runIterate — fix_code (actionable threads)", () => {
     const written = mockWriteFixAttempts.mock.calls[0]?.[1];
     expect(written?.threadAttempts?.["thread-1"]).toBe(3);
   });
-  it("includes Shepherd Journal instruction when there are actionable threads", async () => {
+  it("does not require journaling actionable threads", async () => {
     const thread = {
       id: "thread-1",
       isResolved: false,
@@ -97,7 +97,8 @@ describe("runIterate — fix_code (actionable threads)", () => {
     if (result.action === "fix_code") {
       const joined = result.fix.instructions.join("\n");
       const journalMentions = joined.match(/Journal key decisions/g)?.length ?? 0;
-      expect(journalMentions).toBe(1);
+      expect(journalMentions).toBe(0);
+      expect(joined).toContain("Optional: If you reject a code review suggestion");
       expect(joined).toContain("pr-shepherd apply journal");
       expect(joined).not.toContain("idempotent");
     }

@@ -53,7 +53,7 @@ export interface ClassifyAction {
   readonly autoResolve?: boolean;
   /** When true, hides the item from agent output (seen marker is still written). */
   readonly suppress?: boolean;
-  /** Note included in the auto-resolve report, tick line, and Shepherd Journal when this rule fires. */
+  /** Note included in the auto-resolve report and tick line when this rule fires. */
   readonly reason?: string;
 }
 

@@ -2,14 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { AutoResolvedThread, ShepherdReport } from "../types.mts";
 import {
   decorateAutoResolveError,
-  formatRuleAutoResolveJournalItem,
   insertRuleAutoResolveSection,
   minimizedItem,
   projectRuleAutoResolve,
-  reasonClause,
   reasonsForError,
   resolvedThread,
-  ruleAutoResolveBody,
   ruleAutoResolveFromReport,
   stripReplayedRuleAutoResolve,
   uniqueReasons,
@@ -42,39 +39,35 @@ function report(overrides: {
   } as unknown as ShepherdReport;
 }
 
+function summary(threads: number, comments: number, reviews: number) {
+  return ruleAutoResolveFromReport(
+    report({
+      autoResolved: Array.from({ length: threads }, () => thread),
+      autoMinimized: [
+        ...Array.from({ length: comments }, (_, i) =>
+          minimizedItem("pr-comment", `c${i}`, undefined, []),
+        ),
+        ...Array.from({ length: reviews }, (_, i) =>
+          minimizedItem("review-summary", `r${i}`, undefined, []),
+        ),
+      ],
+    }),
+  )?.summary;
+}
+
 describe("rule auto-resolve formatting", () => {
-  it("builds the summary, journal line, and markdown section", () => {
+  it("builds the summary and markdown section", () => {
     expect(uniqueReasons([" a ", "", "a", "b"])).toEqual(["a", "b"]);
-    expect(reasonClause([])).toBeUndefined();
-    expect(reasonClause([" a ", "a"])).toBe("(rule: a)");
-    expect(reasonClause(["a", "b"])).toBe("(rules: a; b)");
-    expect(ruleAutoResolveBody({ threads: 0, comments: 0, reviewSummaries: 0 })).toBeUndefined();
-    expect(ruleAutoResolveBody({ threads: 1, comments: 0, reviewSummaries: 0 })).toBe(
-      "auto-resolved 1 thread",
-    );
-    expect(ruleAutoResolveBody({ threads: 2, comments: 1, reviewSummaries: 2 })).toBe(
+    expect(decorateAutoResolveError("failed", [])).toBe("failed");
+    expect(decorateAutoResolveError("failed", [" a ", "a"])).toBe("failed (rule: a)");
+    expect(decorateAutoResolveError("failed", ["a", "b"])).toBe("failed (rules: a; b)");
+    expect(summary(0, 0, 0)).toBeUndefined();
+    expect(summary(1, 0, 0)).toBe("auto-resolved 1 thread");
+    expect(summary(2, 1, 2)).toBe(
       "auto-resolved 2 threads, minimized 1 comment and 2 review summaries",
     );
-    expect(ruleAutoResolveBody({ threads: 0, comments: 2, reviewSummaries: 1 })).toBe(
-      "minimized 2 comments and 1 review summary",
-    );
+    expect(summary(0, 2, 1)).toBe("minimized 2 comments and 1 review summary");
     expect(resolvedThread(thread, ["a", "a", "b"]).ruleReason).toBe("a; b");
-    expect(
-      formatRuleAutoResolveJournalItem({
-        body: "auto-resolved 1 thread",
-        reasons: ["noise"],
-        viewerLogin: "alice",
-        urls: [" https://t ", ""],
-      }),
-    ).toBe("- auto-resolved 1 thread as @alice (rule: noise): https://t");
-    expect(
-      formatRuleAutoResolveJournalItem({
-        body: "auto-resolved 1 thread",
-        reasons: [],
-        viewerLogin: "  ",
-        urls: [],
-      }),
-    ).toBe("- auto-resolved 1 thread (token login unavailable)");
     expect(decorateAutoResolveError("c1: failed", [])).toBe("c1: failed");
     expect(decorateAutoResolveError("c1: failed", ["noise"])).toBe("c1: failed (rule: noise)");
     expect(minimizedItem("pr-comment", "c1", "  ", [])).toEqual({ id: "c1", kind: "pr-comment" });

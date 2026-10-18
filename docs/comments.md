@@ -32,11 +32,11 @@ A classification rule with both `suppress: true` and `autoResolve: true` is appl
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Thread resolved              | `threads.autoResolved` (`isResolved: true`, plus `ruleReason` when the rule set `reason`)                                                         |
 | Comment or summary minimized | `comments.autoMinimized` as `{ id, url?, kind, ruleReason? }`; summaries use `kind: "review-summary"` and carry `url` when the batch returned one |
-| Any confirmed                | `## Classification auto-resolve` section plus one Shepherd Journal item. A journal failure is reported there and does not undo the mutation       |
+| Any confirmed                | `## Classification auto-resolve` section with the confirmed mutation results; no automatic journal update                                         |
 | Not confirmed by GitHub      | ID stays on the `apply review` handoff, with the error under that section                                                                         |
 | REST minimization            | Unsupported: a one-look skip, or a clear unsupported-operation error for an explicit `apply`                                                      |
 
-With `actions.autoMinimizeSuppressed: false`, the IDs stay on the handoff and Shepherd does not mutate, journal, or print the section.
+With `actions.autoMinimizeSuppressed: false`, the IDs stay on the handoff and Shepherd does not mutate or print the section. Journal updates occur only through explicit `apply journal` calls and are optional agent-authored notes.
 
 ### Transport differences
 
