@@ -58,6 +58,8 @@ export function routePollSummary(
   }
   if (raw.isDraft) {
     const autoMarkReadyDisabled = opts.noAutoMarkReady || actions.autoMarkReady === false;
+    if (autoMarkReadyDisabled && (checks.incomplete || review.incomplete))
+      return { action: "fix_code", reasons: ["draft-readiness-verification-required"] };
     if (autoMarkReadyDisabled)
       return { action: "cancel", reasons: ["draft-auto-mark-ready-disabled"] };
     if (!canGenerateGithubMutation(raw.viewerCanUpdate, "ready")) {

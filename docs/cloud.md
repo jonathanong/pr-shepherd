@@ -46,7 +46,7 @@ An event-mode result carries `pollMode: "event"` and, when another tick is meani
 | `merge-pending` | A printed merge request can stay `pending` (one-PR REST merge, or a stack merge), so the rerun resumes it                                                                                                                                        | about every 5 minutes |
 | `safety-net`    | Every other non-terminal tick; a backstop for a missed event                                                                                                                                                                                     | about 50 minutes      |
 
-`nextCheck` is omitted for `CANCEL`, `ESCALATE`, a `MERGE` whose command is not a REST merge, `MARK_READY`, and an aggregate result whose PRs are all terminal or whose rows are all `CANCEL` or `ESCALATE`.
+`nextCheck` is omitted for `CANCEL`, `ESCALATE`, a `MERGE` whose command is not a REST merge, `MARK_READY`, and an aggregate result whose PRs are all terminal, whose rows are all `CANCEL` or `ESCALATE`, or whose only remaining work is final draft-verification probes. The probe instructions say when to stop or rerun the selector.
 
 Text prints a `**nextCheck**` header line; JSON and MCP `structuredContent` carry the object; `## Instructions` names the same time. A stack or multi-PR selector reports one `nextCheck` for the selection, and every row `pollCommand` (including bounded draft probes) carries `--poll-mode event`.
 

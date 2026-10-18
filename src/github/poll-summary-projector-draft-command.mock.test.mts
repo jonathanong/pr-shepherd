@@ -81,6 +81,23 @@ describe("draft stack poll commands", () => {
     expect(item.pollProbe).toBeUndefined();
   });
 
+  it("retains a bounded probe when a disabled draft's review sample is incomplete", async () => {
+    const raw = draft();
+    raw.comments.pageInfo.hasPreviousPage = true;
+    const item = await summarizePollSummaryPr(raw, repo, {
+      stackPrNumber: 42,
+      noAutoMarkReady: true,
+    });
+    expect(item).toMatchObject({
+      action: "fix_code",
+      reasons: ["draft-readiness-verification-required"],
+      pollProbe: true,
+      review: { incomplete: true },
+    });
+    expect(item.pollCommand).toContain("--no-auto-mark-ready");
+    expect(item.pollCommand).toContain("--timeout 1s");
+  });
+
   it("holds a disabled draft while a configured reviewer is pending", async () => {
     mockLoadConfig.mockReturnValue({
       cliCommand: ["pr-shepherd"],

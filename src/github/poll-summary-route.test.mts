@@ -100,6 +100,22 @@ describe("routePollSummary", () => {
       "cancel",
       "draft-auto-mark-ready-disabled",
     ],
+    [
+      { isDraft: true },
+      { incomplete: true },
+      {},
+      { noAutoMarkReady: true },
+      "fix_code",
+      "draft-readiness-verification-required",
+    ],
+    [
+      { isDraft: true },
+      {},
+      { incomplete: true },
+      { noAutoMarkReady: true },
+      "fix_code",
+      "draft-readiness-verification-required",
+    ],
     [{ isDraft: true }, {}, {}, {}, "mark_ready", "draft-appears-ready"],
     [
       { isDraft: true, viewerCanUpdate: false },

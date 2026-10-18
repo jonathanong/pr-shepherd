@@ -52,7 +52,9 @@ export async function summarizePollSummaryPr(
   if (
     raw.isDraft &&
     blockingReviewerInProgress &&
-    (action === "mark_ready" || reasons.includes("draft-auto-mark-ready-disabled"))
+    (action === "mark_ready" ||
+      reasons.includes("draft-auto-mark-ready-disabled") ||
+      reasons.includes("draft-readiness-verification-required"))
   ) {
     action = "wait";
     reasons = ["blocking-reviewer-in-progress"];

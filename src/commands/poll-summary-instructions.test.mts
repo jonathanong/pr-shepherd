@@ -457,4 +457,25 @@ describe("explicit selection with disabled mark-ready", () => {
     expect(result.instructions?.join("\n")).toContain("each non-WAIT, non-CANCEL row");
     expect(result.instructions?.join("\n")).not.toContain("gh pr ready");
   });
+
+  it("stops after a clean final verification probe", () => {
+    const verification = row(2, 2, {
+      isDraft: true,
+      action: "fix_code",
+      reasons: ["draft-readiness-verification-required"],
+      pollCommand:
+        "pr-shepherd https://github.com/acme/widgets/pull/2 --timeout 1s --no-auto-mark-ready",
+      pollProbe: true,
+    });
+    const result = withPollSummaryInstructions(
+      {
+        ...stack([held, verification]),
+        selection: { kind: "prs", requested: [1, 2] },
+        reason: "actionable",
+      },
+      false,
+    );
+    expect(result.instructions?.[2]).toContain("If every draft verification probe returns");
+    expect(result.instructions?.[2]).toContain("stop this selection");
+  });
 });

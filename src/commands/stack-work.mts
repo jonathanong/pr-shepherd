@@ -10,6 +10,18 @@ export interface StackWork {
   idle: PollSummaryItem[];
 }
 
+export function isDraftReadinessVerification(item: PollSummaryItem): boolean {
+  return item.reasons?.includes("draft-readiness-verification-required") === true;
+}
+
+/** A full one-PR check is the final task when the compact review sample was incomplete. */
+export function onlyDraftReadinessVerification(
+  sessions: PollSummaryItem[],
+  idle: PollSummaryItem[],
+): boolean {
+  return sessions.length > 0 && idle.length === 0 && sessions.every(isDraftReadinessVerification);
+}
+
 /**
  * Split autonomous stack candidates by what the agent can do for each. A clean draft held by
  * disabled mark-ready is complete for this run. Other bounded waits stay idle.

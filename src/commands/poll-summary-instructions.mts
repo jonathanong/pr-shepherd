@@ -13,7 +13,11 @@ import {
   stackPosition,
   type StackPlan,
 } from "./stack-drain.mts";
-import { appendStackRerunInstruction, splitStackWork } from "./stack-work.mts";
+import {
+  appendStackRerunInstruction,
+  onlyDraftReadinessVerification,
+  splitStackWork,
+} from "./stack-work.mts";
 
 /** Keep aggregate JSON, Markdown, and MCP instructions on one projection. */
 export function withPollSummaryInstructions(
@@ -144,11 +148,12 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
       );
     }
     if (ownedWork) {
-      appendStackRerunInstruction(
-        instructions,
-        runnableCandidates,
-        "After the listed one-PR sessions, rerun this same `--stack` selector. Stop for the human handoff only when no autonomous shepherding remains.",
-      );
+      const rerun =
+        onlyDraftReadinessVerification(work.sessions, work.idle) &&
+        work.sessions.every((item) => item.owned)
+          ? "If every listed one-PR probe returns `[CANCEL]` with reason `auto-mark-ready-disabled`, report the human handoff above and stop this selector. If any probe returns `[ESCALATE]`, report that handoff and stop after the other probes finish. Otherwise follow each probe's instructions and rerun this same `--stack` selector when that work completes."
+          : "After the listed one-PR sessions, rerun this same `--stack` selector. Stop for the human handoff only when no autonomous shepherding remains.";
+      appendStackRerunInstruction(instructions, runnableCandidates, rerun);
     }
     return { action: stop ? "escalate" : "shepherd", stackMergeable: false, instructions };
   }
@@ -194,6 +199,15 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
     }
     const instructions: string[] = [];
     appendAutonomousInstructions(instructions, work.sessions);
+    if (
+      onlyDraftReadinessVerification(work.sessions, work.idle) &&
+      work.sessions.every((item) => item.owned)
+    ) {
+      instructions.push(
+        `${instructions.length + 1}. If every listed one-PR probe returns \`[CANCEL]\` with reason \`auto-mark-ready-disabled\`, stop shepherding this stack and leave those drafts unchanged. If any probe returns \`[ESCALATE]\`, report that handoff and stop after the other probes finish. Otherwise follow each probe's instructions and rerun this same \`--stack\` selector when that work completes.`,
+      );
+      return { action: "shepherd", stackMergeable: false, instructions };
+    }
     const action = appendStackRerunInstruction(
       instructions,
       work.sessions,
