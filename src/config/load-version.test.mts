@@ -33,9 +33,26 @@ describe("loadConfig — config version", () => {
     await expectConfigError("`version` must be 1");
   });
 
-  it("accepts an empty file without a version", async () => {
-    writeRawRc("");
-    const loadConfig = await freshLoadConfig();
-    expect(loadConfig().iterate["ready-delay-minutes"]).toBe(0);
+  it.each(["", "# comment only\n", "---\n"])(
+    "accepts an empty file %j without a version",
+    async (body) => {
+      writeRawRc(body);
+      const loadConfig = await freshLoadConfig();
+      expect(loadConfig().iterate["ready-delay-minutes"]).toBe(0);
+    },
+  );
+
+  it.each(["null\n", "~\n"])("rejects an explicit null document %j", async (body) => {
+    writeRawRc(body);
+    await expectConfigError("the top level must be a mapping");
+  });
+
+  it.each([
+    ["apply", "sha-poll-interval-seconds"],
+    ["iterate", "ready-delay-minutes"],
+    ["poll", "debounce-seconds"],
+  ])("rejects an infinite %s.%s", async (section, key) => {
+    writeRawRc(`version: 1\n${section}:\n  ${key}: .inf\n`);
+    await expectConfigError(`${section}.${key}`);
   });
 });

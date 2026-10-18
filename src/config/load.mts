@@ -1,7 +1,7 @@
 import { readFileSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { homedir } from "node:os";
-import { parse } from "yaml";
+import { isScalar, parse, parseDocument } from "yaml";
 import { getEffectiveCwd } from "../execution-context.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import { configError, issueLines, resolveConfig, type PrShepherdConfig } from "./resolve.mts";
@@ -82,11 +82,15 @@ function deepMerge(
 /** Parse and validate one config file without applying defaults. */
 function readConfigFile(file: string): Record<string, unknown> {
   let raw: unknown;
+  let text: string;
   try {
-    raw = parse(readFileSync(file, "utf8")) ?? {};
+    text = readFileSync(file, "utf8");
+    raw = parse(text);
   } catch (err) {
     throw configError(file, [err instanceof Error ? err.message : String(err)]);
   }
+  // `parse` returns null for an empty document and for an explicit `null` or `~` scalar.
+  if (raw === null && !isExplicitNull(text)) raw = {};
   if (!isPlainObject(raw)) throw configError(file, ["the top level must be a mapping"]);
   // An empty file sets nothing, so it needs no version.
   if (Object.keys(raw).length === 0) return raw;
@@ -111,9 +115,14 @@ function readConfigFile(file: string): Record<string, unknown> {
   return raw;
 }
 
+function isExplicitNull(text: string): boolean {
+  const contents = parseDocument(text).contents;
+  return isScalar(contents) && contents.source !== "";
+}
+
 function versionIssue(version: unknown): string {
   return version === undefined
-    ? `\`version\` is required: add \`version: ${CONFIG_VERSION}\` (0.x config files have none; see docs/migrating-to-v1.md)`
+    ? `\`version\` is required: add \`version: ${CONFIG_VERSION}\` (0.x config files have none; see docs/configuration.md#version)`
     : `\`version\` must be ${CONFIG_VERSION}`;
 }
 
