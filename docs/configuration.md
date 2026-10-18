@@ -424,7 +424,7 @@ When `false`, Shepherd does not mutate, journal, or print the line. Supported ID
 
 ### `actions.autoMarkReady` — default `true`
 
-When `true`, Shepherd converts a draft PR to ready for review once checks pass, no Shepherd-visible work remains, no configured blocking review is in progress, and the ready-delay has not elapsed (after it elapses the loop emits `cancel`). Disabling stops only the poll loop's own transition: a `--stack` selection then lists a clean, unblocked draft layer's `gh pr ready` step for the agent after that layer's bounded probe; see [actions.md](actions.md).
+When `true`, Shepherd converts a draft PR to ready for review once checks pass, no Shepherd-visible work remains, no configured blocking review is in progress, and the ready-delay has not elapsed (after it elapses the loop emits `cancel`). When disabled, a clean draft remains in draft and ends its one-PR session with `CANCEL` (`auto-mark-ready-disabled`, exit 0), without a ready-delay countdown or stall guard. Pending CI, bot review, and other actionable work still runs first. A stack selector continues independent work and eligible ready-prefix merges, then returns `CANCEL` when only clean disabled drafts remain; it never asks the agent to promote them. See [actions.md](actions.md).
 
 ### `actions.neverCancelRuns` — default `[]`
 

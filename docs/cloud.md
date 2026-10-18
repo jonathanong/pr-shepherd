@@ -46,14 +46,14 @@ An event-mode result carries `pollMode: "event"` and, when another tick is meani
 | `merge-pending` | A printed merge request can stay `pending` (one-PR REST merge, or a stack merge), so the rerun resumes it                                                                                                                                        | about every 5 minutes |
 | `safety-net`    | Every other non-terminal tick; a backstop for a missed event                                                                                                                                                                                     | about 50 minutes      |
 
-`nextCheck` is omitted for `CANCEL`, `ESCALATE`, a `MERGE` whose command is not a REST merge, `MARK_READY`, a native-stack draft hold, and an aggregate result whose PRs are all terminal or whose rows are all `CANCEL` or `ESCALATE`.
+`nextCheck` is omitted for `CANCEL`, `ESCALATE`, a `MERGE` whose command is not a REST merge, `MARK_READY`, and an aggregate result whose PRs are all terminal or whose rows are all `CANCEL` or `ESCALATE`.
 
 Text prints a `**nextCheck**` header line; JSON and MCP `structuredContent` carry the object; `## Instructions` names the same time. A stack or multi-PR selector reports one `nextCheck` for the selection, and every row `pollCommand` (including bounded draft probes) carries `--poll-mode event`.
 
 Event-mode special cases:
 
 - Stack steps drop "at the configured polling cadence", and a pending REST stack merge reruns after the wake-up, so the appended event step is the only timing rule.
-- A native-stack draft hold prints its `--stack` handoff with `--poll-mode event`, plus a step not to rerun the held one-PR session or keep a wake-up for it. After the handoff the agent follows only the stack selector's output and its `nextCheck`.
+- A clean draft with auto mark-ready disabled returns `CANCEL` without a wake-up. A stack selector continues other layer work and schedules any next tick from the remaining layers.
 - `MARK_READY` keeps its immediate rerun: that tick saw a draft, so the ready-delay timer was cleared; the next tick sees the PR ready, starts the timer, and reports the `ready-delay` deadline.
 
 The instructions end with a "Cloud event loop" step naming the bundled playbook (`pr-shepherd playbook "Cloud event loop"`): run one tick, follow the printed instructions on when to rerun or end the turn without sleeping, act only on Shepherd's output, and keep exactly one wake-up at `nextCheck.at`. After `FIX_CODE` it reruns Shepherd once and ends the turn. This replaces the quota-aware `FIX_CODE` continuation; the quota warning itself still prints.

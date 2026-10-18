@@ -105,25 +105,22 @@ async function summary(merge: boolean, noAutoMarkReady = false) {
 }
 
 describe("REST native-stack routing through the public summary", () => {
-  it("emits probe and CCR ready commands only for owned drafts", async () => {
+  it("stops a stack of clean drafts without emitting ready commands", async () => {
     await freshLoadConfig();
     vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
     await server({ drafts: true });
     const result = await summary(false, true);
     expect(result.prs).toMatchObject([
-      { pr: 101, owned: true, isDraft: true, pollProbe: true },
-      { pr: 102, isDraft: true, pollProbe: true },
+      { pr: 101, owned: true, isDraft: true, action: "cancel" },
+      { pr: 102, isDraft: true, action: "cancel" },
     ]);
+    expect(result).toMatchObject({ nextAction: "cancel", reason: "all_terminal" });
     expect(result.prs[1]).not.toHaveProperty("owned");
     const instructions = result.instructions!.join("\n");
-    expect(instructions).toContain(
-      "Run `pr-shepherd https://github.com/octocat/hello-world/pull/101",
-    );
-    expect(instructions).toContain(
-      "iterate https://github.com/octocat/hello-world/pull/101 --transport rest",
-    );
-    expect(instructions).not.toContain("pull/102");
-    expect(instructions).toContain("PR #102 is not owned");
+    expect(instructions).toContain("Stop shepherding this stack");
+    expect(instructions).not.toContain("gh pr ready");
+    expect(instructions).not.toContain("ready_for_review");
+    expect(result.prs.every((item) => item.pollCommand === undefined)).toBe(true);
     expect(wire.requests.every(({ method }) => method === "GET")).toBe(true);
   });
 

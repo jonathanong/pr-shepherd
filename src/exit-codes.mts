@@ -14,7 +14,7 @@ import type { CancelReason, IterateResult } from "./types.mts";
 import type { ResolveResult } from "./comments/resolve.mts";
 
 export const EXIT = Object.freeze({
-  /** `cancel` + `merged` or `ready-delay-elapsed` — shepherd finished cleanly. */
+  /** Clean terminal stop, including a draft held by disabled automatic mark-ready. */
   OK: 0,
 
   /** Nothing to do yet, or a clean PR whose ready-delay is still counting. */
@@ -64,6 +64,7 @@ export class ShepherdError extends Error {
 const CANCEL_REASON_EXIT_CODE: Record<CancelReason, number> = {
   merged: EXIT.OK,
   "ready-delay-elapsed": EXIT.OK,
+  "auto-mark-ready-disabled": EXIT.OK,
   closed: EXIT.CLOSED,
 };
 

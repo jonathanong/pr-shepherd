@@ -58,20 +58,15 @@ export function routePollSummary(
   }
   if (raw.isDraft) {
     const autoMarkReadyDisabled = opts.noAutoMarkReady || actions.autoMarkReady === false;
-    // The stack selector asks the agent to mark a disabled draft ready, so
-    // that transition needs the same capability as the automatic one.
-    if (
-      !canGenerateGithubMutation(raw.viewerCanUpdate, "ready") &&
-      (!autoMarkReadyDisabled || opts.stackPrNumber !== undefined)
-    ) {
+    if (autoMarkReadyDisabled)
+      return { action: "cancel", reasons: ["draft-auto-mark-ready-disabled"] };
+    if (!canGenerateGithubMutation(raw.viewerCanUpdate, "ready")) {
       const unsupported =
         getGithubTransport() === "rest" && raw.viewerCanUpdate !== false && !isCcrTransport();
       if (unsupported) return { action: "escalate", reasons: ["transport-unsupported"] };
       return { action: "escalate", reasons: ["mark-ready-authorization-required"] };
     }
-    return autoMarkReadyDisabled
-      ? { action: "wait", reasons: ["draft-auto-mark-ready-disabled"] }
-      : { action: "mark_ready", reasons: ["draft-appears-ready"] };
+    return { action: "mark_ready", reasons: ["draft-appears-ready"] };
   }
   if (opts.merge && (raw.isInMergeQueue || raw.autoMergeRequest)) {
     return {

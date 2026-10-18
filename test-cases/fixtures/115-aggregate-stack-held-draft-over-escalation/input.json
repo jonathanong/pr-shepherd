@@ -1,5 +1,5 @@
 {
-  "description": "A clean upper draft is still the agent's mark-ready step when a lower layer needs a human. The selector lists that step and then the handoff.",
+  "description": "A clean upper draft remains held while a lower layer needs a human. The selector stops for that handoff without promoting the draft.",
   "mode": "aggregate",
   "args": [
     "--stack",
@@ -8,8 +8,8 @@
     "--debounce",
     "0s"
   ],
-  "expectedExitCode": 16,
-  "expectedNextAction": "shepherd",
+  "expectedExitCode": 13,
+  "expectedNextAction": "escalate",
   "expectedReason": "actionable",
   "aggregateSummary": {
     "selection": {
@@ -47,7 +47,7 @@
         "repo": "owner/repo",
         "title": "Held upper draft",
         "url": "https://github.com/owner/repo/pull/452",
-        "action": "wait",
+        "action": "cancel",
         "reasons": [
           "draft-auto-mark-ready-disabled"
         ],
@@ -64,8 +64,7 @@
           "position": 2,
           "baseRefName": "main"
         },
-        "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/452 --timeout 1s --debounce 0s --no-auto-mark-ready",
-        "pollProbe": true
+        "owned": true
       }
     ]
   }

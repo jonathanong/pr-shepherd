@@ -97,7 +97,7 @@ describe("routePollSummary", () => {
       {},
       {},
       { noAutoMarkReady: true },
-      "wait",
+      "cancel",
       "draft-auto-mark-ready-disabled",
     ],
     [{ isDraft: true }, {}, {}, {}, "mark_ready", "draft-appears-ready"],
@@ -176,8 +176,8 @@ describe("routePollSummary", () => {
   });
 
   it.each([
-    ["an explicit selection waits for the human transition", {}, "wait"],
-    ["a stack selection escalates the agent transition", { stackPrNumber: 42 }, "escalate"],
+    ["an explicit selection stops at the clean draft", {}, "cancel"],
+    ["a stack selection leaves the draft held", { stackPrNumber: 42 }, "cancel"],
   ] as const)("routes a disabled draft the viewer cannot update: %s", (_case, opts, action) => {
     const routed = route(
       { isDraft: true, viewerCanUpdate: false },
@@ -194,7 +194,7 @@ describe("routePollSummary", () => {
   it("honors configured auto-mark-ready disablement", () => {
     mockLoadConfig.mockReturnValue({ actions: { autoMarkReady: false, workWhileQueued: false } });
     expect(route({ isDraft: true })).toEqual({
-      action: "wait",
+      action: "cancel",
       reasons: ["draft-auto-mark-ready-disabled"],
     });
   });

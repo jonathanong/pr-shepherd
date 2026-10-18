@@ -23,13 +23,13 @@ Any escalation from a tick with automatically selected review mutations keeps ev
 
 Native-stack aggregate reconciliation (`--stack`) is read-only and never mutates GitHub.
 
-| Stack state                                                                                       | Result                                                     |
-| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| Owned layers still have autonomous work                                                           | `SHEPHERD` (non-terminal), with human blockers surfaced    |
-| Every remaining layer can only wait, or the stack is queued                                       | `WAIT`                                                     |
-| `--merge` and a ready prefix whose bottom open layer targets base                                 | `MERGE` with an agent-run `gh stack merge` for that prefix |
-| Every open layer READY without `--merge`, or every layer merged                                   | `CANCEL`                                                   |
-| A human decision remains (closed or unverified topology) and no autonomous one-PR session remains | `ESCALATE`                                                 |
+| Stack state                                                                                                                                                    | Result                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| Owned layers still have autonomous work                                                                                                                        | `SHEPHERD` (non-terminal), with human blockers surfaced    |
+| Every remaining layer can only wait, or the stack is queued                                                                                                    | `WAIT`                                                     |
+| `--merge` and a ready prefix whose bottom open layer targets base                                                                                              | `MERGE` with an agent-run `gh stack merge` for that prefix |
+| Every open layer READY without `--merge`, only clean drafts with auto mark-ready disabled (row reason `draft-auto-mark-ready-disabled`), or every layer merged | `CANCEL`                                                   |
+| A human decision remains (closed or unverified topology) and no autonomous one-PR session remains                                                              | `ESCALATE`                                                 |
 
 Stack ticks can also escalate with `stall-timeout`, `stall-state-unavailable`, or `merge-method-unavailable`; see the predicates below and [actions.md](actions.md#shepherd-actions).
 

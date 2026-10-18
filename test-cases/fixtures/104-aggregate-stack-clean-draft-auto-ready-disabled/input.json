@@ -1,19 +1,19 @@
 {
-  "description": "A clean draft whose automatic transition is disabled becomes the agent's ready-for-review step: run the bounded probe, then mark the draft ready when it reports WAIT. No human decision is required.",
+  "description": "A clean draft whose automatic ready transition is disabled stops stack shepherding without promoting the draft or polling until stall-timeout.",
   "mode": "aggregate",
   "args": ["--stack", "https://github.com/owner/repo/pull/421", "--no-auto-mark-ready", "--debounce", "0s"],
-  "expectedExitCode": 16,
-  "expectedNextAction": "shepherd",
-  "expectedReason": "actionable",
+  "expectedExitCode": 0,
+  "expectedNextAction": "cancel",
+  "expectedReason": "all_terminal",
   "aggregateSummary": {
     "selection": { "kind": "stack", "anchor": 421, "stackNumber": 42, "stackSize": 1 },
     "prs": [
       {
         "pr": 421, "repo": "owner/repo", "title": "Clean draft", "url": "https://github.com/owner/repo/pull/421",
-        "action": "wait", "reasons": ["draft-auto-mark-ready-disabled"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "action": "cancel", "reasons": ["draft-auto-mark-ready-disabled"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
         "headRefName": "draft", "headRefOid": "4211111111111111111111111111111111111111", "baseRefName": "main", "isDraft": true,
         "stack": { "number": 42, "size": 1, "position": 1, "baseRefName": "main" },
-        "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/421 --timeout 1s --debounce 0s --no-auto-mark-ready", "pollProbe": true
+        "owned": true
       }
     ]
   }

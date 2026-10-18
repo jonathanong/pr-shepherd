@@ -92,7 +92,6 @@ async function runIterateEvent(opts: IterateCommandOptions): Promise<IterateResu
         remainingSeconds: result.remainingSeconds,
         queued: result.mergeQueue?.inQueue === true,
         restMerge: result.action === "merge" && result.merge.mode === "rest",
-        stackDraftHold: result.action === "wait" && result.stackDraftHold !== undefined,
         stallDeadlineSeconds,
       },
       nowMs,

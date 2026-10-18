@@ -33,8 +33,6 @@ interface NextCheckFacts {
   queued?: boolean;
   /** A `merge` tick whose printed command is a REST merge request, which can stay `pending`. */
   restMerge?: boolean;
-  /** A native-stack draft hold: repeating this one-PR session cannot advance it. */
-  stackDraftHold?: boolean;
   /** Unix seconds when an unchanged state would trip the stall timeout. */
   stallDeadlineSeconds?: number;
 }
@@ -49,7 +47,7 @@ export function nextCheckCandidates(facts: NextCheckFacts, nowMs: number): NextC
     return [{ reason: "merge-pending", seconds: MERGE_QUEUE_RECHECK_SECONDS }];
   }
   const terminal = ["cancel", "escalate", "merge", "mark_ready"].includes(facts.action);
-  if (terminal || facts.stackDraftHold) return [];
+  if (terminal) return [];
   const candidates: NextCheckCandidate[] = [];
   if (facts.action === "ready" && (facts.remainingSeconds ?? 0) > 0) {
     candidates.push({ reason: "ready-delay", seconds: facts.remainingSeconds! });

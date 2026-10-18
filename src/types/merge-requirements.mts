@@ -58,12 +58,6 @@ export type StackLayerBlockReason =
   | "no-ready-receipt"
   | "stale-ancestry";
 
-/**
- * A native stack draft stays in draft on a WAIT tick because this session will not
- * mark it ready. The caller returns to the stack selector.
- */
-export type StackDraftHold = { kind: "auto-mark-ready-disabled" };
-
 /** Extra batch-PR fields for merge-queue, stacks, and folded branch rules. */
 export interface BatchPrMergeFields {
   branchRules?: BranchRules;

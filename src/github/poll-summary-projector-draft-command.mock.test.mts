@@ -52,25 +52,27 @@ describe("draft stack poll commands", () => {
   it.each([
     ["the caller disables auto mark-ready", true, { noAutoMarkReady: true }],
     ["configuration disables auto mark-ready", false, {}],
-  ] as const)("bounds the one-PR handoff when %s", async (_case, autoMarkReady, opts) => {
-    mockLoadConfig.mockReturnValue({
-      cliCommand: ["pr-shepherd"],
-      actions: { autoMarkReady, workWhileQueued: false },
-      botUsernames: [],
-      ignoreChecks: [],
-      checks: { ciTriggerEvents: ["pull_request"] },
-    });
+  ] as const)(
+    "retains a bounded command for possible stale ancestry when %s",
+    async (_case, autoMarkReady, opts) => {
+      mockLoadConfig.mockReturnValue({
+        cliCommand: ["pr-shepherd"],
+        actions: { autoMarkReady, workWhileQueued: false },
+        botUsernames: [],
+        ignoreChecks: [],
+        checks: { ciTriggerEvents: ["pull_request"] },
+      });
 
-    const item = await summarizePollSummaryPr(draft(), repo, { stackPrNumber: 42, ...opts });
+      const item = await summarizePollSummaryPr(draft(), repo, { stackPrNumber: 42, ...opts });
 
-    expect(item).toMatchObject({
-      action: "wait",
-      reasons: ["draft-auto-mark-ready-disabled"],
-      pollProbe: true,
-    });
-    expect(item.pollCommand).toContain("--timeout 1s --debounce 0s --no-auto-mark-ready");
-    expect(item.pollCommand).not.toContain("--until-terminal");
-  });
+      expect(item).toMatchObject({
+        action: "cancel",
+        reasons: ["draft-auto-mark-ready-disabled"],
+      });
+      expect(item.pollCommand).toContain("--timeout 1s --debounce 0s --no-auto-mark-ready");
+      expect(item.pollProbe).toBe(true);
+    },
+  );
 
   it("keeps a full session without the probe flag when automatic mark-ready is on", async () => {
     const item = await summarizePollSummaryPr(draft(), repo, { stackPrNumber: 42 });

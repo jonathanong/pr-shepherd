@@ -10,7 +10,12 @@ export function isHandedOffSelection(result: PollSummaryResult): boolean {
 }
 
 export function explicitInstructions(result: PollSummaryResult): string[] {
-  if (result.reason === "all_terminal") return ["1. Stop — every selected PR is terminal."];
+  if (result.reason === "all_terminal")
+    return [
+      result.prs.some((item) => item.reasons.includes("draft-auto-mark-ready-disabled"))
+        ? "1. Stop — every selected PR is complete for this Shepherd run."
+        : "1. Stop — every selected PR is terminal.",
+    ];
   if (result.quotaWarning && result.reason !== "actionable") {
     return [
       buildQuotaAwareContinuation(
