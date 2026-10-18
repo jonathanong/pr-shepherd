@@ -48,8 +48,9 @@ interface IterateTick {
   report?: ShepherdReport;
 }
 
-// Edited PR comments are not readiness work. Hold them while the PR waits or counts down, and show
-// each once on any other action (including MERGE after the ready delay), writing its marker then.
+// Edited PR comments are not readiness work. Hold them while the PR waits or counts down, or when
+// the poll loop will discard the result, and show each once on any other action (including MERGE
+// after the ready delay), writing its marker then.
 // A replayed cached report can carry edits already shown, so re-check the current markers.
 async function attachEditedComments(
   result: IterateResult,
@@ -57,7 +58,12 @@ async function attachEditedComments(
   opts: IterateCommandOptions,
 ): Promise<IterateResult> {
   const candidates = tick.report?.comments.edited ?? [];
-  if (candidates.length === 0 || result.action === "wait" || result.action === "ready")
+  if (
+    candidates.length === 0 ||
+    result.action === "wait" ||
+    result.action === "ready" ||
+    opts.discardedActions?.includes(result.action)
+  )
     return result;
   if (result.action === "cancel" && (result.reason === "merged" || result.reason === "closed"))
     return result;
@@ -67,9 +73,7 @@ async function attachEditedComments(
   const seen = await loadSeenMap(key);
   const edited = candidates.filter((c) => classifyItem(c.id, c.body, seen) === "edited");
   if (edited.length === 0) return result;
-  // Poll discards only debounced fix_code ticks; any other action is returned to the caller.
-  if (opts.persistSeen !== false || result.action !== "fix_code")
-    await Promise.allSettled(edited.map((c) => markSeen(key, c.id, c.body)));
+  await Promise.allSettled(edited.map((c) => markSeen(key, c.id, c.body)));
   return { ...result, editedComments: edited };
 }
 

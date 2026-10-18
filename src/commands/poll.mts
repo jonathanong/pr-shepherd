@@ -1,4 +1,5 @@
 import { runIterate } from "./iterate/index.mts";
+import { pollTickSeenOptions } from "./poll-seen-options.mts";
 import type { IterateCommandOptions, IterateResult } from "../types.mts";
 import { sleep } from "../util/sleep.mts";
 import { withPollApiUsage } from "./poll-run.mts";
@@ -51,6 +52,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
   const verbose = opts.verbose === true;
   const quietStatus = quietStatusOpt === true;
   const untilTerminal = untilTerminalOpt === true;
+  const swallowsMarkReady = untilTerminal || iterateOpts.merge === true;
   let lastWaitSignature: string | null = null;
   let pendingQuotaWarning: IterateResult["quotaWarning"];
   let prNumber = opts.prNumber;
@@ -59,6 +61,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
   while (true) {
     tick += 1;
     const pastDebounce = debounceUntil !== null && Date.now() >= debounceUntil;
+    const seenOptions = pollTickSeenOptions(debounceSeconds, pastDebounce, swallowsMarkReady);
     const remainingBefore = untilTerminal
       ? Number.POSITIVE_INFINITY
       : timeoutMs - (Date.now() - start);
@@ -68,7 +71,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       runIterate({
         ...iterateOpts,
         prNumber,
-        persistSeen: debounceSeconds === 0 || pastDebounce,
+        ...seenOptions,
         fingerprintCache,
         deferQuotaWarning: !untilTerminal,
         quotaWarningMinimumPollIntervalMinutes: intervalSeconds / 60,
@@ -158,11 +161,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       await sleep(sleepMs);
       continue;
     }
-    if (
-      (untilTerminal || iterateOpts.merge) &&
-      lastResult.action === "mark_ready" &&
-      !pastDebounce
-    ) {
+    if (lastResult.action === "mark_ready" && seenOptions.discardedActions.includes("mark_ready")) {
       debounceUntil = null;
       const elapsedMs = Date.now() - start;
       const sleepMs = quotaPollIntervalMs(

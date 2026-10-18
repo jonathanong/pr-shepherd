@@ -229,6 +229,11 @@ export interface IterateCommandOptions extends GlobalOptions {
    */
   persistSeen?: boolean;
   /**
+   * Internal. Actions whose result the poll loop consumes without returning it (debounced
+   * fix_code, swallowed mark_ready). Iterate holds edited comments on them. Set only by `runPollCore`.
+   */
+  discardedActions?: readonly IterateResult["action"][];
+  /**
    * Internal. `true` allows fingerprint reuse of a previous WAIT-shaped report.
    * Poll sets this only for internal WAIT/MARK_READY continuation ticks — never the
    * tick returned to the caller, never FIX_CODE debounce, never single-tick iterate.

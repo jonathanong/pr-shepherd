@@ -54,6 +54,17 @@ describe("runPoll — FIX_CODE debounce", () => {
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
     expect(persistSeenAt(0)).toBe(false);
     expect(persistSeenAt(1)).toBe(true);
+    expect(mockRunIterate.mock.calls[0]?.[0].discardedActions).toEqual(["fix_code"]);
+    expect(mockRunIterate.mock.calls[1]?.[0].discardedActions).toEqual([]);
+  });
+
+  it("marks mark_ready as discarded only while --merge swallows it", async () => {
+    mockRunIterate.mockResolvedValue(makeCancelResult());
+    await runPoll({ ...pollOpts({ debounceSeconds: 0 }), merge: true });
+    expect(mockRunIterate.mock.calls[0]?.[0].discardedActions).toEqual(["mark_ready"]);
+    mockRunIterate.mockClear();
+    await runPoll(pollOpts({ debounceSeconds: 0 }));
+    expect(mockRunIterate.mock.calls[0]?.[0].discardedActions).toEqual([]);
   });
 
   it("keeps polling at --interval during a 5m debounce window", async () => {

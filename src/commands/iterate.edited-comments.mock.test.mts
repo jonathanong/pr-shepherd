@@ -122,38 +122,43 @@ describe("runIterate — edited PR comments", () => {
     expect(result.editedComments?.map((c) => c.id)).toEqual(["c-fix"]);
   });
 
-  it("shows but does not mark the edit on a discarded debounced fix_code tick", async () => {
-    mockRunCheck.mockResolvedValue(
-      await readyReportWithEdit("c-debounce", {
-        status: "UNRESOLVED_COMMENTS",
-        comments: {
-          actionable: [
-            {
-              id: "c-new2",
-              isMinimized: false,
-              author: "alice",
-              authorType: "User",
-              body: "Please add a test.",
-              url: "",
-              createdAtUnix: 0,
-            },
-          ],
-          firstLook: [],
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
+  it.each(["fix_code", "mark_ready"] as const)(
+    "holds the edit when the poll loop discards a %s tick",
+    async (action) => {
+      mockRunCheck.mockResolvedValue(
+        await readyReportWithEdit("c-discard", {
+          status: "UNRESOLVED_COMMENTS",
+          comments: {
+            actionable: [
+              {
+                id: "c-new2",
+                isMinimized: false,
+                author: "alice",
+                authorType: "User",
+                body: "Please add a test.",
+                url: "",
+                createdAtUnix: 0,
+              },
+            ],
+            firstLook: [],
+          },
+        }),
+      );
+      mockUpdateReadyDelay.mockResolvedValue({
+        isReady: false,
+        shouldCancel: false,
+        remainingSeconds: 600,
+      });
 
-    const result = await runIterate(makeOpts({ persistSeen: false }));
+      const result = await runIterate(
+        makeOpts({ persistSeen: false, discardedActions: ["fix_code", action] }),
+      );
 
-    expect(result.action).toBe("fix_code");
-    expect(result.editedComments?.map((c) => c.id)).toEqual(["c-debounce"]);
-    expect(await storedHash("c-debounce")).toBe(hashBody("original"));
-  });
+      expect(result.action).toBe("fix_code");
+      expect(result).not.toHaveProperty("editedComments");
+      expect(await storedHash("c-discard")).toBe(hashBody("original"));
+    },
+  );
 
   it("marks the edit on a returned poll tick even before the debounce starts", async () => {
     mockRunCheck.mockResolvedValue(await readyReportWithEdit("c-poll-cancel"));
@@ -163,7 +168,9 @@ describe("runIterate — edited PR comments", () => {
       remainingSeconds: 0,
     });
 
-    const result = await runIterate(makeOpts({ persistSeen: false }));
+    const result = await runIterate(
+      makeOpts({ persistSeen: false, discardedActions: ["fix_code", "mark_ready"] }),
+    );
 
     expect(result.editedComments?.map((c) => c.id)).toEqual(["c-poll-cancel"]);
     expect(await storedHash("c-poll-cancel")).toBe(hashBody("regenerated"));
