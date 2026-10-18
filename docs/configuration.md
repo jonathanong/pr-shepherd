@@ -122,7 +122,7 @@ Built-in defaults live in `src/config.json`.
 | `iterate.minimizeComments`           | `"all"`                                   | Non-human author classes to minimize: `all`, `bots`, or `none`. Humans are never minimized.                                                             |
 | `iterate.behindBaseHint`             | `""`                                      | One-liner on `fix_code` when the branch is behind or conflicts with its base; empty omits it.                                                           |
 | `iterate.resolveOtherHumanThreads`   | `"none"`                                  | When to resolve other-human threads after a reply: `none`, `outdated`, or `always`.                                                                     |
-| `iterate.instructions`               | `"inline"`                                | `inline` or `playbook` for the `fix_code` commit/push and journal steps. Overridden by `--instructions` and the MCP `instructions` input.               |
+| `iterate.instructions`               | `"inline"`                                | `inline` or `playbook` for the `fix_code` commit/push instructions. Overridden by `--instructions` and the MCP `instructions` input.                    |
 | `poll.mode`                          | `"auto"`                                  | `auto`, `poll`, or `event`. Overridden by `--poll-mode` and the MCP/library `pollMode` option.                                                          |
 | `poll.intervalSeconds`               | `60`                                      | Delay between `WAIT` ticks for one PR; overridden by `--interval`.                                                                                      |
 | `poll.stackIntervalFactor`           | `2`                                       | Multiplier for `--stack` and multi-PR sleeps; `--interval` overrides it and is not multiplied.                                                          |
@@ -140,7 +140,7 @@ Built-in defaults live in `src/config.json`.
 | `mergeStatus.blockingReviewerLogins` | `["copilot"]`                             | Reviewer login prefixes whose pending review or request blocks `mark_ready`.                                                                            |
 | `merge.method`                       | unset                                     | Preferred method: `merge`, `squash`, or `rebase`, used only when the repository allows it. A strategy flag in `commandArgs` must name the same.         |
 | `merge.commandArgs`                  | `[]`                                      | Extra options for ordinary `gh pr merge` commands; not used for queue commands. Its strategy flag is the preferred method when `merge.method` is unset. |
-| `actions.autoMinimizeSuppressed`     | `true`                                    | Resolve/minimize classification matches with both flags, then print, report, and journal the result.                                                    |
+| `actions.autoMinimizeSuppressed`     | `true`                                    | Resolve/minimize classification matches with both flags, then print and report the mutation result.                                                     |
 | `actions.autoMarkReady`              | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean ready state.                                                                                          |
 | `actions.neverCancelRuns`            | `[]`                                      | Legacy name; matching checks stay visible despite `ignoreChecks`. Shepherd never cancels runs.                                                          |
 | `actions.workWhileQueued`            | `false`                                   | Act on non-CI work immediately while the PR is in the merge queue instead of deferring it.                                                              |
@@ -416,11 +416,11 @@ Applies only to classification-rule matches that set both `suppress: true` and `
 When `true`, Shepherd attempts the supported resolve/minimize mutations and removes successful IDs from the agent-facing queues before deciding whether to emit `fix_code`:
 
 - GraphQL mutations are fail-closed unless the capability is explicitly true. REST omits capabilities, so otherwise-eligible mutations are attempted and GitHub decides.
-- Each confirmed success is copied to `threads.autoResolved` or `comments.autoMinimized` (with the rule `reason`, if set), printed in `## Classification auto-resolve` / `ruleAutoResolve`, and appended as one Shepherd Journal item for the token login. See [actions.md](actions.md).
-- Failures stay in `ruleAutoResolveIds`, `comments.minimizeIds`, or `ruleAutoResolveReviewSummaryIds` where retry is supported, and are listed in the same section. A journal read or write failure is reported there and does not undo a successful mutation.
+- Each confirmed success is copied to `threads.autoResolved` or `comments.autoMinimized` (with the rule `reason`, if set), and printed in `## Classification auto-resolve` / `ruleAutoResolve`. These automatic mutations do not edit the PR body; journal entries are optional and require an explicit `apply journal` call. See [actions.md](actions.md).
+- Failures stay in `ruleAutoResolveIds`, `comments.minimizeIds`, or `ruleAutoResolveReviewSummaryIds` where retry is supported, and are listed in the same section.
 - Denied review operations are surfaced once and skipped; REST minimization is unsupported and surfaced as a one-look skip.
 
-When `false`, Shepherd does not mutate, journal, or print the line. Supported IDs stay on the generated `apply review` command; unsupported REST minimization is a one-look skip without an unusable command.
+When `false`, Shepherd does not mutate or print the line. Supported IDs stay on the generated `apply review` command; unsupported REST minimization is a one-look skip without an unusable command.
 
 ### `actions.autoMarkReady` — default `true`
 

@@ -31,9 +31,9 @@
 ## Instructions
 
 1. Fix each warranted item.
-2. Read each body under `## Review summaries (first look)` and journal any warranted note before review mutations.
+2. Read each body under `## Review summaries (first look)` before acting.
 3. Triage `## Failing checks`. Playbook: "CI failure triage".
 4. Inspect every referenced range under `## Check annotations` and apply any warranted change.
-5. Commit and push any changes.
-6. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
+5. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <reason>'`.
+6. Commit and push any changes.
 7. Rerun Shepherd now.

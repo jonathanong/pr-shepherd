@@ -105,8 +105,8 @@ export interface PrShepherdConfig {
      */
     resolveOtherHumanThreads: ResolveOtherHumanThreads;
     /**
-     * `inline` (default) prints the commit/push and journal steps of `fix_code` instructions
-     * every tick; `playbook` folds them into one `Playbook: "Fix-code loop"` pointer. The
+     * `inline` (default) prints the commit/push step of `fix_code` instructions
+     * every tick; `playbook` folds it into one `Playbook: "Fix-code loop"` pointer. The
      * default is inline because the token bench measured playbook as a net cost: it adds a read. The `--instructions` flag and MCP `instructions` input override per call.
      */
     instructions: InstructionStyle;

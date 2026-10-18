@@ -1,6 +1,6 @@
 # PR #42 [FIX_CODE]
 
-**status** `FAILING`
+**status** `FAILING` · **repo** `owner/repo`
 
 ## Failing checks
 
@@ -24,5 +24,4 @@
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
 3. Inspect every referenced range under `## Check annotations` and apply any warranted change.
 4. Commit and push any changes.
-5. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <decision>'`
-6. Rerun Shepherd now.
+5. Rerun Shepherd now.

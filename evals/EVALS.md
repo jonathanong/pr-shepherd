@@ -176,7 +176,7 @@ third arm.
 | `31-create-pr-push-without-asking`          | none    | "Make a PR": non-force push and create it without asking                             |
 | `32-merge-flag-single-pr`                   | `64`    | `--merge` on one PR: run the printed merge without re-asking; fallback only on error |
 | `33-suggestion-patch`                       | `18`    | Run `build-suggestion-patches` for the `[suggestion]` thread                         |
-| `34-journal-rejection`                      | `16`    | Reject a wrong suggestion and append it with `apply journal`                         |
+| `34-journal-rejection`                      | `16`    | Reject a wrong suggestion; journaling remains the agent’s choice                         |
 | `35-merge-queue-ejection`                   | `119`   | Manual queue removal under `--merge`: do not requeue                                 |
 | `36-rest-queue-recovery-unsupported`        | `133`   | REST `transport-unsupported`: base update and reproduce, no requeue, keep REST       |
 | `37-no-target-infers-branch`                | none    | "Shepherd my PR": run the CLI with no target, no `gh pr view` first                  |

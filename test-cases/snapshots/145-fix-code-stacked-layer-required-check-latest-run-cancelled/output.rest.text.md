@@ -1,6 +1,6 @@
 # PR #2687 [FIX_CODE]
 
-**status** `FAILING` · **merge** `BLOCKED`
+**status** `FAILING` · **merge** `BLOCKED` · **repo** `vouchington/vouchington`
 **summary** 3 passing
 **transport** `rest`
 
@@ -29,5 +29,4 @@ Stack: 2688 (layer 2/2, base main)
 1. Fix each warranted item.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
 3. Commit and push any changes.
-4. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/vouchington/vouchington/pull/2687 --transport rest '- <decision>'`
-5. Rerun Shepherd now.
+4. Rerun Shepherd now.

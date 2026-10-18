@@ -19,6 +19,6 @@
 
 ## Instructions
 
-1. Read each body under `## Review summaries (first look)` and journal any warranted note before review mutations.
-2. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
+1. Read each body under `## Review summaries (first look)` before acting.
+2. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <reason>'`.
 3. Rerun Shepherd now.

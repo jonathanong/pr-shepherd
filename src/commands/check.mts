@@ -598,8 +598,6 @@ async function runScopedCheck(
     enabled: opts.autoMinimizeSuppressed === true,
     partition: authorizedPartition,
     batch: batchData,
-    prNumber,
-    repo,
   });
   const visibleMutationThreadIds = new Set(
     [...threadVisibility.activeThreads, ...threadVisibility.resolutionOnlyThreads].map(

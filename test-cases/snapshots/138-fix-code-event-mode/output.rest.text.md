@@ -1,6 +1,6 @@
 # PR #42 [FIX_CODE]
 
-**status** `FAILING` · **pollMode** `event`
+**status** `FAILING` · **repo** `owner/repo` · **pollMode** `event`
 **transport** `rest`
 
 ## Unavailable transport fields
@@ -22,5 +22,4 @@
 1. Fix each warranted item.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
 3. Commit and push any changes.
-4. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
-5. `[FIX_CODE]` is non-terminal. After the steps above, rerun this command once with the same options, then end the turn without sleeping. Keep exactly one safety-net wake-up at `2024-05-15T19:57:00Z` (`safety-net`). Playbook: "Cloud event loop".
+4. `[FIX_CODE]` is non-terminal. After the steps above, rerun this command once with the same options, then end the turn without sleeping. Keep exactly one safety-net wake-up at `2024-05-15T19:57:00Z` (`safety-net`). Playbook: "Cloud event loop".

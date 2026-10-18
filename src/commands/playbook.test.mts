@@ -23,14 +23,10 @@ describe("runPlaybook", () => {
     });
   });
 
-  it("conditions the Fix-code loop journal step on a printed apply journal command", () => {
-    // Playbook-style fix ticks omit the journal command without update permission, so the
-    // playbook must not tell the caller to journal unconditionally.
+  it("leaves journaling to the agent", () => {
     const { content } = runPlaybook("Fix-code loop") as { content: string };
-    expect(content).toContain(
-      "Only when the step that names this playbook prints an `apply journal` command",
-    );
-    expect(content).toContain("do not build or run one");
+    expect(content).not.toContain("Journal before the review mutations");
+    expect(content).not.toContain("run that command with a");
   });
 
   it("fails with usage and the available names for an unknown playbook", () => {

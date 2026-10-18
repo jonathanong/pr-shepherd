@@ -11,15 +11,14 @@ describe("loadConfig — cliCommand", () => {
     writeRc("cliCommand:\n  - pnpm\n  - exec\n  - pr-shepherd\n");
     const loadConfig = await freshLoadConfig();
     const { buildPrShepherdCommand } = await import("../cli/runner.mts");
-    const { buildShepherdJournalInstruction } = await import("../commands/shepherd-journal.mts");
 
     expect(loadConfig().cliCommand).toEqual(["pnpm", "exec", "pr-shepherd"]);
     expect(buildPrShepherdCommand(["42"])).toEqual({
       argv: ["pnpm", "exec", "pr-shepherd", "42"],
       text: "pnpm exec pr-shepherd 42",
     });
-    expect(buildShepherdJournalInstruction(42)).toContain(
-      "`pnpm exec pr-shepherd apply journal 42 '- <decision>'`",
+    expect(buildPrShepherdCommand(["apply", "journal", "42"]).text).toBe(
+      "pnpm exec pr-shepherd apply journal 42",
     );
   });
 

@@ -232,7 +232,7 @@ applying, committing and pushing it, or skip the \`apply review\` command.`,
   },
 
   {
-    // Playbook "Shepherd Journal": a rejection is the canonical journal entry.
+    // A rejected suggestion does not require a PR-body journal update.
     slug: "34-journal-rejection",
     tier: "guard",
     area: "loop",
@@ -249,15 +249,12 @@ applying, committing and pushing it, or skip the \`apply review\` command.`,
 suggestion is wrong. Do not make the change.)`,
     tags: ["fix-code", "journal"],
     graders: {
-      "journals-the-rejection": regex(
-        // `(?!<decision>)` rejects the printed placeholder copied verbatim.
-        cmd(
-          "pr-shepherd",
-          "apply",
-          "journal",
-          String.raw`https://github\.com/owner/repo/pull/42`,
-          String.raw`['"]-\s+(?!\s*<decision>)[^'"]+['"]`,
-        ),
+      "journaling-is-agent-choice": llm(
+        `The plan treats the advisory to journal why a review suggestion is rejected as
+optional. It may record the reason, or proceed directly to the printed review reply and rerun.
+
+Failing responses claim journaling is required before replying or continuing,
+or require the user to approve skipping a journal update.`,
       ),
       "does-not-make-the-change-or-commit": llm(
         `The plan declines the requested change, says so, and does not commit or push

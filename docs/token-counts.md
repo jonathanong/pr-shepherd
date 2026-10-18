@@ -33,7 +33,7 @@ Refresh this file when `SKILL.md`, a skill reference, or iterate `## Instruction
 
 - A `FIX_CODE` tick that names CI triage loads about 1,375 skill tokens (809 + 566).
 - A merge-queue ejection tick adds 576.
-- Review mutations, the Shepherd Journal, and the stack merge command are clauses in the printed steps. They load nothing.
+- Review mutations and the stack merge command are printed instructions and load no separate playbook. Journal updates use the explicit `apply journal` command and remain optional.
 
 ## One iterate result
 

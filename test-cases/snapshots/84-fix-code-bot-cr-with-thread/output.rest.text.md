@@ -25,7 +25,7 @@
 ## Instructions
 
 1. Fix each warranted item.
-2. Commit and push any changes.
-3. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
+2. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <reason>'`.
+3. Commit and push any changes.
 4. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-10 --message "$DISMISS_MESSAGE" --adopt-existing-replies --dismiss-review-ids PRR_bot_overdue_84 --require-sha HEAD`
 5. Rerun Shepherd now.

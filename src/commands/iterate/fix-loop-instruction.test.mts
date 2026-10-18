@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { buildPushJournalSteps } from "./fix-loop-instruction.mts";
+import { buildPushSteps } from "./fix-loop-instruction.mts";
 import { buildFixInstructions } from "./render.mts";
+import type { AgentCheck, FirstLookComment } from "../../types.mts";
 
 const resolveCommand = {
   argv: ["pr-shepherd", "resolve", "42"],
@@ -9,42 +10,21 @@ const resolveCommand = {
   hasMutations: true,
 };
 
-describe("buildPushJournalSteps playbook fold", () => {
-  it("folds commit, journal, and the playbook pointer into one step", () => {
-    const text = buildPushJournalSteps("playbook", 42, true, true).join("\n");
+describe("buildPushSteps", () => {
+  it("folds the push procedure into a playbook pointer without prescribing a journal", () => {
+    const text = buildPushSteps("playbook", true).join("\n");
     expect(text).toContain("Commit and push any changes.");
-    expect(text).toContain("pr-shepherd apply journal 42 '- <decision>'");
-    expect(text).toContain(`Playbook: "Fix-code loop".`);
-    expect(text).toContain('CLI: `pr-shepherd playbook "Fix-code loop"`.');
-  });
-
-  it("keeps a journal-only step inline without the Fix-code loop pointer", () => {
-    // A conflict or queue-recovery push step already owns the push; pointing at the
-    // Fix-code loop playbook would add a conflicting generic push procedure.
-    const steps = buildPushJournalSteps("playbook", 42, false, true);
-    expect(steps).toHaveLength(1);
-    const text = steps.join("\n");
-    expect(text).not.toContain("Commit and push");
-    expect(text).not.toContain("Fix-code loop");
-    expect(text).toContain("pr-shepherd apply journal 42 '- <decision>'");
-    expect(text).toContain("with URLs or IDs");
-  });
-
-  it("omits the journal clause when the journal step does not apply", () => {
-    const text = buildPushJournalSteps("playbook", 42, true, false).join("\n");
-    expect(text).toContain("Commit and push any changes.");
-    expect(text).not.toContain("apply journal");
     expect(text).toContain('Playbook: "Fix-code loop".');
+    expect(text).toContain('CLI: `pr-shepherd playbook "Fix-code loop"`.');
+    expect(text).not.toContain("journal");
   });
 
-  it("emits nothing when neither step applies", () => {
-    expect(buildPushJournalSteps("playbook", 42, false, false)).toEqual([]);
+  it("leaves specialized push procedures intact", () => {
+    expect(buildPushSteps("playbook", false)).toEqual([]);
   });
 
-  it("keeps the steps inline in inline style", () => {
-    const steps = buildPushJournalSteps("inline", 42, true, true);
-    expect(steps).toHaveLength(2);
-    expect(steps.join("\n")).not.toContain("Fix-code loop");
+  it("keeps the generic push inline", () => {
+    expect(buildPushSteps("inline", true)).toEqual(["Commit and push any changes."]);
   });
 });
 
@@ -83,25 +63,76 @@ describe("buildFixInstructions instruction style", () => {
       style,
     );
 
-  it("playbook style replaces the commit and journal steps with one pointer", () => {
+  it("playbook style renders the push procedure without a journal requirement", () => {
     const text = call("playbook", true).join("\n");
     expect(text).toContain('Playbook: "Fix-code loop"');
-    expect(text).not.toContain("with URLs or IDs");
+    expect(text).toContain("Optional: If you reject a code review suggestion");
+    expect(text).toContain("`pr-shepherd apply journal 42 '- <reason>'`");
+    expect(text).not.toContain("Journal key decisions");
     expect(text).not.toContain("$HEAD_SHA");
     expect(text).toContain("--require-sha HEAD");
     expect(text).toContain("Rerun Shepherd now.");
   });
 
-  it("playbook style omits the journal clause without update permission", () => {
+  it("playbook style leaves journaling optional without update permission", () => {
     const text = call("playbook", false).join("\n");
     expect(text).toContain("Commit and push any changes.");
-    expect(text).not.toContain("apply journal");
+    expect(text).toContain("`pr-shepherd apply journal 42 '- <reason>'`");
   });
 
   it("inline style keeps the full text", () => {
     const text = call("inline", true).join("\n");
     expect(text).not.toContain("Fix-code loop");
     expect(text).toContain("Commit and push any changes.");
-    expect(text).toContain("Journal key decisions or rejections with URLs or IDs");
+    expect(text).toContain("Optional: If you reject a code review suggestion");
+  });
+
+  it("omits the advisory for a minimized bot-comment acknowledgement alone", () => {
+    const comment = {
+      id: "c-1",
+      author: "coderabbitai",
+      authorType: "Bot",
+      body: "regenerated summary",
+      isMinimized: true,
+      firstLookStatus: "minimized",
+      edited: true,
+    } as FirstLookComment;
+    const instructions = buildFixInstructions(
+      [],
+      [],
+      [],
+      [],
+      "main",
+      resolveCommand,
+      false,
+      42,
+      0,
+      [],
+      [comment],
+    );
+    expect(instructions.join("\n")).not.toContain("apply journal");
+    expect(instructions.join("\n")).toContain("Review every item under `## First-look items`");
+  });
+
+  it("omits the advisory for a failing check alone", () => {
+    const check = {
+      name: "CI",
+      category: "failing",
+      conclusion: "FAILURE",
+      runId: "123",
+      detailsUrl: "https://github.com/owner/repo/actions/runs/123",
+    } as AgentCheck;
+    const instructions = buildFixInstructions(
+      [],
+      [],
+      [check],
+      [],
+      "main",
+      resolveCommand,
+      false,
+      42,
+      0,
+    );
+    expect(instructions.join("\n")).not.toContain("apply journal");
   });
 });

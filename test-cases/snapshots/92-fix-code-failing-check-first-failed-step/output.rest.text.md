@@ -1,6 +1,6 @@
 # PR #42 [FIX_CODE]
 
-**status** `FAILING`
+**status** `FAILING` · **repo** `owner/repo`
 **transport** `rest`
 
 ## Unavailable transport fields
@@ -23,5 +23,4 @@
 1. Fix each warranted item.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
 3. Commit and push any changes.
-4. Journal key decisions or rejections with URLs or IDs: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <decision>'`
-5. Rerun Shepherd now.
+4. Rerun Shepherd now.

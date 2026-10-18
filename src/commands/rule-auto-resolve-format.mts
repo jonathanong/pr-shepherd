@@ -14,7 +14,7 @@ export function uniqueReasons(reasons: readonly string[]): string[] {
   return unique;
 }
 
-export function reasonClause(reasons: readonly string[]): string | undefined {
+function reasonClause(reasons: readonly string[]): string | undefined {
   const unique = uniqueReasons(reasons);
   if (unique.length === 0) return undefined;
   const label = unique.length === 1 ? "rule" : "rules";
@@ -30,7 +30,7 @@ function plural(count: number, singular: string, pluralForm = `${singular}s`): s
   return `${count} ${count === 1 ? singular : pluralForm}`;
 }
 
-export function ruleAutoResolveBody(counts: {
+function ruleAutoResolveBody(counts: {
   threads: number;
   comments: number;
   reviewSummaries: number;
@@ -49,21 +49,6 @@ export function ruleAutoResolveBody(counts: {
 function withReasonClause(body: string, reasons: readonly string[]): string {
   const clause = reasonClause(reasons);
   return clause ? `${body} ${clause}` : body;
-}
-
-export function formatRuleAutoResolveJournalItem(input: {
-  body: string;
-  reasons: readonly string[];
-  viewerLogin?: string;
-  urls: readonly string[];
-}): string {
-  const login = input.viewerLogin?.trim();
-  const actor = login ? `as @${login}` : "(token login unavailable)";
-  const clause = reasonClause(input.reasons);
-  const links = input.urls.map((url) => url.trim()).filter(Boolean);
-  const reasonSuffix = clause ? ` ${clause}` : "";
-  const linkSuffix = links.length > 0 ? `: ${links.join(", ")}` : "";
-  return `- ${input.body} ${actor}${reasonSuffix}${linkSuffix}`;
 }
 
 export function decorateAutoResolveError(error: string, reasons: readonly string[]): string {
