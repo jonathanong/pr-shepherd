@@ -17,6 +17,7 @@ import {
 } from "./iterate-merge-formatter.mts";
 import { formatApiUsage, formatQuotaWarning } from "./api-usage-formatter.mts";
 import { formatActivityLine } from "./iterate-activity-formatter.mts";
+import { formatSuppressedNameLines } from "./iterate-check-names.mts";
 import { branchStateSegment } from "./iterate-branch-segment.mts";
 import { insertRuleAutoResolveSection } from "../commands/rule-auto-resolve-format.mts";
 import { formatTransportEvidence } from "./transport-formatter.mts";
@@ -87,13 +88,14 @@ export function formatIterateResult(
   let summaryLine: string | null;
   if (verbose) {
     const verboseBranch = branchSeg ? ` · ${branchSeg}` : "";
-    summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress, ${result.summary.superseded} superseded · **remainingSeconds** ${result.remainingSeconds} · **blockingBotReviewInProgress** ${result.blockingBotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}${verboseBranch}${readyDelaySuffix ? ` · **ready-delay** \`${readyDelaySuffix}\` (override)` : ""}`;
+    summaryLine = `**summary** ${result.summary.passing} passing, ${result.summary.skipped} skipped, ${result.summary.filtered} filtered, ${result.summary.inProgress} inProgress, ${result.summary.queued} queued, ${result.summary.superseded} superseded · **remainingSeconds** ${result.remainingSeconds} · **blockingBotReviewInProgress** ${result.blockingBotReviewInProgress} · **isDraft** ${result.isDraft} · **shouldCancel** ${result.shouldCancel}${verboseBranch}${readyDelaySuffix ? ` · **ready-delay** \`${readyDelaySuffix}\` (override)` : ""}`;
   } else {
     const counts: string[] = [];
     if (result.summary.passing > 0) counts.push(`${result.summary.passing} passing`);
     if (result.summary.skipped > 0) counts.push(`${result.summary.skipped} skipped`);
     if (result.summary.filtered > 0) counts.push(`${result.summary.filtered} filtered`);
     if (result.summary.inProgress > 0) counts.push(`${result.summary.inProgress} inProgress`);
+    if (result.summary.queued > 0) counts.push(`${result.summary.queued} queued`);
     if (result.summary.superseded > 0) counts.push(`${result.summary.superseded} superseded`);
     const segs = counts.length > 0 ? [`**summary** ${counts.join(", ")}`] : [];
     if (result.status === "READY" && result.remainingSeconds > 0) {
@@ -136,17 +138,10 @@ export function formatIterateResult(
   } else if (requiredLine) {
     headerLines.push(requiredLine);
   }
-  if (result.ignoredNames && result.ignoredNames.length > 0) {
-    const names = result.ignoredNames.map((n) => "`" + n + "`").join(", ");
-    headerLines.push(`**ignored** ${names}`);
-  }
-  if (result.supersededNames && result.supersededNames.length > 0) {
-    const names = result.supersededNames.map((n) => "`" + n + "`").join(", ");
-    headerLines.push(`**superseded** ${names}`);
-  }
+  headerLines.push(...formatSuppressedNameLines(result, verbose));
   appendUnreportedLines(headerLines, result);
   appendMergeQueueHeader(headerLines, result);
-  const activityLine = formatActivityLine(result);
+  const activityLine = formatActivityLine(result, verbose);
   if (activityLine) headerLines.push(activityLine);
   headerLines.push(...formatNextCheckLines(result.nextCheck));
   const header = headerLines.join("\n");
@@ -206,14 +201,7 @@ export function formatIterateResult(
       } else if (requiredLine) {
         cancelHeaderLines.push(requiredLine);
       }
-      if (result.ignoredNames && result.ignoredNames.length > 0) {
-        const ignoredStr = result.ignoredNames.map((n) => "`" + n + "`").join(", ");
-        cancelHeaderLines.push(`**ignored** ${ignoredStr}`);
-      }
-      if (result.supersededNames && result.supersededNames.length > 0) {
-        const supersededStr = result.supersededNames.map((n) => "`" + n + "`").join(", ");
-        cancelHeaderLines.push(`**superseded** ${supersededStr}`);
-      }
+      cancelHeaderLines.push(...formatSuppressedNameLines(result, verbose));
       appendUnreportedLines(cancelHeaderLines, result);
       appendMergeQueueHeader(cancelHeaderLines, result);
       if (activityLine) cancelHeaderLines.push(activityLine);

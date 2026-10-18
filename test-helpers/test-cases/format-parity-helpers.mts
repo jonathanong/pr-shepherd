@@ -38,19 +38,13 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
   ["fix.checks[].name", "same reformat as checks[].name"],
   ["escalate.checks[].name", "same reformat as checks[].name"],
   [
-    "checks[].detailsUrl",
+    "fix.checks[].detailsUrl",
     "a GitHub Actions check shows only its run ID; a URL is printed only for an external (no-runId) check",
   ],
-  ["fix.checks[].detailsUrl", "same as checks[].detailsUrl"],
   [
     "escalate.stalledChecks[].detailsUrl",
-    "same as checks[].detailsUrl — shown only for the external/status_context stalled check, not a GitHub Actions one",
+    "same as fix.checks[].detailsUrl — shown only for the external/status_context stalled check, not a GitHub Actions one",
   ],
-  [
-    "checks[].conclusion",
-    "the raw `checks[]` array includes passing checks; lean text surfaces passing checks only via the summary count, never per-check",
-  ],
-  ["checks[].runId", "same — passing-check detail is never printed in lean text"],
   [
     "fix.resolutionOnlyThreads[].createdAtUnix",
     "raw bookkeeping timestamp on the thread's top comment; never rendered as a date",

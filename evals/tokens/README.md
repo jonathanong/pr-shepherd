@@ -15,14 +15,14 @@ Latest numbers: [REPORT.md](REPORT.md). Estimated cost per session
 
 | session | cost vs. gh | cost vs. MCP | turns vs. gh / MCP | tool tokens vs. gh / MCP |
 | --- | --- | --- | --- | --- |
-| single PR | **−42%** | **−77%** | −19% / −70% | −72% / −89% |
+| single PR | **−43%** | **−77%** | −19% / −69% | −74% / −89% |
 | PR stack | **−45%** | **−63%** | −38% / −58% | −24% / −59% |
 
 GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
-| single PR | 30.8 / 36.5 / 12 | 4.8 / 9 / 78.3 | 175 core + 0 points | 175 core + 0 points |
+| single PR | 31 / 37 / 12.3 | 4.8 / 9 / 79.5 | 178.5 core + 0 points | 178.5 core + 0 points |
 | PR stack | 11 / 27 / 12 | 2 / 6 / 74 | 432 core + 0 points | 432 core + 0 points |
 
 <!-- bench:headline:end -->
@@ -533,8 +533,9 @@ PR session:
 - one failing check;
 - one review-summary first look;
 - two review threads (one before and one after a review round);
-- one bot-thread round, half a multi-category tick, half a conflict, and a
-  quarter of a check-annotation failure;
+- one bot-thread round, half a multi-category tick, half a conflict, a
+  quarter of a check-annotation failure, and a quarter of a wait in a large
+  (122-check) matrix;
 - one mark-ready and one merged PR;
 - half a merge and a quarter of a merge-queue enqueue (not every session runs
   with `--merge`).

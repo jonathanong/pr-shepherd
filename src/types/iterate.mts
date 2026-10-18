@@ -41,7 +41,10 @@ export interface IterateResultSummary {
   passing: number;
   skipped: number;
   filtered: number;
+  /** Non-completed checks GitHub reports as `IN_PROGRESS`. */
   inProgress: number;
+  /** Non-completed checks GitHub reports as `QUEUED`, `WAITING`, `PENDING`, or `REQUESTED`. */
+  queued: number;
   superseded: number;
 }
 

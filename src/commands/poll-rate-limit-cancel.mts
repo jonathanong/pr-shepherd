@@ -60,7 +60,7 @@ export function onePrCancelFromPulls(
     isDraft: pull.draft,
     shouldCancel: true,
     remainingSeconds: 0,
-    summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 0, superseded: 0 },
+    summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 0, queued: 0, superseded: 0 },
     baseBranch: pull.baseRefName,
     branchProtection: null,
     checks: [],

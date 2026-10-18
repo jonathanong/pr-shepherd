@@ -20,7 +20,7 @@ describe("REST merge output", () => {
       isDraft: false,
       shouldCancel: true,
       remainingSeconds: 0,
-      summary: { passing: 1, skipped: 0, filtered: 0, inProgress: 0, superseded: 0 },
+      summary: { passing: 1, skipped: 0, filtered: 0, inProgress: 0, queued: 0, superseded: 0 },
       baseBranch: "main",
       branchProtection: null,
       checks: [],

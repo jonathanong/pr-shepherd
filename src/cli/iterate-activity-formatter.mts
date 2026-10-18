@@ -1,6 +1,7 @@
 import type { IterateResult } from "../types.mts";
+import { formatNameList } from "./iterate-check-names.mts";
 
-export function formatActivityLine(result: IterateResult): string | null {
+export function formatActivityLine(result: IterateResult, verbose = false): string | null {
   const activity = result.activity ?? {
     commitCount: 0,
     reviewRoundCount: 0,
@@ -21,12 +22,8 @@ export function formatActivityLine(result: IterateResult): string | null {
     parts.push(`${activity.reviewItemsSinceLatestCommit.length} review items since latest commit`);
   }
   if (hasActiveChecks) {
-    parts.push(
-      `active: ${result
-        .inProgressChecks!.slice(0, 5)
-        .map((check) => `\`${check.name}\``)
-        .join(", ")}`,
-    );
+    const names = result.inProgressChecks!.map((check) => check.name);
+    parts.push(`active: ${formatNameList(names, verbose)}`);
   }
   return `**activity** ${parts.join(" · ")}`;
 }

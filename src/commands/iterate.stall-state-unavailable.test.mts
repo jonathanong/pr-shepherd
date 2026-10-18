@@ -25,7 +25,7 @@ const base = {
   isDraft: false,
   shouldCancel: false,
   remainingSeconds: 0,
-  summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 0, superseded: 0 },
+  summary: { passing: 0, skipped: 0, filtered: 0, inProgress: 0, queued: 0, superseded: 0 },
   baseBranch: "main",
   branchProtection: null,
   checks: [],
