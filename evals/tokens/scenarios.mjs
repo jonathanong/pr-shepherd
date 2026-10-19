@@ -985,12 +985,15 @@ const PR_SCENARIOS = [
     id: "large-check-matrix",
     weight: 0.25,
     title: "CI still running in a 122-check matrix",
-    note: "111 passing shards, eight running and three queued checks. Shepherd prints passing checks as one summary count and caps the active list at five; gh and MCP read every check run.",
+    note: "111 passing shards, eight running and three queued checks. Shepherd's polling loop prints one stderr WAIT line with passing checks as a summary count and the active list capped at five; gh and MCP read every check run.",
     arms() {
       const fixture = "153-wait-many-in-progress-and-queued-checks";
       const state = fixtureState(fixture);
+      // The --until-terminal loop does not return a WAIT tick; it prints the
+      // poll-progress.mts line (writeWaitProgress) and keeps polling.
+      const reason = snapshot(fixture).match(/^WAIT: (.+)$/m)[1];
       return {
-        shepherd: [shepherdTick(snapshot(fixture))],
+        shepherd: [shepherdTick(`[poll tick 1 / +0s] WAIT — ${reason}\n`)],
         // Check runs.
         event: { wake: "change", detectors: 1 },
         gh: ghObserve(state),

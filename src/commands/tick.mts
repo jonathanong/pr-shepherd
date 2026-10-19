@@ -31,13 +31,15 @@ import {
 
 /**
  * One iterate tick: no settle window and no sleeping, seen markers persist immediately, and
- * `nextCheck` reports when to come back if no GitHub event arrives first.
+ * `nextCheck` reports when to come back if no GitHub event arrives first. The tick's result is
+ * never discarded, so edited-comment markers are written on the result it returns.
  */
 export async function runIterateTick(opts: IterateCommandOptions): Promise<IterateResult> {
   const sink: { ciStartDeadlineSeconds?: number } = {};
   const result = await runIterate({
     ...opts,
     persistSeen: true,
+    deferEditedCommentMarkers: false,
     fingerprintCache: false,
     stallDeadlineSink: sink,
   });

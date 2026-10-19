@@ -45,6 +45,7 @@ describe("runIterateTick", () => {
     expect(m.runIterate).toHaveBeenCalledTimes(1);
     expect(m.runIterate.mock.calls[0]![0]).toMatchObject({
       persistSeen: true,
+      deferEditedCommentMarkers: false,
       fingerprintCache: false,
     });
     expect(result).toMatchObject({
