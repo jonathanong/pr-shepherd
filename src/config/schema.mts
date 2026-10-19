@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { STANDARD_RULE_NAMES } from "../classify/standard/index.mts";
+import { DEFAULT_BOT_USERNAMES } from "./default-bot-usernames.mts";
 import { findMergeStrategies } from "./merge-command-args.mts";
 
 /**
@@ -7,21 +8,6 @@ import { findMergeStrategies } from "./merge-command-args.mts";
  * the key name, and unknown keys or invalid values are hard errors. The defaults declared here
  * are the built-in defaults; `pr-shepherd.schema.json` is generated from `configFileSchema`.
  */
-const DEFAULT_BOT_USERNAMES = [
-  "chatgpt-connector",
-  "openai-codex",
-  "codex",
-  "claude",
-  "copilot-pull-request-reviewer",
-  "gemini-code-assist",
-  "coderabbitai",
-  "greptile-apps",
-  "qodo-merge-pro",
-  "deepsource-io",
-  "sonarqubecloud",
-  "what-the-diff",
-];
-
 const DEFAULT_QUOTA_WARNINGS = [
   { "remaining-percent": 30, "interval-factor": 2 },
   { "remaining-percent": 20, "interval-factor": 5 },

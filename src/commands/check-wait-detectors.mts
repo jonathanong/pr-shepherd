@@ -32,7 +32,7 @@ type StateKey = { owner: string; repo: string; pr: number };
  * when this read differs from the digest stored beside the report, or no digest is stored yet
  * (the seeding tick): the stored report may predate what the detectors saw, so the tick must
  * not reuse it through the GraphQL fingerprint either. A same-digest read past
- * `poll.reconcileSeconds` leaves `changed` unset.
+ * `poll.reconcile-seconds` leaves `changed` unset.
  */
 export type WaitDetectorResult =
   | { reused: ShepherdReport; baseTipOid: string }

@@ -1,5 +1,5 @@
 /**
- * Per-tick output budget for review items (see `iterate.reviewOutputMaxChars`).
+ * Per-tick output budget for review items (see `iterate.review-output-max-chars`).
  *
  * Fetching is complete; only the rendered volume is capped. When the bodies of every surfaced
  * review item fit the budget, nothing changes. Otherwise items are taken in a fixed priority

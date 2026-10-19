@@ -91,7 +91,7 @@ type CheckOptions = GlobalOptions & {
   persistSeen?: boolean;
   fingerprintCache?: boolean;
   merge?: boolean;
-  /** Per-tick review-item body budget (`iterate.reviewOutputMaxChars`). Omitted or 0: no cap. */
+  /** Per-tick review-item body budget (`iterate.review-output-max-chars`). Omitted or 0: no cap. */
   reviewOutputMaxChars?: number;
 };
 

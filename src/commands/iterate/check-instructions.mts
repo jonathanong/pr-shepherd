@@ -95,7 +95,7 @@ export function buildReleasedBlockerInstruction(prNumber: number): string {
     : `Update this PR branch from its base with \`gh pr update-branch ${prNumber} --rebase\`. Do not rerun the job; a rerun retests the old merge ref.`;
 }
 
-/** `iterate.reviewOutputMaxChars` held review items back; the rerun step that follows shows them. */
+/** `iterate.review-output-max-chars` held review items back; the rerun step that follows shows them. */
 export function buildReviewSubsetInstruction(reviewItems: {
   shown: number;
   total: number;

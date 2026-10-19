@@ -1,5 +1,5 @@
 {
-  "description": "The same 115 review items as fixture 152 with iterate.reviewOutputMaxChars 0: the cap is disabled, every item is shown, and no rollup line or subset step appears.",
+  "description": "The same 115 review items as fixture 152 with iterate.review-output-max-chars 0: the cap is disabled, every item is shown, and no rollup line or subset step appears.",
   "batchData": {
     "reviewDecision": "CHANGES_REQUESTED",
     "reviewThreads": [
@@ -1400,7 +1400,7 @@
   },
   "config": {
     "iterate": {
-      "reviewOutputMaxChars": 0
+      "review-output-max-chars": 0
     }
   },
   "readyDelayState": {

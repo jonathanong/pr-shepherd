@@ -17,6 +17,12 @@ export interface IdlePrState {
   rerun?: boolean;
 }
 
+/**
+ * Config that makes the requested Copilot review block readiness. v1's
+ * `mark-ready.blocking-reviewer-logins` default is `[]`, which would leave the PR READY.
+ */
+export const IDLE_PR_CONFIG = "mark-ready:\n  blocking-reviewer-logins: [copilot]\n";
+
 export const idlePrState = (): IdlePrState => ({
   reviews: [],
   branchFailures: 0,

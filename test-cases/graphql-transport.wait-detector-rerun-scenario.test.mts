@@ -5,12 +5,13 @@ import {
   etagResponses as log,
 } from "../test-helpers/github/rest-read.test-support.mts";
 import {
+  IDLE_PR_CONFIG,
   IDLE_PR_DETECTORS,
   idlePrState,
   serveIdlePr,
   type IdlePrState,
 } from "../test-helpers/github/graphql-idle-pr.test-support.mts";
-import { freshLoadConfig } from "../test-helpers/config/load-test-support.mts";
+import { freshLoadConfig, writeRc } from "../test-helpers/config/load-test-support.mts";
 import { runIterate } from "../src/commands/iterate/index.mts";
 import { runWithGithubTransport } from "../src/github/transport.mts";
 
@@ -37,6 +38,7 @@ const charged = () =>
   log.filter((entry) => entry.status !== 304).map((entry) => entry.path.split("?")[0]);
 
 async function enterIdleWait(state: IdlePrState) {
+  writeRc(IDLE_PR_CONFIG);
   await freshLoadConfig();
   await serveIdlePr(state);
   expect((await tick(false)).action).toBe("wait");

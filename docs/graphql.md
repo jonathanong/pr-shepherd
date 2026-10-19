@@ -185,7 +185,7 @@ A GraphQL-mode poll continuation runs conditional REST detectors instead of `Bat
 ```mermaid
 flowchart TD
   A[Eligible continuation tick] --> B[8 conditional REST reads]
-  B -->|all 304 and last GraphQL snapshot younger than poll.reconcileSeconds| C[Replay stored report, no GraphQL]
+  B -->|all 304 and last GraphQL snapshot younger than poll.reconcile-seconds| C[Replay stored report, no GraphQL]
   B -->|same digest but stale, or error| D[BatchPr: fingerprint hit or full snapshot]
   B -->|no digest recorded yet, or digest changed| G[BatchPr: full snapshot, no fingerprint reuse]
   G --> E

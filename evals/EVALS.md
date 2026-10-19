@@ -128,7 +128,7 @@ Layout:
   native-stack fixes (#509, #567, merge-queue removal of a stack layer, the
   REST stack queue guard).
 - `cases/review-budget.mjs`: case 53, the per-tick review output budget
-  (`iterate.reviewOutputMaxChars`).
+  (`iterate.review-output-max-chars`).
 
 A case may also set `runs` (default 3). Cases 38, 39 and 43–53 use 6.
 
