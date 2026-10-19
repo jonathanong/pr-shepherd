@@ -1,4 +1,4 @@
-# PR #42 [FIX_CODE]
+# PR #42 [TRIAGE]
 
 **status** `UNRESOLVED_COMMENTS`
 **summary** 1 passing

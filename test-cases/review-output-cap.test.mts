@@ -27,7 +27,7 @@ const snapshotDir = join(
 
 interface TickJson {
   action: string;
-  fix: {
+  triage: {
     threads?: { id: string }[];
     actionableComments?: { id: string }[];
     changesRequestedReviews?: { id: string }[];
@@ -42,14 +42,14 @@ interface TickJson {
 }
 
 function shownIds(json: TickJson): string[] {
-  const { fix } = json;
+  const { triage } = json;
   return [
-    ...(fix.changesRequestedReviews ?? []),
-    ...(fix.threads ?? []),
-    ...(fix.actionableComments ?? []),
-    ...(fix.firstLookThreads ?? []),
-    ...(fix.firstLookComments ?? []),
-    ...(fix.firstLookSummaries ?? []),
+    ...(triage.changesRequestedReviews ?? []),
+    ...(triage.threads ?? []),
+    ...(triage.actionableComments ?? []),
+    ...(triage.firstLookThreads ?? []),
+    ...(triage.firstLookComments ?? []),
+    ...(triage.firstLookSummaries ?? []),
     ...(json.editedComments ?? []),
   ].map((item) => item.id);
 }
@@ -68,33 +68,33 @@ function seenMapAfterTick(previous: Map<string, SeenMarker>): Map<string, SeenMa
 async function tick(seenMap: Map<string, SeenMarker>): Promise<RunResult> {
   vi.mocked(markSeen).mockClear();
   vi.mocked(loadSeenMap).mockResolvedValue(seenMap);
-  return captureRun(loadFixture("155-fix-code-review-output-capped"));
+  return captureRun(loadFixture("155-triage-review-output-capped"));
 }
 
 describe("iterate.review-output-max-chars follow-up ticks", () => {
   it("holds unshown items unmarked and shows them on later ticks", async () => {
-    const fixture = loadFixture("155-fix-code-review-output-capped");
+    const fixture = loadFixture("155-triage-review-output-capped");
     applyFixture(fixture);
     let seenMap = new Map<string, SeenMarker>(Object.entries(fixture.seenMap ?? {}));
 
     const first = await tick(seenMap);
     const firstJson = JSON.parse(first.jsonOut) as TickJson;
-    expect(firstJson.fix.reviewItems).toEqual({ shown: 40, total: 115 });
+    expect(firstJson.triage.reviewItems).toEqual({ shown: 40, total: 115 });
     const firstShown = new Set(shownIds(firstJson));
     const marked = new Set(vi.mocked(markSeen).mock.calls.map(([, id]) => id));
     // Held items are not marked seen, and no generated command names them.
     for (const held of ["PRRT_active039", "IC_human001", "PRRT_resolved001", "PRR_summary001"]) {
       expect(firstShown.has(held)).toBe(false);
       expect(marked.has(held)).toBe(false);
-      expect(firstJson.fix.resolveCommand.argv.join(" ")).not.toContain(held);
+      expect(firstJson.triage.resolveCommand.argv.join(" ")).not.toContain(held);
     }
     expect(marked.has("PRRT_active001")).toBe(true);
     seenMap = seenMapAfterTick(seenMap);
 
     const second = await tick(seenMap);
     const secondJson = JSON.parse(second.jsonOut) as TickJson;
-    expect(secondJson.action).toBe("fix_code");
-    expect(secondJson.fix.reviewItems).toEqual({ shown: 42, total: 75 });
+    expect(secondJson.action).toBe("triage");
+    expect(secondJson.triage.reviewItems).toEqual({ shown: 42, total: 75 });
     const secondShown = shownIds(secondJson);
     // Tick 1 marked its 40 items seen, so tick 2 starts with the oldest held thread.
     expect(secondShown).toContain("PRRT_active039");
@@ -110,7 +110,7 @@ describe("iterate.review-output-max-chars follow-up ticks", () => {
     seenMap = seenMapAfterTick(seenMap);
     let last = secondJson;
     // Every later tick is snapshotted too; evals/tokens/scenarios.mjs replays them all.
-    for (let n = 3; n < 13 && last.fix.reviewItems; n++) {
+    for (let n = 3; n < 13 && last.triage.reviewItems; n++) {
       const run = await tick(seenMap);
       await expect(run.textOut).toMatchFileSnapshot(join(snapshotDir, `tick${n}.text.md`));
       await expect(run.jsonOut).toMatchFileSnapshot(join(snapshotDir, `tick${n}.json`));
@@ -118,8 +118,8 @@ describe("iterate.review-output-max-chars follow-up ticks", () => {
       for (const id of shownIds(last)) everShown.add(id);
       seenMap = seenMapAfterTick(seenMap);
     }
-    expect(last.fix.reviewItems).toBeUndefined();
-    expect(last.fix.instructions.join("\n")).not.toContain("This is a subset");
+    expect(last.triage.reviewItems).toBeUndefined();
+    expect(last.triage.instructions.join("\n")).not.toContain("This is a subset");
     expect(everShown.size).toBe(115);
   });
 });

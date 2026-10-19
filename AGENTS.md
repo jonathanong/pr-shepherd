@@ -190,7 +190,7 @@ marked seen while hidden, then silently and permanently excluded from
 leaves the queue.
 
 **Review output budget exception:** when `iterate.review-output-max-chars`
-holds review items back on a `fix_code` tick (see `### Review output budget`
+holds review items back on a `triage` tick (see `### Review output budget`
 in [`docs/actions.md`](docs/actions.md)), the held items are absent from the
 output and from every generated ID, so `check.mts` does not write their seen
 markers on that tick. They are shown on a later tick, which preserves "at

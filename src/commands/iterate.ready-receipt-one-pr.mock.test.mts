@@ -167,7 +167,6 @@ describe("runIterate — one-PR READY receipt", () => {
     expect(mockClearReadyDelay).not.toHaveBeenCalled();
   });
 
-
   it.each([
     ["a human edits a minimized comment", { ...humanNotice, body: "New finding" }],
     ["a human edits a visible comment", { ...humanNotice, isMinimized: false, body: "Typo" }],

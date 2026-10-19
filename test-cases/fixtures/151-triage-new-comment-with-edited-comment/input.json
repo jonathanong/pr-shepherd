@@ -1,5 +1,5 @@
 {
-  "description": "A new human PR comment needs triage while an older bot comment was edited since Shepherd showed it. The new comment drives FIX_CODE; the edit rides along once under `## Edited comments` as informational context.",
+  "description": "A new human PR comment needs triage while an older bot comment was edited since Shepherd showed it. The new comment drives TRIAGE; the edit rides along once under `## Edited comments` as informational context.",
   "batchData": {
     "comments": [
       {

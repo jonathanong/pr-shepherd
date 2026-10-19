@@ -136,7 +136,7 @@ iterate:
   behind-base-hint: "rebase --force-with-lease" # one-liner shown on triage when behind or conflicting with base
   resolve-other-human-threads: none # none | outdated | always
   instructions: inline # inline | playbook
-  review-output-max-chars: 50000 # per-tick review-body budget on fix_code; 0 disables
+  review-output-max-chars: 50000 # per-tick review-body budget on triage; 0 disables
 
 poll:
   interval-seconds: 120 # single-PR delay between WAIT ticks
@@ -195,8 +195,8 @@ classify:
 | `iterate.minimize-comments`           | `"bots"`                                  | Non-human author classes to minimize: `all`, `bots`, or `none`. Humans are never minimized.                                                             |
 | `iterate.behind-base-hint`            | `""`                                      | One-liner on `triage` when the branch is behind or conflicts with its base. Empty omits it.                                                             |
 | `iterate.resolve-other-human-threads` | `"none"`                                  | When to resolve other humans' threads after a reply: `none`, `outdated`, or `always`.                                                                   |
-| `iterate.instructions`                | `"inline"`                                | `inline` or `playbook` for the `triage` commit/push step. `--instructions` and the MCP `instructions` input override it.                              |
-| `iterate.review-output-max-chars`     | `50000`                                   | Per-tick character budget for review-item bodies on `triage`; `0` disables it. See [Review output budget](actions.md#review-output-budget).           |
+| `iterate.instructions`                | `"inline"`                                | `inline` or `playbook` for the `triage` commit/push step. `--instructions` and the MCP `instructions` input override it.                                |
+| `iterate.review-output-max-chars`     | `50000`                                   | Per-tick character budget for review-item bodies on `triage`; `0` disables it. See [Review output budget](actions.md#review-output-budget).             |
 | `poll.interval-seconds`               | `60`                                      | Delay between `WAIT` ticks for one PR. `--interval` overrides it.                                                                                       |
 | `poll.stack-interval-factor`          | `2`                                       | Multiplier for `stack` and multi-PR sleeps. `--interval` overrides it and is not multiplied.                                                            |
 | `poll.timeout-seconds`                | `270`                                     | Wall-clock cap for bounded `WAIT` polling. `--timeout` overrides it; `--until-terminal` ignores it.                                                     |
@@ -492,7 +492,7 @@ Shepherd never picks the git mechanics; it only echoes this pointer (see [action
 
 ### `iterate.review-output-max-chars` — default `50000`
 
-Per-tick budget, in characters, for the review-item bodies a `fix_code` result shows: changes-requested reviews first, then active threads and PR comments, first-look items, review summaries, and edited comments, oldest first within each group. Shepherd shows items until the next one would exceed the budget, always at least one. Held items are left out of the output, the generated IDs, and the seen markers, so the next run shows them; the result carries a `**showing** N of M review items` line (JSON `fix.reviewItems`) and a rerun step. `0` disables the cap. See [Review output budget](actions.md#review-output-budget).
+Per-tick budget, in characters, for the review-item bodies a `triage` result shows: changes-requested reviews first, then active threads and PR comments, first-look items, review summaries, and edited comments, oldest first within each group. Shepherd shows items until the next one would exceed the budget, always at least one. Held items are left out of the output, the generated IDs, and the seen markers, so the next run shows them; the result carries a `**showing** N of M review items` line (JSON `fix.reviewItems`) and a rerun step. `0` disables the cap. See [Review output budget](actions.md#review-output-budget).
 
 <a id="iterateresolveotherhumanthreads"></a>
 

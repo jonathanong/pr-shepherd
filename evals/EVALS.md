@@ -197,7 +197,7 @@ third arm.
 | `50-stack-merged-parent-retarget-wait`      | `131`   | Under `--merge`, wait for GitHub to retarget the bottom layer; no merge or base edit |
 | `51-stack-queue-removal-ack-route`          | `120`   | Stack queue removal: `gh stack rebase`, ack only on an unchanged head                |
 | `52-rest-stack-merge-queue`                 | `135`   | REST stack queue merge: run the printed `apply merge`, not `gh stack merge`          |
-| `53-fix-code-review-subset` | `155` | Review output budget subset: apply the printed IDs, rerun, don't fetch held items |
+| `53-triage-review-subset` | `155` | Review output budget subset: apply the printed IDs, rerun, don't fetch held items |
 
 "apply" is `test-cases/snapshots/apply-review-session-refusal`, an
 `apply review` output recorded by `test-cases/apply-review.test.mts` through

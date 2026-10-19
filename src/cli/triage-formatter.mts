@@ -27,8 +27,8 @@ export function formatTriageResult(
   const verbose = opts.verbose ?? false;
   const topCap = verbose ? undefined : BODY_TRUNCATE_MAX_CHARS;
   const sections: string[] = [header];
-  if (result.fix.reviewItems) {
-    const { shown, total } = result.fix.reviewItems;
+  if (result.triage.reviewItems) {
+    const { shown, total } = result.triage.reviewItems;
     sections.push(`**showing** ${shown} of ${total} review items`);
   }
 
