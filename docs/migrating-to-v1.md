@@ -2,7 +2,7 @@
 
 [← README](../README.md) | [configuration.md](configuration.md)
 
-This page lists every breaking change between pr-shepherd 0.x (0.59.3) and 1.0.0, and what to change. It is for anyone who upgrades a repository config, a script, an MCP client, or a library caller. v1 keeps no compatibility aliases. An old command, flag, field, or tool name fails or is simply absent. Renamed config keys fail with an error that names the new key. `--stack` and `--poll-mode` on the default command, `iterate`, or `stack` fail with an error that names the replacement. Removed keys with no replacement, and `--poll-mode` on other commands, fail as unknown.
+This page lists every breaking change between pr-shepherd 0.x (0.60.0) and 1.0.0, and what to change. It is for anyone who upgrades a repository config, a script, an MCP client, or a library caller. v1 keeps no compatibility aliases. An old command, flag, field, or tool name fails or is simply absent. Renamed config keys fail with an error that names the new key. `--stack` and `--poll-mode` on the default command, `iterate`, or `stack` fail with an error that names the replacement. Removed keys with no replacement, and `--poll-mode` on other commands, fail as unknown.
 
 If you use only the shipped plugin and skill, upgrade the plugin and migrate your config files. The skill already emits the v1 commands.
 
@@ -62,6 +62,7 @@ Every key is now kebab-case. A duration carries its unit in its name, and no key
 | `iterate.minimizeComments`                      | `iterate.minimize-comments`                                            |
 | `iterate.behindBaseHint`                        | `iterate.behind-base-hint`                                             |
 | `iterate.resolveOtherHumanThreads`              | `iterate.resolve-other-human-threads`                                  |
+| `iterate.reviewOutputMaxChars`                  | `iterate.review-output-max-chars`                                      |
 | `poll.intervalSeconds`                          | `poll.interval-seconds`                                                |
 | `poll.stackIntervalFactor`                      | `poll.stack-interval-factor`                                           |
 | `poll.timeoutSeconds`                           | `poll.timeout-seconds`                                                 |
@@ -184,15 +185,15 @@ Most of these aliases printed a deprecation warning in 0.x. In v1 they are all u
 
 ## Actions, output, and exit codes
 
-| 0.x                                               | v1                                                 |
-| ------------------------------------------------- | -------------------------------------------------- |
-| Action `fix_code`, text header `[FIX_CODE]`       | Action `triage`, text header `[TRIAGE]`            |
-| Exit code `12` (`FIX_CODE`)                       | Exit code `12` (`TRIAGE`); the number is unchanged |
-| JSON `fix` block (`fix.threads`, `fix.checks`, …) | JSON `triage` block, with the same fields          |
-| Escalation trigger `fix-thrash`                   | `triage-thrash`                                    |
-| Playbook pointer `Playbook: "Fix-code loop".`     | `Playbook: "Triage loop".`                         |
-| Playbook pointer `Playbook: "Cloud event loop".`  | `Playbook: "Event loop".`                          |
-| Invalid config: warning, then defaults            | Exit code `78` (`EX_CONFIG`)                       |
+| 0.x                                                                  | v1                                                 |
+| -------------------------------------------------------------------- | -------------------------------------------------- |
+| Action `fix_code`, text header `[FIX_CODE]`                          | Action `triage`, text header `[TRIAGE]`            |
+| Exit code `12` (`FIX_CODE`)                                          | Exit code `12` (`TRIAGE`); the number is unchanged |
+| JSON `fix` block (`fix.threads`, `fix.checks`, `fix.reviewItems`, …) | JSON `triage` block, with the same fields          |
+| Escalation trigger `fix-thrash`                                      | `triage-thrash`                                    |
+| Playbook pointer `Playbook: "Fix-code loop".`                        | `Playbook: "Triage loop".`                         |
+| Playbook pointer `Playbook: "Cloud event loop".`                     | `Playbook: "Event loop".`                          |
+| Invalid config: warning, then defaults                               | Exit code `78` (`EX_CONFIG`)                       |
 
 `triage` is the same state as `fix_code`, renamed because the work is often a reply, a thread resolution, or CI triage rather than a code change. It is still always non-terminal.
 
