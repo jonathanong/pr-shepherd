@@ -151,9 +151,10 @@ See [docs/graphql-usage.md](docs/graphql-usage.md) and [docs/rest-usage.md](docs
 
 1. **Install the MCP server and the CLI.** See [Install](#install) below.
 2. **Write your policy into a skill or agent instruction.** Examples: "skip non-blocking review comments", "reply instead of fixing nits", "never merge". Shepherd reports state and the next action. Your instructions decide how the agent treats each comment. The shipped `pr-shepherd` skill is a thin dispatcher you can wrap ([docs/skills.md](docs/skills.md)).
-3. **Configure Shepherd.** In `.pr-shepherdrc.yml`, turn on the bundled classification rules. They drop known bot noise before it reaches the agent, which saves more tokens and tool calls. With the default `actions.autoMinimizeSuppressed: true`, several rules also minimize matching comments on GitHub and surface the mutation result without editing the PR body. See [docs/configuration.md](docs/configuration.md#classifystandard--default-).
+3. **Configure Shepherd.** In `.pr-shepherdrc.yml`, turn on the bundled classification rules. They drop known bot noise before it reaches the agent, which saves more tokens and tool calls. With the default `actions.auto-minimize-suppressed: true`, several rules also minimize matching comments on GitHub and surface the mutation result without editing the PR body. See [docs/configuration.md](docs/configuration.md#classifystandard--default-).
 
    ```yaml
+   version: 1
    classify:
      standard:
        all: true

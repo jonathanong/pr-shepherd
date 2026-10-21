@@ -5,11 +5,12 @@ import {
   etagResponses as log,
 } from "../../test-helpers/github/rest-read.test-support.mts";
 import {
+  IDLE_PR_CONFIG,
   IDLE_PR_DETECTORS,
   idlePrState,
   serveIdlePr,
 } from "../../test-helpers/github/graphql-idle-pr.test-support.mts";
-import { freshLoadConfig } from "../../test-helpers/config/load-test-support.mts";
+import { freshLoadConfig, writeRc } from "../../test-helpers/config/load-test-support.mts";
 import { runCheck } from "../commands/check.mts";
 import { runWithGithubTransport } from "./transport.mts";
 
@@ -32,6 +33,7 @@ const running = (report: Awaited<ReturnType<typeof tick>>) =>
 
 describe("GraphQL idle wait detectors beside an unchanged aggregate fingerprint", () => {
   it("takes a full snapshot while seeding the detectors, then replays it for free", async () => {
+    writeRc(IDLE_PR_CONFIG);
     await freshLoadConfig();
     await serveIdlePr(idlePrState());
     await tick(false);
@@ -44,6 +46,7 @@ describe("GraphQL idle wait detectors beside an unchanged aggregate fingerprint"
   });
 
   it("does not reuse a report that predates a rerun begun before the seeding tick", async () => {
+    writeRc(IDLE_PR_CONFIG);
     await freshLoadConfig();
     const state = idlePrState();
     await serveIdlePr(state);
@@ -56,6 +59,7 @@ describe("GraphQL idle wait detectors beside an unchanged aggregate fingerprint"
   });
 
   it("takes a fresh snapshot when the latest check run changed, and keeps it next tick", async () => {
+    writeRc(IDLE_PR_CONFIG);
     await freshLoadConfig();
     const state = idlePrState();
     await serveIdlePr(state);

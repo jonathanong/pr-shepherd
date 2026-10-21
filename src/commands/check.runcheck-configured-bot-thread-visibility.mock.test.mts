@@ -17,7 +17,7 @@ registerHooks();
 describe("runCheck — configured bot thread visibility", () => {
   it("keeps returning already-seen configured bot active threads", async () => {
     const cfg = defaultConfig();
-    cfg.botUsernames = ["coderabbitai"];
+    cfg["bot-usernames"] = ["coderabbitai"];
     mockLoadConfig.mockReturnValue(cfg);
     const active = makeThread({
       id: "t-bot",
@@ -37,7 +37,7 @@ describe("runCheck — configured bot thread visibility", () => {
 
   it("skips an already-seen configured bot thread when resolution is unauthorized", async () => {
     const cfg = defaultConfig();
-    cfg.botUsernames = ["coderabbitai"];
+    cfg["bot-usernames"] = ["coderabbitai"];
     mockLoadConfig.mockReturnValue(cfg);
     const active = makeThread({
       id: "t-bot",
@@ -58,7 +58,7 @@ describe("runCheck — configured bot thread visibility", () => {
 
   it("keeps an already-seen active configured bot thread without a source location", async () => {
     const cfg = defaultConfig();
-    cfg.botUsernames = ["coderabbitai"];
+    cfg["bot-usernames"] = ["coderabbitai"];
     mockLoadConfig.mockReturnValue(cfg);
     const active = makeThread({
       id: "t-bot",

@@ -68,7 +68,7 @@ describe("aggregate stack stall guard", () => {
 
   it("keeps the configured timer across separate one-shot summaries", async () => {
     await expect(runPollSummary(opts)).resolves.toMatchObject({ nextAction: "wait" });
-    vi.setSystemTime(Date.now() + loadConfig().iterate.stallTimeoutMinutes * 60 * 1000);
+    vi.setSystemTime(Date.now() + loadConfig().iterate["stall-timeout-minutes"] * 60 * 1000);
     const result = await runPollSummary(opts);
     expect(result.nextAction).toBe("escalate");
     expect(result.instructions?.[0]).toContain(

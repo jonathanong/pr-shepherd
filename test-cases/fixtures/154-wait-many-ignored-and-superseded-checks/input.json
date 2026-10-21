@@ -254,15 +254,17 @@
     ]
   },
   "config": {
-    "ignoreChecks": [
-      "Bot Review 1",
-      "Bot Review 2",
-      "Bot Review 3",
-      "Bot Review 4",
-      "Bot Review 5",
-      "Bot Review 6",
-      "Bot Review 7"
-    ]
+    "checks": {
+      "ignore": [
+        "Bot Review 1",
+        "Bot Review 2",
+        "Bot Review 3",
+        "Bot Review 4",
+        "Bot Review 5",
+        "Bot Review 6",
+        "Bot Review 7"
+      ]
+    }
   },
   "readyDelayState": {
     "isReady": false,

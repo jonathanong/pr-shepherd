@@ -196,7 +196,7 @@ describe("buildResolveCommand (via runIterate) — argv shape invariants", () =>
   });
 
   it("pairs bot and viewer-authored replies with resolves; other humans stay reply-only", async () => {
-    mockLoadConfig.mockReturnValue({ ...defaultConfig(), botUsernames: ["coderabbitai"] });
+    mockLoadConfig.mockReturnValue(defaultConfig({ "bot-usernames": ["coderabbitai"] }));
     const humanThread = {
       id: "thread-human",
       isResolved: false,

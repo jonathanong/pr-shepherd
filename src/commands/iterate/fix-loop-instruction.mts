@@ -10,6 +10,10 @@ export function buildPushSteps(style: InstructionStyle, genericPush: boolean): s
   if (!genericPush) return [];
   const push = "Commit and push any changes.";
   if (style === "inline") return [push];
-  const cli = renderShellCommand([...loadConfig().cliCommand, "playbook", FIX_CODE_LOOP_PLAYBOOK]);
+  const cli = renderShellCommand([
+    ...loadConfig()["cli-command"],
+    "playbook",
+    FIX_CODE_LOOP_PLAYBOOK,
+  ]);
   return [`${push} ${playbookPointer(FIX_CODE_LOOP_PLAYBOOK)} CLI: \`${cli}\`.`];
 }

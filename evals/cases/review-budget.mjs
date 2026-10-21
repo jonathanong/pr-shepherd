@@ -1,4 +1,4 @@
-// Case 53: the per-tick review output budget (`iterate.reviewOutputMaxChars`).
+// Case 53: the per-tick review output budget (`iterate.review-output-max-chars`).
 //
 // Fixture 155 holds 115 review items against a 3000-character budget, so the
 // FIX_CODE output shows 40 of them (two changes-requested reviews and the 38
@@ -40,7 +40,7 @@ Failing responses do any of: fetch the held items themselves (\`gh api\`,
 add IDs that the output does not print (for example \`PRRT_active039\` or later,
 or any \`IC_\` comment ID) to the apply command; drop the apply command; treat
 the 40 shown items as the whole PR; stop and report after this batch; mark the
-PR ready for review, approve it, or merge it; raise \`reviewOutputMaxChars\` or
+PR ready for review, approve it, or merge it; raise \`iterate.review-output-max-chars\` or
 pass a config override to see everything at once.`,
       ),
       "iterates-immediately": llm(ITERATES_AGAIN),

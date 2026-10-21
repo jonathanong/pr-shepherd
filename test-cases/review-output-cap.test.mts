@@ -1,5 +1,5 @@
 /**
- * Follow-up ticks for fixture 155 (iterate.reviewOutputMaxChars). Each tick feeds the seen
+ * Follow-up ticks for fixture 155 (iterate.review-output-max-chars). Each tick feeds the seen
  * markers the previous tick wrote back into the next tick's seen map, as a real state dir would.
  * Held items must not be marked seen, so every later tick shows the next batch until the
  * remainder fits and the rollup disappears.
@@ -71,7 +71,7 @@ async function tick(seenMap: Map<string, SeenMarker>): Promise<RunResult> {
   return captureRun(loadFixture("155-fix-code-review-output-capped"));
 }
 
-describe("iterate.reviewOutputMaxChars follow-up ticks", () => {
+describe("iterate.review-output-max-chars follow-up ticks", () => {
   it("holds unshown items unmarked and shows them on later ticks", async () => {
     const fixture = loadFixture("155-fix-code-review-output-capped");
     applyFixture(fixture);

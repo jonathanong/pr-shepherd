@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const { pollConfig } = vi.hoisted(() => ({
   pollConfig: {
-    intervalSeconds: 30,
-    stackIntervalFactor: 4,
-    timeoutSeconds: 90,
-    debounceSeconds: 0,
-    quietStatus: false,
+    "interval-seconds": 30,
+    "stack-interval-factor": 4,
+    "timeout-seconds": 90,
+    "debounce-seconds": 0,
+    "quiet-status": false,
   },
 }));
 
@@ -23,8 +23,8 @@ vi.mock("./github/client.mts", () => ({
 vi.mock("./config/load.mts", () => ({
   loadConfig: () => ({
     poll: pollConfig,
-    watch: { readyDelayMinutes: 10, graphqlQuotaWarnings: [] },
-    iterate: { stallTimeoutMinutes: 60 },
+    iterate: { "ready-delay-minutes": 10, "stall-timeout-minutes": 60 },
+    quotaWarningBands: [],
   }),
 }));
 
@@ -60,11 +60,11 @@ beforeEach(() => {
   vi.useFakeTimers();
   process.exitCode = undefined;
   Object.assign(pollConfig, {
-    intervalSeconds: 30,
-    stackIntervalFactor: 4,
-    timeoutSeconds: 90,
-    debounceSeconds: 0,
-    quietStatus: false,
+    "interval-seconds": 30,
+    "stack-interval-factor": 4,
+    "timeout-seconds": 90,
+    "debounce-seconds": 0,
+    "quiet-status": false,
   });
   mockRunAggregatePoll.mockResolvedValue(aggregateResult);
   vi.spyOn(process.stdout, "write").mockImplementation(() => true);
@@ -123,7 +123,7 @@ describe("poll interval periods", () => {
   });
 
   it("keeps a fractional stack product instead of rounding it to zero", async () => {
-    Object.assign(pollConfig, { intervalSeconds: 0.2, stackIntervalFactor: 2 });
+    Object.assign(pollConfig, { "interval-seconds": 0.2, "stack-interval-factor": 2 });
 
     await main(["node", "shepherd", "stack", "43"]);
 

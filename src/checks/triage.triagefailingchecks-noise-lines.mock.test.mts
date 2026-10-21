@@ -16,7 +16,7 @@ import {
 registerHooks();
 
 function config(ignoreLogLines: string[] = []) {
-  return { checks: { ignoreLogLines } };
+  return { checks: { "ignore-log-lines": ignoreLogLines } };
 }
 
 beforeEach(() => {
@@ -46,7 +46,7 @@ function mockJobAndLog(): void {
     .mockResolvedValueOnce(makeTextResponse(SAMPLE_LOG));
 }
 
-describe("triageFailingChecks — log excerpt noise stripping (checks.ignoreLogLines)", () => {
+describe("triageFailingChecks — log excerpt noise stripping (checks.ignore-log-lines)", () => {
   it("strips nothing by default — Shepherd ships no built-in noise patterns", async () => {
     mockJobAndLog();
 
@@ -57,7 +57,7 @@ describe("triageFailingChecks — log excerpt noise stripping (checks.ignoreLogL
     expect(excerpt).toContain("Duration  73.73s (transform 4.31s, setup 2.90s)");
   });
 
-  it("drops lines matching a configured checks.ignoreLogLines pattern", async () => {
+  it("drops lines matching a configured checks.ignore-log-lines pattern", async () => {
     mockLoadConfig.mockReturnValue(config(["^⎯{3,}", "^Duration\\s"]));
     mockJobAndLog();
 

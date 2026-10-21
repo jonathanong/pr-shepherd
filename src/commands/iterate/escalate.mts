@@ -80,7 +80,7 @@ export function checkEscalateTriggers(
   threadAttempts: Record<string, number>,
 ): EscalateCheck {
   const triggers: EscalateTrigger[] = [];
-  const maxAttempts = loadConfig().iterate.fixAttemptsPerThread;
+  const maxAttempts = loadConfig().iterate["triage-attempts-per-thread"];
 
   // Trigger 1: fix thrash — same thread dispatched too many times without resolving.
   const thrashThreads = actionableThreads.filter((t) => (threadAttempts[t.id] ?? 0) >= maxAttempts);
@@ -304,7 +304,7 @@ export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: st
     return `Could not determine the PR's base branch${reason} — automated rebases are paused because branch safety is unclear. Run the rebase manually against the PR's real target branch.`;
   }
   if (triggers.includes("fix-thrash")) {
-    const attempts = loadConfig().iterate.fixAttemptsPerThread;
+    const attempts = loadConfig().iterate["triage-attempts-per-thread"];
     return `The same thread(s) remain unresolved after their pending review commands were returned for ${attempts} FIX_CODE ticks. Automated iteration is paused for a manual decision.`;
   }
   return "Ambiguous state — automated handling cannot proceed safely. Inspect the PR and act manually.";

@@ -3,8 +3,9 @@ import { loadConfig } from "../config/load.mts";
 import { sleep } from "../util/sleep.mts";
 
 export async function waitForSha(pr: number, repo: RepoInfo, expectedSha: string): Promise<void> {
-  const { intervalMs: SHA_POLL_INTERVAL_MS, maxAttempts: SHA_POLL_MAX_ATTEMPTS } =
-    loadConfig().resolve.shaPoll;
+  const apply = loadConfig().apply;
+  const SHA_POLL_INTERVAL_MS = apply["sha-poll-interval-seconds"] * 1000;
+  const SHA_POLL_MAX_ATTEMPTS = apply["sha-poll-max-attempts"];
   let lastSha: string | undefined;
   for (let attempt = 0; attempt < SHA_POLL_MAX_ATTEMPTS; attempt++) {
     try {

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { testConfig } from "../../test-helpers/config/test-config.mts";
 
 const { mockLoadConfig } = vi.hoisted(() => ({ mockLoadConfig: vi.fn() }));
 vi.mock("../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
@@ -40,13 +41,9 @@ function draft(): RawSummaryPr {
 
 describe("draft stack poll commands", () => {
   beforeEach(() => {
-    mockLoadConfig.mockReturnValue({
-      cliCommand: ["pr-shepherd"],
-      actions: { autoMarkReady: true, workWhileQueued: false },
-      botUsernames: [],
-      ignoreChecks: [],
-      checks: { ciTriggerEvents: ["pull_request"] },
-    });
+    mockLoadConfig.mockReturnValue(
+      testConfig({ "bot-usernames": [], checks: { "ci-trigger-events": ["pull_request"] } }),
+    );
   });
 
   it.each([
@@ -55,13 +52,13 @@ describe("draft stack poll commands", () => {
   ] as const)(
     "retains a bounded command for possible stale ancestry when %s",
     async (_case, autoMarkReady, opts) => {
-      mockLoadConfig.mockReturnValue({
-        cliCommand: ["pr-shepherd"],
-        actions: { autoMarkReady, workWhileQueued: false },
-        botUsernames: [],
-        ignoreChecks: [],
-        checks: { ciTriggerEvents: ["pull_request"] },
-      });
+      mockLoadConfig.mockReturnValue(
+        testConfig({
+          "bot-usernames": [],
+          checks: { "ci-trigger-events": ["pull_request"] },
+          "mark-ready": { auto: autoMarkReady },
+        }),
+      );
 
       const item = await summarizePollSummaryPr(draft(), repo, { stackPrNumber: 42, ...opts });
 
@@ -99,14 +96,13 @@ describe("draft stack poll commands", () => {
   });
 
   it("holds a disabled draft while a configured reviewer is pending", async () => {
-    mockLoadConfig.mockReturnValue({
-      cliCommand: ["pr-shepherd"],
-      actions: { autoMarkReady: false, workWhileQueued: false },
-      botUsernames: [],
-      ignoreChecks: [],
-      checks: { ciTriggerEvents: ["pull_request"] },
-      mergeStatus: { blockingReviewerLogins: ["copilot"] },
-    });
+    mockLoadConfig.mockReturnValue(
+      testConfig({
+        "bot-usernames": [],
+        checks: { "ci-trigger-events": ["pull_request"] },
+        "mark-ready": { auto: false, "blocking-reviewer-logins": ["copilot"] },
+      }),
+    );
     const raw = {
       ...draft(),
       latestReviews: { nodes: [{ state: "PENDING", author: { login: "copilot-reviewer" } }] },

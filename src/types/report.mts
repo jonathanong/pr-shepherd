@@ -93,7 +93,7 @@ export interface ShepherdReport {
     ignored?: ClassifiedCheck[];
     filteredNames: string[];
     blockedByFilteredCheck: boolean;
-    ignoredNames?: string[]; // Suppressed by ignoreChecks config; omitted when empty.
+    ignoredNames?: string[]; // Suppressed by checks.ignore config; omitted when empty.
     supersededNames?: string[]; // CANCELLED, superseded by a newer same-workflow run; omitted when empty.
   };
   threads: {
@@ -130,7 +130,7 @@ export interface ShepherdReport {
   /** APPROVED reviews not yet minimized — opt-in minimize target. */
   approvedReviews: Review[];
   /**
-   * Set only when `iterate.reviewOutputMaxChars` held review items back this tick: `shown` of
+   * Set only when `iterate.review-output-max-chars` held review items back this tick: `shown` of
    * `total` review items appear in this report. Held items are absent from every review list,
    * from the generated mutation IDs, and from the seen markers written this tick.
    */

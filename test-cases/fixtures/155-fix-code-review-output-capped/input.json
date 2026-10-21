@@ -1,5 +1,5 @@
 {
-  "description": "115 review items (2 changes-requested reviews, 60 active threads, 25 PR comments, 8 resolved first-look threads, 10 minimized first-look comments, 6 first-look summaries, 4 edited comments) against iterate.reviewOutputMaxChars 3000. Shepherd shows the changes-requested reviews, then active threads oldest first, until the next body would exceed the budget; the rest is held without IDs or seen markers, and the action stays fix_code with a rerun step.",
+  "description": "115 review items (2 changes-requested reviews, 60 active threads, 25 PR comments, 8 resolved first-look threads, 10 minimized first-look comments, 6 first-look summaries, 4 edited comments) against iterate.review-output-max-chars 3000. Shepherd shows the changes-requested reviews, then active threads oldest first, until the next body would exceed the budget; the rest is held without IDs or seen markers, and the action stays fix_code with a rerun step.",
   "batchData": {
     "reviewDecision": "CHANGES_REQUESTED",
     "reviewThreads": [
@@ -1401,7 +1401,7 @@
   },
   "config": {
     "iterate": {
-      "reviewOutputMaxChars": 3000
+      "review-output-max-chars": 3000
     }
   },
   "readyDelayState": {

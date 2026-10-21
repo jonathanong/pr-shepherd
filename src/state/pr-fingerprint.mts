@@ -9,7 +9,7 @@ import type { PrFingerprint } from "../github/fingerprint.mts";
 import type { PrShepherdConfig } from "../config/load.mts";
 import type { ShepherdReport } from "../types.mts";
 
-const VERSION = 4;
+const VERSION = 5;
 
 export interface StoredPrFingerprint {
   version: number;
@@ -44,18 +44,11 @@ export function fingerprintInputDigest(config: PrShepherdConfig): string {
   const hash = createHash("sha256");
   hash.update(
     JSON.stringify({
-      ignoreChecks: config.ignoreChecks,
-      botUsernames: config.botUsernames,
+      "bot-usernames": config["bot-usernames"],
       iterate: config.iterate,
-      watch: { readyDelayMinutes: config.watch.readyDelayMinutes },
       checks: config.checks,
-      mergeStatus: config.mergeStatus,
-      actions: {
-        autoMinimizeSuppressed: config.actions.autoMinimizeSuppressed,
-        autoMarkReady: config.actions.autoMarkReady,
-        neverCancelRuns: config.actions.neverCancelRuns,
-        workWhileQueued: config.actions.workWhileQueued,
-      },
+      "mark-ready": config["mark-ready"],
+      actions: config.actions,
       standardRules:
         (config.standardRules?.length ?? 0) > 0
           ? { names: config.standardRules, version: readPackageVersion() }

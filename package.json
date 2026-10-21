@@ -37,6 +37,7 @@
     ".grok-plugin/**",
     ".agents/plugins/marketplace.json",
     "marketplace.json",
+    "pr-shepherd.schema.json",
     "README.md",
     "LICENSE"
   ],

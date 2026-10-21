@@ -1,0 +1,361 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "number",
+      "const": 1
+    },
+    "github": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "transport": {
+          "default": "auto",
+          "type": "string",
+          "enum": [
+            "auto",
+            "graphql",
+            "rest"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "cli-command": {
+      "default": [
+        "pr-shepherd"
+      ],
+      "minItems": 1,
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "\\S"
+      }
+    },
+    "bot-usernames": {
+      "default": [
+        "chatgpt-connector",
+        "openai-codex",
+        "codex",
+        "claude",
+        "copilot-pull-request-reviewer",
+        "gemini-code-assist",
+        "coderabbitai",
+        "greptile-apps",
+        "qodo-merge-pro",
+        "deepsource-io",
+        "sonarqubecloud",
+        "what-the-diff"
+      ],
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "checks": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "ignore": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "never-ignore": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ci-trigger-events": {
+          "default": [
+            "pull_request",
+            "pull_request_target"
+          ],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ignore-log-lines": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "regex"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "iterate": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "triage-attempts-per-thread": {
+          "default": 3,
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        },
+        "stall-timeout-minutes": {
+          "default": 60,
+          "type": "number",
+          "minimum": 0
+        },
+        "ready-delay-minutes": {
+          "default": 0,
+          "type": "number",
+          "minimum": 0
+        },
+        "minimize-approvals": {
+          "default": false,
+          "type": "boolean"
+        },
+        "minimize-comments": {
+          "default": "bots",
+          "type": "string",
+          "enum": [
+            "all",
+            "bots",
+            "none"
+          ]
+        },
+        "behind-base-hint": {
+          "default": "",
+          "type": "string"
+        },
+        "review-output-max-chars": {
+          "default": 50000,
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "resolve-other-human-threads": {
+          "default": "none",
+          "type": "string",
+          "enum": [
+            "none",
+            "outdated",
+            "always"
+          ]
+        },
+        "instructions": {
+          "default": "inline",
+          "type": "string",
+          "enum": [
+            "inline",
+            "playbook"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "poll": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "interval-seconds": {
+          "default": 60,
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "stack-interval-factor": {
+          "default": 2,
+          "type": "number",
+          "minimum": 1
+        },
+        "timeout-seconds": {
+          "default": 270,
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "debounce-seconds": {
+          "default": 60,
+          "type": "number",
+          "minimum": 0
+        },
+        "quiet-status": {
+          "default": false,
+          "type": "boolean"
+        },
+        "reconcile-seconds": {
+          "default": 900,
+          "type": "number",
+          "minimum": 0
+        },
+        "quota-warnings": {
+          "default": [
+            {
+              "remaining-percent": 30,
+              "interval-factor": 2
+            },
+            {
+              "remaining-percent": 20,
+              "interval-factor": 5
+            },
+            {
+              "remaining-percent": 10,
+              "interval-factor": 10
+            }
+          ],
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "remaining-percent": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "interval-minutes": {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              "interval-factor": {
+                "type": "number",
+                "minimum": 1
+              }
+            },
+            "required": [
+              "remaining-percent"
+            ],
+            "additionalProperties": false,
+            "anyOf": [
+              {
+                "required": [
+                  "interval-minutes"
+                ]
+              },
+              {
+                "required": [
+                  "interval-factor"
+                ]
+              }
+            ]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "apply": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "sha-poll-interval-seconds": {
+          "default": 2,
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "sha-poll-max-attempts": {
+          "default": 10,
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "additionalProperties": false
+    },
+    "mark-ready": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "auto": {
+          "default": true,
+          "type": "boolean"
+        },
+        "blocking-reviewer-logins": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "merge": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": [
+            "merge",
+            "squash",
+            "rebase"
+          ]
+        },
+        "command-args": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string",
+            "not": {
+              "pattern": "^(?:--repo(?:=|$)|-R|--auto(?:=|$)|--disable-auto(?:=|$)|--match-head-commit(?:=|$)|--admin(?:=|$)|--body-file(?:=|$)|-F|--help(?:=|$)|-h)"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "actions": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "auto-minimize-suppressed": {
+          "default": true,
+          "type": "boolean"
+        },
+        "work-while-queued": {
+          "default": false,
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "classify": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "standard": {
+          "default": {},
+          "type": "object",
+          "propertyNames": {
+            "type": "string",
+            "enum": [
+              "all",
+              "coderabbit-notices",
+              "codecov-report",
+              "codex-notices",
+              "dependabot-notices",
+              "gemini-notices",
+              "kilo-no-issues",
+              "sourcery-notices"
+            ]
+          },
+          "additionalProperties": {
+            "type": "boolean"
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "anyOf": [
+    {
+      "maxProperties": 0
+    },
+    {
+      "required": [
+        "version"
+      ]
+    }
+  ],
+  "title": "pr-shepherd configuration"
+}

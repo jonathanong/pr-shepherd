@@ -26,6 +26,7 @@ import {
   mockUpdateReadyDelay,
   registerIterateHooks,
 } from "../../test-helpers/commands/iterate-test-support.mts";
+import { testConfig } from "../../test-helpers/config/test-config.mts";
 import type { IterateResult } from "../types.mts";
 import { runIterate } from "./iterate/index.mts";
 
@@ -369,6 +370,23 @@ describe("runIterate — merge", () => {
     expectStackedRoute(result, { position: 1, size: 3, number: 7, base: "main" });
   });
 
+  it("routes a stacked PR with the v1 default ready delay of 0", async () => {
+    mockLoadConfig.mockReturnValue(testConfig());
+    mockStackedReady("abc123", { number: 7, size: 3, position: 1, baseRefName: "main" });
+
+    const result = await runIterate(makeOpts({ merge: true, readyDelaySeconds: undefined }));
+
+    expect(mockUpdateReadyDelay).toHaveBeenCalledWith(
+      42,
+      true,
+      0,
+      "owner",
+      "repo",
+      expect.objectContaining({ headSha: "abc123" }),
+    );
+    expectStackedRoute(result, { position: 1, size: 3, number: 7, base: "main" });
+  });
+
   it("routes a mid-stack PR to complete-stack reconciliation", async () => {
     mockStackedReady("def456", { number: 7, size: 3, position: 2, baseRefName: "stack/7/1" });
 
@@ -378,10 +396,9 @@ describe("runIterate — merge", () => {
   });
 
   it("routes stacked reconciliation through the configured launcher", async () => {
-    mockLoadConfig.mockReturnValue({
-      ...defaultConfig(),
-      cliCommand: ["pnpm", "exec", "pr-shepherd"],
-    });
+    mockLoadConfig.mockReturnValue(
+      defaultConfig({ "cli-command": ["pnpm", "exec", "pr-shepherd"] }),
+    );
     mockStackedReady("abc123", { number: 7, size: 3, position: 1, baseRefName: "main" });
 
     const result = await runIterate(makeOpts({ merge: true }));

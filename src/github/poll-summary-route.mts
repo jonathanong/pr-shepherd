@@ -16,7 +16,7 @@ export function routePollSummary(
   review: PollSummaryReview,
   opts: PollSummaryCommandOptions,
 ): Pick<PollSummaryItem, "action" | "reasons"> {
-  const actions = loadConfig().actions;
+  const config = loadConfig();
   const state = normalizePollSummaryState(raw.state);
   if (state === "MERGED" || state === "CLOSED") {
     return { action: "cancel", reasons: [state.toLowerCase()] };
@@ -26,7 +26,7 @@ export function routePollSummary(
   }
   if ((checks.failing ?? 0) > 0) return { action: "fix_code", reasons: ["failing-checks"] };
   if ((review.actionable ?? 0) > 0) {
-    if (opts.merge && raw.isInMergeQueue && actions.workWhileQueued !== true) {
+    if (opts.merge && raw.isInMergeQueue && config.actions["work-while-queued"] !== true) {
       return { action: "wait", reasons: ["review-work-deferred-while-queued"] };
     }
     return { action: "fix_code", reasons: ["review-work"] };
@@ -57,7 +57,7 @@ export function routePollSummary(
     return { action: "wait", reasons: ["pending-or-unknown"] };
   }
   if (raw.isDraft) {
-    const autoMarkReadyDisabled = opts.noAutoMarkReady || actions.autoMarkReady === false;
+    const autoMarkReadyDisabled = opts.noAutoMarkReady || config["mark-ready"].auto === false;
     if (autoMarkReadyDisabled && (checks.incomplete || review.incomplete))
       return { action: "fix_code", reasons: ["draft-readiness-verification-required"] };
     if (autoMarkReadyDisabled)

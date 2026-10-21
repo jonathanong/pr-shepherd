@@ -20,7 +20,7 @@ export async function summarizePollSummaryReview(
   viewerCanAdminister: boolean | undefined,
 ): Promise<PollSummaryReview> {
   const config = loadConfig();
-  const bots = normalizeBotUsernames(config.botUsernames);
+  const bots = normalizeBotUsernames(config["bot-usernames"]);
   const rules = await loadClassifyRules(getEffectiveCwd(), config.standardRules);
   let actionable = 0;
   let incomplete =

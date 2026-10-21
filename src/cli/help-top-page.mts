@@ -47,18 +47,18 @@ Common flags:
   --help, -h           Print help and exit before any GitHub, git, config, or log I/O.
 
 Iterate flags:
-  --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Example: 15m.
+  --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Default: iterate.ready-delay-minutes (built-in 0). Example: 15m.
   --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
   --no-auto-mark-ready           Leave draft PRs in draft; stop when otherwise ready.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
   --instructions playbook|inline Render fix_code steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
 
 Polling flags (looping commands; in a Claude Code cloud session, CLAUDE_CODE_REMOTE=true, they run one tick like iterate):
-  --interval <duration>          Delay between WAIT ticks. Bare number = seconds. Default: poll.intervalSeconds (built-in 60s). Stack and multi-PR polls multiply that by poll.stackIntervalFactor (built-in 2) unless this flag is set.
-  --timeout <duration>           Poll wall-clock cap for WAIT ticks. Bare number = seconds. Default: poll.timeoutSeconds (built-in 4.5m).
-  --debounce <duration>          Settle window after first FIX_CODE or stack SHEPHERD before returning. Bare number = seconds. Default: poll.debounceSeconds (built-in 60s). 0 disables.
-  --quiet-status                 Print only changed WAIT snapshots. Overrides poll.quietStatus.
-  --no-quiet-status              Print every WAIT snapshot. Overrides poll.quietStatus.
+  --interval <duration>          Delay between WAIT ticks. Bare number = seconds. Default: poll.interval-seconds (built-in 60s). Stack and multi-PR polls multiply that by poll.stack-interval-factor (built-in 2) unless this flag is set.
+  --timeout <duration>           Poll wall-clock cap for WAIT ticks. Bare number = seconds. Default: poll.timeout-seconds (built-in 4.5m).
+  --debounce <duration>          Settle window after first FIX_CODE or stack SHEPHERD before returning. Bare number = seconds. Default: poll.debounce-seconds (built-in 60s). 0 disables.
+  --quiet-status                 Print only changed WAIT snapshots. Overrides poll.quiet-status.
+  --no-quiet-status              Print every WAIT snapshot. Overrides poll.quiet-status.
   --until-terminal               Continue through WAIT/MARK_READY until READY/FIX_CODE/MERGE/CANCEL/ESCALATE or stack SHEPHERD.
 
 Clean variants:

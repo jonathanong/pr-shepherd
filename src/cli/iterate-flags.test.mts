@@ -9,44 +9,19 @@ vi.mock("../config/load.mts", async (importOriginal) => ({
 import type { loadConfig } from "../config/load.mts";
 import { parseIterateFlags } from "./iterate-flags.mts";
 import { EXIT } from "../exit-codes.mts";
+import { testConfig } from "../../test-helpers/config/test-config.mts";
 
 type PrShepherdConfig = ReturnType<typeof loadConfig>;
 
 function defaultConfig(): PrShepherdConfig {
-  return {
-    cliCommand: ["pr-shepherd"],
-    botUsernames: [],
-    ignoreChecks: [],
-    standardRules: [],
-    poll: {
-      intervalSeconds: 60,
-      stackIntervalFactor: 2,
-      timeoutSeconds: 270,
-      debounceSeconds: 60,
-      reconcileSeconds: 900,
-      quietStatus: false,
-    },
-    watch: { readyDelayMinutes: 10, graphqlQuotaWarnings: [] },
-    iterate: {
-      fixAttemptsPerThread: 3,
-      stallTimeoutMinutes: 60,
-      minimizeApprovals: false,
-      minimizeComments: "bots",
-      behindBaseHint: "",
-      reviewOutputMaxChars: 50000,
-      resolveOtherHumanThreads: "none",
-      instructions: "playbook",
-    },
-    resolve: { shaPoll: { intervalMs: 2000, maxAttempts: 10 } },
-    checks: { ciTriggerEvents: ["pull_request"], ignoreLogLines: [] },
-    mergeStatus: { blockingReviewerLogins: [] },
-    actions: {
-      autoMinimizeSuppressed: false,
-      autoMarkReady: false,
-      neverCancelRuns: [],
-      workWhileQueued: false,
-    },
-  };
+  return testConfig({
+    "bot-usernames": [],
+    checks: { "ci-trigger-events": ["pull_request"] },
+    iterate: { "ready-delay-minutes": 10, instructions: "playbook" },
+    poll: { "quota-warnings": [] },
+    "mark-ready": { auto: false },
+    actions: { "auto-minimize-suppressed": false },
+  });
 }
 
 beforeEach(() => {
@@ -67,6 +42,10 @@ describe("parseIterateFlags", () => {
     expect(flags.stallTimeoutSeconds).toBe(3600); // 60m * 60
     expect(flags.noAutoMarkReady).toBe(false);
     expect(flags.merge).toBe(false);
+  });
+
+  it("defaults the ready delay to 0 for the poll loop and iterate with the built-in config", () => {
+    expect(parseIterateFlags([], testConfig()).readyDelaySeconds).toBe(0);
   });
 
   it("parses --ready-delay", () => {

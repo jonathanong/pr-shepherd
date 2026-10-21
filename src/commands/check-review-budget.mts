@@ -45,7 +45,7 @@ const threadItem = (thread: ReviewThread): BudgetItem => ({
 });
 
 /**
- * Applies `iterate.reviewOutputMaxChars` to one tick's review buckets. Priority: changes-requested
+ * Applies `iterate.review-output-max-chars` to one tick's review buckets. Priority: changes-requested
  * reviews, active threads and comments, first-look items, review summaries, edited comments.
  * Approved reviews are opt-in minimize targets, not review work, and are never held.
  * Held items leave every list — the report, the generated mutation IDs, and the seen-marker

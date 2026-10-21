@@ -8,8 +8,7 @@ export function pollCommandFields(
   isDraft: boolean,
   opts: PollSummaryCommandOptions,
 ): Pick<PollSummaryItem, "pollCommand" | "pollProbe"> {
-  const autoMarkReadyDisabled =
-    opts.noAutoMarkReady || loadConfig().actions.autoMarkReady === false;
+  const autoMarkReadyDisabled = opts.noAutoMarkReady || loadConfig()["mark-ready"].auto === false;
   const boundedDraft = isDraft && autoMarkReadyDisabled;
   const url = formatPrUrl(repo, pr);
   // A single tick routes each PR to one `iterate` tick rather than a sleeping poll.

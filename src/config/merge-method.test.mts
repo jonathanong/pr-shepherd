@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { chooseMergeMethod, parseMergeMethod, readAllowedMergeMethods } from "./merge-method.mts";
+import { chooseMergeMethod, readAllowedMergeMethods } from "./merge-method.mts";
 
 describe("readAllowedMergeMethods", () => {
   it("stays unknown when the query did not select the settings", () => {
@@ -61,11 +61,5 @@ describe("chooseMergeMethod", () => {
       unavailable:
         "This repository allows no merge method (merge commits, squash, and rebase are all disabled).",
     });
-  });
-});
-
-describe("parseMergeMethod", () => {
-  it("rejects an unknown method", () => {
-    expect(() => parseMergeMethod("fast-forward")).toThrow(/merge, squash, or rebase/);
   });
 });

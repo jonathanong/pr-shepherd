@@ -2,6 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { testConfig } from "../../test-helpers/config/test-config.mts";
 import { writeCheckBlocker } from "../state/check-blockers.mts";
 import { GitHubRequestError } from "./errors.mts";
 
@@ -81,15 +82,13 @@ beforeEach(async () => {
   stateDir = await mkdtemp(join(tmpdir(), "pr-shepherd-summary-blocker-"));
   process.env["PR_SHEPHERD_STATE_DIR"] = stateDir;
   mockGraphql.mockReset();
-  mockLoadConfig.mockReturnValue({
-    cliCommand: ["pr-shepherd"],
-    botUsernames: [],
-    ignoreChecks: [],
-    checks: { ciTriggerEvents: ["pull_request"] },
-    actions: { autoMarkReady: true, workWhileQueued: false, neverCancelRuns: [] },
-    watch: { readyDelayMinutes: 10 },
-    mergeStatus: { blockingReviewerLogins: [] },
-  });
+  mockLoadConfig.mockReturnValue(
+    testConfig({
+      "bot-usernames": [],
+      checks: { "ci-trigger-events": ["pull_request"] },
+      iterate: { "ready-delay-minutes": 10 },
+    }),
+  );
 });
 
 afterEach(async () => {

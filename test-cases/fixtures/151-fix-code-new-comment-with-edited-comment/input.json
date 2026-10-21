@@ -40,7 +40,7 @@
   },
   "config": {
     "iterate": {
-      "minimizeComments": "none"
+      "minimize-comments": "none"
     }
   },
   "readyDelayState": {
