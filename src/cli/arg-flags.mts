@@ -36,7 +36,6 @@ export const FLAGS_WITH_VALUES = new Set([
 // numeric value to be misidentified as the PR number.
 export const BOOLEAN_FLAGS = new Set([
   "--no-auto-mark-ready",
-  "--no-auto-cancel-actionable",
   "--quiet-status",
   "--no-quiet-status",
   "--until-terminal",

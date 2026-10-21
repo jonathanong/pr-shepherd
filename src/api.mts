@@ -11,7 +11,6 @@ import {
 import type { RestMergeAction, RestMergeStackGuard } from "./github/rest-merge.mts";
 export type { RestMergeStackGuard } from "./github/rest-merge.mts";
 import type { MergeMethod } from "./config/merge-method.mts";
-import { runCommitSuggestion } from "./commands/commit-suggestion.mts";
 import { runSuggestionPatches } from "./commands/suggestion-patches.mts";
 import { runIterateForMode, runPollSummaryForMode } from "./commands/event-mode.mts";
 import { runJournal, type JournalResult } from "./commands/journal/index.mts";
@@ -36,7 +35,6 @@ import {
 import type { ResolveResult } from "./comments/resolve.mts";
 import type {
   BuildSuggestionPatchesResult,
-  CommitSuggestionResult,
   IterateCommandOptions,
   IterateResult,
   PollSummaryResult,
@@ -149,14 +147,6 @@ export interface ApplyResult {
   operations: ApplyOperationResult[];
 }
 
-export interface BuildSuggestionPatchInput {
-  transport?: GithubTransport;
-  pr?: PrReference;
-  threadId: string;
-  message: string;
-  description?: string;
-}
-
 export interface SuggestionPatchInput {
   threadId: string;
   message: string;
@@ -181,8 +171,6 @@ export interface PrShepherd {
   apply(input: ApplyInput): Promise<ApplyResult>;
   buildSuggestionPatches(input: BuildSuggestionPatchesInput): Promise<BuildSuggestionPatchesResult>;
   getJournal(input: GetJournalInput): Promise<ShepherdJournalExtraction>;
-  /** Compatibility adapter; prefer buildSuggestionPatches. */
-  buildSuggestionPatch(input: BuildSuggestionPatchInput): Promise<CommitSuggestionResult>;
 }
 
 /** Raised before any API mutation when an input cannot be validated. */
@@ -328,15 +316,6 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
           }
         }
         return { operations: results };
-      });
-    },
-
-    buildSuggestionPatch(input: BuildSuggestionPatchInput) {
-      validateSuggestionPatchInput(input);
-      const { pr: _pr, ...options } = input;
-      return runInClient(input, async () => {
-        const target = resolvePrReference(input.pr);
-        return runCommitSuggestion({ ...options, ...target, format: "json" });
       });
     },
 
@@ -536,21 +515,6 @@ function validateMarkFilesViewed(operation: MarkFilesViewedOperation): void {
       );
     }
   }
-}
-
-function validateSuggestionPatchInput(input: BuildSuggestionPatchInput): void {
-  if (!input || typeof input.threadId !== "string" || input.threadId.trim() === "") {
-    throw new PrShepherdValidationError("buildSuggestionPatch.threadId is required");
-  }
-  if (typeof input.message !== "string" || input.message.trim() === "") {
-    throw new PrShepherdValidationError(
-      "buildSuggestionPatch.message is required and must be non-empty",
-    );
-  }
-  if (input.description !== undefined && typeof input.description !== "string") {
-    throw new PrShepherdValidationError("buildSuggestionPatch.description must be a string");
-  }
-  validatePrReference(input.pr);
 }
 
 function validateSuggestionPatchesInput(input: BuildSuggestionPatchesInput): void {

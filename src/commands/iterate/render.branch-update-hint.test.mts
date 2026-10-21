@@ -27,8 +27,6 @@ function render(opts: {
     RESOLVE,
     opts.hasConflicts,
     42,
-    0,
-    [],
     [],
     [],
     [],

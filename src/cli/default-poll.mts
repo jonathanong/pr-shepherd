@@ -19,7 +19,6 @@ const DEFAULT_POLL_FLAGS_WITH_VALUES = new Set([
 const DEFAULT_POLL_BOOLEAN_FLAGS = new Set([
   "--verbose",
   "--no-auto-mark-ready",
-  "--no-auto-cancel-actionable",
   "--quiet-status",
   "--no-quiet-status",
   "--until-terminal",

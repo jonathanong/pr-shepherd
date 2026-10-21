@@ -131,7 +131,7 @@ export async function replaceFailedMergeRequest(
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
       persisted = parseRecord(await readFile(`${stem}.json`, "utf8"));
       if (!persisted.replacementToken)
-        throw new Error("Legacy merge successor has no recovery token; reconcile its outcome");
+        throw new Error("Merge successor has no recovery token; reconcile its outcome");
       if (
         persisted.options.requireSha !== next.options.requireSha ||
         persisted.options.mergeAction !== next.options.mergeAction ||

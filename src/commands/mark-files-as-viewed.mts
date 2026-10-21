@@ -45,8 +45,6 @@ export interface MarkFilesAsViewedResult {
   errors: string[];
   rateLimit?: ResolveRateLimitStop;
   unmarkedPaths?: string[];
-  /** @deprecated Explicit file-view requests are attempted; GitHub authorizes the mutation. */
-  authorizationSkipped?: "unverifiable";
 }
 
 interface GraphQlErrorLike {
@@ -103,7 +101,7 @@ const TEST_FILE_RE =
 // Keep mutation batches small so rate-limit stops leave an ordered pending list.
 const MARK_FILES_CHUNK_SIZE = 10;
 
-/** @deprecated Hidden implementation for `mark-files-as-viewed`; use `apply files`. */
+/** Implementation for `apply files`. */
 export async function runMarkFilesAsViewed(
   opts: MarkFilesAsViewedOptions,
 ): Promise<MarkFilesAsViewedResult> {

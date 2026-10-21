@@ -10,7 +10,6 @@ Iterate flags:
   --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Example: 15m.
   --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
   --no-auto-mark-ready           Leave draft PRs in draft; stop when otherwise ready.
-  --no-auto-cancel-actionable    Legacy no-op; workflow runs are never cancelled.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
   --instructions playbook|inline Render fix_code steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
   --poll-mode auto|poll|event    event runs one tick, never sleeps, and prints nextCheck; auto picks event when CLAUDE_CODE_REMOTE=true. Default: poll.mode (auto).
@@ -40,7 +39,8 @@ Exit codes:
   15  MERGE
   A command/validation/GitHub failure exits with a sysexits.h code instead (see docs/exit-codes.md).`;
 
-export const POLL_USAGE = `pr-shepherd poll
+/** Public help page for the default PR polling invocation. */
+export const DEFAULT_USAGE = `pr-shepherd [PR]
 
 Run iterate repeatedly for one PR, or read compact summaries for an explicit PR set or native
 GitHub stack. Aggregate mode returns when any row needs work, every row is terminal, or timeout.
@@ -51,8 +51,8 @@ iterating at --interval, then runs one more tick after the window and returns th
 With --until-terminal or --merge, poll also continues through MARK_READY.
 
 Usage:
-  pr-shepherd poll [PR ...] [poll-flags] [iterate-flags]
-  pr-shepherd poll --stack PR [poll-flags] [iterate-flags]
+  pr-shepherd [PR ...] [poll-flags] [iterate-flags]
+  pr-shepherd --stack PR [poll-flags] [iterate-flags]
 
 Poll flags:
   --stack PR                    Select all entries in PR's native GitHub stack, bottom to top.
@@ -67,7 +67,6 @@ Forwarded iterate flags:
   --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Example: 15m.
   --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
   --no-auto-mark-ready           Leave draft PRs in draft; stop when otherwise ready.
-  --no-auto-cancel-actionable    Legacy no-op; workflow runs are never cancelled.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
   --instructions playbook|inline Render fix_code steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
   --poll-mode auto|poll|event    event runs one tick, never sleeps, and prints nextCheck; auto picks event when CLAUDE_CODE_REMOTE=true. Default: poll.mode (auto).
@@ -93,8 +92,3 @@ Exit codes: same as iterate (the final tick's action/reason decides the code).
   15  MERGE
   16  SHEPHERD (--stack only: run the listed one-PR sessions, then rerun the selector)
   A command/validation/GitHub failure exits with a sysexits.h code instead (see docs/exit-codes.md).`;
-
-/** Public help page for the default PR polling invocation. */
-export const DEFAULT_USAGE = POLL_USAGE.replace(/^pr-shepherd poll$/m, "pr-shepherd [PR]")
-  .replace(/^ {2}pr-shepherd poll \[PR \.\.\.\]/m, "  pr-shepherd [PR ...]")
-  .replace(/^ {2}pr-shepherd poll --stack/m, "  pr-shepherd --stack");

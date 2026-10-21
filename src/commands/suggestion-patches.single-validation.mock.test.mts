@@ -8,12 +8,12 @@ import {
   mockExecFile,
   mockFetchBatch,
   mockGetCurrentBranch,
-} from "../../test-helpers/commands/commit-suggestion.test-support.mts";
-import { runCommitSuggestion } from "./commit-suggestion.mts";
+  runSingleSuggestion,
+} from "../../test-helpers/commands/suggestion-patches.single.test-support.mts";
 
 registerHooks();
 
-describe("runCommitSuggestion — validation", () => {
+describe("runSuggestionPatches (single) — validation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetCurrentBranch.mockResolvedValue("feature/foo");
@@ -23,19 +23,19 @@ describe("runCommitSuggestion — validation", () => {
 
   it("throws when --thread-id is empty", async () => {
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "", message: "fix" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "", message: "fix" }),
     ).rejects.toThrow("--thread-id is required");
   });
 
   it("throws when --message is empty", async () => {
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "" }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "" }),
     ).rejects.toThrow("--message is required");
   });
 
   it("throws when --message is whitespace only", async () => {
     await expect(
-      runCommitSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "   " }),
+      runSingleSuggestion({ ...GLOBAL_OPTS, threadId: "PRRT_x", message: "   " }),
     ).rejects.toThrow("--message is required");
   });
 });

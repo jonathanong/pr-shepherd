@@ -35,7 +35,7 @@ afterEach(() => {
 
 it("routes explicit PR sets and native stacks to aggregate polling", async () => {
   mockRunAggregatePoll.mockResolvedValue(aggregateResult);
-  await main(["node", "shepherd", "poll", "42", "43"]);
+  await main(["node", "shepherd", "42", "43"]);
   expect(mockRunAggregatePoll).toHaveBeenLastCalledWith(
     expect.objectContaining({
       prNumbers: [42, 43],
@@ -47,7 +47,7 @@ it("routes explicit PR sets and native stacks to aggregate polling", async () =>
     ...aggregateResult,
     selection: { kind: "stack", anchor: 43, stackNumber: 1, stackSize: 0 },
   });
-  await main(["node", "shepherd", "poll", "--stack", "43"]);
+  await main(["node", "shepherd", "--stack", "43"]);
   expect(mockRunAggregatePoll).toHaveBeenLastCalledWith(
     expect.objectContaining({
       stackPrNumber: 43,
@@ -58,7 +58,7 @@ it("routes explicit PR sets and native stacks to aggregate polling", async () =>
 
 it("routes duplicate PR arguments through the authoritative single-PR iterator", async () => {
   mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
-  await main(["node", "shepherd", "poll", "42", "42"]);
+  await main(["node", "shepherd", "42", "42"]);
   expect(mockRunIterate).toHaveBeenCalledWith(expect.objectContaining({ prNumber: 42 }));
   expect(mockRunAggregatePoll).not.toHaveBeenCalled();
 });

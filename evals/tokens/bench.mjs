@@ -961,7 +961,7 @@ out("| --- | --- | --- | --- | --- | --- | --- | --- |");
 const EVENT_LABELS = {
   event: "event",
   eventProxy: "event, hosted webhook proxy (hypothetical)",
-  shepherd: "pr-shepherd poll",
+  shepherd: "pr-shepherd polling",
   gh: "gh CLI",
   mcp: "GitHub MCP",
 };
@@ -979,7 +979,7 @@ out(
   "Per scenario, `GraphQL points / REST core requests · turns` for one occurrence. The proxy column counts only the user's token; its turns are the event arm's.",
 );
 out();
-out("| scenario | weight | wake | pr-shepherd poll | event | event, proxy |");
+out("| scenario | weight | wake | pr-shepherd polling | event | event, proxy |");
 out("| --- | --- | --- | --- | --- | --- |");
 for (const r of rows.filter((r) => !r.setup)) {
   const c = (a, turns) =>
@@ -996,10 +996,10 @@ out(
 );
 out("| --- | --- | --- | --- | --- | --- | --- |");
 for (const [a, label] of Object.entries({
-  shepherd: "pr-shepherd poll, `--until-terminal` (the skill), first hour, seed included",
+  shepherd: "pr-shepherd polling, `--until-terminal` (the skill), first hour, seed included",
   shepherdNoDetectors:
-    "pr-shepherd poll, `--until-terminal`, without detectors, not READY, one-page reads (e.g. a thread with a reply)",
-  shepherdBounded: "pr-shepherd poll, legacy bounded `--timeout 4.5m` (not the skill)",
+    "pr-shepherd polling, `--until-terminal`, without detectors, not READY, one-page reads (e.g. a thread with a reply)",
+  shepherdBounded: "pr-shepherd polling, legacy bounded `--timeout 4.5m` (not the skill)",
   event: "event",
   eventProxy: "event, hosted webhook proxy (hypothetical)",
 })) {

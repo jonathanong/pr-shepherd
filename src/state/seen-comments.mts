@@ -37,8 +37,8 @@ export function hashBody(body: string): string {
  * - "new"       — no marker exists; surface the body and write the marker.
  * - "edited"    — marker exists but stored hash differs from the current body;
  *                 surface the updated body and update the marker hash.
- * - "unchanged" — marker exists and hash matches (or marker has no hash, which
- *                 is treated conservatively as unchanged).
+ * - "unchanged" — marker exists and hash matches (or marker has no hash and no
+ *                 inline thread IDs, which is treated conservatively as unchanged).
  */
 export function classifyItem(
   id: string,
@@ -71,9 +71,8 @@ export async function loadSeenSet(key: StateKey): Promise<Set<string>> {
  * Used when the caller needs the stored bodyHash to detect in-place edits.
  * Returns an empty Map if the directory does not yet exist.
  *
- * Map keys are the stored `id` field when present (guarding against
- * case-insensitive filesystem collisions), falling back to the filename for
- * legacy markers that predate this field.
+ * Map keys are the stored `id` field (guarding against case-insensitive
+ * filesystem collisions); markers without one are skipped.
  */
 export async function loadSeenMap(key: StateKey): Promise<Map<string, SeenMarker>> {
   const map = new Map<string, SeenMarker>();
@@ -85,14 +84,7 @@ export async function loadSeenMap(key: StateKey): Promise<Map<string, SeenMarker
       try {
         const raw = await readFile(join(dir, entry), "utf8");
         const marker = JSON.parse(raw) as SeenMarker;
-        // Prefer the stored id field; fall back to filename stem for legacy markers.
-        const mapKey = typeof marker.id === "string" ? marker.id : entry.slice(0, -5);
-        // Hash-based markers (those with an id field) take priority over legacy
-        // filename-based markers so that a stale legacy file cannot overwrite a
-        // newer hash-based entry that maps to the same key.
-        if (!map.has(mapKey) || typeof marker.id === "string") {
-          map.set(mapKey, marker);
-        }
+        if (typeof marker.id === "string") map.set(marker.id, marker);
       } catch {
         // unreadable or malformed — skip
       }
@@ -195,7 +187,8 @@ async function writeSeenMarker(
     const unchanged = Object.entries(markerFields).every(([field, value]) =>
       markerFieldEqual(existing?.[field], value),
     );
-    if (existing !== null && unchanged) return;
+    // A marker without its `id` is ignored by loadSeenMap, so rewrite it even when unchanged.
+    if (existing !== null && unchanged && existing.id === id) return;
     const seenAt = existing?.seenAt ?? Date.now();
     tmp = `${path}.${randomUUID()}.tmp`;
     // Store `id` in the payload so loadSeenMap can key by the original ID

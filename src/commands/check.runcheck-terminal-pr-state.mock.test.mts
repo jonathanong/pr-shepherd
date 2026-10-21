@@ -4,7 +4,7 @@ import {
   BASE_OPTS,
   makeBatchData,
   makeCheck,
-  mockAutoResolveOutdated,
+  mockAutoResolveThreads,
   mockFetchPrBatch,
   mockFetchStartupFailureChecks,
   mockGetMergeableState,
@@ -45,7 +45,7 @@ describe("runCheck — terminal PR state", () => {
     expect(mockGetMergeableState).not.toHaveBeenCalled();
     expect(mockFetchStartupFailureChecks).not.toHaveBeenCalled();
     expect(mockTriageFailingChecks).not.toHaveBeenCalled();
-    expect(mockAutoResolveOutdated).not.toHaveBeenCalled();
+    expect(mockAutoResolveThreads).not.toHaveBeenCalled();
     expect(mockLoadSeenMap).not.toHaveBeenCalled();
     expect(mockMarkSeen).not.toHaveBeenCalled();
   });
@@ -72,7 +72,7 @@ describe("runCheck — terminal PR state", () => {
     expect(mockGetMergeableState).not.toHaveBeenCalled();
     expect(mockFetchStartupFailureChecks).not.toHaveBeenCalled();
     expect(mockTriageFailingChecks).not.toHaveBeenCalled();
-    expect(mockAutoResolveOutdated).not.toHaveBeenCalled();
+    expect(mockAutoResolveThreads).not.toHaveBeenCalled();
     expect(mockLoadSeenMap).not.toHaveBeenCalled();
     expect(mockMarkSeen).not.toHaveBeenCalled();
   });

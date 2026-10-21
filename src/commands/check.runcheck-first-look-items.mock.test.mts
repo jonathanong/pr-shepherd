@@ -3,7 +3,7 @@ import {
   registerHooks,
   BASE_OPTS,
   makeBatchData,
-  mockAutoResolveOutdated,
+  mockAutoResolveThreads,
   mockFetchPrBatch,
   mockLoadSeenMap,
   mockMarkSeen,
@@ -75,9 +75,9 @@ describe("runCheck — first-look items", () => {
   it("does not auto-resolve outdated threads during check", async () => {
     const outdated = makeThread({ id: "t-auto", isOutdated: true });
     mockFetchPrBatch.mockResolvedValue({ data: makeBatchData({ reviewThreads: [outdated] }) });
-    mockAutoResolveOutdated.mockResolvedValue({ resolved: ["t-auto"], errors: [] });
+    mockAutoResolveThreads.mockResolvedValue({ resolved: ["t-auto"], errors: [] });
     const report = await runCheck({ ...BASE_OPTS, autoResolve: true });
-    expect(mockAutoResolveOutdated).not.toHaveBeenCalled();
+    expect(mockAutoResolveThreads).not.toHaveBeenCalled();
     expect(report.threads.firstLook[0]?.autoResolved).toBeUndefined();
     expect(report.threads.resolutionOnly.map((t) => t.id)).toEqual(["t-auto"]);
   });

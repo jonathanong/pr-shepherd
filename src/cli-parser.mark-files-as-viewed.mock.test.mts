@@ -39,7 +39,8 @@ describe("main — mark-files-as-viewed", () => {
     await main([
       "node",
       "shepherd",
-      "mark-files-as-viewed",
+      "apply",
+      "files",
       "42",
       "src/a.ts",
       "--tests",
@@ -65,7 +66,7 @@ describe("main — mark-files-as-viewed", () => {
       markedPaths: ["src/a.test.ts"],
     });
 
-    await main(["node", "shepherd", "mark-files-as-viewed", "42", "--tests", "--format=json"]);
+    await main(["node", "shepherd", "apply", "files", "42", "--tests", "--format=json"]);
 
     expect(JSON.parse(getStdout())).toMatchObject({ prNumber: 42, markedPaths: ["src/a.test.ts"] });
   });
@@ -81,11 +82,11 @@ describe("main — mark-files-as-viewed", () => {
   });
 
   it("rejects missing selectors", async () => {
-    await main(["node", "shepherd", "mark-files-as-viewed", "42"]);
+    await main(["node", "shepherd", "apply", "files", "42"]);
 
     expect(mockRunMarkFilesAsViewed).not.toHaveBeenCalled();
     expect(stderrSpy).toHaveBeenCalledWith(
-      "pr-shepherd: mark-files-as-viewed: provide at least one file, --tests, or --match <regex>\n",
+      "pr-shepherd: apply files: provide at least one file, --tests, or --match <regex>\n",
     );
     expect(process.exitCode).toBe(EXIT.USAGE);
   });

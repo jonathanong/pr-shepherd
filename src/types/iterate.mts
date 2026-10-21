@@ -24,7 +24,6 @@ import type {
 import type { MergeRequirements } from "./merge-requirements.mts";
 import type { EscalateDetails } from "./escalate.mts";
 import type { MergeCommandPlan } from "./merge-action.mts";
-import type { ProtectedRun } from "./protected-run.mts";
 import type { ApiUsage, GraphqlQuotaWarning } from "./api-usage.mts";
 import type { NextCheck } from "./next-check.mts";
 
@@ -173,10 +172,6 @@ interface FixRebaseAndPush {
   resolveOnlyCommand?: ResolveCommand;
   /** Ordered steps for the model to follow. */
   instructions: string[];
-  /** Reserved compatibility field. Always empty because Shepherd cannot verify workflow-cancellation authorization. */
-  inProgressRunIds: string[];
-  /** Reserved compatibility field. Always empty because Shepherd never recommends workflow cancellation. */
-  protectedRuns: ProtectedRun[];
   /** Requeue command emitted after merge-group remediation. */
   requeue?: MergeCommandPlan;
   /** Acknowledge an unrelated native-stack queue failure before fresh READY validation. */
@@ -192,7 +187,6 @@ interface FixRebaseAndPush {
 export interface IterateResultFixCode extends IterateResultBase {
   action: "fix_code";
   fix: FixRebaseAndPush;
-  cancelled: string[];
 }
 
 interface IterateResultMarkReady extends IterateResultBase {
@@ -223,11 +217,7 @@ export type IterateResult =
 export interface IterateCommandOptions extends GlobalOptions {
   readyDelaySeconds?: number;
   noAutoMarkReady?: boolean;
-  /** Legacy no-op retained for API compatibility; workflow runs are never cancelled. */
-  noAutoCancelActionable?: boolean;
   stallTimeoutSeconds?: number;
-  /** Legacy per-invocation no-op retained for API compatibility. */
-  neverCancelRuns?: string[];
   /**
    * Internal. `false` skips seen-marker writes (poll's discarded debounce ticks). Set
    * only by `runPollCore`; excluded from the public `IterateInput` in api.mts.

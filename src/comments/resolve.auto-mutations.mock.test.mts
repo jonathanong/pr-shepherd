@@ -1,20 +1,20 @@
 import { describe, it, expect } from "vitest";
 import { registerHooks, mockGraphql } from "../../test-helpers/comments/resolve.test-support.mts";
-import { autoMinimizeComments, autoResolveOutdated } from "./resolve.mts";
+import { autoMinimizeComments, autoResolveThreads } from "./resolve.mts";
 
 registerHooks();
 
-describe("autoResolveOutdated", () => {
+describe("autoResolveThreads", () => {
   it("returns resolved IDs and empty errors on success", async () => {
     const ids = ["t-1", "t-2", "t-3"];
-    const { resolved, errors } = await autoResolveOutdated(ids);
+    const { resolved, errors } = await autoResolveThreads(ids);
     expect(resolved).toEqual(ids);
     expect(errors).toHaveLength(0);
   });
 
   it("splits mutations into 10-op graphql calls", async () => {
     const ids = Array.from({ length: 25 }, (_, i) => `t-${i}`);
-    await autoResolveOutdated(ids);
+    await autoResolveThreads(ids);
     expect(mockGraphql).toHaveBeenCalledTimes(3);
     const doc = mockGraphql.mock.calls[0]?.[0] as string;
     expect(doc).toContain("mutation BulkApply");

@@ -1,10 +1,10 @@
-export const LOG_FILE_USAGE = `pr-shepherd log-file
+export const LOG_FILE_USAGE = `pr-shepherd admin log-file
 
 Print the per-worktree append-only debug log path for the current repository.
 The log is created by the first non-help pr-shepherd command that initializes logging.
 
 Usage:
-  pr-shepherd log-file [--format text|json] [--poll-mode auto|poll|event]
+  pr-shepherd admin log-file [--format text|json] [--poll-mode auto|poll|event]
 
 Flags:
   --format text|json   Print a raw path or {"path": "..."} JSON. Default: text.

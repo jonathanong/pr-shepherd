@@ -90,7 +90,6 @@ pr-shepherd --stack 43
 | `--stall-timeout <duration>`           | iterate                      | `iterate.stallTimeoutMinutes` (60); `0` disables.                                                                                                                                                                 |
 | `--merge`                              | iterate                      | Shepherd through readiness, then emit a merge or merge-queue command.                                                                                                                                             |
 | `--no-auto-mark-ready`                 | iterate                      | Leave clean drafts in draft and stop their one-PR session after other work is handled.                                                                                                                            |
-| `--no-auto-cancel-actionable`          | iterate                      | Legacy no-op; workflow runs are never cancelled.                                                                                                                                                                  |
 | `--instructions inline\|playbook`      | iterate                      | `iterate.instructions` (`inline`). `playbook` folds `fix_code`'s invariant commit/push step into a pointer to the "Fix-code loop" playbook.                                                                       |
 | `--poll-mode auto\|poll\|event`        | iterate                      | `poll.mode` (`auto`). `event` (or `auto` under `CLAUDE_CODE_REMOTE=true`) runs one tick with no sleeping or debounce, ignores the polling flags, and prints `pollMode` and `nextCheck`; see [cloud.md](cloud.md). |
 | `--transport auto\|graphql\|rest`      | all                          | `github.transport` (`auto`). See [api.md](api.md).                                                                                                                                                                |
@@ -127,13 +126,8 @@ npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
 | `extract_journal`          | `pr-shepherd journal extract` (takes a `body` string)            |
 | `get_journal`              | none (fetches the PR body, then extracts)                        |
 | `build_suggestion_patches` | `pr-shepherd build-suggestion-patches`                           |
-| `build_suggestion_patch`   | deprecated one-item adapter                                      |
 
 `admin clean` and `admin log-file` are shell administration commands, not MCP tools. Do not call a long-running polling tool: call `iterate` again after the returned work is complete or when the client's scheduler rechecks.
-
-## CLI aliases
-
-`poll`, `resolve`, `build-suggestion-patch`, `commit-suggestion`, `mark-files-as-viewed`, `journal`, `clean`, and `log-file` are deprecated CLI aliases or adapters for the default poll command, `apply review`, `build-suggestion-patches`, `apply files`, `apply journal`, `admin clean`, and `admin log-file`. Prefer MCP `iterate`, `apply`, and `build_suggestion_patches` for agent integrations.
 
 ## Exit codes
 

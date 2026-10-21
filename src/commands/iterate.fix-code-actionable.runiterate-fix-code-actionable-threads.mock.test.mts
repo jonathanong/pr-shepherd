@@ -115,7 +115,6 @@ describe("runIterate — fix_code (actionable threads)", () => {
       expect(result.fix.threads).toHaveLength(2);
       expect(result.fix.actionableComments).toHaveLength(0);
       expect(result.fix.checks).toHaveLength(0);
-      expect(result.cancelled).toHaveLength(0);
       const joined = result.fix.instructions.join("\n");
       expect(joined).toContain("Rerun Shepherd now.");
       expect(joined).not.toContain("## Cancelled runs");

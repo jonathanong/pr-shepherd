@@ -8,7 +8,6 @@ vi.mock("./commands/check.mts", () => ({ runCheck: vi.fn() }));
 vi.mock("./commands/resolve.mts", () => ({
   runResolveMutate: vi.fn(),
 }));
-vi.mock("./commands/commit-suggestion.mts", () => ({ runCommitSuggestion: vi.fn() }));
 vi.mock("./github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
 }));
@@ -48,7 +47,7 @@ describe("main — poll subcommand", () => {
   it("routes 'poll' to runPoll and emits cancel result", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
 
-    await main(["node", "shepherd", "poll", "42"]);
+    await main(["node", "shepherd", "42"]);
 
     expect(mockRunIterate).toHaveBeenCalledTimes(1);
     expect(getStdout()).toContain("[CANCEL]");
@@ -60,7 +59,7 @@ describe("main — poll subcommand", () => {
       .mockResolvedValueOnce(makeIterateResult("wait"))
       .mockResolvedValue(makeIterateResult("cancel"));
 
-    const promise = main(["node", "shepherd", "poll", "42"]);
+    const promise = main(["node", "shepherd", "42"]);
     await vi.advanceTimersByTimeAsync(60_000);
     await promise;
 
@@ -72,7 +71,7 @@ describe("main — poll subcommand", () => {
   it("accepts --interval and --timeout as minute durations", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
 
-    await main(["node", "shepherd", "poll", "42", "--interval", "1m", "--timeout", "4.5m"]);
+    await main(["node", "shepherd", "42", "--interval", "1m", "--timeout", "4.5m"]);
 
     expect(mockRunIterate).toHaveBeenCalledTimes(1);
   });
@@ -80,7 +79,7 @@ describe("main — poll subcommand", () => {
   it("emits JSON output when --format=json", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
 
-    await main(["node", "shepherd", "poll", "42", "--format=json"]);
+    await main(["node", "shepherd", "42", "--format=json"]);
 
     const out = getStdout();
     const parsed = JSON.parse(out);
@@ -90,7 +89,7 @@ describe("main — poll subcommand", () => {
   it("accepts --verbose without error", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
 
-    await main(["node", "shepherd", "poll", "42", "--verbose"]);
+    await main(["node", "shepherd", "42", "--verbose"]);
 
     expect(process.exitCode).not.toBe(1);
     expect(mockRunIterate).toHaveBeenCalledTimes(1);
@@ -101,7 +100,7 @@ describe("main — poll subcommand", () => {
       .mockResolvedValueOnce(makeIterateResult("mark_ready"))
       .mockResolvedValue(makeIterateResult("cancel"));
 
-    const promise = main(["node", "shepherd", "poll", "42", "--until-terminal"]);
+    const promise = main(["node", "shepherd", "42", "--until-terminal"]);
     await vi.advanceTimersByTimeAsync(60_000);
     await promise;
 
@@ -116,7 +115,6 @@ describe("main — poll subcommand", () => {
     const promise = main([
       "node",
       "shepherd",
-      "poll",
       "42",
       "--merge",
       "--interval",
@@ -131,7 +129,7 @@ describe("main — poll subcommand", () => {
   });
 
   it("rejects an invalid --interval value", async () => {
-    await main(["node", "shepherd", "poll", "42", "--interval", "bad"]);
+    await main(["node", "shepherd", "42", "--interval", "bad"]);
 
     expect(process.exitCode).toBe(EXIT.USAGE);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("invalid --interval"));
@@ -139,7 +137,7 @@ describe("main — poll subcommand", () => {
   });
 
   it("rejects an invalid --timeout value", async () => {
-    await main(["node", "shepherd", "poll", "42", "--timeout", "xyz"]);
+    await main(["node", "shepherd", "42", "--timeout", "xyz"]);
 
     expect(process.exitCode).toBe(EXIT.USAGE);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("invalid --timeout"));
@@ -149,19 +147,19 @@ describe("main — poll subcommand", () => {
   it("accepts --debounce 5m and --debounce 0", async () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
 
-    await main(["node", "shepherd", "poll", "42", "--debounce", "5m"]);
+    await main(["node", "shepherd", "42", "--debounce", "5m"]);
     expect(process.exitCode).not.toBe(EXIT.USAGE);
     expect(mockRunIterate).toHaveBeenCalledTimes(1);
 
     mockRunIterate.mockClear();
     process.exitCode = undefined;
-    await main(["node", "shepherd", "poll", "42", "--debounce", "0"]);
+    await main(["node", "shepherd", "42", "--debounce", "0"]);
     expect(process.exitCode).not.toBe(EXIT.USAGE);
     expect(mockRunIterate).toHaveBeenCalledTimes(1);
   });
 
   it("rejects an invalid --debounce value", async () => {
-    await main(["node", "shepherd", "poll", "42", "--debounce", "bad"]);
+    await main(["node", "shepherd", "42", "--debounce", "bad"]);
 
     expect(process.exitCode).toBe(EXIT.USAGE);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("invalid --debounce"));

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { CheckAnnotation } from "../types.mts";
-import { renderCheckAnnotation, renderProtectedRun } from "./fix-formatter-extra.mts";
+import { renderCheckAnnotation } from "./fix-formatter-extra.mts";
 
 describe("renderCheckAnnotation", () => {
   it("renders unknown locations without optional annotation details", () => {
@@ -115,28 +115,5 @@ describe("renderCheckAnnotation", () => {
     expect(renderCheckAnnotation(annotation, "unrelated log content")).toContain(
       "> AssertionError: expected undefined to be defined",
     );
-  });
-});
-
-describe("renderProtectedRun", () => {
-  it("renders protected workflow runs with workflow context when present", () => {
-    expect(
-      renderProtectedRun({
-        runId: "run-1",
-        matchedPattern: "Final Code Review",
-        checkNames: ["reviewdog"],
-        workflowName: "Final Code Review",
-      }),
-    ).toBe("- `run-1` — `Final Code Review (reviewdog)` [matched: `Final Code Review`]");
-  });
-
-  it("renders protected workflow runs without workflow context", () => {
-    expect(
-      renderProtectedRun({
-        runId: "run-2",
-        matchedPattern: "review*",
-        checkNames: ["reviewdog", "lint"],
-      }),
-    ).toBe("- `run-2` — `reviewdog, lint` [matched: `review*`]");
   });
 });

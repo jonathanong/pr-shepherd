@@ -36,7 +36,7 @@ POSIX has one success code, so clean finishes share it. The `reason` field disti
 
 ## 10–19 — PR state
 
-Emitted by `iterate` and `poll` (including the default `pr-shepherd [PR]`) once a report was fetched. The code names the result's `action`.
+Emitted by `iterate` and the default `pr-shepherd [PR]` once a report was fetched. The code names the result's `action`.
 
 | Code | Action          | Meaning                                                              | Terminal? |
 | ---- | --------------- | -------------------------------------------------------------------- | --------- |
@@ -49,7 +49,7 @@ Emitted by `iterate` and `poll` (including the default `pr-shepherd [PR]`) once 
 | 16   | `shepherd`      | Run the listed one-PR sessions, then recheck the stack               | No        |
 
 - **`wait` and `ready` (10) are not errors and not a signal to give up.** `wait` means nothing is actionable right now, including when `poll --timeout` gives up mid-wait and prints the last `wait` tick. `ready` means the PR is clean with `remainingSeconds` of ready-delay left; `--until-terminal` returns it instead of sleeping through the countdown. A `set -e` script that asks "is the PR done?" should treat 10 like 12/13/16: not finished. Only `0` is a successful terminal state.
-- `mark_ready` (11) is non-terminal. `poll` stops on it by default; `--until-terminal` keeps polling through it.
+- `mark_ready` (11) is non-terminal. `pr-shepherd [PR]` stops on it by default; `--until-terminal` keeps polling through it.
 - `fix_code` (12) is always non-terminal: complete the printed work, then repeat the same CLI command (or schedule another MCP `iterate` tick).
 - `shepherd` (16) is stack-level and non-terminal: complete the listed one-PR sessions and rerun the same `--stack` selector. A mixed stack may surface human blockers on this tick; it returns `escalate` only once no shepherdable session remains.
 - `escalate` (13) is the only human handoff.
@@ -58,7 +58,7 @@ Emitted by `iterate` and `poll` (including the default `pr-shepherd [PR]`) once 
 
 ## 64–78 — shepherd failed (`sysexits.h`)
 
-Standard BSD `sysexits.h` codes (`/usr/include/sysexits.h`), uniform across every subcommand: `iterate`, `apply`, `build-suggestion-patches` (and its deprecated singular adapter), and the `admin` commands.
+Standard BSD `sysexits.h` codes (`/usr/include/sysexits.h`), uniform across every subcommand: `iterate`, `apply`, `build-suggestion-patches`, and the `admin` commands.
 
 | Code | Name             | When                                                                                                                                                                                                                                                                                |
 | ---- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -109,11 +109,11 @@ Every subcommand's `--help`/`-h` short-circuits before any I/O and exits `0`. Se
 
 ## Where this is implemented
 
-| Symbol                            | File                    | Role                                                                                                                                                                                      |
-| --------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `EXIT`                            | `src/exit-codes.mts`    | The constant map of every code above.                                                                                                                                                     |
-| `ShepherdError`                   | `src/exit-codes.mts`    | `Error` subclass that carries its own exit code.                                                                                                                                          |
-| `iterateResultToExitCode(result)` | `src/exit-codes.mts`    | Maps an `IterateResult` (`action`, plus `reason` for `cancel`) to 0 or 10–19. Called from `src/cli/iterate-emitter.mts`, which backs `iterate`, `poll`, and `pr-shepherd [PR]`.           |
-| `applyReviewResultToExitCode`     | `src/exit-codes.mts`    | `apply review`: `77` on a session refusal, `75`/`69` on errors, else `0`.                                                                                                                 |
-| `errorToExitCode(err)`            | `src/exit-codes.mts`    | A thrown `ShepherdError`'s code, or `EX_SOFTWARE` (70). Called from the top-level `.catch()` in `src/index.mts` and handlers that report a caught error directly (`log-file`, `journal`). |
-| `GitHubRequestError`              | `src/github/errors.mts` | Extends `ShepherdError`; classifies itself from HTTP status, rate-limit headers, and `Retry-After`, so every GraphQL and REST call site is classified without special-casing.             |
+| Symbol                            | File                    | Role                                                                                                                                                                                                  |
+| --------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EXIT`                            | `src/exit-codes.mts`    | The constant map of every code above.                                                                                                                                                                 |
+| `ShepherdError`                   | `src/exit-codes.mts`    | `Error` subclass that carries its own exit code.                                                                                                                                                      |
+| `iterateResultToExitCode(result)` | `src/exit-codes.mts`    | Maps an `IterateResult` (`action`, plus `reason` for `cancel`) to 0 or 10–19. Called from `src/cli/iterate-emitter.mts`, which backs `iterate` and `pr-shepherd [PR]`.                                |
+| `applyReviewResultToExitCode`     | `src/exit-codes.mts`    | `apply review`: `77` on a session refusal, `75`/`69` on errors, else `0`.                                                                                                                             |
+| `errorToExitCode(err)`            | `src/exit-codes.mts`    | A thrown `ShepherdError`'s code, or `EX_SOFTWARE` (70). Called from the top-level `.catch()` in `src/index.mts` and handlers that report a caught error directly (`admin log-file`, `apply journal`). |
+| `GitHubRequestError`              | `src/github/errors.mts` | Extends `ShepherdError`; classifies itself from HTTP status, rate-limit headers, and `Retry-After`, so every GraphQL and REST call site is classified without special-casing.                         |

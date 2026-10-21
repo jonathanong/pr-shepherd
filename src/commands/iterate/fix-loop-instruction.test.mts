@@ -46,8 +46,6 @@ describe("buildFixInstructions instruction style", () => {
       resolveCommand,
       false,
       42,
-      0,
-      [],
       [],
       [],
       [],
@@ -107,7 +105,6 @@ describe("buildFixInstructions instruction style", () => {
       resolveCommand,
       false,
       42,
-      0,
       [],
       [comment],
     );
@@ -132,7 +129,6 @@ describe("buildFixInstructions instruction style", () => {
       resolveCommand,
       false,
       42,
-      0,
     );
     expect(instructions.join("\n")).not.toContain("apply journal");
   });

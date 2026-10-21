@@ -30,7 +30,6 @@ describe("applyResolveOptions — validation", () => {
       dismissedReviews: [],
       errors: [],
     });
-    expect(result).not.toHaveProperty("skippedDismissals");
     expect(mockGraphql).not.toHaveBeenCalled();
   });
 });

@@ -16,9 +16,6 @@ vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
 });
 vi.mock("./commands/check.mts", () => ({ runCheck: vi.fn() }));
 vi.mock("./commands/resolve.mts", () => ({ runResolveMutate: vi.fn() }));
-vi.mock("./commands/commit-suggestion.mts", () => ({
-  runCommitSuggestion: vi.fn(),
-}));
 vi.mock("./github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
 }));
@@ -73,7 +70,7 @@ describe("main — configured poll defaults", () => {
       .mockResolvedValueOnce(makeIterateResult("wait"))
       .mockResolvedValue(makeIterateResult("cancel"));
 
-    const promise = main(["node", "shepherd", "poll", "42"]);
+    const promise = main(["node", "shepherd", "42"]);
     await vi.waitFor(() => expect(mockRunIterate).toHaveBeenCalledTimes(1));
     await vi.advanceTimersByTimeAsync(2_000);
     await promise;
@@ -98,7 +95,6 @@ describe("main — configured poll defaults", () => {
     const promise = main([
       "node",
       "shepherd",
-      "poll",
       "42",
       "--interval",
       "1s",
@@ -124,7 +120,7 @@ describe("main — configured poll defaults", () => {
       .mockResolvedValueOnce(makeIterateResult("wait"))
       .mockResolvedValue(makeIterateResult("cancel"));
 
-    const promise = main(["node", "shepherd", "poll", "42", "--no-quiet-status"]);
+    const promise = main(["node", "shepherd", "42", "--no-quiet-status"]);
     await vi.advanceTimersByTimeAsync(1_000);
     await promise;
 
@@ -134,7 +130,7 @@ describe("main — configured poll defaults", () => {
   });
 
   it("rejects conflicting quiet-status flags", async () => {
-    await main(["node", "shepherd", "poll", "42", "--quiet-status", "--no-quiet-status"]);
+    await main(["node", "shepherd", "42", "--quiet-status", "--no-quiet-status"]);
 
     expect(process.exitCode).toBe(EXIT.USAGE);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("cannot be used together"));

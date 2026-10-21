@@ -106,22 +106,18 @@ describe("main — iterate text format (fix_code and checks)", () => {
       instructions: ["step one", "step two"],
       firstLookThreads: [],
       firstLookComments: [],
-      inProgressRunIds: [],
-      protectedRuns: [],
     };
-    result.cancelled = ["run-99"];
     mockRunIterate.mockResolvedValue(result);
 
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
 
-    // Section ordering: threads → comments → checks → reviews → cancelled → Instructions.
+    // Section ordering: threads → comments → checks → reviews → Instructions.
     const order = [
       "## Review threads",
       "## Actionable comments",
       "## Failing checks",
       "## Changes-requested reviews",
-      "## Cancelled runs",
       "## Instructions",
     ];
     let cursor = 0;
@@ -145,8 +141,6 @@ describe("main — iterate text format (fix_code and checks)", () => {
     // heading was a bug: it never rendered anything the agent could act on).
     expect(out).toContain("### `reviewId=REV_1` (@reviewer · Unknown)");
     expect(out).toContain("> please rework this");
-    // Cancelled runs
-    expect(out).toContain("`run-99`");
     // The apply-review command lives in the instruction step, not in a Post-fix actions bullet.
     expect(out).not.toContain("## Post-fix actions");
     expect(out).not.toContain("- apply review:");

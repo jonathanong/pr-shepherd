@@ -34,7 +34,6 @@ describe("pr-shepherd MCP server", () => {
           iterate: vi.fn(),
           apply: vi.fn(),
           buildSuggestionPatches: vi.fn(),
-          buildSuggestionPatch: vi.fn(),
           getJournal,
         },
       }),
@@ -86,7 +85,6 @@ describe("pr-shepherd MCP server", () => {
           iterate: vi.fn(),
           apply: vi.fn(),
           buildSuggestionPatches: vi.fn(),
-          buildSuggestionPatch: vi.fn(),
           getJournal,
         },
       }),
@@ -128,7 +126,6 @@ describe("pr-shepherd MCP server", () => {
           iterate: vi.fn(),
           apply: vi.fn(),
           buildSuggestionPatches: vi.fn(),
-          buildSuggestionPatch: vi.fn(),
           getJournal,
         },
       }),
@@ -178,7 +175,6 @@ describe("pr-shepherd MCP server", () => {
         iterate,
         apply: vi.fn(),
         buildSuggestionPatches: vi.fn(),
-        buildSuggestionPatch: vi.fn(),
         getJournal: vi.fn(),
       },
     });
@@ -186,7 +182,6 @@ describe("pr-shepherd MCP server", () => {
 
     expect(Object.keys(tools).sort()).toEqual([
       "apply",
-      "build_suggestion_patch",
       "build_suggestion_patches",
       "extract_journal",
       "get_journal",
@@ -197,11 +192,6 @@ describe("pr-shepherd MCP server", () => {
       readOnlyHint: false,
       destructiveHint: true,
       idempotentHint: false,
-    });
-    expect(tools.build_suggestion_patch!.annotations).toMatchObject({
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
     });
     expect(tools.build_suggestion_patches!.annotations).toMatchObject({
       readOnlyHint: true,
@@ -268,7 +258,6 @@ describe("pr-shepherd MCP server", () => {
         iterate,
         apply: vi.fn(),
         buildSuggestionPatches: vi.fn(),
-        buildSuggestionPatch: vi.fn(),
         getJournal: vi.fn(),
       },
     });
@@ -326,7 +315,6 @@ describe("pr-shepherd MCP server", () => {
         iterate: vi.fn().mockResolvedValue(result),
         apply: vi.fn(),
         buildSuggestionPatches: vi.fn(),
-        buildSuggestionPatch: vi.fn(),
         getJournal: vi.fn(),
       },
     });
@@ -390,7 +378,6 @@ describe("pr-shepherd MCP server", () => {
           iterate: vi.fn().mockResolvedValue(result),
           apply: vi.fn(),
           buildSuggestionPatches: vi.fn(),
-          buildSuggestionPatch: vi.fn(),
           getJournal: vi.fn(),
         },
       }),
@@ -445,7 +432,6 @@ describe("pr-shepherd MCP server", () => {
           iterate,
           apply: vi.fn(),
           buildSuggestionPatches: vi.fn(),
-          buildSuggestionPatch: vi.fn(),
           getJournal: vi.fn(),
         },
       }),
@@ -502,7 +488,6 @@ describe("pr-shepherd MCP server", () => {
           iterate: vi.fn().mockResolvedValue(result),
           apply: vi.fn(),
           buildSuggestionPatches: vi.fn(),
-          buildSuggestionPatch: vi.fn(),
           getJournal: vi.fn(),
         },
       }),
@@ -538,7 +523,6 @@ describe("pr-shepherd MCP server", () => {
       iterate: vi.fn(),
       apply: vi.fn(),
       buildSuggestionPatches: vi.fn(),
-      buildSuggestionPatch: vi.fn(),
       getJournal: vi.fn(),
     };
     const tools = registeredTools(createPrShepherdMcpServer({ shepherd }));
@@ -582,23 +566,6 @@ describe("pr-shepherd MCP server", () => {
           operations: [{ type: "review_mutations", resolveThreadIds: ["PRRT_one"] }],
         },
       ],
-      build_suggestion_patch: [
-        {},
-        { pr: 3, threadId: "PRRT_one", message: "Apply it" },
-        { pr: "42", threadId: "PRRT_one", message: "Apply it" },
-        { pr: "openai/pr-shepherd", threadId: "PRRT_one", message: "Apply it" },
-        {
-          pr: "openai/pr-shepherd#0",
-          threadId: "PRRT_one",
-          message: "Apply it",
-        },
-        { pr: "openai#3", threadId: "PRRT_one", message: "Apply it" },
-        {
-          pr: "https://example.com/openai/pr-shepherd/pull/3",
-          threadId: "PRRT_one",
-          message: "Apply it",
-        },
-      ],
       build_suggestion_patches: [
         {},
         { pr: 3, suggestions: [{ threadId: "PRRT_one", message: "Apply it" }] },
@@ -626,11 +593,6 @@ describe("pr-shepherd MCP server", () => {
         pr: "openai/pr-shepherd#3",
         operations: [{ type: "review_mutations", resolveThreadIds: ["PRRT_one"] }],
       },
-      build_suggestion_patch: {
-        pr: "https://github.com/openai/pr-shepherd/pull/3",
-        threadId: "PRRT_one",
-        message: "Apply it",
-      },
       build_suggestion_patches: {
         pr: "openai/pr-shepherd#3",
         suggestions: [{ threadId: "PRRT_one", message: "Apply it" }],
@@ -652,7 +614,6 @@ describe("pr-shepherd MCP server", () => {
     expect(shepherd.iterate).not.toHaveBeenCalled();
     expect(shepherd.apply).not.toHaveBeenCalled();
     expect(shepherd.buildSuggestionPatches).not.toHaveBeenCalled();
-    expect(shepherd.buildSuggestionPatch).not.toHaveBeenCalled();
   });
 
   it("routes a colliding fork PR to the injected API without repository validation", async () => {
@@ -665,7 +626,6 @@ describe("pr-shepherd MCP server", () => {
         iterate: vi.fn(),
         apply,
         buildSuggestionPatches: vi.fn(),
-        buildSuggestionPatch: vi.fn(),
         getJournal: vi.fn(),
       },
     });
@@ -688,7 +648,6 @@ describe("pr-shepherd MCP server", () => {
         iterate: vi.fn().mockRejectedValue(new PrShepherdValidationError("bad input")),
         apply: vi.fn(),
         buildSuggestionPatches: vi.fn(),
-        buildSuggestionPatch: vi.fn(),
         getJournal: vi.fn(),
       },
     });
@@ -726,7 +685,6 @@ describe("pr-shepherd MCP server", () => {
         iterate: vi.fn().mockRejectedValue(error),
         apply: vi.fn(),
         buildSuggestionPatches: vi.fn(),
-        buildSuggestionPatch: vi.fn(),
         getJournal: vi.fn(),
       },
     });
@@ -813,21 +771,7 @@ describe("pr-shepherd MCP server", () => {
         },
       ],
     };
-    const suggestionResult = {
-      pr: 3,
-      repo: "acme/widgets",
-      threadId: "PRRT_two",
-      author: "reviewer",
-      path: "src/api.mts",
-      startLine: 1,
-      endLine: 1,
-      patch: "",
-      commitMessage: "apply suggestion",
-      commitBody: "",
-      postActionInstructions: [],
-    };
     const apply = vi.fn().mockResolvedValue(applyResult);
-    const buildSuggestionPatch = vi.fn().mockResolvedValue(suggestionResult);
     const batchResult = {
       pr: 3,
       repo: "acme/widgets",
@@ -852,7 +796,6 @@ describe("pr-shepherd MCP server", () => {
         iterate: vi.fn(),
         apply,
         buildSuggestionPatches,
-        buildSuggestionPatch,
         getJournal: vi.fn(),
       },
     });
@@ -870,11 +813,6 @@ describe("pr-shepherd MCP server", () => {
         },
       ],
     });
-    const suggestionResponse = await tools.build_suggestion_patch!.handler({
-      pr: "acme/widgets#3",
-      threadId: "PRRT_two",
-      message: "apply suggestion",
-    });
     const batchResponse = await tools.build_suggestion_patches!.handler({
       pr: "acme/widgets#3",
       suggestions: [{ threadId: "PRRT_two", message: "apply suggestion" }],
@@ -886,14 +824,8 @@ describe("pr-shepherd MCP server", () => {
     expect(applyResponse.content?.[0]?.text).toContain("Operation 3: append_journal");
     expect(applyResponse.content?.[0]?.text).toContain("Operation 4: acknowledge_queue_removal");
     expect(applyResponse.content?.[0]?.text).toContain("queueCommitOid: " + "b".repeat(40));
-    expect(suggestionResponse.structuredContent).toBe(suggestionResult);
     expect(batchResponse.structuredContent).toBe(batchResult);
     expect(batchResponse.content?.[0]?.text).toContain("## Patch 1");
-    expect(buildSuggestionPatch).toHaveBeenCalledWith({
-      pr: "acme/widgets#3",
-      threadId: "PRRT_two",
-      message: "apply suggestion",
-    });
     expect(buildSuggestionPatches).toHaveBeenCalledWith({
       pr: "acme/widgets#3",
       suggestions: [{ threadId: "PRRT_two", message: "apply suggestion" }],
@@ -920,7 +852,6 @@ describe("pr-shepherd MCP server", () => {
         iterate: vi.fn(),
         apply: vi.fn().mockRejectedValue(error),
         buildSuggestionPatches: vi.fn(),
-        buildSuggestionPatch: vi.fn(),
         getJournal: vi.fn(),
       },
     });

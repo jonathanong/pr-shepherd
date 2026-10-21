@@ -33,7 +33,6 @@ vi.mock("../../src/state/pr-fingerprint.mts", () => ({
 }));
 
 vi.mock("../../src/comments/resolve.mts", () => ({
-  autoResolveOutdated: vi.fn(),
   applyResolveOptions: vi.fn(),
 }));
 
@@ -44,10 +43,8 @@ vi.mock("../../src/config/load.mts", () => ({
       shaPoll: { intervalMs: 2000, maxAttempts: 10 },
     },
     actions: {
-      autoResolveOutdated: true,
       autoMinimizeSuppressed: true,
       autoMarkReady: true,
-      commitSuggestions: true,
       neverCancelRuns: [],
     },
   }),
@@ -58,7 +55,7 @@ import { getCurrentPrNumber } from "../../src/github/client.mts";
 import { fetchPrBatch } from "../../src/github/batch.mts";
 import { fetchReplyThreadTranscripts } from "../../src/github/reply-thread-transcripts.mts";
 import { testFingerprint } from "../github/fingerprint-fixture.mts";
-import { autoResolveOutdated, applyResolveOptions } from "../../src/comments/resolve.mts";
+import { applyResolveOptions } from "../../src/comments/resolve.mts";
 import { loadConfig } from "../../src/config/load.mts";
 import {
   loadSeenMap,
@@ -72,7 +69,6 @@ import type { BatchPrData, ReviewThread, PrComment } from "../../src/types.mts";
 const mockGetCurrentPrNumber = vi.mocked(getCurrentPrNumber);
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockFetchReplyThreadTranscripts = vi.mocked(fetchReplyThreadTranscripts);
-const mockAutoResolveOutdated = vi.mocked(autoResolveOutdated);
 const mockApplyResolveOptions = vi.mocked(applyResolveOptions);
 const mockLoadConfig = vi.mocked(loadConfig);
 const mockLoadSeenMap = vi.mocked(loadSeenMap);
@@ -176,7 +172,6 @@ export function registerHooks(): void {
       fingerprint: testFingerprint(),
     });
     mockFetchReplyThreadTranscripts.mockResolvedValue(new Map());
-    mockAutoResolveOutdated.mockResolvedValue({ resolved: [], errors: [] });
     mockApplyResolveOptions.mockResolvedValue({
       repliedThreads: [],
       resolvedThreads: [],
@@ -190,7 +185,6 @@ export function registerHooks(): void {
 export {
   BASE_OPTS,
   applyResolveOptions,
-  autoResolveOutdated,
   fetchPrBatch,
   getCurrentPrNumber,
   hashBody,
@@ -203,7 +197,6 @@ export {
   markReplySeen,
   markReviewInlineThreads,
   mockApplyResolveOptions,
-  mockAutoResolveOutdated,
   mockFetchPrBatch,
   mockFetchReplyThreadTranscripts,
   mockGetCurrentPrNumber,

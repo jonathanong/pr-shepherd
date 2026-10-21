@@ -5,7 +5,6 @@ const { mockRunJournal } = vi.hoisted(() => ({ mockRunJournal: vi.fn() }));
 vi.mock("./commands/journal/index.mts", () => ({ runJournal: mockRunJournal }));
 vi.mock("./commands/resolve.mts", () => ({ runResolveMutate: vi.fn() }));
 vi.mock("./commands/log-file.mts", () => ({ runLogFile: vi.fn() }));
-vi.mock("./commands/commit-suggestion.mts", () => ({ runCommitSuggestion: vi.fn() }));
 vi.mock("./commands/mark-files-as-viewed.mts", () => ({ runMarkFilesAsViewed: vi.fn() }));
 vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./commands/iterate/index.mts")>();
@@ -48,18 +47,16 @@ afterEach(() => {
 
 describe("main — journal text output", () => {
   it("prints created message when section did not exist", async () => {
-    await main(["node", "shepherd", "journal", "42", "- Decision."]);
+    await main(["node", "shepherd", "apply", "journal", "42", "- Decision."]);
     expect(getStdout()).toContain("Created Shepherd Journal details");
     expect(getStdout()).toContain("PR #42");
     expect(process.exitCode).toBeUndefined();
-    expect(stderrSpy).toHaveBeenCalledWith(
-      "pr-shepherd: journal is deprecated; use pr-shepherd apply journal instead.\n",
-    );
+    expect(stderrSpy).not.toHaveBeenCalled();
   });
 
   it("prints appended message when section existed", async () => {
     mockRunJournal.mockResolvedValue({ ...HAPPY_RESULT, sectionExisted: true });
-    await main(["node", "shepherd", "journal", "42", "- Decision."]);
+    await main(["node", "shepherd", "apply", "journal", "42", "- Decision."]);
     expect(getStdout()).toContain("Appended to Shepherd Journal details");
   });
 
@@ -74,7 +71,7 @@ describe("main — journal text output", () => {
 
   it("prints no-change message when entry already present", async () => {
     mockRunJournal.mockResolvedValue({ ...HAPPY_RESULT, mutated: false, sectionExisted: true });
-    await main(["node", "shepherd", "journal", "42", "- Decision."]);
+    await main(["node", "shepherd", "apply", "journal", "42", "- Decision."]);
     expect(getStdout()).toContain("No change");
     expect(getStdout()).toContain("already present");
   });
@@ -85,19 +82,19 @@ describe("main — journal text output", () => {
       dryRun: true,
       previewBody: "<details>\n<summary>Shepherd Journal</summary>\n\n- Decision.\n</details>",
     });
-    await main(["node", "shepherd", "journal", "42", "- Decision.", "--dry-run"]);
+    await main(["node", "shepherd", "apply", "journal", "42", "- Decision.", "--dry-run"]);
     expect(getStdout()).toContain("Dry run");
     expect(getStdout()).toContain("<summary>Shepherd Journal</summary>");
   });
 
   it("prints dry-run message without preview when previewBody is absent", async () => {
     mockRunJournal.mockResolvedValue({ ...HAPPY_RESULT, dryRun: true });
-    await main(["node", "shepherd", "journal", "42", "- Decision.", "--dry-run"]);
+    await main(["node", "shepherd", "apply", "journal", "42", "- Decision.", "--dry-run"]);
     expect(getStdout()).toContain("Dry run");
   });
 
   it("passes undefined prNumber when no PR is given", async () => {
-    await main(["node", "shepherd", "journal", "- Decision."]);
+    await main(["node", "shepherd", "apply", "journal", "- Decision."]);
     expect(mockRunJournal).toHaveBeenCalledWith(
       expect.objectContaining({ prNumber: undefined, rawItem: "- Decision." }),
     );
@@ -106,7 +103,7 @@ describe("main — journal text output", () => {
 
 describe("main — journal JSON output", () => {
   it("prints JSON for --format=json", async () => {
-    await main(["node", "shepherd", "journal", "42", "- Decision.", "--format=json"]);
+    await main(["node", "shepherd", "apply", "journal", "42", "- Decision.", "--format=json"]);
     const parsed = JSON.parse(getStdout());
     expect(parsed.prNumber).toBe(42);
     expect(parsed.mutated).toBe(true);
@@ -115,7 +112,7 @@ describe("main — journal JSON output", () => {
   });
 
   it("prints JSON for --format json", async () => {
-    await main(["node", "shepherd", "journal", "42", "- Decision.", "--format", "json"]);
+    await main(["node", "shepherd", "apply", "journal", "42", "- Decision.", "--format", "json"]);
     const parsed = JSON.parse(getStdout());
     expect(parsed.prNumber).toBe(42);
   });
@@ -123,7 +120,7 @@ describe("main — journal JSON output", () => {
 
 describe("main — journal --help", () => {
   it("prints usage for --help and exits 0", async () => {
-    await main(["node", "shepherd", "journal", "--help"]);
+    await main(["node", "shepherd", "apply", "journal", "--help"]);
     expect(getStdout()).toContain("Usage:");
     expect(getStdout()).toContain("--dry-run");
     expect(getStdout()).toContain("Shepherd Journal");
@@ -133,7 +130,7 @@ describe("main — journal --help", () => {
   });
 
   it("prints usage for -h and exits 0", async () => {
-    await main(["node", "shepherd", "journal", "-h"]);
+    await main(["node", "shepherd", "apply", "journal", "-h"]);
     expect(getStdout()).toContain("Usage:");
     expect(process.exitCode).toBeUndefined();
   });
@@ -141,20 +138,20 @@ describe("main — journal --help", () => {
 
 describe("main — journal error handling", () => {
   it("rejects unknown flags and sets exitCode=EX_USAGE", async () => {
-    await main(["node", "shepherd", "journal", "42", "- Decision.", "--unknown-flag"]);
+    await main(["node", "shepherd", "apply", "journal", "42", "- Decision.", "--unknown-flag"]);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("unknown flag"));
     expect(process.exitCode).toBe(EXIT.USAGE);
   });
 
   it("sets exitCode=EX_SOFTWARE and writes error when runJournal throws", async () => {
     mockRunJournal.mockRejectedValue(new Error('must start with "- <text>"'));
-    await main(["node", "shepherd", "journal", "42", "Not a list item."]);
+    await main(["node", "shepherd", "apply", "journal", "42", "Not a list item."]);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("journal:"));
     expect(process.exitCode).toBe(EXIT.SOFTWARE);
   });
 
   it("prints usage and sets exitCode=EX_USAGE when item is missing", async () => {
-    await main(["node", "shepherd", "journal", "42"]);
+    await main(["node", "shepherd", "apply", "journal", "42"]);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("Usage:"));
     expect(process.exitCode).toBe(EXIT.USAGE);
     expect(mockRunJournal).not.toHaveBeenCalled();

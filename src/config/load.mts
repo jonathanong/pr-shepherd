@@ -10,7 +10,7 @@ import { parseMergeMethod, type MergeMethod } from "./merge-method.mts";
 import { parseGithubTransport, type GithubTransport } from "../github/transport-mode.mts";
 import { STANDARD_RULE_NAMES } from "../classify/standard/index.mts";
 
-const MINIMIZE_COMMENTS_POLICIES = ["all", "bots", "users", "none"] as const;
+const MINIMIZE_COMMENTS_POLICIES = ["all", "bots", "none"] as const;
 
 export type MinimizeCommentsPolicy = (typeof MINIMIZE_COMMENTS_POLICIES)[number];
 
@@ -155,10 +155,6 @@ export interface PrShepherdConfig {
      * work is handled immediately regardless of queue membership.
      */
     workWhileQueued: boolean;
-    /** @deprecated Accepted for compatibility, ignored by the loader. */
-    autoResolveOutdated?: boolean;
-    /** @deprecated Accepted for compatibility, ignored by the loader. */
-    commitSuggestions?: boolean;
   };
 }
 
@@ -226,15 +222,9 @@ function isMinimizeCommentsPolicy(value: unknown): value is MinimizeCommentsPoli
 }
 
 function parseMinimizeCommentsPolicy(value: unknown): MinimizeCommentsPolicy {
-  if (value === "users") {
-    process.stderr.write(
-      'pr-shepherd: config: iterate.minimizeComments: "users" is deprecated and is now treated as "none".\n',
-    );
-    return "none";
-  }
   if (isMinimizeCommentsPolicy(value)) return value;
   throw new Error(
-    `Invalid config: iterate.minimizeComments must be one of "all", "bots", "users", or "none", got ${JSON.stringify(value)}`,
+    `Invalid config: iterate.minimizeComments must be one of "all", "bots", or "none", got ${JSON.stringify(value)}`,
   );
 }
 
@@ -553,8 +543,6 @@ const KNOWN_NESTED_KEYS: Record<string, ReadonlySet<string>> = {
     "autoMarkReady",
     "neverCancelRuns",
     "workWhileQueued",
-    "autoResolveOutdated",
-    "commitSuggestions",
   ]),
 };
 
@@ -667,23 +655,10 @@ const defaults = parseConfig(structuredClone(rawDefaults), false);
 
 const configCache = new Map<string, PrShepherdConfig>();
 
-function stripDeprecatedActionKeys(parsed: Record<string, unknown>): void {
-  const rawActions = parsed.actions;
-  if (rawActions === null || typeof rawActions !== "object" || Array.isArray(rawActions)) return;
-  const actions = rawActions as Record<string, unknown>;
-  for (const key of ["autoResolveOutdated", "commitSuggestions"] as const) {
-    if (key in actions) {
-      process.stderr.write(`pr-shepherd: config: actions.${key} is deprecated and ignored.\n`);
-      delete actions[key];
-    }
-  }
-}
-
 function readRcFile(rcPath: string): Record<string, unknown> | null {
   try {
     const raw = readFileSync(rcPath, "utf8");
     const parsed = (parse(raw) ?? {}) as Record<string, unknown>;
-    stripDeprecatedActionKeys(parsed);
     warnUnknownConfigKeys(parsed);
     return parsed;
   } catch (err) {

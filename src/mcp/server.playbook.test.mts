@@ -18,7 +18,6 @@ function toolsOf(iterate = vi.fn()) {
       iterate,
       apply: vi.fn(),
       buildSuggestionPatches: vi.fn(),
-      buildSuggestionPatch: vi.fn(),
       getJournal: vi.fn(),
     },
   });

@@ -16,9 +16,6 @@ vi.mock("./commands/iterate/index.mts", async (importOriginal) => {
 });
 vi.mock("./commands/check.mts", () => ({ runCheck: vi.fn() }));
 vi.mock("./commands/resolve.mts", () => ({ runResolveMutate: vi.fn() }));
-vi.mock("./commands/commit-suggestion.mts", () => ({
-  runCommitSuggestion: vi.fn(),
-}));
 vi.mock("./commands/poll-summary.mts", () => ({ runAggregatePoll: vi.fn() }));
 vi.mock("./github/client.mts", () => ({
   getRepoInfo: vi.fn().mockResolvedValue({ owner: "acme", name: "widgets" }),
@@ -87,7 +84,7 @@ describe("poll interval periods", () => {
       .mockResolvedValue(makeIterateResult("cancel"));
 
     // Only the verbose tick line names the sleep period.
-    const promise = main(["node", "shepherd", "poll", "42", "--verbose"]);
+    const promise = main(["node", "shepherd", "42", "--verbose"]);
     await vi.waitFor(() => expect(mockRunIterate).toHaveBeenCalledTimes(1));
     await vi.advanceTimersByTimeAsync(30_000);
     await promise;
@@ -98,7 +95,7 @@ describe("poll interval periods", () => {
   });
 
   it("sleeps intervalSeconds times the factor for a stack without --interval", async () => {
-    await main(["node", "shepherd", "poll", "--stack", "43"]);
+    await main(["node", "shepherd", "--stack", "43"]);
 
     expect(mockRunAggregatePoll).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -110,7 +107,7 @@ describe("poll interval periods", () => {
   });
 
   it("sleeps the same scaled interval for an explicit multi-PR poll", async () => {
-    await main(["node", "shepherd", "poll", "42", "43"]);
+    await main(["node", "shepherd", "42", "43"]);
 
     expect(mockRunAggregatePoll).toHaveBeenCalledWith(
       expect.objectContaining({ prNumbers: [42, 43], intervalSeconds: 120 }),
@@ -118,7 +115,7 @@ describe("poll interval periods", () => {
   });
 
   it("does not multiply an explicit --interval on a stack", async () => {
-    await main(["node", "shepherd", "poll", "--stack", "43", "--interval", "15"]);
+    await main(["node", "shepherd", "--stack", "43", "--interval", "15"]);
 
     expect(mockRunAggregatePoll).toHaveBeenCalledWith(
       expect.objectContaining({ stackPrNumber: 43, intervalSeconds: 15 }),
@@ -128,7 +125,7 @@ describe("poll interval periods", () => {
   it("keeps a fractional stack product instead of rounding it to zero", async () => {
     Object.assign(pollConfig, { intervalSeconds: 0.2, stackIntervalFactor: 2 });
 
-    await main(["node", "shepherd", "poll", "--stack", "43"]);
+    await main(["node", "shepherd", "--stack", "43"]);
 
     expect(mockRunAggregatePoll).toHaveBeenCalledWith(
       expect.objectContaining({ intervalSeconds: 0.4 }),

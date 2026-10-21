@@ -354,7 +354,7 @@ describe("runIterate — merge", () => {
       remainingSeconds: 600,
     });
 
-    const result = await runIterate(makeOpts({ merge: true, noAutoCancelActionable: true }));
+    const result = await runIterate(makeOpts({ merge: true }));
     expect(result.action).toBe("fix_code");
     if (result.action === "fix_code") {
       expect(result.fix.requeue).toBeUndefined();
