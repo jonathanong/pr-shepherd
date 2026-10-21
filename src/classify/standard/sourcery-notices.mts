@@ -2,7 +2,7 @@ import type { ClassifyRule } from "../types.mts";
 import { isBotItem } from "./author.mts";
 
 const NO_ACCESS =
-  /^Hi @[A-Za-z0-9-]+! 👋\n\nYour private repo does not have access to Sourcery\.\n\nPlease \[upgrade\]\(https:\/\/app\.sourcery\.ai\/login\?connection=github(?:&git_namespace_id=\d+)?&from_surface=github_bot&intent=private_repo_upsell\) to continue using Sourcery ✨$/;
+  /^Hi @[A-Za-z0-9-]+! 👋\n\nYour private repo does not have access to Sourcery\.\n\nPlease \[upgrade\]\(https:\/\/app\.sourcery\.ai\/[^\s)]*\) to continue using Sourcery ✨$/;
 const RATE_LIMIT =
   /^Sorry @[A-Za-z0-9-]+, you have reached your weekly rate limit for Sourcery\. Please try again later\.$/;
 

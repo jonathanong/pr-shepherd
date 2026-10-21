@@ -3,8 +3,8 @@ import { isBotItem } from "./author.mts";
 
 const QUOTA_NOTICES = [
   /^You have reached your Codex usage limits for security reviews\. Please try again later\.$/,
-  /^You have reached your Codex usage limits for code reviews\. You can see your limits in the \[Codex usage dashboard\]\(https:\/\/chatgpt.com\/codex\/cloud\/settings\/usage\)\.(?:\nTo continue using code reviews, add credits to your account and enable them for code reviews in your \[settings\]\(https:\/\/chatgpt.com\/codex\/cloud\/settings\/code-review\)\.)?$/,
-  /^Codex usage limits have been reached for code reviews\. Please check with the admins of this repo to increase the limits by adding credits\.\nRepo admins can enable using credits for code reviews in their \[settings\]\(https:\/\/chatgpt.com\/codex\/cloud\/settings\/code-review\)\.$/,
+  /^You have reached your Codex usage limits for code reviews\. You can see your limits in the \[Codex usage dashboard\]\(https:\/\/chatgpt\.com\/[^\s)]*\)\.(?:\nTo continue using code reviews, add credits to your account and enable them for code reviews in your \[settings\]\(https:\/\/chatgpt\.com\/[^\s)]*\)\.)?$/,
+  /^Codex usage limits have been reached for code reviews\. Please check with the admins of this repo to increase the limits by adding credits\.\nRepo admins can enable using credits for code reviews in their \[settings\]\(https:\/\/chatgpt\.com\/[^\s)]*\)\.$/,
   /^Codex usage limits have been reached\. Please try again later\.$/,
 ];
 
@@ -12,13 +12,14 @@ const ABOUT_BLOCK =
   /\n\n<details> <summary>ℹ️ About Codex (?:in GitHub|security reviews in GitHub)<\/summary>[\s\S]*?<\/details>$/;
 
 const ACTIVITY_SUMMARY =
-  /^<!-- codex-pull-request-review-summary -->\n(?:<!-- codex-review-state:v1 \{[^\n]*\} -->\n)?(?:<!-- codex-security-review:v1 \{[^\n]*\} -->\n)?\n?## Codex Review Summary\n\nThis comment shows the latest Codex review activity on this pull request\.\n\n\| Review \| Status \| Commit \| Review trigger \|\n\| --- \| --- \| --- \| --- \|\n(?:\|[^\n]+\|\n?)+$/;
+  /^<!-- codex-pull-request-review-summary -->\n(?:<!-- codex-[a-z0-9-]+:[^\n]* -->\n)*\n?## Codex Review Summary\n\nThis comment shows the latest Codex review activity on this pull request\.\n\n\| Review \| Status \| Commit \| Review trigger \|\n\| --- \| --- \| --- \| --- \|\n(?:\|[^\n]+\|\n?)+$/;
 
+/** Codex closes with a rotating sign-off: a few plain words, a :shortcode:, or one emoji. */
 const CLEAN_REVIEW =
-  /^Codex Review: Didn't find any major issues\. (?:Bravo\.|Breezy!|Hooray!|:\+1:)\n\n\*\*Reviewed commit:\*\* `[a-f0-9]+`$/;
+  /^Codex Review: Didn't find any major issues\. (?:(?:[\p{L}'’]+ ){0,5}[\p{L}'’]+[.!?]|:[a-z0-9_+-]+:|\p{Extended_Pictographic}\uFE0F?)\n\n\*\*Reviewed commit:\*\* `[a-f0-9]+`$/u;
 
 const CLEAN_SECURITY =
-  /^### 🛡️ Codex Security Review(?: · _Automatically triggered_)?\n\nSecurity review completed\. No security issues were found in this pull request\.\n\n\*\*Reviewed commit:\*\* `[a-f0-9]+`\n\n\[View security finding report\]\(https:\/\/chatgpt.com\/codex\/cloud\/tasks\/[a-zA-Z0-9_]+\)\n\n_Only the user who started this review can view the report in Codex\._$/;
+  /^### 🛡️ Codex Security Review(?: · _Automatically triggered_)?\n\nSecurity review completed\. No security issues were found in this pull request\.\n\n\*\*Reviewed commit:\*\* `[a-f0-9]+`\n\n\[View security finding report\]\(https:\/\/chatgpt\.com\/[^\s)]*\)\n\n_Only the user who started this review can view the report in Codex\._$/;
 
 /**
  * Codex quota notices, the review-activity status table, and no-findings notices on conversation
