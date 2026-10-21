@@ -2,7 +2,7 @@
 
 [← README](../README.md) | [configuration.md](configuration.md)
 
-This page lists every breaking change between pr-shepherd 0.x (0.60.0) and 1.0.0, and what to change. It is for anyone who upgrades a repository config, a script, an MCP client, or a library caller. v1 keeps no compatibility aliases. An old command, flag, field, or tool name fails or is simply absent. Renamed config keys fail with an error that names the new key. `--stack` and `--poll-mode` on the default command, `iterate`, or `stack` fail with an error that names the replacement. Removed keys with no replacement, and `--poll-mode` on other commands, fail as unknown.
+This page lists every breaking change between pr-shepherd 0.x (0.60.1) and 1.0.0, and what to change. It is for anyone who upgrades a repository config, a script, an MCP client, or a library caller. v1 keeps no compatibility aliases. An old command, flag, field, or tool name fails or is simply absent. Renamed config keys fail with an error that names the new key. `--stack` and `--poll-mode` on the default command, `iterate`, or `stack` fail with an error that names the replacement. Removed keys with no replacement, and `--poll-mode` on other commands, fail as unknown.
 
 If you use only the shipped plugin and skill, upgrade the plugin and migrate your config files. The skill already emits the v1 commands.
 
