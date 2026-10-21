@@ -45,7 +45,7 @@ describe("formatPollSummaryResult", () => {
     const text = formatPollSummaryResult(
       result(
         row({
-          action: "fix_code",
+          action: "triage",
           reasons: ["failing-checks"],
           state: "OPEN",
           mergeable: "MERGEABLE",
@@ -110,7 +110,7 @@ describe("formatPollSummaryResult", () => {
 
   it("retains actionable row instructions when a quota warning is present", () => {
     const text = formatPollSummaryResult({
-      ...result(row({ action: "fix_code", reasons: ["failing-checks"] }), "actionable"),
+      ...result(row({ action: "triage", reasons: ["failing-checks"] }), "actionable"),
       quotaWarning: {
         resource: "graphql",
         thresholdPercent: 20,

@@ -46,8 +46,8 @@ describe("routePollSummary", () => {
       "pending-or-unknown",
     ],
     [{ state: "CLOSED" }, {}, {}, {}, "cancel", "closed"],
-    [{ mergeable: "CONFLICTING" }, {}, {}, {}, "fix_code", "merge-conflicts"],
-    [{}, { failing: 1 }, {}, {}, "fix_code", "failing-checks"],
+    [{ mergeable: "CONFLICTING" }, {}, {}, {}, "triage", "merge-conflicts"],
+    [{}, { failing: 1 }, {}, {}, "triage", "failing-checks"],
     [{}, { incomplete: true }, {}, {}, "cancel", "appears-ready"],
     [
       { transport: "rest", transportUnavailable: [{ field: "reviewThreads", reason: "denied" }] },
@@ -83,8 +83,8 @@ describe("routePollSummary", () => {
     ],
     [{ mergeable: "UNKNOWN" }, {}, {}, {}, "wait", "pending-or-unknown"],
     [{ mergeStateStatus: "BEHIND" }, {}, {}, { merge: true }, "wait", "pending-or-unknown"],
-    [{}, {}, { actionable: 1 }, {}, "fix_code", "review-work"],
-    [{}, { inProgress: 1 }, { actionable: 1 }, {}, "fix_code", "review-work"],
+    [{}, {}, { actionable: 1 }, {}, "triage", "review-work"],
+    [{}, { inProgress: 1 }, { actionable: 1 }, {}, "triage", "review-work"],
     [
       { isInMergeQueue: true },
       {},
@@ -106,7 +106,7 @@ describe("routePollSummary", () => {
       { incomplete: true },
       {},
       { noAutoMarkReady: true },
-      "fix_code",
+      "triage",
       "draft-readiness-verification-required",
     ],
     [
@@ -114,7 +114,7 @@ describe("routePollSummary", () => {
       {},
       { incomplete: true },
       { noAutoMarkReady: true },
-      "fix_code",
+      "triage",
       "draft-readiness-verification-required",
     ],
     [{ isDraft: true }, {}, {}, {}, "mark_ready", "draft-appears-ready"],
@@ -149,7 +149,7 @@ describe("routePollSummary", () => {
       { passing: 1 },
       {},
       { merge: true },
-      "fix_code",
+      "triage",
       "authoritative-poll-required",
     ],
     [
@@ -170,7 +170,7 @@ describe("routePollSummary", () => {
         { mergeStateStatus: "BLOCKED" },
         { passing: 4, unreportedRequired: ["build", "tests"] },
       ),
-    ).toEqual({ action: "fix_code", reasons: ["unreported-required-checks"] });
+    ).toEqual({ action: "triage", reasons: ["unreported-required-checks"] });
   });
 
   it("keeps waiting while a workflow or check run is still in progress", () => {

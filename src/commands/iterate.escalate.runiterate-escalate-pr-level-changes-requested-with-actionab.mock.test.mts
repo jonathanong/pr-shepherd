@@ -59,23 +59,23 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
 
     const result = await runIterate({ ...makeOpts(), instructions: "inline" });
 
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
+    expect(result.action).toBe("triage");
+    if (result.action === "triage") {
       // Non-human CR review is auto-dismissed (in resolveCommand, SHA-gated);
       // actionable comment minimize splits to resolveOnlyCommand.
-      expect(result.fix.resolveCommand.requiresHeadSha).toBe(true);
-      expect(result.fix.resolveCommand.argv).toContain("--dismiss-review-ids");
-      expect(result.fix.resolveCommand.argv).toContain("review-1");
-      expect(result.fix.resolveOnlyCommand?.argv).toContain("--minimize-comment-ids");
-      expect(result.fix.resolveOnlyCommand?.argv).toContain("comment-1");
-      expect(result.fix.instructions.join("\n")).toContain("Commit and push any changes.");
-      expect(result.fix.instructions.join("\n")).toContain(
+      expect(result.triage.resolveCommand.requiresHeadSha).toBe(true);
+      expect(result.triage.resolveCommand.argv).toContain("--dismiss-review-ids");
+      expect(result.triage.resolveCommand.argv).toContain("review-1");
+      expect(result.triage.resolveOnlyCommand?.argv).toContain("--minimize-comment-ids");
+      expect(result.triage.resolveOnlyCommand?.argv).toContain("comment-1");
+      expect(result.triage.instructions.join("\n")).toContain("Commit and push any changes.");
+      expect(result.triage.instructions.join("\n")).toContain(
         "`$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review",
       );
-      expect(result.fix.instructions.join("\n")).toContain(
+      expect(result.triage.instructions.join("\n")).toContain(
         "Run: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --minimize-comment-ids comment-1`",
       );
-      expect(result.fix.instructions.join("\n")).toContain("Rerun Shepherd now.");
+      expect(result.triage.instructions.join("\n")).toContain("Rerun Shepherd now.");
     }
   });
 

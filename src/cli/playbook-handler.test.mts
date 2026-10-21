@@ -33,18 +33,18 @@ describe("handlePlaybook", () => {
 
   it("lists playbooks as text and JSON", () => {
     handlePlaybook([]);
-    expect(out).toContain("- Fix-code loop");
+    expect(out).toContain("- Triage loop");
     out = "";
     handlePlaybook(["--format=json"]);
-    expect(JSON.parse(out).playbooks).toContain("Fix-code loop");
+    expect(JSON.parse(out).playbooks).toContain("Triage loop");
   });
 
   it("prints a multi-word playbook name given as separate words or quoted", () => {
-    handlePlaybook(["Fix-code", "loop"]);
-    expect(out).toContain("# Fix-code loop");
+    handlePlaybook(["Triage", "loop"]);
+    expect(out).toContain("# Triage loop");
     out = "";
-    handlePlaybook(["Fix-code loop", "--format", "json"]);
-    expect(JSON.parse(out)).toMatchObject({ name: "Fix-code loop" });
+    handlePlaybook(["Triage loop", "--format", "json"]);
+    expect(JSON.parse(out)).toMatchObject({ name: "Triage loop" });
   });
 
   it("reports an unknown playbook with a usage exit code", () => {

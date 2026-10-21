@@ -175,7 +175,7 @@ describe("runIterate — stall-timeout guard", () => {
 
     const result = await runIterate(makeOpts30mStall());
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     const written = mockWriteStallState.mock.calls[0]![1] as StallState;
     expect(written.firstSeenAt).toBe(NOW);
     expect(written.fingerprint).not.toBe(firstFingerprint);

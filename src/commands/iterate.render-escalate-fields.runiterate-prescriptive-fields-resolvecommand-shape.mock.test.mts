@@ -69,9 +69,9 @@ describe("runIterate — prescriptive fields: resolveCommand shape", () => {
     });
 
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
-      const { resolveCommand, resolveOnlyCommand } = result.fix;
+    expect(result.action).toBe("triage");
+    if (result.action === "triage") {
+      const { resolveCommand, resolveOnlyCommand } = result.triage;
       expect(resolveCommand.argv).toContain("--reply-thread-ids");
       expect(resolveCommand.argv.join(" ")).toContain("thread-1");
       // minimize IDs split to resolveOnlyCommand when reply also present
@@ -120,9 +120,9 @@ describe("runIterate — prescriptive fields: resolveCommand shape", () => {
     });
 
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
-      const { resolveCommand } = result.fix;
+    expect(result.action).toBe("triage");
+    if (result.action === "triage") {
+      const { resolveCommand } = result.triage;
       // Non-human (Unknown) CR reviews are auto-dismissed in the same command as replies.
       expect(resolveCommand.argv).toContain("--dismiss-review-ids");
       expect(resolveCommand.argv.join(" ")).toContain("r-1");

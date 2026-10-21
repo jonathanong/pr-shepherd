@@ -93,7 +93,7 @@ describe("runIterate — prescriptive fields: log strings", () => {
       expect(result.log).toMatch(/ready/i);
     }
   });
-  it("fix_code.log for a timeout failure mentions the check name", async () => {
+  it("triage.log for a timeout failure mentions the check name", async () => {
     const timeoutCheck = {
       name: "test",
       status: "COMPLETED" as const,
@@ -125,6 +125,6 @@ describe("runIterate — prescriptive fields: log strings", () => {
     });
 
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
   });
 });

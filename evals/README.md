@@ -12,7 +12,7 @@ a PR is created and targeted.
 
 - **CI:** blocking on `gh run watch` instead of letting Shepherd poll, rerunning
   real failures, fetching pages the output already summarized.
-- **Loop:** stopping on non-terminal actions like `MARK_READY` and `FIX_CODE`,
+- **Loop:** stopping on non-terminal actions like `MARK_READY` and `TRIAGE`,
   skipping the generated `apply review:` command, or fetching review items
   Shepherd held back for a later tick.
 - **Stacks:** leaving layers unshepherded, merging a middle layer directly,
@@ -45,7 +45,7 @@ GitHub gotchas where the plugin changes the outcome (95% interval excludes 0):
 | Case | The trap                                                              | with → without |
 | ---- | --------------------------------------------------------------------- | -------------- |
 | `47` | A stack layer reads "3 passing", but its latest required run was cancelled | 1.00 → 0.44    |
-| `07` | A bot review and a human thread arrive in the same `FIX_CODE`         | 0.89 → 0.33    |
+| `07` | A bot review and a human thread arrive in the same `TRIAGE`         | 0.89 → 0.33    |
 | `05` | A cancelled run has to be rerun, not treated as a failure             | 1.00 → 0.50    |
 | `21` | Every stack layer is terminal, so the stack loop must stop            | 1.00 → 0.50    |
 | `38` | GitHub denied a reply; skip it once, don't retry                       | 0.72 → 0.33    |

@@ -2,7 +2,7 @@
  * Persistent attempt counter for the iterate escalation guard.
  *
  * Tracks how many caller-visible times each review thread has been dispatched to
- * the fix_code handler without being resolved. Body edits reset the count.
+ * the triage handler without being resolved. Body edits reset the count.
  *
  * State lives in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/fix-attempts.json`.
  */
@@ -19,7 +19,7 @@ import { resolvePrStatePath } from "./base.mts";
 export interface FixAttemptsState {
   /** HEAD SHA at the time the counts were last written, retained for observability/compatibility. */
   headSha: string;
-  /** Map from thread ID → number of fix_code dispatches that included this thread. */
+  /** Map from thread ID → number of triage dispatches that included this thread. */
   threadAttempts: Record<string, number>;
   /** Map from thread ID → body hash used for the associated attempt count. */
   threadBodyHashes?: Record<string, string>;

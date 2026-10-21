@@ -8,7 +8,7 @@ describe("escalate pending review commands", () => {
   it("renders pending review commands in a dedicated section", () => {
     const message = buildEscalateHumanMessage(
       {
-        triggers: ["fix-thrash"],
+        triggers: ["triage-thrash"],
         unresolvedThreads: [],
         ambiguousComments: [],
         changesRequestedReviews: [],

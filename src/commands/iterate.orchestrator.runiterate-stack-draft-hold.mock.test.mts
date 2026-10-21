@@ -123,8 +123,8 @@ describe("runIterate — held native stack drafts", () => {
     ];
     mockRunCheck.mockResolvedValue(report);
     const result = await runIterate(makeOpts({ noAutoMarkReady: true }));
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") expect(result.fix.firstLookThreads).toHaveLength(1);
+    expect(result.action).toBe("triage");
+    if (result.action === "triage") expect(result.triage.firstLookThreads).toHaveLength(1);
   });
 
   it("keeps waiting for a blocking bot review", async () => {

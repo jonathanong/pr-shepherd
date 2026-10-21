@@ -28,7 +28,7 @@ the current time — `iterate` always produces the same action, because the disp
 is a fixed sequence of conditions, evaluated first-match-wins. An unchanged PR snapshot
 can still move to a different action as any of those other inputs change: a ready-delay
 timer elapsing turns `WAIT` into `CANCEL` or `MERGE`, a first-look item becomes seen, and
-accumulated stall or fix-attempt state can turn a repeat `FIX_CODE` into `ESCALATE`. None
+accumulated stall or fix-attempt state can turn a repeat `TRIAGE` into `ESCALATE`. None
 of that is nondeterminism — it's the same fixed table over a larger, and equally
 inspectable, input.
 

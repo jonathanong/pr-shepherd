@@ -70,7 +70,7 @@ describe("REST changed tick cost", () => {
     Object.assign(live, { baseSha: "ccc333", mergeable: false, mergeableState: "dirty" });
     log.length = 0;
     const conflicted = await tick();
-    expect(conflicted).toMatchObject({ action: "fix_code" });
+    expect(conflicted).toMatchObject({ action: "triage" });
     expect(conflicted).toMatchObject({ mergeStatus: "CONFLICTS" });
     // The snapshot's closing pull re-read is a 304: the settled dirty body was just stored. A
     // conflict also looks up whether the base branch was itself a merged PR's head.

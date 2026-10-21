@@ -63,7 +63,7 @@ src/
 │   ├── check.mts          # context sweep (fetch → classify → report)
 │   ├── check-status.mts   # ShepherdStatus from a report
 │   ├── iterate/           # action dispatch (runIterate in index.mts)
-│   ├── poll.mts           # bounded WAIT loop + FIX_CODE debounce
+│   ├── poll.mts           # bounded WAIT loop + TRIAGE debounce
 │   ├── poll-summary.mts   # multi-PR / stack aggregate summary
 │   ├── ready-delay.mts    # ready-since.txt
 │   ├── resolve-mutate.mts # apply review mutations

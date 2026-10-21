@@ -72,7 +72,7 @@ it("omits ignored failures and includes merge-queue checks", async () => {
     { merge: true },
   );
   expect(item).toMatchObject({
-    action: "fix_code",
+    action: "triage",
     reasons: ["failing-checks"],
     checks: { failing: 1, ignored: 1 },
   });

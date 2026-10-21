@@ -441,7 +441,7 @@ const withRecordedIds = (text) =>
   text.replaceAll(FIXTURE_RUN_ID, String(RUN_ID)).replaceAll(FIXTURE_JOB_ID, String(JOB_ID));
 
 function failingCheckState() {
-  const state = fixtureState("92-fix-code-failing-check-first-failed-step");
+  const state = fixtureState("92-triage-failing-check-first-failed-step");
   return {
     ...state,
     checks: state.checks.map((c) => ({
@@ -458,7 +458,7 @@ function failingCheckState() {
  * the way the iterate formatter renders every excerpt line.
  */
 function failingCheckOutput() {
-  const text = snapshot("92-fix-code-failing-check-first-failed-step");
+  const text = snapshot("92-triage-failing-check-first-failed-step");
   const fixtureExcerpt = [
     "  > Check benchmark results",
     "  > Benchmark build or execution failed.",
@@ -762,7 +762,7 @@ const PR_SCENARIOS = [
     title: "First look at a review summary",
     note: "A COMMENTED review body arrives with green CI.",
     arms() {
-      const fixture = "22-fix-code-review-summary-first-look";
+      const fixture = "22-triage-review-summary-first-look";
       const state = fixtureState(fixture);
       return {
         shepherd: [shepherdTick(snapshot(fixture))],
@@ -780,7 +780,7 @@ const PR_SCENARIOS = [
     title: "Fix and reply to a review thread",
     note: "Read the thread, then reply after the fix.",
     arms() {
-      const fixture = "16-fix-code-review-thread";
+      const fixture = "16-triage-review-thread";
       const state = fixtureState(fixture);
       const text = snapshot(fixture);
       return {
@@ -799,7 +799,7 @@ const PR_SCENARIOS = [
     title: "Same thread, after a review round",
     note: "As above, on a PR already carrying #505's real history: three bot reviews, two resolved threads, three bot issue comments.",
     arms() {
-      const fixture = "16-fix-code-review-thread";
+      const fixture = "16-triage-review-thread";
       const state = withHistory(fixtureState(fixture), HISTORY);
       const text = snapshot(fixture);
       return {
@@ -818,7 +818,7 @@ const PR_SCENARIOS = [
     title: "Thread, comment, failing check and changes-requested review at once",
     note: "The output has no log excerpt, so the CI-triage playbook sends every arm to the failed log. All three read the real log from `failing-check`.",
     arms() {
-      const fixture = "54-fix-code-multi-category-threads-comments-checks-changes";
+      const fixture = "54-triage-multi-category-threads-comments-checks-changes";
       // The fixture's run 5401 becomes the recorded run, so the log every arm
       // fetches belongs to the failure the output shows.
       const recorded = (t) => t.replace(/\b5401\b/g, String(RUN_ID));
@@ -954,7 +954,7 @@ const PR_SCENARIOS = [
     title: "Reply to one human and two bot threads, resolve the bot ones",
     note: "Five mutations. Shepherd batches them into one `apply review`; the baselines issue each one, gh with `gh api --silent`.",
     arms() {
-      const fixture = "45-fix-code-bot-threads-resolve-human-reply";
+      const fixture = "45-triage-bot-threads-resolve-human-reply";
       const state = fixtureState(fixture);
       const text = snapshot(fixture);
       const threads = ["PRRT_human", "PRRT_bot", "PRRT_bracket_bot"];
@@ -1008,7 +1008,7 @@ const PR_SCENARIOS = [
     title: "Work through 115 review items under the review output budget",
     note: "Fixture 155 at a 3000-character `iterate.review-output-max-chars`: 60 active threads, 25 comments, 2 changes-requested reviews, 6 summaries and 22 first-look or edited items. Shepherd shows them in three batches (40, 42, 33) and replies to each batch's threads with one `apply review`; the baselines read everything at once and reply to all 60 threads one by one.",
     arms() {
-      const fixture = "155-fix-code-review-output-capped";
+      const fixture = "155-triage-review-output-capped";
       const state = fixtureState(fixture);
       const ticks = [snapshot(fixture), followUpTick(2), followUpTick(3)];
       const repliesIn = (text) =>
@@ -1039,7 +1039,7 @@ const PR_SCENARIOS = [
     note: "gh must find the check-run ID, then fetch its annotations. The GitHub MCP server has no annotations tool.",
     gaps: { mcp: "cannot read check annotations" },
     arms() {
-      const fixture = "42-fix-code-check-annotations";
+      const fixture = "42-triage-check-annotations";
       const state = fixtureState(fixture);
       const annotations = fixtureInput(fixture).checkAnnotationsByCheckId;
       // The fixture's run has two annotations, so it still needs the batch read.
@@ -1086,7 +1086,7 @@ const PR_SCENARIOS = [
     title: "Branch conflicts with its base",
     note: "Shepherd also relays the repository's configured branch-update hint.",
     arms() {
-      const fixture = "117-fix-code-conflicts-behind-base-hint";
+      const fixture = "117-triage-conflicts-behind-base-hint";
       const state = fixtureState(fixture);
       return {
         // A warm REST tick charges only the reads the base push moved.
@@ -1202,8 +1202,8 @@ const STACK_REPO = (layer) => layer.repo ?? "owner/repo";
 
 function layerFixture(layer) {
   if (layer.state !== "OPEN") return null;
-  if (layer.reasons?.includes("merge-conflicts")) return "27-fix-code-conflicts";
-  if (layer.reasons?.includes("review-work")) return "16-fix-code-review-thread";
+  if (layer.reasons?.includes("merge-conflicts")) return "27-triage-conflicts";
+  if (layer.reasons?.includes("review-work")) return "16-triage-review-thread";
   if (layer.reasons?.includes("already-in-merge-queue")) return "66-wait-merge-queue-active";
   return "64-merge-ready-delay-elapsed";
 }

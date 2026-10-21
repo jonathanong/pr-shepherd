@@ -4,10 +4,10 @@ import { selectQuotaWarning } from "../quota-selection.mts";
 import type { IterateResult } from "../../types.mts";
 import { buildQuotaAwareContinuation } from "../../quota-warning.mts";
 import { getGithubTransport } from "../../github/transport.mts";
-import { isFixCodeContinuation } from "./check-instructions.mts";
+import { isTriageContinuation } from "./check-instructions.mts";
 
 function shouldWarn(result: IterateResult): boolean {
-  return ["wait", "mark_ready", "merge", "fix_code"].includes(result.action);
+  return ["wait", "mark_ready", "merge", "triage"].includes(result.action);
 }
 
 export async function attachApiUsage(
@@ -44,17 +44,17 @@ export async function attachApiUsage(
     apiUsage,
     ...(quotaWarning !== undefined && { quotaWarning }),
   };
-  if (quotaWarning === undefined || withWarning.action !== "fix_code") return withWarning;
+  if (quotaWarning === undefined || withWarning.action !== "triage") return withWarning;
 
-  const instructions = [...withWarning.fix.instructions];
+  const instructions = [...withWarning.triage.instructions];
   const completion = instructions.at(-1);
   if (completion !== undefined) {
-    if (isFixCodeContinuation(completion)) {
+    if (isTriageContinuation(completion)) {
       instructions[instructions.length - 1] = buildQuotaAwareContinuation(
         quotaWarning,
-        "`[FIX_CODE]` is non-terminal. After completing these steps,",
+        "`[TRIAGE]` is non-terminal. After completing these steps,",
       );
     }
   }
-  return { ...withWarning, fix: { ...withWarning.fix, instructions } };
+  return { ...withWarning, triage: { ...withWarning.triage, instructions } };
 }

@@ -18,7 +18,7 @@ describe("stack handoffs with only unowned autonomous work", () => {
           isDraft: true,
           pollCommand: undefined,
         }),
-        unowned(row(2, 2, { action: "fix_code", reasons: ["review-work"] })),
+        unowned(row(2, 2, { action: "triage", reasons: ["review-work"] })),
       ]),
       false,
     );
@@ -33,8 +33,8 @@ describe("stack handoffs with only unowned autonomous work", () => {
   it("stops to ask about a missing command when every runnable layer is unowned", () => {
     const result = withPollSummaryInstructions(
       stack([
-        row(1, 1, { action: "fix_code", pollCommand: undefined }),
-        unowned(row(2, 2, { action: "fix_code" })),
+        row(1, 1, { action: "triage", pollCommand: undefined }),
+        unowned(row(2, 2, { action: "triage" })),
       ]),
       false,
     );

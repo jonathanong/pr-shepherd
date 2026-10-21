@@ -74,7 +74,7 @@ describe("edited comments section", () => {
   });
 
   it("uses the same projection in verbose JSON", () => {
-    for (const action of ["fix_code", "escalate"] as const) {
+    for (const action of ["triage", "escalate"] as const) {
       const result = { ...makeIterateResult(action), editedComments: [minimized] };
       expect(projectIterateVerbose(result)).toMatchObject({
         editedComments: projectEditedComments([minimized]),

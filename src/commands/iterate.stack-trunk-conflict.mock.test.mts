@@ -75,10 +75,10 @@ describe("runIterate — upper layer trunk conflict", () => {
     });
 
     const result = await runIterate(makeOpts({ prNumber: 2547 }));
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(mockLookupTrunkConflict).not.toHaveBeenCalled();
-    if (result.action !== "fix_code") return;
-    const instructions = result.fix.instructions.join("\n");
+    if (result.action !== "triage") return;
+    const instructions = result.triage.instructions.join("\n");
     expect(instructions).toContain("gh stack checkout 2535");
     expect(instructions).toContain(
       "check out the head branch of PR #2547 and run `gh stack rebase`.",
@@ -103,9 +103,9 @@ describe("runIterate — upper layer trunk conflict", () => {
     });
     const result = await runIterate(makeOpts());
     expect(mockLookupTrunkConflict).toHaveBeenCalledWith(expect.objectContaining({ bottomPr: 11 }));
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.instructions.join("\n")).toContain("gh stack rebase --upstack --no-trunk");
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.instructions.join("\n")).toContain("gh stack rebase --upstack --no-trunk");
   });
 
   it("rebases onto trunk when the upper layer already contains its parent", async () => {
@@ -118,17 +118,17 @@ describe("runIterate — upper layer trunk conflict", () => {
       remainingSeconds: 600,
     });
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
-    const fix = result as Extract<IterateResult, { action: "fix_code" }>;
-    expect(fix.stackTrunkConflict).toBe("main");
-    expect(fix.fix.instructions.join("\n")).toContain(
+    expect(result.action).toBe("triage");
+    const triage = result as Extract<IterateResult, { action: "triage" }>;
+    expect(triage.stackTrunkConflict).toBe("main");
+    expect(triage.triage.instructions.join("\n")).toContain(
       "check out the head branch of PR #11 and run `gh stack rebase`.",
     );
-    expect(fix.fix.instructions.join("\n")).not.toContain("--no-trunk");
-    const text = formatIterateResult(fix);
+    expect(triage.triage.instructions.join("\n")).not.toContain("--no-trunk");
+    const text = formatIterateResult(triage);
     expect(text).toContain("**branch** conflicts with stack trunk `main`");
     expect(text).not.toContain("conflicts with PR base");
-    expect(projectIterateLean(fix)).toMatchObject({ stackTrunkConflict: "main" });
+    expect(projectIterateLean(triage)).toMatchObject({ stackTrunkConflict: "main" });
   });
 
   it("keeps the parent rebase when the head SHA is unavailable", async () => {
@@ -140,10 +140,10 @@ describe("runIterate — upper layer trunk conflict", () => {
       remainingSeconds: 600,
     });
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(mockLookupTrunkConflict).not.toHaveBeenCalled();
-    if (result.action !== "fix_code") return;
-    expect(result.fix.instructions.join("\n")).toContain("--upstack --no-trunk");
+    if (result.action !== "triage") return;
+    expect(result.triage.instructions.join("\n")).toContain("--upstack --no-trunk");
     expect(result.stackTrunkConflict).toBeUndefined();
   });
 });

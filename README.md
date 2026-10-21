@@ -13,7 +13,7 @@ Drive a pull request to merge-ready with a coding agent. It works with Claude Co
 ```text
 $ pr-shepherd 123
 
-# PR #123 [FIX_CODE]
+# PR #123 [TRIAGE]
 
 **status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo`
 **summary** 3 passing
@@ -96,7 +96,7 @@ These are offline estimates at 3.5 characters per token over recorded sessions, 
 
 ### Clearer agent direction
 
-For a single PR, each tick returns exactly one action: `WAIT`, `READY`, `MARK_READY`, `FIX_CODE`, `MERGE`, `CANCEL`, or `ESCALATE`. A `stack` poll can also return `SHEPHERD`, which starts one-PR sessions for owned layers. Every action except `CANCEL` comes with numbered `## Instructions` and exact commands, so the agent does not invent policy. In the [behavior evals](evals/README.md), Sonnet 5.5 at low effort scores **0.94** with the plugin and **0.82** without it on the 36 GitHub-gotcha cases, so it misses about two-thirds fewer graded checks (0.18 → 0.06). On the eight gotchas listed under [Context and correctness](#context-and-correctness) it goes from 0.50 to 0.92. Weighted toward those gotchas, the mean Δ over all 52 cases is **+0.14**, and no case has a regression whose interval excludes 0. See [docs/actions.md](docs/actions.md) for the output contract.
+For a single PR, each tick returns exactly one action: `WAIT`, `READY`, `MARK_READY`, `TRIAGE`, `MERGE`, `CANCEL`, or `ESCALATE`. A `stack` poll can also return `SHEPHERD`, which starts one-PR sessions for owned layers. Every action except `CANCEL` comes with numbered `## Instructions` and exact commands, so the agent does not invent policy. In the [behavior evals](evals/README.md), Sonnet 5.5 at low effort scores **0.94** with the plugin and **0.82** without it on the 36 GitHub-gotcha cases, so it misses about two-thirds fewer graded checks (0.18 → 0.06). On the eight gotchas listed under [Context and correctness](#context-and-correctness) it goes from 0.50 to 0.92. Weighted toward those gotchas, the mean Δ over all 52 cases is **+0.14**, and no case has a regression whose interval excludes 0. See [docs/actions.md](docs/actions.md) for the output contract.
 
 ### Lower GitHub API quota use
 

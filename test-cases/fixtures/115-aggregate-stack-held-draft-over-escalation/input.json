@@ -26,7 +26,7 @@
         "url": "https://github.com/owner/repo/pull/451",
         "action": "escalate",
         "reasons": [
-          "fix-thrash"
+          "triage-thrash"
         ],
         "state": "OPEN",
         "mergeable": "MERGEABLE",

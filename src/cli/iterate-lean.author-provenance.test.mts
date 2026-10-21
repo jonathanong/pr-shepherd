@@ -6,9 +6,9 @@ import {
 
 describe("projectIterateLean — author provenance", () => {
   it("preserves per-reply author provenance in lean JSON", () => {
-    const result = makeIterateResult("fix_code");
-    if (result.action !== "fix_code") throw new Error("unreachable");
-    result.fix.threads = [
+    const result = makeIterateResult("triage");
+    if (result.action !== "triage") throw new Error("unreachable");
+    result.triage.threads = [
       {
         id: "thread-1",
         path: "src/x.ts",
@@ -48,8 +48,8 @@ describe("projectIterateLean — author provenance", () => {
     ];
 
     const lean = projectIterateLean(result) as Record<string, unknown>;
-    const fix = lean.fix as Record<string, unknown>;
-    const threads = fix.threads as typeof result.fix.threads;
+    const triage = lean.triage as Record<string, unknown>;
+    const threads = triage.threads as typeof result.triage.threads;
 
     expect(threads[0]).toMatchObject({
       author: "review-bot[bot]",

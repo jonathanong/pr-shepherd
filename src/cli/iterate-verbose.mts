@@ -16,7 +16,7 @@ export function projectIterateVerbose(
   const edited = result.editedComments && {
     editedComments: projectEditedComments(result.editedComments),
   };
-  if (result.action === "fix_code") return { ...result, ...readyDelayOverride, ...edited };
+  if (result.action === "triage") return { ...result, ...readyDelayOverride, ...edited };
   const log =
     "log" in result && typeof result.log === "string" ? { log: adaptIterateLog(result.log) } : {};
   // `cancel` has no instructions, so verbose JSON omits the field as verbose Markdown omits the section.

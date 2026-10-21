@@ -74,9 +74,9 @@ to start before continuing.`,
     slug: "03-multi-category-fix",
     tier: "guard",
     area: "github",
-    fixture: "54-fix-code-multi-category-threads-comments-checks-changes",
+    fixture: "54-triage-multi-category-threads-comments-checks-changes",
     shape: shapeA,
-    tags: ["fix-code", "complex"],
+    tags: ["triage", "complex"],
     graders: {
       "addresses-every-category": llm(
         `The plan addresses ALL FOUR categories of work in the output, not a subset:
@@ -123,9 +123,9 @@ passing without committing to run it.`,
     slug: "04-real-failure-no-blind-rerun",
     tier: "guard",
     area: "github",
-    fixture: "61-fix-code-aggregate-ci-exit-code",
+    fixture: "61-triage-aggregate-ci-exit-code",
     shape: shapeA,
-    tags: ["fix-code", "ci-triage"],
+    tags: ["triage", "ci-triage"],
     graders: {
       "does-not-treat-rerun-as-the-default": llm(
         `The plan does NOT treat the printed \`rerun:\` command as a recommendation to rerun.
@@ -155,9 +155,9 @@ the printed \`rerun:\` command as shepherd advising a rerun.`,
     slug: "05-cancelled-must-rerun",
     tier: "discriminating",
     area: "github",
-    fixture: "14-fix-code-cancelled-conclusion",
+    fixture: "14-triage-cancelled-conclusion",
     shape: shapeB,
-    tags: ["fix-code", "ci-triage"],
+    tags: ["triage", "ci-triage"],
     graders: {
       // Boundary required: `555` alone also matches `gh run rerun 5550`.
       "issues-the-rerun": regex(`gh run rerun\\s+555(?![0-9])`, { weight: 1 }),
@@ -183,15 +183,15 @@ unfixable.`,
     // Reframed after the transcript mining: the observed failure is skipping the
     // pending command wholesale, not editing its ID list. Zero truncated ID lists
     // were found across three tools.
-    slug: "06-fix-code-dismiss-stale-bot",
+    slug: "06-triage-dismiss-stale-bot",
     tier: "discriminating",
     area: "github",
-    fixture: "60-fix-code-bot-cr-not-dismissed",
+    fixture: "60-triage-bot-cr-not-dismissed",
     shape: shapeA,
-    tags: ["fix_code"],
+    tags: ["triage"],
     graders: {
       "continues-autonomously": llm(
-        `The response treats \`[FIX_CODE]\` as non-terminal. It evaluates the surfaced
+        `The response treats \`[TRIAGE]\` as non-terminal. It evaluates the surfaced
 review bodies, makes any warranted code fixes, runs the generated authorized
 review mutation with a current pushed head SHA and a truthful disposition, then
 iterates Shepherd again. It does not ask a human to dismiss an authorized bot
@@ -210,15 +210,15 @@ first stale review.`,
 
   {
     // Sibling of case 06: preserve the thread reply and bot dismissal together.
-    slug: "07-fix-code-bot-and-thread",
+    slug: "07-triage-bot-and-thread",
     tier: "discriminating",
     area: "github",
-    fixture: "84-fix-code-bot-cr-with-thread",
+    fixture: "84-triage-bot-cr-with-thread",
     shape: shapeB,
-    tags: ["fix_code"],
+    tags: ["triage"],
     graders: {
       "handles-thread-and-bot": llm(
-        `The response treats \`[FIX_CODE]\` as non-terminal, evaluates the review
+        `The response treats \`[TRIAGE]\` as non-terminal, evaluates the review
 thread and bot review, applies warranted code fixes, retains the generated
 thread reply and bot dismissal, then iterates. It does not hand the authorized
 dismissal to a human or silently abandon the actionable thread.`,
@@ -243,9 +243,9 @@ dismissal to a human or silently abandon the actionable thread.`,
     slug: "08-mergeability-diagnosis",
     tier: "guard",
     area: "github",
-    fixture: "32-fix-code-pr-level-changes-requested",
+    fixture: "32-triage-pr-level-changes-requested",
     shape: shapeB,
-    tags: ["fix-code", "mergeability"],
+    tags: ["triage", "mergeability"],
     graders: {
       "names-the-real-blocker": llm(
         `The response identifies the PR-level changes-requested review from @architect
@@ -325,9 +325,9 @@ any push against this PR.`,
     slug: "10-external-check-no-handoff",
     tier: "guard",
     area: "github",
-    fixture: "12-fix-code-failing-check-external",
+    fixture: "12-triage-failing-check-external",
     shape: shapeA,
-    tags: ["fix-code", "ci-triage"],
+    tags: ["triage", "ci-triage"],
     graders: {
       // Recalibrated: the pilot showed both arms planning a sensible
       // investigation and still failing, because the rubric demanded an explicit
@@ -399,9 +399,9 @@ do.`,
     slug: "12-annotations-already-surfaced",
     tier: "guard",
     area: "github",
-    fixture: "55-fix-code-failing-check-annotations-with-thread",
+    fixture: "55-triage-failing-check-annotations-with-thread",
     shape: shapeA,
-    tags: ["fix-code", "complex", "efficiency"],
+    tags: ["triage", "complex", "efficiency"],
     graders: {
       "acts-on-the-surfaced-annotation": llm(
         `The plan acts on the check annotation already in the output —

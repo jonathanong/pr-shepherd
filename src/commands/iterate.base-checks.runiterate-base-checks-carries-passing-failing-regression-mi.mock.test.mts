@@ -15,7 +15,7 @@ registerIterateHooks();
 // ---------------------------------------------------------------------------
 
 describe("runIterate — base.checks carries passing + failing (regression: missing CI bug)", () => {
-  it("regression: 5 passing + 1 infra failure → fix_code with failing check in base.checks", async () => {
+  it("regression: 5 passing + 1 infra failure → triage with failing check in base.checks", async () => {
     const infraCheck = {
       name: "build",
       status: "COMPLETED" as const,
@@ -58,7 +58,7 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     // All 6 checks visible — the bug was that the failing infra check disappeared from output.
     expect(result.checks).toHaveLength(6);
     const failing = result.checks.find((c) => c.name === "build");
@@ -69,7 +69,7 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
       .sort();
     expect(passNames).toEqual(["e2e", "lint", "security", "test", "typecheck"]);
   });
-  it("cancelled+BEHIND → fix_code action with failing check still in base.checks", async () => {
+  it("cancelled+BEHIND → triage action with failing check still in base.checks", async () => {
     const cancelledCheck = {
       name: "ci",
       status: "COMPLETED" as const,
@@ -111,7 +111,7 @@ describe("runIterate — base.checks carries passing + failing (regression: miss
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(result.checks).toHaveLength(1);
     expect(result.checks[0]!.name).toBe("ci");
   });

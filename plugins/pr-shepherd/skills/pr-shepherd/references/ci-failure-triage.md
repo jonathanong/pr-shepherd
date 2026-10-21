@@ -6,7 +6,7 @@ Apply when a step says `Playbook: "CI failure triage"`. Use the excerpts and tag
 - A `rerun:` command means Shepherd verified Actions rerun access (WRITE+) and an original attempt. On the REST transport the role is unknown, so GitHub's response to the rerun decides. Run it at most once; matrix bullets sharing its run id print it once. An `[attempt: N]` check never gets another rerun; its excerpt is still investigation work, and without usable evidence it escalates when nothing else remains.
 - In-progress runs, `ACTION_REQUIRED`, non-Actions run ids, and runs without attempt metadata never get a `rerun:`.
 - `scope: merge_group` never gets a rerun: it cannot restore the queue entry and overwrites the evidence. Fix the PR head if the failure is this PR's. Otherwise apply the Merge queue ejection playbook a printed ejection step names; with no ejection step the entry is still queued, so make no queue mutation and iterate until GitHub reports the removal.
-- Do not invent a handoff from `[FIX_CODE]`. Shepherd escalates when nothing autonomous remains.
+- Do not invent a handoff from `[TRIAGE]`. Shepherd escalates when nothing autonomous remains.
 
 ## Conclusions
 

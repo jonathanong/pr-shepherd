@@ -1,7 +1,7 @@
 // Case 53: the per-tick review output budget (`iterate.review-output-max-chars`).
 //
 // Fixture 155 holds 115 review items against a 3000-character budget, so the
-// FIX_CODE output shows 40 of them (two changes-requested reviews and the 38
+// TRIAGE output shows 40 of them (two changes-requested reviews and the 38
 // oldest active threads) and prints a subset step. The held items are absent
 // from the output and from the generated `apply review` IDs. Two failures are
 // likely: fetching the rest with `gh api` to "finish the job", and treating the
@@ -12,13 +12,13 @@ import { ITERATES_AGAIN, llm, regex, shapeA, skillFired } from "../lib.mjs";
 
 export const REVIEW_BUDGET_CASES = [
   {
-    slug: "53-fix-code-review-subset",
+    slug: "53-triage-review-subset",
     tier: "discriminating",
     area: "github",
     runs: 6,
-    fixture: "155-fix-code-review-output-capped",
+    fixture: "155-triage-review-output-capped",
     shape: shapeA,
-    tags: ["fix-code", "review-budget"],
+    tags: ["triage", "review-budget"],
     graders: {
       "runs-the-printed-apply-review": regex(
         String.raw`pr-shepherd\s+apply\s+review\s+https://github\.com/owner/repo/pull/42(?![0-9])`,

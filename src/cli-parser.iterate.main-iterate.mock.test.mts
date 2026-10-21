@@ -68,14 +68,14 @@ describe("main — default (poll)", () => {
     expect(process.exitCode).toBe(EXIT.OK);
   });
 
-  it("returns fix_code from the default path with an explicit next-poll instruction", async () => {
-    mockRunIterate.mockResolvedValue(makeIterateResult("fix_code"));
+  it("returns triage from the default path with an explicit next-poll instruction", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("triage"));
 
     await main(["node", "shepherd", "42", "--debounce", "0"]);
 
     expect(mockRunIterate).toHaveBeenCalledTimes(1);
-    expect(process.exitCode).toBe(EXIT.FIX_CODE);
-    expect(getStdout()).toContain("`[FIX_CODE]` is non-terminal");
+    expect(process.exitCode).toBe(EXIT.TRIAGE);
+    expect(getStdout()).toContain("`[TRIAGE]` is non-terminal");
     expect(getStdout()).toContain("continue with the next poll");
     expect(getStdout()).not.toContain("Stop this iteration");
   });
@@ -136,10 +136,10 @@ describe("main — default (poll)", () => {
 });
 
 describe("main — iterate subcommand", () => {
-  it("exits with iterateResultToExitCode(fix_code)=EXIT.FIX_CODE", async () => {
-    mockRunIterate.mockResolvedValue(makeIterateResult("fix_code"));
+  it("exits with iterateResultToExitCode(triage)=EXIT.TRIAGE", async () => {
+    mockRunIterate.mockResolvedValue(makeIterateResult("triage"));
     await main(["node", "shepherd", "iterate", "42"]);
-    expect(process.exitCode).toBe(EXIT.FIX_CODE);
+    expect(process.exitCode).toBe(EXIT.TRIAGE);
   });
 
   it("exits with EXIT.WAIT for wait action", async () => {

@@ -57,14 +57,14 @@ const warning: GraphqlQuotaWarning = {
 const QUOTA_RESUME_TEXT =
   "Resume full-cadence pr-shepherd after the GraphQL quota resets at 2026-08-30T05:12:29.000Z";
 
-type FixCodeResult = Extract<IterateResult, { action: "fix_code" }>;
+type TriageResult = Extract<IterateResult, { action: "triage" }>;
 
-function fixCodeResult(instructions?: string[]): FixCodeResult {
-  const result = makeIterateResult("fix_code") as FixCodeResult;
+function triageResult(instructions?: string[]): TriageResult {
+  const result = makeIterateResult("triage") as TriageResult;
   return {
     ...result,
-    fix: {
-      ...result.fix,
+    triage: {
+      ...result.triage,
       ...(instructions !== undefined && { instructions }),
     },
   };
@@ -89,8 +89,8 @@ describe("attachApiUsage", () => {
     ["wait", makeIterateResult("wait"), true],
     ["mark_ready", makeIterateResult("mark_ready"), true],
     ["merge", makeIterateResult("merge"), true],
-    ["ordinary fix_code", fixCodeResult(), true],
-    ["fix_code wording does not alter recurrence", fixCodeResult(["arbitrary text"]), true],
+    ["ordinary triage", triageResult(), true],
+    ["triage wording does not alter recurrence", triageResult(["arbitrary text"]), true],
     ["cancel", makeIterateResult("cancel"), false],
     ["escalate", makeIterateResult("escalate"), false],
   ] as const)(
@@ -130,15 +130,15 @@ describe("attachApiUsage", () => {
     );
   });
 
-  it("attaches the quota warning and replaces a fix-code continuation with its longer poll cadence", async () => {
+  it("attaches the quota warning and replaces a triage continuation with its longer poll cadence", async () => {
     mockEvaluateQuotaWarning.mockResolvedValue(warning);
-    const result = fixCodeResult();
+    const result = triageResult();
     const attached = await attachApiUsage(result, true);
-    expect(attached).toMatchObject({ apiUsage, quotaWarning: warning, action: "fix_code" });
-    if (attached.action !== "fix_code") throw new Error("expected fix_code result");
-    expect(attached.fix.instructions.at(-1)).toContain(QUOTA_RESUME_TEXT);
-    expect(attached.fix.instructions.at(-1)).toContain("no more often than every 5 minutes");
-    expect(attached.fix.instructions.at(-1)).toContain("--interval 5m --timeout 10m");
+    expect(attached).toMatchObject({ apiUsage, quotaWarning: warning, action: "triage" });
+    if (attached.action !== "triage") throw new Error("expected triage result");
+    expect(attached.triage.instructions.at(-1)).toContain(QUOTA_RESUME_TEXT);
+    expect(attached.triage.instructions.at(-1)).toContain("no more often than every 5 minutes");
+    expect(attached.triage.instructions.at(-1)).toContain("--interval 5m --timeout 10m");
   });
 
   it("evaluates REST core telemetry and adds no warning while it is above every band", async () => {
@@ -168,12 +168,12 @@ describe("attachApiUsage", () => {
     );
   });
 
-  it("keeps fix-code instructions unchanged when quota evaluation produces no warning", async () => {
-    const result = fixCodeResult();
+  it("keeps triage instructions unchanged when quota evaluation produces no warning", async () => {
+    const result = triageResult();
     const attached = await attachApiUsage(result, true);
     expect(attached).toEqual({ ...result, apiUsage });
-    if (attached.action !== "fix_code") throw new Error("expected fix_code result");
-    expect(attached.fix.instructions).toEqual(result.fix.instructions);
+    if (attached.action !== "triage") throw new Error("expected triage result");
+    expect(attached.triage.instructions).toEqual(result.triage.instructions);
   });
 
   it("removes a deferred inner warning when the serialized outer evaluation suppresses it", async () => {

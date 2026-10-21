@@ -56,10 +56,10 @@ describe("REST transport iterate scenarios", () => {
     vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
     await serve(routes({ comments: [comment(11)] }));
     const first = await pollUntilTerminal();
-    expect(first.action).toBe("fix_code");
-    if (first.action !== "fix_code") throw new Error("expected first-look work");
-    expect(first.fix.firstLookThreads).toHaveLength(1);
-    expect(first.fix.firstLookThreads[0]).toMatchObject({ firstLookStatus: "resolved" });
+    expect(first.action).toBe("triage");
+    if (first.action !== "triage") throw new Error("expected first-look work");
+    expect(first.triage.firstLookThreads).toHaveLength(1);
+    expect(first.triage.firstLookThreads[0]).toMatchObject({ firstLookStatus: "resolved" });
 
     // A fresh transport runner models an independently started CLI invocation;
     // seen markers and ready receipts live outside that process scope.
@@ -69,7 +69,7 @@ describe("REST transport iterate scenarios", () => {
       reason: "ready-delay-elapsed",
       status: "READY",
     });
-    expect(next.action === "fix_code" ? next.fix.firstLookThreads : []).toHaveLength(0);
+    expect(next.action === "triage" ? next.triage.firstLookThreads : []).toHaveLength(0);
     expect(await readReadyReceipt({ owner: repo.owner, repo: repo.name, pr: 101 })).not.toBeNull();
     assertNoGraphql();
   });
@@ -77,9 +77,9 @@ describe("REST transport iterate scenarios", () => {
   it("surfaces status-unknown feedback once and escalates the incomplete REST snapshot", async () => {
     await serve(routes({ comments: [comment(11)] }));
     const first = await iterate({ noAutoMarkReady: true });
-    expect(first.action).toBe("fix_code");
-    if (first.action !== "fix_code") throw new Error("expected first-look work");
-    expect(first.fix.firstLookThreads).toMatchObject([{ firstLookStatus: "unknown" }]);
+    expect(first.action).toBe("triage");
+    if (first.action !== "triage") throw new Error("expected first-look work");
+    expect(first.triage.firstLookThreads).toMatchObject([{ firstLookStatus: "unknown" }]);
 
     const next = await iterate({ noAutoMarkReady: true });
     expect(next).toMatchObject({

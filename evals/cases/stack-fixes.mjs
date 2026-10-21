@@ -57,9 +57,9 @@ export const STACK_FIXES_CASES = [
     tier: "discriminating",
     area: "github",
     runs: 6,
-    fixture: "145-fix-code-stacked-layer-required-check-latest-run-cancelled",
+    fixture: "145-triage-stacked-layer-required-check-latest-run-cancelled",
     shape: stackLayerShape,
-    tags: ["stack", "fix-code", "ci-triage"],
+    tags: ["stack", "triage", "ci-triage"],
     graders: {
       "runs-a-printed-rerun": regex(String.raw`gh run rerun\s+20[0-2](?![0-9])`),
       "reruns-every-cancelled-required-check": llm(
@@ -194,9 +194,9 @@ ask the user what to do.`,
     tier: "guard",
     area: "github",
     runs: 6,
-    fixture: "120-fix-code-native-stack-queue-removal-ack",
+    fixture: "120-triage-native-stack-queue-removal-ack",
     shape: shepherdShape,
-    tags: ["stack", "fix-code", "merge-queue"],
+    tags: ["stack", "triage", "merge-queue"],
     graders: {
       "updates-through-gh-stack": regex(String.raw`gh stack rebase`),
       "acknowledges-only-on-an-unchanged-head": llm(

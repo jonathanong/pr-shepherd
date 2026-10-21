@@ -26,7 +26,7 @@ export function checksWithActionableAnnotations(report: ShepherdReport): Triaged
  * check, an unseen check-run annotation, or a hard merge conflict) — the categories that
  * `commands/iterate/index.mts` never defers while a PR is queued. Shared with `check.mts` so
  * the seen-marker suppression gate there can't drift from the actual iterate dispatch
- * decision (a queued PR with a failing check still renders review items via `fix_code`; their
+ * decision (a queued PR with a failing check still renders review items via `triage`; their
  * seen markers must not be suppressed just because the PR happens to be queued).
  */
 export function hasCheckDrivenActionableWork(

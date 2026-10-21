@@ -13,7 +13,7 @@ Iterate flags:
   --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
   --no-auto-mark-ready           Leave draft PRs in draft; stop when otherwise ready.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
-  --instructions playbook|inline Render fix_code steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
+  --instructions playbook|inline Render triage steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
   --transport auto|graphql|rest  Select GitHub transport. Default: github.transport (auto).
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include verbose iterate fields.
@@ -25,7 +25,7 @@ Actions:
   WAIT        No immediate action; continue with the next poll.
   MARK_READY  Draft PR was marked ready; continue with the next poll.
   READY       Clean PR is inside the ready-delay. Schedule the rerun for when remainingSeconds elapses. Do not invent unrelated work. Already-owned later work may continue.
-  FIX_CODE    Agent action is required; follow the instructions, then continue polling.
+  TRIAGE      Agent action is required; follow the instructions, then continue polling.
   CANCEL      Stop polling this pull request: merged/closed, ready-delay elapsed, or a clean draft left in draft because auto mark-ready is disabled. Continue remaining work from the original request.
   ESCALATE    Stop polling until a human provides direction.
   MERGE       Run the emitted merge/queue command, then continue monitoring.
@@ -34,7 +34,7 @@ Exit codes:
   0   CANCEL (merged, ready-delay elapsed, or clean draft left in draft by disabled auto mark-ready)
   10  WAIT or READY
   11  MARK_READY
-  12  FIX_CODE
+  12  TRIAGE
   13  ESCALATE
   14  CANCEL (closed without merging)
   15  MERGE
@@ -47,7 +47,7 @@ Run iterate repeatedly for one PR, or read compact summaries for an explicit sam
 Aggregate mode returns when any row needs work, every row is terminal, or timeout.
 When CLAUDE_CODE_REMOTE=true, the command runs one tick like iterate and prints nextCheck instead.
 Poll exits as soon as iterate returns READY, MARK_READY, CANCEL, or ESCALATE, or when timeout
-returns the last WAIT result. FIX_CODE starts a --debounce settle window (default:
+returns the last WAIT result. TRIAGE starts a --debounce settle window (default:
 poll.debounce-seconds; built-in 1m): poll keeps
 iterating at --interval, then runs one more tick after the window and returns that result.
 With --until-terminal or --merge, poll also continues through MARK_READY.
@@ -60,17 +60,17 @@ Use 'pr-shepherd stack PR' for a native GitHub stack.
 Poll flags:
   --interval <duration>          Sleep between WAIT ticks. Bare number = seconds. Default: poll.interval-seconds (built-in 60s). Stack and multi-PR polls multiply that by poll.stack-interval-factor (built-in 2) unless this flag is set.
   --timeout <duration>           Maximum wall-clock wait for WAIT ticks. Bare number = seconds. Default: poll.timeout-seconds (built-in 4.5m).
-  --debounce <duration>          Settle window after first FIX_CODE or stack SHEPHERD before returning. Bare number = seconds. Default: poll.debounce-seconds (built-in 60s). 0 disables.
+  --debounce <duration>          Settle window after first TRIAGE or stack SHEPHERD before returning. Bare number = seconds. Default: poll.debounce-seconds (built-in 60s). 0 disables.
   --quiet-status                 Print only changed WAIT snapshots. Overrides poll.quiet-status.
   --no-quiet-status              Print every WAIT snapshot. Overrides poll.quiet-status.
-  --until-terminal               Continue through WAIT/MARK_READY until READY/FIX_CODE/MERGE/CANCEL/ESCALATE or stack SHEPHERD.
+  --until-terminal               Continue through WAIT/MARK_READY until READY/TRIAGE/MERGE/CANCEL/ESCALATE or stack SHEPHERD.
 
 Forwarded iterate flags:
   --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Default: iterate.ready-delay-minutes (built-in 0). Example: 15m.
   --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
   --no-auto-mark-ready           Leave draft PRs in draft; stop when otherwise ready.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
-  --instructions playbook|inline Render fix_code steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
+  --instructions playbook|inline Render triage steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
   --transport auto|graphql|rest  Select GitHub transport. Default: github.transport (auto).
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include verbose iterate fields and detailed per-tick lines.
@@ -80,14 +80,14 @@ Durations accept s/m/h suffixes: 30s, 4.5m, 1h. A bare number uses each flag's d
 for --interval/--timeout/--debounce, minutes for --ready-delay/--stall-timeout); decimals are allowed only with
 an explicit unit (4.5m).
 Each WAIT tick writes a stderr line naming what it is waiting on by default; poll.quiet-status can change that default, --quiet-status/--no-quiet-status override it, and --verbose emits detailed per-tick lines.
-FIX_CODE debounce writes a remaining-seconds line to stderr. --timeout does not cut an in-flight debounce short.
-With --until-terminal, --timeout is ignored for WAIT ticks and polling continues until READY, FIX_CODE, MERGE, CANCEL, or ESCALATE. With --merge, --timeout still bounds WAIT ticks; it only continues through MARK_READY while polling remains within that timeout.
+TRIAGE debounce writes a remaining-seconds line to stderr. --timeout does not cut an in-flight debounce short.
+With --until-terminal, --timeout is ignored for WAIT ticks and polling continues until READY, TRIAGE, MERGE, CANCEL, or ESCALATE. With --merge, --timeout still bounds WAIT ticks; it only continues through MARK_READY while polling remains within that timeout.
 
 Exit codes: same as iterate (the final tick's action/reason decides the code).
   0   CANCEL (merged, ready-delay elapsed, or clean draft left in draft by disabled auto mark-ready)
   10  WAIT or READY (including a WAIT returned by --timeout)
   11  MARK_READY
-  12  FIX_CODE
+  12  TRIAGE
   13  ESCALATE
   14  CANCEL (closed without merging)
   15  MERGE
@@ -120,7 +120,7 @@ Forwarded iterate flags:
   --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
   --no-auto-mark-ready           Do not convert draft PRs to ready for review.
   --merge                        Shepherd through readiness, then emit the stack merge commands.
-  --instructions playbook|inline Render fix_code steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
+  --instructions playbook|inline Render triage steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
   --transport auto|graphql|rest  Select GitHub transport. Default: github.transport (auto).
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include detailed per-tick lines.

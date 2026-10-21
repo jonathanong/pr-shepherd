@@ -21,7 +21,7 @@ describe("escalate message helpers", () => {
   it("includes ambiguous comments and fallback suggestions", () => {
     const message = buildEscalateHumanMessage(
       {
-        triggers: ["fix-thrash"],
+        triggers: ["triage-thrash"],
         unresolvedThreads: [],
         ambiguousComments: [
           {
@@ -50,7 +50,7 @@ describe("escalate message helpers", () => {
   it("renders thread/review item fallbacks, thrash attempts, and singular stall wording", () => {
     const message = buildEscalateHumanMessage(
       {
-        triggers: ["fix-thrash"],
+        triggers: ["triage-thrash"],
         unresolvedThreads: [
           {
             id: "t-no-loc",

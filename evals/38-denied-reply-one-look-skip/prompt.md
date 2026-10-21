@@ -4,7 +4,7 @@ runs: 6
 max_turns: 6
 timeout_seconds: 300
 allowed_tools: [Read, Glob, Grep, Skill]
-tags: [fix-code, rest, review-mutation, multi-turn, tier:discriminating, area:github]
+tags: [triage, rest, review-mutation, multi-turn, tier:discriminating, area:github]
 append_system_prompt: |
   You have no shell and no network access. Do not run shell commands, fetch
   anything over the network, or read repository files other than a reference
@@ -32,7 +32,7 @@ Shepherd https://github.com/owner/repo/pull/42 through to a terminal state. This
 
 [tool] $ pr-shepherd https://github.com/owner/repo/pull/42 --until-terminal --transport rest
 
-# PR #42 [FIX_CODE]
+# PR #42 [TRIAGE]
 
 **status** `UNRESOLVED_COMMENTS`
 **transport** `rest`
@@ -86,7 +86,7 @@ The reply to `rest-thread-11` failed with a 403. Running the next tick.
 
 [tool] $ pr-shepherd https://github.com/owner/repo/pull/42 --until-terminal --transport rest
 
-# PR #42 [FIX_CODE]
+# PR #42 [TRIAGE]
 
 **status** `UNRESOLVED_COMMENTS`
 **transport** `rest`

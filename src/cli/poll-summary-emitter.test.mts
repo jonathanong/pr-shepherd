@@ -12,7 +12,7 @@ function result(
   action: ShepherdAction | StackNextAction,
   reasons: string[] = [action],
 ): PollSummaryResult {
-  const rowAction: ShepherdAction = action === "shepherd" ? "fix_code" : action;
+  const rowAction: ShepherdAction = action === "shepherd" ? "triage" : action;
   const row: PollSummaryItem = {
     pr: 42,
     repo: "acme/widgets",
@@ -54,7 +54,7 @@ describe("emitPollSummaryResult", () => {
   it.each([
     ["escalate", 13, undefined],
     ["shepherd", 16, undefined],
-    ["fix_code", 12, undefined],
+    ["triage", 12, undefined],
     ["merge", 15, undefined],
     ["mark_ready", 11, undefined],
     ["wait", 10, undefined],
@@ -73,7 +73,7 @@ describe("emitPollSummaryResult", () => {
 
   it("emits the same raw result as JSON", () => {
     const write = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
-    const value = result("fix_code");
+    const value = result("triage");
     emitPollSummaryResult(value, { format: "json" });
     expect(JSON.parse(String(write.mock.calls[0]![0]))).toEqual(value);
   });

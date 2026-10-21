@@ -18,7 +18,7 @@ import { getGithubTransport } from "../github/transport.mts";
 export interface PollCommandOptions extends IterateCommandOptions {
   intervalSeconds: number;
   timeoutSeconds: number;
-  /** Settle window after first FIX_CODE before returning. Default 60. 0 disables. */
+  /** Settle window after first TRIAGE before returning. Default 60. 0 disables. */
   debounceSeconds?: number;
   quietStatus?: boolean;
   untilTerminal?: boolean;
@@ -112,11 +112,11 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
     if (
       untilTerminal &&
       pendingQuotaWarning !== undefined &&
-      !(lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) &&
+      !(lastResult.action === "triage" && debounceSeconds > 0 && !pastDebounce) &&
       !(debounceUntil !== null && !pastDebounce)
     ) {
       await refreshIfReturning();
-      if (lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) {
+      if (lastResult.action === "triage" && debounceSeconds > 0 && !pastDebounce) {
         debounceUntil ??= Date.now() + debounceMs;
         const remainingMs = Math.max(debounceUntil - Date.now(), 0);
         writeRuleAutoResolveProgress(lastResult);
@@ -183,7 +183,7 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       await sleep(sleepMs);
       continue;
     }
-    if (lastResult.action === "fix_code" && debounceSeconds > 0 && !pastDebounce) {
+    if (lastResult.action === "triage" && debounceSeconds > 0 && !pastDebounce) {
       writeRuleAutoResolveProgress(lastResult);
       debounceUntil ??= Date.now() + debounceMs;
       const remainingMs = debounceUntil - Date.now();

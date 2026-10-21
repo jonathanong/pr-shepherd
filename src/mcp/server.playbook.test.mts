@@ -35,15 +35,15 @@ describe("MCP playbook tool", () => {
     });
     const response = await tool.handler({});
     const names = (response.structuredContent as { playbooks: string[] }).playbooks;
-    expect(names).toContain("Fix-code loop");
-    expect(response.content?.[0]?.text).toContain("- Fix-code loop");
+    expect(names).toContain("Triage loop");
+    expect(response.content?.[0]?.text).toContain("- Triage loop");
   });
 
   it("returns one playbook and reports unknown names as errors", async () => {
     const tool = toolsOf().playbook!;
-    const response = await tool.handler({ name: "Fix-code loop" });
-    expect(response.structuredContent).toMatchObject({ name: "Fix-code loop" });
-    expect(response.content?.[0]?.text).toContain("# Fix-code loop");
+    const response = await tool.handler({ name: "Triage loop" });
+    expect(response.structuredContent).toMatchObject({ name: "Triage loop" });
+    expect(response.content?.[0]?.text).toContain("# Triage loop");
     const missing = await tool.handler({ name: "nope" });
     expect(missing.isError).toBe(true);
   });

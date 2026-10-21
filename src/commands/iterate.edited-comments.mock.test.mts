@@ -90,7 +90,7 @@ describe("runIterate — edited PR comments", () => {
     expect(result).toMatchObject({ action: "merge", editedComments: [{ id: "c-merge" }] });
   });
 
-  it("rides along on fix_code caused by other work", async () => {
+  it("rides along on triage caused by other work", async () => {
     mockRunCheck.mockResolvedValue(
       await readyReportWithEdit("c-fix", {
         status: "UNRESOLVED_COMMENTS",
@@ -118,7 +118,7 @@ describe("runIterate — edited PR comments", () => {
 
     const result = await runIterate(makeOpts());
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(result.editedComments?.map((c) => c.id)).toEqual(["c-fix"]);
   });
 
@@ -152,7 +152,7 @@ describe("runIterate — edited PR comments", () => {
       makeOpts({ persistSeen: false, deferEditedCommentMarkers: true }),
     );
 
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
     expect(result.editedComments?.map((c) => c.id)).toEqual(["c-discard"]);
     expect(await storedHash("c-discard")).toBe(hashBody("original"));
   });

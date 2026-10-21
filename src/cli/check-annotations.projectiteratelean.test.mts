@@ -5,10 +5,10 @@ import { projectIterateLean } from "./iterate-lean.mts";
 import type { IterateResult } from "../types.mts";
 
 describe("projectIterateLean — check annotations", () => {
-  it("keeps annotations on fix.checks", () => {
-    const result: IterateResult = { ...makeIterateResult("fix_code") };
-    if (result.action !== "fix_code") throw new Error("expected fix_code fixture");
-    result.fix.checks = [
+  it("keeps annotations on triage.checks", () => {
+    const result: IterateResult = { ...makeIterateResult("triage") };
+    if (result.action !== "triage") throw new Error("expected triage fixture");
+    result.triage.checks = [
       {
         name: "SonarCloud Code Analysis",
         runId: null,
@@ -27,8 +27,8 @@ describe("projectIterateLean — check annotations", () => {
       },
     ];
 
-    const lean = projectIterateLean(result) as { fix: { checks: unknown[] } };
+    const lean = projectIterateLean(result) as { triage: { checks: unknown[] } };
 
-    expect(lean.fix.checks).toEqual(result.fix.checks);
+    expect(lean.triage.checks).toEqual(result.triage.checks);
   });
 });

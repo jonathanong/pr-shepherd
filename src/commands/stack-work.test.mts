@@ -57,7 +57,7 @@ describe("stack command agent work", () => {
   it("shepherds an upper draft while a lower layer needs a human", () => {
     const result = withPollSummaryInstructions(
       stack([
-        row(1, 1, { action: "escalate", reasons: ["fix-thrash"] }),
+        row(1, 1, { action: "escalate", reasons: ["triage-thrash"] }),
         row(2, 2, { isDraft: true }),
       ]),
       false,
@@ -65,12 +65,12 @@ describe("stack command agent work", () => {
     expect(result.nextAction).toBe("shepherd");
     expect(text(result)).toContain("pull/2 --until-terminal");
     expect(text(result)).toContain(
-      "PR #1 requires human action (fix-thrash). Keep shepherding other PRs before the handoff.",
+      "PR #1 requires human action (triage-thrash). Keep shepherding other PRs before the handoff.",
     );
   });
 
   it("does not emit a session command for a layer the viewer does not own", () => {
-    const unowned = row(1, 1, { action: "fix_code", reasons: ["failing-checks"] });
+    const unowned = row(1, 1, { action: "triage", reasons: ["failing-checks"] });
     delete unowned.owned;
     const result = withPollSummaryInstructions(stack([unowned]), false);
     expect(text(result)).toContain("PR #1 is not owned. Do not run a session for it.");
@@ -89,8 +89,8 @@ describe("stack command agent work", () => {
   it("keeps an upper draft's review session above a layer that needs a human", () => {
     const result = withPollSummaryInstructions(
       stack([
-        row(1, 1, { action: "escalate", reasons: ["fix-thrash"] }),
-        row(2, 2, { isDraft: true, action: "fix_code", reasons: ["review-work"] }),
+        row(1, 1, { action: "escalate", reasons: ["triage-thrash"] }),
+        row(2, 2, { isDraft: true, action: "triage", reasons: ["review-work"] }),
       ]),
       false,
     );
@@ -102,7 +102,7 @@ describe("stack command agent work", () => {
 
   it("stops for a human handoff on another layer without promoting a held draft", () => {
     const result = withPollSummaryInstructions(
-      stack([disabledDraft(1, 1), row(2, 2, { action: "escalate", reasons: ["fix-thrash"] })]),
+      stack([disabledDraft(1, 1), row(2, 2, { action: "escalate", reasons: ["triage-thrash"] })]),
       false,
     );
     expect(result.nextAction).toBe("escalate");
@@ -116,7 +116,7 @@ describe("stack command agent work", () => {
     );
     expect(result.nextAction).toBe("shepherd");
     expect(result.prs[2]).toMatchObject({
-      action: "fix_code",
+      action: "triage",
       reasons: ["draft-auto-mark-ready-disabled", "stale-ancestry"],
     });
     expect(text(result)).toContain(`Run \`${probe(3)}\`.`);
@@ -184,7 +184,7 @@ describe("deferred check blockers", () => {
 
 describe("splitStackWork", () => {
   it("keeps a probe with work as a session and a clean draft without a command held", () => {
-    const failing = disabledDraft(1, 1, { action: "fix_code", reasons: ["failing-checks"] });
+    const failing = disabledDraft(1, 1, { action: "triage", reasons: ["failing-checks"] });
     const noCommand = disabledDraft(2, 2, { pollCommand: undefined });
     expect(splitStackWork([failing, noCommand], new Set())).toEqual({
       sessions: [failing],

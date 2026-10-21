@@ -16,10 +16,10 @@ function textInstructions(result: IterateResult): string[] {
 function jsonInstructions(result: IterateResult): string[] {
   const projection = projectIterateLean(result) as {
     instructions?: string[];
-    fix?: { instructions?: string[] };
+    triage?: { instructions?: string[] };
   };
   const instructions =
-    result.action === "fix_code" ? projection.fix?.instructions : projection.instructions;
+    result.action === "triage" ? projection.triage?.instructions : projection.instructions;
   if (!instructions) throw new Error("missing JSON instructions");
   return instructions;
 }
@@ -42,8 +42,8 @@ describe("iterate instruction polling contract", () => {
     expect(buildSimpleIterateInstructions(result as CancelResult)).toEqual([]);
   });
 
-  it("fix_code text instructions equal fix.instructions", () => {
-    const result = makeIterateResult("fix_code");
+  it("triage text instructions equal triage.instructions", () => {
+    const result = makeIterateResult("triage");
     expect(textInstructions(result)).toEqual(jsonInstructions(result));
   });
 

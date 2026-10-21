@@ -109,13 +109,13 @@ function expectStackedRoute(
   result: IterateResult,
   layer: { position: number; size: number; number: number; base: string },
 ) {
-  expect(result.action).toBe("fix_code");
+  expect(result.action).toBe("triage");
   expect("merge" in result).toBe(false);
-  if (result.action === "fix_code") {
-    expect(result.fix.instructions).toContain(
+  if (result.action === "triage") {
+    expect(result.triage.instructions).toContain(
       `PR #42 is layer ${layer.position} of ${layer.size} in native stack #${layer.number}; do not run \`gh pr merge\` for this layer.`,
     );
-    expect(result.fix.instructions).toContain(
+    expect(result.triage.instructions).toContain(
       "Run `pr-shepherd stack https://github.com/owner/repo/pull/42 --until-terminal --merge` to reconcile the stack and run each bottom-layer merge command it emits.",
     );
   }
@@ -356,9 +356,9 @@ describe("runIterate — merge", () => {
     });
 
     const result = await runIterate(makeOpts({ merge: true }));
-    expect(result.action).toBe("fix_code");
-    if (result.action === "fix_code") {
-      expect(result.fix.requeue).toBeUndefined();
+    expect(result.action).toBe("triage");
+    if (result.action === "triage") {
+      expect(result.triage.requeue).toBeUndefined();
     }
   });
 
@@ -403,9 +403,9 @@ describe("runIterate — merge", () => {
 
     const result = await runIterate(makeOpts({ merge: true }));
 
-    expect(result.action).toBe("fix_code");
-    if (result.action !== "fix_code") return;
-    expect(result.fix.resolveCommand.argv).toEqual([
+    expect(result.action).toBe("triage");
+    if (result.action !== "triage") return;
+    expect(result.triage.resolveCommand.argv).toEqual([
       "pnpm",
       "exec",
       "pr-shepherd",
@@ -413,7 +413,7 @@ describe("runIterate — merge", () => {
       "review",
       "https://github.com/owner/repo/pull/42",
     ]);
-    expect(result.fix.instructions).toContain(
+    expect(result.triage.instructions).toContain(
       "Run `pnpm exec pr-shepherd stack https://github.com/owner/repo/pull/42 --until-terminal --merge` to reconcile the stack and run each bottom-layer merge command it emits.",
     );
   });

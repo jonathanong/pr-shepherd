@@ -3,7 +3,7 @@ import {
   mockRunIterate,
   makeWaitResult,
   makeCancelResult,
-  makeFixCodeResult,
+  makeTriageResult,
   makeMarkReadyResult,
   registerPollHooks,
 } from "../../test-helpers/commands/poll.test-support.mts";
@@ -66,8 +66,8 @@ describe("runPoll — until-terminal mode", () => {
     expect(result.action).toBe("cancel");
   });
 
-  it("still stops on FIX_CODE", async () => {
-    mockRunIterate.mockResolvedValueOnce(makeWaitResult()).mockResolvedValue(makeFixCodeResult());
+  it("still stops on TRIAGE", async () => {
+    mockRunIterate.mockResolvedValueOnce(makeWaitResult()).mockResolvedValue(makeTriageResult());
 
     const pollPromise = runPoll({
       prNumber: 42,
@@ -82,7 +82,7 @@ describe("runPoll — until-terminal mode", () => {
     const result = await pollPromise;
 
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
-    expect(result.action).toBe("fix_code");
+    expect(result.action).toBe("triage");
   });
 
   it("returns a WAIT immediately when until-terminal crosses a quota warning", async () => {

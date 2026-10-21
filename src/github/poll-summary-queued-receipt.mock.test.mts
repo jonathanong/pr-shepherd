@@ -242,7 +242,7 @@ describe("queued READY receipt projection", () => {
       { stackPrNumber: 42, merge: true },
     );
     expect(item.readyReceipt).toBeUndefined();
-    expect(item.action).toBe("fix_code");
+    expect(item.action).toBe("triage");
   });
 
   it("invalidates on changed review evidence even while queued", async () => {

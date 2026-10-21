@@ -53,7 +53,7 @@ it("routes all four remaining layers by trunk checks after two lower layers merg
   ).toEqual(
     [2547, 2569, 2627, 2629].map((pr) => ({
       pr,
-      action: "fix_code",
+      action: "triage",
       reasons: ["unreported-required-checks"],
       missing: ["tests", "build"],
     })),

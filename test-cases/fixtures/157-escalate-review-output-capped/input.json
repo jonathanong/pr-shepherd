@@ -1,5 +1,5 @@
 {
-  "description": "Fixture 155 (115 review items against iterate.review-output-max-chars 3000) with an unknown base branch, so the tick escalates with base-branch-unknown. The escalation carries the same `showing 40 of 115` rollup as the fix_code tick; held items stay unmarked and appear on the next run.",
+  "description": "Fixture 155 (115 review items against iterate.review-output-max-chars 3000) with an unknown base branch, so the tick escalates with base-branch-unknown. The escalation carries the same `showing 40 of 115` rollup as the triage tick; held items stay unmarked and appear on the next run.",
   "batchData": {
     "reviewDecision": "CHANGES_REQUESTED",
     "reviewThreads": [

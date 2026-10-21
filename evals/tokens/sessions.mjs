@@ -47,6 +47,7 @@ import {
   mcpReviewThreads,
   mcpReviews,
   readJson,
+  recordedAction,
   rest,
 } from "./lib.mjs";
 
@@ -217,7 +218,8 @@ function parseLog(text, scope, stats, until = Infinity) {
       if (t <= until)
         inv.outs.push({
           chars: out.length,
-          action: out.match(/^# PR #\d+ \[([A-Z_]+)\]/m)?.[1] ?? null,
+          // Recorded sessions predate the v1 rename of the old action header to TRIAGE.
+          action: recordedAction(out.match(/^# PR #\d+ \[([A-Z_]+)\]/m)?.[1] ?? null),
           readyDelayElapsed: /^# PR #\d+ \[CANCEL\] — ready-delay-elapsed$/m.test(out),
         });
       touch(inv, t);
@@ -1183,12 +1185,12 @@ export function realSessions(data = readJson(REAL_SESSIONS_FILE), cpt = {}) {
       polls: polls.length,
       applies: steps.length - polls.length,
       ticks: polls.reduce((s, i) => s + i.ticks, 0),
-      fixCode: polls.filter((i) => i.action === "FIX_CODE").length,
-      // FIX_CODE polls that ended with a failed check: a baseline would fetch
+      triage: polls.filter((i) => recordedAction(i.action) === "TRIAGE").length,
+      // TRIAGE polls that ended with a failed check: a baseline would fetch
       // the failed job's log, which the replay does not model.
       failedCheckFixes: polls.filter(
         (i) =>
-          i.action === "FIX_CODE" &&
+          recordedAction(i.action) === "TRIAGE" &&
           stateAt(pr, i.t + i.seconds).checks.some((k) => k.conclusion === "FAILURE"),
       ).length,
       threads: pr.content.threads.length,
@@ -1367,20 +1369,20 @@ export function realSessionsSection({ rows, data } = realSessions()) {
   const failedFixes = rows.filter((r) => r.failedCheckFixes);
   if (failedFixes.length)
     out.push(
-      `**The baselines fetch no CI logs.** ${total((r) => r.failedCheckFixes)} FIX_CODE polls (${failedFixes.map((r) => `#${r.pr}: ${r.failedCheckFixes}`).join(", ")}) ended with a failed check. pr-shepherd's measured output includes the failure context it printed, but the replay gives gh and MCP no \`gh run view --log-failed\` or \`get_job_logs\` call: the data holds no real log sizes, and borrowing the scenarios' fixture log would replay another PR's log. This leaves the baselines cheaper than they would be.`,
+      `**The baselines fetch no CI logs.** ${total((r) => r.failedCheckFixes)} TRIAGE polls (${failedFixes.map((r) => `#${r.pr}: ${r.failedCheckFixes}`).join(", ")}) ended with a failed check. pr-shepherd's measured output includes the failure context it printed, but the replay gives gh and MCP no \`gh run view --log-failed\` or \`get_job_logs\` call: the data holds no real log sizes, and borrowing the scenarios' fixture log would replay another PR's log. This leaves the baselines cheaper than they would be.`,
       "",
     );
   out.push(
-    "| PR | rounds | polls (ticks) | FIX_CODE | applies | threads | cost: pr-shepherd / gh / MCP | turns: pr-shepherd / gh / MCP | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP |",
+    "| PR | rounds | polls (ticks) | TRIAGE | applies | threads | cost: pr-shepherd / gh / MCP | turns: pr-shepherd / gh / MCP | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP |",
     "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
   );
   const trio = (r, k) => `${num(r.shepherd[k])} / ${num(r.gh[k])} / ${num(r.mcp[k])}`;
   for (const r of rows)
     out.push(
-      `| #${r.pr} | ${r.rounds} | ${r.polls} (${r.ticks}) | ${r.fixCode} | ${r.applies} | ${r.threads} | ${trio(r.modeled, "ite")} | ${trio(r.modeled, "turns")} | ${trio(r.modeled, "graphqlPoints")} | ${trio(r.modeled, "restCore")} |`,
+      `| #${r.pr} | ${r.rounds} | ${r.polls} (${r.ticks}) | ${r.triage} | ${r.applies} | ${r.threads} | ${trio(r.modeled, "ite")} | ${trio(r.modeled, "turns")} | ${trio(r.modeled, "graphqlPoints")} | ${trio(r.modeled, "restCore")} |`,
     );
   out.push(
-    `| **all** | ${total((r) => r.rounds)} | ${total((r) => r.polls)} (${total((r) => r.ticks)}) | ${total((r) => r.fixCode)} | ${total((r) => r.applies)} | ${total((r) => r.threads)} | ${trio(T, "ite")} | ${trio(T, "turns")} | ${trio(T, "graphqlPoints")} | ${trio(T, "restCore")} |`,
+    `| **all** | ${total((r) => r.rounds)} | ${total((r) => r.polls)} (${total((r) => r.ticks)}) | ${total((r) => r.triage)} | ${total((r) => r.applies)} | ${total((r) => r.threads)} | ${trio(T, "ite")} | ${trio(T, "turns")} | ${trio(T, "graphqlPoints")} | ${trio(T, "restCore")} |`,
     "",
   );
   out.push(
@@ -1433,7 +1435,7 @@ export function realSessionsSection({ rows, data } = realSessions()) {
   out.push(
     `- **Characters per token.** A result's tokens are the next request's prompt growth, less the calling request's output. ${cpt.noThinking ? `Fitted on the ${cpt.noThinking.samples} clean results (one result between two requests, nothing else) whose request had no thinking block: ${cpt.noThinking.charsPerToken} characters per token plus ${cpt.noThinking.intercept} tokens per result (R² ${cpt.noThinking.r2}); per result of 2,000+ characters, median ${cpt.noThinking.perSample.p50}, 10th–90th percentile ${cpt.noThinking.perSample.p10}–${cpt.noThinking.perSample.p90}.` : "Clean results whose request had no thinking block: too few clean samples."} pr-shepherd's own output alone: ${cpt.shepherd ? `${cpt.shepherd.charsPerToken} (${cpt.shepherd.samples} results, R² ${cpt.shepherd.r2})` : "too few clean samples"}. With thinking requests included the fit degrades (${cpt.all ? `${cpt.all.samples} results, ${cpt.all.charsPerToken}, R² ${cpt.all.r2}` : "too few clean samples"}): thinking counts as output but leaves the next prompt. The model assumes ${MODEL.charsPerToken} for every arm and \`fixtures/calibrate\` 4.00, so both undercount real tokens. No session used GitHub MCP, so MCP's JSON ratio is unmeasured.`,
     `- **Context tokens.** The pr-shepherd and PR-state results whose size the next request's prompt growth pins down (${num(mChars)} characters) measured, per-result wrapper included, ${num(mTok)} tokens; the model's ${MODEL.charsPerToken} characters per token gives ${num(mChars / MODEL.charsPerToken)}.`,
-    `- **Rate limit.** The debug logs record every request: pr-shepherd spent ${num(api.cost)} GraphQL points on queries${api.noCost ? ` (a lower bound: ${num(api.noCost)} ${api.noCost === 1 ? "query" : "queries"} logged no cost)` : ""}, ${num(api.mut)} mutation requests (GitHub reports no cost for these; at 1 point each the total is ${num(api.cost + api.mut)}) and ${num(api.rest)} REST requests. The model charges ${num(T.shepherd.graphqlPoints)} points and ${num(T.shepherd.restCore)} REST requests for the same timeline (GraphQL transport, which every session used). The model's REST requests are one mergeability refresh per READY or ready-delay CANCEL poll, the rate measured there; the measured remainder falls on other polls (mostly FIX_CODE), which the model does not charge. No poll recorded \`apiUsage\` (none ran with \`--verbose\`), so these come from the per-request log entries.`,
+    `- **Rate limit.** The debug logs record every request: pr-shepherd spent ${num(api.cost)} GraphQL points on queries${api.noCost ? ` (a lower bound: ${num(api.noCost)} ${api.noCost === 1 ? "query" : "queries"} logged no cost)` : ""}, ${num(api.mut)} mutation requests (GitHub reports no cost for these; at 1 point each the total is ${num(api.cost + api.mut)}) and ${num(api.rest)} REST requests. The model charges ${num(T.shepherd.graphqlPoints)} points and ${num(T.shepherd.restCore)} REST requests for the same timeline (GraphQL transport, which every session used). The model's REST requests are one mergeability refresh per READY or ready-delay CANCEL poll, the rate measured there; the measured remainder falls on other polls (mostly TRIAGE), which the model does not charge. No poll recorded \`apiUsage\` (none ran with \`--verbose\`), so these come from the per-request log entries.`,
     `- **Turns.** The agents spent ${num(sh.reduce((s, b) => s + b.turns, 0))} turns on pr-shepherd calls and reads of their output; the model counts ${num(T.shepherd.turns)}, one per invocation.`,
     "",
   );

@@ -31,10 +31,10 @@ describe("renderRelatedJobLines", () => {
 });
 
 describe("related jobs in check renderers", () => {
-  it("renders under a fix_code failing check", () => {
-    const result: IterateResult = { ...makeIterateResult("fix_code") };
-    if (result.action !== "fix_code") throw new Error("expected fix_code fixture");
-    result.fix.checks = [
+  it("renders under a triage failing check", () => {
+    const result: IterateResult = { ...makeIterateResult("triage") };
+    if (result.action !== "triage") throw new Error("expected triage fixture");
+    result.triage.checks = [
       {
         name: "gate",
         runId: "9",

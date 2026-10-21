@@ -78,14 +78,14 @@ Rows that route identically keep their written `action` and `reasons`, including
 such as `ready-delay` or `blocking-reviewer-in-progress`. `test-cases/format-parity.test.mts` and
 `src/skill-playbook-pointers.test.mts` cover both variants.
 
-`<action>` must be one of `cancel`, `wait`, `fix-code`, `mark-ready`,
+`<action>` must be one of `cancel`, `wait`, `triage`, `mark-ready`,
 `escalate`, `merge` (hyphenated) and must match what iterate actually emits —
 `index.test.mts` derives the expected action from the directory name and fails
 the fixture if they disagree. This exists because three fixtures drifted from
 their names during development (see git history for
 `24-wait-review-summary-already-surfaced`,
-`32-fix-code-pr-level-changes-requested`,
-`44-fix-code-seen-bot-thread-resurfaced`) with nothing catching it.
+`32-triage-pr-level-changes-requested`,
+`44-triage-seen-bot-thread-resurfaced`) with nothing catching it.
 
 `snapshots/apply-review-*/` have no fixture directory. `apply-review.test.mts` records them by
 driving `apply review`'s REST mutation path against a local GitHub wire, with the exit code
@@ -132,7 +132,7 @@ bug in practice:
    nested object you set (`viewerAuthorization`, `mergeRequirements`, …)
    **replaces** the default wholesale rather than merging into it. If you only
    want to flip one field of `viewerAuthorization`, you must respell every
-   other field of it too (see `63-fix-code-conflicts-push-denied`, which
+   other field of it too (see `63-triage-conflicts-push-denied`, which
    respells all seven fields to flip `viewerCanEditFiles`). `config`, by
    contrast, is deep-merged onto `defaultConfig()`.
 

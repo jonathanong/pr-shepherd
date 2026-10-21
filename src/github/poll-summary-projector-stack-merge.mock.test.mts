@@ -40,7 +40,7 @@ it("keeps the authoritative one-PR command for a stack member in an explicit mer
       readyDelaySeconds: 0,
     },
   );
-  expect(item.action).toBe("fix_code");
+  expect(item.action).toBe("triage");
   expect(item.reasons).toContain("authoritative-poll-required");
   expect(item.pollCommand).toContain("--until-terminal --merge");
 });

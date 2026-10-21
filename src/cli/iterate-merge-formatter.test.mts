@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { IterateResult, IterateResultMerge } from "../types.mts";
 import {
   makeCancelResult,
-  makeFixCodeResult,
+  makeTriageResult,
   makeWaitResult,
 } from "../../test-helpers/commands/poll.test-support.mts";
-import { formatFixCodeResult } from "./fix-formatter.mts";
+import { formatTriageResult } from "./triage-formatter.mts";
 import { formatIterateResult } from "./iterate-formatter.mts";
 import { projectIterateLean } from "./iterate-lean.mts";
 import { appendMergeQueueHeader, formatMergeAction } from "./iterate-merge-formatter.mts";
@@ -166,14 +166,14 @@ describe("iterate merge formatting", () => {
   });
 
   it("renders post-fix requeue commands", () => {
-    const result = makeFixCodeResult();
-    if (result.action !== "fix_code") throw new Error("expected fix_code fixture");
-    result.fix.requeue = {
+    const result = makeTriageResult();
+    if (result.action !== "triage") throw new Error("expected triage fixture");
+    result.triage.requeue = {
       mode: "queue",
       command: { argv: ["gh", "pr", "merge", "42"] },
       queueApiFallbackCommand: { argv: ["gh", "api", "graphql"] },
     };
-    const output = formatFixCodeResult("header", result);
+    const output = formatTriageResult("header", result);
     expect(output).toContain("- requeue: `gh pr merge 42`");
     expect(output).toContain("- requeue API fallback: `gh api graphql`");
   });

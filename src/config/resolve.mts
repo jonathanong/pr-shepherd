@@ -12,8 +12,8 @@ export type ResolveOtherHumanThreads = ConfigFile["iterate"]["resolve-other-huma
 export const INSTRUCTION_STYLES = ["playbook", "inline"] as const;
 
 /**
- * How `fix_code` `## Instructions` render invariant procedure text. `inline` (default)
- * prints every step each tick; `playbook` folds them into one `Playbook: "Fix-code loop".` pointer.
+ * How `triage` `## Instructions` render invariant procedure text. `inline` (default)
+ * prints every step each tick; `playbook` folds them into one `Playbook: "Triage loop".` pointer.
  */
 export type InstructionStyle = (typeof INSTRUCTION_STYLES)[number];
 

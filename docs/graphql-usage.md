@@ -61,7 +61,7 @@ Costs assume the PR number was passed; inferring it from the branch adds 1 point
 | `pr-shepherd [PR]`, idle continuation tick, detectors unchanged     | Conditional REST detectors only (all 304) | 0                   |
 | `pr-shepherd [PR]`, continuation tick, fingerprint hit              | `BatchPr` first page only                 | 1                   |
 | Same tick, fingerprint miss                                         | `BatchPr`                                 | 1, plus supplements |
-| Tick returned to the caller, last bounded tick, FIX_CODE debounce   | `BatchPr` (fingerprint reuse is off)      | 1, plus supplements |
+| Tick returned to the caller, last bounded tick, TRIAGE debounce     | `BatchPr` (fingerprint reuse is off)      | 1, plus supplements |
 | `iterate`, MCP `iterate` for one PR                                 | `BatchPr` every call                      | 1, plus supplements |
 | First tick of a stack layer the stack tick routed, within 2 minutes | The stack tick's handoff, no request      | 0, plus supplements |
 
@@ -98,13 +98,13 @@ On a measured ready PR (#481), the receipt evidence took one request and 2 point
 
 The summary also selects the scalar and object fields `BatchPr`'s first page needs (viewer capabilities, head repository, review and comment timestamps, thread capabilities and lines, check-suite workflow runs, base tip), none a connection. On a routing tick, each routed layer whose summary covers every `BatchPr` first-page window gets that page stored as a handoff:
 
-| Handoff rule                                                                                                          |
-| --------------------------------------------------------------------------------------------------------------------- |
-| Read once only; the read deletes it                                                                                   |
-| Valid within 2 minutes of the summary, for the same head only                                                         |
-| Every later stack tick clears the handoff of each layer it does not hand off again                                    |
-| A wider, queued, or queue-removed layer gets none; every later tick, including the FIX_CODE debounce, reads `BatchPr` |
-| The REST transport has no handoff                                                                                     |
+| Handoff rule                                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------- |
+| Read once only; the read deletes it                                                                                 |
+| Valid within 2 minutes of the summary, for the same head only                                                       |
+| Every later stack tick clears the handoff of each layer it does not hand off again                                  |
+| A wider, queued, or queue-removed layer gets none; every later tick, including the TRIAGE debounce, reads `BatchPr` |
+| The REST transport has no handoff                                                                                   |
 
 In the `stack-work` scenario (four routed layers), the summary, the handoff read, and the layers' first ticks total 3 points instead of 6. Later one-PR session ticks are separate spend.
 

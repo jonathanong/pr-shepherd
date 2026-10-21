@@ -1,0 +1,24 @@
+# PR #42 [TRIAGE]
+
+**status** `FAILING`
+
+## Review threads
+
+### [threadId=PRRT_with_check](https://github.com/owner/repo/pull/42#discussion_r46) — `src/handler.ts:22` (@reviewer)
+
+> Guard against the null case here.
+
+## Failing checks
+
+- `4601` — `CI › tests (ubuntu)` [conclusion: FAILURE]
+  > Run tests
+  rerun: `gh run rerun 4601 -R owner/repo`
+
+## Instructions
+
+1. Fix each warranted item.
+2. Triage `## Failing checks`. Playbook: "CI failure triage".
+3. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <reason>'`.
+4. Commit and push any changes.
+5. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_with_check --message "$DISMISS_MESSAGE" --require-sha HEAD`
+6. Rerun Shepherd now.

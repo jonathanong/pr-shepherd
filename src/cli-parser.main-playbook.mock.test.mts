@@ -6,8 +6,8 @@ registerHooks();
 
 describe("main — playbook", () => {
   it("prints a shipped playbook before any log setup", async () => {
-    await main(["node", "shepherd", "playbook", "Fix-code loop"]);
-    expect(getStdout()).toContain("# Fix-code loop");
+    await main(["node", "shepherd", "playbook", "Triage loop"]);
+    expect(getStdout()).toContain("# Triage loop");
   });
 
   it("honors --help", async () => {

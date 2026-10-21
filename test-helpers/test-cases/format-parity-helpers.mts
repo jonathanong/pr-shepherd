@@ -32,28 +32,29 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
     "checks[].name",
     "`## Checks` / `## Failing checks` reconstruct `workflowName › jobName`; the raw `name` field (`workflow / job`) is never printed verbatim",
   ],
-  ["fix.checks[].name", "same reformat as checks[].name"],
+  ["triage.checks[].name", "same reformat as checks[].name"],
   ["escalate.checks[].name", "same reformat as checks[].name"],
   [
-    "fix.checks[].detailsUrl",
+    "triage.checks[].detailsUrl",
     "a GitHub Actions check shows only its run ID; a URL is printed only for an external (no-runId) check",
   ],
+
   [
     "escalate.stalledChecks[].detailsUrl",
-    "same as fix.checks[].detailsUrl — shown only for the external/status_context stalled check, not a GitHub Actions one",
+    "same as triage.checks[].detailsUrl — shown only for the external/status_context stalled check, not a GitHub Actions one",
   ],
   [
-    "fix.resolutionOnlyThreads[].createdAtUnix",
+    "triage.resolutionOnlyThreads[].createdAtUnix",
     "raw bookkeeping timestamp on the thread's top comment; never rendered as a date",
   ],
   // Same, for the other review items (the review-output budget orders by them).
   ...["firstLookThreads", "changesRequestedReviews", "firstLookSummaries", "firstLookComments"].map(
-    (k): [string, string] => [`fix.${k}[].createdAtUnix`, "same"],
+    (k): [string, string] => [`triage.${k}[].createdAtUnix`, "same"],
   ),
   ["escalate.changesRequestedReviews[].createdAtUnix", "same"],
-  ["fix.firstLookThreads[].comments[].createdAtUnix", "same, for transcript replies"],
+  ["triage.firstLookThreads[].comments[].createdAtUnix", "same, for transcript replies"],
   [
-    "fix.resolutionOnlyThreads[].comments[].createdAtUnix",
+    "triage.resolutionOnlyThreads[].comments[].createdAtUnix",
     "same, for transcript replies (the REST reader always returns the full transcript)",
   ],
   [
@@ -66,7 +67,7 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
     "same — the duration is reformatted to whatever unit reads best (docs/actions.md)",
   ],
   [
-    "fix.resolveCommand.argv[]",
+    "triage.resolveCommand.argv[]",
     "JSON always carries the structured command object for programmatic callers; Markdown prints the assembled `apply review:` bullet only when hasMutations is true",
   ],
   [
@@ -103,11 +104,11 @@ export interface ConditionalLossyPath {
 
 const DEFAULT_AUTHOR_TYPE_PATHS = [
   ...["threads", "firstLookThreads", "resolutionOnlyThreads"].flatMap((k) => [
-    `fix.${k}[].authorType`,
-    `fix.${k}[].comments[].authorType`,
+    `triage.${k}[].authorType`,
+    `triage.${k}[].comments[].authorType`,
   ]),
   ...["actionableComments", "changesRequestedReviews", "firstLookSummaries", "editedSummaries"].map(
-    (k) => `fix.${k}[].authorType`,
+    (k) => `triage.${k}[].authorType`,
   ),
   "editedComments[].authorType",
 ];
@@ -143,9 +144,9 @@ export const CONDITIONAL_LOSSY_PATHS: ConditionalLossyPath[] = [
         container.title.includes("\\")),
   },
   {
-    path: "fix.changesRequestedReviews[].body",
+    path: "triage.changesRequestedReviews[].body",
     description:
-      "a stale bot CR (staleBotCr: true) keeps its full body in JSON for API consumers, but text intentionally renders only a terse one-line dismissal reminder on resurfacing ticks (fix-formatter.mts) — every other review (human, or a bot CR's first emission) must render its full body",
+      "a stale bot CR (staleBotCr: true) keeps its full body in JSON for API consumers, but text intentionally renders only a terse one-line dismissal reminder on resurfacing ticks (triage-formatter.mts) — every other review (human, or a bot CR's first emission) must render its full body",
     isExempt: (container) =>
       typeof container === "object" &&
       container !== null &&
@@ -164,7 +165,7 @@ export function normalizeText(text: string): string {
 
 // The third tuple element is the leaf's immediate containing object (or array, for a scalar
 // array item) — needed so a path-level allowlist entry can be conditioned on a sibling field
-// (see the fix.changesRequestedReviews[].body handling in format-parity.test.mts), not just on
+// (see the triage.changesRequestedReviews[].body handling in format-parity.test.mts), not just on
 // the path string.
 export function* walkLeaves(
   value: unknown,

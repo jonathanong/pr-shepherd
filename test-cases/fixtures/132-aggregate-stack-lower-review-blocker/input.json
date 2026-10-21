@@ -24,7 +24,7 @@
         "repo": "vouchington/vouchington",
         "title": "ci(filters): require path filters to cover executed scripts",
         "url": "https://github.com/vouchington/vouchington/pull/2620",
-        "action": "fix_code",
+        "action": "triage",
         "reasons": [
           "actionable-reviews"
         ],

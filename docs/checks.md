@@ -86,8 +86,8 @@ Merged lower layers do not block this lookup when the lowest open PR still targe
 | Situation                                                                                      | Result                                                                                                                                                                                                                                                            |
 | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | A check run in progress or queued, or a check suite with a `workflowRun` that is not completed | `WAIT` (CI is in progress). A queued suite without a workflow run does not count                                                                                                                                                                                  |
-| Contexts missing, no relevant Actions workflow running                                         | `FIX_CODE` immediately; `computeStatus` stays `PENDING`, even when `BLOCKED` and every reported check passed, so ready-delay does not start                                                                                                                       |
-| Branch behind (base compare, trunk compare, or merge status `BEHIND`)                          | Instruction states the commit count and tells the caller to rebase and push; that push starts the checks. Stays `FIX_CODE`, writes no marker                                                                                                                      |
+| Contexts missing, no relevant Actions workflow running                                         | `TRIAGE` immediately; `computeStatus` stays `PENDING`, even when `BLOCKED` and every reported check passed, so ready-delay does not start                                                                                                                         |
+| Branch behind (base compare, trunk compare, or merge status `BEHIND`)                          | Instruction states the commit count and tells the caller to rebase and push; that push starts the checks. Stays `TRIAGE`, writes no marker                                                                                                                        |
 | Branch current, contexts still missing                                                         | Shepherd instructs the caller to close and reopen the PR once for that head (`gh pr close` then `gh pr reopen`) and to investigate why workflows did not start. Records head and context set in `ci-retrigger.json`; the marker does not verify the caller ran it |
 | Same head on the next tick, still missing                                                      | `ESCALATE` with `required-checks-unreported`                                                                                                                                                                                                                      |
 
@@ -102,7 +102,7 @@ Output, each field omitted when empty:
 | `trunkBehindBy`             | The trunk compare is behind                                  |
 | `actionsWorkflowInProgress` | A relevant Actions suite has not completed                   |
 
-A `stack` summary routes the layer as `fix_code` with reason `unreported-required-checks` instead of an idle wait and prints the names on that layer.
+A `stack` summary routes the layer as `triage` with reason `unreported-required-checks` instead of an idle wait and prints the names on that layer.
 
 ### `getCiVerdict`
 
@@ -140,13 +140,13 @@ By conclusion:
 | `STARTUP_FAILURE` | `run_attempt` from the workflow-runs response; no jobs or logs calls; may carry `summary` | `[conclusion: STARTUP_FAILURE]` |
 | Other failures    | Jobs, `failedStep`, `logExcerpt`, `relatedJobs`                                           | none                            |
 
-Ordinary failures use only the bounded evidence Shepherd includes. A later failed attempt never gets a second rerun command, but a nonblank log excerpt still makes it autonomous `FIX_CODE` investigation work. When a check has neither included evidence nor an authorized first-attempt rerun, Shepherd lets other autonomous work finish under `FIX_CODE` (including refreshing a behind or conflicting branch after a later attempt) and returns `ESCALATE` only if that check is the last blocker with no autonomous path left.
+Ordinary failures use only the bounded evidence Shepherd includes. A later failed attempt never gets a second rerun command, but a nonblank log excerpt still makes it autonomous `TRIAGE` investigation work. When a check has neither included evidence nor an authorized first-attempt rerun, Shepherd lets other autonomous work finish under `TRIAGE` (including refreshing a behind or conflicting branch after a later attempt) and returns `ESCALATE` only if that check is the last blocker with no autonomous path left.
 
 ### Annotations
 
 The batch query probes `annotations(first: 1)`, so Shepherd paginates only check runs that have annotations. Bodies are loaded together, one `nodes(ids:)` request per 20 uncached check runs, then the single-check query only when `hasNextPage` is set (costs in [graphql.md](graphql.md#check-run-annotation-bodies)). `message` and `rawDetails` are capped independently before text and JSON output. Each annotation is surfaced once per PR; there is no resolve or minimize mutation.
 
-`check` keeps successful-check annotations as raw context and marks them seen. `iterate` treats a successful parent conclusion as authoritative regardless of bucket and does not turn those annotations into `FIX_CODE`.
+`check` keeps successful-check annotations as raw context and marks them seen. `iterate` treats a successful parent conclusion as authoritative regardless of bucket and does not turn those annotations into `TRIAGE`.
 
 ## Report output
 
