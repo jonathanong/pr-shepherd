@@ -57,14 +57,15 @@ The [README](../README.md) and the site, [jongleberry.com/pr-shepherd](https://j
 
 ## Works across agents and environments
 
-| Document                             | What it covers                                                           |
-| ------------------------------------ | ------------------------------------------------------------------------ |
-| [mcp.md](mcp.md)                     | Install and use the local stdio MCP server                               |
-| [skills.md](skills.md)               | Claude Code, Codex, and Grok skills and recurrence                       |
-| [cli-usage.md](cli-usage.md)         | Shell commands, stacks, polling, and the MCP tool reference              |
-| [cloud.md](cloud.md)                 | Single ticks, Claude Code cloud, `nextCheck`, durable state              |
-| [configuration.md](configuration.md) | `.pr-shepherdrc.yml` and environment variables                           |
-| [api.md](api.md)                     | Package exports: `pr-shepherd`, `pr-shepherd/mcp`, `classify`, `journal` |
+| Document                                 | What it covers                                                           |
+| ---------------------------------------- | ------------------------------------------------------------------------ |
+| [mcp.md](mcp.md)                         | Install and use the local stdio MCP server                               |
+| [skills.md](skills.md)                   | Claude Code, Codex, and Grok skills and recurrence                       |
+| [cli-usage.md](cli-usage.md)             | Shell commands, stacks, polling, and the MCP tool reference              |
+| [cloud.md](cloud.md)                     | Single ticks, Claude Code cloud, `nextCheck`, durable state              |
+| [configuration.md](configuration.md)     | `.pr-shepherdrc.yml` and environment variables                           |
+| [api.md](api.md)                         | Package exports: `pr-shepherd`, `pr-shepherd/mcp`, `classify`, `journal` |
+| [migrating-to-v1.md](migrating-to-v1.md) | Upgrading from 0.x: config keys, commands, actions, MCP, and library     |
 
 ## Internals
 
