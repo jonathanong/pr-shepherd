@@ -58,6 +58,7 @@ function stripChrome(body: string): string {
     ? withoutFooter.slice(0, -FINISHING_TOUCH_BLOCK.length).trim()
     : withoutFooter;
   return withoutFinishingTouch
+    .replace(/^<!-- coderabbit-ai-generated:v\d+ -->\s*/, "")
     .replace(/^<!-- This is an auto-generated comment: summarize by coderabbit.ai -->\s*/, "")
     .replace(/^<!-- review_stack_entry_start -->[\s\S]*?<!-- review_stack_entry_end -->\s*/, "");
 }
