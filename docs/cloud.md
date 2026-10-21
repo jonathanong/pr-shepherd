@@ -10,7 +10,7 @@ The default command `pr-shepherd [PR]` and `pr-shepherd stack PR` sleep between 
 flowchart LR
   W[PR event or wake-up] --> T[Run one Shepherd tick]
   T --> I[Follow the printed Instructions]
-  I -->|TRIAGE| F[Fix, push, rerun once] --> E
+  I -->|TRIAGE| F[Do the triage steps, push only if files changed, rerun once] --> E
   I -->|other non-terminal| E[Keep one wake-up at nextCheck.at, end turn]
   I -->|CANCEL / ESCALATE| X[Stop]
   E --> W

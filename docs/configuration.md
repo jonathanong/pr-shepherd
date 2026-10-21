@@ -492,7 +492,7 @@ Shepherd never picks the git mechanics; it only echoes this pointer (see [action
 
 ### `iterate.review-output-max-chars` — default `50000`
 
-Per-tick budget, in characters, for the review-item bodies a `triage` result shows: changes-requested reviews first, then active threads and PR comments, first-look items, review summaries, and edited comments, oldest first within each group. Shepherd shows items until the next one would exceed the budget, always at least one. Held items are left out of the output, the generated IDs, and the seen markers, so the next run shows them; the result carries a `**showing** N of M review items` line (JSON `fix.reviewItems`) and a rerun step. `0` disables the cap. See [Review output budget](actions.md#review-output-budget).
+Per-tick budget, in characters, for the review-item bodies a `triage` result shows: changes-requested reviews first, then active threads and PR comments, first-look items, review summaries, and edited comments, oldest first within each group. Shepherd shows items until the next one would exceed the budget, always at least one. Held items are left out of the output, the generated IDs, and the seen markers, so the next run shows them; the result carries a `**showing** N of M review items` line (JSON `triage.reviewItems`) and a rerun step. `0` disables the cap. See [Review output budget](actions.md#review-output-budget).
 
 <a id="iterateresolveotherhumanthreads"></a>
 
