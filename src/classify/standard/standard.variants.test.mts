@@ -117,7 +117,7 @@ describe("Codex variants", () => {
   it.each([
     "`user` is dereferenced before the null check.",
     "See [this](https://example.com) bug.",
-    "But the authorization check is broken here.",
+    "But the authorization check is broken when the session token expires.",
     "Bravo. Also auth.ts line 4 is wrong.",
   ])("keeps the sign-off %s visible", (signOff) => {
     expect(matches(clean, variant(clean.body, "Bravo.", signOff))).toEqual([]);
@@ -146,5 +146,31 @@ describe("Sourcery variants", () => {
     const offsite = variant(upsell.body, "https://app.sourcery.ai/", "https://example.com/");
     expect(matches(upsell, moved)).toEqual(["sourcery-notices"]);
     expect(matches(upsell, offsite)).toEqual([]);
+  });
+});
+
+describe("Kilo and CodeRabbit report edges", () => {
+  it("accepts an unmarked Kilo report without a file list", () => {
+    const kilo = fixture("kilo-no-issues");
+    const body =
+      "## Code Review Summary\n\n**Status:** No Issues Found | **Recommendation:** Merge";
+    expect(matches(kilo, body)).toEqual(["kilo-no-issues"]);
+  });
+
+  it("keeps a marked Kilo report with an extra section after the file list visible", () => {
+    const kilo = fixture("kilo-no-issues-real");
+    const extra =
+      "</details>\n\n<details>\n<summary><b>Other Observations (not in diff)</b></summary>\n\n| `a.ts` | 3 | Bug |\n\n</details>\n\n---";
+    expect(matches(kilo, variant(kilo.body, "</details>\n\n---", extra))).toEqual([]);
+  });
+
+  it("keeps an unquoted line inside a CodeRabbit notice envelope visible", () => {
+    const limit = fixture("coderabbit-rate-limit-generated-marker");
+    const body = variant(
+      limit.body,
+      "> ## Review limit reached\n",
+      "> ## Review limit reached\nA bug.\n",
+    );
+    expect(matches(limit, body)).toEqual([]);
   });
 });

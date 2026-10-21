@@ -16,7 +16,7 @@ const ACTIVITY_SUMMARY =
 
 /** Codex closes with a rotating sign-off: a few plain words, a :shortcode:, or one emoji. */
 const CLEAN_REVIEW =
-  /^Codex Review: Didn't find any major issues\. (?:(?:[\p{L}'’]+ ){0,5}[\p{L}'’]+[.!?]|:[a-z0-9_+-]+:|\p{Extended_Pictographic}\uFE0F?)\n\n\*\*Reviewed commit:\*\* `[a-f0-9]+`$/u;
+  /^Codex Review: Didn't find any major issues\. (?:(?:[\p{L}'’]+,? ){0,7}[\p{L}'’]+[.!?]|:[a-z0-9_+-]+:|\p{Extended_Pictographic}\uFE0F?)\n\n\*\*Reviewed commit:\*\* `[a-f0-9]+`$/u;
 
 const CLEAN_SECURITY =
   /^### 🛡️ Codex Security Review(?: · _Automatically triggered_)?\n\nSecurity review completed\. No security issues were found in this pull request\.\n\n\*\*Reviewed commit:\*\* `[a-f0-9]+`\n\n\[View security finding report\]\(https:\/\/chatgpt\.com\/[^\s)]*\)\n\n_Only the user who started this review can view the report in Codex\._$/;
@@ -32,8 +32,12 @@ const rule: ClassifyRule = (item) => {
   if (QUOTA_NOTICES.some((notice) => notice.test(body))) {
     return { autoResolve: true, suppress: true, reason: "Codex usage-limit notice" };
   }
-  // Strip only the trailing About block; extra findings after it stay visible.
-  const content = body.replace(ABOUT_BLOCK, "").trim();
+  // Strip only leading codex-* metadata markers and the trailing About block; extra findings stay
+  // visible. The activity table's own marker has no colon, so it is kept for ACTIVITY_SUMMARY.
+  const content = body
+    .replace(ABOUT_BLOCK, "")
+    .trim()
+    .replace(/^(?:<!-- codex-[a-z0-9-]+:[^\n]* -->\s*)+/, "");
   if (ACTIVITY_SUMMARY.test(content)) {
     return { autoResolve: true, suppress: true, reason: "Codex review-activity table" };
   }
