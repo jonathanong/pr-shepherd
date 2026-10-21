@@ -7,7 +7,6 @@ const DEFAULT_POLL = {
   timeoutSeconds: 270,
   debounceSeconds: 60,
   quietStatus: false,
-  mode: "auto",
   reconcileSeconds: 900,
 };
 
@@ -27,12 +26,6 @@ describe("loadConfig — poll defaults", () => {
     });
   });
 
-  it("accepts every poll mode", async () => {
-    writeRc("poll:\n  mode: event\n");
-    const loadConfig = await freshLoadConfig();
-    expect(loadConfig().poll.mode).toBe("event");
-  });
-
   it.each([
     ["poll object", "poll: disabled"],
     ["interval", "poll:\n  intervalSeconds: 0"],
@@ -40,7 +33,6 @@ describe("loadConfig — poll defaults", () => {
     ["debounce", "poll:\n  debounceSeconds: -1"],
     ["reconcile", "poll:\n  reconcileSeconds: -1"],
     ["quiet status", "poll:\n  quietStatus: yes"],
-    ["mode", "poll:\n  mode: sometimes"],
   ])("falls back to defaults for an invalid %s", async (_label, yaml) => {
     writeRc(`${yaml}\n`);
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);

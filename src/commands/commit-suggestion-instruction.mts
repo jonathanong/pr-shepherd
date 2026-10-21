@@ -2,7 +2,7 @@ import { buildPrShepherdCommand } from "../cli/runner.mts";
 import { playbookPointer } from "./playbook-pointer.mts";
 
 /**
- * Build the `build-suggestion-patches` instruction step for agent consumers.
+ * Build the `suggest` instruction step for agent consumers.
  * Currently emitted by iterate `fix_code` for suggestion review threads. The CLI keeps
  * only the trigger and the concrete command; refusal/drift handling is invariant across
  * every invocation, so it lives in the pr-shepherd skill's "Suggestion patches" playbook
@@ -16,7 +16,7 @@ export function buildCommitSuggestionInstruction(
   sectionName: string,
 ): string {
   const command = buildPrShepherdCommand([
-    "build-suggestion-patches",
+    "suggest",
     String(prReference),
     "--thread-id",
     "<id>",

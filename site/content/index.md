@@ -93,7 +93,7 @@ action:
 <li>ESCALATE</li>
 </ul>
 
-A `--stack` poll can also return `SHEPHERD`, which starts a session for each stack layer you own.
+A `stack` poll can also return `SHEPHERD`, which starts a session for each stack layer you own.
 
 The agent follows the printed steps, pushes, and asks again. `READY` means a clean PR is
 settling; the loop ends at `CANCEL`, or at `ESCALATE` when a human is needed. The agent

@@ -1,8 +1,8 @@
 {
-  "description": "A clean upper draft remains held while a lower layer needs a human. The selector stops for that handoff without promoting the draft.",
+  "description": "A clean upper draft remains held while a lower layer needs a human. The command stops for that handoff without promoting the draft.",
   "mode": "aggregate",
   "args": [
-    "--stack",
+    "stack",
     "https://github.com/owner/repo/pull/452",
     "--no-auto-mark-ready",
     "--debounce",

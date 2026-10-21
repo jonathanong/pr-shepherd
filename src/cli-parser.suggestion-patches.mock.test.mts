@@ -12,13 +12,13 @@ import { EXIT } from "./exit-codes.mts";
 
 registerHooks();
 
-describe("main — build-suggestion-patches", () => {
+describe("main — suggest", () => {
   it("routes ordered suggestion groups", async () => {
     mockRunSuggestionPatches.mockResolvedValue(SUGGESTIONS_RESULT);
     await main([
       "node",
       "shepherd",
-      "build-suggestion-patches",
+      "suggest",
       "42",
       "--thread-id",
       "t1",
@@ -47,7 +47,7 @@ describe("main — build-suggestion-patches", () => {
     await main([
       "node",
       "shepherd",
-      "build-suggestion-patches",
+      "suggest",
       "42",
       "--thread-id",
       "t1",

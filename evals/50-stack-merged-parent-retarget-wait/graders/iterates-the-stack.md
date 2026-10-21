@@ -4,7 +4,7 @@ focus: last_message
 weight: 1
 ---
 
-The plan commits to rerunning the same `pr-shepherd --stack …` selector after
+The plan commits to rerunning the same `pr-shepherd stack …` command after
 the per-layer work the output lists, to continue the stack loop.
 
 A stack overview whose heading carries neither `[CANCEL]` nor `[ESCALATE]` is

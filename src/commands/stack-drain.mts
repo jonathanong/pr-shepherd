@@ -110,7 +110,7 @@ export function planPrefixDrain(
   const handoffs = findHumanHandoffs(result);
   if (handoffs) appendHumanHandoffInstructions(instructions, handoffs, false);
   instructions.push(
-    `${instructions.length + 1}. After the merge attempt, rerun this same \`--stack --merge\` selector; GitHub retargets the next layer onto \`${top.stack.baseRefName}\`. Shepherd any layer that GitHub rejects or ejects.`,
+    `${instructions.length + 1}. After the merge attempt, rerun this same \`stack --merge\` command; GitHub retargets the next layer onto \`${top.stack.baseRefName}\`. Shepherd any layer that GitHub rejects or ejects.`,
   );
   return {
     action: "merge",

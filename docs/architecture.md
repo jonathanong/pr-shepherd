@@ -56,7 +56,7 @@ src/
 ├── cli/                   # argument parsing, help pages, Markdown formatters
 ├── mcp/
 │   ├── server.mts         # iterate, apply, extract_journal, get_journal, playbook,
-│   │                      #   build_suggestion_patches tools
+│   │                      #   suggest tools
 │   └── index.mts          # createPrShepherdMcpServer / runPrShepherdMcpStdio
 │
 ├── commands/              # one file (or dir) per subcommand
@@ -64,12 +64,12 @@ src/
 │   ├── check-status.mts   # ShepherdStatus from a report
 │   ├── iterate/           # action dispatch (runIterate in index.mts)
 │   ├── poll.mts           # bounded WAIT loop + FIX_CODE debounce
-│   ├── poll-summary.mts   # multi-PR / --stack aggregate summary
+│   ├── poll-summary.mts   # multi-PR / stack aggregate summary
 │   ├── ready-delay.mts    # ready-since.txt
 │   ├── resolve-mutate.mts # apply review mutations
 │   ├── apply-merge.mts    # REST apply merge
 │   ├── journal/           # PR-body journal
-│   ├── suggestion-patches.mts # build-suggestion-patches
+│   ├── suggestion-patches.mts # suggest
 │   ├── mark-files-as-viewed.mts
 │   └── clean.mts
 │

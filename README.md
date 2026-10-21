@@ -96,7 +96,7 @@ These are offline estimates at 3.5 characters per token over recorded sessions, 
 
 ### Clearer agent direction
 
-For a single PR, each tick returns exactly one action: `WAIT`, `READY`, `MARK_READY`, `FIX_CODE`, `MERGE`, `CANCEL`, or `ESCALATE`. A `--stack` poll can also return `SHEPHERD`, which starts one-PR sessions for owned layers. Every action except `CANCEL` comes with numbered `## Instructions` and exact commands, so the agent does not invent policy. In the [behavior evals](evals/README.md), Sonnet 5.5 at low effort scores **0.94** with the plugin and **0.82** without it on the 36 GitHub-gotcha cases, so it misses about two-thirds fewer graded checks (0.18 → 0.06). On the eight gotchas listed under [Context and correctness](#context-and-correctness) it goes from 0.50 to 0.92. Weighted toward those gotchas, the mean Δ over all 52 cases is **+0.14**, and no case has a regression whose interval excludes 0. See [docs/actions.md](docs/actions.md) for the output contract.
+For a single PR, each tick returns exactly one action: `WAIT`, `READY`, `MARK_READY`, `FIX_CODE`, `MERGE`, `CANCEL`, or `ESCALATE`. A `stack` poll can also return `SHEPHERD`, which starts one-PR sessions for owned layers. Every action except `CANCEL` comes with numbered `## Instructions` and exact commands, so the agent does not invent policy. In the [behavior evals](evals/README.md), Sonnet 5.5 at low effort scores **0.94** with the plugin and **0.82** without it on the 36 GitHub-gotcha cases, so it misses about two-thirds fewer graded checks (0.18 → 0.06). On the eight gotchas listed under [Context and correctness](#context-and-correctness) it goes from 0.50 to 0.92. Weighted toward those gotchas, the mean Δ over all 52 cases is **+0.14**, and no case has a regression whose interval excludes 0. See [docs/actions.md](docs/actions.md) for the output contract.
 
 ### Lower GitHub API quota use
 
@@ -139,8 +139,8 @@ See [docs/graphql-usage.md](docs/graphql-usage.md) and [docs/rest-usage.md](docs
 - The plugin ships [skills](docs/skills.md) for Claude Code, Codex, and Grok.
 - Cursor and other stdio clients use the [MCP server](docs/mcp.md).
 - Shell and CI use the [CLI](docs/cli-usage.md).
-- In Claude Code cloud sessions, Shepherd switches to the [REST transport](docs/rest.md) and [event mode](docs/cloud.md).
-- `--stack` reports every layer of a native GitHub stacked PR and shepherds the layers you own.
+- In Claude Code cloud sessions, Shepherd switches to the [REST transport](docs/rest.md) and [single ticks](docs/cloud.md).
+- `stack` reports every layer of a native GitHub stacked PR and shepherds the layers you own.
 
 ## Use cases
 

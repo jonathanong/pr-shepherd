@@ -14,4 +14,4 @@ Apply when a step says `Playbook: "Merge queue ejection"`. The `**queue removal*
    - no other blocker remains;
    - the logs or the check's details page show a transient failure, or a failure caused by another entry in the same queue group.
 8. If gh reports auto-merge is disabled instead of adding the PR to the queue, run the `requeue API fallback:` command. Both requeue commands require the observed PR head SHA. If the head changed, iterate for a fresh command.
-9. After `acknowledge queue removal:`, finish this one-PR session so it validates current source CI and records its READY receipt. Then return to the aggregate `--stack` selector with its original options. In merge mode it verifies lower-layer readiness before merging. Never enqueue or merge a stack layer directly.
+9. After `acknowledge queue removal:`, finish this one-PR session so it validates current source CI and records its READY receipt. Then return to the aggregate `stack` command with its original options. In merge mode it verifies lower-layer readiness before merging. Never enqueue or merge a stack layer directly.

@@ -27,7 +27,7 @@ describe("stack handoffs with only unowned autonomous work", () => {
     expect(text).toContain("PR #1 requires human action (mark-ready-authorization-required). Stop");
     expect(text).not.toContain("Keep shepherding other PRs");
     expect(text).not.toContain("Report this overview and stop");
-    expect(text).not.toContain("rerun this same `--stack` selector");
+    expect(text).not.toContain("rerun this same `stack` command");
   });
 
   it("stops to ask about a missing command when every runnable layer is unowned", () => {
@@ -43,6 +43,6 @@ describe("stack handoffs with only unowned autonomous work", () => {
     expect(text).toContain(
       "PR #1 needs a one-PR session, but Shepherd could not produce its command. Stop and ask",
     );
-    expect(text).not.toContain("rerun this same `--stack` selector");
+    expect(text).not.toContain("rerun this same `stack` command");
   });
 });

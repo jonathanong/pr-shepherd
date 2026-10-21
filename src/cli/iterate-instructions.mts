@@ -2,7 +2,7 @@ import type { IterateResult } from "../types.mts";
 import { inlineCode } from "../util/markdown.mts";
 import { buildQuotaAwareContinuation } from "../quota-warning.mts";
 import { renderShellCommand } from "./runner.mts";
-import { eventWaitSteps } from "../commands/event-instructions.mts";
+import { tickWaitSteps } from "../commands/tick-instructions.mts";
 
 export function buildSimpleIterateInstructions(
   result: Exclude<IterateResult, { action: "fix_code" }>,
@@ -12,7 +12,7 @@ export function buildSimpleIterateInstructions(
       if (result.nextCheck) {
         return [
           `PR #${result.pr} is ready. Ready-delay has ${result.remainingSeconds}s left. Do not invent unrelated work.`,
-          ...eventWaitSteps(result.nextCheck),
+          ...tickWaitSteps(result.nextCheck),
         ];
       }
       const sentence = `PR #${result.pr} is ready. Ready-delay has ${result.remainingSeconds}s left. Rerun this command when the timer elapses. Do not invent unrelated work.`;
@@ -22,7 +22,7 @@ export function buildSimpleIterateInstructions(
     }
     case "wait":
       if (result.nextCheck) {
-        return ["Non-terminal — no action needed this tick.", ...eventWaitSteps(result.nextCheck)];
+        return ["Non-terminal — no action needed this tick.", ...tickWaitSteps(result.nextCheck)];
       }
       if (result.quotaWarning) {
         return [
@@ -36,8 +36,7 @@ export function buildSimpleIterateInstructions(
         "Non-terminal — no action needed this tick. Iterate immediately with the same options to continue.",
       ];
     case "mark_ready":
-      // Event mode reruns at once too: Shepherd is not polling, so no cadence applies.
-      if (result.quotaWarning && result.pollMode !== "event") {
+      if (result.quotaWarning) {
         return [
           buildQuotaAwareContinuation(
             result.quotaWarning,
@@ -54,7 +53,7 @@ export function buildSimpleIterateInstructions(
       if (result.merge.mode === "rest" && result.nextCheck)
         return [
           `Run the REST merge command exactly as printed: ${command}. \`enqueued\` is not merged.`,
-          ...eventWaitSteps(result.nextCheck),
+          ...tickWaitSteps(result.nextCheck),
         ];
       if (result.merge.mode === "rest")
         return [

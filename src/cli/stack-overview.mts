@@ -27,7 +27,6 @@ export interface StackOverview {
   instructions?: string[];
   apiUsage?: ApiUsage;
   quotaWarning?: GraphqlQuotaWarning;
-  pollMode?: "event";
   nextCheck?: NextCheck;
 }
 
@@ -54,7 +53,6 @@ export function projectStackOverview(result: PollSummaryResult): StackOverview {
     ...(result.instructions?.length && { instructions: result.instructions }),
     ...(result.apiUsage && { apiUsage: result.apiUsage }),
     ...(result.quotaWarning && { quotaWarning: result.quotaWarning }),
-    ...(result.pollMode && { pollMode: result.pollMode }),
     ...(result.nextCheck && { nextCheck: result.nextCheck }),
   };
 }
@@ -122,7 +120,7 @@ export function formatStackOverview(overview: StackOverview): string {
   const lines = [
     `# ${overview.repo} stack #${stack.stackNumber}${stackTerminalTag(overview.nextAction)} — ${overview.reason}`,
     "",
-    `anchor PR #${stack.anchor} · ${stack.stackSize} layers · mode \`${overview.mode}\`${overview.pollMode ? ` · pollMode \`${overview.pollMode}\`` : ""}`,
+    `anchor PR #${stack.anchor} · ${stack.stackSize} layers · mode \`${overview.mode}\``,
     ...(overview.stackMergeable ? ["stackMergeable: true"] : []),
     ...(overview.nextAction ? [`nextAction: ${overview.nextAction}`] : []),
     ...formatNextCheckLines(overview.nextCheck),

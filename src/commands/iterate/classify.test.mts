@@ -1,8 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildResolveCommand } from "./classify.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
 import { addPrShepherdMarker } from "../../comments/marker.mts";
-import { runWithDurableState } from "../../state/durable-state.mts";
 import type { AgentThread, ReviewThread } from "../../types.mts";
 
 const FORK_PR = "https://github.com/fork/widgets/pull/42";
@@ -43,7 +42,7 @@ describe("iterate follow-up references", () => {
 
   it("uses the full PR URL for suggestion follow-up instructions", () => {
     expect(buildCommitSuggestionInstruction(FORK_PR, "## Review threads")).toContain(
-      `pr-shepherd build-suggestion-patches ${FORK_PR}`,
+      `pr-shepherd suggest ${FORK_PR}`,
     );
   });
 });
@@ -113,18 +112,22 @@ describe("buildResolveCommand — existing-reply adoption", () => {
     expect(build().resolveCommand.argv).not.toContain("--adopt-existing-replies");
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("adds the opt-in flag to generated reply commands in durable state", () => {
-    const single = runWithDurableState(() => build());
+    vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
+    const single = build();
     expect(single.resolveCommand.argv).toContain("--adopt-existing-replies");
-    const split = runWithDurableState(() => build(["PRRC_one"]));
+    const split = build(["PRRC_one"]);
     expect(split.resolveCommand.argv).toContain("--adopt-existing-replies");
     expect(split.resolveOnlyCommand?.argv).not.toContain("--adopt-existing-replies");
   });
 
   it("never adds the flag to a command without replies", () => {
-    const { resolveCommand } = runWithDurableState(() =>
-      buildResolveCommand([], [], ["PRRC_one"], [], [], FORK_PR),
-    );
+    vi.stubEnv("CLAUDE_CODE_REMOTE", "true");
+    const { resolveCommand } = buildResolveCommand([], [], ["PRRC_one"], [], [], FORK_PR);
     expect(resolveCommand.argv).not.toContain("--adopt-existing-replies");
   });
 });

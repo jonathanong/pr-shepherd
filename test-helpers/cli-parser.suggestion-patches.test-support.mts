@@ -52,7 +52,7 @@ const SUGGESTIONS_RESULT = {
 };
 
 // ---------------------------------------------------------------------------
-// build-suggestion-patches dispatch
+// suggest dispatch
 // ---------------------------------------------------------------------------
 
 export function registerHooks(): void {

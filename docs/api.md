@@ -18,10 +18,9 @@ import { createPrShepherd } from "pr-shepherd";
 
 const shepherd = createPrShepherd({ cwd: "/path/to/repo", transport: "auto" });
 
-const tick = await shepherd.iterate({ pr: 42, merge: true });
+const tick = await shepherd.iterate({ pr: 42, merge: true }); // one tick, with nextCheck
 const group = await shepherd.iterate({ prs: [42, 43] });
-const stack = await shepherd.iterate({ stack: 43 });
-const cloud = await shepherd.iterate({ pr: 42, pollMode: "event" }); // adds pollMode and nextCheck
+const stack = await shepherd.stack({ pr: 43 });
 const journal = await shepherd.getJournal({ pr: "owner/repo#42" });
 const applied = await shepherd.apply({
   pr: 42,
@@ -41,7 +40,7 @@ const applied = await shepherd.apply({
     },
   ],
 });
-const patches = await shepherd.buildSuggestionPatches({
+const patches = await shepherd.suggest({
   pr: 42,
   suggestions: [
     { threadId: "PRRT_…", message: "Apply reviewer suggestion" },
@@ -52,12 +51,13 @@ const patches = await shepherd.buildSuggestionPatches({
 
 `createPrShepherd({ cwd, transport })` returns these methods:
 
-| Method                                        | Same as                               |
-| --------------------------------------------- | ------------------------------------- |
-| `iterate(input?)`                             | MCP `iterate` / `pr-shepherd iterate` |
-| `apply({ pr, operations })`                   | MCP `apply`                           |
-| `getJournal({ pr })`                          | MCP `get_journal`                     |
-| `buildSuggestionPatches({ pr, suggestions })` | MCP `build_suggestion_patches`        |
+| Method                         | Same as                                  |
+| ------------------------------ | ---------------------------------------- |
+| `iterate(input?)`              | MCP `iterate` / `pr-shepherd iterate`    |
+| `stack({ pr })`                | MCP `stack` / `pr-shepherd stack --once` |
+| `apply({ pr, operations })`    | MCP `apply`                              |
+| `getJournal({ pr })`           | MCP `get_journal`                        |
+| `suggest({ pr, suggestions })` | MCP `suggest`                            |
 
 `transport` (`auto`, `graphql`, `rest`) is the same choice as the CLI `--transport` option and the [`github.transport`](configuration.md#github-api-transport) key; the MCP server accepts the equivalent option. In `auto`, Claude Code cloud sessions start with REST and other environments start with GraphQL and use the documented fallback triggers. REST fields or operations that are unavailable stay explicit unknowns or surface as unsupported outcomes.
 
@@ -70,17 +70,21 @@ const patches = await shepherd.buildSuggestionPatches({
 
 ### `iterate`
 
-A singular call returns the raw `IterateResult`. `pollMode` (`auto`, `poll`, `event`) selects the event-mode tick described in [cloud.md](cloud.md); the result then carries `pollMode: "event"` and, when another tick is meaningful, `nextCheck { at, inSeconds, reason }`.
+Every call runs one tick. A singular call returns the raw `IterateResult`, which carries `nextCheck { at, inSeconds, reason }` when another tick is meaningful ([cloud.md](cloud.md#nextcheck)).
 
-Alternatively, pass exactly one aggregate selector — non-empty `prs` or `stack`. Every reference must resolve to one repository. An aggregate call runs one compact, read-only summary tick and returns `PollSummaryResult`. It does not mark review items seen, keep ready-delay state, perform GitHub mutations, or emit rebase/push commands. The caller owns recurrence and follows the returned instructions.
+Alternatively, pass a non-empty `prs` set. Every reference must resolve to one repository. An aggregate call runs one compact, read-only summary tick and returns `PollSummaryResult`. It does not mark review items seen, keep ready-delay state, perform GitHub mutations, or emit rebase/push commands. The caller owns recurrence and follows the returned instructions.
 
-| Native-stack action | When                                                                                                                                                                                                           |
-| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SHEPHERD`          | Some layer is unready and autonomous. Every layer with work gets a one-PR Shepherd instruction; a mixed state also surfaces any human blocker.                                                                 |
-| `WAIT`              | The stack is queued, or its layers can only wait. An unchanged idle wait that reaches `stallTimeoutSeconds` returns `ESCALATE` with `stall-timeout`.                                                           |
-| `ESCALATE`          | Closed or unverified topology needs human direction, and no one-PR Shepherd session remains.                                                                                                                   |
-| `MERGE`             | With `--stack --merge`: the highest ready prefix whose bottom open layer targets the stack base. Run `gh stack merge <PR number>` for that prefix, then recheck until every layer merges and `CANCEL` returns. |
-| `CANCEL`            | Terminal READY or merged state, including clean drafts left in draft when auto mark-ready is disabled (row reason `draft-auto-mark-ready-disabled`, with no `pollCommand`).                                    |
+### `stack`
+
+`stack({ pr })` takes the anchor PR of a native GitHub stack plus the same tick options as `iterate`, runs one aggregate tick, and returns `PollSummaryResult` with the same read-only guarantees and `nextCheck` rule as an aggregate `iterate`.
+
+| Native-stack action | When                                                                                                                                                                                                       |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SHEPHERD`          | Some layer is unready and autonomous. Every layer with work gets a one-PR Shepherd instruction; a mixed state also surfaces any human blocker.                                                             |
+| `WAIT`              | The stack is queued, or its layers can only wait. An unchanged idle wait that reaches `stallTimeoutSeconds` returns `ESCALATE` with `stall-timeout`.                                                       |
+| `ESCALATE`          | Closed or unverified topology needs human direction, and no one-PR Shepherd session remains.                                                                                                               |
+| `MERGE`             | With `merge: true`: the highest ready prefix whose bottom open layer targets the stack base. Run `gh stack merge <PR number>` for that prefix, then recheck until every layer merges and `CANCEL` returns. |
+| `CANCEL`            | Terminal READY or merged state, including clean drafts left in draft when auto mark-ready is disabled (row reason `draft-auto-mark-ready-disabled`, with no `pollCommand`).                                |
 
 ### `apply`
 
@@ -92,6 +96,7 @@ Alternatively, pass exactly one aggregate selector — non-empty `prs` or `stack
 | `review_mutations`          | `resolveThreadIds`, `replyThreadIds`, `minimizeCommentIds`, `dismissReviewIds`, `message`, `requireSha` | `message` is required for replies and dismissals. `requireSha` is `HEAD` (read with `git rev-parse HEAD`) or a full 40-character lowercase SHA; mutations wait until GitHub reports that PR head.          |
 | `mark_files_viewed`         | `files`, `tests`, `matchPatterns`                                                                       | Surfaces GitHub's per-file results. REST reports it as explicitly unsupported.                                                                                                                             |
 | `append_journal`            | `item`, optional `dryRun`                                                                               | Honors explicit caller intent.                                                                                                                                                                             |
+| `check_blocker`             | `check`, then either `blockedBy` or `clear: true`                                                       | Records or clears a local blocker for one exact failing check, as `apply check-blocker` does. `blockedBy` is a PR/issue URL, `owner/repo#N`, or `issue:owner/repo#N`.                                      |
 | `acknowledge_queue_removal` | `requireSha`, `queueCommitOid` (full SHAs), `removedAtUnix` (positive safe integer)                     | Records a local acknowledgment of the current native-stack CI removal; never enqueues or merges. REST returns a transport-unsupported error before GitHub I/O.                                             |
 
 Direct review operations forward every supplied ID without iterate's author, capability, or current-state filtering; GitHub is authoritative for authorization and mutation validity.
@@ -145,7 +150,7 @@ Fetches one PR body through the selected transport and returns the same result a
 | Absent    | `{ ok: true, journal: null }` |
 | Malformed | `{ ok: false, error }`        |
 
-### `buildSuggestionPatches`
+### `suggest`
 
 Accepts one or more `{ threadId, message, description? }` items and returns an ordered patch list with per-patch commit metadata and shared instructions. It builds against the fetched PR-head blobs, permits a clean local descendant of that head, and returns nothing unless the ordered stream passes `git apply --check`. It never writes a patch file or mutates git.
 
@@ -190,12 +195,12 @@ const server = createPrShepherdMcpServer({ cwd: "/path/to/repo" });
 await runPrShepherdMcpStdio({ cwd: "/path/to/repo" });
 ```
 
-`createPrShepherdMcpServer` accepts an optional `shepherd` for tests and exposes `iterate`, `apply`, `build_suggestion_patches`, `extract_journal`, `get_journal`, and `playbook`. Host install and tool schemas: [mcp.md](mcp.md).
+`createPrShepherdMcpServer` accepts an optional `shepherd` for tests and exposes `iterate`, `stack`, `apply`, `suggest`, `extract_journal`, `get_journal`, and `playbook`. Host install and tool schemas: [mcp.md](mcp.md).
 
-- PR-targeted tools require a repository-qualified reference and reject bare or omitted ones. `iterate` takes exactly one of `pr`, `prs`, or `stack`; the others require `pr`.
+- PR-targeted tools require a repository-qualified reference and reject bare or omitted ones. `iterate` takes exactly one of `pr` or `prs`; the others, including `stack`, require `pr`.
 - That repository is the GitHub target and may differ from the factory's `cwd`, which still supplies local git, config, and rules context.
 - `extract_journal` takes only a Markdown `body` string and performs no GitHub, file, stdin, or Shepherd-log I/O.
-- Singular MCP `iterate` returns the lean JSON projection (matching CLI `--format=json`) as `structuredContent`; aggregate `structuredContent` is the raw `PollSummaryResult`.
+- Singular MCP `iterate` returns the lean JSON projection (matching CLI `--format=json`) as `structuredContent`; aggregate `iterate` returns the raw `PollSummaryResult`, and `stack` returns the lean stack overview the CLI prints as JSON.
 
 ## `pr-shepherd/classify`
 

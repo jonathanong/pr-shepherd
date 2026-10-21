@@ -47,7 +47,7 @@ describe("stack draft verification", () => {
       false,
     );
     expect(result.nextAction).toBe("shepherd");
-    expect(instructions(result)).toContain("rerun this same `--stack` selector");
+    expect(instructions(result)).toContain("rerun this same `stack` command");
     expect(instructions(result)).not.toContain("stop shepherding this stack");
   });
 
@@ -57,7 +57,9 @@ describe("stack draft verification", () => {
       false,
     );
     expect(result.nextAction).toBe("shepherd");
-    expect(instructions(result)).toContain("report the human handoff above and stop this selector");
+    expect(instructions(result)).toContain(
+      "report the human handoff above and stop this `stack` command",
+    );
     expect(instructions(result)).toContain("If any probe returns `[ESCALATE]`");
   });
 });

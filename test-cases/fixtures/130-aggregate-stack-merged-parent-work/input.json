@@ -11,7 +11,7 @@
   },
   "description": "Two merged lower native-stack layers do not block review of the four open layers above them, even while GitHub retains the merged-parent base on the bottom open PR. Dispatch all four authoritative one-PR sessions on the same tick.",
   "args": [
-    "--stack",
+    "stack",
     "https://github.com/vouchington/vouchington/pull/2547",
     "--debounce",
     "0s"

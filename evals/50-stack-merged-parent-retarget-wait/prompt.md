@@ -20,7 +20,7 @@ append_system_prompt: |
   explicitly and say why.
 ---
 Shepherd the native PR stack anchored at https://github.com/vouchington/vouchington/pull/2547 and merge it.
-I already ran the first tick (`pr-shepherd --stack https://github.com/vouchington/vouchington/pull/2547 --until-terminal --merge`) —
+I already ran the first tick (`pr-shepherd stack https://github.com/vouchington/vouchington/pull/2547 --until-terminal --merge`) —
 here is what it returned. Take it from there.
 
 ---

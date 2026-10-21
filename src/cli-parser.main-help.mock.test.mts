@@ -15,13 +15,13 @@ describe("main — top-level help", () => {
     const out = getStdout();
     expect(out).toContain("Usage:");
     expect(out).toContain("pr-shepherd [PR ...]");
-    expect(out).toContain("pr-shepherd --stack PR");
+    expect(out).toContain("pr-shepherd stack PR [--once]");
     expect(out).toContain("pr-shepherd iterate");
     expect(out).toContain("pr-shepherd apply review");
     expect(out).toContain("pr-shepherd apply files");
     expect(out).toContain("pr-shepherd apply journal");
     expect(out).toContain("pr-shepherd apply check-blocker");
-    expect(out).toContain("pr-shepherd build-suggestion-patches");
+    expect(out).toContain("pr-shepherd suggest");
     expect(out).toContain("pr-shepherd admin clean <pr|branch|current|repo|all>");
     expect(out).toContain("pr-shepherd admin log-file");
     expect(out).not.toContain("pr-shepherd resolve");

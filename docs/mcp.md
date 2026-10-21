@@ -4,7 +4,7 @@
 
 How to install and call `pr-shepherd-mcp`, the local stdio MCP server, plus the contract for every tool it registers. For people wiring Shepherd into Claude Code, Codex, Grok, or another MCP client, and for agents calling the tools.
 
-The server shares command implementations, GitHub token resolution, and cascading `.pr-shepherdrc.yml` files with the CLI. Tools gather PR context (`iterate`), apply deterministic GitHub mutations (`apply`), build checked suggestion patches (`build_suggestion_patches`), read Shepherd Journals (`extract_journal`, `get_journal`), and print playbooks (`playbook`). The calling client owns recurrence and any git mutations.
+The server shares command implementations, GitHub token resolution, and cascading `.pr-shepherdrc.yml` files with the CLI. Tools gather PR context (`iterate`), apply deterministic GitHub mutations (`apply`), build checked suggestion patches (`suggest`), read Shepherd Journals (`extract_journal`, `get_journal`), and print playbooks (`playbook`). The calling client owns recurrence and any git mutations.
 
 GitHub transport follows `github.transport` or the per-call `transport: "auto"|"graphql"|"rest"` input, with the same `auto` selection and fallback as the CLI. REST results may omit GraphQL-only fields; unavailable context stays unknown, and unsupported operations are reported explicitly. See [api.md](api.md) and [github-api.md](github-api.md#transport-selection).
 
@@ -26,7 +26,7 @@ The MCP server does not require a global CLI install; install the `pr-shepherd` 
 
 ### Plugin
 
-The plugin launches the server from `plugins/pr-shepherd/.mcp.json` (Claude Code and Grok) or `plugins/pr-shepherd/.codex.mcp.json` (Codex). The shipped `pr-shepherd` skill runs the poll command `pr-shepherd` and uses MCP `iterate` only when the CLI is unavailable. After a CLI poll, run the printed apply command; use MCP `apply` / `build_suggestion_patches` only when this tick used MCP `iterate`.
+The plugin launches the server from `plugins/pr-shepherd/.mcp.json` (Claude Code and Grok) or `plugins/pr-shepherd/.codex.mcp.json` (Codex). The shipped `pr-shepherd` skill runs the poll command `pr-shepherd` and uses MCP `iterate` only when the CLI is unavailable. After a CLI poll, run the printed apply command; use MCP `apply` / `suggest` only when this tick used MCP `iterate`.
 
 | Host        | Install                                                                                                                      | Confirm                                                 | Invoke                                                                           |
 | ----------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------- |
@@ -90,35 +90,36 @@ Replace `/path/to/pr-shepherd` with this checkout's absolute path. Do not use a 
 
 ## Tools
 
-The server registers six tools. Hosts namespace tool names with the server name (`pr-shepherd__iterate` in Grok, `mcp__pr-shepherd__iterate` in some Claude setups); the names below are the server-registered ones.
+The server registers seven tools. Hosts namespace tool names with the server name (`pr-shepherd__iterate` in Grok, `mcp__pr-shepherd__iterate` in some Claude setups); the names below are the server-registered ones.
 
-| Tool                       | CLI counterpart                                                                      | Side effects                                                                                                                                                                                                         |
-| -------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `iterate`                  | `pr-shepherd iterate` (one tick; no poll, no debounce)                               | One state-machine tick: review items, checks, merge state, and review-mutation arguments. With REST, attempts otherwise-eligible supported mutations when capability is omitted; GitHub decides. Never cancels runs. |
-| `apply`                    | `apply merge`, `apply review`, `apply files`, `apply journal`, `apply queue-removal` | Explicit operations are attempted in order. Merge requires REST and returns `pending`/`enqueued`/`merged`/`failed`; unsupported REST operations are reported.                                                        |
-| `playbook`                 | `pr-shepherd playbook`                                                               | None; no GitHub I/O. Returns a bundled playbook by `name`, or lists them with no name.                                                                                                                               |
-| `extract_journal`          | `pr-shepherd journal extract` (from a `body` string, not a file)                     | None; no file, stdin, GitHub, or Shepherd-log I/O.                                                                                                                                                                   |
-| `get_journal`              | none                                                                                 | Read-only fetch of the PR body through the selected transport; never writes it.                                                                                                                                      |
-| `build_suggestion_patches` | `pr-shepherd build-suggestion-patches`                                               | None. Never edits the worktree or git history.                                                                                                                                                                       |
+| Tool              | CLI counterpart                                                                                             | Side effects                                                                                                                                                                                                         |
+| ----------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `iterate`         | `pr-shepherd iterate` (one tick; no poll, no debounce)                                                      | One state-machine tick: review items, checks, merge state, and review-mutation arguments. With REST, attempts otherwise-eligible supported mutations when capability is omitted; GitHub decides. Never cancels runs. |
+| `stack`           | `pr-shepherd stack --once`                                                                                  | None. One read-only aggregate tick over the PR's native stack.                                                                                                                                                       |
+| `apply`           | `apply merge`, `apply review`, `apply files`, `apply journal`, `apply check-blocker`, `apply queue-removal` | Explicit operations are attempted in order. Merge requires REST and returns `pending`/`enqueued`/`merged`/`failed`; unsupported REST operations are reported.                                                        |
+| `playbook`        | `pr-shepherd playbook`                                                                                      | None; no GitHub I/O. Returns a bundled playbook by `name`, or lists them with no name.                                                                                                                               |
+| `extract_journal` | `pr-shepherd journal extract` (from a `body` string, not a file)                                            | None; no file, stdin, GitHub, or Shepherd-log I/O.                                                                                                                                                                   |
+| `get_journal`     | none                                                                                                        | Read-only fetch of the PR body through the selected transport; never writes it.                                                                                                                                      |
+| `suggest`         | `pr-shepherd suggest`                                                                                       | None. Never edits the worktree or git history.                                                                                                                                                                       |
 
 `admin clean` and `admin log-file` have no MCP tool.
 
 ### Selectors
 
-Every PR-targeted call requires a repository-qualified selector: a GitHub PR URL such as `https://github.com/owner/repo/pull/123` or an `owner/repo#123` reference. Bare PR numbers and omitted selectors are rejected. Singular PR tools require `pr`; aggregate `iterate` accepts `prs` or `stack`; `extract_journal` takes only a Markdown body. The named repository is the GitHub target and may differ from the server's startup working directory (or an embedded factory's `cwd`), which remains the local git/configuration/rules context.
+Every PR-targeted call requires a repository-qualified selector: a GitHub PR URL such as `https://github.com/owner/repo/pull/123` or an `owner/repo#123` reference. Bare PR numbers and omitted selectors are rejected. Singular PR tools and `stack` require `pr`; aggregate `iterate` accepts `prs`; `extract_journal` takes only a Markdown body. The named repository is the GitHub target and may differ from the server's startup working directory (or an embedded factory's `cwd`), which remains the local git/configuration/rules context.
 
 ### Output projection
 
 Each result has Markdown `content` and `structuredContent` produced from the same projection, so the two channels carry equivalent information.
 
-| Tool / selector                     | `structuredContent`                                                                                                                |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `iterate` with `pr`                 | The CLI's lean `--format=json` projection of `IterateResult`, not the raw object (details below).                                  |
-| `iterate` with `prs`                | The raw `PollSummaryResult`.                                                                                                       |
-| `iterate` with `stack`              | The lean stack overview the CLI prints as JSON; Markdown is rendered from the same projection.                                     |
-| `apply`, `build_suggestion_patches` | The raw result object, matching their CLI JSON output.                                                                             |
-| `extract_journal`, `get_journal`    | The same JSON in both channels.                                                                                                    |
-| `playbook`                          | The result object. Markdown `content` is the playbook body for a named playbook, or a bullet list of names when `name` is omitted. |
+| Tool / selector                  | `structuredContent`                                                                                                                |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `iterate` with `pr`              | The CLI's lean `--format=json` projection of `IterateResult`, not the raw object (details below).                                  |
+| `iterate` with `prs`             | The raw `PollSummaryResult`.                                                                                                       |
+| `stack`                          | The lean stack overview the CLI prints as JSON; Markdown is rendered from the same projection.                                     |
+| `apply`, `suggest`               | The raw result object, matching their CLI JSON output.                                                                             |
+| `extract_journal`, `get_journal` | The same JSON in both channels.                                                                                                    |
+| `playbook`                       | The result object. Markdown `content` is the playbook body for a named playbook, or a bullet list of names when `name` is omitted. |
 
 The single-PR `iterate` projection omits trivial-default fields (including `state` when `OPEN` and `mergeStateStatus` when `CLEAN`, like the text header) and adds `readyDelayOverride` when `readyDelaySeconds` was supplied. Every action except `fix_code` and `cancel` gets a computed top-level `instructions` array; `fix_code` carries its steps under `fix.instructions`, and `cancel` has none. A clean PR whose ready-delay is still counting returns action `ready` with `remainingSeconds`. Action semantics, instruction text, and the full field contract live in [actions.md](actions.md).
 
@@ -126,32 +127,34 @@ The single-PR `iterate` projection omits trivial-default fields (including `stat
 
 1. Call `iterate` first.
 2. Translate its `resolveCommand` / `resolveOnlyCommand` arguments into an `apply` `review_mutations` operation.
-3. Use one `build_suggestion_patches` call for all marked suggestion threads, in displayed order.
+3. Use one `suggest` call for all marked suggestion threads, in displayed order.
 
 `mark_files_viewed` performs the requested viewed-state mutations and reports GitHub's results. Use `append_journal` only when the caller asks for that mutation; direct apply honors that explicit intent even when `viewerCanUpdate` is false. Journal reads are independent of `iterate`.
 
 ### `iterate`
 
-Supply exactly one of `pr`, `prs`, or `stack`.
+Supply exactly one of `pr` or `prs`. The call always runs one tick and returns `nextCheck` unless nothing remains to wait for ([cloud.md](cloud.md#nextcheck)).
 
-| Input                 | Type                            | Meaning                                                                                                                     |
-| --------------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `pr`                  | GitHub PR URL or `owner/repo#N` | Selector: one PR to inspect.                                                                                                |
-| `prs`                 | qualified PR array              | Selector: non-empty explicit set from one repository.                                                                       |
-| `stack`               | GitHub PR URL or `owner/repo#N` | Selector: anchor of its complete native GitHub stack.                                                                       |
-| `readyDelaySeconds`   | non-negative number             | Override the ready-delay window.                                                                                            |
-| `stallTimeoutSeconds` | non-negative number             | Override the one-PR or `stack` stall timeout.                                                                               |
-| `noAutoMarkReady`     | boolean                         | Disable automatic draft → ready.                                                                                            |
-| `merge`               | boolean                         | Shepherd to readiness and emit merge/queue commands.                                                                        |
-| `instructions`        | `inline` or `playbook`          | `fix_code` instruction style; default `iterate.instructions` (`inline`).                                                    |
-| `pollMode`            | `auto`, `poll`, or `event`      | Event mode adds `pollMode` and `nextCheck` and event-mode instruction steps; default `poll.mode`. See [cloud.md](cloud.md). |
-| `transport`           | `auto`, `graphql`, or `rest`    | Override `github.transport` for this call.                                                                                  |
+| Input                 | Type                            | Meaning                                                                  |
+| --------------------- | ------------------------------- | ------------------------------------------------------------------------ |
+| `pr`                  | GitHub PR URL or `owner/repo#N` | Selector: one PR to inspect.                                             |
+| `prs`                 | qualified PR array              | Selector: non-empty explicit set from one repository.                    |
+| `readyDelaySeconds`   | non-negative number             | Override the ready-delay window.                                         |
+| `stallTimeoutSeconds` | non-negative number             | Override the one-PR or `stack` stall timeout.                            |
+| `noAutoMarkReady`     | boolean                         | Disable automatic draft → ready.                                         |
+| `merge`               | boolean                         | Shepherd to readiness and emit merge/queue commands.                     |
+| `instructions`        | `inline` or `playbook`          | `fix_code` instruction style; default `iterate.instructions` (`inline`). |
+| `transport`           | `auto`, `graphql`, or `rest`    | Override `github.transport` for this call.                               |
 
-Aggregate selectors return one compact, read-only summary tick:
+Aggregate commands return one compact, read-only summary tick:
 
 - **`prs`** keeps per-PR raw state, bounded check/review counts, routing hints, and `pollCommand`s in both channels.
-- **`stack`** projects each layer to `shepherded` (when true), mergeable or one blocker (open layers only), author, `owned` when that author matches the viewer, position, and the layer's own base branch. It also surfaces `stackMergeable` (when true), `nextAction`, and raw ancestry mismatches. One-PR sessions run only for layers marked `owned`.
+- **`stack`** (the [`stack` tool](#stack)) projects each layer to `shepherded` (when true), mergeable or one blocker (open layers only), author, `owned` when that author matches the viewer, position, and the layer's own base branch. It also surfaces `stackMergeable` (when true), `nextAction`, and raw ancestry mismatches. One-PR sessions run only for layers marked `owned`.
 - The compact tick reuses singular check/review classification but does not maintain ready-delay state. Bounded overflow is surfaced as incomplete context without becoming a permanent action by itself.
+
+### `stack`
+
+Takes `pr`, the anchor of its complete native GitHub stack, plus the same `readyDelaySeconds`, `stallTimeoutSeconds`, `noAutoMarkReady`, `merge`, `instructions`, and `transport` inputs as `iterate`. It runs one aggregate tick and returns `nextCheck` unless nothing remains to wait for.
 
 ### `apply`
 
@@ -197,6 +200,16 @@ A REST proxy session refusal stops the batch and any later operations. Both chan
 
 It validates current GitHub evidence before writing local state and does not enqueue or merge. Fresh source CI and the one-PR READY receipt still precede aggregate stack recovery. The result contains `pr`, `repo`, and `acknowledgment` (`headSha`, `queueCommitOid`, `removedAtUnix`).
 
+**`check_blocker`** — record or clear that a failing check is blocked on an external PR or issue, as `apply check-blocker` does.
+
+| Field       | Type    | Required                 | Meaning                                               |
+| ----------- | ------- | ------------------------ | ----------------------------------------------------- |
+| `check`     | string  | yes                      | Exact check name                                      |
+| `blockedBy` | string  | unless `clear` is `true` | PR/issue URL, `owner/repo#N`, or `issue:owner/repo#N` |
+| `clear`     | boolean | no                       | Clear the recorded blocker for that check instead     |
+
+The result carries `checkName` and, when recording, `blocker` and `recordedAt`.
+
 **`mark_files_viewed`**
 
 | Field           | Type         | Required | Meaning                   |
@@ -212,7 +225,7 @@ It validates current GitHub evidence before writing local state and does not enq
 | `item`   | string  | yes      | Idempotent Shepherd Journal entry   |
 | `dryRun` | boolean | no       | Preview without writing the PR body |
 
-### `build_suggestion_patches`
+### `suggest`
 
 | Input         | Type                            | Required | Meaning                                                            |
 | ------------- | ------------------------------- | -------- | ------------------------------------------------------------------ |
@@ -253,14 +266,14 @@ This is a client-side constraint a local server cannot get around:
 | Codex CLI          | Same 60s default; users can raise `tool_timeout_sec`.                                                                                                                                                                                                 |
 | Grok CLI           | Unconfirmed.                                                                                                                                                                                                                                          |
 
-A tool that sleeps across ticks would risk that ceiling on at least two of three plugin hosts, so no tool intentionally polls or sleeps. `iterate` and `build_suggestion_patches` each do one bounded fetch over the selected transport. `apply` awaits its `operations` sequentially, each with GitHub I/O, so a large request against a slow GitHub can still approach the timeout; a failure partway through leaves earlier mutations applied without the client seeing a response, and `PartialApplyError`'s `completed` list is the recovery path.
+A tool that sleeps across ticks would risk that ceiling on at least two of three plugin hosts, so no tool intentionally polls or sleeps. `iterate`, `stack`, and `suggest` each do one bounded fetch over the selected transport. `apply` awaits its `operations` sequentially, each with GitHub I/O, so a large request against a slow GitHub can still approach the timeout; a failure partway through leaves earlier mutations applied without the client seeing a response, and `PartialApplyError`'s `completed` list is the recovery path.
 
 1. Call `iterate` with a repository-qualified `pr`.
 2. Follow the returned `## Instructions`.
-3. For `WAIT` or `MARK_READY`, call `iterate` again when the host is ready to recheck. Do not wait for CI with `gh pr checks`, `gh pr watch`, `gh run watch`, or equivalent GitHub MCP check waiters; fetching check logs is fine.
+3. For `WAIT` or `READY`, call `iterate` again on a PR event or at `nextCheck.at`; for `MARK_READY`, call it again immediately. Do not wait for CI with `gh pr checks`, `gh pr watch`, `gh run watch`, or equivalent GitHub MCP check waiters; fetching check logs is fine.
 4. For `FIX_CODE`, finish the code/review work, then call `iterate` immediately. Do not wait for CI to finish first.
 5. For `MERGE`, run the returned command (and only the conditionally documented fallback), then call `iterate` immediately.
-6. Stop on `CANCEL` or `ESCALATE`. For a native-stack selector, `SHEPHERD` means run the listed one-PR sessions and select the stack again; human blockers may already be visible, but the selector returns `ESCALATE` only after autonomous shepherding is exhausted.
+6. Stop on `CANCEL` or `ESCALATE`. For the `stack` tool, `SHEPHERD` means run the listed one-PR sessions and call `stack` again; human blockers may already be visible, but the command returns `ESCALATE` only after autonomous shepherding is exhausted.
 
 The shell command `pr-shepherd [PR]` is the bounded poll dispatcher, not an MCP tool. See [skills.md](skills.md) and [cli-usage.md](cli-usage.md).
 
@@ -297,7 +310,7 @@ const server = createPrShepherdMcpServer({ cwd: "/path/to/repo" });
 await runPrShepherdMcpStdio({ cwd: "/path/to/repo" });
 ```
 
-`createPrShepherdMcpServer` also accepts `transport` and an optional `shepherd` for tests or alternate transports. It exposes the same six tools: `iterate`, `apply`, `playbook`, `build_suggestion_patches`, `extract_journal`, and `get_journal`.
+`createPrShepherdMcpServer` also accepts `transport` and an optional `shepherd` for tests or alternate transports. It exposes the same seven tools: `iterate`, `stack`, `apply`, `playbook`, `suggest`, `extract_journal`, and `get_journal`.
 
 ## Related docs
 

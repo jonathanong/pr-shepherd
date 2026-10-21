@@ -40,7 +40,7 @@ async function fetchSelectedPollSummary(
   if (opts.stackPrNumber !== undefined) return fetchStackSummary(opts, repo);
   const requested = [...new Set(opts.prNumbers ?? [])];
   if (requested.length === 0) {
-    throw new ShepherdError("Aggregate poll requires at least two PRs or --stack <PR>", EXIT.USAGE);
+    throw new ShepherdError("Aggregate poll requires at least two PRs or a stack PR", EXIT.USAGE);
   }
   const raw: RawSummaryPr[] = [];
   let viewerCanAdminister: boolean | undefined;

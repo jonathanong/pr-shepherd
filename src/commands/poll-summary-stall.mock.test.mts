@@ -31,7 +31,7 @@ beforeEach(() => {
   mockSleep.mockImplementation(async (ms) => {
     vi.setSystemTime(Date.now() + ms);
   });
-  // Stack #9: both drafts wait on CI, so the selector can only wait.
+  // Stack #9: both drafts wait on CI, so the stack command can only wait.
   mockFetch.mockResolvedValue({
     selection: { kind: "stack", anchor: 2, stackNumber: 9, stackSize: 2 },
     prs: [1, 2].map((pr) =>

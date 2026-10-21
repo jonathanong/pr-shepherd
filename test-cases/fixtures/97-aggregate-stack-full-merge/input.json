@@ -1,7 +1,7 @@
 {
   "description": "Merge intent on a fully ready stack emits gh stack merge for the top layer, which lands every unmerged layer below it.",
   "mode": "aggregate",
-  "args": ["--stack", "https://github.com/owner/repo/pull/342", "--merge", "--debounce", "0s"],
+  "args": ["stack", "https://github.com/owner/repo/pull/342", "--merge", "--debounce", "0s"],
   "expectedExitCode": 15,
   "expectedNextAction": "merge",
   "expectedReason": "actionable",

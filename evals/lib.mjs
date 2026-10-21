@@ -88,7 +88,7 @@ export const stackShape =
   (anchor, { merge = false, extra = "" } = {}) =>
   (fixture) =>
     `Shepherd the native PR stack anchored at ${anchor}${merge ? " and merge it" : ""}.
-I already ran the first tick (\`pr-shepherd --stack ${anchor} --until-terminal${merge ? " --merge" : ""}${extra}\`) —
+I already ran the first tick (\`pr-shepherd stack ${anchor} --until-terminal${merge ? " --merge" : ""}${extra}\`) —
 here is what it returned. Take it from there.
 
 ---
@@ -155,8 +155,8 @@ the work as finished; stop to write a status report; wait for something before
 the next tick; treat a push as the end of the loop.`;
 
 // Stack-level twin of ITERATES_AGAIN. The stack loop continues by rerunning the
-// same `--stack` selector after the per-layer work, not by re-shepherding one PR.
-export const ITERATES_STACK_AGAIN = `The plan commits to rerunning the same \`pr-shepherd --stack …\` selector after
+// same `stack` command after the per-layer work, not by re-shepherding one PR.
+export const ITERATES_STACK_AGAIN = `The plan commits to rerunning the same \`pr-shepherd stack …\` command after
 the per-layer work the output lists, to continue the stack loop.
 
 A stack overview whose heading carries neither \`[CANCEL]\` nor \`[ESCALATE]\` is

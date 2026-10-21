@@ -7,12 +7,12 @@ import { z } from "zod";
 import {
   createPrShepherd,
   type ApplyInput,
-  type BuildSuggestionPatchesInput,
+  type SuggestInput,
   type CreatePrShepherdOptions,
   type GetJournalInput,
-  type IterateInput,
-  type AggregateIterateInput,
+  type MultiIterateInput,
   type SingleIterateInput,
+  type StackInput,
   PartialApplyError,
   type PrShepherd,
   PrShepherdValidationError,
@@ -38,6 +38,7 @@ import { errorToExitCode, EXIT } from "../exit-codes.mts";
 import { formatApplyMergeResult } from "../cli/apply-merge-handler.mts";
 import { extractShepherdJournal } from "../journal/index.mts";
 import { formatPlaybookResult, runPlaybook } from "../commands/playbook.mts";
+import { formatCheckBlockerResult } from "../commands/apply-check-blocker.mts";
 
 export interface CreatePrShepherdMcpServerOptions extends CreatePrShepherdOptions {
   /** Optional injection point for embedding hosts and focused tests. */
@@ -54,36 +55,29 @@ const pr = z
 const ids = z.array(z.string().min(1)).optional();
 const transport = z.enum(["auto", "graphql", "rest"]).optional();
 
+const tickOptionsSchema = {
+  transport,
+  readyDelaySeconds: z.number().nonnegative().optional(),
+  stallTimeoutSeconds: z.number().nonnegative().optional(),
+  noAutoMarkReady: z.boolean().optional(),
+  merge: z.boolean().optional(),
+  instructions: z
+    .enum(["playbook", "inline"])
+    .optional()
+    .describe(
+      "fix_code instruction style. inline (default) prints every step each tick; playbook folds commit and push into the Fix-code loop playbook.",
+    ),
+};
+
 const iterateInputSchema = z
   .object({
-    transport,
+    ...tickOptionsSchema,
     pr: pr.optional(),
     prs: z.array(pr).min(1).optional(),
-    stack: pr.optional(),
-    readyDelaySeconds: z.number().nonnegative().optional(),
-    stallTimeoutSeconds: z.number().nonnegative().optional(),
-    noAutoMarkReady: z.boolean().optional(),
-    merge: z.boolean().optional(),
-    instructions: z
-      .enum(["playbook", "inline"])
-      .optional()
-      .describe(
-        "fix_code instruction style. inline (default) prints every step each tick; playbook folds commit and push into the Fix-code loop playbook.",
-      ),
-    pollMode: z
-      .enum(["auto", "poll", "event"])
-      .optional()
-      .describe(
-        "Overrides poll.mode. event returns one tick with pollMode and nextCheck so the caller owns the wake-up; auto (default) selects event when CLAUDE_CODE_REMOTE=true.",
-      ),
   })
-  .refine(
-    (input) =>
-      [input.pr, input.prs, input.stack].filter((value) => value !== undefined).length === 1,
-    {
-      message: "exactly one of pr, prs, or stack is required",
-    },
-  )
+  .refine((input) => (input.pr === undefined) !== (input.prs === undefined), {
+    message: "exactly one of pr or prs is required",
+  })
   .refine(
     (input) =>
       !input.prs ||
@@ -94,6 +88,8 @@ const iterateInputSchema = z
       ).size === 1,
     { message: "all prs must belong to the same repository" },
   );
+
+const stackInputSchema = z.object({ ...tickOptionsSchema, pr });
 
 const reviewMutationsOperationSchema = z.object({
   type: z.literal("review_mutations"),
@@ -123,6 +119,17 @@ const acknowledgeQueueRemovalOperationSchema = z.object({
   requireSha: z.string().regex(/^[0-9a-f]{40}$/),
   queueCommitOid: z.string().regex(/^[0-9a-f]{40}$/),
   removedAtUnix: z.number().int().positive().safe(),
+});
+
+const checkBlockerOperationSchema = z.object({
+  type: z.literal("check_blocker"),
+  check: z.string().min(1).describe("Exact check name."),
+  blockedBy: z
+    .string()
+    .min(1)
+    .optional()
+    .describe("Blocking PR/issue URL, owner/repo#N, or issue:owner/repo#N."),
+  clear: z.boolean().optional().describe("Clear the recorded blocker instead of setting one."),
 });
 
 const mergeOperationSchema = z.object({
@@ -159,12 +166,13 @@ const applyInputSchema = z.object({
         markFilesViewedOperationSchema,
         appendJournalOperationSchema,
         acknowledgeQueueRemovalOperationSchema,
+        checkBlockerOperationSchema,
       ]),
     )
     .min(1),
 });
 
-const suggestionPatchesInputSchema = z.object({
+const suggestInputSchema = z.object({
   transport,
   pr,
   suggestions: z
@@ -191,7 +199,7 @@ export function createPrShepherdMcpServer(
     "iterate",
     {
       description:
-        "Inspect one pull request, an explicit same-repository set, or a native stack and return one Shepherd tick.",
+        "Inspect one pull request (pr) or an explicit same-repository set (prs) and return one Shepherd tick.",
       inputSchema: iterateInputSchema,
       annotations: {
         readOnlyHint: false,
@@ -213,20 +221,37 @@ export function createPrShepherdMcpServer(
             ? formatPollSummaryResult(result)
             : formatIterateResult(result, opts),
         (result: IterateResult | PollSummaryResult) =>
-          isPollSummary(result)
-            ? result.selection.kind === "stack"
-              ? projectStackOverview(result)
-              : result
-            : projectIterateLean(result, opts),
+          isPollSummary(result) ? result : projectIterateLean(result, opts),
       );
     },
+  );
+
+  server.registerTool(
+    "stack",
+    {
+      description:
+        "Inspect the native stack containing one pull request and return one aggregate Shepherd tick.",
+      inputSchema: stackInputSchema,
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: true,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
+    },
+    async (input) =>
+      runTool(
+        () => getShepherd().stack(requireRepositoryQualifiedPr(input) as StackInput),
+        formatPollSummaryResult,
+        projectStackOverview,
+      ),
   );
 
   server.registerTool(
     "apply",
     {
       description:
-        "Apply ordered review, journal, and file-view operations after prevalidation; explicit requests rely on GitHub's mutation response.",
+        "Apply ordered merge, review, file-view, journal, check-blocker, and queue-removal operations after prevalidation; explicit requests rely on GitHub's mutation response.",
       inputSchema: applyInputSchema,
       annotations: {
         readOnlyHint: false,
@@ -301,10 +326,10 @@ export function createPrShepherdMcpServer(
   );
 
   server.registerTool(
-    "build_suggestion_patches",
+    "suggest",
     {
       description: "Build, but never apply, an ordered list of eligible review suggestion patches.",
-      inputSchema: suggestionPatchesInputSchema,
+      inputSchema: suggestInputSchema,
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
@@ -314,10 +339,7 @@ export function createPrShepherdMcpServer(
     },
     async (input) =>
       runTool(
-        () =>
-          getShepherd().buildSuggestionPatches(
-            requireRepositoryQualifiedPr(input) as BuildSuggestionPatchesInput,
-          ),
+        () => getShepherd().suggest(requireRepositoryQualifiedPr(input) as SuggestInput),
         formatSuggestionPatchesResult,
       ),
   );
@@ -327,22 +349,21 @@ export function createPrShepherdMcpServer(
 
 function runIterateSelector(
   shepherd: PrShepherd,
-  input: IterateInput,
+  input: SingleIterateInput | MultiIterateInput,
 ): Promise<IterateResult | PollSummaryResult> {
-  return "prs" in input || "stack" in input
-    ? shepherd.iterate(input as AggregateIterateInput)
+  return "prs" in input && input.prs !== undefined
+    ? shepherd.iterate(input as MultiIterateInput)
     : shepherd.iterate(input as SingleIterateInput);
 }
 
 function requireRepositoryQualifiedIterate(input: {
   pr?: unknown;
   prs?: unknown;
-  stack?: unknown;
-}): IterateInput {
-  if ([input.pr, input.prs, input.stack].filter((value) => value !== undefined).length !== 1) {
-    throw new PrShepherdValidationError("exactly one of pr, prs, or stack is required");
+}): SingleIterateInput | MultiIterateInput {
+  if ((input.pr === undefined) === (input.prs === undefined)) {
+    throw new PrShepherdValidationError("exactly one of pr or prs is required");
   }
-  const refs = Array.isArray(input.prs) ? input.prs : [input.pr ?? input.stack];
+  const refs = Array.isArray(input.prs) ? input.prs : [input.pr];
   if (refs.length === 0 || refs.some((ref) => !isRepositoryQualifiedPrReference(ref))) {
     throw new PrShepherdValidationError(QUALIFIED_PR_ERROR);
   }
@@ -354,7 +375,7 @@ function requireRepositoryQualifiedIterate(input: {
   if (repositories.size !== 1) {
     throw new PrShepherdValidationError("all prs must belong to the same repository");
   }
-  return input as IterateInput;
+  return input as SingleIterateInput | MultiIterateInput;
 }
 
 function isPollSummary(result: IterateResult | PollSummaryResult): result is PollSummaryResult {
@@ -386,7 +407,7 @@ function toolResult(structured: unknown, text: string) {
 
 /**
  * `project` mirrors the CLI's `--format=json` treatment of the same result. Tools
- * whose CLI JSON is the raw result object (apply, build_suggestion_patches — see
+ * whose CLI JSON is the raw result object (apply, suggest — see
  * handlers.mts and cli-parser.mts, which JSON.stringify the result directly) omit
  * `project` and return the result unchanged, matching their own CLI JSON output.
  */
@@ -416,6 +437,8 @@ function formatApplyResult(result: Awaited<ReturnType<PrShepherd["apply"]>>): st
           return `${heading}\n\n${formatMarkFilesAsViewedResult(operation.result)}`;
         case "append_journal":
           return `${heading}\n\n${formatJournalResult(operation.result)}`;
+        case "check_blocker":
+          return `${heading}\n\n${formatCheckBlockerResult(operation.result)}`;
         case "acknowledge_queue_removal": {
           const result = operation.result;
           return [

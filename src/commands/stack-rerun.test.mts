@@ -13,7 +13,7 @@ function unowned(pr: number, position: number): PollSummaryItem {
 describe("stack rerun step", () => {
   const stop = "No owned layer needs a session. Report this overview and stop.";
 
-  it("reruns the selector when an owned layer has work", () => {
+  it("reruns the stack command when an owned layer has work", () => {
     const steps = ["1. existing"];
     appendStackRerunInstruction(steps, [row(1, 1), unowned(2, 2)], "rerun");
     expect(steps).toEqual(["1. existing", "2. rerun"]);
@@ -33,7 +33,7 @@ describe("stack rerun step", () => {
     const text = result.instructions?.join("\n") ?? "";
     expect(result.nextAction).toBe("escalate");
     expect(text).toContain(stop);
-    expect(text).not.toContain("rerun this same `--stack` selector");
+    expect(text).not.toContain("rerun this same `stack` command");
   });
 
   it("adds no quota cadence after the unowned-stack stop", () => {

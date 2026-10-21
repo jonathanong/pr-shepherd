@@ -36,7 +36,7 @@ command and hands it back instead of running it:
   arguments already filled in from the batch it just fetched.
 - **Suggestion patches** are built from the PR's actual head blobs and dry-run verified
   with `git apply --check` against a clean descendant of that head — but never written to
-  a file or applied. `build_suggestion_patches` returns nothing unless the whole ordered
+  a file or applied. `suggest` returns nothing unless the whole ordered
   stream passes.
 - **Merges** get a head-pinned `gh pr merge --auto` (or a queue command, with a direct
   GraphQL `enqueuePullRequest` fallback for a known `gh` CLI queue limitation). Shepherd

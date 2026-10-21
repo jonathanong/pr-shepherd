@@ -2,7 +2,7 @@
   "description": "A clean upper draft stays held while a lower draft is still waiting on CI. The selector continues to wait only for the pending lower layer.",
   "mode": "aggregate",
   "args": [
-    "--stack",
+    "stack",
     "https://github.com/owner/repo/pull/442",
     "--no-auto-mark-ready",
     "--debounce",

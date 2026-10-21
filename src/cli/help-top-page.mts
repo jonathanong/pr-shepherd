@@ -6,8 +6,8 @@ Usage:
   pr-shepherd --version | -v
   pr-shepherd --help | -h
   pr-shepherd [PR ...] [poll-flags] [iterate-flags]
-  pr-shepherd --stack PR [poll-flags] [iterate-flags]
-  pr-shepherd iterate [PR] [iterate-flags]
+  pr-shepherd stack PR [--once] [poll-flags] [iterate-flags]
+  pr-shepherd iterate [PR ...] [iterate-flags]
   pr-shepherd apply merge [PR] --require-sha SHA --merge-action ACTION --transport rest
   pr-shepherd apply review [PR] [review-flags]
   pr-shepherd apply files [PR] [files...] [--tests] [--match REGEX]
@@ -15,13 +15,14 @@ Usage:
   pr-shepherd apply check-blocker [PR] --check <name> (--blocked-by <ref>|--clear)
   pr-shepherd apply queue-removal [PR] --require-sha <head> --queue-commit <commit> --removed-at <unix>
   pr-shepherd journal extract --body-file <path>
-  pr-shepherd build-suggestion-patches [PR] --thread-id ID --message MSG [groups...]
+  pr-shepherd suggest [PR] --thread-id ID --message MSG [groups...]
   pr-shepherd admin clean <pr|branch|current|repo|all> [value] [flags]
   pr-shepherd admin log-file [--format text|json]
 
 Commands:
-  [PR ...]             Poll one PR, an explicit same-repository set, or a native stack.
-  iterate              Run one iterate tick (single-tick alias).
+  [PR ...]             Poll one PR or an explicit same-repository set.
+  stack                Poll every open PR in one PR's native GitHub stack.
+  iterate              Run one tick for one PR or a same-repository set, and print nextCheck.
   apply merge          Submit or resume a guarded asynchronous merge or enqueue request.
   apply review         Apply review-state mutations after fixes.
   apply files          Mark selected changed files as viewed.
@@ -29,15 +30,14 @@ Commands:
   apply check-blocker  Record that a failing check is blocked on an external PR or issue.
   apply queue-removal  Acknowledge one current CI-driven native-stack queue removal.
   journal extract      Extract a validated Shepherd Journal from a local PR-body file as JSON.
-  build-suggestion-patches
-                       Convert ordered GitHub suggestion threads into patches and commit instructions.
+  suggest              Convert ordered GitHub suggestion threads into patches and commit instructions.
   playbook             Print a playbook named by an instruction pointer.
   admin clean          Remove pr-shepherd state files.
   admin log-file       Print the per-worktree debug log path.
 
 PR argument:
   PR may be a number, owner/repo#number, or a GitHub pull request URL.
-  Multiple PRs must name one repository. --stack PR selects every entry in PR's native stack.
+  Multiple PRs must name one repository.
   When omitted, pr-shepherd infers the current branch's pull request.
 
 Common flags:
@@ -53,7 +53,7 @@ Iterate flags:
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
   --instructions playbook|inline Render fix_code steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
 
-Polling flags:
+Polling flags (looping commands; in a Claude Code cloud session, CLAUDE_CODE_REMOTE=true, they run one tick like iterate):
   --interval <duration>          Delay between WAIT ticks. Bare number = seconds. Default: poll.intervalSeconds (built-in 60s). Stack and multi-PR polls multiply that by poll.stackIntervalFactor (built-in 2) unless this flag is set.
   --timeout <duration>           Poll wall-clock cap for WAIT ticks. Bare number = seconds. Default: poll.timeoutSeconds (built-in 4.5m).
   --debounce <duration>          Settle window after first FIX_CODE or stack SHEPHERD before returning. Bare number = seconds. Default: poll.debounceSeconds (built-in 60s). 0 disables.
@@ -76,7 +76,7 @@ Exit codes: 0 done, 10-19 PR state, 64-78 shepherd failed (sysexits.h).
   13  ESCALATE
   14  CANCEL (closed without merging)
   15  MERGE
-  16  SHEPHERD (--stack only: run the listed one-PR sessions, then rerun the selector)
+  16  SHEPHERD (stack only: run the listed one-PR sessions, then rerun the stack command)
 See docs/exit-codes.md for the full sysexits.h error-code table.
 
 Duration examples: 30s, 4.5m, 1h. A bare number uses each flag's default unit (see above); decimals are allowed with an explicit unit (4.5m).
