@@ -34,7 +34,7 @@ In 0.x, problems were mostly warnings. A file with a YAML syntax error was skipp
 - a top level that is not a mapping
 - more than one config file in one directory
 
-Shepherd stops at the first invalid file. The message names that file and the key path of each problem in it, but a YAML syntax error, a non-mapping top level, or a duplicate config file has no key path. Fix it and rerun to see problems in later files, such as a repository config after `~/.pr-shepherdrc.yml`. A pre-v1 key never takes effect, but the error names the key that replaced it:
+Shepherd stops at the first invalid file. The message names that file and the key path of each problem in it, but a YAML syntax error, a non-mapping top level, or a duplicate config file has no key path. Fix it and rerun to see problems in later files, such as a repository config after `~/.pr-shepherdrc.yml`. A renamed pre-v1 key never takes effect, but the error names the key that replaced it. A removed key is reported as an unknown key:
 
 ```text
 pr-shepherd: invalid config in /repo/.pr-shepherdrc.yml:
@@ -85,12 +85,12 @@ These keys keep their names: `github.transport`, `iterate.instructions`, `merge.
 
 These have no replacement:
 
-| 0.x key or value                   | v1                                                                    |
-| ---------------------------------- | --------------------------------------------------------------------- |
-| `poll.mode`                        | Removed. The error says to use `pr-shepherd iterate` for single ticks |
-| `actions.autoResolveOutdated`      | Unknown key; delete it                                                |
-| `actions.commitSuggestions`        | Unknown key; delete it                                                |
-| `iterate.minimize-comments: users` | Invalid value; use `all`, `bots`, or `none`                           |
+| 0.x key or value                   | v1                                                                              |
+| ---------------------------------- | ------------------------------------------------------------------------------- |
+| `poll.mode`                        | Removed. The error says to use `pr-shepherd iterate` for single ticks           |
+| `actions.autoResolveOutdated`      | Unknown key; delete it                                                          |
+| `actions.commitSuggestions`        | Unknown key; delete it                                                          |
+| `iterate.minimize-comments: users` | Invalid value; use `none` to keep 0.x behavior (`all` and `bots` change policy) |
 
 A migrated file looks like this:
 
@@ -254,4 +254,4 @@ The first run after the upgrade starts partly clean. Nothing needs to be deleted
 - **The stored PR fingerprint is discarded.** Its version changed, so the first tick per PR runs the full batched query instead of skipping on an unchanged fingerprint.
 - **Local event-mode state is no longer read** unless `PR_SHEPHERD_STATE_DIR` was set. That variable takes priority in both 0.x and v1, so with it set nothing moves and this item and the cleanup below do not apply. Without it, 0.x event mode (`--poll-mode event`, `poll.mode: event`, or the MCP and library `pollMode: "event"`) kept seen markers, stall timers, and reply records under `<git-common-dir>/pr-shepherd-state` on any machine. v1 uses that directory only when `CLAUDE_CODE_REMOTE=true`. A local `iterate` uses the normal state directory, so state written by local event-mode runs is not carried over.
 
-Triage attempt counts (`fix-attempts.json`) and merge requests carry over when the state directory is unchanged. Local event-mode runs kept them under `<git-common-dir>/pr-shepherd-state`, so after such runs they start fresh with the rest of that state. The full per-thread budget (`iterate.triage-attempts-per-thread`, default 3) starts over, so an unchanged thread can come back in that many more `TRIAGE` results before Shepherd escalates. To start fully clean, run `pr-shepherd admin clean all`. That cleans the normal state directory only. If you used local event mode without `PR_SHEPHERD_STATE_DIR`, also delete the legacy directory, which would otherwise come back into use under `CLAUDE_CODE_REMOTE=true`: `rm -rf "$(git rev-parse --git-common-dir)/pr-shepherd-state"`.
+Merge requests from `apply merge` always used the normal state directory, so they carry over. Triage attempt counts (`fix-attempts.json`) carry over when the state directory is unchanged. Local event-mode runs kept them under `<git-common-dir>/pr-shepherd-state`, so after such runs they start fresh with the rest of that state. The full per-thread budget (`iterate.triage-attempts-per-thread`, default 3) starts over, so an unchanged thread can come back in that many more `TRIAGE` results before Shepherd escalates. To start fully clean, run `pr-shepherd admin clean all`. That cleans the normal state directory only. If you used local event mode without `PR_SHEPHERD_STATE_DIR`, also delete the legacy directory, which would otherwise come back into use under `CLAUDE_CODE_REMOTE=true`: `dir=$(git rev-parse --git-common-dir) && rm -rf "$dir/pr-shepherd-state"`.
