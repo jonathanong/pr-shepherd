@@ -14,9 +14,35 @@ const ABOUT_BLOCK =
 const ACTIVITY_SUMMARY =
   /^<!-- codex-pull-request-review-summary -->\n(?:<!-- codex-[a-z0-9-]+:[^\n]* -->\n)*\n?## Codex Review Summary\n\nThis comment shows the latest Codex review activity on this pull request\.\n\n\| Review \| Status \| Commit \| Review trigger \|\n\| --- \| --- \| --- \| --- \|\n(?:\|[^\n]+\|\n?)+$/;
 
-/** Codex closes with a rotating sign-off: a few plain words, a :shortcode:, or one emoji. */
-const CLEAN_REVIEW =
-  /^Codex Review: Didn't find any major issues\. (?:(?:[\p{L}'’]+,? ){0,7}[\p{L}'’]+[.!?]|:[a-z0-9_+-]+:|\p{Extended_Pictographic}\uFE0F?)\n\n\*\*Reviewed commit:\*\* `[a-f0-9]+`$/u;
+/**
+ * Codex's rotating clean-review sign-offs, as observed. Prose is matched only from this list so a
+ * short piece of advice in that position stays visible; a new sign-off is shown until added here.
+ */
+const SIGN_OFFS = [
+  "Already looking forward to the next diff.",
+  "Another round soon, please!",
+  "Bravo.",
+  "Breezy!",
+  "Can't wait for the next one!",
+  "Chef's kiss.",
+  "Delightful!",
+  "Hooray!",
+  "Keep it up!",
+  "Keep them coming!",
+  "More of your lovely PRs please.",
+  "Nice work!",
+  "Swish!",
+  "What shall we delve into next?",
+  "You're on a roll.",
+];
+
+const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** A clean review closes with a known sign-off, a `:shortcode:`, or a single emoji. */
+const CLEAN_REVIEW = new RegExp(
+  `^Codex Review: Didn't find any major issues\\. (?:${SIGN_OFFS.map(escapeRegExp).join("|")}|:[a-z0-9_+-]+:|\\p{Extended_Pictographic}\\uFE0F?)\\n\\n\\*\\*Reviewed commit:\\*\\* \`[a-f0-9]+\`$`,
+  "u",
+);
 
 const CLEAN_SECURITY =
   /^### 🛡️ Codex Security Review(?: · _Automatically triggered_)?\n\nSecurity review completed\. No security issues were found in this pull request\.\n\n\*\*Reviewed commit:\*\* `[a-f0-9]+`\n\n\[View security finding report\]\(https:\/\/chatgpt\.com\/[^\s)]*\)\n\n_Only the user who started this review can view the report in Codex\._$/;

@@ -61,18 +61,23 @@ describe("CodeRabbit chrome variants", () => {
     expect(matches(progress, body)).toEqual(["coderabbit-notices"]);
   });
 
-  it("accepts new command invocation ids, notes, and the generated marker", () => {
+  it("accepts new command invocation ids and the generated marker", () => {
     const newId = variant(reply.body, /invocation: v2:[a-f0-9]+/, "invocation: v3:abc-123");
-    const newNote = variant(reply.body, /> Note: [^\n]+/, "> Note: Automatic reviews are paused.");
     const marked = `<!-- coderabbit-ai-generated:v2 -->\n\n${reply.body}`;
-    for (const body of [newId, newNote, marked]) {
+    for (const body of [newId, marked]) {
       expect(matches(reply, body)).toEqual(["coderabbit-notices"]);
     }
   });
 
-  it("keeps a command reply with an extra paragraph visible", () => {
-    const body = variant(reply.body, "\n\n</details>", "\n\nThis line has a bug.\n\n</details>");
-    expect(matches(reply, body)).toEqual([]);
+  it("keeps a command reply with an extra paragraph or an unknown note visible", () => {
+    const extra = variant(reply.body, "\n\n</details>", "\n\nThis line has a bug.\n\n</details>");
+    const note = variant(
+      reply.body,
+      /> Note: [^\n]+/,
+      "> Note: The authorization check is bypassed for anonymous requests.",
+    );
+    expect(matches(reply, extra)).toEqual([]);
+    expect(matches(reply, note)).toEqual([]);
   });
 });
 
@@ -119,6 +124,7 @@ describe("Codex variants", () => {
     "See [this](https://example.com) bug.",
     "But the authorization check is broken when the session token expires.",
     "Bravo. Also auth.ts line 4 is wrong.",
+    "Consider adding more test coverage.",
   ])("keeps the sign-off %s visible", (signOff) => {
     expect(matches(clean, variant(clean.body, "Bravo.", signOff))).toEqual([]);
   });
@@ -162,6 +168,26 @@ describe("Kilo and CodeRabbit report edges", () => {
     const extra =
       "</details>\n\n<details>\n<summary><b>Other Observations (not in diff)</b></summary>\n\n| `a.ts` | 3 | Bug |\n\n</details>\n\n---";
     expect(matches(kilo, variant(kilo.body, "</details>\n\n---", extra))).toEqual([]);
+  });
+
+  it("accepts a marked Kilo overview of prose and lists under ### Overview", () => {
+    const kilo = fixture("kilo-no-issues-real");
+    const body = variant(
+      kilo.body,
+      "Kilo-owned placement only:",
+      "### Overview\n- First point.\n- Second point.\n\nKilo-owned placement only:",
+    );
+    expect(matches(kilo, body)).toEqual(["kilo-no-issues"]);
+  });
+
+  it.each([
+    "### Potential bug\n\n`user` is dereferenced before the null check.",
+    "<details>\n<summary>Other Observations</summary>\n\nA bug.\n\n</details>",
+    "| File | Line | Issue |\n|---|---|---|\n| `a.ts` | 3 | Bug |",
+  ])("keeps a marked Kilo overview with a findings section visible: %s", (section) => {
+    const kilo = fixture("kilo-no-issues-real");
+    const body = variant(kilo.body, "Kilo-owned placement only:", `${section}\n\nKilo-owned:`);
+    expect(matches(kilo, body)).toEqual([]);
   });
 
   it("keeps an unquoted line inside a CodeRabbit notice envelope visible", () => {

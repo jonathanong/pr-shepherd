@@ -5,11 +5,11 @@ const NOTICE_ENVELOPE =
   /^<!-- This is an auto-generated comment: (rate limited|skip review|review in progress) by coderabbit.ai -->\n([\s\S]*?)\n<!-- end of auto-generated comment: \1 by coderabbit.ai -->$/;
 
 /**
- * Command replies that only report a status. The invocation id and the optional explanatory
- * paragraph vary between releases; a reply with any other text, such as an answer, stays visible.
+ * Command replies that only report a known status, optionally followed by one of CodeRabbit's
+ * fixed explanations. The invocation id varies between releases; any other text stays visible.
  */
 const COMMAND_REPLY =
-  /^<!-- This is an auto-generated reply by CodeRabbit -->\n<!-- CodeRabbit review command invocation: [^\n]* -->\n<details>\n<summary>(?:⚠️ Action not completed|✅ Action performed)<\/summary>\n\n(?:Review rate limited\.|Review skipped: \d+ files exceed the limit of \d+\.|(?:Full review|Review) finished\.|Pull request base or head changed\.|Pull request is closed\.)\n\n(?:(?:> Note: [^\n]+|---\n\nYour included review limit is currently reached[^\n]*)\n\n)?<\/details>$/;
+  /^<!-- This is an auto-generated reply by CodeRabbit -->\n<!-- CodeRabbit review command invocation: [^\n]* -->\n<details>\n<summary>(?:⚠️ Action not completed|✅ Action performed)<\/summary>\n\n(?:Review rate limited\.|Review skipped: \d+ files exceed the limit of \d+\.|(?:Full review|Review) finished\.|Pull request base or head changed\.|Pull request is closed\.)\n\n(?:(?:> Note: CodeRabbit is an incremental review system and does not re-review already reviewed commits\. This command is applicable only when automatic reviews are paused\.|---\n\nYour included review limit is currently reached under our \[Fair Usage Limits Policy\]\(https:\/\/docs\.coderabbit\.ai\/[^\s)]*\)\. This review may still proceed through usage-based billing if eligible\. Your next included review will be available in \d+ minutes?\.)\n\n)?<\/details>$/;
 
 /** Standalone status comments: zero-findings completion, skipped autofix, and a failed edit. */
 const STATUS_COMMENTS = [
