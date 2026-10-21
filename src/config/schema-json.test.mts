@@ -11,8 +11,14 @@ const SCHEMA_FILE = join(ROOT, "pr-shepherd.schema.json");
 
 /** The JSON Schema shipped as `pr-shepherd.schema.json` for editor autocompletion. */
 function configJsonSchema(): Record<string, unknown> {
+  const { required: _required, ...schema } = z.toJSONSchema(configFileSchema, {
+    io: "input",
+    target: "draft-2020-12",
+  });
   return {
-    ...z.toJSONSchema(configFileSchema, { io: "input", target: "draft-2020-12" }),
+    ...schema,
+    // The loader accepts an empty mapping without `version`, so only a non-empty file needs it.
+    anyOf: [{ maxProperties: 0 }, { required: ["version"] }],
     title: "pr-shepherd configuration",
   };
 }
@@ -31,6 +37,12 @@ describe("pr-shepherd.schema.json", () => {
       title: "pr-shepherd configuration",
     });
     expect(Object.keys(schema["properties"] as object)).toContain("mark-ready");
+  });
+
+  it("requires version only in a non-empty mapping, like the loader", () => {
+    const schema = configJsonSchema();
+    expect(schema).not.toHaveProperty("required");
+    expect(schema["anyOf"]).toEqual([{ maxProperties: 0 }, { required: ["version"] }]);
   });
 
   it("states the runtime's blank launcher and Shepherd-owned merge-arg checks", () => {

@@ -346,9 +346,16 @@
       "additionalProperties": false
     }
   },
-  "required": [
-    "version"
-  ],
   "additionalProperties": false,
+  "anyOf": [
+    {
+      "maxProperties": 0
+    },
+    {
+      "required": [
+        "version"
+      ]
+    }
+  ],
   "title": "pr-shepherd configuration"
 }
