@@ -45,7 +45,7 @@ The library and the MCP server validate the same way before any GitHub I/O. A li
 
 ### Key renames
 
-Every key is now kebab-case. A duration carries its unit in its name, and no key takes milliseconds.
+Every multi-word key is now kebab-case; single-word keys such as `github.transport` and `merge.method` keep their names. A duration carries its unit in its name, and no key takes milliseconds.
 
 | 0.x key                                         | v1 key                                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------------------- |
@@ -149,7 +149,7 @@ Every key, default, and per-key section is in [configuration.md](configuration.m
 | Playbook `Fix-code loop` (`fix-code-loop`)                             | `Triage loop` (`triage-loop`)                                    |
 | Playbook `Cloud event loop` (`cloud-event-loop`)                       | `Event loop` (`event-loop`)                                      |
 
-- `stack` owns the `shepherd` action and exit code `16`. Passing `--stack` to the default command or to `iterate` now exits `64` with an error that names `pr-shepherd stack <PR>`.
+- `stack` owns the `shepherd` action and exit code `16`. Passing `--stack` to the default command, `iterate`, or `stack` now exits `64` with an error that names `pr-shepherd stack <PR>`.
 - `iterate` is always one tick, accepts several same-repository PRs for one aggregate tick, and prints `nextCheck` when the action waits: when to rerun if no GitHub event arrives first (see the omissions below). It behaves like 0.x `--poll-mode event`. It never sleeps or debounces, and it writes seen markers immediately. See [cloud.md](cloud.md).
 - `--poll-mode` and `poll.mode` are removed. On the default command, `iterate`, and `stack`, `--poll-mode` exits `64` with an error that names the replacement. On `admin clean` and `admin log-file` it is just an unknown flag (exit `64`), so drop it there. There is no mode to configure. The default command `pr-shepherd [PR ...]` and `stack` loop by default. They run one tick in a Claude Code cloud session (`CLAUDE_CODE_REMOTE=true`), and `stack` also runs one tick with `--once`.
 - Multi-PR polling is unchanged: `pr-shepherd 1 2 3`.
@@ -206,7 +206,7 @@ Removed result fields:
 | `apply review` (`ResolveResult`) | `skippedDismissals`, `skippedHumanResolves`, `skippedHumanMinimizes`, `skippedHumanDismissals`, `skippedNonHumanReplies`, `skippedUnauthorizedReplies`, `skippedUnauthorizedResolves`, `skippedUnauthorizedMinimizes`, `skippedUnauthorizedDismissals` | Deprecated; direct apply forwards every ID |
 | `apply files`, `apply journal`   | `authorizationSkipped`                                                                                                                                                                                                                                 | Deprecated                                 |
 
-On a single tick, `nextCheck` is omitted for `triage`, for `mark_ready`, and for terminal actions. After `triage` or `mark_ready`, rerun immediately: after `mark_ready` the next tick sees the ready PR and starts any ready delay; [actions.md](actions.md#single-ticks) has the full rule.
+On a single tick, `nextCheck` is omitted for `triage`, for `mark_ready`, for a `merge` whose command is not a REST merge, and for other terminal actions. A REST merge carries a `merge-pending` `nextCheck`, so schedule that rerun: it resumes a request that is still `pending`. After `triage` or `mark_ready`, rerun immediately: after `mark_ready` the next tick sees the ready PR and starts any ready delay; [actions.md](actions.md#single-ticks) has the full rule.
 
 ## MCP tools and library API
 
