@@ -120,6 +120,21 @@ describe("aggregate summaries perform rule-driven auto-resolve", () => {
     expect(result.prs[1]?.ruleAutoResolve?.summary).toBe("minimized 1 comment (rule: bot notice)");
   });
 
+  it("never mutates a merged or closed PR", async () => {
+    mockGraphql.mockResolvedValue({
+      data: {
+        repository: {
+          viewerCanAdminister: false,
+          pr0: { ...pr(42), state: "MERGED" },
+          pr1: { ...pr(43), state: "CLOSED" },
+        },
+      },
+    });
+    const result = await fetchPollSummary({ prNumbers: [42, 43] }, repo);
+    expect(autoMinimizeComments).not.toHaveBeenCalled();
+    expect(result.prs.every((item) => item.ruleAutoResolve === undefined)).toBe(true);
+  });
+
   it("does the same for every layer of a native stack", async () => {
     const entries = [43, 44].map((number, index) => ({
       position: index + 1,

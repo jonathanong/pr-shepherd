@@ -51,7 +51,9 @@ export async function summarizePollSummaryPr(
     raw,
     seen,
     viewerCanAdminister,
-    applyRuleAutoResolve ? { owner: repo.owner, repo: repo.name, pr: raw.number } : undefined,
+    applyRuleAutoResolve && normalizePollSummaryState(raw.state) === "OPEN"
+      ? { owner: repo.owner, repo: repo.name, pr: raw.number }
+      : undefined,
   );
   const blockingReviewerInProgress = detectBlockingReviewer(raw);
   const removalEvent = currentQueueRemovalEvent(raw);
