@@ -60,7 +60,7 @@ Each case carries `tier:discriminating` or `tier:guard` in its tags, set in
 
 `EVAL_RUNS_DISCRIMINATING` and `EVAL_RUNS_GUARD` override the per-case `runs`
 (a case's own `runs`, else 3) at generation time. Cases `38`, `39` and
-`43`–`53` commit their own `runs: 6`, whatever their tier, because at 3 the
+`43`–`55` commit their own `runs: 6`, whatever their tier, because at 3 the
 without arm alone has swung ±0.44; `40`–`42` do not. Regenerate, run, then
 regenerate without the variables so the tree matches the committed cases:
 
@@ -129,8 +129,9 @@ Layout:
   REST stack queue guard).
 - `cases/review-budget.mjs`: case 53, the per-tick review output budget
   (`iterate.review-output-max-chars`).
+- `cases/aggregate.mjs`: cases 54 and 55, explicit multi-PR aggregate polls.
 
-A case may also set `runs` (default 3). Cases 38, 39 and 43–53 use 6.
+A case may also set `runs` (default 3). Cases 38, 39 and 43–55 use 6.
 
 Case numbers are stable. Add new cases at the end instead of renumbering.
 
@@ -198,6 +199,8 @@ third arm.
 | `51-stack-queue-removal-ack-route`          | `120`   | Stack queue removal: `gh stack rebase`, ack only on an unchanged head                |
 | `52-rest-stack-merge-queue`                 | `135`   | REST stack queue merge: run the printed `apply merge`, not `gh stack merge`          |
 | `53-triage-review-subset` | `155` | Review output budget subset: apply the printed IDs, rerun, don't fetch held items |
+| `54-multi-pr-aggregate-routes-rows` | `86` | Explicit aggregate poll: run each non-WAIT row's `pollCommand`, skip WAIT, rerun the aggregate |
+| `55-multi-pr-aggregate-escalate-keeps-working` | `160` | One row's `ESCALATE` is reported but does not stop work on the `TRIAGE` row |
 
 "apply" is `test-cases/snapshots/apply-review-session-refusal`, an
 `apply review` output recorded by `test-cases/apply-review.test.mts` through
