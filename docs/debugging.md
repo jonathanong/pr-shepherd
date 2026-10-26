@@ -39,6 +39,14 @@ The message may include the GraphQL field path GitHub denied.
 
 Shepherd does not turn this into `wait` or a retry: incomplete GraphQL read data is not safe input for a PR state transition.
 
+### "GitHub request timed out after 60s"
+
+**Symptom:** A request fails with `GitHub request timed out after 60s: GET https://api.github.com/...`.
+
+**Cause:** Every GitHub REST and GraphQL request, over either transport and through a configured proxy, has a fixed 60s deadline covering the response headers and body. Actions log downloads get 180s. Previously only undici's defaults applied (10s connect, 300s headers, 300s body), so a dead or half-open connection could stall a tick for minutes without output.
+
+**Behavior:** A timed-out read is retried like `ECONNRESET`: twice more, after 250ms and 500ms. A timeout that persists, and any timed-out mutation, surfaces the error on stderr. The deadlines are fixed and have no config key. Check the network path or proxy if it recurs.
+
 ### "Loop stuck in WAIT after merge"
 
 **Symptom:** The PR merged but Shepherd keeps emitting `action: wait`.
