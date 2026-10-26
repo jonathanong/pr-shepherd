@@ -64,6 +64,17 @@ function detectorsCover(stored: StoredPrFingerprint): boolean {
  * Read the PR's REST change detectors: the pull, the head's check runs, check suites and
  * statuses, the three feedback lists, and the base branch. Every read is conditional, so an
  * unchanged resource answers a free 304.
+ *
+ * The feedback lists are deliberately not rule-aware (#635 gap 7). An edited bot comment, even
+ * a rule-suppressed or minimized one, answers 200 and wakes the tick. The wake costs one
+ * charged list read plus one `BatchPr` first page (a complete fingerprint needs no more),
+ * the same point a fingerprint hit spends. Once the digest is re-recorded, a later eligible
+ * tick can replay for free again, but only if every detector answers 304 with that digest and
+ * the stored snapshot is within `poll.reconcile-seconds`; otherwise it goes to `BatchPr`. Being
+ * rule-aware would need the loaded rules, a persisted set of hidden comment ids (REST has no
+ * `isMinimized`), and a content digest in place of the ETag. That is more code, and more risk
+ * of sleeping through a real change (a rule-suppressed comment edited so it no longer matches,
+ * an edited minimized human comment, which `check` surfaces), than the one point it saves.
  */
 async function readDetectors(
   prNumber: number,
