@@ -68,6 +68,12 @@ describe("aggregateRerunCommand", () => {
     ).not.toMatch(/--ready-delay|--stall-timeout/);
   });
 
+  it("keeps an explicit selection a single tick with the iterate subcommand", () => {
+    expect(aggregateRerunCommand("o/r", prs, { tick: true })).toBe(
+      "pr-shepherd iterate https://github.com/o/r/pull/7 https://github.com/o/r/pull/8",
+    );
+  });
+
   it("prints the stack subcommand, as one tick for a single-tick run", () => {
     expect(aggregateRerunCommand("o/r", stack, {})).toBe(
       "pr-shepherd stack https://github.com/o/r/pull/7 --until-terminal",

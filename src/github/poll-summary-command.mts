@@ -45,7 +45,11 @@ export function aggregateRerunCommand(
   const args =
     selection.kind === "stack"
       ? ["stack", formatPrUrl(repo, selection.anchor), opts.tick ? "--once" : "--until-terminal"]
-      : [...selection.requested.map((pr) => formatPrUrl(repo, pr)), "--until-terminal"];
+      : [
+          ...(opts.tick ? ["iterate"] : []),
+          ...selection.requested.map((pr) => formatPrUrl(repo, pr)),
+          ...(opts.tick ? [] : ["--until-terminal"]),
+        ];
   if (opts.merge) args.push("--merge");
   // The parser always fills these from config, so a default value adds nothing to the command.
   const iterate = loadConfig().iterate;
