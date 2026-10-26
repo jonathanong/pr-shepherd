@@ -127,6 +127,7 @@ describe("applyUnseenCheckAnnotations", () => {
       expect(mockBatch).toHaveBeenCalledWith(["skip"], {
         stateKey: { owner: "acme", repo: "widgets", pr: 42 },
         headSha: "a".repeat(40),
+        expectedCounts: new Map([["skip", 2]]),
       });
     },
   );

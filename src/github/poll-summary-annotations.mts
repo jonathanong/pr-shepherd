@@ -34,22 +34,22 @@ export async function applyUnseenCheckAnnotations(
 ): Promise<Routed> {
   if (!routed.reasons.some((reason) => READY_CLAIMS.has(reason))) return routed;
   const totalsKnown = await hydrateAnnotationTotals(raw, repo);
-  const candidates = nonSuccessCheckIds(raw, required, totalsKnown);
-  if (candidates.length === 0) return routed;
+  const candidates = nonSuccessCheckTotals(raw, required, totalsKnown);
+  if (candidates.size === 0) return routed;
   const count = totalsKnown
     ? await countChecksWithUnseen(raw, repo, candidates, seen)
-    : candidates.length;
+    : candidates.size;
   if (count === 0) return routed;
   checks.annotated = count;
   return { action: "triage", reasons: ["check-annotations"] };
 }
 
-/** Completed, non-SUCCESS head checks that report annotations (or may, when totals are unknown). */
-function nonSuccessCheckIds(
+/** Completed, non-SUCCESS head checks with their annotation totals (all of them when totals are unknown). */
+function nonSuccessCheckTotals(
   raw: RawSummaryPr,
   required: readonly string[],
   totalsKnown: boolean,
-): string[] {
+): Map<string, number> {
   const head = new Map(
     (raw.commits.nodes[0]?.commit.statusCheckRollup?.contexts.nodes ?? []).flatMap((node) =>
       node.__typename === "CheckRun" && node.id
@@ -57,24 +57,29 @@ function nonSuccessCheckIds(
         : [],
     ),
   );
-  return classifiedSummaryChecks(raw, required).flatMap((check) => {
-    if (check.scope || check.id == null || !head.has(check.id)) return [];
-    if (check.category === "in_progress" || check.category === "superseded") return [];
-    if (check.status !== "COMPLETED" || check.conclusion === "SUCCESS") return [];
-    return totalsKnown && !((head.get(check.id) ?? 0) > 0) ? [] : [check.id];
-  });
+  const totals = new Map<string, number>();
+  for (const check of classifiedSummaryChecks(raw, required)) {
+    if (check.scope || check.id == null || !head.has(check.id)) continue;
+    if (check.category === "in_progress" || check.category === "superseded") continue;
+    if (check.status !== "COMPLETED" || check.conclusion === "SUCCESS") continue;
+    const total = head.get(check.id) ?? 0;
+    if (!totalsKnown || total > 0) totals.set(check.id, total);
+  }
+  return totals;
 }
 
 async function countChecksWithUnseen(
   raw: RawSummaryPr,
   repo: RepoInfo,
-  ids: string[],
+  totals: ReadonlyMap<string, number>,
   seen: ReadonlyMap<string, unknown>,
 ): Promise<number> {
+  const ids = [...totals.keys()];
   try {
     const batch = await fetchCheckRunAnnotationsBatch(ids, {
       stateKey: { owner: repo.owner, repo: repo.name, pr: raw.number },
       headSha: raw.headRefOid,
+      expectedCounts: totals,
     });
     // A check whose annotations could not be read may still hold unseen work.
     const unread = ids.filter((id) => !batch.annotations.has(id)).length;

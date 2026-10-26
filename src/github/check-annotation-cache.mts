@@ -4,6 +4,11 @@ import type { CheckAnnotation } from "../types.mts";
 export interface AnnotationCacheOptions {
   stateKey: StateKey;
   headSha?: string;
+  /**
+   * Annotation total GitHub reports per check run right now. A cached list whose length
+   * differs is stale (a publisher added annotations to a completed run) and is not reused.
+   */
+  expectedCounts?: ReadonlyMap<string, number>;
 }
 
 /**
@@ -23,8 +28,10 @@ export async function readFreshCheckAnnotations(
 ): Promise<CheckAnnotation[] | undefined> {
   if (!cacheOpts) return undefined;
   const cached = await loadDerived<CheckAnnotation[]>(cacheOpts.stateKey, cacheName(checkRunId));
-  if (cached && Date.now() - cached.storedAt < ANNOTATION_CACHE_MAX_AGE_MS) return cached.value;
-  return undefined;
+  if (!cached || Date.now() - cached.storedAt >= ANNOTATION_CACHE_MAX_AGE_MS) return undefined;
+  const expected = cacheOpts.expectedCounts?.get(checkRunId);
+  if (expected !== undefined && cached.value.length !== expected) return undefined;
+  return cached.value;
 }
 
 export async function storeCheckAnnotations(
