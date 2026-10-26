@@ -6,6 +6,7 @@ import type {
   PollSummaryReview,
 } from "../types.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
+import { hasNoRelevantChecks } from "./poll-summary-unreported.mts";
 import { isKnownMergeStateStatus, transportReadinessGaps } from "./transport-evidence.mts";
 import { canGenerateGithubMutation } from "./mutation-policy.mts";
 import { getGithubTransport, isCcrTransport } from "./transport.mts";
@@ -40,6 +41,7 @@ export function routePollSummary(
   }
   if (
     (checks.inProgress ?? 0) > 0 ||
+    (checks.actionsWorkflowInProgress === true && hasNoRelevantChecks(checks)) ||
     !isKnownMergeStateStatus(raw.mergeStateStatus) ||
     raw.mergeable === "UNKNOWN" ||
     raw.mergeStateStatus === "UNKNOWN"

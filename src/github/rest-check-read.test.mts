@@ -162,7 +162,10 @@ describe("REST check evidence", () => {
         __typename: "CheckRun",
         id: "CR_77",
         annotations: { totalCount: 1 },
-        checkSuite: { workflowRun: { event: "pull_request", workflow: { databaseId: 44 } } },
+        checkSuite: {
+          status: "COMPLETED",
+          workflowRun: { event: "pull_request", workflow: { databaseId: 44 } },
+        },
       },
       { __typename: "StatusContext", context: "legacy", state: "SUCCESS" },
     ]);

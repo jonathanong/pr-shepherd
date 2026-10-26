@@ -196,6 +196,7 @@ query BatchPrPage(
                       }
                     }
                     checkSuite {
+                      status
                       createdAt
                       updatedAt
                       workflowRun {

@@ -60,7 +60,15 @@ describe("REST check matrix pagination", () => {
   );
   it("rejects counted check pages without their declared total", async () => {
     await serve((request, response) =>
-      response.end(JSON.stringify(request.path.includes("check-runs") ? { check_runs: [] } : [])),
+      response.end(
+        JSON.stringify(
+          request.path.includes("check-runs")
+            ? { check_runs: [] }
+            : request.path.includes("check-suites")
+              ? { total_count: 0, check_suites: [] }
+              : [],
+        ),
+      ),
     );
     await expect(readRestCommitChecks("aaa111", repo, 101)).rejects.toThrow("total_count");
   });

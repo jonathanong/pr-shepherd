@@ -15,6 +15,7 @@ fragment PollSummaryCheckContexts on StatusCheckRollupContextConnection {
       startedAt
       completedAt
       checkSuite {
+        status
         createdAt
         updatedAt
         workflowRun {

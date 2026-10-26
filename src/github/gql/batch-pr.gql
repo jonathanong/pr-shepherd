@@ -356,6 +356,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
                       }
                     }
                     checkSuite {
+                      status
                       createdAt
                       updatedAt
                       workflowRun {

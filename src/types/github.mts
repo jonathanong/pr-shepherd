@@ -101,6 +101,12 @@ export interface CheckRun {
   summary?: string;
   /** Workflow display name for GitHub Actions check runs, when GraphQL exposes it. */
   workflowName?: string;
+  /**
+   * Raw status of the check suite this run belongs to. Absent when GitHub did not report one
+   * (status contexts, synthetic checks, or a transport that cannot read it). A `COMPLETED`
+   * suite with a run that is not `COMPLETED` is a stuck check.
+   */
+  suiteStatus?: string;
   workflowId?: string; // Stable workflow database ID (stringified); groups runs across concurrency evictions.
   /** True when GraphQL reported at least one CheckRun annotation. Omitted when false. */
   hasAnnotations?: boolean;

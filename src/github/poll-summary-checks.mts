@@ -111,6 +111,7 @@ function checkRuns(rollup: RawCheckRollup, scope: CheckRun["scope"]): CheckRun[]
       ...(run?.workflow?.databaseId != null && {
         workflowId: String(run.workflow.databaseId),
       }),
+      ...(context.checkSuite?.status && { suiteStatus: context.checkSuite.status }),
       ...(context.startedAt && { startedAtUnix: parseCreatedAt(context.startedAt) }),
       ...(context.completedAt && { completedAtUnix: parseCreatedAt(context.completedAt) }),
       ...(scope && { scope }),

@@ -440,13 +440,16 @@ async function runScopedCheck(
       visibleChangesRequestedIds.has(review.id)
     );
   }).length;
+  const awaitingChecks =
+    unreported.hasUnreportedRequired ||
+    (!verdict.hasChecks && unreported.actionsWorkflowInProgress === true);
   let status = computeStatus(
     verdict,
     threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
     visibleCommentClassification.actionable.length,
     mergeStatus,
     changesRequestedReviewCount,
-    unreported.hasUnreportedRequired,
+    awaitingChecks,
   );
   status = enforceTransportReadiness(status, batchData);
 
@@ -464,7 +467,7 @@ async function runScopedCheck(
       threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
       visibleCommentClassification.actionable.length,
       changesRequestedReviewCount,
-      unreported.hasUnreportedRequired,
+      awaitingChecks,
     );
     batchData = refreshed.batchData;
     mergeStatus = refreshed.mergeStatus;

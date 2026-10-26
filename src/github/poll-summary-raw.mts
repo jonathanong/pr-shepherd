@@ -43,6 +43,7 @@ type RawCheckContext =
       completedAt?: string | null;
       annotations?: { totalCount: number };
       checkSuite: {
+        status?: string | null;
         createdAt?: string | null;
         updatedAt?: string | null;
         workflowRun: {

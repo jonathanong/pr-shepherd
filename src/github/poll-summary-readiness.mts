@@ -3,6 +3,7 @@ import { summarizePollSummaryChecks } from "./poll-summary-checks.mts";
 import { parseBranchRules } from "./batch-parsers-rules.mts";
 import { rulesComplete } from "./fingerprint-fields.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
+import { hasNoRelevantChecks } from "./poll-summary-unreported.mts";
 import { isKnownMergeStateStatus, transportReadinessGaps } from "./transport-evidence.mts";
 
 /**
@@ -53,6 +54,7 @@ export function isCurrentSummaryReady(
     (sourceChecks.failing ?? 0) === 0 &&
     (sourceChecks.inProgress ?? 0) === 0 &&
     (checks.unreportedRequired?.length ?? 0) === 0 &&
+    !(checks.actionsWorkflowInProgress === true && hasNoRelevantChecks(checks)) &&
     (review.actionable ?? 0) === 0
   );
 }

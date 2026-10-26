@@ -53,6 +53,7 @@ query CommitCheckContexts($owner: String!, $repo: String!, $oid: String!, $curso
                   }
                 }
                 checkSuite {
+                  status
                   createdAt
                   updatedAt
                   workflowRun {

@@ -7,7 +7,9 @@
  *      to PR readiness.
  *   2. Drop checks with `conclusion == SKIPPED` or `conclusion == NEUTRAL` from the
  *      pass/fail tally. Report them as "skipped" for transparency but don't block on them.
- *   3. Reclassify `CANCELLED` checks as "superseded" (non-blocking) when a newer
+ *   3. A check that is not `COMPLETED` while its check suite is `COMPLETED` is stuck and
+ *      classifies as `failing`.
+ *   4. Reclassify `CANCELLED` checks as "superseded" (non-blocking) when a newer
  *      run of the same workflow exists on the same commit and event, or when an
  *      exact matching check from a lower-ID run started and succeeded later.
  *      GitHub can start jobs out of workflow-run creation order.
@@ -90,6 +92,10 @@ function classify(check: CheckRun, relevantEvents: Set<string>): ClassifiedCheck
 
   // Not yet finished.
   if (status !== "COMPLETED") {
+    // The enclosing suite finished while this run did not: nothing will update it again, so
+    // waiting would only end in the stall timeout. Surface it as failing work (rerun the
+    // workflow) with the raw status and suite status shown.
+    if (check.suiteStatus === "COMPLETED") return { ...check, category: "failing" };
     return { ...check, category: "in_progress" };
   }
 

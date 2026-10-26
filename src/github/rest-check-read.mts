@@ -51,13 +51,14 @@ export interface RestWorkflowRun {
 }
 export async function readRestCommitChecks(oid: string, repo: RepoInfo, pr = 0) {
   const prefix = restRepoPath(repo);
-  const checks = await readRestPages<RestCheck>(
-    `${prefix}/commits/${encodeURIComponent(oid)}/check-runs?filter=latest`,
-    (body) => restCollection(body, "check_runs") as RestCheck[],
-  );
+  // Suites first: a COMPLETED suite read before the runs means a run still not COMPLETED is stuck.
   const suites = await readRestPages<RestSuite>(
     `${prefix}/commits/${encodeURIComponent(oid)}/check-suites`,
     (body) => restCollection(body, "check_suites") as RestSuite[],
+  );
+  const checks = await readRestPages<RestCheck>(
+    `${prefix}/commits/${encodeURIComponent(oid)}/check-runs?filter=latest`,
+    (body) => restCollection(body, "check_runs") as RestCheck[],
   );
   const statuses = await readRestPages<RestStatus>(
     `${prefix}/commits/${encodeURIComponent(oid)}/statuses`,
@@ -127,6 +128,7 @@ export async function readRestCommitChecks(oid: string, repo: RepoInfo, pr = 0) 
       annotations: { totalCount: check.output.annotations_count, nodes: [] },
       checkSuite: suite
         ? {
+            status: suite.status.toUpperCase(),
             createdAt: suite.created_at,
             updatedAt: suite.updated_at,
             workflowRun: run

@@ -43,6 +43,15 @@ describe("computeStatus", () => {
     ).toBe("UNKNOWN");
   });
 
+  it("returns PENDING instead of READY while checks are awaited, for CLEAN and DRAFT", () => {
+    const noChecks: CiVerdict = { ...passingVerdict, hasChecks: false };
+    expect(computeStatus(noChecks, 0, 0, cleanMerge, 0, true)).toBe("PENDING");
+    expect(computeStatus(noChecks, 0, 0, { ...cleanMerge, status: "DRAFT" }, 0, true)).toBe(
+      "PENDING",
+    );
+    expect(computeStatus(noChecks, 0, 0, cleanMerge, 0, false)).toBe("READY");
+  });
+
   it("returns READY for draft PRs when checks have passed and no review work remains", () => {
     expect(computeStatus(passingVerdict, 0, 0, { ...cleanMerge, status: "DRAFT" }, 0)).toBe(
       "READY",

@@ -1,13 +1,18 @@
 import type { MergeStatusResult, ShepherdStatus } from "../types.mts";
 import type { CiVerdict } from "../checks/classify.mts";
 
+/**
+ * `awaitingChecks` is true when required checks have not reported, or when the PR has no relevant
+ * check yet while a relevant Actions workflow suite is still running: the suite exists before
+ * its check runs, so a CLEAN or DRAFT merge state is not yet proof that CI passed.
+ */
 export function computeStatus(
   verdict: CiVerdict,
   unresolvedThreads: number,
   unresolvedComments: number,
   mergeStatus: MergeStatusResult,
   changesRequestedReviews: number,
-  hasUnreportedRequired = false,
+  awaitingChecks = false,
 ): ShepherdStatus {
   // Merge conflicts are always terminal regardless of CI state.
   if (mergeStatus.status === "CONFLICTS") return "FAILING";
@@ -35,7 +40,7 @@ export function computeStatus(
     changesRequestedReviews === 0 &&
     (mergeStatus.status === "BLOCKED" || mergeStatus.status === "UNSTABLE") &&
     !mergeStatus.blockingBotReviewInProgress &&
-    !hasUnreportedRequired
+    !awaitingChecks
   ) {
     return "READY";
   }
@@ -52,10 +57,10 @@ export function computeStatus(
   if (
     (mergeStatus.status === "CLEAN" || mergeStatus.status === "DRAFT") &&
     verdict.allPassed &&
-    !hasUnreportedRequired
+    !awaitingChecks
   )
     return "READY";
-  if (hasUnreportedRequired && (mergeStatus.status === "CLEAN" || mergeStatus.status === "DRAFT"))
+  if (awaitingChecks && (mergeStatus.status === "CLEAN" || mergeStatus.status === "DRAFT"))
     return "PENDING";
   return "UNKNOWN";
 }

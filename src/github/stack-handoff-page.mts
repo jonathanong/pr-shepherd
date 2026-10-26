@@ -123,6 +123,7 @@ export function batchResponseFromSummary(
       ...(run.annotations && { annotations: run.annotations }),
       checkSuite: suite
         ? {
+            ...(suite.status && { status: suite.status }),
             ...(suite.createdAt && { createdAt: suite.createdAt }),
             ...(suite.updatedAt && { updatedAt: suite.updatedAt }),
             workflowRun: workflowRun
