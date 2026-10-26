@@ -71,6 +71,29 @@ describe("applyStackStallGuard", () => {
     });
   });
 
+  it("keeps the timer running when rule-suppressed noise moves raw totals", async () => {
+    const quiet = { review: { comments: 1, reviews: 1, threads: 1 }, checks: { passing: 2 } };
+    await applyStackStallGuard(idleStack(quiet), repo, 600);
+    advance(600);
+    const noisy = idleStack({
+      review: { comments: 5, reviews: 3, threads: 2 },
+      checks: { passing: 2, ignored: 1, skipped: 1, filtered: 1, superseded: 1 },
+    });
+    await expect(applyStackStallGuard(noisy, repo, 600)).resolves.toMatchObject({
+      nextAction: "escalate",
+    });
+  });
+
+  it("restarts the timer when a real actionable item or check transition appears", async () => {
+    await applyStackStallGuard(idleStack({ checks: { passing: 2 } }), repo, 600);
+    advance(600);
+    const actionable = idleStack({ checks: { passing: 2 }, review: { actionable: 1 } });
+    await expect(applyStackStallGuard(actionable, repo, 600)).resolves.toBe(actionable.result);
+    advance(600);
+    const passed = idleStack({ checks: { passing: 3 }, review: { actionable: 1 } });
+    await expect(applyStackStallGuard(passed, repo, 600)).resolves.toBe(passed.result);
+  });
+
   it("restarts the timer when a waiting layer's head changes", async () => {
     await applyStackStallGuard(idleStack(), repo, 600);
     advance(600);
