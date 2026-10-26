@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { pollCommandFields } from "./poll-summary-command.mts";
+import type { PollSummarySelection } from "../types.mts";
+import { aggregateRerunCommand, pollCommandFields } from "./poll-summary-command.mts";
 
 describe("pollCommandFields --instructions", () => {
   it("forwards an explicit instruction style to the per-PR poll command", () => {
@@ -29,5 +30,39 @@ describe("pollCommandFields single ticks", () => {
       pollCommand: "pr-shepherd iterate https://github.com/o/r/pull/7 --no-auto-mark-ready",
       pollProbe: true,
     });
+  });
+});
+
+describe("aggregateRerunCommand", () => {
+  const prs: PollSummarySelection = { kind: "prs", requested: [7, 8] };
+  const stack: PollSummarySelection = { kind: "stack", anchor: 7, stackNumber: 1, stackSize: 2 };
+
+  it("prints every selected PR as a URL with --until-terminal", () => {
+    expect(aggregateRerunCommand("o/r", prs, {})).toBe(
+      "pr-shepherd https://github.com/o/r/pull/7 https://github.com/o/r/pull/8 --until-terminal",
+    );
+  });
+
+  it("forwards the caller's selection options", () => {
+    expect(
+      aggregateRerunCommand("o/r", prs, {
+        merge: true,
+        readyDelaySeconds: 60,
+        stallTimeoutSeconds: 120,
+        instructions: "playbook",
+        noAutoMarkReady: true,
+      }),
+    ).toBe(
+      "pr-shepherd https://github.com/o/r/pull/7 https://github.com/o/r/pull/8 --until-terminal --merge --ready-delay 60s --stall-timeout 120s --instructions playbook --no-auto-mark-ready",
+    );
+  });
+
+  it("prints the stack subcommand, as one tick for a single-tick run", () => {
+    expect(aggregateRerunCommand("o/r", stack, {})).toBe(
+      "pr-shepherd stack https://github.com/o/r/pull/7 --until-terminal",
+    );
+    expect(aggregateRerunCommand("o/r", stack, { tick: true })).toBe(
+      "pr-shepherd stack https://github.com/o/r/pull/7 --once",
+    );
   });
 });

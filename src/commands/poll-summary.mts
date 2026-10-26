@@ -4,6 +4,7 @@ import { ShepherdError } from "../exit-codes.mts";
 import { getRepoInfo } from "../github/client.mts";
 import { getGithubTransport } from "../github/transport.mts";
 import { withApiTelemetryScope, summarizeApiTelemetry } from "../github/api-telemetry.mts";
+import { aggregateRerunCommand } from "../github/poll-summary-command.mts";
 import { fetchPollSummary } from "../github/poll-summary.mts";
 import { writeStackHandoffs } from "../github/stack-handoff.mts";
 import type { StackHandoffSource } from "../github/stack-handoff-page.mts";
@@ -30,7 +31,7 @@ export function runPollSummary(opts: PollSummaryCommandOptions): Promise<PollSum
   return withApiTelemetryScope(async () => {
     const tick = await readPollSummaryTick(opts);
     await handOffRoutedLayers(tick);
-    return attachUsage(tick.result, opts.merge);
+    return attachUsage(tick.result, opts);
   });
 }
 
@@ -86,6 +87,7 @@ async function readPollSummaryTick(opts: PollSummaryCommandOptions): Promise<Pol
       ...(fetched.allowedMergeMethods && { allowedMergeMethods: fetched.allowedMergeMethods }),
     },
     opts.merge === true,
+    aggregateRerunCommand(`${repo.owner}/${repo.name}`, fetched.selection, opts),
   );
   const result = await applyStackStallGuard(
     planned,
@@ -137,7 +139,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
               instructions: ["1. Stop — every stack layer is merged."],
               ...(pendingQuotaWarning && { quotaWarning: pendingQuotaWarning }),
             },
-            opts.merge,
+            opts,
           );
         }
         return attachUsage(
@@ -152,7 +154,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
             ],
             ...(pendingQuotaWarning && { quotaWarning: pendingQuotaWarning }),
           },
-          opts.merge,
+          opts,
         );
       }
       const early = await rateLimitRetry.wait(error, {
@@ -166,7 +168,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
       if (early) {
         return presentProbedCancel(
           pendingQuotaWarning ? { ...early, quotaWarning: pendingQuotaWarning } : early,
-          opts.merge,
+          opts,
         );
       }
       continue;
@@ -193,7 +195,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
           reason: "all_terminal",
           ...(pendingQuotaWarning && { quotaWarning: pendingQuotaWarning }),
         },
-        opts.merge,
+        opts,
       );
     }
     if (immediate) {
@@ -203,7 +205,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
           reason: "actionable",
           ...(pendingQuotaWarning && { quotaWarning: pendingQuotaWarning }),
         },
-        opts.merge,
+        opts,
       );
     }
 
@@ -216,13 +218,13 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
             reason: "actionable",
             ...(pendingQuotaWarning && { quotaWarning: pendingQuotaWarning }),
           },
-          opts.merge,
+          opts,
         );
       }
     } else {
       debounceUntil = null;
       if (opts.untilTerminal && pendingQuotaWarning) {
-        return attachUsage({ ...last, quotaWarning: pendingQuotaWarning }, opts.merge);
+        return attachUsage({ ...last, quotaWarning: pendingQuotaWarning }, opts);
       }
     }
 
@@ -239,7 +241,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
     if (!opts.untilTerminal && debounceUntil === null) {
       const remainingMs = timeoutMs - elapsedMs;
       if (remainingMs <= 0 || remainingMs + TIMER_DRIFT_TOLERANCE_MS < sleepMs) {
-        return attachUsage({ ...last, reason: "timeout" }, opts.merge);
+        return attachUsage({ ...last, reason: "timeout" }, opts);
       }
     }
     const statusSignature = summaryStatusSignature(last);
@@ -264,11 +266,11 @@ function writeAggregateRuleAutoResolve(result: PollSummaryResult): void {
 
 function presentProbedCancel(
   result: PollSummaryResult,
-  merge: boolean | undefined,
+  opts: PollSummaryCommandOptions,
 ): PollSummaryResult {
   // The stack planner already cancels an all-merged stack and escalates a
   // closed-unmerged layer. Do not rewrite that into a successful stop.
-  return attachUsage({ ...result, reason: "all_terminal" }, merge);
+  return attachUsage({ ...result, reason: "all_terminal" }, opts);
 }
 
 function isMissingStack(error: unknown): boolean {
@@ -277,7 +279,10 @@ function isMissingStack(error: unknown): boolean {
   );
 }
 
-function attachUsage(result: PollSummaryResult, mergeRequested?: boolean): PollSummaryResult {
+function attachUsage(
+  result: PollSummaryResult,
+  opts: PollSummaryCommandOptions,
+): PollSummaryResult {
   const apiUsage = summarizeApiTelemetry();
   const enriched = apiUsage ? { ...result, apiUsage } : result;
   // A disappeared native stack is an aggregate-level terminal handoff. Keep
@@ -286,5 +291,9 @@ function attachUsage(result: PollSummaryResult, mergeRequested?: boolean): PollS
   if (enriched.selection.kind === "stack" && enriched.nextAction === "escalate") {
     return enriched;
   }
-  return withPollSummaryInstructions(enriched, mergeRequested === true);
+  return withPollSummaryInstructions(
+    enriched,
+    opts.merge === true,
+    aggregateRerunCommand(enriched.repo, enriched.selection, opts),
+  );
 }

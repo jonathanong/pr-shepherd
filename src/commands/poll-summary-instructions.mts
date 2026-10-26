@@ -17,23 +17,26 @@ import {
   appendStackRerunInstruction,
   onlyDraftReadinessVerification,
   splitStackWork,
+  stackRerunTarget,
 } from "./stack-work.mts";
 
 /** Keep aggregate JSON, Markdown, and MCP instructions on one projection. */
 export function withPollSummaryInstructions(
   result: PollSummaryResult,
   mergeRequested: boolean,
+  rerunCommand?: string,
 ): PollSummaryResult {
-  return planPollSummary(result, mergeRequested).result;
+  return planPollSummary(result, mergeRequested, rerunCommand).result;
 }
 
 /** The projected summary, plus the idle layers when the stack plan can only wait on them. */
 export function planPollSummary(
   result: PollSummaryResult,
   mergeRequested: boolean,
+  rerunCommand?: string,
 ): { result: PollSummaryResult; idle?: PollSummaryItem[] } {
   if (result.selection.kind !== "stack") {
-    return { result: { ...result, instructions: explicitInstructions(result) } };
+    return { result: { ...result, instructions: explicitInstructions(result, rerunCommand) } };
   }
 
   const prs = [...result.prs].sort((left, right) => stackPosition(left) - stackPosition(right));
@@ -87,7 +90,7 @@ export function planPollSummary(
       return layer;
     }),
   };
-  const planned = planStack(projected, mergeRequested);
+  const planned = planStack(projected, mergeRequested, rerunCommand);
   const instructions = [...planned.instructions];
   if (result.quotaWarning && planned.action === "shepherd") {
     instructions.push(
@@ -116,7 +119,12 @@ export function planPollSummary(
   };
 }
 
-function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPlan {
+function planStack(
+  result: PollSummaryResult,
+  mergeRequested: boolean,
+  rerunCommand?: string,
+): StackPlan {
+  const again = stackRerunTarget(rerunCommand);
   const open = result.prs.filter((item) => item.state === "OPEN");
   const gaps = result.stackAncestry ?? [];
   const staleChildren = new Set(gaps.map((gap) => gap.childPr));
@@ -151,8 +159,8 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
       const rerun =
         onlyDraftReadinessVerification(work.sessions, work.idle) &&
         work.sessions.every((item) => item.owned)
-          ? "If every listed one-PR probe returns `[CANCEL]` with reason `auto-mark-ready-disabled`, report the human handoff above and stop this `stack` command. If any probe returns `[ESCALATE]`, report that handoff and stop after the other probes finish. Otherwise follow each probe's instructions and rerun this same `stack` command when that work completes."
-          : "After the listed one-PR sessions, rerun this same `stack` command. Stop for the human handoff only when no autonomous shepherding remains.";
+          ? `If every listed one-PR probe returns \`[CANCEL]\` with reason \`auto-mark-ready-disabled\`, report the human handoff above and stop this \`stack\` command. If any probe returns \`[ESCALATE]\`, report that handoff and stop after the other probes finish. Otherwise follow each probe's instructions and rerun ${again} when that work completes.`
+          : `After the listed one-PR sessions, rerun ${again}. Stop for the human handoff only when no autonomous shepherding remains.`;
       appendStackRerunInstruction(instructions, runnableCandidates, rerun);
     }
     return { action: stop ? "escalate" : "shepherd", stackMergeable: false, instructions };
@@ -179,7 +187,7 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
         appendStackRerunInstruction(
           instructions,
           runnableCandidates,
-          "After the listed one-PR sessions, rerun this same `stack` command. Stop for the human handoff only when no autonomous shepherding remains.",
+          `After the listed one-PR sessions, rerun ${again}. Stop for the human handoff only when no autonomous shepherding remains.`,
         );
       }
       return { action: ownedWork ? "shepherd" : "escalate", stackMergeable: false, instructions };
@@ -203,14 +211,14 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
       work.sessions.every((item) => item.owned)
     ) {
       instructions.push(
-        `${instructions.length + 1}. If every listed one-PR probe returns \`[CANCEL]\` with reason \`auto-mark-ready-disabled\`, stop shepherding this stack and leave those drafts unchanged. If any probe returns \`[ESCALATE]\`, report that handoff and stop after the other probes finish. Otherwise follow each probe's instructions and rerun this same \`stack\` command when that work completes.`,
+        `${instructions.length + 1}. If every listed one-PR probe returns \`[CANCEL]\` with reason \`auto-mark-ready-disabled\`, stop shepherding this stack and leave those drafts unchanged. If any probe returns \`[ESCALATE]\`, report that handoff and stop after the other probes finish. Otherwise follow each probe's instructions and rerun ${again} when that work completes.`,
       );
       return { action: "shepherd", stackMergeable: false, instructions };
     }
     const action = appendStackRerunInstruction(
       instructions,
       work.sessions,
-      "After the selected one-PR sessions, rerun this same `stack` command.",
+      `After the selected one-PR sessions, rerun ${again}.`,
     );
     return { action, stackMergeable: false, instructions };
   }
@@ -241,7 +249,7 @@ function planStack(result: PollSummaryResult, mergeRequested: boolean): StackPla
     const action = appendStackRerunInstruction(
       instructions,
       sessions,
-      "After the selected one-PR sessions, rerun this same `stack` command.",
+      `After the selected one-PR sessions, rerun ${again}.`,
     );
     return { action, stackMergeable, instructions };
   }

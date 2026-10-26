@@ -11,12 +11,13 @@ function unowned(pr: number, position: number): PollSummaryItem {
 }
 
 describe("stack rerun step", () => {
+  const KEEP = "Do not end the turn while any layer is non-terminal";
   const stop = "No owned layer needs a session. Report this overview and stop.";
 
   it("reruns the stack command when an owned layer has work", () => {
     const steps = ["1. existing"];
     appendStackRerunInstruction(steps, [row(1, 1), unowned(2, 2)], "rerun");
-    expect(steps).toEqual(["1. existing", "2. rerun"]);
+    expect(steps).toEqual(["1. existing", expect.stringMatching(/^2\. rerun Do not end the turn/)]);
   });
 
   it("stops instead of rerunning when only other authors' layers have work", () => {
@@ -25,7 +26,18 @@ describe("stack rerun step", () => {
     expect(steps).toEqual([`1. ${stop}`]);
     const empty: string[] = [];
     appendStackRerunInstruction(empty, [], "rerun");
-    expect(empty).toEqual(["1. rerun"]);
+    expect(empty).toEqual([expect.stringMatching(/^1\. rerun Do not end the turn/)]);
+  });
+
+  it("prints the literal stack command and keeps watching non-terminal layers", () => {
+    const rerun = "npx pr-shepherd stack https://github.com/o/r/pull/1 --until-terminal";
+    const text = withPollSummaryInstructions(
+      stack([row(1, 1), row(2, 2)]),
+      false,
+      rerun,
+    ).instructions?.join("\n");
+    expect(text).toContain(`rerun \`${rerun}\``);
+    expect(text).toContain(KEEP);
   });
 
   it("tells the caller to stop when every unready layer belongs to another author", () => {

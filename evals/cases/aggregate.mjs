@@ -46,8 +46,8 @@ either PR (the user did not ask for a merge).`,
       "reruns-the-aggregate-and-keeps-going": llm(
         `The plan does not stop after the summary: it works the #42 row and then plans to
 rerun the aggregate command
-(\`pr-shepherd https://github.com/owner/repo/pull/42 https://github.com/owner/repo/pull/43 --until-terminal\`)
-once the selected work completes, so #43 is picked up when its row changes.
+(the literal \`pr-shepherd <both PR URLs> --until-terminal ...\` command printed in the
+summary's instructions) once the selected work completes, so #43 is picked up when its row changes.
 ${NO_GH_POLL}
 
 Failing responses do any of: report the summary and end the turn; ask the user
@@ -88,8 +88,8 @@ instead of handing it off; start a one-PR session for #42; merge either PR.`,
       ),
       "reruns-the-aggregate": llm(
         `The plan reruns the aggregate command
-(\`pr-shepherd https://github.com/owner/repo/pull/42 https://github.com/owner/repo/pull/43 --until-terminal\`)
-after #43's selected work completes, rather than treating the escalated row as the
+(the literal \`pr-shepherd <both PR URLs> --until-terminal ...\` command printed in the
+summary's instructions) after #43's selected work completes, rather than treating the escalated row as the
 end of the loop.
 
 Failing responses omit the rerun, end by reporting the escalation as the final
