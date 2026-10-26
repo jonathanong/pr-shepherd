@@ -21,6 +21,7 @@ import { applyOpenCheckBlockers } from "./poll-summary-check-blockers.mts";
 import { normalizePollSummaryState, routePollSummary } from "./poll-summary-route.mts";
 import { hydrateReadyAnnotationProbe, readyFingerprint } from "./poll-summary-annotation-probe.mts";
 import {
+  applyPendingWorkflowSuites,
   applyUnreportedRequiredChecks,
   summaryRequiredContexts,
 } from "./poll-summary-unreported.mts";
@@ -48,6 +49,7 @@ export async function summarizePollSummaryPr(
   const required = summaryRequiredContexts(raw, mergeTargetContexts);
   const checks = summarizePollSummaryChecks(raw, required);
   applyUnreportedRequiredChecks(raw, checks, required);
+  applyPendingWorkflowSuites(raw, checks);
   const { review, ruleAutoResolve } = await evaluatePollSummaryReview(
     raw,
     seen,

@@ -48,6 +48,7 @@ export function mapCheckRunNode(
   const summary = extractCheckRunSummary(node.title, node.summary);
   const rawCreatedAt = node.checkSuite?.workflowRun?.createdAt ?? node.checkSuite?.createdAt;
   const rawUpdatedAt = node.checkSuite?.workflowRun?.updatedAt ?? node.checkSuite?.updatedAt;
+  const suiteStatus = node.checkSuite?.status || undefined;
   const createdAtUnix = rawCreatedAt ? parseCreatedAt(rawCreatedAt) : undefined;
   const startedAtUnix = node.startedAt ? parseCreatedAt(node.startedAt) : undefined;
   const completedAtUnix = node.completedAt ? parseCreatedAt(node.completedAt) : undefined;
@@ -63,6 +64,7 @@ export function mapCheckRunNode(
     runId,
     ...(workflowName !== undefined && { workflowName }),
     ...(workflowId !== undefined && { workflowId }),
+    ...(suiteStatus !== undefined && { suiteStatus }),
     ...(createdAtUnix !== undefined && { createdAtUnix }),
     ...(startedAtUnix !== undefined && { startedAtUnix }),
     ...(completedAtUnix !== undefined && { completedAtUnix }),

@@ -7,6 +7,7 @@ import type {
   MergeStatusResult,
   ViewerAuthorization,
   CheckConclusion,
+  CheckStatus,
   SuggestionBlock,
 } from "./github.mts";
 import type { ClassifiedCheck, RelatedFailedJob, TriagedCheck } from "./check-classification.mts";
@@ -216,6 +217,10 @@ export interface AgentCheck {
   detailsUrl: string | null;
   /** Raw GitHub check conclusion; may be null for some completed checks from upstream data. */
   conclusion: CheckConclusion;
+  /** Raw check status, present only for a stuck check: not `COMPLETED` while its suite is. */
+  status?: CheckStatus;
+  /** Raw check-suite status (`COMPLETED`), present only with `status` for a stuck check. */
+  suiteStatus?: string;
   /** Workflow display name (e.g. `"CI"`). Populated on a best-effort basis when available from the jobs API. */
   workflowName?: string;
   /** Name of the matched job (e.g. `"tests (ubuntu)"`). Distinct from check name for matrix builds. */

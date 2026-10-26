@@ -59,6 +59,23 @@ export function applyUnreportedRequiredChecks(
   }
 }
 
+/** No relevant check yet. A skipped, filtered, ignored or superseded check is not relevant. */
+export function hasNoRelevantChecks(checks: PollSummaryChecks): boolean {
+  return (checks.passing ?? 0) + (checks.failing ?? 0) + (checks.inProgress ?? 0) === 0;
+}
+
+/**
+ * Flag a running Actions workflow suite when the head has no relevant check yet. Suites exist
+ * before their check runs, so CLEAN with no checks is not proof that CI passed.
+ */
+export function applyPendingWorkflowSuites(raw: RawSummaryPr, checks: PollSummaryChecks): void {
+  if (checks.actionsWorkflowInProgress === true || !hasNoRelevantChecks(checks)) return;
+  const suites = raw.commits.nodes[0]?.commit.checkSuites?.nodes ?? [];
+  if (actionsWorkflowInProgress(suites, new Set(loadConfig().checks["ci-trigger-events"]))) {
+    checks.actionsWorkflowInProgress = true;
+  }
+}
+
 function reportedNames(raw: RawSummaryPr): Set<string> {
   const names = new Set<string>();
   const rollups = [

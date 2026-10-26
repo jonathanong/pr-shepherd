@@ -109,7 +109,12 @@ export function formatTriageResult(
         : ch.detailsUrl
           ? `external \`${ch.detailsUrl}\``
           : "(no runId)";
-      const conclusionTag = ch.conclusion !== null ? ` [conclusion: ${ch.conclusion}]` : "";
+      const conclusionTag =
+        ch.status !== undefined
+          ? ` [status: ${ch.status}, suite: ${ch.suiteStatus}]`
+          : ch.conclusion !== null
+            ? ` [conclusion: ${ch.conclusion}]`
+            : "";
       const attemptTag = ch.runAttempt !== undefined ? ` [attempt: ${ch.runAttempt}]` : "";
       const scopeTag = ch.scope
         ? ` [scope: ${ch.scope}${ch.commitOid ? `, commit: ${ch.commitOid}` : ""}]`

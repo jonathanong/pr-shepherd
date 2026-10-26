@@ -127,6 +127,7 @@ export async function readRestCommitChecks(oid: string, repo: RepoInfo, pr = 0) 
       annotations: { totalCount: check.output.annotations_count, nodes: [] },
       checkSuite: suite
         ? {
+            status: suite.status.toUpperCase(),
             createdAt: suite.created_at,
             updatedAt: suite.updated_at,
             workflowRun: run

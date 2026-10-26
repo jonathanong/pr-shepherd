@@ -202,6 +202,7 @@ export type RawContextNode =
         nodes: Array<Partial<RawCheckAnnotation> & { message: string }>;
       };
       checkSuite: {
+        status?: string | null;
         createdAt?: string;
         updatedAt?: string;
         workflowRun: {

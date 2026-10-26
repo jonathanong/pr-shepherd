@@ -59,10 +59,13 @@ function renderEscalateAnnotation(annotation: AgentCheckAnnotation): string[] {
 function renderEscalateCheck(check: AgentCheck): string[] {
   const workflowPrefix = check.workflowName ? `${check.workflowName} › ` : "";
   const jobLabel = check.jobName ?? check.name;
-  const conclusion = check.conclusion ?? "UNKNOWN";
+  const conclusionTag =
+    check.status !== undefined
+      ? `[status: ${check.status}, suite: ${check.suiteStatus}]`
+      : `[conclusion: ${check.conclusion ?? "UNKNOWN"}]`;
   const attempt = check.runAttempt !== undefined ? ` [attempt: ${check.runAttempt}]` : "";
   const lines = [
-    `- ${renderCheckTarget(check)} — \`${workflowPrefix}${jobLabel}\` [conclusion: ${conclusion}]${attempt}${renderCheckScope(check)}`,
+    `- ${renderCheckTarget(check)} — \`${workflowPrefix}${jobLabel}\` ${conclusionTag}${attempt}${renderCheckScope(check)}`,
   ];
   if (check.failedStep) lines.push(`  > failed step: ${check.failedStep}`);
   if (check.summary) lines.push(`  > ${check.summary}`);

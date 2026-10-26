@@ -32,6 +32,7 @@ describe("fetchPrBatch — check timestamps", () => {
                       title: null,
                       summary: null,
                       checkSuite: {
+                        status: "COMPLETED",
                         createdAt: "2026-05-20T01:00:00Z",
                         updatedAt: "2026-05-20T01:05:00Z",
                         workflowRun: {
@@ -55,6 +56,7 @@ describe("fetchPrBatch — check timestamps", () => {
 
     expect(data.checks[0]).toMatchObject({
       source: "check_run",
+      suiteStatus: "COMPLETED",
       createdAtUnix: 1_779_238_740,
       completedAtUnix: 1_779_239_040,
       updatedAtUnix: 1_779_239_160,
