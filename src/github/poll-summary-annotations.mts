@@ -33,6 +33,8 @@ export async function applyUnseenCheckAnnotations(
   required: readonly string[],
 ): Promise<Routed> {
   if (!routed.reasons.some((reason) => READY_CLAIMS.has(reason))) return routed;
+  // Successful checks never carry actionable annotations: skip the probe when none can.
+  if (nonSuccessCheckTotals(raw, required, false).size === 0) return routed;
   const totalsKnown = await hydrateAnnotationTotals(raw, repo);
   const candidates = nonSuccessCheckTotals(raw, required, totalsKnown);
   if (candidates.size === 0) return routed;

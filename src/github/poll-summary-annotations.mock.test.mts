@@ -81,6 +81,12 @@ describe("applyUnseenCheckAnnotations", () => {
     expect(mockHydrate).not.toHaveBeenCalled();
   });
 
+  it("makes no probe request when every completed check succeeded", async () => {
+    const { result } = await apply(pr([run("ok", "SUCCESS", undefined)]));
+    expect(result).toBe(ready);
+    expect(mockHydrate).not.toHaveBeenCalled();
+  });
+
   it("does not read annotations when no non-SUCCESS check has any", async () => {
     const raw = pr([
       run("ok", "SUCCESS", 3),
