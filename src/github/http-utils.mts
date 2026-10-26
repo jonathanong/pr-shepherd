@@ -15,6 +15,8 @@ const TRANSPORT_ERROR_CODES = new Set([
 
 export function isTransportError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
+  // The request deadline aborts a stalled body read with a TimeoutError.
+  if (err.name === "TimeoutError") return true;
   const code = (err as NodeJS.ErrnoException).code;
   if (code && TRANSPORT_ERROR_CODES.has(code)) return true;
   const cause = (err as { cause?: unknown }).cause;

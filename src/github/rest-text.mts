@@ -2,6 +2,7 @@ import { appendEntry, nextEntry } from "../log/log-file.mts";
 import { formatRequestEntry, formatResponseEntry } from "../log/session.mts";
 import { GitHubRequestError } from "./errors.mts";
 import { githubFetch } from "./github-fetch.mts";
+import { GITHUB_LOG_TIMEOUT_MS } from "./github-timeouts.mts";
 import { makeAuthHeaders } from "./http-auth.mts";
 import { requestWithTokenRetry } from "./http-request.mts";
 import {
@@ -32,7 +33,11 @@ export async function restText(
       const auth = await makeAuthHeaders();
       authSource = auth.source;
       credentialFingerprint = auth.fingerprint;
-      return githubFetch(url, { method: "GET", headers: auth.headers, redirect: "manual" });
+      return githubFetch(
+        url,
+        { method: "GET", headers: auth.headers, redirect: "manual" },
+        GITHUB_LOG_TIMEOUT_MS,
+      );
     },
     t0,
     (response, durationMs) =>
@@ -145,7 +150,7 @@ async function followRestTextRedirect(
   const logUrl = redactUrl(location);
   appendEntry(formatRequestEntry({ n: n2, kind: "restText", method: "GET", url: logUrl }));
   const t1 = performance.now();
-  const redirectRes = await githubFetch(location);
+  const redirectRes = await githubFetch(location, undefined, GITHUB_LOG_TIMEOUT_MS);
   appendEntry(
     formatResponseEntry({
       n: n2,
