@@ -57,8 +57,7 @@ function onlyUnownedWork(layers: PollSummaryItem[]): boolean {
 }
 
 /** The turn must outlive every non-terminal layer; a one-PR session ending does not end the stack. */
-const STACK_KEEP_WATCHING =
-  "Do not end the turn while any layer is non-terminal: a one-PR session returning `CANCEL` or `ESCALATE` finishes only that layer, and merged, `CANCEL`, `ESCALATE`, or handed-off layers do not count.";
+const STACK_KEEP_WATCHING = "Keep watching until every layer is terminal.";
 
 /** The literal stack command to rerun, or the generic name when the caller's command is unknown. */
 export function stackRerunTarget(command?: string): string {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { loadConfig } from "../config/load.mts";
 import type { PollSummarySelection } from "../types.mts";
 import { aggregateRerunCommand, pollCommandFields } from "./poll-summary-command.mts";
 
@@ -55,6 +56,16 @@ describe("aggregateRerunCommand", () => {
     ).toBe(
       "pr-shepherd https://github.com/o/r/pull/7 https://github.com/o/r/pull/8 --until-terminal --merge --ready-delay 60s --stall-timeout 120s --instructions playbook --no-auto-mark-ready",
     );
+  });
+
+  it("omits ready-delay and stall-timeout values equal to the configured defaults", () => {
+    const iterate = loadConfig().iterate;
+    expect(
+      aggregateRerunCommand("o/r", prs, {
+        readyDelaySeconds: iterate["ready-delay-minutes"] * 60,
+        stallTimeoutSeconds: iterate["stall-timeout-minutes"] * 60,
+      }),
+    ).not.toMatch(/--ready-delay|--stall-timeout/);
   });
 
   it("prints the stack subcommand, as one tick for a single-tick run", () => {

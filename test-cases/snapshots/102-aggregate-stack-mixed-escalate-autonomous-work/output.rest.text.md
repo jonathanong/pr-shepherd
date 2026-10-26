@@ -33,4 +33,4 @@ nextAction: shepherd
 2. PR #401 is not owned. Do not run a session for it.
 3. Run `pr-shepherd https://github.com/owner/repo/pull/402 --until-terminal`.
 4. Run `pr-shepherd https://github.com/owner/repo/pull/403 --until-terminal`.
-5. After the selected one-PR sessions, rerun `pr-shepherd stack https://github.com/owner/repo/pull/403 --until-terminal --ready-delay 0s --stall-timeout 3600s --transport rest`. Do not end the turn while any layer is non-terminal: a one-PR session returning `CANCEL` or `ESCALATE` finishes only that layer, and merged, `CANCEL`, `ESCALATE`, or handed-off layers do not count.
+5. After the selected one-PR sessions, rerun `pr-shepherd stack https://github.com/owner/repo/pull/403 --until-terminal --transport rest`. Keep watching until every layer is terminal.

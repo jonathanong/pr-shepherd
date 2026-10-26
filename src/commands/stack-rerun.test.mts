@@ -11,13 +11,13 @@ function unowned(pr: number, position: number): PollSummaryItem {
 }
 
 describe("stack rerun step", () => {
-  const KEEP = "Do not end the turn while any layer is non-terminal";
+  const KEEP = "Keep watching until every layer is terminal";
   const stop = "No owned layer needs a session. Report this overview and stop.";
 
   it("reruns the stack command when an owned layer has work", () => {
     const steps = ["1. existing"];
     appendStackRerunInstruction(steps, [row(1, 1), unowned(2, 2)], "rerun");
-    expect(steps).toEqual(["1. existing", expect.stringMatching(/^2\. rerun Do not end the turn/)]);
+    expect(steps).toEqual(["1. existing", expect.stringMatching(/^2\. rerun Keep watching/)]);
   });
 
   it("stops instead of rerunning when only other authors' layers have work", () => {
@@ -26,7 +26,7 @@ describe("stack rerun step", () => {
     expect(steps).toEqual([`1. ${stop}`]);
     const empty: string[] = [];
     appendStackRerunInstruction(empty, [], "rerun");
-    expect(empty).toEqual([expect.stringMatching(/^1\. rerun Do not end the turn/)]);
+    expect(empty).toEqual([expect.stringMatching(/^1\. rerun Keep watching/)]);
   });
 
   it("prints the literal stack command and keeps watching non-terminal layers", () => {

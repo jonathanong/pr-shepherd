@@ -34,7 +34,8 @@ export function pollCommandFields(
 
 /**
  * The literal command that re-runs this aggregate selection with the options the caller used.
- * Intervals and timeouts are omitted: they are loop cadence, not selection.
+ * Intervals and timeouts are omitted: they are loop cadence, not selection. Options equal to the
+ * configured defaults are omitted too, since the parser fills them from config.
  */
 export function aggregateRerunCommand(
   repo: string,
@@ -46,9 +47,17 @@ export function aggregateRerunCommand(
       ? ["stack", formatPrUrl(repo, selection.anchor), opts.tick ? "--once" : "--until-terminal"]
       : [...selection.requested.map((pr) => formatPrUrl(repo, pr)), "--until-terminal"];
   if (opts.merge) args.push("--merge");
-  if (opts.readyDelaySeconds !== undefined)
+  // The parser always fills these from config, so a default value adds nothing to the command.
+  const iterate = loadConfig().iterate;
+  if (
+    opts.readyDelaySeconds !== undefined &&
+    opts.readyDelaySeconds !== iterate["ready-delay-minutes"] * 60
+  )
     args.push("--ready-delay", `${opts.readyDelaySeconds}s`);
-  if (opts.stallTimeoutSeconds !== undefined)
+  if (
+    opts.stallTimeoutSeconds !== undefined &&
+    opts.stallTimeoutSeconds !== iterate["stall-timeout-minutes"] * 60
+  )
     args.push("--stall-timeout", `${opts.stallTimeoutSeconds}s`);
   if (opts.instructions) args.push("--instructions", opts.instructions);
   if (opts.noAutoMarkReady) args.push("--no-auto-mark-ready");

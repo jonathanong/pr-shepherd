@@ -51,7 +51,6 @@ describe("aggregate tick", () => {
       summary({
         instructions: [
           "1. Run `cmd` again. Do not end the turn while any selected row is non-terminal: a poll finishes only that row.",
-          "2. Rerun `cmd`. Do not end the turn while any layer is non-terminal: a session finishes only that layer.",
         ],
       }),
     );
@@ -60,9 +59,6 @@ describe("aggregate tick", () => {
     expect(text).not.toContain("Do not end the turn");
     expect(text).toContain(
       "Keep watching every non-terminal selected row through the wake-up below: a poll",
-    );
-    expect(text).toContain(
-      "Keep watching every non-terminal layer through the wake-up below: a session",
     );
   });
 

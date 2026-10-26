@@ -18,4 +18,4 @@ nextAction: shepherd
 2. Run `pr-shepherd https://github.com/owner/repo/pull/441 --until-terminal`.
 3. Run `pr-shepherd https://github.com/owner/repo/pull/442 --until-terminal`.
 4. Run `pr-shepherd https://github.com/owner/repo/pull/443 --until-terminal`.
-5. After the selected one-PR sessions, rerun `pr-shepherd stack https://github.com/owner/repo/pull/443 --until-terminal --ready-delay 0s --stall-timeout 3600s`. Do not end the turn while any layer is non-terminal: a one-PR session returning `CANCEL` or `ESCALATE` finishes only that layer, and merged, `CANCEL`, `ESCALATE`, or handed-off layers do not count.
+5. After the selected one-PR sessions, rerun `pr-shepherd stack https://github.com/owner/repo/pull/443 --until-terminal`. Keep watching until every layer is terminal.
