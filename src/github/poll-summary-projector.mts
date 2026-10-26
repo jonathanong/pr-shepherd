@@ -69,7 +69,7 @@ export async function summarizePollSummaryPr(
       readyDelaySeconds,
       repo.owner,
       repo.name,
-      { headSha: raw.headRefOid },
+      { headSha: raw.headRefOid, summary: true },
     );
     if (appearsReady && !readyState.shouldCancel) {
       action = "wait";

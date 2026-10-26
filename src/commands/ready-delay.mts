@@ -43,9 +43,9 @@ export async function updateReadyDelay(
   readyDelaySeconds: number,
   owner: string,
   repo: string,
-  options: { headSha: string; alreadyElapsed?: boolean },
+  options: { headSha: string; alreadyElapsed?: boolean; summary?: boolean },
 ): Promise<ReadyDelayState> {
-  const markerPath = readySincePath(prNumber, owner, repo);
+  const markerPath = readySincePath(prNumber, owner, repo, options.summary);
 
   if (!isReady) {
     // Reset the timer.
@@ -119,8 +119,16 @@ export async function readyDelayElapsed(
 // Helpers
 // ---------------------------------------------------------------------------
 
-function readySincePath(pr: number, owner: string, repo: string): string {
-  return resolvePrStatePath({ owner, repo, pr }, "ready-since.txt");
+/**
+ * The one-PR session owns `ready-since.txt`. The aggregate summary's coarser
+ * view keeps its own `ready-since-summary.txt` so it can never reset or start
+ * the authoritative timer.
+ */
+function readySincePath(pr: number, owner: string, repo: string, summary = false): string {
+  return resolvePrStatePath(
+    { owner, repo, pr },
+    summary ? "ready-since-summary.txt" : "ready-since.txt",
+  );
 }
 
 /** The marker's start time, or null when it is missing, malformed, or bound to another head. */

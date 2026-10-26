@@ -86,7 +86,7 @@ stateDiagram-v2
 - The elapsed marker stays until `cancel` or `merge` consumes it, so a hidden-comment acknowledgement tick does not restart the wait.
 - A current READY receipt (same head, base, and readiness evidence) already proves the delay elapsed, so a clean sweep returns `shouldCancel: true` without a marker (`alreadyElapsed`). Rerunning a READY PR — for example with `--merge` after a `ready-delay-elapsed` cancel — does not restart the countdown. When the head, base, or evidence moved, the receipt is cleared and the countdown restarts. PR comment bodies and hidden review bodies are omitted from the receipt fingerprint, and comment IDs still bind new comments. An edited PR comment keeps the receipt.
 - Before a READY sweep reaches this step, `runCheck` does one fresh REST mergeability read (unless the UNKNOWN fallback already did). If it reports `CONFLICTING`/`DIRTY`, the sweep becomes `FAILING`/`CONFLICTS`, resets the marker, and routes to `triage`.
-- Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/ready-since.txt` (`<unix seconds> <head SHA>`). A future timestamp (clock skew), another head, or a marker without a head is reset to now.
+- Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/ready-since.txt` (`<unix seconds> <head SHA>`). Only the one-PR session reads or writes it; explicit multi-PR aggregate polls use a separate `ready-since-summary.txt` with the same format. A future timestamp (clock skew), another head, or a marker without a head is reset to now.
 
 The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completion).
 
