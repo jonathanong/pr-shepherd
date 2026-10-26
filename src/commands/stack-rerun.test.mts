@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { row, stack } from "../../test-helpers/commands/poll-summary-stack.test-support.mts";
 import type { PollSummaryItem } from "../types.mts";
 import { withPollSummaryInstructions } from "./poll-summary-instructions.mts";
+import { planPrefixDrain } from "./stack-drain.mts";
 import { appendStackRerunInstruction } from "./stack-work.mts";
 
 /** A layer another author owns: `owned` is only ever present as `true`. */
@@ -18,6 +19,28 @@ describe("stack rerun step", () => {
     const steps = ["1. existing"];
     appendStackRerunInstruction(steps, [row(1, 1), unowned(2, 2)], "rerun");
     expect(steps).toEqual(["1. existing", expect.stringMatching(/^2\. rerun Keep watching/)]);
+  });
+
+  it.each([
+    [
+      "the literal stack command",
+      "pr-shepherd stack 1 --merge --until-terminal",
+      "rerun `pr-shepherd stack 1 --merge --until-terminal`;",
+    ],
+    ["the generic name without a command", undefined, "rerun this same `stack --merge` command;"],
+  ] as const)("names %s after a prefix merge attempt", (_case, command, expected) => {
+    const plan = planPrefixDrain(
+      stack([row(1, 1, { readyReceipt: true, baseRefName: "main" }), row(2, 2)]),
+      true,
+      command,
+    );
+    expect(plan?.instructions.at(-1)).toContain(`After the merge attempt, ${expected}`);
+  });
+
+  it("omits the keep-watching directive when a human handoff can end the run", () => {
+    const steps: string[] = [];
+    appendStackRerunInstruction(steps, [row(1, 1)], "rerun", false);
+    expect(steps).toEqual(["1. rerun"]);
   });
 
   it("stops instead of rerunning when only other authors' layers have work", () => {

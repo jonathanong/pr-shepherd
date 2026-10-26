@@ -39,7 +39,7 @@ export function explicitInstructions(result: PollSummaryResult, rerunCommand?: s
     return [
       buildQuotaAwareContinuation(
         result.quotaWarning,
-        "1. This aggregate selection is non-terminal. Before continuing,",
+        `1. This aggregate selection is non-terminal. Run ${again} again at the cadence below. ${KEEP_WATCHING} Before continuing,`,
       ),
     ];
   }
@@ -59,7 +59,7 @@ export function explicitInstructions(result: PollSummaryResult, rerunCommand?: s
   } else if (result.quotaWarning) {
     instructions[2] = buildQuotaAwareContinuation(
       result.quotaWarning,
-      "3. After selected work completes,",
+      `3. After selected work completes, run ${again} again at the cadence below; one row's \`ESCALATE\` does not stop work on other rows. ${KEEP_WATCHING}`,
     );
   }
   return instructions;

@@ -3,7 +3,7 @@ export { findHumanHandoffs, appendHumanHandoffInstructions } from "./stack-hando
 import { stackMergeFlag } from "./stack-merge-flag.mts";
 import type { PollSummaryItem, PollSummaryResult, StackNextAction } from "../types.mts";
 import { stackLayerBlockReason } from "./stack-layer-readiness.mts";
-import { splitStackWork } from "./stack-work.mts";
+import { splitStackWork, stackRerunTarget } from "./stack-work.mts";
 import { getGithubTransport } from "../github/transport.mts";
 import { buildMergeCommandPlan, renderMergeCommand } from "./iterate/merge.mts";
 
@@ -42,6 +42,7 @@ function readyPrefixTop(result: PollSummaryResult): StackLayer | undefined {
 export function planPrefixDrain(
   result: PollSummaryResult,
   mergeRequested: boolean,
+  rerunCommand?: string,
 ): StackPlan | undefined {
   if (!mergeRequested) return undefined;
   const top = readyPrefixTop(result);
@@ -110,7 +111,7 @@ export function planPrefixDrain(
   const handoffs = findHumanHandoffs(result);
   if (handoffs) appendHumanHandoffInstructions(instructions, handoffs, false);
   instructions.push(
-    `${instructions.length + 1}. After the merge attempt, rerun this same \`stack --merge\` command; GitHub retargets the next layer onto \`${top.stack.baseRefName}\`. Shepherd any layer that GitHub rejects or ejects.`,
+    `${instructions.length + 1}. After the merge attempt, rerun ${rerunCommand ? stackRerunTarget(rerunCommand) : "this same `stack --merge` command"}; GitHub retargets the next layer onto \`${top.stack.baseRefName}\`. Shepherd any layer that GitHub rejects or ejects.`,
   );
   return {
     action: "merge",
