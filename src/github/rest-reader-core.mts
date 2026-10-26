@@ -103,7 +103,11 @@ function nextRestPage(link: string | undefined, original: string): string | unde
   const match = /^\s*<([^>]+)>;\s*rel="next"\s*$/.exec(nextEntries[0]!);
   if (!match) malformedRest(`invalid pagination link for ${original}`);
   const url = new URL(match[1]!, "https://api.github.com");
-  if (url.origin !== "https://api.github.com" || url.pathname !== original.split("?")[0])
+  const originalPath = original.split("?")[0]!;
+  if (
+    url.origin !== "https://api.github.com" ||
+    !samePaginationResource(url.pathname, originalPath)
+  )
     malformedRest(`unsafe pagination link for ${original}`);
   if (url.searchParams.get("per_page") !== "100")
     malformedRest(`changed page size for ${original}`);
@@ -117,7 +121,16 @@ function nextRestPage(link: string | undefined, original: string): string | unde
     )
       malformedRest(`changed pagination filter for ${original}`);
   }
-  return `${url.pathname}${url.search}`;
+  // Rebuild on the requested path so the repository id in a /repositories/{id} link is never trusted.
+  return `${originalPath}${url.search}`;
+}
+
+/** GitHub may link `/repos/{owner}/{repo}/…` pages through `/repositories/{id}/…`. */
+function samePaginationResource(linkPath: string, originalPath: string): boolean {
+  if (linkPath === originalPath) return true;
+  const linkSuffix = /^\/repositories\/\d+(\/.*)$/.exec(linkPath)?.[1];
+  const originalSuffix = /^\/repos\/[^/]+\/[^/]+(\/.*)$/.exec(originalPath)?.[1];
+  return linkSuffix !== undefined && linkSuffix === originalSuffix;
 }
 
 /** A pull request whose mergeability GitHub is still computing must be re-read, never replayed. */

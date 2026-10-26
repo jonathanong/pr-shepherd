@@ -78,6 +78,41 @@ describe("REST complete pagination", () => {
     );
     expect(wire.requests).toHaveLength(1);
   });
+  it("follows /repositories/{id} Links on the requested /repos path", async () => {
+    await serve((request, response) => {
+      const second = request.path.includes("page=2");
+      if (!second)
+        response.setHeader(
+          "link",
+          '<https://api.github.com/repositories/123/commits/sha/check-runs?filter=latest&per_page=100&page=2>; rel="next"',
+        );
+      const offset = second ? 100 : 0;
+      const length = second ? 7 : 100;
+      const runs = Array.from({ length }, (_, i) => ({ id: offset + i }));
+      response.end(JSON.stringify({ total_count: 107, check_runs: runs }));
+    });
+    const result = await readRestPages(`${prefix}/commits/sha/check-runs?filter=latest`, (body) =>
+      restArray(restObject(body, "runs").check_runs, "runs"),
+    );
+    expect(result.nodes).toHaveLength(107);
+    expect(wire.requests[1]!.path).toBe(
+      `${prefix}/commits/sha/check-runs?filter=latest&per_page=100&page=2`,
+    );
+  });
+  it.each([
+    "https://api.github.com/repositories/123/commits/other/check-runs",
+    "https://api.github.com/repositories/abc/commits/sha/check-runs",
+    "https://attacker.example/repositories/123/commits/sha/check-runs",
+  ])("rejects the /repositories Link %s", async (target) => {
+    await serve((_request, response) => {
+      response.setHeader("link", `<${target}?per_page=100&page=2>; rel="next"`);
+      response.end("[{}]");
+    });
+    await expect(readRestPages(`${prefix}/commits/sha/check-runs`)).rejects.toThrow(
+      "unsafe pagination",
+    );
+    expect(wire.requests).toHaveLength(1);
+  });
 
   it("rejects a repeated next page instead of returning duplicate or partial data", async () => {
     await serve((_request, response) => {
