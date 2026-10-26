@@ -56,6 +56,7 @@ import {
   threadHasAuthorizedMutation,
 } from "./iterate/thread-mutation-routing.mts";
 import { loadClassifyRules } from "../classify/loader.mts";
+import { filterSuppressedActivity } from "./check-activity.mts";
 import { buildClassifyIndex, partitionBatch, type BatchPartition } from "../classify/apply.mts";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import { getEffectiveCwd } from "../execution-context.mts";
@@ -713,7 +714,11 @@ async function runScopedCheck(
     ...(batchData.allowedMergeMethods && {
       allowedMergeMethods: batchData.allowedMergeMethods,
     }),
-    activity: batchData.activity,
+    activity: filterSuppressedActivity(batchData.activity, partition, [
+      ...deniedRuleAutoResolveCommentIds,
+      ...deniedRuleAutoResolveThreadIds,
+      ...deniedRuleAutoResolveReviewSummaryIds,
+    ]),
     ...(hasQueueState && {
       mergeQueue: {
         enabled: Boolean(batchData.isMergeQueueEnabled),
