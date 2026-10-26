@@ -80,6 +80,7 @@ function formatItem(item: PollSummaryItem): string {
         ]
       : []),
     `  - reasons: ${item.reasons.map((reason) => `\`${reason}\``).join(", ")}`,
+    ...(item.error ? [`  - error: ${item.error.replace(/\s*[\r\n]+\s*/g, " ")}`] : []),
     ...(item.transport ? [`  - transport \`${item.transport}\``] : []),
     ...(item.transportUnavailable ?? []).map(
       ({ field, reason }) => `  - unavailable \`${field}\`: ${reason}`,

@@ -14,6 +14,11 @@ import { missingRepositoryError } from "./errors.mts";
 import { hydratePollSummaryChecks } from "./poll-summary-check-hydration.mts";
 import { refreshUnknownSummaryMergeability } from "./poll-summary-mergeability.mts";
 import { summarizePollSummaryPr } from "./poll-summary-projector.mts";
+import {
+  hydrateRowsIsolated,
+  summarizeRowsIsolated,
+  type ExplicitChunk,
+} from "./poll-summary-row-error.mts";
 import { trunkRequiredContexts } from "./poll-summary-unreported.mts";
 import { loadStackSizeHint, storeStackSizeHint } from "./stack-size-hint.mts";
 import type { RawExplicitResponse, RawSummaryPr } from "./poll-summary-raw.mts";
@@ -43,17 +48,20 @@ async function fetchSelectedPollSummary(
     throw new ShepherdError("Aggregate poll requires at least two PRs or a stack PR", EXIT.USAGE);
   }
   const raw: RawSummaryPr[] = [];
+  const failures = new Map<number, unknown>();
   let viewerCanAdminister: boolean | undefined;
   for (let offset = 0; offset < requested.length; offset += MAX_EXPLICIT_PRS_PER_QUERY) {
     const chunk = requested.slice(offset, offset + MAX_EXPLICIT_PRS_PER_QUERY);
     const fetched = await fetchExplicitChunk(chunk, repo);
     viewerCanAdminister = fetched.viewerCanAdminister;
     raw.push(...fetched.prs);
+    for (const [pr, error] of fetched.failures ?? []) failures.set(pr, error);
   }
   return {
     selection: { kind: "prs", requested },
-    prs: await Promise.all(
-      raw.map((pr) => summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister)),
+    // One explicit PR's failed read becomes a row; stack selections stay fail-closed.
+    prs: await summarizeRowsIsolated(raw, failures, repo, opts, (pr) =>
+      summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister),
     ),
   };
 }
@@ -61,13 +69,14 @@ async function fetchSelectedPollSummary(
 /** Fresh, read-only snapshot used to bind a one-PR READY receipt to stack routing. */
 export async function fetchRawSummaryPr(pr: number, repo: RepoInfo): Promise<RawSummaryPr> {
   const fetched = await fetchExplicitChunk([pr], repo);
+  if (fetched.failures?.has(pr)) throw fetched.failures.get(pr);
   return fetched.prs[0]!;
 }
 
 async function fetchGraphqlExplicitChunk(
   prs: number[],
   repo: RepoInfo,
-): Promise<{ prs: RawSummaryPr[]; viewerCanAdminister: boolean }> {
+): Promise<ExplicitChunk & { viewerCanAdminister: boolean }> {
   const declarations = prs.map((_, index) => `$pr${index}: Int!`).join(", ");
   const aliases = prs
     .map((_, index) => `pr${index}: pullRequest(number: $pr${index}) { ...PollSummaryPr }`)
@@ -85,17 +94,14 @@ async function fetchGraphqlExplicitChunk(
     if (!raw) throw new ShepherdError(`PR #${pr} not found`, EXIT.UNAVAILABLE);
     return raw;
   });
-  for (const raw of rawPrs) {
-    await hydratePollSummaryChecks(raw, repo);
-    await refreshUnknownSummaryMergeability(raw, repo);
-  }
-  return { prs: rawPrs, viewerCanAdminister: result.data.repository.viewerCanAdminister };
+  const failures = await hydrateRowsIsolated(rawPrs, repo);
+  return { prs: rawPrs, viewerCanAdminister: result.data.repository.viewerCanAdminister, failures };
 }
 
 async function fetchExplicitChunk(
   prs: number[],
   repo: RepoInfo,
-): Promise<{ prs: RawSummaryPr[]; viewerCanAdminister?: boolean }> {
+): Promise<ExplicitChunk & { viewerCanAdminister?: boolean }> {
   return githubOperation(
     "PollSummary",
     () => runWithGithubTransport("graphql", () => fetchGraphqlExplicitChunk(prs, repo)),
