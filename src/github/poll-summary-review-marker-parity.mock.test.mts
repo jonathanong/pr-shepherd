@@ -5,7 +5,10 @@ import { addPrShepherdMarker } from "../comments/marker.mts";
 import { classifyThreadVisibility } from "../comments/thread-visibility.mts";
 
 vi.mock("../classify/loader.mts", () => ({ loadClassifyRules: vi.fn().mockResolvedValue([]) }));
-import { summarizePollSummaryReview } from "./poll-summary-review.mts";
+import { evaluatePollSummaryReview } from "./poll-summary-review.mts";
+
+const summarizePollSummaryReview = async (...args: Parameters<typeof evaluatePollSummaryReview>) =>
+  (await evaluatePollSummaryReview(...args)).review;
 
 function snapshot(resolved: boolean | undefined, bodies: string[], truncated = false) {
   const comments = bodies.map((body, index) => ({

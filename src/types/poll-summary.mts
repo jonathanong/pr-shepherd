@@ -3,6 +3,7 @@ import type { MergeableState, MergeStateStatus, ReviewDecision } from "./github.
 import type { MergeQueueRemovalStatus } from "./merge-requirements.mts";
 import type { ShepherdAction } from "./iterate.mts";
 import type { NextCheck } from "./next-check.mts";
+import type { AutoMinimizedItem } from "./report.mts";
 
 export interface PollSummaryChecks {
   passing?: number;
@@ -17,6 +18,14 @@ export interface PollSummaryChecks {
   unreportedRequired?: string[];
   /** A relevant Actions workflow suite has not completed. */
   actionsWorkflowInProgress?: true;
+}
+
+/** The one-PR `ruleAutoResolve` content, with threads reduced to what a row needs: ID and link. */
+export interface PollSummaryRuleAutoResolve {
+  summary: string;
+  threads?: Array<{ id: string; url?: string }>;
+  minimized?: AutoMinimizedItem[];
+  errors?: string[];
 }
 
 export interface PollSummaryReview {
@@ -76,6 +85,11 @@ export interface PollSummaryItem {
   remainingSeconds?: number;
   checks?: PollSummaryChecks;
   review?: PollSummaryReview;
+  /**
+   * Rule-driven auto-resolve this tick performed or failed, in the one-PR `ruleAutoResolve`
+   * shape. Kept out of `review` so a one-tick event does not churn the status signature.
+   */
+  ruleAutoResolve?: PollSummaryRuleAutoResolve;
   stack?: PollSummaryStack;
   pollCommand?: string;
   /**

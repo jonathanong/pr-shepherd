@@ -4,6 +4,7 @@ import { withPollSummaryInstructions } from "../commands/poll-summary-instructio
 import { formatStackOverview, projectStackOverview } from "./stack-overview.mts";
 import { formatTransportEvidence } from "./transport-formatter.mts";
 import { formatNextCheckLines } from "./next-check-format.mts";
+import { formatRuleAutoResolveLines } from "./rule-auto-resolve-lines.mts";
 
 export function formatPollSummaryResult(result: PollSummaryResult): string {
   if (result.selection.kind === "stack") return formatStackOverview(projectStackOverview(result));
@@ -74,6 +75,7 @@ function formatItem(item: PollSummaryItem): string {
     ...(review
       ? [`  - review: ${formatCounts(review, review.incomplete ? ", incomplete" : "")}`]
       : []),
+    ...formatRuleAutoResolveLines(item.ruleAutoResolve),
     ...(item.queueRemoval
       ? [
           `  - queue removal: reason \`${item.queueRemoval.reason ?? "UNKNOWN"}\` · at \`${item.queueRemoval.createdAtUnix}\`${item.queueRemoval.actor ? ` · actor \`@${item.queueRemoval.actor}\`` : ""}${item.queueRemoval.beforeCommitOid ? ` · commit \`${item.queueRemoval.beforeCommitOid}\`` : ""}${item.queueRemoval.beforeCommitParentOids?.length ? ` · parents \`${item.queueRemoval.beforeCommitParentOids.join(",")}\`` : ""}`,

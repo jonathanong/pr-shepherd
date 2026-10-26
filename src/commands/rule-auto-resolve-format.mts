@@ -75,9 +75,22 @@ function splitJoined(reason: string | undefined): string[] {
 export function ruleAutoResolveFromReport(
   report: ShepherdReport,
 ): RuleAutoResolveReport | undefined {
-  const threads = report.threads.autoResolved;
-  const minimized = report.comments.autoMinimized ?? [];
-  const errors = report.threads.autoResolveErrors;
+  return buildRuleAutoResolveReport({
+    threads: report.threads.autoResolved,
+    minimized: report.comments.autoMinimized ?? [],
+    errors: report.threads.autoResolveErrors,
+    errorReasons: report.threads.autoResolveErrorReasons ?? [],
+  });
+}
+
+/** The one report shape iterate and the aggregate summary both surface. */
+export function buildRuleAutoResolveReport(input: {
+  threads: AutoResolvedThread[];
+  minimized: AutoMinimizedItem[];
+  errors: string[];
+  errorReasons: string[];
+}): RuleAutoResolveReport | undefined {
+  const { threads, minimized, errors } = input;
   if (threads.length === 0 && minimized.length === 0 && errors.length === 0) return undefined;
   const comments = minimized.filter((item) => item.kind === "pr-comment").length;
   const reviewSummaries = minimized.filter((item) => item.kind === "review-summary").length;
@@ -87,7 +100,7 @@ export function ruleAutoResolveFromReport(
         ...threads.flatMap((thread) => splitJoined(thread.ruleReason)),
         ...minimized.flatMap((item) => splitJoined(item.ruleReason)),
       ])
-    : uniqueReasons(report.threads.autoResolveErrorReasons ?? []);
+    : uniqueReasons(input.errorReasons);
   const body =
     ruleAutoResolveBody({ threads: threads.length, comments, reviewSummaries }) ??
     `auto-resolve failed for ${plural(errors.length, "mutation")}`;

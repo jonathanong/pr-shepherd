@@ -1,0 +1,61 @@
+{
+  "description": "Native stack: the aggregate summary auto-minimized a bot notice on the lower layer; the layer is no longer routed for review work, and the lean layer row records what was minimized.",
+  "mode": "aggregate",
+  "args": ["stack", "https://github.com/owner/repo/pull/51", "--debounce", "0s"],
+  "expectedExitCode": 16,
+  "expectedNextAction": "shepherd",
+  "expectedReason": "actionable",
+  "aggregateSummary": {
+    "selection": { "kind": "stack", "anchor": 51, "stackNumber": 60, "stackSize": 2 },
+    "prs": [
+      {
+        "pr": 50,
+        "repo": "owner/repo",
+        "title": "Lower layer with a bot notice",
+        "url": "https://github.com/owner/repo/pull/50",
+        "action": "cancel",
+        "reasons": ["appears-ready"],
+        "readyReceipt": true,
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "lower",
+        "headRefOid": "c111111111111111111111111111111111111111",
+        "baseRefName": "main",
+        "stack": { "number": 60, "size": 2, "position": 1, "baseRefName": "main" },
+        "owned": true,
+        "review": { "comments": 1 },
+        "ruleAutoResolve": {
+          "summary": "minimized 1 comment (rule: coderabbit-progress)",
+          "minimized": [
+            {
+              "id": "IC_progress",
+              "kind": "pr-comment",
+              "url": "https://github.com/owner/repo/pull/50#issuecomment-9",
+              "ruleReason": "coderabbit-progress"
+            }
+          ]
+        }
+      },
+      {
+        "pr": 51,
+        "repo": "owner/repo",
+        "title": "Upper layer needs work",
+        "url": "https://github.com/owner/repo/pull/51",
+        "action": "triage",
+        "reasons": ["actionable-reviews"],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "upper",
+        "headRefOid": "c222222222222222222222222222222222222222",
+        "baseRefName": "lower",
+        "stack": { "number": 60, "size": 2, "position": 2, "baseRefName": "main" },
+        "owned": true,
+        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/51 --until-terminal",
+        "review": { "comments": 1, "actionable": 1 }
+      }
+    ]
+  },
+  "repository": { "owner": "owner", "name": "repo" }
+}

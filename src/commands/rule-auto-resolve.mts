@@ -1,6 +1,6 @@
 import type { BatchPartition } from "../classify/apply.mts";
 import { autoMinimizeComments, autoResolveThreads } from "../comments/resolve.mts";
-import type { AutoMinimizedItem, AutoResolvedThread, BatchPrData } from "../types.mts";
+import type { AutoMinimizedItem, AutoResolvedThread, ReviewThread } from "../types.mts";
 import { canGenerateGithubMutation } from "../github/mutation-policy.mts";
 import {
   decorateAutoResolveError,
@@ -18,6 +18,19 @@ export interface RuleAutoResolveApplied {
   autoMinimized: AutoMinimizedItem[];
   autoResolveErrors: string[];
   errorReasons: string[];
+}
+
+interface MinimizableItem {
+  id: string;
+  url?: string;
+  viewerCanMinimize?: boolean;
+}
+
+/** The part of a PR read the mutations need. A full batch and a compact summary both satisfy it. */
+export interface RuleAutoResolveBatch {
+  comments: readonly MinimizableItem[];
+  reviewSummaries: readonly MinimizableItem[];
+  reviewThreads: readonly ReviewThread[];
 }
 
 const EMPTY: RuleAutoResolveApplied = {
@@ -47,7 +60,7 @@ function decorateErrors(
 export async function applySuppressedRuleAutoResolve(input: {
   enabled: boolean;
   partition: BatchPartition;
-  batch: BatchPrData;
+  batch: RuleAutoResolveBatch;
 }): Promise<RuleAutoResolveApplied> {
   if (!input.enabled) {
     return {
@@ -57,10 +70,7 @@ export async function applySuppressedRuleAutoResolve(input: {
       reviewSummaryIds: input.partition.ruleAutoResolveReviewSummaryIds,
     };
   }
-  const canMinimize = <T extends { id: string; viewerCanMinimize?: boolean }>(
-    items: readonly T[],
-    id: string,
-  ): boolean =>
+  const canMinimize = (items: readonly MinimizableItem[], id: string): boolean =>
     canGenerateGithubMutation(items.find((item) => item.id === id)?.viewerCanMinimize, "minimize");
   const threadFor = (id: string) => input.batch.reviewThreads.find((thread) => thread.id === id);
   const commentIds = input.partition.ruleAutoResolveCommentIds.filter(

@@ -61,7 +61,7 @@ async function fetchSelectedPollSummary(
     selection: { kind: "prs", requested },
     // One explicit PR's failed read becomes a row; stack selections stay fail-closed.
     prs: await summarizeRowsIsolated(raw, failures, repo, opts, (pr) =>
-      summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister),
+      summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister, undefined, null, true),
     ),
   };
 }
@@ -151,7 +151,7 @@ async function fetchStackSummary(
     selection: { kind: "stack", anchor, stackNumber, stackSize },
     prs: await Promise.all(
       ordered.map((pr) =>
-        summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister, required, viewerLogin),
+        summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister, required, viewerLogin, true),
       ),
     ),
     ...(stackAncestry.length > 0 && { stackAncestry }),

@@ -12,6 +12,7 @@ import type { StackLayerView } from "./stack-layer-view.mts";
 import type { NextCheck } from "../types/next-check.mts";
 import { formatNextCheckLines } from "./next-check-format.mts";
 import { formatPrUrl } from "../pr-reference.mts";
+import { formatRuleAutoResolveLines } from "./rule-auto-resolve-lines.mts";
 
 export interface StackOverview {
   transport?: "rest";
@@ -87,6 +88,7 @@ function projectLayer(item: PollSummaryItem, stale: boolean): StackLayerView {
       (item.review?.actionable ?? 0) > 0 && { actionable: item.review?.actionable }),
     ...(item.checks?.incomplete && { checksIncomplete: true as const }),
     ...(item.review?.incomplete && { reviewIncomplete: true as const }),
+    ...(item.ruleAutoResolve && { ruleAutoResolve: item.ruleAutoResolve }),
     ...(removal && {
       queueRemoval: {
         reason: removal.reason,
@@ -184,6 +186,7 @@ function formatLayerLines(layer: StackLayerView, index: number, overview: StackO
   return [
     `- ${layer.url === formatPrUrl(overview.repo, layer.pr) ? `PR #${layer.pr}: ${layer.title}` : `[PR #${layer.pr}: ${layer.title}](${layer.url})`}${facts.length > 0 ? ` — ${facts.join(" · ")}` : ""}`,
     `  - ${details.join(" · ")}`,
+    ...formatRuleAutoResolveLines(layer.ruleAutoResolve),
     ...(layer.transport ? [`  - transport \`${layer.transport}\``] : []),
     ...(layer.transportUnavailable ?? []).map(
       ({ field, reason }) => `  - unavailable \`${field}\`: ${reason}`,

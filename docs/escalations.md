@@ -21,7 +21,7 @@ Any escalation from a tick with automatically selected review mutations keeps ev
 
 ## Stack-level outcomes
 
-Native-stack aggregate reconciliation (`stack`) is read-only and never mutates GitHub.
+Native-stack aggregate reconciliation (`stack`) mutates GitHub only through rule-driven [classification auto-resolve](actions.md#classification-auto-resolve).
 
 | Stack state                                                                                                                                                    | Result                                                     |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
