@@ -18,6 +18,10 @@ interface ThreadVisibility {
   toMarkSeen: ReviewThread[];
 }
 
+function isOrdinaryHuman(thread: ReviewThread, botUsernames: NormalizedBotUsernames): boolean {
+  return isHumanAuthor(thread) && !isConfiguredBotAuthor(thread, botUsernames);
+}
+
 function withEdited<T extends ReviewThread>(thread: T, edited: boolean): T {
   return edited ? { ...thread, edited: true } : thread;
 }
@@ -42,6 +46,52 @@ function classifyFirstLookThread(
   return { ...visible, firstLookStatus };
 }
 
+/** An unresolved, current thread whose author class makes it repeat while a mutation is authorized. */
+function repeatsAsActive(
+  thread: ReviewThread,
+  ended: boolean,
+  botUsernames: NormalizedBotUsernames,
+  policy: ResolveOtherHumanThreads,
+): boolean {
+  if (thread.isOutdated !== false || thread.isMinimized === true || ended) return false;
+  return (
+    isConfiguredBotAuthor(thread, botUsernames) ||
+    isViewerAuthoredHuman(thread, botUsernames) ||
+    (isOrdinaryHuman(thread, botUsernames) && policy === "always")
+  );
+}
+
+/** An unresolved thread that is resolution-only work: outdated, minimized or ended by Shepherd. */
+function isResolutionOnlyCandidate(
+  thread: ReviewThread,
+  ended: boolean,
+  botUsernames: NormalizedBotUsernames,
+  policy: ResolveOtherHumanThreads,
+): boolean {
+  if (!ended) return thread.isOutdated === true || thread.isMinimized === true;
+  if (!isOrdinaryHuman(thread, botUsernames)) return true;
+  return (
+    isViewerAuthoredHuman(thread, botUsernames) || shouldResolveOtherHumanThread(thread, policy)
+  );
+}
+
+/**
+ * Whether an unresolved thread with a known outdated state keeps returning every tick once seen,
+ * given an authorized mutation. The compact summary calls this so its count cannot drift from
+ * `classifyThreadVisibility`.
+ */
+export function unresolvedThreadRepeats(
+  thread: ReviewThread,
+  ended: boolean,
+  botUsernames: NormalizedBotUsernames,
+  policy: ResolveOtherHumanThreads,
+): boolean {
+  return (
+    repeatsAsActive(thread, ended, botUsernames, policy) ||
+    isResolutionOnlyCandidate(thread, ended, botUsernames, policy)
+  );
+}
+
 export function classifyThreadVisibility(
   threads: ReviewThread[],
   seenMap: Map<string, SeenMarker>,
@@ -51,8 +101,6 @@ export function classifyThreadVisibility(
 ): ThreadVisibility {
   const shouldRepeat = (thread: ReviewThread): boolean =>
     repeatableThreadIds?.has(thread.id) ?? true;
-  const isOrdinaryHuman = (thread: ReviewThread): boolean =>
-    isHumanAuthor(thread) && !isConfiguredBotAuthor(thread, botUsernames);
   const unknownStatusThreads = threads.filter(
     (thread) => thread.isResolved === undefined || thread.isOutdated === undefined,
   );
@@ -63,26 +111,20 @@ export function classifyThreadVisibility(
     .filter((t) => t.isOutdated === false && t.isMinimized !== true)
     .flatMap((t) => {
       if (threadEndedByShepherd(t)) return [];
-      const repeatAuthor =
-        isConfiguredBotAuthor(t, botUsernames) ||
-        isViewerAuthoredHuman(t, botUsernames) ||
-        (isOrdinaryHuman(t) && resolveOtherHumanThreads === "always");
-      if (repeatAuthor && shouldRepeat(t)) return [t];
+      if (repeatsAsActive(t, false, botUsernames, resolveOtherHumanThreads) && shouldRepeat(t))
+        return [t];
       const visible = classifyVisibleThread(t, seenMap);
       return visible ? [visible] : [];
     });
   const resolutionOnlyThreads = unresolvedThreads
-    .filter((t) => {
-      const endedByShepherd = threadEndedByShepherd(t);
-      if (endedByShepherd) {
-        if (!isOrdinaryHuman(t)) return true;
-        return (
-          isViewerAuthoredHuman(t, botUsernames) ||
-          shouldResolveOtherHumanThread(t, resolveOtherHumanThreads)
-        );
-      }
-      return t.isOutdated || t.isMinimized;
-    })
+    .filter((t) =>
+      isResolutionOnlyCandidate(
+        t,
+        threadEndedByShepherd(t),
+        botUsernames,
+        resolveOtherHumanThreads,
+      ),
+    )
     .flatMap((t) => {
       const visible = classifyVisibleThread(t, seenMap);
       if (visible) return [visible];

@@ -34,6 +34,7 @@ export const thread = (id: string, body: string, extra: Record<string, unknown> 
   id,
   isResolved: false,
   isOutdated: false,
+  viewerCanReply: true,
   viewerCanResolve: true,
   path: "src/a.mts",
   line: 3,
