@@ -68,18 +68,28 @@ describe("githubFetch request deadline", () => {
     expect(isTransportError(error)).toBe(true);
   });
 
-  it("bounds a body that stalls after the headers", async () => {
+  it("bounds a body that stalls after the headers inside the same call", async () => {
     const origin = await githubWire((_request, response) => {
       response.write("{");
     });
     cleanup.push(origin.close);
-    const response = await githubFetch(`${origin.origin}/slow-body`, undefined, 100);
-    const error = await response.text().then(
+    const error = await githubFetch(`${origin.origin}/slow-body`, undefined, 100).then(
       () => undefined,
       (err: unknown) => err,
     );
-    expect((error as Error).name).toBe("TimeoutError");
+    expect((error as NodeJS.ErrnoException).code).toBe("ETIMEDOUT");
     expect(isTransportError(error)).toBe(true);
+  });
+
+  it("returns an empty-bodied response as a fresh response", async () => {
+    const origin = await githubWire((_request, response) => {
+      response.statusCode = 204;
+      response.end();
+    });
+    cleanup.push(origin.close);
+    const response = await githubFetch(`${origin.origin}/empty`);
+    expect(response.status).toBe(204);
+    expect(await response.text()).toBe("");
   });
 
   it("keeps the caller's abort distinct from the deadline", async () => {

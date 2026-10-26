@@ -31,7 +31,7 @@ export async function githubFetch(
   const deadline = AbortSignal.timeout(timeoutMs);
   const signal = init?.signal ? AbortSignal.any([init.signal, deadline]) : deadline;
   try {
-    return await routedFetch(input, { ...init, signal });
+    return await bufferBody(await routedFetch(input, { ...init, signal }));
   } catch (err) {
     if (deadline.aborted && !init?.signal?.aborted) {
       const method = init?.method ?? "GET";
@@ -45,6 +45,21 @@ export async function githubFetch(
     }
     throw err;
   }
+}
+
+/**
+ * Read a streamed body inside the deadline and the callers' transport retry, so a
+ * body that stalls after the headers is retried like a stalled request. Callers
+ * read every body in full anyway.
+ */
+async function bufferBody(response: Response): Promise<Response> {
+  if (typeof response.body?.getReader !== "function") return response;
+  const bytes = await response.arrayBuffer();
+  return new Response(bytes.byteLength > 0 ? bytes : null, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
 }
 
 async function routedFetch(input: string | URL, init: RequestInit): Promise<Response> {
