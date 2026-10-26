@@ -14,7 +14,8 @@ import type { RepoInfo } from "./client.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import { summarizePollSummaryChecks } from "./poll-summary-checks.mts";
 import { evaluatePollSummaryReview } from "./poll-summary-review.mts";
-import { currentQueueRemovalEvent } from "./poll-summary-queue-removal.mts";
+import { currentQueueRemovalEvent, projectQueueRemoval } from "./poll-summary-queue-removal.mts";
+import { applyUnseenCheckAnnotations } from "./poll-summary-annotations.mts";
 import { isCurrentSummaryReady } from "./poll-summary-readiness.mts";
 import { applyOpenCheckBlockers } from "./poll-summary-check-blockers.mts";
 import { normalizePollSummaryState, routePollSummary } from "./poll-summary-route.mts";
@@ -69,6 +70,14 @@ export async function summarizePollSummaryPr(
     action = "wait";
     reasons = ["blocking-reviewer-in-progress"];
   }
+  ({ action, reasons } = await applyUnseenCheckAnnotations(
+    raw,
+    repo,
+    { action, reasons },
+    checks,
+    seen,
+    required,
+  ));
   const appearsReady = reasons.includes("appears-ready");
   if (opts.stackPrNumber === undefined) {
     const readyDelaySeconds =
@@ -176,19 +185,5 @@ export async function summarizePollSummaryPr(
       ? pollCommandFields(repoName, raw.number, raw.isDraft, opts)
       : {}),
     ...(blocked.pollProbe ? { pollProbe: true as const } : {}),
-  };
-}
-
-function projectQueueRemoval(
-  removal: NonNullable<ReturnType<typeof currentQueueRemovalEvent>>,
-): PollSummaryItem["queueRemoval"] {
-  const removalTime = Date.parse(removal.createdAt);
-  const parents = removal.beforeCommit?.parents?.nodes.map((parent) => parent.oid) ?? [];
-  return {
-    reason: removal.reason,
-    createdAtUnix: Math.floor(removalTime / 1000),
-    ...(removal.actor?.login && { actor: removal.actor.login }),
-    ...(removal.beforeCommit?.oid && { beforeCommitOid: removal.beforeCommit.oid }),
-    beforeCommitParentOids: parents,
   };
 }

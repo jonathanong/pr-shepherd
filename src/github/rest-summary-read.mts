@@ -2,7 +2,7 @@ import type { BatchPrData } from "../types.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import type { RestPull } from "./rest-pr-core.mts";
 import type { readRestFeedback } from "./rest-feedback-read.mts";
-import type { readRestCommitChecks } from "./rest-check-read.mts";
+import type { readRestCommitChecks, RestWorkflowRun } from "./rest-check-read.mts";
 import type { readRestBranchRules } from "./rest-rules-read.mts";
 export function restSummary(
   data: BatchPrData,
@@ -122,8 +122,9 @@ export function restSummary(
               nodes: checks.suites.map((suite) => ({
                 status: suite.status.toUpperCase(),
                 conclusion: suite.conclusion?.toUpperCase() ?? null,
-                workflowRun:
-                  checks.workflowRuns.find((run) => run.check_suite_id === suite.id) ?? null,
+                workflowRun: restSuiteWorkflowRun(
+                  checks.workflowRuns.find((run) => run.check_suite_id === suite.id),
+                ),
               })),
             },
           },
@@ -132,5 +133,16 @@ export function restSummary(
     },
     transport: "rest",
     transportUnavailable: data.transportUnavailable,
+  };
+}
+
+/** The GraphQL `workflowRun` shape, so summary readers see one suite format on either transport. */
+function restSuiteWorkflowRun(run: RestWorkflowRun | undefined) {
+  if (!run) return null;
+  return {
+    databaseId: run.id,
+    event: run.event,
+    url: run.html_url,
+    workflow: { name: run.name },
   };
 }

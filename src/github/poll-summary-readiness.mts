@@ -49,6 +49,7 @@ export function isCurrentSummaryReady(
     (queued || raw.mergeable === "MERGEABLE") &&
     (queued || !blockedStates.includes(raw.mergeStateStatus)) &&
     (checks.failing ?? 0) === 0 &&
+    (checks.annotated ?? 0) === 0 &&
     (sourceChecks.failing ?? 0) === 0 &&
     (sourceChecks.inProgress ?? 0) === 0 &&
     (checks.unreportedRequired?.length ?? 0) === 0 &&

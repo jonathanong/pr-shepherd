@@ -7,6 +7,13 @@ import type { RawSummaryPr } from "./poll-summary-raw.mts";
  * completion and stack reconciliation. Queue entry, queue checks, and GitHub's
  * computed merge state are checked separately: including them here would
  * invalidate a READY receipt merely because a ready PR entered the queue.
+ *
+ * Deliberately conservative: every comment, review and thread node and the ignored
+ * checks are hashed without applying classification rules. A rule-suppressed bot
+ * comment or an ignored-check change therefore invalidates a receipt, but a miss only
+ * costs one more one-PR session (`no-ready-receipt`), whereas a hash that skipped
+ * evidence could certify a state the one-PR check never examined. Do not narrow this
+ * to post-rule state unless the one-PR check hashes the same projection.
  */
 export function fingerprintRawSummaryPr(summary: RawSummaryPr): string | null {
   const raw = withoutHandoffFields(summary);

@@ -1,3 +1,4 @@
+import type { PollSummaryItem } from "../types.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import {
   forcePushUnix,
@@ -36,4 +37,16 @@ export function currentQueueRemovalEvent(raw: RawSummaryPr): QueueRemovalEvent |
     return null;
   }
   return removal;
+}
+
+export function projectQueueRemoval(removal: QueueRemovalEvent): PollSummaryItem["queueRemoval"] {
+  const removalTime = Date.parse(removal.createdAt);
+  const parents = removal.beforeCommit?.parents?.nodes.map((parent) => parent.oid) ?? [];
+  return {
+    reason: removal.reason,
+    createdAtUnix: Math.floor(removalTime / 1000),
+    ...(removal.actor?.login && { actor: removal.actor.login }),
+    ...(removal.beforeCommit?.oid && { beforeCommitOid: removal.beforeCommit.oid }),
+    beforeCommitParentOids: parents,
+  };
 }

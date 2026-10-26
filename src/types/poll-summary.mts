@@ -14,6 +14,11 @@ export interface PollSummaryChecks {
   ignored?: number;
   superseded?: number;
   incomplete?: true;
+  /**
+   * Non-SUCCESS checks with annotations the one-PR check has not shown yet (or that could not be
+   * read). Only set on a row that would otherwise claim ready; it routes to `triage`.
+   */
+  annotated?: number;
   /** Required contexts with no check run and no status context. Omitted when empty. */
   unreportedRequired?: string[];
   /** A relevant Actions workflow suite has not completed. */
