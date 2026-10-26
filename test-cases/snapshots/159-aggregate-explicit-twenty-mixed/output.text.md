@@ -1,0 +1,125 @@
+# Poll summary [ACTIONABLE]
+
+**repo** `owner/repo` · **selection** PRs #201, #202, #203, #204, #205, #206, #207, #208, #209, #210, #211, #212, #213, #214, #215, #216, #217, #218, #219, #220 · **mode** `summary`
+
+## Pull requests
+
+- [PR #201: Add search index](https://github.com/owner/repo/pull/201) [WAIT]
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN`
+  - head `branch-201` at `0000000000000000000000000000000000000201` · base `main`
+  - checks: 3 passing, 2 in progress
+  - reasons: `pending-or-unknown`
+  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/201 --until-terminal`
+- [PR #202: Upgrade lockfile](https://github.com/owner/repo/pull/202) [WAIT]
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN`
+  - head `branch-202` at `0000000000000000000000000000000000000202` · base `main`
+  - checks: 3 passing, 2 in progress
+  - reasons: `pending-or-unknown`
+  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/202 --until-terminal`
+- [PR #203: Refactor billing client](https://github.com/owner/repo/pull/203) [WAIT]
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN`
+  - head `branch-203` at `0000000000000000000000000000000000000203` · base `main`
+  - checks: 3 passing, 2 in progress
+  - reasons: `pending-or-unknown`
+  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/203 --until-terminal`
+- [PR #204: Cache warmup job](https://github.com/owner/repo/pull/204) [WAIT]
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN`
+  - head `branch-204` at `0000000000000000000000000000000000000204` · base `main`
+  - checks: 3 passing, 2 in progress
+  - reasons: `pending-or-unknown`
+  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/204 --until-terminal`
+- [PR #205: Docs navigation](https://github.com/owner/repo/pull/205) [WAIT]
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN`
+  - head `branch-205` at `0000000000000000000000000000000000000205` · base `main`
+  - checks: 3 passing, 2 in progress
+  - reasons: `pending-or-unknown`
+  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/205 --until-terminal`
+- [PR #206: Rate limit headers](https://github.com/owner/repo/pull/206) [WAIT]
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN`
+  - head `branch-206` at `0000000000000000000000000000000000000206` · base `main`
+  - checks: 3 passing, 2 in progress
+  - reasons: `pending-or-unknown`
+  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/206 --until-terminal`
+- [PR #207: Settings page copy](https://github.com/owner/repo/pull/207) [WAIT]
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN`
+  - head `branch-207` at `0000000000000000000000000000000000000207` · base `main`
+  - checks: 5 passing
+  - reasons: `ready-delay`
+  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/207 --until-terminal`
+- [PR #208: Draft: onboarding flow](https://github.com/owner/repo/pull/208) [WAIT]
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · flags `draft`
+  - head `branch-208` at `0000000000000000000000000000000000000208` · base `main`
+  - checks: 1 passing, 3 in progress
+  - reasons: `pending-or-unknown`
+  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/208 --until-terminal`
+- [PR #209: Fix flaky &lt;upload&gt; test](https://github.com/owner/repo/pull/209) [TRIAGE]
+  - state `OPEN` · mergeable `MERGEABLE` · merge `UNSTABLE`
+  - head `branch-209` at `0000000000000000000000000000000000000209` · base `main`
+  - checks: 4 passing, 1 failing
+  - reasons: `failing-checks`
+  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/209 --until-terminal`
+- [PR #210: Bump parser &amp; lexer](https://github.com/owner/repo/pull/210) [TRIAGE]
+  - state `OPEN` · mergeable `MERGEABLE` · merge `UNSTABLE`
+  - head `branch-210` at `0000000000000000000000000000000000000210` · base `main`
+  - checks: 2 passing, 2 failing
+  - reasons: `failing-checks`
+  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/210 --until-terminal`
+- [PR #211: Paginate audit log](https://github.com/owner/repo/pull/211) [TRIAGE]
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN`
+  - head `branch-211` at `0000000000000000000000000000000000000211` · base `main`
+  - checks: 5 passing
+  - review: 2 comments, 1 thread, 3 actionable
+  - reasons: `review-work`
+  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/211 --until-terminal`
+- [PR #212: Rename config keys](https://github.com/owner/repo/pull/212) [TRIAGE]
+  - state `OPEN` · mergeable `CONFLICTING` · merge `DIRTY`
+  - head `branch-212` at `0000000000000000000000000000000000000212` · base `main`
+  - checks: 5 passing
+  - reasons: `merge-conflicts`
+  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/212 --until-terminal`
+- [PR #213: Draft: telemetry opt-out](https://github.com/owner/repo/pull/213) [MARK_READY]
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · flags `draft`
+  - head `branch-213` at `0000000000000000000000000000000000000213` · base `main`
+  - checks: 6 passing
+  - reasons: `draft-appears-ready`
+  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/213 --until-terminal`
+- [PR #214: Merged: fix typo](https://github.com/owner/repo/pull/214) [CANCEL]
+  - state `MERGED` · mergeable `MERGEABLE` · merge `CLEAN`
+  - head `branch-214` at `0000000000000000000000000000000000000214` · base `main`
+  - reasons: `merged`
+- [PR #215: Merged: add changelog](https://github.com/owner/repo/pull/215) [CANCEL]
+  - state `MERGED` · mergeable `MERGEABLE` · merge `CLEAN`
+  - head `branch-215` at `0000000000000000000000000000000000000215` · base `main`
+  - reasons: `merged`
+- [PR #216: Closed: abandoned spike](https://github.com/owner/repo/pull/216) [CANCEL]
+  - state `CLOSED` · mergeable `MERGEABLE` · merge `CLEAN`
+  - head `branch-216` at `0000000000000000000000000000000000000216` · base `main`
+  - reasons: `closed`
+- [PR #217: Tighten CSP header](https://github.com/owner/repo/pull/217) [CANCEL]
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · Shepherd READY completion `verified`
+  - head `branch-217` at `0000000000000000000000000000000000000217` · base `main`
+  - checks: 6 passing
+  - reasons: `ready-delay-elapsed`
+- [PR #218: Draft: external SSO](https://github.com/owner/repo/pull/218) [ESCALATE]
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN` · flags `draft`
+  - head `branch-218` at `0000000000000000000000000000000000000218` · base `main`
+  - checks: 6 passing
+  - reasons: `mark-ready-authorization-required`
+- [PR #219: Queue metrics](https://github.com/owner/repo/pull/219) [WAIT]
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN`
+  - head `branch-219` at `0000000000000000000000000000000000000219` · base `main`
+  - checks: 1 passing, 4 in progress
+  - reasons: `pending-or-unknown`
+  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/219 --until-terminal`
+- [PR #220: Retry backoff](https://github.com/owner/repo/pull/220) [WAIT]
+  - state `OPEN` · mergeable `MERGEABLE` · merge `CLEAN`
+  - head `branch-220` at `0000000000000000000000000000000000000220` · base `main`
+  - checks: 1 passing, 4 in progress
+  - reasons: `pending-or-unknown`
+  - pollCommand: `pr-shepherd https://github.com/owner/repo/pull/220 --until-terminal`
+
+## Instructions
+
+1. Choose each non-WAIT, non-CANCEL row that can proceed independently and run or delegate its exact `pollCommand`.
+2. Follow each selected one-PR poll's `## Instructions` until it returns `CANCEL` or `ESCALATE`.
+3. Run this aggregate poll again after selected work completes; one row's `ESCALATE` does not stop work on other rows.
