@@ -25,4 +25,4 @@ nextAction: shepherd
 3. Run `pr-shepherd https://github.com/vouchington/vouchington/pull/2569 --until-terminal`.
 4. Run `pr-shepherd https://github.com/vouchington/vouchington/pull/2627 --until-terminal`.
 5. Run `pr-shepherd https://github.com/vouchington/vouchington/pull/2629 --until-terminal`.
-6. After the selected one-PR sessions, rerun this same `stack` command.
+6. After the selected one-PR sessions, rerun `pr-shepherd stack https://github.com/vouchington/vouchington/pull/2547 --until-terminal`. Keep watching until every layer is terminal.

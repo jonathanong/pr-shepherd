@@ -140,6 +140,10 @@ function withoutPollingCadence(step: string): string {
   return step
     .replace(/ Recheck(?: them)? at the configured polling cadence\./g, "")
     .replace(
+      /Do not end the turn while any selected row is non-terminal: /g,
+      "Keep watching every non-terminal selected row through the wake-up below: ",
+    )
+    .replace(
       "rerun that command at the configured cadence to resume its UUID",
       "rerun that command after the wake-up below to resume its UUID",
     );

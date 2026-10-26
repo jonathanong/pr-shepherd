@@ -1,0 +1,27 @@
+# vouchington/vouchington stack #2622 — actionable
+
+anchor PR #2621 · 2 layers · mode `summary`
+nextAction: shepherd
+
+## Layers
+
+- PR #2620: ci(filters): require path filters to cover executed scripts — not mergeable (`review-work`) · owned
+  - OPEN · base `main` · 3 actionable
+  - transport `rest`
+  - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
+  - unavailable `viewerAuthorization`: REST does not expose viewer capability fields
+  - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
+  - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
+- PR #2621: fix(ci): make run-bounded own the command's output pipes — shepherded · mergeable · owned
+  - OPEN · base `ci/executed-script-path-coverage`
+  - transport `rest`
+  - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
+  - unavailable `viewerAuthorization`: REST does not expose viewer capability fields
+  - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
+  - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
+
+## Instructions
+
+1. Start or delegate concurrent one-PR sessions only for `owned` rows. Leave other layers untouched.
+2. Run `pr-shepherd https://github.com/vouchington/vouchington/pull/2620 --until-terminal`.
+3. After the selected one-PR sessions, rerun `pr-shepherd stack https://github.com/vouchington/vouchington/pull/2621 --until-terminal --merge --transport rest`. Keep watching until every layer is terminal.

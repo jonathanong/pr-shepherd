@@ -125,4 +125,4 @@ nextAction: shepherd
 2. Run `pr-shepherd https://github.com/owner/repo/pull/402 --until-terminal`.
 3. Run `pr-shepherd https://github.com/owner/repo/pull/403 --until-terminal`.
 4. PR #401 requires human action (mark-ready-authorization-required). Keep shepherding other PRs before the handoff.
-5. After the listed one-PR sessions, rerun this same `stack` command. Stop for the human handoff only when no autonomous shepherding remains.
+5. After the listed one-PR sessions, rerun `pr-shepherd stack https://github.com/owner/repo/pull/403 --until-terminal`. Stop for the human handoff only when no autonomous shepherding remains.

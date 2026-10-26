@@ -46,6 +46,22 @@ describe("aggregate tick", () => {
     expect(result.instructions![1]).toMatch(/^2\. End this turn now/);
   });
 
+  it("replaces the keep-watching sentence with the wake-up wording so steps never contradict", async () => {
+    m.runPollSummary.mockResolvedValue(
+      summary({
+        instructions: [
+          "1. Run `cmd` again. Do not end the turn while any selected row is non-terminal: a poll finishes only that row.",
+        ],
+      }),
+    );
+    const result = await runPollSummaryTick({} as never);
+    const text = result.instructions!.join("\n");
+    expect(text).not.toContain("Do not end the turn");
+    expect(text).toContain(
+      "Keep watching every non-terminal selected row through the wake-up below: a poll",
+    );
+  });
+
   it("holds the wake-up until the quota warning's interval", async () => {
     m.runPollSummary.mockResolvedValue(
       summary({

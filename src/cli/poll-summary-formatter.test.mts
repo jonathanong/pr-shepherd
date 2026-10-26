@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { PollSummaryItem, PollSummaryResult } from "../types.mts";
+import { withPollSummaryInstructions } from "../commands/poll-summary-instructions.mts";
 import { formatPollSummaryResult } from "./poll-summary-formatter.mts";
 
 function row(overrides: Partial<PollSummaryItem> = {}): PollSummaryItem {
@@ -152,6 +153,21 @@ describe("formatPollSummaryResult", () => {
     expect(text).toContain(
       `- PR #42 base \`parent\` at \`${"b".repeat(40)}\` differs from parent PR #41 head \`parent\` at \`${"a".repeat(40)}\`.`,
     );
+  });
+
+  it("prints the literal aggregate command and says not to end the turn while rows are non-terminal", () => {
+    const command =
+      "pr-shepherd https://github.com/o/r/pull/42 https://github.com/o/r/pull/43 --until-terminal";
+    for (const reason of ["actionable", "waiting", "timeout"] as const) {
+      const row_ = reason === "actionable" ? row({ action: "triage" }) : row({ action: "wait" });
+      const instructions = withPollSummaryInstructions(
+        result(row_, reason),
+        false,
+        command,
+      ).instructions!.join("\n");
+      expect(instructions).toContain(`Run \`${command}\` again`);
+      expect(instructions).toContain("Do not end the turn while any selected row is non-terminal");
+    }
   });
 
   it("tells one-shot and timed-out callers to recheck", () => {

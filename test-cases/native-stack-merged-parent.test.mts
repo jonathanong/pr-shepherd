@@ -22,7 +22,10 @@ it("shows lower review blockers before merging an individually ready upper layer
   expect(json.prs[1].mergeable).toBe(true);
   for (const output of [result.textOut, json.instructions.join("\n")]) {
     expect(output).toContain("pull/2620 --until-terminal");
-    expect(output).not.toContain("pull/2621 --until-terminal");
+    // The only 2621 command is the literal rerun of the `stack` command itself.
+    expect(output.replaceAll(/stack \S*pull\/2621 --until-terminal/g, "")).not.toContain(
+      "pull/2621 --until-terminal",
+    );
     expect(output).not.toContain("gh stack merge");
   }
 });

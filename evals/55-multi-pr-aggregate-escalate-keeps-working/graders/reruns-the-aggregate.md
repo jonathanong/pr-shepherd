@@ -5,8 +5,8 @@ weight: 1
 ---
 
 The plan reruns the aggregate command
-(`pr-shepherd https://github.com/owner/repo/pull/42 https://github.com/owner/repo/pull/43 --until-terminal`)
-after #43's selected work completes, rather than treating the escalated row as the
+(the literal `pr-shepherd <both PR URLs> --until-terminal ...` command printed in the
+summary's instructions) after #43's selected work completes, rather than treating the escalated row as the
 end of the loop.
 
 Failing responses omit the rerun, end by reporting the escalation as the final
