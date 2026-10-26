@@ -1,0 +1,44 @@
+{
+  "mode": "aggregate",
+  "description": "Explicit PR set keeps polling when one PR's summary read failed: that row is TRIAGE with the raw error and its one-PR pollCommand.",
+  "args": ["42", "43", "--debounce", "0s"],
+  "expectedReason": "actionable",
+  "expectedExitCode": 12,
+  "aggregateSummary": {
+    "selection": { "kind": "prs", "requested": [42, 43] },
+    "prs": [
+      {
+        "pr": 42,
+        "repo": "owner/repo",
+        "title": "Many check runs",
+        "url": "https://github.com/owner/repo/pull/42",
+        "action": "triage",
+        "reasons": ["summary-read-failed"],
+        "error": "GitHub REST GET /repos/owner/repo/commits/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/check-runs failed: pagination limit reached",
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "many-checks",
+        "headRefOid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "baseRefName": "main",
+        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/42 --until-terminal"
+      },
+      {
+        "pr": 43,
+        "repo": "owner/repo",
+        "title": "Draft follow-up",
+        "url": "https://github.com/owner/repo/pull/43",
+        "action": "wait",
+        "reasons": ["blocking-reviewer-in-progress"],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "follow-up",
+        "headRefOid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "baseRefName": "many-checks",
+        "isDraft": true,
+        "blockingReviewerInProgress": true
+      }
+    ]
+  }
+}

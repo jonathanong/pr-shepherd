@@ -58,6 +58,8 @@ export interface PollSummaryItem {
   /** Conservative routing hint; the selected one-PR poll makes the authoritative decision. */
   action: ShepherdAction;
   reasons: string[];
+  /** Raw message of the error that stopped this PR's summary read (`summary-read-failed`). */
+  error?: string;
   state: "OPEN" | "CLOSED" | "MERGED" | "UNKNOWN";
   mergeable: MergeableState;
   mergeStateStatus: MergeStateStatus;
