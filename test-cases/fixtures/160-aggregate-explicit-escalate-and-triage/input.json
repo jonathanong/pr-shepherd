@@ -1,0 +1,43 @@
+{
+  "mode": "aggregate",
+  "description": "Explicit PR set renders one escalated row beside an independent TRIAGE row; the escalation must not stop the other row's work.",
+  "args": ["42", "43", "--debounce", "0s"],
+  "expectedReason": "actionable",
+  "expectedExitCode": 13,
+  "aggregateSummary": {
+    "selection": { "kind": "prs", "requested": [42, 43] },
+    "prs": [
+      {
+        "pr": 42,
+        "repo": "owner/repo",
+        "title": "Rework retry policy",
+        "url": "https://github.com/owner/repo/pull/42",
+        "action": "escalate",
+        "reasons": ["triage-thrash"],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "UNSTABLE",
+        "headRefName": "retry-policy",
+        "headRefOid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "baseRefName": "main"
+      },
+      {
+        "pr": 43,
+        "repo": "owner/repo",
+        "title": "Fix flaky CI",
+        "url": "https://github.com/owner/repo/pull/43",
+        "action": "triage",
+        "reasons": ["failing-checks"],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "UNSTABLE",
+        "headRefName": "fix-ci",
+        "headRefOid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "baseRefName": "main",
+        "checks": { "passing": 2, "failing": 1 },
+        "owned": true,
+        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/43 --until-terminal"
+      }
+    ]
+  }
+}

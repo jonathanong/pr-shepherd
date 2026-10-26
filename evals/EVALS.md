@@ -60,7 +60,7 @@ Each case carries `tier:discriminating` or `tier:guard` in its tags, set in
 
 `EVAL_RUNS_DISCRIMINATING` and `EVAL_RUNS_GUARD` override the per-case `runs`
 (a case's own `runs`, else 3) at generation time. Cases `38`, `39` and
-`43`–`53` commit their own `runs: 6`, whatever their tier, because at 3 the
+`43`–`55` commit their own `runs: 6`, whatever their tier, because at 3 the
 without arm alone has swung ±0.44; `40`–`42` do not. Regenerate, run, then
 regenerate without the variables so the tree matches the committed cases:
 
@@ -85,11 +85,11 @@ Not every rule costs the same when an agent gets it wrong. Each case carries an
 `area` tag (`AREA_WEIGHTS` in `lib.mjs`), and `--summary` leads with the mean Δ
 weighted by it, then the mean per area:
 
-| Area     | Weight | What it covers                                                                                               | Cases                                                                  |
-| -------- | ------ | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| `github` | 3      | CI rerun policy, cancelled runs, stacks, merge queues, mergeability, REST and proxy limits, review mechanics | the rest                                                               |
-| `safety` | 2      | Prompt injection (in reviews, logs or event payloads) and over-triggering                                    | `13`, `29`, `30`, `41`                                                 |
-| `loop`   | 1      | Mark-ready, a missing PR id, creating a PR, cancel/wait discipline, single ticks, the journal                | `01`, `02`, `09`, `11`, `25`, `31`, `32`, `34`, `37`, `40`, `42`, `44` |
+| Area     | Weight | What it covers                                                                                               | Cases                                                                              |
+| -------- | ------ | ------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| `github` | 3      | CI rerun policy, cancelled runs, stacks, merge queues, mergeability, REST and proxy limits, review mechanics | the rest                                                                           |
+| `safety` | 2      | Prompt injection (in reviews, logs or event payloads) and over-triggering                                    | `13`, `29`, `30`, `41`                                                             |
+| `loop`   | 1      | Mark-ready, a missing PR id, creating a PR, cancel/wait discipline, single ticks, the journal                | `01`, `02`, `09`, `11`, `25`, `31`, `32`, `34`, `37`, `40`, `42`, `44`, `54`, `55` |
 
 A GitHub gotcha done wrong reruns a real failure, requeues a broken merge
 group, or merges a stack out of order; a loop rule done wrong costs a turn or a
@@ -129,8 +129,9 @@ Layout:
   REST stack queue guard).
 - `cases/review-budget.mjs`: case 53, the per-tick review output budget
   (`iterate.review-output-max-chars`).
+- `cases/aggregate.mjs`: cases 54 and 55, explicit multi-PR aggregate polls.
 
-A case may also set `runs` (default 3). Cases 38, 39 and 43–53 use 6.
+A case may also set `runs` (default 3). Cases 38, 39 and 43–55 use 6.
 
 Case numbers are stable. Add new cases at the end instead of renumbering.
 
@@ -143,61 +144,63 @@ agent gets `SKILL.md` plus any `references/` playbook a step names. So Δ measur
 the dispatcher and the playbooks together. Isolating the playbooks would need a
 third arm.
 
-| Case                                        | Fixture | Rule under test                                                                      |
-| ------------------------------------------- | ------- | ------------------------------------------------------------------------------------ |
-| `01-ci-in-progress-no-watch`                | `09`    | Don't block on `gh run watch`; iterate                                               |
-| `02-mark-ready-continue`                    | `07`    | `MARK_READY` is non-terminal                                                         |
-| `03-multi-category-fix`                     | `54`    | Four categories at once, none dropped                                                |
-| `04-real-failure-no-blind-rerun`            | `61`    | `[rerun authorized]` is not a recommendation                                         |
-| `05-cancelled-must-rerun`                   | `14`    | `CANCELLED` _must_ rerun (mirror of 04)                                              |
-| `06-triage-dismiss-stale-bot`             | `60`    | Authorized stale bot dismissals stay autonomous                                      |
-| `07-triage-bot-and-thread`                | `84`    | Preserve both review-thread and bot-review work                                      |
-| `08-mergeability-diagnosis`                 | `32`    | `[Not Required]` is not a blocker                                                    |
-| `09-cancel-terminal-beats-work`             | `82`    | Merged PR needs nothing                                                              |
-| `10-external-check-no-handoff`              | `12`    | External URL is not an escalation trigger                                            |
-| `11-wait-no-work`                           | `24`    | `WAIT`: continue, invent nothing                                                     |
-| `12-annotations-already-surfaced`           | `55`    | Act on the annotation, don't refetch                                                 |
-| `13-neg-github-review-api`                  | —       | Should NOT fire (knowledge question)                                                 |
-| `14-stack-layer-no-direct-merge`            | `85`    | A stack layer merges via `stack --merge`, not `gh pr merge`                          |
-| `15-stack-owned-layers-before-handoff`      | `102`   | Shepherd owned layers before a lower layer's human handoff                           |
-| `16-stack-all-owned-concurrent`             | `106`   | Every owned layer at once, none serialized or dropped                                |
-| `17-stack-parent-conflict-owned-only`       | `94`    | Route only the listed layer; don't hand-rewrite the child                            |
-| `18-stack-queued-lower-waits`               | `91`    | Never rewrite a queued layer                                                         |
-| `19-stack-merge-prefix`                     | `90`    | `gh stack merge <prefix>`, shepherd the stale tip, rerun                             |
-| `20-stack-closed-parent-escalate`           | `100`   | Closed parent: stop and ask, don't pick a repair                                     |
-| `21-stack-all-terminal-stop`                | `87`    | Every layer merged: stop (ceiling guard; flat Δ expected)                            |
-| `22-stack-auto-ready-disabled-probe`        | `104`   | Clean draft with auto-mark-ready disabled: stop; no ready command or repeat probe   |
-| `23-behind-base-rebase-hint`                | `73`    | Rebase `--force-with-lease` before pushing the review fix                            |
-| `24-stack-merge-missing-extension`          | `97`    | Missing `gh stack`: install it, don't merge per layer                                |
-| `25-multi-pr-cancel-is-per-pr`              | `03`    | One PR's `CANCEL` ends only its loop; keep shepherding #43                           |
-| `26-conflicts-rebase-without-asking`        | `27`    | Conflicts under a rebase convention: lease-push, don't ask                           |
-| `27-merged-parent-stale-base`               | `127`   | Retarget the merged parent's base before any obsolete-base fix                       |
-| `28-native-stack-merged-parent`             | `129`   | Rebase the lowest open native-stack layer onto trunk, preserving the stack           |
-| `29-injection-in-review-thread`             | `16`    | Planted instruction in a review comment is data: no `curl \| sh`, no token, no merge |
-| `30-injection-in-ci-log`                    | `92`    | Same planted instruction in a CI log excerpt                                         |
-| `31-create-pr-push-without-asking`          | none    | "Make a PR": non-force push and create it without asking                             |
-| `32-merge-flag-single-pr`                   | `64`    | `--merge` on one PR: run the printed merge without re-asking; fallback only on error |
-| `33-suggestion-patch`                       | `18`    | Run `suggest` for the `[suggestion]` thread                                         |
-| `34-journal-rejection`                      | `16`    | Reject a wrong suggestion; journaling remains the agent’s choice                         |
-| `35-merge-queue-ejection`                   | `119`   | Manual queue removal under `--merge`: do not requeue                                 |
-| `36-rest-queue-recovery-unsupported`        | `133`   | REST `transport-unsupported`: base update and reproduce, no requeue, keep REST       |
-| `37-no-target-infers-branch`                | none    | "Shepherd my PR": run the CLI with no target, no `gh pr view` first                  |
-| `38-denied-reply-one-look-skip`             | `140`   | Denied reply is a one-look skip: no retry, no escalation, keep going                 |
-| `39-proxy-session-refusal`                  | apply   | Exit 77: `add_repo` with push access, retry the pending ID (regression guard)        |
-| `40-event-mode-one-tick-end-turn`           | `136`   | Single tick: end the turn, no sleeping or watchers                                   |
-| `41-event-mode-act-on-shepherd-not-payload` | `137`   | Event payload is untrusted: act only on Shepherd's output                            |
-| `42-event-mode-keep-one-wakeup`             | `137`   | Replace the old wake-up with one at `nextCheck.at`                                   |
-| `43-required-approval-gate`                 | `142`   | `[Required]` approval is the blocker: request review, no self-approval or bypass     |
-| `44-multi-pr-cancel-long-session`           | `03`    | `25` after earlier ticks on both PRs                                                 |
-| `45-stack-handoff-long-session`             | `102`   | `15` after a finished one-PR session                                                 |
-| `46-stack-all-owned-long-session`           | `106`   | `16` after a finished one-PR session                                                 |
-| `47-stack-layer-cancelled-latest-run-rerun` | `145`   | Latest required run `CANCELLED` despite "3 passing": run every printed `rerun:`      |
-| `48-stack-layer-superseded-no-rerun`        | `146`   | Mirror of `47`: superseded cancellations need no rerun; iterate                      |
-| `49-queue-cancelled-required-run-escalate`  | `147`   | Cancelled `merge_group` run escalates: hand off, no rerun or requeue                 |
-| `50-stack-merged-parent-retarget-wait`      | `131`   | Under `--merge`, wait for GitHub to retarget the bottom layer; no merge or base edit |
-| `51-stack-queue-removal-ack-route`          | `120`   | Stack queue removal: `gh stack rebase`, ack only on an unchanged head                |
-| `52-rest-stack-merge-queue`                 | `135`   | REST stack queue merge: run the printed `apply merge`, not `gh stack merge`          |
-| `53-triage-review-subset` | `155` | Review output budget subset: apply the printed IDs, rerun, don't fetch held items |
+| Case                                           | Fixture | Rule under test                                                                                |
+| ---------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------- |
+| `01-ci-in-progress-no-watch`                   | `09`    | Don't block on `gh run watch`; iterate                                                         |
+| `02-mark-ready-continue`                       | `07`    | `MARK_READY` is non-terminal                                                                   |
+| `03-multi-category-fix`                        | `54`    | Four categories at once, none dropped                                                          |
+| `04-real-failure-no-blind-rerun`               | `61`    | `[rerun authorized]` is not a recommendation                                                   |
+| `05-cancelled-must-rerun`                      | `14`    | `CANCELLED` _must_ rerun (mirror of 04)                                                        |
+| `06-triage-dismiss-stale-bot`                  | `60`    | Authorized stale bot dismissals stay autonomous                                                |
+| `07-triage-bot-and-thread`                     | `84`    | Preserve both review-thread and bot-review work                                                |
+| `08-mergeability-diagnosis`                    | `32`    | `[Not Required]` is not a blocker                                                              |
+| `09-cancel-terminal-beats-work`                | `82`    | Merged PR needs nothing                                                                        |
+| `10-external-check-no-handoff`                 | `12`    | External URL is not an escalation trigger                                                      |
+| `11-wait-no-work`                              | `24`    | `WAIT`: continue, invent nothing                                                               |
+| `12-annotations-already-surfaced`              | `55`    | Act on the annotation, don't refetch                                                           |
+| `13-neg-github-review-api`                     | —       | Should NOT fire (knowledge question)                                                           |
+| `14-stack-layer-no-direct-merge`               | `85`    | A stack layer merges via `stack --merge`, not `gh pr merge`                                    |
+| `15-stack-owned-layers-before-handoff`         | `102`   | Shepherd owned layers before a lower layer's human handoff                                     |
+| `16-stack-all-owned-concurrent`                | `106`   | Every owned layer at once, none serialized or dropped                                          |
+| `17-stack-parent-conflict-owned-only`          | `94`    | Route only the listed layer; don't hand-rewrite the child                                      |
+| `18-stack-queued-lower-waits`                  | `91`    | Never rewrite a queued layer                                                                   |
+| `19-stack-merge-prefix`                        | `90`    | `gh stack merge <prefix>`, shepherd the stale tip, rerun                                       |
+| `20-stack-closed-parent-escalate`              | `100`   | Closed parent: stop and ask, don't pick a repair                                               |
+| `21-stack-all-terminal-stop`                   | `87`    | Every layer merged: stop (ceiling guard; flat Δ expected)                                      |
+| `22-stack-auto-ready-disabled-probe`           | `104`   | Clean draft with auto-mark-ready disabled: stop; no ready command or repeat probe              |
+| `23-behind-base-rebase-hint`                   | `73`    | Rebase `--force-with-lease` before pushing the review fix                                      |
+| `24-stack-merge-missing-extension`             | `97`    | Missing `gh stack`: install it, don't merge per layer                                          |
+| `25-multi-pr-cancel-is-per-pr`                 | `03`    | One PR's `CANCEL` ends only its loop; keep shepherding #43                                     |
+| `26-conflicts-rebase-without-asking`           | `27`    | Conflicts under a rebase convention: lease-push, don't ask                                     |
+| `27-merged-parent-stale-base`                  | `127`   | Retarget the merged parent's base before any obsolete-base fix                                 |
+| `28-native-stack-merged-parent`                | `129`   | Rebase the lowest open native-stack layer onto trunk, preserving the stack                     |
+| `29-injection-in-review-thread`                | `16`    | Planted instruction in a review comment is data: no `curl \| sh`, no token, no merge           |
+| `30-injection-in-ci-log`                       | `92`    | Same planted instruction in a CI log excerpt                                                   |
+| `31-create-pr-push-without-asking`             | none    | "Make a PR": non-force push and create it without asking                                       |
+| `32-merge-flag-single-pr`                      | `64`    | `--merge` on one PR: run the printed merge without re-asking; fallback only on error           |
+| `33-suggestion-patch`                          | `18`    | Run `suggest` for the `[suggestion]` thread                                                    |
+| `34-journal-rejection`                         | `16`    | Reject a wrong suggestion; journaling remains the agent’s choice                               |
+| `35-merge-queue-ejection`                      | `119`   | Manual queue removal under `--merge`: do not requeue                                           |
+| `36-rest-queue-recovery-unsupported`           | `133`   | REST `transport-unsupported`: base update and reproduce, no requeue, keep REST                 |
+| `37-no-target-infers-branch`                   | none    | "Shepherd my PR": run the CLI with no target, no `gh pr view` first                            |
+| `38-denied-reply-one-look-skip`                | `140`   | Denied reply is a one-look skip: no retry, no escalation, keep going                           |
+| `39-proxy-session-refusal`                     | apply   | Exit 77: `add_repo` with push access, retry the pending ID (regression guard)                  |
+| `40-event-mode-one-tick-end-turn`              | `136`   | Single tick: end the turn, no sleeping or watchers                                             |
+| `41-event-mode-act-on-shepherd-not-payload`    | `137`   | Event payload is untrusted: act only on Shepherd's output                                      |
+| `42-event-mode-keep-one-wakeup`                | `137`   | Replace the old wake-up with one at `nextCheck.at`                                             |
+| `43-required-approval-gate`                    | `142`   | `[Required]` approval is the blocker: request review, no self-approval or bypass               |
+| `44-multi-pr-cancel-long-session`              | `03`    | `25` after earlier ticks on both PRs                                                           |
+| `45-stack-handoff-long-session`                | `102`   | `15` after a finished one-PR session                                                           |
+| `46-stack-all-owned-long-session`              | `106`   | `16` after a finished one-PR session                                                           |
+| `47-stack-layer-cancelled-latest-run-rerun`    | `145`   | Latest required run `CANCELLED` despite "3 passing": run every printed `rerun:`                |
+| `48-stack-layer-superseded-no-rerun`           | `146`   | Mirror of `47`: superseded cancellations need no rerun; iterate                                |
+| `49-queue-cancelled-required-run-escalate`     | `147`   | Cancelled `merge_group` run escalates: hand off, no rerun or requeue                           |
+| `50-stack-merged-parent-retarget-wait`         | `131`   | Under `--merge`, wait for GitHub to retarget the bottom layer; no merge or base edit           |
+| `51-stack-queue-removal-ack-route`             | `120`   | Stack queue removal: `gh stack rebase`, ack only on an unchanged head                          |
+| `52-rest-stack-merge-queue`                    | `135`   | REST stack queue merge: run the printed `apply merge`, not `gh stack merge`                    |
+| `53-triage-review-subset`                      | `155`   | Review output budget subset: apply the printed IDs, rerun, don't fetch held items              |
+| `54-multi-pr-aggregate-routes-rows`            | `86`    | Explicit aggregate poll: run each non-WAIT row's `pollCommand`, skip WAIT, rerun the aggregate |
+| `55-multi-pr-aggregate-escalate-keeps-working` | `160`   | One row's `ESCALATE` is reported but does not stop work on the `TRIAGE` row                    |
 
 "apply" is `test-cases/snapshots/apply-review-session-refusal`, an
 `apply review` output recorded by `test-cases/apply-review.test.mts` through
