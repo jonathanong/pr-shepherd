@@ -1,4 +1,6 @@
 import { classifyChecks } from "../checks/classify.mts";
+import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
+import { startupFailureChecksFromSuites } from "./batch-parse-suites.mts";
 import type { CheckRun, PollSummaryChecks } from "../types.mts";
 import { parseCreatedAt } from "./batch-parser-helpers.mts";
 import type { RawCheckRollup, RawSummaryPr } from "./poll-summary-raw.mts";
@@ -25,6 +27,11 @@ export function summarizePollSummaryChecks(
   if (rollups.some(({ rollup }) => rollup.contexts.pageInfo.hasPreviousPage)) {
     summary.incomplete = true;
   }
+  // The first 50 check suites are all the summary reads. The one-PR check lists the
+  // remaining workflow runs for startup failures; here an unread suite stays unverified.
+  if (raw.commits.nodes[0]?.commit.checkSuites?.pageInfo?.hasNextPage === true) {
+    summary.incomplete = true;
+  }
   return summary;
 }
 
@@ -48,14 +55,26 @@ function summaryRollups(raw: RawSummaryPr) {
   ].flatMap(({ rollup, scope }) => (rollup ? [{ rollup, scope }] : []));
 }
 
-function classifiedSummaryChecks(raw: RawSummaryPr, requiredContexts?: readonly string[]) {
+export function classifiedSummaryChecks(raw: RawSummaryPr, requiredContexts?: readonly string[]) {
   // A successful check on the queue commit cannot cover a PR-head cancellation, or vice versa.
-  return summaryRollups(raw).flatMap(({ rollup, scope }) =>
-    classifyChecks(checkRuns(rollup, scope), {
+  const groups = summaryRollups(raw).map(({ rollup, scope }) => ({
+    runs: checkRuns(rollup, scope),
+    scope,
+  }));
+  if (!groups.some(({ scope }) => scope === undefined))
+    groups.unshift({ runs: [], scope: undefined });
+  return groups.flatMap(({ runs, scope }) =>
+    classifyChecks(scope ? runs : withStartupFailures(raw, runs), {
       ...(scope === "merge_group" && { additionalRelevantEvents: ["merge_group"] }),
       ...(requiredContexts && { requiredContexts }),
     }),
   );
+}
+
+/** A workflow run that never started has no check run; the one-PR check synthesizes it as failing. */
+function withStartupFailures(raw: RawSummaryPr, runs: CheckRun[]) {
+  const suites = raw.commits.nodes[0]?.commit.checkSuites;
+  return mergeStartupFailureChecks(runs, startupFailureChecksFromSuites(suites));
 }
 
 function checkRuns(rollup: RawCheckRollup, scope: CheckRun["scope"]): CheckRun[] {

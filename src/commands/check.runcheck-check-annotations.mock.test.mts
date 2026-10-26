@@ -46,6 +46,7 @@ describe("runCheck — check annotations", () => {
       conclusion: "FAILURE",
       category: "failing",
       hasAnnotations: true,
+      annotationCount: 1,
     });
     mockLoadSeenMap.mockResolvedValue(new Map());
     mockFetchCheckRunAnnotationsBatch.mockResolvedValue(
@@ -66,7 +67,10 @@ describe("runCheck — check annotations", () => {
     expect(report.checks.failing[0]?.annotations).toEqual([
       expect.objectContaining({ id: "check_annotation_123" }),
     ]);
-    expect(mockFetchCheckRunAnnotationsBatch).toHaveBeenCalledWith(["CR_fail"], cacheOpts);
+    expect(mockFetchCheckRunAnnotationsBatch).toHaveBeenCalledWith(
+      ["CR_fail"],
+      expect.objectContaining(cacheOpts),
+    );
     expect(mockMarkSeen).not.toHaveBeenCalledWith(
       expect.any(Object),
       "check_annotation_123",
@@ -129,7 +133,10 @@ describe("runCheck — check annotations", () => {
     expect(report.checks.passing[0]?.annotations).toEqual([
       expect.objectContaining({ id: "check_annotation_lua", path: "scripts/instrument-lua.cjs" }),
     ]);
-    expect(mockFetchCheckRunAnnotationsBatch).toHaveBeenCalledWith(["CR_pass"], cacheOpts);
+    expect(mockFetchCheckRunAnnotationsBatch).toHaveBeenCalledWith(
+      ["CR_pass"],
+      expect.objectContaining(cacheOpts),
+    );
     expect(mockMarkSeen).toHaveBeenCalledWith(
       expect.any(Object),
       "check_annotation_lua",

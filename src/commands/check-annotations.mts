@@ -77,7 +77,17 @@ export async function attachAndMergeCheckAnnotations(
     ...buckets.filtered,
     ...buckets.ignored,
   ].filter(shouldFetchCheckAnnotations);
-  const annotated = await attachUnseenCheckAnnotations(candidates, seenMap, prNumber, cacheOpts);
+  const expectedCounts = new Map(
+    candidates.flatMap((c) =>
+      c.id != null && c.annotationCount ? [[c.id, c.annotationCount] as const] : [],
+    ),
+  );
+  const annotated = await attachUnseenCheckAnnotations(
+    candidates,
+    seenMap,
+    prNumber,
+    cacheOpts && { ...cacheOpts, expectedCounts },
+  );
   const byId = new Map(annotated.flatMap((c) => (c.id != null ? [[c.id, c] as const] : [])));
   const apply = <T extends ClassifiedCheck>(list: T[]): T[] =>
     list.map((c) => {

@@ -68,6 +68,9 @@ export function mapCheckRunNode(
     ...(completedAtUnix !== undefined && { completedAtUnix }),
     ...(updatedAtUnix !== undefined && { updatedAtUnix }),
     ...(summary !== undefined && { summary }),
+    ...((node.annotations?.totalCount ?? 0) > 0 && {
+      annotationCount: node.annotations!.totalCount,
+    }),
     ...(((node.annotations?.totalCount ?? 0) > 0 || (node.annotations?.nodes.length ?? 0) > 0) && {
       hasAnnotations: true as const,
     }),

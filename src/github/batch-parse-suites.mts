@@ -28,7 +28,26 @@ function parseHeadWorkflowSuites(raw: RawPr): WorkflowSuiteSnapshot[] {
 }
 
 export function parseSuiteStartupFailures(raw: RawPr): CheckRun[] {
-  const suites = raw.commits.nodes[0]?.commit.checkSuites;
+  return startupFailureChecksFromSuites(raw.commits.nodes[0]?.commit.checkSuites);
+}
+
+/** One failing check per STARTUP_FAILURE workflow-run suite; shared by the one-PR and summary reads. */
+export function startupFailureChecksFromSuites(
+  suites:
+    | {
+        nodes: Array<{
+          conclusion: string | null;
+          workflowRun: {
+            databaseId?: number | null;
+            event: string | null;
+            url?: string | null;
+            workflow?: { name: string | null } | null;
+          } | null;
+        }>;
+      }
+    | null
+    | undefined,
+): CheckRun[] {
   if (!suites) return [];
   return suites.nodes.flatMap((node) => {
     if (node.conclusion !== "STARTUP_FAILURE" || node.workflowRun == null) return [];

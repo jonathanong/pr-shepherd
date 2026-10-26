@@ -56,6 +56,28 @@ describe("fetchCheckRunAnnotations — cross-tick cache", () => {
     expect(mockGraphql).toHaveBeenCalledTimes(1);
   });
 
+  it("re-fetches when the cached list no longer matches the reported annotation total", async () => {
+    mockPage([rawAnnotation]);
+    await fetchCheckRunAnnotations("CR_1", { stateKey, headSha: "sha1" });
+
+    mockPage([rawAnnotation, { ...rawAnnotation, fullDatabaseId: "2" }]);
+    const grown = await fetchCheckRunAnnotations("CR_1", {
+      stateKey,
+      headSha: "sha1",
+      expectedCounts: new Map([["CR_1", 2]]),
+    });
+    expect(grown).toHaveLength(2);
+    expect(mockGraphql).toHaveBeenCalledTimes(2);
+
+    const again = await fetchCheckRunAnnotations("CR_1", {
+      stateKey,
+      headSha: "sha1",
+      expectedCounts: new Map([["CR_1", 2]]),
+    });
+    expect(again).toHaveLength(2);
+    expect(mockGraphql).toHaveBeenCalledTimes(2);
+  });
+
   it("re-fetches for a different check-run id (a re-run mints a new node id)", async () => {
     mockPage([rawAnnotation]);
     await fetchCheckRunAnnotations("CR_1", { stateKey, headSha: "sha1" });

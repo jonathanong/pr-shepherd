@@ -9,6 +9,7 @@ import type { RawSummaryPr } from "./poll-summary-raw.mts";
 
 const PROBE_UNAVAILABLE = Symbol.for("prShepherd.annotationProbeUnavailable");
 const COMPLETE_FROM_BATCH = new WeakSet<RawSummaryPr>();
+const HYDRATED = new WeakSet<RawSummaryPr>();
 
 /** Annotation totals copied from the same full-snapshot request; no follow-up probe is needed. */
 export function markReadyAnnotationProbeComplete(pr: RawSummaryPr): void {
@@ -54,9 +55,20 @@ export async function hydrateReadyAnnotationProbe(
   if (COMPLETE_FROM_BATCH.has(pr)) return;
   const checks = summarizePollSummaryChecks(pr);
   if (!isCurrentSummaryReady(pr, checks, review)) return;
-  if (!(await hydrateCommitAnnotations(pr, repo))) {
-    (pr as { [PROBE_UNAVAILABLE]?: true })[PROBE_UNAVAILABLE] = true;
-  }
+  await hydrateAnnotationTotals(pr, repo);
+}
+
+/**
+ * Load annotation totals once per summary row, from the same probe the READY receipt
+ * hash uses. False when a page could not be read, so no total is trustworthy.
+ */
+export async function hydrateAnnotationTotals(pr: RawSummaryPr, repo: RepoInfo): Promise<boolean> {
+  if (COMPLETE_FROM_BATCH.has(pr)) return true;
+  if (HYDRATED.has(pr)) return !annotationProbeUnavailable(pr);
+  HYDRATED.add(pr);
+  if (await hydrateCommitAnnotations(pr, repo)) return true;
+  (pr as { [PROBE_UNAVAILABLE]?: true })[PROBE_UNAVAILABLE] = true;
+  return false;
 }
 
 async function hydrateCommitAnnotations(pr: RawSummaryPr, repo: RepoInfo): Promise<boolean> {

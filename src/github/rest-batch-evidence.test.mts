@@ -41,7 +41,11 @@ describe("REST batch workflow and review evidence", () => {
       { requestedReviewer: { login: "platform" } },
     ]);
     expect(batch.receiptSummary?.commits.nodes[0]?.commit.checkSuites?.nodes).toMatchObject([
-      { status: "COMPLETED", conclusion: "STARTUP_FAILURE", workflowRun: { id: 88 } },
+      {
+        status: "COMPLETED",
+        conclusion: "STARTUP_FAILURE",
+        workflowRun: { databaseId: 88, workflow: { name: "CI" } },
+      },
       { status: "QUEUED", conclusion: null, workflowRun: null },
     ]);
     expect(await readRestAnnotationCounts("aaa111", repo)).toEqual([

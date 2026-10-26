@@ -22,6 +22,7 @@ export function summaryStatusSignature(result: PollSummaryResult): string {
         failing: item.checks.failing,
         inProgress: item.checks.inProgress,
         incomplete: item.checks.incomplete,
+        annotated: item.checks.annotated,
         unreportedRequired: item.checks.unreportedRequired,
         actionsWorkflowInProgress: item.checks.actionsWorkflowInProgress,
       },

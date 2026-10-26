@@ -48,7 +48,7 @@ A summary thread with more than five comments is incomplete and differs from its
 - A second summary page otherwise exists only past 50 layers. `Resource limits for this query exceeded` halves the page down to one entry and rereads, so a wide check matrix can add pages.
 - Check contexts stay on the shared fragment, and `PollSummaryCheckPage` completes a window past 100 at 1 point without repeating the annotation probe.
 - `fetchRawSummaryPr` uses the same fragment: 1 point.
-- `PollSummaryAnnotationProbe` runs only for a layer that otherwise looks ready, one commit at a time, so a late annotation still changes the READY-receipt fingerprint ([`fingerprintRawSummaryPr`](../src/github/poll-summary-fingerprint.mts)). A commit past 100 contexts adds a page. It is not in the totals above; its cost is measured in `--verbose`. A failed or incomplete probe does not replace a stored fingerprint.
+- `PollSummaryAnnotationProbe` runs only for a row that otherwise looks ready (a layer, or an explicit multi-PR row that would claim `appears-ready`), one commit at a time. Its totals also feed the check-annotation parity read (`CheckRunAnnotationsBatch` for just the non-`SUCCESS` checks with a total above zero; see [Summary check parity](actions.md#summary-check-parity)), and a late annotation still changes the READY-receipt fingerprint ([`fingerprintRawSummaryPr`](../src/github/poll-summary-fingerprint.mts)). A commit past 100 contexts adds a page. It is not in the totals above; its cost is measured in `--verbose`. A failed or incomplete probe does not replace a stored fingerprint.
 
 ## Usage by command
 
@@ -93,7 +93,7 @@ On a measured ready PR (#481), the receipt evidence took one request and 2 point
 `pr-shepherd stack PR`, `pr-shepherd` with two or more PRs, and MCP aggregate `iterate` read the summary, not per-layer `BatchPr`. An explicit multi-PR selection uses `PollSummary` in chunks of 50. Each stack tick is:
 
 - One `PollStackSummary` at the "Summary" cost above (4 entries on the anchor's first tick, then the rest).
-- `PollSummaryAnnotationProbe` only for layers that otherwise look ready.
+- `PollSummaryAnnotationProbe` only for rows that otherwise look ready, plus `CheckRunAnnotationsBatch` when one of them has a non-`SUCCESS` check with annotations.
 - `StackHandoffCheckRuns` only on a tick that routes owned layers to their one-PR sessions: one `nodes(ids:)` read per 100 check runs on those layers, 1 point each (measured), adding the check-run titles, summaries, and first annotations the summary lacks.
 
 The summary also selects the scalar and object fields `BatchPr`'s first page needs (viewer capabilities, head repository, review and comment timestamps, thread capabilities and lines, check-suite workflow runs, base tip), none a connection. On a routing tick, each routed layer whose summary covers every `BatchPr` first-page window gets that page stored as a handoff:
