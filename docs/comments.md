@@ -26,7 +26,7 @@ Human-authored items are never minimized. [`iterate.minimize-approvals`](configu
 
 ### Classification auto-resolve
 
-A classification rule with both `suppress: true` and `autoResolve: true` is applied in-process when [`actions.auto-minimize-suppressed`](configuration.md#actionsauto-minimize-suppressed--default-true) is on (the default). Where the transport supports the operation Shepherd attempts it and GitHub's response is authoritative.
+A classification rule with both `suppress: true` and `autoResolve: true` is applied in-process when [`actions.auto-minimize-suppressed`](configuration.md#actionsauto-minimize-suppressed--default-true) is on (the default). Where the transport supports the operation Shepherd attempts it and GitHub's response is authoritative. Explicit multi-PR and `stack` summaries apply the same rule per row (see [Aggregate commands](actions.md#aggregate-commands-multi-pr-and-stack)).
 
 | Outcome                      | Where it lands                                                                                                                                    |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |

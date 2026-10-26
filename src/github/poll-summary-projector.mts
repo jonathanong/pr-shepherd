@@ -13,7 +13,7 @@ import type {
 import type { RepoInfo } from "./client.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import { summarizePollSummaryChecks } from "./poll-summary-checks.mts";
-import { summarizePollSummaryReview } from "./poll-summary-review.mts";
+import { evaluatePollSummaryReview } from "./poll-summary-review.mts";
 import { currentQueueRemovalEvent } from "./poll-summary-queue-removal.mts";
 import { isCurrentSummaryReady } from "./poll-summary-readiness.mts";
 import { applyOpenCheckBlockers } from "./poll-summary-check-blockers.mts";
@@ -25,6 +25,7 @@ import {
 } from "./poll-summary-unreported.mts";
 import { aliasThreadSeenMarkers } from "./rest-identities.mts";
 import { restQueueRequirement } from "./poll-summary-rest-queue.mts";
+import { detectBlockingReviewer } from "./poll-summary-blocking-reviewer.mts";
 export async function summarizePollSummaryPr(
   raw: RawSummaryPr,
   repo: RepoInfo,
@@ -32,6 +33,8 @@ export async function summarizePollSummaryPr(
   viewerCanAdminister: boolean | undefined = undefined,
   mergeTargetContexts?: readonly string[],
   viewerLogin: string | null = null,
+  /** Aggregate polls only: apply rule-driven auto-resolve. Receipt and merge validation reads never mutate. */
+  applyRuleAutoResolve = false,
 ): Promise<PollSummaryItem> {
   const repoName = `${repo.owner}/${repo.name}`;
   const seen = await loadSeenMap({ owner: repo.owner, repo: repo.name, pr: raw.number });
@@ -44,7 +47,14 @@ export async function summarizePollSummaryPr(
   const required = summaryRequiredContexts(raw, mergeTargetContexts);
   const checks = summarizePollSummaryChecks(raw, required);
   applyUnreportedRequiredChecks(raw, checks, required);
-  const review = await summarizePollSummaryReview(raw, seen, viewerCanAdminister);
+  const { review, ruleAutoResolve } = await evaluatePollSummaryReview(
+    raw,
+    seen,
+    viewerCanAdminister,
+    applyRuleAutoResolve && normalizePollSummaryState(raw.state) === "OPEN"
+      ? { owner: repo.owner, repo: repo.name, pr: raw.number }
+      : undefined,
+  );
   const blockingReviewerInProgress = detectBlockingReviewer(raw);
   const removalEvent = currentQueueRemovalEvent(raw);
   let { action, reasons } = routePollSummary(raw, checks, review, opts);
@@ -157,6 +167,7 @@ export async function summarizePollSummaryPr(
     ...(remainingSeconds !== undefined && { remainingSeconds }),
     ...(Object.keys(checks).length > 0 && { checks }),
     ...(Object.keys(review).length > 0 && { review }),
+    ...(ruleAutoResolve && { ruleAutoResolve }),
     ...(stack && { stack }),
     ...(readyReceipt && { readyReceipt: true as const }),
     ...((opts.stackPrNumber !== undefined && raw.state === "OPEN") ||
@@ -180,20 +191,4 @@ function projectQueueRemoval(
     ...(removal.beforeCommit?.oid && { beforeCommitOid: removal.beforeCommit.oid }),
     beforeCommitParentOids: parents,
   };
-}
-
-function detectBlockingReviewer(raw: RawSummaryPr): boolean {
-  const prefixes = loadConfig()["mark-ready"]["blocking-reviewer-logins"].map((login) =>
-    login.toLowerCase(),
-  );
-  // A team reviewer has a name, not a login, so it never matches a login prefix.
-  const matches = (author: { login?: string } | null): boolean =>
-    typeof author?.login === "string" &&
-    prefixes.some((prefix) => author.login!.toLowerCase().startsWith(prefix));
-  return (
-    (raw.reviewRequests?.nodes ?? []).some((request) => matches(request.requestedReviewer)) ||
-    (raw.latestReviews?.nodes ?? []).some(
-      (review) => review.state === "PENDING" && matches(review.author),
-    )
-  );
 }

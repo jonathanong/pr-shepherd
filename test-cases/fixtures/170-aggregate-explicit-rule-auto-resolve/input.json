@@ -1,0 +1,70 @@
+{
+  "mode": "aggregate",
+  "description": "Explicit PR set: the aggregate summary auto-minimized bot notices and auto-resolved a thread on #42 (rule-driven, so the row stays WAIT), and a minimize that GitHub rejected on #43 stays TRIAGE with the error surfaced once.",
+  "args": ["42", "43", "--debounce", "0s"],
+  "expectedReason": "actionable",
+  "expectedExitCode": 12,
+  "aggregateSummary": {
+    "selection": { "kind": "prs", "requested": [42, 43] },
+    "prs": [
+      {
+        "pr": 42,
+        "repo": "owner/repo",
+        "title": "Noisy bot notices",
+        "url": "https://github.com/owner/repo/pull/42",
+        "action": "wait",
+        "reasons": ["ready-delay"],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "noisy",
+        "headRefOid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "baseRefName": "main",
+        "remainingSeconds": 60,
+        "review": { "comments": 2, "reviews": 1, "threads": 1 },
+        "ruleAutoResolve": {
+          "summary": "auto-resolved 1 thread, minimized 1 comment and 1 review summary (rules: codex-activity; coderabbit-progress)",
+          "threads": [
+            {
+              "id": "PRRT_notice",
+              "url": "https://github.com/owner/repo/pull/42#discussion_r1"
+            }
+          ],
+          "minimized": [
+            {
+              "id": "IC_progress",
+              "kind": "pr-comment",
+              "url": "https://github.com/owner/repo/pull/42#issuecomment-1",
+              "ruleReason": "coderabbit-progress"
+            },
+            {
+              "id": "PRR_activity",
+              "kind": "review-summary",
+              "ruleReason": "codex-activity"
+            }
+          ]
+        }
+      },
+      {
+        "pr": 43,
+        "repo": "owner/repo",
+        "title": "Rejected minimize",
+        "url": "https://github.com/owner/repo/pull/43",
+        "action": "triage",
+        "reasons": ["actionable-reviews"],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "rejected",
+        "headRefOid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "baseRefName": "main",
+        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/43 --until-terminal",
+        "review": { "comments": 1, "actionable": 1 },
+        "ruleAutoResolve": {
+          "summary": "auto-resolve failed for 1 mutation (rule: coderabbit-progress)",
+          "errors": ["IC_stuck: Resource not accessible by integration (rule: coderabbit-progress)"]
+        }
+      }
+    ]
+  }
+}

@@ -72,11 +72,11 @@ const patches = await shepherd.suggest({
 
 Every call runs one tick. A singular call returns the raw `IterateResult`, which carries `nextCheck { at, inSeconds, reason }` when another tick is meaningful ([cloud.md](cloud.md#nextcheck)).
 
-Alternatively, pass a non-empty `prs` set. Every reference must resolve to one repository. An aggregate call runs one compact, read-only summary tick and returns `PollSummaryResult`. It does not mark review items seen, keep ready-delay state, perform GitHub mutations, or emit rebase/push commands. The caller owns recurrence and follows the returned instructions.
+Alternatively, pass a non-empty `prs` set. Every reference must resolve to one repository. An aggregate call runs one compact summary tick and returns `PollSummaryResult`. It does not keep ready-delay state or emit rebase/push commands, and its only GitHub mutations (with their seen markers) are rule-driven [classification auto-resolve](actions.md#classification-auto-resolve), reported per row as `ruleAutoResolve`. The caller owns recurrence and follows the returned instructions.
 
 ### `stack`
 
-`stack({ pr })` takes the anchor PR of a native GitHub stack plus the same tick options as `iterate`, runs one aggregate tick, and returns `PollSummaryResult` with the same read-only guarantees and `nextCheck` rule as an aggregate `iterate`.
+`stack({ pr })` takes the anchor PR of a native GitHub stack plus the same tick options as `iterate`, runs one aggregate tick, and returns `PollSummaryResult` with the same guarantees (rule-driven auto-resolve is the only mutation) and `nextCheck` rule as an aggregate `iterate`.
 
 | Native-stack action | When                                                                                                                                                                                                       |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

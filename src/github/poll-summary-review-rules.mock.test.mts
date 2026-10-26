@@ -18,7 +18,10 @@ vi.mock("../classify/loader.mts", () => ({
   ]),
 }));
 
-import { summarizePollSummaryReview } from "./poll-summary-review.mts";
+import { evaluatePollSummaryReview } from "./poll-summary-review.mts";
+
+const summarizePollSummaryReview = async (...args: Parameters<typeof evaluatePollSummaryReview>) =>
+  (await evaluatePollSummaryReview(...args)).review;
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import { hashBody, type SeenMarker } from "../state/seen-comments.mts";
 
@@ -70,19 +73,20 @@ describe("summarizePollSummaryReview — classification rules", () => {
     expect((await summarizePollSummaryReview(raw(["New finding"]), seen, true)).actionable).toBe(
       undefined,
     );
+    // A never-seen minimized comment is a first-look acknowledgement, not readiness work.
     expect(
       (await summarizePollSummaryReview(minimized("New finding"), new Map(), true)).actionable,
-    ).toBe(1);
+    ).toBeUndefined();
   });
 });
 
 describe("auto-resolution evidence for compact thread certification", () => {
-  it("accepts only a complete resolved auto-resolve match", async () => {
+  it("accepts a resolved auto-resolve match, complete or not", async () => {
     for (const [isResolved, truncated, expected] of [
       [true, false, undefined],
       [false, false, 1],
       [undefined, false, 1],
-      [true, true, 1],
+      [true, true, undefined],
     ] as const) {
       const input = raw([]);
       input.reviewThreads = {

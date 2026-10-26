@@ -1,4 +1,4 @@
-import type { PollSummaryItem } from "../types.mts";
+import type { PollSummaryItem, PollSummaryRuleAutoResolve } from "../types.mts";
 
 /** One lean stack row shared by Markdown, JSON, and MCP. */
 export interface StackLayerView {
@@ -24,5 +24,6 @@ export interface StackLayerView {
   actionable?: number;
   checksIncomplete?: true;
   reviewIncomplete?: true;
+  ruleAutoResolve?: PollSummaryRuleAutoResolve;
   queueRemoval?: { reason: string | null; actor?: string };
 }
