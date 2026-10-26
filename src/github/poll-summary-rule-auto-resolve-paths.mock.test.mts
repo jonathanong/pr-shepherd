@@ -106,6 +106,20 @@ describe("aggregate summaries perform rule-driven auto-resolve", () => {
     }
   });
 
+  it("turns an unexpected mutation failure for one PR into a row instead of failing the tick", async () => {
+    vi.mocked(autoMinimizeComments).mockRejectedValueOnce(new Error("boom"));
+    mockGraphql.mockResolvedValue({
+      data: { repository: { viewerCanAdminister: false, pr0: pr(42), pr1: pr(43) } },
+    });
+    const result = await fetchPollSummary({ prNumbers: [42, 43] }, repo);
+    expect(result.prs[0]).toMatchObject({
+      pr: 42,
+      reasons: ["summary-read-failed"],
+      error: "boom",
+    });
+    expect(result.prs[1]?.ruleAutoResolve?.summary).toBe("minimized 1 comment (rule: bot notice)");
+  });
+
   it("does the same for every layer of a native stack", async () => {
     const entries = [43, 44].map((number, index) => ({
       position: index + 1,
