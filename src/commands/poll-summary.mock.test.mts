@@ -215,6 +215,24 @@ describe("aggregate poll recurrence", () => {
     expect(stderr).toHaveBeenCalledTimes(2);
   });
 
+  it("forwards a rule auto-resolve from a swallowed tick to stderr", async () => {
+    let now = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    mockSleep.mockImplementation(async (milliseconds) => {
+      now += milliseconds;
+    });
+    const minimized = {
+      ...row(42, "wait"),
+      ruleAutoResolve: { summary: "minimized 1 comment (rule: bot notice)" },
+    };
+    mockFetch
+      .mockResolvedValueOnce({ selection: { kind: "prs", requested: [42] }, prs: [minimized] })
+      .mockResolvedValue({ selection: { kind: "prs", requested: [42] }, prs: [row(42, "wait")] });
+    const stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    await runAggregatePoll({ ...opts, timeoutSeconds: 180 });
+    expect(stderr).toHaveBeenCalledWith("#42 minimized 1 comment (rule: bot notice)\n");
+  });
+
   it("retries one GraphQL throttle during an until-terminal run", async () => {
     mockFetch
       .mockRejectedValueOnce(

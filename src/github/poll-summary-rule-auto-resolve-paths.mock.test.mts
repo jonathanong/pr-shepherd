@@ -148,6 +148,10 @@ describe("aggregate summaries perform rule-driven auto-resolve", () => {
       "minimized 1 comment (rule: bot notice)",
     ]);
     expect(result.prs.every((item) => item.review?.actionable === undefined)).toBe(true);
+    // The handoff snapshot reflects the confirmed mutations so a one-PR session does not repeat them.
+    expect(
+      result.handoffSource?.layers.map((layer) => layer.comments.nodes[0]?.isMinimized),
+    ).toEqual([true, true]);
   });
 });
 

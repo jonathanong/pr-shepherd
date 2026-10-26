@@ -25,6 +25,7 @@ import type { RawExplicitResponse, RawSummaryPr } from "./poll-summary-raw.mts";
 import { POLL_SUMMARY_FRAGMENT } from "./queries.mts";
 import { stackAncestryGaps, type StackRead } from "./stack-read.mts";
 import { readGraphqlStackSummary } from "./poll-summary-stack-page.mts";
+import { patchHandoffLayers } from "./poll-summary-rule-handoff.mts";
 import { stackHandoffSource } from "./stack-handoff.mts";
 import type { StackHandoffSource } from "./stack-handoff-page.mts";
 
@@ -147,13 +148,15 @@ async function fetchStackSummary(
   const handoffSource = getGithubTransport() === "rest" ? undefined : stackHandoffSource(read);
   const stackAncestry = stackAncestryGaps(ordered);
   const required = await trunkRequiredContexts(ordered, repo);
+  const prs = await Promise.all(
+    ordered.map((pr) =>
+      summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister, required, viewerLogin, true),
+    ),
+  );
+  if (handoffSource) patchHandoffLayers(handoffSource.layers, prs);
   return {
     selection: { kind: "stack", anchor, stackNumber, stackSize },
-    prs: await Promise.all(
-      ordered.map((pr) =>
-        summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister, required, viewerLogin, true),
-      ),
-    ),
+    prs,
     ...(stackAncestry.length > 0 && { stackAncestry }),
     ...(allowedMergeMethods && { allowedMergeMethods }),
     ...(handoffSource && { handoffSource }),

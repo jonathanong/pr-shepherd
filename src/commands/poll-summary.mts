@@ -114,6 +114,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
     try {
       lastTick = await readPollSummaryTick(opts);
       last = lastTick.result;
+      writeAggregateRuleAutoResolve(last);
       rateLimitRetry.reset();
     } catch (error) {
       pendingQuotaWarning = carryQuotaWarning(pendingQuotaWarning, undefined);
@@ -252,6 +253,13 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
     lastStatusSignature = statusSignature;
     await sleep(sleepMs);
   }
+}
+
+/** An auto-resolve is a one-tick event; forward it so a swallowed tick still records it. */
+function writeAggregateRuleAutoResolve(result: PollSummaryResult): void {
+  for (const item of result.prs)
+    if (item.ruleAutoResolve?.summary)
+      process.stderr.write(`#${item.pr} ${item.ruleAutoResolve.summary}\n`);
 }
 
 function presentProbedCancel(
