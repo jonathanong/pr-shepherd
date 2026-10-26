@@ -61,6 +61,10 @@ export function fingerprintFromRaw(
     isMergeQueueEnabled: Boolean(raw.isMergeQueueEnabled),
     mergePolicy: mergePolicyFingerprint(raw),
     commentCount: raw.comments.totalCount ?? raw.comments.nodes.length,
+    // Raw `updatedAt` on purpose, even for bot or rule-suppressed comments (#635 gap 7). A miss
+    // continues the same BatchPr request into the full snapshot, so an edited bot comment costs
+    // no extra request over a hit, while excluding it would need rule evaluation here and would
+    // risk hiding an edit that un-suppresses the comment or edits a minimized human comment.
     commentRevisions: commentRevisions(raw.comments.nodes),
     threadCount: raw.reviewThreads.totalCount ?? raw.reviewThreads.nodes.length,
     reviewCount: raw.allReviews?.totalCount ?? 0,
