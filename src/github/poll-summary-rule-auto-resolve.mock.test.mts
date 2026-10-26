@@ -25,6 +25,11 @@ vi.mock("../config/load.mts", () => ({
     "bot-usernames": ["Helper-Bot[bot]"],
     standardRules: false,
     actions: { "auto-minimize-suppressed": hoisted.enabled.value },
+    iterate: {
+      "minimize-comments": "bots",
+      "minimize-approvals": false,
+      "resolve-other-human-threads": "none",
+    },
   }),
 }));
 vi.mock("../comments/resolve.mts", () => ({

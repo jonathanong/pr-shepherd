@@ -20,6 +20,11 @@ vi.mock("../config/load.mts", () => ({
     "bot-usernames": ["Helper-Bot[bot]"],
     standardRules: false,
     actions: { "auto-minimize-suppressed": true },
+    iterate: {
+      "minimize-comments": "bots",
+      "minimize-approvals": false,
+      "resolve-other-human-threads": "none",
+    },
   }),
 }));
 vi.mock("../comments/resolve.mts", () => ({
@@ -90,7 +95,8 @@ describe("compact first-look and long-thread handling", () => {
     // A bot review stays actionable after it was seen: only a dismissal clears it.
     expect((await evaluate(raw({ reviews: [changes] }), seenCr)).review.actionable).toBe(1);
     const human = { ...changes, author: { login: "alice", __typename: "User" } };
-    expect((await evaluate(raw({ reviews: [human] }), seenCr)).review.actionable).toBeUndefined();
+    // A human changes-requested review counts whether or not it was seen, like the full check.
+    expect((await evaluate(raw({ reviews: [human] }), seenCr)).review.actionable).toBe(1);
     const botThread = thread("tb", "ordinary", { isResolved: false });
     (botThread.comments as { nodes: Array<{ author: unknown }> }).nodes[0]!.author = helper;
     const seenThread = new Map<string, SeenMarker>([

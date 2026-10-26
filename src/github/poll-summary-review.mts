@@ -1,7 +1,6 @@
 import {
   isConfiguredBotAuthor,
   isHumanAuthor,
-  isViewerAuthoredHuman,
   normalizeAuthorType,
   normalizeBotUsernames,
 } from "../comments/authors.mts";
@@ -21,6 +20,7 @@ import {
   type SummaryRuleActions,
   type SummaryStateKey,
 } from "./poll-summary-rule-auto-resolve.mts";
+import { countCommentWork, repeatingThreadIds } from "./poll-summary-review-parity.mts";
 import { ruleHides, summaryRuleAction } from "./poll-summary-rule-items.mts";
 
 const authorOf = (author: RawAuthor | null | undefined) => ({
@@ -91,13 +91,16 @@ export async function evaluatePollSummaryReview(
       : { confirmed: new Set(), unconfirmed: new Set() };
   const { confirmed, unconfirmed } = handled;
 
-  for (const comment of raw.comments.nodes) {
-    const action = actions.comments.get(comment.id);
-    if (!action || ruleHides(action, "pr-comment", confirmed.has(comment.id))) continue;
-    // An edited PR comment is shown once by iterate but never blocks readiness.
-    if (unconfirmed.has(comment.id) || classifyItem(comment.id, comment.body, seen) === "new")
-      actionable += 1;
-  }
+  actionable += countCommentWork(
+    raw.comments.nodes.filter((comment) => {
+      const action = actions.comments.get(comment.id);
+      return action !== undefined && !ruleHides(action, "pr-comment", confirmed.has(comment.id));
+    }),
+    unconfirmed,
+    seen,
+    config.iterate["minimize-comments"],
+    bots,
+  );
 
   const latestStateByAuthor = new Map(
     (raw.latestReviews?.nodes ?? []).flatMap((review) =>
@@ -112,6 +115,16 @@ export async function evaluatePollSummaryReview(
         actionable += 1;
       continue;
     }
+    // An approval is surfaced once, as work, when iterate.minimize-approvals is on.
+    if (review.state === "APPROVED") {
+      if (
+        config.iterate["minimize-approvals"] &&
+        !review.isMinimized &&
+        classifyItem(review.id, review.body, seen) !== "unchanged"
+      )
+        actionable += 1;
+      continue;
+    }
     if (review.state !== "CHANGES_REQUESTED") continue;
     const login = review.author?.login.toLowerCase();
     if (login && latestStateByAuthor.get(login) === "APPROVED") continue;
@@ -121,16 +134,23 @@ export async function evaluatePollSummaryReview(
       continue;
     const author = authorOf(review.author);
     const isBot = !isHumanAuthor(author) || isConfiguredBotAuthor(author, bots);
+    // The full check counts a human changes-requested review whether or not it was seen.
     if (
-      (isBot &&
-        canGenerateGithubMutation(viewerCanAdminister, "dismiss") &&
+      !isBot ||
+      (canGenerateGithubMutation(viewerCanAdminister, "dismiss") &&
         !mutationWasDenied(review.id, review.body, seen)) ||
       classifyItem(review.id, review.body, seen) !== "unchanged"
     )
       actionable += 1;
   }
 
-  for (const { thread, truncated, root, transcript, ended } of threadView) {
+  const repeating = repeatingThreadIds(
+    threadView,
+    seen,
+    bots,
+    config.iterate["resolve-other-human-threads"],
+  );
+  for (const { thread, truncated, transcript, ended } of threadView) {
     const action = actions.threads.get(thread.id);
     if (ended || !action) continue;
     // Rules read the root, so a resolved or outdated thread satisfies its auto-resolve match.
@@ -141,20 +161,13 @@ export async function evaluatePollSummaryReview(
       actionable += 1;
       continue;
     }
-    const rootAuthor = {
-      ...authorOf(root?.author),
-      ...(root?.viewerDidAuthor === true && { viewerDidAuthor: true as const }),
-    };
-    const repeatable =
-      !mutationWasDenied(thread.id, transcript, seen) &&
-      (isConfiguredBotAuthor(rootAuthor, bots) || isViewerAuthoredHuman(rootAuthor, bots));
     // The marker hashes the full transcript, which a window never reproduces. A long resolved
     // thread is seen once any marker exists; any other long thread cannot prove it was seen.
     const unseen = truncated
       ? !(thread.isResolved === true && seen.has(thread.id))
       : classifyItem(thread.id, transcript, seen) !== "unchanged";
     if (
-      (thread.isResolved === false && (repeatable || unseen)) ||
+      (thread.isResolved === false && (repeating.has(thread.id) || unseen)) ||
       (thread.isResolved === undefined && unseen) ||
       ((thread.isResolved || thread.isOutdated) && unseen)
     )
