@@ -159,10 +159,9 @@ The batch query probes `annotations(first: 1)`, so Shepherd paginates only check
 | `inProgress`             | `category === 'in_progress'`                                                                                                                                   |
 | `skipped`                | `category === 'skipped'`                                                                                                                                       |
 | `filtered`               | Excluded by the event filter                                                                                                                                   |
-| `ignored`                | Ignored checks that still carry unseen annotations; omitted when empty                                                                                         |
 | `filteredNames`          | Names of filtered checks                                                                                                                                       |
 | `blockedByFilteredCheck` | `BLOCKED` state is caused by a filtered check                                                                                                                  |
-| `ignoredNames`           | Suppressed by `checks.ignore`; omitted when empty                                                                                                              |
+| `ignoredNames`           | Suppressed by `checks.ignore` (their annotations are never read); omitted when empty                                                                           |
 | `supersededNames`        | `CANCELLED` checks reclassified as `superseded`; omitted when empty                                                                                            |
 
 Pending checks also carry raw timing when GitHub exposes it:

@@ -185,9 +185,6 @@ function makeReport(overrides: Partial<ShepherdReport> = {}): ShepherdReport {
       inProgress: stampInitialRunAttempt(report.checks.inProgress),
       skipped: stampInitialRunAttempt(report.checks.skipped),
       filtered: stampInitialRunAttempt(report.checks.filtered),
-      ...(report.checks.ignored !== undefined && {
-        ignored: stampInitialRunAttempt(report.checks.ignored),
-      }),
     },
     threads: {
       ...report.threads,

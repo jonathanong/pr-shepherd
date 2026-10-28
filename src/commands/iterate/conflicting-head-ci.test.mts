@@ -43,7 +43,7 @@ describe("conflictingHeadCiNote", () => {
   });
 
   it("counts every reported check bucket, including ignored", () => {
-    expect(countReportedChecks({ ...emptyChecks, ignored: [{}] })).toBe(1);
+    expect(countReportedChecks({ ...emptyChecks, ignoredNames: ["lint"] })).toBe(1);
     expect(countReportedChecks({ ...emptyChecks, failing: [{}], skipped: [{}] })).toBe(2);
   });
 

@@ -90,8 +90,6 @@ export interface ShepherdReport {
     skipped: ClassifiedCheck[];
     /** Checks filtered out because they were triggered by a non-PR event (push, schedule, etc.). */
     filtered: ClassifiedCheck[];
-    /** Ignored checks with unseen annotations; omitted when empty. */
-    ignored?: ClassifiedCheck[];
     filteredNames: string[];
     blockedByFilteredCheck: boolean;
     ignoredNames?: string[]; // Suppressed by checks.ignore config; omitted when empty.

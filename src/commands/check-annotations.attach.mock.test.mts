@@ -78,7 +78,7 @@ function rateLimit(): GitHubRequestError {
 
 function attach(list: ClassifiedCheck[]) {
   return attachAndMergeCheckAnnotations(
-    { passing: list, failing: [], skipped: [], filtered: [], ignored: [] },
+    { passing: list, failing: [], skipped: [], filtered: [] },
     new Map(),
     7,
   );

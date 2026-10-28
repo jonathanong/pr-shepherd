@@ -55,7 +55,7 @@ function checkNode(id: string, message: string) {
 
 function attach(list: ClassifiedCheck[]) {
   return attachAndMergeCheckAnnotations(
-    { passing: list, failing: [], skipped: [], filtered: [], ignored: [] },
+    { passing: list, failing: [], skipped: [], filtered: [] },
     new Map(),
     7,
   );
@@ -121,7 +121,6 @@ describe("inline BatchPr annotations", () => {
         failing: [],
         skipped: [running],
         filtered: [],
-        ignored: [],
       },
       seen,
       7,

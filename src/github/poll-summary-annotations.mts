@@ -18,7 +18,7 @@ const READY_CLAIMS = new Set([
 
 /**
  * The one-PR check treats unseen annotations on any non-SUCCESS check (failing, skipped,
- * filtered, ignored or neutral) as actionable work. The compact summary only has annotation
+ * filtered or neutral) as actionable work; `checks.ignore` checks never gate, annotations included. The compact summary only has annotation
  * totals, and only for a row that otherwise claims readiness, so it loads them then and reads
  * the annotations of just the non-SUCCESS checks that have any. A row with unseen annotations,
  * or whose annotations cannot be read, goes to its one-PR `pollCommand` instead of
@@ -62,7 +62,7 @@ function nonSuccessCheckTotals(
   const totals = new Map<string, number>();
   for (const check of classifiedSummaryChecks(raw, required)) {
     if (check.scope || check.id == null || !head.has(check.id)) continue;
-    if (check.category === "in_progress" || check.category === "superseded") continue;
+    if (["in_progress", "superseded", "ignored"].includes(check.category)) continue;
     if (check.status !== "COMPLETED" || check.conclusion === "SUCCESS") continue;
     const total = head.get(check.id) ?? 0;
     if (!totalsKnown || total > 0) totals.set(check.id, total);

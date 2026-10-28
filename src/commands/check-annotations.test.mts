@@ -79,19 +79,6 @@ describe("checksWithActionableAnnotations", () => {
           annotations: [annotation],
         }),
       ],
-      ignored: [
-        check({
-          id: "CR_ign",
-          category: "ignored",
-          conclusion: "FAILURE",
-          annotations: [{ ...annotation, id: "check_annotation_ign" }],
-        }),
-        check({
-          id: "CR_ign_success",
-          category: "ignored",
-          annotations: [{ ...annotation, id: "check_annotation_ign_success" }],
-        }),
-      ],
       filtered: [
         check({
           id: "CR_filtered_success",
@@ -100,6 +87,6 @@ describe("checksWithActionableAnnotations", () => {
         }),
       ],
     });
-    expect(checksWithActionableAnnotations(report).map((c) => c.id)).toEqual(["CR_skip", "CR_ign"]);
+    expect(checksWithActionableAnnotations(report).map((c) => c.id)).toEqual(["CR_skip"]);
   });
 });

@@ -108,6 +108,17 @@ describe("applyUnseenCheckAnnotations", () => {
     expect(mockBatch).not.toHaveBeenCalled();
   });
 
+  it("never reads annotations on checks listed in checks.ignore", async () => {
+    mockLoadConfig.mockReturnValue(
+      testConfig({ checks: { "ci-trigger-events": ["pull_request"], ignore: ["flaky"] } }),
+    );
+    const { result, checks } = await apply(pr([run("flaky", "FAILURE", 2)]));
+    expect(result).toBe(ready);
+    expect(checks).toEqual({});
+    expect(mockHydrate).not.toHaveBeenCalled();
+    expect(mockBatch).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["appears-ready", "cancel"],
     ["draft-appears-ready", "mark_ready"],
