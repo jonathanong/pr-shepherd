@@ -110,12 +110,12 @@ Static documents live in [`src/github/gql/`](../src/github/gql/), loaded by [`qu
 
 ### Check-run annotation bodies
 
-| Case                                     | Read                                                                                                                                                             |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Probe `totalCount` is 1                  | The probe page is the whole body; no further read                                                                                                                |
-| More than one, uncached, completed check | `CheckRunAnnotationsBatch`, 20 runs per request (1 + 20 = 21 connection-requests = 1 point). Passing, failing, skipped, filtered, and ignored checks all qualify |
-| Batched page has `hasNextPage`           | `CheckRunAnnotations` with a cursor for that run, up to 1,000 annotations                                                                                        |
-| Cached run                               | Skipped; results are cached per check-run id for 1 hour                                                                                                          |
+| Case                                     | Read                                                                                                                                                                                 |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Probe `totalCount` is 1                  | The probe page is the whole body; no further read                                                                                                                                    |
+| More than one, uncached, completed check | `CheckRunAnnotationsBatch`, 20 runs per request (1 + 20 = 21 connection-requests = 1 point). Passing, failing, skipped, and filtered checks qualify; `checks.ignore` checks never do |
+| Batched page has `hasNextPage`           | `CheckRunAnnotations` with a cursor for that run, up to 1,000 annotations                                                                                                            |
+| Cached run                               | Skipped; results are cached per check-run id for 1 hour                                                                                                                              |
 
 The chunk size of 20 exists to keep each request at 1 point. A rate-limit error (the same classification as `--until-terminal` retry) aborts remaining chunks and pages so polling can back off; other per-check failures are summarized once per tick.
 

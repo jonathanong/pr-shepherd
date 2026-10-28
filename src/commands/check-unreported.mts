@@ -161,7 +161,7 @@ function reportChecks(report: ShepherdReport): { name: string }[] {
     ...report.checks.inProgress,
     ...report.checks.skipped,
     ...report.checks.filtered,
-    ...(report.checks.ignored ?? []),
+    ...(report.checks.ignoredNames ?? []).map((name) => ({ name })),
     ...(report.checks.supersededNames ?? []).map((name) => ({ name })),
   ];
 }

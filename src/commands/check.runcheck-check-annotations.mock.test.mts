@@ -5,7 +5,9 @@ import {
   makeBatchData,
   makeCheck,
   annotationBatch,
+  defaultConfig,
   mockFetchCheckRunAnnotationsBatch,
+  mockLoadConfig,
   mockFetchPrBatch,
   mockLoadSeenMap,
   mockMarkSeen,
@@ -158,6 +160,24 @@ describe("runCheck — check annotations", () => {
     const report = await runCheck(BASE_OPTS);
 
     expect(report.checks.skipped[0]?.annotations?.[0]?.id).toBe("check_annotation_skip");
+  });
+
+  it("never fetches or reports annotations on checks listed in checks.ignore", async () => {
+    mockLoadConfig.mockReturnValue(defaultConfig({ checks: { ignore: ["flaky-live"] } }));
+    batchWith({
+      id: "CR_ign",
+      name: "flaky-live",
+      conclusion: "FAILURE",
+      hasAnnotations: true,
+      annotationCount: 1,
+    });
+
+    const report = await runCheck(BASE_OPTS);
+
+    expect(mockFetchCheckRunAnnotationsBatch).not.toHaveBeenCalled();
+    expect(report.checks.failing).toEqual([]);
+    expect(report.checks.ignoredNames).toEqual(["flaky-live"]);
+    expect(report.checks).not.toHaveProperty("ignored");
   });
 
   it("keeps the failing check when annotation fetch fails", async () => {

@@ -73,7 +73,8 @@ describe("refreshCachedUnreported", () => {
   it("clears the cached names once every required context has a check", async () => {
     target.mockResolvedValue({ contexts: ["gitleaks", "build", "tests"], stackBottomPr: 613 });
     const cached = report({ status: "PENDING" });
-    cached.checks.supersededNames = ["build", "tests"];
+    cached.checks.supersededNames = ["build"];
+    cached.checks.ignoredNames = ["tests"];
 
     const next = await refreshCachedUnreported(cached, { owner: "acme", name: "widgets" });
 

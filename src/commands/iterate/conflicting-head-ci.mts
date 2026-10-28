@@ -27,7 +27,7 @@ export function countReportedChecks(checks: {
   inProgress: readonly unknown[];
   skipped: readonly unknown[];
   filtered: readonly unknown[];
-  ignored?: readonly unknown[];
+  ignoredNames?: readonly unknown[];
 }): number {
   return (
     checks.passing.length +
@@ -35,7 +35,7 @@ export function countReportedChecks(checks: {
     checks.inProgress.length +
     checks.skipped.length +
     checks.filtered.length +
-    (checks.ignored?.length ?? 0)
+    (checks.ignoredNames?.length ?? 0)
   );
 }
 

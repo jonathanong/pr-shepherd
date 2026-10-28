@@ -17,7 +17,6 @@ export function checksWithActionableAnnotations(report: ShepherdReport): Triaged
     ...report.checks.passing,
     ...report.checks.skipped,
     ...report.checks.filtered,
-    ...(report.checks.ignored ?? []),
   ].filter(hasActionableAnnotation);
 }
 
@@ -35,19 +34,14 @@ export function hasCheckDrivenActionableWork(
     passing: ClassifiedCheck[];
     skipped: ClassifiedCheck[];
     filtered: ClassifiedCheck[];
-    ignored?: TriagedCheck[];
   },
   mergeStatusValue: string,
 ): boolean {
   return (
     checks.failing.length > 0 ||
-    [
-      ...checks.failing,
-      ...checks.passing,
-      ...checks.skipped,
-      ...checks.filtered,
-      ...(checks.ignored ?? []),
-    ].some(hasActionableAnnotation) ||
+    [...checks.failing, ...checks.passing, ...checks.skipped, ...checks.filtered].some(
+      hasActionableAnnotation,
+    ) ||
     mergeStatusValue === "CONFLICTS"
   );
 }
@@ -58,7 +52,6 @@ export async function attachAndMergeCheckAnnotations(
     failing: TriagedCheck[];
     skipped: ClassifiedCheck[];
     filtered: ClassifiedCheck[];
-    ignored: ClassifiedCheck[];
   },
   seenMap: Map<string, { seenAt: number }>,
   prNumber: number,
@@ -68,14 +61,12 @@ export async function attachAndMergeCheckAnnotations(
   failing: TriagedCheck[];
   skipped: ClassifiedCheck[];
   filtered: ClassifiedCheck[];
-  ignored: ClassifiedCheck[];
 }> {
   const candidates = [
     ...buckets.failing,
     ...buckets.passing,
     ...buckets.skipped,
     ...buckets.filtered,
-    ...buckets.ignored,
   ].filter(shouldFetchCheckAnnotations);
   const expectedCounts = new Map(
     candidates.flatMap((c) =>
@@ -101,7 +92,6 @@ export async function attachAndMergeCheckAnnotations(
     failing: apply(buckets.failing),
     skipped: apply(buckets.skipped),
     filtered: apply(buckets.filtered),
-    ignored: apply(buckets.ignored),
   };
 }
 

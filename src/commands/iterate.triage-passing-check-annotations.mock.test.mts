@@ -96,7 +96,7 @@ describe("triage — passing-check annotations", () => {
     expect(result.action).toBe("ready");
   });
 
-  it("does not treat ignored annotated checks as failing CI", async () => {
+  it("does not treat skipped annotated checks as failing CI", async () => {
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "READY",
@@ -104,28 +104,27 @@ describe("triage — passing-check annotations", () => {
           passing: [],
           failing: [],
           inProgress: [],
-          skipped: [],
           filtered: [],
           filteredNames: [],
           blockedByFilteredCheck: false,
-          ignored: [
+          skipped: [
             {
-              id: "CR_ign",
-              name: "ignored-ci",
+              id: "CR_skip",
+              name: "skipped-ci",
               status: "COMPLETED",
-              conclusion: "FAILURE",
-              detailsUrl: "https://checks.example/ignored",
+              conclusion: "NEUTRAL",
+              detailsUrl: "https://checks.example/skipped",
               event: "push",
               runId: "99",
-              category: "ignored",
+              category: "skipped",
               annotations: [
                 {
-                  id: "check_annotation_ign",
+                  id: "check_annotation_skip",
                   path: "src/a.mts",
                   startLine: 1,
                   endLine: 1,
                   level: "FAILURE",
-                  message: "Ignored check annotation.",
+                  message: "Skipped check annotation.",
                 },
               ],
             },
@@ -145,7 +144,7 @@ describe("triage — passing-check annotations", () => {
     if (result.action === "triage") {
       expect(result.triage.checks).toHaveLength(1);
       expect(result.triage.checks[0]?.annotationOnly).toBe(true);
-      expect(result.triage.checks[0]?.conclusion).toBe("FAILURE");
+      expect(result.triage.checks[0]?.conclusion).toBe("NEUTRAL");
       expect(result.triage.instructions.join("\n")).not.toContain("## Failing checks");
       expect(result.triage.resolveCommand.requiresHeadSha).toBe(false);
     }

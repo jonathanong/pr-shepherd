@@ -267,7 +267,6 @@ async function runScopedCheck(
   const inProgress = classifiedChecks.filter((c) => c.category === "in_progress");
   const skipped = classifiedChecks.filter((c) => c.category === "skipped");
   const filtered = classifiedChecks.filter((c) => c.category === "filtered");
-  const ignored = classifiedChecks.filter((c) => c.category === "ignored");
   const triagedBase =
     failing.length > 0 && !opts.skipTriage
       ? await triageFailingChecks(
@@ -299,12 +298,11 @@ async function runScopedCheck(
   const classifyIndex = buildClassifyIndex(ruleSet, batchData);
   const partition = partitionBatch(classifyIndex, batchData);
   const merged = await attachAndMergeCheckAnnotations(
-    { passing, failing: triagedBase, skipped, filtered, ignored },
+    { passing, failing: triagedBase, skipped, filtered },
     seenMap,
     prNumber,
     { stateKey, headSha: batchData.headRefOid },
   );
-  const ignoredAnnotated = merged.ignored.filter((c) => (c.annotations?.length ?? 0) > 0);
   const minimizedCommentCandidates = batchData.comments.filter(
     (c) => c.isMinimized && !partition.suppressedCommentIds.has(c.id),
   );
@@ -507,7 +505,6 @@ async function runScopedCheck(
         passing: merged.passing,
         skipped: merged.skipped,
         filtered: merged.filtered,
-        ignored: merged.ignored,
       },
       mergeStatus.status,
     );
@@ -529,12 +526,7 @@ async function runScopedCheck(
     deferWhileQueued ? 0 : (opts.reviewOutputMaxChars ?? 0),
   );
   if (opts.persistSeen !== false) {
-    const successfulAnnotations = [
-      ...merged.passing,
-      ...merged.skipped,
-      ...merged.filtered,
-      ...merged.ignored,
-    ]
+    const successfulAnnotations = [...merged.passing, ...merged.skipped, ...merged.filtered]
       .filter((check) => check.conclusion === "SUCCESS")
       .flatMap((check) => check.annotations ?? []);
     const deferredMarkSeen = deferWhileQueued
@@ -675,7 +667,6 @@ async function runScopedCheck(
       inProgress: inProgress as ClassifiedCheck[],
       skipped: merged.skipped,
       filtered: merged.filtered,
-      ...(ignoredAnnotated.length > 0 && { ignored: ignoredAnnotated }),
       filteredNames: verdict.filteredNames,
       blockedByFilteredCheck,
       ...(verdict.ignoredNames.length > 0 && {
