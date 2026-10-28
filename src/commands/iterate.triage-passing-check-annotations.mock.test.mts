@@ -95,4 +95,58 @@ describe("triage — passing-check annotations", () => {
 
     expect(result.action).toBe("ready");
   });
+
+  it("does not treat skipped annotated checks as failing CI", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        checks: {
+          passing: [],
+          failing: [],
+          inProgress: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+          skipped: [
+            {
+              id: "CR_skip",
+              name: "skipped-ci",
+              status: "COMPLETED",
+              conclusion: "NEUTRAL",
+              detailsUrl: "https://checks.example/skipped",
+              event: "push",
+              runId: "99",
+              category: "skipped",
+              annotations: [
+                {
+                  id: "check_annotation_skip",
+                  path: "src/a.mts",
+                  startLine: 1,
+                  endLine: 1,
+                  level: "FAILURE",
+                  message: "Skipped check annotation.",
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("triage");
+    if (result.action === "triage") {
+      expect(result.triage.checks).toHaveLength(1);
+      expect(result.triage.checks[0]?.annotationOnly).toBe(true);
+      expect(result.triage.checks[0]?.conclusion).toBe("NEUTRAL");
+      expect(result.triage.instructions.join("\n")).not.toContain("## Failing checks");
+      expect(result.triage.resolveCommand.requiresHeadSha).toBe(false);
+    }
+  });
 });

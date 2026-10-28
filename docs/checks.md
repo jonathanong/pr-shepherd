@@ -161,7 +161,7 @@ The batch query probes `annotations(first: 1)`, so Shepherd paginates only check
 | `filtered`               | Excluded by the event filter                                                                                                                                   |
 | `filteredNames`          | Names of filtered checks                                                                                                                                       |
 | `blockedByFilteredCheck` | `BLOCKED` state is caused by a filtered check                                                                                                                  |
-| `ignoredNames`           | Suppressed by `checks.ignore` (their annotations are never read); omitted when empty                                                                           |
+| `ignoredNames`           | Suppressed by `checks.ignore`; their annotations get no follow-up read and never count as work; omitted when empty                                             |
 | `supersededNames`        | `CANCELLED` checks reclassified as `superseded`; omitted when empty                                                                                            |
 
 Pending checks also carry raw timing when GitHub exposes it:
