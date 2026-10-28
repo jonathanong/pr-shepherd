@@ -73,7 +73,8 @@ describe("refreshCachedUnreported", () => {
   it("clears the cached names once every required context has a check", async () => {
     target.mockResolvedValue({ contexts: ["gitleaks", "build", "tests"], stackBottomPr: 613 });
     const cached = report({ status: "PENDING" });
-    cached.checks.supersededNames = ["build", "tests"];
+    cached.checks.supersededNames = ["build"];
+    cached.checks.ignoredNames = ["tests"];
 
     const next = await refreshCachedUnreported(cached, { owner: "acme", name: "widgets" });
 
@@ -81,17 +82,6 @@ describe("refreshCachedUnreported", () => {
     expect(next!.trunkBehindBy).toBeUndefined();
     expect(next!.stackBottomPr).toBe(613);
     expect(next!.status).toBe("PENDING");
-  });
-
-  it("counts checks.ignore checks as reported", async () => {
-    target.mockResolvedValue({ contexts: ["gitleaks", "build", "tests"] });
-    const cached = report({ status: "PENDING" });
-    cached.checks.supersededNames = ["build"];
-    cached.checks.ignoredNames = ["tests"];
-
-    const next = await refreshCachedUnreported(cached, { owner: "acme", name: "widgets" });
-
-    expect(next!.unreportedRequiredChecks).toBeUndefined();
   });
 
   it("asks for a fresh check when the trunk's required contexts changed", async () => {
