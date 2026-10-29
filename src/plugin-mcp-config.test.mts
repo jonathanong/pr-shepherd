@@ -26,6 +26,33 @@ describe("plugin MCP configuration", () => {
     expect(codexMcp.mcpServers["pr-shepherd"]).toEqual(expected);
   });
 
+  it("locks the launched package in the plugin directory", () => {
+    // Not compared with .mcp.json: the release commit bumps that pin before publish,
+    // and the lock only follows once the new version is on the registry.
+    const manifest = readJson("plugins/pr-shepherd/package.json") as {
+      dependencies: Record<string, string>;
+    };
+    const lock = readJson("plugins/pr-shepherd/package-lock.json") as {
+      packages: Record<string, { version?: string; integrity?: string }>;
+    };
+    const locked = lock.packages["node_modules/pr-shepherd"];
+
+    expect(locked?.version).toBe(manifest.dependencies["pr-shepherd"]);
+    expect(locked?.integrity).toMatch(/^sha512-/);
+  });
+
+  it("ships a square PNG listing icon within directory limits", () => {
+    const icon = readFileSync(new URL("plugins/pr-shepherd/.claude-plugin/icon.png", rootUrl));
+    const width = icon.readUInt32BE(16);
+    const height = icon.readUInt32BE(20);
+
+    expect(icon.subarray(1, 4).toString("ascii")).toBe("PNG");
+    expect(width).toBe(height);
+    expect(width).toBeGreaterThanOrEqual(512);
+    expect(width).toBeLessThanOrEqual(2048);
+    expect(icon.length).toBeLessThan(2 * 1024 * 1024);
+  });
+
   it("registers host-appropriate MCP configs in both plugin manifests", () => {
     const codex = readJson("plugins/pr-shepherd/.codex-plugin/plugin.json");
     const claude = readJson(".claude-plugin/plugin.json");

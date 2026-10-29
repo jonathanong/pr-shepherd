@@ -73,6 +73,13 @@ jobs:
 
       - run: npm publish --provenance --access public
 
+      - name: Lock plugin launcher to the published version
+        run: |
+          node .github/scripts/sync-plugin-lock.mjs
+          git add plugins/pr-shepherd/package.json plugins/pr-shepherd/package-lock.json
+          git commit -m "chore(plugin): lock launcher to v${{ steps.bump.outputs.version }}"
+          git push origin HEAD:main
+
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
