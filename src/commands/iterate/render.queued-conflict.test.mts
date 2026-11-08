@@ -14,6 +14,7 @@ function render(opts: {
   hasExhaustedWorkflowRerun?: boolean;
   stackRebase?: string;
   dequeueCommand?: string;
+  behindBaseHint?: string;
 }): string[] {
   return buildFixInstructions(
     [],
@@ -30,7 +31,7 @@ function render(opts: {
     [],
     [],
     undefined,
-    "",
+    opts.behindBaseHint ?? "",
     false,
     false,
     opts.hasExhaustedWorkflowRerun ?? false,
@@ -62,6 +63,19 @@ describe("buildFixInstructions queued conflict", () => {
       /^If you chose \(a\): /,
     );
     expect(instructions.at(-1)).toBe(QUEUED_CONFLICT_CONTINUATION);
+  });
+
+  it("marks the configured branch-update hint as path (a) on both conflict routes", () => {
+    for (const hasExhaustedWorkflowRerun of [false, true]) {
+      const instructions = render({
+        dequeueCommand: "DEQUEUE",
+        hasExhaustedWorkflowRerun,
+        behindBaseHint: "rebase --force-with-lease",
+      });
+      const hint = instructions.filter((i) => i.includes("rebase --force-with-lease"));
+      expect(hint).toHaveLength(1);
+      expect(hint[0]).toMatch(/^If you chose \(a\): /);
+    }
   });
 
   it("warns a stack layer that queued layers above it may leave too", () => {

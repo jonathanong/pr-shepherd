@@ -93,15 +93,15 @@ export function buildFixInstructions(
   // Start with interpretation. The agent decides what raw feedback warrants a code change.
   if (hasNonConflictHints) instructions.push("Fix each warranted item.");
   // A conflicting native stack layer follows the printed gh-stack route, so it omits the hint.
+  // A queued conflict offers a wait path, so its branch update and push steps become path (a).
+  const pathA = (step: string) => (dequeueCommand ? `If you chose (a): ${step}` : step);
   const branchUpdateHint = buildBehindBaseHintInstruction(baseBranch, behindBaseHint, {
     isBehind,
     hasConflicts: hasConflicts && !stackRebase,
-  });
+  }).map(pathA);
   // The conflict hint belongs with the conflict step; otherwise it precedes the push step.
   const hintWithConflictStep = hasConflicts && !hasRepeatedWorkflowBranchRecovery;
   const branchRecovery = hasConflicts || hasRepeatedWorkflowBranchRecovery;
-  // A queued conflict offers a wait path, so its branch update and push steps become path (a).
-  const pathA = (step: string) => (dequeueCommand ? `If you chose (a): ${step}` : step);
   if (hintWithConflictStep)
     instructions.push(buildConflictInstruction(stackRebase, dequeueCommand), ...branchUpdateHint);
   else if (dequeueCommand && hasRepeatedWorkflowBranchRecovery)
