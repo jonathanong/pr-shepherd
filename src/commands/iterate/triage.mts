@@ -565,9 +565,17 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
   if (recovery && "unavailable" in recovery) instructions.unshift(recovery.unavailable);
   if (acknowledgmentRecovery && "unavailable" in acknowledgmentRecovery)
     instructions.unshift(acknowledgmentRecovery.unavailable);
+  // A queued conflict offers a wait path, so every later branch-mutating step is path (a), and
+  // leading repair steps follow the dequeue-or-wait choice instead of preceding it.
+  const pathA = (step: string) => (dequeueCommand ? `If you chose (a): ${step}` : step);
+  const prependBranchSteps = (steps: string[]) => {
+    if (!dequeueCommand) return void instructions.unshift(...steps);
+    const choice = instructions.findIndex((step) => step.includes(dequeueCommand));
+    instructions.splice(choice + 1, 0, ...steps.map(pathA));
+  };
   if (failingAgentChecks.some((check) => releasedCheckNames.has(check.name))) {
     const completion = instructions.pop();
-    instructions.push(buildReleasedBlockerInstruction(prNumber));
+    instructions.push(pathA(buildReleasedBlockerInstruction(prNumber)));
     if (completion !== undefined) instructions.push(completion);
   }
   if (report.reviewItems) {
@@ -575,23 +583,16 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     instructions.push(buildReviewSubsetInstruction(report.reviewItems));
     if (completion !== undefined) instructions.push(completion);
   }
-  if (repairInstructions && repairInstructions.length > 0) {
-    if (dequeueCommand) {
-      // Stack repairs rewrite branches, so they follow the queued-conflict choice as path (a).
-      const choice = instructions.findIndex((step) => step.includes(dequeueCommand));
-      const steps = repairInstructions.map((step) => `If you chose (a): ${step}`);
-      instructions.splice(choice + 1, 0, ...steps);
-    } else instructions.unshift(...repairInstructions);
-  }
+  if (repairInstructions && repairInstructions.length > 0) prependBranchSteps(repairInstructions);
   if (mergedBasePullRequests.length > 0) {
     // `gh pr edit` goes through GraphQL; REST callers retarget with the pulls PATCH endpoint.
     const retarget =
       report.transport === "rest"
         ? `gh api --method PATCH repos/${report.repo}/pulls/${prNumber} -f base=<verified-parent-base>`
         : `gh pr edit ${prReference} --base <verified-parent-base>`;
-    instructions.unshift(
+    prependBranchSteps([
       `Inspect every PR under \`## Merged PRs matching the current base\`. If this PR is the remaining layer intended for a merged parent's base branch, run \`${retarget}\` after replacing \`<verified-parent-base>\` with that parent's shell-quoted base branch, then rerun Shepherd immediately and follow its fresh instructions instead of the remaining steps here. Otherwise keep the current base and follow the remaining conflict-resolution steps.`,
-    );
+    ]);
   }
   const checkRunCount = countReportedChecks(report.checks);
   const suitesEmpty = report.headCheckSuitesEmpty === true;
