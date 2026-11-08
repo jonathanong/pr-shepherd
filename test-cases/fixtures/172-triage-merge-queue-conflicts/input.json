@@ -1,0 +1,47 @@
+{
+  "batchData": {
+    "mergeable": "CONFLICTING",
+    "mergeStateStatus": "DIRTY",
+    "reviewDecision": "APPROVED",
+    "isMergeQueueEnabled": true,
+    "isInMergeQueue": true,
+    "mergeQueueEntry": {
+      "position": 2,
+      "state": "UNMERGEABLE",
+      "estimatedTimeToMerge": null
+    },
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ],
+    "reviewThreads": [
+      {
+        "id": "PRRT_active",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/index.ts",
+        "line": 42,
+        "startLine": null,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "Please rename this variable to be more descriptive.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r1",
+        "createdAtUnix": 1715700000
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "args": ["--merge"],
+  "expectedExitCode": 12
+}

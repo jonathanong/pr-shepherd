@@ -18,6 +18,7 @@ import { isFailingAgentCheck } from "../checks/conclusions.mts";
 import type { IterateResultTriage } from "../types.mts";
 import { renderMergeCommand } from "../commands/iterate/merge.mts";
 import { partitionFixThreads } from "../commands/iterate/fix-instruction-threads.mts";
+import { formatDeferredWorkLine } from "./iterate-merge-formatter.mts";
 
 export function formatTriageResult(
   header: string,
@@ -31,6 +32,7 @@ export function formatTriageResult(
     const { shown, total } = result.triage.reviewItems;
     sections.push(`**showing** ${shown} of ${total} review items`);
   }
+  if (result.triage.deferredWork) sections.push(formatDeferredWorkLine(result.triage.deferredWork));
 
   if (result.mergedBasePullRequests?.length) {
     sections.push("## Merged PRs matching the current base");

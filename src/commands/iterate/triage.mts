@@ -29,6 +29,8 @@ import {
   buildReviewSubsetInstruction,
 } from "./check-instructions.mts";
 import { buildNativeStackLayerRebase } from "./native-stack-rebase.mts";
+import { buildDequeueCommand } from "./merge-plan.mts";
+import { renderShellCommand } from "../../cli/runner.mts";
 import { lookupUpperLayerTrunkConflict } from "./stack-trunk-conflict.mts";
 import { lookupMergedBasePullRequests } from "./merged-base-pull-requests.mts";
 import {
@@ -38,7 +40,11 @@ import {
 } from "./conflicting-head-ci.mts";
 import { conflictingHeadFirstSeenUnix } from "../../state/conflicting-head-seen.mts";
 import { applyStallGuard } from "./stall.mts";
-import { annotationMarkerBody, checksWithActionableAnnotations } from "../check-annotations.mts";
+import {
+  annotationMarkerBody,
+  checksWithActionableAnnotations,
+  isQueuedConflict,
+} from "../check-annotations.mts";
 import { threadTranscriptBody } from "../../threads/transcript.mts";
 import { isHumanAuthor, isConfiguredBotAuthor } from "../../comments/authors.mts";
 import { canRerunWorkflows } from "../../checks/conclusions.mts";
@@ -49,6 +55,7 @@ import type {
   AgentCheck,
   EscalateDetails,
   IterateCommandOptions,
+  IterateDeferredWork,
   IterateResult,
   IterateResultBase,
   Review,
@@ -78,6 +85,8 @@ interface HandleTriageContext {
   ruleAutoResolveThreadIds?: string[];
   /** Verified stack-repair guidance, when ancestry is stale. */
   repairInstructions?: string[];
+  /** Review work a queued conflict holds back until the PR leaves the queue. */
+  deferredWork?: IterateDeferredWork;
 }
 
 function checkRequiresHumanFollowUp(check: AgentCheck): boolean {
@@ -354,6 +363,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
   ];
   const { changesRequestedReviews } = report;
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
+  const queuedConflict = isQueuedConflict(report.mergeQueue?.inQueue, report.mergeStatus.status);
   const isBehind = report.mergeStatus.status === "BEHIND";
   const { "behind-base-hint": behindBaseHint, instructions: configuredInstructions } =
     loadConfig().iterate;
@@ -525,6 +535,9 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
           report.stackBottomPr,
         )
       : undefined;
+  const dequeueCommand = queuedConflict
+    ? renderShellCommand(buildDequeueCommand(report.nodeId))
+    : undefined;
   const instructions = buildFixInstructions(
     threads,
     actionableComments,
@@ -547,13 +560,22 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     stackRebase,
     queueEjection,
     opts.instructions ?? configuredInstructions,
+    dequeueCommand,
   );
   if (recovery && "unavailable" in recovery) instructions.unshift(recovery.unavailable);
   if (acknowledgmentRecovery && "unavailable" in acknowledgmentRecovery)
     instructions.unshift(acknowledgmentRecovery.unavailable);
+  // A queued conflict offers a wait path, so every later branch-mutating step is path (a), and
+  // leading repair steps follow the dequeue-or-wait choice instead of preceding it.
+  const pathA = (step: string) => (dequeueCommand ? `If you chose (a): ${step}` : step);
+  const prependBranchSteps = (steps: string[]) => {
+    if (!dequeueCommand) return void instructions.unshift(...steps);
+    const choice = instructions.findIndex((step) => step.includes(dequeueCommand));
+    instructions.splice(choice + 1, 0, ...steps.map(pathA));
+  };
   if (failingAgentChecks.some((check) => releasedCheckNames.has(check.name))) {
     const completion = instructions.pop();
-    instructions.push(buildReleasedBlockerInstruction(prNumber));
+    instructions.push(pathA(buildReleasedBlockerInstruction(prNumber)));
     if (completion !== undefined) instructions.push(completion);
   }
   if (report.reviewItems) {
@@ -561,18 +583,16 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     instructions.push(buildReviewSubsetInstruction(report.reviewItems));
     if (completion !== undefined) instructions.push(completion);
   }
-  if (repairInstructions && repairInstructions.length > 0) {
-    instructions.unshift(...repairInstructions);
-  }
+  if (repairInstructions && repairInstructions.length > 0) prependBranchSteps(repairInstructions);
   if (mergedBasePullRequests.length > 0) {
     // `gh pr edit` goes through GraphQL; REST callers retarget with the pulls PATCH endpoint.
     const retarget =
       report.transport === "rest"
         ? `gh api --method PATCH repos/${report.repo}/pulls/${prNumber} -f base=<verified-parent-base>`
         : `gh pr edit ${prReference} --base <verified-parent-base>`;
-    instructions.unshift(
+    prependBranchSteps([
       `Inspect every PR under \`## Merged PRs matching the current base\`. If this PR is the remaining layer intended for a merged parent's base branch, run \`${retarget}\` after replacing \`<verified-parent-base>\` with that parent's shell-quoted base branch, then rerun Shepherd immediately and follow its fresh instructions instead of the remaining steps here. Otherwise keep the current base and follow the remaining conflict-resolution steps.`,
-    );
+    ]);
   }
   const checkRunCount = countReportedChecks(report.checks);
   const suitesEmpty = report.headCheckSuitesEmpty === true;
@@ -619,6 +639,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       firstLookThreads,
       firstLookComments,
       ...(report.reviewItems && { reviewItems: report.reviewItems }),
+      ...(ctx.deferredWork && { deferredWork: ctx.deferredWork }),
     },
   } as IterateResult;
   const result = await applyStallGuard(
@@ -636,11 +657,13 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       { owner: repoOwner, repo: repoName, pr: prNumber },
       { headSha, threadAttempts, threadBodyHashes },
     );
-    await Promise.allSettled(
-      result.triage.checks.flatMap((ch) =>
-        (ch.annotations ?? []).map((a) => markSeen(stallKey, a.id, annotationMarkerBody(a))),
-      ),
-    );
+    // A queued conflict's annotation fixes are path (a); waiting keeps them unseen.
+    if (!queuedConflict)
+      await Promise.allSettled(
+        result.triage.checks.flatMap((ch) =>
+          (ch.annotations ?? []).map((a) => markSeen(stallKey, a.id, annotationMarkerBody(a))),
+        ),
+      );
   }
   return result;
 }

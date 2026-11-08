@@ -26,6 +26,7 @@ import {
   annotationMarkerBody,
   attachAndMergeCheckAnnotations,
   hasCheckDrivenActionableWork,
+  isQueuedConflict,
 } from "./check-annotations.mts";
 import { buildTerminalReport } from "./check-terminal-report.mts";
 import {
@@ -495,19 +496,22 @@ async function runScopedCheck(
   // that also has check-driven work (failing checks, actionable annotations, conflicts) is
   // NOT deferred — index.mts still renders these items via triage — so this must stay false
   // in that case too, or their seen markers would be suppressed while actually being shown.
+  // A queued conflict also holds review work back (iterate strips it from that triage tick).
+  const queuedConflict = isQueuedConflict(batchData.isInMergeQueue, mergeStatus.status);
   const deferWhileQueued =
-    opts.merge === true &&
-    batchData.isInMergeQueue === true &&
-    config.actions["work-while-queued"] !== true &&
-    !hasCheckDrivenActionableWork(
-      {
-        failing: merged.failing,
-        passing: merged.passing,
-        skipped: merged.skipped,
-        filtered: merged.filtered,
-      },
-      mergeStatus.status,
-    );
+    queuedConflict ||
+    (opts.merge === true &&
+      batchData.isInMergeQueue === true &&
+      config.actions["work-while-queued"] !== true &&
+      !hasCheckDrivenActionableWork(
+        {
+          failing: merged.failing,
+          passing: merged.passing,
+          skipped: merged.skipped,
+          filtered: merged.filtered,
+        },
+        mergeStatus.status,
+      ));
   // A deferred tick shows no review items, so it is never capped; its seen markers stay unwritten.
   const {
     buckets: budgeted,
@@ -544,7 +548,10 @@ async function runScopedCheck(
           ...approvedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
         ];
     await Promise.allSettled([
-      ...successfulAnnotations.map((a) => markSeen(stateKey, a.id, annotationMarkerBody(a))),
+      // A queued conflict defers annotation fixes too (path (a)), so they stay unseen.
+      ...(queuedConflict ? [] : successfulAnnotations).map((a) =>
+        markSeen(stateKey, a.id, annotationMarkerBody(a)),
+      ),
       ...deferredMarkSeen,
       ...batchData.comments
         .filter(

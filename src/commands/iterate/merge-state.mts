@@ -84,7 +84,7 @@ export function buildReadyMergeOutcome(
   return { ...base, action: "merge", merge: plan };
 }
 /** Raw counts of non-CI actionable work held back for one queued-PR wait tick. Omitted (all zero) when empty. */
-function buildDeferredWork(input: {
+export function buildDeferredWork(input: {
   report: ShepherdReport;
   reviewSummaryIds: string[];
   firstLookSummaries: Review[];

@@ -60,7 +60,7 @@ Each case carries `tier:discriminating` or `tier:guard` in its tags, set in
 
 `EVAL_RUNS_DISCRIMINATING` and `EVAL_RUNS_GUARD` override the per-case `runs`
 (a case's own `runs`, else 3) at generation time. Cases `38`, `39` and
-`43`–`55` commit their own `runs: 6`, whatever their tier, because at 3 the
+`43`–`56` commit their own `runs: 6`, whatever their tier, because at 3 the
 without arm alone has swung ±0.44; `40`–`42` do not. Regenerate, run, then
 regenerate without the variables so the tree matches the committed cases:
 
@@ -118,7 +118,7 @@ Layout:
 - `cases/core.mjs`: cases 01–13.
 - `cases/stack.mjs`: cases 14–22 and 24.
 - `cases/recent.mjs`: cases 23 and 25–28.
-- `cases/rules.mjs`: cases 29–37, one per skill or CLI rule that had no case. A case may set `transform` (edit the recorded text, used to plant an injection) or `plan: true` (no fixture; the prompt is the whole input).
+- `cases/rules.mjs`: cases 29–37 and 56, one per skill or CLI rule that had no case. A case may set `transform` (edit the recorded text, used to plant an injection) or `plan: true` (no fixture; the prompt is the whole input).
 - `cases/deferred.mjs`: cases 38, 39 and 43, the rules that first needed a new
   CLI snapshot.
 - `cases/cloud.mjs`: cases 40–42, the cloud event loop (single ticks).
@@ -131,7 +131,7 @@ Layout:
   (`iterate.review-output-max-chars`).
 - `cases/aggregate.mjs`: cases 54 and 55, explicit multi-PR aggregate polls.
 
-A case may also set `runs` (default 3). Cases 38, 39 and 43–55 use 6.
+A case may also set `runs` (default 3). Cases 38, 39 and 43–56 use 6.
 
 Case numbers are stable. Add new cases at the end instead of renumbering.
 
@@ -201,6 +201,7 @@ third arm.
 | `53-triage-review-subset`                      | `155`   | Review output budget subset: apply the printed IDs, rerun, don't fetch held items              |
 | `54-multi-pr-aggregate-routes-rows`            | `86`    | Explicit aggregate poll: run each non-WAIT row's `pollCommand`, skip WAIT, rerun the aggregate |
 | `55-multi-pr-aggregate-escalate-keeps-working` | `160`   | One row's `ESCALATE` is reported but does not stop work on the `TRIAGE` row                    |
+| `56-queued-conflict-dequeue-or-wait`           | `172`   | Queued PR conflicts: dequeue before pushing a resolution, or wait; never push first            |
 
 "apply" is `test-cases/snapshots/apply-review-session-refusal`, an
 `apply review` output recorded by `test-cases/apply-review.test.mts` through

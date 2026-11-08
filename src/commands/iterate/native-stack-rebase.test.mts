@@ -121,6 +121,22 @@ describe("native stack rebase instructions", () => {
     );
   });
 
+  it("offers a queued conflicting PR both dequeue-and-resolve and waiting", () => {
+    const single = buildConflictInstruction(undefined, "DEQUEUE");
+    expect(single).toContain("The PR is still in the merge queue");
+    expect(single).toContain("(a) pull it from the queue and resolve now — first run `DEQUEUE`");
+    expect(single).toContain("the other entries stay queued");
+    expect(single).toContain("then: Resolve them before committing.");
+    expect(single).toContain("enqueue it again");
+    expect(single).toContain(
+      "(b) wait — skip the dequeue and every step marked `If you chose (a):`",
+    );
+    expect(single).toContain("`stall-timeout`");
+    expect(buildConflictInstruction("Run `gh stack rebase`.", "DEQUEUE")).toContain(
+      "then: Run `gh stack rebase`.",
+    );
+  });
+
   it("pushes after a merge-queue ejection update only when the head changed", () => {
     expect(buildBranchPushInstruction("rebase", false, "", true)).toBe(
       "If the base update or a fix changed the head, commit any remaining changes on the PR head branch and push the rewritten stack with `gh stack push`. If neither did, do not push.",

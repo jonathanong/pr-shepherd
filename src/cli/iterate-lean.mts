@@ -129,9 +129,7 @@ export function projectIterateLean(
         ...base,
         // Zero counts are omitted, matching the text `**deferred (in merge queue)**` rollup.
         ...(result.deferredWork && {
-          deferredWork: Object.fromEntries(
-            Object.entries(result.deferredWork).filter(([, n]) => n > 0),
-          ),
+          deferredWork: nonZeroCounts(result.deferredWork),
         }),
         log: adaptIterateLog(result.log),
         instructions: simpleInstructions(result),
@@ -198,6 +196,9 @@ export function projectIterateLean(
             resolveOnlyCommand: result.triage.resolveOnlyCommand,
           }),
           ...(result.triage.reviewItems && { reviewItems: result.triage.reviewItems }),
+          ...(result.triage.deferredWork && {
+            deferredWork: nonZeroCounts(result.triage.deferredWork),
+          }),
           ...(result.triage.instructions.length > 0 && {
             instructions: result.triage.instructions,
           }),
@@ -264,3 +265,10 @@ function cappedList<T>(key: string, items: readonly T[] | undefined): Record<str
 }
 
 export { projectIterateVerbose } from "./iterate-verbose.mts";
+
+/** Zero deferred-work counts are omitted, matching the text `**deferred (in merge queue)**` rollup. */
+function nonZeroCounts(counts: object): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(counts).filter((entry): entry is [string, number] => entry[1] > 0),
+  );
+}

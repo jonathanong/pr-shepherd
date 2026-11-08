@@ -1,0 +1,38 @@
+{
+  "description": "The bottom layer of a native stack is still queued but now conflicts with trunk. The conflict step offers dequeue-then-restack through the printed gh stack route, or waiting for GitHub to remove the entry; it never says a push alone leaves the queue.",
+  "batchData": {
+    "mergeable": "CONFLICTING",
+    "mergeStateStatus": "DIRTY",
+    "reviewDecision": "APPROVED",
+    "isMergeQueueEnabled": true,
+    "isInMergeQueue": true,
+    "mergeQueueEntry": {
+      "position": 1,
+      "state": "UNMERGEABLE",
+      "estimatedTimeToMerge": null
+    },
+    "stack": {
+      "number": 7,
+      "size": 1,
+      "position": 1,
+      "baseRefName": "main"
+    },
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "args": ["--merge"],
+  "expectedExitCode": 12
+}

@@ -184,7 +184,9 @@ shown to the agent this tick — only its raw count appears in `deferredWork`.
 `check.mts` skips persisting seen markers for exactly those deferred
 categories (threads, comments, changes-requested reviews, review summaries)
 on that tick; checks/annotations/rule-auto-resolve suppression marking are
-unaffected since they are never deferred. Without this, an item would be
+unaffected since they are never deferred. A queued PR with merge conflicts is the
+exception: its review items and check-annotation markers stay unwritten on
+every tick until it leaves the queue, because the caller may choose to wait. Without this, an item would be
 marked seen while hidden, then silently and permanently excluded from
 `actionable`/`firstLook` once its body stops changing — even after the PR
 leaves the queue.

@@ -138,4 +138,61 @@ describe("triage — check annotation seen markers", () => {
     expect(result.action).toBe("triage");
     expect(mockMarkSeen).not.toHaveBeenCalled();
   });
+
+  it("keeps annotation markers unwritten while a conflicting PR stays queued", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "FAILING",
+        mergeStatus: {
+          status: "CONFLICTS",
+          state: "OPEN",
+          isDraft: false,
+          mergeable: "CONFLICTING",
+          reviewDecision: "APPROVED",
+          blockingBotReviewInProgress: false,
+          mergeStateStatus: "DIRTY",
+        },
+        mergeQueue: { enabled: true, inQueue: true },
+        checks: {
+          passing: [],
+          failing: [
+            {
+              id: "CR_1",
+              name: "ci",
+              status: "COMPLETED",
+              conclusion: "FAILURE",
+              detailsUrl: "https://checks.example/1",
+              event: "pull_request",
+              runId: "1",
+              category: "failing",
+              annotations: [
+                {
+                  id: "check_annotation_queued",
+                  path: "src/a.mts",
+                  startLine: 1,
+                  endLine: 1,
+                  level: "FAILURE",
+                  message: "Deferred.",
+                },
+              ],
+            },
+          ],
+          inProgress: [],
+          skipped: [],
+          filtered: [],
+          filteredNames: [],
+          blockedByFilteredCheck: false,
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+    expect(result.action).toBe("triage");
+    expect(mockMarkSeen).not.toHaveBeenCalled();
+  });
 });

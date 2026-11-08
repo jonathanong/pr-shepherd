@@ -41,6 +41,7 @@ function prepare(
   blocker: CheckBlockerRef,
   checkName: string,
   mergeStateStatus = "CLEAN",
+  overrides: Parameters<typeof makeReport>[0] = {},
 ) {
   mockReadCheckBlockers.mockResolvedValue([{ checkName, blocker, recordedAt: 1700000000 }]);
   mockRunCheck.mockResolvedValue(
@@ -65,6 +66,7 @@ function prepare(
         filteredNames: [],
         blockedByFilteredCheck: false,
       },
+      ...overrides,
     }),
   );
   mockUpdateReadyDelay.mockResolvedValue({
@@ -121,6 +123,19 @@ describe("check blockers during iterate", () => {
     expect(instructions).not.toContain("rerun:");
     expect(result.triage.checks[0]?.rerunCommand).toBeUndefined();
     expect(formatIterateResult(result)).not.toContain("rerun:");
+  });
+
+  it("marks the released-blocker branch update as path (a) on a queued conflict", async () => {
+    await prepare([failing("backend-tests (1)", "123")], pull, "backend-tests (1)", "CONFLICTS", {
+      mergeQueue: { enabled: true, inQueue: true },
+    });
+    mockGraphql.mockResolvedValue({
+      data: { repository: { pullRequest: { state: "MERGED", merged: true } } },
+    });
+    const result = await runIterate(makeOpts());
+    if (result.action !== "triage") throw new Error(`expected triage, got ${result.action}`);
+    const update = result.triage.instructions.find((step) => step.includes("gh pr update-branch"));
+    expect(update).toMatch(/^If you chose \(a\): /);
   });
 
   it("treats a released blocker as a normal failure once the branch is current", async () => {

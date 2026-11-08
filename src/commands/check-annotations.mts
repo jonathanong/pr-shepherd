@@ -46,6 +46,17 @@ export function hasCheckDrivenActionableWork(
   );
 }
 
+/**
+ * A merge-queue entry whose branch conflicts with its base. Its triage offers dequeue-and-resolve
+ * or wait; review work waits until the PR leaves the queue on either path. Shared by `check.mts`
+ * (seen markers stay unwritten) and `iterate` (review items and fix attempts stay out of the
+ * tick), so a caller who waits never has review items consumed or counted toward
+ * `triage-thrash`.
+ */
+export function isQueuedConflict(inQueue: boolean | undefined, mergeStatus: string): boolean {
+  return inQueue === true && mergeStatus === "CONFLICTS";
+}
+
 export async function attachAndMergeCheckAnnotations(
   buckets: {
     passing: ClassifiedCheck[];
