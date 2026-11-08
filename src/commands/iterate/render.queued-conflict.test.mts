@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ResolveCommand } from "../../types.mts";
 import { buildFixInstructions } from "./render.mts";
-import { QUEUED_CONFLICT_CONTINUATION } from "./native-stack-rebase.mts";
+import { QUEUED_CONFLICT_CONTINUATION, isTriageContinuation } from "./check-instructions.mts";
 
 const RESOLVE: ResolveCommand = {
   argv: ["pr-shepherd", "apply", "review", "42"],
@@ -15,6 +15,7 @@ function render(opts: {
   stackRebase?: string;
   dequeueCommand?: string;
   behindBaseHint?: string;
+  resolve?: ResolveCommand;
 }): string[] {
   return buildFixInstructions(
     [],
@@ -22,7 +23,7 @@ function render(opts: {
     [],
     [],
     "main",
-    RESOLVE,
+    opts.resolve ?? RESOLVE,
     true,
     42,
     [],
@@ -82,6 +83,21 @@ describe("buildFixInstructions queued conflict", () => {
     const [step] = render({ dequeueCommand: "DEQUEUE", stackRebase: "Run `gh stack rebase`." });
     expect(step).toContain("so may any queued layers above it in this stack");
     expect(step).toContain("enqueue it and any removed layers again");
+  });
+
+  it("defers review mutations to path (a) so the wait path never resolves an unpushed fix", () => {
+    const instructions = render({
+      dequeueCommand: "DEQUEUE",
+      resolve: { ...RESOLVE, hasMutations: true, requiresHeadSha: true },
+    });
+    const mutation = instructions.filter((i) => i.includes("pr-shepherd apply review 42"));
+    expect(mutation.length).toBeGreaterThan(0);
+    for (const step of mutation) expect(step).toMatch(/^If you chose \(a\): /);
+    expect(instructions[0]).toContain("leaves review fixes and mutations for a later tick");
+  });
+
+  it("lets the quota warning rewrite the queued continuation", () => {
+    expect(isTriageContinuation(QUEUED_CONFLICT_CONTINUATION)).toBe(true);
   });
 
   it("leaves an unqueued conflict unchanged", () => {

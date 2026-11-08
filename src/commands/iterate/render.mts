@@ -16,6 +16,7 @@ import {
   buildRepeatedWorkflowBranchRecoveryInstructions,
   buildResolveCommandInstruction,
   buildFixCompletionInstruction,
+  QUEUED_CONFLICT_CONTINUATION,
 } from "./check-instructions.mts";
 import { isFailingAgentCheck } from "../../checks/conclusions.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
@@ -24,7 +25,6 @@ import {
   buildBranchPushInstruction,
   buildConflictInstruction,
   buildQueuedConflictChoice,
-  QUEUED_CONFLICT_CONTINUATION,
 } from "./native-stack-rebase.mts";
 import { queueEjectionSteps, type QueueEjectionRecovery } from "./queue-recovery-instructions.mts";
 import { buildPushSteps } from "./triage-loop-instruction.mts";
@@ -91,10 +91,11 @@ export function buildFixInstructions(
     actionableComments.length > 0;
 
   // Start with interpretation. The agent decides what raw feedback warrants a code change.
-  if (hasNonConflictHints) instructions.push("Fix each warranted item.");
-  // A conflicting native stack layer follows the printed gh-stack route, so it omits the hint.
-  // A queued conflict offers a wait path, so its branch update and push steps become path (a).
+  // A queued conflict offers a wait path that publishes nothing, so fixes, branch updates,
+  // pushes, and review mutations (which must follow a push) become path (a).
   const pathA = (step: string) => (dequeueCommand ? `If you chose (a): ${step}` : step);
+  if (hasNonConflictHints) instructions.push(pathA("Fix each warranted item."));
+  // A conflicting native stack layer follows the printed gh-stack route, so it omits the hint.
   const branchUpdateHint = buildBehindBaseHintInstruction(baseBranch, behindBaseHint, {
     isBehind,
     hasConflicts: hasConflicts && !stackRebase,
@@ -126,7 +127,7 @@ export function buildFixInstructions(
 
   const hasSuggestions = locatedThreads.some((t) => t.suggestion);
   if (hasSuggestions)
-    instructions.push(buildCommitSuggestionInstruction(prReference, "## Review threads"));
+    instructions.push(pathA(buildCommitSuggestionInstruction(prReference, "## Review threads")));
 
   if (resolutionOnlyThreads.length > 0)
     instructions.push(
@@ -141,7 +142,9 @@ export function buildFixInstructions(
 
   if (hasAnnotations)
     instructions.push(
-      "Inspect every referenced range under `## Check annotations` and apply any warranted change.",
+      pathA(
+        "Inspect every referenced range under `## Check annotations` and apply any warranted change.",
+      ),
     );
 
   // The first step already covers applying changes-requested bodies; only stale CRs add a step.
@@ -178,10 +181,12 @@ export function buildFixInstructions(
   instructions.push(...buildPushSteps(instructionStyle, genericPush));
 
   if (resolveOnlyCommand?.hasMutations)
-    instructions.push(`Run: \`${renderResolveCommand(resolveOnlyCommand)}\``);
+    instructions.push(pathA(`Run: \`${renderResolveCommand(resolveOnlyCommand)}\``));
 
   instructions.push(
-    ...buildResolveCommandInstruction(resolveCommand, renderResolveCommand(resolveCommand)),
+    ...buildResolveCommandInstruction(resolveCommand, renderResolveCommand(resolveCommand)).map(
+      pathA,
+    ),
     dequeueCommand ? QUEUED_CONFLICT_CONTINUATION : buildFixCompletionInstruction(),
   );
   return instructions;

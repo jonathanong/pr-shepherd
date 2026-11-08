@@ -110,13 +110,8 @@ export function buildQueuedConflictChoice(
     ? "this PR leaves the queue, and so may any queued layers above it in this stack; other entries stay queued"
     : "only this PR leaves the queue and the other entries stay queued";
   const requeue = stack ? "enqueue it and any removed layers again" : "enqueue it again";
-  return `The PR is still in the merge queue, but GitHub cannot merge it until the conflicts are resolved. Choose one path: (a) pull it from the queue and resolve now — first run \`${dequeueCommand}\` (\`gh pr\` cannot remove a queue entry); ${leaves}; then: ${resolve} Once the PR is ready again, ${requeue} (with \`--merge\`, Shepherd prints the enqueue command). Or (b) wait — skip the dequeue and every step marked \`If you chose (a):\`, and rerun Shepherd after the polling interval instead of immediately, until GitHub removes the entry itself; this step repeats until then, and an unchanged conflict escalates through \`stall-timeout\`.`;
+  return `The PR is still in the merge queue, but GitHub cannot merge it until the conflicts are resolved. Choose one path: (a) pull it from the queue and resolve now — first run \`${dequeueCommand}\` (\`gh pr\` cannot remove a queue entry); ${leaves}; then: ${resolve} Once the PR is ready again, ${requeue} (with \`--merge\`, Shepherd prints the enqueue command). Or (b) wait — skip the dequeue and every step marked \`If you chose (a):\`, which leaves review fixes and mutations for a later tick, and rerun Shepherd after the polling interval instead of immediately, until GitHub removes the entry itself; this step repeats until then, and an unchanged conflict escalates through \`stall-timeout\`.`;
 }
-
-/** The final rerun step when a queued conflict offers both paths. */
-export const QUEUED_CONFLICT_CONTINUATION =
-  "If you chose (a), rerun Shepherd now. If you chose (b), rerun Shepherd after the polling interval.";
-
 /**
  * Push a conflict resolution or branch refresh: one branch, or the whole rewritten native stack.
  * After a merge-queue ejection update, push only when the update or a fix changed the head.

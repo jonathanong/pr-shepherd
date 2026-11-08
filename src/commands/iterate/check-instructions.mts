@@ -4,9 +4,20 @@ import { playbookPointer } from "../playbook-pointer.mts";
 // The `[TRIAGE]` heading and the skill already say the action is non-terminal.
 const TRIAGE_CONTINUATION = "Rerun Shepherd now.";
 
-/** The `[TRIAGE]` recurrence step, whether plain or rewritten by the quota warning. */
+/** The final rerun step when a queued conflict offers both paths. */
+export const QUEUED_CONFLICT_CONTINUATION =
+  "If you chose (a), rerun Shepherd now. If you chose (b), rerun Shepherd after the polling interval.";
+
+/**
+ * The `[TRIAGE]` recurrence step, whether plain, the queued-conflict variant, or rewritten by
+ * the quota warning. The quota cadence supersedes both queued-conflict paths.
+ */
 export function isTriageContinuation(step: string): boolean {
-  return step === TRIAGE_CONTINUATION || /\[TRIAGE\].*non-terminal/i.test(step);
+  return (
+    step === TRIAGE_CONTINUATION ||
+    step === QUEUED_CONFLICT_CONTINUATION ||
+    /\[TRIAGE\].*non-terminal/i.test(step)
+  );
 }
 
 /** Build the stale-CR step for `## Changes-requested reviews`. Empty when no human CR is stale. */
