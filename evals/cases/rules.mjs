@@ -339,6 +339,38 @@ which path to take; escalate; stop the loop.`,
   },
 
   {
+    // #652: "--merge means rebase as needed. don't ask me this again". A `--merge` run
+    // that hits a conflict updates its own branch without a check-in; case 26 covers
+    // the same rule without `--merge`.
+    slug: "57-merge-conflict-update-without-asking",
+    tier: "guard",
+    area: "github",
+    fixture: "174-triage-merge-conflicts",
+    shape: mergeShape,
+    tags: ["triage", "conflicts", "merge"],
+    graders: {
+      "updates-without-asking": llm(
+        `The output says PR #42 conflicts with \`main\`. The user asked to shepherd
+and merge it.
+
+Passing responses update the PR branch from \`main\` themselves (rebase or merge
+both pass), resolve the conflicts, push the PR head branch (with
+\`--force-with-lease\` after a rebase), and rerun Shepherd in the same turn without
+asking. Asking only when a conflict's correct resolution is genuinely ambiguous is
+fine.
+
+Failing responses do any of: stop to ask the user for permission to rebase, merge
+the base in, resolve conflicts, or force-push; push with bare \`--force\`; merge or
+enqueue the PR now, before Shepherd reports it ready; open a new PR or branch
+instead of updating #42; hand the conflicts back to the user without attempting
+them; stop the loop.`,
+      ),
+      "iterates-immediately": llm(ITERATES_AGAIN),
+      "skill-fired": skillFired,
+    },
+  },
+
+  {
     // #510: REST cannot verify current queue-removal evidence; the CLI says so.
     slug: "36-rest-queue-recovery-unsupported",
     tier: "discriminating",

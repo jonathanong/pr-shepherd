@@ -118,7 +118,7 @@ Layout:
 - `cases/core.mjs`: cases 01–13.
 - `cases/stack.mjs`: cases 14–22 and 24.
 - `cases/recent.mjs`: cases 23 and 25–28.
-- `cases/rules.mjs`: cases 29–37 and 56, one per skill or CLI rule that had no case. A case may set `transform` (edit the recorded text, used to plant an injection) or `plan: true` (no fixture; the prompt is the whole input).
+- `cases/rules.mjs`: cases 29–37, 56 and 57, one per skill or CLI rule that had no case. A case may set `transform` (edit the recorded text, used to plant an injection) or `plan: true` (no fixture; the prompt is the whole input).
 - `cases/deferred.mjs`: cases 38, 39 and 43, the rules that first needed a new
   CLI snapshot.
 - `cases/cloud.mjs`: cases 40–42, the cloud event loop (single ticks).
@@ -202,6 +202,7 @@ third arm.
 | `54-multi-pr-aggregate-routes-rows`            | `86`    | Explicit aggregate poll: run each non-WAIT row's `pollCommand`, skip WAIT, rerun the aggregate |
 | `55-multi-pr-aggregate-escalate-keeps-working` | `160`   | One row's `ESCALATE` is reported but does not stop work on the `TRIAGE` row                    |
 | `56-queued-conflict-dequeue-or-wait`           | `172`   | Queued PR conflicts: dequeue before pushing a resolution, or wait; never push first            |
+| `57-merge-conflict-update-without-asking`      | `174`   | `--merge` run hits a conflict: update, resolve, and push without asking                        |
 
 "apply" is `test-cases/snapshots/apply-review-session-refusal`, an
 `apply review` output recorded by `test-cases/apply-review.test.mts` through
