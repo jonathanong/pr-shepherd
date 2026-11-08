@@ -128,7 +128,9 @@ describe("native stack rebase instructions", () => {
     expect(single).toContain("the other entries stay queued");
     expect(single).toContain("then: Resolve them before committing.");
     expect(single).toContain("enqueue it again");
-    expect(single).toContain("(b) wait — skip the dequeue and the conflict push step");
+    expect(single).toContain(
+      "(b) wait — skip the dequeue and every step marked `If you chose (a):`",
+    );
     expect(single).toContain("`stall-timeout`");
     expect(buildConflictInstruction("Run `gh stack rebase`.", "DEQUEUE")).toContain(
       "then: Run `gh stack rebase`.",

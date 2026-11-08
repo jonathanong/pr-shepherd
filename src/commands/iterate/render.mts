@@ -20,7 +20,12 @@ import {
 import { isFailingAgentCheck } from "../../checks/conclusions.mts";
 import { buildCommitSuggestionInstruction } from "../commit-suggestion-instruction.mts";
 import { partitionFixThreads } from "./fix-instruction-threads.mts";
-import { buildBranchPushInstruction, buildConflictInstruction } from "./native-stack-rebase.mts";
+import {
+  buildBranchPushInstruction,
+  buildConflictInstruction,
+  buildQueuedConflictChoice,
+  QUEUED_CONFLICT_CONTINUATION,
+} from "./native-stack-rebase.mts";
 import { queueEjectionSteps, type QueueEjectionRecovery } from "./queue-recovery-instructions.mts";
 import { buildPushSteps } from "./triage-loop-instruction.mts";
 import type { InstructionStyle } from "../../config/load.mts";
@@ -95,8 +100,14 @@ export function buildFixInstructions(
   // The conflict hint belongs with the conflict step; otherwise it precedes the push step.
   const hintWithConflictStep = hasConflicts && !hasRepeatedWorkflowBranchRecovery;
   const branchRecovery = hasConflicts || hasRepeatedWorkflowBranchRecovery;
+  // A queued conflict offers a wait path, so its branch update and push steps become path (a).
+  const pathA = (step: string) => (dequeueCommand ? `If you chose (a): ${step}` : step);
   if (hintWithConflictStep)
     instructions.push(buildConflictInstruction(stackRebase, dequeueCommand), ...branchUpdateHint);
+  else if (dequeueCommand && hasRepeatedWorkflowBranchRecovery)
+    instructions.push(
+      `The branch has merge conflicts (see \`**branch**\` above). ${buildQueuedConflictChoice(dequeueCommand, "Follow the steps marked `If you chose (a):` below.", stackRebase !== undefined)}`,
+    );
 
   const firstLookTotal = firstLookThreads.length + firstLookComments.length;
   if (firstLookTotal > 0)
@@ -124,7 +135,7 @@ export function buildFixInstructions(
 
   instructions.push(
     ...buildFailingCheckInstructions(failingChecks),
-    ...repeatedWorkflowBranchRecoveryInstructions,
+    ...repeatedWorkflowBranchRecoveryInstructions.map(pathA),
     ...queueEjectionSteps(queueEjection, stackRebase, branchRecovery),
   );
 
@@ -160,14 +171,9 @@ export function buildFixInstructions(
   const genericPush = !(branchRecovery || queueEjection) && hasNonConflictHints;
 
   if (branchRecovery || queueEjection) {
-    const push = buildBranchPushInstruction(
-      stackRebase,
-      hasConflicts,
-      mutationSuffix,
-      !branchRecovery,
+    instructions.push(
+      pathA(buildBranchPushInstruction(stackRebase, hasConflicts, mutationSuffix, !branchRecovery)),
     );
-    // A queued conflict offers a wait path, which pushes nothing.
-    instructions.push(dequeueCommand && hintWithConflictStep ? `If you chose (a): ${push}` : push);
   }
   instructions.push(...buildPushSteps(instructionStyle, genericPush));
 
@@ -176,7 +182,7 @@ export function buildFixInstructions(
 
   instructions.push(
     ...buildResolveCommandInstruction(resolveCommand, renderResolveCommand(resolveCommand)),
-    buildFixCompletionInstruction(),
+    dequeueCommand ? QUEUED_CONFLICT_CONTINUATION : buildFixCompletionInstruction(),
   );
   return instructions;
 }

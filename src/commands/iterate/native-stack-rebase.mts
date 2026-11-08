@@ -94,8 +94,28 @@ export function buildConflictInstruction(
   const pointer = "The branch has merge conflicts (see `**branch**` above).";
   const resolve = stackRebase ?? "Resolve them before committing.";
   if (!dequeueCommand) return `${pointer} ${resolve}`;
-  return `${pointer} The PR is still in the merge queue, but GitHub cannot merge it until the conflicts are resolved. Choose one path: (a) pull it from the queue and resolve now — first run \`${dequeueCommand}\` (\`gh pr\` cannot remove a queue entry); only this PR leaves the queue and the other entries stay queued; then: ${resolve} Once the PR is ready again, enqueue it again (with \`--merge\`, Shepherd prints the enqueue command). Or (b) wait — skip the dequeue and the conflict push step, and rerun Shepherd after the polling interval instead of immediately, until GitHub removes the entry itself; this step repeats until then, and an unchanged conflict escalates through \`stall-timeout\`.`;
+  return `${pointer} ${buildQueuedConflictChoice(dequeueCommand, resolve, stackRebase !== undefined)}`;
 }
+
+/**
+ * The two paths for a conflicting PR that is still a queue entry. `resolve` is the branch
+ * update route; on a native stack, dequeueing a layer can also take queued layers above it out.
+ */
+export function buildQueuedConflictChoice(
+  dequeueCommand: string,
+  resolve: string,
+  stack: boolean,
+): string {
+  const leaves = stack
+    ? "this PR leaves the queue, and so may any queued layers above it in this stack; other entries stay queued"
+    : "only this PR leaves the queue and the other entries stay queued";
+  const requeue = stack ? "enqueue it and any removed layers again" : "enqueue it again";
+  return `The PR is still in the merge queue, but GitHub cannot merge it until the conflicts are resolved. Choose one path: (a) pull it from the queue and resolve now — first run \`${dequeueCommand}\` (\`gh pr\` cannot remove a queue entry); ${leaves}; then: ${resolve} Once the PR is ready again, ${requeue} (with \`--merge\`, Shepherd prints the enqueue command). Or (b) wait — skip the dequeue and every step marked \`If you chose (a):\`, and rerun Shepherd after the polling interval instead of immediately, until GitHub removes the entry itself; this step repeats until then, and an unchanged conflict escalates through \`stall-timeout\`.`;
+}
+
+/** The final rerun step when a queued conflict offers both paths. */
+export const QUEUED_CONFLICT_CONTINUATION =
+  "If you chose (a), rerun Shepherd now. If you chose (b), rerun Shepherd after the polling interval.";
 
 /**
  * Push a conflict resolution or branch refresh: one branch, or the whole rewritten native stack.
