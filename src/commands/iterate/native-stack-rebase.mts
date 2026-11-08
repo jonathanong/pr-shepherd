@@ -80,10 +80,17 @@ export function buildNativeStackLayerRebase(
   return buildNativeStackRebaseInstruction(repo, stack.number, start);
 }
 
-/** Point at the conflicts, and at the stack rebase when the PR is a native stack layer. */
-export function buildConflictInstruction(stackRebase: string | undefined): string {
+/**
+ * Point at the conflicts, and at the stack rebase when the PR is a native stack layer. A queued
+ * conflicting entry cannot form a merge group, so GitHub removes it once the queue reaches it.
+ * Pulling it out early (by pushing the resolution) or waiting for that removal is the caller's
+ * call, so a queued PR gets both paths without a recommendation.
+ */
+export function buildConflictInstruction(stackRebase: string | undefined, inQueue = false): string {
   const pointer = "The branch has merge conflicts (see `**branch**` above).";
-  return stackRebase ? `${pointer} ${stackRebase}` : `${pointer} Resolve them before committing.`;
+  const resolve = stackRebase ?? "Resolve them before committing.";
+  if (!inQueue) return `${pointer} ${resolve}`;
+  return `${pointer} The PR is still in the merge queue, but GitHub cannot merge it until the conflicts are resolved. Choose one path: (a) resolve them now — pushing the updated head removes only this PR from the queue, the other entries stay queued, and this PR must be enqueued again once it is ready; or (b) wait — skip the conflict push step and rerun Shepherd after the polling interval instead of immediately, until GitHub removes the entry itself; this step repeats until then, and an unchanged conflict escalates through \`stall-timeout\`. To resolve now: ${resolve}`;
 }
 
 /**

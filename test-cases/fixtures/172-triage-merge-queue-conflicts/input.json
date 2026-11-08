@@ -1,0 +1,31 @@
+{
+  "batchData": {
+    "mergeable": "CONFLICTING",
+    "mergeStateStatus": "DIRTY",
+    "reviewDecision": "APPROVED",
+    "isMergeQueueEnabled": true,
+    "isInMergeQueue": true,
+    "mergeQueueEntry": {
+      "position": 2,
+      "state": "UNMERGEABLE",
+      "estimatedTimeToMerge": null
+    },
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "args": ["--merge"],
+  "expectedExitCode": 12
+}

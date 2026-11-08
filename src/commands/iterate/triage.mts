@@ -547,6 +547,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     stackRebase,
     queueEjection,
     opts.instructions ?? configuredInstructions,
+    report.mergeQueue?.inQueue === true,
   );
   if (recovery && "unavailable" in recovery) instructions.unshift(recovery.unavailable);
   if (acknowledgmentRecovery && "unavailable" in acknowledgmentRecovery)

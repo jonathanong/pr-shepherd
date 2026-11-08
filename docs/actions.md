@@ -311,7 +311,7 @@ The lowest open layer is selected by native-stack order, even when GitHub still 
 - A direct merge is atomic. On a merge queue, the prefix is queued together and each layer is evaluated from the bottom. A failure ejects that layer and the layers above it. Layers that already merged stay merged.
 - Layers above the prefix keep their one-PR sessions in the same instructions.
 - After each merge, GitHub retargets the next layer. Rerun `stack --merge` until every layer is merged and the result is `CANCEL`.
-- If GitHub queues a layer, the summary stays `WAIT` for those queued layers. Recheck at the polling cadence. Do not rewrite a queued layer. That wait does not block a layer that is not queued. The stack is not finished until every layer merges.
+- If GitHub queues a layer, the summary stays `WAIT` for those queued layers. Recheck at the polling cadence. Do not rewrite a queued layer, except when its one-PR session reports merge conflicts and the caller chooses to restack it (see queued merge conflicts under `## wait`). That wait does not block a layer that is not queued. The stack is not finished until every layer merges.
 - An ejected layer leaves the merge prefix until a receipt acknowledges that removal. The instruction names the reason and actor and says to run that layer's one-PR session, which fixes failing queue CI, records a validated acknowledgment for a transient or grouped-entry failure that does not reproduce after updating from the latest base, with no remaining blocker, or escalates when no autonomous path remains.
 
 ## Single ticks
@@ -414,6 +414,7 @@ WAIT: 1 in-progress — active checks: CI / build
 - Review threads, PR comments, `CHANGES_REQUESTED` reviews, and review summaries do not trigger `triage`. A push now would eject the PR.
 - The tick is `WAIT`. Raw counts are `deferredWork` in JSON and `**deferred (in merge queue)**` in Markdown, omitted when nothing is deferred.
 - Failing checks, including `merge_group` failures on the queue commit, unseen check annotations, and merge conflicts are never deferred. They still go to `triage`.
+- **Queued merge conflicts.** Whenever GitHub still lists a conflicting PR as a queue entry (`mergeQueue.inQueue`, with or without `--merge`), the conflict step offers two paths and leaves the choice to the caller. (a) Resolve now: rebase, or restack through the printed `gh stack` route on a native stack, then push. The push removes only this PR from the queue. Other entries stay queued, and this PR must be enqueued again once it is ready. (b) Wait: skip the push and rerun after the polling interval until GitHub removes the unmergeable entry itself. Each tick repeats the step, and an unchanged conflict escalates through [`stall-timeout`](escalations.md#stall-timeout). The push step that follows starts with `If you chose (a):`. REST cannot read queue membership, so it prints the plain conflict step.
 - [`actions.work-while-queued: true`](configuration.md#actionswork-while-queued--default-false) acts on that work immediately.
 - After the PR leaves the queue, the next tick picks the work up. Held items are not marked seen, so nothing is dropped. See the comment visibility invariant in [`AGENTS.md`](../AGENTS.md).
 
