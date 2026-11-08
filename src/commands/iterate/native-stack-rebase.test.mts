@@ -121,16 +121,17 @@ describe("native stack rebase instructions", () => {
     );
   });
 
-  it("offers a queued conflicting PR both pulling it from the queue and waiting", () => {
-    const single = buildConflictInstruction(undefined, true);
+  it("offers a queued conflicting PR both dequeue-and-resolve and waiting", () => {
+    const single = buildConflictInstruction(undefined, "DEQUEUE");
     expect(single).toContain("The PR is still in the merge queue");
-    expect(single).toContain("(a) resolve them now");
+    expect(single).toContain("(a) pull it from the queue and resolve now — first run `DEQUEUE`");
     expect(single).toContain("the other entries stay queued");
-    expect(single).toContain("(b) wait — skip the conflict push step");
+    expect(single).toContain("then: Resolve them before committing.");
+    expect(single).toContain("enqueue it again");
+    expect(single).toContain("(b) wait — skip the dequeue and the conflict push step");
     expect(single).toContain("`stall-timeout`");
-    expect(single).toMatch(/To resolve now: Resolve them before committing\.$/);
-    expect(buildConflictInstruction("Run `gh stack rebase`.", true)).toMatch(
-      /To resolve now: Run `gh stack rebase`\.$/,
+    expect(buildConflictInstruction("Run `gh stack rebase`.", "DEQUEUE")).toContain(
+      "then: Run `gh stack rebase`.",
     );
   });
 

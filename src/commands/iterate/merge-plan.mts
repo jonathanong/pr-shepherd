@@ -12,6 +12,13 @@ import { getGithubTransport } from "../../github/transport.mts";
 import type { RestMergeStackGuard } from "../../github/rest-merge.mts";
 const ENQUEUE_MUTATION =
   "mutation EnqueuePullRequest($pullRequestId: ID!, $expectedHeadOid: GitObjectID!) { enqueuePullRequest(input: { pullRequestId: $pullRequestId, expectedHeadOid: $expectedHeadOid }) { mergeQueueEntry { id } } }";
+const DEQUEUE_MUTATION =
+  "mutation DequeuePullRequest($id: ID!) { dequeuePullRequest(input: { id: $id }) { mergeQueueEntry { id } } }";
+
+/** gh CLI cannot remove a queue entry, so dequeueing goes through the GraphQL mutation. */
+export function buildDequeueCommand(nodeId: string): string[] {
+  return ["gh", "api", "graphql", "-f", `query=${DEQUEUE_MUTATION}`, "-f", `id=${nodeId}`];
+}
 
 export interface MergePlanInput {
   transport?: "rest";

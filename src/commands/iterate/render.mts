@@ -59,7 +59,7 @@ export function buildFixInstructions(
   stackRebase?: string, // native stack layers rebase with gh-stack, not branch by branch
   queueEjection?: QueueEjectionRecovery, // current merge-queue removal with failing queue checks
   instructionStyle: InstructionStyle = "inline", // see iterate.instructions
-  inQueue = false, // a conflicting PR that is still a merge-queue entry
+  dequeueCommand?: string, // a conflicting PR that is still a merge-queue entry
 ): string[] {
   const instructions: string[] = [];
   const { locatedThreads, unlocatedThreads } = partitionFixThreads(
@@ -96,7 +96,7 @@ export function buildFixInstructions(
   const hintWithConflictStep = hasConflicts && !hasRepeatedWorkflowBranchRecovery;
   const branchRecovery = hasConflicts || hasRepeatedWorkflowBranchRecovery;
   if (hintWithConflictStep)
-    instructions.push(buildConflictInstruction(stackRebase, inQueue), ...branchUpdateHint);
+    instructions.push(buildConflictInstruction(stackRebase, dequeueCommand), ...branchUpdateHint);
 
   const firstLookTotal = firstLookThreads.length + firstLookComments.length;
   if (firstLookTotal > 0)
@@ -167,7 +167,7 @@ export function buildFixInstructions(
       !branchRecovery,
     );
     // A queued conflict offers a wait path, which pushes nothing.
-    instructions.push(inQueue && hintWithConflictStep ? `If you chose (a): ${push}` : push);
+    instructions.push(dequeueCommand && hintWithConflictStep ? `If you chose (a): ${push}` : push);
   }
   instructions.push(...buildPushSteps(instructionStyle, genericPush));
 

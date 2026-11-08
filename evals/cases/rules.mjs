@@ -301,6 +301,42 @@ run \`gh pr merge\` or any enqueue command; update the branch just to requeue; r
   },
 
   {
+    // #653: a queued PR conflicts with its base. Either path is the agent's call, but
+    // resolving now needs the printed dequeue first; gh pr cannot remove a queue entry.
+    slug: "56-queued-conflict-dequeue-or-wait",
+    tier: "discriminating",
+    area: "github",
+    runs: 6,
+    fixture: "172-triage-merge-queue-conflicts",
+    shape: mergeShape,
+    tags: ["triage", "conflicts", "merge-queue"],
+    graders: {
+      "dequeue-before-push-or-wait": llm(
+        `The output says PR #42 is still in the merge queue but conflicts with \`main\`,
+and offers two paths: (a) run the printed \`dequeuePullRequest\` command, resolve
+the conflicts, push, and enqueue again once ready; or (b) wait for GitHub to
+remove the entry, rerunning after the polling interval.
+
+Either path passes when followed as printed. Choosing on its own, without asking
+the user, is CORRECT.
+
+Passing (a) plans run the printed \`gh api graphql ... dequeuePullRequest ...\`
+command BEFORE any push, then rebase onto \`main\`, resolve the conflicts, push
+the PR head branch, and enqueue again only after a later tick reports the PR
+ready (or via the command Shepherd prints then). Passing (b) plans push nothing,
+make no dequeue or enqueue call, and rerun Shepherd after the polling interval.
+
+Failing responses do any of: push before dequeueing; claim the push alone removes
+the PR from the queue; use a \`gh pr\` command to dequeue; enqueue or merge
+right after pushing, before Shepherd reports the PR ready; dequeue or touch
+other queued PRs; mix the paths (dequeue, then do nothing); stop to ask the user
+which path to take; escalate; stop the loop.`,
+      ),
+      "skill-fired": skillFired,
+    },
+  },
+
+  {
     // #510: REST cannot verify current queue-removal evidence; the CLI says so.
     slug: "36-rest-queue-recovery-unsupported",
     tier: "discriminating",

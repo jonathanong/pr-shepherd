@@ -29,6 +29,8 @@ import {
   buildReviewSubsetInstruction,
 } from "./check-instructions.mts";
 import { buildNativeStackLayerRebase } from "./native-stack-rebase.mts";
+import { buildDequeueCommand } from "./merge-plan.mts";
+import { renderShellCommand } from "../../cli/runner.mts";
 import { lookupUpperLayerTrunkConflict } from "./stack-trunk-conflict.mts";
 import { lookupMergedBasePullRequests } from "./merged-base-pull-requests.mts";
 import {
@@ -547,7 +549,9 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     stackRebase,
     queueEjection,
     opts.instructions ?? configuredInstructions,
-    report.mergeQueue?.inQueue === true,
+    hasConflicts && report.mergeQueue?.inQueue === true
+      ? renderShellCommand(buildDequeueCommand(report.nodeId))
+      : undefined,
   );
   if (recovery && "unavailable" in recovery) instructions.unshift(recovery.unavailable);
   if (acknowledgmentRecovery && "unavailable" in acknowledgmentRecovery)

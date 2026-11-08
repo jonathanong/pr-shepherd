@@ -83,14 +83,18 @@ export function buildNativeStackLayerRebase(
 /**
  * Point at the conflicts, and at the stack rebase when the PR is a native stack layer. A queued
  * conflicting entry cannot form a merge group, so GitHub removes it once the queue reaches it.
- * Pulling it out early (by pushing the resolution) or waiting for that removal is the caller's
- * call, so a queued PR gets both paths without a recommendation.
+ * Pulling it out early (dequeue, then resolve) or waiting for that removal is the caller's
+ * call, so a queued PR gets both paths without a recommendation. `dequeueCommand` is the
+ * rendered dequeue mutation; it is present only while the PR is a queue entry.
  */
-export function buildConflictInstruction(stackRebase: string | undefined, inQueue = false): string {
+export function buildConflictInstruction(
+  stackRebase: string | undefined,
+  dequeueCommand?: string,
+): string {
   const pointer = "The branch has merge conflicts (see `**branch**` above).";
   const resolve = stackRebase ?? "Resolve them before committing.";
-  if (!inQueue) return `${pointer} ${resolve}`;
-  return `${pointer} The PR is still in the merge queue, but GitHub cannot merge it until the conflicts are resolved. Choose one path: (a) resolve them now — pushing the updated head removes only this PR from the queue, the other entries stay queued, and this PR must be enqueued again once it is ready; or (b) wait — skip the conflict push step and rerun Shepherd after the polling interval instead of immediately, until GitHub removes the entry itself; this step repeats until then, and an unchanged conflict escalates through \`stall-timeout\`. To resolve now: ${resolve}`;
+  if (!dequeueCommand) return `${pointer} ${resolve}`;
+  return `${pointer} The PR is still in the merge queue, but GitHub cannot merge it until the conflicts are resolved. Choose one path: (a) pull it from the queue and resolve now — first run \`${dequeueCommand}\` (\`gh pr\` cannot remove a queue entry); only this PR leaves the queue and the other entries stay queued; then: ${resolve} Once the PR is ready again, enqueue it again (with \`--merge\`, Shepherd prints the enqueue command). Or (b) wait — skip the dequeue and the conflict push step, and rerun Shepherd after the polling interval instead of immediately, until GitHub removes the entry itself; this step repeats until then, and an unchanged conflict escalates through \`stall-timeout\`.`;
 }
 
 /**
