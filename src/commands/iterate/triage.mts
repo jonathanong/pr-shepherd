@@ -40,7 +40,11 @@ import {
 } from "./conflicting-head-ci.mts";
 import { conflictingHeadFirstSeenUnix } from "../../state/conflicting-head-seen.mts";
 import { applyStallGuard } from "./stall.mts";
-import { annotationMarkerBody, checksWithActionableAnnotations } from "../check-annotations.mts";
+import {
+  annotationMarkerBody,
+  checksWithActionableAnnotations,
+  isQueuedConflict,
+} from "../check-annotations.mts";
 import { threadTranscriptBody } from "../../threads/transcript.mts";
 import { isHumanAuthor, isConfiguredBotAuthor } from "../../comments/authors.mts";
 import { canRerunWorkflows } from "../../checks/conclusions.mts";
@@ -359,6 +363,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
   ];
   const { changesRequestedReviews } = report;
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
+  const queuedConflict = isQueuedConflict(report.mergeQueue?.inQueue, report.mergeStatus.status);
   const isBehind = report.mergeStatus.status === "BEHIND";
   const { "behind-base-hint": behindBaseHint, instructions: configuredInstructions } =
     loadConfig().iterate;
@@ -530,6 +535,9 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
           report.stackBottomPr,
         )
       : undefined;
+  const dequeueCommand = queuedConflict
+    ? renderShellCommand(buildDequeueCommand(report.nodeId))
+    : undefined;
   const instructions = buildFixInstructions(
     threads,
     actionableComments,
@@ -552,9 +560,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     stackRebase,
     queueEjection,
     opts.instructions ?? configuredInstructions,
-    hasConflicts && report.mergeQueue?.inQueue === true
-      ? renderShellCommand(buildDequeueCommand(report.nodeId))
-      : undefined,
+    dequeueCommand,
   );
   if (recovery && "unavailable" in recovery) instructions.unshift(recovery.unavailable);
   if (acknowledgmentRecovery && "unavailable" in acknowledgmentRecovery)
@@ -570,7 +576,12 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     if (completion !== undefined) instructions.push(completion);
   }
   if (repairInstructions && repairInstructions.length > 0) {
-    instructions.unshift(...repairInstructions);
+    if (dequeueCommand) {
+      // Stack repairs rewrite branches, so they follow the queued-conflict choice as path (a).
+      const choice = instructions.findIndex((step) => step.includes(dequeueCommand));
+      const steps = repairInstructions.map((step) => `If you chose (a): ${step}`);
+      instructions.splice(choice + 1, 0, ...steps);
+    } else instructions.unshift(...repairInstructions);
   }
   if (mergedBasePullRequests.length > 0) {
     // `gh pr edit` goes through GraphQL; REST callers retarget with the pulls PATCH endpoint.
@@ -645,11 +656,13 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       { owner: repoOwner, repo: repoName, pr: prNumber },
       { headSha, threadAttempts, threadBodyHashes },
     );
-    await Promise.allSettled(
-      result.triage.checks.flatMap((ch) =>
-        (ch.annotations ?? []).map((a) => markSeen(stallKey, a.id, annotationMarkerBody(a))),
-      ),
-    );
+    // A queued conflict's annotation fixes are path (a); waiting keeps them unseen.
+    if (!queuedConflict)
+      await Promise.allSettled(
+        result.triage.checks.flatMap((ch) =>
+          (ch.annotations ?? []).map((a) => markSeen(stallKey, a.id, annotationMarkerBody(a))),
+        ),
+      );
   }
   return result;
 }

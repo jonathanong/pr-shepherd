@@ -497,8 +497,9 @@ async function runScopedCheck(
   // NOT deferred — index.mts still renders these items via triage — so this must stay false
   // in that case too, or their seen markers would be suppressed while actually being shown.
   // A queued conflict also holds review work back (iterate strips it from that triage tick).
+  const queuedConflict = isQueuedConflict(batchData.isInMergeQueue, mergeStatus.status);
   const deferWhileQueued =
-    isQueuedConflict(batchData.isInMergeQueue, mergeStatus.status) ||
+    queuedConflict ||
     (opts.merge === true &&
       batchData.isInMergeQueue === true &&
       config.actions["work-while-queued"] !== true &&
@@ -547,7 +548,10 @@ async function runScopedCheck(
           ...approvedReviewVisibility.toMarkSeen.map((r) => markSeen(stateKey, r.id, r.body)),
         ];
     await Promise.allSettled([
-      ...successfulAnnotations.map((a) => markSeen(stateKey, a.id, annotationMarkerBody(a))),
+      // A queued conflict defers annotation fixes too (path (a)), so they stay unseen.
+      ...(queuedConflict ? [] : successfulAnnotations).map((a) =>
+        markSeen(stateKey, a.id, annotationMarkerBody(a)),
+      ),
       ...deferredMarkSeen,
       ...batchData.comments
         .filter(
