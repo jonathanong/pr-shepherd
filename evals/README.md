@@ -3,7 +3,7 @@
 **Does an agent act correctly on pr-shepherd's output, and would it without the
 plugin?**
 
-52 cases replay real recorded pr-shepherd output, mostly from the states agents
+54 cases replay real recorded pr-shepherd output, mostly from the states agents
 get wrong in real transcripts. Five of those (`38`, `39`, `44`–`46`) also replay
 earlier turns of the session, to catch drift that a fresh context hides. Three
 others start from a request alone: one
