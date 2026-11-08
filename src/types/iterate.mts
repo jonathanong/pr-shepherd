@@ -180,6 +180,8 @@ interface TriageDetails {
   firstLookComments: FirstLookComment[];
   /** Set only when `iterate.review-output-max-chars` held review items back: `shown` of `total`. */
   reviewItems?: { shown: number; total: number };
+  /** Review work a queued conflicting PR holds back until it leaves the queue. Omitted when empty. */
+  deferredWork?: import("./merge-queue.mts").IterateDeferredWork;
 }
 
 export interface IterateResultTriage extends IterateResultBase {

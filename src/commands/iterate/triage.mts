@@ -51,6 +51,7 @@ import type {
   AgentCheck,
   EscalateDetails,
   IterateCommandOptions,
+  IterateDeferredWork,
   IterateResult,
   IterateResultBase,
   Review,
@@ -80,6 +81,8 @@ interface HandleTriageContext {
   ruleAutoResolveThreadIds?: string[];
   /** Verified stack-repair guidance, when ancestry is stale. */
   repairInstructions?: string[];
+  /** Review work a queued conflict holds back until the PR leaves the queue. */
+  deferredWork?: IterateDeferredWork;
 }
 
 function checkRequiresHumanFollowUp(check: AgentCheck): boolean {
@@ -624,6 +627,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       firstLookThreads,
       firstLookComments,
       ...(report.reviewItems && { reviewItems: report.reviewItems }),
+      ...(ctx.deferredWork && { deferredWork: ctx.deferredWork }),
     },
   } as IterateResult;
   const result = await applyStallGuard(

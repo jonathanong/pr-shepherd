@@ -93,7 +93,7 @@ describe("buildFixInstructions queued conflict", () => {
     const mutation = instructions.filter((i) => i.includes("pr-shepherd apply review 42"));
     expect(mutation.length).toBeGreaterThan(0);
     for (const step of mutation) expect(step).toMatch(/^If you chose \(a\): /);
-    expect(instructions[0]).toContain("leaves review fixes and mutations for a later tick");
+    expect(instructions[0]).toContain("review items stay deferred until the PR leaves the queue");
   });
 
   it("lets the quota warning rewrite the queued continuation", () => {

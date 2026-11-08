@@ -9,9 +9,10 @@ import { classifyReviewSummaries } from "./classify.mts";
 import { applyStallGuard } from "./stall.mts";
 import { clearStallState } from "../../state/iterate-stall.mts";
 import { handleTriage } from "./triage.mts";
+import { deferQueuedConflictReviewWork } from "./queued-conflict-deferral.mts";
 import { normalizeBotUsernames } from "../../comments/authors.mts";
 import { autoMinimizeComments } from "../../comments/resolve.mts";
-import { hasCheckDrivenActionableWork } from "../check-annotations.mts";
+import { hasCheckDrivenActionableWork, isQueuedConflict } from "../check-annotations.mts";
 import { buildReadyMergeOutcome, handleActiveMergeState } from "./merge-state.mts";
 import { buildIterateBase } from "./base.mts";
 import { markReadyIfAuthorized } from "./mark-ready.mts";
@@ -256,9 +257,20 @@ async function runIterateCore(
     config.actions["work-while-queued"] !== true;
 
   if (hasActionableWork && !(deferWhileQueued && !checkDrivenActionableWork)) {
-    return handleTriage({
-      base,
+    const reviewWork = {
       report: reportForWork,
+      reviewSummaryIds,
+      firstLookSummaries,
+      editedSummaries,
+      surfacedApprovals,
+      ruleAutoResolveThreadIds: report.threads.ruleAutoResolveIds,
+    };
+    // A queued conflict holds review work until the PR leaves the queue (see check.mts).
+    return handleTriage({
+      ...(isQueuedConflict(report.mergeQueue?.inQueue, report.mergeStatus.status)
+        ? deferQueuedConflictReviewWork(reviewWork, config.iterate["minimize-approvals"])
+        : reviewWork),
+      base,
       opts: { ...opts, prNumber },
       headSha,
       stallKey,
@@ -266,16 +278,11 @@ async function runIterateCore(
       stallTimeoutSeconds,
       repoOwner,
       repoName,
-      reviewSummaryIds,
-      firstLookSummaries,
-      editedSummaries,
-      surfacedApprovals,
       botUsernames,
       releasedCheckNames: blockerGate?.releasedNames,
       ...((unreportedRepair.length > 0 || staleAncestry !== null) && {
         repairInstructions: [...unreportedRepair, ...(staleAncestry?.instructions ?? [])],
       }),
-      ruleAutoResolveThreadIds: report.threads.ruleAutoResolveIds,
     });
   }
 

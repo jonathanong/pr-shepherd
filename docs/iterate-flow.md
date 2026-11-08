@@ -130,7 +130,7 @@ The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completio
 - Stale-boundary repair, and a behind layer whose workflow rerun already failed, use the same transport-appropriate stack update and push.
 - A conflicting head with a complete empty check-suite page and no check runs gets a note that GitHub did not start `pull_request` workflows, once Shepherd has seen that head for at least 2 minutes. Commit time is not used (GitHub's Commit object has no push timestamp). An unreadable seen marker omits the note.
 
-**Deferred while queued.** With `--merge`, the PR in the merge queue, and `actions.work-while-queued` not `true`, everything above **except** `checks.failing`, `mergeStatus.status === 'CONFLICTS'`, and check-run annotations stops counting — a Shepherd-initiated push would eject the PR. That work falls through to [step 4](#4-active-merge-and-queue-removal), which reports it as `deferredWork` counts on the `wait` result.
+**Deferred while queued.** With `--merge`, the PR in the merge queue, and `actions.work-while-queued` not `true`, everything above **except** `checks.failing`, `mergeStatus.status === 'CONFLICTS'`, and check-run annotations stops counting — a Shepherd-initiated push would eject the PR. That work falls through to [step 4](#4-active-merge-and-queue-removal), which reports it as `deferredWork` counts on the `wait` result. A queued PR with `CONFLICTS` (with or without `--merge`) still triages the conflict, but holds that review work back the same way and reports it as `triage.deferredWork`.
 
 **Side-effects:** none. Shepherd never cancels workflow runs (GitHub exposes no exact viewer capability for cancellation); it only surfaces failure context.
 

@@ -26,6 +26,7 @@ import {
   annotationMarkerBody,
   attachAndMergeCheckAnnotations,
   hasCheckDrivenActionableWork,
+  isQueuedConflict,
 } from "./check-annotations.mts";
 import { buildTerminalReport } from "./check-terminal-report.mts";
 import {
@@ -495,19 +496,21 @@ async function runScopedCheck(
   // that also has check-driven work (failing checks, actionable annotations, conflicts) is
   // NOT deferred — index.mts still renders these items via triage — so this must stay false
   // in that case too, or their seen markers would be suppressed while actually being shown.
+  // A queued conflict also holds review work back (iterate strips it from that triage tick).
   const deferWhileQueued =
-    opts.merge === true &&
-    batchData.isInMergeQueue === true &&
-    config.actions["work-while-queued"] !== true &&
-    !hasCheckDrivenActionableWork(
-      {
-        failing: merged.failing,
-        passing: merged.passing,
-        skipped: merged.skipped,
-        filtered: merged.filtered,
-      },
-      mergeStatus.status,
-    );
+    isQueuedConflict(batchData.isInMergeQueue, mergeStatus.status) ||
+    (opts.merge === true &&
+      batchData.isInMergeQueue === true &&
+      config.actions["work-while-queued"] !== true &&
+      !hasCheckDrivenActionableWork(
+        {
+          failing: merged.failing,
+          passing: merged.passing,
+          skipped: merged.skipped,
+          filtered: merged.filtered,
+        },
+        mergeStatus.status,
+      ));
   // A deferred tick shows no review items, so it is never capped; its seen markers stay unwritten.
   const {
     buckets: budgeted,
