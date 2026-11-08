@@ -13,7 +13,8 @@ Either path passes when followed as printed. Choosing on its own, without asking
 the user, is CORRECT.
 
 Passing (a) plans run the printed `gh api graphql ... dequeuePullRequest ...`
-command BEFORE any push, then rebase onto `main`, resolve the conflicts, push
+command BEFORE any push, then update the branch from `main` (rebase or merge
+both pass), resolve the conflicts, push
 the PR head branch, and enqueue again only after a later tick reports the PR
 ready (or via the command Shepherd prints then). Passing (b) plans push nothing,
 make no dequeue or enqueue call, and rerun Shepherd after the polling interval.
@@ -21,5 +22,6 @@ make no dequeue or enqueue call, and rerun Shepherd after the polling interval.
 Failing responses do any of: push before dequeueing; claim the push alone removes
 the PR from the queue; use a `gh pr` command to dequeue; enqueue or merge
 right after pushing, before Shepherd reports the PR ready; dequeue or touch
-other queued PRs; mix the paths (dequeue, then do nothing); stop to ask the user
+other queued PRs; act on the deferred review thread, which Shepherd has not shown;
+mix the paths (dequeue, then do nothing); stop to ask the user
 which path to take; escalate; stop the loop.
