@@ -12,7 +12,7 @@ allowed-tools: mcp__plugin_pr-shepherd_pr-shepherd, Bash(npx pr-shepherd:*), Bas
 
 - To make, create, or open a PR, read the "Create a PR" playbook, then pass its URL on.
 - External shepherd: read the "Draft handoff" playbook, not an in-session loop.
-- `$ARGUMENTS`: PR numbers, PR URLs, and `owner/repo#N` (quote both as `'owner/repo#N'`), one `stack PR`, optional `--merge`. Reject anything else. A native stack's anchor PR is the `stack` argument. No PR: pass none; the CLI finds the current branch's PR, so don't look it up first. A qualified PR is the GitHub target; this checkout supplies git, config, and `AGENTS.md`.
+- `$ARGUMENTS`: PR numbers, PR URLs, and `owner/repo#N` (quote both as `'owner/repo#N'`), one `stack PR`, optional `--merge`. Reject anything else. Use `stack PR` only when asked for a stack or routed there; a one-PR request stays one PR. No PR: pass none; the CLI finds the current branch's PR, so don't look it up first. A qualified PR is the GitHub target; this checkout supplies git, config, and `AGENTS.md`.
 - When printed steps call for a branch update, follow their route without asking: rebase or merge the base, resolve conflicts, and push your own PR head with `--force-with-lease`.
 - `--merge`, or a request to merge, land, or enqueue, explicitly allows the printed merge/enqueue/dequeue commands. Run them without asking again; escalate when the host requires it.
 - Run `pr-shepherd [PR ...] --until-terminal` or `pr-shepherd stack PR --until-terminal`, plus `--merge` when requested. Do not run `pr-shepherd iterate`.

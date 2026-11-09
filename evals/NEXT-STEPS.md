@@ -8,11 +8,15 @@ Open work for the eval suite, most recent findings first. Current results are in
 1. **Retag tiers** as `--summary` suggests. Twelve discriminating cases had an
    interval including 0 and a with-arm of at least 0.9: `01`, `06`, `07`, `08`,
    `12`, `22`, `29`, `35`, `38`, `48`, `50`, `55`. Demote those that also sit
-   at ceiling without the plugin. Promote `54` (with-arm below 0.9).
-2. **Rerun `39`** at `runs: 6`. Its −0.17 regression re-judges PASS in
-   isolation and was 1.00 in both arms in the targeted run.
-3. **Lift `27` and `28`** (0.79 and 0.78 with the plugin): the merged-parent
-   stale-base cases. Read their failing checks first.
+   at ceiling without the plugin. Promote `54` (with-arm below 0.9). Optional:
+   sharded runs make the extra runs cheap.
+2. **`28` reruns with a bare PR number** in two of six plans instead of the URL
+   the user gave. Consider whether the CLI's "Rerun Shepherd now." step should
+   print the exact rerun command.
+
+Done: `39` was variance (0.94 in both arms on rerun); `27`'s grader no longer
+asks to re-check what Shepherd matched; `28` no longer switches to `stack`;
+`21` and `56` graders accept correct observations.
 
 ## Earlier: from the first 2026-11-09 run
 

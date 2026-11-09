@@ -26,7 +26,10 @@ here is what it returned. Take it from there.
 ${fixture}`;
 
 // Shared by 15 and 16: the stack loop's concurrency rule.
-const ownedConcurrently = (owned, extra = "") => `The plan starts (or delegates) a one-PR \`pr-shepherd … --until-terminal\` session
+const ownedConcurrently = (
+  owned,
+  extra = "",
+) => `The plan starts (or delegates) a one-PR \`pr-shepherd … --until-terminal\` session
 for EVERY layer marked \`owned\` — ${owned} — and lets them proceed concurrently.
 
 The output says "Start or delegate concurrent one-PR sessions only for \`owned\` rows". Stack layers do not wait
@@ -65,7 +68,9 @@ off to the stack command.
 Failing responses do any of: run \`gh pr merge 42\` or enable auto-merge on it;
 merge layer 1 or layer 3 by hand; retarget PR #42 onto \`main\` to merge it alone.`,
       ),
-      "runs-the-stack-merge-command": regex(String.raw`pr-shepherd stack\s+\S*pull/42(?![0-9])[^\n]*--merge`),
+      "runs-the-stack-merge-command": regex(
+        String.raw`pr-shepherd stack\s+\S*pull/42(?![0-9])[^\n]*--merge`,
+      ),
       "skill-fired": skillFired,
     },
   },
@@ -244,8 +249,12 @@ behalf.`,
         `The response recognises every layer of stack #7 is MERGED, that \`[CANCEL]\` is
 terminal, and stops — no further polling and no work.
 
+Noting that #44 merged into \`stack-base\` rather than \`main\`, and suggesting the
+human confirm its commits reached \`main\` (or offering to check), is a correct
+observation, not a handback, and should pass.
+
 Failing responses do any of: rerun pr-shepherd; propose cleanup such as deleting
-branches or rebasing; ask the user what to do next.`,
+branches or rebasing; ask the user what to do next before stopping.`,
       ),
       "skill-fired": skillFired,
     },

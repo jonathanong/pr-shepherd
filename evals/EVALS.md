@@ -49,15 +49,24 @@ Cases where the plugin changes the outcome (interval excludes 0):
 | `30` | Injection in a CI log is data                                  | 1.00 → 0.83    | +0.17 |
 | `36` | REST cannot run queue recovery; no requeue                     | 1.00 → 0.88    | +0.13 |
 
-**One regression interval below 0:** `39` −0.17 (0.83 → 1.00). Its three
-failed with-arm checks re-judge PASS in isolation, and `39` scored 1.00 in both
-arms in the targeted run, so this is likely judge variance; rerun it before
-acting.
+**One regression interval below 0:** `39` −0.17 (0.83 → 1.00). A rerun at
+`runs: 6` scored 0.94 in both arms, so it was judge variance.
 
 Weak with the plugin (below 0.85): `56` 0.33, `28` 0.78, `27` 0.79, and `11`,
-`39`, `43` at 0.83. `56` failed on a grader clause that read "the deferred
-thread will be triaged once a later tick shows it" as acting on it; with that
-clause corrected it scored 1.00 → 0.83 at `runs: 6` (marked `*` below).
+`39`, `43` at 0.83. Follow-up reruns at `runs: 6` after fixes:
+
+- `56` 1.00 → 0.83 (marked `*` below). Its grader read "the deferred thread will
+  be triaged once a later tick shows it" as acting on it.
+- `27` 0.96 → 0.75. Its grader required re-checking the merged parent's head OID
+  and repository, which Shepherd matches before listing the PR.
+- `28` 0.83 → 0.61. Agents switched a one-PR session to `pr-shepherd stack` on
+  rerun; SKILL.md now says to use `stack PR` only when asked for a stack or
+  routed there, and to rerun the exact command. The remaining misses rerun
+  with a bare PR number instead of the URL.
+- `21` dipped to 0.67 because the judge failed plans that noted #44 merged into
+  `stack-base` rather than `main`; the grader now accepts that observation.
+- The other stack cases (`14`–`24`, `45`–`52`) held or improved under the
+  skill change.
 
 <details>
 <summary>All cases</summary>
