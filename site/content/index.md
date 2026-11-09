@@ -65,7 +65,7 @@ summary 3 passing
   server.
 - [**Your agent knows what to do next**](https://github.com/jonathanong/pr-shepherd/blob/main/evals/README.md)
   Every tick ends in one action, and every action but `CANCEL` comes with numbered steps. On tricky GitHub cases, eval scores
-  rise from 0.82 to 0.94, about two-thirds fewer misses.
+  rise from 0.70 to 0.96, about 87% fewer misses.
 - [**It's easy on your rate limit**](docs/github-api.md) Waiting on CI costs about 60
   GraphQL points an hour, against about 360 for `gh pr checks --watch`. Unchanged idle
   waits can cost as little as 4.

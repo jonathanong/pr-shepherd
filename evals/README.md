@@ -32,16 +32,17 @@ own.
 ## Latest results
 
 > **Sonnet 5.5, low effort, opus judge, all 57 cases (2026-11-09, after the
-> grader fixes):** mean score 0.96 with the plugin and 0.84 without. Weighted
-> mean Δ **+0.11** [+0.08, +0.14]: GitHub gotchas +0.10 [+0.07, +0.13], loop
-> rules +0.20 [+0.14, +0.26], safety +0.07 [+0.03, +0.11]. The skill fired in
-> 272/276 runs where it should and 0/3 on the unrelated question.
+> tier retag):** mean score 0.98 with the plugin and 0.85 without, 87% fewer
+> misses. Weighted mean Δ **+0.12** [+0.10, +0.13]: GitHub gotchas +0.11
+> [+0.09, +0.13], loop rules +0.22 [+0.17, +0.27], safety +0.07 [+0.03, +0.11].
+> The skill fired in 260/264 runs where it should and 0/3 on the unrelated
+> question.
 
-12 cases favor the plugin (interval above 0), led by `37` (run with no target, 1.00 → 0.00),
-`31` (create a PR without asking, 0.92 → 0.00) and `21` (stop an all-terminal
-stack, 1.00 → 0.33). One case, `39`, favored the without-plugin arm (interval below
-0); a rerun scored 0.94 in both arms, so it was variance. The run cost $97.19 for 558 runs and took about 8.5
-minutes in four shards. Full table and findings: [EVALS.md](EVALS.md).
+11 cases favor the plugin (interval above 0), led by `37` (run with no target,
+1.00 → 0.00), `31` (create a PR without asking, 1.00 → 0.00) and `47` (a stack
+layer's latest required run was cancelled, 1.00 → 0.33). No case favored the
+without-plugin arm. The run cost $115.02 for 534 runs and took about 6 minutes
+in four shards. Full table and findings: [EVALS.md](EVALS.md).
 
 ## Run it
 
