@@ -1,6 +1,6 @@
 # Branch update
 
-Apply when a step says `Playbook: "Branch update"`. The CLI prints the repo, the `gh stack checkout` import, the checkout target, and the rebase command. A merge step uses Stack merge instead.
+Apply when a step says `Playbook: "Branch update"`. It covers native `gh stack` layers only; a PR outside a native stack never uses `gh stack`. The CLI prints the repo, the `gh stack checkout` import, the checkout target, and the rebase command. A merge step uses Stack merge instead.
 
 - If `gh stack` does not track that stack locally, run the printed `gh stack checkout` first.
 - If `gh stack` is an unknown command, run `gh extension install github/gh-stack` first.
