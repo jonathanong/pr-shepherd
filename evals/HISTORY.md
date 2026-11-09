@@ -73,7 +73,7 @@ corrected grader, which accepts a closing line saying readying is the human's
 decision; one more `22` run failed only because the skill didn't fire.
 
 <details>
-<summary>All cases</summary>
+<summary>All cases from the full run before the grader fixes</summary>
 
 | Case | runs | with | without | Δ     | Case | runs | with | without | Δ     |
 | ---- | ---- | ---- | ------- | ----- | ---- | ---- | ---- | ------- | ----- |
