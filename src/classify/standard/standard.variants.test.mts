@@ -74,6 +74,18 @@ describe("Codex variants", () => {
     }
   });
 
+  it("keeps a finding appended inside a collapsed table visible", () => {
+    const collapsed = fixture("codex-activity-collapsed-failed");
+    const beforeAbout = variant(
+      collapsed.body,
+      "\n\n<details> <summary>",
+      "\n\nA finding.\n\n<details> <summary>",
+    );
+    const beforeClose = variant(collapsed.body, /\n\n<\/details>$/, "\n\nA finding.\n\n</details>");
+    expect(matches(collapsed, beforeAbout)).toEqual([]);
+    expect(matches(collapsed, beforeClose)).toEqual([]);
+  });
+
   it("keeps a non-Codex marker before the table visible", () => {
     const body = variant(
       activity.body,
