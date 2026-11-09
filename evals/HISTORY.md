@@ -210,7 +210,7 @@ What the numbers say:
   rerun "when the excerpt shows a transient failure" and to fix real failures.
   It is silent on the original attempt when the excerpt has no usable evidence
   (fixture `61` shows only `exit code 1`). The with-arm filled the gap with "no
-  evidence of a code defect → run the authorized rerun once". Next step 10.
+  evidence of a code defect → run the authorized rerun once". Next step 9.
 - **`06` (−0.13) and `12` (−0.17) are inside the ±0.44 noise floor.** In the
   `12` failures the agent opened the external provider page "to confirm". That
   is the behavior the case targets, so watch it across runs.

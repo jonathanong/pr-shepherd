@@ -50,23 +50,22 @@ above.
    display-only parts, and the plugin guard compares a recorded source hash.
    Still open: the runner does not record that hash, so today the guard only
    prints this checkout's hash.
-9. **Wire the sonnet tier into CI** for PRs touching
-    `plugins/pr-shepherd/skills/**`.
-10. **Surface the failing jobs' log tails when the failing job is a gate.**
+9. **Surface the failing jobs' log tails when the failing job is a gate.**
     The `04` fix has the agent run `gh run view --log-failed`. Per "Surface
     data, don't classify it", the CLI should print that evidence itself. This
     #491 landed this: `## Failing checks` now lists sibling failed jobs with
     log tails. On the 2026-10-12 run `04` scored 1.00 with and 0.92 without,
     so the printed tails carry most of it now.
-11. **Lift the weak with-arm gotchas first**, since they carry ×3 weight:
+10. **Lift the weak with-arm gotchas first**, since they carry ×3 weight:
     `06` 0.47 (stale bot review dismissal), `48` 0.67 (fails
     `iterates-immediately`), `38` 0.72 (retries the denied reply), `49` 0.75
     (reruns or requeues), and `27`/`28` (merged stack parent, 0.79/0.78). Then
     the loop rules `11` 0.50 and `02` 0.67. Read their transcripts before
     changing the skill.
-12. **More playbook-only stack cases.** `24` shows the pattern: stack rules
+11. **More playbook-only stack cases.** `24` shows the pattern: stack rules
     printed in the output sit at ceiling, and rules found only in a playbook
     discriminate. `51` covers a native-stack merge-queue ejection (fixture
     `120`); fixture `98` is still uncovered.
 
-Dropped: the haiku trigger rate. Haiku is out of scope for these evals.
+Dropped: the haiku trigger rate (haiku is out of scope for these evals), and
+running evals in CI (it would need an Anthropic token in CI).
