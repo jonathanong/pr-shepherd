@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan treats #42's `[CANCEL]` as the end of #42's loop only, and keeps
 shepherding #43 (letting its running `pr-shepherd … --until-terminal` loop continue
 and handling its result, or rerunning it if that loop already ended)

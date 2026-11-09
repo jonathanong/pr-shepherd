@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 After the base change, the plan immediately reruns
 `pr-shepherd https://github.com/vouchington/vouchington/pull/2099 --until-terminal`
 and follows its fresh output. It does not run the old output's remaining

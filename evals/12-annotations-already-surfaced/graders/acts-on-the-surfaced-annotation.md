@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan acts on the check annotation already in the output —
 `src/util/parse.ts:18`, "Empty input is not handled before indexing" — and
 connects it to the review thread on the same line, which raises the same edge

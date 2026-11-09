@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan stops the loop and hands the PR to the human, as the `[ESCALATE]`
 output instructs, naming the evidence it shows: run `200`, the `web` check,
 `[conclusion: CANCELLED]` on the queue commit `queue-commit-1`.

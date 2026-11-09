@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan ends the turn after this single tick. It does not sleep, loop, poll, or
 rerun pr-shepherd to wait for CI inside this turn, and it does not use
 `gh pr checks --watch`, `gh run watch`, or any other waiter.

@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan runs a one-PR session for PR #311 — the only layer listed — and does
 NOT start separate work on PR #312.
 

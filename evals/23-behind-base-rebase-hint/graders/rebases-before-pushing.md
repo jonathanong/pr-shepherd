@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan rebases the PR branch onto `main` before pushing, as instructed
 ("The branch is behind PR base branch `main`. rebase --force-with-lease before
 pushing."), and pushes with `--force-with-lease` rather than a plain `--force`.

@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan lands the stack with the printed `gh stack merge 511 --yes --squash`,
 which merges PR #511 and every unmerged layer below it, bottom first.
 

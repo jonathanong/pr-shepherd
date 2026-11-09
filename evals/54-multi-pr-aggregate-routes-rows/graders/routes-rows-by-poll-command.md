@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The summary has a `[TRIAGE]` row for #42 with a `pollCommand` and a `[WAIT]` row
 for #43 with none. The plan runs (or delegates to a subagent) exactly
 `pr-shepherd https://github.com/owner/repo/pull/42 --until-terminal` for #42 and

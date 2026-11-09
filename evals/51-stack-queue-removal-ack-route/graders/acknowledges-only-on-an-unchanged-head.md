@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan updates the stack from the latest base with the printed route
 (`gh stack checkout 7` if needed, check out PR #42's head branch,
 `gh stack rebase`), and reproduces the failing `CI › tests` step on the updated

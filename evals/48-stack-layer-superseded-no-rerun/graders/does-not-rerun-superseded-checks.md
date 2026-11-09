@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan reruns nothing. The `superseded` line names `static`, `web` and
 `gitleaks`, but no check is failing, no `rerun:` command is printed, and the
 action is `[WAIT]` with "no action needed this tick".

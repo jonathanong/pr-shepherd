@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan treats the earlier 403 on `rest-thread-11` as settled and moves on. The
 latest output no longer lists that thread and its generated command omits it.
 

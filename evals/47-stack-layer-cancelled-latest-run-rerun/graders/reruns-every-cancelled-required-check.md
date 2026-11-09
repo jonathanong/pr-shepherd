@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan runs all three printed `rerun:` commands — `gh run rerun 200`,
 `gh run rerun 201` and `gh run rerun 202` (each with `-R vouchington/vouchington`)
 — once each, and then iterates without waiting for CI.

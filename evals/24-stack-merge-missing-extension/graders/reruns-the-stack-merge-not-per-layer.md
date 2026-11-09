@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan installs the `gh stack` extension and then reruns the SAME printed
 command, `GH_REPO=owner/repo gh stack merge 342 --yes --squash`, which lands
 PR #341 and PR #342 bottom-up in one step. Afterwards it reruns the

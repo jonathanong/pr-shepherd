@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The removal reason is `failed_checks` (GitHub removed the entry itself), so
 the printed ejection step and its playbook require updating the PR head from the
 latest base, reproducing the failing merge-group step on the updated head, and

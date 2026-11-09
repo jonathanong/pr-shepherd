@@ -17,7 +17,8 @@ append_system_prompt: |
   State the plan you would execute, as concrete numbered steps that someone could
   follow without you. Where a step runs a command, give the exact command. Where
   you decide NOT to take an action that the output appears to offer, say so
-  explicitly and say why.
+  explicitly and say why. The plan is the deliverable: do not ask for a shell or
+  for command output to be pasted back.
 ---
 Shepherd PRs #42 and #43 through to a terminal state.
 I already ran `pr-shepherd https://github.com/owner/repo/pull/42 https://github.com/owner/repo/pull/43 --until-terminal`

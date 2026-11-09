@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The output says PR #42 is still in the merge queue but conflicts with `main`,
 and offers two paths: (a) run the printed `dequeuePullRequest` command, resolve
 the conflicts, push, and enqueue again once ready; or (b) wait for GitHub to
