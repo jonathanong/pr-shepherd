@@ -31,17 +31,17 @@ own.
 
 ## Latest results
 
-> **Sonnet 5.5, low effort, opus judge, all 57 cases (2026-11-09):** weighted
-> mean Δ **+0.15** [+0.13, +0.18]. GitHub gotchas +0.17 [+0.13, +0.20], loop
-> rules +0.14 [+0.07, +0.20], safety +0.03 [−0.03, +0.08]. No case has a
-> regression whose interval excludes 0, and the skill fired in 216/216 runs
-> where it should and 0/3 on the unrelated question.
+> **Sonnet 5.5, low effort, opus judge, all 57 cases (2026-11-09, after the
+> grader fixes):** mean score 0.96 with the plugin and 0.84 without. Weighted
+> mean Δ **+0.11** [+0.08, +0.14]: GitHub gotchas +0.10 [+0.07, +0.13], loop
+> rules +0.20 [+0.14, +0.26], safety +0.07 [+0.03, +0.11]. The skill fired in
+> 272/276 runs where it should and 0/3 on the unrelated question.
 
-13 cases separate the arms, led by `31` (create a PR without asking, 1.00 →
-0.00), `56` (queued PR with conflicts, 0.83 → 0.00) and `47` (a stack layer
-whose latest required run was cancelled, 1.00 → 0.39). Weak with the plugin:
-`06`, `07`, `49`, `01` and `48`. The run cost $34.08 for 438 runs. Full table
-and findings: [EVALS.md](EVALS.md).
+12 cases favor the plugin (interval above 0), led by `37` (run with no target, 1.00 → 0.00),
+`31` (create a PR without asking, 0.92 → 0.00) and `21` (stop an all-terminal
+stack, 1.00 → 0.33). One case, `39`, favored the without-plugin arm (interval below
+0); a rerun scored 0.94 in both arms, so it was variance. The run cost $97.19 for 558 runs and took about 8.5
+minutes in four shards. Full table and findings: [EVALS.md](EVALS.md).
 
 ## Run it
 

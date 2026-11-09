@@ -11,5 +11,9 @@ gives the command counts as running it.
 The response recognises every layer of stack #7 is MERGED, that `[CANCEL]` is
 terminal, and stops — no further polling and no work.
 
+Noting that #44 merged into `stack-base` rather than `main`, and suggesting the
+human confirm its commits reached `main` (or offering to check), is a correct
+observation, not a handback, and should pass.
+
 Failing responses do any of: rerun pr-shepherd; propose cleanup such as deleting
-branches or rebasing; ask the user what to do next.
+branches or rebasing; ask the user what to do next before stopping.

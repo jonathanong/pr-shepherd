@@ -89,7 +89,7 @@ sequenceDiagram
 Merge and stacks:
 
 - A request to merge, land, or enqueue a selected PR or native stack sets `--merge` even without the flag. Creating or opening a PR without merge intent leaves merge mode off.
-- For a native stack, an anchor PR runs `pr-shepherd stack PR`. A merge request reconciles one-PR READY receipts and merges the highest ready prefix with `gh stack merge`.
+- A request for a native stack runs `pr-shepherd stack PR` with any PR in it, as do printed steps that route there. A request for one PR stays a one-PR session even when that PR is a stack layer. A merge request reconciles one-PR READY receipts and merges the highest ready prefix with `gh stack merge`.
 - Review and CI sessions can run at the same time. A clean draft is marked ready without waiting for lower layers. A queued stack stays non-terminal until every layer is merged.
 - Ready-delay defaults to 0, meaning no countdown (`iterate.ready-delay-minutes`). See [iterate-flow.md](iterate-flow.md#2-ready-delay) and [configuration.md](configuration.md).
 

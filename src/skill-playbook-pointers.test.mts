@@ -150,7 +150,7 @@ describe("pr-shepherd skill recurrence contract", () => {
   });
 
   it("repeats the dispatcher until CANCEL or ESCALATE", () => {
-    expect(skill).toMatch(/rerun that same command immediately/i);
+    expect(skill).toMatch(/rerun that exact command \(same target and flags\) immediately/i);
     expect(skill).toContain("[CANCEL]");
     expect(skill).toContain("[ESCALATE]");
   });

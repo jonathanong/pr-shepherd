@@ -6,7 +6,7 @@ Each row is a PR state that a naive `gh` / GitHub MCP loop tends to misread, and
 
 The table describes what Shepherd surfaces and which action it picks. The agent still decides whether a surfaced item needs a code change.
 
-An `eval NN (with vs. without)` link marks a row where the [behavior evals](../evals/README.md) measured that the agent gets the case wrong without the plugin: Sonnet 5.5 at low effort, 6 runs per arm, 95% interval of the difference excluding 0. Many rows have no eval case. Most other evaluated gotcha cases score near 1.00 in both arms, because the CLI's printed instructions carry them.
+An `eval NN (with vs. without)` link marks a row where the [behavior evals](../evals/README.md) measured that the agent gets the case wrong without the plugin: Sonnet 5.5 at low effort, 6 runs per arm, 95% interval of the difference excluding 0. Each figure is from the run that added or last reran that case; [EVALS.md](../evals/EVALS.md) has the latest full run. Many rows have no eval case. Most other evaluated gotcha cases score near 1.00 in both arms, because the CLI's printed instructions carry them.
 
 ## Comments and reviews
 
