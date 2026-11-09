@@ -3,6 +3,22 @@
 Open work for the eval suite, most recent findings first. Current results are in
 [EVALS.md](EVALS.md).
 
+## From the 2026-11-09 sweep (after the tier retag)
+
+1. **Rerun `17` at `runs: 6`.** It is a guard and scored 0.83 with the plugin
+   (one miss in three); `analyze.mjs` suggests promoting it.
+2. **Read the `06`, `43` and `54` transcripts.** With-arm 0.87 to 0.89.
+3. **Revisit `11`, `21`, `29`, `36`, `50`, `51` and `56`.** Tagged
+   discriminating, with-arm at least 0.94, but the without-arm reached 0.83 to
+   1.00 and every interval includes 0. Retag after one more full run if they
+   hold.
+
+Done: `27`'s plans fell back to `gh stack` for a PR outside a native stack;
+the Branch update playbook now scopes itself to native stacks (#666; rerun
+1.00 with). Case `59` exposed released-blocker output that still printed fix
+and push steps; the CLI now prints only the branch update (#665; rerun 1.00
+with).
+
 ## From the 2026-11-09 sweep (after the grader fixes)
 
 1. **Revisit `06`, `07`, `29`, `35` and `50`** at the next full run. They
