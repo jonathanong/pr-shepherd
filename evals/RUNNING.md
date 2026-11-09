@@ -48,11 +48,12 @@ node evals/analyze.mjs --instructions-ablation <inline-dir> <playbook-dir>  # se
 ### Tiers and run recipes
 
 Each case carries `tier:discriminating` or `tier:guard` in its tags, set in
-`cases/*.mjs` from the last full run.
+`cases/*.mjs` from the last full run (2026-11-09).
 
-- `discriminating`: the arms separated with an interval that excludes 0
-  (`01`, `02`, `05`, `07`, `21`, `30`, `31`, `35`–`38`, `47`, `49`), or the
-  with-arm is below 0.9 (`06`, `11`, `27`, `28`, `48`). These get the runs. A new case starts here
+- `discriminating`: the arms separated with an interval that excludes 0, or the
+  with-arm is below 0.9: `01`, `02`, `04`–`08`, `11`, `12`, `21`, `22`,
+  `27`–`31`, `33`, `35`–`38`, `40`, `43`, `47`–`51`, `55`, `56`. `21` and `35`
+  stay here on their 2026-10-12 `runs: 6` result. These get the runs. A new case starts here
   too, so a targeted run measures it; `--summary` lists it for demotion if its
   interval includes 0.
 - `guard`: everything else. Both arms sit at or near ceiling, so the case only
