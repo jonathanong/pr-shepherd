@@ -5,13 +5,31 @@ Open work for the eval suite, most recent findings first. Current results are in
 
 ## From the 2026-11-09 sweep (after the tier retag)
 
-1. **Rerun `17` at `runs: 6`.** It is a guard and scored 0.83 with the plugin
-   (one miss in three); `analyze.mjs` suggests promoting it.
-2. **Read the `06`, `43` and `54` transcripts.** With-arm 0.87 to 0.89.
-3. **Revisit `11`, `21`, `29`, `36`, `50`, `51` and `56`.** Tagged
+1. **`43`: agents without a scheduler tell the user to set the wake-up.** At
+   `runs: 6` it scored 0.89 with and 0.50 without in two reruns. The two
+   failing plans each read the Event loop playbook, then still wrote "If your
+   host has a one-shot scheduler, set it" or "you'll need to set that wake-up
+   yourself". Giving the playbook an exact no-scheduler sentence and forbidding
+   "tell them to schedule or rerun" did not move the score, so it was not
+   kept. Next idea: put the no-scheduler sentence in the CLI's own `READY`
+   wake-up step, where every caller reads it.
+2. **Revisit `11`, `21`, `29`, `36`, `50`, `51` and `56`.** Tagged
    discriminating, with-arm at least 0.94, but the without-arm reached 0.83 to
    1.00 and every interval includes 0. Retag after one more full run if they
    hold.
+
+Done (follow-up reruns at `runs: 6`, 2026-11-09):
+
+- `17` scored 1.00 with and 0.92 without, then 1.00 and 1.00: it stays a guard.
+  Its grader no longer claims the output lists only #311 (both layers are
+  listed), and it accepts the #311 session's printed `gh stack` commands and a
+  #312 session gated on a later rerun.
+- `06` scored 1.00 with and 0.80 without, and `54` 1.00 and 1.00. Their
+  sweep-2 misses did not repeat. A re-judge found no difference between the
+  passing and failing `06` plans.
+- `43`'s grader now follows the printed step: end the turn and rerun at the
+  wake-up or on a PR event. A one-sentence "no scheduler" note passes; telling
+  the user to set the wake-up or rerun fails.
 
 Done: `27`'s plans fell back to `gh stack` for a PR outside a native stack;
 the Branch update playbook now scopes itself to native stacks (#666; rerun
