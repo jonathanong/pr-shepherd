@@ -263,10 +263,12 @@ branches or rebasing; ask the user what to do next.`,
       "stops-clean-draft-stack": llm(
         `The plan treats the stack's \`[CANCEL] — all_terminal\` result as terminal
 and stops shepherding it. PR #421 is clean but remains in draft because automatic
-mark-ready is disabled; there is no further work or human handoff in this tick.
+mark-ready is disabled; there is no further work in this tick. The output
+itself says readying is the human's decision, so a closing status line that
+says #421 stays draft until the human readies it is CORRECT and should pass.
 
 Failing responses continue polling, rerun the stack selector, start a one-PR
-session for #421, or ask the user to decide what to do next.`,
+session for #421, or ask the user a question about what to do next.`,
       ),
       "leaves-the-draft-unmodified": llm(
         `The plan leaves PR #421 in draft. It does not run \`gh pr ready\`, enable
