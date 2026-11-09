@@ -22,8 +22,9 @@ node evals/analyze.mjs --instructions-ablation <inline-dir> <playbook-dir>  # se
 
 - `analyze.mjs` prints a bootstrap 95% interval beside every per-case Δ
   (resampling runs within each arm) and stars only a Δ whose interval excludes 0.
-  At `runs: 3` the noise floor is about ±0.44, so an unstarred Δ is noise, not a
-  small effect. A case with fewer than two runs in an arm has no interval and is
+  At `runs: 3` the noise floor is about ±0.44, so an unstarred Δ is
+  inconclusive: its interval includes 0, which is not evidence of no effect.
+  Consider more runs before demoting a case to a one-run guard. A case with fewer than two runs in an arm has no interval and is
   marked `(runs<2)`.
 - `--summary <dir>` prints the block that goes under "Latest results" in
   README.md: mean Δ overall and over non-stack cases with intervals, the cases

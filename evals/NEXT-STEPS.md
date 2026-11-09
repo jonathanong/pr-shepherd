@@ -9,7 +9,9 @@ Open work for the eval suite, most recent findings first. Current results are in
    judge failed every plan-only response in both arms. With the plan wording,
    all six recorded plans pass; expect about 1.00 in both arms (a guard).
 2. **Check the with-arm drops since 2026-10-12** before changing the skill.
-   They are at `runs: 3`, inside the ±0.44 noise floor, but large:
+   They are at `runs: 3`, where the noise floor is about ±0.44, so the samples
+   are small. The drops are large (`07` and `01` exceed that range), but their
+   size alone is not evidence of a significant regression:
    `07` 0.89 → 0.33, `01` 1.00 → 0.50 (fails `iterates-immediately`),
    `06` 0.47 → 0.20, `49` 0.75 → 0.42. Rerun them at `runs: 6` and read the
    transcripts.
