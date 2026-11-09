@@ -37,6 +37,8 @@ export interface ResolveResult {
   rateLimit?: ResolveRateLimitStop;
   sessionRefusal?: string;
   instructions?: string[];
+  /** IDs GitHub denied (403/404); Shepherd omits them from later commands until edited. */
+  deniedIds?: string[];
   unrepliedThreads?: string[];
   unresolvedThreads?: string[];
   unminimizedComments?: string[];
@@ -157,6 +159,11 @@ export async function applyResolveOptions(
     result.instructions = [
       "Restore GitHub access for this session using the proxy instructions above.",
       "Retry only the pending IDs listed above.",
+    ];
+  else if (result.deniedIds?.length)
+    result.instructions = [
+      `GitHub denied ${result.deniedIds.map((id) => `\`${id}\``).join(", ")}. Shepherd omits ${result.deniedIds.length === 1 ? "it" : "them"} from later commands until edited, so do not retry, escalate, or route around ${result.deniedIds.length === 1 ? "it" : "them"}.`,
+      "Rerun Shepherd with the same options and continue from its output.",
     ];
 
   return result;
@@ -334,6 +341,8 @@ async function bulkApplyChunk(
       { mutation: true },
     );
     if ("restStopped" in resp) restStopped = resp.restStopped === true;
+    if ("deniedIds" in resp && Array.isArray(resp.deniedIds) && resp.deniedIds.length)
+      (result.deniedIds ??= []).push(...(resp.deniedIds as string[]));
     if ("sessionRefusal" in resp && typeof resp.sessionRefusal === "string")
       result.sessionRefusal = resp.sessionRefusal;
     data = resp.data;

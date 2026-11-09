@@ -37,4 +37,4 @@ nextAction: cancel
 
 ## Instructions
 
-1. Stop shepherding this stack. Automatic mark-ready is disabled and PR #421 is clean but still in draft.
+1. Stop shepherding this stack. Automatic mark-ready is disabled and PR #421 is clean but still in draft. Leave it in draft and end the turn; do not mark it ready or suggest doing so, because that is the human's decision.

@@ -51,6 +51,9 @@ export function explicitInstructions(result: PollSummaryResult, rerunCommand?: s
     "2. Follow each selected one-PR poll's `## Instructions` until it returns `CANCEL` or `ESCALATE`.",
     `3. Run ${again} again after selected work completes; one row's \`ESCALATE\` does not stop work on other rows. ${KEEP_WATCHING}`,
   ];
+  if (result.prs.some((item) => item.action === "escalate") && !isHandedOffSelection(result)) {
+    instructions[0] = `${instructions[0]} Report each \`ESCALATE\` row's reasons to the user now and leave that PR alone; keep working on the other rows.`;
+  }
   if (onlyDraftVerificationSelection(result)) {
     instructions[2] = `3. If every draft verification probe returns \`[CANCEL]\` with reason \`auto-mark-ready-disabled\`, stop this selection and report any \`ESCALATE\` rows; leave the drafts unchanged. If any probe returns \`[ESCALATE]\`, report that handoff and stop after the other probes finish. Otherwise follow the probes' instructions and rerun ${again} when that work completes.`;
   } else if (isHandedOffSelection(result)) {
