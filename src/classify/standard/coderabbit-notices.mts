@@ -46,6 +46,25 @@ function stripChrome(body: string): string {
     .replace(/^<!-- review_stack_entry_start -->[\s\S]*?<!-- review_stack_entry_end -->\s*/, "");
 }
 
+/** The "Review info" block that follows a progress notice: it opens with this summary line. */
+const REVIEW_INFO_START =
+  /\n<details>\n<summary><strong>(?:<picture>(?:<source [^>\n]*>)*<img [^>\n]*><\/picture> )?Review info<\/strong><\/summary>\n/;
+
+/**
+ * Lines the "Review info" block may hold: layout tags, picture-icon summaries, `- **Key**: value`
+ * settings, file bullets, and the commit-range sentence. Any other line keeps the comment visible.
+ */
+const REVIEW_INFO_LINE =
+  /^(?:|<\/?details>|<\/?dl>|<\/?dd>|<br>|<summary><strong>(?:<picture>(?:<source [^>]*>)*<img [^>]*><\/picture> )?[A-Za-z][A-Za-z :0-9]*<\/strong><\/summary>|- \*\*[A-Za-z ]+\*\*: [^<>\n]*|\* `[^`\n]+`|Reviewing files that changed from the base of the PR and between [a-f0-9]+ and [a-f0-9]+\.)$/;
+
+/** Removes a trailing "Review info" block made only of known metadata lines. */
+function stripReviewInfo(quoted: string): string {
+  const start = quoted.search(REVIEW_INFO_START);
+  if (start < 0) return quoted;
+  const info = quoted.slice(start).split("\n");
+  return info.every((line) => REVIEW_INFO_LINE.test(line)) ? quoted.slice(0, start) : quoted;
+}
+
 function isQuotedNotice(quoted: string): boolean {
   const onlyQuotedLines = quoted.split("\n").every((line) => !line.trim() || line.startsWith(">"));
   if (!onlyQuotedLines) return false;
@@ -69,7 +88,8 @@ function isQuotedNotice(quoted: string): boolean {
 const rule: ClassifyRule = (item) => {
   if (!isBotItem(item, ["coderabbitai"], ["pr-comment"])) return null;
   const body = stripChrome(item.body);
-  const quoted = body.match(NOTICE_ENVELOPE)?.[2]?.trim();
+  const envelope = body.match(NOTICE_ENVELOPE)?.[2];
+  const quoted = envelope === undefined ? undefined : stripReviewInfo(envelope).trim();
   const isStatus = COMMAND_REPLY.test(body) || STATUS_COMMENTS.some((notice) => notice.test(body));
   if (!(quoted && isQuotedNotice(quoted)) && !isStatus) return null;
   return {

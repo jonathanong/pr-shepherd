@@ -27,6 +27,18 @@ describe("CodeRabbit chrome variants", () => {
     expect(matches(progress, link)).toEqual([]);
   });
 
+  it("keeps prose inside the progress notice's Review info block visible", () => {
+    const info = fixture("coderabbit-progress-with-review-info");
+    const prose = variant(
+      info.body,
+      "- **Review profile**: CHILL\n",
+      "- **Review profile**: CHILL\nThe auth check is bypassed here.\n",
+    );
+    const link = variant(info.body, "* `docs/configuration.md`", "* [x](https://example.com)");
+    expect(matches(info, prose)).toEqual([]);
+    expect(matches(info, link)).toEqual([]);
+  });
+
   it("accepts a new Autofix checkbox id and description", () => {
     const body = variant(
       progress.body,
