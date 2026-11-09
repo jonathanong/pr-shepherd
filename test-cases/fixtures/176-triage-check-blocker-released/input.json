@@ -1,0 +1,54 @@
+{
+  "description": "The recorded blocker (owner/repo#99) merged and the branch is behind its base, so TRIAGE says to update the branch and not rerun the job.",
+  "batchData": {
+    "checks": [
+      {
+        "id": "CR_benchmarks",
+        "name": "Benchmarks",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/34906500059/job/104190467372",
+        "runId": "34906500059"
+      }
+    ],
+    "mergeStateStatus": "BEHIND"
+  },
+  "triagedChecks": [
+    {
+      "id": "CR_benchmarks",
+      "name": "Benchmarks",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE",
+      "event": "pull_request",
+      "detailsUrl": "https://github.com/owner/repo/actions/runs/34906500059/job/104190467372",
+      "runId": "34906500059",
+      "category": "failing",
+      "workflowName": "Benchmarks",
+      "jobName": "Benchmarks",
+      "failedStep": "Check benchmark results",
+      "logExcerpt": "Benchmark build or execution failed.\n##[error]Process completed with exit code 1."
+    }
+  ],
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12,
+  "checkBlockers": {
+    "records": [
+      {
+        "checkName": "Benchmarks",
+        "blocker": {
+          "owner": "owner",
+          "name": "repo",
+          "number": 99,
+          "kind": "pull"
+        },
+        "recordedAt": 1715790000
+      }
+    ],
+    "blockerState": "MERGED"
+  }
+}

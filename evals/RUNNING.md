@@ -52,7 +52,7 @@ Each case carries `tier:discriminating` or `tier:guard` in its tags, set in
 
 - `discriminating`: the arms separated with an interval that excludes 0, or the
   with-arm is below 0.9: `02`, `04`–`07`, `11`, `21`, `27`–`31`, `33`,
-  `35`–`37`, `43`, `47`, `50`, `51`, `54`, `56`. `21` and `35` stay here on
+  `35`–`37`, `43`, `47`, `50`, `51`, `54`, `56`, `58`–`61`. `21` and `35` stay here on
   their 2026-10-12 `runs: 6` result. `06`, `07`, `29`, `35` and `50` stay
   although their interval includes 0, because their without-arm is below 0.9.
   `01`, `08`, `12`, `22`, `38`, `40`, `48`, `49` and `55` moved to guard after
@@ -64,7 +64,7 @@ Each case carries `tier:discriminating` or `tier:guard` in its tags, set in
 
 `EVAL_RUNS_DISCRIMINATING` and `EVAL_RUNS_GUARD` override the per-case `runs`
 (a case's own `runs`, else 3) at generation time. Cases `38`, `39` and
-`43`–`56` commit their own `runs: 6`, whatever their tier, because at 3 the
+`43`–`61` commit their own `runs: 6`, whatever their tier, because at 3 the
 without arm alone has swung ±0.44; `40`–`42` do not. Regenerate, run, then
 regenerate without the variables so the tree matches the committed cases:
 
@@ -158,6 +158,8 @@ Layout:
 - `cases/review-budget.mjs`: case 53, the per-tick review output budget
   (`iterate.review-output-max-chars`).
 - `cases/aggregate.mjs`: cases 54 and 55, explicit multi-PR aggregate polls.
+- `cases/blockers.mjs`: cases 58–61, check blockers (`apply check-blocker`),
+  classification auto-resolve and a merge-queued stack.
 
 A case may also set `runs` (default 3). Cases 38, 39 and 43–56 use 6.
 
