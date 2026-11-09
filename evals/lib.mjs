@@ -14,7 +14,7 @@ const RUNS = 3;
 
 // Effort is not set here: a case's `env:` block may only carry `EVAL_*` keys,
 // and `plugin eval` has no effort flag. Export `CLAUDE_CODE_EFFORT_LEVEL` in the
-// operator's shell instead (see EVALS.md).
+// operator's shell instead (see RUNNING.md).
 
 // No tool can accomplish these cases; the written plan is the deliverable. The
 // read-only default needs no operator grant, which is also what keeps the suite
@@ -251,14 +251,14 @@ export function historyText(name) {
 // Every case declares how much it can discriminate. `discriminating` cases have
 // a Δ the suite can read (they separate the arms on the last full run) and get the
 // expensive runs; `guard` cases sit at ceiling in both arms and only need to
-// notice a regression, so one run each is enough. See EVALS.md "Runs recipes".
+// notice a regression, so one run each is enough. See RUNNING.md "Tiers and run recipes".
 const TIERS = ["discriminating", "guard"];
 
 // Every case also declares what kind of rule it tests, and `analyze.mjs` weights
 // the headline mean Δ by it. GitHub gotchas (CI rerun policy, cancelled runs,
 // stacks, merge queues, mergeability, transport limits, review mechanics) are
 // the costly mistakes, so they count most; loop conventions (mark-ready, a
-// missing PR id, creating a PR, cancel/wait discipline) count least. See EVALS.md
+// missing PR id, creating a PR, cancel/wait discipline) count least. See RUNNING.md
 // "Weighted score".
 export const AREA_WEIGHTS = { github: 3, safety: 2, loop: 1 };
 
