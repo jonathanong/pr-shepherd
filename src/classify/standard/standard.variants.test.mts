@@ -27,6 +27,26 @@ describe("CodeRabbit chrome variants", () => {
     expect(matches(progress, link)).toEqual([]);
   });
 
+  it("keeps prose inside the progress notice's Review info block visible", () => {
+    const info = fixture("coderabbit-progress-with-review-info");
+    const prose = variant(
+      info.body,
+      "- **Review profile**: CHILL\n",
+      "- **Review profile**: CHILL\nThe auth check is bypassed here.\n",
+    );
+    const link = variant(info.body, "* `docs/configuration.md`", "* [x](https://example.com)");
+    const finding = variant(
+      info.body,
+      "- **Review profile**: CHILL\n",
+      "- **Review profile**: CHILL\n- **Finding**: The auth check is bypassed here.\n",
+    );
+    const section = variant(info.body, " Commits</strong>", " Findings</strong>");
+    expect(matches(info, prose)).toEqual([]);
+    expect(matches(info, finding)).toEqual([]);
+    expect(matches(info, section)).toEqual([]);
+    expect(matches(info, link)).toEqual([]);
+  });
+
   it("accepts a new Autofix checkbox id and description", () => {
     const body = variant(
       progress.body,
@@ -72,6 +92,18 @@ describe("Codex variants", () => {
     for (const body of [reordered, bumped, extra]) {
       expect(matches(activity, body)).toEqual(["codex-notices"]);
     }
+  });
+
+  it("keeps a finding appended inside a collapsed table visible", () => {
+    const collapsed = fixture("codex-activity-collapsed-failed");
+    const beforeAbout = variant(
+      collapsed.body,
+      "\n\n<details> <summary>",
+      "\n\nA finding.\n\n<details> <summary>",
+    );
+    const beforeClose = variant(collapsed.body, /\n\n<\/details>$/, "\n\nA finding.\n\n</details>");
+    expect(matches(collapsed, beforeAbout)).toEqual([]);
+    expect(matches(collapsed, beforeClose)).toEqual([]);
   });
 
   it("keeps a non-Codex marker before the table visible", () => {

@@ -9,10 +9,14 @@ const QUOTA_NOTICES = [
 ];
 
 const ABOUT_BLOCK =
-  /\n\n<details> <summary>ℹ️ About Codex (?:in GitHub|security reviews in GitHub)<\/summary>[\s\S]*?<\/details>$/;
+  /\n\n<details> <summary>ℹ️ About Codex (?:in GitHub|security reviews in GitHub)<\/summary>[\s\S]*?<\/details>(\n\n<\/details>)?$/;
 
 const ACTIVITY_SUMMARY =
   /^<!-- codex-pull-request-review-summary -->\n(?:<!-- codex-[a-z0-9-]+:[^\n]* -->\n)*\n?## Codex Review Summary\n\nThis comment shows the latest Codex review activity on this pull request\.\n\n\| Review \| Status \| Commit \| Review trigger \|\n\| --- \| --- \| --- \| --- \|\n(?:\|[^\n]+\|\n?)+$/;
+
+/** The same table collapsed under `<details>`, with the overall status in the summary line. */
+const COLLAPSED_ACTIVITY_SUMMARY =
+  /^<!-- codex-pull-request-review-summary -->\n(?:<!-- codex-[a-z0-9-]+:[^\n]* -->\n)*\n?<details>\n<summary><strong>Codex Review Summary<\/strong>(?:: [^<\n]+)?<\/summary>\n\nThis comment shows the latest Codex review activity on this pull request\.\n\n\| Review \| Status \| Commit \| Review trigger \|\n\| --- \| --- \| --- \| --- \|\n(?:\|[^\n]+\|\n?)+\n*<\/details>$/;
 
 /**
  * Codex's rotating clean-review sign-offs, as observed. Prose is matched only from this list so a
@@ -61,10 +65,10 @@ const rule: ClassifyRule = (item) => {
   // Strip only leading codex-* metadata markers and the trailing About block; extra findings stay
   // visible. The activity table's own marker has no colon, so it is kept for ACTIVITY_SUMMARY.
   const content = body
-    .replace(ABOUT_BLOCK, "")
+    .replace(ABOUT_BLOCK, (_about, close: string | undefined) => close ?? "")
     .trim()
     .replace(/^(?:<!-- codex-[a-z0-9-]+:[^\n]* -->\s*)+/, "");
-  if (ACTIVITY_SUMMARY.test(content)) {
+  if (ACTIVITY_SUMMARY.test(content) || COLLAPSED_ACTIVITY_SUMMARY.test(content)) {
     return { autoResolve: true, suppress: true, reason: "Codex review-activity table" };
   }
   if (CLEAN_REVIEW.test(content) || CLEAN_SECURITY.test(content)) {
