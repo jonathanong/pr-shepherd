@@ -96,7 +96,7 @@ These are offline estimates at 3.5 characters per token over recorded sessions, 
 
 ### Clearer agent direction
 
-For a single PR, each tick returns exactly one action: `WAIT`, `READY`, `MARK_READY`, `TRIAGE`, `MERGE`, `CANCEL`, or `ESCALATE`. A `stack` poll can also return `SHEPHERD`, which starts one-PR sessions for owned layers. Every action except `CANCEL` comes with numbered `## Instructions` and exact commands, so the agent does not invent policy. In the [behavior evals](evals/README.md) (Sonnet 5.5 at low effort, all 57 cases, 2026-11-09), the plugin's weighted mean Δ (with − without) is **+0.15** [+0.13, +0.18], and **+0.17** on the 39 GitHub-gotcha cases. No case has a regression whose interval excludes 0. See [docs/actions.md](docs/actions.md) for the output contract.
+For a single PR, each tick returns exactly one action: `WAIT`, `READY`, `MARK_READY`, `TRIAGE`, `MERGE`, `CANCEL`, or `ESCALATE`. A `stack` poll can also return `SHEPHERD`, which starts one-PR sessions for owned layers. Every action except `CANCEL` comes with numbered `## Instructions` and exact commands, so the agent does not invent policy. In the [behavior evals](evals/README.md) (Sonnet 5.5 at low effort, all 57 cases, 2026-11-09), the agent scores **0.96** with the plugin and **0.84** without it, a weighted mean Δ of **+0.11** [+0.08, +0.14]. Twelve cases separate the arms, such as creating a PR without asking (0.92 → 0.00) and running with no PR argument (1.00 → 0.00). See [docs/actions.md](docs/actions.md) for the output contract.
 
 ### Lower GitHub API quota use
 

@@ -3,23 +3,23 @@
 Open work for the eval suite, most recent findings first. Current results are in
 [EVALS.md](EVALS.md).
 
-## From the 2026-11-09 run
+## From the 2026-11-09 sweep (after the grader fixes)
 
-Done on `evals/raise-weak-cases`: `57`'s plan wording, the tier retag, a
-plan-only note on every plan-case LLM grader, and CLI and skill wording for
-ESCALATE stops, denied mutations, held drafts and runs with no target. The weak
-cases were rerun at `runs: 6`; see [EVALS.md](EVALS.md#follow-up-weak-cases-at-runs-6-2026-11-09).
+1. **Retag tiers** as `--summary` suggests. Twelve discriminating cases had an
+   interval including 0 and a with-arm of at least 0.9: `01`, `06`, `07`, `08`,
+   `12`, `22`, `29`, `35`, `38`, `48`, `50`, `55`. Demote those that also sit
+   at ceiling without the plugin. Promote `54` (with-arm below 0.9).
+2. **Rerun `39`** at `runs: 6`. Its −0.17 regression re-judges PASS in
+   isolation and was 1.00 in both arms in the targeted run.
+3. **Lift `27` and `28`** (0.79 and 0.78 with the plugin): the merged-parent
+   stale-base cases. Read their failing checks first.
 
-1. **Run a full sweep** with the discriminating tier at `runs: 6` and refresh
-   EVALS.md and the README. Graders changed for every plan case, so the
-   2026-11-09 full-run numbers are no longer comparable.
-2. **Done: `49` is a guard.** The ESCALATE step now says not to rerun or
-   requeue, so both arms score 1.00 at `runs: 6`.
-3. **`02`, `07`, `11`** lost their without-arm zeros or gained without-arm
-   points after the plan-only note. Confirm on the sweep before retagging.
-4. **Done: `40` is a guard.** It scored 1.00 without the plugin at `runs: 6`.
-   Its one with-arm failure named `--until-terminal` for the next wake-up,
-   which the corrected grader accepts.
+## Earlier: from the first 2026-11-09 run
+
+Done: `57`'s plan wording, the tier retag, a plan-only note on every plan-case
+LLM grader, CLI and skill wording for ESCALATE stops, denied mutations, held
+drafts and runs with no target, `40` and `49` moved to guard, and the full sweep
+above.
 
 ## Earlier list (2026-10-12)
 
