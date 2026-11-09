@@ -77,7 +77,7 @@
 // playbook`) and is written under <dir>, which must be outside evals/ so neither
 // the default suite nor its pruning sees it. Cases with no playbook snapshot are
 // skipped, listed, and pruned from <dir> if an earlier run wrote them. <dir> must
-// be new, empty, or a directory an earlier playbook run marked as its own. Transcript history stays inline. See EVALS.md "Ablation: inline vs
+// be new, empty, or a directory an earlier playbook run marked as its own. Transcript history stays inline. See RUNNING.md "Ablation: inline vs
 // playbook instructions".
 
 import { parseArgs } from "node:util";

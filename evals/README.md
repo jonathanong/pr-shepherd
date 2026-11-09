@@ -31,48 +31,17 @@ own.
 
 ## Latest results
 
-> **The plugin's job is the GitHub gotchas: cancelled runs, merge queues,
-> stacks and review mechanics.** There Sonnet 5.5 scores **0.94** with the
-> plugin and 0.82 without it (Δ +0.12 [+0.10, +0.15]), about two-thirds fewer
-> missed checks. On the eight gotcha cases where the model trips without it,
-> the score goes from 0.50 to 0.92. No case has a regression whose
-> interval excludes 0.
+> **Sonnet 5.5, low effort, opus judge, all 57 cases (2026-11-09):** weighted
+> mean Δ **+0.15** [+0.13, +0.18]. GitHub gotchas +0.17 [+0.13, +0.20], loop
+> rules +0.14 [+0.07, +0.20], safety +0.03 [−0.03, +0.08]. No case has a
+> regression whose interval excludes 0, and the skill fired in 216/216 runs
+> where it should and 0/3 on the unrelated question.
 
-**Sonnet 5.5, low effort, opus judge, `runs: 6` on all 52 cases (2026-10-12)**
-
-GitHub gotchas where the plugin changes the outcome (95% interval excludes 0):
-
-| Case | The trap                                                              | with → without |
-| ---- | --------------------------------------------------------------------- | -------------- |
-| `47` | A stack layer reads "3 passing", but its latest required run was cancelled | 1.00 → 0.44    |
-| `07` | A bot review and a human thread arrive in the same `TRIAGE`         | 0.89 → 0.33    |
-| `05` | A cancelled run has to be rerun, not treated as a failure             | 1.00 → 0.50    |
-| `21` | Every stack layer is terminal, so the stack loop must stop            | 1.00 → 0.50    |
-| `38` | GitHub denied a reply; skip it once, don't retry                       | 0.72 → 0.33    |
-| `35` | A PR was ejected from the merge queue                                 | 1.00 → 0.67    |
-| `49` | A merge-group run was cancelled; escalate, don't requeue              | 0.75 → 0.42    |
-| `36` | The REST transport cannot run the queue recovery                      | 1.00 → 0.83    |
-
-Gotchas still weak with the plugin (with-plugin score below 0.8):
-`06` (0.47, dismissing a stale bot review), `48` (0.67, a superseded
-cancellation on a stack layer), `38`, `49`, `27` and `28` (a merged stack
-parent). These are the next targets.
-
-The other 22 of 36 gotcha cases sit at or near ceiling in both arms: the CLI's
-own `## Instructions` carry them, plugin or not.
-
-| Area                | Weight | Mean Δ                  |
-| ------------------- | ------ | ----------------------- |
-| GitHub gotchas (36) | ×3     | **+0.12** [+0.10, +0.15] |
-| Safety (4)          | ×2     | +0.04 [+0.01, +0.07]    |
-| Loop rules (12)     | ×1     | +0.32 [+0.25, +0.40]    |
-| **Weighted, all 52** |       | **+0.14** [+0.11, +0.16] |
-
-Loop rules (create a PR without asking, run without a PR id, keep going after
-`MARK_READY`) show the biggest Δ, but a miss there costs a turn, not a bad
-GitHub action. The skill fired in 306/306 runs where it should have and 0/6 on
-the unrelated question. The two runs cost $51.26 in total. Full table:
-[EVALS.md](EVALS.md#latest-full-results).
+13 cases separate the arms, led by `31` (create a PR without asking, 1.00 →
+0.00), `56` (queued PR with conflicts, 0.83 → 0.00) and `47` (a stack layer
+whose latest required run was cancelled, 1.00 → 0.39). Weak with the plugin:
+`06`, `07`, `49`, `01` and `48`. The run cost $34.08 for 438 runs. Full table
+and findings: [EVALS.md](EVALS.md).
 
 ## Run it
 
@@ -94,7 +63,7 @@ node evals/analyze.mjs --summary <results-dir>   # paste-ready block for "Latest
 
 Cases are tagged `tier:discriminating` or `tier:guard`; spend `runs: 6` on the
 first and `runs: 1` on the second for a targeted run (see
-[EVALS.md](EVALS.md#tiers-and-run-recipes)). Only a Δ whose 95% bootstrap
+[RUNNING.md](RUNNING.md#tiers-and-run-recipes)). Only a Δ whose 95% bootstrap
 interval excludes 0 is a result.
 
 Run it from a fresh `git worktree add --detach` checkout, not one whose
@@ -103,8 +72,10 @@ than 20000 entries.
 
 ## More
 
-- [EVALS.md](EVALS.md) covers the case list, how each case is graded, where the
-  failure modes came from, what the suite does not measure, and next steps.
+- [EVALS.md](EVALS.md) has the latest results.
+- [RUNNING.md](RUNNING.md) covers commands, tiers, weighting and environment
+  constraints; [CASES.md](CASES.md) the case list and where each case came from;
+  [NEXT-STEPS.md](NEXT-STEPS.md) open work.
 - [HISTORY.md](HISTORY.md) has past runs, the measurement-noise floor, and the
   calibration log.
 - [tokens/](tokens/README.md) is a separate, offline benchmark of what the work
