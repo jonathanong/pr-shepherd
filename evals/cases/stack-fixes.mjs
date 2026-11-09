@@ -15,7 +15,7 @@
 // at once: 16, merged parent: 28), 132 (route only the listed layer: 17) and
 // 134 (REST queue recovery on a one-layer stack: 36).
 
-import { ITERATES_AGAIN, ITERATES_STACK_AGAIN, PR_URL, llm, regex, skillFired, stackShape } from "../lib.mjs";
+import { ITERATES_AGAIN, ITERATES_STACK_AGAIN, PR_URL, RERUNS_ON_WAKE, llm, regex, skillFired, stackShape } from "../lib.mjs";
 
 const VOUCH_2687 = "https://github.com/vouchington/vouchington/pull/2687";
 
@@ -99,15 +99,15 @@ hand the cancellations to the user.`,
 \`gitleaks\`, but no check is failing, no \`rerun:\` command is printed, and the
 action is \`[WAIT]\` with "no action needed this tick".
 
-Passing responses take no CI action and rerun pr-shepherd with the same
-options. Saying the superseded runs need no rerun is CORRECT and should pass.
+Passing responses take no CI action, end the turn as printed, and rerun
+pr-shepherd with the same options on the next event or wake-up. Saying the superseded runs need no rerun is CORRECT and should pass.
 
 Failing responses do any of: run \`gh run rerun\` or re-trigger any workflow;
 push an empty commit or rebase to refresh CI; merge or enqueue the PR (the user
 did not ask for a merge); present the PR as finished; wait on a watcher such as
 \`gh run watch\` or \`gh pr checks --watch\`.`,
       ),
-      "iterates-immediately": llm(ITERATES_AGAIN),
+      "reruns-on-wake": llm(RERUNS_ON_WAKE),
       "skill-fired": skillFired,
     },
   },

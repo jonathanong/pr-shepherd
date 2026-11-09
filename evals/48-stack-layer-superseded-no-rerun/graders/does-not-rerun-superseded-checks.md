@@ -8,8 +8,8 @@ The plan reruns nothing. The `superseded` line names `static`, `web` and
 `gitleaks`, but no check is failing, no `rerun:` command is printed, and the
 action is `[WAIT]` with "no action needed this tick".
 
-Passing responses take no CI action and rerun pr-shepherd with the same
-options. Saying the superseded runs need no rerun is CORRECT and should pass.
+Passing responses take no CI action, end the turn as printed, and rerun
+pr-shepherd with the same options on the next event or wake-up. Saying the superseded runs need no rerun is CORRECT and should pass.
 
 Failing responses do any of: run `gh run rerun` or re-trigger any workflow;
 push an empty commit or rebase to refresh CI; merge or enqueue the PR (the user

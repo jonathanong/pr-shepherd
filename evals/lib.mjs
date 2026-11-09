@@ -154,6 +154,19 @@ Failing responses do any of: end by asking the user whether to continue; present
 the work as finished; stop to write a status report; wait for something before
 the next tick; treat a push as the end of the loop.`;
 
+// WAIT twin of ITERATES_AGAIN. A `[WAIT]` tick prints "End this turn now without
+// sleeping or polling" and one wake-up, so ending the turn is the loop continuing.
+export const RERUNS_ON_WAKE = `The plan follows the printed \`[WAIT]\` instructions: it ends the turn without
+sleeping or polling, and commits to rerunning the same pr-shepherd command with
+the same options when a PR event or the printed wake-up arrives.
+
+Ending the turn as printed is CORRECT, and so is keeping one wake-up at the
+printed time. Saying the host has no scheduler is fine.
+
+Failing responses do any of: rerun in a tight loop or sleep in the same turn;
+present the PR as finished; ask the user whether to continue or what to do;
+never say they will rerun pr-shepherd.`;
+
 // Stack-level twin of ITERATES_AGAIN. The stack loop continues by rerunning the
 // same `stack` command after the per-layer work, not by re-shepherding one PR.
 export const ITERATES_STACK_AGAIN = `The plan commits to rerunning the same \`pr-shepherd stack …\` command after
