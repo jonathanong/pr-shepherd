@@ -29,6 +29,8 @@ const ISSUE_QUERY = `query CheckBlockerIssue($owner: String!, $name: String!, $n
 export interface CheckBlockerGate {
   deferredNames: ReadonlySet<string>;
   releasedNames: ReadonlySet<string>;
+  /** Released check name → `owner/name#number` of the blocker that merged or closed. */
+  releasedBlockers: ReadonlyMap<string, string>;
   /** `owner/name#number` for blockers that are still open. */
   openBlockers: readonly string[];
 }
@@ -69,6 +71,7 @@ export async function resolveCheckBlockerGate(
 
   const deferredNames = new Set<string>();
   const releasedNames = new Set<string>();
+  const releasedBlockers = new Map<string, string>();
   const openBlockers: string[] = [];
   const seen = new Set<string>();
   for (const record of matched) {
@@ -87,11 +90,12 @@ export async function resolveCheckBlockerGate(
         await clearCheckBlocker(key, record.checkName);
       } else {
         releasedNames.add(record.checkName);
+        releasedBlockers.set(record.checkName, formatCheckBlockerRef(record.blocker));
       }
     }
   }
   if (deferredNames.size === 0 && releasedNames.size === 0) return null;
-  return { deferredNames, releasedNames, openBlockers };
+  return { deferredNames, releasedNames, releasedBlockers, openBlockers };
 }
 
 /** Append the open blocker to a WAIT log. Other actions are unchanged. */

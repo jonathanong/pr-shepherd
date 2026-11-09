@@ -82,6 +82,8 @@ interface HandleTriageContext {
   botUsernames: NormalizedBotUsernames;
   /** Failing checks whose external blocker has merged or closed. */
   releasedCheckNames?: ReadonlySet<string>;
+  /** Released check name → the blocker that merged or closed, shown on the check. */
+  releasedCheckBlockers?: ReadonlyMap<string, string>;
   ruleAutoResolveThreadIds?: string[];
   /** Verified stack-repair guidance, when ancestry is stale. */
   repairInstructions?: string[];
@@ -178,6 +180,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     surfacedApprovals,
     botUsernames,
     releasedCheckNames = EMPTY_RELEASED,
+    releasedCheckBlockers,
     ruleAutoResolveThreadIds,
     repairInstructions,
   } = ctx;
@@ -341,7 +344,10 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     failingChecks.flatMap((c) => (c.runId !== null && c.runAttempt === 1 ? [c.runId] : [])),
   );
   const failingAgentChecks = toAgentChecks(failingChecks).map((c) => {
-    if (releasedCheckNames.has(c.name)) return c;
+    if (releasedCheckNames.has(c.name)) {
+      const releasedBlocker = releasedCheckBlockers?.get(c.name);
+      return releasedBlocker ? { ...c, releasedBlocker } : c;
+    }
     return rerunAuthorized &&
       // Rerunning queue CI cannot restore a removed entry and overwrites its failure evidence.
       c.scope !== "merge_group" &&
@@ -541,7 +547,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
   const instructions = buildFixInstructions(
     threads,
     actionableComments,
-    checks,
+    checks.filter((check) => !releasedCheckNames.has(check.name)),
     changesRequestedReviews,
     baseLookup.branch,
     resolveCommand,

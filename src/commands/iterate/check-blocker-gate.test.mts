@@ -76,6 +76,7 @@ describe("resolveCheckBlockerGate", () => {
     mockGraphql.mockResolvedValue(pullData(state, merged));
     const gate = await resolveCheckBlockerGate(key, [{ name: "lint" }]);
     expect(gate?.releasedNames.has("lint")).toBe(true);
+    expect(gate?.releasedBlockers.get("lint")).toMatch(/#\d+$/);
     expect(gate?.deferredNames.size).toBe(0);
     expect(status).toBe("released");
   });
@@ -130,6 +131,7 @@ describe("annotateBlockedWait", () => {
   const gate = {
     deferredNames: new Set(["lint"]),
     releasedNames: new Set<string>(),
+    releasedBlockers: new Map<string, string>(),
     openBlockers: ["acme/widgets#9"],
   };
 
