@@ -96,7 +96,7 @@ hand the cancellations to the user.`,
     // so Shepherd lists them as superseded and waits. Without this case a
     // blanket "rerun anything cancelled" policy would pass 47.
     slug: "48-stack-layer-superseded-no-rerun",
-    tier: "discriminating",
+    tier: "guard",
     area: "github",
     runs: 6,
     fixture: "146-wait-stacked-layer-required-check-older-run-cancelled",

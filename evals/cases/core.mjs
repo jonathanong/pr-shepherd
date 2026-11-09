@@ -9,7 +9,7 @@ export const CORE_CASES = [
     // instead of letting the CLI poll. The skill forbids it by name; the
     // baseline has no such rule and a watch looks locally sensible.
     slug: "01-ci-in-progress-no-watch",
-    tier: "discriminating",
+    tier: "guard",
     area: "loop",
     fixture: "09-wait-in-progress-ci",
     shape: shapeA,
@@ -242,7 +242,7 @@ dismissal to a human or silently abandon the actionable thread.`,
     // identification of the real blocker rather than mere absence of the word
     // "approval", which would be one-directional and gameable.
     slug: "08-mergeability-diagnosis",
-    tier: "discriminating",
+    tier: "guard",
     area: "github",
     fixture: "32-triage-pr-level-changes-requested",
     shape: shapeB,
@@ -398,7 +398,7 @@ do.`,
     // Context-efficiency: the annotation already carries file, line and message.
     // Re-fetching the provider's page adds context and no information.
     slug: "12-annotations-already-surfaced",
-    tier: "discriminating",
+    tier: "guard",
     area: "github",
     fixture: "55-triage-failing-check-annotations-with-thread",
     shape: shapeA,
