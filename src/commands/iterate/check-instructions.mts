@@ -2,7 +2,7 @@ import type { AgentCheck, ResolveCommand, Review } from "../../types.mts";
 import { playbookPointer } from "../playbook-pointer.mts";
 
 // The `[TRIAGE]` heading and the skill already say the action is non-terminal.
-const TRIAGE_CONTINUATION = "Rerun Shepherd now.";
+export const TRIAGE_CONTINUATION = "Rerun Shepherd now.";
 
 /** The final rerun step when a queued conflict offers both paths. */
 export const QUEUED_CONFLICT_CONTINUATION =
@@ -14,7 +14,7 @@ export const QUEUED_CONFLICT_CONTINUATION =
  */
 export function isTriageContinuation(step: string): boolean {
   return (
-    step === TRIAGE_CONTINUATION ||
+    step.startsWith(TRIAGE_CONTINUATION.slice(0, -1)) ||
     step === QUEUED_CONFLICT_CONTINUATION ||
     /\[TRIAGE\].*non-terminal/i.test(step)
   );

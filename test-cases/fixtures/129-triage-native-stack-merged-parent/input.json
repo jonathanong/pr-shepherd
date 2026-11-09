@@ -1,4 +1,5 @@
 {
+  "qualifiedTarget": true,
   "description": "The first two native-stack layers merged, but PR #2547 (position 3 of 6) still targets its merged parent branch. Real topology selects #2547 as the bottom open layer; conflicting code requires a whole-stack trunk rebase and stack push, without parent-only rebase or manual retargeting.",
   "repository": {
     "owner": "vouchington",

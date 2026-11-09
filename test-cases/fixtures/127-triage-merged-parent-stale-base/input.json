@@ -1,4 +1,5 @@
 {
+  "qualifiedTarget": true,
   "description": "PR #2099 is the final layer after #2095 merged. GitHub reports stack:null and DIRTY because #2099 still targets #2095's old head branch. Live GraphQL comparisons showed #2099's head ahead of current main by 2 and behind by 0, while it diverged from the old base by 4 ahead and 7 behind. The first step must verify the merged parent, retarget the PR base to main, and rerun without a conflict-resolution commit.",
   "repository": { "owner": "vouchington", "name": "vouchington" },
   "batchData": {
