@@ -76,6 +76,30 @@ node evals/generate.mjs        # restore the committed suite
 node evals/generate.mjs
 ```
 
+### Sharded runs
+
+One `claude plugin eval` process keeps `-j` runs in flight, so a full sweep takes
+hours. To go faster, split the generated cases into shards, run each shard in its
+own terminal tab, and merge the results:
+
+```sh
+node evals/shard.mjs split 4 evals-shards          # balanced by run count; optional case prefixes
+# one tab per shard:
+CLAUDE_CODE_EFFORT_LEVEL=low claude plugin eval . --model claude-sonnet-5-5 \
+  --ablation with-without --judge-model opus --no-publish -j 8 \
+  --eval-dir evals-shards/shard-1 --output-dir "$TMPDIR/sweep-1"
+# after every shard finishes:
+node evals/shard.mjs merge "$TMPDIR/sweep" "$TMPDIR"/sweep-{1,2,3,4}
+node evals/analyze.mjs --summary "$TMPDIR/sweep"
+rm -rf evals-shards
+```
+
+Run `split` after any `generate.mjs` overrides, because it copies the case
+directories as they are. The shard root must sit below the plugin directory, as
+`--eval-dir` requires. The merged result points each case back at `evals/<case>`
+for its tags, so `analyze.mjs` weighs it like a single run. Concurrency is the
+shard count times `-j`; lower `-j` if runs start failing on rate limits.
+
 A comparison needs both tiers generated with the same overrides, because the run
 count is part of the scored fingerprint. Move a case between tiers by editing its
 `tier` in `cases/*.mjs` after a run shows it separating the arms (or not).
