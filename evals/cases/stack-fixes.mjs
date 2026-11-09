@@ -170,7 +170,7 @@ retrigger CI.`,
     // but the bottom open layer still targets its merged parent's branch.
     // GitHub rejects `gh pr edit --base` on a native-stack PR.
     slug: "50-stack-merged-parent-retarget-wait",
-    tier: "guard",
+    tier: "discriminating",
     area: "github",
     runs: 6,
     fixture: "131-aggregate-stack-merged-parent-retarget-wait",
@@ -202,7 +202,7 @@ ask the user what to do.`,
     // failed_checks. The base update goes through `gh stack`, and the printed
     // `acknowledge queue removal:` is conditional on the head NOT changing.
     slug: "51-stack-queue-removal-ack-route",
-    tier: "guard",
+    tier: "discriminating",
     area: "github",
     runs: 6,
     fixture: "120-triage-native-stack-queue-removal-ack",

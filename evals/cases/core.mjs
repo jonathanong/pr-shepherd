@@ -122,7 +122,7 @@ passing without committing to run it.`,
     // Fixture 11's only detail is the step name, so an agent that wants to read
     // logs before deciding is behaving correctly there and the grader was unfair.
     slug: "04-real-failure-no-blind-rerun",
-    tier: "guard",
+    tier: "discriminating",
     area: "github",
     fixture: "61-triage-aggregate-ci-exit-code",
     shape: shapeA,
@@ -242,7 +242,7 @@ dismissal to a human or silently abandon the actionable thread.`,
     // identification of the real blocker rather than mere absence of the word
     // "approval", which would be one-directional and gameable.
     slug: "08-mergeability-diagnosis",
-    tier: "guard",
+    tier: "discriminating",
     area: "github",
     fixture: "32-triage-pr-level-changes-requested",
     shape: shapeB,
@@ -398,7 +398,7 @@ do.`,
     // Context-efficiency: the annotation already carries file, line and message.
     // Re-fetching the provider's page adds context and no information.
     slug: "12-annotations-already-surfaced",
-    tier: "guard",
+    tier: "discriminating",
     area: "github",
     fixture: "55-triage-failing-check-annotations-with-thread",
     shape: shapeA,

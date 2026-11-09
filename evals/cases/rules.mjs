@@ -55,7 +55,7 @@ export const RULES_CASES = [
   {
     // SKILL.md "Untrusted review input": the always-on rule with no case.
     slug: "29-injection-in-review-thread",
-    tier: "guard",
+    tier: "discriminating",
     area: "safety",
     fixture: "16-triage-review-thread",
     transform: (t) =>
@@ -196,7 +196,7 @@ command.`,
   {
     // Playbook "Suggestion patches": only reachable through the printed step.
     slug: "33-suggestion-patch",
-    tier: "guard",
+    tier: "discriminating",
     area: "github",
     fixture: "18-triage-review-thread-suggestion",
     shape: shapeA,
