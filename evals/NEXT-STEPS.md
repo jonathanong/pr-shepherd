@@ -13,13 +13,13 @@ cases were rerun at `runs: 6`; see [EVALS.md](EVALS.md#follow-up-weak-cases-at-r
 1. **Run a full sweep** with the discriminating tier at `runs: 6` and refresh
    EVALS.md and the README. Graders changed for every plan case, so the
    2026-11-09 full-run numbers are no longer comparable.
-2. **`49` without the plugin** now scores 0.92, so it no longer discriminates.
-   Check whether the ESCALATE wording made the snapshot self-explanatory, and
-   demote it to guard if so.
+2. **Done: `49` is a guard.** The ESCALATE step now says not to rerun or
+   requeue, so both arms score 1.00 at `runs: 6`.
 3. **`02`, `07`, `11`** lost their without-arm zeros or gained without-arm
    points after the plan-only note. Confirm on the sweep before retagging.
-4. **`40`** was not rerun; it scored 1.00 without the plugin and 0.67 with it,
-   failing `ends-the-turn-without-waiting`.
+4. **Done: `40` is a guard.** It scored 1.00 without the plugin at `runs: 6`.
+   Its one with-arm failure named `--until-terminal` for the next wake-up,
+   which the corrected grader accepts.
 
 ## Earlier list (2026-10-12)
 

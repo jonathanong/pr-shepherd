@@ -15,7 +15,16 @@
 // at once: 16, merged parent: 28), 132 (route only the listed layer: 17) and
 // 134 (REST queue recovery on a one-layer stack: 36).
 
-import { ITERATES_AGAIN, ITERATES_STACK_AGAIN, PR_URL, RERUNS_ON_WAKE, llm, regex, skillFired, stackShape } from "../lib.mjs";
+import {
+  ITERATES_AGAIN,
+  ITERATES_STACK_AGAIN,
+  PR_URL,
+  RERUNS_ON_WAKE,
+  llm,
+  regex,
+  skillFired,
+  stackShape,
+} from "../lib.mjs";
 
 const VOUCH_2687 = "https://github.com/vouchington/vouchington/pull/2687";
 
@@ -118,7 +127,9 @@ did not ask for a merge); present the PR as finished; wait on a watcher such as
     // action is ESCALATE. Case 05's "CANCELLED must rerun" and the user's merge
     // request both pull the wrong way.
     slug: "49-queue-cancelled-required-run-escalate",
-    tier: "discriminating",
+    // Guard since the ESCALATE step itself says not to rerun or requeue:
+    // 1.00 in both arms at runs: 6 (2026-11-09).
+    tier: "guard",
     area: "github",
     runs: 6,
     fixture: "147-escalate-queue-required-check-latest-run-cancelled",

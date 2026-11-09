@@ -13,6 +13,7 @@ export const CLOUD_CASES = [
     // "WAIT" as "keep going" and sleeps, loops or runs `gh pr checks --watch`
     // inside the turn, burning the session on work the next event will wake it for.
     slug: "40-event-mode-one-tick-end-turn",
+    // Guard: 1.00 without the plugin at runs: 6 (2026-11-09).
     tier: "guard",
     area: "loop",
     fixture: "136-wait-tick-safety-net",
@@ -29,10 +30,12 @@ rerun pr-shepherd to wait for CI inside this turn, and it does not use
 \`gh pr checks --watch\`, \`gh run watch\`, or any other waiter.
 
 Passing responses say there is nothing more to do this turn, that a PR event or
-the scheduled wake-up will bring the next tick, and stop.
+the scheduled wake-up will bring the next tick, and stop. Naming the command to
+rerun when that event or wake-up arrives is fine, with or without
+\`--until-terminal\`: inside a cloud session that command also runs one tick.
 
-Failing responses do any of: sleep; run \`pr-shepherd\` again immediately or in a
-loop; run \`--until-terminal\`; run \`gh pr checks\`, \`gh run watch\` or an
+Failing responses do any of: sleep; run \`pr-shepherd\` again in this turn,
+immediately or in a loop; run \`gh pr checks\`, \`gh run watch\` or an
 equivalent watcher; ask the user whether to keep waiting.`,
       ),
       "skill-fired": skillFired,

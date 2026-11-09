@@ -52,8 +52,9 @@ Each case carries `tier:discriminating` or `tier:guard` in its tags, set in
 
 - `discriminating`: the arms separated with an interval that excludes 0, or the
   with-arm is below 0.9: `01`, `02`, `04`–`08`, `11`, `12`, `21`, `22`,
-  `27`–`31`, `33`, `35`–`38`, `40`, `43`, `47`–`51`, `55`, `56`. `21` and `35`
-  stay here on their 2026-10-12 `runs: 6` result. These get the runs. A new case starts here
+  `27`–`31`, `33`, `35`–`38`, `43`, `47`, `48`, `50`, `51`, `55`, `56`. `21`
+  and `35` stay here on their 2026-10-12 `runs: 6` result; `40` and `49` moved
+  to guard after scoring 1.00 without the plugin at `runs: 6`. These get the runs. A new case starts here
   too, so a targeted run measures it; `--summary` lists it for demotion if its
   interval includes 0.
 - `guard`: everything else. Both arms sit at or near ceiling, so the case only
