@@ -1,6 +1,7 @@
 import { withApiTelemetryScope } from "../../github/api-telemetry.mts";
 import type { IterateCommandOptions, IterateResult } from "../../types.mts";
 import { attachApiUsage } from "./api-usage.mts";
+import { withTriageRerunTarget } from "./rerun-command.mts";
 
 export function withIterateApiUsage(
   opts: IterateCommandOptions,
@@ -9,7 +10,7 @@ export function withIterateApiUsage(
   return withApiTelemetryScope(async () => {
     const result = await runCore();
     return attachApiUsage(
-      result,
+      withTriageRerunTarget(result, opts.targetRepository !== undefined),
       opts.deferQuotaWarning !== true,
       false,
       opts.quotaWarningMinimumPollIntervalMinutes,

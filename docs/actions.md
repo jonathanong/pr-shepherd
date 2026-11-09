@@ -599,6 +599,7 @@ When review feedback is present, `TRIAGE` prints one optional advisory: if the a
 
 ### Instruction steps
 
+- When the PR was given as a qualified reference (a URL or `owner/repo#N`, as MCP always does), the final `[TRIAGE]` step names it by URL: ``Rerun Shepherd now on `<PR URL>`.`` A caller that shortened it to a bare number would rerun against the local checkout's repository. A bare target keeps `Rerun Shepherd now.`. The step names only the target; the caller keeps its mode and flags (`--until-terminal`, `--merge`, `iterate`, or MCP). The queued-conflict variant and the quota-warning rewrite replace this step with their own wording.
 - Review mutation commands are printed inline in their steps rather than as `## Post-fix actions` bullets. `--require-sha HEAD` makes `apply review` read the checkout's HEAD itself (a read-only `git rev-parse HEAD`), so it needs no substitution; run the command after any push so it equals the remote PR head. Run from another checkout (a qualified PR reference), that HEAD is unrelated: `apply review` then times out and its error says to rerun with the PR head SHA you pushed, naming the current head.
 - `$DISMISS_MESSAGE` substitution stays in the CLI output when `resolveCommand.requiresDismissMessage` is set; the printed command is invalid without it. It must be one specific sentence describing what changed — never generic text like "address review comments". When `resolveCommand.requiresHeadSha` is set, the command carries `--require-sha HEAD`.
 - A caller who never loads the skill can still run the printed commands; placeholder steps are in the output. Dismiss-ID retention stays in its printed step. Omitting a `--dismiss-review-ids` value leaves `CHANGES_REQUESTED`.
@@ -781,7 +782,7 @@ When every item fits, the output is unchanged. Otherwise Shepherd shows items in
 
 Within a group, items go oldest first (unknown ages last). Selection stops at the first item that does not fit; it does not skip ahead to a smaller one.
 
-A held item is absent from every section, from the generated `apply review` IDs, and from the JSON. Its seen marker is not written, so a later tick shows it. The tick prints `**showing** <shown> of <total> review items` below the base fields (JSON `triage.reviewItems: { shown, total }`) and adds this step before `Rerun Shepherd now.`:
+A held item is absent from every section, from the generated `apply review` IDs, and from the JSON. Its seen marker is not written, so a later tick shows it. The tick prints `**showing** <shown> of <total> review items` below the base fields (JSON `triage.reviewItems: { shown, total }`) and adds this step before the final rerun step:
 
 ```markdown
 5. This is a subset: 40 of 115 review items are shown, and only their IDs are in the commands above. After handling these items, rerun Shepherd for the next batch; do not fetch the held items yourself.

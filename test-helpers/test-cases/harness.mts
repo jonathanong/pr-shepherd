@@ -304,6 +304,8 @@ export interface Fixture {
   claudeCodeRemote?: boolean;
   /** Extra CLI args appended after "42". */
   args?: string[];
+  /** Pass the PR as its URL (a qualified target) instead of a bare number. */
+  qualifiedTarget?: boolean;
   /** Freeform note about the scenario. Not read by the harness; documentation only. */
   description?: string;
   /**
@@ -737,7 +739,11 @@ export async function captureRun(
   fixture: Fixture,
   transport: FixtureTransport = "graphql",
 ): Promise<RunResult> {
-  const pr = String(fixture.batchData?.number ?? 42);
+  const number = String(fixture.batchData?.number ?? 42);
+  const pr =
+    fixture.qualifiedTarget && fixture.repository
+      ? `https://github.com/${fixture.repository.owner}/${fixture.repository.name}/pull/${number}`
+      : number;
   const args =
     fixture.mode === "aggregate"
       ? [...(fixture.args ?? ["42", "43", "--timeout", "0s"]), ...transportArgs(transport)]
