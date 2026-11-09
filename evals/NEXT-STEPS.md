@@ -36,36 +36,38 @@ above.
    (classification auto-resolve)**, then cases for them.
 3. **Done: every case ran at `runs: 6`** (2026-10-12). 13 cases have
    intervals that exclude 0.
-4. **Unblock the call-count and token measurement.** Flatten `~/.docker`, then
-   build a suite that grants Bash to both arms. Watch for the inverted failure:
-   with no working binary, the with-arm tries the CLI, fails, and Δ goes negative.
-5. **Done: the `[Required]` approval-gate case ran.** `43` scored 1.00 with
+4. **Done: the `[Required]` approval-gate case ran.** `43` scored 1.00 with
    and 0.94 without, so it is a guard.
-6. **Add a bad-workflow-YAML fixture**, if the CLI surfaces that state at all.
+5. **Add a bad-workflow-YAML fixture**, if the CLI surfaces that state at all.
    If it doesn't, that's a CLI gap and no eval can close it.
-7. **Watch the over-trigger rate, not just Δ.** A widened skill `description`
+6. **Watch the over-trigger rate, not just Δ.** A widened skill `description`
    can start activating on unrelated GitHub questions while every score looks
    healthy.
-8. **Done in `analyze.mjs`:** the case fingerprint is split into scored and
+7. **Done in `analyze.mjs`:** the case fingerprint is split into scored and
    display-only parts, and the plugin guard compares a recorded source hash.
    Still open: the runner does not record that hash, so today the guard only
    prints this checkout's hash.
-9. **Surface the failing jobs' log tails when the failing job is a gate.**
+8. **Surface the failing jobs' log tails when the failing job is a gate.**
     The `04` fix has the agent run `gh run view --log-failed`. Per "Surface
     data, don't classify it", the CLI should print that evidence itself. This
     #491 landed this: `## Failing checks` now lists sibling failed jobs with
     log tails. On the 2026-10-12 run `04` scored 1.00 with and 0.92 without,
     so the printed tails carry most of it now.
-10. **Lift the weak with-arm gotchas first**, since they carry ×3 weight:
+9. **Lift the weak with-arm gotchas first**, since they carry ×3 weight:
     `06` 0.47 (stale bot review dismissal), `48` 0.67 (fails
     `iterates-immediately`), `38` 0.72 (retries the denied reply), `49` 0.75
     (reruns or requeues), and `27`/`28` (merged stack parent, 0.79/0.78). Then
     the loop rules `11` 0.50 and `02` 0.67. Read their transcripts before
     changing the skill.
-11. **More playbook-only stack cases.** `24` shows the pattern: stack rules
+10. **More playbook-only stack cases.** `24` shows the pattern: stack rules
     printed in the output sit at ceiling, and rules found only in a playbook
     discriminate. `51` covers a native-stack merge-queue ejection (fixture
     `120`); fixture `98` is still uncovered.
 
-Dropped: the haiku trigger rate (haiku is out of scope for these evals), and
-running evals in CI (it would need an Anthropic token in CI).
+Dropped:
+
+- The haiku trigger rate: haiku is out of scope for these evals.
+- Running evals in CI: it would need an Anthropic token in CI.
+- Measuring call counts and tokens with a Bash-granting suite: the runner
+  refuses to grant Bash while `~/.docker` holds Docker Desktop's symlinks. The
+  offline token bench (`evals/tokens/`) covers cost instead.

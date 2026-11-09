@@ -215,8 +215,8 @@ Without `--instructions`, the generator's output is unchanged.
 
 - **`--allow-tools` is the only way to grant Bash.** A case's `allowed_tools`
   can only narrow, and a skill's `allowed-tools:` frontmatter does not grant.
-- **Bash-granting runs abort when `~/.docker` contains a symlink.** Flatten the
-  store; its root may be a link.
+- **Bash-granting runs abort when `~/.docker` contains a symlink.** Docker
+  Desktop puts links there, so the suite does not grant Bash.
 - **The runner needs an unsandboxed `/tmp`** (`EPERM … mkdtemp '/tmp/e-…'`).
 - **A Claude Code worktree-isolated session cannot launch `plugin eval`.** Its
   guard misreads the subcommand as shell `eval`. Run it from a normal shell.
