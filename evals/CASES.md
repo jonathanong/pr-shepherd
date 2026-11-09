@@ -5,12 +5,13 @@ What each case tests and where it came from. How to run them is in
 
 ## Case list
 
-Each case embeds a real recorded CLI output from
-`test-cases/snapshots/<name>/output.text.md`. Both arms get identical text; the
-only difference is whether the skill is in context. When the skill fires, the
-agent gets `SKILL.md` plus any `references/` playbook a step names. So Δ measures
-the dispatcher and the playbooks together. Isolating the playbooks would need a
-third arm.
+Fixture-backed cases embed a real recorded CLI output from
+`test-cases/snapshots/<name>/output.text.md`; cases without a fixture (`—`)
+use a standalone prompt. Both arms get identical text; the only difference is
+plugin availability: the skill instructions are present only when the skill
+fires. When it fires, the agent gets `SKILL.md` and may read any `references/`
+playbook a step names. So Δ measures the dispatcher plus whichever playbooks the
+agent actually reads. Isolating the playbooks would need a third arm.
 
 | Case                                           | Fixture | Rule under test                                                                                |
 | ---------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------- |
@@ -79,8 +80,10 @@ as the turn before fixture `140`. Both cases open with the same first REST
 tick, fixture `143`.
 
 `39` expects Δ≈0. The plugin has no `add_repo` guidance; the CLI output's own
-instructions and the proxy's message carry the fix. A negative Δ would mean the
-skill pulls the agent toward reading the refusal as a review denial.
+instructions and the proxy's message carry the fix. A negative Δ may reflect a
+missed pending-ID retry or another failed check. Inspect the individual grader
+results before attributing it to the skill pulling the agent toward reading the
+refusal as a review denial.
 
 Presence of a specific token is graded by regex (`gh stack merge 511`).
 Absence of a behavior is graded by an LLM rubric: the framing asks the agent to
@@ -180,7 +183,7 @@ anyway, because its tools hit a 60s timeout.
 
 - **Tool-call count, token usage, context size.** No case invokes anything.
   Measuring the fan-out that pr-shepherd replaces needs Bash in the baseline arm
-  (see below). For scale, a shepherd tick is ~325 tokens at the median; a
+  (see [Environment constraints](RUNNING.md#environment-constraints) and [NEXT-STEPS.md](NEXT-STEPS.md)). For scale, a shepherd tick is ~325 tokens at the median; a
   single `gh run view --log` routinely runs to tens of thousands.
 - **Whether the CLI produces correct output.** That is covered by
   `test-cases/**` and the unit suite.
