@@ -234,6 +234,8 @@ export interface AgentCheck {
   rerunCommand?: string;
   /** Workflow-run attempt number, surfaced only after the initial attempt. */
   runAttempt?: number;
+  /** `owner/name#number` of a recorded blocker that has merged or closed. */
+  releasedBlocker?: string;
   annotations?: CheckAnnotation[];
   annotationOnly?: true; // annotation carrier from a non-failing check bucket
   scope?: "merge_group";

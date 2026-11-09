@@ -32,8 +32,10 @@ above.
 1. **Done: stack Branch-update cases.** Fixtures `129` and `120` emit the
    `Playbook: "Branch update"` route (`gh stack checkout` / `rebase` / `push`);
    `28` and `51` grade it.
-2. **Add fixtures for #463 (check blocked by another PR) and #471
-   (classification auto-resolve)**, then cases for them.
+2. **Done: fixtures and cases for #463 and #471.** Fixtures `175` (open
+   blocker, `WAIT`) and `176` (released blocker, update the branch) back
+   cases `58` and `59`; `60` replays fixture `170` (classification
+   auto-resolve). The fixture harness gained an optional `checkBlockers` field.
 3. **Done: every case ran at `runs: 6`** (2026-10-12). 13 cases have
    intervals that exclude 0.
 4. **Done: the `[Required]` approval-gate case ran.** `43` scored 1.00 with
@@ -48,21 +50,22 @@ above.
    Still open: the runner does not record that hash, so today the guard only
    prints this checkout's hash.
 8. **Surface the failing jobs' log tails when the failing job is a gate.**
-    The `04` fix has the agent run `gh run view --log-failed`. Per "Surface
-    data, don't classify it", the CLI should print that evidence itself. This
-    #491 landed this: `## Failing checks` now lists sibling failed jobs with
-    log tails. On the 2026-10-12 run `04` scored 1.00 with and 0.92 without,
-    so the printed tails carry most of it now.
+   The `04` fix has the agent run `gh run view --log-failed`. Per "Surface
+   data, don't classify it", the CLI should print that evidence itself. This
+   #491 landed this: `## Failing checks` now lists sibling failed jobs with
+   log tails. On the 2026-10-12 run `04` scored 1.00 with and 0.92 without,
+   so the printed tails carry most of it now.
 9. **Lift the weak with-arm gotchas first**, since they carry ×3 weight:
-    `06` 0.47 (stale bot review dismissal), `48` 0.67 (fails
-    `iterates-immediately`), `38` 0.72 (retries the denied reply), `49` 0.75
-    (reruns or requeues), and `27`/`28` (merged stack parent, 0.79/0.78). Then
-    the loop rules `11` 0.50 and `02` 0.67. Read their transcripts before
-    changing the skill.
+   `06` 0.47 (stale bot review dismissal), `48` 0.67 (fails
+   `iterates-immediately`), `38` 0.72 (retries the denied reply), `49` 0.75
+   (reruns or requeues), and `27`/`28` (merged stack parent, 0.79/0.78). Then
+   the loop rules `11` 0.50 and `02` 0.67. Read their transcripts before
+   changing the skill.
 10. **More playbook-only stack cases.** `24` shows the pattern: stack rules
     printed in the output sit at ceiling, and rules found only in a playbook
     discriminate. `51` covers a native-stack merge-queue ejection (fixture
-    `120`); fixture `98` is still uncovered.
+    `120`); fixture `98` is covered by `61` (a merge-queued stack stays
+    non-terminal).
 
 Dropped:
 

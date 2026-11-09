@@ -61,6 +61,11 @@ vi.mock("../../src/state/queue-removal-ack.mts", async (importOriginal) => ({
   ...(await importOriginal()),
   readQueueRemovalAcknowledgment: vi.fn().mockResolvedValue(null),
 }));
+vi.mock("../../src/state/check-blockers.mts", async (importOriginal) => ({
+  ...(await importOriginal()),
+  readCheckBlockers: vi.fn().mockResolvedValue([]),
+  clearCheckBlocker: vi.fn().mockResolvedValue(true),
+}));
 vi.mock("../../src/state/pr-fingerprint.mts", () => ({
   loadPrFingerprint: vi.fn().mockResolvedValue(null),
   storePrFingerprint: vi.fn().mockResolvedValue(undefined),
@@ -141,6 +146,7 @@ import { recordThreadIdentity } from "../../src/github/rest-identities.mts";
 import { triageFailingChecks, fetchStartupFailureChecks } from "../../src/checks/triage.mts";
 import { fetchCheckRunAnnotationsBatch } from "../../src/github/check-annotations-batch.mts";
 import { loadSeenMap, markSeen } from "../../src/state/seen-comments.mts";
+import { readCheckBlockers } from "../../src/state/check-blockers.mts";
 import { readQueueRemovalAcknowledgment } from "../../src/state/queue-removal-ack.mts";
 import { updateReadyDelay } from "../../src/commands/ready-delay.mts";
 import {
@@ -247,6 +253,18 @@ export interface Fixture {
   headWorkflowSuites?: unknown[];
   /** Commits on the PR base that the head does not contain for the GraphQL compare. */
   baseBehindBy?: number;
+  /**
+   * Stored `apply check-blocker` records and the live state GitHub reports for the blocking pull
+   * request (GraphQL `CheckBlockerPull` and the REST pull route both answer from it).
+   */
+  checkBlockers?: {
+    records: {
+      checkName: string;
+      blocker: { owner: string; name: string; number: number; kind: "pull" | "issue" };
+      recordedAt: number;
+    }[];
+    blockerState: "OPEN" | "MERGED" | "CLOSED";
+  };
   /** Exact local acknowledgment of an unrelated native-stack queue failure. */
   queueRemovalAcknowledgment?: {
     headSha: string;
@@ -496,6 +514,7 @@ export function applyFixture(fixture: Fixture, transport: FixtureTransport = "gr
   vi.mocked(readQueueRemovalAcknowledgment).mockResolvedValue(
     fixture.queueRemovalAcknowledgment ?? null,
   );
+  vi.mocked(readCheckBlockers).mockResolvedValue(fixture.checkBlockers?.records ?? []);
   let overlayCfg: Record<string, unknown> = {};
   if (fixture.stallTimeoutMinutes !== undefined) {
     overlayCfg.iterate = { "stall-timeout-minutes": fixture.stallTimeoutMinutes };
@@ -526,8 +545,14 @@ export function applyFixture(fixture: Fixture, transport: FixtureTransport = "gr
       ),
     );
   });
-  mockGraphql.mockImplementation(() => {
+  mockGraphql.mockImplementation((query: string) => {
     if (rest) throw new Error("REST fixture variant issued GraphQL");
+    if (query.includes("CheckBlockerPull") && fixture.checkBlockers) {
+      const state = fixture.checkBlockers.blockerState;
+      return Promise.resolve({
+        data: { repository: { pullRequest: { state, merged: state === "MERGED" } } },
+      });
+    }
     return Promise.resolve({
       data: {
         repository: { pullRequests: { nodes: fixture.mergedBasePullRequests ?? [] } },

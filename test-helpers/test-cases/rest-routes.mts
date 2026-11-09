@@ -177,6 +177,17 @@ export function restRoutesForFixture(fixture, batchData: Record<string, any>) {
       );
     }
     const pull = path.match(new RegExp(`^${prefix}/pulls/(\\d+)$`));
+    const blocker = fixture.checkBlockers;
+    if (
+      method === "GET" &&
+      pull &&
+      blocker?.records.some((r) => r.blocker.number === Number(pull[1]))
+    ) {
+      return json({
+        state: blocker.blockerState === "OPEN" ? "open" : "closed",
+        merged: blocker.blockerState === "MERGED",
+      });
+    }
     if (method === "GET" && pull) {
       const row = rows.find((candidate) => candidate.pullRequest.number === Number(pull[1]));
       if (row) return json(restPull(owner, name, row.pullRequest));

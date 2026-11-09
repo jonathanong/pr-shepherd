@@ -72,6 +72,10 @@ agent actually reads. Isolating the playbooks would need a third arm.
 | `55-multi-pr-aggregate-escalate-keeps-working` | `160`   | One row's `ESCALATE` is reported but does not stop work on the `TRIAGE` row                    |
 | `56-queued-conflict-dequeue-or-wait`           | `172`   | Queued PR conflicts: dequeue before pushing a resolution, or wait; never push first            |
 | `57-merge-conflict-update-without-asking`      | `174`   | `--merge` run hits a conflict: update, resolve, and push without asking                        |
+| `58-check-blocked-by-open-pr-waits`            | `175`   | Failing check blocked by an open PR: `WAIT`, no rerun or fix                                   |
+| `59-check-blocker-released-updates-branch`     | `176`   | Blocker merged: update the branch, do not rerun the job                                        |
+| `60-aggregate-rule-auto-resolved-not-redone`   | `170`   | Rule auto-resolve already done: do not resolve or minimize again; run the `TRIAGE` row         |
+| `61-stack-merge-queued-stays-non-terminal`     | `98`    | Merge-queued stack under `--merge`: leave it alone, keep rechecking                            |
 
 "apply" is `test-cases/snapshots/apply-review-session-refusal`, an
 `apply review` output recorded by `test-cases/apply-review.test.mts` through

@@ -280,6 +280,7 @@ async function runIterateCore(
       repoName,
       botUsernames,
       releasedCheckNames: blockerGate?.releasedNames,
+      releasedCheckBlockers: blockerGate?.releasedBlockers,
       ...((unreportedRepair.length > 0 || staleAncestry !== null) && {
         repairInstructions: [...unreportedRepair, ...(staleAncestry?.instructions ?? [])],
       }),
@@ -303,6 +304,7 @@ async function runIterateCore(
       surfacedApprovals,
       botUsernames,
       releasedCheckNames: blockerGate?.releasedNames,
+      releasedCheckBlockers: blockerGate?.releasedBlockers,
       repairInstructions: [...unreportedRepair, ...staleAncestry.instructions],
       ruleAutoResolveThreadIds: report.threads.ruleAutoResolveIds,
     });
@@ -356,6 +358,7 @@ async function runIterateCore(
       surfacedApprovals,
       botUsernames,
       releasedCheckNames: blockerGate?.releasedNames,
+      releasedCheckBlockers: blockerGate?.releasedBlockers,
       repairInstructions: [...unreportedRepair, ...staleAncestry.instructions],
       ruleAutoResolveThreadIds: report.threads.ruleAutoResolveIds,
     });

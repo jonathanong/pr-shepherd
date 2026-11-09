@@ -118,11 +118,12 @@ export function formatTriageResult(
             ? ` [conclusion: ${ch.conclusion}]`
             : "";
       const attemptTag = ch.runAttempt !== undefined ? ` [attempt: ${ch.runAttempt}]` : "";
+      const blockerTag = ch.releasedBlocker ? ` [blocker released: ${ch.releasedBlocker}]` : "";
       const scopeTag = ch.scope
         ? ` [scope: ${ch.scope}${ch.commitOid ? `, commit: ${ch.commitOid}` : ""}]`
         : "";
       const lines = [
-        `- ${locator} — \`${workflowPrefix}${jobLabel}\`${conclusionTag}${attemptTag}${scopeTag}`,
+        `- ${locator} — \`${workflowPrefix}${jobLabel}\`${conclusionTag}${attemptTag}${blockerTag}${scopeTag}`,
       ];
       if (ch.conclusion !== "CANCELLED") {
         if (ch.failedStep) lines.push(`  > ${ch.failedStep}`);
