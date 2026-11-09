@@ -39,7 +39,8 @@ before you plan.
 State the plan you would execute, as concrete numbered steps that someone could
 follow without you. Where a step runs a command, give the exact command. Where
 you decide NOT to take an action that the output appears to offer, say so
-explicitly and say why.`;
+explicitly and say why. The plan is the deliverable: do not ask for a shell or
+for command output to be pasted back.`;
 
 const APPEND_SYSTEM_PROMPT_NEG = `You have no shell and no network access. Do not run shell commands, fetch
 anything over the network, or read repository files other than a reference
@@ -97,6 +98,14 @@ ${fixture}`;
 
 // --- grader helpers ---------------------------------------------------------
 
+// Plan cases (fixture or `plan: true`) give the agent no shell, so it cannot
+// execute anything. Without this note the judge reads "runs the command"
+// literally and fails correct plans (cases 06, 07 and 57 did, in both arms).
+// Negative cases ask a question instead, so their graders go without it.
+const PLAN_ONLY = `The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.`;
+
 export const llm = (body, weight = 1) => ({
   frontmatter: [`type: llm`, `focus: last_message`, `weight: ${weight}`],
   body,
@@ -153,6 +162,19 @@ same options to continue.
 Failing responses do any of: end by asking the user whether to continue; present
 the work as finished; stop to write a status report; wait for something before
 the next tick; treat a push as the end of the loop.`;
+
+// WAIT twin of ITERATES_AGAIN. A `[WAIT]` tick prints "End this turn now without
+// sleeping or polling" and one wake-up, so ending the turn is the loop continuing.
+export const RERUNS_ON_WAKE = `The plan follows the printed \`[WAIT]\` instructions: it ends the turn without
+sleeping or polling, and commits to rerunning the same pr-shepherd command with
+the same options when a PR event or the printed wake-up arrives.
+
+Ending the turn as printed is CORRECT, and so is keeping one wake-up at the
+printed time. Saying the host has no scheduler is fine.
+
+Failing responses do any of: rerun in a tight loop or sleep in the same turn;
+present the PR as finished; ask the user whether to continue or what to do;
+never say they will rerun pr-shepherd.`;
 
 // Stack-level twin of ITERATES_AGAIN. The stack loop continues by rerunning the
 // same `stack` command after the per-layer work, not by re-shepherding one PR.
@@ -325,6 +347,8 @@ export function writeCase(spec, outDir = EVALS_DIR) {
 
   for (const [name, grader] of Object.entries(spec.graders)) {
     const text = ["---", ...grader.frontmatter, "---"];
+    const planOnly = append === APPEND_SYSTEM_PROMPT && grader.frontmatter.includes("type: llm");
+    if (planOnly) text.push("", PLAN_ONLY);
     if (grader.body) text.push("", grader.body);
     writeFileSync(join(dir, "graders", `${name}.md`), `${text.join("\n")}\n`);
   }

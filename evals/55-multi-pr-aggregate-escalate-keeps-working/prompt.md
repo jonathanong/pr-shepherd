@@ -17,7 +17,8 @@ append_system_prompt: |
   State the plan you would execute, as concrete numbered steps that someone could
   follow without you. Where a step runs a command, give the exact command. Where
   you decide NOT to take an action that the output appears to offer, say so
-  explicitly and say why.
+  explicitly and say why. The plan is the deliverable: do not ask for a shell or
+  for command output to be pasted back.
 ---
 Shepherd PRs #42 and #43 through to a terminal state.
 I already ran `pr-shepherd https://github.com/owner/repo/pull/42 https://github.com/owner/repo/pull/43 --until-terminal`
@@ -44,6 +45,6 @@ and it returned this summary. Take it from there.
 
 ## Instructions
 
-1. Choose each non-WAIT, non-CANCEL row that can proceed independently and run or delegate its exact `pollCommand`.
+1. Choose each non-WAIT, non-CANCEL row that can proceed independently and run or delegate its exact `pollCommand`. Report each `ESCALATE` row's reasons to the user now and leave that PR alone; keep working on the other rows.
 2. Follow each selected one-PR poll's `## Instructions` until it returns `CANCEL` or `ESCALATE`.
 3. Run `pr-shepherd https://github.com/owner/repo/pull/42 https://github.com/owner/repo/pull/43 --until-terminal` again after selected work completes; one row's `ESCALATE` does not stop work on other rows. Do not end the turn while any selected row is non-terminal: a one-PR poll returning `CANCEL` or `ESCALATE` finishes only that row, and rows that are `CANCEL`, `ESCALATE`, or handed off do not count.

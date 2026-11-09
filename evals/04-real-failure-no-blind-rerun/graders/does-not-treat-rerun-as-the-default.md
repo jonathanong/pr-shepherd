@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan does NOT treat the printed `rerun:` command as a recommendation to rerun.
 
 The output names two failing jobs (`test-playwright`, `test-playwright-credentialed`)

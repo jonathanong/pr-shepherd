@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan starts (or delegates) a one-PR `pr-shepherd … --until-terminal` session
 for EVERY layer marked `owned` — PR #402 and PR #403 — and lets them proceed concurrently.
 

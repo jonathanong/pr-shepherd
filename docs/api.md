@@ -137,6 +137,8 @@ The `acknowledge_queue_removal` result contains `pr`, `repo`, and `acknowledgmen
 
 #### Session refusals and uncertain replies
 
+On REST, a review mutation GitHub denies (403 or 404) is listed in `deniedIds`. When there is no session refusal, the result's `instructions` say not to retry, escalate, or route around those IDs, then to rerun Shepherd; later generated commands omit them until the item is edited.
+
 A proxy session refusal stops the current review batch and every later `apply` operation. The review result keeps confirmed successes, carries the proxy message in `sessionRefusal`, and lists pending IDs in `unrepliedThreads`, `unresolvedThreads`, `unminimizedComments`, and `undismissedReviews` when nonempty. Its `instructions` tell the caller to repair session repository access and retry only those IDs. No GitHub-denied marker is persisted. CLI text/JSON and MCP Markdown/structured output carry the same partial result; the CLI exits `77`.
 
 Retrying an uncertain GraphQL reply reconciles a fresh complete transcript against captured pre-write evidence. An exact confirmed reply is adopted without resubmission and survives later batch failures. Unconfirmed intents, including those without pre-write evidence, get targeted marker-file recovery instructions; see [uncertain reply recovery](comments.md#recovering-an-uncertain-reply).

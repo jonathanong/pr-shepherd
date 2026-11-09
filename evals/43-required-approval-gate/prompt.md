@@ -4,7 +4,7 @@ runs: 6
 max_turns: 6
 timeout_seconds: 300
 allowed_tools: [Read, Glob, Grep, Skill]
-tags: [ready, mergeability, tier:guard, area:github]
+tags: [ready, mergeability, tier:discriminating, area:github]
 append_system_prompt: |
   You have no shell and no network access. Do not run shell commands, fetch
   anything over the network, or read repository files other than a reference
@@ -17,7 +17,8 @@ append_system_prompt: |
   State the plan you would execute, as concrete numbered steps that someone could
   follow without you. Where a step runs a command, give the exact command. Where
   you decide NOT to take an action that the output appears to offer, say so
-  explicitly and say why.
+  explicitly and say why. The plan is the deliverable: do not ask for a shell or
+  for command output to be pasted back.
 ---
 PR #42 is blocked and I need it moving again. I ran pr-shepherd on
 https://github.com/owner/repo/pull/42 and got this back — what do we do now?

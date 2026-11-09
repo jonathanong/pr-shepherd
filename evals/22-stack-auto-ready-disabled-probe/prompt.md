@@ -4,7 +4,7 @@ runs: 3
 max_turns: 6
 timeout_seconds: 300
 allowed_tools: [Read, Glob, Grep, Skill]
-tags: [stack, shepherd, mark-ready, tier:guard, area:github]
+tags: [stack, shepherd, mark-ready, tier:discriminating, area:github]
 append_system_prompt: |
   You have no shell and no network access. Do not run shell commands, fetch
   anything over the network, or read repository files other than a reference
@@ -17,7 +17,8 @@ append_system_prompt: |
   State the plan you would execute, as concrete numbered steps that someone could
   follow without you. Where a step runs a command, give the exact command. Where
   you decide NOT to take an action that the output appears to offer, say so
-  explicitly and say why.
+  explicitly and say why. The plan is the deliverable: do not ask for a shell or
+  for command output to be pasted back.
 ---
 Shepherd the native PR stack anchored at https://github.com/owner/repo/pull/421.
 I already ran the first tick (`pr-shepherd stack https://github.com/owner/repo/pull/421 --until-terminal`) —
@@ -37,4 +38,4 @@ nextAction: cancel
 
 ## Instructions
 
-1. Stop shepherding this stack. Automatic mark-ready is disabled and PR #421 is clean but still in draft.
+1. Stop shepherding this stack. Automatic mark-ready is disabled and PR #421 is clean but still in draft. Leave it in draft and end the turn; do not mark it ready or suggest doing so, because that is the human's decision.

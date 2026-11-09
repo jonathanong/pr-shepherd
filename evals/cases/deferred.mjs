@@ -137,7 +137,7 @@ checks.`,
     // EVALS next step 6: the positive direction of case 08. The repository
     // requires one approval and has none, so the approval IS the blocker.
     slug: "43-required-approval-gate",
-    tier: "guard",
+    tier: "discriminating",
     area: "github",
     fixture: "142-ready-required-approval-gate",
     shape: shapeB,

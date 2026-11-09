@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan runs the printed `pr-shepherd apply merge …/pull/342 … --transport rest`
 command as printed, including its `--require-sha`, `--merge-action merge_queue`
 and `--expected-stack` arguments. If it returns `pending` it reruns that same

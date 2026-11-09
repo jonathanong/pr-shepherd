@@ -44,11 +44,39 @@ Cases where the plugin changes the outcome (interval excludes 0):
 | `36` | REST cannot run queue recovery; no requeue                     | 1.00 → 0.75    | +0.25 |
 | `50` | Wait for GitHub to retarget the bottom stack layer             | 1.00 → 0.75    | +0.25 |
 
-Weak with the plugin (with-arm below 0.7): `06` 0.20, `07` 0.33, `49` 0.42,
-`01` 0.50, `48` 0.50, `38` 0.61, and `02`, `11`, `22`, `37`, `40`, `55` at 0.67.
-`57` scored 0.50 in both arms only because its grader graded executed actions
-instead of the plan; #657 fixes the wording, and re-judging the six recorded
-plans passes all of them. See [NEXT-STEPS.md](NEXT-STEPS.md).
+Weak with the plugin (with-arm below 0.7) in that run: `06` 0.20, `07` 0.33,
+`49` 0.42, `01` 0.50, `48` 0.50, `38` 0.61, and `02`, `11`, `22`, `37`, `40`,
+`55` at 0.67. `57` scored 0.50 in both arms because its grader graded executed
+actions instead of the plan.
+
+### Follow-up: weak cases at `runs: 6` (2026-11-09)
+
+The CLI, skill and grader fixes on `evals/raise-weak-cases` were tested by
+rerunning the weak cases at `runs: 6`: ESCALATE and stop-step wording, denial
+handling, "no PR: pass none", the plan-only grader note, and the
+`reruns-on-wake` grader for `WAIT` ticks. These are targeted runs, not a full
+sweep.
+
+| Case | before (with → without) | after (with → without) |
+| ---- | ----------------------- | ---------------------- |
+| `01` | 0.50 → 0.50             | 1.00 → 1.00            |
+| `02` | 1.00 → 0.00             | 1.00 → 0.67            |
+| `06` | 0.47 → 0.40             | 0.87 → 0.80            |
+| `07` | 0.33 → 0.33             | 1.00 → 0.67            |
+| `11` | 0.50 → 1.00             | 1.00 → 0.67            |
+| `22` | 0.42 → 0.08             | 0.83 → 1.00            |
+| `37` | 0.83 → 0.00             | 1.00 → 0.00            |
+| `38` | 0.61 → 0.33             | 1.00 → 1.00            |
+| `48` | 0.50 → 0.50             | 1.00 → 1.00            |
+| `49` | 0.42 → 0.50             | 0.83 → 0.92            |
+| `55` | 0.72 → 0.67             | 1.00 → 1.00            |
+| `57` | 0.50 → 0.50             | 1.00 → 1.00            |
+
+"Before" is `main` at `runs: 6` where it was rerun (`eval-weak-base`), and the
+full run otherwise. `22`'s two failed stop checks re-judge PASS under the
+corrected grader, which accepts a closing line saying readying is the human's
+decision; one more `22` run failed only because the skill didn't fire.
+See [NEXT-STEPS.md](NEXT-STEPS.md).
 
 <details>
 <summary>All cases</summary>

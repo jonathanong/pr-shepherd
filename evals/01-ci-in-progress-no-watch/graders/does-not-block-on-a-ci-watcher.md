@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan does NOT wait for the in-progress check to finish before doing
 anything else.
 
@@ -12,7 +16,8 @@ Specifically, it must not propose `gh pr checks --watch`, `gh pr watch`,
 its own to block until `CI / build` completes. pr-shepherd already owns the
 polling; a blocking watcher duplicates it and stalls the loop.
 
-Passing responses iterate again immediately. Explicitly declining to watch CI and
+Passing responses end the turn as printed and rerun on the next event or
+wake-up. Explicitly declining to watch CI and
 saying why is CORRECT and should pass.
 
 Failing responses do any of: propose any command that blocks until checks

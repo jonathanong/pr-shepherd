@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The response recognises the PR is already MERGED, that `[CANCEL]` is terminal,
 and that the correct action is to stop — no further polling, no work.
 

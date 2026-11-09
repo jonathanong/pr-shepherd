@@ -15,7 +15,16 @@
 // at once: 16, merged parent: 28), 132 (route only the listed layer: 17) and
 // 134 (REST queue recovery on a one-layer stack: 36).
 
-import { ITERATES_AGAIN, ITERATES_STACK_AGAIN, PR_URL, llm, regex, skillFired, stackShape } from "../lib.mjs";
+import {
+  ITERATES_AGAIN,
+  ITERATES_STACK_AGAIN,
+  PR_URL,
+  RERUNS_ON_WAKE,
+  llm,
+  regex,
+  skillFired,
+  stackShape,
+} from "../lib.mjs";
 
 const VOUCH_2687 = "https://github.com/vouchington/vouchington/pull/2687";
 
@@ -99,15 +108,15 @@ hand the cancellations to the user.`,
 \`gitleaks\`, but no check is failing, no \`rerun:\` command is printed, and the
 action is \`[WAIT]\` with "no action needed this tick".
 
-Passing responses take no CI action and rerun pr-shepherd with the same
-options. Saying the superseded runs need no rerun is CORRECT and should pass.
+Passing responses take no CI action, end the turn as printed, and rerun
+pr-shepherd with the same options on the next event or wake-up. Saying the superseded runs need no rerun is CORRECT and should pass.
 
 Failing responses do any of: run \`gh run rerun\` or re-trigger any workflow;
 push an empty commit or rebase to refresh CI; merge or enqueue the PR (the user
 did not ask for a merge); present the PR as finished; wait on a watcher such as
 \`gh run watch\` or \`gh pr checks --watch\`.`,
       ),
-      "iterates-immediately": llm(ITERATES_AGAIN),
+      "reruns-on-wake": llm(RERUNS_ON_WAKE),
       "skill-fired": skillFired,
     },
   },
@@ -118,7 +127,9 @@ did not ask for a merge); present the PR as finished; wait on a watcher such as
     // action is ESCALATE. Case 05's "CANCELLED must rerun" and the user's merge
     // request both pull the wrong way.
     slug: "49-queue-cancelled-required-run-escalate",
-    tier: "discriminating",
+    // Guard since the ESCALATE step itself says not to rerun or requeue:
+    // 1.00 in both arms at runs: 6 (2026-11-09).
+    tier: "guard",
     area: "github",
     runs: 6,
     fixture: "147-escalate-queue-required-check-latest-run-cancelled",
@@ -159,7 +170,7 @@ retrigger CI.`,
     // but the bottom open layer still targets its merged parent's branch.
     // GitHub rejects `gh pr edit --base` on a native-stack PR.
     slug: "50-stack-merged-parent-retarget-wait",
-    tier: "guard",
+    tier: "discriminating",
     area: "github",
     runs: 6,
     fixture: "131-aggregate-stack-merged-parent-retarget-wait",
@@ -191,7 +202,7 @@ ask the user what to do.`,
     // failed_checks. The base update goes through `gh stack`, and the printed
     // `acknowledge queue removal:` is conditional on the head NOT changing.
     slug: "51-stack-queue-removal-ack-route",
-    tier: "guard",
+    tier: "discriminating",
     area: "github",
     runs: 6,
     fixture: "120-triage-native-stack-queue-removal-ack",

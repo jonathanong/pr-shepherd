@@ -21,7 +21,7 @@ ${fixture}`;
 export const AGGREGATE_CASES = [
   {
     slug: "54-multi-pr-aggregate-routes-rows",
-    tier: "discriminating",
+    tier: "guard",
     area: "loop",
     runs: 6,
     fixture: "86-aggregate-explicit-mixed-actions",

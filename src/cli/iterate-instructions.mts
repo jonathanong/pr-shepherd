@@ -86,7 +86,9 @@ export function buildSimpleIterateInstructions(
     case "escalate": {
       const pending = result.escalate.pendingReviewCommands;
       if (!pending)
-        return ["Stop — human direction is required before automated polling can resume."];
+        return [
+          "Stop — human direction is required before automated polling can resume. Report the evidence above and the decision the human must make; do not attempt a fix, rerun, requeue, branch update, or merge for this PR.",
+        ];
       return [
         "Stop polling. Ask the user whether to run the pending review commands shown above.",
         "If yes, set any `$DISMISS_MESSAGE` to a one-sentence disposition, run every pending command from the pushed PR head, then rerun Shepherd with the same options.",

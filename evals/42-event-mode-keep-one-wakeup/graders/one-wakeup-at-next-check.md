@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan ends with exactly one wake-up for this PR, at the printed
 `nextCheck.at` of `2024-05-15T19:09:00Z`. The earlier 19:57 wake-up is replaced
 or cancelled, not kept alongside it.

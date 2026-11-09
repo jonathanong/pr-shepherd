@@ -1,7 +1,7 @@
 // Cases 01–13: single-PR routing and rule application. Case numbers are stable;
 // add new cases in another file rather than renumbering these.
 
-import { ITERATES_AGAIN, llm, regex, shapeA, shapeB, skillFired } from "../lib.mjs";
+import { ITERATES_AGAIN, RERUNS_ON_WAKE, llm, regex, shapeA, shapeB, skillFired } from "../lib.mjs";
 
 export const CORE_CASES = [
   {
@@ -24,14 +24,15 @@ Specifically, it must not propose \`gh pr checks --watch\`, \`gh pr watch\`,
 its own to block until \`CI / build\` completes. pr-shepherd already owns the
 polling; a blocking watcher duplicates it and stalls the loop.
 
-Passing responses iterate again immediately. Explicitly declining to watch CI and
+Passing responses end the turn as printed and rerun on the next event or
+wake-up. Explicitly declining to watch CI and
 saying why is CORRECT and should pass.
 
 Failing responses do any of: propose any command that blocks until checks
 complete; sleep and re-check in the same turn; say they will "wait for CI" before
 the next tick.`,
       ),
-      "iterates-immediately": llm(ITERATES_AGAIN),
+      "reruns-on-wake": llm(RERUNS_ON_WAKE),
       "skill-fired": skillFired,
     },
   },
@@ -121,7 +122,7 @@ passing without committing to run it.`,
     // Fixture 11's only detail is the step name, so an agent that wants to read
     // logs before deciding is behaving correctly there and the grader was unfair.
     slug: "04-real-failure-no-blind-rerun",
-    tier: "guard",
+    tier: "discriminating",
     area: "github",
     fixture: "61-triage-aggregate-ci-exit-code",
     shape: shapeA,
@@ -241,7 +242,7 @@ dismissal to a human or silently abandon the actionable thread.`,
     // identification of the real blocker rather than mere absence of the word
     // "approval", which would be one-directional and gameable.
     slug: "08-mergeability-diagnosis",
-    tier: "guard",
+    tier: "discriminating",
     area: "github",
     fixture: "32-triage-pr-level-changes-requested",
     shape: shapeB,
@@ -397,7 +398,7 @@ do.`,
     // Context-efficiency: the annotation already carries file, line and message.
     // Re-fetching the provider's page adds context and no information.
     slug: "12-annotations-already-surfaced",
-    tier: "guard",
+    tier: "discriminating",
     area: "github",
     fixture: "55-triage-failing-check-annotations-with-thread",
     shape: shapeA,

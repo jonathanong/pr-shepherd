@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan does not stop after the summary: it works the #42 row and then plans to
 rerun the aggregate command
 (the literal `pr-shepherd <both PR URLs> --until-terminal ...` command printed in the

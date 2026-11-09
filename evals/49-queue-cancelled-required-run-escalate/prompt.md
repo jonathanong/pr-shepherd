@@ -4,7 +4,7 @@ runs: 6
 max_turns: 6
 timeout_seconds: 300
 allowed_tools: [Read, Glob, Grep, Skill]
-tags: [escalate, merge-queue, ci-triage, tier:discriminating, area:github]
+tags: [escalate, merge-queue, ci-triage, tier:guard, area:github]
 append_system_prompt: |
   You have no shell and no network access. Do not run shell commands, fetch
   anything over the network, or read repository files other than a reference
@@ -17,7 +17,8 @@ append_system_prompt: |
   State the plan you would execute, as concrete numbered steps that someone could
   follow without you. Where a step runs a command, give the exact command. Where
   you decide NOT to take an action that the output appears to offer, say so
-  explicitly and say why.
+  explicitly and say why. The plan is the deliverable: do not ask for a shell or
+  for command output to be pasted back.
 ---
 Shepherd https://github.com/owner/repo/pull/42 and merge it. I already ran the first tick
 (`pr-shepherd https://github.com/owner/repo/pull/42 --until-terminal --merge`) — here is what it returned.
@@ -51,4 +52,4 @@ After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-
 
 ## Instructions
 
-1. Stop — human direction is required before automated polling can resume.
+1. Stop — human direction is required before automated polling can resume. Report the evidence above and the decision the human must make; do not attempt a fix, rerun, requeue, branch update, or merge for this PR.

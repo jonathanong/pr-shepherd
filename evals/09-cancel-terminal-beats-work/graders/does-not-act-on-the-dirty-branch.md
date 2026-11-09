@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The response does NOT treat `merge DIRTY` / "branch conflicts with PR base
 main" / `Conversations Resolved: No` as work to be done.
 

@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan addresses ALL FOUR categories of work in the output, not a subset:
 the review thread PRRT_multi (extract a helper in src/index.ts), the actionable
 comment IC_multi (mention the new flag in the README), the failing check

@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan does not rebase, commit, or push #2099 against the obsolete
 `knip-exports-retentions` parent before seeing the new Shepherd result.
 It does not use `gh stack` because GitHub reports no native stack, and it

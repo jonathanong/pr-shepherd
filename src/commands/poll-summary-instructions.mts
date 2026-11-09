@@ -199,7 +199,7 @@ function planStack(
           action: "cancel",
           stackMergeable: false,
           instructions: [
-            `1. Stop shepherding this stack. Automatic mark-ready is disabled and ${work.held.map((item) => `PR #${item.pr}`).join(", ")} ${work.held.length === 1 ? "is" : "are"} clean but still in draft.`,
+            `1. Stop shepherding this stack. Automatic mark-ready is disabled and ${work.held.map((item) => `PR #${item.pr}`).join(", ")} ${work.held.length === 1 ? "is" : "are"} clean but still in draft. Leave ${work.held.length === 1 ? "it" : "them"} in draft and end the turn; do not mark ${work.held.length === 1 ? "it" : "them"} ready or suggest doing so, because that is the human's decision.`,
           ],
         };
       }

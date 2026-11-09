@@ -48,11 +48,13 @@ node evals/analyze.mjs --instructions-ablation <inline-dir> <playbook-dir>  # se
 ### Tiers and run recipes
 
 Each case carries `tier:discriminating` or `tier:guard` in its tags, set in
-`cases/*.mjs` from the last full run.
+`cases/*.mjs` from the last full run (2026-11-09).
 
-- `discriminating`: the arms separated with an interval that excludes 0
-  (`01`, `02`, `05`, `07`, `21`, `30`, `31`, `35`–`38`, `47`, `49`), or the
-  with-arm is below 0.9 (`06`, `11`, `27`, `28`, `48`). These get the runs. A new case starts here
+- `discriminating`: the arms separated with an interval that excludes 0, or the
+  with-arm is below 0.9: `01`, `02`, `04`–`08`, `11`, `12`, `21`, `22`,
+  `27`–`31`, `33`, `35`–`38`, `43`, `47`, `48`, `50`, `51`, `55`, `56`. `21`
+  and `35` stay here on their 2026-10-12 `runs: 6` result; `40` and `49` moved
+  to guard after scoring 1.00 without the plugin at `runs: 6`. These get the runs. A new case starts here
   too, so a targeted run measures it; `--summary` lists it for demotion if its
   interval includes 0.
 - `guard`: everything else. Both arms sit at or near ceiling, so the case only
@@ -74,6 +76,30 @@ node evals/generate.mjs        # restore the committed suite
 # Full sweep: the committed runs (3, or the case's own 6).
 node evals/generate.mjs
 ```
+
+### Sharded runs
+
+One `claude plugin eval` process keeps `-j` runs in flight, so a full sweep takes
+hours. To go faster, split the generated cases into shards, run each shard in its
+own terminal tab, and merge the results:
+
+```sh
+node evals/shard.mjs split 4 evals-shards          # balanced by run count; optional case prefixes
+# one tab per shard:
+CLAUDE_CODE_EFFORT_LEVEL=low claude plugin eval . --model claude-sonnet-5-5 \
+  --ablation with-without --judge-model opus --no-publish -j 8 \
+  --eval-dir evals-shards/shard-1 --output-dir "$TMPDIR/sweep-1"
+# after every shard finishes:
+node evals/shard.mjs merge "$TMPDIR/sweep" "$TMPDIR"/sweep-{1,2,3,4}
+node evals/analyze.mjs --summary "$TMPDIR/sweep"
+rm -rf evals-shards
+```
+
+Run `split` after any `generate.mjs` overrides, because it copies the case
+directories as they are. The shard root must sit below the plugin directory, as
+`--eval-dir` requires. The merged result points each case back at `evals/<case>`
+for its tags, so `analyze.mjs` weighs it like a single run. Concurrency is the
+shard count times `-j`; lower `-j` if runs start failing on rate limits.
 
 A comparison needs both tiers generated with the same overrides, because the run
 count is part of the scored fingerprint. Move a case between tiers by editing its

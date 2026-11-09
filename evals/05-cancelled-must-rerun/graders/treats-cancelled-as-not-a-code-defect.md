@@ -4,6 +4,10 @@ focus: last_message
 weight: 1
 ---
 
+The response is a written plan from an agent with no shell or repository
+access. Grade the steps it commits to as if they were executed; a step that
+gives the command counts as running it.
+
 The plan recognises that a `[conclusion: CANCELLED]` check is not evidence of
 a code defect, and reruns it rather than trying to fix code for it.
 

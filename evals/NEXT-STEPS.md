@@ -5,26 +5,21 @@ Open work for the eval suite, most recent findings first. Current results are in
 
 ## From the 2026-11-09 run
 
-1. **Rerun `57` after #657.** Its grader asked for executed actions, so the
-   judge failed every plan-only response in both arms. With the plan wording,
-   all six recorded plans pass; expect about 1.00 in both arms (a guard).
-2. **Check the with-arm drops since 2026-10-12** before changing the skill.
-   They are at `runs: 3`, where the noise floor is about ±0.44, so the samples
-   are small. The drops are large (`07` and `01` exceed that range), but their
-   size alone is not evidence of a significant regression:
-   `07` 0.89 → 0.33, `01` 1.00 → 0.50 (fails `iterates-immediately`),
-   `06` 0.47 → 0.20, `49` 0.75 → 0.42. Rerun them at `runs: 6` and read the
-   transcripts.
-3. **Lift the weak with-arm cases**, GitHub gotchas first (×3 weight): `06`,
-   `07`, `49`, `48` (0.50, fails `iterates-immediately`), `38` (0.61, retries
-   the denied reply), then `55`, `11`, `40` (0.67; `40` scores 1.00 without
-   the plugin, failing `ends-the-turn-without-waiting`).
-4. **Retag tiers** as `--summary` suggests. Promote to discriminating: `04`,
-   `22`, `33`, `50`, `51` (interval excludes 0), and consider `08`, `12`,
-   `29`, `40`, `43` (with-arm below 0.9). Demote to guard: `21`, `35`, `53`,
-   `54`.
-5. **Run the discriminating tier at `runs: 6`.** Most cases ran at the
-   committed `runs: 3`; only `38`, `39` and `43`–`56` ran at 6.
+Done on `evals/raise-weak-cases`: `57`'s plan wording, the tier retag, a
+plan-only note on every plan-case LLM grader, and CLI and skill wording for
+ESCALATE stops, denied mutations, held drafts and runs with no target. The weak
+cases were rerun at `runs: 6`; see [EVALS.md](EVALS.md#follow-up-weak-cases-at-runs-6-2026-11-09).
+
+1. **Run a full sweep** with the discriminating tier at `runs: 6` and refresh
+   EVALS.md and the README. Graders changed for every plan case, so the
+   2026-11-09 full-run numbers are no longer comparable.
+2. **Done: `49` is a guard.** The ESCALATE step now says not to rerun or
+   requeue, so both arms score 1.00 at `runs: 6`.
+3. **`02`, `07`, `11`** lost their without-arm zeros or gained without-arm
+   points after the plan-only note. Confirm on the sweep before retagging.
+4. **Done: `40` is a guard.** It scored 1.00 without the plugin at `runs: 6`.
+   Its one with-arm failure named `--until-terminal` for the next wake-up,
+   which the corrected grader accepts.
 
 ## Earlier list (2026-10-12)
 

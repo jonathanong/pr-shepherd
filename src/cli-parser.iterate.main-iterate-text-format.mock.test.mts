@@ -64,7 +64,7 @@ describe("main — iterate text format", () => {
     expect(out).toContain("⚠️ /pr-shepherd:pr-shepherd paused — manual intervention required");
     expect(out).toContain("## Instructions");
     expect(out).toContain(
-      "1. Stop — human direction is required before automated polling can resume.",
+      "1. Stop — human direction is required before automated polling can resume. Report the evidence above and the decision the human must make; do not attempt a fix, rerun, requeue, branch update, or merge for this PR.",
     );
   });
   it("wait: surfaces --ready-delay override as a header field, not a rerun command", async () => {
@@ -105,7 +105,7 @@ describe("main — iterate text format", () => {
     await main(["node", "shepherd", "iterate", "42"]);
     const out = getStdout();
     expect(out).toContain(
-      "1. Stop — human direction is required before automated polling can resume.",
+      "1. Stop — human direction is required before automated polling can resume. Report the evidence above and the decision the human must make; do not attempt a fix, rerun, requeue, branch update, or merge for this PR.",
     );
     expect(out).not.toContain("CronList");
   });

@@ -13,7 +13,7 @@ import { ITERATES_AGAIN, llm, regex, shapeA, skillFired } from "../lib.mjs";
 export const REVIEW_BUDGET_CASES = [
   {
     slug: "53-triage-review-subset",
-    tier: "discriminating",
+    tier: "guard",
     area: "github",
     runs: 6,
     fixture: "155-triage-review-output-capped",
