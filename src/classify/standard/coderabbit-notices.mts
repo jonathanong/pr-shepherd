@@ -52,10 +52,10 @@ const REVIEW_INFO_START =
 
 /**
  * Lines the "Review info" block may hold: layout tags, picture-icon summaries, `- **Key**: value`
- * settings, file bullets, and the commit-range sentence. Any other line keeps the comment visible.
+ * settings with CodeRabbit's known keys, file bullets, and the commit-range sentence. Any other line keeps the comment visible.
  */
 const REVIEW_INFO_LINE =
-  /^(?:|<\/?details>|<\/?dl>|<\/?dd>|<br>|<summary><strong>(?:<picture>(?:<source [^>]*>)*<img [^>]*><\/picture> )?[A-Za-z][A-Za-z :0-9]*<\/strong><\/summary>|- \*\*[A-Za-z ]+\*\*: [^<>\n]*|\* `[^`\n]+`|Reviewing files that changed from the base of the PR and between [a-f0-9]+ and [a-f0-9]+\.)$/;
+  /^(?:|<\/?details>|<\/?dl>|<\/?dd>|<br>|<summary><strong>(?:<picture>(?:<source [^>]*>)*<img [^>]*><\/picture> )?(?:Review info|Run configuration|Commits|Files selected for processing: \d+)<\/strong><\/summary>|- \*\*(?:Source mode|Repository|Branch|File|Commit|Layers|Review profile|Plan|Run ID)\*\*: [^<>\n]*|\* `[^`\n]+`|Reviewing files that changed from the base of the PR and between [a-f0-9]+ and [a-f0-9]+\.)$/;
 
 /** Removes a trailing "Review info" block made only of known metadata lines. */
 function stripReviewInfo(quoted: string): string {

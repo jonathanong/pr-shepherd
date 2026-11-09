@@ -35,7 +35,15 @@ describe("CodeRabbit chrome variants", () => {
       "- **Review profile**: CHILL\nThe auth check is bypassed here.\n",
     );
     const link = variant(info.body, "* `docs/configuration.md`", "* [x](https://example.com)");
+    const finding = variant(
+      info.body,
+      "- **Review profile**: CHILL\n",
+      "- **Review profile**: CHILL\n- **Finding**: The auth check is bypassed here.\n",
+    );
+    const section = variant(info.body, " Commits</strong>", " Findings</strong>");
     expect(matches(info, prose)).toEqual([]);
+    expect(matches(info, finding)).toEqual([]);
+    expect(matches(info, section)).toEqual([]);
     expect(matches(info, link)).toEqual([]);
   });
 
