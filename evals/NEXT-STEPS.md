@@ -5,14 +5,16 @@ Open work for the eval suite, most recent findings first. Current results are in
 
 ## From the 2026-11-09 sweep (after the grader fixes)
 
-1. **Retag tiers** as `--summary` suggests. Twelve discriminating cases had an
-   interval including 0 and a with-arm of at least 0.9: `01`, `06`, `07`, `08`,
-   `12`, `22`, `29`, `35`, `38`, `48`, `50`, `55`. Demote those that also sit
-   at ceiling without the plugin. Promote `54` (with-arm below 0.9). Optional:
-   sharded runs make the extra runs cheap.
-2. **`28` reruns with a bare PR number** in two of six plans instead of the URL
-   the user gave. Consider whether the CLI's "Rerun Shepherd now." step should
-   print the exact rerun command.
+1. **Revisit `06`, `07`, `29`, `35` and `50`** at the next full run. They
+   stay discriminating with a with-arm of at least 0.9 and an interval
+   including 0, because their without-arm is below 0.9 (0.58 to 0.89) and more
+   runs may separate them.
+
+Done: retagged tiers. `01`, `08`, `12`, `22`, `38`, `48` and `55` moved to
+guard (without-arm 0.92 to 1.00); `54` moved to discriminating (with-arm
+0.89). `39` stays guard: its rerun scored 0.94 in both arms. `28`'s bare-number
+rerun: the CLI now names a qualified PR's URL in the `[TRIAGE]` rerun step
+(#662).
 
 Done: `39` was variance (0.94 in both arms on rerun); `27`'s grader no longer
 asks to re-check what Shepherd matched; `28` no longer switches to `stack`;

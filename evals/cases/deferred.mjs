@@ -46,7 +46,7 @@ export const DEFERRED_CASES = [
     // already suppressed the denied thread; the risk is an agent that escalates
     // over the earlier 403 or retries the denied ID by hand.
     slug: "38-denied-reply-one-look-skip",
-    tier: "discriminating",
+    tier: "guard",
     area: "github",
     fixture: "140-triage-denied-reply-one-look-skip",
     shape: transcriptShape({

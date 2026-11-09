@@ -263,7 +263,7 @@ branches or rebasing; ask the user what to do next before stopping.`,
   {
     // #444: a clean draft with auto-mark-ready disabled ends the stack loop.
     slug: "22-stack-auto-ready-disabled-probe",
-    tier: "discriminating",
+    tier: "guard",
     area: "github",
     fixture: "104-aggregate-stack-clean-draft-auto-ready-disabled",
     shape: stackShape(repoPr(421)),

@@ -21,7 +21,7 @@ ${fixture}`;
 export const AGGREGATE_CASES = [
   {
     slug: "54-multi-pr-aggregate-routes-rows",
-    tier: "guard",
+    tier: "discriminating",
     area: "loop",
     runs: 6,
     fixture: "86-aggregate-explicit-mixed-actions",
@@ -60,7 +60,7 @@ whether to continue; wait for #43 by hand or with a sleep loop; poll with
   },
   {
     slug: "55-multi-pr-aggregate-escalate-keeps-working",
-    tier: "discriminating",
+    tier: "guard",
     area: "loop",
     runs: 6,
     fixture: "160-aggregate-explicit-escalate-and-triage",
