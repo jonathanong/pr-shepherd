@@ -107,7 +107,7 @@ If an app-authenticated request hits the installation's primary rate limit (a `4
 3. Sends later requests for that resource straight to your token until the reset passes, then returns to the app.
 4. Notes it once in the debug log (`pr-shepherd admin log-file`).
 
-Secondary (abuse) rate limits never trigger this. If your token is also exhausted, the existing transport fallback (GraphQL to REST) applies as usual. The GitHub API usage section lists both credential sources when both were used.
+Secondary (abuse) rate limits never trigger this. If your token is also exhausted, the existing transport fallback (GraphQL to REST) applies as usual. The GitHub API usage section accounts for your token chain and each app separately, so the quota you see for your own token is never mixed with the app's ([Verify](#verify)).
 
 ## Identity
 
@@ -115,10 +115,16 @@ Nothing is authored by the app. Because writes and viewer-relative reads use you
 
 ## Verify
 
-Run Shepherd with `--verbose` on a covered repository and read the **GitHub API usage** section. The credential sources name the app and installation next to your own token, because the app answers only part of the traffic:
+Run Shepherd with `--verbose` on a covered repository and read the **GitHub API usage** section. The top-level lines describe only your own token chain (request counts, measured cost, nodes, and the quota sample for each resource). Each app installation that answered gets its own block with the same per-resource lines, because it has its own buckets:
 
 ```
-- Credential source: `GitHub App 123456 (installation 7890123)`, `gh auth token`
+- Credential source: `gh auth token`
+- `graphql`: 4993/5000 remaining · used 7 · 1 requests · resets 2026-01-01T00:00:00.000Z
+- GraphQL measured cost: 7 · unmeasured requests: 0 · nodes: 1500
+- `GitHub App 123456 (installation 7890123)`:
+  - `graphql`: 9997/10000 remaining · used 3 · 5 requests · resets 2026-01-01T00:00:00.000Z
+  - GraphQL measured cost: 5 · unmeasured requests: 0 · nodes: 4000
+  - `core`: 14999/15000 remaining · used 1 · 1 requests · resets 2026-01-01T00:00:00.000Z
 ```
 
-The same value is in the JSON `apiUsage.credentialSources`. A repository that is not covered shows only its usual source.
+In JSON, `apiUsage.credentialSources`, `graphql`, and `rest` are your token chain only, and `apiUsage.githubApps` is an array with one `{ source, graphql?, rest? }` entry per installation, ordered by first use. It is omitted when no app answered, and `credentialSources` is empty if only an app did. Quota warnings and poll pacing read your token's samples only; the app's own exhaustion is handled by the fallback above. A repository that is not covered shows only its usual source.

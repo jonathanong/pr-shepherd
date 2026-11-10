@@ -107,7 +107,7 @@ export interface AuthRequest {
 async function resolveCredential(
   request: AuthRequest,
   target: AuthTarget | undefined,
-): Promise<{ token: string; source: AuthSource; fingerprint: string }> {
+): Promise<{ token: string; source: AuthSource; fingerprint: string; githubApp: boolean }> {
   const app = request.appEligible && target && findGithubApp(target.owner, target.repo);
   if (app) {
     const { token, appId, installationId } = await appCredential(app, target);
@@ -116,11 +116,12 @@ async function resolveCredential(
         token,
         source: `GitHub App ${appId} (installation ${installationId})`,
         fingerprint: credentialFingerprint(`github-app:${appId}:${installationId}`),
+        githubApp: true,
       };
     }
   }
   const { token, source } = await resolveToken();
-  return { token, source, fingerprint: credentialFingerprint(token) };
+  return { token, source, fingerprint: credentialFingerprint(token), githubApp: false };
 }
 
 /**
@@ -134,14 +135,16 @@ export async function makeAuthHeaders(
   headers: Record<string, string>;
   source: AuthSource;
   fingerprint: string;
+  githubApp: boolean;
 }> {
-  const { token, source, fingerprint } = await resolveCredential(
+  const { token, source, fingerprint, githubApp } = await resolveCredential(
     request,
     request.target ?? currentAuthTarget(),
   );
   return {
     source,
     fingerprint,
+    githubApp,
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: "application/vnd.github+json",

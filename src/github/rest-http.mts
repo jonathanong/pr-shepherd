@@ -96,6 +96,7 @@ async function restAttempt<T>(
   const t0 = performance.now();
   let authSource = "unknown";
   let credentialFingerprint: string | undefined;
+  let githubApp = false;
 
   const cached =
     opts?.conditional && !opts.conditional.revalidate
@@ -110,6 +111,7 @@ async function restAttempt<T>(
       });
       authSource = auth.source;
       credentialFingerprint = auth.fingerprint;
+      githubApp = auth.githubApp;
       return githubFetch(url, {
         method,
         headers: auth.headers,
@@ -159,6 +161,7 @@ async function restAttempt<T>(
       method,
       authSource,
       credentialFingerprint,
+      githubApp,
       rateLimit,
       notModified: true,
     });
@@ -195,6 +198,7 @@ async function restAttempt<T>(
       method,
       authSource,
       credentialFingerprint,
+      githubApp,
       rateLimit,
     });
     const responseMessage = isRestSessionRefusalResponse(res.status, text)
@@ -239,6 +243,7 @@ async function restAttempt<T>(
         method,
         authSource,
         credentialFingerprint,
+        githubApp,
         rateLimit,
       });
       if (!res.ok) {
@@ -276,6 +281,7 @@ async function restAttempt<T>(
       method,
       authSource,
       credentialFingerprint,
+      githubApp,
       rateLimit,
     });
     const etag = opts?.conditional ? (res.headers.get("etag") ?? undefined) : undefined;
@@ -318,6 +324,7 @@ async function restAttempt<T>(
     method,
     authSource,
     credentialFingerprint,
+    githubApp,
     rateLimit,
   });
   return { data: undefined as T, rateLimit, status: res.status };

@@ -167,7 +167,10 @@ describe("GitHub App credentials", () => {
       return summarizeApiTelemetry();
     });
 
-    expect(usage?.credentialSources).toEqual(["GitHub App 42 (installation 7)"]);
-    expect(formatApiUsage(usage)).toContain("Credential source: `GitHub App 42 (installation 7)`");
+    expect(usage?.credentialSources).toEqual([]);
+    expect(usage?.githubApps?.map((app) => app.source)).toEqual(["GitHub App 42 (installation 7)"]);
+    const text = formatApiUsage(usage);
+    expect(text).not.toContain("Credential source");
+    expect(text).toContain("- `GitHub App 42 (installation 7)`:");
   });
 });

@@ -1,8 +1,8 @@
 import type { ApiTelemetryEvent } from "./api-telemetry.mts";
 import type { RateLimitInfo } from "./http-utils.mts";
-import { mostConservativeSample } from "./rate-limit-sample.mts";
+import { adoptGraphqlRateLimit, adoptRestRateLimit } from "./api-telemetry-adopt.mts";
 
-interface RestTelemetryGroup {
+export interface RestTelemetryGroup {
   /** Quota-consuming requests; 304 Not Modified responses are tallied separately. */
   requestCount: number;
   notModifiedCount: number;
@@ -28,6 +28,11 @@ export interface TelemetryAggregate {
   rest: Map<string, RestTelemetryGroup>;
   /** Headerless REST responses (not 304s), kept out of every resource group: the proxy's `ccr` routes. */
   unmeteredRestRequestCount: number;
+  /**
+   * GitHub App installation requests, kept apart so the fields above describe only the user's
+   * token chain. Keyed by installation source; each value's own `apps` is empty.
+   */
+  apps: Map<string, TelemetryAggregate>;
 }
 
 export interface SequencedApiTelemetryEvent extends ApiTelemetryEvent {
@@ -48,13 +53,21 @@ export function emptyAggregate(): TelemetryAggregate {
     graphql: { requestCount: 0, measuredQueryCost: 0, unmeasuredRequestCount: 0, nodeCount: 0 },
     rest: new Map(),
     unmeteredRestRequestCount: 0,
+    apps: new Map(),
   };
 }
 
 export function aggregateEvents(events: SequencedApiTelemetryEvent[]): TelemetryAggregate {
   const aggregate = emptyAggregate();
+  const appEvents = new Map<string, SequencedApiTelemetryEvent[]>();
   for (const event of events) {
     aggregate.eventCount += 1;
+    if (event.githubApp) {
+      const group = appEvents.get(event.authSource) ?? [];
+      group.push(event);
+      appEvents.set(event.authSource, group);
+      continue;
+    }
     if (!aggregate.credentialSources.has(event.authSource)) {
       aggregate.credentialSources.set(event.authSource, event.sequence);
     }
@@ -80,6 +93,11 @@ export function aggregateEvents(events: SequencedApiTelemetryEvent[]): Telemetry
     if (sample) adoptRestRateLimit(group, sample, event.credentialFingerprint, event.sequence);
     aggregate.rest.set(resource, group);
   }
+  for (const [source, group] of appEvents) {
+    // Re-aggregate as a plain chain: clearing the flag keeps the nested pass from splitting again.
+    const chain = group.map((event) => ({ ...event, githubApp: false }));
+    aggregate.apps.set(source, aggregateEvents(chain));
+  }
   return aggregate;
 }
 
@@ -96,6 +114,11 @@ export function mergeAggregate(target: TelemetryAggregate, source: TelemetryAggr
   target.graphql.unmeasuredRequestCount += source.graphql.unmeasuredRequestCount;
   target.graphql.nodeCount += source.graphql.nodeCount;
   target.unmeteredRestRequestCount += source.unmeteredRestRequestCount;
+  for (const [appSource, sourceApp] of source.apps) {
+    const targetApp = target.apps.get(appSource) ?? emptyAggregate();
+    mergeAggregate(targetApp, sourceApp);
+    target.apps.set(appSource, targetApp);
+  }
   if (source.graphql.rateLimit !== undefined) {
     adoptGraphqlRateLimit(
       target.graphql,
@@ -126,75 +149,4 @@ export function aggregateStore(active: TelemetryStore): TelemetryAggregate {
   mergeAggregate(all, active.compacted);
   mergeAggregate(all, aggregateEvents(active.events));
   return all;
-}
-
-function adoptGraphqlRateLimit(
-  graphql: TelemetryAggregate["graphql"],
-  candidate: RateLimitInfo,
-  fingerprint: string | undefined,
-): void {
-  // Two credentials' samples are compared whole, never mixed: a mixed sample would be
-  // attributed to whichever credential supplied the changed half.
-  const sameCredential =
-    fingerprint === undefined ||
-    graphql.credentialFingerprint === undefined ||
-    fingerprint === graphql.credentialFingerprint;
-  const next = selectAuthoritativeRateLimit(graphql.rateLimit, candidate, sameCredential);
-  if (next !== graphql.rateLimit) graphql.credentialFingerprint = fingerprint;
-  graphql.rateLimit = next;
-}
-
-function adoptRestRateLimit(
-  group: RestTelemetryGroup,
-  candidate: RateLimitInfo,
-  fingerprint: string | undefined,
-  sequence: number | undefined,
-  latestCredentialFingerprint: string | undefined = fingerprint,
-  latestCredentialSequence: number | undefined = sequence,
-): void {
-  const credentialChanged =
-    group.latestCredentialFingerprint !== undefined &&
-    latestCredentialFingerprint !== undefined &&
-    group.latestCredentialFingerprint !== latestCredentialFingerprint;
-  const olderCredentialObservation =
-    credentialChanged &&
-    group.latestCredentialSequence !== undefined &&
-    latestCredentialSequence !== undefined &&
-    latestCredentialSequence < group.latestCredentialSequence;
-  if (olderCredentialObservation) return;
-
-  if (group.rateLimit === undefined || credentialChanged) {
-    group.rateLimit = { ...candidate };
-    group.credentialFingerprint = fingerprint;
-  } else {
-    const next = selectAuthoritativeRateLimit(group.rateLimit, candidate);
-    if (next !== group.rateLimit) {
-      group.rateLimit = next;
-      group.credentialFingerprint = fingerprint;
-    }
-  }
-
-  if (
-    latestCredentialFingerprint !== undefined &&
-    (group.latestCredentialSequence === undefined ||
-      latestCredentialSequence === undefined ||
-      latestCredentialSequence >= group.latestCredentialSequence)
-  ) {
-    group.latestCredentialFingerprint = latestCredentialFingerprint;
-    group.latestCredentialSequence = latestCredentialSequence;
-  }
-}
-
-function selectAuthoritativeRateLimit(
-  current: RateLimitInfo | undefined,
-  candidate: RateLimitInfo,
-  sameCredential = true,
-): RateLimitInfo {
-  if (current === undefined) return { ...candidate };
-  if (candidate.resetAt !== current.resetAt) {
-    return candidate.resetAt > current.resetAt ? { ...candidate } : current;
-  }
-  if (!sameCredential) return candidate.remaining < current.remaining ? { ...candidate } : current;
-  const merged = mostConservativeSample(current, candidate);
-  return merged.remaining === current.remaining && merged.used === current.used ? current : merged;
 }

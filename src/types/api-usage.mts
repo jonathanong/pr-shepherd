@@ -31,7 +31,20 @@ export interface QuotaWarningBudget {
   resetAt: number;
 }
 
+/** One GitHub App installation's usage, accounted separately from the user's token chain. */
+export interface GithubAppApiUsage {
+  /** `GitHub App <appId> (installation <id>)`. */
+  source: string;
+  graphql?: GraphqlApiUsage;
+  rest?: ApiResourceUsage[];
+}
+
+/**
+ * Top-level fields describe only the user's token chain (non-App requests); quota state and
+ * warnings are driven by these alone.
+ */
 export interface ApiUsage {
+  /** User-chain credential sources; empty when only a GitHub App answered. */
   credentialSources: string[];
   graphql?: GraphqlApiUsage;
   rest?: ApiResourceUsage[];
@@ -40,6 +53,8 @@ export interface ApiUsage {
    * Code proxy's `ccr` routes). Omitted when 0.
    */
   unmeteredRestRequestCount?: number;
+  /** One entry per GitHub App installation used, in order of first use. Omitted when none. */
+  githubApps?: GithubAppApiUsage[];
 }
 
 export interface GraphqlQuotaWarning {

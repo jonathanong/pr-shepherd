@@ -1,13 +1,13 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import type { ApiResourceUsage, ApiUsage, GraphqlApiUsage } from "../types.mts";
 import {
   aggregateEvents,
   aggregateStore,
   emptyAggregate,
   mergeAggregate,
-  type TelemetryAggregate,
   type TelemetryStore,
 } from "./api-telemetry-aggregate.mts";
+import { summarizeAggregate } from "./api-telemetry-summary.mts";
+import type { ApiUsage } from "../types.mts";
 import type { RateLimitInfo } from "./http-utils.mts";
 
 const GRAPHQL_RATE_LIMIT_ALIAS = "_shepherdRateLimit";
@@ -16,6 +16,8 @@ export interface ApiTelemetryEvent {
   kind: "GraphQL" | "REST";
   method: string;
   authSource: string;
+  /** True when a GitHub App installation token answered this request, not the user's chain. */
+  githubApp?: boolean;
   /** Truncated SHA-256 of the credential that produced this request. */
   credentialFingerprint?: string;
   rateLimit?: RateLimitInfo;
@@ -129,56 +131,7 @@ export function withRestCoreCredentialFingerprint<T extends object>(sample: T): 
 
 export function summarizeApiTelemetry(): ApiUsage | undefined {
   const active = store();
-  if (active === undefined) return undefined;
-  const selected = aggregateStore(active);
-  if (selected.eventCount === 0) return undefined;
-  const credentialSources = [...selected.credentialSources.entries()]
-    .sort((left, right) => left[1] - right[1])
-    .map(([source]) => source);
-  const graphql = summarizeGraphql(selected.graphql);
-  const rest = summarizeRest(selected.rest);
-  const unmeteredRestRequestCount = selected.unmeteredRestRequestCount;
-  return {
-    credentialSources,
-    ...(graphql !== undefined && { graphql }),
-    ...(rest.length > 0 && { rest }),
-    ...(unmeteredRestRequestCount > 0 && { unmeteredRestRequestCount }),
-  };
-}
-
-function summarizeGraphql(selected: TelemetryAggregate["graphql"]): GraphqlApiUsage | undefined {
-  if (selected.rateLimit === undefined) return undefined;
-  return {
-    ...resourceUsage(selected.rateLimit, selected.requestCount, "graphql"),
-    measuredQueryCost: selected.measuredQueryCost,
-    unmeasuredRequestCount: selected.unmeasuredRequestCount,
-    nodeCount: selected.nodeCount,
-  };
-}
-
-function summarizeRest(selected: TelemetryAggregate["rest"]): ApiResourceUsage[] {
-  return [...selected.entries()].flatMap(([resource, group]) =>
-    group.rateLimit
-      ? [resourceUsage(group.rateLimit, group.requestCount, resource, group.notModifiedCount)]
-      : [],
-  );
-}
-
-function resourceUsage(
-  rateLimit: RateLimitInfo,
-  requestCount: number,
-  fallbackResource: string,
-  notModified = 0,
-): ApiResourceUsage {
-  return {
-    resource: rateLimit.resource ?? fallbackResource,
-    ...(requestCount > 0 && { requestCount }),
-    ...(notModified > 0 && { notModified }),
-    limit: rateLimit.limit,
-    ...(rateLimit.used !== undefined && { used: rateLimit.used }),
-    remaining: rateLimit.remaining,
-    resetAt: rateLimit.resetAt,
-  };
+  return active === undefined ? undefined : summarizeAggregate(aggregateStore(active));
 }
 
 function extractGraphqlRateLimit(data: unknown): GraphqlRateLimitPayload | null {

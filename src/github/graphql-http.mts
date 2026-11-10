@@ -71,6 +71,7 @@ async function graphqlAttempt<T>(
   const t0 = performance.now();
   let authSource = "unknown";
   let credentialFingerprint: string | undefined;
+  let githubApp = false;
 
   const { res, attempt, retryT0 } = await requestWithTokenRetry(
     async () => {
@@ -81,6 +82,7 @@ async function graphqlAttempt<T>(
       });
       authSource = auth.source;
       credentialFingerprint = auth.fingerprint;
+      githubApp = auth.githubApp;
       return githubFetch(url, {
         method: "POST",
         headers: auth.headers,
@@ -129,6 +131,7 @@ async function graphqlAttempt<T>(
       method: "POST",
       authSource,
       credentialFingerprint,
+      githubApp,
       rateLimit: headerRateLimit ?? undefined,
     });
     throw new GitHubRequestError(
@@ -170,6 +173,7 @@ async function graphqlAttempt<T>(
       method: "POST",
       authSource,
       credentialFingerprint,
+      githubApp,
       rateLimit: headerRateLimit ?? undefined,
     });
     throw new GitHubRequestError(`GitHub GraphQL response was not valid JSON${detail}`, {
@@ -204,6 +208,7 @@ async function graphqlAttempt<T>(
     method: "POST",
     authSource,
     credentialFingerprint,
+    githubApp,
     rateLimit: rateLimit ?? undefined,
   });
 

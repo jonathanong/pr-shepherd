@@ -156,7 +156,10 @@ describe("app quota fallback", () => {
       return summarizeApiTelemetry();
     });
 
-    expect(usage?.credentialSources).toEqual(["GitHub App 42 (installation 7)", "GH_TOKEN"]);
-    expect(formatApiUsage(usage)).toContain("`GitHub App 42 (installation 7)`, `GH_TOKEN`");
+    expect(usage?.credentialSources).toEqual(["GH_TOKEN"]);
+    expect(usage?.githubApps?.map((app) => app.source)).toEqual(["GitHub App 42 (installation 7)"]);
+    const text = formatApiUsage(usage);
+    expect(text).toContain("- Credential source: `GH_TOKEN`");
+    expect(text).toContain("- `GitHub App 42 (installation 7)`:");
   });
 });
