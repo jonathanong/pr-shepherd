@@ -1,3 +1,5 @@
+import { setAuthTarget } from "./github/auth-target.mts";
+
 export interface ParsedPrReference {
   number?: number;
   repository?: string;
@@ -52,6 +54,8 @@ export function resolveParsedPrTarget(parsed: ParsedPrReference): ResolvedPrTarg
   if (parsed.repository === undefined) return { prNumber: parsed.number };
   const [owner, name] = parsed.repository.split("/");
   if (!owner || !name) throw new Error(`Invalid repository reference: ${parsed.repository}`);
+  // A repository the caller named selects the credential for the whole command.
+  setAuthTarget({ owner, name }, "explicit");
   return {
     prNumber: parsed.number,
     targetRepository: { owner, name },

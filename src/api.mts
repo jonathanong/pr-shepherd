@@ -67,7 +67,9 @@ export type { CheckBlockerCommandResult } from "./commands/apply-check-blocker.m
 export type { JournalResult } from "./commands/journal/index.mts";
 export type { ResolveResult } from "./comments/resolve.mts";
 export type { ShepherdJournalExtraction } from "./journal/index.mts";
+import { runWithAuthScope } from "./github/auth-target.mts";
 import { getPullRequestBody, getRepoInfo } from "./github/client.mts";
+import { loadGithubApps } from "./github/github-app-config.mts";
 import { getLocalHeadSha } from "./commands/suggestion-patch-git.mts";
 import { extractShepherdJournal, type ShepherdJournalExtraction } from "./journal/index.mts";
 
@@ -248,7 +250,8 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
     // Validate config first, as the CLI does, so a bad or pre-v1 file rejects before GitHub I/O.
     return runWithExecutionCwd(cwd, async () => {
       loadConfig();
-      return transportRunner(work, input?.transport);
+      loadGithubApps();
+      return runWithAuthScope(() => transportRunner(work, input?.transport));
     });
   }
 

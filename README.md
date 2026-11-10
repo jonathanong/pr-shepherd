@@ -209,6 +209,7 @@ Leave out the PR number to use the current branch.
 | Index of every doc                           | [docs/README.md](docs/README.md)                                                                     |
 | Features, workflow assumptions, limits       | [docs/features.md](docs/features.md)                                                                 |
 | Commands, flags, stacks, polling             | [docs/cli-usage.md](docs/cli-usage.md)                                                               |
+| GitHub App auth (separate rate limit)        | [docs/github-app.md](docs/github-app.md)                                                             |
 | Actions and exit codes                       | [docs/actions.md](docs/actions.md), [docs/exit-codes.md](docs/exit-codes.md)                         |
 | Configuration and classification rules       | [docs/configuration.md](docs/configuration.md), [examples/classification/](examples/classification/) |
 | Journal, library API                         | [docs/api.md](docs/api.md)                                                                           |

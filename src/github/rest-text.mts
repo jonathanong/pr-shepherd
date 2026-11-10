@@ -3,6 +3,9 @@ import { formatRequestEntry, formatResponseEntry } from "../log/session.mts";
 import { GitHubRequestError } from "./errors.mts";
 import { githubFetch } from "./github-fetch.mts";
 import { GITHUB_LOG_TIMEOUT_MS } from "./github-timeouts.mts";
+import { isAppEligibleRest } from "./app-eligibility.mts";
+import { withAppQuotaFallback } from "./app-quota.mts";
+import { authTargetFromRestPath } from "./auth-target.mts";
 import { makeAuthHeaders } from "./http-auth.mts";
 import { requestWithTokenRetry } from "./http-request.mts";
 import {
@@ -17,7 +20,14 @@ import { recordIntermediateResponse } from "./http-intermediate.mts";
 
 const BASE_URL = "https://api.github.com";
 
-export async function restText(
+export function restText(
+  path: string,
+  onRateLimit?: (rateLimit?: RateLimitInfo) => void,
+): Promise<string> {
+  return withAppQuotaFallback("core", () => restTextAttempt(path, onRateLimit));
+}
+
+async function restTextAttempt(
   path: string,
   onRateLimit?: (rateLimit?: RateLimitInfo) => void,
 ): Promise<string> {
@@ -27,12 +37,16 @@ export async function restText(
   const t0 = performance.now();
   let authSource = "unknown";
   let credentialFingerprint: string | undefined;
-
+  let githubApp = false;
   const { res, attempt, retryT0 } = await requestWithTokenRetry(
     async () => {
-      const auth = await makeAuthHeaders();
+      const auth = await makeAuthHeaders(undefined, {
+        target: authTargetFromRestPath(path),
+        appEligible: isAppEligibleRest("GET", path),
+      });
       authSource = auth.source;
       credentialFingerprint = auth.fingerprint;
+      githubApp = auth.githubApp;
       return githubFetch(
         url,
         { method: "GET", headers: auth.headers, redirect: "manual" },
@@ -50,6 +64,7 @@ export async function restText(
         durationMs,
         authSource,
         credentialFingerprint,
+        githubApp,
       }),
   );
 
@@ -57,7 +72,14 @@ export async function restText(
   const rateLimit = parseRateLimit(res.headers) ?? undefined;
   onRateLimit?.(rateLimit);
   const retryAfterSeconds = parseRetryAfter(res.headers);
-  recordApiTelemetry({ kind: "REST", method: "GET", authSource, credentialFingerprint, rateLimit });
+  recordApiTelemetry({
+    kind: "REST",
+    method: "GET",
+    authSource,
+    credentialFingerprint,
+    githubApp,
+    rateLimit,
+  });
   if ([301, 302, 307, 308].includes(res.status)) {
     const redirected = await followRestTextRedirect(res, {
       n,
@@ -145,7 +167,6 @@ async function followRestTextRedirect(
   );
   const location = res.headers.get("location");
   if (!location) return null;
-
   const n2 = nextEntry();
   const logUrl = redactUrl(location);
   appendEntry(formatRequestEntry({ n: n2, kind: "restText", method: "GET", url: logUrl }));

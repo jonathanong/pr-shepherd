@@ -73,7 +73,13 @@ describe("REST user-directed review actions", () => {
     await serve((_request, response) => response.end('{"comment_ids":[11],"resolved":true}'));
     await withApiTelemetryScope(async () => {
       const core = { resource: "core", limit: 5000, remaining: 4990, used: 10, resetAt: 1 };
-      recordApiTelemetry({ kind: "REST", method: "GET", authSource: "GH_TOKEN", rateLimit: core });
+      recordApiTelemetry({
+        kind: "REST",
+        method: "GET",
+        authSource: "GH_TOKEN",
+        githubApp: false,
+        rateLimit: core,
+      });
       const before = summarizeApiTelemetry();
       const resolve = () => autoResolveThreads(["PRRT_opaque"]);
       expect(await runWithGithubTransport("rest", resolve)).toEqual({

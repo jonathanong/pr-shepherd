@@ -11,16 +11,33 @@ const core = { resource: "core", limit: 5000, remaining: 4990, used: 10, resetAt
 describe("REST requests without rate-limit headers", () => {
   it("counts them as unmetered instead of dropping them or charging core", async () => {
     await withApiTelemetryScope(async () => {
-      recordApiTelemetry({ kind: "REST", method: "GET", authSource: "GH_TOKEN", rateLimit: core });
-      await withApiTelemetryScope(async () => {
-        // The Claude Code proxy's ccr/review_threads read: no ETag, no X-RateLimit-* headers.
-        recordApiTelemetry({ kind: "REST", method: "GET", authSource: "GH_TOKEN" });
-      });
-      recordApiTelemetry({ kind: "REST", method: "POST", authSource: "GH_TOKEN" });
       recordApiTelemetry({
         kind: "REST",
         method: "GET",
         authSource: "GH_TOKEN",
+        githubApp: false,
+        rateLimit: core,
+      });
+      await withApiTelemetryScope(async () => {
+        // The Claude Code proxy's ccr/review_threads read: no ETag, no X-RateLimit-* headers.
+        recordApiTelemetry({
+          kind: "REST",
+          method: "GET",
+          authSource: "GH_TOKEN",
+          githubApp: false,
+        });
+      });
+      recordApiTelemetry({
+        kind: "REST",
+        method: "POST",
+        authSource: "GH_TOKEN",
+        githubApp: false,
+      });
+      recordApiTelemetry({
+        kind: "REST",
+        method: "GET",
+        authSource: "GH_TOKEN",
+        githubApp: false,
         notModified: true,
       });
 
@@ -53,11 +70,12 @@ describe("REST requests without rate-limit headers", () => {
         kind: "REST",
         method: "GET",
         authSource: "GH_TOKEN",
+        githubApp: false,
         rateLimit: unnamed,
       });
       expect(summarizeApiTelemetry()).not.toHaveProperty("unmeteredRestRequestCount");
       // A headerless response in the same command stays out of the metered `unknown` group.
-      recordApiTelemetry({ kind: "REST", method: "GET", authSource: "GH_TOKEN" });
+      recordApiTelemetry({ kind: "REST", method: "GET", authSource: "GH_TOKEN", githubApp: false });
       const usage = summarizeApiTelemetry();
       expect(usage?.rest).toEqual([
         expect.objectContaining({ resource: "unknown", requestCount: 1 }),
@@ -68,14 +86,20 @@ describe("REST requests without rate-limit headers", () => {
 
   it("reports an unmetered-only command and omits the field when every request was metered", async () => {
     await withApiTelemetryScope(async () => {
-      recordApiTelemetry({ kind: "REST", method: "GET", authSource: "GH_TOKEN" });
+      recordApiTelemetry({ kind: "REST", method: "GET", authSource: "GH_TOKEN", githubApp: false });
       expect(summarizeApiTelemetry()).toEqual({
         credentialSources: ["GH_TOKEN"],
         unmeteredRestRequestCount: 1,
       });
     });
     await withApiTelemetryScope(async () => {
-      recordApiTelemetry({ kind: "REST", method: "GET", authSource: "GH_TOKEN", rateLimit: core });
+      recordApiTelemetry({
+        kind: "REST",
+        method: "GET",
+        authSource: "GH_TOKEN",
+        githubApp: false,
+        rateLimit: core,
+      });
       const usage = summarizeApiTelemetry();
       expect(usage).not.toHaveProperty("unmeteredRestRequestCount");
       expect(formatApiUsage(usage)).not.toContain("unmetered");

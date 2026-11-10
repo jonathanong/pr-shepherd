@@ -46,23 +46,37 @@ function recommendation(warning: GraphqlQuotaWarning): string {
   return "- Recommendation: keep polling pr-shepherd at the cadence above; for incidental PR reads use explicit REST endpoints such as `gh api repos/OWNER/REPO/pulls/PR`; do not substitute `gh pr checks` or `gh pr watch`";
 }
 
+function formatChain(
+  chain: Pick<ApiUsage, "graphql" | "rest" | "unmeteredRestRequestCount">,
+  indent: string,
+): string[] {
+  const lines: string[] = [];
+  if (chain.graphql !== undefined) {
+    lines.push(formatResource(chain.graphql));
+    lines.push(
+      `- GraphQL measured cost: ${chain.graphql.measuredQueryCost} · unmeasured requests: ${chain.graphql.unmeasuredRequestCount} · nodes: ${chain.graphql.nodeCount}`,
+    );
+  }
+  for (const resource of chain.rest ?? []) lines.push(formatResource(resource));
+  if (chain.unmeteredRestRequestCount !== undefined) {
+    lines.push(
+      `- REST requests without rate-limit headers (unmetered): ${chain.unmeteredRestRequestCount}`,
+    );
+  }
+  return lines.map((line) => `${indent}${line}`);
+}
+
 export function formatApiUsage(usage: ApiUsage | undefined): string | null {
   if (usage === undefined) return null;
   const lines = ["## GitHub API usage", ""];
-  lines.push(
-    `- Credential source: ${usage.credentialSources.map((source) => `\`${source}\``).join(", ")}`,
-  );
-  if (usage.graphql !== undefined) {
-    lines.push(formatResource(usage.graphql));
+  if (usage.credentialSources.length > 0) {
     lines.push(
-      `- GraphQL measured cost: ${usage.graphql.measuredQueryCost} · unmeasured requests: ${usage.graphql.unmeasuredRequestCount} · nodes: ${usage.graphql.nodeCount}`,
+      `- Credential source: ${usage.credentialSources.map((source) => `\`${source}\``).join(", ")}`,
     );
   }
-  for (const resource of usage.rest ?? []) lines.push(formatResource(resource));
-  if (usage.unmeteredRestRequestCount !== undefined) {
-    lines.push(
-      `- REST requests without rate-limit headers (unmetered): ${usage.unmeteredRestRequestCount}`,
-    );
+  lines.push(...formatChain(usage, ""));
+  for (const app of usage.githubApps ?? []) {
+    lines.push(`- \`${app.source}\`:`, ...formatChain(app, "  "));
   }
   return lines.join("\n");
 }

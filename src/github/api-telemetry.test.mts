@@ -13,6 +13,7 @@ describe("API telemetry aggregation", () => {
         kind: "GraphQL",
         method: "POST",
         authSource: "gh auth token",
+        githubApp: false,
         rateLimit: {
           resource: "graphql",
           limit: 5000,
@@ -27,6 +28,7 @@ describe("API telemetry aggregation", () => {
         kind: "GraphQL",
         method: "POST",
         authSource: "gh auth token",
+        githubApp: false,
         rateLimit: {
           resource: "graphql",
           limit: 5000,
@@ -59,6 +61,7 @@ describe("API telemetry aggregation", () => {
         kind: "REST",
         method: "GET",
         authSource: "GH_TOKEN",
+        githubApp: false,
         rateLimit: {
           resource: "core",
           limit: 5000,
@@ -85,7 +88,7 @@ describe("API telemetry aggregation", () => {
   });
 
   it("discards events outside an explicit command scope", () => {
-    recordApiTelemetry({ kind: "REST", method: "GET", authSource: "GH_TOKEN" });
+    recordApiTelemetry({ kind: "REST", method: "GET", authSource: "GH_TOKEN", githubApp: false });
     expect(summarizeApiTelemetry()).toBeUndefined();
   });
 
@@ -93,7 +96,12 @@ describe("API telemetry aggregation", () => {
     const summarize = (source: string) =>
       withApiTelemetryScope(async () => {
         await Promise.resolve();
-        recordApiTelemetry({ kind: "GraphQL", method: "POST", authSource: source });
+        recordApiTelemetry({
+          kind: "GraphQL",
+          method: "POST",
+          authSource: source,
+          githubApp: false,
+        });
         await Promise.resolve();
         return summarizeApiTelemetry();
       });

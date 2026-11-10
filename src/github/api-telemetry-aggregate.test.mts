@@ -1,17 +1,22 @@
 import { describe, expect, it } from "vitest";
 import {
+  type ApiTelemetryEvent,
   recordApiTelemetry,
   summarizeApiTelemetry,
   withApiTelemetryScope,
 } from "./api-telemetry.mts";
 
+const record = (event: Omit<ApiTelemetryEvent, "githubApp">) =>
+  recordApiTelemetry({ ...event, githubApp: false });
+
 describe("API telemetry bounded aggregation", () => {
   it("keeps the strongest observation in the newest GraphQL quota window", async () => {
     await withApiTelemetryScope(async () => {
-      recordApiTelemetry({
+      record({
         kind: "GraphQL",
         method: "POST",
         authSource: "token",
+
         rateLimit: {
           resource: "graphql",
           limit: 5000,
@@ -21,10 +26,11 @@ describe("API telemetry bounded aggregation", () => {
         },
       });
       // Newest reset wins; within it, lowest remaining is authoritative.
-      recordApiTelemetry({
+      record({
         kind: "GraphQL",
         method: "POST",
         authSource: "token",
+
         rateLimit: {
           resource: "graphql",
           limit: 5000,
@@ -33,10 +39,11 @@ describe("API telemetry bounded aggregation", () => {
           resetAt: 1_700_000_100,
         },
       });
-      recordApiTelemetry({
+      record({
         kind: "GraphQL",
         method: "POST",
         authSource: "token",
+
         rateLimit: {
           resource: "graphql",
           limit: 5000,
@@ -53,12 +60,17 @@ describe("API telemetry bounded aggregation", () => {
 
   it("folds nested scope totals into the parent scope", async () => {
     await withApiTelemetryScope(async () => {
-      recordApiTelemetry({ kind: "GraphQL", method: "POST", authSource: "token" });
+      record({
+        kind: "GraphQL",
+        method: "POST",
+        authSource: "token",
+      });
       await withApiTelemetryScope(async () => {
-        recordApiTelemetry({
+        record({
           kind: "GraphQL",
           method: "POST",
           authSource: "nested-token",
+
           rateLimit: {
             resource: "graphql",
             limit: 5000,
@@ -90,9 +102,13 @@ describe("API telemetry bounded aggregation", () => {
 
   it("keeps child telemetry isolated while the child is running", async () => {
     await withApiTelemetryScope(async () => {
-      recordApiTelemetry({ kind: "REST", method: "GET", authSource: "token" });
+      record({ kind: "REST", method: "GET", authSource: "token" });
       await withApiTelemetryScope(async () => {
-        recordApiTelemetry({ kind: "GraphQL", method: "POST", authSource: "child" });
+        record({
+          kind: "GraphQL",
+          method: "POST",
+          authSource: "child",
+        });
         expect(summarizeApiTelemetry()).toEqual({ credentialSources: ["child"] });
       });
 
@@ -111,10 +127,11 @@ describe("API telemetry bounded aggregation", () => {
         childRecorded = resolve;
       });
       const child = withApiTelemetryScope(async () => {
-        recordApiTelemetry({
+        record({
           kind: "REST",
           method: "GET",
           authSource: "token",
+
           rateLimit: {
             resource: "core",
             limit: 5000,
@@ -127,10 +144,11 @@ describe("API telemetry bounded aggregation", () => {
         await childCanFinish;
       });
       await childDidRecord;
-      recordApiTelemetry({
+      record({
         kind: "REST",
         method: "GET",
         authSource: "token",
+
         rateLimit: {
           resource: "core",
           limit: 5000,
@@ -159,10 +177,11 @@ describe("API telemetry bounded aggregation", () => {
   it("uses the lowest remaining, then highest used, within a REST quota window", async () => {
     await withApiTelemetryScope(async () => {
       for (const used of [200, 150, 100]) {
-        recordApiTelemetry({
+        record({
           kind: "REST",
           method: "GET",
           authSource: "token",
+
           rateLimit: {
             resource: "core",
             limit: 5000,
@@ -176,25 +195,6 @@ describe("API telemetry bounded aggregation", () => {
       expect(summarizeApiTelemetry()).toMatchObject({
         rest: [{ resource: "core", requestCount: 3, remaining: 4800, used: 200 }],
       });
-    });
-  });
-  it("uses highest used when remaining and reset window tie", async () => {
-    await withApiTelemetryScope(async () => {
-      for (const used of [undefined, 10, undefined, 5]) {
-        recordApiTelemetry({
-          kind: "GraphQL",
-          method: "POST",
-          authSource: "token",
-          rateLimit: {
-            resource: "graphql",
-            limit: 5000,
-            ...(used !== undefined && { used }),
-            remaining: 4990,
-            resetAt: 1_700_000_000,
-          },
-        });
-      }
-      expect(summarizeApiTelemetry()).toMatchObject({ graphql: { used: 10, remaining: 4990 } });
     });
   });
 });

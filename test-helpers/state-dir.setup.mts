@@ -10,3 +10,10 @@ if (!process.env["PR_SHEPHERD_STATE_DIR"]) {
   process.env["PR_SHEPHERD_STATE_DIR"] = directory;
   afterAll(() => rmSync(directory, { recursive: true, force: true }));
 }
+
+// User-level GitHub App settings must never read the developer's real home folder.
+if (!process.env["PR_SHEPHERD_HOME"]) {
+  const directory = mkdtempSync(join(tmpdir(), "shepherd-test-home-"));
+  process.env["PR_SHEPHERD_HOME"] = directory;
+  afterAll(() => rmSync(directory, { recursive: true, force: true }));
+}

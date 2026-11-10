@@ -28,7 +28,13 @@ describe("REST mark-ready authorization", () => {
     await serve((_request, response) => response.end('{"draft":false}'));
     await withApiTelemetryScope(async () => {
       const core = { resource: "core", limit: 5000, remaining: 4990, used: 10, resetAt: 1 };
-      recordApiTelemetry({ kind: "REST", method: "GET", authSource: "GH_TOKEN", rateLimit: core });
+      recordApiTelemetry({
+        kind: "REST",
+        method: "GET",
+        authSource: "GH_TOKEN",
+        githubApp: false,
+        rateLimit: core,
+      });
       const before = summarizeApiTelemetry();
       expect(await markReady()).toMatchObject({ action: "mark_ready", markedReady: true });
       const after = summarizeApiTelemetry();

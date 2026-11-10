@@ -54,6 +54,7 @@ The [README](../README.md) and the site, [jongleberry.com/pr-shepherd](https://j
 | -------------------------------------- | ----------------------------------------------------------- |
 | [escalations.md](escalations.md)       | The finite escalation list, exact predicates, and non-cases |
 | [authentication.md](authentication.md) | Token resolution, fine-grained access, classic scopes       |
+| [github-app.md](github-app.md)         | Poll as a GitHub App installation to use its own rate limit |
 
 ## Works across agents and environments
 

@@ -6,6 +6,9 @@ import { isGraphQlMutationDocument, withGraphQlInternalRetry } from "./graphql-i
 import { githubFetch } from "./github-fetch.mts";
 import { formatGraphQlErrors, parseGraphQlPayload } from "./graphql-response.mts";
 import { CCR_GRAPHQL_REFUSAL_MESSAGE, isCcrGraphqlRefusal } from "./graphql-session-refusal.mts";
+import { isAppEligibleGraphql } from "./app-eligibility.mts";
+import { withAppQuotaFallback } from "./app-quota.mts";
+import { authTargetFromGraphqlVars } from "./auth-target.mts";
 import { makeAuthHeaders } from "./http-auth.mts";
 import { requestWithTokenRetry } from "./http-request.mts";
 import {
@@ -36,7 +39,15 @@ export interface GraphQlRequestOptions {
   allowPartialData?: boolean;
 }
 
-async function graphqlInner<T>(
+function graphqlInner<T>(
+  query: string,
+  vars: Record<string, unknown>,
+  opts: GraphQlRequestOptions,
+) {
+  return withAppQuotaFallback("graphql", () => graphqlAttempt<T>(query, vars, opts));
+}
+
+async function graphqlAttempt<T>(
   query: string,
   vars: Record<string, unknown>,
   opts: GraphQlRequestOptions,
@@ -60,12 +71,18 @@ async function graphqlInner<T>(
   const t0 = performance.now();
   let authSource = "unknown";
   let credentialFingerprint: string | undefined;
+  let githubApp = false;
 
   const { res, attempt, retryT0 } = await requestWithTokenRetry(
     async () => {
-      const auth = await makeAuthHeaders();
+      const auth = await makeAuthHeaders(undefined, {
+        target: authTargetFromGraphqlVars(vars),
+        appEligible: isAppEligibleGraphql(query),
+        resource: "graphql",
+      });
       authSource = auth.source;
       credentialFingerprint = auth.fingerprint;
+      githubApp = auth.githubApp;
       return githubFetch(url, {
         method: "POST",
         headers: auth.headers,
@@ -83,6 +100,7 @@ async function graphqlInner<T>(
         durationMs,
         authSource,
         credentialFingerprint,
+        githubApp,
       }),
     !isGraphQlMutationDocument(query),
     true,
@@ -114,6 +132,7 @@ async function graphqlInner<T>(
       method: "POST",
       authSource,
       credentialFingerprint,
+      githubApp,
       rateLimit: headerRateLimit ?? undefined,
     });
     throw new GitHubRequestError(
@@ -155,6 +174,7 @@ async function graphqlInner<T>(
       method: "POST",
       authSource,
       credentialFingerprint,
+      githubApp,
       rateLimit: headerRateLimit ?? undefined,
     });
     throw new GitHubRequestError(`GitHub GraphQL response was not valid JSON${detail}`, {
@@ -189,6 +209,7 @@ async function graphqlInner<T>(
     method: "POST",
     authSource,
     credentialFingerprint,
+    githubApp,
     rateLimit: rateLimit ?? undefined,
   });
 

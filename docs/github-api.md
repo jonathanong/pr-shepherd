@@ -104,7 +104,7 @@ REST branch-policy reads propagate primary and secondary throttling, `Retry-Afte
 
 ## How to read spend
 
-1. Pass `--verbose` on iterate or poll. Markdown adds `## GitHub API usage`; JSON includes `apiUsage`: credential source, request count, measured query cost, node count, remaining/limit/reset, REST `notModified` counts, and `unmeteredRestRequestCount` (REST responses without rate-limit headers, such as the proxy's `ccr/review_threads`).
+1. Pass `--verbose` on iterate or poll. Markdown adds `## GitHub API usage`; JSON includes `apiUsage`: credential source, request count, measured query cost, node count, remaining/limit/reset, REST `notModified` counts, and `unmeteredRestRequestCount` (REST responses without rate-limit headers, such as the proxy's `ccr/review_threads`). These describe your token chain only; GitHub App requests are reported per installation under `apiUsage.githubApps` ([github-app.md](github-app.md#verify)).
 2. `npx pr-shepherd admin log-file`: each response line carries quota headers, GraphQL cost, and credential source.
 3. A `quotaWarning` / `## GitHub API quota warning` block is primary remaining% crossing a band. It is not emitted for secondary limits.
 4. Exit 75 with `Retry-After` and a `secondary rate limit` message is a burst throttle, not an empty bucket. Back off; do not assume REST is exhausted too.
