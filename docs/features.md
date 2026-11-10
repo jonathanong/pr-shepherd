@@ -41,6 +41,7 @@ Interfaces: the MCP tools `iterate`, `apply`, `suggest`, `extract_journal`, `get
 | Bundled vendor-noise rules (`classify.standard`)                                  | [configuration.md](configuration.md#classifystandard--default-)                        |
 | Custom rules in `.pr-shepherd/classification/`                                    | [actions.md](actions.md#classification-rules), [examples](../examples/classification/) |
 | Auth: `GH_TOKEN`, `GITHUB_TOKEN`, `gh auth token`, `GITHUB_PERSONAL_ACCESS_TOKEN` | [authentication.md](authentication.md)                                                 |
+| GitHub App installation tokens (`~/.pr-shepherd/github-apps.yml`)                 | [github-app.md](github-app.md)                                                         |
 | `PR_SHEPHERD_STATE_DIR`, `PR_SHEPHERD_LOG_DISABLED`, `PR_SHEPHERD_LOG_MAX_BODY`   | [configuration.md](configuration.md#environment-variables)                             |
 
 ## Workflow assumptions

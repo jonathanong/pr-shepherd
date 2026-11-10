@@ -4,6 +4,7 @@ import { formatRequestEntry, formatResponseEntry } from "../log/session.mts";
 import { loadEtagEntry, storeEtagEntry, type StateKey } from "../state/rest-cache.mts";
 import { GitHubRequestError } from "./errors.mts";
 import { githubFetch } from "./github-fetch.mts";
+import { authTargetFromRestPath } from "./auth-target.mts";
 import { makeAuthHeaders } from "./http-auth.mts";
 import { requestWithTokenRetry } from "./http-request.mts";
 import {
@@ -92,7 +93,10 @@ export async function restWithRateLimit<T = unknown>(
 
   const { res, attempt, retryT0 } = await requestWithTokenRetry(
     async () => {
-      const auth = await makeAuthHeaders(cached ? { "If-None-Match": cached.etag } : undefined);
+      const auth = await makeAuthHeaders(
+        cached ? { "If-None-Match": cached.etag } : undefined,
+        authTargetFromRestPath(path),
+      );
       authSource = auth.source;
       credentialFingerprint = auth.fingerprint;
       return githubFetch(url, {

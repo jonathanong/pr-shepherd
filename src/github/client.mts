@@ -29,6 +29,7 @@ import {
 } from "./queries.mts";
 import type { MergeableState, MergeStateStatus } from "../types.mts";
 import { getExecutionCwd } from "../execution-context.mts";
+import { setAuthTarget } from "./auth-target.mts";
 
 export type { RateLimitInfo } from "./http.mts";
 
@@ -57,8 +58,9 @@ export async function getRepoInfo(): Promise<RepoInfo> {
   const { stdout } = await execFile("git", ["remote", "get-url", "origin"], {
     cwd: getExecutionCwd(),
   });
-  const url = stdout.trim();
-  return parseRemoteUrl(url);
+  const repository = parseRemoteUrl(stdout.trim());
+  setAuthTarget(repository, "inferred");
+  return repository;
 }
 
 /**

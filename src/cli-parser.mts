@@ -35,6 +35,8 @@ import { handleApplyMerge } from "./cli/apply-merge-handler.mts";
 import { getLocalHeadSha } from "./commands/suggestion-patch-git.mts";
 import { extractTransportArgs } from "./cli/transport-args.mts";
 import { parseGithubTransport } from "./github/transport-mode.mts";
+import { runWithAuthScope } from "./github/auth-target.mts";
+import { loadGithubApps } from "./github/github-app-config.mts";
 import { runWithGithubTransport } from "./github/transport.mts";
 
 // ---------------------------------------------------------------------------
@@ -69,15 +71,18 @@ export async function main(argv: string[]): Promise<void> {
   // Validate config before any GitHub work, so a bad or pre-v1 config file exits 78 up front.
   try {
     loadConfig();
+    loadGithubApps();
   } catch (error) {
     if (!(error instanceof ShepherdError)) throw error;
     process.stderr.write(`pr-shepherd: ${error.message}\n`);
     process.exitCode = error.exitCode;
     return;
   }
-  return runWithGithubTransport(mode, () => dispatch(dispatched), {
-    verbose: extracted.args.includes("--verbose"),
-  });
+  return runWithAuthScope(() =>
+    runWithGithubTransport(mode, () => dispatch(dispatched), {
+      verbose: extracted.args.includes("--verbose"),
+    }),
+  );
 }
 
 async function dispatch(argv: string[]): Promise<void> {

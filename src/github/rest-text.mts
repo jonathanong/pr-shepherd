@@ -3,6 +3,7 @@ import { formatRequestEntry, formatResponseEntry } from "../log/session.mts";
 import { GitHubRequestError } from "./errors.mts";
 import { githubFetch } from "./github-fetch.mts";
 import { GITHUB_LOG_TIMEOUT_MS } from "./github-timeouts.mts";
+import { authTargetFromRestPath } from "./auth-target.mts";
 import { makeAuthHeaders } from "./http-auth.mts";
 import { requestWithTokenRetry } from "./http-request.mts";
 import {
@@ -30,7 +31,7 @@ export async function restText(
 
   const { res, attempt, retryT0 } = await requestWithTokenRetry(
     async () => {
-      const auth = await makeAuthHeaders();
+      const auth = await makeAuthHeaders(undefined, authTargetFromRestPath(path));
       authSource = auth.source;
       credentialFingerprint = auth.fingerprint;
       return githubFetch(

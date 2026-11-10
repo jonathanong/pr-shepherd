@@ -6,6 +6,7 @@ import { isGraphQlMutationDocument, withGraphQlInternalRetry } from "./graphql-i
 import { githubFetch } from "./github-fetch.mts";
 import { formatGraphQlErrors, parseGraphQlPayload } from "./graphql-response.mts";
 import { CCR_GRAPHQL_REFUSAL_MESSAGE, isCcrGraphqlRefusal } from "./graphql-session-refusal.mts";
+import { authTargetFromGraphqlVars } from "./auth-target.mts";
 import { makeAuthHeaders } from "./http-auth.mts";
 import { requestWithTokenRetry } from "./http-request.mts";
 import {
@@ -63,7 +64,7 @@ async function graphqlInner<T>(
 
   const { res, attempt, retryT0 } = await requestWithTokenRetry(
     async () => {
-      const auth = await makeAuthHeaders();
+      const auth = await makeAuthHeaders(undefined, authTargetFromGraphqlVars(vars));
       authSource = auth.source;
       credentialFingerprint = auth.fingerprint;
       return githubFetch(url, {

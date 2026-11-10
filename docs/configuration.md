@@ -760,11 +760,16 @@ actions:
   work-while-queued: true
 ```
 
+## User-level GitHub App settings
+
+`$PR_SHEPHERD_HOME/github-apps.yml` (default `~/.pr-shepherd/github-apps.yml`) lists GitHub Apps whose installation tokens replace your user token for matching repositories. It is separate from `.pr-shepherdrc.yml`, is never read from a repository, and follows the same rules: kebab-case keys, and unknown keys or invalid values exit `78`. Setup and the key reference are in [github-app.md](github-app.md).
+
 ## Environment variables
 
 | Variable                                                     | Effect                                                                                                                                                                                                      |
 | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PR_SHEPHERD_STATE_DIR`                                      | Override the base directory for loop state (defaults below).                                                                                                                                                |
+| `PR_SHEPHERD_HOME`                                           | User-level folder for `github-apps.yml` (defaults to `~/.pr-shepherd`). See [github-app.md](github-app.md). It is read only from here, never from `.pr-shepherdrc.yml`.                                     |
 | `PR_SHEPHERD_POLL_GUARD`                                     | Plugin poll guard level: `advisory` (default), `fail`, or `disabled` ([skills.md](skills.md#poll-guard)).                                                                                                   |
 | `PR_SHEPHERD_LOG_DISABLED`                                   | `1` disables the per-worktree debug log.                                                                                                                                                                    |
 | `CI`                                                         | Any value other than empty, `0`, or `false` also disables the debug log.                                                                                                                                    |
