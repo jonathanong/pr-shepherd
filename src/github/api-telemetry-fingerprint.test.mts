@@ -19,6 +19,7 @@ describe("GraphQL credential fingerprint", () => {
         kind: "GraphQL",
         method: "POST",
         authSource: "token",
+        githubApp: false,
         credentialFingerprint: "b".repeat(16),
         rateLimit: {
           resource: "graphql",
@@ -32,6 +33,7 @@ describe("GraphQL credential fingerprint", () => {
         kind: "GraphQL",
         method: "POST",
         authSource: "token",
+        githubApp: false,
         credentialFingerprint: "a".repeat(16),
         rateLimit: {
           resource: "graphql",
@@ -52,12 +54,18 @@ describe("GraphQL credential fingerprint", () => {
 
   it("keeps a nested scope's fingerprint after it is folded into the parent", async () => {
     await withApiTelemetryScope(async () => {
-      recordApiTelemetry({ kind: "GraphQL", method: "POST", authSource: "token" });
+      recordApiTelemetry({
+        kind: "GraphQL",
+        method: "POST",
+        authSource: "token",
+        githubApp: false,
+      });
       await withApiTelemetryScope(async () => {
         recordApiTelemetry({
           kind: "GraphQL",
           method: "POST",
           authSource: "nested-token",
+          githubApp: false,
           credentialFingerprint: "c".repeat(16),
           rateLimit: {
             resource: "graphql",
@@ -80,6 +88,7 @@ describe("GraphQL credential fingerprint", () => {
         kind: "GraphQL",
         method: "POST",
         authSource: "graphql-token",
+        githubApp: false,
         credentialFingerprint: "g".repeat(16),
         rateLimit: {
           resource: "graphql",
@@ -93,6 +102,7 @@ describe("GraphQL credential fingerprint", () => {
         kind: "REST",
         method: "GET",
         authSource: "rest-token-a",
+        githubApp: false,
         credentialFingerprint: "a".repeat(16),
         rateLimit: {
           resource: "core",
@@ -106,6 +116,7 @@ describe("GraphQL credential fingerprint", () => {
         kind: "REST",
         method: "GET",
         authSource: "rest-token-b",
+        githubApp: false,
         credentialFingerprint: "b".repeat(16),
         rateLimit: {
           resource: "core",
@@ -133,6 +144,7 @@ describe("GraphQL credential fingerprint", () => {
         kind: "REST",
         method: "GET",
         authSource: "old-token",
+        githubApp: false,
         credentialFingerprint: "a".repeat(16),
         rateLimit: {
           resource: "core",
@@ -147,6 +159,7 @@ describe("GraphQL credential fingerprint", () => {
           kind: "REST",
           method: "GET",
           authSource: "new-token",
+          githubApp: false,
           credentialFingerprint: "b".repeat(16),
           rateLimit: {
             resource: "core",

@@ -14,6 +14,7 @@ function proxySample(remaining: number, used: number | undefined, reset = resetA
     kind: "REST",
     method: "GET",
     authSource: "GH_TOKEN",
+    githubApp: false,
     credentialFingerprint: "a".repeat(16),
     rateLimit: {
       resource: "core",
@@ -97,6 +98,7 @@ describe("REST core quota samples that disagree within one tick", () => {
       kind: "GraphQL" as const,
       method: "POST",
       authSource: "GH_TOKEN",
+      githubApp: false,
       sequence,
       credentialFingerprint: fingerprint,
       rateLimit: { resource: "graphql", limit: 5000, remaining, used, resetAt },

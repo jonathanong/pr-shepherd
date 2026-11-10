@@ -33,6 +33,7 @@ describe("GitHub App usage accounting", () => {
         kind: "GraphQL",
         method: "BatchPr",
         authSource: "gh auth token",
+        githubApp: false,
         credentialFingerprint: "user",
         rateLimit: gql(4000, 5000, 1000, 7),
       });
@@ -133,6 +134,7 @@ describe("GitHub App usage accounting", () => {
         kind: "REST",
         method: "GET",
         authSource: "GH_TOKEN",
+        githubApp: false,
         rateLimit: core(1, 2, 3),
       });
       return summarizeApiTelemetry();
@@ -150,6 +152,7 @@ describe("GitHub App usage accounting", () => {
           kind,
           method: "x",
           authSource: "GH_TOKEN",
+          githubApp: false,
           credentialFingerprint: "user",
           rateLimit: sample,
         });

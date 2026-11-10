@@ -129,6 +129,7 @@ async function restAttempt<T>(
         durationMs,
         authSource,
         credentialFingerprint,
+        githubApp,
       }),
     method === "GET" || method === "HEAD",
   );

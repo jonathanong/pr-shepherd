@@ -17,7 +17,7 @@ export interface ApiTelemetryEvent {
   method: string;
   authSource: string;
   /** True when a GitHub App installation token answered this request, not the user's chain. */
-  githubApp?: boolean;
+  githubApp: boolean;
   /** Truncated SHA-256 of the credential that produced this request. */
   credentialFingerprint?: string;
   rateLimit?: RateLimitInfo;

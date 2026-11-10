@@ -19,6 +19,7 @@ describe("quota warning sample provenance", () => {
         kind: "GraphQL",
         method: "POST",
         authSource: "GH_TOKEN",
+        githubApp: false,
         credentialFingerprint: "g".repeat(16),
         rateLimit: { resource: "graphql", limit: 5000, remaining: 4000, resetAt: 1_700_000_000 },
       });
@@ -26,6 +27,7 @@ describe("quota warning sample provenance", () => {
         kind: "REST",
         method: "GET",
         authSource: "GH_TOKEN",
+        githubApp: false,
         credentialFingerprint: "a".repeat(16),
         rateLimit: { resource: "core", limit: 5000, remaining: 1000, resetAt: 1_700_000_000 },
       });
@@ -36,6 +38,7 @@ describe("quota warning sample provenance", () => {
             kind: "REST",
             method: "GET",
             authSource: "GH_TOKEN",
+            githubApp: false,
             credentialFingerprint: "b".repeat(16),
             rateLimit: { resource: "core", limit: 5000, remaining: 4900, resetAt: 1_700_000_000 },
           });

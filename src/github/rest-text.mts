@@ -37,7 +37,7 @@ async function restTextAttempt(
   const t0 = performance.now();
   let authSource = "unknown";
   let credentialFingerprint: string | undefined;
-
+  let githubApp = false;
   const { res, attempt, retryT0 } = await requestWithTokenRetry(
     async () => {
       const auth = await makeAuthHeaders(undefined, {
@@ -46,6 +46,7 @@ async function restTextAttempt(
       });
       authSource = auth.source;
       credentialFingerprint = auth.fingerprint;
+      githubApp = auth.githubApp;
       return githubFetch(
         url,
         { method: "GET", headers: auth.headers, redirect: "manual" },
@@ -63,6 +64,7 @@ async function restTextAttempt(
         durationMs,
         authSource,
         credentialFingerprint,
+        githubApp,
       }),
   );
 
@@ -70,7 +72,14 @@ async function restTextAttempt(
   const rateLimit = parseRateLimit(res.headers) ?? undefined;
   onRateLimit?.(rateLimit);
   const retryAfterSeconds = parseRetryAfter(res.headers);
-  recordApiTelemetry({ kind: "REST", method: "GET", authSource, credentialFingerprint, rateLimit });
+  recordApiTelemetry({
+    kind: "REST",
+    method: "GET",
+    authSource,
+    credentialFingerprint,
+    githubApp,
+    rateLimit,
+  });
   if ([301, 302, 307, 308].includes(res.status)) {
     const redirected = await followRestTextRedirect(res, {
       n,
@@ -158,7 +167,6 @@ async function followRestTextRedirect(
   );
   const location = res.headers.get("location");
   if (!location) return null;
-
   const n2 = nextEntry();
   const logUrl = redactUrl(location);
   appendEntry(formatRequestEntry({ n: n2, kind: "restText", method: "GET", url: logUrl }));

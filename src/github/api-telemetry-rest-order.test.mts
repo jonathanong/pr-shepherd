@@ -11,6 +11,7 @@ function sample(fingerprint: string, remaining: number) {
     kind: "REST",
     method: "GET",
     authSource: "GH_TOKEN",
+    githubApp: false,
     credentialFingerprint: fingerprint.repeat(16),
     rateLimit: {
       resource: "core",

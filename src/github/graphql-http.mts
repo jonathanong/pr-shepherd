@@ -100,6 +100,7 @@ async function graphqlAttempt<T>(
         durationMs,
         authSource,
         credentialFingerprint,
+        githubApp,
       }),
     !isGraphQlMutationDocument(query),
     true,
