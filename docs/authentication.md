@@ -15,7 +15,7 @@ Which credential Shepherd uses, what permissions it needs, and how quota is shar
 
 A GitHub App installation can answer identity-independent reads for repositories you list in `~/.pr-shepherd/github-apps.yml`; see [github-app.md](github-app.md). Writes, viewer-relative reads, and repositories it does not cover use the order above.
 
-GraphQL and REST requests for one repository in one process use the same resolved credential. Verbose telemetry and request failures report the source label, never the token value.
+For a repository no app covers, GraphQL and REST requests in one process use the same resolved credential. For a covered repository, the app answers eligible reads and the token chain answers the rest, so one run can use both. Verbose telemetry and request failures report the source label, never the token value.
 
 Transport selection (`github.transport`, `--transport`) is in [github-api.md](github-api.md#transport-selection). In Claude Code cloud sessions the environment token may be a placeholder: do not validate it locally or trust `gh auth status`. Requests go through the configured `HTTP_PROXY`/`HTTPS_PROXY`, which supplies credentials; Node's HTTP client honors the proxy and its CA bundle, and TLS verification stays on.
 
