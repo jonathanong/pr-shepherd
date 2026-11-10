@@ -23,6 +23,43 @@ A GraphQL document is viewer-relative when, after comments are stripped, it cont
 
 In practice the app absorbs CI and check pages, check annotations, Actions jobs and logs, ruleset and merge-policy reads, base-behind compares, PR body and head SHA reads, and the REST change detectors that make idle waits cheap. The main `BatchPr` query selects viewer fields, so it stays on your token, as do the stack summary and topology reads and review-thread reads. A normal one-PR GraphQL tick is one `BatchPr` point, so most of your GraphQL spend does not move; the app mainly takes REST `core` load and the occasional follow-up page. Splitting the viewer fields out of `BatchPr` would move more and is possible future work.
 
+### GraphQL operations
+
+The queries live in `src/github/gql/`. A test pins which ones are app-eligible, so adding a viewer field to one of them fails the test.
+
+These queries go through the app:
+
+| Operation                    | When Shepherd sends it                                                              |
+| ---------------------------- | ----------------------------------------------------------------------------------- |
+| `CommitCheckContexts`        | More status contexts for a merge-queue commit, past the first page.                 |
+| `PollSummaryCheckPage`       | Older status contexts for one commit in a multi-PR or stack summary.                |
+| `PollSummaryAnnotationProbe` | Annotation totals for a summary layer that otherwise looks ready.                   |
+| `CheckRunAnnotationsBatch`   | First annotation page for up to 20 failing check runs.                              |
+| `CheckRunAnnotations`        | Further annotation pages for one check run.                                         |
+| `StackHandoffCheckRuns`      | Check run titles, summaries, and first annotations for a stack-layer handoff.       |
+| `RefRules`                   | Base branch rules and how far the head is behind the base.                          |
+| `BaseBehind`                 | How far a non-stack head is behind its PR base.                                     |
+| `UpperLayerConflictTarget`   | Whether a conflicting upper stack layer already contains its base.                  |
+| `MergedBasePullRequests`     | Merged PRs whose head may be the stale base of a conflict.                          |
+| `GetPrHeadSha`               | The PR's current head SHA while waiting for a push to land.                         |
+| `PrNumberByBranch`           | The PR number for the current branch.                                               |
+| `GetPrBody`                  | The PR body and node ID before a body update. The `UpdatePrBody` mutation is yours. |
+| `ReplyThreadTranscripts`     | Review-thread transcripts used to write seen markers after `apply review` replies.  |
+| `ReplyThreadComments`        | Further comments of one of those threads.                                           |
+
+These stay on your token:
+
+| Operation                                 | Why                                                                                |
+| ----------------------------------------- | ---------------------------------------------------------------------------------- |
+| `BatchPr` (and its READY receipt variant) | The per-tick query. Selects `viewer`, `viewerPermission`, and `viewerCan*` fields. |
+| `BatchPrPage`                             | Follow-up pages of `BatchPr` threads and comments, with `viewerCan*` fields.       |
+| `PollStackSummary`, `PollStackTopology`   | Stack and multi-PR summaries. Select viewer fields.                                |
+| `ReviewThreadComments`                    | More comments of a review thread. Selects `viewerDidAuthor` and `viewerCan*`.      |
+| `SuggestionThreads`                       | Threads for `suggest`. Selects viewer fields.                                      |
+| `MarkPrReady`, `UpdatePrBody`             | Mutations.                                                                         |
+
+The `RefRules`, `PrMergePolicy`, and `CommitCheckSuites` fragments are also part of `BatchPr`. There they ride on your token with the rest of that query.
+
 The setting is user-level only. Shepherd reads it from `~/.pr-shepherd/`, never from the repository's `.pr-shepherdrc.yml`.
 
 ## 1. Create the app
