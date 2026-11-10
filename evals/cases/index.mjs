@@ -10,6 +10,7 @@ import { REVIEW_BUDGET_CASES } from "./review-budget.mjs";
 import { RULES_CASES } from "./rules.mjs";
 import { STACK_CASES } from "./stack.mjs";
 import { STACK_FIXES_CASES } from "./stack-fixes.mjs";
+import { WATCH_CASES } from "./watch.mjs";
 
 export const CASES = [
   ...CORE_CASES,
@@ -23,4 +24,5 @@ export const CASES = [
   ...REVIEW_BUDGET_CASES,
   ...AGGREGATE_CASES,
   ...BLOCKER_CASES,
+  ...WATCH_CASES,
 ];
