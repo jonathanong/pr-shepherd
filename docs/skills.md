@@ -156,6 +156,24 @@ Use the skill from the slash menu:
 
 The session owns recurrence; the skill prints the full result and follows its plan. `[CANCEL]` and `[ESCALATE]` stop that PR's loop, and the work ends when every PR it covers is terminal.
 
+## Poll guard
+
+The plugin ships a `PreToolUse` hook for Claude Code and Codex (`plugins/pr-shepherd/hooks/`). It checks each `Bash` and `Monitor` command for its own polling of PR or CI state:
+
+- a GitHub read (`gh pr view|checks|status|list`, `gh run view|list`, `gh api`, `curl` to `api.github.com`, or `pr-shepherd`) together with `while`, `until`, `sleep`, or `watch`;
+- `gh run watch` and `gh pr checks --watch`;
+- a shell script the command runs (`bash wait.sh`, `./wait.sh`) whose contents match either rule.
+
+Such loops spend GraphQL quota on every pass and miss what Shepherd reports, such as why a PR left the merge queue. One-off reads and a single `pr-shepherd … --until-terminal` pass through.
+
+| Level                | Effect                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------ |
+| `advisory` (default) | The command runs; the agent gets a note to use one `pr-shepherd <PRs> --until-terminal` instead. |
+| `fail`               | The command is blocked, and the agent sees the same note as the reason.                          |
+| `disabled`           | The hook does nothing.                                                                           |
+
+Set the level with `PR_SHEPHERD_POLL_GUARD`, or in Claude Code with the plugin option `poll_guard`; the environment variable wins. Set it in the environment the host starts from (Claude Code `settings.json` `env`, or the shell that launches Codex), not in a command, since the hook reads its own environment. Any other value prints an error and lets the command run. In Claude Code, an `advisory` note reaches the agent with the tool result, so a foreground loop is reported only after it ends; use `fail` to stop it beforehand. Codex runs plugin hooks only after you review and trust them in `/hooks`.
+
 ## Competing PR babysitters
 
 Do not attach Cursor `/autopilot`, or a `gh pr checks` / `gh pr watch` skill, in the same session. Those prompts rebuild GitHub state, skip resolved threads, and classify comments in the model; this dispatcher follows printed `## Instructions`. See [comparison.md](comparison.md).
