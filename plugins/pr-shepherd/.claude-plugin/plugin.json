@@ -11,5 +11,13 @@
   "license": "MIT",
   "keywords": ["github", "pull-request", "ci", "code-review", "automation"],
   "skills": "./skills/",
-  "mcpServers": "./.mcp.json"
+  "mcpServers": "./.mcp.json",
+  "userConfig": {
+    "poll_guard": {
+      "type": "string",
+      "title": "Poll guard",
+      "description": "What to do when a shell command polls GitHub PR or CI state instead of running pr-shepherd: disabled, advisory (run it and tell the agent), or fail (block it). The PR_SHEPHERD_POLL_GUARD environment variable overrides this.",
+      "default": "advisory"
+    }
+  }
 }
