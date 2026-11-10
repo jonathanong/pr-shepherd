@@ -18,7 +18,7 @@ describe("GitHub App failures", () => {
 
   async function failure(): Promise<ShepherdError> {
     try {
-      await makeAuthHeaders(undefined, target);
+      await makeAuthHeaders(undefined, { target: target, appEligible: true });
     } catch (error) {
       return error as ShepherdError;
     }
@@ -63,10 +63,26 @@ describe("GitHub App failures", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("exits 75 for 429 and 5xx on the lookup and the mint, 77 for 401/403", async () => {
+    const lookup = "GET /repos/acme/widgets/installation";
+    const mint = "POST /app/installations/7/access_tokens";
+    for (const [key, status, code] of [
+      [lookup, 429, EXIT.TEMPFAIL],
+      [lookup, 503, EXIT.TEMPFAIL],
+      [lookup, 401, EXIT.NOPERM],
+      [mint, 429, EXIT.TEMPFAIL],
+      [mint, 502, EXIT.TEMPFAIL],
+      [mint, 403, EXIT.NOPERM],
+    ] as const) {
+      route({ [key]: () => json(status, { message: "x" }) });
+      expect((await failure()).exitCode).toBe(code);
+    }
+  });
+
   it("treats an unparseable expiry as already stale", async () => {
     state.expiresAt = "garbage";
-    await makeAuthHeaders(undefined, target);
-    const again = await makeAuthHeaders(undefined, target);
+    await makeAuthHeaders(undefined, { target: target, appEligible: true });
+    const again = await makeAuthHeaders(undefined, { target: target, appEligible: true });
 
     expect(again.headers["Authorization"]).toBe("Bearer inst-token-2");
   });

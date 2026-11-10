@@ -13,7 +13,7 @@ Which credential Shepherd uses, what permissions it needs, and how quota is shar
 | 3     | `gh auth token`                |
 | 4     | `GITHUB_PERSONAL_ACCESS_TOKEN` |
 
-A GitHub App installation can take precedence for repositories you list in `~/.pr-shepherd/github-apps.yml`; see [github-app.md](github-app.md). Repositories it does not cover use the order above.
+A GitHub App installation can answer identity-independent reads for repositories you list in `~/.pr-shepherd/github-apps.yml`; see [github-app.md](github-app.md). Writes, viewer-relative reads, and repositories it does not cover use the order above.
 
 GraphQL and REST requests for one repository in one process use the same resolved credential. Verbose telemetry and request failures report the source label, never the token value.
 

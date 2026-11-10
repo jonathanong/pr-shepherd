@@ -762,7 +762,7 @@ actions:
 
 ## User-level GitHub App settings
 
-`$PR_SHEPHERD_HOME/github-apps.yml` (default `~/.pr-shepherd/github-apps.yml`) lists GitHub Apps whose installation tokens replace your user token for matching repositories. It is separate from `.pr-shepherdrc.yml`, is never read from a repository, and follows the same rules: kebab-case keys, and unknown keys or invalid values exit `78`. Setup and the key reference are in [github-app.md](github-app.md).
+`$PR_SHEPHERD_HOME/github-apps.yml` (default `~/.pr-shepherd/github-apps.yml`) lists GitHub Apps whose installation tokens answer identity-independent reads for matching repositories; writes and viewer-relative reads stay on your token. It is separate from `.pr-shepherdrc.yml`, is never read from a repository, and follows the same rules: kebab-case keys, and unknown keys or invalid values exit `78`. Setup and the key reference are in [github-app.md](github-app.md).
 
 ## Environment variables
 

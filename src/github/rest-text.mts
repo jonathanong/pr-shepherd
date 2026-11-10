@@ -3,6 +3,8 @@ import { formatRequestEntry, formatResponseEntry } from "../log/session.mts";
 import { GitHubRequestError } from "./errors.mts";
 import { githubFetch } from "./github-fetch.mts";
 import { GITHUB_LOG_TIMEOUT_MS } from "./github-timeouts.mts";
+import { isAppEligibleRest } from "./app-eligibility.mts";
+import { withAppQuotaFallback } from "./app-quota.mts";
 import { authTargetFromRestPath } from "./auth-target.mts";
 import { makeAuthHeaders } from "./http-auth.mts";
 import { requestWithTokenRetry } from "./http-request.mts";
@@ -18,7 +20,14 @@ import { recordIntermediateResponse } from "./http-intermediate.mts";
 
 const BASE_URL = "https://api.github.com";
 
-export async function restText(
+export function restText(
+  path: string,
+  onRateLimit?: (rateLimit?: RateLimitInfo) => void,
+): Promise<string> {
+  return withAppQuotaFallback("core", () => restTextAttempt(path, onRateLimit));
+}
+
+async function restTextAttempt(
   path: string,
   onRateLimit?: (rateLimit?: RateLimitInfo) => void,
 ): Promise<string> {
@@ -31,7 +40,10 @@ export async function restText(
 
   const { res, attempt, retryT0 } = await requestWithTokenRetry(
     async () => {
-      const auth = await makeAuthHeaders(undefined, authTargetFromRestPath(path));
+      const auth = await makeAuthHeaders(undefined, {
+        target: authTargetFromRestPath(path),
+        appEligible: isAppEligibleRest("GET", path),
+      });
       authSource = auth.source;
       credentialFingerprint = auth.fingerprint;
       return githubFetch(

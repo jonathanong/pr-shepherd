@@ -40,10 +40,20 @@ export function clearAppTokens(): void {
   tokens.clear();
 }
 
-function fail(app: GithubApp, target: AuthTarget, problem: string, fix: string): never {
+/** 429 and 5xx are GitHub's trouble, not a setup error: exit 75 so callers retry later. */
+const exitFor = (status: number): number =>
+  status === 429 || status >= 500 ? EXIT.TEMPFAIL : EXIT.NOPERM;
+
+function fail(
+  app: GithubApp,
+  target: AuthTarget,
+  problem: string,
+  fix: string,
+  exitCode: number = EXIT.NOPERM,
+): never {
   throw new ShepherdError(
     `GitHub App ${app.appId} cannot authenticate for ${target.owner}/${target.repo}: ${problem}. ${fix}`,
-    EXIT.NOPERM,
+    exitCode,
   );
 }
 
@@ -104,7 +114,13 @@ async function installationId(app: GithubApp, target: AuthTarget, jwt: string): 
     return fail(app, target, "the app is not installed there", "Install the app on that account.");
   }
   if (status !== 200 || typeof id !== "number") {
-    return fail(app, target, `GitHub answered ${status} ${sanitizeBody(text)}`, "Check app-id.");
+    return fail(
+      app,
+      target,
+      `GitHub answered ${status} ${sanitizeBody(text)}`,
+      "Check app-id.",
+      exitFor(status),
+    );
   }
   installations.set(key, id);
   return id;
@@ -120,7 +136,13 @@ async function mint(app: GithubApp, target: AuthTarget): Promise<AppCredential> 
   );
   const minted = body as { token?: unknown; expires_at?: unknown } | undefined;
   if (status !== 201 || typeof minted?.token !== "string") {
-    return fail(app, target, `token request answered ${status} ${sanitizeBody(text)}`, "Retry.");
+    return fail(
+      app,
+      target,
+      `token request answered ${status} ${sanitizeBody(text)}`,
+      "Retry.",
+      exitFor(status),
+    );
   }
   const expiresAt = Date.parse(String(minted.expires_at));
   tokens.set(id, { token: minted.token, expiresAt });

@@ -21,7 +21,10 @@ registerAppAuthHooks();
 describe("GitHub App credentials", () => {
   it("signs a verifiable RS256 JWT and mints an installation token", async () => {
     const before = Math.floor(Date.now() / 1000);
-    const auth = await makeAuthHeaders(undefined, { owner: "acme", repo: "widgets" });
+    const auth = await makeAuthHeaders(undefined, {
+      target: { owner: "acme", repo: "widgets" },
+      appEligible: true,
+    });
 
     expect(auth.headers["Authorization"]).toBe("Bearer inst-token-1");
     expect(auth.source).toBe("GitHub App 42 (installation 7)");
@@ -52,8 +55,11 @@ describe("GitHub App credentials", () => {
 
   it("caches the token and the per-owner installation, sharing one in-flight mint", async () => {
     const target = { owner: "Acme", repo: "a" };
-    await Promise.all([makeAuthHeaders(undefined, target), makeAuthHeaders(undefined, target)]);
-    await makeAuthHeaders(undefined, { owner: "acme", repo: "b" });
+    await Promise.all([
+      makeAuthHeaders(undefined, { target: target, appEligible: true }),
+      makeAuthHeaders(undefined, { target: target, appEligible: true }),
+    ]);
+    await makeAuthHeaders(undefined, { target: { owner: "acme", repo: "b" }, appEligible: true });
 
     expect(state.mintCount).toBe(1);
     expect(state.calls).toHaveLength(2);
@@ -61,8 +67,11 @@ describe("GitHub App credentials", () => {
 
   it("refreshes a token within five minutes of expiry", async () => {
     state.expiresAt = new Date(Date.now() + 4 * 60_000).toISOString();
-    await makeAuthHeaders(undefined, { owner: "acme", repo: "a" });
-    const second = await makeAuthHeaders(undefined, { owner: "acme", repo: "a" });
+    await makeAuthHeaders(undefined, { target: { owner: "acme", repo: "a" }, appEligible: true });
+    const second = await makeAuthHeaders(undefined, {
+      target: { owner: "acme", repo: "a" },
+      appEligible: true,
+    });
 
     expect(second.headers["Authorization"]).toBe("Bearer inst-token-2");
     expect(state.calls.filter((call) => call.url.endsWith("/installation"))).toHaveLength(1);
@@ -102,21 +111,37 @@ describe("GitHub App credentials", () => {
   });
 
   it("falls back to the command scope for requests without a target", async () => {
-    await rest("GET", "/user");
+    const node = "query($id:ID!){node(id:$id){id}}";
+    await graphql(node, { id: "PR_x" });
     await runWithAuthScope(async () => {
-      await graphql("mutation($id:ID!){x}", { id: "PR_x" });
       setAuthTarget({ owner: "acme", name: "widgets" }, "inferred");
-      await graphql("mutation($id:ID!){x}", { id: "PR_x" });
+      await graphql(node, { id: "PR_x" });
       // A request-derived target beats the scope.
       await rest("GET", "/repos/stranger/x/pulls/1");
     });
 
     expect(apiCalls().map((call) => call.auth)).toEqual([
       "Bearer user-token",
-      "Bearer user-token",
       "Bearer inst-token-1",
       "Bearer user-token",
     ]);
+  });
+
+  it("keeps writes, viewer reads, and caller-relative routes on the user token", async () => {
+    await runWithAuthScope(async () => {
+      setAuthTarget({ owner: "acme", name: "widgets" }, "explicit");
+      await rest("POST", "/repos/acme/widgets/issues/1/comments", { body: "x" });
+      await rest("GET", "/user");
+      await rest("GET", "/rate_limit");
+      await graphql("mutation($id:ID!){x}", { id: "PR_x" });
+      await graphql("query($owner:String!,$repo:String!){repository{viewerCanX}}", {
+        owner: "acme",
+        repo: "widgets",
+      });
+    });
+
+    expect(new Set(apiCalls().map((call) => call.auth))).toEqual(new Set(["Bearer user-token"]));
+    expect(state.calls.some((call) => call.url.includes("/app/"))).toBe(false);
   });
 
   it("re-mints the installation token after a 401", async () => {

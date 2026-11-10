@@ -6,6 +6,8 @@ import { isGraphQlMutationDocument, withGraphQlInternalRetry } from "./graphql-i
 import { githubFetch } from "./github-fetch.mts";
 import { formatGraphQlErrors, parseGraphQlPayload } from "./graphql-response.mts";
 import { CCR_GRAPHQL_REFUSAL_MESSAGE, isCcrGraphqlRefusal } from "./graphql-session-refusal.mts";
+import { isAppEligibleGraphql } from "./app-eligibility.mts";
+import { withAppQuotaFallback } from "./app-quota.mts";
 import { authTargetFromGraphqlVars } from "./auth-target.mts";
 import { makeAuthHeaders } from "./http-auth.mts";
 import { requestWithTokenRetry } from "./http-request.mts";
@@ -37,7 +39,15 @@ export interface GraphQlRequestOptions {
   allowPartialData?: boolean;
 }
 
-async function graphqlInner<T>(
+function graphqlInner<T>(
+  query: string,
+  vars: Record<string, unknown>,
+  opts: GraphQlRequestOptions,
+) {
+  return withAppQuotaFallback("graphql", () => graphqlAttempt<T>(query, vars, opts));
+}
+
+async function graphqlAttempt<T>(
   query: string,
   vars: Record<string, unknown>,
   opts: GraphQlRequestOptions,
@@ -64,7 +74,11 @@ async function graphqlInner<T>(
 
   const { res, attempt, retryT0 } = await requestWithTokenRetry(
     async () => {
-      const auth = await makeAuthHeaders(undefined, authTargetFromGraphqlVars(vars));
+      const auth = await makeAuthHeaders(undefined, {
+        target: authTargetFromGraphqlVars(vars),
+        appEligible: isAppEligibleGraphql(query),
+        resource: "graphql",
+      });
       authSource = auth.source;
       credentialFingerprint = auth.fingerprint;
       return githubFetch(url, {

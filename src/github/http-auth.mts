@@ -3,6 +3,7 @@ import { execFile as execFileCb } from "node:child_process";
 import { promisify } from "node:util";
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import { currentAuthTarget, type AuthTarget } from "./auth-target.mts";
+import { _resetAppQuota, isAppExhausted, type AppResource } from "./app-quota.mts";
 import { _resetGithubApps, findGithubApp } from "./github-app-config.mts";
 import {
   _resetAppTokens,
@@ -28,6 +29,7 @@ export function _resetTokenCache(): void {
   _tokenSource = undefined;
   _resetGithubApps();
   _resetAppTokens();
+  _resetAppQuota();
 }
 
 export function hasCachedToken(): boolean {
@@ -87,21 +89,35 @@ async function resolveToken(): Promise<{ token: string; source: AuthSource }> {
   );
 }
 
+/** What the request is, so the credential can be chosen for it. */
+export interface AuthRequest {
+  /** The request's own repository; without one the command's auth scope decides. */
+  target?: AuthTarget;
+  /** True for identity-independent reads (see `app-eligibility.mts`). Default false. */
+  appEligible?: boolean;
+  /** Quota bucket the request draws on. Default `core`. */
+  resource?: AppResource;
+}
+
 /**
- * A configured GitHub App that covers the target repository wins over every user token. Its
- * fingerprint is a stable identity, because installation tokens rotate hourly.
+ * A configured GitHub App that covers the target repository answers eligible requests, ahead of
+ * every user token, until its installation's bucket for the resource is spent. Its fingerprint is
+ * a stable identity, because installation tokens rotate hourly.
  */
 async function resolveCredential(
+  request: AuthRequest,
   target: AuthTarget | undefined,
 ): Promise<{ token: string; source: AuthSource; fingerprint: string }> {
-  const app = target && findGithubApp(target.owner, target.repo);
+  const app = request.appEligible && target && findGithubApp(target.owner, target.repo);
   if (app) {
     const { token, appId, installationId } = await appCredential(app, target);
-    return {
-      token,
-      source: `GitHub App ${appId} (installation ${installationId})`,
-      fingerprint: credentialFingerprint(`github-app:${appId}:${installationId}`),
-    };
+    if (!isAppExhausted(installationId, request.resource ?? "core")) {
+      return {
+        token,
+        source: `GitHub App ${appId} (installation ${installationId})`,
+        fingerprint: credentialFingerprint(`github-app:${appId}:${installationId}`),
+      };
+    }
   }
   const { token, source } = await resolveToken();
   return { token, source, fingerprint: credentialFingerprint(token) };
@@ -109,18 +125,20 @@ async function resolveCredential(
 
 /**
  * `extra` lets callers layer additional headers (e.g. `If-None-Match` for
- * conditional REST requests) on top of the standard auth/version headers. `target` is the
- * request's own repository; without one the command's auth scope decides.
+ * conditional REST requests) on top of the standard auth/version headers.
  */
 export async function makeAuthHeaders(
   extra?: Record<string, string>,
-  target?: AuthTarget,
+  request: AuthRequest = {},
 ): Promise<{
   headers: Record<string, string>;
   source: AuthSource;
   fingerprint: string;
 }> {
-  const { token, source, fingerprint } = await resolveCredential(target ?? currentAuthTarget());
+  const { token, source, fingerprint } = await resolveCredential(
+    request,
+    request.target ?? currentAuthTarget(),
+  );
   return {
     source,
     fingerprint,

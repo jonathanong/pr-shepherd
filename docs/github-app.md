@@ -6,7 +6,22 @@ How to poll pull requests with a GitHub App installation instead of your persona
 
 ## Why
 
-GitHub meters each credential separately ([authentication.md](authentication.md#quota-sharing)). A user token, including a PAT or `gh auth token`, draws on the user's budget, shared with every other tool that user runs. A GitHub App installation token has its own budget per installation. Shepherd can mint that token for repositories the app covers, so polling spends the installation's quota and leaves yours alone.
+GitHub meters each credential separately ([authentication.md](authentication.md#quota-sharing)). A user token, including a PAT or `gh auth token`, draws on the user's budget, shared with every other tool that user runs. A GitHub App installation token has its own budget per installation. Shepherd can mint that token for repositories the app covers, so identity-independent reads spend the installation's quota and leave yours alone.
+
+## What the app answers
+
+The app answers only requests whose answer does not depend on who is asking. Everything else always uses your own token chain, so `viewerCan*`, `viewerDidAuthor`, the viewer login, mutation authorship, and the fail-closed capability rules behave exactly as they do without the app.
+
+| Request                                                   | Credential       |
+| --------------------------------------------------------- | ---------------- |
+| REST `GET` or `HEAD` of a `/repos/{owner}/{repo}/…` route | App              |
+| Any other REST request: writes, `/user`, `/rate_limit`    | Your token chain |
+| GraphQL query that selects no viewer-relative field       | App              |
+| GraphQL mutation, or a document with any `viewer…` token  | Your token chain |
+
+A GraphQL document is viewer-relative when, after comments are stripped, it contains a word starting with `viewer` (`viewer {`, `viewerCan*`, `viewerDidAuthor`, `viewerPermission`, `viewerLatestReview`) or a `…ByViewer` field. Shepherd decides from the document text at request time.
+
+In practice the app absorbs CI and check pages, check annotations, Actions jobs and logs, ruleset and merge-policy reads, base-behind compares, PR body and head SHA reads, and the REST change detectors that make idle waits cheap. The main `BatchPr` query selects viewer fields, so it stays on your token, as do the stack summary and topology reads and review-thread reads. A normal one-PR GraphQL tick is one `BatchPr` point, so most of your GraphQL spend does not move; the app mainly takes REST `core` load and the occasional follow-up page. Splitting the viewer fields out of `BatchPr` would move more and is possible future work.
 
 The setting is user-level only. Shepherd reads it from `~/.pr-shepherd/`, never from the repository's `.pr-shepherdrc.yml`.
 
@@ -21,20 +36,20 @@ The setting is user-level only. Shepherd reads it from `~/.pr-shepherd/`, never 
 
 ### Permissions
 
-Shepherd derives these from the requests it makes. Required means a PR cannot be read or acted on without it.
+The app only reads, so it needs no write permission. Grant every read permission below: a request the app answers that lacks one fails with a permission error instead of falling back.
 
-| Permission      | Access         | Required | Used for                                                                                                                                                                                 |
-| --------------- | -------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Metadata        | Read           | Yes      | Repository identity. GitHub grants it automatically.                                                                                                                                     |
-| Pull requests   | Read and write | Yes      | PR state, files, review threads, and the review mutations: replies, resolves, dismissals, mark ready, mark files viewed, PR body updates, enqueue and dequeue, REST merge.               |
-| Contents        | Read           | Yes      | Commit, branch, and ref context behind the PR.                                                                                                                                           |
-| Checks          | Read           | Yes      | Check runs, check suites, and their annotations in the status rollup.                                                                                                                    |
-| Commit statuses | Read           | Yes      | Third-party status contexts in the rollup.                                                                                                                                               |
-| Actions         | Read           | Yes      | Workflow runs, jobs, and job logs for failing checks.                                                                                                                                    |
-| Issues          | Read and write | Yes      | PR conversation comments (issue-comment APIs) read, reply, and minimize.                                                                                                                 |
-| Administration  | Read           | No       | Branch protection and rulesets. Without it Shepherd treats those fields as not visible and still reports READY from merge state, CI, and feedback; a required-reviews rule is not shown. |
+| Permission      | Access | Required | Used for                                                                                                                                 |
+| --------------- | ------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Metadata        | Read   | Yes      | Repository identity. GitHub grants it automatically.                                                                                     |
+| Pull requests   | Read   | Yes      | PR body, head SHA, branch lookup, merge policy, and REST PR reads.                                                                       |
+| Contents        | Read   | Yes      | Commit, branch, and base-behind compare reads.                                                                                           |
+| Checks          | Read   | Yes      | Check runs, check suites, and annotations.                                                                                               |
+| Commit statuses | Read   | Yes      | Third-party status contexts in the rollup.                                                                                               |
+| Actions         | Read   | Yes      | Workflow runs, jobs, and job logs for failing checks.                                                                                    |
+| Issues          | Read   | Yes      | REST change detectors and reads of PR conversation comments (`/issues/{n}/comments`).                                                    |
+| Administration  | Read   | No       | Branch protection and rulesets. Without it those fields are not visible to the app; Shepherd treats them as unavailable and keeps going. |
 
-Shepherd never reruns or cancels workflow runs through the API, so the app does not need Actions write. The `gh run rerun` commands it prints run under your own `gh` login.
+Replies, resolves, dismissals, mark ready, minimizing, merging, and the `gh run rerun` commands Shepherd prints all run under your own token, so none of them needs an app permission.
 
 ## 2. Create and store a private key
 
@@ -77,28 +92,33 @@ Unknown keys, wrong types, empty lists, and malformed patterns are errors that n
 
 ## Precedence
 
-For each GitHub request Shepherd finds the repository it targets: the request's own repository, or the repository the command was started for. If an app's `repositories` match it, the installation token is used, ahead of `GH_TOKEN`, `GITHUB_TOKEN`, and `gh auth token`. Every other repository uses the token order in [authentication.md](authentication.md#token-resolution), unchanged.
+For each eligible GitHub request Shepherd finds the repository it targets: the request's own repository, or the repository the command was started for. If an app's `repositories` match it, the installation token is used, ahead of `GH_TOKEN`, `GITHUB_TOKEN`, and `gh auth token`. Every other request, and every other repository, uses the token order in [authentication.md](authentication.md#token-resolution), unchanged.
 
-A matched repository never falls back to your user token. If the app is not installed there, or the key cannot be read, Shepherd exits `77` and names the app ID, the repository, and the fix: install the app on that account, or correct `private-key-file`. Falling back would quietly spend the quota you configured the app to protect.
+A matched repository never falls back to your user token because of a setup problem. If the app is not installed there, or the key cannot be read, Shepherd exits `77` and names the app ID, the repository, and the fix: install the app on that account, or correct `private-key-file`. If GitHub answers `429` or `5xx` while Shepherd looks up or mints the installation token, it exits `75`, which means retry later.
 
 Installation tokens last an hour. Shepherd keeps them in memory, refreshes one five minutes before it expires, and re-mints it after a `401`.
 
-## Identity consequences
+## When the app's quota runs out
 
-Under an installation token, GitHub's `viewer` is the app's bot account:
+If an app-authenticated request hits the installation's primary rate limit (a `403` or `429` with an empty bucket, or a GraphQL `RATE_LIMITED` error), Shepherd:
 
-- `viewerCan*` capability fields describe the app's permissions, so generated mutations follow what the app may do, under the existing fail-closed rules.
-- Replies, resolves, minimizes, dismissals, and mark-ready are authored by the app.
-- Threads authored by the viewer are the bot's. Your own review threads are treated as ordinary human threads.
-- The REST `/user` identity read is denied for installation tokens; Shepherd tolerates that and treats the login as unknown.
-- The `gh` commands Shepherd prints for you to run use your own `gh` login, not the app.
+1. Marks that installation exhausted for that resource until GitHub's reset time. GraphQL and REST `core` are separate buckets, so a GraphQL exhaustion does not divert REST.
+2. Retries the request once with your token chain.
+3. Sends later requests for that resource straight to your token until the reset passes, then returns to the app.
+4. Notes it once in the debug log (`pr-shepherd admin log-file`).
+
+Secondary (abuse) rate limits never trigger this. If your token is also exhausted, the existing transport fallback (GraphQL to REST) applies as usual. The GitHub API usage section lists both credential sources when both were used.
+
+## Identity
+
+Nothing is authored by the app. Because writes and viewer-relative reads use your token, `viewer` is you, `viewerCan*` describes your permissions, replies, resolves, minimizes, dismissals, and mark-ready are yours, and your own review threads are `viewerDidAuthor` threads, exactly as without the app. The `gh` commands Shepherd prints also run under your own `gh` login.
 
 ## Verify
 
-Run Shepherd with `--verbose` on a covered repository and read the **GitHub API usage** section. The credential source names the app and installation:
+Run Shepherd with `--verbose` on a covered repository and read the **GitHub API usage** section. The credential sources name the app and installation next to your own token, because the app answers only part of the traffic:
 
 ```
-- Credential source: `GitHub App 123456 (installation 7890123)`
+- Credential source: `GitHub App 123456 (installation 7890123)`, `gh auth token`
 ```
 
-The same value is in the JSON `apiUsage.credentialSources`. A repository that is not covered shows its usual source, such as `gh auth token`.
+The same value is in the JSON `apiUsage.credentialSources`. A repository that is not covered shows only its usual source.
