@@ -43,4 +43,38 @@ instead of one command naming both.`,
       "skill-fired": skillFired,
     },
   },
+  // Case 63: a one-time status question. The skill routes it to a single
+  // `pr-shepherd iterate` tick that is reported and not acted on. The failure
+  // modes are gh lookups that spend quota without Shepherd's rollup, and an
+  // `--until-terminal` run that keeps polling and acting when only a report
+  // was asked for.
+  {
+    slug: "63-status-question-one-tick",
+    tier: "discriminating",
+    area: "loop",
+    fixture: null,
+    plan: true,
+    tags: ["status", "efficiency"],
+    prompt: `What's the status of https://github.com/owner/repo/pull/41? Is CI passing,
+and is anything blocking it from merging?`,
+    graders: {
+      "one-iterate-tick": regex(
+        // `pr-shepherd … iterate … 41` on one command line, in either order of
+        // subcommand and PR.
+        String.raw`pr-shepherd\b(?=[^\n;&|]*\biterate\b)(?=[^\n;&|]*\b41\b)`,
+      ),
+      "reports-without-acting": llm(
+        `The plan answers the status question with one \`pr-shepherd iterate\` run for
+#41, then reports what it shows (CI state, blockers, review state) and stops.
+
+Failing responses do any of: run \`pr-shepherd … --until-terminal\` or rerun
+Shepherd to keep watching; look the PR up with \`gh pr view\`, \`gh pr checks\`,
+\`gh api\`, \`gh api graphql\` or \`curl\` instead of or alongside Shepherd; write
+a polling loop, \`sleep\`, or watcher; act on Shepherd's printed instructions by
+changing code, committing, pushing, rerunning CI, replying to or resolving review
+threads, marking the PR ready, or merging or enqueueing it.`,
+      ),
+      "skill-fired": skillFired,
+    },
+  },
 ];
