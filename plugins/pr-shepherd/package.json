@@ -4,6 +4,6 @@
   "description": "Pins the pr-shepherd package that .mcp.json launches",
   "license": "MIT",
   "dependencies": {
-    "pr-shepherd": "1.3.0"
+    "pr-shepherd": "1.4.0"
   }
 }
