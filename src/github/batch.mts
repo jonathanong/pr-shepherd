@@ -72,12 +72,17 @@ async function fetchGraphqlPrBatch<T>(
   const split = !handoff && usesViewerSplit(repo, opts);
   const result = handoff ? { data: handoff } : await readBatchFirstPage(pr, repo, opts, split);
   const raw = requireRawPr(result.data, pr, repo);
-  const fingerprint = fingerprintFromRaw(raw);
+  // A split read carries no viewer field, so its fingerprint holds the empty viewer values.
+  const fingerprint = fingerprintFromRaw(
+    raw,
+    result.data.repository?.viewerPermission ?? null,
+    result.data.viewer?.login ?? null,
+  );
   // Decide reuse from the first page alone, before any supplement is paid for.
   const reused = reuse && (await reuse(fingerprint));
   const baseTipOid = raw.baseRef?.target?.oid;
-  // Split read: the topology's viewer fields are unread here, so only the trunk rules ride along.
-  const stackEvidence = stackEvidenceFromRaw(raw, result.data, split);
+  // A split read has no viewer fields yet, so a reused tick carries only the trunk rules.
+  let stackEvidence = stackEvidenceFromRaw(raw, result.data, split);
   if (reused)
     return { reused, ...(baseTipOid && { baseTipOid }), ...(stackEvidence && { stackEvidence }) };
   const queueRateLimit = await hydrateMergeQueueChecks(raw, repo, result.rateLimit);
@@ -96,6 +101,10 @@ async function fetchGraphqlPrBatch<T>(
       comments: paged.comments,
       reviews: [...paged.reviewSummaries, ...paged.approvedReviews],
     }));
+  // The topology's viewer login and administer bit come from this snapshot's viewer read.
+  if (viewer) {
+    stackEvidence = stackEvidenceFromRaw(raw, { viewer, repository: viewer.repository });
+  }
   let receiptSummary: RawSummaryPr | null = null;
   if (opts.includeReceiptSummary) {
     try {
@@ -131,9 +140,10 @@ async function fetchGraphqlPrBatch<T>(
   return {
     data,
     fingerprint,
-    rateLimit:
-      (viewer && viewer.rateLimit) ||
-      (threadPages.rateLimit ?? paged.rateLimit ?? result.rateLimit),
+    // A split read's other samples are the app's buckets; only the viewer read is the user's.
+    rateLimit: viewer
+      ? viewer.rateLimit
+      : (threadPages.rateLimit ?? paged.rateLimit ?? result.rateLimit),
     ...(parseCheckSuitesComplete(raw) && { checkSuitesComplete: true }),
     ...(parseHeadCheckSuitesEmpty(raw) && { headCheckSuitesEmpty: true as const }),
     ...workflowSuites(raw),

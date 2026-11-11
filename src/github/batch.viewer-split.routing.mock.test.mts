@@ -121,4 +121,50 @@ describe("fetchPrBatch — viewer split paging and routing", () => {
     expect(result).toMatchObject({ reused: "cached" });
     expect(mockGraphqlWithRateLimit).toHaveBeenCalledTimes(1);
   });
+
+  it("carries the stack topology only once this snapshot's viewer read supplied its viewer", async () => {
+    app.covered = true;
+    const sha = "0".repeat(40);
+    const pr = makeRawPr({
+      baseRefName: "main",
+      stack: {
+        number: 7,
+        size: 1,
+        baseRefName: "main",
+        entries: {
+          pageInfo: { hasNextPage: false, endCursor: null },
+          nodes: [
+            {
+              position: 1,
+              pullRequest: {
+                number: 42,
+                state: "OPEN",
+                headRefName: "feature",
+                headRefOid: sha,
+                baseRefName: "main",
+                baseRefOid: sha,
+              },
+            },
+          ],
+        },
+        trunkEntry: { nodes: [] },
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValueOnce(makeResponse(pr));
+    const reused = await runWithGithubTransport("graphql", () =>
+      operation(42, REPO, {}, async () => "cached"),
+    );
+    expect(reused).toMatchObject({ reused: "cached" });
+    expect((reused as { stackEvidence?: unknown }).stackEvidence).toBeUndefined();
+
+    mockGraphqlWithRateLimit
+      .mockResolvedValueOnce(makeResponse(pr))
+      .mockResolvedValueOnce(viewerResponse([]));
+    const { stackEvidence } = await fetchPrBatch(42, REPO);
+    expect(stackEvidence?.topology).toMatchObject({
+      stackNumber: 7,
+      viewerLogin: "Me",
+      viewerCanAdminister: false,
+    });
+  });
 });

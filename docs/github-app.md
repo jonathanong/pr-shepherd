@@ -32,9 +32,15 @@ In practice the app absorbs CI and check pages, check annotations, Actions jobs 
 
 `viewerDidAuthor` on thread comments is the tick's viewer login compared, ignoring case, with the comment's author login, so it costs no per-comment IDs.
 
-The viewer read is skipped when the first page's fingerprint matches the stored one and the stored report is replayed. The fingerprint no longer includes the viewer's permission, login, or `viewerCanUpdate`: a replayed report is an idle wait with nothing to reply to, resolve, or minimize, and a changed first page runs the viewer read again. So an idle or fingerprint-reused wait tick spends no GraphQL on your token. A tick that builds a fresh snapshot (a new check result, a new comment) spends one small viewer read on your token, beside the one data read on the app.
+The viewer read is skipped when the first page's fingerprint matches the stored one and the stored report is replayed. A split read's fingerprint holds no viewer values (a combined read's still includes the viewer's permission, login, and `viewerCanUpdate`), so a token switch on the same state directory does not by itself invalidate a replayed report. A replayed report is an idle wait with nothing to reply to, resolve, or minimize, and a changed first page runs the viewer read again. So a fingerprint-reused wait tick spends no GraphQL on your token.
 
-Three cases keep the single combined `BatchPr` query on your token, because splitting would only add a request or the viewer fields are needed at once: a repository no app covers; the READY-receipt variant (a READY candidate needs the viewer fields in that tick); and a stack layer read from a stack handoff. A tick that reads a native stack's topology from the first page also drops that embedded topology when split (its viewer login and administer bit are not selected), so the standalone `PollStackTopology` read supplies it.
+Residual cost on your token:
+
+- A tick that builds a fresh snapshot (a new check result, a new comment) spends one small viewer read, because the viewer fields decide which items are actionable and are part of the report. That is one cost-1 request per 100 node IDs.
+- When the app's GraphQL bucket is exhausted, the data read goes to your token for that window ([below](#when-the-apps-quota-runs-out)), so that tick spends two requests instead of one.
+- A tick that reuses a stored report for a native-stack layer carries only the stack's trunk rules, not its topology (the topology's viewer login and administer bit are unread), so the standalone `PollStackTopology` read supplies it on your token. A snapshot tick carries the topology as before, using that tick's viewer read.
+
+Three cases keep the single combined `BatchPr` query on your token: a repository no app covers (no extra request, nothing to gain); the READY-receipt variant (a READY candidate needs the viewer fields in that tick); and a stack layer read from a stack handoff.
 
 ### GraphQL operations
 
