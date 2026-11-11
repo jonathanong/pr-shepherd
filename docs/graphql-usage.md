@@ -129,7 +129,7 @@ READY-receipt fingerprints leave the handoff fields out, so a bot editing a hidd
 
 ## Recommendations
 
-One-PR `BatchPr` is at the 1-point floor; fewer review connections, a smaller annotation probe, or fewer thread comments on it do not reduce primary quota.
+One-PR `BatchPr` is at the 1-point floor; fewer review connections, a smaller annotation probe, or fewer thread comments on it do not reduce primary quota. Below that floor, the remaining levers act on the tick, not the query: tick less often with [hook-harness events](hook-harness.md), or bill the tick to another budget with a [GitHub App](github-app.md#the-batchpr-viewer-split).
 
 Not done: a whole-stack fingerprint that skips the summary. Check rollups, mergeability, queue entries, and annotation receipts change without bumping any layer's `updatedAt`, so a safe stack fingerprint would need most of the summary.
 

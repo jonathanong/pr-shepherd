@@ -4,6 +4,8 @@ By default a poll sleeps `poll.interval-seconds` between ticks. With [hook-harne
 
 This is opt-in and changes only when ticks happen. The tick itself, its output, JSON, and exit codes are the same. Events never cause a mutation.
 
+It reduces how many ticks run. A [GitHub App](github-app.md) reduces what each tick costs your token. The two are independent and combine.
+
 ## How it works
 
 A GitHub App's webhooks reach a hook-harness relay, which keeps normalized events for one day. Shepherd polls the relay over plain HTTP, using the same credentials as `hook-harness`. It needs no extra dependency.

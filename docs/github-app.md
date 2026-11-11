@@ -8,6 +8,8 @@ How to poll pull requests with a GitHub App installation instead of your persona
 
 GitHub meters each credential separately ([authentication.md](authentication.md#quota-sharing)). A user token, including a PAT or `gh auth token`, draws on the user's budget, shared with every other tool that user runs. A GitHub App installation token has its own budget per installation. Shepherd can mint that token for repositories the app covers, so identity-independent reads spend the installation's quota and leave yours alone.
 
+The app changes what each tick costs your token. [hook-harness events](hook-harness.md) change how many ticks run. The two are independent and combine.
+
 ## What the app answers
 
 The app answers only requests whose answer does not depend on who is asking. Everything else always uses your own token chain, so `viewerCan*`, `viewerDidAuthor`, the viewer login, mutation authorship, and the fail-closed capability rules behave exactly as they do without the app.
