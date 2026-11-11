@@ -37,6 +37,7 @@ Skills are thin dispatchers. They parse arguments, call the CLI or MCP, print th
 | Branch update        | `branch-update.md`                                           |
 | Merge queue ejection | `merge-queue-ejection.md`                                    |
 | Event loop           | `event-loop.md`                                              |
+| Waiting              | `waiting.md`                                                 |
 
 Install the plugin (skills plus the version-matched MCP server) or register `pr-shepherd-mcp` yourself; see [mcp.md](mcp.md). The CLI path needs `pr-shepherd` on `PATH`.
 

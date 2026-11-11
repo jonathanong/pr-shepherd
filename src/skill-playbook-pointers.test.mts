@@ -13,7 +13,12 @@ const ALWAYS_ON_PLAYBOOKS = new Set(["Untrusted review input"]);
  * procedure that was moved out of the per-tick text.
  */
 /** Playbooks the skill's own Dispatch bullets name (quoted); the CLI never points at them. */
-const SKILL_DISPATCHED_PLAYBOOKS = new Set(["Create a PR", "Draft handoff", "MCP fallback"]);
+const SKILL_DISPATCHED_PLAYBOOKS = new Set([
+  "Create a PR",
+  "Draft handoff",
+  "MCP fallback",
+  "Waiting",
+]);
 
 function skillPlaybookHeadings(): Set<string> {
   const skillDir = new URL("plugins/pr-shepherd/skills/pr-shepherd/", rootUrl);
@@ -145,9 +150,8 @@ describe("pr-shepherd skill recurrence contract", () => {
 
   it("picks --until-terminal or the bounded poll by host capability", () => {
     expect(skill).toMatch(/Run `pr-shepherd \[PR \.\.\.\]` or `pr-shepherd stack PR`/);
-    expect(skill).toMatch(/add `--until-terminal`, run it as a background command/);
-    expect(skill).toMatch(/run the bounded command in the foreground/);
-    expect(skill).toMatch(/One watcher per selection/);
+    expect(skill).toMatch(/`--until-terminal` in the background only if its exit wakes you/);
+    expect(skill).toMatch(/else run it in the foreground/);
     expect(skill).toContain("Do not run `pr-shepherd iterate`");
   });
 

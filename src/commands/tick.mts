@@ -139,10 +139,7 @@ async function withAggregateNextCheck(
 function withoutPollingCadence(step: string): string {
   return step
     .replace(/ Recheck(?: them)? at the configured polling cadence\./g, "")
-    .replace(
-      " If this command runs as a background command that wakes you on exit, end the turn and continue when it exits.",
-      "",
-    )
+    .replace(" If a background exit wakes you, end the turn and continue then.", "")
     .replace(
       /Do not end the turn while any selected row is non-terminal: /g,
       "Keep watching every non-terminal selected row through the wake-up below: ",

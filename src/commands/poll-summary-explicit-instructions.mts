@@ -25,7 +25,7 @@ export function onlyDraftVerificationSelection(result: PollSummaryResult): boole
 
 /** Rerunning is mandatory while any selected row is non-terminal; a finished one-PR poll is not the end. */
 const KEEP_WATCHING =
-  "Do not end the turn while any selected row is non-terminal: a one-PR poll returning `CANCEL` or `ESCALATE` finishes only that row, and rows that are `CANCEL`, `ESCALATE`, or handed off do not count. If this command runs as a background command that wakes you on exit, end the turn and continue when it exits.";
+  "Do not end the turn while any selected row is non-terminal: a one-PR poll returning `CANCEL` or `ESCALATE` finishes only that row, and rows that are `CANCEL`, `ESCALATE`, or handed off do not count. If a background exit wakes you, end the turn and continue then.";
 
 export function explicitInstructions(result: PollSummaryResult, rerunCommand?: string): string[] {
   const again = rerunCommand ? `\`${rerunCommand}\`` : "this aggregate command";

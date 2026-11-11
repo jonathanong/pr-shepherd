@@ -50,7 +50,7 @@ describe("aggregate tick", () => {
     m.runPollSummary.mockResolvedValue(
       summary({
         instructions: [
-          "1. Run `cmd` again. Do not end the turn while any selected row is non-terminal: a poll finishes only that row. If this command runs as a background command that wakes you on exit, end the turn and continue when it exits.",
+          "1. Run `cmd` again. Do not end the turn while any selected row is non-terminal: a poll finishes only that row. If a background exit wakes you, end the turn and continue then.",
         ],
       }),
     );
