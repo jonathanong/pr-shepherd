@@ -169,13 +169,17 @@ Case numbers are stable. Add new cases at the end instead of renumbering.
 
 The 2×2 is skill on/off × inline/playbook `## Instructions`. Skill on/off is
 `--ablation with-without`. The instructions mode is chosen when the case is
-generated. #523 adds `iterate --instructions inline|playbook` (inline stays the
-default). Until it lands, only the scaffolding exists:
+generated. `iterate --instructions inline|playbook` (#523) picks the mode for
+the `triage` commit/push step; inline is the default. The latest result is in
+[HISTORY.md](HISTORY.md#2026-11-10-inline-vs-playbook-instructions-527). To
+rerun it:
 
 1. For each fixture to compare, add a sibling under `test-cases/fixtures/`
    whose name ends in `-playbook` and whose `input.json` adds
    `"args": ["--instructions", "playbook"]`. Then run
-   `npx vitest run test-cases -u` and review the new snapshots.
+   `npx vitest run test-cases -u` and review the new snapshots. The ten
+   `triage` fixtures behind cases `03`–`07`, `29`, `30`, `33`, `34`, `47` and
+   `53` already have one.
 2. Generate the playbook arm outside `evals/` (the default suite and its
    pruning never see it); an `--out` inside `evals/`, including through a
    symlink, is rejected. Cases without

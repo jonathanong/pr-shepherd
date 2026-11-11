@@ -1,0 +1,23 @@
+{
+  "args": ["--instructions", "playbook"],
+  "batchData": {
+    "checks": [
+      {
+        "name": "CI / build",
+        "status": "COMPLETED",
+        "conclusion": "CANCELLED",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/555",
+        "runId": "555",
+        "workflowName": "CI",
+        "jobName": "build"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

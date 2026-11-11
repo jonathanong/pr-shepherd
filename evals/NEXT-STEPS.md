@@ -3,6 +3,11 @@
 Open work for the eval suite, most recent findings first. Current results are in
 [EVALS.md](EVALS.md).
 
+Done (2026-11-10): the inline vs playbook `## Instructions` ablation (#527
+item 4) ran on the 11 `triage` commit-step cases at `runs: 6`. The modes tie
+with the skill, so inline stays the default
+([HISTORY.md](HISTORY.md#2026-11-10-inline-vs-playbook-instructions-527)).
+
 ## From the 2026-11-09 sweep (after the tier retag)
 
 1. **`43`: agents without a scheduler tell the user to set the wake-up.** At
