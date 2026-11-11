@@ -42,6 +42,7 @@ Interfaces: the MCP tools `iterate`, `apply`, `suggest`, `extract_journal`, `get
 | Custom rules in `.pr-shepherd/classification/`                                    | [actions.md](actions.md#classification-rules), [examples](../examples/classification/) |
 | Auth: `GH_TOKEN`, `GITHUB_TOKEN`, `gh auth token`, `GITHUB_PERSONAL_ACCESS_TOKEN` | [authentication.md](authentication.md)                                                 |
 | GitHub App installation tokens (`~/.pr-shepherd/github-apps.yml`)                 | [github-app.md](github-app.md)                                                         |
+| Event-driven poll waits (`events.source: hook-harness`)                           | [hook-harness.md](hook-harness.md)                                                     |
 | `PR_SHEPHERD_STATE_DIR`, `PR_SHEPHERD_LOG_DISABLED`, `PR_SHEPHERD_LOG_MAX_BODY`   | [configuration.md](configuration.md#environment-variables)                             |
 
 ## Workflow assumptions
