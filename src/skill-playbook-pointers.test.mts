@@ -131,7 +131,9 @@ describe("CLI instruction pointers name real pr-shepherd skill playbooks", () =>
     );
     for (const name of SKILL_DISPATCHED_PLAYBOOKS) {
       expect(headings.has(name), `missing playbook "${name}"`).toBe(true);
-      expect(skill, `SKILL.md never names "${name}"`).toContain(`"${name}" playbook`);
+      expect(skill, `SKILL.md never names "${name}"`).toMatch(
+        new RegExp(`"${name}" playbook|\\[${name}\\]\\(references/`),
+      );
     }
   });
 
@@ -151,7 +153,7 @@ describe("pr-shepherd skill recurrence contract", () => {
   it("picks --until-terminal or the bounded poll by host capability", () => {
     expect(skill).toMatch(/Run `pr-shepherd \[PR \.\.\.\]` or `pr-shepherd stack PR`/);
     expect(skill).toMatch(/`--until-terminal` in the background only if its exit wakes you/);
-    expect(skill).toMatch(/else run it in the foreground/);
+    expect(skill).toMatch(/else in the foreground/);
     expect(skill).toContain("Do not run `pr-shepherd iterate`");
   });
 

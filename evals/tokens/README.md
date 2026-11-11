@@ -497,10 +497,9 @@ by how far they move the result.
   read; 8 seed requests, each detector's cold 200; and 472 later detector
   reads that all answer 304; no turn,
   assuming no check is running, for example a requested bot review; a wait on
-  running CI still spends a fingerprint point per poll), which is what the skill runs and the comparison that
-  counts; the legacy bounded CLI mode, a `--timeout 4.5m` poll called again
-  each time it returns (one turn each), which the skill no longer uses and is
-  shown only for reference; and the event arm (4 reconcile wakes of two requests each, 300 conditional
+  running CI still spends a fingerprint point per poll), which is what a host that wakes on background exit runs and the comparison that
+  counts; the bounded foreground mode, a `--timeout 4.5m` poll called again
+  each time it returns (one turn each), which the Waiting playbook uses for hosts without wake-on-exit; and the event arm (4 reconcile wakes of two requests each, 300 conditional
   requests that all answer 304). The poll declines a sleep that does not fit
   in its timeout (`poll.mts`), so with the 60s interval each bounded call runs
   5 ticks and returns after about 240s: 15 calls and 75 GraphQL points an

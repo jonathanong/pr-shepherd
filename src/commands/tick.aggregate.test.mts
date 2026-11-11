@@ -57,7 +57,7 @@ describe("aggregate tick", () => {
     const result = await runPollSummaryTick({} as never);
     const text = result.instructions!.join("\n");
     expect(text).not.toContain("Do not end the turn");
-    expect(text).not.toContain("background command");
+    expect(text).not.toContain("If a background exit wakes you");
     expect(text).toContain(
       "Keep watching every non-terminal selected row through the wake-up below: a poll",
     );
