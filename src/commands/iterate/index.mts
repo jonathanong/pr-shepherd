@@ -105,6 +105,10 @@ async function runIterateCore(
     checkContext,
   );
   tick.report = report;
+  if (opts.eventTargetSink) {
+    opts.eventTargetSink.headSha = report.headSha;
+    opts.eventTargetSink.headRef = report.headRefName;
+  }
 
   const [repoOwner, repoName] = report.repo.split("/");
   if (!repoOwner || !repoName) {

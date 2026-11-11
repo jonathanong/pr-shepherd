@@ -242,6 +242,27 @@
       },
       "additionalProperties": false
     },
+    "events": {
+      "default": {},
+      "type": "object",
+      "properties": {
+        "source": {
+          "default": "none",
+          "type": "string",
+          "enum": [
+            "none",
+            "hook-harness"
+          ]
+        },
+        "fallback-interval-seconds": {
+          "default": 300,
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 86400
+        }
+      },
+      "additionalProperties": false
+    },
     "apply": {
       "default": {},
       "type": "object",

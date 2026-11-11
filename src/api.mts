@@ -92,6 +92,7 @@ type IterateOptions = Omit<
   | "deferEditedCommentMarkers"
   | "fingerprintCache"
   | "stallDeadlineSink"
+  | "eventTargetSink"
   | "deferQuotaWarning"
   | "quotaWarningMinimumPollIntervalMinutes"
 >;

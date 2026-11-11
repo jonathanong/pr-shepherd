@@ -150,6 +150,12 @@ export const configSchema = z.strictObject({
       "quota-warnings": quotaWarnings.default(() => structuredClone(DEFAULT_QUOTA_WARNINGS)),
     })
     .prefault({}),
+  events: z
+    .strictObject({
+      source: z.enum(["none", "hook-harness"]).default("none"),
+      "fallback-interval-seconds": positive().max(86_400).default(300),
+    })
+    .prefault({}),
   apply: z
     .strictObject({
       "sha-poll-interval-seconds": positive().default(2),

@@ -97,6 +97,10 @@ Host examples, as of 2026-11 (they change; check the source):
 - Gemini CLI: `is_background` / `&` exists without a documented exit notification, so treat it as no wake-up.
 - Prompt cache: Anthropic's default TTL is 5 minutes, while OpenAI's retention options differ (30m, 12h, 24h), so the cache argument for 270s is Claude-specific; the tool-timeout argument applies everywhere.
 
+### Event-driven waits
+
+With `events.source: hook-harness` ([hook-harness.md](hook-harness.md)), the sleep between `WAIT` ticks becomes a wait for a matching GitHub event. A wake-up still runs a normal tick, so output, JSON, and exit codes do not change. `--verbose` prints the wake reason to stderr. If the source is unreachable, waits fall back to `poll.interval-seconds`.
+
 ### Flags
 
 | Flag                                   | Applies to                   | Default / notes                                                                                                                                                                             |
