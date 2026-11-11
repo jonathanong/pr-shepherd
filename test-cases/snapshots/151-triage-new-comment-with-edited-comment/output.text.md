@@ -13,7 +13,6 @@
 
 ### [commentId=IC_bot_summary](https://github.com/owner/repo/pull/42#issuecomment-2) (@coderabbitai · Bot) [status: minimized, edited]
 
-> <!-- walkthrough -->
 > Walkthrough updated after the latest PR description edit.
 
 ## Instructions

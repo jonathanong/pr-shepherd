@@ -7,6 +7,7 @@ import {
   BODY_TRUNCATE_MAX_CHARS,
   NESTED_BODY_TRUNCATE_MAX_CHARS,
 } from "./body-truncate.mts";
+import { displayBody } from "./display-body.mts";
 
 const BODY_PREVIEW_MAX = 100;
 
@@ -24,7 +25,7 @@ export function renderAuthor(
 }
 
 export function renderBodyPreview(body: string): string {
-  const normalizedBody = body.replace(/\r\n?/g, "\n");
+  const normalizedBody = displayBody(body);
   const firstLine = normalizedBody.split("\n")[0]?.trim() ?? "";
   return firstLine.slice(0, BODY_PREVIEW_MAX);
 }
@@ -129,7 +130,8 @@ export function renderThreadConversation(t: ThreadBulletInput, verbose = false):
 }
 
 export function blockquote(body: string, maxChars?: number, url?: string): string {
-  const text = maxChars === undefined ? body : truncateBody(body, maxChars, url);
+  // Capped review bodies show only GitHub-visible text; uncapped (`--verbose`, annotations) stay raw.
+  const text = maxChars === undefined ? body : truncateBody(displayBody(body), maxChars, url);
   return text
     .replace(/\r\n/g, "\n")
     .split("\n")
