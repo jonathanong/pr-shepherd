@@ -64,6 +64,29 @@ describe("displayBody", () => {
     ).toBe("Explain");
   });
 
+  it("keeps comment syntax in inline code spans, including unclosed backtick runs", () => {
+    expect(displayBody("Replace `<!-- old -->` with ``<!-- new -->`` <!-- hidden -->now")).toBe(
+      "Replace `<!-- old -->` with ``<!-- new -->`` now",
+    );
+    expect(displayBody("a ``x` <!-- gone --> b")).toBe("a ``x`  b");
+    // A longer backtick run inside the span does not close it.
+    expect(displayBody("``a ``` <!-- kept --> b`` <!-- gone -->")).toBe(
+      "``a ``` <!-- kept --> b``",
+    );
+  });
+
+  it("keeps an unclosed comment opener and the text after it", () => {
+    expect(displayBody("Use `<!--` to start a comment.\nThen <!-- and keep\nthis")).toBe(
+      "Use `<!--` to start a comment.\nThen <!-- and keep\nthis",
+    );
+  });
+
+  it("keeps indented code blocks verbatim but not indented paragraph continuations", () => {
+    const body = "Example:\n\n    <!-- literal -->\n\n    <!-- second -->\ntext\n    <!-- gone -->";
+    expect(displayBody(body)).toBe("Example:\n\n    <!-- literal -->\n\n    <!-- second -->\ntext");
+    expect(displayBody("\t<!-- tab code -->")).toBe("\t<!-- tab code -->");
+  });
+
   it("returns the raw body when nothing visible remains", () => {
     expect(displayBody("<!-- pr-shepherd -->")).toBe("<!-- pr-shepherd -->");
     expect(displayBody("")).toBe("");

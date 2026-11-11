@@ -6,7 +6,7 @@ const PICTURE_RE = /<picture>[\s\S]*?<\/picture>/g;
 const EMPTY_ANCHOR_RE = /<a\s[^>]*>\s*<\/a>/g;
 
 function fenceMarker(line: string): string | null {
-  const match = /^\s*(`{3,}|~{3,})/.exec(line);
+  const match = /^ {0,3}(`{3,}|~{3,})/.exec(line);
   return match ? match[1]! : null;
 }
 
@@ -15,59 +15,114 @@ function closesFence(line: string, fence: string): boolean {
   return trimmed.length >= fence.length && [...trimmed].every((c) => c === fence[0]);
 }
 
-/** Removes `<!-- … -->` spans from `line`, carrying an open comment across lines. */
-function stripComments(line: string, inComment: boolean): { text: string; inComment: boolean } {
-  let text = "";
-  let rest = line;
-  let open = inComment;
-  while (rest.length > 0) {
-    if (open) {
-      const end = rest.indexOf(COMMENT_CLOSE);
-      if (end === -1) return { text, inComment: true };
-      rest = rest.slice(end + COMMENT_CLOSE.length);
-      open = false;
-    } else {
-      const start = rest.indexOf(COMMENT_OPEN);
-      if (start === -1) return { text: text + rest, inComment: false };
-      text += rest.slice(0, start);
-      rest = rest.slice(start + COMMENT_OPEN.length);
-      open = true;
+const isIndented = (line: string) => /^(?: {4}|\t)/.test(line);
+const isBlank = (line: string) => line.trim() === "";
+
+/**
+ * Marks lines GitHub renders as code: fenced blocks and indented blocks (which start after a
+ * blank line and continue through indented or blank lines).
+ */
+function codeLines(lines: string[]): boolean[] {
+  const code: boolean[] = [];
+  let fence: string | null = null;
+  let indented = false;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (fence) {
+      code.push(true);
+      if (closesFence(line, fence)) fence = null;
+      continue;
     }
+    fence = fenceMarker(line);
+    // A blank line ends `indented`, but the next indented line restarts it (blank line before).
+    indented = isIndented(line) && (indented || i === 0 || isBlank(lines[i - 1]!));
+    code.push(fence !== null || (indented && !isBlank(line)));
   }
-  return { text, inComment: open };
+  return code;
+}
+
+/** Index just past the inline code span opening at `i`, or -1 when its backticks never close. */
+function codeSpanEnd(text: string, i: number): number {
+  let n = 0;
+  while (text[i + n] === "`") n++;
+  const run = "`".repeat(n);
+  let at = text.indexOf(run, i + n);
+  while (at !== -1) {
+    let len = 0;
+    while (text[at + len] === "`") len++;
+    if (len === n) return at + n;
+    at = text.indexOf(run, at + len);
+  }
+  return -1;
+}
+
+/** Removes closed `<!-- … -->` comments outside inline code spans; unclosed openers stay literal. */
+function stripComments(text: string): string {
+  let out = "";
+  let i = 0;
+  while (i < text.length) {
+    if (text[i] === "`") {
+      let n = 0;
+      while (text[i + n] === "`") n++;
+      const end = codeSpanEnd(text, i);
+      const next = end === -1 ? i + n : end;
+      out += text.slice(i, next);
+      i = next;
+      continue;
+    }
+    if (text.startsWith(COMMENT_OPEN, i)) {
+      const close = text.indexOf(COMMENT_CLOSE, i + COMMENT_OPEN.length);
+      if (close !== -1) {
+        i = close + COMMENT_CLOSE.length;
+        continue;
+      }
+    }
+    out += text[i];
+    i++;
+  }
+  return out;
+}
+
+/** Strips one run of non-code lines and returns its lines. */
+function visibleLines(run: string[]): string[] {
+  return stripComments(run.join("\n"))
+    .replace(PICTURE_RE, "")
+    .replace(EMPTY_ANCHOR_RE, "")
+    .split("\n")
+    .map((line) => line.trimEnd());
 }
 
 /**
- * The visible text of a GitHub Markdown body, for Markdown output: HTML comments, `<picture>`
- * image wrappers, and links left empty by them are dropped, because GitHub does not display them.
- * Fenced code is kept verbatim. Lines emptied by the removal are dropped and blank runs collapse
- * to one; a body with no visible text is returned unchanged. JSON and `--verbose` keep the raw
- * body.
+ * The visible text of a GitHub Markdown body, for Markdown output: closed HTML comments,
+ * `<picture>` image wrappers, and links left empty by them are dropped, because GitHub does not
+ * display them. Fenced and indented code and inline code spans are kept verbatim. Blank runs
+ * collapse to one; a body with no visible text is returned unchanged. JSON and `--verbose` keep
+ * the raw body.
  */
 export function displayBody(body: string): string {
+  const lines = body.replace(/\r\n?/g, "\n").split("\n");
+  const code = codeLines(lines);
   const out: string[] = [];
-  let fence: string | null = null;
-  let inComment = false;
-  for (const raw of body.replace(/\r\n?/g, "\n").split("\n")) {
-    if (fence) {
-      out.push(raw);
-      if (closesFence(raw, fence)) fence = null;
-      continue;
+  const push = (line: string) => {
+    if (isBlank(line) && (out.length === 0 || isBlank(out[out.length - 1]!))) return;
+    out.push(line);
+  };
+  let run: string[] = [];
+  const flush = () => {
+    if (run.length === 0) return;
+    for (const line of visibleLines(run)) push(line);
+    run = [];
+  };
+  lines.forEach((line, i) => {
+    if (code[i]) {
+      flush();
+      out.push(line);
+    } else {
+      run.push(line);
     }
-    if (!inComment) fence = fenceMarker(raw);
-    if (fence) {
-      out.push(raw);
-      continue;
-    }
-    const stripped = stripComments(raw, inComment);
-    inComment = stripped.inComment;
-    const text = stripped.text.replace(PICTURE_RE, "").replace(EMPTY_ANCHOR_RE, "");
-    if (text.trim() === "" && raw.trim() !== "") continue;
-    if (text.trim() === "" && out.length > 0 && out[out.length - 1]!.trim() === "") continue;
-    out.push(text.trimEnd());
-  }
-  while (out.length > 0 && out[0]!.trim() === "") out.shift();
-  while (out.length > 0 && out[out.length - 1]!.trim() === "") out.pop();
+  });
+  flush();
+  while (out.length > 0 && isBlank(out[out.length - 1]!)) out.pop();
   // A body with no visible text (only comments) stays raw rather than rendering as nothing.
   return out.length > 0 ? out.join("\n") : body;
 }
