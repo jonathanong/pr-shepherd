@@ -3,7 +3,7 @@ import { readRestRawThread } from "./rest-thread-read.mts";
 import { graphqlWithRateLimit, type RateLimitInfo } from "./client.mts";
 import { GitHubRequestError } from "./errors.mts";
 import { paginateForward } from "./pagination.mts";
-import { REVIEW_THREAD_COMMENTS_QUERY } from "./queries.mts";
+import { REVIEW_THREAD_COMMENTS_DATA_QUERY, REVIEW_THREAD_COMMENTS_QUERY } from "./queries.mts";
 import { mapPool } from "../util/pool.mts";
 import type {
   RawReviewThreadCommentsResponse,
@@ -16,6 +16,7 @@ const THREAD_COMMENT_PAGE_CONCURRENCY = 4;
 async function hydrateGraphqlThreadCommentPages(
   threads: RawThread[],
   initialRateLimit?: RateLimitInfo,
+  viewerFree = false,
 ): Promise<{ threads: RawThread[]; rateLimit?: RateLimitInfo }> {
   const gate: { rateLimit?: RateLimitInfo; exhausted: boolean; error?: unknown } = {
     rateLimit: initialRateLimit,
@@ -24,7 +25,7 @@ async function hydrateGraphqlThreadCommentPages(
   const hydrated = await mapPool(threads, THREAD_COMMENT_PAGE_CONCURRENCY, async (thread) => {
     if (gate.error !== undefined) return thread;
     try {
-      return await hydrateThreadCommentPage(thread, gate);
+      return await hydrateThreadCommentPage(thread, gate, viewerFree);
     } catch (error) {
       gate.error ??= error;
       return thread;
@@ -37,6 +38,7 @@ async function hydrateGraphqlThreadCommentPages(
 async function hydrateThreadCommentPage(
   thread: RawThread,
   gate: { rateLimit?: RateLimitInfo; exhausted: boolean; error?: unknown },
+  viewerFree: boolean,
 ): Promise<RawThread> {
   const pageInfo = thread.comments.pageInfo;
   if (!pageInfo?.hasNextPage || !pageInfo.endCursor) return thread;
@@ -50,7 +52,7 @@ async function hydrateThreadCommentPage(
       );
     }
     const res = await graphqlWithRateLimit<RawReviewThreadCommentsResponse>(
-      REVIEW_THREAD_COMMENTS_QUERY,
+      viewerFree ? REVIEW_THREAD_COMMENTS_DATA_QUERY : REVIEW_THREAD_COMMENTS_QUERY,
       {
         threadId: thread.id,
         ...(cursor ? { commentsCursor: cursor } : {}),
@@ -84,10 +86,11 @@ async function hydrateThreadCommentPage(
 export function hydrateThreadCommentPages(
   threads: RawThread[],
   initialRateLimit?: RateLimitInfo,
+  viewerFree = false,
 ): Promise<{ threads: RawThread[]; rateLimit?: RateLimitInfo }> {
   return githubOperation(
     "ReviewThreadComments",
-    () => hydrateGraphqlThreadCommentPages(threads, initialRateLimit),
+    () => hydrateGraphqlThreadCommentPages(threads, initialRateLimit, viewerFree),
     async () => ({
       threads: await mapPool(threads, THREAD_COMMENT_PAGE_CONCURRENCY, async (thread) =>
         thread.comments.pageInfo?.hasNextPage ? readRestRawThread(thread.id) : thread,

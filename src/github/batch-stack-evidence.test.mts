@@ -57,6 +57,12 @@ describe("stackEvidenceFromRaw", () => {
     });
   });
 
+  it("omits the topology from a viewer-free read, which lacks the viewer fields", () => {
+    expect(stackEvidenceFromRaw(raw(), {}, true)).toEqual({
+      trunk: { refName: "main", contexts: ["ci"], tipOid: sha(9) },
+    });
+  });
+
   it("uses a bottom layer's own base as the trunk", () => {
     const evidence = stackEvidenceFromRaw(raw({ number: 1, baseRefName: "main" }), viewer);
     expect(evidence?.trunk).toEqual({

@@ -1,6 +1,6 @@
 import { graphqlWithRateLimit, type RateLimitInfo, type RepoInfo } from "./client.mts";
 import { GitHubRequestError } from "./errors.mts";
-import { BATCH_PR_PAGE_QUERY } from "./queries.mts";
+import { BATCH_PR_PAGE_DATA_QUERY, BATCH_PR_PAGE_QUERY } from "./queries.mts";
 import { requireContextNodes } from "./batch-response.mts";
 import {
   applyIncludedPage,
@@ -18,6 +18,8 @@ export interface PaginatedBatchNodes extends PageAccumulator {
 
 export interface PaginateBatchOptions {
   paginateApprovedReviews?: boolean;
+  /** Select no viewer field, so a GitHub App can answer the follow-up pages. */
+  viewerFree?: boolean;
 }
 
 /**
@@ -62,23 +64,26 @@ export async function paginateBatchConnections(
       );
     }
 
-    const res = await graphqlWithRateLimit<RawPageResponse>(BATCH_PR_PAGE_QUERY, {
-      owner: repo.owner,
-      repo: repo.name,
-      pr,
-      includeThreads: cursors.threads !== undefined,
-      threadsCursor: cursors.threads ?? null,
-      includeComments: cursors.comments !== undefined,
-      commentsCursor: cursors.comments ?? null,
-      includeChangesRequested: cursors.changesRequested !== undefined,
-      changesRequestedCursor: cursors.changesRequested ?? null,
-      includeReviewSummaries: cursors.reviewSummaries !== undefined,
-      reviewSummariesCursor: cursors.reviewSummaries ?? null,
-      includeApprovedReviews: cursors.approvedReviews !== undefined,
-      approvedReviewsCursor: cursors.approvedReviews ?? null,
-      includeChecks: cursors.checks !== undefined,
-      checksCursor: cursors.checks ?? null,
-    });
+    const res = await graphqlWithRateLimit<RawPageResponse>(
+      opts.viewerFree === true ? BATCH_PR_PAGE_DATA_QUERY : BATCH_PR_PAGE_QUERY,
+      {
+        owner: repo.owner,
+        repo: repo.name,
+        pr,
+        includeThreads: cursors.threads !== undefined,
+        threadsCursor: cursors.threads ?? null,
+        includeComments: cursors.comments !== undefined,
+        commentsCursor: cursors.comments ?? null,
+        includeChangesRequested: cursors.changesRequested !== undefined,
+        changesRequestedCursor: cursors.changesRequested ?? null,
+        includeReviewSummaries: cursors.reviewSummaries !== undefined,
+        reviewSummariesCursor: cursors.reviewSummaries ?? null,
+        includeApprovedReviews: cursors.approvedReviews !== undefined,
+        approvedReviewsCursor: cursors.approvedReviews ?? null,
+        includeChecks: cursors.checks !== undefined,
+        checksCursor: cursors.checks ?? null,
+      },
+    );
     rateLimit = res.rateLimit ?? rateLimit;
 
     const pr2 = res.data.repository.pullRequest;

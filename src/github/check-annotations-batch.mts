@@ -4,6 +4,7 @@ import {
   isGithubReadFallbackError,
 } from "./transport.mts";
 import { mapPool } from "../util/pool.mts";
+import { chunksOf } from "../util/chunks.mts";
 import { ensureRestCheckIdentities } from "./rest-annotation-read.mts";
 import { pollRateLimitRetryAfterMs } from "../commands/poll-quota.mts";
 import type { CheckAnnotation } from "../types.mts";
@@ -39,14 +40,6 @@ interface RawBatchNode {
     pageInfo: { hasNextPage: boolean; endCursor: string | null };
     nodes: RawCheckAnnotation[];
   };
-}
-
-function chunksOf<T>(items: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let index = 0; index < items.length; index += size) {
-    chunks.push(items.slice(index, index + size));
-  }
-  return chunks;
 }
 
 function retryableRateLimit(err: unknown): boolean {
