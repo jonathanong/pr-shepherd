@@ -115,8 +115,8 @@ Fewer requests help on both tiers. The GitHub MCP server issues one or more REST
 
 Two optional setups take most of the remaining spend off your token. They are independent and combine:
 
-- **[GitHub App](docs/github-app.md):** reads whose answer does not depend on who asks go to an app installation, which has its own budget. On a live PR, one tick's user-token GraphQL dropped from a 3,135-node read to a 4-node viewer read, and a tick that reuses the stored report spends none. Six ticks went from 7 user-token requests (21,945 nodes) to 2 (8 nodes).
-- **[hook-harness events](docs/hook-harness.md):** a poll waits for a GitHub webhook event about the PR instead of sleeping a fixed interval. A quiet PR ticks every 5 minutes (`events.fallback-interval-seconds`) instead of every minute, and a push or check result still wakes it within seconds. Events never make ticks more frequent than plain polling.
+- **[GitHub App](docs/github-app.md):** reads whose answer does not depend on who asks go to an app installation, which has its own budget. On a live PR, one tick's user-token GraphQL dropped from a 3,135-node read to a 4-node viewer read, and a tick that reuses the stored report spends none, except that a native-stack layer still reads `PollStackTopology` on your token. Six ticks went from 7 user-token requests (21,945 nodes) to 2 (8 nodes). READY-receipt reads, stack summaries, and ticks while the app's quota is spent stay on your token ([details](docs/github-app.md#the-batchpr-viewer-split)).
+- **[hook-harness events](docs/hook-harness.md):** a poll waits for a GitHub webhook event about the PR instead of sleeping a fixed interval. A quiet PR ticks every 5 minutes (`events.fallback-interval-seconds`) instead of every minute. A push or check result wakes it after a 10-second settle, but never sooner than `poll.interval-seconds` after the previous tick began, so up to about a minute at the default interval. Events never make ticks more frequent than plain polling.
 
 Per session, assumed and deterministic, from the [token bench](evals/tokens/README.md):
 
