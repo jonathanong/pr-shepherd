@@ -1,0 +1,3 @@
+# Dogfood scratch for #544
+
+Temporary file for testing hook-harness event waits. Do not merge.
