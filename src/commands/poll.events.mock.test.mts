@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IterateResult } from "../types.mts";
 import type { EventTransport, TransportResult } from "../events/types.mts";
-
 vi.mock("./iterate/index.mts", () => ({ runIterate: vi.fn() }));
 vi.mock("../config/load.mts", () => ({
   loadConfig: () => ({
