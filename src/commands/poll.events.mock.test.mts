@@ -95,6 +95,14 @@ describe("runPoll with hook-harness events", () => {
     expect(transport.close).toHaveBeenCalledOnce();
   });
 
+  it("says it is waiting for an event in --quiet-status mode too", async () => {
+    mockRunIterate.mockResolvedValue(result("wait"));
+    const done = runPoll({ ...base, timeoutSeconds: 100, quietStatus: true });
+    await vi.advanceTimersByTimeAsync(100_000);
+    await done;
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining("— waiting for an event\n"));
+  });
+
   it("waits out a short window for events instead of giving up early, then returns the last wait", async () => {
     mockRunIterate.mockResolvedValue(result("wait"));
     const done = runPoll({ ...base, timeoutSeconds: 100 });

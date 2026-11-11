@@ -38,7 +38,7 @@ Shepherd stores no URL or token. It resolves the source in this order:
 2. `HOOK_HARNESS_URL` and `HOOK_HARNESS_TOKEN`, each overriding the matching field below.
 3. `client.json` from `HOOK_HARNESS_CONFIG_DIR`, else `$XDG_CONFIG_HOME/hook-harness`, else `~/.config/hook-harness`.
 
-If nothing resolves, or a URL is not `http(s)`, the poll fails at startup with a config error that names the login command. Tokens are never logged.
+If nothing resolves, a URL is not `http(s)`, or a token would go over plain `http` to a host other than loopback, the poll fails at startup with a config error that names the login command. Tokens are never logged.
 
 Each relay read costs the owner's whole partition. When more than three to five watchers run at once, run one `hook-harness serve` and point `HOOK_HARNESS_SOURCE` at it. A serve source covers only its own owner.
 

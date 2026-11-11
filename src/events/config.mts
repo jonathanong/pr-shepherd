@@ -31,16 +31,26 @@ function readSaved(env: NodeJS.ProcessEnv): { url?: string; token?: string } {
   }
 }
 
-function checkedUrl(url: string, origin: string): string {
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/** An http(s) URL; one that carries a bearer token must be https unless it is loopback. */
+function checkedUrl(url: string, origin: string, token: string): string {
   let protocol: string | undefined;
+  let hostname = "";
   try {
-    protocol = new URL(url).protocol;
+    ({ protocol, hostname } = new URL(url));
   } catch {
     protocol = undefined;
   }
   if (protocol !== "http:" && protocol !== "https:") {
     throw new ShepherdError(
       `events.source is hook-harness but ${origin} is not an http(s) URL.`,
+      EXIT.CONFIG,
+    );
+  }
+  if (token && protocol === "http:" && !LOOPBACK_HOSTS.has(hostname)) {
+    throw new ShepherdError(
+      `events.source is hook-harness but ${origin} would send a token over plain http to a non-loopback host; use https.`,
       EXIT.CONFIG,
     );
   }
@@ -55,11 +65,8 @@ function checkedUrl(url: string, origin: string): string {
 export function resolveEventsSource(env: NodeJS.ProcessEnv = process.env): EventsSourceConfig {
   const source = env["HOOK_HARNESS_SOURCE"];
   if (source) {
-    return {
-      kind: "serve",
-      url: checkedUrl(source, "HOOK_HARNESS_SOURCE"),
-      token: env["HOOK_HARNESS_SOURCE_TOKEN"] ?? "",
-    };
+    const token = env["HOOK_HARNESS_SOURCE_TOKEN"] ?? "";
+    return { kind: "serve", url: checkedUrl(source, "HOOK_HARNESS_SOURCE", token), token };
   }
   const saved = readSaved(env);
   const url = env["HOOK_HARNESS_URL"] || saved.url;
@@ -70,5 +77,5 @@ export function resolveEventsSource(env: NodeJS.ProcessEnv = process.env): Event
       EXIT.CONFIG,
     );
   }
-  return { kind: "relay", url: checkedUrl(url, "the hook-harness relay URL"), token };
+  return { kind: "relay", url: checkedUrl(url, "the hook-harness relay URL", token), token };
 }

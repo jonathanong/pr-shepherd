@@ -54,6 +54,25 @@ describe("resolveEventsSource", () => {
     ).toEqual({ kind: "serve", url: "http://127.0.0.1:7391", token: "s3" });
   });
 
+  it("refuses to send a token over plain http to a non-loopback host", () => {
+    const relay = (url: string) => () =>
+      resolveEventsSource({
+        HOOK_HARNESS_URL: url,
+        HOOK_HARNESS_TOKEN: "hh_x",
+        HOOK_HARNESS_CONFIG_DIR: "/nonexistent-hh-dir",
+      });
+    expect(relay("http://relay.example")).toThrow("plain http to a non-loopback host");
+    expect(relay("http://localhost:9000")().url).toBe("http://localhost:9000");
+    expect(relay("http://[::1]:9000")().url).toBe("http://[::1]:9000");
+    expect(() =>
+      resolveEventsSource({
+        HOOK_HARNESS_SOURCE: "http://box.lan:7391",
+        HOOK_HARNESS_SOURCE_TOKEN: "s",
+      }),
+    ).toThrow("plain http to a non-loopback host");
+    expect(resolveEventsSource({ HOOK_HARNESS_SOURCE: "http://box.lan:7391" }).token).toBe("");
+  });
+
   it("uses the relay URL and token from the environment", () => {
     expect(
       resolveEventsSource({

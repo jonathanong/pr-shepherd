@@ -35,6 +35,7 @@ function writeQuietStatus(
   elapsedSeconds: number,
   sleepSeconds: number,
   result: WaitResult,
+  viaEvents: boolean,
 ): void {
   const activeChecks = result.inProgressChecks ?? [];
   const activeCheckText = activeChecks.map((c) => `${c.name} (${c.status})`).join(", ");
@@ -46,7 +47,7 @@ function writeQuietStatus(
   const reviewRoundSeg = reviewRounds > 0 ? ` · ${reviewRounds} review rounds` : "";
   const reviewSeg = reviewItems > 0 ? ` · ${reviewItems} review items since latest commit` : "";
   process.stderr.write(
-    `[poll tick ${tick} / +${elapsedSeconds}s] WAIT ${result.status}/${result.mergeStateStatus}/${result.reviewDecision ?? "NO_REVIEW_DECISION"}${active}${commitSeg}${reviewRoundSeg}${reviewSeg} — sleeping ${sleepSeconds}s\n`,
+    `[poll tick ${tick} / +${elapsedSeconds}s] WAIT ${result.status}/${result.mergeStateStatus}/${result.reviewDecision ?? "NO_REVIEW_DECISION"}${active}${commitSeg}${reviewRoundSeg}${reviewSeg} — ${viaEvents ? "waiting for an event" : `sleeping ${sleepSeconds}s`}\n`,
   );
 }
 
@@ -77,7 +78,7 @@ export function writeWaitProgress(opts: {
   }
   const signature = waitSignature(opts.result);
   if (signature !== opts.lastWaitSignature) {
-    writeQuietStatus(opts.tick, elapsedSeconds, sleepSeconds, opts.result);
+    writeQuietStatus(opts.tick, elapsedSeconds, sleepSeconds, opts.result, opts.viaEvents === true);
   }
   return signature;
 }

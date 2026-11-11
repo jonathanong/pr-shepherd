@@ -21,4 +21,18 @@ describe("createSseParser", () => {
     expect(parse("bogus\ndata\n\n")).toEqual([{ event: "message", data: "" }]);
     expect(parse("data:x\n\n")).toEqual([{ event: "message", data: "x" }]);
   });
+
+  it("keeps a CRLF split across chunks as one line break", () => {
+    const parse = createSseParser();
+    expect(parse("event: gap\r")).toEqual([]);
+    expect(parse("\ndata: x\r\n\r\n")).toEqual([{ event: "gap", data: "x" }]);
+  });
+
+  it("throws on an unterminated line or a frame over 1 MiB", () => {
+    expect(() => createSseParser()("x".repeat(1024 * 1024 + 1))).toThrow("SSE line exceeds 1 MiB");
+    const parse = createSseParser();
+    const line = `data: ${"y".repeat(600 * 1024)}\n`;
+    expect(parse(line)).toEqual([]);
+    expect(() => parse(line)).toThrow("SSE frame exceeds 1 MiB");
+  });
 });
