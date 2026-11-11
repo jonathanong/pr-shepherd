@@ -1,4 +1,4 @@
-import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
+import { graphqlWithRateLimit, type RateLimitInfo, type RepoInfo } from "./client.mts";
 import { BATCH_PR_DATA_QUERY, BATCH_PR_QUERY, BATCH_PR_RECEIPT_QUERY } from "./queries.mts";
 import { findGithubApp } from "./github-app-config.mts";
 import {
@@ -40,7 +40,7 @@ export async function readBatchFirstPage(
   repo: RepoInfo,
   opts: FirstPageOptions,
   split: boolean,
-) {
+): Promise<{ data: RawBatchResponse; rateLimit?: RateLimitInfo }> {
   const variables = { owner: repo.owner, repo: repo.name, pr };
   // The data read goes to the App; `applyBatchViewer` reads the viewer fields on the user's token.
   if (split) return graphqlWithRateLimit<RawBatchResponse>(BATCH_PR_DATA_QUERY, variables);
