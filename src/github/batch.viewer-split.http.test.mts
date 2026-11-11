@@ -22,7 +22,7 @@ const rateLimit = {
 };
 
 /** Serve BatchPr reads and record which credential asked for which operation. */
-function serveBatchPr(): Array<{ operation: string; auth: string }> {
+function serveBatchPr(viewerErrors?: unknown[]): Array<{ operation: string; auth: string }> {
   route();
   const base = fetchMock.getMockImplementation()!;
   const seen: Array<{ operation: string; auth: string }> = [];
@@ -37,10 +37,15 @@ function serveBatchPr(): Array<{ operation: string; auth: string }> {
         ? {
             viewer: { login: "me" },
             repository: { viewerPermission: "WRITE", viewerCanAdminister: true },
-            nodes: [{ id: "PR_kgDOAAA", viewerCanUpdate: true }],
+            nodes: viewerErrors
+              ? [null, { id: "PR_kgDOAAA", viewerCanUpdate: true }]
+              : [{ id: "PR_kgDOAAA", viewerCanUpdate: true }],
           }
         : makeResponse(makeRawPr()).data;
-    return json(200, { data: { ...body, _shepherdRateLimit: rateLimit } });
+    return json(200, {
+      data: { ...body, _shepherdRateLimit: rateLimit },
+      ...(operation === "BatchPrViewer" && viewerErrors && { errors: viewerErrors }),
+    });
   });
   return seen;
 }
@@ -71,5 +76,18 @@ describe("BatchPr viewer split at the HTTP boundary", () => {
       fetchPrBatch(1, { owner: "elsewhere", name: "widgets" }, {}),
     );
     expect(seen).toEqual([{ operation: "BatchPr", auth: "Bearer user-token" }]);
+  });
+
+  it("keeps the viewer fields it did get when one id no longer resolves (NOT_FOUND)", async () => {
+    serveBatchPr([
+      {
+        type: "NOT_FOUND",
+        path: ["nodes", 0],
+        message: "Could not resolve to a node with the global id of 'X'",
+      },
+    ]);
+    const snapshot = await runWithGithubTransport("graphql", () => fetchPrBatch(1, REPO, {}));
+    const { data } = snapshot as { data: { viewerAuthorization?: { viewerCanUpdate?: boolean } } };
+    expect(data.viewerAuthorization?.viewerCanUpdate).toBe(true);
   });
 });

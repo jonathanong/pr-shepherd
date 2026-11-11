@@ -3,6 +3,7 @@ import { githubOperation, runWithGithubTransport } from "./transport.mts";
 import { fetchRestPrBatch } from "./rest-batch-read.mts";
 import type { RateLimitInfo, RepoInfo } from "./client.mts";
 import { hydrateThreadCommentPages } from "./thread-comments.mts";
+import { makeAuthHeaders } from "./http-auth.mts";
 import { readBatchFirstPage, usesViewerSplit } from "./batch-first-page.mts";
 import { applyBatchViewer } from "./batch-viewer.mts";
 import { prepareBatchReceiptEvidence } from "./batch-receipt-evidence.mts";
@@ -69,14 +70,15 @@ async function fetchGraphqlPrBatch<T>(
   const handoff = await takeStackHandoff(repo, pr); // a routed stack layer's first read
   // The READY receipt sibling and a stack handoff carry viewer fields in the same document, and
   // a READY candidate needs them anyway, so those reads stay combined on the user's token.
-  const split = !handoff && usesViewerSplit(repo, opts);
+  const split = !handoff && (await usesViewerSplit(repo, opts));
   const result = handoff ? { data: handoff } : await readBatchFirstPage(pr, repo, opts, split);
   const raw = requireRawPr(result.data, pr, repo);
-  // A split read carries no viewer field, so its fingerprint holds the empty viewer values.
+  // A split read carries no viewer field, so its fingerprint holds the user token's identity in
+  // place of the viewer login: another token never matches a stored one.
   const fingerprint = fingerprintFromRaw(
     raw,
     result.data.repository?.viewerPermission ?? null,
-    result.data.viewer?.login ?? null,
+    result.data.viewer?.login ?? (split ? `token:${(await makeAuthHeaders()).fingerprint}` : null),
   );
   // Decide reuse from the first page alone, before any supplement is paid for.
   const reused = reuse && (await reuse(fingerprint));

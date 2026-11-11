@@ -1,6 +1,8 @@
 import { graphqlWithRateLimit, type RateLimitInfo, type RepoInfo } from "./client.mts";
 import { BATCH_PR_DATA_QUERY, BATCH_PR_QUERY, BATCH_PR_RECEIPT_QUERY } from "./queries.mts";
 import { findGithubApp } from "./github-app-config.mts";
+import { appCredential } from "./github-app-token.mts";
+import { isAppExhausted } from "./app-quota.mts";
 import {
   GitHubRequestError,
   isRetryableGraphQlResourceLimit,
@@ -16,11 +18,16 @@ interface FirstPageOptions {
 /**
  * Whether this tick reads `BatchPr` viewer-free and the viewer fields apart. A GitHub App
  * answers only viewer-free documents, so the split is worth its extra request only when one
- * covers the repository. Without an App the single combined query stays. The READY receipt
+ * covers the repository and its GraphQL bucket has quota. Without an App the single combined query stays. The READY receipt
  * sibling stays combined too: a READY candidate needs the viewer fields in that tick anyway.
  */
-export function usesViewerSplit(repo: RepoInfo, opts: FirstPageOptions): boolean {
-  return !opts.includeReceiptSummary && findGithubApp(repo.owner, repo.name) !== undefined;
+export async function usesViewerSplit(repo: RepoInfo, opts: FirstPageOptions): Promise<boolean> {
+  const app = opts.includeReceiptSummary ? undefined : findGithubApp(repo.owner, repo.name);
+  if (!app) return false;
+  // An exhausted installation sends the data read to the user's token, so splitting would add a
+  // user-token request: use the combined query until the bucket resets.
+  const { installationId } = await appCredential(app, { owner: repo.owner, repo: repo.name });
+  return !isAppExhausted(installationId, "graphql");
 }
 
 function onlyReceiptSummaryErrors(errors?: GitHubGraphQlError[]): boolean {

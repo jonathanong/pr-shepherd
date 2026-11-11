@@ -1,8 +1,11 @@
 import { graphqlWithRateLimit, type RateLimitInfo, type RepoInfo } from "./client.mts";
+import { mapPool } from "../util/pool.mts";
+import { chunksOf } from "../util/chunks.mts";
 import { BATCH_PR_VIEWER_QUERY } from "./queries.mts";
 import type { RawComment, RawPr, RawReviewSummary, RawThread } from "./batch-raw-types.mts";
 
 const NODES_PER_REQUEST = 100; // GraphQL `nodes(ids:)` limit
+const CONCURRENCY = 4;
 
 interface ViewerNode {
   id?: string;
@@ -35,13 +38,8 @@ export interface BatchViewer {
   rateLimit?: RateLimitInfo;
 }
 
-function chunks<T>(items: T[]): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < items.length; i += NODES_PER_REQUEST) {
-    out.push(items.slice(i, i + NODES_PER_REQUEST));
-  }
-  return out;
-}
+/** A bot's GraphQL `Bot` author has no `[bot]` suffix, but its token's `viewer.login` does. */
+const normalizeLogin = (login: string): string => login.toLowerCase().replace(/\[bot\]$/, "");
 
 /**
  * Read the viewer-relative fields a viewer-free `BatchPr` read omitted, on the user's token, in
@@ -62,24 +60,29 @@ export async function applyBatchViewer(
     ...targets.reviews.map((r) => r.id),
   ];
   const nodes = new Map<string, ViewerNode>();
-  let viewer: BatchViewer | undefined;
-  for (const batch of chunks(ids)) {
-    const res = await graphqlWithRateLimit<ViewerResponse>(BATCH_PR_VIEWER_QUERY, {
-      owner: repo.owner,
-      repo: repo.name,
-      ids: batch,
-    });
-    if (!res.data.repository) {
-      throw new Error(`GitHub viewer read did not include repository ${repo.owner}/${repo.name}`);
-    }
+  // Only the first chunk selects `viewer` and the repository. `allowPartialData`: an id that no
+  // longer resolves (a comment deleted since the data read) comes back null beside a NOT_FOUND
+  // error, and its fields stay unset (fail closed) instead of failing the tick.
+  const results = await mapPool(chunksOf(ids, NODES_PER_REQUEST), CONCURRENCY, (batch, index) =>
+    graphqlWithRateLimit<ViewerResponse>(
+      BATCH_PR_VIEWER_QUERY,
+      { owner: repo.owner, repo: repo.name, ids: batch, includeViewer: index === 0 },
+      { allowPartialData: true },
+    ),
+  );
+  for (const res of results) {
     for (const node of res.data.nodes) if (node?.id) nodes.set(node.id, node);
-    viewer = {
-      login: res.data.viewer?.login ?? null,
-      repository: res.data.repository,
-      ...(res.rateLimit && { rateLimit: res.rateLimit }),
-    };
   }
-  const login = viewer!.login?.toLowerCase();
+  const first = results[0]!;
+  if (!first.data.repository) {
+    throw new Error(`GitHub viewer read did not include repository ${repo.owner}/${repo.name}`);
+  }
+  const viewer: BatchViewer = {
+    login: first.data.viewer?.login ?? null,
+    repository: first.data.repository,
+    ...(first.rateLimit && { rateLimit: first.rateLimit }),
+  };
+  const login = viewer.login === null ? undefined : normalizeLogin(viewer.login);
   const prNode = nodes.get(raw.id);
   raw.viewerDidAuthor = prNode?.viewerDidAuthor === true;
   raw.viewerCanUpdate = prNode?.viewerCanUpdate === true;
@@ -94,11 +97,13 @@ export async function applyBatchViewer(
     thread.viewerCanResolve = node?.viewerCanResolve === true;
     for (const comment of thread.comments.nodes) {
       comment.viewerDidAuthor =
-        login !== undefined && comment.author?.login.toLowerCase() === login;
+        login !== undefined &&
+        comment.author?.login !== undefined &&
+        normalizeLogin(comment.author.login) === login;
     }
   }
   for (const item of [...targets.comments, ...targets.reviews]) {
     item.viewerCanMinimize = nodes.get(item.id)?.viewerCanMinimize === true;
   }
-  return viewer!;
+  return viewer;
 }

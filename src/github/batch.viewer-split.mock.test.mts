@@ -15,6 +15,13 @@ vi.mock("./github-app-config.mts", () => ({
   findGithubApp: () => (app.covered ? { appId: 1 } : undefined),
 }));
 
+vi.mock("./http-auth.mts", () => ({
+  makeAuthHeaders: async () => ({ fingerprint: "fp" }),
+}));
+vi.mock("./github-app-token.mts", () => ({
+  appCredential: async () => ({ token: "t", appId: 1, installationId: 7 }),
+}));
+
 const fetchPrBatch = (...args: Parameters<typeof operation>) =>
   runWithGithubTransport("graphql", () => operation(...args));
 import {

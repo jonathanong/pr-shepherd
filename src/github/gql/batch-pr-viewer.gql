@@ -1,7 +1,7 @@
 # Viewer-relative fields for nodes a viewer-free BatchPr read already returned.
 # Runs on the user's token (a GitHub App cannot answer `viewer…`), in the same
 # tick as that read, keyed by node id. At most 100 ids per request.
-query BatchPrViewer($owner: String!, $repo: String!, $ids: [ID!]!) {
+query BatchPrViewer($owner: String!, $repo: String!, $ids: [ID!]!, $includeViewer: Boolean!) {
   _shepherdRateLimit: rateLimit {
     cost
     limit
@@ -10,10 +10,10 @@ query BatchPrViewer($owner: String!, $repo: String!, $ids: [ID!]!) {
     resetAt
     used
   }
-  viewer {
+  viewer @include(if: $includeViewer) {
     login
   }
-  repository(owner: $owner, name: $repo) {
+  repository(owner: $owner, name: $repo) @include(if: $includeViewer) {
     viewerPermission
     viewerCanAdminister
   }
