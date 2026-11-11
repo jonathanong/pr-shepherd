@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { IterateResult } from "../types.mts";
 import type { EventTransport, TransportResult } from "../events/types.mts";
-
 vi.mock("./iterate/index.mts", () => ({ runIterate: vi.fn() }));
 vi.mock("../config/load.mts", () => ({
   loadConfig: () => ({
     quotaWarningBands: [],
+    iterate: { "stall-timeout-minutes": 30 },
     events: { source: "hook-harness", "fallback-interval-seconds": 300 },
   }),
 }));
@@ -16,9 +16,11 @@ vi.mock("../events/relay.mts", () => ({
   createRelayTransport: vi.fn(),
   RELAY_REQUEST_TIMEOUT_MS: 10_000,
 }));
+vi.mock("../state/iterate-stall.mts", () => ({ readStallState: vi.fn() }));
 vi.mock("../log/log-file.mts", () => ({ appendEntry: vi.fn() }));
 
 import { createRelayTransport } from "../events/relay.mts";
+import { readStallState } from "../state/iterate-stall.mts";
 import { runIterate } from "./iterate/index.mts";
 import { runPoll } from "./poll.mts";
 
@@ -42,6 +44,7 @@ let stderr: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(readStallState).mockResolvedValue({ ok: true } as never);
   vi.useFakeTimers();
   polls = [{ events: [] }];
   transport = {
@@ -56,6 +59,13 @@ afterEach(() => {
   vi.useRealTimers();
   stderr.mockRestore();
 });
+
+const stallAt = (offsetSeconds: number): void => {
+  vi.mocked(readStallState).mockImplementation(
+    async () =>
+      ({ ok: true, state: { firstSeenAt: Date.now() / 1000 + offsetSeconds - 1800 } }) as never,
+  );
+};
 
 const base = { prNumber: 42, format: "json", intervalSeconds: 60, timeoutSeconds: 300 } as const;
 
@@ -145,5 +155,45 @@ describe("runPoll with hook-harness events", () => {
     const done = runPoll(base);
     await vi.advanceTimersByTimeAsync(60_000);
     expect((await done).action).toBe("cancel");
+  });
+
+  describe("time-based deadline cap", () => {
+    beforeEach(() => {
+      mockRunIterate
+        .mockResolvedValueOnce(result("wait"))
+        .mockResolvedValue(result("cancel", { state: "MERGED" }));
+    });
+
+    it("wakes at the stall deadline instead of the 300s fallback", async () => {
+      stallAt(100);
+      const done = runPoll({ ...base, timeoutSeconds: 1000, verbose: true });
+      await vi.advanceTimersByTimeAsync(100_000);
+      expect((await done).action).toBe("cancel");
+      expect(mockRunIterate).toHaveBeenCalledTimes(2);
+      expect(stderr).toHaveBeenCalledWith(expect.stringContaining("on stall-timeout deadline"));
+    });
+
+    it("wakes at the CI-start deadline reported by the tick", async () => {
+      vi.mocked(readStallState).mockResolvedValue({ ok: true } as never);
+      mockRunIterate.mockReset();
+      mockRunIterate.mockImplementationOnce(async (opts) => {
+        opts.stallDeadlineSink!.ciStartDeadlineSeconds = Date.now() / 1000 + 90;
+        return result("wait");
+      });
+      mockRunIterate.mockResolvedValue(result("cancel", { state: "MERGED" }));
+      const done = runPoll({ ...base, timeoutSeconds: 1000, verbose: true });
+      await vi.advanceTimersByTimeAsync(90_000);
+      await done;
+      expect(stderr).toHaveBeenCalledWith(expect.stringContaining("woke on CI-start deadline"));
+    });
+
+    it("never ticks sooner than the plain interval when the deadline is past", async () => {
+      stallAt(-10);
+      const done = runPoll({ ...base, timeoutSeconds: 1000 });
+      await vi.advanceTimersByTimeAsync(59_000);
+      expect(mockRunIterate).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect((await done).action).toBe("cancel");
+    });
   });
 });

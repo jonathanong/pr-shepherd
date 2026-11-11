@@ -68,6 +68,16 @@ export function quotaPollIntervalMs(
   );
 }
 
+/** The plain poll sleep for a single-PR tick: the interval raised by any quota band. */
+export function onePrSleepMs(
+  bands: GraphqlQuotaWarningBand[],
+  usage: Parameters<typeof quotaPollIntervalMs>[1],
+  intervalMs: number,
+  maxMs: number,
+): number {
+  return quotaPollIntervalMs(bands, usage, intervalMs, maxMs, getGithubTransport());
+}
+
 export interface RateLimitRetry {
   ms: number;
   resource: string;

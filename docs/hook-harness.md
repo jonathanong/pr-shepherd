@@ -15,7 +15,7 @@ A GitHub App's webhooks reach a hook-harness relay, which keeps normalized event
 
 An event matches when it is for the same repository and any of these holds: it lists the PR number; its head SHA is the PR's head SHA; its head ref is the PR's head branch; it is a merge-queue ref for the PR (`gh-readonly-queue/<base>/pr-N-...`); or it is a push to the PR's base branch. Events for other PRs that share the base branch do not match.
 
-While the source is healthy, a quiet wait lasts `events.fallback-interval-seconds` (default 300, at most 86400), never less than `poll.interval-seconds`. The fallback exists because events can be lost. A merge-state recheck (GitHub still computing mergeability) keeps the plain interval.
+While the source is healthy, a quiet wait lasts `events.fallback-interval-seconds` (default 300, at most 86400), never less than `poll.interval-seconds`. The fallback exists because events can be lost. A merge-state recheck (GitHub still computing mergeability) keeps the plain interval. Time-based deadlines that no event announces, such as the stall timeout, a CI-start timeout, or a ready-delay countdown, cap the wait, though never below `poll.interval-seconds`.
 
 ## Setup
 
