@@ -2,13 +2,18 @@ import { describe, expect, it } from "vitest";
 import { filtersFor, filtersParam } from "./filters.mts";
 
 describe("filtersFor", () => {
-  it("builds pr, sha and ref filters, de-duplicated", () => {
+  it("builds pr, sha, head-ref and base-push filters, de-duplicated", () => {
     expect(
       filtersFor([
         { repo: "a/b", pr: 1, headSha: "s", headRef: "h", baseRef: "main" },
         { repo: "a/b", pr: 2, headSha: "s", headRef: "h2", baseRef: "main" },
       ]),
-    ).toEqual([{ pr: [1, 2] }, { sha: ["s"] }, { ref: ["h", "main", "h2"] }]);
+    ).toEqual([
+      { pr: [1, 2] },
+      { sha: ["s"] },
+      { ref: ["h", "h2"] },
+      { event: ["push"], branch: ["main"] },
+    ]);
   });
 
   it("omits sha and ref when unknown", () => {

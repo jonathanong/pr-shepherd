@@ -20,7 +20,11 @@ export interface WatchTarget {
 }
 
 /** Relay-side bandwidth hint; the waiter always matches locally too. */
-export type EventFilter = { pr: number[] } | { sha: string[] } | { ref: string[] };
+export type EventFilter =
+  | { pr: number[] }
+  | { sha: string[] }
+  | { ref: string[] }
+  | { event: string[]; branch: string[] };
 
 export interface OwnerScope {
   owner: string;

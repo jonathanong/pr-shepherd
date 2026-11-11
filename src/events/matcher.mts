@@ -1,6 +1,5 @@
 import type { EventEnvelope, WatchTarget } from "./types.mts";
 
-const BASE_MOVE_EVENTS = new Set(["push", "pull_request"]);
 const QUEUE_REF = /^gh-readonly-queue\/(.+)\/pr-(\d+)-/;
 
 function branch(ref: string | null): string | null {
@@ -26,8 +25,9 @@ function matchesTarget(event: EventEnvelope, target: WatchTarget): boolean {
   const queued = queuedPr(eventHead);
   if (queued?.pr === target.pr && (target.baseRef === undefined || queued.base === target.baseRef))
     return true;
-  if (target.baseRef === undefined || !BASE_MOVE_EVENTS.has(event.event)) return false;
-  return eventHead === target.baseRef || branch(event.baseRef) === target.baseRef;
+  // Only a push moves the base. Other PRs' events also carry this base as `baseRef`; matching
+  // them would wake every PR in a busy repository on every sibling's activity.
+  return target.baseRef !== undefined && event.event === "push" && eventHead === target.baseRef;
 }
 
 export function matchesAny(event: EventEnvelope, targets: readonly WatchTarget[]): boolean {

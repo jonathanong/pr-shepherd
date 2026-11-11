@@ -13,7 +13,7 @@ A GitHub App's webhooks reach a hook-harness relay, which keeps normalized event
 3. After the first match it settles for 10 seconds so a burst of events produces one tick, and never starts a tick sooner than 15 seconds after the previous one began (or the larger quota-band interval).
 4. The next tick runs.
 
-An event matches when it is for the same repository and any of these holds: it lists the PR number; its head SHA is the PR's head SHA; its head ref is the PR's head branch; it is a merge-queue ref for the PR (`gh-readonly-queue/<base>/pr-N-...`); or it is a push or pull request event on the PR's base branch.
+An event matches when it is for the same repository and any of these holds: it lists the PR number; its head SHA is the PR's head SHA; its head ref is the PR's head branch; it is a merge-queue ref for the PR (`gh-readonly-queue/<base>/pr-N-...`); or it is a push to the PR's base branch. Events for other PRs that share the base branch do not match.
 
 While the source is healthy, a quiet wait lasts `events.fallback-interval-seconds` (default 300, at most 86400), never less than `poll.interval-seconds`. The fallback exists because events can be lost. A merge-state recheck (GitHub still computing mergeability) keeps the plain interval.
 
@@ -55,7 +55,7 @@ Notes go to stderr and the per-worktree debug log. Wake reasons appear on stderr
 - Events are coarse. A `check_suite` event says some CI changed, not which check, so a wake-up is a prompt to tick, not a verdict.
 - A 413 or 5xx can drop events, which is why the fallback interval exists.
 - The first wait can wake on an event replayed from shortly before the poll started. The settle window and gap bound the cost.
-- Merge-queue refs may not be expressible in relay-side filters. Those wake-ups then rely on the fallback interval.
+- Relay-side filters cannot express merge-queue refs, so a check suite that completes on `gh-readonly-queue/...` arrives only when it matches locally from an unfiltered page, or at the fallback interval. The queue's `merge_group` events and the PR's own `pull_request` closed event carry the PR number and do wake the wait.
 - A stalled `serve` stream is not detected; the fallback interval still bounds the wait.
 - Single ticks (`iterate`, MCP, library, `CLAUDE_CODE_REMOTE=true`) never wait, so they ignore `events`.
 

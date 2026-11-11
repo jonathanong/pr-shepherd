@@ -58,10 +58,15 @@ describe("matchesTarget", () => {
     expect(matchesTarget(queued("gh-readonly-queue/dev/pr-7-deadbeef"), noBase)).toBe(true);
   });
 
-  it("matches a push or pull_request that moves the base branch", () => {
+  it("matches a push that moves the base branch, not sibling PRs on that base", () => {
     expect(matchesTarget(event({ event: "push", headRef: "main" }), target)).toBe(true);
-    expect(matchesTarget(event({ event: "pull_request", baseRef: "main" }), target)).toBe(true);
-    expect(matchesTarget(event({ event: "pull_request", baseRef: "dev" }), target)).toBe(false);
+    expect(matchesTarget(event({ event: "push", headRef: "dev" }), target)).toBe(false);
+    expect(
+      matchesTarget(
+        event({ event: "pull_request", prs: [8], headRef: "y", baseRef: "main" }),
+        target,
+      ),
+    ).toBe(false);
     expect(matchesTarget(event({ event: "issue_comment", headRef: "main" }), target)).toBe(false);
     expect(
       matchesTarget(event({ event: "push", headRef: "main" }), { repo: "acme/widgets", pr: 7 }),

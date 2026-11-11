@@ -4,19 +4,21 @@ const MAX_FILTERS = 50;
 const MAX_FILTER_BYTES = 4096;
 
 /**
- * A superset hint for the relay: events for these PR numbers, head SHAs, or branches (head and
- * base). Local matching stays authoritative; older relays ignore the parameter.
+ * A superset hint for the relay: events for these PR numbers, head SHAs, head branches, or pushes
+ * to their base branches. Local matching stays authoritative; older relays ignore the parameter.
  */
 export function filtersFor(targets: readonly WatchTarget[]): EventFilter[] {
   const unique = (values: Array<string | undefined>): string[] => [
     ...new Set(values.filter((value): value is string => Boolean(value))),
   ];
   const sha = unique(targets.map((target) => target.headSha));
-  const ref = unique(targets.flatMap((target) => [target.headRef, target.baseRef]));
+  const ref = unique(targets.map((target) => target.headRef));
+  const base = unique(targets.map((target) => target.baseRef));
   return [
     { pr: targets.map((target) => target.pr) },
     ...(sha.length > 0 ? [{ sha }] : []),
     ...(ref.length > 0 ? [{ ref }] : []),
+    ...(base.length > 0 ? [{ event: ["push"], branch: base }] : []),
   ];
 }
 
