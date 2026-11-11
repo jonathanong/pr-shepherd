@@ -91,7 +91,7 @@ describe("runAggregatePoll with hook-harness events", () => {
       timeoutSeconds: 600,
       verbose: true,
     });
-    await vi.advanceTimersByTimeAsync(30_000);
+    await vi.advanceTimersByTimeAsync(240_000);
     expect((await done).reason).toBe("all_terminal");
     expect(mockFetch).toHaveBeenCalledTimes(2);
     expect(transport.close).toHaveBeenCalledOnce();

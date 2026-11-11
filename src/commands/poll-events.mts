@@ -4,12 +4,7 @@ import { createRelayTransport, RELAY_REQUEST_TIMEOUT_MS } from "../events/relay.
 import { createServeTransport } from "../events/serve.mts";
 import type { IterateResult, PollSummaryResult } from "../types.mts";
 import type { EventTransport, WatchTarget } from "../events/types.mts";
-import {
-  createEventWaiter,
-  MIN_TICK_GAP_MS,
-  type EventWaiter,
-  type Wake,
-} from "../events/waiter.mts";
+import { createEventWaiter, type EventWaiter, type Wake } from "../events/waiter.mts";
 import { githubFetch } from "../github/github-fetch.mts";
 import { appendEntry } from "../log/log-file.mts";
 import { sleep } from "../util/sleep.mts";
@@ -80,7 +75,8 @@ function createPollEvents(verbose: boolean): PollEvents | undefined {
         sleepMs: input.sleepMs,
         windowMs: input.remainingMs,
         recheck: input.recheck,
-        minGapMs: input.sleepMs > input.intervalMs ? input.sleepMs : MIN_TICK_GAP_MS,
+        // Events never make ticks more frequent than plain polling would.
+        minGapMs: input.sleepMs,
         tickStartedAt: input.tickStartedAt,
       });
       note(`[${input.label}] woke on ${describe(wake, degraded)}`);
@@ -107,7 +103,8 @@ export async function withPollEvents<T>(
 
 export interface PauseInput extends WaitTickInput {
   events: PollEvents | undefined;
-  announce: () => void;
+  /** `viaEvents` is true when the pause waits for an event rather than sleeping. */
+  announce: (viaEvents: boolean) => void;
 }
 
 /**
@@ -122,7 +119,7 @@ export async function pauseBeforeNextTick(input: PauseInput): Promise<boolean> {
   if (remainingMs <= 0 || (!viaEvents && remainingMs + TIMER_DRIFT_TOLERANCE_MS < sleepMs)) {
     return true;
   }
-  announce();
+  announce(viaEvents);
   if (!events || !viaEvents) {
     await sleep(sleepMs);
     return false;

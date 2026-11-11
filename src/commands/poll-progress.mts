@@ -54,6 +54,8 @@ export function writeWaitProgress(opts: {
   tick: number;
   elapsedMs: number;
   sleepMs: number;
+  /** The pause waits for a hook-harness event, so `sleepMs` is not its length. */
+  viaEvents?: boolean;
   result: WaitResult;
   quietStatus: boolean;
   verbose: boolean;
@@ -67,7 +69,9 @@ export function writeWaitProgress(opts: {
     writeTickProgress(
       opts.tick,
       elapsedSeconds,
-      opts.verbose ? `${reason} — sleeping ${sleepSeconds}s` : reason,
+      opts.verbose
+        ? `${reason} — ${opts.viaEvents ? "waiting for an event" : `sleeping ${sleepSeconds}s`}`
+        : reason,
     );
     return opts.lastWaitSignature;
   }

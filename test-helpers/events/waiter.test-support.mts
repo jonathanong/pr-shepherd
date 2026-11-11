@@ -6,7 +6,7 @@ import type {
   TransportResult,
   WatchTarget,
 } from "../../src/events/types.mts";
-import { createEventWaiter, MIN_TICK_GAP_MS } from "../../src/events/waiter.mts";
+import { createEventWaiter } from "../../src/events/waiter.mts";
 
 export const target: WatchTarget = { repo: "acme/widgets", pr: 7, baseRef: "main" };
 export const hit: EventEnvelope = {
@@ -57,7 +57,7 @@ export function harness(
     sleepMs: 60_000,
     windowMs: Infinity,
     recheck: false,
-    minGapMs: MIN_TICK_GAP_MS,
+    minGapMs: 15_000,
     tickStartedAt: clock,
     ...overrides,
   });

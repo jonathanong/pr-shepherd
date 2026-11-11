@@ -27,6 +27,7 @@ export type { PollCommandOptions } from "./poll-options.mts";
 const DEFAULT_POLL_DEBOUNCE_SECONDS = 60;
 const MAX_TIMER_MS = 2 ** 31 - 1;
 const TIMER_DRIFT_TOLERANCE_MS = 500;
+type Announce = (sleepMs: number, viaEvents: boolean) => void;
 export function runPoll(opts: PollCommandOptions): Promise<IterateResult> {
   return withPollEvents(opts.verbose === true, (events) =>
     withPollApiUsage(
@@ -106,7 +107,7 @@ async function runPollCore(
       pendingQuotaWarning = carryQuotaWarning(pendingQuotaWarning, lastResult.quotaWarning);
     };
     /** Wait for the next tick; true when the poll window ends first and the poll should stop. */
-    const pause = (result: IterateResult, announce: (sleepMs: number) => void) => {
+    const pause = (result: IterateResult, announce: Announce) => {
       const sleepMs = quotaPollIntervalMs(
         quotaBands,
         result.apiUsage,
@@ -123,7 +124,7 @@ async function runPollCore(
         label: `poll tick ${tick} / +${Math.round((Date.now() - start) / 1000)}s`,
         tickStartedAt,
         remainingMs: untilTerminal ? Infinity : timeoutMs - (Date.now() - start),
-        announce: () => announce(sleepMs),
+        announce: (viaEvents) => announce(sleepMs, viaEvents),
       });
     };
     if (
@@ -153,11 +154,12 @@ async function runPollCore(
       if (pendingQuotaWarning === undefined) debounceUntil = null;
       const elapsedMs = Date.now() - start;
       const waiting = lastResult;
-      const stop = await pause(waiting, (sleepMs) => {
+      const stop = await pause(waiting, (sleepMs, viaEvents) => {
         lastWaitSignature = writeWaitProgress({
           tick,
           elapsedMs,
           sleepMs,
+          viaEvents,
           result: waiting,
           quietStatus,
           verbose,

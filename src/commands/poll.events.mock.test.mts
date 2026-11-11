@@ -83,11 +83,12 @@ describe("runPoll with hook-harness events", () => {
       },
     ];
     const done = runPoll({ ...base, verbose: true });
-    await vi.advanceTimersByTimeAsync(15_000);
+    await vi.advanceTimersByTimeAsync(60_000);
     expect((await done).action).toBe("cancel");
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
     expect(mockRunIterate.mock.calls[0]![0].eventTargetSink).toBeDefined();
     expect(vi.mocked(createRelayTransport).mock.calls[0]![1]).toBeTypeOf("number");
+    expect(stderr).toHaveBeenCalledWith(expect.stringContaining("— waiting for an event\n"));
     expect(stderr).toHaveBeenCalledWith(
       expect.stringContaining("woke on check_suite acme/widgets"),
     );
@@ -123,7 +124,7 @@ describe("runPoll with hook-harness events", () => {
       },
     ];
     const done = runPoll({ ...base, merge: true });
-    await vi.advanceTimersByTimeAsync(15_000);
+    await vi.advanceTimersByTimeAsync(60_000);
     expect((await done).action).toBe("cancel");
     expect(mockRunIterate).toHaveBeenCalledTimes(2);
   });

@@ -10,7 +10,7 @@ A GitHub App's webhooks reach a hook-harness relay, which keeps normalized event
 
 1. A tick runs and returns `WAIT`.
 2. Shepherd waits for an event that matches the PR, or until the deadline.
-3. After the first match it settles for 10 seconds so a burst of events produces one tick, and never starts a tick sooner than 15 seconds after the previous one began (or the larger quota-band interval).
+3. After the first match it settles for 10 seconds so a burst of events produces one tick, and never starts a tick sooner than `poll.interval-seconds` (or a larger quota-band interval) after the previous one began. Events can make ticks less frequent than plain polling, never more frequent.
 4. The next tick runs.
 
 An event matches when it is for the same repository and any of these holds: it lists the PR number; its head SHA is the PR's head SHA; its head ref is the PR's head branch; it is a merge-queue ref for the PR (`gh-readonly-queue/<base>/pr-N-...`); or it is a push to the PR's base branch. Events for other PRs that share the base branch do not match.

@@ -11,8 +11,6 @@ import type {
 
 /** After the first matching event, wait this long so a burst becomes one tick. */
 const SETTLE_MS = 10_000;
-/** Earliest next tick after the previous one started, absent a larger quota-band floor. */
-export const MIN_TICK_GAP_MS = 15_000;
 const SEEN_LIMIT = 2000;
 
 interface WaitRequest {
