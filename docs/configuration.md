@@ -517,6 +517,8 @@ iterate:
 
 `inline` prints the `triage` commit/push step on every tick. `playbook` points at the shipped "Triage loop" playbook instead. `--instructions` and the MCP `instructions` input override it.
 
+Inline is the default because the two modes behaved the same in the eval ablation (#527), and the token bench found that folding the step into a playbook is not a net win.
+
 ## `poll`
 
 Defaults for the polling CLI (`pr-shepherd [PR]`). Explicit flags win over these keys.
