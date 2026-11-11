@@ -59,11 +59,12 @@ Use 'pr-shepherd stack PR' for a native GitHub stack.
 
 Poll flags:
   --interval <duration>          Sleep between WAIT ticks. Bare number = seconds. Default: poll.interval-seconds (built-in 60s). Stack and multi-PR polls multiply that by poll.stack-interval-factor (built-in 2) unless this flag is set.
-  --timeout <duration>           Maximum wall-clock wait for WAIT ticks. Bare number = seconds. Default: poll.timeout-seconds (built-in 4.5m).
+  --timeout <duration>           Maximum wall-clock wait for WAIT ticks. Bare number = seconds. Default: poll.timeout-seconds (built-in 4.5m, for foreground waits).
   --debounce <duration>          Settle window after first TRIAGE or stack SHEPHERD before returning. Bare number = seconds. Default: poll.debounce-seconds (built-in 60s). 0 disables.
   --quiet-status                 Print only changed WAIT snapshots. Overrides poll.quiet-status.
   --no-quiet-status              Print every WAIT snapshot. Overrides poll.quiet-status.
   --until-terminal               Continue through WAIT/MARK_READY until READY/TRIAGE/MERGE/CANCEL/ESCALATE or stack SHEPHERD.
+                                 For background runs that wake the caller on exit; foreground waits use the bounded default.
 
 Forwarded iterate flags:
   --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Default: iterate.ready-delay-minutes (built-in 0). Example: 15m.
@@ -109,7 +110,7 @@ Stack flags:
 
 Poll flags:
   --interval <duration>          Sleep between WAIT ticks. Bare number = seconds. Default: poll.interval-seconds (built-in 60s) multiplied by poll.stack-interval-factor (built-in 2) unless this flag is set.
-  --timeout <duration>           Maximum wall-clock wait for WAIT ticks. Bare number = seconds. Default: poll.timeout-seconds (built-in 4.5m).
+  --timeout <duration>           Maximum wall-clock wait for WAIT ticks. Bare number = seconds. Default: poll.timeout-seconds (built-in 4.5m, for foreground waits).
   --debounce <duration>          Settle window after the first SHEPHERD before returning. Bare number = seconds. Default: poll.debounce-seconds (built-in 60s). 0 disables.
   --quiet-status                 Print only changed WAIT snapshots. Overrides poll.quiet-status.
   --no-quiet-status              Print every WAIT snapshot. Overrides poll.quiet-status.

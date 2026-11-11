@@ -13,7 +13,12 @@ const ALWAYS_ON_PLAYBOOKS = new Set(["Untrusted review input"]);
  * procedure that was moved out of the per-tick text.
  */
 /** Playbooks the skill's own Dispatch bullets name (quoted); the CLI never points at them. */
-const SKILL_DISPATCHED_PLAYBOOKS = new Set(["Create a PR", "Draft handoff", "MCP fallback"]);
+const SKILL_DISPATCHED_PLAYBOOKS = new Set([
+  "Create a PR",
+  "Draft handoff",
+  "MCP fallback",
+  "Waiting",
+]);
 
 function skillPlaybookHeadings(): Set<string> {
   const skillDir = new URL("plugins/pr-shepherd/skills/pr-shepherd/", rootUrl);
@@ -126,7 +131,9 @@ describe("CLI instruction pointers name real pr-shepherd skill playbooks", () =>
     );
     for (const name of SKILL_DISPATCHED_PLAYBOOKS) {
       expect(headings.has(name), `missing playbook "${name}"`).toBe(true);
-      expect(skill, `SKILL.md never names "${name}"`).toContain(`"${name}" playbook`);
+      expect(skill, `SKILL.md never names "${name}"`).toMatch(
+        new RegExp(`"${name}" playbook|\\[${name}\\]\\(references/`),
+      );
     }
   });
 
@@ -143,9 +150,10 @@ describe("pr-shepherd skill recurrence contract", () => {
     "utf8",
   );
 
-  it("injects --until-terminal into the canonical CLI poll dispatcher", () => {
-    expect(skill).toMatch(/Run `pr-shepherd \[PR \.\.\.\] --until-terminal`/);
-    expect(skill).toMatch(/pr-shepherd stack PR --until-terminal/);
+  it("picks --until-terminal or the bounded poll by host capability", () => {
+    expect(skill).toMatch(/Run `pr-shepherd \[PR \.\.\.\]` or `pr-shepherd stack PR`/);
+    expect(skill).toMatch(/`--until-terminal` in the background only if its exit wakes you/);
+    expect(skill).toMatch(/else in the foreground/);
     expect(skill).toContain("Do not run `pr-shepherd iterate`");
   });
 
