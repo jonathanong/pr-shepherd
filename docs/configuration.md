@@ -197,6 +197,8 @@ classify:
 | `iterate.resolve-other-human-threads` | `"none"`                                  | When to resolve other humans' threads after a reply: `none`, `outdated`, or `always`.                                                                                                                                                                                                                                                  |
 | `iterate.instructions`                | `"inline"`                                | `inline` or `playbook` for the `triage` commit/push step. `--instructions` and the MCP `instructions` input override it.                                                                                                                                                                                                               |
 | `iterate.review-output-max-chars`     | `50000`                                   | Per-tick character budget for review-item bodies on `triage`; `0` disables it. See [Review output budget](actions.md#review-output-budget).                                                                                                                                                                                            |
+| `events.source`                       | `"none"`                                  | `none` or `hook-harness`. `hook-harness` makes poll waits event-driven. See [hook-harness.md](hook-harness.md).                                                                                                                                                                                                                        |
+| `events.fallback-interval-seconds`    | `300`                                     | Longest quiet wait while the event source is healthy; at most `86400`. See [hook-harness.md](hook-harness.md).                                                                                                                                                                                                                         |
 | `poll.interval-seconds`               | `60`                                      | Delay between `WAIT` ticks for one PR. `--interval` overrides it.                                                                                                                                                                                                                                                                      |
 | `poll.stack-interval-factor`          | `2`                                       | Multiplier for `stack` and multi-PR sleeps. `--interval` overrides it and is not multiplied.                                                                                                                                                                                                                                           |
 | `poll.timeout-seconds`                | `270`                                     | Wall-clock cap for bounded `WAIT` polling. The 270s default keeps one foreground call inside a 5-minute prompt-cache window and under common tool time limits; background callers use `--until-terminal` instead ([Choosing a wait mode](cli-usage.md#choosing-a-wait-mode)). `--timeout` overrides it; `--until-terminal` ignores it. |
@@ -518,6 +520,23 @@ iterate:
 `inline` prints the `triage` commit/push step on every tick. `playbook` points at the shipped "Triage loop" playbook instead. `--instructions` and the MCP `instructions` input override it.
 
 Inline is the default because the two modes behaved the same in the eval ablation (#527), and the token bench found that folding the step into a playbook is not a net win.
+
+## `events`
+
+Opt-in event-driven waiting for the polling CLI. With the default `source: none`, nothing changes: every wait sleeps `poll.interval-seconds`. See [hook-harness.md](hook-harness.md) for setup, health, and limits.
+
+```yaml
+events:
+  source: hook-harness
+  fallback-interval-seconds: 300
+```
+
+| Key                         | Constraint                | Notes                                                                                                                                                                                                                              |
+| --------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `source`                    | `none`, `hook-harness`    | `hook-harness` reads GitHub webhook events from a hook-harness relay. Shepherd stores no URL or token; they come from the environment or hook-harness's own login file. Startup fails if no login resolves.                        |
+| `fallback-interval-seconds` | positive, at most `86400` | While the source is healthy, a quiet wait lasts this long instead of `poll.interval-seconds` (never shorter than that interval). When the source is unhealthy or does not cover the PR's owner, waits use `poll.interval-seconds`. |
+
+Single ticks (`iterate`, MCP, library, `CLAUDE_CODE_REMOTE=true`) never wait, so they ignore `events`.
 
 ## `poll`
 

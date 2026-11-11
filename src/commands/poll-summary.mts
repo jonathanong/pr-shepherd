@@ -9,7 +9,6 @@ import { fetchPollSummary } from "../github/poll-summary.mts";
 import { writeStackHandoffs } from "../github/stack-handoff.mts";
 import type { StackHandoffSource } from "../github/stack-handoff-page.mts";
 import type { RepoInfo } from "../github/client.mts";
-import { sleep } from "../util/sleep.mts";
 import { aggregateQuotaWarning, carryQuotaWarning, quotaPollIntervalMs } from "./poll-quota.mts";
 import { aggregateCancelFromPulls, aggregateRateLimitTargets } from "./poll-rate-limit-cancel.mts";
 import { createUntilTerminalRateLimitRetry } from "./poll-rate-limit-wait.mts";
@@ -17,15 +16,21 @@ import type { PollSummaryCommandOptions, PollSummaryResult } from "../types.mts"
 import { planPollSummary, withPollSummaryInstructions } from "./poll-summary-instructions.mts";
 import { summaryStatusSignature } from "./poll-summary-signature.mts";
 import { applyStackStallGuard } from "./stack-stall.mts";
+import {
+  aggregateTargets,
+  pauseBeforeNextTick,
+  withPollEvents,
+  type PollEvents,
+} from "./poll-events.mts";
 
 const MAX_TIMER_MS = 2 ** 31 - 1;
-const TIMER_DRIFT_TOLERANCE_MS = 500;
 export interface AggregatePollCommandOptions extends PollSummaryCommandOptions {
   intervalSeconds: number;
   timeoutSeconds: number;
   debounceSeconds?: number;
   quietStatus?: boolean;
   untilTerminal?: boolean;
+  verbose?: boolean;
 }
 export function runPollSummary(opts: PollSummaryCommandOptions): Promise<PollSummaryResult> {
   return withApiTelemetryScope(async () => {
@@ -36,7 +41,9 @@ export function runPollSummary(opts: PollSummaryCommandOptions): Promise<PollSum
 }
 
 export function runAggregatePoll(opts: AggregatePollCommandOptions): Promise<PollSummaryResult> {
-  return withApiTelemetryScope(() => runAggregatePollCore(opts));
+  return withPollEvents(opts.verbose === true, (events) =>
+    withApiTelemetryScope(() => runAggregatePollCore(opts, events)),
+  );
 }
 
 interface PollSummaryTick {
@@ -97,7 +104,10 @@ async function readPollSummaryTick(opts: PollSummaryCommandOptions): Promise<Pol
   return { result, repo, ...(fetched.handoffSource && { handoffSource: fetched.handoffSource }) };
 }
 
-async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<PollSummaryResult> {
+async function runAggregatePollCore(
+  opts: AggregatePollCommandOptions,
+  events: PollEvents | undefined,
+): Promise<PollSummaryResult> {
   const intervalMs = Math.min(opts.intervalSeconds * 1000, MAX_TIMER_MS);
   const timeoutMs = Math.min(opts.timeoutSeconds * 1000, MAX_TIMER_MS);
   const debounceMs = Math.min((opts.debounceSeconds ?? 60) * 1000, MAX_TIMER_MS);
@@ -113,6 +123,7 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
 
   while (true) {
     tick += 1;
+    const tickStartedAt = Date.now();
     try {
       lastTick = await readPollSummaryTick(opts);
       last = lastTick.result;
@@ -238,22 +249,29 @@ async function runAggregatePollCore(opts: AggregatePollCommandOptions): Promise<
           MAX_TIMER_MS,
           getGithubTransport(),
         );
-    if (!opts.untilTerminal && debounceUntil === null) {
-      const remainingMs = timeoutMs - elapsedMs;
-      if (remainingMs <= 0 || remainingMs + TIMER_DRIFT_TOLERANCE_MS < sleepMs) {
-        return attachUsage({ ...last, reason: "timeout" }, opts);
-      }
-    }
-    const statusSignature = summaryStatusSignature(last);
-    if (!opts.quietStatus || hasFix || statusSignature !== lastStatusSignature) {
-      process.stderr.write(
-        `[aggregate poll tick ${tick} / +${Math.round(elapsedMs / 1000)}s] ${last.prs
-          .map((item) => `#${item.pr} ${item.action.toUpperCase()}`)
-          .join(", ")}\n`,
-      );
-    }
-    lastStatusSignature = statusSignature;
-    await sleep(sleepMs);
+    const stop = await pauseBeforeNextTick({
+      // The settle window after a first TRIAGE is a plain timer, never an event wait.
+      events: debounceUntil ? undefined : events,
+      targets: aggregateTargets(last),
+      recheck: last.prs.some((item) => item.mergeStateStatus === "UNKNOWN"),
+      sleepMs,
+      intervalMs,
+      label: `aggregate poll tick ${tick} / +${Math.round(elapsedMs / 1000)}s`,
+      tickStartedAt,
+      remainingMs: opts.untilTerminal || debounceUntil !== null ? Infinity : timeoutMs - elapsedMs,
+      announce: () => {
+        const statusSignature = summaryStatusSignature(last!);
+        if (!opts.quietStatus || hasFix || statusSignature !== lastStatusSignature) {
+          process.stderr.write(
+            `[aggregate poll tick ${tick} / +${Math.round(elapsedMs / 1000)}s] ${last!.prs
+              .map((item) => `#${item.pr} ${item.action.toUpperCase()}`)
+              .join(", ")}\n`,
+          );
+        }
+        lastStatusSignature = statusSignature;
+      },
+    });
+    if (stop) return attachUsage({ ...last, reason: "timeout" }, opts);
   }
 }
 

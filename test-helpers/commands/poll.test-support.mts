@@ -4,6 +4,7 @@ import type { IterateResult } from "../../src/types.mts";
 vi.mock("../../src/commands/iterate/index.mts", () => ({ runIterate: vi.fn() }));
 vi.mock("../../src/config/load.mts", () => ({
   loadConfig: () => ({
+    events: { source: "none", "fallback-interval-seconds": 300 },
     quotaWarningBands: [
       { remainingPercent: 30, pollIntervalMinutes: 2 },
       { remainingPercent: 20, pollIntervalMinutes: 5 },

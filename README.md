@@ -140,6 +140,7 @@ See [docs/graphql-usage.md](docs/graphql-usage.md) and [docs/rest-usage.md](docs
 - Cursor and other stdio clients use the [MCP server](docs/mcp.md).
 - Shell and CI use the [CLI](docs/cli-usage.md).
 - In Claude Code cloud sessions, Shepherd switches to the [REST transport](docs/rest.md) and [single ticks](docs/cloud.md).
+- Optional [event-driven waiting](docs/hook-harness.md) wakes a poll on GitHub webhook events instead of a fixed sleep.
 - `stack` reports every layer of a native GitHub stacked PR and shepherds the layers you own.
 
 ## Use cases

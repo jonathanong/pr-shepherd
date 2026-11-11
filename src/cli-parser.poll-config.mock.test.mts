@@ -22,6 +22,7 @@ vi.mock("./github/client.mts", () => ({
 vi.mock("./config/load.mts", () => ({
   loadConfig: () => ({
     poll: pollConfig,
+    events: { source: "none", "fallback-interval-seconds": 300 },
     iterate: { "ready-delay-minutes": 10, "stall-timeout-minutes": 60 },
   }),
 }));

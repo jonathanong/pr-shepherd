@@ -242,6 +242,12 @@ export interface IterateCommandOptions extends GlobalOptions {
    * the public `IterateInput` in api.mts.
    */
   stallDeadlineSink?: { ciStartDeadlineSeconds?: number };
+  /**
+   * Internal. Poll receives the PR's head SHA and head branch from the tick's batch data so
+   * event-driven waits can match webhook events. Never serialized into a result. Excluded from
+   * the public `IterateInput` in api.mts.
+   */
+  eventTargetSink?: { headSha?: string; headRef?: string };
   /** Shepherd through readiness and emit the exact merge/queue command when ready. */
   merge?: boolean;
   /** Override `iterate.instructions` for this call. */

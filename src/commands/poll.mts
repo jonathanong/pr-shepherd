@@ -1,39 +1,46 @@
 import { runIterate } from "./iterate/index.mts";
 import { pollTickSeenOptions } from "./poll-seen-options.mts";
 import { markEditedCommentsSeen } from "./iterate/edited-comment-markers.mts";
-import type { IterateCommandOptions, IterateResult } from "../types.mts";
+import type { IterateResult } from "../types.mts";
+import type { PollCommandOptions } from "./poll-options.mts";
 import { sleep } from "../util/sleep.mts";
 import { withPollApiUsage } from "./poll-run.mts";
 import { loadConfig } from "../config/load.mts";
 import { carryQuotaWarning, quotaPollIntervalMs } from "./poll-quota.mts";
 import { onePrCancelFromPulls, onePrRateLimitTargets } from "./poll-rate-limit-cancel.mts";
 import { createUntilTerminalRateLimitRetry } from "./poll-rate-limit-wait.mts";
+import { createTickRunner } from "./poll-tick.mts";
 import {
   writeDebounceProgress,
   writeRuleAutoResolveProgress,
   writeWaitProgress,
 } from "./poll-progress.mts";
 import { getGithubTransport } from "../github/transport.mts";
+import {
+  onePrTargets,
+  pauseBeforeNextTick,
+  withPollEvents,
+  type PollEvents,
+} from "./poll-events.mts";
 
-export interface PollCommandOptions extends IterateCommandOptions {
-  intervalSeconds: number;
-  timeoutSeconds: number;
-  /** Settle window after first TRIAGE before returning. Default 60. 0 disables. */
-  debounceSeconds?: number;
-  quietStatus?: boolean;
-  untilTerminal?: boolean;
-}
+export type { PollCommandOptions } from "./poll-options.mts";
 const DEFAULT_POLL_DEBOUNCE_SECONDS = 60;
 const MAX_TIMER_MS = 2 ** 31 - 1;
 const TIMER_DRIFT_TOLERANCE_MS = 500;
+type Announce = (sleepMs: number, viaEvents: boolean) => void;
 export function runPoll(opts: PollCommandOptions): Promise<IterateResult> {
-  return withPollApiUsage(
-    () => runPollCore(opts),
-    opts.untilTerminal === true,
-    opts.intervalSeconds / 60,
+  return withPollEvents(opts.verbose === true, (events) =>
+    withPollApiUsage(
+      () => runPollCore(opts, events),
+      opts.untilTerminal === true,
+      opts.intervalSeconds / 60,
+    ),
   );
 }
-async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
+async function runPollCore(
+  opts: PollCommandOptions,
+  events: PollEvents | undefined,
+): Promise<IterateResult> {
   const {
     intervalSeconds,
     timeoutSeconds,
@@ -59,8 +66,10 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
   let prNumber = opts.prNumber;
   let debounceUntil: number | null = null;
   const rateLimitRetry = createUntilTerminalRateLimitRetry();
+  const head: { headSha?: string; headRef?: string } = {};
   while (true) {
     tick += 1;
+    const tickStartedAt = Date.now();
     const pastDebounce = debounceUntil !== null && Date.now() >= debounceUntil;
     const seenOptions = pollTickSeenOptions(debounceSeconds, pastDebounce);
     const remainingBefore = untilTerminal
@@ -68,39 +77,27 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       : timeoutMs - (Date.now() - start);
     const allowCache =
       debounceUntil === null && remainingBefore + TIMER_DRIFT_TOLERANCE_MS >= intervalMs;
-    const iterateTick = (fingerprintCache: boolean) =>
-      runIterate({
-        ...iterateOpts,
-        prNumber,
-        ...seenOptions,
-        fingerprintCache,
-        deferQuotaWarning: !untilTerminal,
-        quotaWarningMinimumPollIntervalMinutes: intervalSeconds / 60,
-      });
-    const runTick = async (fingerprintCache: boolean): Promise<IterateResult> => {
-      while (true) {
-        try {
-          const result = await iterateTick(fingerprintCache);
-          rateLimitRetry.reset();
-          return result;
-        } catch (err) {
-          const early = await rateLimitRetry.wait(err, {
-            untilTerminal,
-            intervalMs,
-            tickLabel: `poll tick ${tick}`,
-            startedAt: start,
-            targets: onePrRateLimitTargets(
-              iterateOpts.targetRepository,
-              prNumber,
-              lastResult?.repo,
-            ),
-            onAllTerminal: (pulls) =>
-              onePrCancelFromPulls(iterateOpts.targetRepository, lastResult?.repo, pulls),
-          });
-          if (early) return early;
-        }
-      }
-    };
+    const runTick = createTickRunner({
+      run: (fingerprintCache) =>
+        runIterate({
+          ...iterateOpts,
+          prNumber,
+          ...seenOptions,
+          ...(events && { eventTargetSink: head }),
+          fingerprintCache,
+          deferQuotaWarning: !untilTerminal,
+          quotaWarningMinimumPollIntervalMinutes: intervalSeconds / 60,
+        }),
+      retry: rateLimitRetry,
+      untilTerminal,
+      intervalMs,
+      tickLabel: `poll tick ${tick}`,
+      startedAt: start,
+      targets: () =>
+        onePrRateLimitTargets(iterateOpts.targetRepository, prNumber, lastResult?.repo),
+      onAllTerminal: (pulls) =>
+        onePrCancelFromPulls(iterateOpts.targetRepository, lastResult?.repo, pulls),
+    });
     lastResult = await runTick(allowCache);
     prNumber ??= lastResult.pr;
     pendingQuotaWarning = carryQuotaWarning(pendingQuotaWarning, lastResult.quotaWarning);
@@ -108,6 +105,27 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
       if (lastResult?.fingerprintReused !== true) return;
       lastResult = await runTick(false);
       pendingQuotaWarning = carryQuotaWarning(pendingQuotaWarning, lastResult.quotaWarning);
+    };
+    /** Wait for the next tick; true when the poll window ends first and the poll should stop. */
+    const pause = (result: IterateResult, announce: Announce) => {
+      const sleepMs = quotaPollIntervalMs(
+        quotaBands,
+        result.apiUsage,
+        intervalMs,
+        MAX_TIMER_MS,
+        getGithubTransport(),
+      );
+      return pauseBeforeNextTick({
+        events,
+        targets: onePrTargets(result, head),
+        recheck: result.mergeStateStatus === "UNKNOWN",
+        sleepMs,
+        intervalMs,
+        label: `poll tick ${tick} / +${Math.round((Date.now() - start) / 1000)}s`,
+        tickStartedAt,
+        remainingMs: untilTerminal ? Infinity : timeoutMs - (Date.now() - start),
+        announce: (viaEvents) => announce(sleepMs, viaEvents),
+      });
     };
     if (
       untilTerminal &&
@@ -135,52 +153,34 @@ async function runPollCore(opts: PollCommandOptions): Promise<IterateResult> {
     if (lastResult.action === "wait" && !pastDebounce) {
       if (pendingQuotaWarning === undefined) debounceUntil = null;
       const elapsedMs = Date.now() - start;
-      const sleepMs = quotaPollIntervalMs(
-        quotaBands,
-        lastResult.apiUsage,
-        intervalMs,
-        MAX_TIMER_MS,
-        getGithubTransport(),
-      );
-      if (!untilTerminal) {
-        const remainingMs = timeoutMs - elapsedMs;
-        if (remainingMs <= 0 || remainingMs + TIMER_DRIFT_TOLERANCE_MS < sleepMs) {
-          await refreshIfReturning();
-          break;
-        }
-      }
-      lastWaitSignature = writeWaitProgress({
-        tick,
-        elapsedMs,
-        sleepMs,
-        result: lastResult,
-        quietStatus,
-        verbose,
-        lastWaitSignature,
+      const waiting = lastResult;
+      const stop = await pause(waiting, (sleepMs, viaEvents) => {
+        lastWaitSignature = writeWaitProgress({
+          tick,
+          elapsedMs,
+          sleepMs,
+          viaEvents,
+          result: waiting,
+          quietStatus,
+          verbose,
+          lastWaitSignature,
+        });
+        writeRuleAutoResolveProgress(waiting);
       });
-      writeRuleAutoResolveProgress(lastResult);
-      await sleep(sleepMs);
+      if (stop) {
+        await refreshIfReturning();
+        break;
+      }
       continue;
     }
     if (swallowsMarkReady && lastResult.action === "mark_ready" && !pastDebounce) {
       debounceUntil = null;
-      const elapsedMs = Date.now() - start;
-      const sleepMs = quotaPollIntervalMs(
-        quotaBands,
-        lastResult.apiUsage,
-        intervalMs,
-        MAX_TIMER_MS,
-        getGithubTransport(),
-      );
-      if (!untilTerminal) {
-        const remainingMs = timeoutMs - elapsedMs;
-        if (remainingMs <= 0 || remainingMs + TIMER_DRIFT_TOLERANCE_MS < sleepMs) {
-          await refreshIfReturning();
-          break;
-        }
+      const ready = lastResult;
+      const stop = await pause(ready, () => writeRuleAutoResolveProgress(ready));
+      if (stop) {
+        await refreshIfReturning();
+        break;
       }
-      writeRuleAutoResolveProgress(lastResult);
-      await sleep(sleepMs);
       continue;
     }
     if (lastResult.action === "triage" && debounceSeconds > 0 && !pastDebounce) {
