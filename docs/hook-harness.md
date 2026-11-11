@@ -22,7 +22,7 @@ While the source is healthy, a quiet wait lasts `events.fallback-interval-second
 1. Log in once with a token that can read your repositories:
 
    ```bash
-   npx -y hook-harness@0.3.3 token create --repos 'owner/*,other/*' --label pr-shepherd --login
+   npx -y hook-harness@0.3.4 token create --repos 'owner/*,other/*' --label pr-shepherd --login
    ```
 
 2. Enable it in `.pr-shepherdrc.yml`:
