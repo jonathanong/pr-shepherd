@@ -21,44 +21,61 @@ The app answers only requests whose answer does not depend on who is asking. Eve
 
 A GraphQL document is viewer-relative when, after comments are stripped, it contains a word starting with `viewer` (`viewer {`, `viewerCan*`, `viewerDidAuthor`, `viewerPermission`, `viewerLatestReview`) or a `…ByViewer` field. Shepherd decides from the document text at request time.
 
-In practice the app absorbs CI and check pages, check annotations, Actions jobs and logs, ruleset and merge-policy reads, base-behind compares, PR body and head SHA reads, and the REST change detectors that make idle waits cheap. The main `BatchPr` query selects viewer fields, so it stays on your token, as do the stack summary and topology reads and review-thread reads. A normal one-PR GraphQL tick is one `BatchPr` point, so most of your GraphQL spend does not move; the app mainly takes REST `core` load and the occasional follow-up page. Splitting the viewer fields out of `BatchPr` would move more and is possible future work.
+In practice the app absorbs CI and check pages, check annotations, Actions jobs and logs, ruleset and merge-policy reads, base-behind compares, PR body and head SHA reads, the REST change detectors that make idle waits cheap, and the per-tick `BatchPr` data read.
+
+### The `BatchPr` viewer split
+
+`BatchPr` selects viewer fields, so one document cannot go to the app. With an app covering the repository, a one-PR tick reads it as two parts:
+
+1. **Data read (app).** `BatchPrData` is `BatchPr` with every `viewer…` selection removed, and its follow-up pages (`BatchPrPageData`, `ReviewThreadCommentsData`) are cut the same way. It runs every tick on the installation token.
+2. **Viewer read (your token).** `BatchPrViewer` selects only the viewer-relative fields, keyed by the node IDs the data read returned (the PR, its review threads, PR comments, and review summaries and approvals, up to 100 IDs per request). It carries `viewer.login`, the repository's `viewerPermission` and `viewerCanAdminister`, and the PR's and nodes' `viewerCan*` fields. It runs in the same tick as the data read, so reply, resolve, minimize, dismiss, mark-ready, and merge capabilities are never older than the tick. Nothing is cached across ticks, and a node GitHub does not return reads as "no" (fail closed).
+
+`viewerDidAuthor` on thread comments is the tick's viewer login compared, ignoring case, with the comment's author login, so it costs no per-comment IDs.
+
+The viewer read is skipped when the first page's fingerprint matches the stored one and the stored report is replayed. The fingerprint no longer includes the viewer's permission, login, or `viewerCanUpdate`: a replayed report is an idle wait with nothing to reply to, resolve, or minimize, and a changed first page runs the viewer read again. So an idle or fingerprint-reused wait tick spends no GraphQL on your token. A tick that builds a fresh snapshot (a new check result, a new comment) spends one small viewer read on your token, beside the one data read on the app.
+
+Three cases keep the single combined `BatchPr` query on your token, because splitting would only add a request or the viewer fields are needed at once: a repository no app covers; the READY-receipt variant (a READY candidate needs the viewer fields in that tick); and a stack layer read from a stack handoff. A tick that reads a native stack's topology from the first page also drops that embedded topology when split (its viewer login and administer bit are not selected), so the standalone `PollStackTopology` read supplies it.
 
 ### GraphQL operations
 
-The queries live in `src/github/gql/`. A test pins which ones are app-eligible, so adding a viewer field to one of them fails the test.
+The queries live in `src/github/gql/`. `BatchPrData`, `BatchPrPageData`, and `ReviewThreadCommentsData` are derived at load time from `batch-pr.gql`, `batch-pr-page.gql`, and `review-thread-comments.gql` by removing the viewer selections (`src/github/gql-strip-viewer.mts`). A test pins which bundled documents are app-eligible and that the derived ones contain no viewer token, so adding a viewer field to one of them fails the test.
 
 These queries go through the app:
 
-| Operation                    | When Shepherd sends it                                                              |
-| ---------------------------- | ----------------------------------------------------------------------------------- |
-| `CommitCheckContexts`        | More status contexts for a merge-queue commit, past the first page.                 |
-| `PollSummaryCheckPage`       | Older status contexts for one commit in a multi-PR or stack summary.                |
-| `PollSummaryAnnotationProbe` | Annotation totals for a summary layer that otherwise looks ready.                   |
-| `CheckRunAnnotationsBatch`   | First annotation page for up to 20 failing check runs.                              |
-| `CheckRunAnnotations`        | Further annotation pages for one check run.                                         |
-| `StackHandoffCheckRuns`      | Check run titles, summaries, and first annotations for a stack-layer handoff.       |
-| `RefRules`                   | Base branch rules and how far the head is behind the base.                          |
-| `BaseBehind`                 | How far a non-stack head is behind its PR base.                                     |
-| `UpperLayerConflictTarget`   | Whether a conflicting upper stack layer already contains its base.                  |
-| `MergedBasePullRequests`     | Merged PRs whose head may be the stale base of a conflict.                          |
-| `GetPrHeadSha`               | The PR's current head SHA while waiting for a push to land.                         |
-| `PrNumberByBranch`           | The PR number for the current branch.                                               |
-| `GetPrBody`                  | The PR body and node ID before a body update. The `UpdatePrBody` mutation is yours. |
-| `ReplyThreadTranscripts`     | Review-thread transcripts used to write seen markers after `apply review` replies.  |
-| `ReplyThreadComments`        | Further comments of one of those threads.                                           |
+| Operation                    | When Shepherd sends it                                                                                             |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `BatchPrData`                | The per-tick PR read: checks, threads, comments, reviews, merge and branch-protection state, with no viewer field. |
+| `BatchPrPageData`            | Follow-up pages of `BatchPrData` threads, comments, reviews, and checks.                                           |
+| `ReviewThreadCommentsData`   | More comments of a review thread, in a split read.                                                                 |
+| `CommitCheckContexts`        | More status contexts for a merge-queue commit, past the first page.                                                |
+| `PollSummaryCheckPage`       | Older status contexts for one commit in a multi-PR or stack summary.                                               |
+| `PollSummaryAnnotationProbe` | Annotation totals for a summary layer that otherwise looks ready.                                                  |
+| `CheckRunAnnotationsBatch`   | First annotation page for up to 20 failing check runs.                                                             |
+| `CheckRunAnnotations`        | Further annotation pages for one check run.                                                                        |
+| `StackHandoffCheckRuns`      | Check run titles, summaries, and first annotations for a stack-layer handoff.                                      |
+| `RefRules`                   | Base branch rules and how far the head is behind the base.                                                         |
+| `BaseBehind`                 | How far a non-stack head is behind its PR base.                                                                    |
+| `UpperLayerConflictTarget`   | Whether a conflicting upper stack layer already contains its base.                                                 |
+| `MergedBasePullRequests`     | Merged PRs whose head may be the stale base of a conflict.                                                         |
+| `GetPrHeadSha`               | The PR's current head SHA while waiting for a push to land.                                                        |
+| `PrNumberByBranch`           | The PR number for the current branch.                                                                              |
+| `GetPrBody`                  | The PR body and node ID before a body update. The `UpdatePrBody` mutation is yours.                                |
+| `ReplyThreadTranscripts`     | Review-thread transcripts used to write seen markers after `apply review` replies.                                 |
+| `ReplyThreadComments`        | Further comments of one of those threads.                                                                          |
 
 These stay on your token:
 
-| Operation                                 | Why                                                                                |
-| ----------------------------------------- | ---------------------------------------------------------------------------------- |
-| `BatchPr` (and its READY receipt variant) | The per-tick query. Selects `viewer`, `viewerPermission`, and `viewerCan*` fields. |
-| `BatchPrPage`                             | Follow-up pages of `BatchPr` threads and comments, with `viewerCan*` fields.       |
-| `PollStackSummary`, `PollStackTopology`   | Stack and multi-PR summaries. Select viewer fields.                                |
-| `ReviewThreadComments`                    | More comments of a review thread. Selects `viewerDidAuthor` and `viewerCan*`.      |
-| `SuggestionThreads`                       | Threads for `suggest`. Selects viewer fields.                                      |
-| `MarkPrReady`, `UpdatePrBody`             | Mutations.                                                                         |
+| Operation                                 | Why                                                                                                                                          |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BatchPrViewer`                           | The viewer fields for a split `BatchPr` read: `viewer`, `viewerPermission`, `viewerCan*`.                                                    |
+| `BatchPr` (and its READY receipt variant) | The combined per-tick query, used when no app covers the repository, for the receipt variant, and for stack handoffs. Selects viewer fields. |
+| `BatchPrPage`                             | Combined follow-up pages, in the same cases as `BatchPr`.                                                                                    |
+| `PollStackSummary`, `PollStackTopology`   | Stack and multi-PR summaries. Select viewer fields.                                                                                          |
+| `ReviewThreadComments`                    | Combined thread-comment pages, in the same cases as `BatchPr`. Selects `viewerDidAuthor`.                                                    |
+| `SuggestionThreads`                       | Threads for `suggest`. Selects viewer fields.                                                                                                |
+| `MarkPrReady`, `UpdatePrBody`             | Mutations.                                                                                                                                   |
 
-The `RefRules`, `PrMergePolicy`, and `CommitCheckSuites` fragments are also part of `BatchPr`. There they ride on your token with the rest of that query.
+The `RefRules`, `PrMergePolicy`, and `CommitCheckSuites` fragments are also part of `BatchPr`. They ride on the app in a split read and on your token in a combined one.
 
 The setting is user-level only. Shepherd reads it from `~/.pr-shepherd/`, never from the repository's `.pr-shepherdrc.yml`.
 

@@ -9,6 +9,7 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { stripViewerFields } from "./gql-strip-viewer.mts";
 
 const gql = (name: string): string =>
   readFileSync(join((import.meta as { dirname: string }).dirname, "gql", name), "utf8");
@@ -19,8 +20,17 @@ const withSharedFragments = (query: string): string =>
 /** The primary batch query that fetches CI + comments + merge status in one round-trip. */
 export const BATCH_PR_QUERY = withSharedFragments(gql("batch-pr.gql"));
 
+/** `BatchPr` without any viewer field: a GitHub App may answer it. Paired with `BATCH_PR_VIEWER_QUERY`. */
+export const BATCH_PR_DATA_QUERY = stripViewerFields(BATCH_PR_QUERY, "BatchPrData");
+
+/** Viewer-relative fields (user token) for the node ids a viewer-free `BatchPr` read returned. */
+export const BATCH_PR_VIEWER_QUERY = gql("batch-pr-viewer.gql");
+
 /** Slim @include follow-up for outstanding batch-query connections. */
 export const BATCH_PR_PAGE_QUERY = gql("batch-pr-page.gql");
+
+/** `BatchPrPage` without viewer fields, for the viewer-free split read. */
+export const BATCH_PR_PAGE_DATA_QUERY = stripViewerFields(BATCH_PR_PAGE_QUERY, "BatchPrPageData");
 
 const POLL_SUMMARY_CHECK_CONTEXTS_FRAGMENT = gql("poll-summary-check-contexts.gql");
 
@@ -75,6 +85,12 @@ export const SUGGESTION_THREADS_QUERY = gql("suggestion-threads.gql");
 
 /** Fetches additional comments for a single review thread when its nested connection paginates. */
 export const REVIEW_THREAD_COMMENTS_QUERY = gql("review-thread-comments.gql");
+
+/** `ReviewThreadComments` without `viewerDidAuthor`, for the viewer-free split read. */
+export const REVIEW_THREAD_COMMENTS_DATA_QUERY = stripViewerFields(
+  REVIEW_THREAD_COMMENTS_QUERY,
+  "ReviewThreadCommentsData",
+);
 
 /** Requested review-thread transcripts for best-effort reply seen markers. */
 export const REPLY_THREAD_TRANSCRIPTS_QUERY = gql("reply-thread-transcripts.gql");

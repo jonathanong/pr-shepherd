@@ -65,7 +65,7 @@ Costs assume the PR number was passed; inferring it from the branch adds 1 point
 | `iterate`, MCP `iterate` for one PR                                 | `BatchPr` every call                      | 1, plus supplements |
 | First tick of a stack layer the stack tick routed, within 2 minutes | The stack tick's handoff, no request      | 0, plus supplements |
 
-`BatchPr`'s first page is the fingerprint read, so a hit and a miss cost the same 1 point when there are no supplements: about 60 points/hour at the default 60s interval. A thread among the newest 20 with more than one comment disables reuse.
+With a [GitHub App](github-app.md#the-batchpr-viewer-split) covering the repository, `BatchPr` is read as `BatchPrData` on the app plus, on a fingerprint miss, one `BatchPrViewer` request on your token; a hit spends nothing on your token. `BatchPr`'s first page is the fingerprint read, so a hit and a miss cost the same 1 point when there are no supplements: about 60 points/hour at the default 60s interval. A thread among the newest 20 with more than one comment disables reuse.
 
 An idle wait (no check running, for example a pending bot review after CI finished) first makes eight conditional REST reads ([graphql.md](graphql.md#idle-wait-change-detectors)). If all answer 304 within `poll.reconcile-seconds` (default 900) of the last GraphQL snapshot, the tick spends no points and no core requests; a changed read costs that read plus a full `BatchPr` snapshot (no fingerprint hit), and the first idle tick seeds eight charged core reads beside a full `BatchPr` snapshot (one first page, 1 point). An hour of unchanged idle waiting costs about 4 points (one reconcile per 15 minutes) instead of 60.
 

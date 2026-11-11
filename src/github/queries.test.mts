@@ -160,3 +160,28 @@ describe("queries — GQL constants load at import time", () => {
     }
   });
 });
+
+describe("queries — viewer split", () => {
+  it("derives viewer-free data documents a GitHub App may answer", async () => {
+    const { isAppEligibleGraphql } = await import("./app-eligibility.mts");
+    const {
+      BATCH_PR_DATA_QUERY,
+      BATCH_PR_PAGE_DATA_QUERY,
+      REVIEW_THREAD_COMMENTS_DATA_QUERY,
+      BATCH_PR_VIEWER_QUERY,
+    } = await import("./queries.mts");
+    for (const [document, name] of [
+      [BATCH_PR_DATA_QUERY, "BatchPrData"],
+      [BATCH_PR_PAGE_DATA_QUERY, "BatchPrPageData"],
+      [REVIEW_THREAD_COMMENTS_DATA_QUERY, "ReviewThreadCommentsData"],
+    ] as const) {
+      expect(document).toContain(`query ${name}`);
+      expect(document.replace(/#[^\n]*/g, "")).not.toMatch(/\bviewer/);
+      expect(isAppEligibleGraphql(document)).toBe(true);
+    }
+    expect(isAppEligibleGraphql(BATCH_PR_QUERY)).toBe(false);
+    expect(isAppEligibleGraphql(BATCH_PR_VIEWER_QUERY)).toBe(false);
+    expect(BATCH_PR_DATA_QUERY).toContain("headRepository {\n        nameWithOwner\n");
+    expect(BATCH_PR_DATA_QUERY).toContain("mergeCommitAllowed");
+  });
+});

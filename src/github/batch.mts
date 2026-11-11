@@ -1,16 +1,11 @@
 import { recordThreadIdentity } from "./rest-identities.mts";
 import { githubOperation, runWithGithubTransport } from "./transport.mts";
 import { fetchRestPrBatch } from "./rest-batch-read.mts";
-import { graphqlWithRateLimit, type RateLimitInfo, type RepoInfo } from "./client.mts";
+import type { RateLimitInfo, RepoInfo } from "./client.mts";
 import { hydrateThreadCommentPages } from "./thread-comments.mts";
-import { BATCH_PR_QUERY, BATCH_PR_RECEIPT_QUERY } from "./queries.mts";
+import { readBatchFirstPage, usesViewerSplit } from "./batch-first-page.mts";
+import { applyBatchViewer } from "./batch-viewer.mts";
 import { prepareBatchReceiptEvidence } from "./batch-receipt-evidence.mts";
-import {
-  GitHubRequestError,
-  isRetryableGraphQlResourceLimit,
-  type GitHubGraphQlError,
-} from "./errors.mts";
-import { rateLimitKind } from "./rate-limit-kind.mts";
 import { parseRawPr } from "./batch-parsers.mts";
 import {
   parseCheckSuitesComplete,
@@ -23,7 +18,6 @@ import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
 import { paginateBatchConnections } from "./batch-page.mts";
 import { requireRawPr } from "./batch-response.mts";
 import { hydrateMergeQueueChecks } from "./merge-queue-checks.mts";
-import type { RawBatchResponse } from "./batch-raw-types.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import type { BatchPrData } from "../types.mts";
 import { fingerprintFromRaw, type PrFingerprint } from "./fingerprint.mts";
@@ -63,42 +57,6 @@ interface FetchPrBatchOptions {
   terminalShortCircuit?: boolean; // REST: a merged PR stops at its first pull read
 }
 
-function onlyReceiptSummaryErrors(errors?: GitHubGraphQlError[]): boolean {
-  return (
-    !!errors?.length &&
-    errors.every(
-      (error) =>
-        Array.isArray(error.path) &&
-        error.path[0] === "repository" &&
-        error.path[1] === "receiptSummary",
-    )
-  );
-}
-
-async function readBatchFirstPage(pr: number, repo: RepoInfo, opts: FetchPrBatchOptions) {
-  const variables = { owner: repo.owner, repo: repo.name, pr };
-  try {
-    return await graphqlWithRateLimit<RawBatchResponse>(
-      opts.includeReceiptSummary ? BATCH_PR_RECEIPT_QUERY : BATCH_PR_QUERY,
-      variables,
-    );
-  } catch (error) {
-    if (
-      !opts.includeReceiptSummary ||
-      !(error instanceof GitHubRequestError) ||
-      rateLimitKind(error) !== null ||
-      !(
-        isRetryableGraphQlResourceLimit(error.graphqlErrors) ||
-        (error.status === 200 && onlyReceiptSummaryErrors(error.graphqlErrors))
-      )
-    )
-      throw error;
-    // Receipt evidence is optional; a resource-limited combined query or an
-    // error confined to its sibling must not prevent the ordinary snapshot.
-    return graphqlWithRateLimit<RawBatchResponse>(BATCH_PR_QUERY, variables);
-  }
-}
-
 /**
  * Fetch all PR data needed for a `shepherd check` in one (or a few, if paginating) GraphQL requests.
  */
@@ -109,22 +67,35 @@ async function fetchGraphqlPrBatch<T>(
   reuse?: (fingerprint: PrFingerprint) => Promise<T | null>,
 ): Promise<BatchResult | ReusedBatch<T>> {
   const handoff = await takeStackHandoff(repo, pr); // a routed stack layer's first read
-  const result = handoff ? { data: handoff } : await readBatchFirstPage(pr, repo, opts);
+  // The READY receipt sibling and a stack handoff carry viewer fields in the same document, and
+  // a READY candidate needs them anyway, so those reads stay combined on the user's token.
+  const split = !handoff && usesViewerSplit(repo, opts);
+  const result = handoff ? { data: handoff } : await readBatchFirstPage(pr, repo, opts, split);
   const raw = requireRawPr(result.data, pr, repo);
-  const fingerprint = fingerprintFromRaw(
-    raw,
-    result.data.repository?.viewerPermission ?? null,
-    result.data.viewer?.login ?? null,
-  );
+  const fingerprint = fingerprintFromRaw(raw);
   // Decide reuse from the first page alone, before any supplement is paid for.
   const reused = reuse && (await reuse(fingerprint));
   const baseTipOid = raw.baseRef?.target?.oid;
-  const stackEvidence = stackEvidenceFromRaw(raw, result.data);
+  // Split read: the topology's viewer fields are unread here, so only the trunk rules ride along.
+  const stackEvidence = stackEvidenceFromRaw(raw, result.data, split);
   if (reused)
     return { reused, ...(baseTipOid && { baseTipOid }), ...(stackEvidence && { stackEvidence }) };
   const queueRateLimit = await hydrateMergeQueueChecks(raw, repo, result.rateLimit);
-  const paged = await paginateBatchConnections(pr, repo, raw, opts, queueRateLimit);
-  const threadPages = await hydrateThreadCommentPages(paged.threads, paged.rateLimit);
+  const paged = await paginateBatchConnections(
+    pr,
+    repo,
+    raw,
+    { ...opts, viewerFree: split },
+    queueRateLimit,
+  );
+  const threadPages = await hydrateThreadCommentPages(paged.threads, paged.rateLimit, split);
+  const viewer =
+    split &&
+    (await applyBatchViewer(repo, raw, {
+      threads: threadPages.threads,
+      comments: paged.comments,
+      reviews: [...paged.reviewSummaries, ...paged.approvedReviews],
+    }));
   let receiptSummary: RawSummaryPr | null = null;
   if (opts.includeReceiptSummary) {
     try {
@@ -152,15 +123,17 @@ async function fetchGraphqlPrBatch<T>(
     paged.reviewSummaries,
     paged.approvedReviews,
     paged.checks,
-    result.data.repository!,
+    viewer ? { ...result.data.repository!, ...viewer.repository } : result.data.repository!,
   );
-  const viewerLogin = result.data.viewer?.login;
+  const viewerLogin = viewer ? viewer.login : result.data.viewer?.login;
   if (viewerLogin) data.viewerLogin = viewerLogin;
   data.checks = mergeStartupFailureChecks(data.checks, parseSuiteStartupFailures(raw));
   return {
     data,
     fingerprint,
-    rateLimit: threadPages.rateLimit ?? paged.rateLimit ?? result.rateLimit,
+    rateLimit:
+      (viewer && viewer.rateLimit) ||
+      (threadPages.rateLimit ?? paged.rateLimit ?? result.rateLimit),
     ...(parseCheckSuitesComplete(raw) && { checkSuitesComplete: true }),
     ...(parseHeadCheckSuitesEmpty(raw) && { headCheckSuitesEmpty: true as const }),
     ...workflowSuites(raw),

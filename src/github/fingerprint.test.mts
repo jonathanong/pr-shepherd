@@ -41,11 +41,10 @@ describe("fingerprintsEqual", () => {
     ).toBe(false);
   });
 
-  it("is false when a comment is edited in place or the viewer changes", () => {
+  it("is false when a comment is edited in place", () => {
     expect(
       fingerprintsEqual(sample(), sample({ commentRevisions: "c1:2026-09-06T02:00:00Z" })),
     ).toBe(false);
-    expect(fingerprintsEqual(sample(), sample({ viewerLogin: "other" }))).toBe(false);
   });
 
   it("is false when a thread comment is edited", () => {
@@ -107,11 +106,10 @@ describe("fingerprintFromRaw", () => {
         ],
       },
     });
-    const fingerprint = fingerprintFromRaw(raw as never, "WRITE");
+    const fingerprint = fingerprintFromRaw(raw as never);
     expect(fingerprint.reviewCount).toBe(0);
     expect(fingerprint.checkSuiteConclusions).toBe("CS_1::");
     expect(fingerprint.checkSuitesComplete).toBe(true);
-    expect(fingerprint.viewerPermission).toBe("WRITE");
   });
 
   it("treats a complete suite page with no nodes as empty", () => {

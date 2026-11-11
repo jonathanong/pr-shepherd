@@ -26,6 +26,8 @@ export function stackEvidenceFromRaw(
     viewer?: { login: string | null } | null;
     repository?: { viewerCanAdminister?: boolean } | null;
   },
+  /** A viewer-free read has no viewer login or administer bit, so it omits the topology. */
+  viewerFree = false,
 ): BatchStackEvidence | undefined {
   const stack = raw.stack;
   if (!stack) return undefined;
@@ -33,7 +35,7 @@ export function stackEvidenceFromRaw(
     login: data.viewer?.login ?? null,
     canAdminister: data.repository?.viewerCanAdminister,
   };
-  const topology = embeddedTopology(stack, raw.number, viewer);
+  const topology = viewerFree ? undefined : embeddedTopology(stack, raw.number, viewer);
   const trunk = embeddedTrunkRules(stack, raw);
   if (!topology && !trunk) return undefined;
   return { ...(topology && { topology }), ...(trunk && { trunk }) };
