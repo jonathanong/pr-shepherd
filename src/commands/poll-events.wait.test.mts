@@ -133,10 +133,10 @@ describe("waitTick deadline cap", () => {
   it("wakes at a time-based deadline and says so", async () => {
     const events = await enabled([{ events: [] }]);
     const start = Date.now();
-    await events.waitTick(input({ deadlineAt: start + 100_000 }));
+    await events.waitTick(input({ deadlineAt: start + 100_000, deadlineReason: "ready-delay" }));
     expect(Date.now() - start).toBe(100_000);
     expect(appendEntry).toHaveBeenCalledWith(
-      expect.stringContaining("woke on stall-timeout deadline"),
+      expect.stringContaining("woke on ready-delay deadline"),
     );
   });
 
@@ -145,6 +145,7 @@ describe("waitTick deadline cap", () => {
     const start = Date.now();
     await events.waitTick(input({ deadlineAt: start - 5_000 }));
     expect(Date.now() - start).toBe(60_000);
+    expect(appendEntry).toHaveBeenCalledWith(expect.stringContaining("on time-based deadline"));
   });
 
   it("ignores a deadline beyond the fallback interval", async () => {

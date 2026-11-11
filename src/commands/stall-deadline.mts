@@ -15,15 +15,15 @@ export function earliestDeadline(...deadlines: (number | undefined)[]): number |
 export async function aggregateDeadline(
   result: PollSummaryResult,
   stallTimeoutSeconds: number | undefined,
-): Promise<{ deadlineAt: number } | undefined> {
+): Promise<WaitDeadline | undefined> {
   const stall = await readStackStallDeadline(
     result,
     stallTimeoutSeconds ?? loadConfig().iterate["stall-timeout-minutes"] * 60,
   );
   const ready = result.prs
     .filter((item) => (item.remainingSeconds ?? 0) > 0)
-    .map((item) => Date.now() / 1000 + item.remainingSeconds!);
-  return toDeadlineAt(earliestDeadline(stall, ...ready));
+    .map((item): Candidate => [Date.now() / 1000 + item.remainingSeconds!, "ready-delay"]);
+  return firstDeadline([stall, "stall-timeout"], ...ready);
 }
 
 /** The `deadlineAt` for a single-PR wait: the stall timeout or the CI-start timeout. */
@@ -31,17 +31,29 @@ export async function onePrDeadline(
   result: IterateResult,
   opts: { stallTimeoutSeconds?: number },
   sink: { ciStartDeadlineSeconds?: number },
-): Promise<{ deadlineAt: number } | undefined> {
-  return toDeadlineAt(
-    earliestDeadline(
-      await readStallDeadline(result, opts.stallTimeoutSeconds),
-      result.action === "wait" ? sink.ciStartDeadlineSeconds : undefined,
-    ),
+): Promise<WaitDeadline | undefined> {
+  return firstDeadline(
+    [await readStallDeadline(result, opts.stallTimeoutSeconds), "stall-timeout"],
+    [result.action === "wait" ? sink.ciStartDeadlineSeconds : undefined, "CI-start"],
   );
 }
 
-function toDeadlineAt(seconds: number | undefined): { deadlineAt: number } | undefined {
-  return seconds === undefined ? undefined : { deadlineAt: seconds * 1000 };
+/** A capped event wait's deadline (epoch ms) and the timer it belongs to, for the wake log. */
+export interface WaitDeadline {
+  deadlineAt: number;
+  deadlineReason: string;
+}
+
+type Candidate = [seconds: number | undefined, reason: string];
+
+function firstDeadline(...candidates: Candidate[]): WaitDeadline | undefined {
+  let first: WaitDeadline | undefined;
+  for (const [seconds, reason] of candidates) {
+    if (seconds !== undefined && (first === undefined || seconds * 1000 < first.deadlineAt)) {
+      first = { deadlineAt: seconds * 1000, deadlineReason: reason };
+    }
+  }
+  return first;
 }
 
 /** When an unchanged state would trip the stall timeout, or undefined when no timer is running. */

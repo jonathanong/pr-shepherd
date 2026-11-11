@@ -170,9 +170,7 @@ describe("runPoll with hook-harness events", () => {
       await vi.advanceTimersByTimeAsync(100_000);
       expect((await done).action).toBe("cancel");
       expect(mockRunIterate).toHaveBeenCalledTimes(2);
-      expect(stderr).toHaveBeenCalledWith(
-        expect.stringContaining("woke on stall-timeout deadline"),
-      );
+      expect(stderr).toHaveBeenCalledWith(expect.stringContaining("on stall-timeout deadline"));
     });
 
     it("wakes at the CI-start deadline reported by the tick", async () => {
@@ -183,9 +181,10 @@ describe("runPoll with hook-harness events", () => {
         return result("wait");
       });
       mockRunIterate.mockResolvedValue(result("cancel", { state: "MERGED" }));
-      const done = runPoll({ ...base, timeoutSeconds: 1000 });
+      const done = runPoll({ ...base, timeoutSeconds: 1000, verbose: true });
       await vi.advanceTimersByTimeAsync(90_000);
-      expect((await done).action).toBe("cancel");
+      await done;
+      expect(stderr).toHaveBeenCalledWith(expect.stringContaining("woke on CI-start deadline"));
     });
 
     it("never ticks sooner than the plain interval when the deadline is past", async () => {
