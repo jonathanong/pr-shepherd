@@ -6,7 +6,7 @@ import type { PollCommandOptions } from "./poll-options.mts";
 import { sleep } from "../util/sleep.mts";
 import { withPollApiUsage } from "./poll-run.mts";
 import { loadConfig } from "../config/load.mts";
-import { carryQuotaWarning, quotaPollIntervalMs } from "./poll-quota.mts";
+import { carryQuotaWarning, onePrSleepMs } from "./poll-quota.mts";
 import { onePrCancelFromPulls, onePrRateLimitTargets } from "./poll-rate-limit-cancel.mts";
 import { createUntilTerminalRateLimitRetry } from "./poll-rate-limit-wait.mts";
 import { createTickRunner } from "./poll-tick.mts";
@@ -15,7 +15,7 @@ import {
   writeRuleAutoResolveProgress,
   writeWaitProgress,
 } from "./poll-progress.mts";
-import { getGithubTransport } from "../github/transport.mts";
+import { onePrDeadline } from "./stall-deadline.mts";
 import {
   onePrTargets,
   pauseBeforeNextTick,
@@ -66,7 +66,7 @@ async function runPollCore(
   let prNumber = opts.prNumber;
   let debounceUntil: number | null = null;
   const rateLimitRetry = createUntilTerminalRateLimitRetry();
-  const head: { headSha?: string; headRef?: string } = {};
+  const head: { headSha?: string; headRef?: string; ciStartDeadlineSeconds?: number } = {};
   while (true) {
     tick += 1;
     const tickStartedAt = Date.now();
@@ -83,7 +83,7 @@ async function runPollCore(
           ...iterateOpts,
           prNumber,
           ...seenOptions,
-          ...(events && { eventTargetSink: head }),
+          ...(events && { eventTargetSink: head, stallDeadlineSink: head }),
           fingerprintCache,
           deferQuotaWarning: !untilTerminal,
           quotaWarningMinimumPollIntervalMinutes: intervalSeconds / 60,
@@ -107,14 +107,9 @@ async function runPollCore(
       pendingQuotaWarning = carryQuotaWarning(pendingQuotaWarning, lastResult.quotaWarning);
     };
     /** Wait for the next tick; true when the poll window ends first and the poll should stop. */
-    const pause = (result: IterateResult, announce: Announce) => {
-      const sleepMs = quotaPollIntervalMs(
-        quotaBands,
-        result.apiUsage,
-        intervalMs,
-        MAX_TIMER_MS,
-        getGithubTransport(),
-      );
+    const pause = async (result: IterateResult, announce: Announce) => {
+      const deadline = events && (await onePrDeadline(result, iterateOpts, head));
+      const sleepMs = onePrSleepMs(quotaBands, result.apiUsage, intervalMs, MAX_TIMER_MS);
       return pauseBeforeNextTick({
         events,
         targets: onePrTargets(result, head),
@@ -123,6 +118,7 @@ async function runPollCore(
         intervalMs,
         label: `poll tick ${tick} / +${Math.round((Date.now() - start) / 1000)}s`,
         tickStartedAt,
+        ...deadline,
         remainingMs: untilTerminal ? Infinity : timeoutMs - (Date.now() - start),
         announce: (viaEvents) => announce(sleepMs, viaEvents),
       });

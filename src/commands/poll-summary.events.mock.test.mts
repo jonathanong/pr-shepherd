@@ -121,4 +121,30 @@ describe("runAggregatePoll with hook-harness events", () => {
     expect((await done).reason).toBe("actionable");
     expect(transport.poll).not.toHaveBeenCalled();
   });
+
+  it("caps the event wait at a ready-delay deadline, but not below the plain interval", async () => {
+    const waiting = (remainingSeconds: number) =>
+      ({
+        selection: { kind: "prs" as const, requested: [1, 2] },
+        prs: [1, 2].map((pr) =>
+          row(pr, pr, {
+            action: "wait",
+            state: "OPEN",
+            mergeStateStatus: "BLOCKED",
+            remainingSeconds,
+          }),
+        ),
+      }) as never;
+    mockFetch
+      .mockResolvedValueOnce(waiting(100))
+      .mockResolvedValueOnce(waiting(10))
+      .mockResolvedValue(summary("cancel") as never);
+    const done = runAggregatePoll({ ...opts, intervalSeconds: 60, timeoutSeconds: 1000 });
+    await vi.advanceTimersByTimeAsync(100_000);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(59_000);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect((await done).reason).toBe("all_terminal");
+  });
 });

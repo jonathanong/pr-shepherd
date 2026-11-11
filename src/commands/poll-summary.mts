@@ -16,6 +16,7 @@ import type { PollSummaryCommandOptions, PollSummaryResult } from "../types.mts"
 import { planPollSummary, withPollSummaryInstructions } from "./poll-summary-instructions.mts";
 import { summaryStatusSignature } from "./poll-summary-signature.mts";
 import { applyStackStallGuard } from "./stack-stall.mts";
+import { aggregateDeadline } from "./stall-deadline.mts";
 import {
   aggregateTargets,
   pauseBeforeNextTick,
@@ -249,9 +250,12 @@ async function runAggregatePollCore(
           MAX_TIMER_MS,
           getGithubTransport(),
         );
+    const useEvents = debounceUntil ? undefined : events;
+    const deadline = useEvents && (await aggregateDeadline(last, opts.stallTimeoutSeconds));
     const stop = await pauseBeforeNextTick({
       // The settle window after a first TRIAGE is a plain timer, never an event wait.
-      events: debounceUntil ? undefined : events,
+      events: useEvents,
+      ...deadline,
       targets: aggregateTargets(last),
       recheck: last.prs.some((item) => item.mergeStateStatus === "UNKNOWN"),
       sleepMs,

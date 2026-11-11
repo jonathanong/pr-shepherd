@@ -21,6 +21,8 @@ interface WaitTickInput {
   /** Time left in the poll window; `Infinity` for `--until-terminal`. */
   remainingMs: number;
   recheck: boolean;
+  /** Epoch ms of a time-based deadline (stall timeout) that caps the healthy event wait. */
+  deadlineAt?: number;
 }
 
 export interface PollEvents {
@@ -78,8 +80,16 @@ function createPollEvents(verbose: boolean): PollEvents | undefined {
         // Events never make ticks more frequent than plain polling would.
         minGapMs: input.sleepMs,
         tickStartedAt: input.tickStartedAt,
+        ...(input.deadlineAt !== undefined && { deadlineAt: input.deadlineAt }),
       });
-      note(`[${input.label}] woke on ${describe(wake, degraded)}`);
+      const atDeadline =
+        wake.kind === "timer" &&
+        !degraded &&
+        input.deadlineAt !== undefined &&
+        Date.now() + TIMER_DRIFT_TOLERANCE_MS >= input.deadlineAt;
+      note(
+        `[${input.label}] woke on ${atDeadline ? "stall-timeout deadline" : describe(wake, degraded)}`,
+      );
       return (
         wake.kind === "timer" &&
         Date.now() - waitStart + TIMER_DRIFT_TOLERANCE_MS >= input.remainingMs

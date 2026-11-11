@@ -24,6 +24,11 @@ interface WaitRequest {
   /** Earliest gap after `tickStartedAt` before the next tick may start. */
   minGapMs: number;
   tickStartedAt: number;
+  /**
+   * Epoch ms of a time-based deadline no event announces (the stall timeout). It caps the healthy
+   * wait, but never below `sleepMs`.
+   */
+  deadlineAt?: number;
 }
 
 export type Wake = { kind: "event"; event: EventEnvelope } | { kind: "timer" };
@@ -82,7 +87,11 @@ export function createEventWaiter(options: {
     async wait(request) {
       const scopes = scopesOf(request.targets);
       const start = deps.now();
-      const healthyMs = request.recheck ? request.sleepMs : Math.max(request.sleepMs, fallbackMs);
+      const capped =
+        request.deadlineAt === undefined
+          ? fallbackMs
+          : Math.min(fallbackMs, request.deadlineAt - start);
+      const healthyMs = request.recheck ? request.sleepMs : Math.max(request.sleepMs, capped);
       const deadline = (degraded: boolean): number =>
         start + Math.min(degraded ? request.sleepMs : healthyMs, request.windowMs);
       let degraded = false;

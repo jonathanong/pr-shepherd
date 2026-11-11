@@ -1,5 +1,4 @@
 import { loadConfig } from "../config/load.mts";
-import { readStallState } from "../state/iterate-stall.mts";
 import type {
   IterateCommandOptions,
   IterateResult,
@@ -20,6 +19,7 @@ import {
   onlyDraftVerificationSelection,
 } from "./poll-summary-explicit-instructions.mts";
 import { runIterate } from "./iterate/index.mts";
+import { earliestDeadline, readStallDeadline } from "./stall-deadline.mts";
 import { runsSingleTick } from "./single-tick.mts";
 import { readStackStallDeadline } from "./stack-stall.mts";
 import { runPoll, type PollCommandOptions } from "./poll.mts";
@@ -93,24 +93,6 @@ export function runAggregatePollCommand(
   opts: AggregatePollCommandOptions,
 ): Promise<PollSummaryResult> {
   return runsSingleTick() ? runPollSummaryTick(opts) : runAggregatePoll(opts);
-}
-
-function earliestDeadline(...deadlines: (number | undefined)[]): number | undefined {
-  const known = deadlines.filter((d): d is number => d !== undefined);
-  return known.length > 0 ? Math.min(...known) : undefined;
-}
-
-/** When an unchanged state would trip the stall timeout, or undefined when no timer is running. */
-async function readStallDeadline(
-  result: IterateResult,
-  stallTimeoutSeconds: number | undefined,
-): Promise<number | undefined> {
-  if (result.action !== "wait") return undefined;
-  const timeout = stallTimeoutSeconds ?? loadConfig().iterate["stall-timeout-minutes"] * 60;
-  const [owner, repo] = result.repo.split("/");
-  if (timeout <= 0 || !owner || !repo) return undefined;
-  const read = await readStallState({ owner, repo, pr: result.pr });
-  return read.ok && read.state ? read.state.firstSeenAt + timeout : undefined;
 }
 
 async function withAggregateNextCheck(
