@@ -22,6 +22,8 @@ fi
 # code is 0 or 10-19 here — a real PR outcome, not an error
 ```
 
+A host that runs Shepherd as a background command may report any non-zero exit, including `10`–`16`, as a failed command; read the output, since these are Shepherd actions, not crashes.
+
 Codes 10–19 sit above the single-digit range and below the `sysexits.h` block, so "shepherd is reporting PR state" never collides with "shepherd broke".
 
 ## 0 — done

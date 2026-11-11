@@ -34,6 +34,7 @@ describe("explicitInstructions quota continuations", () => {
     const text = explicitInstructions(result(reason, action), command).join("\n");
     expect(text.toLowerCase()).toContain(`run \`${command}\` again at the cadence below`);
     expect(text).toContain("Do not end the turn while any selected row is non-terminal");
+    expect(text).toContain("runs as a background command that wakes you on exit, end the turn");
     expect(text).toContain("--interval 5m");
   });
 

@@ -143,9 +143,11 @@ describe("pr-shepherd skill recurrence contract", () => {
     "utf8",
   );
 
-  it("injects --until-terminal into the canonical CLI poll dispatcher", () => {
-    expect(skill).toMatch(/Run `pr-shepherd \[PR \.\.\.\] --until-terminal`/);
-    expect(skill).toMatch(/pr-shepherd stack PR --until-terminal/);
+  it("picks --until-terminal or the bounded poll by host capability", () => {
+    expect(skill).toMatch(/Run `pr-shepherd \[PR \.\.\.\]` or `pr-shepherd stack PR`/);
+    expect(skill).toMatch(/add `--until-terminal`, run it as a background command/);
+    expect(skill).toMatch(/run the bounded command in the foreground/);
+    expect(skill).toMatch(/One watcher per selection/);
     expect(skill).toContain("Do not run `pr-shepherd iterate`");
   });
 

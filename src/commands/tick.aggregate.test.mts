@@ -50,13 +50,14 @@ describe("aggregate tick", () => {
     m.runPollSummary.mockResolvedValue(
       summary({
         instructions: [
-          "1. Run `cmd` again. Do not end the turn while any selected row is non-terminal: a poll finishes only that row.",
+          "1. Run `cmd` again. Do not end the turn while any selected row is non-terminal: a poll finishes only that row. If this command runs as a background command that wakes you on exit, end the turn and continue when it exits.",
         ],
       }),
     );
     const result = await runPollSummaryTick({} as never);
     const text = result.instructions!.join("\n");
     expect(text).not.toContain("Do not end the turn");
+    expect(text).not.toContain("background command");
     expect(text).toContain(
       "Keep watching every non-terminal selected row through the wake-up below: a poll",
     );

@@ -77,6 +77,26 @@ pr-shepherd 42 43 44
 pr-shepherd stack 43
 ```
 
+### Choosing a wait mode
+
+The bounded poll (`poll.timeout-seconds`, default 270s = 4.5m) is for short-lived agents that wait in the foreground: each call stays inside Anthropic's default 5-minute prompt-cache window and under common tool timeouts. `--until-terminal` is for callers that run it as a background process, or for an external or background shepherd. Pick by what your host does, not by its name:
+
+| Host capability                                               | Run                                                                                                                                                                          |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A background command's exit wakes the agent                   | `pr-shepherd [PR ...] --until-terminal` (plus `--merge` when requested) as a background command; end the turn; act on its output when it exits. Do not poll its output file. |
+| No wake-up on exit (foreground subagent, polling-style tools) | `pr-shepherd [PR ...]` in the foreground; pass `--timeout` below the host's command-time limit if that is under 270s; on a non-terminal `WAIT`/`READY`, rerun it.            |
+| One tick per invocation (cloud sessions, MCP, `iterate`)      | Unchanged: follow `nextCheck` ([cloud.md](cloud.md)).                                                                                                                        |
+
+Run one watcher per selection. Before starting Shepherd with different PRs or flags (for example adding `--merge`), stop the running one; never run two on the same PR. A non-zero exit from a background `--until-terminal` run is a Shepherd action ([exit codes](exit-codes.md)), not a crash, and some hosts label it a failure.
+
+Host examples, as of 2026-11 (they change; check the source):
+
+- Claude Code: a Bash command with `run_in_background` re-invokes the session when it exits, and a background subagent is notified too; a foreground subagent's background commands are stopped when its run ends. Bash defaults to a 120s timeout (max 600s, set per call), and a foreground command that times out moves to the background rather than being killed.
+- Codex CLI: no wake-on-exit yet ([openai/codex#13733](https://github.com/openai/codex/issues/13733)); `exec_command` yields after about 10s with a session id and the model polls with `write_stdin`, each poll waiting up to about 300s, so use the bounded poll.
+- Cursor CLI: recent releases deliver a completion follow-up when a background shell finishes.
+- Gemini CLI: `is_background` / `&` exists without a documented exit notification, so treat it as no wake-up.
+- Prompt cache: Anthropic's default TTL is 5 minutes, while OpenAI's retention options differ (30m, 12h, 24h), so the cache argument for 270s is Claude-specific; the tool-timeout argument applies everywhere.
+
 ### Flags
 
 | Flag                                   | Applies to                   | Default / notes                                                                                                                                                                             |
@@ -85,7 +105,7 @@ pr-shepherd stack 43
 | `--timeout <duration>`                 | poll                         | `poll.timeout-seconds` (270). Ignored for WAIT ticks under `--until-terminal`; does not cut an in-flight debounce short.                                                                    |
 | `--debounce <duration>`                | poll                         | `poll.debounce-seconds` (60). Settle window after the first `TRIAGE` or stack `SHEPHERD`; `0` disables.                                                                                     |
 | `--quiet-status` / `--no-quiet-status` | poll                         | `poll.quiet-status` (`false`). By default each `WAIT` tick writes a stderr line naming what it waits on; stdout carries only the final action.                                              |
-| `--until-terminal`                     | poll                         | See above. The shipped skill's canonical form.                                                                                                                                              |
+| `--until-terminal`                     | poll                         | See above and [Choosing a wait mode](#choosing-a-wait-mode). The shipped skill's canonical form for a host that a background command's exit wakes.                                          |
 | `--once`                               | `stack`                      | Run one aggregate tick with `nextCheck` instead of polling; the poll flags are ignored.                                                                                                     |
 | `--ready-delay <duration>`             | iterate                      | `iterate.ready-delay-minutes` (0).                                                                                                                                                          |
 | `--stall-timeout <duration>`           | iterate                      | `iterate.stall-timeout-minutes` (60); `0` disables.                                                                                                                                         |

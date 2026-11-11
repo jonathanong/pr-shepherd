@@ -57,7 +57,8 @@ function onlyUnownedWork(layers: PollSummaryItem[]): boolean {
 }
 
 /** The turn must outlive every non-terminal layer; a one-PR session ending does not end the stack. */
-const STACK_KEEP_WATCHING = "Keep watching until every layer is terminal.";
+const STACK_KEEP_WATCHING =
+  "Keep watching until every layer is terminal; if this command runs as a background command that wakes you on exit, end the turn and continue when it exits.";
 
 /** The literal stack command to rerun, or the generic name when the caller's command is unknown. */
 export function stackRerunTarget(command?: string): string {

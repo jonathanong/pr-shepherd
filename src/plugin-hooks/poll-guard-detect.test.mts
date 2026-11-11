@@ -71,6 +71,16 @@ describe("detectPoller", () => {
   });
 });
 
+describe("backgrounded Shepherd", () => {
+  it.each([
+    "pr-shepherd 41 42 --until-terminal --merge &",
+    "nohup pr-shepherd stack 41 --until-terminal > out.log 2>&1 &",
+    "npx pr-shepherd 671 --until-terminal",
+  ])("does not flag %s", (command) => {
+    expect(detectPoller(command)).toBeNull();
+  });
+});
+
 describe("expandPath", () => {
   const env = { HOME: "/home/u", TMPDIR: "/tmp/x" };
   it("expands home, variables and quotes", () => {
