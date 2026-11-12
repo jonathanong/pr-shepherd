@@ -46,6 +46,16 @@ function generate(outDir) {
 
 function analyze(path) {
   const { cases } = JSON.parse(readFileSync(path, "utf8"));
+  // Same rule as analyze.mjs refuseBroken: a failed run or judge call scores 0,
+  // which would read as a gh-only loss.
+  const broken = cases.flatMap((c) =>
+    Object.entries(c.arms ?? {}).flatMap(([arm, runs]) =>
+      runs
+        .filter((r) => r.error || (r.graders ?? []).some((g) => /grader threw|judge call failed/i.test(g.explanation ?? "")))
+        .map((r) => `${c.name} [${arm}]: ${r.error ?? "grader threw"}`),
+    ),
+  );
+  if (broken.length) throw new Error(`runs did not execute cleanly:\n${broken.join("\n")}`);
   const scores = (name, arm) => {
     const c = cases.find((x) => x.name === name || x.name.endsWith(`/${name}`));
     if (!c) throw new Error(`no case ${name} in ${path}`);
