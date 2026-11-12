@@ -17,7 +17,6 @@ CANCEL: PR #42 has been ready for review — ready-delay elapsed, stopping
 
 ### [commentId=IC_bot_summary](https://github.com/owner/repo/pull/42#issuecomment-2) (@coderabbitai · Bot) [edited since first look]
 
-> <!-- walkthrough -->
 > Walkthrough updated after the latest PR description edit.
 
 ### [commentId=IC_human_edit](https://github.com/owner/repo/pull/42#issuecomment-3) (@reviewer) [edited since first look]

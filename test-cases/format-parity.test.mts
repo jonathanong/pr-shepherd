@@ -28,6 +28,7 @@ import {
   normalizeText,
   walkLeaves,
 } from "../test-helpers/test-cases/format-parity-helpers.mts";
+import { displayBody } from "../src/cli/display-body.mts";
 
 registerHarnessBefore();
 
@@ -51,6 +52,8 @@ describe("text/json output parity", () => {
       for (const [path, value, container] of walkLeaves(json, "")) {
         if (value.length === 0) continue;
         if (text.includes(value)) continue;
+        // Markdown renders a body's GitHub-visible text (HTML comments and image wrappers dropped).
+        if (path.endsWith(".body") && text.includes(displayBody(value))) continue;
         // A path-level allowlist entry that ignores context would hide a real regression on
         // every OTHER value at that path — check the conditional list first, and only fall
         // through to the unconditional TEXT_LOSSY_PATHS allowlist when no conditional entry

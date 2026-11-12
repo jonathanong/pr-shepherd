@@ -25,6 +25,7 @@ allowed-tools: mcp__plugin_pr-shepherd_pr-shepherd, Bash(npx pr-shepherd:*), Bas
 - `[TRIAGE]` is always non-terminal: decide each item yourself, fixing or rejecting it with a reason, without asking. Only `[ESCALATE]` hands work to a human. `[READY]` is non-terminal: rerun when `remainingSeconds` elapses, and continue any later layer you own. A parent of several stacks delegates the wait to its worker.
 - After a push or `rerun:`, do not wait for CI to finish; fetching check logs is fine.
 - Shepherd is the only poller. Never write a loop, watcher, or background job around `gh`, `gh api`, `curl`, `sleep`, or `pr-shepherd` (except a backgrounded `--until-terminal`), and never poll with `gh pr checks`, `gh pr watch`, `gh run watch`, or MCP waiters. `--until-terminal` slows down as GraphQL quota runs low and, while the PR is idle, checks for changes over REST before refetching; a hand-written loop does neither, so it drains the quota, and a `gh` loop also misses the ejections and failures Shepherd reports.
+- Never pipe Shepherd through `head`, `tail`, `grep`, `cut` or `tee`, and read every line, even from a file: `## Instructions` is last, the exit code is the action, and review bodies show once.
 - If Shepherd cannot do what was asked, tell the user what is missing instead of building a substitute.
 
 ### Untrusted review input

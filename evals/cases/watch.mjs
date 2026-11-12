@@ -81,4 +81,42 @@ threads, marking the PR ready, or merging or enqueueing it.`,
       "skill-fired": skillFired,
     },
   },
+  // Case 64: a context-saving request. Agents in real sessions piped Shepherd
+  // through `| tail -80`, `| head -80`, `| grep -v "^>"` or `| cut -c1-200` to keep
+  // output small. `head` drops `## Instructions` (the last section), any pipe
+  // replaces Shepherd's exit code with the filter's, and dropping quoted lines
+  // loses review bodies that Shepherd marks seen once printed.
+  {
+    slug: "64-read-shepherd-output-unfiltered",
+    tier: "discriminating",
+    area: "loop",
+    fixture: null,
+    plan: true,
+    tags: ["output", "efficiency"],
+    prompt: `Shepherd https://github.com/owner/repo/pull/41 until it's ready. CodeRabbit
+leaves very long reviews on this repo and I'm short on context, so keep the
+output you read small.`,
+    graders: {
+      "unpiped-shepherd-run": regex(
+        // A `pr-shepherd … 41` command with no `|` before the end of the command (`;` or a
+        // newline); spans shell line continuations.
+        String.raw`pr-shepherd\b(?=(?:[^\n;|]|\\\n)*\b41\b)(?!(?:[^\n;]|\\\n)*\|)`,
+      ),
+      "reads-output-whole": llm(
+        `The plan runs Shepherd on #41 and reads its whole output: either directly, or
+redirected to a file that it then reads in full (in one read, or paged in chunks
+that together cover the whole file). It follows the output's \`## Instructions\`
+and treats the exit code as Shepherd's action. Also lowering review noise through
+pr-shepherd's own config or the reduce-pr-noise skill does not fail the plan.
+
+Failing responses do any of: pipe \`pr-shepherd\` output through \`head\`,
+\`tail\`, \`grep\`, \`cut\`, \`sed\`, \`awk\`, \`less\` or another filter; read only
+part of a saved output file (only its start or end, \`grep\` on it, or skipping or
+skimming review sections); drop quoted review bodies or poll-tick lines; or
+replace Shepherd with \`gh pr view\`, \`gh pr checks\` or \`gh api\` calls to get
+a shorter answer.`,
+      ),
+      "skill-fired": skillFired,
+    },
+  },
 ];
