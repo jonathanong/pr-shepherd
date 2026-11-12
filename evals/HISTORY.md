@@ -6,6 +6,45 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-12: gh baseline pilot
+
+The main suite's fixture cases give both arms Shepherd's output, so Δ measures
+only the skill. This pilot asks the product question instead: does an agent
+with the plugin and Shepherd's output do better than an agent with neither,
+working from the `gh` output it would read? `evals/gh-baseline.mjs` writes each
+PR state twice (`gh-baseline-pairs.mjs`), once as a recorded Shepherd tick and
+once as `gh pr view`, `gh pr checks` and `gh api …/comments` output. Both
+halves share one tool-neutral grader. "Shepherd+plugin" is the Shepherd half's
+`with` arm; "gh only" is the gh half's `without` arm.
+
+Sonnet 5.5, `CLAUDE_CODE_EFFORT_LEVEL=low`, opus judge, 3 runs per arm, about
+$7 for both runs.
+
+| Pair                  | Shepherd+plugin | gh only | Δ     | 95% CI        | gh+plugin | Shepherd only |
+| --------------------- | --------------- | ------- | ----- | ------------- | --------- | ------------- |
+| `01-silent-edit`      | 1.00            | 1.00    | 0.00  | [0.00, 0.00]  | 1.00      | 1.00          |
+| `02-stale-bot-review` | 1.00            | 0.00    | +1.00 | [1.00, 1.00]  | 0.00      | 1.00          |
+| `03-real-ci-failure`  | 1.00            | 0.67    | +0.33 | [0.00, 1.00]  | 1.00      | 1.00          |
+| `04-plain-thread`     | 0.67            | 0.67    | 0.00  | [-0.67, 0.67] | 1.00      | 1.00          |
+
+- **02** is the gap. Every gh-only plan fixed the code, then refused to dismiss
+  the bot's changes-requested reviews ("would hide the blocker", "you didn't
+  ask") and asked a human to re-review, so the PR stays blocked. Shepherd's
+  output prints the authorized dismissal, and every Shepherd plan ran it. The
+  first run used fixture 60's second review body, which reads like an
+  instruction to dismiss; gh-only plans cited it. The pair now uses a plain
+  re-review body in both halves, and the rerun (shown) gave the same result.
+- **01** shows no gap because the prompt tells both halves what the agent did
+  last tick, so a gh-only agent can compare that with the current body. A real
+  session that lost that memory has only `updated_at`, which is noisy.
+- **03**: one gh-only plan read the 0s `tests` job as a config error rather
+  than looking at the failing Playwright jobs first.
+- **04** is the control. Its misses are single 2–1 judge splits in both arms.
+
+The grader for 02 encodes a policy (dismiss stale bot reviews after fixing)
+that Shepherd's output authorizes and a cautious gh-only agent declines, so
+part of that Δ is authorization rather than information.
+
 ## 2026-11-12: cases 64 and 65
 
 Sonnet 5.5, `CLAUDE_CODE_EFFORT_LEVEL=low`, opus judge, 3 runs per arm, each
