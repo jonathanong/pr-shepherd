@@ -102,6 +102,14 @@ describe("displayBody", () => {
     expect(displayBody(indented)).toBe(indented);
   });
 
+  it("keeps code fenced from a list item verbatim", () => {
+    const listed = "- ```html\n  <!-- required marker -->\n  ```\n1. <!-- hidden -->item";
+    expect(displayBody(listed)).toBe("- ```html\n  <!-- required marker -->\n  ```\n1. item");
+    expect(displayBody("> - ~~~\n>   <!-- kept -->\n>   ~~~")).toBe(
+      "> - ~~~\n>   <!-- kept -->\n>   ~~~",
+    );
+  });
+
   it("keeps meaningful pictures as Markdown images and drops decorative ones", () => {
     const shot = '<picture><img src="https://x.test/f.png" alt="Access denied"></picture>';
     expect(displayBody(`Error is ${shot}.`)).toBe(

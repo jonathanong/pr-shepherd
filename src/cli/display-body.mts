@@ -16,8 +16,9 @@ function closesFence(line: string, fence: string): boolean {
 }
 
 const isIndented = (line: string) => /^(?: {4}|\t)/.test(line);
-// Blockquote markers are containers: code inside a quote is still code.
-const unquote = (line: string) => line.replace(/^(?: {0,3}> ?)+/, "");
+// Blockquote and list markers are containers: code inside a quote or list item is still code.
+const containerContent = (line: string) =>
+  line.replace(/^(?: {0,3}(?:> ?|(?:[-*+]|\d{1,9}[.)])(?: |$)))+/, "");
 
 const attribute = (tag: string, name: string): string | undefined =>
   new RegExp(`\\s${name}="([^"]*)"`).exec(tag)?.[1];
@@ -44,7 +45,7 @@ function codeLines(lines: string[]): boolean[] {
   const code: boolean[] = [];
   let fence: string | null = null;
   let indented = false;
-  const content = lines.map(unquote);
+  const content = lines.map(containerContent);
   for (let i = 0; i < content.length; i++) {
     const line = content[i]!;
     if (fence) {
