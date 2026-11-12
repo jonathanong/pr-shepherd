@@ -236,6 +236,33 @@ CLAUDE_CODE_EFFORT_LEVEL=low claude plugin eval . --model claude-sonnet-5-5 \
 node evals/gh-baseline.mjs --analyze evals/results/gh/aggregate-result.json
 ```
 
+## Outcome suite
+
+The fixture suite measures how well the skill follows Shepherd's output. The
+outcome suite measures whether the plugin changes what an agent does. Each
+scenario in `evals/outcomes/scenarios-*.mjs` describes one PR state (`world`)
+and one tool-neutral grader. Both arms get the `gh` CLI and the GitHub MCP
+server as `type: agent` mocks that answer from that world. Only the `with` arm
+gets the plugin, whose `iterate` returns the recorded fixture tick for the same
+state. Neither arm has a shell, so code changes appear as plan steps. The
+`with` minus `without` delta is the plugin's effect.
+
+`--out` must be below the repository root and outside `evals/`;
+`evals-outcomes/` is gitignored. `--tag` selects scenarios (each has an
+`outcome` tag plus its own, such as `review`, `ci` or `safety`). Results are in
+[HISTORY.md](HISTORY.md#2026-11-12-outcome-suite).
+
+```sh
+node evals/outcomes/generate.mjs --out evals-outcomes
+claude plugin eval . --model claude-sonnet-5-5 --judge-model opus --no-publish \
+  --eval-dir evals-outcomes --output-dir evals/results/outcomes
+```
+
+Cases set `allowed_tools: [Read, Glob, Grep, Skill]`. Without it the runner
+denies the `Skill` call ("don't ask mode"), the agent falls back to the bare MCP
+tools, and the `skill-fired` grader still passes because it counts calls, not
+successful loads.
+
 ## Environment constraints
 
 - **`--allow-tools` is the only way to grant Bash.** A case's `allowed_tools`

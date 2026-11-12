@@ -1,0 +1,403 @@
+{
+  "tools": [
+    {
+      "name": "iterate",
+      "description": "Inspect one pull request (pr) or an explicit same-repository set (prs) and return one Shepherd tick.",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "transport": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "graphql",
+              "rest"
+            ]
+          },
+          "readyDelaySeconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "stallTimeoutSeconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "noAutoMarkReady": {
+            "type": "boolean"
+          },
+          "merge": {
+            "type": "boolean"
+          },
+          "instructions": {
+            "description": "triage instruction style. inline (default) prints every step each tick; playbook folds commit and push into the Triage loop playbook.",
+            "type": "string",
+            "enum": [
+              "playbook",
+              "inline"
+            ]
+          },
+          "pr": {
+            "type": "string",
+            "description": "GitHub pull-request URL or owner/repo#number; the explicit repository may differ from the server working directory"
+          },
+          "prs": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "description": "GitHub pull-request URL or owner/repo#number; the explicit repository may differ from the server working directory"
+            }
+          }
+        }
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "apply",
+      "description": "Apply ordered merge, review, file-view, journal, check-blocker, and queue-removal operations after prevalidation; explicit requests rely on GitHub's mutation response.",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "transport": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "graphql",
+              "rest"
+            ]
+          },
+          "pr": {
+            "type": "string",
+            "description": "GitHub pull-request URL or owner/repo#number; the explicit repository may differ from the server working directory"
+          },
+          "operations": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "merge"
+                    },
+                    "requireSha": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{40}$"
+                    },
+                    "mergeAction": {
+                      "type": "string",
+                      "enum": [
+                        "direct_merge",
+                        "merge_queue",
+                        "default"
+                      ]
+                    },
+                    "mergeMethod": {
+                      "type": "string",
+                      "enum": [
+                        "merge",
+                        "squash",
+                        "rebase"
+                      ]
+                    },
+                    "expectedStack": {
+                      "type": "object",
+                      "properties": {
+                        "number": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "baseRefName": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "prefix": {
+                          "minItems": 1,
+                          "maxItems": 100000,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "pr": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "headRefName": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "headRefOid": {
+                                "type": "string",
+                                "pattern": "^[0-9a-f]{40}$"
+                              },
+                              "baseRefName": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "pr",
+                              "headRefName",
+                              "headRefOid",
+                              "baseRefName"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "number",
+                        "baseRefName",
+                        "prefix"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "requireSha",
+                    "mergeAction"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "review_mutations"
+                    },
+                    "resolveThreadIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "replyThreadIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "minimizeCommentIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "dismissReviewIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "requireSha": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "mark_files_viewed"
+                    },
+                    "files": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "tests": {
+                      "description": "Select changed test files to mark as viewed.",
+                      "type": "boolean"
+                    },
+                    "matchPatterns": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "append_journal"
+                    },
+                    "item": {
+                      "type": "string"
+                    },
+                    "dryRun": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "item"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "acknowledge_queue_removal"
+                    },
+                    "requireSha": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{40}$"
+                    },
+                    "queueCommitOid": {
+                      "type": "string",
+                      "pattern": "^[0-9a-f]{40}$"
+                    },
+                    "removedAtUnix": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "requireSha",
+                    "queueCommitOid",
+                    "removedAtUnix"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "const": "check_blocker"
+                    },
+                    "check": {
+                      "type": "string",
+                      "minLength": 1,
+                      "description": "Exact check name."
+                    },
+                    "blockedBy": {
+                      "description": "Blocking PR/issue URL, owner/repo#N, or issue:owner/repo#N.",
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "clear": {
+                      "description": "Clear the recorded blocker instead of setting one.",
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "check"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "pr",
+          "operations"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    },
+    {
+      "name": "suggest",
+      "description": "Build, but never apply, an ordered list of eligible review suggestion patches.",
+      "inputSchema": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "properties": {
+          "transport": {
+            "type": "string",
+            "enum": [
+              "auto",
+              "graphql",
+              "rest"
+            ]
+          },
+          "pr": {
+            "type": "string",
+            "description": "GitHub pull-request URL or owner/repo#number; the explicit repository may differ from the server working directory"
+          },
+          "suggestions": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "threadId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "message": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "description": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "threadId",
+                "message"
+              ]
+            }
+          }
+        },
+        "required": [
+          "pr",
+          "suggestions"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": true
+      },
+      "execution": {
+        "taskSupport": "forbidden"
+      }
+    }
+  ]
+}
