@@ -76,6 +76,10 @@ agent actually reads. Isolating the playbooks would need a third arm.
 | `59-check-blocker-released-updates-branch`     | `176`   | Blocker merged: update the branch, do not rerun the job                                        |
 | `60-aggregate-rule-auto-resolved-not-redone`   | `170`   | Rule auto-resolve already done: do not resolve or minimize again; run the `TRIAGE` row         |
 | `61-stack-merge-queued-stays-non-terminal`     | `98`    | Merge-queued stack under `--merge`: leave it alone, keep rechecking                            |
+| `62-watch-queued-prs-no-custom-poller`         | —       | "Tell me when they merge": one `--until-terminal` run, no hand-written poller                  |
+| `63-status-question-one-tick`                  | —       | One-time status question: one `iterate` tick, reported and not acted on                        |
+| `64-read-shepherd-output-unfiltered`           | —       | "Keep output small": no pipe through `head`/`tail`/`grep`/`cut`; read the whole output         |
+| `65-edited-thread-new-ask`                     | `177`   | A handled thread edited with a new ask: fix the new ask, not "already done"                    |
 
 "apply" is `test-cases/snapshots/apply-review-session-refusal`, an
 `apply review` output recorded by `test-cases/apply-review.test.mts` through

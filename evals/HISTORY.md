@@ -6,6 +6,25 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-12: cases 64 and 65
+
+Sonnet 5.5, `CLAUDE_CODE_EFFORT_LEVEL=low`, opus judge, 3 runs per arm, each
+case run alone.
+
+| Case                                 | With | Without | Δ     | Cost  |
+| ------------------------------------ | ---- | ------- | ----- | ----- |
+| `64-read-shepherd-output-unfiltered` | 1.00 | 0.00    | +1.00 | —     |
+| `65-edited-thread-new-ask`           | 1.00 | 1.00    | 0.00  | $0.83 |
+
+- **64** is discriminating. A shorter skill line ("read it all, from a file if
+  needed") scored 0.67 with the plugin: agents saved the output and read only
+  `## Instructions`. The shipped line names the filters and why each breaks the
+  loop, and scored 1.00 (#691).
+- **65** is a guard. Shepherd's CLI marks the thread `[edited since first look]`
+  and shows the new body, so both arms act on the new request; the skill adds
+  nothing here. It guards that marker: without it, `gh` returns only the
+  current body and an agent cannot tell a handled thread changed.
+
 ## 2026-11-10: inline vs playbook instructions (#527)
 
 This is the 2×2 from #527 item 4: skill on/off (`--ablation with-without`) ×

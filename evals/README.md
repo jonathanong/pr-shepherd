@@ -3,12 +3,13 @@
 **Does an agent act correctly on pr-shepherd's output, and would it without the
 plugin?**
 
-54 cases replay real recorded pr-shepherd output, mostly from the states agents
+59 cases replay real recorded pr-shepherd output, mostly from the states agents
 get wrong in real transcripts. Five of those (`38`, `39`, `44`–`46`) also replay
-earlier turns of the session, to catch drift that a fresh context hides. Three
-others start from a request alone: one
-checks that the skill stays out of unrelated GitHub questions, and two check how
-a PR is created and targeted.
+earlier turns of the session, to catch drift that a fresh context hides. Six
+others start from a request alone: one checks that the skill stays out of
+unrelated GitHub questions, two check how a PR is created and targeted, and
+three check how Shepherd is used to watch PRs, answer a status question, and
+read its own output.
 
 - **CI:** blocking on `gh run watch` instead of letting Shepherd poll, rerunning
   real failures, fetching pages the output already summarized.
