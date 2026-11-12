@@ -1,7 +1,7 @@
 const COMMENT_OPEN = "<!--";
 const COMMENT_CLOSE = "-->";
-// An image wrapper renders as its alt text; CodeRabbit severity icons have an empty alt.
 const PICTURE_RE = /<picture>[\s\S]*?<\/picture>/g;
+const IMG_RE = /<img\s[^>]*>/;
 // A link left with no visible content after the pictures inside it are dropped.
 const EMPTY_ANCHOR_RE = /<a\s[^>]*>\s*<\/a>/g;
 
@@ -16,6 +16,24 @@ function closesFence(line: string, fence: string): boolean {
 }
 
 const isIndented = (line: string) => /^(?: {4}|\t)/.test(line);
+// Blockquote markers are containers: code inside a quote is still code.
+const unquote = (line: string) => line.replace(/^(?: {0,3}> ?)+/, "");
+
+const attribute = (tag: string, name: string): string | undefined =>
+  new RegExp(`\\s${name}="([^"]*)"`).exec(tag)?.[1];
+
+/**
+ * A `<picture>` as Markdown image text. An image whose `alt` is explicitly empty is decorative
+ * (CodeRabbit's severity icons) and is dropped; any other keeps its alt text and source.
+ */
+function pictureText(picture: string): string {
+  const img = IMG_RE.exec(picture)?.[0];
+  if (img === undefined) return "";
+  const alt = attribute(img, "alt");
+  if (alt === "") return "";
+  const src = attribute(img, "src");
+  return src === undefined ? (alt ?? "") : `![${alt ?? ""}](${src})`;
+}
 const isBlank = (line: string) => line.trim() === "";
 
 /**
@@ -26,8 +44,9 @@ function codeLines(lines: string[]): boolean[] {
   const code: boolean[] = [];
   let fence: string | null = null;
   let indented = false;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]!;
+  const content = lines.map(unquote);
+  for (let i = 0; i < content.length; i++) {
+    const line = content[i]!;
     if (fence) {
       code.push(true);
       if (closesFence(line, fence)) fence = null;
@@ -35,7 +54,7 @@ function codeLines(lines: string[]): boolean[] {
     }
     fence = fenceMarker(line);
     // A blank line ends `indented`, but the next indented line restarts it (blank line before).
-    indented = isIndented(line) && (indented || i === 0 || isBlank(lines[i - 1]!));
+    indented = isIndented(line) && (indented || i === 0 || isBlank(content[i - 1]!));
     code.push(fence !== null || (indented && !isBlank(line)));
   }
   return code;
@@ -56,7 +75,8 @@ function codeSpanEnd(text: string, i: number): number {
   return -1;
 }
 
-const dropImageMarkup = (text: string) => text.replace(PICTURE_RE, "").replace(EMPTY_ANCHOR_RE, "");
+const dropImageMarkup = (text: string) =>
+  text.replace(PICTURE_RE, pictureText).replace(EMPTY_ANCHOR_RE, "");
 
 /**
  * Removes closed `<!-- … -->` comments, `<picture>` wrappers, and links left empty, all outside

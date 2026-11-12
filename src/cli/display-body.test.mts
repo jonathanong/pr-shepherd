@@ -95,6 +95,26 @@ describe("displayBody", () => {
     expect(displayBody("\t<!-- tab code -->")).toBe("\t<!-- tab code -->");
   });
 
+  it("keeps fenced and indented code inside blockquotes verbatim", () => {
+    const fenced = "> ~~~html\n> <!-- required marker -->\n> ~~~\n> <!-- hidden -->after";
+    expect(displayBody(fenced)).toBe("> ~~~html\n> <!-- required marker -->\n> ~~~\n> after");
+    const indented = "> Example:\n>\n>     <!-- required marker -->";
+    expect(displayBody(indented)).toBe(indented);
+  });
+
+  it("keeps meaningful pictures as Markdown images and drops decorative ones", () => {
+    const shot = '<picture><img src="https://x.test/f.png" alt="Access denied"></picture>';
+    expect(displayBody(`Error is ${shot}.`)).toBe(
+      "Error is ![Access denied](https://x.test/f.png).",
+    );
+    expect(displayBody('A <picture><img src="https://x.test/a.png"></picture>')).toBe(
+      "A ![](https://x.test/a.png)",
+    );
+    expect(displayBody('B <picture><img alt="no src"></picture>')).toBe("B no src");
+    expect(displayBody("C <picture><source srcset=x></picture>")).toBe("C");
+    expect(displayBody('D <picture><img width="1"></picture>')).toBe("D");
+  });
+
   it("returns the raw body when nothing visible remains", () => {
     expect(displayBody("<!-- pr-shepherd -->")).toBe("<!-- pr-shepherd -->");
     expect(displayBody("")).toBe("");
