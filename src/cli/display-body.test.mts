@@ -75,6 +75,14 @@ describe("displayBody", () => {
     );
   });
 
+  it("keeps picture and anchor markup inside inline code spans", () => {
+    const body =
+      'Replace `<picture><img alt="old"></picture>` with `<a href="x"></a>` <picture>x</picture>';
+    expect(displayBody(body)).toBe(
+      'Replace `<picture><img alt="old"></picture>` with `<a href="x"></a>`',
+    );
+  });
+
   it("keeps an unclosed comment opener and the text after it", () => {
     expect(displayBody("Use `<!--` to start a comment.\nThen <!-- and keep\nthis")).toBe(
       "Use `<!--` to start a comment.\nThen <!-- and keep\nthis",

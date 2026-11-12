@@ -6,4 +6,4 @@ flags: i
 weight: 1
 ---
 
-pr-shepherd\b(?=[^\n;|]*\b41\b)(?![^\n;]*\|)
+pr-shepherd\b(?=(?:[^\n;|]|\\\n)*\b41\b)(?!(?:[^\n;]|\\\n)*\|)

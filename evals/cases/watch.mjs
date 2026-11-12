@@ -98,8 +98,9 @@ leaves very long reviews on this repo and I'm short on context, so keep the
 output you read small.`,
     graders: {
       "unpiped-shepherd-run": regex(
-        // A `pr-shepherd … 41` command with no `|` before the end of its line or `;`.
-        String.raw`pr-shepherd\b(?=[^\n;|]*\b41\b)(?![^\n;]*\|)`,
+        // A `pr-shepherd … 41` command with no `|` before the end of the command (`;` or a
+        // newline); spans shell line continuations.
+        String.raw`pr-shepherd\b(?=(?:[^\n;|]|\\\n)*\b41\b)(?!(?:[^\n;]|\\\n)*\|)`,
       ),
       "reads-output-whole": llm(
         `The plan runs Shepherd on #41 and reads its whole output: either directly, or

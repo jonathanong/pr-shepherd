@@ -56,9 +56,15 @@ function codeSpanEnd(text: string, i: number): number {
   return -1;
 }
 
-/** Removes closed `<!-- … -->` comments outside inline code spans; unclosed openers stay literal. */
-function stripComments(text: string): string {
+const dropImageMarkup = (text: string) => text.replace(PICTURE_RE, "").replace(EMPTY_ANCHOR_RE, "");
+
+/**
+ * Removes closed `<!-- … -->` comments, `<picture>` wrappers, and links left empty, all outside
+ * inline code spans; unclosed comment openers stay literal.
+ */
+function stripHiddenMarkup(text: string): string {
   let out = "";
+  let plain = "";
   let i = 0;
   while (i < text.length) {
     if (text[i] === "`") {
@@ -66,7 +72,12 @@ function stripComments(text: string): string {
       while (text[i + n] === "`") n++;
       const end = codeSpanEnd(text, i);
       const next = end === -1 ? i + n : end;
-      out += text.slice(i, next);
+      if (end === -1) {
+        plain += text.slice(i, next);
+      } else {
+        out += dropImageMarkup(plain) + text.slice(i, next);
+        plain = "";
+      }
       i = next;
       continue;
     }
@@ -77,17 +88,15 @@ function stripComments(text: string): string {
         continue;
       }
     }
-    out += text[i];
+    plain += text[i];
     i++;
   }
-  return out;
+  return out + dropImageMarkup(plain);
 }
 
 /** Strips one run of non-code lines and returns its lines. */
 function visibleLines(run: string[]): string[] {
-  return stripComments(run.join("\n"))
-    .replace(PICTURE_RE, "")
-    .replace(EMPTY_ANCHOR_RE, "")
+  return stripHiddenMarkup(run.join("\n"))
     .split("\n")
     .map((line) => line.trimEnd());
 }
