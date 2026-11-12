@@ -217,6 +217,25 @@ run count is part of that check.
 
 Without `--instructions`, the generator's output is unchanged.
 
+## gh baseline pilot
+
+Fixture cases show Shepherd's output to both arms, so they cannot compare
+Shepherd with plain `gh`. `evals/gh-baseline.mjs` writes each PR state in
+`evals/gh-baseline-pairs.mjs` twice: a `-shepherd` case with the recorded tick
+and a `-gh` case with the equivalent `gh` output, both graded by one
+tool-neutral grader. The paired score is the `-shepherd` case's `with` arm
+minus the `-gh` case's `without` arm. `--out` must be below the repository root
+(`--eval-dir` resolves there) and outside `evals/`; `evals-gh/` is gitignored.
+The latest result is in
+[HISTORY.md](HISTORY.md#2026-11-12-gh-baseline-pilot).
+
+```sh
+node evals/gh-baseline.mjs --out evals-gh
+CLAUDE_CODE_EFFORT_LEVEL=low claude plugin eval . --model claude-sonnet-5-5 \
+  --judge-model opus --no-publish --eval-dir evals-gh --output-dir evals/results/gh
+node evals/gh-baseline.mjs --analyze evals/results/gh/aggregate-result.json
+```
+
 ## Environment constraints
 
 - **`--allow-tools` is the only way to grant Bash.** A case's `allowed_tools`

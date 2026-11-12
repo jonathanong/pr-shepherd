@@ -17,3 +17,6 @@ Claude.md
 
 # Eval shard copies (evals/shard.mjs split)
 evals-shards/
+
+# gh baseline pilot cases (evals/gh-baseline.mjs --out)
+evals-gh/
