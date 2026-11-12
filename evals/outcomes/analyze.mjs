@@ -29,6 +29,7 @@ for (const file of files) {
 
 const denied = [];
 const rows = [];
+const unmeasured = [];
 for (const spec of SCENARIOS) {
   const c = cases.get(spec.slug);
   if (!c) continue;
@@ -44,7 +45,9 @@ for (const spec of SCENARIOS) {
   };
   const w = arm("with");
   const wo = arm("without");
-  rows.push({ spec, with: w.kept, without: wo.kept, excluded: w.excluded + wo.excluded });
+  // An arm with no valid run is unmeasured, not 0: keep it out of every table.
+  if (!w.kept.length || !wo.kept.length) unmeasured.push(spec.slug);
+  else rows.push({ spec, with: w.kept, without: wo.kept, excluded: w.excluded + wo.excluded });
 }
 if (denied.length) {
   console.error(`Skill was denied in these with-arm runs; rerun them:\n${denied.join("\n")}`);
@@ -72,7 +75,7 @@ console.log("| Category | Scenarios | Plugin | gh/MCP | Δ | 95% CI |");
 console.log("| --- | --- | --- | --- | --- | --- |");
 const categories = [...new Set(rows.map((r) => r.spec.category))];
 for (const cat of categories) summary(cat, rows.filter((r) => r.spec.category === cat));
-summary("**All**", rows);
+if (rows.length) summary("**All**", rows);
 
 console.log("\n| Scenario | Category | Plugin | gh/MCP | Δ | 95% CI | Excluded |");
 console.log("| --- | --- | --- | --- | --- | --- | --- |");
@@ -90,6 +93,9 @@ for (const r of rows) {
 }
 const missing = SCENARIOS.filter((s) => !cases.has(s.slug)).map((s) => s.slug);
 if (missing.length) console.log(`\nNot in these results: ${missing.join(", ")}`);
+if (unmeasured.length) {
+  console.log(`\nNo valid run in one arm, left out of every table: ${unmeasured.join(", ")}`);
+}
 
 function skillDenied(run) {
   if (!run.tracePath || !existsSync(run.tracePath)) return false;
