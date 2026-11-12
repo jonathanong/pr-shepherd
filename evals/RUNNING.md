@@ -217,31 +217,17 @@ run count is part of that check.
 
 Without `--instructions`, the generator's output is unchanged.
 
-## gh baseline pilot
-
-Fixture cases show Shepherd's output to both arms, so they cannot compare
-Shepherd with plain `gh`. `evals/gh-baseline.mjs` writes each PR state in
-`evals/gh-baseline-pairs.mjs` twice: a `-shepherd` case with the recorded tick
-and a `-gh` case with the equivalent `gh` output, both graded by one
-tool-neutral grader. The paired score is the `-shepherd` case's `with` arm
-minus the `-gh` case's `without` arm. `--out` must be below the repository root
-(`--eval-dir` resolves there) and outside `evals/`; `evals-gh/` is gitignored.
-The latest result is in
-[HISTORY.md](HISTORY.md#2026-11-12-gh-baseline-pilot).
-
-```sh
-node evals/gh-baseline.mjs --out evals-gh
-CLAUDE_CODE_EFFORT_LEVEL=low claude plugin eval . --model claude-sonnet-5-5 \
-  --judge-model opus --no-publish --eval-dir evals-gh --output-dir evals/results/gh
-node evals/gh-baseline.mjs --analyze evals/results/gh/aggregate-result.json
-```
-
 ## Outcome suite
 
-The fixture suite measures how well the skill follows Shepherd's output. The
-outcome suite measures whether the plugin changes what an agent does. Each
-scenario in `evals/outcomes/scenarios-*.mjs` describes one PR state (`world`)
-and one tool-neutral grader. Both arms get the `gh` CLI and the GitHub MCP
+The outcome suite is the one the README reports. It asks whether an agent with
+the plugin and the pr-shepherd CLI gets PRs to mergeable better than an agent
+with the `gh` CLI and the GitHub MCP server. The fixture suite above stays as
+the regression guard for the CLI's output and the skill: run it when `iterate`
+output or the skill changes, but do not quote it as a result.
+
+Each scenario in `evals/outcomes/scenarios-*.mjs` describes one PR state
+(`world`) and one tool-neutral grader, and `scenarios.mjs` assigns it a
+category. Both arms get the `gh` CLI and the GitHub MCP
 server as `type: agent` mocks that answer from that world. Only the `with` arm
 gets the plugin, whose `iterate` returns the recorded fixture tick for the same
 state. Neither arm has a shell, so code changes appear as plan steps. The
@@ -255,8 +241,17 @@ state. Neither arm has a shell, so code changes appear as plan steps. The
 ```sh
 node evals/outcomes/generate.mjs --out evals-outcomes
 claude plugin eval . --model claude-sonnet-5-5 --judge-model opus --no-publish \
-  --eval-dir evals-outcomes --output-dir evals/results/outcomes
+  --keep-temp --eval-dir evals-outcomes --output-dir evals/results/outcomes
+node evals/outcomes/analyze.mjs evals/results/outcomes/aggregate-result.json
 ```
+
+`analyze.mjs` prints the category and scenario tables with bootstrap 95%
+intervals. Pass a targeted rerun's result after the full run's, and it
+replaces those scenarios. It leaves out runs the harness voided or that
+errored (the `Excluded` column). It refuses to report when a `with` run's
+`Skill` call was denied, which needs `--keep-temp` so it can read the traces.
+Do not regenerate the cases while a run is in progress: generation deletes
+each case directory, including its `.replay` recordings.
 
 Cases set `allowed_tools: [Read, Glob, Grep, Skill]`. Without it the runner
 denies the `Skill` call ("don't ask mode"), the agent falls back to the bare MCP

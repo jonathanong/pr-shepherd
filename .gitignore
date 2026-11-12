@@ -18,9 +18,6 @@ Claude.md
 # Eval shard copies (evals/shard.mjs split)
 evals-shards/
 
-# gh baseline pilot cases (evals/gh-baseline.mjs --out)
-evals-gh/
-
 # Outcome suite cases (evals/outcomes/generate.mjs) and local probes
 evals-outcomes/
 evals-probe/

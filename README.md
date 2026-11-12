@@ -43,14 +43,14 @@ More features are in [docs/features.md](docs/features.md).
 
 ## Outcomes
 
-| Outcome                                                                 | Headline                                                                                                                             | Evidence                                                                 |
-| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| [Context and correctness](#context-and-correctness)                     | 60 GitHub edge cases cataloged, backed by 147 scenario fixtures; on 8 eval cases, the agent does measurably worse without the plugin | [Handled cases](docs/handled-cases.md)                                   |
-| [Fewer tokens, lower cost](#fewer-tokens-and-lower-cost)                | Cost −42% vs. `gh` and −77% vs. MCP per PR session; turns −19% / −70% (estimates)                                                    | [Token bench](evals/tokens/README.md)                                    |
-| [Clearer agent direction](#clearer-agent-direction)                     | Scores 0.85 without the plugin and 0.98 with it, 87% fewer misses; GitHub gotchas Δ +0.11 [+0.09, +0.13] (2026-11-09 run)            | [Behavior evals](evals/README.md)                                        |
-| [Lower GitHub API quota use](#lower-github-api-quota-use)               | ~60 GraphQL points per CI-wait hour vs. ~360 for `gh`; ~4 when idle. REST core per PR session 4.8 vs. 9 (`gh`), 78.3 (MCP)           | [GitHub API](docs/github-api.md), [GraphQL usage](docs/graphql-usage.md) |
-| [Safe by construction](#safe-by-construction)                           | 0 git mutations; human handoff limited to 10 escalation triggers for a single PR                                                     | [Escalations](docs/escalations.md)                                       |
-| [Works across agents and stacks](#works-across-agents-and-environments) | 3 agent plugins plus any stdio MCP client; GraphQL and REST transports; native stacked PRs                                           | [MCP](docs/mcp.md), [cloud](docs/cloud.md)                               |
+| Outcome                                                                 | Headline                                                                                                                   | Evidence                                                                 |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [Context and correctness](#context-and-correctness)                     | 60 GitHub edge cases cataloged, backed by 147 scenario fixtures                                                            | [Handled cases](docs/handled-cases.md)                                   |
+| [Fewer tokens, lower cost](#fewer-tokens-and-lower-cost)                | Cost −42% vs. `gh` and −77% vs. MCP per PR session; turns −19% / −70% (estimates)                                          | [Token bench](evals/tokens/README.md)                                    |
+| [Clearer agent direction](#clearer-agent-direction)                     | Across 22 PR states, 0.77 with the plugin vs. 0.42 with `gh` + GitHub MCP, Δ +0.34 [+0.26, +0.42] (2026-11-12)             | [Outcome evals](evals/README.md)                                         |
+| [Lower GitHub API quota use](#lower-github-api-quota-use)               | ~60 GraphQL points per CI-wait hour vs. ~360 for `gh`; ~4 when idle. REST core per PR session 4.8 vs. 9 (`gh`), 78.3 (MCP) | [GitHub API](docs/github-api.md), [GraphQL usage](docs/graphql-usage.md) |
+| [Safe by construction](#safe-by-construction)                           | 0 git mutations; human handoff limited to 10 escalation triggers for a single PR                                           | [Escalations](docs/escalations.md)                                       |
+| [Works across agents and stacks](#works-across-agents-and-environments) | 3 agent plugins plus any stdio MCP client; GraphQL and REST transports; native stacked PRs                                 | [MCP](docs/mcp.md), [cloud](docs/cloud.md)                               |
 
 **[jongleberry.com/pr-shepherd](https://jongleberry.com/pr-shepherd/)** covers the why and the design principles.
 
@@ -67,18 +67,14 @@ One `iterate` call returns everything the agent needs about the PR:
 
 One exception: a `COMMENTED` review that was already minimized before the first tick is not fetched.
 
-The agent reasons less and misses less. [docs/handled-cases.md](docs/handled-cases.md) catalogs the GitHub edge cases this covers. These are the gotchas where the [behavior evals](evals/README.md) measured the agent going wrong without the plugin (score with vs. without, 2026-11-09 full run; 95% interval of the difference excludes 0):
+The agent reasons less and misses less. [docs/handled-cases.md](docs/handled-cases.md) catalogs the GitHub edge cases this covers. In the [outcome evals](evals/README.md), both agents get the `gh` CLI and the GitHub MCP server, and only one gets the plugin. These PR states separated them most (score with the plugin vs. with `gh` + MCP, 2026-11-12; 95% interval of the difference excludes 0):
 
-| GitHub gotcha                                                                                                                                                                                                                                            | With | Without |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---: | ------: |
-| On a stack layer, the latest run of a required check was cancelled while an older run passed. GitHub still blocks the merge ([#567](https://github.com/jonathanong/pr-shepherd/pull/567), [gh-stack#466](https://github.com/github/gh-stack/issues/466)) | 1.00 |    0.33 |
-| A cancelled run needs a rerun, not a code fix                                                                                                                                                                                                            | 1.00 |    0.50 |
-| A real failure marked `[rerun authorized]` is not blindly rerun                                                                                                                                                                                          | 1.00 |    0.50 |
-| A maintainer removed the PR from the merge queue: don't requeue                                                                                                                                                                                          | 0.92 |    0.42 |
-| A native stack's parent merged: rebase the lowest open layer onto trunk, keeping the stack                                                                                                                                                               | 0.94 |    0.56 |
-| A bot `CHANGES_REQUESTED` review and a human thread arrive together                                                                                                                                                                                      | 1.00 |    0.67 |
-| A `[suggestion]` thread: apply it with `suggest`                                                                                                                                                                                                         | 1.00 |    0.72 |
-| A CI log carries a planted instruction: treat it as data                                                                                                                                                                                                 | 1.00 |    0.72 |
+| PR state                                                                           | Plugin | gh/MCP |
+| ---------------------------------------------------------------------------------- | -----: | -----: |
+| A maintainer removed the PR from the merge queue: don't requeue or merge           |   1.00 |   0.00 |
+| Behind base in a repo that rebases: rebase and `--force-with-lease` without asking |   1.00 |   0.00 |
+| CI still running: report and check back later instead of blocking on a watcher     |   1.00 |   0.00 |
+| A review thread carries a planted instruction: ignore it and still do the rename   |   1.00 |   0.00 |
 
 ### Fewer tokens and lower cost
 
@@ -96,7 +92,7 @@ These are offline estimates at 3.5 characters per token over recorded sessions, 
 
 ### Clearer agent direction
 
-For a single PR, each tick returns exactly one action: `WAIT`, `READY`, `MARK_READY`, `TRIAGE`, `MERGE`, `CANCEL`, or `ESCALATE`. A `stack` poll can also return `SHEPHERD`, which starts one-PR sessions for owned layers. Every action except `CANCEL` comes with numbered `## Instructions` and exact commands, so the agent does not invent policy. In the [behavior evals](evals/README.md) (Sonnet 5.5 at low effort, all 57 cases, 2026-11-09), the agent scores **0.96** with the plugin and **0.84** without it, a weighted mean Δ of **+0.11** [+0.08, +0.14]. Twelve cases favor the plugin, such as creating a PR without asking (0.92 → 0.00) and running with no PR argument (1.00 → 0.00). See [docs/actions.md](docs/actions.md) for the output contract.
+For a single PR, each tick returns exactly one action: `WAIT`, `READY`, `MARK_READY`, `TRIAGE`, `MERGE`, `CANCEL`, or `ESCALATE`. A `stack` poll can also return `SHEPHERD`, which starts one-PR sessions for owned layers. Every action except `CANCEL` comes with numbered `## Instructions` and exact commands, so the agent does not invent policy. In the [outcome evals](evals/README.md) (Sonnet 5.5, 22 PR states, 2026-11-12), the agent scores **0.77** with the plugin and **0.42** with the `gh` CLI and the GitHub MCP server, a Δ of **+0.34** [+0.26, +0.42]. Every category favors the plugin, from review feedback (+0.22) to safety and terminal states (+0.58). Both still fail merge conflicts. See [docs/actions.md](docs/actions.md) for the output contract.
 
 ### Lower GitHub API quota use
 

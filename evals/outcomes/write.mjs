@@ -130,10 +130,15 @@ export function writeOutcomeCase(spec, outDir) {
   // `suggest` report success, so the with-plugin arm's Shepherd path works.
   put(join(dir, "mocks", "pr-shepherd", "_tools.json"), json("pr-shepherd-tools.json"));
   put(join(dir, "mocks", "pr-shepherd", "iterate.md"), tick);
-  put(join(dir, "mocks", "pr-shepherd", "apply.md"), "Applied every requested operation.");
+  // A scenario can replace either answer with its own (`spec.shepherd`).
+  const shepherd = spec.shepherd ?? {};
+  put(
+    join(dir, "mocks", "pr-shepherd", "apply.md"),
+    shepherd.apply ?? "Applied every requested operation.",
+  );
   put(
     join(dir, "mocks", "pr-shepherd", "suggest.md"),
-    "No eligible suggestion patches.",
+    shepherd.suggest ?? "No eligible suggestion patches.",
   );
   console.log(`${spec.slug.padEnd(36)} ${spec.fixture}`);
 }
