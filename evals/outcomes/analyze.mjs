@@ -22,9 +22,25 @@ if (!files.length) {
   process.exit(2);
 }
 
+// An interrupted run can be short of executions without any run error; refuse
+// it rather than score the missing runs.
 const cases = new Map();
+const short = [];
 for (const file of files) {
-  for (const c of JSON.parse(readFileSync(file, "utf8")).cases) cases.set(c.name, c);
+  const result = JSON.parse(readFileSync(file, "utf8"));
+  if (result.partial) short.push(`${file}: aggregate is flagged partial`);
+  for (const c of result.cases) {
+    for (const [arm, runs] of Object.entries(c.arms ?? {})) {
+      if (c.runsPerCase && runs.length !== c.runsPerCase) {
+        short.push(`${file} · ${c.name} [${arm}]: ${runs.length} of ${c.runsPerCase} runs`);
+      }
+    }
+    cases.set(c.name, c);
+  }
+}
+if (short.length) {
+  console.error(`Incomplete results; refusing to report:\n${short.join("\n")}`);
+  process.exit(1);
 }
 
 const denied = [];
