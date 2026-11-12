@@ -1,0 +1,42 @@
+{
+  "batchData": {
+    "reviewThreads": [
+      {
+        "id": "PRRT_edited_ask",
+        "isResolved": false,
+        "isOutdated": false,
+        "isMinimized": false,
+        "path": "src/paginate.ts",
+        "line": 18,
+        "startLine": null,
+        "author": "reviewer",
+        "authorType": "User",
+        "body": "nit: rename `n` to `pageSize`.\n\nEdit: also, this loop uses `i <= items.length`, so the last page reads one past the end and returns `undefined`. Please fix the bound and add a test for an exact multiple of `pageSize`.",
+        "url": "https://github.com/owner/repo/pull/42#discussion_r7",
+        "createdAtUnix": 1715700000
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "seenMap": {
+    "PRRT_edited_ask": {
+      "seenAt": 1715700000,
+      "bodyHash": "aaaaaaaaaaaaaaaa"
+    }
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

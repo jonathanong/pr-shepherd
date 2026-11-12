@@ -4,7 +4,7 @@
 // one `--until-terminal` run. Each loop iteration spends GraphQL quota, and the
 // gh loops miss ejections and failing checks that Shepherd reports.
 
-import { llm, regex, skillFired } from "../lib.mjs";
+import { PR_URL, llm, regex, skillFired } from "../lib.mjs";
 
 export const WATCH_CASES = [
   {
@@ -115,6 +115,43 @@ part of a saved output file (only its start or end, \`grep\` on it, or skipping 
 skimming review sections); drop quoted review bodies or poll-tick lines; or
 replace Shepherd with \`gh pr view\`, \`gh pr checks\` or \`gh api\` calls to get
 a shorter answer.`,
+      ),
+      "skill-fired": skillFired,
+    },
+  },
+  // Case 65: a reviewer edits a thread the agent already handled, adding a new
+  // request. `gh` shows only the current body, so an agent without Shepherd's
+  // seen markers cannot tell what changed; Shepherd re-surfaces the thread as
+  // `[edited since first look]`. The failure is treating it as already done
+  // because the original nit was fixed last tick.
+  {
+    slug: "65-edited-thread-new-ask",
+    tier: "guard",
+    area: "loop",
+    fixture: "177-triage-handled-thread-edited-new-ask",
+    shape: (
+      fixture,
+    ) => `Shepherd ${PR_URL} through to a terminal state. On the last tick, thread
+\`PRRT_edited_ask\` said only "nit: rename \`n\` to \`pageSize\`". You renamed it,
+pushed, and replied "Renamed \`n\` to \`pageSize\`." This is the next tick.
+
+---
+
+${fixture}`,
+    tags: ["triage", "edited"],
+    graders: {
+      "acts-on-the-edit": llm(
+        `The plan notices that \`PRRT_edited_ask\` was edited after it was handled
+and acts on the new request: it fixes the loop bound in \`src/paginate.ts\` so the
+last page no longer reads past the end (for example \`i < items.length\`), adds a
+test for an item count that is an exact multiple of \`pageSize\`, commits and
+pushes, then runs the generated \`apply review\` command with a reply that
+describes the bound fix and the test, and reruns Shepherd.
+
+Failing responses do any of: treat the thread as already handled because the
+rename was done; reply only about the rename or say nothing changed; skip the
+bound fix or the test; resolve or dismiss the thread without the fix; ask the
+user what to do; stop instead of rerunning Shepherd.`,
       ),
       "skill-fired": skillFired,
     },
