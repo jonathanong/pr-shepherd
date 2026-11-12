@@ -1,0 +1,15 @@
+{
+  "tools": [
+    {
+      "name": "gh",
+      "description": "Run the GitHub CLI (`gh`) in a checkout of the pull request's repository, authenticated as the PR author. Returns stdout, or stderr and the exit code on failure. Supports every gh command, including `gh api` (REST and GraphQL).",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "args": { "type": "string", "description": "Arguments after `gh`, e.g. `pr view 42 --comments` or `api repos/owner/repo/pulls/42/comments`." }
+        },
+        "required": ["args"]
+      }
+    }
+  ]
+}

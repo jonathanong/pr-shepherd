@@ -1,0 +1,180 @@
+{
+  "tools": [
+    {
+      "name": "pull_request_read",
+      "description": "Get information on a specific pull request in a GitHub repository.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "method": {
+            "type": "string",
+            "enum": ["get", "get_diff", "get_status", "get_files", "get_review_comments", "get_reviews", "get_comments"],
+            "description": "get: details. get_diff: the diff. get_status: combined commit status and check runs of the head commit. get_files: changed files. get_review_comments: review threads with their comments (includes isResolved, isOutdated). get_reviews: reviews. get_comments: issue comments on the PR."
+          },
+          "owner": { "type": "string" },
+          "repo": { "type": "string" },
+          "pullNumber": { "type": "number" }
+        },
+        "required": ["method", "owner", "repo", "pullNumber"]
+      }
+    },
+    {
+      "name": "list_pull_requests",
+      "description": "List pull requests in a GitHub repository.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": { "type": "string" },
+          "repo": { "type": "string" },
+          "state": { "type": "string", "enum": ["open", "closed", "all"] },
+          "head": { "type": "string" },
+          "base": { "type": "string" }
+        },
+        "required": ["owner", "repo"]
+      }
+    },
+    {
+      "name": "actions_list",
+      "description": "List GitHub Actions workflows, workflow runs, or the jobs of a run.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "method": { "type": "string", "enum": ["list_workflows", "list_workflow_runs", "list_workflow_jobs"] },
+          "owner": { "type": "string" },
+          "repo": { "type": "string" },
+          "resource_id": { "type": "string", "description": "Workflow ID or file name for list_workflow_runs; run ID for list_workflow_jobs." },
+          "workflow_runs_filter": { "type": "object", "description": "Optional filters: branch, event, status, head_sha." }
+        },
+        "required": ["method", "owner", "repo"]
+      }
+    },
+    {
+      "name": "get_job_logs",
+      "description": "Download logs for one workflow job, or for all failed jobs of a run.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": { "type": "string" },
+          "repo": { "type": "string" },
+          "job_id": { "type": "number" },
+          "run_id": { "type": "number" },
+          "failed_only": { "type": "boolean", "description": "With run_id: logs of every failed job." },
+          "tail_lines": { "type": "number" }
+        },
+        "required": ["owner", "repo"]
+      }
+    },
+    {
+      "name": "actions_run_trigger",
+      "description": "Trigger, rerun or cancel GitHub Actions workflow runs.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "method": { "type": "string", "enum": ["run_workflow", "rerun_workflow_run", "rerun_failed_jobs", "cancel_workflow_run"] },
+          "owner": { "type": "string" },
+          "repo": { "type": "string" },
+          "run_id": { "type": "number" },
+          "workflow_id": { "type": "string" },
+          "ref": { "type": "string" }
+        },
+        "required": ["method", "owner", "repo"]
+      }
+    },
+    {
+      "name": "add_reply_to_pull_request_comment",
+      "description": "Reply to a pull request review comment.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": { "type": "string" },
+          "repo": { "type": "string" },
+          "pullNumber": { "type": "number" },
+          "commentId": { "type": "number" },
+          "body": { "type": "string" }
+        },
+        "required": ["owner", "repo", "pullNumber", "commentId", "body"]
+      }
+    },
+    {
+      "name": "add_issue_comment",
+      "description": "Add a comment to an issue or pull request conversation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": { "type": "string" },
+          "repo": { "type": "string" },
+          "issue_number": { "type": "number" },
+          "body": { "type": "string" }
+        },
+        "required": ["owner", "repo", "issue_number", "body"]
+      }
+    },
+    {
+      "name": "pull_request_review_write",
+      "description": "Create, submit or delete a pull request review, or dismiss an existing review.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "method": { "type": "string", "enum": ["create", "submit_pending", "delete_pending", "dismiss"] },
+          "owner": { "type": "string" },
+          "repo": { "type": "string" },
+          "pullNumber": { "type": "number" },
+          "event": { "type": "string", "enum": ["APPROVE", "REQUEST_CHANGES", "COMMENT"] },
+          "body": { "type": "string" },
+          "reviewId": { "type": "number", "description": "For dismiss." },
+          "message": { "type": "string", "description": "Dismissal message." }
+        },
+        "required": ["method", "owner", "repo", "pullNumber"]
+      }
+    },
+    {
+      "name": "update_pull_request",
+      "description": "Update a pull request: title, body, base, state, draft, or requested reviewers.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": { "type": "string" },
+          "repo": { "type": "string" },
+          "pullNumber": { "type": "number" },
+          "title": { "type": "string" },
+          "body": { "type": "string" },
+          "base": { "type": "string" },
+          "state": { "type": "string", "enum": ["open", "closed"] },
+          "draft": { "type": "boolean" },
+          "reviewers": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["owner", "repo", "pullNumber"]
+      }
+    },
+    {
+      "name": "update_pull_request_branch",
+      "description": "Update a pull request branch with the latest changes from its base branch.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": { "type": "string" },
+          "repo": { "type": "string" },
+          "pullNumber": { "type": "number" },
+          "expectedHeadSha": { "type": "string" }
+        },
+        "required": ["owner", "repo", "pullNumber"]
+      }
+    },
+    {
+      "name": "merge_pull_request",
+      "description": "Merge a pull request. In a repository with a merge queue, this adds it to the queue.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "owner": { "type": "string" },
+          "repo": { "type": "string" },
+          "pullNumber": { "type": "number" },
+          "merge_method": { "type": "string", "enum": ["merge", "squash", "rebase"] },
+          "commit_title": { "type": "string" },
+          "commit_message": { "type": "string" }
+        },
+        "required": ["owner", "repo", "pullNumber"]
+      }
+    }
+  ]
+}
