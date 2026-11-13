@@ -16,7 +16,7 @@ Latest numbers: [REPORT.md](REPORT.md). Estimated cost per session
 | session | cost vs. gh | cost vs. MCP | turns vs. gh / MCP | tool tokens vs. gh / MCP |
 | --- | --- | --- | --- | --- |
 | single PR | **−41%** | **−76%** | −17% / −68% | −71% / −88% |
-| PR stack | **−43%** | **−62%** | −38% / −58% | −13% / −53% |
+| PR stack | **−43%** | **−62%** | −38% / −58% | −11% / −52% |
 
 GitHub rate limit per session (deterministic, assumed; see the Method section):
 

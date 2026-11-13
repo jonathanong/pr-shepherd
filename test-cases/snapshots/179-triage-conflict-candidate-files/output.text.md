@@ -10,7 +10,7 @@
 
 ## Instructions
 
-1. The branch has merge conflicts (see `**branch**` above). Resolve them before committing.
+1. The branch has merge conflicts (see `**branch**` above). Update the branch from its base the way this repository's instructions say (rebase or merge), and resolve each conflict keeping both sides' changes unless they contradict.
 2. Start with the files under `## Files changed on both sides since the merge base`: the PR and its base both changed them, so they are the likeliest conflicts, but GitHub does not list conflicting files and the list may be incomplete. Resolve the conflicts yourself rather than handing them to the user.
 3. Commit any remaining conflict-resolution changes and push to the PR head branch.
 4. Rerun Shepherd now.

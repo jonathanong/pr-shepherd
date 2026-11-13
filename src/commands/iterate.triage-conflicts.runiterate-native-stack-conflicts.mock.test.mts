@@ -80,7 +80,7 @@ describe("runIterate — triage (native stack merge conflicts)", () => {
     expect(instructions.at(-1)).toBe("Rerun Shepherd now.");
     const joined = instructions.join("\n");
     expect(joined).not.toContain("check out the parent stack branch `main`");
-    expect(joined).not.toContain("Resolve them before committing.");
+    expect(joined).not.toContain("resolve each conflict keeping both sides");
     expect(joined).not.toContain("push to the PR head branch");
     expect(mockLookupTrunkConflict).toHaveBeenCalled();
   });

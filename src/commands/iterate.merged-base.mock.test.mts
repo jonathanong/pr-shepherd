@@ -61,7 +61,9 @@ describe("runIterate merged base context", () => {
       "gh pr edit https://github.com/owner/repo/pull/42",
     );
     expect(result.triage.instructions[0]).toContain("rerun Shepherd immediately");
-    expect(result.triage.instructions.join("\n")).toContain("Resolve them before committing");
+    expect(result.triage.instructions.join("\n")).toContain(
+      "resolve each conflict keeping both sides' changes",
+    );
     const text = formatIterateResult(result);
     expect(text).toContain("## Merged PRs matching the current base\n\n");
     for (const value of Object.values(parent).filter((value) => typeof value === "string")) {
@@ -146,7 +148,9 @@ describe("runIterate merged base context", () => {
     expect(result.action).toBe("triage");
     if (result.action !== "triage") throw new Error("expected triage");
     expect(result.mergedBasePullRequests).toBeUndefined();
-    expect(result.triage.instructions.join("\n")).toContain("Resolve them before committing");
+    expect(result.triage.instructions.join("\n")).toContain(
+      "resolve each conflict keeping both sides' changes",
+    );
     expect(result.triage.instructions.join("\n")).not.toContain("gh pr edit");
     expect(formatIterateResult(result)).not.toContain("## Merged PRs matching the current base");
     expect(projectIterateLean(result)).not.toHaveProperty("mergedBasePullRequests");
