@@ -81,6 +81,13 @@ export function buildNativeStackLayerRebase(
 }
 
 /**
+ * The branch-update route for a conflicting PR that is not a native stack layer. Rebase versus
+ * merge is the repository's convention, so the step points at it instead of choosing.
+ */
+const RESOLVE_CONFLICTS =
+  "Check the base branch's instructions (such as `AGENTS.md`) only for whether to rebase or merge, update the branch from its base that way, and resolve each conflict keeping both sides' changes unless they contradict.";
+
+/**
  * Point at the conflicts, and at the stack rebase when the PR is a native stack layer. A queued
  * conflicting entry cannot form a merge group, so GitHub removes it once the queue reaches it.
  * Pulling it out early (dequeue, then resolve) or waiting for that removal is the caller's
@@ -92,7 +99,7 @@ export function buildConflictInstruction(
   dequeueCommand?: string,
 ): string {
   const pointer = "The branch has merge conflicts (see `**branch**` above).";
-  const resolve = stackRebase ?? "Resolve them before committing.";
+  const resolve = stackRebase ?? RESOLVE_CONFLICTS;
   if (!dequeueCommand) return `${pointer} ${resolve}`;
   return `${pointer} ${buildQueuedConflictChoice(dequeueCommand, resolve, stackRebase !== undefined)}`;
 }

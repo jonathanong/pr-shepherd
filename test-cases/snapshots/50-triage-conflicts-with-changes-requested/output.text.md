@@ -12,7 +12,7 @@
 ## Instructions
 
 1. Fix each warranted item.
-2. The branch has merge conflicts (see `**branch**` above). Resolve them before committing.
+2. The branch has merge conflicts (see `**branch**` above). Check the base branch's instructions (such as `AGENTS.md`) only for whether to rebase or merge, update the branch from its base that way, and resolve each conflict keeping both sides' changes unless they contradict.
 3. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <reason>'`.
 4. Commit any remaining conflict-resolution changes and push to the PR head branch.
 5. Rerun Shepherd now.
