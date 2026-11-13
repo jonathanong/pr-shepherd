@@ -29,7 +29,7 @@ Skills are thin dispatchers. They parse arguments, call the CLI or MCP, print th
 | Playbook             | Reference file                                               |
 | -------------------- | ------------------------------------------------------------ |
 | Triage loop          | `triage-loop.md` (only named with `--instructions playbook`) |
-| Create a PR          | `create-pr.md`                                               |
+| Create a PR          | `create-a-pr.md`                                             |
 | Draft handoff        | `draft-handoff.md`                                           |
 | MCP fallback         | `mcp-fallback.md`                                            |
 | Suggestion patches   | `suggestion-patches.md`                                      |
