@@ -5,6 +5,7 @@ import codexNotices from "./codex-notices.mts";
 import dependabotNotices from "./dependabot-notices.mts";
 import geminiNotices from "./gemini-notices.mts";
 import kiloNoIssues from "./kilo-no-issues.mts";
+import socketReports from "./socket-reports.mts";
 import sourceryNotices from "./sourcery-notices.mts";
 
 /**
@@ -18,6 +19,7 @@ export const STANDARD_RULES: Readonly<Record<string, ClassifyRule>> = {
   "dependabot-notices": dependabotNotices,
   "gemini-notices": geminiNotices,
   "kilo-no-issues": kiloNoIssues,
+  "socket-reports": socketReports,
   "sourcery-notices": sourceryNotices,
 };
 

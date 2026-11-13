@@ -814,5 +814,17 @@
       "suppress": true,
       "autoResolve": true
     }
+  },
+  {
+    "name": "socket-overview",
+    "rule": "socket-reports",
+    "kind": "pr-comment",
+    "author": "socket-security",
+    "url": "https://github.com/example/example/pull/163#issuecomment-6845876264",
+    "body": "**Review the following changes in direct dependencies.** Learn more about [Socket for GitHub](https://socket.dev?utm_medium=gh).\n\n<table>\n<thead>\n<tr>\n<th>Diff</th>\n<th width=\"200px\">Package</th>\n<th align=\"left\" width=\"100px\">Supply Chain<br/>Security</th>\n<th align=\"left\" width=\"100px\">Vulnerability</th>\n<th align=\"left\" width=\"100px\">Quality</th>\n<th align=\"left\" width=\"100px\">Maintenance</th>\n<th align=\"left\" width=\"100px\">License</th>\n</tr>\n</thead>\n<tbody>\n<tr><td align=\"center\"><a href=\"https://socket.dev/dashboard/org/example/diff-scan/658ed928-5abb-4520-a63d-d82745a8fc18?tab=dependencies&dependency_item_key=101972963369\"><img src=\"https://github-app-statics.socket.dev/diff-updated.svg\" title=\"Updated\" alt=\"Updated\" width=\"20\" height=\"20\"></a></td><td><a href=\"https://socket.dev/dashboard/org/example/diff-scan/658ed928-5abb-4520-a63d-d82745a8fc18?tab=dependencies&dependency_item_key=101972963369\">@​sentry/​mcp-server@​0.42.0 ⏵ 0.48.0</a></td><td align=\"left\"><a href=\"https://socket.dev/dashboard/org/example/diff-scan/658ed928-5abb-4520-a63d-d82745a8fc18?tab=dependencies&dependency_item_key=101972963369\"><img src=\"https://github-app-statics.socket.dev/score-100.svg\" title=\"Supply Chain Security\" width=\"40\" height=\"40\" alt=\"100\"></a> <sup>+1</sup></td><td align=\"left\"><a href=\"https://socket.dev/dashboard/org/example/diff-scan/658ed928-5abb-4520-a63d-d82745a8fc18?tab=dependencies&dependency_item_key=101972963369\"><img src=\"https://github-app-statics.socket.dev/score-100.svg\" title=\"Vulnerability\" width=\"40\" height=\"40\" alt=\"100\"></a></td><td align=\"left\"><a href=\"https://socket.dev/dashboard/org/example/diff-scan/658ed928-5abb-4520-a63d-d82745a8fc18?tab=dependencies&dependency_item_key=101972963369\"><img src=\"https://github-app-statics.socket.dev/score-89.svg\" title=\"Quality\" width=\"40\" height=\"40\" alt=\"89\"></a> <sup>+12</sup></td><td align=\"left\"><a href=\"https://socket.dev/dashboard/org/example/diff-scan/658ed928-5abb-4520-a63d-d82745a8fc18?tab=dependencies&dependency_item_key=101972963369\"><img src=\"https://github-app-statics.socket.dev/score-94.svg\" title=\"Maintenance\" width=\"40\" height=\"40\" alt=\"94\"></a> <sup>-1</sup></td><td align=\"left\"><a href=\"https://socket.dev/dashboard/org/example/diff-scan/658ed928-5abb-4520-a63d-d82745a8fc18?tab=dependencies&dependency_item_key=101972963369\"><img src=\"https://github-app-statics.socket.dev/score-90.svg\" title=\"License\" width=\"40\" height=\"40\" alt=\"90\"></a></td></tr>\n</tbody>\n</table>\n\n[View full report](https://socket.dev/dashboard/org/example/diff-scan/658ed928-5abb-4520-a63d-d82745a8fc18?tab=dependencies)\n\n<!-- overview-comment -->",
+    "expect": {
+      "suppress": true,
+      "autoResolve": true
+    }
   }
 ]
