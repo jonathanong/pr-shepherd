@@ -60,11 +60,30 @@ resolve the thread without the fix; ask the user what to do.`,
     // Changes-requested reviews from a bot keep the PR blocked until dismissed.
     slug: "02-stale-bot-review",
     fixture: "60-triage-bot-cr-not-dismissed",
+    // The fixture is a later tick that lists the overdue review without its
+    // body; show the body, as the first tick did.
     transform: (t) =>
-      t.replace(
-        "A newer changes-requested review that must be displayed before its retained dismissal runs.",
-        BOT_NEW_BODY,
-      ),
+      t
+        .replace(
+          "A newer changes-requested review that must be displayed before its retained dismissal runs.",
+          BOT_NEW_BODY,
+        )
+        .replace(
+          "- `reviewId=PRR_bot_overdue` (@claude · Bot) [pending dismissal — already surfaced; include in `--dismiss-review-ids`]",
+          [
+            "### `reviewId=PRR_bot_overdue` (@claude · Bot)",
+            "",
+            "> ## Summary",
+            ">",
+            "> Here are some blockers I found:",
+            ">",
+            "> 1. **Missing input validation.** The `processPayment` function at",
+            "> `src/payments.mts:42` does not validate the amount field before passing it to",
+            "> the charge API.",
+            "> 2. **Race condition.** `src/queue.mts:88` reads and writes the job counter",
+            "> without a lock.",
+          ].join("\n"),
+        ),
     tags: ["review", "bot"],
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `PR #42 "Add payments" in owner/repo: open, not a draft, base \`main\`, head

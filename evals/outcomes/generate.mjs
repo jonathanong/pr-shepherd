@@ -11,14 +11,8 @@ import { existsSync, mkdirSync, readdirSync, realpathSync, writeFileSync } from 
 import { join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { EVALS_DIR, pruneStaleCases } from "../lib.mjs";
-import { CI_SCENARIOS } from "./scenarios-ci.mjs";
-import { REVIEW_SCENARIOS } from "./scenarios-review.mjs";
-import { SAFETY_SCENARIOS } from "./scenarios-safety.mjs";
+import { SCENARIOS } from "./scenarios.mjs";
 import { writeOutcomeCase } from "./write.mjs";
-
-export const SCENARIOS = [...REVIEW_SCENARIOS, ...CI_SCENARIOS, ...SAFETY_SCENARIOS].sort((a, b) =>
-  a.slug.localeCompare(b.slug),
-);
 
 const MARKER = ".pr-shepherd-outcome-evals";
 const { values } = parseArgs({ options: { out: { type: "string", default: "evals-outcomes" } } });
