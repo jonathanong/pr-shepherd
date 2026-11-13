@@ -16,7 +16,7 @@ batch; do not fetch the held items yourself."
 Passing plans address the shown review threads (`PRRT_active001` through
 `PRRT_active038`) and the two changes-requested reviews, commit and push any
 changes, run the printed `pr-shepherd apply review …/pull/42 …` command with
-its printed `--reply-thread-ids` list (substituting `$DISMISS_MESSAGE`), and
+its printed `--reply-thread-ids` list (substituting `$CHANGE_MESSAGE`), and
 then rerun pr-shepherd to get the next batch.
 
 Failing responses do any of: fetch the held items themselves (`gh api`,

@@ -209,7 +209,7 @@ command.`,
         `The CLI only builds the patch. After \`suggest\`, the plan
 applies the returned patch, commits and pushes it to the PR head branch, then
 runs the printed \`apply review\` command from the pushed checkout, so its
-\`--require-sha\` resolves to the pushed SHA, with \`$DISMISS_MESSAGE\` replaced by
+\`--require-sha\` resolves to the pushed SHA, with \`$CHANGE_MESSAGE\` replaced by
 a one-sentence summary.
 
 Passing responses do all of that before iterating. Inspecting the source instead

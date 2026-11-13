@@ -131,11 +131,11 @@ interface IterateResultCancel extends IterateResultBase {
 }
 
 export interface ResolveCommand {
-  /** Argv for spawn-style execution. May contain a `$DISMISS_MESSAGE` placeholder. `--require-sha` is never in `argv` — `renderResolveCommand` (from `commands/iterate/render.mts`) appends `--require-sha HEAD` when rendering if `requiresHeadSha` is true. Use `renderResolveCommand` to render as a command string; don't naive-join. */
+  /** Argv for spawn-style execution. May contain a `$CHANGE_MESSAGE` placeholder. `--require-sha` is never in `argv` — `renderResolveCommand` (from `commands/iterate/render.mts`) appends `--require-sha HEAD` when rendering if `requiresHeadSha` is true. Use `renderResolveCommand` to render as a command string; don't naive-join. */
   argv: string[];
   /** When true, `renderResolveCommand` appends `--require-sha HEAD` to the rendered command. */
   requiresHeadSha: boolean;
-  /** Whether the model must substitute $DISMISS_MESSAGE with a specific description of the fix. */
+  /** Whether the model must substitute $CHANGE_MESSAGE with a specific description of the fix. */
   requiresDismissMessage: boolean;
   /** Thread IDs that should receive a reply. Viewer-authored human IDs may also appear in resolveThreadIds. */
   replyThreadIds?: string[];

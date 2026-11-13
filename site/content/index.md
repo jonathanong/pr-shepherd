@@ -47,7 +47,7 @@ summary 3 passing
 2. Triage ## Failing checks. Playbook: "CI failure triage".
 3. Commit and push any changes.
 4. Journal key decisions or rejections with URLs or IDs: pr-shepherd apply journal 123 '- <decision>'
-5. $DISMISS_MESSAGE: one sentence on what changed. Run even if no code changed: pr-shepherd apply review 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$DISMISS_MESSAGE" --require-sha HEAD
+5. $CHANGE_MESSAGE: one sentence on what changed. Run even if no code changed: pr-shepherd apply review 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$CHANGE_MESSAGE" --require-sha HEAD
 6. Rerun Shepherd now.
 ```
 

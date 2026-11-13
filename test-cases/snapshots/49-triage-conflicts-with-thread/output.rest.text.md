@@ -25,5 +25,5 @@
 2. The branch has merge conflicts (see `**branch**` above). Resolve them before committing.
 3. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <reason>'`.
 4. Commit any remaining conflict-resolution changes and push to the PR head branch before review mutations.
-5. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-49 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha HEAD`
+5. `$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-49 --message "$CHANGE_MESSAGE" --adopt-existing-replies --require-sha HEAD`
 6. Rerun Shepherd now.

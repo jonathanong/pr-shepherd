@@ -97,7 +97,7 @@ describe("main — iterate text format (triage and checks)", () => {
           "--dismiss-review-ids",
           "REV_1",
           "--message",
-          "$DISMISS_MESSAGE",
+          "$CHANGE_MESSAGE",
         ],
         requiresHeadSha: true,
         requiresDismissMessage: true,

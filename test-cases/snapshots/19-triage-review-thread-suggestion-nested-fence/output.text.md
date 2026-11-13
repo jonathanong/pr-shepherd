@@ -22,5 +22,5 @@ const x = ````nested fence````;
 2. For every `[suggestion]` thread under `## Review threads`, run one `pr-shepherd suggest https://github.com/owner/repo/pull/42 --thread-id "<id>" --message "<one-sentence headline>" --format=json`, repeating `--thread-id` and `--message` in displayed order. Playbook: "Suggestion patches".
 3. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <reason>'`.
 4. Commit and push any changes.
-5. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_nested --message "$DISMISS_MESSAGE" --require-sha HEAD`
+5. `$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_nested --message "$CHANGE_MESSAGE" --require-sha HEAD`
 6. Rerun Shepherd now.

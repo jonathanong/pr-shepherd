@@ -63,7 +63,7 @@
 //   - Agents do NOT truncate `--dismiss-review-ids`. Both miners found zero
 //     instances. They skip the whole command instead (failure 2), so that is
 //     what the graders check.
-//   - Unsubstituted `$HEAD_SHA` / `$DISMISS_MESSAGE` never reached an executed
+//   - Unsubstituted `$HEAD_SHA` / `$CHANGE_MESSAGE` never reached an executed
 //     command. Zero instances across all three tools.
 
 //

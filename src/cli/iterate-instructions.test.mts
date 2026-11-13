@@ -52,7 +52,7 @@ describe("iterate instruction polling contract", () => {
     if (result.action !== "escalate") throw new Error("expected escalate fixture");
     result.escalate.pendingReviewCommands = {
       resolveCommand: {
-        argv: ["pr-shepherd", "apply", "review", "42", "--message", "$DISMISS_MESSAGE"],
+        argv: ["pr-shepherd", "apply", "review", "42", "--message", "$CHANGE_MESSAGE"],
         requiresHeadSha: true,
         requiresDismissMessage: true,
         hasMutations: true,
@@ -65,7 +65,7 @@ describe("iterate instruction polling contract", () => {
     expect(text).toHaveLength(2);
     expect(text[0]).toContain("Ask the user whether to run");
     expect(text.join(" ")).toContain("pushed PR head");
-    expect(text.join(" ")).toContain("$DISMISS_MESSAGE");
+    expect(text.join(" ")).toContain("$CHANGE_MESSAGE");
     expect(text.join(" ")).toContain("pending review commands");
     expect(text.at(-1)).toContain("rerun Shepherd");
   });

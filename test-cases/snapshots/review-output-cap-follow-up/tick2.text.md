@@ -182,6 +182,6 @@
 1. Fix each warranted item.
 2. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <reason>'`.
 3. Commit and push any changes.
-4. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_active060,PRRT_active059,PRRT_active058,PRRT_active057,PRRT_active056,PRRT_active055,PRRT_active054,PRRT_active053,PRRT_active052,PRRT_active051,PRRT_active050,PRRT_active049,PRRT_active048,PRRT_active047,PRRT_active046,PRRT_active045,PRRT_active044,PRRT_active043,PRRT_active042,PRRT_active041,PRRT_active040,PRRT_active039 --message "$DISMISS_MESSAGE" --require-sha HEAD`
+4. `$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_active060,PRRT_active059,PRRT_active058,PRRT_active057,PRRT_active056,PRRT_active055,PRRT_active054,PRRT_active053,PRRT_active052,PRRT_active051,PRRT_active050,PRRT_active049,PRRT_active048,PRRT_active047,PRRT_active046,PRRT_active045,PRRT_active044,PRRT_active043,PRRT_active042,PRRT_active041,PRRT_active040,PRRT_active039 --message "$CHANGE_MESSAGE" --require-sha HEAD`
 5. This is a subset: 42 of 75 review items are shown, and only their IDs are in the commands above. After handling these items, rerun Shepherd for the next batch; do not fetch the held items yourself.
 6. Rerun Shepherd now.

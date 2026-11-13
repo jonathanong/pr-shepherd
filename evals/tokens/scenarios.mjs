@@ -258,13 +258,13 @@ const shepherdMerge = (cmd, out) => ({
 });
 
 /**
- * Run the printed `apply review` command and read its output. Only `$DISMISS_MESSAGE` needs
+ * Run the printed `apply review` command and read its output. Only `$CHANGE_MESSAGE` needs
  * filling; `--require-sha HEAD` runs as printed.
  */
 function shepherdApply(text, result, phase = 2) {
   const cmd = text.match(/`(pr-shepherd apply review [^`]+)`/)?.[1];
   if (!cmd) throw new Error("snapshot has no apply review command");
-  const filled = cmd.replace("$DISMISS_MESSAGE", "Renamed the variable as requested.");
+  const filled = cmd.replace("$CHANGE_MESSAGE", "Renamed the variable as requested.");
   // Every printed command carries --require-sha. GraphQL reads follow
   // `applyReviewGraphqlReads` (lib.mjs): with 1 to 20 replies, one
   // `ApplyReviewPreflight` read confirms the head SHA and carries the

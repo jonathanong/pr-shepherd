@@ -28,7 +28,7 @@ Could not determine the PR's base branch (GraphQL batch returned an empty base b
 
 ## Pending review commands
 
-- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-30 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha HEAD`
+- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-30 --message "$CHANGE_MESSAGE" --adopt-existing-replies --require-sha HEAD`
 
 ---
 
@@ -37,4 +37,4 @@ After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-
 ## Instructions
 
 1. Stop polling. Ask the user whether to run the pending review commands shown above.
-2. If yes, set any `$DISMISS_MESSAGE` to a one-sentence disposition, run every pending command from the pushed PR head, then rerun Shepherd with the same options.
+2. If yes, set any `$CHANGE_MESSAGE` to a one-sentence disposition, run every pending command from the pushed PR head, then rerun Shepherd with the same options.

@@ -126,7 +126,7 @@ describe("runIterate — prescriptive fields: resolveCommand shape", () => {
       // Non-human (Unknown) CR reviews are auto-dismissed in the same command as replies.
       expect(resolveCommand.argv).toContain("--dismiss-review-ids");
       expect(resolveCommand.argv.join(" ")).toContain("r-1");
-      expect(resolveCommand.argv).toContain("$DISMISS_MESSAGE");
+      expect(resolveCommand.argv).toContain("$CHANGE_MESSAGE");
       expect(resolveCommand.requiresDismissMessage).toBe(true);
     }
   });
