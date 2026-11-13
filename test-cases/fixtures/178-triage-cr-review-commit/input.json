@@ -1,0 +1,26 @@
+{
+  "description": "A changes-requested review submitted on an older commit shows that commit beside the PR head, as raw data and with no stale verdict. A review submitted on the head carries no commit tag.",
+  "batchData": {
+    "mergeStateStatus": "BLOCKED",
+    "reviewDecision": "CHANGES_REQUESTED",
+    "headRefOid": "def5678abc1234def5678abc1234def5678abc1",
+    "changesRequestedReviews": [
+      {
+        "id": "PRR_older_commit",
+        "author": "claude",
+        "authorType": "Bot",
+        "body": "Please validate the amount before charging.",
+        "commitOid": "1234567890abcdef1234567890abcdef12345678"
+      },
+      {
+        "id": "PRR_on_head",
+        "author": "claude",
+        "authorType": "Bot",
+        "body": "Please add a lock around the job counter.",
+        "commitOid": "def5678abc1234def5678abc1234def5678abc1"
+      }
+    ]
+  },
+  "readyDelayState": { "isReady": false, "shouldCancel": false, "remainingSeconds": 600 },
+  "expectedExitCode": 12
+}
