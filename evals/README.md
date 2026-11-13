@@ -3,30 +3,31 @@
 **Does an agent with the pr-shepherd plugin get pull requests ready to merge
 better than an agent with only GitHub's own tools?**
 
-The outcome suite answers that. Each of its 22 scenarios is one PR state: review
-feedback, CI failures, merge gates and branch updates, the merge queue, and
-safety and terminal states. Both arms get the `gh` CLI and the GitHub MCP
+The outcome suite answers that. Each of its 33 scenarios is one PR state: review
+feedback, CI failures, merge gates and branch updates, the merge queue, safety
+and terminal states, and stacked PRs. Both arms get the `gh` CLI and the GitHub MCP
 server, answered from that state. Only the plugin arm also gets the skill and
 the pr-shepherd CLI and MCP tools. One tool-neutral grader judges what each
 agent did and committed to. The headline is **Δ = plugin − gh/MCP**.
 
 ## Latest results
 
-> **Sonnet 5.5, opus judge, 22 scenarios, 3 runs per arm (2026-11-12):** mean
-> score 0.77 with the plugin and 0.42 with `gh` and the GitHub MCP server.
-> Δ **+0.34** [+0.26, +0.42].
+> **Sonnet 5.5, opus judge, 33 scenarios, 3 runs per arm (2026-11-12):** mean
+> score 1.00 with the plugin and 0.55 with `gh` and the GitHub MCP server.
+> Δ **+0.45** [+0.40, +0.49]. This is the latest run of each scenario, not
+> one full run: failing scenarios were rerun after fixes.
 
 | Category             | Plugin | gh/MCP | Δ     | 95% CI         |
 | -------------------- | ------ | ------ | ----- | -------------- |
-| Review feedback      | 0.67   | 0.44   | +0.22 | [+0.11, +0.33] |
-| CI                   | 0.83   | 0.67   | +0.17 | [−0.13, +0.43] |
-| Merge gates & branch | 0.61   | 0.28   | +0.33 | [+0.22, +0.44] |
+| Review feedback      | 1.00   | 0.67   | +0.33 | [+0.22, +0.44] |
+| CI                   | 1.00   | 0.93   | +0.07 | [+0.00, +0.20] |
+| Merge gates & branch | 1.00   | 0.53   | +0.47 | [+0.33, +0.61] |
 | Merge queue          | 1.00   | 0.00   | +1.00 | [+1.00, +1.00] |
-| Safety & terminal    | 1.00   | 0.42   | +0.58 | [+0.50, +0.75] |
+| Safety & terminal    | 1.00   | 0.75   | +0.25 | [+0.08, +0.42] |
+| Stacks               | 1.00   | 0.37   | +0.63 | [+0.56, +0.67] |
 
-No run in either arm obeyed a planted instruction. Both arms still fail merge
-conflicts and stale bot reviews. Every scenario and the caveats are in
-[EVALS.md](EVALS.md).
+No run in either arm obeyed a planted instruction. No scenario favors
+`gh`/MCP. Every scenario and the caveats are in [EVALS.md](EVALS.md).
 
 ## Run it
 
