@@ -266,6 +266,63 @@ const sessionsOf = (rows) =>
   );
 const sessions = sessionsOf(rows);
 
+// --- realism sweep (reported, not gated) ------------------------------------
+
+const GATED_MODEL = {
+  baseContextTokens: MODEL.baseContextTokens,
+  cacheWriteMultiplier: MODEL.cacheWriteMultiplier,
+  outputTokensPerTurn: MODEL.outputTokensPerTurn,
+};
+const REALISTIC = { cacheWriteMultiplier: 2, outputTokensPerTurn: 190 };
+const REALISM_VARIANTS = [
+  { id: "gated", label: "gated model", model: GATED_MODEL },
+  { id: "write", label: "1-hour cache write", model: { ...GATED_MODEL, cacheWriteMultiplier: 2 } },
+  { id: "output", label: "+ measured output", model: { ...GATED_MODEL, ...REALISTIC } },
+  { id: "central", label: "**central**", model: { ...REALISTIC, baseContextTokens: 60_000 } },
+  {
+    id: "conservative",
+    label: "**conservative**",
+    model: { ...REALISTIC, baseContextTokens: 100_000 },
+  },
+];
+
+/** Session ITE savings vs. gh and MCP with MODEL overridden, optionally without some steps. */
+function savingsUnder(model, drop = []) {
+  const saved = { ...MODEL };
+  Object.assign(MODEL, model);
+  try {
+    const picked = pickRows(Object.fromEntries(STRATEGIES.map((st) => [st, buildRows(st)])));
+    return {
+      rows: picked,
+      ...Object.fromEntries(
+        Object.keys(SESSIONS).map((key) => {
+          const t = totals(picked.filter((r) => r.session === key && !drop.includes(r.id)));
+          return [
+            key,
+            { gh: saving(t.gh.ite, t.shepherd.ite), mcp: saving(t.mcp.ite, t.shepherd.ite) },
+          ];
+        }),
+      ),
+    };
+  } finally {
+    Object.assign(MODEL, saved);
+  }
+}
+
+const realism = Object.fromEntries(REALISM_VARIANTS.map((v) => [v.id, savingsUnder(v.model)]));
+const centralModel = REALISM_VARIANTS.find((v) => v.id === "central").model;
+// The PR session's biggest contributors to the gh gap under the central setting.
+const drivers = realism.central.rows
+  .filter((r) => r.session === "pr" && !r.setup)
+  .map((r) => ({ id: r.id, gap: r.weight * (r.gh.ite - r.shepherd.ite) }))
+  .sort((a, b) => b.gap - a.gap)
+  .slice(0, 4)
+  .map((d) => d.id);
+const realismDrops = [0, 1, 2, 3, 4].map((n) => {
+  const ids = drivers.slice(0, n);
+  return { ids, saving: savingsUnder(centralModel, ids).pr };
+});
+
 // --- rate-limit totals -----------------------------------------------------------
 
 const API_ARMS = ["shepherd", "shepherdRest", "shepherdCloud", "gh", "mcp"];
@@ -550,11 +607,14 @@ const pendingLosses = losses.filter((l) => !structuralKeys.has(lossKey(l)));
 const structuralLosses = losses.filter((l) => structuralKeys.has(lossKey(l)));
 
 if (process.argv.includes("--check")) {
-  const { unlisted, stale, pending: pendingEntries, wrongIssue, duplicate, missingReason } = checkPending(
-    losses,
-    pending,
-    structural,
-  );
+  const {
+    unlisted,
+    stale,
+    pending: pendingEntries,
+    wrongIssue,
+    duplicate,
+    missingReason,
+  } = checkPending(losses, pending, structural);
   const fail =
     unlisted.length +
       stale.length +
@@ -598,7 +658,8 @@ if (process.argv.includes("--check")) {
     console.error(`\n✗ ${missingReason.length} structural entr(y/ies) without a reason:`);
     for (const s of missingReason) console.error(`  ${lossKey(s)}`);
   }
-  if (!fail) console.log("✓ every loss is structural with a reason; nothing pending; no entry is stale");
+  if (!fail)
+    console.log("✓ every loss is structural with a reason; nothing pending; no entry is stale");
   process.exit(fail ? 1 : 0);
 }
 
@@ -700,6 +761,9 @@ const apiPct = (key, b, f) => {
   return pct(saving(a[b][f], a.shepherd[f]));
 };
 
+const realismPair = (session, base) =>
+  `**${pct(realism.central[session][base])}** / ${pct(realism.conservative[session][base])}`;
+
 const headline = [
   "| session | cost vs. gh | cost vs. MCP | turns vs. gh / MCP | tool tokens vs. gh / MCP |",
   "| --- | --- | --- | --- | --- |",
@@ -707,6 +771,8 @@ const headline = [
     ([k, label]) =>
       `| ${label} | **${sess(k, "gh")}** | **${sess(k, "mcp")}** | ${sess(k, "gh", "turns")} / ${sess(k, "mcp", "turns")} | ${sess(k, "gh", "toolTokens")} / ${sess(k, "mcp", "toolTokens")} |`,
   ),
+  "",
+  `Realism sweep (REPORT.md; central at a 60k context, conservative at 100k, both with Claude Code's 1-hour cache write and measured output per turn), cost central / conservative: single PR ${realismPair("pr", "gh")} vs. gh and ${realismPair("pr", "mcp")} vs. MCP; stack ${realismPair("stack", "gh")} and ${realismPair("stack", "mcp")}. Every figure assumes a warm cache.`,
   "",
   "GitHub rate limit per session (deterministic, assumed; see the Method section):",
   "",
@@ -1000,7 +1066,8 @@ for (const [a, label] of Object.entries({
   shepherd: "pr-shepherd polling, `--until-terminal` (the skill), first hour, seed included",
   shepherdNoDetectors:
     "pr-shepherd polling, `--until-terminal`, without detectors, not READY, one-page reads (e.g. a thread with a reply)",
-  shepherdBounded: "pr-shepherd polling, bounded foreground `--timeout 4.5m` (hosts without wake-on-exit)",
+  shepherdBounded:
+    "pr-shepherd polling, bounded foreground `--timeout 4.5m` (hosts without wake-on-exit)",
   event: "event",
   eventProxy: "event, hosted webhook proxy (hypothetical)",
 })) {
@@ -1025,6 +1092,35 @@ out(
 out(
   "- The proxy row moves every pr-shepherd snapshot (detectors, change ticks, reconciles, and their log and annotation reads) to a hosted proxy's own token. The agent's mutations, merges, `apply review` reads and its own `gh` reads still count against the user.",
 );
+out();
+out("## Realism sweep");
+out();
+out(
+  "The gated model above is deliberately simple: a 30k-token base context, a 1.25× cache write, and output priced only for the commands each turn emits. This sweep re-scores both sessions under settings closer to a real Claude Code session, with the same scenarios and weights. Claude Code writes its prompt cache with a one-hour lifetime, priced at 2× an uncached input token. Sonnet 5.5 eval traces averaged about 190 output tokens per turn on both arms, prose and thinking included. A mid-PR session carries 40k to 100k tokens of context. The cache is still assumed warm: a wait over an hour would re-write the whole context. Each cell is pr-shepherd's change in cost (ITE) against the baseline.",
+);
+out();
+out(
+  "| setting | base context | cache write | output per turn | PR session vs. gh / MCP | stack session vs. gh / MCP |",
+);
+out("| --- | --- | --- | --- | --- | --- |");
+for (const v of REALISM_VARIANTS) {
+  const r = realism[v.id];
+  out(
+    `| ${v.label} | ${num(v.model.baseContextTokens)} | ${v.model.cacheWriteMultiplier}× | ${num(v.model.outputTokensPerTurn)} | ${pct(r.pr.gh)} / ${pct(r.pr.mcp)} | ${pct(r.stack.gh)} / ${pct(r.stack.mcp)} |`,
+  );
+}
+out();
+out(
+  `The PR session's saving vs. gh is concentrated in a few steps. Under the central setting, dropping its largest contributors one at a time (each step's weighted gh cost minus pr-shepherd's):`,
+);
+out();
+out("| without | PR session vs. gh | vs. MCP |");
+out("| --- | --- | --- |");
+for (const d of realismDrops) {
+  out(
+    `| ${d.ids.length ? d.ids.map((id) => `\`${id}\``).join(", ") : "nothing"} | ${pct(d.saving.gh)} | ${pct(d.saving.mcp)} |`,
+  );
+}
 out();
 out("## Baseline strategy sensitivity");
 out();
@@ -1128,7 +1224,7 @@ out(
   "- Prompt cache: always warm. Every turn re-reads the carried context at the cache-read price; no wait expires it. The cache lives 5 minutes or more, so a wait longer than that (a blocking `gh pr checks --watch`, a ready-delay) can re-write the whole context at the cache-write price on any arm. That is not charged.",
 );
 out(
-  "- Thinking tokens: none, on every arm. A turn is charged only for the commands it emits. Baselines that must classify raw GitHub state likely think more than an agent following printed instructions; that is not charged.",
+  "- Thinking tokens: none, on every arm, in the gated model: a turn is charged only for the commands it emits. Sonnet 5.5 outcome-eval traces show about 190 output tokens per turn on both arms, thinking included, and slightly more thinking with the plugin; the Realism sweep charges that.",
 );
 out(
   `- Host output caps: Bash ${num(MODEL.bashOutputCapChars)} characters, MCP ${num(MODEL.mcpOutputCapTokens)} tokens.`,

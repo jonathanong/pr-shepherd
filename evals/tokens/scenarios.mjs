@@ -909,8 +909,22 @@ const PR_SCENARIOS = [
             apiProxy: gql(1),
           },
         },
+        // A frugal baseline that just watched CI settle checks only the merge
+        // gate before `gh pr ready`; it does not re-read the review history it
+        // handled on earlier ticks. That skips any review posted during the
+        // wait, which pr-shepherd would surface, so it favors the baselines.
         gh: [
-          ...ghObserve(state),
+          {
+            phase: 1,
+            via: "bash",
+            cmd: "gh pr view 42 -R owner/repo --json state,isDraft,mergeStateStatus,reviewDecision",
+            out: JSON.stringify({
+              isDraft: state.isDraft,
+              mergeStateStatus: state.mergeStateStatus,
+              reviewDecision: state.reviewDecision,
+              state: state.state,
+            }),
+          },
           {
             phase: 2,
             via: "bash",
@@ -919,7 +933,7 @@ const PR_SCENARIOS = [
           },
         ],
         mcp: [
-          ...mcpObserve(state),
+          mcpCall(1, "pull_request_read", { method: "get", pullNumber: 42 }, mcpGet(state)),
           mcpCall(
             2,
             "update_pull_request",
@@ -1015,8 +1029,7 @@ const PR_SCENARIOS = [
       const fixture = "155-triage-review-output-capped";
       const state = fixtureState(fixture);
       const ticks = [snapshot(fixture), followUpTick(2), followUpTick(3)];
-      const repliesIn = (text) =>
-        text.match(/--reply-thread-ids (\S+)/)?.[1].split(",") ?? [];
+      const repliesIn = (text) => text.match(/--reply-thread-ids (\S+)/)?.[1].split(",") ?? [];
       const shepherd = [];
       for (const text of ticks) {
         shepherd.push(shepherdTick(text, shepherd.length + 1));
