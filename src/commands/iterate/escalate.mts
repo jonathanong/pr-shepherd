@@ -1,4 +1,5 @@
 /* eslint-disable max-lines */
+import { renderReviewCommitTag } from "../../cli/list-formatters.mts";
 import { renderRelatedJobLines } from "../../cli/related-jobs-format.mts";
 import type { AgentCheck, EscalateDetails, EscalateTrigger, ReviewThread } from "../../types.mts";
 import { loadConfig } from "../../config/load.mts";
@@ -203,7 +204,7 @@ export function buildEscalateHumanMessage(
       }
     }
     for (const r of escalate.changesRequestedReviews) {
-      lines.push(`- review \`${r.id}\` (${renderEscalateAuthor(r)}):`);
+      lines.push(`- review \`${r.id}\` (${renderEscalateAuthor(r)})${renderReviewCommitTag(r)}:`);
       lines.push("");
       for (const bodyLine of r.body.split("\n")) lines.push(`  > ${bodyLine}`);
       lines.push("");

@@ -21,6 +21,7 @@ import type { CheckExecutionContext } from "./check-execution-context.mts";
 import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
 import { classifyVisibleComments } from "../comments/visible-comments.mts";
+import { withHeadOid } from "./review-commit.mts";
 import { computeStatus } from "./check-status.mts";
 import {
   annotationMarkerBody,
@@ -701,7 +702,7 @@ async function runScopedCheck(
       ...(budgeted.editedComments.length > 0 && { edited: budgeted.editedComments }),
       ...(autoMinimized.length > 0 && { autoMinimized }),
     },
-    changesRequestedReviews: budgeted.changesRequested.visible,
+    changesRequestedReviews: withHeadOid(budgeted.changesRequested.visible, batchData.headRefOid),
     reviewSummaries: seenSummaries,
     firstLookSummaries: budgeted.firstLookSummaries,
     editedSummaries: budgeted.editedSummaries,

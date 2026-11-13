@@ -4,6 +4,7 @@ import { renderSuggestionBlock, renderLineRange } from "./suggestion-renderer.mt
 import {
   renderThreadBullet,
   renderReviewBullet,
+  renderReviewCommitTag,
   renderThreadResolutionStatusTag,
   renderAuthor,
   buildFirstLookBullets,
@@ -180,7 +181,7 @@ export function formatTriageResult(
         ? " [stale — review is on an old commit, all threads resolved; ask reviewer to re-review or dismiss]"
         : "";
       sections.push(
-        `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})${staleTag}`,
+        `### \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})${renderReviewCommitTag(r)}${staleTag}`,
       );
       sections.push(r.body.trim() === "" ? "(no review body)" : blockquote(r.body, topCap));
     }

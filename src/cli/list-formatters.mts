@@ -177,6 +177,13 @@ export function renderCommentBullet(
   return `- \`commentId=${c.id}\`${link} (${renderAuthor(c.author, c.authorType, c.authorAssociation)})${statusSuffix}: ${renderBodyPreview(c.body)}`;
 }
 
+/** ` [submitted on <sha>, head is <sha>]` when the review was submitted on a commit other than the PR head. */
+export function renderReviewCommitTag(r: { commitOid?: string; headOid?: string }): string {
+  return r.commitOid && r.headOid
+    ? ` [submitted on \`${r.commitOid}\`, head is \`${r.headOid}\`]`
+    : "";
+}
+
 export function renderReviewBullet(
   r: {
     id: string;
@@ -186,10 +193,12 @@ export function renderReviewBullet(
     body?: string;
     staleBotCr?: boolean;
     staleReview?: boolean;
+    commitOid?: string;
+    headOid?: string;
   },
   opts: { includeBody?: boolean } = {},
 ): string {
-  const base = `- \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})`;
+  const base = `- \`reviewId=${r.id}\` (${renderAuthor(r.author, r.authorType, r.authorAssociation)})${renderReviewCommitTag(r)}`;
   const staleTag = r.staleReview
     ? " [stale — review is on an old commit, all threads resolved]"
     : "";
