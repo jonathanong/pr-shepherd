@@ -6,6 +6,7 @@ import { QUEUE_SCENARIOS } from "./scenarios-queue.mjs";
 import { REVIEW_MORE_SCENARIOS } from "./scenarios-review-more.mjs";
 import { REVIEW_SCENARIOS } from "./scenarios-review.mjs";
 import { SAFETY_SCENARIOS } from "./scenarios-safety.mjs";
+import { STACK_MORE_SCENARIOS } from "./scenarios-stack-more.mjs";
 import { STACK_SCENARIOS } from "./scenarios-stack.mjs";
 
 const CATEGORIES = [
@@ -13,7 +14,7 @@ const CATEGORIES = [
   ["CI", CI_SCENARIOS],
   ["Merge gates & branch", GATE_SCENARIOS],
   ["Merge queue", QUEUE_SCENARIOS],
-  ["Stacks", STACK_SCENARIOS],
+  ["Stacks", [...STACK_SCENARIOS, ...STACK_MORE_SCENARIOS]],
   ["Safety & terminal", SAFETY_SCENARIOS],
 ];
 

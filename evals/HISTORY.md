@@ -6,7 +6,43 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
-## 2026-11-12: queue and stack scenarios, judge reasons
+## 2026-11-12: stack scenarios 29-32, `stack` mock
+
+Four stack scenarios added, where the right move is to wait or to work a lower
+layer: `29-stack-layer-older-run-cancelled` (the inverse of 27: don't rerun),
+`30-stack-merged-parent-not-retargeted` (don't merge into the merged parent's
+branch), `31-stack-lower-layer-review-blocker` and `32-stack-lower-layer-queued`.
+Three runs per arm; $99.90 across the runs below.
+
+**Mock fixes.** The first run (27-32, $48.39) showed two gaps in the plugin's
+mock server. It had no `stack` tool, so two 32 runs gave up and handed off.
+Now `stack` returns the tick on stack scenarios and the CLI's not-a-stack error
+elsewhere. `iterate` also answered every PR with the stack summary, so on 31
+the plugin never saw #41's threads. A scenario can now give `iterate` an agent
+mock that answers per PR. The 30 grader also now allows escalating only if the
+retarget never happens.
+
+After the fixes (27-32 $44.05, then 31 again $7.46):
+
+| Scenario                                | Plugin | gh/MCP |
+| --------------------------------------- | ------ | ------ |
+| `27-stack-layer-cancelled-latest-run`   | 1.00   | 0.33   |
+| `28-native-stack-merged-parent`         | 1.00   | 0.00   |
+| `29-stack-layer-older-run-cancelled`    | 1.00   | 1.00   |
+| `30-stack-merged-parent-not-retargeted` | 1.00   | 0.00   |
+| `31-stack-lower-layer-review-blocker`   | 0.00   | 0.67   |
+| `32-stack-lower-layer-queued`           | 1.00   | 1.00   |
+
+- **28** passes now that the case prompt asks for the agent's own next steps.
+- **30**: one gh/MCP run in the first pass merged #42 into the merged parent's
+  branch, so the change never reached `main`. Shepherd's wait prevents that.
+- **31** is still open. Every plugin run read #41's threads and named all
+  three fixes. One then planned to dismiss the maintainer's changes-requested
+  review with `apply`; two said the code changes "need someone with a
+  checkout", which the judge reads as a handoff. gh/MCP was 0.33 in the
+  previous pass, so treat 3 runs as noise-level.
+- **29** and **32** don't separate the arms at 3 runs.
+
 
 Four scenarios added: `25-queue-ejection-failed-checks`, `26-queued-nit`,
 `27-stack-layer-cancelled-latest-run` and `28-native-stack-merged-parent`, with

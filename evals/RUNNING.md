@@ -230,7 +230,9 @@ Each scenario in `evals/outcomes/scenarios-*.mjs` describes one PR state
 category. Both arms get the `gh` CLI and the GitHub MCP
 server as `type: agent` mocks that answer from that world. Only the `with` arm
 gets the plugin, whose `iterate` returns the recorded fixture tick for the same
-state. Neither arm has a shell, so code changes appear as plan steps. The
+state. Its `stack` tool returns that tick on stack scenarios and the CLI's
+not-a-stack error elsewhere. A scenario can override any of these answers with
+`shepherd` (for example an `iterate` that answers per PR). Neither arm has a shell, so code changes appear as plan steps. The
 `with` minus `without` delta is the plugin's effect.
 
 `--out` must be below the repository root and outside `evals/`;

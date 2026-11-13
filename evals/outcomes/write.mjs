@@ -131,9 +131,17 @@ export function writeOutcomeCase(spec, outDir) {
   // Fixed mocks: every `iterate` call returns the recorded tick, and `apply` and
   // `suggest` report success, so the with-plugin arm's Shepherd path works.
   put(join(dir, "mocks", "pr-shepherd", "_tools.json"), json("pr-shepherd-tools.json"));
-  put(join(dir, "mocks", "pr-shepherd", "iterate.md"), tick);
-  // A scenario can replace either answer with its own (`spec.shepherd`).
+  // A scenario can replace any answer with its own (`spec.shepherd`); its
+  // `iterate` is a function of the recorded tick.
   const shepherd = spec.shepherd ?? {};
+  put(join(dir, "mocks", "pr-shepherd", "iterate.md"), shepherd.iterate?.(tick) ?? tick);
+  // `stack` answers with the recorded tick on stack scenarios, and with the
+  // CLI's own error everywhere else.
+  put(
+    join(dir, "mocks", "pr-shepherd", "stack.md"),
+    shepherd.stack ??
+      (spec.tags.includes("stack") ? tick : "Error: PR #42 is not part of a native GitHub stack"),
+  );
   put(
     join(dir, "mocks", "pr-shepherd", "apply.md"),
     shepherd.apply ?? "Applied every requested operation.",
