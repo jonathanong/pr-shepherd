@@ -286,17 +286,23 @@ const REALISM_VARIANTS = [
   },
 ];
 
-/** Session ITE savings vs. gh and MCP with MODEL overridden, optionally without some steps. */
+/**
+ * Session ITE savings vs. gh and MCP with MODEL overridden, optionally without
+ * some steps. A dropped step's setup loads (playbooks, MCP schemas) and their
+ * carriage go with it, as in the measured-ratio sensitivity.
+ */
 function savingsUnder(model, drop = []) {
   const saved = { ...MODEL };
   Object.assign(MODEL, model);
   try {
-    const picked = pickRows(Object.fromEntries(STRATEGIES.map((st) => [st, buildRows(st)])));
+    const exclude = new Set(drop);
+    const ctx = { carry: setupCarry(exclude), eagerTokens, exclude };
+    const picked = pickRows(Object.fromEntries(STRATEGIES.map((st) => [st, buildRows(st, ctx)])));
     return {
       rows: picked,
       ...Object.fromEntries(
         Object.keys(SESSIONS).map((key) => {
-          const t = totals(picked.filter((r) => r.session === key && !drop.includes(r.id)));
+          const t = totals(picked.filter((r) => r.session === key && !exclude.has(r.id)));
           return [
             key,
             { gh: saving(t.gh.ite, t.shepherd.ite), mcp: saving(t.mcp.ite, t.shepherd.ite) },

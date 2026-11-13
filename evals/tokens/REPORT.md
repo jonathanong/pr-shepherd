@@ -372,10 +372,10 @@ The PR session's saving vs. gh is concentrated in a few steps. Under the central
 | without | PR session vs. gh | vs. MCP |
 | --- | --- | --- |
 | nothing | −30% | −74% |
-| `failing-check` | −23% | −70% |
-| `failing-check`, `review-thread-with-history` | −17% | −71% |
-| `failing-check`, `review-thread-with-history`, `mark-ready` | −6% | −70% |
-| `failing-check`, `review-thread-with-history`, `mark-ready`, `ci-wait` | +8% | −41% |
+| `failing-check` | −25% | −70% |
+| `failing-check`, `review-thread-with-history` | −19% | −72% |
+| `failing-check`, `review-thread-with-history`, `mark-ready` | −8% | −70% |
+| `failing-check`, `review-thread-with-history`, `mark-ready`, `ci-wait` | +5% | −39% |
 
 ## Baseline strategy sensitivity
 
