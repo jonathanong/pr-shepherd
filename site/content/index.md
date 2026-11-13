@@ -16,7 +16,7 @@ docs:
 <p class="tagline">Your coding agent fixes the code. Shepherd tells it what GitHub wants next: every review comment, every failing check, and the merge requirements GitHub reports, in one call.</p>
 </div>
 
-**About 42% cheaper per PR than `gh` and 77% cheaper than the GitHub MCP server.** Waiting on
+**About 41% cheaper per PR than `gh` and 76% cheaper than the GitHub MCP server.** Waiting on
 CI costs about 60 GraphQL points an hour instead of 360.
 
 <div class="terminal">
@@ -61,7 +61,7 @@ summary 3 passing
   CI failures with log excerpts when available, and the real merge requirements. It handles 60 GitHub edge
   cases, like a cancelled run that needs a rerun rather than a code fix.
 - [**It costs less to run**](https://github.com/jonathanong/pr-shepherd/blob/main/evals/tokens/README.md)
-  An estimated 42% lower cost per PR session than `gh`, and 77% lower than the GitHub MCP
+  An estimated 41% lower cost per PR session than `gh`, and 76% lower than the GitHub MCP
   server.
 - [**Your agent knows what to do next**](https://github.com/jonathanong/pr-shepherd/blob/main/evals/README.md)
   Every tick ends in one action, and every action but `CANCEL` comes with numbered steps. On tricky GitHub cases, eval scores

@@ -38,7 +38,7 @@ flowchart TD
   SG -.->|stalled| E4(["escalate: stall-timeout"])
 ```
 
-The shipped skill runs `pr-shepherd [PR] --until-terminal`, not `pr-shepherd iterate`. That poll stays inside ordinary `WAIT` and `MARK_READY`, and returns `READY` (ready-delay counting), `TRIAGE` (after its `--debounce` window), `MERGE`, any non-terminal quota warning, or terminal `CANCEL` / `ESCALATE`. After following `## Instructions`, the skill reruns the same command unless it got `CANCEL` or `ESCALATE`, the instructions say to end the turn or not to rerun (a single tick), or a human says stop. The bare `pr-shepherd [PR]` stays bounded for direct CLI users; MCP `iterate` returns one tick with no debounce, and its caller owns recurrence.
+The shipped skill runs `pr-shepherd [PR] --until-terminal`, not `pr-shepherd iterate`. Which results that poll returns, and when the skill reruns it, is in [skills.md](skills.md#recurrence). The bare `pr-shepherd [PR]` stays bounded for direct CLI users; MCP `iterate` returns one tick with no debounce, and its caller owns recurrence.
 
 ## Steps
 
@@ -52,13 +52,16 @@ Human-authored threads must stay visible. Shepherd later pairs reply-and-resolve
 
 **Check:** `report.mergeStatus.state !== 'OPEN'`. GitHub returns `mergeable: UNKNOWN` and `mergeStateStatus: UNKNOWN` for merged/closed PRs; `runCheck` surfaces top-level `status: 'MERGED'` or `status: 'CLOSED'`, and this branch stops before actionable checks.
 
-**Emits:** `action: 'cancel'`, clearing the stall state and any stale ready-delay marker.
+**Emits:** `action: 'cancel'` (reason `merged` or `closed`), clearing the stall state and any stale ready-delay marker.
 
 ### 2. Ready-delay
 
 `updateReadyDelay(pr, isCleanReadyState, readyDelaySeconds, owner, repo, options)` reads and writes `ready-since.txt`. Default delay is 0, meaning no countdown (`iterate.ready-delay-minutes` or `--ready-delay`).
 
-A **clean ready state** is `status === "READY"`, `hasReadinessWork` false, and no active auto-merge or merge-queue state being handled. It includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending). An initial first look at a hidden PR comment routes to `triage` for acknowledgement without restarting the countdown or voiding a READY receipt. An edited PR comment (a conversation comment, minimized or not, from any author) never blocks readiness: it does not route to `triage`, restart the ready delay, or clear a READY receipt. Iterate holds it during `wait` and `ready` without writing its marker, then shows it once under `## Edited comments` on the next other action, such as the `cancel` or `merge` that ends the delay (see [Edited comments](actions.md#edited-comments)). Bots such as CodeRabbit regenerate summaries on their own after a PR settles, often in reply to a PR-body journal edit, so an edit cannot be readiness evidence.
+A **clean ready state** is `status === "READY"`, `hasReadinessWork` false, and no active auto-merge or merge-queue state being handled. It includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending).
+
+- An initial first look at a hidden PR comment routes to `triage` for acknowledgement without restarting the countdown or voiding a READY receipt.
+- An edited PR comment (a conversation comment, minimized or not, from any author) never blocks readiness: it does not route to `triage`, restart the ready delay, or clear a READY receipt. Iterate holds it during `wait` and `ready` without writing its marker, then shows it once under `## Edited comments` on the next other action, such as the `cancel` or `merge` that ends the delay (see [Edited comments](actions.md#edited-comments)). Bots such as CodeRabbit regenerate summaries on their own after a PR settles, so an edit cannot be readiness evidence.
 
 ```mermaid
 stateDiagram-v2
@@ -146,7 +149,7 @@ The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completio
 
 **Check:** `report.status === 'READY'` AND `isDraft` AND `!blockingBotReviewInProgress` AND `mark-ready.auto` (disable with `--no-auto-mark-ready`).
 
-There is no `mergeStateStatus === "CLEAN"` requirement: a draft whose derived status is `DRAFT` (even one that is also behind) can be marked ready when the Shepherd status is `READY`. This runs before the ready-delay completion, and that completion never applies to a draft. When auto mark-ready is disabled, a clean draft instead returns `cancel` with reason `auto-mark-ready-disabled` and exit 0; the PR remains a draft, with no ready-delay countdown or stall guard.
+There is no `mergeStateStatus === "CLEAN"` requirement: a draft whose derived status is `DRAFT` (even one that is also behind) can be marked ready when the Shepherd status is `READY`. This runs before the ready-delay completion, and that completion never applies to a draft. When auto mark-ready is disabled, a clean draft instead returns `cancel` with reason `auto-mark-ready-disabled` and exit 0. The PR remains a draft, with no ready-delay countdown or stall guard.
 
 **Side-effects:** the selected transport's mark-ready operation. REST uses the supported CCR route; an unavailable route escalates with `transport-unsupported`, and a denial with `authorization-required`.
 
@@ -159,15 +162,15 @@ There is no `mergeStateStatus === "CLEAN"` requirement: a draft whose derived st
 
 ### 7. Wait
 
-**Fallthrough:** nothing actionable, no terminal state, no ready-delay elapsed or counting, not marking ready. A clean draft with auto mark-ready disabled returns `cancel` before this fallthrough.
+**Fallthrough:** nothing actionable, no terminal state, no ready-delay elapsed or counting, not marking ready.
 
-A draft native stack layer is marked ready by its own session as soon as that layer is clean when auto mark-ready is enabled; it does not wait for lower layers. With auto mark-ready disabled, the `stack` command processes independent actionable layers and eligible ready-prefix merges, then returns `CANCEL` when only clean disabled drafts remain. It never instructs the agent to mark those drafts ready.
+A draft native stack layer is marked ready by its own session as soon as that layer is clean; it does not wait for lower layers. With auto mark-ready disabled, `stack` still processes independent actionable layers and eligible ready-prefix merges, then returns `CANCEL` when only clean drafts remain. It never tells the agent to mark them ready.
 
 **Emits:** `action: 'wait'`, through the stall guard.
 
 ### Stall guard
 
-Applies to ordinary `wait` and `triage` after the action is chosen — not to `ready`, active merge waits, `merge`, `cancel`, `mark_ready`, or `escalate`. A clean draft with automatic mark-ready disabled returns `cancel` before this path and does not use the guard.
+Applies to ordinary `wait` and `triage` after the action is chosen — not to `ready`, active merge waits, `merge`, `cancel` (including the disabled-auto-mark-ready draft), `mark_ready`, or `escalate`.
 
 **Fingerprint:** PR head SHA from GitHub (not the local checkout), action, `status`, `mergeStateStatus`, `state`, `isDraft`, sorted failing-check names + conclusions, sorted actionable thread/comment/review IDs, sorted review-summary minimize IDs. Stored at `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/iterate-stall.json`.
 

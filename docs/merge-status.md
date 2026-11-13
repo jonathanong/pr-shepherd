@@ -98,8 +98,6 @@ Read these lines instead of inferring a required review from `reviewDecision`. `
 
 `stack` drives merging. With `--merge` enabled and the clean READY state held for the ready delay, a present `stack` field turns that one-PR tick into non-terminal `TRIAGE` directing the agent to `pr-shepherd stack <PR URL> --until-terminal --merge` instead of `gh pr merge`. The aggregate command emits `gh stack merge` for the highest open layer whose open lower layers all have current READY receipts; that command lands the named layer and every unmerged layer below it, at every stack position including 1. GitHub's stack field is public preview and can be absent on a genuinely stacked PR, so absence means no signal, not proof the PR is unstacked.
 
-An iterate result built without a sweep (tests only; no `mergeRequirements`) falls back to a `**required**` line listing `requiredStatusCheckContexts`. Live output never prints it.
-
 ## Gotchas
 
 ### DIRTY vs CONFLICTING

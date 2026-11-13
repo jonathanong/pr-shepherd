@@ -8,7 +8,7 @@ How to poll pull requests with a GitHub App installation instead of your persona
 
 GitHub meters each credential separately ([authentication.md](authentication.md#quota-sharing)). A user token, including a PAT or `gh auth token`, draws on the user's budget, shared with every other tool that user runs. A GitHub App installation token has its own budget per installation. Shepherd can mint that token for repositories the app covers, so identity-independent reads spend the installation's quota and leave yours alone.
 
-The app changes what each tick costs your token. [hook-harness events](hook-harness.md) change how many ticks run. The two are independent and combine.
+The app changes what each tick costs your token. [hook-harness events](hook-harness.md) change how many ticks run. The two combine.
 
 ## What the app answers
 
@@ -81,11 +81,10 @@ These stay on your token:
 | `PollStackSummary`, `PollStackTopology`   | Stack and multi-PR summaries. Select viewer fields.                                                                                          |
 | `ReviewThreadComments`                    | Combined thread-comment pages, in the same cases as `BatchPr`. Selects `viewerDidAuthor`.                                                    |
 | `SuggestionThreads`                       | Threads for `suggest`. Selects viewer fields.                                                                                                |
+| `ApplyReviewPreflight`                    | The combined read before `apply review` replies. Selects `viewer { login }`.                                                                 |
 | `MarkPrReady`, `UpdatePrBody`             | Mutations.                                                                                                                                   |
 
 The `RefRules`, `PrMergePolicy`, and `CommitCheckSuites` fragments are also part of `BatchPr`. They ride on the app in a split read and on your token in a combined one.
-
-The setting is user-level only. Shepherd reads it from `~/.pr-shepherd/`, never from the repository's `.pr-shepherdrc.yml`.
 
 ## 1. Create the app
 
@@ -132,7 +131,7 @@ Install it once per account you want covered: Install App on the app's page, cho
 
 ## 4. Configure Shepherd
 
-Create `~/.pr-shepherd/github-apps.yml`. `PR_SHEPHERD_HOME` overrides the folder (default `~/.pr-shepherd`).
+Create `~/.pr-shepherd/github-apps.yml`. `PR_SHEPHERD_HOME` overrides the folder (default `~/.pr-shepherd`). The setting is user-level only: Shepherd never reads it from the repository's `.pr-shepherdrc.yml`.
 
 ```yaml
 apps:

@@ -4,7 +4,7 @@
 
 What each command spends against GitHub's GraphQL point budget, per tick and per hour. For operators sizing polling and contributors changing queries. REST-transport costs are in [rest-usage.md](rest-usage.md); automatic fallback can move the rest of a process to REST ([transport selection](github-api.md#transport-selection)).
 
-A user PAT has 5,000 points/hour. One-PR polling is a small slice of that; aggregate polls are larger. Pricing rules are in [graphql.md](graphql.md#how-github-prices-a-query). The figures below are `rateLimit.cost` for the static query shape; extra pages add their own cost, and `--verbose` `apiUsage.graphql.measuredQueryCost` is authoritative for a live response.
+A user PAT has 5,000 points/hour. One-PR polling is a small slice of that; aggregate polls are larger. Pricing rules are in [graphql.md](graphql.md#how-github-prices-a-query). The figures below are `rateLimit.cost` for the static query shape. Extra pages add their own cost. `--verbose` `apiUsage.graphql.measuredQueryCost` is authoritative for a live response.
 
 Per-tick request counts are asserted at the HTTP boundary by these tests; change them and this page together:
 
@@ -84,8 +84,6 @@ Supplements on a full snapshot, usually 1 point each:
 | `CheckBlockerPull` / `CheckBlockerIssue` | Per distinct blocker while a matching check fails                                                                                                                                                                                                                                                                                                       |
 | READY-receipt evidence                   | An existing receipt or elapsed ready-delay marker: `BatchPr` selects the `PollSummaryPr` sibling and copies complete annotation totals. A resource-limited document, or a field error confined to the sibling, retries plain `BatchPr`. Incomplete or mismatched evidence, or a review mutation after the batch, uses `fetchRawSummaryPr` and its probe |
 
-On a measured ready PR (#481), the receipt evidence took one request and 2 points, versus three requests and 3 points as separate reads. Wider PRs can differ.
-
 `BulkApply` runs when iterate minimizes or resolves in-process: unmeasured mutations in chunks of 10.
 
 ### Several PRs
@@ -106,9 +104,9 @@ The summary also selects the scalar and object fields `BatchPr`'s first page nee
 | A wider, queued, or queue-removed layer gets none; every later tick, including the TRIAGE debounce, reads `BatchPr` |
 | The REST transport has no handoff                                                                                   |
 
-In the `stack-work` scenario (four routed layers), the summary, the handoff read, and the layers' first ticks total 3 points instead of 6. Later one-PR session ticks are separate spend.
+Later one-PR session ticks are separate spend.
 
-READY-receipt fingerprints leave the handoff fields out, so a bot editing a hidden comment does not invalidate a receipt. The exception is thread comments' `isMinimized`, which the fingerprint uses to hide minimized bodies, as for comments and reviews. After upgrading to this fragment, stored READY receipts for PRs with review threads change fingerprint once.
+READY-receipt fingerprints leave the handoff fields out, so a bot editing a hidden comment does not invalidate a receipt. The exception is thread comments' `isMinimized`, which the fingerprint uses to hide minimized bodies, as for comments and reviews.
 
 ### Mutations and one-shot reads
 

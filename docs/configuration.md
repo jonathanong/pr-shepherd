@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-This page lists every config-file key and environment variable Shepherd reads, with its default and effect. It is for repository owners and anyone tuning two things: how Shepherd gathers context, and which actions `iterate` may take on its own.
+Every config-file key and environment variable Shepherd reads, with its default and effect.
 
 ## How files load
 
@@ -18,8 +18,8 @@ Two config files in the same directory is an error. Keep exactly one.
 Shepherd collects files in this order, from farthest to closest:
 
 1. The built-in defaults.
-2. The `$HOME` config file. It always applies, as the farthest user-level overlay, even when cwd is outside `$HOME`. In that case the walk covers cwd's ancestors but stops before the filesystem root, so a root-level file cannot override the user file.
-3. Each ancestor directory's file, going down from `$HOME` (or from the root) toward cwd.
+2. The `$HOME` config file. It applies even when cwd is outside `$HOME`. In that case the walk covers cwd's ancestors but stops before the filesystem root, so a root-level file cannot override the user file.
+3. Each ancestor directory's file, going down toward cwd.
 4. The cwd file.
 
 Files deep-merge ESLint-style:
@@ -28,34 +28,15 @@ Files deep-merge ESLint-style:
 - Nested objects merge key by key.
 - Arrays replace each other rather than combining.
 
-Every non-empty file starts with `version: 1` (see [Version](#version)). Every other key is optional. The built-in defaults fill in anything you leave out. They are declared in `src/config/schema.mts`.
+Every non-empty file starts with `version: 1` (see [Version](#version)). Every other key is optional. The built-in defaults in `src/config/schema.mts` fill in the rest.
 
-```text
-# ~/.pr-shepherdrc.yml
-version: 1
-checks:
-  ignore:
-    - "Kilo*"
-iterate:
-  stall-timeout-minutes: 90
-
-# <repo>/.pr-shepherdrc.yml
-version: 1
-iterate:
-  triage-attempts-per-thread: 5
-```
-
-In the repo above, the result keeps `checks.ignore` and `iterate.stall-timeout-minutes` from `$HOME` and takes `iterate.triage-attempts-per-thread: 5` from the project file. If both files set `checks.ignore`, the closer list replaces the farther one.
+For example, if `$HOME` sets `checks.ignore` and `iterate.stall-timeout-minutes`, and the repository sets `iterate.triage-attempts-per-thread: 5`, the result has all three. If both files set `checks.ignore`, the closer list replaces the farther one.
 
 ### Validation
 
-Config follows the conventions of GitHub Actions workflow files:
+Config follows GitHub Actions conventions. Keys are kebab-case. A duration key carries its unit in its name, such as `interval-seconds` or `ready-delay-minutes`; no key takes milliseconds. Validation is strict, so a bad config never falls back silently.
 
-- Keys are kebab-case.
-- A duration key carries its unit in its name, such as `interval-seconds` or `ready-delay-minutes`. No key takes milliseconds.
-- Validation is strict. A bad config never falls back silently.
-
-Shepherd validates config before it makes any GitHub call. Any of the following makes it exit with code `78` (`EX_CONFIG`):
+Shepherd validates config before it makes any GitHub call. Any of the following exits with code `78` (`EX_CONFIG`):
 
 - a missing or unsupported `version`
 - an unknown key
@@ -80,11 +61,11 @@ Shepherd validates each file on its own. After merging the files, it runs these 
 
 When one of these checks fails, the message lists every contributing file.
 
-A key from before v1 never takes effect. Instead, the error names the key that replaced it, for example `` `watch.readyDelayMinutes` → `iterate.ready-delay-minutes` ``. The full table is in [Migrating from pre-v1 keys](#migrating-from-pre-v1-keys).
+A pre-v1 key never takes effect. The error names its replacement, as in the example above. See [Migrating from pre-v1 keys](#migrating-from-pre-v1-keys).
 
 ### Version
 
-`version` is the config format version, and it matches the semver major of the pr-shepherd release that reads it. This release reads `version: 1`. Files from 0.x have no `version`; add `version: 1` when you rename their keys.
+`version` is the config format version. It matches the semver major of the pr-shepherd release that reads it. This release reads `version: 1`. Files from 0.x have no `version`; add `version: 1` when you rename their keys.
 
 - A non-empty file without `version` is an error. An empty file needs none.
 - A file with a higher version, such as `version: 2`, fails with a message saying it needs a newer pr-shepherd. Shepherd reports nothing else about that file, because a newer format may add or rename keys.
@@ -92,7 +73,7 @@ A key from before v1 never takes effect. Instead, the error names the key that r
 
 ### Editor autocompletion
 
-The npm package ships a JSON Schema, `pr-shepherd.schema.json`, generated from the same validator Shepherd uses. To get completion and inline validation from editors that use the YAML language server, add this first line to your config file:
+The npm package ships `pr-shepherd.schema.json`, generated from the validator Shepherd uses. For completion and inline validation in editors that use the YAML language server, add this first line to your config file:
 
 ```yaml
 # yaml-language-server: $schema=./node_modules/pr-shepherd/pr-shepherd.schema.json
@@ -102,75 +83,33 @@ Adjust the relative path for files outside the repository root, or for a global 
 
 ## Example
 
+A config that overrides a few defaults. The [table below](#all-supported-keys) lists every key.
+
 ```yaml
 version: 1
 
-cli-command:
-  - pnpm
-  - exec
-  - pr-shepherd
-
-bot-usernames:
-  - chatgpt-connector
-  - claude
-  - coderabbitai
+cli-command: [pnpm, exec, pr-shepherd]
 
 checks:
   ignore:
-    - "Kilo Code Review"
     - "Kilo*"
   never-ignore:
     - "Final Code Review"
-  ci-trigger-events:
-    - pull_request
-    - pull_request_target
-  ignore-log-lines:
-    - "^\\[vitest-teardown\\]"
 
 iterate:
-  triage-attempts-per-thread: 5 # raise before escalating to manual review
-  stall-timeout-minutes: 60 # escalate if state unchanged or CI has not started for this many minutes
-  ready-delay-minutes: 10 # settle window after the PR first becomes READY; 0 (default) disables
-  minimize-approvals: false # set true to also minimize APPROVED-state reviews
-  minimize-comments: bots # all | bots | none
-  behind-base-hint: "rebase --force-with-lease" # one-liner shown on triage when behind or conflicting with base
-  resolve-other-human-threads: none # none | outdated | always
-  instructions: inline # inline | playbook
-  review-output-max-chars: 50000 # per-tick review-body budget on triage; 0 disables
+  triage-attempts-per-thread: 5
+  ready-delay-minutes: 10
+  behind-base-hint: "rebase --force-with-lease"
 
 poll:
-  interval-seconds: 120 # single-PR delay between WAIT ticks
-  stack-interval-factor: 2 # stack and multi-PR polls sleep interval-seconds times this
-  timeout-seconds: 270 # default bounded WAIT timeout; ignored by --until-terminal
-  debounce-seconds: 60 # settle window after first TRIAGE; 0 disables
-  quiet-status: false # unchanged WAIT snapshots remain visible by default
-  reconcile-seconds: 900 # max age of a GraphQL snapshot replayed on idle waits; 0 disables
-  quota-warnings:
-    - remaining-percent: 30
-      interval-factor: 2
-    - remaining-percent: 20
-      interval-factor: 5
-    - remaining-percent: 10
-      interval-factor: 10
-
-apply:
-  sha-poll-interval-seconds: 2
-  sha-poll-max-attempts: 10
+  interval-seconds: 120
 
 mark-ready:
-  auto: true
-  blocking-reviewer-logins:
-    - copilot
-    - sonar # add other review bots here
+  blocking-reviewer-logins: [copilot, sonar]
 
 merge:
   method: squash
-  command-args:
-    - --delete-branch
-
-actions:
-  auto-minimize-suppressed: true
-  work-while-queued: false # set true to act on non-CI work immediately instead of waiting until the PR leaves the merge queue
+  command-args: [--delete-branch]
 
 classify:
   standard:
@@ -179,42 +118,42 @@ classify:
 
 ## All supported keys
 
-| Key                                   | Default                                   | Purpose                                                                                                                                                                                                                                                                                                                                |
-| ------------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `github.transport`                    | `"auto"`                                  | `auto`, `graphql`, or `rest`. See [GitHub API transport](#github-api-transport).                                                                                                                                                                                                                                                       |
-| `cli-command`                         | `["pr-shepherd"]`                         | Argv prefix for every `pr-shepherd` command Shepherd emits.                                                                                                                                                                                                                                                                            |
-| `bot-usernames`                       | Known code-review bot logins              | Logins treated as bots even when GitHub reports `User` or `Unknown`.                                                                                                                                                                                                                                                                   |
-| `checks.ignore`                       | `[]`                                      | Case-insensitive globs excluded from CI decisions, annotations included. The names stay in the ignored rollup.                                                                                                                                                                                                                         |
-| `checks.never-ignore`                 | `[]`                                      | Actions workflows or checks that stay visible even when they match `checks.ignore`.                                                                                                                                                                                                                                                    |
-| `checks.ci-trigger-events`            | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR-head CI. Merge-queue `merge_group` checks are included automatically.                                                                                                                                                                                                                              |
-| `checks.ignore-log-lines`             | `[]`                                      | Regexes. Matching raw CI log lines are dropped from `## Failing checks` excerpts and from annotation dedup.                                                                                                                                                                                                                            |
-| `iterate.triage-attempts-per-thread`  | `3`                                       | Number of caller-visible `TRIAGE` deliveries of one unchanged, unresolved thread before the next tick escalates.                                                                                                                                                                                                                       |
-| `iterate.stall-timeout-minutes`       | `60`                                      | Minutes without progress, or of CI that has not started, before `escalate` / `stall-timeout`; `0` disables.                                                                                                                                                                                                                            |
-| `iterate.ready-delay-minutes`         | `0`                                       | Settle window after READY before the loop cancels or merges. `0` cancels or merges as soon as the PR is READY.                                                                                                                                                                                                                         |
-| `iterate.minimize-approvals`          | `false`                                   | Also minimize `APPROVED` reviews, and fetch approvals past the first 50.                                                                                                                                                                                                                                                               |
-| `iterate.minimize-comments`           | `"bots"`                                  | Non-human author classes to minimize: `all`, `bots`, or `none`. Humans are never minimized.                                                                                                                                                                                                                                            |
-| `iterate.behind-base-hint`            | `""`                                      | One-liner on `triage` when the branch is behind or conflicts with its base. Empty omits it.                                                                                                                                                                                                                                            |
-| `iterate.resolve-other-human-threads` | `"none"`                                  | When to resolve other humans' threads after a reply: `none`, `outdated`, or `always`.                                                                                                                                                                                                                                                  |
-| `iterate.instructions`                | `"inline"`                                | `inline` or `playbook` for the `triage` commit/push step. `--instructions` and the MCP `instructions` input override it.                                                                                                                                                                                                               |
-| `iterate.review-output-max-chars`     | `50000`                                   | Per-tick character budget for review-item bodies on `triage`; `0` disables it. See [Review output budget](actions.md#review-output-budget).                                                                                                                                                                                            |
-| `events.source`                       | `"none"`                                  | `none` or `hook-harness`. `hook-harness` makes poll waits event-driven. See [hook-harness.md](hook-harness.md).                                                                                                                                                                                                                        |
-| `events.fallback-interval-seconds`    | `300`                                     | Longest quiet wait while the event source is healthy; at most `86400`. See [hook-harness.md](hook-harness.md).                                                                                                                                                                                                                         |
-| `poll.interval-seconds`               | `60`                                      | Delay between `WAIT` ticks for one PR. `--interval` overrides it.                                                                                                                                                                                                                                                                      |
-| `poll.stack-interval-factor`          | `2`                                       | Multiplier for `stack` and multi-PR sleeps. `--interval` overrides it and is not multiplied.                                                                                                                                                                                                                                           |
-| `poll.timeout-seconds`                | `270`                                     | Wall-clock cap for bounded `WAIT` polling. The 270s default keeps one foreground call inside a 5-minute prompt-cache window and under common tool time limits; background callers use `--until-terminal` instead ([Choosing a wait mode](cli-usage.md#choosing-a-wait-mode)). `--timeout` overrides it; `--until-terminal` ignores it. |
-| `poll.debounce-seconds`               | `60`                                      | Settle window after the first `TRIAGE`. `--debounce` overrides it; `0` disables it.                                                                                                                                                                                                                                                    |
-| `poll.quiet-status`                   | `false`                                   | Hide unchanged `WAIT` snapshots. `--quiet-status` / `--no-quiet-status` override it.                                                                                                                                                                                                                                                   |
-| `poll.reconcile-seconds`              | `900`                                     | GraphQL transport: the maximum age of a snapshot an idle `WAIT` tick may replay when REST change detectors are unchanged. `0` disables it.                                                                                                                                                                                             |
-| `poll.quota-warnings`                 | `30% → 2x, 20% → 5x, 10% → 10x`           | Warning bands for the GraphQL and REST core quotas, each with a minimum poll interval. `[]` disables them.                                                                                                                                                                                                                             |
-| `apply.sha-poll-interval-seconds`     | `2`                                       | Seconds between polls while waiting for `--require-sha` to land on GitHub.                                                                                                                                                                                                                                                             |
-| `apply.sha-poll-max-attempts`         | `10`                                      | Maximum number of `--require-sha` polls before giving up.                                                                                                                                                                                                                                                                              |
-| `mark-ready.auto`                     | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean ready state.                                                                                                                                                                                                                                                                         |
-| `mark-ready.blocking-reviewer-logins` | `[]`                                      | Reviewer login prefixes whose pending review or review request blocks `mark_ready`.                                                                                                                                                                                                                                                    |
-| `merge.method`                        | unset                                     | Preferred method: `merge`, `squash`, or `rebase`, used only when the repository allows it. A strategy flag in `command-args` must name the same method.                                                                                                                                                                                |
-| `merge.command-args`                  | `[]`                                      | Extra options for ordinary `gh pr merge` commands, not for queue commands. Its strategy flag is the preferred method when `merge.method` is unset.                                                                                                                                                                                     |
-| `actions.auto-minimize-suppressed`    | `true`                                    | Resolve and minimize classification matches that set both flags, then print and report the result.                                                                                                                                                                                                                                     |
-| `actions.work-while-queued`           | `false`                                   | Act on non-CI work immediately while the PR is in the merge queue, instead of deferring it.                                                                                                                                                                                                                                            |
-| `classify.standard`                   | `{}`                                      | Opt-in bundled classification rules for common bot noise.                                                                                                                                                                                                                                                                              |
+| Key                                   | Default                                   | Purpose                                                                                                                                                            |
+| ------------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `github.transport`                    | `"auto"`                                  | `auto`, `graphql`, or `rest`. See [GitHub API transport](#github-api-transport).                                                                                   |
+| `cli-command`                         | `["pr-shepherd"]`                         | Argv prefix for every `pr-shepherd` command Shepherd emits.                                                                                                        |
+| `bot-usernames`                       | Known code-review bot logins              | Logins treated as bots even when GitHub reports `User` or `Unknown`.                                                                                               |
+| `checks.ignore`                       | `[]`                                      | Case-insensitive globs excluded from CI decisions, annotations included. The names stay in the ignored rollup.                                                     |
+| `checks.never-ignore`                 | `[]`                                      | Actions workflows or checks that stay visible even when they match `checks.ignore`.                                                                                |
+| `checks.ci-trigger-events`            | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR-head CI. Merge-queue `merge_group` checks are included automatically.                                                          |
+| `checks.ignore-log-lines`             | `[]`                                      | Regexes. Matching raw CI log lines are dropped from `## Failing checks` excerpts and from annotation dedup.                                                        |
+| `iterate.triage-attempts-per-thread`  | `3`                                       | Number of caller-visible `TRIAGE` deliveries of one unchanged, unresolved thread before the next tick escalates.                                                   |
+| `iterate.stall-timeout-minutes`       | `60`                                      | Minutes without progress, or of CI that has not started, before `escalate` / `stall-timeout`; `0` disables.                                                        |
+| `iterate.ready-delay-minutes`         | `0`                                       | Settle window after READY before the loop cancels or merges. `0` cancels or merges as soon as the PR is READY.                                                     |
+| `iterate.minimize-approvals`          | `false`                                   | Also minimize `APPROVED` reviews, and fetch approvals past the first 50.                                                                                           |
+| `iterate.minimize-comments`           | `"bots"`                                  | Non-human author classes to minimize: `all`, `bots`, or `none`. Humans are never minimized.                                                                        |
+| `iterate.behind-base-hint`            | `""`                                      | One-liner on `triage` when the branch is behind or conflicts with its base. Empty omits it.                                                                        |
+| `iterate.resolve-other-human-threads` | `"none"`                                  | When to resolve other humans' threads after a reply: `none`, `outdated`, or `always`.                                                                              |
+| `iterate.instructions`                | `"inline"`                                | `inline` or `playbook` for the `triage` commit/push step. `--instructions` and the MCP `instructions` input override it.                                           |
+| `iterate.review-output-max-chars`     | `50000`                                   | Per-tick character budget for review-item bodies on `triage`; `0` disables it. See [Review output budget](actions.md#review-output-budget).                        |
+| `events.source`                       | `"none"`                                  | `none` or `hook-harness`. `hook-harness` makes poll waits event-driven. See [hook-harness.md](hook-harness.md).                                                    |
+| `events.fallback-interval-seconds`    | `300`                                     | Longest quiet wait while the event source is healthy; at most `86400`. See [hook-harness.md](hook-harness.md).                                                     |
+| `poll.interval-seconds`               | `60`                                      | Delay between `WAIT` ticks for one PR. `--interval` overrides it.                                                                                                  |
+| `poll.stack-interval-factor`          | `2`                                       | Multiplier for `stack` and multi-PR sleeps. `--interval` overrides it and is not multiplied.                                                                       |
+| `poll.timeout-seconds`                | `270`                                     | Wall-clock cap for bounded `WAIT` polling. `--timeout` overrides it; `--until-terminal` ignores it. See [Choosing a wait mode](cli-usage.md#choosing-a-wait-mode). |
+| `poll.debounce-seconds`               | `60`                                      | Settle window after the first `TRIAGE`. `--debounce` overrides it; `0` disables it.                                                                                |
+| `poll.quiet-status`                   | `false`                                   | Hide unchanged `WAIT` snapshots. `--quiet-status` / `--no-quiet-status` override it.                                                                               |
+| `poll.reconcile-seconds`              | `900`                                     | GraphQL transport: the maximum age of a snapshot an idle `WAIT` tick may replay when REST change detectors are unchanged. `0` disables it.                         |
+| `poll.quota-warnings`                 | `30% → 2x, 20% → 5x, 10% → 10x`           | Warning bands for the GraphQL and REST core quotas, each with a minimum poll interval. `[]` disables them.                                                         |
+| `apply.sha-poll-interval-seconds`     | `2`                                       | Seconds between polls while waiting for `--require-sha` to land on GitHub.                                                                                         |
+| `apply.sha-poll-max-attempts`         | `10`                                      | Maximum number of `--require-sha` polls before giving up.                                                                                                          |
+| `mark-ready.auto`                     | `true`                                    | Emit `mark_ready` when a draft PR reaches a clean ready state.                                                                                                     |
+| `mark-ready.blocking-reviewer-logins` | `[]`                                      | Reviewer login prefixes whose pending review or review request blocks `mark_ready`.                                                                                |
+| `merge.method`                        | unset                                     | Preferred method: `merge`, `squash`, or `rebase`, used only when the repository allows it. A strategy flag in `command-args` must name the same method.            |
+| `merge.command-args`                  | `[]`                                      | Extra options for ordinary `gh pr merge` commands, not for queue commands. Its strategy flag is the preferred method when `merge.method` is unset.                 |
+| `actions.auto-minimize-suppressed`    | `true`                                    | Resolve and minimize classification matches that set both flags, then print and report the result.                                                                 |
+| `actions.work-while-queued`           | `false`                                   | Act on non-CI work immediately while the PR is in the merge queue, instead of deferring it.                                                                        |
+| `classify.standard`                   | `{}`                                      | Opt-in bundled classification rules for common bot noise.                                                                                                          |
 
 ## Migrating from pre-v1 keys
 
@@ -265,11 +204,7 @@ Three defaults also changed in v1. To keep the pre-v1 behavior, set each key exp
 
 ## GitHub API transport
 
-To choose the transport, do any one of these:
-
-- set `github.transport`;
-- pass `--transport auto|graphql|rest` to the CLI;
-- pass the equivalent library or MCP option.
+Choose the transport with `github.transport`, the CLI `--transport auto|graphql|rest` option, or the equivalent library or MCP option.
 
 | Mode      | Behavior                                                                                                                                                                                                                                |
 | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -277,29 +212,19 @@ To choose the transport, do any one of these:
 | `graphql` | GraphQL only.                                                                                                                                                                                                                           |
 | `rest`    | REST only.                                                                                                                                                                                                                              |
 
-These never switch transports:
+Credential failures, ordinary permission or query errors, and secondary throttling never switch transports. Both transports honor proxy configuration.
 
-- credential failures;
-- ordinary permission or query errors;
-- secondary throttling.
-
-Both transports honor proxy configuration.
-
-REST can return less context than GraphQL. Any field REST does not return stays unknown.
+REST can return less context than GraphQL, and any field it omits stays unknown:
 
 - A clean merge state with complete CI and complete feedback evidence can be READY without `reviewDecision` or branch-protection data.
-- `reviewDecision` is never a readiness input. Its absence therefore does not block a state that is not clean either, such as `BLOCKED` while awaiting an approval, `UNSTABLE`, or `HAS_HOOKS`.
+- `reviewDecision` is never a readiness input, so its absence does not block a state that is not clean either, such as `BLOCKED` while awaiting an approval, `UNSTABLE`, or `HAS_HOOKS`.
 - Unreadable branch protection or rulesets still prevent READY for a state that is not clean.
 
 For cloud credentials, see [authentication.md](authentication.md). For transport limits and usage, see [github-api.md](github-api.md).
 
 ## `cli-command` — default `["pr-shepherd"]`
 
-This is the argv prefix for every `pr-shepherd` command Shepherd emits, in Markdown, JSON, and MCP output:
-
-- follow-up `stack` commands and per-PR session commands;
-- `apply review` and `apply journal` mutations;
-- `suggest` commands.
+The argv prefix for every `pr-shepherd` command Shepherd emits, in Markdown, JSON, and MCP output: follow-up `stack` and per-PR session commands, `apply review` and `apply journal` mutations, and `suggest` commands.
 
 The default assumes `pr-shepherd` is on `PATH`. A repository that pins pr-shepherd as a dependency should set its launcher, so agents run the pinned version:
 
@@ -314,7 +239,7 @@ The value must be a non-empty list of non-empty strings. Shepherd shell-quotes e
 
 ## `bot-usernames`
 
-Shepherd treats these logins as bot authors. Bots are also detected in two other ways: GitHub reports `authorType: Bot`, or the login contains `[bot]`.
+Logins Shepherd treats as bot authors. It also detects bots when GitHub reports `authorType: Bot` or the login contains `[bot]`.
 
 - Matching is case-insensitive.
 - A trailing `[bot]` is equivalent to the bare login.
@@ -377,7 +302,7 @@ Regex source strings matched against each raw CI log line. Shepherd applies them
 3. Drop the run-command group and post-step cleanup.
 4. Strip any remaining group markers.
 
-Matching lines are dropped from `## Failing checks` excerpts, so they are also unavailable for check-annotation dedup. Shepherd ships no built-in patterns, because noise is specific to each toolchain.
+Matching lines are dropped from `## Failing checks` excerpts, so they are also unavailable for check-annotation dedup. Shepherd ships no built-in patterns.
 
 ```yaml
 checks:
@@ -400,8 +325,6 @@ The number of caller-visible `triage` results that may return the same thread bo
 - Internal polling and debounce ticks do not count, and neither do threads suppressed by seen markers.
 - The counter is keyed by the thread transcript hash, so an edit or a reply resets it.
 
-Raise it for threads that need several fix-push-review cycles. Lower it to escalate sooner.
-
 ### `iterate.stall-timeout-minutes` — default `60`
 
 How many minutes the loop may repeat without material progress before escalating with `stall-timeout`. `0` disables stall detection.
@@ -417,39 +340,24 @@ The same threshold covers CI that never starts. That means relevant queued, requ
 
 A `stack` selection whose layers can only wait uses this threshold for its own timer. See [`stall-timeout`](escalations.md#stall-timeout).
 
-To override it for one invocation, pass `--stall-timeout <duration>`:
-
-- a bare number is minutes;
-- an `s`, `m`, or `h` suffix sets the unit, as in `--stall-timeout 90s` or `--stall-timeout 1h`;
-- `--stall-timeout 0` disables stall detection for that run.
+`--stall-timeout <duration>` overrides it for one invocation. A bare number is minutes; an `s`, `m`, or `h` suffix sets the unit (`90s`, `1h`); `0` disables stall detection for that run.
 
 ### `iterate.ready-delay-minutes` — default `0`
 
-After the PR first reaches a clean READY state, Shepherd keeps looping for this many minutes before cancelling, or before merging with `--merge`. A clean READY state means:
-
-- checks are green;
-- no Shepherd-visible work remains;
-- no blocking bot review is pending.
-
-The delay gives reviewers and blocking bots time to act.
+After the PR first reaches a clean READY state (checks green, no Shepherd-visible work, no blocking bot review pending), Shepherd keeps looping for this many minutes before cancelling, or before merging with `--merge`. The delay gives reviewers and blocking bots time to act.
 
 - The countdown restarts if the PR leaves that state or its head changes.
 - A newly surfaced hidden PR comment does not reset it.
-- `0`, the default, cancels or merges on the first READY tick without a countdown.
+- `0` cancels or merges on the first READY tick without a countdown.
 - `--ready-delay` overrides the key for one invocation.
 
 For the lifecycle, see [iterate-flow.md](iterate-flow.md#2-ready-delay).
-
-```yaml
-iterate:
-  ready-delay-minutes: 10
-```
 
 <a id="iterateminimizeapprovals"></a>
 
 ### `iterate.minimize-approvals` — default `false`
 
-Also minimize `APPROVED` reviews, meaning `pr approve` clicks with or without a body. It is off by default because you usually want approvals visible. Turn it on for long-running PRs where stale approvals pile up. `iterate.minimize-comments` still decides which approval authors qualify.
+Also minimize `APPROVED` reviews, with or without a body. It is off by default so approvals stay visible. Turn it on for long-running PRs where stale approvals pile up. `iterate.minimize-comments` still decides which approval authors qualify.
 
 | Setting           | Behavior                                                                                                                                                                                                                                                                                                                     |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -480,15 +388,9 @@ Excluded items still pass the seen-marker gate. They are surfaced once, suppress
 
 ### `iterate.behind-base-hint` — default `""`
 
-A one-liner added to the `triage` instructions when the branch is behind its base (`mergeStatus: "BEHIND"`) or conflicts with it (`mergeStatus: "CONFLICTS"`). Examples:
+A one-liner added to the `triage` instructions when the branch is behind its base (`mergeStatus: "BEHIND"`) or conflicts with it (`"CONFLICTS"`), such as `"rebase --force-with-lease"` or `"see .agents/skills/agent-workflow/git-and-prs.md"`. The conflict hint follows the merge-conflicts step and is omitted on a conflicting native stack layer.
 
-- `"rebase --force-with-lease"`
-- `"merge the main branch"`
-- `"see .agents/skills/agent-workflow/git-and-prs.md"`
-
-The conflict hint follows the merge-conflicts step. It is omitted on a conflicting native stack layer.
-
-Shepherd never picks the git mechanics; it only echoes this pointer (see [actions.md](actions.md)). An empty value omits the hint.
+Shepherd never picks the git mechanics; it only echoes this pointer. An empty value omits the hint.
 
 <a id="iteratereviewoutputmaxchars"></a>
 
@@ -510,26 +412,13 @@ Threads by bots or other non-human authors, and threads the viewer wrote, always
 | `"outdated"`       | Reply; also resolve when `isOutdated: true` | Retry the resolve only, when outdated        |
 | `"always"`         | Reply and resolve                           | Retry the resolve only                       |
 
-```yaml
-iterate:
-  resolve-other-human-threads: outdated
-```
-
 ### `iterate.instructions` — default `"inline"`
 
-`inline` prints the `triage` commit/push step on every tick. `playbook` points at the shipped "Triage loop" playbook instead. `--instructions` and the MCP `instructions` input override it.
-
-Inline is the default because the two modes behaved the same in the eval ablation (#527), and the token bench found that folding the step into a playbook is not a net win.
+`inline` prints the `triage` commit/push step on every tick. `playbook` points at the shipped "Triage loop" playbook instead. `--instructions` and the MCP `instructions` input override it. Inline is the default because folding the step into a playbook is not a net token win.
 
 ## `events`
 
-Opt-in event-driven waiting for the polling CLI. With the default `source: none`, nothing changes: every wait sleeps `poll.interval-seconds`. See [hook-harness.md](hook-harness.md) for setup, health, and limits.
-
-```yaml
-events:
-  source: hook-harness
-  fallback-interval-seconds: 300
-```
+Opt-in event-driven waiting for the polling CLI. With the default `source: none`, every wait sleeps `poll.interval-seconds`. See [hook-harness.md](hook-harness.md) for setup, health, and limits.
 
 | Key                         | Constraint                | Notes                                                                                                                                                                                                                              |
 | --------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -542,24 +431,7 @@ Single ticks (`iterate`, MCP, library, `CLAUDE_CODE_REMOTE=true`) never wait, so
 
 Defaults for the polling CLI (`pr-shepherd [PR]`). Explicit flags win over these keys.
 
-Single ticks do not poll and ignore these settings. Single ticks are:
-
-- `iterate`;
-- `stack --once`;
-- MCP and library calls;
-- every command when `CLAUDE_CODE_REMOTE=true`.
-
-See [cloud.md](cloud.md).
-
-```yaml
-poll:
-  interval-seconds: 120
-  stack-interval-factor: 2
-  timeout-seconds: 270
-  debounce-seconds: 60
-  quiet-status: false
-  reconcile-seconds: 900
-```
+Single ticks do not poll and ignore these settings. They are `iterate`, `stack --once`, MCP and library calls, and every command when `CLAUDE_CODE_REMOTE=true` ([cloud.md](cloud.md)).
 
 | Key                     | Constraint    | Notes                                                                                                                                                                                                                                                                                                          |
 | ----------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -583,11 +455,7 @@ An entry needs `interval-factor`, `interval-minutes`, or both. With both, the sl
 
 The resolved interval must not decrease as remaining quota falls. `[]` disables the warnings.
 
-| Remaining | Default factor | At `interval-seconds: 60` | At `interval-seconds: 120` |
-| --------- | -------------- | ------------------------- | -------------------------- |
-| 30%       | 2x             | 2 min                     | 4 min                      |
-| 20%       | 5x             | 5 min                     | 10 min                     |
-| 10%       | 10x            | 10 min                    | 20 min                     |
+The defaults are 30% → 2x, 20% → 5x, and 10% → 10x. At `interval-seconds: 60` the minimum intervals are 2, 5, and 10 minutes.
 
 ```yaml
 poll:
@@ -605,7 +473,7 @@ How it behaves:
 - When a band is crossed, the next result the agent sees that is not terminal carries the raw quota state and continuation guidance.
   - Bounded CLI guidance uses a timeout twice the recommended interval.
   - MCP and single-tick callers are told how long to wait.
-- The poll dispatcher sleeps the slower of the effective interval and the resolved band interval on every normal wait, even after the one-time warning. The dispatcher covers `pr-shepherd [PR]`, `--until-terminal`, and aggregate `stack` / multi-PR polls.
+- The poll dispatcher (`pr-shepherd [PR]`, `--until-terminal`, and aggregate `stack` / multi-PR polls) sleeps the slower of the effective interval and the resolved band interval on every normal wait, even after the one-time warning.
   - The effective interval is `--interval` when set. Otherwise it is `poll.interval-seconds` for one PR, or `poll.interval-seconds × poll.stack-interval-factor` for a stack or multi-PR poll.
   - The active band is the crossed entry with the lowest `remaining-percent`.
   - A slower explicit interval is kept, in both the sleep and the instructions.
@@ -652,13 +520,7 @@ When disabled, a clean draft remains in draft and ends its one-PR session with `
 
 Case-insensitive reviewer login prefixes, matched with `startsWith`. While a matching reviewer has a pending review request or a `PENDING` review, Shepherd treats the PR as `BLOCKED` and does not mark it ready.
 
-Nothing blocks by default. List review bots whose reviews must finish first, such as `copilot`, `sonar`, `codeclimate`, or `reviewdog`:
-
-```yaml
-mark-ready:
-  blocking-reviewer-logins:
-    - copilot
-```
+Nothing blocks by default. List review bots whose reviews must finish first, such as `copilot`, `sonar`, `codeclimate`, or `reviewdog`.
 
 ## `merge`
 
@@ -675,13 +537,6 @@ mark-ready:
 - `--body-file`/`-F`, including values attached to the short option.
 
 Select at most one of `--merge`/`-m`, `--squash`/`-s`, or `--rebase`/`-r`. Shepherd also recognizes boolean assignments such as `--squash=true`, and safe short bundles such as `-sd`. If `merge.method` is also set, both must name the same method.
-
-```yaml
-merge:
-  method: squash
-  command-args:
-    - --delete-branch
-```
 
 When neither is set, Shepherd picks a method in this order:
 
@@ -761,25 +616,9 @@ When `false`, Shepherd does not mutate or print the line. Supported IDs stay on 
 
 ### `actions.work-while-queued` — default `false`
 
-When `false`, `iterate --merge` defers non-CI work while the PR is in the merge queue, because a push would eject it. Deferred work is:
+When `false`, `iterate --merge` defers non-CI work while the PR is in the merge queue, because a push would eject it. Deferred work is review threads, PR comments, `CHANGES_REQUESTED` reviews, and review summaries. The tick is `WAIT`, carrying raw counts of the held work (see [`wait`](actions.md#wait)). Failing checks, unseen check-run annotations, and merge conflicts are never deferred and always route to `triage`.
 
-- review threads;
-- PR comments;
-- `CHANGES_REQUESTED` reviews;
-- review summaries.
-
-The tick is `WAIT`, carrying raw counts of the held work (see [`wait`](actions.md#wait)). These are never deferred and always route to `triage`:
-
-- failing checks;
-- check-run annotations not yet seen;
-- merge conflicts.
-
-Set it to `true` to handle that work immediately, even while the PR is queued:
-
-```yaml
-actions:
-  work-while-queued: true
-```
+Set it to `true` to handle deferred work immediately, even while the PR is queued.
 
 ## User-level GitHub App settings
 
@@ -811,4 +650,4 @@ When `PR_SHEPHERD_STATE_DIR` is unset, the default state directory is:
 
 Per-repository files live at `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/`. Separate owner and repository directories keep hyphenated names from colliding.
 
-Older builds wrote directories named `<owner>-<repo>`. Those are no longer read, so the first run after upgrading starts clean: seen comments can surface once more, and the ready-delay restarts. `pr-shepherd admin clean all` removes the whole base directory, including those leftovers.
+Directories named `<owner>-<repo>` from older builds are no longer read, so the first run after upgrading starts clean: seen comments can surface once more, and the ready-delay restarts. `pr-shepherd admin clean all` removes the whole base directory.

@@ -2,7 +2,7 @@
 
 [← README](../README.md) | [comments.md](comments.md) | [escalations.md](escalations.md)
 
-How Shepherd replies to and resolves inline review threads by author class, how that interacts with GitHub's "require conversation resolution" branch rule, and where the current behavior differs from a requested policy. For contributors working on thread routing and for anyone debugging a PR that is `READY` while GitHub still says conversations block the merge.
+How Shepherd replies to and resolves inline review threads by author class, how that interacts with GitHub's "require conversation resolution" branch rule, and where current behavior differs from a requested policy. For contributors working on thread routing and anyone debugging a PR that is `READY` while GitHub still says conversations block the merge.
 
 Shepherd replies to human inline threads. It resolves them only for the authenticated viewer's own threads, and for other humans when [`iterate.resolve-other-human-threads`](configuration.md#iterateresolve-other-human-threads--default-none) allows it. That enum does not read the branch rule.
 
@@ -133,7 +133,7 @@ The gap is the required-resolution, other-human row; the requested switch is the
 
 `ambiguousComments` on an escalation payload is the actionable top-level PR comment list copied onto some handoffs; inline threads are copied separately as `unresolvedThreads`. The field name is not a trigger.
 
-The requested "escalate when a decision is needed" has no predicate in code. The two decisions this feature raises (whether an inline comment warrants a code change, and what to do when GitHub will not let the viewer resolve a thread the branch requires resolved) both stay off the escalation list.
+The requested "escalate when a decision is needed" has no predicate in code. Both decisions this feature raises stay off the escalation list: whether an inline comment warrants a code change, and what to do when GitHub will not let the viewer resolve a thread the branch requires resolved.
 
 ## Surfaces outside this policy
 

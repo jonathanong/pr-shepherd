@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-How `src/` is organized, which way dependencies point, and where new code goes. For contributors; see [extending.md](extending.md) for step-by-step recipes.
+How `src/` is organized, which way dependencies point, and where new code goes. For contributors. Recipes: [extending.md](extending.md).
 
 ## Design rationale
 
@@ -49,14 +49,18 @@ src/
 ├── mcp-stdio.mts          # pr-shepherd-mcp binary entry
 ├── cli-parser.mts         # argv dispatch
 ├── types.mts              # barrel for types/*
+├── execution-context.mts  # caller-scoped working directory (API/MCP)
+├── pr-reference.mts       # API PR reference parsing (number, URL, owner/repo#N)
+├── quota-budgets.mts      # quota warning bands across GraphQL and REST core
+├── quota-warning.mts      # quotaWarning from sampled usage
 ├── exit-codes.mts         # EXIT map — see docs/exit-codes.md
 ├── config/schema.mts      # config keys, defaults, validation (zod)
 ├── config/                # cascading RC loader (load.mts), renames.mts
 │
 ├── cli/                   # argument parsing, help pages, Markdown formatters
 ├── mcp/
-│   ├── server.mts         # iterate, apply, extract_journal, get_journal, playbook,
-│   │                      #   suggest tools
+│   ├── server.mts         # iterate, stack, apply, suggest, extract_journal,
+│   │                      #   get_journal, playbook tools
 │   └── index.mts          # createPrShepherdMcpServer / runPrShepherdMcpStdio
 │
 ├── commands/              # one file (or dir) per subcommand
@@ -65,6 +69,9 @@ src/
 │   ├── iterate/           # action dispatch (runIterate in index.mts)
 │   ├── poll.mts           # bounded WAIT loop + TRIAGE debounce
 │   ├── poll-summary.mts   # multi-PR / stack aggregate summary
+│   ├── stack-*.mts        # stack work, handoffs, drain, stall
+│   ├── playbook.mts       # bundled playbook lookup
+│   ├── tick.mts           # nextCheck and tick instructions; single-tick.mts, next-check.mts
 │   ├── ready-delay.mts    # ready-since.txt
 │   ├── resolve-mutate.mts # apply review mutations
 │   ├── apply-merge.mts    # REST apply merge
@@ -81,6 +88,7 @@ src/
 │   ├── rest-*.mts         # REST transport reads and mutations
 │   ├── queries.mts        # loads gql/*.gql
 │   └── gql/               # batch-pr.gql, batch-pr-page.gql, suggestion-threads.gql, …
+├── events/                # hook-harness relay client and event waiter (see hook-harness.md)
 ├── checks/                # classify, triage, startup-failures, superseded
 ├── comments/              # resolve / minimize / dismiss mutations
 ├── merge-status/          # deriveMergeStatus + deriveMergeRequirements
