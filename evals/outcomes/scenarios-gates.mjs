@@ -2,12 +2,14 @@
 // answer from; `fixture` is the Shepherd tick for the same state.
 
 import { PR_URL } from "../lib.mjs";
-import { PR, STEPS } from "./world.mjs";
+import { PR, STEPS, withConflictFiles } from "./world.mjs";
+
+const REBASE_TEXT = `Keep PR branches linear: rebase onto \`main\`, never merge \`main\` into a
+branch, and push with \`--force-with-lease\`. Rebasing and force-with-lease
+pushes of your own PR branch need no confirmation.`;
 
 const REBASE_RULE = `\`AGENTS.md\` at the repository root (also returned by the contents API) says:
-"Keep PR branches linear: rebase onto \`main\`, never merge \`main\` into a
-branch, and push with \`--force-with-lease\`. Rebasing and force-with-lease
-pushes of your own PR branch need no confirmation."`;
+"${REBASE_TEXT}"`;
 
 export const GATE_SCENARIOS = [
   {
@@ -74,6 +76,7 @@ review.`,
     // Behind base, in a repo whose AGENTS.md says to rebase.
     slug: "19-behind-base",
     fixture: "73-triage-behind-base-hint",
+    repoInstructions: REBASE_TEXT,
     tags: ["merge-gate", "branch-update"],
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `${PR(" No merge queue. No required approvals.", "`src/index.ts`")} Branch
@@ -102,6 +105,8 @@ the rename or the reply.`,
     // Conflicts with main, in a repo whose AGENTS.md says to rebase.
     slug: "20-conflicts",
     fixture: "27-triage-conflicts",
+    transform: withConflictFiles(["src/paginate.ts"]),
+    repoInstructions: REBASE_TEXT,
     tags: ["merge-gate", "conflicts"],
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `${PR(" No merge queue. No required approvals.", "`src/paginate.ts`")}
@@ -129,6 +134,7 @@ conflict to the user.`,
     // The user asked for a merge; the branch conflicts.
     slug: "21-conflict-on-merge",
     fixture: "174-triage-merge-conflicts",
+    transform: withConflictFiles(["README.md"]),
     tags: ["merge-gate", "conflicts"],
     prompt: `Merge ${PR_URL}.`,
     world: `${PR(" No merge queue. No required approvals.", "`README.md`, `src/paginate.ts`")}

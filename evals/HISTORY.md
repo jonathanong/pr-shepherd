@@ -6,6 +6,55 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-12: closing the plugin's remaining gaps
+
+Reruns of every scenario where the plugin arm scored below gh/MCP, against the
+current output. `20-conflicts` and `21-conflict-on-merge` replay fixtures
+recorded before the `## Files changed on both sides since the merge base`
+section existed, so `withConflictFiles` in `outcomes/world.mjs` adds that
+section and its step, as fixture 179 prints them.
+
+With the files section alone, agents named the conflicting file but merged
+`main` into a branch whose `AGENTS.md` says to rebase, and did not commit to
+keeping both sides of the conflict (20: 0.00 vs 0.33, 21: 0.00 vs 0.00). The
+conflict step now says to check the repository's instructions (such as
+`AGENTS.md`) for whether to rebase or merge, and to keep both sides' changes
+unless they contradict.
+
+Scenarios 19 and 20 now load their `AGENTS.md` rule into both arms' system
+prompt (`repoInstructions`), as a real session loads project instructions.
+Before that the rule was readable only through the contents API, and no run in
+either arm read it: plugin runs said they would read `AGENTS.md` in the next
+pass, and the gh/MCP runs that passed had defaulted to a rebase. Results for 19
+and 20 before this entry are not comparable.
+
+Total spend $141.57 across ten reruns:
+
+| Scenario                              | Runs per arm | Plugin | gh/MCP |
+| ------------------------------------- | ------------ | ------ | ------ |
+| `02-stale-bot-review`                 | 3            | 1.00   | 0.00   |
+| `05-cancelled-ci`                     | 3            | 1.00   | 1.00   |
+| `12-bot-review-and-thread`            | 3            | 1.00   | 0.67   |
+| `19-behind-base`                      | 6            | 1.00   | 1.00   |
+| `20-conflicts`                        | 6            | 1.00   | 0.17   |
+| `21-conflict-on-merge`                | 6            | 1.00   | 0.17   |
+| `31-stack-lower-layer-review-blocker` | 3            | 1.00   | 1.00   |
+
+- **12**: an earlier rerun scored 0.67 vs 1.00. Its one failure misquoted the
+  review ID and planned a re-review request nobody needed. A second rerun
+  scored 1.00, so the table shows that one.
+- **20**: the gh/MCP failures rebased but never looked at what conflicted or
+  said to keep both changes.
+- **Wording**: "Update per the repo's instructions, keeping both sides'
+  changes" kept the token bench under the gh baseline but scored 20 at 0.00 vs
+  0.33. The current step puts the bench's `stack-work` case over the gh
+  baseline (2,049 vs 1,984); the owner accepted that in
+  `tokens/pending-losses.json` until tokens are optimized.
+- **Base branch only**: after a security review, the step reads the
+  rebase-or-merge policy from the base branch's instructions only. A
+  3-run rerun on that wording scored 20 at 1.00 vs 0.00 and 21 at 1.00 vs
+  0.33 ($8.70).
+
 ## 2026-11-12: stack scenarios 33-35, own-pass framing
 
 Three stack scenarios added: `33-stack-lower-layer-conflicts` (fix the bottom
