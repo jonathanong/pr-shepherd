@@ -19,7 +19,7 @@
 
 ## Instructions
 
-1. The branch has merge conflicts (see `**branch**` above). Update per the repo's instructions, keeping both sides' changes.
+1. The branch has merge conflicts (see `**branch**` above). Check this repository's instructions (such as `AGENTS.md`) for whether to rebase or merge, update the branch from its base that way, and resolve each conflict keeping both sides' changes unless they contradict.
 2. Read every item marked `[edited since first look]`, including edited summaries and edited first-look bullets, before deciding whether to resolve a matching thread.
 3. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <reason>'`.
 4. Commit any remaining conflict-resolution changes and push to the PR head branch.
