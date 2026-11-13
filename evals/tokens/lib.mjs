@@ -43,6 +43,10 @@ export const MODEL = {
   cacheReadMultiplier: 0.1,
   cacheWriteMultiplier: 1.25,
   outputMultiplier: 5,
+  // Output the model writes per turn beyond its commands: prose and thinking.
+  // The gated model leaves it at 0; REPORT.md's realism sweep sets it from
+  // measured eval traces.
+  outputTokensPerTurn: 0,
 };
 
 export const tokens = (text) => Math.ceil(text.length / MODEL.charsPerToken);
@@ -602,7 +606,9 @@ export function cost(allCalls, { extraContext = 0 } = {}) {
     // Request that emits this phase's calls.
     ite += MODEL.cacheReadMultiplier * context + MODEL.cacheWriteMultiplier * pending;
     context += pending;
-    pending = 0;
+    // Prose and thinking the request writes; it stays in context like a command.
+    ite += MODEL.outputMultiplier * MODEL.outputTokensPerTurn;
+    pending = MODEL.outputTokensPerTurn;
     for (const call of calls.filter((c) => c.phase === p)) {
       const t = capped(call);
       cmdTotal += t.cmdTokens;
@@ -951,7 +957,8 @@ export function callApi(call, transport = "graphql") {
   }
   if (/^(Skill|Read|ToolSearch) /.test(cmd) || /^sleep \d+$/.test(cmd)) return NO_API;
   if (/^pr-shepherd /.test(cmd)) {
-    if (/^pr-shepherd stack /.test(cmd)) throw new Error(`stack tick needs an explicit api: ${cmd}`);
+    if (/^pr-shepherd stack /.test(cmd))
+      throw new Error(`stack tick needs an explicit api: ${cmd}`);
     if (transport === "cloud") return SHEPHERD_TICK_API_CLOUD;
     return transport === "rest" ? SHEPHERD_TICK_API_REST : SHEPHERD_TICK_API;
   }
