@@ -51,6 +51,13 @@ export interface MergedBasePullRequest {
   headRepository: { nameWithOwner: string };
 }
 
+/** Files changed on both the PR head and its base since their merge base; not a conflict list. */
+export interface ConflictCandidateFiles {
+  /** Paths, capped. `total` counts every shared file. */
+  files: string[];
+  total: number;
+}
+
 export type AuthorType = "User" | "Bot" | "Unknown";
 
 type RepositoryPermission = "NONE" | "READ" | "TRIAGE" | "WRITE" | "MAINTAIN" | "ADMIN";

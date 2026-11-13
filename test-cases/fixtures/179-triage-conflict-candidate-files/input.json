@@ -1,0 +1,38 @@
+{
+  "description": "A conflicting non-stack PR lists the files changed on both the head and the base since the merge base (a rename counts through its previous name); a file changed on one side only is not listed.",
+  "batchData": {
+    "mergeable": "CONFLICTING",
+    "mergeStateStatus": "DIRTY",
+    "reviewDecision": "APPROVED",
+    "stack": null,
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "restResponses": {
+    "/repos/owner/repo/compare/main...abc123": {
+      "merge_base_commit": { "sha": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm" },
+      "files": [
+        { "filename": "src/a.ts" },
+        { "filename": "src/b.ts" },
+        { "filename": "lib/new.ts", "previous_filename": "lib/old.ts" }
+      ]
+    },
+    "/repos/owner/repo/compare/mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm...main": {
+      "files": [{ "filename": "src/a.ts" }, { "filename": "lib/old.ts" }, { "filename": "docs/x.md" }]
+    }
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

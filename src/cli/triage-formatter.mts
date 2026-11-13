@@ -47,6 +47,17 @@ export function formatTriageResult(
     );
   }
 
+  if (result.conflictCandidateFiles) {
+    const { files, total } = result.conflictCandidateFiles;
+    sections.push("## Files changed on both sides since the merge base");
+    const more = total - files.length;
+    sections.push(
+      [...files.map((file) => `- \`${file}\``), ...(more > 0 ? [`- +${more} more`] : [])].join(
+        "\n",
+      ),
+    );
+  }
+
   const renderThreads = (heading: string, threads: typeof result.triage.threads): void => {
     if (threads.length === 0) return;
     sections.push(heading);
