@@ -31,10 +31,16 @@ export function maskShell(text) {
     const top = stack.at(-1);
     const c = text[i];
     if (top.mode === "dq") {
-      if (c === "\\") (hide(i, i + 2), i++);
-      else if (c === '"') (hide(i, i + 1), stack.pop());
-      else if (c === "$" && text[i + 1] === "(") (stack.push({ mode: "code", depth: 1 }), i++);
-      else if (c === "`") stack.push({ mode: "bq", depth: 0 });
+      if (c === "\\") {
+        hide(i, i + 2);
+        i++;
+      } else if (c === '"') {
+        hide(i, i + 1);
+        stack.pop();
+      } else if (c === "$" && text[i + 1] === "(") {
+        stack.push({ mode: "code", depth: 1 });
+        i++;
+      } else if (c === "`") stack.push({ mode: "bq", depth: 0 });
       else hide(i, i + 1);
       continue;
     }
@@ -42,14 +48,18 @@ export function maskShell(text) {
       stack.pop();
       continue;
     }
-    if (c === "\\") (hide(i, i + 2), i++);
-    else if (c === "'") {
+    if (c === "\\") {
+      hide(i, i + 2);
+      i++;
+    } else if (c === "'") {
       const end = text.indexOf("'", i + 1);
       const stop = end === -1 ? text.length : end + 1;
       hide(i, stop);
       i = stop - 1;
-    } else if (c === '"') (hide(i, i + 1), stack.push({ mode: "dq", depth: 0 }));
-    else if (c === "#" && (i === 0 || /[\s;&|(]/.test(text[i - 1]))) {
+    } else if (c === '"') {
+      hide(i, i + 1);
+      stack.push({ mode: "dq", depth: 0 });
+    } else if (c === "#" && (i === 0 || /[\s;&|(]/.test(text[i - 1]))) {
       const end = text.indexOf("\n", i);
       hide(i, end === -1 ? text.length : end);
       i = (end === -1 ? text.length : end) - 1;

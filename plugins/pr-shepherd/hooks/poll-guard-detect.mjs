@@ -149,7 +149,7 @@ function scriptPaths(commands) {
       if (rest.some((w) => w.word === "-c")) continue;
       const path = rest.find((w) => !w.word.startsWith("-"));
       if (path) paths.push(path.raw);
-    } else if (/\.sh$/.test(first.raw)) paths.push(first.raw);
+    } else if (first.raw.endsWith(".sh")) paths.push(first.raw);
   }
   return paths;
 }
