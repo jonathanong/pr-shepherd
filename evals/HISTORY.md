@@ -28,7 +28,7 @@ either arm read it: plugin runs said they would read `AGENTS.md` in the next
 pass, and the gh/MCP runs that passed had defaulted to a rebase. Results for 19
 and 20 before this entry are not comparable.
 
-Total spend $132.87 across nine reruns:
+Total spend $141.57 across ten reruns:
 
 | Scenario                              | Runs per arm | Plugin | gh/MCP |
 | ------------------------------------- | ------------ | ------ | ------ |
@@ -48,8 +48,12 @@ Total spend $132.87 across nine reruns:
 - **Wording**: "Update per the repo's instructions, keeping both sides'
   changes" kept the token bench under the gh baseline but scored 20 at 0.00 vs
   0.33. The current step puts the bench's `stack-work` case over the gh
-  baseline (2,047 vs 1,984); the owner accepted that in
+  baseline (2,049 vs 1,984); the owner accepted that in
   `tokens/pending-losses.json` until tokens are optimized.
+- **Base branch only**: after a security review, the step reads the
+  rebase-or-merge policy from the base branch's instructions only. A
+  3-run rerun on that wording scored 20 at 1.00 vs 0.00 and 21 at 1.00 vs
+  0.33 ($8.70).
 
 ## 2026-11-12: stack scenarios 33-35, own-pass framing
 
