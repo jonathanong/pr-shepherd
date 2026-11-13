@@ -2,7 +2,9 @@
 
 [← README](../README.md) | [configuration.md](configuration.md)
 
-This page lists every breaking change between pr-shepherd 0.x (0.60.1) and 1.0.0, and what to change. It is for anyone who upgrades a repository config, a script, an MCP client, or a library caller. v1 keeps no compatibility aliases. An old command, flag, field, or tool name fails or is simply absent. Renamed config keys fail with an error that names the new key. `--stack` and `--poll-mode` on the default command, `iterate`, or `stack` fail with an error that names the replacement. Removed keys with no replacement, and `--poll-mode` on other commands, fail as unknown.
+Every breaking change between pr-shepherd 0.x (0.60.1) and 1.0.0, and what to change. For anyone upgrading a repository config, a script, an MCP client, or a library caller. Changes after 1.0.0 are not listed here.
+
+v1 keeps no compatibility aliases. An old command, flag, field, or tool name fails or is absent. A renamed config key fails with an error that names the new key. `--stack` and `--poll-mode` on the default command, `iterate`, or `stack` fail with an error that names the replacement. Removed keys with no replacement, and `--poll-mode` on other commands, fail as unknown.
 
 If you use only the shipped plugin and skill, upgrade the plugin and migrate your config files. The skill already emits the v1 commands.
 
@@ -25,7 +27,7 @@ Every non-empty config file must now start with `version: 1`. 0.x files have non
 
 ### Strict validation
 
-In 0.x, problems were mostly warnings. A file with a YAML syntax error was skipped while other files still merged, and an unknown key was dropped while the rest of its file applied. Only a merged config that failed validation fell back entirely to the built-in defaults. So an old warning does not always mean every configured value was inactive. In v1, Shepherd validates config before any GitHub call and exits with code `78` (`EX_CONFIG`) on any of these:
+In 0.x, problems were mostly warnings. A file with a YAML syntax error was skipped while other files still merged, and an unknown key was dropped while the rest of its file applied. Only a merged config that failed validation fell back to the built-in defaults. In v1, Shepherd validates config before any GitHub call and exits with code `78` (`EX_CONFIG`) on any of these:
 
 - an unknown key, including every renamed or removed pre-v1 key (`github.transport`, `iterate.instructions`, `merge.method`, and `classify.standard` keep their names and stay valid)
 - a value of the wrong type or out of range
@@ -34,7 +36,7 @@ In 0.x, problems were mostly warnings. A file with a YAML syntax error was skipp
 - a top level that is not a mapping
 - more than one config file in one directory
 
-Shepherd stops at the first invalid file. The message names that file and the key path of each problem in it, but a YAML syntax error, a non-mapping top level, or a duplicate config file has no key path. Fix it and rerun to see problems in later files, such as a repository config after `~/.pr-shepherdrc.yml`. A renamed pre-v1 key never takes effect, but the error names the key that replaced it. A removed key is reported as an unknown key:
+Shepherd stops at the first invalid file. The message names that file and the key path of each problem in it. A YAML syntax error, a non-mapping top level, or a duplicate config file has no key path. Fix the file and rerun to see problems in later files, such as a repository config after `~/.pr-shepherdrc.yml`. A renamed pre-v1 key never takes effect, but the error names its replacement. A removed key is reported as unknown:
 
 ```text
 pr-shepherd: invalid config in /repo/.pr-shepherdrc.yml:
@@ -81,9 +83,7 @@ Every multi-word key is now kebab-case; single-word keys such as `github.transpo
 | `actions.autoMinimizeSuppressed`                | `actions.auto-minimize-suppressed`                                     |
 | `actions.workWhileQueued`                       | `actions.work-while-queued`                                            |
 
-These keys keep their names: `github.transport`, `iterate.instructions`, `merge.method`, and `classify.standard`.
-
-These have no replacement:
+`github.transport`, `iterate.instructions`, `merge.method`, and `classify.standard` keep their names. These have no replacement:
 
 | 0.x key or value                   | v1                                                                              |
 | ---------------------------------- | ------------------------------------------------------------------------------- |
@@ -195,7 +195,7 @@ Most of these aliases printed a deprecation warning in 0.x. In v1 they are all u
 | Playbook pointer `Playbook: "Cloud event loop".`                     | `Playbook: "Event loop".`                          |
 | Invalid config: warning, then defaults                               | Exit code `78` (`EX_CONFIG`)                       |
 
-`triage` is the same state as `fix_code`, renamed because the work is often a reply, a thread resolution, or CI triage rather than a code change. It is still always non-terminal.
+`triage` is the same state as `fix_code`, renamed because the work is often a reply, a thread resolution, or CI triage rather than a code change. It is always non-terminal.
 
 Removed result fields:
 
@@ -248,10 +248,10 @@ The package entry point now also re-exports the result and action types: `Iterat
 
 ## Local state
 
-The first run after the upgrade starts partly clean. Nothing needs to be deleted by hand, but expect these one-time effects:
+Nothing needs deleting by hand, but expect these one-time effects on the first run after the upgrade:
 
-- **Seen markers without an `id` field are ignored.** These are filename-keyed markers from old builds. Their review threads and comments surface once more as first-look items, and Shepherd writes a current marker.
+- **Seen markers without an `id` field are ignored.** These filename-keyed markers come from old builds. Their review threads and comments surface once more as first-look items, and Shepherd writes a current marker.
 - **The stored PR fingerprint is discarded.** Its version changed, so the first tick per PR runs the full batched query instead of skipping on an unchanged fingerprint.
 - **Local event-mode state is no longer read** unless `PR_SHEPHERD_STATE_DIR` was set. That variable takes priority in both 0.x and v1, so with it set nothing moves and this item and the cleanup below do not apply. Without it, 0.x event mode (`--poll-mode event`, `poll.mode: event`, or the MCP and library `pollMode: "event"`) kept seen markers, stall timers, and reply records under `<git-common-dir>/pr-shepherd-state` on any machine. v1 uses that directory only when `CLAUDE_CODE_REMOTE=true`. A local `iterate` uses the normal state directory, so state written by local event-mode runs is not carried over.
 
-Merge requests from `apply merge` always used the normal state directory, so they carry over. Triage attempt counts (`fix-attempts.json`) carry over when the state directory is unchanged. Local event-mode runs kept them under `<git-common-dir>/pr-shepherd-state`, so after such runs they start fresh with the rest of that state. The full per-thread budget (`iterate.triage-attempts-per-thread`, default 3) starts over, so an unchanged thread can come back in that many more `TRIAGE` results before Shepherd escalates. To start fully clean, run `pr-shepherd admin clean all`. That cleans the normal state directory only. If you used local event mode without `PR_SHEPHERD_STATE_DIR`, also delete the legacy directory, which would otherwise come back into use under `CLAUDE_CODE_REMOTE=true`: `dir=$(git rev-parse --git-common-dir) && rm -rf "$dir/pr-shepherd-state"`.
+Merge requests from `apply merge` always used the normal state directory, so they carry over. Triage attempt counts (`fix-attempts.json`) carry over when the state directory is unchanged. Local event-mode runs kept them under `<git-common-dir>/pr-shepherd-state`, so after such runs they start fresh. The full per-thread budget (`iterate.triage-attempts-per-thread`, default 3) then starts over, and an unchanged thread can return in that many more `TRIAGE` results before Shepherd escalates. To start fully clean, run `pr-shepherd admin clean all`. That cleans the normal state directory only. If you used local event mode without `PR_SHEPHERD_STATE_DIR`, also delete the legacy directory, which would otherwise come back into use under `CLAUDE_CODE_REMOTE=true`: `dir=$(git rev-parse --git-common-dir) && rm -rf "$dir/pr-shepherd-state"`.

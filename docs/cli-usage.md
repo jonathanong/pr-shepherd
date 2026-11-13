@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-Reference for the `pr-shepherd` shell commands and flags, for people and agents driving Shepherd from a terminal or CI. The CLI and the local stdio MCP server share one workflow model: both **gather PR context** and **emit the same deterministic action**. The MCP server returns structured data ([mcp.md](mcp.md)); the CLI renders it as text or JSON.
+Reference for the `pr-shepherd` shell commands and flags, for people and agents driving Shepherd from a terminal or CI. The CLI and the local stdio MCP server ([mcp.md](mcp.md)) share one workflow model: both gather PR context and emit the same deterministic action. The MCP server returns structured data; the CLI renders text or JSON.
 
 ## Canonical shell commands
 
@@ -28,24 +28,24 @@ pr-shepherd admin clean <pr|branch|current|repo|all> [value] [--dry-run] [--form
 pr-shepherd admin log-file [--format text|json]
 ```
 
-`PR` may be a number, `owner/repo#N`, or a GitHub pull request URL. Multiple explicit PRs must resolve to one repository. `pr-shepherd stack PR` selects the complete native GitHub stack containing that PR, ordered bottom-to-top. When omitted, Shepherd infers the current branch's open PR. A qualified PR selects the GitHub target; the working directory stays the local git, config, rules, and log context.
+`PR` may be a number, `owner/repo#N`, or a GitHub pull request URL. Multiple explicit PRs must resolve to one repository. `pr-shepherd stack PR` selects the complete native GitHub stack containing that PR, ordered bottom to top. When `PR` is omitted, Shepherd infers the current branch's open PR. A qualified PR selects the GitHub target; the working directory stays the local git, config, rules, and log context.
 
-| Command                | What it does                                                                                                                                       |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pr-shepherd [PR ...]` | Bounded poll dispatcher (one PR or an explicit set). See [Polling](#polling).                                                                      |
-| `stack`                | Bounded poll of one PR's native GitHub stack; `--once` runs one tick. See [Aggregate commands](#aggregate-commands).                               |
-| `iterate`              | One tick for one PR, or one aggregate tick for several, with `nextCheck`. Use it when the caller owns recurrence ([cloud.md](cloud.md)).           |
-| `apply merge`          | Submit or resume one SHA-guarded asynchronous REST merge or enqueue request. Requires `--transport rest`.                                          |
-| `apply review`         | Reply to, resolve, minimize, and dismiss review items after fixes.                                                                                 |
-| `apply files`          | Mark selected changed files as viewed (`markFileAsViewed`).                                                                                        |
-| `apply journal`        | Optionally append an agent-authored item to the PR body's Shepherd Journal.                                                                        |
-| `apply check-blocker`  | Record (or `--clear`) that a failing check is blocked on an external PR or issue.                                                                  |
-| `apply queue-removal`  | Acknowledge one current CI-driven native-stack queue removal.                                                                                      |
-| `journal extract`      | Parse a local PR-body file into typed journal JSON.                                                                                                |
-| `playbook [name]`      | Print a bundled skill playbook so agents without the skill can read it. No name lists them; an unknown name exits 64 and lists the available ones. |
-| `suggest`              | Build ordered, `git apply --check`-validated patches from review suggestions. Never edits files or git history.                                    |
-| `admin clean`          | Remove local Shepherd state (`pr`, `branch`, `current`, `repo`, or `all`).                                                                         |
-| `admin log-file`       | Print the append-only per-worktree debug log path.                                                                                                 |
+| Command                | What it does                                                                                                                                                                                                       |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pr-shepherd [PR ...]` | Bounded poll dispatcher (one PR or an explicit set). See [Polling](#polling).                                                                                                                                      |
+| `stack`                | Bounded poll of one PR's native GitHub stack; `--once` runs one tick. See [Aggregate commands](#aggregate-commands).                                                                                               |
+| `iterate`              | One tick for one PR, or one aggregate tick for several, with `nextCheck`. Use it when the caller owns recurrence ([cloud.md](cloud.md)).                                                                           |
+| `apply merge`          | Submit or resume one SHA-guarded asynchronous REST merge or enqueue request. Requires `--transport rest`.                                                                                                          |
+| `apply review`         | Reply to, resolve, minimize, and dismiss review items after fixes.                                                                                                                                                 |
+| `apply files`          | Mark selected changed files as viewed (`markFileAsViewed`).                                                                                                                                                        |
+| `apply journal`        | Optionally append an agent-authored item to the PR body's Shepherd Journal.                                                                                                                                        |
+| `apply check-blocker`  | Record (or `--clear`) that a failing check is blocked on an external PR or issue.                                                                                                                                  |
+| `apply queue-removal`  | Acknowledge one current CI-driven native-stack queue removal.                                                                                                                                                      |
+| `journal extract`      | Parse a local PR-body file into typed journal JSON.                                                                                                                                                                |
+| `playbook [name]`      | Print a bundled skill playbook so agents without the skill can read it. The name is the playbook name or its file slug (`create-a-pr`). No name lists them; an unknown name exits 64 and lists the available ones. |
+| `suggest`              | Build ordered, `git apply --check`-validated patches from review suggestions. Never edits files or git history.                                                                                                    |
+| `admin clean`          | Remove local Shepherd state (`pr`, `branch`, `current`, `repo`, or `all`).                                                                                                                                         |
+| `admin log-file`       | Print the append-only per-worktree debug log path.                                                                                                                                                                 |
 
 ### Apply subcommand details
 
@@ -79,7 +79,7 @@ pr-shepherd stack 43
 
 ### Choosing a wait mode
 
-The bounded poll (`poll.timeout-seconds`, default 270s = 4.5m) is for short-lived agents that wait in the foreground: each call stays inside Anthropic's default 5-minute prompt-cache window and under common tool timeouts. `--until-terminal` is for callers that run it as a background process, or for an external or background shepherd. Pick by what your host does, not by its name:
+The bounded poll (`poll.timeout-seconds`, default 270s = 4.5m) suits short-lived agents that wait in the foreground. Each call stays inside Anthropic's default 5-minute prompt-cache window and under common tool timeouts. `--until-terminal` suits a background process or an external shepherd. Pick by what your host does, not by its name:
 
 | Host capability                                               | Run                                                                                                                                                                          |
 | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -87,15 +87,15 @@ The bounded poll (`poll.timeout-seconds`, default 270s = 4.5m) is for short-live
 | No wake-up on exit (foreground subagent, polling-style tools) | `pr-shepherd [PR ...]` in the foreground; pass `--timeout` below the host's command-time limit if that is under 270s; on a non-terminal `WAIT`/`READY`, rerun it.            |
 | One tick per invocation (cloud sessions, MCP, `iterate`)      | Unchanged: follow `nextCheck` ([cloud.md](cloud.md)).                                                                                                                        |
 
-Run one watcher per selection. Before starting Shepherd with different PRs or flags (for example adding `--merge`), stop the running one; never run two on the same PR. Exit `10`–`16` from a background `--until-terminal` run is a Shepherd action ([exit codes](exit-codes.md)), not a crash, though some hosts label it a failure; `64` and above is a real command failure (`75` is retryable).
+Run one watcher per selection. Before restarting Shepherd with different PRs or flags (for example adding `--merge`), stop the running one. Never run two on the same PR. Exit `10`–`16` from a background `--until-terminal` run is a Shepherd action ([exit codes](exit-codes.md)), not a crash, though some hosts label it a failure. Exit `64` and above is a real command failure (`75` is retryable).
 
-Host examples, as of 2026-11 (they change; check the source):
+Host behavior, as of 2026-11 (it changes; check the source):
 
-- Claude Code: a Bash command with `run_in_background` re-invokes the session when it exits, and a background subagent is notified too; a foreground subagent's background commands are stopped when its run ends. Bash defaults to a 120s timeout (max 600s, set per call), and a foreground command that times out moves to the background rather than being killed.
-- Codex CLI: no wake-on-exit yet ([openai/codex#13733](https://github.com/openai/codex/issues/13733)); `exec_command` yields after about 10s with a session id and the model polls with `write_stdin`, each poll waiting up to about 300s, so use the bounded poll.
-- Cursor CLI: recent releases deliver a completion follow-up when a background shell finishes.
-- Gemini CLI: `is_background` / `&` exists without a documented exit notification, so treat it as no wake-up.
-- Prompt cache: Anthropic's default TTL is 5 minutes, while OpenAI's retention options differ (30m, 12h, 24h), so the cache argument for 270s is Claude-specific; the tool-timeout argument applies everywhere.
+- Claude Code: a Bash command with `run_in_background` re-invokes the session when it exits, and a background subagent is notified too. A foreground subagent's background commands stop when its run ends. Bash defaults to a 120s timeout (max 600s, set per call), and a foreground command that times out moves to the background.
+- Codex CLI: no wake-on-exit yet ([openai/codex#13733](https://github.com/openai/codex/issues/13733)). `exec_command` yields after about 10s with a session id, and the model polls with `write_stdin`, each poll waiting up to about 300s. Use the bounded poll.
+- Cursor CLI: recent releases send a completion follow-up when a background shell finishes.
+- Gemini CLI: `is_background` / `&` has no documented exit notification, so treat it as no wake-up.
+- Prompt cache: Anthropic's default TTL is 5 minutes, while OpenAI's retention options differ (30m, 12h, 24h). The cache argument for 270s is Claude-specific; the tool-timeout argument applies everywhere.
 
 ### Event-driven waits
 
@@ -127,34 +127,24 @@ Durations accept `s`, `m`, and `h` (`30s`, `4.5m`, `1h`). Bare polling durations
 
 ## Aggregate commands
 
-Explicit PR sets and native stacks use a compact summary, whose only GitHub mutation is rule-driven [classification auto-resolve](actions.md#classification-auto-resolve), rather than running the stateful one-PR iterator for every row. Aggregate polling returns when work is needed, every selected PR is complete, every selected row is `CANCEL`, or timeout expires. Its Markdown, JSON, API, and MCP result has one row per PR with raw state, bounded check/review counts, and routing context.
+Explicit PR sets and native stacks use a compact summary instead of running the stateful one-PR iterator for every row. Its only GitHub mutation is rule-driven [classification auto-resolve](actions.md#classification-auto-resolve). Aggregate polling returns when work is needed, every selected PR is complete, every selected row is `CANCEL`, or the timeout expires. The Markdown, JSON, API, and MCP result has one row per PR with raw state, bounded check/review counts, and routing context.
 
-- **Explicit PR sets** include an exact one-PR `pollCommand` for each actionable row, which callers may handle independently. A PR whose summary could not be read becomes a `TRIAGE` row (`summary-read-failed`, with the raw `error`) instead of failing the other rows; rate limits, credential errors, and an all-rows failure still fail the tick. When every row is `CANCEL`, the aggregate stops; when every row is `CANCEL` or `ESCALATE`, the instructions say to stop after reporting the handoffs.
-- **`stack`** performs no GitHub mutations other than rule-driven [classification auto-resolve](actions.md#classification-auto-resolve) (minimizing or resolving bot notices a classification rule marks `autoResolve`) and never emits rebase or push commands. When any layer is draft, lacks a current one-PR READY receipt, conflicts, fails checks, remains pending, or has stale ancestry, the result is `SHEPHERD` naming a one-PR session for every such layer at once. A clean draft is marked ready by its own session without waiting for lower layers when automatic mark-ready is enabled. With it disabled, draft layers with work get bounded probe commands (`pollProbe`) and actionable work is processed normally. A clean draft row is immediately `CANCEL` with reason `draft-auto-mark-ready-disabled` and has no probe command; the draft remains in draft. The `stack` command continues independent work and eligible ready-prefix merges, then returns `CANCEL` when only clean disabled drafts remain.
-- A queued stack, or one whose remaining layers can only wait on CI, merge state, or a blocking review, returns `WAIT` until that state stays unchanged past `--stall-timeout`, then `ESCALATE` with `stall-timeout`. A terminal READY stack, a stack with only clean drafts held in draft by disabled auto mark-ready, or a fully merged stack returns `CANCEL`. Closed or unverified topology returns `ESCALATE` only after every other shepherdable layer has completed; mixed states return immediate `SHEPHERD` and surface the eventual human blocker.
-- **`stack --merge`**: once the bottom open layer targets the stack base, the highest open layer whose open lower layers are all READY returns `MERGE` with a command that lands that layer and every unmerged layer below it (`gh stack merge <PR number> --yes --squash` in GraphQL mode, with the method from `merge.method` or repository settings; a SHA-pinned `pr-shepherd apply merge` in REST mode). A merge queue queues that prefix together and evaluates each layer from the bottom; a failure ejects that layer and the layers above it. Reconciliation continues until every layer merges and returns `CANCEL`. JSON/MCP includes the same raw ancestry, routing context, `nextAction`, and instructions that Markdown renders.
+- **Explicit PR sets** include an exact one-PR `pollCommand` for each actionable row, which callers may handle independently. A PR whose summary could not be read becomes a `TRIAGE` row (`summary-read-failed`, with the raw `error`) instead of failing the other rows; rate limits, credential errors, and an all-rows failure still fail the tick. When every row is `CANCEL`, the aggregate stops. When every row is `CANCEL` or `ESCALATE`, the instructions say to stop after reporting the handoffs.
+- **`stack`** never emits rebase or push commands. When any layer is draft, lacks a current one-PR READY receipt, conflicts, fails checks, remains pending, or has stale ancestry, the result is `SHEPHERD`, naming a one-PR session for every such layer at once. With automatic mark-ready enabled, a clean draft is marked ready by its own session without waiting for lower layers. With it disabled, draft layers with work get bounded probe commands (`pollProbe`) and their work is processed normally. A clean draft row is `CANCEL` with reason `draft-auto-mark-ready-disabled` and has no probe command; the draft stays in draft. `stack` continues independent work and eligible ready-prefix merges, then returns `CANCEL` when only such drafts remain.
+- A queued stack, or one whose remaining layers can only wait on CI, merge state, or a blocking review, returns `WAIT` until that state stays unchanged past `--stall-timeout`, then `ESCALATE` with `stall-timeout`. A terminal READY stack, a stack with only clean drafts held by disabled auto mark-ready, or a fully merged stack returns `CANCEL`. Closed or unverified topology returns `ESCALATE` only after every other shepherdable layer completes; mixed states return `SHEPHERD` and surface the eventual human blocker.
+- **`stack --merge`**: once the bottom open layer targets the stack base, the highest open layer whose open lower layers are all READY returns `MERGE` with a command that lands that layer and every unmerged layer below it (`gh stack merge <PR number> --yes --squash` in GraphQL mode, with the method from `merge.method` or repository settings; a SHA-pinned `pr-shepherd apply merge` in REST mode). A merge queue queues that prefix together and evaluates each layer from the bottom; a failure ejects that layer and the layers above it. Reconciliation continues until every layer merges and returns `CANCEL`. JSON and MCP results carry the same raw ancestry, routing context, `nextAction`, and instructions as Markdown.
 
 Full aggregate semantics: [actions.md](actions.md).
 
 ## MCP server
 
-Install and configure the stdio server in Claude Code, Codex, or Grok with [mcp.md](mcp.md). The plugin and a manual `pr-shepherd-mcp` registration both run:
+[mcp.md](mcp.md) covers installing the stdio server in Claude Code, Codex, or Grok, and the contract for each tool. The plugin and a manual `pr-shepherd-mcp` registration both run:
 
 ```text
 npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
 ```
 
-| Tool              | CLI counterpart                                                                 |
-| ----------------- | ------------------------------------------------------------------------------- |
-| `iterate`         | `pr-shepherd iterate` (one tick; MCP clients own recurrence)                    |
-| `stack`           | `pr-shepherd stack --once`                                                      |
-| `apply`           | `pr-shepherd apply merge\|review\|files\|journal\|check-blocker\|queue-removal` |
-| `playbook`        | `pr-shepherd playbook`                                                          |
-| `extract_journal` | `pr-shepherd journal extract` (takes a `body` string)                           |
-| `get_journal`     | none (fetches the PR body, then extracts)                                       |
-| `suggest`         | `pr-shepherd suggest`                                                           |
-
-`admin clean` and `admin log-file` are shell administration commands, not MCP tools. Do not call a long-running polling tool: call `iterate` or `stack` again after the returned work is complete or when the client's scheduler rechecks.
+Seven tools mirror the CLI: `iterate`, `stack` (`stack --once`), `apply` (`apply merge|review|files|journal|check-blocker|queue-removal`), `playbook`, `suggest`, `extract_journal` (`journal extract`, from a `body` string), and `get_journal` (no CLI counterpart; fetches the PR body, then extracts). See [mcp.md](mcp.md#tools). `admin clean` and `admin log-file` are shell-only. MCP has no polling tool: call `iterate` or `stack` again after the returned work is done or when the client's scheduler rechecks.
 
 ## Exit codes
 

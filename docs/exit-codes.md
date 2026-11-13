@@ -8,23 +8,13 @@ This page lists every process exit code `pr-shepherd` returns, for scripts and a
 
 ```text
 $? == 0          shepherd finished and the PR is in a good terminal state
-$? in 10..19     shepherd ran fine; the code reports non-terminal PR state
+$? in 10..19     shepherd ran fine; the code reports PR state (mostly non-terminal)
 $? >= 64         shepherd itself failed (BSD sysexits.h)
 ```
 
-```sh
-pr-shepherd 42
-code=$?
-if [ "$code" -ge 64 ]; then
-  echo "shepherd failed — see stderr" >&2
-  exit "$code"
-fi
-# code is 0 or 10-19 here — a real PR outcome, not an error
-```
+Codes 10–19 sit below the `sysexits.h` block, so "shepherd is reporting PR state" never collides with "shepherd broke". A script only needs `[ "$?" -ge 64 ]` to detect a failure.
 
-A host that runs Shepherd as a background command may report any non-zero exit, including `10`–`16`, as a failed command; read the output, since these are Shepherd actions, not crashes.
-
-Codes 10–19 sit above the single-digit range and below the `sysexits.h` block, so "shepherd is reporting PR state" never collides with "shepherd broke".
+A host that runs Shepherd as a background command may report any non-zero exit, including `10`–`16`, as a failed command. Read the output: these are Shepherd actions, not crashes.
 
 ## 0 — done
 
@@ -34,11 +24,11 @@ Codes 10–19 sit above the single-digit range and below the `sysexits.h` block,
 | 0    | `cancel` / `ready-delay-elapsed`      |
 | 0    | `cancel` / `auto-mark-ready-disabled` |
 
-POSIX has one success code, so clean finishes share it. The `reason` field distinguishes them in text and JSON. A clean draft canceled because auto mark-ready is disabled remains a draft and skips the ready-delay countdown and stall guard.
+POSIX has one success code, so clean finishes share it. The `reason` field distinguishes them in text and JSON.
 
 ## 10–19 — PR state
 
-Emitted by `iterate` and the default `pr-shepherd [PR]` once a report was fetched. The code names the result's `action`.
+Emitted by `iterate`, the default `pr-shepherd [PR]`, and the aggregate commands once a report was fetched. The code names the result's `action`.
 
 | Code | Action          | Meaning                                                              | Terminal? |
 | ---- | --------------- | -------------------------------------------------------------------- | --------- |
@@ -50,13 +40,23 @@ Emitted by `iterate` and the default `pr-shepherd [PR]` once a report was fetche
 | 15   | `merge`         | Run the emitted merge or merge-queue command                         | No        |
 | 16   | `shepherd`      | Run the listed one-PR sessions, then recheck the stack               | No        |
 
-- **`wait` and `ready` (10) are not errors and not a signal to give up.** `wait` means nothing is actionable right now, including when `poll --timeout` gives up mid-wait and prints the last `wait` tick. `ready` means the PR is clean with `remainingSeconds` of ready-delay left; `--until-terminal` returns it instead of sleeping through the countdown. A `set -e` script that asks "is the PR done?" should treat 10 like 12/13/16: not finished. Only `0` is a successful terminal state.
+- **`wait` and `ready` (10) are not errors and not a signal to give up.** `wait` means nothing is actionable right now, including when `poll --timeout` gives up mid-wait and prints the last `wait` tick. `ready` means the PR is clean with `remainingSeconds` of ready-delay left; `--until-terminal` returns it instead of sleeping through the countdown. A script that asks "is the PR done?" should treat 10 like 12/13/16: not finished. Only `0` is a successful terminal state.
 - `mark_ready` (11) is non-terminal. `pr-shepherd [PR]` stops on it by default; `--until-terminal` keeps polling through it.
 - `triage` (12) is always non-terminal: complete the printed work, then repeat the same CLI command (or schedule another MCP `iterate` tick).
 - `shepherd` (16) is stack-level and non-terminal: complete the listed one-PR sessions and rerun the same `stack` command. A mixed stack may surface human blockers on this tick; it returns `escalate` only once no shepherdable session remains.
 - `escalate` (13) is the only human handoff.
 
-**Aggregate commands.** Explicit multi-PR polling returns the highest-priority row outcome, in this order: `escalate`, `triage`, `merge`, `mark_ready`, `wait`, closed-only `cancel`, then successful `cancel`. Native `stack` returns `shepherd` (16) for autonomous one-PR work, `wait` (10) for queue progress, `cancel` (0) when ready layers are complete, when only clean drafts remain under disabled auto mark-ready (row reason `draft-auto-mark-ready-disabled`), or when all layers merged, and `escalate` (13) only when a human decision remains with no autonomous one-PR work. The full row list prints regardless of the aggregate action.
+**Aggregate commands.** Explicit multi-PR polling returns the highest-priority row outcome, in this order: `escalate`, `triage`, `merge`, `mark_ready`, `wait`, closed-only `cancel`, then successful `cancel`. Native `stack` maps its `nextAction` directly:
+
+| Stack `nextAction` | Exit | When                                                                                                                                                                                    |
+| ------------------ | ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shepherd`         | 16   | Autonomous one-PR work remains                                                                                                                                                          |
+| `wait`             | 10   | Queue progress                                                                                                                                                                          |
+| `merge`            | 15   | A ready prefix can merge                                                                                                                                                                |
+| `cancel`           | 0    | Ready layers are complete, only clean drafts remain under disabled auto mark-ready (row reason `draft-auto-mark-ready-disabled`), or all layers merged. Any closed layer makes it `14`. |
+| `escalate`         | 13   | A human decision remains with no autonomous one-PR work                                                                                                                                 |
+
+The full row list prints regardless of the aggregate action.
 
 ## 64–78 — shepherd failed (`sysexits.h`)
 
@@ -84,7 +84,7 @@ Standard BSD `sysexits.h` codes (`/usr/include/sysexits.h`), uniform across ever
 | Explicit `--transport graphql` (or `github.transport: graphql`) inside a Claude Code cloud session | 77   | The proxy answers every GraphQL request with 403 `GitHub GraphQL is not available from Claude Code sessions`. Rerun with `--transport rest` or `--transport auto`; there is no token to fix. `auto` (the default) switches to REST on that refusal. |
 | `apply review` with one or more failed operations                                                  | 69   | `75` when the result reports a rate-limit stop. The complete result still prints.                                                                                                                                                                   |
 
-`apply`, `suggest`, and `admin` commands never emit 0/10–19 PR-state codes — those are specific to `IterateResult`. They exit `0` on success and a `sysexits.h` code on failure; each command's `--help` lists the codes it can realistically hit.
+`suggest` and `admin` commands never emit 10–19 PR-state codes. They exit `0` on success and a `sysexits.h` code on failure; each command's `--help` lists the codes it can realistically hit. `apply merge` reports its status: `pending` exits `10`; `failed` exits `75` when `uncertain`, else `69`; any other status exits `0`.
 
 ### How GitHub errors are classified
 
@@ -96,13 +96,12 @@ Standard BSD `sysexits.h` codes (`/usr/include/sysexits.h`), uniform across ever
 
 A malformed GraphQL response (wrong shape, a null node where one is required) is neither a permission nor a precondition problem; those call sites pass `exitCodeOverride: EXIT.SOFTWARE` (70).
 
-**GraphQL engine crashes** arrive at HTTP 200 with `data: null` and `Something went wrong while executing your query … Please include <id> when reporting this issue.`, sometimes with `errors[].type` or `errors[].extensions.code` set to `INTERNAL` (checked independently — a nonempty non-`INTERNAL` `type` does not hide `extensions.code`). Retrying the same query often succeeds, so they map to `75`.
+**GraphQL engine crashes** arrive at HTTP 200 with `data: null` and `Something went wrong while executing your query … Please include <id> when reporting this issue.`, sometimes with `errors[].type` or `errors[].extensions.code` set to `INTERNAL` (checked independently). Retrying the same query often succeeds, so they map to `75`.
 
 - The GraphQL client retries read operations twice (500ms, then 1500ms) before surfacing the failure. The same retry covers `Resource limits for this query exceeded` (message, `type`, or `extensions.code` `RESOURCE_LIMITS_EXCEEDED`), even with partial `data`.
 - A `stack` summary that still hits the resource limit halves `entries(first:)` down to 1 and pages with `after`; a failing one-entry page surfaces `75` with GitHub's message.
-- Mutations are never retried: an INTERNAL or resource-limit error after GitHub applied a write (`addPullRequestReviewThreadReply`, mark-ready) would duplicate the side effect.
+- Mutations are never retried: a retry after GitHub applied a write (`addPullRequestReviewThreadReply`, mark-ready) would duplicate the side effect.
 - A response that also carries `Retry-After` or an exhausted rate limit skips the short delays and surfaces `75` immediately.
-- The GraphQL layer keeps `type` and `extensions` on `graphqlErrors` so classification can use them.
 
 ## `--help` / `-h`
 
@@ -110,11 +109,12 @@ Every subcommand's `--help`/`-h` short-circuits before any I/O and exits `0`. Se
 
 ## Where this is implemented
 
-| Symbol                            | File                    | Role                                                                                                                                                                                                  |
-| --------------------------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `EXIT`                            | `src/exit-codes.mts`    | The constant map of every code above.                                                                                                                                                                 |
-| `ShepherdError`                   | `src/exit-codes.mts`    | `Error` subclass that carries its own exit code.                                                                                                                                                      |
-| `iterateResultToExitCode(result)` | `src/exit-codes.mts`    | Maps an `IterateResult` (`action`, plus `reason` for `cancel`) to 0 or 10–19. Called from `src/cli/iterate-emitter.mts`, which backs `iterate` and `pr-shepherd [PR]`.                                |
-| `applyReviewResultToExitCode`     | `src/exit-codes.mts`    | `apply review`: `77` on a session refusal, `75`/`69` on errors, else `0`.                                                                                                                             |
-| `errorToExitCode(err)`            | `src/exit-codes.mts`    | A thrown `ShepherdError`'s code, or `EX_SOFTWARE` (70). Called from the top-level `.catch()` in `src/index.mts` and handlers that report a caught error directly (`admin log-file`, `apply journal`). |
-| `GitHubRequestError`              | `src/github/errors.mts` | Extends `ShepherdError`; classifies itself from HTTP status, rate-limit headers, and `Retry-After`, so every GraphQL and REST call site is classified without special-casing.                         |
+| Symbol                            | File                               | Role                                                                                                                                                                                                  |
+| --------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EXIT`                            | `src/exit-codes.mts`               | The constant map of every code above.                                                                                                                                                                 |
+| `ShepherdError`                   | `src/exit-codes.mts`               | `Error` subclass that carries its own exit code.                                                                                                                                                      |
+| `iterateResultToExitCode(result)` | `src/exit-codes.mts`               | Maps an `IterateResult` (`action`, plus `reason` for `cancel`) to 0 or 10–15. Called from `src/cli/iterate-emitter.mts`, which backs `iterate` and `pr-shepherd [PR]`.                                |
+| `pollSummaryExitCode(result)`     | `src/cli/poll-summary-emitter.mts` | Maps a `PollSummaryResult` (`nextAction` for `stack`, else the highest-priority row) to 0 or 10–16.                                                                                                   |
+| `applyReviewResultToExitCode`     | `src/exit-codes.mts`               | `apply review`: `77` on a session refusal, `75`/`69` on errors, else `0`.                                                                                                                             |
+| `errorToExitCode(err)`            | `src/exit-codes.mts`               | A thrown `ShepherdError`'s code, or `EX_SOFTWARE` (70). Called from the top-level `.catch()` in `src/index.mts` and handlers that report a caught error directly (`admin log-file`, `apply journal`). |
+| `GitHubRequestError`              | `src/github/errors.mts`            | Extends `ShepherdError`; classifies itself from HTTP status, rate-limit headers, and `Retry-After`, so every GraphQL and REST call site is classified without special-casing.                         |

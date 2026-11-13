@@ -59,7 +59,7 @@ const patches = await shepherd.suggest({
 | `getJournal({ pr })`           | MCP `get_journal`                        |
 | `suggest({ pr, suggestions })` | MCP `suggest`                            |
 
-`transport` (`auto`, `graphql`, `rest`) is the same choice as the CLI `--transport` option and the [`github.transport`](configuration.md#github-api-transport) key; the MCP server accepts the equivalent option. In `auto`, Claude Code cloud sessions start with REST and other environments start with GraphQL and use the documented fallback triggers. REST fields or operations that are unavailable stay explicit unknowns or surface as unsupported outcomes.
+`transport` (`auto`, `graphql`, `rest`) is the same choice as the CLI `--transport` option and the [`github.transport`](configuration.md#github-api-transport) key; the MCP server accepts the equivalent option. `auto` and the fallback triggers are in [github-api.md](github-api.md#transport-selection).
 
 ### PR references and `cwd`
 
@@ -72,11 +72,11 @@ const patches = await shepherd.suggest({
 
 Every call runs one tick. A singular call returns the raw `IterateResult`, which carries `nextCheck { at, inSeconds, reason }` when another tick is meaningful ([cloud.md](cloud.md#nextcheck)).
 
-Alternatively, pass a non-empty `prs` set. Every reference must resolve to one repository. An aggregate call runs one compact summary tick and returns `PollSummaryResult`. It does not keep ready-delay state or emit rebase/push commands, and its only GitHub mutations (with their seen markers) are rule-driven [classification auto-resolve](actions.md#classification-auto-resolve), reported per row as `ruleAutoResolve`. The caller owns recurrence and follows the returned instructions.
+A non-empty `prs` set runs one compact summary tick instead and returns `PollSummaryResult`. Every reference must resolve to one repository. It keeps no ready-delay state and emits no rebase/push commands. Its only GitHub mutations (with their seen markers) are rule-driven [classification auto-resolve](actions.md#classification-auto-resolve), reported per row as `ruleAutoResolve`. The caller owns recurrence.
 
 ### `stack`
 
-`stack({ pr })` takes the anchor PR of a native GitHub stack plus the same tick options as `iterate`, runs one aggregate tick, and returns `PollSummaryResult` with the same guarantees (rule-driven auto-resolve is the only mutation) and `nextCheck` rule as an aggregate `iterate`.
+`stack({ pr })` takes the anchor PR of a native GitHub stack plus the same tick options as `iterate`, runs one aggregate tick, and returns `PollSummaryResult` with the same guarantees and `nextCheck` rule as an aggregate `iterate`.
 
 | Native-stack action | When                                                                                                                                                                                                       |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -111,7 +111,7 @@ A merge result is `{ pr, repo, status, details, uncertain? }`:
 | `details`   | May include `message`, `uuid`, `expected_head_sha`, `merge_action`, `merge_method`, `bypass_rules`, merged `sha`. |
 | `uncertain` | `uncertain: true` marks an outcome that needs reconciliation before another request.                              |
 
-The CLI prints the same result as text or JSON. Rerunning the same request resumes its persisted UUID without resubmitting, and returns the recorded result rather than enqueueing again.
+The CLI prints the same result as text or JSON. Rerunning the same request resumes its persisted UUID and returns the recorded result; it never submits twice.
 
 | Prior outcome                                      | Treatment                                                                                  |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------ |
@@ -121,7 +121,7 @@ The CLI prints the same result as text or JSON. Rerunning the same request resum
 | HTTP `400`/`409` without the async result envelope | Definite failure.                                                                          |
 | Malformed successful response                      | Uncertain — GitHub may have accepted it.                                                   |
 
-REST cannot verify merge-queue removal history, so automatic same-head queue recovery is unsupported and never emitted as a recovery command. Interrupted local replacements resume their persisted intent; a submission with an unknown outcome is never repeated.
+REST cannot verify merge-queue removal history, so automatic same-head queue recovery is unsupported and never emitted. Interrupted local replacements resume their persisted intent.
 
 Native-stack merges also accept `expectedStack: { number, baseRefName, prefix }`:
 
@@ -141,11 +141,11 @@ On REST, a review mutation GitHub denies (403 or 404) is listed in `deniedIds`. 
 
 A proxy session refusal stops the current review batch and every later `apply` operation. The review result keeps confirmed successes, carries the proxy message in `sessionRefusal`, and lists pending IDs in `unrepliedThreads`, `unresolvedThreads`, `unminimizedComments`, and `undismissedReviews` when nonempty. Its `instructions` tell the caller to repair session repository access and retry only those IDs. No GitHub-denied marker is persisted. CLI text/JSON and MCP Markdown/structured output carry the same partial result; the CLI exits `77`.
 
-Retrying an uncertain GraphQL reply reconciles a fresh complete transcript against captured pre-write evidence. An exact confirmed reply is adopted without resubmission and survives later batch failures. Unconfirmed intents, including those without pre-write evidence, get targeted marker-file recovery instructions; see [uncertain reply recovery](comments.md#recovering-an-uncertain-reply).
+Retrying an uncertain GraphQL reply reconciles a fresh transcript against pre-write evidence; see [uncertain reply recovery](comments.md#recovering-an-uncertain-reply).
 
 ### `getJournal`
 
-Fetches one PR body through the selected transport and returns the same result as `extractShepherdJournal(body)`, without exposing the body or PR node ID. Accepts a qualified reference or a numeric PR in the checkout repository.
+Fetches one PR body through the selected transport and returns the same result as `extractShepherdJournal(body)`, without exposing the body or PR node ID.
 
 | Journal   | Result                        |
 | --------- | ----------------------------- |

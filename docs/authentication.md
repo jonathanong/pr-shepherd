@@ -71,10 +71,8 @@ Token scope does not prove the viewer may perform an action.
 
 A proxy session refusal differs from a GitHub permission denial. Responses naming `not enabled for this session`, `sessions are bound`, or an Anthropic documentation URL stop review mutations with exit `77` and keep the proxy's message. They do not mark the item denied, so a retry after access is repaired works without editing the comment. A refusal during mark-ready uses `transport-unsupported` and quotes the message. Follow the proxy's repository-access instructions; when it asks for API or write access, call `add_repo` with `access: "push"`.
 
-Cloud VM rebuilds can erase the default temp state directory, including pending reply and merge receipts. Set `PR_SHEPHERD_STATE_DIR` to persistent storage when available ([cloud.md](cloud.md#durable-state)).
+State directory durability in cloud sessions: [cloud.md](cloud.md#durable-state).
 
 ## Permission failures
 
-Missing access usually shows as `403 Resource not accessible by personal access token`. Read failures are fatal, because partial PR, review, or check data could drive an unsafe transition: `iterate` and `pr-shepherd [PR]` exit `77` (`EX_NOPERM`) instead of emitting an action from an incomplete snapshot. The recognized Claude Code GraphQL-blocked response is a transport switch, not a permission failure; a secondary rate limit exits `75` (`EX_TEMPFAIL`) without switching. See [exit-codes.md](exit-codes.md).
-
-To fix: read the error's GraphQL path to find the field, update the token permission or repository selection, and retry. `pr-shepherd admin log-file` locates the request log.
+Missing access usually shows as `403 Resource not accessible by personal access token`. Read failures are fatal, because partial PR, review, or check data could drive an unsafe transition: `iterate` and `pr-shepherd [PR]` exit `77` (`EX_NOPERM`) instead of emitting an action from an incomplete snapshot. The recognized Claude Code GraphQL-blocked response is a transport switch, not a permission failure; a secondary rate limit exits `75` (`EX_TEMPFAIL`) without switching. See [exit-codes.md](exit-codes.md) and [debugging.md](debugging.md#resource-not-accessible-by-personal-access-token) for the fix.

@@ -2,7 +2,7 @@
 
 [← README](../README.md) | [context.md](context.md)
 
-How Shepherd classifies CI checks and what failure context it surfaces to the agent. For readers of iterate's checks sections and contributors changing CI logic. Shepherd surfaces failures and log excerpts; it does not decide rerun versus code fix.
+How Shepherd classifies CI checks and what failure context it surfaces. For readers of iterate's checks sections and contributors changing CI logic. Shepherd surfaces failures and log excerpts. It does not decide between a rerun and a code fix.
 
 ## Classification pipeline
 
@@ -16,14 +16,14 @@ flowchart LR
 
 ### Stage 0: Supplement startup failures (`checks/triage.mts`)
 
-A workflow run can end with `conclusion: startup_failure` before it creates any job or check-run context, so it may be missing from GraphQL `statusCheckRollup`. The batch query reads `commit.checkSuites` and merges suites whose `conclusion` is `STARTUP_FAILURE` into the check list (`checks/startup-failures.mts`).
+A workflow run can end with `conclusion: startup_failure` before it creates any job or check-run context, so GraphQL `statusCheckRollup` may omit it. The batch query reads `commit.checkSuites` and merges suites whose `conclusion` is `STARTUP_FAILURE` into the check list (`checks/startup-failures.mts`).
 
 REST `GET /repos/{owner}/{repo}/actions/runs?head_sha=<sha>&status=startup_failure` runs only when that CheckSuite page is missing or truncated (`hasNextPage`):
 
 - The endpoint is repository-wide for the SHA, so runs are kept only when the REST `pull_requests` association includes this PR number and head SHA.
 - Each run becomes a `CheckRun` with `conclusion: "STARTUP_FAILURE"`, the run ID, run URL, raw event, workflow name, and `display_title` as `summary`.
 - A run ID already in the GraphQL list is updated in place, not duplicated.
-- The supplement is best-effort: a failed request logs a warning and keeps the GraphQL data. A secondary rate limit aborts the tick with exit 75 instead ([graphql.md](graphql.md#startup-failure-checksuites-graphql--actions-rest-fallback)).
+- The supplement is best-effort: a failed request logs a warning and keeps the GraphQL data. A secondary rate limit aborts the tick with exit 75 ([graphql.md](graphql.md#startup-failure-checksuites-graphql--actions-rest-fallback)).
 
 ### Stage 1: Classify (`checks/classify.mts`)
 
@@ -41,13 +41,13 @@ Each check gets one `CheckCategory`. Rules apply in this order; the first match 
 
 ### Ignore/protection precedence
 
-`checks.ignore` matches the raw check name (`CheckRun.name` or `StatusContext.context`), case-insensitively, and removes matches from the CI verdict. The legacy cancellation-named `checks.never-ignore` takes precedence when it matches the workflow name or check name of any check in that Actions run: the run's checks stay visible and blocking. Shepherd never cancels workflow runs.
+`checks.ignore` matches the raw check name (`CheckRun.name` or `StatusContext.context`), case-insensitively, and removes matches from the CI verdict. `checks.never-ignore` wins when it matches the workflow name or check name of any check in that Actions run: the run's checks stay visible and blocking. Shepherd never cancels workflow runs.
 
 `checks.never-ignore` does not bypass the event filter. A protected workflow triggered by `workflow_dispatch`, `push`, or another non-PR event counts toward readiness only if that event is in `checks.ci-trigger-events`.
 
 ### Event filter
 
-Only checks triggered by `checks.ci-trigger-events` (default `pull_request`, `pull_request_target`) count toward the PR-head verdict; `push`, `schedule`, `merge_group`, `workflow_dispatch`, and anything else are `filtered`. When a PR is in a merge queue, or was just removed, Shepherd separately reads the synthetic queue commit and accepts `merge_group` checks for that commit only. Queue checks carry `scope: "merge_group"` and `commitOid` so they are not confused with PR-head checks.
+Only checks triggered by `checks.ci-trigger-events` (default `pull_request`, `pull_request_target`) count toward the PR-head verdict. `push`, `schedule`, `merge_group`, `workflow_dispatch`, and any other event are `filtered`. When a PR is in a merge queue, or was just removed, Shepherd separately reads the synthetic queue commit and accepts `merge_group` checks for that commit only. Queue checks carry `scope: "merge_group"` and `commitOid`, so they stay distinct from PR-head checks.
 
 Filtered checks appear in `report.checks.filtered` and `filteredNames` and never block READY. `blockedByFilteredCheck` is set when the merge state is `BLOCKED` and the only failing checks are filtered; the reporter shows it as a hint.
 
@@ -62,7 +62,7 @@ Checks are grouped by workflow: the Actions workflow `databaseId` (`workflowId`)
 | Higher run ID | A check in the same workflow, event, scope, and commit has a strictly greater numeric `runId`                                                                                                                                                                                                                                                                                                                   |
 | Later success | A completed `SUCCESS` check with the same exact name, stable workflow ID, non-null event, scope, and commit; a distinct, lower numeric `runId`; finite positive timestamps; its start and completion both strictly later than the cancelled check's, and its own completion at or after its start. A cancelled wrapper may report completion before start; both of its recorded boundaries must still be beaten |
 
-The later-success rule covers duplicated triggers whose run IDs were allocated out of start order. It proves only the observed run order in the loaded same-commit context, not that both events used the same PR base.
+The later-success rule covers duplicated triggers whose run IDs were allocated out of start order. It proves only the observed run order on that commit, not that both events used the same PR base.
 
 Limits:
 
@@ -79,9 +79,9 @@ When every check is filtered or skipped (for example a docs-only PR that trigger
 
 ### Unreported required checks
 
-A required status context with no check run and no status context at all is a different gap: the other checks can be green (`allPassed` stays true) and the missing names are not rows in the rollup. Shepherd loads the required contexts from the merge target. For a native stack that is the stack trunk (`stack.baseRefName`), the rules GitHub applies to every layer, not the upper layer's parent branch. The newest check or status of a name counts: a later success supersedes an older cancelled run.
+A required status context with no check run and no status context is a different gap. The other checks can be green (`allPassed` stays true) and the missing names are not rollup rows. Shepherd loads the required contexts from the merge target. For a native stack that is the stack trunk (`stack.baseRefName`), whose rules GitHub applies to every layer, not the upper layer's parent branch. The newest check or status of a name counts: a later success supersedes an older cancelled run.
 
-Merged lower layers do not block this lookup when the lowest open PR still targets its merged parent's branch. One-PR checks verify that every lower layer merged, then compare the trunk with the lowest open layer's head from the validated stack order; closed or unknown lower states cannot designate an open child as the bottom. Aggregate summaries reuse the trunk's rules from a retained trunk-based member (merged members included) or fetch the trunk ref directly, never substituting the merged parent's rules.
+Merged lower layers do not block this lookup when the lowest open PR still targets its merged parent's branch. One-PR checks verify that every lower layer merged, then compare the trunk with the lowest open layer's head from the validated stack order. Closed or unknown lower states cannot designate an open child as the bottom. Aggregate summaries reuse the trunk's rules from a retained trunk-based member (merged members included) or fetch the trunk ref directly. They never use the merged parent's rules.
 
 | Situation                                                                                      | Result                                                                                                                                                                                                                                                            |
 | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -91,7 +91,7 @@ Merged lower layers do not block this lookup when the lowest open PR still targe
 | Branch current, contexts still missing                                                         | Shepherd instructs the caller to close and reopen the PR once for that head (`gh pr close` then `gh pr reopen`) and to investigate why workflows did not start. Records head and context set in `ci-retrigger.json`; the marker does not verify the caller ran it |
 | Same head on the next tick, still missing                                                      | `ESCALATE` with `required-checks-unreported`                                                                                                                                                                                                                      |
 
-The instruction says no CI checks are running and names the required checks that have not passed. To decide "behind", a non-stack PR loads `baseRef.compare(headRef).behindBy` using the head commit OID (so a fork branch name is not resolved in the base repository). A native-stack layer compares the stack trunk against the bottom open layer's head. Both compares run only while a required check is unreported, including when `mergeStateStatus` is `BLOCKED` for another reason, and are cached in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/` keyed on the live tip (`baseRef.target.oid` from `BatchPr`, or the trunk tip) and the head, so they rerun only when one moves. Being behind is not its own action once required checks have reported.
+The instruction says no CI checks are running and names the required checks that have not passed. To decide "behind", a non-stack PR loads `baseRef.compare(headRef).behindBy` with the head commit OID, so a fork branch name is never resolved in the base repository. A native-stack layer compares the stack trunk against the bottom open layer's head. Both compares run only while a required check is unreported, even when `mergeStateStatus` is `BLOCKED` for another reason. They are cached in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/`, keyed on the live tip (`baseRef.target.oid` from `BatchPr`, or the trunk tip) and the head, so they rerun only when one moves. Once required checks have reported, being behind is not its own action.
 
 Output, each field omitted when empty:
 
@@ -140,7 +140,7 @@ By conclusion:
 | `STARTUP_FAILURE` | `run_attempt` from the workflow-runs response; no jobs or logs calls; may carry `summary` | `[conclusion: STARTUP_FAILURE]` |
 | Other failures    | Jobs, `failedStep`, `logExcerpt`, `relatedJobs`                                           | none                            |
 
-Ordinary failures use only the bounded evidence Shepherd includes. A later failed attempt never gets a second rerun command, but a nonblank log excerpt still makes it autonomous `TRIAGE` investigation work. When a check has neither included evidence nor an authorized first-attempt rerun, Shepherd lets other autonomous work finish under `TRIAGE` (including refreshing a behind or conflicting branch after a later attempt) and returns `ESCALATE` only if that check is the last blocker with no autonomous path left.
+Ordinary failures use only the bounded evidence Shepherd includes. A later failed attempt never gets a second rerun command, but a nonblank log excerpt still makes it autonomous `TRIAGE` investigation work. When a check has neither included evidence nor an authorized first-attempt rerun, other autonomous work finishes under `TRIAGE` first (including refreshing a behind or conflicting branch after a later attempt). Shepherd returns `ESCALATE` only if that check is the last blocker with no autonomous path left ([`check-follow-up-unavailable`](escalations.md#check-follow-up-unavailable)).
 
 ### Annotations
 

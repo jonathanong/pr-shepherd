@@ -2,7 +2,7 @@
 
 [← docs index](README.md) | [README](../README.md)
 
-What Shepherd does, the workflow it assumes, and what it does not do. The outcomes and their evidence are on the [README](../README.md#outcomes). Edge cases are listed in [handled-cases.md](handled-cases.md).
+What Shepherd does, the workflow it assumes, and what it does not do. Outcomes and evidence: [README](../README.md#outcomes). Edge cases: [handled-cases.md](handled-cases.md).
 
 ## Context gathered
 
@@ -31,7 +31,7 @@ Log excerpts are omitted for `CANCELLED` and `STARTUP_FAILURE`. The full field i
 | Shepherd Journal               | Idempotent decision log in the PR body, with a pure extraction API                                                                                                                                            | [api.md](api.md)                                             |
 | Exit codes                     | `0` and `10`–`16` for PR state; `64`–`78` for command and GitHub failures                                                                                                                                     | [exit-codes.md](exit-codes.md)                               |
 
-Interfaces: the MCP tools `iterate`, `apply`, `suggest`, `extract_journal`, `get_journal`, and `playbook` ([mcp.md](mcp.md)), and the CLI `pr-shepherd [PR]` and `pr-shepherd iterate [PR]` ([cli-usage.md](cli-usage.md)).
+Interfaces: the MCP tools `iterate`, `stack`, `apply`, `suggest`, `extract_journal`, `get_journal`, and `playbook` ([mcp.md](mcp.md)), and the CLI `pr-shepherd [PR]` and `pr-shepherd iterate [PR]` ([cli-usage.md](cli-usage.md)).
 
 ## Configuration
 
@@ -50,7 +50,7 @@ Interfaces: the MCP tools `iterate`, `apply`, `suggest`, `extract_journal`, `get
 Shepherd works best on PRs that use required status checks and conversation resolution.
 
 - Push access to the PR head branch is a usage precondition. GitHub viewer fields do not create a separate push handoff.
-- The CLI never mutates git. It prints commit and push steps for the agent.
+- The CLI never mutates git. It prints commit and push steps for the agent, and never merges or updates branches itself.
 - Every thread, comment, and review summary is surfaced at least once, even when it is already outdated, resolved, or minimized. Edited items re-surface. The exception is a `COMMENTED` review minimized before the first tick, which is not fetched.
 - Unmarked bot and other non-human threads, and the viewer's own threads, are replied to and resolved. Other humans' threads are reply-only unless `iterate.resolve-other-human-threads` is `outdated` or `always`. Human items are never minimized. See [conversation-resolution.md](conversation-resolution.md).
 - Shepherd recognizes its own reply only by a leading `<!-- pr-shepherd -->` marker. A marked thread is resolve-only on retry.
@@ -63,9 +63,8 @@ Shepherd works best on PRs that use required status checks and conversation reso
 ## Not supported
 
 - No long-running daemon. MCP clients call `iterate` again; the shell poll is bounded.
-- No merging or branch updates by Shepherd itself, and no continuous rebasing.
+- No continuous rebasing.
 - No edits to the working tree. Suggestion patches are returned, not applied.
 - No judgment of which comments are actionable, and no rerun-versus-fix decision for CI. The agent decides. Only configured `classify` rules suppress matching noise.
 - No automatic edits for threads without a file location.
-- Already-minimized `COMMENTED` reviews are not fetched.
 - GitHub only. No GitLab, Bitbucket, or Azure DevOps.

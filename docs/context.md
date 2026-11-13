@@ -57,13 +57,11 @@ Do not infer “must wait for an approval” from `reviewDecision`. `REVIEW_REQU
 | First-look / edited / outdated / resolved / minimized items (seen-marker gate)                             | [comments.md](comments.md#first-look-items-comment-visibility-invariant) |
 | `authorType` (`User` / `Bot` / `Unknown`), raw GitHub `authorAssociation`, and true-only `viewerDidAuthor` | [comments.md](comments.md#trust-and-author-provenance)                   |
 
-Thread handling (full matrix in [conversation-resolution.md](conversation-resolution.md)):
+Thread handling is a matrix of author and thread state ([conversation-resolution.md](conversation-resolution.md)). In short:
 
-- Unmarked bot and other non-human threads, and the viewer's own threads, are replied to and resolved.
-- Unmarked other-human threads are reply-only unless `iterate.resolve-other-human-threads` is `outdated` or `always`.
-- A leading `<!-- pr-shepherd -->` marker on the latest comment identifies an automated reply regardless of author, so a marked thread is resolve-only on retry.
-- `resolutionOnlyThreads` therefore holds unresolved outdated or minimized threads and marked retry threads.
-- Non-human threads can be resolved, and eligible non-human comments and summaries can be minimized. Human items are never minimized. Already-minimized `COMMENTED` reviews are not fetched, so their bodies never enter the seen-marker gate.
+- Bot, other non-human, and viewer-authored threads are replied to and resolved. Other humans' threads are reply-only unless `iterate.resolve-other-human-threads` is `outdated` or `always`.
+- A leading `<!-- pr-shepherd -->` marker on the latest comment identifies an automated reply regardless of author, so a marked thread is resolve-only on retry. `resolutionOnlyThreads` holds unresolved outdated or minimized threads and marked retry threads.
+- Eligible non-human comments and summaries can be minimized. Human items never are. Already-minimized `COMMENTED` reviews are not fetched, so their bodies never enter the seen-marker gate.
 
 ## CI context
 

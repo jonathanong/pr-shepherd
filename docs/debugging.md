@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-Symptoms, causes, and fixes for common pr-shepherd failures, plus where to find logs and local state. For users and contributors diagnosing a misbehaving loop.
+Symptoms, causes, and fixes for common pr-shepherd failures, plus where to find logs and local state. For anyone diagnosing a misbehaving loop.
 
 ## Where to look
 
@@ -43,7 +43,7 @@ Shepherd does not turn this into `wait` or a retry: incomplete GraphQL read data
 
 **Symptom:** A request fails with `GitHub request timed out after 60s: GET https://api.github.com/...`.
 
-**Cause:** Every GitHub REST and GraphQL request, over either transport and through a configured proxy, has a fixed 60s deadline covering the response headers and body. Actions log downloads get 180s. Previously only undici's defaults applied (10s connect, 300s headers, 300s body), so a dead or half-open connection could stall a tick for minutes without output.
+**Cause:** Every GitHub REST and GraphQL request, over either transport and through a configured proxy, has a fixed 60s deadline covering the response headers and body. Actions log downloads get 180s.
 
 **Behavior:** A timed-out read is retried like `ECONNRESET`: twice more, after 250ms and 500ms. A timeout that persists, and any timed-out mutation, surfaces the error on stderr. The deadlines are fixed and have no config key. Check the network path or proxy if it recurs.
 
@@ -56,7 +56,7 @@ Shepherd does not turn this into `wait` or a retry: incomplete GraphQL read data
 **Fix:** Check the iterate output:
 
 ```bash
-pr-shepherd <PR> --format=json
+pr-shepherd iterate <PR> --format=json
 ```
 
 A merged PR returns for example `{"action":"cancel","pr":42,"reason":"merged"}` (`--verbose` adds `"status":"MERGED"` and `"state":"MERGED"`). If it still returns `wait`, check that `report.mergeStatus.state` is set correctly in `--verbose` JSON. If it returns `cancel` with a status other than `MERGED` or `CLOSED`, check that `runCheck` short-circuits terminal PRs (`commands/check-terminal-report.mts`) before CI and comment processing.
@@ -67,7 +67,7 @@ A merged PR returns for example `{"action":"cancel","pr":42,"reason":"merged"}` 
 
 **Cause:** GitHub is still computing the merge state.
 
-**Fix:** Wait a minute and rerun `pr-shepherd <PR> --format=json`.
+**Fix:** Wait a minute and rerun `pr-shepherd iterate <PR> --format=json`.
 
 ### "Loop fires cancel immediately"
 
@@ -81,11 +81,7 @@ A merged PR returns for example `{"action":"cancel","pr":42,"reason":"merged"}` 
 pr-shepherd admin clean current --dry-run
 ```
 
-Remove the `ready-since.txt` path it prints, for example:
-
-```bash
-rm /var/folders/ab/xyz/T/pr-shepherd-state/acme/myrepo/42/ready-since.txt
-```
+Remove the `ready-since.txt` path it prints.
 
 ### "First-look items keep coming back during debounce"
 
@@ -126,7 +122,9 @@ If `state` is `open`, `mergeable` is `null`, and `mergeable_state` stays `unknow
 
 ## Replay an iteration manually
 
-| Output             | Command                          |
-| ------------------ | -------------------------------- |
-| JSON               | `pr-shepherd <PR> --format=json` |
-| Markdown, one tick | `pr-shepherd iterate <PR>`       |
+| Output             | Command                                  |
+| ------------------ | ---------------------------------------- |
+| JSON, one tick     | `pr-shepherd iterate <PR> --format=json` |
+| Markdown, one tick | `pr-shepherd iterate <PR>`               |
+
+`pr-shepherd <PR>` polls and sleeps between `WAIT` ticks, so it is not a replay.

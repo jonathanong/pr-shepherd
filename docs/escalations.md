@@ -1,6 +1,6 @@
 # Escalation boundary
 
-`ESCALATE` is Shepherd's only human handoff. This page is the canonical, closed list of escalation triggers (the `EscalateTrigger` union in `src/types/escalate.mts`) and their exact predicates, for maintainers and for agents deciding what to hand to a human. Output shape is in [actions.md](actions.md#escalate).
+`ESCALATE` is Shepherd's only human handoff. This page is the canonical, closed list of escalation triggers (the `EscalateTrigger` union in `src/types/escalate.mts`) and their exact predicates, for maintainers and for agents deciding what to hand to a human. Output shape: [actions.md](actions.md#escalate).
 
 ## Triggers
 
@@ -17,11 +17,11 @@
 | `required-checks-unreported`  | Required merge-target contexts still have no check run after one close/reopen of the current head, and no Actions workflow is running.                      | Fix the workflow (path filters are the usual cause) so it emits the required contexts. |
 | `stall-state-unavailable`     | An enabled stall timeout cannot read or write its timer file.                                                                                               | Fix `PR_SHEPHERD_STATE_DIR` or its permissions, then resume.                           |
 
-Any escalation from a tick with automatically selected review mutations keeps every non-empty resolve-only and `apply review` command under `pendingReviewCommands` (Markdown: `## Pending review commands`). This includes `triage-thrash`, `base-branch-unknown`, and stall conversions. Polling still pauses; the commands stay available for human-directed recovery.
+Any escalation from a tick with automatically selected review mutations keeps every non-empty resolve-only and `apply review` command under `pendingReviewCommands` (Markdown: `## Pending review commands`). This includes `triage-thrash`, `base-branch-unknown`, and stall conversions. Polling still pauses, and the commands stay available for human-directed recovery.
 
 ## Stack-level outcomes
 
-Native-stack aggregate reconciliation (`stack`) mutates GitHub only through rule-driven [classification auto-resolve](actions.md#classification-auto-resolve).
+`stack` mutates GitHub only through rule-driven [classification auto-resolve](actions.md#classification-auto-resolve). Its outcomes:
 
 | Stack state                                                                                                                                                    | Result                                                     |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
@@ -31,7 +31,7 @@ Native-stack aggregate reconciliation (`stack`) mutates GitHub only through rule
 | Every open layer READY without `--merge`, only clean drafts with auto mark-ready disabled (row reason `draft-auto-mark-ready-disabled`), or every layer merged | `CANCEL`                                                   |
 | A human decision remains (closed or unverified topology) and no autonomous one-PR session remains                                                              | `ESCALATE`                                                 |
 
-Stack ticks can also escalate with `stall-timeout`, `stall-state-unavailable`, or `merge-method-unavailable`; see the predicates below and [actions.md](actions.md#shepherd-actions).
+Stack ticks can also escalate with `stall-timeout`, `stall-state-unavailable`, or `merge-method-unavailable`. See the predicates below and [actions.md](actions.md#shepherd-actions).
 
 ## Complete predicates
 
@@ -118,12 +118,12 @@ Failing queue CI is actionable and stays `TRIAGE`. GitHub's removal reason is a 
 
 Native-stack membership is not an escalation.
 
-1. When a one-PR `--merge` poll reaches its ready delay, it writes the layer's READY receipt and returns non-terminal `TRIAGE` with `pr-shepherd stack <PR URL> --until-terminal --merge`. This applies at every position, including position 1: `--auto` is rejected server-side on stacked PRs, and a plain `gh pr merge` fallback would land a mid-stack layer into its unmerged parent instead of the stack trunk.
+1. When a one-PR `--merge` poll reaches its ready delay, it writes the layer's READY receipt and returns non-terminal `TRIAGE` with `pr-shepherd stack <PR URL> --until-terminal --merge`. This holds at every position, including position 1. GitHub rejects `--auto` on stacked PRs, and a plain `gh pr merge` would land a mid-stack layer into its unmerged parent instead of the stack trunk.
 2. The aggregate command reconciles every open layer's READY receipt and linear ancestry and returns one of the [stack-level outcomes](#stack-level-outcomes).
 3. A clean draft is marked ready by its own session without waiting for lower layers. Closed or unverified topology is surfaced during `SHEPHERD` while another layer can proceed; otherwise it returns `ESCALATE`.
 4. With a ready prefix whose bottom open layer targets the stack base, `stack --merge` returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge <PR number> --yes` and the allowed method flag for the highest ready layer. Rerun the same command until every layer merges and it returns `CANCEL`. If the repository allows no method for that command, it returns `ESCALATE` with `merge-method-unavailable`.
 
-**Detection caveat:** GitHub's `stack` field is a public-preview API and can be absent even for a stacked PR (for example when Stacked PRs are disabled on the repository). Absence means no signal, not "not stacked". Shepherd does not infer stackedness otherwise (comparing the base to the default branch false-positives on any PR targeting a non-default branch). This is a known gap: absence only lets the ordinary merge path proceed; it does not confirm a plain `gh pr merge --auto` is safe.
+**Detection caveat:** GitHub's `stack` field is a public-preview API and can be absent even for a stacked PR (for example when Stacked PRs are disabled on the repository). Absence means no signal, not "not stacked". Shepherd does not infer stackedness otherwise, because comparing the base to the default branch false-positives on any PR targeting a non-default branch. This is a known gap: absence only lets the ordinary merge path proceed. It does not confirm that a plain `gh pr merge --auto` is safe.
 
 ### `merge-method-unavailable`
 

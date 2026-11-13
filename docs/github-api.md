@@ -70,7 +70,7 @@ The single-PR poll interval is 60s (`poll.interval-seconds`). `stack` and multi-
 | `stack` summary             | `PollStackSummary`, about 0.36 points per layer (minimum 1); the anchor's first tick reads 4 entries per page                                            | 126 requests for 10 layers without validators, 104 charged on a cold cache; 0 when unchanged (cloud also sends one unmetered `ccr` thread read per layer)                                        |
 | Detail                      | [graphql-usage.md](graphql-usage.md), [graphql.md](graphql.md#per-tick-budget)                                                                           | [rest-usage.md](rest-usage.md)                                                                                                                                                                   |
 
-On REST, a bot that edits its PR status comment in place also costs session time: each edit returns `TRIAGE` and restarts the ready delay ([rest.md](rest.md#bot-status-comment-edits)).
+On REST, a bot that edits its PR status comment in place also costs session time ([rest.md](rest.md#bot-status-comment-edits)).
 
 ## Quota warnings and cadence
 
@@ -112,8 +112,8 @@ REST branch-policy reads propagate primary and secondary throttling, `Retry-Afte
 ## Operational advice
 
 - **Isolate quota with a different identity.** The agent's GitHub MCP, Copilot, and `gh api graphql` share the GraphQL pool of their token's user. A second PAT for the same user does not isolate quota; use a GitHub App installation token or a different user ([authentication.md](authentication.md)). A dedicated PAT still helps least privilege and audit.
-- **Let a GitHub App answer the reads.** With an app in `~/.pr-shepherd/github-apps.yml`, identity-independent reads, including each tick's main `BatchPr` read, spend the installation's budget. Your token keeps a small viewer read on ticks that build a fresh snapshot, plus writes. READY-receipt reads, stack summaries and topology reads, and reads while the app's GraphQL quota is spent also stay on your token ([github-app.md](github-app.md#the-batchpr-viewer-split)).
-- **Tick on events, not a timer.** With `events.source: hook-harness`, a waiting poll sleeps until a GitHub webhook event concerns the PR, with a 5-minute fallback, so quiet PRs tick less often ([hook-harness.md](hook-harness.md)). It combines with a GitHub App.
+- **Let a GitHub App answer the reads.** Identity-independent reads, including each tick's main `BatchPr` read, then spend the installation's budget. Your token keeps writes and a few reads ([github-app.md](github-app.md#the-batchpr-viewer-split)).
+- **Tick on events, not a timer.** With `events.source: hook-harness`, a waiting poll sleeps until a GitHub webhook event concerns the PR, with a 5-minute fallback ([hook-harness.md](hook-harness.md)). It combines with a GitHub App.
 - **Always pass the PR number** (or URL / `owner/repo#N`) so Shepherd skips the branch lookup.
 - **Do not also poll** with GitHub MCP GraphQL, `gh pr checks`, or `gh pr watch`. Name incidental REST reads explicitly, for example `gh api repos/OWNER/REPO/pulls/PR`.
 - **On a `quotaWarning`**, follow `## Instructions`: keep using pr-shepherd at the printed cadence. For `--until-terminal`, pass `--interval` from the warning and omit `--timeout`. Resume full cadence after the printed reset.
