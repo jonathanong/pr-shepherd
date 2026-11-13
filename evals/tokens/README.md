@@ -645,9 +645,14 @@ token usage, never text, IDs or paths. The bench reads only that file.
 - **History is re-read every tick.** After one review round, `gh pr view
   --json comments,reviews` and the MCP readers return every bot summary and
   resolved thread again: about 8.5k tokens on #505. pr-shepherd's seen markers
-  surface each item once. This is most of the gap in the `-with-history` and
-  `mark-ready` scenarios. A state-first gh agent skips the re-read on a merged
-  PR, so `merged` is not one of them.
+  surface each item once. This is most of the gap in the `-with-history`
+  scenarios. A state-first gh agent skips the re-read on a merged PR, so
+  `merged` is not one of them.
+- **Mark-ready happens inside the wait.** Under `--until-terminal` the poll
+  marks a clean draft ready and keeps polling, so pr-shepherd spends no turn
+  on `mark-ready`. The baselines check the merge gate (`gh pr view` with four
+  fields, or one `pull_request_read` get) and then mark it ready, without
+  re-reading history: two turns.
 - **Logs are excerpted.** On the real log, pr-shepherd's excerpt is about 1.1k
   tokens. `gh … --log-failed | tail -n 200` is about 7k. MCP's default
   500-line tail is about 11k, and none of it is the failure: on this log the
@@ -678,20 +683,23 @@ The report splits each session's cost in two:
 REPORT.md's Summary prints the current split ("Fixed vs. variable"); it is
 regenerated with every run, so this page does not repeat its numbers.
 
-Within the variable cost, `stack-work` is where pr-shepherd reads more than gh:
-2,254 tokens against 1,598.
+Within the variable cost, `stack-work` is the closest row on tool tokens. At
+the modeled ratio pr-shepherd reads fewer tokens than gh there; at the
+measured characters per token it reads slightly more (REPORT.md's Scenarios
+table and Accepted structural losses have the current numbers).
 
-- **Overview:** pr-shepherd's stack overview is about 600 tokens. gh's native
-  stacks call, projected with `--jq`, is about 260.
-- **Routed layers:** each layer pr-shepherd routes gets its own one-PR tick of
-  about 450 tokens. About 250 of those are the fixed `## Instructions` block and
-  60 the post-fix commands. gh's per-layer reads are 100–250 tokens, because the
-  fixture layers each carry a single short thread.
+- **Overview:** pr-shepherd's stack overview is longer than gh's native stacks
+  call projected with `--jq`.
+- **Routed layers:** each layer pr-shepherd routes gets its own one-PR tick,
+  much of it the fixed `## Instructions` block and the post-fix commands. gh's
+  per-layer reads are short, because the fixture layers each carry a single
+  short thread.
 
-So on small layers, the per-output instruction boilerplate outweighs the
-content. pr-shepherd still costs 11% less on that row, because its commands are
-shorter (output tokens cost 5×). It pulls ahead once layers carry real review
-history, which gh re-reads and pr-shepherd shows once.
+So on small layers, the per-output instruction boilerplate is close to the
+content. pr-shepherd still costs less on that row, because it takes fewer
+turns and its commands are shorter (output tokens cost 5×). It pulls further
+ahead once layers carry real review history, which gh re-reads and
+pr-shepherd shows once.
 
 The levers, in order of size:
 
@@ -729,9 +737,10 @@ explains the main ones.
   REST snapshot is broader on purpose, and gh is the rate-limit baseline it
   targets, so the owner accepts these cells (#525).
 - **Stack token volume.** Each routed layer's first tick prints its own
-  instructions, so on small layers `stack-work` reads more tool tokens than
-  gh's terse per-layer reads. The stack session still costs less, because
-  pr-shepherd takes fewer turns (REPORT.md's Scenarios table).
+  instructions, so at the measured characters per token `stack-work` reads
+  slightly more tool tokens than gh's terse per-layer reads (an accepted
+  loss). The stack session still costs less, because pr-shepherd takes fewer
+  turns (REPORT.md's Scenarios table).
 - **Steps without history, logs or waits.** The session saving comes from a
   few steps: a failing CI log, a review tick after a bot round, marking a draft
   ready after a CI wait, and the wait itself. REPORT.md's "Realism sweep"
