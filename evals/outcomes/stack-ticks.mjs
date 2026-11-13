@@ -1,4 +1,12 @@
-// Shepherd answers for stack scenarios whose `iterate` depends on the PR asked.
+// Shared pieces of stack scenarios: fixture renumbering, and Shepherd answers
+// whose `iterate` depends on the PR asked.
+
+/** Renumbers fixture PRs (`from` → `to`) and moves the fixture to owner/repo. */
+export const renumber = (pairs) => (t) =>
+  pairs.reduce(
+    (s, [from, to]) => s.replace(new RegExp(`\\b${from}\\b`, "g"), String(to)),
+    t.replaceAll("vouchington/vouchington", "owner/repo"),
+  );
 
 /** An agent mock for \`iterate\` that answers #41 with its own tick. */
 export const iterateByPr = (stackTick, tick41) => `---

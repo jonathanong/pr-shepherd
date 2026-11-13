@@ -2,15 +2,8 @@
 // layer, rather than to act on the PR the user named.
 
 import { PR_URL } from "../lib.mjs";
-import { LAYER_41_TICK, iterateByPr } from "./stack-ticks.mjs";
+import { LAYER_41_TICK, iterateByPr, renumber } from "./stack-ticks.mjs";
 import { STEPS } from "./world.mjs";
-
-/** Renumbers fixture PRs (`from` → `to`) and moves the fixture to owner/repo. */
-const renumber = (pairs) => (t) =>
-  pairs.reduce(
-    (s, [from, to]) => s.replace(new RegExp(`\\b${from}\\b`, "g"), String(to)),
-    t.replaceAll("vouchington/vouchington", "owner/repo"),
-  );
 
 export const STACK_MORE_SCENARIOS = [
   {
