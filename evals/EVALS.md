@@ -16,7 +16,7 @@ and committed to. The headline is **Δ = plugin − gh/MCP**.
 
 ## Latest results (2026-11-12)
 
-Sonnet 5.5, opus judge, 3 runs per arm, 33 scenarios. **This is the latest run of each scenario, not one full run.** Runs date from 2026-11-12, and scenarios that failed were rerun after the fixes they prompted, so plugin scores carry selection bias. Some reruns also changed a scenario for both arms (for example, loading the repository's `AGENTS.md`). [HISTORY.md](HISTORY.md) records each run. 95% intervals are bootstrap intervals over runs.
+Sonnet 5.5, opus judge, 3 to 6 runs per arm, 33 scenarios. **This is the latest run of each scenario, not one full run.** Runs date from 2026-11-12, and scenarios that failed were rerun after the fixes they prompted, so plugin scores carry selection bias. Some reruns also changed a scenario for both arms (for example, loading the repository's `AGENTS.md`). [HISTORY.md](HISTORY.md#2026-11-12-reruns-after-the-skill-trim) records each run. 95% intervals are bootstrap intervals over runs.
 
 | Category             | Scenarios | Plugin | gh/MCP | Δ     | 95% CI         |
 | -------------------- | --------- | ------ | ------ | ----- | -------------- |

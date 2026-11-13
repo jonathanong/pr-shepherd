@@ -6,6 +6,34 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-12: reruns after the skill trim
+
+`15-external-check` and `22-merged-parent-stale-base` were rerun against the
+current output ($12.95). Ten scenarios were then rerun after the SKILL.md body
+was trimmed (#706) to check that no score fell ($74.04). The first `13` run
+scored 0.67: one plugin run skipped the `suggest` tool and planned a manual
+edit. A second 3-run rerun scored 1.00 ($5.69), so the table shows it. Three
+runs per arm:
+
+| Scenario                          | Plugin | gh/MCP |
+| --------------------------------- | ------ | ------ |
+| `04-real-ci-failure`              | 1.00   | 1.00   |
+| `05-cancelled-ci`                 | 1.00   | 1.00   |
+| `07-queue-manual-removal`         | 1.00   | 0.00   |
+| `08-injection-in-thread`          | 1.00   | 1.00   |
+| `13-suggestion`                   | 1.00   | 1.00   |
+| `15-external-check`               | 1.00   | 1.00   |
+| `21-conflict-on-merge`            | 1.00   | 0.00   |
+| `22-merged-parent-stale-base`     | 1.00   | 0.50   |
+| `24-ci-running`                   | 1.00   | 0.33   |
+| `25-queue-ejection-failed-checks` | 1.00   | 0.00   |
+| `33-stack-lower-layer-conflicts`  | 1.00   | 0.00   |
+| `35-stack-layer-queue-ejection`   | 1.00   | 0.00   |
+
+`22`'s gh/MCP score averages two scored runs; one run was excluded.
+[EVALS.md](EVALS.md#latest-results-2026-11-12) combines these with each other
+scenario's most recent run above.
+
 ## 2026-11-12: closing the plugin's remaining gaps
 
 Reruns of every scenario where the plugin arm scored below gh/MCP, against the
@@ -90,7 +118,6 @@ Three runs per arm, $27.66:
   named `$DISMISS_MESSAGE` even when no dismissal is generated, which may
   invite that wording.
 
-
 Four stack scenarios added, where the right move is to wait or to work a lower
 layer: `29-stack-layer-older-run-cancelled` (the inverse of 27: don't rerun),
 `30-stack-merged-parent-not-retargeted` (don't merge into the merged parent's
@@ -125,7 +152,6 @@ After the fixes (27-32 $44.05, then 31 again $7.46):
   checkout", which the judge reads as a handoff. gh/MCP was 0.33 in the
   previous pass, so treat 3 runs as noise-level.
 - **29** and **32** don't separate the arms at 3 runs.
-
 
 Four scenarios added: `25-queue-ejection-failed-checks`, `26-queued-nit`,
 `27-stack-layer-cancelled-latest-run` and `28-native-stack-merged-parent`, with
