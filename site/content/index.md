@@ -61,7 +61,7 @@ summary 3 passing
   CI failures with log excerpts when available, and the real merge requirements. It handles 63 GitHub edge
   cases, like a cancelled run that needs a rerun rather than a code fix.
 - [**It costs less to run**](https://github.com/jonathanong/pr-shepherd/blob/main/evals/tokens/README.md)
-  A modeled 30% lower cost per PR session than `gh` (27–35% across realistic settings), and
+  A modeled 30% lower cost per PR session than `gh` (27–33% across realistic context sizes), and
   74% lower than the GitHub MCP server, assuming a warm prompt cache.
 - [**Your agent knows what to do next**](https://github.com/jonathanong/pr-shepherd/blob/main/evals/README.md)
   Every tick ends in one action, and every action but `CANCEL` comes with numbered steps. Across 33 PR

@@ -913,6 +913,9 @@ const PR_SCENARIOS = [
         // gate before `gh pr ready`; it does not re-read the review history it
         // handled on earlier ticks. That skips any review posted during the
         // wait, which pr-shepherd would surface, so it favors the baselines.
+        // A still leaner floor runs `gh pr ready` in the same turn that
+        // `--watch` returns, with no gate read; that would put the gated
+        // single-PR session at about -27% vs. gh.
         gh: [
           {
             phase: 1,

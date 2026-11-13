@@ -6,6 +6,27 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-12: output and spend in the outcome-eval traces
+
+The token bench's realism sweep and the README cite two figures from the
+outcome-eval traces behind [EVALS.md](EVALS.md#latest-results-2026-11-12):
+each scenario's most recent run, 33 scenarios, 99 plugin runs and 94 gh/MCP
+runs, all on `claude-sonnet-5-5`. Effort was not recorded per trace; several
+runs used `low`, which limits thinking.
+
+- **Output per turn.** The `result` event's `usage.output_tokens` divided by
+  `num_turns`: 192 on the plugin arm (140,889 over 734 turns) and 196 on gh/MCP
+  (145,912 over 744). This includes thinking and the tool-call JSON a turn
+  emits, so the bench, which also charges each command's tokens, may count
+  some output twice. Streamed `assistant` messages report partial usage and
+  undercount it.
+- **Agent spend per run.** `total_cost_usd` of the agent session, which
+  excludes the judge and the scripted mock responder. Summed over each
+  scenario's mean run: plugin $2.24 vs. gh/MCP $1.91 (+17%) across all 33, and
+  $0.95 vs. $0.85 (+11%) across the 14 where both arms scored 1.00. Each
+  scenario is one fresh tick that loads the skill, so this measures a single
+  tick, not a session.
+
 ## 2026-11-12: reruns after the skill trim
 
 `15-external-check` and `22-merged-parent-stale-base` were rerun against the

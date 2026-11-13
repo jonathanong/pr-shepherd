@@ -278,11 +278,24 @@ const REALISM_VARIANTS = [
   { id: "gated", label: "gated model", model: GATED_MODEL },
   { id: "write", label: "1-hour cache write", model: { ...GATED_MODEL, cacheWriteMultiplier: 2 } },
   { id: "output", label: "+ measured output", model: { ...GATED_MODEL, ...REALISTIC } },
+  { id: "low", label: "smaller context", model: { ...REALISTIC, baseContextTokens: 40_000 } },
   { id: "central", label: "**central**", model: { ...REALISTIC, baseContextTokens: 60_000 } },
   {
     id: "conservative",
     label: "**conservative**",
     model: { ...REALISTIC, baseContextTokens: 100_000 },
+  },
+  {
+    id: "centralExpiry",
+    label: "central + one cache expiry",
+    model: { ...REALISTIC, baseContextTokens: 60_000 },
+    cacheExpiries: 1,
+  },
+  {
+    id: "conservativeExpiry",
+    label: "conservative + one cache expiry",
+    model: { ...REALISTIC, baseContextTokens: 100_000 },
+    cacheExpiries: 1,
   },
 ];
 
@@ -290,10 +303,19 @@ const REALISM_VARIANTS = [
  * Session ITE savings vs. gh and MCP with MODEL overridden, optionally without
  * some steps. A dropped step's setup loads (playbooks, MCP schemas) and their
  * carriage go with it, as in the measured-ratio sensitivity.
+ *
+ * A cache expiry (a wait past the one-hour cache lifetime) makes one request
+ * re-write the base context instead of reading it. Every arm pays the same
+ * amount: the larger context a baseline has accumulated by then is ignored,
+ * which favors the baselines.
  */
-function savingsUnder(model, drop = []) {
+function savingsUnder(model, drop = [], cacheExpiries = 0) {
   const saved = { ...MODEL };
   Object.assign(MODEL, model);
+  const expiry =
+    cacheExpiries *
+    (MODEL.cacheWriteMultiplier - MODEL.cacheReadMultiplier) *
+    MODEL.baseContextTokens;
   try {
     const exclude = new Set(drop);
     const ctx = { carry: setupCarry(exclude), eagerTokens, exclude };
@@ -303,19 +325,23 @@ function savingsUnder(model, drop = []) {
       ...Object.fromEntries(
         Object.keys(SESSIONS).map((key) => {
           const t = totals(picked.filter((r) => r.session === key && !exclude.has(r.id)));
+          const ours = t.shepherd.ite + expiry;
           return [
             key,
-            { gh: saving(t.gh.ite, t.shepherd.ite), mcp: saving(t.mcp.ite, t.shepherd.ite) },
+            { gh: saving(t.gh.ite + expiry, ours), mcp: saving(t.mcp.ite + expiry, ours) },
           ];
         }),
       ),
     };
   } finally {
+    for (const k of Object.keys(MODEL)) if (!(k in saved)) delete MODEL[k];
     Object.assign(MODEL, saved);
   }
 }
 
-const realism = Object.fromEntries(REALISM_VARIANTS.map((v) => [v.id, savingsUnder(v.model)]));
+const realism = Object.fromEntries(
+  REALISM_VARIANTS.map((v) => [v.id, savingsUnder(v.model, [], v.cacheExpiries)]),
+);
 const centralModel = REALISM_VARIANTS.find((v) => v.id === "central").model;
 // The PR session's biggest contributors to the gh gap under the central setting.
 const drivers = realism.central.rows
@@ -1102,7 +1128,7 @@ out();
 out("## Realism sweep");
 out();
 out(
-  "The gated model above is deliberately simple: a 30k-token base context, a 1.25× cache write, and output priced only for the commands each turn emits. This sweep re-scores both sessions under settings closer to a real Claude Code session, with the same scenarios and weights. Claude Code writes its prompt cache with a one-hour lifetime, priced at 2× an uncached input token. Sonnet 5.5 eval traces averaged about 190 output tokens per turn on both arms, prose and thinking included. A mid-PR session carries 40k to 100k tokens of context. The cache is still assumed warm: a wait over an hour would re-write the whole context. Each cell is pr-shepherd's change in cost (ITE) against the baseline.",
+  "The gated model above is deliberately simple: a 30k-token base context, a 1.25× cache write, and output priced only for the commands each turn emits. This sweep re-scores both sessions under settings closer to a real Claude Code session, with the same scenarios and weights. Claude Code writes its prompt cache with a one-hour lifetime, priced at 2× an uncached input token. Sonnet 5.5 outcome-eval traces averaged about 190 output tokens per turn on both arms, prose and thinking included ([HISTORY](../HISTORY.md#2026-11-12-output-and-spend-in-the-outcome-eval-traces)). A mid-PR session carries 40k to 100k tokens of context. Rows without an expiry assume a warm cache. A wait over an hour expires it, and the next request re-writes the context; the expiry rows charge every arm one re-write of the base context. Each cell is pr-shepherd's change in cost (ITE) against the baseline.",
 );
 out();
 out(

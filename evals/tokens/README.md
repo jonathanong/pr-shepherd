@@ -33,7 +33,7 @@ The savings are concentrated. Against a frugal gh agent they come from
 re-read review history, CI logs, CI and merge-queue waits, and stack merges. Against
 the GitHub MCP server they also come from polling and stack discovery, which
 MCP has no shortcut for. A single fresh read-and-reply tick against gh is a
-wash: 4% cheaper. A PR that has already merged costs 5% more to confirm than
+wash: 4% cheaper. A PR that has already merged costs 6% more to confirm than
 a state-first gh agent pays. On the GitHub rate limit, pr-shepherd spends
 fewer GraphQL points and far fewer REST requests than gh on both a single PR
 and a stack; against MCP it trades REST requests for GraphQL points. See "Where
@@ -727,7 +727,7 @@ explains the main ones.
 - **Confirming a merged PR.** A state-first gh agent runs one
   `gh pr view --json state,isDraft` and stops, about 24 tokens. pr-shepherd's
   command and one-line CANCEL are 21 tokens, but it carries the skill, so
-  `merged` costs 5% more than gh and 25% less than MCP. The owner accepts this
+  `merged` costs 6% more than gh and 25% less than MCP. The owner accepts this
   gap as the outcome of shrinking the skill (#523/#551): without the carried
   skill and playbook the step would beat gh, and deleting SKILL.md entirely
   would save only about 85 ITE.
@@ -746,7 +746,8 @@ explains the main ones.
   ready after a CI wait, and the wait itself. REPORT.md's "Realism sweep"
   drops them one at a time: without all four, pr-shepherd costs slightly more
   than gh. Single-state outcome evals agree: there the plugin arm's own spend
-  per run was about 11–17% above gh/MCP's.
+  per run was about 11–17% above gh/MCP's
+  ([HISTORY](../HISTORY.md#2026-11-12-output-and-spend-in-the-outcome-eval-traces)).
 
 ## What this does not measure
 

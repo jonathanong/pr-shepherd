@@ -357,15 +357,18 @@ An idle hour, while nothing changes:
 
 ## Realism sweep
 
-The gated model above is deliberately simple: a 30k-token base context, a 1.25× cache write, and output priced only for the commands each turn emits. This sweep re-scores both sessions under settings closer to a real Claude Code session, with the same scenarios and weights. Claude Code writes its prompt cache with a one-hour lifetime, priced at 2× an uncached input token. Sonnet 5.5 eval traces averaged about 190 output tokens per turn on both arms, prose and thinking included. A mid-PR session carries 40k to 100k tokens of context. The cache is still assumed warm: a wait over an hour would re-write the whole context. Each cell is pr-shepherd's change in cost (ITE) against the baseline.
+The gated model above is deliberately simple: a 30k-token base context, a 1.25× cache write, and output priced only for the commands each turn emits. This sweep re-scores both sessions under settings closer to a real Claude Code session, with the same scenarios and weights. Claude Code writes its prompt cache with a one-hour lifetime, priced at 2× an uncached input token. Sonnet 5.5 outcome-eval traces averaged about 190 output tokens per turn on both arms, prose and thinking included ([HISTORY](../HISTORY.md#2026-11-12-output-and-spend-in-the-outcome-eval-traces)). A mid-PR session carries 40k to 100k tokens of context. Rows without an expiry assume a warm cache. A wait over an hour expires it, and the next request re-writes the context; the expiry rows charge every arm one re-write of the base context. Each cell is pr-shepherd's change in cost (ITE) against the baseline.
 
 | setting | base context | cache write | output per turn | PR session vs. gh / MCP | stack session vs. gh / MCP |
 | --- | --- | --- | --- | --- | --- |
 | gated model | 30,000 | 1.25× | 0 | −34% / −75% | −43% / −62% |
 | 1-hour cache write | 30,000 | 2× | 0 | −39% / −77% | −42% / −61% |
 | + measured output | 30,000 | 2× | 190 | −35% / −76% | −41% / −61% |
+| smaller context | 40,000 | 2× | 190 | −33% / −75% | −41% / −60% |
 | **central** | 60,000 | 2× | 190 | −30% / −74% | −40% / −60% |
 | **conservative** | 100,000 | 2× | 190 | −27% / −72% | −40% / −59% |
+| central + one cache expiry | 60,000 | 2× | 190 | −19% / −61% | −20% / −36% |
+| conservative + one cache expiry | 100,000 | 2× | 190 | −16% / −57% | −19% / −34% |
 
 The PR session's saving vs. gh is concentrated in a few steps. Under the central setting, dropping its largest contributors one at a time (each step's weighted gh cost minus pr-shepherd's):
 
