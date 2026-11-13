@@ -254,6 +254,17 @@ and analyze before the temporary directories are cleaned up.
 Do not regenerate the cases while a run is in progress: generation deletes
 each case directory, including its `.replay` recordings.
 
+The runner records only the judge's votes. To see why runs failed, re-judge
+them from their kept traces:
+
+```sh
+node evals/outcomes/explain.mjs evals/results/outcomes/aggregate-result.json [slug-prefix] [--all]
+```
+
+It prints, per failed run (every run with `--all`), a fresh PASS or FAIL with
+the criterion clause that decides it. It costs one judge call per run (opus by
+default, `JUDGE_MODEL` to change) and explains a score without replacing it.
+
 Cases set `allowed_tools: [Read, Glob, Grep, Skill]`. Without it the runner
 denies the `Skill` call ("don't ask mode"), the agent falls back to the bare MCP
 tools, and the `skill-fired` grader still passes because it counts calls, not

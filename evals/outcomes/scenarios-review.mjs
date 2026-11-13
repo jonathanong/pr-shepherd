@@ -2,15 +2,12 @@
 // from; `fixture` is the Shepherd tick for the same state.
 
 import { PR_URL } from "../lib.mjs";
+import { STEPS } from "./world.mjs";
 
 const PR = `PR #42 "Add pagination" in owner/repo: open, not a draft, base \`main\`, head
 \`feature\` at commit \`c0ffee1\`, author \`you\`. No merge queue. Branch protection
 on \`main\`: no required approvals, conversations must be resolved before merge.
 Changed files: \`src/paginate.ts\`, \`src/index.ts\`, \`tests/paginate.test.ts\`.`;
-
-const STEPS = `After the work, the plan checks the PR again (with whatever tool it uses) and
-keeps going until it is mergeable, rather than presenting the work as finished or
-asking the user whether to continue.`;
 
 const BOT_NEW_BODY =
   "Re-reviewed the latest push. The amount validation in `processPayment` (`src/payments.mts:42`) is still missing.";
