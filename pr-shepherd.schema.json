@@ -354,9 +354,12 @@
               "codecov-report",
               "codex-notices",
               "dependabot-notices",
+              "dependency-review-no-issues",
               "gemini-notices",
               "kilo-no-issues",
+              "snyk-no-issues",
               "socket-reports",
+              "sonarqube-gate-passed",
               "sourcery-notices"
             ]
           },
