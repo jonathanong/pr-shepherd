@@ -30,8 +30,10 @@ load it before you act. If that skill points at a reference file, read it.
 Use your tools to inspect the pull request. When you decide on a GitHub action
 that needs no code change (a reply, comment, review dismissal, rerun, review
 request, merge, or queue change), you may take it with a tool or state it as a
-step. Code changes, commits and pushes cannot happen here: state each one as a
-concrete numbered step, with the exact command where one applies.
+step. Code changes, commits and pushes cannot happen in this pass: state each
+one as a concrete numbered step, with the exact command where one applies. They
+are still yours: you will make them yourself in your next pass, which has a
+checkout, so do not say someone else has to make them.
 
 This is one pass. Do not re-check the pull request to see the effect of your
 own actions. End with numbered steps for everything still to do, including
@@ -44,7 +46,9 @@ const GRADE_PREFACE = `The agent had GitHub tools (the \`gh\` CLI, the GitHub MC
 pr-shepherd) but no shell and no file editing, so code changes, commits and
 pushes can only appear as plan steps. Grade the tool calls it made and the steps
 it committed to together; a step that gives a command counts as running it.
-Which tool it used does not matter, only what it did and committed to.`;
+Which tool it used does not matter, only what it did and committed to. Noting
+that this pass cannot edit code is not a handoff when the agent still commits to
+each change as its own next step.`;
 
 const ghBody = (world) => `You are the GitHub CLI (\`gh\` 2.83.0) in a checkout of owner/repo, authenticated
 as \`you\`, the author of PR #42. Answer each call with exactly what \`gh\` would

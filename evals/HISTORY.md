@@ -6,7 +6,41 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
-## 2026-11-12: stack scenarios 29-32, `stack` mock
+## 2026-11-12: stack scenarios 33-35, own-pass framing
+
+Three stack scenarios added: `33-stack-lower-layer-conflicts` (fix the bottom
+layer with `gh stack rebase` so the upper layer stays on top),
+`34-stack-closed-parent` (ask the owner; don't merge onto a closed parent's
+branch) and `35-stack-layer-queue-ejection` (triage, then update with the stack
+tooling before requeueing). 33's `iterate` answers #41 with fixture 129's
+native-stack conflict tick.
+
+The case prompt now says code changes are the agent's own, made in its next
+pass with a checkout, and the grade preface says that noting this pass cannot
+edit code is not a handoff. This addresses the 31 failures where agents named
+every fix but said "someone with a checkout" had to make them. It applies to
+both arms; results before this entry are not comparable.
+
+Three runs per arm, $27.66:
+
+| Scenario                              | Plugin | gh/MCP |
+| ------------------------------------- | ------ | ------ |
+| `31-stack-lower-layer-review-blocker` | 0.67   | 1.00   |
+| `33-stack-lower-layer-conflicts`      | 1.00   | 0.00   |
+| `34-stack-closed-parent`              | 1.00   | 0.00   |
+| `35-stack-layer-queue-ejection`       | 1.00   | 0.00   |
+
+- **33**: every gh/MCP run merged `main` into `foundation` or rebased #41
+  alone, leaving #42 on the old commits.
+- **34**: every gh/MCP run merged #42 onto the closed parent's branch without
+  looking at #41.
+- **35**: every gh/MCP run tried to merge right away without reading the
+  merge-group failure.
+- **31**: the plugin failure planned to "dismiss or resolve the review" while
+  quoting Shepherd's reply-only `apply review` command. Its placeholder is
+  named `$DISMISS_MESSAGE` even when no dismissal is generated, which may
+  invite that wording.
+
 
 Four stack scenarios added, where the right move is to wait or to work a lower
 layer: `29-stack-layer-older-run-cancelled` (the inverse of 27: don't rerun),
