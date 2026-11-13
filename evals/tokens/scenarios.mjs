@@ -18,7 +18,7 @@
 // What no arm counts: the agent's own code edits, commits and pushes, and its
 // reasoning. Those are the same work whichever tool fetches the state.
 
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runWithExecutionCwd } from "../../src/execution-context.mts";
@@ -518,12 +518,16 @@ const mcpLogCalls = (phase) => [
 const SKILL_DIR = join(REPO_ROOT, "plugins", "pr-shepherd", "skills", "pr-shepherd");
 const readSkill = (p) => readFileSync(join(SKILL_DIR, p), "utf8");
 
-// SKILL.md links each playbook by the name outputs use: `- [Name](references/x.md)`.
+// SKILL.md names each playbook's file after it: "Name" is `references/<name-in-kebab-case>.md`.
 const PLAYBOOK_FILES = Object.fromEntries(
-  [...readSkill("SKILL.md").matchAll(/^- \[([^\]]+)\]\((references\/[^)]+)\)$/gm)].map((m) => [
-    m[1],
-    m[2],
-  ]),
+  readdirSync(join(SKILL_DIR, "references"))
+    .filter((f) => f.endsWith(".md"))
+    .map((f) => [
+      readSkill(join("references", f))
+        .match(/^# (.+)$/m)[1]
+        .trim(),
+      join("references", f),
+    ]),
 );
 
 /**

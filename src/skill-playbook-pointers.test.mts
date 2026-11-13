@@ -137,6 +137,14 @@ describe("CLI instruction pointers name real pr-shepherd skill playbooks", () =>
     }
   });
 
+  it("names every reference file after its playbook in kebab case, as SKILL.md says", () => {
+    const dir = new URL("plugins/pr-shepherd/skills/pr-shepherd/references/", rootUrl);
+    for (const file of readdirSync(dir).filter((f) => f.endsWith(".md"))) {
+      const title = readFileSync(new URL(file, dir), "utf8").match(/^# (.+)$/m)?.[1] ?? "";
+      expect(file).toBe(`${title.trim().toLowerCase().replace(/\s+/g, "-")}.md`);
+    }
+  });
+
   it("declares every always-on playbook as a ### heading", () => {
     for (const heading of ALWAYS_ON_PLAYBOOKS) {
       expect(headings.has(heading), `missing always-on playbook "${heading}"`).toBe(true);

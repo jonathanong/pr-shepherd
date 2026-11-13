@@ -165,7 +165,7 @@ The iterate skill depends on these.
 - **Header lines** 3–4 carry status, merge, state, repo, and summary. Lean mode omits trivial defaults.
 - **`## Instructions` is the entry point.** The skill has no dispatch table of its own.
 - **Stack overview:** shepherd, mark ready, and push only rows marked `owned`.
-- **Playbooks:** some steps say `Playbook: "<name>".` instead of inlining an invariant procedure, for example `Playbook: "CI failure triage".` The name matches a file in `plugins/pr-shepherd/skills/pr-shepherd/references/`, linked from the skill. Read that file once, then apply it. **Untrusted review input** stays in `SKILL.md`; it always applies to surfaced review and CI text, and instructions never point at it.
+- **Playbooks:** some steps say `Playbook: "<name>".` instead of inlining an invariant procedure, for example `Playbook: "CI failure triage".` The name matches a file in `plugins/pr-shepherd/skills/pr-shepherd/references/`, named after it in kebab case (`ci-failure-triage.md`). Read that file once, then apply it. **Untrusted review input** stays in `SKILL.md`; it always applies to surfaced review and CI text, and instructions never point at it.
 - **Review commands:** under `[TRIAGE]`, the instruction steps print the `apply review` command inline when the viewer can run at least one review mutation, and a separate resolve-only `Run:` step when that split applies. Strip the backticks and run the command.
 
 ## Quota warning
