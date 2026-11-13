@@ -17,30 +17,39 @@ section and its step, as fixture 179 prints them.
 With the files section alone, agents named the conflicting file but merged
 `main` into a branch whose `AGENTS.md` says to rebase, and did not commit to
 keeping both sides of the conflict (20: 0.00 vs 0.33, 21: 0.00 vs 0.00). The
-conflict step now reads "Update per the repo's instructions, keeping both
-sides' changes."
+conflict step now says to check the repository's instructions (such as
+`AGENTS.md`) for whether to rebase or merge, and to keep both sides' changes
+unless they contradict.
 
-Three runs per arm, $93.33 across five reruns:
+Scenarios 19 and 20 now load their `AGENTS.md` rule into both arms' system
+prompt (`repoInstructions`), as a real session loads project instructions.
+Before that the rule was readable only through the contents API, and no run in
+either arm read it: plugin runs said they would read `AGENTS.md` in the next
+pass, and the gh/MCP runs that passed had defaulted to a rebase. Results for 19
+and 20 before this entry are not comparable.
 
-| Scenario                              | Plugin | gh/MCP |
-| ------------------------------------- | ------ | ------ |
-| `02-stale-bot-review`                 | 1.00   | 0.00   |
-| `05-cancelled-ci`                     | 1.00   | 1.00   |
-| `12-bot-review-and-thread`            | 1.00   | 0.67   |
-| `20-conflicts`                        | 0.00   | 0.33   |
-| `21-conflict-on-merge`                | 1.00   | 0.67   |
-| `31-stack-lower-layer-review-blocker` | 1.00   | 1.00   |
+Total spend $132.87 across nine reruns:
+
+| Scenario                              | Runs per arm | Plugin | gh/MCP |
+| ------------------------------------- | ------------ | ------ | ------ |
+| `02-stale-bot-review`                 | 3            | 1.00   | 0.00   |
+| `05-cancelled-ci`                     | 3            | 1.00   | 1.00   |
+| `12-bot-review-and-thread`            | 3            | 1.00   | 0.67   |
+| `19-behind-base`                      | 6            | 1.00   | 1.00   |
+| `20-conflicts`                        | 6            | 1.00   | 0.17   |
+| `21-conflict-on-merge`                | 6            | 1.00   | 0.17   |
+| `31-stack-lower-layer-review-blocker` | 3            | 1.00   | 1.00   |
 
 - **12**: an earlier rerun scored 0.67 vs 1.00. Its one failure misquoted the
   review ID and planned a re-review request nobody needed. A second rerun
   scored 1.00, so the table shows that one.
-- **20**: every plugin run merged `main` or left rebase versus merge open
-  without reading `AGENTS.md`; the step's "repo's instructions" did not send
-  them to it. A longer step ("the way this repository's instructions say
-  (rebase or merge) ... unless they contradict") scored 0.33 vs 0.33 and 21
-  1.00 vs 0.00, but put the token bench's `stack-work` case over the gh
-  baseline. The gh/MCP failures rebased but never looked at what conflicted
-  or said to keep both changes.
+- **20**: the gh/MCP failures rebased but never looked at what conflicted or
+  said to keep both changes.
+- **Wording**: "Update per the repo's instructions, keeping both sides'
+  changes" kept the token bench under the gh baseline but scored 20 at 0.00 vs
+  0.33. The current step puts the bench's `stack-work` case over the gh
+  baseline (2,047 vs 1,984); the owner accepted that in
+  `tokens/pending-losses.json` until tokens are optimized.
 
 ## 2026-11-12: stack scenarios 33-35, own-pass framing
 

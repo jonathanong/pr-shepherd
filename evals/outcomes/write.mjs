@@ -78,6 +78,15 @@ ${world}`;
 
 const GITHUB_TOOLS = JSON.parse(json("github-tools.json")).tools.map((t) => t.name);
 
+/**
+ * A real session starts with the repository's `AGENTS.md` loaded as project
+ * instructions, so a scenario's repo rules go into both arms' system prompt.
+ */
+const withRepoInstructions = (system, text) =>
+  text
+    ? `${system}\n\nProject instructions from the repository's \`AGENTS.md\`, already loaded:\n\n${text}`
+    : system;
+
 const frontmatter = (spec) =>
   [
     "---",
@@ -89,7 +98,9 @@ const frontmatter = (spec) =>
     "allowed_tools: [Read, Glob, Grep, Skill]",
     `tags: [outcome, ${spec.slug}, ${spec.tags.join(", ")}]`,
     `append_system_prompt: |`,
-    ...SYSTEM.split("\n").map((l) => (l ? `  ${l}` : "")),
+    ...withRepoInstructions(SYSTEM, spec.repoInstructions)
+      .split("\n")
+      .map((l) => (l ? `  ${l}` : "")),
     "---",
   ].join("\n");
 
