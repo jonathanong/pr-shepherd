@@ -6,6 +6,39 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-12: closing the plugin's remaining gaps
+
+Reruns of every scenario where the plugin arm scored below gh/MCP, against the
+current output. `20-conflicts` and `21-conflict-on-merge` replay fixtures
+recorded before the `## Files changed on both sides since the merge base`
+section existed, so `withConflictFiles` in `outcomes/world.mjs` adds that
+section and its step, as fixture 179 prints them.
+
+With the files section alone, agents named the conflicting file but merged
+`main` into a branch whose `AGENTS.md` says to rebase, and did not commit to
+keeping both sides of the conflict (20: 0.00 vs 0.33, 21: 0.00 vs 0.00). The
+conflict step now says to update the branch the way the repository's
+instructions say (rebase or merge) and to keep both sides' changes unless they
+contradict.
+
+Three runs per arm, $83.10 across four reruns:
+
+| Scenario                              | Plugin | gh/MCP |
+| ------------------------------------- | ------ | ------ |
+| `02-stale-bot-review`                 | 1.00   | 0.00   |
+| `05-cancelled-ci`                     | 1.00   | 1.00   |
+| `12-bot-review-and-thread`            | 1.00   | 0.67   |
+| `20-conflicts`                        | 0.33   | 0.33   |
+| `21-conflict-on-merge`                | 1.00   | 0.00   |
+| `31-stack-lower-layer-review-blocker` | 1.00   | 1.00   |
+
+- **12**: an earlier rerun scored 0.67 vs 1.00. Its one failure misquoted the
+  review ID and planned a re-review request nobody needed. A second rerun
+  scored 1.00, so the table shows that one.
+- **20**: the plugin failures put off choosing between rebase and merge until
+  they had read `AGENTS.md`, instead of rebasing. The gh/MCP failures rebased
+  but never looked at what conflicted or said to keep both changes.
+
 ## 2026-11-12: stack scenarios 33-35, own-pass framing
 
 Three stack scenarios added: `33-stack-lower-layer-conflicts` (fix the bottom

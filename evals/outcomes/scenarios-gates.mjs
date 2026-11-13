@@ -2,7 +2,7 @@
 // answer from; `fixture` is the Shepherd tick for the same state.
 
 import { PR_URL } from "../lib.mjs";
-import { PR, STEPS } from "./world.mjs";
+import { PR, STEPS, withConflictFiles } from "./world.mjs";
 
 const REBASE_RULE = `\`AGENTS.md\` at the repository root (also returned by the contents API) says:
 "Keep PR branches linear: rebase onto \`main\`, never merge \`main\` into a
@@ -102,6 +102,7 @@ the rename or the reply.`,
     // Conflicts with main, in a repo whose AGENTS.md says to rebase.
     slug: "20-conflicts",
     fixture: "27-triage-conflicts",
+    transform: withConflictFiles(["src/paginate.ts"]),
     tags: ["merge-gate", "conflicts"],
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `${PR(" No merge queue. No required approvals.", "`src/paginate.ts`")}
@@ -129,6 +130,7 @@ conflict to the user.`,
     // The user asked for a merge; the branch conflicts.
     slug: "21-conflict-on-merge",
     fixture: "174-triage-merge-conflicts",
+    transform: withConflictFiles(["README.md"]),
     tags: ["merge-gate", "conflicts"],
     prompt: `Merge ${PR_URL}.`,
     world: `${PR(" No merge queue. No required approvals.", "`README.md`, `src/paginate.ts`")}
