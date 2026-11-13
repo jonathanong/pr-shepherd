@@ -11,6 +11,8 @@ const METRIC = new RegExp(
   `^!\\[\\]\\(${esc(STATIC)}/common/(?:passed|accepted)-16px\\.png ''\\) \\[([^\\]\\n]+)\\]\\(https://sonarcloud\\.io/[^\\s)]*\\)$`,
 );
 const COUNTS = /^(?:0 New issues|\d+ Accepted issues|0 Security Hotspots)$/;
+/** Both counts must be shown as zero; a report missing either is not a known pass. */
+const REQUIRED = ["0 New issues", "0 Security Hotspots"];
 const PERCENT = /^\d+(?:\.\d+)?% (?:Coverage|Duplication) on New Code$/;
 const FOOTER = /^\[See analysis details on SonarQube Cloud\]\(https:\/\/sonarcloud\.io\/[^\s)]*\)$/;
 
@@ -27,12 +29,17 @@ const rule: ClassifyRule = (item) => {
     .filter((line) => line !== "" && line !== "<!-- sqra-placement-anchor -->");
   const [header, ...rest] = lines;
   if (!HEADER.test(header ?? "") || !FOOTER.test(rest.pop() ?? "")) return null;
+  const labels: string[] = [];
   const ok = rest.every((line) => {
     if (line === "Issues" || line === "Measures") return true;
     const label = METRIC.exec(line)?.[1];
+    if (label !== undefined) labels.push(label);
     return label !== undefined && (COUNTS.test(label) || PERCENT.test(label));
   });
-  return ok ? { autoResolve: true, suppress: true, reason: "SonarQube quality gate passed" } : null;
+  const zeroed = REQUIRED.every((label) => labels.includes(label));
+  return ok && zeroed
+    ? { autoResolve: true, suppress: true, reason: "SonarQube quality gate passed" }
+    : null;
 };
 
 export default rule;

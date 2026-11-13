@@ -28,6 +28,15 @@ describe("passing scanner report edges", () => {
     expect(matches(sonar, sonar.body.split("\n")[0]!)).toEqual([]);
   });
 
+  it("keeps a SonarQube report missing either zero count visible", () => {
+    const lines = sonar.body.split("\n");
+    expect(matches(sonar, `${lines[0]}\n${lines.at(-3)}`)).toEqual([]);
+    for (const metric of ["[0 New issues]", "[0 Security Hotspots]"]) {
+      const kept = lines.filter((line) => !line.includes(metric)).join("\n");
+      expect(matches(sonar, kept)).toEqual([]);
+    }
+  });
+
   it("accepts non-zero accepted issues but not a failed metric icon", () => {
     expect(
       matches(sonar, variant(sonar.body, "[0 Accepted issues]", "[3 Accepted issues]")),
