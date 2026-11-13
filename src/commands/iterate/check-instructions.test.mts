@@ -169,7 +169,7 @@ describe("buildResolveCommandInstruction", () => {
     );
   });
 
-  it("folds the $DISMISS_MESSAGE substitution into the run step, with no $HEAD_SHA step", () => {
+  it("folds the $CHANGE_MESSAGE substitution into the run step, with no $HEAD_SHA step", () => {
     const instructions = buildResolveCommandInstruction(
       resolveCommand({
         replyThreadIds: ["PRRT_1"],
@@ -179,7 +179,7 @@ describe("buildResolveCommandInstruction", () => {
       rendered,
     );
     expect(instructions).toEqual([
-      "`$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review 42`",
+      "`$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review 42`",
     ]);
     expect(instructions.join("\n")).not.toContain("$HEAD_SHA");
   });

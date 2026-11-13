@@ -176,7 +176,7 @@ Could not determine the PR's base branch (GraphQL batch returned an empty base b
 
 ## Pending review commands
 
-- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_active038,PRRT_active037,PRRT_active036,PRRT_active035,PRRT_active034,PRRT_active033,PRRT_active032,PRRT_active031,PRRT_active030,PRRT_active029,PRRT_active028,PRRT_active027,PRRT_active026,PRRT_active025,PRRT_active024,PRRT_active023,PRRT_active022,PRRT_active021,PRRT_active020,PRRT_active019,PRRT_active018,PRRT_active017,PRRT_active016,PRRT_active015,PRRT_active014,PRRT_active013,PRRT_active012,PRRT_active011,PRRT_active010,PRRT_active009,PRRT_active008,PRRT_active007,PRRT_active006,PRRT_active005,PRRT_active004,PRRT_active003,PRRT_active002,PRRT_active001 --message "$DISMISS_MESSAGE" --require-sha HEAD`
+- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_active038,PRRT_active037,PRRT_active036,PRRT_active035,PRRT_active034,PRRT_active033,PRRT_active032,PRRT_active031,PRRT_active030,PRRT_active029,PRRT_active028,PRRT_active027,PRRT_active026,PRRT_active025,PRRT_active024,PRRT_active023,PRRT_active022,PRRT_active021,PRRT_active020,PRRT_active019,PRRT_active018,PRRT_active017,PRRT_active016,PRRT_active015,PRRT_active014,PRRT_active013,PRRT_active012,PRRT_active011,PRRT_active010,PRRT_active009,PRRT_active008,PRRT_active007,PRRT_active006,PRRT_active005,PRRT_active004,PRRT_active003,PRRT_active002,PRRT_active001 --message "$CHANGE_MESSAGE" --require-sha HEAD`
 
 ---
 
@@ -185,4 +185,4 @@ After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-
 ## Instructions
 
 1. Stop polling. Ask the user whether to run the pending review commands shown above.
-2. If yes, set any `$DISMISS_MESSAGE` to a one-sentence disposition, run every pending command from the pushed PR head, then rerun Shepherd with the same options.
+2. If yes, set any `$CHANGE_MESSAGE` to a one-sentence disposition, run every pending command from the pushed PR head, then rerun Shepherd with the same options.

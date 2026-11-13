@@ -11,8 +11,8 @@ describe("buildPrShepherdCommand", () => {
   });
 
   it("quotes shell placeholders and whitespace-bearing args", () => {
-    expect(renderShellCommand(["--message", "$DISMISS_MESSAGE", "hello world"])).toBe(
-      '--message "$DISMISS_MESSAGE" "hello world"',
+    expect(renderShellCommand(["--message", "$CHANGE_MESSAGE", "hello world"])).toBe(
+      '--message "$CHANGE_MESSAGE" "hello world"',
     );
   });
 

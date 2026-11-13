@@ -170,7 +170,7 @@ describe("main — iterate text format (triage and checks)", () => {
         "--dismiss-review-ids",
         "PRR_BOT_STALE",
         "--message",
-        "$DISMISS_MESSAGE",
+        "$CHANGE_MESSAGE",
       ],
       requiresHeadSha: true,
       requiresDismissMessage: true,

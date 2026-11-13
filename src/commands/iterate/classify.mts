@@ -178,7 +178,7 @@ export function buildResolveCommand(
     if (pairedResolveThreadIds.length > 0) {
       resolveArgv.push("--resolve-thread-ids", pairedResolveThreadIds.join(","));
     }
-    resolveArgv.push("--message", "$DISMISS_MESSAGE");
+    resolveArgv.push("--message", "$CHANGE_MESSAGE");
     pushAdoptExistingReplies(resolveArgv, hasReply);
     if (hasDismiss) {
       resolveArgv.push("--dismiss-review-ids", dismissReviewIds.join(","));
@@ -222,7 +222,7 @@ export function buildResolveCommand(
   const argv = buildPrShepherdCommand(["apply", "review", String(prReference)]).argv;
   if (replyThreadIds.length > 0) {
     argv.push("--reply-thread-ids", replyThreadIds.join(","));
-    argv.push("--message", "$DISMISS_MESSAGE");
+    argv.push("--message", "$CHANGE_MESSAGE");
     pushAdoptExistingReplies(argv, true);
   }
   if (resolveThreadIds.length > 0) {
@@ -233,7 +233,7 @@ export function buildResolveCommand(
   }
   if (hasDismiss) {
     // Add --message when dismissing without a reply (replies already added it above).
-    if (!hasReply) argv.push("--message", "$DISMISS_MESSAGE");
+    if (!hasReply) argv.push("--message", "$CHANGE_MESSAGE");
     argv.push("--dismiss-review-ids", dismissReviewIds.join(","));
   }
   const hasMutations = hasMessageMutations || hasResolveOrMinimize;

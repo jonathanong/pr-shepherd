@@ -252,7 +252,7 @@ Could not determine the PR's base branch (GraphQL batch returned an empty base b
 
 ## Pending review commands
 
-- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-1030,rest-thread-1029,rest-thread-1028,rest-thread-1027,rest-thread-1026,rest-thread-1025,rest-thread-1024,rest-thread-1023,rest-thread-1022,rest-thread-1021,rest-thread-1020,rest-thread-1019,rest-thread-1018,rest-thread-1017,rest-thread-1016,rest-thread-1015,rest-thread-1014,rest-thread-1013,rest-thread-1012,rest-thread-1011,rest-thread-1010,rest-thread-1009,rest-thread-1008,rest-thread-1007,rest-thread-1006,rest-thread-1005,rest-thread-1004,rest-thread-1003,rest-thread-1002,rest-thread-1001 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha HEAD`
+- apply review: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-1030,rest-thread-1029,rest-thread-1028,rest-thread-1027,rest-thread-1026,rest-thread-1025,rest-thread-1024,rest-thread-1023,rest-thread-1022,rest-thread-1021,rest-thread-1020,rest-thread-1019,rest-thread-1018,rest-thread-1017,rest-thread-1016,rest-thread-1015,rest-thread-1014,rest-thread-1013,rest-thread-1012,rest-thread-1011,rest-thread-1010,rest-thread-1009,rest-thread-1008,rest-thread-1007,rest-thread-1006,rest-thread-1005,rest-thread-1004,rest-thread-1003,rest-thread-1002,rest-thread-1001 --message "$CHANGE_MESSAGE" --adopt-existing-replies --require-sha HEAD`
 
 ---
 
@@ -261,4 +261,4 @@ After completing manual fixes (and pushing if required), rerun `/pr-shepherd:pr-
 ## Instructions
 
 1. Stop polling. Ask the user whether to run the pending review commands shown above.
-2. If yes, set any `$DISMISS_MESSAGE` to a one-sentence disposition, run every pending command from the pushed PR head, then rerun Shepherd with the same options.
+2. If yes, set any `$CHANGE_MESSAGE` to a one-sentence disposition, run every pending command from the pushed PR head, then rerun Shepherd with the same options.

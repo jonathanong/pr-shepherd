@@ -42,5 +42,5 @@
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
 3. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <reason>'`.
 4. Commit and push any changes.
-5. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-54 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha HEAD`
+5. `$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-54 --message "$CHANGE_MESSAGE" --adopt-existing-replies --require-sha HEAD`
 6. Rerun Shepherd now.

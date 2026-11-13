@@ -152,11 +152,11 @@ describe("buildFixInstructions", () => {
     expect(text).toContain("Commit and push any changes.");
     // CLI no longer prescribes rebase mechanics — that is the caller's convention.
     expect(text).not.toContain("rebase onto");
-    // $DISMISS_MESSAGE substitution stays CLI-side because the command is invalid without it.
+    // $CHANGE_MESSAGE substitution stays CLI-side because the command is invalid without it.
     // The SHA gate reads HEAD itself, so no $HEAD_SHA substitution step remains.
     expect(text).not.toContain("$HEAD_SHA");
     expect(instructions.at(-2)).toBe(
-      "`$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd resolve 42 --require-sha HEAD`",
+      "`$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd resolve 42 --require-sha HEAD`",
     );
     expect(instructions.at(-1)).toBe("Rerun Shepherd now.");
     expect(text).not.toContain("Stop this iteration");
@@ -192,7 +192,7 @@ describe("buildFixInstructions", () => {
 
     const text = instructions.join("\n");
     expect(text).not.toContain("$HEAD_SHA");
-    expect(text).not.toContain("$DISMISS_MESSAGE");
+    expect(text).not.toContain("$CHANGE_MESSAGE");
     expect(text).toContain(
       "Run, even if no code changed: `pr-shepherd resolve 42 --require-sha HEAD`",
     );

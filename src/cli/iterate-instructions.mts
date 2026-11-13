@@ -91,7 +91,7 @@ export function buildSimpleIterateInstructions(
         ];
       return [
         "Stop polling. Ask the user whether to run the pending review commands shown above.",
-        "If yes, set any `$DISMISS_MESSAGE` to a one-sentence disposition, run every pending command from the pushed PR head, then rerun Shepherd with the same options.",
+        "If yes, set any `$CHANGE_MESSAGE` to a one-sentence disposition, run every pending command from the pushed PR head, then rerun Shepherd with the same options.",
       ];
     }
   }

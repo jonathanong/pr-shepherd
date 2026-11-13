@@ -70,7 +70,7 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
       expect(result.triage.resolveOnlyCommand?.argv).toContain("comment-1");
       expect(result.triage.instructions.join("\n")).toContain("Commit and push any changes.");
       expect(result.triage.instructions.join("\n")).toContain(
-        "`$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review",
+        "`$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review",
       );
       expect(result.triage.instructions.join("\n")).toContain(
         "Run: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --minimize-comment-ids comment-1`",

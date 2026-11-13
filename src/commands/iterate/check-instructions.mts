@@ -75,7 +75,7 @@ export function buildRepeatedWorkflowBranchRecoveryInstructions(
 
 /**
  * Build the `apply review` step, with the rendered command inline. The step stays here (not in
- * the skill) because the *as-printed* command is invalid without `$DISMISS_MESSAGE`: an empty
+ * the skill) because the *as-printed* command is invalid without `$CHANGE_MESSAGE`: an empty
  * `--message` makes `apply review` reject the mutation. `--require-sha` needs no substitution:
  * the rendered command reads the pushed HEAD itself. "Even if you changed no code": the
  * command records each item's disposition either way.
@@ -87,7 +87,7 @@ export function buildResolveCommandInstruction(
   if (!resolveCommand.hasMutations) return [];
   if (resolveCommand.requiresDismissMessage) {
     return [
-      `\`$DISMISS_MESSAGE\`: one sentence on what changed. Run even if no code changed: \`${rendered}\``,
+      `\`$CHANGE_MESSAGE\`: one sentence on what changed. Run even if no code changed: \`${rendered}\``,
     ];
   }
   return [`Run, even if no code changed: \`${rendered}\``];

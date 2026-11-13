@@ -32,5 +32,5 @@ const MAX_RETRIES = 3;
 2. For every `[suggestion]` thread under `## Review threads`, run one `pr-shepherd suggest https://github.com/owner/repo/pull/42 --thread-id "<id>" --message "<one-sentence headline>" --format=json --transport rest`, repeating `--thread-id` and `--message` in displayed order. Playbook: "Suggestion patches".
 3. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <reason>'`.
 4. Commit and push any changes.
-5. `$DISMISS_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-3 --message "$DISMISS_MESSAGE" --adopt-existing-replies --require-sha HEAD`
+5. `$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-3 --message "$CHANGE_MESSAGE" --adopt-existing-replies --require-sha HEAD`
 6. Rerun Shepherd now.

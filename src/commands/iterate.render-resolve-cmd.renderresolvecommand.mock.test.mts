@@ -5,7 +5,7 @@ import { registerIterateHooks } from "../../test-helpers/commands/iterate-test-s
 registerIterateHooks();
 
 describe("renderResolveCommand", () => {
-  it("quotes $DISMISS_MESSAGE so a substituted sentence stays one argument", () => {
+  it("quotes $CHANGE_MESSAGE so a substituted sentence stays one argument", () => {
     const joined = renderResolveCommand({
       argv: [
         "pr-shepherd",
@@ -14,14 +14,14 @@ describe("renderResolveCommand", () => {
         "--dismiss-review-ids",
         "r-1",
         "--message",
-        "$DISMISS_MESSAGE",
+        "$CHANGE_MESSAGE",
       ],
       requiresHeadSha: false,
       requiresDismissMessage: true,
       hasMutations: true,
     });
     expect(joined).toBe(
-      'pr-shepherd resolve 42 --dismiss-review-ids r-1 --message "$DISMISS_MESSAGE"',
+      'pr-shepherd resolve 42 --dismiss-review-ids r-1 --message "$CHANGE_MESSAGE"',
     );
   });
   it("appends --require-sha HEAD when requiresHeadSha is true", () => {

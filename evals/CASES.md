@@ -152,7 +152,7 @@ the inlined clause.
 The corpus disproved two assumptions, so nothing here tests them:
 
 - Agents do not truncate `--dismiss-review-ids`; they skip the whole command.
-- Unsubstituted `$HEAD_SHA` / `$DISMISS_MESSAGE` never reached an executed
+- Unsubstituted `$HEAD_SHA` / `$CHANGE_MESSAGE` never reached an executed
   command.
 
 The corpus cannot support a model-tier claim: about 99.5% of the Claude

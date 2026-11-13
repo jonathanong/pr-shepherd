@@ -35,7 +35,7 @@ describe("renderResolveCommand", () => {
         "--dismiss-review-ids",
         "r-1",
         "--message",
-        "$DISMISS_MESSAGE",
+        "$CHANGE_MESSAGE",
       ],
       requiresHeadSha: true,
       requiresDismissMessage: true,
@@ -44,7 +44,7 @@ describe("renderResolveCommand", () => {
     // The one placeholder appears with its quotes attached as a single token —
     // this is the contract consumers rely on when doing literal-text substitution.
     // The SHA gate reads HEAD itself, so it needs no substitution.
-    expect(joined).toContain('"$DISMISS_MESSAGE"');
+    expect(joined).toContain('"$CHANGE_MESSAGE"');
     expect(joined).not.toContain("$HEAD_SHA");
     expect(joined.endsWith("--require-sha HEAD")).toBe(true);
   });
@@ -82,7 +82,7 @@ describe("renderResolveCommand", () => {
         "--dismiss-review-ids",
         "REV_1",
         "--message",
-        "$DISMISS_MESSAGE",
+        "$CHANGE_MESSAGE",
       ],
       requiresHeadSha: true,
       requiresDismissMessage: true,
