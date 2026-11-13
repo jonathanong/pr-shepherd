@@ -6,6 +6,33 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-12: queue and stack scenarios, judge reasons
+
+Four scenarios added: `25-queue-ejection-failed-checks`, `26-queued-nit`,
+`27-stack-layer-cancelled-latest-run` and `28-native-stack-merged-parent`, with
+a new "Stacks" category. Smoke run, 3 runs per arm, $28.13:
+
+| Scenario                              | Plugin | gh/MCP |
+| ------------------------------------- | ------ | ------ |
+| `25-queue-ejection-failed-checks`     | 1.00   | 0.00   |
+| `26-queued-nit`                       | 1.00   | 0.00   |
+| `27-stack-layer-cancelled-latest-run` | 1.00   | 0.00   |
+| `28-native-stack-merged-parent`       | 0.00   | 0.00   |
+
+`explain.mjs` re-judged every failure. The gh/MCP failures are real: those
+runs never read the merge-group run (25), call the MCP merge tool on a queued
+PR (26), and trust the green rollup over the cancelled latest runs (27).
+
+- **Steps for the user.** In 28 every plugin run gave the right `gh stack`
+  commands but listed them as "steps for you", and the judge failed that as a
+  handoff. The same framing failed all six 02 runs in the parity rerun. The
+  case prompt now asks for the remaining steps as the agent's own next steps.
+- **One-pass clause.** The shared follow-through clause now counts a re-check
+  listed as the next step, since the case prompt forbids re-checking within
+  the pass (the 05 failures).
+
+Both changes apply to both arms. Results before this entry are not comparable.
+
 ## 2026-11-12: outcome suite, full run
 
 The outcome suite grown to 22 scenarios in five categories

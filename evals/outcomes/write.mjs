@@ -35,7 +35,9 @@ concrete numbered step, with the exact command where one applies.
 
 This is one pass. Do not re-check the pull request to see the effect of your
 own actions. End with numbered steps for everything still to do, including
-what you would do after those steps. Where you decide NOT to take an action
+what you would do after those steps. Write them as the steps you will take
+next, not as tasks for the user; hand a step to the user only when it truly
+needs a human. Where you decide NOT to take an action
 that the pull request's state appears to offer, say so and why.`;
 
 const GRADE_PREFACE = `The agent had GitHub tools (the \`gh\` CLI, the GitHub MCP server, and possibly
