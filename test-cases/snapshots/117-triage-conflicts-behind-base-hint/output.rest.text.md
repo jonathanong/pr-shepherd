@@ -13,7 +13,7 @@
 
 ## Instructions
 
-1. The branch has merge conflicts (see `**branch**` above). Check this repository's instructions (such as `AGENTS.md`) for whether to rebase or merge, update the branch from its base that way, and resolve each conflict keeping both sides' changes unless they contradict.
+1. The branch has merge conflicts (see `**branch**` above). Check the base branch's instructions (such as `AGENTS.md`) only for whether to rebase or merge, update the branch from its base that way, and resolve each conflict keeping both sides' changes unless they contradict.
 2. The branch conflicts with PR base branch `main`. rebase --force-with-lease before pushing.
 3. Commit any remaining conflict-resolution changes and push to the PR head branch.
 4. Rerun Shepherd now.

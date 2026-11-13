@@ -85,7 +85,7 @@ export function buildNativeStackLayerRebase(
  * merge is the repository's convention, so the step points at it instead of choosing.
  */
 const RESOLVE_CONFLICTS =
-  "Check this repository's instructions (such as `AGENTS.md`) for whether to rebase or merge, update the branch from its base that way, and resolve each conflict keeping both sides' changes unless they contradict.";
+  "Check the base branch's instructions (such as `AGENTS.md`) only for whether to rebase or merge, update the branch from its base that way, and resolve each conflict keeping both sides' changes unless they contradict.";
 
 /**
  * Point at the conflicts, and at the stack rebase when the PR is a native stack layer. A queued

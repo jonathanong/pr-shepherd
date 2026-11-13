@@ -20,7 +20,7 @@ const DEFAULT_TIMEOUT_MS = 5000;
 ## Instructions
 
 1. Fix each warranted item.
-2. The branch has merge conflicts (see `**branch**` above). Check this repository's instructions (such as `AGENTS.md`) for whether to rebase or merge, update the branch from its base that way, and resolve each conflict keeping both sides' changes unless they contradict.
+2. The branch has merge conflicts (see `**branch**` above). Check the base branch's instructions (such as `AGENTS.md`) only for whether to rebase or merge, update the branch from its base that way, and resolve each conflict keeping both sides' changes unless they contradict.
 3. For every `[suggestion]` thread under `## Review threads`, run one `pr-shepherd suggest https://github.com/owner/repo/pull/42 --thread-id "<id>" --message "<one-sentence headline>" --format=json`, repeating `--thread-id` and `--message` in displayed order. Playbook: "Suggestion patches".
 4. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <reason>'`.
 5. Commit any remaining conflict-resolution changes and push to the PR head branch before review mutations.
