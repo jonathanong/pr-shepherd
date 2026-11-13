@@ -11,7 +11,7 @@
 
 ## Instructions
 
-1. The branch has merge conflicts (see `**branch**` above). Update the branch from its base the way this repository's instructions say (rebase or merge), and resolve each conflict keeping both sides' changes unless they contradict.
+1. The branch has merge conflicts (see `**branch**` above). Update per the repo's instructions, keeping both sides' changes.
 2. Read every item marked `[edited since first look]`, including edited summaries and edited first-look bullets, before deciding whether to resolve a matching thread.
 3. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <reason>'`.
 4. Commit any remaining conflict-resolution changes and push to the PR head branch.

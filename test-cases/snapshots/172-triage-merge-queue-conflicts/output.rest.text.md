@@ -22,7 +22,7 @@
 ## Instructions
 
 1. Fix each warranted item.
-2. The branch has merge conflicts (see `**branch**` above). Update the branch from its base the way this repository's instructions say (rebase or merge), and resolve each conflict keeping both sides' changes unless they contradict.
+2. The branch has merge conflicts (see `**branch**` above). Update per the repo's instructions, keeping both sides' changes.
 3. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <reason>'`.
 4. Commit any remaining conflict-resolution changes and push to the PR head branch before review mutations.
 5. `$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-1 --message "$CHANGE_MESSAGE" --adopt-existing-replies --require-sha HEAD`

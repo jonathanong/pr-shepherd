@@ -84,8 +84,7 @@ export function buildNativeStackLayerRebase(
  * The branch-update route for a conflicting PR that is not a native stack layer. Rebase versus
  * merge is the repository's convention, so the step points at it instead of choosing.
  */
-const RESOLVE_CONFLICTS =
-  "Update the branch from its base the way this repository's instructions say (rebase or merge), and resolve each conflict keeping both sides' changes unless they contradict.";
+const RESOLVE_CONFLICTS = "Update per the repo's instructions, keeping both sides' changes.";
 
 /**
  * Point at the conflicts, and at the stack rebase when the PR is a native stack layer. A queued

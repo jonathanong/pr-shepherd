@@ -108,7 +108,7 @@ describe("native stack rebase instructions", () => {
 
   it("keeps the single-branch conflict wording outside a stack", () => {
     expect(buildConflictInstruction(undefined)).toBe(
-      "The branch has merge conflicts (see `**branch**` above). Update the branch from its base the way this repository's instructions say (rebase or merge), and resolve each conflict keeping both sides' changes unless they contradict.",
+      "The branch has merge conflicts (see `**branch**` above). Update per the repo's instructions, keeping both sides' changes.",
     );
     expect(buildBranchPushInstruction(undefined, true, "")).toBe(
       "Commit any remaining conflict-resolution changes and push to the PR head branch.",
@@ -127,7 +127,7 @@ describe("native stack rebase instructions", () => {
     expect(single).toContain("(a) pull it from the queue and resolve now — first run `DEQUEUE`");
     expect(single).toContain("the other entries stay queued");
     expect(single).toContain(
-      "then: Update the branch from its base the way this repository's instructions say (rebase or merge), and resolve each conflict keeping both sides' changes unless they contradict.",
+      "then: Update per the repo's instructions, keeping both sides' changes.",
     );
     expect(single).toContain("enqueue it again");
     expect(single).toContain(
