@@ -201,5 +201,47 @@
     "author": "socket-security",
     "url": "https://github.com/example/example/pull/163#issuecomment-2",
     "body": "**Socket Security: Pull Request Alerts**\n\n🚨 Potential security issues detected. Review the following alerts before merging."
+  },
+  {
+    "name": "snyk-issues-found",
+    "kind": "pr-comment",
+    "author": "snyk-io",
+    "url": "https://github.com/snyk/cli/pull/7514#issuecomment-6850179073",
+    "body": "### :x: **Snyk checks have failed. 1 issue has been found.**\n\n| Status | Scan Engine | ![](https://res.cloudinary.com/snyk/image/upload/r-d/scm-platform/snyk-pull-requests/severity-critical.svg) Critical | ![](https://res.cloudinary.com/snyk/image/upload/r-d/scm-platform/snyk-pull-requests/severity-high.svg) High | ![](https://res.cloudinary.com/snyk/image/upload/r-d/scm-platform/snyk-pull-requests/severity-medium.svg) Medium | ![](https://res.cloudinary.com/snyk/image/upload/r-d/scm-platform/snyk-pull-requests/severity-low.svg) Low | Total (1) |\n|---|---|---|---|---|---|---|\n| :white_check_mark: | Open Source Security| 0 | 0 | 0 | 0 | [ 0 issues](https://app.snyk.io/org/developer-agentic-experience_endpoint-experience/pr-checks/4275bd58-b576-43c4-847b-2faea0033797?refs=801fca947ccde5004d17e372fb71a18547c4c86a&source=prChecksComment) |\n| :white_check_mark: | Licenses| 0 | 0 | 0 | 0 | [ 0 issues](https://app.snyk.io/org/developer-agentic-experience_endpoint-experience/pr-checks/4275bd58-b576-43c4-847b-2faea0033797/license?refs=801fca947ccde5004d17e372fb71a18547c4c86a&source=prChecksComment) |\n| :x: | Code Security| 0 | 1 | 0 | 0 | [ 1 issue](https://app.snyk.io/org/developer-agentic-experience_endpoint-experience/project/eb0fa8af-dc42-405a-a73e-fe8af5c05c6e/pr-check/1c52ffff-c2e0-4d1f-aa73-64ffdcade258?refs=801fca947ccde5004d17e372fb71a18547c4c86a&source=prChecksComment) |\n| :white_check_mark: | Secrets| 0 | 0 | 0 | 0 | [ 0 issues](https://app.snyk.io/org/developer-agentic-experience_endpoint-experience/project/fd07e9f9-182c-4a8c-a719-d0ecafd217ce/pr-check/e826b902-fdf2-4c82-8cfd-86b06bb1c2ea?refs=801fca947ccde5004d17e372fb71a18547c4c86a&source=prChecksComment) |\n\n:computer: Catch issues earlier using the plugins for [VS Code](https://marketplace.visualstudio.com/items?itemName=snyk-security.snyk-vulnerability-scanner), [JetBrains IDEs](https://plugins.jetbrains.com/plugin/10972-snyk-security), [Visual Studio](https://marketplace.visualstudio.com/items?itemName=snyk-security.snyk-vulnerability-scanner-vs-2022), and [Eclipse](https://marketplace.eclipse.org/content/snyk-security#external-install-button)."
+  },
+  {
+    "name": "snyk-passed-header-with-failing-row",
+    "kind": "pr-comment",
+    "author": "snyk-io",
+    "url": "https://github.com/snyk/cli/pull/7514#issuecomment-6850179073",
+    "body": "### :white_check_mark: **Snyk checks have passed. No issues have been found so far.**\n\n| Status | Scan Engine | ![](https://res.cloudinary.com/snyk/image/upload/r-d/scm-platform/snyk-pull-requests/severity-critical.svg) Critical | ![](https://res.cloudinary.com/snyk/image/upload/r-d/scm-platform/snyk-pull-requests/severity-high.svg) High | ![](https://res.cloudinary.com/snyk/image/upload/r-d/scm-platform/snyk-pull-requests/severity-medium.svg) Medium | ![](https://res.cloudinary.com/snyk/image/upload/r-d/scm-platform/snyk-pull-requests/severity-low.svg) Low | Total (0) |\n|---|---|---|---|---|---|---|\n| :white_check_mark: | Open Source Security| 0 | 0 | 0 | 0 | [ 0 issues](https://app.snyk.io/org/developer-agentic-experience_endpoint-experience/pr-checks/4275bd58-b576-43c4-847b-2faea0033797?refs=801fca947ccde5004d17e372fb71a18547c4c86a&source=prChecksComment) |\n| :white_check_mark: | Licenses| 0 | 0 | 0 | 0 | [ 0 issues](https://app.snyk.io/org/developer-agentic-experience_endpoint-experience/pr-checks/4275bd58-b576-43c4-847b-2faea0033797/license?refs=801fca947ccde5004d17e372fb71a18547c4c86a&source=prChecksComment) |\n| :x: | Code Security| 0 | 1 | 0 | 0 | [ 1 issue](https://app.snyk.io/org/developer-agentic-experience_endpoint-experience/project/eb0fa8af-dc42-405a-a73e-fe8af5c05c6e/pr-check/1c52ffff-c2e0-4d1f-aa73-64ffdcade258?refs=801fca947ccde5004d17e372fb71a18547c4c86a&source=prChecksComment) |\n| :white_check_mark: | Secrets| 0 | 0 | 0 | 0 | [ 0 issues](https://app.snyk.io/org/developer-agentic-experience_endpoint-experience/project/fd07e9f9-182c-4a8c-a719-d0ecafd217ce/pr-check/e826b902-fdf2-4c82-8cfd-86b06bb1c2ea?refs=801fca947ccde5004d17e372fb71a18547c4c86a&source=prChecksComment) |\n\n:computer: Catch issues earlier using the plugins for [VS Code](https://marketplace.visualstudio.com/items?itemName=snyk-security.snyk-vulnerability-scanner), [JetBrains IDEs](https://plugins.jetbrains.com/plugin/10972-snyk-security), [Visual Studio](https://marketplace.visualstudio.com/items?itemName=snyk-security.snyk-vulnerability-scanner-vs-2022), and [Eclipse](https://marketplace.eclipse.org/content/snyk-security#external-install-button)."
+  },
+  {
+    "name": "dependency-review-issues-found",
+    "kind": "pr-comment",
+    "author": "github-actions",
+    "url": "https://github.com/reactorynet/reactory-reactor/pull/55#issuecomment-6848872258",
+    "body": "# Dependency Review\nThe following issues were found:\n* ❌ 2 vulnerable package(s)\n* ✅ 0 package(s) with incompatible licenses\n* ✅ 0 package(s) with invalid SPDX license definitions\n* ✅ 0 package(s) with unknown licenses.\n* ⚠️ 8 packages with OpenSSF Scorecard issues.\n\n[View full job summary](https://github.com/reactorynet/reactory-reactor/actions/runs/43399370174)\n\n<!-- dependency-review-pr-comment-marker -->"
+  },
+  {
+    "name": "dependency-review-snapshot-warning",
+    "kind": "pr-comment",
+    "author": "github-actions",
+    "url": "https://github.com/mielenosoitukset-fi/mielenosoitukset_fi/pull/1156#issuecomment-6857185910",
+    "body": "<h1>Dependency Review</h1>\n✅ No vulnerabilities or license issues or OpenSSF Scorecard issues found.<h2>Snapshot Warnings</h2>\n<blockquote>⚠️: No snapshots were found for the head SHA 6de59600a30cf023f193543521cd5797f698b0db.</blockquote>\nEnsure that dependencies are being submitted on PR branches and consider enabling <em>retry-on-snapshot-warnings</em>. See <a href=\"https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/about-dependency-review#best-practices-for-using-the-dependency-review-api-and-the-dependency-submission-api-together\">the documentation</a> for more information and troubleshooting advice.<h2>Scanned Files</h2>\nNone\n\n<!-- dependency-review-pr-comment-marker -->"
+  },
+  {
+    "name": "sonarqube-gate-failed",
+    "kind": "pr-comment",
+    "author": "sonarqubecloud",
+    "url": "https://github.com/alokpandey/agent_sdlc/pull/4#issuecomment-3485093403",
+    "body": "## [![Quality Gate Failed](https://sonarsource.github.io/sonarcloud-github-static-resources/v2/checks/QualityGateBadge/qg-failed-20px.png 'Quality Gate Failed')](https://sonarcloud.io/dashboard?id=alokpandey_agent_sdlc&pullRequest=4) **Quality Gate failed**  \nFailed conditions  \n![](https://sonarsource.github.io/sonarcloud-github-static-resources/v2/common/failed-16px.png '') [15.4% Coverage on New Code](https://sonarcloud.io/component_measures?id=alokpandey_agent_sdlc&pullRequest=4&metric=new_coverage&view=list) (required ≥ 80%)  \n  \n[See analysis details on SonarQube Cloud](https://sonarcloud.io/dashboard?id=alokpandey_agent_sdlc&pullRequest=4)\n\n"
+  },
+  {
+    "name": "sonarqube-gate-passed-with-new-issues",
+    "kind": "pr-comment",
+    "author": "sonarqubecloud",
+    "url": "https://github.com/mkaraki/ipdb/pull/161#issuecomment-6858184034",
+    "body": "## [![Quality Gate Passed](https://sonarsource.github.io/sonarcloud-github-static-resources/v2/checks/QualityGateBadge/qg-passed-20px.png 'Quality Gate Passed')](https://sonarcloud.io/dashboard?id=mkaraki_ipdb&pullRequest=161) **Quality Gate passed**  \nIssues  \n![](https://sonarsource.github.io/sonarcloud-github-static-resources/v2/common/passed-16px.png '') [2 New issues](https://sonarcloud.io/project/issues?id=mkaraki_ipdb&pullRequest=161&issueStatuses=OPEN,CONFIRMED&sinceLeakPeriod=true)  \n![](https://sonarsource.github.io/sonarcloud-github-static-resources/v2/common/accepted-16px.png '') [0 Accepted issues](https://sonarcloud.io/project/issues?id=mkaraki_ipdb&pullRequest=161&issueStatuses=ACCEPTED)\n\nMeasures  \n![](https://sonarsource.github.io/sonarcloud-github-static-resources/v2/common/passed-16px.png '') [0 Security Hotspots](https://sonarcloud.io/project/security_hotspots?id=mkaraki_ipdb&pullRequest=161&issueStatuses=OPEN,CONFIRMED&sinceLeakPeriod=true)  \n![](https://sonarsource.github.io/sonarcloud-github-static-resources/v2/common/passed-16px.png '') [0.0% Coverage on New Code](https://sonarcloud.io/component_measures?id=mkaraki_ipdb&pullRequest=161&metric=new_coverage&view=list)  \n![](https://sonarsource.github.io/sonarcloud-github-static-resources/v2/common/passed-16px.png '') [0.0% Duplication on New Code](https://sonarcloud.io/component_measures?id=mkaraki_ipdb&pullRequest=161&metric=new_duplicated_lines_density&view=list)  \n  \n<!-- sqra-placement-anchor -->\n[See analysis details on SonarQube Cloud](https://sonarcloud.io/dashboard?id=mkaraki_ipdb&pullRequest=161)\n\n"
   }
 ]
