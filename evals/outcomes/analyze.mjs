@@ -66,7 +66,9 @@ for (const spec of SCENARIOS) {
   else rows.push({ spec, with: w.kept, without: wo.kept, excluded: w.excluded + wo.excluded });
 }
 if (denied.length) {
-  console.error(`Skill was denied in these with-arm runs; rerun them:\n${denied.join("\n")}`);
+  console.error(
+    `Skill was denied, or the trace is gone, in these with-arm runs; rerun them with --keep-temp:\n${denied.join("\n")}`,
+  );
   process.exit(1);
 }
 
@@ -113,7 +115,9 @@ if (unmeasured.length) {
   console.log(`\nNo valid run in one arm, left out of every table: ${unmeasured.join(", ")}`);
 }
 
+// A missing trace cannot show the Skill call went through, so it counts as
+// denied: the run needs `--keep-temp`, and the analysis needs its traces.
 function skillDenied(run) {
-  if (!run.tracePath || !existsSync(run.tracePath)) return false;
+  if (!run.tracePath || !existsSync(run.tracePath)) return true;
   return SKILL_DENIED.test(readFileSync(run.tracePath, "utf8"));
 }

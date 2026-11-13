@@ -249,7 +249,8 @@ node evals/outcomes/analyze.mjs evals/results/outcomes/aggregate-result.json
 intervals. Pass a targeted rerun's result after the full run's, and it
 replaces those scenarios. It leaves out runs the harness voided or that
 errored (the `Excluded` column). It refuses to report when a `with` run's
-`Skill` call was denied, which needs `--keep-temp` so it can read the traces.
+`Skill` call was denied, or when its trace is gone, so run with `--keep-temp`
+and analyze before the temporary directories are cleaned up.
 Do not regenerate the cases while a run is in progress: generation deletes
 each case directory, including its `.replay` recordings.
 
