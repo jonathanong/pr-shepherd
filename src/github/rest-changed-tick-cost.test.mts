@@ -62,7 +62,7 @@ const charged = () =>
   log.filter((entry) => entry.status !== 304).map((entry) => entry.path.split("?")[0]);
 
 describe("REST changed tick cost", () => {
-  it("charges the pull, the base branch and the merged-base lookup when a base push conflicts", async () => {
+  it("charges the pull, the base branch, the merged-base lookup and the shared-files compare when a base push conflicts", async () => {
     await freshLoadConfig();
     const live = { baseSha: "bbb222", mergeable: true, mergeableState: "clean" };
     await serveLivePr(live);
@@ -73,11 +73,13 @@ describe("REST changed tick cost", () => {
     expect(conflicted).toMatchObject({ action: "triage" });
     expect(conflicted).toMatchObject({ mergeStatus: "CONFLICTS" });
     // The snapshot's closing pull re-read is a 304: the settled dirty body was just stored. A
-    // conflict also looks up whether the base branch was itself a merged PR's head.
+    // conflict also looks up whether the base branch was itself a merged PR's head, and reads
+    // the files changed on both sides (this wire has no compare route, so only the first read).
     expect(charged()).toEqual([
       `${prefix}/pulls/101`,
       `${prefix}/branches/main`,
       `${prefix}/pulls`,
+      `${prefix}/compare/main...aaa111`,
     ]);
   });
 

@@ -32,6 +32,7 @@ import { buildNativeStackLayerRebase } from "./native-stack-rebase.mts";
 import { buildDequeueCommand } from "./merge-plan.mts";
 import { renderShellCommand } from "../../cli/runner.mts";
 import { lookupUpperLayerTrunkConflict } from "./stack-trunk-conflict.mts";
+import { lookupConflictCandidateFiles } from "./conflict-candidate-files.mts";
 import { lookupMergedBasePullRequests } from "./merged-base-pull-requests.mts";
 import {
   conflictingHeadCiNote,
@@ -497,6 +498,16 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
           baseRefOid: report.baseRefOid,
         })
       : [];
+  // Native stack layers update from trunk or a parent, so a base comparison names no useful files.
+  const conflictCandidateFiles =
+    hasConflicts && !stack && headRef
+      ? await lookupConflictCandidateFiles({
+          owner: repoOwner,
+          repo: repoName,
+          baseRefName: baseLookup.branch,
+          headRefOid: headRef,
+        })
+      : undefined;
   // A bottom open layer can still retain its merged parent's PR base. Its update starts
   // at trunk regardless of that base comparison; true upper layers first check the parent.
   const trunkConflict =
@@ -600,6 +611,15 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       `Inspect every PR under \`## Merged PRs matching the current base\`. If this PR is the remaining layer intended for a merged parent's base branch, run \`${retarget}\` after replacing \`<verified-parent-base>\` with that parent's shell-quoted base branch, then rerun Shepherd immediately and follow its fresh instructions instead of the remaining steps here. Otherwise keep the current base and follow the remaining conflict-resolution steps.`,
     ]);
   }
+  if (conflictCandidateFiles) {
+    // Follows the conflict step; without one (index -1) it leads the list.
+    const conflictAt = instructions.findIndex((step) => step.includes("merge conflicts"));
+    instructions.splice(
+      conflictAt + 1,
+      0,
+      "Start with the files under `## Files changed on both sides since the merge base`: the PR and its base both changed them, so they are the likeliest conflicts, but GitHub does not list conflicting files and the list may be incomplete. Resolve the conflicts yourself rather than handing them to the user.",
+    );
+  }
   const checkRunCount = countReportedChecks(report.checks);
   const suitesEmpty = report.headCheckSuitesEmpty === true;
   const nowMs = Date.now();
@@ -625,6 +645,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     ...base,
     baseBranch: baseLookup.branch,
     ...(mergedBasePullRequests.length > 0 && { mergedBasePullRequests }),
+    ...(conflictCandidateFiles && { conflictCandidateFiles }),
     ...(trunkConflict && { stackTrunkConflict: trunkConflict.trunk }),
     action: "triage" as const,
     triage: {

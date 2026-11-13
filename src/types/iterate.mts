@@ -16,6 +16,7 @@ import type {
   BranchProtection,
   MergeStateStatus,
   MergedBasePullRequest,
+  ConflictCandidateFiles,
   Review,
   ReviewDecision,
   ReviewThread,
@@ -74,6 +75,8 @@ export interface IterateResultBase {
   stackTrunkConflict?: string;
   /** Merged PRs whose exact head commit and repository match this conflicting PR's base. */
   mergedBasePullRequests?: MergedBasePullRequest[];
+  /** Conflicting non-stack PR: files changed on both sides since the merge base. */
+  conflictCandidateFiles?: ConflictCandidateFiles;
   /** Null when no classic protection rule exists or the base ref is unavailable. */
   branchProtection: BranchProtection | null;
   mergeRequirements?: MergeRequirements;

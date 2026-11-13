@@ -82,6 +82,7 @@ export function projectIterateLean(
     ...((result.mergedBasePullRequests?.length ?? 0) > 0 && {
       mergedBasePullRequests: result.mergedBasePullRequests,
     }),
+    ...(result.conflictCandidateFiles && { conflictCandidateFiles: result.conflictCandidateFiles }),
     ...(result.branchProtection !== null && { branchProtection: result.branchProtection }),
     ...(mergeRequirements && { mergeRequirements }),
     ...(result.mergeQueue && !isRedundantMergeQueue(result) && { mergeQueue: result.mergeQueue }),
