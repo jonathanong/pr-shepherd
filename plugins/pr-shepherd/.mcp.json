@@ -1,6 +1,6 @@
 {
   "pr-shepherd": {
     "command": "npx",
-    "args": ["--yes", "--package", "pr-shepherd@1.6.1", "pr-shepherd-mcp"]
+    "args": ["--yes", "--package", "pr-shepherd@2.0.0", "pr-shepherd-mcp"]
   }
 }
