@@ -1,0 +1,67 @@
+{
+  "batchData": {
+    "mergeable": "CONFLICTING",
+    "mergeStateStatus": "DIRTY",
+    "reviewDecision": "APPROVED",
+    "isMergeQueueEnabled": true,
+    "isInMergeQueue": true,
+    "mergeQueueEntry": {
+      "position": 2,
+      "state": "UNMERGEABLE",
+      "estimatedTimeToMerge": null
+    },
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ],
+    "stack": null
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "args": [
+    "--merge"
+  ],
+  "expectedExitCode": 12,
+  "description": "A conflicting non-stack PR still in the merge queue: the files-changed-on-both-sides step is part of path (a), so a caller who chooses to wait skips it.",
+  "restResponses": {
+    "/repos/owner/repo/compare/main...abc123": {
+      "merge_base_commit": {
+        "sha": "mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm"
+      },
+      "files": [
+        {
+          "filename": "src/a.ts"
+        },
+        {
+          "filename": "src/b.ts"
+        },
+        {
+          "filename": "lib/new.ts",
+          "previous_filename": "lib/old.ts"
+        }
+      ]
+    },
+    "/repos/owner/repo/compare/mmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm...main": {
+      "files": [
+        {
+          "filename": "src/a.ts"
+        },
+        {
+          "filename": "lib/old.ts"
+        },
+        {
+          "filename": "docs/x.md"
+        }
+      ]
+    }
+  }
+}

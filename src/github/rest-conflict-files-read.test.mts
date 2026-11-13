@@ -3,11 +3,11 @@ import { serve, wire, prefix, repo } from "../../test-helpers/github/rest-read.t
 import { readRestFilesChangedOnBothSides } from "./rest-conflict-files-read.mts";
 
 const mergeBase = "m".repeat(40);
-const headPath = `${prefix}/compare/feature%2Fbase...abc123?per_page=100`;
-const basePath = `${prefix}/compare/${mergeBase}...feature%2Fbase?per_page=100`;
+const headPath = `${prefix}/compare/feature%2Fbase...abc123?per_page=1`;
+const basePath = `${prefix}/compare/${mergeBase}...feature%2Fbase?per_page=1`;
 
 describe("readRestFilesChangedOnBothSides", () => {
-  it("intersects both sides through renames and pages the base side", async () => {
+  it("intersects both sides through renames and reads only the first compare page of each side", async () => {
     await serve((request, response) => {
       if (request.path === headPath) {
         response.end(
@@ -22,20 +22,17 @@ describe("readRestFilesChangedOnBothSides", () => {
           }),
         );
       } else if (request.path === basePath) {
-        response.setHeader(
-          "link",
-          `<https://api.github.com${prefix}/compare/${mergeBase}...feature%2Fbase?per_page=100&page=2>; rel="next"`,
-        );
         response.end(JSON.stringify({ files: [{ filename: "a.ts" }, { filename: "old.ts" }] }));
       } else {
-        response.end(JSON.stringify({ files: [{ filename: "c.ts" }] }));
+        response.statusCode = 500;
+        response.end("{}");
       }
     });
     await expect(readRestFilesChangedOnBothSides(repo, "feature/base", "abc123")).resolves.toEqual([
       "a.ts",
       "new.ts",
-      "moved/c.ts",
     ]);
+    expect(wire.requests.map((request) => request.path)).toEqual([headPath, basePath]);
   });
 
   it("rejects a comparison without a merge base", async () => {

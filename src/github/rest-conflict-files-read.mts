@@ -1,12 +1,5 @@
 import type { RepoInfo } from "./client.mts";
-import {
-  malformedRest,
-  readRestPages,
-  restArray,
-  restObject,
-  restRepoPath,
-  restString,
-} from "./rest-reader-core.mts";
+import { readRest, restArray, restObject, restRepoPath, restString } from "./rest-reader-core.mts";
 
 interface SideFile {
   filename: string;
@@ -24,20 +17,19 @@ function compareFiles(files: unknown[]): SideFile[] {
   });
 }
 
+/**
+ * Compare lists `files` on its first page only (later pages carry commits), and at most 300 of
+ * them, so a very large change can yield an incomplete list. One commit per page keeps it small.
+ */
 async function readSide(
   repo: RepoInfo,
   basehead: string,
-  onBody?: (body: Record<string, unknown>) => void,
-): Promise<SideFile[]> {
-  const pages = await readRestPages<unknown>(
-    `${restRepoPath(repo)}/compare/${basehead}`,
-    (body) => {
-      const record = restObject(body, "compare");
-      onBody?.(record);
-      return restArray(record.files, "compare files");
-    },
+): Promise<{ files: SideFile[]; body: Record<string, unknown> }> {
+  const body = restObject(
+    await readRest<unknown>("GET", `${restRepoPath(repo)}/compare/${basehead}?per_page=1`),
+    "compare",
   );
-  return compareFiles(pages.nodes);
+  return { files: compareFiles(restArray(body.files, "compare files")), body };
 }
 
 /**
@@ -50,19 +42,15 @@ export async function readRestFilesChangedOnBothSides(
   baseRef: string,
   headRef: string,
 ): Promise<string[]> {
-  let mergeBase: string | undefined;
-  const head = await readSide(
+  const { files: head, body } = await readSide(
     repo,
     `${encodeURIComponent(baseRef)}...${encodeURIComponent(headRef)}`,
-    (body) => {
-      mergeBase ??= restString(
-        restObject(body.merge_base_commit, "compare merge base").sha,
-        "compare merge base SHA",
-      );
-    },
   );
-  if (mergeBase === undefined) malformedRest("compare merge base missing");
-  const base = await readSide(repo, `${mergeBase}...${encodeURIComponent(baseRef)}`);
+  const mergeBase = restString(
+    restObject(body.merge_base_commit, "compare merge base").sha,
+    "compare merge base SHA",
+  );
+  const { files: base } = await readSide(repo, `${mergeBase}...${encodeURIComponent(baseRef)}`);
   // A rename on either side still matches through the name the other side changed.
   const baseNames = new Set(
     base.flatMap((file) => [file.filename, file.previous ?? file.filename]),

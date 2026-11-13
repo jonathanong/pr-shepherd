@@ -617,7 +617,9 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     instructions.splice(
       conflictAt + 1,
       0,
-      "Start with the files under `## Files changed on both sides since the merge base`: the PR and its base both changed them, so they are the likeliest conflicts, but GitHub does not list conflicting files and the list may be incomplete. Resolve the conflicts yourself rather than handing them to the user.",
+      pathA(
+        "Start with the files under `## Files changed on both sides since the merge base`: the PR and its base both changed them, so they are the likeliest conflicts, but GitHub does not list conflicting files and the list may be incomplete. Resolve the conflicts yourself rather than handing them to the user.",
+      ),
     );
   }
   const checkRunCount = countReportedChecks(report.checks);
