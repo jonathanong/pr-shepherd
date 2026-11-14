@@ -34,6 +34,17 @@ Sonnet 5.5, opus judge, 3 to 6 runs per arm, 33 scenarios. **This is the latest 
 - **Ties at 1.00** are mostly states `gh` already handles: silent edits, real CI failures, cancelled runs, a branch behind base, and a merged PR.
 - **A clean full run of all 33 scenarios** would replace this composite.
 
+### Stack merge scope (2026-11-14)
+
+Three scenarios added after the composite above, for merges limited to what the user approved. They are not in the category table above. Same model, judge and 3 runs per arm, at low effort. [HISTORY.md](HISTORY.md#2026-11-14-outcome-scenarios-for-stack-merge-scope) has the runs.
+
+| Scenario                             | Plugin | gh/MCP | Δ     |
+| ------------------------------------ | ------ | ------ | ----- |
+| `36-stack-merge-unowned-lower-layer` | 1.00   | 1.00   | 0.00  |
+| `37-stack-merge-through-layer`       | 1.00   | 0.00   | +1.00 |
+| `38-two-stacks-one-request`          | 1.00   | 0.00   | +1.00 |
+| **All**                              | 1.00   | 0.33   | +0.67 |
+
 <details>
 <summary>All scenarios</summary>
 
@@ -72,5 +83,8 @@ Sonnet 5.5, opus judge, 3 to 6 runs per arm, 33 scenarios. **This is the latest 
 | `33-stack-lower-layer-conflicts`        | Stacks               | 1.00   | 0.00   | +1.00 |
 | `34-stack-closed-parent`                | Stacks               | 1.00   | 0.00   | +1.00 |
 | `35-stack-layer-queue-ejection`         | Stacks               | 1.00   | 0.00   | +1.00 |
+| `36-stack-merge-unowned-lower-layer`    | Stacks               | 1.00   | 1.00   | 0.00  |
+| `37-stack-merge-through-layer`          | Stacks               | 1.00   | 0.00   | +1.00 |
+| `38-two-stacks-one-request`             | Stacks               | 1.00   | 0.00   | +1.00 |
 
 </details>
