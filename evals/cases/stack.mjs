@@ -147,8 +147,8 @@ about #401 before shepherding #402 and #403; never mention the handoff at all.`,
     tags: ["stack", "shepherd", "conflicts"],
     graders: {
       "routes-only-the-conflicting-layer": llm(
-        `The plan runs a one-PR session for PR #311 — the only \`owned\` layer and the
-only one the Instructions route — and does NOT start separate work on PR #312.
+        `The plan runs a one-PR session for PR #311 — the only layer with a printed one-PR
+command — and does NOT start separate work on PR #312, which needs no session this tick.
 
 PR #312 is \`shepherded · mergeable\`. Resolving #311's conflict inside its own
 session, including the printed \`gh stack\` commands of that session, is
