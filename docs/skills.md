@@ -159,13 +159,15 @@ The session owns recurrence; the skill prints the full result and follows its pl
 
 ## Poll guard
 
-The plugin ships a `PreToolUse` hook for Claude Code and Codex (`plugins/pr-shepherd/hooks/`). It checks each `Bash` and `Monitor` command for its own polling of PR or CI state:
+The plugin ships a `PreToolUse` hook for Claude Code and Codex (`plugins/pr-shepherd/hooks/`). It checks each `Bash` and `Monitor` command for its own waiting on pull request state. A PR read is `gh pr view|checks|status|list`, `gh api` or a `curl` to `api.github.com` on pull requests, or a `pr-shepherd` status tick (the default command, `iterate`, or `stack`, without `--until-terminal`). The hook flags:
 
-- a GitHub read (`gh pr view|checks|status|list`, `gh run view|list`, `gh api`, `curl` to `api.github.com`, or `pr-shepherd`) together with `while`, `until`, `sleep`, or `watch`;
-- `gh run watch` and `gh pr checks --watch`;
-- a shell script the command runs (`bash wait.sh`, `./wait.sh`) whose contents match either rule.
+- a loop (`while`, `until`, `for`) that runs a PR read and a `sleep`, or a PR read repeated with `watch`;
+- a `sleep` of 60 seconds or more right before a PR read;
+- `gh pr checks --watch`;
+- a wait on a workflow run (`gh run view|list` in a loop or after a long sleep, or `gh run watch`) when a `gh pr` or `pr-shepherd` command follows it in the same command;
+- a shell script the command runs (`bash wait.sh`, `./wait.sh`) whose contents match one of these rules.
 
-Such loops spend GraphQL quota on every pass and miss what Shepherd reports, such as why a PR left the merge queue. One-off reads and a single `pr-shepherd … --until-terminal` pass through.
+Such waits spend GraphQL quota on every pass and miss what Shepherd reports, such as why a PR left the merge queue. To avoid false positives, the hook counts only words in command position. Text in quotes, comments and heredocs is data; `$(…)` inside double quotes still runs and is checked. A loop that steps through its own variable (`for pr in 1 2 3; do gh pr view $pr; done`) is iteration, not polling. A wait on a workflow run with no PR command after it, such as `gh run watch` on a `workflow_dispatch` or post-merge publish run, passes. So do one-off reads, `pr-shepherd apply`, and a single `pr-shepherd … --until-terminal`.
 
 | Level                | Effect                                                                                           |
 | -------------------- | ------------------------------------------------------------------------------------------------ |
