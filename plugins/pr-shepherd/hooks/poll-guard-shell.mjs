@@ -54,6 +54,12 @@ export function maskShell(text) {
     if (c === "\\") {
       hide(i, i + 2);
       i++;
+    } else if (c === "$" && text[i + 1] === "'") {
+      // ANSI-C `$'…'`: a backslash escapes the next character, including a quote.
+      let j = i + 2;
+      while (j < text.length && text[j] !== "'") j += text[j] === "\\" ? 2 : 1;
+      hide(i, j + 1);
+      i = j;
     } else if (c === "'") {
       const end = text.indexOf("'", i + 1);
       const stop = end === -1 ? text.length : end + 1;
@@ -138,7 +144,9 @@ export function simpleCommands(text) {
     let wrapped = false;
     while (words.length > 0) {
       const w = words[0].word;
-      if (KEYWORDS.has(w) || /^\w+=/.test(w) || (w.startsWith("-") && wrapped)) {
+      if (w === "command" && /^-[vV]$/.test(words[1]?.word)) {
+        words.length = 0;
+      } else if (KEYWORDS.has(w) || /^\w+=/.test(w) || (w.startsWith("-") && wrapped)) {
         words.shift();
       } else if (WRAPPERS.has(w)) {
         wrapped = true;
@@ -182,19 +190,3 @@ export function leadingQuoted(rest) {
   const end = quote === "'" ? body.indexOf("'") : body.search(/(?<!\\)"/);
   return end === -1 ? null : body.slice(0, end);
 }
-
-/** The command's arguments without redirections, so `> "out-$i"` is not iteration. */
-function argText(cmd) {
-  const kept = [];
-  for (let k = 0; k < cmd.words.length; k++) {
-    const raw = cmd.words[k].raw;
-    if (/^\d*(?:[<>]|>>|&>)$/.test(raw)) k++;
-    else if (!/^\d*(?:[<>]|&>)/.test(raw)) kept.push(raw);
-  }
-  return kept.join(" ");
-}
-
-const usesVar = (text, name) => new RegExp(`\\$(?:${name}\\b|\\{${name}[}:#%/])`).test(text);
-
-/** Whether the command's arguments, not its redirections, use loop variable `name`. */
-export const usesLoopVar = (cmd, name) => usesVar(argText(cmd), name);

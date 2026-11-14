@@ -8,7 +8,8 @@
 // Words inside quotes, comments and heredocs are data, not commands. Anything the
 // scanner cannot classify passes: the guard prefers a miss to a false positive.
 
-import { leadingQuoted, simpleCommands, usesLoopVar } from "./poll-guard-shell.mjs";
+import { argText, usesLoopVar } from "./poll-guard-args.mjs";
+import { leadingQuoted, simpleCommands } from "./poll-guard-shell.mjs";
 
 const PR_SUBCOMMANDS = new Set(["view", "checks", "status", "list"]);
 const PR_API = /pulls|pullRequest/;
@@ -115,12 +116,14 @@ function quotedCommand(cmd, words) {
 function isPrRead(cmd) {
   const [first, second, third] = cmd.words.map((w) => w.word);
   if (first === "gh" && second === "pr") return PR_SUBCOMMANDS.has(third);
-  if (first === "gh" && second === "api") return PR_API.test(cmd.text);
+  if (first === "gh" && second === "api") return PR_API.test(argText(cmd));
   // Quoting does not change an argument's value: `pr-shepherd "42"` is `pr-shepherd 42`.
   if (first === "pr-shepherd") {
     return isShepherdTick(cmd.words.map((w) => w.raw.replace(/^(["'])(.*)\1$/, "$2")));
   }
-  return first === "curl" && /api\.github\.com/.test(cmd.text) && PR_API.test(cmd.text);
+  // `curl -o FILE` names where the response goes, not what it reads.
+  const args = argText(cmd).replace(/(?:^|\s)(?:-o|--output)\s+\S+/g, " ");
+  return first === "curl" && /api\.github\.com/.test(args) && PR_API.test(args);
 }
 
 /**

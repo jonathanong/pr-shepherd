@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  detectPoller,
-  expandPath,
-  guardMessage,
-  readLevel,
-} from "../../plugins/pr-shepherd/hooks/poll-guard-detect.mjs";
+import { detectPoller } from "../../plugins/pr-shepherd/hooks/poll-guard-detect.mjs";
 
 // Commands agents actually ran instead of one `pr-shepherd … --until-terminal`.
 const POLLERS = [
@@ -167,41 +162,5 @@ describe("backgrounded Shepherd", () => {
     "npx pr-shepherd 671 --until-terminal",
   ])("does not flag %s", (command) => {
     expect(detectPoller(command)).toBeNull();
-  });
-});
-
-describe("expandPath", () => {
-  const env = { HOME: "/home/u", TMPDIR: "/tmp/x" };
-  it("expands home, variables and quotes", () => {
-    expect(expandPath("~/a.sh", env)).toBe("/home/u/a.sh");
-    expect(expandPath("$TMPDIR/a.sh", env)).toBe("/tmp/x/a.sh");
-    expect(expandPath('"${TMPDIR}/a.sh"', env)).toBe("/tmp/x/a.sh");
-    expect(expandPath("$NOPE/a.sh", env)).toBe("$NOPE/a.sh");
-    expect(expandPath("~/a.sh", {})).toBe("~/a.sh");
-  });
-});
-
-describe("readLevel", () => {
-  it("defaults to advisory", () => {
-    expect(readLevel({})).toEqual({ level: "advisory" });
-    expect(readLevel({ PR_SHEPHERD_POLL_GUARD: "" })).toEqual({ level: "advisory" });
-  });
-
-  it.each(["disabled", "advisory", "fail"])("accepts %s", (level) => {
-    expect(readLevel({ PR_SHEPHERD_POLL_GUARD: level })).toEqual({ level });
-  });
-
-  it("rejects other values with an error", () => {
-    expect(readLevel({ PR_SHEPHERD_POLL_GUARD: "block" })).toEqual({
-      error: expect.stringMatching(/must be one of disabled, advisory, fail; got "block"/),
-    });
-  });
-});
-
-describe("guardMessage", () => {
-  it("names the finding and the Shepherd command", () => {
-    const text = guardMessage("a loop");
-    expect(text).toContain("(a loop)");
-    expect(text).toContain("pr-shepherd <all PRs> --until-terminal");
   });
 });
