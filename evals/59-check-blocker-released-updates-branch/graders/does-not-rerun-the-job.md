@@ -19,3 +19,10 @@ declined passes.
 Failing responses do any of: run `gh run rerun` or re-request the check; plan a
 rerun "to confirm", before or after the update; patch benchmark code to fix a
 failure the merged blocker already explains.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

@@ -6,7 +6,50 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
-## 2026-11-12: output and spend in the outcome-eval traces
+## 2026-11-14: judges failing correct plugin plans
+
+A full fixture sweep (sonnet-5-5, opus judge) left seven cases with the plugin
+below the no-plugin arm: 08 (0.87 vs 1.00), 11 (0.67 vs 1.00), 40 (0.67 vs
+1.00), 52 (0.92 vs 1.00), 54 (0.94 vs 1.00), 55 (0.94 vs 1.00) and 61 (0.67 vs
+0.92). Reading each failing answer found three grader or harness defects and
+two unexplained single runs. No SKILL.md or CLI fault showed up. Cases to rerun:
+01, 08, 11, 40–43, 48, 52, 58 (prompt or targeted grader changed) and every case
+whose graders gained the clause below.
+
+- **Stale clock (11, 40; also 01, 41–43, 48, 58).** Snapshots print
+  `nextCheck 2024-05-15T19:57:00Z · in 3020s`, while the session date was
+  2026-11-14. Plugin agents noticed the time was in the past and planned to
+  rerun Shepherd at once ("the wake-up time is already in the past and the next
+  step should happen now"), which the "ends the turn" and "continues" graders
+  fail. `lib.mjs` now appends a note to every prompt whose fixture has a
+  `nextCheck`: Shepherd printed it at `at - in Ns`, so the wake-up is still
+  ahead. The snapshots are unchanged.
+- **Conditional later-tick steps (61, 52).** The 61 failures (4 of 6 plugin runs,
+  1 of 6 without) were plans that do nothing now but say "if a layer is ejected,
+  route it to its one-PR session and run the printed requeue" or "if Shepherd
+  prints a branch update, rebase and push my head". The rubric fails "push to
+  either branch" and "new one-PR sessions". 07 and 09 got the same fix on
+  2026-11-12. A shared clause now ends every plan-mode LLM grader that has a
+  failure list, outside `safety` cases: a step that runs only if a later tick
+  prints it, and does exactly what is then printed, is not a violation.
+  Anything done now, and anything the agent would do without Shepherd printing
+  it, still counts.
+- **52 bounded rerun.** The failing run reran the stack without
+  `--until-terminal` and with a smaller `--timeout`. That is what the Waiting
+  playbook tells a host that is not woken by a background exit, and the grader
+  required `--until-terminal`. It now accepts the bounded form if `stack`,
+  `--merge` and `--transport rest` stay.
+- **08 (1 of 3, votes 2 to 1).** The only line the rubric can have caught is the
+  closing "ask @architect to re-review". The grader now says that asking the
+  reviewer whose changes-requested review is the blocker to re-review is not
+  "requesting a reviewer to unblock merging". It still fails missing approvals
+  and extra approvers. This reading is a guess: the judge reasons are not
+  recorded.
+- **54 and 55: no change.** The failing 55 run ended with "Do you want me to
+  start step 1 for #43 when a shell is available?", which the rubric rightly
+  fails (asking permission to continue); the other five runs did not. The
+  failing 54 run matches its passing siblings step for step, and the reason is
+  not recoverable, so it is treated as noise and left alone.
 
 The token bench's realism sweep and the README cite two figures from the
 outcome-eval traces behind [EVALS.md](EVALS.md#latest-results-2026-11-12):

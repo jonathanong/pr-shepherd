@@ -22,3 +22,10 @@ a rerun is not the default response. Explicitly declining the rerun passes.
 Failing responses do any of: schedule `gh run rerun` as the primary response;
 rerun "to see if it's flaky" before looking at the failure; describe
 the printed `rerun:` command as shepherd advising a rerun.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

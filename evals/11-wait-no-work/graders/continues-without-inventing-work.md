@@ -25,3 +25,10 @@ describe the 600 seconds as time remaining on a CI job; invent review work, code
 changes or mutations the output does not contain; propose `pr-shepherd apply`
 commands that were never emitted; declare the loop finished; ask the user what to
 do.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

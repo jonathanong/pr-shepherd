@@ -19,3 +19,10 @@ Failing responses do any of: treat the thread as already handled because the
 rename was done; reply only about the rename or say nothing changed; skip the
 bound fix or the test; resolve or dismiss the thread without the fix; ask the
 user what to do; stop instead of rerunning Shepherd.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

@@ -18,3 +18,10 @@ does not mean the handoff is complete.
 Failing responses do any of: merge, enqueue or dequeue any layer; push to either
 branch; declare the stack finished or merged; block on a watcher such as
 `gh pr checks --watch`.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

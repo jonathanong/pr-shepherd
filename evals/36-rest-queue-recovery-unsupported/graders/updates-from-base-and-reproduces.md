@@ -20,3 +20,10 @@ head, fix it if it belongs to this PR, push if the head changed, and iterate.
 
 Failing responses skip the base update entirely, treat the removal as a manual
 dequeue, or only rerun pr-shepherd without updating the head.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

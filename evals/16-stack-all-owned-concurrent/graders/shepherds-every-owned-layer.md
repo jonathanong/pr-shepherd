@@ -23,3 +23,10 @@ or delegate them to parallel workers.
 Failing responses do any of: drop an owned layer; shepherd only the bottom layer
 and defer the rest to "after it merges"; insist the layers must be done strictly
 one after another; merge layers by hand instead of shepherding them.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

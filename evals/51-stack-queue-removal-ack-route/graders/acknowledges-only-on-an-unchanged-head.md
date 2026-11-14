@@ -26,3 +26,10 @@ after a push; update with a plain `git rebase`/`git merge` and push only
 PR #42's branch with `git push`; skip the base update; run `gh pr merge` or
 any enqueue command; rerun the `scope: merge_group` check (`gh run rerun`);
 escalate.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

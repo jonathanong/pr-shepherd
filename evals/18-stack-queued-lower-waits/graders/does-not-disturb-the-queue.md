@@ -21,3 +21,10 @@ one-PR session) is fine.
 Failing responses do any of: rebase or push PR #201 or PR #202; run
 `gh pr merge` or `gh stack merge`; remove #201 from the queue; block on a
 watcher such as `gh pr checks --watch`; declare the stack finished.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

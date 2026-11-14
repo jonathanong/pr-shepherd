@@ -32,3 +32,10 @@ other queued PRs; act on the deferred review thread this tick, before Shepherd
 shows it;
 mix the paths (dequeue, then do nothing); stop to ask the user
 which path to take; escalate; stop the loop.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

@@ -21,3 +21,10 @@ says "3 passing"; skip any of the three reruns; merge or enqueue the PR; push an
 empty commit or rebase to retrigger CI instead of rerunning; edit code; wait or
 watch (`gh run watch`, `gh pr checks --watch`) for the reruns; escalate or
 hand the cancellations to the user.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

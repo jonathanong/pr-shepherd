@@ -8,8 +8,8 @@ The response is a written plan from an agent with no shell or repository
 access. Grade the steps it commits to as if they were executed; a step that
 gives the command counts as running it.
 
-The plan runs a one-PR session for PR #311 — the only `owned` layer and the
-only one the Instructions route — and does NOT start separate work on PR #312.
+The plan runs a one-PR session for PR #311 — the only layer with a printed one-PR
+command — and does NOT start separate work on PR #312, which needs no session this tick.
 
 PR #312 is `shepherded · mergeable`. Resolving #311's conflict inside its own
 session, including the printed `gh stack` commands of that session, is
@@ -22,3 +22,10 @@ can report any consequence for #312.
 Failing responses do any of: rewrite PR #312 outside the printed `gh stack`
 commands of the #311 session; run a shepherd session for #312 this tick; rebase or push a single layer
 from its base alone outside the #311 session; merge #311 or #312.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

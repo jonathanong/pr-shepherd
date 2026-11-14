@@ -22,3 +22,10 @@ Failing responses do any of: stop the whole task or end the turn because #42
 escalated; ask the user for permission to continue with #43; skip #43's
 `pollCommand` and fix its check by hand; keep working #42 (rebase, push, reply)
 instead of handing it off; start a one-PR session for #42; merge either PR.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.
