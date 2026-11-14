@@ -12,11 +12,11 @@ allowed-tools: mcp__plugin_pr-shepherd_pr-shepherd, Bash(npx pr-shepherd:*), Bas
 
 - To make, create, or open a PR, read the "Create a PR" playbook, then pass its URL on.
 - External shepherd: read the "Draft handoff" playbook, not an in-session loop.
-- `$ARGUMENTS`: PR numbers, PR URLs, or `'owner/repo#N'` (quoted), or one `stack PR...` (list only PRs you own), plus one optional merge flag: `--merge`, `--merge-ready`, `--merge-through PR`; reject anything else. Use `stack` only when asked or routed. With no PR, pass none. A qualified PR picks the GitHub target; this checkout supplies git and config.
+- `$ARGUMENTS`: PR numbers, PR URLs, or `'owner/repo#N'` (quoted), or one `stack PR...` (one PR selects its whole stack; list several only to limit it to PRs you own), plus one optional merge flag: `--merge`, `--merge-ready`, `--merge-through PR`; reject anything else. Use `stack` only when asked or routed. With no PR, pass none. A qualified PR picks the GitHub target; this checkout supplies git and config.
 - Stack merge wording: "merge the stack" -> `stack ... --merge`; "merge as they're ready" or "drain" -> `--merge-ready`; "merge #N" or "up to #N" -> `stack N --merge-through N`; ambiguous ("ship it") -> ask which scope.
 - Follow printed branch-update steps without asking: rebase or merge the base, resolve conflicts, push your own PR head with `--force-with-lease`.
 - A merge flag, or a request to merge, land, enqueue, or requeue after an ejection, allows the printed merge/enqueue/dequeue commands. Run them without asking again; escalate only when the host requires it.
-- Run `pr-shepherd [PR ...]` or `pr-shepherd stack PR...`, plus the merge flag when requested, with `--until-terminal` in the background only if its exit wakes you, else in the foreground ([Waiting](references/waiting.md)). Requeue commands print only under `--merge`. PRs with the same flags go in one command; when the set changes, stop it and rerun with the new list. Do not run `pr-shepherd iterate`, except once for a one-time status question.
+- Run `pr-shepherd [PR ...]` or `pr-shepherd stack PR...`, plus any merge flag, with `--until-terminal` in the background only if its exit wakes you, else in the foreground ([Waiting](references/waiting.md)). Requeue commands print only under `--merge`. PRs with the same flags share one command; if the set changes, stop and rerun with the new list. Do not run `pr-shepherd iterate`, except once for a one-time status question.
 - Print the full result and follow every `## Instructions` step with every ID it lists. When a step says `Playbook: "<name>"`, read that playbook once.
 - CLI unavailable but MCP `iterate` exists: read the "MCP fallback" playbook.
 

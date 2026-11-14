@@ -77,7 +77,7 @@ reporting; say nothing about the ready lower layers.`,
 layers as they become ready. I own all of it.`,
     graders: {
       "uses-merge-ready": regex(
-        String.raw`pr-shepherd stack\s+\S*pull/603(?![0-9])[^\n]*--merge-ready`,
+        String.raw`pr-shepherd stack\s+[^\n]*603(?![0-9])[^\n]*--merge-ready`,
       ),
       "does-not-use-plain-merge": llm(
         `The plan runs \`pr-shepherd stack\` with \`--merge-ready\`, because the user
@@ -101,12 +101,14 @@ ${NO_PER_LAYER}`,
 mine. Merge #632, but leave #633 open.`,
     graders: {
       "uses-merge-through": regex(
-        String.raw`pr-shepherd stack\s+[^\n]*--merge-through\s+\S*(?:pull/|#)?632(?![0-9])`,
+        String.raw`pr-shepherd\s+(?:stack\s+[^\n]*--merge-through\s+\S*632(?![0-9])|\S*632(?![0-9])\S*\s+[^\n]*--merge(?![-\w]))`,
       ),
       "leaves-the-upper-layer-alone": llm(
-        `The plan runs \`pr-shepherd stack\` with \`--merge-through\` naming #632, so
-#631 and #632 land and #633 stays open. It does not merge #633, and does not
-rebase or push #633.
+        `The plan lands #632, and #631 beneath it, which must land first, and leaves #633
+open. Either route passes: \`pr-shepherd stack … --merge-through 632\` (listing
+#633 in the command is fine) or a one-PR \`pr-shepherd <#632> --merge\`, which the
+CLI routes to \`--merge-through\`. Saying #633 may need a restack by its owner
+afterwards is fine. It does not merge #633 and does not rebase or push #633.
 
 ${NO_PER_LAYER}`,
       ),
