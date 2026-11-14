@@ -14,7 +14,7 @@ nextAction: shepherd
 
 ## Instructions
 
-1. Start or delegate concurrent one-PR sessions only for `owned` rows. Leave other layers untouched.
+1. Start one concurrent one-PR session per command below, only for `owned` rows; none for layers without one.
 2. Run `pr-shepherd https://github.com/owner/repo/pull/641 --until-terminal --layers 641:1:o:layer-641,642:2:o:layer-642,643:3:u:layer-643`.
 3. Run `pr-shepherd https://github.com/owner/repo/pull/642 --until-terminal --layers 641:1:o:layer-641,642:2:o:layer-642,643:3:u:layer-643`.
 4. PR #643 is not owned. Do not run a session for it.

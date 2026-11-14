@@ -22,6 +22,6 @@ nextAction: shepherd
 
 ## Instructions
 
-1. Start or delegate concurrent one-PR sessions for these layers; every layer is yours.
+1. Start one concurrent one-PR session per command below; none for layers without one.
 2. Run `pr-shepherd https://github.com/vouchington/vouchington/pull/2620 --until-terminal`.
 3. After the selected one-PR sessions, rerun `pr-shepherd stack "vouchington/vouchington#2622" --until-terminal --merge --transport rest`. Keep watching until every layer is terminal.

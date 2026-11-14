@@ -24,7 +24,7 @@ describe("stack session ownership wording", () => {
       stack([row(1, 1, { action: "triage", reasons: ["failing-checks"] })]),
       false,
     );
-    expect(text(result)).toContain("every layer is yours");
+    expect(text(result)).toContain("none for layers without one");
     expect(text(result)).not.toContain("only for `owned` rows");
   });
 

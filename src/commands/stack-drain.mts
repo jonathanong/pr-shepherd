@@ -68,7 +68,7 @@ export function appendAutonomousInstructions(
 ): void {
   if (candidates.length === 0) return;
   instructions.push(
-    `${instructions.length + 1}. ${partial ? "Start or delegate concurrent one-PR sessions only for `owned` rows. Leave other layers untouched." : "Start or delegate concurrent one-PR sessions for these layers; every layer is yours."}`,
+    `${instructions.length + 1}. ${partial ? "Start one concurrent one-PR session per command below, only for `owned` rows; none for layers without one." : "Start one concurrent one-PR session per command below; none for layers without one."}`,
   );
   for (const item of candidates) {
     instructions.push(`${instructions.length + 1}.${sessionInstruction(item)}`);
