@@ -6,7 +6,7 @@ Usage:
   pr-shepherd --version | -v
   pr-shepherd --help | -h
   pr-shepherd [PR ...] [poll-flags] [iterate-flags]
-  pr-shepherd stack PR [--once] [poll-flags] [iterate-flags]
+  pr-shepherd stack PR [PR ...] [--once] [poll-flags] [iterate-flags]
   pr-shepherd iterate [PR ...] [iterate-flags]
   pr-shepherd apply merge [PR] --require-sha SHA --merge-action ACTION --transport rest
   pr-shepherd apply review [PR] [review-flags]
@@ -16,7 +16,7 @@ Usage:
   pr-shepherd apply queue-removal [PR] --require-sha <head> --queue-commit <commit> --removed-at <unix>
   pr-shepherd journal extract --body-file <path>
   pr-shepherd suggest [PR] --thread-id ID --message MSG [groups...]
-  pr-shepherd admin clean <pr|branch|current|repo|all> [value] [flags]
+  pr-shepherd admin clean <pr|stack|branch|current|repo|all> [value] [flags]
   pr-shepherd admin log-file [--format text|json]
 
 Commands:

@@ -128,10 +128,12 @@ describe("native-stack reconciliation", () => {
         sized(4, { action: "triage", reasons: ["review-work"], review: { actionable: 1 } }),
       ]),
       true,
+      undefined,
+      { kind: "ready" },
     );
     expect(result.nextAction).toBe("merge");
     expect(result.instructions?.[0]).toContain("gh stack merge 3 --yes --squash");
-    expect(result.instructions?.[0]).toContain("PR #3 and every unmerged layer below it");
+    expect(result.instructions?.[0]).toContain("PRs #1, #2, #3");
     expect(result.instructions?.join("\n")).toContain("pull/4 --until-terminal");
     expect(result.instructions?.join("\n")).not.toContain("gh stack merge 4");
   });

@@ -3,7 +3,7 @@
   "mode": "aggregate",
   "args": [
     "stack",
-    "https://github.com/owner/repo/pull/342",
+    "owner/repo#35",
     "--merge",
     "--debounce",
     "0s"

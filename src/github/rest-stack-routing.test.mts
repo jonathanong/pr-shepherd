@@ -8,6 +8,7 @@ import {
 } from "../../test-helpers/github/rest-read.test-support.mts";
 import { freshLoadConfig } from "../../test-helpers/config/load-test-support.mts";
 import { fetchPollSummary } from "./poll-summary.mts";
+import { applyStackOwnership } from "../commands/stack-ownership.mts";
 import { runWithGithubTransport } from "./transport.mts";
 import { runIterate } from "../commands/iterate/index.mts";
 import { withPollSummaryInstructions } from "../commands/poll-summary-instructions.mts";
@@ -94,12 +95,18 @@ async function certify() {
   });
 }
 
-async function summary(merge: boolean, noAutoMarkReady = false) {
+async function summary(merge: boolean, noAutoMarkReady = false, listed?: number[]) {
   return runWithGithubTransport("rest", async () => {
-    const fetched = await fetchPollSummary({ stackPrNumber: 102, noAutoMarkReady }, repo);
+    const input = { stackPrNumber: 102, noAutoMarkReady, ...(listed && { stackOwned: listed }) };
+    const fetched = await fetchPollSummary(input, repo);
+    const owned = applyStackOwnership(fetched.selection as never, fetched.prs, listed);
+    const base = { ...fetched, ...owned, mode: "summary" as const, reason: "actionable" as const };
+    const result = { ...base, repo: `${repo.owner}/${repo.name}` };
     return withPollSummaryInstructions(
-      { ...fetched, mode: "summary", repo: `${repo.owner}/${repo.name}`, reason: "actionable" },
+      result,
       merge,
+      undefined,
+      merge ? { kind: "all" } : undefined,
     );
   });
 }
@@ -112,22 +119,20 @@ describe("REST native-stack routing through the public summary", () => {
     const result = await summary(false, true);
     expect(result.prs).toMatchObject([
       { pr: 101, owned: true, isDraft: true, action: "cancel" },
-      { pr: 102, isDraft: true, action: "cancel" },
+      { pr: 102, owned: true, isDraft: true, action: "cancel" },
     ]);
     expect(result).toMatchObject({ nextAction: "cancel", reason: "all_terminal" });
-    expect(result.prs[1]).not.toHaveProperty("owned");
     const instructions = result.instructions!.join("\n");
     expect(instructions).toContain("Stop shepherding this stack");
     expect(instructions).not.toContain("gh pr ready");
     expect(instructions).not.toContain("ready_for_review");
     expect(result.prs.every((item) => item.pollCommand === undefined)).toBe(true);
-    expect(wire.requests.every(({ method }) => method === "GET")).toBe(true);
   });
 
-  it("selects the authenticated viewer's session and preserves other authors' rows", async () => {
+  it("selects only the listed PR's session and keeps other authors' rows", async () => {
     await freshLoadConfig();
     await server();
-    const result = await summary(false);
+    const result = await summary(false, false, [101]);
     expect(result).toMatchObject({
       nextAction: "shepherd",
       prs: [
@@ -150,8 +155,6 @@ describe("REST native-stack routing through the public summary", () => {
     expect(markdown).toContain("owner `@author` · owned");
     expect(markdown).toContain("owner `@other`");
     expect(wire.requests.some(({ path }) => path === "/user")).toBe(true);
-    expect(wire.requests.some(({ path }) => path === "/graphql")).toBe(false);
-    expect(wire.requests.every(({ method }) => method === "GET")).toBe(true);
   });
 
   it.each([

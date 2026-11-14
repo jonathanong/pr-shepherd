@@ -1,0 +1,93 @@
+{
+  "description": "`stack --merge` with ready lower layers and an upper layer still in review work: nothing is merged, the output says why and offers --merge-ready only for a user who asked for it.",
+  "mode": "aggregate",
+  "args": [
+    "stack",
+    "owner/repo#60",
+    "--merge",
+    "--debounce",
+    "0s"
+  ],
+  "expectedExitCode": 16,
+  "expectedNextAction": "shepherd",
+  "expectedReason": "actionable",
+  "aggregateSummary": {
+    "selection": {
+      "kind": "stack",
+      "anchor": 601,
+      "stackNumber": 60,
+      "stackSize": 3
+    },
+    "prs": [
+      {
+        "pr": 601,
+        "repo": "owner/repo",
+        "title": "Layer 1",
+        "url": "https://github.com/owner/repo/pull/601",
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-601",
+        "headRefOid": "6016016016016016016016016016016016016016",
+        "baseRefName": "main",
+        "stack": {
+          "number": 60,
+          "size": 3,
+          "position": 1,
+          "baseRefName": "main"
+        },
+        "action": "merge",
+        "reasons": [
+          "appears-ready"
+        ],
+        "readyReceipt": true
+      },
+      {
+        "pr": 602,
+        "repo": "owner/repo",
+        "title": "Layer 2",
+        "url": "https://github.com/owner/repo/pull/602",
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-602",
+        "headRefOid": "6026026026026026026026026026026026026026",
+        "baseRefName": "layer-601",
+        "stack": {
+          "number": 60,
+          "size": 3,
+          "position": 2,
+          "baseRefName": "main"
+        },
+        "action": "merge",
+        "reasons": [
+          "appears-ready"
+        ],
+        "readyReceipt": true
+      },
+      {
+        "pr": 603,
+        "repo": "owner/repo",
+        "title": "Layer 3",
+        "url": "https://github.com/owner/repo/pull/603",
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-603",
+        "headRefOid": "6036036036036036036036036036036036036036",
+        "baseRefName": "layer-602",
+        "stack": {
+          "number": 60,
+          "size": 3,
+          "position": 3,
+          "baseRefName": "main"
+        },
+        "action": "triage",
+        "reasons": [
+          "review-work"
+        ],
+        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/603 --until-terminal"
+      }
+    ]
+  }
+}

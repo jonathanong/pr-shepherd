@@ -8,7 +8,7 @@ import {
   getPrNumberForBranch,
 } from "../github/client.mts";
 
-export type CleanVariant = "pr" | "branch" | "current" | "repo" | "all";
+export type CleanVariant = "pr" | "stack" | "branch" | "current" | "repo" | "all";
 
 interface CleanOptions {
   variant: CleanVariant;
@@ -153,6 +153,14 @@ async function resolveTarget(base: string, opts: CleanOptions): Promise<string> 
       );
     }
     return repoDir;
+  }
+
+  if (variant === "stack") {
+    const n = value === undefined ? NaN : parseInt(value, 10);
+    if (!Number.isFinite(n) || n <= 0 || String(n) !== value!.trim()) {
+      throw new Error(`"clean stack" needs a native stack number; got ${value ?? "none"}`);
+    }
+    return join(repoDir, `stack-${n}`);
   }
 
   let prNumber: number;

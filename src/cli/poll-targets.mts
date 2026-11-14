@@ -18,6 +18,8 @@ const VALUE_FLAGS = new Set([
   "--interval",
   "--timeout",
   "--debounce",
+  "--merge-through",
+  "--layers",
 ]);
 
 export interface ParsedPollTargets {

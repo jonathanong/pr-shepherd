@@ -14,6 +14,7 @@ Iterate flags:
   --no-auto-mark-ready           Leave draft PRs in draft; stop when otherwise ready.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
   --instructions playbook|inline Render triage steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
+  --layers <list>          Set by the commands a partly owned stack prints. Open layers as pr:position:o|u:branch (branch percent-encoded); a one-PR session then never prints a whole-stack rebase or push.
   --transport auto|graphql|rest  Select GitHub transport. Default: github.transport (auto).
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include verbose iterate fields.
@@ -72,6 +73,7 @@ Forwarded iterate flags:
   --no-auto-mark-ready           Leave draft PRs in draft; stop when otherwise ready.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
   --instructions playbook|inline Render triage steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
+  --layers <list>          Set by the commands a partly owned stack prints. Open layers as pr:position:o|u:branch (branch percent-encoded); a one-PR session then never prints a whole-stack rebase or push.
   --transport auto|graphql|rest  Select GitHub transport. Default: github.transport (auto).
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include verbose iterate fields and detailed per-tick lines.
@@ -103,7 +105,11 @@ SHEPHERD lists one-PR sessions to run before rerunning this command.
 --once, or CLAUDE_CODE_REMOTE=true, runs one aggregate tick and prints nextCheck instead of sleeping.
 
 Usage:
-  pr-shepherd stack PR [--once] [poll-flags] [iterate-flags]
+  pr-shepherd stack PR [PR ...] [--once] [poll-flags] [iterate-flags]
+
+The PRs you list are the layers you own (one PR owns only itself); a stack number (owner/repo#N) owns every
+layer. A merge that would also land unlisted layers escalates instead. A bare number is a PR first, then a
+stack number. Refs that span several stacks fail with one command per stack.
 
 Stack flags:
   --once                         Run one aggregate tick without sleeping; poll flags are ignored.
@@ -120,7 +126,9 @@ Forwarded iterate flags:
   --ready-delay <duration>       Settle window before a clean PR cancels. Bare number = minutes. Default: iterate.ready-delay-minutes (built-in 0). Example: 15m.
   --stall-timeout <duration>     Escalate repeated unchanged failures after this duration. Bare number = minutes. 0 disables.
   --no-auto-mark-ready           Do not convert draft PRs to ready for review.
-  --merge                        Shepherd through readiness, then emit the stack merge commands.
+  --merge                        Shepherd through readiness, then emit one merge that lands every owned layer.
+  --merge-ready                  Merge the highest contiguous ready, owned prefix as layers become ready.
+  --merge-through <PR>           Merge up to and including this PR of the stack; layers above stay open.
   --instructions playbook|inline Render triage steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
   --transport auto|graphql|rest  Select GitHub transport. Default: github.transport (auto).
   --format text|json             Output Markdown text or JSON. Default: text.

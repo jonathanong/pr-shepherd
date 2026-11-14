@@ -1,5 +1,5 @@
 import type { PollSummaryItem, PollSummaryResult } from "../types.mts";
-import { stackPosition } from "./stack-drain.mts";
+import { stackPosition } from "./stack-merge-scope.mts";
 /** Layers only a human can resolve: a closed dependency, an unverified state, or an escalation. */
 export interface HumanHandoffs {
   closedDependency?: PollSummaryItem;

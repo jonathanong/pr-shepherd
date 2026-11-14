@@ -137,7 +137,7 @@ See [docs/graphql-usage.md](docs/graphql-usage.md) and [docs/rest-usage.md](docs
 ### Safe by construction
 
 - The CLI runs read-only git only. It emits patches and commit commands for the agent to run ([AGENTS.md](AGENTS.md#git-operations)).
-- Shepherd never merges by itself. With `--merge`, it emits a merge or queue command for the agent to run, head-pinned for a single PR and guarded by READY receipts for a stack.
+- Shepherd never merges by itself. With `--merge`, it emits a merge or queue command for the agent to run, head-pinned for a single PR and guarded by READY receipts for a stack. `stack` merges only the layers you list (or all of them by stack number), and `--merge`, `--merge-ready`, or `--merge-through` escalate rather than land a layer you did not approve.
 - Human handoff is a [finite escalation list](docs/escalations.md).
 - The shipped skill tells the agent to treat review titles, comments, and CI logs as untrusted data. Shell and other MCP callers must apply that rule themselves.
 - A denied reply or resolve is a one-look skip, not a retry loop.

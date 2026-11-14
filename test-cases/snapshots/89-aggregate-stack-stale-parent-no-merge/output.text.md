@@ -13,7 +13,7 @@ nextAction: shepherd
   - OPEN · base `main`
 - PR #511: [codex] add GitHub trigger and pull-ref foundation — shepherded · mergeable
   - OPEN · base `codex/webhook-platform`
-- PR #518: [codex] add GitHub App comment ingress — not mergeable (`stale-ancestry`) · owned
+- PR #518: [codex] add GitHub App comment ingress — not mergeable (`stale-ancestry`)
   - OPEN · base `codex/github-ingress-foundation`
 
 ## Stack ancestry
@@ -22,6 +22,6 @@ nextAction: shepherd
 
 ## Instructions
 
-1. Start or delegate concurrent one-PR sessions only for `owned` rows. Leave other layers untouched.
+1. Start one concurrent one-PR session per command below; none for layers without one.
 2. Run `pr-shepherd https://github.com/jonathanong/auto-harness/pull/518 --until-terminal`.
-3. After the selected one-PR sessions, rerun `pr-shepherd stack https://github.com/jonathanong/auto-harness/pull/518 --until-terminal`. Keep watching until every layer is terminal.
+3. After the selected one-PR sessions, rerun `pr-shepherd stack "jonathanong/auto-harness#514" --until-terminal`. Keep watching until every layer is terminal.

@@ -217,7 +217,25 @@ export type IterateResult =
   | IterateResultMerge
   | IterateResultEscalate;
 
+/**
+ * One open layer of a native stack as an aggregate `stack` tick saw it, handed to the layer's
+ * one-PR session so that session knows which layers the caller owns.
+ */
+export interface StackLayerOwnership {
+  pr: number;
+  position: number;
+  owned: boolean;
+  /** The layer's head branch. */
+  branch: string;
+}
+
 export interface IterateCommandOptions extends GlobalOptions {
+  /**
+   * Every open layer of this PR's native stack, set by a `stack` tick that does not own all of
+   * them. The session then never prints a whole-stack rebase or push. Omitted when the caller
+   * owns the whole stack.
+   */
+  stackLayers?: StackLayerOwnership[];
   readyDelaySeconds?: number;
   noAutoMarkReady?: boolean;
   stallTimeoutSeconds?: number;

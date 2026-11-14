@@ -146,3 +146,13 @@ describe("formatStackOverview", () => {
     expect(text).not.toContain("nextAction");
   });
 });
+
+describe("addedLayers", () => {
+  it("projects and renders layers added after approval", () => {
+    const result = { ...stack([item()]), addedLayers: [321] };
+    const overview = projectStackOverview(result);
+    expect(overview.addedLayers).toEqual([321]);
+    expect(formatStackOverview(overview)).toContain("Layers added after approval: #321");
+    expect(projectStackOverview(stack([item()])).addedLayers).toBeUndefined();
+  });
+});

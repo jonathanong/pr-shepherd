@@ -53,6 +53,34 @@ vi.mock("../../src/github/poll-summary.mts", () => ({
   fetchPollSummary: mockFetchPollSummaryValue,
   fetchRawSummaryPr: mockFetchRawSummaryPr,
 }));
+const stackRefState = vi.hoisted(() => ({ stackNumber: undefined as number | undefined }));
+// Fixture refs are PR numbers or URLs of one stack (the listed PRs are the caller's), or the
+// fixture's own stack number (every layer is the caller's), without the REST reads that resolve a
+// bare number against GitHub.
+vi.mock("../../src/commands/stack-targets.mts", async (importOriginal) => {
+  const { resolveParsedPrTarget } = await import("../../src/pr-reference.mts");
+  return {
+    ...(await importOriginal<typeof import("../../src/commands/stack-targets.mts")>()),
+    resolveStackTarget: async ({
+      refs,
+      through,
+    }: {
+      refs: Array<{ number?: number }>;
+      through?: { number?: number };
+    }) => {
+      const numbers = refs.map((ref) => ref.number!);
+      const targetRepository = resolveParsedPrTarget(refs[0] as never).targetRepository;
+      return {
+        anchor: numbers[0]!,
+        ...(!(numbers.length === 1 && numbers[0] === stackRefState.stackNumber) && {
+          owned: numbers,
+        }),
+        ...(through?.number !== undefined && { through: through.number }),
+        ...(targetRepository && { targetRepository }),
+      };
+    },
+  };
+});
 vi.mock("../../src/state/ready-receipts.mts", async (importOriginal) => ({
   ...(await importOriginal()),
   writeReadyReceipt: vi.fn().mockResolvedValue(undefined),
@@ -148,6 +176,7 @@ import { fetchCheckRunAnnotationsBatch } from "../../src/github/check-annotation
 import { loadSeenMap, markSeen } from "../../src/state/seen-comments.mts";
 import { readCheckBlockers } from "../../src/state/check-blockers.mts";
 import { readQueueRemovalAcknowledgment } from "../../src/state/queue-removal-ack.mts";
+import { writeApprovedLayers } from "../../src/state/stack-merge-approval.mts";
 import { updateReadyDelay } from "../../src/commands/ready-delay.mts";
 import {
   readStallState,
@@ -273,6 +302,10 @@ export interface Fixture {
   };
   /** Selects the aggregate bare-poll fixture path instead of singular iterate. */
   mode?: "aggregate";
+  /** Layers a whole-stack `--merge` request already approved on an earlier tick (seeded before the run). */
+  approvedStackLayers?: number[];
+  /** The first-tick command line the approval record is keyed to (the transport flag is appended). */
+  approvedStackCommand?: string;
   /** Return value of fetchPollSummary() for aggregate fixtures. */
   aggregateSummary?: { selection: Record<string, unknown>; prs: unknown[] };
   /** Expected aggregate result reason. */
@@ -760,6 +793,27 @@ function transportArgs(transport: FixtureTransport): string[] {
   return transport === "rest" ? ["--transport", "rest"] : [];
 }
 
+async function seedApprovedLayers(
+  fixture: Fixture,
+  transport: FixtureTransport = "graphql",
+): Promise<void> {
+  const summary = fixture.aggregateSummary;
+  if (!fixture.approvedStackLayers || !summary) return;
+  const [owner, repo] = String((summary.prs[0] as { repo: string }).repo).split("/") as [
+    string,
+    string,
+  ];
+  const stack = (summary.selection as { stackNumber: number }).stackNumber;
+  const command = [fixture.approvedStackCommand ?? "", ...transportArgs(transport)]
+    .filter(Boolean)
+    .join(" ");
+  await writeApprovedLayers(
+    { owner, repo, stack, scope: "all" },
+    fixture.approvedStackLayers,
+    command,
+  );
+}
+
 export async function captureRun(
   fixture: Fixture,
   transport: FixtureTransport = "graphql",
@@ -773,7 +827,12 @@ export async function captureRun(
     fixture.mode === "aggregate"
       ? [...(fixture.args ?? ["42", "43", "--timeout", "0s"]), ...transportArgs(transport)]
       : ["iterate", pr, ...(fixture.args ?? []), ...transportArgs(transport)];
+  stackRefState.stackNumber = (
+    fixture.aggregateSummary?.selection as { stackNumber?: number } | undefined
+  )?.stackNumber;
+  await seedApprovedLayers(fixture, transport);
   const { out: textOut, exitCode } = await runMain(args);
+  await seedApprovedLayers(fixture, transport);
   const { out: jsonOut, exitCode: jsonExitCode } = await runMain([...args, "--format=json"]);
   return { textOut, jsonOut, exitCode, jsonExitCode };
 }

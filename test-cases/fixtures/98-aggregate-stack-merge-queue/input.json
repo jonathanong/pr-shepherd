@@ -7,7 +7,7 @@
   },
   "description": "After whole-stack submission, a merge-queued stack remains non-terminal until every layer is merged; an upper READY receipt does not complete the handoff.",
   "mode": "aggregate",
-  "args": ["stack", "https://github.com/owner/repo/pull/352", "--merge", "--timeout", "1s", "--interval", "2s"],
+  "args": ["stack", "owner/repo#36", "--merge", "--timeout", "1s", "--interval", "2s"],
   "expectedExitCode": 10,
   "expectedNextAction": "wait",
   "expectedReason": "timeout",

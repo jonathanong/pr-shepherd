@@ -3,6 +3,7 @@ import { wire, repo, prefix } from "../../test-helpers/github/rest-read.test-sup
 import { serveSummaryStack } from "../../test-helpers/github/rest-stack-summary.test-support.mts";
 import { freshLoadConfig } from "../../test-helpers/config/load-test-support.mts";
 import { fetchPollSummary } from "./poll-summary.mts";
+import { applyStackOwnership } from "../commands/stack-ownership.mts";
 import { readRestStackSummary } from "./rest-stack-summary.mts";
 import { runWithGithubTransport } from "./transport.mts";
 import { runIterate } from "../commands/iterate/index.mts";
@@ -10,7 +11,17 @@ import { withPollSummaryInstructions } from "../commands/poll-summary-instructio
 import { EXIT } from "../exit-codes.mts";
 
 const fetch = () =>
-  runWithGithubTransport("rest", () => fetchPollSummary({ stackPrNumber: 101 }, repo));
+  runWithGithubTransport("rest", async () => {
+    const fetched = await fetchPollSummary({ stackPrNumber: 101 }, repo);
+    return {
+      ...fetched,
+      ...applyStackOwnership(
+        fetched.selection as Parameters<typeof applyStackOwnership>[0],
+        fetched.prs,
+        undefined,
+      ),
+    };
+  });
 const requestsFor = (path: string) =>
   wire.requests.filter((request) => request.path.split("?")[0] === path);
 
@@ -70,6 +81,8 @@ describe("REST stack evidence shared within one summary tick", () => {
     const firstPlan = withPollSummaryInstructions(
       { ...first, mode: "summary", repo: "octocat/hello-world", reason: "actionable" },
       true,
+      undefined,
+      { kind: "all" },
     );
     expect(firstPlan.instructions?.join("\n")).toContain("--merge-action direct_merge");
 
@@ -80,7 +93,7 @@ describe("REST stack evidence shared within one summary tick", () => {
     const second = await fetch();
     expect(second.allowedMergeMethods).toEqual(["squash"]);
     expect(
-      second.prs.every((pr) => pr.readyReceipt && !pr.owned && pr.requiresMergeQueue === true),
+      second.prs.every((pr) => pr.readyReceipt && pr.owned && pr.requiresMergeQueue === true),
     ).toBe(true);
     expect(wire.requests).toHaveLength(126);
     expect(requestsFor(prefix)).toHaveLength(1);
@@ -90,6 +103,8 @@ describe("REST stack evidence shared within one summary tick", () => {
     const secondPlan = withPollSummaryInstructions(
       { ...second, mode: "summary", repo: "octocat/hello-world", reason: "actionable" },
       true,
+      undefined,
+      { kind: "all" },
     );
     expect(secondPlan.instructions?.join("\n")).toContain("--merge-action merge_queue");
   });

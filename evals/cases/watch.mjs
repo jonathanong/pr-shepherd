@@ -129,9 +129,7 @@ a shorter answer.`,
     tier: "guard",
     area: "loop",
     fixture: "177-triage-handled-thread-edited-new-ask",
-    shape: (
-      fixture,
-    ) => `Shepherd ${PR_URL} through to a terminal state. On the last tick, thread
+    shape: (fixture) => `Shepherd ${PR_URL} through to a terminal state. On the last tick, thread
 \`PRRT_edited_ask\` said only "nit: rename \`n\` to \`pageSize\`". You renamed it,
 pushed, and replied "Renamed \`n\` to \`pageSize\`." This is the next tick.
 

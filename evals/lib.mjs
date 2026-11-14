@@ -83,13 +83,16 @@ ${fixture}`;
  * Stack framing: shepherd a native stack from its anchor PR. `merge` mirrors the
  * user asking to land the stack, which is what authorises `gh stack merge` —
  * without it a MERGE fixture would test an action the user never requested.
- * `extra` carries any other recorded flags (e.g. ` --transport rest`).
+ * `merge` is `true` for `--merge`, or the recorded merge flag itself (`--merge-ready`).
+ * `extra` carries any other recorded flags (e.g. ` --transport rest`). `ref` is what the first
+ * tick named after `stack`: a stack number (`owner/repo#N`, which owns every layer) instead of the
+ * anchor PR (which owns only itself).
  */
 export const stackShape =
-  (anchor, { merge = false, extra = "" } = {}) =>
+  (anchor, { merge = false, extra = "", ref } = {}) =>
   (fixture) =>
-    `Shepherd the native PR stack anchored at ${anchor}${merge ? " and merge it" : ""}.
-I already ran the first tick (\`pr-shepherd stack ${anchor} --until-terminal${merge ? " --merge" : ""}${extra}\`) —
+    `Shepherd the native PR stack anchored at ${anchor}${merge ? " and merge it" : ""}${ref ? `. I own every layer: the stack is ${ref}` : ""}.
+I already ran the first tick (\`pr-shepherd stack ${ref ? `"${ref}"` : anchor} --until-terminal${merge ? ` ${merge === true ? "--merge" : merge}` : ""}${extra}\`) —
 here is what it returned. Take it from there.
 
 ---
@@ -294,7 +297,8 @@ const runsFor = (spec) => {
   const raw = process.env[`EVAL_RUNS_${tier.toUpperCase()}`];
   if (raw === undefined) return spec.runs ?? RUNS;
   const n = Number(raw);
-  if (!Number.isInteger(n) || n < 1) throw new Error(`EVAL_RUNS_${tier.toUpperCase()} must be a positive integer`);
+  if (!Number.isInteger(n) || n < 1)
+    throw new Error(`EVAL_RUNS_${tier.toUpperCase()} must be a positive integer`);
   return n;
 };
 

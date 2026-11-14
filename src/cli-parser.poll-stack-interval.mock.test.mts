@@ -29,6 +29,13 @@ vi.mock("./config/load.mts", () => ({
   }),
 }));
 
+vi.mock("./commands/stack-targets.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./commands/stack-targets.mts")>()),
+  resolveStackTarget: vi
+    .fn()
+    .mockResolvedValue({ anchor: 43, targetRepository: { owner: "acme", name: "widgets" } }),
+}));
+
 import { main } from "./cli-parser.mts";
 import { runAggregatePoll } from "./commands/poll-summary.mts";
 import { runIterate } from "./commands/iterate/index.mts";

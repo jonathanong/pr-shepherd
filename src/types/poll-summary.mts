@@ -67,7 +67,7 @@ export interface PollSummaryItem {
   url: string;
   /** GitHub author login, when the summary query returned one. */
   authorLogin?: string;
-  /** Author login matches the authenticated viewer. */
+  /** Stack rows: the caller declared this layer theirs (every layer when the whole stack is). */
   owned?: true;
   /** Conservative routing hint; the selected one-PR poll makes the authoritative decision. */
   action: ShepherdAction;
@@ -108,7 +108,17 @@ export interface PollSummaryItem {
 
 export type PollSummarySelection =
   | { kind: "prs"; requested: number[] }
-  | { kind: "stack"; anchor: number; stackNumber: number; stackSize: number };
+  | {
+      kind: "stack";
+      anchor: number;
+      stackNumber: number;
+      stackSize: number;
+      /** Set only when the caller listed some PRs: the layers the caller owns. Omitted = the whole stack. */
+      owned?: number[];
+    };
+
+/** Which owned layers `stack` may merge: all of them, the ready prefix, or up to one PR. */
+export type StackMergeScope = { kind: "all" } | { kind: "ready" } | { kind: "through"; pr: number };
 
 /** Aggregate-only transition; one-PR actions remain unchanged. */
 export type StackNextAction = "shepherd" | "wait" | "merge" | "cancel" | "escalate";
@@ -125,6 +135,8 @@ export interface PollSummaryResult {
   stackAncestry?: PollSummaryStackAncestry[];
   /** Immediate stack transition; human blockers surface in rows while shepherdable work remains. */
   nextAction?: StackNextAction;
+  /** Open in-scope layers that appeared after the merge was requested (whole-stack ownership only). */
+  addedLayers?: number[];
   /** Whether every open layer is independently ready and stack ancestry is linear. */
   stackMergeable?: boolean;
   /**
@@ -143,6 +155,10 @@ export interface PollSummaryCommandOptions {
   transport?: import("../github/transport.mts").GithubTransport;
   prNumbers?: number[];
   stackPrNumber?: number;
+  /** `stack` only: PRs the caller owns. Omitted when the caller owns every layer. */
+  stackOwned?: number[];
+  /** `stack` only: which owned layers a merge may land. Set together with `merge`. */
+  stackMerge?: StackMergeScope;
   targetRepository?: { owner: string; name: string };
   merge?: boolean;
   readyDelaySeconds?: number;

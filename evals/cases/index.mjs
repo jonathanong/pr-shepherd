@@ -10,6 +10,7 @@ import { REVIEW_BUDGET_CASES } from "./review-budget.mjs";
 import { RULES_CASES } from "./rules.mjs";
 import { STACK_CASES } from "./stack.mjs";
 import { STACK_FIXES_CASES } from "./stack-fixes.mjs";
+import { STACK_MERGE_SCOPE_CASES } from "./stack-merge-scope.mjs";
 import { WATCH_CASES } from "./watch.mjs";
 
 export const CASES = [
@@ -21,6 +22,7 @@ export const CASES = [
   ...CLOUD_CASES,
   ...MULTITURN_CASES,
   ...STACK_FIXES_CASES,
+  ...STACK_MERGE_SCOPE_CASES,
   ...REVIEW_BUDGET_CASES,
   ...AGGREGATE_CASES,
   ...BLOCKER_CASES,

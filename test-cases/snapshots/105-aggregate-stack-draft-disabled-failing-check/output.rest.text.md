@@ -5,7 +5,7 @@ nextAction: shepherd
 
 ## Layers
 
-- PR #431: Draft CI failure — not mergeable (`draft`) · owned
+- PR #431: Draft CI failure — not mergeable (`draft`)
   - OPEN · draft · base `main`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
@@ -15,6 +15,6 @@ nextAction: shepherd
 
 ## Instructions
 
-1. Start or delegate concurrent one-PR sessions only for `owned` rows. Leave other layers untouched.
+1. Start one concurrent one-PR session per command below; none for layers without one.
 2. Run `pr-shepherd https://github.com/owner/repo/pull/431 --timeout 1s --debounce 0s --no-auto-mark-ready`.
-3. After the selected one-PR sessions, rerun `pr-shepherd stack https://github.com/owner/repo/pull/431 --until-terminal --no-auto-mark-ready --transport rest`. Keep watching until every layer is terminal.
+3. After the selected one-PR sessions, rerun `pr-shepherd stack "owner/repo#43" --until-terminal --no-auto-mark-ready --transport rest`. Keep watching until every layer is terminal.

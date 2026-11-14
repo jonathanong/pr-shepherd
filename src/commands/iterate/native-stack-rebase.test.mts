@@ -5,6 +5,7 @@ import {
   buildNativeStackLayerRebase,
   buildNativeStackRebaseInstruction,
 } from "./native-stack-rebase.mts";
+import { withStackBoundary } from "./stack-boundary.mts";
 import {
   buildFixCompletionInstruction,
   buildRepeatedWorkflowBranchRecoveryInstructions,
@@ -146,6 +147,19 @@ describe("native stack rebase instructions", () => {
     expect(buildBranchPushInstruction(undefined, false, " before review mutations", true)).toBe(
       "If the base update or a fix changed the head, commit any remaining changes and push to the PR head branch before review mutations. If neither did, do not push.",
     );
+  });
+
+  it("pushes only owned branches after a queue-ejection update when the stack is bounded", async () => {
+    const layers = [
+      { pr: 1, position: 1, owned: true, branch: "b1" },
+      { pr: 2, position: 2, owned: false, branch: "b2" },
+    ];
+    const text = await withStackBoundary(1, layers, async () =>
+      buildBranchPushInstruction("rebase", false, "", true),
+    );
+    expect(text).toContain("If the base update or a fix changed the head");
+    expect(text).toContain("push only the owned branches (`b1`)");
+    expect(text).toContain("If neither did, do not push.");
   });
 
   it("routes repeated-workflow conflict recovery and completion through the stack", () => {

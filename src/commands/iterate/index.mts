@@ -31,6 +31,7 @@ import {
   readReadyReceipt,
   writeReadyReceipt,
 } from "../../state/ready-receipts.mts";
+import { withStackBoundary } from "./stack-boundary.mts";
 import { findStaleNativeStackAncestry } from "./stale-ancestry.mts";
 import { annotateBlockedWait, resolveCheckBlockerGate } from "./check-blocker-gate.mts";
 import { buildUnreportedFixResult, planUnreportedRequired } from "./unreported-required.mts";
@@ -40,10 +41,12 @@ import { buildEscalateHumanMessage } from "./escalate.mts";
 import { markEditedCommentsSeen } from "./edited-comment-markers.mts";
 
 export function runIterate(opts: IterateCommandOptions): Promise<IterateResult> {
-  return withIterateApiUsage(opts, async () => {
-    const tick: IterateTick = {};
-    return attachEditedComments(await runIterateCore(opts, tick), tick, opts);
-  });
+  return withIterateApiUsage(opts, () =>
+    withStackBoundary(opts.prNumber, opts.stackLayers, async () => {
+      const tick: IterateTick = {};
+      return attachEditedComments(await runIterateCore(opts, tick), tick, opts);
+    }),
+  );
 }
 
 interface IterateTick {

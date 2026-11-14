@@ -3,7 +3,7 @@
   "mode": "aggregate",
   "args": [
     "stack",
-    "https://github.com/owner/repo/pull/442",
+    "owner/repo#44",
     "--no-auto-mark-ready",
     "--debounce",
     "0s",

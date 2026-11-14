@@ -149,12 +149,12 @@ Supply exactly one of `pr` or `prs`. The call always runs one tick and returns `
 Aggregate commands return one compact summary tick. Its only GitHub mutation is rule-driven [classification auto-resolve](actions.md#classification-auto-resolve), reported on the affected row or layer as `ruleAutoResolve`:
 
 - **`prs`** keeps per-PR raw state, bounded check/review counts, routing hints, and `pollCommand`s in both channels.
-- **`stack`** (the [`stack` tool](#stack)) projects each layer to `shepherded` (when true), mergeable or one blocker (open layers only), author, `owned` when that author matches the viewer, position, and the layer's own base branch. It also surfaces `stackMergeable` (when true), `nextAction`, and raw ancestry mismatches. One-PR sessions run only for layers marked `owned`.
+- **`stack`** (the [`stack` tool](#stack)) projects each layer to `shepherded` (when true), mergeable or one blocker (open layers only), author, `owned` only when the caller listed its PRs (whole-stack ownership omits it), position, and the layer's own base branch. It also surfaces `stackMergeable` (when true), `nextAction`, and raw ancestry mismatches. One-PR sessions run only for layers marked `owned`.
 - The compact tick reuses singular check/review classification but does not maintain ready-delay state. Bounded overflow is surfaced as incomplete context without becoming a permanent action by itself.
 
 ### `stack`
 
-Takes `pr`, the anchor of its complete native GitHub stack, plus the same `readyDelaySeconds`, `stallTimeoutSeconds`, `noAutoMarkReady`, `merge`, `instructions`, and `transport` inputs as `iterate`. It runs one aggregate tick and returns `nextCheck` unless nothing remains to wait for.
+Takes `refs`: one stack number (`owner/repo#N`), or the PRs of one stack (you own only those; a single PR owns only itself, and the iterate input `stackLayers` carries layer ownership to one-PR sessions). Refs spanning several stacks fail with the same per-stack commands the CLI prints. `merge` lands every owned layer together once all are ready, `mergeReady` lands the ready owned prefix, and `mergeThrough` lands up to that PR; the three are mutually exclusive. It also takes the same `readyDelaySeconds`, `stallTimeoutSeconds`, `noAutoMarkReady`, `merge`, `instructions`, and `transport` inputs as `iterate`. It runs one aggregate tick and returns `nextCheck` unless nothing remains to wait for.
 
 ### `apply`
 

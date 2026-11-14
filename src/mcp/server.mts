@@ -74,6 +74,18 @@ const iterateInputSchema = z
     ...tickOptionsSchema,
     pr: pr.optional(),
     prs: z.array(pr).min(1).optional(),
+    stackLayers: z
+      .array(
+        z.object({
+          pr: z.number().int().positive(),
+          position: z.number().int().positive(),
+          owned: z.boolean(),
+          branch: z.string().min(1),
+        }),
+      )
+      .min(1)
+      .optional()
+      .describe("Set by a partly owned `stack` tick: the stack's open layers and which are owned."),
   })
   .refine((input) => (input.pr === undefined) !== (input.prs === undefined), {
     message: "exactly one of pr or prs is required",
@@ -89,7 +101,15 @@ const iterateInputSchema = z
     { message: "all prs must belong to the same repository" },
   );
 
-const stackInputSchema = z.object({ ...tickOptionsSchema, pr });
+const stackInputSchema = z.object({
+  ...tickOptionsSchema,
+  refs: z
+    .array(pr)
+    .min(1)
+    .describe("A stack (owner/repo#N, owns every layer) or the PRs of one stack you own."),
+  mergeReady: z.boolean().optional().describe("Merge the ready owned prefix."),
+  mergeThrough: pr.optional().describe("Merge up to this PR."),
+});
 
 const reviewMutationsOperationSchema = z.object({
   type: z.literal("review_mutations"),
@@ -229,8 +249,7 @@ export function createPrShepherdMcpServer(
   server.registerTool(
     "stack",
     {
-      description:
-        "Inspect the native stack containing one pull request and return one aggregate Shepherd tick.",
+      description: "Inspect one native stack and return one aggregate Shepherd tick.",
       inputSchema: stackInputSchema,
       annotations: {
         readOnlyHint: false,
@@ -241,7 +260,7 @@ export function createPrShepherdMcpServer(
     },
     async (input) =>
       runTool(
-        () => getShepherd().stack(requireRepositoryQualifiedPr(input) as StackInput),
+        () => getShepherd().stack(requireStackInput(input)),
         formatPollSummaryResult,
         projectStackOverview,
       ),
@@ -380,6 +399,15 @@ function requireRepositoryQualifiedIterate(input: {
 
 function isPollSummary(result: IterateResult | PollSummaryResult): result is PollSummaryResult {
   return "mode" in result && result.mode === "summary";
+}
+
+/** The stack tool's `refs` are validated here too, so a direct handler call fails like a schema miss. */
+function requireStackInput(input: unknown): StackInput {
+  const parsed = stackInputSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new PrShepherdValidationError(parsed.error.issues[0]?.message ?? QUALIFIED_PR_ERROR);
+  }
+  return parsed.data as StackInput;
 }
 
 function requireRepositoryQualifiedPr<Input extends { pr?: unknown }>(

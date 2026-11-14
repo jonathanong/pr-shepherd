@@ -10,10 +10,10 @@ import {
 describe("pull-request references", () => {
   it.each([
     ["owner/repo#42", { number: 42, repository: "owner/repo" }],
-    ["https://github.com/owner/repo/pull/42", { number: 42, repository: "owner/repo" }],
+    ["https://github.com/owner/repo/pull/42", { number: 42, repository: "owner/repo", url: true }],
     [
       "https://www.github.com/fork/widgets/pull/42#discussion_r123",
-      { number: 42, repository: "fork/widgets" },
+      { number: 42, repository: "fork/widgets", url: true },
     ],
   ])("parses qualified reference %s", (reference, expected) => {
     expect(parsePrReference(reference)).toEqual(expected);

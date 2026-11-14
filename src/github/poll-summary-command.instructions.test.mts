@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../config/load.mts";
 import type { PollSummarySelection } from "../types.mts";
-import { aggregateRerunCommand, pollCommandFields } from "./poll-summary-command.mts";
+import {
+  aggregateRerunCommand,
+  mergeReadyCommand,
+  stackApprovalCommands,
+  pollCommandFields,
+} from "./poll-summary-command.mts";
 
 describe("pollCommandFields --instructions", () => {
   it("forwards an explicit instruction style to the per-PR poll command", () => {
@@ -76,10 +81,66 @@ describe("aggregateRerunCommand", () => {
 
   it("prints the stack subcommand, as one tick for a single-tick run", () => {
     expect(aggregateRerunCommand("o/r", stack, {})).toBe(
-      "pr-shepherd stack https://github.com/o/r/pull/7 --until-terminal",
+      'pr-shepherd stack "o/r#1" --until-terminal',
     );
     expect(aggregateRerunCommand("o/r", stack, { tick: true })).toBe(
-      "pr-shepherd stack https://github.com/o/r/pull/7 --once",
+      'pr-shepherd stack "o/r#1" --once',
+    );
+  });
+
+  it("lists the caller's PRs after stack, not the anchor, when only some were declared", () => {
+    const owned: PollSummarySelection = { ...stack, owned: [7, 9] };
+    expect(aggregateRerunCommand("o/r", owned, { merge: true })).toBe(
+      "pr-shepherd stack https://github.com/o/r/pull/7 https://github.com/o/r/pull/9 --until-terminal --merge",
+    );
+  });
+
+  it("repeats the merge scope the caller chose", () => {
+    expect(
+      aggregateRerunCommand("o/r", stack, { merge: true, stackMerge: { kind: "ready" } }),
+    ).toBe('pr-shepherd stack "o/r#1" --until-terminal --merge-ready');
+    expect(
+      aggregateRerunCommand("o/r", stack, { merge: true, stackMerge: { kind: "through", pr: 8 } }),
+    ).toBe(
+      'pr-shepherd stack "o/r#1" --until-terminal --merge-through https://github.com/o/r/pull/8',
+    );
+    expect(aggregateRerunCommand("o/r", stack, { merge: true, stackMerge: { kind: "all" } })).toBe(
+      'pr-shepherd stack "o/r#1" --until-terminal --merge',
+    );
+  });
+
+  it("builds the commands that approve unlisted layers: list them, or name the stack number", () => {
+    const owned: PollSummarySelection = { ...stack, owned: [9] };
+    expect(stackApprovalCommands("o/r", owned, { merge: true }, [7, 8])).toEqual({
+      listed:
+        "pr-shepherd stack https://github.com/o/r/pull/7 https://github.com/o/r/pull/8 https://github.com/o/r/pull/9 --until-terminal --merge",
+      whole: 'pr-shepherd stack "o/r#1" --until-terminal --merge',
+    });
+    expect(stackApprovalCommands("o/r", prs, {}, [1])).toEqual({ listed: "", whole: "" });
+  });
+});
+
+describe("mergeReadyCommand", () => {
+  it.each([
+    ["pr-shepherd stack https://github.com/o/r/pull/7 --until-terminal --merge", "--merge-ready"],
+    [
+      "pr-shepherd stack https://github.com/o/r/pull/7 --until-terminal --merge-through https://github.com/o/r/pull/8 --ready-delay 60s",
+      "--merge-ready --ready-delay 60s",
+    ],
+  ])("swaps the whole-scope flag in %s", (command, tail) => {
+    expect(mergeReadyCommand(command)).toBe(
+      `pr-shepherd stack https://github.com/o/r/pull/7 --until-terminal ${tail}`,
+    );
+  });
+
+  it("replaces the listed refs with the scoped PRs", () => {
+    expect(
+      mergeReadyCommand('npx pr-shepherd stack "o/r#9" --once --merge-through o/r#2 --x', [
+        "https://github.com/o/r/pull/1",
+        "https://github.com/o/r/pull/2",
+      ]),
+    ).toBe(
+      "npx pr-shepherd stack https://github.com/o/r/pull/1 https://github.com/o/r/pull/2 --once --merge-ready --x",
     );
   });
 });

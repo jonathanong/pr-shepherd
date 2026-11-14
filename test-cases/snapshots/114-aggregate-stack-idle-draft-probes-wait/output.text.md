@@ -5,9 +5,9 @@ nextAction: wait
 
 ## Layers
 
-- PR #441: Draft with pending CI — not mergeable (`draft`) · owned
+- PR #441: Draft with pending CI — not mergeable (`draft`)
   - OPEN · draft · base `main`
-- PR #442: Upper draft — not mergeable (`draft`) · owned
+- PR #442: Upper draft — not mergeable (`draft`)
   - OPEN · draft · base `draft-pending`
 
 ## Instructions

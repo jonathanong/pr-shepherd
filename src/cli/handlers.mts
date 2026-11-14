@@ -44,6 +44,7 @@ const ITERATE_FLAGS = [
   "--no-auto-mark-ready",
   "--merge",
   "--instructions",
+  "--layers",
 ];
 
 /** `iterate [PR...]`: one tick for one PR, or one aggregate tick for several. */
@@ -81,6 +82,7 @@ export async function handleIterate(args: string[]): Promise<void> {
     noAutoMarkReady: flags.noAutoMarkReady,
     merge: flags.merge,
     instructions: flags.instructions ?? undefined,
+    ...(flags.stackLayers && { stackLayers: flags.stackLayers }),
   });
 
   emitIterateResult(result, {

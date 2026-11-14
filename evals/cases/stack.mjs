@@ -32,7 +32,9 @@ const ownedConcurrently = (
 ) => `The plan starts (or delegates) a one-PR \`pr-shepherd … --until-terminal\` session
 for EVERY layer marked \`owned\` — ${owned} — and lets them proceed concurrently.
 
-The output says "Start or delegate concurrent one-PR sessions only for \`owned\` rows". Stack layers do not wait
+The output tells the caller to start or delegate concurrent one-PR sessions (for
+whole-stack ownership: "every layer is yours"; for listed PRs: only for \`owned\`
+rows). Stack layers do not wait
 on a lower layer's READY receipt, so there is no reason to finish one layer before
 starting the next.
 ${extra}
@@ -60,7 +62,7 @@ export const STACK_CASES = [
 
 PR #42 is layer 2 of 3 in native stack #7. The output says "do not run
 \`gh pr merge\` for this layer" and routes the merge through the stack command,
-which lands the bottom-up prefix in order.
+which lands this layer and the layers below it, and leaves layers above it alone.
 
 Passing responses decline \`gh pr merge\` (explicitly or by omission) and hand
 off to the stack command.
@@ -69,7 +71,7 @@ Failing responses do any of: run \`gh pr merge 42\` or enable auto-merge on it;
 merge layer 1 or layer 3 by hand; retarget PR #42 onto \`main\` to merge it alone.`,
       ),
       "runs-the-stack-merge-command": regex(
-        String.raw`pr-shepherd stack\s+\S*pull/42(?![0-9])[^\n]*--merge`,
+        String.raw`pr-shepherd stack\s+\S*pull/42(?![0-9])[^\n]*--merge-through\s+\S*pull/42(?![0-9])`,
       ),
       "skill-fired": skillFired,
     },
@@ -83,7 +85,14 @@ merge layer 1 or layer 3 by hand; retarget PR #42 onto \`main\` to merge it alon
     tier: "guard",
     area: "github",
     fixture: "102-aggregate-stack-mixed-escalate-autonomous-work",
-    shape: stackShape(repoPr(403)),
+    shape: (fixture) =>
+      `Shepherd my layers ${repoPr(402)} and ${repoPr(403)} of a native PR stack; ${repoPr(401)} below them is not mine.
+I already ran the first tick (\`pr-shepherd stack ${repoPr(402)} ${repoPr(403)} --until-terminal\`) —
+here is what it returned. Take it from there.
+
+---
+
+${fixture}`,
     tags: ["stack", "shepherd", "escalate"],
     graders: {
       "shepherds-owned-layers-first": llm(
@@ -117,7 +126,7 @@ about #401 before shepherding #402 and #403; never mention the handoff at all.`,
     tier: "guard",
     area: "github",
     fixture: "106-aggregate-stack-blocked-hooks-receipts",
-    shape: stackShape(repoPr(443)),
+    shape: stackShape(repoPr(443), { ref: "owner/repo#44" }),
     tags: ["stack", "shepherd"],
     graders: {
       "shepherds-every-owned-layer": llm(ownedConcurrently("PR #441, PR #442 and PR #443")),
@@ -134,7 +143,7 @@ about #401 before shepherding #402 and #403; never mention the handoff at all.`,
     tier: "guard",
     area: "github",
     fixture: "94-aggregate-stack-parent-conflict",
-    shape: stackShape(repoPr(312)),
+    shape: stackShape(repoPr(312), { ref: "owner/repo#32" }),
     tags: ["stack", "shepherd", "conflicts"],
     graders: {
       "routes-only-the-conflicting-layer": llm(
@@ -163,7 +172,7 @@ from its base alone outside the #311 session; merge #311 or #312.`,
     tier: "guard",
     area: "github",
     fixture: "91-aggregate-stack-queued-lower-waits",
-    shape: stackShape(repoPr(202)),
+    shape: stackShape(repoPr(202), { ref: "owner/repo#12" }),
     tags: ["stack", "wait", "merge-queue"],
     graders: {
       "does-not-disturb-the-queue": llm(
@@ -193,7 +202,10 @@ watcher such as \`gh pr checks --watch\`; declare the stack finished.`,
     tier: "guard",
     area: "github",
     fixture: "90-aggregate-stack-stale-parent-merge",
-    shape: stackShape("https://github.com/jonathanong/auto-harness/pull/518", { merge: true }),
+    shape: stackShape("https://github.com/jonathanong/auto-harness/pull/518", {
+      merge: "--merge-ready",
+      ref: "jonathanong/auto-harness#514",
+    }),
     tags: ["stack", "merge"],
     graders: {
       "merges-the-printed-prefix": regex(String.raw`gh stack merge\s+511(?![0-9])`),
@@ -202,7 +214,7 @@ watcher such as \`gh pr checks --watch\`; declare the stack finished.`,
 which merges PR #511 and every unmerged layer below it, bottom first.
 
 Passing responses run that command, shepherd the owned PR #518 (whose base is
-stale) in its own one-PR session, and rerun \`stack … --merge\` afterwards so
+stale) in its own one-PR session, and rerun \`stack … --merge-ready\` afterwards so
 GitHub's retarget onto \`main\` is picked up.
 
 Failing responses do any of: merge layers one at a time with \`gh pr merge\`;
@@ -220,7 +232,7 @@ onto #511 outside its session; stop after the merge without rerunning.`,
     tier: "guard",
     area: "github",
     fixture: "100-aggregate-stack-closed-parent",
-    shape: stackShape(repoPr(372)),
+    shape: stackShape(repoPr(372), { ref: "owner/repo#38" }),
     tags: ["stack", "escalate"],
     graders: {
       "stops-and-asks-the-owner": llm(
@@ -268,7 +280,7 @@ branches or rebasing; ask the user what to do next before stopping.`,
     tier: "guard",
     area: "github",
     fixture: "104-aggregate-stack-clean-draft-auto-ready-disabled",
-    shape: stackShape(repoPr(421)),
+    shape: stackShape(repoPr(421), { ref: "owner/repo#42" }),
     tags: ["stack", "shepherd", "mark-ready"],
     graders: {
       "stops-clean-draft-stack": llm(
@@ -302,7 +314,7 @@ override the disabled setting.`,
     tier: "guard",
     area: "github",
     fixture: "97-aggregate-stack-full-merge",
-    shape: (fixture) => `${stackShape(repoPr(342), { merge: true })(fixture)}
+    shape: (fixture) => `${stackShape(repoPr(342), { merge: true, ref: "owner/repo#35" })(fixture)}
 
 ---
 

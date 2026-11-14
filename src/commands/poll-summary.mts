@@ -4,7 +4,7 @@ import { ShepherdError } from "../exit-codes.mts";
 import { getRepoInfo } from "../github/client.mts";
 import { getGithubTransport } from "../github/transport.mts";
 import { withApiTelemetryScope, summarizeApiTelemetry } from "../github/api-telemetry.mts";
-import { aggregateRerunCommand } from "../github/poll-summary-command.mts";
+import { aggregateRerunCommand, stackApprovalCommands } from "../github/poll-summary-command.mts";
 import { fetchPollSummary } from "../github/poll-summary.mts";
 import { writeStackHandoffs } from "../github/stack-handoff.mts";
 import type { StackHandoffSource } from "../github/stack-handoff-page.mts";
@@ -16,6 +16,13 @@ import type { PollSummaryCommandOptions, PollSummaryResult } from "../types.mts"
 import { planPollSummary, withPollSummaryInstructions } from "./poll-summary-instructions.mts";
 import { summaryStatusSignature } from "./poll-summary-signature.mts";
 import { applyStackStallGuard } from "./stack-stall.mts";
+import {
+  applyStackOwnership,
+  listedLayerLeftStack,
+  missingListedLayers,
+} from "./stack-ownership.mts";
+import { stackRerunTarget } from "./stack-work.mts";
+import { requestedMergeScope, stackAddedLayers } from "./stack-merge-scope.mts";
 import { aggregateDeadline } from "./stall-deadline.mts";
 import {
   aggregateTargets,
@@ -81,21 +88,40 @@ async function handOffRoutedLayers(tick: PollSummaryTick): Promise<void> {
 
 async function readPollSummaryTick(opts: PollSummaryCommandOptions): Promise<PollSummaryTick> {
   const repo = opts.targetRepository ?? (await getRepoInfo());
-  const fetched = await fetchPollSummary(opts, repo);
+  const fetchedRaw = await fetchPollSummary(opts, repo);
+  const fetched =
+    fetchedRaw.selection.kind === "stack"
+      ? {
+          ...fetchedRaw,
+          ...applyStackOwnership(fetchedRaw.selection, fetchedRaw.prs, opts.stackOwned),
+        }
+      : fetchedRaw;
   const allTerminal = fetched.prs.every((item) => item.action === "cancel");
   const actionable = fetched.prs.some((item) => item.action !== "wait" && item.action !== "cancel");
+  const scope = requestedMergeScope(opts);
+  const summary: PollSummaryResult = {
+    mode: "summary",
+    repo: `${repo.owner}/${repo.name}`,
+    selection: fetched.selection,
+    reason: allTerminal ? "all_terminal" : actionable ? "actionable" : "waiting",
+    prs: fetched.prs,
+    ...(fetched.stackAncestry?.length && { stackAncestry: fetched.stackAncestry }),
+    ...(fetched.allowedMergeMethods && { allowedMergeMethods: fetched.allowedMergeMethods }),
+  };
+  const rerunCommand = aggregateRerunCommand(`${repo.owner}/${repo.name}`, fetched.selection, opts);
+  const missing = missingListedLayers(fetchedRaw.prs, opts.stackOwned);
+  if (fetchedRaw.selection.kind === "stack" && missing.length > 0) {
+    // A teammate removed a listed PR from the stack: the listed ownership no longer matches it.
+    const escalated = listedLayerLeftStack(summary, missing, stackRerunTarget(rerunCommand));
+    return { result: escalated, repo };
+  }
+  const addedLayers = await stackAddedLayers(summary, scope, rerunCommand);
   const planned = planPollSummary(
-    {
-      mode: "summary",
-      repo: `${repo.owner}/${repo.name}`,
-      selection: fetched.selection,
-      reason: allTerminal ? "all_terminal" : actionable ? "actionable" : "waiting",
-      prs: fetched.prs,
-      ...(fetched.stackAncestry?.length && { stackAncestry: fetched.stackAncestry }),
-      ...(fetched.allowedMergeMethods && { allowedMergeMethods: fetched.allowedMergeMethods }),
-    },
-    opts.merge === true,
-    aggregateRerunCommand(`${repo.owner}/${repo.name}`, fetched.selection, opts),
+    { ...summary, ...(addedLayers.length > 0 && { addedLayers }) },
+    scope !== undefined,
+    rerunCommand,
+    scope,
+    (extra) => stackApprovalCommands(`${repo.owner}/${repo.name}`, fetched.selection, opts, extra),
   );
   const result = await applyStackStallGuard(
     planned,
@@ -311,11 +337,21 @@ function attachUsage(
   // that explicit escalation intact even when the one-PR fallback contains
   // open orphan rows that would otherwise be re-planned as triage.
   if (enriched.selection.kind === "stack" && enriched.nextAction === "escalate") {
-    return enriched;
+    return withoutImpliedOwnership(enriched);
   }
-  return withPollSummaryInstructions(
-    enriched,
-    opts.merge === true,
-    aggregateRerunCommand(enriched.repo, enriched.selection, opts),
+  const scope = requestedMergeScope(opts);
+  return withoutImpliedOwnership(
+    withPollSummaryInstructions(
+      enriched,
+      scope !== undefined,
+      aggregateRerunCommand(enriched.repo, enriched.selection, opts),
+      scope,
+    ),
   );
+}
+
+/** Whole-stack ownership is the default, so rows say `owned` only when the caller listed PRs. */
+function withoutImpliedOwnership(result: PollSummaryResult): PollSummaryResult {
+  if (result.selection.kind !== "stack" || result.selection.owned) return result;
+  return { ...result, prs: result.prs.map(({ owned: _owned, ...item }) => item) };
 }

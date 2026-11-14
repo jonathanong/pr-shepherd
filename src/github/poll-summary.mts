@@ -1,4 +1,5 @@
 import { readRestStackSummary } from "./rest-stack-summary.mts";
+import { requestedMergeScope } from "../commands/stack-merge-scope.mts";
 import { githubOperation, getGithubTransport, runWithGithubTransport } from "./transport.mts";
 import { readRestExplicitSummary } from "./rest-explicit-summary-read.mts";
 import { withRestConditionalScope } from "./rest-conditional-scope.mts";
@@ -62,7 +63,7 @@ async function fetchSelectedPollSummary(
     selection: { kind: "prs", requested },
     // One explicit PR's failed read becomes a row; stack selections stay fail-closed.
     prs: await summarizeRowsIsolated(raw, failures, repo, opts, (pr) =>
-      summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister, undefined, null, true),
+      summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister, undefined, true),
     ),
   };
 }
@@ -138,8 +139,7 @@ async function fetchStackSummary(
   const hint = graphql ? await loadStackSizeHint(stateKey) : 0;
   const sizeHint = hint || UNSIZED_STACK_SUMMARY_FIRST;
   const read = await readStackSummary(anchor, repo, sizeHint);
-  const { stackNumber, stackSize, viewerLogin, viewerCanAdminister, ordered, allowedMergeMethods } =
-    read;
+  const { stackNumber, stackSize, viewerCanAdminister, ordered, allowedMergeMethods } = read;
   if (graphql && stackSize !== hint) await storeStackSizeHint(stateKey, stackSize);
   for (const pr of ordered) {
     await hydratePollSummaryChecks(pr, repo);
@@ -148,9 +148,17 @@ async function fetchStackSummary(
   const handoffSource = getGithubTransport() === "rest" ? undefined : stackHandoffSource(read);
   const stackAncestry = stackAncestryGaps(ordered);
   const required = await trunkRequiredContexts(ordered, repo);
+  // Rule-driven auto-resolve mutates review state, so it runs only on layers the caller owns
+  // and, for --merge-through, only through the target: other layers are read, never written.
+  const scope = requestedMergeScope(opts);
+  const throughIndex =
+    scope?.kind === "through" ? ordered.findIndex((pr) => pr.number === scope.pr) : -1;
+  const mayMutate = (pr: (typeof ordered)[number], index: number): boolean =>
+    (!opts.stackOwned || opts.stackOwned.includes(pr.number)) &&
+    (throughIndex < 0 || index <= throughIndex);
   const prs = await Promise.all(
-    ordered.map((pr) =>
-      summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister, required, viewerLogin, true),
+    ordered.map((pr, index) =>
+      summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister, required, mayMutate(pr, index)),
     ),
   );
   if (handoffSource) patchHandoffLayers(handoffSource.layers, prs);

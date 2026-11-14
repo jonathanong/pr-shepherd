@@ -5,13 +5,13 @@ nextAction: shepherd
 
 ## Layers
 
-- PR #2620: ci(filters): require path filters to cover executed scripts — not mergeable (`review-work`) · owned
+- PR #2620: ci(filters): require path filters to cover executed scripts — not mergeable (`review-work`)
   - OPEN · base `main` · 3 actionable
-- PR #2621: fix(ci): make run-bounded own the command's output pipes — shepherded · mergeable · owned
+- PR #2621: fix(ci): make run-bounded own the command's output pipes — shepherded · mergeable
   - OPEN · base `ci/executed-script-path-coverage`
 
 ## Instructions
 
-1. Start or delegate concurrent one-PR sessions only for `owned` rows. Leave other layers untouched.
+1. Start one concurrent one-PR session per command below; none for layers without one.
 2. Run `pr-shepherd https://github.com/vouchington/vouchington/pull/2620 --until-terminal`.
-3. After the selected one-PR sessions, rerun `pr-shepherd stack https://github.com/vouchington/vouchington/pull/2621 --until-terminal --merge`. Keep watching until every layer is terminal.
+3. After the selected one-PR sessions, rerun `pr-shepherd stack "vouchington/vouchington#2622" --until-terminal --merge`. Keep watching until every layer is terminal.

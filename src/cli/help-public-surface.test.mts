@@ -15,11 +15,11 @@ describe("public CLI help surface", () => {
       expect(USAGE.top).not.toContain(legacy);
     }
     expect(USAGE.default).toContain("Usage:\n  pr-shepherd [PR ...] [poll-flags] [iterate-flags]");
-    expect(USAGE.top).toContain("pr-shepherd stack PR [--once]");
+    expect(USAGE.top).toContain("pr-shepherd stack PR [PR ...] [--once]");
     expect(USAGE.default).toContain("Use 'pr-shepherd stack PR' for a native GitHub stack.");
     expect(USAGE.default).not.toContain("--stack");
     expect(USAGE.default).not.toContain("--poll-mode");
-    expect(USAGE.stack).toContain("pr-shepherd stack PR [--once]");
+    expect(USAGE.stack).toContain("pr-shepherd stack PR [PR ...] [--once]");
     expect(USAGE.default).not.toContain("[PR] [PR]");
     expect(USAGE.default).not.toContain("pr-shepherd poll");
     expect(USAGE.top).toContain("--debounce");

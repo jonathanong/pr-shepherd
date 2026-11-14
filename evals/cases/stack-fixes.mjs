@@ -174,7 +174,10 @@ retrigger CI.`,
     area: "github",
     runs: 6,
     fixture: "131-aggregate-stack-merged-parent-retarget-wait",
-    shape: stackShape("https://github.com/vouchington/vouchington/pull/2547", { merge: true }),
+    shape: stackShape("https://github.com/vouchington/vouchington/pull/2547", {
+      merge: true,
+      ref: "vouchington/vouchington#2535",
+    }),
     tags: ["stack", "wait", "merge", "merged-parent"],
     graders: {
       "waits-without-merging-or-retargeting": llm(
@@ -247,6 +250,7 @@ escalate.`,
     shape: stackShape("https://github.com/owner/repo/pull/342", {
       merge: true,
       extra: " --transport rest",
+      ref: "owner/repo#35",
     }),
     tags: ["stack", "merge", "merge-queue", "rest"],
     graders: {

@@ -100,11 +100,11 @@ PR #42 is ready for review and its loop has ended. Nothing else was requested.
 
 [user]
 
-Thanks. Now shepherd the native PR stack anchored at https://github.com/owner/repo/pull/443.
+Thanks. Now shepherd the native PR stack anchored at https://github.com/owner/repo/pull/443. I own every layer: the stack is owner/repo#44.
 
 ---
 
-[tool] $ pr-shepherd stack https://github.com/owner/repo/pull/443 --until-terminal
+[tool] $ pr-shepherd stack "owner/repo#44" --until-terminal
 
 # owner/repo stack #44 — actionable
 
@@ -113,17 +113,17 @@ nextAction: shepherd
 
 ## Layers
 
-- PR #441: Blocked receipt — shepherded · not mergeable (`merge-state`) · owned
+- PR #441: Blocked receipt — shepherded · not mergeable (`merge-state`)
   - OPEN · base `main`
-- PR #442: Hooks receipt — shepherded · not mergeable (`merge-state`) · owned
+- PR #442: Hooks receipt — shepherded · not mergeable (`merge-state`)
   - OPEN · base `blocked`
-- PR #443: Pending CI receipt — shepherded · not mergeable (`checks-in-progress`) · owned
+- PR #443: Pending CI receipt — shepherded · not mergeable (`checks-in-progress`)
   - OPEN · base `hooks` · 1 in progress
 
 ## Instructions
 
-1. Start or delegate concurrent one-PR sessions only for `owned` rows. Leave other layers untouched.
+1. Start one concurrent one-PR session per command below; none for layers without one.
 2. Run `pr-shepherd https://github.com/owner/repo/pull/441 --until-terminal`.
 3. Run `pr-shepherd https://github.com/owner/repo/pull/442 --until-terminal`.
 4. Run `pr-shepherd https://github.com/owner/repo/pull/443 --until-terminal`.
-5. After the selected one-PR sessions, rerun `pr-shepherd stack https://github.com/owner/repo/pull/443 --until-terminal`. Keep watching until every layer is terminal.
+5. After the selected one-PR sessions, rerun `pr-shepherd stack "owner/repo#44" --until-terminal`. Keep watching until every layer is terminal.

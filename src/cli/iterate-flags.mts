@@ -4,7 +4,9 @@ import {
   isInstructionStyle,
   type InstructionStyle,
 } from "../config/resolve.mts";
+import { parseStackLayers } from "../commands/iterate/stack-boundary.mts";
 import { EXIT } from "../exit-codes.mts";
+import type { StackLayerOwnership } from "../types.mts";
 import { getFlag, hasFlag } from "./args.mts";
 import { parseDurationToSeconds } from "./duration.mts";
 import { validateSecondsDurationFlag } from "./duration-flag.mts";
@@ -22,6 +24,8 @@ interface IterateFlags {
   merge: boolean;
   /** `null` when `--instructions` was invalid (an error was already printed). */
   instructions: InstructionStyle | null | undefined;
+  /** `null` when `--layers` was invalid (an error was already printed). */
+  stackLayers: StackLayerOwnership[] | null | undefined;
 }
 
 /** True when any flag failed validation; the usage error is already printed. */
@@ -29,7 +33,8 @@ export function hasInvalidIterateFlags(flags: IterateFlags): boolean {
   return (
     flags.readyDelaySuffix === null ||
     flags.stallTimeoutSuffix === null ||
-    flags.instructions === null
+    flags.instructions === null ||
+    flags.stackLayers === null
   );
 }
 
@@ -66,8 +71,10 @@ export function parseIterateFlags(
     MINUTE_FLAG_OPTS,
   );
   const instructions = parseInstructionsFlag(extra);
+  const stackLayers = parseStackLayersFlag(extra);
   return {
     instructions,
+    stackLayers,
     readyDelaySuffix,
     readyDelaySeconds,
     stallTimeoutSuffix,
@@ -91,4 +98,19 @@ function parseInstructionsFlag(extra: string[]): InstructionStyle | null | undef
 
 function hasInstructionsFlag(extra: string[]): boolean {
   return extra.some((arg) => arg === "--instructions" || arg.startsWith("--instructions="));
+}
+
+/** Validate `--layers`. Returns `undefined` when absent, `null` after printing a usage error. */
+function parseStackLayersFlag(extra: string[]): StackLayerOwnership[] | null | undefined {
+  const value = getFlag(extra, "--layers");
+  if (!extra.some((arg) => arg === "--layers" || arg.startsWith("--layers="))) {
+    return undefined;
+  }
+  const layers = value === null ? null : parseStackLayers(value);
+  if (layers) return layers;
+  process.stderr.write(
+    `pr-shepherd: --layers must be comma-separated pr:position:o|u:branch entries (branch percent-encoded), got ${JSON.stringify(value ?? "")}\n`,
+  );
+  process.exitCode = EXIT.USAGE;
+  return null;
 }

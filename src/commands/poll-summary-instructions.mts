@@ -1,18 +1,22 @@
 /* eslint-disable max-lines */
 import { buildQuotaAwareContinuation } from "../quota-warning.mts";
-import type { PollSummaryItem, PollSummaryResult } from "../types.mts";
+import type { PollSummaryItem, PollSummaryResult, StackMergeScope } from "../types.mts";
 import { explicitInstructions } from "./poll-summary-explicit-instructions.mts";
 import {
   appendAutonomousInstructions,
+  hasListedOwnership,
   appendHumanHandoffInstructions,
   findHumanHandoffs,
   idleWaitPlan,
   isStackLayerReady,
-  planPrefixDrain,
   retargetWaitPlan,
   stackPosition,
   type StackPlan,
 } from "./stack-drain.mts";
+import { lowerReadyNote } from "./stack-lower-ready-note.mts";
+import { planStackMerge, type ApproveCommands } from "./stack-merge-plan.mts";
+import { aboveThroughTarget } from "./stack-merge-scope.mts";
+import { ownershipBoundaryStep } from "./stack-ownership.mts";
 import {
   appendStackRerunInstruction,
   onlyDraftReadinessVerification,
@@ -25,8 +29,9 @@ export function withPollSummaryInstructions(
   result: PollSummaryResult,
   mergeRequested: boolean,
   rerunCommand?: string,
+  scope?: StackMergeScope,
 ): PollSummaryResult {
-  return planPollSummary(result, mergeRequested, rerunCommand).result;
+  return planPollSummary(result, mergeRequested, rerunCommand, scope).result;
 }
 
 /** The projected summary, plus the idle layers when the stack plan can only wait on them. */
@@ -34,6 +39,8 @@ export function planPollSummary(
   result: PollSummaryResult,
   mergeRequested: boolean,
   rerunCommand?: string,
+  scope: StackMergeScope | undefined = mergeRequested ? { kind: "all" } : undefined,
+  approve?: ApproveCommands,
 ): { result: PollSummaryResult; idle?: PollSummaryItem[] } {
   if (result.selection.kind !== "stack") {
     return { result: { ...result, instructions: explicitInstructions(result, rerunCommand) } };
@@ -90,8 +97,27 @@ export function planPollSummary(
       return layer;
     }),
   };
-  const planned = planStack(projected, mergeRequested, rerunCommand);
+  const planned = planStack(
+    projected,
+    mergeRequested,
+    rerunCommand,
+    mergeRequested ? scope : undefined,
+    approve,
+  );
   const instructions = [...planned.instructions];
+  if (planned.action === "shepherd" || planned.action === "wait") {
+    const note = lowerReadyNote(projected, scope, rerunCommand);
+    if (note) instructions.push(`${instructions.length + 1}. ${note}`);
+  }
+  const boundary =
+    planned.action === "shepherd" || planned.action === "merge"
+      ? ownershipBoundaryStep(projected)
+      : undefined;
+  if (boundary) {
+    // The rerun step stays last; renumber around the inserted step.
+    instructions.splice(Math.max(instructions.length - 1, 0), 0, `0. ${boundary}`);
+    instructions.forEach((line, i) => (instructions[i] = line.replace(/^\d+\. /, `${i + 1}. `)));
+  }
   if (result.quotaWarning && planned.action === "shepherd") {
     instructions.push(
       buildQuotaAwareContinuation(
@@ -123,16 +149,22 @@ function planStack(
   result: PollSummaryResult,
   mergeRequested: boolean,
   rerunCommand?: string,
+  scope?: StackMergeScope,
+  approve?: ApproveCommands,
 ): StackPlan {
   const again = stackRerunTarget(rerunCommand);
+  const partial = hasListedOwnership(result);
   const open = result.prs.filter((item) => item.state === "OPEN");
   const gaps = result.stackAncestry ?? [];
   const staleChildren = new Set(gaps.map((gap) => gap.childPr));
   const stackMergeable = gaps.length === 0 && open.every(isStackLayerReady);
+  const outside = aboveThroughTarget(result, scope);
   const work = splitStackWork(
     open.filter(
       (item) =>
-        (!isStackLayerReady(item) || staleChildren.has(item.pr)) && item.action !== "escalate",
+        (!isStackLayerReady(item) || staleChildren.has(item.pr)) &&
+        item.action !== "escalate" &&
+        !outside.has(item.pr),
     ),
     staleChildren,
   );
@@ -141,13 +173,13 @@ function planStack(
   const agentWork = runnableCandidates.length > 0;
   // Only owned work defers a human handoff: rerunning cannot advance another author's layer.
   const ownedWork = runnableCandidates.some((item) => item.owned);
-  const drain = planPrefixDrain(result, mergeRequested, rerunCommand);
+  const drain = planStackMerge(result, scope, rerunCommand, approve);
   if (drain) return drain;
 
   const handoffs = findHumanHandoffs(result);
   if (handoffs) {
     const instructions: string[] = [];
-    appendAutonomousInstructions(instructions, runnableCandidates);
+    appendAutonomousInstructions(instructions, runnableCandidates, partial);
     const stop = !ownedWork;
     appendHumanHandoffInstructions(instructions, handoffs, stop);
     for (const item of missingCommands) {
@@ -177,7 +209,7 @@ function planStack(
   if (!stackMergeable) {
     if (missingCommands.length > 0) {
       const instructions: string[] = [];
-      appendAutonomousInstructions(instructions, runnableCandidates);
+      appendAutonomousInstructions(instructions, runnableCandidates, partial);
       for (const item of missingCommands) {
         instructions.push(
           `${instructions.length + 1}. PR #${item.pr} needs a one-PR session, but Shepherd could not produce its command. ${ownedWork ? "After autonomous shepherding, ask" : "Stop and ask"} for direction.`,
@@ -206,7 +238,7 @@ function planStack(
       return idleWaitPlan(work.idle);
     }
     const instructions: string[] = [];
-    appendAutonomousInstructions(instructions, work.sessions);
+    appendAutonomousInstructions(instructions, work.sessions, partial);
     if (
       onlyDraftReadinessVerification(work.sessions, work.idle) &&
       work.sessions.every((item) => item.owned)
@@ -246,7 +278,7 @@ function planStack(
   if (!mergeRequested) {
     const instructions: string[] = [];
     const sessions = open.filter((item) => item.action !== "cancel");
-    appendAutonomousInstructions(instructions, sessions);
+    appendAutonomousInstructions(instructions, sessions, partial);
     const action = appendStackRerunInstruction(
       instructions,
       sessions,

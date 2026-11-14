@@ -20,8 +20,8 @@ append_system_prompt: |
   explicitly and say why. The plan is the deliverable: do not ask for a shell or
   for command output to be pasted back.
 ---
-Shepherd the native PR stack anchored at https://github.com/owner/repo/pull/421.
-I already ran the first tick (`pr-shepherd stack https://github.com/owner/repo/pull/421 --until-terminal`) —
+Shepherd the native PR stack anchored at https://github.com/owner/repo/pull/421. I own every layer: the stack is owner/repo#42.
+I already ran the first tick (`pr-shepherd stack "owner/repo#42" --until-terminal`) —
 here is what it returned. Take it from there.
 
 ---
@@ -33,7 +33,7 @@ nextAction: cancel
 
 ## Layers
 
-- PR #421: Clean draft — not mergeable (`draft`) · owned
+- PR #421: Clean draft — not mergeable (`draft`)
   - OPEN · draft · base `main`
 
 ## Instructions

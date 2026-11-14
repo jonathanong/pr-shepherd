@@ -69,15 +69,6 @@ describe("stack command agent work", () => {
     );
   });
 
-  it("does not emit a session command for a layer the viewer does not own", () => {
-    const unowned = row(1, 1, { action: "triage", reasons: ["failing-checks"] });
-    delete unowned.owned;
-    const result = withPollSummaryInstructions(stack([unowned]), false);
-    expect(text(result)).toContain("PR #1 is not owned. Do not run a session for it.");
-    expect(text(result)).not.toContain("pull/1 --until-terminal");
-    expect(text(result)).toContain("only for `owned` rows");
-  });
-
   it("says when an owned layer has no session command", () => {
     const instructions: string[] = [];
     appendAutonomousInstructions(instructions, [row(2, 2, { pollCommand: undefined })]);
@@ -127,6 +118,8 @@ describe("stack command agent work", () => {
     const result = withPollSummaryInstructions(
       stack([row(1, 1, ready), disabledDraft(2, 2), row(3, 3, { isDraft: true })]),
       true,
+      undefined,
+      { kind: "ready" },
     );
     expect(result.nextAction).toBe("merge");
     expect(text(result)).toContain("gh stack merge 1 --yes --squash");

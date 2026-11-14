@@ -116,7 +116,7 @@ function expectStackedRoute(
       `PR #42 is layer ${layer.position} of ${layer.size} in native stack #${layer.number}; do not run \`gh pr merge\` for this layer.`,
     );
     expect(result.triage.instructions).toContain(
-      "Run `pr-shepherd stack https://github.com/owner/repo/pull/42 --until-terminal --merge` to reconcile the stack and run each bottom-layer merge command it emits.",
+      "Run `pr-shepherd stack https://github.com/owner/repo/pull/42 --until-terminal --merge-through https://github.com/owner/repo/pull/42` to merge this layer and the unmerged layers below it, never a layer above it. If lower layers are not yours it escalates `unowned-stack-layers` and merges nothing: report that to the user. Otherwise it emits one merge command that lands every layer it lists. Run that command as printed: do not merge the layers one at a time with `gh pr merge`, and do not rebase or push between layers.",
     );
   }
   expect(JSON.stringify(result)).not.toContain("--auto");
@@ -414,7 +414,7 @@ describe("runIterate — merge", () => {
       "https://github.com/owner/repo/pull/42",
     ]);
     expect(result.triage.instructions).toContain(
-      "Run `pnpm exec pr-shepherd stack https://github.com/owner/repo/pull/42 --until-terminal --merge` to reconcile the stack and run each bottom-layer merge command it emits.",
+      "Run `pnpm exec pr-shepherd stack https://github.com/owner/repo/pull/42 --until-terminal --merge-through https://github.com/owner/repo/pull/42` to merge this layer and the unmerged layers below it, never a layer above it. If lower layers are not yours it escalates `unowned-stack-layers` and merges nothing: report that to the user. Otherwise it emits one merge command that lands every layer it lists. Run that command as printed: do not merge the layers one at a time with `gh pr merge`, and do not rebase or push between layers.",
     );
   });
 

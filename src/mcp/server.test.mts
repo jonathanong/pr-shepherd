@@ -2,6 +2,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { PartialApplyError, PrShepherdValidationError } from "../api.mts";
+import { multiStackError } from "../commands/stack-targets-error.mts";
+import { EXIT, ShepherdError } from "../exit-codes.mts";
 import { GitHubRequestError } from "../github/errors.mts";
 import { createPrShepherdMcpServer } from "./server.mts";
 
@@ -505,10 +507,10 @@ describe("pr-shepherd MCP server", () => {
     );
 
     const response = await tools.stack!.handler({
-      pr: "openai/pr-shepherd#3",
+      refs: ["openai/pr-shepherd#3"],
       merge: true,
     });
-    expect(stack).toHaveBeenCalledWith({ pr: "openai/pr-shepherd#3", merge: true });
+    expect(stack).toHaveBeenCalledWith({ refs: ["openai/pr-shepherd#3"], merge: true });
     const structured = response.structuredContent as {
       prs: Array<{
         shepherded?: true;
@@ -529,6 +531,39 @@ describe("pr-shepherd MCP server", () => {
     expect(response.content?.[0]?.text).toContain(
       ": Fix widgets — mergeable · owner `@alice` · owned",
     );
+  });
+
+  it("returns the multi-stack error with its per-stack commands in both MCP channels", async () => {
+    const message = multiStackError(
+      "openai/pr-shepherd",
+      [
+        { stack: 7, prs: [3], stackRefs: [], members: [3, 4] },
+        { stack: 9, prs: [], stackRefs: [9], members: [10] },
+      ],
+      "ready",
+      undefined,
+    );
+    const stack = vi.fn().mockRejectedValue(new ShepherdError(message, EXIT.USAGE));
+    const tools = registeredTools(
+      createPrShepherdMcpServer({
+        shepherd: {
+          iterate: vi.fn(),
+          apply: vi.fn(),
+          stack,
+          suggest: vi.fn(),
+          getJournal: vi.fn(),
+        },
+      }),
+    );
+    const response = await tools.stack!.handler({
+      refs: ["openai/pr-shepherd#3", "openai/pr-shepherd#9"],
+      mergeReady: true,
+    });
+    expect(response.isError).toBe(true);
+    expect(response.structuredContent).toMatchObject({ code: EXIT.USAGE, message });
+    expect(response.content?.[0]?.text).toBe(`pr-shepherd error (${EXIT.USAGE}): ${message}`);
+    expect(message).toContain("These refs span 2 stacks. Run one command per stack:");
+    expect(message).toContain("--until-terminal --merge-ready");
   });
 
   it("requires a repository-qualified PR string in every tool schema and handler", async () => {
@@ -553,7 +588,14 @@ describe("pr-shepherd MCP server", () => {
         { prs: ["openai/pr-shepherd#3", "other/widgets#4"] },
         { stack: "openai/pr-shepherd#3" },
       ],
-      stack: [{}, { pr: 3 }, { pr: "42" }, { prs: ["openai/pr-shepherd#3"] }],
+      stack: [
+        {},
+        { pr: "openai/pr-shepherd#3" },
+        { refs: [] },
+        { refs: [3] },
+        { refs: ["42"] },
+        { refs: ["openai/pr-shepherd#3"], mergeThrough: "42" },
+      ],
       apply: [
         {},
         {
@@ -604,7 +646,7 @@ describe("pr-shepherd MCP server", () => {
 
     const validByTool = {
       iterate: { pr: "openai/pr-shepherd#3" },
-      stack: { pr: "openai/pr-shepherd#3", merge: true },
+      stack: { refs: ["openai/pr-shepherd#3", "openai/pr-shepherd#4"], mergeReady: true },
       apply: {
         pr: "openai/pr-shepherd#3",
         operations: [{ type: "review_mutations", resolveThreadIds: ["PRRT_one"] }],

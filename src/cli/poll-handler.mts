@@ -8,6 +8,8 @@ import { emitIterateResult } from "./iterate-emitter.mts";
 import { EXIT } from "../exit-codes.mts";
 import { emitPollSummaryResult } from "./poll-summary-emitter.mts";
 import { parsePollTargets, resolvePollTargets } from "./poll-targets.mts";
+import { parseStackMerge } from "./stack-merge-args.mts";
+import { resolveStackTarget, stackMergeScope } from "../commands/stack-targets.mts";
 import { DEFAULT_POLL_BOOLEAN_FLAGS, DEFAULT_POLL_FLAGS_WITH_VALUES } from "./default-poll.mts";
 import { validateDefaultArgs } from "./validate-default-args.mts";
 import { rejectRemovedFlags } from "./removed-flags.mts";
@@ -39,30 +41,48 @@ export async function handlePoll(args: string[]): Promise<void> {
   });
 }
 
-/** `pr-shepherd stack <PR>`: the native stack containing one PR. */
+/** `pr-shepherd stack <ref> [<ref> ...]`: the native stack that a stack number or PRs select. */
 export async function handleStack(args: string[]): Promise<void> {
   if (maybePrintHelp(args, "stack")) return;
   if (rejectRemovedFlags(args) || rejectUnknownFlags(args, "stack", STACK_FLAGS)) return;
-  if (!validateDefaultArgs(args, DEFAULT_POLL_FLAGS_WITH_VALUES, STACK_BOOLEAN_FLAGS, usageArg))
-    return;
+  if (!validateDefaultArgs(args, STACK_FLAGS_WITH_VALUES, STACK_BOOLEAN_FLAGS, usageArg)) return;
   const parsedTargets = parsePollTargets(args);
   if (!parsedTargets) return;
-  if (parsedTargets.refs.length !== 1) {
-    usage("stack requires exactly one PR reference.");
+  if (parsedTargets.refs.length === 0) {
+    usage("stack requires a PR or stack reference.");
     return;
   }
-  const { prNumbers, targetRepository } = await resolvePollTargets(parsedTargets);
+  const merge = parseStackMerge(parsedTargets.extra);
+  if (!merge) return;
   const shared = parseLoopOptions(parsedTargets.extra, parsedTargets.global, true);
   if (!shared) return;
-  const target = { stackPrNumber: prNumbers[0], targetRepository };
+  const target = await resolveStackTarget({
+    refs: parsedTargets.refs,
+    ...(merge.through && { through: merge.through }),
+    ...(merge.flag && { merge: merge.flag }),
+  });
+  const scope = stackMergeScope(merge.flag, target.through);
+  const options = {
+    ...shared.options,
+    merge: scope !== undefined,
+    ...(scope && { stackMerge: scope }),
+    stackPrNumber: target.anchor,
+    ...(target.owned && { stackOwned: target.owned }),
+    targetRepository: target.targetRepository,
+  };
   const result = hasFlag(parsedTargets.extra, "--once")
-    ? await runPollSummaryTick({ ...shared.options, ...target })
-    : await runAggregatePollCommand({ ...shared.options, ...target });
+    ? await runPollSummaryTick(options)
+    : await runAggregatePollCommand(options);
   emitPollSummaryResult(result, { format: parsedTargets.global.format });
 }
 
-const STACK_BOOLEAN_FLAGS = new Set([...DEFAULT_POLL_BOOLEAN_FLAGS, "--once"]);
-const STACK_FLAGS = [...DEFAULT_POLL_FLAGS_WITH_VALUES, ...STACK_BOOLEAN_FLAGS];
+// `--layers` is for the one-PR commands a stack prints; `stack` itself has no use for it.
+const STACK_FLAGS_WITH_VALUES = new Set([
+  ...[...DEFAULT_POLL_FLAGS_WITH_VALUES].filter((flag) => flag !== "--layers"),
+  "--merge-through",
+]);
+const STACK_BOOLEAN_FLAGS = new Set([...DEFAULT_POLL_BOOLEAN_FLAGS, "--once", "--merge-ready"]);
+const STACK_FLAGS = [...STACK_FLAGS_WITH_VALUES, ...STACK_BOOLEAN_FLAGS];
 
 function parseLoopOptions(
   extra: string[],
@@ -135,6 +155,7 @@ function parseLoopOptions(
       noAutoMarkReady: flags.noAutoMarkReady,
       merge: flags.merge,
       instructions: flags.instructions ?? undefined,
+      ...(flags.stackLayers && { stackLayers: flags.stackLayers }),
       intervalSeconds,
       timeoutSeconds,
       debounceSeconds,

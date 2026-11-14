@@ -1,6 +1,7 @@
 import type { StackStatus } from "../../types.mts";
 import { playbookPointer } from "../playbook-pointer.mts";
 import { getGithubTransport } from "../../github/transport.mts";
+import { boundedStackPush, boundedStackRebase } from "./stack-boundary.mts";
 
 /**
  * Where a native-stack rebase starts: an upper layer rebases from its parent stack branch
@@ -24,6 +25,13 @@ export function buildNativeStackRebaseInstruction(
   stackNumber: number,
   start: NativeStackRebaseStart,
 ): string {
+  // A one-PR session that carries unowned layers never runs a whole-stack update.
+  const bounded = boundedStackRebase(
+    stackNumber,
+    playbookPointer("Branch update"),
+    getGithubTransport() === "rest",
+  );
+  if (bounded) return bounded;
   if (getGithubTransport() === "rest") {
     const boundary =
       "parentBranch" in start
@@ -129,6 +137,12 @@ export function buildBranchPushInstruction(
   mutationSuffix: string,
   ejectionUpdate = false,
 ): string {
+  const bounded = stackRebase ? boundedStackPush() : undefined;
+  if (bounded) {
+    return ejectionUpdate
+      ? `If the base update or a fix changed the head, commit any remaining changes and ${bounded}${mutationSuffix}. If neither did, do not push.`
+      : `Commit any remaining changes on the PR head branch and ${bounded}${mutationSuffix}.`;
+  }
   if (stackRebase && getGithubTransport() === "rest")
     return `If the base update or a fix changed any heads, commit the remaining changes and push every affected stack branch using the repository's stack-update procedure${mutationSuffix}. If no heads changed, do not push.`;
   if (ejectionUpdate) {

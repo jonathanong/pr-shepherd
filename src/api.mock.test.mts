@@ -12,6 +12,7 @@ const {
   mockRunPollSummary,
   mockApplyQueueRemovalAck,
   mockApplyCheckBlocker,
+  mockResolveStackTarget,
 } = vi.hoisted(() => ({
   mockRunSuggestionPatches: vi.fn(),
   mockRunIterate: vi.fn(),
@@ -23,6 +24,11 @@ const {
   mockRunPollSummary: vi.fn(),
   mockApplyQueueRemovalAck: vi.fn(),
   mockApplyCheckBlocker: vi.fn(),
+  mockResolveStackTarget: vi.fn(),
+}));
+vi.mock("./commands/stack-targets.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./commands/stack-targets.mts")>()),
+  resolveStackTarget: mockResolveStackTarget,
 }));
 
 vi.mock("./commands/suggestion-patches.mts", () => ({
@@ -173,14 +179,77 @@ describe("public API", () => {
       targetRepository: { owner: "openai", name: "pr-shepherd" },
     });
 
-    await shepherd.stack({ pr: "openai/pr-shepherd#43", merge: true });
+    mockResolveStackTarget.mockResolvedValue({
+      anchor: 43,
+      targetRepository: { owner: "openai", name: "pr-shepherd" },
+    });
+    await shepherd.stack({ refs: ["openai/pr-shepherd#43"], merge: true });
+    expect(mockResolveStackTarget).toHaveBeenLastCalledWith({
+      refs: [{ number: 43, repository: "openai/pr-shepherd" }],
+      merge: "merge",
+      tool: true,
+    });
     expect(mockRunPollSummary).toHaveBeenLastCalledWith({
       stackPrNumber: 43,
       tick: true,
       targetRepository: { owner: "openai", name: "pr-shepherd" },
       merge: true,
+      stackMerge: { kind: "all" },
     });
     expect(mockRunIterate).not.toHaveBeenCalled();
+  });
+
+  it("passes declared ownership and the merge scope to the stack read", async () => {
+    mockRunPollSummary.mockResolvedValue(SUMMARY);
+    mockResolveStackTarget.mockResolvedValue({
+      anchor: 42,
+      owned: [42, 43],
+      through: 43,
+      targetRepository: { owner: "openai", name: "pr-shepherd" },
+    });
+    const shepherd = createPrShepherd();
+    await shepherd.stack({
+      refs: ["openai/pr-shepherd#42", 43],
+      mergeThrough: "openai/pr-shepherd#43",
+    });
+    expect(mockRunPollSummary).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        stackOwned: [42, 43],
+        merge: true,
+        stackMerge: { kind: "through", pr: 43 },
+      }),
+    );
+
+    mockResolveStackTarget.mockResolvedValue({ anchor: 42 });
+    await shepherd.stack({ refs: [42], mergeReady: true });
+    expect(mockRunPollSummary).toHaveBeenLastCalledWith(
+      expect.objectContaining({ merge: true, stackMerge: { kind: "ready" } }),
+    );
+    expect(mockRunPollSummary.mock.calls.at(-1)?.[0]).not.toHaveProperty("stackOwned");
+
+    await shepherd.stack({ refs: [42] });
+    expect(mockRunPollSummary.mock.calls.at(-1)?.[0]).toMatchObject({ merge: false });
+    expect(mockRunPollSummary.mock.calls.at(-1)?.[0]).not.toHaveProperty("stackMerge");
+  });
+
+  it("rejects a malformed stack reference", async () => {
+    const shepherd = createPrShepherd();
+    await expect(shepherd.stack({ refs: ["bad"] })).rejects.toThrow("Invalid reference");
+    await expect(shepherd.stack({ refs: [42], mergeThrough: "bad" })).rejects.toThrow(
+      "Invalid reference",
+    );
+    expect(mockRunPollSummary).not.toHaveBeenCalled();
+  });
+
+  it("rejects more than one stack merge flag", async () => {
+    const shepherd = createPrShepherd();
+    await expect(shepherd.stack({ refs: [42], merge: true, mergeReady: true })).rejects.toThrow(
+      "mutually exclusive",
+    );
+    await expect(
+      shepherd.stack({ refs: [42], mergeReady: true, mergeThrough: 42 }),
+    ).rejects.toThrow("mutually exclusive");
+    expect(mockRunPollSummary).not.toHaveBeenCalled();
   });
 
   it("rejects cross-repository aggregate iterate input", async () => {
@@ -204,7 +273,12 @@ describe("public API", () => {
     await expect(shepherd.iterate({ pr: 42, prs: [43] } as never)).rejects.toThrow(
       "mutually exclusive",
     );
-    await expect(shepherd.stack({} as never)).rejects.toThrow("stack requires a PR reference");
+    await expect(shepherd.stack({} as never)).rejects.toThrow(
+      "stack requires at least one reference",
+    );
+    await expect(shepherd.stack({ refs: [] })).rejects.toThrow(
+      "stack requires at least one reference",
+    );
     expect(mockRunPollSummary).not.toHaveBeenCalled();
     expect(mockRunIterate).not.toHaveBeenCalled();
   });
