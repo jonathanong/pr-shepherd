@@ -1,4 +1,5 @@
 import { mergeReadyCommand } from "../github/poll-summary-command.mts";
+import { formatPrUrl } from "../pr-reference.mts";
 import type { PollSummaryItem, PollSummaryResult, StackMergeScope } from "../types.mts";
 import { mergeScopeLayers, readyPrefix, type StackLayer } from "./stack-merge-scope.mts";
 
@@ -19,8 +20,11 @@ export function lowerReadyNote(
   if (!target || prefix.length === 0 || prefix.some((item) => item.pr === target.pr))
     return undefined;
   const lagging = inScope.filter((item) => !prefix.includes(item as StackLayer));
+  // `--merge-through N` approves only layers at or below N, so the drain lists exactly those.
+  const scoped =
+    scope.kind === "through" ? inScope.map((item) => formatPrUrl(result.repo, item.pr)) : undefined;
   const drain = rerunCommand
-    ? `\`${mergeReadyCommand(rerunCommand)}\``
+    ? `\`${mergeReadyCommand(rerunCommand, scoped)}\``
     : "`stack` with `--merge-ready`";
   return `Owned ${prefix.length === 1 ? "layer" : "layers"} ${list(prefix)} ${prefix.length === 1 ? "is" : "are"} ready, but ${lagging.map(describeLagging).join("; ")} ${lagging.length === 1 ? "is" : "are"} not. Nothing was merged because \`${scope.kind === "all" ? "--merge" : "--merge-through"}\` lands every layer in scope together. Tell the user the lower layers are ready. Only if the user asked to merge layers as they become ready, rerun ${drain}; otherwise keep shepherding.`;
 }

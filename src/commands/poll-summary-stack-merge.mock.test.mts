@@ -77,6 +77,21 @@ describe("stack merge requests", () => {
     expect(text).toContain("--merge-ready");
   });
 
+  it("drains a whole-stack --merge-through only over the layers at or below the target", async () => {
+    const stackNumber = 8100 + ++counter;
+    mockFetch.mockResolvedValue(
+      summary(stackNumber, [row(1, 1, ready), row(2, 2), row(3, 3, ready)]),
+    );
+    const result = await runPollSummary({ ...base, stackMerge: { kind: "through", pr: 2 } });
+    const text = result.instructions?.join("\n") ?? "";
+    const drain = text.match(/rerun `([^`]*--merge-ready[^`]*)`/)?.[1] ?? "";
+    expect(drain).toContain("widgets/pull/1");
+    expect(drain).toContain("widgets/pull/2");
+    expect(drain).not.toContain("widgets/pull/3");
+    expect(drain).not.toContain(`#${stackNumber}`);
+    expect(JSON.stringify(result)).toContain("--merge-ready");
+  });
+
   it("escalates when a layer joins the stack after the merge was requested", async () => {
     const stackNumber = 8100 + ++counter;
     mockFetch.mockResolvedValueOnce(summary(stackNumber, [row(1, 1, ready), row(2, 2, ready)]));

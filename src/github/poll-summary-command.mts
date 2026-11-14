@@ -98,7 +98,14 @@ export function stackApprovalCommands(
   };
 }
 
-/** The same stack command, merging whichever owned prefix is ready instead of the whole scope. */
-export function mergeReadyCommand(command: string): string {
-  return command.replace(/ --merge(?:-through \S+)?(?= |$)/, " --merge-ready");
+/**
+ * The same stack command, merging whichever owned prefix is ready instead of the whole scope.
+ * `scoped` replaces the listed refs, so a stack number or a listed PR above a `--merge-through`
+ * target cannot widen ownership past what the original request approved.
+ */
+export function mergeReadyCommand(command: string, scoped?: string[]): string {
+  const swapped = command.replace(/ --merge(?:-through \S+)?(?= |$)/, " --merge-ready");
+  return scoped
+    ? swapped.replace(/ stack (?:[^-\s]\S* )+(?=--)/, ` stack ${scoped.join(" ")} `)
+    : swapped;
 }

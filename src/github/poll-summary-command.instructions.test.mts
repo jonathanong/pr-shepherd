@@ -132,4 +132,15 @@ describe("mergeReadyCommand", () => {
       `pr-shepherd stack https://github.com/o/r/pull/7 --until-terminal ${tail}`,
     );
   });
+
+  it("replaces the listed refs with the scoped PRs", () => {
+    expect(
+      mergeReadyCommand('npx pr-shepherd stack "o/r#9" --once --merge-through o/r#2 --x', [
+        "https://github.com/o/r/pull/1",
+        "https://github.com/o/r/pull/2",
+      ]),
+    ).toBe(
+      "npx pr-shepherd stack https://github.com/o/r/pull/1 https://github.com/o/r/pull/2 --once --merge-ready --x",
+    );
+  });
 });

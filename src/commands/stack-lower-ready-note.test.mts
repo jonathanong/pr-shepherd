@@ -55,4 +55,16 @@ describe("lowerReadyNote", () => {
     const two = stack([row(1, 1, ready), row(2, 2, ready), row(3, 3)]);
     expect(lowerReadyNote(two, ALL, RERUN)).toContain("Owned layers #1, #2 are ready");
   });
+
+  it("keeps a --merge-through drain inside the approved layers", () => {
+    const base = stack([row(1, 1, ready), row(2, 2), row(3, 3, ready)]);
+    const rerun =
+      "pr-shepherd stack acme/widgets#9 --until-terminal --merge-through https://github.com/acme/widgets/pull/2 --ready-delay 0s";
+    const note = lowerReadyNote(base, through(2), rerun)!;
+    expect(note).toContain(
+      "`pr-shepherd stack https://github.com/acme/widgets/pull/1 https://github.com/acme/widgets/pull/2 --until-terminal --merge-ready --ready-delay 0s`",
+    );
+    expect(note).not.toContain("widgets/pull/3");
+    expect(note).not.toContain("#9");
+  });
 });
