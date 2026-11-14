@@ -27,11 +27,11 @@ Any escalation from a tick with automatically selected review mutations keeps ev
 | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
 | Owned layers still have autonomous work                                                                                                                        | `SHEPHERD` (non-terminal), with human blockers surfaced    |
 | Every remaining layer can only wait, or the stack is queued                                                                                                    | `WAIT`                                                     |
-| `--merge` and a ready prefix whose bottom open layer targets base                                                                                              | `MERGE` with an agent-run `gh stack merge` for that prefix |
+| `--merge`, `--merge-ready`, or `--merge-through` and a ready in-scope prefix whose bottom open layer targets base                                              | `MERGE` with an agent-run `gh stack merge` for that prefix |
 | Every open layer READY without `--merge`, only clean drafts with auto mark-ready disabled (row reason `draft-auto-mark-ready-disabled`), or every layer merged | `CANCEL`                                                   |
 | A human decision remains (closed or unverified topology) and no autonomous one-PR session remains                                                              | `ESCALATE`                                                 |
 
-Stack ticks can also escalate with `stall-timeout`, `stall-state-unavailable`, or `merge-method-unavailable`. See the predicates below and [actions.md](actions.md#shepherd-actions).
+Stack ticks can also escalate with `stall-timeout`, `stall-state-unavailable`, `merge-method-unavailable`, `unowned-stack-layers` (the requested merge would also land open layers the caller does not own), or `unapproved-stack-layer` (a layer joined the stack after a whole-stack `--merge` was requested). The last two merge nothing: the caller asks the user, then reruns with the covered PRs listed or with `--merge-through`. See the predicates below and [actions.md](actions.md#shepherd-actions).
 
 ## Complete predicates
 
@@ -118,10 +118,10 @@ Failing queue CI is actionable and stays `TRIAGE`. GitHub's removal reason is a 
 
 Native-stack membership is not an escalation.
 
-1. When a one-PR `--merge` poll reaches its ready delay, it writes the layer's READY receipt and returns non-terminal `TRIAGE` with `pr-shepherd stack <PR URL> --until-terminal --merge`. This holds at every position, including position 1. GitHub rejects `--auto` on stacked PRs, and a plain `gh pr merge` would land a mid-stack layer into its unmerged parent instead of the stack trunk.
+1. When a one-PR `--merge` poll reaches its ready delay, it writes the layer's READY receipt and returns non-terminal `TRIAGE` with `pr-shepherd stack <PR URL> --until-terminal --merge-through <PR URL>`, which merges that layer and the layers below it and leaves layers above it alone. This holds at every position, including position 1. GitHub rejects `--auto` on stacked PRs, and a plain `gh pr merge` would land a mid-stack layer into its unmerged parent instead of the stack trunk.
 2. The aggregate command reconciles every open layer's READY receipt and linear ancestry and returns one of the [stack-level outcomes](#stack-level-outcomes).
 3. A clean draft is marked ready by its own session without waiting for lower layers. Closed or unverified topology is surfaced during `SHEPHERD` while another layer can proceed; otherwise it returns `ESCALATE`.
-4. With a ready prefix whose bottom open layer targets the stack base, `stack --merge` returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge <PR number> --yes` and the allowed method flag for the highest ready layer. Rerun the same command until every layer merges and it returns `CANCEL`. If the repository allows no method for that command, it returns `ESCALATE` with `merge-method-unavailable`.
+4. With a ready in-scope prefix whose bottom open layer targets the stack base, `stack --merge`, `--merge-ready`, or `--merge-through` returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge <PR number> --yes` and the allowed method flag for the highest ready layer. Rerun the same command until every layer merges and it returns `CANCEL`. If the repository allows no method for that command, it returns `ESCALATE` with `merge-method-unavailable`.
 
 **Detection caveat:** GitHub's `stack` field can be absent even for a stacked PR (for example when stacks are unavailable on the repository). Absence means no signal, not "not stacked". Shepherd does not infer stackedness otherwise, because comparing the base to the default branch false-positives on any PR targeting a non-default branch. This is a known gap: absence only lets the ordinary merge path proceed. It does not confirm that a plain `gh pr merge --auto` is safe.
 

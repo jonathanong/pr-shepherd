@@ -63,7 +63,7 @@ After `## Instructions`, rerun the same command unless the action is `[CANCEL]` 
 - `[CANCEL]` ends polling this pull request and prints no instructions. Only `[ESCALATE]` hands work to a human. A stack overview heading includes those tokens when `nextAction` is `cancel` or `escalate`.
 - A one-PR `[CANCEL]` or `[ESCALATE]` ends only that PR's loop. Keep every other PR's loop running until it is terminal too, and continue any remaining pull requests or issues from the original request.
 - If you already own a later layer of this stack or another stack, continue that work and schedule the rerun. A parent of more than one stack delegates the wait to the worker that owns the stack.
-- On a stack overview, shepherd, mark ready, and push only rows marked `owned`. If every remaining session belongs to someone else, report the overview and stop.
+- On a stack overview, shepherd, mark ready, and push only rows marked `owned` (with whole-stack ownership no row carries the mark). If every remaining session belongs to someone else, report the overview and stop.
 - Do not wait on `gh pr checks`, `gh pr watch`, `gh run watch`, or equivalent GitHub MCP check waiters; they hide review comments until CI finishes. Fetching check logs is fine.
 - A user-supplied `--merge` explicitly allows the emitted merge, enqueue, and dequeue commands for the selected PR or stack, including a requeue the "Merge queue ejection" playbook permits. Forward it to the CLI or MCP and run those commands without another conversational confirmation. Request runtime escalation when the host requires it.
 
@@ -89,8 +89,8 @@ sequenceDiagram
 
 Merge and stacks:
 
-- A request to merge, land, or enqueue a selected PR or native stack sets `--merge` even without the flag. Creating or opening a PR without merge intent leaves merge mode off.
-- A request for a native stack runs `pr-shepherd stack PR` with any PR in it, as do printed steps that route there. A request for one PR stays a one-PR session even when that PR is a stack layer. A merge request reconciles one-PR READY receipts and merges the highest ready prefix with `gh stack merge`.
+- A request to merge, land, or enqueue a selected PR sets `--merge` even without the flag. For a native stack, "merge the stack" sets `--merge`, "merge as they become ready" sets `--merge-ready`, and "merge #N" sets `--merge-through N`. An ambiguous request ("ship it") means ask which. List only the PRs you own after `stack`. Creating or opening a PR without merge intent leaves merge mode off.
+- A request for a native stack runs `pr-shepherd stack PR` with any PR in it, as do printed steps that route there. A request for one PR stays a one-PR session even when that PR is a stack layer. A merge request reconciles one-PR READY receipts and merges the in-scope ready prefix with one `gh stack merge`; never merge layers one at a time with `gh pr merge`.
 - Review and CI sessions can run at the same time. A clean draft is marked ready without waiting for lower layers. A queued stack stays non-terminal until every layer is merged.
 - Ready-delay defaults to 0, meaning no countdown (`iterate.ready-delay-minutes`). See [iterate-flow.md](iterate-flow.md#2-ready-delay) and [configuration.md](configuration.md).
 

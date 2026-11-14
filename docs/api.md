@@ -54,7 +54,7 @@ const patches = await shepherd.suggest({
 | Method                         | Same as                                  |
 | ------------------------------ | ---------------------------------------- |
 | `iterate(input?)`              | MCP `iterate` / `pr-shepherd iterate`    |
-| `stack({ pr })`                | MCP `stack` / `pr-shepherd stack --once` |
+| `stack({ refs })`              | MCP `stack` / `pr-shepherd stack --once` |
 | `apply({ pr, operations })`    | MCP `apply`                              |
 | `getJournal({ pr })`           | MCP `get_journal`                        |
 | `suggest({ pr, suggestions })` | MCP `suggest`                            |

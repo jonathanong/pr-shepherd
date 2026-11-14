@@ -6,7 +6,7 @@ Usage:
   pr-shepherd --version | -v
   pr-shepherd --help | -h
   pr-shepherd [PR ...] [poll-flags] [iterate-flags]
-  pr-shepherd stack PR [--once] [poll-flags] [iterate-flags]
+  pr-shepherd stack PR [PR ...] [--once] [poll-flags] [iterate-flags]
   pr-shepherd iterate [PR ...] [iterate-flags]
   pr-shepherd apply merge [PR] --require-sha SHA --merge-action ACTION --transport rest
   pr-shepherd apply review [PR] [review-flags]

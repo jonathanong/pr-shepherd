@@ -159,7 +159,7 @@ describe("pr-shepherd skill recurrence contract", () => {
   );
 
   it("picks --until-terminal or the bounded poll by host capability", () => {
-    expect(skill).toMatch(/Run `pr-shepherd \[PR \.\.\.\]` or `pr-shepherd stack PR`/);
+    expect(skill).toMatch(/Run `pr-shepherd \[PR \.\.\.\]` or `pr-shepherd stack PR...`/);
     expect(skill).toMatch(/`--until-terminal` in the background only if its exit wakes you/);
     expect(skill).toMatch(/else in the foreground/);
     expect(skill).toContain("Do not run `pr-shepherd iterate`");

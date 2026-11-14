@@ -25,13 +25,13 @@ Process failures use sysexits.h codes (`75` rate limit, `77` permission or sessi
 
 `PR` accepts a positive number, `owner/repo#N`, or a pull-request URL. A qualified reference selects the repository for GitHub I/O; the working directory stays the local git, configuration, classification-rule, and debug-log context. Several PR arguments select an exact same-repository set. `pr-shepherd stack PR` selects the PR's complete native stack. MCP calls require qualified references and can name any accessible repository.
 
-| Entry point                            | Behavior                                                                                                            |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `pr-shepherd iterate`, MCP `iterate`   | One tick with [`nextCheck`](#single-ticks). The caller schedules the next one. MCP has no debounce.                 |
-| `pr-shepherd <PR>`                     | Bounded poll dispatcher; prints the final iterate action.                                                           |
-| `pr-shepherd [PR] --until-terminal`    | What the shipped skill runs. Keeps ordinary `WAIT` and `MARK_READY` inside the poll.                                |
-| `pr-shepherd stack <PR>`               | Polls the PR's native stack ([aggregate commands](#aggregate-commands-multi-pr-and-stack)); `--once` runs one tick. |
-| Any looping command in a cloud session | One tick, as [single ticks](#single-ticks) describe (`CLAUDE_CODE_REMOTE=true`).                                    |
+| Entry point                            | Behavior                                                                                                                                               |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pr-shepherd iterate`, MCP `iterate`   | One tick with [`nextCheck`](#single-ticks). The caller schedules the next one. MCP has no debounce.                                                    |
+| `pr-shepherd <PR>`                     | Bounded poll dispatcher; prints the final iterate action.                                                                                              |
+| `pr-shepherd [PR] --until-terminal`    | What the shipped skill runs. Keeps ordinary `WAIT` and `MARK_READY` inside the poll.                                                                   |
+| `pr-shepherd stack <PR> [PR ...]`      | Polls the PR's native stack ([aggregate commands](#aggregate-commands-multi-pr-and-stack)); `--once` runs one tick. Extra PRs name the layers you own. |
+| Any looping command in a cloud session | One tick, as [single ticks](#single-ticks) describe (`CLAUDE_CODE_REMOTE=true`).                                                                       |
 
 The default output is Markdown. `--format=json` emits the same action data as one JSON object. Examples below show the default (lean) format. MCP `iterate`'s `structuredContent` uses the lean JSON shape (see [mcp.md](mcp.md)); MCP has no verbose mode.
 
@@ -227,7 +227,7 @@ Other compact review rules:
 - **`stack` row:** an overview ordered bottom to top, with entries fetched completely. It omits one-PR action tags, head SHAs, repeated stack coordinates, check and review histograms, and `pollCommand`. Its fields:
   - `shepherded`: only when true (a current one-PR READY receipt). A missing receipt omits it and is not a mergeability blocker.
   - Mergeability: mergeable, or one blocker on an open layer. Failing, in-progress, or actionable counts appear only for the blocker they explain. A merged or closed layer carries only its state.
-  - `owned`: when the author matches the authenticated viewer (REST reads the authenticated `/user` login without inferring capabilities).
+  - `owned`: only when the caller listed its own PRs after `stack` (declared, never derived from the author; whole-stack ownership omits it).
   - `requiresMergeQueue`: REST rows only, when branch policy proves a queue is required (`true`) or not (`false`); unavailable or incomplete negative policy stays omitted. Markdown: `merge queue required` / `merge queue not required`.
   - `position` and the layer's own base branch. Markdown omits `position n/m` when list order already shows it and links the row only when its URL differs from the one the header repository and PR number imply. JSON keeps `position`, `stackSize`, and `url`.
 
@@ -300,9 +300,29 @@ READY-receipt certification uses the compact review sample independently of the 
 
 Receipt creation is described under [`cancel`](#cancel).
 
-### Stack merge (`stack --merge`)
+### Stack merge (`stack --merge`, `--merge-ready`, `--merge-through`)
 
-The command finds the highest open layer such that:
+`stack` merges only the layers the caller approved and owns. Exactly one of three flags selects the scope:
+
+| Flag                   | Merges                                                                               |
+| ---------------------- | ------------------------------------------------------------------------------------ |
+| `--merge`              | Every owned open layer, in one command, once all of them are ready.                  |
+| `--merge-ready`        | The highest contiguous ready, owned prefix, now. Rerun as more layers become ready.  |
+| `--merge-through <PR>` | That PR and every open layer below it. Layers above stay open and are never touched. |
+
+`stack PR` owns the whole stack. Listing several PRs of one stack (`stack <PR> <PR> ...`) owns exactly those; ownership is declared, never derived from the PR author. A bare number is read as a PR first and as a native stack number only when no PR has that number. Refs that span several stacks fail with exit 64 and a message that names each stack, lists its refs, and prints one exact command per stack; the CLI text/JSON error and the MCP tool error use the same format. `--merge`, `--merge-ready`, and `--merge-through` are mutually exclusive, and `--merge-through` must name a PR the caller owns in that stack.
+
+Every merge step says that one command lands every listed layer, and not to merge layers one at a time with `gh pr merge` or to rebase or push between layers.
+
+Scope rules:
+
+- `--merge` and `--merge-through` merge nothing while any layer they would land is not ready. When lower owned layers are ready and an upper one lags, the instructions say so, name why the lagging layer is not ready, and say to rerun with `--merge-ready` only if the user asked to merge layers as they become ready.
+- An unowned open layer below the target would be landed by the merge: `ESCALATE` / `unowned-stack-layers`. Ask the user to approve (rerun with those PRs listed) or wait for the owner.
+- A layer that joins the stack after a whole-stack `--merge` was requested: `ESCALATE` / `unapproved-stack-layer`. The first tick of a whole-stack-owned `--merge` records the approved layers under the state directory, per stack and scope; the record is cleared when the scope completes. Listing PRs explicitly approves them; `--merge-through` covers only the PRs through its target.
+- A branch update with unowned layers in the stack rebases and pushes only the owned layers below the first unowned layer (`gh stack rebase --downstack` from the highest such layer, then `git push --force-with-lease` per owned branch), never the unowned layer or anything above it.
+- Rows carry `owned: true` only when the caller listed its PRs; with whole-stack ownership the field is omitted.
+
+When the scope allows it, the command finds the highest open layer such that:
 
 - That layer and every open layer below it have a current READY receipt.
 - The bottom open layer targets the stack base.
@@ -322,7 +342,7 @@ Details:
 - If `gh stack` is an unknown command, the instructions install `github/gh-stack` and rerun the merge command. The same step says not to rebase, push, or run `gh stack push`.
 - A direct merge is atomic. On a merge queue, the prefix is queued together and each layer is evaluated from the bottom. A failure ejects that layer and the layers above it; layers that already merged stay merged.
 - Layers above the prefix keep their one-PR sessions in the same instructions.
-- After each merge, GitHub retargets the next layer. Rerun `stack --merge` until every layer is merged and the result is `CANCEL`.
+- After each merge, GitHub retargets the next layer. Rerun the same stack command until every layer in scope is merged and the result is `CANCEL`; layers outside the scope stay open.
 - If GitHub queues a layer, the summary stays `WAIT` for those layers. Recheck at the polling cadence and do not rewrite a queued layer, except when its one-PR session reports merge conflicts and the caller chooses to restack it (see queued merge conflicts under [`wait`](#wait)). That wait does not block a layer that is not queued. The stack is not finished until every layer merges.
 - An ejected layer leaves the merge prefix until a receipt acknowledges the removal. The instruction names the reason and actor and says to run that layer's one-PR session. That session fixes failing queue CI, records a validated acknowledgment for a transient or grouped-entry failure that does not reproduce after updating from the latest base (with no remaining blocker), or escalates when no autonomous path remains.
 

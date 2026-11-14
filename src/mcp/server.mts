@@ -89,24 +89,17 @@ const iterateInputSchema = z
     { message: "all prs must belong to the same repository" },
   );
 
-const stackInputSchema = z
-  .object({
-    ...tickOptionsSchema,
-    refs: z
-      .array(pr)
-      .min(1)
-      .describe(
-        "One stack number as owner/repo#N, one PR (its whole stack), or several PRs of one stack (you own only those). Each is a GitHub pull-request URL or owner/repo#number.",
-      ),
-    mergeReady: z
-      .boolean()
-      .optional()
-      .describe("Merge the ready prefix of owned layers; exclusive with merge and mergeThrough."),
-    mergeThrough: pr
-      .optional()
-      .describe("Merge owned layers up to this PR; exclusive with merge and mergeReady."),
-  })
-  .describe("merge lands every owned layer together, once all are ready.");
+const stackInputSchema = z.object({
+  ...tickOptionsSchema,
+  refs: z
+    .array(pr)
+    .min(1)
+    .describe(
+      "A stack (owner/repo#N), one PR (its whole stack), or several PRs of one stack (only those are yours).",
+    ),
+  mergeReady: z.boolean().optional().describe("Merge the ready owned prefix."),
+  mergeThrough: pr.optional().describe("Merge up to this PR."),
+});
 
 const reviewMutationsOperationSchema = z.object({
   type: z.literal("review_mutations"),
@@ -246,8 +239,7 @@ export function createPrShepherdMcpServer(
   server.registerTool(
     "stack",
     {
-      description:
-        "Inspect one native stack (a stack number, a PR, or several PRs you own) and return one aggregate Shepherd tick.",
+      description: "Inspect one native stack and return one aggregate Shepherd tick.",
       inputSchema: stackInputSchema,
       annotations: {
         readOnlyHint: false,

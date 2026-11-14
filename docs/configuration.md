@@ -551,8 +551,8 @@ When neither is set, Shepherd picks a method in this order:
 
 There is no key to opt out of stack detection. When GitHub reports that the PR is in a native stack:
 
-- A ready singular `--merge` poll returns `TRIAGE`, which is not terminal, pointing at `pr-shepherd stack <PR URL> --until-terminal --merge`. `merge.command-args` is never consulted for that PR.
-- `stack --merge` returns `MERGE` for the highest ready prefix, then `CANCEL` once every layer has merged.
+- A ready singular `--merge` poll returns `TRIAGE`, which is not terminal, pointing at `pr-shepherd stack <PR URL> --until-terminal --merge-through <PR URL>`. `merge.command-args` is never consulted for that PR.
+- `stack --merge`, `--merge-ready`, and `--merge-through` return `MERGE` for the highest ready in-scope prefix, then `CANCEL` once every layer in scope has merged.
 
 For stack routing (`SHEPHERD`, `WAIT`, `MERGE`, `CANCEL`, `ESCALATE`), see [actions.md](actions.md), [merge-status.md](merge-status.md#merge-requirements), and [`native-stack-merge-routing`](escalations.md#native-stack-merge-routing).
 
