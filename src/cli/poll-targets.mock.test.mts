@@ -53,6 +53,22 @@ describe("poll target parsing", () => {
     await expect(resolvePollTargets(parsed)).resolves.toMatchObject({ prNumbers: [42, 43] });
   });
 
+  it("treats the delegated --layers value as a flag value, not a PR reference", async () => {
+    const layers = "715:1:o:docs/a,716:2:u:feat/b";
+    const url = "https://github.com/acme/widgets/pull/716";
+    for (const args of [
+      [url, "--until-terminal", "--layers", layers],
+      [url, "--timeout", "1s", "--debounce", "0s", "--layers", layers],
+      ["--layers", layers, url],
+      [url, `--layers=${layers}`],
+    ]) {
+      const parsed = parsePollTargets(args)!;
+      expect(parsed).not.toBeNull();
+      await expect(resolvePollTargets(parsed)).resolves.toMatchObject({ prNumbers: [716] });
+      expect(parsed.extra.join(" ")).toContain("--layers");
+    }
+  });
+
   it("rejects every --stack spelling", () => {
     expect(parsePollTargets(["--stack"])).toBeNull();
     expect(parsePollTargets(["--stack=42"])).toBeNull();
