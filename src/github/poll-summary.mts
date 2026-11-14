@@ -1,4 +1,5 @@
 import { readRestStackSummary } from "./rest-stack-summary.mts";
+import { requestedMergeScope } from "../commands/stack-merge-scope.mts";
 import { githubOperation, getGithubTransport, runWithGithubTransport } from "./transport.mts";
 import { readRestExplicitSummary } from "./rest-explicit-summary-read.mts";
 import { withRestConditionalScope } from "./rest-conditional-scope.mts";
@@ -147,9 +148,17 @@ async function fetchStackSummary(
   const handoffSource = getGithubTransport() === "rest" ? undefined : stackHandoffSource(read);
   const stackAncestry = stackAncestryGaps(ordered);
   const required = await trunkRequiredContexts(ordered, repo);
+  // Rule-driven auto-resolve mutates review state, so it runs only on layers the caller owns
+  // and, for --merge-through, only through the target: other layers are read, never written.
+  const scope = requestedMergeScope(opts);
+  const throughIndex =
+    scope?.kind === "through" ? ordered.findIndex((pr) => pr.number === scope.pr) : -1;
+  const mayMutate = (pr: (typeof ordered)[number], index: number): boolean =>
+    (!opts.stackOwned || opts.stackOwned.includes(pr.number)) &&
+    (throughIndex < 0 || index <= throughIndex);
   const prs = await Promise.all(
-    ordered.map((pr) =>
-      summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister, required, true),
+    ordered.map((pr, index) =>
+      summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister, required, mayMutate(pr, index)),
     ),
   );
   if (handoffSource) patchHandoffLayers(handoffSource.layers, prs);
