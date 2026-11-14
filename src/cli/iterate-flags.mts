@@ -109,7 +109,7 @@ function parseStackLayersFlag(extra: string[]): StackLayerOwnership[] | null | u
   const layers = value === null ? null : parseStackLayers(value);
   if (layers) return layers;
   process.stderr.write(
-    `pr-shepherd: --layers must be comma-separated pr:position:o|u:branch entries, got ${JSON.stringify(value ?? "")}\n`,
+    `pr-shepherd: --layers must be comma-separated pr:position:o|u:branch entries (branch percent-encoded), got ${JSON.stringify(value ?? "")}\n`,
   );
   process.exitCode = EXIT.USAGE;
   return null;

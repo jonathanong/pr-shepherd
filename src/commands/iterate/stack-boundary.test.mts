@@ -26,6 +26,18 @@ describe("stack layer flag", () => {
     expect(parseStackLayers("1:1:x:b1")).toBeNull();
     expect(parseStackLayers("")).toBeNull();
   });
+
+  it("round-trips branch names containing commas, colons, percent signs and slashes", () => {
+    const branches = ["feature,one", "a:2:o:evil", "100%", "x/y,z:w"];
+    const layers = branches.map((branch, i) => ({ ...layer(i + 1, i % 2 === 0), branch }));
+    const text = formatStackLayers(layers);
+    expect(text.split(",")).toHaveLength(branches.length);
+    expect(parseStackLayers(text)).toEqual(layers);
+  });
+
+  it("rejects an entry whose branch is not valid percent-encoding", () => {
+    expect(parseStackLayers("1:1:o:%E0%A4%A")).toBeNull();
+  });
 });
 
 describe("withStackBoundary", () => {

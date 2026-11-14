@@ -14,7 +14,7 @@ Iterate flags:
   --no-auto-mark-ready           Leave draft PRs in draft; stop when otherwise ready.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
   --instructions playbook|inline Render triage steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
-  --layers <list>          Set by the commands a partly owned stack prints. Open layers as pr:position:o|u:branch; a one-PR session then never prints a whole-stack rebase or push.
+  --layers <list>          Set by the commands a partly owned stack prints. Open layers as pr:position:o|u:branch (branch percent-encoded); a one-PR session then never prints a whole-stack rebase or push.
   --transport auto|graphql|rest  Select GitHub transport. Default: github.transport (auto).
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include verbose iterate fields.
@@ -73,7 +73,7 @@ Forwarded iterate flags:
   --no-auto-mark-ready           Leave draft PRs in draft; stop when otherwise ready.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
   --instructions playbook|inline Render triage steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
-  --layers <list>          Set by the commands a partly owned stack prints. Open layers as pr:position:o|u:branch; a one-PR session then never prints a whole-stack rebase or push.
+  --layers <list>          Set by the commands a partly owned stack prints. Open layers as pr:position:o|u:branch (branch percent-encoded); a one-PR session then never prints a whole-stack rebase or push.
   --transport auto|graphql|rest  Select GitHub transport. Default: github.transport (auto).
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include verbose iterate fields and detailed per-tick lines.

@@ -114,6 +114,23 @@ describe("parseIterateFlags", () => {
     stderrSpy.mockRestore();
   });
 
+  it("parses --layers in both spellings and rejects missing or malformed values", () => {
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    const expected = [{ pr: 1, position: 1, owned: true, branch: "a,b" }];
+    expect(parseIterateFlags([], defaultConfig()).stackLayers).toBeUndefined();
+    expect(parseIterateFlags(["--layers", "1:1:o:a%2Cb"], defaultConfig()).stackLayers).toEqual(
+      expected,
+    );
+    expect(parseIterateFlags(["--layers=1:1:o:a%2Cb"], defaultConfig()).stackLayers).toEqual(
+      expected,
+    );
+    expect(parseIterateFlags(["--layers", "bogus"], defaultConfig()).stackLayers).toBeNull();
+    expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("--layers must be"));
+    expect(process.exitCode).toBe(EXIT.USAGE);
+    expect(parseIterateFlags(["--layers"], defaultConfig()).stackLayers).toBeNull();
+    stderrSpy.mockRestore();
+  });
+
   it("returns null readyDelaySuffix on malformed --ready-delay", () => {
     const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
     const flags = parseIterateFlags(["--ready-delay", "bad"], defaultConfig());

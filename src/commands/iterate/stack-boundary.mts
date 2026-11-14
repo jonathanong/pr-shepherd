@@ -17,9 +17,19 @@ export function withStackBoundary<T>(
   return layers?.some((layer) => !layer.owned) ? storage.run({ pr, layers }, run) : run();
 }
 
-/** `pr:position:o|u:branch` per layer, comma separated: the `--layers` value. */
+/** `pr:position:o|u:branch` per layer, comma separated: the `--layers` value. The branch is percent-encoded so commas and colons survive. */
 export function formatStackLayers(layers: StackLayerOwnership[]): string {
-  return layers.map((l) => `${l.pr}:${l.position}:${l.owned ? "o" : "u"}:${l.branch}`).join(",");
+  return layers
+    .map((l) => `${l.pr}:${l.position}:${l.owned ? "o" : "u"}:${encodeURIComponent(l.branch)}`)
+    .join(",");
+}
+
+function decodeBranch(value: string): string | null {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
 }
 
 /** Parse a `--layers` value; null when any entry is malformed. */
@@ -27,12 +37,13 @@ export function parseStackLayers(value: string): StackLayerOwnership[] | null {
   const layers: StackLayerOwnership[] = [];
   for (const entry of value.split(",")) {
     const match = /^(\d+):(\d+):([ou]):(.+)$/.exec(entry);
-    if (!match) return null;
+    const branch = match ? decodeBranch(match[4]!) : null;
+    if (!match || !branch) return null;
     layers.push({
       pr: Number(match[1]),
       position: Number(match[2]),
       owned: match[3] === "o",
-      branch: match[4]!,
+      branch,
     });
   }
   return layers.length > 0 ? layers : null;

@@ -7,6 +7,7 @@ import {
   prefix,
 } from "../../test-helpers/github/rest-read.test-support.mts";
 import { readStackTopology } from "./stack-read.mts";
+import { restRepoReachable } from "./rest-stack-read.mts";
 import { runWithGithubTransport } from "./transport.mts";
 
 // Shape from GitHub's official REST stacks list/get examples: ordered pull_requests, base.ref.
@@ -121,4 +122,26 @@ describe("official REST native stacks", () => {
       expect(wire.requests.some((request) => request.path === "/graphql")).toBe(false);
     },
   );
+
+  it.each([
+    [200, true],
+    [403, false],
+    [404, false],
+  ] as const)("reports repository reachability for a %i response", async (status, reachable) => {
+    await serve((_request, response) => {
+      response.statusCode = status;
+      response.end("{}");
+    });
+    await expect(runWithGithubTransport("rest", () => restRepoReachable(repo))).resolves.toBe(
+      reachable,
+    );
+  });
+
+  it("rethrows other repository read failures instead of calling the repository unreachable", async () => {
+    await serve((_request, response) => {
+      response.statusCode = 500;
+      response.end("{}");
+    });
+    await expect(runWithGithubTransport("rest", () => restRepoReachable(repo))).rejects.toThrow();
+  });
 });
