@@ -55,7 +55,11 @@ function detectIn(commands, nested) {
       const innerCommands = simpleCommands(inner);
       const found = detectIn(innerCommands, false);
       if (found) return found;
-      if (cmd.watched && innerCommands.some((c) => isPrRead(c))) return LOOP;
+      // The shell's own loop or `watch` repeats the inner read.
+      if (innerCommands.some((c) => isPrRead(c))) {
+        if (cmd.watched) return LOOP;
+        reads.push({ index, cmd });
+      }
     }
     if (words[0] === "sleep") sleeps.push({ index, cmd, seconds: seconds(words.slice(1)) });
     else if (isWatcher(words)) return WATCHER;
@@ -73,7 +77,9 @@ function detectIn(commands, nested) {
   for (const read of reads) {
     // A loop polls when it sleeps and re-reads a state that does not depend on its variable.
     const loops = new Set(
-      read.cmd.loops.filter((l) => !l.vars.some((v) => usesVar(read.cmd.text, v))).map((l) => l.id),
+      read.cmd.loops
+        .filter((l) => !l.vars.some((v) => usesVar(argText(read.cmd), v)))
+        .map((l) => l.id),
     );
     if (sleeps.some((s) => s.cmd.loops.some((l) => loops.has(l.id)))) return LOOP;
     // A long sleep whose very next command is the PR read, outside any loop.
@@ -84,6 +90,17 @@ function detectIn(commands, nested) {
     if (waited) return WAIT;
   }
   return null;
+}
+
+/** The command's arguments without redirections, so `> "out-$i"` is not iteration. */
+function argText(cmd) {
+  const kept = [];
+  for (let k = 0; k < cmd.words.length; k++) {
+    const raw = cmd.words[k].raw;
+    if (/^\d*(?:[<>]|>>|&>)$/.test(raw)) k++;
+    else if (!/^\d*(?:[<>]|&>)/.test(raw)) kept.push(raw);
+  }
+  return kept.join(" ");
 }
 
 const usesVar = (text, name) => new RegExp(`\\$(?:${name}\\b|\\{${name}[}:#%/])`).test(text);

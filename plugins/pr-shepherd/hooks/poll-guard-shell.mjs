@@ -19,13 +19,16 @@ const WRAPPERS = new Set([
 ]);
 const KEYWORDS = new Set(["do", "then", "else", "elif", "if"]);
 
-/** Masks quoted text, comments and heredoc bodies with NUL, preserving length. */
+/**
+ * Masks quoted text with NUL and comments and heredoc bodies with spaces, preserving
+ * UTF-16 length. Quoted text stays one argument; comments and heredocs disappear.
+ */
 export function maskShell(text) {
-  const out = [...text];
+  const out = text.split("");
   const stack = [{ mode: "code", depth: 0 }];
   let heredocs = [];
-  const hide = (from, to) => {
-    for (let k = from; k < to && k < out.length; k++) if (out[k] !== "\n") out[k] = HIDDEN;
+  const hide = (from, to, fill = HIDDEN) => {
+    for (let k = from; k < to && k < out.length; k++) if (out[k] !== "\n") out[k] = fill;
   };
   for (let i = 0; i < text.length; i++) {
     const top = stack.at(-1);
@@ -61,7 +64,7 @@ export function maskShell(text) {
       stack.push({ mode: "dq", depth: 0 });
     } else if (c === "#" && (i === 0 || /[\s;&|(]/.test(text[i - 1]))) {
       const end = text.indexOf("\n", i);
-      hide(i, end === -1 ? text.length : end);
+      hide(i, end === -1 ? text.length : end, " ");
       i = (end === -1 ? text.length : end) - 1;
     } else if (c === "(" && top.depth > 0) top.depth++;
     else if (c === ")" && top.depth > 0 && --top.depth === 0) stack.pop();
@@ -90,7 +93,7 @@ function skipHeredocs(text, start, heredocs, hide) {
         break;
       }
     }
-    hide(at, end);
+    hide(at, end, " ");
     at = end;
   }
   return at;
