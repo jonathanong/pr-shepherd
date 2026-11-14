@@ -66,6 +66,12 @@ export function maskShell(text) {
       const end = text.indexOf("\n", i);
       hide(i, end === -1 ? text.length : end, " ");
       i = (end === -1 ? text.length : end) - 1;
+    } else if (c === "$" && text[i + 1] === "{") {
+      // `${VAR}` stays inside its word; its braces are not a command group.
+      const end = text.indexOf("}", i);
+      const stop = end === -1 ? text.length : end + 1;
+      hide(i, stop);
+      i = stop - 1;
     } else if (c === "(" && top.depth > 0) top.depth++;
     else if (c === ")" && top.depth > 0 && --top.depth === 0) stack.pop();
     else if (c === "<" && text[i + 1] === "<" && text[i + 2] !== "<") {
@@ -176,3 +182,19 @@ export function leadingQuoted(rest) {
   const end = quote === "'" ? body.indexOf("'") : body.search(/(?<!\\)"/);
   return end === -1 ? null : body.slice(0, end);
 }
+
+/** The command's arguments without redirections, so `> "out-$i"` is not iteration. */
+function argText(cmd) {
+  const kept = [];
+  for (let k = 0; k < cmd.words.length; k++) {
+    const raw = cmd.words[k].raw;
+    if (/^\d*(?:[<>]|>>|&>)$/.test(raw)) k++;
+    else if (!/^\d*(?:[<>]|&>)/.test(raw)) kept.push(raw);
+  }
+  return kept.join(" ");
+}
+
+const usesVar = (text, name) => new RegExp(`\\$(?:${name}\\b|\\{${name}[}:#%/])`).test(text);
+
+/** Whether the command's arguments, not its redirections, use loop variable `name`. */
+export const usesLoopVar = (cmd, name) => usesVar(argText(cmd), name);

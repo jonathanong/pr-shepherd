@@ -8,7 +8,7 @@
 // Words inside quotes, comments and heredocs are data, not commands. Anything the
 // scanner cannot classify passes: the guard prefers a miss to a false positive.
 
-import { leadingQuoted, simpleCommands } from "./poll-guard-shell.mjs";
+import { leadingQuoted, simpleCommands, usesLoopVar } from "./poll-guard-shell.mjs";
 
 const PR_SUBCOMMANDS = new Set(["view", "checks", "status", "list"]);
 const PR_API = /pulls|pullRequest/;
@@ -77,9 +77,7 @@ function detectIn(commands, nested) {
   for (const read of reads) {
     // A loop polls when it sleeps and re-reads a state that does not depend on its variable.
     const loops = new Set(
-      read.cmd.loops
-        .filter((l) => !l.vars.some((v) => usesVar(argText(read.cmd), v)))
-        .map((l) => l.id),
+      read.cmd.loops.filter((l) => !l.vars.some((v) => usesLoopVar(read.cmd, v))).map((l) => l.id),
     );
     if (sleeps.some((s) => s.cmd.loops.some((l) => loops.has(l.id)))) return LOOP;
     // A long sleep whose very next command is the PR read, outside any loop.
@@ -92,18 +90,8 @@ function detectIn(commands, nested) {
   return null;
 }
 
-/** The command's arguments without redirections, so `> "out-$i"` is not iteration. */
-function argText(cmd) {
-  const kept = [];
-  for (let k = 0; k < cmd.words.length; k++) {
-    const raw = cmd.words[k].raw;
-    if (/^\d*(?:[<>]|>>|&>)$/.test(raw)) k++;
-    else if (!/^\d*(?:[<>]|&>)/.test(raw)) kept.push(raw);
-  }
-  return kept.join(" ");
-}
-
-const usesVar = (text, name) => new RegExp(`\\$(?:${name}\\b|\\{${name}[}:#%/])`).test(text);
+/** `-c`, or combined shell options that include it, such as `-lc` or `-ec`. */
+const isCommandFlag = (word) => /^-[a-z]*c[a-z]*$/i.test(word);
 
 const isRunRead = (words) =>
   words[0] === "gh" && words[1] === "run" && ["view", "list", "watch"].includes(words[2]);
@@ -118,8 +106,8 @@ const isWatcher = (words) =>
 function quotedCommand(cmd, words) {
   let at = -1;
   if (cmd.watched) at = cmd.words[0].at;
-  else if (SHELLS.has(words[0]) && words.includes("-c")) {
-    at = cmd.words[words.indexOf("-c") + 1]?.at ?? -1;
+  else if (SHELLS.has(words[0]) && words.some(isCommandFlag)) {
+    at = cmd.words[words.findIndex(isCommandFlag) + 1]?.at ?? -1;
   }
   return at === -1 ? null : leadingQuoted(cmd.text.slice(at - cmd.words[0].at));
 }
@@ -128,7 +116,10 @@ function isPrRead(cmd) {
   const [first, second, third] = cmd.words.map((w) => w.word);
   if (first === "gh" && second === "pr") return PR_SUBCOMMANDS.has(third);
   if (first === "gh" && second === "api") return PR_API.test(cmd.text);
-  if (first === "pr-shepherd") return isShepherdTick(cmd.words.map((w) => w.word));
+  // Quoting does not change an argument's value: `pr-shepherd "42"` is `pr-shepherd 42`.
+  if (first === "pr-shepherd") {
+    return isShepherdTick(cmd.words.map((w) => w.raw.replace(/^(["'])(.*)\1$/, "$2")));
+  }
   return first === "curl" && /api\.github\.com/.test(cmd.text) && PR_API.test(cmd.text);
 }
 
@@ -144,7 +135,7 @@ function isShepherdTick(words) {
     target === undefined ||
     target === "iterate" ||
     target === "stack" ||
-    /^(?:-|\d|https?:)|[#/]/.test(target)
+    /^(?:-|\d|https?:|\$)|[#/]/.test(target)
   );
 }
 
@@ -163,7 +154,7 @@ function scriptPaths(commands) {
   for (const { words } of commands) {
     const [first, ...rest] = words;
     if (SHELLS.has(first.word)) {
-      if (rest.some((w) => w.word === "-c")) continue;
+      if (rest.some((w) => isCommandFlag(w.word))) continue;
       const path = rest.find((w) => !w.word.startsWith("-"));
       if (path) paths.push(path.raw);
     } else if (first.raw.endsWith(".sh")) paths.push(first.raw);
