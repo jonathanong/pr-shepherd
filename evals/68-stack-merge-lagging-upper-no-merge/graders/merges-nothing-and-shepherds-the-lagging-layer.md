@@ -19,3 +19,10 @@ the user.
 Failing responses do any of: run `gh stack merge` or `gh pr merge` on #601 or
 #602; rerun with `--merge-ready` without the user asking for it; stop after
 reporting; say nothing about the ready lower layers.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

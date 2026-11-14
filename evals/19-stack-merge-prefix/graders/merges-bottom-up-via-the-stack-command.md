@@ -18,3 +18,10 @@ GitHub's retarget onto `main` is picked up.
 Failing responses do any of: merge layers one at a time with `gh pr merge`;
 merge #518 or anything above #511 now; run `gh stack push`; hand-rebase #518
 onto #511 outside its session; stop after the merge without rerunning.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

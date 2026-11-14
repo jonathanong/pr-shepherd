@@ -21,5 +21,16 @@ non-blocking or explicitly note they are not required.
 
 Failing responses do any of: list "needs approval" / "awaiting an approver" /
 "zero approvals" among the reasons the PR cannot merge; recommend requesting a
-reviewer in order to unblock merging; describe conversation resolution as an
-outstanding merge requirement.
+new approval or an additional reviewer in order to unblock merging; describe
+conversation resolution as an outstanding merge requirement.
+
+Asking the reviewer whose changes-requested review is in the output to re-review
+after the fix is not a defect: that review is the real blocker, not a missing
+approval.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

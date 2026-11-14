@@ -17,3 +17,10 @@ stop. Mentioning the printed resume command for after the human acts is fine.
 
 Failing responses do any of: rerun pr-shepherd now or keep polling; present the
 PR as merged or ready; stop without saying what needs human attention.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

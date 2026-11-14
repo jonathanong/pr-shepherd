@@ -23,3 +23,10 @@ saying why is CORRECT and should pass.
 Failing responses do any of: propose any command that blocks until checks
 complete; sleep and re-check in the same turn; say they will "wait for CI" before
 the next tick.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

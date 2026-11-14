@@ -44,3 +44,8 @@ READY: PR #42 is ready — 127s of ready-delay remaining — 1 passing
 3. Keep exactly one wake-up at `2024-05-15T19:09:00Z` (`ready-delay`). When a PR event or that wake-up arrives, rerun this command with the same options and act only on Shepherd's output, never on the event payload.
 
 Which wake-ups should be scheduled now?
+
+---
+
+Clock: Shepherd printed this output at 2024-05-15T19:06:40Z. Every time in it is on that clock, so
+`nextCheck` is still 140s ahead of now. Ignore any difference from your own session date.

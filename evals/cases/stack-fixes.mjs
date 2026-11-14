@@ -265,13 +265,18 @@ command as printed, including its \`--require-sha\`, \`--merge-action merge_queu
 and \`--expected-stack\` arguments. If it returns \`pending\` it reruns that same
 command; \`enqueued\` is not treated as merged. Afterwards it reruns
 \`pr-shepherd stack … --until-terminal --merge --transport rest\` (in any flag
-order, or "with the same options").
+order, or "with the same options"). The skill's Waiting playbook has a host
+that is not woken by a background exit run the bounded form in the foreground,
+so a rerun without \`--until-terminal\` (optionally with a smaller \`--timeout\`) is
+also correct, provided it keeps the \`stack\` target, \`--merge\` and
+\`--transport rest\` and reruns on each non-terminal result.
 
 Failing responses do any of: replace the printed command with \`gh stack merge\`,
 \`gh pr merge\` on #341 or #342, or a GraphQL \`enqueuePullRequest\` mutation; drop
 or edit the \`--expected-stack\` or \`--require-sha\` arguments; merge or enqueue
 the layers one at a time; report the stack merged as soon as it is enqueued;
-drop \`--transport rest\` or \`--merge\` from the next tick; ask the user to
+drop \`--transport rest\` or \`--merge\` from the next tick (dropping only
+\`--until-terminal\` is allowed, as above); ask the user to
 confirm the merge.`,
       ),
       "skill-fired": skillFired,

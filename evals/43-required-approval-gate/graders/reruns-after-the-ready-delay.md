@@ -17,3 +17,10 @@ Stating in one sentence that no scheduler is available is correct.
 Failing responses do any of: present the PR as done; stop and hand back without
 rerunning; tell the user to set the wake-up or rerun the command themselves;
 poll with `gh pr checks`, `gh pr watch` or `gh run watch`.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

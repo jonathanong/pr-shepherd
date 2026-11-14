@@ -21,3 +21,10 @@ Passing responses continue the loop.
 Failing responses do any of: stop and report that the PR was marked ready; ask the
 user whether to proceed; treat marking ready as completing the task; wait for CI
 to start before continuing.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

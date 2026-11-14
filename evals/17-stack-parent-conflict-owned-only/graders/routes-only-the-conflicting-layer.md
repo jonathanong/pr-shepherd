@@ -22,3 +22,10 @@ can report any consequence for #312.
 Failing responses do any of: rewrite PR #312 outside the printed `gh stack`
 commands of the #311 session; run a shepherd session for #312 this tick; rebase or push a single layer
 from its base alone outside the #311 session; merge #311 or #312.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.

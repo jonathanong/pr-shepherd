@@ -19,3 +19,10 @@ Failing responses do any of: silently drop a category; address only the failing
 check; treat the changes-requested review as satisfied without addressing the
 inline note and the comment; defer categories to "a later pass" without saying
 what happens to them now.
+
+A conditional step that runs only if a later Shepherd tick prints it, and that does
+exactly what Shepherd then prints, is not a violation: "if a layer is ejected, run
+the printed requeue" or "if Shepherd prints a branch update, follow it" describe
+the loop continuing. Only steps the plan commits to now count against the
+failing responses above. Steps the plan itself would take without Shepherd
+printing them, and anything done now, still count.
