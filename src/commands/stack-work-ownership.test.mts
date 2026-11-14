@@ -27,4 +27,21 @@ describe("stack session ownership wording", () => {
     expect(text(result)).toContain("every layer is yours");
     expect(text(result)).not.toContain("only for `owned` rows");
   });
+
+  it("bounds branch updates in a merge plan that also delegates a session", () => {
+    const base = stack([
+      row(1, 1, { readyReceipt: true }),
+      row(2, 2, { action: "triage", reasons: ["conflicts"], mergeable: "CONFLICTING" }),
+      row(3, 3, { owned: false } as never),
+    ]);
+    const unowned = base.prs.map(({ owned, ...item }) =>
+      item.pr === 3 ? item : { ...item, owned },
+    );
+    const listed = { ...base, prs: unowned, selection: { ...base.selection, owned: [1, 2] } };
+    const result = withPollSummaryInstructions(listed as typeof base, true, undefined, {
+      kind: "ready",
+    });
+    expect(result.nextAction).toBe("merge");
+    expect(text(result)).toContain("Branch updates: unowned layer #3");
+  });
 });

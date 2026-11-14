@@ -107,7 +107,10 @@ export function planPollSummary(
     const note = lowerReadyNote(projected, scope, rerunCommand);
     if (note) instructions.push(`${instructions.length + 1}. ${note}`);
   }
-  const boundary = planned.action === "shepherd" ? ownershipBoundaryStep(projected) : undefined;
+  const boundary =
+    planned.action === "shepherd" || planned.action === "merge"
+      ? ownershipBoundaryStep(projected)
+      : undefined;
   if (boundary) {
     // The rerun step stays last; renumber around the inserted step.
     instructions.splice(Math.max(instructions.length - 1, 0), 0, `0. ${boundary}`);
