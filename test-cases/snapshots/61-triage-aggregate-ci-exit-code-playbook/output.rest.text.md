@@ -25,5 +25,5 @@
 
 1. Fix each warranted item.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
-3. Commit and push any changes. Playbook: "Triage loop". CLI: `pr-shepherd playbook "Triage loop"`.
+3. Commit and push any changes to the PR head. Playbook: "Triage loop". CLI: `pr-shepherd playbook "Triage loop"`.
 4. Rerun Shepherd now.

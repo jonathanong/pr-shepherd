@@ -68,7 +68,9 @@ describe("runIterate — escalate (pr-level-changes-requested with actionable co
       expect(result.triage.resolveCommand.argv).toContain("review-1");
       expect(result.triage.resolveOnlyCommand?.argv).toContain("--minimize-comment-ids");
       expect(result.triage.resolveOnlyCommand?.argv).toContain("comment-1");
-      expect(result.triage.instructions.join("\n")).toContain("Commit and push any changes.");
+      expect(result.triage.instructions.join("\n")).toContain(
+        "Commit and push any changes to the PR head.",
+      );
       expect(result.triage.instructions.join("\n")).toContain(
         "`$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review",
       );

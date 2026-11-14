@@ -49,7 +49,7 @@ export function explicitInstructions(result: PollSummaryResult, rerunCommand?: s
   const instructions = [
     "1. Choose each non-WAIT, non-CANCEL row that can proceed independently and run or delegate its exact `pollCommand`.",
     "2. Follow each selected one-PR poll's `## Instructions` until it returns `CANCEL` or `ESCALATE`.",
-    `3. Run ${again} again after selected work completes; one row's \`ESCALATE\` does not stop work on other rows. ${KEEP_WATCHING}`,
+    `3. When the selected one-PR polls return, always run ${again} again: its output, not theirs, decides whether this selection is done. One row's \`ESCALATE\` does not stop work on other rows. ${KEEP_WATCHING}`,
   ];
   if (result.prs.some((item) => item.action === "escalate") && !isHandedOffSelection(result)) {
     instructions[0] = `${instructions[0]} Report each \`ESCALATE\` row's reasons to the user now and leave that PR alone; keep working on the other rows.`;

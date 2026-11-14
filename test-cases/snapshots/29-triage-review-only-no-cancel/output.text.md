@@ -20,6 +20,6 @@
 
 1. Fix each warranted item.
 2. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <reason>'`.
-3. Commit and push any changes.
+3. Commit and push any changes to the PR head.
 4. `$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --reply-thread-ids PRRT_inline1 --message "$CHANGE_MESSAGE" --require-sha HEAD`
 5. Rerun Shepherd now.

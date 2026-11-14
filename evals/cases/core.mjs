@@ -282,7 +282,9 @@ Asking the reviewer whose changes-requested review is in the output to re-review
 after the fix is not a defect: that review is the real blocker, not a missing
 approval.`,
       ),
-      "identifies-review-id": regex(`PRR_prlevel`, { weight: 0.5 }),
+      // The output prints no command that takes this ID, so naming the review by
+      // its author identifies it as well as quoting the ID.
+      "identifies-review-id": regex(`PRR_prlevel|@architect`, { weight: 0.5 }),
       "skill-fired": skillFired,
     },
   },

@@ -1,6 +1,6 @@
 # CI failure triage
 
-Apply when a step says `Playbook: "CI failure triage"`. Use the excerpts and tags already printed; fetch a job log only under the gate-job rule below. An `external` check with a URL may be opened or reproduced.
+Apply when a step says `Playbook: "CI failure triage"`. Use the excerpts and tags already printed; fetch a job log only under the gate-job rule below. An `external` check without printed annotations may be opened or reproduced.
 
 - A specific `[conclusion: …]` tag wins over the general GitHub Actions rule.
 - A `rerun:` command means Shepherd verified Actions rerun access (WRITE+) and an original attempt. On the REST transport the role is unknown, so GitHub's response to the rerun decides. Run it at most once; matrix bullets sharing its run id print it once. An `[attempt: N]` check never gets another rerun; its excerpt is still investigation work, and without usable evidence it escalates when nothing else remains.
@@ -15,5 +15,5 @@ Apply when a step says `Playbook: "CI failure triage"`. Use the excerpts and tag
 - `CANCELLED` or `STARTUP_FAILURE` (no excerpt): run a printed `rerun:`, else finish the other work; iterate without waiting.
 - `[status: …, suite: COMPLETED]` (stuck run): the workflow finished but this check never completed, so there is nothing to fix in code. Run a printed `rerun:`, else finish the other work; iterate without waiting.
 - `ACTION_REQUIRED`: finish the other work and iterate. Shepherd escalates if manual approval is still required.
-- `external` with a URL: inspect the provider or reproduce locally, fix, and iterate. The URL alone is not `[ESCALATE]`.
+- `external` with a URL: fix from its printed annotations (file, line, message) without opening the URL; with none, inspect the provider or reproduce locally. Then iterate. The URL alone is not `[ESCALATE]`.
 - `(no runId)` without a URL: keep the metadata. Shepherd escalates when nothing else remains.

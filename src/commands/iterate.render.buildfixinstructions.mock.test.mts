@@ -149,7 +149,7 @@ describe("buildFixInstructions", () => {
 
     const text = instructions.join("\n");
     expect(instructions[0]).toBe("Fix each warranted item.");
-    expect(text).toContain("Commit and push any changes.");
+    expect(text).toContain("Commit and push any changes to the PR head.");
     // CLI no longer prescribes rebase mechanics — that is the caller's convention.
     expect(text).not.toContain("rebase onto");
     // $CHANGE_MESSAGE substitution stays CLI-side because the command is invalid without it.
@@ -236,7 +236,7 @@ describe("buildFixInstructions", () => {
     );
 
     const text = instructions.join("\n");
-    expect(text).toContain("Commit and push any changes.");
+    expect(text).toContain("Commit and push any changes to the PR head.");
     // CLI no longer prescribes rebase mechanics or names origin/main
     expect(text).not.toContain("rebase onto");
     expect(text).not.toContain("origin/main");
@@ -289,7 +289,7 @@ describe("buildFixInstructions", () => {
 
     const text = instructions.join("\n");
     expect(instructions[0]).toBe("Fix each warranted item.");
-    expect(text).toContain("Commit and push any changes.");
+    expect(text).toContain("Commit and push any changes to the PR head.");
     // No old prescriptive commands
     expect(text).not.toContain("Commit changed files:");
     expect(text).not.toContain("Rebase and push:");

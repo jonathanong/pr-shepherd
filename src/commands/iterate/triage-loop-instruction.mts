@@ -8,7 +8,7 @@ const TRIAGE_LOOP_PLAYBOOK = "Triage loop";
 /** The generic push stays separate from conflict and queue-recovery push instructions. */
 export function buildPushSteps(style: InstructionStyle, genericPush: boolean): string[] {
   if (!genericPush) return [];
-  const push = "Commit and push any changes.";
+  const push = "Commit and push any changes to the PR head.";
   if (style === "inline") return [push];
   const cli = renderShellCommand([
     ...loadConfig()["cli-command"],
