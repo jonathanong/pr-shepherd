@@ -609,7 +609,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
         ? `gh api --method PATCH repos/${report.repo}/pulls/${prNumber} -f base=<verified-parent-base>`
         : `gh pr edit ${prReference} --base <verified-parent-base>`;
     prependBranchSteps([
-      `Inspect every PR under \`## Merged PRs matching the current base\`. If this PR is the remaining layer intended for a merged parent's base branch, run \`${retarget}\` after replacing \`<verified-parent-base>\` with that parent's shell-quoted base branch, then rerun Shepherd immediately and follow its fresh instructions instead of the remaining steps here. Otherwise keep the current base and follow the remaining conflict-resolution steps. These PRs are chained by base branch, not a native stack. For future dependent PRs, use \`gh stack\` ${playbookPointer("Create a PR")}`,
+      `Inspect every PR under \`## Merged PRs matching the current base\`. If this PR is the remaining layer intended for a merged parent's base branch, run \`${retarget}\` after replacing \`<verified-parent-base>\` with that parent's shell-quoted base branch, then rerun Shepherd immediately and follow its fresh instructions instead of the remaining steps here. Otherwise keep the current base and follow the remaining conflict-resolution steps. These PRs are chained by base branch, not a native stack. For future dependent PRs, use \`gh stack\`. ${playbookPointer("Create a PR")}`,
     ]);
   }
   if (conflictCandidateFiles) {
