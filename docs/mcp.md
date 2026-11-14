@@ -154,7 +154,7 @@ Aggregate commands return one compact summary tick. Its only GitHub mutation is 
 
 ### `stack`
 
-Takes `refs`: one stack number (`owner/repo#N`), one PR (its whole stack, which you own), or several PRs of one stack (you own only those). Refs spanning several stacks fail with the same per-stack commands the CLI prints. `merge` lands every owned layer together once all are ready, `mergeReady` lands the ready owned prefix, and `mergeThrough` lands up to that PR; the three are mutually exclusive. It also takes the same `readyDelaySeconds`, `stallTimeoutSeconds`, `noAutoMarkReady`, `merge`, `instructions`, and `transport` inputs as `iterate`. It runs one aggregate tick and returns `nextCheck` unless nothing remains to wait for.
+Takes `refs`: one stack number (`owner/repo#N`), or the PRs of one stack (you own only those; a single PR owns only itself, and the iterate input `stackLayers` carries layer ownership to one-PR sessions). Refs spanning several stacks fail with the same per-stack commands the CLI prints. `merge` lands every owned layer together once all are ready, `mergeReady` lands the ready owned prefix, and `mergeThrough` lands up to that PR; the three are mutually exclusive. It also takes the same `readyDelaySeconds`, `stallTimeoutSeconds`, `noAutoMarkReady`, `merge`, `instructions`, and `transport` inputs as `iterate`. It runs one aggregate tick and returns `nextCheck` unless nothing remains to wait for.
 
 ### `apply`
 

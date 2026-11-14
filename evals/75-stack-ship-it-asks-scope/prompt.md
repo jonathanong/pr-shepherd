@@ -20,5 +20,5 @@ append_system_prompt: |
   explicitly and say why. The plan is the deliverable: do not ask for a shell or
   for command output to be pasted back.
 ---
-https://github.com/owner/repo/pull/603 is the top of a native stack of three PRs. I opened the top
-one; the other two are a teammate's. Ship it.
+https://github.com/owner/repo/pull/603 is the top of a native stack of three PRs (stack number
+owner/repo#60). I opened the top one; the other two are a teammate's. Ship it.

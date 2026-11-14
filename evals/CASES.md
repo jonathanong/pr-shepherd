@@ -90,6 +90,9 @@ agent actually reads. Isolating the playbooks would need a third arm.
 | `73-stack-unowned-below-escalate`              | `182`   | An unowned layer below the target: ask, merge nothing                                          |
 | `74-stack-new-layer-asks`                      | `183`   | A layer that joined after the request: ask, merge nothing                                      |
 | `75-stack-ship-it-asks-scope`                  | —       | An ambiguous "ship it" on a mixed-owner stack: ask which layers                                |
+| `76-merge-one-pr-unlisted-lower-asks`          | `186`   | "Merge #613" with #611/#612 unlisted: report them and ask, merge nothing                       |
+| `77-merge-non-stack-pr-plain-merge`            | —       | "Merge #42" on a non-stack PR: the plain one-PR `--merge`, not `stack`                         |
+| `78-merge-whole-stack-uses-printed-stack-number`| `186`   | "Merge the whole stack": rerun with the printed stack number or every layer                    |
 
 "apply" is `test-cases/snapshots/apply-review-session-refusal`, an
 `apply review` output recorded by `test-cases/apply-review.test.mts` through

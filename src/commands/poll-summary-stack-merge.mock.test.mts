@@ -58,11 +58,13 @@ describe("stack merge requests", () => {
     expect(result.instructions?.[0]).toContain("PR #1 alone");
   });
 
-  it("rejects a listed PR that is not in the stack", async () => {
+  it("escalates when a listed PR has left the stack, instead of failing", async () => {
     mockFetch.mockResolvedValue(summary(8100 + ++counter, [row(1, 1, ready)]));
-    await expect(runPollSummary({ ...base, stackOwned: [1, 9] })).rejects.toThrow(
-      "PR #9 is not in native stack",
-    );
+    const result = await runPollSummary({ ...base, stackOwned: [1, 9], merge: true });
+    expect(result.nextAction).toBe("escalate");
+    const text = result.instructions?.join("\n") ?? "";
+    expect(text).toContain("`listed-pr-left-stack`: PR #9 is no longer in native stack");
+    expect(text).toContain("Nothing was merged or changed");
   });
 
   it("explains lagging upper layers instead of merging the ready lower one", async () => {

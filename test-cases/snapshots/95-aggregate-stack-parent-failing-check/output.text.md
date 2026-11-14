@@ -14,4 +14,4 @@ nextAction: shepherd
 
 1. Start or delegate concurrent one-PR sessions for these layers; every layer is yours.
 2. Run `pr-shepherd https://github.com/owner/repo/pull/321 --until-terminal`.
-3. After the selected one-PR sessions, rerun `pr-shepherd stack https://github.com/owner/repo/pull/322 --until-terminal`. Keep watching until every layer is terminal.
+3. After the selected one-PR sessions, rerun `pr-shepherd stack "owner/repo#33" --until-terminal`. Keep watching until every layer is terminal.

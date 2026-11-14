@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   registerHooks,
@@ -76,5 +77,24 @@ describe("clean pr (inferred from current branch)", () => {
     const result = await runClean({ variant: "pr" });
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/No open PR/);
+  });
+});
+
+describe("clean stack", () => {
+  it("deletes the stack approval state directory", async () => {
+    const dir = join(sd(), "acme", "widgets", "stack-7");
+    await mkdir(dir, { recursive: true });
+    await writeFile(join(dir, "merge-approval-all.json"), "{}");
+    const result = await runClean({ variant: "stack", value: "7" });
+    expect(result.ok).toBe(true);
+    expect(await pathExists(dir)).toBe(false);
+  });
+
+  it("requires a stack number", async () => {
+    for (const value of [undefined, "abc", "0"]) {
+      const result = await runClean({ variant: "stack", value });
+      expect(result.ok).toBe(false);
+      expect(result.error).toMatch(/needs a native stack number/);
+    }
   });
 });

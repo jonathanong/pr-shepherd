@@ -12,6 +12,7 @@ import {
 } from "./stack-merge-scope.mts";
 
 const ready = { readyReceipt: true } as const;
+const CMD = "pr-shepherd stack acme/widgets#1 --until-terminal --merge";
 
 describe("requestedMergeScope", () => {
   it("prefers an explicit scope and treats a bare merge as all", () => {
@@ -74,10 +75,17 @@ describe("mergeScopeLayers", () => {
     expect(target?.pr).toBe(3);
   });
 
-  it("covers every open layer up to the through PR, owned or not", () => {
-    const { inScope, target } = mergeScopeLayers(result, { kind: "through", pr: 2 });
-    expect(inScope.map((item) => item.pr)).toEqual([1, 2]);
-    expect(target?.pr).toBe(2);
+  it("covers only owned open layers up to the through PR", () => {
+    const { inScope, target } = mergeScopeLayers(result, { kind: "through", pr: 3 });
+    expect(inScope.map((item) => item.pr)).toEqual([1, 3]);
+    expect(target?.pr).toBe(3);
+  });
+
+  it("has no target once the through PR is closed, instead of falling to a lower layer", () => {
+    const closed = stack([row(1, 1), row(2, 2, { state: "CLOSED" })]);
+    const { inScope, target } = mergeScopeLayers(closed, { kind: "through", pr: 2 });
+    expect(target).toBeUndefined();
+    expect(inScope).toEqual([]);
   });
 
   it("covers nothing when the through PR is not in the stack", () => {
@@ -106,42 +114,57 @@ function keyOf(result: PollSummaryResult, scope: string) {
 }
 
 describe("stackAddedLayers", () => {
-  it("does nothing without a scope, for --merge-ready, or outside a stack", async () => {
+  it("does nothing without a scope or outside a stack", async () => {
     const result = fresh([row(1, 1)]);
-    expect(await stackAddedLayers(result, undefined)).toEqual([]);
-    expect(await stackAddedLayers(result, { kind: "ready" })).toEqual([]);
+    expect(await stackAddedLayers(result, undefined, CMD)).toEqual([]);
     const prs = { ...result, selection: { kind: "prs" as const, requested: [1] } };
-    expect(await stackAddedLayers(prs, { kind: "all" })).toEqual([]);
+    expect(await stackAddedLayers(prs, { kind: "all" }, CMD)).toEqual([]);
   });
 
   it("needs no record when the caller listed its PRs", async () => {
     const result = fresh([row(1, 1), row(2, 2)], [1]);
-    expect(await stackAddedLayers(result, { kind: "all" })).toEqual([]);
-    expect(await readApprovedLayers(keyOf(result, "all"))).toBeNull();
+    expect(await stackAddedLayers(result, { kind: "all" }, CMD)).toEqual([]);
+    expect(await readApprovedLayers(keyOf(result, "all"), CMD)).toBeNull();
   });
 
   it("records the first tick's layers and reports one that joins later", async () => {
     const first = fresh([row(1, 1), row(2, 2)]);
-    expect(await stackAddedLayers(first, { kind: "all" })).toEqual([]);
-    expect(await stackAddedLayers(first, { kind: "all" })).toEqual([]);
+    expect(await stackAddedLayers(first, { kind: "all" }, CMD)).toEqual([]);
+    expect(await stackAddedLayers(first, { kind: "all" }, CMD)).toEqual([]);
     const grown = { ...first, prs: [...first.prs, row(3, 3)] };
-    expect(await stackAddedLayers(grown, { kind: "all" })).toEqual([3]);
+    expect(await stackAddedLayers(grown, { kind: "all" }, CMD)).toEqual([3]);
     // A merged layer is not an addition, and the record survives it.
     const merged = { ...first, prs: [row(1, 1, { state: "MERGED" }), row(2, 2)] };
-    expect(await stackAddedLayers(merged, { kind: "all" })).toEqual([]);
+    expect(await stackAddedLayers(merged, { kind: "all" }, CMD)).toEqual([]);
   });
 
   it("keeps a record per through target and drops it once nothing in scope is open", async () => {
     const first = fresh([row(1, 1), row(2, 2), row(3, 3)]);
     const scope = { kind: "through", pr: 2 } as const;
-    expect(await stackAddedLayers(first, scope)).toEqual([]);
+    expect(await stackAddedLayers(first, scope, CMD)).toEqual([]);
     const key = keyOf(first, "through-2");
-    expect(await readApprovedLayers(key)).toEqual([1, 2]);
+    expect(await readApprovedLayers(key, CMD), CMD).toEqual([1, 2]);
     const done = {
       ...first,
       prs: first.prs.map((item) => ({ ...item, state: "MERGED" as const })),
     };
-    expect(await stackAddedLayers(done, scope)).toEqual([]);
-    expect(await readApprovedLayers(key)).toBeNull();
+    expect(await stackAddedLayers(done, scope, CMD)).toEqual([]);
+    expect(await readApprovedLayers(key, CMD), CMD).toBeNull();
+  });
+
+  it("covers --merge-ready: a layer that joins later is reported", async () => {
+    const first = fresh([row(1, 1), row(2, 2)]);
+    const ready = { kind: "ready" } as const;
+    expect(await stackAddedLayers(first, ready, CMD)).toEqual([]);
+    const grown = { ...first, prs: [...first.prs, row(3, 3)] };
+    expect(await stackAddedLayers(grown, ready, CMD)).toEqual([3]);
+  });
+
+  it("treats a different command line as a new request with a fresh record", async () => {
+    const first = fresh([row(1, 1), row(2, 2)]);
+    expect(await stackAddedLayers(first, { kind: "all" }, CMD)).toEqual([]);
+    const grown = { ...first, prs: [...first.prs, row(3, 3)] };
+    expect(await stackAddedLayers(grown, { kind: "all" }, `${CMD} --ready-delay 5m`)).toEqual([]);
+    expect(await stackAddedLayers(grown, { kind: "all" }, `${CMD} --ready-delay 5m`)).toEqual([]);
   });
 });

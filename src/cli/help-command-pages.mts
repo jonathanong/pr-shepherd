@@ -151,7 +151,7 @@ every generated patch is dry-run in order with git apply --check before output.
 Administrative state and diagnostics commands.
 
 Usage:
-  pr-shepherd admin clean <pr|branch|current|repo|all> [value] [flags]
+  pr-shepherd admin clean <pr|stack|branch|current|repo|all> [value] [flags]
   pr-shepherd admin log-file [--format text|json]
 
 Run 'pr-shepherd admin <clean|log-file> --help' for command-specific details.
@@ -163,6 +163,7 @@ Remove pr-shepherd state files from PR_SHEPHERD_STATE_DIR.
 
 Usage:
   pr-shepherd admin clean pr [number] [--dry-run] [--format text|json]
+  pr-shepherd admin clean stack <number> [--dry-run] [--format text|json]
   pr-shepherd admin clean branch [name] [--dry-run] [--format text|json]
   pr-shepherd admin clean current [--dry-run] [--format text|json]
   pr-shepherd admin clean repo [--dry-run] [--format text|json]

@@ -76,7 +76,11 @@ export async function handleStack(args: string[]): Promise<void> {
   emitPollSummaryResult(result, { format: parsedTargets.global.format });
 }
 
-const STACK_FLAGS_WITH_VALUES = new Set([...DEFAULT_POLL_FLAGS_WITH_VALUES, "--merge-through"]);
+// `--layers` is for the one-PR commands a stack prints; `stack` itself has no use for it.
+const STACK_FLAGS_WITH_VALUES = new Set([
+  ...[...DEFAULT_POLL_FLAGS_WITH_VALUES].filter((flag) => flag !== "--layers"),
+  "--merge-through",
+]);
 const STACK_BOOLEAN_FLAGS = new Set([...DEFAULT_POLL_BOOLEAN_FLAGS, "--once", "--merge-ready"]);
 const STACK_FLAGS = [...STACK_FLAGS_WITH_VALUES, ...STACK_BOOLEAN_FLAGS];
 
@@ -151,6 +155,7 @@ function parseLoopOptions(
       noAutoMarkReady: flags.noAutoMarkReady,
       merge: flags.merge,
       instructions: flags.instructions ?? undefined,
+      ...(flags.stackLayers && { stackLayers: flags.stackLayers }),
       intervalSeconds,
       timeoutSeconds,
       debounceSeconds,

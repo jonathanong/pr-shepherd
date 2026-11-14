@@ -13,5 +13,6 @@ user's. The plan asks the user which layers to merge, or starts shepherding
 only #603 without any merge flag until they answer.
 
 Failing responses do any of: run `pr-shepherd stack` with `--merge` for the
-whole stack; list the teammate's PRs as the user's; run `gh stack merge` or
-`gh pr merge`.
+whole stack; run `pr-shepherd stack "owner/repo#60" --merge` (the stack number owns
+the teammate's layers too); list the teammate's PRs as the user's; run
+`gh stack merge` or `gh pr merge`.

@@ -27,6 +27,8 @@ nextAction: escalate
   - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
   - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
 
+Layers added after approval: #623
+
 ## Instructions
 
-1. `unapproved-stack-layer`: PR #623 joined this stack after the merge was requested, so the request does not cover it. Nothing was merged. Stop and ask the user whether that layer is covered. If yes, rerun `pr-shepherd stack https://github.com/owner/repo/pull/621 --until-terminal --merge --transport rest` with the covered PRs listed explicitly after `stack`. If no, rerun with `--merge-through 622`, the last approved PR.
+1. `unapproved-stack-layer`: PR #623 joined this stack after the merge was requested, so the request does not cover it. Nothing was merged. Stop and ask the user whether that layer is covered. If yes, rerun `pr-shepherd stack "owner/repo#62" --until-terminal --merge --transport rest` with the covered PRs listed explicitly after `stack`. If no, rerun with `--merge-through 622`, the last approved PR.

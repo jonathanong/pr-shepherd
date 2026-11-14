@@ -36,7 +36,7 @@ nextAction: cancel
 
 - PR #43: Stack base
   - MERGED · base `main`
-- PR #44: Stack tip
+- PR #44: Stack tip — owned
   - MERGED · base `stack-base`
 
 ## Instructions

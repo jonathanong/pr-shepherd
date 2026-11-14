@@ -126,7 +126,7 @@ about #401 before shepherding #402 and #403; never mention the handoff at all.`,
     tier: "guard",
     area: "github",
     fixture: "106-aggregate-stack-blocked-hooks-receipts",
-    shape: stackShape(repoPr(443)),
+    shape: stackShape(repoPr(443), { ref: "owner/repo#44" }),
     tags: ["stack", "shepherd"],
     graders: {
       "shepherds-every-owned-layer": llm(ownedConcurrently("PR #441, PR #442 and PR #443")),
@@ -143,7 +143,7 @@ about #401 before shepherding #402 and #403; never mention the handoff at all.`,
     tier: "guard",
     area: "github",
     fixture: "94-aggregate-stack-parent-conflict",
-    shape: stackShape(repoPr(312)),
+    shape: stackShape(repoPr(312), { ref: "owner/repo#32" }),
     tags: ["stack", "shepherd", "conflicts"],
     graders: {
       "routes-only-the-conflicting-layer": llm(
@@ -172,7 +172,7 @@ from its base alone outside the #311 session; merge #311 or #312.`,
     tier: "guard",
     area: "github",
     fixture: "91-aggregate-stack-queued-lower-waits",
-    shape: stackShape(repoPr(202)),
+    shape: stackShape(repoPr(202), { ref: "owner/repo#12" }),
     tags: ["stack", "wait", "merge-queue"],
     graders: {
       "does-not-disturb-the-queue": llm(
@@ -204,6 +204,7 @@ watcher such as \`gh pr checks --watch\`; declare the stack finished.`,
     fixture: "90-aggregate-stack-stale-parent-merge",
     shape: stackShape("https://github.com/jonathanong/auto-harness/pull/518", {
       merge: "--merge-ready",
+      ref: "jonathanong/auto-harness#514",
     }),
     tags: ["stack", "merge"],
     graders: {
@@ -231,7 +232,7 @@ onto #511 outside its session; stop after the merge without rerunning.`,
     tier: "guard",
     area: "github",
     fixture: "100-aggregate-stack-closed-parent",
-    shape: stackShape(repoPr(372)),
+    shape: stackShape(repoPr(372), { ref: "owner/repo#38" }),
     tags: ["stack", "escalate"],
     graders: {
       "stops-and-asks-the-owner": llm(
@@ -279,7 +280,7 @@ branches or rebasing; ask the user what to do next before stopping.`,
     tier: "guard",
     area: "github",
     fixture: "104-aggregate-stack-clean-draft-auto-ready-disabled",
-    shape: stackShape(repoPr(421)),
+    shape: stackShape(repoPr(421), { ref: "owner/repo#42" }),
     tags: ["stack", "shepherd", "mark-ready"],
     graders: {
       "stops-clean-draft-stack": llm(
@@ -313,7 +314,7 @@ override the disabled setting.`,
     tier: "guard",
     area: "github",
     fixture: "97-aggregate-stack-full-merge",
-    shape: (fixture) => `${stackShape(repoPr(342), { merge: true })(fixture)}
+    shape: (fixture) => `${stackShape(repoPr(342), { merge: true, ref: "owner/repo#35" })(fixture)}
 
 ---
 

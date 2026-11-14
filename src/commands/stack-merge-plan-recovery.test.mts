@@ -33,7 +33,7 @@ describe("--merge-ready with an unowned ready bottom layer", () => {
     const result = listed(stack([row(1, 1, ready), row(2, 2, ready)]), [2]);
     const plan = planStackMerge(result, { kind: "ready" }, RERUN);
     expect(plan).toMatchObject({ action: "escalate" });
-    expect(plan!.instructions[0]).toContain("`unowned-stack-layers`: ready PR #1");
+    expect(plan!.instructions[0]).toContain("`unowned-stack-layers`: merging PR #2 also merges #1");
   });
 
   it("still waits when the unowned bottom layer is not ready", () => {

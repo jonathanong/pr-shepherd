@@ -20,5 +20,5 @@ append_system_prompt: |
   explicitly and say why. The plan is the deliverable: do not ask for a shell or
   for command output to be pasted back.
 ---
-Shepherd the native stack that https://github.com/owner/repo/pull/603 belongs to, and merge the
-layers as they become ready. I own all of it.
+Shepherd the native stack owner/repo#60, and merge the layers as they become
+ready. I own all of it.

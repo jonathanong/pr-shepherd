@@ -19,12 +19,20 @@ import {
   type StackLayer,
 } from "./stack-merge-scope.mts";
 import { stackMergeFlag } from "./stack-merge-flag.mts";
+import {
+  addedLayersEscalation,
+  escalation,
+  list,
+  scopeDone,
+  unlistedEscalation,
+  type ApproveCommands,
+} from "./stack-merge-escalations.mts";
 import { splitStackWork, stackRerunTarget } from "./stack-work.mts";
+
+export type { ApproveCommands };
 
 const NO_PER_LAYER =
   "One command lands every listed layer. Do not merge the layers one at a time with `gh pr merge`, and do not rebase or push between layers; GitHub retargets the remaining layers itself.";
-
-const list = (items: PollSummaryItem[]): string => items.map((i) => `#${i.pr}`).join(", ");
 
 /**
  * The merge the requested scope allows, an escalation when the scope cannot be merged safely, or
@@ -35,10 +43,13 @@ export function planStackMerge(
   result: PollSummaryResult,
   scope: StackMergeScope | undefined,
   rerunCommand?: string,
+  approve?: ApproveCommands,
 ): StackPlan | undefined {
   const open = openLayers(result);
   if (!scope || open.length === 0) return undefined;
+  const added = addedLayersEscalation(result, open, scope, rerunCommand);
   if (scope.kind === "ready") {
+    if (added) return added;
     const prefix = readyPrefix(result, true);
     const top = prefix.at(-1);
     if (top) return mergePlan(result, top, scope, rerunCommand);
@@ -46,61 +57,31 @@ export function planStackMerge(
       stackPosition(item) < stackPosition(low) ? item : low,
     );
     if (!bottom.owned && isStackLayerReady(bottom) && open.some((item) => item.owned)) {
-      return escalation(
-        `\`unowned-stack-layers\`: ready PR #${bottom.pr} sits below owned layers and the caller does not own it, so \`--merge-ready\` has no owned prefix to merge. Nothing was merged. Stop and tell the user. They either approve it, and you rerun ${stackRerunTarget(rerunCommand)} with those PRs listed after \`stack\`, or wait for its owner to merge it.`,
-      );
+      const above = open.filter((item) => item.owned).at(-1)!;
+      return unlistedEscalation(above, [bottom], rerunCommand, approve);
     }
     return open.some((item) => item.owned) || closedInScope(result, scope).length > 0
       ? undefined
       : scopeDone(open);
   }
+  if (scope.kind === "through") {
+    const row = result.prs.find((item) => item.pr === scope.pr);
+    if (!row || row.state === "CLOSED") {
+      return escalation(
+        `\`merge-through-target-closed\`: the \`--merge-through\` target PR #${scope.pr} ${row ? "was closed without merging" : "is no longer a layer of this stack"}, so the request no longer names a layer to merge up to. Nothing was merged. Stop and tell the user. They either name another target, and you rerun ${stackRerunTarget(rerunCommand)} with that PR as \`--merge-through\`, or restore PR #${scope.pr}.`,
+      );
+    }
+  }
   const { target } = mergeScopeLayers(result, scope);
   if (!target) return closedInScope(result, scope).length > 0 ? undefined : scopeDone(open);
-  const added = result.addedLayers ?? [];
-  if (added.length > 0) {
-    const approved = open.filter((item) => !added.includes(item.pr));
-    const lastApproved = approved.reduce<PollSummaryItem | undefined>(
-      (top, item) => (!top || stackPosition(item) > stackPosition(top) ? item : top),
-      undefined,
-    );
-    const above =
-      !!lastApproved &&
-      !open.some(
-        (item) => added.includes(item.pr) && stackPosition(item) < stackPosition(lastApproved),
-      );
-    const recovery = !lastApproved
-      ? "If no, merge nothing."
-      : above
-        ? `If no, rerun with \`--merge-through ${lastApproved.pr}\`, the last approved PR.`
-        : "If no, do not use `--merge-through`: the new layer sits below an approved one and would land with it. Rerun with only the approved PRs listed after `stack`, which stops at the unowned layer, or wait for its owner.";
-    return escalation(
-      `\`unapproved-stack-layer\`: ${added.map((pr) => `PR #${pr}`).join(", ")} joined this stack after the merge was requested, so the request does not cover ${added.length === 1 ? "it" : "them"}. Nothing was merged. Stop and ask the user whether ${added.length === 1 ? "that layer is" : "those layers are"} covered. If yes, rerun ${stackRerunTarget(rerunCommand)} with the covered PRs listed explicitly after \`stack\`. ${recovery}`,
-    );
-  }
-  const unowned = open.filter((item) => !item.owned && stackPosition(item) < stackPosition(target));
-  if (unowned.length > 0) {
-    return escalation(
-      `\`unowned-stack-layers\`: merging PR #${target.pr} would also land ${list(unowned)}, which the caller does not own. Nothing was merged. Stop and tell the user which PRs would be merged. They either approve it, and you rerun ${stackRerunTarget(rerunCommand)} with those PRs listed after \`stack\`, or wait for their owner to finish.`,
-    );
-  }
+  if (added) return added;
+  const unowned = open.filter(
+    (item) => !item.owned && stackPosition(item) <= stackPosition(target),
+  );
+  if (unowned.length > 0) return unlistedEscalation(target, unowned, rerunCommand, approve);
   return readyPrefix(result, false).some((item) => item.pr === target.pr)
     ? mergePlan(result, target as StackLayer, scope, rerunCommand)
     : undefined;
-}
-
-function scopeDone(open: PollSummaryItem[]): StackPlan {
-  const many = open.length !== 1;
-  return {
-    action: "cancel",
-    stackMergeable: true,
-    instructions: [
-      `1. Stop — every layer in the merge scope is merged. ${list(open)} ${many ? "stay" : "stays"} open outside it; leave ${many ? "them" : "it"} to ${many ? "their" : "its"} owner.`,
-    ],
-  };
-}
-
-function escalation(text: string): StackPlan {
-  return { action: "escalate", stackMergeable: false, instructions: [`1. ${text}`] };
 }
 
 /** The one merge for `top`, which lands it and every unmerged layer below it. */

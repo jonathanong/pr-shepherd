@@ -4,6 +4,7 @@
   "args": [
     "stack",
     "https://github.com/owner/repo/pull/631",
+    "https://github.com/owner/repo/pull/632",
     "--merge-through",
     "https://github.com/owner/repo/pull/632",
     "--debounce",

@@ -3,7 +3,7 @@
   "mode": "aggregate",
   "args": [
     "stack",
-    "https://github.com/owner/repo/pull/461",
+    "owner/repo#46",
     "--no-auto-mark-ready",
     "--timeout",
     "1s",

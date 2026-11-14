@@ -15,7 +15,9 @@ export type EscalateTrigger =
   | "merge-queue-removed"
   | "merge-method-unavailable"
   | "unowned-stack-layers"
-  | "unapproved-stack-layer";
+  | "unapproved-stack-layer"
+  | "merge-through-target-closed"
+  | "listed-pr-left-stack";
 
 export interface AgentStalledCheck {
   name: string;

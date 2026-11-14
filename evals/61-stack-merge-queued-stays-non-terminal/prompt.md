@@ -20,8 +20,8 @@ append_system_prompt: |
   explicitly and say why. The plan is the deliverable: do not ask for a shell or
   for command output to be pasted back.
 ---
-Shepherd the native PR stack anchored at https://github.com/owner/repo/pull/352 and merge it.
-I already ran the first tick (`pr-shepherd stack https://github.com/owner/repo/pull/352 --until-terminal --merge`) —
+Shepherd the native PR stack anchored at https://github.com/owner/repo/pull/352 and merge it. I own every layer: the stack is owner/repo#36.
+I already ran the first tick (`pr-shepherd stack "owner/repo#36" --until-terminal --merge`) —
 here is what it returned. Take it from there.
 
 ---

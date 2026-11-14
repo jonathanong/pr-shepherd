@@ -1,0 +1,94 @@
+{
+  "description": "The caller asked to merge only #613 (a one-PR `--merge` routed to `stack --merge-through`), but #611 and #612 below it are not listed. Merging #613 would also merge them, so the aggregate escalates with unowned-stack-layers and merges nothing.",
+  "mode": "aggregate",
+  "args": [
+    "stack",
+    "https://github.com/owner/repo/pull/613",
+    "--merge-through",
+    "https://github.com/owner/repo/pull/613",
+    "--debounce",
+    "0s"
+  ],
+  "expectedExitCode": 13,
+  "expectedNextAction": "escalate",
+  "expectedReason": "actionable",
+  "aggregateSummary": {
+    "selection": {
+      "kind": "stack",
+      "anchor": 611,
+      "stackNumber": 61,
+      "stackSize": 3
+    },
+    "prs": [
+      {
+        "pr": 611,
+        "repo": "owner/repo",
+        "title": "Layer 1",
+        "url": "https://github.com/owner/repo/pull/611",
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-611",
+        "headRefOid": "6116116116116116116116116116116116116116",
+        "baseRefName": "main",
+        "stack": {
+          "number": 61,
+          "size": 3,
+          "position": 1,
+          "baseRefName": "main"
+        },
+        "action": "merge",
+        "reasons": [
+          "appears-ready"
+        ],
+        "readyReceipt": true
+      },
+      {
+        "pr": 612,
+        "repo": "owner/repo",
+        "title": "Layer 2",
+        "url": "https://github.com/owner/repo/pull/612",
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-612",
+        "headRefOid": "6126126126126126126126126126126126126126",
+        "baseRefName": "layer-611",
+        "stack": {
+          "number": 61,
+          "size": 3,
+          "position": 2,
+          "baseRefName": "main"
+        },
+        "action": "merge",
+        "reasons": [
+          "appears-ready"
+        ],
+        "readyReceipt": true
+      },
+      {
+        "pr": 613,
+        "repo": "owner/repo",
+        "title": "Layer 3",
+        "url": "https://github.com/owner/repo/pull/613",
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-613",
+        "headRefOid": "6136136136136136136136136136136136136136",
+        "baseRefName": "layer-612",
+        "stack": {
+          "number": 61,
+          "size": 3,
+          "position": 3,
+          "baseRefName": "main"
+        },
+        "action": "merge",
+        "reasons": [
+          "appears-ready"
+        ],
+        "readyReceipt": true
+      }
+    ]
+  }
+}

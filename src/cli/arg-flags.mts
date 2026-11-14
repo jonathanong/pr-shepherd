@@ -9,6 +9,7 @@ export const FLAGS_WITH_VALUES = new Set([
   "--ready-delay",
   "--stall-timeout",
   "--instructions",
+  "--layers",
   "--require-sha",
   "--message",
   "--description",

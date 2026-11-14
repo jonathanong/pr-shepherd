@@ -3,7 +3,7 @@
   "mode": "aggregate",
   "args": [
     "stack",
-    "https://github.com/owner/repo/pull/621",
+    "owner/repo#62",
     "--merge",
     "--debounce",
     "0s"
@@ -11,6 +11,7 @@
   "expectedExitCode": 13,
   "expectedNextAction": "escalate",
   "expectedReason": "actionable",
+  "approvedStackCommand": "pr-shepherd stack \"owner/repo#62\" --until-terminal --merge",
   "approvedStackLayers": [
     621,
     622

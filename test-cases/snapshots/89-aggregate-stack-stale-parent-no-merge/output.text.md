@@ -24,4 +24,4 @@ nextAction: shepherd
 
 1. Start or delegate concurrent one-PR sessions for these layers; every layer is yours.
 2. Run `pr-shepherd https://github.com/jonathanong/auto-harness/pull/518 --until-terminal`.
-3. After the selected one-PR sessions, rerun `pr-shepherd stack https://github.com/jonathanong/auto-harness/pull/518 --until-terminal`. Keep watching until every layer is terminal.
+3. After the selected one-PR sessions, rerun `pr-shepherd stack "jonathanong/auto-harness#514" --until-terminal`. Keep watching until every layer is terminal.

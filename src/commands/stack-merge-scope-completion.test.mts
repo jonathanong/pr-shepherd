@@ -28,8 +28,15 @@ describe("--merge-through leaves layers above the target alone", () => {
   });
 
   it("is not complete while an in-scope layer is closed without merging", () => {
-    const closed = [row(1, 1, { state: "MERGED" }), row(2, 2, { state: "CLOSED" }), row(3, 3)];
+    const closed = [row(1, 1, { state: "CLOSED" }), row(2, 2), row(3, 3)];
     expect(planStackMerge(stack(closed), through(2))).toBeUndefined();
+  });
+
+  it("escalates rather than retargeting when the through PR itself was closed", () => {
+    const closed = [row(1, 1), row(2, 2, { state: "CLOSED" }), row(3, 3)];
+    const plan = planStackMerge(stack(closed), through(2));
+    expect(plan).toMatchObject({ action: "escalate" });
+    expect(plan!.instructions[0]).toContain("`merge-through-target-closed`");
   });
 
   it("is complete once every in-scope layer merged", () => {
@@ -62,7 +69,7 @@ describe("--merge-ready completion", () => {
 });
 
 describe("multiStackError singleton groups", () => {
-  it("warns that a lone PR owns its whole stack", () => {
+  it("does not claim a lone PR owns its whole stack", () => {
     const message = multiStackError(
       "acme/widgets",
       [
@@ -74,8 +81,7 @@ describe("multiStackError singleton groups", () => {
       undefined,
     );
     const lines = message.split("\n");
-    expect(lines[1]).toContain("This command owns every layer of that stack");
-    expect(lines[2]).not.toContain("owns every layer");
-    expect(lines[3]).not.toContain("owns every layer");
+    for (const line of lines) expect(line).not.toContain("owns every layer");
+    expect(lines[1]).toContain("pull/11 --until-terminal --merge");
   });
 });

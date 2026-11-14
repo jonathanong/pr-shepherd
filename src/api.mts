@@ -114,8 +114,8 @@ export type IterateInput = SingleIterateInput | MultiIterateInput;
 
 /**
  * One aggregate tick over one native stack. `refs` is one stack number (or `owner/repo#N` naming
- * one), which the caller owns entirely; one PR, which selects its stack and owns every layer; or
- * several PRs of one stack, which own only those PRs. `merge` lands every owned layer,
+ * one), which the caller owns entirely; or one or more PRs of one stack, which select it and own only
+ * those PRs (a single PR owns only itself). `merge` lands every owned layer,
  * `mergeReady` the ready owned prefix, and `mergeThrough` the owned layers up to that PR; they are
  * mutually exclusive.
  */
@@ -313,6 +313,7 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
           refs: refs.map(parseStackRef),
           ...(mergeThrough !== undefined && { through: parseStackRef(mergeThrough) }),
           ...(flags[0] && { merge: flags[0] }),
+          tool: true,
         });
         const scope = stackMergeScope(flags[0], target.through);
         return runPollSummaryTick({

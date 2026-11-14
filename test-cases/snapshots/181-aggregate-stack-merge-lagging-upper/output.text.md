@@ -16,5 +16,5 @@ nextAction: shepherd
 
 1. Start or delegate concurrent one-PR sessions for these layers; every layer is yours.
 2. Run `pr-shepherd https://github.com/owner/repo/pull/603 --until-terminal`.
-3. After the selected one-PR sessions, rerun `pr-shepherd stack https://github.com/owner/repo/pull/601 --until-terminal --merge`. Keep watching until every layer is terminal.
-4. Owned layers #601, #602 are ready, but #603 (action triage; reasons review-work) is not. Nothing was merged because `--merge` lands every layer in scope together. Tell the user the lower layers are ready. Only if the user asked to merge layers as they become ready, rerun `pr-shepherd stack https://github.com/owner/repo/pull/601 --until-terminal --merge-ready`; otherwise keep shepherding.
+3. After the selected one-PR sessions, rerun `pr-shepherd stack "owner/repo#60" --until-terminal --merge`. Keep watching until every layer is terminal.
+4. Owned layers #601, #602 are ready, but #603 (action triage; reasons review-work) is not. Nothing was merged because `--merge` lands every layer in scope together. Tell the user the lower layers are ready. Only if the user asked to merge layers as they become ready, rerun `pr-shepherd stack "owner/repo#60" --until-terminal --merge-ready`; otherwise keep shepherding.

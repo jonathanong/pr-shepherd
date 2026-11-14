@@ -105,3 +105,16 @@ export async function restPullExists(pr: number, repo: RepoInfo): Promise<boolea
     throw error;
   }
 }
+
+/** Whether the repository itself is readable: a 404 or 403 there is an access problem. */
+export async function restRepoReachable(repo: RepoInfo): Promise<boolean> {
+  try {
+    await rest<unknown>("GET", restRepoPath(repo));
+    return true;
+  } catch (error) {
+    if (error instanceof GitHubRequestError && (error.status === 404 || error.status === 403)) {
+      return false;
+    }
+    throw error;
+  }
+}

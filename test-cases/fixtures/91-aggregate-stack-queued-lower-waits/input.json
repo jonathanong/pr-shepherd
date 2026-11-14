@@ -9,7 +9,7 @@
   "description": "Without --merge, a queued stack remains non-terminal until every layer merges or GitHub ejects one; aggregate reprojects queued CANCEL rows as WAIT.",
   "args": [
     "stack",
-    "https://github.com/owner/repo/pull/202",
+    "owner/repo#12",
     "--timeout",
     "1s",
     "--interval",

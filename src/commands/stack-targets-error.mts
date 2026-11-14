@@ -14,13 +14,15 @@ export interface StackGroup {
 
 /**
  * The error for refs that span several stacks: it names each stack, the refs that belong to it,
- * and the exact command to run for it, so the caller can run them as written.
+ * and the exact command to run for it, so the caller can run them as written. `tool` names the
+ * `stack` tool call (MCP or library) instead of the CLI command.
  */
 export function multiStackError(
   repo: string,
   groups: StackGroup[],
   merge: "merge" | "ready" | "through" | undefined,
   through: number | undefined,
+  tool = false,
 ): string {
   const lines = groups.map((group) => {
     const refs = [
@@ -41,19 +43,34 @@ export function multiStackError(
           : merge === "merge"
             ? ["--merge"]
             : [];
-    const command = buildPrShepherdCommand([
-      "stack",
-      ...targets,
-      "--until-terminal",
-      ...flags,
-    ]).text;
-    const whole =
-      group.prs.length === 1 && group.stackRefs.length === 0
-        ? " This command owns every layer of that stack; run it only if all of them are yours."
-        : "";
-    return `- stack #${group.stack} (${refs}): \`${command}\`${whole}`;
+    const command = tool
+      ? toolCall(
+          targets,
+          merge,
+          through !== undefined && group.members?.includes(through) ? through : undefined,
+          repo,
+        )
+      : buildPrShepherdCommand(["stack", ...targets, "--until-terminal", ...flags]).text;
+    return `- stack #${group.stack} (${refs}): \`${command}\``;
   });
   return [`These refs span ${groups.length} stacks. Run one command per stack:`, ...lines].join(
     "\n",
   );
+}
+
+/** The `stack` tool call for one group, in the tool's own argument names. */
+function toolCall(
+  refs: string[],
+  merge: "merge" | "ready" | "through" | undefined,
+  through: number | undefined,
+  repo: string,
+): string {
+  const args = {
+    refs,
+    ...(merge === "merge" && { merge: true }),
+    ...(merge === "ready" && { mergeReady: true }),
+    ...(merge === "through" &&
+      through !== undefined && { mergeThrough: formatPrUrl(repo, through) }),
+  };
+  return `stack ${JSON.stringify(args)}`;
 }

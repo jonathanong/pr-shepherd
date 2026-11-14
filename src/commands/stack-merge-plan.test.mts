@@ -51,28 +51,6 @@ describe("planStackMerge --merge", () => {
     const two = listed(stack([row(1, 1, ready), row(2, 2, ready)]), [3]);
     expect(plan(two, ALL)!.instructions[0]).toContain("#1, #2 stay open outside it");
   });
-
-  it("escalates when merging would land a layer the caller does not own", () => {
-    const result = listed(stack([row(1, 1, ready), row(2, 2, ready), row(3, 3, ready)]), [2, 3]);
-    const escalated = plan(result, ALL);
-    expect(escalated).toMatchObject({ action: "escalate", stackMergeable: false });
-    expect(escalated!.instructions[0]).toContain("`unowned-stack-layers`");
-    expect(escalated!.instructions[0]).toContain("would also land #1");
-    expect(escalated!.instructions[0]).toContain("pull/3 --until-terminal");
-  });
-
-  it("escalates for a layer that joined after the request, singular and plural", () => {
-    const base = stack([row(1, 1, ready), row(2, 2, ready)]);
-    const one = plan({ ...base, addedLayers: [2] }, ALL)!.instructions[0]!;
-    expect(one).toContain("`unapproved-stack-layer`");
-    expect(one).toContain("PR #2 joined this stack");
-    expect(one).toContain("does not cover it");
-    expect(one).toContain("whether that layer is covered");
-    const many = plan({ ...base, addedLayers: [1, 2] }, ALL)!.instructions[0]!;
-    expect(many).toContain("PR #1, PR #2 joined this stack");
-    expect(many).toContain("does not cover them");
-    expect(many).toContain("whether those layers are covered");
-  });
 });
 
 describe("planStackMerge --merge-through", () => {

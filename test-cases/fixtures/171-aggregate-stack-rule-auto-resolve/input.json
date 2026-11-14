@@ -1,7 +1,7 @@
 {
   "description": "Native stack: the aggregate summary auto-minimized a bot notice on the lower layer; the layer is no longer routed for review work, and the lean layer row records what was minimized.",
   "mode": "aggregate",
-  "args": ["stack", "https://github.com/owner/repo/pull/51", "--debounce", "0s"],
+  "args": ["stack", "owner/repo#60", "--debounce", "0s"],
   "expectedExitCode": 16,
   "expectedNextAction": "shepherd",
   "expectedReason": "actionable",

@@ -41,13 +41,17 @@ export function aggregateRerunCommand(
   repo: string,
   selection: PollSummarySelection,
   opts: PollSummaryCommandOptions,
+  refs?: string[],
 ): string {
   const args =
     selection.kind === "stack"
       ? [
           "stack",
-          // Listed PRs name the caller's own layers; otherwise the anchor selects the whole stack.
-          ...(selection.owned ?? [selection.anchor]).map((pr) => formatPrUrl(repo, pr)),
+          // Listed PRs name the caller's own layers; otherwise the stack number selects them all.
+          ...(refs ??
+            (selection.owned
+              ? selection.owned.map((pr) => formatPrUrl(repo, pr))
+              : [`${repo}#${selection.stackNumber}`])),
           opts.tick ? "--once" : "--until-terminal",
         ]
       : [
@@ -74,6 +78,24 @@ export function aggregateRerunCommand(
   if (opts.instructions) args.push("--instructions", opts.instructions);
   if (opts.noAutoMarkReady) args.push("--no-auto-mark-ready");
   return buildPrShepherdCommand(args).text;
+}
+
+/**
+ * The two commands that approve unlisted layers: the same request listing them as well, and the
+ * same request naming the stack number, which owns every layer.
+ */
+export function stackApprovalCommands(
+  repo: string,
+  selection: PollSummarySelection,
+  opts: PollSummaryCommandOptions,
+  extra: number[],
+): { listed: string; whole: string } {
+  if (selection.kind !== "stack") return { listed: "", whole: "" };
+  const listed = [...new Set([...(selection.owned ?? []), ...extra])].sort((a, b) => a - b);
+  return {
+    listed: aggregateRerunCommand(repo, { ...selection, owned: listed }, opts),
+    whole: aggregateRerunCommand(repo, selection, opts, [`${repo}#${selection.stackNumber}`]),
+  };
 }
 
 /** The same stack command, merging whichever owned prefix is ready instead of the whole scope. */

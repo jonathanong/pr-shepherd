@@ -14,6 +14,7 @@ Iterate flags:
   --no-auto-mark-ready           Leave draft PRs in draft; stop when otherwise ready.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
   --instructions playbook|inline Render triage steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
+  --layers <list>          Set by the commands a partly owned stack prints. Open layers as pr:position:o|u:branch; a one-PR session then never prints a whole-stack rebase or push.
   --transport auto|graphql|rest  Select GitHub transport. Default: github.transport (auto).
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include verbose iterate fields.
@@ -72,6 +73,7 @@ Forwarded iterate flags:
   --no-auto-mark-ready           Leave draft PRs in draft; stop when otherwise ready.
   --merge                        Shepherd through readiness, then emit a merge or merge-queue command.
   --instructions playbook|inline Render triage steps inline every tick (default) or fold the invariant ones into a playbook pointer. Default: iterate.instructions (inline).
+  --layers <list>          Set by the commands a partly owned stack prints. Open layers as pr:position:o|u:branch; a one-PR session then never prints a whole-stack rebase or push.
   --transport auto|graphql|rest  Select GitHub transport. Default: github.transport (auto).
   --format text|json             Output Markdown text or JSON. Default: text.
   --verbose                      Include verbose iterate fields and detailed per-tick lines.
@@ -105,8 +107,9 @@ SHEPHERD lists one-PR sessions to run before rerunning this command.
 Usage:
   pr-shepherd stack PR [PR ...] [--once] [poll-flags] [iterate-flags]
 
-Several PRs of one stack name the layers you own; with one PR you own the whole stack. A bare number is a
-PR first, then a stack number. Refs that span several stacks fail with one command per stack.
+The PRs you list are the layers you own (one PR owns only itself); a stack number (owner/repo#N) owns every
+layer. A merge that would also land unlisted layers escalates instead. A bare number is a PR first, then a
+stack number. Refs that span several stacks fail with one command per stack.
 
 Stack flags:
   --once                         Run one aggregate tick without sleeping; poll flags are ignored.

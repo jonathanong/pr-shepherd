@@ -187,6 +187,7 @@ describe("public API", () => {
     expect(mockResolveStackTarget).toHaveBeenLastCalledWith({
       refs: [{ number: 43, repository: "openai/pr-shepherd" }],
       merge: "merge",
+      tool: true,
     });
     expect(mockRunPollSummary).toHaveBeenLastCalledWith({
       stackPrNumber: 43,

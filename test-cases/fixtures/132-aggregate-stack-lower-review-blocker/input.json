@@ -3,7 +3,7 @@
   "mode": "aggregate",
   "args": [
     "stack",
-    "https://github.com/vouchington/vouchington/pull/2621",
+    "vouchington/vouchington#2622",
     "--merge",
     "--debounce",
     "0s"

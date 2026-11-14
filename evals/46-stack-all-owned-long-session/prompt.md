@@ -100,11 +100,11 @@ PR #42 is ready for review and its loop has ended. Nothing else was requested.
 
 [user]
 
-Thanks. Now shepherd the native PR stack anchored at https://github.com/owner/repo/pull/443.
+Thanks. Now shepherd the native PR stack anchored at https://github.com/owner/repo/pull/443. I own every layer: the stack is owner/repo#44.
 
 ---
 
-[tool] $ pr-shepherd stack https://github.com/owner/repo/pull/443 --until-terminal
+[tool] $ pr-shepherd stack "owner/repo#44" --until-terminal
 
 # owner/repo stack #44 — actionable
 
@@ -126,4 +126,4 @@ nextAction: shepherd
 2. Run `pr-shepherd https://github.com/owner/repo/pull/441 --until-terminal`.
 3. Run `pr-shepherd https://github.com/owner/repo/pull/442 --until-terminal`.
 4. Run `pr-shepherd https://github.com/owner/repo/pull/443 --until-terminal`.
-5. After the selected one-PR sessions, rerun `pr-shepherd stack https://github.com/owner/repo/pull/443 --until-terminal`. Keep watching until every layer is terminal.
+5. After the selected one-PR sessions, rerun `pr-shepherd stack "owner/repo#44" --until-terminal`. Keep watching until every layer is terminal.

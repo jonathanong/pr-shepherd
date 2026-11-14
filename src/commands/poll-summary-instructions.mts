@@ -14,7 +14,7 @@ import {
   type StackPlan,
 } from "./stack-drain.mts";
 import { lowerReadyNote } from "./stack-lower-ready-note.mts";
-import { planStackMerge } from "./stack-merge-plan.mts";
+import { planStackMerge, type ApproveCommands } from "./stack-merge-plan.mts";
 import { aboveThroughTarget } from "./stack-merge-scope.mts";
 import { ownershipBoundaryStep } from "./stack-ownership.mts";
 import {
@@ -40,6 +40,7 @@ export function planPollSummary(
   mergeRequested: boolean,
   rerunCommand?: string,
   scope: StackMergeScope | undefined = mergeRequested ? { kind: "all" } : undefined,
+  approve?: ApproveCommands,
 ): { result: PollSummaryResult; idle?: PollSummaryItem[] } {
   if (result.selection.kind !== "stack") {
     return { result: { ...result, instructions: explicitInstructions(result, rerunCommand) } };
@@ -101,6 +102,7 @@ export function planPollSummary(
     mergeRequested,
     rerunCommand,
     mergeRequested ? scope : undefined,
+    approve,
   );
   const instructions = [...planned.instructions];
   if (planned.action === "shepherd" || planned.action === "wait") {
@@ -148,6 +150,7 @@ function planStack(
   mergeRequested: boolean,
   rerunCommand?: string,
   scope?: StackMergeScope,
+  approve?: ApproveCommands,
 ): StackPlan {
   const again = stackRerunTarget(rerunCommand);
   const partial = hasListedOwnership(result);
@@ -170,7 +173,7 @@ function planStack(
   const agentWork = runnableCandidates.length > 0;
   // Only owned work defers a human handoff: rerunning cannot advance another author's layer.
   const ownedWork = runnableCandidates.some((item) => item.owned);
-  const drain = planStackMerge(result, scope, rerunCommand);
+  const drain = planStackMerge(result, scope, rerunCommand, approve);
   if (drain) return drain;
 
   const handoffs = findHumanHandoffs(result);

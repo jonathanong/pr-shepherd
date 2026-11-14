@@ -89,7 +89,7 @@ sequenceDiagram
 
 Merge and stacks:
 
-- A request to merge, land, or enqueue a selected PR sets `--merge` even without the flag. For a native stack, "merge the stack" sets `--merge`, "merge as they become ready" sets `--merge-ready`, and "merge #N" sets `--merge-through N`. An ambiguous request ("ship it") means ask which. List only the PRs you own after `stack`. Creating or opening a PR without merge intent leaves merge mode off.
+- A request to merge, land, or enqueue a selected PR sets `--merge` even without the flag. For a native stack, "merge the stack" runs `stack <stack#> --merge` (the number is printed in the output) or lists every layer, "merge as they become ready" sets `--merge-ready`, and "merge #N" uses the one-PR `--merge` route, never `stack` for a non-stack PR; it escalates when lower layers are not yours, so tell the user and ask. An ambiguous request ("ship it") means ask which. List only the PRs you own after `stack`. Creating or opening a PR without merge intent leaves merge mode off.
 - A request for a native stack runs `pr-shepherd stack PR` with any PR in it, as do printed steps that route there. A request for one PR stays a one-PR session even when that PR is a stack layer. A merge request reconciles one-PR READY receipts and merges the in-scope ready prefix with one `gh stack merge`; never merge layers one at a time with `gh pr merge`.
 - Review and CI sessions can run at the same time. A clean draft is marked ready without waiting for lower layers. A queued stack stays non-terminal until every layer is merged.
 - Ready-delay defaults to 0, meaning no countdown (`iterate.ready-delay-minutes`). See [iterate-flow.md](iterate-flow.md#2-ready-delay) and [configuration.md](configuration.md).

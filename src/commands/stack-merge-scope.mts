@@ -60,22 +60,26 @@ export function readyPrefix(result: PollSummaryResult, ownedOnly: boolean): Stac
 }
 
 /**
- * The open layers a merge scope covers, and the layer a merge would target. `all` is every owned
- * open layer; `through` is every open layer up to and including that PR.
+ * The open layers a merge scope covers, and the layer a merge would target. Both scopes cover
+ * only owned open layers: `all` is every one, `through` those up to and including that PR. The
+ * `through` target is that PR itself while it is open; once it is closed or gone there is no
+ * target, so a merge never retargets to a lower layer.
  */
 export function mergeScopeLayers(
   result: PollSummaryResult,
   scope: Exclude<StackMergeScope, { kind: "ready" }>,
 ): { inScope: PollSummaryItem[]; target?: PollSummaryItem } {
   const open = openLayers(result);
-  // A through PR that is not a row of the stack covers nothing rather than everything.
-  const target =
-    scope.kind === "through" ? result.prs.find((item) => item.pr === scope.pr) : undefined;
-  const limit = scope.kind === "all" ? Number.MAX_SAFE_INTEGER : target ? stackPosition(target) : 0;
-  const inScope = open.filter(
-    (item) => stackPosition(item) <= limit && (scope.kind === "through" || item.owned === true),
-  );
-  return { inScope, target: inScope.at(-1) };
+  if (scope.kind === "all") {
+    const inScope = open.filter((item) => item.owned === true);
+    return { inScope, target: inScope.at(-1) };
+  }
+  // A through PR that is not an open row of the stack covers nothing rather than everything.
+  const row = result.prs.find((item) => item.pr === scope.pr);
+  const target = row?.state === "OPEN" ? row : undefined;
+  const limit = target ? stackPosition(target) : 0;
+  const inScope = open.filter((item) => stackPosition(item) <= limit && item.owned === true);
+  return { inScope, target };
 }
 
 /** PRs above a `--merge-through` target: outside the request, so they never get a session. */
@@ -108,27 +112,32 @@ function scopeKey(scope: StackMergeScope): string {
 }
 
 /**
- * Whole-stack ownership only: the first tick of a `--merge` or `--merge-through` request records
- * the open in-scope layers; later ticks report any open in-scope layer that is not in that record.
- * The record is dropped once nothing in scope is open. Explicitly listed PRs need no record.
+ * Whole-stack ownership only: the first tick of a `--merge`, `--merge-ready` or `--merge-through`
+ * request records the open owned in-scope layers; later ticks of that same request (same command
+ * line, within the record's TTL) report any open in-scope layer that is not in that record. A
+ * different command line is a new request and records afresh. The record is dropped once nothing
+ * in scope is open. Explicitly listed PRs need no record.
  */
 export async function stackAddedLayers(
   result: Pick<PollSummaryResult, "repo" | "selection" | "prs" | "stackAncestry">,
   scope: StackMergeScope | undefined,
+  command: string,
 ): Promise<number[]> {
-  if (!scope || scope.kind === "ready" || result.selection.kind !== "stack") return [];
-  if (result.selection.owned) return [];
+  if (!scope || result.selection.kind !== "stack" || result.selection.owned) return [];
   const [owner, repo] = result.repo.split("/") as [string, string];
   const key = { owner, repo, stack: result.selection.stackNumber, scope: scopeKey(scope) };
-  const { inScope } = mergeScopeLayers(result as PollSummaryResult, scope);
-  const current = inScope.map((item) => item.pr);
+  const layers =
+    scope.kind === "ready"
+      ? openLayers(result as PollSummaryResult).filter((item) => item.owned === true)
+      : mergeScopeLayers(result as PollSummaryResult, scope).inScope;
+  const current = layers.map((item) => item.pr);
   if (current.length === 0) {
     await clearApprovedLayers(key);
     return [];
   }
-  const approved = await readApprovedLayers(key);
+  const approved = await readApprovedLayers(key, command);
   if (!approved) {
-    await writeApprovedLayers(key, current);
+    await writeApprovedLayers(key, current, command);
     return [];
   }
   return current.filter((pr) => !approved.includes(pr));

@@ -25,6 +25,7 @@ export interface StackOverview {
   nextAction?: StackNextAction;
   prs: StackLayerView[];
   stackAncestry?: PollSummaryStackAncestry[];
+  addedLayers?: number[];
   instructions?: string[];
   apiUsage?: ApiUsage;
   quotaWarning?: GraphqlQuotaWarning;
@@ -51,6 +52,7 @@ export function projectStackOverview(result: PollSummaryResult): StackOverview {
     ...(result.nextAction && { nextAction: result.nextAction }),
     prs: result.prs.map((item) => projectLayer(item, stale.has(item.pr))),
     ...(result.stackAncestry?.length && { stackAncestry: result.stackAncestry }),
+    ...(result.addedLayers?.length && { addedLayers: result.addedLayers }),
     ...(result.instructions?.length && { instructions: result.instructions }),
     ...(result.apiUsage && { apiUsage: result.apiUsage }),
     ...(result.quotaWarning && { quotaWarning: result.quotaWarning }),
@@ -140,6 +142,8 @@ export function formatStackOverview(overview: StackOverview): string {
       );
     }
   }
+  const added = overview.addedLayers?.map((pr) => `#${pr}`).join(", ");
+  if (added) lines.push("", `Layers added after approval: ${added}`);
   if (overview.instructions?.length) {
     lines.push("", "## Instructions", "", ...overview.instructions);
   }

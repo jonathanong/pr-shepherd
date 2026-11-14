@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { row, stack } from "../../test-helpers/commands/poll-summary-stack.test-support.mts";
-import { EXIT } from "../exit-codes.mts";
 import type { PollSummaryResult } from "../types.mts";
-import { applyStackOwnership, ownershipBoundaryStep } from "./stack-ownership.mts";
+import {
+  applyStackOwnership,
+  listedLayerLeftStack,
+  missingListedLayers,
+  ownershipBoundaryStep,
+} from "./stack-ownership.mts";
 
 const ready = { readyReceipt: true } as const;
 
@@ -40,7 +44,8 @@ describe("ownershipBoundaryStep", () => {
     expect(step).toContain("unowned layer #3 sits in this stack and must not be rebased or pushed");
     expect(step).toContain("check out `layer-2` (PR #2), run `gh stack rebase --downstack`");
     expect(step).toContain("push only the owned branches (`layer-1`, `layer-2`)");
-    expect(step).toContain("`git push --force-with-lease origin <branch>`");
+    expect(step).toContain("`git push --force-with-lease <push-remote> <branch>`");
+    expect(step).toContain("substitute this repository's push remote");
     expect(step).toContain(
       "#3 (and anything above) will be stale: tell the user their owner must restack it",
     );
@@ -94,15 +99,41 @@ describe("applyStackOwnership", () => {
     expect(result.prs.map((item) => item.owned)).toEqual([undefined, true, undefined]);
   });
 
-  it("rejects a listed PR that is not a layer of the stack", () => {
-    expect(() => applyStackOwnership(selection, prs, [2, 8])).toThrow(
-      expect.objectContaining({
-        exitCode: EXIT.USAGE,
-        message: "PR #8 is not in native stack #9. One stack per command.",
-      }),
+  it("does not throw for a listed PR that left the stack, and reports it as missing", () => {
+    expect(() => applyStackOwnership(selection, prs, [2, 8])).not.toThrow();
+    expect(missingListedLayers(prs, [2, 8])).toEqual([8]);
+    expect(missingListedLayers(prs, undefined)).toEqual([]);
+  });
+
+  it("escalates with a dedicated reason when listed PRs left the stack", () => {
+    const base = { ...stack([row(1, 1)]), selection };
+    const one = listedLayerLeftStack(base, [8], "`rerun`");
+    expect(one).toMatchObject({ nextAction: "escalate", stackMergeable: false });
+    expect(one.instructions![0]).toContain(
+      "`listed-pr-left-stack`: PR #8 is no longer in native stack #9",
     );
-    expect(() => applyStackOwnership(selection, prs, [7, 8])).toThrow(
-      "PR #7, PR #8 are not in native stack #9.",
-    );
+    expect(one.instructions![0]).toContain("rerun `rerun` with only the PRs that remain");
+    const many = listedLayerLeftStack(base, [7, 8], "`rerun`");
+    expect(many.instructions![0]).toContain("PR #7, PR #8 are no longer");
+  });
+
+  it("hands each owned row's one-PR command the layer ownership when some layer is unlisted", () => {
+    const withCommands = prs.map((item) => ({
+      ...item,
+      state: "OPEN" as const,
+      stack: { number: 9, size: 3, position: item.pr, baseRefName: "main" },
+      pollCommand: `pr-shepherd iterate https://github.com/o/r/pull/${item.pr}`,
+    }));
+    const partial = applyStackOwnership(selection, withCommands, [2]);
+    const [first, second, third] = partial.prs;
+    expect(first!.pollCommand).not.toContain("--layers");
+    expect(second!.pollCommand).toContain("--layers");
+    expect(second!.pollCommand).toContain(":o:");
+    expect(second!.pollCommand).toContain(":u:");
+    expect(third!.pollCommand).not.toContain("--layers");
+    const whole = applyStackOwnership(selection, withCommands, undefined);
+    expect(whole.prs.every((item) => !item.pollCommand!.includes("--layers"))).toBe(true);
+    const everyone = applyStackOwnership(selection, withCommands, [1, 2, 3]);
+    expect(everyone.prs.every((item) => !item.pollCommand!.includes("--layers"))).toBe(true);
   });
 });

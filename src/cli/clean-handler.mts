@@ -3,7 +3,7 @@ import { EXIT } from "../exit-codes.mts";
 import { USAGE } from "./help.mts";
 import { formatCleanResult } from "./formatters.mts";
 
-const CLEAN_VARIANTS = new Set<string>(["pr", "branch", "current", "repo", "all"]);
+const CLEAN_VARIANTS = new Set<string>(["pr", "stack", "branch", "current", "repo", "all"]);
 
 export async function handleClean(args: string[]): Promise<void> {
   const command = "admin clean";

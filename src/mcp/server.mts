@@ -74,6 +74,18 @@ const iterateInputSchema = z
     ...tickOptionsSchema,
     pr: pr.optional(),
     prs: z.array(pr).min(1).optional(),
+    stackLayers: z
+      .array(
+        z.object({
+          pr: z.number().int().positive(),
+          position: z.number().int().positive(),
+          owned: z.boolean(),
+          branch: z.string().min(1),
+        }),
+      )
+      .min(1)
+      .optional()
+      .describe("Set by a partly owned `stack` tick: the stack's open layers and which are owned."),
   })
   .refine((input) => (input.pr === undefined) !== (input.prs === undefined), {
     message: "exactly one of pr or prs is required",
@@ -94,9 +106,7 @@ const stackInputSchema = z.object({
   refs: z
     .array(pr)
     .min(1)
-    .describe(
-      "A stack (owner/repo#N), one PR (its whole stack), or several PRs of one stack (only those are yours).",
-    ),
+    .describe("A stack (owner/repo#N, owns every layer) or the PRs of one stack you own."),
   mergeReady: z.boolean().optional().describe("Merge the ready owned prefix."),
   mergeThrough: pr.optional().describe("Merge up to this PR."),
 });

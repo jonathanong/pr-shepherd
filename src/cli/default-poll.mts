@@ -10,6 +10,7 @@ export const DEFAULT_POLL_FLAGS_WITH_VALUES = new Set([
   "--ready-delay",
   "--stall-timeout",
   "--instructions",
+  "--layers",
   "--interval",
   "--timeout",
   "--debounce",

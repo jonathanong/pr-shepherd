@@ -118,7 +118,7 @@ ${NO_GH_POLL}`,
     area: "github",
     runs: 6,
     fixture: "98-aggregate-stack-merge-queue",
-    shape: stackShape("https://github.com/owner/repo/pull/352", { merge: true }),
+    shape: stackShape("https://github.com/owner/repo/pull/352", { merge: true, ref: "owner/repo#36" }),
     tags: ["stack", "wait", "merge-queue"],
     graders: {
       "leaves-the-queued-stack-alone": llm(

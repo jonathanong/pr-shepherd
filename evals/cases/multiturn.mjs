@@ -44,9 +44,9 @@ the printed \`apply review:\` command (it replied to \`PRRT_active\`). Iterating
   },
 ];
 
-const stackRequest = (anchor) => ({
+const stackRequest = (anchor, ref) => ({
   role: "user",
-  text: `Thanks. Now shepherd the native PR stack anchored at ${anchor}.`,
+  text: `Thanks. Now shepherd the native PR stack anchored at ${anchor}${ref ? `. I own every layer: the stack is ${ref}` : ""}.`,
 });
 
 const repoPr = (n) => `https://github.com/owner/repo/pull/${n}`;
@@ -116,8 +116,8 @@ the printed \`apply review:\` command (it replied to \`PRRT_active\`). Restarted
     area: "github",
     fixture: "106-aggregate-stack-blocked-hooks-receipts",
     shape: transcriptShape({
-      turns: () => [...finishedPr42(), stackRequest(repoPr(443))],
-      latest: `pr-shepherd stack ${repoPr(443)} --until-terminal`,
+      turns: () => [...finishedPr42(), stackRequest(repoPr(443), "owner/repo#44")],
+      latest: `pr-shepherd stack "owner/repo#44" --until-terminal`,
     }),
     runs: 6,
     tags: ["stack", "shepherd", "multi-turn"],

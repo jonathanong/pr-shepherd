@@ -46,7 +46,7 @@ function buildStackedRouteResult(
       },
       instructions: [
         `PR #${report.pr} is layer ${stack.position} of ${stack.size} in native stack #${stack.number}; do not run \`gh pr merge\` for this layer.`,
-        `Run ${inlineCode(buildPrShepherdCommand(["stack", prUrl, "--until-terminal", "--merge-through", prUrl]).text)} to merge this layer and the unmerged layers below it, never a layer above it. It emits one merge command that lands every layer it lists. Run that command as printed: do not merge the layers one at a time with \`gh pr merge\`, and do not rebase or push between layers.`,
+        `Run ${inlineCode(buildPrShepherdCommand(["stack", prUrl, "--until-terminal", "--merge-through", prUrl]).text)} to merge this layer and the unmerged layers below it, never a layer above it. If lower layers are not yours it escalates \`unowned-stack-layers\` and merges nothing: report that to the user. Otherwise it emits one merge command that lands every layer it lists. Run that command as printed: do not merge the layers one at a time with \`gh pr merge\`, and do not rebase or push between layers.`,
       ],
       firstLookThreads: [],
       firstLookComments: [],

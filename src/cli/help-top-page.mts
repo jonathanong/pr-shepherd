@@ -16,7 +16,7 @@ Usage:
   pr-shepherd apply queue-removal [PR] --require-sha <head> --queue-commit <commit> --removed-at <unix>
   pr-shepherd journal extract --body-file <path>
   pr-shepherd suggest [PR] --thread-id ID --message MSG [groups...]
-  pr-shepherd admin clean <pr|branch|current|repo|all> [value] [flags]
+  pr-shepherd admin clean <pr|stack|branch|current|repo|all> [value] [flags]
   pr-shepherd admin log-file [--format text|json]
 
 Commands:

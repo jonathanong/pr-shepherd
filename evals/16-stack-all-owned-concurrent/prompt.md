@@ -20,8 +20,8 @@ append_system_prompt: |
   explicitly and say why. The plan is the deliverable: do not ask for a shell or
   for command output to be pasted back.
 ---
-Shepherd the native PR stack anchored at https://github.com/owner/repo/pull/443.
-I already ran the first tick (`pr-shepherd stack https://github.com/owner/repo/pull/443 --until-terminal`) —
+Shepherd the native PR stack anchored at https://github.com/owner/repo/pull/443. I own every layer: the stack is owner/repo#44.
+I already ran the first tick (`pr-shepherd stack "owner/repo#44" --until-terminal`) —
 here is what it returned. Take it from there.
 
 ---
@@ -46,4 +46,4 @@ nextAction: shepherd
 2. Run `pr-shepherd https://github.com/owner/repo/pull/441 --until-terminal`.
 3. Run `pr-shepherd https://github.com/owner/repo/pull/442 --until-terminal`.
 4. Run `pr-shepherd https://github.com/owner/repo/pull/443 --until-terminal`.
-5. After the selected one-PR sessions, rerun `pr-shepherd stack https://github.com/owner/repo/pull/443 --until-terminal`. Keep watching until every layer is terminal.
+5. After the selected one-PR sessions, rerun `pr-shepherd stack "owner/repo#44" --until-terminal`. Keep watching until every layer is terminal.

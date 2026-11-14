@@ -53,8 +53,10 @@ vi.mock("../../src/github/poll-summary.mts", () => ({
   fetchPollSummary: mockFetchPollSummaryValue,
   fetchRawSummaryPr: mockFetchRawSummaryPr,
 }));
-// Fixture refs are PR numbers or URLs of one stack, so ownership follows the listed PRs without
-// the REST reads that resolve a bare number against GitHub.
+const stackRefState = vi.hoisted(() => ({ stackNumber: undefined as number | undefined }));
+// Fixture refs are PR numbers or URLs of one stack (the listed PRs are the caller's), or the
+// fixture's own stack number (every layer is the caller's), without the REST reads that resolve a
+// bare number against GitHub.
 vi.mock("../../src/commands/stack-targets.mts", async (importOriginal) => {
   const { resolveParsedPrTarget } = await import("../../src/pr-reference.mts");
   return {
@@ -70,7 +72,9 @@ vi.mock("../../src/commands/stack-targets.mts", async (importOriginal) => {
       const targetRepository = resolveParsedPrTarget(refs[0] as never).targetRepository;
       return {
         anchor: numbers[0]!,
-        ...(numbers.length > 1 && { owned: numbers }),
+        ...(!(numbers.length === 1 && numbers[0] === stackRefState.stackNumber) && {
+          owned: numbers,
+        }),
         ...(through?.number !== undefined && { through: through.number }),
         ...(targetRepository && { targetRepository }),
       };
@@ -300,6 +304,8 @@ export interface Fixture {
   mode?: "aggregate";
   /** Layers a whole-stack `--merge` request already approved on an earlier tick (seeded before the run). */
   approvedStackLayers?: number[];
+  /** The first-tick command line the approval record is keyed to (the transport flag is appended). */
+  approvedStackCommand?: string;
   /** Return value of fetchPollSummary() for aggregate fixtures. */
   aggregateSummary?: { selection: Record<string, unknown>; prs: unknown[] };
   /** Expected aggregate result reason. */
@@ -787,7 +793,10 @@ function transportArgs(transport: FixtureTransport): string[] {
   return transport === "rest" ? ["--transport", "rest"] : [];
 }
 
-async function seedApprovedLayers(fixture: Fixture): Promise<void> {
+async function seedApprovedLayers(
+  fixture: Fixture,
+  transport: FixtureTransport = "graphql",
+): Promise<void> {
   const summary = fixture.aggregateSummary;
   if (!fixture.approvedStackLayers || !summary) return;
   const [owner, repo] = String((summary.prs[0] as { repo: string }).repo).split("/") as [
@@ -795,7 +804,14 @@ async function seedApprovedLayers(fixture: Fixture): Promise<void> {
     string,
   ];
   const stack = (summary.selection as { stackNumber: number }).stackNumber;
-  await writeApprovedLayers({ owner, repo, stack, scope: "all" }, fixture.approvedStackLayers);
+  const command = [fixture.approvedStackCommand ?? "", ...transportArgs(transport)]
+    .filter(Boolean)
+    .join(" ");
+  await writeApprovedLayers(
+    { owner, repo, stack, scope: "all" },
+    fixture.approvedStackLayers,
+    command,
+  );
 }
 
 export async function captureRun(
@@ -811,9 +827,12 @@ export async function captureRun(
     fixture.mode === "aggregate"
       ? [...(fixture.args ?? ["42", "43", "--timeout", "0s"]), ...transportArgs(transport)]
       : ["iterate", pr, ...(fixture.args ?? []), ...transportArgs(transport)];
-  await seedApprovedLayers(fixture);
+  stackRefState.stackNumber = (
+    fixture.aggregateSummary?.selection as { stackNumber?: number } | undefined
+  )?.stackNumber;
+  await seedApprovedLayers(fixture, transport);
   const { out: textOut, exitCode } = await runMain(args);
-  await seedApprovedLayers(fixture);
+  await seedApprovedLayers(fixture, transport);
   const { out: jsonOut, exitCode: jsonExitCode } = await runMain([...args, "--format=json"]);
   return { textOut, jsonOut, exitCode, jsonExitCode };
 }

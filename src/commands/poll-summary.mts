@@ -4,7 +4,7 @@ import { ShepherdError } from "../exit-codes.mts";
 import { getRepoInfo } from "../github/client.mts";
 import { getGithubTransport } from "../github/transport.mts";
 import { withApiTelemetryScope, summarizeApiTelemetry } from "../github/api-telemetry.mts";
-import { aggregateRerunCommand } from "../github/poll-summary-command.mts";
+import { aggregateRerunCommand, stackApprovalCommands } from "../github/poll-summary-command.mts";
 import { fetchPollSummary } from "../github/poll-summary.mts";
 import { writeStackHandoffs } from "../github/stack-handoff.mts";
 import type { StackHandoffSource } from "../github/stack-handoff-page.mts";
@@ -16,7 +16,12 @@ import type { PollSummaryCommandOptions, PollSummaryResult } from "../types.mts"
 import { planPollSummary, withPollSummaryInstructions } from "./poll-summary-instructions.mts";
 import { summaryStatusSignature } from "./poll-summary-signature.mts";
 import { applyStackStallGuard } from "./stack-stall.mts";
-import { applyStackOwnership } from "./stack-ownership.mts";
+import {
+  applyStackOwnership,
+  listedLayerLeftStack,
+  missingListedLayers,
+} from "./stack-ownership.mts";
+import { stackRerunTarget } from "./stack-work.mts";
 import { requestedMergeScope, stackAddedLayers } from "./stack-merge-scope.mts";
 import { aggregateDeadline } from "./stall-deadline.mts";
 import {
@@ -103,12 +108,20 @@ async function readPollSummaryTick(opts: PollSummaryCommandOptions): Promise<Pol
     ...(fetched.stackAncestry?.length && { stackAncestry: fetched.stackAncestry }),
     ...(fetched.allowedMergeMethods && { allowedMergeMethods: fetched.allowedMergeMethods }),
   };
-  const addedLayers = await stackAddedLayers(summary, scope);
+  const rerunCommand = aggregateRerunCommand(`${repo.owner}/${repo.name}`, fetched.selection, opts);
+  const missing = missingListedLayers(fetchedRaw.prs, opts.stackOwned);
+  if (fetchedRaw.selection.kind === "stack" && missing.length > 0) {
+    // A teammate removed a listed PR from the stack: the listed ownership no longer matches it.
+    const escalated = listedLayerLeftStack(summary, missing, stackRerunTarget(rerunCommand));
+    return { result: escalated, repo };
+  }
+  const addedLayers = await stackAddedLayers(summary, scope, rerunCommand);
   const planned = planPollSummary(
     { ...summary, ...(addedLayers.length > 0 && { addedLayers }) },
     scope !== undefined,
-    aggregateRerunCommand(`${repo.owner}/${repo.name}`, fetched.selection, opts),
+    rerunCommand,
     scope,
+    (extra) => stackApprovalCommands(`${repo.owner}/${repo.name}`, fetched.selection, opts, extra),
   );
   const result = await applyStackStallGuard(
     planned,
