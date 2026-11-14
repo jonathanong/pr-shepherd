@@ -172,6 +172,7 @@ import { fetchCheckRunAnnotationsBatch } from "../../src/github/check-annotation
 import { loadSeenMap, markSeen } from "../../src/state/seen-comments.mts";
 import { readCheckBlockers } from "../../src/state/check-blockers.mts";
 import { readQueueRemovalAcknowledgment } from "../../src/state/queue-removal-ack.mts";
+import { writeApprovedLayers } from "../../src/state/stack-merge-approval.mts";
 import { updateReadyDelay } from "../../src/commands/ready-delay.mts";
 import {
   readStallState,
@@ -297,6 +298,8 @@ export interface Fixture {
   };
   /** Selects the aggregate bare-poll fixture path instead of singular iterate. */
   mode?: "aggregate";
+  /** Layers a whole-stack `--merge` request already approved on an earlier tick (seeded before the run). */
+  approvedStackLayers?: number[];
   /** Return value of fetchPollSummary() for aggregate fixtures. */
   aggregateSummary?: { selection: Record<string, unknown>; prs: unknown[] };
   /** Expected aggregate result reason. */
@@ -784,6 +787,17 @@ function transportArgs(transport: FixtureTransport): string[] {
   return transport === "rest" ? ["--transport", "rest"] : [];
 }
 
+async function seedApprovedLayers(fixture: Fixture): Promise<void> {
+  const summary = fixture.aggregateSummary;
+  if (!fixture.approvedStackLayers || !summary) return;
+  const [owner, repo] = String((summary.prs[0] as { repo: string }).repo).split("/") as [
+    string,
+    string,
+  ];
+  const stack = (summary.selection as { stackNumber: number }).stackNumber;
+  await writeApprovedLayers({ owner, repo, stack, scope: "all" }, fixture.approvedStackLayers);
+}
+
 export async function captureRun(
   fixture: Fixture,
   transport: FixtureTransport = "graphql",
@@ -797,7 +811,9 @@ export async function captureRun(
     fixture.mode === "aggregate"
       ? [...(fixture.args ?? ["42", "43", "--timeout", "0s"]), ...transportArgs(transport)]
       : ["iterate", pr, ...(fixture.args ?? []), ...transportArgs(transport)];
+  await seedApprovedLayers(fixture);
   const { out: textOut, exitCode } = await runMain(args);
+  await seedApprovedLayers(fixture);
   const { out: jsonOut, exitCode: jsonExitCode } = await runMain([...args, "--format=json"]);
   return { textOut, jsonOut, exitCode, jsonExitCode };
 }

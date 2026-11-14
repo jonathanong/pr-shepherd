@@ -83,13 +83,14 @@ ${fixture}`;
  * Stack framing: shepherd a native stack from its anchor PR. `merge` mirrors the
  * user asking to land the stack, which is what authorises `gh stack merge` —
  * without it a MERGE fixture would test an action the user never requested.
+ * `merge` is `true` for `--merge`, or the recorded merge flag itself (`--merge-ready`).
  * `extra` carries any other recorded flags (e.g. ` --transport rest`).
  */
 export const stackShape =
   (anchor, { merge = false, extra = "" } = {}) =>
   (fixture) =>
     `Shepherd the native PR stack anchored at ${anchor}${merge ? " and merge it" : ""}.
-I already ran the first tick (\`pr-shepherd stack ${anchor} --until-terminal${merge ? " --merge" : ""}${extra}\`) —
+I already ran the first tick (\`pr-shepherd stack ${anchor} --until-terminal${merge ? ` ${merge === true ? "--merge" : merge}` : ""}${extra}\`) —
 here is what it returned. Take it from there.
 
 ---

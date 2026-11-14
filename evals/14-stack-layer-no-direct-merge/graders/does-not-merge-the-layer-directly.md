@@ -12,7 +12,7 @@ The plan does NOT merge PR #42 directly.
 
 PR #42 is layer 2 of 3 in native stack #7. The output says "do not run
 `gh pr merge` for this layer" and routes the merge through the stack command,
-which lands the bottom-up prefix in order.
+which lands this layer and the layers below it, and leaves layers above it alone.
 
 Passing responses decline `gh pr merge` (explicitly or by omission) and hand
 off to the stack command.

@@ -33,11 +33,11 @@ nextAction: shepherd
 
 ## Layers
 
-- PR #441: Blocked receipt — shepherded · not mergeable (`merge-state`) · owned
+- PR #441: Blocked receipt — shepherded · not mergeable (`merge-state`)
   - OPEN · base `main`
-- PR #442: Hooks receipt — shepherded · not mergeable (`merge-state`) · owned
+- PR #442: Hooks receipt — shepherded · not mergeable (`merge-state`)
   - OPEN · base `blocked`
-- PR #443: Pending CI receipt — shepherded · not mergeable (`checks-in-progress`) · owned
+- PR #443: Pending CI receipt — shepherded · not mergeable (`checks-in-progress`)
   - OPEN · base `hooks` · 1 in progress
 
 ## Instructions

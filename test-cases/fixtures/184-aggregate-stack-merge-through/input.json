@@ -1,0 +1,94 @@
+{
+  "description": "`--merge-through` #632 lands #631 and #632 with one gh stack merge and leaves #633 open above them, untouched.",
+  "mode": "aggregate",
+  "args": [
+    "stack",
+    "https://github.com/owner/repo/pull/631",
+    "--merge-through",
+    "https://github.com/owner/repo/pull/632",
+    "--debounce",
+    "0s"
+  ],
+  "expectedExitCode": 15,
+  "expectedNextAction": "merge",
+  "expectedReason": "actionable",
+  "aggregateSummary": {
+    "selection": {
+      "kind": "stack",
+      "anchor": 631,
+      "stackNumber": 63,
+      "stackSize": 3
+    },
+    "prs": [
+      {
+        "pr": 631,
+        "repo": "owner/repo",
+        "title": "Layer 1",
+        "url": "https://github.com/owner/repo/pull/631",
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-631",
+        "headRefOid": "6316316316316316316316316316316316316316",
+        "baseRefName": "main",
+        "stack": {
+          "number": 63,
+          "size": 3,
+          "position": 1,
+          "baseRefName": "main"
+        },
+        "action": "merge",
+        "reasons": [
+          "appears-ready"
+        ],
+        "readyReceipt": true
+      },
+      {
+        "pr": 632,
+        "repo": "owner/repo",
+        "title": "Layer 2",
+        "url": "https://github.com/owner/repo/pull/632",
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-632",
+        "headRefOid": "6326326326326326326326326326326326326326",
+        "baseRefName": "layer-631",
+        "stack": {
+          "number": 63,
+          "size": 3,
+          "position": 2,
+          "baseRefName": "main"
+        },
+        "action": "merge",
+        "reasons": [
+          "appears-ready"
+        ],
+        "readyReceipt": true
+      },
+      {
+        "pr": 633,
+        "repo": "owner/repo",
+        "title": "Layer 3",
+        "url": "https://github.com/owner/repo/pull/633",
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-633",
+        "headRefOid": "6336336336336336336336336336336336336336",
+        "baseRefName": "layer-632",
+        "stack": {
+          "number": 63,
+          "size": 3,
+          "position": 3,
+          "baseRefName": "main"
+        },
+        "action": "merge",
+        "reasons": [
+          "appears-ready"
+        ],
+        "readyReceipt": true
+      }
+    ]
+  }
+}

@@ -95,8 +95,14 @@ the printed \`apply review:\` command (it replied to \`PRRT_active\`). Restarted
     area: "github",
     fixture: "102-aggregate-stack-mixed-escalate-autonomous-work",
     shape: transcriptShape({
-      turns: () => [...finishedPr42(), stackRequest(repoPr(403))],
-      latest: `pr-shepherd stack ${repoPr(403)} --until-terminal`,
+      turns: () => [
+        ...finishedPr42(),
+        {
+          role: "user",
+          text: `Thanks. Now shepherd my layers ${repoPr(402)} and ${repoPr(403)} of the native PR stack; ${repoPr(401)} below them is not mine.`,
+        },
+      ],
+      latest: `pr-shepherd stack ${repoPr(402)} ${repoPr(403)} --until-terminal`,
     }),
     runs: 6,
     tags: ["stack", "shepherd", "escalate", "multi-turn"],

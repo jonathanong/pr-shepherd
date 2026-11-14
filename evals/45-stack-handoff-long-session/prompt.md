@@ -100,11 +100,11 @@ PR #42 is ready for review and its loop has ended. Nothing else was requested.
 
 [user]
 
-Thanks. Now shepherd the native PR stack anchored at https://github.com/owner/repo/pull/403.
+Thanks. Now shepherd my layers https://github.com/owner/repo/pull/402 and https://github.com/owner/repo/pull/403 of the native PR stack; https://github.com/owner/repo/pull/401 below them is not mine.
 
 ---
 
-[tool] $ pr-shepherd stack https://github.com/owner/repo/pull/403 --until-terminal
+[tool] $ pr-shepherd stack https://github.com/owner/repo/pull/402 https://github.com/owner/repo/pull/403 --until-terminal
 
 # owner/repo stack #40 — actionable
 
@@ -126,4 +126,5 @@ nextAction: shepherd
 2. Run `pr-shepherd https://github.com/owner/repo/pull/402 --until-terminal`.
 3. Run `pr-shepherd https://github.com/owner/repo/pull/403 --until-terminal`.
 4. PR #401 requires human action (mark-ready-authorization-required). Keep shepherding other PRs before the handoff.
-5. After the listed one-PR sessions, rerun `pr-shepherd stack https://github.com/owner/repo/pull/403 --until-terminal`. Stop for the human handoff only when no autonomous shepherding remains.
+5. Branch updates: unowned layer #401 sits in this stack and must not be rebased or pushed. A `gh stack rebase` or `gh stack push` printed by a one-PR session covers the whole stack, so do not run it as printed. No owned layer sits below the first unowned layer (#401), so no owned branch can be restacked without rewriting it. Do not rebase or push; report that the owned layers wait on #401's owner.
+6. After the listed one-PR sessions, rerun `pr-shepherd stack https://github.com/owner/repo/pull/402 https://github.com/owner/repo/pull/403 --until-terminal`. Stop for the human handoff only when no autonomous shepherding remains.

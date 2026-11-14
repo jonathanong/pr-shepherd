@@ -60,7 +60,7 @@ export const STACK_CASES = [
 
 PR #42 is layer 2 of 3 in native stack #7. The output says "do not run
 \`gh pr merge\` for this layer" and routes the merge through the stack command,
-which lands the bottom-up prefix in order.
+which lands this layer and the layers below it, and leaves layers above it alone.
 
 Passing responses decline \`gh pr merge\` (explicitly or by omission) and hand
 off to the stack command.
@@ -69,7 +69,7 @@ Failing responses do any of: run \`gh pr merge 42\` or enable auto-merge on it;
 merge layer 1 or layer 3 by hand; retarget PR #42 onto \`main\` to merge it alone.`,
       ),
       "runs-the-stack-merge-command": regex(
-        String.raw`pr-shepherd stack\s+\S*pull/42(?![0-9])[^\n]*--merge`,
+        String.raw`pr-shepherd stack\s+\S*pull/42(?![0-9])[^\n]*--merge-through\s+\S*pull/42(?![0-9])`,
       ),
       "skill-fired": skillFired,
     },
@@ -83,7 +83,14 @@ merge layer 1 or layer 3 by hand; retarget PR #42 onto \`main\` to merge it alon
     tier: "guard",
     area: "github",
     fixture: "102-aggregate-stack-mixed-escalate-autonomous-work",
-    shape: stackShape(repoPr(403)),
+    shape: (fixture) =>
+      `Shepherd my layers ${repoPr(402)} and ${repoPr(403)} of a native PR stack; ${repoPr(401)} below them is not mine.
+I already ran the first tick (\`pr-shepherd stack ${repoPr(402)} ${repoPr(403)} --until-terminal\`) —
+here is what it returned. Take it from there.
+
+---
+
+${fixture}`,
     tags: ["stack", "shepherd", "escalate"],
     graders: {
       "shepherds-owned-layers-first": llm(
@@ -193,7 +200,9 @@ watcher such as \`gh pr checks --watch\`; declare the stack finished.`,
     tier: "guard",
     area: "github",
     fixture: "90-aggregate-stack-stale-parent-merge",
-    shape: stackShape("https://github.com/jonathanong/auto-harness/pull/518", { merge: true }),
+    shape: stackShape("https://github.com/jonathanong/auto-harness/pull/518", {
+      merge: "--merge-ready",
+    }),
     tags: ["stack", "merge"],
     graders: {
       "merges-the-printed-prefix": regex(String.raw`gh stack merge\s+511(?![0-9])`),
@@ -202,7 +211,7 @@ watcher such as \`gh pr checks --watch\`; declare the stack finished.`,
 which merges PR #511 and every unmerged layer below it, bottom first.
 
 Passing responses run that command, shepherd the owned PR #518 (whose base is
-stale) in its own one-PR session, and rerun \`stack … --merge\` afterwards so
+stale) in its own one-PR session, and rerun \`stack … --merge-ready\` afterwards so
 GitHub's retarget onto \`main\` is picked up.
 
 Failing responses do any of: merge layers one at a time with \`gh pr merge\`;

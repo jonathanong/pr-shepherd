@@ -1,0 +1,93 @@
+{
+  "description": "The caller owns #641 and #642 and another author owns #643 above them. Branch updates stop below #643, which is never rebased or pushed.",
+  "mode": "aggregate",
+  "args": [
+    "stack",
+    "https://github.com/owner/repo/pull/641",
+    "https://github.com/owner/repo/pull/642",
+    "--debounce",
+    "0s"
+  ],
+  "expectedExitCode": 16,
+  "expectedNextAction": "shepherd",
+  "expectedReason": "actionable",
+  "aggregateSummary": {
+    "selection": {
+      "kind": "stack",
+      "anchor": 641,
+      "stackNumber": 64,
+      "stackSize": 3
+    },
+    "prs": [
+      {
+        "pr": 641,
+        "repo": "owner/repo",
+        "title": "Layer 1",
+        "url": "https://github.com/owner/repo/pull/641",
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-641",
+        "headRefOid": "6416416416416416416416416416416416416416",
+        "baseRefName": "main",
+        "stack": {
+          "number": 64,
+          "size": 3,
+          "position": 1,
+          "baseRefName": "main"
+        },
+        "action": "triage",
+        "reasons": [
+          "review-work"
+        ],
+        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/641 --until-terminal"
+      },
+      {
+        "pr": 642,
+        "repo": "owner/repo",
+        "title": "Layer 2",
+        "url": "https://github.com/owner/repo/pull/642",
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-642",
+        "headRefOid": "6426426426426426426426426426426426426426",
+        "baseRefName": "layer-641",
+        "stack": {
+          "number": 64,
+          "size": 3,
+          "position": 2,
+          "baseRefName": "main"
+        },
+        "action": "triage",
+        "reasons": [
+          "review-work"
+        ],
+        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/642 --until-terminal"
+      },
+      {
+        "pr": 643,
+        "repo": "owner/repo",
+        "title": "Layer 3",
+        "url": "https://github.com/owner/repo/pull/643",
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-643",
+        "headRefOid": "6436436436436436436436436436436436436436",
+        "baseRefName": "layer-642",
+        "stack": {
+          "number": 64,
+          "size": 3,
+          "position": 3,
+          "baseRefName": "main"
+        },
+        "action": "triage",
+        "reasons": [
+          "review-work"
+        ],
+        "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/643 --until-terminal"
+      }
+    ]
+  }
+}
