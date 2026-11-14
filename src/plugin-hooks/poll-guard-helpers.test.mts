@@ -14,6 +14,11 @@ describe("shell forms that look like PR reads but are not", () => {
     "echo $'it\\'s gh pr checks 42 --watch'",
     "while :; do gh api repos/o/r/actions/runs/1 > pulls.json; sleep 60; done",
     "while :; do curl https://api.github.com/repos/o/r/actions/runs/1 -o pulls.json; sleep 60; done",
+    "while :; do curl https://api.github.com/repos/o/r/actions/runs/1 -o/tmp/pulls.json; sleep 60; done",
+    "while :; do curl -sSo pulls.json https://api.github.com/repos/o/r/actions/runs/1; sleep 60; done",
+    "while :; do curl --output=pulls.json https://api.github.com/repos/o/r/actions/runs/1; sleep 60; done",
+    `for term in alpha beta; do gh pr list --search "it's $term's PR"; sleep 1; done`,
+    `for t in a b; do gh pr list --search "x \\"$t\\" y"; sleep 1; done`,
   ])("does not flag %s", (command) => {
     expect(detectPoller(command)).toBeNull();
   });

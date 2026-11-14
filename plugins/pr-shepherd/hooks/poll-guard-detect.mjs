@@ -8,7 +8,7 @@
 // Words inside quotes, comments and heredocs are data, not commands. Anything the
 // scanner cannot classify passes: the guard prefers a miss to a false positive.
 
-import { argText, usesLoopVar } from "./poll-guard-args.mjs";
+import { argText, curlArgs, usesLoopVar } from "./poll-guard-args.mjs";
 import { leadingQuoted, simpleCommands } from "./poll-guard-shell.mjs";
 
 const PR_SUBCOMMANDS = new Set(["view", "checks", "status", "list"]);
@@ -121,8 +121,7 @@ function isPrRead(cmd) {
   if (first === "pr-shepherd") {
     return isShepherdTick(cmd.words.map((w) => w.raw.replace(/^(["'])(.*)\1$/, "$2")));
   }
-  // `curl -o FILE` names where the response goes, not what it reads.
-  const args = argText(cmd).replace(/(?:^|\s)(?:-o|--output)\s+\S+/g, " ");
+  const args = curlArgs(cmd);
   return first === "curl" && /api\.github\.com/.test(args) && PR_API.test(args);
 }
 
