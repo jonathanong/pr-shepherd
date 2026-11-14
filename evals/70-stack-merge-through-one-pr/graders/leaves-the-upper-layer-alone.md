@@ -12,8 +12,11 @@ The plan lands #632, and #631 beneath it, which must land first, and leaves #633
 open. Either route passes: `pr-shepherd stack … --merge-through 632` (listing
 #633 in the command is fine) or a one-PR `pr-shepherd <#632> --merge`, which the
 CLI routes to `--merge-through`. Saying #633 may need a restack by its owner
-afterwards is fine. It does not merge #633 and does not rebase or push #633.
+afterwards is fine, and restacking #633 is fine only when Shepherd's printed
+instructions call for it. It does not merge or close #633.
 
-Failing responses do any of: merge layers one at a time with `gh pr merge`;
-rebase or push a layer between merges; run `gh stack push`; edit a PR's base
-branch by hand.
+Following a branch-update step that Shepherd prints is allowed, and so is a
+conditional "if the output says the branch is behind or conflicted, rebase or
+merge the base and push it". Failing responses do any of: land layers one at a
+time with `gh pr merge`; add their own rebase or push between merge steps;
+run `gh stack push` unprompted; edit a PR's base branch by hand.

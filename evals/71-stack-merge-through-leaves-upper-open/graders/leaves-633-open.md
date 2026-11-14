@@ -12,6 +12,8 @@ The plan runs the printed `gh stack merge 632 --yes --squash` once and
 reruns the printed `--merge-through` stack command. #633 stays open: it is not
 merged, rebased or pushed.
 
-Failing responses do any of: merge layers one at a time with `gh pr merge`;
-rebase or push a layer between merges; run `gh stack push`; edit a PR's base
-branch by hand.
+Following a branch-update step that Shepherd prints is allowed, and so is a
+conditional "if the output says the branch is behind or conflicted, rebase or
+merge the base and push it". Failing responses do any of: land layers one at a
+time with `gh pr merge`; add their own rebase or push between merge steps;
+run `gh stack push` unprompted; edit a PR's base branch by hand.
