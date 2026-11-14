@@ -80,6 +80,7 @@ agent actually reads. Isolating the playbooks would need a third arm.
 | `63-status-question-one-tick`                  | —       | One-time status question: one `iterate` tick, reported and not acted on                        |
 | `64-read-shepherd-output-unfiltered`           | —       | "Keep output small": no pipe through `head`/`tail`/`grep`/`cut`; read the whole output         |
 | `65-edited-thread-new-ask`                     | `177`   | A handled thread edited with a new ask: fix the new ask, not "already done"                    |
+| `66-create-pr-native-stack`                    | —       | Two dependent PRs: create a native stack with `gh stack`, not hand-chained bases               |
 
 "apply" is `test-cases/snapshots/apply-review-session-refusal`, an
 `apply review` output recorded by `test-cases/apply-review.test.mts` through

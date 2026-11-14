@@ -8,3 +8,5 @@ Apply when the user asks to make, create, or open a PR, before dispatching.
 - Rebasing your own PR head onto its base and pushing it with `--force-with-lease` is also part of this workflow. Do not ask first.
 - Bare `--force`, pushes to any other branch, remote or credential changes, unrelated changes, and ambiguous targets stay outside this workflow.
 - Creating or opening a PR without merge intent leaves `--merge` off.
+- When the work splits into dependent PRs, create a GitHub native stack with `gh stack` instead of pointing branches at each other by hand: `gh extension install github/gh-stack`, `gh stack init <branch>`, `gh stack add <branch>`, `gh stack submit --auto`. If `gh stack` reports stacks are unavailable, open separate PRs on the default branch and merge them in order.
+- Merge a native stack with one `gh stack merge <top PR>` (or the merge Shepherd prints), which lands every layer below it; do not `gh pr merge` layer by layer and rebase between merges.
