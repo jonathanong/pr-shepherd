@@ -42,6 +42,14 @@ export function planStackMerge(
     const prefix = readyPrefix(result, true);
     const top = prefix.at(-1);
     if (top) return mergePlan(result, top, scope, rerunCommand);
+    const bottom = open.reduce((low, item) =>
+      stackPosition(item) < stackPosition(low) ? item : low,
+    );
+    if (!bottom.owned && isStackLayerReady(bottom) && open.some((item) => item.owned)) {
+      return escalation(
+        `\`unowned-stack-layers\`: ready PR #${bottom.pr} sits below owned layers and the caller does not own it, so \`--merge-ready\` has no owned prefix to merge. Nothing was merged. Stop and tell the user. They either approve it, and you rerun ${stackRerunTarget(rerunCommand)} with those PRs listed after \`stack\`, or wait for its owner to merge it.`,
+      );
+    }
     return open.some((item) => item.owned) || closedInScope(result, scope).length > 0
       ? undefined
       : scopeDone(open);
@@ -50,8 +58,23 @@ export function planStackMerge(
   if (!target) return closedInScope(result, scope).length > 0 ? undefined : scopeDone(open);
   const added = result.addedLayers ?? [];
   if (added.length > 0) {
+    const approved = open.filter((item) => !added.includes(item.pr));
+    const lastApproved = approved.reduce<PollSummaryItem | undefined>(
+      (top, item) => (!top || stackPosition(item) > stackPosition(top) ? item : top),
+      undefined,
+    );
+    const above =
+      !!lastApproved &&
+      !open.some(
+        (item) => added.includes(item.pr) && stackPosition(item) < stackPosition(lastApproved),
+      );
+    const recovery = !lastApproved
+      ? "If no, merge nothing."
+      : above
+        ? `If no, rerun with \`--merge-through ${lastApproved.pr}\`, the last approved PR.`
+        : "If no, do not use `--merge-through`: the new layer sits below an approved one and would land with it. Rerun with only the approved PRs listed after `stack`, which stops at the unowned layer, or wait for its owner.";
     return escalation(
-      `\`unapproved-stack-layer\`: ${added.map((pr) => `PR #${pr}`).join(", ")} joined this stack after the merge was requested, so the request does not cover ${added.length === 1 ? "it" : "them"}. Nothing was merged. Stop and ask the user whether ${added.length === 1 ? "that layer is" : "those layers are"} covered. If yes, rerun ${stackRerunTarget(rerunCommand)} with the covered PRs listed explicitly after \`stack\`. If no, rerun with \`--merge-through\` set to the last approved PR.`,
+      `\`unapproved-stack-layer\`: ${added.map((pr) => `PR #${pr}`).join(", ")} joined this stack after the merge was requested, so the request does not cover ${added.length === 1 ? "it" : "them"}. Nothing was merged. Stop and ask the user whether ${added.length === 1 ? "that layer is" : "those layers are"} covered. If yes, rerun ${stackRerunTarget(rerunCommand)} with the covered PRs listed explicitly after \`stack\`. ${recovery}`,
     );
   }
   const unowned = open.filter((item) => !item.owned && stackPosition(item) < stackPosition(target));

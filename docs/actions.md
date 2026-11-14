@@ -320,6 +320,7 @@ Scope rules:
 - An unowned open layer below the target would be landed by the merge: `ESCALATE` / `unowned-stack-layers`. Ask the user to approve (rerun with those PRs listed) or wait for the owner.
 - A layer that joins the stack after a whole-stack `--merge` was requested: `ESCALATE` / `unapproved-stack-layer`. The first tick of a whole-stack-owned `--merge` records the approved layers under the state directory, per stack and scope; the record is cleared when the scope completes. Listing PRs explicitly approves them; `--merge-through` covers only the PRs through its target.
 - A branch update with unowned layers in the stack rebases and pushes only the owned layers below the first unowned layer (`gh stack rebase --downstack` from the highest such layer, then `git push --force-with-lease` per owned branch), never the unowned layer or anything above it.
+- When the new layer sits below an approved one, the recovery does not offer `--merge-through` (it would land the new layer); `--merge-ready` with a ready unowned bottom layer and owned layers above escalates `unowned-stack-layers` instead of waiting.
 - Rows carry `owned: true` only when the caller listed its PRs; with whole-stack ownership the field is omitted. The session instruction follows: with listed PRs it says to start sessions only for `owned` rows; with whole-stack ownership it says every layer is the caller's.
 
 When the scope allows it, the command finds the highest open layer such that:
