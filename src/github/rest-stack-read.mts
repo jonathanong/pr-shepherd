@@ -14,6 +14,7 @@ import { readRestPull, restPullRefs } from "./rest-pr-core.mts";
 import { mapPool } from "../util/pool.mts";
 import { readRestViewerLogin } from "./rest-viewer-read.mts";
 import { currentRestConditionalKey, withRestConditionalScope } from "./rest-conditional-scope.mts";
+import { GitHubRequestError } from "./errors.mts";
 
 interface RestStack {
   number: number;
@@ -71,4 +72,36 @@ async function readTopology(anchor: number, repo: RepoInfo): Promise<StackRead<S
   // Installation tokens may read native stacks without supporting authenticated-user identity.
   const viewerLogin = await readRestViewerLogin();
   return { stackNumber: stack.number, stackSize: ordered.length, ordered, viewerLogin };
+}
+
+/** A native stack read by its number, or null when GitHub has no such stack (404). */
+export async function readRestStackByNumber(
+  stack: number,
+  repo: RepoInfo,
+): Promise<{ number: number; members: number[] } | null> {
+  try {
+    const body = restObject(
+      await rest<unknown>("GET", `${restRepoPath(repo)}/stacks/${stack}`),
+      "stack",
+    );
+    restArray(body.pull_requests, "stack pull_requests");
+    const members = (body.pull_requests as Array<{ number: unknown }>).map((pull) =>
+      restNumber(pull.number, "stack member number"),
+    );
+    return { number: restNumber(body.number, "stack number"), members };
+  } catch (error) {
+    if (error instanceof GitHubRequestError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+/** Whether a number names a pull request; a 404 means it may name a stack instead. */
+export async function restPullExists(pr: number, repo: RepoInfo): Promise<boolean> {
+  try {
+    await rest<unknown>("GET", `${restRepoPath(repo)}/pulls/${pr}`);
+    return true;
+  } catch (error) {
+    if (error instanceof GitHubRequestError && error.status === 404) return false;
+    throw error;
+  }
 }

@@ -5,21 +5,21 @@ nextAction: shepherd
 
 ## Layers
 
-- PR #441: Blocked receipt — shepherded · not mergeable (`merge-state`) · owned
+- PR #441: Blocked receipt — shepherded · not mergeable (`merge-state`)
   - OPEN · base `main`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields
   - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
   - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
-- PR #442: Hooks receipt — shepherded · not mergeable (`merge-state`) · owned
+- PR #442: Hooks receipt — shepherded · not mergeable (`merge-state`)
   - OPEN · base `blocked`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields
   - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
   - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
-- PR #443: Pending CI receipt — shepherded · not mergeable (`checks-in-progress`) · owned
+- PR #443: Pending CI receipt — shepherded · not mergeable (`checks-in-progress`)
   - OPEN · base `hooks` · 1 in progress
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied

@@ -5,7 +5,7 @@ nextAction: shepherd
 
 ## Layers
 
-- PR #431: Draft CI failure — not mergeable (`draft`) · owned
+- PR #431: Draft CI failure — not mergeable (`draft`)
   - OPEN · draft · base `main`
 
 ## Instructions

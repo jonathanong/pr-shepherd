@@ -7,7 +7,7 @@ nextAction: shepherd
 
 - PR #381: Verified foundation — shepherded · mergeable
   - OPEN · base `main`
-- PR #382: Unverified child — mergeable · owned
+- PR #382: Unverified child — mergeable
   - OPEN · base `foundation`
 
 ## Instructions

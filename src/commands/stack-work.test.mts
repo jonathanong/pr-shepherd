@@ -127,6 +127,8 @@ describe("stack command agent work", () => {
     const result = withPollSummaryInstructions(
       stack([row(1, 1, ready), disabledDraft(2, 2), row(3, 3, { isDraft: true })]),
       true,
+      undefined,
+      { kind: "ready" },
     );
     expect(result.nextAction).toBe("merge");
     expect(text(result)).toContain("gh stack merge 1 --yes --squash");

@@ -5,7 +5,7 @@ nextAction: shepherd
 
 ## Layers
 
-- PR #431: Draft CI failure — not mergeable (`draft`) · owned
+- PR #431: Draft CI failure — not mergeable (`draft`)
   - OPEN · draft · base `main`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied

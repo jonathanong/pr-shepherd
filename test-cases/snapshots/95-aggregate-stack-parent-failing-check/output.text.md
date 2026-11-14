@@ -5,7 +5,7 @@ nextAction: shepherd
 
 ## Layers
 
-- PR #321: CI failure — not mergeable (`failing-checks`) · owned
+- PR #321: CI failure — not mergeable (`failing-checks`)
   - OPEN · base `main` · 1 failing
 - PR #322: Verified child — shepherded · mergeable
   - OPEN · base `foundation`

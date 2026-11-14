@@ -5,7 +5,7 @@ nextAction: shepherd
 
 ## Layers
 
-- PR #311: Conflicting foundation — not mergeable (`conflicting`) · owned
+- PR #311: Conflicting foundation — not mergeable (`conflicting`)
   - OPEN · base `main`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied

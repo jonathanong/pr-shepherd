@@ -7,7 +7,7 @@ nextAction: shepherd
 
 - PR #361: Verified foundation — shepherded · mergeable
   - OPEN · base `main`
-- PR #362: Stale child — shepherded · not mergeable (`stale-ancestry`) · owned
+- PR #362: Stale child — shepherded · not mergeable (`stale-ancestry`)
   - OPEN · base `foundation`
 
 ## Stack ancestry

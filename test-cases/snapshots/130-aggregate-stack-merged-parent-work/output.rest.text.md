@@ -19,28 +19,28 @@ nextAction: shepherd
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields
   - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
   - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
-- PR #2547: Hostname dispatcher — not mergeable (`conflicting`) · owned
+- PR #2547: Hostname dispatcher — not mergeable (`conflicting`)
   - OPEN · base `fix/2429-hostname-flags-not-null`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields
   - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
   - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
-- PR #2569: Bloom rebuilds and backfills — not mergeable (`review-work`) · owned
+- PR #2569: Bloom rebuilds and backfills — not mergeable (`review-work`)
   - OPEN · base `fix/1855-crawl-hostnames-dispatcher` · 1 actionable
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields
   - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
   - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
-- PR #2627: UUID media registry and paged async replay — not mergeable (`review-work`) · owned
+- PR #2627: UUID media registry and paged async replay — not mergeable (`review-work`)
   - OPEN · base `fix/1855-bloom-reconciliation` · 1 actionable
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields
   - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
   - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
-- PR #2629: Image projection view and hydration budgets — not mergeable (`review-work`) · owned
+- PR #2629: Image projection view and hydration budgets — not mergeable (`review-work`)
   - OPEN · base `fix/2508-media-delivery-registry-ids` · 1 actionable
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied

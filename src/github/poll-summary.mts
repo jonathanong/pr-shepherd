@@ -62,7 +62,7 @@ async function fetchSelectedPollSummary(
     selection: { kind: "prs", requested },
     // One explicit PR's failed read becomes a row; stack selections stay fail-closed.
     prs: await summarizeRowsIsolated(raw, failures, repo, opts, (pr) =>
-      summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister, undefined, null, true),
+      summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister, undefined, true),
     ),
   };
 }
@@ -138,8 +138,7 @@ async function fetchStackSummary(
   const hint = graphql ? await loadStackSizeHint(stateKey) : 0;
   const sizeHint = hint || UNSIZED_STACK_SUMMARY_FIRST;
   const read = await readStackSummary(anchor, repo, sizeHint);
-  const { stackNumber, stackSize, viewerLogin, viewerCanAdminister, ordered, allowedMergeMethods } =
-    read;
+  const { stackNumber, stackSize, viewerCanAdminister, ordered, allowedMergeMethods } = read;
   if (graphql && stackSize !== hint) await storeStackSizeHint(stateKey, stackSize);
   for (const pr of ordered) {
     await hydratePollSummaryChecks(pr, repo);
@@ -150,7 +149,7 @@ async function fetchStackSummary(
   const required = await trunkRequiredContexts(ordered, repo);
   const prs = await Promise.all(
     ordered.map((pr) =>
-      summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister, required, viewerLogin, true),
+      summarizePollSummaryPr(pr, repo, opts, viewerCanAdminister, required, true),
     ),
   );
   if (handoffSource) patchHandoffLayers(handoffSource.layers, prs);

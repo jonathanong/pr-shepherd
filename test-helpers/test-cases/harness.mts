@@ -53,6 +53,30 @@ vi.mock("../../src/github/poll-summary.mts", () => ({
   fetchPollSummary: mockFetchPollSummaryValue,
   fetchRawSummaryPr: mockFetchRawSummaryPr,
 }));
+// Fixture refs are PR numbers or URLs of one stack, so ownership follows the listed PRs without
+// the REST reads that resolve a bare number against GitHub.
+vi.mock("../../src/commands/stack-targets.mts", async (importOriginal) => {
+  const { resolveParsedPrTarget } = await import("../../src/pr-reference.mts");
+  return {
+    ...(await importOriginal<typeof import("../../src/commands/stack-targets.mts")>()),
+    resolveStackTarget: async ({
+      refs,
+      through,
+    }: {
+      refs: Array<{ number?: number }>;
+      through?: { number?: number };
+    }) => {
+      const numbers = refs.map((ref) => ref.number!);
+      const targetRepository = resolveParsedPrTarget(refs[0] as never).targetRepository;
+      return {
+        anchor: numbers[0]!,
+        ...(numbers.length > 1 && { owned: numbers }),
+        ...(through?.number !== undefined && { through: through.number }),
+        ...(targetRepository && { targetRepository }),
+      };
+    },
+  };
+});
 vi.mock("../../src/state/ready-receipts.mts", async (importOriginal) => ({
   ...(await importOriginal()),
   writeReadyReceipt: vi.fn().mockResolvedValue(undefined),

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { row, stack } from "../../test-helpers/commands/poll-summary-stack.test-support.mts";
 import { freshLoadConfig, writeRc } from "../../test-helpers/config/load-test-support.mts";
 import { runWithGithubTransport } from "../github/transport.mts";
-import { planPrefixDrain } from "./stack-drain.mts";
+import { planStackMerge } from "./stack-merge-plan.mts";
 import { splitStackWork } from "./stack-work.mts";
 import {
   buildBranchPushInstruction,
@@ -49,7 +49,7 @@ describe("REST native stack instructions", () => {
       row(1, 1, { readyReceipt: true, transport: "rest", requiresMergeQueue: false }),
       row(2, 2),
     ]);
-    const plan = planPrefixDrain(result, true);
+    const plan = planStackMerge(result, { kind: "ready" });
     expect(plan).toMatchObject({ action: "merge", stackMergeable: false });
     expect(plan?.instructions[0]).toContain(
       "--require-sha 0000000000000000000000000000000000000001",
@@ -70,7 +70,7 @@ describe("REST native stack instructions", () => {
         transportUnavailable: [{ field: "branchRules", reason: "access denied" }],
       }),
     ]);
-    const plan = planPrefixDrain(result, true);
+    const plan = planStackMerge(result, { kind: "ready" });
     expect(plan).toMatchObject({ action: "escalate", stackMergeable: false });
     expect(plan?.instructions.join("\n")).toContain("cannot verify merge-queue policy");
     expect(plan?.instructions.join("\n")).not.toContain("apply merge");

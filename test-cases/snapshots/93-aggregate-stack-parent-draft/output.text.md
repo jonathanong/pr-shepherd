@@ -5,7 +5,7 @@ nextAction: shepherd
 
 ## Layers
 
-- PR #301: Draft foundation — not mergeable (`draft`) · owned
+- PR #301: Draft foundation — not mergeable (`draft`)
   - OPEN · draft · base `main`
 - PR #302: Ready-looking child — shepherded · mergeable
   - OPEN · base `foundation`

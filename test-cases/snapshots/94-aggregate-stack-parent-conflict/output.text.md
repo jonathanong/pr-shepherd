@@ -5,7 +5,7 @@ nextAction: shepherd
 
 ## Layers
 
-- PR #311: Conflicting foundation — not mergeable (`conflicting`) · owned
+- PR #311: Conflicting foundation — not mergeable (`conflicting`)
   - OPEN · base `main`
 - PR #312: Verified child — shepherded · mergeable
   - OPEN · base `foundation`

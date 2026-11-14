@@ -3,6 +3,7 @@
 export const FLAGS_WITH_VALUES = new Set([
   "--transport",
   "--merge-action",
+  "--merge-through",
   "--method",
   "--format",
   "--ready-delay",
@@ -38,6 +39,7 @@ export const BOOLEAN_FLAGS = new Set([
   "--no-quiet-status",
   "--until-terminal",
   "--merge",
+  "--merge-ready",
   "--dry-run",
   "--verbose",
   "--clear",

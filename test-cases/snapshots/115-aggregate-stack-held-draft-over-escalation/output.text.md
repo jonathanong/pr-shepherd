@@ -5,9 +5,9 @@ nextAction: escalate
 
 ## Layers
 
-- PR #451: Layer needing a decision — not mergeable (`triage-thrash`) · owned
+- PR #451: Layer needing a decision — not mergeable (`triage-thrash`)
   - OPEN · base `main`
-- PR #452: Held upper draft — not mergeable (`draft`) · owned
+- PR #452: Held upper draft — not mergeable (`draft`)
   - OPEN · draft · base `needs-decision`
 
 ## Instructions

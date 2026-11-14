@@ -5,7 +5,7 @@ nextAction: shepherd
 
 ## Layers
 
-- PR #50: Lower layer with a bot notice — shepherded · mergeable · owned
+- PR #50: Lower layer with a bot notice — shepherded · mergeable
   - OPEN · base `main`
   - classification auto-resolve: minimized 1 comment (rule: coderabbit-progress)
     - pr-comment `IC_progress` https://github.com/owner/repo/pull/50#issuecomment-9
@@ -14,7 +14,7 @@ nextAction: shepherd
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields
   - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
   - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
-- PR #51: Upper layer needs work — not mergeable (`review-work`) · owned
+- PR #51: Upper layer needs work — not mergeable (`review-work`)
   - OPEN · base `lower` · 1 actionable
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied

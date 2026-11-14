@@ -16,6 +16,8 @@ import type { PollSummaryCommandOptions, PollSummaryResult } from "../types.mts"
 import { planPollSummary, withPollSummaryInstructions } from "./poll-summary-instructions.mts";
 import { summaryStatusSignature } from "./poll-summary-signature.mts";
 import { applyStackStallGuard } from "./stack-stall.mts";
+import { applyStackOwnership } from "./stack-ownership.mts";
+import { requestedMergeScope, stackAddedLayers } from "./stack-merge-scope.mts";
 import { aggregateDeadline } from "./stall-deadline.mts";
 import {
   aggregateTargets,
@@ -81,21 +83,32 @@ async function handOffRoutedLayers(tick: PollSummaryTick): Promise<void> {
 
 async function readPollSummaryTick(opts: PollSummaryCommandOptions): Promise<PollSummaryTick> {
   const repo = opts.targetRepository ?? (await getRepoInfo());
-  const fetched = await fetchPollSummary(opts, repo);
+  const fetchedRaw = await fetchPollSummary(opts, repo);
+  const fetched =
+    fetchedRaw.selection.kind === "stack"
+      ? {
+          ...fetchedRaw,
+          ...applyStackOwnership(fetchedRaw.selection, fetchedRaw.prs, opts.stackOwned),
+        }
+      : fetchedRaw;
   const allTerminal = fetched.prs.every((item) => item.action === "cancel");
   const actionable = fetched.prs.some((item) => item.action !== "wait" && item.action !== "cancel");
+  const scope = requestedMergeScope(opts);
+  const summary: PollSummaryResult = {
+    mode: "summary",
+    repo: `${repo.owner}/${repo.name}`,
+    selection: fetched.selection,
+    reason: allTerminal ? "all_terminal" : actionable ? "actionable" : "waiting",
+    prs: fetched.prs,
+    ...(fetched.stackAncestry?.length && { stackAncestry: fetched.stackAncestry }),
+    ...(fetched.allowedMergeMethods && { allowedMergeMethods: fetched.allowedMergeMethods }),
+  };
+  const addedLayers = await stackAddedLayers(summary, scope);
   const planned = planPollSummary(
-    {
-      mode: "summary",
-      repo: `${repo.owner}/${repo.name}`,
-      selection: fetched.selection,
-      reason: allTerminal ? "all_terminal" : actionable ? "actionable" : "waiting",
-      prs: fetched.prs,
-      ...(fetched.stackAncestry?.length && { stackAncestry: fetched.stackAncestry }),
-      ...(fetched.allowedMergeMethods && { allowedMergeMethods: fetched.allowedMergeMethods }),
-    },
-    opts.merge === true,
+    { ...summary, ...(addedLayers.length > 0 && { addedLayers }) },
+    scope !== undefined,
     aggregateRerunCommand(`${repo.owner}/${repo.name}`, fetched.selection, opts),
+    scope,
   );
   const result = await applyStackStallGuard(
     planned,
@@ -311,11 +324,21 @@ function attachUsage(
   // that explicit escalation intact even when the one-PR fallback contains
   // open orphan rows that would otherwise be re-planned as triage.
   if (enriched.selection.kind === "stack" && enriched.nextAction === "escalate") {
-    return enriched;
+    return withoutImpliedOwnership(enriched);
   }
-  return withPollSummaryInstructions(
-    enriched,
-    opts.merge === true,
-    aggregateRerunCommand(enriched.repo, enriched.selection, opts),
+  const scope = requestedMergeScope(opts);
+  return withoutImpliedOwnership(
+    withPollSummaryInstructions(
+      enriched,
+      scope !== undefined,
+      aggregateRerunCommand(enriched.repo, enriched.selection, opts),
+      scope,
+    ),
   );
+}
+
+/** Whole-stack ownership is the default, so rows say `owned` only when the caller listed PRs. */
+function withoutImpliedOwnership(result: PollSummaryResult): PollSummaryResult {
+  if (result.selection.kind !== "stack" || result.selection.owned) return result;
+  return { ...result, prs: result.prs.map(({ owned: _owned, ...item }) => item) };
 }

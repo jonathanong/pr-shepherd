@@ -44,13 +44,21 @@ export function aggregateRerunCommand(
 ): string {
   const args =
     selection.kind === "stack"
-      ? ["stack", formatPrUrl(repo, selection.anchor), opts.tick ? "--once" : "--until-terminal"]
+      ? [
+          "stack",
+          // Listed PRs name the caller's own layers; otherwise the anchor selects the whole stack.
+          ...(selection.owned ?? [selection.anchor]).map((pr) => formatPrUrl(repo, pr)),
+          opts.tick ? "--once" : "--until-terminal",
+        ]
       : [
           ...(opts.tick ? ["iterate"] : []),
           ...selection.requested.map((pr) => formatPrUrl(repo, pr)),
           ...(opts.tick ? [] : ["--until-terminal"]),
         ];
-  if (opts.merge) args.push("--merge");
+  if (opts.stackMerge?.kind === "ready") args.push("--merge-ready");
+  else if (opts.stackMerge?.kind === "through")
+    args.push("--merge-through", formatPrUrl(repo, opts.stackMerge.pr));
+  else if (opts.merge) args.push("--merge");
   // The parser always fills these from config, so a default value adds nothing to the command.
   const iterate = loadConfig().iterate;
   if (
@@ -66,4 +74,9 @@ export function aggregateRerunCommand(
   if (opts.instructions) args.push("--instructions", opts.instructions);
   if (opts.noAutoMarkReady) args.push("--no-auto-mark-ready");
   return buildPrShepherdCommand(args).text;
+}
+
+/** The same stack command, merging whichever owned prefix is ready instead of the whole scope. */
+export function mergeReadyCommand(command: string): string {
+  return command.replace(/ --merge(?:-through \S+)?(?= |$)/, " --merge-ready");
 }

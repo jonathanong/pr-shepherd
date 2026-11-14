@@ -5,9 +5,9 @@ nextAction: shepherd
 
 ## Layers
 
-- PR #2620: ci(filters): require path filters to cover executed scripts — not mergeable (`review-work`) · owned
+- PR #2620: ci(filters): require path filters to cover executed scripts — not mergeable (`review-work`)
   - OPEN · base `main` · 3 actionable
-- PR #2621: fix(ci): make run-bounded own the command's output pipes — shepherded · mergeable · owned
+- PR #2621: fix(ci): make run-bounded own the command's output pipes — shepherded · mergeable
   - OPEN · base `ci/executed-script-path-coverage`
 
 ## Instructions

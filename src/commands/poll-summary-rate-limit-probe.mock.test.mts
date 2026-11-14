@@ -11,6 +11,12 @@ vi.mock("../state/stack-stall.mts", () => ({
   clearStackStallState: vi.fn(async () => undefined),
 }));
 
+vi.mock("../state/stack-merge-approval.mts", () => ({
+  readApprovedLayers: vi.fn(async () => null),
+  writeApprovedLayers: vi.fn(async () => undefined),
+  clearApprovedLayers: vi.fn(async () => undefined),
+}));
+
 import { fetchPollSummary } from "../github/poll-summary.mts";
 import { rest } from "../github/rest-http.mts";
 import { exhaustedPrimaryLimitDelayMs } from "./poll-rate-limit-delay.mts";

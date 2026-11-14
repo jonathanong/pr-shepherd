@@ -5,7 +5,7 @@ nextAction: wait
 
 ## Layers
 
-- PR #461: Draft awaiting review — not mergeable (`draft`) · owned
+- PR #461: Draft awaiting review — not mergeable (`draft`)
   - OPEN · draft · base `main`
 
 ## Instructions

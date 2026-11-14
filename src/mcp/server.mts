@@ -89,7 +89,24 @@ const iterateInputSchema = z
     { message: "all prs must belong to the same repository" },
   );
 
-const stackInputSchema = z.object({ ...tickOptionsSchema, pr });
+const stackInputSchema = z
+  .object({
+    ...tickOptionsSchema,
+    refs: z
+      .array(pr)
+      .min(1)
+      .describe(
+        "One stack number as owner/repo#N, one PR (its whole stack), or several PRs of one stack (you own only those). Each is a GitHub pull-request URL or owner/repo#number.",
+      ),
+    mergeReady: z
+      .boolean()
+      .optional()
+      .describe("Merge the ready prefix of owned layers; exclusive with merge and mergeThrough."),
+    mergeThrough: pr
+      .optional()
+      .describe("Merge owned layers up to this PR; exclusive with merge and mergeReady."),
+  })
+  .describe("merge lands every owned layer together, once all are ready.");
 
 const reviewMutationsOperationSchema = z.object({
   type: z.literal("review_mutations"),
@@ -230,7 +247,7 @@ export function createPrShepherdMcpServer(
     "stack",
     {
       description:
-        "Inspect the native stack containing one pull request and return one aggregate Shepherd tick.",
+        "Inspect one native stack (a stack number, a PR, or several PRs you own) and return one aggregate Shepherd tick.",
       inputSchema: stackInputSchema,
       annotations: {
         readOnlyHint: false,
@@ -241,7 +258,7 @@ export function createPrShepherdMcpServer(
     },
     async (input) =>
       runTool(
-        () => getShepherd().stack(requireRepositoryQualifiedPr(input) as StackInput),
+        () => getShepherd().stack(requireStackInput(input)),
         formatPollSummaryResult,
         projectStackOverview,
       ),
@@ -380,6 +397,15 @@ function requireRepositoryQualifiedIterate(input: {
 
 function isPollSummary(result: IterateResult | PollSummaryResult): result is PollSummaryResult {
   return "mode" in result && result.mode === "summary";
+}
+
+/** The stack tool's `refs` are validated here too, so a direct handler call fails like a schema miss. */
+function requireStackInput(input: unknown): StackInput {
+  const parsed = stackInputSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new PrShepherdValidationError(parsed.error.issues[0]?.message ?? QUALIFIED_PR_ERROR);
+  }
+  return parsed.data as StackInput;
 }
 
 function requireRepositoryQualifiedPr<Input extends { pr?: unknown }>(

@@ -34,7 +34,6 @@ export async function summarizePollSummaryPr(
   opts: PollSummaryCommandOptions,
   viewerCanAdminister: boolean | undefined = undefined,
   mergeTargetContexts?: readonly string[],
-  viewerLogin: string | null = null,
   /** Aggregate polls only: apply rule-driven auto-resolve. Receipt and merge validation reads never mutate. */
   applyRuleAutoResolve = false,
 ): Promise<PollSummaryItem> {
@@ -158,9 +157,6 @@ export async function summarizePollSummaryPr(
     title: raw.title,
     url: raw.url || formatPrUrl(repoName, raw.number),
     ...(raw.author?.login && { authorLogin: raw.author.login }),
-    ...(raw.author?.login &&
-      viewerLogin !== null &&
-      raw.author.login.toLowerCase() === viewerLogin.toLowerCase() && { owned: true as const }),
     action,
     reasons,
     state: normalizePollSummaryState(raw.state),

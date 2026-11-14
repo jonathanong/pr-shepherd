@@ -13,7 +13,9 @@ export type EscalateTrigger =
   | "check-follow-up-unavailable"
   | "authorization-required"
   | "merge-queue-removed"
-  | "merge-method-unavailable";
+  | "merge-method-unavailable"
+  | "unowned-stack-layers"
+  | "unapproved-stack-layer";
 
 export interface AgentStalledCheck {
   name: string;

@@ -1,6 +1,6 @@
 /* eslint-disable max-lines */
 import { buildQuotaAwareContinuation } from "../quota-warning.mts";
-import type { PollSummaryItem, PollSummaryResult } from "../types.mts";
+import type { PollSummaryItem, PollSummaryResult, StackMergeScope } from "../types.mts";
 import { explicitInstructions } from "./poll-summary-explicit-instructions.mts";
 import {
   appendAutonomousInstructions,
@@ -8,11 +8,12 @@ import {
   findHumanHandoffs,
   idleWaitPlan,
   isStackLayerReady,
-  planPrefixDrain,
   retargetWaitPlan,
   stackPosition,
   type StackPlan,
 } from "./stack-drain.mts";
+import { lowerReadyNote, planStackMerge } from "./stack-merge-plan.mts";
+import { ownershipBoundaryStep } from "./stack-ownership.mts";
 import {
   appendStackRerunInstruction,
   onlyDraftReadinessVerification,
@@ -25,8 +26,9 @@ export function withPollSummaryInstructions(
   result: PollSummaryResult,
   mergeRequested: boolean,
   rerunCommand?: string,
+  scope?: StackMergeScope,
 ): PollSummaryResult {
-  return planPollSummary(result, mergeRequested, rerunCommand).result;
+  return planPollSummary(result, mergeRequested, rerunCommand, scope).result;
 }
 
 /** The projected summary, plus the idle layers when the stack plan can only wait on them. */
@@ -34,6 +36,7 @@ export function planPollSummary(
   result: PollSummaryResult,
   mergeRequested: boolean,
   rerunCommand?: string,
+  scope: StackMergeScope | undefined = mergeRequested ? { kind: "all" } : undefined,
 ): { result: PollSummaryResult; idle?: PollSummaryItem[] } {
   if (result.selection.kind !== "stack") {
     return { result: { ...result, instructions: explicitInstructions(result, rerunCommand) } };
@@ -90,8 +93,23 @@ export function planPollSummary(
       return layer;
     }),
   };
-  const planned = planStack(projected, mergeRequested, rerunCommand);
+  const planned = planStack(
+    projected,
+    mergeRequested,
+    rerunCommand,
+    mergeRequested ? scope : undefined,
+  );
   const instructions = [...planned.instructions];
+  if (planned.action === "shepherd" || planned.action === "wait") {
+    const note = lowerReadyNote(projected, scope, rerunCommand);
+    if (note) instructions.push(`${instructions.length + 1}. ${note}`);
+  }
+  const boundary = planned.action === "shepherd" ? ownershipBoundaryStep(projected) : undefined;
+  if (boundary) {
+    // The rerun step stays last; renumber around the inserted step.
+    instructions.splice(Math.max(instructions.length - 1, 0), 0, `0. ${boundary}`);
+    instructions.forEach((line, i) => (instructions[i] = line.replace(/^\d+\. /, `${i + 1}. `)));
+  }
   if (result.quotaWarning && planned.action === "shepherd") {
     instructions.push(
       buildQuotaAwareContinuation(
@@ -123,6 +141,7 @@ function planStack(
   result: PollSummaryResult,
   mergeRequested: boolean,
   rerunCommand?: string,
+  scope?: StackMergeScope,
 ): StackPlan {
   const again = stackRerunTarget(rerunCommand);
   const open = result.prs.filter((item) => item.state === "OPEN");
@@ -141,7 +160,7 @@ function planStack(
   const agentWork = runnableCandidates.length > 0;
   // Only owned work defers a human handoff: rerunning cannot advance another author's layer.
   const ownedWork = runnableCandidates.some((item) => item.owned);
-  const drain = planPrefixDrain(result, mergeRequested, rerunCommand);
+  const drain = planStackMerge(result, scope, rerunCommand);
   if (drain) return drain;
 
   const handoffs = findHumanHandoffs(result);

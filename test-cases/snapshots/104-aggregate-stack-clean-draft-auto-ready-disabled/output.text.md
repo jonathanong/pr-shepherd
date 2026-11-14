@@ -5,7 +5,7 @@ nextAction: cancel
 
 ## Layers
 
-- PR #421: Clean draft — not mergeable (`draft`) · owned
+- PR #421: Clean draft — not mergeable (`draft`)
   - OPEN · draft · base `main`
 
 ## Instructions

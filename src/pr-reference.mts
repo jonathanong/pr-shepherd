@@ -3,6 +3,8 @@ import { setAuthTarget } from "./github/auth-target.mts";
 export interface ParsedPrReference {
   number?: number;
   repository?: string;
+  /** A pull-request URL names a PR for certain; a bare number may name a PR or a stack. */
+  url?: true;
 }
 
 export interface ResolvedPrTarget {
@@ -34,7 +36,7 @@ export function parsePrReference(pr: number | string | undefined): ParsedPrRefer
       parts[2] === "pull" &&
       /^[1-9][0-9]*$/.test(parts[3]!)
     ) {
-      return { number: Number(parts[3]), repository: `${parts[0]}/${parts[1]}` };
+      return { number: Number(parts[3]), repository: `${parts[0]}/${parts[1]}`, url: true };
     }
   } catch {
     // Return the uniform invalid result below.

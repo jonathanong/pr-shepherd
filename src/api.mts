@@ -14,6 +14,11 @@ import type { MergeMethod } from "./config/merge-method.mts";
 import { runSuggestionPatches } from "./commands/suggestion-patches.mts";
 import { runIterateTick, runPollSummaryTick } from "./commands/tick.mts";
 import {
+  resolveStackTarget,
+  stackMergeScope,
+  type StackMergeFlag,
+} from "./commands/stack-targets.mts";
+import {
   applyCheckBlocker,
   type CheckBlockerCommandResult,
 } from "./commands/apply-check-blocker.mts";
@@ -107,8 +112,18 @@ export type MultiIterateInput = IterateOptions & { prs: PrReference[]; pr?: neve
 
 export type IterateInput = SingleIterateInput | MultiIterateInput;
 
-/** One aggregate tick over the native stack containing `pr`. */
-export type StackInput = IterateOptions & { pr: PrReference };
+/**
+ * One aggregate tick over one native stack. `refs` is one stack number (or `owner/repo#N` naming
+ * one), which the caller owns entirely; one PR, which selects its stack and owns every layer; or
+ * several PRs of one stack, which own only those PRs. `merge` lands every owned layer,
+ * `mergeReady` the ready owned prefix, and `mergeThrough` the owned layers up to that PR; they are
+ * mutually exclusive.
+ */
+export type StackInput = IterateOptions & {
+  refs: PrReference[];
+  mergeReady?: boolean;
+  mergeThrough?: PrReference;
+};
 
 export interface ReviewMutationsOperation {
   type: "review_mutations";
@@ -280,15 +295,33 @@ export function createPrShepherd(options: CreatePrShepherdOptions = {}): PrSheph
 
     stack(input: StackInput) {
       return runInClient(input ?? {}, async () => {
-        if (!input || input.pr === undefined) {
-          throw new PrShepherdValidationError("stack requires a PR reference");
+        if (!input || !Array.isArray(input.refs) || input.refs.length === 0) {
+          throw new PrShepherdValidationError("stack requires at least one reference");
         }
-        const { pr, ...options } = input;
-        const { numbers, repository } = await resolveSameRepositoryRefs([pr], "stack.pr");
+        const { refs, mergeReady, mergeThrough, ...options } = input;
+        const flags: StackMergeFlag[] = [
+          ...(options.merge ? (["merge"] as const) : []),
+          ...(mergeReady ? (["ready"] as const) : []),
+          ...(mergeThrough !== undefined ? (["through"] as const) : []),
+        ];
+        if (flags.length > 1) {
+          throw new PrShepherdValidationError(
+            "merge, mergeReady, and mergeThrough are mutually exclusive",
+          );
+        }
+        const target = await resolveStackTarget({
+          refs: refs.map(parseStackRef),
+          ...(mergeThrough !== undefined && { through: parseStackRef(mergeThrough) }),
+          ...(flags[0] && { merge: flags[0] }),
+        });
+        const scope = stackMergeScope(flags[0], target.through);
         return runPollSummaryTick({
           ...options,
-          stackPrNumber: numbers[0],
-          targetRepository: repository,
+          merge: scope !== undefined,
+          ...(scope && { stackMerge: scope }),
+          stackPrNumber: target.anchor,
+          ...(target.owned && { stackOwned: target.owned }),
+          targetRepository: target.targetRepository,
         });
       });
     },
@@ -443,6 +476,12 @@ async function resolveSameRepositoryRefs(
     if (!numbers.includes(prNumber)) numbers.push(prNumber);
   }
   return { numbers, repository: repository! };
+}
+
+function parseStackRef(ref: PrReference): ParsedPrReference {
+  const parsed = parsePrReference(ref);
+  if (!parsed?.number) throw new PrShepherdValidationError(`Invalid reference: ${String(ref)}`);
+  return parsed;
 }
 
 function validateApplyInput(input: ApplyInput): void {

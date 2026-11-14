@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../config/load.mts";
 import type { PollSummarySelection } from "../types.mts";
-import { aggregateRerunCommand, pollCommandFields } from "./poll-summary-command.mts";
+import {
+  aggregateRerunCommand,
+  mergeReadyCommand,
+  pollCommandFields,
+} from "./poll-summary-command.mts";
 
 describe("pollCommandFields --instructions", () => {
   it("forwards an explicit instruction style to the per-PR poll command", () => {
@@ -80,6 +84,41 @@ describe("aggregateRerunCommand", () => {
     );
     expect(aggregateRerunCommand("o/r", stack, { tick: true })).toBe(
       "pr-shepherd stack https://github.com/o/r/pull/7 --once",
+    );
+  });
+
+  it("lists the caller's PRs after stack, not the anchor, when only some were declared", () => {
+    const owned: PollSummarySelection = { ...stack, owned: [7, 9] };
+    expect(aggregateRerunCommand("o/r", owned, { merge: true })).toBe(
+      "pr-shepherd stack https://github.com/o/r/pull/7 https://github.com/o/r/pull/9 --until-terminal --merge",
+    );
+  });
+
+  it("repeats the merge scope the caller chose", () => {
+    expect(
+      aggregateRerunCommand("o/r", stack, { merge: true, stackMerge: { kind: "ready" } }),
+    ).toBe("pr-shepherd stack https://github.com/o/r/pull/7 --until-terminal --merge-ready");
+    expect(
+      aggregateRerunCommand("o/r", stack, { merge: true, stackMerge: { kind: "through", pr: 8 } }),
+    ).toBe(
+      "pr-shepherd stack https://github.com/o/r/pull/7 --until-terminal --merge-through https://github.com/o/r/pull/8",
+    );
+    expect(aggregateRerunCommand("o/r", stack, { merge: true, stackMerge: { kind: "all" } })).toBe(
+      "pr-shepherd stack https://github.com/o/r/pull/7 --until-terminal --merge",
+    );
+  });
+});
+
+describe("mergeReadyCommand", () => {
+  it.each([
+    ["pr-shepherd stack https://github.com/o/r/pull/7 --until-terminal --merge", "--merge-ready"],
+    [
+      "pr-shepherd stack https://github.com/o/r/pull/7 --until-terminal --merge-through https://github.com/o/r/pull/8 --ready-delay 60s",
+      "--merge-ready --ready-delay 60s",
+    ],
+  ])("swaps the whole-scope flag in %s", (command, tail) => {
+    expect(mergeReadyCommand(command)).toBe(
+      `pr-shepherd stack https://github.com/o/r/pull/7 --until-terminal ${tail}`,
     );
   });
 });

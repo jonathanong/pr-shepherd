@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { row, stack } from "../../test-helpers/commands/poll-summary-stack.test-support.mts";
 import type { PollSummaryItem } from "../types.mts";
 import { withPollSummaryInstructions } from "./poll-summary-instructions.mts";
-import { planPrefixDrain } from "./stack-drain.mts";
+import { planStackMerge } from "./stack-merge-plan.mts";
 import { appendStackRerunInstruction } from "./stack-work.mts";
 
 /** A layer another author owns: `owned` is only ever present as `true`. */
@@ -27,11 +27,11 @@ describe("stack rerun step", () => {
       "pr-shepherd stack 1 --merge --until-terminal",
       "rerun `pr-shepherd stack 1 --merge --until-terminal`;",
     ],
-    ["the generic name without a command", undefined, "rerun this same `stack --merge` command;"],
+    ["the generic name without a command", undefined, "rerun this same `stack` merge command;"],
   ] as const)("names %s after a prefix merge attempt", (_case, command, expected) => {
-    const plan = planPrefixDrain(
+    const plan = planStackMerge(
       stack([row(1, 1, { readyReceipt: true, baseRefName: "main" }), row(2, 2)]),
-      true,
+      { kind: "ready" },
       command,
     );
     expect(plan?.instructions.at(-1)).toContain(`After the merge attempt, ${expected}`);

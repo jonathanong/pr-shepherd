@@ -13,7 +13,7 @@ nextAction: merge
   - OPEN · base `main`
 - PR #511: [codex] add GitHub trigger and pull-ref foundation — shepherded · mergeable
   - OPEN · base `codex/webhook-platform`
-- PR #518: [codex] add GitHub App comment ingress — not mergeable (`stale-ancestry`) · owned
+- PR #518: [codex] add GitHub App comment ingress — not mergeable (`stale-ancestry`)
   - OPEN · base `codex/github-ingress-foundation`
 
 ## Stack ancestry
@@ -22,7 +22,7 @@ nextAction: merge
 
 ## Instructions
 
-1. PR #511 is the highest open layer of stack #514 in `jonathanong/auto-harness` whose open lower layers are all ready. Run `GH_REPO=jonathanong/auto-harness gh stack merge 511 --yes --squash` to merge PR #511 and every unmerged layer below it. If `gh stack` is an unknown command, run `gh extension install github/gh-stack`, then rerun that merge command. Do not rebase, push, or run `gh stack push`.
+1. Run `GH_REPO=jonathanong/auto-harness gh stack merge 511 --yes --squash` in `jonathanong/auto-harness` to merge PRs #510, #511 of stack #514. #518 stays open above it; GitHub retargets it onto `main`. One command lands every listed layer. Do not merge the layers one at a time with `gh pr merge`, and do not rebase or push between layers; GitHub retargets the remaining layers itself. If `gh stack` is an unknown command, run `gh extension install github/gh-stack`, then rerun that merge command.
 2. Start or delegate concurrent one-PR sessions only for `owned` rows. Leave other layers untouched.
 3. Run `pr-shepherd https://github.com/jonathanong/auto-harness/pull/518 --until-terminal --merge`.
-4. After the merge attempt, rerun `pr-shepherd stack https://github.com/jonathanong/auto-harness/pull/518 --until-terminal --merge`; GitHub retargets the next layer onto `main`. Shepherd any layer that GitHub rejects or ejects.
+4. After the merge attempt, rerun `pr-shepherd stack https://github.com/jonathanong/auto-harness/pull/518 --until-terminal --merge-ready`; GitHub retargets the next layer onto `main`. Shepherd any layer that GitHub rejects or ejects.

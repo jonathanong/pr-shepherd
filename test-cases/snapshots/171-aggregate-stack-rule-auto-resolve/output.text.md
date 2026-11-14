@@ -5,11 +5,11 @@ nextAction: shepherd
 
 ## Layers
 
-- PR #50: Lower layer with a bot notice — shepherded · mergeable · owned
+- PR #50: Lower layer with a bot notice — shepherded · mergeable
   - OPEN · base `main`
   - classification auto-resolve: minimized 1 comment (rule: coderabbit-progress)
     - pr-comment `IC_progress` https://github.com/owner/repo/pull/50#issuecomment-9
-- PR #51: Upper layer needs work — not mergeable (`review-work`) · owned
+- PR #51: Upper layer needs work — not mergeable (`review-work`)
   - OPEN · base `lower` · 1 actionable
 
 ## Instructions

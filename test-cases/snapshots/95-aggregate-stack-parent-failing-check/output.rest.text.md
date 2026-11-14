@@ -5,7 +5,7 @@ nextAction: shepherd
 
 ## Layers
 
-- PR #321: CI failure — not mergeable (`failing-checks`) · owned
+- PR #321: CI failure — not mergeable (`failing-checks`)
   - OPEN · base `main` · 1 failing
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied

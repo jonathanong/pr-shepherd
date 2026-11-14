@@ -9,13 +9,13 @@ nextAction: shepherd
   - MERGED · base `main`
 - PR #2534: Hostname flags NOT NULL
   - MERGED · base `main`
-- PR #2547: Hostname dispatcher — not mergeable (`conflicting`) · owned
+- PR #2547: Hostname dispatcher — not mergeable (`conflicting`)
   - OPEN · base `fix/2429-hostname-flags-not-null`
-- PR #2569: Bloom rebuilds and backfills — not mergeable (`review-work`) · owned
+- PR #2569: Bloom rebuilds and backfills — not mergeable (`review-work`)
   - OPEN · base `fix/1855-crawl-hostnames-dispatcher` · 1 actionable
-- PR #2627: UUID media registry and paged async replay — not mergeable (`review-work`) · owned
+- PR #2627: UUID media registry and paged async replay — not mergeable (`review-work`)
   - OPEN · base `fix/1855-bloom-reconciliation` · 1 actionable
-- PR #2629: Image projection view and hydration budgets — not mergeable (`review-work`) · owned
+- PR #2629: Image projection view and hydration budgets — not mergeable (`review-work`)
   - OPEN · base `fix/2508-media-delivery-registry-ids` · 1 actionable
 
 ## Instructions
