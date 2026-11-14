@@ -145,6 +145,7 @@ it.each([
     "--merge, --merge-ready, and --merge-through are mutually exclusive.",
   ],
   [["stack", "42", "--merge-through", "bad"], "--merge-through requires a PR reference."],
+  [["stack", "42", "--merge-through"], 'unexpected argument: "--merge-through"'],
 ])("rejects %j with a stack usage error", async (args, message) => {
   await main(["node", "shepherd", ...args]);
   expect(vi.mocked(process.stderr.write)).toHaveBeenCalledWith(
