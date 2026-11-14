@@ -112,6 +112,16 @@ Use `pr-shepherd` inside a `/goal`; the other skills are one-shot:
 
 The goal loop handles recurrence; the skill prints the full result and follows its plan. `[CANCEL]` and `[ESCALATE]` stop that PR's loop, and the goal ends when every PR it covers is terminal.
 
+### Claude plugin directory build
+
+`plugins/directory/` is the build submitted to the Claude plugin directory. The directory accepts hooks, local MCP servers, lockfiles, and `allowed-tools` beyond Read, Grep, Glob, and LS only from Verified organizations, so this build ships the three skills alone:
+
+- No poll guard hook, no MCP server, and no pre-approved `pr-shepherd` commands, so each command asks for permission.
+- The CLI is not bundled; the skill asks the user to run `npm install -g pr-shepherd` when `pr-shepherd` is missing.
+- It is not listed in this repository's marketplace. Install either it or the marketplace plugin, not both, because both are named `pr-shepherd`.
+
+`.github/scripts/sync-directory-plugin.mjs` generates it from `plugins/pr-shepherd/`, and the release workflow reruns it. Edit `plugins/pr-shepherd/` and rerun the script; `test-cases/directory-plugin.test.mts` fails when the two drift.
+
 ## Codex
 
 Add the marketplace from GitHub (optionally pinned with `--ref`), or from a local checkout for development:
