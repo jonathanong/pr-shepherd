@@ -444,4 +444,36 @@ to pr-shepherd; refuse for lack of a PR number.`,
       "skill-fired": skillFired,
     },
   },
+
+  {
+    // references/create-a-pr.md: dependent PRs become a native stack via `gh stack`,
+    // not hand-chained base branches.
+    slug: "66-create-pr-native-stack",
+    tier: "guard",
+    area: "loop",
+    fixture: null,
+    plan: true,
+    tags: ["create-pr", "stack"],
+    prompt: `I made two dependent changes in \`https://github.com/owner/repo\`. The first is
+committed on the local branch \`feat/api-client\`. The second builds on it and is
+committed on the local branch \`feat/api-retries\`, which is based on
+\`feat/api-client\`. Make PRs for these two dependent changes. The base is \`main\`.`,
+    graders: {
+      "uses-native-stack": llm(
+        `The plan creates a GitHub native stack with the \`gh stack\` extension for the
+two dependent branches: it installs or confirms the extension
+(\`gh extension install github/gh-stack\`), initializes the stack
+(\`gh stack init\`), adds the second branch (\`gh stack add\`), and submits it
+(\`gh stack submit --auto\`), with \`feat/api-client\` at the bottom of the stack.
+It may fall back to two separate PRs on \`main\`, merged in order, only if
+\`gh stack\` reports that stacks are unavailable.
+
+Failing responses do any of: create the second PR with \`--base feat/api-client\`
+(or any \`gh pr create --base\` pointing at the first branch) as the primary
+route; open two unrelated PRs and mention the dependency only in the
+descriptions; never mention \`gh stack\`; ask the user which approach to take.`,
+      ),
+      "skill-fired": skillFired,
+    },
+  },
 ];

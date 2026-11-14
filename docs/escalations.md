@@ -123,7 +123,7 @@ Native-stack membership is not an escalation.
 3. A clean draft is marked ready by its own session without waiting for lower layers. Closed or unverified topology is surfaced during `SHEPHERD` while another layer can proceed; otherwise it returns `ESCALATE`.
 4. With a ready prefix whose bottom open layer targets the stack base, `stack --merge` returns `MERGE` with `GH_REPO=<owner/repo> gh stack merge <PR number> --yes` and the allowed method flag for the highest ready layer. Rerun the same command until every layer merges and it returns `CANCEL`. If the repository allows no method for that command, it returns `ESCALATE` with `merge-method-unavailable`.
 
-**Detection caveat:** GitHub's `stack` field is a public-preview API and can be absent even for a stacked PR (for example when Stacked PRs are disabled on the repository). Absence means no signal, not "not stacked". Shepherd does not infer stackedness otherwise, because comparing the base to the default branch false-positives on any PR targeting a non-default branch. This is a known gap: absence only lets the ordinary merge path proceed. It does not confirm that a plain `gh pr merge --auto` is safe.
+**Detection caveat:** GitHub's `stack` field can be absent even for a stacked PR (for example when stacks are unavailable on the repository). Absence means no signal, not "not stacked". Shepherd does not infer stackedness otherwise, because comparing the base to the default branch false-positives on any PR targeting a non-default branch. This is a known gap: absence only lets the ordinary merge path proceed. It does not confirm that a plain `gh pr merge --auto` is safe.
 
 ### `merge-method-unavailable`
 
