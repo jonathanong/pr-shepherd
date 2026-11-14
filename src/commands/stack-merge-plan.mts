@@ -5,6 +5,7 @@ import {
   appendAutonomousInstructions,
   appendHumanHandoffInstructions,
   findHumanHandoffs,
+  hasListedOwnership,
   type StackPlan,
 } from "./stack-drain.mts";
 import {
@@ -114,7 +115,7 @@ function mergePlan(
   const first = mergeStep(result, top, landing, left);
   if ("unavailable" in first) return escalation(first.unavailable);
   const instructions = [first.text];
-  appendAutonomousInstructions(instructions, work.sessions);
+  appendAutonomousInstructions(instructions, work.sessions, hasListedOwnership(result));
   const handoffs = findHumanHandoffs(result);
   if (handoffs) appendHumanHandoffInstructions(instructions, handoffs, false);
   instructions.push(

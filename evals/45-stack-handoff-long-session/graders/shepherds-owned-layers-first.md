@@ -11,7 +11,9 @@ gives the command counts as running it.
 The plan starts (or delegates) a one-PR `pr-shepherd … --until-terminal` session
 for EVERY layer marked `owned` — PR #402 and PR #403 — and lets them proceed concurrently.
 
-The output says "Start or delegate concurrent one-PR sessions only for `owned` rows". Stack layers do not wait
+The output tells the caller to start or delegate concurrent one-PR sessions (for
+whole-stack ownership: "every layer is yours"; for listed PRs: only for `owned`
+rows). Stack layers do not wait
 on a lower layer's READY receipt, so there is no reason to finish one layer before
 starting the next.
 

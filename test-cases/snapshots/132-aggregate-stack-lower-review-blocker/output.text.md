@@ -12,6 +12,6 @@ nextAction: shepherd
 
 ## Instructions
 
-1. Start or delegate concurrent one-PR sessions only for `owned` rows. Leave other layers untouched.
+1. Start or delegate concurrent one-PR sessions for these layers; every layer is yours.
 2. Run `pr-shepherd https://github.com/vouchington/vouchington/pull/2620 --until-terminal`.
 3. After the selected one-PR sessions, rerun `pr-shepherd stack https://github.com/vouchington/vouchington/pull/2621 --until-terminal --merge`. Keep watching until every layer is terminal.

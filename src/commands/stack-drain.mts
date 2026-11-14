@@ -1,5 +1,5 @@
 export { findHumanHandoffs, appendHumanHandoffInstructions } from "./stack-handoffs.mts";
-import type { PollSummaryItem, StackNextAction } from "../types.mts";
+import type { PollSummaryItem, PollSummaryResult, StackNextAction } from "../types.mts";
 export { isStackLayerReady, stackPosition } from "./stack-merge-scope.mts";
 
 export interface StackPlan {
@@ -56,13 +56,19 @@ export function describeIdleLayers(idle: PollSummaryItem[]): string {
   return idle.map((item) => `PR #${item.pr} (${item.reasons.join(", ")})`).join("; ");
 }
 
+/** True when the caller listed its own PRs, so rows carry `owned` and others are not theirs. */
+export function hasListedOwnership(result: PollSummaryResult): boolean {
+  return result.selection.kind === "stack" && result.selection.owned !== undefined;
+}
+
 export function appendAutonomousInstructions(
   instructions: string[],
   candidates: PollSummaryItem[],
+  partial = false,
 ): void {
   if (candidates.length === 0) return;
   instructions.push(
-    `${instructions.length + 1}. Start or delegate concurrent one-PR sessions only for \`owned\` rows. Leave other layers untouched.`,
+    `${instructions.length + 1}. ${partial ? "Start or delegate concurrent one-PR sessions only for `owned` rows. Leave other layers untouched." : "Start or delegate concurrent one-PR sessions for these layers; every layer is yours."}`,
   );
   for (const item of candidates) {
     instructions.push(`${instructions.length + 1}.${sessionInstruction(item)}`);

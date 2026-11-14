@@ -4,6 +4,7 @@ import type { PollSummaryItem, PollSummaryResult, StackMergeScope } from "../typ
 import { explicitInstructions } from "./poll-summary-explicit-instructions.mts";
 import {
   appendAutonomousInstructions,
+  hasListedOwnership,
   appendHumanHandoffInstructions,
   findHumanHandoffs,
   idleWaitPlan,
@@ -146,6 +147,7 @@ function planStack(
   scope?: StackMergeScope,
 ): StackPlan {
   const again = stackRerunTarget(rerunCommand);
+  const partial = hasListedOwnership(result);
   const open = result.prs.filter((item) => item.state === "OPEN");
   const gaps = result.stackAncestry ?? [];
   const staleChildren = new Set(gaps.map((gap) => gap.childPr));
@@ -171,7 +173,7 @@ function planStack(
   const handoffs = findHumanHandoffs(result);
   if (handoffs) {
     const instructions: string[] = [];
-    appendAutonomousInstructions(instructions, runnableCandidates);
+    appendAutonomousInstructions(instructions, runnableCandidates, partial);
     const stop = !ownedWork;
     appendHumanHandoffInstructions(instructions, handoffs, stop);
     for (const item of missingCommands) {
@@ -201,7 +203,7 @@ function planStack(
   if (!stackMergeable) {
     if (missingCommands.length > 0) {
       const instructions: string[] = [];
-      appendAutonomousInstructions(instructions, runnableCandidates);
+      appendAutonomousInstructions(instructions, runnableCandidates, partial);
       for (const item of missingCommands) {
         instructions.push(
           `${instructions.length + 1}. PR #${item.pr} needs a one-PR session, but Shepherd could not produce its command. ${ownedWork ? "After autonomous shepherding, ask" : "Stop and ask"} for direction.`,
@@ -230,7 +232,7 @@ function planStack(
       return idleWaitPlan(work.idle);
     }
     const instructions: string[] = [];
-    appendAutonomousInstructions(instructions, work.sessions);
+    appendAutonomousInstructions(instructions, work.sessions, partial);
     if (
       onlyDraftReadinessVerification(work.sessions, work.idle) &&
       work.sessions.every((item) => item.owned)
@@ -270,7 +272,7 @@ function planStack(
   if (!mergeRequested) {
     const instructions: string[] = [];
     const sessions = open.filter((item) => item.action !== "cancel");
-    appendAutonomousInstructions(instructions, sessions);
+    appendAutonomousInstructions(instructions, sessions, partial);
     const action = appendStackRerunInstruction(
       instructions,
       sessions,

@@ -28,12 +28,12 @@ agent actually reads. Isolating the playbooks would need a third arm.
 | `11-wait-no-work`                              | `24`    | `WAIT`: continue, invent nothing                                                               |
 | `12-annotations-already-surfaced`              | `55`    | Act on the annotation, don't refetch                                                           |
 | `13-neg-github-review-api`                     | —       | Should NOT fire (knowledge question)                                                           |
-| `14-stack-layer-no-direct-merge`               | `85`    | A stack layer merges via `stack --merge-through`, not `gh pr merge`                                    |
+| `14-stack-layer-no-direct-merge`               | `85`    | A stack layer merges via `stack --merge-through`, not `gh pr merge`                            |
 | `15-stack-owned-layers-before-handoff`         | `102`   | Shepherd owned layers before a lower layer's human handoff                                     |
 | `16-stack-all-owned-concurrent`                | `106`   | Every owned layer at once, none serialized or dropped                                          |
 | `17-stack-parent-conflict-owned-only`          | `94`    | Route only the listed layer; don't hand-rewrite the child                                      |
 | `18-stack-queued-lower-waits`                  | `91`    | Never rewrite a queued layer                                                                   |
-| `19-stack-merge-prefix`                        | `90`    | `--merge-ready`: `gh stack merge <prefix>`, shepherd the stale tip, rerun                                       |
+| `19-stack-merge-prefix`                        | `90`    | `--merge-ready`: `gh stack merge <prefix>`, shepherd the stale tip, rerun                      |
 | `20-stack-closed-parent-escalate`              | `100`   | Closed parent: stop and ask, don't pick a repair                                               |
 | `21-stack-all-terminal-stop`                   | `87`    | Every layer merged: stop (ceiling guard; flat Δ expected)                                      |
 | `22-stack-auto-ready-disabled-probe`           | `104`   | Clean draft with auto-mark-ready disabled: stop; no ready command or repeat probe              |
@@ -81,15 +81,15 @@ agent actually reads. Isolating the playbooks would need a third arm.
 | `64-read-shepherd-output-unfiltered`           | —       | "Keep output small": no pipe through `head`/`tail`/`grep`/`cut`; read the whole output         |
 | `65-edited-thread-new-ask`                     | `177`   | A handled thread edited with a new ask: fix the new ask, not "already done"                    |
 | `66-create-pr-native-stack`                    | —       | Two dependent PRs: create a native stack with `gh stack`, not hand-chained bases               |
-| `66-stack-merge-one-command`                   | `97`    | "Merge the stack": one `gh stack merge`, no per-layer `gh pr merge`, no rebase between layers  |
-| `67-stack-merge-lagging-upper-no-merge`        | `181`   | `--merge` with a lagging upper layer merges nothing and does not switch to `--merge-ready`     |
-| `68-stack-merge-as-ready-uses-merge-ready`     | —       | "Merge as they become ready" maps to `--merge-ready`                                           |
-| `69-stack-merge-through-one-pr`                | —       | "Merge #632, leave #633 open" maps to `--merge-through`                                        |
-| `70-stack-merge-through-leaves-upper-open`     | `184`   | `gh stack merge 632` once; #633 is not merged, rebased or pushed                               |
-| `71-stack-unowned-above-no-rebase`             | `185`   | Another agent's layer above: bounded branch update, no rebase or push of it                    |
-| `72-stack-unowned-below-escalate`              | `182`   | An unowned layer below the target: ask, merge nothing                                          |
-| `73-stack-new-layer-asks`                      | `183`   | A layer that joined after the request: ask, merge nothing                                      |
-| `74-stack-ship-it-asks-scope`                  | —       | An ambiguous "ship it" on a mixed-owner stack: ask which layers                                |
+| `67-stack-merge-one-command`                   | `97`    | "Merge the stack": one `gh stack merge`, no per-layer `gh pr merge`, no rebase between layers  |
+| `68-stack-merge-lagging-upper-no-merge`        | `181`   | `--merge` with a lagging upper layer merges nothing and does not switch to `--merge-ready`     |
+| `69-stack-merge-as-ready-uses-merge-ready`     | —       | "Merge as they become ready" maps to `--merge-ready`                                           |
+| `70-stack-merge-through-one-pr`                | —       | "Merge #632, leave #633 open" maps to `--merge-through`                                        |
+| `71-stack-merge-through-leaves-upper-open`     | `184`   | `gh stack merge 632` once; #633 is not merged, rebased or pushed                               |
+| `72-stack-unowned-above-no-rebase`             | `185`   | Another agent's layer above: bounded branch update, no rebase or push of it                    |
+| `73-stack-unowned-below-escalate`              | `182`   | An unowned layer below the target: ask, merge nothing                                          |
+| `74-stack-new-layer-asks`                      | `183`   | A layer that joined after the request: ask, merge nothing                                      |
+| `75-stack-ship-it-asks-scope`                  | —       | An ambiguous "ship it" on a mixed-owner stack: ask which layers                                |
 
 "apply" is `test-cases/snapshots/apply-review-session-refusal`, an
 `apply review` output recorded by `test-cases/apply-review.test.mts` through

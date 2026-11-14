@@ -295,7 +295,8 @@ const runsFor = (spec) => {
   const raw = process.env[`EVAL_RUNS_${tier.toUpperCase()}`];
   if (raw === undefined) return spec.runs ?? RUNS;
   const n = Number(raw);
-  if (!Number.isInteger(n) || n < 1) throw new Error(`EVAL_RUNS_${tier.toUpperCase()} must be a positive integer`);
+  if (!Number.isInteger(n) || n < 1)
+    throw new Error(`EVAL_RUNS_${tier.toUpperCase()} must be a positive integer`);
   return n;
 };
 
