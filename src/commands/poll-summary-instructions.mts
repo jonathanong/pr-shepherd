@@ -12,7 +12,9 @@ import {
   stackPosition,
   type StackPlan,
 } from "./stack-drain.mts";
-import { lowerReadyNote, planStackMerge } from "./stack-merge-plan.mts";
+import { lowerReadyNote } from "./stack-lower-ready-note.mts";
+import { planStackMerge } from "./stack-merge-plan.mts";
+import { aboveThroughTarget } from "./stack-merge-scope.mts";
 import { ownershipBoundaryStep } from "./stack-ownership.mts";
 import {
   appendStackRerunInstruction,
@@ -148,10 +150,13 @@ function planStack(
   const gaps = result.stackAncestry ?? [];
   const staleChildren = new Set(gaps.map((gap) => gap.childPr));
   const stackMergeable = gaps.length === 0 && open.every(isStackLayerReady);
+  const outside = aboveThroughTarget(result, scope);
   const work = splitStackWork(
     open.filter(
       (item) =>
-        (!isStackLayerReady(item) || staleChildren.has(item.pr)) && item.action !== "escalate",
+        (!isStackLayerReady(item) || staleChildren.has(item.pr)) &&
+        item.action !== "escalate" &&
+        !outside.has(item.pr),
     ),
     staleChildren,
   );

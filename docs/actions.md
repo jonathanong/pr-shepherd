@@ -310,7 +310,7 @@ Receipt creation is described under [`cancel`](#cancel).
 | `--merge-ready`        | The highest contiguous ready, owned prefix, now. Rerun as more layers become ready.  |
 | `--merge-through <PR>` | That PR and every open layer below it. Layers above stay open and are never touched. |
 
-`stack PR` owns the whole stack. Listing several PRs of one stack (`stack <PR> <PR> ...`) owns exactly those; ownership is declared, never derived from the PR author. A bare number is read as a PR first and as a native stack number only when no PR has that number. Refs that span several stacks fail with exit 64 and a message that names each stack, lists its refs, and prints one exact command per stack; the CLI text/JSON error and the MCP tool error use the same format. `--merge`, `--merge-ready`, and `--merge-through` are mutually exclusive, and `--merge-through` must name a PR the caller owns in that stack.
+`stack PR` owns the whole stack. Listing several PRs of one stack (`stack <PR> <PR> ...`) owns exactly those; ownership is declared, never derived from the PR author. A bare number is read as a PR first and as a native stack number only when no PR has that number. Refs that span several stacks fail with exit 64 and a message that names each stack, lists its refs, and prints one exact command per stack (a lone PR in a group owns that whole stack, and its line says so); the CLI text/JSON error and the MCP tool error use the same format. `--merge`, `--merge-ready`, and `--merge-through` are mutually exclusive, and `--merge-through` must name a PR the caller owns in that stack.
 
 Every merge step says that one command lands every listed layer, and not to merge layers one at a time with `gh pr merge` or to rebase or push between layers.
 

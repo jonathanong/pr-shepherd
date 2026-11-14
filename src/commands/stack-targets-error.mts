@@ -47,7 +47,11 @@ export function multiStackError(
       "--until-terminal",
       ...flags,
     ]).text;
-    return `- stack #${group.stack} (${refs}): \`${command}\``;
+    const whole =
+      group.prs.length === 1 && group.stackRefs.length === 0
+        ? " This command owns every layer of that stack; run it only if all of them are yours."
+        : "";
+    return `- stack #${group.stack} (${refs}): \`${command}\`${whole}`;
   });
   return [`These refs span ${groups.length} stacks. Run one command per stack:`, ...lines].join(
     "\n",

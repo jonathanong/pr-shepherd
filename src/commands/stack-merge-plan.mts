@@ -1,5 +1,4 @@
 import { getGithubTransport } from "../github/transport.mts";
-import { mergeReadyCommand } from "../github/poll-summary-command.mts";
 import type { PollSummaryItem, PollSummaryResult, StackMergeScope } from "../types.mts";
 import { buildMergeCommandPlan, renderMergeCommand } from "./iterate/merge.mts";
 import {
@@ -10,6 +9,8 @@ import {
 } from "./stack-drain.mts";
 import {
   isStackLayerReady,
+  aboveThroughTarget,
+  closedInScope,
   mergeScopeLayers,
   openLayers,
   readyPrefix,
@@ -39,18 +40,13 @@ export function planStackMerge(
   if (scope.kind === "ready") {
     const prefix = readyPrefix(result, true);
     const top = prefix.at(-1);
-    return top ? mergePlan(result, top, rerunCommand) : undefined;
+    if (top) return mergePlan(result, top, scope, rerunCommand);
+    return open.some((item) => item.owned) || closedInScope(result, scope).length > 0
+      ? undefined
+      : scopeDone(open);
   }
   const { target } = mergeScopeLayers(result, scope);
-  if (!target) {
-    return {
-      action: "cancel",
-      stackMergeable: true,
-      instructions: [
-        `1. Stop — every layer in the merge scope is merged. ${list(open)} ${open.length === 1 ? "stays" : "stay"} open outside it; leave ${open.length === 1 ? "it" : "them"} to ${open.length === 1 ? "its" : "their"} owner.`,
-      ],
-    };
-  }
+  if (!target) return closedInScope(result, scope).length > 0 ? undefined : scopeDone(open);
   const added = result.addedLayers ?? [];
   if (added.length > 0) {
     return escalation(
@@ -64,8 +60,19 @@ export function planStackMerge(
     );
   }
   return readyPrefix(result, false).some((item) => item.pr === target.pr)
-    ? mergePlan(result, target as StackLayer, rerunCommand)
+    ? mergePlan(result, target as StackLayer, scope, rerunCommand)
     : undefined;
+}
+
+function scopeDone(open: PollSummaryItem[]): StackPlan {
+  const many = open.length !== 1;
+  return {
+    action: "cancel",
+    stackMergeable: true,
+    instructions: [
+      `1. Stop — every layer in the merge scope is merged. ${list(open)} ${many ? "stay" : "stays"} open outside it; leave ${many ? "them" : "it"} to ${many ? "their" : "its"} owner.`,
+    ],
+  };
 }
 
 function escalation(text: string): StackPlan {
@@ -76,9 +83,11 @@ function escalation(text: string): StackPlan {
 function mergePlan(
   result: PollSummaryResult,
   top: PollSummaryItem,
+  scope: StackMergeScope,
   rerunCommand?: string,
 ): StackPlan {
   const stack = top.stack!;
+  const outside = aboveThroughTarget(result, scope);
   const open = openLayers(result);
   const lands = open.filter((item) => stackPosition(item) <= stackPosition(top));
   const above = open.filter((item) => stackPosition(item) > stackPosition(top));
@@ -87,7 +96,9 @@ function mergePlan(
   const work = splitStackWork(
     above.filter(
       (item) =>
-        item.action !== "escalate" && (!isStackLayerReady(item) || staleChildren.has(item.pr)),
+        item.action !== "escalate" &&
+        !outside.has(item.pr) &&
+        (!isStackLayerReady(item) || staleChildren.has(item.pr)),
     ),
     staleChildren,
   );
@@ -159,38 +170,4 @@ function mergeStep(
   return {
     text: `1. Run \`GH_REPO=${result.repo} gh stack merge ${top.pr} --yes ${method.flag}\` in \`${result.repo}\` to merge ${landing} of stack #${stack.number}.${left} ${NO_PER_LAYER} If \`gh stack\` is an unknown command, run \`gh extension install github/gh-stack\`, then rerun that merge command.`,
   };
-}
-
-/**
- * `--merge` or `--merge-through` found owned layers ready at the bottom while a higher owned layer
- * is not: nothing merges. Name the lagging layers' raw state and the explicit opt-in to drain.
- */
-export function lowerReadyNote(
-  result: PollSummaryResult,
-  scope: StackMergeScope | undefined,
-  rerunCommand?: string,
-): string | undefined {
-  if (!scope || scope.kind === "ready") return undefined;
-  const { inScope, target } = mergeScopeLayers(result, scope);
-  const prefix = readyPrefix(result, false).filter((item) => inScope.includes(item));
-  if (!target || prefix.length === 0 || prefix.some((item) => item.pr === target.pr))
-    return undefined;
-  const lagging = inScope.filter((item) => !prefix.includes(item as StackLayer));
-  const drain = rerunCommand
-    ? `\`${mergeReadyCommand(rerunCommand)}\``
-    : "`stack` with `--merge-ready`";
-  return `Owned ${prefix.length === 1 ? "layer" : "layers"} ${list(prefix)} ${prefix.length === 1 ? "is" : "are"} ready, but ${lagging.map(describeLagging).join("; ")} ${lagging.length === 1 ? "is" : "are"} not. Nothing was merged because \`${scope.kind === "all" ? "--merge" : "--merge-through"}\` lands every layer in scope together. Tell the user the lower layers are ready. Only if the user asked to merge layers as they become ready, rerun ${drain}; otherwise keep shepherding.`;
-}
-
-function describeLagging(item: PollSummaryItem): string {
-  const facts = [
-    `action ${item.action}`,
-    item.reasons.length > 0 ? `reasons ${item.reasons.join(", ")}` : undefined,
-    item.isDraft ? "draft" : undefined,
-    item.reviewDecision ? `review ${item.reviewDecision}` : undefined,
-    item.checks?.failing ? `${item.checks.failing} failing checks` : undefined,
-    item.checks?.inProgress ? `${item.checks.inProgress} checks in progress` : undefined,
-    item.review?.actionable ? `${item.review.actionable} actionable review items` : undefined,
-  ].filter((fact): fact is string => fact !== undefined);
-  return `#${item.pr} (${facts.join("; ")})`;
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { row, stack } from "../../test-helpers/commands/poll-summary-stack.test-support.mts";
 import type { PollSummaryItem } from "../types.mts";
-import { lowerReadyNote } from "./stack-merge-plan.mts";
+import { lowerReadyNote } from "./stack-lower-ready-note.mts";
 
 const ready = { readyReceipt: true } as const;
 const ALL = { kind: "all" } as const;

@@ -78,6 +78,30 @@ export function mergeScopeLayers(
   return { inScope, target: inScope.at(-1) };
 }
 
+/** PRs above a `--merge-through` target: outside the request, so they never get a session. */
+export function aboveThroughTarget(
+  result: PollSummaryResult,
+  scope: StackMergeScope | undefined,
+): Set<number> {
+  if (scope?.kind !== "through") return new Set();
+  const target = result.prs.find((item) => item.pr === scope.pr);
+  const limit = target ? stackPosition(target) : 0;
+  return new Set(result.prs.filter((item) => stackPosition(item) > limit).map((item) => item.pr));
+}
+
+/** In-scope layers closed without merging: the request is not complete while any exists. */
+export function closedInScope(
+  result: PollSummaryResult,
+  scope: StackMergeScope,
+): PollSummaryItem[] {
+  const outside = aboveThroughTarget(result, scope);
+  return result.prs.filter(
+    (item) =>
+      item.state === "CLOSED" &&
+      (scope.kind === "through" ? !outside.has(item.pr) : item.owned === true),
+  );
+}
+
 /** The scope's key in the approval record. */
 function scopeKey(scope: StackMergeScope): string {
   return scope.kind === "through" ? `through-${scope.pr}` : scope.kind;
