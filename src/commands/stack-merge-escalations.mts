@@ -30,7 +30,7 @@ export function unlistedEscalation(
     ? `run \`${commands.listed}\``
     : `rerun ${stackRerunTarget(rerunCommand)} with those PRs listed after \`stack\``;
   const approval = commands
-    ? `If they approve, run \`${commands.listed}\` (lists ${list(unlisted)} as yours too) or \`${commands.whole}\` (the stack number owns every layer). Otherwise wait for ${owner}.`
+    ? `If they approve, run that same command, or \`${commands.whole}\` (the stack number owns every layer). Otherwise wait for ${owner}.`
     : `They either approve it, and you ${listAll}, or wait for ${owner}.`;
   return escalation(
     `\`unowned-stack-layers\`: merging PR #${target.pr} also merges ${describeLayers(unlisted)}, which you did not list as yours. Nothing was merged, and never merge only #${target.pr} while leaving ${them} open. If the user's request already covers ${them} (they asked for the whole stack, or for every layer up to #${target.pr}), ${listAll} now. Otherwise stop and tell the user that merging #${target.pr} also merges ${list(unlisted)}. ${approval}`,
