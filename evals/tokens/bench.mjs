@@ -42,7 +42,7 @@ import {
   tokens,
   recordedAction,
 } from "./lib.mjs";
-import { SCENARIOS, eventArm } from "./scenarios.mjs";
+import { GH_WATCH_SECONDS, SCENARIOS, eventArm } from "./scenarios.mjs";
 import { checkPending, findLosses, lossKey, readGateLists, structuralEntry } from "./gate.mjs";
 import { atCharsPerToken, measuredCharsPerToken, realSessionsSection } from "./sessions.mjs";
 
@@ -120,8 +120,8 @@ function buildRows(strategy, ctx = BASE_CTX) {
   return SCENARIOS.map((s) => buildRow(s, strategy, ctx));
 }
 
-function buildRow(s, strategy, { carry, eagerTokens, exclude } = BASE_CTX) {
-  const arms = applyStrategy(s.setup ? s.arms(exclude) : s.arms(), s, strategy);
+function buildRow(s, strategy, { carry, eagerTokens, exclude, baseline } = BASE_CTX) {
+  const arms = applyStrategy(s.setup ? s.arms(exclude) : s.arms(baseline), s, strategy);
   const carried = (arm) => (s.setup ? 0 : (carry[s.id]?.[arm] ?? 0));
   // A setup row adds its lazy loads, each at the share of sessions that trigger it.
   const armCost = (a) =>
@@ -309,7 +309,7 @@ const REALISM_VARIANTS = [
  * amount: the larger context a baseline has accumulated by then is ignored,
  * which favors the baselines.
  */
-function savingsUnder(model, drop = [], cacheExpiries = 0) {
+function savingsUnder(model, drop = [], cacheExpiries = 0, baseline = undefined) {
   const saved = { ...MODEL };
   Object.assign(MODEL, model);
   const expiry =
@@ -318,7 +318,7 @@ function savingsUnder(model, drop = [], cacheExpiries = 0) {
     MODEL.baseContextTokens;
   try {
     const exclude = new Set(drop);
-    const ctx = { carry: setupCarry(exclude), eagerTokens, exclude };
+    const ctx = { carry: setupCarry(exclude), eagerTokens, exclude, baseline };
     const picked = pickRows(Object.fromEntries(STRATEGIES.map((st) => [st, buildRows(st, ctx)])));
     return {
       rows: picked,
@@ -326,9 +326,15 @@ function savingsUnder(model, drop = [], cacheExpiries = 0) {
         Object.keys(SESSIONS).map((key) => {
           const t = totals(picked.filter((r) => r.session === key && !exclude.has(r.id)));
           const ours = t.shepherd.ite + expiry;
+          const rs = picked.filter((r) => r.session === key && !exclude.has(r.id));
+          const ghPoints = round(rs.reduce((n, r) => n + r.weight * r.api.gh.graphqlPoints, 0));
           return [
             key,
-            { gh: saving(t.gh.ite + expiry, ours), mcp: saving(t.mcp.ite + expiry, ours) },
+            {
+              gh: saving(t.gh.ite + expiry, ours),
+              mcp: saving(t.mcp.ite + expiry, ours),
+              ghPoints,
+            },
           ];
         }),
       ),
@@ -343,6 +349,18 @@ const realism = Object.fromEntries(
   REALISM_VARIANTS.map((v) => [v.id, savingsUnder(v.model, [], v.cacheExpiries)]),
 );
 const centralModel = REALISM_VARIANTS.find((v) => v.id === "central").model;
+
+// gh's `--watch` refresh: the default the report uses, and a frugal agent's
+// `--interval 60`, which ties pr-shepherd's 60s poll.
+const GH_WATCH_VARIANTS = [GH_WATCH_SECONDS, 60].map((ghWatchSeconds) => ({
+  ghWatchSeconds,
+  ...Object.fromEntries(
+    ["gated", "central", "conservative"].map((id) => {
+      const v = REALISM_VARIANTS.find((x) => x.id === id);
+      return [id, savingsUnder(v.model, [], 0, { ghWatchSeconds }).pr];
+    }),
+  ),
+}));
 // The PR session's biggest contributors to the gh gap under the central setting.
 const drivers = realism.central.rows
   .filter((r) => r.session === "pr" && !r.setup)
@@ -386,7 +404,7 @@ const waitPerHour = {
     (3600 / POLL_SECONDS) * (SHEPHERD_WAIT_TICK_API_CLOUD.restCore + CI_POLL_CHANGED_READS),
   shepherdRestIdle: (3600 / POLL_SECONDS) * SHEPHERD_WAIT_TICK_API_REST.restCore,
   shepherdCloudIdle: (3600 / POLL_SECONDS) * SHEPHERD_WAIT_TICK_API_CLOUD.restCore,
-  ghWatchGraphql: 3600 / POLL_SECONDS,
+  ghWatchGraphql: 3600 / GH_WATCH_SECONDS,
   mcpRest: (3600 / POLL_SECONDS) * 2,
 };
 
@@ -1002,7 +1020,7 @@ for (const r of rows.filter((r) => !r.setup)) {
 }
 out();
 out(
-  `- Waiting on CI costs ${waitPerHour.shepherdGraphql} GraphQL points an hour for pr-shepherd (one fingerprint hit per ${POLL_SECONDS}s poll), about ${waitPerHour.shepherdRest} REST requests an hour on the REST transport (${waitPerHour.shepherdCloud} on cloud REST; ${waitPerHour.shepherdRestIdle} and ${waitPerHour.shepherdCloudIdle} when nothing changes, and ${idleHour.shepherd.graphqlPoints} GraphQL points when no check is running), ${waitPerHour.ghWatchGraphql} points for \`gh pr checks --watch --interval ${POLL_SECONDS}\`, and about ${waitPerHour.mcpRest} REST requests for a one-minute MCP re-check.`,
+  `- Waiting on CI costs ${waitPerHour.shepherdGraphql} GraphQL points an hour for pr-shepherd (one fingerprint hit per ${POLL_SECONDS}s poll), about ${waitPerHour.shepherdRest} REST requests an hour on the REST transport (${waitPerHour.shepherdCloud} on cloud REST; ${waitPerHour.shepherdRestIdle} and ${waitPerHour.shepherdCloudIdle} when nothing changes, and ${idleHour.shepherd.graphqlPoints} GraphQL points when no check is running), ${waitPerHour.ghWatchGraphql} points for \`gh pr checks --watch\` at its default ${GH_WATCH_SECONDS}s refresh (60 with \`--interval 60\`), and about ${waitPerHour.mcpRest} REST requests for a one-minute MCP re-check.`,
 );
 out(
   MCP_API.verified
@@ -1151,6 +1169,26 @@ out("| --- | --- | --- |");
 for (const d of realismDrops) {
   out(
     `| ${d.ids.length ? d.ids.map((id) => `\`${id}\``).join(", ") : "nothing"} | ${pct(d.saving.gh)} | ${pct(d.saving.mcp)} |`,
+  );
+}
+out();
+out("## gh watch interval sensitivity");
+out();
+out(
+  `\`ci-wait\` models \`gh pr checks --watch\` at its default ${GH_WATCH_SECONDS}s refresh: of 599 \`--watch\` calls in the maintainer's agent transcripts (2026-11-15), 17 set \`--interval\`. A frugal agent that passes \`--interval 60\` ties pr-shepherd's 60s poll. Each refresh costs 1 GraphQL point and reprints the check table. Only the PR session waits on \`gh --watch\`.`,
+);
+out();
+out(
+  "| gh refresh | PR session gh GraphQL points | PR session cost vs. gh: gated / central / conservative |",
+);
+out("| --- | --- | --- |");
+for (const v of GH_WATCH_VARIANTS) {
+  const label =
+    v.ghWatchSeconds === GH_WATCH_SECONDS
+      ? `${v.ghWatchSeconds}s (default, used)`
+      : `${v.ghWatchSeconds}s (\`--interval ${v.ghWatchSeconds}\`)`;
+  out(
+    `| ${label} | ${num(v.gated.ghPoints)} | ${pct(v.gated.gh)} / ${pct(v.central.gh)} / ${pct(v.conservative.gh)} |`,
   );
 }
 out();
