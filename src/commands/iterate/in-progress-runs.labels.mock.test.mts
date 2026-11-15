@@ -14,7 +14,6 @@ vi.mock("./workflow-files.mts", async (importOriginal) => ({
 
 import { buildInProgressRuns } from "./in-progress-runs.mts";
 
-const SHA = "a".repeat(40);
 const CANCEL = "concurrency:\n  group: g\n  cancel-in-progress: true\n";
 
 const check = (over: Partial<ClassifiedCheck> = {}): ClassifiedCheck =>
@@ -32,7 +31,7 @@ const check = (over: Partial<ClassifiedCheck> = {}): ClassifiedCheck =>
 const report = (inProgress: ClassifiedCheck[], failing: unknown[] = []) =>
   ({
     repo: "owner/repo",
-    headSha: SHA,
+    pr: 42,
     baseBranch: "main",
     checks: { inProgress, failing, passing: [], skipped: [], filtered: [] },
   }) as unknown as ShepherdReport;
@@ -41,7 +40,7 @@ describe("buildInProgressRuns labels", () => {
   beforeEach(() => {
     mockLoadConfig.mockReturnValue(resolveConfig({}, "test"));
     mockReadFiles.mockImplementation(
-      async () => new Map([[`${SHA}:.github/workflows/ci.yml`, { text: CANCEL }]]),
+      async () => new Map([["refs/pull/42/merge:.github/workflows/ci.yml", { text: CANCEL }]]),
     );
   });
 

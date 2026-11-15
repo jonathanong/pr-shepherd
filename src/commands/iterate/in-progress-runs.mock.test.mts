@@ -14,7 +14,6 @@ vi.mock("./workflow-files.mts", async (importOriginal) => ({
 
 import { buildInProgressRuns } from "./in-progress-runs.mts";
 
-const SHA = "a".repeat(40);
 const CANCEL = "concurrency:\n  group: g\n  cancel-in-progress: true\n";
 
 const check = (over: Partial<ClassifiedCheck> = {}): ClassifiedCheck => ({
@@ -37,7 +36,7 @@ function report(
 ): ShepherdReport {
   return {
     repo: "owner/repo",
-    headSha: SHA,
+    pr: 42,
     baseBranch: "main",
     checks: { inProgress, failing, passing: [], skipped: [], filtered: [] },
     ...over,
@@ -49,7 +48,7 @@ function config(raw: Record<string, unknown> = {}) {
 }
 const files = (entries: Record<string, { text: string } | { unreadable: string }>) =>
   mockReadFiles.mockImplementation(async () => new Map(Object.entries(entries)));
-const ciKey = `${SHA}:.github/workflows/ci.yml`;
+const ciKey = "refs/pull/42/merge:.github/workflows/ci.yml";
 
 describe("buildInProgressRuns", () => {
   beforeEach(() => {
@@ -70,7 +69,7 @@ describe("buildInProgressRuns", () => {
       },
     ]);
     expect(mockReadFiles).toHaveBeenCalledWith({ owner: "owner", name: "repo" }, [
-      { ref: SHA, path: ".github/workflows/ci.yml", pinned: true },
+      { ref: "refs/pull/42/merge", path: ".github/workflows/ci.yml", pinned: false },
     ]);
   });
 
@@ -93,11 +92,12 @@ describe("buildInProgressRuns", () => {
     expect(await concurrencyFor({})).toBe("unreadable (no workflow file)");
   });
 
-  it("names the missing file without a request when the run has no workflow path or head SHA", async () => {
+  it("names the missing file without a request when the run has no workflow path or base branch", async () => {
     files({});
     const noPath = await buildInProgressRuns(report([check({ workflowPath: undefined })]), true);
     expect(noPath[0]).toMatchObject({ concurrency: "unreadable (no workflow file)" });
-    const noHead = await buildInProgressRuns(report([check()], { headSha: undefined }), true);
+    const target = check({ event: "pull_request_target" });
+    const noHead = await buildInProgressRuns(report([target], { baseBranch: undefined }), true);
     expect(noHead[0]).toMatchObject({ concurrency: "unreadable (no workflow file)" });
     expect(mockReadFiles).toHaveBeenCalledWith({ owner: "owner", name: "repo" }, []);
   });

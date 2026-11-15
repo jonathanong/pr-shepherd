@@ -46,8 +46,9 @@ function fileRequest(
 ): WorkflowFileRequest | undefined {
   const path = group.find((check) => check.workflowPath !== undefined)?.workflowPath;
   const baseRead = group[0]?.event === BASE_FILE_EVENT;
-  const ref = baseRead ? report.baseBranch : report.headSha;
-  return path && ref ? { ref, path, pinned: !baseRead } : undefined;
+  // GitHub runs a `pull_request` workflow from the PR merge revision, not the head commit.
+  const ref = baseRead ? report.baseBranch : `refs/pull/${report.pr}/merge`;
+  return path && ref ? { ref, path, pinned: false } : undefined;
 }
 
 /**
