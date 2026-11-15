@@ -67,6 +67,30 @@ ${layerRows(layers, owned)}
 
 const block = (label, text) => `=== ${label}\n${text}\n===`;
 
+/** `iterate` on a stacked layer routes it to `stack` (src/commands/iterate/merge-state.mts). */
+const route = (layers, pr) => `# PR #${pr} [TRIAGE]
+
+**status** \`READY\`
+**summary** 1 passing
+Stack: 7 (layer ${layers.indexOf(pr) + 1}/${layers.length}, base ${layers.indexOf(pr) === 0 ? "main" : `layer-${layers[layers.indexOf(pr) - 1]}`})
+
+## Instructions
+
+1. PR #${pr} is layer ${layers.indexOf(pr) + 1} of ${layers.length} in native stack #7; do not run \`gh pr merge\` for this layer.
+2. Run \`pr-shepherd stack ${URL(pr)} --until-terminal --merge-through ${URL(pr)}\` to merge this layer and the unmerged layers below it, never a layer above it. If lower layers are not yours it escalates \`unowned-stack-layers\` and merges nothing: report that to the user. Otherwise it emits one merge command that lands every layer it lists. Run that command as printed: do not merge the layers one at a time with \`gh pr merge\`, and do not rebase or push between layers.`;
+
+/** An `iterate` mock for stack #7 that answers each PR in the call with its route. */
+export const routeMock = (layers) => () => `---
+type: agent
+---
+
+You are the pr-shepherd MCP \`iterate\` tool. PRs ${layers.map((n) => `#${n}`).join(", ")} form native
+stack #7. Answer with the block for each PR in the call (number or URL), in the
+call's order, separated by a blank line. Print only the text between each block's
+=== lines and nothing else.
+
+${layers.map((n) => block(`PR-${n}`, route(layers, n))).join("\n\n")}`;
+
 /** An agent mock for `stack` that picks one labelled answer by the call's arguments. */
 export const stackMock = (rules, answers) => `---
 type: agent

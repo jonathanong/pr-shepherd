@@ -4,7 +4,7 @@
 import { PR_URL } from "../lib.mjs";
 import { renumber } from "./stack-ticks.mjs";
 import { STEPS } from "./world.mjs";
-import { scope36, scope37 } from "./scope-ticks.mjs";
+import { routeMock, scope36, scope37 } from "./scope-ticks.mjs";
 import { TWO_STACK_SHEPHERD } from "./two-stack-ticks.mjs";
 
 const URL = (n) => `https://github.com/owner/repo/pull/${n}`;
@@ -27,7 +27,7 @@ export const STACK_SCOPE_SCENARIOS = [
       [61, 7],
     ]),
     tags: ["stack", "merge"],
-    shepherd: { stack: scope36 },
+    shepherd: { stack: scope36, iterate: routeMock([40, 41, 42]) },
     prompt: `Merge my PRs ${URL(41)} and ${PR_URL}.`,
     world: `Native stack #7 in owner/repo (\`gh stack\`, installed). Every layer is open,
 not a draft, approved, with checks passed and mergeStateStatus CLEAN against its base:
@@ -62,7 +62,7 @@ report the PRs as merged or ready to merge without mentioning #40.`,
       [63, 7],
     ]),
     tags: ["stack", "merge"],
-    shepherd: { stack: scope37 },
+    shepherd: { stack: scope37, iterate: routeMock([41, 42, 43]) },
     prompt: `Merge the stack that ${PR_URL} belongs to, up to and including #42.`,
     world: `Native stack #7 in owner/repo (\`gh stack\`, installed). Every layer is open,
 not a draft, approved, with checks passed and mergeStateStatus CLEAN against its base:
