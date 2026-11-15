@@ -44,7 +44,7 @@ nextAction: escalate
 
 ## Instructions
 
-1. \`unowned-stack-layers\`: merging PR #${top} also merges #${lower} ("${lowerTitle}"), which you did not list as yours. Nothing was merged, and never merge only #${top} while leaving that layer open. If the user's request already covers that layer (they asked for the whole stack, or for every layer up to #${top}), run \`pr-shepherd stack ${URL(lower)} ${URL(top)} --until-terminal --merge\` now. Otherwise stop and tell the user that merging #${top} also merges #${lower}. If they approve, run \`pr-shepherd stack ${URL(lower)} ${URL(top)} --until-terminal --merge\` (lists #${lower} as yours too) or \`pr-shepherd stack "owner/repo#${stack}" --until-terminal --merge\` (the stack number owns every layer). Otherwise wait for its owner.`;
+1. \`unowned-stack-layers\`: merging PR #${top} also merges #${lower} ("${lowerTitle}"), which you did not list as yours. Nothing was merged, and never merge only #${top} while leaving that layer open. If the user's request already covers that layer (they asked for the whole stack, or for every layer up to #${top}), run \`pr-shepherd stack ${URL(lower)} ${URL(top)} --until-terminal --merge\` now. Otherwise stop and tell the user that merging #${top} also merges #${lower}. If they approve, run that same command, or \`pr-shepherd stack "owner/repo#${stack}" --until-terminal --merge\` (the stack number owns every layer). Otherwise wait for its owner.`;
 
 // `multiStackError` in its tool form, for refs that name only the top layers.
 const MULTI_STACK_ERROR = `These refs span 2 stacks. Run one command per stack:
