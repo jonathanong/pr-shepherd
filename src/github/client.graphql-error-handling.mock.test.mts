@@ -16,6 +16,40 @@ describe("graphql — error handling", () => {
     await expect(graphql("{ q }")).rejects.toThrow("Field does not exist; Syntax error");
   });
 
+  it("returns partial data when the only error is an unreadable check-suite app", async () => {
+    const data = { repository: { checkSuites: { nodes: [{ id: "S1", app: null }] } } };
+    const errors = [
+      { message: "IP allow list", path: ["repository", "checkSuites", "nodes", 0, "app"] },
+    ];
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: () => Promise.resolve({ data, errors }),
+      text: () => Promise.resolve(JSON.stringify({ data, errors })),
+    });
+    await expect(graphql("{ q }")).resolves.toEqual({ data, errors: undefined });
+  });
+
+  it("still throws when another error comes with a tolerated one", async () => {
+    const data = { repository: { checkSuites: { nodes: [{ id: "S1", app: null }] } } };
+    const errors = [
+      { message: "IP allow list", path: ["repository", "checkSuites", "nodes", 0, "app"] },
+      { message: "Something else", path: ["repository", "pullRequest"] },
+    ];
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: () => Promise.resolve({ data, errors }),
+      text: () => Promise.resolve(JSON.stringify({ data, errors })),
+    });
+    const err = await graphql("{ q }").catch((e: unknown) => e);
+    expect((err as Error).message).toBe(
+      "GitHub GraphQL error: Something else (path: repository.pullRequest)",
+    );
+  });
+
   it("wraps fetch failure as 'GitHub GraphQL request failed'", async () => {
     mockFetch.mockResolvedValue({
       ok: false,
