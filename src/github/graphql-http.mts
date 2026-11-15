@@ -5,6 +5,7 @@ import { GitHubRequestError, type GitHubGraphQlError } from "./errors.mts";
 import { isGraphQlMutationDocument, withGraphQlInternalRetry } from "./graphql-internal-retry.mts";
 import { githubFetch } from "./github-fetch.mts";
 import { formatGraphQlErrors, parseGraphQlPayload } from "./graphql-response.mts";
+import { withoutToleratedErrors } from "./graphql-tolerated-errors.mts";
 import { CCR_GRAPHQL_REFUSAL_MESSAGE, isCcrGraphqlRefusal } from "./graphql-session-refusal.mts";
 import { isAppEligibleGraphql } from "./app-eligibility.mts";
 import { withAppQuotaFallback } from "./app-quota.mts";
@@ -224,21 +225,22 @@ async function graphqlAttempt<T>(
       authSource,
     });
   }
-  if (payload.errors?.length && !opts.allowPartialData) {
-    throw new GitHubRequestError(`GitHub GraphQL error: ${formatGraphQlErrors(payload.errors)}`, {
+  const errors = withoutToleratedErrors(payload.errors);
+  if (errors?.length && !opts.allowPartialData) {
+    throw new GitHubRequestError(`GitHub GraphQL error: ${formatGraphQlErrors(errors)}`, {
       status: res.status,
       rateLimit: rateLimit ?? undefined,
       retryAfterSeconds,
-      graphqlErrors: payload.errors,
+      graphqlErrors: errors,
       authSource,
     });
   }
-  if (payload.errors?.length) {
-    const messages = payload.errors.map((e) => e.message).join("; ");
+  if (errors?.length) {
+    const messages = errors.map((e) => e.message).join("; ");
     process.stderr.write(`pr-shepherd: GraphQL non-fatal errors: ${messages}\n`);
   }
 
-  return { data: payload.data, rateLimit, retryAfterSeconds, errors: payload.errors };
+  return { data: payload.data, rateLimit, retryAfterSeconds, errors };
 }
 
 export async function graphql<T = unknown>(

@@ -56,6 +56,8 @@ Merge-queue check rollups are not on the first page. When the PR is queued, or i
 
 GraphQL reads are strict. Any GraphQL `errors`, null `data`, invalid JSON, a malformed payload, or a null check-context node throws `GitHubRequestError`, keeping GitHub's error paths. An incomplete snapshot never drives an action: `iterate` and `pr-shepherd [PR]` exit with a code from the HTTP status (`77` for 401/403, `75` for 429/5xx/rate-limited, `69` otherwise; [exit-codes.md](exit-codes.md)) instead of reaching `10`–`14`.
 
+One error is exempt: a check suite's `app` that GitHub refuses to read. This happens when the app's owner enforces an IP allow list, which can block even a GitHub App token. GitHub returns the rest of the response with `app: null`. Shepherd reads `app.slug` only to recognize GitHub Actions suites, and an unreadable app is never Actions, so the read continues. Any other error in the same response still throws.
+
 Only mutation batches that keep independent per-alias successes accept partial data; the resolve path reports successful aliases and returns failed ones for retry. New read paths must not enable partial data.
 
 ## Pagination strategy
