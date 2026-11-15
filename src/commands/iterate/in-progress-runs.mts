@@ -89,7 +89,13 @@ export async function buildInProgressRuns(
     const concurrency = label(parsed ? parsed.raw : `unreadable (${why})`);
     const workflowName = label(group[0]!.workflowName!);
     // Protection covers every check of the run, finished or not.
-    const siblings = [...report.checks.passing, ...report.checks.failing, ...group]
+    const siblings = [
+      ...report.checks.passing,
+      ...report.checks.failing,
+      ...report.checks.skipped,
+      ...report.checks.filtered,
+      ...group,
+    ]
       .filter((check) => check.runId === runId)
       .map((check) => check.name);
     const neverCancel = matchedNeverCancel(config.checks["never-cancel"], [

@@ -34,7 +34,7 @@ const report = (inProgress: ClassifiedCheck[], failing: unknown[] = []) =>
     repo: "owner/repo",
     headSha: SHA,
     baseBranch: "main",
-    checks: { inProgress, failing, passing: [] },
+    checks: { inProgress, failing, passing: [], skipped: [], filtered: [] },
   }) as unknown as ShepherdReport;
 
 describe("buildInProgressRuns labels", () => {
@@ -51,6 +51,20 @@ describe("buildInProgressRuns labels", () => {
     expect(run!.workflowName).toBe("CI cancel: rm -rf ~");
     expect(run).toMatchObject({ failed: ["x y"], running: ["a b"] });
     expect(JSON.stringify(run)).not.toContain("`");
+  });
+
+  it("matches never-cancel against finished sibling checks of the run too", async () => {
+    mockLoadConfig.mockReturnValue(
+      resolveConfig({ checks: { "never-cancel": ["review bot"] } }, "t"),
+    );
+    const sibling = check({ name: "Review Bot", status: "COMPLETED" });
+    for (const list of ["passing", "skipped", "filtered", "failing"]) {
+      const base = report([check()]);
+      base.checks = { ...base.checks, [list]: [sibling] };
+      const [run] = await buildInProgressRuns(base, true);
+      expect(run).toMatchObject({ neverCancel: "review bot" });
+      expect(run).not.toHaveProperty("cancelCommand");
+    }
   });
 
   it("withholds the cancel for a run that is not a pull-request run", async () => {

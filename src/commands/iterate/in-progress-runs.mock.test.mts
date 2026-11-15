@@ -39,7 +39,7 @@ function report(
     repo: "owner/repo",
     headSha: SHA,
     baseBranch: "main",
-    checks: { inProgress, failing, passing: [] },
+    checks: { inProgress, failing, passing: [], skipped: [], filtered: [] },
     ...over,
   } as unknown as ShepherdReport;
 }
@@ -113,19 +113,6 @@ describe("buildInProgressRuns", () => {
     const byCheck = await buildInProgressRuns(report(sibling), true);
     expect(byCheck[0]).toMatchObject({ neverCancel: "review *" });
     expect(byCheck[0]).not.toHaveProperty("cancelCommand");
-  });
-
-  it("matches never-cancel against finished sibling checks of the run too", async () => {
-    files({ [ciKey]: { text: CANCEL } });
-    config({ checks: { "never-cancel": ["review bot"] } });
-    const passed = check({ name: "Review Bot", status: "COMPLETED" });
-    const runs = await buildInProgressRuns(
-      report([check()], {
-        checks: { inProgress: [check()], passing: [passed], failing: [] },
-      } as unknown as Partial<ShepherdReport>),
-      true,
-    );
-    expect(runs[0]).toMatchObject({ neverCancel: "review bot" });
   });
 
   it("reports files unreadable instead of throwing when the read fails", async () => {
