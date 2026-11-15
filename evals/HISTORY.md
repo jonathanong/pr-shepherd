@@ -13,7 +13,8 @@ multi-PR polls, but none had the one-PR READY receipt `stack --merge` requires,
 and the caller folded the per-layer sessions into one multi-PR poll. The stack
 output now labels such a layer `mergeable, no READY receipt yet` and says to run
 each session on its own; a multi-PR poll of ready stack layers says it records
-no receipts. Sonnet 5.5 at low effort, opus judge, 3 runs per arm, $17.91.
+no receipts. Sonnet 5.5 at low effort, opus judge, 3 runs per arm, $31.78 over
+three runs.
 
 | Scenario                               | Plugin | gh/MCP | Δ     |
 | -------------------------------------- | ------ | ------ | ----- |
@@ -22,6 +23,14 @@ no receipts. Sonnet 5.5 at low effort, opus judge, 3 runs per arm, $17.91.
 
 - Every gh/MCP run merged the layers one at a time and retargeted the upper
   layers by hand instead of one `gh stack merge`.
+- **57** first used a `stack` mock that switched to the merge tick on its second
+  call. Review (#744) noted that a mock sees only its own calls, so it could
+  merge after a multi-PR poll that recorded nothing. With the mock always
+  answering the session tick, the plugin scored 0.33: agents ran the three
+  sessions but then planned "the merge commands Shepherd prints, in order" and
+  a conditional `--force-with-lease`, which the grader failed. The grader now
+  accepts the printed merge command and a conditional branch update, as the
+  other stack-merge graders do; the third run scored 1.00.
 - **58** checks that "merge it" after a ready report covers every layer: a first
   call naming only the top PR escalates `unowned-stack-layers`, and the agent
   reruns with the stack number without asking again.

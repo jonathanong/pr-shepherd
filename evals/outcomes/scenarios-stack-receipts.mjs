@@ -49,13 +49,17 @@ session per layer, each on its own (three separate one-PR runs, not one call tha
 names all three), then reruns the stack merge and runs the one merge command it
 prints. Because this pass forbids re-checking, that rerun and merge may appear as
 the next numbered steps, even if a repeated stack call in this pass still lists
-the sessions.
+the sessions. A step to run the merge command (or commands) the stack rerun prints
+counts as the single merge, since that rerun prints one command. A conditional
+"if the output says a branch is behind or conflicted, update it as the printed
+step says" is allowed; an unconditional rebase, push or retarget is not.
 
 ${STEPS}
 
 Failing responses do any of: merge the layers one at a time with \`gh pr merge\`;
 treat one multi-PR poll of all three layers as those sessions and stop there;
-merge only part of the stack; push to, rebase or retarget any branch; stop
+merge only part of the stack; push to, rebase or retarget a branch when nothing
+said it was behind or conflicted; stop
 without merging and without a concrete next step that merges; hand off to a human.`,
   },
   {
