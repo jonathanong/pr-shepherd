@@ -44,6 +44,11 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
     "same as triage.checks[].detailsUrl — shown only for the external/status_context stalled check, not a GitHub Actions one",
   ],
   [
+    "inProgressChecks[].pendingDeployments[].reviewers[].type",
+    "the `pending deployment:` line encodes the reviewer type as a `team` prefix for a Team and an `@` login for a User, not the raw enum",
+  ],
+  ["escalate.stalledChecks[].pendingDeployments[].reviewers[].type", "same"],
+  ["escalate.checks[].pendingDeployments[].reviewers[].type", "same"],  [
     "triage.resolutionOnlyThreads[].createdAtUnix",
     "raw bookkeeping timestamp on the thread's top comment; never rendered as a date",
   ],
