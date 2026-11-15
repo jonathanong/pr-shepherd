@@ -45,12 +45,12 @@ vi.mock("../../src/state/check-follow-up.mts", async (importOriginal) => ({
 vi.mock("../../src/state/queue-removal-follow-up.mts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/state/queue-removal-follow-up.mts")>()),
   readQueueRemovalFollowUp: vi.fn().mockResolvedValue(false),
-  writeQueueRemovalFollowUp: vi.fn().mockResolvedValue(true),
+  writeQueueRemovalFollowUp: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../src/state/ci-start-follow-up.mts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/state/ci-start-follow-up.mts")>()),
   readCiStartFollowUp: vi.fn().mockResolvedValue(false),
-  writeCiStartFollowUp: vi.fn().mockResolvedValue(true),
+  writeCiStartFollowUp: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../src/state/check-blockers.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../src/state/check-blockers.mts")>();
@@ -315,8 +315,8 @@ function registerIterateHooks(config = defaultConfig): void {
     mockWriteCheckFollowUp.mockResolvedValue(undefined);
     mockReadQueueRemovalFollowUp.mockResolvedValue(false);
     mockReadCiStartFollowUp.mockResolvedValue(false);
-    mockWriteCiStartFollowUp.mockResolvedValue(true);
-    mockWriteQueueRemovalFollowUp.mockResolvedValue(true);
+    mockWriteCiStartFollowUp.mockResolvedValue(undefined);
+    mockWriteQueueRemovalFollowUp.mockResolvedValue(undefined);
     mockWriteFixAttempts.mockResolvedValue(undefined);
     mockReadStallState.mockResolvedValue({ ok: true, state: null });
     mockWriteStallState.mockResolvedValue({ ok: true });

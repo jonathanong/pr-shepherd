@@ -35,7 +35,7 @@ describe("queue removal follow-up marker", () => {
 
   it("matches only the stored signature", async () => {
     expect(await readQueueRemovalFollowUp(key, "abc#5#q1")).toBe(false);
-    await writeQueueRemovalFollowUp(key, "abc#5#q1");
+    expect(await writeQueueRemovalFollowUp(key, "abc#5#q1")).toBeUndefined();
     expect(await readQueueRemovalFollowUp(key, "abc#5#q1")).toBe(true);
     expect(await readQueueRemovalFollowUp(key, "def#5#q1")).toBe(false);
   });
@@ -49,9 +49,11 @@ describe("queue removal follow-up marker", () => {
     expect(await readQueueRemovalFollowUp(key, "x")).toBe(false);
   });
 
-  it("does not throw when the state directory cannot be written", async () => {
+  it("returns the save error when the state directory cannot be written", async () => {
     await writeFile(join(dir, "file"), "x");
     process.env["PR_SHEPHERD_STATE_DIR"] = join(dir, "file");
-    await expect(writeQueueRemovalFollowUp(key, "x")).resolves.toBe(false);
+    await expect(writeQueueRemovalFollowUp(key, "x")).resolves.toMatch(
+      /^queue-removal-follow-up\.json: /,
+    );
   });
 });

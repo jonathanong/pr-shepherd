@@ -13,14 +13,17 @@ const FILE = "ci-start-follow-up.json";
 
 /** Identity of the stalled set: the head plus the sorted names of the unstarted checks. */
 export function ciStartSignature(headSha: string, names: readonly string[]): string {
-  return `${headSha}#${[...names].sort().join(",")}`;
+  return JSON.stringify([headSha, ...[...names].sort()]);
 }
 
 export function readCiStartFollowUp(key: StateKey, signature: string): Promise<boolean> {
   return readSignatureMarker(key, FILE, signature);
 }
 
-/** False when the marker could not be saved, so the caller escalates instead of repeating. */
-export function writeCiStartFollowUp(key: StateKey, signature: string): Promise<boolean> {
+/** The save error, if any, so the caller escalates instead of repeating the investigation. */
+export function writeCiStartFollowUp(
+  key: StateKey,
+  signature: string,
+): Promise<string | undefined> {
   return writeSignatureMarker(key, FILE, signature);
 }

@@ -72,11 +72,14 @@ describe("runIterate — CI start stall investigation", () => {
     expect(result.action).toBe("triage");
     expect(mockWriteCiStartFollowUp).toHaveBeenCalledWith(
       expect.objectContaining({ pr: 42 }),
-      "unknown#tests",
+      '["unknown","tests"]',
     );
     const text = formatIterateResult(result);
-    expect(text).toContain("`tests` [status: QUEUED] (run `123`");
-    expect(text).toContain("Waiting for runner");
+    expect(text).toContain("## Unstarted checks\n\n- check `tests` — QUEUED check_run, run `123`");
+    expect(text).toContain("  > Waiting for runner");
+    expect(result.action === "triage" && result.triage.instructions.join("\n")).not.toContain(
+      "Waiting for runner",
+    );
     expect(text).toContain('Playbook: "CI start stall"');
   });
 
@@ -85,13 +88,13 @@ describe("runIterate — CI start stall investigation", () => {
     const external = formatIterateResult(
       await runIterate(makeOpts({ stallTimeoutSeconds: STALL_TIMEOUT_S, noAutoMarkReady: true })),
     );
-    expect(external).toContain("(external status, https://example.test/build/1)");
+    expect(external).toContain("status_context, external `https://example.test/build/1`");
 
     mockInProgressCheck(checkRun({ runId: null, detailsUrl: "" }));
     const bare = formatIterateResult(
       await runIterate(makeOpts({ stallTimeoutSeconds: STALL_TIMEOUT_S, noAutoMarkReady: true })),
     );
-    expect(bare).toContain("(no run)");
+    expect(bare).toContain(", no run ID, ");
   });
 
   it("does not record the investigation on a debounce preview tick", async () => {
@@ -116,11 +119,14 @@ describe("runIterate — CI start stall investigation", () => {
 
   it("escalates when the investigation marker cannot be saved", async () => {
     mockInProgressCheck(checkRun());
-    mockWriteCiStartFollowUp.mockResolvedValue(false);
+    mockWriteCiStartFollowUp.mockResolvedValue("ci-start-follow-up.json: EACCES");
     const result = await runIterate(
       makeOpts({ stallTimeoutSeconds: STALL_TIMEOUT_S, noAutoMarkReady: true }),
     );
     expect(result.action).toBe("escalate");
+    if (result.action !== "escalate") return;
+    expect(result.escalate.triggers).toEqual(["stall-state-unavailable"]);
+    expect(result.escalate.suggestion).toContain("ci-start-follow-up.json: EACCES");
   });
 
   it("escalates at once when a stalled check waits on an environment approval", async () => {

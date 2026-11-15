@@ -7,6 +7,7 @@ import {
 } from "../../state/queue-removal-follow-up.mts";
 import { playbookPointer } from "../playbook-pointer.mts";
 import { buildEscalateHumanMessage, buildEscalateSuggestion } from "./escalate.mts";
+import { stateUnavailableResult } from "./state-unavailable.mts";
 import { buildUnreportedFixResult, stackRebase } from "./unreported-required.mts";
 
 type StateKey = { owner: string; repo: string; pr: number };
@@ -71,8 +72,11 @@ export async function planQueueRemoval(input: {
   // A reused cached report is re-run by the poll before it is shown, so it must not spend the one
   // investigation tick the caller never sees.
   if (persistState && report.fingerprintReused !== true) {
-    if (!(await writeQueueRemovalFollowUp(stallKey, signature)))
-      return escalateResult(base, report);
+    // A marker that cannot be saved would repeat the investigation forever.
+    const saveError = await writeQueueRemovalFollowUp(stallKey, signature);
+    if (saveError) {
+      return stateUnavailableResult(base, formatPrUrl(report.repo, report.pr), saveError);
+    }
   }
   return buildUnreportedFixResult(base, report, buildQueueRemovalInstructions(report));
 }

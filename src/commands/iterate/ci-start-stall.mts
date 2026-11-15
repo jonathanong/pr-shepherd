@@ -10,30 +10,15 @@ import {
   writeCiStartFollowUp,
 } from "../../state/ci-start-follow-up.mts";
 import { playbookPointer } from "../playbook-pointer.mts";
-import { formatDurationApprox } from "./escalate.mts";
 import { buildUnreportedFixResult } from "./unreported-required.mts";
 
 type StateKey = { owner: string; repo: string; pr: number };
 
-function describeCheck(check: AgentStalledCheck): string {
-  const where = check.runId
-    ? `run \`${check.runId}\``
-    : check.source === "status_context"
-      ? "external status"
-      : "no run";
-  const link = check.detailsUrl ? `, ${check.detailsUrl}` : "";
-  const summary = check.summary ? ` — ${check.summary}` : "";
-  return `- \`${check.name}\` [status: ${check.status}] (${where}${link}), unstarted for ${formatDurationApprox(check.ageSeconds)}${summary}`;
-}
-
-/** Facts, then an open-ended investigation, then the bounded outcome. */
-function buildCiStartInstructions(checks: readonly AgentStalledCheck[]): string[] {
-  return [
-    `These checks have not started after the stall timeout:\n${checks.map(describeCheck).join("\n")}`,
-    `Shepherd cannot tell from GitHub's data why nothing started. Find out before acting. ${playbookPointer("CI start stall")}`,
-    "If the cause is within this PR, fix it and push. Otherwise make no change and keep what you found. If the same checks are still not started on the next poll, Shepherd escalates with `stall-timeout`; report your diagnosis then.",
-  ];
-}
+/** Constant text: the checks' names, URLs and summaries are data under `## Unstarted checks`. */
+const CI_START_INSTRUCTIONS = [
+  `The checks under \`## Unstarted checks\` have not started after the stall timeout, and Shepherd cannot tell from GitHub's data why. Find out before acting. ${playbookPointer("CI start stall")}`,
+  "If the cause is within this PR, fix it and push. Otherwise make no change and keep what you found. If the same checks are still not started on the next poll, Shepherd escalates with `stall-timeout`; report your diagnosis then.",
+];
 
 /**
  * One bounded investigation `triage` the first time unstarted checks stall on a head; `undefined`
@@ -48,6 +33,8 @@ export async function planCiStartInvestigation(input: {
   stalledChecks: readonly AgentStalledCheck[];
   /** Internal preview ticks must not consume the one investigation tick. */
   persistState: boolean;
+  /** The escalation when the investigation marker cannot be saved. */
+  stateUnavailable: (reason: string) => IterateResult;
 }): Promise<IterateResult | undefined> {
   const { base, report, stallKey, headSha, stalledChecks, persistState } = input;
   // A deployment-environment approval is a known human gate: nothing to investigate.
@@ -59,9 +46,12 @@ export async function planCiStartInvestigation(input: {
   if (await readCiStartFollowUp(stallKey, signature)) return undefined;
   // A reused cached report is re-run by the poll before it is shown, so it must not spend the one
   // investigation tick the caller never sees. A marker that cannot be saved would repeat the
-  // investigation forever, so that escalates like an already-presented one.
+  // investigation forever, so that escalates with the save error.
   if (persistState && report.fingerprintReused !== true) {
-    if (!(await writeCiStartFollowUp(stallKey, signature))) return undefined;
+    const saveError = await writeCiStartFollowUp(stallKey, signature);
+    if (saveError) return input.stateUnavailable(saveError);
   }
-  return buildUnreportedFixResult(base, report, buildCiStartInstructions(stalledChecks));
+  return buildUnreportedFixResult(base, report, CI_START_INSTRUCTIONS, {
+    stalledChecks: [...stalledChecks],
+  });
 }

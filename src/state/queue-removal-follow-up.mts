@@ -26,6 +26,10 @@ export function readQueueRemovalFollowUp(key: StateKey, signature: string): Prom
 }
 
 /** Remember that the one investigation instruction was returned for this removal. */
-export function writeQueueRemovalFollowUp(key: StateKey, signature: string): Promise<boolean> {
+/** The save error, if any. */
+export function writeQueueRemovalFollowUp(
+  key: StateKey,
+  signature: string,
+): Promise<string | undefined> {
   return writeSignatureMarker(key, FILE, signature);
 }

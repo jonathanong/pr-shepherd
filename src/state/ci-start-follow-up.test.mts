@@ -27,7 +27,10 @@ describe("CI start follow-up marker", () => {
   });
 
   it("keys the stalled set by head and sorted check names", () => {
-    expect(ciStartSignature("abc", ["b", "a"])).toBe("abc#a,b");
+    expect(ciStartSignature("abc", ["b", "a"])).toBe('["abc","a","b"]');
+    expect(ciStartSignature("abc", ["lint,unit"])).not.toBe(
+      ciStartSignature("abc", ["lint", "unit"]),
+    );
     expect(ciStartSignature("abc", ["a", "b"])).toBe(ciStartSignature("abc", ["b", "a"]));
   });
 

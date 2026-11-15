@@ -1,4 +1,9 @@
-import type { IterateResult, IterateResultBase, ShepherdReport } from "../../types.mts";
+import type {
+  IterateResult,
+  IterateResultBase,
+  ShepherdReport,
+  AgentStalledCheck,
+} from "../../types.mts";
 import { buildPrShepherdCommand } from "../../cli/runner.mts";
 import { formatPrUrl } from "../../pr-reference.mts";
 import { readCiRetrigger, sameCiRetrigger, writeCiRetrigger } from "../../state/ci-retrigger.mts";
@@ -124,6 +129,7 @@ export function buildUnreportedFixResult(
   base: IterateResultBase,
   report: ShepherdReport,
   instructions: string[],
+  data: { stalledChecks?: AgentStalledCheck[] } = {},
 ): IterateResult {
   const prUrl = formatPrUrl(report.repo, report.pr);
   return {
@@ -148,6 +154,7 @@ export function buildUnreportedFixResult(
       instructions: [...instructions, buildFixCompletionInstruction()],
       firstLookThreads: [],
       firstLookComments: [],
+      ...data,
     },
   };
 }

@@ -2,6 +2,7 @@
 import { renderReviewCommitTag } from "../../cli/list-formatters.mts";
 import { renderRelatedJobLines } from "../../cli/related-jobs-format.mts";
 import { renderPendingDeploymentLines } from "../../cli/pending-deployments-format.mts";
+import { renderStalledCheckLines } from "../../cli/stalled-check-format.mts";
 import type { AgentCheck, EscalateDetails, EscalateTrigger, ReviewThread } from "../../types.mts";
 import { loadConfig } from "../../config/load.mts";
 import { renderResolveCommand } from "./render.mts";
@@ -103,6 +104,8 @@ export function checkEscalateTriggers(
   };
 }
 
+export { formatDurationApprox } from "./duration-approx.mts";
+
 interface BaseBranchLookup {
   branch: string;
   /** True when we could not confirm the branch name from GitHub. Callers must
@@ -118,19 +121,6 @@ interface BaseBranchLookup {
  * shell commands by `buildFixInstructions`, so we reject anything outside
  * `[A-Za-z0-9._/-]` to prevent shell injection.
  */
-/**
- * Render a seconds count as an approximate human duration: "8 seconds" below one minute,
- * otherwise whole minutes ("166 minutes", "60 minutes") — matching the precision the
- * generic stall timer has always reported, just adding a seconds tier for sub-minute ages
- * instead of always flooring to "0 minutes".
- */
-export function formatDurationApprox(seconds: number): string {
-  const s = Math.max(0, Math.floor(seconds));
-  if (s < 60) return `${s} second${s === 1 ? "" : "s"}`;
-  const mins = Math.floor(s / 60);
-  return `${mins} minute${mins === 1 ? "" : "s"}`;
-}
-
 export function validateBaseBranch(raw: string): BaseBranchLookup {
   const trimmed = raw.trim();
   if (trimmed === "") {
@@ -174,18 +164,7 @@ export function buildEscalateHumanMessage(
     lines.push("");
     lines.push("## Items needing attention");
     lines.push("");
-    for (const c of escalate.stalledChecks ?? []) {
-      const target = c.runId
-        ? `run \`${c.runId}\``
-        : c.detailsUrl
-          ? `external \`${c.detailsUrl}\``
-          : "no run ID";
-      lines.push(
-        `- check \`${c.name}\` — ${c.status} ${c.source}, ${target}, waiting ${formatDurationApprox(c.ageSeconds)}`,
-      );
-      if (c.summary) lines.push(`  > ${c.summary}`);
-      lines.push(...renderPendingDeploymentLines(c.pendingDeployments, "  "));
-    }
+    for (const c of escalate.stalledChecks ?? []) lines.push(...renderStalledCheckLines(c));
     if ((escalate.stalledChecks?.length ?? 0) > 0) lines.push("");
     for (const check of escalate.checks ?? []) {
       lines.push(...renderEscalateCheck(check), "");

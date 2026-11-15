@@ -28,18 +28,18 @@ export async function readSignatureMarker(
   }
 }
 
-/** True when the marker was saved; false when the state directory could not be written. */
+/** `undefined` when the marker was saved; otherwise the filesystem error, naming the file. */
 export async function writeSignatureMarker(
   key: StateKey,
   file: string,
   signature: string,
-): Promise<boolean> {
+): Promise<string | undefined> {
   try {
     const path = resolvePrStatePath(key, file);
     await mkdir(dirname(path), { recursive: true });
     await writeFile(path, JSON.stringify({ signature }));
-    return true;
-  } catch {
-    return false;
+    return undefined;
+  } catch (error) {
+    return `${file}: ${(error as Error).message}`;
   }
 }

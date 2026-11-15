@@ -47,6 +47,7 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
     "the `pending deployment:` line encodes the reviewer type as a `team` prefix for a Team and an `@` login for a User, not the raw enum",
   ],
   ["escalate.stalledChecks[].pendingDeployments[].reviewers[].type", "same"],
+  ["triage.stalledChecks[].detailsUrl", "same as escalate.stalledChecks[].detailsUrl"],
   ["escalate.checks[].pendingDeployments[].reviewers[].type", "same"],
   [
     "triage.resolutionOnlyThreads[].createdAtUnix",
@@ -67,10 +68,13 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
     "rendered as a relative 'waiting N minutes' duration, not a raw timestamp",
   ],
   ["escalate.stalledChecks[].updatedAtUnix", "same"],
+  ["triage.stalledChecks[].createdAtUnix", "same"],
+  ["triage.stalledChecks[].updatedAtUnix", "same"],
   [
     "escalate.stalledChecks[].ageSeconds",
     "same — the duration is reformatted to whatever unit reads best (docs/actions.md)",
   ],
+  ["triage.stalledChecks[].ageSeconds", "same"],
   [
     "triage.resolveCommand.argv[]",
     "JSON always carries the structured command object for programmatic callers; Markdown prints the assembled `apply review:` bullet only when hasMutations is true",
