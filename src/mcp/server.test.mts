@@ -529,7 +529,7 @@ describe("pr-shepherd MCP server", () => {
     expect(structured.prs[0]?.headRefOid).toBeUndefined();
     expect(response.content?.[0]?.text).toContain("# openai/pr-shepherd stack #9 — actionable");
     expect(response.content?.[0]?.text).toContain(
-      ": Fix widgets — mergeable · owner `@alice` · owned",
+      ": Fix widgets — mergeable, no READY receipt yet · owner `@alice` · owned",
     );
   });
 

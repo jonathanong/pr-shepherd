@@ -162,7 +162,7 @@ function formatLayerLines(layer: StackLayerView, index: number, overview: StackO
     layer.mergeable === undefined
       ? undefined
       : layer.mergeable
-        ? "mergeable"
+        ? `mergeable${layer.shepherded ? "" : ", no READY receipt yet"}`
         : `not mergeable (\`${layer.blocker ?? "unknown"}\`)`,
     layer.author ? `owner \`@${layer.author}\`` : undefined,
     layer.owned ? "owned" : undefined,

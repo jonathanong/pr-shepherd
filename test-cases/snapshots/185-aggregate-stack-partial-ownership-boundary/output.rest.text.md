@@ -5,21 +5,21 @@ nextAction: shepherd
 
 ## Layers
 
-- PR #641: Layer 1 — mergeable · owned
+- PR #641: Layer 1 — mergeable, no READY receipt yet · owned
   - OPEN · base `main`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields
   - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
   - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
-- PR #642: Layer 2 — mergeable · owned
+- PR #642: Layer 2 — mergeable, no READY receipt yet · owned
   - OPEN · base `layer-641`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields
   - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
   - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
-- PR #643: Layer 3 — mergeable
+- PR #643: Layer 3 — mergeable, no READY receipt yet
   - OPEN · base `layer-642`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied

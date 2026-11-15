@@ -9,7 +9,7 @@ nextAction: shepherd
   - OPEN · base `main`
 - PR #602: Layer 2 — shepherded · mergeable
   - OPEN · base `layer-601`
-- PR #603: Layer 3 — mergeable
+- PR #603: Layer 3 — mergeable, no READY receipt yet
   - OPEN · base `layer-602`
 
 ## Instructions

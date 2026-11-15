@@ -115,7 +115,7 @@ nextAction: shepherd
 
 - PR #401: Human handoff — not mergeable (`mark-ready-authorization-required`)
   - OPEN · draft · base `main`
-- PR #402: Independent review work — mergeable · owned
+- PR #402: Independent review work — mergeable, no READY receipt yet · owned
   - OPEN · base `foundation`
 - PR #403: Pending CI — not mergeable (`checks-in-progress`) · owned
   - OPEN · base `review-work` · 1 in progress

@@ -1,0 +1,34 @@
+{
+  "description": "A whole-stack merge where every layer looks ready but none has a one-PR READY receipt yet (only multi-PR polls ran): each layer gets its own one-PR session, the step says not to fold them into one multi-PR poll, and nothing merges yet.",
+  "mode": "aggregate",
+  "args": ["stack", "owner/repo#98", "--merge", "--debounce", "0s"],
+  "expectedExitCode": 16,
+  "expectedNextAction": "shepherd",
+  "expectedReason": "actionable",
+  "aggregateSummary": {
+    "selection": { "kind": "stack", "anchor": 981, "stackNumber": 98, "stackSize": 3 },
+    "prs": [
+      {
+        "pr": 981, "repo": "owner/repo", "title": "Layer 1", "url": "https://github.com/owner/repo/pull/981",
+        "action": "cancel", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-1", "headRefOid": "9811111111111111111111111111111111111111", "baseRefName": "main",
+        "stack": { "number": 98, "size": 3, "position": 1, "baseRefName": "main" },
+        "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/981 --until-terminal"
+      },
+      {
+        "pr": 982, "repo": "owner/repo", "title": "Layer 2", "url": "https://github.com/owner/repo/pull/982",
+        "action": "cancel", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-2", "headRefOid": "9822222222222222222222222222222222222222", "baseRefName": "layer-1",
+        "stack": { "number": 98, "size": 3, "position": 2, "baseRefName": "main" },
+        "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/982 --until-terminal"
+      },
+      {
+        "pr": 983, "repo": "owner/repo", "title": "Layer 3", "url": "https://github.com/owner/repo/pull/983",
+        "action": "cancel", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-3", "headRefOid": "9833333333333333333333333333333333333333", "baseRefName": "layer-2",
+        "stack": { "number": 98, "size": 3, "position": 3, "baseRefName": "main" },
+        "owned": true, "pollCommand": "pr-shepherd https://github.com/owner/repo/pull/983 --until-terminal"
+      }
+    ]
+  }
+}

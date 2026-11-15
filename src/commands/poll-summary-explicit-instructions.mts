@@ -27,6 +27,21 @@ export function onlyDraftVerificationSelection(result: PollSummaryResult): boole
 const KEEP_WATCHING =
   "Do not end the turn while any selected row is non-terminal: a one-PR poll returning `CANCEL` or `ESCALATE` finishes only that row, and rows that are `CANCEL`, `ESCALATE`, or handed off do not count. If a background exit wakes you, end the turn and continue then.";
 
+/**
+ * A multi-PR poll reads stack layers without verifying them, so `appears-ready` here is not the
+ * READY receipt a `stack --merge` requires. Say so once, only when a stack layer looks ready.
+ */
+function stackReceiptNote(result: PollSummaryResult): string[] {
+  const layers = result.prs.filter(
+    (item) => item.state === "OPEN" && item.stack && item.reasons.includes("appears-ready"),
+  );
+  if (layers.length === 0) return [];
+  const names = layers.map((item) => `#${item.pr}`).join(", ");
+  return [
+    `2. ${names} ${layers.length === 1 ? "is a native stack layer" : "are native stack layers"}: this poll does not record the READY receipt a stack merge needs. If the user asked to merge, run \`pr-shepherd stack\` with \`--merge\` instead; it starts the one-PR sessions that record them.`,
+  ];
+}
+
 export function explicitInstructions(result: PollSummaryResult, rerunCommand?: string): string[] {
   const again = rerunCommand ? `\`${rerunCommand}\`` : "this aggregate command";
   if (result.reason === "all_terminal")
@@ -34,6 +49,7 @@ export function explicitInstructions(result: PollSummaryResult, rerunCommand?: s
       result.prs.some((item) => item.reasons.includes("draft-auto-mark-ready-disabled"))
         ? "1. Stop — every selected PR is complete for this Shepherd run."
         : "1. Stop — every selected PR is terminal.",
+      ...stackReceiptNote(result),
     ];
   if (result.quotaWarning && result.reason !== "actionable") {
     return [
