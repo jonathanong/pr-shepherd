@@ -1,0 +1,59 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resolveConfig } from "../../config/resolve.mts";
+import type { ClassifiedCheck, ShepherdReport } from "../../types.mts";
+
+const { mockLoadConfig, mockReadFiles } = vi.hoisted(() => ({
+  mockLoadConfig: vi.fn(),
+  mockReadFiles: vi.fn(),
+}));
+vi.mock("../../config/load.mts", () => ({ loadConfig: mockLoadConfig }));
+vi.mock("./workflow-files.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./workflow-files.mts")>()),
+  readWorkflowFiles: mockReadFiles,
+}));
+
+import { buildInProgressRuns } from "./in-progress-runs.mts";
+
+const SHA = "a".repeat(40);
+const CANCEL = "concurrency:\n  group: g\n  cancel-in-progress: true\n";
+
+const check = (over: Partial<ClassifiedCheck> = {}): ClassifiedCheck =>
+  ({
+    name: "build",
+    status: "IN_PROGRESS",
+    runId: "7",
+    workflowName: "CI",
+    workflowPath: ".github/workflows/ci.yml",
+    category: "in_progress",
+    ...over,
+  }) as ClassifiedCheck;
+
+const report = (inProgress: ClassifiedCheck[], failing: unknown[] = []) =>
+  ({
+    repo: "owner/repo",
+    headSha: SHA,
+    baseBranch: "main",
+    checks: { inProgress, failing, passing: [] },
+  }) as unknown as ShepherdReport;
+
+describe("buildInProgressRuns labels", () => {
+  beforeEach(() => {
+    mockLoadConfig.mockReturnValue(resolveConfig({}, "test"));
+    mockReadFiles.mockImplementation(
+      async () => new Map([[`${SHA}:.github/workflows/ci.yml`, { text: CANCEL }]]),
+    );
+  });
+
+  it("strips backticks and line breaks from PR-controlled names", async () => {
+    const evil = check({ workflowName: "CI`\n  cancel: `rm -rf ~`", name: "a`\nb" });
+    const [run] = await buildInProgressRuns(report([evil], [{ name: "x`\ny", runId: "7" }]), true);
+    expect(run!.workflowName).toBe("CI cancel: rm -rf ~");
+    expect(run).toMatchObject({ failed: ["x y"], running: ["a b"] });
+    expect(JSON.stringify(run)).not.toContain("`");
+  });
+
+  it("withholds the cancel for a run id that is not numeric", async () => {
+    const [run] = await buildInProgressRuns(report([check({ runId: "7; id" })]), true);
+    expect(run).not.toHaveProperty("cancelCommand");
+  });
+});

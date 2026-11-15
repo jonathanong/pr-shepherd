@@ -7,6 +7,17 @@ import { readWorkflowFiles, workflowFileKey, type WorkflowFileRequest } from "./
 /** Raw `pull_request_target` runs execute the base branch's workflow file, not the head's. */
 const BASE_FILE_EVENT = "pull_request_target";
 
+/**
+ * Display text from PR-controlled YAML or check names: control characters and backticks would
+ * let a name forge a `cancel:` line or close the code span around it.
+ */
+function label(text: string): string {
+  return text
+    .replace(/[\p{Cc}\p{Zl}\p{Zp}`\s]+/gu, " ")
+    .trim()
+    .slice(0, 200);
+}
+
 function groupByRun(checks: readonly ClassifiedCheck[]): Map<string, ClassifiedCheck[]> {
   const groups = new Map<string, ClassifiedCheck[]>();
   for (const check of checks) {
@@ -75,28 +86,32 @@ export async function buildInProgressRuns(
     const file = request ? files.get(workflowFileKey(request)) : undefined;
     const parsed = file && "text" in file ? parseWorkflowConcurrency(file.text) : undefined;
     const why = !file ? "no workflow file" : "unreadable" in file ? file.unreadable : "parse error";
-    const concurrency = parsed ? parsed.raw : `unreadable (${why})`;
-    const workflowName = group[0]!.workflowName!;
+    const concurrency = label(parsed ? parsed.raw : `unreadable (${why})`);
+    const workflowName = label(group[0]!.workflowName!);
     // Protection covers every check of the run, finished or not.
     const siblings = [...report.checks.passing, ...report.checks.failing, ...group]
       .filter((check) => check.runId === runId)
       .map((check) => check.name);
     const neverCancel = matchedNeverCancel(config.checks["never-cancel"], [
-      workflowName,
+      group[0]!.workflowName!,
       ...siblings,
     ]);
     const status = group.some((check) => check.status === "WAITING") ? "WAITING" : group[0]!.status;
     const failed = report.checks.failing
       .filter((check) => check.runId === runId)
-      .map((check) => check.name);
+      .map((check) => label(check.name));
     const cancel =
-      parsed?.cancelInProgress && !neverCancel && status !== "WAITING" && rerunAuthorized;
+      parsed?.cancelInProgress &&
+      !neverCancel &&
+      status !== "WAITING" &&
+      rerunAuthorized &&
+      /^\d+$/.test(runId);
     return {
       runId,
       workflowName,
       status,
       concurrency,
-      ...(failed.length > 0 && { failed, running: group.map((check) => check.name) }),
+      ...(failed.length > 0 && { failed, running: group.map((check) => label(check.name)) }),
       ...(neverCancel !== undefined && { neverCancel }),
       ...(cancel && { cancelCommand: `gh run cancel ${runId} -R ${report.repo}` }),
     };
