@@ -37,7 +37,7 @@ function groupIsStable(group: string): boolean {
 
 /**
  * False when any `pull_request` / `pull_request_target` trigger lists `types` without
- * `synchronize`: the run in progress may be of that event, and a fix push then starts no
+ * `synchronize`, or filters by `paths`: the run in progress may be of that event, and a fix push then starts no
  * replacement run of it. Conservative: an unverified event withholds the cancel.
  */
 function pushRetriggers(on: unknown): boolean {
@@ -47,10 +47,11 @@ function pushRetriggers(on: unknown): boolean {
     .filter((trigger) => trigger !== undefined);
   if (triggers.length === 0) return true;
   return triggers.every((trigger) => {
-    const types =
-      trigger !== null && typeof trigger === "object"
-        ? (trigger as Record<string, unknown>)["types"]
-        : undefined;
+    const config =
+      trigger !== null && typeof trigger === "object" ? (trigger as Record<string, unknown>) : {};
+    // A path filter is evaluated against the whole PR diff, so a fix push may not match it.
+    if (config["paths"] !== undefined || config["paths-ignore"] !== undefined) return false;
+    const types = config["types"];
     return !Array.isArray(types) || types.includes("synchronize");
   });
 }
@@ -83,7 +84,7 @@ export function parseWorkflowConcurrency(text: string): WorkflowConcurrency | un
   }
   if (value === true && !pushRetriggers((doc as Record<string, unknown>)["on"])) {
     return {
-      raw: "cancel-in-progress=true (a push does not retrigger it)",
+      raw: "cancel-in-progress=true (a push may not retrigger it)",
       cancelInProgress: false,
     };
   }

@@ -69,7 +69,7 @@ describe("parseWorkflowConcurrency", () => {
 
   it("withholds a cancel when a push to the PR does not retrigger the workflow", () => {
     const body = "concurrency:\n  group: g\n  cancel-in-progress: true\n";
-    const raw = "cancel-in-progress=true (a push does not retrigger it)";
+    const raw = "cancel-in-progress=true (a push may not retrigger it)";
     const types = (on: string) => parseWorkflowConcurrency(`on:\n${on}\n${body}`);
     expect(types("  pull_request:\n    types: [opened, reopened]")?.raw).toBe(raw);
     expect(types("  pull_request:\n    types: [opened, synchronize]")?.cancelInProgress).toBe(true);
@@ -79,6 +79,8 @@ describe("parseWorkflowConcurrency", () => {
       )?.raw,
     ).toBe(raw);
     expect(types("  pull_request:\n    branches: [main]")?.cancelInProgress).toBe(true);
+    expect(types("  pull_request:\n    paths: ['src/**']")?.raw).toBe(raw);
+    expect(types("  pull_request:\n    paths-ignore: ['docs/**']")?.raw).toBe(raw);
     expect(types("  pull_request:")?.cancelInProgress).toBe(true);
     expect(types("  push:")?.cancelInProgress).toBe(true);
     expect(parseWorkflowConcurrency(`on: pull_request\n${body}`)?.cancelInProgress).toBe(true);
