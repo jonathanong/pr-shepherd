@@ -14,6 +14,9 @@ fragment CommitCheckSuites on Commit {
         workflow {
           name
         }
+        file {
+          path
+        }
       }
     }
   }

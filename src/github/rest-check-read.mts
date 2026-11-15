@@ -48,6 +48,7 @@ export interface RestWorkflowRun {
   created_at: string;
   updated_at: string;
   html_url: string;
+  path?: string; // workflow file, e.g. .github/workflows/ci.yml
 }
 export async function readRestCommitChecks(oid: string, repo: RepoInfo, pr = 0) {
   const prefix = restRepoPath(repo);
@@ -190,7 +191,6 @@ export async function readRestAnnotationCounts(oid: string, repo: RepoInfo) {
     annotations: { totalCount: restNumber(check.output?.annotations_count, "annotations_count") },
   }));
 }
-
 export async function readRestBehind(repo: RepoInfo, base: string, head: string): Promise<number> {
   const comparison = await rest<Record<string, unknown>>(
     "GET",

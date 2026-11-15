@@ -108,6 +108,7 @@ export async function readRestSnapshot(
             detailsUrl: run.html_url,
             event: run.event,
             runId: String(run.id),
+            ...(run.path?.trim() && { workflowPath: run.path.trim() }),
           },
         ];
       }),

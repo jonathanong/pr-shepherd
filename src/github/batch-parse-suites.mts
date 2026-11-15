@@ -42,6 +42,7 @@ export function startupFailureChecksFromSuites(
             event: string | null;
             url?: string | null;
             workflow?: { name: string | null } | null;
+            file?: { path: string | null } | null;
           } | null;
         }>;
       }
@@ -54,6 +55,7 @@ export function startupFailureChecksFromSuites(
     const runId = node.workflowRun.databaseId != null ? String(node.workflowRun.databaseId) : null;
     const name =
       node.workflowRun.workflow?.name?.trim() || (runId ? `workflow run ${runId}` : "workflow run");
+    const workflowPath = node.workflowRun.file?.path?.trim() || undefined;
     return [
       {
         name,
@@ -63,6 +65,7 @@ export function startupFailureChecksFromSuites(
         detailsUrl: node.workflowRun.url ?? "",
         event: node.workflowRun.event,
         runId,
+        ...(workflowPath !== undefined && { workflowPath }),
       },
     ];
   });

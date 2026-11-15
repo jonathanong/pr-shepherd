@@ -254,6 +254,9 @@ fragment PollSummaryPr on PullRequest {
               workflow {
                 name
               }
+              file {
+                path
+              }
             }
           }
         }

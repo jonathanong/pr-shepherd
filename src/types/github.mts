@@ -106,6 +106,8 @@ export interface CheckRun {
   updatedAtUnix?: number;
   /** One-line status text shown in the GitHub UI (CheckRun.title or first line of summary; StatusContext.description). */
   summary?: string;
+  /** Workflow file of a `startup_failure` check, e.g. `.github/workflows/ci.yml`. */
+  workflowPath?: string;
   /** Workflow display name for GitHub Actions check runs, when GraphQL exposes it. */
   workflowName?: string;
   /**

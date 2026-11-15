@@ -5,7 +5,7 @@
 ## Failing checks
 
 - `999` — `CI (startup failure)` [conclusion: STARTUP_FAILURE]
-  > Process exited early
+  workflow file: `.github/workflows/ci.yml`
   rerun: `gh run rerun 999 -R owner/repo`
 
 ## Instructions

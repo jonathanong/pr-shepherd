@@ -27,6 +27,7 @@ describe("REST batch workflow and review evidence", () => {
         source: "startup_failure",
         conclusion: "STARTUP_FAILURE",
         runId: "88",
+        workflowPath: ".github/workflows/ci.yml",
       }),
     );
     expect(batch.headWorkflowSuites).toEqual([

@@ -9,7 +9,7 @@
       "event": "pull_request",
       "detailsUrl": "https://github.com/owner/repo/actions/runs/999",
       "runId": "999",
-      "summary": "Process exited early"
+      "workflowPath": ".github/workflows/ci.yml"
     }
   ],
   "readyDelayState": {

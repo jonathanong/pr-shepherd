@@ -67,6 +67,7 @@ describe("parseSuiteStartupFailures", () => {
             event: "pull_request",
             url: "https://github.com/o/r/actions/runs/99",
             workflow: { name: "CI" },
+            file: { path: ".github/workflows/ci.yml" },
           },
         },
         { conclusion: "SUCCESS", workflowRun: null },
@@ -81,6 +82,7 @@ describe("parseSuiteStartupFailures", () => {
         detailsUrl: "https://github.com/o/r/actions/runs/99",
         event: "pull_request",
         runId: "99",
+        workflowPath: ".github/workflows/ci.yml",
       },
     ]);
   });
