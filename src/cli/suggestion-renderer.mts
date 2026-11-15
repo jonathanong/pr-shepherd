@@ -20,6 +20,12 @@ export function renderSuggestionBlock(s: SuggestionBlock, indent = "  "): string
         ? `Replaces ${rangeLabel} with a blank line:`
         : `Replaces ${rangeLabel}:`;
 
+  const note = /`{3,}/.test(content)
+    ? [
+        `${indent}Replacement contains backtick runs of 3 or more; \`suggest\` builds the exact patch.`,
+      ]
+    : [];
+
   return [
     `${indent}${label}`,
     `${indent}${fence}`,
@@ -32,5 +38,6 @@ export function renderSuggestionBlock(s: SuggestionBlock, indent = "  "): string
             .join("\n"),
         ]),
     `${indent}${fence}`,
+    ...note,
   ].join("\n");
 }

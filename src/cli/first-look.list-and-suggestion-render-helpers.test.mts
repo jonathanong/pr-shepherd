@@ -117,4 +117,16 @@ describe("list and suggestion render helpers", () => {
       renderSuggestionBlock({ startLine: 1, endLine: 2, lines: ["a", "b"], author: "a" }, ""),
     ).toContain("a\nb");
   });
+
+  it("points at suggest only when the replacement contains backtick fences", () => {
+    const plain = renderSuggestionBlock({ startLine: 1, endLine: 1, lines: ["`x`"], author: "a" });
+    expect(plain).not.toContain("suggest");
+    const nested = renderSuggestionBlock({
+      startLine: 1,
+      endLine: 1,
+      lines: ["a ```b``` c"],
+      author: "a",
+    });
+    expect(nested).toContain("`suggest` builds the exact patch");
+  });
 });

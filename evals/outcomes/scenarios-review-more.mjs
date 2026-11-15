@@ -8,6 +8,7 @@ const RULES =
   " No merge queue. Branch protection on `main`: conversations must be resolved before merge.";
 
 const NESTED = "const x = ````nested fence````;";
+const TYPO = "const x = ````nested fense````;";
 
 const SUGGEST_RESULT = JSON.stringify(
   {
@@ -20,7 +21,7 @@ const SUGGEST_RESULT = JSON.stringify(
         startLine: 7,
         endLine: 7,
         author: "reviewer",
-        patch: `--- a/src/template.ts\n+++ b/src/template.ts\n@@ -7,1 +7,1 @@\n-const x = "placeholder";\n+${NESTED}\n`,
+        patch: `--- a/src/template.ts\n+++ b/src/template.ts\n@@ -7,1 +7,1 @@\n-${TYPO}\n+${NESTED}\n`,
         commitMessage: "Use the nested-fence literal",
         commitBody: "Co-authored-by: reviewer <reviewer@users.noreply.github.com>",
         filesToStage: ["src/template.ts"],
@@ -127,39 +128,45 @@ Failing responses do any of: leave the bot review blocking; wait for the bot to
 re-review; ask a human to dismiss or approve; skip the thread.`,
   },
   {
-    // A suggestion whose own text contains backtick runs: copying the body by
-    // hand cuts it at the first run of four.
+    // An obvious typo fix whose suggestion text contains backtick runs: copying
+    // the body by hand cuts it at the first run of four.
     slug: "13-suggestion",
     fixture: "19-triage-review-thread-suggestion-nested-fence",
     tags: ["review", "suggestion", "nested-fence"],
     shepherd: { suggest: SUGGEST_RESULT },
-    prompt: `Get ${PR_URL} ready to merge.`,
+    transform: (t) =>
+      t.replace(
+        "> The suggestion body itself contains a code fence:",
+        "> Typo: `fense` should be `fence`.",
+      ),
+    prompt: `Get ${PR_URL} ready to merge. Apply the reviewer's suggestion on \`src/template.ts\`.`,
     world: `${PR(RULES, "`src/template.ts`")} Checks on \`c0ffee1\`: \`build\` passed.
 
 Review thread (GraphQL id \`PRRT_nested\`), unresolved, on \`src/template.ts\` line 7,
 by \`reviewer\`. Body (the suggestion fence is five backticks because the
 suggested line itself contains runs of four):
-  The suggestion body itself contains a code fence:
+  Typo: \`fense\` should be \`fence\`.
   \`\`\`\`\`suggestion
   ${NESTED}
   \`\`\`\`\`
-Line 7 currently reads \`const x = "placeholder";\`.`,
+Line 7 currently reads \`${TYPO}\`.`,
     grader: `The agent applies the reviewer's suggestion exactly: line 7 of
 \`src/template.ts\` becomes \`${NESTED}\`, with all eight backticks (four on each
-side of \`nested fence\`) intact and the trailing semicolon. It commits and pushes
-it to the PR branch, and replies on the thread. Crediting the reviewer as
-co-author is fine.
+side of \`nested fence\`) intact, the typo fixed and the trailing semicolon. It
+commits and pushes it to the PR branch, and replies on the thread (resolving it
+is fine). Crediting the reviewer as co-author is fine. Any mechanism counts:
+building the patch with a tool or editing the line by hand.
 
-The agent must check the suggestion against the code and then commit to
-applying it (or reject it with a stated reason). A conditional commitment, such
-as "apply it if it's correct" or "decide whether it's warranted", counts as not
-committing: it fails.
+The user asked for the suggestion to be applied, so the agent must commit to
+it. Hedging that defers the decision ("apply it if it's correct", "decide
+whether it's warranted") counts as not committing: it fails.
 
 ${STEPS}
 
 Failing responses do any of: write a line that differs from the suggestion
-(for example one that drops or adds backticks, or stops at the first run of
-four); change something other than that line; skip the commit, the push or the
-reply; ask the user to click "Commit suggestion" instead of doing it.`,
+(for example one that drops or adds backticks, keeps the typo, or stops at the
+first run of four); change something other than that line; skip the commit, the
+push or the reply; ask the user to click "Commit suggestion" instead of doing
+it.`,
   },
 ];
