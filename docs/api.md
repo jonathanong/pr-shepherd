@@ -82,7 +82,7 @@ A non-empty `prs` set runs one compact summary tick instead and returns `PollSum
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SHEPHERD`          | Some layer is unready and autonomous. Every layer with work gets a one-PR Shepherd instruction; a mixed state also surfaces any human blocker.                                                             |
 | `WAIT`              | The stack is queued, or its layers can only wait. An unchanged idle wait that reaches `stallTimeoutSeconds` returns `ESCALATE` with `stall-timeout`.                                                       |
-| `ESCALATE`          | Closed or unverified topology needs human direction, and no one-PR Shepherd session remains.                                                                                                               |
+| `ESCALATE`          | A closed-unmerged layer needs human direction, and no one-PR Shepherd session remains.                                                                                                                     |
 | `MERGE`             | With `merge: true`: the highest ready prefix whose bottom open layer targets the stack base. Run `gh stack merge <PR number>` for that prefix, then recheck until every layer merges and `CANCEL` returns. |
 | `CANCEL`            | Terminal READY or merged state, including clean drafts left in draft when auto mark-ready is disabled (row reason `draft-auto-mark-ready-disabled`, with no `pollCommand`).                                |
 

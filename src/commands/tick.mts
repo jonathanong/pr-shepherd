@@ -21,6 +21,7 @@ import {
 import { runIterate } from "./iterate/index.mts";
 import { earliestDeadline, readStallDeadline } from "./stall-deadline.mts";
 import { runsSingleTick } from "./single-tick.mts";
+import { isDraftReadinessVerification } from "./stack-work.mts";
 import { readStackStallDeadline } from "./stack-stall.mts";
 import { runPoll, type PollCommandOptions } from "./poll.mts";
 import {
@@ -120,7 +121,7 @@ async function withAggregateNextCheck(
 /** The appended tick step owns timing, including pending stack merges. */
 function withoutPollingCadence(step: string): string {
   return step
-    .replace(/ Recheck(?: them)? at the configured polling cadence\./g, "")
+    .replace(/ Recheck(?: them)? at the configured polling cadence[.;]/g, "")
     .replace(" If a background exit wakes you, end the turn and continue then.", "")
     .replace(
       /Do not end the turn while any selected row is non-terminal: /g,
@@ -132,13 +133,27 @@ function withoutPollingCadence(step: string): string {
     );
 }
 
+/** A stack layer no one-PR probe can advance: unreadable, or another author's draft. */
+function hasUnrunnableLayer(result: PollSummaryResult): boolean {
+  const { selection } = result;
+  if (selection.kind !== "stack") return false;
+  // A whole-stack selection omits row ownership: every layer is the caller's.
+  const listed = selection.owned !== undefined;
+  return result.prs.some(
+    (item) =>
+      item.state === "UNKNOWN" || (listed && isDraftReadinessVerification(item) && !item.owned),
+  );
+}
+
 function aggregateNextCheck(
   result: PollSummaryResult,
   stallDeadlineSeconds: number | undefined,
 ): NextCheck | undefined {
   if (
     isHandedOffSelection(result) ||
-    (onlyDraftVerificationSelection(result) && result.nextAction !== "merge") ||
+    (onlyDraftVerificationSelection(result) &&
+      !hasUnrunnableLayer(result) &&
+      result.nextAction !== "merge") ||
     result.reason === "all_terminal" ||
     result.nextAction === "cancel" ||
     result.nextAction === "escalate"

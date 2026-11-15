@@ -4,6 +4,7 @@ import type {
   PollSummaryCommandOptions,
   PollSummaryItem,
   PollSummaryReview,
+  StackHandoffReason,
 } from "../types.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import { hasNoRelevantChecks } from "./poll-summary-unreported.mts";
@@ -68,7 +69,10 @@ export function routePollSummary(
       const unsupported =
         getGithubTransport() === "rest" && raw.viewerCanUpdate !== false && !isCcrTransport();
       if (unsupported) return { action: "escalate", reasons: ["transport-unsupported"] };
-      return { action: "escalate", reasons: ["mark-ready-authorization-required"] };
+      return {
+        action: "escalate",
+        reasons: ["mark-ready-authorization-required" satisfies StackHandoffReason],
+      };
     }
     return { action: "mark_ready", reasons: ["draft-appears-ready"] };
   }

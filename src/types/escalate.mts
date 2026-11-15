@@ -19,6 +19,16 @@ export type EscalateTrigger =
   | "merge-through-target-closed"
   | "listed-pr-left-stack";
 
+/**
+ * Reasons an aggregate `stack`/PR-set row reports `escalate`. They ride on the row's `reasons`,
+ * not on an iterate result's `escalate.triggers`, so they are not `EscalateTrigger` members.
+ * Row hand-offs that are triggers (`transport-unsupported`) are listed there.
+ */
+export type StackHandoffReason =
+  | "closed-unmerged-dependency"
+  | "closed-unmerged-layer"
+  | "mark-ready-authorization-required";
+
 export interface AgentStalledCheck {
   name: string;
   status: CheckStatus;

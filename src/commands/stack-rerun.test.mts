@@ -13,7 +13,8 @@ function unowned(pr: number, position: number): PollSummaryItem {
 
 describe("stack rerun step", () => {
   const KEEP = "Keep watching until every layer is terminal";
-  const stop = "No owned layer needs a session. Report this overview and stop.";
+  const stop =
+    "No owned layer needs a session. The remaining work belongs to other authors. Recheck at the configured polling cadence; Shepherd escalates `stall-timeout` if the stack does not change.";
 
   it("reruns the stack command when an owned layer has work", () => {
     const steps = ["1. existing"];
@@ -43,7 +44,7 @@ describe("stack rerun step", () => {
     expect(steps).toEqual(["1. rerun"]);
   });
 
-  it("stops instead of rerunning when only other authors' layers have work", () => {
+  it("waits instead of rerunning when only other authors' layers have work", () => {
     const steps: string[] = [];
     appendStackRerunInstruction(steps, [unowned(1, 1)], "rerun");
     expect(steps).toEqual([`1. ${stop}`]);
@@ -63,15 +64,16 @@ describe("stack rerun step", () => {
     expect(text).toContain(KEEP);
   });
 
-  it("tells the caller to stop when every unready layer belongs to another author", () => {
+  it("tells the caller to wait when every unready layer belongs to another author", () => {
     const result = withPollSummaryInstructions(stack([unowned(1, 1), unowned(2, 2)]), false);
     const text = result.instructions?.join("\n") ?? "";
-    expect(result.nextAction).toBe("escalate");
+    expect(result.nextAction).toBe("wait");
+    expect(result.reason).toBe("waiting");
     expect(text).toContain(stop);
     expect(text).not.toContain("rerun this same `stack` command");
   });
 
-  it("adds no quota cadence after the unowned-stack stop", () => {
+  it("adds no quota cadence after the unowned-stack wait", () => {
     const result = withPollSummaryInstructions(
       {
         ...stack([unowned(1, 1), unowned(2, 2)]),
@@ -87,7 +89,7 @@ describe("stack rerun step", () => {
       },
       false,
     );
-    expect(result.nextAction).toBe("escalate");
+    expect(result.nextAction).toBe("wait");
     expect(result.instructions?.at(-1)).toBe(`4. ${stop}`);
   });
 });

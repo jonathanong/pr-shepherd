@@ -51,6 +51,16 @@ describe("stack draft verification", () => {
     expect(instructions(result)).not.toContain("stop shepherding this stack");
   });
 
+  it("does not stop the stack while an unreadable layer is unreconciled", () => {
+    const result = withPollSummaryInstructions(
+      stack([verification(1, 1), row(2, 2, { state: "UNKNOWN" })]),
+      false,
+    );
+    expect(result.nextAction).toBe("shepherd");
+    expect(instructions(result)).toContain("rerun this same `stack` command");
+    expect(instructions(result)).not.toContain("stop shepherding this stack");
+  });
+
   it("stops after final verification beside a human handoff", () => {
     const result = withPollSummaryInstructions(
       stack([row(1, 1, { action: "escalate", reasons: ["triage-thrash"] }), verification(2, 2)]),

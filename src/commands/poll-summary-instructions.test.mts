@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { row, stack } from "../../test-helpers/commands/poll-summary-stack.test-support.mts";
 import type { PollSummaryItem } from "../types.mts";
-import { withPollSummaryInstructions } from "./poll-summary-instructions.mts";
+import { planPollSummary, withPollSummaryInstructions } from "./poll-summary-instructions.mts";
 
 describe("native-stack reconciliation", () => {
   it("requires one-PR completion receipts, not apparently clean GitHub rows", () => {
@@ -361,10 +361,34 @@ describe("native-stack reconciliation", () => {
       [row(1, 1, { state: "MERGED" }), row(2, 2, { state: "UNKNOWN" })],
     ],
     ["below an open layer", [row(1, 1, { state: "UNKNOWN" }), row(2, 2, { readyReceipt: true })]],
-  ] as const)("escalates an unverified state %s", (_case, prs) => {
-    const result = withPollSummaryInstructions(stack([...prs]), true);
-    expect(result).toMatchObject({ nextAction: "escalate", stackMergeable: false });
-    expect(result.instructions?.join("\n")).toContain("state `UNKNOWN`");
+  ] as const)("waits on an unverified state %s", (_case, prs) => {
+    const planned = planPollSummary(stack([...prs]), true);
+    expect(planned.result).toMatchObject({
+      nextAction: "wait",
+      reason: "waiting",
+      stackMergeable: false,
+    });
+    expect(planned.result.instructions?.join("\n")).not.toContain("gh stack merge");
+    expect(planned.result.instructions?.join("\n")).toContain("unverified-stack-state");
+    expect(planned.idle?.map((item) => item.state)).toContain("UNKNOWN");
+  });
+
+  it("never plans a merge above an unverified layer", () => {
+    const result = withPollSummaryInstructions(
+      stack([row(1, 1, { state: "UNKNOWN" }), row(2, 2, { readyReceipt: true })]),
+      true,
+    );
+    expect(result.nextAction).toBe("wait");
+    expect(result.instructions?.join("\n")).not.toContain("gh stack merge");
+  });
+
+  it("escalates a closed layer above the last open layer", () => {
+    const result = withPollSummaryInstructions(
+      stack([row(1, 1, { readyReceipt: true }), row(2, 2, { state: "CLOSED" })]),
+      false,
+    );
+    expect(result.nextAction).toBe("escalate");
+    expect(result.instructions?.join("\n")).toContain("PR #2 was closed without merging");
   });
 
   it("does not accept an incomplete handoff after only the parent finishes", () => {

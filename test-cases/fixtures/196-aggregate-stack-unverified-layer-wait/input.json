@@ -1,0 +1,79 @@
+{
+  "description": "GitHub returned no state for lower layer #2620 (UNKNOWN), and #2621 above it is READY. The unreadable state is a fetch gap, not a human decision: the stack waits under the stack stall timer and plans no merge.",
+  "mode": "aggregate",
+  "args": [
+    "stack",
+    "vouchington/vouchington#2622",
+    "--merge",
+    "--debounce",
+    "0s",
+    "--timeout",
+    "1s",
+    "--interval",
+    "2s"
+  ],
+  "expectedExitCode": 10,
+  "expectedNextAction": "wait",
+  "expectedReason": "timeout",
+  "aggregateSummary": {
+    "selection": {
+      "kind": "stack",
+      "anchor": 2621,
+      "stackNumber": 2622,
+      "stackSize": 2
+    },
+    "prs": [
+      {
+        "pr": 2620,
+        "repo": "vouchington/vouchington",
+        "title": "layer 1",
+        "url": "https://github.com/vouchington/vouchington/pull/2620",
+        "action": "cancel",
+        "reasons": [
+          "state-unavailable"
+        ],
+        "state": "UNKNOWN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-1",
+        "headRefOid": "1111111111111111111111111111111111111111",
+        "baseRefName": "main",
+        "stack": {
+          "number": 2622,
+          "size": 2,
+          "position": 1,
+          "baseRefName": "main"
+        },
+        "owned": true
+      },
+      {
+        "pr": 2621,
+        "repo": "vouchington/vouchington",
+        "title": "layer 2",
+        "url": "https://github.com/vouchington/vouchington/pull/2621",
+        "action": "cancel",
+        "reasons": [
+          "appears-ready"
+        ],
+        "state": "OPEN",
+        "mergeable": "MERGEABLE",
+        "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-2",
+        "headRefOid": "2222222222222222222222222222222222222222",
+        "baseRefName": "layer-1",
+        "stack": {
+          "number": 2622,
+          "size": 2,
+          "position": 2,
+          "baseRefName": "main"
+        },
+        "readyReceipt": true,
+        "owned": true
+      }
+    ]
+  },
+  "repository": {
+    "owner": "vouchington",
+    "name": "vouchington"
+  }
+}
