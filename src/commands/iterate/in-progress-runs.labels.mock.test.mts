@@ -67,6 +67,17 @@ describe("buildInProgressRuns labels", () => {
     }
   });
 
+  it("lets an ignored protected check protect every run", async () => {
+    mockLoadConfig.mockReturnValue(
+      resolveConfig({ checks: { "never-cancel": ["review bot"] } }, "t"),
+    );
+    const base = report([check()]);
+    base.checks = { ...base.checks, ignoredNames: ["Review Bot"] };
+    const [run] = await buildInProgressRuns(base, true);
+    expect(run).toMatchObject({ neverCancel: "review bot" });
+    expect(run).not.toHaveProperty("cancelCommand");
+  });
+
   it("withholds the cancel for a run that is not a pull-request run", async () => {
     const [run] = await buildInProgressRuns(report([check({ event: "workflow_dispatch" })]), true);
     expect(run).toMatchObject({ concurrency: "cancel-in-progress=true" });

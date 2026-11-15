@@ -98,9 +98,12 @@ export async function buildInProgressRuns(
     ]
       .filter((check) => check.runId === runId)
       .map((check) => check.name);
+    // `checks.ignore` drops a check's run association, so a protected name that is ignored
+    // protects every run.
     const neverCancel = matchedNeverCancel(config.checks["never-cancel"], [
       group[0]!.workflowName!,
       ...siblings,
+      ...(report.checks.ignoredNames ?? []),
     ]);
     const status = group.some((check) => check.status === "WAITING") ? "WAITING" : group[0]!.status;
     const failed = report.checks.failing
