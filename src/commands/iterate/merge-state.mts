@@ -7,7 +7,7 @@ import type {
   ShepherdReport,
 } from "../../types.mts";
 import type { StackStatus } from "../../types/merge-requirements.mts";
-import { buildEscalateHumanMessage, buildEscalateSuggestion } from "./escalate.mts";
+import { planQueueRemoval } from "./queue-removal.mts";
 import { buildMergeCommandPlan, unavailableMergeResult } from "./merge.mts";
 import { formatPrUrl } from "../../pr-reference.mts";
 import { buildPrShepherdCommand } from "../../cli/runner.mts";
@@ -145,6 +145,8 @@ export async function handleActiveMergeState(input: {
   editedSummaries: Review[];
   surfacedApprovals: Review[];
   minimizeApprovals: boolean;
+  /** False on internal debounce preview ticks, which must not write follow-up markers. */
+  persistState?: boolean;
 }): Promise<IterateResult | null> {
   const { enabled, active, base, report, stallKey } = input;
   const inQueue = report.mergeQueue?.inQueue === true;
@@ -173,25 +175,5 @@ export async function handleActiveMergeState(input: {
   )
     return null;
   await clearStallState(stallKey);
-  const escalateBase = {
-    triggers: ["merge-queue-removed" as const],
-    unresolvedThreads: [],
-    ambiguousComments: [],
-    changesRequestedReviews: [],
-    mergeQueueRemoval: removal,
-    suggestion: buildEscalateSuggestion(
-      ["merge-queue-removed"],
-      removal.reason ?? "GitHub did not provide a reason",
-    ),
-  };
-  return {
-    ...base,
-    action: "escalate",
-    escalate: {
-      ...escalateBase,
-      humanMessage: buildEscalateHumanMessage(escalateBase, formatPrUrl(report.repo, report.pr), {
-        merge: true,
-      }),
-    },
-  };
+  return planQueueRemoval({ base, report, stallKey, persistState: input.persistState !== false });
 }

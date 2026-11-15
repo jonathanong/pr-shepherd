@@ -152,7 +152,7 @@ export function buildUnreportedFixResult(
   };
 }
 
-function stackRebase(report: ShepherdReport): string | undefined {
+export function stackRebase(report: ShepherdReport): string | undefined {
   const stack = report.mergeStatus.mergeRequirements?.stack;
   if (!stack) return undefined;
   const start =

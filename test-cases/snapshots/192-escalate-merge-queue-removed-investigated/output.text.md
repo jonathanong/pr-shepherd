@@ -9,7 +9,7 @@
 
 **Triggers:** `merge-queue-removed`
 
-The PR left the merge queue without an actionable check failure. GitHub reason: failed_checks. Confirm the removal was not intentional before adding it again.
+The PR left the merge queue without an actionable check failure, and the removal was unchanged after one investigation tick. GitHub reason: failed_checks. Report what the investigation found. Confirm the removal was not intentional before adding it again.
 
 ## Merge queue removal
 

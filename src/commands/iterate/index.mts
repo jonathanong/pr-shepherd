@@ -345,6 +345,7 @@ async function runIterateCore(
     editedSummaries,
     surfacedApprovals,
     minimizeApprovals: config.iterate["minimize-approvals"],
+    persistState: opts.persistSeen !== false,
   });
   if (mergeStateResult) return annotateBlockedWait(mergeStateResult, blockerGate);
 
