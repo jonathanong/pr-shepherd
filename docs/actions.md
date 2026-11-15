@@ -844,6 +844,7 @@ GitHub reviewers can leave ` ```suggestion ` fenced blocks in review thread bodi
 
 - A `[suggestion]` marker on the heading.
 - A `Replaces line(s) …` block immediately after the blockquoted body, showing the parsed replacement. An empty suggestion (deletion) uses the label `Replaces line(s) … with nothing:` followed by an empty fenced block. For a range (`path:startLine-endLine`, e.g. `src/foo.ts:40-42`), the `Replaces lines 40–42:` block is spliced in for that entire range: an empty block means "delete those lines"; a block containing a single blank line means "replace with one blank line".
+- When the replacement itself contains a run of three or more backticks (so it cannot sit in a plain ` ``` ` fence), the block is fenced with a longer run and followed by one line, ``Replacement contains backtick runs of 3 or more; `suggest` builds the exact patch.`` The line is omitted otherwise. JSON carries the same replacement verbatim in `suggestion.lines`; the line adds no data.
 
 The instruction step names `suggest` (the CLI substitutes the real PR URL; `<id>` and `<one-sentence headline>` are left for the agent). The procedure — structured path, manual fallback, refusal and drift handling — is the skill's [Suggestion patches playbook](../plugins/pr-shepherd/skills/pr-shepherd/references/suggestion-patches.md). In short:
 

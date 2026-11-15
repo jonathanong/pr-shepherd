@@ -6,6 +6,16 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-14: 13 reworked after the double failure
+
+Unrun, so EVALS.md keeps the old row. Both arms hedged ("decide whether the
+suggestion is warranted") because the prompt never asked for the change. The
+prompt now says to apply the reviewer's suggestion, and the suggestion is an
+obvious typo fix (`fense` to `fence`) that keeps the nested-fence line. The
+grader is tool-neutral: any mechanism counts, a deferred decision fails. The
+tick also now ends a suggestion block that contains backtick fences with a
+pointer to `suggest`.
+
 ## 2026-11-14: first run of 46 and 47 (cancel superseded runs before a fix)
 
 Sonnet 5.5 at low effort, opus judge, 3 runs per arm, $15.95 for both scenarios

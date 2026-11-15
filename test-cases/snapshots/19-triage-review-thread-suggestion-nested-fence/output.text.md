@@ -15,6 +15,7 @@ Replaces line 7:
 `````
 const x = ````nested fence````;
 `````
+Replacement contains backtick runs of 3 or more; `suggest` builds the exact patch.
 
 ## Instructions
 
