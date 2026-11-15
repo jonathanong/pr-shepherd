@@ -25,9 +25,13 @@ export function checkFollowUp(check: AgentCheck): CheckFollowUp | undefined {
 }
 
 /** The one investigation tick: raw facts, the playbook, and the bounded outcome. */
-export function buildCheckFollowUpInstructions(): string[] {
+export function buildCheckFollowUpInstructions(checks: AgentCheck[], repo: string): string[] {
+  const runIds = [...new Set(checks.flatMap((check) => (check.runId ? [check.runId] : [])))];
+  const start = runIds.length
+    ? ` Start with ${runIds.map((id) => `\`gh run view ${id} -R ${repo}\``).join(", ")}: it lists the run's jobs and annotations.`
+    : "";
   return [
-    `Shepherd has no rerun to offer and no log excerpt to show for the checks under \`## Failing checks\`, so it cannot tell from GitHub's data why they failed or what would fix them. Find out before acting. ${playbookPointer("Check follow-up")}`,
-    "If the cause is within this PR, fix it and push. If a rerun is the right call, run it once. Otherwise make no change and keep what you found. If these checks are unchanged on the next poll, Shepherd escalates with `check-follow-up-unavailable`; report that diagnosis then.",
+    `Shepherd has no rerun to offer and no log excerpt to show for the checks under \`## Failing checks\`, so it cannot tell from GitHub's data why they failed or what would fix them. Find out before acting.${start} ${playbookPointer("Check follow-up")}`,
+    "If the cause is within this PR, fix it and push. Otherwise make no change and keep what you found; do not rerun or retrigger these checks. If these checks are unchanged on the next poll, Shepherd escalates with `check-follow-up-unavailable`; report that diagnosis then.",
   ];
 }

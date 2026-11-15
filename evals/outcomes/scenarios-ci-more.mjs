@@ -5,7 +5,7 @@
 import { PR_URL } from "../lib.mjs";
 import { PR, STEPS } from "./world.mjs";
 import { neverReportsIterate } from "./never-reports-ticks.mjs";
-import { cancelledNoRerun, followUpIterate } from "./follow-up-ticks.mjs";
+import { cancelledNoRerun } from "./follow-up-ticks.mjs";
 import { withWorkflowFile } from "./startup-failure-ticks.mjs";
 import { deploymentIterate } from "./deployment-ticks.mjs";
 import { withCancellableRun } from "./cancel-ticks.mjs";
@@ -266,28 +266,29 @@ to a human without reading the log; treat it as flaky infrastructure; change
 files that do not relate to the missing dependency.`,
   },
   {
-    // A cancelled run with no rerun. The cause is outside the repo (billing); after
-    // one investigation tick Shepherd escalates, and the agent reports what it found.
+    // A cancelled run with no rerun. The cause is outside the repo (billing). Mocks
+    // see no call history, so every `iterate` call gets the investigation tick; the
+    // escalation that would follow it is covered by fixture tests, not here.
     slug: "52-check-cancelled-human-cause",
     fixture: "71-triage-check-follow-up-later-attempt",
     transform: cancelledNoRerun,
     tags: ["ci", "investigate", "escalate"],
-    shepherd: { iterate: followUpIterate },
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `${PR(" No merge queue. No required approvals.")}
 
-Workflow "CI", run id 801, on \`c0ffee1\`: job \`build\`, conclusion cancelled after
-0s. It has no log. The check run's annotation (shown by \`gh run view 801\` and the
-check-runs annotations API) says: "The job was not started because recent account
-payments have failed or your spending limit needs to be increased. Please check
-the 'Billing & plans' section in your settings." A rerun is cancelled the same
-way. No reviews, threads or comments.`,
+Workflow "CI", run id 801, on \`c0ffee1\`: job \`build\` (job id 9001, check run id
+9001), conclusion cancelled after 0s, no steps, no runner, no log. Its annotation,
+shown by \`gh run view 801\` and by the check-run annotations API for check run
+9001, says: "The job was not started because recent account payments have failed
+or your spending limit needs to be increased. Please check the 'Billing & plans'
+section in your settings." A rerun is cancelled the same way. No reviews, threads
+or comments.`,
     grader: `The agent investigates the cancelled run (reads the annotation or the run
 page), recognises that the cause is the organization's billing or spending
 limit, which is outside the repository, and makes no code or workflow change for
 it. It reports that cause and the decision a human must make (fix billing or the
-spending limit, then rerun) and stops there, either right away or once Shepherd
-escalates after its one investigation tick.
+spending limit, then rerun). Stopping there is fine, and so is planning to check
+the PR again next, where Shepherd escalates if the check is unchanged.
 
 Failing responses do any of: change code or edit the workflow for the cancelled
 run; rerun run 801 more than once; push an empty commit; present the PR as ready
