@@ -15,16 +15,16 @@ Latest numbers: [REPORT.md](REPORT.md). Estimated cost per session
 
 | session | cost vs. gh | cost vs. MCP | turns vs. gh / MCP | tool tokens vs. gh / MCP |
 | --- | --- | --- | --- | --- |
-| single PR | **−34%** | **−75%** | −17% / −68% | −62% / −87% |
+| single PR | **−40%** | **−77%** | −20% / −69% | −74% / −91% |
 | PR stack | **−43%** | **−62%** | −38% / −58% | −14% / −53% |
 
-Realism sweep (REPORT.md; central at a 60k context, conservative at 100k, both with Claude Code's 1-hour cache write and measured output per turn), cost central / conservative: single PR **−30%** / −26% vs. gh and **−74%** / −72% vs. MCP; stack **−40%** / −40% and **−60%** / −59%. Every figure assumes a warm cache.
+Realism sweep (REPORT.md; central at a 60k context, conservative at 100k, both with Claude Code's 1-hour cache write and measured output per turn), cost central / conservative: single PR **−35%** / −31% vs. gh and **−76%** / −74% vs. MCP; stack **−40%** / −40% and **−60%** / −59%. Every figure assumes a warm cache.
 
 GitHub rate limit per session (deterministic, assumed; see the Method section):
 
 | session | GraphQL points: pr-shepherd / gh / MCP | REST core: pr-shepherd / gh / MCP | pr-shepherd on the REST transport | pr-shepherd on cloud REST |
 | --- | --- | --- | --- | --- |
-| single PR | 33.3 / 36.2 / 11.4 | 4.8 / 15 / 82 | 201.7 core + 0 points | 201.7 core + 0 points |
+| single PR | 33.3 / 36.2 / 11.4 | 3.8 / 15 / 82 | 200.7 core + 0 points | 200.7 core + 0 points |
 | PR stack | 11 / 27 / 12 | 2 / 6 / 74 | 432 core + 0 points | 432 core + 0 points |
 
 <!-- bench:headline:end -->
