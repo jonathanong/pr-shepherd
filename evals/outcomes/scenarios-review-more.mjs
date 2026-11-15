@@ -4,7 +4,10 @@
 import { PR_URL } from "../lib.mjs";
 import { PR, STEPS } from "./world.mjs";
 
-const RULES = " No merge queue. Branch protection on `main`: conversations must be resolved before merge.";
+const RULES =
+  " No merge queue. Branch protection on `main`: conversations must be resolved before merge.";
+
+const NESTED = "const x = ````nested fence````;";
 
 const SUGGEST_RESULT = JSON.stringify(
   {
@@ -12,24 +15,23 @@ const SUGGEST_RESULT = JSON.stringify(
     repo: "owner/repo",
     patches: [
       {
-        threadId: "PRRT_suggest",
-        path: "src/parser.ts",
-        startLine: 15,
-        endLine: 15,
+        threadId: "PRRT_nested",
+        path: "src/template.ts",
+        startLine: 7,
+        endLine: 7,
         author: "reviewer",
-        patch:
-          "--- a/src/parser.ts\n+++ b/src/parser.ts\n@@ -15,1 +15,1 @@\n-let MAX_RETRIES = 3;\n+const MAX_RETRIES = 3;\n",
-        commitMessage: "Use a constant for MAX_RETRIES",
+        patch: `--- a/src/template.ts\n+++ b/src/template.ts\n@@ -7,1 +7,1 @@\n-const x = "placeholder";\n+${NESTED}\n`,
+        commitMessage: "Use the nested-fence literal",
         commitBody: "Co-authored-by: reviewer <reviewer@users.noreply.github.com>",
-        filesToStage: ["src/parser.ts"],
+        filesToStage: ["src/template.ts"],
       },
     ],
     postActionInstructions: [
-      "Apply the patch for src/parser.ts with `git apply`.",
-      "Stage the files: `git add src/parser.ts`.",
-      'Commit: `git commit -m "Use a constant for MAX_RETRIES" -m "Co-authored-by: reviewer <reviewer@users.noreply.github.com>"`.',
+      "Apply the patch for src/template.ts with `git apply`.",
+      "Stage the files: `git add src/template.ts`.",
+      'Commit: `git commit -m "Use the nested-fence literal" -m "Co-authored-by: reviewer <reviewer@users.noreply.github.com>"`.',
       "Push the commit to the PR head branch; Shepherd does not recommend a push for you.",
-      "Run the authorization-checked `apply review` command for PRRT_suggest from the pushed checkout.",
+      "Run the authorization-checked `apply review` command for PRRT_nested from the pushed checkout.",
     ],
   },
   null,
@@ -125,29 +127,34 @@ Failing responses do any of: leave the bot review blocking; wait for the bot to
 re-review; ask a human to dismiss or approve; skip the thread.`,
   },
   {
-    // A reviewer's GitHub suggestion block.
+    // A suggestion whose own text contains backtick runs: copying the body by
+    // hand cuts it at the first run of four.
     slug: "13-suggestion",
-    fixture: "18-triage-review-thread-suggestion",
-    tags: ["review", "suggestion"],
+    fixture: "19-triage-review-thread-suggestion-nested-fence",
+    tags: ["review", "suggestion", "nested-fence"],
     shepherd: { suggest: SUGGEST_RESULT },
     prompt: `Get ${PR_URL} ready to merge.`,
-    world: `${PR(RULES, "`src/parser.ts`")} Checks on \`c0ffee1\`: \`build\` passed.
+    world: `${PR(RULES, "`src/template.ts`")} Checks on \`c0ffee1\`: \`build\` passed.
 
-Review thread (GraphQL id \`PRRT_suggest\`), unresolved, on \`src/parser.ts\` line 15,
-by \`reviewer\`. Body:
-  Use a constant here:
-  \`\`\`suggestion
-  const MAX_RETRIES = 3;
-  \`\`\`
-Line 15 currently reads \`let MAX_RETRIES = 3;\`, and nothing reassigns it.`,
-    grader: `The agent applies the reviewer's suggestion exactly (line 15 becomes
-\`const MAX_RETRIES = 3;\`), commits and pushes it to the PR branch, and replies on
-the thread. Crediting the reviewer as co-author is fine.
+Review thread (GraphQL id \`PRRT_nested\`), unresolved, on \`src/template.ts\` line 7,
+by \`reviewer\`. Body (the suggestion fence is five backticks because the
+suggested line itself contains runs of four):
+  The suggestion body itself contains a code fence:
+  \`\`\`\`\`suggestion
+  ${NESTED}
+  \`\`\`\`\`
+Line 7 currently reads \`const x = "placeholder";\`.`,
+    grader: `The agent applies the reviewer's suggestion exactly: line 7 of
+\`src/template.ts\` becomes \`${NESTED}\`, with all eight backticks (four on each
+side of \`nested fence\`) intact and the trailing semicolon. It commits and pushes
+it to the PR branch, and replies on the thread. Crediting the reviewer as
+co-author is fine.
 
 ${STEPS}
 
-Failing responses do any of: change something other than the suggested line;
-skip the commit, the push or the reply; ask the user to click "Commit
-suggestion" instead of doing it.`,
+Failing responses do any of: write a line that differs from the suggestion
+(for example one that drops or adds backticks, or stops at the first run of
+four); change something other than that line; skip the commit, the push or the
+reply; ask the user to click "Commit suggestion" instead of doing it.`,
   },
 ];
