@@ -17,6 +17,7 @@ import { classifyChecks, getCiVerdict } from "../checks/classify.mts";
 import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
 import { fetchStartupFailureChecks, triageFailingChecks } from "../checks/triage.mts";
 import { TriageBudget } from "../checks/triage-budget.mts";
+import { attachPendingDeployments } from "../checks/pending-deployments.mts";
 import type { CheckExecutionContext } from "./check-execution-context.mts";
 import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
@@ -262,7 +263,10 @@ async function runScopedCheck(
     additionalRelevantEvents: ["merge_group"],
     requiredContexts: unreported.requiredContexts,
   });
-  const classifiedChecks = [...classifiedPrChecks, ...classifiedQueueChecks];
+  const classifiedBaseChecks = [...classifiedPrChecks, ...classifiedQueueChecks];
+  const classifiedChecks = opts.skipTriage
+    ? classifiedBaseChecks
+    : await attachPendingDeployments(classifiedBaseChecks, repo, stateKey, triageBudget);
   const verdict = getCiVerdict(classifiedChecks);
   const passing = classifiedChecks.filter((c) => c.category === "passed");
   const failing = classifiedChecks.filter((c) => c.category === "failing");

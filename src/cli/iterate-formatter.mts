@@ -16,7 +16,7 @@ import {
   formatMergeAction,
 } from "./iterate-merge-formatter.mts";
 import { formatApiUsage, formatQuotaWarning } from "./api-usage-formatter.mts";
-import { formatActivityLine } from "./iterate-activity-formatter.mts";
+import { formatActivityLine, formatPendingDeploymentLines } from "./iterate-activity-formatter.mts";
 import { formatSuppressedNameLines } from "./iterate-check-names.mts";
 import { branchStateSegment } from "./iterate-branch-segment.mts";
 import { insertRuleAutoResolveSection } from "../commands/rule-auto-resolve-format.mts";
@@ -143,6 +143,7 @@ export function formatIterateResult(
   appendMergeQueueHeader(headerLines, result);
   const activityLine = formatActivityLine(result, verbose);
   if (activityLine) headerLines.push(activityLine);
+  headerLines.push(...formatPendingDeploymentLines(result));
   headerLines.push(...formatNextCheckLines(result.nextCheck));
   const header = headerLines.join("\n");
   const quotaWarning = formatQuotaWarning(result.quotaWarning);

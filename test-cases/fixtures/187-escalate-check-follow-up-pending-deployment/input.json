@@ -1,0 +1,33 @@
+{
+  "description": "An ACTION_REQUIRED check whose run GitHub reports as held on the `production` environment (pending_deployments lists required reviewers and viewer capability). A rerun cannot satisfy the gate, so iterate escalates with check-follow-up-unavailable, and the evidence names the environment and its reviewers. Compare 70-escalate-check-follow-up-action-required, where the run has no pending deployment (the fork 'approve and run' gate).",
+  "batchData": {
+    "checks": [
+      {
+        "name": "Deploy / approve",
+        "status": "COMPLETED",
+        "conclusion": "ACTION_REQUIRED",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/700",
+        "runId": "700",
+        "workflowName": "Deploy",
+        "jobName": "approve",
+        "pendingDeployments": [
+          {
+            "environment": "production",
+            "currentUserCanApprove": false,
+            "reviewers": [
+              { "type": "Team", "name": "release-managers" },
+              { "type": "User", "name": "alice" }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 13
+}

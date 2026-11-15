@@ -15,6 +15,7 @@ import { BODY_TRUNCATE_MAX_CHARS } from "./body-truncate.mts";
 import { numberInstructions } from "./iterate-instructions.mts";
 import { renderCheckAnnotation } from "./triage-formatter-extra.mts";
 import { renderRelatedJobLines } from "./related-jobs-format.mts";
+import { renderPendingDeploymentLines } from "./pending-deployments-format.mts";
 import { isFailingAgentCheck } from "../checks/conclusions.mts";
 import type { IterateResultTriage } from "../types.mts";
 import { renderMergeCommand } from "../commands/iterate/merge.mts";
@@ -144,6 +145,7 @@ export function formatTriageResult(
         if (ch.logExcerpt) lines.push(indentBlockquote(ch.logExcerpt, "  "));
         lines.push(...renderRelatedJobLines(ch.relatedJobs));
       }
+      lines.push(...renderPendingDeploymentLines(ch.pendingDeployments));
       if (ch.rerunCommand && ch.runId && !seenRerunRunIds.has(ch.runId)) {
         seenRerunRunIds.add(ch.runId);
         lines.push(`  rerun: \`${ch.rerunCommand}\``);

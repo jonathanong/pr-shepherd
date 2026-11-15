@@ -1,0 +1,31 @@
+{
+  "description": "A run in WAITING status held on the `production` environment protection rule. Nothing autonomous can advance it, but the stall timer has not elapsed, so iterate waits and the output already names the environment, its required reviewers, and whether the viewer can approve.",
+  "batchData": {
+    "checks": [
+      {
+        "name": "Deploy / production",
+        "status": "WAITING",
+        "conclusion": null,
+        "source": "check_run",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/700/job/1",
+        "runId": "700",
+        "workflowName": "Deploy",
+        "pendingDeployments": [
+          {
+            "environment": "production",
+            "currentUserCanApprove": true,
+            "reviewers": [{ "type": "Team", "name": "release-managers" }],
+            "waitTimerMinutes": 5
+          }
+        ]
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 10
+}

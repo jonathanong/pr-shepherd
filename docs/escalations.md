@@ -77,7 +77,7 @@ It fires only when no autonomous work or newly surfaced one-look item remains: n
 - An authorized bot, viewer-authored, or configured other-human thread with a generated mutation is repeatable work even without a source location.
 - A stale human `CHANGES_REQUESTED` review does not postpone the handoff, but it is kept in the payload so the human sees every blocker.
 - A failing external check with `runId === null` and a non-empty `detailsUrl` stays `TRIAGE`: the URL is an autonomous investigation path (Codecov is the regression case).
-- `escalate.checks[]` keeps the raw check details for the human.
+- `escalate.checks[]` keeps the raw check details for the human. When the run is held on an environment approval, they include its `pendingDeployments[]` (environment, required reviewers, and whether the viewer can approve), so the human learns what to approve without opening the run. An `ACTION_REQUIRED` run with no listed environment (the fork "approve and run" gate) shows only the conclusion and URL.
 
 ### `triage-thrash`
 

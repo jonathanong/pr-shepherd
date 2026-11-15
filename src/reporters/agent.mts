@@ -83,6 +83,7 @@ export function toAgentCheck(c: TriagedCheck): AgentCheck {
     ...(c.summary !== undefined && { summary: c.summary }),
     ...(c.logExcerpt !== undefined && { logExcerpt: c.logExcerpt }),
     ...(c.relatedJobs !== undefined && { relatedJobs: c.relatedJobs }),
+    ...(c.pendingDeployments !== undefined && { pendingDeployments: c.pendingDeployments }),
     ...(c.annotations !== undefined && { annotations: c.annotations }),
     ...(c.scope !== undefined && { scope: c.scope }),
     ...(c.commitOid !== undefined && { commitOid: c.commitOid }),
@@ -103,6 +104,7 @@ export function toAgentStalledCheck(c: ClassifiedCheck, nowSeconds: number): Age
     ...(c.updatedAtUnix !== undefined && { updatedAtUnix: c.updatedAtUnix }),
     ageSeconds: Math.max(0, nowSeconds - activityAtUnix),
     ...(c.summary !== undefined && { summary: c.summary }),
+    ...(c.pendingDeployments !== undefined && { pendingDeployments: c.pendingDeployments }),
   };
 }
 

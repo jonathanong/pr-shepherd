@@ -120,6 +120,7 @@ export function buildActiveChecks(report: ShepherdReport): ActiveCheck[] {
     detailsUrl: c.detailsUrl || null,
     ...(c.workflowName !== undefined && { workflowName: c.workflowName }),
     ...(c.summary !== undefined && { summary: c.summary }),
+    ...(c.pendingDeployments !== undefined && { pendingDeployments: c.pendingDeployments }),
     ...(c.scope !== undefined && { scope: c.scope }),
     ...(c.commitOid !== undefined && { commitOid: c.commitOid }),
   }));

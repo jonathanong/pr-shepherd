@@ -1,5 +1,18 @@
 import type { IterateResult } from "../types.mts";
 import { formatNameList } from "./iterate-check-names.mts";
+import { formatPendingDeployment } from "./pending-deployments-format.mts";
+
+/** Environment approvals blocking active (waiting) checks, one line per environment. */
+export function formatPendingDeploymentLines(result: IterateResult): string[] {
+  // A stall escalation lists the stalled checks with their pending deployments under its items.
+  if (result.action === "escalate" && (result.escalate.stalledChecks?.length ?? 0) > 0) return [];
+  return (result.inProgressChecks ?? []).flatMap((check) =>
+    (check.pendingDeployments ?? []).map((deployment) => {
+      const run = check.runId ? ` (run \`${check.runId}\`)` : "";
+      return `**pending deployment** \`${check.name}\`${run} — ${formatPendingDeployment(deployment)}`;
+    }),
+  );
+}
 
 export function formatActivityLine(result: IterateResult, verbose = false): string | null {
   const activity = result.activity ?? {

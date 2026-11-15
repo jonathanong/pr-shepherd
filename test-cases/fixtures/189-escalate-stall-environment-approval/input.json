@@ -1,0 +1,35 @@
+{
+  "description": "A WAITING run held on the `production` environment past the stall timeout. The stall-timeout escalation lists the stalled check together with its environment, required reviewers, and viewer capability instead of only 'WAITING, waiting 60 minutes'.",
+  "batchData": {
+    "checks": [
+      {
+        "name": "Deploy / production",
+        "status": "WAITING",
+        "conclusion": null,
+        "source": "check_run",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/700/job/1",
+        "runId": "700",
+        "createdAtUnix": 1715792800,
+        "updatedAtUnix": 1715796400,
+        "pendingDeployments": [
+          {
+            "environment": "production",
+            "currentUserCanApprove": false,
+            "reviewers": [
+              { "type": "Team", "name": "release-managers" },
+              { "type": "User", "name": "alice" }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "stallTimeoutMinutes": 30,
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 13
+}
