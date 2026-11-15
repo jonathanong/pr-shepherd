@@ -131,6 +131,12 @@ export async function buildInProgressRuns(
 
 /** The first fix step: cancel the superseded runs before editing, only when one has a command. */
 export function buildCancelRunsInstruction(runs: readonly InProgressRun[]): string | undefined {
-  if (!runs.some((run) => run.cancelCommand)) return undefined;
-  return "If any item will need a code change, run every `cancel:` under `## In-progress runs` now, before editing; ignore errors for runs that already finished. If you will push nothing, leave them running.";
+  const ids = runs.filter((run) => run.cancelCommand).map((run) => run.runId);
+  if (ids.length === 0) return undefined;
+  const named = ids.length === 1 ? `run ${ids[0]}` : `runs ${ids.join(", ")}`;
+  const others =
+    runs.length > ids.length
+      ? " Cancel no other run: a push does not cancel the rest, so cancelling them only discards their results."
+      : "";
+  return `If any item will need a code change, cancel ${named} now with ${ids.length === 1 ? "its `cancel:` command" : "their `cancel:` commands"}, before editing; ignore errors for runs that already finished.${others} If you will push nothing, leave every run running.`;
 }

@@ -29,7 +29,7 @@
 
 ## Instructions
 
-1. If any item will need a code change, run every `cancel:` under `## In-progress runs` now, before editing; ignore errors for runs that already finished. If you will push nothing, leave them running.
+1. If any item will need a code change, cancel run 500 now with its `cancel:` command, before editing; ignore errors for runs that already finished. Cancel no other run: a push does not cancel the rest, so cancelling them only discards their results. If you will push nothing, leave every run running.
 2. Fix each warranted item.
 3. Triage `## Failing checks`. Playbook: "CI failure triage".
 4. Commit and push any changes to the PR head.
