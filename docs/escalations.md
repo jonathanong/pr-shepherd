@@ -10,14 +10,13 @@
 | `transport-unsupported`       | The selected transport cannot perform an operation the action needs, and it cannot be represented as a one-look skip or explicit apply error.                                                         | Rerun on a transport that supports it, or do the operation by hand.                                        |
 | `check-follow-up-unavailable` | A failing check needs an approval only a human can grant (`ACTION_REQUIRED`), or the same checks stayed unchanged after one investigation `TRIAGE` tick.                                              | Approve the gate, or report the investigation and change CI configuration or permissions.                  |
 | `triage-thrash`               | A retryable, located review thread stays unchanged and unresolved after `iterate.triage-attempts-per-thread` caller-visible `TRIAGE` results.                                                         | Decide the thread; optionally run the retained pending review commands.                                    |
-| `base-branch-unknown`         | The GraphQL base branch is empty or unsafe, and the tick has work that could require a push.                                                                                                          | Fix the PR base, then resume.                                                                              |
 | `merge-queue-removed`         | Merge mode is on, GitHub reports a current queue removal on an unchanged head, nothing is queued or auto-merging, no actionable failure explains it, and one investigation `TRIAGE` tick already ran. | Read GitHub's raw removal reason and decide whether to requeue.                                            |
 | `merge-method-unavailable`    | Merge mode is on and the method Shepherd would print is disabled on the repository, or the repository enables no merge method. No merge command is printed.                                           | Fix `merge.method` / `merge.command-args` or repository merge settings.                                    |
 | `stall-timeout`               | An enabled timeout expires: CI never starts, a `WAIT`/`TRIAGE` fingerprint stays unchanged, or a `stack` selection's layers can only wait.                                                            | Investigate why nothing moves.                                                                             |
 | `required-checks-unreported`  | Required merge-target contexts still have no check run after one close/reopen of the current head, and no Actions workflow is running.                                                                | Report what the investigation found. Repository, CI-config, or branch-policy changes are a human decision. |
-| `stall-state-unavailable`     | An enabled stall timeout cannot read or write its timer file, or an investigation marker cannot be saved.                                                                                             | Fix `PR_SHEPHERD_STATE_DIR` or its permissions, then resume.                                               |
+| `stall-state-unavailable`     | An enabled stall timeout cannot read or write its timer file, and the one repair tick already ran; or an investigation marker cannot be saved.                                                        | Fix `PR_SHEPHERD_STATE_DIR` or its permissions, then resume.                                               |
 
-Any escalation from a tick with automatically selected review mutations keeps every non-empty resolve-only and `apply review` command under `pendingReviewCommands` (Markdown: `## Pending review commands`). This includes `triage-thrash`, `base-branch-unknown`, and stall conversions. Polling still pauses, and the commands stay available for human-directed recovery.
+Any escalation from a tick with automatically selected review mutations keeps every non-empty resolve-only and `apply review` command under `pendingReviewCommands` (Markdown: `## Pending review commands`). This includes `triage-thrash` and stall conversions. Polling still pauses, and the commands stay available for human-directed recovery.
 
 ## Stack-level outcomes
 
@@ -89,10 +88,6 @@ It fires only when no autonomous work or newly surfaced one-look item remains: n
 - Threads without a source location, threads suppressed by seen markers, and threads with unauthorized required mutations do not count. Unauthorized mutations are surfaced once, then suppressed. Authorized reply/resolve mutations still run by thread ID after GitHub clears the path or line.
 - Authorized bot `CHANGES_REQUESTED` dismissals remain repeatable `TRIAGE` work, even after the stall window; the agent runs the emitted command without a handoff.
 
-### `base-branch-unknown`
-
-The GraphQL base branch is empty or contains characters outside `[A-Za-z0-9._/-]`, and a push is plausible: the tick has a retryable actionable or resolution-only thread, failing check, actionable annotation, conflict, actionable changes-requested review, or actionable comment. Skipped review mutations and unlocated threads do not make a push plausible. Rebasing onto the wrong base is worse than pausing.
-
 ### `merge-queue-removed`
 
 All of these hold:
@@ -134,7 +129,7 @@ Native-stack membership is not an escalation.
 `--merge` is enabled and Shepherd is about to print a merge command, but the method is not allowed: `merge.method` (or the strategy flag in `merge.command-args`) names a method the repository disables, or the repository disables merge commits, squash, and rebase. The result names the allowed methods and has no merge command.
 
 - REST queue requests omit the direct method, so a disabled method never escalates them.
-- When REST queue policy is unknown, a configured direct method still escalates: it cannot safely be applied to a `default` request.
+- When REST cannot read queue policy, a configured direct method cannot safely be applied to a `default` request. That is not this trigger: the tick is `WAIT` (a `stack` selection returns `WAIT` under the stack stall timer) and rereads policy on the next poll, and `stall-timeout` escalates if it stays unreadable.
 
 ### `stall-timeout`
 
@@ -164,7 +159,7 @@ The stall timeout is enabled, and the one-PR timer (`iterate-stall.json`) or the
 
 - A missing file (`ENOENT`) is a normal first sighting. Corrupt JSON is also a miss, so one successful rewrite restarts the timer.
 - Any other read error, an unsafe state key, or a failed write of a new or reset timer is this trigger.
-- The suggestion quotes the filesystem error and says to fix `PR_SHEPHERD_STATE_DIR` or the directory permissions, then resume. A `stack` selection returns the same handoff as one instruction, `` `stall-state-unavailable` ``, naming the error.
+- The first tick for a given error is not an escalation. It carries one repair step quoting the filesystem error (a `triage` for a tick with no work of its own, the tick's own work with the step added otherwise, the unchanged `WAIT`/`SHEPHERD` plan with a trailing instruction for a `stack` selection). A marker outside the state directory (`<tmpdir>/pr-shepherd-stall-repair-<hash>.json`, valid for an hour, not written on debounce preview ticks) records it, because the state directory is what failed. The same error on the next tick escalates with the suggestion quoting the filesystem error, or at once when that marker cannot be saved. A `stack` selection returns the same handoff as one instruction, `` `stall-state-unavailable` ``, naming the error.
 - The same trigger fires when an investigation marker (`ci-start-follow-up.json` for the CI-start investigation, `queue-removal-follow-up.json` for a merge-queue removal) cannot be saved on the tick that would present the investigation: without it the investigation would repeat on every poll. The suggestion names the file and the error.
 - `--stall-timeout 0` turns the guard off, so the original action stands. Disabling the timeout, or switching to a plan that is not an idle wait, still clears the timer on a best-effort basis.
 

@@ -76,28 +76,6 @@ describe("REST stale changes-requested reviews", () => {
     expect(data.changesRequestedReviews[1]).not.toHaveProperty("staleReview");
   });
 
-  it.each([
-    { name: "stale", commit: previousHead, action: "triage" },
-    { name: "current", commit: currentHead, action: "escalate" },
-  ])("excludes only $name human review from push-requiring work", async ({ commit, action }) => {
-    await serveStaleReviewFixture({ base: "unsafe;base", reviews: [review(1, commit)] });
-    const result = await runWithGithubTransport("rest", () =>
-      runIterate({
-        prNumber: 101,
-        targetRepository: repo,
-        format: "json",
-        readyDelaySeconds: 0,
-        stallTimeoutSeconds: 0,
-        noAutoMarkReady: true,
-      }),
-    );
-    expect(result.action).toBe(action);
-    if (result.action === "escalate")
-      expect(result.escalate.triggers).toContain("base-branch-unknown");
-    else if (result.action === "triage")
-      expect(result.triage.instructions.join("\n")).toContain("Ask the reviewer to re-review");
-  });
-
   it("surfaces stale human feedback with re-review instructions and no automated dismissal", async () => {
     await serveStaleReviewFixture();
     const result = await runWithGithubTransport("rest", () =>

@@ -60,7 +60,7 @@ describe("REST native stack instructions", () => {
     expect(plan?.instructions[0]).not.toContain("gh stack merge");
   });
 
-  it("does not guess queue policy for a configured direct merge method", async () => {
+  it("waits instead of guessing queue policy for a configured direct merge method", async () => {
     writeRc("merge:\n  method: squash\n");
     await freshLoadConfig();
     const result = stack([
@@ -71,8 +71,8 @@ describe("REST native stack instructions", () => {
       }),
     ]);
     const plan = planStackMerge(result, { kind: "ready" });
-    expect(plan).toMatchObject({ action: "escalate", stackMergeable: false });
-    expect(plan?.instructions.join("\n")).toContain("cannot verify merge-queue policy");
+    expect(plan).toMatchObject({ action: "wait", stackMergeable: false, waiting: true });
+    expect(plan?.instructions.join("\n")).toContain("could not read merge-queue policy");
     expect(plan?.instructions.join("\n")).not.toContain("apply merge");
   });
 });

@@ -80,7 +80,12 @@ export function buildReadyMergeOutcome(
       ),
     ...(report.allowedMergeMethods && { allowedMergeMethods: report.allowedMergeMethods }),
   });
-  if ("unavailable" in plan) return unavailableMergeResult(base, report, plan.unavailable);
+  if ("unavailable" in plan) {
+    // A REST policy read that may succeed on a later poll waits under the stall timer.
+    if (plan.refresh)
+      return { ...base, action: "wait", log: `WAIT: PR #${report.pr} ${plan.unavailable}` };
+    return unavailableMergeResult(base, report, plan.unavailable);
+  }
   return { ...base, action: "merge", merge: plan };
 }
 /** Raw counts of non-CI actionable work held back for one queued-PR wait tick. Omitted (all zero) when empty. */

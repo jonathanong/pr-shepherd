@@ -4,7 +4,9 @@ import {
   writeStackStallState,
 } from "../state/stack-stall.mts";
 import type { PollSummaryItem, PollSummaryResult } from "../types.mts";
+import { readStallRepair, writeStallRepair } from "../state/stall-repair.mts";
 import { formatDurationApprox } from "./iterate/escalate.mts";
+import { stallRepairStep } from "./iterate/stall-repair.mts";
 import { summaryStatusSignature } from "./poll-summary-signature.mts";
 import { describeIdleLayers } from "./stack-drain.mts";
 
@@ -30,11 +32,11 @@ export async function applyStackStallGuard(
   const fingerprint = stackStallFingerprint(result);
   const nowSeconds = Math.floor(Date.now() / 1000);
   const read = await readStackStallState(key);
-  if (!read.ok) return stackStateUnavailable(result, read.reason);
+  if (!read.ok) return await stackStateUnavailable(result, read.reason);
   const stored = read.state;
   if (!stored || stored.fingerprint !== fingerprint || stored.firstSeenAt > nowSeconds) {
     const wrote = await writeStackStallState(key, { fingerprint, firstSeenAt: nowSeconds });
-    if (!wrote.ok) return stackStateUnavailable(result, wrote.reason);
+    if (!wrote.ok) return await stackStateUnavailable(result, wrote.reason);
     return result;
   }
   const ageSeconds = nowSeconds - stored.firstSeenAt;
@@ -65,7 +67,22 @@ export async function readStackStallDeadline(
   return read.ok && read.state ? read.state.firstSeenAt + stallTimeoutSeconds : undefined;
 }
 
-function stackStateUnavailable(result: PollSummaryResult, reason: string): PollSummaryResult {
+/**
+ * The first time the stack stall timer cannot be saved, the plan keeps its action and gains one
+ * repair step. The unchanged failure on the next poll escalates `stall-state-unavailable`.
+ */
+async function stackStateUnavailable(
+  result: PollSummaryResult,
+  reason: string,
+): Promise<PollSummaryResult> {
+  const scope = `${result.repo} stack ${result.selection.kind === "stack" ? result.selection.stackNumber : ""}`;
+  if (!(await readStallRepair(scope, reason)) && (await writeStallRepair(scope, reason))) {
+    const steps = result.instructions ?? [];
+    return {
+      ...result,
+      instructions: [...steps, `${steps.length + 1}. ${stallRepairStep(reason)}`],
+    };
+  }
   return {
     ...result,
     reason: "actionable",

@@ -78,7 +78,6 @@ describe("escalate message helpers", () => {
     expect(message).toContain("pending commands returned 3 times");
     expect(buildEscalateSuggestion(["stall-timeout"], "1 minute")).toContain("1 minute —");
     expect(buildEscalateSuggestion(["stall-timeout"])).toContain("60 minutes —");
-    expect(buildEscalateSuggestion(["base-branch-unknown"])).toContain("base branch");
   });
 
   it("renders complete failing-check evidence for a check escalation", () => {

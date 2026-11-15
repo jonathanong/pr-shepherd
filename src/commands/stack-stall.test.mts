@@ -132,25 +132,6 @@ describe("applyStackStallGuard", () => {
     await expect(readStackStallState(key)).resolves.toEqual({ ok: true, state: null });
   });
 
-  it("escalates stall-state-unavailable on each tick when the timer cannot be saved", async () => {
-    const blocker = join(stateDir, "blocker");
-    await mkdir(stateDir, { recursive: true });
-    await writeFile(blocker, "not a directory");
-    process.env["PR_SHEPHERD_STATE_DIR"] = blocker;
-    const planned = idleStack();
-    const first = await applyStackStallGuard(planned, repo, 600);
-    const second = await applyStackStallGuard(planned, repo, 600);
-    expect(first).toMatchObject({
-      reason: "actionable",
-      nextAction: "escalate",
-      stackMergeable: false,
-    });
-    expect(first.instructions?.[0]).toContain("`stall-state-unavailable`");
-    expect(first.instructions?.[0]).toContain("ENOTDIR");
-    expect(second.instructions?.[0]).toContain("`stall-state-unavailable`");
-    expect(second.nextAction).toBe("escalate");
-  });
-
   it("returns the idle plan when the timeout is disabled and state cannot be saved", async () => {
     const blocker = join(stateDir, "blocker");
     await mkdir(stateDir, { recursive: true });

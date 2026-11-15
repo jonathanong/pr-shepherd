@@ -79,45 +79,15 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
     }
   });
 
-  it("escalates with base-branch-unknown when triage needs a push but baseBranch is empty", async () => {
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "UNRESOLVED_COMMENTS",
-        baseBranch: "",
-        threads: {
-          actionable: [THREAD],
-          resolutionOnly: [],
-          autoResolved: [],
-          autoResolveErrors: [],
-          firstLook: [],
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
-
-    const result = await runIterate(makeOpts());
-    expect(result.action).toBe("escalate");
-    if (result.action === "escalate") {
-      expect(result.escalate.triggers).toContain("base-branch-unknown");
-      expect(result.escalate.suggestion).toMatch(/empty base branch name/);
-      expect(result.escalate.humanMessage).toMatch(/base-branch-unknown/);
-    }
-  });
-
-  it("escalates with base-branch-unknown on CONFLICTS-only when baseBranch is empty (no resolve IDs, but rebase still needed)", async () => {
-    // Guards the `|| hasConflicts` branch of the triage base-branch-unknown
-    // gate. Without it, a CONFLICTS-only PR with no threads/comments/checks/
-    // reviews would silently rebase onto `main` when the base branch was
-    // invalid, because resolveCommand.requiresHeadSha is false (nothing to
-    // resolve).
+  it.each([
+    { name: "empty", baseBranch: "" },
+    { name: "unsafe", baseBranch: "main; rm -rf /" },
+  ])("triages with a read-the-base step when the base branch is $name", async ({ baseBranch }) => {
+    // A name outside [A-Za-z0-9._/-] must never reach a printed command or the output.
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "FAILING",
-        baseBranch: "",
+        baseBranch,
         mergeStatus: {
           status: "CONFLICTS",
           state: "OPEN" as const,
@@ -136,41 +106,14 @@ describe("runIterate — prescriptive fields: escalate humanMessage", () => {
     });
 
     const result = await runIterate(makeOpts());
-    expect(result.action).toBe("escalate");
-    if (result.action === "escalate") {
-      expect(result.escalate.triggers).toEqual(["base-branch-unknown"]);
-      expect(result.escalate.suggestion).toMatch(/empty base branch name/);
-    }
-  });
-
-  it("escalates with base-branch-unknown when baseBranch contains unsafe characters", async () => {
-    // Prevents shell interpolation via validateBaseBranch — a ref like
-    // `main;rm -rf /` must not flow into the rebase instruction string.
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "UNRESOLVED_COMMENTS",
-        baseBranch: "main; rm -rf /",
-        threads: {
-          actionable: [THREAD],
-          resolutionOnly: [],
-          autoResolved: [],
-          autoResolveErrors: [],
-          firstLook: [],
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
-
-    const result = await runIterate(makeOpts());
-    expect(result.action).toBe("escalate");
-    if (result.action === "escalate") {
-      expect(result.escalate.triggers).toContain("base-branch-unknown");
-      expect(result.escalate.suggestion).toMatch(/unsafe characters/);
-      expect(result.escalate.suggestion).toContain("main; rm -rf /");
+    expect(result.action).toBe("triage");
+    if (result.action === "triage") {
+      expect(result.baseBranch).toBe("");
+      const steps = result.triage.instructions.join("\n");
+      expect(steps).toContain(
+        "gh pr view https://github.com/owner/repo/pull/42 --json baseRefName",
+      );
+      expect(steps).not.toContain("rm -rf");
     }
   });
 });

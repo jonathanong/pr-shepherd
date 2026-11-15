@@ -159,35 +159,4 @@ describe("runIterate — escalate (triage-thrash)", () => {
     expect(result.action).toBe("triage");
     expect(mockWriteFixAttempts).not.toHaveBeenCalled();
   });
-
-  it("does not count a tick that escalates before returning TRIAGE", async () => {
-    mockReadFixAttempts.mockResolvedValue({
-      headSha: "abc123",
-      threadAttempts: { "thread-1": 1 },
-      threadBodyHashes: { "thread-1": hashBody("Fix this") },
-    });
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        baseBranch: "",
-        status: "UNRESOLVED_COMMENTS",
-        threads: {
-          actionable: [THREAD],
-          resolutionOnly: [],
-          autoResolved: [],
-          autoResolveErrors: [],
-          firstLook: [],
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: false,
-      shouldCancel: false,
-      remainingSeconds: 600,
-    });
-
-    const result = await runIterate(makeOpts());
-
-    expect(result.action).toBe("escalate");
-    expect(mockWriteFixAttempts).not.toHaveBeenCalled();
-  });
 });

@@ -444,50 +444,12 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
   // Push access to the PR head branch is a usage precondition. Build review mutations for
   // conflict ticks normally so the caller can push and complete the same triage cycle.
   const { resolveCommand, resolveOnlyCommand } = buildReviewCommands(failingAgentChecks);
-  // Safety: if the base branch is unknown, escalate when a push is plausible — the agent
-  // would need the correct base to rebase safely. This is a conservative guard, not a
-  // prediction that the agent *will* push. Located resolution-only threads retain that guard;
-  // an outdated bot thread resolved only by ID has no code or push path.
-  const locatedResolutionOnlyThreadsForWork = resolutionOnlyThreadsForWork.filter(
-    (thread) => thread.path !== null && thread.line !== null,
-  );
-  const pushIsPlausible =
-    retryableActionableThreads.length > 0 ||
-    failingAgentChecks.length > 0 ||
-    annotatedExtra.length > 0 ||
-    hasConflicts ||
-    changesRequestedReviewsForWork.length > 0 ||
-    actionableComments.length > 0 ||
-    locatedResolutionOnlyThreadsForWork.length > 0;
-  if (baseLookup.isFallback && pushIsPlausible) {
-    const pending = pendingReviewCommands(resolveCommand, resolveOnlyCommand);
-    const fallbackEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
-      triggers: ["base-branch-unknown"],
-      unresolvedThreads: [...threads, ...resolutionOnlyThreads.map(toAgentThread)],
-      ambiguousComments: actionableComments,
-      changesRequestedReviews,
-      ...(firstLookSummaries.length > 0 && { firstLookSummaries }),
-      ...(editedSummaries.length > 0 && { editedSummaries }),
-      ...(pending && { pendingReviewCommands: pending }),
-      suggestion: buildEscalateSuggestion(["base-branch-unknown"], baseLookup.failureReason),
-    };
-    return {
-      ...base,
-      action: "escalate",
-      escalate: {
-        ...fallbackEscalateBase,
-        humanMessage: buildEscalateHumanMessage(fallbackEscalateBase, prReference, {
-          merge: opts.merge,
-        }),
-      },
-    };
-  }
   const firstLookThreads = report.threads.firstLook;
   const firstLookComments = report.comments.firstLook;
   const stack = report.mergeStatus.mergeRequirements?.stack;
   const headRef = report.headSha;
   const mergedBasePullRequests =
-    hasConflicts && !stack && report.baseRefOid
+    hasConflicts && !stack && report.baseRefOid && !baseLookup.unusable
       ? await lookupMergedBasePullRequests({
           owner: repoOwner,
           repo: repoName,
@@ -497,7 +459,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       : [];
   // Native stack layers update from trunk or a parent, so a base comparison names no useful files.
   const conflictCandidateFiles =
-    hasConflicts && !stack && headRef
+    hasConflicts && !stack && headRef && !baseLookup.unusable
       ? await lookupConflictCandidateFiles({
           owner: repoOwner,
           repo: repoName,
@@ -540,7 +502,8 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
   // Conflicts, a behind branch whose rerun already failed, and a queue ejection that may be
   // reproduced on the latest base all print the branch update route.
   const stackRebase =
-    hasConflicts || (isBehind && exhaustedAttempts.length > 0) || queueEjection
+    !baseLookup.unusable &&
+    (hasConflicts || (isBehind && exhaustedAttempts.length > 0) || queueEjection)
       ? buildNativeStackLayerRebase(
           report.repo,
           { number: prNumber, baseBranch: baseLookup.branch },
@@ -643,6 +606,11 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
           nowMs,
         )
       : undefined;
+  if (baseLookup.unusable && (hasConflicts || isBehind)) {
+    instructions.unshift(
+      `Shepherd could not use the PR's base branch name from GitHub (empty, or characters outside \`[A-Za-z0-9._/-]\`), so it prints no command that names the base. Read it with \`gh pr view ${prReference} --json baseRefName\` and quote it in any command you run.`,
+    );
+  }
   insertConflictingHeadCiNote(
     instructions,
     conflictingHeadCiNote({
@@ -655,7 +623,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
   );
   const prospectiveResult = {
     ...base,
-    baseBranch: baseLookup.branch,
+    baseBranch: baseLookup.unusable ? "" : baseLookup.branch,
     ...(mergedBasePullRequests.length > 0 && { mergedBasePullRequests }),
     ...(conflictCandidateFiles && { conflictCandidateFiles }),
     ...(trunkConflict && { stackTrunkConflict: trunkConflict.trunk }),

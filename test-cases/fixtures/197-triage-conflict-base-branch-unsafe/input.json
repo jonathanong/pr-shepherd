@@ -1,0 +1,25 @@
+{
+  "description": "The PR conflicts and its base branch name has a quote, outside [A-Za-z0-9._/-]. Shepherd still triages: the conflict step prints no command that names the base, the output omits the base name, and one step says to read it with `gh pr view`.",
+  "batchData": {
+    "mergeable": "CONFLICTING",
+    "mergeStateStatus": "DIRTY",
+    "reviewDecision": "APPROVED",
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ],
+    "baseRefName": "release/it's-1.0"
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

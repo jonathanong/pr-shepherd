@@ -3,6 +3,7 @@ import type { PollSummaryItem, PollSummaryResult, StackMergeScope } from "../typ
 import { buildMergeCommandPlan, renderMergeCommand } from "./iterate/merge.mts";
 import {
   appendAutonomousInstructions,
+  idleWaitPlan,
   appendHumanHandoffInstructions,
   findHumanHandoffs,
   hasListedOwnership,
@@ -117,7 +118,11 @@ function mergePlan(
       ? ` ${list(above)} stay${above.length === 1 ? "s" : ""} open above it${ownership}; GitHub retargets ${above.length === 1 ? "it" : "them"} onto \`${stack.baseRefName}\`.`
       : "";
   const first = mergeStep(result, top, landing, left);
-  if ("unavailable" in first) return escalation(first.unavailable);
+  if ("unavailable" in first) {
+    if (!first.refresh) return escalation(first.unavailable);
+    const waiting = idleWaitPlan(lands);
+    return { ...waiting, instructions: [`1. ${first.unavailable}`] };
+  }
   const instructions = [first.text];
   appendAutonomousInstructions(instructions, work.sessions, hasListedOwnership(result));
   const handoffs = findHumanHandoffs(result);
@@ -137,7 +142,7 @@ function mergeStep(
   top: PollSummaryItem,
   landing: string,
   left: string,
-): { text: string } | { unavailable: string } {
+): { text: string } | { unavailable: string; refresh?: true } {
   const stack = top.stack!;
   if (getGithubTransport() === "rest" || top.transport === "rest") {
     // Upper layers target their parent; the prefix merges into the stack trunk.
@@ -165,7 +170,8 @@ function mergeStep(
           })),
       },
     });
-    if ("unavailable" in plan) return { unavailable: plan.unavailable };
+    if ("unavailable" in plan)
+      return { unavailable: plan.unavailable, ...(plan.refresh && { refresh: true as const }) };
     return {
       text: `1. Run \`${renderMergeCommand(plan.command)}\` to request merging ${landing} of native stack #${stack.number}.${left} ${NO_PER_LAYER} If status is \`pending\`, rerun that command at the configured cadence to resume its UUID. \`enqueued\` is not merged. Shepherd revalidates every open lower layer's READY receipt before submission.`,
     };
