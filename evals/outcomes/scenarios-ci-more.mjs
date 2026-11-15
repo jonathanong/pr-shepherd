@@ -239,7 +239,7 @@ included) to justify cancelling; skip the reply.`,
   {
     // A failed run Shepherd has no log excerpt for. It prints one investigation tick;
     // the agent reads the run's log itself and finds a code cause.
-    slug: "48-check-no-log-investigate-fix",
+    slug: "51-check-no-log-investigate-fix",
     fixture: "71-triage-check-follow-up-later-attempt",
     tags: ["ci", "investigate"],
     prompt: `Get ${PR_URL} ready to merge.`,
@@ -268,7 +268,7 @@ files that do not relate to the missing dependency.`,
   {
     // A cancelled run with no rerun. The cause is outside the repo (billing); after
     // one investigation tick Shepherd escalates, and the agent reports what it found.
-    slug: "49-check-cancelled-human-cause",
+    slug: "52-check-cancelled-human-cause",
     fixture: "71-triage-check-follow-up-later-attempt",
     transform: cancelledNoRerun,
     tags: ["ci", "investigate", "escalate"],
