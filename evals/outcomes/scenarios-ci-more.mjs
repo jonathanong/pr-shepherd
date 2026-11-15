@@ -221,9 +221,11 @@ Review thread (GraphQL id \`PRRT_active\`), unresolved, not outdated, on
 \`src/index.ts\` line 42:
 - Comment id 1 by \`reviewer\`, never edited: "Please rename this variable to be
   more descriptive."
-The variable on that line is \`const d = Date.now() - start;\`. In the PR
-conversation the author already explained that the short name is deliberate and
-the reviewer agreed it can stay, so the right answer is a reply with no code change.`,
+- Comment id 2 by \`reviewer\`, never edited: "On second thought, \`d\` is fine for
+  a duration this local. No rename needed; just reply with why the short name is
+  deliberate so it's on record, and I'll resolve."
+The variable on that line is \`const d = Date.now() - start;\`. No other reviews or
+comments, so the right answer is a reply on the thread with no code change.`,
     grader: `The agent replies on the review thread explaining the name and makes no code
 change, so nothing is pushed. It does not cancel run 500: a push is the reason to
 cancel, and there is none. It does not push an empty commit.

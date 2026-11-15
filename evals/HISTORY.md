@@ -6,6 +6,24 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-14: first run of 46 and 47 (cancel superseded runs before a fix)
+
+Sonnet 5.5 at low effort, opus judge, 3 runs per arm, $15.95 for both scenarios
+plus $6.16 for the 47 rerun.
+
+| Scenario                               | Plugin | gh/MCP | Δ     |
+| -------------------------------------- | ------ | ------ | ----- |
+| `46-cancel-superseded-runs-before-fix` | 1.00   | 0.00   | +1.00 |
+| `47-no-push-no-cancel`                 | 1.00   | 1.00   | 0.00  |
+
+- **46**: every plugin run cancels only run 500 before the fix; no gh/MCP run
+  cancels it before pushing.
+- **47** first scored 0.00 for the plugin and 0.33 for gh/MCP. The reviewer's
+  "keep `d`" lived only in the PR conversation, which Shepherd's tick does not
+  repeat, so plugin runs planned the rename and cancelled run 500 as step 1
+  told them to. The agreement now sits in the review thread, where both arms see
+  it; the rerun above is with that change.
+
 ## 2026-11-14: rerun of 13, 39, 40, 42 and 43 after the CLI fixes
 
 Sonnet 5.5 at low effort, opus judge, 3 runs per arm, $39.28. Run on a local

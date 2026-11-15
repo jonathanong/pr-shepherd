@@ -49,6 +49,8 @@ Three scenarios added after the composite above, for merges limited to what the 
 
 Seven scenarios (39 to 45) were added and two were rewritten (36 now asks to land #42 on `main`; 13 now uses the nested-code-fence suggestion), so 13 and 36 do not compare with earlier scores. Same model and judge, 3 runs per arm, low effort. 13, 39, 40, 42 and 43 are from the rerun on a branch with #723 and #726 to #728; 36, 41, 44 and 45 are from the first run. Across the nine, plugin 0.89 vs gh/MCP 0.56. 13 fails in both arms: every run says it will decide whether the suggestion is warranted on a later pass instead of committing to apply it. [HISTORY.md](HISTORY.md#2026-11-14-rerun-of-13-39-40-42-and-43-after-the-cli-fixes) has the runs.
 
+46 and 47 (cancel superseded CI runs before a fix push, and not without one) were added with #732. 47 is from the rerun after its review thread gained the reviewer's follow-up. [HISTORY.md](HISTORY.md#2026-11-14-first-run-of-46-and-47-cancel-superseded-runs-before-a-fix) has the runs.
+
 <details>
 <summary>All scenarios</summary>
 
@@ -71,6 +73,8 @@ Seven scenarios (39 to 45) were added and two were rewritten (36 now asks to lan
 | `40-startup-failure-workflow-edit`      | CI                   | 1.00   | 1.00   | 0.00  |
 | `41-check-annotations-no-log`           | CI                   | 1.00   | 0.67   | +0.33 |
 | `43-deployment-awaiting-approval`       | CI                   | 1.00   | 0.00   | +1.00 |
+| `46-cancel-superseded-runs-before-fix`  | CI                   | 1.00   | 0.00   | +1.00 |
+| `47-no-push-no-cancel`                  | CI                   | 1.00   | 1.00   | 0.00  |
 | `06-required-approval`                  | Merge gates & branch | 1.00   | 0.67   | +0.33 |
 | `18-pr-level-changes-requested`         | Merge gates & branch | 1.00   | 1.00   | 0.00  |
 | `19-behind-base`                        | Merge gates & branch | 1.00   | 1.00   | 0.00  |
