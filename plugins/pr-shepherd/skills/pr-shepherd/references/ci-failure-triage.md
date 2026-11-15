@@ -3,7 +3,7 @@
 Apply when a step says `Playbook: "CI failure triage"`. Use the excerpts and tags already printed; fetch a job log only under the gate-job rule below. An `external` check without printed annotations may be opened or reproduced.
 
 - A specific `[conclusion: …]` tag wins over the general GitHub Actions rule.
-- A `rerun:` command means Shepherd verified Actions rerun access (WRITE+) and an original attempt. On the REST transport the role is unknown, so GitHub's response to the rerun decides. Run it at most once; matrix bullets sharing its run id print it once. An `[attempt: N]` check never gets another rerun; its excerpt is still investigation work, and without usable evidence and with nothing else to do, Shepherd prints one investigation step (Playbook "Check follow-up") and escalates only if the checks are unchanged on the next poll.
+- A `rerun:` command means Shepherd verified Actions rerun access (WRITE+) and an original attempt. On the REST transport the role is unknown, so GitHub's response to the rerun decides. Run it at most once; matrix bullets sharing its run id print it once. An `[attempt: N]` check never gets another rerun; its excerpt is still investigation work, and without usable evidence it gets a "Check follow-up" step first.
 - In-progress runs, `ACTION_REQUIRED`, non-Actions run ids, and runs without attempt metadata never get a `rerun:`.
 - `scope: merge_group` never gets a rerun: it cannot restore the queue entry and overwrites the evidence. Fix the PR head if the failure is this PR's. Otherwise apply the Merge queue ejection playbook a printed ejection step names; with no ejection step the entry is still queued, so make no queue mutation and iterate until GitHub reports the removal.
 - Do not invent a handoff from `[TRIAGE]`. Shepherd escalates when nothing autonomous remains.
@@ -17,4 +17,4 @@ Apply when a step says `Playbook: "CI failure triage"`. Use the excerpts and tag
 - `[status: …, suite: COMPLETED]` (stuck run): the workflow finished but this check never completed, so there is nothing to fix in code. Run a printed `rerun:`, else finish the other work; iterate without waiting.
 - `ACTION_REQUIRED`: finish the other work and iterate. Shepherd escalates if manual approval is still required.
 - `external` with a URL: fix from its printed annotations (file, line, message) without opening the URL; with none, inspect the provider or reproduce locally. Then iterate. The URL alone is not `[ESCALATE]`.
-- `(no runId)` without a URL: keep the metadata. With nothing else to do, Shepherd prints one investigation step (Playbook "Check follow-up") and escalates only if the checks are unchanged on the next poll.
+- `(no runId)` without a URL: keep the metadata; same "Check follow-up" step first.
