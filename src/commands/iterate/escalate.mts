@@ -115,7 +115,7 @@ interface BaseBranchLookup {
 }
 
 /** Stands in for a base branch name that failed validation, in prose only. */
-export const UNKNOWN_BASE_BRANCH = "<base branch>";
+const UNKNOWN_BASE_BRANCH = "<base branch>";
 
 /**
  * Validate the base branch name from the GraphQL batch (`report.baseBranch`). The branch is
