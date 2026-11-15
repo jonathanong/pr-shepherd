@@ -38,7 +38,6 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
     "triage.checks[].detailsUrl",
     "a GitHub Actions check shows only its run ID; a URL is printed only for an external (no-runId) check",
   ],
-
   [
     "escalate.stalledChecks[].detailsUrl",
     "same as triage.checks[].detailsUrl — shown only for the external/status_context stalled check, not a GitHub Actions one",
