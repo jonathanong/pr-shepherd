@@ -5,12 +5,14 @@ import {
   makeReport,
   mockClearReadyDelay,
   mockClearStallState,
+  mockReadFixAttempts,
   mockRunCheck,
   mockUpdateReadyDelay,
   mockWriteStallState,
   registerIterateHooks,
 } from "../../test-helpers/commands/iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
+import { hashBody } from "../state/seen-comments.mts";
 
 registerIterateHooks(() => defaultConfig({ merge: { method: "squash" } }));
 
@@ -36,5 +38,74 @@ describe("runIterate — REST merge with unreadable queue policy", () => {
     expect(mockWriteStallState).toHaveBeenCalled();
     expect(mockClearStallState).not.toHaveBeenCalled();
     expect(mockClearReadyDelay).not.toHaveBeenCalled();
+  });
+
+  it("still escalates merge-method-unavailable when the configured method is known disabled", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({ status: "READY", transport: "rest", allowedMergeMethods: ["merge"] }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: true,
+      shouldCancel: true,
+      remainingSeconds: 0,
+    });
+
+    const result = await runIterate(makeOpts({ merge: true, stallTimeoutSeconds: 600 }));
+
+    expect(result.action).toBe("escalate");
+    expect(result.action === "escalate" && result.escalate.triggers).toContain(
+      "merge-method-unavailable",
+    );
+  });
+});
+
+describe("runIterate — escalation from a review-output-capped tick", () => {
+  it("carries the rollup of held-back review items", async () => {
+    mockReadFixAttempts.mockResolvedValue({
+      headSha: "old-sha",
+      threadAttempts: { "thread-1": 3 },
+      threadBodyHashes: { "thread-1": hashBody("Fix this") },
+    });
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "UNRESOLVED_COMMENTS",
+        reviewItems: { shown: 1, total: 3 },
+        threads: {
+          actionable: [
+            {
+              id: "thread-1",
+              isResolved: false,
+              isOutdated: false,
+              isMinimized: false,
+              path: "src/foo.mts",
+              line: 10,
+              startLine: null,
+              author: "reviewer",
+              authorType: "Unknown" as const,
+              body: "Fix this",
+              url: "",
+              createdAtUnix: 1,
+            },
+          ],
+          resolutionOnly: [],
+          autoResolved: [],
+          autoResolveErrors: [],
+          firstLook: [],
+        },
+      }),
+    );
+    mockUpdateReadyDelay.mockResolvedValue({
+      isReady: false,
+      shouldCancel: false,
+      remainingSeconds: 600,
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("escalate");
+    expect(result.action === "escalate" && result.escalate.reviewItems).toEqual({
+      shown: 1,
+      total: 3,
+    });
   });
 });
