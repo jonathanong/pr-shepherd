@@ -607,7 +607,11 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       : undefined;
   if (baseLookup.unusable && (hasConflicts || isBehind)) {
     instructions.unshift(
-      `Shepherd could not use the PR's base branch name from GitHub (empty, or characters outside \`[A-Za-z0-9._/-]\`), so it prints no command that names the base. Read it with \`gh pr view ${prReference} --json baseRefName\` and quote it in any command you run.`,
+      `Shepherd could not use the PR's base branch name from GitHub (empty, or characters outside \`[A-Za-z0-9._/-]\`), so it prints no command that names the base. Read it with ${
+        report.transport === "rest"
+          ? `\`gh api repos/${report.repo}/pulls/${prNumber} --jq .base.ref\``
+          : `\`gh pr view ${prReference} --json baseRefName\``
+      } and quote it in any command you run.`,
     );
   }
   insertConflictingHeadCiNote(
@@ -658,6 +662,8 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     prospectiveResult,
     report,
     reviewSummaryIds,
+    undefined,
+    opts.persistSeen !== false,
   );
   if (result.action === "triage" && opts.persistSeen !== false) {
     await writeFixAttempts(
