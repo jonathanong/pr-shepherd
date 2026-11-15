@@ -1,4 +1,9 @@
-import type { AuthorType, CheckStatus, CommentAuthorAssociation } from "./github.mts";
+import type {
+  AuthorType,
+  CheckStatus,
+  CommentAuthorAssociation,
+  PendingDeployment,
+} from "./github.mts";
 
 type ReviewActivityKind =
   | "pr-comment"
@@ -35,6 +40,7 @@ export interface ActiveCheck {
   detailsUrl: string | null;
   workflowName?: string;
   summary?: string;
+  pendingDeployments?: PendingDeployment[];
   scope?: "merge_group";
   commitOid?: string;
 }

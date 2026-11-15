@@ -9,6 +9,7 @@ import type {
   CheckConclusion,
   CheckStatus,
   SuggestionBlock,
+  PendingDeployment,
 } from "./github.mts";
 import type { ClassifiedCheck, RelatedFailedJob, TriagedCheck } from "./check-classification.mts";
 import type { AgentThreadComment } from "./agent-thread.mts";
@@ -232,6 +233,8 @@ export interface AgentCheck {
   logExcerpt?: string;
   /** Other failed jobs from the same workflow run (not their own check entries), with log tails. */
   relatedJobs?: RelatedFailedJob[];
+  /** Environment approvals the run is held on: environment, required reviewers, viewer capability. */
+  pendingDeployments?: PendingDeployment[];
   /** `gh run rerun` command, present only when the check has a runId and the viewer's repository role grants Actions rerun capability (WRITE+). */
   rerunCommand?: string;
   /** Workflow-run attempt number, surfaced only after the initial attempt. */

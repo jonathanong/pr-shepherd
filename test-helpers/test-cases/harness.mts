@@ -114,6 +114,9 @@ vi.mock("../../src/checks/triage.mts", () => ({
   triageFailingChecks: vi.fn((checks) => Promise.resolve(checks)),
   fetchStartupFailureChecks: vi.fn().mockResolvedValue([]),
 }));
+vi.mock("../../src/checks/pending-deployments.mts", () => ({
+  attachPendingDeployments: vi.fn((checks) => Promise.resolve(checks)),
+}));
 vi.mock("../../src/github/check-annotations-batch.mts", () => ({
   fetchCheckRunAnnotationsBatch: vi.fn().mockResolvedValue({
     annotations: new Map(),

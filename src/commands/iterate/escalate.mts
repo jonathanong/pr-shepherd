@@ -1,6 +1,7 @@
 /* eslint-disable max-lines */
 import { renderReviewCommitTag } from "../../cli/list-formatters.mts";
 import { renderRelatedJobLines } from "../../cli/related-jobs-format.mts";
+import { renderPendingDeploymentLines } from "../../cli/pending-deployments-format.mts";
 import type { AgentCheck, EscalateDetails, EscalateTrigger, ReviewThread } from "../../types.mts";
 import { loadConfig } from "../../config/load.mts";
 import { renderResolveCommand } from "./render.mts";
@@ -72,6 +73,7 @@ function renderEscalateCheck(check: AgentCheck): string[] {
   if (check.summary) lines.push(`  > ${check.summary}`);
   if (check.logExcerpt) lines.push(...renderBlockquoteLines(check.logExcerpt, "  "));
   lines.push(...renderRelatedJobLines(check.relatedJobs));
+  lines.push(...renderPendingDeploymentLines(check.pendingDeployments));
   if (check.rerunCommand) lines.push(`  rerun: \`${check.rerunCommand}\``);
   for (const annotation of check.annotations ?? []) {
     lines.push(...renderEscalateAnnotation(annotation));
@@ -182,6 +184,7 @@ export function buildEscalateHumanMessage(
         `- check \`${c.name}\` — ${c.status} ${c.source}, ${target}, waiting ${formatDurationApprox(c.ageSeconds)}`,
       );
       if (c.summary) lines.push(`  > ${c.summary}`);
+      lines.push(...renderPendingDeploymentLines(c.pendingDeployments, "  "));
     }
     if ((escalate.stalledChecks?.length ?? 0) > 0) lines.push("");
     for (const check of escalate.checks ?? []) {

@@ -1,5 +1,5 @@
 {
-  "description": "A single ACTION_REQUIRED failing check with confirmed Actions provenance (workflowName resolved) and no other actionable work. Unlike CANCELLED (see 14-triage-cancelled-conclusion), ACTION_REQUIRED explicitly disqualifies the rerun grant because a rerun cannot satisfy a paused manual-approval gate. No autonomous work remains, so iterate escalates with check-follow-up-unavailable instead of staying triage.",
+  "description": "A single ACTION_REQUIRED failing check with confirmed Actions provenance (workflowName resolved) and no other actionable work. Unlike CANCELLED (see 14-triage-cancelled-conclusion), ACTION_REQUIRED explicitly disqualifies the rerun grant because a rerun cannot satisfy a paused manual-approval gate. The run lists no pending deployment, as with the fork 'approve and run' gate (see 187 for an environment gate). No autonomous work remains, so iterate escalates with check-follow-up-unavailable instead of staying triage.",
   "batchData": {
     "checks": [
       {

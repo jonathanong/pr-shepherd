@@ -84,6 +84,18 @@ export type CommentAuthorAssociation =
   | "NONE"
   | "OWNER";
 
+/** One environment an Actions run is held on, as GitHub's `pending_deployments` endpoint reports it. */
+export interface PendingDeployment {
+  /** Environment name (e.g. `"production"`). */
+  environment: string;
+  /** Raw `current_user_can_approve`: whether the authenticated viewer may approve this deployment. */
+  currentUserCanApprove: boolean;
+  /** Required reviewers: a user's login or a team's slug. Omitted when GitHub lists none. */
+  reviewers?: Array<{ type: "User" | "Team"; name: string }>;
+  /** Configured wait timer in minutes. Omitted when zero. */
+  waitTimerMinutes?: number;
+}
+
 export interface CheckRun {
   /** GitHub node ID for CheckRun contexts. Missing for StatusContext and synthetic checks. */
   id?: string | null;
@@ -116,6 +128,8 @@ export interface CheckRun {
    * suite with a run that is not `COMPLETED` is a stuck check.
    */
   suiteStatus?: string;
+  /** Environment approvals the run is waiting on. Present only when GitHub lists at least one. */
+  pendingDeployments?: PendingDeployment[];
   workflowId?: string; // Stable workflow database ID (stringified); groups runs across concurrency evictions.
   /** True when GraphQL reported at least one CheckRun annotation. Omitted when false. */
   hasAnnotations?: boolean;

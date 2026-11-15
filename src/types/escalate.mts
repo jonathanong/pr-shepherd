@@ -1,6 +1,6 @@
 import type { AgentCheck, AgentComment, AgentThread } from "./report.mts";
 import type { ResolveCommand } from "./iterate.mts";
-import type { CheckStatus, Review } from "./github.mts";
+import type { CheckStatus, PendingDeployment, Review } from "./github.mts";
 import type { MergeQueueRemovalStatus } from "./merge-requirements.mts";
 
 export type EscalateTrigger =
@@ -30,6 +30,7 @@ export interface AgentStalledCheck {
   updatedAtUnix?: number;
   ageSeconds: number;
   summary?: string;
+  pendingDeployments?: PendingDeployment[];
 }
 
 export interface EscalateDetails {
