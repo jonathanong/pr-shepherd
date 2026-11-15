@@ -465,9 +465,13 @@ function failingCheckOutput() {
     "  > ##[error]Process completed with exit code 1.",
   ].join("\n");
   if (!text.includes(fixtureExcerpt)) throw new Error("snapshot 92 excerpt moved");
+  return withRecordedIds(text.replace(fixtureExcerpt, renderedExcerpt()));
+}
+
+/** The failed-step excerpt a live tick prints for the recorded job's log. */
+function renderedExcerpt() {
   const real = excerptWithDefaultConfig(JOB_LOG);
-  const rendered = [`  > ${FAILED_STEP}`, ...real.split("\n").map((l) => `  > ${l}`)].join("\n");
-  return withRecordedIds(text.replace(fixtureExcerpt, rendered));
+  return [`  > ${FAILED_STEP}`, ...real.split("\n").map((l) => `  > ${l}`)].join("\n");
 }
 
 const GH_LOG_FAILED = ghLogFailed(
@@ -820,7 +824,7 @@ const PR_SCENARIOS = [
     id: "multi-category",
     weight: 0.5,
     title: "Thread, comment, failing check and changes-requested review at once",
-    note: "The output has no log excerpt, so the CI-triage playbook sends every arm to the failed log. All three read the real log from `failing-check`.",
+    note: "Fixture 54 records no CI log, so its snapshot prints only the step name. Shepherd's output swaps in the failed-step excerpt a live tick prints, built from the real log of `failing-check`, and needs no log fetch. gh and MCP read that log.",
     arms() {
       const fixture = "54-triage-multi-category-threads-comments-checks-changes";
       // The fixture's run 5401 becomes the recorded run, so the log every arm
@@ -835,11 +839,13 @@ const PR_SCENARIOS = [
           detailsUrl: recorded(c.detailsUrl),
         })),
       };
-      const text = recorded(snapshot(fixture));
+      const bareStep = "  > Run tests";
+      const bare = snapshot(fixture);
+      if (bare.split(bareStep).length !== 2) throw new Error("snapshot 54 failed step moved");
+      const text = recorded(bare.replace(bareStep, renderedExcerpt()));
       return {
         shepherd: [
           shepherdTick(text),
-          ghLogCall(2),
           shepherdApply(text, { repliedThreads: ["PRRT_multi"] }, 3),
         ],
         // Reviews, review comments, issue comments and check runs, then review
