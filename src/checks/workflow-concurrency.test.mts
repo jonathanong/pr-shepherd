@@ -37,25 +37,34 @@ describe("parseWorkflowConcurrency", () => {
     });
   });
 
-  it("withholds a cancel when the group changes on every push or run", () => {
+  it("withholds a cancel unless the group is verified stable across pushes", () => {
+    const withGroup = (group: string) =>
+      parseWorkflowConcurrency(`concurrency:\n  group: "${group}"\n  cancel-in-progress: true\n`);
     for (const group of [
       "ci-${{ github.sha }}",
       "ci-${{ github.run_id }}",
       "ci-${{ github.event.pull_request.head.sha }}",
+      "ci-${{ github['sha'] }}",
       "ci-${{ github.event.after }}",
+      "ci-${{ matrix.os }}",
     ]) {
-      expect(
-        parseWorkflowConcurrency(`concurrency:\n  group: "${group}"\n  cancel-in-progress: true\n`),
-      ).toEqual({
-        raw: "cancel-in-progress=true (group changes every push)",
+      expect(withGroup(group)).toEqual({
+        raw: "cancel-in-progress=true (group not verified stable)",
         cancelInProgress: false,
       });
     }
+    for (const group of [
+      "ci",
+      "ci-${{ github.ref }}",
+      "ci-${{ 'literal' }}",
+      "${{ github.workflow }}-${{ github.head_ref }}",
+      "${{ format('{0}-{1}', github.workflow, github.event.pull_request.number) }}",
+    ]) {
+      expect(withGroup(group)?.cancelInProgress).toBe(true);
+    }
     expect(
-      parseWorkflowConcurrency(
-        "concurrency:\n  group: ci-${{ github.ref }}\n  cancel-in-progress: true\n",
-      )?.cancelInProgress,
-    ).toBe(true);
+      parseWorkflowConcurrency("concurrency:\n  cancel-in-progress: true\n")?.cancelInProgress,
+    ).toBe(false);
   });
 
   it("withholds a cancel when a push to the PR does not retrigger the workflow", () => {

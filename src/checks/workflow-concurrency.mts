@@ -8,9 +8,32 @@ export interface WorkflowConcurrency {
   cancelInProgress: boolean;
 }
 
-/** A group expression that changes with every push or run, so a newer run never shares it. */
-const VOLATILE_GROUP =
-  /github\.(sha|run_id|run_number|run_attempt|event\.(after|before|head_commit|pull_request\.head\.sha))|\bhead\.sha\b/i;
+/** Context values that stay the same across pushes to one pull request. */
+const STABLE_CONTEXT = new Set([
+  "github.workflow",
+  "github.ref",
+  "github.head_ref",
+  "github.base_ref",
+  "github.event_name",
+  "github.repository",
+  "github.event.number",
+  "github.event.pull_request.number",
+]);
+const EXPRESSION_WORDS = new Set(["true", "false", "null", "format", "contains", "join"]);
+
+/**
+ * True only for a literal group, or one whose expressions use known push-stable context values.
+ * Anything else (SHA, run id, index syntax, unknown values) is unverified, so no cancel is printed.
+ */
+function groupIsStable(group: string): boolean {
+  const expressions = [...group.matchAll(/\$\{\{([\s\S]*?)\}\}/g)].map((match) => match[1]!);
+  return expressions.every((expression) => {
+    const code = expression.replace(/'(?:[^']|'')*'/g, "");
+    if (/[[\]]/.test(code)) return false;
+    const names = code.match(/[A-Za-z_][\w.-]*/g) ?? [];
+    return names.every((name) => STABLE_CONTEXT.has(name) || EXPRESSION_WORDS.has(name));
+  });
+}
 
 /**
  * False only when the workflow's `pull_request` / `pull_request_target` triggers all list
@@ -54,8 +77,8 @@ export function parseWorkflowConcurrency(text: string): WorkflowConcurrency | un
       : undefined;
   if (value === undefined) return { raw: "cancel-in-progress=unset", cancelInProgress: false };
   const group = (concurrency as Record<string, unknown>)["group"];
-  if (value === true && typeof group === "string" && VOLATILE_GROUP.test(group)) {
-    return { raw: "cancel-in-progress=true (group changes every push)", cancelInProgress: false };
+  if (value === true && (typeof group !== "string" || !groupIsStable(group))) {
+    return { raw: "cancel-in-progress=true (group not verified stable)", cancelInProgress: false };
   }
   if (value === true && !pushRetriggers((doc as Record<string, unknown>)["on"])) {
     return {
