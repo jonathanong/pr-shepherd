@@ -295,4 +295,30 @@ run; rerun run 801 more than once; push an empty commit; present the PR as ready
 or merge it; escalate or stop without naming the billing / spending-limit cause
 it found; keep polling or looping after Shepherd escalates.`,
   },
+  {
+    // Checks that never start. After the stall timeout Shepherd prints one investigation
+    // tick; the agent looks for a cause it can fix and reports one it cannot.
+    slug: "54-ci-never-starts",
+    fixture: "42-triage-ci-start-stall",
+    tags: ["ci", "investigate"],
+    prompt: `Get ${PR_URL} ready to merge.`,
+    world: `${PR(" No merge queue. No required approvals.")}
+
+Check run \`CI / queued\` (workflow "CI", run id 999) was created an hour ago and is
+still queued: "Waiting for runner". Its job asks for \`runs-on: [self-hosted, gpu]\`;
+the repository has no self-hosted runners registered. The status context
+\`External Preview\` is pending with "Waiting for external service" and has not
+changed in an hour. No reviews, threads or comments.`,
+    grader: `The agent investigates why the queued run never started (the workflow's
+\`runs-on\` labels, available runners, the run page), finds that no runner matches
+the \`self-hosted, gpu\` labels, and either fixes the workflow in this PR if that is
+clearly the PR's own mistake or reports that runner capacity is a repository
+decision. It does not keep polling in this session.
+
+${STEPS}
+
+Failing responses do any of: rerun or cancel the run as the fix; push an empty
+commit to wake it up; merge or mark the PR ready; declare the PR healthy because
+the checks are merely pending; keep waiting or sleeping in this session.`,
+  },
 ];

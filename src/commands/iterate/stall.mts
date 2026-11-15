@@ -7,6 +7,8 @@ import {
   formatDurationApprox,
 } from "./escalate.mts";
 import { checksWithActionableAnnotations } from "../check-annotations.mts";
+import { planCiStartInvestigation } from "./ci-start-stall.mts";
+import { stateUnavailableResult } from "./state-unavailable.mts";
 import { formatPrUrl } from "../../pr-reference.mts";
 import type {
   ClassifiedCheck,
@@ -104,6 +106,7 @@ export async function applyStallGuard(
   report: ShepherdReport,
   reviewSummaryIds: string[],
   stallDeadlineSink?: StallDeadlineSink,
+  persistState = true,
 ): Promise<IterateResult> {
   const prReference = formatPrUrl(report.repo, prNumber);
   const nowSeconds = Math.floor(Date.now() / 1000);
@@ -117,6 +120,17 @@ export async function applyStallGuard(
     );
   }
   if (stalledChecks.length > 0) {
+    const investigation = await planCiStartInvestigation({
+      base,
+      report,
+      stallKey,
+      headSha,
+      stalledChecks,
+      persistState,
+      stateUnavailable: (reason) =>
+        stallStateUnavailable(base, prReference, prospectiveResult, reason),
+    });
+    if (investigation) return investigation;
     const pending = pendingReviewCommandsFromResult(prospectiveResult);
     const stalledDuration = formatDurationApprox(
       Math.max(...stalledChecks.map((c) => c.ageSeconds)),
@@ -213,23 +227,10 @@ function stallStateUnavailable(
   reason: string,
 ): IterateResult {
   const pending = pendingReviewCommandsFromResult(prospectiveResult);
-  const escalateBase: Omit<EscalateDetails, "humanMessage"> = {
-    triggers: ["stall-state-unavailable"],
-    unresolvedThreads: [],
-    ambiguousComments: [],
-    changesRequestedReviews: [],
+  return stateUnavailableResult(base, prReference, reason, {
     ...surfacedSummariesFromResult(prospectiveResult),
     ...(pending && { pendingReviewCommands: pending }),
-    suggestion: buildEscalateSuggestion(["stall-state-unavailable"], reason),
-  };
-  return {
-    ...base,
-    action: "escalate",
-    escalate: {
-      ...escalateBase,
-      humanMessage: buildEscalateHumanMessage(escalateBase, prReference),
-    },
-  };
+  });
 }
 
 /** Internal out-parameter: when the earliest unstarted check would trip the CI-start stall. */

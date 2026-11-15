@@ -47,6 +47,11 @@ vi.mock("../../src/state/queue-removal-follow-up.mts", async (importOriginal) =>
   readQueueRemovalFollowUp: vi.fn().mockResolvedValue(false),
   writeQueueRemovalFollowUp: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("../../src/state/ci-start-follow-up.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/state/ci-start-follow-up.mts")>()),
+  readCiStartFollowUp: vi.fn().mockResolvedValue(false),
+  writeCiStartFollowUp: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("../../src/state/check-blockers.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../src/state/check-blockers.mts")>();
   return { ...actual, readCheckBlockers: vi.fn(async () => []) };
@@ -87,6 +92,7 @@ import {
   readCheckFollowUp,
   writeCheckFollowUp,
 } from "../../src/state/check-follow-up.mts";
+import { readCiStartFollowUp, writeCiStartFollowUp } from "../../src/state/ci-start-follow-up.mts";
 import {
   readQueueRemovalFollowUp,
   writeQueueRemovalFollowUp,
@@ -121,6 +127,8 @@ const mockReadFixAttempts = vi.mocked(readFixAttempts);
 const mockReadCheckBlockers = vi.mocked(readCheckBlockers);
 const mockReadCheckFollowUp = vi.mocked(readCheckFollowUp);
 const mockWriteCheckFollowUp = vi.mocked(writeCheckFollowUp);
+const mockReadCiStartFollowUp = vi.mocked(readCiStartFollowUp);
+const mockWriteCiStartFollowUp = vi.mocked(writeCiStartFollowUp);
 const mockReadQueueRemovalFollowUp = vi.mocked(readQueueRemovalFollowUp);
 const mockWriteQueueRemovalFollowUp = vi.mocked(writeQueueRemovalFollowUp);
 const mockWriteFixAttempts = vi.mocked(writeFixAttempts);
@@ -306,6 +314,8 @@ function registerIterateHooks(config = defaultConfig): void {
     mockReadCheckFollowUp.mockResolvedValue(undefined);
     mockWriteCheckFollowUp.mockResolvedValue(undefined);
     mockReadQueueRemovalFollowUp.mockResolvedValue(false);
+    mockReadCiStartFollowUp.mockResolvedValue(false);
+    mockWriteCiStartFollowUp.mockResolvedValue(undefined);
     mockWriteQueueRemovalFollowUp.mockResolvedValue(undefined);
     mockWriteFixAttempts.mockResolvedValue(undefined);
     mockReadStallState.mockResolvedValue({ ok: true, state: null });
@@ -346,6 +356,8 @@ export {
   mockReadCheckFollowUp,
   mockWriteCheckFollowUp,
   mockReadQueueRemovalFollowUp,
+  mockReadCiStartFollowUp,
+  mockWriteCiStartFollowUp,
   mockWriteQueueRemovalFollowUp,
   mockReadReadyReceipt,
   mockReadStallState,

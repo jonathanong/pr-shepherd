@@ -1,5 +1,4 @@
 import type { IterateResult, IterateResultBase, ShepherdReport } from "../../types.mts";
-import { buildPrShepherdCommand } from "../../cli/runner.mts";
 import { formatPrUrl } from "../../pr-reference.mts";
 import {
   queueRemovalSignature,
@@ -7,9 +6,9 @@ import {
   writeQueueRemovalFollowUp,
 } from "../../state/queue-removal-follow-up.mts";
 import { playbookPointer } from "../playbook-pointer.mts";
-import { buildFixCompletionInstruction } from "./check-instructions.mts";
 import { buildEscalateHumanMessage, buildEscalateSuggestion } from "./escalate.mts";
-import { stackRebase } from "./unreported-required.mts";
+import { stateUnavailableResult } from "./state-unavailable.mts";
+import { buildUnreportedFixResult, stackRebase } from "./unreported-required.mts";
 
 type StateKey = { owner: string; repo: string; pr: number };
 
@@ -22,39 +21,7 @@ function buildQueueRemovalInstructions(report: ShepherdReport): string[] {
     `GitHub removed PR #${report.pr} from the merge queue, and Shepherd has no failed queue-commit check to triage. The \`**queue removal**\` line above carries the raw reason and actor.`,
     `Decide from them. If the reason names a merge conflict, an invalid merge commit, or a stack that changed, ${update}. If a person dequeued the PR (the actor is a user, not a bot or \`github-actions\`), make no change and report that. If the reason is missing or unclear, find out why before acting. Never enqueue the PR yourself. ${playbookPointer("Merge queue ejection")}`,
     "If the head is unchanged on the next poll, Shepherd escalates with `merge-queue-removed`; report what you found then.",
-    buildFixCompletionInstruction(),
   ];
-}
-
-function triageResult(
-  base: IterateResultBase,
-  report: ShepherdReport,
-  instructions: string[],
-): IterateResult {
-  return {
-    ...base,
-    action: "triage",
-    triage: {
-      threads: [],
-      resolutionOnlyThreads: [],
-      actionableComments: [],
-      reviewSummaryIds: [],
-      firstLookSummaries: [],
-      editedSummaries: [],
-      surfacedApprovals: [],
-      checks: [],
-      changesRequestedReviews: [],
-      resolveCommand: {
-        argv: buildPrShepherdCommand(["apply", "review", formatPrUrl(report.repo, report.pr)]).argv,
-        requiresHeadSha: false,
-        requiresDismissMessage: false,
-        hasMutations: false,
-      },
-      instructions,
-      firstLookThreads: [],
-      firstLookComments: [],
-    },
-  };
 }
 
 function escalateResult(base: IterateResultBase, report: ShepherdReport): IterateResult {
@@ -105,7 +72,11 @@ export async function planQueueRemoval(input: {
   // A reused cached report is re-run by the poll before it is shown, so it must not spend the one
   // investigation tick the caller never sees.
   if (persistState && report.fingerprintReused !== true) {
-    await writeQueueRemovalFollowUp(stallKey, signature);
+    // A marker that cannot be saved would repeat the investigation forever.
+    const saveError = await writeQueueRemovalFollowUp(stallKey, signature);
+    if (saveError) {
+      return stateUnavailableResult(base, formatPrUrl(report.repo, report.pr), saveError);
+    }
   }
-  return triageResult(base, report, buildQueueRemovalInstructions(report));
+  return buildUnreportedFixResult(base, report, buildQueueRemovalInstructions(report));
 }

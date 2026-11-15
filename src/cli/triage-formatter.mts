@@ -16,6 +16,7 @@ import { numberInstructions } from "./iterate-instructions.mts";
 import { renderCheckAnnotation } from "./triage-formatter-extra.mts";
 import { renderRelatedJobLines } from "./related-jobs-format.mts";
 import { renderPendingDeploymentLines } from "./pending-deployments-format.mts";
+import { renderStalledCheckLines } from "./stalled-check-format.mts";
 import { renderInProgressRun } from "./in-progress-run-format.mts";
 import { isFailingAgentCheck } from "../checks/conclusions.mts";
 import type { IterateResultTriage } from "../types.mts";
@@ -177,6 +178,11 @@ export function formatTriageResult(
       sections.push(`### ${locator} — \`${workflowPrefix}${jobLabel}\``);
       sections.push(rendered.join("\n\n"));
     }
+  }
+
+  if (result.triage.stalledChecks) {
+    sections.push("## Unstarted checks");
+    sections.push(result.triage.stalledChecks.flatMap(renderStalledCheckLines).join("\n"));
   }
 
   if (result.triage.inProgressRuns) {

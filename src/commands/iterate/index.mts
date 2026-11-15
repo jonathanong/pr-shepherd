@@ -444,6 +444,7 @@ async function runIterateCore(
           reportForWork,
           reviewSummaryIds,
           opts.stallDeadlineSink,
+          opts.persistSeen !== false,
         ),
         blockerGate,
       );
@@ -491,6 +492,7 @@ async function runIterateCore(
       reportForWork,
       reviewSummaryIds,
       opts.stallDeadlineSink,
+      opts.persistSeen !== false,
     ),
     blockerGate,
   );

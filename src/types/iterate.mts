@@ -23,7 +23,7 @@ import type {
   ShepherdMergeStatus,
 } from "./github.mts";
 import type { MergeRequirements } from "./merge-requirements.mts";
-import type { EscalateDetails } from "./escalate.mts";
+import type { AgentStalledCheck, EscalateDetails } from "./escalate.mts";
 import type { MergeCommandPlan } from "./merge-action.mts";
 import type { ApiUsage, GraphqlQuotaWarning } from "./api-usage.mts";
 import type { NextCheck } from "./next-check.mts";
@@ -168,6 +168,8 @@ interface TriageDetails {
   checks: AgentCheck[];
   /** In-progress Actions runs on the head with their raw `concurrency` and a cancel command where one applies. Omitted when empty. */
   inProgressRuns?: import("./in-progress-run.mts").InProgressRun[];
+  /** Checks still unstarted after the CI-start stall timeout, on the one investigation tick. Omitted otherwise. */
+  stalledChecks?: AgentStalledCheck[];
   changesRequestedReviews: Review[];
   /** Pre-built apply command. Run after committing and pushing. */
   resolveCommand: ResolveCommand;

@@ -39,10 +39,6 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
     "a GitHub Actions check shows only its run ID; a URL is printed only for an external (no-runId) check",
   ],
   [
-    "escalate.stalledChecks[].detailsUrl",
-    "same as triage.checks[].detailsUrl — shown only for the external/status_context stalled check, not a GitHub Actions one",
-  ],
-  [
     "inProgressChecks[].pendingDeployments[].reviewers[].type",
     "the `pending deployment:` line encodes the reviewer type as a `team` prefix for a Team and an `@` login for a User, not the raw enum",
   ],
@@ -62,15 +58,14 @@ export const TEXT_LOSSY_PATHS = new Map<string, string>([
     "triage.resolutionOnlyThreads[].comments[].createdAtUnix",
     "same, for transcript replies (the REST reader always returns the full transcript)",
   ],
-  [
-    "escalate.stalledChecks[].createdAtUnix",
-    "rendered as a relative 'waiting N minutes' duration, not a raw timestamp",
-  ],
-  ["escalate.stalledChecks[].updatedAtUnix", "same"],
-  [
-    "escalate.stalledChecks[].ageSeconds",
-    "same — the duration is reformatted to whatever unit reads best (docs/actions.md)",
-  ],
+  // Stalled checks (the CI-start TRIAGE tick and the stall ESCALATE): an Actions check shows only
+  // its run ID, and the age is a relative 'waiting N minutes' duration, not raw timestamps.
+  ...["escalate", "triage"].flatMap((a) =>
+    ["detailsUrl", "createdAtUnix", "updatedAtUnix", "ageSeconds"].map((k): [string, string] => [
+      `${a}.stalledChecks[].${k}`,
+      "see the comment above",
+    ]),
+  ),
   [
     "triage.resolveCommand.argv[]",
     "JSON always carries the structured command object for programmatic callers; Markdown prints the assembled `apply review:` bullet only when hasMutations is true",

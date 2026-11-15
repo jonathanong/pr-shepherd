@@ -189,6 +189,7 @@ export function projectIterateLean(
             queueRemovalAcknowledgment: result.triage.queueRemovalAcknowledgment,
           }),
           ...(result.triage.checks.length > 0 && { checks: result.triage.checks }),
+          ...(result.triage.stalledChecks && { stalledChecks: result.triage.stalledChecks }),
           ...(result.triage.inProgressRuns && { inProgressRuns: result.triage.inProgressRuns }),
           ...(result.triage.changesRequestedReviews.length > 0 && {
             changesRequestedReviews: result.triage.changesRequestedReviews,
