@@ -6,6 +6,38 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-15: escalation conversions, 51 to 56 and reruns of 39 and 43
+
+Stack #737 (#735, #736, #739, #740, #741) turns several escalations into one
+investigation `TRIAGE` or a `WAIT`. Sonnet 5.5 at low effort, opus judge, 3 runs
+per arm, $128.29 over four runs. Each row is the latest run of that scenario.
+
+| Scenario                           | Plugin | gh/MCP | Δ     |
+| ---------------------------------- | ------ | ------ | ----- |
+| `39-required-check-never-reports`  | 1.00   | 0.33   | +0.67 |
+| `43-deployment-awaiting-approval`  | 1.00   | 0.00   | +1.00 |
+| `51-check-no-log-investigate-fix`  | 1.00   | 1.00   | 0.00  |
+| `52-check-cancelled-human-cause`   | 1.00   | 0.67   | +0.33 |
+| `53-queue-removed-merge-conflict`  | 1.00   | 0.00   | +1.00 |
+| `54-ci-never-starts`               | 1.00   | 0.00   | +1.00 |
+| `55-stack-layer-state-unavailable` | 1.00   | 0.00   | +1.00 |
+| `56-conflict-unsafe-base-name`     | 1.00   | 0.00   | +1.00 |
+
+- **52** scored 0.00 for the plugin twice. Agent mocks see no call history, so
+  its "first call, then later calls" `iterate` mock sometimes escalated on the
+  first call. It now serves the investigation tick on every call. Agents also
+  read the tick's bare `800` as a job id, got a 404 and stopped. The
+  investigation step now prints `gh run view <runId> -R <repo>`, and no longer
+  says "If a rerun is the right call, run it once" when Shepherd withheld the
+  rerun. 39 and 43 keep the same kind of mock and pass on either answer.
+- **51** dipped to 0.67 on the second run for the same bare-id reason and was
+  1.00 after the fix.
+- **55** scored 0.67 on the first run: one agent planned to hand an unreadable
+  layer to a human. The idle stack step now says Shepherd escalates
+  `stall-timeout` if the stack does not change.
+- **53**, **56** are from the first run; 39, 43, 55 from the second; 51, 54 from
+  the third; 52 from the fourth.
+
 ## 2026-11-14: first runs of 48 to 50 (creating PRs: split and stack)
 
 Sonnet 5.5 at low effort, opus judge, 3 runs per arm, $49.40 over three runs.
