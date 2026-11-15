@@ -75,6 +75,33 @@ describe("aggregate tick", () => {
     expect(result.nextCheck!.inSeconds).toBeGreaterThanOrEqual(600);
   });
 
+  it("keeps a wake-up for a stack whose draft probe is another author's or unreadable", async () => {
+    const probe = { reasons: ["draft-readiness-verification-required"], action: "wait" };
+    for (const prs of [
+      [
+        { pr: 1, owned: true, action: "cancel" },
+        { pr: 2, ...probe },
+      ],
+      [
+        { pr: 1, owned: true, ...probe },
+        { pr: 2, state: "UNKNOWN", action: "wait" },
+      ],
+    ]) {
+      m.runPollSummary.mockResolvedValue(
+        summary({ selection: { kind: "stack" }, reason: "waiting", prs }),
+      );
+      const result = await runPollSummaryTick({} as never);
+      expect(result).toMatchObject({ nextCheck: { reason: "safety-net" } });
+    }
+    m.runPollSummary.mockResolvedValue(
+      summary({
+        selection: { kind: "stack" },
+        prs: [{ pr: 1, owned: true, ...probe }],
+      }),
+    );
+    expect(await runPollSummaryTick({} as never)).not.toHaveProperty("nextCheck");
+  });
+
   it("prefers a ready-delay countdown and a queue wait", async () => {
     m.runPollSummary.mockResolvedValue(
       summary({

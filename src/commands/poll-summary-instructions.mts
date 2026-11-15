@@ -206,7 +206,7 @@ function planStack(
     }
     if (ownedWork) {
       const rerun =
-        onlyDraftReadinessVerification(work.sessions, work.idle) &&
+        onlyDraftReadinessVerification(work.sessions, [...work.idle, ...unverified]) &&
         work.sessions.every((item) => item.owned)
           ? `If every listed one-PR probe returns \`[CANCEL]\` with reason \`auto-mark-ready-disabled\`, report the human handoff above and stop this \`stack\` command. If any probe returns \`[ESCALATE]\`, report that handoff and stop after the other probes finish. Otherwise follow each probe's instructions and rerun ${again} when that work completes.`
           : `After the listed one-PR sessions, rerun ${again}. Stop for the human handoff only when no autonomous shepherding remains.`;
@@ -257,7 +257,7 @@ function planStack(
     const instructions: string[] = [];
     appendAutonomousInstructions(instructions, work.sessions, partial);
     if (
-      onlyDraftReadinessVerification(work.sessions, work.idle) &&
+      onlyDraftReadinessVerification(work.sessions, [...work.idle, ...unverified]) &&
       work.sessions.every((item) => item.owned)
     ) {
       instructions.push(

@@ -21,6 +21,7 @@ import {
 import { runIterate } from "./iterate/index.mts";
 import { earliestDeadline, readStallDeadline } from "./stall-deadline.mts";
 import { runsSingleTick } from "./single-tick.mts";
+import { isDraftReadinessVerification } from "./stack-work.mts";
 import { readStackStallDeadline } from "./stack-stall.mts";
 import { runPoll, type PollCommandOptions } from "./poll.mts";
 import {
@@ -132,13 +133,25 @@ function withoutPollingCadence(step: string): string {
     );
 }
 
+/** A stack layer no one-PR probe can advance: unreadable, or another author's draft. */
+function hasUnrunnableLayer(result: PollSummaryResult): boolean {
+  return (
+    result.selection.kind === "stack" &&
+    result.prs.some(
+      (item) => item.state === "UNKNOWN" || (isDraftReadinessVerification(item) && !item.owned),
+    )
+  );
+}
+
 function aggregateNextCheck(
   result: PollSummaryResult,
   stallDeadlineSeconds: number | undefined,
 ): NextCheck | undefined {
   if (
     isHandedOffSelection(result) ||
-    (onlyDraftVerificationSelection(result) && result.nextAction !== "merge") ||
+    (onlyDraftVerificationSelection(result) &&
+      !hasUnrunnableLayer(result) &&
+      result.nextAction !== "merge") ||
     result.reason === "all_terminal" ||
     result.nextAction === "cancel" ||
     result.nextAction === "escalate"
