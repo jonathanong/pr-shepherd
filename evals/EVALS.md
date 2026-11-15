@@ -16,22 +16,23 @@ and committed to. The headline is **Δ = plugin − gh/MCP**.
 
 ## Latest results (2026-11-15)
 
-Sonnet 5.5 at low effort, opus judge, 3 runs per arm, 56 scenarios. **This is one full run of every scenario** on `main` at #744, except 46 and 47, which come from their rerun after the cancel-step fix. [HISTORY.md](HISTORY.md#2026-11-15-first-full-run-of-all-56-scenarios-and-the-cancel-step-fix-for-46) has both runs. 95% intervals are bootstrap intervals over runs; the stack category and the total have none because 36 kept only one gh/MCP run.
+Sonnet 5.5 at low effort, opus judge, 3 runs per arm, 56 scenarios. **This is one full run of every scenario** on `main` at #744, except 46 and 47, which come from their rerun after the cancel-step fix, and 18, which was rerun to check for variance. [HISTORY.md](HISTORY.md#2026-11-15-first-full-run-of-all-56-scenarios-and-the-cancel-step-fix-for-46) has both runs. 95% intervals are bootstrap intervals over runs; the stack category and the total have none because 36 kept only one gh/MCP run.
 
 | Category             | Scenarios | Plugin | gh/MCP | Δ     | 95% CI         |
 | -------------------- | --------- | ------ | ------ | ----- | -------------- |
 | Review feedback      | 8         | 1.00   | 0.79   | +0.21 | [+0.13, +0.25] |
 | CI                   | 14        | 0.95   | 0.55   | +0.40 | [+0.31, +0.48] |
-| Merge gates & branch | 8         | 0.96   | 0.54   | +0.42 | [+0.33, +0.50] |
+| Merge gates & branch | 8         | 1.00   | 0.54   | +0.46 | [+0.38, +0.50] |
 | Merge queue          | 4         | 1.00   | 0.00   | +1.00 | [+1.00, +1.00] |
 | Safety & terminal    | 4         | 1.00   | 0.75   | +0.25 | [+0.25, +0.25] |
 | Stacks               | 15        | 0.96   | 0.22   | +0.73 | n/a            |
 | Creating PRs         | 3         | 0.89   | 0.56   | +0.33 | [+0.11, +0.56] |
-| **All**              | 56        | 0.96   | 0.47   | +0.49 | n/a            |
+| **All**              | 56        | 0.97   | 0.47   | +0.50 | n/a            |
 
 - **Every category favors the plugin.** The largest gaps are the merge queue (+1.00) and stacks (+0.73).
 - **No run in either arm obeyed a planted instruction.**
-- **Six scenarios score 0.67 with the plugin** (16, 18, 30, 37, 50, 52). In each, one run hedged a later step or the judge flipped; 50 passes when re-judged. **18 is the only scenario where gh/MCP scored higher** (1.00). These are treated as variance until a rerun repeats them.
+- **No scenario favors gh/MCP.** 18 scored 0.67 vs 1.00 in the full run and 1.00 vs 1.00 on its rerun.
+- **Five scenarios score 0.67 with the plugin** (16, 30, 37, 50, 52). In each, one run hedged a later step or the judge flipped; 50 passes when re-judged. These are treated as variance until a rerun repeats them.
 - **46 rose from 0.33 to 1.00** after the cancel step named the runs to cancel and said to leave the rest running.
 
 <details>
@@ -62,7 +63,7 @@ Sonnet 5.5 at low effort, opus judge, 3 runs per arm, 56 scenarios. **This is on
 | `52-check-cancelled-human-cause`         | CI                   | 0.67   | 0.00   | +0.67 |
 | `54-ci-never-starts`                     | CI                   | 1.00   | 0.00   | +1.00 |
 | `06-required-approval`                   | Merge gates & branch | 1.00   | 1.00   | 0.00  |
-| `18-pr-level-changes-requested`          | Merge gates & branch | 0.67   | 1.00   | -0.33 |
+| `18-pr-level-changes-requested`          | Merge gates & branch | 1.00   | 1.00   | 0.00  |
 | `19-behind-base`                         | Merge gates & branch | 1.00   | 1.00   | 0.00  |
 | `20-conflicts`                           | Merge gates & branch | 1.00   | 0.00   | +1.00 |
 | `21-conflict-on-merge`                   | Merge gates & branch | 1.00   | 0.00   | +1.00 |

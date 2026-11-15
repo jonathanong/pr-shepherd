@@ -6,6 +6,14 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-15: rerun of 18, the one scenario that favored gh/MCP
+
+In the full run below, 18 scored 0.67 with the plugin vs 1.00 for gh/MCP: one
+plugin run hedged a later step. Rerun on `main` at #745, same model, judge and
+runs: 1.00 vs 1.00, $4.88, exit 0. It was variance. Layered over the full run
+and the 46/47 rerun, the plugin scores 0.97 vs 0.47 (Δ +0.50), and no scenario
+favors gh/MCP.
+
 ## 2026-11-15: first full run of all 56 scenarios, and the cancel-step fix for 46
 
 The first clean pass of every scenario in one run, on `main` at #744. Sonnet 5.5
