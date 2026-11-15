@@ -8,6 +8,7 @@ import { pickFailedStep, type ActionsJob } from "./jobs-types.mts";
 import { pickRelatedFailedJobs, fetchRelatedJobs } from "./related-jobs.mts";
 import { TriageBudget } from "./triage-budget.mts";
 import { mapPool } from "../util/pool.mts";
+import { normalizeWorkflowPath } from "./workflow-path.mts";
 
 const STARTUP_FAILURE_STATUS = "startup_failure";
 
@@ -211,7 +212,7 @@ interface JobInfo {
 }
 
 function workflowRunToCheckRun(run: WorkflowRunsResponse["workflow_runs"][number]): CheckRun {
-  const workflowPath = run.path?.trim() || undefined;
+  const workflowPath = normalizeWorkflowPath(run.path);
   const runAttempt = normalizeRunAttempt(run.run_attempt);
   return {
     name: run.name?.trim() || `workflow run ${run.id}`,
