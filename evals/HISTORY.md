@@ -52,6 +52,14 @@ $12.44 to rerun 36 and 38 after the fixes below.
   command at once when the request already covers those layers, and to ask
   only otherwise (#722). The plugin-arm rerun scored 36 and 37 at 3 of 3
   ($5.13); 36 still stops, since "my PRs #41 and #42" does not cover #40.
+- **After `iterate` routes stacked layers through the escalation (#722):
+  plugin 36 1.00, 37 1.00, 38 0.67** ($13.45). The `iterate` mocks now answer
+  each PR with its stack route, and the route says to follow the escalation's
+  instructions instead of reporting to the user. 38's failing run never loaded
+  the skill or called a pr-shepherd tool: it merged #42 and #52 onto their
+  parents' branches with the GitHub MCP, as every gh/MCP run does. The two runs
+  that loaded the skill passed. That is a trigger miss on "Merge #42 and #52",
+  not a change in the CLI text.
 
 ## 2026-11-14: judges failing correct plugin plans
 
