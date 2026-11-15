@@ -1,0 +1,145 @@
+{
+  "description": "A failed job in a run whose siblings still run, plus other in-progress runs on the head. Only a workflow whose top-level cancel-in-progress is the literal true, that checks.never-cancel does not match, and that is not held on a deployment gate gets a cancel command; an expression, a workflow with no concurrency, a protected review run and a WAITING run only print their raw concurrency.",
+  "config": { "checks": { "never-cancel": ["AI *"] } },
+  "batchData": {
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/500",
+        "runId": "500",
+        "workflowName": "CI"
+      },
+      {
+        "name": "CI / e2e",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/500",
+        "runId": "500",
+        "workflowName": "CI"
+      },
+      {
+        "name": "CI / lint",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/500",
+        "runId": "500",
+        "workflowName": "CI"
+      },
+      {
+        "name": "review",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/501",
+        "runId": "501",
+        "workflowName": "AI Review"
+      },
+      {
+        "name": "format",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/502",
+        "runId": "502",
+        "workflowName": "Format"
+      },
+      {
+        "name": "build",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/503",
+        "runId": "503",
+        "workflowName": "Build"
+      },
+      {
+        "name": "deploy preview",
+        "status": "WAITING",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/504",
+        "runId": "504",
+        "workflowName": "Preview"
+      }
+    ]
+  },
+  "triagedChecks": [
+    {
+      "name": "CI / tests",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE",
+      "event": "pull_request",
+      "detailsUrl": "https://github.com/owner/repo/actions/runs/500",
+      "runId": "500",
+      "category": "failing",
+      "workflowName": "CI",
+      "jobName": "tests",
+      "failedStep": "Run tests"
+    }
+  ],
+  "headWorkflowSuites": [
+    {
+      "status": "IN_PROGRESS",
+      "conclusion": null,
+      "workflowRun": {
+        "event": "pull_request",
+        "databaseId": 500,
+        "path": ".github/workflows/ci.yml"
+      }
+    },
+    {
+      "status": "IN_PROGRESS",
+      "conclusion": null,
+      "workflowRun": {
+        "event": "pull_request",
+        "databaseId": 501,
+        "path": ".github/workflows/ai-review.yml"
+      }
+    },
+    {
+      "status": "IN_PROGRESS",
+      "conclusion": null,
+      "workflowRun": {
+        "event": "pull_request",
+        "databaseId": 502,
+        "path": ".github/workflows/format.yml"
+      }
+    },
+    {
+      "status": "IN_PROGRESS",
+      "conclusion": null,
+      "workflowRun": {
+        "event": "pull_request",
+        "databaseId": 503,
+        "path": ".github/workflows/build.yml"
+      }
+    },
+    {
+      "status": "WAITING",
+      "conclusion": null,
+      "workflowRun": {
+        "event": "pull_request",
+        "databaseId": 504,
+        "path": ".github/workflows/preview.yml"
+      }
+    }
+  ],
+  "workflowFiles": {
+    ".github/workflows/ci.yml": "name: CI\non: pull_request\nconcurrency:\n  group: ci-${{ github.ref }}\n  cancel-in-progress: true\njobs: {}\n",
+    ".github/workflows/ai-review.yml": "name: AI Review\non: pull_request\nconcurrency:\n  group: ai-${{ github.ref }}\n  cancel-in-progress: true\njobs: {}\n",
+    ".github/workflows/format.yml": "name: Format\non: pull_request\njobs: {}\n",
+    ".github/workflows/build.yml": "name: Build\non: pull_request\nconcurrency:\n  group: build\n  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}\njobs: {}\n",
+    ".github/workflows/preview.yml": "name: Preview\non: pull_request\nconcurrency:\n  group: preview\n  cancel-in-progress: true\njobs: {}\n"
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

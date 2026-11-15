@@ -166,6 +166,8 @@ interface TriageDetails {
   /** APPROVED-state reviews surfaced for visibility (when `iterate.minimize-approvals` is false). */
   surfacedApprovals: Review[];
   checks: AgentCheck[];
+  /** In-progress Actions runs on the head with their raw `concurrency` and a cancel command where one applies. Omitted when empty. */
+  inProgressRuns?: import("./in-progress-run.mts").InProgressRun[];
   changesRequestedReviews: Review[];
   /** Pre-built apply command. Run after committing and pushing. */
   resolveCommand: ResolveCommand;

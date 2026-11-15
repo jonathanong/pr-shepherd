@@ -122,6 +122,7 @@ export const configSchema = z.strictObject({
     .strictObject({
       ignore: strings().default(() => []),
       "never-ignore": strings().default(() => []),
+      "never-cancel": strings().default(() => []),
       "ci-trigger-events": strings().default(() => ["pull_request", "pull_request_target"]),
       "ignore-log-lines": z.array(regexPattern).default(() => []),
     })
@@ -178,6 +179,7 @@ export const configSchema = z.strictObject({
     .strictObject({
       "auto-minimize-suppressed": z.boolean().default(true),
       "work-while-queued": z.boolean().default(false),
+      "cancel-runs-before-push": z.boolean().default(true),
     })
     .prefault({}),
   classify: z

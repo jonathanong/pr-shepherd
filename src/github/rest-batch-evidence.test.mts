@@ -34,7 +34,7 @@ describe("REST batch workflow and review evidence", () => {
       {
         status: "COMPLETED",
         conclusion: "STARTUP_FAILURE",
-        workflowRun: { event: "pull_request" },
+        workflowRun: { event: "pull_request", databaseId: 88, path: ".github/workflows/ci.yml" },
       },
     ]);
     expect(batch.receiptSummary?.reviewRequests?.nodes).toEqual([

@@ -124,6 +124,7 @@ classify:
 | `cli-command`                         | `["pr-shepherd"]`                         | Argv prefix for every `pr-shepherd` command Shepherd emits.                                                                                                        |
 | `bot-usernames`                       | Known code-review bot logins              | Logins treated as bots even when GitHub reports `User` or `Unknown`.                                                                                               |
 | `checks.ignore`                       | `[]`                                      | Case-insensitive globs excluded from CI decisions, annotations included. The names stay in the ignored rollup.                                                     |
+| `checks.never-cancel`                 | `[]`                                      | Workflows or checks whose in-progress runs Shepherd never recommends cancelling (code-review workflows). Case-insensitive globs.                                   |
 | `checks.never-ignore`                 | `[]`                                      | Actions workflows or checks that stay visible even when they match `checks.ignore`.                                                                                |
 | `checks.ci-trigger-events`            | `["pull_request", "pull_request_target"]` | Workflow `on:` events treated as PR-head CI. Merge-queue `merge_group` checks are included automatically.                                                          |
 | `checks.ignore-log-lines`             | `[]`                                      | Regexes. Matching raw CI log lines are dropped from `## Failing checks` excerpts and from annotation dedup.                                                        |
@@ -152,6 +153,7 @@ classify:
 | `merge.method`                        | unset                                     | Preferred method: `merge`, `squash`, or `rebase`, used only when the repository allows it. A strategy flag in `command-args` must name the same method.            |
 | `merge.command-args`                  | `[]`                                      | Extra options for ordinary `gh pr merge` commands, not for queue commands. Its strategy flag is the preferred method when `merge.method` is unset.                 |
 | `actions.auto-minimize-suppressed`    | `true`                                    | Resolve and minimize classification matches that set both flags, then print and report the result.                                                                 |
+| `actions.cancel-runs-before-push`     | `true`                                    | On `triage`, print `gh run cancel` for in-progress runs a fix push would cancel anyway. `false` prints nothing and reads no workflow files.                        |
 | `actions.work-while-queued`           | `false`                                   | Act on non-CI work immediately while the PR is in the merge queue, instead of deferring it.                                                                        |
 | `classify.standard`                   | `{}`                                      | Opt-in bundled classification rules for common bot noise.                                                                                                          |
 
@@ -164,7 +166,7 @@ v1 renamed every camelCase key. An old key is an error that names its replacemen
 | `cliCommand`                                    | `cli-command`                                                          |
 | `botUsernames`                                  | `bot-usernames`                                                        |
 | `ignoreChecks`                                  | `checks.ignore`                                                        |
-| `actions.neverCancelRuns`                       | `checks.never-ignore`                                                  |
+| `actions.neverCancelRuns`                       | `checks.never-cancel`                                                  |
 | `checks.ciTriggerEvents`                        | `checks.ci-trigger-events`                                             |
 | `checks.ignoreLogLines`                         | `checks.ignore-log-lines`                                              |
 | `iterate.fixAttemptsPerThread`                  | `iterate.triage-attempts-per-thread`                                   |
@@ -275,9 +277,23 @@ checks:
 
 For a GitHub Actions run, a `checks.never-ignore` match on its workflow name or its raw check name takes precedence. This keeps a protected workflow's child jobs visible.
 
+### `checks.never-cancel` — default `[]`
+
+Case-insensitive globs matched against a run's workflow name and every check name in that run. A match tags the run `[never-cancel: <pattern>]` under `## In-progress runs` and withholds its `cancel:` command. Use it for code-review workflows, which should finish even when a push supersedes them. Shepherd only prints the command; it never cancels.
+
+```yaml
+checks:
+  never-cancel:
+    - "AI Review*"
+```
+
+### `actions.cancel-runs-before-push` — default `true`
+
+A `cancel: gh run cancel <id> -R <repo>` line is printed only for runs whose workflow declares a top-level `concurrency.cancel-in-progress: true`, so the push would cancel them anyway. Runs held on approval, merge-queue runs, and runs when the viewer cannot rerun workflows get none. Set `false` to disable the section and the workflow-file reads. See [actions.md](actions.md#section-order).
+
 ### `checks.never-ignore` — default `[]`
 
-Matching Actions runs stay visible, and can block readiness, even when a raw job name matches `checks.ignore`. Use it for workflows whose sibling jobs should keep running after one fails. Shepherd never cancels or recommends cancelling workflow runs, because GitHub exposes no exact viewer capability for it.
+Matching Actions runs stay visible, and can block readiness, even when a raw job name matches `checks.ignore`. Use it for workflows whose sibling jobs should keep running after one fails.
 
 ```yaml
 checks:

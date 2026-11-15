@@ -1,0 +1,68 @@
+import { describe, expect, it } from "vitest";
+import { parseWorkflowConcurrency } from "./workflow-concurrency.mts";
+
+describe("parseWorkflowConcurrency", () => {
+  it("accepts only the literal true as a cancel", () => {
+    expect(
+      parseWorkflowConcurrency("concurrency:\n  group: g\n  cancel-in-progress: true\n"),
+    ).toEqual({ raw: "cancel-in-progress=true", cancelInProgress: true });
+  });
+
+  it("surfaces a false value raw without a cancel", () => {
+    expect(parseWorkflowConcurrency("concurrency:\n  cancel-in-progress: false\n")).toEqual({
+      raw: "cancel-in-progress=false",
+      cancelInProgress: false,
+    });
+  });
+
+  it("surfaces an expression raw and never treats it as true", () => {
+    expect(
+      parseWorkflowConcurrency(
+        "concurrency:\n  group: g\n  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}\n",
+      ),
+    ).toEqual({
+      raw: "cancel-in-progress=${{ github.ref != 'refs/heads/main' }}",
+      cancelInProgress: false,
+    });
+  });
+
+  it("does not treat the string 'true' or a non-scalar as true", () => {
+    expect(parseWorkflowConcurrency("concurrency:\n  cancel-in-progress: 'true'\n")).toEqual({
+      raw: "cancel-in-progress=true",
+      cancelInProgress: false,
+    });
+    expect(parseWorkflowConcurrency("concurrency:\n  cancel-in-progress: [1]\n")).toEqual({
+      raw: "cancel-in-progress=[1]",
+      cancelInProgress: false,
+    });
+  });
+
+  it("reports unset when concurrency has no cancel-in-progress or is a bare group string", () => {
+    expect(parseWorkflowConcurrency("concurrency:\n  group: g\n")?.raw).toBe(
+      "cancel-in-progress=unset",
+    );
+    expect(parseWorkflowConcurrency("concurrency: my-group\n")?.raw).toBe(
+      "cancel-in-progress=unset",
+    );
+    expect(parseWorkflowConcurrency("concurrency: [a]\n")?.raw).toBe("cancel-in-progress=unset");
+  });
+
+  it("reports none for a workflow without top-level concurrency, even with a job-level one", () => {
+    expect(parseWorkflowConcurrency("on: push\n")).toEqual({
+      raw: "none",
+      cancelInProgress: false,
+    });
+    expect(parseWorkflowConcurrency("concurrency:\njobs: {}\n")?.raw).toBe("none");
+    expect(
+      parseWorkflowConcurrency("jobs:\n  a:\n    concurrency:\n      cancel-in-progress: true\n")
+        ?.raw,
+    ).toBe("none");
+  });
+
+  it("returns undefined for YAML that does not parse or is not a mapping", () => {
+    expect(parseWorkflowConcurrency("a: [unclosed")).toBeUndefined();
+    expect(parseWorkflowConcurrency("")).toBeUndefined();
+    expect(parseWorkflowConcurrency("- a\n- b\n")).toBeUndefined();
+    expect(parseWorkflowConcurrency("just text")).toBeUndefined();
+  });
+});

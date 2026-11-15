@@ -2,7 +2,12 @@
 export interface WorkflowSuiteSnapshot {
   status?: string | null;
   conclusion?: string | null;
-  workflowRun?: { event?: string | null } | null;
+  workflowRun?: {
+    event?: string | null;
+    /** Run id and workflow file, read to find an unfinished run's `concurrency`. */
+    databaseId?: number | null;
+    path?: string | null;
+  } | null;
 }
 
 /** Required context names that have no check run and no status context. */

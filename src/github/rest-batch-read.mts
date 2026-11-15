@@ -8,6 +8,7 @@ import { restSummary } from "./rest-summary-read.mts";
 import { markReadyAnnotationProbeComplete } from "./poll-summary-annotation-probe.mts";
 import { hydratePollSummaryChecks } from "./poll-summary-check-hydration.mts";
 import { GitHubRequestError } from "./errors.mts";
+import { normalizeWorkflowPath } from "../checks/workflow-path.mts";
 import { EXIT } from "../exit-codes.mts";
 import type { RestSnapshotContext } from "./rest-snapshot-context.mts";
 /** REST uses multiple resources; retry a moving head/base once rather than combining revisions. */
@@ -52,7 +53,11 @@ export async function fetchRestPrBatch(
               {
                 status: suite.status.toUpperCase(),
                 conclusion: suite.conclusion?.toUpperCase() ?? null,
-                workflowRun: { event: run.event },
+                workflowRun: {
+                  event: run.event,
+                  databaseId: run.id,
+                  path: normalizeWorkflowPath(run.path) ?? null,
+                },
               },
             ]
           : [];

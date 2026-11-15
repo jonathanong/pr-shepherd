@@ -33,6 +33,7 @@
     "test-cases/**/*.mts": ["exports", "types"],
     "src/cli/args.mts": ["exports"],
     "src/cli/list-formatters.mts": ["exports"],
+    "src/commands/iterate/workflow-files.mts": ["exports"],
     "src/commands/shepherd-journal.mts": ["exports"],
     "src/config/load.mts": ["exports"],
     "src/github/http-auth.mts": ["exports"],
