@@ -34,8 +34,8 @@ describe("PR #2099 after retargeting to main", () => {
     expect(steps.match(/gh pr close 2099 -R vouchington\/vouchington/g)).toHaveLength(1);
     expect(steps.match(/gh pr reopen 2099 -R vouchington\/vouchington/g)).toHaveLength(1);
     expect(steps).toContain("This branch is not behind `main`");
-    expect(steps).toContain("do not close the PR again");
-    expect(steps).not.toMatch(/\brebase\b|\bpush\b|gh stack/);
+    expect(steps).toContain("retrigger once");
+    expect(steps).not.toMatch(/\brebase\b|gh stack/);
     expect(run.textOut).toContain("gh pr close 2099 -R vouchington/vouchington");
     expect(run.textOut).toContain("gh pr reopen 2099 -R vouchington/vouchington");
   });

@@ -5,6 +5,7 @@ import { readCiRetrigger, sameCiRetrigger, writeCiRetrigger } from "../../state/
 import { buildFixCompletionInstruction } from "./check-instructions.mts";
 import { buildEscalateHumanMessage, buildEscalateSuggestion } from "./escalate.mts";
 import { buildNativeStackRebaseInstruction } from "./native-stack-rebase.mts";
+import { playbookPointer } from "../playbook-pointer.mts";
 import { getGithubTransport } from "../../github/transport.mts";
 
 interface UnreportedPlan {
@@ -30,6 +31,7 @@ function listedChecks(names: readonly string[]): string {
 /** Facts, then rebase-and-push, then investigate or escalate if that push does not start CI. */
 function buildUnreportedRequiredInstructions(input: {
   names: readonly string[];
+  headSha: string;
   repo: string;
   pr: number;
   baseBranch: string;
@@ -47,17 +49,17 @@ function buildUnreportedRequiredInstructions(input: {
         : input.behind
           ? "This PR's derived merge status is BEHIND."
           : `This branch is not behind \`${input.baseBranch}\`.`;
-  const facts = `${gap} No CI checks are running, and required checks have not passed: ${names}.`;
+  const facts = `${gap} No CI checks are running on head \`${input.headSha.slice(0, 7)}\`, and required checks have not passed: ${names}.`;
+  const playbook = playbookPointer("Required checks unreported");
   if (!input.behind) {
+    const retrigger =
+      getGithubTransport() === "rest"
+        ? `run \`gh api --method PATCH repos/${input.repo}/pulls/${input.pr} -f state=closed\`, then run \`gh api --method PATCH repos/${input.repo}/pulls/${input.pr} -f state=open\``
+        : `run \`gh pr close ${input.pr} -R ${input.repo}\` then \`gh pr reopen ${input.pr} -R ${input.repo}\``;
     return [
       facts,
-      "Before retriggering, diagnose why the workflows did not start: compare the `on:` triggers and any `paths`, `paths-ignore`, or branch filters of the workflow that emits each required check against this PR's changed files and base branch.",
-      `If the filters exclude this PR, do not edit the CI workflow and do not retrigger. Escalate to a human with that diagnosis: the filter, and the changed files it skips. Changing CI configuration is a human decision. If the triggers should have run for this head, retrigger once: ${
-        getGithubTransport() === "rest"
-          ? `run \`gh api --method PATCH repos/${input.repo}/pulls/${input.pr} -f state=closed\`, then run \`gh api --method PATCH repos/${input.repo}/pulls/${input.pr} -f state=open\``
-          : `run \`gh pr close ${input.pr} -R ${input.repo}\` then \`gh pr reopen ${input.pr} -R ${input.repo}\``
-      }.`,
-      "If those checks are still missing on the next poll, do not close the PR again; report the diagnosis. Shepherd escalates with `required-checks-unreported` when this remains the only blocker.",
+      `Shepherd cannot tell from GitHub's data why nothing started. Find out before acting. ${playbook}`,
+      `If the cause is within this PR, fix it and push. If the workflows should have run and the PR is fine, retrigger once: ${retrigger}. Otherwise make no change and keep what you found. If the checks are still missing on the next poll, Shepherd escalates with \`required-checks-unreported\`; report that diagnosis then.`,
     ];
   }
   const rebase = input.stackRebase
@@ -66,7 +68,7 @@ function buildUnreportedRequiredInstructions(input: {
   return [
     facts,
     `${rebase} Rebase and push is how these checks start.`,
-    "If that push does not start the checks, investigate why the workflows did not run. Shepherd escalates with `required-checks-unreported` when the branch is current and this remains the only blocker.",
+    `If that push does not start the checks, find out why nothing started. ${playbook} Shepherd escalates with \`required-checks-unreported\` when the branch is current and this remains the only blocker.`,
   ];
 }
 
@@ -103,6 +105,7 @@ export async function planUnreportedRequired(input: {
   const rebase = stackRebase(input.report);
   const instructions = buildUnreportedRequiredInstructions({
     names,
+    headSha: input.headSha,
     repo: input.report.repo,
     pr: input.report.pr,
     baseBranch: input.report.baseBranch,

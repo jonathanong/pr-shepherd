@@ -56,7 +56,7 @@ describe("runIterate — unreported required checks", () => {
     if (result.action !== "triage") throw new Error("expected triage");
     const instructions = result.triage.instructions.join("\n");
     expect(instructions).toContain("The stack trunk is behind by 2 commits.");
-    expect(instructions).toContain("No CI checks are running, and required checks have not passed");
+    expect(instructions).toContain("required checks have not passed");
     expect(instructions).toContain("Rebase onto `main` and push.");
     expect(instructions).not.toContain("gh pr close 42");
     expect(result.triage.checks).toEqual([]);
@@ -157,7 +157,7 @@ describe("runIterate — unreported required checks", () => {
     const text = formatIterateResult(result);
     expect(text).toContain("**behind** `93`");
     expect(text).toContain("This branch is behind `main` by 93 commits.");
-    expect(text).toContain("No CI checks are running, and required checks have not passed");
+    expect(text).toContain("required checks have not passed");
     expect(projectIterateLean(result)).toMatchObject({ baseBehindBy: 93 });
   });
 
