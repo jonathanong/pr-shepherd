@@ -51,10 +51,13 @@ function buildUnreportedRequiredInstructions(input: {
   if (!input.behind) {
     return [
       facts,
-      getGithubTransport() === "rest"
-        ? `Retrigger workflows once for this head: run \`gh api --method PATCH repos/${input.repo}/pulls/${input.pr} -f state=closed\`, then run \`gh api --method PATCH repos/${input.repo}/pulls/${input.pr} -f state=open\`.`
-        : `Retrigger workflows once for this head with \`gh pr close ${input.pr} -R ${input.repo}\` then \`gh pr reopen ${input.pr} -R ${input.repo}\`.`,
-      "If those checks are still missing on the next poll, investigate why the workflows did not start. Do not close the PR again. Shepherd escalates with `required-checks-unreported` when this remains the only blocker.",
+      "Before retriggering, diagnose why the workflows did not start: compare the `on:` triggers and any `paths`, `paths-ignore`, or branch filters of the workflow that emits each required check against this PR's changed files and base branch.",
+      `If the filters exclude this PR, do not edit the CI workflow and do not retrigger. Escalate to a human with that diagnosis: the filter, and the changed files it skips. Changing CI configuration is a human decision. If the triggers should have run for this head, retrigger once: ${
+        getGithubTransport() === "rest"
+          ? `run \`gh api --method PATCH repos/${input.repo}/pulls/${input.pr} -f state=closed\`, then run \`gh api --method PATCH repos/${input.repo}/pulls/${input.pr} -f state=open\``
+          : `run \`gh pr close ${input.pr} -R ${input.repo}\` then \`gh pr reopen ${input.pr} -R ${input.repo}\``
+      }.`,
+      "If those checks are still missing on the next poll, do not close the PR again; report the diagnosis. Shepherd escalates with `required-checks-unreported` when this remains the only blocker.",
     ];
   }
   const rebase = input.stackRebase
