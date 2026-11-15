@@ -49,7 +49,7 @@ describe("applyStackStallGuard when the timer cannot be saved", () => {
     const planned = idleStack();
     const first = await applyStackStallGuard(planned, repo, 600);
     const second = await applyStackStallGuard(planned, repo, 600);
-    expect(first.nextAction).toBe("wait");
+    expect(first).toMatchObject({ nextAction: "shepherd", reason: "actionable" });
     expect(first.instructions?.at(-1)).toMatch(/^\d+\. The stall timer could not be saved/);
     expect(first.instructions?.at(-1)).toContain("ENOTDIR");
     expect(second).toMatchObject({

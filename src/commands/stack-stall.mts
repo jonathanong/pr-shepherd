@@ -80,6 +80,8 @@ async function stackStateUnavailable(
     const steps = result.instructions ?? [];
     return {
       ...result,
+      reason: "actionable",
+      nextAction: "shepherd",
       instructions: [...steps, `${steps.length + 1}. ${stallRepairStep(reason)}`],
     };
   }

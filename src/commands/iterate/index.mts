@@ -449,9 +449,24 @@ async function runIterateCore(
         blockerGate,
       );
     }
+    const mergeResult = buildReadyMergeOutcome(opts.merge, true, base, report);
+    if (mergeResult?.action === "wait") {
+      // Unreadable REST queue policy: keep the ready-delay and run the stall timer across ticks.
+      return await applyStallGuard(
+        stallKey,
+        stallTimeoutSeconds,
+        headSha,
+        base,
+        prNumber,
+        mergeResult,
+        reportForWork,
+        reviewSummaryIds,
+        opts.stallDeadlineSink,
+        opts.persistSeen !== false,
+      );
+    }
     await clearReadyDelay(report.pr, repoOwner, repoName);
     await clearStallState(stallKey);
-    const mergeResult = buildReadyMergeOutcome(opts.merge, true, base, report);
     if (mergeResult) return mergeResult;
     const cancelNote = blockedCancelNote(base);
     return {

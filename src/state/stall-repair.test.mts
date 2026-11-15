@@ -36,6 +36,14 @@ describe("stall repair marker", () => {
     await expect(readStallRepair("acme/widgets#2", "EACCES")).resolves.toBe(false);
   });
 
+  it("ignores the randomized temporary file name in the reason", async () => {
+    const reason = (id: string) => `EROFS: open '/state/stall.json.${id}.tmp'`;
+    await writeStallRepair(scope, reason("0b6f2f55-7c0e-4d58-9f9e-1f6b6a7d4c11"));
+    await expect(
+      readStallRepair(scope, reason("c1a3d2e4-5b6f-4a7c-8d9e-0f1a2b3c4d5e")),
+    ).resolves.toBe(true);
+  });
+
   it("expires after an hour", async () => {
     await writeStallRepair(scope, "EACCES");
     vi.setSystemTime(Date.now() + 3601 * 1000);

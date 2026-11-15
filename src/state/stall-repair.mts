@@ -17,6 +17,11 @@ import { resolveStateBase } from "./base.mts";
 
 const MAX_AGE_SECONDS = 3600;
 
+/** The state store names its temporary file with a fresh UUID; it is not part of the failure's identity. */
+function stableReason(reason: string): string {
+  return reason.replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "<id>");
+}
+
 /** `scope` names the timer: `owner/repo#pr` or `owner/repo stack N`. */
 export function stallRepairMarkerPath(scope: string): string {
   const hash = createHash("sha256").update(`${resolveStateBase()}|${scope}`).digest("hex");
@@ -31,7 +36,7 @@ export async function readStallRepair(scope: string, reason: string): Promise<bo
       at?: unknown;
     };
     return (
-      parsed.reason === reason &&
+      parsed.reason === stableReason(reason) &&
       typeof parsed.at === "number" &&
       Date.now() / 1000 - parsed.at < MAX_AGE_SECONDS
     );
@@ -45,7 +50,7 @@ export async function writeStallRepair(scope: string, reason: string): Promise<b
   try {
     await writeFile(
       stallRepairMarkerPath(scope),
-      JSON.stringify({ reason, at: Math.floor(Date.now() / 1000) }),
+      JSON.stringify({ reason: stableReason(reason), at: Math.floor(Date.now() / 1000) }),
     );
     return true;
   } catch {

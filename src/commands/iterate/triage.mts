@@ -502,11 +502,10 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
   // Conflicts, a behind branch whose rerun already failed, and a queue ejection that may be
   // reproduced on the latest base all print the branch update route.
   const stackRebase =
-    !baseLookup.unusable &&
-    (hasConflicts || (isBehind && exhaustedAttempts.length > 0) || queueEjection)
+    hasConflicts || (isBehind && exhaustedAttempts.length > 0) || queueEjection
       ? buildNativeStackLayerRebase(
           report.repo,
-          { number: prNumber, baseBranch: baseLookup.branch },
+          { number: prNumber, baseBranch: baseLookup.unusable ? undefined : baseLookup.branch },
           stack,
           trunkConflict,
           report.stackBottomPr,

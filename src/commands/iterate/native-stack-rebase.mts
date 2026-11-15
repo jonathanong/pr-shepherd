@@ -64,28 +64,34 @@ export function buildNativeStackRebaseInstruction(
  * retains its merged parent's branch as its PR base. Without that topology, a PR base matching
  * the stack trunk also identifies a bottom layer. Other layers rebase from their PR base.
  * `trunkConflict` means an upper layer already contains its parent, so the rebase starts
- * at the bottom open layer.
+ * at the bottom open layer. An unusable base name (`baseBranch` undefined) is never named: the
+ * route starts at the known bottom open layer, which updates every layer above it as well.
  */
 export function buildNativeStackLayerRebase(
   repo: string,
-  pr: { number: number; baseBranch: string },
+  pr: { number: number; baseBranch: string | undefined },
   stack: StackStatus | undefined,
   trunkConflict?: { trunk: string; bottomPr?: number },
   stackBottomPr?: number,
 ): string | undefined {
   if (!stack) return undefined;
-  const start: NativeStackRebaseStart = trunkConflict
-    ? trunkConflict.bottomPr !== undefined
-      ? { bottomPr: trunkConflict.bottomPr }
-      : { trunk: trunkConflict.trunk }
-    : (
-          stackBottomPr !== undefined
-            ? pr.number === stackBottomPr
-            : pr.baseBranch === stack.baseRefName
-        )
-      ? { bottomPr: pr.number }
-      : { parentBranch: pr.baseBranch };
-  return buildNativeStackRebaseInstruction(repo, stack.number, start);
+  const { baseBranch } = pr;
+  let start: NativeStackRebaseStart | undefined;
+  if (trunkConflict) {
+    start =
+      trunkConflict.bottomPr !== undefined
+        ? { bottomPr: trunkConflict.bottomPr }
+        : { trunk: trunkConflict.trunk };
+  } else if (baseBranch === undefined) {
+    if (stackBottomPr !== undefined) start = { bottomPr: stackBottomPr };
+  } else if (
+    stackBottomPr !== undefined ? pr.number === stackBottomPr : baseBranch === stack.baseRefName
+  ) {
+    start = { bottomPr: pr.number };
+  } else {
+    start = { parentBranch: baseBranch };
+  }
+  return start && buildNativeStackRebaseInstruction(repo, stack.number, start);
 }
 
 /**
