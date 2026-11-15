@@ -25,8 +25,19 @@ export function checkFollowUp(check: AgentCheck): CheckFollowUp | undefined {
 }
 
 /** The one investigation tick: raw facts, the playbook, and the bounded outcome. */
-export function buildCheckFollowUpInstructions(checks: AgentCheck[], repo: string): string[] {
-  const runIds = [...new Set(checks.flatMap((check) => (check.runId ? [check.runId] : [])))];
+export function buildCheckFollowUpInstructions(
+  checks: AgentCheck[],
+  repo: string,
+  actionsRunIds: ReadonlySet<string>,
+): string[] {
+  // Only confirmed Actions runs: an external check's details-URL run id is not one.
+  const runIds = [
+    ...new Set(
+      checks.flatMap((check) =>
+        check.runId && actionsRunIds.has(check.runId) ? [check.runId] : [],
+      ),
+    ),
+  ];
   const start = runIds.length
     ? ` Start with ${runIds.map((id) => `\`gh run view ${id} -R ${repo}\``).join(", ")}: it lists the run's jobs and annotations.`
     : "";

@@ -586,7 +586,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     instructions.splice(
       triageStep,
       1,
-      ...buildCheckFollowUpInstructions(manualFollowUpChecks, report.repo),
+      ...buildCheckFollowUpInstructions(manualFollowUpChecks, report.repo, actionsRunIds),
     );
   }
   if (recovery && "unavailable" in recovery) instructions.unshift(recovery.unavailable);
