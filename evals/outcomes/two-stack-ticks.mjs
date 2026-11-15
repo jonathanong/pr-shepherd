@@ -44,7 +44,7 @@ nextAction: escalate
 
 ## Instructions
 
-1. \`unowned-stack-layers\`: merging PR #${top} also merges #${lower} ("${lowerTitle}"), which you did not list as yours. Nothing was merged, and never merge only #${top} while leaving that layer open. Stop and tell the user that merging #${top} also merges #${lower}. If they approve, run \`pr-shepherd stack ${URL(lower)} ${URL(top)} --until-terminal --merge\` (lists #${lower} as yours too) or \`pr-shepherd stack "owner/repo#${stack}" --until-terminal --merge\` (the stack number owns every layer). Otherwise wait for its owner.`;
+1. \`unowned-stack-layers\`: merging PR #${top} also merges #${lower} ("${lowerTitle}"), which you did not list as yours. Nothing was merged, and never merge only #${top} while leaving that layer open. If the user's request already covers that layer (they asked for the whole stack, or for every layer up to #${top}), run \`pr-shepherd stack ${URL(lower)} ${URL(top)} --until-terminal --merge\` now. Otherwise stop and tell the user that merging #${top} also merges #${lower}. If they approve, run \`pr-shepherd stack ${URL(lower)} ${URL(top)} --until-terminal --merge\` (lists #${lower} as yours too) or \`pr-shepherd stack "owner/repo#${stack}" --until-terminal --merge\` (the stack number owns every layer). Otherwise wait for its owner.`;
 
 // `multiStackError` in its tool form, for refs that name only the top layers.
 const MULTI_STACK_ERROR = `These refs span 2 stacks. Run one command per stack:
@@ -60,7 +60,7 @@ Stack: ${stack} (layer 2/2, base ${base})
 ## Instructions
 
 1. PR #${top} is layer 2 of 2 in native stack #${stack}; do not run \`gh pr merge\` for this layer.
-2. Run \`pr-shepherd stack ${URL(top)} --until-terminal --merge-through ${URL(top)}\` to merge this layer and the unmerged layers below it, never a layer above it. If lower layers are not yours it escalates \`unowned-stack-layers\` and merges nothing: report that to the user. Otherwise it emits one merge command that lands every layer it lists. Run that command as printed: do not merge the layers one at a time with \`gh pr merge\`, and do not rebase or push between layers.`;
+2. Run \`pr-shepherd stack ${URL(top)} --until-terminal --merge-through ${URL(top)}\` to merge this layer and the unmerged layers below it, never a layer above it. If lower layers are not yours it escalates \`unowned-stack-layers\` and merges nothing: follow its instructions. Otherwise it emits one merge command that lands every layer it lists. Run that command as printed: do not merge the layers one at a time with \`gh pr merge\`, and do not rebase or push between layers.`;
 
 const block = (label, text) => `=== ${label}\n${text}\n===`;
 

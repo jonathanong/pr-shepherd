@@ -28,6 +28,9 @@ describe("planStackMerge escalations", () => {
     expect(escalated!.instructions[0]).toContain('merging PR #3 also merges #1 ("Layer 1")');
     expect(escalated!.instructions[0]).toContain("never merge only #3");
     expect(escalated!.instructions[0]).toContain("pull/3 --until-terminal");
+    expect(escalated!.instructions[0]).toMatch(
+      /If the user's request already covers that layer \(they asked for the whole stack, or for every layer up to #3\), rerun .* with those PRs listed after `stack` now\. Otherwise stop/,
+    );
   });
 
   it("names each unlisted layer with its author and prints both approval commands", () => {
@@ -50,6 +53,9 @@ describe("planStackMerge escalations", () => {
     expect(text).toContain("tell the user that merging #3 also merges #1, #2");
     expect(text).toContain("`rerun --listed 1,2`");
     expect(text).toContain("`rerun --stack 9`");
+    expect(text).toContain(
+      "If the user's request already covers those layers (they asked for the whole stack, or for every layer up to #3), run `rerun --listed 1,2` now. Otherwise stop",
+    );
   });
 
   it("escalates a through target whose lower layers are not listed", () => {

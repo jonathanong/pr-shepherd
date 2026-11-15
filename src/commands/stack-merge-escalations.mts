@@ -24,11 +24,16 @@ export function unlistedEscalation(
   approve: ApproveCommands | undefined,
 ): StackPlan {
   const commands = approve?.(unlisted.map((item) => item.pr));
+  const owner = unlisted.length === 1 ? "its owner" : "their owners";
+  const them = unlisted.length === 1 ? "that layer" : "those layers";
+  const listAll = commands
+    ? `run \`${commands.listed}\``
+    : `rerun ${stackRerunTarget(rerunCommand)} with those PRs listed after \`stack\``;
   const approval = commands
-    ? `If they approve, run \`${commands.listed}\` (lists ${list(unlisted)} as yours too) or \`${commands.whole}\` (the stack number owns every layer). Otherwise wait for ${unlisted.length === 1 ? "its owner" : "their owners"}.`
-    : `They either approve it, and you rerun ${stackRerunTarget(rerunCommand)} with those PRs listed after \`stack\`, or wait for ${unlisted.length === 1 ? "its owner" : "their owners"}.`;
+    ? `If they approve, run \`${commands.listed}\` (lists ${list(unlisted)} as yours too) or \`${commands.whole}\` (the stack number owns every layer). Otherwise wait for ${owner}.`
+    : `They either approve it, and you ${listAll}, or wait for ${owner}.`;
   return escalation(
-    `\`unowned-stack-layers\`: merging PR #${target.pr} also merges ${describeLayers(unlisted)}, which you did not list as yours. Nothing was merged, and never merge only #${target.pr} while leaving ${unlisted.length === 1 ? "that layer" : "those layers"} open. Stop and tell the user that merging #${target.pr} also merges ${list(unlisted)}. ${approval}`,
+    `\`unowned-stack-layers\`: merging PR #${target.pr} also merges ${describeLayers(unlisted)}, which you did not list as yours. Nothing was merged, and never merge only #${target.pr} while leaving ${them} open. If the user's request already covers ${them} (they asked for the whole stack, or for every layer up to #${target.pr}), ${listAll} now. Otherwise stop and tell the user that merging #${target.pr} also merges ${list(unlisted)}. ${approval}`,
   );
 }
 

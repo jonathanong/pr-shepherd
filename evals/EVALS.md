@@ -36,14 +36,14 @@ Sonnet 5.5, opus judge, 3 to 6 runs per arm, 33 scenarios. **This is the latest 
 
 ### Stack merge scope (2026-11-14)
 
-Three scenarios added after the composite above, for merges limited to what the user approved. They are not in the category table above. Same model, judge and 3 runs per arm, at low effort. [HISTORY.md](HISTORY.md#2026-11-14-outcome-scenarios-for-stack-merge-scope) has the runs.
+Three scenarios added after the composite above, for merges limited to what the user approved. They are not in the category table above. Same model, judge and 3 runs per arm, at low effort. [HISTORY.md](HISTORY.md#2026-11-14-outcome-scenarios-for-stack-merge-scope) has the runs. The plugin scores are from the rerun after #722, under argument-dependent mocks. 38's one failing run never loaded the skill and merged with the GitHub MCP.
 
 | Scenario                             | Plugin | gh/MCP | Δ     |
 | ------------------------------------ | ------ | ------ | ----- |
 | `36-stack-merge-unowned-lower-layer` | 1.00   | 1.00   | 0.00  |
 | `37-stack-merge-through-layer`       | 1.00   | 0.00   | +1.00 |
-| `38-two-stacks-one-request`          | 1.00   | 0.00   | +1.00 |
-| **All**                              | 1.00   | 0.33   | +0.67 |
+| `38-two-stacks-one-request`          | 0.67   | 0.00   | +0.67 |
+| **All**                              | 0.89   | 0.33   | +0.56 |
 
 <details>
 <summary>All scenarios</summary>
@@ -85,6 +85,6 @@ Three scenarios added after the composite above, for merges limited to what the 
 | `35-stack-layer-queue-ejection`         | Stacks               | 1.00   | 0.00   | +1.00 |
 | `36-stack-merge-unowned-lower-layer`    | Stacks               | 1.00   | 1.00   | 0.00  |
 | `37-stack-merge-through-layer`          | Stacks               | 1.00   | 0.00   | +1.00 |
-| `38-two-stacks-one-request`             | Stacks               | 1.00   | 0.00   | +1.00 |
+| `38-two-stacks-one-request`             | Stacks               | 0.67   | 0.00   | +0.67 |
 
 </details>
