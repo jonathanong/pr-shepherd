@@ -102,6 +102,10 @@ export async function planQueueRemoval(input: {
     ...(removal.beforeCommitOid && { beforeCommitOid: removal.beforeCommitOid }),
   });
   if (await readQueueRemovalFollowUp(stallKey, signature)) return escalateResult(base, report);
-  if (persistState) await writeQueueRemovalFollowUp(stallKey, signature);
+  // A reused cached report is re-run by the poll before it is shown, so it must not spend the one
+  // investigation tick the caller never sees.
+  if (persistState && report.fingerprintReused !== true) {
+    await writeQueueRemovalFollowUp(stallKey, signature);
+  }
   return triageResult(base, report, buildQueueRemovalInstructions(report));
 }

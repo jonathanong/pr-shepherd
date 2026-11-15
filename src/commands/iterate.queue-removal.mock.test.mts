@@ -52,6 +52,15 @@ describe("runIterate — merge queue removal without a failed queue check", () =
     expect(mockWriteQueueRemovalFollowUp).not.toHaveBeenCalled();
   });
 
+  it("does not record the removal on a reused cached report the poll will refresh", async () => {
+    mockRunCheck.mockResolvedValue(removedReport({ fingerprintReused: true }));
+    mockUpdateReadyDelay.mockResolvedValue(readyNow);
+
+    const result = await runIterate(makeOpts({ merge: true }));
+    expect(result.action).toBe("triage");
+    expect(mockWriteQueueRemovalFollowUp).not.toHaveBeenCalled();
+  });
+
   it("escalates once the same removal is unchanged after the investigation tick", async () => {
     mockRunCheck.mockResolvedValue(removedReport());
     mockUpdateReadyDelay.mockResolvedValue(readyNow);
