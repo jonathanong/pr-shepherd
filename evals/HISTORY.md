@@ -6,6 +6,19 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-15: token bench models gh's default `--watch` refresh
+
+The `ci-wait` scenario had `gh pr checks --watch --interval 60`, which tied
+pr-shepherd's 60s poll. Agents rarely pass `--interval`: of 599
+`gh pr checks --watch` calls in the maintainer's agent transcripts, 17 set it (some of
+those are this repo's own bench text). The scenario now uses gh's default 10s
+refresh. The PR session's gh GraphQL points went from 36.2 to 96.2 (pr-shepherd
+33.3). The cost moved little, since a check table is small: central vs. gh went
+from −35% to −36% (gated −40% to −41%, 40k context −38% to −39%). REPORT.md's
+"gh watch interval sensitivity" keeps the 60s figures. The README's quota
+headline now quotes these per-session numbers, from the same weighted scenarios
+as the cost figures, instead of the per-hour wait rate alone.
+
 ## 2026-11-15: rerun of 18, the one scenario that favored gh/MCP
 
 In the full run below, 18 scored 0.67 with the plugin vs 1.00 for gh/MCP: one

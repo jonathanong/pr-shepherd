@@ -16,8 +16,8 @@ docs:
 <p class="tagline">Your coding agent fixes the code. Shepherd tells it what GitHub wants next: every review comment, every failing check, and the merge requirements GitHub reports, in one call.</p>
 </div>
 
-**Modeled at about 30% cheaper per PR than `gh` and 74% cheaper than the GitHub MCP server.**
-Waiting on CI costs about 60 GraphQL points an hour instead of 360.
+**Modeled at about 36% cheaper per PR than `gh` and 76% cheaper than the GitHub MCP server.**
+A modeled PR session spends about 33 GraphQL points of your GitHub quota, against 96 for `gh`.
 
 <div class="terminal">
 <div class="terminal-bar"><span></span><span></span><span></span></div>
@@ -61,16 +61,16 @@ summary 3 passing
   CI failures with log excerpts when available, and the real merge requirements. It handles 72 GitHub edge
   cases, like a cancelled run that needs a rerun rather than a code fix.
 - [**It costs less to run**](https://github.com/jonathanong/pr-shepherd/blob/main/evals/tokens/README.md)
-  A modeled 35% lower cost per PR session than `gh` (31–38% across realistic context sizes), and
+  A modeled 36% lower cost per PR session than `gh` (31–39% across realistic context sizes), and
   76% lower than the GitHub MCP server, assuming a warm prompt cache.
 - [**Your agent knows what to do next**](https://github.com/jonathanong/pr-shepherd/blob/main/evals/README.md)
   Every tick ends in one action, and every action but `CANCEL` comes with numbered steps. Across 56 PR
   states, the agent scores 0.97 with the plugin and 0.47 with `gh` and the GitHub MCP server.
-- [**It's easy on your rate limit**](docs/github-api.md) Waiting on CI costs about 60
-  GraphQL points an hour, against about 360 for `gh pr checks --watch`. Unchanged idle
-  waits can cost as little as 4.
+- [**It's easy on your rate limit**](docs/github-api.md) A modeled PR session spends about
+  33 GraphQL points against 96 for `gh`. Waiting on CI costs about 60 points an hour,
+  against about 360 for `gh pr checks --watch`. Unchanged idle waits can cost as little as 4.
 - [**It never touches your git**](docs/escalations.md) Shepherd runs zero git mutations and
-  never merges on its own. For a single PR, it hands off to a human only for 10 specific
+  never merges on its own. For a single PR, it hands off to a human only for 9 specific
   reasons.
 - [**It works with your agent**](docs/mcp.md) Plugins for Claude Code, Codex, and Grok, a
   local stdio MCP server for other clients, and a CLI for shells and CI. Native stacked PRs are

@@ -89,6 +89,9 @@ const HISTORY = readJson("history-pr505.json");
 // How long one CI run takes, and how often a baseline agent re-checks it.
 const CI_MINUTES = 6;
 const BASELINE_POLL_MINUTES = 1;
+// `gh pr checks --watch` refreshes every 10s unless `--interval` is set. Of
+// 599 `--watch` calls in the maintainer's agent transcripts (2026-11-15), 17 set it.
+export const GH_WATCH_SECONDS = 10;
 // A stack poll sleeps poll.interval-seconds × poll.stack-interval-factor (60s × 2).
 const STACK_POLL_SECONDS = 120;
 
@@ -667,9 +670,10 @@ const PR_SCENARIOS = [
     id: "ci-wait",
     weight: 2,
     title: `Wait out one ${CI_MINUTES}-minute CI run`,
-    note: `With --until-terminal, shepherd's one call blocks until CI settles and prints a stderr line per poll. gh blocks the same way on \`gh pr checks --watch\`, which reprints the table each refresh. Shepherd's call returns the next scenario's tick, so here it adds only the stderr lines, no call or turn. gh's next read is a separate call. MCP has no watch or sleep, so it re-checks every ${BASELINE_POLL_MINUTES}m with a Bash sleep plus a call.`,
-    arms() {
+    note: `With --until-terminal, shepherd's one call blocks until CI settles and prints a stderr line per poll. gh blocks the same way on \`gh pr checks --watch\`, which reprints the table on each ${GH_WATCH_SECONDS}s refresh (its default; agents rarely pass \`--interval\`). Shepherd's call returns the next scenario's tick, so here it adds only the stderr lines, no call or turn. gh's next read is a separate call. MCP has no watch or sleep, so it re-checks every ${BASELINE_POLL_MINUTES}m with a Bash sleep plus a call.`,
+    arms({ ghWatchSeconds = GH_WATCH_SECONDS } = {}) {
       const fixture = "09-wait-in-progress-ci";
+      const ghRefreshes = Math.ceil((CI_MINUTES * 60) / ghWatchSeconds);
       const state = fixtureState(fixture);
       const polls = Math.ceil(CI_MINUTES / BASELINE_POLL_MINUTES);
       const settled = {
@@ -724,13 +728,13 @@ const PR_SCENARIOS = [
             phase: 1,
             via: "bash",
             // One GraphQL query on start, then one per refresh: the checks
-            // settle on the refresh after shepherd's last WAIT tick.
-            api: gql(polls + 1),
-            cmd: "gh pr checks 42 -R owner/repo --watch --interval 60",
+            // settle on the last refresh of the run.
+            api: gql(ghRefreshes + 1),
+            cmd: `gh pr checks 42 -R owner/repo --watch${ghWatchSeconds === GH_WATCH_SECONDS ? "" : ` --interval ${ghWatchSeconds}`}`,
             // `--watch` returns only once the checks finish: the last refresh is
             // terminal (here the failure \`failing-check\` picks up).
-            out: Array.from({ length: polls + 1 }, (_, i) =>
-              ghPrChecks(i === polls ? settled : state),
+            out: Array.from({ length: ghRefreshes + 1 }, (_, i) =>
+              ghPrChecks(i === ghRefreshes ? settled : state),
             ).join("\n"),
           },
         ],
@@ -844,10 +848,7 @@ const PR_SCENARIOS = [
       if (bare.split(bareStep).length !== 2) throw new Error("snapshot 54 failed step moved");
       const text = recorded(bare.replace(bareStep, renderedExcerpt()));
       return {
-        shepherd: [
-          shepherdTick(text),
-          shepherdApply(text, { repliedThreads: ["PRRT_multi"] }, 3),
-        ],
+        shepherd: [shepherdTick(text), shepherdApply(text, { repliedThreads: ["PRRT_multi"] }, 3)],
         // Reviews, review comments, issue comments and check runs, then review
         // comments again for the reply.
         event: { wake: "change", detectors: 5 },
