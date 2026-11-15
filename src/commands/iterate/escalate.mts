@@ -295,7 +295,7 @@ export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: st
   }
   if (triggers.includes("merge-queue-removed")) {
     const reason = detail ? ` GitHub reason: ${detail}.` : "";
-    return `The PR left the merge queue without an actionable check failure.${reason} Confirm the removal was not intentional before adding it again.`;
+    return `The PR left the merge queue without an actionable check failure, and the removal was unchanged after one investigation tick.${reason} Report what the investigation found. Confirm the removal was not intentional before adding it again.`;
   }
   if (triggers.includes("stall-timeout")) {
     const duration = detail ?? "60 minutes";

@@ -21,7 +21,7 @@ flowchart TD
   URR -->|yes| FIX
   URR -->|no| AM{"4. auto-merge / queue active,<br/>or current queue removal?"}
   AM -->|active| W1(["wait (+ deferredWork)"])
-  AM -->|removal| E2(["escalate: merge-queue-removed"])
+  AM -->|removal| E2(["triage once, then escalate: merge-queue-removed"])
   AM -->|no| TG{"REST readiness gaps?"}
   TG -->|yes| E3(["escalate: transport-unsupported"])
   TG -->|no| MR{"5. READY + draft +<br/>!blockingBotReview + mark-ready.auto?"}
@@ -142,7 +142,7 @@ The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completio
 ### 4. Active merge and queue removal
 
 - An active auto-merge request or merge-queue entry emits `wait`, without ready-delay cancellation or the generic stall guard. In the queue, that `wait` also carries raw `deferredWork` counts (threads, comments, changes-requested reviews, review summaries) when [step 3](#3-actionable-work) held work back. Plain auto-merge (no queue membership) never defers anything.
-- With `--merge` and a current queue removal that has no actionable failure, iterate emits `escalate` with the raw removal fields ([`merge-queue-removed`](escalations.md#merge-queue-removed)). A removal whose queue commit GitHub no longer returns is treated as stale. A squash or rebase removal is also stale once the current head reached the PR after the removal, even if that commit's committer time is earlier.
+- With `--merge` and a current queue removal that has no actionable failure, iterate emits one investigation `triage` (marker `queue-removal-follow-up.json`), then `escalate` with the raw removal fields if the same removal is unchanged on the next tick ([`merge-queue-removed`](escalations.md#merge-queue-removed)). A removal whose queue commit GitHub no longer returns is treated as stale. A squash or rebase removal is also stale once the current head reached the PR after the removal, even if that commit's committer time is earlier.
 - If REST could not supply fields readiness depends on (no CI in progress, merge state known), the READY receipt is cleared and the tick escalates with `transport-unsupported`, naming each field.
 
 ### 5. Mark ready
@@ -199,7 +199,8 @@ Exit codes `0`/`10`–`15` report one-PR state; see [exit-codes.md](exit-codes.m
 | 3     | Same thread remains after `iterate.triage-attempts-per-thread` returned `TRIAGE` results | `escalate` (`triage-thrash`) with pending commands | 13        |
 | 4     | Only non-CI work while queued (`--merge`, in queue, `!work-while-queued`)                | `wait` with `deferredWork`                         | 10        |
 | 4     | Auto-merge or merge queue active                                                         | `wait`                                             | 10        |
-| 4     | `--merge`, current queue removal, no actionable failure                                  | `escalate` (`merge-queue-removed`)                 | 13        |
+| 4     | `--merge`, current queue removal, no actionable failure, first tick for this removal     | `triage` (one investigation tick)                  | 12        |
+| 4     | Same removal unchanged on the next tick                                                  | `escalate` (`merge-queue-removed`)                 | 13        |
 | 4     | REST readiness gaps                                                                      | `escalate` (`transport-unsupported`)               | 13        |
 | 5     | READY + isDraft + !blockingBotReview + mark-ready.auto                                   | `mark_ready`                                       | 11        |
 | 5     | Clean draft + auto mark-ready disabled                                                   | `cancel` (`auto-mark-ready-disabled`)              | 0         |

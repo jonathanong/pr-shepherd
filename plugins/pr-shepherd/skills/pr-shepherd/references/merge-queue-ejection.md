@@ -7,11 +7,12 @@ Apply when a step says `Playbook: "Merge queue ejection"`. The `**queue removal*
 3. If the failure does not reproduce and the update changed the head, the printed push step pushes it (`gh stack push` on a native stack). Never run a printed `requeue:` or `acknowledge queue removal:` command after a push. Shepherd prints a fresh queue command once the new head is READY.
 4. If the failure comes from the base itself, do not requeue or acknowledge it. Make no change. The unchanged failure escalates through the stall timeout.
 5. If the removal reason suggests a person dequeued the PR, skip the step 1 update unless a conflict step requires it. Fix a failure that belongs to this PR; otherwise make no change. Never enqueue.
-6. If the step says no queue command was printed, never enqueue. A failure that does not reproduce follows step 4. Shepherd prints no queue command once the same head was already removed before (`removals on this head` in the header), so a flaky failure is not retried indefinitely.
-7. Otherwise, run the printed `requeue:` or `acknowledge queue removal:` command exactly as printed, and only if all of these hold:
+6. If the step names a removal with no failed queue-commit check, the `**queue removal**` header carries the raw reason and actor. A conflict-style reason (`merge_conflict`, `invalid_merge_commit`, `stack_invalidated`) means update the head from the base and push (step 1). A person's dequeue means make no change and report it. Otherwise find out why before acting. Never enqueue. If the head is unchanged on the next poll, Shepherd escalates.
+7. If the step says no queue command was printed, never enqueue. A failure that does not reproduce follows step 4. Shepherd prints no queue command once the same head was already removed before (`removals on this head` in the header), so a flaky failure is not retried indefinitely.
+8. Otherwise, run the printed `requeue:` or `acknowledge queue removal:` command exactly as printed, and only if all of these hold:
    - the head did not change;
    - no code changed;
    - no other blocker remains;
    - the logs or the check's details page show a transient failure, or a failure caused by another entry in the same queue group.
-8. If gh reports auto-merge is disabled instead of adding the PR to the queue, run the `requeue API fallback:` command. Both requeue commands require the observed PR head SHA. If the head changed, iterate for a fresh command.
-9. After `acknowledge queue removal:`, finish this one-PR session so it validates current source CI and records its READY receipt. Then return to the aggregate `stack` command with its original options. In merge mode it verifies lower-layer readiness before merging. Never enqueue or merge a stack layer directly.
+9. If gh reports auto-merge is disabled instead of adding the PR to the queue, run the `requeue API fallback:` command. Both requeue commands require the observed PR head SHA. If the head changed, iterate for a fresh command.
+10. After `acknowledge queue removal:`, finish this one-PR session so it validates current source CI and records its READY receipt. Then return to the aggregate `stack` command with its original options. In merge mode it verifies lower-layer readiness before merging. Never enqueue or merge a stack layer directly.

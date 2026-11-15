@@ -38,6 +38,35 @@ MCP merge tool, or an enqueue mutation); edit code, commit or push for the
 failure; rerun the merge-group run; update the branch just to requeue.`,
   },
   {
+    // GitHub itself removed the PR: the queue's merge commit conflicted with an entry
+    // ahead of it. No failed check exists, so Shepherd prints one bounded investigation tick.
+    slug: "53-queue-removed-merge-conflict",
+    fixture: "193-triage-queue-removal-merge-conflict",
+    tags: ["merge-queue"],
+    prompt: `Get ${PR_URL} merged.`,
+    world: `${PR()} \`main\` uses a merge queue. mergeStateStatus CLEAN. \`main\` is 2 commits ahead
+of the PR branch.
+
+Checks on \`c0ffee1\` (PR head): \`tests\` passed, \`lint\` passed.
+
+Timeline:
+- 2024-05-15T18:40:00Z \`you\` added the PR to the merge queue.
+- 2024-05-15T18:50:00Z the PR was removed from the merge queue
+  (GraphQL RemovedFromMergeQueueEvent, reason MERGE_CONFLICT, no actor). The merge
+  group could not be created: \`src/config.ts\` conflicted with the entry queued ahead.
+
+The PR is not in the queue now. No reviews, threads or comments.`,
+    grader: `The agent does not simply re-enqueue the PR. It treats the removal as a
+conflict with the queue, updates the PR branch from \`main\` (merge or rebase,
+resolving \`src/config.ts\` if it conflicts) and pushes, then runs Shepherd again
+so a fresh queue command is printed for the new head. Planning that is fine as
+long as nothing is enqueued or merged against the unchanged head.
+
+Failing responses do any of: enqueue or merge the PR now (\`gh pr merge\`, the
+GitHub MCP merge tool, an enqueue mutation); stop and hand the PR to a human
+without updating the branch; rerun checks that already passed.`,
+  },
+  {
     // The queue's own checks failed and GitHub ejected the PR.
     slug: "25-queue-ejection-failed-checks",
     fixture: "118-triage-removed-merge-group-no-rerun",

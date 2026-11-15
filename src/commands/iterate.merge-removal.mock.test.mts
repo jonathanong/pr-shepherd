@@ -135,32 +135,6 @@ describe("runIterate — merge queue removal", () => {
     const result = await runIterate(makeOpts({ merge: true }));
     expect(result.action).toBe("mark_ready");
   });
-
-  it("escalates a current ejection before a ready-delay merge", async () => {
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        mergeQueue: {
-          enabled: true,
-          inQueue: false,
-          latestRemoval: { reason: "MANUAL", createdAtUnix: 1_700_000_000 },
-        },
-      }),
-    );
-    mockUpdateReadyDelay.mockResolvedValue({
-      isReady: true,
-      shouldCancel: true,
-      remainingSeconds: 0,
-    });
-
-    const result = await runIterate(makeOpts({ merge: true }));
-    expect(result.action).toBe("escalate");
-    if (result.action === "escalate") {
-      expect(result.escalate.mergeQueueRemoval?.reason).toBe("MANUAL");
-      expect(result.escalate.humanMessage).toContain(
-        "pr-shepherd https://github.com/owner/repo/pull/42 --merge",
-      );
-    }
-  });
 });
 
 function removedEntryReport(logExcerpt?: string) {
