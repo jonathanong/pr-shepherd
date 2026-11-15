@@ -158,6 +158,11 @@ vi.mock("../../src/state/fix-attempts.mts", () => ({
   readFixAttempts: vi.fn().mockResolvedValue(null),
   writeFixAttempts: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("../../src/state/check-follow-up.mts", async (importOriginal) => ({
+  ...(await importOriginal()),
+  readCheckFollowUp: vi.fn().mockResolvedValue(undefined),
+  writeCheckFollowUp: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("../../src/state/ci-retrigger.mts", async (importOriginal) => ({
   ...(await importOriginal()),
   readCiRetrigger: vi.fn().mockResolvedValue(null),
@@ -187,6 +192,7 @@ import {
   clearStallState,
 } from "../../src/state/iterate-stall.mts";
 import { readFixAttempts, writeFixAttempts } from "../../src/state/fix-attempts.mts";
+import { readCheckFollowUp } from "../../src/state/check-follow-up.mts";
 import { clearWorkflowFileMemo } from "../../src/commands/iterate/workflow-files.mts";
 
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);
@@ -346,6 +352,8 @@ export interface Fixture {
     threadAttempts: Record<string, number>;
     threadBodyHashes?: Record<string, string>;
   };
+  /** Return value of readCheckFollowUp(): the head and check keys of an earlier investigation tick. */
+  checkFollowUp?: { headSha: string; checks: string[] };
   /** If true, REST cancel calls return HTTP 409. */
   cancelRunsFail?: boolean;
   /** Explicit REST response bodies keyed by URL pathname for transport-transition fixtures. */
@@ -718,6 +726,7 @@ export function applyFixture(fixture: Fixture, transport: FixtureTransport = "gr
 
   mockReadFixAttempts.mockResolvedValue(fixture.fixAttempts ?? null);
   mockWriteFixAttempts.mockResolvedValue(undefined);
+  vi.mocked(readCheckFollowUp).mockResolvedValue(fixture.checkFollowUp);
 
   if (rest) {
     const route = restRoutesForFixture(fixture, batchData);

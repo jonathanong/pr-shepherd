@@ -137,7 +137,7 @@ The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completio
 
 **Side-effects:** none. Shepherd never cancels workflow runs (GitHub exposes no exact viewer capability for cancellation); it only surfaces failure context.
 
-**Emits:** `action: 'triage'`. A non-empty external check URL is an autonomous investigation path and stays `triage`. If no other autonomous work remains and every failing check needs a human-only action or lacks usable evidence and an authorized rerun, `handleTriage` emits `escalate` with `check-follow-up-unavailable` and the raw check context. It can also escalate with `triage-thrash` or `base-branch-unknown`. Every `triage` is non-terminal and runs through the [stall guard](#stall-guard).
+**Emits:** `action: 'triage'`. A non-empty external check URL is an autonomous investigation path and stays `triage`. If no other autonomous work remains and every failing check lacks usable evidence and an authorized rerun, `handleTriage` emits one investigation `triage` (marker `check-follow-up.json`), then `escalate` with `check-follow-up-unavailable` and the raw check context if the same checks are unchanged on the next tick. An `ACTION_REQUIRED` check, a human-only approval, escalates immediately. It can also escalate with `triage-thrash` or `base-branch-unknown`. Every `triage` is non-terminal and runs through the [stall guard](#stall-guard).
 
 ### 4. Active merge and queue removal
 
@@ -194,7 +194,8 @@ Exit codes `0`/`10`–`15` report one-PR state; see [exit-codes.md](exit-codes.m
 | 1.5   | `state === 'CLOSED'`                                                                     | `cancel`                                           | 14        |
 | 3     | Required contexts still unreported after one close/reopen, nothing running               | `escalate` (`required-checks-unreported`)          | 13        |
 | 3     | `hasActionableWork`, unreported-required repair, or stale stack ancestry                 | `triage`                                           | 12        |
-| 3     | Only checks without autonomous follow-up                                                 | `escalate` (`check-follow-up-unavailable`)         | 13        |
+| 3     | Only checks without autonomous follow-up, first tick for this head and check set         | `triage` (one investigation tick)                  | 12        |
+| 3     | Same checks unchanged after that tick, or any `ACTION_REQUIRED` check                    | `escalate` (`check-follow-up-unavailable`)         | 13        |
 | 3     | Same thread remains after `iterate.triage-attempts-per-thread` returned `TRIAGE` results | `escalate` (`triage-thrash`) with pending commands | 13        |
 | 4     | Only non-CI work while queued (`--merge`, in queue, `!work-while-queued`)                | `wait` with `deferredWork`                         | 10        |
 | 4     | Auto-merge or merge queue active                                                         | `wait`                                             | 10        |

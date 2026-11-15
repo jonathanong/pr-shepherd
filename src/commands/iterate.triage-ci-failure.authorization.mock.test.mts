@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   makeOpts,
   makeReport,
+  markCheckFollowUpInvestigated,
   mockFetch,
+  mockReadCheckFollowUp,
   mockRunCheck,
+  mockWriteCheckFollowUp,
   mockUpdateReadyDelay,
   registerIterateHooks,
 } from "../../test-helpers/commands/iterate-test-support.mts";
@@ -72,10 +75,16 @@ const readOnlyAuthorization = {
   headRepositoryPermission: "READ" as const,
 };
 
-function prepareManualCheck(overrides: Partial<Parameters<typeof makeReport>[0]> = {}) {
-  mockRunCheck.mockResolvedValue(
-    failingCheckReport({ viewerAuthorization: readOnlyAuthorization, ...overrides }),
-  );
+const markInvestigated = markCheckFollowUpInvestigated;
+
+/** A manual-only check that already had its one investigation tick, unless `investigated` is false. */
+function prepareManualCheck(
+  overrides: Partial<Parameters<typeof makeReport>[0]> = {},
+  investigated = true,
+) {
+  const report = failingCheckReport({ viewerAuthorization: readOnlyAuthorization, ...overrides });
+  mockRunCheck.mockResolvedValue(report);
+  if (investigated) markInvestigated(report);
   mockUpdateReadyDelay.mockResolvedValue({
     isReady: false,
     shouldCancel: false,
@@ -151,6 +160,7 @@ describe("triage — GitHub Actions authorization", () => {
     const report = failingCheckReport();
     delete report.checks.failing[0]?.runAttempt;
     mockRunCheck.mockResolvedValue(report);
+    markInvestigated(report);
 
     const result = await runIterate(makeOpts());
 
@@ -270,12 +280,60 @@ describe("triage — GitHub Actions authorization", () => {
     expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
   });
 
+  it("investigates a manual-only check once, then escalates when it is unchanged", async () => {
+    prepareManualCheck({}, false);
+
+    const first = await runIterate(makeOpts());
+
+    expect(first.action).toBe("triage");
+    if (first.action !== "triage") return;
+    const text = first.triage.instructions.join("\n");
+    expect(text).toContain('Playbook: "Check follow-up".');
+    expect(text).not.toContain("Triage `## Failing checks`");
+    expect(first.triage.checks[0]).toMatchObject({ name: "tests" });
+    expect(mockWriteCheckFollowUp).toHaveBeenCalledWith(
+      { owner: "owner", repo: "repo", pr: 42 },
+      { headSha: expect.any(String), checks: ["tests#123#"] },
+    );
+
+    prepareManualCheck();
+    const second = await runIterate(makeOpts());
+
+    expectCheckFollowUpUnavailable(second);
+    if (second.action !== "escalate") return;
+    expect(second.escalate.suggestion).toContain("After one investigation tick");
+  });
+
+  it("investigates again when the head or the check set changed since the marker", async () => {
+    prepareManualCheck({}, false);
+    mockReadCheckFollowUp.mockResolvedValue({
+      headSha: "older-head",
+      checks: ["tests#123#"],
+    });
+
+    const result = await runIterate(makeOpts());
+
+    expect(result.action).toBe("triage");
+  });
+
+  it("does not write the investigation marker on a preview tick", async () => {
+    prepareManualCheck({}, false);
+
+    const result = await runIterate(makeOpts({ persistSeen: false }));
+
+    expect(result.action).toBe("triage");
+    expect(mockWriteCheckFollowUp).not.toHaveBeenCalled();
+  });
+
   it("escalates an ACTION_REQUIRED check for manual workflow approval", async () => {
     // ACTION_REQUIRED means the run is paused pending manual workflow approval on GitHub;
     // a rerun cannot grant that approval, so no rerun command applies.
-    prepareManualCheck({
-      checks: checkSet([failingCheck({ conclusion: "ACTION_REQUIRED" })]),
-    });
+    prepareManualCheck(
+      {
+        checks: checkSet([failingCheck({ conclusion: "ACTION_REQUIRED" })]),
+      },
+      false,
+    );
 
     const result = await runIterate(makeOpts());
 

@@ -37,6 +37,11 @@ vi.mock("../../src/state/fix-attempts.mts", () => ({
   readFixAttempts: vi.fn().mockResolvedValue(null),
   writeFixAttempts: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("../../src/state/check-follow-up.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/state/check-follow-up.mts")>()),
+  readCheckFollowUp: vi.fn().mockResolvedValue(undefined),
+  writeCheckFollowUp: vi.fn().mockResolvedValue(undefined),
+}));
 vi.mock("../../src/state/check-blockers.mts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../src/state/check-blockers.mts")>();
   return { ...actual, readCheckBlockers: vi.fn(async () => []) };
@@ -73,6 +78,12 @@ import { autoMinimizeComments } from "../../src/comments/resolve.mts";
 import { readFixAttempts, writeFixAttempts } from "../../src/state/fix-attempts.mts";
 import { readCheckBlockers } from "../../src/state/check-blockers.mts";
 import {
+  checkFollowUpKeys,
+  readCheckFollowUp,
+  writeCheckFollowUp,
+} from "../../src/state/check-follow-up.mts";
+import { toAgentChecks } from "../../src/reporters/agent.mts";
+import {
   clearStallState,
   readStallState,
   writeStallState,
@@ -99,6 +110,8 @@ const mockGraphql = vi.mocked(graphql);
 const mockAutoMinimizeComments = vi.mocked(autoMinimizeComments);
 const mockReadFixAttempts = vi.mocked(readFixAttempts);
 const mockReadCheckBlockers = vi.mocked(readCheckBlockers);
+const mockReadCheckFollowUp = vi.mocked(readCheckFollowUp);
+const mockWriteCheckFollowUp = vi.mocked(writeCheckFollowUp);
 const mockWriteFixAttempts = vi.mocked(writeFixAttempts);
 const mockReadStallState = vi.mocked(readStallState);
 const mockWriteStallState = vi.mocked(writeStallState);
@@ -107,6 +120,13 @@ const mockClearReadyReceipt = vi.mocked(clearReadyReceipt);
 const mockIsReadyReceiptCurrent = vi.mocked(isReadyReceiptCurrent);
 const mockReadReadyReceipt = vi.mocked(readReadyReceipt);
 const mockWriteReadyReceipt = vi.mocked(writeReadyReceipt);
+/** Record that the one check follow-up investigation tick already ran for this report's checks. */
+function markCheckFollowUpInvestigated(report: ShepherdReport): void {
+  mockReadCheckFollowUp.mockResolvedValue({
+    headSha: report.headSha ?? "unknown",
+    checks: checkFollowUpKeys(toAgentChecks(report.checks.failing)),
+  });
+}
 const NOW = 1_700_000_000;
 const READY_STATE_DEFAULT = { isReady: true, shouldCancel: false, remainingSeconds: 300 };
 
@@ -272,6 +292,8 @@ function registerIterateHooks(config = defaultConfig): void {
     mockUpdateReadyDelay.mockResolvedValue(READY_STATE_DEFAULT);
     mockReadFixAttempts.mockResolvedValue(null);
     mockReadCheckBlockers.mockResolvedValue([]);
+    mockReadCheckFollowUp.mockResolvedValue(undefined);
+    mockWriteCheckFollowUp.mockResolvedValue(undefined);
     mockWriteFixAttempts.mockResolvedValue(undefined);
     mockReadStallState.mockResolvedValue({ ok: true, state: null });
     mockWriteStallState.mockResolvedValue({ ok: true });
@@ -286,6 +308,7 @@ function registerIterateHooks(config = defaultConfig): void {
 
 export {
   NOW,
+  markCheckFollowUpInvestigated,
   buildEscalateHumanMessage,
   buildEscalateSuggestion,
   buildRelevantChecks,
@@ -307,6 +330,8 @@ export {
   mockLoadConfig,
   mockReadFixAttempts,
   mockReadCheckBlockers,
+  mockReadCheckFollowUp,
+  mockWriteCheckFollowUp,
   mockReadReadyReceipt,
   mockReadStallState,
   mockRunCheck,

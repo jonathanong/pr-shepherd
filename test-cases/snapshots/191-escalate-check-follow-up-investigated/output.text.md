@@ -6,7 +6,7 @@
 
 **Triggers:** `check-follow-up-unavailable`
 
-GitHub reports a later workflow attempt (800: attempt 2), so Shepherd's single rerun allowance is exhausted. Use the included evidence to handle the repeated failure manually before resuming.
+GitHub reports a later workflow attempt (800: attempt 2), so Shepherd's single rerun allowance is exhausted. The failing checks below had no rerun and no log excerpt Shepherd could show. After one investigation tick they are unchanged on this head. Report what the investigation found. What remains is a repository, CI-configuration, or workflow-permission change, or waiting out a GitHub incident; each is a human decision.
 
 ## Items needing attention
 

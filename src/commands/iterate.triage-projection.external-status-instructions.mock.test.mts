@@ -3,6 +3,7 @@ import {
   registerIterateHooks,
   makeOpts,
   makeReport,
+  markCheckFollowUpInvestigated,
   mockRunCheck,
   mockUpdateReadyDelay,
 } from "../../test-helpers/commands/iterate-test-support.mts";
@@ -54,7 +55,7 @@ describe("runIterate — external check follow-up", () => {
     });
     expect(result.triage.instructions.join("\n")).toContain("CI failure triage");
   });
-  it("escalates a bare check and preserves its raw metadata", async () => {
+  it("investigates a bare check once, then escalates and preserves its raw metadata", async () => {
     const bareCheck = {
       name: "mystery",
       status: "COMPLETED" as const,
@@ -64,26 +65,29 @@ describe("runIterate — external check follow-up", () => {
       runId: null,
       category: "failing" as const,
     };
-    mockRunCheck.mockResolvedValue(
-      makeReport({
-        status: "FAILING",
-        checks: {
-          passing: [],
-          failing: [bareCheck],
-          inProgress: [],
-          skipped: [],
-          filtered: [],
-          filteredNames: [],
-          blockedByFilteredCheck: false,
-        },
-      }),
-    );
+    const report = makeReport({
+      status: "FAILING",
+      checks: {
+        passing: [],
+        failing: [bareCheck],
+        inProgress: [],
+        skipped: [],
+        filtered: [],
+        filteredNames: [],
+        blockedByFilteredCheck: false,
+      },
+    });
+    mockRunCheck.mockResolvedValue(report);
     mockUpdateReadyDelay.mockResolvedValue({
       isReady: false,
       shouldCancel: false,
       remainingSeconds: 600,
     });
 
+    const first = await runIterate(makeOpts());
+    expect(first.action).toBe("triage");
+
+    markCheckFollowUpInvestigated(report);
     const result = await runIterate(makeOpts());
 
     expect(result.action).toBe("escalate");

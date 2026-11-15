@@ -1,22 +1,9 @@
 // Shepherd's two ticks for scenario 39 (required check `tests` never reports).
 //
-// The first tick is fixture 128 with this world's names. Its diagnose-first steps
-// are written out here (they match src/commands/iterate/unreported-required.mts,
-// graphql transport) so the case does not depend on which side of that change the
-// recorded snapshot is on; the rewrite is a no-op once the snapshot carries them.
-// The second tick is what the real CLI prints on the next presented tick of the
-// same head after the close/reopen: `ESCALATE` / `required-checks-unreported`.
-
-const DIAGNOSE = `2. Before retriggering, diagnose why the workflows did not start: compare the \`on:\` triggers and any \`paths\`, \`paths-ignore\`, or branch filters of the workflow that emits each required check against this PR's changed files and base branch.
-3. If the filters exclude this PR, do not edit the CI workflow and do not retrigger. Escalate to a human with that diagnosis: the filter, and the changed files it skips. Changing CI configuration is a human decision. If the triggers should have run for this head, retrigger once: run \`gh pr close 42 -R owner/repo\` then \`gh pr reopen 42 -R owner/repo\`.
-4. If those checks are still missing on the next poll, do not close the PR again; report the diagnosis. Shepherd escalates with \`required-checks-unreported\` when this remains the only blocker.
-5. Rerun Shepherd now.`;
-
-const OLD_STEPS =
-  /^2\. Retrigger workflows once[^\n]*\n3\. If those checks[^\n]*\n4\. Rerun Shepherd now\./m;
-
-/** The recorded tick, with the diagnose-first steps. */
-export const withDiagnoseSteps = (text) => text.replace(OLD_STEPS, DIAGNOSE);
+// The first tick is fixture 128 with this world's names (it carries the investigate-first
+// steps and the "Required checks unreported" playbook pointer). The second tick is what
+// the real CLI prints on the next presented tick of the same head after the close/reopen:
+// `ESCALATE` / `required-checks-unreported`.
 
 const ESCALATE = `# PR #42 [ESCALATE]
 
@@ -28,7 +15,7 @@ Required status checks: tests [Required]
 
 **Triggers:** \`required-checks-unreported\`
 
-Required checks are still unreported (\`tests\`), and no CI is running. Rebase and push is the fix when the branch is behind. This head is current, and another reopen will not create a job the workflow does not emit. Path filters are the usual cause. Investigate that, then handle the missing checks manually.
+Required checks are still unreported (\`tests\`): no CI ran on this head after the investigation tick and one retrigger, and no CI is running. Report what the investigation found. What remains is a repository, CI-configuration, or branch-policy change, or waiting out a GitHub incident; each is a human decision.
 
 ---
 

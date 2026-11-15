@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   makeOpts,
   makeReport,
+  markCheckFollowUpInvestigated,
   mockRunCheck,
   registerIterateHooks,
 } from "../../test-helpers/commands/iterate-test-support.mts";
@@ -86,6 +87,10 @@ describe("queue recovery evidence", () => {
         };
       mockRunCheck.mockResolvedValue(report);
 
+      const first = await runIterate(makeOpts({ merge: true }));
+      expect(first.action).toBe("triage");
+
+      markCheckFollowUpInvestigated(report);
       const result = await runIterate(makeOpts({ merge: true }));
 
       expect(result.action).toBe("escalate");

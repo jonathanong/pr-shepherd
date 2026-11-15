@@ -20,7 +20,13 @@ import {
 import { buildFixInstructions } from "./render.mts";
 import { buildCancelRunsInstruction, buildInProgressRuns } from "./in-progress-runs.mts";
 import { buildRemovedQueueRecovery, buildStackQueueRemovalAcknowledgment } from "./merge.mts";
-import { hasLogEvidence } from "./check-evidence.mts";
+import { buildCheckFollowUpInstructions, checkFollowUp } from "./check-follow-up.mts";
+import {
+  checkFollowUpKeys,
+  readCheckFollowUp,
+  sameCheckFollowUp,
+  writeCheckFollowUp,
+} from "../../state/check-follow-up.mts";
 import {
   currentEjectionCommit,
   type QueueEjectionRecovery,
@@ -92,25 +98,6 @@ interface HandleTriageContext {
   repairInstructions?: string[];
   /** Review work a queued conflict holds back until the PR leaves the queue. */
   deferredWork?: IterateDeferredWork;
-}
-
-function checkRequiresHumanFollowUp(check: AgentCheck): boolean {
-  if (check.rerunCommand) return false;
-  if (
-    check.conclusion === "ACTION_REQUIRED" ||
-    check.conclusion === "CANCELLED" ||
-    check.conclusion === "STARTUP_FAILURE"
-  )
-    return true;
-  // A later attempt cannot be rerun automatically, but its included log can still
-  // identify a code or configuration fix for the agent. Only a later failure with
-  // no actionable evidence needs a human handoff.
-  if (check.runAttempt !== undefined && check.runAttempt > 1) return !hasLogEvidence(check);
-  // An external check's direct URL is actionable evidence: the agent can inspect the
-  // provider and/or reproduce the reported failure locally. Only a truly bare check
-  // has no autonomous investigation path.
-  if (check.runId === null) return !check.detailsUrl?.trim();
-  return !hasLogEvidence(check);
 }
 
 function nextFixAttempts(
@@ -381,7 +368,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     (check) =>
       !releasedCheckNames.has(check.name) &&
       !belongsToActiveWorkflowRun(check) &&
-      checkRequiresHumanFollowUp(check),
+      checkFollowUp(check) !== undefined,
   );
   const exhaustedAttempts = failingAgentChecks.filter(
     (check) => check.runAttempt !== undefined && check.runAttempt > 1,
@@ -409,9 +396,16 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       (check) =>
         releasedCheckNames.has(check.name) ||
         belongsToActiveWorkflowRun(check) ||
-        !checkRequiresHumanFollowUp(check),
+        checkFollowUp(check) === undefined,
     );
-  if (manualFollowUpChecks.length > 0 && !hasAutonomousWork) {
+  // Only a gate a human must grant escalates at once; every other manual-only check gets one
+  // investigation tick for this head and check set before it escalates.
+  const needsApproval = manualFollowUpChecks.some((check) => checkFollowUp(check) === "approval");
+  const followUpKeys = checkFollowUpKeys(manualFollowUpChecks);
+  const investigated =
+    needsApproval || sameCheckFollowUp(await readCheckFollowUp(stallKey), headSha, followUpKeys);
+  const investigate = manualFollowUpChecks.length > 0 && !hasAutonomousWork && !investigated;
+  if (manualFollowUpChecks.length > 0 && !hasAutonomousWork && investigated) {
     const { resolveCommand, resolveOnlyCommand } = buildReviewCommands(failingAgentChecks);
     const pending = pendingReviewCommands(resolveCommand, resolveOnlyCommand);
     const checkSuggestion =
@@ -420,8 +414,11 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
             .map((check) => `${check.runId ?? check.name}: attempt ${check.runAttempt}`)
             .join(
               ", ",
-            )}), so Shepherd's single rerun allowance is exhausted. Use the included evidence to handle the repeated failure manually before resuming.`
-        : buildEscalateSuggestion(["check-follow-up-unavailable"]);
+            )}), so Shepherd's single rerun allowance is exhausted. ${needsApproval ? "Use the included evidence to handle the repeated failure manually before resuming." : buildEscalateSuggestion(["check-follow-up-unavailable"], "investigated")}`
+        : buildEscalateSuggestion(
+            ["check-follow-up-unavailable"],
+            needsApproval ? undefined : "investigated",
+          );
     const checkEscalateBase: Omit<EscalateDetails, "humanMessage"> = {
       triggers: ["check-follow-up-unavailable"],
       unresolvedThreads: [],
@@ -581,6 +578,13 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     dequeueCommand,
     buildCancelRunsInstruction(inProgressRuns),
   );
+  if (investigate) {
+    // The failing-checks pointer is replaced: these checks have no excerpt for the CI playbook.
+    const triageStep = instructions.findIndex((step) =>
+      step.startsWith("Triage `## Failing checks`."),
+    );
+    instructions.splice(triageStep, 1, ...buildCheckFollowUpInstructions());
+  }
   if (recovery && "unavailable" in recovery) instructions.unshift(recovery.unavailable);
   if (acknowledgmentRecovery && "unavailable" in acknowledgmentRecovery)
     instructions.unshift(acknowledgmentRecovery.unavailable);
@@ -689,6 +693,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       { owner: repoOwner, repo: repoName, pr: prNumber },
       { headSha, threadAttempts, threadBodyHashes },
     );
+    if (investigate) await writeCheckFollowUp(stallKey, { headSha, checks: followUpKeys });
     // A queued conflict's annotation fixes are path (a); waiting keeps them unseen.
     if (!queuedConflict)
       await Promise.allSettled(
