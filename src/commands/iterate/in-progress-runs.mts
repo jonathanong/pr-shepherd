@@ -105,6 +105,7 @@ export async function buildInProgressRuns(
       !neverCancel &&
       status !== "WAITING" &&
       rerunAuthorized &&
+      (group[0]!.event === "pull_request" || group[0]!.event === BASE_FILE_EVENT) &&
       /^\d+$/.test(runId);
     return {
       runId,

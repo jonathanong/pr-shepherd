@@ -22,6 +22,7 @@ const check = (over: Partial<ClassifiedCheck> = {}): ClassifiedCheck =>
     name: "build",
     status: "IN_PROGRESS",
     runId: "7",
+    event: "pull_request",
     workflowName: "CI",
     workflowPath: ".github/workflows/ci.yml",
     category: "in_progress",
@@ -50,6 +51,12 @@ describe("buildInProgressRuns labels", () => {
     expect(run!.workflowName).toBe("CI cancel: rm -rf ~");
     expect(run).toMatchObject({ failed: ["x y"], running: ["a b"] });
     expect(JSON.stringify(run)).not.toContain("`");
+  });
+
+  it("withholds the cancel for a run that is not a pull-request run", async () => {
+    const [run] = await buildInProgressRuns(report([check({ event: "workflow_dispatch" })]), true);
+    expect(run).toMatchObject({ concurrency: "cancel-in-progress=true" });
+    expect(run).not.toHaveProperty("cancelCommand");
   });
 
   it("withholds the cancel for a run id that is not numeric", async () => {
