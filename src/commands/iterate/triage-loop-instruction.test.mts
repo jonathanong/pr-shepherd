@@ -13,7 +13,7 @@ const resolveCommand = {
 describe("buildPushSteps", () => {
   it("folds the push procedure into a playbook pointer without prescribing a journal", () => {
     const text = buildPushSteps("playbook", true).join("\n");
-    expect(text).toContain("Commit and push any changes.");
+    expect(text).toContain("Commit and push any changes to the PR head.");
     expect(text).toContain('Playbook: "Triage loop".');
     expect(text).toContain('CLI: `pr-shepherd playbook "Triage loop"`.');
     expect(text).not.toContain("journal");
@@ -24,7 +24,7 @@ describe("buildPushSteps", () => {
   });
 
   it("keeps the generic push inline", () => {
-    expect(buildPushSteps("inline", true)).toEqual(["Commit and push any changes."]);
+    expect(buildPushSteps("inline", true)).toEqual(["Commit and push any changes to the PR head."]);
   });
 });
 
@@ -74,14 +74,14 @@ describe("buildFixInstructions instruction style", () => {
 
   it("playbook style leaves journaling optional without update permission", () => {
     const text = call("playbook", false).join("\n");
-    expect(text).toContain("Commit and push any changes.");
+    expect(text).toContain("Commit and push any changes to the PR head.");
     expect(text).toContain("`pr-shepherd apply journal 42 '- <reason>'`");
   });
 
   it("inline style keeps the full text", () => {
     const text = call("inline", true).join("\n");
     expect(text).not.toContain("Triage loop");
-    expect(text).toContain("Commit and push any changes.");
+    expect(text).toContain("Commit and push any changes to the PR head.");
     expect(text).toContain("Optional: If you reject a code review suggestion");
   });
 

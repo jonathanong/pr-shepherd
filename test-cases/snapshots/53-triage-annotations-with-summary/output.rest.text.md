@@ -35,5 +35,5 @@
 3. Triage `## Failing checks`. Playbook: "CI failure triage".
 4. Inspect every referenced range under `## Check annotations` and apply any warranted change.
 5. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <reason>'`.
-6. Commit and push any changes.
+6. Commit and push any changes to the PR head.
 7. Rerun Shepherd now.

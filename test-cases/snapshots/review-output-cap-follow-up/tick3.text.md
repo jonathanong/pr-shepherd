@@ -96,5 +96,5 @@
 2. Review every item under `## First-look items` before acting.
 3. Read each body under `## Review summaries (first look)` before acting.
 4. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <reason>'`.
-5. Commit and push any changes.
+5. Commit and push any changes to the PR head.
 6. Rerun Shepherd now.

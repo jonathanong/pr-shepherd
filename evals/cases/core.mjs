@@ -194,7 +194,8 @@ unfixable.`,
       "continues-autonomously": llm(
         `The response treats \`[TRIAGE]\` as non-terminal. It evaluates the surfaced
 review bodies, makes any warranted code fixes, runs the generated authorized
-review mutation with a current pushed head SHA and a truthful disposition, then
+review mutation as printed (its \`--require-sha HEAD\` pins the current pushed head;
+no literal SHA is needed) with a truthful disposition, then
 iterates Shepherd again. It does not ask a human to dismiss an authorized bot
 review just because the review is old.`,
       ),
@@ -282,7 +283,9 @@ Asking the reviewer whose changes-requested review is in the output to re-review
 after the fix is not a defect: that review is the real blocker, not a missing
 approval.`,
       ),
-      "identifies-review-id": regex(`PRR_prlevel`, { weight: 0.5 }),
+      // The output prints no command that takes this ID, so naming the review by
+      // its author identifies it as well as quoting the ID.
+      "identifies-review-id": regex(`PRR_prlevel|@architect`, { weight: 0.5 }),
       "skill-fired": skillFired,
     },
   },

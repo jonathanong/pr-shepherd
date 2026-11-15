@@ -31,5 +31,5 @@
 1. Fix each warranted item.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
 3. Inspect every referenced range under `## Check annotations` and apply any warranted change.
-4. Commit and push any changes.
+4. Commit and push any changes to the PR head.
 5. Rerun Shepherd now.

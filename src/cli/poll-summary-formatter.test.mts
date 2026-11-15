@@ -165,7 +165,9 @@ describe("formatPollSummaryResult", () => {
         false,
         command,
       ).instructions!.join("\n");
-      expect(instructions).toContain(`Run \`${command}\` again`);
+      expect(instructions).toMatch(
+        new RegExp(`[Rr]un \`${command.replaceAll("/", "\\/")}\` again`),
+      );
       expect(instructions).toContain("Do not end the turn while any selected row is non-terminal");
     }
   });

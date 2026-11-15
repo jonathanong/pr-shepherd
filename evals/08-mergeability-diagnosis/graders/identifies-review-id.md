@@ -6,4 +6,4 @@ flags: i
 weight: 0.5
 ---
 
-PRR_prlevel
+PRR_prlevel|@architect

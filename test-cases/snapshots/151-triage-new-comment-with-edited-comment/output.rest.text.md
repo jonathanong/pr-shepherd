@@ -27,5 +27,5 @@
 
 1. Fix each warranted item.
 2. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <reason>'`.
-3. Commit and push any changes.
+3. Commit and push any changes to the PR head.
 4. Rerun Shepherd now.

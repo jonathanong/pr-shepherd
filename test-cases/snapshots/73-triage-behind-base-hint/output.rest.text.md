@@ -24,6 +24,6 @@
 1. Fix each warranted item.
 2. The branch is behind PR base branch `main`. rebase --force-with-lease before pushing.
 3. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <reason>'`.
-4. Commit and push any changes.
+4. Commit and push any changes to the PR head.
 5. `$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review https://github.com/owner/repo/pull/42 --transport rest --reply-thread-ids rest-thread-1 --message "$CHANGE_MESSAGE" --adopt-existing-replies --require-sha HEAD`
 6. Rerun Shepherd now.

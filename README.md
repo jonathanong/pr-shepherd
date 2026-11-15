@@ -34,7 +34,7 @@ $ pr-shepherd 123
 1. Fix each warranted item.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
 3. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal 123 '- <reason>'`.
-4. Commit and push any changes.
+4. Commit and push any changes to the PR head.
 5. `$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$CHANGE_MESSAGE" --require-sha HEAD`
 6. Rerun Shepherd now.
 ```
