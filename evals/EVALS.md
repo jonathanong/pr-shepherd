@@ -45,6 +45,10 @@ Three scenarios added after the composite above, for merges limited to what the 
 | `38-two-stacks-one-request`          | 0.67   | 0.00   | +0.67 |
 | **All**                              | 0.89   | 0.33   | +0.56 |
 
+### New and reworked scenarios (2026-11-14)
+
+Seven scenarios (39 to 45) were added and two were rewritten (36 now asks to land #42 on `main`; 13 now uses the nested-code-fence suggestion), so 13 and 36 do not compare with earlier scores. Same model and judge, 3 runs per arm, low effort. 13, 39, 40, 42 and 43 are from the rerun on a branch with #723 and #726 to #728; 36, 41, 44 and 45 are from the first run. Across the nine, plugin 0.89 vs gh/MCP 0.56. 13 fails in both arms: every run says it will decide whether the suggestion is warranted on a later pass instead of committing to apply it. [HISTORY.md](HISTORY.md#2026-11-14-rerun-of-13-39-40-42-and-43-after-the-cli-fixes) has the runs.
+
 <details>
 <summary>All scenarios</summary>
 
@@ -55,18 +59,25 @@ Three scenarios added after the composite above, for merges limited to what the 
 | `03-plain-thread`                       | Review feedback      | 1.00   | 0.33   | +0.67 |
 | `11-multi-category`                     | Review feedback      | 1.00   | 1.00   | 0.00  |
 | `12-bot-review-and-thread`              | Review feedback      | 1.00   | 0.67   | +0.33 |
-| `13-suggestion`                         | Review feedback      | 1.00   | 1.00   | 0.00  |
+| `13-suggestion`                         | Review feedback      | 0.00   | 0.00   | 0.00  |
+| `42-denied-reply-one-look-skip`         | Review feedback      | 1.00   | 1.00   | 0.00  |
+| `44-resolved-thread-new-reply`          | Review feedback      | 1.00   | 1.00   | 0.00  |
 | `04-real-ci-failure`                    | CI                   | 1.00   | 1.00   | 0.00  |
 | `05-cancelled-ci`                       | CI                   | 1.00   | 1.00   | 0.00  |
 | `15-external-check`                     | CI                   | 1.00   | 1.00   | 0.00  |
 | `16-check-blocked-by-open-pr`           | CI                   | 1.00   | 1.00   | 0.00  |
 | `17-check-blocker-released`             | CI                   | 1.00   | 0.67   | +0.33 |
+| `39-required-check-never-reports`       | CI                   | 1.00   | 0.00   | +1.00 |
+| `40-startup-failure-workflow-edit`      | CI                   | 1.00   | 1.00   | 0.00  |
+| `41-check-annotations-no-log`           | CI                   | 1.00   | 0.67   | +0.33 |
+| `43-deployment-awaiting-approval`       | CI                   | 1.00   | 0.00   | +1.00 |
 | `06-required-approval`                  | Merge gates & branch | 1.00   | 0.67   | +0.33 |
 | `18-pr-level-changes-requested`         | Merge gates & branch | 1.00   | 1.00   | 0.00  |
 | `19-behind-base`                        | Merge gates & branch | 1.00   | 1.00   | 0.00  |
 | `20-conflicts`                          | Merge gates & branch | 1.00   | 0.00   | +1.00 |
 | `21-conflict-on-merge`                  | Merge gates & branch | 1.00   | 0.00   | +1.00 |
 | `22-merged-parent-stale-base`           | Merge gates & branch | 1.00   | 0.50   | +0.50 |
+| `45-blocking-bot-review-in-progress`    | Merge gates & branch | 1.00   | 1.00   | 0.00  |
 | `07-queue-manual-removal`               | Merge queue          | 1.00   | 0.00   | +1.00 |
 | `25-queue-ejection-failed-checks`       | Merge queue          | 1.00   | 0.00   | +1.00 |
 | `26-queued-nit`                         | Merge queue          | 1.00   | 0.00   | +1.00 |
@@ -83,7 +94,7 @@ Three scenarios added after the composite above, for merges limited to what the 
 | `33-stack-lower-layer-conflicts`        | Stacks               | 1.00   | 0.00   | +1.00 |
 | `34-stack-closed-parent`                | Stacks               | 1.00   | 0.00   | +1.00 |
 | `35-stack-layer-queue-ejection`         | Stacks               | 1.00   | 0.00   | +1.00 |
-| `36-stack-merge-unowned-lower-layer`    | Stacks               | 1.00   | 1.00   | 0.00  |
+| `36-stack-merge-unowned-lower-layer`    | Stacks               | 1.00   | 0.33   | +0.67 |
 | `37-stack-merge-through-layer`          | Stacks               | 1.00   | 0.00   | +1.00 |
 | `38-two-stacks-one-request`             | Stacks               | 0.67   | 0.00   | +0.67 |
 

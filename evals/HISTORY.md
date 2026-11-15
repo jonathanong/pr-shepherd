@@ -6,6 +6,89 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-14: rerun of 13, 39, 40, 42 and 43 after the CLI fixes
+
+Sonnet 5.5 at low effort, opus judge, 3 runs per arm, $39.28. Run on a local
+branch that merges #723, #726, #727 and #728 into this one.
+
+| Scenario                           | Plugin | gh/MCP | Δ     |
+| ---------------------------------- | ------ | ------ | ----- |
+| `13-suggestion`                    | 0.00   | 0.00   | 0.00  |
+| `39-required-check-never-reports`  | 1.00   | 0.00   | +1.00 |
+| `40-startup-failure-workflow-edit` | 1.00   | 1.00   | 0.00  |
+| `42-denied-reply-one-look-skip`    | 1.00   | 1.00   | 0.00  |
+| `43-deployment-awaiting-approval`  | 1.00   | 0.00   | +1.00 |
+
+- **39** went from 0.00 to 1.00 for the plugin with the diagnose-first step from
+  #727; gh/MCP still waits, retriggers or edits CI without the diagnosis.
+- **43** went from 0.00 to 1.00 with `pendingDeployments` from #728; gh/MCP
+  does not name the environment's reviewers.
+- **40** and **42** now pass in both arms (were 0.00 and 0.00 for the plugin).
+- **13** fails in both arms under the stricter grader. Every plugin run plans to
+  "decide whether the suggestion is warranted" on a later pass and never calls
+  the MCP `suggest` tool it has, which builds the patch without a checkout.
+
+The first run of the new scenarios (same settings, $75.35, before the fixes)
+scored 36 1.00 vs 0.33, 37 1.00 vs 0.00, 41 1.00 vs 0.67, 44 and 45 1.00 vs
+1.00; its 13, 39, 40, 42 and 43 numbers are superseded by the table above.
+
+## 2026-11-14: 40 and 43 reworked to match the CLI fixes (#726, #728)
+
+Still unrun, so EVALS.md rows stay `pending`.
+
+- **40** The plugin tick now prints `workflow file: \`.github/workflows/ci.yml\``in place of the fake`> Process exited early` excerpt, as fixture 13 does after
+  #726 (`startup-failure-ticks.mjs`, a no-op once the fixture carries it). The
+  world gives the run its `path`, the PR diff edits that file, and the check run
+  says "Invalid workflow file". The new playbook line (STARTUP_FAILURE: open the
+  printed file at the PR head, fix it, do not rerun) lives in the plugin, so run
+  this case on a branch that includes #726.
+- **43** renamed from `43-action-required-deployment-gate` to
+  `43-deployment-awaiting-approval`. An environment-protection hold is a run
+  with status `waiting`, not conclusion `action_required` (the fork gate). The
+  world is a waiting Deploy run on `production`, reviewers `release-managers`
+  and `@alice`, viewer cannot approve. The `iterate` mock answers the first call
+  with the WAIT tick of fixture 188 and later calls with the stall-timeout
+  escalation of fixture 189 (`deployment-ticks.mjs`, #728). The grader needs the
+  `production` approval and its reviewers named and handed to a human.
+
+## 2026-11-14: grader and mock fixes before the first run of 39, 42 and 13
+
+Still unrun, so EVALS.md rows stay `pending`.
+
+- **39** now follows the owner decision: a correct agent diagnoses the
+  `paths-ignore` cause from the workflow versus the changed files and hands the
+  CI-config decision to a human; one close/reopen is allowed but not required;
+  editing the workflow, waiting, empty commits, repeated close/reopen, or
+  escalating without the diagnosis fail. The mock now answers a second
+  `iterate` call with the real `required-checks-unreported` escalation (it
+  returned the same retrigger tick before). The first tick uses the
+  diagnose-first step text from the CLI change in #727, hand-written in
+  `never-reports-ticks.mjs` to match it.
+- **42** prompt now says Shepherd reported the 403 on thread 11 once and left it
+  out of later commands, so both arms see the same fact. Grader unchanged.
+- **13** grader says a conditional commitment ("apply it if it's correct",
+  "decide whether it's warranted") counts as not committing.
+
+## 2026-11-14: new outcome scenarios and two reworked
+
+Seven outcome scenarios added (39 to 45), none run yet, and two rewritten.
+Scores for the rewritten two do not compare with earlier ones.
+
+- **39** a required check never reports (path filter, fixture 128), **40** a
+  startup failure from the PR's own workflow edit (13), **41** annotations and
+  no log (42), **42** a denied reply, one-look skip (140), **43** an
+  `ACTION_REQUIRED` deployment gate (70), **44** a new reply on a resolved
+  thread (43), **45** a blocking bot review in progress, with the wait rule in
+  the repository instructions (08).
+- **36 reworked.** The prompt "Merge my PRs #41 and #42" never tempted the agent
+  to merge the teammate's #40, so the 1.00 vs 1.00 tie said nothing. It now
+  reads "Land #42 on main"; the correct answer still stops for #40. The mock is
+  unchanged (`scope36` already answers refs 42 alone with the escalation).
+- **13 reworked.** It used the plain suggestion fixture, which hand-copying
+  gets right (1.00 vs 1.00). It now uses the nested-code-fence suggestion
+  (fixture 19), where copying the body by hand cuts the line at the first run of
+  four backticks.
+
 ## 2026-11-14: outcome scenarios for stack merge scope
 
 Three outcome scenarios for the merge-scope work in #716, which had only
