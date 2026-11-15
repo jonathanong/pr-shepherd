@@ -64,10 +64,10 @@ describe("planUnreportedRequired behind a BLOCKED base", () => {
     });
     const text = plan.repairInstructions?.join("\n") ?? "";
     expect(text).toContain("This branch is behind `main` by 93 commits.");
-    expect(text).toContain("No CI checks are running, and required checks have not passed");
+    expect(text).toContain("required checks have not passed");
     expect(text).toContain("`static`, `backend`");
     expect(text).toContain("Rebase onto `main` and push.");
-    expect(text).toContain("If that push does not start the checks, investigate");
+    expect(text).toContain("If that push does not start the checks, find out why nothing started");
     expect(text).not.toContain("gh pr close");
   });
 

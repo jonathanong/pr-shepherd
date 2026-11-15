@@ -300,7 +300,7 @@ export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: st
   }
   if (triggers.includes("required-checks-unreported")) {
     const names = detail ? ` (${detail})` : "";
-    return `Required checks are still unreported${names}, and no CI is running. Rebase and push is the fix when the branch is behind. This head is current, and another reopen will not create a job the workflow does not emit. Path filters are the usual cause. Investigate that, then handle the missing checks manually.`;
+    return `Required checks are still unreported${names}: no CI ran on this head after the investigation tick and one retrigger, and no CI is running. Report what the investigation found. What remains is a repository, CI-configuration, or branch-policy change, or waiting out a GitHub incident; each is a human decision.`;
   }
   if (triggers.includes("stall-state-unavailable")) {
     const reason = detail ?? "unknown error";

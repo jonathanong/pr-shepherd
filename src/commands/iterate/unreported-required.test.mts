@@ -73,11 +73,11 @@ describe("planUnreportedRequired", () => {
     expect(plan.escalate).toBeUndefined();
     const text = plan.repairInstructions?.join("\n") ?? "";
     expect(text).toContain("The stack trunk is behind by 6 commits.");
-    expect(text).toContain("No CI checks are running, and required checks have not passed");
+    expect(text).toContain("required checks have not passed");
     expect(text).toContain("gh stack rebase");
     expect(text).toContain("gh stack push");
     expect(text).toContain("Rebase and push is how these checks start.");
-    expect(text).toContain("investigate why the workflows did not run");
+    expect(text).toContain('Playbook: "Required checks unreported".');
     expect(text).not.toContain("gh pr close");
   });
 
@@ -92,11 +92,12 @@ describe("planUnreportedRequired", () => {
     });
     const firstText = first.repairInstructions?.join("\n") ?? "";
     expect(firstText).toContain("This branch is not behind `feature-parent`.");
-    expect(firstText).toContain("No CI checks are running, and required checks have not passed");
+    expect(firstText).toContain("required checks have not passed");
     expect(firstText).toContain("gh pr close 622 -R acme/widgets");
-    expect(firstText).toContain("Before retriggering, diagnose why the workflows did not start");
-    expect(firstText).toContain("do not edit the CI workflow");
-    expect(firstText.indexOf("diagnose")).toBeLessThan(firstText.indexOf("gh pr close"));
+    expect(firstText).toContain("Shepherd cannot tell from GitHub's data why nothing started");
+    expect(firstText).toContain('Playbook: "Required checks unreported".');
+    expect(firstText).not.toContain("paths-ignore");
+    expect(firstText.indexOf("Find out")).toBeLessThan(firstText.indexOf("gh pr close"));
     const second = await planUnreportedRequired({
       report: current,
       base,
@@ -109,7 +110,8 @@ describe("planUnreportedRequired", () => {
     if (second.escalate?.action !== "escalate") return;
     expect(second.escalate.escalate.triggers).toEqual(["required-checks-unreported"]);
     expect(second.escalate.escalate.suggestion).toContain("`build`");
-    expect(second.escalate.escalate.suggestion).toContain("Path filters");
+    expect(second.escalate.escalate.suggestion).not.toContain("Path filters");
+    expect(second.escalate.escalate.suggestion).toContain("Report what the investigation found");
   });
 
   it("does nothing once the required names have reported", async () => {
