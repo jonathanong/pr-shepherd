@@ -66,6 +66,17 @@ describe("buildInProgressRuns labels", () => {
     }
   });
 
+  it("strips line breaks and backticks from a never-cancel pattern before printing it", async () => {
+    mockLoadConfig.mockReturnValue(
+      resolveConfig({ checks: { "never-cancel": ["ci\ncancel: `rm`*"] } }, "t"),
+    );
+    const [run] = await buildInProgressRuns(
+      report([check({ workflowName: "ci\ncancel: `rm`x" })]),
+      true,
+    );
+    expect(run).toMatchObject({ neverCancel: "ci cancel: rm *" });
+  });
+
   it("lets an ignored protected check protect every run", async () => {
     mockLoadConfig.mockReturnValue(
       resolveConfig({ checks: { "never-cancel": ["review bot"] } }, "t"),

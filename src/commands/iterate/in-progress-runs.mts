@@ -123,7 +123,7 @@ export async function buildInProgressRuns(
       status,
       concurrency,
       ...(failed.length > 0 && { failed, running: group.map((check) => label(check.name)) }),
-      ...(neverCancel !== undefined && { neverCancel }),
+      ...(neverCancel !== undefined && { neverCancel: label(neverCancel) }),
       ...(cancel && { cancelCommand: `gh run cancel ${runId} -R ${report.repo}` }),
     };
   });
