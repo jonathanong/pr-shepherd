@@ -1,0 +1,38 @@
+{
+  "description": "Same stalled checks as fixture 42, but the one investigation TRIAGE already ran for this head and check set (the ci-start-follow-up marker matches), so the unchanged checks now escalate stall-timeout.",
+  "batchData": {
+    "checks": [
+      {
+        "name": "CI / queued",
+        "status": "QUEUED",
+        "conclusion": null,
+        "source": "check_run",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/999/jobs/1",
+        "runId": "999",
+        "createdAtUnix": 1715792800,
+        "updatedAtUnix": 1715796400,
+        "summary": "Waiting for runner"
+      },
+      {
+        "name": "External Preview",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "source": "status_context",
+        "event": null,
+        "detailsUrl": "https://ci.example.test/build/42",
+        "runId": null,
+        "createdAtUnix": 1715796400,
+        "summary": "Waiting for external service"
+      }
+    ]
+  },
+  "stallTimeoutMinutes": 30,
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 13,
+  "ciStartFollowUp": true
+}

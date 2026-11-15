@@ -7,6 +7,7 @@ import {
   formatDurationApprox,
 } from "./escalate.mts";
 import { checksWithActionableAnnotations } from "../check-annotations.mts";
+import { planCiStartInvestigation } from "./ci-start-stall.mts";
 import { formatPrUrl } from "../../pr-reference.mts";
 import type {
   ClassifiedCheck,
@@ -104,6 +105,7 @@ export async function applyStallGuard(
   report: ShepherdReport,
   reviewSummaryIds: string[],
   stallDeadlineSink?: StallDeadlineSink,
+  persistState = true,
 ): Promise<IterateResult> {
   const prReference = formatPrUrl(report.repo, prNumber);
   const nowSeconds = Math.floor(Date.now() / 1000);
@@ -117,6 +119,15 @@ export async function applyStallGuard(
     );
   }
   if (stalledChecks.length > 0) {
+    const investigation = await planCiStartInvestigation({
+      base,
+      report,
+      stallKey,
+      headSha,
+      stalledChecks,
+      persistState,
+    });
+    if (investigation) return investigation;
     const pending = pendingReviewCommandsFromResult(prospectiveResult);
     const stalledDuration = formatDurationApprox(
       Math.max(...stalledChecks.map((c) => c.ageSeconds)),

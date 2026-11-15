@@ -1,4 +1,5 @@
 {
+  "description": "Two checks never started and are older than the 30-minute CI-start stall timeout. The first presented tick for this head and check set is one bounded investigation TRIAGE (Playbook: CI start stall), not an escalation. Fixture 194 covers the next unchanged tick.",
   "batchData": {
     "checks": [
       {
@@ -32,5 +33,5 @@
     "shouldCancel": false,
     "remainingSeconds": 600
   },
-  "expectedExitCode": 13
+  "expectedExitCode": 12
 }

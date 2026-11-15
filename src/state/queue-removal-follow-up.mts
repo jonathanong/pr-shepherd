@@ -7,15 +7,9 @@
  * Internal debounce preview ticks do not write this marker.
  */
 
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
-import { resolvePrStatePath } from "./base.mts";
+import { readSignatureMarker, writeSignatureMarker, type StateKey } from "./signature-marker.mts";
 
-interface StateKey {
-  owner: string;
-  repo: string;
-  pr: number;
-}
+const FILE = "queue-removal-follow-up.json";
 
 /** Identity of one removal on one head: a new head or a newer removal is a new situation. */
 export function queueRemovalSignature(input: {
@@ -27,28 +21,11 @@ export function queueRemovalSignature(input: {
 }
 
 /** True when the investigation tick was already returned for exactly this removal. */
-export async function readQueueRemovalFollowUp(key: StateKey, signature: string): Promise<boolean> {
-  try {
-    const parsed: unknown = JSON.parse(
-      await readFile(resolvePrStatePath(key, "queue-removal-follow-up.json"), "utf8"),
-    );
-    return (
-      parsed !== null &&
-      typeof parsed === "object" &&
-      (parsed as { signature?: unknown }).signature === signature
-    );
-  } catch {
-    return false;
-  }
+export function readQueueRemovalFollowUp(key: StateKey, signature: string): Promise<boolean> {
+  return readSignatureMarker(key, FILE, signature);
 }
 
 /** Remember that the one investigation instruction was returned for this removal. */
-export async function writeQueueRemovalFollowUp(key: StateKey, signature: string): Promise<void> {
-  try {
-    const path = resolvePrStatePath(key, "queue-removal-follow-up.json");
-    await mkdir(dirname(path), { recursive: true });
-    await writeFile(path, JSON.stringify({ signature }));
-  } catch {
-    // Best-effort: a missing marker only repeats the one investigation tick.
-  }
+export function writeQueueRemovalFollowUp(key: StateKey, signature: string): Promise<void> {
+  return writeSignatureMarker(key, FILE, signature);
 }

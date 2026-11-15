@@ -188,24 +188,26 @@ Applies to ordinary `wait` and `triage` after the action is chosen — not to `r
 
 Exit codes `0`/`10`–`15` report one-PR state; see [exit-codes.md](exit-codes.md) for stack-level `16` and the `sysexits.h` codes when a step fails before reaching a row.
 
-| Step  | Condition                                                                                | Action                                             | Exit code |
-| ----- | ---------------------------------------------------------------------------------------- | -------------------------------------------------- | --------- |
-| 1.5   | `state === 'MERGED'`                                                                     | `cancel`                                           | 0         |
-| 1.5   | `state === 'CLOSED'`                                                                     | `cancel`                                           | 14        |
-| 3     | Required contexts still unreported after one close/reopen, nothing running               | `escalate` (`required-checks-unreported`)          | 13        |
-| 3     | `hasActionableWork`, unreported-required repair, or stale stack ancestry                 | `triage`                                           | 12        |
-| 3     | Only checks without autonomous follow-up, first tick for this head and check set         | `triage` (one investigation tick)                  | 12        |
-| 3     | Same checks unchanged after that tick, or any `ACTION_REQUIRED` check                    | `escalate` (`check-follow-up-unavailable`)         | 13        |
-| 3     | Same thread remains after `iterate.triage-attempts-per-thread` returned `TRIAGE` results | `escalate` (`triage-thrash`) with pending commands | 13        |
-| 4     | Only non-CI work while queued (`--merge`, in queue, `!work-while-queued`)                | `wait` with `deferredWork`                         | 10        |
-| 4     | Auto-merge or merge queue active                                                         | `wait`                                             | 10        |
-| 4     | `--merge`, current queue removal, no actionable failure, first tick for this removal     | `triage` (one investigation tick)                  | 12        |
-| 4     | Same removal unchanged on the next tick                                                  | `escalate` (`merge-queue-removed`)                 | 13        |
-| 4     | REST readiness gaps                                                                      | `escalate` (`transport-unsupported`)               | 13        |
-| 5     | READY + isDraft + !blockingBotReview + mark-ready.auto                                   | `mark_ready`                                       | 11        |
-| 5     | Clean draft + auto mark-ready disabled                                                   | `cancel` (`auto-mark-ready-disabled`)              | 0         |
-| 6     | `shouldCancel` + `--merge`                                                               | `merge`                                            | 15        |
-| 6     | `shouldCancel` without `--merge`                                                         | `cancel`                                           | 0         |
-| 6     | Ready-delay counting                                                                     | `ready`                                            | 10        |
-| 7     | Fallthrough                                                                              | `wait`                                             | 10        |
-| guard | Same fingerprint for ≥ `iterate.stall-timeout-minutes` on `triage` or `wait`             | `escalate` (`stall-timeout`)                       | 13        |
+| Step  | Condition                                                                                    | Action                                             | Exit code |
+| ----- | -------------------------------------------------------------------------------------------- | -------------------------------------------------- | --------- |
+| 1.5   | `state === 'MERGED'`                                                                         | `cancel`                                           | 0         |
+| 1.5   | `state === 'CLOSED'`                                                                         | `cancel`                                           | 14        |
+| 3     | Required contexts still unreported after one close/reopen, nothing running                   | `escalate` (`required-checks-unreported`)          | 13        |
+| 3     | `hasActionableWork`, unreported-required repair, or stale stack ancestry                     | `triage`                                           | 12        |
+| 3     | Only checks without autonomous follow-up, first tick for this head and check set             | `triage` (one investigation tick)                  | 12        |
+| 3     | Same checks unchanged after that tick, or any `ACTION_REQUIRED` check                        | `escalate` (`check-follow-up-unavailable`)         | 13        |
+| 3     | Same thread remains after `iterate.triage-attempts-per-thread` returned `TRIAGE` results     | `escalate` (`triage-thrash`) with pending commands | 13        |
+| 4     | Only non-CI work while queued (`--merge`, in queue, `!work-while-queued`)                    | `wait` with `deferredWork`                         | 10        |
+| 4     | Auto-merge or merge queue active                                                             | `wait`                                             | 10        |
+| 4     | `--merge`, current queue removal, no actionable failure, first tick for this removal         | `triage` (one investigation tick)                  | 12        |
+| 4     | Same removal unchanged on the next tick                                                      | `escalate` (`merge-queue-removed`)                 | 13        |
+| 4     | REST readiness gaps                                                                          | `escalate` (`transport-unsupported`)               | 13        |
+| 5     | READY + isDraft + !blockingBotReview + mark-ready.auto                                       | `mark_ready`                                       | 11        |
+| 5     | Clean draft + auto mark-ready disabled                                                       | `cancel` (`auto-mark-ready-disabled`)              | 0         |
+| 6     | `shouldCancel` + `--merge`                                                                   | `merge`                                            | 15        |
+| 6     | `shouldCancel` without `--merge`                                                             | `cancel`                                           | 0         |
+| 6     | Ready-delay counting                                                                         | `ready`                                            | 10        |
+| 7     | Fallthrough                                                                                  | `wait`                                             | 10        |
+| guard | Same fingerprint for ≥ `iterate.stall-timeout-minutes` on `triage` or `wait`                 | `escalate` (`stall-timeout`)                       | 13        |
+| guard | Unstarted checks reach the CI-start threshold on `wait`, first tick for this head and checks | `triage` (one investigation tick)                  | 12        |
+| guard | Same unstarted checks unchanged after that tick                                              | `escalate` (`stall-timeout`)                       | 13        |

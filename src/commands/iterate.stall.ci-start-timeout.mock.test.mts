@@ -4,6 +4,7 @@ import {
   NOW,
   makeOpts,
   makeReport,
+  mockReadCiStartFollowUp,
   mockReadStallState,
   mockRunCheck,
   registerIterateHooks,
@@ -64,6 +65,7 @@ function checkRun(overrides: Partial<ClassifiedCheck> = {}): ClassifiedCheck {
 
 describe("runIterate — CI start stall timeout", () => {
   it("escalates when an external status context has been pending without starting past the threshold", async () => {
+    mockReadCiStartFollowUp.mockResolvedValue(true);
     mockInProgressCheck({
       ...statusContext(NOW - STALL_TIMEOUT_S),
       summary: "Waiting for external service",
@@ -90,6 +92,7 @@ describe("runIterate — CI start stall timeout", () => {
   });
 
   it("escalates when a queued check run has not started past the threshold", async () => {
+    mockReadCiStartFollowUp.mockResolvedValue(true);
     mockInProgressCheck(checkRun());
 
     const result = await runIterate(

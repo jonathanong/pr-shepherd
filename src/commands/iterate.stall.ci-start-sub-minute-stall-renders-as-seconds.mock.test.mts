@@ -4,6 +4,7 @@ import {
   NOW,
   makeOpts,
   makeReport,
+  mockReadCiStartFollowUp,
   mockRunCheck,
 } from "../../test-helpers/commands/iterate-test-support.mts";
 import { runIterate } from "./iterate/index.mts";
@@ -16,6 +17,7 @@ registerIterateHooks();
 describe("runIterate — CI start stall timeout, sub-minute threshold", () => {
   it("renders the stalled-check wait time in seconds", async () => {
     const STALL_TIMEOUT_S = 5;
+    mockReadCiStartFollowUp.mockResolvedValue(true);
     mockRunCheck.mockResolvedValue(
       makeReport({
         status: "IN_PROGRESS",
