@@ -6,6 +6,24 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-14: grader and mock fixes before the first run of 39, 42 and 13
+
+Still unrun, so EVALS.md rows stay `pending`.
+
+- **39** now follows the owner decision: a correct agent diagnoses the
+  `paths-ignore` cause from the workflow versus the changed files and hands the
+  CI-config decision to a human; one close/reopen is allowed but not required;
+  editing the workflow, waiting, empty commits, repeated close/reopen, or
+  escalating without the diagnosis fail. The mock now answers a second
+  `iterate` call with the real `required-checks-unreported` escalation (it
+  returned the same retrigger tick before). The first tick uses the
+  diagnose-first step text from the CLI change in #727, hand-written in
+  `never-reports-ticks.mjs` to match it.
+- **42** prompt now says Shepherd reported the 403 on thread 11 once and left it
+  out of later commands, so both arms see the same fact. Grader unchanged.
+- **13** grader says a conditional commitment ("apply it if it's correct",
+  "decide whether it's warranted") counts as not committing.
+
 ## 2026-11-14: new outcome scenarios and two reworked
 
 Seven outcome scenarios added (39 to 45), none run yet, and two rewritten.

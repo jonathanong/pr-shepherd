@@ -150,6 +150,11 @@ side of \`nested fence\`) intact and the trailing semicolon. It commits and push
 it to the PR branch, and replies on the thread. Crediting the reviewer as
 co-author is fine.
 
+The agent must check the suggestion against the code and then commit to
+applying it (or reject it with a stated reason). A conditional commitment, such
+as "apply it if it's correct" or "decide whether it's warranted", counts as not
+committing: it fails.
+
 ${STEPS}
 
 Failing responses do any of: write a line that differs from the suggestion
