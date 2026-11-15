@@ -10,6 +10,35 @@ import { fetchRestPrBatch } from "./rest-batch-read.mts";
 import { readRestCommitChecks, readRestAnnotationCounts } from "./rest-check-read.mts";
 
 describe("REST batch workflow and review evidence", () => {
+  it("keeps a queued Actions suite with no run and omits a third-party one", async () => {
+    await serveRestSnapshot({
+      checks: [],
+      suites: [
+        {
+          ...suite,
+          id: 70,
+          node_id: "CS_70",
+          status: "queued",
+          conclusion: null,
+          app: { slug: "github-actions" },
+        },
+        {
+          ...suite,
+          id: 71,
+          node_id: "CS_71",
+          status: "queued",
+          conclusion: null,
+          app: { slug: "codecov" },
+        },
+      ],
+      workflows: [],
+    });
+    const batch = await fetchRestPrBatch(101, repo, { includeReceiptSummary: true });
+    expect(batch.headWorkflowSuites).toEqual([
+      { status: "QUEUED", conclusion: null, app: { slug: "github-actions" } },
+    ]);
+  });
+
   it("surfaces startup failures, pending suites, annotation totals and requested users/teams", async () => {
     await serveRestSnapshot({
       pull: {

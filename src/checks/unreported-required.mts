@@ -8,7 +8,11 @@ export interface WorkflowSuiteSnapshot {
     databaseId?: number | null;
     path?: string | null;
   } | null;
+  app?: { slug?: string | null } | null;
 }
+
+/** The GitHub Actions app, which creates a suite before its workflow run exists. */
+export const ACTIONS_APP_SLUG = "github-actions";
 
 /** Required context names that have no check run and no status context. */
 export function unreportedRequiredContexts(
@@ -38,7 +42,9 @@ export function reportedCheckNames(checks: readonly { name: string }[]): Set<str
 
 /**
  * True when a relevant Actions workflow has not finished.
- * Suites with no workflow run stay queued at third-party apps and do not count.
+ * A suite with no run yet counts only when the Actions app owns it and it is not COMPLETED:
+ * Actions creates suites a few seconds before their runs. Third-party apps leave suites queued
+ * forever with no run, so those do not count.
  */
 export function actionsWorkflowInProgress(
   suites: readonly WorkflowSuiteSnapshot[],
@@ -46,7 +52,11 @@ export function actionsWorkflowInProgress(
 ): boolean {
   return suites.some((suite) => {
     const run = suite.workflowRun;
-    if (!run) return false;
+    if (!run) {
+      return (
+        suite.app?.slug === ACTIONS_APP_SLUG && suite.status != null && suite.status !== "COMPLETED"
+      );
+    }
     const event = run.event ?? null;
     if (event !== null && event !== "" && !relevantEvents.has(event)) return false;
     if (suite.status != null && suite.status !== "") return suite.status !== "COMPLETED";

@@ -7,18 +7,11 @@ import {
   restString,
   restNumber,
   malformedRest,
+  readRest as rest,
 } from "./rest-reader-core.mts";
+import type { RestSuite, RestWorkflowRun } from "./rest-suite-types.mts";
 import { recordRestIdentity } from "./rest-identities.mts";
-import { readRest as rest } from "./rest-reader-core.mts";
 
-export interface RestSuite {
-  id: number;
-  node_id: string;
-  status: string;
-  conclusion: string | null;
-  created_at: string;
-  updated_at: string;
-}
 interface RestCheck {
   id: number;
   node_id: string;
@@ -38,17 +31,6 @@ interface RestStatus {
   target_url: string | null;
   description: string | null;
   created_at: string;
-}
-export interface RestWorkflowRun {
-  id: number;
-  check_suite_id: number;
-  event: string;
-  workflow_id: number;
-  name: string;
-  created_at: string;
-  updated_at: string;
-  html_url: string;
-  path?: string; // workflow file, e.g. .github/workflows/ci.yml
 }
 export async function readRestCommitChecks(oid: string, repo: RepoInfo, pr = 0) {
   const prefix = restRepoPath(repo);

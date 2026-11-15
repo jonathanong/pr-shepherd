@@ -87,6 +87,7 @@ export interface RawSummaryCommit {
       id?: string;
       status?: string | null;
       conclusion: string | null;
+      app?: { slug: string | null } | null;
       workflowRun: {
         databaseId?: number | null;
         event: string | null;

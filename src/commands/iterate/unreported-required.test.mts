@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { IterateResultBase, ShepherdReport } from "../../types.mts";
+import { readCiRetrigger } from "../../state/ci-retrigger.mts";
 import { planUnreportedRequired } from "./unreported-required.mts";
 
 const stateKey = { owner: "acme", repo: "widgets", pr: 622 };
@@ -60,6 +61,18 @@ describe("planUnreportedRequired", () => {
     if (previous === undefined) delete process.env["PR_SHEPHERD_STATE_DIR"];
     else process.env["PR_SHEPHERD_STATE_DIR"] = previous;
     await rm(dir, { recursive: true, force: true });
+  });
+
+  it("does nothing and keeps the retrigger state while an Actions workflow is starting", async () => {
+    const plan = await planUnreportedRequired({
+      report: report({ actionsWorkflowInProgress: true, trunkBehindBy: 0, baseBehindBy: 0 }),
+      base,
+      stateKey,
+      headSha,
+      otherAutonomousWork: false,
+    });
+    expect(plan).toEqual({});
+    expect(await readCiRetrigger(stateKey)).toBeUndefined();
   });
 
   it("asks for a trunk rebase when the stack is behind", async () => {

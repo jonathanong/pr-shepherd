@@ -247,6 +247,9 @@ fragment PollSummaryPr on PullRequest {
             id
             status
             conclusion
+            app {
+              slug
+            }
             workflowRun {
               databaseId
               event

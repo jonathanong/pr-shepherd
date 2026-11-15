@@ -37,6 +37,28 @@ describe("actionsWorkflowInProgress", () => {
     ).toBe(false);
   });
 
+  it("treats an unfinished Actions suite with no run yet as a starting workflow", () => {
+    const actions = { slug: "github-actions" };
+    expect(
+      actionsWorkflowInProgress([{ status: "QUEUED", conclusion: null, app: actions }], events),
+    ).toBe(true);
+    expect(
+      actionsWorkflowInProgress(
+        [{ status: "COMPLETED", conclusion: "SUCCESS", app: actions }],
+        events,
+      ),
+    ).toBe(false);
+    expect(
+      actionsWorkflowInProgress(
+        [{ status: "QUEUED", conclusion: null, app: { slug: "codecov" } }],
+        events,
+      ),
+    ).toBe(false);
+    expect(
+      actionsWorkflowInProgress([{ status: null, conclusion: null, app: actions }], events),
+    ).toBe(false);
+  });
+
   it("treats an unfinished relevant workflow as running", () => {
     expect(
       actionsWorkflowInProgress(

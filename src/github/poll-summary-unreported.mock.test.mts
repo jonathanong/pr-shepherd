@@ -121,6 +121,27 @@ it("does not treat a third-party queued suite as running CI", async () => {
   expect(item.checks?.actionsWorkflowInProgress).toBeUndefined();
 });
 
+it("waits while an Actions suite has no workflow run yet", async () => {
+  const item = await summarizePollSummaryPr(
+    blockedLayer([passed("gitleaks")], {
+      nodes: [
+        {
+          status: "QUEUED",
+          conclusion: null,
+          app: { slug: "github-actions" },
+          workflowRun: null,
+        },
+      ],
+    }),
+    { owner: "acme", name: "widgets" },
+    {},
+    false,
+    trunk,
+  );
+  expect(item.action).toBe("wait");
+  expect(item.checks?.actionsWorkflowInProgress).toBe(true);
+});
+
 it("waits while a relevant Actions suite has not completed", async () => {
   const item = await summarizePollSummaryPr(
     blockedLayer([passed("gitleaks")], {

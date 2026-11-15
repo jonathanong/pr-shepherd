@@ -7,6 +7,9 @@ fragment CommitCheckSuites on Commit {
       id
       status
       conclusion
+      app {
+        slug
+      }
       workflowRun {
         databaseId
         event
