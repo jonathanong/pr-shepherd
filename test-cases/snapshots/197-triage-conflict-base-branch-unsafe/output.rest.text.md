@@ -1,6 +1,6 @@
 # PR #42 [TRIAGE]
 
-**status** `FAILING` · **merge** `DIRTY`
+**status** `FAILING` · **merge** `DIRTY` · **repo** `owner/repo`
 **summary** 1 passing
 **transport** `rest`
 
@@ -13,7 +13,7 @@
 
 ## Instructions
 
-1. Shepherd could not use the PR's base branch name from GitHub (empty, or characters outside `[A-Za-z0-9._/-]`), so it prints no command that names the base. Read it with `gh pr view https://github.com/owner/repo/pull/42 --json baseRefName` and quote it in any command you run.
+1. Shepherd could not use the PR's base branch name from GitHub (empty, or characters outside `[A-Za-z0-9._/-]`), so it prints no command that names the base. Read it with `gh api repos/owner/repo/pulls/42 --jq .base.ref` and quote it in any command you run.
 2. The branch has merge conflicts (see `**branch**` above). Check the base branch's instructions (such as `AGENTS.md`) only for whether to rebase or merge, update the branch from its base that way, and resolve each conflict keeping both sides' changes unless they contradict.
 3. Commit any remaining conflict-resolution changes and push to the PR head branch.
 4. Rerun Shepherd now.
