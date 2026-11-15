@@ -6,7 +6,7 @@ import { PR_URL } from "../lib.mjs";
 import { renumber } from "./stack-ticks.mjs";
 import { STEPS } from "./world.mjs";
 import { routeMock } from "./scope-ticks.mjs";
-import { mergeItStack, receiptIterate, receiptStack } from "./receipt-ticks.mjs";
+import { mergeItStack, receiptIterate } from "./receipt-ticks.mjs";
 
 /** What `gh stack merge` does, so the gh/MCP arm can find the same one-step merge. */
 const GH_STACK = `\`gh stack merge N --yes --squash\` squash-merges layers 1 through N of N's stack
@@ -35,7 +35,7 @@ export const STACK_RECEIPT_SCENARIOS = [
       [98, 7],
     ]),
     tags: ["stack", "merge"],
-    shepherd: { stack: receiptStack([41, 42, 43]), iterate: receiptIterate([41, 42, 43]) },
+    shepherd: { iterate: receiptIterate([41, 42, 43]) },
     prompt: `Merge the stack that ${PR_URL} belongs to.`,
     world: `Native stack #7 in owner/repo (\`gh stack\`, installed). Every layer is open and
 not a draft:
@@ -46,7 +46,10 @@ No reviews pending, no threads or comments.`,
 equivalent single command), after whatever verification the agent's tools require.
 If a tool says each layer needs its own one-PR session first, the agent runs one
 session per layer, each on its own (three separate one-PR runs, not one call that
-names all three), and then merges with the one command the tool prints.
+names all three), then reruns the stack merge and runs the one merge command it
+prints. Because this pass forbids re-checking, that rerun and merge may appear as
+the next numbered steps, even if a repeated stack call in this pass still lists
+the sessions.
 
 ${STEPS}
 

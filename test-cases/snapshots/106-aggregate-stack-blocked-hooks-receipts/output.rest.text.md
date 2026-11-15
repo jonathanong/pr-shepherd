@@ -29,8 +29,8 @@ nextAction: shepherd
 
 ## Instructions
 
-1. Start one concurrent one-PR session per command below; none for layers without one. Run each command as its own session: one multi-PR `pr-shepherd <PR> <PR>` poll records no READY receipts.
-2. Run `pr-shepherd https://github.com/owner/repo/pull/441 --until-terminal`. It looks ready, but only its own one-PR session records the READY receipt a stack merge needs.
-3. Run `pr-shepherd https://github.com/owner/repo/pull/442 --until-terminal`. It looks ready, but only its own one-PR session records the READY receipt a stack merge needs.
-4. Run `pr-shepherd https://github.com/owner/repo/pull/443 --until-terminal`. It looks ready, but only its own one-PR session records the READY receipt a stack merge needs.
+1. Start one concurrent one-PR session per command below; none for layers without one.
+2. Run `pr-shepherd https://github.com/owner/repo/pull/441 --until-terminal`.
+3. Run `pr-shepherd https://github.com/owner/repo/pull/442 --until-terminal`.
+4. Run `pr-shepherd https://github.com/owner/repo/pull/443 --until-terminal`.
 5. After the selected one-PR sessions, rerun `pr-shepherd stack "owner/repo#44" --until-terminal --transport rest`. Keep watching until every layer is terminal.

@@ -1,6 +1,12 @@
 export { findHumanHandoffs, appendHumanHandoffInstructions } from "./stack-handoffs.mts";
 import type { PollSummaryItem, PollSummaryResult, StackNextAction } from "../types.mts";
 export { isStackLayerReady, stackPosition } from "./stack-merge-scope.mts";
+import { stackLayerBlockReason } from "./stack-layer-readiness.mts";
+
+/** The layer's only blocker is its missing one-PR READY receipt. */
+const onlyLacksReceipt = (item: PollSummaryItem): boolean =>
+  item.reasons.includes("ready-receipt-required") &&
+  stackLayerBlockReason(item) === "no-ready-receipt";
 
 export interface StackPlan {
   action: StackNextAction;
@@ -50,7 +56,7 @@ function sessionInstruction(item: PollSummaryItem): string {
   const queueNote = item.queueRemoval
     ? " That session fixes failing queue CI, or investigates a removal with no failed check once, then escalates if it is unchanged."
     : "";
-  const receiptNote = item.reasons.includes("ready-receipt-required")
+  const receiptNote = onlyLacksReceipt(item)
     ? " It looks ready, but only its own one-PR session records the READY receipt a stack merge needs."
     : "";
   return `${removal} Run \`${item.pollCommand}\`.${queueNote}${receiptNote}`;
@@ -70,7 +76,7 @@ export function appendAutonomousInstructions(
   partial = false,
 ): void {
   if (candidates.length === 0) return;
-  const separate = candidates.some((item) => item.reasons.includes("ready-receipt-required"))
+  const separate = candidates.some(onlyLacksReceipt)
     ? " Run each command as its own session: one multi-PR `pr-shepherd <PR> <PR>` poll records no READY receipts."
     : "";
   instructions.push(

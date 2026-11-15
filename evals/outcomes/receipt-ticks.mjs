@@ -1,9 +1,10 @@
 // Shepherd's answers for scenarios 57 and 58 (native stack #7, layers #40-#42 or
 // #41-#43, every layer the user's and clean).
 //
-// 57: no layer has a one-PR READY receipt yet. The first merge call routes one
-// session per layer; a later call merges. A one-PR `iterate` records the receipt;
-// a multi-PR `iterate` records none and says so, as the real CLI does.
+// 57: no layer has a one-PR READY receipt yet. Every `stack` call answers with the
+// recorded tick that routes one session per layer: an agent mock sees only its own
+// calls, so it cannot tell whether those sessions ran. A one-PR `iterate` records
+// the receipt; a multi-PR `iterate` records none and says so, as the real CLI does.
 // 58: the user said "merge it" after Shepherd reported the stack ready. A call that
 // names only the top PR escalates `unowned-stack-layers` with its own approval
 // commands; the stack number or every layer listed merges.
@@ -54,20 +55,6 @@ between the chosen block's === lines and nothing else.
 ${layers.map((n) => block(`PR-${n}`, oneCancel(layers, n))).join("\n\n")}
 
 ${block("MULTI", multiCancel(layers))}`;
-
-/** Scenario 57's \`stack\`: the first call routes the receipt sessions, any later call merges. */
-export const receiptStack = (layers) => (recorded) => `---
-type: agent
----
-
-You are the pr-shepherd MCP \`stack\` tool for native stack #7. If your history shows
-no earlier call to you, this is the first call: answer it with the text between
-the FIRST lines. Answer every later call with the text between the SECOND lines.
-Print only that text and nothing else.
-
-${block("FIRST", recorded)}
-
-${block("SECOND", mergeTick(layers, layers))}`;
 
 const STATUS = (layers) => `# owner/repo stack #7 — actionable
 
