@@ -70,7 +70,7 @@ Seven scenarios (39 to 45) were added and two were rewritten, none run yet; thei
 | `39-required-check-never-reports`       | CI                   | pending | pending | pending |
 | `40-startup-failure-workflow-edit`      | CI                   | pending | pending | pending |
 | `41-check-annotations-no-log`           | CI                   | pending | pending | pending |
-| `43-action-required-deployment-gate`    | CI                   | pending | pending | pending |
+| `43-deployment-awaiting-approval`       | CI                   | pending | pending | pending |
 | `06-required-approval`                  | Merge gates & branch | 1.00    | 0.67    | +0.33   |
 | `18-pr-level-changes-requested`         | Merge gates & branch | 1.00    | 1.00    | 0.00    |
 | `19-behind-base`                        | Merge gates & branch | 1.00    | 1.00    | 0.00    |

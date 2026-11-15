@@ -6,6 +6,25 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-14: 40 and 43 reworked to match the CLI fixes (#726, #728)
+
+Still unrun, so EVALS.md rows stay `pending`.
+
+- **40** The plugin tick now prints `workflow file: \`.github/workflows/ci.yml\``in place of the fake`> Process exited early` excerpt, as fixture 13 does after
+  #726 (`startup-failure-ticks.mjs`, a no-op once the fixture carries it). The
+  world gives the run its `path`, the PR diff edits that file, and the check run
+  says "Invalid workflow file". The new playbook line (STARTUP_FAILURE: open the
+  printed file at the PR head, fix it, do not rerun) lives in the plugin, so run
+  this case on a branch that includes #726.
+- **43** renamed from `43-action-required-deployment-gate` to
+  `43-deployment-awaiting-approval`. An environment-protection hold is a run
+  with status `waiting`, not conclusion `action_required` (the fork gate). The
+  world is a waiting Deploy run on `production`, reviewers `release-managers`
+  and `@alice`, viewer cannot approve. The `iterate` mock answers the first call
+  with the WAIT tick of fixture 188 and later calls with the stall-timeout
+  escalation of fixture 189 (`deployment-ticks.mjs`, #728). The grader needs the
+  `production` approval and its reviewers named and handed to a human.
+
 ## 2026-11-14: grader and mock fixes before the first run of 39, 42 and 13
 
 Still unrun, so EVALS.md rows stay `pending`.
