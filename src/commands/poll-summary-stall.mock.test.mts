@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { rm } from "node:fs/promises";
+import { rm, writeFile } from "node:fs/promises";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../github/poll-summary.mts", () => ({ fetchPollSummary: vi.fn() }));
@@ -64,6 +64,21 @@ describe("aggregate stack stall guard", () => {
     expect(result).toMatchObject({ nextAction: "escalate", reason: "actionable" });
     expect(result.instructions?.[0]).toContain("`stall-timeout`: the stack has not changed for 3");
     expect(mockFetch).toHaveBeenCalledTimes(4);
+  });
+
+  it("returns the one repair tick without holding it in debounce", async () => {
+    await writeFile(stateDir, "not a directory");
+    const result = await runAggregatePoll({
+      ...opts,
+      intervalSeconds: 60,
+      timeoutSeconds: 0,
+      untilTerminal: true,
+      stallTimeoutSeconds: 180,
+      debounceSeconds: 60,
+    });
+    expect(result).toMatchObject({ nextAction: "shepherd", reason: "actionable" });
+    expect(result.instructions?.at(-1)).toContain("could not be saved");
+    expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the configured timer across separate one-shot summaries", async () => {

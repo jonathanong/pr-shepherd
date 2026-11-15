@@ -6,7 +6,7 @@ import { row, stack } from "../../test-helpers/commands/poll-summary-stack.test-
 import { stallRepairMarkerPath } from "../state/stall-repair.mts";
 import type { PollSummaryItem } from "../types.mts";
 import { planPollSummary } from "./poll-summary-instructions.mts";
-import { applyStackStallGuard } from "./stack-stall.mts";
+import { applyStackStallGuard, isStackRepairTick } from "./stack-stall.mts";
 
 const repo = { owner: "acme", name: "widgets" };
 let stateDir: string;
@@ -50,6 +50,8 @@ describe("applyStackStallGuard when the timer cannot be saved", () => {
     const first = await applyStackStallGuard(planned, repo, 600);
     const second = await applyStackStallGuard(planned, repo, 600);
     expect(first).toMatchObject({ nextAction: "shepherd", reason: "actionable" });
+    expect(isStackRepairTick(first)).toBe(true);
+    expect(isStackRepairTick(second)).toBe(false);
     expect(first.instructions?.at(-1)).toMatch(/^\d+\. The stall timer could not be saved/);
     expect(first.instructions?.at(-1)).toContain("ENOTDIR");
     expect(second).toMatchObject({

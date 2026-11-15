@@ -67,6 +67,14 @@ export async function readStackStallDeadline(
   return read.ok && read.state ? read.state.firstSeenAt + stallTimeoutSeconds : undefined;
 }
 
+/** Not serialized and carried by object spread, so it survives the poll loop's result copies. */
+const REPAIR_TICK = Symbol("stackRepairTick");
+
+/** True for the one repair tick whose marker is already spent: debounce and re-planning must keep it. */
+export function isStackRepairTick(result: PollSummaryResult): boolean {
+  return (result as { [REPAIR_TICK]?: true })[REPAIR_TICK] === true;
+}
+
 /**
  * The first time the stack stall timer cannot be saved, the plan keeps its action and gains one
  * repair step. The unchanged failure on the next poll escalates `stall-state-unavailable`.
@@ -78,12 +86,15 @@ async function stackStateUnavailable(
   const scope = `${result.repo} stack ${result.selection.kind === "stack" ? result.selection.stackNumber : ""}`;
   if (!(await readStallRepair(scope, reason)) && (await writeStallRepair(scope, reason))) {
     const steps = result.instructions ?? [];
-    return {
-      ...result,
-      reason: "actionable",
-      nextAction: "shepherd",
-      instructions: [...steps, `${steps.length + 1}. ${stallRepairStep(reason)}`],
-    };
+    return Object.assign(
+      {
+        ...result,
+        reason: "actionable" as const,
+        nextAction: "shepherd" as const,
+        instructions: [...steps, `${steps.length + 1}. ${stallRepairStep(reason)}`],
+      },
+      { [REPAIR_TICK]: true as const },
+    );
   }
   return {
     ...result,
