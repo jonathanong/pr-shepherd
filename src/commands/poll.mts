@@ -146,7 +146,7 @@ async function runPollCore(
       }
       break;
     }
-    if (lastResult.action === "wait" && !pastDebounce) {
+    if (lastResult.action === "wait" && (!pastDebounce || untilTerminal)) {
       if (pendingQuotaWarning === undefined) debounceUntil = null;
       const elapsedMs = Date.now() - start;
       const waiting = lastResult;
@@ -169,7 +169,11 @@ async function runPollCore(
       }
       continue;
     }
-    if (swallowsMarkReady && lastResult.action === "mark_ready" && !pastDebounce) {
+    if (
+      swallowsMarkReady &&
+      lastResult.action === "mark_ready" &&
+      (!pastDebounce || untilTerminal)
+    ) {
       debounceUntil = null;
       const ready = lastResult;
       const stop = await pause(ready, () => writeRuleAutoResolveProgress(ready));
