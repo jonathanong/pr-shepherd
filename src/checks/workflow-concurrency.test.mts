@@ -58,6 +58,18 @@ describe("parseWorkflowConcurrency", () => {
     ).toBe(true);
   });
 
+  it("withholds a cancel when a push to the PR does not retrigger the workflow", () => {
+    const body = "concurrency:\n  group: g\n  cancel-in-progress: true\n";
+    const raw = "cancel-in-progress=true (a push does not retrigger it)";
+    const types = (on: string) => parseWorkflowConcurrency(`on:\n${on}\n${body}`);
+    expect(types("  pull_request:\n    types: [opened, reopened]")?.raw).toBe(raw);
+    expect(types("  pull_request:\n    types: [opened, synchronize]")?.cancelInProgress).toBe(true);
+    expect(types("  pull_request:\n    branches: [main]")?.cancelInProgress).toBe(true);
+    expect(types("  pull_request:")?.cancelInProgress).toBe(true);
+    expect(types("  push:")?.cancelInProgress).toBe(true);
+    expect(parseWorkflowConcurrency(`on: pull_request\n${body}`)?.cancelInProgress).toBe(true);
+  });
+
   it("reports unset when concurrency has no cancel-in-progress or is a bare group string", () => {
     expect(parseWorkflowConcurrency("concurrency:\n  group: g\n")?.raw).toBe(
       "cancel-in-progress=unset",

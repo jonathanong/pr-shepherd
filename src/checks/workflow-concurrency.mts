@@ -12,6 +12,25 @@ export interface WorkflowConcurrency {
 const VOLATILE_GROUP =
   /github\.(sha|run_id|run_number|run_attempt|event\.(after|before|head_commit|pull_request\.head\.sha))|\bhead\.sha\b/i;
 
+/**
+ * False only when the workflow's `pull_request` / `pull_request_target` triggers all list
+ * `types` without `synchronize`: a fix push then starts no replacement run to cancel the old one.
+ */
+function pushRetriggers(on: unknown): boolean {
+  if (on === null || typeof on !== "object" || Array.isArray(on)) return true;
+  const triggers = ["pull_request", "pull_request_target"]
+    .map((name) => (on as Record<string, unknown>)[name])
+    .filter((trigger) => trigger !== undefined);
+  if (triggers.length === 0) return true;
+  return triggers.some((trigger) => {
+    const types =
+      trigger !== null && typeof trigger === "object"
+        ? (trigger as Record<string, unknown>)["types"]
+        : undefined;
+    return !Array.isArray(types) || types.includes("synchronize");
+  });
+}
+
 function scalar(value: unknown): string {
   return typeof value === "string" ? value : JSON.stringify(value);
 }
@@ -37,6 +56,12 @@ export function parseWorkflowConcurrency(text: string): WorkflowConcurrency | un
   const group = (concurrency as Record<string, unknown>)["group"];
   if (value === true && typeof group === "string" && VOLATILE_GROUP.test(group)) {
     return { raw: "cancel-in-progress=true (group changes every push)", cancelInProgress: false };
+  }
+  if (value === true && !pushRetriggers((doc as Record<string, unknown>)["on"])) {
+    return {
+      raw: "cancel-in-progress=true (a push does not retrigger it)",
+      cancelInProgress: false,
+    };
   }
   return { raw: `cancel-in-progress=${scalar(value)}`, cancelInProgress: value === true };
 }
