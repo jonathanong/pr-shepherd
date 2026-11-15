@@ -1,6 +1,6 @@
 # pr-shepherd
 
-Drive a pull request to merge-ready with a coding agent. It works with Claude Code, Codex, Grok, and any stdio MCP client.
+Take pull requests from scratch to merge-ready with a coding agent. It works with Claude Code, Codex, Grok, and any stdio MCP client.
 
 **Modeled per PR session: about 30% lower LLM cost than `gh` at a 60k-token context (27–33% across 40k–100k) and about 74% lower than the GitHub MCP server, both assuming a warm prompt cache. While waiting on CI: ~60 GraphQL points an hour vs. ~360 for `gh pr checks --watch`.**
 
@@ -198,6 +198,12 @@ Requirements:
 - A GitHub token or an authenticated `gh` CLI with [the required access](docs/authentication.md)
 
 ## Quick start
+
+`/pr-shepherd:pr-shepherd` takes work from scratch to mergeable. The three everyday workflows:
+
+- **"make PRs, /pr-shepherd:pr-shepherd"** makes one PR per change that can be reviewed alone. It stacks a PR on an earlier one when it needs that PR's code or edits the same lines, and shepherds every PR until it is mergeable. Independent changes become separate PRs on the default branch.
+- **`/pr-shepherd <PR>`** takes a PR, including a draft, to mergeable. It does not merge.
+- **`/pr-shepherd --merge <PR>`** takes the PR to mergeable and merges it. For a stack layer, it merges that layer and the layers below it.
 
 ```text
 /goal /pr-shepherd:pr-shepherd 42    # Claude Code
