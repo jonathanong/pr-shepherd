@@ -36,7 +36,7 @@ Sonnet 5.5, opus judge, 3 to 6 runs per arm, 33 scenarios. **This is the latest 
 
 ### Stack merge scope (2026-11-14)
 
-Three scenarios added after the composite above, for merges limited to what the user approved. They are not in the category table above. Same model, judge and 3 runs per arm, at low effort. [HISTORY.md](HISTORY.md#2026-11-14-outcome-scenarios-for-stack-merge-scope) has the runs.
+Three scenarios added after the composite above, for merges limited to what the user approved. They are not in the category table above. Same model, judge and 3 runs per arm, at low effort. [HISTORY.md](HISTORY.md#2026-11-14-outcome-scenarios-for-stack-merge-scope) has the runs. The plugin scores for 36 and 37 are from the rerun after #722, under argument-dependent mocks.
 
 | Scenario                             | Plugin | gh/MCP | Δ     |
 | ------------------------------------ | ------ | ------ | ----- |

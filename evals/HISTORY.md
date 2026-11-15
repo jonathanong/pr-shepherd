@@ -44,6 +44,14 @@ $12.44 to rerun 36 and 38 after the fixes below.
   repeated status calls. The remaining difference, a backgrounded
   `--until-terminal`, is something the gh/MCP arm cannot do, so no
   tool-neutral grader can score it.
+- **37 under an argument-dependent mock: plugin 0.00, then 1.00.** Review on
+  #720 found that 37's mock ignored the call's arguments. Once it answered by
+  them, every plugin run listed only #42, got `unowned-stack-layers` for #41,
+  and stopped to ask, although "the stack up to #42" already covered #41
+  ($4.00, outcome 0 of 3). The escalation now says to run the printed listing
+  command at once when the request already covers those layers, and to ask
+  only otherwise (#722). The plugin-arm rerun scored 36 and 37 at 3 of 3
+  ($5.13); 36 still stops, since "my PRs #41 and #42" does not cover #40.
 
 ## 2026-11-14: judges failing correct plugin plans
 
