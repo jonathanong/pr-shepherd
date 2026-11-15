@@ -144,5 +144,6 @@ function restSuiteWorkflowRun(run: RestWorkflowRun | undefined) {
     event: run.event,
     url: run.html_url,
     workflow: { name: run.name },
+    file: { path: run.path ?? null },
   };
 }

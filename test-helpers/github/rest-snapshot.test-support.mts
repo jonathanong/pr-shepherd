@@ -59,6 +59,7 @@ export const workflow = {
   workflow_id: 44,
   event: "pull_request",
   name: "CI",
+  path: ".github/workflows/ci.yml@refs/heads/main",
   html_url: "https://github.com/octocat/hello-world/actions/runs/88",
   created_at: suite.created_at,
   updated_at: suite.updated_at,

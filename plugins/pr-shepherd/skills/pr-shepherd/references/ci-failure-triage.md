@@ -12,7 +12,8 @@ Apply when a step says `Playbook: "CI failure triage"`. Use the excerpts and tag
 
 - Actions failure with a run id: read the excerpt. Fix a real test or build failure in code and never rerun it, even with a printed `rerun:`. Run a printed `rerun:` only for a transient cause; without one, finish the other work. Then iterate without waiting.
 - An empty excerpt is not evidence of a transient failure. A gate-job excerpt naming failed jobs (for example `test-playwright: failure`) is test-failure evidence even without a stack trace: read the `Other failed jobs in this run` tails first, and only when a named job's tail is absent or truncated run `gh run view <runId> --log-failed -R <owner/repo>`. Rerun only when those logs show a transient cause.
-- `CANCELLED` or `STARTUP_FAILURE` (no excerpt): run a printed `rerun:`, else finish the other work; iterate without waiting.
+- `CANCELLED` (no excerpt): run a printed `rerun:`, else finish the other work; iterate without waiting.
+- `STARTUP_FAILURE` (workflow did not start): if the PR changes the printed `workflow file:` (or any `.github/workflows/` file if none printed), fix it at the PR head and do not rerun. Otherwise run a printed `rerun:`, else finish other work; iterate without waiting.
 - `[status: …, suite: COMPLETED]` (stuck run): the workflow finished but this check never completed, so there is nothing to fix in code. Run a printed `rerun:`, else finish the other work; iterate without waiting.
 - `ACTION_REQUIRED`: finish the other work and iterate. Shepherd escalates if manual approval is still required.
 - `external` with a URL: fix from its printed annotations (file, line, message) without opening the URL; with none, inspect the provider or reproduce locally. Then iterate. The URL alone is not `[ESCALATE]`.

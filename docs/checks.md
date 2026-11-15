@@ -21,7 +21,7 @@ A workflow run can end with `conclusion: startup_failure` before it creates any 
 REST `GET /repos/{owner}/{repo}/actions/runs?head_sha=<sha>&status=startup_failure` runs only when that CheckSuite page is missing or truncated (`hasNextPage`):
 
 - The endpoint is repository-wide for the SHA, so runs are kept only when the REST `pull_requests` association includes this PR number and head SHA.
-- Each run becomes a `CheckRun` with `conclusion: "STARTUP_FAILURE"`, the run ID, run URL, raw event, workflow name, and `display_title` as `summary`.
+- Each run becomes a `CheckRun` with `conclusion: "STARTUP_FAILURE"`, the run ID, run URL, raw event, workflow name, and the workflow file `path` as `workflowPath`. The run's `display_title` is the PR or commit title, not an error, so it is not surfaced. GitHub's "Invalid workflow file" message is not read (it would cost another call per run).
 - A run ID already in the GraphQL list is updated in place, not duplicated.
 - The supplement is best-effort: a failed request logs a warning and keeps the GraphQL data. A secondary rate limit aborts the tick with exit 75 ([graphql.md](graphql.md#startup-failure-checksuites-graphql--actions-rest-fallback)).
 
@@ -134,11 +134,11 @@ For each failing check, triage adds context from the GitHub Actions API:
 
 By conclusion:
 
-| Conclusion        | Triage                                                                                    | Tag                             |
-| ----------------- | ----------------------------------------------------------------------------------------- | ------------------------------- |
-| `CANCELLED`       | Job metadata only, to recover `run_attempt`; never a log excerpt                          | `[conclusion: CANCELLED]`       |
-| `STARTUP_FAILURE` | `run_attempt` from the workflow-runs response; no jobs or logs calls; may carry `summary` | `[conclusion: STARTUP_FAILURE]` |
-| Other failures    | Jobs, `failedStep`, `logExcerpt`, `relatedJobs`                                           | none                            |
+| Conclusion        | Triage                                                                                                                                          | Tag                             |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| `CANCELLED`       | Job metadata only, to recover `run_attempt`; never a log excerpt                                                                                | `[conclusion: CANCELLED]`       |
+| `STARTUP_FAILURE` | `run_attempt` from the workflow-runs response; no jobs or logs calls; carries `workflowPath` (GraphQL `workflowRun.file.path`, REST run `path`) | `[conclusion: STARTUP_FAILURE]` |
+| Other failures    | Jobs, `failedStep`, `logExcerpt`, `relatedJobs`                                                                                                 | none                            |
 
 Ordinary failures use only the bounded evidence Shepherd includes. A later failed attempt never gets a second rerun command, but a nonblank log excerpt still makes it autonomous `TRIAGE` investigation work. When a check has neither included evidence nor an authorized first-attempt rerun, other autonomous work finishes under `TRIAGE` first (including refreshing a behind or conflicting branch after a later attempt). Shepherd returns `ESCALATE` only if that check is the last blocker with no autonomous path left ([`check-follow-up-unavailable`](escalations.md#check-follow-up-unavailable)).
 

@@ -21,6 +21,7 @@ describe("fetchStartupFailureChecks", () => {
           conclusion: "startup_failure",
           html_url: "https://github.com/owner/repo/actions/runs/25406234225",
           display_title: "ci: skip secret-backed jobs for dependency bots",
+          path: " .github/workflows/ci.yml@refs/heads/main ",
           run_attempt: 2,
           pull_requests: [{ number: 42, head: { sha: "abc123" } }],
         },
@@ -39,7 +40,7 @@ describe("fetchStartupFailureChecks", () => {
         event: "pull_request",
         runId: "25406234225",
         runAttempt: 2,
-        summary: "ci: skip secret-backed jobs for dependency bots",
+        workflowPath: ".github/workflows/ci.yml",
       },
     ]);
     const [url] = mockFetch.mock.calls[0] as [string];
@@ -68,7 +69,7 @@ describe("fetchStartupFailureChecks", () => {
     expect(check!.name).toBe("workflow run 123");
     expect(check).not.toHaveProperty("summary");
   });
-  it("omits summary when GitHub omits display_title", async () => {
+  it("omits summary and workflowPath when GitHub omits them", async () => {
     mockFetch.mockResolvedValueOnce(
       makeWorkflowRunsResponse([
         {
@@ -87,6 +88,7 @@ describe("fetchStartupFailureChecks", () => {
 
     expect(check!.name).toBe("CI");
     expect(check).not.toHaveProperty("summary");
+    expect(check).not.toHaveProperty("workflowPath");
   });
   it("filters out runs when GitHub omits pull_requests", async () => {
     mockFetch.mockResolvedValueOnce(

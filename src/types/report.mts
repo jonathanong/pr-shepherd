@@ -219,6 +219,8 @@ export interface AgentCheck {
   status?: CheckStatus;
   /** Raw check-suite status (`COMPLETED`), present only with `status` for a stuck check. */
   suiteStatus?: string;
+  /** Workflow file of a `STARTUP_FAILURE` run (e.g. `.github/workflows/ci.yml`). */
+  workflowPath?: string;
   /** Workflow display name (e.g. `"CI"`). Populated on a best-effort basis when available from the jobs API. */
   workflowName?: string;
   /** Name of the matched job (e.g. `"tests (ubuntu)"`). Distinct from check name for matrix builds. */

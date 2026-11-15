@@ -64,8 +64,13 @@ describe("toAgentCheck", () => {
     expect(result.summary).toBe("2 tests failed");
     expect(result.logExcerpt).toBe('"test-playwright": {"result": "failure"}');
 
+    expect(toAgentCheck({ ...check, workflowPath: ".github/workflows/ci.yml" }).workflowPath).toBe(
+      ".github/workflows/ci.yml",
+    );
+
     const bare = toAgentCheck(makeCheck("run-2"));
     expect(bare).not.toHaveProperty("workflowName");
+    expect(bare).not.toHaveProperty("workflowPath");
     expect(bare).not.toHaveProperty("jobName");
     expect(bare).not.toHaveProperty("failedStep");
     expect(bare).not.toHaveProperty("summary");

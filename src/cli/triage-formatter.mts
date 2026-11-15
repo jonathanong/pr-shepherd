@@ -137,6 +137,7 @@ export function formatTriageResult(
       const lines = [
         `- ${locator} — \`${workflowPrefix}${jobLabel}\`${conclusionTag}${attemptTag}${blockerTag}${scopeTag}`,
       ];
+      if (ch.workflowPath) lines.push(`  workflow file: \`${ch.workflowPath}\``);
       if (ch.conclusion !== "CANCELLED") {
         if (ch.failedStep) lines.push(`  > ${ch.failedStep}`);
         if (ch.summary) lines.push(`  > ${ch.summary}`);

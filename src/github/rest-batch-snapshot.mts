@@ -1,3 +1,4 @@
+import { normalizeWorkflowPath } from "../checks/workflow-path.mts";
 import type { RepoInfo } from "./client.mts";
 import type { BatchPrData } from "../types.mts";
 import { restPullRefs, type RestPull } from "./rest-pr-core.mts";
@@ -99,6 +100,7 @@ export async function readRestSnapshot(
       checks.suites.flatMap((suite) => {
         const run = checks.workflowRuns.find((run) => run.check_suite_id === suite.id);
         if (suite.conclusion?.toUpperCase() !== "STARTUP_FAILURE" || !run) return [];
+        const workflowPath = normalizeWorkflowPath(run.path);
         return [
           {
             name: run.name || `workflow run ${run.id}`,
@@ -108,6 +110,7 @@ export async function readRestSnapshot(
             detailsUrl: run.html_url,
             event: run.event,
             runId: String(run.id),
+            ...(workflowPath !== undefined && { workflowPath }),
           },
         ];
       }),

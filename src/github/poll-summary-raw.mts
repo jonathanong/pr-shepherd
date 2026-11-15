@@ -92,6 +92,7 @@ export interface RawSummaryCommit {
         event: string | null;
         url?: string | null;
         workflow?: { name: string | null } | null;
+        file?: { path: string | null } | null;
       } | null;
     }>;
   } | null;

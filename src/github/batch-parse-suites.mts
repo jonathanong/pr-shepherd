@@ -1,3 +1,4 @@
+import { normalizeWorkflowPath } from "../checks/workflow-path.mts";
 import type { WorkflowSuiteSnapshot } from "../checks/unreported-required.mts";
 import type { CheckRun } from "../types.mts";
 import type { RawPr } from "./batch-raw-types.mts";
@@ -42,6 +43,7 @@ export function startupFailureChecksFromSuites(
             event: string | null;
             url?: string | null;
             workflow?: { name: string | null } | null;
+            file?: { path: string | null } | null;
           } | null;
         }>;
       }
@@ -54,6 +56,7 @@ export function startupFailureChecksFromSuites(
     const runId = node.workflowRun.databaseId != null ? String(node.workflowRun.databaseId) : null;
     const name =
       node.workflowRun.workflow?.name?.trim() || (runId ? `workflow run ${runId}` : "workflow run");
+    const workflowPath = normalizeWorkflowPath(node.workflowRun.file?.path);
     return [
       {
         name,
@@ -63,6 +66,7 @@ export function startupFailureChecksFromSuites(
         detailsUrl: node.workflowRun.url ?? "",
         event: node.workflowRun.event,
         runId,
+        ...(workflowPath !== undefined && { workflowPath }),
       },
     ];
   });
