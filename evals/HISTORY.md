@@ -6,6 +6,26 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-14: first runs of 48 to 50 (creating PRs: split and stack)
+
+Sonnet 5.5 at low effort, opus judge, 3 runs per arm, $49.40 over three runs.
+
+| Scenario                                 | Plugin | gh/MCP | Δ     |
+| ---------------------------------------- | ------ | ------ | ----- |
+| `48-create-prs-same-lines-stack`         | 1.00   | 0.00   | +1.00 |
+| `49-create-prs-independent-separate`     | 1.00   | 1.00   | 0.00  |
+| `50-create-prs-needs-earlier-code-stack` | 1.00   | 0.67   | +0.33 |
+
+- **48** scored 0.33 for the plugin on the first two runs. Agents opened both
+  PRs against `main` and offered to stack later. Moving the split-and-stack
+  bullet to the top of the "Create a PR" playbook did not change that. Both
+  branches were cut from `main`, so stacking meant rebasing the second onto the
+  first, and the playbook never said to. With that sentence added, the plugin
+  scored 1.00. gh/MCP opens both against `main` and rebases after the first
+  merge.
+- **49** and **50** are from the second run, with the bullet at the top; the
+  rebase sentence only applies to overlapping branches.
+
 ## 2026-11-14: 13 reworked after the double failure
 
 Both arms had hedged ("decide whether the suggestion is warranted") because the

@@ -2,6 +2,7 @@
 
 import { CI_MORE_SCENARIOS } from "./scenarios-ci-more.mjs";
 import { CI_SCENARIOS } from "./scenarios-ci.mjs";
+import { CREATE_SCENARIOS } from "./scenarios-create.mjs";
 import { GATE_MORE_SCENARIOS } from "./scenarios-gates-more.mjs";
 import { GATE_SCENARIOS } from "./scenarios-gates.mjs";
 import { QUEUE_SCENARIOS } from "./scenarios-queue.mjs";
@@ -29,6 +30,7 @@ const CATEGORIES = [
     ],
   ],
   ["Safety & terminal", SAFETY_SCENARIOS],
+  ["Creating PRs", CREATE_SCENARIOS],
 ];
 
 export const SCENARIOS = CATEGORIES.flatMap(([category, specs]) =>
