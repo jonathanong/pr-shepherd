@@ -35,6 +35,8 @@ export interface MergePlanInput {
 
 export interface MergeMethodUnavailable {
   unavailable: string;
+  /** REST could not read queue policy: a retry may read it, so the caller waits instead of escalating. */
+  refresh?: true;
 }
 
 export function buildMergeCommandPlan(
@@ -45,7 +47,8 @@ export function buildMergeCommandPlan(
     if (!input.queue && input.queueKnown !== true && configured)
       return {
         unavailable:
-          "REST cannot verify merge-queue policy and cannot apply a configured direct merge method to an automatic merge request. Refresh branch policy before merging.",
+          "REST could not read merge-queue policy, so it cannot apply the configured direct merge method to an automatic merge request. Shepherd rereads branch policy on the next poll and stops with `stall-timeout` if it stays unreadable.",
+        refresh: true,
       };
     let method: MergeMethod | undefined;
     if (!input.queue && input.queueKnown === true) {

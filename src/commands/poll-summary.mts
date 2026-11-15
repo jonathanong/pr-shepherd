@@ -15,7 +15,7 @@ import { createUntilTerminalRateLimitRetry } from "./poll-rate-limit-wait.mts";
 import type { PollSummaryCommandOptions, PollSummaryResult } from "../types.mts";
 import { planPollSummary, withPollSummaryInstructions } from "./poll-summary-instructions.mts";
 import { summaryStatusSignature } from "./poll-summary-signature.mts";
-import { applyStackStallGuard } from "./stack-stall.mts";
+import { applyStackStallGuard, isStackRepairTick } from "./stack-stall.mts";
 import {
   applyStackOwnership,
   listedLayerLeftStack,
@@ -217,8 +217,9 @@ async function runAggregatePollCore(
         : last.prs.every((item) => item.action === "cancel");
     const immediate =
       last.selection.kind === "stack"
-        ? (last.nextAction === "escalate" || last.nextAction === "merge") &&
-          last.reason !== "waiting"
+        ? isStackRepairTick(last) ||
+          ((last.nextAction === "escalate" || last.nextAction === "merge") &&
+            last.reason !== "waiting")
         : last.prs.some((item) => ["escalate", "merge", "mark_ready"].includes(item.action));
     const hasFix =
       last.selection.kind === "stack"
@@ -336,7 +337,10 @@ function attachUsage(
   // A disappeared native stack is an aggregate-level terminal handoff. Keep
   // that explicit escalation intact even when the one-PR fallback contains
   // open orphan rows that would otherwise be re-planned as triage.
-  if (enriched.selection.kind === "stack" && enriched.nextAction === "escalate") {
+  if (
+    enriched.selection.kind === "stack" &&
+    (enriched.nextAction === "escalate" || isStackRepairTick(enriched))
+  ) {
     return withoutImpliedOwnership(enriched);
   }
   const scope = requestedMergeScope(opts);

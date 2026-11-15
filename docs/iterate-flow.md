@@ -137,7 +137,7 @@ The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completio
 
 **Side-effects:** none. Shepherd never cancels workflow runs (GitHub exposes no exact viewer capability for cancellation); it only surfaces failure context.
 
-**Emits:** `action: 'triage'`. A non-empty external check URL is an autonomous investigation path and stays `triage`. If no other autonomous work remains and every failing check lacks usable evidence and an authorized rerun, `handleTriage` emits one investigation `triage` (marker `check-follow-up.json`), then `escalate` with `check-follow-up-unavailable` and the raw check context if the same checks are unchanged on the next tick. An `ACTION_REQUIRED` check, a human-only approval, escalates immediately. It can also escalate with `triage-thrash` or `base-branch-unknown`. Every `triage` is non-terminal and runs through the [stall guard](#stall-guard).
+**Emits:** `action: 'triage'`. A non-empty external check URL is an autonomous investigation path and stays `triage`. If no other autonomous work remains and every failing check lacks usable evidence and an authorized rerun, `handleTriage` emits one investigation `triage` (marker `check-follow-up.json`), then `escalate` with `check-follow-up-unavailable` and the raw check context if the same checks are unchanged on the next tick. An `ACTION_REQUIRED` check, a human-only approval, escalates immediately. It can also escalate with `triage-thrash`. An empty or unsafe PR base branch name never escalates: Shepherd omits every command that names it, prints no base in the output, and adds one step to read the base with `gh pr view`. Every `triage` is non-terminal and runs through the [stall guard](#stall-guard).
 
 ### 4. Active merge and queue removal
 
@@ -174,13 +174,13 @@ Applies to ordinary `wait` and `triage` after the action is chosen — not to `r
 
 **Fingerprint:** PR head SHA from GitHub (not the local checkout), action, `status`, `mergeStateStatus`, `state`, `isDraft`, sorted failing-check names + conclusions, sorted actionable thread/comment/review IDs, sorted review-summary minimize IDs. Stored at `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/iterate-stall.json`.
 
-| Stored state                                          | Result                                     |
-| ----------------------------------------------------- | ------------------------------------------ |
-| Matches and `now − firstSeenAt ≥ stallTimeoutSeconds` | `escalate` with `stall-timeout`            |
-| Matches, within threshold                             | Keep `firstSeenAt` and the original action |
-| Differs, or missing (first sighting)                  | Write new state, keep the original action  |
-| Timeout enabled, timer unreadable or unwritable       | `escalate` with `stall-state-unavailable`  |
-| `--stall-timeout 0`                                   | Keep the original action                   |
+| Stored state                                          | Result                                                          |
+| ----------------------------------------------------- | --------------------------------------------------------------- |
+| Matches and `now − firstSeenAt ≥ stallTimeoutSeconds` | `escalate` with `stall-timeout`                                 |
+| Matches, within threshold                             | Keep `firstSeenAt` and the original action                      |
+| Differs, or missing (first sighting)                  | Write new state, keep the original action                       |
+| Timeout enabled, timer unreadable or unwritable       | One repair step, then `escalate` with `stall-state-unavailable` |
+| `--stall-timeout 0`                                   | Keep the original action                                        |
 
 `wait` also inspects in-progress CI for a start stall (queued/requested checks that never start).
 

@@ -9,6 +9,7 @@ import {
 import { checksWithActionableAnnotations } from "../check-annotations.mts";
 import { planCiStartInvestigation } from "./ci-start-stall.mts";
 import { stateUnavailableResult } from "./state-unavailable.mts";
+import { planStallRepair } from "./stall-repair.mts";
 import { formatPrUrl } from "../../pr-reference.mts";
 import type {
   ClassifiedCheck,
@@ -163,17 +164,27 @@ export async function applyStallGuard(
     reviewSummaryIds,
   );
 
+  const stateUnavailable = async (reason: string): Promise<IterateResult> =>
+    (await planStallRepair({
+      base,
+      report,
+      prospective: prospectiveResult,
+      scope: `${stallKey.owner}/${stallKey.repo}#${stallKey.pr}`,
+      reason,
+      persistState,
+    })) ?? stallStateUnavailable(base, prReference, prospectiveResult, reason);
+
   const read = await readStallState(stallKey);
   if (!read.ok) {
     if (stallTimeoutSeconds <= 0) return prospectiveResult;
-    return stallStateUnavailable(base, prReference, prospectiveResult, read.reason);
+    return await stateUnavailable(read.reason);
   }
   const stored = read.state;
 
   const persistTimer = async (): Promise<IterateResult | undefined> => {
     const wrote = await writeStallState(stallKey, { fingerprint, firstSeenAt: nowSeconds });
     if (!wrote.ok && stallTimeoutSeconds > 0) {
-      return stallStateUnavailable(base, prReference, prospectiveResult, wrote.reason);
+      return stateUnavailable(wrote.reason);
     }
     return undefined;
   };

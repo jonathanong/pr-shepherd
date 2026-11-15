@@ -1,4 +1,5 @@
 {
+  "description": "The PR base branch name is empty (an unsafe name behaves the same). Shepherd no longer escalates: the tick is an ordinary triage and the base is never named in a printed command.",
   "batchData": {
     "baseRefName": "",
     "reviewThreads": [
@@ -33,5 +34,5 @@
     "shouldCancel": false,
     "remainingSeconds": 600
   },
-  "expectedExitCode": 13
+  "expectedExitCode": 12
 }

@@ -107,37 +107,26 @@ export function checkEscalateTriggers(
 export { formatDurationApprox } from "./duration-approx.mts";
 
 interface BaseBranchLookup {
+  /** The validated name, or a placeholder when `unusable` is set. */
   branch: string;
-  /** True when we could not confirm the branch name from GitHub. Callers must
-   * escalate rather than emitting a rebase against a potentially-wrong base. */
-  isFallback: boolean;
-  /** Populated when `isFallback`; one-line reason shown in escalate output. */
-  failureReason?: string;
+  /** True when the name is empty or outside `[A-Za-z0-9._/-]`. A name outside that set is never
+   * interpolated into a printed command; the caller reads the base from the PR instead. */
+  unusable: boolean;
 }
 
+/** Stands in for a base branch name that failed validation, in prose only. */
+const UNKNOWN_BASE_BRANCH = "<base branch>";
+
 /**
- * Validate the base branch name from the GraphQL batch (`report.baseBranch`)
- * and fall back safely if it's missing/unsafe. The branch is interpolated into
- * shell commands by `buildFixInstructions`, so we reject anything outside
- * `[A-Za-z0-9._/-]` to prevent shell injection.
+ * Validate the base branch name from the GraphQL batch (`report.baseBranch`). The branch is
+ * interpolated into printed shell commands, so a name outside `[A-Za-z0-9._/-]` (or an empty
+ * one) is `unusable`: callers omit the command and tell the agent to read the base from the PR.
  */
 export function validateBaseBranch(raw: string): BaseBranchLookup {
   const trimmed = raw.trim();
-  if (trimmed === "") {
-    return {
-      branch: "main",
-      isFallback: true,
-      failureReason: "GraphQL batch returned an empty base branch name",
-    };
-  }
-  if (!/^[A-Za-z0-9._/-]+$/.test(trimmed)) {
-    return {
-      branch: "main",
-      isFallback: true,
-      failureReason: `base branch ${JSON.stringify(trimmed)} contains unsafe characters`,
-    };
-  }
-  return { branch: trimmed, isFallback: false };
+  return /^[A-Za-z0-9._/-]+$/.test(trimmed)
+    ? { branch: trimmed, unusable: false }
+    : { branch: UNKNOWN_BASE_BRANCH, unusable: true };
 }
 
 export function buildEscalateHumanMessage(
@@ -287,10 +276,6 @@ export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: st
   if (triggers.includes("stall-state-unavailable")) {
     const reason = detail ?? "unknown error";
     return `The stall timer could not be saved (${reason}). Fix PR_SHEPHERD_STATE_DIR or the directory permissions, then resume. Automated polling is paused because a stuck loop would not be detected.`;
-  }
-  if (triggers.includes("base-branch-unknown")) {
-    const reason = detail ? ` (${detail})` : "";
-    return `Could not determine the PR's base branch${reason} — automated rebases are paused because branch safety is unclear. Run the rebase manually against the PR's real target branch.`;
   }
   if (triggers.includes("triage-thrash")) {
     const attempts = loadConfig().iterate["triage-attempts-per-thread"];

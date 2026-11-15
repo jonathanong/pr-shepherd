@@ -13,7 +13,7 @@ describe("REST queue policy in one-PR merge instructions", () => {
   it.each([
     { classic: false, configured: "squash", expected: "direct_merge" },
     { classic: true, configured: undefined, expected: "default" },
-    { classic: true, configured: "squash", expected: "escalate" },
+    { classic: true, configured: "squash", expected: "wait" },
   ])(
     "routes complete empty rules with classic policy %j",
     async ({ classic, configured, expected }) => {
@@ -50,10 +50,10 @@ describe("REST queue policy in one-PR merge instructions", () => {
         }),
       );
 
-      if (expected === "escalate") {
+      if (expected === "wait") {
         expect(result).toMatchObject({
-          action: "escalate",
-          escalate: { triggers: ["merge-method-unavailable"] },
+          action: "wait",
+          log: expect.stringContaining("could not read merge-queue policy"),
         });
       } else {
         expect(result.action).toBe("merge");

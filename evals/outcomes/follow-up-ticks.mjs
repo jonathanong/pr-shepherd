@@ -7,4 +7,5 @@
 export const cancelledNoRerun = (tick) =>
   tick
     .replace("[conclusion: FAILURE] [attempt: 2]", "[conclusion: CANCELLED]")
-    .replace("`800` — `CI › tests`", "`801` — `CI › build`");
+    .replace("`800` — `CI › tests`", "`801` — `CI › build`")
+    .replace("`gh run view 800 ", "`gh run view 801 ");
