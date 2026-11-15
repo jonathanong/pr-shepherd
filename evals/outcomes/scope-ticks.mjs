@@ -79,7 +79,7 @@ Stack: 7 (layer ${layers.indexOf(pr) + 1}/${layers.length}, base ${layers.indexO
 ## Instructions
 
 1. PR #${pr} is layer ${layers.indexOf(pr) + 1} of ${layers.length} in native stack #7; do not run \`gh pr merge\` for this layer.
-2. Run \`pr-shepherd stack ${URL(pr)} --until-terminal --merge-through ${URL(pr)}\` to merge this layer and the unmerged layers below it, never a layer above it. If lower layers are not yours it escalates \`unowned-stack-layers\` and merges nothing: report that to the user. Otherwise it emits one merge command that lands every layer it lists. Run that command as printed: do not merge the layers one at a time with \`gh pr merge\`, and do not rebase or push between layers.`;
+2. Run \`pr-shepherd stack ${URL(pr)} --until-terminal --merge-through ${URL(pr)}\` to merge this layer and the unmerged layers below it, never a layer above it. If lower layers are not yours it escalates \`unowned-stack-layers\` and merges nothing: follow its instructions. Otherwise it emits one merge command that lands every layer it lists. Run that command as printed: do not merge the layers one at a time with \`gh pr merge\`, and do not rebase or push between layers.`;
 
 /** An `iterate` mock for stack #7 that answers each PR in the call with its route. */
 export const routeMock = (layers) => () => `---
