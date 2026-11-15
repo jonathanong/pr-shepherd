@@ -36,8 +36,9 @@ function groupIsStable(group: string): boolean {
 }
 
 /**
- * False only when the workflow's `pull_request` / `pull_request_target` triggers all list
- * `types` without `synchronize`: a fix push then starts no replacement run to cancel the old one.
+ * False when any `pull_request` / `pull_request_target` trigger lists `types` without
+ * `synchronize`: the run in progress may be of that event, and a fix push then starts no
+ * replacement run of it. Conservative: an unverified event withholds the cancel.
  */
 function pushRetriggers(on: unknown): boolean {
   if (on === null || typeof on !== "object" || Array.isArray(on)) return true;
@@ -45,7 +46,7 @@ function pushRetriggers(on: unknown): boolean {
     .map((name) => (on as Record<string, unknown>)[name])
     .filter((trigger) => trigger !== undefined);
   if (triggers.length === 0) return true;
-  return triggers.some((trigger) => {
+  return triggers.every((trigger) => {
     const types =
       trigger !== null && typeof trigger === "object"
         ? (trigger as Record<string, unknown>)["types"]

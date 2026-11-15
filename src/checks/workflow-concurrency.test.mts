@@ -73,6 +73,11 @@ describe("parseWorkflowConcurrency", () => {
     const types = (on: string) => parseWorkflowConcurrency(`on:\n${on}\n${body}`);
     expect(types("  pull_request:\n    types: [opened, reopened]")?.raw).toBe(raw);
     expect(types("  pull_request:\n    types: [opened, synchronize]")?.cancelInProgress).toBe(true);
+    expect(
+      types(
+        "  pull_request:\n    types: [labeled]\n  pull_request_target:\n    types: [synchronize]",
+      )?.raw,
+    ).toBe(raw);
     expect(types("  pull_request:\n    branches: [main]")?.cancelInProgress).toBe(true);
     expect(types("  pull_request:")?.cancelInProgress).toBe(true);
     expect(types("  push:")?.cancelInProgress).toBe(true);
