@@ -67,7 +67,7 @@ One `iterate` call returns everything the agent needs about the PR:
 
 One exception: a `COMMENTED` review that was already minimized before the first tick is not fetched. [docs/handled-cases.md](docs/handled-cases.md) catalogs the GitHub edge cases this covers.
 
-In the [outcome evals](evals/README.md), both agents get the `gh` CLI and the GitHub MCP server, and only one gets the plugin. These PR states separated them most (score with the plugin vs. with `gh` + MCP, 2026-11-12; 95% interval of the difference excludes 0):
+In the [outcome evals](evals/README.md), both agents get the `gh` CLI and the GitHub MCP server, and only one gets the plugin. These PR states separated them most (score with the plugin vs. with `gh` + MCP, 2026-11-15; 95% interval of the difference excludes 0):
 
 | PR state                                                                 | Plugin | gh/MCP |
 | ------------------------------------------------------------------------ | -----: | -----: |
@@ -99,7 +99,7 @@ Where the saving comes from, and where it does not:
 
 For a single PR, each tick returns exactly one action: `WAIT`, `READY`, `MARK_READY`, `TRIAGE`, `MERGE`, `CANCEL`, or `ESCALATE`. A `stack` poll can also return `SHEPHERD`, which starts one-PR sessions for owned layers. Every action except `CANCEL` comes with numbered `## Instructions` and exact commands, so the agent does not invent policy.
 
-In the [outcome evals](evals/README.md) (Sonnet 5.5, 33 PR states, 2026-11-12), the agent scores **1.00** with the plugin and **0.55** with `gh` + the GitHub MCP server, a Δ of **+0.45** [+0.40, +0.49]. That is the latest run of each scenario; failing scenarios were rerun after fixes. Every category favors the plugin, from CI (+0.07) to stacks (+0.63) and the merge queue (+1.00). The output contract is in [docs/actions.md](docs/actions.md).
+In the [outcome evals](evals/README.md) (Sonnet 5.5, 56 PR states, one full run on 2026-11-15), the agent scores **0.96** with the plugin and **0.47** with `gh` + the GitHub MCP server, a Δ of **+0.49**. Two scenarios come from a rerun after a fix. Every category favors the plugin, from review feedback (+0.21) to stacks (+0.73) and the merge queue (+1.00). The output contract is in [docs/actions.md](docs/actions.md).
 
 ### Lower GitHub API quota use
 

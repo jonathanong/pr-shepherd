@@ -10,7 +10,20 @@ describe("buildCancelRunsInstruction", () => {
     expect(buildCancelRunsInstruction([run])).toBeUndefined();
     expect(buildCancelRunsInstruction([])).toBeUndefined();
     const step = buildCancelRunsInstruction([{ ...run, cancelCommand: "gh run cancel 7 -R o/r" }]);
-    expect(step).toContain("run every `cancel:` under `## In-progress runs` now, before editing");
-    expect(step).toContain("If you will push nothing, leave them running.");
+    expect(step).toBe(
+      "If any item will need a code change, cancel run 7 now with its `cancel:` command, before editing; ignore errors for runs that already finished. If you will push nothing, leave every run running.",
+    );
+  });
+
+  it("names every cancellable run and keeps the others running", () => {
+    const base = { workflowName: "CI", status: "IN_PROGRESS", concurrency: "none" };
+    const step = buildCancelRunsInstruction([
+      { ...base, runId: "7", cancelCommand: "gh run cancel 7 -R o/r" },
+      { ...base, runId: "8" },
+      { ...base, runId: "9", cancelCommand: "gh run cancel 9 -R o/r" },
+    ]);
+    expect(step).toBe(
+      "If any item will need a code change, cancel runs 7, 9 now with their `cancel:` commands, before editing; ignore errors for runs that already finished. Cancel no other run: a push does not cancel the rest, so cancelling them only discards their results. If you will push nothing, leave every run running.",
+    );
   });
 });

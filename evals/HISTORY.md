@@ -6,6 +6,54 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-15: first full run of all 56 scenarios, and the cancel-step fix for 46
+
+The first clean pass of every scenario in one run, on `main` at #744. Sonnet 5.5
+at low effort, opus judge, 3 runs per arm, $412.63. Plugin 0.95 vs gh/MCP 0.47
+(Δ +0.48). Four runs were excluded (one in 05, two in 36, one in 51) and the
+runner exited 1.
+
+| Category             | Scenarios | Plugin | gh/MCP | Δ     |
+| -------------------- | --------- | ------ | ------ | ----- |
+| Review feedback      | 8         | 1.00   | 0.79   | +0.21 |
+| CI                   | 14        | 0.90   | 0.55   | +0.36 |
+| Merge gates & branch | 8         | 0.96   | 0.54   | +0.42 |
+| Merge queue          | 4         | 1.00   | 0.00   | +1.00 |
+| Safety & terminal    | 4         | 1.00   | 0.75   | +0.25 |
+| Stacks               | 15        | 0.96   | 0.22   | +0.73 |
+| Creating PRs         | 3         | 0.89   | 0.56   | +0.33 |
+| **All**              | 56        | 0.95   | 0.47   | +0.48 |
+
+Plugin scenarios below 1.00:
+
+- **46 at 0.33, a real weakness.** Two of three agents also cancelled runs
+  502 to 504, which Shepherd had printed without a `cancel:` line (no
+  concurrency group, an unevaluated expression, a pending approval). The step
+  said to run every `cancel:` command but never said to leave the others alone.
+- **16, 18, 30, 37 and 52 at 0.67.** One run each hedged a later step ("if
+  needed", "consider") where the grader wants a commitment. 18 is the only
+  scenario where gh/MCP scored higher (1.00). Treated as variance until a rerun
+  repeats it.
+- **50 at 0.67.** The failed run passes when re-judged with `explain.mjs`.
+
+The cancel step now names the runs to cancel ("cancel run 500 now with its
+`cancel:` command") and, when another listed run has no `cancel:` line, adds
+"Cancel no other run: a push does not cancel the rest, so cancelling them only
+discards their results." Rerun of 46 and 47 on that branch, $15.66, exit 0:
+
+| Scenario                               | Plugin | gh/MCP | Δ     |
+| -------------------------------------- | ------ | ------ | ----- |
+| `46-cancel-superseded-runs-before-fix` | 1.00   | 0.00   | +1.00 |
+| `47-no-push-no-cancel`                 | 1.00   | 1.00   | 0.00  |
+
+Every plugin run on 46 cancelled only run 500, before editing. Layered over the
+full run, the plugin scores 0.96 vs 0.47.
+
+A note on reading a rerun: the first analysis of this rerun read a stale
+`out-cancel` directory from an earlier session, whose judge calls had failed in
+a sandbox, so the wait loop returned at once. Use a fresh output directory per
+run.
+
 ## 2026-11-15: stack merges that need READY receipts, 57 and 58
 
 Merging stack #737 took about ten commands: every layer looked ready in

@@ -15,7 +15,7 @@ const SECTION = `## In-progress runs
 `;
 
 const STEP =
-  "1. If any item will need a code change, run every `cancel:` under `## In-progress runs` now, before editing; ignore errors for runs that already finished. If you will push nothing, leave them running.\n";
+  "1. If any item will need a code change, cancel run 500 now with its `cancel:` command, before editing; ignore errors for runs that already finished. If you will push nothing, leave every run running.\n";
 
 // The reviewer's follow-up sits in the thread so both arms see that no rename is wanted.
 const THREAD_COMMENTS = `#### [commentId=PRRC_1](https://github.com/owner/repo/pull/42#discussion_r1) (@reviewer)
