@@ -53,7 +53,13 @@ export function readyPrefix(result: PollSummaryResult, ownedOnly: boolean): Stac
     if (!isStackLayer(item)) break;
     if (item.action === "escalate" || !isStackLayerReady(item) || stale.has(item.pr)) break;
     if (ownedOnly && !item.owned) break;
-    if (layers.some((l) => l.state === "CLOSED" && stackPosition(l) < stackPosition(item))) break;
+    if (
+      layers.some(
+        (l) =>
+          (l.state === "CLOSED" || l.state === "UNKNOWN") && stackPosition(l) < stackPosition(item),
+      )
+    )
+      break;
     prefix.push(item);
   }
   return prefix;

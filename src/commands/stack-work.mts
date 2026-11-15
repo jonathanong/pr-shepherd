@@ -59,14 +59,19 @@ function onlyUnownedWork(layers: PollSummaryItem[]): boolean {
 /** The turn must outlive every non-terminal layer; a one-PR session ending does not end the stack. */
 const STACK_KEEP_WATCHING = "Keep watching until every layer is terminal.";
 
+/** Work remains, but only on other authors' layers. The stack stall timer escalates if it never moves. */
+const NO_OWNED_SESSION =
+  "No owned layer needs a session. The remaining work belongs to other authors. Recheck at the configured polling cadence; Shepherd escalates `stall-timeout` if the stack does not change.";
+
 /** The literal stack command to rerun, or the generic name when the caller's command is unknown. */
 export function stackRerunTarget(command?: string): string {
   return command ? `\`${command}\`` : "this same `stack` command";
 }
 
 /**
- * The closing step after routed sessions: rerun the stack command, or stop when nothing is owned.
- * Returns the plan action: a stop is a handoff, so no rerun, quota cadence, or wake-up follows it.
+ * The closing step after routed sessions: rerun the stack command, or wait when nothing is owned.
+ * Returns the plan action: other authors' layers are not an intervention, so the plan waits under
+ * the stack stall timer, with no rerun, quota cadence, or wake-up step.
  * `keepWatching` is false when a human handoff may end the run before every layer is terminal.
  */
 export function appendStackRerunInstruction(
@@ -74,11 +79,9 @@ export function appendStackRerunInstruction(
   layers: PollSummaryItem[],
   rerun: string,
   keepWatching = true,
-): "shepherd" | "escalate" {
+): "shepherd" | "wait" {
   const stop = onlyUnownedWork(layers);
   const step = keepWatching ? `${rerun} ${STACK_KEEP_WATCHING}` : rerun;
-  instructions.push(
-    `${instructions.length + 1}. ${stop ? "No owned layer needs a session. Report this overview and stop." : step}`,
-  );
-  return stop ? "escalate" : "shepherd";
+  instructions.push(`${instructions.length + 1}. ${stop ? NO_OWNED_SESSION : step}`);
+  return stop ? "wait" : "shepherd";
 }

@@ -48,7 +48,7 @@ function sessionInstruction(item: PollSummaryItem): string {
     return ` PR #${item.pr} needs a one-PR Shepherd session, but no command was available.`;
   }
   const queueNote = item.queueRemoval
-    ? " That session fixes failing queue CI, or escalates when the removal has no concrete fix."
+    ? " That session fixes failing queue CI, or investigates a removal with no failed check once, then escalates if it is unchanged."
     : "";
   return `${removal} Run \`${item.pollCommand}\`.${queueNote}`;
 }

@@ -63,7 +63,7 @@ After `## Instructions`, rerun the same command unless the action is `[CANCEL]` 
 - `[CANCEL]` ends polling this pull request and prints no instructions. Only `[ESCALATE]` hands work to a human. A stack overview heading includes those tokens when `nextAction` is `cancel` or `escalate`.
 - A one-PR `[CANCEL]` or `[ESCALATE]` ends only that PR's loop. Keep every other PR's loop running until it is terminal too, and continue any remaining pull requests or issues from the original request.
 - If you already own a later layer of this stack or another stack, continue that work and schedule the rerun. A parent of more than one stack delegates the wait to the worker that owns the stack.
-- On a stack overview, shepherd, mark ready, and push only rows marked `owned` (with whole-stack ownership no row carries the mark). If every remaining session belongs to someone else, report the overview and stop.
+- On a stack overview, shepherd, mark ready, and push only rows marked `owned` (with whole-stack ownership no row carries the mark). If every remaining session belongs to someone else, the result is `WAIT`: report the overview and recheck at the polling cadence.
 - Do not wait on `gh pr checks`, `gh pr watch`, `gh run watch`, or equivalent GitHub MCP check waiters; they hide review comments until CI finishes. Fetching check logs is fine.
 - A user-supplied `--merge` explicitly allows the emitted merge, enqueue, and dequeue commands for the selected PR or stack, including a requeue the "Merge queue ejection" playbook permits. Forward it to the CLI or MCP and run those commands without another conversational confirmation. Request runtime escalation when the host requires it.
 

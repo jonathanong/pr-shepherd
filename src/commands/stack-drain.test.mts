@@ -28,7 +28,7 @@ describe("bottom-layer stack drain", () => {
       false,
     );
     expect(text(result)).toContain(
-      "PR #1 was removed from the merge queue (`failed_checks` by @github). Run `pr-shepherd https://github.com/acme/widgets/pull/1 --until-terminal`. That session fixes failing queue CI, or escalates when the removal has no concrete fix.",
+      "PR #1 was removed from the merge queue (`failed_checks` by @github). Run `pr-shepherd https://github.com/acme/widgets/pull/1 --until-terminal`. That session fixes failing queue CI, or investigates a removal with no failed check once, then escalates if it is unchanged.",
     );
   });
 

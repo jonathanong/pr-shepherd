@@ -1,6 +1,11 @@
 /* eslint-disable max-lines */
 import { buildQuotaAwareContinuation } from "../quota-warning.mts";
-import type { PollSummaryItem, PollSummaryResult, StackMergeScope } from "../types.mts";
+import type {
+  PollSummaryItem,
+  PollSummaryResult,
+  StackHandoffReason,
+  StackMergeScope,
+} from "../types.mts";
 import { explicitInstructions } from "./poll-summary-explicit-instructions.mts";
 import {
   appendAutonomousInstructions,
@@ -77,14 +82,24 @@ export function planPollSummary(
         return {
           ...layer,
           action: "escalate" as const,
-          reasons: [...layer.reasons, "closed-unmerged-dependency"],
+          reasons: [...layer.reasons, "closed-unmerged-dependency" satisfies StackHandoffReason],
         };
       }
-      if (layer.state !== "OPEN" && layer.state !== "MERGED") {
+      if (layer.state === "CLOSED") {
         return {
           ...layer,
           action: "escalate" as const,
-          reasons: [...layer.reasons, "unverified-stack-state"],
+          reasons: [...layer.reasons, "closed-unmerged-layer" satisfies StackHandoffReason],
+        };
+      }
+      if (layer.state === "UNKNOWN") {
+        // A fetch gap, not a human decision: wait and retry under the stack stall timer.
+        return {
+          ...layer,
+          action: "wait" as const,
+          reasons: layer.reasons.includes("unverified-stack-state")
+            ? layer.reasons
+            : [...layer.reasons, "unverified-stack-state"],
         };
       }
       if (
@@ -157,7 +172,9 @@ function planStack(
   const open = result.prs.filter((item) => item.state === "OPEN");
   const gaps = result.stackAncestry ?? [];
   const staleChildren = new Set(gaps.map((gap) => gap.childPr));
-  const stackMergeable = gaps.length === 0 && open.every(isStackLayerReady);
+  const unverified = result.prs.filter((item) => item.state === "UNKNOWN");
+  const stackMergeable =
+    gaps.length === 0 && unverified.length === 0 && open.every(isStackLayerReady);
   const outside = aboveThroughTarget(result, scope);
   const work = splitStackWork(
     open.filter(
@@ -198,7 +215,7 @@ function planStack(
     return { action: stop ? "escalate" : "shepherd", stackMergeable: false, instructions };
   }
 
-  if (open.length === 0) {
+  if (open.length === 0 && unverified.length === 0) {
     return {
       action: "cancel",
       stackMergeable: true,
@@ -226,7 +243,7 @@ function planStack(
       return { action: ownedWork ? "shepherd" : "escalate", stackMergeable: false, instructions };
     }
     if (!agentWork) {
-      if (work.held.length > 0 && work.idle.length === 0) {
+      if (work.held.length > 0 && work.idle.length === 0 && unverified.length === 0) {
         return {
           action: "cancel",
           stackMergeable: false,
@@ -235,7 +252,7 @@ function planStack(
           ],
         };
       }
-      return idleWaitPlan(work.idle);
+      return idleWaitPlan([...work.idle, ...unverified]);
     }
     const instructions: string[] = [];
     appendAutonomousInstructions(instructions, work.sessions, partial);
@@ -253,7 +270,7 @@ function planStack(
       work.sessions,
       `After the selected one-PR sessions, rerun ${again}.`,
     );
-    return { action, stackMergeable: false, instructions };
+    return sessionsPlan(action, work.sessions, false, instructions);
   }
 
   if (open.some((item) => item.isInMergeQueue)) {
@@ -284,7 +301,7 @@ function planStack(
       sessions,
       `After the selected one-PR sessions, rerun ${again}.`,
     );
-    return { action, stackMergeable, instructions };
+    return sessionsPlan(action, sessions, stackMergeable, instructions);
   }
 
   return retargetWaitPlan(open[0]!);
@@ -300,4 +317,16 @@ function closedDependency(items: PollSummaryItem[], pr: number): boolean {
         item.pr === pr && item.state === "CLOSED" && stackPosition(item) < stackPosition(lastOpen),
     ),
   );
+}
+
+/** Routed sessions, or an idle wait (under the stack stall timer) when every one is another author's. */
+function sessionsPlan(
+  action: "shepherd" | "wait",
+  layers: PollSummaryItem[],
+  stackMergeable: boolean,
+  instructions: string[],
+): StackPlan {
+  return action === "wait"
+    ? { action, stackMergeable, waiting: true, idle: layers, instructions }
+    : { action, stackMergeable, instructions };
 }
