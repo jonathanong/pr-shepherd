@@ -142,13 +142,22 @@ describe("workflowSuites", () => {
             event: "pull_request",
             url: "https://example.test/run/9",
             workflow: { name: "CI" },
+            file: { path: ".github/workflows/ci.yml" },
           },
         },
       ],
     });
     expect(workflowSuites(raw)).toEqual({
       headWorkflowSuites: [
-        { status: "IN_PROGRESS", conclusion: null, workflowRun: { event: "pull_request" } },
+        {
+          status: "IN_PROGRESS",
+          conclusion: null,
+          workflowRun: {
+            event: "pull_request",
+            databaseId: 9,
+            path: ".github/workflows/ci.yml",
+          },
+        },
       ],
     });
   });

@@ -65,6 +65,7 @@ export function buildFixInstructions(
   queueEjection?: QueueEjectionRecovery, // current merge-queue removal with failing queue checks
   instructionStyle: InstructionStyle = "inline", // see iterate.instructions
   dequeueCommand?: string, // a conflicting PR that is still a merge-queue entry
+  cancelRunsStep?: string, // cancel superseded in-progress runs before editing
 ): string[] {
   const instructions: string[] = [];
   const { locatedThreads, unlocatedThreads } = partitionFixThreads(
@@ -94,6 +95,7 @@ export function buildFixInstructions(
   // A queued conflict offers a wait path that publishes nothing, so fixes, branch updates,
   // pushes, and review mutations (which must follow a push) become path (a).
   const pathA = (step: string) => (dequeueCommand ? `If you chose (a): ${step}` : step);
+  if (cancelRunsStep) instructions.push(cancelRunsStep);
   if (hasNonConflictHints) instructions.push(pathA("Fix each warranted item."));
   // A conflicting native stack layer follows the printed gh-stack route, so it omits the hint.
   const branchUpdateHint = buildBehindBaseHintInstruction(baseBranch, behindBaseHint, {

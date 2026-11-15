@@ -15,6 +15,7 @@ import { collectUnreportedRequired, refreshCachedUnreported } from "./check-unre
 import { getRepoInfo, getCurrentPrNumber, type RepoInfo } from "../github/client.mts";
 import { classifyChecks, getCiVerdict } from "../checks/classify.mts";
 import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
+import { withRunWorkflowPaths } from "../checks/run-workflow-paths.mts";
 import { fetchStartupFailureChecks, triageFailingChecks } from "../checks/triage.mts";
 import { TriageBudget } from "../checks/triage-budget.mts";
 import { attachPendingDeployments } from "../checks/pending-deployments.mts";
@@ -194,7 +195,10 @@ async function runScopedCheck(
           stateKey,
           triageBudget,
         );
-  const allChecks = mergeStartupFailureChecks(batchData.checks, startupFailureChecks);
+  const allChecks = withRunWorkflowPaths(
+    mergeStartupFailureChecks(batchData.checks, startupFailureChecks),
+    result.headWorkflowSuites ?? [],
+  );
   const unreported = await collectUnreportedRequired(
     {
       batchData,

@@ -22,7 +22,11 @@ function parseHeadWorkflowSuites(raw: RawPr): WorkflowSuiteSnapshot[] {
       {
         status: node.status ?? null,
         conclusion: node.conclusion,
-        workflowRun: { event: node.workflowRun.event },
+        workflowRun: {
+          event: node.workflowRun.event,
+          databaseId: node.workflowRun.databaseId,
+          path: normalizeWorkflowPath(node.workflowRun.file?.path) ?? null,
+        },
       },
     ];
   });

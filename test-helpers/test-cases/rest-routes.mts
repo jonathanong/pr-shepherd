@@ -9,6 +9,7 @@
  * An unrouted request throws: a permissive stub would let a dropped or GraphQL-only operation
  * pass unnoticed.
  */
+import { workflowFileRoute } from "./workflow-file-route.mts";
 
 export interface StackLayerRow {
   position: number;
@@ -152,6 +153,8 @@ export function restRoutesForFixture(fixture, batchData: Record<string, any>) {
     if (method === "GET" && path.startsWith(`${prefix}/rules/branches/`)) {
       return json([]);
     }
+    const workflow = workflowFileRoute(method, path, prefix, fixture.workflowFiles);
+    if (workflow) return workflow;
     if (method === "GET" && path === `${prefix}/stacks`) {
       const member = Number(parsed.searchParams.get("pull_request"));
       rows = stackLayerRows(batchData, member, fixture.stackTopology);

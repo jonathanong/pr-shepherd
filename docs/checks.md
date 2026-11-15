@@ -41,7 +41,7 @@ Each check gets one `CheckCategory`. Rules apply in this order; the first match 
 
 ### Ignore/protection precedence
 
-`checks.ignore` matches the raw check name (`CheckRun.name` or `StatusContext.context`), case-insensitively, and removes matches from the CI verdict. `checks.never-ignore` wins when it matches the workflow name or check name of any check in that Actions run: the run's checks stay visible and blocking. Shepherd never cancels workflow runs.
+`checks.ignore` matches the raw check name (`CheckRun.name` or `StatusContext.context`), case-insensitively, and removes matches from the CI verdict. `checks.never-ignore` wins when it matches the workflow name or check name of any check in that Actions run: the run's checks stay visible and blocking. Shepherd never cancels workflow runs itself; on `triage` it may print `gh run cancel` for in-progress runs whose workflow declares `concurrency.cancel-in-progress: true`, except those matching `checks.never-cancel` ([configuration.md](configuration.md#checksnever-cancel--default-)).
 
 `checks.never-ignore` does not bypass the event filter. A protected workflow triggered by `workflow_dispatch`, `push`, or another non-PR event counts toward readiness only if that event is in `checks.ci-trigger-events`.
 

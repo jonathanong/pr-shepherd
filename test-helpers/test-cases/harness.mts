@@ -187,6 +187,7 @@ import {
   clearStallState,
 } from "../../src/state/iterate-stall.mts";
 import { readFixAttempts, writeFixAttempts } from "../../src/state/fix-attempts.mts";
+import { clearWorkflowFileMemo } from "../../src/commands/iterate/workflow-files.mts";
 
 const mockFetchPrBatch = vi.mocked(fetchPrBatch);
 const mockFetchPollSummary = vi.mocked(fetchPollSummary);
@@ -354,6 +355,8 @@ export interface Fixture {
    * to `restResponses` when set, else the default empty success.
    */
   restErrorResponses?: Record<string, { status: number; body: unknown }>;
+  /** Workflow file text by repo path (`.github/workflows/ci.yml`), read by the cancel-runs lookup. */
+  workflowFiles?: Record<string, string>;
   /** Sets CLAUDE_CODE_REMOTE=true for the run (a Claude Code cloud session behind the proxy). */
   claudeCodeRemote?: boolean;
   /** Extra CLI args appended after "42". */
@@ -581,8 +584,20 @@ export function applyFixture(fixture: Fixture, transport: FixtureTransport = "gr
       ),
     );
   });
-  mockGraphql.mockImplementation((query: string) => {
+  mockGraphql.mockImplementation((query: string, variables?: Record<string, unknown>) => {
     if (rest) throw new Error("REST fixture variant issued GraphQL");
+    if (query.includes("query WorkflowFiles")) {
+      const files = Object.entries(variables ?? {})
+        .filter(([key]) => /^e\d+$/.test(key))
+        .map(([key, expression]) => [key.slice(1), String(expression)]);
+      const repository = Object.fromEntries(
+        files.map(([index, expression]) => {
+          const text = fixture.workflowFiles?.[expression.slice(expression.indexOf(":") + 1)];
+          return [`w${index}`, text === undefined ? null : { text, isTruncated: false }];
+        }),
+      );
+      return Promise.resolve({ data: { repository } });
+    }
     if (query.includes("CheckBlockerPull") && fixture.checkBlockers) {
       const state = fixture.checkBlockers.blockerState;
       return Promise.resolve({
@@ -884,6 +899,7 @@ export function registerHarnessBefore(): void {
   let stateDir: string | undefined;
   beforeEach(() => {
     vi.clearAllMocks();
+    clearWorkflowFileMemo();
     // Unmocked state (REST identity associations, conditional caches) lives in a per-test
     // directory so one fixture's recorded handles cannot leak into another.
     stateDir = mkdtempSync(join(tmpdir(), "pr-shepherd-fixture-"));

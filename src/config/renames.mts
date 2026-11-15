@@ -6,7 +6,7 @@ const RENAMED_KEYS: Readonly<Record<string, string>> = {
   cliCommand: "cli-command",
   botUsernames: "bot-usernames",
   ignoreChecks: "checks.ignore",
-  "actions.neverCancelRuns": "checks.never-ignore",
+  "actions.neverCancelRuns": "checks.never-cancel",
   "checks.ciTriggerEvents": "checks.ci-trigger-events",
   "checks.ignoreLogLines": "checks.ignore-log-lines",
   "iterate.fixAttemptsPerThread": "iterate.triage-attempts-per-thread",

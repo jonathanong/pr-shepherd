@@ -18,6 +18,7 @@ import {
   threadHasAuthorizedMutation,
 } from "./thread-mutation-routing.mts";
 import { buildFixInstructions } from "./render.mts";
+import { buildCancelRunsInstruction, buildInProgressRuns } from "./in-progress-runs.mts";
 import { buildRemovedQueueRecovery, buildStackQueueRemovalAcknowledgment } from "./merge.mts";
 import { hasLogEvidence } from "./check-evidence.mts";
 import {
@@ -313,13 +314,11 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       },
     };
   }
-  // GitHub does not expose a per-run viewer capability for cancellation, so Shepherd never
-  // issues or recommends a cancellation regardless of repository role. A rerun is different:
-  // GitHub's Actions rerun API requires actions:write, which rides with WRITE+ repo access, so
-  // repositoryPermission is a proxy for account-level rerun capability (see canRerunWorkflows) —
-  // it does not confirm the credential executing `gh` has that scope; an unauthorized rerun
-  // simply fails when the agent runs it, the same residual risk as every other CLI-recommended
-  // git/gh mutation in this codebase.
+  // GitHub's Actions rerun and cancel APIs both require actions:write, which rides with WRITE+
+  // repo access, so repositoryPermission is a proxy for account-level capability (see
+  // canRerunWorkflows) — it does not confirm the credential executing `gh` has that scope; an
+  // unauthorized rerun or cancel simply fails when the agent runs it, the same residual risk as
+  // every other CLI-recommended command in this codebase. Shepherd itself never cancels a run.
   const baseLookup = validateBaseBranch(report.baseBranch);
   const threads = report.threads.actionable.map(toAgentThread);
   const resolutionOnlyThreads = report.threads.resolutionOnly;
@@ -556,6 +555,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
   const dequeueCommand = queuedConflict
     ? renderShellCommand(buildDequeueCommand(report.nodeId))
     : undefined;
+  const inProgressRuns = await buildInProgressRuns(report, rerunAuthorized);
   const instructions = buildFixInstructions(
     threads,
     actionableComments,
@@ -579,6 +579,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     queueEjection,
     opts.instructions ?? configuredInstructions,
     dequeueCommand,
+    buildCancelRunsInstruction(inProgressRuns),
   );
   if (recovery && "unavailable" in recovery) instructions.unshift(recovery.unavailable);
   if (acknowledgmentRecovery && "unavailable" in acknowledgmentRecovery)
@@ -660,6 +661,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       editedSummaries,
       surfacedApprovals,
       checks,
+      ...(inProgressRuns.length > 0 && { inProgressRuns }),
       ...(requeue && { requeue }),
       ...(queueRemovalAcknowledgment && { queueRemovalAcknowledgment }),
       changesRequestedReviews,

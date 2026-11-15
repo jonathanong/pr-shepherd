@@ -71,6 +71,13 @@
             "type": "string"
           }
         },
+        "never-cancel": {
+          "default": [],
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "ci-trigger-events": {
           "default": [
             "pull_request",
@@ -334,6 +341,10 @@
         },
         "work-while-queued": {
           "default": false,
+          "type": "boolean"
+        },
+        "cancel-runs-before-push": {
+          "default": true,
           "type": "boolean"
         }
       },

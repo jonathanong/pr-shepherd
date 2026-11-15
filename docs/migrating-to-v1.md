@@ -54,7 +54,7 @@ Every multi-word key is now kebab-case; single-word keys such as `github.transpo
 | `cliCommand`                                    | `cli-command`                                                          |
 | `botUsernames`                                  | `bot-usernames`                                                        |
 | `ignoreChecks`                                  | `checks.ignore`                                                        |
-| `actions.neverCancelRuns`                       | `checks.never-ignore`                                                  |
+| `actions.neverCancelRuns`                       | `checks.never-cancel`                                                  |
 | `checks.ciTriggerEvents`                        | `checks.ci-trigger-events`                                             |
 | `checks.ignoreLogLines`                         | `checks.ignore-log-lines`                                              |
 | `iterate.fixAttemptsPerThread`                  | `iterate.triage-attempts-per-thread`                                   |
@@ -175,11 +175,11 @@ Most of these aliases printed a deprecation warning in 0.x. In v1 they are all u
 
 ### Removed flags
 
-| Removed flag                    | Replacement                                                     |
-| ------------------------------- | --------------------------------------------------------------- |
-| `--stack PR`                    | The `stack` subcommand                                          |
-| `--poll-mode auto\|poll\|event` | `pr-shepherd iterate` for one tick; the default command to loop |
-| `--no-auto-cancel-actionable`   | None. It was a no-op; Shepherd never cancels workflow runs      |
+| Removed flag                    | Replacement                                                                                      |
+| ------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `--stack PR`                    | The `stack` subcommand                                                                           |
+| `--poll-mode auto\|poll\|event` | `pr-shepherd iterate` for one tick; the default command to loop                                  |
+| `--no-auto-cancel-actionable`   | None. It was a no-op; Shepherd never cancels runs itself (see `actions.cancel-runs-before-push`) |
 
 `--no-auto-cancel-actionable` and other unknown flags exit `64`. `iterate` and `apply review` reject an unknown flag before they resolve the PR.
 

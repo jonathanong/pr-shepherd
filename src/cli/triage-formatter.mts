@@ -16,6 +16,7 @@ import { numberInstructions } from "./iterate-instructions.mts";
 import { renderCheckAnnotation } from "./triage-formatter-extra.mts";
 import { renderRelatedJobLines } from "./related-jobs-format.mts";
 import { renderPendingDeploymentLines } from "./pending-deployments-format.mts";
+import { renderInProgressRun } from "./in-progress-run-format.mts";
 import { isFailingAgentCheck } from "../checks/conclusions.mts";
 import type { IterateResultTriage } from "../types.mts";
 import { renderMergeCommand } from "../commands/iterate/merge.mts";
@@ -176,6 +177,11 @@ export function formatTriageResult(
       sections.push(`### ${locator} — \`${workflowPrefix}${jobLabel}\``);
       sections.push(rendered.join("\n\n"));
     }
+  }
+
+  if (result.triage.inProgressRuns) {
+    sections.push("## In-progress runs");
+    sections.push(result.triage.inProgressRuns.map(renderInProgressRun).join("\n\n"));
   }
 
   if (result.triage.changesRequestedReviews.length > 0) {
