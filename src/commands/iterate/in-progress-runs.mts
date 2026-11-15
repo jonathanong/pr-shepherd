@@ -57,11 +57,18 @@ export async function buildInProgressRuns(
     [...groups].map(([runId, group]) => [runId, fileRequest(report, group)]),
   );
   const [owner, name] = report.repo.split("/") as [string, string];
-  const files = await readWorkflowFiles(
-    { owner, name },
-    [...requests.values()].filter(
-      (request): request is WorkflowFileRequest => request !== undefined,
-    ),
+  const wanted = [...requests.values()].filter(
+    (request): request is WorkflowFileRequest => request !== undefined,
+  );
+  // Optional enrichment: a failed read (rate limit included) must not drop the triage output
+  // after the feedback's seen markers are written, so every file is reported unreadable.
+  const files = await readWorkflowFiles({ owner, name }, wanted).catch(
+    (error: unknown): Map<string, { unreadable: string }> => {
+      process.stderr.write(`workflow files unreadable: ${String(error)}\n`);
+      return new Map(
+        wanted.map((request) => [workflowFileKey(request), { unreadable: "request failed" }]),
+      );
+    },
   );
   return [...groups].map(([runId, group]) => {
     const request = requests.get(runId);
@@ -70,9 +77,13 @@ export async function buildInProgressRuns(
     const why = !file ? "no workflow file" : "unreadable" in file ? file.unreadable : "parse error";
     const concurrency = parsed ? parsed.raw : `unreadable (${why})`;
     const workflowName = group[0]!.workflowName!;
+    // Protection covers every check of the run, finished or not.
+    const siblings = [...report.checks.passing, ...report.checks.failing, ...group]
+      .filter((check) => check.runId === runId)
+      .map((check) => check.name);
     const neverCancel = matchedNeverCancel(config.checks["never-cancel"], [
       workflowName,
-      ...group.map((check) => check.name),
+      ...siblings,
     ]);
     const status = group.some((check) => check.status === "WAITING") ? "WAITING" : group[0]!.status;
     const failed = report.checks.failing

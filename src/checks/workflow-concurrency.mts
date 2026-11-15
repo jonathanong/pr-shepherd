@@ -8,6 +8,10 @@ export interface WorkflowConcurrency {
   cancelInProgress: boolean;
 }
 
+/** A group expression that changes with every push or run, so a newer run never shares it. */
+const VOLATILE_GROUP =
+  /github\.(sha|run_id|run_number|run_attempt|event\.(after|before|head_commit|pull_request\.head\.sha))|\bhead\.sha\b/i;
+
 function scalar(value: unknown): string {
   return typeof value === "string" ? value : JSON.stringify(value);
 }
@@ -30,5 +34,9 @@ export function parseWorkflowConcurrency(text: string): WorkflowConcurrency | un
       ? (concurrency as Record<string, unknown>)["cancel-in-progress"]
       : undefined;
   if (value === undefined) return { raw: "cancel-in-progress=unset", cancelInProgress: false };
+  const group = (concurrency as Record<string, unknown>)["group"];
+  if (value === true && typeof group === "string" && VOLATILE_GROUP.test(group)) {
+    return { raw: "cancel-in-progress=true (group changes every push)", cancelInProgress: false };
+  }
   return { raw: `cancel-in-progress=${scalar(value)}`, cancelInProgress: value === true };
 }

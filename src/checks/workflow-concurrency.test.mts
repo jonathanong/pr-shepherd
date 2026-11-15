@@ -37,6 +37,27 @@ describe("parseWorkflowConcurrency", () => {
     });
   });
 
+  it("withholds a cancel when the group changes on every push or run", () => {
+    for (const group of [
+      "ci-${{ github.sha }}",
+      "ci-${{ github.run_id }}",
+      "ci-${{ github.event.pull_request.head.sha }}",
+      "ci-${{ github.event.after }}",
+    ]) {
+      expect(
+        parseWorkflowConcurrency(`concurrency:\n  group: "${group}"\n  cancel-in-progress: true\n`),
+      ).toEqual({
+        raw: "cancel-in-progress=true (group changes every push)",
+        cancelInProgress: false,
+      });
+    }
+    expect(
+      parseWorkflowConcurrency(
+        "concurrency:\n  group: ci-${{ github.ref }}\n  cancel-in-progress: true\n",
+      )?.cancelInProgress,
+    ).toBe(true);
+  });
+
   it("reports unset when concurrency has no cancel-in-progress or is a bare group string", () => {
     expect(parseWorkflowConcurrency("concurrency:\n  group: g\n")?.raw).toBe(
       "cancel-in-progress=unset",

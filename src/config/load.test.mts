@@ -33,6 +33,7 @@ describe("loadConfig — no rc file", () => {
     expect(result["mark-ready"]).toEqual({ auto: true, "blocking-reviewer-logins": [] });
     expect(result.actions).toEqual({
       "auto-minimize-suppressed": true,
+      "cancel-runs-before-push": true,
       "work-while-queued": false,
     });
   });
@@ -86,6 +87,7 @@ describe("loadConfig — overrides", () => {
     expect(result["mark-ready"]).toEqual({ auto: false, "blocking-reviewer-logins": ["copilot"] });
     expect(result.actions).toEqual({
       "auto-minimize-suppressed": false,
+      "cancel-runs-before-push": true,
       "work-while-queued": true,
     });
     expect(result.apply["sha-poll-interval-seconds"]).toBe(0.5);

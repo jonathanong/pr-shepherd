@@ -12,7 +12,7 @@ vi.mock("./workflow-files.mts", async (importOriginal) => ({
   readWorkflowFiles: mockReadFiles,
 }));
 
-import { buildCancelRunsInstruction, buildInProgressRuns } from "./in-progress-runs.mts";
+import { buildInProgressRuns } from "./in-progress-runs.mts";
 
 const SHA = "a".repeat(40);
 const CANCEL = "concurrency:\n  group: g\n  cancel-in-progress: true\n";
@@ -39,7 +39,7 @@ function report(
     repo: "owner/repo",
     headSha: SHA,
     baseBranch: "main",
-    checks: { inProgress, failing },
+    checks: { inProgress, failing, passing: [] },
     ...over,
   } as unknown as ShepherdReport;
 }
@@ -82,30 +82,23 @@ describe("buildInProgressRuns", () => {
   });
 
   it("prints why a file is unreadable, and for YAML that does not parse", async () => {
-    files({ [ciKey]: { unreadable: "404" } });
-    expect((await buildInProgressRuns(report([check()]), true))[0]).toMatchObject({
-      concurrency: "unreadable (404)",
-    });
-    files({ [ciKey]: { text: "a: [unclosed" } });
-    expect((await buildInProgressRuns(report([check()]), true))[0]).toMatchObject({
-      concurrency: "unreadable (parse error)",
-    });
-    files({});
-    expect((await buildInProgressRuns(report([check()]), true))[0]).toMatchObject({
-      concurrency: "unreadable (no workflow file)",
-    });
+    const concurrencyFor = async (entries: Parameters<typeof files>[0]) => {
+      files(entries);
+      return (await buildInProgressRuns(report([check()]), true))[0]!.concurrency;
+    };
+    expect(await concurrencyFor({ [ciKey]: { unreadable: "404" } })).toBe("unreadable (404)");
+    expect(await concurrencyFor({ [ciKey]: { text: "a: [unclosed" } })).toBe(
+      "unreadable (parse error)",
+    );
+    expect(await concurrencyFor({})).toBe("unreadable (no workflow file)");
   });
 
   it("names the missing file without a request when the run has no workflow path or head SHA", async () => {
     files({});
-    const noPath = check({ workflowPath: undefined });
-    expect((await buildInProgressRuns(report([noPath]), true))[0]).toMatchObject({
-      concurrency: "unreadable (no workflow file)",
-    });
-    const noHead = report([check()], { headSha: undefined });
-    expect((await buildInProgressRuns(noHead, true))[0]).toMatchObject({
-      concurrency: "unreadable (no workflow file)",
-    });
+    const noPath = await buildInProgressRuns(report([check({ workflowPath: undefined })]), true);
+    expect(noPath[0]).toMatchObject({ concurrency: "unreadable (no workflow file)" });
+    const noHead = await buildInProgressRuns(report([check()], { headSha: undefined }), true);
+    expect(noHead[0]).toMatchObject({ concurrency: "unreadable (no workflow file)" });
     expect(mockReadFiles).toHaveBeenCalledWith({ owner: "owner", name: "repo" }, []);
   });
 
@@ -120,6 +113,27 @@ describe("buildInProgressRuns", () => {
     const byCheck = await buildInProgressRuns(report(sibling), true);
     expect(byCheck[0]).toMatchObject({ neverCancel: "review *" });
     expect(byCheck[0]).not.toHaveProperty("cancelCommand");
+  });
+
+  it("matches never-cancel against finished sibling checks of the run too", async () => {
+    files({ [ciKey]: { text: CANCEL } });
+    config({ checks: { "never-cancel": ["review bot"] } });
+    const passed = check({ name: "Review Bot", status: "COMPLETED" });
+    const runs = await buildInProgressRuns(
+      report([check()], {
+        checks: { inProgress: [check()], passing: [passed], failing: [] },
+      } as unknown as Partial<ShepherdReport>),
+      true,
+    );
+    expect(runs[0]).toMatchObject({ neverCancel: "review bot" });
+  });
+
+  it("reports files unreadable instead of throwing when the read fails", async () => {
+    const write = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    mockReadFiles.mockRejectedValue(new Error("rate limited"));
+    const [run] = await buildInProgressRuns(report([check()]), true);
+    expect(run).toMatchObject({ concurrency: "unreadable (request failed)" });
+    write.mockRestore();
   });
 
   it("withholds the cancel for a WAITING run and reports the waiting status", async () => {
@@ -182,16 +196,5 @@ describe("buildInProgressRuns", () => {
     const queued = report([check()], { mergeQueue: { enabled: true, inQueue: true } });
     expect(await buildInProgressRuns(queued, true)).toEqual([]);
     expect(mockReadFiles).not.toHaveBeenCalled();
-  });
-});
-
-describe("buildCancelRunsInstruction", () => {
-  it("is a step only when some run has a cancel command", () => {
-    const run = { runId: "7", workflowName: "CI", status: "IN_PROGRESS", concurrency: "none" };
-    expect(buildCancelRunsInstruction([run])).toBeUndefined();
-    expect(buildCancelRunsInstruction([])).toBeUndefined();
-    const step = buildCancelRunsInstruction([{ ...run, cancelCommand: "gh run cancel 7 -R o/r" }]);
-    expect(step).toContain("run every `cancel:` under `## In-progress runs` now, before editing");
-    expect(step).toContain("If you will push nothing, leave them running.");
   });
 });
