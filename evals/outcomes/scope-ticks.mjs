@@ -37,6 +37,13 @@ ${layerRows(layers, owned)}
 2. After the merge attempt, rerun the same \`stack\` call; GitHub retargets the next layer onto \`main\`. Shepherd any layer that GitHub rejects or ejects.`;
 };
 
+/** The printed command that approves `lower` by listing it with the owned layers. */
+const listed = (lower, owned, flag) =>
+  `pr-shepherd stack ${[...lower, ...owned]
+    .sort((a, b) => a - b)
+    .map(URL)
+    .join(" ")} --until-terminal ${flag}`;
+
 /**
  * Fixture 182's escalation: merging `top` also lands the unlisted `lower` layers. `flag` is the
  * call's merge option, which the printed approval commands keep; `authors` maps PR to login.
@@ -58,12 +65,7 @@ ${layerRows(layers, owned)}
 
 ## Instructions
 
-1. \`unowned-stack-layers\`: merging PR #${top} also merges ${lower.map((n) => `#${n} (@${authors[n] ?? "you"}, "Layer ${layers.indexOf(n) + 1}")`).join(", ")}, which you did not list as yours. Nothing was merged, and never merge only #${top} while leaving ${lower.length === 1 ? "that layer" : "those layers"} open. Stop and tell the user that merging #${top} also merges ${lower.map((n) => `#${n}`).join(", ")}. If they approve, run \`pr-shepherd stack ${[...lower, ...owned]
-  .sort((a, b) => a - b)
-  .map(URL)
-  .join(
-    " ",
-  )} --until-terminal ${flag}\` (lists ${lower.map((n) => `#${n}`).join(", ")} as yours too) or \`pr-shepherd stack "owner/repo#7" --until-terminal ${flag}\` (the stack number owns every layer). Otherwise wait for ${lower.length === 1 ? "its owner" : "their owners"}.`;
+1. \`unowned-stack-layers\`: merging PR #${top} also merges ${lower.map((n) => `#${n} (@${authors[n] ?? "you"}, "Layer ${layers.indexOf(n) + 1}")`).join(", ")}, which you did not list as yours. Nothing was merged, and never merge only #${top} while leaving ${lower.length === 1 ? "that layer" : "those layers"} open. If the user's request already covers ${lower.length === 1 ? "that layer" : "those layers"} (they asked for the whole stack, or for every layer up to #${top}), run \`${listed(lower, owned, flag)}\` now. Otherwise stop and tell the user that merging #${top} also merges ${lower.map((n) => `#${n}`).join(", ")}. If they approve, run \`${listed(lower, owned, flag)}\` (lists ${lower.map((n) => `#${n}`).join(", ")} as yours too) or \`pr-shepherd stack "owner/repo#7" --until-terminal ${flag}\` (the stack number owns every layer). Otherwise wait for ${lower.length === 1 ? "its owner" : "their owners"}.`;
 
 const block = (label, text) => `=== ${label}\n${text}\n===`;
 
