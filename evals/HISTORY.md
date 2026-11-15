@@ -6,6 +6,45 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-14: outcome scenarios for stack merge scope
+
+Three outcome scenarios for the merge-scope work in #716, which had only
+fixture cases until now. Sonnet 5.5, opus judge, 3 runs per arm,
+`CLAUDE_CODE_EFFORT_LEVEL=low`. $17.23 for the first run of all three, then
+$12.44 to rerun 36 and 38 after the fixes below.
+
+| Scenario                             | Plugin | gh/MCP | Δ     |
+| ------------------------------------ | ------ | ------ | ----- |
+| `36-stack-merge-unowned-lower-layer` | 1.00   | 1.00   | 0.00  |
+| `37-stack-merge-through-layer`       | 1.00   | 0.00   | +1.00 |
+| `38-two-stacks-one-request`          | 1.00   | 0.00   | +1.00 |
+
+- **Stale mock schema.** The plugin arm's `stack` tool still took only `pr`,
+  so it could not pass `refs`, `mergeThrough` or `mergeReady`.
+  `pr-shepherd-tools.json` is now the live server's `tools/list` for
+  `iterate`, `stack`, `apply` and `suggest`.
+- **36, first run: plugin 0.67 vs 1.00.** One plugin run loaded the skill,
+  never called Shepherd, and merged #41 onto #40's branch with the GitHub MCP.
+  The skill now says to run Shepherd first and never merge, enqueue or
+  retarget with `gh` or a GitHub MCP tool before Shepherd prints that step.
+  The rerun scored 3 of 3. One gh/MCP run in the first batch was voided by the
+  harness (an altered tool result).
+- **38, first run: plugin 0.67.** The mock answered `stack` on the top layer
+  alone with a clean merge. The real CLI treats a listed PR as the only one
+  the caller owns, so it escalates `unowned-stack-layers` for the layer below.
+  The failing run asked the user to confirm that #41 and #51 would land too,
+  which is what real Shepherd prints. The mock now escalates when a lower
+  layer is unlisted (`two-stack-ticks.mjs`), and the grader accepts that one
+  confirmation as well as merging both stacks whole.
+- **No-plugin failures are real.** In 37 the gh/MCP runs planned to rebase and
+  force-push the teammate's `layer-43`, or merged #42 without seeing it
+  retargeted. In 38 every gh/MCP run merged #42 and #52 onto their parents'
+  branches.
+- **No polling scenario.** `24-ci-running` already fails watchers, sleeps and
+  repeated status calls. The remaining difference, a backgrounded
+  `--until-terminal`, is something the gh/MCP arm cannot do, so no
+  tool-neutral grader can score it.
+
 ## 2026-11-14: judges failing correct plugin plans
 
 A full fixture sweep (sonnet-5-5, opus judge) left seven cases with the plugin

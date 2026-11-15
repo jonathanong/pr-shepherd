@@ -151,10 +151,12 @@ export function writeOutcomeCase(spec, outDir) {
   const shepherd = spec.shepherd ?? {};
   put(join(dir, "mocks", "pr-shepherd", "iterate.md"), shepherd.iterate?.(tick) ?? tick);
   // `stack` answers with the recorded tick on stack scenarios, and with the
-  // CLI's own error everywhere else.
+  // CLI's own error everywhere else. A scenario's own answer may be a function
+  // of the recorded tick.
+  const stack = typeof shepherd.stack === "function" ? shepherd.stack(tick) : shepherd.stack;
   put(
     join(dir, "mocks", "pr-shepherd", "stack.md"),
-    shepherd.stack ??
+    stack ??
       (spec.tags.includes("stack") ? tick : "Error: PR #42 is not part of a native GitHub stack"),
   );
   put(
