@@ -2,7 +2,7 @@
 
 Apply when a step says `Playbook: "Check follow-up"`. A check failed, was cancelled, or never started, and Shepherd has no rerun or log excerpt to show. Find out why before acting; follow the evidence.
 
-- Logs and jobs: `gh run view <runId> -R <owner/repo> --log-failed`, or the failed job's steps and annotations.
+- The run: `gh run view <runId> -R <owner/repo>` lists its jobs and annotations, which often say why a job never got a runner; add `--log-failed` for logs.
 - `STARTUP_FAILURE`: workflow syntax, an unresolved reusable workflow or action, missing permissions, secrets or environments.
 - `CANCELLED`: a newer push, a `concurrency` group, a job timeout, a lost runner, or a manual cancel.
 - An external check: the provider behind its details URL, and whether it is up. Also check for a GitHub or runner incident.
@@ -11,4 +11,4 @@ Then:
 
 1. Cause within this PR: fix it and push.
 2. Transient and the output printed a rerun command for it: run that command. Without one, do not rerun; the allowance is spent or the check is not rerunnable.
-3. Otherwise change nothing and keep your findings. CI configuration, repository settings, and approving a gated run are human decisions. If the checks are unchanged next poll, Shepherd escalates `check-follow-up-unavailable`; report them then.
+3. Otherwise change nothing and keep your findings. CI configuration, repository settings, and approving a gated run are human decisions. Rerun Shepherd now; if the checks are unchanged, it escalates `check-follow-up-unavailable`. Report your findings then.
