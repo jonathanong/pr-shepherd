@@ -49,7 +49,7 @@ The bare command accepts `--interval`, `--timeout`, `--debounce`, `--quiet-statu
 
 ### `--until-terminal`
 
-- Ordinary `WAIT` and `MARK_READY` stay inside the poll.
+- Ordinary `WAIT` and `MARK_READY` stay inside the poll, including a `WAIT` or `MARK_READY` on the first tick after a `TRIAGE` debounce window (for example CI starting after a push); the bounded poll still returns that post-debounce `WAIT`.
 - It returns `READY` while a clean ready-delay counts down.
 - It returns `TRIAGE` or stack-level `SHEPHERD` after `--debounce` (`poll.debounce-seconds`, default 1m, `0` disables), plus `MERGE`, a non-terminal quota warning, or terminal `CANCEL` / `ESCALATE`.
 - A quota warning returns immediately. Follow its cadence and rerun without `--timeout`.
