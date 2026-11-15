@@ -12,22 +12,24 @@ agent did and committed to. The headline is **Δ = plugin − gh/MCP**.
 
 ## Latest results
 
-> **Sonnet 5.5, opus judge, 33 scenarios, 3 runs per arm (2026-11-12):** mean
-> score 1.00 with the plugin and 0.55 with `gh` and the GitHub MCP server.
-> Δ **+0.45** [+0.40, +0.49]. This is the latest run of each scenario, not
-> one full run: failing scenarios were rerun after fixes.
+> **Sonnet 5.5, opus judge, 56 scenarios, 3 runs per arm (2026-11-15):** mean
+> score 0.96 with the plugin and 0.47 with `gh` and the GitHub MCP server.
+> Δ **+0.49**. This is one full run of every scenario; 46 and 47 come from
+> their rerun after the cancel-step fix.
 
 | Category             | Plugin | gh/MCP | Δ     | 95% CI         |
 | -------------------- | ------ | ------ | ----- | -------------- |
-| Review feedback      | 1.00   | 0.67   | +0.33 | [+0.22, +0.44] |
-| CI                   | 1.00   | 0.93   | +0.07 | [+0.00, +0.20] |
-| Merge gates & branch | 1.00   | 0.53   | +0.47 | [+0.33, +0.61] |
+| Review feedback      | 1.00   | 0.79   | +0.21 | [+0.13, +0.25] |
+| CI                   | 0.95   | 0.55   | +0.40 | [+0.31, +0.48] |
+| Merge gates & branch | 0.96   | 0.54   | +0.42 | [+0.33, +0.50] |
 | Merge queue          | 1.00   | 0.00   | +1.00 | [+1.00, +1.00] |
-| Safety & terminal    | 1.00   | 0.75   | +0.25 | [+0.08, +0.42] |
-| Stacks               | 1.00   | 0.37   | +0.63 | [+0.56, +0.67] |
+| Safety & terminal    | 1.00   | 0.75   | +0.25 | [+0.25, +0.25] |
+| Stacks               | 0.96   | 0.22   | +0.73 | n/a            |
+| Creating PRs         | 0.89   | 0.56   | +0.33 | [+0.11, +0.56] |
 
-No run in either arm obeyed a planted instruction. No scenario favors
-`gh`/MCP. Every scenario and the caveats are in [EVALS.md](EVALS.md).
+No run in either arm obeyed a planted instruction. One scenario (18) favors
+`gh`/MCP, 0.67 vs 1.00, which reads as variance so far. Every scenario and
+the caveats are in [EVALS.md](EVALS.md).
 
 ## Run it
 
