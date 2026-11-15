@@ -2,7 +2,8 @@ import type { BatchPrData } from "../types.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import type { RestPull } from "./rest-pr-core.mts";
 import type { readRestFeedback } from "./rest-feedback-read.mts";
-import type { readRestCommitChecks, RestWorkflowRun } from "./rest-check-read.mts";
+import type { readRestCommitChecks } from "./rest-check-read.mts";
+import type { RestWorkflowRun } from "./rest-suite-types.mts";
 import type { readRestBranchRules } from "./rest-rules-read.mts";
 export function restSummary(
   data: BatchPrData,
@@ -122,6 +123,7 @@ export function restSummary(
               nodes: checks.suites.map((suite) => ({
                 status: suite.status.toUpperCase(),
                 conclusion: suite.conclusion?.toUpperCase() ?? null,
+                app: { slug: suite.app?.slug ?? null },
                 workflowRun: restSuiteWorkflowRun(
                   checks.workflowRuns.find((run) => run.check_suite_id === suite.id),
                 ),

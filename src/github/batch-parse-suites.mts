@@ -1,5 +1,5 @@
 import { normalizeWorkflowPath } from "../checks/workflow-path.mts";
-import type { WorkflowSuiteSnapshot } from "../checks/unreported-required.mts";
+import { ACTIONS_APP_SLUG, type WorkflowSuiteSnapshot } from "../checks/unreported-required.mts";
 import type { CheckRun } from "../types.mts";
 import type { RawPr } from "./batch-raw-types.mts";
 
@@ -16,8 +16,12 @@ export function parseHeadCheckSuitesEmpty(raw: RawPr): boolean {
 /** Actions suites on the head. Third-party suites with no workflow run are omitted. */
 function parseHeadWorkflowSuites(raw: RawPr): WorkflowSuiteSnapshot[] {
   const nodes = raw.commits.nodes[0]?.commit.checkSuites?.nodes ?? [];
-  return nodes.flatMap((node) => {
-    if (!node.workflowRun) return [];
+  return nodes.flatMap((node): WorkflowSuiteSnapshot[] => {
+    if (!node.workflowRun) {
+      // Actions creates its suites before their runs; keep those so a starting workflow is visible.
+      if (node.app?.slug !== ACTIONS_APP_SLUG) return [];
+      return [{ status: node.status ?? null, conclusion: node.conclusion, app: node.app }];
+    }
     return [
       {
         status: node.status ?? null,

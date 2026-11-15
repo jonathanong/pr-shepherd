@@ -55,6 +55,22 @@ describe("parseHeadCheckSuitesEmpty", () => {
   });
 });
 
+describe("workflowSuites", () => {
+  it("keeps Actions-app suites with no run and drops third-party ones", () => {
+    const raw = withSuites({
+      pageInfo: { hasNextPage: false },
+      nodes: [
+        { status: "QUEUED", conclusion: null, app: { slug: "github-actions" }, workflowRun: null },
+        { status: "QUEUED", conclusion: null, app: { slug: "codecov" }, workflowRun: null },
+        { status: "QUEUED", conclusion: null, workflowRun: null },
+      ],
+    });
+    expect(workflowSuites(raw)).toEqual({
+      headWorkflowSuites: [{ status: "QUEUED", conclusion: null, app: { slug: "github-actions" } }],
+    });
+  });
+});
+
 describe("parseSuiteStartupFailures", () => {
   it("maps STARTUP_FAILURE suites with a workflow run", () => {
     const raw = withSuites({

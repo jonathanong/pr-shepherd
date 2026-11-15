@@ -1,3 +1,4 @@
+import { ACTIONS_APP_SLUG, type WorkflowSuiteSnapshot } from "../checks/unreported-required.mts";
 import type { RepoInfo } from "./client.mts";
 import type { BatchResult } from "./batch.mts";
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
@@ -46,20 +47,25 @@ export async function fetchRestPrBatch(
       rateLimit: snapshot.checks.rateLimit,
       checkSuitesComplete: true,
       ...(snapshot.checks.suites.length === 0 && { headCheckSuitesEmpty: true as const }),
-      headWorkflowSuites: snapshot.checks.suites.flatMap((suite) => {
+      headWorkflowSuites: snapshot.checks.suites.flatMap((suite): WorkflowSuiteSnapshot[] => {
         const run = snapshot.checks.workflowRuns.find((run) => run.check_suite_id === suite.id);
-        return run
-          ? [
-              {
-                status: suite.status.toUpperCase(),
-                conclusion: suite.conclusion?.toUpperCase() ?? null,
-                workflowRun: {
-                  event: run.event,
-                  databaseId: run.id,
-                  path: normalizeWorkflowPath(run.path) ?? null,
-                },
+        const status = suite.status.toUpperCase();
+        const conclusion = suite.conclusion?.toUpperCase() ?? null;
+        if (run)
+          return [
+            {
+              status,
+              conclusion,
+              workflowRun: {
+                event: run.event,
+                databaseId: run.id,
+                path: normalizeWorkflowPath(run.path) ?? null,
               },
-            ]
+            },
+          ];
+        // Actions creates its suites before their runs; third-party suites with no run are omitted.
+        return suite.app?.slug === ACTIONS_APP_SLUG
+          ? [{ status, conclusion, app: { slug: suite.app.slug } }]
           : [];
       }),
       ...(opts.includeReceiptSummary && { receiptSummary }),
