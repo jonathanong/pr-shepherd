@@ -6,6 +6,32 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-14: rerun of 13, 39, 40, 42 and 43 after the CLI fixes
+
+Sonnet 5.5 at low effort, opus judge, 3 runs per arm, $39.28. Run on a local
+branch that merges #723, #726, #727 and #728 into this one.
+
+| Scenario                           | Plugin | gh/MCP | Δ     |
+| ---------------------------------- | ------ | ------ | ----- |
+| `13-suggestion`                    | 0.00   | 0.00   | 0.00  |
+| `39-required-check-never-reports`  | 1.00   | 0.00   | +1.00 |
+| `40-startup-failure-workflow-edit` | 1.00   | 1.00   | 0.00  |
+| `42-denied-reply-one-look-skip`    | 1.00   | 1.00   | 0.00  |
+| `43-deployment-awaiting-approval`  | 1.00   | 0.00   | +1.00 |
+
+- **39** went from 0.00 to 1.00 for the plugin with the diagnose-first step from
+  #727; gh/MCP still waits, retriggers or edits CI without the diagnosis.
+- **43** went from 0.00 to 1.00 with `pendingDeployments` from #728; gh/MCP
+  does not name the environment's reviewers.
+- **40** and **42** now pass in both arms (were 0.00 and 0.00 for the plugin).
+- **13** fails in both arms under the stricter grader. Every plugin run plans to
+  "decide whether the suggestion is warranted" on a later pass and never calls
+  the MCP `suggest` tool it has, which builds the patch without a checkout.
+
+The first run of the new scenarios (same settings, $75.35, before the fixes)
+scored 36 1.00 vs 0.33, 37 1.00 vs 0.00, 41 1.00 vs 0.67, 44 and 45 1.00 vs
+1.00; its 13, 39, 40, 42 and 43 numbers are superseded by the table above.
+
 ## 2026-11-14: 40 and 43 reworked to match the CLI fixes (#726, #728)
 
 Still unrun, so EVALS.md rows stay `pending`.
