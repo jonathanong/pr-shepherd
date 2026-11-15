@@ -50,7 +50,7 @@ describe("stack command agent work", () => {
     const result = withPollSummaryInstructions(stack([waiting(1, 1), waiting(2, 2)]), false);
     expect(result).toMatchObject({ nextAction: "wait", reason: "waiting", stackMergeable: false });
     expect(result.instructions).toEqual([
-      "1. No one-PR session can advance the stack yet: PR #1 (pending-or-unknown); PR #2 (pending-or-unknown). Recheck at the configured polling cadence.",
+      "1. No one-PR session can advance the stack yet: PR #1 (pending-or-unknown); PR #2 (pending-or-unknown). Recheck at the configured polling cadence; Shepherd escalates `stall-timeout` if the stack does not change.",
     ]);
   });
 

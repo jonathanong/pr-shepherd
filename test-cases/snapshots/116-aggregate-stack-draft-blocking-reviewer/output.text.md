@@ -10,4 +10,4 @@ nextAction: wait
 
 ## Instructions
 
-1. No one-PR session can advance the stack yet: PR #461 (blocking-reviewer-in-progress). Recheck at the configured polling cadence.
+1. No one-PR session can advance the stack yet: PR #461 (blocking-reviewer-in-progress). Recheck at the configured polling cadence; Shepherd escalates `stall-timeout` if the stack does not change.

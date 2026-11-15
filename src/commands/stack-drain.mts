@@ -34,7 +34,7 @@ export function idleWaitPlan(idle: PollSummaryItem[]): StackPlan {
     waiting: true,
     idle,
     instructions: [
-      `1. No one-PR session can advance the stack yet: ${describeIdleLayers(idle)}. Recheck at the configured polling cadence.`,
+      `1. No one-PR session can advance the stack yet: ${describeIdleLayers(idle)}. Recheck at the configured polling cadence; Shepherd escalates \`stall-timeout\` if the stack does not change.`,
     ],
   };
 }

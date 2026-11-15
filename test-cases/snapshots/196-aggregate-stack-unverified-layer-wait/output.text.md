@@ -12,4 +12,4 @@ nextAction: wait
 
 ## Instructions
 
-1. No one-PR session can advance the stack yet: PR #2620 (state-unavailable, unverified-stack-state). Recheck at the configured polling cadence.
+1. No one-PR session can advance the stack yet: PR #2620 (state-unavailable, unverified-stack-state). Recheck at the configured polling cadence; Shepherd escalates `stall-timeout` if the stack does not change.

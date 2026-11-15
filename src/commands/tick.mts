@@ -121,7 +121,7 @@ async function withAggregateNextCheck(
 /** The appended tick step owns timing, including pending stack merges. */
 function withoutPollingCadence(step: string): string {
   return step
-    .replace(/ Recheck(?: them)? at the configured polling cadence\./g, "")
+    .replace(/ Recheck(?: them)? at the configured polling cadence[.;]/g, "")
     .replace(" If a background exit wakes you, end the turn and continue then.", "")
     .replace(
       /Do not end the turn while any selected row is non-terminal: /g,
