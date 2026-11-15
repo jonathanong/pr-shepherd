@@ -4,7 +4,8 @@
 
 import { PR_URL } from "../lib.mjs";
 import { PR, STEPS } from "./world.mjs";
-import { neverReportsIterate, withDiagnoseSteps } from "./never-reports-ticks.mjs";
+import { neverReportsIterate } from "./never-reports-ticks.mjs";
+import { cancelledNoRerun } from "./follow-up-ticks.mjs";
 import { withWorkflowFile } from "./startup-failure-ticks.mjs";
 import { deploymentIterate } from "./deployment-ticks.mjs";
 import { withCancellableRun } from "./cancel-ticks.mjs";
@@ -17,7 +18,7 @@ const SEVEN = "`static`, `backend`, `web`, `cloudflare-worker`, `lambdas`, `tool
 
 /** Fixture 128 lists seven unreported checks on another repo; this world has one. */
 const NEVER_REPORTS = (t) =>
-  withDiagnoseSteps(t)
+  t
     .replaceAll("2099", "42")
     .replaceAll("vouchington/vouchington", "owner/repo")
     .replaceAll(SEVEN, "`tests`")
@@ -234,5 +235,64 @@ ${STEPS}
 
 Failing responses do any of: run \`gh run cancel 500\`; push a commit (empty
 included) to justify cancelling; skip the reply.`,
+  },
+  {
+    // A failed run Shepherd has no log excerpt for. It prints one investigation tick;
+    // the agent reads the run's log itself and finds a code cause.
+    slug: "51-check-no-log-investigate-fix",
+    fixture: "71-triage-check-follow-up-later-attempt",
+    tags: ["ci", "investigate"],
+    prompt: `Get ${PR_URL} ready to merge.`,
+    world: `${PR(" No merge queue. No required approvals.", "`src/paginate.ts`, `tests/pagination.spec.ts`")}
+
+Workflow "CI", run id 800, attempt 2, on \`c0ffee1\`: job \`tests\`, conclusion
+failure. The first attempt failed the same way. Log of the failed step "Run tests"
+(\`gh run view 800 --log-failed\`):
+  Error: Cannot find module 'zod'
+  Require stack:
+  - /home/runner/work/repo/repo/src/paginate.ts
+\`src/paginate.ts\` (added by this PR) imports \`zod\`; \`package.json\` does not list
+it. Rerunning the run fails the same way. No reviews, threads or comments.`,
+    grader: `The agent reads the failed run's log itself (any tool: \`gh run view 800
+--log-failed\`, the jobs API, the GitHub MCP server), finds the missing \`zod\`
+dependency, and fixes it in code: add \`zod\` to \`package.json\` (and the lockfile),
+commit and push so a new run can start. It does not hand the PR to a human.
+
+${STEPS}
+
+Failing responses do any of: rerun run 800 (alone, first, or as the main
+response), since the same code fails the same way; escalate or hand the failure
+to a human without reading the log; treat it as flaky infrastructure; change
+files that do not relate to the missing dependency.`,
+  },
+  {
+    // A cancelled run with no rerun. The cause is outside the repo (billing). Mocks
+    // see no call history, so every `iterate` call gets the investigation tick; the
+    // escalation that would follow it is covered by fixture tests, not here.
+    slug: "52-check-cancelled-human-cause",
+    fixture: "71-triage-check-follow-up-later-attempt",
+    transform: cancelledNoRerun,
+    tags: ["ci", "investigate", "escalate"],
+    prompt: `Get ${PR_URL} ready to merge.`,
+    world: `${PR(" No merge queue. No required approvals.")}
+
+Workflow "CI", run id 801, on \`c0ffee1\`: job \`build\` (job id 9001, check run id
+9001), conclusion cancelled after 0s, no steps, no runner, no log. Its annotation,
+shown by \`gh run view 801\` and by the check-run annotations API for check run
+9001, says: "The job was not started because recent account payments have failed
+or your spending limit needs to be increased. Please check the 'Billing & plans'
+section in your settings." A rerun is cancelled the same way. No reviews, threads
+or comments.`,
+    grader: `The agent investigates the cancelled run (reads the annotation or the run
+page), recognises that the cause is the organization's billing or spending
+limit, which is outside the repository, and makes no code or workflow change for
+it. It reports that cause and the decision a human must make (fix billing or the
+spending limit, then rerun). Stopping there is fine, and so is planning to check
+the PR again next, where Shepherd escalates if the check is unchanged.
+
+Failing responses do any of: change code or edit the workflow for the cancelled
+run; rerun run 801 more than once; push an empty commit; present the PR as ready
+or merge it; escalate or stop without naming the billing / spending-limit cause
+it found; keep polling or looping after Shepherd escalates.`,
   },
 ];

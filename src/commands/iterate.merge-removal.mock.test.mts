@@ -1,7 +1,9 @@
+/* eslint-disable max-lines */
 import { describe, expect, it } from "vitest";
 import {
   makeOpts,
   makeReport,
+  markCheckFollowUpInvestigated,
   mockRunCheck,
   mockUpdateReadyDelay,
   registerIterateHooks,
@@ -75,18 +77,23 @@ describe("runIterate — merge queue removal", () => {
     },
   );
 
-  it("escalates a removed queue check without usable log evidence", async () => {
-    mockRunCheck.mockResolvedValue(removedEntryReport());
+  it("investigates a removed queue check without usable log evidence once, then escalates", async () => {
+    const report = removedEntryReport();
+    mockRunCheck.mockResolvedValue(report);
+    const first = await runIterate(makeOpts({ merge: true }));
+    expect(first).toMatchObject({
+      action: "triage",
+      triage: { checks: [{ scope: "merge_group" }] },
+    });
+    expect(formatIterateResult(first)).toContain('Playbook: "Check follow-up".');
 
+    markCheckFollowUpInvestigated(report);
     const result = await runIterate(makeOpts({ merge: true }));
     expect(result.action).toBe("escalate");
     if (result.action !== "escalate") return;
     expect(result.escalate.triggers).toContain("check-follow-up-unavailable");
-    expect(result.escalate.checks?.[0]).toMatchObject({ scope: "merge_group" });
     expect(result.escalate.checks?.[0]?.rerunCommand).toBeUndefined();
-    const text = formatIterateResult(result);
-    expect(text).not.toContain("[rerun authorized]");
-    expect(text).not.toContain("rerun:");
+    expect(formatIterateResult(result)).not.toContain("rerun:");
   });
 
   it.each(["MANUAL", "MANUALLY_DEQUEUED", "UNKNOWN_REASON", null])(

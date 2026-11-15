@@ -4,7 +4,7 @@
     "exitCode": 10,
     "why": "REST cannot read merge-queue removal history or queue-commit checks, so the cancelled queue run is invisible and the green head looks READY."
   },
-  "description": "The PR was removed from the merge queue for failed checks. On the queue commit, the required `web` context has a cancelled run with the higher run ID and a lower-ID success that ran later. GitHub's required gate reads the latest (highest-ID) run, so Shepherd keeps that queue cancellation as a concrete failure (merge_group has no autonomous rerun, so it escalates check-follow-up-unavailable naming run 200) instead of superseding it and escalating merge-queue-removed with no failing check.",
+  "description": "The PR was removed from the merge queue for failed checks. On the queue commit, the required `web` context has a cancelled run with the higher run ID and a lower-ID success that ran later. GitHub's required gate reads the latest (highest-ID) run, so Shepherd keeps that queue cancellation as a concrete failure (merge_group has no autonomous rerun, so it prints one investigation TRIAGE naming run 200 and escalates check-follow-up-unavailable only if the check is unchanged on the next tick) instead of superseding it and escalating merge-queue-removed with no failing check.",
   "args": [
     "--merge"
   ],
@@ -85,5 +85,5 @@
     "shouldCancel": false,
     "remainingSeconds": 600
   },
-  "expectedExitCode": 13
+  "expectedExitCode": 12
 }

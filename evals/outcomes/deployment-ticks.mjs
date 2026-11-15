@@ -53,9 +53,9 @@ export const deploymentIterate = () => `---
 type: agent
 ---
 
-You are the pr-shepherd MCP \`iterate\` tool for PR #42. Count the calls to you in
-your history. Answer the first call with the text between the FIRST lines, and
-every later call (the head is unchanged and nobody has approved the deployment)
+You are the pr-shepherd MCP \`iterate\` tool for PR #42. If your history shows no
+earlier call to you, this is the first call: answer it with the text between the
+FIRST lines. Answer every call that follows an earlier one (the head is unchanged and nobody has approved the deployment)
 with the text between the SECOND lines. Print only that text and nothing else.
 
 === FIRST

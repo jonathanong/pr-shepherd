@@ -285,6 +285,9 @@ export function buildEscalateHumanMessage(
 
 export function buildEscalateSuggestion(triggers: EscalateTrigger[], detail?: string): string {
   if (triggers.includes("check-follow-up-unavailable")) {
+    if (detail === "investigated") {
+      return "The failing checks below had no rerun and no log excerpt Shepherd could show. After one investigation tick they are unchanged on this head. Report what the investigation found. What remains is a repository, CI-configuration, or workflow-permission change, or waiting out a GitHub incident; each is a human decision.";
+    }
     return "One or more failing checks have no autonomous follow-up available. Use the displayed conclusion, run or URL, and included evidence to handle them manually.";
   }
   if (triggers.includes("authorization-required")) {

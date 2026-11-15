@@ -1,0 +1,48 @@
+import type { AgentCheck } from "../../types.mts";
+import { playbookPointer } from "../playbook-pointer.mts";
+import { hasLogEvidence } from "./check-evidence.mts";
+
+/**
+ * What a failing check with no authorized rerun needs next.
+ * `approval`: a gate only a human can grant. `investigate`: the agent can find out why.
+ */
+export type CheckFollowUp = "approval" | "investigate";
+
+export function checkFollowUp(check: AgentCheck): CheckFollowUp | undefined {
+  if (check.rerunCommand) return undefined;
+  if (check.conclusion === "ACTION_REQUIRED") return "approval";
+  if (check.conclusion === "CANCELLED" || check.conclusion === "STARTUP_FAILURE") {
+    return "investigate";
+  }
+  // A later attempt cannot be rerun automatically, but its included log can still identify a
+  // fix. Without evidence the agent can fetch the log itself.
+  if (check.runAttempt !== undefined && check.runAttempt > 1) {
+    return hasLogEvidence(check) ? undefined : "investigate";
+  }
+  // An external check's direct URL is actionable evidence: the agent can inspect the provider.
+  if (check.runId === null) return check.detailsUrl?.trim() ? undefined : "investigate";
+  return hasLogEvidence(check) ? undefined : "investigate";
+}
+
+/** The one investigation tick: raw facts, the playbook, and the bounded outcome. */
+export function buildCheckFollowUpInstructions(
+  checks: AgentCheck[],
+  repo: string,
+  actionsRunIds: ReadonlySet<string>,
+): string[] {
+  // Only confirmed Actions runs: an external check's details-URL run id is not one.
+  const runIds = [
+    ...new Set(
+      checks.flatMap((check) =>
+        check.runId && actionsRunIds.has(check.runId) ? [check.runId] : [],
+      ),
+    ),
+  ];
+  const start = runIds.length
+    ? ` Start with ${runIds.map((id) => `\`gh run view ${id} -R ${repo}\``).join(", ")}: it lists the run's jobs and annotations.`
+    : "";
+  return [
+    `Shepherd has no rerun to offer and no log excerpt to show for the checks under \`## Failing checks\`, so it cannot tell from GitHub's data why they failed or what would fix them. Find out before acting.${start} ${playbookPointer("Check follow-up")}`,
+    "If the cause is within this PR, fix it and push. Otherwise make no change and keep what you found; do not rerun or retrigger these checks. If these checks are unchanged on the next poll, Shepherd escalates with `check-follow-up-unavailable`; report that diagnosis then.",
+  ];
+}

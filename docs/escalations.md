@@ -8,7 +8,7 @@
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `authorization-required`      | GitHub denied an otherwise-eligible automatic mark-ready operation (or GraphQL capability was false/unavailable and failed closed).                         | Grant update access or mark the PR ready by hand.                                                          |
 | `transport-unsupported`       | The selected transport cannot perform an operation the action needs, and it cannot be represented as a one-look skip or explicit apply error.               | Rerun on a transport that supports it, or do the operation by hand.                                        |
-| `check-follow-up-unavailable` | Every remaining failing check has no autonomous follow-up, and no other autonomous work remains.                                                            | Inspect the check (approve, rerun, or fix CI) and resume.                                                  |
+| `check-follow-up-unavailable` | A failing check needs an approval only a human can grant (`ACTION_REQUIRED`), or the same checks stayed unchanged after one investigation `TRIAGE` tick.    | Approve the gate, or report the investigation and change CI configuration or permissions.                  |
 | `triage-thrash`               | A retryable, located review thread stays unchanged and unresolved after `iterate.triage-attempts-per-thread` caller-visible `TRIAGE` results.               | Decide the thread; optionally run the retained pending review commands.                                    |
 | `base-branch-unknown`         | The GraphQL base branch is empty or unsafe, and the tick has work that could require a push.                                                                | Fix the PR base, then resume.                                                                              |
 | `merge-queue-removed`         | Merge mode is on, GitHub reports a current queue removal on an unchanged head, nothing is queued or auto-merging, and no actionable failure explains it.    | Read GitHub's raw removal reason and decide whether to requeue.                                            |
@@ -66,14 +66,14 @@ A cloud proxy session-access refusal during mark-ready also uses this trigger an
 
 At least one remaining failing check has no `rerunCommand` and is one of:
 
-- a GitHub Actions check with `runAttempt` greater than 1 and no nonblank included log excerpt (Shepherd's single rerun allowance is spent with no usable evidence), unless a behind/conflicting branch still provides a branch-refresh path;
-- `ACTION_REQUIRED`, `CANCELLED`, or `STARTUP_FAILURE`;
-- a check with `runId === null` and an empty or whitespace-only `detailsUrl`;
-- a check with a run ID but no nonblank included `logExcerpt` (or `relatedJobs[].logExcerpt`).
+- `ACTION_REQUIRED`: a gate only a human can grant. This escalates immediately, with no investigation tick;
+- a manual-only check the agent can investigate: `CANCELLED` or `STARTUP_FAILURE`, a GitHub Actions check with `runAttempt` greater than 1 and no nonblank included log excerpt, a check with `runId === null` and an empty or whitespace-only `detailsUrl`, or a check with a run ID but no nonblank included `logExcerpt` (or `relatedJobs[].logExcerpt`).
+
+A manual-only check is not escalated first. Shepherd returns one investigation `TRIAGE` with the raw checks under `## Failing checks`, says it cannot tell from GitHub's data why they failed, and points to `Playbook: "Check follow-up"` (open-ended starting points, not a checklist). The caller fixes a cause within the PR, reruns once if that is right, or makes no change and keeps its findings. Shepherd records the head SHA and the check set (name, run ID, attempt) in `check-follow-up.json` in the PR state directory when it returns that tick; internal poll debounce ticks do not write it. The next presented tick with the same head and checks escalates, and the caller reports its diagnosis. A new head or a different check set investigates again.
 
 It fires only when no autonomous work or newly surfaced one-look item remains: no conflicts, behind-base recovery for a later workflow attempt, surfaced actionable or resolution-only threads, actionable comments, pending comment minimizations, actionable changes-requested reviews, queued/first-look/edited review summaries, first-look threads/comments, actionable annotations, another failing check with an autonomous path, or a failed job whose workflow run still has an in-progress job.
 
-- An unauthorized review item postpones the escalation for its one visibility tick; once its seen marker suppresses it, the manual-only check can escalate next tick.
+- An unauthorized review item postpones the escalation for its one visibility tick; once its seen marker suppresses it, the manual-only check gets its investigation tick, then can escalate.
 - An authorized bot, viewer-authored, or configured other-human thread with a generated mutation is repeatable work even without a source location.
 - A stale human `CHANGES_REQUESTED` review does not postpone the handoff, but it is kept in the payload so the human sees every blocker.
 - A failing external check with `runId === null` and a non-empty `detailsUrl` stays `TRIAGE`: the URL is an autonomous investigation path (Codecov is the regression case).

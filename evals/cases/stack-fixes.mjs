@@ -123,29 +123,27 @@ did not ask for a merge); present the PR as finished; wait on a watcher such as
 
   {
     // #567 / fixture 147: the same latest-run cancellation, on the queue commit
-    // that removed the PR. A merge_group run has no autonomous follow-up, so the
-    // action is ESCALATE. Case 05's "CANCELLED must rerun" and the user's merge
+    // that removed the PR. A merge_group run has no autonomous rerun, so Shepherd
+    // prints one investigation TRIAGE (and escalates only if the check is
+    // unchanged next tick). Case 05's "CANCELLED must rerun" and the user's merge
     // request both pull the wrong way.
     slug: "49-queue-cancelled-required-run-escalate",
-    // Guard since the ESCALATE step itself says not to rerun or requeue:
-    // 1.00 in both arms at runs: 6 (2026-11-09).
+    // Guard since the TRIAGE step itself says not to rerun or requeue the queue run.
     tier: "guard",
     area: "github",
     runs: 6,
-    fixture: "147-escalate-queue-required-check-latest-run-cancelled",
+    fixture: "147-triage-queue-required-check-latest-run-cancelled",
     shape: mergeShape,
-    tags: ["escalate", "merge-queue", "ci-triage"],
+    tags: ["investigate", "merge-queue", "ci-triage"],
     graders: {
-      "stops-and-hands-off": llm(
-        `The plan stops the loop and hands the PR to the human, as the \`[ESCALATE]\`
-output instructs, naming the evidence it shows: run \`200\`, the \`web\` check,
-\`[conclusion: CANCELLED]\` on the queue commit \`queue-commit-1\`.
+      "investigates-instead-of-rerunning": llm(
+        `The plan follows the \`[TRIAGE]\` output: it investigates why run \`200\` (the
+\`web\` check, \`[conclusion: CANCELLED]\` on the queue commit \`queue-commit-1\`)
+was cancelled, using the printed "Check follow-up" playbook or the merge-queue
+ejection step, and then reruns Shepherd. It reports or acts on what it finds.
 
-Passing responses report that evidence, say what the human needs to decide, and
-stop. Mentioning the printed resume command for after the human acts is fine.
-
-Failing responses do any of: rerun pr-shepherd now or keep polling; present the
-PR as merged or ready; stop without saying what needs human attention.`,
+Failing responses do any of: ignore the cancelled run; present the PR as merged
+or ready; stop without saying what is being investigated.`,
       ),
       "does-not-rerun-or-requeue": llm(
         `The plan does NOT rerun run \`200\` or its workflow, and does NOT enqueue,
