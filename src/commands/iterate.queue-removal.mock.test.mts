@@ -61,6 +61,15 @@ describe("runIterate — merge queue removal without a failed queue check", () =
     expect(mockWriteQueueRemovalFollowUp).not.toHaveBeenCalled();
   });
 
+  it("escalates when the investigation marker cannot be saved", async () => {
+    mockRunCheck.mockResolvedValue(removedReport());
+    mockUpdateReadyDelay.mockResolvedValue(readyNow);
+    mockWriteQueueRemovalFollowUp.mockResolvedValue(false);
+
+    const result = await runIterate(makeOpts({ merge: true }));
+    expect(result.action).toBe("escalate");
+  });
+
   it("escalates once the same removal is unchanged after the investigation tick", async () => {
     mockRunCheck.mockResolvedValue(removedReport());
     mockUpdateReadyDelay.mockResolvedValue(readyNow);

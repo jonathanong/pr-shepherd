@@ -52,6 +52,6 @@ describe("queue removal follow-up marker", () => {
   it("does not throw when the state directory cannot be written", async () => {
     await writeFile(join(dir, "file"), "x");
     process.env["PR_SHEPHERD_STATE_DIR"] = join(dir, "file");
-    await expect(writeQueueRemovalFollowUp(key, "x")).resolves.toBeUndefined();
+    await expect(writeQueueRemovalFollowUp(key, "x")).resolves.toBe(false);
   });
 });

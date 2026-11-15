@@ -20,6 +20,7 @@ export function readCiStartFollowUp(key: StateKey, signature: string): Promise<b
   return readSignatureMarker(key, FILE, signature);
 }
 
-export function writeCiStartFollowUp(key: StateKey, signature: string): Promise<void> {
+/** False when the marker could not be saved, so the caller escalates instead of repeating. */
+export function writeCiStartFollowUp(key: StateKey, signature: string): Promise<boolean> {
   return writeSignatureMarker(key, FILE, signature);
 }

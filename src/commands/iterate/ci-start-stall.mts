@@ -57,6 +57,11 @@ export async function planCiStartInvestigation(input: {
     stalledChecks.map((check) => check.name),
   );
   if (await readCiStartFollowUp(stallKey, signature)) return undefined;
-  if (persistState) await writeCiStartFollowUp(stallKey, signature);
+  // A reused cached report is re-run by the poll before it is shown, so it must not spend the one
+  // investigation tick the caller never sees. A marker that cannot be saved would repeat the
+  // investigation forever, so that escalates like an already-presented one.
+  if (persistState && report.fingerprintReused !== true) {
+    if (!(await writeCiStartFollowUp(stallKey, signature))) return undefined;
+  }
   return buildUnreportedFixResult(base, report, buildCiStartInstructions(stalledChecks));
 }

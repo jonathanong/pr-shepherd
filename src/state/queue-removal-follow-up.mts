@@ -26,6 +26,6 @@ export function readQueueRemovalFollowUp(key: StateKey, signature: string): Prom
 }
 
 /** Remember that the one investigation instruction was returned for this removal. */
-export function writeQueueRemovalFollowUp(key: StateKey, signature: string): Promise<void> {
+export function writeQueueRemovalFollowUp(key: StateKey, signature: string): Promise<boolean> {
   return writeSignatureMarker(key, FILE, signature);
 }

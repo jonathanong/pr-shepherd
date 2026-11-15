@@ -14,9 +14,10 @@ import type { ClassifiedCheck } from "../types.mts";
 
 registerIterateHooks();
 
-function mockInProgressCheck(check: ClassifiedCheck): void {
+function mockInProgressCheck(check: ClassifiedCheck, extra: Record<string, unknown> = {}): void {
   mockRunCheck.mockResolvedValue(
     makeReport({
+      ...extra,
       status: "IN_PROGRESS",
       checks: {
         passing: [],
@@ -102,6 +103,24 @@ describe("runIterate — CI start stall investigation", () => {
 
     expect(result.action).toBe("triage");
     expect(mockWriteCiStartFollowUp).not.toHaveBeenCalled();
+  });
+
+  it("does not spend the investigation on a reused cached report", async () => {
+    mockInProgressCheck(checkRun(), { fingerprintReused: true });
+    const result = await runIterate(
+      makeOpts({ stallTimeoutSeconds: STALL_TIMEOUT_S, noAutoMarkReady: true }),
+    );
+    expect(result.action).toBe("triage");
+    expect(mockWriteCiStartFollowUp).not.toHaveBeenCalled();
+  });
+
+  it("escalates when the investigation marker cannot be saved", async () => {
+    mockInProgressCheck(checkRun());
+    mockWriteCiStartFollowUp.mockResolvedValue(false);
+    const result = await runIterate(
+      makeOpts({ stallTimeoutSeconds: STALL_TIMEOUT_S, noAutoMarkReady: true }),
+    );
+    expect(result.action).toBe("escalate");
   });
 
   it("escalates at once when a stalled check waits on an environment approval", async () => {

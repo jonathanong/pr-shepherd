@@ -28,17 +28,18 @@ export async function readSignatureMarker(
   }
 }
 
-/** Best-effort: a missing marker only repeats the one investigation tick. */
+/** True when the marker was saved; false when the state directory could not be written. */
 export async function writeSignatureMarker(
   key: StateKey,
   file: string,
   signature: string,
-): Promise<void> {
+): Promise<boolean> {
   try {
     const path = resolvePrStatePath(key, file);
     await mkdir(dirname(path), { recursive: true });
     await writeFile(path, JSON.stringify({ signature }));
+    return true;
   } catch {
-    // Intentionally ignored.
+    return false;
   }
 }

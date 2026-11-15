@@ -166,12 +166,12 @@ vi.mock("../../src/state/check-follow-up.mts", async (importOriginal) => ({
 vi.mock("../../src/state/queue-removal-follow-up.mts", async (importOriginal) => ({
   ...(await importOriginal()),
   readQueueRemovalFollowUp: vi.fn().mockResolvedValue(false),
-  writeQueueRemovalFollowUp: vi.fn().mockResolvedValue(undefined),
+  writeQueueRemovalFollowUp: vi.fn().mockResolvedValue(true),
 }));
 vi.mock("../../src/state/ci-start-follow-up.mts", async (importOriginal) => ({
   ...(await importOriginal()),
   readCiStartFollowUp: vi.fn().mockResolvedValue(false),
-  writeCiStartFollowUp: vi.fn().mockResolvedValue(undefined),
+  writeCiStartFollowUp: vi.fn().mockResolvedValue(true),
 }));
 vi.mock("../../src/state/ci-retrigger.mts", async (importOriginal) => ({
   ...(await importOriginal()),
