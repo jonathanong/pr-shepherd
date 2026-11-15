@@ -94,7 +94,9 @@ describe("planUnreportedRequired", () => {
     expect(firstText).toContain("This branch is not behind `feature-parent`.");
     expect(firstText).toContain("No CI checks are running, and required checks have not passed");
     expect(firstText).toContain("gh pr close 622 -R acme/widgets");
-    expect(firstText).toContain("investigate why the workflows did not start");
+    expect(firstText).toContain("Before retriggering, diagnose why the workflows did not start");
+    expect(firstText).toContain("do not edit the CI workflow");
+    expect(firstText.indexOf("diagnose")).toBeLessThan(firstText.indexOf("gh pr close"));
     const second = await planUnreportedRequired({
       report: current,
       base,
