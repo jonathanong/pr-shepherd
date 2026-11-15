@@ -135,11 +135,13 @@ function withoutPollingCadence(step: string): string {
 
 /** A stack layer no one-PR probe can advance: unreadable, or another author's draft. */
 function hasUnrunnableLayer(result: PollSummaryResult): boolean {
-  return (
-    result.selection.kind === "stack" &&
-    result.prs.some(
-      (item) => item.state === "UNKNOWN" || (isDraftReadinessVerification(item) && !item.owned),
-    )
+  const { selection } = result;
+  if (selection.kind !== "stack") return false;
+  // A whole-stack selection omits row ownership: every layer is the caller's.
+  const listed = selection.owned !== undefined;
+  return result.prs.some(
+    (item) =>
+      item.state === "UNKNOWN" || (listed && isDraftReadinessVerification(item) && !item.owned),
   );
 }
 

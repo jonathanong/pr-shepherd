@@ -50,16 +50,21 @@ describe("aggregate tick wake-up for draft probes", () => {
       ],
     ]) {
       m.runPollSummary.mockResolvedValue(
-        summary({ selection: { kind: "stack" }, reason: "waiting", prs }),
+        summary({ selection: { kind: "stack", owned: [1] }, reason: "waiting", prs }),
       );
       const result = await runPollSummaryTick({} as never);
       expect(result).toMatchObject({ nextCheck: { reason: "safety-net" } });
     }
     m.runPollSummary.mockResolvedValue(
       summary({
-        selection: { kind: "stack" },
+        selection: { kind: "stack", owned: [1] },
         prs: [{ pr: 1, owned: true, ...probe }],
       }),
+    );
+    expect(await runPollSummaryTick({} as never)).not.toHaveProperty("nextCheck");
+    // A whole-stack selection omits row ownership: every probe is the caller's.
+    m.runPollSummary.mockResolvedValue(
+      summary({ selection: { kind: "stack" }, prs: [{ pr: 1, ...probe }] }),
     );
     expect(await runPollSummaryTick({} as never)).not.toHaveProperty("nextCheck");
   });
