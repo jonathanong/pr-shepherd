@@ -10,5 +10,5 @@ Apply when a step says `Playbook: "Check follow-up"`. A check failed, was cancel
 Then:
 
 1. Cause within this PR: fix it and push.
-2. Transient and the run is complete: `gh run rerun <runId> -R <owner/repo>` once. Never rerun a `scope: merge_group` check.
+2. Transient and the output printed a rerun command for it: run that command. Without one, do not rerun; the allowance is spent or the check is not rerunnable.
 3. Otherwise change nothing and keep your findings. CI configuration, repository settings, and approving a gated run are human decisions. If the checks are unchanged next poll, Shepherd escalates `check-follow-up-unavailable`; report them then.
