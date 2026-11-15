@@ -111,6 +111,8 @@ Seven scenarios (39 to 45) were added and two were rewritten (36 now asks to lan
 | `37-stack-merge-through-layer`           | Stacks               | 1.00   | 0.00   | +1.00 |
 | `38-two-stacks-one-request`              | Stacks               | 0.67   | 0.00   | +0.67 |
 | `55-stack-layer-state-unavailable`       | Stacks               | 1.00   | 0.00   | +1.00 |
+| `57-stack-merge-needs-receipts`          | Stacks               | 1.00   | 0.00   | +1.00 |
+| `58-stack-merge-it-after-ready-report`   | Stacks               | 1.00   | 0.00   | +1.00 |
 | `48-create-prs-same-lines-stack`         | Creating PRs         | 1.00   | 0.00   | +1.00 |
 | `49-create-prs-independent-separate`     | Creating PRs         | 1.00   | 1.00   | 0.00  |
 | `50-create-prs-needs-earlier-code-stack` | Creating PRs         | 1.00   | 0.67   | +0.33 |

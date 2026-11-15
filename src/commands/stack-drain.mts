@@ -50,7 +50,10 @@ function sessionInstruction(item: PollSummaryItem): string {
   const queueNote = item.queueRemoval
     ? " That session fixes failing queue CI, or investigates a removal with no failed check once, then escalates if it is unchanged."
     : "";
-  return `${removal} Run \`${item.pollCommand}\`.${queueNote}`;
+  const receiptNote = item.reasons.includes("ready-receipt-required")
+    ? " It looks ready, but only its own one-PR session records the READY receipt a stack merge needs."
+    : "";
+  return `${removal} Run \`${item.pollCommand}\`.${queueNote}${receiptNote}`;
 }
 export function describeIdleLayers(idle: PollSummaryItem[]): string {
   return idle.map((item) => `PR #${item.pr} (${item.reasons.join(", ")})`).join("; ");
@@ -67,8 +70,11 @@ export function appendAutonomousInstructions(
   partial = false,
 ): void {
   if (candidates.length === 0) return;
+  const separate = candidates.some((item) => item.reasons.includes("ready-receipt-required"))
+    ? " Run each command as its own session: one multi-PR `pr-shepherd <PR> <PR>` poll records no READY receipts."
+    : "";
   instructions.push(
-    `${instructions.length + 1}. ${partial ? "Start one concurrent one-PR session per command below, only for `owned` rows; none for layers without one." : "Start one concurrent one-PR session per command below; none for layers without one."}`,
+    `${instructions.length + 1}. ${partial ? "Start one concurrent one-PR session per command below, only for `owned` rows; none for layers without one." : "Start one concurrent one-PR session per command below; none for layers without one."}${separate}`,
   );
   for (const item of candidates) {
     instructions.push(`${instructions.length + 1}.${sessionInstruction(item)}`);

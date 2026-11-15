@@ -225,7 +225,7 @@ Other compact review rules:
 
 - **Multi-PR row:** repository, title/URL, raw PR/merge/review/head/base/stack state, bounded check and review counts (including ignored and superseded checks and active merge-queue commit checks), incomplete flags, and `pollCommand` when the row needs a one-PR session.
 - **`stack` row:** an overview ordered bottom to top, with entries fetched completely. It omits one-PR action tags, head SHAs, repeated stack coordinates, check and review histograms, and `pollCommand`. Its fields:
-  - `shepherded`: only when true (a current one-PR READY receipt). A missing receipt omits it and is not a mergeability blocker.
+  - `shepherded`: only when true (a current one-PR READY receipt). A missing receipt omits it and is not a mergeability blocker. Markdown labels a mergeable open layer without one `mergeable, no READY receipt yet`; JSON conveys the same by `mergeable: true` without `shepherded`. That layer's session step adds that only its own one-PR session records the receipt, and the step that starts the sessions says to run each command as its own session, because one multi-PR poll records no receipts.
   - Mergeability: mergeable, or one blocker on an open layer. Failing, in-progress, or actionable counts appear only for the blocker they explain. A merged or closed layer carries only its state.
   - `owned`: only when the caller listed its own PRs after `stack` (declared, never derived from the author; whole-stack ownership omits it).
   - `requiresMergeQueue`: REST rows only, when branch policy proves a queue is required (`true`) or not (`false`); unavailable or incomplete negative policy stays omitted. Markdown: `merge queue required` / `merge queue not required`.
@@ -257,7 +257,7 @@ flowchart TD
 - `CANCEL` is terminal when every open layer is READY without merge intent, when only clean drafts remain under disabled auto mark-ready, or when every layer is merged. The stack heading then includes `[CANCEL]`; a human hand-off heading includes `[ESCALATE]`. The skill stops on those tokens.
 - A layer whose only failing checks are deferred on an open external pull request or issue is `WAIT` (a probed row). The command does not return `SHEPHERD` for that layer alone, so `--until-terminal` keeps polling. A merged or closed blocker still sends the layer to its one-PR session, which says to update the branch rather than rerun the job.
 - A draft is marked ready by its own session as soon as that layer is clean when auto mark-ready is enabled; it does not wait for a lower layer's receipt.
-- An explicit PR set that contains a native-stack member still routes that row to an authoritative one-PR poll and includes its `pollCommand`.
+- An explicit PR set that contains a native-stack member still routes that row to an authoritative one-PR poll and includes its `pollCommand`. A multi-PR poll never writes READY receipts: when it ends `all_terminal` with an open native-stack row at `appears-ready`, step 2 names those rows, says the poll did not record the receipt a stack merge needs, and, if the user asked to merge, points to `pr-shepherd stack` with `--merge`.
 - When an explicit PR set has an `ESCALATE` row alongside rows that can proceed, step 1 also says to report each `ESCALATE` row's reasons to the user now, leave that PR alone, and keep working on the other rows.
 
 ### Draft probes (auto mark-ready disabled)

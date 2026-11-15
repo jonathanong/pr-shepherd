@@ -5,11 +5,11 @@ nextAction: shepherd
 
 ## Layers
 
-- PR #641: Layer 1 — mergeable · owned
+- PR #641: Layer 1 — mergeable, no READY receipt yet · owned
   - OPEN · base `main`
-- PR #642: Layer 2 — mergeable · owned
+- PR #642: Layer 2 — mergeable, no READY receipt yet · owned
   - OPEN · base `layer-641`
-- PR #643: Layer 3 — mergeable
+- PR #643: Layer 3 — mergeable, no READY receipt yet
   - OPEN · base `layer-642`
 
 ## Instructions

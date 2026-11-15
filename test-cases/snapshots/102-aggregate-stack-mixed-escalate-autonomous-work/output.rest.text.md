@@ -12,7 +12,7 @@ nextAction: shepherd
   - unavailable `viewerAuthorization`: REST does not expose viewer capability fields
   - unavailable `comments.isMinimized`: REST does not expose minimization state or support minimizing comments
   - unavailable `mergeQueue`: REST does not expose queue membership, entry or removal history
-- PR #402: Independent review work — mergeable · owned
+- PR #402: Independent review work — mergeable, no READY receipt yet · owned
   - OPEN · base `foundation`
   - transport `rest`
   - unavailable `reviewDecision`: REST does not expose an aggregate review decision; latest review states are supplied
