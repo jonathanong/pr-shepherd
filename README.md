@@ -2,7 +2,7 @@
 
 Take pull requests from scratch to merge-ready with a coding agent. It works with Claude Code, Codex, Grok, and any stdio MCP client.
 
-**Modeled per PR session: about 30% lower LLM cost than `gh` at a 60k-token context (27–33% across 40k–100k) and about 74% lower than the GitHub MCP server, both assuming a warm prompt cache. While waiting on CI: ~60 GraphQL points an hour vs. ~360 for `gh pr checks --watch`.**
+**Modeled per PR session: about 35% lower LLM cost than `gh` at a 60k-token context (31–38% across 40k–100k) and about 76% lower than the GitHub MCP server, both assuming a warm prompt cache. While waiting on CI: ~60 GraphQL points an hour vs. ~360 for `gh pr checks --watch`.**
 
 ## What it does
 
@@ -45,11 +45,11 @@ More features are in [docs/features.md](docs/features.md).
 
 | Outcome                                                                 | Headline                                                                                                                  | Evidence                                                                 |
 | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| [Context and correctness](#context-and-correctness)                     | 63 GitHub edge cases cataloged, backed by 181 scenario fixtures                                                           | [Handled cases](docs/handled-cases.md)                                   |
-| [Fewer tokens, lower cost](#fewer-tokens-and-lower-cost)                | Modeled cost ~−30% vs. `gh` and ~−74% vs. MCP per PR session; turns −17% / −68%                                           | [Token bench](evals/tokens/README.md)                                    |
-| [Clearer agent direction](#clearer-agent-direction)                     | Across 33 PR states, 1.00 with the plugin vs. 0.55 with `gh` + GitHub MCP, Δ +0.45 [+0.40, +0.49] (2026-11-12)            | [Outcome evals](evals/README.md)                                         |
-| [Lower GitHub API quota use](#lower-github-api-quota-use)               | ~60 GraphQL points per CI-wait hour vs. ~360 for `gh`; ~4 when idle. REST core per PR session 4.8 vs. 15 (`gh`), 82 (MCP) | [GitHub API](docs/github-api.md), [GraphQL usage](docs/graphql-usage.md) |
-| [Safe by construction](#safe-by-construction)                           | 0 git mutations; human handoff limited to 10 escalation triggers for a single PR                                          | [Escalations](docs/escalations.md)                                       |
+| [Context and correctness](#context-and-correctness)                     | 72 GitHub edge cases cataloged, backed by 198 scenario fixtures                                                           | [Handled cases](docs/handled-cases.md)                                   |
+| [Fewer tokens, lower cost](#fewer-tokens-and-lower-cost)                | Modeled cost ~−35% vs. `gh` and ~−76% vs. MCP per PR session; turns −20% / −69%                                           | [Token bench](evals/tokens/README.md)                                    |
+| [Clearer agent direction](#clearer-agent-direction)                     | Across 56 PR states, 0.97 with the plugin vs. 0.47 with `gh` + GitHub MCP, Δ +0.50 (2026-11-15)                           | [Outcome evals](evals/README.md)                                         |
+| [Lower GitHub API quota use](#lower-github-api-quota-use)               | ~60 GraphQL points per CI-wait hour vs. ~360 for `gh`; ~4 when idle. REST core per PR session 3.8 vs. 15 (`gh`), 82 (MCP) | [GitHub API](docs/github-api.md), [GraphQL usage](docs/graphql-usage.md) |
+| [Safe by construction](#safe-by-construction)                           | 0 git mutations; human handoff limited to 9 escalation triggers for a single PR                                           | [Escalations](docs/escalations.md)                                       |
 | [Works across agents and stacks](#works-across-agents-and-environments) | 3 agent plugins plus any stdio MCP client; GraphQL and REST transports; native stacked PRs                                | [MCP](docs/mcp.md), [cloud](docs/cloud.md)                               |
 
 **[jongleberry.com/pr-shepherd](https://jongleberry.com/pr-shepherd/)** covers the why and the design principles.
@@ -82,10 +82,10 @@ Batching, noise filtering, fingerprint skips, seen markers, and lean output cut 
 
 | Session   | Cost vs. `gh` | Cost vs. GitHub MCP |
 | --------- | ------------: | ------------------: |
-| Single PR |      **−30%** |            **−74%** |
+| Single PR |      **−35%** |            **−76%** |
 | PR stack  |      **−40%** |            **−60%** |
 
-These are modeled, not measured billing. The model replays a hand-weighted PR session (a CI wait, a failing log, review rounds, marking a draft ready, a merge) against scripted `gh` and MCP agents that never retry or fail a step. The figures above use a 60k-token context, Claude Code's 1-hour cache-write price, and about 190 output tokens per turn, thinking included, as measured in [Sonnet 5.5 eval traces](evals/HISTORY.md#2026-11-12-output-and-spend-in-the-outcome-eval-traces). They assume a warm prompt cache. At a 40k context the single-PR saving vs. `gh` is 33%, and at 100k it is 27%. A wait past the cache's one-hour lifetime re-writes the context. One such expiry cuts the saving vs. `gh` to 16–19% and vs. MCP to 57–61% ([realism sweep](evals/tokens/REPORT.md#realism-sweep)).
+These are modeled, not measured billing. The model replays a hand-weighted PR session (a CI wait, a failing log, review rounds, marking a draft ready, a merge) against scripted `gh` and MCP agents that never retry or fail a step. The figures above use a 60k-token context, Claude Code's 1-hour cache-write price, and about 190 output tokens per turn, thinking included, as measured in [Sonnet 5.5 eval traces](evals/HISTORY.md#2026-11-12-output-and-spend-in-the-outcome-eval-traces). They assume a warm prompt cache. At a 40k context the single-PR saving vs. `gh` is 38%, and at 100k it is 31%. A wait past the cache's one-hour lifetime re-writes the context. One such expiry cuts the saving vs. `gh` to 18–22% and vs. MCP to 58–62% ([realism sweep](evals/tokens/REPORT.md#realism-sweep)).
 
 Where the saving comes from, and where it does not:
 
@@ -99,7 +99,7 @@ Where the saving comes from, and where it does not:
 
 For a single PR, each tick returns exactly one action: `WAIT`, `READY`, `MARK_READY`, `TRIAGE`, `MERGE`, `CANCEL`, or `ESCALATE`. A `stack` poll can also return `SHEPHERD`, which starts one-PR sessions for owned layers. Every action except `CANCEL` comes with numbered `## Instructions` and exact commands, so the agent does not invent policy.
 
-In the [outcome evals](evals/README.md) (Sonnet 5.5, 56 PR states, one full run on 2026-11-15), the agent scores **0.96** with the plugin and **0.47** with `gh` + the GitHub MCP server, a Δ of **+0.49**. Two scenarios come from a rerun after a fix. Every category favors the plugin, from review feedback (+0.21) to stacks (+0.73) and the merge queue (+1.00). The output contract is in [docs/actions.md](docs/actions.md).
+In the [outcome evals](evals/README.md) (Sonnet 5.5, 56 PR states, one full run on 2026-11-15), the agent scores **0.97** with the plugin and **0.47** with `gh` + the GitHub MCP server, a Δ of **+0.50**. Three scenarios come from reruns. No scenario favors `gh` + MCP. Every category favors the plugin, from review feedback (+0.21) to stacks (+0.73) and the merge queue (+1.00). The output contract is in [docs/actions.md](docs/actions.md).
 
 ### Lower GitHub API quota use
 
@@ -125,12 +125,12 @@ Per session, assumed and deterministic, from the [token bench](evals/tokens/READ
 
 | Session   | GraphQL points: Shepherd / `gh` / MCP | REST core: Shepherd / `gh` / MCP |
 | --------- | ------------------------------------: | -------------------------------: |
-| Single PR |                    33.3 / 36.2 / 11.4 |                    4.8 / 15 / 82 |
+| Single PR |                    33.3 / 36.2 / 11.4 |                    3.8 / 15 / 82 |
 | PR stack  |                          11 / 27 / 12 |                       2 / 6 / 74 |
 
 - On the default GraphQL transport, Shepherd spends fewer GraphQL points than `gh` and fewer REST requests than `gh` or MCP.
 - On a single PR, MCP spends fewer GraphQL points but about 17× the REST requests.
-- The REST transport used in cloud sessions spends no GraphQL points. It spends more `core` requests than `gh` or MCP (201.7 single PR, 432 stack).
+- The REST transport used in cloud sessions spends no GraphQL points. It spends more `core` requests than `gh` or MCP (200.7 single PR, 432 stack).
 
 See [docs/graphql-usage.md](docs/graphql-usage.md) and [docs/rest-usage.md](docs/rest-usage.md).
 
@@ -203,7 +203,7 @@ Requirements:
 
 - **"make PRs, /pr-shepherd:pr-shepherd"** makes one PR per change that can be reviewed alone. It stacks a PR on an earlier one when it needs that PR's code or edits the same lines, and shepherds every PR until it is mergeable. Independent changes become separate PRs on the default branch.
 - **`/pr-shepherd <PR>`** takes a PR, including a draft, to mergeable. It does not merge.
-- **`/pr-shepherd --merge <PR>`** takes the PR to mergeable and merges it. For a stack layer, it merges that layer and the layers below it.
+- **`/pr-shepherd --merge <PR>`** takes the PR to mergeable and merges it. A PR owns only itself, so for a stack layer with open layers below it, Shepherd hands those layers back to you instead of merging them. `/pr-shepherd --merge stack owner/repo#N` lands the whole stack.
 
 ```text
 /goal /pr-shepherd:pr-shepherd 42    # Claude Code
