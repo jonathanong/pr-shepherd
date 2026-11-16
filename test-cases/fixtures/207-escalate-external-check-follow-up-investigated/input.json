@@ -1,0 +1,27 @@
+{
+  "description": "A failing external status with a details URL and no workflow run in progress, on the next presented tick after the TRIAGE (marker matches): ESCALATE check-follow-up-unavailable.",
+  "batchData": {
+    "checks": [
+      {
+        "name": "external-status",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": null,
+        "detailsUrl": "https://external.ci/builds/42",
+        "runId": null
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 13,
+  "checkFollowUp": {
+    "headSha": "abc123",
+    "checks": [
+      "external-status##"
+    ]
+  }
+}

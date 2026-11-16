@@ -33,7 +33,8 @@
 1. Fix each warranted item.
 2. Read each body under `## Review summaries (first look)` before acting.
 3. Triage `## Failing checks`. Playbook: "CI failure triage".
-4. Inspect every referenced range under `## Check annotations` and apply any warranted change.
-5. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <reason>'`.
-6. Commit and push any changes to the PR head.
-7. Rerun Shepherd now.
+4. Shepherd has no rerun to offer for some checks under `## Failing checks` (an external status, a later attempt, or a failed merge-queue run). Investigate them with the evidence shown. Playbook: "Check follow-up". If the cause is within this PR, fix it and push. Otherwise make no change and keep what you found; do not rerun or retrigger these checks. If these checks are unchanged on the next poll, Shepherd escalates with `check-follow-up-unavailable`; report that diagnosis then.
+5. Inspect every referenced range under `## Check annotations` and apply any warranted change.
+6. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 --transport rest '- <reason>'`.
+7. Commit and push any changes to the PR head.
+8. Rerun Shepherd now.

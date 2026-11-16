@@ -19,6 +19,7 @@ Merge queue: No [Required]
 
 1. Fix each warranted item.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
-3. Triage the merge-queue ejection before any requeue. Update the PR head from the latest base first. Run `requeue:` only if the failure does not reproduce on the updated head, neither the update nor a code change altered the head, and no other blocker remains. If gh reports auto-merge is disabled, run `requeue API fallback:` instead. Playbook: "Merge queue ejection".
-4. If the base update or a fix changed the head, commit any remaining changes and push to the PR head branch. If neither did, do not push.
-5. Rerun Shepherd now.
+3. Shepherd has no rerun to offer for some checks under `## Failing checks` (an external status, a later attempt, or a failed merge-queue run). Investigate them with the evidence shown. Playbook: "Check follow-up". If the cause is within this PR, fix it and push. Otherwise make no change and keep what you found; do not rerun or retrigger these checks. If these checks are unchanged on the next poll, Shepherd escalates with `check-follow-up-unavailable`; report that diagnosis then.
+4. Triage the merge-queue ejection before any requeue. Update the PR head from the latest base first. Run `requeue:` only if the failure does not reproduce on the updated head, neither the update nor a code change altered the head, and no other blocker remains. If gh reports auto-merge is disabled, run `requeue API fallback:` instead. Playbook: "Merge queue ejection".
+5. If the base update or a fix changed the head, commit any remaining changes and push to the PR head branch. If neither did, do not push.
+6. Rerun Shepherd now.

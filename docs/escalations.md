@@ -67,7 +67,8 @@ A cloud proxy session-access refusal during mark-ready also uses this trigger an
 At least one remaining failing check has no `rerunCommand` and is one of:
 
 - `ACTION_REQUIRED`: a gate only a human can grant. This escalates immediately, with no investigation tick;
-- a manual-only check the agent can investigate: `CANCELLED` or `STARTUP_FAILURE`, a GitHub Actions check with `runAttempt` greater than 1 and no nonblank included log excerpt, a check with `runId === null` and an empty or whitespace-only `detailsUrl`, or a check with a run ID but no nonblank included `logExcerpt` (or `relatedJobs[].logExcerpt`).
+- a manual-only check the agent can investigate: `CANCELLED` or `STARTUP_FAILURE`, a GitHub Actions check with `runAttempt` greater than 1 and no nonblank included log excerpt, a check with `runId === null` and an empty or whitespace-only `detailsUrl`, or a check with a run ID but no nonblank included `logExcerpt` (or `relatedJobs[].logExcerpt`);
+- evidence-bearing checks with no rerun: a failing external status with a non-empty `detailsUrl` once no workflow run is in progress, a later attempt (`runAttempt > 1`) with a nonblank log excerpt, or a merge-group failure with a nonblank log excerpt once the PR is no longer queued. These carry evidence, so their first tick is the ordinary `TRIAGE` showing the excerpt and annotations plus a `Playbook: "Check follow-up"` step (never an escalation), and they escalate only when they are the last blockers and the branch is not behind or conflicting.
 
 A manual-only check is not escalated first. Shepherd returns one investigation `TRIAGE` with the raw checks under `## Failing checks`, says it cannot tell from GitHub's data why they failed, and points to `Playbook: "Check follow-up"` (open-ended starting points, not a checklist). The caller fixes a cause within the PR, reruns once if that is right, or makes no change and keeps its findings. Shepherd records the head SHA and the check set (name, run ID, attempt) in `check-follow-up.json` in the PR state directory when it returns that tick; internal poll debounce ticks do not write it. The next presented tick with the same head and checks escalates, and the caller reports its diagnosis. A new head or a different check set investigates again.
 
@@ -76,7 +77,7 @@ It fires only when no autonomous work or newly surfaced one-look item remains: n
 - An unauthorized review item postpones the escalation for its one visibility tick; once its seen marker suppresses it, the manual-only check gets its investigation tick, then can escalate.
 - An authorized bot, viewer-authored, or configured other-human thread with a generated mutation is repeatable work even without a source location.
 - A stale human `CHANGES_REQUESTED` review does not postpone the handoff, but it is kept in the payload so the human sees every blocker.
-- A failing external check with `runId === null` and a non-empty `detailsUrl` stays `TRIAGE`: the URL is an autonomous investigation path (Codecov is the regression case).
+- A failing external check with `runId === null` and a non-empty `detailsUrl` stays `TRIAGE` for its first presented tick, and while any workflow run is in progress (Codecov is the regression case); it then follows the investigation rule above.
 - `escalate.checks[]` keeps the raw check details for the human. When the run is held on an environment approval, they include its `pendingDeployments[]` (environment, required reviewers, and whether the viewer can approve), so the human learns what to approve without opening the run. An `ACTION_REQUIRED` run with no listed environment (the fork "approve and run" gate) shows only the conclusion and URL.
 
 ### `triage-thrash`
@@ -171,4 +172,4 @@ The stall timeout is enabled, and the one-PR timer (`iterate-stall.json`) or the
 - Closed or merged PRs return `CANCEL`, not `ESCALATE`.
 - Ordinary non-force pushes never produce `authorization-required`.
 - Missing-location threads and unauthorized review mutations are surfaced/logged once and skipped.
-- Failing queue CI and URL-backed external checks stay actionable `TRIAGE` work.
+- Failing queue CI and URL-backed external checks stay actionable `TRIAGE` work for their first presented tick; unchanged on the next, they escalate `check-follow-up-unavailable`.
