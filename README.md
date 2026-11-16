@@ -7,7 +7,7 @@ Benefits:
 - Improved correctness: across 56 PR states, 0.97 with the plugin vs. 0.47 with `gh` + GitHub MCP, Δ +0.50 (2026-11-15)
 - Lower cost: modeled cost ~−36% vs. `gh` and ~−76% vs. MCP per PR session; turns −20% / −69%
 - Optimized GitHub GraphQL rate limit quotas: modeled usage GraphQL points 33 vs. 96 (`gh`), 11 (MCP); REST core 3.8 vs. 15, 82
-- Tidy PRs: automatically triage and resolve bot comments & reply to human code reviews
+- Tidy PRs: automatically triage and resolve bot & outdated comments, reply to human code reviews, and hide your own comments
 - CI Optimizations: automatically cancel CI runs when an agent is preparing a fix
 - Full shepherd flow: handles PRs from scratch, to draft, to mergeable, and into the merge queue
 - Pre-filtering: filters resolved comments plus configurations to filter more bot noise to minimize context usage
