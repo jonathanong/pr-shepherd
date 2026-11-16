@@ -5,7 +5,8 @@ import type { AgentCheck, IterateResult, IterateResultBase } from "../../types.m
  * Failing checks that can still change because CI is still running: an Actions check whose own
  * run is in progress (no rerun is possible yet), and an external status with a details URL (no run
  * id, e.g. coverage) while any workflow run is in progress, since such statuses often flip once CI
- * finishes. They are shown once and then waited on. Queue checks are never held back.
+ * finishes. They are shown once and then waited on. Queue checks and external approval gates
+ * (`ACTION_REQUIRED`, which escalate at once) are never held back.
  */
 export function activeRunFailures(
   failing: readonly AgentCheck[],
@@ -17,7 +18,9 @@ export function activeRunFailures(
       !released.has(check.name) &&
       check.scope !== "merge_group" &&
       (check.runId === null
-        ? Boolean(check.detailsUrl) && activeRunIds.size > 0
+        ? Boolean(check.detailsUrl) &&
+          check.conclusion !== "ACTION_REQUIRED" &&
+          activeRunIds.size > 0
         : activeRunIds.has(check.runId)),
   );
 }

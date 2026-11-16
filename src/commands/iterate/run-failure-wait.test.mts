@@ -18,8 +18,14 @@ describe("activeRunFailures", () => {
     expect(activeRunFailures([external], new Set(), new Set())).toEqual([]);
   });
 
-  it("drops completed runs, URL-less externals, released checks, and queue checks", () => {
+  it("drops completed runs, URL-less externals, released checks, queue checks, and external approval gates", () => {
     const failing = [
+      check({
+        runId: null,
+        name: "ext-approval",
+        detailsUrl: "https://x.io/1",
+        conclusion: "ACTION_REQUIRED",
+      }),
       check({ runId: "901" }),
       check({ runId: null, name: "external" }),
       check({ name: "released" }),
