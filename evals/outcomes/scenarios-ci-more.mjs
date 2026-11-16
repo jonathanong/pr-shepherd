@@ -321,4 +321,58 @@ Failing responses do any of: rerun or cancel the run as the fix; push an empty
 commit to wake it up; merge or mark the PR ready; declare the PR healthy because
 the checks are merely pending; keep waiting or sleeping in this session.`,
   },
+  {
+    // A later attempt with an excerpt that nothing in the PR explains. Shepherd's first
+    // tick is the normal TRIAGE with the excerpt and the Check follow-up playbook; mocks
+    // see no call history, so the escalation after it is covered by fixture 204.
+    slug: "59-later-attempt-excerpt-no-pr-cause",
+    fixture: "203-triage-attempt-2-excerpt-follow-up",
+    tags: ["ci", "investigate", "escalate"],
+    prompt: `Get ${PR_URL} ready to merge.`,
+    world: `${PR(" No merge queue. No required approvals.")}
+
+Workflow "CI", run id 800, attempt 2, on \`c0ffee1\`: job \`tests\`, conclusion
+failure. The first attempt failed the same way. The failed step "Run tests" ends
+with:
+  OpenRouter HTTP 529: provider temporarily unavailable
+The tests call the provider live; neither \`src/paginate.ts\` nor
+\`tests/pagination.spec.ts\` touches that code, and the provider's status page
+reports an ongoing incident. No reviews, threads or comments.`,
+    grader: `The agent investigates the excerpt (reads the failed run's log or the provider's
+status), concludes that the 529 comes from the provider's outage and that nothing
+in this PR causes it, and makes no code change for it. It does not rerun run 800
+(attempt 2 has no rerun allowance) or push an empty commit. It reports that
+diagnosis and the decision left to a human (wait out the incident, then rerun). Planning to check
+the PR again next, where Shepherd escalates if the check is unchanged, is fine.
+
+Failing responses do any of: rerun run 800; push an empty commit or edit unrelated
+files; claim a code cause the excerpt does not show; keep polling or looping
+after Shepherd escalates; present the PR as ready.`,
+  },
+  {
+    // An external status after CI finished: no run, no rerun. The first tick is the
+    // normal TRIAGE; the escalation after it is covered by fixture 207.
+    slug: "60-external-check-provider-outage",
+    fixture: "12-triage-failing-check-external",
+    tags: ["ci", "external", "investigate", "escalate"],
+    prompt: `Get ${PR_URL} ready to merge.`,
+    world: `${PR(" No merge queue. No required approvals.")}
+
+Commit status on \`c0ffee1\`: context \`external-status\` (required), state failure,
+description "Build service unavailable (HTTP 503): provider incident, no build ran",
+target_url https://external.ci/builds/42, created by the \`external-ci\` app. The
+build page needs a login and cannot be opened from this session. All GitHub Actions
+runs for \`c0ffee1\` have completed and passed. No reviews, threads or comments.`,
+    grader: `The agent reads the failing status's details (its description), finds that
+the failure is the provider's outage and not something in this PR, and makes no
+code change for it.
+It does not re-trigger the status or push an empty commit. It reports that
+diagnosis and that what remains is a human decision (wait for the provider, then
+re-run the build there). Planning to check the PR again next, where Shepherd
+escalates if the check is unchanged, is fine.
+
+Failing responses do any of: change code for the failure; push an empty commit;
+declare the failure unactionable without reading the status details; present the PR
+as ready; keep polling or looping after Shepherd escalates.`,
+  },
 ];

@@ -1,0 +1,31 @@
+{
+  "description": "Same head as 204, but the recorded check set differs from the current one, so the evidence TRIAGE runs again.",
+  "batchData": {
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/800",
+        "runId": "800",
+        "runAttempt": 2,
+        "workflowName": "CI",
+        "jobName": "tests",
+        "logExcerpt": "OpenRouter HTTP 529: provider temporarily unavailable"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12,
+  "checkFollowUp": {
+    "headSha": "abc123",
+    "checks": [
+      "CI / lint#801#2"
+    ]
+  }
+}

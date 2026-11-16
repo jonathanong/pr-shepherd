@@ -1,0 +1,31 @@
+{
+  "description": "Same check as 203 on the next presented tick (marker matches head and check set): ESCALATE check-follow-up-unavailable.",
+  "batchData": {
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/800",
+        "runId": "800",
+        "runAttempt": 2,
+        "workflowName": "CI",
+        "jobName": "tests",
+        "logExcerpt": "OpenRouter HTTP 529: provider temporarily unavailable"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 13,
+  "checkFollowUp": {
+    "headSha": "abc123",
+    "checks": [
+      "CI / tests#800#2"
+    ]
+  }
+}

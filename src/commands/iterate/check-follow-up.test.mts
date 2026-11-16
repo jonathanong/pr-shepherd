@@ -1,6 +1,50 @@
 import { describe, expect, it } from "vitest";
 import type { AgentCheck } from "../../types.mts";
-import { buildCheckFollowUpInstructions } from "./check-follow-up.mts";
+import {
+  buildCheckFollowUpInstructions,
+  buildEvidenceFollowUpInstruction,
+  isEvidenceFollowUpCheck,
+} from "./check-follow-up.mts";
+
+describe("isEvidenceFollowUpCheck", () => {
+  const base = { runId: "9", conclusion: "FAILURE", logExcerpt: "boom" } as AgentCheck;
+  it("accepts an external check with a details URL", () => {
+    const ext = { runId: null, conclusion: "FAILURE", detailsUrl: "https://x" } as AgentCheck;
+    expect(isEvidenceFollowUpCheck(ext, false)).toBe(true);
+  });
+  it("rejects a check with a rerun, or no evidence", () => {
+    expect(isEvidenceFollowUpCheck({ ...base, rerunCommand: "r", runAttempt: 2 }, false)).toBe(
+      false,
+    );
+    expect(isEvidenceFollowUpCheck({ ...base, logExcerpt: "", runAttempt: 2 }, false)).toBe(false);
+  });
+  it("accepts a later attempt with an excerpt", () => {
+    expect(isEvidenceFollowUpCheck({ ...base, runAttempt: 2 }, false)).toBe(true);
+  });
+  it("accepts a merge-group failure only when the PR is not queued", () => {
+    const mg = { ...base, scope: "merge_group" } as AgentCheck;
+    expect(isEvidenceFollowUpCheck(mg, false)).toBe(true);
+    expect(isEvidenceFollowUpCheck(mg, true)).toBe(false);
+  });
+  it("rejects any merge-group check while the PR is still queued", () => {
+    const later = { ...base, scope: "merge_group", runAttempt: 2 } as AgentCheck;
+    const ext = {
+      runId: null,
+      conclusion: "FAILURE",
+      detailsUrl: "https://x",
+      scope: "merge_group",
+    } as AgentCheck;
+    expect(isEvidenceFollowUpCheck(later, true)).toBe(false);
+    expect(isEvidenceFollowUpCheck(ext, true)).toBe(false);
+    expect(isEvidenceFollowUpCheck(ext, false)).toBe(true);
+  });
+  it("leaves a first-attempt pull-request failure to the rerun path", () => {
+    expect(isEvidenceFollowUpCheck(base, false)).toBe(false);
+  });
+  it("names the playbook and the escalation", () => {
+    expect(buildEvidenceFollowUpInstruction()).toContain('Playbook: "Check follow-up"');
+  });
+});
 
 const check = (runId: string | null) => ({ runId }) as AgentCheck;
 

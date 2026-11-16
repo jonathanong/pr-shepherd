@@ -20,7 +20,12 @@ import {
 import { buildFixInstructions } from "./render.mts";
 import { buildCancelRunsInstruction, buildInProgressRuns } from "./in-progress-runs.mts";
 import { buildRemovedQueueRecovery, buildStackQueueRemovalAcknowledgment } from "./merge.mts";
-import { buildCheckFollowUpInstructions, checkFollowUp } from "./check-follow-up.mts";
+import {
+  buildCheckFollowUpInstructions,
+  buildEvidenceFollowUpInstruction,
+  checkFollowUp,
+  isEvidenceFollowUpCheck,
+} from "./check-follow-up.mts";
 import {
   checkFollowUpKeys,
   readCheckFollowUp,
@@ -390,8 +395,17 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     inProgressWorkflowRunIds,
     releasedCheckNames,
   );
+  const evidenceChecks = failingAgentChecks.filter(
+    (check) =>
+      !releasedCheckNames.has(check.name) &&
+      !belongsToActiveWorkflowRun(check) &&
+      !activeFailures.includes(check) &&
+      isEvidenceFollowUpCheck(check, Boolean(report.mergeQueue?.inQueue)),
+  );
   const hasOtherAutonomousWork =
     hasConflicts ||
+    // The branch-update step is emitted only with a configured hint; uncounted work cannot loop.
+    (isBehind && behindBaseHint.trim() !== "" && evidenceChecks.length > 0) ||
     hasBehindBaseRecovery ||
     threads.length > 0 ||
     resolutionOnlyThreads.length > 0 ||
@@ -410,22 +424,28 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
         !activeFailures.includes(check) &&
         (releasedCheckNames.has(check.name) ||
           belongsToActiveWorkflowRun(check) ||
-          checkFollowUp(check) === undefined),
+          (checkFollowUp(check) === undefined && !evidenceChecks.includes(check))),
     );
   const hasAutonomousWork = hasOtherAutonomousWork || activeFailures.length > 0;
   // Only a gate a human must grant escalates at once; every other manual-only check gets one
   // investigation tick for this head and check set before it escalates.
   const needsApproval = manualFollowUpChecks.some((check) => checkFollowUp(check) === "approval");
-  const followUpKeys = checkFollowUpKeys(manualFollowUpChecks);
+  const terminalChecks = [...manualFollowUpChecks, ...evidenceChecks];
+  const followUpKeys = checkFollowUpKeys(terminalChecks);
   const investigated =
     needsApproval || sameCheckFollowUp(await readCheckFollowUp(stallKey), headSha, followUpKeys);
-  const investigate = manualFollowUpChecks.length > 0 && !hasAutonomousWork && !investigated;
-  if (manualFollowUpChecks.length > 0 && !hasAutonomousWork && investigated) {
+  const investigate =
+    manualFollowUpChecks.length > 0 &&
+    evidenceChecks.length === 0 &&
+    !hasAutonomousWork &&
+    !investigated;
+  if (terminalChecks.length > 0 && !hasAutonomousWork && investigated) {
     const { resolveCommand, resolveOnlyCommand } = buildReviewCommands(failingAgentChecks);
     const pending = pendingReviewCommands(resolveCommand, resolveOnlyCommand);
+    const terminalExhausted = exhaustedAttempts.filter((check) => terminalChecks.includes(check));
     const checkSuggestion =
-      manualExhaustedAttempts.length > 0
-        ? `GitHub reports a later workflow attempt (${manualExhaustedAttempts
+      terminalExhausted.length > 0
+        ? `GitHub reports a later workflow attempt (${terminalExhausted
             .map((check) => `${check.runId ?? check.name}: attempt ${check.runAttempt}`)
             .join(
               ", ",
@@ -441,7 +461,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       changesRequestedReviews,
       ...(firstLookSummaries.length > 0 && { firstLookSummaries }),
       ...(editedSummaries.length > 0 && { editedSummaries }),
-      checks: manualFollowUpChecks,
+      checks: terminalChecks,
       ...(pending && { pendingReviewCommands: pending }),
       suggestion: checkSuggestion,
     };
@@ -464,6 +484,8 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     activeFailures.length > 0 &&
     !hasOtherAutonomousWork &&
     manualFollowUpChecks.length === 0 &&
+    // New evidence checks are shown on a TRIAGE tick; once shown, the run's wait covers them too.
+    (evidenceChecks.length === 0 || investigated) &&
     !isBehind &&
     !repairInstructions?.length &&
     runFailuresShown(await readShownRunFailures(stallKey), headSha, shownKeys)
@@ -591,6 +613,12 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       ...buildCheckFollowUpInstructions(manualFollowUpChecks, report.repo, actionsRunIds),
     );
   }
+  if (evidenceChecks.length > 0) {
+    const triageStep = instructions.findIndex((step) =>
+      step.startsWith("Triage `## Failing checks`."),
+    );
+    if (triageStep >= 0) instructions.splice(triageStep + 1, 0, buildEvidenceFollowUpInstruction());
+  }
   if (recovery && "unavailable" in recovery) instructions.unshift(recovery.unavailable);
   if (acknowledgmentRecovery && "unavailable" in acknowledgmentRecovery)
     instructions.unshift(acknowledgmentRecovery.unavailable);
@@ -710,7 +738,8 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       { owner: repoOwner, repo: repoName, pr: prNumber },
       { headSha, threadAttempts, threadBodyHashes },
     );
-    if (investigate) await writeCheckFollowUp(stallKey, { headSha, checks: followUpKeys });
+    if (investigate || evidenceChecks.length > 0)
+      await writeCheckFollowUp(stallKey, { headSha, checks: followUpKeys });
     if (activeFailures.length > 0) {
       await writeShownRunFailures(stallKey, { headSha, checks: shownKeys });
     }

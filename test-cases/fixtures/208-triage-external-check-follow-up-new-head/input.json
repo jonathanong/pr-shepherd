@@ -1,0 +1,27 @@
+{
+  "description": "Same external check as 207, but the marker is for an earlier head, so TRIAGE runs again.",
+  "batchData": {
+    "checks": [
+      {
+        "name": "external-status",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": null,
+        "detailsUrl": "https://external.ci/builds/42",
+        "runId": null
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12,
+  "checkFollowUp": {
+    "headSha": "old000",
+    "checks": [
+      "external-status##|https://external.ci/builds/42"
+    ]
+  }
+}

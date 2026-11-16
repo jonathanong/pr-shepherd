@@ -36,7 +36,7 @@
   "shownRunFailures": {
     "headSha": "abc123",
     "checks": [
-      "codecov/project/rust##"
+      "codecov/project/rust##|https://app.codecov.io/gh/owner/repo/pull/42"
     ]
   },
   "readyDelayState": {

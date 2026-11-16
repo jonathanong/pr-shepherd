@@ -46,3 +46,23 @@ export function buildCheckFollowUpInstructions(
     "If the cause is within this PR, fix it and push. Otherwise make no change and keep what you found; do not rerun or retrigger these checks. If these checks are unchanged on the next poll, Shepherd escalates with `check-follow-up-unavailable`; report that diagnosis then.",
   ];
 }
+
+/**
+ * A failing check with evidence (an excerpt, or an external details URL) but no rerun and no
+ * further automatic path: an external status, a later attempt, or a merge-group failure once the
+ * PR left the queue. The caller can fix a cause in the PR; otherwise it gets one investigation
+ * tick before `check-follow-up-unavailable`.
+ */
+export function isEvidenceFollowUpCheck(check: AgentCheck, queued: boolean): boolean {
+  if (check.rerunCommand || checkFollowUp(check) !== undefined) return false;
+  // A still-queued merge-group entry waits for GitHub to report its removal.
+  if (check.scope === "merge_group" && queued) return false;
+  if (check.runId === null) return Boolean(check.detailsUrl?.trim());
+  if (!hasLogEvidence(check)) return false;
+  return (check.runAttempt ?? 1) > 1 || (check.scope === "merge_group" && !queued);
+}
+
+/** The investigation step for evidence-bearing checks: the evidence stays in the failing checks. */
+export function buildEvidenceFollowUpInstruction(): string {
+  return `Some checks under \`## Failing checks\` have no rerun Shepherd can offer. ${playbookPointer("Check follow-up")}`;
+}

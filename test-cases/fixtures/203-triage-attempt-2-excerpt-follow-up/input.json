@@ -1,0 +1,25 @@
+{
+  "description": "A failing check on its second attempt with a nonblank log excerpt and nothing else to do. The first presented tick stays a normal TRIAGE with the excerpt and the Check follow-up playbook; the check-follow-up marker is written on it.",
+  "batchData": {
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/800",
+        "runId": "800",
+        "runAttempt": 2,
+        "workflowName": "CI",
+        "jobName": "tests",
+        "logExcerpt": "OpenRouter HTTP 529: provider temporarily unavailable"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}
