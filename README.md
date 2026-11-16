@@ -96,8 +96,10 @@ grok plugin marketplace add jonathanong/pr-shepherd
 grok plugin install pr-shepherd --trust
 
 # CLI, for shells and CI
-npm install -g pr-shepherd
+pnpm i -g pr-shepherd
 ```
+
+Use one package manager for global installs, because a second global copy shadows the first (`which -a pr-shepherd` lists every copy).
 
 For the MCP server without the plugin, or a local checkout, see [docs/mcp.md](docs/mcp.md).
 
