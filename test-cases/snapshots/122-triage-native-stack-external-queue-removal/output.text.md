@@ -19,7 +19,7 @@ Stack: 7 (layer 1/1, base main)
 
 1. Fix each warranted item.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
-3. Shepherd has no rerun to offer for some checks under `## Failing checks` (an external status, a later attempt, or a failed merge-queue run). Investigate them with the evidence shown. Playbook: "Check follow-up". If the cause is within this PR, fix it and push. Otherwise make no change and keep what you found; do not rerun or retrigger these checks. If these checks are unchanged on the next poll, Shepherd escalates with `check-follow-up-unavailable`; report that diagnosis then.
+3. Some checks under `## Failing checks` have no rerun Shepherd can offer. Investigate them with the evidence shown. Playbook: "Check follow-up". Fix a cause within this PR; otherwise change nothing and do not retrigger them. If they are unchanged on the next poll, Shepherd escalates; report your diagnosis then.
 4. Triage the merge-queue ejection before any requeue. Update the stack from the latest base first: From a clean checkout of `owner/repo`, if `gh stack` does not track stack #7 locally, import it with `gh stack checkout 7`. Then check out the head branch of PR #42 and run `gh stack rebase`. Playbook: "Branch update". Run `acknowledge queue removal:` only if the failure does not reproduce on the updated head, neither the update nor a code change altered the head, and no other blocker remains. Playbook: "Merge queue ejection".
 5. If the base update or a fix changed the head, commit any remaining changes on the PR head branch and push the rewritten stack with `gh stack push`. If neither did, do not push.
 6. Rerun Shepherd now.

@@ -37,5 +37,6 @@ here is what it returned. Take it from there.
 
 1. Fix each warranted item.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
-3. Commit and push any changes to the PR head.
-4. Rerun Shepherd now.
+3. Some checks under `## Failing checks` have no rerun Shepherd can offer. Investigate them with the evidence shown. Playbook: "Check follow-up". Fix a cause within this PR; otherwise change nothing and do not retrigger them. If they are unchanged on the next poll, Shepherd escalates; report your diagnosis then.
+4. Commit and push any changes to the PR head.
+5. Rerun Shepherd now.
