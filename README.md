@@ -73,7 +73,7 @@ $ pr-shepherd 123
 
 1. Fix each warranted item.
 2. Commit and push any changes to the PR head.
-3. `pr-shepherd apply review 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$CHANGE_MESSAGE" --require-sha HEAD`
+3. `$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$CHANGE_MESSAGE" --require-sha HEAD`
 4. Rerun Shepherd now.
 ```
 
