@@ -77,7 +77,7 @@ $ pr-shepherd 123
 4. Rerun Shepherd now.
 ```
 
-More features are in [docs/features.md](docs/features.md). [jongleberry.com/pr-shepherd](https://jongleberry.com/pr-shepherd/) covers the why and the design principles.
+More features are in [docs/features.md](docs/features.md).
 
 ## Install
 
