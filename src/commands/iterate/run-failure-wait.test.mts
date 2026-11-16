@@ -12,7 +12,13 @@ describe("activeRunFailures", () => {
     expect(activeRunFailures([check({})], active, new Set())).toHaveLength(1);
   });
 
-  it("drops completed runs, external checks, released checks, and queue checks", () => {
+  it("keeps an external status with a URL while any run is running", () => {
+    const external = check({ runId: null, name: "codecov", detailsUrl: "https://c.io/1" });
+    expect(activeRunFailures([external], active, new Set())).toHaveLength(1);
+    expect(activeRunFailures([external], new Set(), new Set())).toEqual([]);
+  });
+
+  it("drops completed runs, URL-less externals, released checks, and queue checks", () => {
     const failing = [
       check({ runId: "901" }),
       check({ runId: null, name: "external" }),
@@ -30,10 +36,11 @@ describe("buildRunFailureWait", () => {
       check({}),
       check({ name: "b" }),
       check({ runId: "8" }),
+      check({ runId: null, name: "codecov" }),
     ]);
     expect(result.action).toBe("wait");
     expect(result.action === "wait" && result.log).toBe(
-      "WAIT: PR #7 failing checks already shown; their workflow run is still running (run 900, 8) — waiting for it to complete",
+      "WAIT: PR #7 failing checks already shown; their workflow run is still running (run 900, run 8, codecov) — waiting for it to complete",
     );
   });
 });

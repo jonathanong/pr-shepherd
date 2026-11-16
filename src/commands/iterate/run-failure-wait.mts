@@ -2,8 +2,10 @@ import { checkFollowUpKeys, sameCheckFollowUp } from "../../state/check-follow-u
 import type { AgentCheck, IterateResult, IterateResultBase } from "../../types.mts";
 
 /**
- * Failing checks whose workflow run is still in progress. A rerun is not possible until the run
- * completes, so these are shown once and then waited on. Queue checks are never held back.
+ * Failing checks that can still change because CI is still running: an Actions check whose own
+ * run is in progress (no rerun is possible yet), and an external status with a details URL (no run
+ * id, e.g. coverage) while any workflow run is in progress, since such statuses often flip once CI
+ * finishes. They are shown once and then waited on. Queue checks are never held back.
  */
 export function activeRunFailures(
   failing: readonly AgentCheck[],
@@ -14,8 +16,9 @@ export function activeRunFailures(
     (check) =>
       !released.has(check.name) &&
       check.scope !== "merge_group" &&
-      check.runId !== null &&
-      activeRunIds.has(check.runId),
+      (check.runId === null
+        ? Boolean(check.detailsUrl) && activeRunIds.size > 0
+        : activeRunIds.has(check.runId)),
   );
 }
 
@@ -30,10 +33,12 @@ export function buildRunFailureWait(
   base: IterateResultBase,
   checks: readonly AgentCheck[],
 ): IterateResult {
-  const runIds = [...new Set(checks.map((c) => c.runId))].join(", ");
+  const runIds = [...new Set(checks.filter((c) => c.runId !== null).map((c) => c.runId))];
+  const external = checks.filter((c) => c.runId === null).map((c) => c.name);
+  const waiting = [...runIds.map((id) => `run ${id}`), ...external].join(", ");
   return {
     ...base,
     action: "wait",
-    log: `WAIT: PR #${base.pr} failing checks already shown; their workflow run is still running (run ${runIds}) — waiting for it to complete`,
+    log: `WAIT: PR #${base.pr} failing checks already shown; their workflow run is still running (${waiting}) — waiting for it to complete`,
   } as IterateResult;
 }
