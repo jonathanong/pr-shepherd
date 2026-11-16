@@ -62,5 +62,5 @@ export function isEvidenceFollowUpCheck(check: AgentCheck, queued: boolean): boo
 
 /** The investigation step for evidence-bearing checks: the evidence stays in the failing checks. */
 export function buildEvidenceFollowUpInstruction(): string {
-  return `Some checks under \`## Failing checks\` have no rerun Shepherd can offer. Investigate them with the evidence shown. ${playbookPointer("Check follow-up")} Fix a cause within this PR; otherwise change nothing and do not retrigger them. If they are unchanged on the next poll, Shepherd escalates; report your diagnosis then.`;
+  return `Some checks under \`## Failing checks\` have no rerun Shepherd can offer. ${playbookPointer("Check follow-up")}`;
 }

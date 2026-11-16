@@ -25,7 +25,7 @@
 1. Fix each warranted item.
 2. Read each body under `## Review summaries (first look)` before acting.
 3. Triage `## Failing checks`. Playbook: "CI failure triage".
-4. Some checks under `## Failing checks` have no rerun Shepherd can offer. Investigate them with the evidence shown. Playbook: "Check follow-up". Fix a cause within this PR; otherwise change nothing and do not retrigger them. If they are unchanged on the next poll, Shepherd escalates; report your diagnosis then.
+4. Some checks under `## Failing checks` have no rerun Shepherd can offer. Playbook: "Check follow-up".
 5. Inspect every referenced range under `## Check annotations` and apply any warranted change.
 6. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal https://github.com/owner/repo/pull/42 '- <reason>'`.
 7. Commit and push any changes to the PR head.

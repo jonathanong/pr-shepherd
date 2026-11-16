@@ -14,7 +14,7 @@ Merge queue: No [Required]
 
 1. Fix each warranted item.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
-3. Some checks under `## Failing checks` have no rerun Shepherd can offer. Investigate them with the evidence shown. Playbook: "Check follow-up". Fix a cause within this PR; otherwise change nothing and do not retrigger them. If they are unchanged on the next poll, Shepherd escalates; report your diagnosis then.
+3. Some checks under `## Failing checks` have no rerun Shepherd can offer. Playbook: "Check follow-up".
 4. Triage the merge-queue ejection before any requeue. If the `**queue removal**` reason shows GitHub removed the entry itself, update the PR head from the latest base first. If a person may have dequeued the PR, skip that update unless a conflict step above requires it. Shepherd printed no queue command for this session, so do not enqueue the PR. Playbook: "Merge queue ejection".
 5. If the base update or a fix changed the head, commit any remaining changes and push to the PR head branch. If neither did, do not push.
 6. Rerun Shepherd now.

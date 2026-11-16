@@ -1,6 +1,6 @@
 # Check follow-up
 
-Apply when a step says `Playbook: "Check follow-up"`. A check failed, was cancelled, or never started, and Shepherd has no rerun or log excerpt to show. Find out why before acting; follow the evidence.
+Apply when a step says `Playbook: "Check follow-up"`. A check failed, was cancelled, or never started, and Shepherd has no rerun to offer. Start from any excerpt or annotations it printed; without them, find out why before acting. Follow the evidence.
 
 - The run: `gh run view <runId> -R <owner/repo>` lists its jobs and annotations, which often say why a job never got a runner; add `--log-failed` for logs.
 - `STARTUP_FAILURE`: workflow syntax, an unresolved reusable workflow or action, missing permissions, secrets or environments.
