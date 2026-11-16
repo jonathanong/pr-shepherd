@@ -55,6 +55,8 @@ export function buildCheckFollowUpInstructions(
  */
 export function isEvidenceFollowUpCheck(check: AgentCheck, queued: boolean): boolean {
   if (check.rerunCommand || checkFollowUp(check) !== undefined) return false;
+  // A still-queued merge-group entry waits for GitHub to report its removal.
+  if (check.scope === "merge_group" && queued) return false;
   if (check.runId === null) return Boolean(check.detailsUrl?.trim());
   if (!hasLogEvidence(check)) return false;
   return (check.runAttempt ?? 1) > 1 || (check.scope === "merge_group" && !queued);

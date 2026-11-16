@@ -26,6 +26,18 @@ describe("isEvidenceFollowUpCheck", () => {
     expect(isEvidenceFollowUpCheck(mg, false)).toBe(true);
     expect(isEvidenceFollowUpCheck(mg, true)).toBe(false);
   });
+  it("rejects any merge-group check while the PR is still queued", () => {
+    const later = { ...base, scope: "merge_group", runAttempt: 2 } as AgentCheck;
+    const ext = {
+      runId: null,
+      conclusion: "FAILURE",
+      detailsUrl: "https://x",
+      scope: "merge_group",
+    } as AgentCheck;
+    expect(isEvidenceFollowUpCheck(later, true)).toBe(false);
+    expect(isEvidenceFollowUpCheck(ext, true)).toBe(false);
+    expect(isEvidenceFollowUpCheck(ext, false)).toBe(true);
+  });
   it("leaves a first-attempt pull-request failure to the rerun path", () => {
     expect(isEvidenceFollowUpCheck(base, false)).toBe(false);
   });
