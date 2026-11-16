@@ -1,0 +1,45 @@
+{
+  "description": "The same failing job in a still-running run on its first presented tick (no shown marker): Shepherd shows the failure as TRIAGE once, with no rerun until the run completes. The next tick with an unchanged head and failing set waits (see 199-wait-in-progress-run-failure-shown).",
+  "batchData": {
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/900",
+        "runId": "900",
+        "runAttempt": 1,
+        "workflowName": "CI"
+      },
+      {
+        "name": "CI / e2e",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/900",
+        "runId": "900",
+        "runAttempt": 1,
+        "workflowName": "CI"
+      }
+    ]
+  },
+  "triagedChecks": [
+    {
+      "name": "CI / tests",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE",
+      "event": "pull_request",
+      "detailsUrl": "https://github.com/owner/repo/actions/runs/900",
+      "runId": "900",
+      "runAttempt": 1,
+      "category": "failing",
+      "workflowName": "CI",
+      "jobName": "tests",
+      "failedStep": "Run tests",
+      "logExcerpt": "Simulator launch timed out.\n##[error]Process completed with exit code 1."
+    }
+  ],
+  "readyDelayState": { "isReady": false, "shouldCancel": false, "remainingSeconds": 600 },
+  "expectedExitCode": 12
+}

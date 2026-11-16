@@ -162,6 +162,8 @@ vi.mock("../../src/state/check-follow-up.mts", async (importOriginal) => ({
   ...(await importOriginal()),
   readCheckFollowUp: vi.fn().mockResolvedValue(undefined),
   writeCheckFollowUp: vi.fn().mockResolvedValue(undefined),
+  readShownRunFailures: vi.fn().mockResolvedValue(undefined),
+  writeShownRunFailures: vi.fn().mockResolvedValue(undefined),
 }));
 vi.mock("../../src/state/queue-removal-follow-up.mts", async (importOriginal) => ({
   ...(await importOriginal()),
@@ -202,7 +204,7 @@ import {
   clearStallState,
 } from "../../src/state/iterate-stall.mts";
 import { readFixAttempts, writeFixAttempts } from "../../src/state/fix-attempts.mts";
-import { readCheckFollowUp } from "../../src/state/check-follow-up.mts";
+import { readCheckFollowUp, readShownRunFailures } from "../../src/state/check-follow-up.mts";
 import { readCiStartFollowUp } from "../../src/state/ci-start-follow-up.mts";
 import { readQueueRemovalFollowUp } from "../../src/state/queue-removal-follow-up.mts";
 import { clearWorkflowFileMemo } from "../../src/commands/iterate/workflow-files.mts";
@@ -366,6 +368,8 @@ export interface Fixture {
   };
   /** Return value of readCheckFollowUp(): the head and check keys of an earlier investigation tick. */
   checkFollowUp?: { headSha: string; checks: string[] };
+  /** Return value of readShownRunFailures(): the head and check keys of failures already shown while their run was still running. */
+  shownRunFailures?: { headSha: string; checks: string[] };
   /** Return value of readQueueRemovalFollowUp(): true when the one removal investigation tick already ran. */
   queueRemovalFollowUp?: boolean;
   /** Return value of readCiStartFollowUp(): true when the one CI-start investigation tick already ran. */
@@ -743,6 +747,7 @@ export function applyFixture(fixture: Fixture, transport: FixtureTransport = "gr
   mockReadFixAttempts.mockResolvedValue(fixture.fixAttempts ?? null);
   mockWriteFixAttempts.mockResolvedValue(undefined);
   vi.mocked(readCheckFollowUp).mockResolvedValue(fixture.checkFollowUp);
+  vi.mocked(readShownRunFailures).mockResolvedValue(fixture.shownRunFailures);
   vi.mocked(readQueueRemovalFollowUp).mockResolvedValue(fixture.queueRemovalFollowUp ?? false);
   vi.mocked(readCiStartFollowUp).mockResolvedValue(fixture.ciStartFollowUp ?? false);
 

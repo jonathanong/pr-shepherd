@@ -5,8 +5,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   checkFollowUpKeys,
   readCheckFollowUp,
+  readShownRunFailures,
   sameCheckFollowUp,
   writeCheckFollowUp,
+  writeShownRunFailures,
 } from "./check-follow-up.mts";
 import { resolvePrStatePath } from "./base.mts";
 
@@ -58,6 +60,12 @@ describe("check follow-up marker", () => {
       await writeFile(path, bad);
       expect(await readCheckFollowUp(key)).toBeUndefined();
     }
+  });
+
+  it("keeps shown running-run failures apart from the investigation marker", async () => {
+    await writeShownRunFailures(key, { headSha: "abc", checks: ["t#1#1"] });
+    expect(await readShownRunFailures(key)).toEqual({ headSha: "abc", checks: ["t#1#1"] });
+    expect(await readCheckFollowUp(key)).toBeUndefined();
   });
 
   it("never throws when the marker cannot be written", async () => {

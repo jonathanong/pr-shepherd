@@ -30,11 +30,21 @@ export function checkFollowUpKeys(
 }
 
 /** The stored head and check set, or undefined when no usable marker exists. */
-export async function readCheckFollowUp(key: StateKey): Promise<CheckFollowUpMarker | undefined> {
+export function readCheckFollowUp(key: StateKey): Promise<CheckFollowUpMarker | undefined> {
+  return readMarker(key, "check-follow-up.json");
+}
+
+/**
+ * The head and failing checks of a still-running workflow run that were already shown, kept in
+ * `run-failures-shown.json`. The next presented tick with the same head and checks waits instead.
+ */
+export function readShownRunFailures(key: StateKey): Promise<CheckFollowUpMarker | undefined> {
+  return readMarker(key, "run-failures-shown.json");
+}
+
+async function readMarker(key: StateKey, file: string): Promise<CheckFollowUpMarker | undefined> {
   try {
-    const parsed: unknown = JSON.parse(
-      await readFile(resolvePrStatePath(key, "check-follow-up.json"), "utf8"),
-    );
+    const parsed: unknown = JSON.parse(await readFile(resolvePrStatePath(key, file), "utf8"));
     if (parsed === null || typeof parsed !== "object") return undefined;
     const { headSha, checks } = parsed as { headSha?: unknown; checks?: unknown };
     if (typeof headSha !== "string" || !Array.isArray(checks)) return undefined;
@@ -46,12 +56,22 @@ export async function readCheckFollowUp(key: StateKey): Promise<CheckFollowUpMar
 }
 
 /** Remember that the one investigation instruction was returned for this head and check set. */
-export async function writeCheckFollowUp(
+export function writeCheckFollowUp(key: StateKey, record: CheckFollowUpMarker): Promise<void> {
+  return writeMarker(key, "check-follow-up.json", record);
+}
+
+/** Remember that these still-running-run failures were shown for this head. */
+export function writeShownRunFailures(key: StateKey, record: CheckFollowUpMarker): Promise<void> {
+  return writeMarker(key, "run-failures-shown.json", record);
+}
+
+async function writeMarker(
   key: StateKey,
+  file: string,
   record: CheckFollowUpMarker,
 ): Promise<void> {
   try {
-    const path = resolvePrStatePath(key, "check-follow-up.json");
+    const path = resolvePrStatePath(key, file);
     await mkdir(dirname(path), { recursive: true });
     await writeFile(
       path,
