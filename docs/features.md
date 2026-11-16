@@ -2,7 +2,7 @@
 
 [← docs index](README.md) | [README](../README.md)
 
-What Shepherd does, the workflow it assumes, and what it does not do. Outcomes and evidence: [README](../README.md#outcomes). Edge cases: [handled-cases.md](handled-cases.md).
+What Shepherd does, the workflow it assumes, and what it does not do. Benefits and evidence: [README](../README.md#benefits). Edge cases: [handled-cases.md](handled-cases.md).
 
 ## Context gathered
 

@@ -1,54 +1,62 @@
 # pr-shepherd
 
-Take pull requests from scratch to merge-ready with a coding agent as a [Code Mode-style](https://code.claude.com/docs/en/code-mode) plugin. 
+Take pull requests from scratch to merge-ready with a coding agent as a [Code Mode-style](https://code.claude.com/docs/en/code-mode) plugin. It works with Claude Code, Codex, Grok, and any stdio MCP client.
 
-Benefits:
+## Benefits
 
-- Improved correctness: across 56 PR states, 0.97 with the plugin vs. 0.47 with `gh` + GitHub MCP, Δ +0.50 (2026-11-15)
-- Lower cost: modeled cost ~−36% vs. `gh` and ~−76% vs. MCP per PR session; turns −20% / −69%
-- Optimized GitHub GraphQL rate limit quotas: modeled usage GraphQL points 33 vs. 96 (`gh`), 11 (MCP); REST core 3.8 vs. 15, 82
-- Tidy PRs: automatically triage and resolve bot & outdated comments, reply to human code reviews, and hide your own comments
-- CI Optimizations: automatically cancel CI runs when an agent is preparing a fix
-- Full shepherd flow: handles PRs from scratch, to draft, to mergeable, and into the merge queue
-- Pre-filtering: filters resolved comments plus configurations to filter more bot noise to minimize context usage
-- Apply commit suggestions: supports applying code review suggestions with attribution
+- **Better decisions:** across 56 PR states, the agent scores 0.97 with the plugin vs. 0.47 with `gh` + the GitHub MCP server ([outcome evals](evals/README.md), 2026-11-15).
+- **Lower cost:** modeled cost per PR session is about 36% lower than `gh` and 76% lower than the GitHub MCP server, with 20% / 69% fewer turns ([token bench](evals/tokens/README.md); assumes a warm prompt cache).
+- **More PRs on one GitHub quota:** 65% fewer GraphQL points than `gh` per PR session. While CI runs, one 5,000-point hourly budget covers about 80 waiting PRs, vs. about 13 with `gh pr checks --watch` ([GitHub API](docs/github-api.md), [GraphQL usage](docs/graphql-usage.md)). A [GitHub App](docs/github-app.md) and [webhook events](docs/hook-harness.md) cut it further.
+- **Tidy PRs:** bot and outdated comments are triaged and resolved, human reviews get replies, and known bot noise is minimized ([handled cases](docs/handled-cases.md)).
+- **Less context:** resolved comments and configured bot noise are filtered out before they reach the agent.
+- **Cheaper CI:** names the in-progress runs a fix push would cancel anyway, so the agent cancels them early.
+- **Full flow:** from scratch to draft, mergeable, and through the merge queue, including stacked PRs.
+- **Review suggestions:** applies suggested changes as commits that credit the reviewer.
+- **Safe by construction:** the CLI never mutates git or merges by itself, and human handoff is limited to a [short escalation list](docs/escalations.md).
 
 ## Use cases
 
 - **Autonomous agents.** An agent opens a PR and drives it to merge-ready, or merged when you allow it. Nobody has to watch CI and reviews.
 - **Exhaustive AI code review.** Some PRs get many bot reviews (CodeRabbit, Codex, Copilot, and others). Shepherd shows every thread and comment once and tracks first-look, edited, and outdated items. It pre-filters comments, batches the replies, resolves, and minimizes.
-- **High-Velocity Teams** Supports stacked PRs, merge queues, merge queue ejections, and directs agents to rebase/stack as necessary, allowing high-velocity even when there are a lot of conflicts
+- **High-velocity teams.** Supports stacked PRs, merge queues, and merge queue ejections, and directs agents to rebase or stack as needed, so work keeps moving even with many conflicts.
 
-## Playbooks
+## How to use
 
-`/pr-shepherd:pr-shepherd` takes work from scratch to mergeable. The three everyday workflows:
+1. [Install](#install) the plugin.
+2. Ask your agent:
+   - **"make PRs, /pr-shepherd:pr-shepherd"** makes one PR per change that can be reviewed alone, stacks a PR on an earlier one when it needs that PR's code or edits the same lines, and shepherds every PR until it is mergeable.
+   - **`/pr-shepherd <PR>`** takes a PR, including a draft, to mergeable. It does not merge. Leave out the PR to use the current branch.
+   - **`/pr-shepherd <PR1> <PR2>`** shepherds several PRs and returns when any has an actionable step.
+   - **`/pr-shepherd --merge <PR>`** takes the PR to mergeable and merges it.
+   - **`/pr-shepherd stack <stack#> --merge`** shepherds a native stack and merges it all at once when it is ready. Use `--merge-through <PR>` instead to merge up to that layer, or `--merge-ready` to merge the bottom layers as they become ready. Listing PR numbers instead of the stack number owns only those layers.
 
-- **"make PRs, /pr-shepherd:pr-shepherd"** makes one PR per change that can be reviewed alone. It stacks a PR on an earlier one when it needs that PR's code or edits the same lines, and shepherds every PR until it is mergeable. Independent changes become separate PRs on the default branch.
-- **`/pr-shepherd <PR>`** takes a PR, including a draft, to mergeable. It does not merge.
-- **`/pr-shepherd --merge <PR>`** takes the PR to mergeable and merges it. A PR owns only itself, so for a stack layer with open layers below it, Shepherd hands those layers back to you instead of merging them. `/pr-shepherd --merge stack owner/repo#N` lands the whole stack.
-- **`/pr-shepherd <PR1> <PR2>`** - shepherd multiple PRs, returning when any has an actionable step
-- **`/pr-shepherd stack --merge <stack# or PR#>`** shepherds the stack or the stack up to this PR #, then merges it all at once when it's ready
-- **`/pr-shepherd stack --merge-drain <stack# or PR#>`** shepherds the stack, and merges the bottom PRs as they are ready
+   In Codex, use `$pr-shepherd`. In a shell or CI, run `pr-shepherd <PR>`. `/goal` is generally not needed.
 
-`/goal` is generally not needed for pr-shepherd to work. 
+3. Configure `.pr-shepherdrc.yml` ([configuration](docs/configuration.md)):
+   - turn on the bundled classification rules to hide known bot comments;
+   - add your own [classification rules](examples/classification/);
+   - list code-review workflows in `checks.never-cancel` so they always finish.
 
-Next set up your pr-shepherd config:
+   ```yaml
+   version: 1
+   classify:
+     standard:
+       all: true
+   checks:
+     never-cancel:
+       - "*review*"
+   ```
 
-- enable classification to automatically hide known bot comments
-- add custom classification rules for comments
-- disallow code review CI from being canceled
+4. Optionally, write your policy ("reply instead of fixing nits", "never merge") into a skill that wraps the shipped one ([skills](docs/skills.md)).
 
 ## What it does
 
-PR Shepherd gathers the full PR context (reviews, CI failures, merge requirements) in one call, then returns actions with numbered instructions and exact commands, lowering the reasoning tokens, tool calls, turns, and most of all, gathering as much context as possible to minimize the need for the agent to investigate.
+Shepherd gathers the full PR context (reviews, CI failures, merge requirements) in one call and returns one action with numbered instructions and exact commands. The agent spends fewer reasoning tokens, tool calls, and turns, and rarely has to investigate on its own.
 
 ```text
 $ pr-shepherd 123
 
 # PR #123 [TRIAGE]
-
-**status** `UNRESOLVED_COMMENTS` · **repo** `owner/repo`
-**summary** 3 passing
 
 ## Review threads
 
@@ -56,145 +64,15 @@ $ pr-shepherd 123
 
 > The variable name is misleading.
 
-## Failing checks
-
-- `24697658766` — `CI › lint / typecheck / test (22.x)` [conclusion: FAILURE]
-  > oxfmt
-
 ## Instructions
 
 1. Fix each warranted item.
-2. Triage `## Failing checks`. Playbook: "CI failure triage".
-3. Optional: If you reject a code review suggestion, journal why: `pr-shepherd apply journal 123 '- <reason>'`.
-4. Commit and push any changes to the PR head.
-5. `$CHANGE_MESSAGE`: one sentence on what changed. Run even if no code changed: `pr-shepherd apply review 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$CHANGE_MESSAGE" --require-sha HEAD`
-6. Rerun Shepherd now.
+2. Commit and push any changes to the PR head.
+3. `pr-shepherd apply review 123 --reply-thread-ids PRRT_kwDOSGizTs58XB1L --message "$CHANGE_MESSAGE" --require-sha HEAD`
+4. Rerun Shepherd now.
 ```
 
-More features are in [docs/features.md](docs/features.md).
-
-## Outcomes
-
-| Outcome                                                                 | Headline                                                                                        | Evidence                                                                 |
-| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| [Context and correctness](#context-and-correctness)                     | 72 GitHub edge cases cataloged, backed by 198 scenario fixtures                                 | [Handled cases](docs/handled-cases.md)                                   |
-| [Fewer tokens, lower cost](#fewer-tokens-and-lower-cost)                | Modeled cost ~−36% vs. `gh` and ~−76% vs. MCP per PR session; turns −20% / −69%                 | [Token bench](evals/tokens/README.md)                                    |
-| [Clearer agent direction](#clearer-agent-direction)                     | Across 56 PR states, 0.97 with the plugin vs. 0.47 with `gh` + GitHub MCP, Δ +0.50 (2026-11-15) | [Outcome evals](evals/README.md)                                         |
-| [Lower GitHub API quota use](#lower-github-api-quota-use)               | Per PR session: GraphQL points 33 vs. 96 (`gh`), 11 (MCP); REST core 3.8 vs. 15, 82             | [GitHub API](docs/github-api.md), [GraphQL usage](docs/graphql-usage.md) |
-| [Safe by construction](#safe-by-construction)                           | 0 git mutations; human handoff limited to 9 escalation triggers for a single PR                 | [Escalations](docs/escalations.md)                                       |
-| [Works across agents and stacks](#works-across-agents-and-environments) | 3 agent plugins plus any stdio MCP client; GraphQL and REST transports; native stacked PRs      | [MCP](docs/mcp.md), [cloud](docs/cloud.md)                               |
-
-**[jongleberry.com/pr-shepherd](https://jongleberry.com/pr-shepherd/)** covers the why and the design principles.
-
-## Outcome details
-
-### Context and correctness
-
-One `iterate` call returns everything the agent needs about the PR:
-
-- review threads with replies, PR comments, and review summaries;
-- each CI failure, with its failed step and a log excerpt when triage can fetch them;
-- mergeability and the actual merge requirements;
-- first-look, outdated, and edited items, and stack topology.
-
-One exception: a `COMMENTED` review that was already minimized before the first tick is not fetched. [docs/handled-cases.md](docs/handled-cases.md) catalogs the GitHub edge cases this covers.
-
-In the [outcome evals](evals/README.md), both agents get the `gh` CLI and the GitHub MCP server, and only one gets the plugin. These PR states separated them most (score with the plugin vs. with `gh` + MCP, 2026-11-15; 95% interval of the difference excludes 0):
-
-| PR state                                                                 | Plugin | gh/MCP |
-| ------------------------------------------------------------------------ | -----: | -----: |
-| A maintainer removed the PR from the merge queue: don't requeue or merge |   1.00 |   0.00 |
-| Merge conflicts: update from base and resolve them without handing off   |   1.00 |   0.00 |
-| Bot changes-requested reviews block merge: fix, push, and dismiss both   |   1.00 |   0.00 |
-| Lower stack layers merged: rebase the whole stack so upper layers follow |   1.00 |   0.00 |
-
-### Fewer tokens and lower cost
-
-Batching, noise filtering, fingerprint skips, seen markers, and lean output cut tokens and agent turns. Estimated cost per session from the [token bench](evals/tokens/README.md) ([report](evals/tokens/REPORT.md)):
-
-| Session   | Cost vs. `gh` | Cost vs. GitHub MCP |
-| --------- | ------------: | ------------------: |
-| Single PR |      **−36%** |            **−76%** |
-| PR stack  |      **−40%** |            **−60%** |
-
-These are modeled, not measured billing. The model replays a hand-weighted PR session (a CI wait, a failing log, review rounds, marking a draft ready, a merge) against scripted `gh` and MCP agents that never retry or fail a step. The figures above use a 60k-token context, Claude Code's 1-hour cache-write price, and about 190 output tokens per turn, thinking included, as measured in [Sonnet 5.5 eval traces](evals/HISTORY.md#2026-11-12-output-and-spend-in-the-outcome-eval-traces). They assume a warm prompt cache. At a 40k context the single-PR saving vs. `gh` is 39%, and at 100k it is 31%. A wait past the cache's one-hour lifetime re-writes the context. One such expiry cuts the saving vs. `gh` to 18–23% and vs. MCP to 58–62% ([realism sweep](evals/tokens/REPORT.md#realism-sweep)).
-
-Where the saving comes from, and where it does not:
-
-- It comes from steps that re-read review history or CI logs, and from CI waits. Without those steps, pr-shepherd costs slightly more than `gh`.
-- A single fresh read-and-reply tick costs about the same as `gh`, or slightly more. In the single-state outcome evals, the plugin arm's own spend per run was about 11–17% higher ([HISTORY](evals/HISTORY.md#2026-11-12-output-and-spend-in-the-outcome-eval-traces)).
-- Confirming an already-merged PR costs about 2–6% more ([report](evals/tokens/REPORT.md)).
-
-[docs/token-counts.md](docs/token-counts.md) counts the skill and per-tick text.
-
-### Clearer agent direction
-
-For a single PR, each tick returns exactly one action: `WAIT`, `READY`, `MARK_READY`, `TRIAGE`, `MERGE`, `CANCEL`, or `ESCALATE`. A `stack` poll can also return `SHEPHERD`, which starts one-PR sessions for owned layers. Every action except `CANCEL` comes with numbered `## Instructions` and exact commands, so the agent does not invent policy.
-
-In the [outcome evals](evals/README.md) (Sonnet 5.5, 56 PR states, one full run on 2026-11-15), the agent scores **0.97** with the plugin and **0.47** with `gh` + the GitHub MCP server, a Δ of **+0.50**. Three scenarios come from reruns. No scenario favors `gh` + MCP. Every category favors the plugin, from review feedback (+0.21) to stacks (+0.73) and the merge queue (+1.00). The output contract is in [docs/actions.md](docs/actions.md).
-
-### Lower GitHub API quota use
-
-GitHub meters two tiers ([details](docs/github-api.md#github-metering)):
-
-- Primary hourly budgets: GraphQL points and REST `core` requests.
-- Secondary limits: per-minute points (a GraphQL query or REST `GET` costs 1, a mutation 5), plus concurrency and content-creation limits.
-
-Waiting is where most quota goes. `gh pr checks --watch` refreshes every 10 seconds by default, at 1 GraphQL point each. That is about 360 points an hour per watched PR, so a few agents waiting on CI can drain the shared 5,000-point hourly budget. Agents rarely change it: of 599 `--watch` calls in the maintainer's agent transcripts, 17 set `--interval`. Shepherd polls every 60 seconds by default:
-
-- A typical tick is one batched GraphQL query (1 point). Large or paginated PRs add supplement queries. When nothing changed, the fingerprint skip returns the stored report from that same query.
-- While CI runs, that is about 60 points an hour for a typical PR. A `gh` agent that passes `--interval 60` ties it ([sensitivity](evals/tokens/REPORT.md#gh-watch-interval-sensitivity)).
-- When no check is running, conditional REST change detectors run first. A `304` consumes no primary quota, so an hour of unchanged idle waiting costs about 4 GraphQL points instead of 60 ([graphql-usage.md](docs/graphql-usage.md)). Native-stack layers, `READY` reports, incomplete snapshots, and detector failures still run the batched query each tick ([graphql.md](docs/graphql.md#idle-wait-change-detectors)).
-
-The GitHub MCP server issues one or more REST requests per tool call, so unbatched calls drain `core` and the per-minute pool faster.
-
-Two optional setups take most of the remaining spend off your token. They are independent and combine:
-
-- **[GitHub App](docs/github-app.md):** reads whose answer does not depend on who asks go to an app installation, which has its own budget. On a live PR, one tick's user-token GraphQL dropped from a 3,135-node read to a 4-node viewer read, and a tick that reuses the stored report spends none (a native-stack layer still reads `PollStackTopology` on your token). Six ticks went from 7 user-token requests (21,945 nodes) to 2 (8 nodes). READY-receipt reads, stack summaries, and ticks while the app's quota is spent stay on your token ([details](docs/github-app.md#the-batchpr-viewer-split)).
-- **[hook-harness events](docs/hook-harness.md):** a poll waits for a GitHub webhook event about the PR instead of sleeping. A quiet PR ticks every 5 minutes (`events.fallback-interval-seconds`) instead of every minute. A push or check result wakes it after a 10-second settle, never sooner than `poll.interval-seconds` after the previous tick began. Events never make ticks more frequent than plain polling.
-
-Per session, assumed and deterministic, from the same weighted scenarios as the [token bench](evals/tokens/README.md)'s cost figures. The PR session includes a 6-minute CI wait, with `gh` on its default `--watch` refresh:
-
-| Session   | GraphQL points: Shepherd / `gh` / MCP | REST core: Shepherd / `gh` / MCP |
-| --------- | ------------------------------------: | -------------------------------: |
-| Single PR |                    33.3 / 96.2 / 11.4 |                    3.8 / 15 / 82 |
-| PR stack  |                          11 / 27 / 12 |                       2 / 6 / 74 |
-
-- On the default GraphQL transport, Shepherd spends fewer GraphQL points than `gh` and fewer REST requests than `gh` or MCP. A `gh` agent on `--watch --interval 60` spends 36.2 points, still more than Shepherd.
-- On a single PR, MCP spends fewer GraphQL points but about 17× the REST requests.
-- The REST transport used in cloud sessions spends no GraphQL points. It spends more `core` requests than `gh` or MCP (200.7 single PR, 432 stack).
-
-See [docs/graphql-usage.md](docs/graphql-usage.md) and [docs/rest-usage.md](docs/rest-usage.md).
-
-### Safe by construction
-
-- The CLI runs read-only git only. It emits patches and commit commands for the agent to run ([AGENTS.md](AGENTS.md#git-operations)).
-- Shepherd never merges by itself. With `--merge`, it emits a merge or queue command for the agent to run, head-pinned for a single PR and guarded by READY receipts for a stack. `stack` merges only the layers you list (or all of them by stack number), and `--merge`, `--merge-ready`, or `--merge-through` escalate rather than land a layer you did not approve.
-- Human handoff is a [finite escalation list](docs/escalations.md).
-- The shipped skill tells the agent to treat review titles, comments, and CI logs as untrusted data. Shell and other MCP callers must apply that rule themselves.
-- A denied reply or resolve is a one-look skip, not a retry loop.
-
-### Works across agents and environments
-
-- The plugin ships [skills](docs/skills.md) for Claude Code, Codex, and Grok.
-- Cursor and other stdio clients use the [MCP server](docs/mcp.md).
-- Shell and CI use the [CLI](docs/cli-usage.md).
-- In Claude Code cloud sessions, Shepherd switches to the [REST transport](docs/rest.md) and [single ticks](docs/cloud.md).
-- Optional [event-driven waiting](docs/hook-harness.md) wakes a poll on GitHub webhook events.
-- `stack` reports every layer of a native GitHub stacked PR and shepherds the layers you own.
-
-## How to use
-
-1. **Install the MCP server and the CLI.** See [Install](#install) below.
-2. **Write your policy into a skill or agent instruction.** Examples: "skip non-blocking review comments", "reply instead of fixing nits", "never merge". Shepherd reports state and the next action. Your instructions decide how the agent treats each comment. The shipped `pr-shepherd` skill is a thin dispatcher you can wrap ([docs/skills.md](docs/skills.md)).
-3. **Configure Shepherd.** In `.pr-shepherdrc.yml`, turn on the bundled classification rules. They drop known bot noise before it reaches the agent, which saves more tokens and tool calls. With the default `actions.auto-minimize-suppressed: true`, several rules also minimize matching comments on GitHub and surface the mutation result without editing the PR body. See [docs/configuration.md](docs/configuration.md#classifystandard--default-).
-
-   ```yaml
-   version: 1
-   classify:
-     standard:
-       all: true
-   ```
+More features are in [docs/features.md](docs/features.md). [jongleberry.com/pr-shepherd](https://jongleberry.com/pr-shepherd/) covers the why and the design principles.
 
 ## Install
 
