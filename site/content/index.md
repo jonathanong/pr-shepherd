@@ -3,7 +3,7 @@ title: "pr-shepherd"
 description: "Drive a pull request to merge-ready with your coding agent. One call gathers the whole PR; one action says what to do next. Works with Claude Code, Codex, Grok, and any stdio MCP client."
 docs:
   - path: "README.md"
-    label: "README — outcomes, evidence, and install"
+    label: "README — benefits, usage, and install"
   - path: "docs/README.md"
     label: "Full documentation index"
 ---
@@ -166,7 +166,7 @@ Claude Code.
 
 <div class="card-grid">
 
-- [**README**](README.md) The outcomes in detail, with the evidence behind each number.
+- [**README**](README.md) Benefits, with links to the evidence behind each number, plus usage and install.
 - [**Principles**](/principles/) The beliefs behind the design.
 - [**GitHub**](https://github.com/jonathanong/pr-shepherd) Source, issues, and releases.
 
