@@ -152,7 +152,7 @@ npx --yes --package pr-shepherd@latest pr-shepherd-mcp
 **CLI, for shells and CI**
 
 ```bash
-npm install -g pr-shepherd
+pnpm i -g pr-shepherd
 ```
 
 </div>
