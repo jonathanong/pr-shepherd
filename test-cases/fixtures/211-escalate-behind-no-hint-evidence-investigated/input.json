@@ -1,0 +1,32 @@
+{
+  "description": "BEHIND with no iterate.behind-base-hint configured and only an investigated attempt-2 excerpt failure: no branch-update step is emitted, so it is not other work and Shepherd escalates instead of repeating TRIAGE.",
+  "batchData": {
+    "mergeStateStatus": "BEHIND",
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/800",
+        "runId": "800",
+        "runAttempt": 2,
+        "workflowName": "CI",
+        "jobName": "tests",
+        "logExcerpt": "OpenRouter HTTP 529: provider temporarily unavailable"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 13,
+  "checkFollowUp": {
+    "headSha": "abc123",
+    "checks": [
+      "CI / tests#800#2"
+    ]
+  }
+}

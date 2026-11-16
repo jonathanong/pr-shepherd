@@ -22,11 +22,28 @@ interface StateKey {
   pr: number;
 }
 
-/** Stable identity for a failing check: name, run, and attempt. Sorted so order never matters. */
+/**
+ * Stable identity for a failing check: name, run, attempt, queue commit, and (for a status with no
+ * run) its details URL, so a fresh queue execution or result is not mistaken for an old one.
+ * Sorted so order never matters.
+ */
 export function checkFollowUpKeys(
-  checks: ReadonlyArray<{ name: string; runId: string | null; runAttempt?: number }>,
+  checks: ReadonlyArray<{
+    name: string;
+    runId: string | null;
+    runAttempt?: number;
+    commitOid?: string;
+    detailsUrl?: string | null;
+  }>,
 ): string[] {
-  return checks.map((c) => `${c.name}#${c.runId ?? ""}#${c.runAttempt ?? ""}`).sort();
+  return checks
+    .map((c) => {
+      const base = `${c.name}#${c.runId ?? ""}#${c.runAttempt ?? ""}`;
+      const commit = c.commitOid ? `@${c.commitOid}` : "";
+      const url = c.runId === null && c.detailsUrl ? `|${c.detailsUrl}` : "";
+      return base + commit + url;
+    })
+    .sort();
 }
 
 /** The stored head and check set, or undefined when no usable marker exists. */

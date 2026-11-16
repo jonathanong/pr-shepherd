@@ -37,6 +37,19 @@ describe("check follow-up marker", () => {
     expect(checkFollowUpKeys([b])).toEqual(["b##"]);
   });
 
+  it("distinguishes queue commits and external details URLs", () => {
+    const status = { name: "s", runId: null, detailsUrl: "https://x/1" };
+    expect(checkFollowUpKeys([status])).not.toEqual(
+      checkFollowUpKeys([{ ...status, detailsUrl: "https://x/2" }]),
+    );
+    expect(checkFollowUpKeys([{ ...status, commitOid: "q1" }])).not.toEqual(
+      checkFollowUpKeys([{ ...status, commitOid: "q2" }]),
+    );
+    expect(checkFollowUpKeys([{ name: "a", runId: "1", detailsUrl: "https://x/1" }])).toEqual([
+      "a#1#",
+    ]);
+  });
+
   it("matches the same head and check set regardless of order", async () => {
     await writeCheckFollowUp(key, { headSha: "abc", checks: ["t#1#1", "b#2#1"] });
     const stored = await readCheckFollowUp(key);

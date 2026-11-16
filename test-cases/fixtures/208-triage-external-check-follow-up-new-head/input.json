@@ -21,7 +21,7 @@
   "checkFollowUp": {
     "headSha": "old000",
     "checks": [
-      "external-status##"
+      "external-status##|https://external.ci/builds/42"
     ]
   }
 }

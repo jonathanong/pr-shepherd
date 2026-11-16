@@ -404,7 +404,8 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
   );
   const hasOtherAutonomousWork =
     hasConflicts ||
-    (isBehind && evidenceChecks.length > 0) ||
+    // The branch-update step is emitted only with a configured hint; uncounted work cannot loop.
+    (isBehind && behindBaseHint.trim() !== "" && evidenceChecks.length > 0) ||
     hasBehindBaseRecovery ||
     threads.length > 0 ||
     resolutionOnlyThreads.length > 0 ||
@@ -483,6 +484,8 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     activeFailures.length > 0 &&
     !hasOtherAutonomousWork &&
     manualFollowUpChecks.length === 0 &&
+    // New evidence checks are shown on a TRIAGE tick; once shown, the run's wait covers them too.
+    (evidenceChecks.length === 0 || investigated) &&
     !isBehind &&
     !repairInstructions?.length &&
     runFailuresShown(await readShownRunFailures(stallKey), headSha, shownKeys)

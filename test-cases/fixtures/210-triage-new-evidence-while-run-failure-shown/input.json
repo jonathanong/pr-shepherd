@@ -1,0 +1,73 @@
+{
+  "description": "An external status failure was already shown while another run is still in progress (shownRunFailures), but a separate completed run newly fails on attempt 2 with an excerpt. The new evidence check has not been shown, so Shepherd stays TRIAGE instead of waiting.",
+  "batchData": {
+    "checks": [
+      {
+        "name": "codecov/project/rust",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": null,
+        "detailsUrl": "https://app.codecov.io/gh/owner/repo/pull/42",
+        "runId": null
+      },
+      {
+        "name": "CI / e2e",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/900",
+        "runId": "900",
+        "runAttempt": 1,
+        "workflowName": "CI"
+      },
+      {
+        "name": "Lint / tests",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/800",
+        "runId": "800",
+        "runAttempt": 2,
+        "workflowName": "Lint",
+        "jobName": "tests",
+        "logExcerpt": "OpenRouter HTTP 529: provider temporarily unavailable"
+      }
+    ]
+  },
+  "triagedChecks": [
+    {
+      "name": "codecov/project/rust",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE",
+      "event": null,
+      "detailsUrl": "https://app.codecov.io/gh/owner/repo/pull/42",
+      "runId": null,
+      "category": "failing"
+    },
+    {
+      "name": "Lint / tests",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE",
+      "event": "pull_request",
+      "detailsUrl": "https://github.com/owner/repo/actions/runs/800",
+      "runId": "800",
+      "runAttempt": 2,
+      "workflowName": "Lint",
+      "jobName": "tests",
+      "logExcerpt": "OpenRouter HTTP 529: provider temporarily unavailable",
+      "category": "failing"
+    }
+  ],
+  "shownRunFailures": {
+    "headSha": "abc123",
+    "checks": [
+      "codecov/project/rust|https://app.codecov.io/gh/owner/repo/pull/42"
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

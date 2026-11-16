@@ -77,7 +77,7 @@ It fires only when no autonomous work or newly surfaced one-look item remains: n
 - An unauthorized review item postpones the escalation for its one visibility tick; once its seen marker suppresses it, the manual-only check gets its investigation tick, then can escalate.
 - An authorized bot, viewer-authored, or configured other-human thread with a generated mutation is repeatable work even without a source location.
 - A stale human `CHANGES_REQUESTED` review does not postpone the handoff, but it is kept in the payload so the human sees every blocker.
-- A failing external check with `runId === null` and a non-empty `detailsUrl` stays `TRIAGE` for its first presented tick, and while any workflow run is in progress (Codecov is the regression case); it then follows the investigation rule above.
+- A failing external check with `runId === null` and a non-empty `detailsUrl` stays `TRIAGE` for its first presented tick. On later ticks while any workflow run is in progress and no other work remains, it returns `WAIT` (Codecov is the regression case); it then follows the investigation rule above.
 - `escalate.checks[]` keeps the raw check details for the human. When the run is held on an environment approval, they include its `pendingDeployments[]` (environment, required reviewers, and whether the viewer can approve), so the human learns what to approve without opening the run. An `ACTION_REQUIRED` run with no listed environment (the fork "approve and run" gate) shows only the conclusion and URL.
 
 ### `triage-thrash`
@@ -172,4 +172,4 @@ The stall timeout is enabled, and the one-PR timer (`iterate-stall.json`) or the
 - Closed or merged PRs return `CANCEL`, not `ESCALATE`.
 - Ordinary non-force pushes never produce `authorization-required`.
 - Missing-location threads and unauthorized review mutations are surfaced/logged once and skipped.
-- Failing queue CI and URL-backed external checks stay actionable `TRIAGE` work for their first presented tick; unchanged on the next, they escalate `check-follow-up-unavailable`.
+- Failing queue CI (a merge-group failure once the PR is no longer queued; a still-queued entry is excluded) and URL-backed external checks stay actionable `TRIAGE` work for their first presented tick; unchanged on the next, and only when no other autonomous work remains, they escalate `check-follow-up-unavailable`.
