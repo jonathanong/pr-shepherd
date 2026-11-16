@@ -26,32 +26,33 @@ Take pull requests from scratch to merge-ready with a coding agent as a [Code Mo
 
 ## How to use
 
-1. [Install](#install) the plugin.
-2. Ask your agent:
-   - **"make PRs, /pr-shepherd:pr-shepherd"** makes one PR per change that can be reviewed alone, stacks a PR on an earlier one when it needs that PR's code or edits the same lines, and shepherds every PR until it is mergeable.
-   - **`/pr-shepherd <PR>`** takes a PR, including a draft, to mergeable. It does not merge. Leave out the PR to use the current branch.
-   - **`/pr-shepherd <PR1> <PR2>`** shepherds several PRs and returns when any has an actionable step.
-   - **`/pr-shepherd --merge <PR>`** takes the PR to mergeable and merges it.
-   - **`/pr-shepherd stack <stack#> --merge`** shepherds a native stack and merges it all at once when it is ready. Use `--merge-through <PR>` instead to merge up to that layer, or `--merge-ready` to merge the bottom layers as they become ready. Listing PR numbers instead of the stack number owns only those layers.
+[Install](#install) the plugin, then ask your agent:
 
-   In Codex, use `$pr-shepherd`. In a shell or CI, run `pr-shepherd <PR>`. `/goal` is generally not needed.
+- **"make PRs, /pr-shepherd:pr-shepherd"** makes one PR per change that can be reviewed alone, stacks a PR on an earlier one when it needs that PR's code or edits the same lines, and shepherds every PR until it is mergeable.
+- **`/pr-shepherd <PR>`** takes a PR, including a draft, to mergeable. It does not merge. Leave out the PR to use the current branch.
+- **`/pr-shepherd <PR1> <PR2>`** shepherds several PRs and returns when any has an actionable step.
+- **`/pr-shepherd --merge <PR>`** takes the PR to mergeable and merges it.
+- **`/pr-shepherd stack <stack#> --merge`** shepherds a native stack and merges it all at once when it is ready. Use `--merge-through <PR>` instead to merge up to that layer, or `--merge-ready` to merge the bottom layers as they become ready. Listing PR numbers instead of the stack number owns only those layers.
 
-3. Configure `.pr-shepherdrc.yml` ([configuration](docs/configuration.md)):
-   - turn on the bundled classification rules to hide known bot comments;
-   - add your own [classification rules](examples/classification/);
-   - list code-review workflows in `checks.never-cancel` so they always finish.
+In Codex, use `$pr-shepherd`. In a shell or CI, run `pr-shepherd <PR>`. `/goal` is generally not needed.
 
-   ```yaml
-   version: 1
-   classify:
-     standard:
-       all: true
-   checks:
-     never-cancel:
-       - "*review*"
-   ```
+Then configure `.pr-shepherdrc.yml` ([configuration](docs/configuration.md)):
 
-4. Optionally, write your policy ("reply instead of fixing nits", "never merge") into a skill that wraps the shipped one ([skills](docs/skills.md)).
+- turn on the bundled classification rules to hide known bot comments;
+- add your own [classification rules](examples/classification/);
+- list code-review workflows in `checks.never-cancel` so they always finish.
+
+```yaml
+version: 1
+classify:
+  standard:
+    all: true
+checks:
+  never-cancel:
+    - "*review*"
+```
+
+Optionally, write your policy ("reply instead of fixing nits", "never merge") into a skill that wraps the shipped one ([skills](docs/skills.md)).
 
 ## What it does
 
