@@ -1,0 +1,48 @@
+{
+  "description": "A failing external status with a URL and no run ID (coverage) was already shown for this head while Actions CI is still running. It often flips when CI finishes, so Shepherd waits instead of repeating the same TRIAGE.",
+  "batchData": {
+    "checks": [
+      {
+        "name": "codecov/project/rust",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": null,
+        "detailsUrl": "https://app.codecov.io/gh/owner/repo/pull/42",
+        "runId": null
+      },
+      {
+        "name": "CI / e2e",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/900",
+        "runId": "900",
+        "runAttempt": 1,
+        "workflowName": "CI"
+      }
+    ]
+  },
+  "triagedChecks": [
+    {
+      "name": "codecov/project/rust",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE",
+      "event": null,
+      "detailsUrl": "https://app.codecov.io/gh/owner/repo/pull/42",
+      "runId": null,
+      "category": "failing"
+    }
+  ],
+  "shownRunFailures": {
+    "headSha": "abc123",
+    "checks": [
+      "codecov/project/rust##"
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 10
+}

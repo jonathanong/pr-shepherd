@@ -820,7 +820,9 @@ export interface RunResult {
   jsonExitCode: number | undefined;
 }
 
-async function runMain(args: string[]): Promise<{ out: string; exitCode: number | undefined }> {
+export async function runMain(
+  args: string[],
+): Promise<{ out: string; exitCode: number | undefined }> {
   const chunks: string[] = [];
   const outSpy = vi.spyOn(process.stdout, "write").mockImplementation((data) => {
     chunks.push(String(data));

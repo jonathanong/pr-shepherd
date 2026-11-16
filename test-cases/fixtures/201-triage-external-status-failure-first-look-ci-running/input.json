@@ -1,0 +1,42 @@
+{
+  "description": "The same failing external status on its first presented tick while CI is running: shown once as TRIAGE. See 202 for the following wait.",
+  "batchData": {
+    "checks": [
+      {
+        "name": "codecov/project/rust",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "event": null,
+        "detailsUrl": "https://app.codecov.io/gh/owner/repo/pull/42",
+        "runId": null
+      },
+      {
+        "name": "CI / e2e",
+        "status": "IN_PROGRESS",
+        "conclusion": null,
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/900",
+        "runId": "900",
+        "runAttempt": 1,
+        "workflowName": "CI"
+      }
+    ]
+  },
+  "triagedChecks": [
+    {
+      "name": "codecov/project/rust",
+      "status": "COMPLETED",
+      "conclusion": "FAILURE",
+      "event": null,
+      "detailsUrl": "https://app.codecov.io/gh/owner/repo/pull/42",
+      "runId": null,
+      "category": "failing"
+    }
+  ],
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}
