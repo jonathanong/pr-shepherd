@@ -1,14 +1,46 @@
 # pr-shepherd
 
-Take pull requests from scratch to merge-ready with a coding agent. It works with Claude Code, Codex, Grok, and any stdio MCP client.
+Take pull requests from scratch to merge-ready with a coding agent as a [Code Mode-style](https://code.claude.com/docs/en/code-mode) plugin. 
 
-**Modeled per PR session: about 36% lower LLM cost than `gh` at a 60k-token context (31–39% across 40k–100k) and about 76% lower than the GitHub MCP server, both assuming a warm prompt cache. GitHub quota per PR session: 33 GraphQL points and 4 REST requests, vs. 96 and 15 for `gh` and 11 and 82 for the MCP server.**
+Benefits:
+
+- Improved correctness: across 56 PR states, 0.97 with the plugin vs. 0.47 with `gh` + GitHub MCP, Δ +0.50 (2026-11-15)
+- Lower cost: modeled cost ~−36% vs. `gh` and ~−76% vs. MCP per PR session; turns −20% / −69%
+- Optimized GitHub GraphQL rate limit quotas: modeled usage GraphQL points 33 vs. 96 (`gh`), 11 (MCP); REST core 3.8 vs. 15, 82
+- Tidy PRs: automatically triage and resolve bot comments & reply to human code reviews
+- CI Optimizations: automatically cancel CI runs when an agent is preparing a fix
+- Full shepherd flow: handles PRs from scratch, to draft, to mergeable, and into the merge queue
+- Pre-filtering: filters resolved comments plus configurations to filter more bot noise to minimize context usage
+- Apply commit suggestions: supports applying code review suggestions with attribution
+
+## Use cases
+
+- **Autonomous agents.** An agent opens a PR and drives it to merge-ready, or merged when you allow it. Nobody has to watch CI and reviews.
+- **Exhaustive AI code review.** Some PRs get many bot reviews (CodeRabbit, Codex, Copilot, and others). Shepherd shows every thread and comment once and tracks first-look, edited, and outdated items. It pre-filters comments, batches the replies, resolves, and minimizes.
+- **High-Velocity Teams** Supports stacked PRs, merge queues, merge queue ejections, and directs agents to rebase/stack as necessary, allowing high-velocity even when there are a lot of conflicts
+
+## Playbooks
+
+`/pr-shepherd:pr-shepherd` takes work from scratch to mergeable. The three everyday workflows:
+
+- **"make PRs, /pr-shepherd:pr-shepherd"** makes one PR per change that can be reviewed alone. It stacks a PR on an earlier one when it needs that PR's code or edits the same lines, and shepherds every PR until it is mergeable. Independent changes become separate PRs on the default branch.
+- **`/pr-shepherd <PR>`** takes a PR, including a draft, to mergeable. It does not merge.
+- **`/pr-shepherd --merge <PR>`** takes the PR to mergeable and merges it. A PR owns only itself, so for a stack layer with open layers below it, Shepherd hands those layers back to you instead of merging them. `/pr-shepherd --merge stack owner/repo#N` lands the whole stack.
+- **`/pr-shepherd <PR1> <PR2>`** - shepherd multiple PRs, returning when any has an actionable step
+- **`/pr-shepherd stack --merge <stack# or PR#>`** shepherds the stack or the stack up to this PR #, then merges it all at once when it's ready
+- **`/pr-shepherd stack --merge-drain <stack# or PR#>`** shepherds the stack, and merges the bottom PRs as they are ready
+
+`/goal` is generally not needed for pr-shepherd to work. 
+
+Next set up your pr-shepherd config:
+
+- enable classification to automatically hide known bot comments
+- add custom classification rules for comments
+- disallow code review CI from being canceled
 
 ## What it does
 
-- Gathers the PR's review items, CI failures, and merge requirements in one call.
-- Returns one action with numbered instructions and exact commands. `CANCEL` ends the loop and carries none.
-- Never mutates git. The agent edits, commits, pushes, and decides what each comment deserves.
+PR Shepherd gathers the full PR context (reviews, CI failures, merge requirements) in one call, then returns actions with numbered instructions and exact commands, lowering the reasoning tokens, tool calls, turns, and most of all, gathering as much context as possible to minimize the need for the agent to investigate.
 
 ```text
 $ pr-shepherd 123
@@ -151,11 +183,6 @@ See [docs/graphql-usage.md](docs/graphql-usage.md) and [docs/rest-usage.md](docs
 - Optional [event-driven waiting](docs/hook-harness.md) wakes a poll on GitHub webhook events.
 - `stack` reports every layer of a native GitHub stacked PR and shepherds the layers you own.
 
-## Use cases
-
-- **Autonomous agents.** An agent opens a PR and drives it to merge-ready, or merged when you allow it. Nobody has to watch CI and reviews.
-- **Exhaustive AI code review.** Some PRs get many bot reviews (CodeRabbit, Codex, Copilot, and others). Shepherd shows every thread and comment once and tracks first-look, edited, and outdated items. It batches the replies, resolves, and minimizes.
-
 ## How to use
 
 1. **Install the MCP server and the CLI.** See [Install](#install) below.
@@ -196,26 +223,6 @@ Requirements:
 - Node.js >= 22.19.0, Bun, or Deno
 - `git`
 - A GitHub token or an authenticated `gh` CLI with [the required access](docs/authentication.md)
-
-## Quick start
-
-`/pr-shepherd:pr-shepherd` takes work from scratch to mergeable. The three everyday workflows:
-
-- **"make PRs, /pr-shepherd:pr-shepherd"** makes one PR per change that can be reviewed alone. It stacks a PR on an earlier one when it needs that PR's code or edits the same lines, and shepherds every PR until it is mergeable. Independent changes become separate PRs on the default branch.
-- **`/pr-shepherd <PR>`** takes a PR, including a draft, to mergeable. It does not merge.
-- **`/pr-shepherd --merge <PR>`** takes the PR to mergeable and merges it. A PR owns only itself, so for a stack layer with open layers below it, Shepherd hands those layers back to you instead of merging them. `/pr-shepherd --merge stack owner/repo#N` lands the whole stack.
-
-```text
-/goal /pr-shepherd:pr-shepherd 42    # Claude Code
-/goal $pr-shepherd 42                # Codex
-/pr-shepherd 42                      # Grok
-```
-
-```sh
-pr-shepherd 42                       # shell: poll for work (270s cap; --until-terminal removes it)
-```
-
-Leave out the PR number to use the current branch.
 
 ## Documentation
 
