@@ -24,9 +24,17 @@ import { buildCheckFollowUpInstructions, checkFollowUp } from "./check-follow-up
 import {
   checkFollowUpKeys,
   readCheckFollowUp,
+  readShownRunFailures,
   sameCheckFollowUp,
   writeCheckFollowUp,
+  writeShownRunFailures,
 } from "../../state/check-follow-up.mts";
+import {
+  activeRunFailures,
+  buildRunFailureWait,
+  runFailureKeys,
+  runFailuresShown,
+} from "./run-failure-wait.mts";
 import {
   currentEjectionCommit,
   type QueueEjectionRecovery,
@@ -377,7 +385,12 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     manualFollowUpChecks.includes(check),
   );
   const hasBehindBaseRecovery = isBehind && manualExhaustedAttempts.length > 0;
-  const hasAutonomousWork =
+  const activeFailures = activeRunFailures(
+    failingAgentChecks,
+    inProgressWorkflowRunIds,
+    releasedCheckNames,
+  );
+  const hasOtherAutonomousWork =
     hasConflicts ||
     hasBehindBaseRecovery ||
     threads.length > 0 ||
@@ -394,10 +407,12 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
     checks.some((check) => (check.annotations?.length ?? 0) > 0) ||
     failingAgentChecks.some(
       (check) =>
-        releasedCheckNames.has(check.name) ||
-        belongsToActiveWorkflowRun(check) ||
-        checkFollowUp(check) === undefined,
+        !activeFailures.includes(check) &&
+        (releasedCheckNames.has(check.name) ||
+          belongsToActiveWorkflowRun(check) ||
+          checkFollowUp(check) === undefined),
     );
+  const hasAutonomousWork = hasOtherAutonomousWork || activeFailures.length > 0;
   // Only a gate a human must grant escalates at once; every other manual-only check gets one
   // investigation tick for this head and check set before it escalates.
   const needsApproval = manualFollowUpChecks.some((check) => checkFollowUp(check) === "approval");
@@ -440,6 +455,31 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
         }),
       },
     };
+  }
+  // Failures in a still-running run cannot be rerun yet. Show them once, then wait for the run.
+  // Keyed from the classified checks: the agent projection omits `runAttempt` on a first attempt.
+  const activeNames = new Set(activeFailures.map((check) => check.name));
+  const shownKeys = runFailureKeys(failingChecks.filter((check) => activeNames.has(check.name)));
+  if (
+    activeFailures.length > 0 &&
+    !hasOtherAutonomousWork &&
+    manualFollowUpChecks.length === 0 &&
+    !isBehind &&
+    !repairInstructions?.length &&
+    runFailuresShown(await readShownRunFailures(stallKey), headSha, shownKeys)
+  ) {
+    return applyStallGuard(
+      stallKey,
+      stallTimeoutSeconds,
+      headSha,
+      base,
+      prNumber,
+      buildRunFailureWait(base, activeFailures),
+      report,
+      reviewSummaryIds,
+      opts.stallDeadlineSink,
+      opts.persistSeen !== false,
+    );
   }
   // Push access to the PR head branch is a usage precondition. Build review mutations for
   // conflict ticks normally so the caller can push and complete the same triage cycle.
@@ -671,6 +711,9 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       { headSha, threadAttempts, threadBodyHashes },
     );
     if (investigate) await writeCheckFollowUp(stallKey, { headSha, checks: followUpKeys });
+    if (activeFailures.length > 0) {
+      await writeShownRunFailures(stallKey, { headSha, checks: shownKeys });
+    }
     // A queued conflict's annotation fixes are path (a); waiting keeps them unseen.
     if (!queuedConflict)
       await Promise.allSettled(
