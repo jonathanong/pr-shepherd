@@ -14,6 +14,17 @@ The binary `pr-shepherd-mcp` ships in the `pr-shepherd` npm package. Replace `<v
 npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
 ```
 
+## Why the plugin does not start it
+
+The plugin is the CLI plus skills. Up to v2.2.3 it also started this server; it no longer does, for these reasons:
+
+- **The agent needs a shell anyway.** Most `[TRIAGE]` ticks end in a commit and a push, so an agent that can act on Shepherd's output can also run the CLI.
+- **Waiting belongs in the background.** `pr-shepherd [PR] --until-terminal` runs as a background process and wakes the agent when the PR needs it. An MCP tool call blocks the agent's turn until it returns, so an MCP tool cannot wait without stalling the agent, and a tick-per-call loop costs a full GitHub fetch per call.
+- **Streaming does not help.** SSE responses or MCP progress notifications are not shown to the model, so the agent still sees only the final result.
+- **Almost all real use went through the CLI.** The server's tool definitions were loaded into every session for a fallback that was rarely used.
+
+The server, its binary, and its tools stay supported. Register it yourself (below) for an MCP-only host.
+
 ## Install
 
 | Path            | When                                                                      |

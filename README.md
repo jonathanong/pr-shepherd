@@ -81,7 +81,7 @@ More features are in [docs/features.md](docs/features.md).
 
 ## Install
 
-The plugin ships the skills and drives the CLI, so install both.
+The plugin ships the skills, which drive the CLI, so install both.
 
 ```bash
 # Claude Code
@@ -101,7 +101,7 @@ pnpm i -g pr-shepherd
 
 Use one package manager for global installs, because a second global copy shadows the first (`which -a pr-shepherd` lists every copy).
 
-The plugin does not start the MCP server. To register it yourself, or for a local checkout, see [docs/mcp.md](docs/mcp.md).
+The plugin is the CLI plus skills; it does not start the MCP server. For why, and to register the server yourself, see [docs/mcp.md](docs/mcp.md#why-the-plugin-does-not-start-it).
 
 Requirements:
 
