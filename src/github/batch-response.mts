@@ -1,6 +1,7 @@
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type { RepoInfo } from "./client.mts";
 import { GitHubRequestError } from "./errors.mts";
+import { dropUnreadableSuites } from "./check-suite-nodes.mts";
 import type { RawBatchResponse, RawContextNode, RawPr } from "./batch-raw-types.mts";
 
 export function requireRawPr(
@@ -17,7 +18,9 @@ export function requireRawPr(
   if (!response.repository.pullRequest) {
     throw new ShepherdError(`PR #${pr} not found`, EXIT.UNAVAILABLE);
   }
-  return response.repository.pullRequest;
+  const raw = response.repository.pullRequest;
+  dropUnreadableSuites(raw.commits?.nodes[0]?.commit);
+  return raw;
 }
 
 export function requireContextNodes(nodes: Array<RawContextNode | null>): RawContextNode[] {

@@ -11,6 +11,7 @@
 import { main } from "./cli-parser.mts";
 import { errorToExitCode } from "./exit-codes.mts";
 import { formatCliError } from "./cli/error-format.mts";
+import { appendEntry } from "./log/log-file.mts";
 
 function formatCause(cause: unknown, seen = new Set<unknown>(), depth = 0): string {
   if (depth > 5 || seen.has(cause)) return "[circular or deep cause chain]";
@@ -26,6 +27,8 @@ function formatCause(cause: unknown, seen = new Set<unknown>(), depth = 0): stri
 
 main(process.argv).catch((err) => {
   const msg = formatCliError(err);
+  // The terminal gets the message only; the stack goes to the debug log (a no-op when it is off).
+  appendEntry(`## Unhandled error\n\n\`\`\`\n${formatCause(err)}\n\`\`\`\n\n`);
   const causeStr = err instanceof Error && err.cause != null ? formatCause(err.cause) : null;
   process.stderr.write(
     `pr-shepherd error: ${msg}${causeStr !== null ? ` (cause: ${causeStr})` : ""}\n`,

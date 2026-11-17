@@ -1,4 +1,5 @@
 import { githubOperation } from "./transport.mts";
+import { dropUnreadableSuites } from "./check-suite-nodes.mts";
 import { readRestCommitChecks } from "./rest-check-read.mts";
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import type { RawCheckRollup, RawSummaryCommit, RawSummaryPr } from "./poll-summary-raw.mts";
@@ -28,6 +29,7 @@ interface CheckPageResponse {
  */
 export async function hydratePollSummaryChecks(raw: RawSummaryPr, repo: RepoInfo): Promise<void> {
   const headCommit = raw.commits.nodes[0]?.commit;
+  dropUnreadableSuites(headCommit);
   if (headCommit) await hydrateCommitContexts(headCommit, repo);
   const queueCommit = raw.mergeQueueEntry?.headCommit;
   if (queueCommit) await hydrateCommitContexts(queueCommit, repo);

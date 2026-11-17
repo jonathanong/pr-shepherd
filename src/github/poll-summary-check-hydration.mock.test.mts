@@ -71,6 +71,21 @@ describe("hydratePollSummaryChecks", () => {
     });
   });
 
+  it("drops null check suites and leaves the suite page unverified", async () => {
+    const head = commit(HEAD, null);
+    head.checkSuites = {
+      pageInfo: { hasNextPage: false },
+      nodes: [null as never, { status: "QUEUED", conclusion: null, workflowRun: null }],
+    };
+    const raw = rawPr(head);
+
+    await hydratePollSummaryChecks(raw, repo);
+
+    expect(head.checkSuites.nodes).toHaveLength(1);
+    expect(head.checkSuites.pageInfo?.hasNextPage).toBe(true);
+    expect(summarizePollSummaryChecks(raw).incomplete).toBe(true);
+  });
+
   it("prepends older pages in GitHub order until the window is complete", async () => {
     const raw = rawPr(commit(HEAD, contexts(["c", "d"], 4, "cursor-3")));
     mockGraphql
