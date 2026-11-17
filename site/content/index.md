@@ -73,7 +73,7 @@ summary 3 passing
   never merges on its own. For a single PR, it hands off to a human only for 9 specific
   reasons.
 - [**It works with your agent**](docs/mcp.md) Plugins for Claude Code, Codex, and Grok, a
-  local stdio MCP server for other clients, and a CLI for shells and CI. Native stacked PRs are
+  CLI for shells and CI, and an opt-in local stdio MCP server. Native stacked PRs are
   supported.
 
 </div>

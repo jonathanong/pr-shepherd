@@ -28,8 +28,6 @@
   },
   "files": [
     "bin/**",
-    "plugins/**/.mcp.json",
-    "plugins/**/.codex.mcp.json",
     "src/classify/types.mts",
     "plugins/**",
     "plugins/**/.codex-plugin/**",

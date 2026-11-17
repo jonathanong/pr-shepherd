@@ -8,34 +8,36 @@ The server shares command implementations, GitHub token resolution, and cascadin
 
 GitHub transport follows `github.transport` or the per-call `transport: "auto"|"graphql"|"rest"` input, with the same selection and fallback as the CLI. REST results may omit GraphQL-only fields; those stay unknown, and unsupported operations are reported explicitly. See [api.md](api.md) and [github-api.md](github-api.md#transport-selection).
 
-The binary `pr-shepherd-mcp` ships in the `pr-shepherd` npm package. Replace `<version>` with a published version; the plugin files pin the version in `package.json`. The server speaks stdio only. There is no hosted HTTP endpoint.
+The binary `pr-shepherd-mcp` ships in the `pr-shepherd` npm package. Replace `<version>` with a published version. The server speaks stdio only. There is no hosted HTTP endpoint.
 
 ```text
 npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
 ```
 
+## Why the plugin does not start it
+
+The plugin is the CLI plus skills. Up to v2.2.3 it also started this server; it no longer does, for these reasons:
+
+- **The agent needs a shell anyway.** Most `[TRIAGE]` ticks end in a commit and a push, so an agent that can act on Shepherd's output can also run the CLI.
+- **Waiting belongs in the background.** `pr-shepherd [PR] --until-terminal` runs as a background process; hosts that wake the agent when it exits, such as Claude Code, resume the agent when the PR needs it, and hosts without wake-on-exit, such as Codex CLI, use the bounded poll ([cli-usage.md](cli-usage.md)). An MCP tool call blocks the agent's turn until it returns, so an MCP tool cannot wait without stalling the agent, and a tick-per-call loop costs a full GitHub fetch per call.
+- **Streaming does not help.** SSE responses or MCP progress notifications are not shown to the model, so the agent still sees only the final result.
+- **Almost all real use went through the CLI.** The server's tool definitions were loaded into every session for a fallback that was rarely used.
+
+The server, its binary, and its tools stay supported. Register it yourself (below) for an MCP-only host.
+
 ## Install
 
-| Path            | When                                                                             |
-| --------------- | -------------------------------------------------------------------------------- |
-| Plugin          | Preferred in Claude Code, Codex, and Grok: skills plus a version-matched server. |
-| MCP server only | Register `pr-shepherd-mcp` in the host when you do not want the plugin.          |
-| Local checkout  | Developing this repository.                                                      |
+| Path            | When                                                                      |
+| --------------- | ------------------------------------------------------------------------- |
+| Plugin          | Preferred in Claude Code, Codex, and Grok: skills that drive the CLI.     |
+| MCP server only | Register `pr-shepherd-mcp` in any MCP host; the plugin does not start it. |
+| Local checkout  | Developing this repository.                                               |
 
 The server needs no global CLI install. Confirm GitHub auth before the first tool call ([authentication.md](authentication.md)).
 
 ### Plugin
 
-The plugin launches the server from `plugins/pr-shepherd/.mcp.json` (Claude Code and Grok) or `plugins/pr-shepherd/.codex.mcp.json` (Codex). The shipped `pr-shepherd` skill runs the CLI poll and uses MCP `iterate` only when the CLI is unavailable. After a CLI poll, run the printed apply command. Use MCP `apply` and `suggest` only when the tick used MCP `iterate`.
-
-| Host        | Install                                                                                                                      | Confirm                                                 | Invoke                                                                           |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| Claude Code | `claude /plugin marketplace add jonathanong/pr-shepherd` then `claude /plugin install pr-shepherd`                           | `/mcp`                                                  | `/goal /pr-shepherd:pr-shepherd [42]`                                            |
-| Codex       | `codex plugin marketplace add jonathanong/pr-shepherd` (optionally `--ref main`), then install/enable `pr-shepherd` in Codex | `/mcp`                                                  | `/goal $pr-shepherd [42]`                                                        |
-| Grok        | `grok plugin marketplace add jonathanong/pr-shepherd` then `grok plugin install pr-shepherd --trust`                         | `grok mcp list`, `grok mcp doctor pr-shepherd`, `/mcps` | `/pr-shepherd` or `/pr-shepherd:pr-shepherd`, optionally with a PR number or URL |
-
-- **Codex local checkout:** `git clone https://github.com/jonathanong/pr-shepherd ~/.codex/plugin-sources/pr-shepherd`, then `codex plugin marketplace add ~/.codex/plugin-sources/pr-shepherd`. The marketplace root must contain `.agents/plugins/marketplace.json` and `plugins/pr-shepherd/`.
-- **Grok trust:** Grok starts a plugin's MCP server only after the plugin is trusted; `--trust` grants that. Plugins under `~/.grok/plugins/` are trusted automatically; project plugins require trust.
+The plugin ships the skills and drives the CLI; it does not start this server. Install the plugin as described in [skills.md](skills.md), and register the server below if you also want MCP. The `pr-shepherd` skill uses MCP `iterate` only when the CLI is unavailable and the server is registered. Use MCP `apply` and `suggest` only when the tick used MCP `iterate`.
 
 ### MCP server only
 

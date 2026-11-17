@@ -39,7 +39,7 @@ Skills are thin dispatchers. They parse arguments, call the CLI or MCP, print th
 | Event loop           | `event-loop.md`                                              |
 | Waiting              | `waiting.md`                                                 |
 
-Install the plugin (skills plus the version-matched MCP server) or register `pr-shepherd-mcp` yourself; see [mcp.md](mcp.md). The CLI path needs `pr-shepherd` on `PATH`.
+The plugin ships skills and the poll guard. It does not start an MCP server, so install the CLI too (`pnpm i -g pr-shepherd`). To use MCP instead, register `pr-shepherd-mcp` yourself; see [mcp.md](mcp.md).
 
 ## Recurrence
 
@@ -137,13 +137,9 @@ Codex runs the `pr-shepherd` skill until `[CANCEL]` or `[ESCALATE]`.
 
 ## Grok
 
-Install the plugin and trust it so the bundled MCP server starts, or register the server without the plugin:
-
 ```bash
 grok plugin marketplace add jonathanong/pr-shepherd
 grok plugin install pr-shepherd --trust
-
-grok mcp add pr-shepherd -- npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
 ```
 
 Use the skill from the slash menu:

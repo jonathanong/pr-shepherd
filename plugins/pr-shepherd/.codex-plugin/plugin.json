@@ -12,7 +12,6 @@
   "license": "MIT",
   "keywords": ["github", "pull-request", "ci", "code-review", "automation", "codex"],
   "skills": "./skills/",
-  "mcpServers": "./.codex.mcp.json",
   "interface": {
     "displayName": "pr-shepherd",
     "shortDescription": "Monitor PR CI and review comments from Codex",

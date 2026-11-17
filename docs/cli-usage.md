@@ -138,7 +138,7 @@ Full aggregate semantics: [actions.md](actions.md).
 
 ## MCP server
 
-[mcp.md](mcp.md) covers installing the stdio server in Claude Code, Codex, or Grok, and the contract for each tool. The plugin and a manual `pr-shepherd-mcp` registration both run:
+[mcp.md](mcp.md) covers installing the stdio server in Claude Code, Codex, or Grok, and the contract for each tool. The plugin does not start it; register it yourself with:
 
 ```text
 npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
