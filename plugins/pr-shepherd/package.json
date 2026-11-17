@@ -1,9 +1,0 @@
-{
-  "name": "pr-shepherd-plugin",
-  "private": true,
-  "description": "Pins the pr-shepherd package that .mcp.json launches",
-  "license": "MIT",
-  "dependencies": {
-    "pr-shepherd": "2.2.3"
-  }
-}

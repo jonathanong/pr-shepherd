@@ -81,7 +81,7 @@ More features are in [docs/features.md](docs/features.md).
 
 ## Install
 
-The plugin starts the version-matched `pr-shepherd-mcp` server automatically.
+The plugin ships the skills and drives the CLI, so install both.
 
 ```bash
 # Claude Code
@@ -101,7 +101,7 @@ pnpm i -g pr-shepherd
 
 Use one package manager for global installs, because a second global copy shadows the first (`which -a pr-shepherd` lists every copy).
 
-For the MCP server without the plugin, or a local checkout, see [docs/mcp.md](docs/mcp.md).
+The plugin does not start the MCP server. To register it yourself, or for a local checkout, see [docs/mcp.md](docs/mcp.md).
 
 Requirements:
 

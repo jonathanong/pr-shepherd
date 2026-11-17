@@ -8,11 +8,11 @@ How `src/` is organized, which way dependencies point, and where new code goes. 
 
 Modules split along two jobs: **context gather** (`github`, `checks`, `comments`, `merge-status`) and **action emit** (`commands/iterate`, `commands/poll`, CLI formatters, MCP tools). I/O adapters (CLI parser, MCP stdio, `api.mts`) are thin layers over those.
 
-| Principle                 | What it means                                                                                                                                                                                                      |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **One local MCP surface** | The version-matched stdio server is the canonical agent integration. It shares command implementations and GitHub token resolution with the CLI; plugins only declare the same local server. See [mcp.md](mcp.md). |
-| **Skills over subagents** | Skill prompts inject into the main conversation instead of spawning a subagent that reloads `AGENTS.md` every turn, keeping cost and latency low.                                                                  |
-| **Safe to interrupt**     | Durable state lives in the PR on GitHub. The iterate loop self-terminates when the PR is merged, closed, or settles after ready-delay. Local state in `$PR_SHEPHERD_STATE_DIR` can be deleted without data loss.   |
+| Principle                 | What it means                                                                                                                                                                                                        |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **One local MCP surface** | The stdio server is an opt-in agent integration that hosts register themselves; the plugins drive the CLI instead. It shares command implementations and GitHub token resolution with the CLI. See [mcp.md](mcp.md). |
+| **Skills over subagents** | Skill prompts inject into the main conversation instead of spawning a subagent that reloads `AGENTS.md` every turn, keeping cost and latency low.                                                                    |
+| **Safe to interrupt**     | Durable state lives in the PR on GitHub. The iterate loop self-terminates when the PR is merged, closed, or settles after ready-delay. Local state in `$PR_SHEPHERD_STATE_DIR` can be deleted without data loss.     |
 
 ## Module map
 

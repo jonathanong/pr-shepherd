@@ -11,7 +11,6 @@
   "license": "MIT",
   "keywords": ["github", "pull-request", "ci", "code-review", "automation"],
   "skills": "./skills/",
-  "mcpServers": "./.mcp.json",
   "userConfig": {
     "poll_guard": {
       "type": "string",
