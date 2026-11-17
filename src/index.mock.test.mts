@@ -3,7 +3,10 @@ import { EXIT } from "./exit-codes.mts";
 
 const { mockMain } = vi.hoisted(() => ({ mockMain: vi.fn() }));
 
+const { mockAppendEntry } = vi.hoisted(() => ({ mockAppendEntry: vi.fn() }));
+
 vi.mock("./cli-parser.mts", () => ({ main: mockMain }));
+vi.mock("./log/log-file.mts", () => ({ appendEntry: mockAppendEntry }));
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let exitSpy: any;
@@ -34,6 +37,17 @@ describe("index — error exit", () => {
     await loadIndex();
     expect(stderrSpy).toHaveBeenCalledWith("pr-shepherd error: something broke\n");
     expect(exitSpy).toHaveBeenCalledWith(EXIT.SOFTWARE);
+  });
+
+  it("writes the stack to the debug log without printing it", async () => {
+    const err = new TypeError("Cannot read properties of null (reading 'id')");
+    mockMain.mockRejectedValueOnce(err);
+    await loadIndex();
+    expect(mockAppendEntry).toHaveBeenCalledWith(expect.stringContaining(String(err.stack)));
+    expect(mockAppendEntry.mock.calls[0]![0]).toMatch(/^## Unhandled error\n\n```\nTypeError:/);
+    expect(stderrSpy).toHaveBeenCalledWith(
+      "pr-shepherd error: Cannot read properties of null (reading 'id')\n",
+    );
   });
 
   it("stringifies non-Error rejections", async () => {

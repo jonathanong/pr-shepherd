@@ -200,6 +200,10 @@ describe("batchResponseFromSummary", () => {
       (_, layer) => delete layer.commits.nodes[0]!.commit.checkSuites!.pageInfo,
     ],
     [
+      "an unreadable (null) check suite",
+      (_, layer) => layer.commits.nodes[0]!.commit.checkSuites!.nodes.push(null as never),
+    ],
+    [
       "older contexts",
       (_, layer) =>
         (layer.commits.nodes[0]!.commit.statusCheckRollup!.contexts.pageInfo.hasPreviousPage = true),

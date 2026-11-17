@@ -69,6 +69,7 @@ export function summaryComplete(layer: RawSummaryPr, source: StackHandoffSource)
   if (!layer.reviewRequests || layer.commits.totalCount === undefined) return false;
   const commit = headCommit(layer);
   if (!commit || commit.oid !== layer.headRefOid || !commit.checkSuites?.pageInfo) return false;
+  if (commit.checkSuites.nodes.includes(null as never)) return false;
   const contexts = commit.statusCheckRollup?.contexts;
   if (
     contexts &&
