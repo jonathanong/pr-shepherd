@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-Reference for the `pr-shepherd` shell commands and flags, for people and agents driving Shepherd from a terminal or CI. The CLI and the local stdio MCP server ([mcp.md](mcp.md)) share one workflow model: both gather PR context and emit the same deterministic action. The MCP server returns structured data; the CLI renders text or JSON.
+Reference for the `pr-shepherd` shell commands and flags. The CLI and the local stdio MCP server ([mcp.md](mcp.md)) share one workflow model and emit the same deterministic action; the MCP server returns structured data, the CLI renders text or JSON.
 
 ## Canonical shell commands
 
@@ -28,7 +28,7 @@ pr-shepherd admin clean <pr|stack|branch|current|repo|all> [value] [--dry-run] [
 pr-shepherd admin log-file [--format text|json]
 ```
 
-`PR` may be a number, `owner/repo#N`, or a GitHub pull request URL. Multiple explicit PRs must resolve to one repository. `pr-shepherd stack PR` selects the complete native GitHub stack containing that PR, ordered bottom to top, but a single PR owns only itself; a stack number (`stack owner/repo#N`) owns every layer. `pr-shepherd stack PR PR ...` owns only the listed PRs of one stack (ownership is declared, not derived from the author); refs spanning several stacks fail with one exact command per stack. When `PR` is omitted, Shepherd infers the current branch's open PR. A qualified PR selects the GitHub target; the working directory stays the local git, config, rules, and log context.
+`PR` may be a number, `owner/repo#N`, or a GitHub pull request URL. Multiple explicit PRs must resolve to one repository. `pr-shepherd stack PR` selects the complete native GitHub stack containing that PR, ordered bottom to top, but a single PR owns only itself; a stack number (`stack owner/repo#N`) owns every layer, and `stack PR PR ...` owns only the listed PRs of one stack (ownership is declared, not derived from the author). Refs spanning several stacks fail with one exact command per stack. When `PR` is omitted, Shepherd infers the current branch's open PR. A qualified PR selects the GitHub target; the working directory stays the local git, config, rules, and log context.
 
 | Command                | What it does                                                                                                                                                                                                       |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -79,7 +79,7 @@ pr-shepherd stack 43
 
 ### Choosing a wait mode
 
-The bounded poll (`poll.timeout-seconds`, default 270s = 4.5m) suits short-lived agents that wait in the foreground. Each call stays inside Anthropic's default 5-minute prompt-cache window and under common tool timeouts. `--until-terminal` suits a background process or an external shepherd. Pick by what your host does, not by its name:
+The bounded poll (`poll.timeout-seconds`, default 270s = 4.5m) suits agents that wait in the foreground: each call stays inside Anthropic's default 5-minute prompt-cache window and under common tool timeouts. `--until-terminal` suits a background process or an external shepherd. Pick by what your host does, not its name:
 
 | Host capability                                               | Run                                                                                                                                                                          |
 | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -87,7 +87,7 @@ The bounded poll (`poll.timeout-seconds`, default 270s = 4.5m) suits short-lived
 | No wake-up on exit (foreground subagent, polling-style tools) | `pr-shepherd [PR ...]` in the foreground; pass `--timeout` below the host's command-time limit if that is under 270s; on a non-terminal `WAIT`/`READY`, rerun it.            |
 | One tick per invocation (cloud sessions, MCP, `iterate`)      | Unchanged: follow `nextCheck` ([cloud.md](cloud.md)).                                                                                                                        |
 
-Run one watcher per selection. Before restarting Shepherd with different PRs or flags (for example adding `--merge`), stop the running one. Never run two on the same PR. Exit `10`–`16` from a background `--until-terminal` run is a Shepherd action ([exit codes](exit-codes.md)), not a crash, though some hosts label it a failure. Exit `64` and above is a real command failure (`75` is retryable).
+Run one watcher per selection, and never two on the same PR; stop the running one before restarting with different PRs or flags (for example adding `--merge`). Exit `10`-`16` from a background `--until-terminal` run is a Shepherd action ([exit codes](exit-codes.md)), not a crash, though some hosts label it a failure. Exit `64` and above is a real command failure (`75` is retryable).
 
 Host behavior, as of 2026-11 (it changes; check the source):
 
@@ -99,7 +99,7 @@ Host behavior, as of 2026-11 (it changes; check the source):
 
 ### Event-driven waits
 
-With `events.source: hook-harness` ([hook-harness.md](hook-harness.md)), the sleep between `WAIT` ticks becomes a wait for a matching GitHub event. A wake-up still runs a normal tick, so output, JSON, and exit codes do not change. `--verbose` prints the wake reason to stderr. If the source is unreachable, waits fall back to `poll.interval-seconds`.
+With `events.source: hook-harness` ([hook-harness.md](hook-harness.md)), the sleep between `WAIT` ticks becomes a wait for a matching GitHub event. A wake-up still runs a normal tick, so output, JSON, and exit codes do not change; `--verbose` prints the wake reason to stderr. If the source is unreachable, waits fall back to `poll.interval-seconds`.
 
 ### Flags
 
@@ -127,7 +127,7 @@ Durations accept `s`, `m`, and `h` (`30s`, `4.5m`, `1h`). Bare polling durations
 
 ## Aggregate commands
 
-Explicit PR sets and native stacks use a compact summary instead of running the stateful one-PR iterator for every row. Its only GitHub mutation is rule-driven [classification auto-resolve](actions.md#classification-auto-resolve). Aggregate polling returns when work is needed, every selected PR is complete, every selected row is `CANCEL`, or the timeout expires. The Markdown, JSON, API, and MCP result has one row per PR with raw state, bounded check/review counts, and routing context.
+Explicit PR sets and native stacks use a compact summary instead of the stateful one-PR iterator per row. Its only GitHub mutation is rule-driven [classification auto-resolve](actions.md#classification-auto-resolve). Aggregate polling returns when work is needed, every selected PR is complete, every row is `CANCEL`, or the timeout expires. Every output format has one row per PR with raw state, bounded check/review counts, and routing context.
 
 - **Explicit PR sets** include an exact one-PR `pollCommand` for each actionable row, which callers may handle independently. A PR whose summary could not be read becomes a `TRIAGE` row (`summary-read-failed`, with the raw `error`) instead of failing the other rows; rate limits, credential errors, and an all-rows failure still fail the tick. When every row is `CANCEL`, the aggregate stops; if any open row is a native-stack layer with `appears-ready`, a second step says this poll records no READY receipt and, if the user asked to merge, points to `pr-shepherd stack` with `--merge`. When every row is `CANCEL` or `ESCALATE`, the instructions say to stop after reporting the handoffs.
 - **`stack`** never emits rebase or push commands. When any layer is draft, lacks a current one-PR READY receipt, conflicts, fails checks, remains pending, or has stale ancestry, the result is `SHEPHERD`, naming a one-PR session for every such layer at once. The instruction says to start one session per printed command; a layer without a command needs no session that tick. A layer that only lacks its receipt reads `mergeable, no READY receipt yet`, its step says only its own one-PR session records that receipt, and the first step says not to fold the commands into one multi-PR poll. With automatic mark-ready enabled, a clean draft is marked ready by its own session without waiting for lower layers. With it disabled, draft layers with work get bounded probe commands (`pollProbe`) and their work is processed normally. A clean draft row is `CANCEL` with reason `draft-auto-mark-ready-disabled` and has no probe command; the draft stays in draft. `stack` continues independent work and eligible ready-prefix merges, then returns `CANCEL` when only such drafts remain.
@@ -138,13 +138,7 @@ Full aggregate semantics: [actions.md](actions.md).
 
 ## MCP server
 
-[mcp.md](mcp.md) covers installing the stdio server in Claude Code, Codex, or Grok, and the contract for each tool. The plugin does not start it; register it yourself with:
-
-```text
-npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
-```
-
-Seven tools mirror the CLI: `iterate`, `stack` (`stack --once`), `apply` (`apply merge|review|files|journal|check-blocker|queue-removal`), `playbook`, `suggest`, `extract_journal` (`journal extract`, from a `body` string), and `get_journal` (no CLI counterpart; fetches the PR body, then extracts). See [mcp.md](mcp.md#tools). `admin clean` and `admin log-file` are shell-only. MCP has no polling tool: call `iterate` or `stack` again after the returned work is done or when the client's scheduler rechecks.
+[mcp.md](mcp.md) covers installing the stdio server (the plugin does not start it) and the contract for each tool. Seven tools mirror the CLI: `iterate`, `stack` (`stack --once`), `apply` (`apply merge|review|files|journal|check-blocker|queue-removal`), `playbook`, `suggest`, `extract_journal` (`journal extract`, from a `body` string), and `get_journal` (no CLI counterpart; fetches the PR body, then extracts). See [mcp.md](mcp.md#tools). `admin clean` and `admin log-file` are shell-only. MCP has no polling tool: call `iterate` or `stack` again after the returned work is done or when the client's scheduler rechecks.
 
 ## Exit codes
 

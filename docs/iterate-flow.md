@@ -2,7 +2,7 @@
 
 [← README](../README.md) | [actions.md](actions.md) | [context.md](context.md)
 
-This page is the canonical decision order of one `iterate` tick (`src/commands/iterate/index.mts`), for maintainers and for readers who want to know why a tick returned a given action. Each tick gathers context and returns exactly one action; the output of each action is in [actions.md](actions.md), escalation predicates are in [escalations.md](escalations.md), and polling flags are in [cli-usage.md](cli-usage.md).
+The canonical decision order of one `iterate` tick (`src/commands/iterate/index.mts`). Each tick gathers context and returns exactly one action. Action output: [actions.md](actions.md). Escalation predicates: [escalations.md](escalations.md). Polling flags: [cli-usage.md](cli-usage.md).
 
 ## Dispatch order
 
@@ -38,7 +38,7 @@ flowchart TD
   SG -.->|stalled| E4(["escalate: stall-timeout"])
 ```
 
-The shipped skill runs `pr-shepherd [PR] --until-terminal`, not `pr-shepherd iterate`. Which results that poll returns, and when the skill reruns it, is in [skills.md](skills.md#recurrence). The bare `pr-shepherd [PR]` stays bounded for direct CLI users; MCP `iterate` returns one tick with no debounce, and its caller owns recurrence.
+The shipped skill runs `pr-shepherd [PR] --until-terminal`, not `pr-shepherd iterate`; which results that poll returns and when the skill reruns it: [skills.md](skills.md#recurrence). Bare `pr-shepherd [PR]` stays bounded for direct CLI users; MCP `iterate` returns one tick with no debounce, and its caller owns recurrence.
 
 ## Steps
 
@@ -46,22 +46,22 @@ The shipped skill runs `pr-shepherd [PR] --until-terminal`, not `pr-shepherd ite
 
 `runCheck({ autoResolve: true })` fires one GraphQL batch query (CI checks, review threads, PR comments, merge state, branch rules). A merged or closed PR returns a terminal report immediately. Otherwise outdated threads are surfaced without being resolved, and eligible already-seen `COMMENTED` review summaries are minimized in-process.
 
-Human-authored threads must stay visible. Shepherd later pairs reply-and-resolve for unmarked bot/non-human threads and unmarked viewer-authored human feedback; unmarked other-human threads stay reply-only unless `iterate.resolve-other-human-threads` allows resolve. `resolutionOnly` also carries active marker-ended retry threads that are still being resolved.
+Human-authored threads stay visible. Shepherd later pairs reply-and-resolve for unmarked bot/non-human threads and unmarked viewer-authored human feedback; unmarked other-human threads stay reply-only unless `iterate.resolve-other-human-threads` allows resolve. `resolutionOnly` also carries active marker-ended retry threads still being resolved.
 
 ### 1.5. Terminal state — PR merged or closed
 
-**Check:** `report.mergeStatus.state !== 'OPEN'`. GitHub returns `mergeable: UNKNOWN` and `mergeStateStatus: UNKNOWN` for merged/closed PRs; `runCheck` surfaces top-level `status: 'MERGED'` or `status: 'CLOSED'`, and this branch stops before actionable checks.
+**Check:** `report.mergeStatus.state !== 'OPEN'`. GitHub returns `UNKNOWN` mergeability for merged/closed PRs; `runCheck` surfaces top-level `status: 'MERGED'` or `'CLOSED'`, and this branch stops before actionable checks.
 
 **Emits:** `action: 'cancel'` (reason `merged` or `closed`), clearing the stall state and any stale ready-delay marker.
 
 ### 2. Ready-delay
 
-`updateReadyDelay(pr, isCleanReadyState, readyDelaySeconds, owner, repo, options)` reads and writes `ready-since.txt`. Default delay is 0, meaning no countdown (`iterate.ready-delay-minutes` or `--ready-delay`).
+`updateReadyDelay(pr, isCleanReadyState, readyDelaySeconds, owner, repo, options)` reads and writes `ready-since.txt`. The default delay is 0 (no countdown); set `iterate.ready-delay-minutes` or `--ready-delay`.
 
 A **clean ready state** is `status === "READY"`, `hasReadinessWork` false, and no active auto-merge or merge-queue state being handled. It includes BLOCKED/UNSTABLE states where Shepherd has nothing left to do (green CI, no unresolved items, no blocking bot review pending).
 
 - An initial first look at a hidden PR comment routes to `triage` for acknowledgement without restarting the countdown or voiding a READY receipt.
-- An edited PR comment (a conversation comment, minimized or not, from any author) never blocks readiness: it does not route to `triage`, restart the ready delay, or clear a READY receipt. Iterate holds it during `wait` and `ready` without writing its marker, then shows it once under `## Edited comments` on the next other action, such as the `cancel` or `merge` that ends the delay (see [Edited comments](actions.md#edited-comments)). Bots such as CodeRabbit regenerate summaries on their own after a PR settles, so an edit cannot be readiness evidence.
+- An edited PR comment (a conversation comment, minimized or not, from any author) never blocks readiness: it does not route to `triage`, restart the ready delay, or clear a READY receipt. Iterate holds it during `wait` and `ready` without writing its marker, then shows it once under `## Edited comments` on the next other action, such as the `cancel` or `merge` that ends the delay ([Edited comments](actions.md#edited-comments)). Bots such as CodeRabbit regenerate summaries after a PR settles, so an edit cannot be readiness evidence.
 
 ```mermaid
 stateDiagram-v2
@@ -87,8 +87,8 @@ stateDiagram-v2
 
 - Unclean sweeps include non-READY status, failing CI, conflicts, unresolved comments, review-summary minimization, and first-look threads and summaries.
 - The elapsed marker stays until `cancel` or `merge` consumes it, so a hidden-comment acknowledgement tick does not restart the wait.
-- A current READY receipt (same head, base, and readiness evidence) already proves the delay elapsed, so a clean sweep returns `shouldCancel: true` without a marker (`alreadyElapsed`). Rerunning a READY PR — for example with `--merge` after a `ready-delay-elapsed` cancel — does not restart the countdown. When the head, base, or evidence moved, the receipt is cleared and the countdown restarts. PR comment bodies and hidden review bodies are omitted from the receipt fingerprint, and comment IDs still bind new comments. An edited PR comment keeps the receipt.
-- Before a READY sweep reaches this step, `runCheck` does one fresh REST mergeability read (unless the UNKNOWN fallback already did). If it reports `CONFLICTING`/`DIRTY`, the sweep becomes `FAILING`/`CONFLICTS`, resets the marker, and routes to `triage`.
+- A current READY receipt (same head, base, and readiness evidence) already proves the delay elapsed, so a clean sweep returns `shouldCancel: true` without a marker (`alreadyElapsed`); rerunning a READY PR, for example with `--merge` after a `ready-delay-elapsed` cancel, does not restart the countdown. When the head, base, or evidence moved, the receipt is cleared and the countdown restarts. PR comment bodies and hidden review bodies are omitted from the receipt fingerprint, and comment IDs still bind new comments. An edited PR comment keeps the receipt.
+- Before a READY sweep reaches this step, `runCheck` does one fresh REST mergeability read (unless the UNKNOWN fallback already did). `CONFLICTING`/`DIRTY` turns the sweep into `FAILING`/`CONFLICTS`, resets the marker, and routes to `triage`.
 - Marker path: `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/ready-since.txt` (`<unix seconds> <head SHA>`). Only the one-PR session reads or writes it; explicit multi-PR aggregate polls use a separate `ready-since-summary.txt` with the same format. A future timestamp (clock skew), another head, or a marker without a head is reset to now.
 
 The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completion).
@@ -109,7 +109,7 @@ The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completio
 - `report.mergeStatus.status === 'CONFLICTS'`
 - pending review-summary IDs, first-look summaries, or edited summaries
 
-**Required contexts never reported.** Just before this check, `planUnreportedRequired` runs. If the one close/reopen for this head was already emitted and the contexts are still missing with nothing running, the tick escalates with `required-checks-unreported`. Otherwise its repair steps (rebase/push or close/reopen) ride on the `triage` result; with no other work they produce their own `triage` through the stall guard. A verified stale native-stack boundary also produces `triage`, after the active-merge check in [step 4](#4-active-merge-and-queue-removal).
+**Required contexts never reported.** Just before this check, `planUnreportedRequired` runs. If the one close/reopen for this head was already emitted and the contexts are still missing with nothing running, the tick escalates with `required-checks-unreported`; otherwise its repair steps (rebase/push or close/reopen) ride on the `triage` result; with no other work they produce their own `triage` through the stall guard. A verified stale native-stack boundary also produces `triage`, after the active-merge check in [step 4](#4-active-merge-and-queue-removal).
 
 **Failing checks.** All failing checks route here — including timeout, cancelled, startup-failure, flaky, and `merge_group` checks from the active/latest queue commit — except a check recorded as blocked on an external pull request or issue that is still open.
 
@@ -118,7 +118,7 @@ The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completio
 - Queue checks are classified separately from PR-head checks, so supersession never crosses commit boundaries.
 - The `triage` payload carries `conclusion` for each failing check. `workflowName`, `jobName`, `failedStep`, `logExcerpt`, and `relatedJobs` are populated only when triage runs (not for cancelled or startup-failure checks).
 
-**Conflicts.** CONFLICTS is included so conflicts and review comments are handled in one tick. Iterate surfaces raw `**branch**` state and does not prescribe how to rebase a standalone PR. A native stack layer (`mergeRequirements.stack`) is the exception, because updating one layer from its base strands every layer above it:
+**Conflicts.** CONFLICTS is included so conflicts and review comments are handled in one tick. Iterate surfaces raw `**branch**` state and does not prescribe how to rebase a standalone PR. A native stack layer (`mergeRequirements.stack`) is the exception, since updating one layer from its base strands every layer above it:
 
 | Situation                                                                                 | GraphQL mode                                                                                                                  | REST mode                           |
 | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
@@ -135,7 +135,7 @@ The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completio
 
 **Deferred while queued.** With `--merge`, the PR in the merge queue, and `actions.work-while-queued` not `true`, everything above **except** `checks.failing`, `mergeStatus.status === 'CONFLICTS'`, and check-run annotations stops counting — a Shepherd-initiated push would eject the PR. That work falls through to [step 4](#4-active-merge-and-queue-removal), which reports it as `deferredWork` counts on the `wait` result. A queued PR with `CONFLICTS` (with or without `--merge`) still triages the conflict, but holds that review work back the same way and reports it as `triage.deferredWork`.
 
-**Side-effects:** none. Shepherd never cancels workflow runs (GitHub exposes no exact viewer capability for cancellation); it only surfaces failure context.
+**Side-effects:** none. Shepherd never cancels workflow runs (GitHub exposes no exact viewer capability for cancellation).
 
 **Emits:** `action: 'triage'`. A non-empty external check URL, or a later-attempt or post-queue merge-group failure with an excerpt, is an investigation path: `triage` first (with the Check follow-up playbook step), then `escalate` if it is the last blocker and unchanged on the same head (marker `check-follow-up.json`). If no other autonomous work remains and every failing check lacks usable evidence and an authorized rerun, `handleTriage` emits one investigation `triage` (marker `check-follow-up.json`), then `escalate` with `check-follow-up-unavailable` and the raw check context if the same checks are unchanged on the next tick. An `ACTION_REQUIRED` check, a human-only approval, escalates immediately. It can also escalate with `triage-thrash`. An empty or unsafe PR base branch name never escalates: Shepherd omits every command that names it, prints no base in the output, and adds one step to read the base with `gh pr view`. Every `triage` is non-terminal and runs through the [stall guard](#stall-guard).
 
@@ -149,7 +149,7 @@ The countdown's outcomes are emitted later, at [step 6](#6-ready-delay-completio
 
 **Check:** `report.status === 'READY'` AND `isDraft` AND `!blockingBotReviewInProgress` AND `mark-ready.auto` (disable with `--no-auto-mark-ready`).
 
-There is no `mergeStateStatus === "CLEAN"` requirement: a draft whose derived status is `DRAFT` (even one that is also behind) can be marked ready when the Shepherd status is `READY`. This runs before the ready-delay completion, and that completion never applies to a draft. When auto mark-ready is disabled, a clean draft instead returns `cancel` with reason `auto-mark-ready-disabled` and exit 0. The PR remains a draft, with no ready-delay countdown or stall guard.
+There is no `mergeStateStatus === "CLEAN"` requirement: a draft whose derived status is `DRAFT` (even one that is also behind) can be marked ready when the Shepherd status is `READY`. This runs before ready-delay completion, which never applies to a draft. When auto mark-ready is disabled, a clean draft returns `cancel` with reason `auto-mark-ready-disabled` and exit 0, stays a draft, and gets no ready-delay countdown or stall guard.
 
 **Side-effects:** the selected transport's mark-ready operation. REST uses the supported CCR route; an unavailable route escalates with `transport-unsupported`, and a denial with `authorization-required`.
 

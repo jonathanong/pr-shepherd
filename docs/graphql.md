@@ -2,13 +2,11 @@
 
 [← README](../README.md) | [github-api.md](github-api.md) | [context.md](context.md)
 
-How the GraphQL transport reads a PR: the batch query, pagination, the operation catalog, fingerprint reuse, idle-wait detectors, and the REST calls GraphQL mode still makes.
-
-Transport selection, metering, quota warnings, and backoff are in [github-api.md](github-api.md). The REST transport is in [rest.md](rest.md). Measured costs per command are in [graphql-usage.md](graphql-usage.md).
+How the GraphQL transport reads a PR: the batch query, pagination, operation catalog, fingerprint reuse, idle-wait detectors, and the REST calls GraphQL mode still makes. Transport selection, metering, quota warnings, and backoff: [github-api.md](github-api.md). REST transport: [rest.md](rest.md). Measured costs: [graphql-usage.md](graphql-usage.md).
 
 ## How GitHub prices a query
 
-GitHub meters GraphQL in points per hour, not HTTP requests ([GitHub metering](github-api.md#github-metering)). Per [GitHub's formula](https://docs.github.com/en/graphql/overview/rate-limits-and-query-limits-for-the-graphql-api):
+GitHub meters GraphQL in points per hour ([GitHub metering](github-api.md#github-metering)). Per [GitHub's formula](https://docs.github.com/en/graphql/overview/rate-limits-and-query-limits-for-the-graphql-api):
 
 1. Count the connection-requests implied by the query AST. A nested `first`/`last` multiplies by its parent connection's size; assume every connection fills.
 2. Divide by 100 and round to the nearest integer. The minimum is 1.
@@ -20,7 +18,7 @@ Example: `reviewThreads(last: 20) { comments(first: 100) }` is 1 + 20 = 21 conne
 | 500,000 nodes / query | `first`/`last` multiplied through the tree. GitHub rejects the query outright; not a quota warning |
 | Mutations             | Cannot select `rateLimit { cost }`; recorded as `unmeasuredRequestCount`, quota read from headers  |
 
-Queries select this sibling so cost is exact; `github/api-telemetry.mts` merges it with the `x-ratelimit-*` headers, so no extra quota call is needed:
+Queries select this sibling for exact cost; `github/api-telemetry.mts` merges it with the `x-ratelimit-*` headers, so no extra quota call is needed:
 
 ```graphql
 _shepherdRateLimit: rateLimit {
@@ -54,9 +52,9 @@ Merge-queue check rollups are not on the first page. When the PR is queued, or i
 
 ## Response integrity
 
-GraphQL reads are strict. Any GraphQL `errors`, null `data`, invalid JSON, a malformed payload, or a null check-context node throws `GitHubRequestError`, keeping GitHub's error paths. An incomplete snapshot never drives an action: `iterate` and `pr-shepherd [PR]` exit with a code from the HTTP status (`77` for 401/403, `75` for 429/5xx/rate-limited, `69` otherwise; [exit-codes.md](exit-codes.md)) instead of reaching `10`–`14`.
+GraphQL reads are strict. Any GraphQL `errors`, null `data`, invalid JSON, malformed payload, or null check-context node throws `GitHubRequestError`, keeping GitHub's error paths. An incomplete snapshot never drives an action: `iterate` and `pr-shepherd [PR]` exit with a code from the HTTP status (`77` for 401/403, `75` for 429/5xx/rate-limited, `69` otherwise; [exit-codes.md](exit-codes.md)) instead of reaching `10`-`14`.
 
-One error is exempt: a check suite's `app` that GitHub refuses to read. This happens when the app's owner enforces an IP allow list, which can block even a GitHub App token. GitHub returns the rest of the response with `app: null`. Shepherd reads `app.slug` only to recognize GitHub Actions suites, and an unreadable app is never Actions, so the read continues. Any other error in the same response still throws.
+One error is exempt: a check suite's `app` that GitHub refuses to read, which happens when the app's owner enforces an IP allow list (even against a GitHub App token). GitHub returns the rest of the response with `app: null`. Shepherd reads `app.slug` only to recognize GitHub Actions suites, and an unreadable app is never Actions, so the read continues. Any other error in the same response still throws.
 
 Only mutation batches that keep independent per-alias successes accept partial data; the resolve path reports successful aliases and returns failed ones for retry. New read paths must not enable partial data.
 
@@ -77,7 +75,7 @@ Extra pages use [`batch-pr-page.gql`](../src/github/gql/batch-pr-page.gql), a sl
 
 ## Operation catalog
 
-Static documents live in [`src/github/gql/`](../src/github/gql/), loaded by [`queries.mts`](../src/github/queries.mts). Mutation documents with runtime aliases are built in code.
+Static documents live in [`src/github/gql/`](../src/github/gql/), loaded by [`queries.mts`](../src/github/queries.mts); mutation documents with runtime aliases are built in code.
 
 | Operation                       | Document                                                       | When it runs                                                                                                                                                                                                                                            | Selects `rateLimit.cost` |
 | ------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
@@ -122,7 +120,7 @@ Static documents live in [`src/github/gql/`](../src/github/gql/), loaded by [`qu
 | Batched page has `hasNextPage`           | `CheckRunAnnotations` with a cursor for that run, up to 1,000 annotations                                                                                                            |
 | Cached run                               | Skipped; results are cached per check-run id for 1 hour                                                                                                                              |
 
-The chunk size of 20 exists to keep each request at 1 point. A rate-limit error (the same classification as `--until-terminal` retry) aborts remaining chunks and pages so polling can back off; other per-check failures are summarized once per tick.
+The chunk size of 20 keeps each request at 1 point. A rate-limit error (the same classification as `--until-terminal` retry) aborts remaining chunks and pages so polling can back off; other per-check failures are summarized once per tick.
 
 The poll-summary fragment does not select annotations. On a one-PR READY-receipt candidate, complete batch totals are copied by check ID into the same-request summary, keeping the v1 fingerprint without a probe. Other summary reads and fallback receipt snapshots use `PollSummaryAnnotationProbe`, paging with `before` past the newest 100 contexts. A failed or incomplete probe writes no fingerprint and does not clear a receipt whose head and base still match.
 
@@ -171,7 +169,7 @@ An unchanged poll continuation tick stops after `BatchPr`'s first page, before a
 
 The fingerprint covers: head SHA, `updatedAt`, comment/thread/review counts, comment and review `updatedAt` revisions, latest thread-comment revisions, latest comment/review ids, check-rollup state, check-suite identity and completeness, merge/queue flags, merge policy, stack membership, and viewer login. Its windows match the first page: the latest 20 threads (first 100 comments each), 100 PR comments, and 100 reviews. New or edited review items change it, so the [comment visibility invariant](comments.md#first-look-items-comment-visibility-invariant) holds; a different viewer login is a miss.
 
-Reuse is internal to poll. The tick returned to the caller always runs `BatchPr`: the last bounded-poll tick, `TRIAGE` debounce ticks, the post-debounce return tick, and every single-tick `iterate` / MCP call. The skip is also refused when:
+Reuse is internal to poll. Ticks returned to the caller always run `BatchPr`: the last bounded-poll tick, `TRIAGE` debounce ticks, the post-debounce return tick, and every single-tick `iterate` / MCP call. The skip is also refused when:
 
 | Condition                                                                                                                           | Why                                                                                                                                                                |
 | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -205,9 +203,9 @@ flowchart TD
 | `GET /pulls/{n}/reviews`, `/issues/{n}/comments`, `/pulls/{n}/comments` |                                           |
 | `GET /branches/{base}`                                                  | `commit.sha` keys the cached base compare |
 
-They share the REST transport's `rest-cache/` ETags ([conditional reads](rest.md#conditional-reads)), so unchanged resources answer free 304s. The first eligible tick seeds them with charged reads. When no digest is recorded beside the stored report yet (that seeding tick), or the detectors differ from the recorded digest, the stored report may predate what they read, so the tick skips fingerprint reuse and builds a full snapshot: the first-page fingerprint summarizes only the aggregate check rollup and suites, so a re-run check run can change the detectors without changing it. The digest is then recorded beside the fresh report, never beside an older one. A detector-eligible fingerprint is complete, so that full snapshot is the same single first page (1 point) as a fingerprint hit. A detector failure never triggers a transport fallback. `poll.reconcile-seconds` defaults to 900; `0` disables the detectors.
+They share the REST transport's `rest-cache/` ETags ([conditional reads](rest.md#conditional-reads)), so unchanged resources answer free 304s. The first eligible tick seeds them with charged reads. When no digest is recorded beside the stored report (the seeding tick), or the detectors differ from the recorded digest, the stored report may predate what they read, so the tick skips fingerprint reuse and builds a full snapshot: the first-page fingerprint summarizes only the aggregate check rollup and suites, so a re-run check run can change the detectors without changing it. The digest is then recorded beside the fresh report, never an older one. A detector-eligible fingerprint is complete, so that full snapshot is the same single first page (1 point) as a fingerprint hit. A detector failure never triggers a transport fallback. `poll.reconcile-seconds` defaults to 900; `0` disables the detectors.
 
-The feedback detectors are not rule-aware, on purpose. Any comment edit, including a rule-suppressed or minimized bot notice such as a CodeRabbit progress comment, changes the list's ETag and wakes the tick. The cost is that charged list read plus one `BatchPr` first page (1 point, the same as a fingerprint hit). The digest is then re-recorded, so a later eligible tick replays for free again. Ignoring those edits would need the loaded rules, a stored set of hidden comment ids (REST has no `isMinimized`), and a content digest in place of the ETag. A mistake there would sleep through a real change, such as a suppressed comment edited so it no longer matches its rule.
+The feedback detectors are deliberately not rule-aware. Any comment edit, including a rule-suppressed or minimized bot notice such as a CodeRabbit progress comment, changes the list's ETag and wakes the tick, costing that charged list read plus one `BatchPr` first page (1 point). The digest is then re-recorded, so a later eligible tick replays for free again. Ignoring those edits would need the loaded rules, a stored set of hidden comment ids (REST has no `isMinimized`), and a content digest in place of the ETag, and a mistake would sleep through a real change, such as a suppressed comment edited so it no longer matches its rule.
 
 Not visible to detectors, so picked up at the next reconcile or any other change: thread resolution and unresolution, branch rule or protection changes, someone else enqueuing the PR, and GraphQL-only fields such as `reviewDecision`.
 
@@ -228,7 +226,7 @@ These REST `core` requests count against the REST pool, not GraphQL points, and 
 
 ### `getMergeableState`
 
-`GET /repos/{owner}/{repo}/pulls/{pull_number}` runs when GraphQL returns `mergeable` or `mergeStateStatus` `UNKNOWN` for an OPEN PR, or when `runCheck` is about to return a candidate READY state. GitHub computes mergeability asynchronously and REST often has it first. The same response's `state` and `merged_at` catch a merge or close that raced the GraphQL snapshot, with no separate request.
+`GET /repos/{owner}/{repo}/pulls/{pull_number}` runs when GraphQL returns `mergeable` or `mergeStateStatus` `UNKNOWN` for an OPEN PR, or when `runCheck` is about to return a candidate READY state. GitHub computes mergeability asynchronously and REST often has it first. The response's `state` and `merged_at` also catch a merge or close that raced the GraphQL snapshot.
 
 - Inside a PR's tick (READY refresh, UNKNOWN refresh, fingerprint-hit check) the read is conditional and shares the pull's ETag with the idle detectors, so an unchanged pull is a free 304 (`src/github/graphql-ready-refresh-cost.test.mts`). A body whose mergeability is still being computed is never stored.
 - Aggregate polls (`stack`, explicit lists) apply the same `UNKNOWN` fallback per PR in `poll-summary-mergeability.mts`, unconditionally, so a layer that just gained a conflict routes to `merge-conflicts` that tick.
@@ -250,15 +248,10 @@ For a failing, non-cancelled, non-startup-failure Actions check with a matched j
 
 ## Targeted GraphQL reads
 
-| Read                     | When                                                                    | What it selects                                                                                                                                                                                                                      |
-| ------------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `getPrHeadSha`           | `--require-sha` on `apply review` (MCP `review_mutations.requireSha`)   | Polls `headRefOid` until it matches, so threads resolve only after GitHub has the push                                                                                                                                               |
-| Suggestion threads       | `suggest`                                                               | [`suggestion-threads.gql`](../src/github/gql/suggestion-threads.gql): `headRefOid`, `headRefName`, `headRepository`, `nodes(ids: $threadIds)`, instead of a full snapshot                                                            |
-| Reply transcripts        | `apply review` reply IDs needing pre-reply transcripts for seen markers | `ReplyThreadTranscripts` in batches of 20, validated against the target repo and PR; `ReplyThreadComments` past 100 comments; at most 4 concurrent. A bad page omits only its seen marker; every reply ID still reaches the mutation |
-| `apply review` preflight | GraphQL, 1–20 GraphQL reply thread IDs                                  | `ApplyReviewPreflight` (1 point): `headRefOid`, `viewer.login`, and the threads' comment pages                                                                                                                                       |
+`getPrHeadSha` polls `headRefOid` for `--require-sha` so threads resolve only after GitHub has the push. `suggest` reads [`suggestion-threads.gql`](../src/github/gql/suggestion-threads.gql) (`headRefOid`, `headRefName`, `headRepository`, `nodes(ids: $threadIds)`) instead of a full snapshot. `apply review` reply IDs needing pre-reply transcripts for seen markers use `ReplyThreadTranscripts` in batches of 20, validated against the target repo and PR, with `ReplyThreadComments` past 100 comments and at most 4 concurrent; a bad page omits only its seen marker, and every reply ID still reaches the mutation. For 1-20 GraphQL reply thread IDs, `ApplyReviewPreflight` (1 point) reads `headRefOid`, `viewer.login`, and the threads' comment pages.
 
 The preflight replaces the first `GetPrHeadSha` poll, the `ReplyThreadTranscripts` read, and the first mutation batch's `ReplyRecoveryEvidence` read, each accepted only under its standalone checks. A thread past 100 comments, an unresolvable thread, a request error, or a REST thread handle falls back to the standalone read. Recovery evidence is reused for the `--adopt-existing-replies` scan and the first mutation batch only when `--require-sha` is absent or already matched, so a SHA wait never separates evidence from the mutation.
 
 ## Rate limiting
 
-Shared quota behavior (warnings, cadence, `--until-terminal` backoff, closure probes) is in [github-api.md](github-api.md#quota-warnings-and-cadence). GraphQL spend is held down by the measures above: one batch per full tick with slim combined-cursor pages, queue rollups only when queued, opt-in approval pages, single-annotation bodies from the probe, 1-point annotation batches with a 1-hour cache, fingerprint skips, and idle-wait detectors. Ranked follow-ups are in [graphql-usage.md](graphql-usage.md#recommendations). If `nodeCount` approaches 500,000 on huge PRs, shrink `reviewThreads.comments(first: 100)`; point cost is mostly parent connections, not this `first`.
+Shared quota behavior (warnings, cadence, `--until-terminal` backoff, closure probes) is in [github-api.md](github-api.md#quota-warnings-and-cadence). GraphQL spend stays low through one batch per full tick with slim combined-cursor pages, queue rollups only when queued, opt-in approval pages, single-annotation bodies from the probe, 1-point annotation batches with a 1-hour cache, fingerprint skips, and idle-wait detectors. Ranked follow-ups: [graphql-usage.md](graphql-usage.md#recommendations). If `nodeCount` approaches 500,000 on huge PRs, shrink `reviewThreads.comments(first: 100)`; point cost is mostly parent connections, not this `first`.
