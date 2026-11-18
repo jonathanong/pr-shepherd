@@ -36,7 +36,7 @@ Take pull requests from scratch to merge-ready with a coding agent as a [Code Mo
 
 In Codex, use `$pr-shepherd`. In a shell or CI, run `pr-shepherd <PR>`. `/goal` is generally not needed.
 
-Then configure `.pr-shepherdrc.yml` ([configuration](docs/configuration.md)):
+Then run **`/pr-shepherd:setup-pr-shepherd`** (Codex: `$setup-pr-shepherd`) to scan your recent PRs for recurring bot noise and configure `.pr-shepherdrc.yml` for you, or edit it by hand ([configuration](docs/configuration.md)):
 
 - turn on the bundled classification rules to hide known bot comments;
 - add your own [classification rules](examples/classification/);

@@ -10,11 +10,11 @@ Skills are thin dispatchers. They parse arguments, call the CLI or MCP, print th
 - Invariant procedures live in `references/` files next to the skill, named in kebab case after the playbook (`Create a PR` is `create-a-pr.md`). They load only when a step names them. A step that says `Playbook: "<name>"` means: read that reference once, then apply it. `pr-shepherd playbook <name>` prints the same text for callers without the skill.
 - Estimated context cost of the skill and one iterate result: [token-counts.md](token-counts.md).
 
-| Skill                  | Use                                                                                                                                                                                                       |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pr-shepherd`          | Shepherd a PR (or create one, then shepherd it) with `pr-shepherd [PR] --until-terminal`. Recurring; run it inside a goal or session loop.                                                                |
-| `mark-files-as-viewed` | One-shot. Bare number or omitted target: `pr-shepherd apply files`. Qualified target: MCP `apply` with `mark_files_viewed` when available. Runs `markFileAsViewed` and reports GitHub's per-file results. |
-| `reduce-pr-noise`      | One-shot guide for a narrowly matched bot-comment classifier, a noise setting in `.pr-shepherdrc.yml`, or both. Loads only the reference it needs; does not change the PR-iteration loop.                 |
+| Skill                  | Use                                                                                                                                                                                                                                                                      |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pr-shepherd`          | Shepherd a PR (or create one, then shepherd it) with `pr-shepherd [PR] --until-terminal`. Recurring; run it inside a goal or session loop.                                                                                                                               |
+| `mark-files-as-viewed` | One-shot. Bare number or omitted target: `pr-shepherd apply files`. Qualified target: MCP `apply` with `mark_files_viewed` when available. Runs `markFileAsViewed` and reports GitHub's per-file results.                                                                |
+| `setup-pr-shepherd`    | One-shot setup guide: scans recent PR comments for recurring bot noise, picks bundled or custom classification rules, configures `.pr-shepherdrc.yml` in the repo or home directory, and can propose a new bundled rule upstream. Does not change the PR-iteration loop. |
 
 ### `pr-shepherd`
 
@@ -107,7 +107,7 @@ Use `pr-shepherd` inside a `/goal`; the other skills are one-shot:
 /goal /pr-shepherd:pr-shepherd        # infer PR from current branch
 /goal /pr-shepherd:pr-shepherd 42
 /pr-shepherd:mark-files-as-viewed 42 tests
-/pr-shepherd:reduce-pr-noise quiet repeated WAIT output
+/pr-shepherd:setup-pr-shepherd set up pr-shepherd for this repo
 ```
 
 The goal loop handles recurrence; the skill prints the full result and follows its plan. `[CANCEL]` and `[ESCALATE]` stop that PR's loop, and the goal ends when every PR it covers is terminal.
@@ -130,7 +130,7 @@ Then open the Codex plugin directory, choose the `jonathanong` marketplace, and 
 /goal $pr-shepherd        # infer PR from current branch
 /goal $pr-shepherd 42
 $mark-files-as-viewed 42 tests
-$reduce-pr-noise quiet repeated WAIT output
+$setup-pr-shepherd set up pr-shepherd for this repo
 ```
 
 Codex runs the `pr-shepherd` skill until `[CANCEL]` or `[ESCALATE]`.
@@ -148,7 +148,7 @@ Use the skill from the slash menu:
 /pr-shepherd
 /pr-shepherd 42
 /pr-shepherd:mark-files-as-viewed 42 tests
-/pr-shepherd:reduce-pr-noise quiet repeated WAIT output
+/pr-shepherd:setup-pr-shepherd set up pr-shepherd for this repo
 ```
 
 The session owns recurrence; the skill prints the full result and follows its plan. `[CANCEL]` and `[ESCALATE]` stop that PR's loop, and the work ends when every PR it covers is terminal.
