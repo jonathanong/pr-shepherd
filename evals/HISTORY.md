@@ -18,6 +18,23 @@ eval copy of the plugin with the skills and a mocked `pr-shepherd` CLI
 (`mocks/cli/`) in the with arm only. The 2026-11-15 numbers in the README predate
 v2.2.4 and stand.
 
+## 2026-11-18: outcome 61, merging a stack from one of its PRs
+
+Issue #772: asked to "merge the #43 stack", the agent knows only one PR number, so
+its first `stack` call lists #43 alone and escalates `unowned-stack-layers`; it
+then asked the user instead of running the printed whole-stack command. The skill's
+stack-merge line now says to run that printed stack-number command. Outcome 61
+(3 layers, one PR named) on the CLI-mock harness (pr-shepherd only in the with
+arm), Sonnet 5.5, opus judge, 3 runs per arm, $3.05: plugin 1.00, gh/MCP 0.00
+(Δ +1.00). Isolation: no without-arm run called `cli`/`pr-shepherd`. Every with
+run called `stack owner/repo#43 --merge`, took the printed command naming all
+three layers, then ran `gh stack merge 43 --yes --squash`. Every without run
+merged the layers one at a time with the GitHub MCP `merge_pull_request` and
+`gh pr edit N --base main`, which the grader fails. An earlier score for this
+scenario was taken with pr-shepherd MCP tools in both arms and is invalid. The
+skill grew past the MCP baseline in the token bench, so `stack-setup` is an owner
+`structural` entry in `pending-losses.json`.
+
 ## 2026-11-15: token bench models gh's default `--watch` refresh
 
 The `ci-wait` scenario had `gh pr checks --watch --interval 60`, which tied
