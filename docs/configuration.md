@@ -535,7 +535,7 @@ The value is a map, so it deep-merges across files. An unknown rule name or a no
 - Every rule requires GitHub to report the author as a bot, and matches both the GraphQL login (`coderabbitai`) and the REST login (`coderabbitai[bot]`).
 - Rules match conversation comments only. The same text on a review summary or inline review comment follows the normal review path.
 - "Resolve" means `autoResolve: true`. With [`actions.auto-minimize-suppressed`](#actionsauto-minimize-suppressed--default-true) on, the comment is also minimized on GitHub.
-- Shepherd reclassifies the current body on every fetch. A CodeRabbit progress comment later edited into a walkthrough no longer matches `coderabbit-notices`. The agent sees it once as an [edited comment](actions.md#edited-comments), it never blocks readiness, and it stays minimized on GitHub.
+- Shepherd reclassifies the current body on every fetch. A CodeRabbit progress comment later edited into a walkthrough no longer matches `coderabbit-notices`. The agent sees it once as an [edited comment](actions.md#edited-comments) on the next action that is not `wait` or `ready`, it never blocks readiness, and it stays minimized on GitHub.
 
 ## `actions`
 
@@ -551,7 +551,7 @@ This applies only to classification-rule matches that set both `suppress: true` 
 When `true`, Shepherd attempts the supported resolve and minimize mutations. It removes the IDs that succeed from the queues the agent sees before deciding whether to emit `triage`.
 
 - GraphQL mutations fail closed unless the capability is explicitly true. REST omits capabilities, so otherwise-eligible mutations are attempted and GitHub decides.
-- Each confirmed success is copied to `threads.autoResolved` or `comments.autoMinimized` (with the rule's `reason`) and printed in `## Classification auto-resolve` / `ruleAutoResolve`. See [actions.md](actions.md#classification-auto-resolve).
+- Each confirmed success is copied to `threads.autoResolved` or `comments.autoMinimized` (with the rule's `reason`, if it sets one) and printed in `## Classification auto-resolve` / `ruleAutoResolve`. See [actions.md](actions.md#classification-auto-resolve).
 - These mutations do not edit the PR body. Journal entries need an explicit `apply journal` call.
 - Failures stay in `ruleAutoResolveIds`, `comments.minimizeIds`, or `ruleAutoResolveReviewSummaryIds` where retry is supported, and are listed in the same section.
 - Denied review operations are surfaced once and skipped. REST cannot minimize, so minimization there is a one-look skip.
