@@ -267,7 +267,7 @@ Client tool-call timeouts vary widely, and a local server cannot change them:
 | Gemini CLI              | 10 min                    | `timeout` per server.                                                                                                                                        |
 | MCP TypeScript SDK      | 60 s per request          | Resetting the timeout on progress notifications is the caller's option.                                                                                      |
 
-Most hosts cut calls off at about 60 s, and a tool call blocks the agent's turn regardless of the limit. So no tool polls or sleeps. `iterate`, `stack`, and `suggest` each do one bounded fetch. `apply` runs its `operations` sequentially, each with GitHub I/O, so a large request on a slow GitHub can approach the timeout; a failure partway leaves earlier mutations applied without a client response, and `PartialApplyError`'s `completed` list is the recovery path.
+Most hosts cut calls off at about 60 s, and a tool call blocks the agent's turn regardless of the limit. So no tool polls or sleeps. `iterate`, `stack`, and `suggest` each do one bounded fetch. `apply` runs its `operations` sequentially, each with GitHub I/O, so a large request on a slow GitHub can approach the timeout; a failure partway leaves earlier mutations applied. A returned `PartialApplyError` carries a `completed` list, which is the recovery path. A client timeout returns no such list, so check the PR's current state before retrying, because replaying the batch can repeat mutations.
 
 1. Call `iterate` with a repository-qualified `pr`.
 2. Follow the returned `## Instructions`.
