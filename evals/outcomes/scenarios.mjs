@@ -16,6 +16,7 @@ import { STACK_RECEIPT_SCENARIOS } from "./scenarios-stack-receipts.mjs";
 import { STACK_BY_PR_SCENARIOS } from "./scenarios-stack-by-pr.mjs";
 import { STACK_SCOPE_SCENARIOS } from "./scenarios-stack-scope.mjs";
 import { STACK_SCENARIOS } from "./scenarios-stack.mjs";
+import { STACK_TRUNK_SCENARIOS } from "./scenarios-stack-trunk.mjs";
 
 const CATEGORIES = [
   ["Review feedback", [...REVIEW_SCENARIOS, ...REVIEW_MORE_SCENARIOS, ...REVIEW_NEW_SCENARIOS]],
@@ -31,6 +32,7 @@ const CATEGORIES = [
       ...STACK_SCOPE_SCENARIOS,
       ...STACK_BY_PR_SCENARIOS,
       ...STACK_RECEIPT_SCENARIOS,
+      ...STACK_TRUNK_SCENARIOS,
     ],
   ],
   ["Safety & terminal", SAFETY_SCENARIOS],

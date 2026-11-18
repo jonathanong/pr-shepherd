@@ -8,7 +8,7 @@ import type {
 import type { ApiUsage, GraphqlQuotaWarning } from "../types/api-usage.mts";
 import { formatApiUsage, formatQuotaWarning } from "./api-usage-formatter.mts";
 import { formatTransportEvidence } from "./transport-formatter.mts";
-import type { StackLayerView } from "./stack-layer-view.mts";
+import { removalDetail, trunkDetail, type StackLayerView } from "./stack-layer-view.mts";
 import type { NextCheck } from "../types/next-check.mts";
 import { formatNextCheckLines } from "./next-check-format.mts";
 import { formatPrUrl } from "../pr-reference.mts";
@@ -91,6 +91,8 @@ function projectLayer(item: PollSummaryItem, stale: boolean): StackLayerView {
     ...(item.checks?.incomplete && { checksIncomplete: true as const }),
     ...(item.review?.incomplete && { reviewIncomplete: true as const }),
     ...(item.ruleAutoResolve && { ruleAutoResolve: item.ruleAutoResolve }),
+    ...(item.trunkBehindBy && { trunkBehindBy: item.trunkBehindBy }),
+    ...(item.trunkBehindUnknown && { trunkBehindUnknown: true as const }),
     ...(removal && {
       queueRemoval: {
         reason: removal.reason,
@@ -183,9 +185,8 @@ function formatLayerLines(layer: StackLayerView, index: number, overview: StackO
     layer.actionable ? `${layer.actionable} actionable` : undefined,
     layer.checksIncomplete ? "checks incomplete" : undefined,
     layer.reviewIncomplete ? "review incomplete" : undefined,
-    layer.queueRemoval
-      ? `removed from merge queue (${layer.queueRemoval.reason ?? "unknown reason"}${layer.queueRemoval.actor ? ` by @${layer.queueRemoval.actor}` : ""})`
-      : undefined,
+    trunkDetail(layer),
+    removalDetail(layer.queueRemoval),
   ].filter((detail): detail is string => detail !== undefined);
   return [
     `- ${layer.url === formatPrUrl(overview.repo, layer.pr) ? `PR #${layer.pr}: ${layer.title}` : `[PR #${layer.pr}: ${layer.title}](${layer.url})`}${facts.length > 0 ? ` — ${facts.join(" · ")}` : ""}`,

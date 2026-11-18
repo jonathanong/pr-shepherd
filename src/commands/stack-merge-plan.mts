@@ -20,6 +20,7 @@ import {
   type StackLayer,
 } from "./stack-merge-scope.mts";
 import { stackMergeFlag } from "./stack-merge-flag.mts";
+import { MERGE_CONFLICT_NOTE, trunkPreCheck } from "./stack-merge-trunk-check.mts";
 import {
   addedLayersEscalation,
   escalation,
@@ -123,7 +124,8 @@ function mergePlan(
     const waiting = idleWaitPlan(lands);
     return { ...waiting, instructions: [`1. ${first.unavailable}`] };
   }
-  const instructions = [first.text];
+  const check = trunkPreCheck(result, top);
+  const instructions = check ? [`1. ${check}`, `2. ${first.text}`] : [`1. ${first.text}`];
   appendAutonomousInstructions(instructions, work.sessions, hasListedOwnership(result));
   const handoffs = findHumanHandoffs(result);
   if (handoffs) appendHumanHandoffInstructions(instructions, handoffs, false);
@@ -173,12 +175,12 @@ function mergeStep(
     if ("unavailable" in plan)
       return { unavailable: plan.unavailable, ...(plan.refresh && { refresh: true as const }) };
     return {
-      text: `1. Run \`${renderMergeCommand(plan.command)}\` to request merging ${landing} of native stack #${stack.number}.${left} ${NO_PER_LAYER} If status is \`pending\`, rerun that command at the configured cadence to resume its UUID. \`enqueued\` is not merged. Shepherd revalidates every open lower layer's READY receipt before submission.`,
+      text: `Run \`${renderMergeCommand(plan.command)}\` to request merging ${landing} of native stack #${stack.number}.${left} ${NO_PER_LAYER} If status is \`pending\`, rerun that command at the configured cadence to resume its UUID. \`enqueued\` is not merged. Shepherd revalidates every open lower layer's READY receipt before submission.`,
     };
   }
   const method = stackMergeFlag(result.allowedMergeMethods);
   if ("unavailable" in method) return { unavailable: method.unavailable };
   return {
-    text: `1. Run \`GH_REPO=${result.repo} gh stack merge ${top.pr} --yes ${method.flag}\` in \`${result.repo}\` to merge ${landing} of stack #${stack.number}.${left} ${NO_PER_LAYER} If \`gh stack\` is an unknown command, run \`gh extension install github/gh-stack\`, then rerun that merge command.`,
+    text: `Run \`GH_REPO=${result.repo} gh stack merge ${top.pr} --yes ${method.flag}\` in \`${result.repo}\` to merge ${landing} of stack #${stack.number}.${left} ${NO_PER_LAYER} If \`gh stack\` is an unknown command, run \`gh extension install github/gh-stack\`, then rerun that merge command. ${MERGE_CONFLICT_NOTE}`,
   };
 }

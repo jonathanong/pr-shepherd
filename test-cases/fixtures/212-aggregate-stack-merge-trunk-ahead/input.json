@@ -1,0 +1,32 @@
+{
+  "description": "Merge intent on a fully ready 3-layer stack whose trunk gained a commit the top layer lacks: GitHub calls every layer mergeable, so the merge step is preceded by a read-only git merge-tree pre-check against trunk.",
+  "mode": "aggregate",
+  "args": ["stack", "owner/repo#36", "--merge", "--debounce", "0s"],
+  "baseBehindBy": 1,
+  "expectedExitCode": 15,
+  "expectedNextAction": "merge",
+  "expectedReason": "actionable",
+  "aggregateSummary": {
+    "selection": { "kind": "stack", "anchor": 351, "stackNumber": 36, "stackSize": 3 },
+    "prs": [
+      {
+        "pr": 351, "repo": "owner/repo", "title": "Layer 1", "url": "https://github.com/owner/repo/pull/351",
+        "action": "merge", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-351", "headRefOid": "e111111111111111111111111111111111111111", "baseRefName": "main", "readyReceipt": true,
+        "stack": { "number": 36, "size": 3, "position": 1, "baseRefName": "main" }
+      },
+      {
+        "pr": 352, "repo": "owner/repo", "title": "Layer 2", "url": "https://github.com/owner/repo/pull/352",
+        "action": "merge", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-352", "headRefOid": "e222222222222222222222222222222222222222", "baseRefName": "layer-351", "readyReceipt": true,
+        "stack": { "number": 36, "size": 3, "position": 2, "baseRefName": "main" }
+      },
+      {
+        "pr": 353, "repo": "owner/repo", "title": "Layer 3", "url": "https://github.com/owner/repo/pull/353",
+        "action": "merge", "reasons": ["appears-ready"], "state": "OPEN", "mergeable": "MERGEABLE", "mergeStateStatus": "CLEAN",
+        "headRefName": "layer-353", "headRefOid": "e333333333333333333333333333333333333333", "baseRefName": "layer-352", "readyReceipt": true,
+        "stack": { "number": 36, "size": 3, "position": 3, "baseRefName": "main" }
+      }
+    ]
+  }
+}

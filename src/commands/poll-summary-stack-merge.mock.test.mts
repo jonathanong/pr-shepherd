@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("../github/poll-summary.mts", () => ({ fetchPollSummary: vi.fn() }));
 vi.mock("../github/client.mts", () => ({ getRepoInfo: vi.fn() }));
 vi.mock("../util/sleep.mts", () => ({ sleep: vi.fn() }));
+vi.mock("../github/merge-target-rules.mts", () => ({ loadBaseBehindBy: vi.fn(async () => 0) }));
 
 import { row } from "../../test-helpers/commands/poll-summary-stack.test-support.mts";
 import { fetchPollSummary } from "../github/poll-summary.mts";
