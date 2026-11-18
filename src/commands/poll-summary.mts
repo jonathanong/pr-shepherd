@@ -22,6 +22,7 @@ import {
   missingListedLayers,
 } from "./stack-ownership.mts";
 import { stackRerunTarget } from "./stack-work.mts";
+import { withTrunkBehind } from "./stack-trunk-behind.mts";
 import { requestedMergeScope, stackAddedLayers } from "./stack-merge-scope.mts";
 import { aggregateDeadline } from "./stall-deadline.mts";
 import {
@@ -116,8 +117,9 @@ async function readPollSummaryTick(opts: PollSummaryCommandOptions): Promise<Pol
     return { result: escalated, repo };
   }
   const addedLayers = await stackAddedLayers(summary, scope, rerunCommand);
+  const withBehind = await withTrunkBehind(summary, scope);
   const planned = planPollSummary(
-    { ...summary, ...(addedLayers.length > 0 && { addedLayers }) },
+    { ...withBehind, ...(addedLayers.length > 0 && { addedLayers }) },
     scope !== undefined,
     rerunCommand,
     scope,

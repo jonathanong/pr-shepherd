@@ -104,6 +104,10 @@ export interface PollSummaryItem {
   pollProbe?: true;
   /** A current one-PR READY-after-delay completion was verified. */
   readyReceipt?: true;
+  /** Stack merge top only: commits on the stack trunk that this head lacks (omitted when 0). */
+  trunkBehindBy?: number;
+  /** Stack merge top only: the trunk compare failed, so the conflict check is unverified. */
+  trunkBehindUnknown?: true;
 }
 
 export type PollSummarySelection =

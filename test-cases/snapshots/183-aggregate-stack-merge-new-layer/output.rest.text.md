@@ -32,3 +32,8 @@ Layers added after approval: #623
 ## Instructions
 
 1. `unapproved-stack-layer`: PR #623 joined this stack after the merge was requested, so the request does not cover it. Nothing was merged. Stop and ask the user whether that layer is covered. If yes, rerun `pr-shepherd stack "owner/repo#62" --until-terminal --merge --transport rest` with the covered PRs listed explicitly after `stack`. If no, rerun with `--merge-through 622`, the last approved PR.
+
+## GitHub API usage
+
+- Credential source: `GH_TOKEN`
+- REST requests without rate-limit headers (unmetered): 1

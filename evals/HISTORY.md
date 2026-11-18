@@ -35,6 +35,20 @@ scenario was taken with pr-shepherd MCP tools in both arms and is invalid. The
 skill grew past the MCP baseline in the token bench, so `stack-setup` is an owner
 `structural` entry in `pending-losses.json`.
 
+## 2026-11-18: scenario 62, a stack merge whose top layer conflicts with trunk
+
+Issue #773: GitHub calls every layer `mergeable` because an upper layer is compared
+only with its parent, yet `gh stack merge` fails on a trunk conflict. `stack
+--merge` now prints a read-only `git merge-tree` pre-check against trunk first
+when trunk is ahead of the top layer. Scenario 62 (3 layers, trunk has a
+conflicting commit) on the branch, Sonnet 5.5, opus judge, 3 runs per arm,
+$1.61: plugin 1.00, gh/MCP 1.00 (Δ 0.00). Both arms checked against trunk
+before merging, so this scenario guards the plugin's behavior but does not
+separate the arms. A first version whose world spelled out the `git merge-tree`
+result scored the same; its hints were removed and the rerun is the one
+reported. The incident's unprompted merge is not reproduced, because the gh/MCP
+mock answers only what the agent asks.
+
 ## 2026-11-15: token bench models gh's default `--watch` refresh
 
 The `ci-wait` scenario had `gh pr checks --watch --interval 60`, which tied
