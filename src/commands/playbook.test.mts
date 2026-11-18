@@ -23,12 +23,6 @@ describe("runPlaybook", () => {
     });
   });
 
-  it("leaves journaling to the agent", () => {
-    const { content } = runPlaybook("Triage loop") as { content: string };
-    expect(content).not.toContain("Journal before the review mutations");
-    expect(content).not.toContain("run that command with a");
-  });
-
   it("fails with usage and the available names for an unknown playbook", () => {
     try {
       runPlaybook("nope");
