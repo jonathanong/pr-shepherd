@@ -585,11 +585,12 @@ Set it to `true` to handle deferred work immediately, even while the PR is queue
 
 When `PR_SHEPHERD_STATE_DIR` is unset, the default state directory is:
 
-| Context                   | Default                                                                                                                                                                                                               |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `CLAUDE_CODE_REMOTE=true` | `<git-common-dir>/pr-shepherd-state` ([durable state](cloud.md#durable-state))                                                                                                                                        |
-| macOS                     | `pr-shepherd-state` in the per-user temp dir (`getconf DARWIN_USER_TEMP_DIR`), not `$TMPDIR`, so sandboxed and unsandboxed runs share state                                                                           |
-| Linux                     | `/tmp/pr-shepherd-state-<uid>` (created with mode `0700`), when it is a real directory you own that is not group- or world-writable and is readable, writable, and searchable. Otherwise `$TMPDIR/pr-shepherd-state`. |
-| Other platforms           | `os.tmpdir()`                                                                                                                                                                                                         |
+| Context                           | Default                                                                                                                                                                                                               |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CLAUDE_CODE_REMOTE=true`         | `<git-common-dir>/pr-shepherd-state` ([durable state](cloud.md#durable-state))                                                                                                                                        |
+| Linux                             | `/tmp/pr-shepherd-state-<uid>` (created with mode `0700`), when it is a real directory you own that is not group- or world-writable and is readable, writable, and searchable. Otherwise `$TMPDIR/pr-shepherd-state`. |
+| Other platforms (including macOS) | `os.tmpdir()` (honors `$TMPDIR`)                                                                                                                                                                                      |
+
+Sandboxed shells (such as Claude Code's Bash sandbox) set `$TMPDIR` to their own writable directory, and the default follows it, so the sandbox needs no extra setup. A run outside the sandbox uses a different directory and does not see sandboxed seen markers; set `PR_SHEPHERD_STATE_DIR` to share one directory. If the state directory is not writable, the error ends with a hint naming it and this variable.
 
 Per-repository files live at `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/`. Directories named `<owner>-<repo>` from older builds are no longer read, so the first run after upgrading starts clean: seen comments can surface once more, and the ready-delay restarts. `pr-shepherd admin clean all` removes the whole base directory.
