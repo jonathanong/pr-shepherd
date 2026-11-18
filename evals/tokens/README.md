@@ -16,7 +16,7 @@ Latest numbers: [REPORT.md](REPORT.md). Estimated cost per session
 | session | cost vs. gh | cost vs. MCP | turns vs. gh / MCP | tool tokens vs. gh / MCP |
 | --- | --- | --- | --- | --- |
 | single PR | **−40%** | **−77%** | −18% / −69% | −75% / −91% |
-| PR stack | **−43%** | **−62%** | −38% / −58% | −14% / −54% |
+| PR stack | **−43%** | **−62%** | −38% / −58% | −14% / −53% |
 
 Realism sweep (REPORT.md; central at a 60k context, conservative at 100k, both with Claude Code's 1-hour cache write and measured output per turn), cost central / conservative: single PR **−35%** / −30% vs. gh and **−75%** / −73% vs. MCP; stack **−40%** / −40% and **−60%** / −59%. Every figure assumes a warm cache.
 

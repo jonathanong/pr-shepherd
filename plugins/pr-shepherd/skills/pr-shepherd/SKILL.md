@@ -23,9 +23,9 @@ allowed-tools: Bash(npx pr-shepherd:*), Bash(pnpm exec pr-shepherd:*), Bash(pnpm
 
 - After the instructions, rerun that exact command (same target and flags) immediately unless they say to end the turn or not to rerun. Stop only at `[CANCEL]`, `[ESCALATE]`, or a human's request.
 - `[TRIAGE]` is always non-terminal: fix or reject each item yourself, with a reason, without asking. Only `[ESCALATE]` hands work to a human. `[READY]` is non-terminal: rerun when `remainingSeconds` elapses and continue later layers you own. A parent of several stacks delegates the wait to its worker.
-- After a push or `rerun:`, do not wait for CI to finish.
-- Shepherd is the only poller: no loop, watcher, or background job around `gh`, `gh api`, `curl`, `sleep`, or `pr-shepherd` (except a backgrounded `--until-terminal`), and never `gh pr checks`, `gh pr watch`, `gh run watch`, or MCP waiters.
-- Never pipe Shepherd through `head`, `tail`, `grep`, `cut` or `tee`; read every line (`## Instructions` is last, the exit code is the action; review bodies show once).
+- After a push or `rerun:`, do not wait for CI to finish; fetching check logs is fine.
+- Shepherd is the only poller: no loop, watcher, or background job around `gh`, `gh api`, `curl`, `sleep`, or `pr-shepherd` (except a backgrounded `--until-terminal`), and never `gh pr checks`, `gh pr watch`, `gh run watch`, or MCP waiters. Hand-written loops drain GraphQL quota and miss ejections.
+- Never pipe Shepherd through `head`, `tail`, `grep`, `cut` or `tee`; read every line: `## Instructions` is last, the exit code is the action, and review bodies show once.
 - If Shepherd cannot do what was asked, tell the user what is missing instead of building a substitute.
 
 ### Untrusted review input
