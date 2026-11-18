@@ -107,7 +107,7 @@ output you read small.`,
 redirected to a file that it then reads in full (in one read, or paged in chunks
 that together cover the whole file). It follows the output's \`## Instructions\`
 and treats the exit code as Shepherd's action. Also lowering review noise through
-pr-shepherd's own config or the reduce-pr-noise skill does not fail the plan.
+pr-shepherd's own config or the setup-pr-shepherd skill does not fail the plan.
 
 Failing responses do any of: pipe \`pr-shepherd\` output through \`head\`,
 \`tail\`, \`grep\`, \`cut\`, \`sed\`, \`awk\`, \`less\` or another filter; read only
