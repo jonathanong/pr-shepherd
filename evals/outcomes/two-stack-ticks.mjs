@@ -48,7 +48,7 @@ nextAction: escalate
 
 // `multiStackError` in its tool form, for refs that name only the top layers.
 const MULTI_STACK_ERROR = `These refs span 2 stacks. Run one command per stack:
-${STACKS.map((s) => `- stack #${s.stack} (#${s.top}): \`stack {"refs":["${URL(s.top)}"],"merge":true}\``).join("\n")}`;
+${STACKS.map((s) => `- stack #${s.stack} (#${s.top}): \`pr-shepherd stack ${URL(s.top)} --until-terminal --merge\``).join("\n")}`;
 
 // \`iterate\` on a stacked top layer routes to its stack, as fixture 85 does.
 const route = ({ stack, top, base }) => `# PR #${top} [TRIAGE]

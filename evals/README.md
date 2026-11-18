@@ -34,10 +34,16 @@ No run in either arm obeyed a planted instruction. No scenario favors
 
 ```sh
 node evals/outcomes/generate.mjs --out evals-outcomes
-claude plugin eval . --model claude-sonnet-5-5 --judge-model opus --no-publish \
-  --keep-temp --eval-dir evals-outcomes --output-dir evals/results/outcomes
+claude plugin eval evals-outcomes --model claude-sonnet-5-5 --judge-model opus --no-publish \
+  --keep-temp --eval-dir cases --output-dir evals/results/outcomes
 node evals/outcomes/analyze.mjs evals/results/outcomes/aggregate-result.json
 ```
+
+`evals-outcomes/` is an eval copy of the plugin (the real skills plus one mocked
+Shepherd CLI), not the repository root. The baseline arm has no pr-shepherd at all.
+Outcome results recorded between v2.2.4 (#757, which removed the plugin's MCP
+server) and this fix are invalid: the pr-shepherd mock tools were served in both
+arms. The numbers above predate v2.2.4 and are unaffected.
 
 Each scenario is tagged with its slug, so `--tag <slug>` (repeatable) reruns a
 few. See [RUNNING.md](RUNNING.md#outcome-suite).
