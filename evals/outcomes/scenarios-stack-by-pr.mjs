@@ -24,10 +24,12 @@ export const STACK_BY_PR_SCENARIOS = [
     shepherd: {
       stack: () =>
         stackMock(
-          `- the stack number, or refs that include 41 and 42, with a merge option: MERGE-ALL.
+          `- the stack number, or refs 41, 42 and 43, with a merge option: MERGE-ALL.
+- refs 41 and 42 (not 43) with a merge option: MERGE-41-42.
 - refs 43 alone with a merge option: ESCALATE.`,
           {
             "MERGE-ALL": mergeTick(LAYERS, LAYERS),
+            "MERGE-41-42": mergeTick(LAYERS, [41, 42], [41, 42]),
             ESCALATE: escalateTick(LAYERS, [43], 43, [41, 42]),
           },
         ),
