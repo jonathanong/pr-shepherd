@@ -1,6 +1,6 @@
 # pr-shepherd
 
-Take pull requests from scratch to merge-ready with a coding agent as a [Code Mode-style](https://code.claude.com/docs/en/code-mode) plugin. It works with Claude Code, Codex, Grok, and any stdio MCP client.
+Take pull requests from scratch to merge-ready with a coding agent as a [Code Mode-style](https://code.claude.com/docs/en/code-mode) plugin. It works with Claude Code, Codex, and Grok.
 
 ## Benefits
 
