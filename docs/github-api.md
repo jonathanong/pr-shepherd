@@ -2,15 +2,7 @@
 
 [← README](../README.md) | [context.md](context.md)
 
-How Shepherd talks to GitHub: transport selection, how GitHub meters each transport, quota warnings and backoff, and how to read spend. For operators watching API budgets and contributors adding GitHub calls.
-
-| Page                                   | What it covers                                                                                       |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| [graphql.md](graphql.md)               | GraphQL transport: batch query, pagination, operation catalog, fingerprint skip, REST calls it makes |
-| [graphql-usage.md](graphql-usage.md)   | GraphQL points per command and per tick                                                              |
-| [rest.md](rest.md)                     | REST transport: snapshot coverage, conditional reads, fields REST cannot supply, `ccr` proxy routes  |
-| [rest-usage.md](rest-usage.md)         | REST `core` requests per command and per tick                                                        |
-| [authentication.md](authentication.md) | Credential sources and which token pools share quota                                                 |
+How Shepherd talks to GitHub: transport selection, metering, quota warnings and backoff, and how to read spend. Transport internals: [graphql.md](graphql.md), [rest.md](rest.md). Per-command cost: [graphql-usage.md](graphql-usage.md), [rest-usage.md](rest-usage.md). Credentials and which tokens share quota: [authentication.md](authentication.md).
 
 ## Transport selection
 
@@ -27,7 +19,7 @@ flowchart TD
   C -->|credential, permission/query error, or secondary limit| E[Error, no fallback]
 ```
 
-Proven exhaustion: a recognized GraphQL quota refusal without a usable quota sample triggers `GET /rate_limit`; only a measured empty GraphQL bucket authorizes fallback. A healthy, malformed, or unavailable probe keeps the original error. Secondary limits and forced `graphql` mode never probe. Through the Claude Code proxy, `GET /rate_limit` can report a different `core` bucket than the `X-RateLimit-*` headers on ordinary REST responses; treat it as a separate sample. A switch is logged once in verbose output and does not mean the original error was harmless or that the snapshots carry identical fields.
+Proven exhaustion: a recognized GraphQL quota refusal without a usable quota sample triggers `GET /rate_limit`; only a measured empty GraphQL bucket authorizes fallback. A healthy, malformed, or unavailable probe keeps the original error. Secondary limits and forced `graphql` mode never probe. Through the Claude Code proxy, `GET /rate_limit` can report a different `core` bucket than the `X-RateLimit-*` headers on ordinary REST responses; treat it as a separate sample. A switch is logged once in verbose output; the snapshots may not carry identical fields.
 
 On REST:
 
@@ -61,14 +53,10 @@ One tick can see two reset windows for one resource (the Claude Code proxy's res
 
 ## Per-tick budget
 
-The single-PR poll interval is 60s (`poll.interval-seconds`). `stack` and multi-PR polls default to that times `poll.stack-interval-factor` (built-in 2, so 120s), because a summary's cost grows with PR count. An explicit `--interval` overrides either default and is not multiplied. The ready delay defaults to 0 (no countdown); set `iterate.ready-delay-minutes` to add one.
+The single-PR poll interval is 60s (`poll.interval-seconds`); `stack` and multi-PR polls multiply it by `poll.stack-interval-factor` (built-in 2, so 120s) because a summary's cost grows with PR count. An explicit `--interval` overrides either and is not multiplied. The ready delay defaults to 0; set `iterate.ready-delay-minutes` to add one.
 
-| Situation                   | GraphQL transport                                                                                                                                        | REST transport                                                                                                                                                                                   |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| One PR, changed tick        | 1 point (`BatchPr`), plus supplements                                                                                                                    | 14 core requests for an unprotected base and single-page lists (13 charged on a cold cache), plus one per extra page and one for a protected base; only reads whose resource changed are charged |
-| One PR, unchanged wait tick | 1 point (fingerprint hit), or 0 points and 0 core requests while the idle wait detectors all answer 304, with one `BatchPr` per `poll.reconcile-seconds` | 0 requests (a Claude Code cloud session also sends the unmetered `ccr` thread read)                                                                                                              |
-| `stack` summary             | `PollStackSummary`, about 0.36 points per layer (minimum 1); the anchor's first tick reads 4 entries per page                                            | 126 requests for 10 layers without validators, 104 charged on a cold cache; 0 when unchanged (cloud also sends one unmetered `ccr` thread read per layer)                                        |
-| Detail                      | [graphql-usage.md](graphql-usage.md), [graphql.md](graphql.md#per-tick-budget)                                                                           | [rest-usage.md](rest-usage.md)                                                                                                                                                                   |
+- GraphQL: 1 point per changed or returned one-PR tick (`BatchPr`) plus supplements; 1 point on a fingerprint hit, or 0 points and 0 core requests while the idle-wait detectors all answer 304 (one `BatchPr` per `poll.reconcile-seconds`). A `stack` summary is about 0.36 points per layer (minimum 1), reading 4 entries on the anchor's first tick ([graphql-usage.md](graphql-usage.md), [graphql.md](graphql.md#per-tick-budget)).
+- REST: 14 core requests for a changed one-PR tick on an unprotected base with single-page lists (13 charged on a cold cache), plus one per extra page and one for a protected base; only reads whose resource changed are charged. An unchanged wait tick is 0 (a cloud session also sends the unmetered `ccr` thread read). A 10-layer `stack` summary is 126 requests without validators, 104 charged on a cold cache, 0 unchanged (cloud adds one unmetered `ccr` read per layer) ([rest-usage.md](rest-usage.md)).
 
 On REST, a bot that edits its PR status comment in place also costs session time ([rest.md](rest.md#bot-status-comment-edits)).
 
@@ -118,4 +106,4 @@ REST branch-policy reads propagate primary and secondary throttling, `Retry-Afte
 - **Do not also poll** with GitHub MCP GraphQL, `gh pr checks`, or `gh pr watch`. Name incidental REST reads explicitly, for example `gh api repos/OWNER/REPO/pulls/PR`.
 - **On a `quotaWarning`**, follow `## Instructions`: keep using pr-shepherd at the printed cadence. For `--until-terminal`, pass `--interval` from the warning and omit `--timeout`. Resume full cadence after the printed reset.
 
-Open work: warnings are per worktree; token-scoped quota state would let worktrees sharing a credential share warned bands. GraphQL follow-ups are in [graphql-usage.md](graphql-usage.md#recommendations).
+Open work: warnings are per worktree; token-scoped quota state would let worktrees sharing a credential share warned bands. GraphQL follow-ups: [graphql-usage.md](graphql-usage.md#recommendations).

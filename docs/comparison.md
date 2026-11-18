@@ -4,16 +4,6 @@
 
 pr-shepherd gathers a PR's state and emits one next action for a coding agent you already run. It does not provide a model, write a new review, edit code, mutate git, or run as a hosted service. Several tools below are complements as often as competitors.
 
-## Choose by job
-
-| You want                                                                     | Use                                                     |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------- |
-| A repeatable loop over existing feedback, CI, and mergeability for any agent | **pr-shepherd**                                         |
-| A prompt-only loop inside Cursor, with no CLI installed                      | **Cursor `/autopilot`**                                 |
-| One Copilot command that edits, commits, pushes, and iterates                | **GitHub Copilot CLI `/pr auto`**                       |
-| A generated review, or a fix delegated to the reviewing product              | **Codex, Claude Code Action, CodeRabbit, Bugbot, Qodo** |
-| Low-level GitHub primitives, with your own state machine and prompts         | **GitHub MCP Server or `gh` / GraphQL**                 |
-
 ## Comparison
 
 | Approach                            | Primary job                            | Runs as                                  | Built-in feedback + CI loop                            | Edits code and git        | Agent-neutral        | Cost                                       |
@@ -51,11 +41,4 @@ Do not attach `/autopilot`, or a `gh pr checks --watch` skill, in the same sessi
 
 ## Official sources
 
-- [Cursor Agent Skills](https://cursor.com/docs/skills) (`/autopilot` is a built-in skill)
-- [GitHub Copilot CLI pull-request management](https://docs.github.com/en/copilot/how-tos/copilot-cli/use-copilot-cli/manage-pull-requests)
-- [OpenAI Codex GitHub code review](https://learn.chatgpt.com/codex/third-party/github)
-- [Anthropic Claude Code Action](https://github.com/anthropics/claude-code-action) and [capabilities and limitations](https://github.com/anthropics/claude-code-action/blob/main/docs/capabilities-and-limitations.md)
-- [GitHub MCP Server](https://github.com/github/github-mcp-server)
-- [CodeRabbit documentation](https://docs.coderabbit.ai/)
-- [Cursor Bugbot documentation](https://docs.cursor.com/bugbot)
-- [Qodo Merge documentation](https://qodo-merge-docs.qodo.ai/)
+[Cursor Agent Skills](https://cursor.com/docs/skills) (`/autopilot` is a built-in skill), [GitHub Copilot CLI pull-request management](https://docs.github.com/en/copilot/how-tos/copilot-cli/use-copilot-cli/manage-pull-requests), [OpenAI Codex GitHub code review](https://learn.chatgpt.com/codex/third-party/github), [Anthropic Claude Code Action](https://github.com/anthropics/claude-code-action) ([capabilities and limitations](https://github.com/anthropics/claude-code-action/blob/main/docs/capabilities-and-limitations.md)), [GitHub MCP Server](https://github.com/github/github-mcp-server), [CodeRabbit](https://docs.coderabbit.ai/), [Cursor Bugbot](https://docs.cursor.com/bugbot), [Qodo Merge](https://qodo-merge-docs.qodo.ai/).

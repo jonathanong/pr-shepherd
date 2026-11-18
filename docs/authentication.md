@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-Which credential Shepherd uses, what permissions it needs, and how quota is shared between tokens. For anyone setting up a token or debugging a permission failure. Without a usable token, iterate fails before emitting an action.
+Which credential Shepherd uses, what it needs, and how quota is shared. Without a usable token, iterate fails before emitting an action.
 
 ## Token resolution
 
@@ -48,12 +48,7 @@ Fine-grained PATs have no separate Checks permission: Actions covers Actions che
 
 The token owner also needs repository access for the operation; organization approval, SAML SSO, and repository-selection policies can restrict a token independently of its permissions.
 
-GitHub references:
-
-- [Managing fine-grained personal access tokens](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
-- [Fine-grained PAT permissions](https://docs.github.com/en/rest/authentication/permissions-required-for-fine-grained-personal-access-tokens)
-- [Workflow runs API permissions](https://docs.github.com/en/rest/actions/workflow-runs)
-- [Commit statuses API permissions](https://docs.github.com/en/rest/commits/statuses)
+References: [fine-grained PATs](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens), [permission table](https://docs.github.com/en/rest/authentication/permissions-required-for-fine-grained-personal-access-tokens), [workflow runs](https://docs.github.com/en/rest/actions/workflow-runs), [commit statuses](https://docs.github.com/en/rest/commits/statuses).
 
 ## Capabilities versus scope
 
@@ -70,8 +65,6 @@ Token scope does not prove the viewer may perform an action.
 ## Claude Code proxy refusals
 
 A proxy session refusal differs from a GitHub permission denial. Responses naming `not enabled for this session`, `sessions are bound`, or an Anthropic documentation URL stop review mutations with exit `77` and keep the proxy's message. They do not mark the item denied, so a retry after access is repaired works without editing the comment. A refusal during mark-ready uses `transport-unsupported` and quotes the message. Follow the proxy's repository-access instructions; when it asks for API or write access, call `add_repo` with `access: "push"`.
-
-State directory durability in cloud sessions: [cloud.md](cloud.md#durable-state).
 
 ## Permission failures
 

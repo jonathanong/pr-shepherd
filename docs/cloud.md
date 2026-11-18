@@ -2,9 +2,7 @@
 
 [← README](../README.md) | [actions.md](actions.md)
 
-How Shepherd runs when the session, not Shepherd, owns the wait: one tick per invocation, woken by PR events and scheduled wake-ups instead of sleeping in a poll loop. For anyone running Shepherd in a Claude Code cloud session, through MCP or the library, or wiring it into an event-driven host.
-
-The default command `pr-shepherd [PR]` and `pr-shepherd stack PR` sleep between `WAIT` ticks and return on a terminal action or `TRIAGE`. A single tick moves the wait out of Shepherd and into the session.
+How Shepherd runs when the session owns the wait: one tick per invocation, woken by PR events and scheduled wake-ups instead of a poll loop. For Claude Code cloud sessions, MCP or library callers, and event-driven hosts. The default `pr-shepherd [PR]` and `pr-shepherd stack PR` sleep between `WAIT` ticks; a single tick moves that wait into the session.
 
 ```mermaid
 flowchart LR
@@ -51,7 +49,7 @@ Text prints a `**nextCheck**` header line; JSON and MCP `structuredContent` carr
 
 Tick special cases:
 
-- Stack steps drop "at the configured polling cadence", and a pending REST stack merge reruns after the wake-up, so the appended tick step is the only timing rule.
+- Stack steps drop "at the configured polling cadence"; a pending REST stack merge reruns after the wake-up, so the appended tick step is the only timing rule.
 - A stack or multi-PR tick routes each row to one `pr-shepherd iterate` tick, not a sleeping `--until-terminal` poll.
 - A clean draft with auto mark-ready disabled returns `CANCEL` without a wake-up. A `stack` command continues other layer work and schedules any next tick from the remaining layers.
 - `MARK_READY` keeps its immediate rerun: that tick saw a draft, so the ready-delay timer was cleared; the next tick sees the PR ready, starts the timer, and reports the `ready-delay` deadline.

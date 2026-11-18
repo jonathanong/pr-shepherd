@@ -2,14 +2,14 @@
 
 [← README](../README.md) | [comments.md](comments.md) | [escalations.md](escalations.md)
 
-How Shepherd replies to and resolves inline review threads by author class, how that interacts with GitHub's "require conversation resolution" branch rule, and where current behavior differs from a requested policy. For contributors working on thread routing and anyone debugging a PR that is `READY` while GitHub still says conversations block the merge.
+How Shepherd replies to and resolves inline review threads by author class, how that interacts with GitHub's "require conversation resolution" branch rule, and where current behavior differs from a requested policy. Useful when debugging a PR that is `READY` while GitHub still says conversations block the merge.
 
 Shepherd replies to human inline threads. It resolves them only for the authenticated viewer's own threads, and for other humans when [`iterate.resolve-other-human-threads`](configuration.md#iterateresolve-other-human-threads--default-none) allows it. That enum does not read the branch rule.
 
 **Requested policy, not implemented:**
 
 - When the base branch requires conversation resolution, reply to every human inline thread and resolve it once a Shepherd reply is in place (the viewer-authored pairing: reply and resolve in one `apply review`, then a resolve-only retry while the marker is present and the thread is open).
-- When it does not, keep the enum.
+- Otherwise, keep the enum.
 - When the next step is a decision Shepherd cannot make, `ESCALATE`.
 
 The matrices below show current behavior, then the requested policy against the same rows.
@@ -51,7 +51,7 @@ A Shepherd reply is a latest comment whose body begins `<!-- pr-shepherd -->`. "
 | `computeStatus`                                                                                                                            | no                   |
 | `ESCALATE` trigger list                                                                                                                    | no                   |
 
-`computeStatus` counts threads still in `actionable` plus `resolutionOnly`. `unresolvedCount` on the requirements line counts every fetched thread with `isResolved: false`. So once an other-human thread leaves the work set, ShepherdStatus can be `READY` while `Conversations Resolved: No [Required]` is still printed.
+`computeStatus` counts threads in `actionable` plus `resolutionOnly`; `unresolvedCount` on the requirements line counts every fetched thread with `isResolved: false`. So once an other-human thread leaves the work set, ShepherdStatus can be `READY` while `Conversations Resolved: No [Required]` is still printed.
 
 ## Current mutation matrix
 
@@ -84,7 +84,7 @@ For threads already in the work set. `iterate.resolve-other-human-threads` defau
 | Other human, `outdated` | until seen       | left unresolved; no further mutation | every tick                      | every tick (resolve)                 |
 | Other human, `always`   | every tick       | resolution-only, every tick          | every tick                      | every tick                           |
 
-Resolved threads are out of both mutation sets; one whose latest comment is not a Shepherd reply is first-look once. Human authors are never minimized. `always` is the only current setting that replies to and resolves every other-human thread, on every branch, including branches whose folded flag is false.
+Resolved threads are out of both mutation sets; one whose latest comment is not a Shepherd reply is first-look once. Human authors are never minimized. `always` is the only setting that replies to and resolves every other-human thread, on every branch, including those whose folded flag is false.
 
 ## Requirement versus outcome
 
@@ -133,7 +133,7 @@ The gap is the required-resolution, other-human row; the requested switch is the
 
 `ambiguousComments` on an escalation payload is the actionable top-level PR comment list copied onto some handoffs; inline threads are copied separately as `unresolvedThreads`. The field name is not a trigger.
 
-The requested "escalate when a decision is needed" has no predicate in code. Both decisions this feature raises stay off the escalation list: whether an inline comment warrants a code change, and what to do when GitHub will not let the viewer resolve a thread the branch requires resolved.
+The requested "escalate when a decision is needed" has no predicate in code. Two decisions stay off the escalation list: whether an inline comment warrants a code change, and what to do when GitHub will not let the viewer resolve a thread the branch requires resolved.
 
 ## Surfaces outside this policy
 

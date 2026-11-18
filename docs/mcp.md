@@ -2,13 +2,13 @@
 
 [← README](../README.md)
 
-How to install and call `pr-shepherd-mcp`, the local stdio MCP server, plus the contract for every tool it registers. For people wiring Shepherd into Claude Code, Codex, Grok, or another MCP client, and for agents calling the tools.
+How to install and call `pr-shepherd-mcp`, the local stdio MCP server (no hosted HTTP endpoint), and the contract for every tool it registers.
 
 The server shares command implementations, GitHub token resolution, and cascading `.pr-shepherdrc.yml` files with the CLI. Tools gather PR context (`iterate`, `stack`), apply deterministic GitHub mutations (`apply`), build checked suggestion patches (`suggest`), read Shepherd Journals (`extract_journal`, `get_journal`), and print playbooks (`playbook`). The calling client owns recurrence and any git mutations.
 
-GitHub transport follows `github.transport` or the per-call `transport: "auto"|"graphql"|"rest"` input, with the same selection and fallback as the CLI. REST results may omit GraphQL-only fields; those stay unknown, and unsupported operations are reported explicitly. See [api.md](api.md) and [github-api.md](github-api.md#transport-selection).
+Transport follows `github.transport` or the per-call `transport: "auto"|"graphql"|"rest"` input, with the CLI's selection and fallback. REST results may omit GraphQL-only fields; those stay unknown, and unsupported operations are reported explicitly. See [api.md](api.md) and [github-api.md](github-api.md#transport-selection).
 
-The binary `pr-shepherd-mcp` ships in the `pr-shepherd` npm package. Replace `<version>` with a published version. The server speaks stdio only. There is no hosted HTTP endpoint.
+The binary ships in the `pr-shepherd` npm package; replace `<version>` with a published version.
 
 ```text
 npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
@@ -19,29 +19,25 @@ npx --yes --package pr-shepherd@<version> pr-shepherd-mcp
 The plugin is the CLI plus skills. Up to v2.2.3 it also started this server; it no longer does, for these reasons:
 
 - **The agent needs a shell anyway.** Most `[TRIAGE]` ticks end in a commit and a push, so an agent that can act on Shepherd's output can also run the CLI.
-- **Waiting belongs in the background.** `pr-shepherd [PR] --until-terminal` runs as a background process; hosts that wake the agent when it exits, such as Claude Code, resume the agent when the PR needs it, and hosts without wake-on-exit, such as Codex CLI, use the bounded poll ([cli-usage.md](cli-usage.md)). An MCP tool call blocks the agent's turn until it returns, so an MCP tool cannot wait without stalling the agent, and a tick-per-call loop costs a full GitHub fetch per call.
-- **Streaming does not help.** SSE responses or MCP progress notifications are not shown to the model, so the agent still sees only the final result.
-- **Almost all real use went through the CLI.** The server's tool definitions were loaded into every session for a fallback that was rarely used.
+- **Waiting belongs in the background.** `pr-shepherd [PR] --until-terminal` runs as a background process; hosts that wake the agent on exit (Claude Code) resume it when the PR needs it, and hosts without wake-on-exit (Codex CLI) use the bounded poll ([cli-usage.md](cli-usage.md)). An MCP tool call blocks the agent's turn, so it cannot wait without stalling, and a tick-per-call loop costs a full GitHub fetch per call.
+- **Streaming does not help.** SSE responses and MCP progress notifications are not shown to the model.
+- **Almost all real use went through the CLI.** The tool definitions were loaded into every session for a rarely used fallback.
 
 The server, its binary, and its tools stay supported. Register it yourself (below) for an MCP-only host.
 
 ## Install
 
-| Path            | When                                                                      |
-| --------------- | ------------------------------------------------------------------------- |
-| Plugin          | Preferred in Claude Code, Codex, and Grok: skills that drive the CLI.     |
-| MCP server only | Register `pr-shepherd-mcp` in any MCP host; the plugin does not start it. |
-| Local checkout  | Developing this repository.                                               |
+Paths: the plugin (preferred in Claude Code, Codex, and Grok; skills that drive the CLI), the MCP server alone (below), or a local checkout when developing this repository.
 
 The server needs no global CLI install. Confirm GitHub auth before the first tool call ([authentication.md](authentication.md)).
 
 ### Plugin
 
-The plugin ships the skills and drives the CLI; it does not start this server. Install the plugin as described in [skills.md](skills.md), and register the server below if you also want MCP. The `pr-shepherd` skill uses MCP `iterate` only when the CLI is unavailable and the server is registered. Use MCP `apply` and `suggest` only when the tick used MCP `iterate`.
+Install the plugin as described in [skills.md](skills.md); register the server below if you also want MCP. The `pr-shepherd` skill uses MCP `iterate` only when the CLI is unavailable and the server is registered, and MCP `apply` and `suggest` only when the tick used MCP `iterate`.
 
 ### MCP server only
 
-Register the same stdio command in any MCP client. Pin `@<version>` so the host does not float to a new release.
+Register the stdio command in any MCP client. Pin `@<version>` so the host does not float to a new release.
 
 ```bash
 claude mcp add --transport stdio --scope user pr-shepherd -- \
@@ -79,7 +75,7 @@ args = ["--yes", "--package", "pr-shepherd@<version>", "pr-shepherd-mcp"]
 
 ### Local checkout
 
-After `npm install` (which builds `bin/`), `npx pr-shepherd-mcp` launches the checkout's server, but only while the current directory is this repository. In client config, store the built file by absolute path instead. A stored `npx pr-shepherd-mcp` later launches from the PR repo and misses this package's bin:
+After `npm install` (which builds `bin/`), `npx pr-shepherd-mcp` launches the checkout's server only while the current directory is this repository. In client config, store the built file by absolute path; a stored `npx pr-shepherd-mcp` would launch from the PR repo and miss this package's bin:
 
 ```bash
 claude mcp add --transport stdio --scope user pr-shepherd -- \
@@ -88,11 +84,11 @@ codex mcp add pr-shepherd -- node /path/to/pr-shepherd/bin/mcp-stdio.mjs
 grok mcp add pr-shepherd -- node /path/to/pr-shepherd/bin/mcp-stdio.mjs
 ```
 
-Replace `/path/to/pr-shepherd` with the checkout's absolute path. A stale global `pr-shepherd-mcp` lacks unreleased tools, so do not use it while developing.
+Replace `/path/to/pr-shepherd` with the checkout's absolute path. A stale global `pr-shepherd-mcp` lacks unreleased tools; do not use it while developing.
 
 ## Tools
 
-The server registers seven tools. Hosts prefix tool names with the server name (`pr-shepherd__iterate` in Grok, `mcp__pr-shepherd__iterate` in some Claude setups). The names below are the registered ones.
+The server registers seven tools. Hosts may prefix names with the server name (`pr-shepherd__iterate` in Grok, `mcp__pr-shepherd__iterate` in some Claude setups); the names below are the registered ones.
 
 | Tool              | CLI counterpart                                                                                             | Side effects                                                                                                                                                                                                         |
 | ----------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -108,11 +104,11 @@ The server registers seven tools. Hosts prefix tool names with the server name (
 
 ### Selectors
 
-Every PR-targeted call requires a repository-qualified selector: a PR URL such as `https://github.com/owner/repo/pull/123` or `owner/repo#123`. Bare numbers and omitted selectors are rejected. Single-PR tools and `stack` take `pr`; aggregate `iterate` takes `prs`; `extract_journal` takes only a Markdown body. The named repository is the GitHub target. It may differ from the server's startup working directory (or an embedded factory's `cwd`), which stays the local git, configuration, and rules context.
+Every PR-targeted call requires a repository-qualified selector: a PR URL such as `https://github.com/owner/repo/pull/123` or `owner/repo#123`. Bare numbers and omitted selectors are rejected. Single-PR tools and `stack` take `pr`; aggregate `iterate` takes `prs`; `extract_journal` takes only a Markdown body. The named repository is the GitHub target and may differ from the server's startup working directory (or an embedded factory's `cwd`), which stays the local git, configuration, and rules context.
 
 ### Output projection
 
-Each result has Markdown `content` and `structuredContent` produced from the same projection, so the two channels carry equivalent information.
+Each result's Markdown `content` and `structuredContent` come from the same projection and carry equivalent information.
 
 | Tool / selector                  | `structuredContent`                                                                                                                |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
@@ -123,7 +119,7 @@ Each result has Markdown `content` and `structuredContent` produced from the sam
 | `extract_journal`, `get_journal` | The same JSON in both channels.                                                                                                    |
 | `playbook`                       | The result object. Markdown `content` is the playbook body for a named playbook, or a bullet list of names when `name` is omitted. |
 
-The single-PR `iterate` projection omits trivial-default fields (including `state` when `OPEN` and `mergeStateStatus` when `CLEAN`, like the text header) and adds `readyDelayOverride` when `readyDelaySeconds` was supplied. Every action except `triage` and `cancel` gets a computed top-level `instructions` array; `triage` carries its steps under `triage.instructions`, and `cancel` has none. A clean PR whose ready-delay is still counting returns action `ready` with `remainingSeconds`. Action semantics, instruction text, and the full field contract live in [actions.md](actions.md).
+The single-PR `iterate` projection omits trivial-default fields (including `state` when `OPEN` and `mergeStateStatus` when `CLEAN`, like the text header) and adds `readyDelayOverride` when `readyDelaySeconds` was supplied. Every action except `triage` and `cancel` gets a top-level `instructions` array; `triage` carries its steps under `triage.instructions`, and `cancel` has none. A clean PR whose ready-delay is still counting returns action `ready` with `remainingSeconds`. The full field contract lives in [actions.md](actions.md).
 
 ### Review workflow
 
@@ -148,11 +144,11 @@ Supply exactly one of `pr` or `prs`. The call always runs one tick and returns `
 | `instructions`        | `inline` or `playbook`          | `triage` instruction style; default `iterate.instructions` (`inline`). |
 | `transport`           | `auto`, `graphql`, or `rest`    | Override `github.transport` for this call.                             |
 
-Aggregate commands return one compact summary tick. Its only GitHub mutation is rule-driven [classification auto-resolve](actions.md#classification-auto-resolve), reported on the affected row or layer as `ruleAutoResolve`:
+Aggregate commands return one compact summary tick whose only GitHub mutation is rule-driven [classification auto-resolve](actions.md#classification-auto-resolve), reported as `ruleAutoResolve` on the affected row or layer:
 
 - **`prs`** keeps per-PR raw state, bounded check/review counts, routing hints, and `pollCommand`s in both channels.
 - **`stack`** (the [`stack` tool](#stack)) projects each layer to `shepherded` (when true), mergeable or one blocker (open layers only), author, `owned` only when the caller listed its PRs (whole-stack ownership omits it), position, and the layer's own base branch. It also surfaces `stackMergeable` (when true), `nextAction`, and raw ancestry mismatches. One-PR sessions run only for layers marked `owned`.
-- The compact tick reuses singular check/review classification but does not maintain ready-delay state. Bounded overflow is surfaced as incomplete context without becoming a permanent action by itself.
+- The compact tick reuses singular check/review classification but keeps no ready-delay state. Bounded overflow is surfaced as incomplete context, not as a permanent action.
 
 ### `stack`
 
@@ -261,12 +257,12 @@ MCP clients own polling. There is no long-running poll tool, and `iterate` has n
 
 A local server cannot work around client tool-call timeouts:
 
-- MCP TypeScript SDK: 60s default per request. Resetting the timeout on progress notifications is the caller's option, not the server's.
+- MCP TypeScript SDK: 60s default per request. Resetting the timeout on progress notifications is the caller's option.
 - Claude Code: long calls time out even with correct progress notifications (`anthropics/claude-code#58687`). `MCP_TIMEOUT` covers server startup only, and `MCP_TOOL_TIMEOUT` support has been inconsistent.
 - Codex CLI: same 60s default; users can raise `tool_timeout_sec`.
 - Grok CLI: unconfirmed.
 
-So no tool polls or sleeps. `iterate`, `stack`, and `suggest` each do one bounded fetch. `apply` runs its `operations` sequentially, each with GitHub I/O, so a large request on a slow GitHub can approach the timeout. A failure partway through leaves earlier mutations applied without a client response; `PartialApplyError`'s `completed` list is the recovery path.
+So no tool polls or sleeps. `iterate`, `stack`, and `suggest` each do one bounded fetch. `apply` runs its `operations` sequentially, each with GitHub I/O, so a large request on a slow GitHub can approach the timeout; a failure partway leaves earlier mutations applied without a client response, and `PartialApplyError`'s `completed` list is the recovery path.
 
 1. Call `iterate` with a repository-qualified `pr`.
 2. Follow the returned `## Instructions`.
@@ -279,7 +275,7 @@ The shell command `pr-shepherd [PR]` is the bounded poll dispatcher, not an MCP 
 
 ## Authentication, cwd, and environment
 
-The server uses its startup working directory (or an embedded factory's `cwd`) for local git, cascading `.pr-shepherdrc.yml` files, classification rules, and per-worktree debug logging. An explicit `pr` changes only the GitHub target. PR-scoped state uses the explicit target repository and PR number.
+The startup working directory (or an embedded factory's `cwd`) supplies local git, cascading `.pr-shepherdrc.yml` files, classification rules, and per-worktree debug logging. An explicit `pr` changes only the GitHub target; PR-scoped state uses that repository and PR number.
 
 | Setting                                 | Effect                                                                                                                                                                                                                                              |
 | --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -310,7 +306,7 @@ const server = createPrShepherdMcpServer({ cwd: "/path/to/repo" });
 await runPrShepherdMcpStdio({ cwd: "/path/to/repo" });
 ```
 
-`createPrShepherdMcpServer` also accepts `transport` and an optional `shepherd` for tests or alternate transports. It exposes the same seven tools.
+`createPrShepherdMcpServer` also accepts `transport` and an optional `shepherd` for tests or alternate transports, and exposes the same seven tools.
 
 ## Related docs
 

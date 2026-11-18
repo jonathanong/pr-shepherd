@@ -2,11 +2,11 @@
 
 [← README](../README.md) | [configuration.md](configuration.md)
 
-Every breaking change between pr-shepherd 0.x (0.60.1) and 1.0.0, and what to change. For anyone upgrading a repository config, a script, an MCP client, or a library caller. Changes after 1.0.0 are not listed here.
+Every breaking change between pr-shepherd 0.x (0.60.1) and 1.0.0, and what to change. Changes after 1.0.0 are not listed.
 
-v1 keeps no compatibility aliases. An old command, flag, field, or tool name fails or is absent. A renamed config key fails with an error that names the new key. `--stack` and `--poll-mode` on the default command, `iterate`, or `stack` fail with an error that names the replacement. Removed keys with no replacement, and `--poll-mode` on other commands, fail as unknown.
+v1 keeps no compatibility aliases: an old command, flag, field, or tool name fails or is absent. A renamed config key fails with an error that names the new key. `--stack` and `--poll-mode` on the default command, `iterate`, or `stack` fail with an error that names the replacement. Removed keys with no replacement, and `--poll-mode` on other commands, fail as unknown.
 
-If you use only the shipped plugin and skill, upgrade the plugin and migrate your config files. The skill already emits the v1 commands.
+If you use only the shipped plugin and skill, upgrade the plugin and migrate your config files; the skill already emits v1 commands.
 
 ## Config
 
@@ -19,15 +19,15 @@ Each directory may hold **one** config file, using any of these names:
 - `.pr-shepherd/config.yml` (new; sits next to `.pr-shepherd/classification/`)
 - `.pr-shepherd/config.yaml` (new)
 
-Two config files in the same directory is an error. The merge order is unchanged: built-in defaults, then `$HOME`, then each ancestor down to cwd, with the closest file winning. Your `~/.pr-shepherdrc.yml` applies to every repository, so migrate it too. Details: [How files load](configuration.md#how-files-load).
+Two config files in one directory is an error. Merge order is unchanged: built-in defaults, then `$HOME`, then each ancestor down to cwd, closest file winning. Migrate `~/.pr-shepherdrc.yml` too, since it applies to every repository. See [How files load](configuration.md#how-files-load).
 
 ### Format version
 
-Every non-empty config file must now start with `version: 1`. 0.x files have none, so add it when you rename their keys. A non-empty file without it fails with exit code `78`. An empty file needs none. A higher version, such as `version: 2`, fails with a message saying the file needs a newer pr-shepherd. Details: [Version](configuration.md#version).
+Every non-empty config file must start with `version: 1`; without it the file fails with exit code `78`. An empty file needs none. A higher version, such as `version: 2`, fails with a message saying the file needs a newer pr-shepherd. See [Version](configuration.md#version).
 
 ### Strict validation
 
-In 0.x, problems were mostly warnings. A file with a YAML syntax error was skipped while other files still merged, and an unknown key was dropped while the rest of its file applied. Only a merged config that failed validation fell back to the built-in defaults. In v1, Shepherd validates config before any GitHub call and exits with code `78` (`EX_CONFIG`) on any of these:
+0.x mostly warned: a file with a YAML syntax error was skipped while other files merged, an unknown key was dropped while the rest of its file applied, and only a merged config that failed validation fell back to defaults. v1 validates config before any GitHub call and exits `78` (`EX_CONFIG`) on any of these:
 
 - an unknown key, including every renamed or removed pre-v1 key (`github.transport`, `iterate.instructions`, `merge.method`, and `classify.standard` keep their names and stay valid)
 - a value of the wrong type or out of range
@@ -36,18 +36,18 @@ In 0.x, problems were mostly warnings. A file with a YAML syntax error was skipp
 - a top level that is not a mapping
 - more than one config file in one directory
 
-Shepherd stops at the first invalid file. The message names that file and the key path of each problem in it. A YAML syntax error, a non-mapping top level, or a duplicate config file has no key path. Fix the file and rerun to see problems in later files, such as a repository config after `~/.pr-shepherdrc.yml`. A renamed pre-v1 key never takes effect, but the error names its replacement. A removed key is reported as unknown:
+Shepherd stops at the first invalid file, naming it and the key path of each problem in it (a YAML syntax error, non-mapping top level, or duplicate config file has no key path). Fix it and rerun to see problems in later files. A renamed pre-v1 key never takes effect, but the error names its replacement; a removed key is reported as unknown:
 
 ```text
 pr-shepherd: invalid config in /repo/.pr-shepherdrc.yml:
   - `watch.readyDelayMinutes` → `iterate.ready-delay-minutes`
 ```
 
-The library and the MCP server validate the same way before any GitHub I/O. A library call rejects with that error, and an MCP tool call returns it as an error result. Details: [Validation](configuration.md#validation).
+The library and MCP server validate the same way before any GitHub I/O: a library call rejects with that error, and an MCP tool call returns it as an error result. See [Validation](configuration.md#validation).
 
 ### Key renames
 
-Every multi-word key is now kebab-case; single-word keys such as `github.transport` and `merge.method` keep their names. A duration carries its unit in its name, and no key takes milliseconds.
+Multi-word keys are now kebab-case; single-word keys such as `github.transport` and `merge.method` keep their names. Durations carry their unit in the name, and no key takes milliseconds.
 
 | 0.x key                                         | v1 key                                                                 |
 | ----------------------------------------------- | ---------------------------------------------------------------------- |
@@ -127,15 +127,13 @@ With a ready delay of `0`, a loop cancels or merges on the first clean READY tic
 
 ### JSON Schema
 
-The npm package now ships `pr-shepherd.schema.json`, generated from the same validator. For completion and inline validation in editors that use the YAML language server, add this first line to your config file:
+The npm package ships `pr-shepherd.schema.json`, generated from the same validator. For editor completion and validation via the YAML language server, add this first line to your config file:
 
 ```yaml
 # yaml-language-server: $schema=./node_modules/pr-shepherd/pr-shepherd.schema.json
 ```
 
-The path is relative to the config file, so in `.pr-shepherd/config.yml` use `../node_modules/pr-shepherd/pr-shepherd.schema.json`.
-
-Every key, default, and per-key section is in [configuration.md](configuration.md).
+The path is relative to the config file; in `.pr-shepherd/config.yml` use `../node_modules/pr-shepherd/pr-shepherd.schema.json`. Every key and default is in [configuration.md](configuration.md).
 
 ## Commands
 
@@ -150,13 +148,13 @@ Every key, default, and per-key section is in [configuration.md](configuration.m
 | Playbook `Cloud event loop` (`cloud-event-loop`)                       | `Event loop` (`event-loop`)                                      |
 
 - `stack` owns the `shepherd` action and exit code `16`. Passing `--stack` to the default command, `iterate`, or `stack` now exits `64` with an error that names `pr-shepherd stack <PR>`.
-- `iterate` is always one tick, accepts several same-repository PRs for one aggregate tick, and prints `nextCheck` when the action waits: when to rerun if no GitHub event arrives first (see the omissions below). It behaves like 0.x `--poll-mode event`. It never sleeps or debounces, and it writes seen markers immediately. See [cloud.md](cloud.md).
-- `--poll-mode` and `poll.mode` are removed. On the default command, `iterate`, and `stack`, `--poll-mode` exits `64` with an error that names the replacement. On `admin clean` and `admin log-file` it is just an unknown flag (exit `64`), so drop it there. There is no mode to configure. The default command `pr-shepherd [PR ...]` and `stack` loop by default. They run one tick in a Claude Code cloud session (`CLAUDE_CODE_REMOTE=true`), and `stack` also runs one tick with `--once`.
+- `iterate` is always one tick, accepts several same-repository PRs for one aggregate tick, and prints `nextCheck` when the action waits: when to rerun if no GitHub event arrives first (omissions below). It behaves like 0.x `--poll-mode event`: it never sleeps or debounces and writes seen markers immediately. See [cloud.md](cloud.md).
+- `--poll-mode` and `poll.mode` are removed. On the default command, `iterate`, and `stack`, `--poll-mode` exits `64` with an error that names the replacement; on `admin clean` and `admin log-file` it is an unknown flag (exit `64`), so drop it. There is no mode to configure: `pr-shepherd [PR ...]` and `stack` loop by default, run one tick in a Claude Code cloud session (`CLAUDE_CODE_REMOTE=true`), and `stack` also runs one tick with `--once`.
 - Multi-PR polling is unchanged: `pr-shepherd 1 2 3`.
 
 ### Removed aliases
 
-Most of these aliases printed a deprecation warning in 0.x. In v1 they are all unknown subcommands (exit `64`).
+These printed deprecation warnings in 0.x; in v1 they are unknown subcommands (exit `64`).
 
 | Removed alias                          | Use                           |
 | -------------------------------------- | ----------------------------- |
@@ -171,7 +169,7 @@ Most of these aliases printed a deprecation warning in 0.x. In v1 they are all u
 
 `pr-shepherd journal extract --body-file <path>` remains.
 
-`suggest` is batch-shaped. Scripts that read the JSON from `build-suggestion-patch` or `commit-suggestion` must read `threadId`, `path`, `patch`, and the other per-suggestion fields from `patches[0]` instead of the top level, and its instructions cover the whole batch.
+`suggest` is batch-shaped: scripts that read JSON from `build-suggestion-patch` or `commit-suggestion` must read `threadId`, `path`, `patch`, and the other per-suggestion fields from `patches[0]`, and its instructions cover the whole batch.
 
 ### Removed flags
 
@@ -195,7 +193,7 @@ Most of these aliases printed a deprecation warning in 0.x. In v1 they are all u
 | Playbook pointer `Playbook: "Cloud event loop".`                     | `Playbook: "Event loop".`                          |
 | Invalid config: warning, then defaults                               | Exit code `78` (`EX_CONFIG`)                       |
 
-`triage` is the same state as `fix_code`, renamed because the work is often a reply, a thread resolution, or CI triage rather than a code change. It is always non-terminal.
+`triage` is the same state as `fix_code`, renamed because the work is often a reply, thread resolution, or CI triage rather than a code change. It is always non-terminal.
 
 Removed result fields:
 
@@ -248,10 +246,10 @@ The package entry point now also re-exports the result and action types: `Iterat
 
 ## Local state
 
-Nothing needs deleting by hand, but expect these one-time effects on the first run after the upgrade:
+Nothing needs deleting by hand. Expect these one-time effects on the first run:
 
-- **Seen markers without an `id` field are ignored.** These filename-keyed markers come from old builds. Their review threads and comments surface once more as first-look items, and Shepherd writes a current marker.
-- **The stored PR fingerprint is discarded.** Its version changed, so the first tick per PR runs the full batched query instead of skipping on an unchanged fingerprint.
-- **Local event-mode state is no longer read** unless `PR_SHEPHERD_STATE_DIR` was set. That variable takes priority in both 0.x and v1, so with it set nothing moves and this item and the cleanup below do not apply. Without it, 0.x event mode (`--poll-mode event`, `poll.mode: event`, or the MCP and library `pollMode: "event"`) kept seen markers, stall timers, and reply records under `<git-common-dir>/pr-shepherd-state` on any machine. v1 uses that directory only when `CLAUDE_CODE_REMOTE=true`. A local `iterate` uses the normal state directory, so state written by local event-mode runs is not carried over.
+- **Seen markers without an `id` field are ignored.** These filename-keyed markers come from old builds; their threads and comments surface once more as first-look items, and Shepherd writes a current marker.
+- **The stored PR fingerprint is discarded** (its version changed), so the first tick per PR runs the full batched query.
+- **Local event-mode state is no longer read** unless `PR_SHEPHERD_STATE_DIR` was set. That variable takes priority in 0.x and v1, so with it set nothing moves and this item and the cleanup below do not apply. Without it, 0.x event mode (`--poll-mode event`, `poll.mode: event`, or MCP/library `pollMode: "event"`) kept seen markers, stall timers, and reply records under `<git-common-dir>/pr-shepherd-state` on any machine. v1 uses that directory only when `CLAUDE_CODE_REMOTE=true`; a local `iterate` uses the normal state directory, so state from local event-mode runs is not carried over.
 
-Merge requests from `apply merge` always used the normal state directory, so they carry over. Triage attempt counts (`fix-attempts.json`) carry over when the state directory is unchanged. Local event-mode runs kept them under `<git-common-dir>/pr-shepherd-state`, so after such runs they start fresh. The full per-thread budget (`iterate.triage-attempts-per-thread`, default 3) then starts over, and an unchanged thread can return in that many more `TRIAGE` results before Shepherd escalates. To start fully clean, run `pr-shepherd admin clean all`. That cleans the normal state directory only. If you used local event mode without `PR_SHEPHERD_STATE_DIR`, also delete the legacy directory, which would otherwise come back into use under `CLAUDE_CODE_REMOTE=true`: `dir=$(git rev-parse --git-common-dir) && rm -rf "$dir/pr-shepherd-state"`.
+Merge requests from `apply merge` always used the normal state directory, so they carry over. Triage attempt counts (`fix-attempts.json`) carry over when the state directory is unchanged; after local event-mode runs they start fresh, so the full per-thread budget (`iterate.triage-attempts-per-thread`, default 3) starts over and an unchanged thread can return that many more `TRIAGE` results before Shepherd escalates. To start fully clean, run `pr-shepherd admin clean all`, which cleans the normal state directory only. If you used local event mode without `PR_SHEPHERD_STATE_DIR`, also delete the legacy directory, which would otherwise come back into use under `CLAUDE_CODE_REMOTE=true`: `dir=$(git rev-parse --git-common-dir) && rm -rf "$dir/pr-shepherd-state"`.

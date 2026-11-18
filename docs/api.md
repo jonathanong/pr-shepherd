@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-The TypeScript entry points of the `pr-shepherd` npm package and what each method accepts and returns. For developers embedding Shepherd in their own tools; MCP host setup is in [mcp.md](mcp.md).
+The TypeScript entry points of the `pr-shepherd` npm package and what each method accepts and returns. MCP host setup: [mcp.md](mcp.md).
 
 | Entry point            | Exports                                                                                          | I/O                                              |
 | ---------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------ |
@@ -59,20 +59,20 @@ const patches = await shepherd.suggest({
 | `getJournal({ pr })`           | MCP `get_journal`                        |
 | `suggest({ pr, suggestions })` | MCP `suggest`                            |
 
-`transport` (`auto`, `graphql`, `rest`) is the same choice as the CLI `--transport` option and the [`github.transport`](configuration.md#github-api-transport) key; the MCP server accepts the equivalent option. `auto` and the fallback triggers are in [github-api.md](github-api.md#transport-selection).
+`transport` (`auto`, `graphql`, `rest`) matches the CLI `--transport` option and the [`github.transport`](configuration.md#github-api-transport) key. Fallback triggers: [github-api.md](github-api.md#transport-selection).
 
 ### PR references and `cwd`
 
 - `pr` is a positive number, `owner/repo#N`, or a GitHub pull-request URL.
 - `getJournal` requires `pr`; the other methods infer the current branch's PR when it is omitted.
 - A repository-qualified reference is authoritative for GitHub reads and mutations and may name a repository other than `cwd`.
-- `cwd` supplies local git state, configuration, classification-rule lookups, and per-worktree debug logging.
+- `cwd` supplies local git state, configuration, classification rules, and per-worktree debug logging.
 
 ### `iterate`
 
 Every call runs one tick. A singular call returns the raw `IterateResult`, which carries `nextCheck { at, inSeconds, reason }` when another tick is meaningful ([cloud.md](cloud.md#nextcheck)).
 
-A non-empty `prs` set runs one compact summary tick instead and returns `PollSummaryResult`. Every reference must resolve to one repository. It keeps no ready-delay state and emits no rebase/push commands. Its only GitHub mutations (with their seen markers) are rule-driven [classification auto-resolve](actions.md#classification-auto-resolve), reported per row as `ruleAutoResolve`. The caller owns recurrence.
+A non-empty `prs` set runs one compact summary tick and returns `PollSummaryResult`. Every reference must resolve to one repository. It keeps no ready-delay state and emits no rebase/push commands; its only GitHub mutations (with their seen markers) are rule-driven [classification auto-resolve](actions.md#classification-auto-resolve), reported per row as `ruleAutoResolve`. The caller owns recurrence.
 
 ### `stack`
 
@@ -197,12 +197,7 @@ const server = createPrShepherdMcpServer({ cwd: "/path/to/repo" });
 await runPrShepherdMcpStdio({ cwd: "/path/to/repo" });
 ```
 
-`createPrShepherdMcpServer` accepts an optional `shepherd` for tests and exposes `iterate`, `stack`, `apply`, `suggest`, `extract_journal`, `get_journal`, and `playbook`. Host install and tool schemas: [mcp.md](mcp.md).
-
-- PR-targeted tools require a repository-qualified reference and reject bare or omitted ones. `iterate` takes exactly one of `pr` or `prs`; the others, including `stack`, require `pr`.
-- That repository is the GitHub target and may differ from the factory's `cwd`, which still supplies local git, config, and rules context.
-- `extract_journal` takes only a Markdown `body` string and performs no GitHub, file, stdin, or Shepherd-log I/O.
-- Singular MCP `iterate` returns the lean JSON projection (matching CLI `--format=json`) as `structuredContent`; aggregate `iterate` returns the raw `PollSummaryResult`, and `stack` returns the lean stack overview the CLI prints as JSON.
+`createPrShepherdMcpServer` accepts an optional `shepherd` for tests and exposes `iterate`, `stack`, `apply`, `suggest`, `extract_journal`, `get_journal`, and `playbook`. Selectors, projections, and tool schemas: [mcp.md](mcp.md).
 
 ## `pr-shepherd/classify`
 
@@ -217,4 +212,4 @@ const rule: ClassifyRule = (item) => {
 export default rule;
 ```
 
-Drop rule files under `.pr-shepherd/classification/`. `ClassifyItem` has `kind`, `id`, `author`, `authorType`, optional `authorAssociation`, and `body`. Rule loading and `suppress` / `autoResolve` behavior: [classification rules](actions.md#classification-rules).
+Put rule files under `.pr-shepherd/classification/`. `ClassifyItem` has `kind`, `id`, `author`, `authorType`, optional `authorAssociation`, and `body`. Rule loading and `suppress` / `autoResolve` behavior: [classification rules](actions.md#classification-rules).

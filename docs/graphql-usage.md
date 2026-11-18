@@ -2,23 +2,13 @@
 
 [← README](../README.md) | [graphql.md](graphql.md) | [github-api.md](github-api.md)
 
-What each command spends against GitHub's GraphQL point budget, per tick and per hour. For operators sizing polling and contributors changing queries. REST-transport costs are in [rest-usage.md](rest-usage.md); automatic fallback can move the rest of a process to REST ([transport selection](github-api.md#transport-selection)).
+What each command spends against GitHub's GraphQL point budget, per tick and per hour. A user PAT has 5,000 points/hour; pricing rules are in [graphql.md](graphql.md#how-github-prices-a-query). Figures are `rateLimit.cost` for the static query shape and extra pages add their own cost; `--verbose` `apiUsage.graphql.measuredQueryCost` is authoritative for a live response. REST-transport costs: [rest-usage.md](rest-usage.md).
 
-A user PAT has 5,000 points/hour. One-PR polling is a small slice of that; aggregate polls are larger. Pricing rules are in [graphql.md](graphql.md#how-github-prices-a-query). The figures below are `rateLimit.cost` for the static query shape. Extra pages add their own cost. `--verbose` `apiUsage.graphql.measuredQueryCost` is authoritative for a live response.
-
-Per-tick request counts are asserted at the HTTP boundary by these tests; change them and this page together:
-
-| Test                                                | Title                                                                                      |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| `src/github/graphql-wait-tick-cost.test.mts`        | "spends one BatchPr request per wait tick, reused or not"                                  |
-| `src/github/graphql-wait-detectors.test.mts`        | "charges nothing on an unchanged idle wait tick"                                           |
-| `src/github/graphql-stack-tick-cost.test.mts`       | "reads a layer above the trunk in one BatchPr request, cold or reused"                     |
-| `src/github/graphql-stack-handoff-cost.test.mts`    | "routes layers on one summary read plus check-run details; their first ticks read nothing" |
-| `src/github/graphql-base-behind-tick-cost.test.mts` | "reads the base compare once per base tip and head"                                        |
+Per-tick request counts are asserted at the HTTP boundary by `src/github/graphql-wait-tick-cost.test.mts`, `graphql-wait-detectors.test.mts`, `graphql-stack-tick-cost.test.mts`, `graphql-stack-handoff-cost.test.mts`, and `graphql-base-behind-tick-cost.test.mts`; change them and this page together.
 
 ## How a point is counted
 
-Formula: [graphql.md](graphql.md#how-github-prices-a-query). Facts specific to Shepherd's queries:
+Shepherd's query shapes:
 
 | Query shape                                       | Cost                                                                                                                                                          |
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |

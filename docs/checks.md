@@ -2,7 +2,7 @@
 
 [← README](../README.md) | [context.md](context.md)
 
-How Shepherd classifies CI checks and what failure context it surfaces. For readers of iterate's checks sections and contributors changing CI logic. Shepherd surfaces failures and log excerpts. It does not decide between a rerun and a code fix.
+How Shepherd classifies CI checks and what failure context it surfaces. Shepherd surfaces failures and log excerpts; it does not decide between a rerun and a code fix.
 
 ## Classification pipeline
 
@@ -16,12 +16,12 @@ flowchart LR
 
 ### Stage 0: Supplement startup failures (`checks/triage.mts`)
 
-A workflow run can end with `conclusion: startup_failure` before it creates any job or check-run context, so GraphQL `statusCheckRollup` may omit it. The batch query reads `commit.checkSuites` and merges suites whose `conclusion` is `STARTUP_FAILURE` into the check list (`checks/startup-failures.mts`).
+A workflow run can end with `conclusion: startup_failure` before creating any job or check-run context, so GraphQL `statusCheckRollup` may omit it. The batch query reads `commit.checkSuites` and merges `STARTUP_FAILURE` suites into the check list (`checks/startup-failures.mts`).
 
 REST `GET /repos/{owner}/{repo}/actions/runs?head_sha=<sha>&status=startup_failure` runs only when that CheckSuite page is missing or truncated (`hasNextPage`):
 
 - The endpoint is repository-wide for the SHA, so runs are kept only when the REST `pull_requests` association includes this PR number and head SHA.
-- Each run becomes a `CheckRun` with `conclusion: "STARTUP_FAILURE"`, the run ID, run URL, raw event, workflow name, and the workflow file `path` as `workflowPath`. The run's `display_title` is the PR or commit title, not an error, so it is not surfaced. GitHub's "Invalid workflow file" message is not read (it would cost another call per run).
+- Each run becomes a `CheckRun` with `conclusion: "STARTUP_FAILURE"`, the run ID, run URL, raw event, workflow name, and the workflow file `path` as `workflowPath`. `display_title` is the PR or commit title, not an error, so it is not surfaced; GitHub's "Invalid workflow file" message is not read (it would cost a call per run).
 - A run ID already in the GraphQL list is updated in place, not duplicated.
 - The supplement is best-effort: a failed request logs a warning and keeps the GraphQL data. A secondary rate limit aborts the tick with exit 75 ([graphql.md](graphql.md#startup-failure-checksuites-graphql--actions-rest-fallback)).
 
@@ -41,7 +41,7 @@ Each check gets one `CheckCategory`. Rules apply in this order; the first match 
 
 ### Ignore/protection precedence
 
-`checks.ignore` matches the raw check name (`CheckRun.name` or `StatusContext.context`), case-insensitively, and removes matches from the CI verdict. `checks.never-ignore` wins when it matches the workflow name or check name of any check in that Actions run: the run's checks stay visible and blocking. Shepherd never cancels workflow runs itself; on `triage` it may print `gh run cancel` for in-progress runs whose workflow declares `concurrency.cancel-in-progress: true`, except those matching `checks.never-cancel` ([configuration.md](configuration.md#checksnever-cancel--default-)).
+`checks.ignore` matches the raw check name (`CheckRun.name` or `StatusContext.context`), case-insensitively, and removes matches from the CI verdict. `checks.never-ignore` wins when it matches the workflow name or check name of any check in that Actions run: the run's checks stay visible and blocking. Shepherd never cancels runs itself; on `triage` it may print `gh run cancel` for in-progress runs whose workflow declares `concurrency.cancel-in-progress: true`, except those matching `checks.never-cancel` ([configuration.md](configuration.md#checksnever-cancel--default-)).
 
 `checks.never-ignore` does not bypass the event filter. A protected workflow triggered by `workflow_dispatch`, `push`, or another non-PR event counts toward readiness only if that event is in `checks.ci-trigger-events`.
 
@@ -79,9 +79,9 @@ When every check is filtered or skipped (for example a docs-only PR that trigger
 
 ### Unreported required checks
 
-A required status context with no check run and no status context is a different gap. The other checks can be green (`allPassed` stays true) and the missing names are not rollup rows. Shepherd loads the required contexts from the merge target. For a native stack that is the stack trunk (`stack.baseRefName`), whose rules GitHub applies to every layer, not the upper layer's parent branch. The newest check or status of a name counts: a later success supersedes an older cancelled run.
+A required status context with no check run and no status context is a different gap: the other checks can be green (`allPassed` stays true) and the missing names are not rollup rows. Shepherd loads the required contexts from the merge target; for a native stack that is the stack trunk (`stack.baseRefName`), whose rules GitHub applies to every layer, not the upper layer's parent branch. The newest check or status of a name counts: a later success supersedes an older cancelled run.
 
-Merged lower layers do not block this lookup when the lowest open PR still targets its merged parent's branch. One-PR checks verify that every lower layer merged, then compare the trunk with the lowest open layer's head from the validated stack order. Closed or unknown lower states cannot designate an open child as the bottom. Aggregate summaries reuse the trunk's rules from a retained trunk-based member (merged members included) or fetch the trunk ref directly. They never use the merged parent's rules.
+Merged lower layers do not block this lookup when the lowest open PR still targets its merged parent's branch. One-PR checks verify that every lower layer merged, then compare the trunk with the lowest open layer's head from the validated stack order; closed or unknown lower states cannot designate an open child as the bottom. Aggregate summaries reuse the trunk's rules from a retained trunk-based member (merged members included) or fetch the trunk ref directly, never the merged parent's rules.
 
 | Situation                                                                                      | Result                                                                                                                                                                                                                                                            |
 | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -91,7 +91,7 @@ Merged lower layers do not block this lookup when the lowest open PR still targe
 | Branch current, contexts still missing                                                         | Shepherd instructs the caller to close and reopen the PR once for that head (`gh pr close` then `gh pr reopen`) and to investigate why workflows did not start. Records head and context set in `ci-retrigger.json`; the marker does not verify the caller ran it |
 | Same head on the next tick, still missing                                                      | `ESCALATE` with `required-checks-unreported`                                                                                                                                                                                                                      |
 
-The instruction says no CI checks are running and names the required checks that have not passed. To decide "behind", a non-stack PR loads `baseRef.compare(headRef).behindBy` with the head commit OID, so a fork branch name is never resolved in the base repository. A native-stack layer compares the stack trunk against the bottom open layer's head. Both compares run only while a required check is unreported, even when `mergeStateStatus` is `BLOCKED` for another reason. They are cached in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/`, keyed on the live tip (`baseRef.target.oid` from `BatchPr`, or the trunk tip) and the head, so they rerun only when one moves. Once required checks have reported, being behind is not its own action.
+The instruction says no CI checks are running and names the required checks that have not passed. To decide "behind", a non-stack PR loads `baseRef.compare(headRef).behindBy` with the head commit OID, so a fork branch name is never resolved in the base repository; a native-stack layer compares the stack trunk against the bottom open layer's head. Both compares run only while a required check is unreported, even when `mergeStateStatus` is `BLOCKED` for another reason, and are cached in `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/`, keyed on the live tip (`baseRef.target.oid` from `BatchPr`, or the trunk tip) and the head, so they rerun only when one moves. Once required checks have reported, being behind is not its own action.
 
 Output, each field omitted when empty:
 
@@ -144,13 +144,13 @@ Ordinary failures use only the bounded evidence Shepherd includes. A later faile
 
 ### Pending deployments
 
-A run held on an environment protection rule reports as a check with status `WAITING`. The "approve and run" gate for fork or first-time-contributor workflows reports `ACTION_REQUIRED` instead, so a check's name and conclusion alone do not say which environment or reviewer it waits on. For each distinct run with a `WAITING` check or an `ACTION_REQUIRED` conclusion, Shepherd makes one conditional REST read of `GET /repos/{owner}/{repo}/actions/runs/{run_id}/pending_deployments` (an ETag-cached call, so an unchanged answer costs no quota, and the read shares the optional Actions-enrichment budget with job and log reads). It makes no request when no such check exists, and it uses REST in both transport modes because the endpoint has no GraphQL equivalent. A failed read, an exhausted budget, or an empty answer (the fork gate lists no environment) leaves the check as it was.
+A run held on an environment protection rule reports as a check with status `WAITING`; the "approve and run" gate for fork or first-time-contributor workflows reports `ACTION_REQUIRED`. Neither name nor conclusion says which environment or reviewer it waits on, so for each distinct run with a `WAITING` check or an `ACTION_REQUIRED` conclusion Shepherd makes one conditional REST read of `GET /repos/{owner}/{repo}/actions/runs/{run_id}/pending_deployments` (ETag-cached, so an unchanged answer costs no quota; it shares the optional Actions-enrichment budget with job and log reads). It makes no request when no such check exists, and uses REST in both transport modes because the endpoint has no GraphQL equivalent. A failed read, exhausted budget, or empty answer (the fork gate lists no environment) leaves the check as it was.
 
 Each listed environment is surfaced as raw `pendingDeployments[]` on the check: `environment`, `currentUserCanApprove` (GitHub's `current_user_can_approve`), `reviewers[]` (`type` `User` or `Team` and the login or team slug, omitted when none), and `waitTimerMinutes` (omitted when zero). Shepherd does not decide whether the viewer should approve. Markdown prints `pending deployment: environment …, required reviewers …, viewer can approve: yes|no` under the check on `[TRIAGE]` and `[ESCALATE]`, and as a `**pending deployment**` line on `[WAIT]`. See [actions.md](actions.md#failing-checks-and-reruns).
 
 ### Annotations
 
-The batch query probes `annotations(first: 1)`, so Shepherd paginates only check runs that have annotations. Bodies are loaded together, one `nodes(ids:)` request per 20 uncached check runs, then the single-check query only when `hasNextPage` is set (costs in [graphql.md](graphql.md#check-run-annotation-bodies)). `message` and `rawDetails` are capped independently before text and JSON output. Each annotation is surfaced once per PR; there is no resolve or minimize mutation.
+The batch query probes `annotations(first: 1)`, so Shepherd paginates only check runs that have annotations. Bodies load together, one `nodes(ids:)` request per 20 uncached check runs, then the single-check query only when `hasNextPage` is set (costs: [graphql.md](graphql.md#check-run-annotation-bodies)). `message` and `rawDetails` are capped independently before output. Each annotation is surfaced once per PR; there is no resolve or minimize mutation.
 
 `check` keeps successful-check annotations as raw context and marks them seen. `iterate` treats a successful parent conclusion as authoritative regardless of bucket and does not turn those annotations into `TRIAGE`.
 

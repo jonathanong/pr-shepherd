@@ -2,21 +2,7 @@
 
 [← docs index](README.md) | [README](../README.md)
 
-What Shepherd does, the workflow it assumes, and what it does not do. Benefits and evidence: [README](../README.md#benefits). Edge cases: [handled-cases.md](handled-cases.md).
-
-## Context gathered
-
-| Area         | What one tick surfaces                                                                                                                                                   | Spec                                                                     |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| Review items | Inline threads (full transcript), PR comments, `COMMENTED` summaries, `APPROVED` and `CHANGES_REQUESTED` reviews                                                         | [comments.md](comments.md)                                               |
-| Visibility   | First-look outdated, resolved, and minimized items; edited bodies re-surface                                                                                             | [comments.md](comments.md#first-look-items-comment-visibility-invariant) |
-| Provenance   | Raw `authorAssociation`, true-only `viewerDidAuthor`, and `authorType`. No trust label is derived                                                                        | [comments.md](comments.md#trust-and-author-provenance)                   |
-| CI           | Checks classified passed / failing / in progress / skipped / filtered / ignored / superseded, with `jobName`, `failedStep`, and a log excerpt when triage can fetch them | [checks.md](checks.md)                                                   |
-| Mergeability | `CLEAN`, `BEHIND`, `CONFLICTS`, `BLOCKED`, `UNSTABLE`, `DRAFT`, `UNKNOWN`, plus the merge requirements that apply                                                        | [merge-status.md](merge-status.md)                                       |
-| Stacks       | Native-stack topology, ancestry, ownership, and READY receipts for every layer                                                                                           | [cli-usage.md](cli-usage.md)                                             |
-| Transport    | GraphQL by default; REST in cloud sessions or after a recognized GraphQL failure. Fields REST lacks stay unknown                                                         | [github-api.md](github-api.md), [rest.md](rest.md)                       |
-
-Log excerpts are omitted for `CANCELLED` and `STARTUP_FAILURE`. The full field inventory is in [context.md](context.md).
+What Shepherd does, the workflow it assumes, and what it does not do. Per-tick context (reviews, CI, mergeability, stacks, transport): [context.md](context.md). Benefits and evidence: [README](../README.md#benefits). Edge cases: [handled-cases.md](handled-cases.md).
 
 ## Actions emitted
 
@@ -32,18 +18,6 @@ Log excerpts are omitted for `CANCELLED` and `STARTUP_FAILURE`. The full field i
 | Exit codes                     | `0` and `10`–`16` for PR state; `64`–`78` for command and GitHub failures                                                                                                                                     | [exit-codes.md](exit-codes.md)                               |
 
 Interfaces: the MCP tools `iterate`, `stack`, `apply`, `suggest`, `extract_journal`, `get_journal`, and `playbook` ([mcp.md](mcp.md)), and the CLI `pr-shepherd [PR]` and `pr-shepherd iterate [PR]` ([cli-usage.md](cli-usage.md)).
-
-## Configuration
-
-| Setting                                                                           | Spec                                                                                   |
-| --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `.pr-shepherdrc.yml`, cascaded from cwd to `$HOME`                                | [configuration.md](configuration.md)                                                   |
-| Bundled vendor-noise rules (`classify.standard`)                                  | [configuration.md](configuration.md#classifystandard--default-)                        |
-| Custom rules in `.pr-shepherd/classification/`                                    | [actions.md](actions.md#classification-rules), [examples](../examples/classification/) |
-| Auth: `GH_TOKEN`, `GITHUB_TOKEN`, `gh auth token`, `GITHUB_PERSONAL_ACCESS_TOKEN` | [authentication.md](authentication.md)                                                 |
-| GitHub App installation tokens (`~/.pr-shepherd/github-apps.yml`)                 | [github-app.md](github-app.md)                                                         |
-| Event-driven poll waits (`events.source: hook-harness`)                           | [hook-harness.md](hook-harness.md)                                                     |
-| `PR_SHEPHERD_STATE_DIR`, `PR_SHEPHERD_LOG_DISABLED`, `PR_SHEPHERD_LOG_MAX_BODY`   | [configuration.md](configuration.md#environment-variables)                             |
 
 ## Workflow assumptions
 

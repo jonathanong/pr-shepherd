@@ -2,7 +2,7 @@
 
 [← README](../README.md) | [context.md](context.md)
 
-Which review threads, PR comments, and reviews Shepherd surfaces, how the seen-marker gate keeps each one visible at least once, and the mutations `apply review` sends. For readers of iterate's review sections and contributors changing review routing. Thread reply/resolve routing by author class is in [conversation-resolution.md](conversation-resolution.md).
+Which review threads, PR comments, and reviews Shepherd surfaces, how the seen-marker gate keeps each one visible at least once, and the mutations `apply review` sends. Reply/resolve routing by author class: [conversation-resolution.md](conversation-resolution.md).
 
 ## Review threads vs PR comments
 
@@ -56,13 +56,9 @@ Shepherd surfaces raw provenance instead of a trusted/untrusted label:
 
 These are provenance, not an authentication or safety verdict, and appear when GitHub returns them. Text appends them to the author label, for example `@alice · MEMBER · viewer-authored` or `@ci[bot] · Bot` (the default `User` type is unlabeled). In transcripts every comment carries its own fields, so a maintainer reply does not lend provenance to an outsider's comment. Only `viewerDidAuthor: true` changes routing: it grants the narrow viewer reply-and-resolve exception in [conversation-resolution.md](conversation-resolution.md#current-mutation-matrix).
 
-## `isOutdated` flag
+## Outdated threads
 
-GitHub sets `isOutdated: true` when a newer push supersedes the commit a thread was attached to. An unresolved outdated thread can still block a branch that requires conversation resolution, so Shepherd routes it like any other unresolved thread and never auto-resolves it in a sweep.
-
-## Outdated-thread path
-
-`src/github/batch.mts` fetches outdated threads. They surface under `report.threads.resolutionOnly` until GitHub reports `isResolved: true`. Seen markers suppress repeated body display but never remove an unresolved outdated or minimized thread from mutation routing. Reply and resolve use the thread ID, so they work after GitHub clears the obsolete path or line. Routing per author class is in [conversation-resolution.md](conversation-resolution.md#current-mutation-matrix); other-human resolve follows [`iterate.resolve-other-human-threads`](configuration.md#iterateresolve-other-human-threads--default-none).
+GitHub sets `isOutdated: true` when a newer push supersedes the commit a thread was attached to. An unresolved outdated thread can still block a branch that requires conversation resolution, so Shepherd routes it like any other unresolved thread and never auto-resolves it in a sweep. `src/github/batch.mts` fetches outdated threads; they surface under `report.threads.resolutionOnly` until GitHub reports `isResolved: true`. Seen markers suppress repeated body display but never remove an unresolved outdated or minimized thread from mutation routing. Reply and resolve use the thread ID, so they work after GitHub clears the obsolete path or line. Routing per author class: [conversation-resolution.md](conversation-resolution.md#current-mutation-matrix); other-human resolve follows [`iterate.resolve-other-human-threads`](configuration.md#iterateresolve-other-human-threads--default-none).
 
 ## Actionable triage is LLM-side
 
