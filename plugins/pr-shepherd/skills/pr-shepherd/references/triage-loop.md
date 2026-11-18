@@ -6,4 +6,4 @@ Apply when a step says `Playbook: "Triage loop"`. It replaces the commit and pus
 - Commit and push. If you changed any files (code, docs, or config), commit them and push to the PR head branch. If you did not, do not commit. The repository's pre-push hooks and `AGENTS.md` own lint, typecheck, and format, and its conventions own rebase style and push flags.
 - The `apply review` step stays inline because it needs `$CHANGE_MESSAGE` substitution. Push first: its `--require-sha HEAD` must read the pushed SHA.
 - `[TRIAGE]` is non-terminal. After the last step, iterate again immediately with the same options. Only `[ESCALATE]` hands work to a human, and `[CANCEL]` ends polling.
-- Playbooks named by other steps (`Playbook: "<name>"`) ship with the package. Without the skill, print one with `pr-shepherd playbook "<name>"`, or the MCP `playbook` tool.
+- Playbooks named by other steps (`Playbook: "<name>"`) ship with the package. Without the skill, print one with `pr-shepherd playbook "<name>"`.

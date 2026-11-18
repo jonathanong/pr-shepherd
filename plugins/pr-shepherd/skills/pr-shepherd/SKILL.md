@@ -1,9 +1,9 @@
 ---
 name: pr-shepherd
-description: 'Create, iterate, watch, or merge a GitHub pull request with pr-shepherd (MCP or CLI). Use for "make a PR and use pr-shepherd", "iterate PR #123", "tell me when #123 merges", and any PR status, CI, merge queue, or ejection question, instead of gh or custom polling scripts.'
+description: 'Create, iterate, watch, or merge a GitHub pull request with pr-shepherd. Use for "make a PR and use pr-shepherd", "iterate PR #123", "tell me when #123 merges", and any PR status, CI, merge queue, or ejection question, instead of gh or custom polling scripts.'
 user-invocable: true
 argument-hint: "[PR | stack PR...] [--merge|--merge-ready|--merge-through PR]"
-allowed-tools: mcp__plugin_pr-shepherd_pr-shepherd, Bash(npx pr-shepherd:*), Bash(pnpm exec pr-shepherd:*), Bash(pnpm dlx pr-shepherd:*), Bash(bunx pr-shepherd:*), Bash(pr-shepherd:*)
+allowed-tools: Bash(npx pr-shepherd:*), Bash(pnpm exec pr-shepherd:*), Bash(pnpm dlx pr-shepherd:*), Bash(bunx pr-shepherd:*), Bash(pr-shepherd:*)
 ---
 
 # pr-shepherd
@@ -18,7 +18,6 @@ allowed-tools: mcp__plugin_pr-shepherd_pr-shepherd, Bash(npx pr-shepherd:*), Bas
 - A merge flag, or a request to merge, land, enqueue, or requeue after an ejection, allows the printed merge/enqueue/dequeue commands. Run Shepherd first: never merge, enqueue or retarget with `gh` or a GitHub MCP tool before Shepherd prints that step. Run them without asking again; escalate only when the host requires it.
 - Run `pr-shepherd [PR ...]` or `pr-shepherd stack PR...`, plus any merge flag, with `--until-terminal` in the background only if its exit wakes you, else in the foreground ([Waiting](references/waiting.md)). Requeue commands print only under `--merge`. PRs with the same flags share one command; if the set changes, stop and rerun with the new list. Do not run `pr-shepherd iterate`, except once for a one-time status question.
 - Print the full result and follow every `## Instructions` step with every ID it lists. When a step says `Playbook: "<name>"`, read that playbook once.
-- CLI unavailable but MCP `iterate` exists: read the "MCP fallback" playbook.
 
 ## Recurrence
 
