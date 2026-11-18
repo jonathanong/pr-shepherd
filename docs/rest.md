@@ -2,9 +2,7 @@
 
 [← README](../README.md) | [github-api.md](github-api.md) | [context.md](context.md)
 
-How the REST transport reads a PR: what a snapshot reads, how conditional reads keep unchanged ticks free, which fields REST cannot supply, and which operations it cannot perform. For contributors and for anyone running Shepherd in a Claude Code cloud session, where REST is the default.
-
-Transport selection, metering, and backoff are in [github-api.md](github-api.md). REST calls made in GraphQL mode are in [graphql.md](graphql.md#rest-calls-in-graphql-mode). Request counts are in [rest-usage.md](rest-usage.md); handoffs in [escalations.md](escalations.md#transport-unsupported).
+How the REST transport reads a PR: snapshot reads, conditional reads, fields and operations REST cannot supply. REST is the default in Claude Code cloud sessions. Transport selection, metering, and backoff: [github-api.md](github-api.md). REST calls made in GraphQL mode: [graphql.md](graphql.md#rest-calls-in-graphql-mode). Request counts: [rest-usage.md](rest-usage.md). Handoffs: [escalations.md](escalations.md#transport-unsupported).
 
 ## Snapshot coverage
 
@@ -103,6 +101,4 @@ Summaries and topology reads keep an unavailable viewer as unknown, including wi
 - Current-branch PR discovery matches the head branch name across owners, including a fork branch when `origin` is the base repository.
 - Journal reads keep the PR identity needed to finish a body update through REST if GraphQL quota runs out between read and write.
 
-## Rate limits
-
-REST counts against `core` ([GitHub metering](github-api.md#github-metering)); a 304 is free. Branch-policy throttling and session refusals propagate rather than reading as unavailable policy ([rate-limit backoff](github-api.md#rate-limit-backoff)).
+Branch-policy throttling and session refusals propagate rather than reading as unavailable policy ([rate-limit backoff](github-api.md#rate-limit-backoff)).

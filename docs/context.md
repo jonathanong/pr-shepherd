@@ -2,9 +2,7 @@
 
 [← docs index](README.md) | [README](../README.md)
 
-This is the context counterpart to [actions.md](actions.md). One `iterate` tick (or one poll that ends on an iterate result) surfaces the fields below so the agent does not need a second GitHub fan-out to reconstruct PR state.
-
-How the data is fetched: [github-api.md](github-api.md) ([graphql.md](graphql.md), [rest.md](rest.md)). How it becomes an action: [iterate-flow.md](iterate-flow.md).
+The context counterpart to [actions.md](actions.md): the fields one `iterate` tick surfaces so the agent needs no second GitHub fan-out. Fetching: [github-api.md](github-api.md). Turning it into an action: [iterate-flow.md](iterate-flow.md).
 
 Debounce ticks in the poll dispatcher (`pr-shepherd [PR] --debounce`, default: `poll.debounce-seconds`; built-in 1m) run `iterate` with `persistSeen: false`. Seen markers and first-look suppression are deferred until the post-window tick, so late comments are not marked seen before the agent-facing result.
 
@@ -49,13 +47,7 @@ Do not infer “must wait for an approval” from `reviewDecision`. `REVIEW_REQU
 
 ## Review context
 
-| Surface                                                                                                    | Spec                                                                     |
-| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Inline review threads (full transcript, path, line, suggestion fence when present)                         | [comments.md](comments.md)                                               |
-| Top-level PR comments                                                                                      | [comments.md](comments.md)                                               |
-| `COMMENTED` review summaries, `APPROVED` reviews, `CHANGES_REQUESTED` reviews                              | [comments.md](comments.md)                                               |
-| First-look / edited / outdated / resolved / minimized items (seen-marker gate)                             | [comments.md](comments.md#first-look-items-comment-visibility-invariant) |
-| `authorType` (`User` / `Bot` / `Unknown`), raw GitHub `authorAssociation`, and true-only `viewerDidAuthor` | [comments.md](comments.md#trust-and-author-provenance)                   |
+Inline review threads (full transcript, path, line, suggestion fence), top-level PR comments, and `COMMENTED`, `APPROVED`, and `CHANGES_REQUESTED` reviews are specified in [comments.md](comments.md). The first-look / edited / outdated / resolved / minimized gate is the [seen-marker invariant](comments.md#first-look-items-comment-visibility-invariant). Each item carries `authorType` (`User` / `Bot` / `Unknown`), raw `authorAssociation`, and true-only `viewerDidAuthor` ([trust and provenance](comments.md#trust-and-author-provenance)).
 
 Thread handling is a matrix of author and thread state ([conversation-resolution.md](conversation-resolution.md)). In short:
 
@@ -65,12 +57,7 @@ Thread handling is a matrix of author and thread state ([conversation-resolution
 
 ## CI context
 
-| Surface                                                                                                                 | Spec                                                                                |
-| ----------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Check runs and status contexts, classified (passed / failing / in_progress / skipped / filtered / ignored / superseded) | [checks.md](checks.md)                                                              |
-| Failed job name, failed step, bounded log excerpt                                                                       | [checks.md](checks.md) — omitted for `CANCELLED` and `STARTUP_FAILURE`              |
-| Inline annotations on completed check runs (once per PR)                                                                | [checks.md](checks.md)                                                              |
-| Startup-failure CheckSuites, with REST only when that page is missing or truncated                                      | [graphql.md](graphql.md#startup-failure-checksuites-graphql--actions-rest-fallback) |
+Specified in [checks.md](checks.md): check runs and status contexts classified (passed / failing / in_progress / skipped / filtered / ignored / superseded); failed job name, failed step, and bounded log excerpt (omitted for `CANCELLED` and `STARTUP_FAILURE`); inline annotations on completed check runs (once per PR). Startup-failure CheckSuites use REST only when that page is missing or truncated ([graphql.md](graphql.md#startup-failure-checksuites-graphql--actions-rest-fallback)).
 
 ## Mutations the agent is expected to run
 

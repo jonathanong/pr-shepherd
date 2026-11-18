@@ -1,8 +1,6 @@
 # pr-shepherd reference documentation
 
-Shepherd gathers a PR's full state from GitHub and returns one deterministic action for the calling agent. This index groups the docs by the outcome they support. These files are the canonical spec.
-
-The [README](../README.md) and the site, [jongleberry.com/pr-shepherd](https://jongleberry.com/pr-shepherd/), are written for people evaluating or installing Shepherd. These docs are written for agents and contributors: exact contracts, predicates, and numbers. Both link back here for every claim they make.
+Canonical spec for Shepherd, grouped by outcome. The [README](../README.md) and the [site](https://jongleberry.com/pr-shepherd/) are for people evaluating or installing it; these docs are for agents and contributors: exact contracts, predicates, and numbers.
 
 ## Overview
 

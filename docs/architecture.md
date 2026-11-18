@@ -6,13 +6,11 @@ How `src/` is organized, which way dependencies point, and where new code goes. 
 
 ## Design rationale
 
-Modules split along two jobs: **context gather** (`github`, `checks`, `comments`, `merge-status`) and **action emit** (`commands/iterate`, `commands/poll`, CLI formatters, MCP tools). I/O adapters (CLI parser, MCP stdio, `api.mts`) are thin layers over those.
+Modules split along two jobs: **context gather** (`github`, `checks`, `comments`, `merge-status`) and **action emit** (`commands/iterate`, `commands/poll`, CLI formatters, MCP tools). The CLI parser, MCP stdio server, and `api.mts` are thin adapters over those.
 
-| Principle                 | What it means                                                                                                                                                                                                        |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **One local MCP surface** | The stdio server is an opt-in agent integration that hosts register themselves; the plugins drive the CLI instead. It shares command implementations and GitHub token resolution with the CLI. See [mcp.md](mcp.md). |
-| **Skills over subagents** | Skill prompts inject into the main conversation instead of spawning a subagent that reloads `AGENTS.md` every turn, keeping cost and latency low.                                                                    |
-| **Safe to interrupt**     | Durable state lives in the PR on GitHub. The iterate loop self-terminates when the PR is merged, closed, or settles after ready-delay. Local state in `$PR_SHEPHERD_STATE_DIR` can be deleted without data loss.     |
+- **One local MCP surface.** The stdio server is an opt-in integration that hosts register themselves; the plugins drive the CLI. It shares command implementations and token resolution with the CLI ([mcp.md](mcp.md)).
+- **Skills over subagents.** Skill prompts inject into the main conversation instead of spawning a subagent that reloads `AGENTS.md` every turn.
+- **Safe to interrupt.** Durable state lives in the PR on GitHub; the iterate loop self-terminates when the PR is merged, closed, or settled. Local state in `$PR_SHEPHERD_STATE_DIR` can be deleted without data loss.
 
 ## Module map
 
@@ -44,63 +42,24 @@ flowchart LR
 
 ```
 src/
-├── index.mts              # bin entrypoint — thin shim that imports cli-parser
-├── api.mts                # createPrShepherd programmatic API
-├── mcp-stdio.mts          # pr-shepherd-mcp binary entry
-├── cli-parser.mts         # argv dispatch
-├── types.mts              # barrel for types/*
-├── execution-context.mts  # caller-scoped working directory (API/MCP)
-├── pr-reference.mts       # API PR reference parsing (number, URL, owner/repo#N)
-├── quota-budgets.mts      # quota warning bands across GraphQL and REST core
-├── quota-warning.mts      # quotaWarning from sampled usage
-├── exit-codes.mts         # EXIT map — see docs/exit-codes.md
-├── config/schema.mts      # config keys, defaults, validation (zod)
-├── config/                # cascading RC loader (load.mts), renames.mts
-│
-├── cli/                   # argument parsing, help pages, Markdown formatters
-├── mcp/
-│   ├── server.mts         # iterate, stack, apply, suggest, extract_journal,
-│   │                      #   get_journal, playbook tools
-│   └── index.mts          # createPrShepherdMcpServer / runPrShepherdMcpStdio
-│
-├── commands/              # one file (or dir) per subcommand
-│   ├── check.mts          # context sweep (fetch → classify → report)
-│   ├── check-status.mts   # ShepherdStatus from a report
-│   ├── iterate/           # action dispatch (runIterate in index.mts)
-│   ├── poll.mts           # bounded WAIT loop + TRIAGE debounce
-│   ├── poll-summary.mts   # multi-PR / stack aggregate summary
-│   ├── stack-*.mts        # stack work, handoffs, drain, stall
-│   ├── playbook.mts       # bundled playbook lookup
-│   ├── tick.mts           # nextCheck and tick instructions; single-tick.mts, next-check.mts
-│   ├── ready-delay.mts    # ready-since.txt
-│   ├── resolve-mutate.mts # apply review mutations
-│   ├── apply-merge.mts    # REST apply merge
-│   ├── journal/           # PR-body journal
-│   ├── suggestion-patches.mts # suggest
-│   ├── mark-files-as-viewed.mts
-│   └── clean.mts
-│
-├── github/                # GraphQL batch + REST reads/mutations
-│   ├── transport.mts      # auto / graphql / rest selection
-│   ├── graphql-http.mts   # graphqlWithRateLimit
-│   ├── batch.mts          # first-page batch + slim extra-page follow-ups
-│   ├── batch-page.mts     # combined @include pagination
-│   ├── rest-*.mts         # REST transport reads and mutations
-│   ├── queries.mts        # loads gql/*.gql
-│   └── gql/               # batch-pr.gql, batch-pr-page.gql, suggestion-threads.gql, …
-├── events/                # hook-harness relay client and event waiter (see hook-harness.md)
-├── checks/                # classify, triage, startup-failures, superseded
-├── comments/              # resolve / minimize / dismiss mutations
-├── merge-status/          # deriveMergeStatus + deriveMergeRequirements
-├── classify/              # .pr-shepherd/classification/ loader, bundled standard rules
-├── journal/               # Shepherd Journal Markdown parsing
-├── log/                   # per-worktree debug log
-├── reporters/             # agent-facing projections of report data
-├── state/                 # seen markers, stall, fix-attempts, ready receipts
-├── threads/               # thread transcripts
-├── suggestions/           # suggestion fence parse + unified diff
-├── util/
-└── types/
+├── index.mts, cli-parser.mts   # bin entrypoint and argv dispatch
+├── api.mts                     # createPrShepherd programmatic API
+├── mcp-stdio.mts, mcp/         # pr-shepherd-mcp: iterate, stack, apply, suggest,
+│                               #   extract_journal, get_journal, playbook tools
+├── cli/                        # argument parsing, help pages, Markdown formatters
+├── commands/                   # one file or dir per subcommand
+│   ├── check.mts               # context sweep; check-status.mts derives ShepherdStatus
+│   ├── iterate/                # action dispatch (runIterate in index.mts)
+│   ├── poll.mts                # bounded WAIT loop + TRIAGE debounce; poll-summary.mts, stack-*.mts
+│   ├── tick.mts                # nextCheck and tick instructions
+│   └── apply-merge.mts, resolve-mutate.mts, journal/, playbook.mts, clean.mts, ...
+├── github/                     # transport.mts (auto/graphql/rest), graphql-http.mts, batch*.mts,
+│   │                           #   rest-*.mts, queries.mts, gql/*.gql
+├── checks/ comments/ merge-status/   # classify/triage, mutations, deriveMergeStatus
+├── config/                     # schema.mts (zod keys and defaults), cascading RC loader
+├── classify/ journal/ log/ reporters/ state/ threads/ suggestions/ events/ util/ types/
+├── quota-budgets.mts, quota-warning.mts, pr-reference.mts, execution-context.mts
+└── exit-codes.mts              # EXIT map, see exit-codes.md
 ```
 
 ## Dependency direction rule

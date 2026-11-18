@@ -33,9 +33,7 @@ Only a skill's name and description are always in context. The `SKILL.md` body l
 | Create a PR                            |    193 |
 | Every reference as well                |  4,564 |
 
-- A `TRIAGE` tick that names CI triage loads about 1,476 skill tokens (856 + 620) once the skill is invoked.
-- A merge-queue ejection tick adds 561.
-- Review mutations and the stack merge command are printed instructions and load no separate playbook. Journal updates use the explicit `apply journal` command and remain optional.
+A `TRIAGE` tick that names CI triage loads about 1,476 skill tokens (856 + 620); a merge-queue ejection tick adds 561. Review mutations and the stack merge command are printed instructions and load no playbook.
 
 ## One iterate result
 
