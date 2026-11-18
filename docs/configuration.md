@@ -34,14 +34,7 @@ Every non-empty file starts with `version: 1` (see [Version](#version)). Every o
 
 Config follows GitHub Actions conventions: keys are kebab-case, and a duration key carries its unit in its name (`interval-seconds`, `ready-delay-minutes`; none takes milliseconds). Validation is strict, so a bad config never falls back silently.
 
-Shepherd validates config before it makes any GitHub call. Any of the following exits with code `78` (`EX_CONFIG`):
-
-- a missing or unsupported `version`
-- an unknown key
-- a value of the wrong type or out of range
-- an invalid regex
-- a YAML syntax error
-- a top level that is not a mapping
+Shepherd validates config before it makes any GitHub call. A missing or unsupported `version`, an unknown key, a wrong-typed or out-of-range value, an invalid regex, a YAML syntax error, or a non-mapping top level exits with code `78` (`EX_CONFIG`).
 
 The message names the file and the key path of every problem:
 
@@ -239,9 +232,7 @@ The value must be a non-empty list of non-empty strings. Shepherd shell-quotes e
 
 Logins Shepherd treats as bot authors. It also detects bots when GitHub reports `authorType: Bot` or the login contains `[bot]`.
 
-- Matching is case-insensitive.
-- A trailing `[bot]` is equivalent to the bare login.
-- The default lists common code-review bots. See `src/config/schema.mts`.
+Matching is case-insensitive, and a trailing `[bot]` is equivalent to the bare login. The default lists common code-review bots (see `src/config/schema.mts`).
 
 | Thread author                | Returned each tick?                                                                                                       |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
@@ -255,14 +246,7 @@ Logins Shepherd treats as bot authors. It also detects bots when GitHub reports 
 
 Case-insensitive globs over Shepherd's normalized check name. That name is `CheckRun.name` or `StatusContext.context`, not the workflow display name.
 
-Ignored checks do not affect:
-
-- readiness;
-- detailed check summaries;
-- triage;
-- stall detection.
-
-Their names stay in the `ignoredNames` JSON field and in the `**ignored**` text rollup.
+Ignored checks do not affect readiness, check summaries, triage, or stall detection. Their names stay in the `ignoredNames` JSON field and the `**ignored**` text rollup.
 
 ```yaml
 checks:
@@ -305,14 +289,7 @@ Merge-queue commits are a separate source. Their `merge_group` checks are includ
 
 ### `checks.ignore-log-lines` — default `[]`
 
-Regex source strings matched against each raw CI log line. Shepherd applies them after it has cleaned and isolated the log:
-
-1. Strip ANSI codes and timestamps.
-2. Isolate the first failed step.
-3. Drop the run-command group and post-step cleanup.
-4. Strip any remaining group markers.
-
-Matching lines are dropped from `## Failing checks` excerpts, so they are also unavailable for check-annotation dedup. Shepherd ships no built-in patterns.
+Regex source strings matched against each raw CI log line after Shepherd has stripped ANSI codes and timestamps, isolated the first failed step, and dropped the run-command group, post-step cleanup, and remaining group markers. Matching lines are dropped from `## Failing checks` excerpts, so they are also unavailable for check-annotation dedup. Shepherd ships no built-in patterns.
 
 ```yaml
 checks:
@@ -330,21 +307,13 @@ An invalid regex is a validation error (see [Validation](#validation)).
 
 The number of caller-visible `triage` results that may return the same thread body while it stays unresolved and unchanged. It must be a positive integer.
 
-- Each of those results repeats the pending review commands.
-- The next unchanged tick escalates with `triage-thrash`, still carrying those commands.
-- Internal polling and debounce ticks do not count, and neither do threads suppressed by seen markers.
-- The counter is keyed by the thread transcript hash, so an edit or a reply resets it.
+Each of those results repeats the pending review commands; the next unchanged tick escalates with `triage-thrash`, still carrying them. Internal polling and debounce ticks and threads suppressed by seen markers do not count. The counter is keyed by the thread transcript hash, so an edit or a reply resets it.
 
 ### `iterate.stall-timeout-minutes` — default `60`
 
 How many minutes the loop may repeat without material progress before escalating with `stall-timeout`. `0` disables stall detection.
 
-Progress means a change to any of these, and any change resets the timer:
-
-- the HEAD SHA;
-- the failing check names;
-- the actionable thread, comment, or review IDs;
-- the review-summary minimize bucket.
+Progress is a change to the HEAD SHA, the failing check names, the actionable thread, comment, or review IDs, or the review-summary minimize bucket. Any change resets the timer.
 
 The same threshold covers CI that never starts. That means relevant queued, requested, or waiting check runs, or pending external status contexts, that have no start timestamp and whose latest activity is older than the threshold. Latest activity is `updatedAtUnix` when GitHub exposes it, otherwise `createdAtUnix`.
 
@@ -356,10 +325,7 @@ A `stack` selection whose layers can only wait uses this threshold for its own t
 
 After the PR first reaches a clean READY state (checks green, no Shepherd-visible work, no blocking bot review pending), Shepherd keeps looping for this many minutes before cancelling, or before merging with `--merge`, so reviewers and blocking bots can act.
 
-- The countdown restarts if the PR leaves that state or its head changes.
-- A newly surfaced hidden PR comment does not reset it.
-- `0` cancels or merges on the first READY tick without a countdown.
-- `--ready-delay` overrides the key for one invocation.
+The countdown restarts if the PR leaves that state or its head changes; a newly surfaced hidden PR comment does not reset it. `0` cancels or merges on the first READY tick. `--ready-delay` overrides the key for one invocation.
 
 For the lifecycle, see [iterate-flow.md](iterate-flow.md#2-ready-delay).
 
@@ -380,13 +346,7 @@ Non-human `COMMENTED` review summaries are minimized independently of this key. 
 
 ### `iterate.minimize-comments` — default `"bots"`
 
-Decides which non-human authors' items go into `--minimize-comment-ids`. Those items are:
-
-- PR comments that can be minimized;
-- `COMMENTED` review summaries;
-- approvals, when `iterate.minimize-approvals` is on.
-
-A human is an `authorType: User` whose login does not contain `[bot]`. Humans are never minimized.
+Decides which non-human authors' items go into `--minimize-comment-ids`: minimizable PR comments, `COMMENTED` review summaries, and approvals when `iterate.minimize-approvals` is on. A human is an `authorType: User` whose login does not contain `[bot]`; humans are never minimized.
 
 | Value              | Minimizes                        |
 | ------------------ | -------------------------------- |
@@ -479,19 +439,11 @@ poll:
 
 How it behaves:
 
-- Shepherd reads the authoritative GraphQL and REST core response headers. It makes no extra rate-limit request.
-- When a band is crossed, the next result the agent sees that is not terminal carries the raw quota state and continuation guidance.
-  - Bounded CLI guidance uses a timeout twice the recommended interval.
-  - MCP and single-tick callers are told how long to wait.
-- The poll dispatcher (`pr-shepherd [PR]`, `--until-terminal`, and aggregate `stack` / multi-PR polls) sleeps the slower of the effective interval and the resolved band interval on every normal wait, even after the one-time warning.
-  - The effective interval is `--interval` when set. Otherwise it is `poll.interval-seconds` for one PR, or `poll.interval-seconds × poll.stack-interval-factor` for a stack or multi-PR poll.
-  - The active band is the crossed entry with the lowest `remaining-percent`.
-  - A slower explicit interval is kept, in both the sleep and the instructions.
-  - With built-in defaults, a stack sleeps 120s until a band is slower.
+- Shepherd reads the authoritative GraphQL and REST core response headers and makes no extra rate-limit request.
+- When a band is crossed, the next non-terminal result carries the raw quota state and continuation guidance: bounded CLI guidance uses a timeout twice the recommended interval, and MCP and single-tick callers are told how long to wait.
+- The poll dispatcher (`pr-shepherd [PR]`, `--until-terminal`, and aggregate `stack` / multi-PR polls) sleeps the slower of the effective interval and the resolved band interval on every normal wait, even after the one-time warning. The effective interval is `--interval` when set, otherwise `poll.interval-seconds` (one PR) or `poll.interval-seconds × poll.stack-interval-factor` (stack or multi-PR; 120s with defaults). The active band is the crossed entry with the lowest `remaining-percent`. A slower explicit interval is kept, in both the sleep and the instructions.
 - A debounce wait after `TRIAGE`, or a stack `SHEPHERD` debounce wait, uses the remaining debounce window and is not adjusted for bands.
-- Each band warns once per worktree and per quota window.
-  - A new window starts when GitHub's used count falls, the remaining count rises, or the reset timestamp advances after the prior deadline has passed. An earlier adjustment to the reset time does not re-arm the warning.
-  - If the first response is already below several bands, only the lowest one warns. The higher ones are recorded as crossed.
+- Each band warns once per worktree and per quota window. A new window starts when GitHub's used count falls, the remaining count rises, or the reset timestamp advances after the prior deadline has passed; an earlier adjustment to the reset time does not re-arm the warning. If the first response is already below several bands, only the lowest warns and the higher ones are recorded as crossed.
 
 On rate limits, `--until-terminal` keeps polling through an exhausted primary limit until the reset time plus a short margin, honors an explicit `Retry-After` in full, and exits 75 only after repeated attempts that do not move the reset time. A bounded poll exits 75 on the first rate-limit error. See [github-api.md](github-api.md#quota-warnings-and-cadence).
 
@@ -511,12 +463,7 @@ The number of attempts before Shepherd gives up and throws. At the default inter
 
 ### `mark-ready.auto` — default `true`
 
-When `true`, Shepherd converts a draft PR to ready for review once all of these hold:
-
-- checks pass;
-- no Shepherd-visible work remains;
-- no configured blocking review is in progress;
-- the ready-delay has not elapsed. After it elapses, the loop emits `cancel`.
+When `true`, Shepherd converts a draft PR to ready for review once checks pass, no Shepherd-visible work remains, no configured blocking review is in progress, and the ready-delay has not elapsed (after it elapses, the loop emits `cancel`).
 
 When disabled, a clean draft stays a draft and ends its one-PR session with `CANCEL` (`auto-mark-ready-disabled`, exit 0), with no ready-delay countdown or stall guard. Pending CI, bot review, and other actionable work still runs first. A `stack` command continues independent work and eligible ready-prefix merges, then returns `CANCEL` when only clean disabled drafts remain; it never asks the agent to promote them. See [actions.md](actions.md).
 
@@ -532,13 +479,7 @@ Nothing blocks by default. List review bots whose reviews must finish first, suc
 
 `merge.command-args` is appended only to the ordinary auto or direct `gh pr merge` commands that `--merge` emits. Queue commands omit every configured option, because the queue controls the method and rejects branch deletion.
 
-`merge.command-args` rejects these options:
-
-- the PR selector and `--repo`/`-R`;
-- `--auto`/`--disable-auto` and `--match-head-commit`;
-- `--admin`;
-- `--help`/`-h`;
-- `--body-file`/`-F`, including values attached to the short option.
+`merge.command-args` rejects the PR selector, `--repo`/`-R`, `--auto`/`--disable-auto`, `--match-head-commit`, `--admin`, `--help`/`-h`, and `--body-file`/`-F` (including values attached to the short option).
 
 Select at most one of `--merge`/`-m`, `--squash`/`-s`, or `--rebase`/`-r`. Shepherd also recognizes boolean assignments such as `--squash=true`, and safe short bundles such as `-sd`. If `merge.method` is also set, both must name the same method.
 
