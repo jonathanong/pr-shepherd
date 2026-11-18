@@ -34,6 +34,16 @@ async function paths(context: ReplyContext, id: string, message: string): Promis
   );
 }
 
+function uncertainMessage(undecided: { id: string; command: string }[]): string {
+  return (
+    `Previous GraphQL reply outcome is uncertain for ${undecided.length} thread(s): ${undecided.map((item) => item.id).join(", ")}; no duplicate reply was sent.\n` +
+    "1. Inspect each complete thread transcript and verify whether the previous reply was delivered. If it was, rerun the same generated command with `--adopt-existing-replies`.\n" +
+    "2. For each thread you verified was not delivered, with no request still in flight, clear only that thread's markers:\n" +
+    undecided.map((item) => `   ${item.command}`).join("\n") +
+    "\n3. Rerun the original reply command; do not clear all PR state or change the disposition to bypass this check."
+  );
+}
+
 export async function assertReplyOutcomeKnown(
   context: ReplyContext,
   ids: string[],
@@ -91,6 +101,7 @@ export async function assertReplyOutcomeKnown(
     }
     return true;
   });
+  const undecided: { id: string; command: string }[] = [];
   for (let offset = 0; offset < pendingIds.length; offset += 10) {
     let evidence = new Map<string, ReplyEvidence>();
     try {
@@ -127,13 +138,8 @@ export async function assertReplyOutcomeKnown(
           ...new Set([...item.paths, ...(await paths(context, record.id, message))]),
         ];
         const command = `rm -- ${recoveryPaths.map((path) => `'${path.replaceAll("'", "'\\''")}'`).join(" ")}`;
-        throw new Error(
-          `Previous GraphQL reply outcome is uncertain for ${id}; no duplicate reply was sent.\n` +
-            "1. Inspect the complete thread transcript and verify whether the previous reply was delivered.\n" +
-            "2. If you verified non-delivery and no request remains in flight, clear only this reply's markers and run:\n" +
-            `   ${command}\n` +
-            "3. Rerun the original reply command; do not clear all PR state or change the disposition to bypass this check.",
-        );
+        undecided.push({ id, command });
+        continue;
       }
       // Keep confirmed outcomes durable: another pending ID or a later resolve can still fail.
       const outcomePaths = new Set([...item.paths, ...(await paths(context, record.id, message))]);
@@ -142,6 +148,7 @@ export async function assertReplyOutcomeKnown(
       adopted.push(id);
     }
   }
+  if (undecided.length) throw new Error(uncertainMessage(undecided));
   await prepareUnmappedIntents(context, ids, message, paths);
   return adopted;
 }

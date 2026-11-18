@@ -96,4 +96,15 @@ describe("formatMutateResult", () => {
     );
     expect(output).not.toContain("due to rate limit");
   });
+
+  it("does not label non-rate-limit pending ids as rate limited", () => {
+    const output = formatMutateResult(
+      makeResult({
+        errors: ["thread-1: GitHub GraphQL request failed: 502"],
+        unrepliedThreads: ["thread-2"],
+      }),
+    );
+    expect(output).toContain("Not replied due to an earlier error: thread-2");
+    expect(output).not.toContain("rate limit");
+  });
 });

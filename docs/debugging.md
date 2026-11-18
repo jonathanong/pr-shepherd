@@ -104,7 +104,7 @@ Remove the `ready-since.txt` path it prints.
 3. Follow a `quotaWarning` interval when present. Configure bands with `poll.quota-warnings` (factors of `poll.interval-seconds`, absolute minutes, or both). The poll dispatcher applies them on `WAIT` / `MARK_READY` sleeps; single-tick `iterate` / MCP only recommend.
 4. For quota isolation, use a GitHub App installation access token or a different GitHub user. Same-user PATs share the user's GraphQL pool with GitHub MCP and `gh api graphql` ([authentication.md](authentication.md)).
 5. `--until-terminal` keeps polling through an exhausted primary limit until the reset (plus a short margin) and exits `75` only after five attempts that do not move the reset time, writing one stderr line with the resource and reset time. A bounded poll fails with `75` immediately. See [github-api.md](github-api.md#rate-limit-backoff).
-6. For `apply review` output, retry only the IDs listed under `Not replied`, `Not resolved`, `Not minimized`, or `Not dismissed` (`due to rate limit`); IDs listed as completed already succeeded.
+6. For `apply review` output, retry only the IDs listed under `Not replied`, `Not resolved`, `Not minimized`, or `Not dismissed` (`due to rate limit`, or `due to an earlier error` after a 5xx or other non-rate-limit failure, which the `Errors` block names); IDs listed as completed already succeeded.
 
 ### "GraphQL UNKNOWN for mergeable — persists after retry"
 
