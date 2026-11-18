@@ -38,7 +38,11 @@ export function formatMutateResult(result: ResolveResult): string {
   pushIds(lines, "Dismissed reviews", result.dismissedReviews);
   const rateLimit = formatRateLimit(result);
   if (rateLimit) lines.push(rateLimit);
-  const pendingReason = result.sessionRefusal ? "session access" : "rate limit";
+  const pendingReason = result.sessionRefusal
+    ? "session access"
+    : result.rateLimit
+      ? "rate limit"
+      : "an earlier error";
   pushIds(lines, `Not replied due to ${pendingReason}`, result.unrepliedThreads);
   pushIds(lines, `Not resolved due to ${pendingReason}`, result.unresolvedThreads);
   pushIds(lines, `Not minimized due to ${pendingReason}`, result.unminimizedComments);

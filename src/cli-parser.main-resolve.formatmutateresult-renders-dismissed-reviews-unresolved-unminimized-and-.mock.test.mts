@@ -35,9 +35,9 @@ describe("main — resolve", () => {
 
     const out = getStdout();
     expect(out).toContain("Dismissed reviews: r-1");
-    expect(out).toContain("Not resolved due to rate limit: t-1");
-    expect(out).toContain("Not minimized due to rate limit: c-1");
-    expect(out).toContain("Not dismissed due to rate limit: r-2");
+    expect(out).toContain("Not resolved due to an earlier error: t-1");
+    expect(out).toContain("Not minimized due to an earlier error: c-1");
+    expect(out).toContain("Not dismissed due to an earlier error: r-2");
     expect(process.exitCode ?? 0).toBe(0);
   });
   it("formatMutateResult renders non-rate-limit errors", async () => {

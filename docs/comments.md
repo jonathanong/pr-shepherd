@@ -132,7 +132,7 @@ A GraphQL reply that loses its response or gets an ambiguous server error is not
 
 On retry, a fresh complete transcript can confirm exactly one new reply from that viewer with the exact Shepherd-marked body. Shepherd then records the outcome, returns the thread in `repliedThreads`, and continues any requested resolve without posting again. The confirmation survives a later failure in the same batch.
 
-Missing, incomplete, or ambiguous transcript evidence cannot prove delivery. If the thread has no known REST identity, its uncertain intent also blocks the same message through a new thread handle until reconciled; different messages stay independent. The error names only the marker files for that thread and message, including intents recorded without pre-write evidence. After verifying the reply was not delivered and no request is still in flight, remove those files and retry. Other threads, messages, seen markers, and merge receipts are untouched.
+Missing, incomplete, or ambiguous transcript evidence cannot prove delivery. If the thread has no known REST identity, its uncertain intent also blocks the same message through a new thread handle until reconciled; different messages stay independent. Every undecidable thread is listed in a single error, which also points to `--adopt-existing-replies` for replies that were delivered; threads whose exact reply is found are adopted in the same pass. The error names only the marker files for each thread and message, including intents recorded without pre-write evidence. After verifying the reply was not delivered and no request is still in flight, remove those files and retry. Other threads, messages, seen markers, and merge receipts are untouched.
 
 ## Applying reviewer suggestions
 

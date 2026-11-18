@@ -87,4 +87,44 @@ describe("uncertain reply transport and durable outcome boundaries", () => {
     expect(await assertReplyOutcomeKnown(context, [opaque], message)).toEqual([opaque]);
     expect(wire.requests).toHaveLength(reads);
   });
+
+  it("reports every undecidable uncertain thread in one error", async () => {
+    const second = "PRRT_other";
+    const baseline = { viewer: "agent", comments: [{ id: "old", body: "root", author: "r" }] };
+    await rememberUncertainReplies(
+      context,
+      [opaque, second],
+      message,
+      new Map([
+        [opaque, baseline],
+        [second, baseline],
+      ]),
+    );
+    await serve((request, response) => {
+      const ids = (request.body.variables as { ids: string[] }).ids;
+      response.end(
+        JSON.stringify({
+          data: {
+            viewer: { login: "agent" },
+            nodes: ids.map((id) => ({
+              id,
+              pullRequest: { number: 101, repository: { nameWithOwner: "octocat/hello-world" } },
+              comments: {
+                totalCount: 1,
+                pageInfo: { hasNextPage: false, endCursor: null },
+                nodes: [{ id: "old", databaseId: 11, body: "root", author: { login: "r" } }],
+              },
+            })),
+          },
+        }),
+      );
+    });
+    const error = await runWithGithubTransport("graphql", () =>
+      assertReplyOutcomeKnown(context, [opaque, second], message),
+    ).catch((caught: Error) => caught);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain(opaque);
+    expect((error as Error).message).toContain(second);
+    expect((error as Error).message).toContain("--adopt-existing-replies");
+  });
 });
