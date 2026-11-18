@@ -13,6 +13,7 @@ import { SAFETY_SCENARIOS } from "./scenarios-safety.mjs";
 import { STACK_EDGE_SCENARIOS } from "./scenarios-stack-edges.mjs";
 import { STACK_MORE_SCENARIOS } from "./scenarios-stack-more.mjs";
 import { STACK_RECEIPT_SCENARIOS } from "./scenarios-stack-receipts.mjs";
+import { STACK_BY_PR_SCENARIOS } from "./scenarios-stack-by-pr.mjs";
 import { STACK_SCOPE_SCENARIOS } from "./scenarios-stack-scope.mjs";
 import { STACK_SCENARIOS } from "./scenarios-stack.mjs";
 
@@ -28,6 +29,7 @@ const CATEGORIES = [
       ...STACK_MORE_SCENARIOS,
       ...STACK_EDGE_SCENARIOS,
       ...STACK_SCOPE_SCENARIOS,
+      ...STACK_BY_PR_SCENARIOS,
       ...STACK_RECEIPT_SCENARIOS,
     ],
   ],
