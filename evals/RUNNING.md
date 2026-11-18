@@ -229,11 +229,24 @@ Each scenario in `evals/outcomes/scenarios-*.mjs` describes one PR state
 (`world`) and one tool-neutral grader, and `scenarios.mjs` assigns it a
 category. Both arms get the `gh` CLI and the GitHub MCP
 server as `type: agent` mocks that answer from that world. Only the `with` arm
-gets the plugin, whose `iterate` returns the recorded fixture tick for the same
-state. Its `stack` tool returns that tick on stack scenarios and the CLI's
-not-a-stack error elsewhere. A scenario can override any of these answers with
-`shepherd` (for example an `iterate` that answers per PR). Neither arm has a shell, so code changes appear as plan steps. The
-`with` minus `without` delta is the plugin's effect.
+gets the plugin's skills and a `pr-shepherd` CLI. The plugin declares no MCP
+server, and plugin eval serves a mock only in the `with` arm when it matches a
+server the plugin declares. So `generate.mjs` writes `evals-outcomes/` as an eval
+copy of the plugin: the real skills copied unchanged, plus a `plugin.json` that
+declares one server, `cli`. Each case's `mocks/cli/pr-shepherd.md` is an agent
+mock of the CLI (one `pr-shepherd` tool taking `args`, like the `gh` tool). It
+answers a default `pr-shepherd [PR]` call with the recorded fixture tick for the
+same state, `pr-shepherd stack` with that tick on stack scenarios and the CLI's
+not-a-stack error elsewhere, and `apply` and `suggest` with a success. A
+scenario can override any of these answers with `shepherd` (for example an
+`iterate` that answers per PR). The baseline arm has nothing named pr-shepherd,
+and the `with` arm has no pr-shepherd MCP tools. Neither arm has a shell, so code
+changes appear as plan steps. The `with` minus `without` delta is the plugin's
+effect. Fixed mocks cannot route on `args`, so the CLI mock is an agent mock told
+to print the recorded text verbatim.
+
+Check isolation after a run: no `without` trace's `mock-calls.jsonl` may contain
+a pr-shepherd call.
 
 `--out` must be below the repository root and outside `evals/`;
 `evals-outcomes/` is gitignored. `--tag` selects scenarios (each has an
@@ -242,8 +255,8 @@ not-a-stack error elsewhere. A scenario can override any of these answers with
 
 ```sh
 node evals/outcomes/generate.mjs --out evals-outcomes
-claude plugin eval . --model claude-sonnet-5-5 --judge-model opus --no-publish \
-  --keep-temp --eval-dir evals-outcomes --output-dir evals/results/outcomes
+claude plugin eval evals-outcomes --model claude-sonnet-5-5 --judge-model opus --no-publish \
+  --keep-temp --eval-dir cases --output-dir evals/results/outcomes
 node evals/outcomes/analyze.mjs evals/results/outcomes/aggregate-result.json
 ```
 

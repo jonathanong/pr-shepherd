@@ -4,15 +4,21 @@
 // and the GitHub MCP server. Each is an agent mock: the judge model answers as
 // that tool from one facts document per scenario, so the two tools agree.
 // The case's mocks/gh and mocks/github match no server a plugin declares, so
-// plugin eval serves them standalone in BOTH arms. mocks/pr-shepherd matches the
-// plugin's own server, so its `iterate` (a recorded Shepherd tick) exists only
-// in the with-plugin arm. Δ is therefore "plugin + Shepherd + GitHub tools" vs
-// "GitHub tools alone".
+// plugin eval serves them standalone in BOTH arms.
+//
+// The Shepherd CLI is the with-arm's only extra. The eval runs against an eval
+// copy of the plugin (see generate.mjs) that declares one MCP server, `cli`,
+// and mocks/cli matches it, so plugin eval serves it in the with-plugin arm
+// only. Its single tool, `pr-shepherd`, runs the CLI like `gh` runs gh: the
+// mock answers `pr-shepherd ...` calls from the scenario's recorded ticks.
+// Neither arm has a pr-shepherd MCP server. Δ is therefore "plugin skills +
+// Shepherd CLI + GitHub tools" vs "GitHub tools alone".
 
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { fixtureText, mustChange } from "../lib.mjs";
+import { cliBody } from "./cli-mock.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const json = (name) => readFileSync(join(HERE, name), "utf8");
@@ -42,8 +48,8 @@ next, not as tasks for the user; hand a step to the user only when it truly
 needs a human. Where you decide NOT to take an action
 that the pull request's state appears to offer, say so and why.`;
 
-const GRADE_PREFACE = `The agent had GitHub tools (the \`gh\` CLI, the GitHub MCP server, and possibly
-pr-shepherd) but no shell and no file editing, so code changes, commits and
+const GRADE_PREFACE = `The agent had GitHub tools (the \`gh\` CLI and the GitHub MCP server), possibly
+with others, but no shell and no file editing, so code changes, commits and
 pushes can only appear as plan steps. Grade the tool calls it made and the steps
 it committed to together; a step that gives a command counts as running it.
 Which tool it used does not matter, only what it did and committed to. Noting
@@ -143,29 +149,8 @@ export function writeOutcomeCase(spec, outDir) {
     `---\ntype: agent\ntools: [${GITHUB_TOOLS.join(", ")}]\n---\n\n${githubBody(world)}`,
   );
 
-  // Fixed mocks: every `iterate` call returns the recorded tick, and `apply` and
-  // `suggest` report success, so the with-plugin arm's Shepherd path works.
-  put(join(dir, "mocks", "pr-shepherd", "_tools.json"), json("pr-shepherd-tools.json"));
-  // A scenario can replace any answer with its own (`spec.shepherd`); its
-  // `iterate` is a function of the recorded tick.
-  const shepherd = spec.shepherd ?? {};
-  put(join(dir, "mocks", "pr-shepherd", "iterate.md"), shepherd.iterate?.(tick) ?? tick);
-  // `stack` answers with the recorded tick on stack scenarios, and with the
-  // CLI's own error everywhere else. A scenario's own answer may be a function
-  // of the recorded tick.
-  const stack = typeof shepherd.stack === "function" ? shepherd.stack(tick) : shepherd.stack;
-  put(
-    join(dir, "mocks", "pr-shepherd", "stack.md"),
-    stack ??
-      (spec.tags.includes("stack") ? tick : "Error: PR #42 is not part of a native GitHub stack"),
-  );
-  put(
-    join(dir, "mocks", "pr-shepherd", "apply.md"),
-    shepherd.apply ?? "Applied every requested operation.",
-  );
-  put(
-    join(dir, "mocks", "pr-shepherd", "suggest.md"),
-    shepherd.suggest ?? "No eligible suggestion patches.",
-  );
+  // The Shepherd CLI runner, with-arm only: see cli-mock.mjs.
+  put(join(dir, "mocks", "cli", "_tools.json"), json("pr-shepherd-tools.json"));
+  put(join(dir, "mocks", "cli", "pr-shepherd.md"), cliBody(spec, tick));
   console.log(`${spec.slug.padEnd(36)} ${spec.fixture}`);
 }

@@ -6,6 +6,18 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-18: outcome runs since v2.2.4 had pr-shepherd in both arms
+
+#757 (v2.2.4) removed the plugin's `pr-shepherd` MCP server. The outcome cases
+still mocked `iterate`, `stack`, `apply` and `suggest` under `mocks/pr-shepherd/`,
+which plugin eval serves only in the with-plugin arm when the plugin declares a
+server of that name. Without one it served them standalone in both arms: the
+baseline arm called `mcp__pr-shepherd__stack` first. Outcome results between
+v2.2.4 and this fix are invalid and not comparable. The suite now runs against an
+eval copy of the plugin with the skills and a mocked `pr-shepherd` CLI
+(`mocks/cli/`) in the with arm only. The 2026-11-15 numbers in the README predate
+v2.2.4 and stand.
+
 ## 2026-11-15: token bench models gh's default `--watch` refresh
 
 The `ci-wait` scenario had `gh pr checks --watch --interval 60`, which tied
