@@ -255,14 +255,19 @@ A malformed journal is a successful tool call carrying a typed parser result; in
 
 MCP clients own polling. There is no long-running poll tool, and `iterate` has no `--debounce`, so late comments and CI failures are not batched the way the shell poll batches them.
 
-A local server cannot work around client tool-call timeouts:
+Client tool-call timeouts vary widely, and a local server cannot change them:
 
-- MCP TypeScript SDK: 60s default per request. Resetting the timeout on progress notifications is the caller's option.
-- Claude Code: long calls time out even with correct progress notifications (`anthropics/claude-code#58687`). `MCP_TIMEOUT` covers server startup only, and `MCP_TOOL_TIMEOUT` support has been inconsistent.
-- Codex CLI: same 60s default; users can raise `tool_timeout_sec`.
-- Grok CLI: unconfirmed.
+| Client                  | Default tool-call timeout                            | Notes                                                                                                                                                                                                                                                                               |
+| ----------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Claude Code CLI         | 30 min idle for stdio servers; about 27.8 h hard cap | The idle timer resets on a response or progress notification. Set `CLAUDE_CODE_MCP_TOOL_IDLE_TIMEOUT` (ms, `0` disables) or a per-server `timeout`. The hard wall-clock cap (`1e8` ms) is `MCP_TOOL_TIMEOUT`, and progress does not extend it. `MCP_TIMEOUT` covers server startup. |
+| Claude Desktop / Cowork | about 60 s                                           | The MCP TypeScript SDK default. Reports say the timeout setting is ignored there.                                                                                                                                                                                                   |
+| Codex CLI               | 60 s                                                 | `tool_timeout_sec` per server.                                                                                                                                                                                                                                                      |
+| Cursor                  | about 60 s                                           | In agent/ACP mode; not configurable.                                                                                                                                                                                                                                                |
+| Cline                   | 60 s                                                 | Configurable per server from 30 s to 1 h.                                                                                                                                                                                                                                           |
+| Gemini CLI              | 10 min                                               | `timeout` per server.                                                                                                                                                                                                                                                               |
+| MCP TypeScript SDK      | 60 s per request                                     | Resetting the timeout on progress notifications is the caller's option.                                                                                                                                                                                                             |
 
-So no tool polls or sleeps. `iterate`, `stack`, and `suggest` each do one bounded fetch. `apply` runs its `operations` sequentially, each with GitHub I/O, so a large request on a slow GitHub can approach the timeout; a failure partway leaves earlier mutations applied without a client response, and `PartialApplyError`'s `completed` list is the recovery path.
+Most hosts cut calls off at about 60 s, and a tool call blocks the agent's turn regardless of the limit. So no tool polls or sleeps. `iterate`, `stack`, and `suggest` each do one bounded fetch. `apply` runs its `operations` sequentially, each with GitHub I/O, so a large request on a slow GitHub can approach the timeout; a failure partway leaves earlier mutations applied. A returned `PartialApplyError` carries a `completed` list, which is the recovery path. A client timeout returns no such list, so check the PR's current state before retrying, because replaying the batch can repeat mutations.
 
 1. Call `iterate` with a repository-qualified `pr`.
 2. Follow the returned `## Instructions`.
