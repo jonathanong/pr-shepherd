@@ -1,4 +1,6 @@
+import { relative, isAbsolute } from "node:path";
 import { GitHubRequestError } from "../github/errors.mts";
+import { resolveStateBase } from "../state/base.mts";
 
 /** Safe GitHub transport metadata suitable for user-facing structured error output. */
 export function serializeGitHubRequestErrorDetails(err: unknown) {
@@ -19,8 +21,20 @@ export function serializeGitHubRequestErrorDetails(err: unknown) {
   };
 }
 
+/** One-line hint when `err` is a permission failure on a path inside the state directory. */
+function stateDirHint(err: unknown): string | null {
+  const { code, path } = (err ?? {}) as { code?: unknown; path?: unknown };
+  if ((code !== "EPERM" && code !== "EACCES") || typeof path !== "string") return null;
+  const base = resolveStateBase();
+  const rel = relative(base, path);
+  if (rel.startsWith("..") || isAbsolute(rel)) return null;
+  return `state dir ${base} not writable; set PR_SHEPHERD_STATE_DIR to a writable directory or run outside the sandbox`;
+}
+
 export function formatCliError(err: unknown): string {
-  const message = err instanceof Error ? err.message : String(err);
+  const hint = stateDirHint(err);
+  const message =
+    (err instanceof Error ? err.message : String(err)) + (hint === null ? "" : `\n${hint}`);
   const githubDetails = serializeGitHubRequestErrorDetails(err);
   if (githubDetails === undefined) return message;
 
