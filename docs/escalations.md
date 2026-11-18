@@ -1,6 +1,6 @@
 # Escalation boundary
 
-`ESCALATE` is Shepherd's only human handoff. This page is the canonical, closed list of escalation triggers (the `EscalateTrigger` union in `src/types/escalate.mts`) and their exact predicates, for maintainers and for agents deciding what to hand to a human. Output shape: [actions.md](actions.md#escalate).
+`ESCALATE` is Shepherd's only human handoff. This page is the canonical, closed list of escalation triggers (the `EscalateTrigger` union in `src/types/escalate.mts`) and their exact predicates. Output shape: [actions.md](actions.md#escalate).
 
 ## Triggers
 
@@ -170,6 +170,3 @@ The stall timeout is enabled, and the one-PR timer (`iterate-stall.json`) or the
 - Aggregate rows can report `escalate` with a row reason: `closed-unmerged-dependency` (a lower layer closed without merging), `closed-unmerged-layer` (a closed layer with no open layer above it), and `mark-ready-authorization-required` (a draft layer the viewer cannot mark ready). These are row `reasons`, typed as `StackHandoffReason` in `src/types/escalate.mts`, not iterate `escalate.triggers`, so they are not `EscalateTrigger` members. The stack plan returns them as `ESCALATE` only after no owned autonomous session remains.
 - Stack-level `SHEPHERD` is always non-terminal: complete the listed one-PR sessions and reselect the stack before any remaining human handoff.
 - Closed or merged PRs return `CANCEL`, not `ESCALATE`.
-- Ordinary non-force pushes never produce `authorization-required`.
-- Missing-location threads and unauthorized review mutations are surfaced/logged once and skipped.
-- Failing queue CI (a merge-group failure once the PR is no longer queued; a still-queued entry is excluded) and URL-backed external checks stay actionable `TRIAGE` work for their first presented tick; unchanged on the next, and only when no other autonomous work remains, they escalate `check-follow-up-unavailable`.

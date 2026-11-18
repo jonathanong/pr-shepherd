@@ -30,11 +30,9 @@ Files deep-merge ESLint-style:
 
 Every non-empty file starts with `version: 1` (see [Version](#version)). Every other key is optional. The built-in defaults in `src/config/schema.mts` fill in the rest.
 
-For example, if `$HOME` sets `checks.ignore` and `iterate.stall-timeout-minutes`, and the repository sets `iterate.triage-attempts-per-thread: 5`, the result has all three. If both files set `checks.ignore`, the closer list replaces the farther one.
-
 ### Validation
 
-Config follows GitHub Actions conventions. Keys are kebab-case. A duration key carries its unit in its name, such as `interval-seconds` or `ready-delay-minutes`; no key takes milliseconds. Validation is strict, so a bad config never falls back silently.
+Config follows GitHub Actions conventions: keys are kebab-case, and a duration key carries its unit in its name (`interval-seconds`, `ready-delay-minutes`; none takes milliseconds). Validation is strict, so a bad config never falls back silently.
 
 Shepherd validates config before it makes any GitHub call. Any of the following exits with code `78` (`EX_CONFIG`):
 
@@ -226,9 +224,7 @@ For cloud credentials, see [authentication.md](authentication.md). For transport
 
 ## `cli-command` — default `["pr-shepherd"]`
 
-The argv prefix for every `pr-shepherd` command Shepherd emits, in Markdown, JSON, and MCP output: follow-up `stack` and per-PR session commands, `apply review` and `apply journal` mutations, and `suggest` commands.
-
-The default assumes `pr-shepherd` is on `PATH`. A repository that pins pr-shepherd as a dependency should set its launcher, so agents run the pinned version:
+The argv prefix for every `pr-shepherd` command Shepherd emits (Markdown, JSON, and MCP): `stack` and per-PR session commands, `apply review` and `apply journal` mutations, and `suggest` commands. The default assumes `pr-shepherd` is on `PATH`. A repository that pins pr-shepherd as a dependency should set its launcher so agents run the pinned version:
 
 ```yaml
 cli-command:
@@ -307,8 +303,6 @@ Only check runs triggered by these events count toward PR-head CI readiness. Run
 
 Merge-queue commits are a separate source. Their `merge_group` checks are included automatically while the PR is queued and after an ejection.
 
-Repositories that never use `pull_request_target` can remove it to reduce noise.
-
 ### `checks.ignore-log-lines` — default `[]`
 
 Regex source strings matched against each raw CI log line. Shepherd applies them after it has cleaned and isolated the log:
@@ -360,7 +354,7 @@ A `stack` selection whose layers can only wait uses this threshold for its own t
 
 ### `iterate.ready-delay-minutes` — default `0`
 
-After the PR first reaches a clean READY state (checks green, no Shepherd-visible work, no blocking bot review pending), Shepherd keeps looping for this many minutes before cancelling, or before merging with `--merge`. The delay gives reviewers and blocking bots time to act.
+After the PR first reaches a clean READY state (checks green, no Shepherd-visible work, no blocking bot review pending), Shepherd keeps looping for this many minutes before cancelling, or before merging with `--merge`, so reviewers and blocking bots can act.
 
 - The countdown restarts if the PR leaves that state or its head changes.
 - A newly surfaced hidden PR comment does not reset it.
@@ -373,7 +367,7 @@ For the lifecycle, see [iterate-flow.md](iterate-flow.md#2-ready-delay).
 
 ### `iterate.minimize-approvals` — default `false`
 
-Also minimize `APPROVED` reviews, with or without a body. It is off by default so approvals stay visible. Turn it on for long-running PRs where stale approvals pile up. `iterate.minimize-comments` still decides which approval authors qualify.
+Also minimize `APPROVED` reviews, with or without a body. Off by default so approvals stay visible; turn it on for long-running PRs where stale approvals pile up. `iterate.minimize-comments` still decides which approval authors qualify.
 
 | Setting           | Behavior                                                                                                                                                                                                                                                                                                                     |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -430,7 +424,7 @@ Threads by bots or other non-human authors, and threads the viewer wrote, always
 
 ### `iterate.instructions` — default `"inline"`
 
-`inline` prints the `triage` commit/push step on every tick. `playbook` points at the shipped "Triage loop" playbook instead. `--instructions` and the MCP `instructions` input override it. Inline is the default because folding the step into a playbook is not a net token win.
+`inline` prints the `triage` commit/push step on every tick. `playbook` points at the shipped "Triage loop" playbook instead. `--instructions` and the MCP `instructions` input override it.
 
 ## `events`
 
@@ -498,14 +492,8 @@ How it behaves:
 - Each band warns once per worktree and per quota window.
   - A new window starts when GitHub's used count falls, the remaining count rises, or the reset timestamp advances after the prior deadline has passed. An earlier adjustment to the reset time does not re-arm the warning.
   - If the first response is already below several bands, only the lowest one warns. The higher ones are recorded as crossed.
-- Single-tick `iterate` and MCP `iterate` never sleep. Callers own the recurrence.
 
-On rate limits:
-
-- `--until-terminal` keeps polling through an exhausted primary limit until the reset time plus a short margin. It honors an explicit `Retry-After` in full, and exits 75 only after repeated attempts that do not move the reset time.
-- A bounded poll exits 75 on the first rate-limit error.
-
-See [github-api.md](github-api.md#quota-warnings-and-cadence).
+On rate limits, `--until-terminal` keeps polling through an exhausted primary limit until the reset time plus a short margin, honors an explicit `Retry-After` in full, and exits 75 only after repeated attempts that do not move the reset time. A bounded poll exits 75 on the first rate-limit error. See [github-api.md](github-api.md#quota-warnings-and-cadence).
 
 ## `apply`
 
@@ -530,7 +518,7 @@ When `true`, Shepherd converts a draft PR to ready for review once all of these 
 - no configured blocking review is in progress;
 - the ready-delay has not elapsed. After it elapses, the loop emits `cancel`.
 
-When disabled, a clean draft remains in draft and ends its one-PR session with `CANCEL` (`auto-mark-ready-disabled`, exit 0), without a ready-delay countdown or stall guard. Pending CI, bot review, and other actionable work still runs first. A `stack` command continues independent work and eligible ready-prefix merges, then returns `CANCEL` when only clean disabled drafts remain; it never asks the agent to promote them. See [actions.md](actions.md).
+When disabled, a clean draft stays a draft and ends its one-PR session with `CANCEL` (`auto-mark-ready-disabled`, exit 0), with no ready-delay countdown or stall guard. Pending CI, bot review, and other actionable work still runs first. A `stack` command continues independent work and eligible ready-prefix merges, then returns `CANCEL` when only clean disabled drafts remain; it never asks the agent to promote them. See [actions.md](actions.md).
 
 ### `mark-ready.blocking-reviewer-logins` — default `[]`
 
@@ -603,13 +591,10 @@ The value is a map, so it deep-merges across files. An unknown rule name or a no
 | `sonarqube-gate-passed`       | SonarQube Cloud's "Quality Gate passed" comment with 0 new issues and 0 security hotspots; a failed gate, a failed metric, or any new issue keeps it visible                                                                                                                                                                                                                                                                      | suppress, resolve |
 | `sourcery-notices`            | Complete Sourcery private-repo upsell and weekly rate-limit notices in the observed formats                                                                                                                                                                                                                                                                                                                                       | suppress, resolve |
 
-- Every rule requires GitHub to report the author as a bot. Each rule matches both the GraphQL login (`coderabbitai`) and the REST login (`coderabbitai[bot]`).
-- Rules match conversation comments only. The same text on a review summary or an inline review comment follows the normal review path.
+- Every rule requires GitHub to report the author as a bot, and matches both the GraphQL login (`coderabbitai`) and the REST login (`coderabbitai[bot]`).
+- Rules match conversation comments only. The same text on a review summary or inline review comment follows the normal review path.
 - "Resolve" means `autoResolve: true`. With [`actions.auto-minimize-suppressed`](#actionsauto-minimize-suppressed--default-true) on, the comment is also minimized on GitHub.
-- A CodeRabbit progress comment may later be edited into a walkthrough.
-  - Shepherd reclassifies the current body on every fetch, so the edited walkthrough no longer matches `coderabbit-notices`.
-  - The agent sees it once as an [edited comment](actions.md#edited-comments) when readiness work is next reported.
-  - It never blocks readiness and stays minimized on GitHub.
+- Shepherd reclassifies the current body on every fetch. A CodeRabbit progress comment later edited into a walkthrough no longer matches `coderabbit-notices`. The agent sees it once as an [edited comment](actions.md#edited-comments), it never blocks readiness, and it stays minimized on GitHub.
 
 ## `actions`
 
@@ -624,13 +609,11 @@ This applies only to classification-rule matches that set both `suppress: true` 
 
 When `true`, Shepherd attempts the supported resolve and minimize mutations. It removes the IDs that succeed from the queues the agent sees before deciding whether to emit `triage`.
 
-- GraphQL mutations fail closed unless the capability is explicitly true. REST omits capabilities, so mutations that are otherwise eligible are attempted and GitHub decides.
-- Each confirmed success is:
-  - copied to `threads.autoResolved` or `comments.autoMinimized`, with the rule's `reason` if it sets one;
-  - printed in `## Classification auto-resolve` / `ruleAutoResolve`. See [actions.md](actions.md).
-- These automatic mutations do not edit the PR body. Journal entries are optional and require an explicit `apply journal` call.
-- Failures stay in `ruleAutoResolveIds`, `comments.minimizeIds`, or `ruleAutoResolveReviewSummaryIds` where retry is supported. They are listed in the same section.
-- Denied review operations are surfaced once and skipped. REST cannot minimize, so minimization under REST is surfaced as a one-look skip.
+- GraphQL mutations fail closed unless the capability is explicitly true. REST omits capabilities, so otherwise-eligible mutations are attempted and GitHub decides.
+- Each confirmed success is copied to `threads.autoResolved` or `comments.autoMinimized` (with the rule's `reason`) and printed in `## Classification auto-resolve` / `ruleAutoResolve`. See [actions.md](actions.md#classification-auto-resolve).
+- These mutations do not edit the PR body. Journal entries need an explicit `apply journal` call.
+- Failures stay in `ruleAutoResolveIds`, `comments.minimizeIds`, or `ruleAutoResolveReviewSummaryIds` where retry is supported, and are listed in the same section.
+- Denied review operations are surfaced once and skipped. REST cannot minimize, so minimization there is a one-look skip.
 
 When `false`, Shepherd does not mutate or print the line. Supported IDs stay on the generated `apply review` command. Minimization under REST is still a one-look skip, without an unusable command.
 
@@ -668,6 +651,4 @@ When `PR_SHEPHERD_STATE_DIR` is unset, the default state directory is:
 | Linux                     | `/tmp/pr-shepherd-state-<uid>` (created with mode `0700`), when it is a real directory you own that is not group- or world-writable and is readable, writable, and searchable. Otherwise `$TMPDIR/pr-shepherd-state`. |
 | Other platforms           | `os.tmpdir()`                                                                                                                                                                                                         |
 
-Per-repository files live at `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/`. Separate owner and repository directories keep hyphenated names from colliding.
-
-Directories named `<owner>-<repo>` from older builds are no longer read, so the first run after upgrading starts clean: seen comments can surface once more, and the ready-delay restarts. `pr-shepherd admin clean all` removes the whole base directory.
+Per-repository files live at `$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/`. Directories named `<owner>-<repo>` from older builds are no longer read, so the first run after upgrading starts clean: seen comments can surface once more, and the ready-delay restarts. `pr-shepherd admin clean all` removes the whole base directory.
