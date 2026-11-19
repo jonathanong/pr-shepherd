@@ -143,7 +143,7 @@ describe("fetchPrBatch — check timestamps", () => {
       status: "COMPLETED",
       conclusion: "SUCCESS",
     });
-    expect(data.checks[1]).toMatchObject({ status: "COMPLETED", conclusion: null });
+    expect(data.checks[1]).toMatchObject({ status: "IN_PROGRESS", conclusion: null });
     expect(data.checks[2]).toMatchObject({ status: "IN_PROGRESS", conclusion: null });
   });
 });

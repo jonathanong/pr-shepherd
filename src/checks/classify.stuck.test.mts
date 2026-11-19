@@ -49,6 +49,12 @@ describe("classifyChecks — stuck check runs", () => {
     expect(getCiVerdict([done!])).toMatchObject({ anyFailing: false, anyInProgress: false });
   });
 
+  it("keeps a run with completedAtUnix but no conclusion in progress (not failing)", () => {
+    const [r] = classifyChecks([run({ completedAtUnix: 1_779_239_040 })]);
+    expect(r!.category).toBe("in_progress");
+    expect(getCiVerdict([r!])).toMatchObject({ anyFailing: false, anyInProgress: true });
+  });
+
   it("classifies a non-success conclusion on a non-completed run as failing", () => {
     const [done] = classifyChecks([run({ conclusion: "FAILURE" })]);
     expect(done!.category).toBe("failing");

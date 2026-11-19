@@ -29,15 +29,15 @@ REST `GET /repos/{owner}/{repo}/actions/runs?head_sha=<sha>&status=startup_failu
 
 Each check gets one `CheckCategory`. Rules apply in this order; the first match wins.
 
-| Order | `CheckCategory` | Condition                                                                                                                                                                           |
-| ----- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1     | `ignored`       | Name matches `checks.ignore`, unless its Actions run is protected by `checks.never-ignore` ([precedence](#ignoreprotection-precedence))                                             |
-| 2     | `filtered`      | Triggered by an event not in `checks.ci-trigger-events` ([event filter](#event-filter)). Status contexts (`event: null`) are never filtered                                         |
-| 3     | `in_progress`   | `status` is anything but `COMPLETED` and no `conclusion` or `completed_at` is recorded; a run with either is read as `COMPLETED` (GitHub can leave a finished run at `in_progress`) |
-| 4     | `skipped`       | `conclusion` is `SKIPPED` or `NEUTRAL`; reported, never blocks readiness                                                                                                            |
-| 5     | `passed`        | `conclusion` is `SUCCESS`                                                                                                                                                           |
-| 6     | `failing`       | Any other conclusion: `FAILURE`, `TIMED_OUT`, `CANCELLED`, `ACTION_REQUIRED`, `STARTUP_FAILURE`, `STALE`                                                                            |
-| 7     | `superseded`    | A `failing` check whose conclusion is `CANCELLED` and that has newer-run evidence ([below](#concurrency-superseded-cancelled-checks))                                               |
+| Order | `CheckCategory` | Condition                                                                                                                                                                                                                                      |
+| ----- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1     | `ignored`       | Name matches `checks.ignore`, unless its Actions run is protected by `checks.never-ignore` ([precedence](#ignoreprotection-precedence))                                                                                                        |
+| 2     | `filtered`      | Triggered by an event not in `checks.ci-trigger-events` ([event filter](#event-filter)). Status contexts (`event: null`) are never filtered                                                                                                    |
+| 3     | `in_progress`   | `status` is anything but `COMPLETED` and no `conclusion` is recorded (a run with a `conclusion` is read as `COMPLETED`, since GitHub can leave a finished run at `in_progress`); stays `failing` instead when its suite is `COMPLETED` (stuck) |
+| 4     | `skipped`       | `conclusion` is `SKIPPED` or `NEUTRAL`; reported, never blocks readiness                                                                                                                                                                       |
+| 5     | `passed`        | `conclusion` is `SUCCESS`                                                                                                                                                                                                                      |
+| 6     | `failing`       | Any other conclusion: `FAILURE`, `TIMED_OUT`, `CANCELLED`, `ACTION_REQUIRED`, `STARTUP_FAILURE`, `STALE`                                                                                                                                       |
+| 7     | `superseded`    | A `failing` check whose conclusion is `CANCELLED` and that has newer-run evidence ([below](#concurrency-superseded-cancelled-checks))                                                                                                          |
 
 ### Ignore/protection precedence
 
