@@ -141,13 +141,6 @@ export function buildWaitLog(base: IterateResultBase): string {
     parts.push(`active checks: ${shown.map((c) => c.name).join(", ")}${moreSuffix(hidden)}`);
   }
 
-  if ((base.pendingComments?.length ?? 0) > 0) {
-    const { shown, hidden } = capList(base.pendingComments!);
-    parts.push(
-      `pending bot comments: ${shown.map((c) => `@${c.author} (run ${c.runId} ${c.runStatus})`).join(", ")}${moreSuffix(hidden)}`,
-    );
-  }
-
   switch (base.mergeStatus) {
     case "BLOCKED": {
       const fromRules = blockedReasonFromRequirements(base.mergeRequirements);

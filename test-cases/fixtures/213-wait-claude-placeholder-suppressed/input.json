@@ -1,0 +1,35 @@
+{
+  "description": "The @claude mention bot's in-progress placeholder comment matches the claude-notices standard rule: suppressed only, never auto-resolved. It is not actionable and not queued for --minimize-comment-ids, so the tick does not triage it and the finished review, once edited into the comment, arrives as an edited comment.",
+  "config": {
+    "classify": { "standard": { "claude-notices": true } }
+  },
+  "batchData": {
+    "comments": [
+      {
+        "id": "IC_claude_placeholder",
+        "author": "claude",
+        "authorType": "Bot",
+        "body": "Claude Code is working… <img src=\"https://github.com/user-attachments/assets/5ac382c7-e004-429b-8e35-7feb3e8f9c6f\" width=\"14px\" height=\"14px\" style=\"vertical-align: middle; margin-left: 4px;\" />\n\nI'll analyze this and get back to you.\n\n[View job run](https://github.com/owner/repo/actions/runs/555)",
+        "url": "https://github.com/owner/repo/pull/42#issuecomment-9",
+        "createdAtUnix": 1715650000,
+        "isMinimized": false
+      }
+    ],
+    "checks": [
+      {
+        "name": "CI / tests",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS",
+        "event": "pull_request",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/100",
+        "runId": "100"
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 10
+}

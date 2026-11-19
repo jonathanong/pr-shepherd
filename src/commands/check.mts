@@ -23,7 +23,6 @@ import type { CheckExecutionContext } from "./check-execution-context.mts";
 import { deriveMergeStatus } from "../merge-status/derive.mts";
 import { loadConfig } from "../config/load.mts";
 import { classifyVisibleComments } from "../comments/visible-comments.mts";
-import { findPendingRunComments } from "../comments/pending-run-comments.mts";
 import { withHeadOid } from "./review-commit.mts";
 import { computeStatus } from "./check-status.mts";
 import {
@@ -333,19 +332,10 @@ async function runScopedCheck(
         ),
     ),
   );
-  const unsuppressedComments = batchData.comments.filter(
-    (c) => !partition.suppressedCommentIds.has(c.id) || deniedRuleAutoResolveCommentIds.has(c.id),
-  );
-  // A mention bot's in-progress placeholder is pending work: held out of actionable/minimize and
-  // never marked seen, so the finished review it becomes is evaluated as a first look.
-  const pendingRunComments = await findPendingRunComments(
-    unsuppressedComments,
-    repo,
-    seenMap,
-    botUsernames,
-  );
   const visibleCommentClassification = classifyVisibleComments(
-    unsuppressedComments.filter((c) => !pendingRunComments.has(c.id)),
+    batchData.comments.filter(
+      (c) => !partition.suppressedCommentIds.has(c.id) || deniedRuleAutoResolveCommentIds.has(c.id),
+    ),
     seenMap,
     config.iterate["minimize-comments"],
     botUsernames,
@@ -465,7 +455,6 @@ async function runScopedCheck(
   }).length;
   const awaitingChecks =
     unreported.hasUnreportedRequired ||
-    pendingRunComments.size > 0 ||
     (!verdict.hasChecks && unreported.actionsWorkflowInProgress === true);
   let status = computeStatus(
     verdict,
@@ -724,7 +713,6 @@ async function runScopedCheck(
       minimizeIds: [...budgeted.comments.minimizeIds, ...ruleAutoResolveCommentIds],
       firstLook: budgeted.firstLookComments,
       ...(budgeted.editedComments.length > 0 && { edited: budgeted.editedComments }),
-      ...(pendingRunComments.size > 0 && { pending: [...pendingRunComments.values()] }),
       ...(autoMinimized.length > 0 && { autoMinimized }),
     },
     changesRequestedReviews: withHeadOid(budgeted.changesRequested.visible, batchData.headRefOid),

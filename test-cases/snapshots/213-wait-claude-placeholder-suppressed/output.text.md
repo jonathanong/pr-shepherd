@@ -1,10 +1,10 @@
 # PR #42 [WAIT]
 
-**status** `PENDING` · **repo** `owner/repo`
-**summary** 1 passing
+**status** `READY` · **repo** `owner/repo`
+**summary** 1 passing · **remainingSeconds** 600
 **nextCheck** `2024-05-15T19:57:00Z` · in 3020s · reason `safety-net`
 
-WAIT: 1 passing — pending bot comments: @claude (run 555 in_progress)
+WAIT: 1 passing
 
 ## Instructions
 

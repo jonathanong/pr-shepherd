@@ -51,21 +51,6 @@ export type ActionableComment = PrComment;
  */
 export type EditedComment = PrComment & { edited: true };
 
-/**
- * A bot comment that links a comment-triggered Actions run GitHub reports as not completed: a
- * placeholder the bot edits into its result (for example claude-code-action answering `@claude`).
- * Held back as pending work, like an in-progress check: not actionable, never queued for
- * minimization, and not marked seen, so it surfaces normally once the run completes.
- */
-export interface PendingRunComment {
-  id: string;
-  author: string;
-  url: string;
-  runId: string;
-  /** Raw Actions run status (`queued`, `in_progress`, `waiting`, ...). */
-  runStatus: string;
-}
-
 export type ShepherdStatus =
   | "MERGED"
   | "CLOSED"
@@ -134,8 +119,6 @@ export interface ShepherdReport {
     edited?: EditedComment[];
     /** PR comments and review summaries minimized by a suppress+autoResolve rule this fetch. */
     autoMinimized?: AutoMinimizedItem[];
-    /** Bot placeholder comments whose Actions run has not completed. Held back; omitted when empty. */
-    pending?: PendingRunComment[];
   };
   changesRequestedReviews: Review[];
   /** COMMENTED reviews already seen — eligible for `--minimize-comment-ids` without re-rendering. */
