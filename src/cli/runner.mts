@@ -1,5 +1,5 @@
 import { loadConfig } from "../config/load.mts";
-import { getGithubTransport } from "../github/transport.mts";
+import { getGithubTransportMode } from "../github/transport.mts";
 
 interface PrShepherdCommand {
   argv: string[];
@@ -9,7 +9,8 @@ interface PrShepherdCommand {
 /** Every emitted pr-shepherd command starts with the configured `cli-command` launcher. */
 export function buildPrShepherdCommand(args: string[]): PrShepherdCommand {
   const transport =
-    getGithubTransport() === "rest" &&
+    // Only an explicit request propagates; an auto fallback is not the caller's choice and stays local.
+    getGithubTransportMode() === "rest" &&
     !args.some((arg) => arg === "--transport" || arg.startsWith("--transport="))
       ? ["--transport", "rest"]
       : [];

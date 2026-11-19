@@ -21,6 +21,8 @@ flowchart TD
 
 Proven exhaustion: a recognized GraphQL quota refusal without a usable quota sample triggers `GET /rate_limit`; only a measured empty GraphQL bucket authorizes fallback. A healthy, malformed, or unavailable probe keeps the original error. Secondary limits and forced `graphql` mode never probe. Through the Claude Code proxy, `GET /rate_limit` can report a different `core` bucket than the `X-RateLimit-*` headers on ordinary REST responses; treat it as a separate sample. A switch is logged once in verbose output; the snapshots may not carry identical fields.
 
+When Shepherd chooses REST on its own (an `auto` fallback, or the cloud-session default), every result says why: the header line reads `**transport** \`rest\` (<reason>)`in text, and the same sentence is`transportReason`in JSON and MCP structured content. For a fallback the reason names the operation that failed and the GraphQL error, for example`auto switched to REST after GraphQL PollStackSummary: GraphQL outage (server or network error after bounded retries)`. A run that asked for REST (`--transport rest`or`github.transport: rest`) carries no reason. The fallback holds for the rest of that command only; the next command starts on GraphQL again. Printed per-PR commands carry `--transport rest`only when the run requested REST; an auto fallback is not propagated, so each printed command makes its own GraphQL-first choice.`apply merge`is the exception: it always prints`--transport rest`, which it requires.
+
 On REST:
 
 - Fields REST cannot supply stay unknown; unsupported operations produce a surfaced skip, error, or escalation ([rest.md](rest.md), [escalations](escalations.md#transport-unsupported)). Text, JSON, and MCP outputs still project equivalent available information.

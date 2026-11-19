@@ -129,6 +129,8 @@ export type StackNextAction = "shepherd" | "wait" | "merge" | "cancel" | "escala
 
 export interface PollSummaryResult {
   transport?: "rest";
+  /** Why REST is in use; present only with `transport`. */
+  transportReason?: string;
   transportUnavailable?: Array<{ field: string; reason: string }>;
   mode: "summary";
   repo: string;

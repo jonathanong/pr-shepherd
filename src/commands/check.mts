@@ -17,6 +17,7 @@ import { classifyChecks, getCiVerdict } from "../checks/classify.mts";
 import { mergeStartupFailureChecks } from "../checks/startup-failures.mts";
 import { withRunWorkflowPaths } from "../checks/run-workflow-paths.mts";
 import { fetchStartupFailureChecks, triageFailingChecks } from "../checks/triage.mts";
+import { transportReasonField } from "../github/transport-evidence.mts";
 import { TriageBudget } from "../checks/triage-budget.mts";
 import { attachPendingDeployments } from "../checks/pending-deployments.mts";
 import type { CheckExecutionContext } from "./check-execution-context.mts";
@@ -668,6 +669,7 @@ async function runScopedCheck(
     pr: prNumber,
     nodeId: batchData.nodeId,
     ...(batchData.transport && { transport: batchData.transport }),
+    ...(batchData.transport && transportReasonField()),
     ...(batchData.transportUnavailable && {
       transportUnavailable: batchData.transportUnavailable,
     }),
