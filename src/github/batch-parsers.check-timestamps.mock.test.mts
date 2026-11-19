@@ -100,4 +100,50 @@ describe("fetchPrBatch — check timestamps", () => {
       summary: "Waiting",
     });
   });
+
+  it("normalizes a finished run reported as in_progress (#793)", async () => {
+    const node = {
+      __typename: "CheckRun",
+      name: "checks / migration-order",
+      status: "IN_PROGRESS",
+      conclusion: "SUCCESS",
+      detailsUrl: "https://github.com/owner/repo/actions/runs/9999/jobs/1",
+      startedAt: "2026-05-20T01:00:00Z",
+      completedAt: "2026-05-20T01:04:00Z",
+      title: null,
+      summary: null,
+      checkSuite: null,
+    };
+    const pr = makeRawPr({
+      commits: {
+        nodes: [
+          {
+            commit: {
+              statusCheckRollup: {
+                contexts: {
+                  pageInfo: { hasNextPage: false, endCursor: null },
+                  nodes: [
+                    node,
+                    { ...node, name: "ended", conclusion: null },
+                    { ...node, name: "running", conclusion: null, completedAt: null },
+                  ],
+                },
+              },
+            },
+          },
+        ],
+      },
+    });
+    mockGraphqlWithRateLimit.mockResolvedValue(makeResponse(pr));
+
+    const { data } = await fetchPrBatch(42, REPO);
+
+    expect(data.checks[0]).toMatchObject({
+      name: "checks / migration-order",
+      status: "COMPLETED",
+      conclusion: "SUCCESS",
+    });
+    expect(data.checks[1]).toMatchObject({ status: "COMPLETED", conclusion: null });
+    expect(data.checks[2]).toMatchObject({ status: "IN_PROGRESS", conclusion: null });
+  });
 });

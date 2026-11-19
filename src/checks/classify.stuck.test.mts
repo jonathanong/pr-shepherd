@@ -40,4 +40,17 @@ describe("classifyChecks — stuck check runs", () => {
     ]);
     expect(done!.category).toBe("passed");
   });
+
+  it("treats a run with a conclusion as completed even when status is IN_PROGRESS (#793)", () => {
+    const [done] = classifyChecks([
+      run({ name: "checks / migration-order", conclusion: "SUCCESS", suiteStatus: "COMPLETED" }),
+    ]);
+    expect(done!.category).toBe("passed");
+    expect(getCiVerdict([done!])).toMatchObject({ anyFailing: false, anyInProgress: false });
+  });
+
+  it("classifies a non-success conclusion on a non-completed run as failing", () => {
+    const [done] = classifyChecks([run({ conclusion: "FAILURE" })]);
+    expect(done!.category).toBe("failing");
+  });
 });

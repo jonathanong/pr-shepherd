@@ -90,8 +90,10 @@ function classify(check: CheckRun, relevantEvents: Set<string>): ClassifiedCheck
 
   const { status, conclusion } = check;
 
-  // Not yet finished.
-  if (status !== "COMPLETED") {
+  // Not yet finished. A recorded conclusion means finished whatever `status` says, so a check can
+  // never be both non-completed and carry a SUCCESS conclusion (which would hide it from the
+  // failing list while still counting as failing).
+  if (status !== "COMPLETED" && conclusion == null) {
     // The enclosing suite finished while this run did not: nothing will update it again, so
     // waiting would only end in the stall timeout. Surface it as failing work (rerun the
     // workflow) with the raw status and suite status shown.
