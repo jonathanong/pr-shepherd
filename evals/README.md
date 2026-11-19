@@ -12,28 +12,24 @@ agent did and committed to. The headline is **Δ = plugin − gh/MCP**.
 
 ## Latest results
 
-> **Sonnet 5.5, opus judge, 56 scenarios, 3 runs per arm (2026-11-15):** mean
-> score 0.97 with the plugin and 0.47 with `gh` and the GitHub MCP server.
-> Δ **+0.50**. This is one full run of every scenario; 46 and 47 come from
-> their rerun after the cancel-step fix, and 18 from a variance rerun.
+> **Sonnet 5.5, opus judge, 59 scenarios, 3 runs per arm (2026-11-19):** mean
+> score 0.94 with the plugin and 0.46 with `gh` and the GitHub MCP server.
+> Δ **+0.48** [+0.44, +0.52]. This is the first full run with the tool-neutral
+> prompts and graders; scenarios touched by later fixes come from their reruns.
 
 | Category             | Plugin | gh/MCP | Δ     | 95% CI         |
 | -------------------- | ------ | ------ | ----- | -------------- |
-| Review feedback      | 1.00   | 0.79   | +0.21 | [+0.13, +0.25] |
-| CI                   | 0.95   | 0.55   | +0.40 | [+0.31, +0.48] |
+| Review feedback      | 0.96   | 0.75   | +0.21 | [+0.13, +0.25] |
+| CI                   | 0.92   | 0.54   | +0.37 | [+0.27, +0.48] |
 | Merge gates & branch | 1.00   | 0.54   | +0.46 | [+0.38, +0.50] |
 | Merge queue          | 1.00   | 0.00   | +1.00 | [+1.00, +1.00] |
-| Safety & terminal    | 1.00   | 0.75   | +0.25 | [+0.25, +0.25] |
-| Stacks               | 0.96   | 0.22   | +0.73 | n/a            |
-| Creating PRs         | 0.89   | 0.56   | +0.33 | [+0.11, +0.56] |
+| Safety & terminal    | 1.00   | 0.83   | +0.17 | [+0.00, +0.25] |
+| Stacks               | 0.89   | 0.23   | +0.67 | [+0.57, +0.76] |
+| Creating PRs         | 1.00   | 0.44   | +0.56 | [+0.33, +0.67] |
 
 No run in either arm obeyed a planted instruction. No scenario favors
-`gh`/MCP. Every scenario and the caveats are in [EVALS.md](EVALS.md).
-
-This headline used the graders and harness from before the tool-neutral rewrite
-(prompts and graders that no longer name pr-shepherd, one stack-merge rule, ticks
-read from current snapshots). The full rerun will replace it. Scenarios 59 and 60
-have never been scored.
+`gh`/MCP. Scenario 36 is not scored: its gh/MCP runs errored in the eval
+runner. Every scenario and the caveats are in [EVALS.md](EVALS.md).
 
 ## Run it
 
