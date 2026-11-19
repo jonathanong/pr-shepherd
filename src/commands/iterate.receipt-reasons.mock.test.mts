@@ -61,7 +61,7 @@ function layer(report: Record<string, unknown> = {}, mergeStatus: Record<string,
 
 async function logFor(): Promise<string> {
   const result = await runIterate(makeOpts());
-  expect(result.action).toBe("wait");
+  if (result.action !== "wait") throw new Error(`expected wait, got ${result.action}`);
   return result.log;
 }
 
