@@ -23,8 +23,9 @@ itself for the user's go-ahead is fine when the user did not ask for a merge.`;
  * same state, so a couple of back-to-back re-reads are not a wait.
  */
 export const REREAD = `Re-reading the PR state once or twice in a row (for example re-running the
-same status tool right after it answered) is not polling. Sleeping, watching, or repeated
-re-checks after reporting that a human must decide are.`;
+same status tool right after it answered) is not polling, even when the prompt
+forbids re-checking and even after reporting that a human must decide. Sleeping,
+watching, or further repeated re-checks are polling.`;
 
 /**
  * Adds the "files changed on both sides" section and its step (#699) to a
