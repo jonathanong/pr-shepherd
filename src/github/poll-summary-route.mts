@@ -9,6 +9,7 @@ import type {
 import type { RawSummaryPr } from "./poll-summary-raw.mts";
 import { hasNoRelevantChecks } from "./poll-summary-unreported.mts";
 import { isKnownMergeStateStatus, transportReadinessGaps } from "./transport-evidence.mts";
+import { parseBranchRules } from "./batch-parsers-rules.mts";
 import { canGenerateGithubMutation } from "./mutation-policy.mts";
 import { getGithubTransport, isCcrTransport } from "./transport.mts";
 
@@ -48,7 +49,13 @@ export function routePollSummary(
     raw.mergeStateStatus === "UNKNOWN"
   )
     return { action: "wait", reasons: ["pending-or-unknown"] };
-  if (transportReadinessGaps(raw, raw.mergeStateStatus).length > 0)
+  if (
+    transportReadinessGaps(
+      raw,
+      raw.mergeStateStatus,
+      parseBranchRules(raw.baseRef).requiresConversationResolution,
+    ).length > 0
+  )
     return { action: "escalate", reasons: ["transport-unsupported"] };
   if (
     raw.mergeable === "UNKNOWN" ||

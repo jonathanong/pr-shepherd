@@ -66,10 +66,10 @@ describe("asynchronous merge reconciliation boundaries", () => {
     expect(submissions()).toHaveLength(1);
   });
 
-  it("propagates polling permission failures and retains the UUID for a later safe retry", async () => {
+  it("propagates polling credential failures and retains the UUID for a later safe retry", async () => {
     await apply();
-    harness.fixture.pollStatus = 403;
-    await expect(apply()).rejects.toMatchObject({ status: 403 });
+    harness.fixture.pollStatus = 401;
+    await expect(apply()).rejects.toMatchObject({ status: 401 });
     expect((await readMergeRequest(key))?.uuid).toBe(mergeUuid);
     harness.fixture.pollStatus = 200;
     await expect(apply()).resolves.toMatchObject({ status: "pending" });

@@ -108,3 +108,34 @@ export function matchesRestMergeRequest(
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(details.uuid)
   );
 }
+
+/**
+ * Synchronous `PUT /pulls/{n}/merge`, guarded by the head SHA. It is the fallback when the
+ * asynchronous request's status cannot be read (403 for tokens without access, or an expired
+ * UUID): GitHub refuses it with 405/409 unless the guarded head is mergeable, so repeating it
+ * after an unknown outcome cannot merge anything the caller did not guard.
+ */
+export async function requestRestSyncMerge(
+  repo: RepoInfo,
+  pr: number,
+  options: { requireSha: string; mergeMethod: MergeMethod },
+): Promise<RestMergeResponse> {
+  const { data } = await restWithRateLimit("PUT", `${restRepoPath(repo)}/pulls/${pr}/merge`, {
+    sha: options.requireSha,
+    merge_method: options.mergeMethod,
+  });
+  const body = (data ?? {}) as { merged?: unknown; sha?: unknown; message?: unknown };
+  const message = typeof body.message === "string" ? body.message : undefined;
+  if (body.merged !== true)
+    return {
+      status: "failed",
+      details: { message: message ?? "GitHub did not merge the pull request." },
+    };
+  return {
+    status: "merged",
+    details: {
+      message: message ?? "Pull request merged.",
+      ...(typeof body.sha === "string" && { sha: body.sha }),
+    },
+  };
+}

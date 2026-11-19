@@ -163,13 +163,85 @@ describe("guarded asynchronous REST merge", () => {
     },
   );
 
-  it("reconciles an expired UUID against actual merged state and leaves unknown outcomes blocked", async () => {
+  it("reconciles an expired UUID against actual merged state", async () => {
     await apply();
     harness.fixture.pollStatus = 404;
-    await expect(apply()).resolves.toMatchObject({ status: "failed", uncertain: true });
     harness.fixture.mergedOnExpiry = true;
     await expect(apply()).resolves.toMatchObject({ status: "merged" });
     expect(submissions()).toHaveLength(1);
+  });
+
+  describe("unreadable asynchronous status", () => {
+    const syncRequests = () =>
+      harness.wire.requests.filter((r) => r.method === "PUT" && r.path.endsWith("/merge"));
+    const key = { owner: "owner", repo: "repo", pr: 1 };
+
+    it("merges synchronously with the guarded SHA and method after a 403 status read", async () => {
+      await apply();
+      harness.fixture.pollStatus = 403;
+      harness.fixture.syncStatus = 200;
+      harness.fixture.syncBody = {
+        merged: true,
+        sha: "d".repeat(40),
+        message: "Pull Request successfully merged",
+      };
+      const result = await apply();
+      expect(result).toMatchObject({ status: "merged", details: { sha: "d".repeat(40) } });
+      expect(result.details.message).toContain("synchronously");
+      expect(syncRequests()).toHaveLength(1);
+      expect(syncRequests()[0]?.body).toEqual({ sha: mergeHead, merge_method: "squash" });
+      expect(submissions().filter((r) => r.path.endsWith("/merge-async"))).toHaveLength(1);
+      await expect(readMergeRequest(key)).resolves.toBeNull();
+    });
+
+    it("surfaces a definite refusal and retires the stale request instead of replaying it", async () => {
+      await apply();
+      harness.fixture.pollStatus = 403;
+      await expect(apply()).rejects.toMatchObject({ status: 405 });
+      await expect(readMergeRequest(key)).resolves.toBeNull();
+    });
+
+    it("keeps the request for an unknown synchronous outcome", async () => {
+      await apply();
+      harness.fixture.pollStatus = 404;
+      harness.fixture.syncStatus = 502;
+      await expect(apply()).rejects.toMatchObject({ status: 502 });
+      await expect(readMergeRequest(key)).resolves.not.toBeNull();
+    });
+
+    it("reports a synchronous response that did not merge", async () => {
+      await apply();
+      harness.fixture.pollStatus = 403;
+      harness.fixture.syncStatus = 200;
+      harness.fixture.syncBody = {};
+      await expect(apply()).resolves.toMatchObject({ status: "failed" });
+    });
+
+    it("never falls back for a request without a direct merge method", async () => {
+      const queue = { ...input, mergeAction: "merge_queue" as const, mergeMethod: undefined };
+      const run = () => runWithGithubTransport("rest", () => runApplyMerge(queue));
+      harness.fixture.submitBody = {
+        status: "pending",
+        details: {
+          uuid: mergeUuid,
+          expected_head_sha: mergeHead,
+          merge_action: "merge_queue",
+          bypass_rules: false,
+        },
+      } as never;
+      await run();
+      harness.fixture.pollStatus = 403;
+      await expect(run()).resolves.toMatchObject({ status: "failed", uncertain: true });
+      expect(syncRequests()).toHaveLength(0);
+    });
+
+    it("merged state wins over the unreadable status", async () => {
+      await apply();
+      harness.fixture.pollStatus = 403;
+      harness.fixture.snapshot.merged = true;
+      await expect(apply()).resolves.toMatchObject({ status: "merged" });
+      expect(syncRequests()).toHaveLength(0);
+    });
   });
 
   it("permits a new guarded head only after a definitive failure, with one successor submission", async () => {

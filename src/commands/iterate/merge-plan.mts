@@ -30,6 +30,10 @@ export interface MergePlanInput {
   queueKnown?: boolean;
   /** Omitted when the batch did not select repository merge settings. */
   allowedMergeMethods?: readonly MergeMethod[];
+  /** Branch policy requires linear history, so merge commits are excluded. */
+  linearHistory?: boolean;
+  /** Attach a REST equivalent of the GraphQL merge commands, for when GraphQL quota runs out. */
+  restFallback?: boolean;
   expectedStack?: RestMergeStackGuard;
 }
 
@@ -56,6 +60,7 @@ export function buildMergeCommandPlan(
         allowed: input.allowedMergeMethods,
         configured,
         fallback: "merge",
+        linearHistory: input.linearHistory,
       });
       if ("unavailable" in decision) return decision;
       method = decision.method;
@@ -113,6 +118,7 @@ export function buildMergeCommandPlan(
     allowed: input.allowedMergeMethods,
     configured: configuredMergeMethod(mergeConfig),
     fallback: "merge",
+    linearHistory: input.linearHistory,
   });
   if ("unavailable" in decision) return decision;
   const hasStrategy = findMergeStrategies(configuredArgs).length > 0;
@@ -121,5 +127,21 @@ export function buildMergeCommandPlan(
     mode: "auto",
     command: { argv: [...base, "--auto", ...commandArgs] },
     fallbackCommand: { argv: [...base, ...commandArgs] },
+    // `gh pr merge` is GraphQL; this REST call has its own quota and merges immediately.
+    ...(input.restFallback && {
+      restFallbackCommand: {
+        argv: [
+          "gh",
+          "api",
+          "-X",
+          "PUT",
+          `repos/${input.repo}/pulls/${input.pr}/merge`,
+          "-f",
+          `sha=${input.headSha}`,
+          "-f",
+          `merge_method=${decision.method}`,
+        ],
+      },
+    }),
   };
 }

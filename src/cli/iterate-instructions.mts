@@ -72,6 +72,11 @@ export function buildSimpleIterateInstructions(
           `Only if GitHub reports that auto-merge is unavailable, run the plain merge fallback: ${inlineCode(renderShellCommand(result.merge.fallbackCommand.argv))}.`,
         );
       }
+      if (result.merge.restFallbackCommand) {
+        instructions.push(
+          `If GraphQL is rate limited, use REST: ${inlineCode(renderShellCommand(result.merge.restFallbackCommand.argv))}.`,
+        );
+      }
       instructions.push(
         result.quotaWarning
           ? buildQuotaAwareContinuation(result.quotaWarning, "After running the merge command.")

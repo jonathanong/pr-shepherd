@@ -25,6 +25,7 @@ On REST:
 
 - Fields REST cannot supply stay unknown; unsupported operations produce a surfaced skip, error, or escalation ([rest.md](rest.md), [escalations](escalations.md#transport-unsupported)). Text, JSON, and MCP outputs still project equivalent available information.
 - A clean merge state with complete CI and complete feedback evidence can be READY without `reviewDecision` or branch-protection details. Neither transport uses `reviewDecision` for readiness; a non-clean state still needs readable branch policy.
+- REST cannot report resolved/outdated thread state without the cloud `ccr` route. When branch policy requires conversation resolution and GitHub reports `CLEAN`, that unknown status is not a readiness gap (GitHub would report `BLOCKED` otherwise); the threads are still surfaced at least once. Without the policy it stays a gap.
 - A queued PR may use REST for supported queue interactions; enqueue is not presumed GraphQL-only.
 
 GraphQL mode still makes some REST calls; they are listed in [graphql.md](graphql.md#rest-calls-in-graphql-mode).

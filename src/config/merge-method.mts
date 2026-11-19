@@ -41,7 +41,28 @@ export function chooseMergeMethod(input: {
   allowed: readonly MergeMethod[] | undefined;
   configured: MergeMethod | null;
   fallback: MergeMethod;
+  /** Branch policy requires linear history: a merge commit can never satisfy it. */
+  linearHistory?: boolean;
 }): { method: MergeMethod } | { unavailable: string } {
+  if (input.linearHistory) {
+    const linear = (input.allowed ?? METHOD_ORDER).filter((method) => method !== "merge");
+    if (input.allowed !== undefined && linear.length === 0)
+      return {
+        unavailable:
+          "Required linear history excludes merge commits, and this repository allows no squash or rebase merge.",
+      };
+    if (input.configured === "merge")
+      return {
+        unavailable:
+          "Configured merge method `merge` conflicts with the required linear history; use `squash` or `rebase`.",
+      };
+    if (input.allowed === undefined) {
+      return {
+        method: input.configured ?? (input.fallback === "merge" ? "squash" : input.fallback),
+      };
+    }
+    return chooseMergeMethod({ ...input, allowed: linear, linearHistory: false });
+  }
   if (input.allowed === undefined) return { method: input.configured ?? input.fallback };
   if (input.configured) {
     if (input.allowed.includes(input.configured)) return { method: input.configured };
