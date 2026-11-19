@@ -23,6 +23,7 @@ import {
 import { join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { EVALS_DIR, pruneStaleCases } from "../lib.mjs";
+import { checkGenerated } from "./generated-checks.mjs";
 import { SCENARIOS } from "./scenarios.mjs";
 import { writeOutcomeCase } from "./write.mjs";
 
@@ -50,7 +51,10 @@ delete manifest.userConfig;
 rmSync(join(real, "skills"), { recursive: true, force: true });
 cpSync(join(PLUGIN, "skills"), join(real, "skills"), { recursive: true });
 mkdirSync(join(real, ".claude-plugin"), { recursive: true });
-writeFileSync(join(real, ".claude-plugin", "plugin.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+writeFileSync(
+  join(real, ".claude-plugin", "plugin.json"),
+  `${JSON.stringify(manifest, null, 2)}\n`,
+);
 const casesDir = join(real, "cases");
 mkdirSync(casesDir, { recursive: true });
 
@@ -61,4 +65,10 @@ for (const spec of SCENARIOS) {
   writeOutcomeCase(spec, casesDir);
 }
 pruneStaleCases([...slugs], casesDir);
+const problems = checkGenerated(real, PLUGIN);
+if (problems.length) {
+  throw new Error(
+    `generated suite breaks arm isolation:\n${problems.map((p) => `- ${p}`).join("\n")}`,
+  );
+}
 console.log(`\n${slugs.size} outcome cases written to ${casesDir}`);

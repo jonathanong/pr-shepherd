@@ -8,9 +8,20 @@
 // layered over a full run. A run that errored or that the harness voided is
 // left out and counted in the `excluded` column. A `with` run whose Skill call
 // was denied makes the whole analysis refuse: that arm did not test the plugin.
+//
+// Each kept run's out/ dir is also checked (isolation.mjs): a baseline run that
+// saw a Shepherd server, tool, slash command or mock, or a plugin run without
+// the `cli` server, refuses the whole analysis. A plugin run that never called
+// `cli`, or whose `cli` answers are not the case's recorded text, is voided.
+// A scenario with fewer than two kept runs in an arm prints `insufficient` and
+// stays out of every mean.
 
 import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fixtureText, mustChange } from "../lib.mjs";
 import { bootstrapDeltas, interval, mean, seedOf } from "../stats.mjs";
+import { cliBody } from "./cli-mock.mjs";
+import { inspectRun } from "./isolation.mjs";
 import { SCENARIOS } from "./scenarios.mjs";
 
 const SKILL_DENIED = /Permission to use Skill has been denied/;
@@ -43,27 +54,59 @@ if (short.length) {
   process.exit(1);
 }
 
+// The cli mock the case served: the generated file when it is still on disk,
+// else the one the current scenario would generate.
+function servedCliMock(spec, c) {
+  const file = resolve(c.dir ?? "", "mocks", "cli", "pr-shepherd.md");
+  if (existsSync(file)) return readFileSync(file, "utf8");
+  const tick = fixtureText(spec.fixture);
+  return cliBody(spec, spec.transform ? mustChange(spec.slug, tick, spec.transform) : tick);
+}
+
 const denied = [];
+const violations = [];
+const voids = [];
+const toolErrors = { with: 0, without: 0 };
+const runCount = { with: 0, without: 0 };
 const rows = [];
-const unmeasured = [];
+const insufficient = [];
 for (const spec of SCENARIOS) {
   const c = cases.get(spec.slug);
   if (!c) continue;
   const arm = (name) => {
     const kept = [];
     let excluded = 0;
-    for (const r of c.arms[name] ?? []) {
+    (c.arms[name] ?? []).forEach((r, i) => {
+      const label = `${spec.slug} [${name}] run ${i + 1}`;
       if (name === "with" && skillDenied(r)) denied.push(`${spec.slug} ${r.tracePath}`);
-      if (r.error || (r.graders ?? []).some((g) => VOIDED.test(g.explanation ?? ""))) excluded++;
-      else kept.push(r.score);
-    }
+      let reason = null;
+      if (r.error) reason = "error";
+      else if ((r.graders ?? []).some((g) => VOIDED.test(g.explanation ?? "")))
+        reason = "harness-voided";
+      else if (r.tracePath && existsSync(r.tracePath)) {
+        const check = inspectRun(
+          name,
+          dirname(r.tracePath),
+          name === "with" ? servedCliMock(spec, c) : "",
+        );
+        runCount[name]++;
+        toolErrors[name] += check.toolErrors;
+        for (const v of check.violations) violations.push(`${label}: ${v}`);
+        reason = check.void;
+      } else if (name === "without")
+        violations.push(`${label}: trace is gone; rerun with --keep-temp`);
+      if (reason) {
+        excluded++;
+        voids.push(`${label}: ${reason}`);
+      } else kept.push(r.score);
+    });
     return { kept, excluded };
   };
   const w = arm("with");
   const wo = arm("without");
-  // An arm with no valid run is unmeasured, not 0: keep it out of every table.
-  if (!w.kept.length || !wo.kept.length) unmeasured.push(spec.slug);
-  else rows.push({ spec, with: w.kept, without: wo.kept, excluded: w.excluded + wo.excluded });
+  const entry = { spec, with: w.kept, without: wo.kept, excluded: w.excluded + wo.excluded };
+  if (w.kept.length < 2 || wo.kept.length < 2) insufficient.push(entry);
+  else rows.push(entry);
 }
 if (denied.length) {
   console.error(
@@ -71,6 +114,12 @@ if (denied.length) {
   );
   process.exit(1);
 }
+if (violations.length) {
+  console.error(`Arm isolation violated; refusing to report:\n${violations.join("\n")}`);
+  process.exit(1);
+}
+console.log(`isolation: ok (${runCount.without} without runs, ${runCount.with} with runs)`);
+console.log(`mock tool_errors: without ${toolErrors.without}, with ${toolErrors.with}\n`);
 
 const fmt = (x) => (x >= 0 ? `+${x.toFixed(2)}` : x.toFixed(2));
 const ci = (draws) => (draws ? `[${interval(draws).map(fmt).join(", ")}]` : "n/a");
@@ -86,13 +135,24 @@ function groupDraws(group) {
 function summary(name, group) {
   const w = mean(group.map((r) => mean(r.with)));
   const wo = mean(group.map((r) => mean(r.without)));
-  row([name, String(group.length), w.toFixed(2), wo.toFixed(2), fmt(w - wo), ci(groupDraws(group))]);
+  row([
+    name,
+    String(group.length),
+    w.toFixed(2),
+    wo.toFixed(2),
+    fmt(w - wo),
+    ci(groupDraws(group)),
+  ]);
 }
 
 console.log("| Category | Scenarios | Plugin | gh/MCP | Δ | 95% CI |");
 console.log("| --- | --- | --- | --- | --- | --- |");
 const categories = [...new Set(rows.map((r) => r.spec.category))];
-for (const cat of categories) summary(cat, rows.filter((r) => r.spec.category === cat));
+for (const cat of categories)
+  summary(
+    cat,
+    rows.filter((r) => r.spec.category === cat),
+  );
 if (rows.length) summary("**All**", rows);
 
 console.log("\n| Scenario | Category | Plugin | gh/MCP | Δ | 95% CI | Excluded |");
@@ -109,11 +169,23 @@ for (const r of rows) {
     String(r.excluded || ""),
   ]);
 }
+for (const r of insufficient) {
+  row([
+    `\`${r.spec.slug}\``,
+    r.spec.category,
+    "insufficient",
+    "insufficient",
+    "",
+    "",
+    String(r.excluded || ""),
+  ]);
+}
+if (insufficient.length) {
+  console.log("\n`insufficient`: fewer than two kept runs in an arm; left out of every mean.");
+}
+if (voids.length) console.log(`\nVoided runs:\n${voids.map((v) => `- ${v}`).join("\n")}`);
 const missing = SCENARIOS.filter((s) => !cases.has(s.slug)).map((s) => s.slug);
 if (missing.length) console.log(`\nNot in these results: ${missing.join(", ")}`);
-if (unmeasured.length) {
-  console.log(`\nNo valid run in one arm, left out of every table: ${unmeasured.join(", ")}`);
-}
 
 // A missing trace cannot show the Skill call went through, so it counts as
 // denied: the run needs `--keep-temp`, and the analysis needs its traces.

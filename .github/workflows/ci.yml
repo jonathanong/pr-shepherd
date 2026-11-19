@@ -55,6 +55,19 @@ jobs:
         with:
           use_oidc: true
 
+  outcome-evals:
+    name: outcome evals isolation
+    runs-on: ubuntu-slim
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24.x'
+      - name: Generated suite keeps the baseline arm free of Shepherd
+        run: node evals/outcomes/generate.mjs --out evals-outcomes-ci
+      - name: Isolation and CLI-mock checks
+        run: node --test evals/outcomes/invariants.test.mjs
+
   site:
     name: site build
     runs-on: ubuntu-slim
