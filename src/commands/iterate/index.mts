@@ -414,8 +414,8 @@ async function runIterateCore(
   if (markReadyResult) return markReadyResult;
 
   if (readyState.shouldCancel && !report.mergeStatus.isDraft) {
-    const receipt = receiptCurrent
-      ? "written"
+    const outcome: ReceiptOutcome = receiptCurrent
+      ? { status: "written" }
       : await recordReadyReceipt(receiptKey, report, checkContext);
     // Aggregate `stack` routing trusts only a layer's receipt, so an unwritten
     // one keeps the elapsed marker and retries next tick. A one-PR receipt
@@ -424,15 +424,15 @@ async function runIterateCore(
     // still holds it, but without --merge its one-PR session ends like a
     // single PR's instead of waiting for a stall-timeout.
     const stackLayer = report.mergeStatus.mergeRequirements?.stack !== undefined;
-    if (stackLayer && (receipt === "failed" || (receipt === "blocked" && opts.merge))) {
+    if (
+      stackLayer &&
+      (outcome.status === "failed" || (outcome.status === "blocked" && opts.merge))
+    ) {
       const receiptWait: IterateResult = {
         ...base,
         action: "wait",
         shouldCancel: false,
-        log:
-          receipt === "blocked"
-            ? `WAIT: PR #${base.pr} reached ready-delay but GitHub reports BLOCKED, so its stack readiness receipt was not certified`
-            : `WAIT: PR #${base.pr} reached ready-delay but its stack readiness receipt could not be persisted`,
+        log: receiptWaitLog(base.pr, outcome),
       };
       return annotateBlockedWait(
         await applyStallGuard(
@@ -514,68 +514,97 @@ async function runIterateCore(
   );
 }
 
+type ReceiptOutcome =
+  | { status: "written" }
+  | { status: "blocked" }
+  | { status: "failed"; reason: string; persistFailure?: boolean };
+
+const short = (oid: string | null | undefined): string => (oid ? oid.slice(0, 7) : "none");
+const failed = (reason: string): ReceiptOutcome => ({ status: "failed", reason });
+const errMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
+
+function receiptWaitLog(pr: number, outcome: ReceiptOutcome): string {
+  const head = `WAIT: PR #${pr} reached ready-delay but`;
+  if (outcome.status === "blocked")
+    return `${head} GitHub reports BLOCKED, so its stack readiness receipt was not certified`;
+  if (outcome.status === "failed" && outcome.persistFailure)
+    return `${head} its stack readiness receipt could not be persisted: ${outcome.reason}`;
+  const reason = outcome.status === "failed" ? outcome.reason : "unknown";
+  return `${head} its stack readiness receipt was not certified: ${reason}`;
+}
+
 /**
  * Persist a READY receipt from a fresh compact snapshot. `blocked` means the
- * snapshot is ready except for GitHub's BLOCKED state; `failed` covers missing,
- * stale, or not-ready evidence and write errors.
+ * snapshot is ready except for GitHub's BLOCKED state; `failed` carries the
+ * reason the receipt was not certified (missing, stale, or not-ready evidence,
+ * or a write error flagged `persistFailure`).
  */
 async function recordReadyReceipt(
   key: { owner: string; repo: string; pr: number },
   report: Awaited<ReturnType<typeof runCheck>>,
   context?: ReturnType<typeof createCheckExecutionContext>,
-): Promise<"written" | "blocked" | "failed"> {
-  if (
-    report.status !== "READY" ||
-    report.mergeStatus.state !== "OPEN" ||
-    report.mergeStatus.isDraft ||
-    !report.headSha ||
-    !report.baseRefOid ||
-    reportReadinessGaps(report).length > 0
-  )
-    return "failed";
+): Promise<ReceiptOutcome> {
+  if (report.status !== "READY") return failed(`report status is ${report.status}, not READY`);
+  if (report.mergeStatus.state !== "OPEN")
+    return failed(`PR is ${report.mergeStatus.state}, not OPEN`);
+  if (report.mergeStatus.isDraft) return failed("PR is a draft");
+  if (!report.headSha) return failed("report has no head SHA");
+  if (!report.baseRefOid) return failed("report has no base SHA");
+  if (reportReadinessGaps(report).length > 0) return failed("report has readiness gaps");
+  let raw: Awaited<ReturnType<typeof receiptSummaryForReport>>;
+  let summary: Awaited<ReturnType<typeof summarizePollSummaryPr>>;
   try {
-    const raw = await receiptSummaryForReport(key, report, context);
-    if (
-      fingerprintRawSummaryPr(raw) === null ||
-      raw.state !== "OPEN" ||
-      raw.isDraft ||
-      raw.headRefOid !== report.headSha ||
-      raw.baseRefOid !== report.baseRefOid
-    )
-      return "failed";
+    raw = await receiptSummaryForReport(key, report, context);
+    if (fingerprintRawSummaryPr(raw) === null) return failed("fresh summary has no fingerprint");
+    if (raw.state !== "OPEN") return failed(`fresh summary shows PR ${raw.state}, not OPEN`);
+    if (raw.isDraft) return failed("fresh summary shows PR as a draft");
+    if (raw.headRefOid !== report.headSha)
+      return failed(`head moved (report ${short(report.headSha)}, fresh ${short(raw.headRefOid)})`);
+    if (raw.baseRefOid !== report.baseRefOid)
+      return failed(
+        `base moved (report ${short(report.baseRefOid)}, fresh ${short(raw.baseRefOid)})`,
+      );
     // Summarize hydrates annotation totals onto the snapshot before the stored hash.
-    const summary = await summarizePollSummaryPr(
+    summary = await summarizePollSummaryPr(
       raw,
       { owner: key.owner, name: key.repo },
       { stackPrNumber: report.pr },
     );
-    if (annotationProbeUnavailable(raw)) return "failed";
-    const fingerprint = fingerprintRawSummaryPr(raw);
-    if (fingerprint === null) return "failed";
-    const checks = summary.checks ?? {};
-    const review = summary.review ?? {};
-    if (!isCurrentSummaryReady(raw, checks, review)) {
-      const onlyBlocked =
-        raw.mergeStateStatus === "BLOCKED" &&
-        !raw.isInMergeQueue &&
-        isCurrentSummaryReady(raw, checks, review, { allowBlocked: true });
-      return onlyBlocked ? "blocked" : "failed";
-    }
-    const removalEvent = currentQueueRemovalEvent(raw);
-    // Bind recovery to the exact evidence the one-PR check accepted. A new ejection
-    // between that check and this fresh snapshot must get its own acknowledgment.
-    if (report.mergeQueue?.removalAcknowledged) {
-      const accepted = report.mergeQueue.latestRemoval;
-      if (
-        raw.isInMergeQueue ||
-        !accepted ||
-        !removalEvent ||
-        removalEvent.beforeCommit?.oid !== accepted.beforeCommitOid ||
-        Math.floor(Date.parse(removalEvent.createdAt) / 1000) !== accepted.createdAtUnix ||
-        removalEvent.reason !== accepted.reason
-      )
-        return "failed";
-    }
+  } catch (e) {
+    // The receipt is supplementary evidence. A transient summary fetch failure
+    // must not turn a completed one-PR poll into a different Shepherd action.
+    return failed(`fresh summary unavailable: ${errMessage(e)}`);
+  }
+  if (annotationProbeUnavailable(raw)) return failed("annotation probe unavailable");
+  const fingerprint = fingerprintRawSummaryPr(raw);
+  if (fingerprint === null) return failed("fresh summary has no fingerprint");
+  const checks = summary.checks ?? {};
+  const review = summary.review ?? {};
+  if (!isCurrentSummaryReady(raw, checks, review)) {
+    const onlyBlocked =
+      raw.mergeStateStatus === "BLOCKED" &&
+      !raw.isInMergeQueue &&
+      isCurrentSummaryReady(raw, checks, review, { allowBlocked: true });
+    return onlyBlocked
+      ? { status: "blocked" }
+      : failed("fresh summary is not ready (checks, review, or merge state changed)");
+  }
+  const removalEvent = currentQueueRemovalEvent(raw);
+  // Bind recovery to the exact evidence the one-PR check accepted. A new ejection
+  // between that check and this fresh snapshot must get its own acknowledgment.
+  if (report.mergeQueue?.removalAcknowledged) {
+    const accepted = report.mergeQueue.latestRemoval;
+    if (
+      raw.isInMergeQueue ||
+      !accepted ||
+      !removalEvent ||
+      removalEvent.beforeCommit?.oid !== accepted.beforeCommitOid ||
+      Math.floor(Date.parse(removalEvent.createdAt) / 1000) !== accepted.createdAtUnix ||
+      removalEvent.reason !== accepted.reason
+    )
+      return failed("merge-queue removal evidence changed since the one-PR check");
+  }
+  try {
     await writeReadyReceipt({
       version: 1,
       ...key,
@@ -589,12 +618,9 @@ async function recordReadyReceipt(
       }),
       recordedAtUnix: Math.floor(Date.now() / 1000),
     });
-    return "written";
-  } catch {
-    // The receipt is supplementary evidence. A transient summary fetch or
-    // state-directory failure must not turn a completed one-PR poll into a
-    // different Shepherd action.
-    return "failed";
+    return { status: "written" };
+  } catch (e) {
+    return { status: "failed", reason: errMessage(e), persistFailure: true };
   }
 }
 
