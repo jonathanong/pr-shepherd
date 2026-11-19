@@ -4,7 +4,7 @@ Take pull requests from scratch to merge-ready with a coding agent, as a [Code M
 
 ## Benefits
 
-- **Better decisions:** across 56 PR states, it scores 0.97 with the plugin vs. 0.47 with `gh` + the GitHub MCP server ([outcome evals](evals/README.md), 2026-11-15).
+- **Better decisions:** across 59 PR states, it scores 0.94 with the plugin vs. 0.46 with `gh` + the GitHub MCP server ([outcome evals](evals/README.md), 2026-11-19).
 - **Lower cost:** modeled cost per PR session is about 36% lower than `gh` and 76% lower than the GitHub MCP server, with 20% / 69% fewer turns ([token bench](evals/tokens/README.md); assumes a warm prompt cache).
 - **More PRs on one GitHub quota:** 65% fewer GraphQL points than `gh` per PR session. While CI runs, a 5,000-point hourly budget covers about 80 waiting PRs, vs. about 13 with `gh pr checks --watch` ([GitHub API](docs/github-api.md), [GraphQL usage](docs/graphql-usage.md)). A [GitHub App](docs/github-app.md) and [webhook events](docs/hook-harness.md) cut it more.
 - **72 GitHub edge cases handled:** outdated or resolved threads are still shown once, edited comments come back, and conflicts that GraphQL reports as `CLEAN` are caught ([handled cases](docs/handled-cases.md)).

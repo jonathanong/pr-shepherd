@@ -6,6 +6,49 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-19: first full run with tool-neutral graders
+
+The first full outcome run after #779 rewrote the prompts and graders so they no
+longer name pr-shepherd, with ticks read from the current snapshots and
+pr-shepherd served only to the plugin arm (the CLI-mock harness). Sonnet 5.5 at
+low effort, opus judge, 3 runs per arm. Later fixes were checked with targeted
+reruns, and `analyze.mjs` layers each run over the earlier ones scenario by
+scenario:
+
+| Run               | Commit            | Scenarios | Cost    |
+| ----------------- | ----------------- | --------- | ------- |
+| Full              | `main` at #779    | 60        | $718.16 |
+| Rerun after fixes | #784              | 17        | $198.72 |
+| Confirm           | #786              | 4         | $37.09  |
+| Targeted          | #789              | 5         | $51.97  |
+| 51                | `main` after #789 | 1         | $7.90   |
+
+Layered: plugin 0.94 vs gh/MCP 0.46 (Δ +0.48, 95% CI [+0.44, +0.52]) over 59
+scenarios. No scenario favors gh/MCP. 36 is unscored: all three gh/MCP runs
+errored in the eval runner. The per-scenario table is in
+[EVALS.md](EVALS.md#latest-results-2026-11-19).
+
+What the targeted reruns changed:
+
+- **48 had all plugin runs voided.** A create scenario starts with no PR, so a
+  plan that stops before the PRs exist never calls Shepherd, and `analyze.mjs`
+  voided it as `cli-never-called` even though the judge passed it. Create
+  scenarios now keep those runs (#789). 48 scores 1.00 vs 0.00.
+- **59 rose from 0.33 to 0.67.** The check follow-up said to fix a cause
+  "within this PR", and agents read the repository's live-provider tests as
+  within the PR and planned to mock the provider during an outage. It now says
+  to fix the failure only if this PR's changes caused it, even if a code change
+  could work around it (#789). The remaining failure planned to rerun Shepherd
+  "until it escalates", which the judge counted as polling.
+- **52 stays at 0.67.** The failing run used `gh run view --log-failed` instead
+  of the printed `gh run view`, so it never saw the billing annotation.
+- **51 had all plugin runs voided as `cli-mock-drift`.** #789 changed the
+  follow-up text in its recorded tick, so the served answers no longer matched.
+  Its rerun scores 1.00 in both arms.
+- **Scenario 63** (an @claude placeholder comment) was dropped before it ran. The
+  `claude-notices` rule (#788) is deterministic and covered by unit and
+  snapshot tests.
+
 ## 2026-11-18: outcome runs since v2.2.4 had pr-shepherd in both arms
 
 #757 (v2.2.4) removed the plugin's `pr-shepherd` MCP server. The outcome cases
