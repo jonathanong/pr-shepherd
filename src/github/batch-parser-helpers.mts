@@ -56,7 +56,10 @@ export function mapCheckRunNode(
   return {
     id: node.id,
     name: node.name,
-    status: node.status as CheckRun["status"],
+    // GitHub can report a finished run (conclusion and/or completed_at set) with a stale
+    // status such as IN_PROGRESS. A recorded outcome means the run is completed; keep the
+    // reported conclusion as-is and invent nothing.
+    status: (node.conclusion ? "COMPLETED" : node.status) as CheckRun["status"],
     conclusion: node.conclusion as CheckRun["conclusion"],
     source: "check_run",
     detailsUrl: node.detailsUrl ?? "",
