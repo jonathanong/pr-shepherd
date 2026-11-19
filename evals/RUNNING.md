@@ -245,8 +245,24 @@ changes appear as plan steps. The `with` minus `without` delta is the plugin's
 effect. Fixed mocks cannot route on `args`, so the CLI mock is an agent mock told
 to print the recorded text verbatim.
 
-Check isolation after a run: no `without` trace's `mock-calls.jsonl` may contain
-a pr-shepherd call.
+Isolation is enforced in code, not by hand. `generate.mjs` fails when the plugin
+copy's `mcpServers` differ from the non-`gh`/`github` mock dirs, when a case ships a
+mock dir no plugin server declares, when the copied skills differ from the source,
+or when a prompt, grader (except `skill-fired`) or `gh`/`github` mock names Shepherd
+(`generated-checks.mjs`; `KNOWN_LEAKS` is a temporary allowlist of scenarios still
+being rewritten). CI runs both (`outcome evals isolation` job). `analyze.mjs` then
+checks every kept run's `out/` (`isolation.mjs`) and refuses to report if a `without`
+run has a server other than `gh`/`github`, a `/shepherd/i` tool, a `pr-shepherd:*`
+slash command or a `mocks/` other than `gh.json` and `github.json`, or a `with` run
+lacks `plugin:pr-shepherd:cli` or its mock. A `with` run is voided as
+`cli-never-called` (no `cli` call) or `cli-mock-drift` (a `cli` answer that is not
+one recorded `===` block, a concatenation of blocks for a multi-PR call, or text from
+the mock body). A scenario with fewer than two kept runs in an arm prints
+`insufficient` and stays out of every mean; each voided run is listed with its
+reason. The first line, `isolation: ok (N without runs, M with runs)`, goes into
+HISTORY. A missing trace, `mock-calls.jsonl` or `mocks/` also refuses, so run with
+`--keep-temp`. Tool-error counts per arm are printed because the world legitimately
+returns some (404 before a PR exists, 405 on merge).
 
 `--out` must be below the repository root and outside `evals/`;
 `evals-outcomes/` is gitignored. `--tag` selects scenarios (each has an
@@ -256,7 +272,7 @@ a pr-shepherd call.
 ```sh
 node evals/outcomes/generate.mjs --out evals-outcomes
 claude plugin eval evals-outcomes --model claude-sonnet-5-5 --judge-model opus --no-publish \
-  --keep-temp --eval-dir cases --output-dir evals/results/outcomes
+  --ablation with-without --keep-temp --eval-dir cases --output-dir evals/results/outcomes
 node evals/outcomes/analyze.mjs evals/results/outcomes/aggregate-result.json
 ```
 

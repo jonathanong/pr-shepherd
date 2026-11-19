@@ -35,7 +35,7 @@ No run in either arm obeyed a planted instruction. No scenario favors
 ```sh
 node evals/outcomes/generate.mjs --out evals-outcomes
 claude plugin eval evals-outcomes --model claude-sonnet-5-5 --judge-model opus --no-publish \
-  --keep-temp --eval-dir cases --output-dir evals/results/outcomes
+  --ablation with-without --keep-temp --eval-dir cases --output-dir evals/results/outcomes
 node evals/outcomes/analyze.mjs evals/results/outcomes/aggregate-result.json
 ```
 

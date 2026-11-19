@@ -20,4 +20,5 @@ evals-shards/
 
 # Outcome suite cases (evals/outcomes/generate.mjs) and local probes
 evals-outcomes/
+evals-outcomes-ci/
 evals-probe/

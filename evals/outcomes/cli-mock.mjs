@@ -18,7 +18,10 @@ const cliWording = (text) =>
     .replace(/the pr-shepherd MCP `(\w+)` tool/g, "the `pr-shepherd $1` command")
     .replace(/the call's `pr` or `prs`/g, "the call's PR arguments")
     .replace(/the call's `refs`/g, "the call's PR or stack arguments")
-    .replaceAll("call `stack` again with `merge`, `mergeReady` or `mergeThrough`", "rerun `pr-shepherd stack` with `--merge`, `--merge-ready` or `--merge-through PR`");
+    .replaceAll(
+      "call `stack` again with `merge`, `mergeReady` or `mergeThrough`",
+      "rerun `pr-shepherd stack` with `--merge`, `--merge-ready` or `--merge-through PR`",
+    );
 
 /** One subcommand's answer: a verbatim block, or a routing rule the model applies. */
 const section = (label, answer) => {
@@ -47,7 +50,13 @@ Pick the subcommand from the first word of \`args\`:
 - \`stack\`: STACK.
 - \`apply\`: APPLY.
 - \`suggest\`: SUGGEST.
-- anything else (PR numbers, PR URLs, \`owner/repo#N\`, flags, or nothing): ITERATE.
+- anything else: ITERATE, but only when every argument is a PR number, PR URL
+  or \`owner/repo#N\`, or one of \`--until-terminal\`, \`--merge\`,
+  \`--merge-ready\`, \`--merge-through PR\` and \`--format json|text\`, or
+  there are no arguments. If any other word or flag appears, a first word that
+  is not a subcommand included, print exactly \`error: unrecognized arguments\`
+  then \`exit code 2\`, and nothing else. Never compose an answer for a call
+  you cannot match.
 
 Flags map to the options a routing rule may name: \`--merge\` is merge,
 \`--merge-ready\` is mergeReady, \`--merge-through PR\` is mergeThrough. Every
