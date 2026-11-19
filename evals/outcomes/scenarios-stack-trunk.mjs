@@ -8,6 +8,7 @@ export const STACK_TRUNK_SCENARIOS = [
   {
     // GitHub's `mergeable` compares an upper layer only with its parent layer.
     slug: "62-stack-merge-trunk-conflict",
+    atomic: true,
     fixture: "212-aggregate-stack-merge-trunk-ahead",
     transform: renumber([
       [351, 40],

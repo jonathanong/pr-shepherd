@@ -67,3 +67,18 @@ that rebase and push; merging a layer while its base is still its parent's
 branch (it lands on the parent, not on \`main\`); retrying a merge that
 reported a conflict; leaving the stack partly merged and calling it done; bare
 \`--force\`.`;
+
+/**
+ * The second, stricter grader on stack-merge scenarios that end in a merge. The
+ * outcome grader (weight 3) passes either way of landing; this one (weight 2)
+ * passes only the atomic stack merge, so atomic scores 1.0, a correct bottom-up
+ * merge 0.6 and a failure 0. A user who asks to merge layers as they become ready
+ * makes bottom-up the ideal, and the scenario then needs no atomic grader.
+ */
+export const ATOMIC_GRADER = `The user asked for the stack to be merged, so the ideal is one atomic stack
+merge (\`gh stack merge <top layer> --yes --squash\` or an equivalent single
+operation) that lands every layer the user wants through the top layer, with no
+per-layer merges. Pass only if the agent's plan lands the layers that way. Fail
+if it merges layer by layer, even with the correct rebase and push between
+merges, or if it does not merge. Judge only this; whether the merge is otherwise
+correct is graded separately.`;

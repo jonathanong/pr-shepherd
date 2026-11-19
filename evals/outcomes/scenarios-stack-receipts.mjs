@@ -21,6 +21,7 @@ export const STACK_RECEIPT_SCENARIOS = [
   {
     // Every layer looks ready, but only multi-PR polls ran: no layer has a receipt.
     slug: "57-stack-merge-needs-receipts",
+    atomic: true,
     fixture: "198-aggregate-stack-merge-no-receipts",
     transform: renumber([
       [981, 41],
@@ -54,6 +55,7 @@ and without a concrete next step that merges; hand off to a human.`,
   {
     // The user said "merge it" about a stack the agent already reported ready.
     slug: "58-stack-merge-it-after-ready-report",
+    atomic: true,
     fixture: "182-aggregate-stack-merge-unowned-below",
     transform: renumber([
       [611, 40],

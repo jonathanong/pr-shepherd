@@ -53,6 +53,7 @@ mentioning #40.`,
   {
     // "Up to #42": the layer above it stays open.
     slug: "37-stack-merge-through-layer",
+    atomic: true,
     fixture: "184-aggregate-stack-merge-through",
     transform: renumber([
       [631, 41],
@@ -91,6 +92,7 @@ to, rebase or restack \`layer-43\` or any branch other than the rebase of
   {
     // Two stacks in one request: one merge per stack, each bottom-up.
     slug: "38-two-stacks-one-request",
+    atomic: true,
     fixture: "97-aggregate-stack-full-merge",
     tags: ["stack", "merge"],
     shepherd: TWO_STACK_SHEPHERD,

@@ -245,6 +245,18 @@ changes appear as plan steps. The `with` minus `without` delta is the plugin's
 effect. Fixed mocks cannot route on `args`, so the CLI mock is an agent mock told
 to print the recorded text verbatim.
 
+Stack-merge scoring. Scenarios 37, 38, 57, 58, 61 and 62 end in a stack merge and
+carry two judge graders: `outcome` (weight 3) passes any correct landing, either one
+atomic stack merge or bottom-up merging with a rebase onto trunk and a
+`--force-with-lease` push after each squash merge; `atomic` (weight 2) passes only
+the atomic merge. A run's score is the weight-averaged pass rate of its scored
+graders, so atomic scores 1.0, correct bottom-up 0.6 and a failure (no rebase after a
+squash merge, merging into the parent branch, retrying a conflicted merge, a
+half-merged stack, bare `--force`) 0. `skill-fired` carries no `arm` or weight, is
+reported as a plugin indicator and is excluded from the score in both arms, so the
+baseline is not penalized for it. A scenario whose user asks for incremental merging
+(merge as layers become ready) would take no `atomic` grader; none in this suite does.
+
 Isolation is enforced in code, not by hand. `generate.mjs` fails when the plugin
 copy's `mcpServers` differ from the non-`gh`/`github` mock dirs, when a case ships a
 mock dir no plugin server declares, when the copied skills differ from the source,

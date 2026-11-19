@@ -13,6 +13,7 @@ const LAYERS = [41, 42, 43];
 export const STACK_BY_PR_SCENARIOS = [
   {
     slug: "61-stack-merge-from-one-pr",
+    atomic: true,
     fixture: "182-aggregate-stack-merge-unowned-below",
     transform: renumber([
       [611, 41],
