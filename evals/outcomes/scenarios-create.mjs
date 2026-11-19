@@ -123,7 +123,11 @@ export const CREATE_SCENARIOS = [
   - \`const TIMEOUT_MS = 5000;\` becomes \`const TIMEOUT_MS = 30000; // ms\`
   - \`const RETRIES = 3;\` becomes \`const RETRIES = 5;\`
 Both commits edit line 10 of \`src/config.ts\`, so whichever merges second
-conflicts with \`main\` and needs a rebase.`),
+conflicts with \`main\` and needs a rebase.
+\`gh stack init --adopt feat/timeout feat/retries\` only stacks the existing branches
+in that order. \`gh stack rebase\` then rebases \`feat/retries\` onto \`feat/timeout\`
+(it keeps \`feat/retries\`'s \`// ms\` version of line 10 and succeeds), so no
+separate checkout, git rebase or push is needed before \`gh stack submit --auto\`.`),
     grader: STACKED_GRADER("the `feat/timeout` PR", "the `feat/retries` PR"),
   },
   {

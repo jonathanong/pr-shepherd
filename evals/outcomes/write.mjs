@@ -59,7 +59,11 @@ each change as its own next step.`;
 
 const ghBody = (world) => `You are the GitHub CLI (\`gh\` 2.83.0) in a checkout of owner/repo, authenticated
 as \`you\`, the author of PR #42. Answer each call with exactly what \`gh\` would
-print: stdout, or stderr followed by \`exit code N\`. Print nothing else.
+print: stdout, or stderr followed by \`exit code N\`. Print nothing else. Never
+answer with an empty reply: the harness rewrites an empty tool result, and a
+run whose results it rewrote cannot be graded. When the real command prints
+nothing (a search or list with no matches), answer with the one line
+\`(no output)\`.
 
 Use only the facts below. Do not invent reviews, comments, checks, logs, runs or
 events beyond them; where they are silent, answer as GitHub would for a repository
@@ -72,7 +76,9 @@ ${world}`;
 
 const githubBody = (world) => `You are the GitHub MCP server (github-mcp-server). Answer each tool call with
 exactly the JSON (or, for logs, the text) the real server returns, and nothing
-else. The caller is \`you\`, the author of PR #42 in owner/repo.
+else. The caller is \`you\`, the author of PR #42 in owner/repo. Never answer with an
+empty reply: the harness rewrites an empty tool result, and a run whose results it
+rewrote cannot be graded. An empty result is \`[]\`.
 
 Use only the facts below. Do not invent reviews, comments, checks, logs, runs or
 events beyond them; where they are silent, answer as GitHub would for a repository
