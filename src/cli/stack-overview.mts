@@ -7,7 +7,7 @@ import type {
 } from "../types.mts";
 import type { ApiUsage, GraphqlQuotaWarning } from "../types/api-usage.mts";
 import { formatApiUsage, formatQuotaWarning } from "./api-usage-formatter.mts";
-import { formatTransportEvidence } from "./transport-formatter.mts";
+import { formatTransportEvidence, projectTransportEvidence } from "./transport-formatter.mts";
 import { removalDetail, trunkDetail, type StackLayerView } from "./stack-layer-view.mts";
 import type { NextCheck } from "../types/next-check.mts";
 import { formatNextCheckLines } from "./next-check-format.mts";
@@ -16,6 +16,8 @@ import { formatRuleAutoResolveLines } from "./rule-auto-resolve-lines.mts";
 
 export interface StackOverview {
   transport?: "rest";
+  /** Why REST is in use; present only with `transport`. */
+  transportReason?: string;
   transportUnavailable?: Array<{ field: string; reason: string }>;
   mode: "summary";
   repo: string;
@@ -42,10 +44,7 @@ export function projectStackOverview(result: PollSummaryResult): StackOverview {
   return {
     mode: "summary",
     repo: result.repo,
-    ...(result.transport && { transport: result.transport }),
-    ...(result.transportUnavailable?.length && {
-      transportUnavailable: result.transportUnavailable,
-    }),
+    ...projectTransportEvidence(result),
     selection,
     reason: result.reason,
     ...(result.stackMergeable && { stackMergeable: true }),

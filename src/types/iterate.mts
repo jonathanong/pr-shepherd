@@ -50,6 +50,8 @@ export interface IterateResultSummary {
 
 export interface IterateResultBase {
   transport?: "rest";
+  /** Why REST is in use; present only with `transport`. */
+  transportReason?: string;
   transportUnavailable?: Array<{ field: string; reason: string }>;
   pr: number;
   repo: string;

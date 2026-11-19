@@ -141,6 +141,10 @@ Every one-PR action, default lean format:
 - The timestamp form never applies to a required status context (the stack trunk's contexts for a native-stack layer). GitHub's required gate reads the latest, highest-ID run, so that cancellation still fails it ([github/gh-stack#466](https://github.com/github/gh-stack/issues/466)). The max-run-ID form covers a required context only when the newer run contains that same context.
 - A `CANCELLED` check without either form of evidence is not superseded. It stays under `## Failing checks` with `[conclusion: CANCELLED]`.
 
+### Transport reason
+
+When Shepherd moved to REST by itself (an `auto` fallback, or the Claude Code cloud-session default), the `**transport** \`rest\``line carries the cause in parentheses and JSON carries`transportReason`, for one-PR results, aggregate results and `stack` (text, JSON and MCP). A run that requested REST (`--transport rest`, `github.transport: rest`) has no reason. The fallback lasts for one command; printed per-PR commands carry `--transport rest` only when the run requested it (`apply merge` always does). See [github-api.md](github-api.md).
+
 ## Load-bearing conventions
 
 The iterate skill depends on these.

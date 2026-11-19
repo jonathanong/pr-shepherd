@@ -1,3 +1,4 @@
+import { transportReasonField } from "../github/transport-evidence.mts";
 import type { BatchPrData, MergeStatusResult, ShepherdReport } from "../types.mts";
 
 /** A merged PR answered from its first REST pull read never read reviews, threads or rules. */
@@ -20,6 +21,7 @@ export function buildTerminalReport(
     pr: prNumber,
     nodeId: batchData.nodeId,
     ...(batchData.transport && { transport: batchData.transport }),
+    ...(batchData.transport && transportReasonField()),
     ...(batchData.transportUnavailable?.length && {
       transportUnavailable: batchData.transportUnavailable,
     }),

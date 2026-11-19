@@ -3,6 +3,7 @@ import { loadConfig } from "../config/load.mts";
 import { ShepherdError } from "../exit-codes.mts";
 import { getRepoInfo } from "../github/client.mts";
 import { getGithubTransport } from "../github/transport.mts";
+import { transportReasonField } from "../github/transport-evidence.mts";
 import { withApiTelemetryScope, summarizeApiTelemetry } from "../github/api-telemetry.mts";
 import { aggregateRerunCommand, stackApprovalCommands } from "../github/poll-summary-command.mts";
 import { fetchPollSummary } from "../github/poll-summary.mts";
@@ -106,6 +107,7 @@ async function readPollSummaryTick(opts: PollSummaryCommandOptions): Promise<Pol
     selection: fetched.selection,
     reason: allTerminal ? "all_terminal" : actionable ? "actionable" : "waiting",
     prs: fetched.prs,
+    ...restReason(),
     ...(fetched.stackAncestry?.length && { stackAncestry: fetched.stackAncestry }),
     ...(fetched.allowedMergeMethods && { allowedMergeMethods: fetched.allowedMergeMethods }),
   };
@@ -360,4 +362,10 @@ function attachUsage(
 function withoutImpliedOwnership(result: PollSummaryResult): PollSummaryResult {
   if (result.selection.kind !== "stack" || result.selection.owned) return result;
   return { ...result, prs: result.prs.map(({ owned: _owned, ...item }) => item) };
+}
+
+/** The summary says why Shepherd moved to REST on its own; a requested REST run says nothing. */
+function restReason(): Pick<PollSummaryResult, "transport" | "transportReason"> {
+  const { transportReason } = transportReasonField();
+  return transportReason ? { transport: "rest", transportReason } : {};
 }

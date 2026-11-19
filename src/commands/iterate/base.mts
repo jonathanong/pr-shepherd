@@ -16,6 +16,7 @@ export function buildIterateBase(
     pr: report.pr,
     repo: report.repo,
     ...(report.transport && { transport: report.transport }),
+    ...(report.transportReason && { transportReason: report.transportReason }),
     ...(report.transportUnavailable?.length && {
       transportUnavailable: report.transportUnavailable,
     }),

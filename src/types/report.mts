@@ -63,6 +63,8 @@ export type ShepherdStatus =
 
 export interface ShepherdReport {
   transport?: "rest";
+  /** Why REST is in use; present only with `transport`. */
+  transportReason?: string;
   transportUnavailable?: Array<{ field: string; reason: string }>;
   pr: number;
   /** GitHub node ID of the PR — used for mutations (e.g. markPullRequestReadyForReview). */

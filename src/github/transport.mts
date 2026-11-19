@@ -17,6 +17,8 @@ export type { GithubTransport } from "./transport-mode.mts";
 interface TransportState {
   fallback: boolean;
   ccr: boolean;
+  /** Why auto switched to REST; set once, with the first switch. */
+  reason?: string;
 }
 interface TransportContext {
   mode: GithubTransport;
@@ -36,6 +38,22 @@ export function getGithubTransport(): "graphql" | "rest" {
   return current?.state.fallback || process.env["CLAUDE_CODE_REMOTE"] === "true"
     ? "rest"
     : "graphql";
+}
+
+/** The mode the caller selected (`--transport`, library option, or config), before any auto fallback. */
+export function getGithubTransportMode(): GithubTransport {
+  return context.getStore()?.mode ?? configuredMode();
+}
+
+/**
+ * Why Shepherd chose REST on its own; undefined on GraphQL and when the caller requested REST
+ * (that needs no explanation). Evidence for output, never a decision input.
+ */
+export function getGithubTransportReason(): string | undefined {
+  if (getGithubTransport() !== "rest" || getGithubTransportMode() === "rest") return undefined;
+  if (process.env["CLAUDE_CODE_REMOTE"] === "true")
+    return "Claude Code cloud session (`CLAUDE_CODE_REMOTE=true`) starts on REST";
+  return context.getStore()?.state.reason;
 }
 
 /** Cloud-session marker or the specific GraphQL refusal observed by this client. */
@@ -77,6 +95,19 @@ function responseMessage(error: GitHubRequestError): string {
 }
 
 type FallbackReason = "refused" | "ccr" | "ambiguous" | "probe";
+
+const FALLBACK_DESCRIPTION: Record<FallbackReason, string> = {
+  refused: "GraphQL primary rate limit exhausted",
+  ccr: "Claude Code proxy refused GraphQL (HTTP 403)",
+  ambiguous: "GraphQL outage (server or network error after bounded retries)",
+  probe: "GraphQL primary rate limit exhausted",
+};
+
+function fallbackExplanation(name: string, reason: FallbackReason, error: unknown): string {
+  const detail =
+    error instanceof Error ? ` (${error.message.replace(/\s+/g, " ").trim().slice(0, 160)})` : "";
+  return `auto switched to REST after GraphQL ${name}: ${FALLBACK_DESCRIPTION[reason]}${detail}`;
+}
 
 function fallbackReason(error: unknown): FallbackReason | undefined {
   if (isTransportError(error)) return "ambiguous";
@@ -152,6 +183,7 @@ export async function githubOperation<T>(
       reason = "refused";
     }
     if (!current.state.fallback) {
+      current.state.reason = fallbackExplanation(name, reason, error);
       const message = `pr-shepherd: GitHub transport switched to REST after ${name} (${reason}).\n`;
       appendEntry(message);
       if (current.verbose) process.stderr.write(message);

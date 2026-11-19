@@ -1,3 +1,11 @@
+import { getGithubTransportReason } from "./transport.mts";
+
+/** `{ transportReason }` while REST is in use, so a result says why it is not on GraphQL. */
+export function transportReasonField(): { transportReason?: string } {
+  const transportReason = getGithubTransportReason();
+  return transportReason ? { transportReason } : {};
+}
+
 interface TransportEvidence {
   transport?: "rest";
   transportUnavailable?: Array<{ field: string; reason: string }>;
