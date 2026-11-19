@@ -6,7 +6,7 @@ import { PR_URL } from "../lib.mjs";
 import { renumber } from "./stack-ticks.mjs";
 import { GH_STACK, STACK_MERGE_RULE, STEPS } from "./world.mjs";
 import { routeMock } from "./scope-ticks.mjs";
-import { mergeItStack, receiptIterate } from "./receipt-ticks.mjs";
+import { mergeItStack, receiptIterate, receiptStack } from "./receipt-ticks.mjs";
 
 const LAYERS = (numbers) =>
   numbers
@@ -30,7 +30,7 @@ export const STACK_RECEIPT_SCENARIOS = [
       [98, 7],
     ]),
     tags: ["stack", "merge"],
-    shepherd: { iterate: receiptIterate([41, 42, 43]) },
+    shepherd: { iterate: receiptIterate([41, 42, 43]), stack: receiptStack([41, 42, 43]) },
     prompt: `Merge the stack that ${PR_URL} belongs to.`,
     world: `Native stack #7 in owner/repo (\`gh stack\`, installed). Every layer is open and
 not a draft:

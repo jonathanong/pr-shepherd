@@ -19,7 +19,7 @@ const oneCancel = (layers, pr) => `# PR #${pr} [CANCEL] — ready-delay-elapsed
 
 **status** \`READY\` · **repo** \`owner/repo\`
 **summary** 6 passing
-Stack: 7 (layer ${layers.indexOf(pr) + 1}/${layers.length}, base main)
+Stack: 7 (layer ${layers.indexOf(pr) + 1}/${layers.length}, base ${layers.indexOf(pr) === 0 ? "main" : `layer-${layers.indexOf(pr)}`})
 
 CANCEL: PR #${pr} has been ready for review — ready-delay elapsed, stopping`;
 
@@ -33,7 +33,7 @@ const multiCancel = (layers) => `# Poll summary [ALL_TERMINAL]
 ${layers
   .map(
     (n, i) =>
-      `- [PR #${n}: Layer ${i + 1}](${URL(n)}) [CANCEL]\n  - state \`OPEN\` · mergeable \`MERGEABLE\` · merge \`CLEAN\` · stack \`7\` position \`${i + 1}/${layers.length}\` base \`main\`\n  - checks: 6 passing\n  - reasons: \`appears-ready\``,
+      `- [PR #${n}: Layer ${i + 1}](${URL(n)}) [CANCEL]\n  - state \`OPEN\` · mergeable \`MERGEABLE\` · merge \`CLEAN\` · stack \`7\` position \`${i + 1}/${layers.length}\` base \`${i === 0 ? "main" : `layer-${i}`}\`\n  - checks: 6 passing\n  - reasons: \`appears-ready\``,
   )
   .join("\n")}
 
@@ -70,5 +70,25 @@ export const mergeItStack = () =>
       ESCALATE: escalateTick([40, 41, 42], [42], 42, [40, 41]),
       "ESCALATE-41-42": escalateTick([40, 41, 42], [41, 42], 42, [40]),
       "ESCALATE-41": escalateTick([40, 41, 42], [41], 41, [40]),
+    },
+  );
+
+/**
+ * Scenario 57's `stack`: the recorded no-receipts tick until the one-PR sessions ran, then the
+ * merge tick (snapshot 97's text with this stack's layer names). A mock answers per call, so it
+ * reads its own history: every layer needs a single-PR call, which records its receipt.
+ */
+export const receiptStack = (layers) => (recorded) =>
+  stackMock(
+    `- Look at the earlier calls in your history. A call is a "one-PR session" when its
+  arguments are a single PR number or URL (no \`stack\` word) and no other PR. If one-PR sessions
+  for every one of ${layers.map((n) => `#${n}`).join(", ")} were already answered earlier in this
+  conversation, answer MERGE.
+- Otherwise answer RECEIPTS.`,
+    {
+      RECEIPTS: recorded,
+      MERGE: mergeTick(layers, layers)
+        .replaceAll(`layer-${layers[0]}`, "layer-1")
+        .replaceAll(`layer-${layers[1]}`, "layer-2"),
     },
   );
