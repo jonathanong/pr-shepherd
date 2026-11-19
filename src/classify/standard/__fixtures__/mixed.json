@@ -243,5 +243,19 @@
     "author": "sonarqubecloud",
     "url": "https://github.com/mkaraki/ipdb/pull/161#issuecomment-6858184034",
     "body": "## [![Quality Gate Passed](https://sonarsource.github.io/sonarcloud-github-static-resources/v2/checks/QualityGateBadge/qg-passed-20px.png 'Quality Gate Passed')](https://sonarcloud.io/dashboard?id=mkaraki_ipdb&pullRequest=161) **Quality Gate passed**  \nIssues  \n![](https://sonarsource.github.io/sonarcloud-github-static-resources/v2/common/passed-16px.png '') [2 New issues](https://sonarcloud.io/project/issues?id=mkaraki_ipdb&pullRequest=161&issueStatuses=OPEN,CONFIRMED&sinceLeakPeriod=true)  \n![](https://sonarsource.github.io/sonarcloud-github-static-resources/v2/common/accepted-16px.png '') [0 Accepted issues](https://sonarcloud.io/project/issues?id=mkaraki_ipdb&pullRequest=161&issueStatuses=ACCEPTED)\n\nMeasures  \n![](https://sonarsource.github.io/sonarcloud-github-static-resources/v2/common/passed-16px.png '') [0 Security Hotspots](https://sonarcloud.io/project/security_hotspots?id=mkaraki_ipdb&pullRequest=161&issueStatuses=OPEN,CONFIRMED&sinceLeakPeriod=true)  \n![](https://sonarsource.github.io/sonarcloud-github-static-resources/v2/common/passed-16px.png '') [0.0% Coverage on New Code](https://sonarcloud.io/component_measures?id=mkaraki_ipdb&pullRequest=161&metric=new_coverage&view=list)  \n![](https://sonarsource.github.io/sonarcloud-github-static-resources/v2/common/passed-16px.png '') [0.0% Duplication on New Code](https://sonarcloud.io/component_measures?id=mkaraki_ipdb&pullRequest=161&metric=new_duplicated_lines_density&view=list)  \n  \n<!-- sqra-placement-anchor -->\n[See analysis details on SonarQube Cloud](https://sonarcloud.io/dashboard?id=mkaraki_ipdb&pullRequest=161)\n\n"
+  },
+  {
+    "name": "claude-finished-review",
+    "kind": "pr-comment",
+    "author": "claude",
+    "url": "https://github.com/jonathanong/pr-shepherd/pull/776#issuecomment-1",
+    "body": "**Claude finished @jonathanong's task in 1m 2s** —— [View job](https://github.com/jonathanong/pr-shepherd/actions/runs/26000000001)\n\n---\n### Review\n\nThe retry limit is off by one in `src/retry.ts`."
+  },
+  {
+    "name": "claude-working-with-findings",
+    "kind": "pr-comment",
+    "author": "claude",
+    "url": "https://github.com/jonathanong/pr-shepherd/pull/776#issuecomment-2",
+    "body": "Claude Code is working… <img src=\"https://github.com/user-attachments/assets/5ac382c7-e004-429b-8e35-7feb3e8f9c6f\" width=\"14px\" height=\"14px\" style=\"vertical-align: middle; margin-left: 4px;\" />\n\nI'll analyze this and get back to you.\n\nFound a bug in the retry limit.\n\n[View job run](https://github.com/jonathanong/pr-shepherd/actions/runs/26000000001)"
   }
 ]

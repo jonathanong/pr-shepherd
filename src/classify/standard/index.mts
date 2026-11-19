@@ -1,4 +1,5 @@
 import type { ClassifyRule } from "../types.mts";
+import claudeNotices from "./claude-notices.mts";
 import coderabbitNotices from "./coderabbit-notices.mts";
 import codecovReport from "./codecov-report.mts";
 import codexNotices from "./codex-notices.mts";
@@ -16,6 +17,7 @@ import sourceryNotices from "./sourcery-notices.mts";
  * Each rule matches conversation comments (`pr-comment`) only.
  */
 export const STANDARD_RULES: Readonly<Record<string, ClassifyRule>> = {
+  "claude-notices": claudeNotices,
   "coderabbit-notices": coderabbitNotices,
   "codecov-report": codecovReport,
   "codex-notices": codexNotices,

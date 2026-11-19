@@ -361,6 +361,7 @@
             "type": "string",
             "enum": [
               "all",
+              "claude-notices",
               "coderabbit-notices",
               "codecov-report",
               "codex-notices",
