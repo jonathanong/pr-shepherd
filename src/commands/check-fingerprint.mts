@@ -22,6 +22,8 @@ export function reportAllowsFingerprintSkip(report: ShepherdReport): boolean {
     report.comments.actionable.length === 0 &&
     (report.comments.minimizeIds?.length ?? 0) === 0 &&
     report.comments.firstLook.length === 0 &&
+    // A pending run's status changes without any PR data changing, so the report cannot be replayed.
+    (report.comments.pending?.length ?? 0) === 0 &&
     report.changesRequestedReviews.length === 0 &&
     report.approvedReviews.length === 0 &&
     report.firstLookSummaries.length === 0 &&

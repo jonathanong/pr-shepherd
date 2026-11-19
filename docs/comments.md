@@ -22,6 +22,8 @@ A review thread carries its root comment fields (`body`, `author`, `url`, and `r
 - the item's `authorType` matches [`iterate.minimize-comments`](configuration.md#iterateminimize-comments--default-bots) (top-level [`bot-usernames`](configuration.md#bot-usernames) extends which authors count as bots, for minimization as well as thread visibility and resolve routing);
 - for a review summary, no known inline child thread from the same review is still unresolved.
 
+A bot placeholder comment whose Actions run is still in progress (a mention bot that later edits it into its result) is never minimized or marked seen; iterate waits instead. See [Pending mention-bot placeholder](actions.md#wait).
+
 Human-authored items are never minimized. [`iterate.minimize-approvals`](configuration.md#iterateminimize-approvals--default-false) adds `APPROVED` reviews to minimization (default off); it does not affect whether `approvedReviews` is reported.
 
 ### Classification auto-resolve

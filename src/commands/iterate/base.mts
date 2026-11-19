@@ -34,6 +34,7 @@ export function buildIterateBase(
     mergeRequirements: report.mergeStatus.mergeRequirements,
     checks: buildRelevantChecks(report),
     inProgressChecks: buildActiveChecks(report),
+    ...(report.comments.pending?.length && { pendingComments: report.comments.pending }),
     ...buildSuppressedCheckFields(report),
     activity: report.activity,
     mergeQueue: report.mergeQueue,

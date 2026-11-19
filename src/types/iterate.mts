@@ -9,6 +9,7 @@ import type {
   FirstLookThread,
   FirstLookComment,
   EditedComment,
+  PendingRunComment,
   RuleAutoResolveReport,
 } from "./report.mts";
 import type { ActiveCheck, PrActivitySummary } from "./activity.mts";
@@ -86,6 +87,8 @@ export interface IterateResultBase {
    */
   checks: RelevantCheck[];
   inProgressChecks?: ActiveCheck[];
+  /** Bot placeholder comments whose Actions run has not completed; the PR waits on them. Omitted when empty. */
+  pendingComments?: PendingRunComment[];
   ignoredNames?: string[]; // Suppressed by checks.ignore config; omitted when empty.
   supersededNames?: string[]; // CANCELLED, superseded by a newer same-workflow run; omitted when empty.
   /** Required merge-target contexts with no check run and no status context. Omitted when empty. */

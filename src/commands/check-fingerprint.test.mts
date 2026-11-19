@@ -212,6 +212,24 @@ describe("fingerprintReuser", () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
+  it("does not skip when the cached report holds a pending bot run comment", async () => {
+    mockLoad.mockResolvedValue(
+      stored(
+        waitReport({
+          comments: {
+            actionable: [],
+            firstLook: [],
+            pending: [
+              { id: "c1", author: "claude", url: "u", runId: "5", runStatus: "in_progress" },
+            ],
+          },
+        }),
+      ),
+    );
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
   it("does not skip when the cached report has failing checks", async () => {
     mockLoad.mockResolvedValue(
       stored(
