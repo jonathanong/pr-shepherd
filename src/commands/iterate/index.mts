@@ -519,18 +519,20 @@ type ReceiptOutcome =
   | { status: "blocked" }
   | { status: "failed"; reason: string; persistFailure?: boolean };
 
-const short = (oid: string | null | undefined): string => (oid ? oid.slice(0, 7) : "none");
+const short = (oid: string): string => oid.slice(0, 7);
 const failed = (reason: string): ReceiptOutcome => ({ status: "failed", reason });
 const errMessage = (e: unknown): string => (e instanceof Error ? e.message : String(e));
 
-function receiptWaitLog(pr: number, outcome: ReceiptOutcome): string {
+function receiptWaitLog(
+  pr: number,
+  outcome: Exclude<ReceiptOutcome, { status: "written" }>,
+): string {
   const head = `WAIT: PR #${pr} reached ready-delay but`;
   if (outcome.status === "blocked")
     return `${head} GitHub reports BLOCKED, so its stack readiness receipt was not certified`;
-  if (outcome.status === "failed" && outcome.persistFailure)
+  if (outcome.persistFailure)
     return `${head} its stack readiness receipt could not be persisted: ${outcome.reason}`;
-  const reason = outcome.status === "failed" ? outcome.reason : "unknown";
-  return `${head} its stack readiness receipt was not certified: ${reason}`;
+  return `${head} its stack readiness receipt was not certified: ${outcome.reason}`;
 }
 
 /**
@@ -545,17 +547,16 @@ async function recordReadyReceipt(
   context?: ReturnType<typeof createCheckExecutionContext>,
 ): Promise<ReceiptOutcome> {
   if (report.status !== "READY") return failed(`report status is ${report.status}, not READY`);
-  if (report.mergeStatus.state !== "OPEN")
-    return failed(`PR is ${report.mergeStatus.state}, not OPEN`);
-  if (report.mergeStatus.isDraft) return failed("PR is a draft");
   if (!report.headSha) return failed("report has no head SHA");
   if (!report.baseRefOid) return failed("report has no base SHA");
-  if (reportReadinessGaps(report).length > 0) return failed("report has readiness gaps");
   let raw: Awaited<ReturnType<typeof receiptSummaryForReport>>;
+  let fingerprint: string;
   let summary: Awaited<ReturnType<typeof summarizePollSummaryPr>>;
   try {
     raw = await receiptSummaryForReport(key, report, context);
-    if (fingerprintRawSummaryPr(raw) === null) return failed("fresh summary has no fingerprint");
+    const fresh = fingerprintRawSummaryPr(raw);
+    if (fresh === null) return failed("fresh summary has no fingerprint");
+    fingerprint = fresh;
     if (raw.state !== "OPEN") return failed(`fresh summary shows PR ${raw.state}, not OPEN`);
     if (raw.isDraft) return failed("fresh summary shows PR as a draft");
     if (raw.headRefOid !== report.headSha)
@@ -576,8 +577,6 @@ async function recordReadyReceipt(
     return failed(`fresh summary unavailable: ${errMessage(e)}`);
   }
   if (annotationProbeUnavailable(raw)) return failed("annotation probe unavailable");
-  const fingerprint = fingerprintRawSummaryPr(raw);
-  if (fingerprint === null) return failed("fresh summary has no fingerprint");
   const checks = summary.checks ?? {};
   const review = summary.review ?? {};
   if (!isCurrentSummaryReady(raw, checks, review)) {

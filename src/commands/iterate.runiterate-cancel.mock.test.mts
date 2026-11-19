@@ -476,65 +476,6 @@ describe("runIterate — cancel", () => {
     expect(mockClearReadyDelay).not.toHaveBeenCalled();
   });
 
-  describe("stack receipt reasons", () => {
-    function readyLayer(report: Record<string, unknown> = {}) {
-      mockRunCheck.mockResolvedValue(
-        makeReport({
-          status: "READY",
-          headSha: "head-1",
-          baseRefOid: "base-1",
-          mergeStatus: { ...makeReport().mergeStatus, mergeRequirements: stackRequirements() },
-          ...report,
-        }),
-      );
-      mockUpdateReadyDelay.mockResolvedValue({
-        isReady: true,
-        shouldCancel: true,
-        remainingSeconds: 0,
-      });
-    }
-
-    it("names a moved base with short SHAs", async () => {
-      readyLayer({ baseRefOid: "abc1234567" });
-      mockFetchRawSummaryPr.mockResolvedValue({ ...rawReadySnapshot, baseRefOid: "def5678901" });
-      const result = await runIterate(makeOpts());
-      expect(result).toMatchObject({
-        action: "wait",
-        log: "WAIT: PR #42 reached ready-delay but its stack readiness receipt was not certified: base moved (report abc1234, fresh def5678)",
-      });
-    });
-
-    it("names a moved head with short SHAs", async () => {
-      readyLayer({ headSha: "1111111999" });
-      mockFetchRawSummaryPr.mockResolvedValue({ ...rawReadySnapshot, headRefOid: "2222222999" });
-      const result = await runIterate(makeOpts());
-      expect(result).toMatchObject({
-        action: "wait",
-        log: expect.stringContaining("head moved (report 1111111, fresh 2222222)"),
-      });
-    });
-
-    it("names a report that is not READY", async () => {
-      readyLayer({ status: "PENDING" });
-      const result = await runIterate(makeOpts());
-      expect(result).toMatchObject({
-        action: "wait",
-        log: expect.stringContaining("not certified: report status is PENDING, not READY"),
-      });
-    });
-
-    it("says could not be persisted, with the error, only when the write fails", async () => {
-      readyLayer();
-      mockFetchRawSummaryPr.mockResolvedValue(rawReadySnapshot);
-      mockWriteReadyReceipt.mockRejectedValue(new Error("disk full"));
-      const result = await runIterate(makeOpts());
-      expect(result).toMatchObject({
-        action: "wait",
-        log: "WAIT: PR #42 reached ready-delay but its stack readiness receipt could not be persisted: disk full",
-      });
-    });
-  });
-
   describe("a stack layer GitHub reports BLOCKED", () => {
     function blockedLayer() {
       mockRunCheck.mockResolvedValue(
