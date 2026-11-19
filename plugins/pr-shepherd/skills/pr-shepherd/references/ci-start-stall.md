@@ -12,4 +12,4 @@ Then act on what you found:
 
 1. If the cause is within this PR (a `runs-on` label that matches no runner, a workflow change that breaks scheduling, a wrong base), fix it and push.
 2. If a run is only waiting on an approval you can legitimately grant, grant it. An approval that needs a human reviewer is not yours to grant.
-3. Otherwise make no change and keep what you found. Runner capacity, billing, repository settings, and GitHub incidents are human decisions. If the same checks are still not started on the next poll, Shepherd escalates with `stall-timeout`; report your diagnosis then.
+3. Otherwise investigate first. If you are still unsure of the cause, or it is outside this PR, make no change and keep what you found. Runner capacity, billing, repository settings, and GitHub incidents are human decisions. If the same checks are still not started on the next poll, Shepherd escalates with `stall-timeout`; report your diagnosis then.

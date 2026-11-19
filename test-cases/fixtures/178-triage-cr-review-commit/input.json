@@ -1,5 +1,5 @@
 {
-  "description": "A changes-requested review submitted on an older commit shows that commit beside the PR head, as raw data and with no stale verdict. A review submitted on the head carries no commit tag.",
+  "description": "A changes-requested review submitted on an older commit shows that commit beside the PR head, as raw data (short SHAs and, on GraphQL, how many commits landed since) and with no stale verdict. A review submitted on the head carries no commit tag.",
   "batchData": {
     "mergeStateStatus": "BLOCKED",
     "reviewDecision": "CHANGES_REQUESTED",
@@ -10,7 +10,8 @@
         "author": "claude",
         "authorType": "Bot",
         "body": "Please validate the amount before charging.",
-        "commitOid": "1234567890abcdef1234567890abcdef12345678"
+        "commitOid": "1234567890abcdef1234567890abcdef12345678",
+        "commitsSince": 2
       },
       {
         "id": "PRR_on_head",

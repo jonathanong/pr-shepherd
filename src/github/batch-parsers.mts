@@ -52,6 +52,12 @@ function parseReviewNode(r: RawReview | RawReviewSummary): Review {
   return base;
 }
 
+function commitsSince(oid: string | undefined, commits: RawPr["prCommitOids"]): number | undefined {
+  if (!oid || !commits) return undefined;
+  const index = commits.nodes.findIndex((node) => node.commit.oid === oid);
+  return index < 0 ? undefined : commits.nodes.length - 1 - index;
+}
+
 export function parseRawPr(
   raw: RawPr,
   rawThreadPages: RawThread[],
@@ -131,6 +137,8 @@ export function parseRawPr(
 
   const allChangesRequestedReviews: Review[] = rawReviewNodes.map((r) => {
     const review = parseReviewNode(r);
+    const since = commitsSince(review.commitOid, raw.prCommitOids);
+    if (since !== undefined) review.commitsSince = since;
     if (isReviewStale(review, raw.headRefOid, reviewThreads)) {
       review.staleReview = true;
     }

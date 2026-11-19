@@ -13,4 +13,4 @@ Then act on what you found:
 
 1. If the cause is within this PR (wrong base or stack parent, a changed file that breaks the workflow, configuration the PR should carry), fix it and push.
 2. If the workflows should have run and the PR is fine, run the printed close and reopen commands once for this head. Do not close it again.
-3. Otherwise make no change and keep what you found. Changing CI configuration, repository settings, or branch rules is a human decision. If the checks are still missing on the next poll, Shepherd escalates with `required-checks-unreported`; report your diagnosis then.
+3. Otherwise investigate first. If you are still unsure of the cause, or it is outside this PR, make no change and keep what you found. Changing CI configuration, repository settings, or branch rules is a human decision. If the checks are still missing on the next poll, Shepherd escalates with `required-checks-unreported`; report your diagnosis then.

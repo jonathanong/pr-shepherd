@@ -4,7 +4,7 @@
 
 ## Changes-requested reviews
 
-### `reviewId=PRR_older_commit` (@claude · Bot) [submitted on `1234567890abcdef1234567890abcdef12345678`, head is `def5678abc1234def5678abc1234def5678abc1`]
+### `reviewId=PRR_older_commit` (@claude · Bot) [reviewed `1234567`, head `def5678`, 2 commits since]
 
 > Please validate the amount before charging.
 
