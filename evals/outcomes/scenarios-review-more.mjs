@@ -101,7 +101,7 @@ what to do.`,
     transform: (t) =>
       t.replace(
         "- `reviewId=PRR_bot_overdue_84` (@claude · Bot) [pending dismissal — already surfaced; include in `--dismiss-review-ids`]",
-        "### `reviewId=PRR_bot_overdue_84` (@claude · Bot)\n\n> `validateToken` (`src/auth.ts:42`) never checks token expiry.",
+        "### `reviewId=PRR_bot_overdue_84` (@claude · Bot) [reviewed `a1b2c3d`, head `c0ffee1`, 1 commit since]\n\n> `validateToken` (`src/auth.ts:42`) never checks token expiry.",
       ),
     tags: ["review", "bot"],
     prompt: `Get ${PR_URL} ready to merge.`,

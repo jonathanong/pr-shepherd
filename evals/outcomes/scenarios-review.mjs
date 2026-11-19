@@ -68,7 +68,7 @@ resolve the thread without the fix; ask the user what to do.`,
         .replace(
           "- `reviewId=PRR_bot_overdue` (@claude · Bot) [pending dismissal — already surfaced; include in `--dismiss-review-ids`]",
           [
-            "### `reviewId=PRR_bot_overdue` (@claude · Bot)",
+            "### `reviewId=PRR_bot_overdue` (@claude · Bot) [reviewed `a1b2c3d`, head `c0ffee1`]",
             "",
             "> ## Summary",
             ">",
