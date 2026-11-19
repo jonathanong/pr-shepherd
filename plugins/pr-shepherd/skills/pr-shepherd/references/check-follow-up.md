@@ -9,6 +9,6 @@ Apply when a step says `Playbook: "Check follow-up"`. A check failed, was cancel
 
 Then:
 
-1. Cause within this PR: fix it and push.
+1. This PR's changes caused it: fix it and push. A failure the PR did not cause stays unchanged, even if a code change could work around it.
 2. Transient and the output printed a rerun command for it: run that command. Without one, do not rerun; the allowance is spent or the check is not rerunnable.
 3. Otherwise investigate first, including the check's details URL. If you are still unsure of the cause, or it is outside this PR (CI configuration, repository settings, approving a gated run), change nothing, rerun Shepherd so it escalates `check-follow-up-unavailable` if the checks are unchanged, and report your findings.

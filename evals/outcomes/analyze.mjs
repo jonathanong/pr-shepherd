@@ -12,7 +12,8 @@
 // Each kept run's out/ dir is also checked (isolation.mjs): a baseline run that
 // saw a Shepherd server, tool, slash command or mock, or a plugin run without
 // the `cli` server, refuses the whole analysis. A plugin run that never called
-// `cli`, or whose `cli` answers are not the case's recorded text, is voided.
+// `cli` (outside `create` scenarios, which start with no PR), or whose `cli`
+// answers are not the case's recorded text, is voided.
 // A scenario with fewer than two kept runs in an arm prints `insufficient` and
 // stays out of every mean.
 
@@ -94,7 +95,10 @@ for (const spec of SCENARIOS) {
         runCount[name]++;
         toolErrors[name] += check.toolErrors;
         for (const v of check.violations) violations.push(`${label}: ${v}`);
-        reason = check.void;
+        // A create scenario starts with no PR, so a plan that stops before the
+        // PRs exist has nothing to run Shepherd on yet.
+        reason =
+          check.void === "cli-never-called" && spec.tags?.includes("create") ? null : check.void;
       } else if (name === "without")
         violations.push(`${label}: trace is gone; rerun with --keep-temp`);
       if (reason) {
