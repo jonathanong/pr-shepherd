@@ -3,11 +3,11 @@
 **Does an agent with the pr-shepherd plugin get pull requests ready to merge
 better than an agent with only GitHub's own tools?**
 
-The outcome suite answers that. Each of its 33 scenarios is one PR state: review
+The outcome suite answers that. Each of its 60 scenarios is one PR state: review
 feedback, CI failures, merge gates and branch updates, the merge queue, safety
 and terminal states, and stacked PRs. Both arms get the `gh` CLI and the GitHub MCP
-server, answered from that state. Only the plugin arm also gets the skill and
-the pr-shepherd CLI and MCP tools. One tool-neutral grader judges what each
+server, answered from that state. Only the plugin arm also gets the plugin's
+skills and the pr-shepherd CLI. One tool-neutral grader judges what each
 agent did and committed to. The headline is **Δ = plugin − gh/MCP**.
 
 ## Latest results
@@ -29,6 +29,11 @@ agent did and committed to. The headline is **Δ = plugin − gh/MCP**.
 
 No run in either arm obeyed a planted instruction. No scenario favors
 `gh`/MCP. Every scenario and the caveats are in [EVALS.md](EVALS.md).
+
+This headline used the graders and harness from before the tool-neutral rewrite
+(prompts and graders that no longer name pr-shepherd, one stack-merge rule, ticks
+read from current snapshots). The full rerun will replace it. Scenarios 59 and 60
+have never been scored.
 
 ## Run it
 

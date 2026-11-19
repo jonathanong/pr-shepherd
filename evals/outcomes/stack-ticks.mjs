@@ -13,9 +13,8 @@ export const iterateByPr = (stackTick, tick41) => `---
 type: agent
 ---
 
-You are the pr-shepherd MCP \`iterate\` tool. If the call's \`pr\` or \`prs\` names PR
-41 (by number or URL), answer with exactly the text between the first pair of
-=== lines. For any other PR, answer with exactly the text between the second
+If the call's PR arguments name PR 41 (by number or URL), answer with exactly
+the text between the first pair of === lines. For any other PR, answer with exactly the text between the second
 pair. Print nothing else.
 
 ===

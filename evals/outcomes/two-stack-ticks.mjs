@@ -1,6 +1,6 @@
 // Shepherd answers for scenario 38: two native stacks, #41→#42 (stack #7) and
-// #51→#52 (stack #8). The answers follow the real CLI: refs that span both
-// stacks fail with one command per stack, and refs that leave out a lower layer
+// #51→#52 (stack #8). The answers follow the real CLI: PRs that span both
+// stacks fail with one command per stack, and PRs that leave out a lower layer
 // escalate `unowned-stack-layers`, since a PR the caller lists is all it owns.
 
 import { fixtureText } from "../lib.mjs";
@@ -46,7 +46,7 @@ nextAction: escalate
 
 1. \`unowned-stack-layers\`: merging PR #${top} also merges #${lower} ("${lowerTitle}"), which you did not list as yours. Nothing was merged, and never merge only #${top} while leaving that layer open. If the user's request already covers that layer (they asked for the whole stack, or for every layer up to #${top}), run \`pr-shepherd stack ${URL(lower)} ${URL(top)} --until-terminal --merge\` now. Otherwise stop and tell the user that merging #${top} also merges #${lower}. If they approve, run that same command, or \`pr-shepherd stack "owner/repo#${stack}" --until-terminal --merge\` (the stack number owns every layer). Otherwise wait for its owner.`;
 
-// `multiStackError` in its tool form, for refs that name only the top layers.
+// The error for PRs that span two stacks.
 const MULTI_STACK_ERROR = `These refs span 2 stacks. Run one command per stack:
 ${STACKS.map((s) => `- stack #${s.stack} (#${s.top}): \`pr-shepherd stack ${URL(s.top)} --until-terminal --merge\``).join("\n")}`;
 
@@ -64,13 +64,12 @@ Stack: ${stack} (layer 2/2, base ${base})
 
 const block = (label, text) => `=== ${label}\n${text}\n===`;
 
-const agent = (tool, rules, blocks) => `---
+const agent = (rules, blocks) => `---
 type: agent
 ---
 
-You are the pr-shepherd MCP \`${tool}\` tool. PRs 41 and 42 form native stack #7;
-PRs 51 and 52 form native stack #8. Read the PRs (number or URL) and stack
-numbers in the call, then pick one answer:
+PRs 41 and 42 form native stack #7; PRs 51 and 52 form native stack #8. Read the
+PRs (number or URL) and stack numbers in the call, then pick one answer:
 ${rules}
 Answer with exactly the text between that answer's === lines. Print nothing else.
 
@@ -78,8 +77,7 @@ ${blocks.join("\n\n")}`;
 
 export const TWO_STACK_SHEPHERD = {
   stack: agent(
-    "stack",
-    `- refs from both stacks: MULTI.
+    `- PRs from both stacks: MULTI.
 - stack #7 by number (owner/repo#7), or both 41 and 42: MERGE-7. Only 42: ESCALATE-7.
 - stack #8 by number (owner/repo#8), or both 51 and 52: MERGE-8. Only 52: ESCALATE-8.`,
     [
@@ -92,7 +90,6 @@ export const TWO_STACK_SHEPHERD = {
   ),
   iterate: () =>
     agent(
-      "iterate",
       `- only PRs of stack #7: ROUTE-7. Only PRs of stack #8: ROUTE-8.
 - PRs of both stacks: BOTH.`,
       [

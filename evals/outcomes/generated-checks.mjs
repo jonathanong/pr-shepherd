@@ -12,20 +12,6 @@ const BASELINE_SERVERS = ["gh", "github"];
 // Shepherd vocabulary a baseline-visible file must not carry.
 export const LEAK = /shepherd|pr-shepherd|nextCheck|Playbook|--until-terminal/i;
 
-// TODO(remove when prompts/graders are de-Shepherded): known leaks another PR
-// rewrites. Slug prefix -> files allowed to hit. A new hit anywhere else fails.
-export const KNOWN_LEAKS = {
-  42: ["prompt.md"],
-  45: ["prompt.md"],
-  58: ["prompt.md"],
-  ...Object.fromEntries(
-    ["37", "38", "48", "49", "50", "52", "53", "59", "60", "61"].map((n) => [
-      n,
-      ["graders/outcome.md"],
-    ]),
-  ),
-};
-
 const files = (dir) =>
   readdirSync(dir, { recursive: true, withFileTypes: true })
     .filter((e) => e.isFile())
@@ -85,10 +71,9 @@ export function checkLeaks(casesDir) {
           f.startsWith("mocks/gh/") ||
           f.startsWith("mocks/github/"),
       );
-    const allowed = KNOWN_LEAKS[slug.split("-")[0]] ?? [];
     for (const f of visible) {
       const hit = readFileSync(join(root, f), "utf8").match(LEAK);
-      if (hit && !allowed.includes(f)) problems.push(`${slug}/${f}: baseline-visible "${hit[0]}"`);
+      if (hit) problems.push(`${slug}/${f}: baseline-visible "${hit[0]}"`);
     }
   }
   return problems;

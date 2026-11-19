@@ -16,9 +16,9 @@ export const REVIEW_NEW_SCENARIOS = [
     tags: ["review", "denied", "rest"],
     prompt: `Keep getting ${PR_URL} ready to merge. On your last pass you fixed
 \`rest-thread-11\`, but the reply on it failed with a 403 ("Resource not accessible
-by integration"). That denial was reported once, in Shepherd's output for that
-pass: GitHub denied the reply to \`rest-thread-11\`, so it is left out of later
-commands until the thread is edited. A new thread has come in since.`,
+by integration"). You noted that denial then and are not retrying it: the reply to
+\`rest-thread-11\` stays unposted unless the thread is edited. A new thread has
+come in since.`,
     world: `${PR(" No merge queue. No required approvals.", "`src/retry.ts`")}
 
 Checks on \`c0ffee1\`: \`build\` passed. Review threads on \`src/retry.ts\`:

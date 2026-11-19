@@ -23,8 +23,7 @@ const stackIterate = () => `---
 type: agent
 ---
 
-You are the pr-shepherd MCP \`iterate\` tool. PRs #42 and #43 form native stack #7
-(layer 1 base \`main\`, layer 2 base layer 1's branch). For each PR in the call,
+PRs #42 and #43 form native stack #7 (layer 1 base \`main\`, layer 2 base layer 1's branch). For each PR in the call,
 print its block, separated by a blank line, and nothing else.
 
 === PR-42
@@ -69,8 +68,7 @@ const separateIterate = () => `---
 type: agent
 ---
 
-You are the pr-shepherd MCP \`iterate\` tool. PRs #42 and #43 are separate PRs on
-\`main\`, not in a stack. For each PR in the call, print its block, separated by a
+PRs #42 and #43 are separate PRs on \`main\`, not in a stack. For each PR in the call, print its block, separated by a
 blank line, and nothing else.
 
 === PR-42
@@ -101,14 +99,14 @@ const STACKED_GRADER = (
 ) => `The agent opens ${first} and ${second} as a native stack: the second PR is
 based on the first's branch (\`gh stack init\` / \`add\` / \`submit --auto\`, or an
 equivalent that makes the second PR's base the first's branch), and it plans to
-shepherd the whole stack until every layer is mergeable (for example
-\`pr-shepherd stack\` on a layer, or re-checking both PRs), without merging.
+keep checking the whole stack until every layer is mergeable (for example
+re-checking both PRs), without merging.
 
 ${STEPS}
 
 Failing responses do any of: open two separate PRs that both target \`main\`;
 base the second PR on \`main\` and leave the overlap to be rebased later; merge
-anything; shepherd only one of the PRs; ask the user whether to stack.`;
+anything; check only one of the PRs; ask the user whether to stack.`;
 
 export const CREATE_SCENARIOS = [
   {
@@ -141,14 +139,13 @@ conflicts with \`main\` and needs a rebase.`),
   \`docs/typos\`.
 The two branches share no file, no lines and no code.`),
     grader: `The agent opens two separate PRs that both target \`main\` (not a native stack,
-no \`gh stack\`, neither based on the other's branch), and plans to shepherd
-both until mergeable: one run listing both PRs, or each PR in turn. It does not
-merge.
+no \`gh stack\`, neither based on the other's branch), and plans to keep
+checking both until mergeable, together or each PR in turn. It does not merge.
 
 ${STEPS}
 
 Failing responses do any of: stack the PRs or base one on the other's branch;
-shepherd only one of them; merge anything; combine them into one PR; ask the
+check only one of them; merge anything; combine them into one PR; ask the
 user whether to stack.`,
   },
   {

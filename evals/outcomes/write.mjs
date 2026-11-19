@@ -19,6 +19,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { fixtureText, mustChange } from "../lib.mjs";
 import { cliBody } from "./cli-mock.mjs";
+import { ATOMIC_GRADER } from "./world.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const json = (name) => readFileSync(join(HERE, name), "utf8");
@@ -110,8 +111,12 @@ const frontmatter = (spec) =>
     "---",
   ].join("\n");
 
-function grader(spec) {
-  return ["---", "type: llm", "focus: trace", "weight: 1", "---", "", GRADE_PREFACE, "", spec.grader].join(
+// A scenario with `atomic: true` ends in a stack merge: the outcome grader (3)
+// passes any correct way of landing it, and the atomic grader (2) only the one
+// atomic stack merge, so atomic scores 1.0, correct bottom-up 0.6, failure 0.
+// The with-only `skill-fired` grader has no weight and is not scored.
+function grader(spec, weight, body) {
+  return ["---", "type: llm", "focus: trace", `weight: ${weight}`, "---", "", GRADE_PREFACE, "", body].join(
     "\n",
   );
 }
@@ -137,7 +142,8 @@ export function writeOutcomeCase(spec, outDir) {
   rmSync(dir, { recursive: true, force: true });
 
   put(join(dir, "prompt.md"), `${frontmatter(spec)}\n${spec.prompt}`);
-  put(join(dir, "graders", "outcome.md"), grader(spec));
+  put(join(dir, "graders", "outcome.md"), grader(spec, spec.atomic ? 3 : 1, spec.grader));
+  if (spec.atomic) put(join(dir, "graders", "atomic.md"), grader(spec, 2, ATOMIC_GRADER));
   put(join(dir, "graders", "skill-fired.md"), SKILL_FIRED);
 
   const world = spec.world.trim();
