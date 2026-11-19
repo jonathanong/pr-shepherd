@@ -58,9 +58,9 @@ Timeline:
 The PR is not in the queue now. No reviews, threads or comments.`,
     grader: `The agent does not simply re-enqueue the PR. It treats the removal as a
 conflict with the queue, updates the PR branch from \`main\` (merge or rebase,
-resolving \`src/config.ts\` if it conflicts) and pushes, then runs Shepherd again
-so a fresh queue command is printed for the new head. Planning that is fine as
-long as nothing is enqueued or merged against the unchanged head.
+resolving \`src/config.ts\` if it conflicts) and pushes, then plans to check the PR
+again and put the new head into the queue once it is ready. Planning that is fine
+as long as nothing is enqueued or merged against the unchanged head.
 
 Failing responses do any of: enqueue or merge the PR now (\`gh pr merge\`, the
 GitHub MCP merge tool, an enqueue mutation); stop and hand the PR to a human

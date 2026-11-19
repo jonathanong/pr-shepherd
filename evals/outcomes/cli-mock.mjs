@@ -3,31 +3,20 @@
 // plugin eval's fixed mocks answer a tool with one canned text and cannot route
 // on the call's `args`, so this is an agent mock: the judge model plays the CLI
 // and prints the scenario's recorded answer for the subcommand it is given.
-// A scenario's `shepherd` overrides (`iterate`, `stack`, `apply`, `suggest`)
-// were written for the retired MCP tools: a string is a verbatim answer, and an
-// `---\ntype: agent\n---` body is a routing rule that picks one answer from the
-// call. Both are folded into the one CLI body below.
+// A scenario's `shepherd` overrides (`iterate`, `stack`, `apply`, `suggest`) are
+// per-subcommand: a string is a verbatim answer, and an `---\ntype: agent\n---`
+// body is a routing rule that picks one answer from the call's arguments. Both
+// are folded into the one CLI body below.
 
 const AGENT_HEAD = /^---\ntype: agent\n---\n\n/;
 
 const NOT_A_STACK = "Error: PR #42 is not part of a native GitHub stack";
 
-/** Maps the MCP-tool wording of a routing rule onto the CLI's. */
-const cliWording = (text) =>
-  text
-    .replace(/the pr-shepherd MCP `(\w+)` tool/g, "the `pr-shepherd $1` command")
-    .replace(/the call's `pr` or `prs`/g, "the call's PR arguments")
-    .replace(/the call's `refs`/g, "the call's PR or stack arguments")
-    .replaceAll(
-      "call `stack` again with `merge`, `mergeReady` or `mergeThrough`",
-      "rerun `pr-shepherd stack` with `--merge`, `--merge-ready` or `--merge-through PR`",
-    );
-
 /** One subcommand's answer: a verbatim block, or a routing rule the model applies. */
 const section = (label, answer) => {
   const text = answer.trim();
   return AGENT_HEAD.test(answer)
-    ? `### ${label}\n\nRouting rule for this subcommand. Follow it and print what it selects.\n\n${cliWording(answer.replace(AGENT_HEAD, "").trim())}`
+    ? `### ${label}\n\nRouting rule for this subcommand. Follow it and print what it selects.\n\n${answer.replace(AGENT_HEAD, "").trim()}`
     : `### ${label}\n\nAnswer with exactly the text between the === lines.\n\n===\n${text}\n===`;
 };
 
@@ -58,10 +47,9 @@ Pick the subcommand from the first word of \`args\`:
   then \`exit code 2\`, and nothing else. Never compose an answer for a call
   you cannot match.
 
-Flags map to the options a routing rule may name: \`--merge\` is merge,
-\`--merge-ready\` is mergeReady, \`--merge-through PR\` is mergeThrough. Every
-call runs to the same answer whether or not it carries \`--until-terminal\`,
-\`--merge\` or the other flags, unless a routing rule says otherwise. Earlier
+Every call runs to the same answer whether or not it carries
+\`--until-terminal\`, \`--merge\` or the other flags, unless a routing rule says
+otherwise. Earlier
 calls are in your history: keep later answers consistent with them.
 
 ${section("ITERATE", s.iterate?.(tick) ?? tick)}

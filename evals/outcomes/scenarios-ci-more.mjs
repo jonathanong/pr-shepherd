@@ -6,7 +6,6 @@ import { PR_URL } from "../lib.mjs";
 import { PR, STEPS } from "./world.mjs";
 import { neverReportsIterate } from "./never-reports-ticks.mjs";
 import { cancelledNoRerun } from "./follow-up-ticks.mjs";
-import { withWorkflowFile } from "./startup-failure-ticks.mjs";
 import { deploymentIterate } from "./deployment-ticks.mjs";
 import { withCancellableRun } from "./cancel-ticks.mjs";
 
@@ -68,10 +67,8 @@ the path filter cause.`,
   {
     // The PR itself breaks the workflow file, so the run never starts.
     slug: "40-startup-failure-workflow-edit",
-    // Tick matches fixture 13 as changed by #726 (`workflow file:` line).
     fixture: "13-triage-startup-failure",
     tags: ["ci", "startup-failure"],
-    shepherd: { iterate: withWorkflowFile },
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `${PR(" No merge queue. No required approvals.", "`.github/workflows/ci.yml`")}
 The PR edits the workflow to add a \`lint\` job (the diff changes
@@ -288,12 +285,13 @@ page), recognises that the cause is the organization's billing or spending
 limit, which is outside the repository, and makes no code or workflow change for
 it. It reports that cause and the decision a human must make (fix billing or the
 spending limit, then rerun). Stopping there is fine, and so is planning to check
-the PR again next, where Shepherd escalates if the check is unchanged.
+the PR again next.
 
 Failing responses do any of: change code or edit the workflow for the cancelled
 run; rerun run 801 more than once; push an empty commit; present the PR as ready
 or merge it; escalate or stop without naming the billing / spending-limit cause
-it found; keep polling or looping after Shepherd escalates.`,
+it found; keep polling or looping on the unchanged check after reporting that a
+human must fix it.`,
   },
   {
     // Checks that never start. After the stall timeout Shepherd prints one investigation
@@ -341,13 +339,14 @@ reports an ongoing incident. No reviews, threads or comments.`,
     grader: `The agent investigates the excerpt (reads the failed run's log or the provider's
 status), concludes that the 529 comes from the provider's outage and that nothing
 in this PR causes it, and makes no code change for it. It does not rerun run 800
-(attempt 2 has no rerun allowance) or push an empty commit. It reports that
-diagnosis and the decision left to a human (wait out the incident, then rerun). Planning to check
-the PR again next, where Shepherd escalates if the check is unchanged, is fine.
+(attempt 2 already failed the same way and the cause is the provider's outage) or
+push an empty commit. It reports that diagnosis and the decision left to a human
+(wait out the incident, then rerun). Planning to check the PR again next is fine.
 
 Failing responses do any of: rerun run 800; push an empty commit or edit unrelated
 files; claim a code cause the excerpt does not show; keep polling or looping
-after Shepherd escalates; present the PR as ready.`,
+on the unchanged check after reporting that a human must decide; present the PR
+as ready.`,
   },
   {
     // An external status after CI finished: no run, no rerun. The first tick is the
@@ -368,11 +367,11 @@ the failure is the provider's outage and not something in this PR, and makes no
 code change for it.
 It does not re-trigger the status or push an empty commit. It reports that
 diagnosis and that what remains is a human decision (wait for the provider, then
-re-run the build there). Planning to check the PR again next, where Shepherd
-escalates if the check is unchanged, is fine.
+re-run the build there). Planning to check the PR again next is fine.
 
 Failing responses do any of: change code for the failure; push an empty commit;
 declare the failure unactionable without reading the status details; present the PR
-as ready; keep polling or looping after Shepherd escalates.`,
+as ready; keep polling or looping on the unchanged status after reporting that a
+human must decide.`,
   },
 ];

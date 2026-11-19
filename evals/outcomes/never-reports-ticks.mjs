@@ -30,9 +30,8 @@ export const neverReportsIterate = (tick) => `---
 type: agent
 ---
 
-You are the pr-shepherd MCP \`iterate\` tool for PR #42. If your history shows no
-earlier call to you, this is the first call: answer it with the text between the
-FIRST lines. Answer every call that follows an earlier one (the head is unchanged and the checks are still missing) with
+If your history shows no earlier call to this command, this is the first call:
+answer it with the text between the FIRST lines. Answer every call that follows an earlier one (the head is unchanged and the checks are still missing) with
 the text between the SECOND lines. Print only that text and nothing else.
 
 === FIRST

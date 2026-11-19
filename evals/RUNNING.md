@@ -249,8 +249,9 @@ Isolation is enforced in code, not by hand. `generate.mjs` fails when the plugin
 copy's `mcpServers` differ from the non-`gh`/`github` mock dirs, when a case ships a
 mock dir no plugin server declares, when the copied skills differ from the source,
 or when a prompt, grader (except `skill-fired`) or `gh`/`github` mock names Shepherd
-(`generated-checks.mjs`; `KNOWN_LEAKS` is a temporary allowlist of scenarios still
-being rewritten). CI runs both (`outcome evals isolation` job). `analyze.mjs` then
+(`generated-checks.mjs`, no exceptions). `ticks.test.mjs` checks that every
+`pr-shepherd` command in a scenario's CLI mock has the subcommand and flag shape of
+some current snapshot and that no retired MCP wording remains. CI runs both (`outcome evals isolation` job). `analyze.mjs` then
 checks every kept run's `out/` (`isolation.mjs`) and refuses to report if a `without`
 run has a server other than `gh`/`github`, a `/shepherd/i` tool, a `pr-shepherd:*`
 slash command or a `mocks/` other than `gh.json` and `github.json`, or a `with` run

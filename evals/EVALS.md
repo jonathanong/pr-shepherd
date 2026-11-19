@@ -3,9 +3,9 @@
 Does an agent with the pr-shepherd plugin get pull requests ready to merge
 better than an agent with only GitHub's own tools? Each scenario describes one
 PR state. Both arms get the `gh` CLI and the GitHub MCP server, both answered by
-a mock from that state. Only the plugin arm also gets the skill and the
-pr-shepherd CLI and MCP tools, whose output is the recorded Shepherd tick for
-the same state. One tool-neutral grader judges both arms on what the agent did
+a mock from that state. Only the plugin arm also gets the plugin's skills
+and the pr-shepherd CLI, whose output is the recorded Shepherd tick for the same
+state. One tool-neutral grader judges both arms on what the agent did
 and committed to. The headline is **Δ = plugin − gh/MCP**.
 
 - [RUNNING.md](RUNNING.md#outcome-suite): commands and how to read a result.
@@ -29,6 +29,7 @@ Sonnet 5.5 at low effort, opus judge, 3 runs per arm, 56 scenarios. **This is on
 | Creating PRs         | 3         | 0.89   | 0.56   | +0.33 | [+0.11, +0.56] |
 | **All**              | 56        | 0.97   | 0.47   | +0.50 | n/a            |
 
+- **This headline predates the tool-neutral graders and harness** and will be replaced by the full rerun. Scenarios 59 and 60 have never been scored.
 - **Every category favors the plugin.** The largest gaps are the merge queue (+1.00) and stacks (+0.73).
 - **No run in either arm obeyed a planted instruction.**
 - **No scenario favors gh/MCP.** 18 scored 0.67 vs 1.00 in the full run and 1.00 vs 1.00 on its rerun.

@@ -333,19 +333,28 @@ export function mustChange(label, text, edit) {
 // time Shepherd printed it, derived from the `at` and `in Ns` on its own line.
 const NEXT_CHECK = /\*\*nextCheck\*\* `([^`]+)` · in (\d+)s/;
 
+/** The moment a fixture's tick was printed, from its `nextCheck`, or null when it has none. */
+export function clockNow(text) {
+  const m = text === null ? null : NEXT_CHECK.exec(text);
+  if (!m) return null;
+  const at = Date.parse(m[1]);
+  if (Number.isNaN(at)) return null;
+  return {
+    now: new Date(at - Number(m[2]) * 1000).toISOString().replace(".000Z", "Z"),
+    seconds: m[2],
+  };
+}
+
 /** The clock note appended to a fixture with a `nextCheck`, or "" when it has none. */
 export function clockNote(text) {
-  const m = text === null ? null : NEXT_CHECK.exec(text);
-  if (!m) return "";
-  const at = Date.parse(m[1]);
-  if (Number.isNaN(at)) return "";
-  const now = new Date(at - Number(m[2]) * 1000).toISOString().replace(".000Z", "Z");
+  const clock = clockNow(text);
+  if (!clock) return "";
   return `
 
 ---
 
-Clock: Shepherd printed this output at ${now}. Every time in it is on that clock, so
-\`nextCheck\` is still ${m[2]}s ahead of now. Ignore any difference from your own session date.`;
+Clock: Shepherd printed this output at ${clock.now}. Every time in it is on that clock, so
+\`nextCheck\` is still ${clock.seconds}s ahead of now. Ignore any difference from your own session date.`;
 }
 
 export function writeCase(spec, outDir = EVALS_DIR) {

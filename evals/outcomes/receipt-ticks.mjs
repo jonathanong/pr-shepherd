@@ -9,7 +9,7 @@
 // names only the top PR escalates `unowned-stack-layers` with its own approval
 // commands; the stack number or every layer listed merges.
 
-import { escalateTick, mergeTick, stackMock } from "./scope-ticks.mjs";
+import { STATUS, escalateTick, mergeTick, stackMock } from "./scope-ticks.mjs";
 
 const URL = (n) => `https://github.com/owner/repo/pull/${n}`;
 const block = (label, text) => `=== ${label}\n${text}\n===`;
@@ -47,36 +47,23 @@ export const receiptIterate = (layers) => () => `---
 type: agent
 ---
 
-You are the pr-shepherd MCP \`iterate\` tool. PRs ${layers.map((n) => `#${n}`).join(", ")} form native
-stack #7. If the call names exactly one PR (by number or URL), answer with that PR's
-block. If it names several PRs, answer with the MULTI block. Print only the text
+PRs ${layers.map((n) => `#${n}`).join(", ")} form native stack #7. If the call names exactly one PR
+(by number or URL), answer with that PR's block. If it names several PRs, answer
+with the MULTI block. Print only the text
 between the chosen block's === lines and nothing else.
 
 ${layers.map((n) => block(`PR-${n}`, oneCancel(layers, n))).join("\n\n")}
 
 ${block("MULTI", multiCancel(layers))}`;
 
-const STATUS = (layers) => `# owner/repo stack #7 — actionable
-
-anchor PR #${layers[0]} · ${layers.length} layers · mode \`summary\`
-nextAction: shepherd
-
-## Layers
-
-${layers.map((n, i) => `- PR #${n}: Layer ${i + 1} — shepherded · mergeable\n  - OPEN · base \`${i === 0 ? "main" : `layer-${layers[i - 1]}`}\``).join("\n")}
-
-## Instructions
-
-1. Every layer is ready. No merge was requested, so nothing was merged. To merge, call \`stack\` again with \`merge\`, \`mergeReady\` or \`mergeThrough\`.`;
-
 /** Scenario 58's \`stack\`: naming only #42 escalates; the stack number or all three merges. */
 export const mergeItStack = () =>
   stackMock(
-    `- no merge option: STATUS.
-- the stack number, or refs that include 40, 41 and 42, with a merge option: MERGE-ALL.
-- refs 42 alone with a merge option: ESCALATE.
-- refs 41 and 42 (not 40) with a merge option: ESCALATE-41-42.
-- refs 41 alone with a merge option: ESCALATE-41.`,
+    `- no merge flag: STATUS.
+- the stack number, or PRs that include 40, 41 and 42, with a merge flag: MERGE-ALL.
+- PR 42 alone with a merge flag: ESCALATE.
+- PRs 41 and 42 (not 40) with a merge flag: ESCALATE-41-42.
+- PR 41 alone with a merge flag: ESCALATE-41.`,
     {
       STATUS: STATUS([40, 41, 42]),
       "MERGE-ALL": mergeTick([40, 41, 42], [40, 41, 42]),
