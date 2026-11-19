@@ -20,6 +20,13 @@ const SNAPSHOTS = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "tes
 export const MCP_ERA = /mergeReady|mergeThrough|MCP|call `stack` again|the call's `(?:refs|pr|prs)`/;
 
 const COMMAND = /`((?:[A-Z_]+=\S+ )?pr-shepherd [^`]*)`/g;
+// Flags that take a value; any other flag is boolean and leaves the next token a positional.
+const VALUE_FLAGS = new Set([
+  "--base", "--debounce", "--dismiss-review-ids", "--format", "--layers", "--match-head-commit",
+  "--merge-through", "--message", "--minimize-comment-ids", "--queue-commit", "--removed-at",
+  "--reply-thread-ids", "--repo", "--require-sha", "--resolve-thread-ids", "--thread-id",
+  "--timeout", "--transport",
+]);
 const TOKEN = /"[^"]*"|'[^']*'|\S+/g;
 
 /** Subcommand words, whether any other positional appears, and the flag names. */
@@ -32,7 +39,7 @@ export function shape(command) {
   for (const token of tokens) {
     if (token.startsWith("--")) {
       flags.add(token.split("=")[0]);
-      value = !token.includes("=");
+      value = !token.includes("=") && VALUE_FLAGS.has(token);
     } else if (value) {
       value = false;
     } else if (/^[a-z][a-z-]*$/.test(token) && words.length < 2 && !positional) {
@@ -74,6 +81,8 @@ describe("shape", () => {
       "apply review ARG --message --require-sha",
     );
     assert.equal(shape("GH_REPO=a/b pr-shepherd 42 --until-terminal"), "ARG --until-terminal");
+    assert.equal(shape("pr-shepherd stack --until-terminal 42"), "stack ARG --until-terminal");
+    assert.equal(shape("pr-shepherd stack --merge 42 --merge-through 41"), "stack ARG --merge --merge-through");
   });
 });
 

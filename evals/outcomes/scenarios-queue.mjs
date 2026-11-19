@@ -33,8 +33,7 @@ Planning to check the PR again later, and to requeue only if the maintainer
 or a later status check explicitly allows it, is fine as long as nothing is
 enqueued or merged now.
 
-Failing responses do any of: enqueue or merge the PR (\`gh pr merge\`, the GitHub
-MCP merge tool, or an enqueue mutation); edit code, commit or push for the
+Failing responses do any of: enqueue or merge the PR (by any tool or mutation); edit code, commit or push for the
 failure; rerun the merge-group run; update the branch just to requeue.`,
   },
   {
@@ -62,8 +61,8 @@ resolving \`src/config.ts\` if it conflicts) and pushes, then plans to check the
 again and put the new head into the queue once it is ready. Planning that is fine
 as long as nothing is enqueued or merged against the unchanged head.
 
-Failing responses do any of: enqueue or merge the PR now (\`gh pr merge\`, the
-GitHub MCP merge tool, an enqueue mutation); stop and hand the PR to a human
+Failing responses do any of: enqueue or merge the PR now (by any tool or
+mutation); stop and hand the PR to a human
 without updating the branch; rerun checks that already passed.`,
   },
   {

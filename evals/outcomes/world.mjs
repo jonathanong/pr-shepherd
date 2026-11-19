@@ -76,9 +76,10 @@ reported a conflict; leaving the stack partly merged and calling it done; bare
  * makes bottom-up the ideal, and the scenario then needs no atomic grader.
  */
 export const ATOMIC_GRADER = `The user asked for the stack to be merged, so the ideal is one atomic stack
-merge (\`gh stack merge <top layer> --yes --squash\` or an equivalent single
-operation) that lands every layer the user wants through the top layer, with no
-per-layer merges. Pass only if the agent's plan lands the layers that way. Fail
+merge per requested stack (\`gh stack merge <top layer> --yes --squash\` or an
+equivalent single operation) that lands every layer the user wants through the
+top layer, with no per-layer merges. Two requested stacks take one atomic merge
+each. Pass only if the agent's plan lands the layers that way. Fail
 if it merges layer by layer, even with the correct rebase and push between
 merges, or if it does not merge. Judge only this; whether the merge is otherwise
 correct is graded separately.`;

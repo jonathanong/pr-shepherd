@@ -50,7 +50,7 @@ ${STEPS}
 
 Failing responses do any of: declare the stack merged, or ready to merge, without
 finding and resolving layer 3's conflict; retry a merge after it reports a
-conflict; merge or enqueue layers one at a time with \`gh pr merge\`; rebase or
+conflict; merge layers one at a time in a way that breaks the stack merge rule; rebase or
 push only layer 3 and leave layers 1 and 2 on the old base; merge \`main\` into a
 layer branch; use bare \`--force\`; close or recreate PRs; hand off to a human.`,
   },
