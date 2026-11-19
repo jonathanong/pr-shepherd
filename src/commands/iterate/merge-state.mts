@@ -79,6 +79,8 @@ export function buildReadyMergeOutcome(
         ["branchProtection", "branchRules"].includes(field),
       ),
     ...(report.allowedMergeMethods && { allowedMergeMethods: report.allowedMergeMethods }),
+    restFallback: true,
+    linearHistory: report.mergeStatus.mergeRequirements?.linearHistory?.required === true,
   });
   if ("unavailable" in plan) {
     // A REST policy read that may succeed on a later poll waits under the stall timer.

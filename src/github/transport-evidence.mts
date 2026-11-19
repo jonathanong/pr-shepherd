@@ -18,21 +18,41 @@ export function isKnownMergeStateStatus(status: string): boolean {
 }
 
 /**
+ * REST has no resolved/outdated thread state. When branch policy requires conversation resolution,
+ * GitHub's CLEAN merge state proves no unresolved thread exists, so the unknown status is not a
+ * readiness gap. Without that policy, or on any other merge state, the gap stands.
+ */
+export function conversationResolutionProven(
+  mergeStateStatus: string,
+  requiresConversationResolution: boolean | undefined,
+): boolean {
+  return mergeStateStatus === "CLEAN" && requiresConversationResolution === true;
+}
+
+/**
  * Missing feedback cannot certify readiness, even when GitHub reports CLEAN. Missing branch policy
  * blocks only a non-CLEAN state, whose unmet requirements Shepherd derives from that policy. The
  * aggregate `reviewDecision` is never a readiness input on either transport (approvals come from
- * branch policy plus latest reviews), so its absence alone is not a gap.
+ * branch policy plus latest reviews), so its absence alone is not a gap. Unknown thread status
+ * (`reviewThreads.status`) is cleared by `conversationResolutionProven`.
  */
 export function transportReadinessGaps(
   value: TransportEvidence,
   mergeStateStatus: string,
+  requiresConversationResolution?: boolean,
 ): Array<{ field: string; reason: string }> {
   if (value.transport !== "rest") return [];
+  const threadStatusProven = conversationResolutionProven(
+    mergeStateStatus,
+    requiresConversationResolution,
+  );
   return (value.transportUnavailable ?? []).filter(
     ({ field }) =>
-      /^(reviewThreads|reviewTranscripts|changesRequestedReviews|reviewSummaries|checks|checkRuns|checkSuites|checkAnnotations|annotations|nativeStack)(?:\.|$)/.test(
-        field,
-      ) ||
+      (field === "reviewThreads.status" && !threadStatusProven) ||
+      (field !== "reviewThreads.status" &&
+        /^(reviewThreads|reviewTranscripts|changesRequestedReviews|reviewSummaries|checks|checkRuns|checkSuites|checkAnnotations|annotations|nativeStack)(?:\.|$)/.test(
+          field,
+        )) ||
       (mergeStateStatus !== "CLEAN" &&
         ["branchProtection", "branchRules", "mergeRequirements"].some(
           (policy) => field === policy || field.startsWith(`${policy}.`),

@@ -37,7 +37,8 @@ export function isCurrentSummaryReady(
   ).requiresConversationResolution;
   return (
     isKnownMergeStateStatus(raw.mergeStateStatus) &&
-    transportReadinessGaps(raw, raw.mergeStateStatus).length === 0 &&
+    transportReadinessGaps(raw, raw.mergeStateStatus, requiresConversationResolution).length ===
+      0 &&
     checks.incomplete !== true &&
     sourceChecks.incomplete !== true &&
     (review.incomplete !== true ||

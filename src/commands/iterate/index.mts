@@ -36,7 +36,7 @@ import { findStaleNativeStackAncestry } from "./stale-ancestry.mts";
 import { annotateBlockedWait, resolveCheckBlockerGate } from "./check-blocker-gate.mts";
 import { buildUnreportedFixResult, planUnreportedRequired } from "./unreported-required.mts";
 import { createCheckExecutionContext } from "../check-execution-context.mts";
-import { transportReadinessGaps } from "../../github/transport-evidence.mts";
+import { reportReadinessGaps } from "./report-gaps.mts";
 import { buildEscalateHumanMessage } from "./escalate.mts";
 import { markEditedCommentsSeen } from "./edited-comment-markers.mts";
 
@@ -377,7 +377,7 @@ async function runIterateCore(
     report.status === "READY" &&
     report.mergeStatus.isDraft &&
     !report.mergeStatus.blockingBotReviewInProgress;
-  const gaps = transportReadinessGaps(report, report.mergeStatus.mergeStateStatus);
+  const gaps = reportReadinessGaps(report);
   if (
     gaps.length > 0 &&
     report.checks.inProgress.length === 0 &&
@@ -530,7 +530,7 @@ async function recordReadyReceipt(
     report.mergeStatus.isDraft ||
     !report.headSha ||
     !report.baseRefOid ||
-    transportReadinessGaps(report, report.mergeStatus.mergeStateStatus).length > 0
+    reportReadinessGaps(report).length > 0
   )
     return "failed";
   try {
@@ -617,7 +617,7 @@ async function revalidateReadyReceipt(
     report.mergeStatus.isDraft ||
     !report.headSha ||
     !report.baseRefOid ||
-    transportReadinessGaps(report, report.mergeStatus.mergeStateStatus).length > 0 ||
+    reportReadinessGaps(report).length > 0 ||
     (!retainQueuedReceipt && (report.status !== "READY" || hasReadinessWork))
   ) {
     await clearReadyReceipt(key);

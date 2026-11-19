@@ -10,10 +10,10 @@ import { EXIT, ShepherdError } from "../exit-codes.mts";
 import { getCurrentPrNumber, getRepoInfo } from "../github/client.mts";
 import { GitHubRequestError } from "../github/errors.mts";
 import { mergedResponse, readPull } from "./apply-merge-pull.mts";
+import { resumeMergeRequest } from "./apply-merge-resume.mts";
 import { withRestConditionalScope } from "../github/rest-conditional-scope.mts";
 import { getGithubTransport } from "../github/transport.mts";
 import {
-  getRestMerge,
   matchesRestMergeRequest,
   requestRestMerge,
   type RestMergeOptions,
@@ -24,7 +24,6 @@ import {
   replaceFailedMergeRequest,
   readMergeRequest,
   writeMergeRequest,
-  writeMergeRequestStatus,
   type MergeRequestRecord,
 } from "../state/merge-request.mts";
 
@@ -108,32 +107,14 @@ async function submitApplyMerge(
         "The previous merge submission has an unknown outcome and no UUID. The PR is not merged; no duplicate request was submitted.",
         true,
       );
-    try {
-      const response = await getRestMerge(repo, pr, existing.uuid);
-      if (
-        response.status === "pending" &&
-        (!matchesRestMergeRequest(response, options) || response.details.uuid !== existing.uuid)
-      )
-        return failed(
-          "Asynchronous merge status does not match the persisted guarded request.",
-          true,
-        );
-      await writeMergeRequestStatus(key, { ...existing, response });
-      return project(response);
-    } catch (error) {
-      if (error instanceof GitHubRequestError && error.status === 404) {
-        const latest = await readPull(repo, pr);
-        if (latest.merged === true)
-          return project(
-            mergedResponse(latest, "Pull request is merged; its asynchronous request has expired."),
-          );
-        return failed(
-          "The asynchronous merge UUID expired or is unavailable. The PR is not merged; its request outcome is unknown and no duplicate was submitted.",
-          true,
-        );
-      }
-      throw error;
-    }
+    return resumeMergeRequest({
+      repo,
+      pr,
+      key,
+      existing: { ...existing, uuid: existing.uuid },
+      options,
+      factory: { failed, project },
+    });
   }
   let record: MergeRequestRecord = {
     version: 1,

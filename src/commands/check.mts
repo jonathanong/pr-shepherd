@@ -39,7 +39,10 @@ import {
 } from "./ready-mergeability.mts";
 import { loadSeenMap, markSeen, classifyItem, mutationWasDenied } from "../state/seen-comments.mts";
 import { aliasThreadSeenMarkers } from "../github/rest-identities.mts";
-import { transportReadinessGaps } from "../github/transport-evidence.mts";
+import {
+  conversationResolutionProven,
+  transportReadinessGaps,
+} from "../github/transport-evidence.mts";
 import { canGenerateGithubMutation } from "../github/mutation-policy.mts";
 import { threadTranscriptBody } from "../threads/transcript.mts";
 import { classifyThreadVisibility } from "../comments/thread-visibility.mts";
@@ -76,16 +79,18 @@ import type {
 
 function enforceTransportReadiness(status: ShepherdStatus, data: BatchPrData): ShepherdStatus {
   if (status !== "READY" || data.transport !== "rest") return status;
+  const conversationsGated = data.branchRules?.requiresConversationResolution;
+  const statusProven = conversationResolutionProven(data.mergeStateStatus, conversationsGated);
   if (
     data.reviewThreads.some(
       (thread) =>
-        thread.isResolved === undefined ||
-        thread.isOutdated === undefined ||
+        (!statusProven && (thread.isResolved === undefined || thread.isOutdated === undefined)) ||
         thread.comments === undefined,
     )
   )
     return "UNKNOWN";
-  if (transportReadinessGaps(data, data.mergeStateStatus).length > 0) return "UNKNOWN";
+  if (transportReadinessGaps(data, data.mergeStateStatus, conversationsGated).length > 0)
+    return "UNKNOWN";
   return status;
 }
 

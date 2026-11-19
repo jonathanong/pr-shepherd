@@ -72,6 +72,11 @@ export function buildSimpleIterateInstructions(
           `Only if GitHub reports that auto-merge is unavailable, run the plain merge fallback: ${inlineCode(renderShellCommand(result.merge.fallbackCommand.argv))}.`,
         );
       }
+      if (result.merge.restFallbackCommand) {
+        instructions.push(
+          `If any command above fails with \`GraphQL: API rate limit already exceeded\`, or the quota warning reports GraphQL quota exhausted, use REST instead (its quota is separate${result.merge.mode === "queue" ? "" : "; this merges immediately"}): ${inlineCode(renderShellCommand(result.merge.restFallbackCommand.argv))}.`,
+        );
+      }
       instructions.push(
         result.quotaWarning
           ? buildQuotaAwareContinuation(result.quotaWarning, "After running the merge command.")

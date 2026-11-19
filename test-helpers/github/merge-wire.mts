@@ -27,6 +27,8 @@ export async function mergeWire() {
     submitBody: pendingMerge(),
     pollStatus: 200,
     pollBody: pendingMerge(),
+    syncStatus: 405,
+    syncBody: { message: "Pull Request is not mergeable" } as Record<string, unknown>,
     failMutation: false,
     mergedOnExpiry: false,
   };
@@ -42,6 +44,9 @@ export async function mergeWire() {
       }
       response.statusCode = fixture.submitStatus;
       response.end(JSON.stringify(fixture.submitBody));
+    } else if (request.path.endsWith("/merge") && request.method === "PUT") {
+      response.statusCode = fixture.syncStatus;
+      response.end(JSON.stringify(fixture.syncBody));
     } else if (request.path.includes("/merge-async/")) {
       response.statusCode = fixture.pollStatus;
       if (fixture.mergedOnExpiry) fixture.snapshot.merged = true;

@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { link, mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import { link, mkdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { resolvePrStatePath } from "./base.mts";
 import type { RestMergeOptions, RestMergeResponse } from "../github/rest-merge.mts";
@@ -153,6 +153,15 @@ export async function replaceFailedMergeRequest(
   } finally {
     if (created && !published) await unlink(source).catch(() => {});
   }
+}
+
+/**
+ * Retire a request whose asynchronous status can no longer be read, once the synchronous fallback
+ * has answered. A merged PR is detected from the pull itself, so no record is needed; a refusal is
+ * surfaced to the caller, and a rerun starts a fresh guarded attempt instead of replaying it.
+ */
+export async function clearMergeRequest(key: Key): Promise<void> {
+  await rm(path(key), { force: true });
 }
 
 export async function writeMergeRequest(key: Key, record: MergeRequestRecord): Promise<void> {
