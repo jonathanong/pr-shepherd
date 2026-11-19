@@ -96,21 +96,6 @@ export function buildMergeCommandPlan(
     return {
       mode: "queue",
       command: { argv: base },
-      ...(input.restFallback && {
-        restFallbackCommand: {
-          argv: buildPrShepherdCommand([
-            "apply",
-            "merge",
-            formatPrUrl(input.repo, input.pr),
-            "--require-sha",
-            input.headSha,
-            "--merge-action",
-            "merge_queue",
-            "--transport",
-            "rest",
-          ]).argv,
-        },
-      }),
       queueApiFallbackCommand: {
         argv: [
           "gh",

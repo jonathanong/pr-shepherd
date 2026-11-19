@@ -472,11 +472,11 @@ Emits an exact merge command; Shepherd does not execute or wrap the merge operat
 
 1. Run the auto-merge command exactly as printed: `gh pr merge 42 --repo owner/repo --match-head-commit abc123 --auto --merge`.
 2. Only if GitHub reports that auto-merge is unavailable, run the plain merge fallback: `gh pr merge 42 --repo owner/repo --match-head-commit abc123 --merge`.
-3. If any command above fails with `GraphQL: API rate limit already exceeded`, or the quota warning reports GraphQL quota exhausted, use REST instead (its quota is separate; this merges immediately): `gh api -X PUT repos/owner/repo/pulls/42/merge -f sha=abc123 -f merge_method=merge`.
+3. If GraphQL is rate limited, use REST: `gh api -X PUT repos/owner/repo/pulls/42/merge -f sha=abc123 -f merge_method=merge`.
 4. Then iterate immediately with the same options until the PR merges or needs work.
 ```
 
-Every GraphQL-mode command spends GraphQL quota, so the merge result carries a `restFallbackCommand` (JSON `merge.restFallbackCommand`) for when that quota runs out: the `gh api` PUT above for an ordinary branch (the sync endpoint, SHA-pinned, with the selected method), or `pr-shepherd apply merge ... --merge-action merge_queue --transport rest` for a queue branch. Both spend only REST quota.
+Every GraphQL-mode command spends GraphQL quota, so the merge result carries a `restFallbackCommand` (JSON `merge.restFallbackCommand`) for when that quota runs out: the `gh api` PUT above for an ordinary branch (the sync endpoint, SHA-pinned, with the selected method), which spends only REST quota. Queue branches carry none.
 
 Each command is printed once, inline in its instruction step; there is no separate `## Merge command` section. The header omits `**repo**` because the printed command already names the repository. A queue-required or queue-enabled branch emits the selected transport's queue command and any supported transport-specific fallback instead. Queue enqueue is not GraphQL-only; the instruction carries the applicable command and operation details.
 

@@ -74,7 +74,7 @@ export function buildSimpleIterateInstructions(
       }
       if (result.merge.restFallbackCommand) {
         instructions.push(
-          `If any command above fails with \`GraphQL: API rate limit already exceeded\`, or the quota warning reports GraphQL quota exhausted, use REST instead (its quota is separate${result.merge.mode === "queue" ? "" : "; this merges immediately"}): ${inlineCode(renderShellCommand(result.merge.restFallbackCommand.argv))}.`,
+          `If GraphQL is rate limited, use REST: ${inlineCode(renderShellCommand(result.merge.restFallbackCommand.argv))}.`,
         );
       }
       instructions.push(

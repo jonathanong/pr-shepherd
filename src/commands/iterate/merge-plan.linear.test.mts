@@ -43,16 +43,6 @@ describe("merge command method under required linear history", () => {
     ]);
   });
 
-  it("offers the REST queue command as a fallback for a queue request", async () => {
-    await freshLoadConfig();
-    const { buildMergeCommandPlan } = await import("./merge-plan.mts");
-    const plan = buildMergeCommandPlan({ ...input, queue: true, restFallback: true });
-    if ("unavailable" in plan) throw new Error(plan.unavailable);
-    expect(plan.restFallbackCommand?.argv).toEqual(
-      expect.arrayContaining(["apply", "merge", "merge_queue", "--transport", "rest"]),
-    );
-  });
-
   it("omits the REST fallback unless requested", async () => {
     await freshLoadConfig();
     const { buildMergeCommandPlan } = await import("./merge-plan.mts");
