@@ -249,8 +249,11 @@ Stack-merge scoring. Scenarios 37, 38, 57, 58, 61 and 62 end in a stack merge an
 carry two judge graders: `outcome` (weight 3) passes any correct landing, either one
 atomic stack merge or bottom-up merging with a rebase onto trunk and a
 `--force-with-lease` push after each squash merge; `atomic` (weight 2) passes only
-the atomic merge. A run's score is the weight-averaged pass rate of its scored
-graders, so atomic scores 1.0, correct bottom-up 0.6 and a failure (no rebase after a
+the atomic merge. A run's score comes from `analyze.mjs` (`score.mjs`), not the
+runner, whose formula is undocumented: only `scored: true` graders count; if
+`outcome` failed the score is 0, otherwise it is the weighted mean
+sum(weight * passed) / sum(weight). Where the runner's `score` differs, analyze
+prints a per-scenario count and uses the computed score. So atomic scores 1.0, correct bottom-up 0.6 and a failure (no rebase after a
 squash merge, merging into the parent branch, retrying a conflicted merge, a
 half-merged stack, bare `--force`) 0. `skill-fired` carries no `arm` or weight, is
 reported as a plugin indicator and is excluded from the score in both arms, so the

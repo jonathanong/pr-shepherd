@@ -22,6 +22,7 @@ import { fixtureText, mustChange } from "../lib.mjs";
 import { bootstrapDeltas, interval, mean, seedOf } from "../stats.mjs";
 import { cliBody } from "./cli-mock.mjs";
 import { inspectRun } from "./isolation.mjs";
+import { computedScore } from "./score.mjs";
 import { SCENARIOS } from "./scenarios.mjs";
 
 const SKILL_DENIED = /Permission to use Skill has been denied/;
@@ -70,6 +71,7 @@ const toolErrors = { with: 0, without: 0 };
 const runCount = { with: 0, without: 0 };
 const rows = [];
 const insufficient = [];
+const scoreMismatch = new Map();
 for (const spec of SCENARIOS) {
   const c = cases.get(spec.slug);
   if (!c) continue;
@@ -98,7 +100,12 @@ for (const spec of SCENARIOS) {
       if (reason) {
         excluded++;
         voids.push(`${label}: ${reason}`);
-      } else kept.push(r.score);
+      } else {
+        const score = computedScore(r);
+        if (typeof r.score === "number" && Math.abs(r.score - score) > 1e-9)
+          scoreMismatch.set(spec.slug, (scoreMismatch.get(spec.slug) ?? 0) + 1);
+        kept.push(score);
+      }
     });
     return { kept, excluded };
   };
@@ -120,6 +127,12 @@ if (violations.length) {
 }
 console.log(`isolation: ok (${runCount.without} without runs, ${runCount.with} with runs)`);
 console.log(`mock tool_errors: without ${toolErrors.without}, with ${toolErrors.with}\n`);
+
+for (const [slug, n] of scoreMismatch)
+  console.log(
+    `note: ${slug}: ${n} run(s) where the runner's score differs from the computed one; using computed`,
+  );
+if (scoreMismatch.size) console.log("");
 
 const fmt = (x) => (x >= 0 ? `+${x.toFixed(2)}` : x.toFixed(2));
 const ci = (draws) => (draws ? `[${interval(draws).map(fmt).join(", ")}]` : "n/a");
