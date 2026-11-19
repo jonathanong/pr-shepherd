@@ -73,6 +73,8 @@ export interface RawPr extends RawPrMergeFields {
     pageInfo: { hasPreviousPage: boolean; startCursor: string | null };
     nodes: RawReviewSummary[];
   };
+  /** Last 100 commit OIDs, oldest first. GraphQL only. */
+  prCommitOids?: { nodes: Array<{ commit: { oid: string } }> };
   commits: {
     totalCount?: number;
     nodes: Array<{

@@ -177,11 +177,18 @@ export function renderCommentBullet(
   return `- \`commentId=${c.id}\`${link} (${renderAuthor(c.author, c.authorType, c.authorAssociation)})${statusSuffix}: ${renderBodyPreview(c.body)}`;
 }
 
-/** ` [submitted on <sha>, head is <sha>]` when the review was submitted on a commit other than the PR head. */
-export function renderReviewCommitTag(r: { commitOid?: string; headOid?: string }): string {
-  return r.commitOid && r.headOid
-    ? ` [submitted on \`${r.commitOid}\`, head is \`${r.headOid}\`]`
-    : "";
+/** ` [reviewed <sha>, head <sha>, N commits since]` when the review is on a commit other than the PR head. */
+export function renderReviewCommitTag(r: {
+  commitOid?: string;
+  headOid?: string;
+  commitsSince?: number;
+}): string {
+  if (!r.commitOid || !r.headOid) return "";
+  const since =
+    r.commitsSince === undefined
+      ? ""
+      : `, ${r.commitsSince} commit${r.commitsSince === 1 ? "" : "s"} since`;
+  return ` [reviewed \`${r.commitOid}\`, head \`${r.headOid}\`${since}]`;
 }
 
 export function renderReviewBullet(
@@ -195,6 +202,7 @@ export function renderReviewBullet(
     staleReview?: boolean;
     commitOid?: string;
     headOid?: string;
+    commitsSince?: number;
   },
   opts: { includeBody?: boolean } = {},
 ): string {

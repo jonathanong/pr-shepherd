@@ -207,6 +207,8 @@ export interface Review {
   commitOid?: string;
   /** PR head OID, set on changes-requested reviews only when `commitOid` differs from it. Raw data, not a staleness verdict. */
   headOid?: string;
+  /** Commits pushed after `commitOid` up to the head. Set with `headOid`, GraphQL only, and only when `commitOid` is among the PR's last 100 commits. */
+  commitsSince?: number;
   /** Review HTML URL, when the batch query selected it. */
   url?: string;
   /** True when commitOid !== headRefOid AND all associated threads are resolved/outdated. Distinct from `staleBotCr` (time-based). Reviews with no threads are not marked stale. */

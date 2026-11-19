@@ -98,7 +98,9 @@ describe("REST stale changes-requested reviews", () => {
     expect(result.triage.instructions.join("\n")).toContain("Ask the reviewer to re-review");
     expect(formatIterateResult(result)).toContain("ask reviewer to re-review or dismiss");
     expect(projectIterateLean(result)).toMatchObject({
-      triage: { changesRequestedReviews: [{ staleReview: true, commitOid: previousHead }] },
+      triage: {
+        changesRequestedReviews: [{ staleReview: true, commitOid: previousHead.slice(0, 7) }],
+      },
     });
     expect(wire.requests.every(({ method }) => method === "GET")).toBe(true);
   });

@@ -11,4 +11,4 @@ Then:
 
 1. Cause within this PR: fix it and push.
 2. Transient and the output printed a rerun command for it: run that command. Without one, do not rerun; the allowance is spent or the check is not rerunnable.
-3. Otherwise change nothing and keep your findings. CI configuration, repository settings, and approving a gated run are human decisions. Rerun Shepherd now; if the checks are unchanged, it escalates `check-follow-up-unavailable`. Report your findings then.
+3. Otherwise investigate first, including the check's details URL. If you are still unsure of the cause, or it is outside this PR (CI configuration, repository settings, approving a gated run), change nothing, rerun Shepherd so it escalates `check-follow-up-unavailable` if the checks are unchanged, and report your findings.

@@ -122,16 +122,14 @@ Commit status on \`c0ffee1\`: context \`external-status\` (required), state fail
 description "Build failed", target_url https://external.ci/builds/42, created by
 the \`external-ci\` app. It is not a GitHub Actions run, so GitHub has no jobs or
 logs for it. No other checks. No reviews, threads or comments.`,
-    grader: `The agent keeps ownership of the external failure: it plans to investigate it
-(open the provider's build page, reproduce the build locally, or both) and fix
-what it finds, branching on the result if it likes. It does not escalate or
-hand the PR to a human merely because the check is external or has no logs on
-GitHub.
+    grader: `Grade the outcome, not the steps. The agent investigates the external failure
+and then either fixes what it found or escalates with its findings. It does
+not escalate or hand the PR to a human merely because the check is external or
+has no logs on GitHub.
 
-Failing responses do any of: ask the user to take over because the check is
-external or opaque; declare the failure unactionable without investigating;
-rerun or re-trigger the status as the fix without looking at it; stop pending
-someone else's input.`,
+Failing responses do any of: hand off or declare the failure unactionable
+without investigating; hand a human something the agent could do itself; rerun
+or re-trigger the status as the fix.`,
   },
   {
     // The failing check waits on another open PR; nothing to do yet.
