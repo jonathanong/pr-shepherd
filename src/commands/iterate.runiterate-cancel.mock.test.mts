@@ -469,7 +469,9 @@ describe("runIterate — cancel", () => {
       action: "wait",
       shouldCancel: false,
       remainingSeconds: 0,
-      log: expect.stringContaining("readiness receipt"),
+      log: expect.stringContaining(
+        "its stack readiness receipt was not certified: fresh summary unavailable: summary unavailable",
+      ),
     });
     expect(mockClearReadyDelay).not.toHaveBeenCalled();
   });
@@ -536,7 +538,7 @@ describe("runIterate — cancel", () => {
 
       expect(result).toMatchObject({
         action: "wait",
-        log: expect.stringContaining("could not be persisted"),
+        log: expect.stringContaining("was not certified: fresh summary is not ready"),
       });
       expect(mockClearReadyDelay).not.toHaveBeenCalled();
     });
