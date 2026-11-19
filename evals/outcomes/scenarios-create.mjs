@@ -10,6 +10,9 @@ const WORLD = (
   branches,
 ) => `owner/repo, default branch \`main\` at \`abc123\`, no branch protection, \`gh\`
 installed with the \`gh stack\` extension (\`gh stack init\`, \`add\`, \`submit --auto\`).
+\`gh stack\` and \`gh pr create\` run through the \`gh\` tool in this session
+against origin, so no local checkout of the repository is needed to create or
+stack PRs.
 The user (\`you\`) pushed these branches to origin and has no open PRs. GitHub
 compare and file-content calls on them (for example
 \`gh api repos/owner/repo/compare/main...BRANCH\`) return the diffs below.

@@ -43,7 +43,7 @@ export function buildCheckFollowUpInstructions(
     : "";
   return [
     `Shepherd has no rerun to offer and no log excerpt to show for the checks under \`## Failing checks\`, so it cannot tell from GitHub's data why they failed or what would fix them. Find out before acting.${start} ${playbookPointer("Check follow-up")}`,
-    "If the cause is within this PR, fix it and push. Otherwise make no change and keep what you found; do not rerun or retrigger these checks. If these checks are unchanged on the next poll, Shepherd escalates with `check-follow-up-unavailable`; report that diagnosis then.",
+    "If the cause is within this PR, fix it and push. Otherwise make no change and keep what you found; do not rerun or retrigger these checks, including with an empty or no-op commit. If these checks are unchanged on the next poll, Shepherd escalates with `check-follow-up-unavailable`; report that diagnosis then.",
   ];
 }
 

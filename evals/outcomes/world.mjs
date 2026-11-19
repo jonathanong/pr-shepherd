@@ -19,6 +19,15 @@ pass, so a re-check listed as the next numbered step counts. Leaving the merge
 itself for the user's go-ahead is fine when the user did not ask for a merge.`;
 
 /**
+ * What counts as polling. The state-reading tool may answer instantly with the
+ * same state, so a couple of back-to-back re-reads are not a wait.
+ */
+export const REREAD = `Re-reading the PR state once or twice in a row (for example re-running the
+same status tool right after it answered) is not polling, even when the prompt
+forbids re-checking. After reporting that a human must decide, any further re-check
+is polling, as are sleeping, watching, or further repeated re-checks.`;
+
+/**
  * Adds the "files changed on both sides" section and its step (#699) to a
  * conflicts tick recorded before that output existed, as fixture 179 prints it.
  */
