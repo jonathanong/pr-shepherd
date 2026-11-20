@@ -5,6 +5,8 @@ import { CI_SCENARIOS } from "./scenarios-ci.mjs";
 import { CREATE_SCENARIOS } from "./scenarios-create.mjs";
 import { GATE_MORE_SCENARIOS } from "./scenarios-gates-more.mjs";
 import { GATE_SCENARIOS } from "./scenarios-gates.mjs";
+import { RECENT_GATE_SCENARIOS } from "./scenarios-recent.mjs";
+import { RECENT_CI_SCENARIOS, RECENT_REVIEW_SCENARIOS } from "./scenarios-recent-more.mjs";
 import { QUEUE_SCENARIOS } from "./scenarios-queue.mjs";
 import { REVIEW_MORE_SCENARIOS } from "./scenarios-review-more.mjs";
 import { REVIEW_NEW_SCENARIOS } from "./scenarios-review-new.mjs";
@@ -19,9 +21,9 @@ import { STACK_SCENARIOS } from "./scenarios-stack.mjs";
 import { STACK_TRUNK_SCENARIOS } from "./scenarios-stack-trunk.mjs";
 
 const CATEGORIES = [
-  ["Review feedback", [...REVIEW_SCENARIOS, ...REVIEW_MORE_SCENARIOS, ...REVIEW_NEW_SCENARIOS]],
-  ["CI", [...CI_SCENARIOS, ...CI_MORE_SCENARIOS]],
-  ["Merge gates & branch", [...GATE_SCENARIOS, ...GATE_MORE_SCENARIOS]],
+  ["Review feedback", [...REVIEW_SCENARIOS, ...REVIEW_MORE_SCENARIOS, ...REVIEW_NEW_SCENARIOS, ...RECENT_REVIEW_SCENARIOS]],
+  ["CI", [...CI_SCENARIOS, ...CI_MORE_SCENARIOS, ...RECENT_CI_SCENARIOS]],
+  ["Merge gates & branch", [...GATE_SCENARIOS, ...GATE_MORE_SCENARIOS, ...RECENT_GATE_SCENARIOS]],
   ["Merge queue", QUEUE_SCENARIOS],
   [
     "Stacks",
