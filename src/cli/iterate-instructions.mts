@@ -58,7 +58,7 @@ export function buildSimpleIterateInstructions(
       if (result.merge.mode === "rest")
         return [
           `Run the REST merge command exactly as printed: ${command}. If its status is \`pending\`, rerun that same command at the configured polling cadence to resume the recorded request; \`enqueued\` is not merged.`,
-          "Rerun with the same options until GitHub confirms the PR merged or needs work. If another run uses these flags, add this PR to it.",
+          "Rerun with the same options until GitHub confirms the PR merged or needs work. If your other run has these flags, add this PR there.",
         ];
       const instructions: string[] = [];
       const stale = result.merge.ghCacheStaleRateLimit;
@@ -87,7 +87,7 @@ export function buildSimpleIterateInstructions(
       instructions.push(
         result.quotaWarning
           ? buildQuotaAwareContinuation(result.quotaWarning, "After running the merge command.")
-          : "Rerun with the same options until it merges or needs work. If another run uses these flags, add this PR to it.",
+          : "Rerun with the same options until it merges or needs work. If your other run has these flags, add this PR there.",
       );
       return instructions;
     }

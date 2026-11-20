@@ -111,7 +111,7 @@ describe("iterate merge formatting", () => {
     expect(queue).toContain("queue API fallback");
     expect(queue).toContain("If gh says auto-merge is disabled");
     expect(queue).toContain(
-      "Rerun with the same options until it merges or needs work. If another run uses these flags, add this PR to it.",
+      "Rerun with the same options until it merges or needs work. If your other run has these flags, add this PR there.",
     );
 
     expect(formatIterateResult(mergeResult("queue"))).not.toContain("## Merge command");
