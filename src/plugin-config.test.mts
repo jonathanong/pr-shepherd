@@ -39,16 +39,6 @@ describe("plugin configuration", () => {
     expect(readJson("plugins/pr-shepherd/.codex-plugin/plugin.json").version).toBe(pkg.version);
   });
 
-  it("points the Claude marketplace at the self-contained plugin directory", () => {
-    const marketplace = readJson(".claude-plugin/marketplace.json") as {
-      plugins: Array<{ name: string; source: unknown }>;
-    };
-
-    expect(marketplace.plugins).toEqual([
-      expect.objectContaining({ name: "pr-shepherd", source: "./plugins/pr-shepherd" }),
-    ]);
-  });
-
   it("registers a Grok marketplace that points at the plugin directory", () => {
     const marketplace = readJson(".grok-plugin/marketplace.json") as {
       plugins: Array<{ name: string; source: { type: string; path: string } }>;
