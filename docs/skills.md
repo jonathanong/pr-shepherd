@@ -168,7 +168,7 @@ Set the level with `PR_SHEPHERD_POLL_GUARD`, or in Claude Code with the plugin o
 
 ## Pipe guard
 
-A second `PreToolUse` hook (`plugins/pr-shepherd/hooks/pipe-guard.mjs`, matcher `Bash`) blocks a command that pipes pr-shepherd's output, such as `pr-shepherd 1 --until-terminal | tail -40`. The pipe drops the `## Instructions` section and the generated IDs the caller must act on. The agent sees one reason: run pr-shepherd without a pipe and read the full output. It works in Claude Code and Codex (Codex reads the plugin's `hooks/hooks.json` by default and runs it after you trust it in `/hooks`) and has no setting.
+The same hook (`plugins/pr-shepherd/hooks/poll-guard.mjs`, one process per call) also blocks, for `Bash` only, a command that pipes pr-shepherd's output, such as `pr-shepherd 1 --until-terminal | tail -40`. The pipe drops the `## Instructions` section and the generated IDs the caller must act on. The agent sees one reason: run pr-shepherd without a pipe and read the full output. It works in Claude Code and Codex (Codex reads the plugin's `hooks/hooks.json` by default and runs it after you trust it in `/hooks`) and ignores `PR_SHEPHERD_POLL_GUARD` / `poll_guard`: the level governs only the poll guard above, and this check always blocks.
 
 It blocks only when the pipe is certain. A pr-shepherd command is `pr-shepherd`, a path ending in `/pr-shepherd`, or `npx` / `pnpm exec` followed by `pr-shepherd`, after any `VAR=value` prefixes. The hook blocks it when a single `|` or `|&` follows it directly, in a list (`a && pr-shepherd 1 | tail`) or in `$(…)`. It allows:
 
