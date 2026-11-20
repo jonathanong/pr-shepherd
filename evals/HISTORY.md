@@ -6,6 +6,33 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-19: scenario 63, MERGE rerun joins an existing watcher (#799)
+
+Scenario `63-merge-rerun-joins-existing-watcher` (Merge gates & branch) starts with
+a background job already watching #101 and #102, and the user asks for #103 to be
+merged and watched too. It checks that the caller ends with one watcher covering all
+three PRs. It was added with the MERGE wording change in #799, whose last step now
+says to add the PR to a run with the same flags instead of starting another.
+
+Sonnet 5.5, opus judge, plugin arm only, 5 runs per wording, old wording ("Then
+iterate immediately with the same options") against new wording ("Rerun with the
+same options ... If your other run has these flags, add this PR there"):
+
+| Wording | Pass rate | Notes                                                                         |
+| ------- | --------- | ----------------------------------------------------------------------------- |
+| Old     | 5/5       | every run named 101, 102 and 103 in one command                               |
+| New     | 4/5       | the miss was a 2-of-3 judge split on a combined command run in the foreground |
+
+The scenario does not separate the two wordings. The skill's own rule ("PRs with
+the same flags share one command") already makes the agent run the combined list
+before it ever sees the MERGE tick, so the changed line is never what decides the
+outcome. Treat it as a regression guard for that rule. Two earlier drafts told
+nothing: with a plain "merge it" prompt the plugin arm never called Shepherd (10 of
+10 runs), and with a merge that completes at once no watcher was needed (all 10 runs
+passed). In those drafts the gh/MCP arm never called a pr-shepherd tool: its
+`mock-calls.jsonl` held only `gh` and GitHub MCP calls. The two final builds cost
+about $11.
+
 ## 2026-11-19: first full run with tool-neutral graders
 
 The first full outcome run after #779 rewrote the prompts and graders so they no

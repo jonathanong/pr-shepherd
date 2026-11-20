@@ -2,10 +2,17 @@
 // from; `fixture` is the Shepherd tick for the same state.
 
 import { PR_URL, clockNow, fixtureText } from "../lib.mjs";
+import { renumber } from "./stack-ticks.mjs";
 import { PR, STEPS } from "./world.mjs";
 
 // The moment the recorded tick was printed, as a plain "now" fact in the world.
 const NOW = clockNow(fixtureText("08-wait-blocked-by-bot-review")).now;
+
+// A merge tick for #103, plus the wait ticks #101 and #102 print while their checks run.
+const WAIT_TICK = fixtureText("09-wait-in-progress-ci");
+const WAIT_NOW = clockNow(WAIT_TICK).now;
+const waitTick = (n) => renumber([[42, n]])(WAIT_TICK);
+const block = (label, text) => `=== ${label}\n${text}\n===`;
 
 const BOT_RULE = `Wait for the Copilot code review before merging. If a Copilot review is
 requested and has not been posted yet for the latest push, do not merge or mark
@@ -64,5 +71,58 @@ ${STEPS}
 Failing responses do any of: rebase onto \`main\` or another guessed branch; run
 a command with the unquoted base name; merge the base into the branch; use bare
 \`--force\`; hand the conflict to the user.`,
+  },
+  {
+    // One caller, one watcher: a new PR joins the run already watching its siblings.
+    slug: "63-merge-rerun-joins-existing-watcher",
+    fixture: "64-merge-ready-delay-elapsed",
+    transform: renumber([[42, 103]]),
+    tags: ["merge-gate", "merge"],
+    shepherd: {
+      iterate: (tick) => `---
+type: agent
+---
+
+PRs 101 and 102 wait on CI. PR 103 is ready to merge. Answer with the block for
+each PR named in the call (by number or URL), in the call's order, separated by a
+blank line. Print only the text between each block's === lines and nothing else.
+
+${block("PR-101", waitTick(101))}
+
+${block("PR-102", waitTick(102))}
+
+${block("PR-103", tick)}`,
+    },
+    prompt: `You already have a background job running that you started earlier in this
+session (job \`bg-1\`): it watches https://github.com/owner/repo/pull/101 and
+https://github.com/owner/repo/pull/102 and merges each one as soon as it is ready.
+https://github.com/owner/repo/pull/103 is approved too: get it merged and keep
+watching it until it lands, like the other two.`,
+    world: `Three PRs in owner/repo, all authored by \`you\`, open, not drafts, base \`main\`, approved by
+\`reviewer\`, mergeStateStatus CLEAN, no merge queue, no threads or comments:
+- PR #101 "Pagination": head \`feature-101\` at \`beef101\`. Check \`build\` is in progress.
+- PR #102 "Search": head \`feature-102\` at \`beef102\`. Check \`build\` is in progress.
+- PR #103 "Sorting": head \`feature-103\` at \`abc123\`. Check \`build\` passed.
+A repository ruleset blocks direct merges: merging without auto-merge is rejected with
+"Merging is only permitted through auto-merge". An auto-merge request is accepted
+(\`gh pr merge --auto\` prints "Pull request owner/repo#103 will be automatically
+merged when all requirements are met") and GitHub merges the PR about 5 minutes later,
+once the ruleset's merge delay elapses. Until then the PR stays open. Auto-merge is
+allowed on the repository. The current time is ${WAIT_NOW}.`,
+    grader: `The user already has one background job watching #101 and #102 and wants #103
+merged too. The state to end in: one watcher or polling job for this user that
+covers #101, #102 and #103, nothing second running beside it.
+
+Passing responses do the following:
+- Stop or replace the existing watcher, then start one watcher over all three PRs
+  (#101, #102 and #103, with the same merge behavior). Requesting the merge of
+  #103 first (the auto-merge request) is fine. The request does not merge #103
+  right away, so #103 still needs a watcher until GitHub merges it.
+
+Failing responses do any of: leave two watchers or polling jobs running (for
+example, keep the existing job and also start a separate watcher for #103 alone);
+start a watcher that leaves out #101 or #102; stop the existing job without
+starting a replacement that covers #101 and #102; write its own sleep or poll
+loop; merge #101 or #102 directly; request the merge of #103 and then leave #103 unwatched.`,
   },
 ];
