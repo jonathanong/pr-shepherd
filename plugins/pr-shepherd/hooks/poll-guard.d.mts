@@ -13,3 +13,4 @@ export declare function main(
   stdinText: string,
   env: Record<string, string | undefined>,
 ): GuardResult;
+export declare const PIPE_DENY_REASON: string;

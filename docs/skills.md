@@ -166,6 +166,19 @@ Such waits spend GraphQL quota each pass and miss what Shepherd reports, such as
 
 Set the level with `PR_SHEPHERD_POLL_GUARD`, or in Claude Code with the plugin option `poll_guard`; the environment variable wins. Set it where the host starts (Claude Code `settings.json` `env`, or the shell that launches Codex), not in a command. Any other value prints an error and lets the command run. In Claude Code, an `advisory` note arrives with the tool result, so a foreground loop is reported only after it ends; use `fail` to stop it first. Codex runs plugin hooks only after you trust them in `/hooks`.
 
+## Pipe guard
+
+The same hook (`plugins/pr-shepherd/hooks/poll-guard.mjs`, one process per call) also blocks, for `Bash` only, a command that pipes pr-shepherd's output, such as `pr-shepherd 1 --until-terminal | tail -40`. The pipe drops the `## Instructions` section and the generated IDs the caller must act on. The agent sees one reason: run pr-shepherd without a pipe and read the full output. It works in Claude Code and Codex (Codex reads the plugin's `hooks/hooks.json` by default and runs it after you trust it in `/hooks`) and ignores `PR_SHEPHERD_POLL_GUARD` / `poll_guard`: the level governs only the poll guard above, and this check always blocks.
+
+It blocks only when the pipe is certain. A pr-shepherd command is `pr-shepherd`, a path ending in `/pr-shepherd`, or `npx` / `pnpm exec` followed by `pr-shepherd`, after any `VAR=value` prefixes. The hook blocks it when a single `|` or `|&` follows it directly, in a list (`a && pr-shepherd 1 | tail`) or in `$(…)`. It allows:
+
+- a pipe into pr-shepherd (`echo x | pr-shepherd apply`), `||`, and redirections (`> out.txt`, `2>&1`, `&>f`);
+- text in quotes, comments, and heredocs, such as a commit message that mentions `pr-shepherd | tail`;
+- a subshell or group piped as a whole (`(pr-shepherd 1) | tail`), a command word that is quoted, and wrappers it does not know (`timeout 60 pr-shepherd 1 | tail`, `node bin/index.mjs 1 | tail`);
+- any command with an unbalanced quote or `$(`, which the hook cannot read.
+
+Commands that mention neither `pr-shepherd` nor `|` skip parsing.
+
 ## Competing PR babysitters
 
 Do not attach Cursor `/autopilot` or a `gh pr checks` / `gh pr watch` skill in the same session. They rebuild GitHub state, skip resolved threads, and classify comments in the model. See [comparison.md](comparison.md).
