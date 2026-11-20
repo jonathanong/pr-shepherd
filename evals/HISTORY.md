@@ -65,6 +65,37 @@ Existing scenarios, plugin vs gh/MCP, against their last scores in the table bel
   #781 and #789 to the check follow-up is the likely cause, and n=3 cannot confirm it.
 - No existing scenario's tick needed refreshing.
 
+## 2026-11-19: scenario 60, report after one unchanged rerun
+
+Scenario `60-external-check-provider-outage` had dropped to 3/5 for the plugin. A
+5-run rerun showed why: both failing runs diagnosed the 503 correctly and changed
+nothing, but planned to keep rerunning `--until-terminal` "until it escalates
+`check-follow-up-unavailable` or the check changes" (one had already rerun three
+times with identical output) and never said a human had to decide. The cause was
+step 3 of `check-follow-up.md`, reworded in #781 from "Rerun Shepherd now ... Report
+your findings then" to "rerun Shepherd so it escalates ... if the checks are
+unchanged". The new step 3 keeps the investigation, then says: change nothing, rerun
+once, and if the checks are unchanged report and name the human decision (provider
+status, CI configuration, repository settings, approving a gated run) instead of
+polling for the escalation.
+
+The CLI already matches. The investigation tick writes a marker for the head and
+check set, and the next tick with the same head and checks escalates
+`check-follow-up-unavailable`, so one unchanged rerun is enough. No CLI output
+changed.
+
+Sonnet 5.5, low effort, opus judge, 5 runs per arm, `--allow-tools Bash`, 10 runs,
+$9.99:
+
+| Arm    | Score | Notes                                                                                    |
+| ------ | ----- | ---------------------------------------------------------------------------------------- |
+| Plugin | 4/5   | the miss never read the status description ("no shell") and deferred the whole diagnosis |
+| gh/MCP | 0/5   | all five diagnosed the outage but planned `git commit --allow-empty` to retrigger        |
+
+The without-arm's mock server list holds no pr-shepherd tool. The plugin's one miss
+was not the loop: it never reached the diagnosis, so the new wording did not decide
+it.
+
 ## 2026-11-19: scenario 63, MERGE rerun joins an existing watcher (#799)
 
 Scenario `63-merge-rerun-joins-existing-watcher` (Merge gates & branch) starts with

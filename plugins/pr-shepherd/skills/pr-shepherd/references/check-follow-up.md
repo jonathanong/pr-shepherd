@@ -11,4 +11,4 @@ Then:
 
 1. This PR's changes caused it: fix it and push. A failure the PR did not cause stays unchanged, even if a code change could work around it.
 2. Transient and the output printed a rerun command for it: run that command. Without one, do not rerun; the allowance is spent or the check is not rerunnable.
-3. Otherwise investigate first, including the check's details URL. If you are still unsure of the cause, or it is outside this PR (CI configuration, repository settings, approving a gated run), change nothing, rerun Shepherd so it escalates `check-follow-up-unavailable` if the checks are unchanged, and report your findings.
+3. Otherwise investigate first, including the check's details URL. Then change nothing and rerun Shepherd once. If the checks are unchanged, stop: report your findings and say a human must decide, naming the kind of decision (provider status, CI configuration, repository settings, approving a gated run). Do not keep rerunning or polling for the escalation.
