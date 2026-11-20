@@ -554,9 +554,6 @@ async function recordReadyReceipt(
   let summary: Awaited<ReturnType<typeof summarizePollSummaryPr>>;
   try {
     raw = await receiptSummaryForReport(key, report, context);
-    const fresh = fingerprintRawSummaryPr(raw);
-    if (fresh === null) return failed("fresh summary has no fingerprint");
-    fingerprint = fresh;
     if (raw.state !== "OPEN") return failed(`fresh summary shows PR ${raw.state}, not OPEN`);
     if (raw.isDraft) return failed("fresh summary shows PR as a draft");
     if (raw.headRefOid !== report.headSha)
@@ -565,12 +562,16 @@ async function recordReadyReceipt(
       return failed(
         `base moved (report ${short(report.baseRefOid)}, fresh ${short(raw.baseRefOid)})`,
       );
-    // Summarize hydrates annotation totals onto the snapshot before the stored hash.
+    // Summarize hydrates annotation totals onto the snapshot; hash only after,
+    // so the stored hash matches the stack side's (which hashes hydrated evidence).
     summary = await summarizePollSummaryPr(
       raw,
       { owner: key.owner, name: key.repo },
       { stackPrNumber: report.pr },
     );
+    const fresh = fingerprintRawSummaryPr(raw);
+    if (fresh === null) return failed("fresh summary has no fingerprint");
+    fingerprint = fresh;
   } catch (e) {
     // The receipt is supplementary evidence. A transient summary fetch failure
     // must not turn a completed one-PR poll into a different Shepherd action.
