@@ -4,14 +4,13 @@ import type { IterateResult } from "../types.mts";
 import { formatIterateResult } from "./iterate-formatter.mts";
 import { projectIterateLean } from "./iterate-lean.mts";
 
-function merge(extra: object, mode: "auto" | "queue" = "auto"): IterateResult {
+function merge(extra: object): IterateResult {
   const base = makeIterateResult("merge");
   if (base.action !== "merge") throw new Error("expected merge");
   return {
     ...base,
     merge: {
       ...base.merge,
-      mode,
       restFallbackCommand: { argv: ["gh", "api", "-X", "PUT", "repos/o/r/pulls/42/merge"] },
       ...extra,
     },
@@ -51,11 +50,9 @@ describe("merge instructions", () => {
     expect(JSON.stringify(projectIterateLean(result))).not.toContain("ghCacheStaleRateLimit");
   });
 
-  it("always prints the REST fallback line for gh merges", () => {
-    for (const mode of ["auto", "queue"] as const) {
-      expect(textSteps(merge({}, mode)).join("\n")).toContain(
-        "If `gh` reports a GraphQL rate limit, run: `gh api -X PUT repos/o/r/pulls/42/merge`.",
-      );
-    }
+  it("prints the REST fallback line for an ordinary gh merge", () => {
+    expect(textSteps(merge({})).join("\n")).toContain(
+      "If `gh` reports a GraphQL rate limit, run: `gh api -X PUT repos/o/r/pulls/42/merge`.",
+    );
   });
 });

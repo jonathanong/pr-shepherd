@@ -96,22 +96,6 @@ export function buildMergeCommandPlan(
     return {
       mode: "queue",
       command: { argv: base },
-      // `gh pr merge` is GraphQL; the REST transport of `apply merge` enqueues without it.
-      ...(input.restFallback && {
-        restFallbackCommand: {
-          argv: buildPrShepherdCommand([
-            "apply",
-            "merge",
-            formatPrUrl(input.repo, input.pr),
-            "--require-sha",
-            input.headSha,
-            "--merge-action",
-            "merge_queue",
-            "--transport",
-            "rest",
-          ]).argv,
-        },
-      }),
       queueApiFallbackCommand: {
         argv: [
           "gh",
