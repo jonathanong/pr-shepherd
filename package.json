@@ -1,6 +1,6 @@
 {
   "name": "pr-shepherd",
-  "version": "2.2.10",
+  "version": "2.2.11",
   "description": "Autonomous PR CI monitor and review-comment resolver for agentic coding tools",
   "keywords": [
     "automation",
