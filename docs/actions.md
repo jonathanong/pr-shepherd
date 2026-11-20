@@ -514,7 +514,7 @@ Emits an exact merge command; Shepherd does not execute or wrap the merge operat
 1. Run the auto-merge command exactly as printed: `gh pr merge 42 --repo owner/repo --match-head-commit abc123 --auto --merge`.
 2. Only if GitHub reports that auto-merge is unavailable, run the plain merge fallback: `gh pr merge 42 --repo owner/repo --match-head-commit abc123 --merge`.
 3. If `gh` reports a GraphQL rate limit, run: `gh api -X PUT repos/owner/repo/pulls/42/merge -f sha=abc123 -f merge_method=merge`.
-4. Then iterate immediately with the same options until the PR merges or needs work.
+4. Rerun with the same options until it merges or needs work. If another run uses these flags, add this PR to it.
 ```
 
 Every GraphQL-mode command spends GraphQL quota, so the ordinary-branch merge result always carries a `restFallbackCommand` (JSON `merge.restFallbackCommand`), printed as "If `gh` reports a GraphQL rate limit, run: ...": the `gh api` PUT above (the sync endpoint, SHA-pinned, with the selected method), which spends only REST quota. Queue branches carry none.
@@ -527,7 +527,7 @@ REST output uses a single command:
 
 ```markdown
 1. Run the REST merge command exactly as printed: `pr-shepherd apply merge https://github.com/owner/repo/pull/42 --require-sha 0123456789abcdef0123456789abcdef01234567 --merge-action direct_merge --method squash --transport rest`. If its status is `pending`, rerun that same command at the configured polling cadence to resume the recorded request; `enqueued` is not merged.
-2. Then iterate with the same options until GitHub confirms the PR merged or needs work.
+2. Rerun with the same options until GitHub confirms the PR merged or needs work. If another run uses these flags, add this PR to it.
 ```
 
 **REST merge requests.** REST merge is asynchronous: `pending` and `enqueued` are not merged states. The command prints a result with `status` set to `pending`, `enqueued`, `merged`, or `failed`, and may include `details.uuid`, `details.expected_head_sha`, `details.merge_action`, `details.merge_method`, `details.bypass_rules`, or the merged `details.sha`. GitHub stays authoritative for permission, branch-policy, and execution results.
