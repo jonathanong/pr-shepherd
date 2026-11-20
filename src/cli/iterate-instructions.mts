@@ -54,6 +54,7 @@ export function buildSimpleIterateInstructions(
         return [
           `Run the REST merge command exactly as printed: ${command}. \`enqueued\` is not merged.`,
           ...tickWaitSteps(result.nextCheck),
+          "If your other run has these flags, add this PR there.",
         ];
       if (result.merge.mode === "rest")
         return [
@@ -84,11 +85,16 @@ export function buildSimpleIterateInstructions(
           `If \`gh\` reports a GraphQL rate limit, run: ${inlineCode(renderShellCommand(result.merge.restFallbackCommand.argv))}.`,
         );
       }
-      instructions.push(
-        result.quotaWarning
-          ? buildQuotaAwareContinuation(result.quotaWarning, "After running the merge command.")
-          : "Rerun with the same options until it merges or needs work. If your other run has these flags, add this PR there.",
-      );
+      if (result.quotaWarning) {
+        instructions.push(
+          buildQuotaAwareContinuation(result.quotaWarning, "After running the merge command."),
+          "If your other run has these flags, add this PR there.",
+        );
+      } else {
+        instructions.push(
+          "Rerun with the same options until it merges or needs work. If your other run has these flags, add this PR there.",
+        );
+      }
       return instructions;
     }
     case "cancel":

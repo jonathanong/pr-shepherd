@@ -17,3 +17,4 @@
 1. Run the REST merge command exactly as printed: `pr-shepherd apply merge https://github.com/owner/repo/pull/42 --require-sha abc123 --merge-action default --transport rest`. `enqueued` is not merged.
 2. End this turn now without sleeping or polling. Playbook: "Event loop".
 3. Keep exactly one wake-up at `2024-05-15T19:12:00Z` (`merge-pending`). When a PR event or that wake-up arrives, rerun this command with the same options and act only on Shepherd's output, never on the event payload.
+4. If your other run has these flags, add this PR there.

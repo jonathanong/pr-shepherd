@@ -32,5 +32,28 @@ describe("tick REST merge instructions", () => {
     expect(steps[2]).toContain(
       "Keep exactly one wake-up at `2024-05-15T19:12:00Z` (`merge-pending`)",
     );
+    expect(steps.at(-1)).toBe("If your other run has these flags, add this PR there.");
+  });
+
+  it("keeps the join-your-run sentence after the quota continuation on a merge tick", () => {
+    const base = makeIterateResult("merge");
+    if (base.action !== "merge") throw new Error("expected merge");
+    const result: IterateResult = {
+      ...base,
+      quotaWarning: {
+        resource: "graphql",
+        thresholdPercent: 20,
+        remaining: 900,
+        limit: 5000,
+        used: 4100,
+        resetAt: 1_788_066_749,
+        pollIntervalMinutes: 5,
+        pollTimeoutMinutes: 10,
+      },
+    };
+    const steps = textInstructions(result);
+    expect(steps).toEqual(jsonInstructions(result));
+    expect(steps.at(-2)).toContain("After running the merge command.");
+    expect(steps.at(-1)).toBe("If your other run has these flags, add this PR there.");
   });
 });

@@ -164,11 +164,14 @@ describe("iterate instruction polling contract", () => {
     expect(output).toContain("Recommendation: keep polling pr-shepherd at the cadence above");
     expect(output).toContain("## GitHub API usage");
     expect(textInstructions(result)).toEqual(jsonInstructions(result));
-    expect(textInstructions(result).at(-1)).toContain("gh api repos/OWNER/REPO/pulls/PR");
-    expect(textInstructions(result).at(-1)).toContain(
+    expect(textInstructions(result).at(-2)).toContain("gh api repos/OWNER/REPO/pulls/PR");
+    expect(textInstructions(result).at(-2)).toContain(
       "Resume full-cadence pr-shepherd after the GraphQL quota resets at 2026-08-30T05:12:29.000Z",
     );
-    expect(textInstructions(result).at(-1)).toContain("no more often than every 2 minutes");
+    expect(textInstructions(result).at(-2)).toContain("no more often than every 2 minutes");
+    expect(textInstructions(result).at(-1)).toBe(
+      "If your other run has these flags, add this PR there.",
+    );
   });
 
   it("applies quota-aware continuation after marking a PR ready", () => {

@@ -530,6 +530,8 @@ REST output uses a single command:
 2. Rerun with the same options until GitHub confirms the PR merged or needs work. If your other run has these flags, add this PR there.
 ```
 
+Every `MERGE` variant ends with the sentence "If your other run has these flags, add this PR there." as its own step: after the wake-up steps of a REST merge that carries a `nextCheck`, and after the quota continuation when a quota warning is present.
+
 **REST merge requests.** REST merge is asynchronous: `pending` and `enqueued` are not merged states. The command prints a result with `status` set to `pending`, `enqueued`, `merged`, or `failed`, and may include `details.uuid`, `details.expected_head_sha`, `details.merge_action`, `details.merge_method`, `details.bypass_rules`, or the merged `details.sha`. GitHub stays authoritative for permission, branch-policy, and execution results.
 
 - A pending UUID and request options are persisted locally. Rerunning the same printed command resumes the request rather than submitting a duplicate. When the status read answers 403 (the token cannot read `merge-async` status, for example a GitHub App installation) or 404 (the UUID expired), Shepherd reads the PR itself: a merged PR is reported `merged`. An unmerged `direct_merge` request with a method falls back to the synchronous `PUT /pulls/{n}/merge` with the same `sha` guard and `merge_method`, reports `merged` on success, and on a definite refusal (405/409/422) surfaces GitHub's error and retires the stale record so a rerun starts a fresh attempt instead of replaying it. Queue, `default`, method-less, and native-stack requests have no synchronous equivalent, so an unreadable status leaves the outcome uncertain and no duplicate is submitted.
