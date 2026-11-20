@@ -583,7 +583,6 @@ describe("runIterate — cancel", () => {
     const result = await runIterate(makeOpts());
 
     expect(result).toMatchObject({ action: "wait", shouldCancel: false });
-    expect(mockSummarizePollSummaryPr).not.toHaveBeenCalled();
     expect(mockWriteReadyReceipt).not.toHaveBeenCalled();
   });
 

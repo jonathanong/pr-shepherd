@@ -169,4 +169,22 @@ describe("stack receipt reasons", () => {
     mockWriteReadyReceipt.mockRejectedValue(new Error("disk full"));
     expect(await logFor()).toBe(`${PREFIX} could not be persisted: disk full`);
   });
+
+  it("hashes the snapshot only after summarize hydrates annotation totals", async () => {
+    layer();
+    const order: string[] = [];
+    mockSummarizePollSummaryPr.mockImplementation(async () => {
+      order.push("summarize");
+      return { checks: {}, review: {} };
+    });
+    mockFingerprintRawSummaryPr.mockImplementation(() => {
+      order.push("fingerprint");
+      return "fp-1";
+    });
+    await runIterate(makeOpts());
+    expect(order.indexOf("summarize")).toBeLessThan(order.indexOf("fingerprint"));
+    expect(mockWriteReadyReceipt).toHaveBeenCalledWith(
+      expect.objectContaining({ readinessFingerprint: "fp-1" }),
+    );
+  });
 });
