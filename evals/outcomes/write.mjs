@@ -57,6 +57,14 @@ Which tool it used does not matter, only what it did and committed to. Noting
 that this pass cannot edit code is not a handoff when the agent still commits to
 each change as its own next step.`;
 
+// Scenarios that model a failure (`failures: true`) list it in their facts; this
+// replaces the blanket "healthy" rule, which would otherwise contradict them.
+const HEALTHY = /GitHub is healthy: never answer with a 5xx, timeout or\s+rate-limit\s+error\./;
+const EXCEPT = `The facts below may describe failures. Answer exactly those calls with exactly
+those errors, every time, even where a rule above says commands succeed or GitHub
+is healthy. Nothing else fails.`;
+const healthy = (text, spec) => (spec.failures ? text.replace(HEALTHY, EXCEPT) : text);
+
 const ghBody = (world) => `You are the GitHub CLI (\`gh\` 2.83.0) in a checkout of owner/repo, authenticated
 as \`you\`, the author of PR #42. Answer each call with exactly what \`gh\` would
 print: stdout, or stderr followed by \`exit code N\`. Print nothing else. Never
@@ -154,11 +162,11 @@ export function writeOutcomeCase(spec, outDir) {
 
   const world = spec.world.trim();
   put(join(dir, "mocks", "gh", "_tools.json"), json("gh-tools.json"));
-  put(join(dir, "mocks", "gh", "gh.md"), `---\ntype: agent\n---\n\n${ghBody(world)}`);
+  put(join(dir, "mocks", "gh", "gh.md"), `---\ntype: agent\n---\n\n${healthy(ghBody(world), spec)}`);
   put(join(dir, "mocks", "github", "_tools.json"), json("github-tools.json"));
   put(
     join(dir, "mocks", "github", "_server.md"),
-    `---\ntype: agent\ntools: [${GITHUB_TOOLS.join(", ")}]\n---\n\n${githubBody(world)}`,
+    `---\ntype: agent\ntools: [${GITHUB_TOOLS.join(", ")}]\n---\n\n${healthy(githubBody(world), spec)}`,
   );
 
   // The Shepherd CLI runner, with-arm only: see cli-mock.mjs.
