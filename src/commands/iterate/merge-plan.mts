@@ -32,7 +32,7 @@ export interface MergePlanInput {
   allowedMergeMethods?: readonly MergeMethod[];
   /** Branch policy requires linear history, so merge commits are excluded. */
   linearHistory?: boolean;
-  /** Attach a REST equivalent of the GraphQL merge commands, for when GraphQL quota runs out. */
+  /** Attach a REST equivalent of the GraphQL merge commands, for when `gh` reports a GraphQL rate limit. */
   restFallback?: boolean;
   expectedStack?: RestMergeStackGuard;
 }

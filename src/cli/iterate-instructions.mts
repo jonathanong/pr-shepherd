@@ -60,9 +60,16 @@ export function buildSimpleIterateInstructions(
           `Run the REST merge command exactly as printed: ${command}. If its status is \`pending\`, rerun that same command at the configured polling cadence to resume the recorded request; \`enqueued\` is not merged.`,
           "Then iterate with the same options until GitHub confirms the PR merged or needs work.",
         ];
-      const instructions = [
+      const instructions: string[] = [];
+      const stale = result.merge.ghCacheStaleRateLimit;
+      if (stale) {
+        instructions.push(
+          `gh's HTTP cache holds a stale GraphQL rate-limit response that makes \`gh pr merge\` fail until ${stale.expiresAt}, although the live quota is healthy. Delete it with ${inlineCode(renderShellCommand(["rm", ...stale.paths]))}, then run the merge command below.`,
+        );
+      }
+      instructions.push(
         `Run the ${result.merge.mode === "queue" ? "merge queue" : "auto-merge"} command exactly as printed: ${command}.`,
-      ];
+      );
       if (result.merge.mode === "queue" && result.merge.queueApiFallbackCommand) {
         instructions.push(
           `If gh says auto-merge is disabled instead of adding the PR to the queue, run the queue API fallback: ${inlineCode(renderShellCommand(result.merge.queueApiFallbackCommand.argv))}.`,
@@ -74,7 +81,7 @@ export function buildSimpleIterateInstructions(
       }
       if (result.merge.restFallbackCommand) {
         instructions.push(
-          `If GraphQL is rate limited, use REST: ${inlineCode(renderShellCommand(result.merge.restFallbackCommand.argv))}.`,
+          `If \`gh\` reports a GraphQL rate limit, run: ${inlineCode(renderShellCommand(result.merge.restFallbackCommand.argv))}.`,
         );
       }
       instructions.push(

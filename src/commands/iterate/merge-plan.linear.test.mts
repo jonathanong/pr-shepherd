@@ -47,7 +47,7 @@ describe("merge command method under required linear history", () => {
     await freshLoadConfig();
     const { buildMergeCommandPlan } = await import("./merge-plan.mts");
     expect(buildMergeCommandPlan(input)).not.toHaveProperty("restFallbackCommand");
-    expect(buildMergeCommandPlan({ ...input, queue: true })).not.toHaveProperty(
+    expect(buildMergeCommandPlan({ ...input, queue: true, restFallback: true })).not.toHaveProperty(
       "restFallbackCommand",
     );
   });
