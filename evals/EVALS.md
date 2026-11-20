@@ -36,6 +36,8 @@ Sonnet 5.5 at low effort, opus judge, 3 runs per arm, 59 of the 60 scenarios. Th
 - **36 is not scored.** All three gh/MCP runs errored in the eval runner.
 - **Creating PRs now counts plans that stop before the PRs exist.** A create scenario starts with no PR, so a plugin run that never called Shepherd is no longer voided (#789).
 
+Scenario `63-merge-rerun-joins-existing-watcher` (Merge gates & branch) was added after this run and is not in these numbers. Its first targeted run is in [HISTORY.md](HISTORY.md).
+
 <details>
 <summary>All scenarios</summary>
 
