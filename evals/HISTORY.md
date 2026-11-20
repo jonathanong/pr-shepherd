@@ -6,6 +6,65 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-19: scenarios 64-68 for recent behavior, and a drift check of seven
+
+Five scenarios cover behavior merged after the full run, plus a rerun of seven
+existing ones whose ticks or instructions may have drifted. Sonnet 5.5 at low
+effort, opus judge, 3 runs per arm, on `main` at #799. 78 agent runs, about $122
+($31.65 for the new five, $90.77 for the seven and the redrafted 66). The ticks in
+`scope-ticks.mjs`, `receipt-ticks.mjs` and `two-stack-ticks.mjs` were diffed against
+the current snapshots first (stack merge, unowned-layer escalation, stack route,
+all-terminal status, multi-PR receipt note, multi-stack error): only stack numbers
+and layer names differ, so none was stale and none was refreshed.
+
+| Scenario | Behavior | Plugin | gh/MCP | Notes |
+| --- | --- | --- | --- | --- |
+| `64-stale-gh-cache-rate-limit` | #798 | 1.00 | 1.00 | does not separate the arms |
+| `65-linear-history-merge-method` | #784 | 1.00 | 1.00 | does not separate the arms; one plugin run errored and was voided |
+| `66-watched-by-another-watcher` | #797 | 1.00 | 0.67 | first draft 0.33 vs 1.00 (see below) |
+| `67-wait-after-shown-failure` | #752, #754 | 1.00 | 0.67 | |
+| `68-changes-requested-older-commit` | #781 | 1.00 | 0.33 | |
+
+- **64 and 65 are guards.** The gh/MCP arm clears the cache or falls back to the REST
+  merge endpoint (or the MCP merge tool, which is the same endpoint), and switches to
+  squash after the rejected merge commit, on its own. Both arms pass 3 of 3, so neither
+  discriminates. I did not redraft them: the fix would be to hide a workaround a real
+  agent has. 64's tick is fixture 64 with the stale-cache step inserted (the harness
+  cannot fake gh's cache directory); 65 has its own fixture, `214-merge-linear-history-squash`.
+- **66, first draft, plugin 0.33.** The grader failed plugin runs that, after the
+  already-watched report, listed "when PID 41233 exits, read its output and rerun" as a
+  next step. That is a legitimate follow-up, so the grader now allows it and fails only a
+  rerun planned while the holder is alive. Redrafted once; plugin 1.00. The gh/MCP arm
+  cannot see the watcher, so its failures are plans to "wait and poll again".
+- **67.** The plugin arm made the second `iterate` call and received the WAIT tick; the
+  gh/MCP failure investigated once and then planned its own polling.
+- **68.** Both gh/MCP failures checked the later commit but declined to dismiss the
+  review, leaving that to the reviewer.
+- **Isolation.** `analyze.mjs` reported `isolation: ok` (15 without and 14 with runs, then
+  24 and 24). A without-arm `mock-calls.jsonl` was read by hand: it holds only `gh` and
+  `github` server calls, and its `mocks/` holds only `gh.json` and `github.json`.
+
+Existing scenarios, plugin vs gh/MCP, against their last scores in the table below:
+
+| Scenario | Before | Now | Change |
+| --- | --- | --- | --- |
+| `15-external-check` | 0.67 / 0.67 | 1.00 / 0.33 | variance |
+| `24-ci-running` | 1.00 / 0.33 | 1.00 / 0.33 | same |
+| `38-two-stacks-one-request` | 0.60 / 0.00 | 0.60 / 0.00 | same (atomic grader fails every run) |
+| `59-later-attempt-excerpt-no-pr-cause` | 0.67 / 0.00 | 0.67 / 0.00 | same |
+| `60-external-check-provider-outage` | 1.00 / 0.00 | 0.33 / 0.00 | regressed |
+| `61-stack-merge-from-one-pr` | 1.00 / 0.20 | 1.00 / 0.00 | same |
+| `62-stack-merge-trunk-conflict` | 0.67 / 0.00 | 1.00 / 0.00 | improved |
+
+- **Only 60 regressed, and not from a stale tick.** Fixture 12 has not changed since #755,
+  which predates the full run. Of its two plugin failures, one planned to "rerun Shepherd
+  until it escalates" (counted as polling, the failure 59 already has after #789), and one
+  never read the status description and said it could not open the URL. The gh/MCP arm
+  scored 0 for a conditional `git commit --allow-empty` step, which is a grader
+  strictness effect, not a plugin effect. Not rerun at 3 runs: the wording change in
+  #781 and #789 to the check follow-up is the likely cause, and n=3 cannot confirm it.
+- No existing scenario's tick needed refreshing.
+
 ## 2026-11-19: scenario 63, MERGE rerun joins an existing watcher (#799)
 
 Scenario `63-merge-rerun-joins-existing-watcher` (Merge gates & branch) starts with

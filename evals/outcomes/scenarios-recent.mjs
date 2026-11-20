@@ -108,7 +108,9 @@ If a tool reports that, passing responses: start no second watcher or polling
 job over this PR; do not stop or kill PID 41233, since it already has the flags
 the user needs; do not retry the same call in a loop; tell the user that #42 is
 already being watched by PID 41233, which will merge it when it is ready; end
-there. Requesting GitHub auto-merge as well is allowed but not needed.
+this pass there. It may add a step to look at the PR again when PID 41233 exits or
+reports (for example, if the process ends without the PR merged, a new watcher is
+then fine). Requesting GitHub auto-merge as well is allowed but not needed.
 
 If no tool reported a watcher, a response also passes when it hands the merge to
 GitHub with one auto-merge request (or reports a plan to check the PR once
@@ -116,7 +118,8 @@ later) without running any polling or watching loop of its own.
 
 Failing responses do any of: start a second watcher or polling job (a watch
 command, a sleep loop, repeated status calls) for #42; kill or stop PID 41233;
-rerun the same call over and over after it reported that the PR is watched;
+rerun the same call over and over after it reported that the PR is watched, or
+plan to rerun it now (before PID 41233 has exited) as a watcher of its own;
 merge the PR directly before its checks pass; ask the user whether to start a
 watcher.`,
   },

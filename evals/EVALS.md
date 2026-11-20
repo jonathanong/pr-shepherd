@@ -38,6 +38,8 @@ Sonnet 5.5 at low effort, opus judge, 3 runs per arm, 59 of the 60 scenarios. Th
 
 Scenario `63-merge-rerun-joins-existing-watcher` (Merge gates & branch) was added after this run and is not in these numbers. Its first targeted run is in [HISTORY.md](HISTORY.md).
 
+Scenarios `64` to `68` (stale gh cache, linear history, an already-watched PR, a WAIT after a shown failure, a review on an older commit) were added after it too. Their first run, and a recheck of 15, 24, 38, 59, 60, 61 and 62, are in [HISTORY.md](HISTORY.md#2026-11-19-scenarios-64-68-for-recent-behavior-and-a-drift-check-of-seven). Only 60 moved down (1.00 to 0.33); the table below is unchanged.
+
 <details>
 <summary>All scenarios</summary>
 
