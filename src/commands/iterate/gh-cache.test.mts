@@ -1,7 +1,15 @@
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  symlinkSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { scanGhCacheForRateLimit } from "./gh-cache.mts";
 
 const HOUR = 3_600_000;
@@ -24,7 +32,10 @@ beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), "gh-cache-"));
   env = { XDG_CACHE_HOME: root };
 });
-afterEach(() => rmSync(root, { recursive: true, force: true }));
+afterEach(() => {
+  vi.restoreAllMocks();
+  rmSync(root, { recursive: true, force: true });
+});
 
 describe("scanGhCacheForRateLimit", () => {
   it("finds a fresh small RATE_LIMIT entry and reports mtime + 24h", () => {
@@ -79,5 +90,44 @@ describe("cache directory resolution", () => {
 
   it("falls back to ~/.cache/gh without throwing", () => {
     expect(() => scanGhCacheForRateLimit(Date.now(), {})).not.toThrow();
+  });
+});
+
+describe("bounded, safe reads", () => {
+  it("stops enumerating once the file cap is reached", () => {
+    const dir = join(root, "gh", "aa", "bb");
+    mkdirSync(dir, { recursive: true });
+    for (let i = 0; i < 5001; i++) writeFileSync(join(dir, `f${i}`), POISON);
+    expect(scanGhCacheForRateLimit(Date.now(), env)?.paths).toHaveLength(5000);
+  });
+
+  it("stops at the deadline before reading any entry", () => {
+    entry("aabbccdd", POISON);
+    const now = vi.spyOn(Date, "now");
+    now.mockReturnValueOnce(0).mockReturnValue(10_000);
+    expect(scanGhCacheForRateLimit(1, env)).toBeUndefined();
+  });
+
+  it("skips symlinks and unreadable files without failing", () => {
+    const good = entry("aabbccdd", POISON);
+    const dir = join(root, "gh", "aa", "bb");
+    symlinkSync(good, join(dir, "link"));
+    const locked = join(dir, "locked");
+    writeFileSync(locked, POISON);
+    chmodSync(locked, 0o000);
+    const found = scanGhCacheForRateLimit(Date.now(), env);
+    expect(found?.paths.filter((path) => path !== locked)).toEqual([good]);
+  });
+
+  it("keeps what it found when a directory cannot be read", () => {
+    const good = entry("aabbccdd", POISON);
+    const blocked = join(root, "gh", "zz");
+    mkdirSync(blocked);
+    chmodSync(blocked, 0o000);
+    try {
+      expect(scanGhCacheForRateLimit(Date.now(), env)?.paths).toEqual([good]);
+    } finally {
+      chmodSync(blocked, 0o755);
+    }
   });
 });

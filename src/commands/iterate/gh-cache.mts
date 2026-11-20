@@ -1,4 +1,12 @@
-import { readdirSync, readFileSync, statSync, type Dirent } from "node:fs";
+import {
+  closeSync,
+  constants,
+  fstatSync,
+  openSync,
+  opendirSync,
+  readSync,
+  type Dirent,
+} from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -38,30 +46,54 @@ export function scanGhCacheForRateLimit(
   const paths: string[] = [];
   let newest = 0;
   let visited = 0;
-  const walk = (dir: string, depth: number): void => {
-    let entries: Dirent[];
+  /** Whether `full` is a small, fresh regular file whose body carries the marker. */
+  const poisoned = (full: string): number | undefined => {
+    let fd: number | undefined;
     try {
-      entries = readdirSync(dir, { withFileTypes: true });
+      fd = openSync(full, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+      const info = fstatSync(fd);
+      if (!info.isFile() || info.size >= MAX_FILE_BYTES) return undefined;
+      if (now - info.mtimeMs >= GH_CACHE_TTL_MS) return undefined;
+      const buffer = Buffer.alloc(MAX_FILE_BYTES);
+      const bytes = readSync(fd, buffer, 0, MAX_FILE_BYTES, 0);
+      if (bytes >= MAX_FILE_BYTES) return undefined;
+      return buffer.toString("utf8", 0, bytes).includes(STALE_MARKER) ? info.mtimeMs : undefined;
+    } catch {
+      return undefined;
+    } finally {
+      if (fd !== undefined) closeSync(fd);
+    }
+  };
+  const walk = (dir: string, depth: number): void => {
+    let handle;
+    try {
+      handle = opendirSync(dir);
     } catch {
       return;
     }
-    for (const entry of entries) {
-      if (visited >= MAX_FILES_VISITED || Date.now() > deadline) return;
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (depth < MAX_DEPTH) walk(full, depth + 1);
-        continue;
-      }
-      if (!entry.isFile()) continue;
-      visited += 1;
-      try {
-        const info = statSync(full);
-        if (info.size >= MAX_FILE_BYTES || now - info.mtimeMs >= GH_CACHE_TTL_MS) continue;
-        if (!readFileSync(full, "utf8").includes(STALE_MARKER)) continue;
+    try {
+      // Read one entry at a time so the caps bound enumeration, not just file reads.
+      for (let entry: Dirent | null; (entry = handle.readSync()) !== null;) {
+        if (visited >= MAX_FILES_VISITED || Date.now() > deadline) return;
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (depth < MAX_DEPTH) walk(full, depth + 1);
+          continue;
+        }
+        if (!entry.isFile()) continue;
+        visited += 1;
+        const mtime = poisoned(full);
+        if (mtime === undefined) continue;
         paths.push(full);
-        newest = Math.max(newest, info.mtimeMs);
+        newest = Math.max(newest, mtime);
+      }
+    } catch {
+      // Enumeration failed part-way: keep what was found.
+    } finally {
+      try {
+        handle.closeSync();
       } catch {
-        // Unreadable or vanished: ignore this entry.
+        // Already closed.
       }
     }
   };
