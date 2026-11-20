@@ -120,7 +120,7 @@ git clone https://github.com/jonathanong/pr-shepherd ~/.codex/plugin-sources/pr-
 codex plugin marketplace add ~/.codex/plugin-sources/pr-shepherd
 ```
 
-Then enable `pr-shepherd` from the `jonathanong` marketplace in the Codex plugin directory. Use `pr-shepherd` in a `/goal`; the others are one-shot:
+Then enable `pr-shepherd` from the `pr-shepherd` marketplace in the Codex plugin directory. Use `pr-shepherd` in a `/goal`; the others are one-shot:
 
 ```
 /goal $pr-shepherd        # infer PR from current branch
