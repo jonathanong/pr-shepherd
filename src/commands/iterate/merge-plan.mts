@@ -32,7 +32,7 @@ export interface MergePlanInput {
   allowedMergeMethods?: readonly MergeMethod[];
   /** Branch policy requires linear history, so merge commits are excluded. */
   linearHistory?: boolean;
-  /** Attach a REST equivalent of the GraphQL merge commands, for when GraphQL quota runs out. */
+  /** Attach a REST equivalent of the GraphQL merge commands, for when `gh` reports a GraphQL rate limit. */
   restFallback?: boolean;
   expectedStack?: RestMergeStackGuard;
 }
@@ -96,6 +96,22 @@ export function buildMergeCommandPlan(
     return {
       mode: "queue",
       command: { argv: base },
+      // `gh pr merge` is GraphQL; the REST transport of `apply merge` enqueues without it.
+      ...(input.restFallback && {
+        restFallbackCommand: {
+          argv: buildPrShepherdCommand([
+            "apply",
+            "merge",
+            formatPrUrl(input.repo, input.pr),
+            "--require-sha",
+            input.headSha,
+            "--merge-action",
+            "merge_queue",
+            "--transport",
+            "rest",
+          ]).argv,
+        },
+      }),
       queueApiFallbackCommand: {
         argv: [
           "gh",

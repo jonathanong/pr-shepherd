@@ -15,4 +15,9 @@ export interface MergeCommandPlan {
    * `apply merge --transport rest` for a queue.
    */
   restFallbackCommand?: ShellCommand;
+  /**
+   * gh's 24h HTTP cache holds a stale GraphQL rate-limit error that makes `gh pr merge` fail while
+   * Shepherd's live GraphQL quota is healthy. Present only when found; delete `paths` first.
+   */
+  ghCacheStaleRateLimit?: { paths: string[]; expiresAt: string };
 }
