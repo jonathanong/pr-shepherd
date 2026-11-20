@@ -2,7 +2,7 @@ import { runIterate } from "./iterate/index.mts";
 import { pollTickSeenOptions } from "./poll-seen-options.mts";
 import { markEditedCommentsSeen } from "./iterate/edited-comment-markers.mts";
 import type { IterateResult } from "../types.mts";
-import type { PollCommandOptions } from "./poll-options.mts";
+import type { Announce, PollCommandOptions } from "./poll-options.mts";
 import { sleep } from "../util/sleep.mts";
 import { withPollApiUsage } from "./poll-run.mts";
 import { loadConfig } from "../config/load.mts";
@@ -24,10 +24,8 @@ import {
 } from "./poll-events.mts";
 
 export type { PollCommandOptions } from "./poll-options.mts";
-const DEFAULT_POLL_DEBOUNCE_SECONDS = 60;
 const MAX_TIMER_MS = 2 ** 31 - 1;
 const TIMER_DRIFT_TOLERANCE_MS = 500;
-type Announce = (sleepMs: number, viaEvents: boolean) => void;
 export function runPoll(opts: PollCommandOptions): Promise<IterateResult> {
   return withPollEvents(opts.verbose === true, (events) =>
     withPollApiUsage(
@@ -47,11 +45,12 @@ async function runPollCore(
     debounceSeconds: debounceSecondsOpt,
     quietStatus: quietStatusOpt,
     untilTerminal: untilTerminalOpt,
+    beforeTick,
     ...iterateOpts
   } = opts;
   const intervalMs = Math.min(intervalSeconds * 1000, MAX_TIMER_MS);
   const timeoutMs = Math.min(timeoutSeconds * 1000, MAX_TIMER_MS);
-  const debounceSeconds = debounceSecondsOpt ?? DEFAULT_POLL_DEBOUNCE_SECONDS;
+  const debounceSeconds = debounceSecondsOpt ?? 60;
   const debounceMs = Math.min(debounceSeconds * 1000, MAX_TIMER_MS);
   const quotaBands = loadConfig().quotaWarningBands;
   const start = Date.now();
@@ -68,6 +67,7 @@ async function runPollCore(
   const rateLimitRetry = createUntilTerminalRateLimitRetry();
   const head: { headSha?: string; headRef?: string; ciStartDeadlineSeconds?: number } = {};
   while (true) {
+    beforeTick?.();
     tick += 1;
     const tickStartedAt = Date.now();
     const pastDebounce = debounceUntil !== null && Date.now() >= debounceUntil;

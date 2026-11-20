@@ -52,6 +52,9 @@ returns the last WAIT result. TRIAGE starts a --debounce settle window (default:
 poll.debounce-seconds; built-in 1m): poll keeps
 iterating at --interval, then runs one more tick after the window and returns that result.
 With --until-terminal or --merge, poll also continues through MARK_READY.
+Only one live process polls a PR at a time. A PR another process already watches is skipped and
+reported; when every requested PR is watched, the command exits 17 without polling. The report names the
+holder's PID and flags.
 
 Usage:
   pr-shepherd [PR ...] [poll-flags] [iterate-flags]
@@ -94,6 +97,7 @@ Exit codes: same as iterate (the final tick's action/reason decides the code).
   13  ESCALATE
   14  CANCEL (closed without merging)
   15  MERGE
+  17  WATCHED (every requested PR is already watched by another live pr-shepherd)
   A command/validation/GitHub failure exits with a sysexits.h code instead (see docs/exit-codes.md).`;
 
 /** Public help page for `pr-shepherd stack`. */
@@ -103,6 +107,8 @@ Shepherd every open PR in one PR's native GitHub stack, bottom to top. Each poll
 per-layer summaries and returns when a layer needs work, every layer is terminal, or timeout.
 SHEPHERD lists one-PR sessions to run before rerunning this command.
 --once, or CLAUDE_CODE_REMOTE=true, runs one aggregate tick and prints nextCheck instead of sleeping.
+Only one live process polls a PR at a time (not with --once). A layer another process already
+watches exits 17 and reports the holder's PID and flags.
 
 Usage:
   pr-shepherd stack PR [PR ...] [--once] [poll-flags] [iterate-flags]
@@ -146,4 +152,5 @@ Exit codes:
   14  CANCEL (a layer closed without merging)
   15  MERGE
   16  SHEPHERD (run the listed one-PR sessions, then rerun this stack command)
+  17  WATCHED (a layer is already watched by another live pr-shepherd)
   A command/validation/GitHub failure exits with a sysexits.h code instead (see docs/exit-codes.md).`;

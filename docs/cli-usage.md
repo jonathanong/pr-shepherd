@@ -87,7 +87,7 @@ The bounded poll (`poll.timeout-seconds`, default 270s = 4.5m) suits agents that
 | No wake-up on exit (foreground subagent, polling-style tools) | `pr-shepherd [PR ...]` in the foreground; pass `--timeout` below the host's command-time limit if that is under 270s; on a non-terminal `WAIT`/`READY`, rerun it.            |
 | One tick per invocation (cloud sessions, MCP, `iterate`)      | Unchanged: follow `nextCheck` ([cloud.md](cloud.md)).                                                                                                                        |
 
-Run one watcher per selection, and never two on the same PR; stop the running one before restarting with different PRs or flags (for example adding `--merge`). Exit `10`-`16` from a background `--until-terminal` run is a Shepherd action ([exit codes](exit-codes.md)), not a crash, though some hosts label it a failure. Exit `64` and above is a real command failure (`75` is retryable).
+Run one watcher per selection, and never two on the same PR; stop the running one before restarting with different PRs or flags (for example adding `--merge`). Shepherd enforces this: a repeating run takes a lock per PR, and a run that finds a PR already watched by a live process skips it, or exits `17` without polling when every requested PR is watched ([watcher lock](actions.md#watcher-lock)). Exit `10`-`17` from a background `--until-terminal` run is a Shepherd action ([exit codes](exit-codes.md)), not a crash, though some hosts label it a failure. Exit `64` and above is a real command failure (`75` is retryable).
 
 Host behavior, as of 2026-11 (it changes; check the source):
 

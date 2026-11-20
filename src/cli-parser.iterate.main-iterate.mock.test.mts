@@ -23,7 +23,7 @@ describe("main — default (poll)", () => {
     mockRunIterate.mockResolvedValue(makeIterateResult("cancel"));
     await main(["node", "shepherd"]);
     expect(mockRunIterate).toHaveBeenCalledTimes(1);
-    expect(mockRunIterate).toHaveBeenCalledWith(expect.objectContaining({ prNumber: undefined }));
+    expect(mockRunIterate).toHaveBeenCalledWith(expect.objectContaining({ prNumber: 42 }));
     expect(process.exitCode).toBe(EXIT.OK);
   });
 

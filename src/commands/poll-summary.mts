@@ -10,6 +10,8 @@ import { fetchPollSummary } from "../github/poll-summary.mts";
 import { writeStackHandoffs } from "../github/stack-handoff.mts";
 import type { StackHandoffSource } from "../github/stack-handoff-page.mts";
 import type { RepoInfo } from "../github/client.mts";
+import { verifyWatchedPrs } from "./poll-watch-verify.mts";
+import type { WatchSet } from "../state/watch-set.mts";
 import { aggregateQuotaWarning, carryQuotaWarning, quotaPollIntervalMs } from "./poll-quota.mts";
 import { aggregateCancelFromPulls, aggregateRateLimitTargets } from "./poll-rate-limit-cancel.mts";
 import { createUntilTerminalRateLimitRetry } from "./poll-rate-limit-wait.mts";
@@ -41,6 +43,8 @@ export interface AggregatePollCommandOptions extends PollSummaryCommandOptions {
   quietStatus?: boolean;
   untilTerminal?: boolean;
   verbose?: boolean;
+  /** Per-PR watcher locks to keep in step with each tick's rows. */
+  watch?: WatchSet;
 }
 export function runPollSummary(opts: PollSummaryCommandOptions): Promise<PollSummaryResult> {
   return withApiTelemetryScope(async () => {
@@ -136,9 +140,10 @@ async function readPollSummaryTick(opts: PollSummaryCommandOptions): Promise<Pol
 }
 
 async function runAggregatePollCore(
-  opts: AggregatePollCommandOptions,
+  options: AggregatePollCommandOptions,
   events: PollEvents | undefined,
 ): Promise<PollSummaryResult> {
+  let opts = options;
   const intervalMs = Math.min(opts.intervalSeconds * 1000, MAX_TIMER_MS);
   const timeoutMs = Math.min(opts.timeoutSeconds * 1000, MAX_TIMER_MS);
   const debounceMs = Math.min((opts.debounceSeconds ?? 60) * 1000, MAX_TIMER_MS);
@@ -153,11 +158,13 @@ async function runAggregatePollCore(
   let pendingQuotaWarning: PollSummaryResult["quotaWarning"];
 
   while (true) {
+    opts = verifyWatchedPrs(opts);
     tick += 1;
     const tickStartedAt = Date.now();
     try {
       lastTick = await readPollSummaryTick(opts);
       last = lastTick.result;
+      opts.watch?.sync(last.prs);
       writeAggregateRuleAutoResolve(last);
       rateLimitRetry.reset();
     } catch (error) {
