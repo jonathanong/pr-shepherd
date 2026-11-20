@@ -1,6 +1,6 @@
 {
-  "name": "jonathanong",
-  "description": "Jonathan Ong's Grok plugins",
+  "name": "pr-shepherd",
+  "description": "Autonomous PR CI monitor and review-comment resolver",
   "owner": {
     "name": "Jonathan Ong",
     "email": "jonathanrichardong@gmail.com"
