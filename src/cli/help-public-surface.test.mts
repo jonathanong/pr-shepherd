@@ -49,7 +49,7 @@ describe("public CLI help surface", () => {
       [USAGE.top, prStateCodes],
       // SHEPHERD is stack-only, so the default page omits it.
       [USAGE.default, prStateCodes.filter((code) => code !== EXIT.SHEPHERD)],
-      [USAGE.stack, [EXIT.SHEPHERD]],
+      [USAGE.stack, [EXIT.SHEPHERD, EXIT.WATCHED]],
     ] as const) {
       const exitBlock = page!.slice(page!.indexOf("Exit codes:"));
       for (const code of codes) {

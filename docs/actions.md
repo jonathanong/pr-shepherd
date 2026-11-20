@@ -51,6 +51,42 @@ The bare command accepts `--interval`, `--timeout`, `--debounce`, `--quiet-statu
 - It returns `READY` while a clean ready-delay counts down; `TRIAGE` or stack-level `SHEPHERD` after `--debounce` (`poll.debounce-seconds`, default 1m, `0` disables); `MERGE`; a non-terminal quota warning (follow its cadence and rerun without `--timeout`); and terminal `CANCEL` / `ESCALATE`. Debounce ticks set `persistSeen: false`; seen markers and first-look suppression wait for the post-window tick.
 - After any other non-terminal result (including `[READY]` and a quota-warning `WAIT` or `MARK_READY`), follow `## Instructions` and run the same command again. `[READY]` is non-terminal: rerun when `remainingSeconds` elapses and invent no unrelated work. If you own a later layer of this stack or another stack, continue that work and schedule the rerun. A parent of more than one stack delegates that wait to the worker that owns the stack.
 
+### Watcher lock
+
+Each repeating command (`pr-shepherd [PR ...]`, with or without `--until-terminal`, and `stack`) holds one lock per PR it polls, so resumed or duplicated agents cannot run several watchers on one PR and exhaust the shared GitHub quota. Single-tick commands (`iterate`, MCP, `apply`, and `stack --once`) and cloud sessions (`CLAUDE_CODE_REMOTE=true`) take no lock.
+
+- The lock is `watch.lock.json` in the PR state directory (`$PR_SHEPHERD_STATE_DIR/<owner>/<repo>/<pr>/`) and records `pid`, the process start time, and the holder's flags (`--merge`, `--until-terminal`, `--no-auto-mark-ready`). The start time is `ps -o lstart=` on macOS and the `/proc/<pid>/stat` start ticks on Linux.
+- It is released as soon as the run stops watching that PR (its row reached `CANCEL` while other PRs continue, or the run ends) and on process exit or SIGINT/SIGTERM.
+- A lock is stale, and taken over, when its PID is gone (`ESRCH`), or the PID is alive but a start time that could be read differs from the stored one (PID reuse). `EPERM` and an unreadable start time (a sandbox hides other processes) count as alive, so the lock is kept.
+- A run asking for several PRs watches the unlocked ones and reports the rest on stderr. A `stack` locks each member as it appears in a tick, and exits `17` when a member is held. When every requested PR is held, nothing polls and the exit code is `17`.
+
+The report (Markdown on stdout, or the JSON object with `--format=json`) lists the held PRs and numbered `## Instructions` to leave that watcher running, or stop its PID and rerun when its flags differ from what you need.
+
+```markdown
+## Already watched
+
+owner/repo #42
+
+## Instructions
+
+1. PR #42 is already watched by PID 4242 (flags: --until-terminal).
+2. Do not start another watcher for a PR listed above; the process that holds it already polls it.
+3. If its flags differ from what you need (for example you need `--merge` and it lacks it), stop PID 4242 and rerun this command.
+```
+
+```json
+{
+  "mode": "watch-lock",
+  "repo": "owner/repo",
+  "alreadyWatched": [{ "pr": 42, "pid": 4242, "flags": ["--until-terminal"] }],
+  "instructions": [
+    "1. PR #42 is already watched by PID 4242 (flags: --until-terminal).",
+    "2. Do not start another watcher for a PR listed above; the process that holds it already polls it.",
+    "3. If its flags differ from what you need (for example you need `--merge` and it lacks it), stop PID 4242 and rerun this command."
+  ]
+}
+```
+
 ### `--verbose`
 
 - **JSON:** the full `IterateResult` (all fields, including `baseBranch`, `checks`, `shouldCancel`, `mergeStatus: "CLEAN"`, and command-scoped `apiUsage`), with the same instruction projection as lean JSON: every action except `triage` and `cancel` gets a top-level `instructions` array (`cancel` has none), and `triage.instructions` may be rewritten.

@@ -1,9 +1,5 @@
 import { runAggregatePollCommand, runPollCommand, runPollSummaryTick } from "../commands/tick.mts";
-import { loadConfig } from "../config/load.mts";
-import { parseCommonArgs, getFlag, hasFlag } from "./args.mts";
-import { parseDurationToSeconds } from "./duration.mts";
-import { validateSecondsDurationFlag } from "./duration-flag.mts";
-import { hasInvalidIterateFlags, parseIterateFlags } from "./iterate-flags.mts";
+import { parseCommonArgs, hasFlag } from "./args.mts";
 import { emitIterateResult } from "./iterate-emitter.mts";
 import { EXIT } from "../exit-codes.mts";
 import { emitPollSummaryResult } from "./poll-summary-emitter.mts";
@@ -15,6 +11,10 @@ import { validateDefaultArgs } from "./validate-default-args.mts";
 import { rejectRemovedFlags } from "./removed-flags.mts";
 import { rejectUnknownFlags } from "./unknown-flags.mts";
 import { maybePrintHelp, USAGE } from "./help.mts";
+import { parseLoopOptions } from "./poll-loop-options.mts";
+import { watchFlagsOf, withWatchLock } from "./poll-watch.mts";
+import { runsSingleTick } from "../commands/single-tick.mts";
+import { getCurrentPrNumber } from "../github/client.mts";
 
 /** The default command: one PR, or several PRs from one repository. */
 export async function handlePoll(args: string[]): Promise<void> {
@@ -26,19 +26,46 @@ export async function handlePoll(args: string[]): Promise<void> {
   if (resolvedTargets.prNumbers.length > 1) {
     const shared = parseLoopOptions(parsedTargets.extra, parsedTargets.global, true);
     if (!shared) return;
-    const result = await runAggregatePollCommand({ ...shared.options, ...resolvedTargets });
-    emitPollSummaryResult(result, { format: parsedTargets.global.format });
+    await withWatchLock(
+      {
+        repo: resolvedTargets.targetRepository,
+        prs: resolvedTargets.prNumbers,
+        flags: watchFlagsOf(shared.options),
+        format: parsedTargets.global.format,
+      },
+      async (watch, prNumbers) => {
+        const result = await runAggregatePollCommand({
+          ...shared.options,
+          ...resolvedTargets,
+          prNumbers,
+          ...(watch && { watch }),
+        });
+        emitPollSummaryResult(result, { format: parsedTargets.global.format });
+      },
+    );
     return;
   }
   const { prNumber, global: globalOpts, extra } = parseCommonArgs(args);
   const shared = parseLoopOptions(extra, globalOpts, false);
   if (!shared) return;
-  const result = await runPollCommand({ ...shared.options, prNumber });
-  emitIterateResult(result, {
-    format: globalOpts.format,
-    verbose: globalOpts.verbose ?? false,
-    readyDelaySuffix: shared.readyDelaySuffix,
-  });
+  const pr =
+    prNumber ?? (runsSingleTick() ? undefined : ((await getCurrentPrNumber()) ?? undefined));
+  await withWatchLock(
+    {
+      repo: globalOpts.targetRepository,
+      prs: pr === undefined ? [] : [pr],
+      flags: watchFlagsOf(shared.options),
+      format: globalOpts.format,
+    },
+    async () => {
+      const result = await runPollCommand({ ...shared.options, prNumber: pr });
+      emitIterateResult(result, {
+        format: globalOpts.format,
+        verbose: globalOpts.verbose ?? false,
+        readyDelaySuffix: shared.readyDelaySuffix,
+      });
+    },
+  );
 }
 
 /** `pr-shepherd stack <ref> [<ref> ...]`: the native stack that a stack number or PRs select. */
@@ -70,10 +97,22 @@ export async function handleStack(args: string[]): Promise<void> {
     ...(target.owned && { stackOwned: target.owned }),
     targetRepository: target.targetRepository,
   };
-  const result = hasFlag(parsedTargets.extra, "--once")
-    ? await runPollSummaryTick(options)
-    : await runAggregatePollCommand(options);
-  emitPollSummaryResult(result, { format: parsedTargets.global.format });
+  const once = hasFlag(parsedTargets.extra, "--once");
+  await withWatchLock(
+    {
+      repo: target.targetRepository,
+      prs: [],
+      growing: !once,
+      flags: watchFlagsOf(options),
+      format: parsedTargets.global.format,
+    },
+    async (watch) => {
+      const result = once
+        ? await runPollSummaryTick(options)
+        : await runAggregatePollCommand({ ...options, ...(watch && { watch }) });
+      emitPollSummaryResult(result, { format: parsedTargets.global.format });
+    },
+  );
 }
 
 // `--layers` is for the one-PR commands a stack prints; `stack` itself has no use for it.
@@ -83,87 +122,6 @@ const STACK_FLAGS_WITH_VALUES = new Set([
 ]);
 const STACK_BOOLEAN_FLAGS = new Set([...DEFAULT_POLL_BOOLEAN_FLAGS, "--once", "--merge-ready"]);
 const STACK_FLAGS = [...STACK_FLAGS_WITH_VALUES, ...STACK_BOOLEAN_FLAGS];
-
-function parseLoopOptions(
-  extra: string[],
-  globalOpts: ReturnType<typeof parseCommonArgs>["global"],
-  isAggregate: boolean,
-) {
-  const cfg = loadConfig();
-
-  const flags = parseIterateFlags(extra, cfg);
-  if (hasInvalidIterateFlags(flags)) return null;
-
-  const intervalStr = getFlag(extra, "--interval");
-  const intervalSuffix = validateSecondsDurationFlag(
-    "pr-shepherd",
-    "--interval",
-    intervalStr,
-    hasFlag(extra, "--interval"),
-  );
-  if (intervalSuffix === null) return null;
-  let intervalSeconds = parseDurationToSeconds(intervalSuffix ?? "", cfg.poll["interval-seconds"]);
-  // `--interval` is the invocation interval. Only an omitted flag is scaled, and only for aggregates.
-  if (isAggregate && intervalSuffix === undefined) {
-    intervalSeconds *= cfg.poll["stack-interval-factor"];
-  }
-
-  const timeoutStr = getFlag(extra, "--timeout");
-  const timeoutSuffix = validateSecondsDurationFlag(
-    "pr-shepherd",
-    "--timeout",
-    timeoutStr,
-    hasFlag(extra, "--timeout"),
-  );
-  if (timeoutSuffix === null) return null;
-  const timeoutSeconds = parseDurationToSeconds(timeoutSuffix ?? "", cfg.poll["timeout-seconds"]);
-
-  const debounceStr = getFlag(extra, "--debounce");
-  const debounceSuffix = validateSecondsDurationFlag(
-    "pr-shepherd",
-    "--debounce",
-    debounceStr,
-    hasFlag(extra, "--debounce"),
-    { allowZero: true },
-  );
-  if (debounceSuffix === null) return null;
-  const debounceSeconds = parseDurationToSeconds(
-    debounceSuffix ?? "",
-    cfg.poll["debounce-seconds"],
-    {
-      allowZero: true,
-    },
-  );
-
-  const quietStatusFlag = hasFlag(extra, "--quiet-status");
-  const noQuietStatusFlag = hasFlag(extra, "--no-quiet-status");
-  if (quietStatusFlag && noQuietStatusFlag) {
-    process.stderr.write(
-      "pr-shepherd: --quiet-status and --no-quiet-status cannot be used together\n",
-    );
-    process.exitCode = EXIT.USAGE;
-    return null;
-  }
-  const quietStatus = quietStatusFlag || (!noQuietStatusFlag && cfg.poll["quiet-status"]);
-
-  return {
-    readyDelaySuffix: flags.readyDelaySuffix ?? undefined,
-    options: {
-      ...globalOpts,
-      readyDelaySeconds: flags.readyDelaySeconds,
-      stallTimeoutSeconds: flags.stallTimeoutSeconds,
-      noAutoMarkReady: flags.noAutoMarkReady,
-      merge: flags.merge,
-      instructions: flags.instructions ?? undefined,
-      ...(flags.stackLayers && { stackLayers: flags.stackLayers }),
-      intervalSeconds,
-      timeoutSeconds,
-      debounceSeconds,
-      quietStatus,
-      untilTerminal: hasFlag(extra, "--until-terminal"),
-    },
-  };
-}
 
 function usageArg(arg: string): void {
   usage(`unexpected argument: "${arg}"`);

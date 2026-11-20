@@ -9,6 +9,13 @@ vi.mock("../src/commands/iterate/index.mts", async (importOriginal) => {
   return { ...actual, runIterate: vi.fn() };
 });
 
+// The per-PR watcher lock resolves the repository and branch PR before polling.
+vi.mock("../src/github/client.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../src/github/client.mts")>()),
+  getRepoInfo: vi.fn().mockResolvedValue({ owner: "owner", name: "repo" }),
+  getCurrentPrNumber: vi.fn().mockResolvedValue(42),
+}));
+
 import { main } from "../src/cli-parser.mts";
 import { runIterate } from "../src/commands/iterate/index.mts";
 import { formatIterateResult } from "../src/cli/iterate-formatter.mts";

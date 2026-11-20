@@ -2,7 +2,7 @@
 
 [← README](../README.md)
 
-This page lists every process exit code `pr-shepherd` returns, for scripts and agents that branch on `$?`. Codes `0` and `10`–`16` mean Shepherd gathered context and chose an action (the process-level counterpart of the action tag in [actions.md](actions.md)); `64` and above mean the command itself failed.
+This page lists every process exit code `pr-shepherd` returns, for scripts and agents that branch on `$?`. Codes `0` and `10`–`17` mean Shepherd gathered context and chose an action (the process-level counterpart of the action tag in [actions.md](actions.md)); `64` and above mean the command itself failed.
 
 ## The rule
 
@@ -14,7 +14,7 @@ $? >= 64         shepherd itself failed (BSD sysexits.h)
 
 Codes 10–19 sit below the `sysexits.h` block, so "shepherd is reporting PR state" never collides with "shepherd broke". A script only needs `[ "$?" -ge 64 ]` to detect a failure.
 
-A host that runs Shepherd as a background command may report any non-zero exit, including `10`–`16`, as a failed command. Read the output: these are Shepherd actions, not crashes.
+A host that runs Shepherd as a background command may report any non-zero exit, including `10`–`17`, as a failed command. Read the output: these are Shepherd actions, not crashes.
 
 ## 0 — done
 
@@ -28,7 +28,7 @@ POSIX has one success code, so clean finishes share it. The `reason` field disti
 
 ## 10–19 — PR state
 
-Emitted by `iterate`, the default `pr-shepherd [PR]`, and the aggregate commands once a report was fetched. The code names the result's `action`.
+Emitted by `iterate`, the default `pr-shepherd [PR]`, and the aggregate commands once a report was fetched. The code names the result's `action`. `17` is the exception: it names a lock, not an action, and is printed before anything is fetched.
 
 | Code | Action          | Meaning                                                              | Terminal? |
 | ---- | --------------- | -------------------------------------------------------------------- | --------- |
@@ -39,12 +39,14 @@ Emitted by `iterate`, the default `pr-shepherd [PR]`, and the aggregate commands
 | 14   | `cancel`        | PR closed without merging (`reason: "closed"`)                       | Yes       |
 | 15   | `merge`         | Run the emitted merge or merge-queue command                         | No        |
 | 16   | `shepherd`      | Run the listed one-PR sessions, then recheck the stack               | No        |
+| 17   | `watched`       | Another live `pr-shepherd` already watches every requested PR        | No        |
 
 - **`wait` and `ready` (10) are not errors and not a signal to give up.** `wait` means nothing is actionable right now, including when `poll --timeout` gives up mid-wait and prints the last `wait` tick. `ready` means the PR is clean with `remainingSeconds` of ready-delay left; `--until-terminal` returns it instead of sleeping through the countdown. A script that asks "is the PR done?" should treat 10 like 12/13/16: not finished. Only `0` is a successful terminal state.
 - `mark_ready` (11) is non-terminal. `pr-shepherd [PR]` stops on it by default; `--until-terminal` keeps polling through it.
 - `triage` (12) is always non-terminal: complete the printed work, then repeat the same CLI command (or schedule another MCP `iterate` tick).
 - `shepherd` (16) is stack-level and non-terminal: complete the listed one-PR sessions and rerun the same `stack` command. A mixed stack may surface human blockers on this tick; it returns `escalate` only once no shepherdable session remains.
 - `escalate` (13) is the only human handoff.
+- `watched` (17) means the run polled nothing. The repeating commands (`pr-shepherd [PR ...]`, `--until-terminal`, `stack`) hold one lock per PR while they watch it, and another live process already holds every PR this run asked for. The output lists each PR, the holder's PID, and the holder's flags, with `## Instructions` to leave that watcher running, or to stop its PID and rerun if its flags (for example `--merge`) are not what you need. See [Watcher lock](actions.md#watcher-lock). When only some requested PRs are held, the run watches the rest, prints the same report on stderr, and exits with the code of its own result.
 
 **Aggregate commands.** Explicit multi-PR polling returns the highest-priority row outcome, in this order: `escalate`, `triage`, `merge`, `mark_ready`, `wait`, closed-only `cancel`, then successful `cancel`. Native `stack` maps its `nextAction` directly:
 

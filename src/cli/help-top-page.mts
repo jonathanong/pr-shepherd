@@ -77,6 +77,7 @@ Exit codes: 0 done, 10-19 PR state, 64-78 shepherd failed (sysexits.h).
   14  CANCEL (closed without merging)
   15  MERGE
   16  SHEPHERD (stack only: run the listed one-PR sessions, then rerun the stack command)
+  17  WATCHED (polling commands only: another live pr-shepherd already watches every requested PR)
 See docs/exit-codes.md for the full sysexits.h error-code table.
 
 Duration examples: 30s, 4.5m, 1h. A bare number uses each flag's default unit (see above); decimals are allowed with an explicit unit (4.5m).

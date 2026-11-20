@@ -31,6 +31,8 @@ export const EXIT = Object.freeze({
   MERGE: 15,
   /** Aggregate stack has PRs to shepherd through one-PR sessions. */
   SHEPHERD: 16,
+  /** Every requested PR is already watched by another live `pr-shepherd` process. */
+  WATCHED: 17,
 
   /** Bad/unknown flag, unknown subcommand, missing required arg, invalid duration. */
   USAGE: 64,
