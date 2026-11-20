@@ -12,7 +12,7 @@ import { rejectRemovedFlags } from "./removed-flags.mts";
 import { rejectUnknownFlags } from "./unknown-flags.mts";
 import { maybePrintHelp, USAGE } from "./help.mts";
 import { parseLoopOptions } from "./poll-loop-options.mts";
-import { watchFlagsOf, withWatchLock } from "./poll-watch.mts";
+import { lostWatchGuard, watchFlagsOf, withWatchLock } from "./poll-watch.mts";
 import { runsSingleTick } from "../commands/single-tick.mts";
 import { getCurrentPrNumber } from "../github/client.mts";
 
@@ -57,8 +57,13 @@ export async function handlePoll(args: string[]): Promise<void> {
       flags: watchFlagsOf(shared.options),
       format: globalOpts.format,
     },
-    async () => {
-      const result = await runPollCommand({ ...shared.options, prNumber: pr });
+    async (watch) => {
+      const beforeTick = watch && (() => lostWatchGuard(watch));
+      const result = await runPollCommand({
+        ...shared.options,
+        prNumber: pr,
+        ...(beforeTick && { beforeTick }),
+      });
       emitIterateResult(result, {
         format: globalOpts.format,
         verbose: globalOpts.verbose ?? false,

@@ -35,7 +35,7 @@ describe("watch lock process hooks", () => {
     lock.acquireWatchLock(repo, 1, []);
     lock.acquireWatchLock(repo, 2, []);
     expect(on.mock.calls.filter(([event]) => event === "exit")).toHaveLength(1);
-    expect(once.mock.calls.map(([event]) => event)).toEqual(["SIGINT", "SIGTERM"]);
+    expect(once.mock.calls.map(([event]) => event)).toEqual(["SIGINT", "SIGTERM", "SIGHUP"]);
     lock.releaseAllWatchLocks();
   });
 
@@ -49,7 +49,7 @@ describe("watch lock process hooks", () => {
     expect(existsSync(file(2))).toBe(false);
   });
 
-  it.each(["SIGINT", "SIGTERM"] as const)(
+  it.each(["SIGINT", "SIGTERM", "SIGHUP"] as const)(
     "releases locks on %s and re-raises the signal",
     async (signal) => {
       const { handlers, kill, lock, repo, file } = await load();

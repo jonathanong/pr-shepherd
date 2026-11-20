@@ -59,4 +59,27 @@ describe("runPoll — loops on wait then stops", () => {
       }),
     );
   });
+
+  it("runs beforeTick ahead of every tick and stops when it throws", async () => {
+    mockRunIterate.mockResolvedValue(makeWaitResult());
+    const beforeTick = vi
+      .fn()
+      .mockImplementationOnce(() => {})
+      .mockImplementationOnce(() => {
+        throw new Error("lost the lock");
+      });
+    const pollPromise = runPoll({
+      prNumber: 42,
+      format: "text",
+      intervalSeconds: 30,
+      timeoutSeconds: 300,
+      beforeTick,
+    });
+    const rejected = expect(pollPromise).rejects.toThrow("lost the lock");
+    await vi.advanceTimersByTimeAsync(30_000);
+    await rejected;
+    expect(beforeTick).toHaveBeenCalledTimes(2);
+    expect(mockRunIterate).toHaveBeenCalledTimes(1);
+    expect(mockRunIterate.mock.calls[0]![0]).not.toHaveProperty("beforeTick");
+  });
 });

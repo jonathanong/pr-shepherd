@@ -29,6 +29,12 @@ export function watchFlagsOf(options: {
   ];
 }
 
+/** Stops a one-PR watcher that lost its lock to another live process: reported as watched, exit 17. */
+export function lostWatchGuard(watch: WatchSet): void {
+  const lost = watch.verify();
+  if (lost.length > 0) throw new WatchedError(watch.repo, lost);
+}
+
 /**
  * Runs a repeating poll under per-PR watcher locks. PRs another live process already watches are
  * dropped and reported; when none remain, nothing polls and the process exits `EXIT.WATCHED`.

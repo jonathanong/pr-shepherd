@@ -32,8 +32,8 @@ const summary = (actions: Array<"wait" | "cancel">) => ({
   ),
 });
 
-function fakeWatch(sync: WatchSet["sync"]): WatchSet {
-  return { repo, claim: () => [], sync, releaseAll: () => {} };
+function fakeWatch(sync: WatchSet["sync"], verify: WatchSet["verify"] = () => []): WatchSet {
+  return { repo, claim: () => [], sync, verify, releaseAll: () => {} };
 }
 
 beforeEach(() => vi.clearAllMocks());
@@ -75,5 +75,34 @@ describe("aggregate poll with per-PR watcher locks", () => {
   it("polls without any lock when no watch is supplied", async () => {
     mockFetch.mockResolvedValue(summary(["cancel", "cancel"]) as never);
     await expect(runAggregatePoll(opts)).resolves.toMatchObject({ reason: "all_terminal" });
+  });
+
+  it("drops a PR whose lock was lost before the tick, reports it, and polls the rest", async () => {
+    const lostHolder = { pr: 42, pid: 7, flags: ["--merge"] };
+    const verify = vi.fn().mockReturnValueOnce([lostHolder]).mockReturnValue([]);
+    const err = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    mockFetch.mockResolvedValue(summary(["cancel"]) as never);
+    await runAggregatePoll({ ...opts, watch: fakeWatch(vi.fn(), verify) });
+    expect(mockFetch.mock.calls[0]![0]).toMatchObject({ prNumbers: [43] });
+    expect(String(err.mock.calls[0]![0])).toContain("PR #42 is already watched by PID 7");
+  });
+
+  it("stops as watched when every explicit PR lost its lock", async () => {
+    const holders = [
+      { pr: 42, pid: 7, flags: [] },
+      { pr: 43, pid: 7, flags: [] },
+    ];
+    const watch = fakeWatch(vi.fn(), () => holders);
+    await expect(runAggregatePoll({ ...opts, watch })).rejects.toMatchObject({ holders });
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("stops as watched when a stack layer lost its lock", async () => {
+    const holders = [{ pr: 44, pid: 7, flags: [] }];
+    const watch = fakeWatch(vi.fn(), () => holders);
+    const { prNumbers: _prNumbers, ...stack } = opts;
+    await expect(runAggregatePoll({ ...stack, stackPrNumber: 43, watch })).rejects.toBeInstanceOf(
+      WatchedError,
+    );
   });
 });

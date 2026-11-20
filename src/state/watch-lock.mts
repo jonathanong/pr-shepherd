@@ -117,6 +117,18 @@ export function acquireWatchLock(repo: WatchRepo, pr: number, flags: string[]): 
   throw new Error(`could not acquire the watch lock for PR #${pr}`);
 }
 
+/**
+ * Per-tick ownership check for a PR this process holds: one file read when the lock is still ours.
+ * A missing or unreadable file is recreated (an `admin clean` may have removed the directory), a
+ * stale holder is taken over, and a live other holder is left untouched and returned as lost.
+ */
+export function verifyWatchLock(repo: WatchRepo, pr: number, flags: string[]): AcquireResult {
+  if (readHolder(pathFor(repo, pr))?.pid === process.pid) return { acquired: true };
+  const result = acquireWatchLock(repo, pr, flags);
+  if (!result.acquired) held.delete(keyOf(repo, pr));
+  return result;
+}
+
 function takeOverIfStale(repo: WatchRepo, pr: number, mine: WatchHolder): boolean {
   const current = readHolder(pathFor(repo, pr));
   return (current === undefined || isStale(current)) && takeOver(repo, pr, mine);
@@ -138,7 +150,7 @@ function track(repo: WatchRepo, pr: number): void {
   if (hooksInstalled) return;
   hooksInstalled = true;
   process.on("exit", releaseAllWatchLocks);
-  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
     process.once(signal, () => {
       releaseAllWatchLocks();
       process.kill(process.pid, signal);

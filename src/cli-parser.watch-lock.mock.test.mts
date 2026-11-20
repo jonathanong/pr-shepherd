@@ -22,6 +22,8 @@ import { main } from "./cli-parser.mts";
 import { runAggregatePoll, runPollSummary } from "./commands/poll-summary.mts";
 import { runIterate } from "./commands/iterate/index.mts";
 import { EXIT } from "./exit-codes.mts";
+import { writeFileSync } from "node:fs";
+import { resolvePrStatePath } from "./state/base.mts";
 import { acquireWatchLock, releaseAllWatchLocks } from "./state/watch-lock.mts";
 import { WatchedError } from "./state/watch-set.mts";
 import { makeIterateResult } from "../fixtures/cli-parser.iterate-fixtures.mts";
@@ -96,6 +98,26 @@ describe("single PR", () => {
     holdAsOther(42);
     await main(["node", "shepherd"]);
     expect(mockIterate).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(EXIT.WATCHED);
+  });
+
+  it("stops with exit 17 when another live watcher takes the lock between ticks", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(process, "kill").mockImplementation((() => true) as never);
+    mockIterate.mockImplementation(async () => {
+      const file = resolvePrStatePath(
+        { owner: repo.owner, repo: repo.name, pr: 42 },
+        "watch.lock.json",
+      );
+      writeFileSync(file, JSON.stringify({ pr: 42, pid: 424242, flags: ["--merge"] }));
+      return makeIterateResult("wait");
+    });
+    const run = main(["node", "shepherd", "42", "--interval", "30s", "--timeout", "300s"]);
+    await vi.advanceTimersByTimeAsync(30_000);
+    await run;
+    vi.useRealTimers();
+    expect(mockIterate).toHaveBeenCalledTimes(1);
+    expect(out.join("")).toContain("PR #42 is already watched by PID 424242 (flags: --merge)");
     expect(process.exitCode).toBe(EXIT.WATCHED);
   });
 

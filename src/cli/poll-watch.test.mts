@@ -9,7 +9,7 @@ import { EXIT } from "../exit-codes.mts";
 import { getRepoInfo } from "../github/client.mts";
 import { acquireWatchLock, releaseAllWatchLocks } from "../state/watch-lock.mts";
 import { WatchedError } from "../state/watch-set.mts";
-import { watchFlagsOf, withWatchLock } from "./poll-watch.mts";
+import { lostWatchGuard, watchFlagsOf, withWatchLock } from "./poll-watch.mts";
 
 let seq = 0;
 let repo: { owner: string; name: string };
@@ -139,5 +139,14 @@ describe("withWatchLock", () => {
       }),
     ).rejects.toThrow("boom");
     expect(acquireWatchLock(repo, 2, []).acquired).toBe(true);
+  });
+});
+
+describe("lostWatchGuard", () => {
+  it("passes while the locks are still ours and throws WatchedError when one is lost", () => {
+    const holders = [{ pr: 2, pid: 9, flags: [] }];
+    const watch = { repo, claim: () => [], sync: () => {}, releaseAll: () => {} };
+    expect(() => lostWatchGuard({ ...watch, verify: () => [] })).not.toThrow();
+    expect(() => lostWatchGuard({ ...watch, verify: () => holders })).toThrow(WatchedError);
   });
 });

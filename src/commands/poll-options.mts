@@ -7,4 +7,8 @@ export interface PollCommandOptions extends IterateCommandOptions {
   debounceSeconds?: number;
   quietStatus?: boolean;
   untilTerminal?: boolean;
+  /** Runs before every tick; the per-PR watcher lock uses it to stop a watcher that lost its lock. */
+  beforeTick?: () => void;
 }
+
+export type Announce = (sleepMs: number, viaEvents: boolean) => void;

@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import { existsSync, mkdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -25,7 +25,12 @@ vi.mock("./process-start.mts", () => ({ readProcessStart: vi.fn(() => "start-A")
 
 import { resolvePrStatePath } from "./base.mts";
 import { readProcessStart } from "./process-start.mts";
-import { acquireWatchLock, releaseAllWatchLocks, releaseWatchLock } from "./watch-lock.mts";
+import {
+  acquireWatchLock,
+  releaseAllWatchLocks,
+  releaseWatchLock,
+  verifyWatchLock,
+} from "./watch-lock.mts";
 
 const mockStart = vi.mocked(readProcessStart);
 const OTHER = 424242;
@@ -224,5 +229,58 @@ describe("releaseWatchLock", () => {
     releaseAllWatchLocks();
     expect(existsSync(lockFile(1))).toBe(false);
     expect(existsSync(lockFile(2))).toBe(false);
+  });
+});
+
+describe("verifyWatchLock", () => {
+  it("keeps a lock that still names this process without checking liveness", () => {
+    acquireWatchLock(repo, 7, ["--merge"]);
+    const kill = vi.spyOn(process, "kill");
+    mockStart.mockClear();
+    expect(verifyWatchLock(repo, 7, ["--merge"])).toEqual({ acquired: true });
+    expect(kill).not.toHaveBeenCalled();
+    expect(mockStart).not.toHaveBeenCalled();
+  });
+
+  it("recreates a lock file that was deleted", () => {
+    acquireWatchLock(repo, 7, ["--merge"]);
+    rmSync(lockFile(7));
+    expect(verifyWatchLock(repo, 7, ["--merge"])).toEqual({ acquired: true });
+    expect(JSON.parse(readFileSync(lockFile(7), "utf8"))).toMatchObject({
+      pid: process.pid,
+      flags: ["--merge"],
+    });
+  });
+
+  it("recreates the whole state directory when `admin clean` removed it mid-run", () => {
+    acquireWatchLock(repo, 7, []);
+    rmSync(dirname(lockFile(7)), { recursive: true, force: true });
+    expect(verifyWatchLock(repo, 7, [])).toEqual({ acquired: true });
+    expect(existsSync(lockFile(7))).toBe(true);
+  });
+
+  it("recreates an unreadable lock file", () => {
+    acquireWatchLock(repo, 7, []);
+    writeFileSync(lockFile(7), "garbage");
+    expect(verifyWatchLock(repo, 7, [])).toEqual({ acquired: true });
+    expect(JSON.parse(readFileSync(lockFile(7), "utf8")).pid).toBe(process.pid);
+  });
+
+  it("takes over a lock that now names a stale holder", () => {
+    acquireWatchLock(repo, 7, []);
+    mockKill({ [OTHER]: "ESRCH" });
+    writeLock(7, { pr: 7, pid: OTHER, flags: [] });
+    expect(verifyWatchLock(repo, 7, [])).toEqual({ acquired: true });
+    expect(JSON.parse(readFileSync(lockFile(7), "utf8")).pid).toBe(process.pid);
+  });
+
+  it("reports a live other holder as lost and leaves its file alone", () => {
+    acquireWatchLock(repo, 7, []);
+    mockKill({});
+    const theirs = { pr: 7, pid: OTHER, startedAt: "start-A", flags: ["--merge"] };
+    writeLock(7, theirs);
+    expect(verifyWatchLock(repo, 7, [])).toEqual({ acquired: false, holder: theirs });
+    releaseAllWatchLocks();
+    expect(JSON.parse(readFileSync(lockFile(7), "utf8"))).toEqual(theirs);
   });
 });

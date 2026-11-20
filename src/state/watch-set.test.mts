@@ -1,7 +1,9 @@
+import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("./process-start.mts", () => ({ readProcessStart: vi.fn(() => "start-A") }));
 
+import { resolvePrStatePath } from "./base.mts";
 import { EXIT } from "../exit-codes.mts";
 import { acquireWatchLock, releaseAllWatchLocks } from "./watch-lock.mts";
 import { createWatchSet, WatchedError } from "./watch-set.mts";
@@ -95,5 +97,40 @@ describe("createWatchSet", () => {
     set.claim([1, 2]);
     set.releaseAll();
     expect(createWatchSet(repo, []).claim([1, 2])).toEqual([]);
+  });
+
+  it("verify keeps locks that are still ours", () => {
+    const set = createWatchSet(freshRepo(), []);
+    set.claim([1, 2]);
+    expect(set.verify()).toEqual([]);
+  });
+
+  it("verify recreates a lock removed by someone else", () => {
+    const repo = freshRepo();
+    const set = createWatchSet(repo, []);
+    set.claim([1]);
+    rmSync(resolvePrStatePath({ owner: repo.owner, repo: repo.name, pr: 1 }), {
+      recursive: true,
+      force: true,
+    });
+    expect(set.verify()).toEqual([]);
+    expect(createWatchSet(repo, []).claim([1])).toHaveLength(1);
+  });
+
+  it("verify drops a PR another live process now holds and returns its holder", () => {
+    const repo = freshRepo();
+    const set = createWatchSet(repo, []);
+    set.claim([1, 2]);
+    const file = resolvePrStatePath(
+      { owner: repo.owner, repo: repo.name, pr: 1 },
+      "watch.lock.json",
+    );
+    const theirs = { pr: 1, pid: 424242, startedAt: "start-A", flags: ["--merge"] };
+    writeFileSync(file, JSON.stringify(theirs));
+    vi.spyOn(process, "kill").mockImplementation((() => true) as never);
+    expect(set.verify()).toEqual([theirs]);
+    expect(set.verify()).toEqual([]);
+    set.releaseAll();
+    expect(JSON.parse(readFileSync(file, "utf8"))).toEqual(theirs);
   });
 });

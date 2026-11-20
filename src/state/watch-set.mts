@@ -1,6 +1,7 @@
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import {
   acquireWatchLock,
+  verifyWatchLock,
   releaseWatchLock,
   type WatchHolder,
   type WatchRepo,
@@ -26,6 +27,8 @@ export interface WatchSet {
   claim(prs: number[]): WatchHolder[];
   /** After a tick: releases rows that stopped, claims rows that appeared; throws if one is watched. */
   sync(rows: ReadonlyArray<{ pr: number; action: string }>): void;
+  /** Before a tick: re-checks every held lock; returns the PRs another live process now holds. */
+  verify(): WatchHolder[];
   releaseAll(): void;
 }
 
@@ -51,6 +54,16 @@ export function createWatchSet(repo: WatchRepo, flags: string[]): WatchSet {
       for (const row of rows) if (row.action === "cancel" && held.has(row.pr)) release(row.pr);
       const blocked = claim(rows.filter((row) => row.action !== "cancel").map((row) => row.pr));
       if (blocked.length > 0) throw new WatchedError(repo, blocked);
+    },
+    verify() {
+      const lost: WatchHolder[] = [];
+      for (const pr of held) {
+        const result = verifyWatchLock(repo, pr, flags);
+        if (result.acquired) continue;
+        held.delete(pr);
+        lost.push(result.holder);
+      }
+      return lost;
     },
     releaseAll() {
       for (const pr of held) release(pr);
