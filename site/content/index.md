@@ -108,9 +108,11 @@ still decides what each comment deserves.
 **Claude Code**
 
 ```bash
-claude /plugin marketplace add jonathanong/pr-shepherd
-claude /plugin install pr-shepherd
+claude plugin marketplace add jonathanong/harness-plugins
+claude plugin install pr-shepherd@harness-plugins
 ```
+
+Previously added the `pr-shepherd` marketplace? Run `claude plugin marketplace remove pr-shepherd` first.
 
 </div>
 
@@ -119,10 +121,11 @@ claude /plugin install pr-shepherd
 **Codex**
 
 ```bash
-codex plugin marketplace add jonathanong/pr-shepherd
+codex plugin marketplace add jonathanong/harness-plugins --ref main
+codex plugin add pr-shepherd@harness-plugins
 ```
 
-Then install and enable the `pr-shepherd` plugin in Codex.
+Previously added the `pr-shepherd` marketplace? Run `codex plugin remove pr-shepherd@pr-shepherd` and `codex plugin marketplace remove pr-shepherd` first.
 
 </div>
 
