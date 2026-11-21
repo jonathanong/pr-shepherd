@@ -168,16 +168,17 @@ Set the level with `PR_SHEPHERD_POLL_GUARD`, or in Claude Code with the plugin o
 
 ## Pipe guard
 
-The same hook (`plugins/pr-shepherd/hooks/poll-guard.mjs`, one process per call) also blocks, for `Bash` only, a command that pipes pr-shepherd's output, such as `pr-shepherd 1 --until-terminal | tail -40`. The pipe drops the `## Instructions` section and the generated IDs the caller must act on. The agent sees one reason: run pr-shepherd without a pipe and read the full output. It works in Claude Code and Codex (Codex reads the plugin's `hooks/hooks.json` by default and runs it after you trust it in `/hooks`) and ignores `PR_SHEPHERD_POLL_GUARD` / `poll_guard`: the level governs only the poll guard above, and this check always blocks.
+The same hook (`plugins/pr-shepherd/hooks/poll-guard.mjs`, one process per call) also blocks, for `Bash` only, a command that pipes pr-shepherd's output or redirects it to a file, such as `pr-shepherd 1 --until-terminal | tail -40` or `pr-shepherd 1 > out.txt`. A filtered or partial read drops what the caller must act on: `## Instructions` comes last, the exit code is the action, and review bodies are shown only once. The agent sees one reason: run pr-shepherd without the pipe or redirect and read the full output; long output is expected. It works in Claude Code and Codex (Codex reads the plugin's `hooks/hooks.json` by default and runs it after you trust it in `/hooks`) and ignores `PR_SHEPHERD_POLL_GUARD` / `poll_guard`: the level governs only the poll guard above, and this check always blocks.
 
-It blocks only when the pipe is certain. A pr-shepherd command is `pr-shepherd`, a path ending in `/pr-shepherd`, or `npx` / `pnpm exec` followed by `pr-shepherd`, after any `VAR=value` prefixes. The hook blocks it when a single `|` or `|&` follows it directly, in a list (`a && pr-shepherd 1 | tail`) or in `$(…)`. It allows:
+It blocks only when the pipe or redirect is certain. A pr-shepherd command is `pr-shepherd`, a path ending in `/pr-shepherd`, or `npx` / `pnpm exec` followed by `pr-shepherd`, after any `VAR=value` prefixes. The hook blocks it when a single `|` or `|&` follows it directly, or when it redirects stdout to a file (`>`, `>>`, `1>`, `&>`, `&>>`, `>|`), in a list (`a && pr-shepherd 1 | tail`) or in `$(…)`. It allows:
 
-- a pipe into pr-shepherd (`echo x | pr-shepherd apply`), `||`, and redirections (`> out.txt`, `2>&1`, `&>f`);
+- `--help`, `-h`, and `--version`, piped or not;
+- a pipe into pr-shepherd (`echo x | pr-shepherd apply`), `||`, and stderr-only redirections (`2>/dev/null`, `2>&1`, `>&2`) or input redirections (`< in.json`);
 - text in quotes, comments, and heredocs, such as a commit message that mentions `pr-shepherd | tail`;
 - a subshell or group piped as a whole (`(pr-shepherd 1) | tail`), a command word that is quoted, and wrappers it does not know (`timeout 60 pr-shepherd 1 | tail`, `node bin/index.mjs 1 | tail`);
 - any command with an unbalanced quote or `$(`, which the hook cannot read.
 
-Commands that mention neither `pr-shepherd` nor `|` skip parsing.
+Commands that mention neither `pr-shepherd` nor `|` or `>` skip parsing. Redirects hidden inside `bash -c '…'` or scripts are not read.
 
 ## Competing PR babysitters
 

@@ -1,5 +1,6 @@
 // A small, conservative shell reader for the pipe guard. It answers one question:
-// is a pr-shepherd command's stdout certainly piped into another command? Anything
+// is a pr-shepherd command's stdout certainly piped into another command or
+// redirected to a file (`--help`, `-h`, and `--version` are exempt)? Anything
 // it cannot read with confidence (unbalanced quotes, odd syntax) answers "no".
 
 import { maskShell } from "./poll-guard-shell.mjs";
@@ -129,14 +130,24 @@ export function runsShepherd(words) {
   return args[0] !== undefined && isShepherd(args[0]);
 }
 
-/** True when a pr-shepherd invocation in `command` is certainly followed by a pipe. */
+const EXEMPT_FLAGS = new Set(["--help", "-h", "--version"]);
+
+/** True when the command text sends stdout to a file. `2>`, `2>&1`, and `>&2` do not. */
+export function redirectsStdout(text) {
+  const rest = text.replace(/\d*>&[\d-]*/g, " ").replace(/[02-9]>>?\S*/g, " ");
+  return rest.includes(">");
+}
+
+/** True when a pr-shepherd invocation in `command` has its stdout piped or redirected to a file. */
 export function pipesShepherd(command) {
   if (typeof command !== "string" || !isBalanced(command)) return false;
   // A backslash-newline joins lines. Blank it (odd backslash runs only) before masking.
   const joined = command.replace(/(\\+)\n/g, (m, run) =>
     run.length % 2 === 1 ? `${run.slice(0, -1)}  ` : m,
   );
-  return splitCommands(maskShell(joined)).some(
-    ({ text, term }) => term === PIPE && runsShepherd(commandWords(text)),
-  );
+  return splitCommands(maskShell(joined)).some(({ text, term }) => {
+    const words = commandWords(text);
+    if (!runsShepherd(words) || words.some((w) => EXEMPT_FLAGS.has(w))) return false;
+    return term === PIPE || redirectsStdout(text);
+  });
 }

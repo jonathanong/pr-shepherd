@@ -22,6 +22,23 @@ describe("piped pr-shepherd", () => {
     expect(result).toMatchObject({ stderr: "", code: 0 });
     expect(JSON.parse(result.stdout)).toEqual(deny);
     expect(PIPE_DENY_REASON).toContain("## Instructions");
+    expect(PIPE_DENY_REASON).toContain("exit code");
+  });
+
+  it.each(["pr-shepherd 1 > out.txt", "npx pr-shepherd 1 --until-terminal &> out.txt"])(
+    "denies a redirect: %s",
+    (command) => {
+      expect(JSON.parse(runGuard(bash(command), {}).stdout)).toEqual(deny);
+    },
+  );
+
+  it.each([
+    "pr-shepherd 1 2>/dev/null",
+    "pr-shepherd 1 2>&1",
+    "pr-shepherd --help | head",
+    "pr-shepherd --version > v.txt",
+  ])("lets stderr-only and --help/--version through: %s", (command) => {
+    expect(runGuard(bash(command), { PR_SHEPHERD_POLL_GUARD: "disabled" }).stdout).toBe("");
   });
 
   it.each(["disabled", "advisory", "fail", "strict"])("denies at poll level %s", (level) => {

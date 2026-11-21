@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // PreToolUse hook for Claude Code and Codex: flags shell commands that poll
 // GitHub PR or CI state instead of running one `pr-shepherd … --until-terminal`,
-// and always blocks a Bash command that certainly pipes pr-shepherd's output.
+// and always blocks a Bash command that certainly pipes pr-shepherd's output or
+// redirects it to a file (`--help`, `-h`, `--version` excepted).
 //
 // Level: PR_SHEPHERD_POLL_GUARD, else the Claude Code plugin option `poll_guard`
 // (CLAUDE_PLUGIN_OPTION_POLL_GUARD): `disabled`, `advisory` (default: the call
@@ -16,20 +17,20 @@ import { detectPoller, expandPath, guardMessage, readLevel } from "./poll-guard-
 import { pipesShepherd } from "./pipe-guard-parse.mjs";
 
 export const PIPE_DENY_REASON =
-  "Piping pr-shepherd output drops its `## Instructions` section and the IDs you must act on; run pr-shepherd without a pipe and read the full output.";
+  "pr-shepherd: piping or redirecting Shepherd's output loses what you must act on: `## Instructions` comes last, the exit code is the action, and review bodies are shown only once. Run it without the pipe or redirect and read the full output; long output is expected.";
 
 const MAX_SCRIPT_BYTES = 64 * 1024;
 
 /** Decides the hook result for one tool call. Returns { stdout, stderr, code }. */
 export function runGuard(input, env, readText = readSmallFile) {
   // A piped pr-shepherd always denies, whatever the poll level. The substring check
-  // is the cheap prefilter: most Bash commands mention neither `pr-shepherd` nor `|`.
+  // is the cheap prefilter: most Bash commands mention neither `pr-shepherd` nor `|` or `>`.
   const text = input?.tool_input?.command;
   if (
     input?.tool_name === "Bash" &&
     typeof text === "string" &&
     text.includes("pr-shepherd") &&
-    text.includes("|") &&
+    /[|>]/.test(text) &&
     pipesShepherd(text)
   ) {
     const hookSpecificOutput = {

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   isBalanced,
   pipesShepherd,
+  redirectsStdout,
   runsShepherd,
   splitCommands,
 } from "../../plugins/pr-shepherd/hooks/pipe-guard-parse.mjs";
@@ -33,15 +34,36 @@ const BLOCK: [string, string][] = [
   ["background then pipe", "sleep 1 & pr-shepherd 1 | tail"],
   ["stderr redirect then pipe", "pr-shepherd 1 2>/dev/null | head"],
   ["heredoc earlier, pipe after", "cat <<EOF\nhi\nEOF\npr-shepherd 1 | tail"],
+  ["flags before a pipe", "pr-shepherd 1 --foo | tail"],
+  ["redirect to file", "pr-shepherd 1 > out.txt"],
+  ["redirect without spaces", "pr-shepherd 1>out.txt"],
+  ["append", "npx pr-shepherd 1 --until-terminal >> out.txt"],
+  ["explicit fd 1", "pnpm exec pr-shepherd 1 1> out.txt"],
+  ["both to file", "pr-shepherd 1 &> out.txt"],
+  ["both appended", "pr-shepherd 1 &>> out.txt"],
+  ["clobber redirect", "pr-shepherd 1 >| out.txt"],
+  ["redirect to /dev/null", "pr-shepherd 1 > /dev/null"],
+  ["stdout to file, stderr merged", "pr-shepherd 1 > out.txt 2>&1"],
+  ["stderr merged then stdout to file", "pr-shepherd 1 2>&1 > out.txt"],
+  ["redirect after &&", "cd x && pr-shepherd 1 > out.txt"],
+  ["help on another command", "pr-shepherd --help | tail && pr-shepherd 1 | tail"],
 ];
 
 const ALLOW: [string, string][] = [
   ["no pipe", "pr-shepherd 1 --until-terminal"],
   ["pipe into pr-shepherd", "echo x | pr-shepherd apply"],
-  ["redirect to file", "pr-shepherd 1 > out.txt"],
   ["merge stderr", "pr-shepherd 1 2>&1"],
-  ["merge both to file", "pr-shepherd 1 &> out.txt"],
-  ["clobber redirect", "pr-shepherd 1 >| out.txt"],
+  ["stderr to /dev/null", "pr-shepherd 1 2>/dev/null"],
+  ["stderr to file", "pr-shepherd 1 2> err.txt"],
+  ["stderr appended", "pr-shepherd 1 2>>err.txt"],
+  ["stdout to stderr", "pr-shepherd 1 >&2"],
+  ["stdout to stderr with fd", "pr-shepherd 1 1>&2"],
+  ["input redirect", "pr-shepherd apply < in.json"],
+  ["redirect on another command", "pr-shepherd 1 && git log > out.txt"],
+  ["quoted redirect text", "pr-shepherd 'a > b'"],
+  ["help piped", "pr-shepherd --help | head"],
+  ["short help piped", "npx pr-shepherd iterate -h | head"],
+  ["version redirected", "pr-shepherd --version > v.txt"],
   ["double pipe", "pr-shepherd 1 || echo failed"],
   ["double pipe no spaces", "pr-shepherd 1||echo failed"],
   ["and then pipe elsewhere", "pr-shepherd 1 && echo done | cat"],
@@ -93,6 +115,22 @@ describe("pipesShepherd", () => {
 
   it("keeps an even backslash run before a newline as a line break", () => {
     expect(pipesShepherd("pr-shepherd 1 \\\\\n| tail")).toBe(false);
+  });
+});
+
+describe("redirectsStdout", () => {
+  it.each([
+    ["a > f", true],
+    ["a>f", true],
+    ["a 1>f", true],
+    ["a &>f", true],
+    ["a 2>f", false],
+    ["a 2>&1", false],
+    ["a >&2", false],
+    ["a 2>&1 >f", true],
+    ["a", false],
+  ])("%j -> %s", (text, expected) => {
+    expect(redirectsStdout(text)).toBe(expected);
   });
 });
 
