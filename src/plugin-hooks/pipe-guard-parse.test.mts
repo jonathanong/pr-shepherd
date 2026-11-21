@@ -46,6 +46,12 @@ const BLOCK: [string, string][] = [
   ["stdout to file, stderr merged", "pr-shepherd 1 > out.txt 2>&1"],
   ["stderr merged then stdout to file", "pr-shepherd 1 2>&1 > out.txt"],
   ["redirect after &&", "cd x && pr-shepherd 1 > out.txt"],
+  ["adjacent stderr and stdout redirects", "pr-shepherd 1 2>err.txt>out.txt"],
+  ["stdout to a file via >&", "pr-shepherd 1 >&out.txt"],
+  ["fd 1 to a file via >&", "pr-shepherd 1 1>&out.txt"],
+  ["redirect glued to the command", "pr-shepherd>out.txt"],
+  ["redirect glued to a flag", "pr-shepherd 1 --foo>out.txt"],
+  ["digits glued to a word are not an fd", "pr-shepherd 1 x2>out"],
   ["help on another command", "pr-shepherd --help | tail && pr-shepherd 1 | tail"],
 ];
 
@@ -61,6 +67,11 @@ const ALLOW: [string, string][] = [
   ["input redirect", "pr-shepherd apply < in.json"],
   ["redirect on another command", "pr-shepherd 1 && git log > out.txt"],
   ["quoted redirect text", "pr-shepherd 'a > b'"],
+  ["stderr to a file after a flag", "pr-shepherd 1 --until-terminal 2>err.txt"],
+  ["stdout closed", "pr-shepherd 1 >&-"],
+  ["glued help redirect", "pr-shepherd --help>help.txt"],
+  ["glued version redirect", "pr-shepherd --version>v.txt"],
+  ["quoted operators stay in the word", "pr-shepherd 'a>b' \"c>d\""],
   ["help piped", "pr-shepherd --help | head"],
   ["short help piped", "npx pr-shepherd iterate -h | head"],
   ["version redirected", "pr-shepherd --version > v.txt"],
@@ -129,6 +140,12 @@ describe("redirectsStdout", () => {
     ["a >&2", false],
     ["a 2>&1 >f", true],
     ["a", false],
+    ["a 2>e>o", true],
+    ["a 2>e", false],
+    ["a >&o", true],
+    ["a >&-", false],
+    ["a<in", false],
+    ["1>f", true],
   ])("%j -> %s", (text, expected) => {
     expect(redirectsStdout(text)).toBe(expected);
   });
