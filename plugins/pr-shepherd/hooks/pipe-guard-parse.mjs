@@ -1,5 +1,6 @@
 // A small, conservative shell reader for the pipe guard. It answers one question:
-// is a pr-shepherd command's stdout certainly piped into another command? Anything
+// is a pr-shepherd command's stdout certainly piped into another command or
+// redirected to a file (`--help`, `-h`, and `--version` are exempt)? Anything
 // it cannot read with confidence (unbalanced quotes, odd syntax) answers "no".
 
 import { maskShell } from "./poll-guard-shell.mjs";
@@ -102,9 +103,33 @@ export function splitCommands(masked) {
   return parts;
 }
 
+// One redirect: an optional fd, the operator, and its operand (up to the next operator).
+const REDIRECT = /(\d*)(&>>?|>&|>\||>>?|<&|<<<?|<>?)\s*([^\s<>]*)/g;
+const FD_OPERAND = /^[\d-]+$/;
+
+/**
+ * Splits `text` into its words and redirects. Unquoted operators are separated from
+ * the words they touch (`pr-shepherd>out`). `stdout` is true when a redirect sends
+ * fd 1 to a file; `2>f`, `2>&1`, `>&2`, `>&-`, and input redirects do not.
+ */
+export function parseRedirects(text) {
+  let stdout = false;
+  const rest = text.replace(REDIRECT, (_match, fd, op, operand, offset) => {
+    let prefix = "";
+    if (fd && offset > 0 && !/\s/.test(text[offset - 1])) {
+      prefix = fd; // digits glued to a word, such as `x1>f`, are not a descriptor
+      fd = "";
+    }
+    const toStdout =
+      op === "&>" || op === "&>>" || (op.startsWith(">") && (fd === "" || fd === "1"));
+    if (toStdout && !(op === ">&" && FD_OPERAND.test(operand))) stdout = true;
+    return `${prefix} `;
+  });
+  return { words: rest.split(/\s+/).filter(Boolean), stdout };
+}
+
 /** The command's words after leading keywords and `VAR=value` assignments. */
-function commandWords(text) {
-  const words = text.split(/\s+/).filter(Boolean);
+function commandWords(words) {
   while (words.length > 0 && (ASSIGNMENT.test(words[0]) || LEADING_KEYWORDS.has(words[0]))) {
     words.shift();
   }
@@ -129,14 +154,24 @@ export function runsShepherd(words) {
   return args[0] !== undefined && isShepherd(args[0]);
 }
 
-/** True when a pr-shepherd invocation in `command` is certainly followed by a pipe. */
+const EXEMPT_FLAGS = new Set(["--help", "-h", "--version"]);
+
+/** True when the command text sends stdout to a file. `2>`, `2>&1`, and `>&2` do not. */
+export function redirectsStdout(text) {
+  return parseRedirects(text).stdout;
+}
+
+/** True when a pr-shepherd invocation in `command` has its stdout piped or redirected to a file. */
 export function pipesShepherd(command) {
   if (typeof command !== "string" || !isBalanced(command)) return false;
   // A backslash-newline joins lines. Blank it (odd backslash runs only) before masking.
   const joined = command.replace(/(\\+)\n/g, (m, run) =>
     run.length % 2 === 1 ? `${run.slice(0, -1)}  ` : m,
   );
-  return splitCommands(maskShell(joined)).some(
-    ({ text, term }) => term === PIPE && runsShepherd(commandWords(text)),
-  );
+  return splitCommands(maskShell(joined)).some(({ text, term }) => {
+    const parsed = parseRedirects(text);
+    const words = commandWords(parsed.words);
+    if (!runsShepherd(words) || words.some((w) => EXEMPT_FLAGS.has(w))) return false;
+    return term === PIPE || parsed.stdout;
+  });
 }
