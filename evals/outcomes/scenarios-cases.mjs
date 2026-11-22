@@ -16,7 +16,7 @@ export const REVIEW_CASE_SCENARIOS = [
     fixture: "21-triage-actionable-comment",
     tags: ["review", "decline"],
     prompt: `Get ${PR_URL} ready to merge.`,
-    world: `${PR(" No merge queue. No required approvals.", "`src/paginate.ts`")} mergeStateStatus CLEAN.
+    world: `${PR(" No merge queue. No required approvals.", "`src/paginate.ts`", "+4 −0")} mergeStateStatus CLEAN.
 Checks on \`c0ffee1\`: \`build\` passed.
 
 \`src/paginate.ts\` at \`c0ffee1\` (the contents API and the PR diff show the same):
@@ -26,24 +26,26 @@ export function paginate<T>(items: readonly T[], page: number, pageSize: number)
   return items.slice(start, start + pageSize);
 }
 \`\`\`
-It is synchronous and pure. Nothing in the PR uses locks, shared or mutable state,
+It is a new file in this PR (the whole diff). It is synchronous and pure. Nothing in the PR uses locks, shared or mutable state,
 async code or I/O.
 
 PR conversation comment (GraphQL id \`IC_actionable\`, comment 1) by \`reviewer\`
 (MEMBER): "This approach might cause a race condition. Please review the locking
 strategy." No other reviews, threads or comments.`,
-    grader: `The agent checks the code and finds the reviewer's concern does not apply:
-\`paginate()\` is pure and synchronous, with no shared state and no locking to
-review. It replies to \`reviewer\`'s comment declining the change and giving that
-reason. It makes no code change for the comment (no lock, mutex or other
-concurrency change).
+    grader: `The agent reads the code (the PR diff or the file) and finds the reviewer's
+concern does not apply: \`paginate()\` is pure and synchronous, with no shared
+state and no locking to review. The required end state is a reply to
+\`reviewer\`'s comment, sent or planned as a concrete step, that says the concern
+does not apply to this code and why, with no code change for it. Inviting the
+reviewer to point at a caller or clarify what they meant, and waiting for the
+reviewer before merging, are fine.
 
 ${STEPS}
 
 Failing responses do any of: add or plan locking or any change for the race;
-agree there is a race; ignore the comment without a reply or without saying why
-nothing changed; ask the user whether to change the code; hand the comment to a
-human.`,
+agree there is a race; give no reply to the comment; defer the investigation
+itself to a later pass without reading the code; ask the user whether to change
+the code; hand the comment to a human.`,
   },
   {
     // Bot noise beside one real comment: act on the real one only.
@@ -64,9 +66,11 @@ PR conversation comments:
   regression test for the empty-list case."
 No threads or reviews.`,
     grader: `The agent acts on the one real comment: it plans the regression test for the
-empty-list case in \`tests/pagination.spec.ts\`, commits and pushes it, and
+empty-list case (in \`tests/pagination.spec.ts\` or any sensible test location),
+commits and pushes it, and
 replies to \`reviewer\`. It leaves the two bot comments alone: no reply to them,
-no code change for them, and it does not count them as blockers.
+no code change for them, and it does not count them as blockers. Planning to merge
+once CI is green after the push is not a failure.
 
 ${STEPS}
 
@@ -94,14 +98,16 @@ false\`).`,
     grader: `The only thing left is the draft state, and the agent ends with the PR marked
 ready for review: it marks it ready itself (\`gh pr ready 42\`, the GitHub MCP
 update, or the equivalent), or a tool it called reports that it marked the PR
-ready for review. It does not merge or enable auto-merge, since the user asked
-for the PR to be ready, not merged, and it makes no code change.
-
-${STEPS}
+ready for review. Once it is marked ready the work is done, so nothing needs
+re-checking. It does not merge or enable auto-merge, since the user asked for the
+PR to be ready, not merged, and it makes no code change. Optional follow-ups
+offered after marking it ready (requesting a reviewer, adding a description,
+offering to merge on the user's go-ahead) are not failures, and are not "asking the
+user to mark it ready" or "inventing blockers".
 
 Failing responses do any of: leave the PR a draft, or only say that it is a
-draft; merge it or enable auto-merge; invent code changes or other blockers; ask
-the user to mark it ready.`,
+draft; merge it or enable auto-merge; make code changes; claim the PR cannot be
+made ready.`,
   },
   {
     // A one-look question: answer it, change nothing, start no watcher.
@@ -111,14 +117,17 @@ the user to mark it ready.`,
     prompt: `Is ${PR_URL} ready to merge?`,
     world: APPROVAL_GATE_WORLD,
     grader: `The user asked a question. The agent answers that the PR is not ready to merge
-and names the one blocker: the required approval from a code owner (\`alice\`,
-\`bob\` or \`@owner/maintainers\`), with the \`build\` check passing. It makes no
-change: no review request, approval, merge, auto-merge, rerun, comment, commit or
-push, and it starts no watcher, polling loop or scheduled re-check. Offering to
-request the review or to check back later, if the user wants that, is fine.
+and that the blocker is a missing required approval, with CI (\`build\`) passing.
+Naming the code owners (\`alice\`, \`bob\` or \`@owner/maintainers\`) is optional, and
+stating the missing approval as the likely or inferred cause from a blocked merge
+state with no reviews counts. Mentioning unrelated observations (for example an
+empty description) is not a failure. It makes no change: no review request,
+approval, merge, auto-merge, rerun, comment, commit or push, and it starts no
+watcher, polling loop or wait-until-done run. Offering to request the review or to
+check back later, if the user wants that, is fine.
 
-Failing responses do any of: say the PR is ready; blame CI, conflicts or anything
-other than the missing approval; request a review, approve, or merge; start a
-watcher, sleep loop or scheduled re-check; change code.`,
+Failing responses do any of: say the PR is ready; blame CI or conflicts; request a
+review, approve, or merge; start a watcher or a wait-until-done run; commit to
+re-checking on a schedule without being asked; change code.`,
   },
 ];

@@ -19,7 +19,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { fixtureText, mustChange } from "../lib.mjs";
 import { cliBody } from "./cli-mock.mjs";
-import { ATOMIC_GRADER } from "./world.mjs";
+import { ATOMIC_GRADER, DIFF } from "./world.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const json = (name) => readFileSync(join(HERE, name), "utf8");
@@ -167,7 +167,10 @@ export function writeOutcomeCase(spec, outDir) {
   if (spec.atomic) put(join(dir, "graders", "atomic.md"), grader(spec, 2, ATOMIC_GRADER));
   put(join(dir, "graders", "skill-fired.md"), SKILL_FIRED);
 
-  const world = spec.world.trim();
+  // An open PR #42 whose world states no diff size gets the shared one.
+  let world = spec.world.trim();
+  if (/^PR #42 .*: open/.test(world) && !/The diff is|additions/.test(world))
+    world += `\n\nThe diff of PR #42 is ${DIFF} (additions, deletions).`;
   put(join(dir, "mocks", "gh", "_tools.json"), json("gh-tools.json"));
   put(join(dir, "mocks", "gh", "gh.md"), `---\ntype: agent\n---\n\n${healthy(ghBody(world), spec)}`);
   put(join(dir, "mocks", "github", "_tools.json"), json("github-tools.json"));
