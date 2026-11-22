@@ -372,7 +372,8 @@
               "snyk-no-issues",
               "socket-reports",
               "sonarqube-gate-passed",
-              "sourcery-notices"
+              "sourcery-notices",
+              "sourcery-review-guide"
             ]
           },
           "additionalProperties": {
