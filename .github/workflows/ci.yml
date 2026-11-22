@@ -66,7 +66,7 @@ jobs:
       - name: Generated suite keeps the baseline arm free of Shepherd
         run: node evals/outcomes/generate.mjs --out evals-outcomes-ci
       - name: Isolation and CLI-mock checks
-        run: node --test evals/outcomes/invariants.test.mjs evals/outcomes/ticks.test.mjs evals/outcomes/score.test.mjs evals/outcomes/stats.test.mjs evals/outcomes/trigger.test.mjs evals/outcomes/keep-traces.test.mjs
+        run: node --test evals/outcomes/invariants.test.mjs evals/outcomes/ticks.test.mjs evals/outcomes/score.test.mjs evals/outcomes/stats.test.mjs evals/outcomes/trigger.test.mjs evals/outcomes/keep-traces.test.mjs evals/outcomes/add-runs.test.mjs
 
   site:
     name: site build

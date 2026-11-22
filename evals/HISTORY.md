@@ -6,9 +6,52 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-21: full run after the second audit
+
+Sonnet 5.5 with `CLAUDE_CODE_EFFORT_LEVEL=low`, opus judge, 3 runs per arm, on
+`evals/outcome-full-run`. Three runs made the table:
+
+- Pilot at 18017769: scenarios 69 to 75, $42.84. Not used in the table. It showed graders
+  72 to 75 failing correct runs, and 2be58468 loosened them.
+- Full run at 2be58468: all 71 scenarios, $567.20, 1311 s. Alone: plugin 0.90, gh/MCP 0.48,
+  Δ +0.42 [+0.30, +0.53], 70 scored.
+- Follow-up at 5786ecaa: $28.57. It reran 75 after its grader changed (replacing the full
+  run's 75) and added 3 more runs per arm to 12, 22 and 72 (6 per arm). The only difference
+  between 2be58468 and 5786ecaa is 75's grader.
+
+`add-runs.mjs` merged the full run and the follow-up, and `analyze.mjs` produced the table
+from kept traces. Headline: plugin 0.90, gh/MCP 0.49, Δ +0.41 [+0.30, +0.52], 70 scored.
+Total round cost $638.61. 36 is unscored: all three baseline runs errored again (`mocks:
+github/list_pull_requests: a result in the trace is not one the harness gave`). One plugin
+run each of 46 and 51 errored and is excluded.
+
+Against the previous table (plugin 0.96, gh/MCP 0.50, Δ +0.47 [+0.35, +0.58], 57
+scenarios), which is not comparable because it was layered from different harness
+versions:
+
+- The table now has 70 scenarios from one harness version, including the 13 scenarios
+  63 to 75 that had no row.
+- 22 flipped: 1.00 / 0.00 to 0.00 / 0.50, the first scenario the plugin loses. Plugin
+  agents retarget #42 to main, rerun the CLI, get the same tick, then leave "rebase or
+  merge" open.
+- 21 and 56 became ties (baselines 3 of 3) once their graders were fixed. 33's baselines
+  pass 2 of 3. 43's baselines still fail 3 of 3.
+- Merge gates fell to +0.06 [-0.11, +0.24]: 21 and 56 became ties, and the category gained
+  22's loss, 73 and 75.
+- 25 is 1.00 / 0.00 after the tick named the world's head.
+- The three trigger scenarios (69 to 71, bare "Merge <PR>") score 0.00 in both arms. The
+  skill loaded in 0 of 9 plugin runs and the CLI was called in 0 of 9 (the pilot had 1 in
+  9). In 69 the agents saw the blocked state and stopped without finding the failing
+  test. In 70 and 71 they got a 405 on a direct merge, re-enqueued with `gh pr merge`, and
+  reported success without noticing the earlier removal. The skill's description was not
+  changed.
+- 75 is 0.67 / 1.00. The failed plugin run used a wait-until-done invocation for a one-look
+  question. 12 and 72 stay inconclusive at 6 runs per arm: the failing runs do not read the
+  diff and defer judging to the next pass.
+
 ## 2026-11-21: second audit and harness changes before the full run
 
-No evals ran. A second audit read the stored baseline runs of scenarios whose
+No evals ran in this step. A second audit read the stored baseline runs of scenarios whose
 baselines reached the right end state and were failed on a detail, and every
 harness change below lands before one full rerun, so the whole table comes from
 one version.
