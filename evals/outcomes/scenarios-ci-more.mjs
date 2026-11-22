@@ -239,9 +239,7 @@ included) to justify cancelling; skip the reply.`,
     // the agent reads the run's log itself and finds a code cause.
     slug: "51-check-no-log-investigate-fix",
     fixture: "71-triage-check-follow-up-later-attempt",
-    // The first call gets the investigation tick, a later call on the unchanged head
-    // the escalation (fixture 191).
-    shepherd: { iterate: thenEscalate(fixtureText("191-escalate-check-follow-up-investigated")) },
+    // Stays single-tick: the fix path (a code change and push) changes the head, so the next real tick would not escalate.
     tags: ["ci", "investigate"],
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `${PR(" No merge queue. No required approvals.", "`src/paginate.ts`, `tests/pagination.spec.ts`")}
@@ -310,9 +308,7 @@ ${REREAD}`,
     // tick; the agent looks for a cause it can fix and reports one it cannot.
     slug: "54-ci-never-starts",
     fixture: "42-triage-ci-start-stall",
-    // The first call gets the investigation tick, a later call on the unchanged head
-    // the stall escalation (fixture 194).
-    shepherd: { iterate: thenEscalate(fixtureText("194-escalate-ci-start-stall-investigated")) },
+    // Stays single-tick: the fix path (a workflow change and push) changes the head, so the next real tick would not escalate.
     tags: ["ci", "investigate"],
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `${PR(" No merge queue. No required approvals.")}

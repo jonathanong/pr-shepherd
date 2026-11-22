@@ -37,9 +37,10 @@ Found:
 Changed:
 
 - 38 loses its atomic grader. 55 and 15 are removed. The suite has 64 scenarios.
-- 51, 52, 54, 59 and 60 get a two-tick `iterate` mock: the first call gets the current
-  tick, later calls the recorded escalation (191, a derived cancelled-check variant of
-  191, 194, 204 and 207). 52's escalation is derived because no snapshot records it.
+- 52, 59 and 60 get a two-tick `iterate` mock: the first call gets the current
+  tick, later calls the recorded escalation (a derived cancelled-check variant of 191,
+  204 and 207). 52's escalation is derived because no snapshot records it. 51 and 54 stay
+  single-tick: their fix path changes the head, so the next real tick would not escalate.
 - 07, 25, 26, 35 and 53 set `failures: true` and say that a direct merge is rejected
   with 405 and `gh pr merge` only enqueues. 26's grader no longer counts a rejected
   direct merge as bypassing the queue.

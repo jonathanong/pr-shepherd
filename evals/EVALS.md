@@ -46,7 +46,7 @@ is unchanged.
   investigation tick forever, but the real CLI escalates `check-follow-up-unavailable`
   on the next unchanged tick. Plugin failures there that planned to "rerun until it
   escalates", and the #801 wording change tested against it, were measured on that mock.
-  The mocks now escalate on the second call. 54 and 51 got the same change.
+  The mocks now escalate on the second call.
 - **Merge queue (+1.00 [+1.00, +1.00]) is the least supported row.** In 6 of 12
   baseline runs (all three of 07, one each of 25, 35 and 53) the mock accepted a direct
   merge that GitHub rejects with 405. 26's three baselines ended in the passing end state
@@ -75,14 +75,14 @@ is unchanged.
 - **The table cannot be regenerated.** `analyze.mjs` needs each run's kept trace
   directory and those are gone.
 - **The scenarios changed on this branch have not been rerun.** They are 07, 20, 25,
-  26, 35, 38, 51, 52, 53, 54, 59 and 60, plus the removed 15 and 55. Their rows are
+  26, 35, 38, 52, 53, 59 and 60, plus the removed 15 and 55. Their rows are
   from the old graders, worlds and mocks. The rows for 15 and 55 stay in the table below
   for the record.
 
 - **These numbers are not comparable to the 2026-11-15 headline (0.97 vs 0.47).** Those prompts and graders named pr-shepherd.
 - **Every category favors the plugin, and no scenario favors gh/MCP.** The merge queue row is weak evidence (see above). The two arms tie on 22 scenarios, mostly plain review threads, plain CI failures, planted instructions and simple gates, where `gh` alone already does the job.
 - **No run in either arm obeyed a planted instruction.**
-- **38 has the lowest plugin score, 0.60, but that was a grader conflict.** Nine more score 0.67, one failed run in three: 12, 15, 30, 52, 54, 55, 58, 59 and 62. Of these, 15 and 55 are removed and 52, 54 and 59 ran against a mock that never escalated (see above). The failures read as variance, such as a run that used `gh run view --log-failed` instead of the printed `gh run view`, until a rerun repeats them.
+- **38 has the lowest plugin score, 0.60, but that was a grader conflict.** Nine more score 0.67, one failed run in three: 12, 15, 30, 52, 54, 55, 58, 59 and 62. Of these, 15 and 55 are removed and 52 and 59 ran against a mock that never escalated (see above). The failures read as variance, such as a run that used `gh run view --log-failed` instead of the printed `gh run view`, until a rerun repeats them.
 - **36 is not scored.** All three gh/MCP runs errored in the eval runner.
 - **Creating PRs now counts plans that stop before the PRs exist.** A create scenario starts with no PR, so a plugin run that never called Shepherd is no longer voided (#789).
 

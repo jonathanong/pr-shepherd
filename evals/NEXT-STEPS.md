@@ -5,8 +5,7 @@ Open work for the eval suite, most recent findings first. Current results are in
 
 ## From the 2026-11-21 audit
 
-1. Rerun the scenarios the audit changed: 07, 20, 25, 26, 35, 38, 51, 52, 53, 54, 59
-   and 60. Their table rows are from the old graders, worlds and mocks.
+1. Rerun the scenarios the audit changed: 07, 20, 25, 26, 35, 38, 52, 53, 59 and 60. Their table rows are from the old graders, worlds and mocks.
 2. Add a sentence to the system prompt for the next full run saying that the tools do
    not show the effect of the agent's own actions. The mocks do not share state, so an
    agent that re-reads after a mutation sees the old state (see 58). This changes
