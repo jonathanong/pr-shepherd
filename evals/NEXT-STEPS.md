@@ -3,6 +3,12 @@
 Open work for the eval suite, most recent findings first. Current results are in
 [EVALS.md](EVALS.md).
 
+## From the 2026-11-22 third audit
+
+1. The 23 scenarios whose generated case differs from main were run once (targeted, see [HISTORY.md](HISTORY.md#2026-11-22-targeted-run-of-the-third-audit-cases)); fix the harness-made results it left (mock answers that ignore the world's 405 and "cannot be rerun" rules in 62 and 67, check runs missing from the github mock's `get_status` in 41 and 54, 404s for just-created PRs in 48 to 50, the runner's void on a missing-`owner` call in 36), then run the full suite and update the tables. The original list is in [HISTORY.md](HISTORY.md#2026-11-22-third-harness-audit-no-runs). The stacked checks-rule PR changes every case's mock and lands with a full re-run.
+2. Decide the two open questions in [EVALS.md](EVALS.md): the facts the tick volunteers but a baseline must ask for (07, 25, 53, 35, 28), and the house rules in 02, 46 and 48.
+3. The runner's judge evidence is sampled by line and can omit a real tool call (70 run 1). Ask for the reasoning to be stored and the evidence kept whole by tool call; until then no grader may fail a run for a call the judge does not see.
+
 ## From the 2026-11-21 full run
 
 Done: the full run after the second audit (25's head SHA, the snapshot sentence in the

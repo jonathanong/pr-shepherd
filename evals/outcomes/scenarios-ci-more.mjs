@@ -115,6 +115,8 @@ job and no log. Its annotations (check-runs annotations API):
   final triage checks payload."
 - id \`check_annotation_1002\`, \`src/commands/iterate/triage.mts\` lines 197-204,
   level warning, message "Verify annotations survive lean projection."
+It is the only check run on \`c0ffee1\`, and the commit has no statuses, so the
+combined commit status is pending with an empty list; the check run reports failed.
 No reviews, threads or comments.`,
     grader: `The agent reads the check's annotations and plans a fix at the locations they
 cite: \`src/commands/check.mts\` line 136 (mark annotations seen only after they
@@ -318,7 +320,9 @@ Check run \`CI / queued\` (workflow "CI", run id 999) was created an hour ago an
 still queued: "Waiting for runner". Its job asks for \`runs-on: [self-hosted, gpu]\`;
 the repository has no self-hosted runners registered. The status context
 \`External Preview\` is pending with "Waiting for external service" and has not
-changed in an hour. No reviews, threads or comments.`,
+changed in an hour. These are the only checks on \`c0ffee1\`: the checks report the
+queued check run and the pending status, and the combined state is pending. No
+reviews, threads or comments.`,
     grader: `The agent investigates why the queued run never started (the workflow's
 \`runs-on\` labels, available runners, the run page), finds that no runner matches
 the \`self-hosted, gpu\` labels, and either fixes the workflow in this PR if that is

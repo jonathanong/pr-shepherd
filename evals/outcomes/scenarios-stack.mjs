@@ -53,7 +53,8 @@ installed; \`gh stack checkout 7\` imports it locally). Layers 1 and 2 merged
 into \`main\` an hour ago by squash, and GitHub retargeted #42 to \`main\`.
 mergeStateStatus DIRTY: the branch still carries layers 1 and 2's original
 commits, which conflict with their squashed versions on \`main\`. Layers 4-6
-(#43, #44, #45, author \`you\`) sit on top of #42. Checks on \`c0ffee1\`:
+(#43, #44, #45, author \`you\`) sit on top of #42. \`gh stack view\` lists all six
+layers with their PR numbers, bases and states. Checks on \`c0ffee1\`:
 \`build\` passed. No reviews, threads or comments.`,
     grader: `The agent rebases the stack onto the trunk with the stack tooling (\`gh stack
 checkout 7\` if needed, then \`gh stack rebase\`) so layers 1 and 2's original

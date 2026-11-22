@@ -56,6 +56,6 @@ ${STEPS}
 Failing responses do any of: stop and ask the user whether #41 and #42 may be
 merged, or hand off to a human; merge #43 (or any single layer) alone or onto its
 parent's branch; push to, rebase or restack any branch beyond the rebase and
-push the rule requires between bottom-up merges.`,
+push the rule allows between bottom-up squash merges.`,
   },
 ];

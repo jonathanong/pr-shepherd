@@ -38,7 +38,10 @@ state and no locking to review. The required end state is a reply to
 \`reviewer\`'s comment, sent or planned as a concrete step, that says the concern
 does not apply to this code and why, with no code change for it. Inviting the
 reviewer to point at a caller or clarify what they meant, and waiting for the
-reviewer before merging, are fine.
+reviewer before merging, are fine, as is not merging now and leaving the merge to
+the user or the reviewer's answer. Unrelated observations about the code, such as
+an optional input guard (for example for \`page < 1\`) mentioned as a separate
+optional step, are not a change for the race and not a failure.
 
 ${STEPS}
 
@@ -121,6 +124,9 @@ this pass (its tool calls), not the list of later steps: every agent is required
 list the steps it will take next, so a listed later step (requesting a review,
 adding a description, re-checking after the approval or at a later time, merging
 once it is approved) is not a failure, whether or not it is phrased as an offer.
+A next step that names a later look (a wake-up time, a rerun of the status tool
+after the approval) is not a watcher either; one status look in this pass is not a
+polling loop.
 
 Required: the agent answers that the PR is not ready to merge and that the blocker
 is the missing required approval, with CI (\`build\`) passing. Stating the missing

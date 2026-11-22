@@ -79,15 +79,17 @@ and untouched (GitHub retargets it onto \`main\`; leaving #43 to its owner is
 correct). The agent plans to confirm both merged and that #43 was retargeted.
 
 ${STACK_MERGE_RULE}
-Here that means either one atomic stack merge through #42, or #41 and then #42
-bottom-up with the rebase and push of \`layer-42\` between them.
+Here that means #41 and #42 land in \`main\` (one atomic stack merge through #42,
+or #41 and then #42 bottom-up, with #42 retargeted to \`main\` or rebased as the
+rule says) and nothing is done to #43.
 
 ${STEPS}
 
 Failing responses do any of: merge or enqueue #43 (alone, as part of a
 whole-stack merge, or bottom-up); merge #42 while its base is \`layer-41\`; push
-to, rebase or restack \`layer-43\` or any branch other than the rebase of
-\`layer-42\` the rule allows; merge only #41 and stop; hand off to a human.`,
+to, rebase, restack or retarget \`layer-43\`, or push to or rebase any branch other
+than the \`layer-42\` rebase the rule allows (retargeting #42 itself to \`main\` is
+fine); merge only #41 and stop; hand off to a human.`,
   },
   {
     // Two stacks in one request: one merge per stack, each bottom-up.
@@ -121,7 +123,7 @@ ${STACK_MERGE_RULE}
 Failing responses do any of: merge #42 or #52 while its base is still its
 parent's branch; merge only one stack, or only the named PRs, and call it done;
 push to, rebase or restack any branch beyond the rebase and push the rule
-requires between bottom-up merges; close or recreate PRs; hand the merges
+allows between bottom-up squash merges; close or recreate PRs; hand the merges
 themselves to a human.`,
   },
 ];

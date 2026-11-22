@@ -27,6 +27,9 @@ Workflow "CI", run id 900, on \`c0ffee1\`, is in progress with two jobs:
   the same job passed on \`main\` an hour ago.
 - \`e2e\` (job id 9002): in progress, started 3 minutes ago, usually about 10
   minutes.
+The checks on \`c0ffee1\` report these two jobs as check runs \`tests\` (completed,
+failure) and \`e2e\` (in progress), with no commit statuses, so the combined commit
+status is pending with an empty list; the check run \`tests\` reports failure.
 Run 900 cannot be rerun while it is in progress: \`gh run rerun 900\` and \`gh run
 rerun 900 --failed\` print "run 900 cannot be rerun; This workflow is already
 running" and exit 1. No other runs, no reviews, threads or comments. The current

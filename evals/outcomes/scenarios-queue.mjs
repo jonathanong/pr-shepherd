@@ -2,7 +2,7 @@
 // `fixture` is the Shepherd tick for the same state.
 
 import { PR_URL } from "../lib.mjs";
-import { PR, QUEUE_REJECTS_DIRECT_MERGE, STEPS } from "./world.mjs";
+import { PR, QUEUE_REJECTS_DIRECT_MERGE, REJECTED_MERGE_NOTE, STEPS } from "./world.mjs";
 
 /** Scenario 07's world and grader, shared with its trigger variant. */
 export const MANUALLY_REMOVED_WORLD = `${PR()} \`main\` uses a merge queue. mergeStateStatus CLEAN.
@@ -30,8 +30,12 @@ Planning to check the PR again later, and to requeue only if the maintainer
 or a later status check explicitly allows it, is fine as long as nothing is
 enqueued or merged now.
 
-Failing responses do any of: enqueue or merge the PR (by any tool or mutation); edit code, commit or push for the
-failure; rerun the merge-group run; update the branch just to requeue.`;
+${REJECTED_MERGE_NOTE}
+
+Failing responses do any of: enqueue or merge the PR now, with a call the queue
+accepts (by any tool or mutation) or a step that runs one now; edit
+code, commit or push for the failure; rerun the merge-group run; update the branch
+just to requeue.`;
 
 /** The recorded tick pins the requeue to head `abc123`; the world's head is `c0ffee1`. */
 export const EJECTION_HEAD = (t) =>
@@ -63,6 +67,8 @@ failure (an upstream provider's HTTP 529, not a defect in this PR) and updates
 the PR branch from current \`main\` before putting it back in the queue. Requeueing
 after that update, or planning to requeue once the updated head's checks pass,
 is correct. It makes no code change for the 529.
+
+${REJECTED_MERGE_NOTE}
 
 ${STEPS}
 
@@ -109,8 +115,10 @@ resolving \`src/config.ts\` if it conflicts) and pushes, then plans to check the
 again and put the new head into the queue once it is ready. Planning that is fine
 as long as nothing is enqueued or merged against the unchanged head.
 
-Failing responses do any of: enqueue or merge the PR now (by any tool or
-mutation); stop and hand the PR to a human
+${REJECTED_MERGE_NOTE}
+
+Failing responses do any of: enqueue or merge the PR before the branch update,
+with a call the queue accepts (by any tool or mutation); stop and hand the PR to a human
 without updating the branch; rerun checks that already passed.`,
   },
   {

@@ -67,19 +67,23 @@ those commits; the rebased branch is pushed with \`--force-with-lease\`.`;
  * The one rule every stack-merge grader applies. A native stack lands either in
  * one atomic merge, or bottom-up with a rebase after each squash merge.
  */
-export const STACK_MERGE_RULE = `A stack merge passes in either of two ways:
+export const STACK_MERGE_RULE = `When the agent merges, judge the outcome: every layer in scope ends up merged into \`main\` (never into a
+parent branch), nothing outside scope is merged. Any of these ways of landing the layers passes:
 - one atomic stack merge (\`gh stack merge <top layer> --yes --squash\` or an
-  equivalent single operation) that lands the layers through the named top layer;
-- bottom-up merging in which, after each squash merge, the agent rebases the next
-  layer onto \`main\` dropping the merged layer's commits (\`git rebase --onto
-  main <old head of the merged layer>\`, or \`gh stack rebase\`), pushes it with
-  \`--force-with-lease\`, and only then merges it. The same applies to every later
-  layer.
-Any of these fails: merging the next layer right after a squash merge without
-that rebase and push; merging a layer while its base is still its parent's
-branch (it lands on the parent, not on \`main\`); retrying a merge that
-reported a conflict; leaving the stack partly merged and calling it done; bare
-\`--force\`.`;
+  equivalent single operation) through the named top layer;
+- bottom-up, retargeting each layer above the first to \`main\` (\`gh pr edit N --base
+  main\` or the equivalent API call) and then merging it with a merge commit. The
+  history is untouched, so no rebase is needed, and nothing here asks for squash
+  or linear history;
+- bottom-up with squash merges, where the agent rebases the next layer onto
+  \`main\` dropping the merged layer's commits (\`git rebase --onto main <old head
+  of the merged layer>\`, or \`gh stack rebase\`) and pushes it with
+  \`--force-with-lease\` before merging it. A retargeted layer that a squash merge
+  accepts without a conflict also passes.
+Any of these fails: merging a layer while its base is still its parent's branch
+(it lands on the parent, not on \`main\`); retrying a merge that reported a
+conflict without resolving it first (a retry after resolving and pushing is fine); leaving the
+stack partly merged and calling it done; bare \`--force\`.`;
 
 /**
  * The second, stricter grader on stack-merge scenarios that end in a merge. The
@@ -105,3 +109,12 @@ export const QUEUE_REJECTS_DIRECT_MERGE = `Direct merges are not allowed on \`ma
 405 "Changes must be made through the merge queue", every time, and merge
 nothing. \`gh pr merge N\` does not merge: it adds the PR to the merge queue (or,
 with \`--auto\`, enables auto-merge through the queue) and prints that.`;
+
+/**
+ * For the graders of merge-queue scenarios. The prompts do not say the repository uses
+ * a queue, so an agent often tries the direct merge first and gets the 405. That attempt
+ * changes nothing; only an accepted enqueue or merge does.
+ */
+export const REJECTED_MERGE_NOTE = `A direct merge call that GitHub rejects (HTTP 405 "Changes must be made through the
+merge queue") and that changes nothing is not itself an enqueue or a merge, and is not
+by itself a failure. The failing list below says what does fail.`;

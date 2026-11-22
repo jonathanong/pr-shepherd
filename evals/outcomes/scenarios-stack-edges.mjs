@@ -3,7 +3,7 @@
 
 import { PR_URL, fixtureText } from "../lib.mjs";
 import { iterateByPr, renumber } from "./stack-ticks.mjs";
-import { QUEUE_REJECTS_DIRECT_MERGE, STEPS } from "./world.mjs";
+import { QUEUE_REJECTS_DIRECT_MERGE, REJECTED_MERGE_NOTE, STEPS } from "./world.mjs";
 
 // #41's own tick: fixture 129's native-stack conflict route, as layer 1 of 2.
 const layer41Conflict = () =>
@@ -94,7 +94,8 @@ as ready to merge.`,
     world: `PR #42 "Add pagination" in owner/repo: open, not a draft, head \`feature\` at
 \`aaaaaaa\`, author \`you\`, approved. It is the only open layer of native stack
 #7 (\`gh stack\`, installed; \`gh stack checkout 7\` imports it locally); the
-layers below it merged. Base \`main\` uses a merge queue; \`tests\` is required.
+layers below it merged (\`gh stack view\` lists them with their PR numbers and
+states). Base \`main\` uses a merge queue; \`tests\` is required.
 \`main\` has moved 2 commits since the PR's base, none touching its files.
 
 Checks on \`aaaaaaa\` (PR head): \`tests\` passed.
@@ -117,6 +118,8 @@ the layer from current \`main\` with the stack tooling (\`gh stack rebase\`, aft
 \`gh stack checkout 7\` if needed, then \`gh stack push\`). Requeueing after that
 update, once the updated head's checks pass, is correct. It makes no code
 change for the 529.
+
+${REJECTED_MERGE_NOTE}
 
 ${STEPS}
 
