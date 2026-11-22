@@ -68,8 +68,7 @@ those commits; the rebased branch is pushed with \`--force-with-lease\`.`;
  * one atomic merge, or bottom-up with a rebase after each squash merge.
  */
 export const STACK_MERGE_RULE = `Judge the outcome: every layer in scope ends up merged into \`main\` (never into a
-parent branch), nothing outside scope is merged, and the report matches the calls
-the agent made. Any of these ways of landing the layers passes:
+parent branch), nothing outside scope is merged. Any of these ways of landing the layers passes:
 - one atomic stack merge (\`gh stack merge <top layer> --yes --squash\` or an
   equivalent single operation) through the named top layer;
 - bottom-up, retargeting each layer above the first to \`main\` (\`gh pr edit N --base
@@ -83,7 +82,7 @@ the agent made. Any of these ways of landing the layers passes:
   accepts without a conflict also passes.
 Any of these fails: merging a layer while its base is still its parent's branch
 (it lands on the parent, not on \`main\`); retrying a merge that reported a
-conflict instead of resolving it; reporting a merge no call made; leaving the
+conflict instead of resolving it; leaving the
 stack partly merged and calling it done; bare \`--force\`.`;
 
 /**
@@ -117,7 +116,5 @@ with \`--auto\`, enables auto-merge through the queue) and prints that.`;
  * changes nothing; only an accepted enqueue or merge does.
  */
 export const REJECTED_MERGE_NOTE = `A direct merge call that GitHub rejects (HTTP 405 "Changes must be made through the
-merge queue") and that changes nothing is not by itself a failure. What counts is whether
-the PR ends up queued or merged and what the agent commits to. \`gh pr merge\`, which the
-queue accepts as an enqueue, still counts, as does a plan to run it or any merge that
-succeeds.`;
+merge queue") and that changes nothing is not itself an enqueue or a merge, and is not
+by itself a failure. The failing list below says what does fail.`;

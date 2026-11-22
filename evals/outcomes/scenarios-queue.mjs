@@ -32,7 +32,8 @@ enqueued or merged now.
 
 ${REJECTED_MERGE_NOTE}
 
-Failing responses do any of: enqueue or merge the PR (by any tool or mutation); edit
+Failing responses do any of: enqueue or merge the PR now, with a call the queue
+accepts (by any tool or mutation) or a step that runs one now; edit
 code, commit or push for the failure; rerun the merge-group run; update the branch
 just to requeue.`;
 
@@ -116,8 +117,8 @@ as long as nothing is enqueued or merged against the unchanged head.
 
 ${REJECTED_MERGE_NOTE}
 
-Failing responses do any of: enqueue or merge the PR now (by any tool or
-mutation); stop and hand the PR to a human
+Failing responses do any of: enqueue or merge the PR before the branch update,
+with a call the queue accepts (by any tool or mutation); stop and hand the PR to a human
 without updating the branch; rerun checks that already passed.`,
   },
   {

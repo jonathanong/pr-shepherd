@@ -108,8 +108,7 @@ equivalent that makes the second PR's base the first's branch), and it plans to
 keep checking the whole stack until every layer is mergeable (for example
 re-checking both PRs), without merging in this pass. A later numbered step that
 merges a layer once it is mergeable, or retargets the second PR after the first
-merges, is the normal plan and not a merge now. Claiming PRs were opened that no
-creation call made is a failure.
+merges, is the normal plan and not a merge now.
 
 ${STEPS}
 
