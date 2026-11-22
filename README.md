@@ -82,11 +82,12 @@ The plugin ships the skills, which drive the CLI, so install both.
 
 ```bash
 # Claude Code
-claude /plugin marketplace add jonathanong/pr-shepherd
-claude /plugin install pr-shepherd
+claude plugin marketplace add jonathanong/harness-plugins
+claude plugin install pr-shepherd@harness-plugins
 
-# Codex (then enable the pr-shepherd plugin)
-codex plugin marketplace add jonathanong/pr-shepherd
+# Codex
+codex plugin marketplace add jonathanong/harness-plugins --ref main
+codex plugin add pr-shepherd@harness-plugins
 
 # Grok
 grok plugin marketplace add jonathanong/pr-shepherd

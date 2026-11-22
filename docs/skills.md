@@ -93,8 +93,14 @@ Merge and stacks:
 ## Claude Code
 
 ```bash
-claude /plugin marketplace add jonathanong/pr-shepherd
-claude /plugin install pr-shepherd
+claude plugin marketplace add jonathanong/harness-plugins
+claude plugin install pr-shepherd@harness-plugins
+```
+
+If you added the old `pr-shepherd` marketplace, remove it first (Claude Code uninstalls its plugins), then install as above:
+
+```bash
+claude plugin marketplace remove pr-shepherd
 ```
 
 Use `pr-shepherd` in a `/goal`; the others are one-shot:
@@ -110,17 +116,21 @@ The goal loop handles recurrence. `[CANCEL]` and `[ESCALATE]` stop that PR's loo
 
 ## Codex
 
-Add the marketplace from GitHub (optionally pinned with `--ref`) or a local checkout:
+Add the shared marketplace from GitHub and install the plugin:
 
 ```sh
-codex plugin marketplace add jonathanong/pr-shepherd
-codex plugin marketplace add jonathanong/pr-shepherd --ref main
-
-git clone https://github.com/jonathanong/pr-shepherd ~/.codex/plugin-sources/pr-shepherd
-codex plugin marketplace add ~/.codex/plugin-sources/pr-shepherd
+codex plugin marketplace add jonathanong/harness-plugins --ref main
+codex plugin add pr-shepherd@harness-plugins
 ```
 
-Then enable `pr-shepherd` from the `pr-shepherd` marketplace in the Codex plugin directory. Use `pr-shepherd` in a `/goal`; the others are one-shot:
+If you added the old `pr-shepherd` marketplace, Codex keeps its plugin enabled, so remove it first:
+
+```sh
+codex plugin remove pr-shepherd@pr-shepherd
+codex plugin marketplace remove pr-shepherd
+```
+
+Use `pr-shepherd` in a `/goal`; the others are one-shot:
 
 ```
 /goal $pr-shepherd        # infer PR from current branch
