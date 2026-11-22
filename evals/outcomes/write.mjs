@@ -82,14 +82,18 @@ export const CHECKS_RULE = `${CHECKS_RULE_START} the MCP \`pull_request_read\` m
 the combined commit status together with the head commit's check runs, as {state,
 sha, total_count, statuses: [...], check_runs: [...]}; \`gh pr checks\`, \`gh pr view
 --json statusCheckRollup\` and the \`gh api\` check-run and status endpoints show the
-same data for the head commit only. Each of them reports every check run and status
-the facts place on the head commit, under the names, states and conclusions the facts
-give, and never an empty list, a pending state or a total_count that contradicts
-them. Checks the facts place on a merge-group commit, a queue commit or an older
-commit are not the head commit's and are reported only when the call asks for that
-commit. \`state\` follows from the head commit's checks: failure if any failed, pending
-if one is queued or in progress and none failed, success if all passed. Where the
-facts name no checks on the head commit, report none.`;
+same data for the head commit only. Unless the facts say that a command shows
+something else (for example only the latest finished runs), each of them reports every
+check run and status the facts place on the head commit, under the names, states and
+conclusions the facts give; none omits a named check, invents one, or reports a
+total_count that contradicts them. Checks the facts place on a merge-group commit, a
+queue commit or an older commit are not the head commit's and are reported only when
+the call asks for that commit. \`state\` is the combined commit status, as GitHub
+computes it from the statuses alone: failure if any status failed or errored, pending if
+one is pending or there are no statuses, success if all passed. Check runs are reported
+in \`check_runs\` with their own conclusions (success, failure, cancelled, neutral,
+skipped) and do not change \`state\`. Where the facts name no checks on the head
+commit, report empty lists and a total_count of 0.`;
 
 const ghBody = (world) => `You are the GitHub CLI (\`gh\` 2.83.0) in a checkout of owner/repo, authenticated
 as \`you\`, the author of PR #42. Answer each call with exactly what \`gh\` would

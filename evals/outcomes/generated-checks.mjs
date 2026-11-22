@@ -7,7 +7,7 @@
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { CHECKS_RULE_START } from "./write.mjs";
+import { CHECKS_RULE } from "./write.mjs";
 
 const BASELINE_SERVERS = ["gh", "github"];
 // Shepherd vocabulary a baseline-visible file must not carry.
@@ -80,13 +80,13 @@ export function checkLeaks(casesDir) {
   return problems;
 }
 
-/** Both GitHub mocks of every case carry the rule that makes them report the same checks. */
+/** Both GitHub mocks of every case carry the whole rule that makes them report the same checks. */
 export function checkChecksRule(casesDir) {
   const problems = [];
   for (const slug of dirs(casesDir)) {
     for (const f of [join("mocks", "gh", "gh.md"), join("mocks", "github", "_server.md")]) {
       const path = join(casesDir, slug, f);
-      if (!existsSync(path) || !readFileSync(path, "utf8").includes(CHECKS_RULE_START))
+      if (!existsSync(path) || !readFileSync(path, "utf8").includes(CHECKS_RULE))
         problems.push(`${slug}/${f}: no checks rule`);
     }
   }
