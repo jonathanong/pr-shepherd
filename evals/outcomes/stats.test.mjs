@@ -28,6 +28,20 @@ describe("groupBootstrapDeltas", () => {
     assert.equal(width(groupBootstrapDeltas(group, 1)), 0);
   });
 
+  it("resamples runs within a scenario when the plugin arm varies", () => {
+    // One scenario, so only the inner resample can vary. Δ is mean(with) - 0.5 with
+    // mean(with) in {0, 0.5, 1}, so every draw lies in [-0.5, 0.5].
+    const draws = groupBootstrapDeltas([scenario([0, 1], [0.5, 0.5])], 3);
+    assert.ok(new Set(draws).size > 1);
+    assert.ok(draws.every((d) => d >= -0.5 && d <= 0.5));
+  });
+
+  it("resamples runs within a scenario when the baseline arm varies", () => {
+    const draws = groupBootstrapDeltas([scenario([0.5, 0.5], [0, 1])], 3);
+    assert.ok(new Set(draws).size > 1);
+    assert.ok(draws.every((d) => d >= -0.5 && d <= 0.5));
+  });
+
   it("returns null for an empty group or an arm with fewer than two runs", () => {
     assert.equal(groupBootstrapDeltas([], 1), null);
     assert.equal(groupBootstrapDeltas([scenario([1], [0, 0])], 1), null);
