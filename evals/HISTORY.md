@@ -72,6 +72,8 @@ The judge's `evidence` in the result file is a sampled view of the trace (about 
 - G: 72 run 2 held (the optional `page < 1` guard step and leaving the merge to the user are now explicitly not failures). 50 runs 0 and 2 held ("merge anything" matched a later step that merges once mergeable; the grader now fails a merge call in the pass; 48 and 49 got the same fix). 50 run 1: it called only `pr view` on PRs it never created, the mock answered, and the report said "I opened both PRs". The create worlds now say a PR does not exist until it is created. The grader does not fail a claim of PRs no call made, because of the sampling above.
 - H, not changed: 02, 46 and 48 require a house rule the prompt and world do not state (not read in this audit); 07, 25, 53, 35 and 28 volunteer facts the baseline reaches only by asking. The worlds state those facts, so the mock can answer; 28 and 35 now describe `gh stack view`. Both are open questions in [EVALS.md](EVALS.md).
 
+Stacked PR (checks rule): every GitHub mock (all 71 cases) carries `CHECKS_RULE`, scoped to the head commit's checks and statuses so merge-group and older-commit checks are not pulled onto the head. `checkChecksRule` in `generated-checks.mjs` and its test fail a case whose mock lacks it. It changes every case's mock, so it lands together with a full re-run.
+
 The generated cases that differ from `origin/main` (23): 07, 25, 28, 35, 36, 37, 38, 41, 48, 49, 50, 53, 54, 57, 58, 61, 62, 63, 67, 70, 71, 72, 75.
 
 ## 2026-11-21: fixes to scenarios 69 and 22, and a targeted run of them
