@@ -11,6 +11,7 @@ import snykNoIssues from "./snyk-no-issues.mts";
 import socketReports from "./socket-reports.mts";
 import sonarqubeGatePassed from "./sonarqube-gate-passed.mts";
 import sourceryNotices from "./sourcery-notices.mts";
+import sourceryReviewGuide from "./sourcery-review-guide.mts";
 
 /**
  * Bundled classification rules that `classify.standard` can enable by name.
@@ -29,6 +30,7 @@ export const STANDARD_RULES: Readonly<Record<string, ClassifyRule>> = {
   "socket-reports": socketReports,
   "sonarqube-gate-passed": sonarqubeGatePassed,
   "sourcery-notices": sourceryNotices,
+  "sourcery-review-guide": sourceryReviewGuide,
 };
 
 export const STANDARD_RULE_NAMES: readonly string[] = Object.keys(STANDARD_RULES);
