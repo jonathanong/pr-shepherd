@@ -31,13 +31,8 @@ step "Check benchmark results". Log:
   Benchmark build or execution failed.
   ##[error]Process completed with exit code 1.`;
 
-export const CI_SCENARIOS = [
-  {
-    // Test jobs failed for real; the aggregate job reports it.
-    slug: "04-real-ci-failure",
-    fixture: "61-triage-aggregate-ci-exit-code",
-    // List the failing Playwright jobs too, as a live tick would.
-    transform: (t) =>
+/** Fixture 61 with the failing jobs listed, as a live tick would; shared with a trigger scenario. */
+export const REAL_FAILURE_TICK = (t) =>
       t.replace(
         "  rerun: `gh run rerun 27325033780 -R owner/repo`\n",
         `  rerun: \`gh run rerun 27325033780 -R owner/repo\`
@@ -53,10 +48,10 @@ ${["chromium", "chromium-credentialed"]
 `,
   )
   .join("")}`,
-      ),
-    tags: ["ci"],
-    prompt: `Get ${PR_URL} ready to merge.`,
-    world: `${PR(" No merge queue. No required approvals.")}
+      );
+
+/** The world of a PR whose required check fails on a real defect in its code. */
+export const REAL_FAILURE_WORLD = `${PR(" No merge queue. No required approvals.")}
 
 Workflow "CI", run id 27325033780, on \`c0ffee1\`, conclusion failure. Jobs:
 - \`lint\` (job 80310000001): success, 1m31s.
@@ -74,7 +69,18 @@ ${PLAYWRIGHT_LOG("chromium")}
   test-playwright-credentialed: failure
 
 The PR changes \`src/paginate.ts\` and \`tests/pagination.spec.ts\`. No reviews,
-threads or comments. No earlier runs on this commit.`,
+threads or comments. No earlier runs on this commit.`;
+
+export const CI_SCENARIOS = [
+  {
+    // Test jobs failed for real; the aggregate job reports it.
+    slug: "04-real-ci-failure",
+    fixture: "61-triage-aggregate-ci-exit-code",
+    // List the failing Playwright jobs too, as a live tick would.
+    transform: REAL_FAILURE_TICK,
+    tags: ["ci"],
+    prompt: `Get ${PR_URL} ready to merge.`,
+    world: REAL_FAILURE_WORLD,
     grader: `The agent treats the failure as a real test failure: it reads the failing
 Playwright jobs' evidence (the last-page test expects 2 items and gets 3) and
 fixes the cause in code before anything else. It does not rerun the run as its

@@ -35,16 +35,23 @@ imports it locally), author \`you\`:
   \`foundation\`.
 No reviews pending, no threads or comments.`,
     grader: `The agent identifies #41's conflict with \`main\` as what blocks the stack and
-resolves it with the stack tooling: \`gh stack rebase\` (after \`gh stack checkout
-7\` if needed), resolving \`src/config.ts\`, then \`gh stack push\` (or
-\`--force-with-lease\` for each rewritten layer), so #42 stays on top of #41. It
-merges nothing until #41 is mergeable, then plans to merge bottom-up.
+resolves it, by either route:
+- the stack tooling: \`gh stack rebase\` (after \`gh stack checkout 7\` if
+  needed), resolving \`src/config.ts\`, then \`gh stack push\` (or
+  \`--force-with-lease\` for each rewritten layer);
+- the manual equivalent: update \`foundation\` from \`main\` (a rebase pushed with
+  \`--force-with-lease\`, or a merge of \`main\` with a plain push), resolve
+  \`src/config.ts\`, and keep #42 valid on top (rebase it onto the rewritten
+  parent, or handle it after #41 merges with \`git rebase --onto\` and
+  \`--force-with-lease\`).
+It merges nothing until #41 is mergeable, then plans to merge bottom-up.
 
 ${STEPS}
 
 Failing responses do any of: merge #41 or #42 now; resolve the conflict on #42
-instead of #41; rebase #41 alone so #42 is left on the old commits; merge
-\`main\` into a branch; use bare \`--force\`; hand off to a human.`,
+instead of #41; rebase #41 alone so #42 is left on the old commits with no plan
+to move it; merge \`main\` into #42's branch to fix #41's conflict; use bare
+\`--force\`; hand off to a human.`,
   },
   {
     // The layer under the named PR was closed without merging.
@@ -80,6 +87,8 @@ as ready to merge.`,
     slug: "35-stack-layer-queue-ejection",
     failures: true,
     fixture: "120-triage-native-stack-queue-removal-ack",
+    // The world names the head and the merge group commit by their short SHAs.
+    transform: (t) => t.replaceAll("a".repeat(40), "aaaaaaa").replaceAll("b".repeat(40), "bbbbbbb"),
     tags: ["stack", "merge-queue"],
     prompt: `Get ${PR_URL} merged.`,
     world: `PR #42 "Add pagination" in owner/repo: open, not a draft, head \`feature\` at

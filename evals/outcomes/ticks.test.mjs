@@ -110,3 +110,31 @@ describe("hand-written ticks", () => {
     });
   }
 });
+
+// A printed `--match-head-commit <sha>` or `--require-sha <sha>` is rejected (422)
+// by a world whose head is another commit, so the tick must name the world's head.
+const PINNED_SHA = /--(?:match-head-commit|require-sha)[ =]([0-9a-f]{6,40})\b/g;
+
+describe("pinned commits", () => {
+  for (const spec of SCENARIOS) {
+    it(`${spec.slug}: pinned commits appear in the world`, () => {
+      const pinned = [...mockBody(spec).matchAll(PINNED_SHA)].map((m) => m[1]);
+      const unknown = pinned.filter((sha) => !spec.world.includes(sha));
+      assert.deepEqual(unknown, []);
+    });
+  }
+});
+
+describe("queue ejection head", () => {
+  // `abc123` is in these worlds only as the merge group's parent, so the check
+  // above would pass a requeue pinned to it. The PR head is `c0ffee1`.
+  const REQUEUE_PIN = /--match-head-commit (\w+)|expectedHeadOid=(\w+)/g;
+  for (const slug of ["25-queue-ejection-failed-checks", "70-trigger-queue-ejected-failed-checks"]) {
+    it(`${slug}: the printed requeue pins the PR head`, () => {
+      const body = mockBody(SCENARIOS.find((s) => s.slug === slug));
+      const pins = [...body.matchAll(REQUEUE_PIN)].map((m) => m[1] ?? m[2]);
+      assert.ok(pins.length >= 2);
+      assert.deepEqual([...new Set(pins)], ["c0ffee1"]);
+    });
+  }
+});

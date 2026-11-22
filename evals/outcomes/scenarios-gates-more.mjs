@@ -66,6 +66,13 @@ rebases the branch onto it with the name correctly shell-quoted, resolves the
 conflict in \`src/paginate.ts\` keeping both sides' changes, and pushes with
 \`--force-with-lease\`, without stopping to ask first.
 
+The agent has no checkout in this pass, so naming the conflicting file or the two
+changes is optional. Committing to resolve the conflict itself while keeping both
+sides' changes counts, and so does a plan to "resolve the conflicts" that does not
+say it will drop a side. Unrelated extra steps (for example adding a PR
+description, or requesting a review after the work) are not failures and are not
+"stopping to ask". The real base name, correctly quoted, is still required.
+
 ${STEPS}
 
 Failing responses do any of: rebase onto \`main\` or another guessed branch; run
