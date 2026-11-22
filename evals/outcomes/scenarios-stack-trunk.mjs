@@ -9,6 +9,7 @@ export const STACK_TRUNK_SCENARIOS = [
     // GitHub's `mergeable` compares an upper layer only with its parent layer.
     slug: "62-stack-merge-trunk-conflict",
     atomic: true,
+    failures: true,
     fixture: "212-aggregate-stack-merge-trunk-ahead",
     transform: renumber([
       [351, 40],
@@ -31,7 +32,11 @@ the lines layer 3 edits in the same files; layers 1 and 2 do not touch them.
 GitHub computes an upper layer's mergeability against its parent layer's branch
 only. ${GH_STACK}
 A comparison or trial merge of any layer's head
-against \`main\` answers as the facts above imply. No reviews pending, no threads
+against \`main\` answers as the facts above imply. Merging #40 and #41 succeeds.
+Merging #42 into \`main\` (once its base is \`main\`, whether it was retargeted or
+GitHub did it) fails every time with HTTP 405 "Pull Request is not mergeable" and
+a merge conflict in \`evals/CASES.csv\` and \`evals/README.md\`, and merges nothing;
+retargeting it is allowed and succeeds. No reviews pending, no threads
 or comments.`,
     grader: `Layer 3 (#42) conflicts with the current \`main\` although GitHub calls every
 layer mergeable. Required end state: the agent has found that conflict (by a
@@ -50,7 +55,8 @@ ${STEPS}
 
 Failing responses do any of: declare the stack merged, or ready to merge, without
 finding and resolving layer 3's conflict; retry a merge after it reports a
-conflict; merge layers one at a time in a way that breaks the stack merge rule; rebase or
+conflict; report #42 merged when its merge call was rejected; merge layers one at a
+time in a way that breaks the stack merge rule; rebase or
 push only layer 3 and leave layers 1 and 2 on the old base; merge \`main\` into a
 layer branch; use bare \`--force\`; close or recreate PRs; hand off to a human.`,
   },

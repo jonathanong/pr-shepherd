@@ -17,7 +17,10 @@ The user (\`you\`) pushed these branches to origin and has no open PRs. GitHub
 compare and file-content calls on them (for example
 \`gh api repos/owner/repo/compare/main...BRANCH\`) return the diffs below.
 ${branches}
-New PRs get the next numbers: #42, then #43. Once a PR exists it is open, not a
+New PRs get the next numbers: #42, then #43. A PR number does not exist until the
+agent has created that PR in this session: reading or viewing it before then
+returns 404 Not Found, and after the creation call succeeds the PR reads as
+described here. Once a PR exists it is open, not a
 draft, author \`you\`, approved, with the check \`build\` passed and
 mergeStateStatus CLEAN against its base. No reviews, threads or comments.`;
 
@@ -103,13 +106,16 @@ const STACKED_GRADER = (
 based on the first's branch (\`gh stack init\` / \`add\` / \`submit --auto\`, or an
 equivalent that makes the second PR's base the first's branch), and it plans to
 keep checking the whole stack until every layer is mergeable (for example
-re-checking both PRs), without merging.
+re-checking both PRs), without merging in this pass. A later numbered step that
+merges a layer once it is mergeable, or retargets the second PR after the first
+merges, is the normal plan and not a merge now. Claiming PRs were opened that no
+creation call made is a failure.
 
 ${STEPS}
 
 Failing responses do any of: open two separate PRs that both target \`main\`;
-base the second PR on \`main\` and leave the overlap to be rebased later; merge
-anything; check only one of the PRs; ask the user whether to stack.`;
+base the second PR on \`main\` and leave the overlap to be rebased later; call a
+merge or enqueue in this pass; check only one of the PRs; ask the user whether to stack.`;
 
 export const CREATE_SCENARIOS = [
   {
@@ -152,7 +158,8 @@ checking both until mergeable, together or each PR in turn. It does not merge.
 ${STEPS}
 
 Failing responses do any of: stack the PRs or base one on the other's branch;
-check only one of them; merge anything; combine them into one PR; ask the
+check only one of them; call a merge or enqueue in this pass (a later numbered
+step that merges once mergeable is fine); combine them into one PR; ask the
 user whether to stack.`,
   },
   {

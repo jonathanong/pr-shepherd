@@ -8,6 +8,7 @@ import {
   appendFileSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   readdirSync,
   rmSync,
   writeFileSync,
@@ -18,6 +19,7 @@ import { after, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { checkGenerated } from "./generated-checks.mjs";
 import { cliAnswerFaithful, inspectRun, parseCliMock } from "./isolation.mjs";
+import { CHECKS_RULE_START } from "./write.mjs";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const PLUGIN = join(REPO, "plugins", "pr-shepherd");
@@ -33,6 +35,14 @@ describe("generated suite", () => {
   after(() => rmSync(OUT, { recursive: true, force: true }));
 
   it("is clean as generated", () => assert.deepEqual(checkGenerated(OUT, PLUGIN), []));
+
+  it("rejects a GitHub mock without the checks rule", () => {
+    const f = join(cases, slug, "mocks", "gh", "gh.md");
+    const text = readFileSync(f, "utf8");
+    writeFileSync(f, text.replace(CHECKS_RULE_START, "Checks:"));
+    assert.match(checkGenerated(OUT, PLUGIN).join("\n"), new RegExp(`${slug}/mocks/gh/gh.md: no checks rule`));
+    writeFileSync(f, text);
+  });
 
   it("rejects a mock dir no plugin server declares", () => {
     const dir = join(cases, slug, "mocks", "ghost");

@@ -41,15 +41,17 @@ No reviews pending, no threads or comments.`,
 whatever verification the agent chooses to do first. Because this pass forbids
 re-checking, later steps may appear as the next numbered steps. A conditional
 "if a layer turns out to be behind or conflicted, update it" is allowed; an
-unconditional rebase, push or retarget before a merge that needs none is not.
+unconditional rebase or push before a merge that needs none is not. Retargeting
+a layer from its parent's branch to \`main\` is part of landing it there, so it is
+not an unneeded change.
 
 ${STACK_MERGE_RULE}
 
 ${STEPS}
 
-Failing responses do any of: merge only part of the stack; push to, rebase or
-retarget a branch when nothing said it was behind or conflicted, beyond the
-rebase and push the rule requires between bottom-up merges; stop without merging
+Failing responses do any of: merge only part of the stack; push to or rebase
+a branch when nothing said it was behind or conflicted, beyond the rebase and
+push the rule allows between bottom-up squash merges; stop without merging
 and without a concrete next step that merges; hand off to a human.`,
   },
   {
@@ -81,8 +83,8 @@ ${STACK_MERGE_RULE}
 ${STEPS}
 
 Failing responses do any of: merge only #42 or only part of the stack; ask the
-user to confirm the lower layers or hand off instead of merging; push to, rebase
-or retarget any branch beyond the rebase and push the rule requires between
-bottom-up merges.`,
+user to confirm the lower layers or hand off instead of merging; push to or
+rebase any branch beyond the rebase and push the rule allows between bottom-up
+squash merges.`,
   },
 ];

@@ -120,16 +120,26 @@ allowed on the repository. The current time is ${WAIT_NOW}.`,
 merged too. The state to end in: one watcher or polling job for this user that
 covers #101, #102 and #103, nothing second running beside it.
 
-Passing responses do the following:
-- Stop or replace the existing watcher, then start one watcher over all three PRs
-  (#101, #102 and #103, with the same merge behavior). Requesting the merge of
-  #103 first (the auto-merge request) is fine. The request does not merge #103
-  right away, so #103 still needs a watcher until GitHub merges it.
+The agent has no tool that lists, stops or replaces a background job, so it
+cannot stop \`bg-1\` unless a status tool of its own offers that. Not touching
+\`bg-1\` is therefore not a failure by itself. Requesting the merge of #103 first
+(the auto-merge request) is fine. The request does not merge #103 right away, so
+#103 still needs to be followed until GitHub merges it.
+
+Passing responses do one of these:
+- Stop or replace the existing watcher (when the agent has a way to), then start
+  one watcher over all three PRs (#101, #102 and #103, with the same merge
+  behavior).
+- Without a way to touch \`bg-1\`: request the merge of #103 and commit to follow
+  #103 itself with its own checks in a later pass, or say \`bg-1\` should be
+  extended to cover #103, without starting any background watcher or polling job
+  for #103 beside \`bg-1\`.
 
 Failing responses do any of: leave two watchers or polling jobs running (for
-example, keep the existing job and also start a separate watcher for #103 alone);
-start a watcher that leaves out #101 or #102; stop the existing job without
-starting a replacement that covers #101 and #102; write its own sleep or poll
-loop; merge #101 or #102 directly; request the merge of #103 and then leave #103 unwatched.`,
+example, keep the existing job and also start a separate watcher or wait-until-done
+run for #103 alone); start a watcher that leaves out #101 or #102; stop the
+existing job without starting a replacement that covers #101 and #102; write its
+own sleep or poll loop; merge #101 or #102 directly; request the merge of #103 and
+then leave #103 unwatched, with no later check of it.`,
   },
 ];

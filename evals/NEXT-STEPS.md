@@ -3,6 +3,12 @@
 Open work for the eval suite, most recent findings first. Current results are in
 [EVALS.md](EVALS.md).
 
+## From the 2026-11-22 third audit
+
+1. Run the scenarios the audit changed from the head of that PR (list in [HISTORY.md](HISTORY.md#2026-11-22-third-harness-audit-no-runs)): 07, 25, 35, 53, 70, 71, 41, 54, 67, 62, 37, 57, 58, 61, 63, 72, 50, 75, 48, 49 and 28. Then update the tables.
+2. Decide the two open questions in [EVALS.md](EVALS.md): the facts the tick volunteers but a baseline must ask for (07, 25, 53, 35, 28), and the house rules in 02, 46 and 48.
+3. Store the judge's reasoning in the result, or sample its evidence by tool call, not by line: 70 run 1 shows a merge call the evidence omits.
+
 ## From the 2026-11-21 full run
 
 Done: the full run after the second audit (25's head SHA, the snapshot sentence in the
