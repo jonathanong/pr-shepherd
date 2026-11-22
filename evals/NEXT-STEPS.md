@@ -3,20 +3,26 @@
 Open work for the eval suite, most recent findings first. Current results are in
 [EVALS.md](EVALS.md).
 
-## From the 2026-11-21 audit
+## From the 2026-11-21 full run
 
-1. Done, awaiting the full run: 25's head SHA mismatch (a transform, and a test that
-   checks every scenario), the system prompt sentence about the tools answering from a
-   snapshot, and `keep-traces.mjs` for keeping each run's trace directory.
-2. Run the whole suite once, keep the traces with `keep-traces.mjs`, then run `analyze.mjs`.
-   Read the trigger lines (69 to 71) before touching the skill's description.
-3. Find why 36's baseline runs error in the runner, and why 12's mock gives different
-   baseline runs different diffs for the same PR.
-4. Re-read the baseline traces of the remaining zero-baseline scenarios (21, 22, 28, 33,
-   34, 43, 56 and others) before trusting their Δ. The audit found harness-made zeros
-   in the ones it read.
-5. Cases added, awaiting the full run (72 to 75): a wrong review comment, a draft PR,
-   a one-look status question and bot noise beside one real comment. Still to add:
+Done: the full run after the second audit (25's head SHA, the snapshot sentence in the
+system prompt, the grader fixes, `keep-traces.mjs`, the trigger and new-case scenarios).
+Results are in [EVALS.md](EVALS.md).
+
+1. Try a skill-description change against 69 to 71 only. The skill loaded in 0 of 9 plugin
+   runs without the hint, and both arms scored 0.00. Rerun only those three.
+2. Find why 36's baseline runs error in the runner (`mocks: github/list_pull_requests: a
+   result in the trace is not one the harness gave`). It recurred in the full run.
+3. Check whether the snapshot sentence causes 22's loss (0.00 vs 0.50): rerun 22 with and
+   without it. The plugin scored 1.00 there before the sentence.
+4. Look at plugin runs that do not read the diff and defer judging to the next pass (12,
+   72). Both stay inconclusive at 6 runs per arm.
+5. Make 12's mock give every run the same diff, and add a diff-size sentence to the worlds
+   that lack one (10, 31, 32, 33, 63).
+6. Re-read the baseline traces of the remaining zero-baseline scenarios (28, 34 and
+   others) before trusting their Δ. The audits found harness-made zeros in the ones they
+   read.
+7. Cases still to add:
    - merging layers as they become ready (`--merge-ready`);
    - several independent PRs in one request with different outcomes (no recorded
      snapshot has one ready PR beside one failing PR);

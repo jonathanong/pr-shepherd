@@ -322,7 +322,7 @@ the PR left the queue. They are graded on `outcome` only. Like `create` scenario
 `analyze.mjs` does not void a plugin run that never called the CLI, so non-firing runs
 stay in. After the tables it prints one line per trigger scenario with how many kept
 plugin runs loaded the skill (the `skill-fired` grader) and how many called the CLI.
-The skill's description is not changed until those lines are read.
+The first full run read 0 of 9; the description is unchanged.
 
 `analyze.mjs` prints the category and scenario tables with bootstrap 95%
 intervals. A scenario's interval resamples its runs. The category and All intervals
@@ -332,6 +332,23 @@ replaces those scenarios. It leaves out runs the harness voided or that
 errored (the `Excluded` column). It refuses to report when a `with` run's
 `Skill` call was denied, or when its trace is gone, so run with `--keep-temp`
 and analyze before the temporary directories are cleaned up.
+
+Adding runs. `analyze.mjs` replaces a scenario when a later file has it, so a follow-up
+that tops up a scenario with more runs would drop the first runs. Merge the two files
+first:
+
+```sh
+node evals/outcomes/add-runs.mjs full/aggregate-result.json topup/aggregate-result.json \
+  combined.json --replace 75
+node evals/outcomes/analyze.mjs combined.json
+```
+
+Each scenario in the top-up file gets its runs appended and its `runsPerCase` raised,
+except those named with `--replace` (a slug or its number prefix), which come from the
+top-up alone. Use `--replace` when the scenario's grader changed, so old runs are not
+mixed with new grading. Run `keep-traces.mjs` on both files first so the combined file's
+trace paths exist. Top up beyond 3 runs only where the direction is in question.
+
 Do not regenerate the cases while a run is in progress: generation deletes
 each case directory, including its `.replay` recordings.
 
