@@ -1,6 +1,6 @@
 {
   "name": "pr-shepherd",
-  "version": "2.2.14",
+  "version": "2.2.15",
   "description": "Autonomous PR CI monitor and review-comment resolver for Codex.",
   "author": {
     "name": "Jonathan Ong",
