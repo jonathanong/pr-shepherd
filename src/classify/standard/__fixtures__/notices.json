@@ -360,6 +360,18 @@
     }
   },
   {
+    "name": "sourcery-review-budget",
+    "rule": "sourcery-notices",
+    "kind": "pr-comment",
+    "author": "sourcery-ai",
+    "synthetic": false,
+    "body": "Sorry @jonathanong, you've used your own review budget of 250,000 diff characters for the last 7 days.\n\nYou can request another review in 6 days and 14 hours by commenting `@sourcery-ai review`. [Upgrade](https://app.sourcery.ai/dashboard/billing?connection=github&owner=jonathanong&from_surface=github_bot&intent=rate_limit_hit) to get a review now.",
+    "expect": {
+      "suppress": true,
+      "autoResolve": true
+    }
+  },
+  {
     "name": "sourcery-review-guide-pr-shepherd-809",
     "rule": "sourcery-review-guide",
     "kind": "pr-comment",

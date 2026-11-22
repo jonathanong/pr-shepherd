@@ -160,4 +160,27 @@ describe("Sourcery variants", () => {
     expect(matches(upsell, moved)).toEqual(["sourcery-notices"]);
     expect(matches(upsell, offsite)).toEqual([]);
   });
+
+  describe("review budget", () => {
+    const budget = fixture("sourcery-review-budget");
+    const wait = (to: string) => variant(budget.body, "6 days and 14 hours", to);
+
+    it("accepts other counts, durations, and singular units", () => {
+      for (const to of ["1 day", "2 days", "1 hour", "5 hours and 1 minute", "30 minutes"]) {
+        expect(matches(budget, wait(to))).toEqual(["sourcery-notices"]);
+      }
+      expect(matches(budget, variant(budget.body, "250,000", "9"))).toEqual(["sourcery-notices"]);
+      expect(matches(budget, variant(budget.body, "7 days", "1 day"))).toEqual([
+        "sourcery-notices",
+      ]);
+    });
+
+    it("keeps malformed counts, durations, and upgrade links visible", () => {
+      expect(matches(budget, wait("soon"))).toEqual([]);
+      expect(matches(budget, wait("6 days and 14 hours and 3 minutes"))).toEqual([]);
+      expect(matches(budget, variant(budget.body, "250,000", "250,00"))).toEqual([]);
+      const offsite = variant(budget.body, "https://app.sourcery.ai/", "https://example.com/");
+      expect(matches(budget, offsite)).toEqual([]);
+    });
+  });
 });
