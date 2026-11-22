@@ -6,6 +6,25 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-21: two targeted experiments
+
+Two runs from throwaway copies of 5786ecaa (the harness of the full run in the entry below, now in #807, first opened as #806), each with one edit. Sonnet 5.5 with `CLAUDE_CODE_EFFORT_LEVEL=low`, opus judge, 3 runs per arm. No full rerun was done, and the main tables in [EVALS.md](EVALS.md) are unchanged.
+
+A. Scenario 22 without the "tools answer from a snapshot" system sentence. Cost $4.29.
+
+- The plugin is still 0 of 3. gh/MCP is 2 of 2 kept runs (one baseline run errored). The sentence is not the cause of 22's loss.
+- The traces show the plugin agent running the tick's first step (retarget #42 to `main`) and rerunning the CLI. The mock returns the same pre-retarget tick, which now contradicts GitHub, and the agent stops short of committing to the rebase.
+- The tick's conflict step says to check `AGENTS.md` for whether to rebase or merge, while the grader requires the rebase.
+- Open: 22 needs a second tick for the state after the retarget (a history-aware mock like the escalation ones) before its score means anything for the plugin.
+
+B. Trigger scenarios 69 to 71 with this sentence appended to the skill description: "Also use as soon as a merge or enqueue is refused or blocked (HTTP 405, a failing required check, "merge queue required"), or a PR turns out to have been removed or ejected from the merge queue." Cost $19.94.
+
+- The skill loaded and the CLI was called in 3 of 3 plugin runs for 70 and for 71 (0 of 3 each before), and 0 of 3 for 69.
+- Scores, plugin / gh/MCP: 69 0.00 / 0.00, 70 0.33 / 0.00, 71 0.33 / 0.00.
+- In 69 the agent never attempts the merge: it reads the PR as blocked and stops. The mock reported the check state differently between runs (pending with no checks, or three failed checks), so nothing is refused from the agent's side.
+- In 70 and 71 the agent usually tries a direct merge first, gets the 405, and only then loads the skill. Several runs then update the branch with the GitHub MCP branch-update tool or hand the requeue to a human instead of following the tick. Loading the skill 6 of 6 times gives only 2 passes of 6.
+- The description sentence is now in the skill. Rerun 69 to 71 on `main` to measure it.
+
 ## 2026-11-21: full run after the second audit
 
 Sonnet 5.5 with `CLAUDE_CODE_EFFORT_LEVEL=low`, opus judge, 3 runs per arm, on

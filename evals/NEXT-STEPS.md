@@ -9,20 +9,20 @@ Done: the full run after the second audit (25's head SHA, the snapshot sentence 
 system prompt, the grader fixes, `keep-traces.mjs`, the trigger and new-case scenarios).
 Results are in [EVALS.md](EVALS.md).
 
-1. Try a skill-description change against 69 to 71 only. The skill loaded in 0 of 9 plugin
-   runs without the hint, and both arms scored 0.00. Rerun only those three.
-2. Find why 36's baseline runs error in the runner (`mocks: github/list_pull_requests: a
+1. Rerun 69 to 71 on `main` once the skill description change merges. The targeted run loaded the skill in 3 of 3 plugin runs for 70 and 71, but scored 0.33 each.
+2. Make 69's world produce a refused merge the agent actually hits, and give it a stable check state. Now the agent reads the PR as blocked and stops, and the mock reports the checks differently between runs.
+3. Add a second tick for 22: the state after the retarget, from a history-aware mock like the escalation ones. Until then its score does not mean much for the plugin.
+4. Find why agents that load the skill after a 405 do not follow the tick. Several update the branch with the GitHub MCP branch-update tool or hand the requeue to a human.
+5. Find why 36's baseline runs error in the runner (`mocks: github/list_pull_requests: a
    result in the trace is not one the harness gave`). It recurred in the full run.
-3. Check whether the snapshot sentence causes 22's loss (0.00 vs 0.50): rerun 22 with and
-   without it. The plugin scored 1.00 there before the sentence.
-4. Look at plugin runs that do not read the diff and defer judging to the next pass (12,
+6. Look at plugin runs that do not read the diff and defer judging to the next pass (12,
    72). Both stay inconclusive at 6 runs per arm.
-5. Make 12's mock give every run the same diff, and add a diff-size sentence to the worlds
+7. Make 12's mock give every run the same diff, and add a diff-size sentence to the worlds
    that lack one (10, 31, 32, 33, 63).
-6. Re-read the baseline traces of the remaining zero-baseline scenarios (28, 34 and
+8. Re-read the baseline traces of the remaining zero-baseline scenarios (28, 34 and
    others) before trusting their Δ. The audits found harness-made zeros in the ones they
    read.
-7. Cases still to add:
+9. Cases still to add:
    - merging layers as they become ready (`--merge-ready`);
    - several independent PRs in one request with different outcomes (no recorded
      snapshot has one ready PR beside one failing PR);
