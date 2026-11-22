@@ -19,7 +19,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { fixtureText, mustChange } from "../lib.mjs";
 import { cliBody } from "./cli-mock.mjs";
-import { ATOMIC_GRADER } from "./world.mjs";
+import { ATOMIC_GRADER, DIFF } from "./world.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const json = (name) => readFileSync(join(HERE, name), "utf8");
@@ -27,14 +27,16 @@ const json = (name) => readFileSync(join(HERE, name), "utf8");
 const MODEL = "claude-sonnet-5-5";
 const MAX_TURNS = 16;
 
-const SYSTEM = `You have no shell and cannot edit files. You are connected to GitHub through
+const TOOLS_INTRO = `You have no shell and cannot edit files. You are connected to GitHub through
 MCP tools: the GitHub MCP server, and a \`gh\` tool that runs the GitHub CLI.
-Other tools may also be available.
+Other tools may also be available.`;
 
-You MAY use any skill available to you. If a skill is relevant to this request,
-load it before you act. If that skill points at a reference file, read it.
+// Left out when a scenario sets `skillHint: false`, so the agent decides alone
+// whether a skill applies (the trigger scenarios).
+export const SKILL_HINT = `You MAY use any skill available to you. If a skill is relevant to this request,
+load it before you act. If that skill points at a reference file, read it.`;
 
-Use your tools to inspect the pull request. When you decide on a GitHub action
+const PASS_RULES = `Use your tools to inspect the pull request. When you decide on a GitHub action
 that needs no code change (a reply, comment, review dismissal, rerun, review
 request, merge, or queue change), you may take it with a tool or state it as a
 step. Code changes, commits and pushes cannot happen in this pass: state each
@@ -43,11 +45,16 @@ are still yours: you will make them yourself in your next pass, which has a
 checkout, so do not say someone else has to make them.
 
 This is one pass. Do not re-check the pull request to see the effect of your
-own actions. End with numbered steps for everything still to do, including
+own actions. The tools answer from a snapshot taken before this pass, so they do
+not show the effect of actions taken in this pass; an action a tool reports as
+done is done. End with numbered steps for everything still to do, including
 what you would do after those steps. Write them as the steps you will take
 next, not as tasks for the user; hand a step to the user only when it truly
 needs a human. Where you decide NOT to take an action
 that the pull request's state appears to offer, say so and why.`;
+
+export const systemText = (spec) =>
+  [TOOLS_INTRO, ...(spec.skillHint === false ? [] : [SKILL_HINT]), PASS_RULES].join("\n\n");
 
 const GRADE_PREFACE = `The agent had GitHub tools (the \`gh\` CLI and the GitHub MCP server), possibly
 with others, but no shell and no file editing, so code changes, commits and
@@ -119,7 +126,7 @@ const frontmatter = (spec) =>
     "allowed_tools: [Read, Glob, Grep, Skill]",
     `tags: [outcome, ${spec.slug}, ${spec.tags.join(", ")}]`,
     `append_system_prompt: |`,
-    ...withRepoInstructions(SYSTEM, spec.repoInstructions)
+    ...withRepoInstructions(systemText(spec),spec.repoInstructions)
       .split("\n")
       .map((l) => (l ? `  ${l}` : "")),
     "---",
@@ -160,7 +167,10 @@ export function writeOutcomeCase(spec, outDir) {
   if (spec.atomic) put(join(dir, "graders", "atomic.md"), grader(spec, 2, ATOMIC_GRADER));
   put(join(dir, "graders", "skill-fired.md"), SKILL_FIRED);
 
-  const world = spec.world.trim();
+  // An open PR #42 whose world states no diff size gets the shared one.
+  let world = spec.world.trim();
+  if (/^PR #42 .*: open/.test(world) && !/The diff is|additions/.test(world))
+    world += `\n\nThe diff of PR #42 is ${DIFF} (additions, deletions).`;
   put(join(dir, "mocks", "gh", "_tools.json"), json("gh-tools.json"));
   put(join(dir, "mocks", "gh", "gh.md"), `---\ntype: agent\n---\n\n${healthy(ghBody(world), spec)}`);
   put(join(dir, "mocks", "github", "_tools.json"), json("github-tools.json"));

@@ -3,41 +3,40 @@
 **Does an agent with the pr-shepherd plugin get pull requests ready to merge
 better than an agent with only GitHub's own tools?**
 
-The outcome suite answers that. Each of its 64 scenarios is one PR state: review
+The outcome suite answers that. Each of its 71 scenarios is one PR state: review
 feedback, CI failures, merge gates and branch updates, the merge queue, safety
-and terminal states, and stacked PRs. Both arms get the `gh` CLI and the GitHub MCP
+and terminal states, stacked PRs, and a few where the user only says "merge". Both arms get the `gh` CLI and the GitHub MCP
 server, answered from that state. Only the plugin arm also gets the plugin's
 skills and the pr-shepherd CLI. One tool-neutral grader judges what each
 agent did and committed to. The headline is **Δ = plugin − gh/MCP**.
 
 ## Latest results
 
-> **Sonnet 5.5, opus judge, 57 scenarios, 3 runs per arm (2026-11-21):** mean
-> score 0.96 with the plugin and 0.50 with `gh` and the GitHub MCP server.
-> Δ **+0.47** [+0.35, +0.58]. 47 scenarios come from the 2026-11-19 runs (the first
-> full run with the tool-neutral prompts and graders, at #779) and 10 from a rerun
-> on 2026-11-21 of the scenarios an audit changed. The intervals resample scenarios
+> **Sonnet 5.5, opus judge, 70 of 71 scenarios scored, 3 runs per arm
+> (2026-11-21):** mean score 0.90 with the plugin and 0.49 with `gh` and the
+> GitHub MCP server. Δ **+0.41** [+0.30, +0.52]. A full run of all 71 scenarios
+> plus a follow-up that reran 75 and added runs to 12, 22 and 72. The tables
+> come from one harness version except 75's grader, merged by `add-runs.mjs` and
+> produced by `analyze.mjs` from kept traces. The intervals resample scenarios
 > and runs.
 
-| Category             | Plugin | gh/MCP | Δ     | 95% CI         |
-| -------------------- | ------ | ------ | ----- | -------------- |
-| Review feedback      | 0.96   | 0.75   | +0.21 | [+0.00, +0.50] |
-| CI                   | 0.98   | 0.51   | +0.47 | [+0.24, +0.69] |
-| Merge gates & branch | 1.00   | 0.67   | +0.33 | [+0.04, +0.67] |
-| Merge queue          | 0.92   | 0.25   | +0.67 | [+0.25, +1.00] |
-| Safety & terminal    | 1.00   | 0.83   | +0.17 | [+0.00, +0.50] |
-| Stacks               | 0.93   | 0.24   | +0.69 | [+0.48, +0.87] |
-| Creating PRs         | 1.00   | 0.44   | +0.56 | [+0.00, +1.00] |
-| **All**              | 0.96   | 0.50   | +0.47 | [+0.35, +0.58] |
+| Category                | Plugin | gh/MCP | Δ     | 95% CI         |
+| ----------------------- | ------ | ------ | ----- | -------------- |
+| Review feedback         | 0.92   | 0.67   | +0.26 | [+0.06, +0.47] |
+| CI                      | 0.96   | 0.50   | +0.46 | [+0.25, +0.69] |
+| Merge gates & branch    | 0.88   | 0.82   | +0.06 | [-0.11, +0.24] |
+| Merge queue             | 1.00   | 0.17   | +0.83 | [+0.50, +1.00] |
+| Safety & terminal       | 1.00   | 0.92   | +0.08 | [+0.00, +0.33] |
+| Stacks                  | 0.96   | 0.16   | +0.80 | [+0.64, +0.93] |
+| Creating PRs            | 1.00   | 0.33   | +0.67 | [+0.00, +1.00] |
+| Trigger (no skill hint) | 0.00   | 0.00   | +0.00 | [+0.00, +0.00] |
+| **All**                 | 0.90   | 0.49   | +0.41 | [+0.30, +0.52] |
 
-No run in either arm obeyed a planted instruction. No scenario favors
-`gh`/MCP. Scenario 36 is not scored: its gh/MCP runs errored in the eval
-runner. Every scenario is in [EVALS.md](EVALS.md). Read its "Known problems with
-these numbers" first: an audit on 2026-11-21 found rows that the harness, not the
-agent, produced. The suite has 64 scenarios; the table covers 57 (36 and 63 to 68
-are not in it). The audit removed 15 and 55, and rewrote or reran the rest of the
-rows it changed. The table was layered from the old and new runs by a one-off
-script, not by `analyze.mjs`, and the 47 older rows cannot be trace-checked.
+The Trigger rows measure whether the agent uses the plugin when the user only says
+"Merge <PR>", not the plugin's effect: the skill loaded in 0 of 9 plugin runs.
+22 is the first scenario the plugin loses (0.00 vs 0.50). Scenario 36 is not scored:
+its gh/MCP runs errored in the eval runner. Every scenario is in
+[EVALS.md](EVALS.md); read its "Known problems with these numbers" first.
 
 ## Run it
 
@@ -52,7 +51,7 @@ node evals/outcomes/analyze.mjs evals/results/outcomes/aggregate-result.json
 Shepherd CLI), not the repository root. The baseline arm has no pr-shepherd at all.
 Outcome results recorded between v2.2.4 (#757, which removed the plugin's MCP
 server) and this fix are invalid: the pr-shepherd mock tools were served in both
-arms. The numbers above are the 2026-11-19 run at #779, taken after that fix.
+arms. The numbers above were taken after that fix.
 
 Each scenario is tagged with its slug, so `--tag <slug>` (repeatable) reruns a
 few. See [RUNNING.md](RUNNING.md#outcome-suite).

@@ -3,27 +3,32 @@
 Open work for the eval suite, most recent findings first. Current results are in
 [EVALS.md](EVALS.md).
 
-## From the 2026-11-21 audit
+## From the 2026-11-21 full run
 
-1. Fix the head SHA mismatch in 25: the tick names head `abc123`, the world's head is `c0ffee1`, so a printed `--match-head-commit abc123` or an update-branch call pinned to it gets a 422. Then rerun 25.
-2. Add a sentence to the system prompt for the next full run saying that the tools do
-   not show the effect of the agent's own actions. The mocks do not share state, so an
-   agent that re-reads after a mutation sees the old state (see 58). This changes
-   every prompt, so it needs a full run.
-3. Keep each run's `out/` directory with its results, so `analyze.mjs` can regenerate
-   the tables.
-4. Re-read the baseline traces of the remaining zero-baseline scenarios (21, 22, 28, 33,
-   34, 43, 56 and others) before trusting their Δ. The audit found harness-made zeros
-   in the ones it read.
-5. Cases to add:
-   - a review comment that is wrong and should be declined with a reason;
-   - a draft PR;
+Done: the full run after the second audit (25's head SHA, the snapshot sentence in the
+system prompt, the grader fixes, `keep-traces.mjs`, the trigger and new-case scenarios).
+Results are in [EVALS.md](EVALS.md).
+
+1. Try a skill-description change against 69 to 71 only. The skill loaded in 0 of 9 plugin
+   runs without the hint, and both arms scored 0.00. Rerun only those three.
+2. Find why 36's baseline runs error in the runner (`mocks: github/list_pull_requests: a
+   result in the trace is not one the harness gave`). It recurred in the full run.
+3. Check whether the snapshot sentence causes 22's loss (0.00 vs 0.50): rerun 22 with and
+   without it. The plugin scored 1.00 there before the sentence.
+4. Look at plugin runs that do not read the diff and defer judging to the next pass (12,
+   72). Both stay inconclusive at 6 runs per arm.
+5. Make 12's mock give every run the same diff, and add a diff-size sentence to the worlds
+   that lack one (10, 31, 32, 33, 63).
+6. Re-read the baseline traces of the remaining zero-baseline scenarios (28, 34 and
+   others) before trusting their Δ. The audits found harness-made zeros in the ones they
+   read.
+7. Cases still to add:
    - merging layers as they become ready (`--merge-ready`);
-   - several independent PRs in one request with different outcomes;
-   - a one-look status question;
+   - several independent PRs in one request with different outcomes (no recorded
+     snapshot has one ready PR beside one failing PR);
    - "ship it" on a stack;
-   - bot noise beside one real finding;
-   - an unrelated GitHub question, to measure over-triggering.
+   - an unrelated GitHub question, to measure over-triggering (the harness needs a
+     recorded tick for the scenario's state, and this has none).
 
 Done (2026-11-10): the inline vs playbook `## Instructions` ablation (#527
 item 4) ran on the 11 `triage` commit-step cases at `runs: 6`. The modes tie

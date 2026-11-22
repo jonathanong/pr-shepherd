@@ -2,6 +2,7 @@
 
 import { CI_MORE_SCENARIOS } from "./scenarios-ci-more.mjs";
 import { CI_SCENARIOS } from "./scenarios-ci.mjs";
+import { GATE_CASE_SCENARIOS, REVIEW_CASE_SCENARIOS } from "./scenarios-cases.mjs";
 import { CREATE_SCENARIOS } from "./scenarios-create.mjs";
 import { GATE_MORE_SCENARIOS } from "./scenarios-gates-more.mjs";
 import { GATE_SCENARIOS } from "./scenarios-gates.mjs";
@@ -19,11 +20,12 @@ import { STACK_BY_PR_SCENARIOS } from "./scenarios-stack-by-pr.mjs";
 import { STACK_SCOPE_SCENARIOS } from "./scenarios-stack-scope.mjs";
 import { STACK_SCENARIOS } from "./scenarios-stack.mjs";
 import { STACK_TRUNK_SCENARIOS } from "./scenarios-stack-trunk.mjs";
+import { TRIGGER_SCENARIOS } from "./scenarios-trigger.mjs";
 
 const CATEGORIES = [
-  ["Review feedback", [...REVIEW_SCENARIOS, ...REVIEW_MORE_SCENARIOS, ...REVIEW_NEW_SCENARIOS, ...RECENT_REVIEW_SCENARIOS]],
+  ["Review feedback", [...REVIEW_SCENARIOS, ...REVIEW_MORE_SCENARIOS, ...REVIEW_NEW_SCENARIOS, ...RECENT_REVIEW_SCENARIOS, ...REVIEW_CASE_SCENARIOS]],
   ["CI", [...CI_SCENARIOS, ...CI_MORE_SCENARIOS, ...RECENT_CI_SCENARIOS]],
-  ["Merge gates & branch", [...GATE_SCENARIOS, ...GATE_MORE_SCENARIOS, ...RECENT_GATE_SCENARIOS]],
+  ["Merge gates & branch", [...GATE_SCENARIOS, ...GATE_MORE_SCENARIOS, ...RECENT_GATE_SCENARIOS, ...GATE_CASE_SCENARIOS]],
   ["Merge queue", QUEUE_SCENARIOS],
   [
     "Stacks",
@@ -39,6 +41,7 @@ const CATEGORIES = [
   ],
   ["Safety & terminal", SAFETY_SCENARIOS],
   ["Creating PRs", CREATE_SCENARIOS],
+  ["Trigger (no skill hint)", TRIGGER_SCENARIOS],
 ];
 
 export const SCENARIOS = CATEGORIES.flatMap(([category, specs]) =>

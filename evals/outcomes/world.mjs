@@ -1,12 +1,16 @@
 // Shared pieces of scenario worlds and graders.
 
+/** The diff size a world states unless it gives its own, so the mocks do not invent one. */
+export const DIFF = "+48 −3";
+
 /** The PR line every world starts from; `extra` adds repo rules after it. */
 export const PR = (
   extra = "",
   files = "`src/paginate.ts`, `tests/pagination.spec.ts`",
+  diff = DIFF,
 ) => `PR #42 "Add pagination" in owner/repo: open, not a draft, base \`main\`, head
 \`feature\` at commit \`c0ffee1\`, author \`you\`.${extra}
-Changed files: ${files}.`;
+Changed files: ${files}. The diff is ${diff} (additions, deletions).`;
 
 /**
  * The follow-through clause most graders share. The case prompt forbids
