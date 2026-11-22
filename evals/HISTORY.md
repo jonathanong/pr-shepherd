@@ -6,6 +6,55 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-22: targeted run of the third-audit cases
+
+A targeted run at 432436f1 of the 23 scenarios whose generated case differs from `origin/main` (07, 25, 28, 35, 36, 37, 38, 41, 48, 49, 50, 53, 54, 57, 58, 61, 62, 63, 67, 70, 71, 72, 75), 3 runs per arm, 138 runs, $238.49, 502 s. Results are in `/tmp/pr-shepherd-eval-811` (not kept in the repository). The main tables in [EVALS.md](EVALS.md) stay as the full run; this table is the before and after.
+
+The 22 measured scenarios scored plugin 0.95 and gh/MCP 0.26, delta +0.69 [+0.53, +0.84]. 36 is insufficient: baseline runs 1 and 2 were voided by the runner ("mocks: github/list_pull_requests: a result in the trace is not one the harness gave", raised after the agent called `list_pull_requests` with no `owner` and the tool answered "missing required parameter: owner"). Trigger skill loads: 70 and 71 loaded the skill in 3 of 3 plugin runs. Mock tool_errors counted from `mock-calls.jsonl`: without the plugin 52 (`analyze.md` reports 50), with the plugin 7.
+
+The run's commit is the head of #811 at the time (432436f1).
+
+| Scenario | Full run plugin | Full run gh/MCP | This run plugin | This run gh/MCP |
+| --- | --- | --- | --- | --- |
+| `07-queue-manual-removal` | 1.00 | 0.00 | 1.00 | 0.00 |
+| `25-queue-ejection-failed-checks` | 1.00 | 0.00 | 1.00 | 0.00 |
+| `28-native-stack-merged-parent` | 1.00 | 0.00 | 1.00 | 0.00 |
+| `35-stack-layer-queue-ejection` | 1.00 | 0.00 | 1.00 | 0.00 |
+| `36-stack-merge-unowned-lower-layer` | n/a | n/a | 1.00 | n/a (2 of 3 voided) |
+| `37-stack-merge-through-layer` | 1.00 | 0.00 | 1.00 | 0.00 |
+| `38-two-stacks-one-request` | 1.00 | 0.00 | 1.00 | 0.00 |
+| `41-check-annotations-no-log` | 1.00 | 0.00 | 1.00 | 0.67 |
+| `48-create-prs-same-lines-stack` | 1.00 | 0.00 | 1.00 | 0.00 |
+| `49-create-prs-independent-separate` | 1.00 | 1.00 | 1.00 | 1.00 |
+| `50-create-prs-needs-earlier-code-stack` | 1.00 | 0.00 | 1.00 | 1.00 |
+| `53-queue-removed-merge-conflict` | 1.00 | 0.00 | 1.00 | 0.00 |
+| `54-ci-never-starts` | 0.67 | 0.00 | 1.00 | 0.00 |
+| `57-stack-merge-needs-receipts` | 1.00 | 0.00 | 1.00 | 0.60 |
+| `58-stack-merge-it-after-ready-report` | 0.67 | 0.00 | 1.00 | 0.60 |
+| `61-stack-merge-from-one-pr` | 1.00 | 0.00 | 1.00 | 0.60 |
+| `62-stack-merge-trunk-conflict` | 1.00 | 0.00 | 0.80 | 0.00 |
+| `63-merge-rerun-joins-existing-watcher` | 0.67 | 0.00 | 1.00 | 0.00 |
+| `67-wait-after-shown-failure` | 1.00 | 0.00 | 0.67 | 0.00 |
+| `70-trigger-queue-ejected-failed-checks` | 0.00 | 0.00 | 1.00 | 0.00 |
+| `71-trigger-queue-removed-by-maintainer` | 0.00 | 0.00 | 1.00 | 0.00 |
+| `72-wrong-review-comment-declined` | 0.67 | 0.33 | 0.67 | 0.33 |
+| `75-status-question-one-blocker` | 0.67 | 1.00 | 1.00 | 1.00 |
+
+
+What the run showed (every claim about calls below is from the raw `trace.jsonl` and `mock-calls.jsonl`, not the sampled evidence):
+
+- Plugin arm: 18 of 22 scenarios at 1.00. 62 (0.80), 67 (0.67) and 72 (0.67) are the exceptions. 67 run 0 planned an immediate rerun of a check that was still running (real agent failure). 72 run 1 rejected the comment but wrote "I also didn't reply on the PR" (real: the grader needs a reply). 62 run 2 differs from runs 0 and 1 only in the judge's vote (unclear, probably judge variance).
+- 62 baseline 0.00 is harness-made: after `gh pr edit 42 --base main` the mock answered `merged: true` for #42 (all three baseline runs) although the world says the merge is rejected with 405 and every run reported all three layers merged. Agent mocks answer each call alone and keep no state, so a retarget does not change the answer of the following merge call.
+- 67 baseline run 0 ran `gh run rerun 900 --job 9001` and the mock answered ok although the world says the run cannot be rerun (harness-made for that run); run 2 got the intended 403.
+- 57, 58 and 61 baselines (0.60): every run lands every layer bottom-up (retarget to `main`, then merge commit or squash) and passes the outcome grader 3 of 3; the only loss is the weight-2 `atomic` grader, which 3 of 3 votes fail in all nine runs. That grader is in both arms' cases, and it requires one atomic stack merge. The baseline's `gh` tool can run `gh stack merge`, but no baseline run called it. Stated for the owner, not changed.
+- 37 baseline (0.00): all three runs merge #41 and #42 correctly but each lists retargeting #43 as a next step, which the grader fails; the prompt says nothing about leaving #43 alone. 38 baseline: all three runs call the merge tool on #42 and #52 whose bases are their parents' branches, which is a real failure.
+- 41 baseline 0.67: the mock now gives the check. `gh pr checks 42` and the check-runs endpoint answered truthfully in runs 1 and 2 (score 1.00). Run 0 never called `gh` and read only `get_status`, which answers `failure` with `total_count: 0` (an inconsistency in the github mock), so it could not find the failing check (real, with a mock gap).
+- 54 baseline 0.00: the github mock's `get_status` shows only the pending "External Preview" status, not the queued check run 999 (that is in the world). No baseline run called `gh pr checks` or the actions tools, so none found the runner labels. Partly harness-made (the queued run is not in the status answer), partly the agent not looking.
+- 07, 25, 53, 35, 28, 70 and 71 baselines (0.00): 0 of 21 runs asked (`gh api` timeline, `gh run view`, `gh stack view`); each called the merge tool and then `gh pr merge` (or `--auto`). The 405s were intended. 28 made no merge call and also no ask.
+- 63: `TaskStop` was called in plugin runs 0, 1 and 2 (each got "No task found with ID: bg-1"), and in no baseline run. The plugin runs pass and the baseline runs fail the grader for the intended reason: baselines never call `TaskStop`, leave `bg-1` running on 101 and 102 and enable auto-merge on #103 with no combined watcher.
+- 48 baseline 0.00 fails on the stack-by-default rule only: all three runs open two PRs against `main`, name the overlap, and do not stack. The prompt does not ask for a stack. 49 (independent) and 50 (the second branch needs the first) pass in both arms.
+- Mock tool_errors, without the plugin: 405s of the queue worlds (07, 25, 35, 53, 70, 71, plus one per run of 63) are intended world rejections. 62 has none (see above). The unintended ones are 26 of the 52: the github mock answers 404 on `get`/`get_status`/`get_diff` for the PRs the agent has just created (48: 6, 49: 12, 50: 8), while `gh pr view` answers the same PRs in the same run; plus `list_workflow_runs` in 41 and the missing-`owner` call in 36. With the plugin: 6 intended merge 405s (3 each in 70 and 71), plus one contents call in 41 at a ref (`abc123`) the world does not have.
+
 ## 2026-11-22: third harness audit (no runs)
 
 Two read-only audits claimed that harness-made results remain in the full run. Each claim was checked against the kept traces of the full run (`results-full`) and the re-run of 22 and 69 to 71 before any change. The judge's reasoning is not stored, so every "why it failed" is inference. No runs were made for this entry; the changed scenarios are to be run from the head of the PR.
