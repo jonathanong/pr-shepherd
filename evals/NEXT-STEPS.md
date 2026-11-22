@@ -5,25 +5,24 @@ Open work for the eval suite, most recent findings first. Current results are in
 
 ## From the 2026-11-21 audit
 
-1. Fix the head SHA mismatch in 25: the tick names head `abc123`, the world's head is `c0ffee1`, so a printed `--match-head-commit abc123` or an update-branch call pinned to it gets a 422. Then rerun 25.
-2. Add a sentence to the system prompt for the next full run saying that the tools do
-   not show the effect of the agent's own actions. The mocks do not share state, so an
-   agent that re-reads after a mutation sees the old state (see 58). This changes
-   every prompt, so it needs a full run.
-3. Keep each run's `out/` directory with its results, so `analyze.mjs` can regenerate
-   the tables.
+1. Done, awaiting the full run: 25's head SHA mismatch (a transform, and a test that
+   checks every scenario), the system prompt sentence about the tools answering from a
+   snapshot, and `keep-traces.mjs` for keeping each run's trace directory.
+2. Run the whole suite once, keep the traces with `keep-traces.mjs`, then run `analyze.mjs`.
+   Read the trigger lines (69 to 71) before touching the skill's description.
+3. Find why 36's baseline runs error in the runner, and why 12's mock gives different
+   baseline runs different diffs for the same PR.
 4. Re-read the baseline traces of the remaining zero-baseline scenarios (21, 22, 28, 33,
    34, 43, 56 and others) before trusting their Δ. The audit found harness-made zeros
    in the ones it read.
-5. Cases to add:
-   - a review comment that is wrong and should be declined with a reason;
-   - a draft PR;
+5. Cases added, awaiting the full run (72 to 75): a wrong review comment, a draft PR,
+   a one-look status question and bot noise beside one real comment. Still to add:
    - merging layers as they become ready (`--merge-ready`);
-   - several independent PRs in one request with different outcomes;
-   - a one-look status question;
+   - several independent PRs in one request with different outcomes (no recorded
+     snapshot has one ready PR beside one failing PR);
    - "ship it" on a stack;
-   - bot noise beside one real finding;
-   - an unrelated GitHub question, to measure over-triggering.
+   - an unrelated GitHub question, to measure over-triggering (the harness needs a
+     recorded tick for the scenario's state, and this has none).
 
 Done (2026-11-10): the inline vs playbook `## Instructions` ablation (#527
 item 4) ran on the 11 `triage` commit-step cases at `runs: 6`. The modes tie

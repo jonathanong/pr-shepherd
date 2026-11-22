@@ -293,8 +293,36 @@ returns some (404 before a PR exists, 405 on merge).
 node evals/outcomes/generate.mjs --out evals-outcomes
 claude plugin eval evals-outcomes --model claude-sonnet-5-5 --judge-model opus --no-publish \
   --ablation with-without --keep-temp --eval-dir cases --output-dir evals/results/outcomes
+node evals/outcomes/keep-traces.mjs evals/results/outcomes/aggregate-result.json
 node evals/outcomes/analyze.mjs evals/results/outcomes/aggregate-result.json
 ```
+
+`keep-traces.mjs` is the step between the run and `analyze.mjs`. The runner's kept trace
+directories (`/private/tmp/e-*`) are cleaned up later, and `analyze.mjs` needs them. The
+script copies each run's `out/` directory (the `dirname` of its `tracePath`) to
+`traces/<e-XXXX>/out` next to the aggregate file, rewrites each `tracePath` to the copy
+(an absolute path), skips runs whose copy is already there, and prints how many it copied.
+It exits 1 and lists any run whose directory is already gone. Keep the `traces/`
+directory with the results. A targeted rerun's file gets the same step.
+
+The system prompt (`systemText` in `write.mjs`) tells the agent that the tools answer
+from a snapshot taken before the pass, so they do not show the effect of actions taken in
+it, and that an action a tool reports as done is done. The mocks answer from one fixed
+world, so without that sentence an agent that re-reads after a mutation sees the old state.
+
+Trigger scenarios. A scenario with `skillHint: false` leaves this sentence out of the
+system prompt in both arms: "You MAY use any skill available to you. If a skill is
+relevant to this request, load it before you act. If that skill points at a reference
+file, read it." Every other scenario keeps it, so skill firing there is a given, not a
+measurement. The three scenarios tagged `trigger` (69 to 71, category "Trigger (no skill
+hint)") use the prompt `Merge <PR>.` with no hint: a merge the world refuses over a real
+failing check, a queue ejection, and a maintainer's manual removal. A bare merge need not
+use the plugin; the question is whether the agent ends up using it once the merge fails or
+the PR left the queue. They are graded on `outcome` only. Like `create` scenarios,
+`analyze.mjs` does not void a plugin run that never called the CLI, so non-firing runs
+stay in. After the tables it prints one line per trigger scenario with how many kept
+plugin runs loaded the skill (the `skill-fired` grader) and how many called the CLI.
+The skill's description is not changed until those lines are read.
 
 `analyze.mjs` prints the category and scenario tables with bootstrap 95%
 intervals. A scenario's interval resamples its runs. The category and All intervals

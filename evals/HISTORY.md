@@ -6,6 +6,32 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-21: second audit and harness changes before the full run
+
+No evals ran. A second audit read the stored baseline runs of scenarios whose
+baselines reached the right end state and were failed on a detail, and every
+harness change below lands before one full rerun, so the whole table comes from
+one version.
+
+- Graders. 21 and 56 take a plan that resolves the conflict without naming the file
+  or the two changes, and no longer fail unrelated extra steps. 22 accepts the retarget
+  and the rebase in either order. 33 accepts the manual equivalent of the stack
+  tooling. 43 no longer requires naming the reviewers.
+- Ticks. 25's tick pins the requeue to the world's head. A test now fails when a
+  scenario's CLI mock pins a commit its world never names; it also fixed 35.
+- System prompt. One sentence says the tools answer from a snapshot taken before the
+  pass, so they do not show the effect of the agent's own actions.
+- Trigger scenarios 69 to 71 say only "Merge <PR>" and leave out the "load a relevant
+  skill" sentence (`skillHint: false`). `analyze.mjs` keeps their runs when the plugin
+  arm never called the CLI and prints how often the skill loaded and the CLI was called.
+- New cases 72 to 75: a wrong review comment, a green draft, bot noise beside one real
+  comment, and a status question. Multi-PR and unrelated-question cases were not added,
+  because no recorded snapshot matches their state.
+- `keep-traces.mjs` copies each run's trace directory next to the results.
+- 36 still errored in the runner in all three baseline runs. Its mock files look like
+  those of 33, 37 and 38; the cause is not found.
+- In 12 the mock gave different baseline runs different diffs for the same PR. Not fixed.
+
 ## 2026-11-21: rerun of the audited scenarios
 
 The ten scenarios the audit changed (07, 20, 25, 26, 35, 38, 52, 53, 59, 60) were

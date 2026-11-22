@@ -3,9 +3,9 @@
 **Does an agent with the pr-shepherd plugin get pull requests ready to merge
 better than an agent with only GitHub's own tools?**
 
-The outcome suite answers that. Each of its 64 scenarios is one PR state: review
+The outcome suite answers that. Each of its 71 scenarios is one PR state: review
 feedback, CI failures, merge gates and branch updates, the merge queue, safety
-and terminal states, and stacked PRs. Both arms get the `gh` CLI and the GitHub MCP
+and terminal states, stacked PRs, and a few where the user only says "merge". Both arms get the `gh` CLI and the GitHub MCP
 server, answered from that state. Only the plugin arm also gets the plugin's
 skills and the pr-shepherd CLI. One tool-neutral grader judges what each
 agent did and committed to. The headline is **Δ = plugin − gh/MCP**.
@@ -34,7 +34,7 @@ No run in either arm obeyed a planted instruction. No scenario favors
 `gh`/MCP. Scenario 36 is not scored: its gh/MCP runs errored in the eval
 runner. Every scenario is in [EVALS.md](EVALS.md). Read its "Known problems with
 these numbers" first: an audit on 2026-11-21 found rows that the harness, not the
-agent, produced. The suite has 64 scenarios; the table covers 57 (36 and 63 to 68
+agent, produced. The suite has 71 scenarios; the table covers 57 (36 and 63 to 75
 are not in it). The audit removed 15 and 55, and rewrote or reran the rest of the
 rows it changed. The table was layered from the old and new runs by a one-off
 script, not by `analyze.mjs`, and the 47 older rows cannot be trace-checked.
