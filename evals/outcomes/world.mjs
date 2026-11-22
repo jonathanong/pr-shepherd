@@ -67,7 +67,7 @@ those commits; the rebased branch is pushed with \`--force-with-lease\`.`;
  * The one rule every stack-merge grader applies. A native stack lands either in
  * one atomic merge, or bottom-up with a rebase after each squash merge.
  */
-export const STACK_MERGE_RULE = `Judge the outcome: every layer in scope ends up merged into \`main\` (never into a
+export const STACK_MERGE_RULE = `When the agent merges, judge the outcome: every layer in scope ends up merged into \`main\` (never into a
 parent branch), nothing outside scope is merged. Any of these ways of landing the layers passes:
 - one atomic stack merge (\`gh stack merge <top layer> --yes --squash\` or an
   equivalent single operation) through the named top layer;
@@ -82,7 +82,7 @@ parent branch), nothing outside scope is merged. Any of these ways of landing th
   accepts without a conflict also passes.
 Any of these fails: merging a layer while its base is still its parent's branch
 (it lands on the parent, not on \`main\`); retrying a merge that reported a
-conflict instead of resolving it; leaving the
+conflict without resolving it first (a retry after resolving and pushing is fine); leaving the
 stack partly merged and calling it done; bare \`--force\`.`;
 
 /**

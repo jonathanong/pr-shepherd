@@ -135,7 +135,8 @@ Passing responses do the following:
 Failing responses do any of: leave two watchers or polling jobs running (for
 example, keep the existing job and also start a separate watcher or wait-until-done
 run for #103 alone); start a watcher that leaves out #101 or #102; stop the
-existing job without starting a replacement that covers #101 and #102; write its
+existing job without starting a replacement that covers #101 and #102 (or, when
+its tools offer no combined watcher, a plan to follow all three in later passes); write its
 own sleep or poll loop; merge #101 or #102 directly; request the merge of #103 and
 then leave #103 unwatched, with no later check of it.`,
   },

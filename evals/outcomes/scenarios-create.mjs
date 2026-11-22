@@ -18,10 +18,10 @@ compare and file-content calls on them (for example
 \`gh api repos/owner/repo/compare/main...BRANCH\`) return the diffs below.
 ${branches}
 New PRs get the next numbers: #42, then #43. A PR number does not exist until the
-agent has created that PR in this session: reading or viewing it before then
-returns 404 Not Found, and after the creation call succeeds the PR reads as
-described here. Once a PR exists it is open, not a
-draft, author \`you\`, approved, with the check \`build\` passed and
+agent has created that PR in this session. The tools keep no record of earlier
+calls, so reading or viewing #42 or #43 answers as described here whether or not
+the agent has created it yet. The PR is open, not a
+draft, authored by whoever created it, approved, with the check \`build\` passed and
 mergeStateStatus CLEAN against its base. No reviews, threads or comments.`;
 
 /** `iterate` for a stack: every layer routes to `stack`. */

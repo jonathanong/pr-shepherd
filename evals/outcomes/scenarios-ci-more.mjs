@@ -115,8 +115,8 @@ job and no log. Its annotations (check-runs annotations API):
   final triage checks payload."
 - id \`check_annotation_1002\`, \`src/commands/iterate/triage.mts\` lines 197-204,
   level warning, message "Verify annotations survive lean projection."
-It is the only check run on \`c0ffee1\`, and the commit has no statuses; the checks
-and the combined state of the commit report it as failed.
+It is the only check run on \`c0ffee1\`, and the commit has no statuses, so the
+combined commit status is pending with an empty list; the check run reports failed.
 No reviews, threads or comments.`,
     grader: `The agent reads the check's annotations and plans a fix at the locations they
 cite: \`src/commands/check.mts\` line 136 (mark annotations seen only after they
