@@ -6,11 +6,45 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-21: rerun of the audited scenarios
+
+The ten scenarios the audit changed (07, 20, 25, 26, 35, 38, 52, 53, 59, 60) were
+rerun on `evals/outcome-honesty` at e999c0c7. Sonnet 5.5 with
+`CLAUDE_CODE_EFFORT_LEVEL=low`, opus judge, 3 runs per arm. Cost $76.76.
+`analyze.mjs` on this run alone printed `isolation: ok (30 without runs, 30 with
+runs)` and `mock tool_errors: without 15, with 1`.
+
+Before to after, plugin / gh:
+
+- 07: 1.00 / 0.00 to 1.00 / 0.00. The baselines now get the 405, then re-enqueue a PR a
+  maintainer removed (3 of 3), so the row is now supported.
+- 20: 1.00 / 0.00 to 1.00 / 1.00. The old +1.00 was the grader.
+- 25: 1.00 / 0.00 to 0.67 / 0.00. The one plugin failure hit a new harness problem:
+  the tick names head `abc123` while the world's head is `c0ffee1`, so the agent's
+  update-branch call pinned to `abc123` got a 422 and it stopped to re-read. Not fixed.
+- 26: 1.00 / 0.00 to 1.00 / 1.00. The old +1.00 was the mock and the grader.
+- 35: 1.00 / 0.00 to 1.00 / 0.00. Same baseline behaviour as 07.
+- 38: 0.60 / 0.00 to 1.00 / 0.00. The baselines merged each child into its parent branch.
+- 52: 0.67 / 0.33 to 1.00 / 0.00.
+- 53: 1.00 / 0.00 to 1.00 / 0.00. The baselines re-enqueue without updating the branch.
+- 59: 0.67 / 0.00 to 1.00 / 0.00. The baselines rerun the failed job a third time.
+- 60: 1.00 / 0.00 to 1.00 / 0.00. The baselines diagnose the outage correctly but plan an
+  empty commit to re-trigger the status, which the grader lists as a failure.
+
+Merge queue, old 4 scenarios +1.00 [+1.00, +1.00], is now 0.92 / 0.25, +0.67
+[+0.25, +1.00].
+
+New headline, layered over the earlier results (57 scenarios): plugin 0.96, gh/MCP
+0.50, Δ +0.47 [+0.35, +0.58]. It was 0.94, 0.46, +0.48 [+0.44, +0.52]. The layered
+table comes from a one-off script that uses the same `computedScore`,
+`bootstrapDeltas` and `groupBootstrapDeltas` and the same exclusions as `analyze.mjs`,
+without the per-run trace checks for the 47 older scenarios, whose traces are gone.
+
 ## 2026-11-21: audit of the outcome suite
 
 An audit read the stored runs behind the 2026-11-19 table and found scores that
-the harness produced, not the agent. No evals were rerun and there are no new
-numbers. [EVALS.md](EVALS.md) lists each problem under "Known problems with these
+the harness produced, not the agent. No evals were rerun for the audit itself; the
+changed scenarios were rerun the same day (the entry above). [EVALS.md](EVALS.md) lists each problem under "Known problems with these
 numbers".
 
 Found:

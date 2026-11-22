@@ -5,7 +5,7 @@ Open work for the eval suite, most recent findings first. Current results are in
 
 ## From the 2026-11-21 audit
 
-1. Rerun the scenarios the audit changed: 07, 20, 25, 26, 35, 38, 52, 53, 59 and 60. Their table rows are from the old graders, worlds and mocks.
+1. Fix the head SHA mismatch in 25: the tick names head `abc123`, the world's head is `c0ffee1`, so a printed `--match-head-commit abc123` or an update-branch call pinned to it gets a 422. Then rerun 25.
 2. Add a sentence to the system prompt for the next full run saying that the tools do
    not show the effect of the agent's own actions. The mocks do not share state, so an
    agent that re-reads after a mutation sees the old state (see 58). This changes
