@@ -41,7 +41,7 @@ Trigger scenarios (69 to 71, bare "Merge <PR>", no skill hint):
 - The skill loaded in 0 of 9 plugin runs and the CLI was called in 0 of 9 in the full run (the pilot had 1 CLI call in 9). Both arms score 0.00.
 - In 69 the agents saw the blocked state and stopped without finding the failing test.
 - In 70 and 71 they got a 405 on a direct merge, re-enqueued with `gh pr merge`, and reported success without noticing the earlier removal.
-- The skill's description is unchanged.
+- The skill description was extended afterwards; see [HISTORY.md](HISTORY.md#2026-11-21-two-targeted-experiments). The trigger rows in the tables predate that change.
 
 Other findings:
 
@@ -75,11 +75,11 @@ The 2026-11-21 audits found rows that the harness, not the agent, produced. Thes
 
 ### Still open
 
-- **22: the plugin loses.** See above. Whether the snapshot sentence causes it is not known.
+- **22: the plugin loses, and the score does not yet mean much for the plugin.** The snapshot sentence is not the cause: without it the plugin was still 0 of 3. The agent runs the tick's first step (retarget #42 to `main`), reruns the CLI, and the mock returns the same pre-retarget tick, which now contradicts GitHub. The agent then stops short of committing to the rebase. The tick's conflict step says to check `AGENTS.md` for whether to rebase or merge, while the grader requires the rebase. 22 needs a second tick for the state after the retarget (a history-aware mock like the escalation ones).
 - **36 errors in the runner for every baseline run.** Its mock files have the same shape as those of 33, 37 and 38, which use the same tools without the error, so the cause is not found.
 - **In 12 the mock gave different baseline runs different diffs for the same PR.** Not fixed, and 12 is inconclusive at 6 runs per arm.
 - **Worlds without a diff-size sentence:** 10, 31, 32, 33 and 63 do not have PR #42 open, so they do not get the one the other worlds have.
-- **The skill triggered in 0 of 9 plugin runs without the hint.** The description is unchanged.
+- **Trigger rate after the description change is not measured on the full suite.** A targeted run of 69 to 71 with the new sentence loaded the skill in 3 of 3 plugin runs for 70 and 71, and 0 of 3 for 69. No full rerun was done. Rerun 69 to 71 on `main` once the description change merges.
 - **Plugin runs that do not read the diff** (12, 72) defer judging to the next pass.
 - **The baseline traces of some zero-baseline scenarios have not been re-read** (28, 34 and others). The audits found harness-made zeros in the ones they read.
 - **These numbers are not comparable to the 2026-11-15 headline (0.97 vs 0.47).** Those prompts and graders named pr-shepherd.

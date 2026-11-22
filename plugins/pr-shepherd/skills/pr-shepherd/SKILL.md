@@ -1,6 +1,6 @@
 ---
 name: pr-shepherd
-description: 'Create, iterate, watch, or merge a GitHub pull request with pr-shepherd. Use for "make a PR and use pr-shepherd", "iterate PR #123", "tell me when #123 merges", and any PR status, CI, merge queue, or ejection question, instead of gh or custom polling scripts.'
+description: 'Create, iterate, watch, or merge a GitHub pull request with pr-shepherd. Use for "make a PR and use pr-shepherd", "iterate PR #123", "tell me when #123 merges", and any PR status, CI, merge queue, or ejection question, instead of gh or custom polling scripts. Also use as soon as a merge or enqueue is refused or blocked (HTTP 405, a failing required check, "merge queue required"), or a PR turns out to have been removed or ejected from the merge queue.'
 user-invocable: true
 argument-hint: "[PR | stack PR...] [--merge|--merge-ready|--merge-through PR]"
 allowed-tools: Bash(npx pr-shepherd:*), Bash(pnpm exec pr-shepherd:*), Bash(pnpm dlx pr-shepherd:*), Bash(bunx pr-shepherd:*), Bash(pr-shepherd:*)
