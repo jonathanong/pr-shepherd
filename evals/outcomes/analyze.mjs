@@ -12,7 +12,8 @@
 // Each kept run's out/ dir is also checked (isolation.mjs): a baseline run that
 // saw a Shepherd server, tool, slash command or mock, or a plugin run without
 // the `cli` server, refuses the whole analysis. A plugin run that never called
-// `cli` (outside `create` scenarios, which start with no PR), or whose `cli`
+// `cli` (outside `create` and `trigger` scenarios: no PR yet, or whether it fires
+// is the measurement), or whose `cli`
 // answers are not the case's recorded text, is voided.
 // A scenario with fewer than two kept runs in an arm prints `insufficient` and
 // stays out of every mean.
@@ -24,6 +25,7 @@ import { bootstrapDeltas, groupBootstrapDeltas, interval, mean, seedOf } from ".
 import { cliBody } from "./cli-mock.mjs";
 import { inspectRun } from "./isolation.mjs";
 import { computedScore } from "./score.mjs";
+import { maySkipCli, skillFired, triggerLine } from "./trigger.mjs";
 import { SCENARIOS } from "./scenarios.mjs";
 
 const SKILL_DENIED = /Permission to use Skill has been denied/;
@@ -73,6 +75,7 @@ const runCount = { with: 0, without: 0 };
 const rows = [];
 const insufficient = [];
 const scoreMismatch = new Map();
+const triggerRuns = new Map(SCENARIOS.filter((s) => s.tags?.includes("trigger")).map((s) => [s.slug, []]));
 for (const spec of SCENARIOS) {
   const c = cases.get(spec.slug);
   if (!c) continue;
@@ -83,6 +86,7 @@ for (const spec of SCENARIOS) {
       const label = `${spec.slug} [${name}] run ${i + 1}`;
       if (name === "with" && skillDenied(r)) denied.push(`${spec.slug} ${r.tracePath}`);
       let reason = null;
+      let cliCalls = 0;
       if (r.error) reason = "error";
       else if ((r.graders ?? []).some((g) => VOIDED.test(g.explanation ?? "")))
         reason = "harness-voided";
@@ -93,12 +97,13 @@ for (const spec of SCENARIOS) {
           name === "with" ? servedCliMock(spec, c) : "",
         );
         runCount[name]++;
+        cliCalls = check.cliCalls;
         toolErrors[name] += check.toolErrors;
         for (const v of check.violations) violations.push(`${label}: ${v}`);
         // A create scenario starts with no PR, so a plan that stops before the
         // PRs exist has nothing to run Shepherd on yet.
         reason =
-          check.void === "cli-never-called" && spec.tags?.includes("create") ? null : check.void;
+          check.void === "cli-never-called" && maySkipCli(spec) ? null : check.void;
       } else if (name === "without")
         violations.push(`${label}: trace is gone; rerun with --keep-temp`);
       if (reason) {
@@ -109,6 +114,8 @@ for (const spec of SCENARIOS) {
         if (typeof r.score === "number" && Math.abs(r.score - score) > 1e-9)
           scoreMismatch.set(spec.slug, (scoreMismatch.get(spec.slug) ?? 0) + 1);
         kept.push(score);
+        if (name === "with" && spec.tags?.includes("trigger"))
+          triggerRuns.get(spec.slug).push({ fired: skillFired(r), cliCalls });
       }
     });
     return { kept, excluded };
@@ -198,6 +205,9 @@ for (const r of insufficient) {
 if (insufficient.length) {
   console.log("\n`insufficient`: fewer than two kept runs in an arm; left out of every mean.");
 }
+const triggerLines = [...triggerRuns].filter(([slug]) => cases.has(slug));
+if (triggerLines.length) console.log("");
+for (const [slug, runs] of triggerLines) console.log(triggerLine(slug, runs));
 if (voids.length) console.log(`\nVoided runs:\n${voids.map((v) => `- ${v}`).join("\n")}`);
 const missing = SCENARIOS.filter((s) => !cases.has(s.slug)).map((s) => s.slug);
 if (missing.length) console.log(`\nNot in these results: ${missing.join(", ")}`);
