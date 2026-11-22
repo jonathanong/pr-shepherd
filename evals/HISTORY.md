@@ -6,13 +6,28 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
-## 2026-11-21: fixes to scenarios 69 and 22, no runs
+## 2026-11-21: fixes to scenarios 69 and 22, and a targeted run of them
 
-No evals ran. Both fixes follow the targeted experiments in the entry below.
+Fixes first, then the run of 22 and 69 to 71 that measured them. Both fixes follow the targeted experiments in the entry below.
 
 - 69: all six runs (both arms) read the PR, saw the blocked merge state and stopped without attempting the merge, so nothing was refused. The tools also reported the checks differently between runs (pending with no checks, or three failed checks). The prompt is now the user's report that GitHub answered 405 "Required status check `tests` is failing", and the world states the final check state. The grader is unchanged apart from its first sentence; both arms stopped before investigating, which is what it fails.
 - 22: after the retarget the CLI mock repeated the pre-retarget tick. A later call now gets fixture 27's tick as recorded (a conflict against base `main`). 22 also had no repository instructions, though both ticks say to check `AGENTS.md` for rebase or merge and the grader requires the rebase. It now has the same rebase rule as 20 and 21, in the system prompt of both arms and in the world.
-- 22 and 69 to 71 need a rerun before their rows mean anything.
+The run: 22 and 69 to 71 (`--tag 22-merged-parent-stale-base --tag trigger`) from a `git archive` export of 8c82fcee, the head of #809, which includes the skill description change from #808. Sonnet 5.5 with `CLAUDE_CODE_EFFORT_LEVEL=low`, opus judge, 3 runs per arm, `--ablation with-without --keep-temp`. Cost $33.30, 108 s. No run was excluded or errored (12 kept runs per arm across the four scenarios, isolation ok). The main tables in [EVALS.md](EVALS.md) are unchanged: these four scenarios changed after the full run, so their rows there are superseded by this run rather than merged into it.
+
+| Scenario | Before (plugin / gh/MCP) | After (plugin / gh/MCP) | Skill loaded, CLI called (plugin) |
+| --- | --- | --- | --- |
+| 22 | 0.00 / 0.50 (full run), plugin 0 of 6 | 1.00 / 1.00 | not a trigger scenario |
+| 69 | 0.00 / 0.00 (0 of 3 loaded, targeted run B) | 1.00 / 1.00 | 3 of 3, 3 of 3 |
+| 70 | 0.33 / 0.00 (targeted run B) | 0.33 / 0.00 | 3 of 3, 3 of 3 |
+| 71 | 0.33 / 0.00 (targeted run B) | 0.00 / 0.00 | 3 of 3, 3 of 3 |
+
+- 22: all three plugin runs retargeted #42 to `main` with `gh pr edit --base main` and reran the CLI, which now returned fixture 27's tick, and they passed. The gh/MCP runs also pass, so 22 no longer separates the arms.
+- 69: each plugin run loaded the skill with the user's refusal as its argument and called the CLI with `--merge`, then passed. The baseline also passes 3 of 3.
+- 70: all three plugin runs tried a direct merge first, got the 405, loaded the skill, called the CLI with `--merge` and read the Merge queue ejection, CI failure triage and Check follow-up playbooks. Their plans are almost the same: update the branch from `main` in "my next pass, which has a checkout", then rerun Shepherd. One run passed (3 of 3 judge votes) and two failed (3 of 3 votes), so the judge's boundary falls between plans that read alike. The baseline runs requeue with `gh pr merge` without looking at why the PR was ejected.
+- 71: all three plugin runs tried a direct merge first (405), loaded the skill, called `pr-shepherd owner/repo#42 --merge`, read the playbooks, reran once and stopped. They did not enqueue, change code, push or update the branch, and they reported the manual removal by `@maintainer` and asked a human to decide. That is what the grader describes, yet all nine judge votes were FAIL. The baseline runs requeue with `gh pr merge`. See the open item in [EVALS.md](EVALS.md).
+- The mocks answered 6 calls with an error in each arm: one per 70 and 71 run, which is the 405 on the agent's direct merge that those worlds are meant to give. The "mock tool_errors: without 6, with 6" line in `analyze.md` counts them. They are not mock failures.
+- `run.exit` is 1 because 70 and 71 have failing scores. `run.log` shows no runner error and the report was written.
+- Before the fixes the description change alone had loaded the skill in 6 of 6 plugin runs for 70 and 71. It now does so in 9 of 9 for 69 to 71, so a refused merge reaches the skill; what the agent does with the tick afterwards is what scores.
 
 ## 2026-11-21: two targeted experiments
 

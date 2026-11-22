@@ -9,8 +9,8 @@ Done: the full run after the second audit (25's head SHA, the snapshot sentence 
 system prompt, the grader fixes, `keep-traces.mjs`, the trigger and new-case scenarios).
 Results are in [EVALS.md](EVALS.md).
 
-1. Rerun 22 and 69 to 71 on `main`. 69 now starts from the user's reported 405 with a pinned check state, and 22 gets a second tick after the retarget; both are unmeasured since the fix. The last run of 70 and 71 loaded the skill in 3 of 3 plugin runs but scored 0.33 each.
-2. Find why agents that load the skill after a 405 do not follow the tick. Several update the branch with the GitHub MCP branch-update tool or hand the requeue to a human.
+1. Find why agents that load the skill after a 405 do not follow the tick. The targeted run at 8c82fcee (22 and 69 are now 1.00 / 1.00) loaded the skill in 9 of 9 plugin runs for 69 to 71, so loading is no longer the problem. In 70 two of three plugin runs scored 0 because they defer the branch update and the requeue to "my next pass, which has a checkout" instead of committing to them, while a third run with a near-identical plan passed. In 71 all three runs hand the manual removal to a human after `--merge` printed no enqueue command, and every judge vote was FAIL.
+2. Check 71's grader against those runs. The tick (fixture 119) is right for a `--merge` call and the plans match the grader's description, but each run first attempted a direct merge and got the world's 405, which the grader's "merge the PR (by any tool or mutation)" may count. Read the judge's reasoning (it is not stored in the result). If that is the cause, either add 26's rejected-direct-merge sentence to 71's grader or change the trigger variant. Also read 07's traces: it has the same grader and passed.
 3. Find why 36's baseline runs error in the runner (`mocks: github/list_pull_requests: a
    result in the trace is not one the harness gave`). It recurred in the full run.
 4. Look at plugin runs that do not read the diff and defer judging to the next pass (12,

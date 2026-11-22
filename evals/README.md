@@ -34,7 +34,9 @@ agent did and committed to. The headline is **Δ = plugin − gh/MCP**.
 
 The Trigger rows measure whether the agent uses the plugin when the user only says
 "Merge <PR>", not the plugin's effect: the skill loaded in 0 of 9 plugin runs.
-22 is the first scenario the plugin loses (0.00 vs 0.50). Scenario 36 is not scored:
+22 is the first scenario the plugin loses (0.00 vs 0.50). A targeted run after the
+fixes superseded the 22 and 69 to 71 rows (22 and 69 1.00 / 1.00, 70 0.33 / 0.00,
+71 0.00 / 0.00, the skill loaded in 9 of 9; see [EVALS.md](EVALS.md)). Scenario 36 is not scored:
 its gh/MCP runs errored in the eval runner. Every scenario is in
 [EVALS.md](EVALS.md); read its "Known problems with these numbers" first.
 
