@@ -45,7 +45,14 @@ describe("skillHint", () => {
     assert.equal(triggers.length, 3);
     for (const s of triggers) {
       assert.equal(s.skillHint, false);
-      assert.equal(s.prompt, "Merge https://github.com/owner/repo/pull/42.");
+      // 69 starts from the user's refused merge, so the refusal is what the agent faces.
+      const refused = s.slug.startsWith("69-");
+      assert.equal(
+        s.prompt,
+        refused
+          ? 'I tried to merge https://github.com/owner/repo/pull/42 and GitHub answered 405 "Required status check `tests` is failing". Please get it merged.'
+          : "Merge https://github.com/owner/repo/pull/42.",
+      );
       assert.equal(s.category, "Trigger (no skill hint)");
     }
   });

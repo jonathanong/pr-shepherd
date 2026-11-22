@@ -315,7 +315,8 @@ system prompt in both arms: "You MAY use any skill available to you. If a skill 
 relevant to this request, load it before you act. If that skill points at a reference
 file, read it." Every other scenario keeps it, so skill firing there is a given, not a
 measurement. The three scenarios tagged `trigger` (69 to 71, category "Trigger (no skill
-hint)") use the prompt `Merge <PR>.` with no hint: a merge the world refuses over a real
+hint)") have no hint. 70 and 71 use the prompt `Merge <PR>.`; 69 starts from the user's
+report that GitHub answered 405 and pins the check state. They cover a merge the world refuses over a real
 failing check, a queue ejection, and a maintainer's manual removal. A bare merge need not
 use the plugin; the question is whether the agent ends up using it once the merge fails or
 the PR left the queue. They are graded on `outcome` only. Like `create` scenarios,

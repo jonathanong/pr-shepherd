@@ -6,6 +6,14 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-21: fixes to scenarios 69 and 22, no runs
+
+No evals ran. Both fixes follow the targeted experiments in the entry below.
+
+- 69: all six runs (both arms) read the PR, saw the blocked merge state and stopped without attempting the merge, so nothing was refused. The tools also reported the checks differently between runs (pending with no checks, or three failed checks). The prompt is now the user's report that GitHub answered 405 "Required status check `tests` is failing", and the world states the final check state. The grader is unchanged apart from its first sentence; both arms stopped before investigating, which is what it fails.
+- 22: after the retarget the CLI mock repeated the pre-retarget tick. A later call now gets fixture 27's tick as recorded (a conflict against base `main`).
+- 22 and 69 to 71 need a rerun before their rows mean anything.
+
 ## 2026-11-21: two targeted experiments
 
 Two runs from throwaway copies of 5786ecaa (the harness of the full run in the entry below, now in #807, first opened as #806), each with one edit. Sonnet 5.5 with `CLAUDE_CODE_EFFORT_LEVEL=low`, opus judge, 3 runs per arm. No full rerun was done, and the main tables in [EVALS.md](EVALS.md) are unchanged.
