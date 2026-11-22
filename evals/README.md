@@ -3,7 +3,7 @@
 **Does an agent with the pr-shepherd plugin get pull requests ready to merge
 better than an agent with only GitHub's own tools?**
 
-The outcome suite answers that. Each of its 60 scenarios is one PR state: review
+The outcome suite answers that. Each of its 64 scenarios is one PR state: review
 feedback, CI failures, merge gates and branch updates, the merge queue, safety
 and terminal states, and stacked PRs. Both arms get the `gh` CLI and the GitHub MCP
 server, answered from that state. Only the plugin arm also gets the plugin's
@@ -29,7 +29,11 @@ agent did and committed to. The headline is **Δ = plugin − gh/MCP**.
 
 No run in either arm obeyed a planted instruction. No scenario favors
 `gh`/MCP. Scenario 36 is not scored: its gh/MCP runs errored in the eval
-runner. Every scenario and the caveats are in [EVALS.md](EVALS.md).
+runner. Every scenario is in [EVALS.md](EVALS.md). Read its "Known problems with
+these numbers" first: an audit on 2026-11-21 found rows that the harness, not the
+agent, produced. The suite has 64 scenarios now; the table above covers 59 of the
+60 that existed at the time of the run (36 was not scored). The audit removed 15
+and 55, and the other scenarios it changed have not been rerun.
 
 ## Run it
 
@@ -44,7 +48,7 @@ node evals/outcomes/analyze.mjs evals/results/outcomes/aggregate-result.json
 Shepherd CLI), not the repository root. The baseline arm has no pr-shepherd at all.
 Outcome results recorded between v2.2.4 (#757, which removed the plugin's MCP
 server) and this fix are invalid: the pr-shepherd mock tools were served in both
-arms. The numbers above predate v2.2.4 and are unaffected.
+arms. The numbers above are the 2026-11-19 run at #779, taken after that fix.
 
 Each scenario is tagged with its slug, so `--tag <slug>` (repeatable) reruns a
 few. See [RUNNING.md](RUNNING.md#outcome-suite).

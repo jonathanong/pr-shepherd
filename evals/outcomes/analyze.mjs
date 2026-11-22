@@ -20,7 +20,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fixtureText, mustChange } from "../lib.mjs";
-import { bootstrapDeltas, interval, mean, seedOf } from "../stats.mjs";
+import { bootstrapDeltas, groupBootstrapDeltas, interval, mean, seedOf } from "../stats.mjs";
 import { cliBody } from "./cli-mock.mjs";
 import { inspectRun } from "./isolation.mjs";
 import { computedScore } from "./score.mjs";
@@ -142,11 +142,9 @@ const fmt = (x) => (x >= 0 ? `+${x.toFixed(2)}` : x.toFixed(2));
 const ci = (draws) => (draws ? `[${interval(draws).map(fmt).join(", ")}]` : "n/a");
 const row = (cells) => console.log(`| ${cells.join(" | ")} |`);
 
-// A group's draws average its scenarios' draws, so each scenario weighs the same.
-function groupDraws(group) {
-  const per = group.map((r) => bootstrapDeltas(r.with, r.without, seedOf(r.spec.slug)));
-  if (per.some((d) => !d)) return null;
-  return per[0].map((_, i) => mean(per.map((d) => d[i])));
+// A group's draws resample its scenarios, then each scenario's runs (see stats.mjs).
+function groupDraws(group, name) {
+  return groupBootstrapDeltas(group, seedOf(name));
 }
 
 function summary(name, group) {
@@ -158,7 +156,7 @@ function summary(name, group) {
     w.toFixed(2),
     wo.toFixed(2),
     fmt(w - wo),
-    ci(groupDraws(group)),
+    ci(groupDraws(group, name)),
   ]);
 }
 

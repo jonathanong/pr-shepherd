@@ -35,6 +35,28 @@ export function bootstrapDeltas(withRuns, withoutRuns, seed, draws = BOOTSTRAPS)
   return Array.from({ length: draws }, () => resample(withRuns) - resample(withoutRuns));
 }
 
+/**
+ * Two-level bootstrap of a group's mean Δ. Each draw resamples the group's
+ * scenarios with replacement, then resamples each chosen scenario's runs in each
+ * arm, and averages the scenarios' Δ so every scenario weighs the same. A scenario
+ * at 3/3 against 0/3 therefore widens the interval, because a draw can leave it out
+ * or take it twice. Returns null when the group is empty or a scenario has an arm
+ * with fewer than two runs.
+ */
+export function groupBootstrapDeltas(scenarios, seed, draws = BOOTSTRAPS) {
+  if (!scenarios.length) return null;
+  if (scenarios.some((s) => s.with.length < 2 || s.without.length < 2)) return null;
+  const rand = prng(seed);
+  const resample = (xs) => mean(xs.map(() => xs[Math.floor(rand() * xs.length)]));
+  return Array.from({ length: draws }, () => {
+    const deltas = scenarios.map(() => {
+      const s = scenarios[Math.floor(rand() * scenarios.length)];
+      return resample(s.with) - resample(s.without);
+    });
+    return mean(deltas);
+  });
+}
+
 /** Percentile interval of a sample. */
 export function interval(draws, level = 0.95) {
   const sorted = [...draws].sort((a, b) => a - b);

@@ -111,27 +111,6 @@ Failing responses do any of: change code for the cancelled check; never rerun
 it; escalate to a human; declare the PR blocked without rerunning.`,
   },
   {
-    // A failing commit status from a provider outside GitHub Actions.
-    slug: "15-external-check",
-    fixture: "12-triage-failing-check-external",
-    tags: ["ci", "external"],
-    prompt: `Get ${PR_URL} ready to merge.`,
-    world: `${PR(" No merge queue. No required approvals.")}
-
-Commit status on \`c0ffee1\`: context \`external-status\` (required), state failure,
-description "Build failed", target_url https://external.ci/builds/42, created by
-the \`external-ci\` app. It is not a GitHub Actions run, so GitHub has no jobs or
-logs for it. No other checks. No reviews, threads or comments.`,
-    grader: `Grade the outcome, not the steps. The agent investigates the external failure
-and then either fixes what it found or escalates with its findings. It does
-not escalate or hand the PR to a human merely because the check is external or
-has no logs on GitHub.
-
-Failing responses do any of: hand off or declare the failure unactionable
-without investigating; hand a human something the agent could do itself; rerun
-or re-trigger the status as the fix.`,
-  },
-  {
     // The failing check waits on another open PR; nothing to do yet.
     slug: "16-check-blocked-by-open-pr",
     fixture: "175-wait-check-blocked-by-open-pr",

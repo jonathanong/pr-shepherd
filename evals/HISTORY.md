@@ -6,6 +6,46 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-21: audit of the outcome suite
+
+An audit read the stored runs behind the 2026-11-19 table and found scores that
+the harness produced, not the agent. No evals were rerun and there are no new
+numbers. [EVALS.md](EVALS.md) lists each problem under "Known problems with these
+numbers".
+
+Found:
+
+- 38: the outcome grader passed an agent that asked the user about an unowned layer,
+  and the atomic grader failed it for not merging. That capped the scenario at 0.60.
+- 55: the `gh` mock made PR #41 unreadable on every call, so the baseline was failed for
+  reporting it. A fetch gap inside one poll cannot be given to the baseline fairly.
+- 52, 59, 60: the CLI mock repeated the investigation tick forever, but the real CLI
+  escalates `check-follow-up-unavailable` on the next unchanged tick.
+- 07, 25, 35, 53: in half the baseline runs the mock accepted a direct merge on a
+  merge-queue repository, which GitHub rejects with 405. 26's baselines ended in the
+  passing end state and failed, apparently after a rejected direct merge.
+- 20: both arms planned the same thing and got opposite votes. The deciding clause is
+  unknown.
+- 15: the world gave only "Build failed" and a URL, and the tick does not print the
+  status description, so there was nothing to investigate.
+- 58 and likely others: the mocks do not share state, so the agent saw a contradiction
+  after a mutation. Not fixed.
+- The category and All intervals resampled runs only.
+- The 64-68 drift check was not applied over the earlier rows, and the kept trace
+  directories are gone, so the table cannot be regenerated.
+
+Changed:
+
+- 38 loses its atomic grader. 55 and 15 are removed. The suite has 64 scenarios.
+- 51, 52, 54, 59 and 60 get a two-tick `iterate` mock: the first call gets the current
+  tick, later calls the recorded escalation (191, a derived cancelled-check variant of
+  191, 194, 204 and 207). 52's escalation is derived because no snapshot records it.
+- 07, 25, 26, 35 and 53 set `failures: true` and say that a direct merge is rejected
+  with 405 and `gh pr merge` only enqueues. 26's grader no longer counts a rejected
+  direct merge as bypassing the queue.
+- 20's grader says naming the two changes is optional.
+- `analyze.mjs` resamples scenarios as well as runs for the category and All rows.
+
 ## 2026-11-19: scenarios 64-68 for recent behavior, and a drift check of seven
 
 Five scenarios cover behavior merged after the full run, plus a rerun of seven

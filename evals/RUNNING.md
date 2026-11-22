@@ -239,13 +239,15 @@ answers a default `pr-shepherd [PR]` call with the recorded fixture tick for the
 same state, `pr-shepherd stack` with that tick on stack scenarios and the CLI's
 not-a-stack error elsewhere, and `apply` and `suggest` with a success. A
 scenario can override any of these answers with `shepherd` (for example an
-`iterate` that answers per PR). The baseline arm has nothing named pr-shepherd,
+`iterate` that answers per PR). Agent mocks see their own
+call history, so an `iterate` can answer the first call with the tick and later calls
+with the escalation the real CLI prints on an unchanged head (`escalation-ticks.mjs`). The baseline arm has nothing named pr-shepherd,
 and the `with` arm has no pr-shepherd MCP tools. Neither arm has a shell, so code
 changes appear as plan steps. The `with` minus `without` delta is the plugin's
 effect. Fixed mocks cannot route on `args`, so the CLI mock is an agent mock told
 to print the recorded text verbatim.
 
-Stack-merge scoring. Scenarios 37, 38, 57, 58, 61 and 62 end in a stack merge and
+Stack-merge scoring. Scenarios 37, 57, 58, 61 and 62 end in a stack merge and
 carry two judge graders: `outcome` (weight 3) passes any correct landing, either one
 atomic stack merge or bottom-up merging with a rebase onto trunk and a
 `--force-with-lease` push after each squash merge; `atomic` (weight 2) passes only
@@ -259,6 +261,8 @@ half-merged stack, bare `--force`) 0. `skill-fired` carries no `arm` or weight, 
 reported as a plugin indicator and is excluded from the score in both arms, so the
 baseline is not penalized for it. A scenario whose user asks for incremental merging
 (merge as layers become ready) would take no `atomic` grader; none in this suite does.
+Scenario 38 (two stacks in one request) has no `atomic` grader: the right answer there can be
+to ask the user before merging, which the atomic grader would fail.
 
 Isolation is enforced in code, not by hand. `generate.mjs` fails when the plugin
 copy's `mcpServers` differ from the non-`gh`/`github` mock dirs, when a case ships a
@@ -282,8 +286,8 @@ returns some (404 before a PR exists, 405 on merge).
 
 `--out` must be below the repository root and outside `evals/`;
 `evals-outcomes/` is gitignored. `--tag` selects scenarios (each has an
-`outcome` tag plus its own, such as `review`, `ci` or `safety`). Results are in
-[HISTORY.md](HISTORY.md#2026-11-12-outcome-suite).
+`outcome` tag plus its own, such as `review`, `ci` or `safety`). The latest results are in [EVALS.md](EVALS.md); [HISTORY.md](HISTORY.md) has the runs and the
+2026-11-21 audit.
 
 ```sh
 node evals/outcomes/generate.mjs --out evals-outcomes
@@ -293,7 +297,9 @@ node evals/outcomes/analyze.mjs evals/results/outcomes/aggregate-result.json
 ```
 
 `analyze.mjs` prints the category and scenario tables with bootstrap 95%
-intervals. Pass a targeted rerun's result after the full run's, and it
+intervals. A scenario's interval resamples its runs. The category and All intervals
+resample scenarios with replacement, then runs within each chosen scenario, so a
+scenario at 3/3 against 0/3 widens them. The draws are seeded and repeat exactly. Pass a targeted rerun's result after the full run's, and it
 replaces those scenarios. It leaves out runs the harness voided or that
 errored (the `Excluded` column). It refuses to report when a `with` run's
 `Skill` call was denied, or when its trace is gone, so run with `--keep-temp`

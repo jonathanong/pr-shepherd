@@ -2,10 +2,11 @@
 // annotations instead of a log. `world` is the GitHub state both tools answer
 // from; `fixture` is the Shepherd tick for the same state.
 
-import { PR_URL } from "../lib.mjs";
+import { PR_URL, fixtureText } from "../lib.mjs";
 import { PR, REREAD, STEPS } from "./world.mjs";
 import { neverReportsIterate } from "./never-reports-ticks.mjs";
-import { cancelledNoRerun } from "./follow-up-ticks.mjs";
+import { cancelledNoRerun, cancelledNoRerunEscalation } from "./follow-up-ticks.mjs";
+import { thenEscalate } from "./escalation-ticks.mjs";
 import { deploymentIterate } from "./deployment-ticks.mjs";
 import { withCancellableRun } from "./cancel-ticks.mjs";
 
@@ -238,6 +239,9 @@ included) to justify cancelling; skip the reply.`,
     // the agent reads the run's log itself and finds a code cause.
     slug: "51-check-no-log-investigate-fix",
     fixture: "71-triage-check-follow-up-later-attempt",
+    // The first call gets the investigation tick, a later call on the unchanged head
+    // the escalation (fixture 191).
+    shepherd: { iterate: thenEscalate(fixtureText("191-escalate-check-follow-up-investigated")) },
     tags: ["ci", "investigate"],
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `${PR(" No merge queue. No required approvals.", "`src/paginate.ts`, `tests/pagination.spec.ts`")}
@@ -263,12 +267,18 @@ to a human without reading the log; treat it as flaky infrastructure; change
 files that do not relate to the missing dependency.`,
   },
   {
-    // A cancelled run with no rerun. The cause is outside the repo (billing). Mocks
-    // see no call history, so every `iterate` call gets the investigation tick; the
-    // escalation that would follow it is covered by fixture tests, not here.
+    // A cancelled run with no rerun. The cause is outside the repo (billing). The first
+    // `iterate` call gets the investigation tick; a later call on the unchanged head gets
+    // the escalation, as the real CLI prints. No snapshot records that escalation for a
+    // cancelled check, so it is derived from fixture 191 (see `cancelledNoRerunEscalation`).
     slug: "52-check-cancelled-human-cause",
     fixture: "71-triage-check-follow-up-later-attempt",
     transform: cancelledNoRerun,
+    shepherd: {
+      iterate: thenEscalate(
+        cancelledNoRerunEscalation(fixtureText("191-escalate-check-follow-up-investigated")),
+      ),
+    },
     tags: ["ci", "investigate", "escalate"],
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `${PR(" No merge queue. No required approvals.")}
@@ -300,6 +310,9 @@ ${REREAD}`,
     // tick; the agent looks for a cause it can fix and reports one it cannot.
     slug: "54-ci-never-starts",
     fixture: "42-triage-ci-start-stall",
+    // The first call gets the investigation tick, a later call on the unchanged head
+    // the stall escalation (fixture 194).
+    shepherd: { iterate: thenEscalate(fixtureText("194-escalate-ci-start-stall-investigated")) },
     tags: ["ci", "investigate"],
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `${PR(" No merge queue. No required approvals.")}
@@ -325,10 +338,13 @@ the checks are merely pending; keep waiting or sleeping in this session.`,
   },
   {
     // A later attempt with an excerpt that nothing in the PR explains. Shepherd's first
-    // tick is the normal TRIAGE with the excerpt and the Check follow-up playbook; mocks
-    // see no call history, so the escalation after it is covered by fixture 204.
+    // tick is the normal TRIAGE with the excerpt and the Check follow-up playbook; a later
+    // call on the unchanged head gets the escalation (fixture 204).
     slug: "59-later-attempt-excerpt-no-pr-cause",
     fixture: "203-triage-attempt-2-excerpt-follow-up",
+    shepherd: {
+      iterate: thenEscalate(fixtureText("204-escalate-attempt-2-excerpt-follow-up-investigated")),
+    },
     tags: ["ci", "investigate", "escalate"],
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `${PR(" No merge queue. No required approvals.")}
@@ -356,9 +372,12 @@ ${REREAD}`,
   },
   {
     // An external status after CI finished: no run, no rerun. The first tick is the
-    // normal TRIAGE; the escalation after it is covered by fixture 207.
+    // normal TRIAGE; a later call on the unchanged head gets the escalation (fixture 207).
     slug: "60-external-check-provider-outage",
     fixture: "12-triage-failing-check-external",
+    shepherd: {
+      iterate: thenEscalate(fixtureText("207-escalate-external-check-follow-up-investigated")),
+    },
     tags: ["ci", "external", "investigate", "escalate"],
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `${PR(" No merge queue. No required approvals.")}

@@ -92,7 +92,6 @@ to, rebase or restack \`layer-43\` or any branch other than the rebase of
   {
     // Two stacks in one request: one merge per stack, each bottom-up.
     slug: "38-two-stacks-one-request",
-    atomic: true,
     fixture: "97-aggregate-stack-full-merge",
     tags: ["stack", "merge"],
     shepherd: TWO_STACK_SHEPHERD,
