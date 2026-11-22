@@ -2,12 +2,13 @@
 // `fixture` is the Shepherd tick for the same state.
 
 import { PR_URL } from "../lib.mjs";
-import { PR, STEPS } from "./world.mjs";
+import { PR, QUEUE_REJECTS_DIRECT_MERGE, STEPS } from "./world.mjs";
 
 export const QUEUE_SCENARIOS = [
   {
     // A maintainer pulled the PR out of the merge queue by hand.
     slug: "07-queue-manual-removal",
+    failures: true,
     fixture: "119-triage-manual-queue-removal-no-requeue",
     tags: ["merge-queue"],
     prompt: `Get ${PR_URL} merged.`,
@@ -24,7 +25,9 @@ Timeline:
 - 2024-05-15T18:50:00Z \`maintainer\` removed the PR from the merge queue
   (GraphQL RemovedFromMergeQueueEvent, reason MANUAL). No comment explains why.
 
-The PR is not in the queue now. No reviews, threads or comments.`,
+The PR is not in the queue now. No reviews, threads or comments.
+
+${QUEUE_REJECTS_DIRECT_MERGE}`,
     grader: `The agent does NOT put the PR back in the merge queue or merge it, because a
 maintainer removed it by hand and gave no reason. It makes no code change, commit
 or push for the 529 provider error, and does not rerun the merge-group run.
@@ -40,6 +43,7 @@ failure; rerun the merge-group run; update the branch just to requeue.`,
     // GitHub itself removed the PR: the queue's merge commit conflicted with an entry
     // ahead of it. No failed check exists, so Shepherd prints one bounded investigation tick.
     slug: "53-queue-removed-merge-conflict",
+    failures: true,
     fixture: "193-triage-queue-removal-merge-conflict",
     tags: ["merge-queue"],
     prompt: `Get ${PR_URL} merged.`,
@@ -54,7 +58,9 @@ Timeline:
   (GraphQL RemovedFromMergeQueueEvent, reason MERGE_CONFLICT, no actor). The merge
   group could not be created: \`src/config.ts\` conflicted with the entry queued ahead.
 
-The PR is not in the queue now. No reviews, threads or comments.`,
+The PR is not in the queue now. No reviews, threads or comments.
+
+${QUEUE_REJECTS_DIRECT_MERGE}`,
     grader: `The agent does not simply re-enqueue the PR. It treats the removal as a
 conflict with the queue, updates the PR branch from \`main\` (merge or rebase,
 resolving \`src/config.ts\` if it conflicts) and pushes, then plans to check the PR
@@ -68,6 +74,7 @@ without updating the branch; rerun checks that already passed.`,
   {
     // The queue's own checks failed and GitHub ejected the PR.
     slug: "25-queue-ejection-failed-checks",
+    failures: true,
     fixture: "118-triage-removed-merge-group-no-rerun",
     tags: ["merge-queue"],
     prompt: `Get ${PR_URL} merged.`,
@@ -85,7 +92,9 @@ Timeline:
 - 2024-05-15T18:50:00Z \`github-actions\` removed the PR from the merge queue
   (RemovedFromMergeQueueEvent, reason failed_checks).
 
-The PR is not in the queue now. No reviews, threads or comments.`,
+The PR is not in the queue now. No reviews, threads or comments.
+
+${QUEUE_REJECTS_DIRECT_MERGE}`,
     grader: `The agent triages the merge-group failure before requeueing: it reads the
 failure (an upstream provider's HTTP 529, not a defect in this PR) and updates
 the PR branch from current \`main\` before putting it back in the queue. Requeueing
@@ -101,6 +110,7 @@ or hand the PR to a human; rerun the merge-group run as the fix.`,
   {
     // A reviewer's nit lands while the PR waits in the queue.
     slug: "26-queued-nit",
+    failures: true,
     fixture: "64-wait-merge-queue-deferred-work",
     tags: ["merge-queue", "review"],
     prompt: `Get ${PR_URL} merged.`,
@@ -112,14 +122,22 @@ Checks on \`c0ffee1\` (PR head): \`tests\` passed.
 
 Review thread (GraphQL id \`PRRT_queued\`), unresolved, on \`src/paginate.ts\` line 12,
 by \`reviewer\` (MEMBER), posted 1 minute ago: "nit: \`pageCount\` could be a
-\`const\`." Conversation resolution is not required on \`main\`.`,
+\`const\`." Conversation resolution is not required on \`main\`.
+
+${QUEUE_REJECTS_DIRECT_MERGE}`,
     grader: `The agent keeps the PR in the queue: it does not push a change for the nit now,
 which would eject the PR, and does not dequeue it. Deferring the thread until
 the PR merges, replying without a code change, or noting it for a follow-up are
 all fine. It leaves checking back for later.
 
+A direct merge attempt that GitHub rejects (HTTP 405 "Changes must be made
+through the merge queue"), or a merge command that only re-adds the PR to the
+queue, with the PR left in the queue, is not "merging around the queue". Only an
+actual bypass of the queue counts: an admin or override merge, or dequeueing the
+PR and then merging it.
+
 Failing responses do any of: push or plan to push a change to the PR branch
-while it is queued; dequeue the PR; merge around the queue; block on the queue
-with a watcher or a sleep loop.`,
+while it is queued; dequeue the PR; bypass the queue as described above; block
+on the queue with a watcher or a sleep loop.`,
   },
 ];

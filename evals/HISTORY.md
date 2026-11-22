@@ -6,6 +6,81 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-21: rerun of the audited scenarios
+
+The ten scenarios the audit changed (07, 20, 25, 26, 35, 38, 52, 53, 59, 60) were
+rerun on `evals/outcome-honesty` at e999c0c7. Sonnet 5.5 with
+`CLAUDE_CODE_EFFORT_LEVEL=low`, opus judge, 3 runs per arm. Cost $76.76.
+`analyze.mjs` on this run alone printed `isolation: ok (30 without runs, 30 with
+runs)` and `mock tool_errors: without 15, with 1`.
+
+Before to after, plugin / gh:
+
+- 07: 1.00 / 0.00 to 1.00 / 0.00. The baselines now get the 405, then re-enqueue a PR a
+  maintainer removed (3 of 3), so the row is now supported.
+- 20: 1.00 / 0.00 to 1.00 / 1.00. The old +1.00 was the grader.
+- 25: 1.00 / 0.00 to 0.67 / 0.00. The one plugin failure hit a new harness problem:
+  the tick names head `abc123` while the world's head is `c0ffee1`, so the agent's
+  update-branch call pinned to `abc123` got a 422 and it stopped to re-read. Not fixed.
+- 26: 1.00 / 0.00 to 1.00 / 1.00. The old +1.00 was the mock and the grader.
+- 35: 1.00 / 0.00 to 1.00 / 0.00. Same baseline behaviour as 07.
+- 38: 0.60 / 0.00 to 1.00 / 0.00. The baselines merged each child into its parent branch.
+- 52: 0.67 / 0.33 to 1.00 / 0.00.
+- 53: 1.00 / 0.00 to 1.00 / 0.00. The baselines re-enqueue without updating the branch.
+- 59: 0.67 / 0.00 to 1.00 / 0.00. The baselines rerun the failed job a third time.
+- 60: 1.00 / 0.00 to 1.00 / 0.00. The baselines diagnose the outage correctly but plan an
+  empty commit to re-trigger the status, which the grader lists as a failure.
+
+Merge queue, old 4 scenarios +1.00 [+1.00, +1.00], is now 0.92 / 0.25, +0.67
+[+0.25, +1.00].
+
+New headline, layered over the earlier results (57 scenarios): plugin 0.96, gh/MCP
+0.50, Δ +0.47 [+0.35, +0.58]. It was 0.94, 0.46, +0.48 [+0.44, +0.52]. The layered
+table comes from a one-off script that uses the same `computedScore`,
+`bootstrapDeltas` and `groupBootstrapDeltas` and the same exclusions as `analyze.mjs`,
+without the per-run trace checks for the 47 older scenarios, whose traces are gone.
+
+## 2026-11-21: audit of the outcome suite
+
+An audit read the stored runs behind the 2026-11-19 table and found scores that
+the harness produced, not the agent. No evals were rerun for the audit itself; the
+changed scenarios were rerun the same day (the entry above). [EVALS.md](EVALS.md) lists each problem under "Known problems with these
+numbers".
+
+Found:
+
+- 38: the outcome grader passed an agent that asked the user about an unowned layer,
+  and the atomic grader failed it for not merging. That capped the scenario at 0.60.
+- 55: the `gh` mock made PR #41 unreadable on every call, so the baseline was failed for
+  reporting it. A fetch gap inside one poll cannot be given to the baseline fairly.
+- 52, 59, 60: the CLI mock repeated the investigation tick forever, but the real CLI
+  escalates `check-follow-up-unavailable` on the next unchanged tick.
+- 07, 25, 35, 53: in half the baseline runs the mock accepted a direct merge on a
+  merge-queue repository, which GitHub rejects with 405. 26's baselines ended in the
+  passing end state and failed, apparently after a rejected direct merge.
+- 20: both arms planned the same thing and got opposite votes. The deciding clause is
+  unknown.
+- 15: the world gave only "Build failed" and a URL, and the tick does not print the
+  status description, so there was nothing to investigate.
+- 58 and likely others: the mocks do not share state, so the agent saw a contradiction
+  after a mutation. Not fixed.
+- The category and All intervals resampled runs only.
+- The 64-68 drift check was not applied over the earlier rows, and the kept trace
+  directories are gone, so the table cannot be regenerated.
+
+Changed:
+
+- 38 loses its atomic grader. 55 and 15 are removed. The suite has 64 scenarios.
+- 52, 59 and 60 get a two-tick `iterate` mock: the first call gets the current
+  tick, later calls the recorded escalation (a derived cancelled-check variant of 191,
+  204 and 207). 52's escalation is derived because no snapshot records it. 51 and 54 stay
+  single-tick: their fix path changes the head, so the next real tick would not escalate.
+- 07, 25, 26, 35 and 53 set `failures: true` and say that a direct merge is rejected
+  with 405 and `gh pr merge` only enqueues. 26's grader no longer counts a rejected
+  direct merge as bypassing the queue.
+- 20's grader says naming the two changes is optional.
+- `analyze.mjs` resamples scenarios as well as runs for the category and All rows.
+
 ## 2026-11-19: scenarios 64-68 for recent behavior, and a drift check of seven
 
 Five scenarios cover behavior merged after the full run, plus a rerun of seven

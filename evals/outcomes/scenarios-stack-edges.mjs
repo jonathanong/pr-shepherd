@@ -3,7 +3,7 @@
 
 import { PR_URL, fixtureText } from "../lib.mjs";
 import { iterateByPr, renumber } from "./stack-ticks.mjs";
-import { STEPS } from "./world.mjs";
+import { QUEUE_REJECTS_DIRECT_MERGE, STEPS } from "./world.mjs";
 
 // #41's own tick: fixture 129's native-stack conflict route, as layer 1 of 2.
 const layer41Conflict = () =>
@@ -78,6 +78,7 @@ as ready to merge.`,
   {
     // The queue's checks failed on a native-stack layer and GitHub ejected it.
     slug: "35-stack-layer-queue-ejection",
+    failures: true,
     fixture: "120-triage-native-stack-queue-removal-ack",
     tags: ["stack", "merge-queue"],
     prompt: `Get ${PR_URL} merged.`,
@@ -98,7 +99,9 @@ Timeline:
 - 2024-05-15T18:50:00Z \`github-actions\` removed the PR from the merge queue
   (RemovedFromMergeQueueEvent, reason failed_checks).
 
-The PR is not in the queue now. No reviews, threads or comments.`,
+The PR is not in the queue now. No reviews, threads or comments.
+
+${QUEUE_REJECTS_DIRECT_MERGE}`,
     grader: `The agent triages the merge-group failure before requeueing: it reads the
 failure (an upstream provider's HTTP 529, not a defect in this PR) and updates
 the layer from current \`main\` with the stack tooling (\`gh stack rebase\`, after

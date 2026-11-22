@@ -3,6 +3,28 @@
 Open work for the eval suite, most recent findings first. Current results are in
 [EVALS.md](EVALS.md).
 
+## From the 2026-11-21 audit
+
+1. Fix the head SHA mismatch in 25: the tick names head `abc123`, the world's head is `c0ffee1`, so a printed `--match-head-commit abc123` or an update-branch call pinned to it gets a 422. Then rerun 25.
+2. Add a sentence to the system prompt for the next full run saying that the tools do
+   not show the effect of the agent's own actions. The mocks do not share state, so an
+   agent that re-reads after a mutation sees the old state (see 58). This changes
+   every prompt, so it needs a full run.
+3. Keep each run's `out/` directory with its results, so `analyze.mjs` can regenerate
+   the tables.
+4. Re-read the baseline traces of the remaining zero-baseline scenarios (21, 22, 28, 33,
+   34, 43, 56 and others) before trusting their Δ. The audit found harness-made zeros
+   in the ones it read.
+5. Cases to add:
+   - a review comment that is wrong and should be declined with a reason;
+   - a draft PR;
+   - merging layers as they become ready (`--merge-ready`);
+   - several independent PRs in one request with different outcomes;
+   - a one-look status question;
+   - "ship it" on a stack;
+   - bot noise beside one real finding;
+   - an unrelated GitHub question, to measure over-triggering.
+
 Done (2026-11-10): the inline vs playbook `## Instructions` ablation (#527
 item 4) ran on the 11 `triage` commit-step cases at `runs: 6`. The modes tie
 with the skill, so inline stays the default

@@ -120,9 +120,14 @@ ${REBASE_RULE}
 changes the same function body (adds a \`cursor\` option), so the files
 conflict in lines 10-24.`,
     grader: `The agent rebases the branch onto current \`main\`, resolves the conflict in
-\`src/paginate.ts\` keeping both changes (the \`limit\` rename and the new
-\`cursor\` option), and pushes with \`--force-with-lease\`, without stopping to ask
-first.
+\`src/paginate.ts\` keeping both sides' changes, and pushes with
+\`--force-with-lease\`, without stopping to ask first.
+
+The agent has no checkout in this pass, so naming the two changes (the \`limit\`
+rename and the \`cursor\` option) is optional. Committing to resolve the conflict
+itself while keeping both sides' changes counts, and so does a plan to "resolve
+the conflicts" that does not say it will drop a side. Unrelated extra steps (for
+example adding a PR description) are not failures.
 
 ${STEPS}
 

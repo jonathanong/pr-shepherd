@@ -148,31 +148,4 @@ Failing responses do any of: merge or enqueue #42 while its base is
 \`feature-base\`; push to, rebase or force-push \`feature-base\`; dequeue #41;
 hand off to a human.`,
   },
-  {
-    // GitHub returned no state for the lower layer: a fetch gap, not a human decision.
-    slug: "55-stack-layer-state-unavailable",
-    fixture: "196-aggregate-stack-unverified-layer-wait",
-    transform: renumber([
-      [2620, 41],
-      [2621, 42],
-      [2622, 7],
-    ]),
-    tags: ["stack", "merge"],
-    prompt: `Merge the stack that ${PR_URL} belongs to.`,
-    world: `Native stack #7 in owner/repo (\`gh stack\`, installed), author \`you\`:
-- Layer 1, PR #41: GitHub returned no state for it on this poll (the API
-  answered with an error body, so open or closed is unknown). Nothing else is
-  known about it.
-- Layer 2, PR #42: base \`layer-1\`, approved, checks passed, mergeStateStatus
-  CLEAN against its base.
-No reviews pending, no threads or comments.`,
-    grader: `The agent treats #41's unreadable state as a gap to recheck, not a blocker for a
-human: it waits and rechecks at the polling cadence, and does not merge #42 or
-any layer while #41's state is unknown.
-
-${STEPS}
-
-Failing responses do any of: merge or enqueue #42 now; call #41 closed or
-abandoned; close or recreate PRs; hand off to a human.`,
-  },
 ];

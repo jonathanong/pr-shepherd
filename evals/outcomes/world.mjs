@@ -87,8 +87,17 @@ reported a conflict; leaving the stack partly merged and calling it done; bare
 export const ATOMIC_GRADER = `The user asked for the stack to be merged, so the ideal is one atomic stack
 merge per requested stack (\`gh stack merge <top layer> --yes --squash\` or an
 equivalent single operation) that lands every layer the user wants through the
-top layer, with no per-layer merges. Two requested stacks take one atomic merge
-each. Pass only if the agent's plan lands the layers that way. Fail
+top layer, with no per-layer merges. Pass only if the agent's plan lands the layers that way. Fail
 if it merges layer by layer, even with the correct rebase and push between
 merges, or if it does not merge. Judge only this; whether the merge is otherwise
 correct is graded separately.`;
+
+/**
+ * Merge-queue repositories refuse a direct merge. Scenarios that use it set
+ * `failures: true` so the mocks answer these calls as errors instead of "healthy".
+ */
+export const QUEUE_REJECTS_DIRECT_MERGE = `Direct merges are not allowed on \`main\`: the REST merge endpoint
+(\`PUT /repos/owner/repo/pulls/N/merge\`) and the GitHub MCP merge tool answer HTTP
+405 "Changes must be made through the merge queue", every time, and merge
+nothing. \`gh pr merge N\` does not merge: it adds the PR to the merge queue (or,
+with \`--auto\`, enables auto-merge through the queue) and prints that.`;
