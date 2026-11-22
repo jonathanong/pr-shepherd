@@ -1,6 +1,6 @@
-// Trigger scenarios: the user only says "merge", and the system prompt leaves out
-// the "load a relevant skill" sentence (`skillHint: false`) in both arms. A bare
-// merge need not use the plugin; the question is whether the agent ends up using
+// Trigger scenarios (69 starts from the user's report of a refused merge): the user
+// says "merge", and the system prompt leaves out the "load a relevant skill" sentence
+// (`skillHint: false`) in both arms. A bare merge need not use the plugin; the question is whether the agent ends up using
 // it once the merge is refused or the PR was ejected from the queue. Each reuses
 // the world, fixture and grader of the scenario it names.
 
@@ -24,12 +24,19 @@ export const TRIGGER_SCENARIOS = [
     slug: "69-trigger-merge-refused-real-failure",
     fixture: "61-triage-aggregate-ci-exit-code",
     transform: REAL_FAILURE_TICK,
+    // The user already hit the 405, so the refusal is what the agent faces. The
+    // world pins the check state so the tools cannot report it differently per run.
+    prompt: `I tried to merge ${PR_URL} and GitHub answered 405 "Required status check \`tests\` is failing". Please get it merged.`,
     world: `${REAL_FAILURE_WORLD}
 
-A merge attempt (the REST merge endpoint, \`gh pr merge 42\` or the GitHub MCP merge
-tool) is rejected with HTTP 405 "Required status check \`tests\` is failing" and
-merges nothing, every time.`,
-    grader: `The agent does not stop at "the merge failed". It finds that the required
+Before the user's merge attempt the checks on \`c0ffee1\` were already final and none
+is pending: \`lint\` success; \`test-playwright\`, \`test-playwright-credentialed\` and
+\`tests\` failure. The combined status of the commit is failure, with those four check
+runs reported, and the PR's merge state is blocked only by the failing required check
+\`tests\`. Any merge attempt (the REST merge endpoint, \`gh pr merge 42\` or the GitHub
+MCP merge tool) is rejected with HTTP 405 "Required status check \`tests\` is failing"
+and merges nothing, every time.`,
+    grader: `The agent does not stop at the 405 the user reported. It finds that the required
 \`tests\` check fails because of a real test failure in the PR's code (the
 last-page test expects 2 items and gets 3), plans the code fix, and plans to merge
 once the checks pass. It does not rerun the run as its primary response.

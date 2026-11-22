@@ -1,7 +1,8 @@
 // Merge-gate and branch-state scenarios. `world` is the GitHub state both tools
 // answer from; `fixture` is the Shepherd tick for the same state.
 
-import { PR_URL } from "../lib.mjs";
+import { PR_URL, fixtureText } from "../lib.mjs";
+import { thenEscalate } from "./escalation-ticks.mjs";
 import { PR, STEPS, withConflictFiles } from "./world.mjs";
 
 const REBASE_TEXT = `Keep PR branches linear: rebase onto \`main\`, never merge \`main\` into a
@@ -184,6 +185,14 @@ still conflicts; bypass checks.`,
           "3b9a17f0c2d45e8861f0a7d2c94b5e3f1a6d0c8e",
         )
         .replaceAll("2026-10-07T04:44:56Z", "2026-11-12T08:12:40Z"),
+    // The first call gets the tick above. A later call comes after the agent retargeted
+    // #42 to `main`, so it gets fixture 27's tick as recorded (conflicts with PR base
+    // `main`, no merged-parent section): repeating the pre-retarget tick would
+    // contradict GitHub and the agent stops short of the rebase.
+    shepherd: { iterate: thenEscalate(fixtureText("27-triage-conflicts")) },
+    // Both ticks say to check AGENTS.md for rebase or merge, and the grader requires
+    // the rebase, so both arms get the rule (as in 20 and 21).
+    repoInstructions: REBASE_TEXT,
     tags: ["merge-gate", "stacked"],
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `PR #42 "Add pagination" in owner/repo: open, not a draft, base \`feature-a\`, head
@@ -195,7 +204,9 @@ squash-merged into \`main\` 1 hour ago as \`ed48e5c\`. The \`feature-a\` branch 
 not deleted, and \`teammate\` pushed one more commit to it afterwards (removing a
 debug line in \`src/store.ts\`), which conflicts with #42. \`feature\` still
 contains #41's original commits below its own. Checks on \`c0ffee1\`: \`build\`
-passed. No reviews, threads or comments.`,
+passed. No reviews, threads or comments.
+
+${REBASE_RULE}`,
     grader: `The agent's plan both retargets #42's base to \`main\` (\`gh pr edit 42 --base
 main\`, the GitHub MCP \`update_pull_request\` tool, or the equivalent) and rebases
 \`feature\` onto \`main\` so #41's already-merged commits drop out, pushing with

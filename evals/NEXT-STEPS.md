@@ -9,20 +9,18 @@ Done: the full run after the second audit (25's head SHA, the snapshot sentence 
 system prompt, the grader fixes, `keep-traces.mjs`, the trigger and new-case scenarios).
 Results are in [EVALS.md](EVALS.md).
 
-1. Rerun 69 to 71 on `main` once the skill description change merges. The targeted run loaded the skill in 3 of 3 plugin runs for 70 and 71, but scored 0.33 each.
-2. Make 69's world produce a refused merge the agent actually hits, and give it a stable check state. Now the agent reads the PR as blocked and stops, and the mock reports the checks differently between runs.
-3. Add a second tick for 22: the state after the retarget, from a history-aware mock like the escalation ones. Until then its score does not mean much for the plugin.
-4. Find why agents that load the skill after a 405 do not follow the tick. Several update the branch with the GitHub MCP branch-update tool or hand the requeue to a human.
-5. Find why 36's baseline runs error in the runner (`mocks: github/list_pull_requests: a
+1. Find why agents that load the skill after a 405 do not follow the tick. The targeted run at 8c82fcee (22 and 69 are now 1.00 / 1.00) loaded the skill in 9 of 9 plugin runs for 69 to 71, so loading is no longer the problem. In 70 two of three plugin runs scored 0 because they defer the branch update and the requeue to "my next pass, which has a checkout" instead of committing to them, while a third run with a near-identical plan passed. In 71 all three runs hand the manual removal to a human after `--merge` printed no enqueue command, and every judge vote was FAIL.
+2. Check 71's grader against those runs. The tick (fixture 119) is right for a `--merge` call and the plans match the grader's description, but each run first attempted a direct merge and got the world's 405, which the grader's "merge the PR (by any tool or mutation)" may count. Read the judge's reasoning (it is not stored in the result). If that is the cause, either add 26's rejected-direct-merge sentence to 71's grader or change the trigger variant. Also read 07's traces: it has the same grader and passed.
+3. Find why 36's baseline runs error in the runner (`mocks: github/list_pull_requests: a
    result in the trace is not one the harness gave`). It recurred in the full run.
-6. Look at plugin runs that do not read the diff and defer judging to the next pass (12,
+4. Look at plugin runs that do not read the diff and defer judging to the next pass (12,
    72). Both stay inconclusive at 6 runs per arm.
-7. Make 12's mock give every run the same diff, and add a diff-size sentence to the worlds
+5. Make 12's mock give every run the same diff, and add a diff-size sentence to the worlds
    that lack one (10, 31, 32, 33, 63).
-8. Re-read the baseline traces of the remaining zero-baseline scenarios (28, 34 and
+6. Re-read the baseline traces of the remaining zero-baseline scenarios (28, 34 and
    others) before trusting their Δ. The audits found harness-made zeros in the ones they
    read.
-9. Cases still to add:
+7. Cases still to add:
    - merging layers as they become ready (`--merge-ready`);
    - several independent PRs in one request with different outcomes (no recorded
      snapshot has one ready PR beside one failing PR);
