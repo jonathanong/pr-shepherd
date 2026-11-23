@@ -174,10 +174,11 @@ The 2026-11-21 audits found rows that the harness, not the agent, produced. Thes
 | `62-stack-merge-trunk-conflict`          | Stacks                  | 0.67   | 0.40   | +0.27 |
 | `36-stack-merge-unowned-lower-layer`     | Stacks                  | n/a    | n/a    | n/a   |
 
-36 is `insufficient`: all three baseline runs were voided. Baseline cells that are not trustworthy: 76, 24 and 41 (see above), and the 0.6 ceiling on 37, 38, 57, 58, 61 and 62. 58's Δ is +0.07 because the baseline is at that ceiling.
+77 was added after this run and has not been run (n/a). 36 is `insufficient`: all three baseline runs were voided. Baseline cells that are not trustworthy: 76, 24 and 41 (see above), and the 0.6 ceiling on 37, 38, 57, 58, 61 and 62. 58's Δ is +0.07 because the baseline is at that ceiling.
 | `48-create-prs-same-lines-stack`         | Creating PRs            | 1.00   | 0.00   | +1.00 |
 | `49-create-prs-independent-separate`     | Creating PRs            | 1.00   | 0.00   | +1.00 |
 | `50-create-prs-needs-earlier-code-stack` | Creating PRs            | 1.00   | 0.67   | +0.33 |
+| `77-create-pr-on-open-pr-native-stack`   | Creating PRs            | n/a    | n/a    | n/a   |
 | `69-trigger-merge-refused-real-failure`  | Trigger (no skill hint) | 1.00   | 1.00   | 0.00  |
 | `70-trigger-queue-ejected-failed-checks` | Trigger (no skill hint) | 1.00   | 0.00   | +1.00 |
 | `71-trigger-queue-removed-by-maintainer` | Trigger (no skill hint) | 1.00   | 0.00   | +1.00 |

@@ -3,6 +3,7 @@
 import { CI_MORE_SCENARIOS } from "./scenarios-ci-more.mjs";
 import { CI_SCENARIOS } from "./scenarios-ci.mjs";
 import { GATE_CASE_SCENARIOS, REVIEW_CASE_SCENARIOS } from "./scenarios-cases.mjs";
+import { CREATE_OPEN_SCENARIOS } from "./scenarios-create-open.mjs";
 import { CREATE_SCENARIOS } from "./scenarios-create.mjs";
 import { FRESH_HEAD_SCENARIOS } from "./scenarios-fresh-head.mjs";
 import { GATE_MORE_SCENARIOS } from "./scenarios-gates-more.mjs";
@@ -41,7 +42,7 @@ const CATEGORIES = [
     ],
   ],
   ["Safety & terminal", SAFETY_SCENARIOS],
-  ["Creating PRs", CREATE_SCENARIOS],
+  ["Creating PRs", [...CREATE_SCENARIOS, ...CREATE_OPEN_SCENARIOS]],
   ["Trigger (no skill hint)", TRIGGER_SCENARIOS],
 ];
 
