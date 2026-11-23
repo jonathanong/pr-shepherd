@@ -19,6 +19,7 @@ export interface RawBatchResponse {
 export interface RawPr extends RawPrMergeFields {
   id: string;
   number: number;
+  createdAt?: string;
   updatedAt?: string;
   state: string;
   isDraft: boolean;
@@ -98,6 +99,7 @@ interface RawCheckSuites {
   pageInfo: { hasNextPage: boolean };
   nodes: Array<{
     id?: string;
+    createdAt?: string | null;
     status?: string | null;
     conclusion: string | null;
     app?: { slug: string | null } | null;

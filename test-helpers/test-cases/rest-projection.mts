@@ -19,6 +19,7 @@ import { restThreadRoots } from "./rest-thread-roots.mts";
 
 /** Top-level `BatchPrData` keys `readRestSnapshot` can emit. */
 export const REST_BATCH_KEYS = new Set([
+  "headFreshAtUnix",
   "nodeId",
   "viewerLogin",
   "number",

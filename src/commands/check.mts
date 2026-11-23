@@ -33,6 +33,7 @@ import {
   isQueuedConflict,
 } from "./check-annotations.mts";
 import { buildTerminalReport } from "./check-terminal-report.mts";
+import { headStillSettling } from "./check-settle.mts";
 import {
   isBlockedByFilteredCheck,
   refreshReadyMergeability,
@@ -454,9 +455,18 @@ async function runScopedCheck(
       visibleChangesRequestedIds.has(review.id)
     );
   }).length;
+  // A head that reached GitHub moments ago has no checks yet because they are not registered,
+  // not because the repository has none; hold READY until the settle window passes.
+  const settling = headStillSettling({
+    hasChecks: verdict.hasChecks,
+    actionsWorkflowInProgress: unreported.actionsWorkflowInProgress === true,
+    headFreshAtUnix: batchData.headFreshAtUnix,
+    nowUnix: Math.floor(Date.now() / 1000),
+  });
   const awaitingChecks =
     unreported.hasUnreportedRequired ||
-    (!verdict.hasChecks && unreported.actionsWorkflowInProgress === true);
+    (!verdict.hasChecks && unreported.actionsWorkflowInProgress === true) ||
+    settling;
   let status = computeStatus(
     verdict,
     threadVisibility.activeThreads.length + threadVisibility.resolutionOnlyThreads.length,
@@ -772,6 +782,7 @@ async function runScopedCheck(
     ...(unreported.actionsWorkflowInProgress && {
       actionsWorkflowInProgress: true as const,
     }),
+    ...(settling && { awaitingCheckRegistration: true as const }),
     ...(unreported.stackBottomPr !== undefined && {
       stackBottomPr: unreported.stackBottomPr,
     }),

@@ -24,6 +24,7 @@ export interface RestPull {
   mergeable: boolean | null;
   mergeable_state: string;
   updated_at: string;
+  created_at?: string;
   user: { login: string; type?: string } | null;
   head: { ref: string; sha: string; repo: { full_name: string } | null };
   base: { ref: string; sha: string };

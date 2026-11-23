@@ -13,6 +13,7 @@ import { isReviewStale } from "./batch-parser-helpers.mts";
 import { readRest as rest, restRepoPath, restObject, restString } from "./rest-reader-core.mts";
 import { restLatestReviews, restPendingReviews } from "./rest-review-read.mts";
 import type { RestSnapshotContext } from "./rest-snapshot-context.mts";
+import { headFreshAtUnix } from "./head-freshness.mts";
 import { REST_BATCH_UNAVAILABLE } from "./rest-batch-unavailable.mts";
 
 export async function readRestSnapshot(
@@ -53,8 +54,13 @@ export async function readRestSnapshot(
     ...rules.unavailable,
     ...REST_BATCH_UNAVAILABLE,
   ];
+  const freshAtUnix = headFreshAtUnix({
+    suiteCreatedAts: checks.suites.map((suite) => suite.created_at),
+    prCreatedAt: pull.created_at,
+  });
   const data: BatchPrData = {
     nodeId: pull.node_id,
+    ...(freshAtUnix !== undefined && { headFreshAtUnix: freshAtUnix }),
     ...(feedback.viewerLogin && { viewerLogin: feedback.viewerLogin }),
     ...restPullRefs(pull),
     state: restPullRefs(pull).state as BatchPrData["state"],

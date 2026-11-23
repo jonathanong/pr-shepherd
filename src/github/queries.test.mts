@@ -57,7 +57,7 @@ describe("queries — GQL constants load at import time", () => {
     expect(BATCH_PR_QUERY).toContain("updatedAt");
     expect(BATCH_PR_QUERY).toContain("...CommitCheckSuites");
     expect(BATCH_PR_QUERY).toContain("checkSuites");
-    expect(BATCH_PR_QUERY).toMatch(/nodes \{\s*id\s*status\s*conclusion/);
+    expect(BATCH_PR_QUERY).toMatch(/nodes \{\s*id\s*createdAt\s*status\s*conclusion/);
     expect(BATCH_PR_QUERY).toContain("reviewThreads(last: 20)");
     expect(BATCH_PR_PAGE_QUERY).toContain("reviewThreads(last: 100, before: $threadsCursor)");
   });

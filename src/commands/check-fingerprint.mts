@@ -14,6 +14,8 @@ export function reportAllowsFingerprintSkip(report: ShepherdReport): boolean {
   if (report.mergeStatus.state !== "OPEN") return false;
   if (report.mergeQueue?.inQueue === true) return false;
   if (report.mergeQueue?.removalAcknowledged === true) return false;
+  // The settle window ends with the clock, not with any change a fingerprint could see.
+  if (report.awaitingCheckRegistration === true) return false;
   return (
     report.threads.actionable.length === 0 &&
     report.threads.resolutionOnly.length === 0 &&

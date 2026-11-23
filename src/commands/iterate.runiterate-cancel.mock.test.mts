@@ -532,7 +532,7 @@ describe("runIterate — cancel", () => {
 
     it("still waits when the fresh snapshot has other gaps", async () => {
       blockedLayer();
-      mockSummarizePollSummaryPr.mockResolvedValue({ checks: { failing: 1 }, review: {} });
+      mockSummarizePollSummaryPr.mockResolvedValue({ checks: {}, review: { actionable: 1 } });
 
       const result = await runIterate(makeOpts());
 
@@ -642,7 +642,7 @@ describe("runIterate — cancel", () => {
       shouldCancel: true,
       remainingSeconds: 0,
     });
-    mockSummarizePollSummaryPr.mockResolvedValue({ checks: { failing: 1 }, review: {} });
+    mockSummarizePollSummaryPr.mockResolvedValue({ checks: {}, review: { actionable: 1 } });
 
     const result = await runIterate(makeOpts());
 
