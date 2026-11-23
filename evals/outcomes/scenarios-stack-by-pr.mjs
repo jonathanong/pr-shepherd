@@ -38,7 +38,7 @@ export const STACK_BY_PR_SCENARIOS = [
     },
     prompt: `Merge the #43 stack (${PR_URL_43}).`,
     world: `Native stack #7 in owner/repo (\`gh stack\`, installed). Every layer is open,
-not a draft, approved, with checks passed and mergeStateStatus CLEAN against its base,
+not a draft, approved, with check \`build\` passed and mergeStateStatus CLEAN against its base,
 all authored by \`you\`:
 - Layer 1, PR #41 "Layer 1": base \`main\`, head \`layer-41\`.
 - Layer 2, PR #42 "Layer 2": base \`layer-41\`, head \`layer-42\`.

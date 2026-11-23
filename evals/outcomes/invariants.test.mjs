@@ -8,6 +8,7 @@ import {
   appendFileSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   readdirSync,
   rmSync,
   writeFileSync,
@@ -18,13 +19,15 @@ import { after, describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 import { checkGenerated } from "./generated-checks.mjs";
 import { cliAnswerFaithful, inspectRun, parseCliMock } from "./isolation.mjs";
+import { CHECKS_RULE, CHECKS_RULE_START } from "./write.mjs";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const PLUGIN = join(REPO, "plugins", "pr-shepherd");
-const OUT = join(REPO, "evals-outcomes-test");
+const OUT_NAME = `evals-outcomes-test-${process.pid}`;
+const OUT = join(REPO, OUT_NAME);
 
 describe("generated suite", () => {
-  execFileSync("node", ["evals/outcomes/generate.mjs", "--out", "evals-outcomes-test"], {
+  execFileSync("node", ["evals/outcomes/generate.mjs", "--out", OUT_NAME], {
     cwd: REPO,
     stdio: "ignore",
   });
@@ -33,6 +36,27 @@ describe("generated suite", () => {
   after(() => rmSync(OUT, { recursive: true, force: true }));
 
   it("is clean as generated", () => assert.deepEqual(checkGenerated(OUT, PLUGIN), []));
+
+  for (const [name, parts] of [
+    ["gh", ["gh", "gh.md"]],
+    ["github", ["github", "_server.md"]],
+  ]) {
+    it(`rejects the ${name} mock without the checks rule or with its body cut`, () => {
+      const f = join(cases, slug, "mocks", ...parts);
+      const text = readFileSync(f, "utf8");
+      try {
+        for (const bad of ["Checks:", CHECKS_RULE_START]) {
+          writeFileSync(f, text.replace(CHECKS_RULE, bad));
+          assert.match(
+            checkGenerated(OUT, PLUGIN).join("\n"),
+            new RegExp(`${slug}/mocks/${parts.join("/")}: no checks rule`),
+          );
+        }
+      } finally {
+        writeFileSync(f, text);
+      }
+    });
+  }
 
   it("rejects a mock dir no plugin server declares", () => {
     const dir = join(cases, slug, "mocks", "ghost");
@@ -49,7 +73,7 @@ describe("generated suite", () => {
         new RegExp(`${slug}/.*baseline-visible`),
       );
       rmSync(join(cases, slug), { recursive: true });
-      execFileSync("node", ["evals/outcomes/generate.mjs", "--out", "evals-outcomes-test"], {
+      execFileSync("node", ["evals/outcomes/generate.mjs", "--out", OUT_NAME], {
         cwd: REPO,
         stdio: "ignore",
       });

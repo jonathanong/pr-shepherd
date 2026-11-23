@@ -25,7 +25,7 @@ const BLOCKER_PROMPT = `Keep getting ${PR_URL} ready to merge. On your last pass
 Benchmarks failure comes from a timer bug on \`main\` that open PR #99 fixes, not
 from this PR, so you decided to wait for #99 instead of changing this PR.`;
 
-const BENCHMARKS_FAILED = `Workflow "Benchmarks", run 34906500059 on \`c0ffee1\`, job \`Benchmarks\` failed in
+const BENCHMARKS_FAILED = `Workflow "Benchmarks", run 34906500059 on \`c0ffee1\`, job \`Benchmarks\` (job id 34906500060) failed in
 step "Check benchmark results". Log:
   harness: timer resolution 15.6 ms (expected <= 1 ms)
   Benchmark build or execution failed.

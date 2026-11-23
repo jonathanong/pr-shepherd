@@ -72,6 +72,29 @@ those errors, every time, even where a rule above says commands succeed or GitHu
 is healthy. Nothing else fails.`;
 const healthy = (text, spec) => (spec.failures ? text.replace(HEALTHY, EXCEPT) : text);
 
+/**
+ * Both mocks answer from one facts document, but one would leave the check runs out of
+ * `get_status` and another put them in. The rule makes every tool report the same ones.
+ * `generated-checks.mjs` looks for CHECKS_RULE_START in each mock body.
+ */
+export const CHECKS_RULE_START = "Checks and statuses of the head commit:";
+export const CHECKS_RULE = `${CHECKS_RULE_START} the MCP \`pull_request_read\` method \`get_status\` returns
+the combined commit status together with the head commit's check runs, as {state,
+sha, total_count, statuses: [...], check_runs: [...]}; \`gh pr checks\`, \`gh pr view
+--json statusCheckRollup\` and the \`gh api\` check-run and status endpoints show the
+same data for the head commit only. Unless the facts say that a command shows
+something else (for example only the latest finished runs), each of them reports every
+check run and status the facts place on the head commit, under the names, states and
+conclusions the facts give; none omits a named check, invents one, or reports a
+total_count that contradicts them. Checks the facts place on a merge-group commit, a
+queue commit or an older commit are not the head commit's and are reported only when
+the call asks for that commit. \`state\` is the combined commit status, as GitHub
+computes it from the statuses alone: failure if any status failed or errored, pending if
+one is pending or there are no statuses, success if all passed. Check runs are reported
+in \`check_runs\` with their own conclusions (success, failure, cancelled, neutral,
+skipped) and do not change \`state\`. Where the facts name no checks on the head
+commit, report empty lists and a total_count of 0.`;
+
 const ghBody = (world) => `You are the GitHub CLI (\`gh\` 2.83.0) in a checkout of owner/repo, authenticated
 as \`you\`, the author of PR #42. Answer each call with exactly what \`gh\` would
 print: stdout, or stderr followed by \`exit code N\`. Print nothing else. Never
@@ -87,6 +110,8 @@ on success. GitHub is healthy: never answer with a 5xx, timeout or rate-limit
 error. Earlier calls are in your history: keep later answers consistent with
 them.
 
+${CHECKS_RULE}
+
 ${world}`;
 
 const githubBody = (world) => `You are the GitHub MCP server (github-mcp-server). Answer each tool call with
@@ -101,6 +126,8 @@ with nothing more. Calls that change state succeed and return what the server
 returns on success. GitHub is healthy: never answer with a 5xx, timeout or
 rate-limit error. Log tools return the log text inline, never a download URL.
 Earlier calls are in your history: keep later answers consistent with them.
+
+${CHECKS_RULE}
 
 ${world}`;
 

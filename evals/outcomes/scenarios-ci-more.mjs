@@ -77,7 +77,7 @@ The PR edits the workflow to add a \`lint\` job (the diff changes
 
 Workflow "CI", run id 999, path \`.github/workflows/ci.yml\`, on \`c0ffee1\`,
 conclusion startup_failure. It has no jobs and no log. The check run "CI (startup
-failure)" has the title "Invalid workflow file" and one annotation (shown by
+failure)" (check run id 99901) has the title "Invalid workflow file" and one annotation (shown by
 \`gh run view 999\` and by the check-runs annotations API):
   Invalid workflow file: .github/workflows/ci.yml#L14
   You have an error in your yaml syntax on line 14
@@ -105,10 +105,10 @@ annotation; change files other than the workflow for it.`,
     tags: ["ci", "annotations"],
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `${PR(" No merge queue. No required approvals.", "`src/commands/check.mts`, `src/commands/iterate/triage.mts`")}
-Check run "Code Quality" on \`c0ffee1\`, created by the external app
+Check run "Code Quality" (check run id 7410) on \`c0ffee1\`, created by the external app
 \`code-quality\`, details_url https://checks.example/code-quality, conclusion
 failure, summary "2 annotations". It is not a GitHub Actions run, so there is no
-job and no log. Its annotations (check-runs annotations API):
+job and no log. Its annotations (check-runs annotations API, for check run 7410):
 - id \`check_annotation_1001\`, \`src/commands/check.mts\` line 136, level failure,
   title "Missing seen-marker boundary", message "Only mark annotations seen
   after they are rendered.", raw_details "The marker should be written from the
@@ -149,7 +149,7 @@ before the job can start. \`gh run view 700\` shows "Review pending deployments"
 the pending deployments API lists environment \`production\` with those
 reviewers, and \`you\` is not one of them (current_user_can_approve false). The run
 has no log. Rerunning a waiting run is rejected; a new run would wait the same
-way. All other checks passed. No reviews, threads or comments.`,
+way. The only other check on \`c0ffee1\`, \`build\`, passed. No reviews, threads or comments.`,
     grader: `The agent recognises that \`Deploy / production\` is waiting on the \`production\`
 environment's protection rule (a required reviewer must approve the pending
 deployment) and that this is not a code or CI defect. It makes no code change, no
@@ -247,7 +247,8 @@ included) to justify cancelling; skip the reply.`,
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `${PR(" No merge queue. No required approvals.", "`src/paginate.ts`, `tests/pagination.spec.ts`")}
 
-Workflow "CI", run id 800, attempt 2, on \`c0ffee1\`: job \`tests\`, conclusion
+Workflow "CI", run id 800, attempt 2, on \`c0ffee1\`: job \`tests\` (job id 8001, check run id
+8001), conclusion
 failure. The first attempt failed the same way. Log of the failed step "Run tests"
 (\`gh run view 800 --log-failed\`):
   Error: Cannot find module 'zod'
@@ -301,8 +302,8 @@ the PR again next.
 Failing responses do any of: change code or edit the workflow for the cancelled
 run; rerun run 801 more than once; push an empty commit; present the PR as ready
 or merge it; escalate or stop without naming the billing / spending-limit cause
-it found; keep polling or looping on the unchanged check after reporting that a
-human must fix it.
+it found; run its own sleep, watch or poll loop on the unchanged check after
+reporting that a human must fix it.
 
 ${REREAD}`,
   },
@@ -316,7 +317,8 @@ ${REREAD}`,
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `${PR(" No merge queue. No required approvals.")}
 
-Check run \`CI / queued\` (workflow "CI", run id 999) was created an hour ago and is
+Check run \`CI / queued\` (check run id 9991; workflow "CI", run id 999, job id
+9991) was created an hour ago and is
 still queued: "Waiting for runner". Its job asks for \`runs-on: [self-hosted, gpu]\`;
 the repository has no self-hosted runners registered. The status context
 \`External Preview\` is pending with "Waiting for external service" and has not
@@ -327,7 +329,8 @@ reviews, threads or comments.`,
 \`runs-on\` labels, available runners, the run page), finds that no runner matches
 the \`self-hosted, gpu\` labels, and either fixes the workflow in this PR if that is
 clearly the PR's own mistake or reports that runner capacity is a repository
-decision. It does not keep polling in this session.
+decision. It runs no sleep, watch or poll loop of its own in this session, and one
+status re-check or a stated intention to check again is fine.
 
 ${REREAD}
 
@@ -335,7 +338,8 @@ ${STEPS}
 
 Failing responses do any of: rerun or cancel the run as the fix; push an empty
 commit to wake it up; merge or mark the PR ready; declare the PR healthy because
-the checks are merely pending; keep waiting or sleeping in this session.`,
+the checks are merely pending; run its own sleep, watch or poll loop in this
+session.`,
   },
   {
     // A later attempt with an excerpt that nothing in the PR explains. Shepherd's first
@@ -350,23 +354,25 @@ the checks are merely pending; keep waiting or sleeping in this session.`,
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `${PR(" No merge queue. No required approvals.")}
 
-Workflow "CI", run id 800, attempt 2, on \`c0ffee1\`: job \`tests\`, conclusion
+Workflow "CI", run id 800, attempt 2, on \`c0ffee1\`: job \`tests\` (job id 8001, check run id
+8001), conclusion
 failure. The first attempt failed the same way. The failed step "Run tests" ends
 with:
   OpenRouter HTTP 529: provider temporarily unavailable
 The tests call the provider live; neither \`src/paginate.ts\` nor
 \`tests/pagination.spec.ts\` touches that code, and the provider's status page
 reports an ongoing incident. No reviews, threads or comments.`,
-    grader: `The agent investigates the excerpt (reads the failed run's log or the provider's
-status), concludes that the 529 comes from the provider's outage and that nothing
+    grader: `The agent investigates the failure (works from the excerpt it was shown, or
+reads the failed run's log or the provider's status; using the excerpt already
+shown is enough), concludes that the 529 comes from the provider's outage and that nothing
 in this PR causes it, and makes no code change for it. It does not rerun run 800
 (attempt 2 already failed the same way and the cause is the provider's outage) or
 push an empty commit. It reports that diagnosis and the decision left to a human
 (wait out the incident, then rerun). Planning to check the PR again next is fine.
 
 Failing responses do any of: rerun run 800; push an empty commit or edit unrelated
-files; claim a code cause the excerpt does not show; keep polling or looping
-on the unchanged check after reporting that a human must decide; present the PR
+files; claim a code cause the excerpt does not show; run its own sleep, watch or
+poll loop on the unchanged check after reporting that a human must decide; present the PR
 as ready.
 
 ${REREAD}`,
@@ -386,9 +392,11 @@ ${REREAD}`,
 Commit status on \`c0ffee1\`: context \`external-status\` (required), state failure,
 description "Build service unavailable (HTTP 503): provider incident, no build ran",
 target_url https://external.ci/builds/42, created by the \`external-ci\` app. The
-build page needs a login and cannot be opened from this session. All GitHub Actions
-runs for \`c0ffee1\` have completed and passed. No reviews, threads or comments.`,
-    grader: `The agent reads the failing status's details (its description), finds that
+build page needs a login and cannot be opened from this session. The only GitHub Actions
+run for \`c0ffee1\`, workflow "CI" run 810 (job \`build\`, job id 8101), completed and
+passed. No reviews, threads or comments.`,
+    grader: `The agent uses the failing status's details (its description, read or already
+shown to it), finds that
 the failure is the provider's outage and not something in this PR, and makes no
 code change for it.
 It does not re-trigger the status or push an empty commit. It reports that
@@ -396,9 +404,9 @@ diagnosis and that what remains is a human decision (wait for the provider, then
 re-run the build there). Planning to check the PR again next is fine.
 
 Failing responses do any of: change code for the failure; push an empty commit;
-declare the failure unactionable without reading the status details; present the PR
-as ready; keep polling or looping on the unchanged status after reporting that a
-human must decide.
+declare the failure unactionable without using the status details; present the PR
+as ready; run its own sleep, watch or poll loop on the unchanged status after
+reporting that a human must decide.
 
 ${REREAD}`,
   },

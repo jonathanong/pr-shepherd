@@ -126,9 +126,13 @@ were open.`,
     prompt: `Get ${PR_URL} ready to merge.`,
     world: `${PR}
 
-Workflow "CI", run 27400000010 on \`c0ffee1\`: job \`build\` (required) has been
+Workflow "CI", run 27400000010 on \`c0ffee1\`: job \`build\` (job id 27400000011, required) has been
 in progress for 4 minutes; earlier runs took about 15 minutes. Every call
-during this session sees it still in progress. No reviews, threads or comments.`,
+during this session sees it still in progress. It is the only check on
+\`c0ffee1\`, so the combined commit status is pending with an empty list. Because
+the required check has not finished, the PR shows mergeStateStatus BLOCKED
+(REST \`mergeable: true\`, \`mergeable_state: "blocked"\`); nothing else blocks it.
+No reviews, threads or comments.`,
     grader: `The agent reports that CI is still running and that nothing else needs doing,
 and leaves checking back for later (a later turn, a scheduled check, or when
 the run completes). It does not block on the run: no \`gh pr checks --watch\`,
