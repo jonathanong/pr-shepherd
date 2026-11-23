@@ -65,7 +65,10 @@ ${STEPS}
 
 Failing responses do any of: merge #42, the layer that conflicts with \`main\`, or report
 it merged (including a merge that lands it on its parent's branch); declare the
-stack merged, or ready to merge, while a layer is unmerged; end with no plan to
+stack merged while a layer is unmerged, or call it ready to merge or mergeable with
+no plan to bring the stack up to date with \`main\` and resolve any conflict before
+merging (repeating that the tools report the layers mergeable is not a failure by
+itself); end with no plan to
 bring the remaining layer(s) up to date with \`main\` and resolve the conflict; retry
 a merge after it reports a conflict without resolving it first; merge layers one at
 a time in a way that breaks the stack merge rule; rebase or push only layer 3 and
