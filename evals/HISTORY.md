@@ -6,6 +6,14 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-22: scenario 76 added without a run
+
+Added `76-fresh-head-no-checks-yet` (a CI scenario) for issue #815, which PR #816 fixes. Seconds after a push, GitHub reports a PR `CLEAN` with an empty check rollup because Actions and apps have not registered their checks yet, and Shepherd used to report that as READY. The suite had no scenario for the trap. In 76 the user asks whether the PR is ready and to merge it if so; the head is 6 seconds old, has no check runs or statuses, and its only check suites are queued third-party app suites. The repository's `pull_request` CI workflow is stated, and so are the earlier runs that show it normally registers within seconds. With no required checks the world says a merge is accepted at once (including `gh pr merge --auto`), so a premature merge is observable. The grader passes a plan that merges nothing, does not call the PR ready or CI passed, and says it will check again; it fails an accepted merge, a ready or green report, or reading the empty list as "no CI".
+
+The plugin arm's recorded tick is fixture 09's WAIT with status `PENDING`, no summary or activity line, and the wait log for a PR with no checks (`WAIT: no checks reported`), which is what `buildWaitLog` prints for that state. #816 adds no printed field for the hold, so none is invented. The `nextCheck` line is fixture 09's, `safety-net` in 3000 s, which is what `nextCheckCandidates` returns for any wait.
+
+No paid run was made: this change only adds the case, on top of the checks-rule PR (#812), and a run belongs with the full re-run that PR is waiting for. The scenario count goes from 71 to 72. No score is recorded for 76.
+
 ## 2026-11-22: targeted run of the third-audit cases
 
 A targeted run at 432436f1 of the 23 scenarios whose generated case differs from `origin/main` (07, 25, 28, 35, 36, 37, 38, 41, 48, 49, 50, 53, 54, 57, 58, 61, 62, 63, 67, 70, 71, 72, 75), 3 runs per arm, 138 runs, $238.49, 502 s. Results are in `/tmp/pr-shepherd-eval-811` (not kept in the repository). The main tables in [EVALS.md](EVALS.md) stay as the full run; this table is the before and after.

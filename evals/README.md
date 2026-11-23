@@ -3,7 +3,7 @@
 **Does an agent with the pr-shepherd plugin get pull requests ready to merge
 better than an agent with only GitHub's own tools?**
 
-The outcome suite answers that. Each of its 71 scenarios is one PR state: review
+The outcome suite answers that. Each of its 72 scenarios is one PR state: review
 feedback, CI failures, merge gates and branch updates, the merge queue, safety
 and terminal states, stacked PRs, and a few where the user only says "merge". Both arms get the `gh` CLI and the GitHub MCP
 server, answered from that state. Only the plugin arm also gets the plugin's
@@ -36,7 +36,7 @@ The Trigger rows measure whether the agent uses the plugin when the user only sa
 "Merge <PR>", not the plugin's effect: the skill loaded in 0 of 9 plugin runs.
 22 is the first scenario the plugin loses (0.00 vs 0.50). A targeted run after the
 fixes superseded the 22 and 69 to 71 rows (22 and 69 1.00 / 1.00, 70 0.33 / 0.00,
-71 0.00 / 0.00, the skill loaded in 9 of 9; see [EVALS.md](EVALS.md)). A later targeted run of the 23 third-audit scenarios (plugin 0.95, gh/MCP 0.26 over 22) superseded the 70 and 71 rows again, with both at 1.00 / 0.00; the tables stay as the full run (see [HISTORY.md](HISTORY.md#2026-11-22-targeted-run-of-the-third-audit-cases)). Scenario 36 is not scored:
+71 0.00 / 0.00, the skill loaded in 9 of 9; see [EVALS.md](EVALS.md)). A later targeted run of the 23 third-audit scenarios (plugin 0.95, gh/MCP 0.26 over 22) superseded the 70 and 71 rows again, with both at 1.00 / 0.00; the tables stay as the full run (see [HISTORY.md](HISTORY.md#2026-11-22-targeted-run-of-the-third-audit-cases)). Scenario 76 (a head pushed seconds ago, no checks registered yet) was added after that run and has not been run. Scenario 36 is not scored:
 its gh/MCP runs errored in the eval runner. Every scenario is in
 [EVALS.md](EVALS.md); read its "Known problems with these numbers" first.
 
