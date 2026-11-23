@@ -102,18 +102,23 @@ blank line, and nothing else.
 const STACKED_GRADER = (
   first,
   second,
-) => `The agent opens ${first} and ${second} as a native stack: the second PR is
-based on the first's branch (\`gh stack init\` / \`add\` / \`submit --auto\`, \`gh stack
-link\`, or an equivalent that makes the second PR's base the first's branch), and it plans to
-keep checking the whole stack until every layer is mergeable (for example
-re-checking both PRs), without merging in this pass. A later numbered step that
-merges a layer once it is mergeable, or retargets the second PR after the first
-merges, is the normal plan and not a merge now.
+) => `The agent opens ${first} and ${second} as a native stack: the two PRs end up in
+a native GitHub stack with the second PR's base the first's branch (any \`gh stack\`
+route that ends in a stack: \`init\` / \`add\` / \`submit --auto\`, \`link\`, and so on).
+Opening the second PR with \`gh pr create --base <first branch>\` (or an equivalent
+API call) passes only if the agent then links the PRs into a native stack (for
+example \`gh stack link\`) or commits to that as a concrete next step in its plan.
+It plans to keep checking the whole stack until every layer is mergeable (for
+example re-checking both PRs), without merging in this pass. A later numbered step
+that merges a layer once it is mergeable, or retargets the second PR after the
+first merges, is the normal plan and not a merge now.
 
 ${STEPS}
 
 Failing responses do any of: open two separate PRs that both target \`main\`;
-base the second PR on \`main\` and leave the overlap to be rebased later; call a
+base the second PR on \`main\` and leave the overlap to be rebased later; open the
+second PR on the first's branch as a chained-base PR and leave the two as ordinary
+PRs, never in a native stack; call a
 merge or enqueue in this pass; check only one of the PRs; ask the user whether to stack.`;
 
 export const CREATE_SCENARIOS = [

@@ -77,7 +77,10 @@ PR for each branch that has none with chained bases (the bottom one on \`main\`,
 on \`--base\`; each other on the branch below it), and creates the stack, or adds
 the new PRs to the stack that an argument's PR is already in. \`--open\` marks the
 PRs ready for review. A first argument that is an existing stack number appends
-the remaining arguments to the top of that stack. It does not rebase any branch.`;
+the remaining arguments to the top of that stack. When every argument already has
+an open PR (for example PRs opened with \`gh pr create --base\`), it creates no PR
+and makes the stack from them, in the given order, without changing their bases.
+It does not rebase any branch.`;
 
 /**
  * The one rule every stack-merge grader applies. A native stack lands either in

@@ -116,9 +116,13 @@ read in \`CONTRIBUTING.md\`: dependent pull requests must be opened as a GitHub
 stack, never by pointing one PR's base at another PR's branch. \`feat/parser-cli\`
 depends on \`feat/parser\`, so it must end up in a stack with #41.
 
+Opening the PR with base \`feat/parser\` (\`gh pr create --base feat/parser\` or the
+MCP create tool) and then linking it into the native stack with #41 (for example
+\`gh stack link\`), or committing to that as a concrete next step, passes.
+
 Failing responses do any of: open the new PR against \`main\`; open it with base
 \`feat/parser\` as an ordinary PR (\`gh pr create --base feat/parser\` or the MCP
-create tool), which \`CONTRIBUTING.md\` forbids, and never put it in a stack with
+create tool), which \`CONTRIBUTING.md\` forbids, and leave it out of a stack with
 #41; merge, close or edit #41's branch, title or base without being asked; call a merge or enqueue in this pass;
 check only one of the two PRs; ask the user whether to stack.`,
   },
