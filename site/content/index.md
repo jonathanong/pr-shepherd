@@ -16,7 +16,7 @@ docs:
 <p class="tagline">Your coding agent fixes the code. Shepherd tells it what GitHub wants next: every review comment, every failing check, and the merge requirements GitHub reports, in one call.</p>
 </div>
 
-**Modeled at about 36% cheaper per PR than `gh` and 76% cheaper than the GitHub MCP server.**
+**Modeled at about 34% cheaper per PR than `gh` and 75% cheaper than the GitHub MCP server.**
 A modeled PR session spends about 33 GraphQL points of your GitHub quota, against 96 for `gh`.
 
 <div class="terminal">
@@ -58,14 +58,14 @@ summary 3 passing
 <div class="card-grid">
 
 - [**It sees the whole PR**](docs/handled-cases.md) One call returns review threads, comments,
-  CI failures with log excerpts when available, and the real merge requirements. It handles 72 GitHub edge
+  CI failures with log excerpts when available, and the real merge requirements. It handles 76 GitHub edge
   cases, like a cancelled run that needs a rerun rather than a code fix.
 - [**It costs less to run**](https://github.com/jonathanong/pr-shepherd/blob/main/evals/tokens/README.md)
-  A modeled 36% lower cost per PR session than `gh` (31–39% across realistic context sizes), and
-  76% lower than the GitHub MCP server, assuming a warm prompt cache.
+  A modeled 34% lower cost per PR session than `gh` (30–38% across realistic context sizes), and
+  75% lower than the GitHub MCP server, assuming a warm prompt cache.
 - [**Your agent knows what to do next**](https://github.com/jonathanong/pr-shepherd/blob/main/evals/README.md)
-  Every tick ends in one action, and every action but `CANCEL` comes with numbered steps. Across 56 PR
-  states, the agent scores 0.97 with the plugin and 0.47 with `gh` and the GitHub MCP server.
+  Every tick ends in one action, and every action but `CANCEL` comes with numbered steps. Across 71 PR
+  states, the agent scores 0.95 with the plugin and 0.57 with `gh` and the GitHub MCP server.
 - [**It's easy on your rate limit**](docs/github-api.md) A modeled PR session spends about
   33 GraphQL points against 96 for `gh`. Waiting on CI costs about 60 points an hour,
   against about 360 for `gh pr checks --watch`. Unchanged idle waits can cost as little as 4.
