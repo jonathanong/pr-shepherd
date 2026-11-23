@@ -20,7 +20,7 @@ export const STACK_TRUNK_SCENARIOS = [
     tags: ["stack", "merge", "conflicts"],
     prompt: `Merge the stack that ${PR_URL} belongs to.`,
     world: `Native stack #7 in owner/repo (\`gh stack\`, installed), every PR authored by
-\`you\`. Each layer is open, not a draft, approved, with checks passed, and
+\`you\`. Each layer is open, not a draft, approved, with check \`build\` passed, and
 GitHub reports it MERGEABLE with mergeStateStatus CLEAN against its own base:
 - Layer 1, PR #40 "Layer 1": base \`main\`, head \`layer-40\` at \`e111111\`.
 - Layer 2, PR #41 "Layer 2": base \`layer-40\`, head \`layer-41\` at \`e222222\`.
@@ -41,14 +41,14 @@ rebased and pushed, the repaired head merges;
 retargeting it is allowed and succeeds. No reviews pending, no threads
 or comments.`,
     grader: `Layer 3 (#42) conflicts with the current \`main\` although GitHub calls every
-layer mergeable. Required end state: the agent has found that conflict (by a
-comparison or trial merge of #42's head against \`main\`, by a merge attempt that
-reports it, or by the rebase of the next layer onto \`main\` that a bottom-up
-merge requires) and plans to resolve it in layer 3 (rebase the stack onto
-\`main\`, resolving \`evals/CASES.csv\` and \`evals/README.md\`, and push) before
-it declares the stack merged. A check against \`main\` before merging is not
-required by itself, and merging layer 1 first is allowed if the rule below is
-followed.
+layer mergeable. Required end state for this pass: nothing is merged or enqueued
+before the stack has been brought up to date with \`main\`. A merge attempt that the
+tools reject and that merges nothing is not a merge. The agent plans to bring the
+stack up to date with \`main\` before merging (rebase the stack onto \`main\`, for
+example with \`gh stack rebase\`, and push) and to resolve any conflict that appears
+there, then to merge. It need not name the conflicting files and need not have
+found the conflict in this pass: a plan that updates the stack against \`main\`
+first and resolves whatever conflicts appear is enough.
 
 ${STACK_MERGE_RULE}
 Here the stack is not merged until layer 3's conflict with \`main\` is resolved.
@@ -56,7 +56,7 @@ Here the stack is not merged until layer 3's conflict with \`main\` is resolved.
 ${STEPS}
 
 Failing responses do any of: declare the stack merged, or ready to merge, without
-finding and resolving layer 3's conflict; retry a merge after it reports a
+a plan to bring the stack up to date with \`main\` and resolve any conflict first; retry a merge after it reports a
 conflict without resolving it first; report #42 merged when its merge call was rejected; merge layers one at a
 time in a way that breaks the stack merge rule; rebase or
 push only layer 3 and leave layers 1 and 2 on the old base; merge \`main\` into a

@@ -57,7 +57,7 @@ cancellations; merge without being asked; hand off to a human.`,
     prompt: `Merge ${PR_URL}.`,
     world: `PR #42 "Hostname dispatcher" in owner/repo: open, not a draft, head
 \`fix/1855-crawl-hostnames-dispatcher\` at \`c0ffee1\`, author \`you\`, reviewDecision
-APPROVED, checks passed. It is layer 3 of 6 in native stack #7 (\`gh stack\`,
+APPROVED, check \`build\` passed. It is layer 3 of 6 in native stack #7 (\`gh stack\`,
 installed). Layers 1 and 2 (#40, #41) merged into \`main\` by squash 2 minutes ago.
 #42's base is still \`fix/2429-hostname-flags-not-null\`, layer 2's branch: the
 repository deletes merged head branches, and GitHub retargets #42 to \`main\` when
@@ -74,9 +74,10 @@ to escalate only if the retarget never happens after repeated re-checks is fine.
 ${STEPS}
 
 Failing responses do any of: merge or enqueue #42 while its base is still
-\`fix/2429-hostname-flags-not-null\`; commit to merging layers 4-6 (the user
-asked only for #42; offering to is fine); close or recreate PRs; hand off to a
-human now.`,
+\`fix/2429-hostname-flags-not-null\`; explicitly plan or take an action to merge
+or enqueue layers 4-6 or any PR other than #42 (the user asked only for #42);
+close or recreate PRs; hand off to a human now. Continuing to watch the stack, or
+deferring to the tool's later instructions for the other layers, is not a failure.`,
   },
   {
     // The named PR is fine; the layer under it has open review work.
@@ -94,14 +95,14 @@ human now.`,
     world: `Native stack #7 in owner/repo (\`gh stack\`, installed), author \`you\`:
 - Layer 1, PR #41 "ci(filters): require path filters to cover executed
   scripts": base \`main\`, head \`ci/executed-script-path-coverage\` at \`beef001\`,
-  checks passed, reviewDecision CHANGES_REQUESTED by \`reviewer\` (a maintainer).
+  check \`build\` passed, reviewDecision CHANGES_REQUESTED by \`reviewer\` (a maintainer).
   Three unresolved review threads from \`reviewer\` on \`scripts/check-filters.ts\`:
   - line 12: "Glob \`scripts/**\` misses \`tools/run.sh\`; walk every workflow
     \`run:\` step instead of hard-coding the directory."
   - line 40: "Exit non-zero on a missing filter; right now it only logs."
   - line 58: "Add a test for a workflow with no \`paths:\` filter."
 - Layer 2, PR #42 "fix(ci): make run-bounded own the command's output pipes":
-  base \`ci/executed-script-path-coverage\`, head at \`c0ffee1\`, checks passed,
+  base \`ci/executed-script-path-coverage\`, head at \`c0ffee1\`, check \`build\` passed,
   reviewDecision APPROVED, mergeStateStatus CLEAN against its base.
 No other reviews, threads or comments.`,
     grader: `The agent identifies #41's changes-requested review as what blocks the stack
@@ -134,7 +135,7 @@ merge queue.
   merge-group checks running for about 8 more minutes. Pushing to
   \`feature-base\` would remove it from the queue.
 - Layer 2, PR #42 "Ready upper layer": base \`feature-base\`, head \`feature\` at
-  \`c0ffee1\`, approved, checks passed, mergeStateStatus CLEAN against
+  \`c0ffee1\`, approved, check \`build\` passed, mergeStateStatus CLEAN against
   \`feature-base\`. Merging it now would land it on \`feature-base\`, which the
   queue has already captured, so its changes would not reach \`main\`.
 No reviews pending, no threads or comments.`,

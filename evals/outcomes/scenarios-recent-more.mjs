@@ -34,13 +34,16 @@ Run 900 cannot be rerun while it is in progress: \`gh run rerun 900\` and \`gh r
 rerun 900 --failed\` print "run 900 cannot be rerun; This workflow is already
 running" and exit 1. No other runs, no reviews, threads or comments. The current
 time is ${NOW}.`,
-    grader: `The agent investigates the failed job once (its log or run page), concludes that
-the simulator launch timeout is not caused by this PR's pagination change, and
-makes no code change for it. It leaves run 900 alone while it is in progress and
-waits for it to finish: it ends this pass saying it will look at the PR again when
-the run completes (or at the next scheduled check). It may add that a failure that
-remains after the run ends is then rerun or reported. It runs no sleep, watch or
-poll loop of its own.
+    grader: `The agent works out why the failed job failed from the failed step's
+excerpt it has seen (in any tool's output) or from the job's log or run page,
+concludes that the simulator launch timeout is not caused by this PR's pagination
+change, and makes no code change for it. An agent that works from an excerpt it
+has already seen has investigated; it need not fetch the log again. It leaves run 900 alone while it is in progress and waits for it to
+finish: it ends this pass either saying it will look at the PR again when run 900
+completes (or at the next scheduled check), or saying it will rerun the status
+tool that waits for the run to finish. It may add that a failure that remains
+after the run ends is then rerun or reported. It runs no sleep, watch or poll
+loop of its own.
 
 ${REREAD}
 

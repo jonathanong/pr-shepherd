@@ -12,7 +12,7 @@ Checks on \`c0ffee1\` (PR head): \`tests\` passed, \`lint\` passed.
 Timeline:
 - 2024-05-15T18:40:00Z \`you\` added the PR to the merge queue.
 - Merge group commit \`queue-commit-1\` (parents \`abc123\` and \`c0ffee1\`): workflow
-  "CI" run 37106358227, event merge_group, job \`tests\` failed. Log:
+  "CI" run 37106358227, event merge_group, job \`tests\` (job id 37106400001) failed. Log:
   OpenRouter HTTP 529: provider temporarily unavailable
   ##[error]Process completed with exit code 1.
 - 2024-05-15T18:50:00Z \`maintainer\` removed the PR from the merge queue
@@ -52,7 +52,7 @@ Checks on \`c0ffee1\` (PR head): \`tests\` passed, \`lint\` passed.
 Timeline:
 - 2024-05-15T18:40:00Z \`you\` added the PR to the merge queue.
 - Merge group commit \`queue-commit-1\` (parents \`abc123\` and \`c0ffee1\`): workflow
-  "CI" run 37106358227, event merge_group, job \`tests\` failed. Log:
+  "CI" run 37106358227, event merge_group, job \`tests\` (job id 37106400001) failed. Log:
   OpenRouter HTTP 529: provider temporarily unavailable
   ##[error]Process completed with exit code 1.
 - 2024-05-15T18:50:00Z \`github-actions\` removed the PR from the merge queue

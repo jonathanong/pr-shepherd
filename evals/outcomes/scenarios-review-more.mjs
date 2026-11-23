@@ -69,7 +69,7 @@ mergeStateStatus BLOCKED, reviewDecision CHANGES_REQUESTED.
   \`--page-size\` flag inline inside \`main()\`.
 - Issue comment id 54 (node \`IC_multi\`) by \`reviewer\`: "Mention the new flag in
   the README." The README does not mention \`--page-size\`.
-- Workflow "CI", run 5401 on \`c0ffee1\`: job \`tests\` (required) failed in step
+- Workflow "CI", run 5401 on \`c0ffee1\`: job \`tests\` (job id 5402, required) failed in step
   "Run tests". Log:
     FAIL tests/flags.test.ts > parses --page-size
     AssertionError: expected '25' to be 25 // Object.is equality

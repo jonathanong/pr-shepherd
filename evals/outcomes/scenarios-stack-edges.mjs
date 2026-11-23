@@ -28,10 +28,10 @@ export const STACK_EDGE_SCENARIOS = [
     world: `Native stack #7 in owner/repo (\`gh stack\`, installed; \`gh stack checkout 7\`
 imports it locally), author \`you\`:
 - Layer 1, PR #41 "Conflicting foundation": base \`main\`, head \`foundation\` at
-  \`beef001\`, approved, checks passed, mergeStateStatus DIRTY: \`main\` changed
+  \`beef001\`, approved, check \`build\` passed, mergeStateStatus DIRTY: \`main\` changed
   \`src/config.ts\` in lines this layer also changed.
 - Layer 2, PR #42 "Verified child": base \`foundation\`, head \`feature\` at
-  \`c0ffee1\`, approved, checks passed, mergeStateStatus CLEAN against
+  \`c0ffee1\`, approved, check \`build\` passed, mergeStateStatus CLEAN against
   \`foundation\`.
 No reviews pending, no threads or comments.`,
     grader: `The agent identifies #41's conflict with \`main\` as what blocks the stack and
@@ -69,7 +69,7 @@ to move it; merge \`main\` into #42's branch to fix #41's conflict; use bare
   \`beef001\`. \`maintainer\` closed it without merging an hour ago and left no
   comment. The \`foundation\` branch still exists.
 - Layer 2, PR #42 "Open child": base \`foundation\`, head \`feature\` at \`c0ffee1\`,
-  approved, checks passed, mergeStateStatus CLEAN against \`foundation\`. Its
+  approved, check \`build\` passed, mergeStateStatus CLEAN against \`foundation\`. Its
   diff builds on #41's changes. Merging it now would land it on \`foundation\`,
   not on \`main\`.
 No other reviews, threads or comments.`,
@@ -103,7 +103,7 @@ Checks on \`aaaaaaa\` (PR head): \`tests\` passed.
 Timeline:
 - 2024-05-15T18:40:00Z \`you\` added the PR to the merge queue.
 - Merge group commit \`bbbbbbb\` (parents \`main\` and \`aaaaaaa\`): workflow "CI"
-  run 37106358227, event merge_group, job \`tests\` failed. Log:
+  run 37106358227, event merge_group, job \`tests\` (job id 37106400001) failed. Log:
   OpenRouter HTTP 529: provider temporarily unavailable
   ##[error]Process completed with exit code 1.
 - 2024-05-15T18:50:00Z \`github-actions\` removed the PR from the merge queue

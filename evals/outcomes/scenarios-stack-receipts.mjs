@@ -13,7 +13,8 @@ const LAYERS = (numbers) =>
     .map(
       (n, i) =>
         `- Layer ${i + 1}, PR #${n} "Layer ${i + 1}": base \`${i === 0 ? "main" : `layer-${i}`}\`, head \`layer-${i + 1}\`,
-  author \`you\`, approved, checks passed, mergeStateStatus CLEAN against its base.`,
+  author \`you\`, approved, its six checks (\`build\`, \`lint\`, \`typecheck\`, \`unit\`,
+  \`e2e\`, \`docs\`) passed, mergeStateStatus CLEAN against its base.`,
     )
     .join("\n");
 
