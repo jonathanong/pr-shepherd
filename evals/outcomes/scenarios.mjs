@@ -19,6 +19,7 @@ import { STACK_EDGE_SCENARIOS } from "./scenarios-stack-edges.mjs";
 import { STACK_MORE_SCENARIOS } from "./scenarios-stack-more.mjs";
 import { STACK_RECEIPT_SCENARIOS } from "./scenarios-stack-receipts.mjs";
 import { STACK_BY_PR_SCENARIOS } from "./scenarios-stack-by-pr.mjs";
+import { STACK_NO_MERGE_SCENARIOS } from "./scenarios-stack-no-merge.mjs";
 import { STACK_SCOPE_SCENARIOS } from "./scenarios-stack-scope.mjs";
 import { STACK_SCENARIOS } from "./scenarios-stack.mjs";
 import { STACK_TRUNK_SCENARIOS } from "./scenarios-stack-trunk.mjs";
@@ -39,6 +40,7 @@ const CATEGORIES = [
       ...STACK_BY_PR_SCENARIOS,
       ...STACK_RECEIPT_SCENARIOS,
       ...STACK_TRUNK_SCENARIOS,
+      ...STACK_NO_MERGE_SCENARIOS,
     ],
   ],
   ["Safety & terminal", SAFETY_SCENARIOS],

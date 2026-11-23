@@ -15,7 +15,7 @@ const URL = (n) => `https://github.com/owner/repo/pull/${n}`;
 const block = (label, text) => `=== ${label}\n${text}\n===`;
 
 /** The real one-PR tick once the ready delay has elapsed; it writes the READY receipt. */
-const oneCancel = (layers, pr) => `# PR #${pr} [CANCEL] — ready-delay-elapsed
+export const oneCancel =(layers, pr) => `# PR #${pr} [CANCEL] — ready-delay-elapsed
 
 **status** \`READY\` · **repo** \`owner/repo\`
 **summary** 6 passing
@@ -24,7 +24,7 @@ Stack: 7 (layer ${layers.indexOf(pr) + 1}/${layers.length}, base ${layers.indexO
 CANCEL: PR #${pr} has been ready for review — ready-delay elapsed, stopping`;
 
 /** A multi-PR poll of the layers: terminal rows, but no receipts. */
-const multiCancel = (layers) => `# Poll summary [ALL_TERMINAL]
+export const multiCancel =(layers) => `# Poll summary [ALL_TERMINAL]
 
 **repo** \`owner/repo\` · **selection** PRs ${layers.map((n) => `#${n}`).join(", ")} · **mode** \`summary\`
 

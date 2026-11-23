@@ -75,7 +75,7 @@ ${layerRows(layers, owned)}
 const block = (label, text) => `=== ${label}\n${text}\n===`;
 
 /** `iterate` on a stacked layer routes it to `stack` (src/commands/iterate/merge-state.mts). */
-const route = (layers, pr) => `# PR #${pr} [TRIAGE]
+export const route = (layers, pr) => `# PR #${pr} [TRIAGE]
 
 **status** \`READY\`
 **summary** 1 passing
