@@ -14,79 +14,91 @@ and committed to. The headline is **Δ = plugin − gh/MCP**.
 - [HISTORY.md](HISTORY.md): past runs, including the fixture suite, which now
   serves as the regression guard for the CLI's output and the skill.
 
-## Latest results (2026-11-21)
+## Latest results (2026-11-23)
 
-Sonnet 5.5 at low effort, opus judge, 3 runs per arm, 70 of the 71 scenarios scored. The full run was on `evals/outcome-full-run` at 2be58468 and covered all 71 scenarios ($567.20, 1311 s). A follow-up at 5786ecaa ($28.57) reran 75, because its grader changed, and added 3 more runs per arm to 12, 22 and 72, which now have 6 per arm. The only difference between 2be58468 and 5786ecaa is 75's grader, so the table comes from one harness version except that. A pilot of scenarios 69 to 75 at 18017769 ($42.84) is not in the table; it showed graders 72 to 75 failing correct runs, and 2be58468 loosened them. The round cost $638.61 in all.
+Sonnet 5.5 at low effort, opus judge, 3 runs per arm, 71 of the 72 scenarios scored. One full run of all 72 scenarios at deaa0744 (the head of #817, stacked on #812), $636.08, 1511 s. The runner exited 1 because six baseline runs errored; they are voided and listed below. Isolation passed (210 runs without the plugin, 216 with). The whole table is from one harness version, and `analyze.mjs` produced it from the kept traces. The run's results and analysis are in `/private/tmp/pr-shepherd-eval-817`, not in the repository. The category and All intervals are bootstrap intervals that resample scenarios and then runs within each chosen scenario. A scenario's own interval resamples its runs. No runs were added beyond 3, so every scenario is at n=3 per arm or fewer (see the voided runs below).
 
-`add-runs.mjs` merged the full run and the follow-up into one file, and `analyze.mjs` produced the tables below from the kept traces. The category and All intervals are bootstrap intervals that resample scenarios and then runs within each chosen scenario. A scenario's own interval resamples its runs. Runs are topped up beyond 3 only where the direction was in question. 22 is settled (plugin 0 of 6). 12 and 72 are still inconclusive at 6 per arm and were not topped up again.
+This is the first full run with the checks rule from #812 and the third-audit fixes to graders, mocks and worlds. The previous full run (2026-11-21, 70 of 71 scored) was plugin 0.90, gh/MCP 0.49, Δ +0.41 [+0.30, +0.52]. Its raw traces no longer exist, so any comparison with it uses the scores recorded in [HISTORY.md](HISTORY.md). The harness differs, so the change in the numbers is not an effect of the plugin.
 
 | Category                | Scenarios | Plugin | gh/MCP | Δ     | 95% CI         |
 | ----------------------- | --------- | ------ | ------ | ----- | -------------- |
-| Review feedback         | 11        | 0.92   | 0.67   | +0.26 | [+0.06, +0.47] |
-| CI                      | 16        | 0.96   | 0.50   | +0.46 | [+0.25, +0.69] |
-| Merge gates & branch    | 14        | 0.88   | 0.82   | +0.06 | [-0.11, +0.24] |
-| Merge queue             | 4         | 1.00   | 0.17   | +0.83 | [+0.50, +1.00] |
-| Safety & terminal       | 4         | 1.00   | 0.92   | +0.08 | [+0.00, +0.33] |
-| Stacks                  | 15        | 0.96   | 0.16   | +0.80 | [+0.64, +0.93] |
-| Creating PRs            | 3         | 1.00   | 0.33   | +0.67 | [+0.00, +1.00] |
-| Trigger (no skill hint) | 3         | 0.00   | 0.00   | +0.00 | [+0.00, +0.00] |
-| **All**                 | 70        | 0.90   | 0.49   | +0.41 | [+0.30, +0.52] |
+| Review feedback         | 11        | 0.97   | 0.67   | +0.30 | [+0.06, +0.58] |
+| CI                      | 17        | 0.92   | 0.53   | +0.39 | [+0.20, +0.59] |
+| Merge gates & branch    | 14        | 1.00   | 0.88   | +0.12 | [+0.00, +0.29] |
+| Merge queue             | 4         | 1.00   | 0.25   | +0.75 | [+0.25, +1.00] |
+| Safety & terminal       | 4         | 1.00   | 0.83   | +0.17 | [+0.00, +0.50] |
+| Stacks                  | 15        | 0.89   | 0.39   | +0.50 | [+0.28, +0.72] |
+| Creating PRs            | 3         | 1.00   | 0.22   | +0.78 | [+0.33, +1.00] |
+| Trigger (no skill hint) | 3         | 1.00   | 0.33   | +0.67 | [+0.00, +1.00] |
+| **All**                 | 71        | 0.95   | 0.57   | +0.38 | [+0.28, +0.49] |
 
-The Trigger rows measure whether the agent reaches for the plugin when the user only says "Merge <PR>", not what the plugin does once used. Do not read them as an effect of the plugin.
+The Trigger rows measure whether the agent reaches for the plugin when the user only says "Merge <PR>", not what the plugin does once used. Do not read them as an effect of the plugin. The category is three scenarios at n=3 each, and its interval is [+0.00, +1.00].
 
-The full run alone gave plugin 0.90, gh/MCP 0.48, Δ +0.42 [+0.30, +0.53]. The previous table (57 scenarios, plugin 0.96, gh/MCP 0.50, Δ +0.47 [+0.35, +0.58]) is not comparable: it was layered from runs on different harness versions.
+Trigger scenarios (69 to 71, bare "Merge <PR>", no skill hint): the skill loaded and the CLI was called in 3 of 3 kept plugin runs for each. 69 scored 1.00 / 1.00; 70 and 71 scored 1.00 / 0.00. In the full run of 2026-11-21 the skill loaded in 0 of 9.
 
-Trigger scenarios (69 to 71, bare "Merge <PR>", no skill hint):
+Voided runs (6, all baseline, one cause): 11 run 2, 27 run 3, 36 runs 1 to 3, and 61 run 1. The agent called a deferred MCP tool it had not loaded, with `{}`; the mock answered "missing required parameter"; the Claude Code runtime appended its own hint to the result; and the runner rejected the run with "a result in the trace is not one the harness gave". It was not a timeout or a limit. 11, 27 and 61 keep 2 baseline runs. 36 keeps none, so it is `insufficient` and left out of every mean.
 
-- The skill loaded in 0 of 9 plugin runs and the CLI was called in 0 of 9 in the full run (the pilot had 1 CLI call in 9). Both arms score 0.00.
-- In 69 the agents saw the blocked state and stopped without finding the failing test.
-- In 70 and 71 they got a 405 on a direct merge, re-enqueued with `gh pr merge`, and reported success without noticing the earlier removal.
-- The skill description was extended afterwards; see [HISTORY.md](HISTORY.md#2026-11-21-two-targeted-experiments). The trigger rows in the tables predate that change; see "Still open" for the targeted run that measured it.
+Other findings. The judge's reasons are not stored; each cause below is from the raw trace read against the grader text, and the ones marked inferred are not confirmed.
 
-Other findings:
-
-- **22 is the first scenario the plugin loses: 0.00 vs 0.50, and the interval excludes 0. Superseded: after the fixes it scored 1.00 / 1.00 (see "Still open").** Plugin agents retarget #42 to main, rerun the CLI, get the same tick (the mock is fixed), then leave "rebase or merge" open. The new snapshot sentence is quoted in those reports, so part of this may be the harness. The plugin scored 1.00 here before.
-- **75: plugin 0.67 vs 1.00.** The failed plugin run used a wait-until-done invocation for a one-look question.
-- **12 and 72:** the failing plugin runs do not read the diff and defer judging to the next pass. The failing baselines do the same, or refuse to dismiss the bot review (12).
-- **21 and 56 are now ties** (baselines 3 of 3). 43's baselines still fail 3 of 3: they stop before confirming that the deployment approval is the blocker. 33's baselines pass 2 of 3.
-- **Merge gates fell to +0.06 [-0.11, +0.24].** 21 and 56 became ties, and the category gained 22's loss, 73 and 75.
-- **36 is not scored.** All three baseline runs errored again (`mocks: github/list_pull_requests: a result in the trace is not one the harness gave`). One plugin run each of 46 and 51 errored and is excluded.
+- **All 10 failed plugin runs have no mock error and no runner error.** They are in 12 (1 run), 30 (2), 37 (1), 54 (1), 58 (1), 59 (1), 60 (1), 62 (1) and 67 (1).
+- **Model variance, 3 runs:** 12 (tried a local read of `src/auth.ts`, never read it through GitHub, planned to fix an already-fixed bot finding and asked for human re-approval), 37 (merged correctly with `gh stack merge`, then planned no re-check because the mock replays a fixed snapshot after the merge, which the agent called stale), and 58 (used the MCP merge tool on #42 alone instead of the printed `gh stack merge`).
+- **30 is the lowest plugin score (0.33).** Both failing runs waited for the retarget and did not merge #42, and failed on the grader clause about committing to later layers. The passing run's wording is nearly the same, so the pass/fail line is thin. SKILL.md's "continue later layers you own" pushes toward the failing wording.
+- **Grader or playbook conflicts, 2 runs, confirmed from the trace:** 59 (the agent used only the printed excerpt, and the grader requires reading the log or provider status; `ci-failure-triage.md` says to use the excerpts already printed while `check-follow-up.md` says to investigate first) and 60 (investigated correctly, then advised the human to push an empty commit, which the grader's failing list names).
+- **Grader conflicts, 3 runs, inferred (judges 1 and 2):** 54 (the grader requires a re-check and also treats a re-check after the human handoff as polling), 62 (the plan matches the passing runs, and "found the conflict / plans to resolve it" cannot be met in a pass with no shell) and 67 (the agent called the failure transient from the excerpt and planned an immediate rerun, the CLI prints "Rerun Shepherd now", and the grader wants a wait until the run completes).
+- **The runner's score for 37 and 62 differs from the computed one in one run each.** The runner stores 0.4 (weighted mean) where `score.mjs` gives 0, because `score.mjs` zeroes a run whose outcome grader fails. The tables use the computed score.
+- **Mock tool errors:** 6 in the plugin arm, all the scripted merge-queue 405 in 70 and 71, and all six runs scored 1.0. 34 in the baseline arm: 26 are 405s the worlds intend (merge queue, rules, linear history, the 62 conflict), and 8 are 404s in 48 when reading PRs the agent had just created (the mock keeps no state). They did not change 48's score.
+- **Baseline ceiling of 0.6 on 36, 37, 38, 57, 58, 61 and 62.** The atomic grader (weight 2 of 5) requires one `gh stack merge`, and the baseline is never told `gh stack` exists. Scores on 57, 58, 61 and 62 sit at the ceiling: 57 is (0.6, 0, 0.6), 58 is 0.6 x3, 61 is 0.6 x2, 62 is (0.6, 0, 0.6). Genuine outcome failures among them: 57 run 2 merged layers onto parent branches, and 62 run 2 ignored the conflict. Do not read these baseline rows as more than the outcome grader's share. This is an owner decision, noted before.
+- **Baseline scores that are not trustworthy:** 41 (0.67; run 3 is a harness artifact: the MCP mock invented check-run id 1001 and the gh mock answered 404 for that id, and the world pins no check-run id), 24 (0.33; the world does not state `mergeStateStatus`, so the mock said "unstable" in the passing run and "blocked" in the two failing runs, where the agents then invented work), and 76 (below). 50 (0.67) and 39 (0.67) are genuine, and 17 (0.67) is judge variance on near-identical plans.
+- **76 is new: plugin 1.00, gh/MCP 0.33 at n=3, and the baseline number is not stable.** The mock was consistent with the world in every baseline run. Run 2 merged the PR (a genuine fail). Runs 1 and 3 did not merge and said nearly the same thing; run 1 ("most likely means no CI") failed 3 votes to 0 and run 3 passed 3 to 0. The direction is trustworthy and the 0.33 is not. The plugin arm obeys a recorded WAIT tick, so this scenario does not exercise the CLI fix in #816.
+- **The arms tie on 32 of 71 scored scenarios** (31 of 68 outside the trigger rows). No scenario has the baseline above the plugin.
+- **The gh/MCP arm scores 0.00 on 23 scenarios:** 02, 07, 25, 28, 30, 34, 35, 37, 38, 46, 48, 49, 52, 53, 54, 59, 60, 63, 67, 68, 70, 71 and 72. Several are worlds where the baseline learns a fact only by asking, or fails a house rule it is not told (see "Still open").
+- **The lowest plugin scores:** 0.33 on 30, and 0.67 on 12, 37, 54, 58, 59, 60, 62 and 67.
 - **The planted-instruction scenarios 08 and 09 score 1.00 in both arms.**
-- **The arms tie on 26 of 70 scenarios** (23 outside the trigger rows), mostly plain review threads, plain CI failures, planted instructions and simple gates, where `gh` alone already does the job. Only 22 and 75 favor gh/MCP.
-- **The lowest plugin scores:** 0.00 on 22 and 69 to 71, 0.50 on 12, and 0.67 on 30, 54, 58, 60, 63, 72 and 75.
 
 ## Known problems with these numbers
 
 ### Fixed and rerun
 
-The 2026-11-21 audits found rows that the harness, not the agent, produced. These were fixed and the full run measured them.
+Settled by the 2026-11-23 run:
 
-- **The mocks do not share state after a mutation.** After `gh stack merge` reported success, the other tools still showed the layers open. The system prompt now says the tools answer from a snapshot taken before the pass, so they do not show the effect of the agent's actions, and an action a tool reports as done is done. 58 is still 0.67 / 0.00; I did not re-read why. 22's reports quote the sentence.
+- **62's mock now rejects the conflicting merge.** The old mock merged #42 despite the conflict, which gave the baseline 0.00. It is now 0.67 / 0.40 (baseline runs 0.6, 0, 0.6). The baseline's 0.40 is the 0.6 ceiling plus one genuine failure (run 2 ignored the conflict); see "Still open".
+- **The cause of 36's runner errors is known. It is not fixed.** The baseline calls a deferred MCP tool it has not loaded, with `{}`. The mock answers "missing required parameter", the Claude Code runtime appends its own hint, and the runner rejects the run with "a result in the trace is not one the harness gave". The same cause voided one run each of 11, 27 and 61. A fix lives in `claude plugin eval`, or in not deferring the mock tool schemas; whether an option exists is not verified. 36 is still unscored.
+- **The third-audit graders, mocks and worlds are now in the full run.** The 23 changed cases (07, 25, 28, 35, 36, 37, 38, 41, 48, 49, 50, 53, 54, 57, 58, 61, 62, 63, 67, 70, 71, 72 and 75) were measured only by a targeted run before. They are in the table now, so it is not layered from harness versions. The 71 grader that failed correct plans after a rejected direct merge is measured: 70 and 71 are 1.00 / 0.00.
+- **22 is in the table at 1.00 / 1.00.** The old row (0.00 / 0.50) is gone.
+- **The trigger scenarios are measured by a full run.** 69 is 1.00 / 1.00, 70 and 71 are 1.00 / 0.00, with the skill loaded in 3 of 3 plugin runs each.
+- **The checks rule (#812) is in this run.** Every GitHub mock reports the checks the world names. It has a side effect in stack worlds, listed in "Still open".
+- **58 is 0.67 / 0.60.** The baseline is at the 0.6 ceiling in all three runs, and the plugin failure is one run that used the MCP merge tool on #42 alone (model variance).
+
+The 2026-11-21 audits found rows that the harness, not the agent, produced. These were fixed and the 2026-11-21 full run measured them. The 2026-11-23 values are given where they differ.
+
+- **The mocks do not share state after a mutation.** After `gh stack merge` reported success, the other tools still showed the layers open. The system prompt now says the tools answer from a snapshot taken before the pass, so they do not show the effect of the agent's actions, and an action a tool reports as done is done.
 - **25: 0.67 / 0.00 to 1.00 / 0.00.** Its tick named head `abc123`, but the world's head is `c0ffee1`. The tick now names `c0ffee1`. A test fails when any scenario's CLI mock pins a `--match-head-commit` or `--require-sha` commit that its world never names, and it found 35's 40-character SHAs, also fixed. 35 is 1.00 / 0.00. 63 was checked and agrees.
-- **The system prompt told agents to load a relevant skill.** Three trigger scenarios (69 to 71) now leave that sentence out (`skillHint: false`). The result is above: 0 of 9.
-- **Graders that failed correct baseline runs.** 21 and 56 failed a plan that resolved the conflict without naming the file or the two changes, which the agent cannot see without a checkout. 22 demanded the retarget before the rebase. 33 accepted only the stack tooling, not the manual equivalent. 43 demanded the names of the required reviewers. 21, 56 and 43 also failed harmless extra steps. After the rerun: 21 is 1.00 / 1.00 (was 1.00 / 0.33), 56 is 1.00 / 1.00 (was 1.00 / 0.00), 33 is 1.00 / 0.67 (was 1.00 / 0.00), 43 is 1.00 / 0.00 (unchanged), and 22 is 0.00 / 0.50 (was 1.00 / 0.00).
-- **62 showed 0.67 from the full run** although a later drift check scored it 1.00. It is now 1.00 / 0.00 from one run.
-- **The older rows could not be regenerated or trace-checked.** The whole table now comes from kept traces. `keep-traces.mjs` copies each run's directory next to the aggregate file.
-- **38: 0.60 / 0.00 to 1.00 / 0.00.** The 0.60 was a grader conflict, and the atomic grader is removed. The baselines merge each child into its parent branch.
-- **52, 59 and 60: to 1.00 / 0.00 each.** Their CLI mock repeated the investigation tick forever, but the real CLI escalates `check-follow-up-unavailable` on the next unchanged tick. The mocks now escalate on the second call. In this run 52 is 1.00 / 0.67, 59 is 1.00 / 0.00, and 60 is 0.67 / 0.00.
-- **Merge queue: 07, 25, 35 and 53.** The mock accepted a direct merge that GitHub rejects with 405. The worlds now reject direct merges, and 26's grader no longer counts a rejected direct merge as bypassing the queue. In this run 07, 25, 35 and 53 are 1.00 / 0.00 and 26 is 1.00 / 0.67. The category is +0.83 [+0.50, +1.00].
-- **20 and 26 became ties** after their grader and mock fixes. 20 is 1.00 / 1.00.
+- **The system prompt told agents to load a relevant skill.** Three trigger scenarios (69 to 71) now leave that sentence out (`skillHint: false`).
+- **Graders that failed correct baseline runs.** 21 and 56 failed a plan that resolved the conflict without naming the file or the two changes, which the agent cannot see without a checkout. 22 demanded the retarget before the rebase. 33 accepted only the stack tooling, not the manual equivalent. 43 demanded the names of the required reviewers. 21, 56 and 43 also failed harmless extra steps. In the 2026-11-23 run 21, 56, 22, 33 and 43 are all 1.00 / 1.00.
+- **62 showed 0.67 from the 2026-11-21 full run** although a later drift check scored it 1.00. It is 0.67 / 0.40 in the 2026-11-23 run.
+- **38: 0.60 / 0.00 to 1.00 / 0.00.** The 0.60 was a grader conflict, and the atomic grader is removed. It is 1.00 / 0.00 in the 2026-11-23 run.
+- **52, 59 and 60.** Their CLI mock repeated the investigation tick forever, but the real CLI escalates `check-follow-up-unavailable` on the next unchanged tick. The mocks now escalate on the second call. In the 2026-11-23 run 52 is 1.00 / 0.00, 59 is 0.67 / 0.00 and 60 is 0.67 / 0.00.
+- **Merge queue: 07, 25, 35 and 53.** The mock accepted a direct merge that GitHub rejects with 405. The worlds now reject direct merges, and 26's grader no longer counts a rejected direct merge as bypassing the queue. In the 2026-11-23 run 07, 25, 35 and 53 are 1.00 / 0.00 and 26 is 1.00 / 1.00. The category is +0.75 [+0.25, +1.00].
+- **20 and 26 became ties** after their grader and mock fixes.
 - **15 and 55 are removed.** 15 had nothing to find: its world gave only "Build failed" and a URL. 55's +0.67 came from a baseline state that could not exist. Fixture 196 stays in the fixture suite.
+- **The older rows could not be regenerated or trace-checked.** `keep-traces.mjs` copies each run's directory next to the aggregate file. The previous full run's raw traces no longer exist.
 
 ### Still open
 
-- **22 is fixed, and its table row is superseded.** In the full run the plugin was 0 of 6: the agent retargeted #42, reran the CLI and got the pre-retarget tick again, then stopped short of the rebase. A later CLI call now gets fixture 27's tick (a conflict against `main`), and 22 has the rebase rule from `AGENTS.md` that both ticks point at, in both arms. A targeted run at 8c82fcee (3 runs per arm) scored 1.00 / 1.00 ([HISTORY.md](HISTORY.md#2026-11-21-fixes-to-scenarios-69-and-22-and-a-targeted-run-of-them)). The tables below still show 0.00 / 0.50, from the full run on the older harness. Folding the targeted run into them would layer harness versions again, so the row stays and the text above supersedes it. (The 75 follow-up could be merged only because it changed nothing but 75's grader.)
-- **36 errors in the runner for every baseline run.** Its mock files have the same shape as those of 33, 37 and 38, which use the same tools without the error, so the cause is not found.
-- **In 12 the mock gave different baseline runs different diffs for the same PR.** Not fixed, and 12 is inconclusive at 6 runs per arm.
+- **The checks rule contradicts stack worlds that say "checks passed" without naming a check.** The rule (#812) tells the mock to report empty lists when no check is named, so `get_status` returns pending with `total_count` 0 on every layer, against the world. Confirmed in 57, 58, 61 and 62; 30 to 38 share the wording and were not audited for it. Baseline agents reported "no CI checks" and merged anyway, and no score change was seen in 57, 58, 61 or 62. Not fixed.
+- **The 0.6 baseline ceiling on 36, 37, 38, 57, 58, 61 and 62.** The atomic grader requires one `gh stack merge` and the baseline is never told it exists, so baseline scores on these rows cannot exceed 0.6. An owner decision, not changed.
+- **Baseline rows 24 and 41 are unreliable.** The world of 24 does not state `mergeStateStatus` (the mock answered "unstable" once and "blocked" twice, and the agents invented work on "blocked"). The world of 41 pins no check-run id (the MCP mock invented 1001 and the gh mock answered 404). Pin both in the worlds.
+- **76's baseline score (0.33) is not stable at n=3.** Runs 1 and 3 said nearly the same thing and got opposite votes. Run more before quoting a point score.
+- **Grader text that conflicts with the CLI or itself:** 54 (re-check vs polling, inferred), 62 ("found the conflict" is unreachable in a pass with no shell, inferred), 67 (wait until the run completes vs the CLI's "Rerun Shepherd now", inferred), 30 (the later-layers wording; the SKILL.md phrase "continue later layers you own" pushes toward the failing answer) and 60 (the grader fails recommending an empty commit to a human).
+- **Playbook conflict:** `ci-failure-triage.md` ("use the excerpts already printed") against `check-follow-up.md` ("investigate first"). It affects 59 and 67.
+- **Deferred-tool voids.** 36 is unscored; 11, 27 and 61 each lose a baseline run and have 2. The cause is known (above) and the fix is not in this repository.
+- **48: the github mock answers 404 for PRs the agent just created.** 8 baseline calls in this run. It did not change 48's score.
+- **67's mock answers.** The third audit found that the 67 baseline mock could answer ok to a rerun the world says cannot happen. The 2026-11-23 findings do not mention it, so it has not been re-checked.
+- **In 12 the mock gave different baseline runs different diffs for the same PR.** Not fixed. 12 is 0.67 / 0.33 at n=3, and its plugin failure is model variance (a local read, never read through GitHub).
 - **Worlds without a diff-size sentence:** 10, 31, 32, 33 and 63 do not have PR #42 open, so they do not get the one the other worlds have.
-- **The trigger scenarios were measured after the fixes, by a targeted run only, and 70 and 71 still fail.** At 8c82fcee (3 runs per arm, $33.30) the skill loaded and the CLI was called in 3 of 3 plugin runs for each of 69, 70 and 71. 69 scored 1.00 / 1.00 (fixed: the user's message reports the 405 and the world pins the check state). 70 scored 0.33 / 0.00 and 71 scored 0.00 / 0.00. In 70 the plugin runs defer the branch update and the requeue to "my next pass, which has a checkout"; one of three passed with a plan that reads like the two that failed. In 71 the plugin runs report the manual removal and ask a human, which is what the grader describes, yet every judge vote was FAIL. The tables below still show these three rows from the full run (0.00 / 0.00), so they are superseded by this text.
-- **Third audit (2026-11-22): graders, mocks and worlds changed, measured by a targeted run only, so these rows are superseded.** The generated cases that differ from main are 07, 25, 28, 35, 36, 37, 38, 41, 48, 49, 50, 53, 54, 57, 58, 61, 62, 63, 67, 70, 71, 72 and 75. The targeted run (3 runs per arm, $238.49) scored the 22 measured ones plugin 0.95, gh/MCP 0.26, delta +0.69 [+0.53, +0.84]; 36 is insufficient (2 baseline runs voided by the runner). The tables below stay as the full run on the older harness, and the before and after per scenario is in [HISTORY.md](HISTORY.md#2026-11-22-targeted-run-of-the-third-audit-cases). Harness-made results left after the run: the 62 and 67 mock answers that contradict the world (62 baseline merged #42, 67 baseline run 0 reran a run the world says cannot be rerun), the github mock's `get_status` that omits the check runs of 41 and 54, and 404s from the github read tools for PRs the agent just created (48, 49, 50). A general rule that makes every GitHub mock report the checks the world names is in a separate stacked PR, to land with a full re-run. Details in [HISTORY.md](HISTORY.md#2026-11-22-third-harness-audit-no-runs).
-- **76 is new and has not been run (2026-11-22).** A head pushed seconds ago: GitHub says CLEAN and the base requires no checks, but no check has registered on the head. The plugin arm's recorded tick is a WAIT; the baseline has to notice the empty check list and the queued third-party suites. It is not in the tables above. Why it was added is in [HISTORY.md](HISTORY.md#2026-11-22-scenario-76-added-without-a-run).
-- **The baseline learns of some facts only if it asks (open question for the owner, not changed).** In 07, 25, 53, 35 and 28 the tick volunteers the removal event, the merge-group failure and the stack membership, while a baseline sees them only through `gh api`, `gh run view` or `gh stack view`. The worlds state each fact, so the mock can answer a baseline that asks; 28 and 35 now also say what `gh stack view` shows. Whether this asymmetry is the thing the suite should measure is the owner's call.
+- **The baseline learns of some facts only if it asks (open question for the owner, not changed).** In 07, 25, 53, 35 and 28 the tick volunteers the removal event, the merge-group failure and the stack membership, while a baseline sees them only through `gh api`, `gh run view` or `gh stack view`. The worlds state each fact, so the mock can answer a baseline that asks. Whether this asymmetry is the thing the suite should measure is the owner's call.
 - **Three graders require a house rule neither the prompt nor the world states (open question, not changed).** 02 requires dismissing the bot review after the fix, 46 cancelling superseded runs, and 48 stacking by default. A baseline that does not know the rule fails it; the plugin knows it from the tick or the skill.
-- **71's grader failed correct plans after a rejected direct merge (found in the third audit, fixed, not yet run).** Every plugin run of 70 and 71 that called the merge tool and got the world's 405 failed, and every one that did not passed; the graders of 07, 25, 35, 53, 70 and 71 now say a rejected direct merge is not by itself a failure. The judge's reasons are not stored, so the cause is inferred from that correlation.
-- **Plugin runs that do not read the diff** (12, 72) defer judging to the next pass.
-- **The baseline traces of some zero-baseline scenarios have not been re-read** (28, 34 and others). The audits found harness-made zeros in the ones they read.
+- **The baseline traces of some zero-baseline scenarios have not been re-read** (28, 34 and others). The audits found harness-made zeros in the ones they read, and the 2026-11-23 findings do not cover the others.
 - **These numbers are not comparable to the 2026-11-15 headline (0.97 vs 0.47).** Those prompts and graders named pr-shepherd.
 - **Creating PRs counts plans that stop before the PRs exist.** A create scenario starts with no PR, so a plugin run that never called Shepherd is not voided (#789).
 
@@ -98,74 +110,76 @@ The 2026-11-21 audits found rows that the harness, not the agent, produced. Thes
 | `01-silent-edit`                         | Review feedback         | 1.00   | 1.00   | 0.00  |
 | `02-stale-bot-review`                    | Review feedback         | 1.00   | 0.00   | +1.00 |
 | `03-plain-thread`                        | Review feedback         | 1.00   | 1.00   | 0.00  |
-| `11-multi-category`                      | Review feedback         | 1.00   | 0.67   | +0.33 |
-| `12-bot-review-and-thread`               | Review feedback         | 0.50   | 0.33   | +0.17 |
-| `13-suggestion`                          | Review feedback         | 1.00   | 0.67   | +0.33 |
+| `11-multi-category`                      | Review feedback         | 1.00   | 1.00   | 0.00  |
+| `12-bot-review-and-thread`               | Review feedback         | 0.67   | 0.33   | +0.33 |
+| `13-suggestion`                          | Review feedback         | 1.00   | 1.00   | 0.00  |
 | `42-denied-reply-one-look-skip`          | Review feedback         | 1.00   | 1.00   | 0.00  |
 | `44-resolved-thread-new-reply`           | Review feedback         | 1.00   | 1.00   | 0.00  |
-| `68-changes-requested-older-commit`      | Review feedback         | 1.00   | 0.33   | +0.67 |
-| `72-wrong-review-comment-declined`       | Review feedback         | 0.67   | 0.33   | +0.33 |
+| `68-changes-requested-older-commit`      | Review feedback         | 1.00   | 0.00   | +1.00 |
+| `72-wrong-review-comment-declined`       | Review feedback         | 1.00   | 0.00   | +1.00 |
 | `74-bot-noise-beside-real-comment`       | Review feedback         | 1.00   | 1.00   | 0.00  |
 | `04-real-ci-failure`                     | CI                      | 1.00   | 1.00   | 0.00  |
 | `05-cancelled-ci`                        | CI                      | 1.00   | 1.00   | 0.00  |
 | `16-check-blocked-by-open-pr`            | CI                      | 1.00   | 1.00   | 0.00  |
-| `17-check-blocker-released`              | CI                      | 1.00   | 1.00   | 0.00  |
-| `39-required-check-never-reports`        | CI                      | 1.00   | 1.00   | 0.00  |
-| `40-startup-failure-workflow-edit`       | CI                      | 1.00   | 0.67   | +0.33 |
-| `41-check-annotations-no-log`            | CI                      | 1.00   | 0.00   | +1.00 |
-| `43-deployment-awaiting-approval`        | CI                      | 1.00   | 0.00   | +1.00 |
+| `17-check-blocker-released`              | CI                      | 1.00   | 0.67   | +0.33 |
+| `39-required-check-never-reports`        | CI                      | 1.00   | 0.67   | +0.33 |
+| `40-startup-failure-workflow-edit`       | CI                      | 1.00   | 1.00   | 0.00  |
+| `41-check-annotations-no-log`            | CI                      | 1.00   | 0.67   | +0.33 |
+| `43-deployment-awaiting-approval`        | CI                      | 1.00   | 1.00   | 0.00  |
 | `46-cancel-superseded-runs-before-fix`   | CI                      | 1.00   | 0.00   | +1.00 |
 | `47-no-push-no-cancel`                   | CI                      | 1.00   | 0.67   | +0.33 |
 | `51-check-no-log-investigate-fix`        | CI                      | 1.00   | 1.00   | 0.00  |
-| `52-check-cancelled-human-cause`         | CI                      | 1.00   | 0.67   | +0.33 |
+| `52-check-cancelled-human-cause`         | CI                      | 1.00   | 0.00   | +1.00 |
 | `54-ci-never-starts`                     | CI                      | 0.67   | 0.00   | +0.67 |
-| `59-later-attempt-excerpt-no-pr-cause`   | CI                      | 1.00   | 0.00   | +1.00 |
+| `59-later-attempt-excerpt-no-pr-cause`   | CI                      | 0.67   | 0.00   | +0.67 |
 | `60-external-check-provider-outage`      | CI                      | 0.67   | 0.00   | +0.67 |
-| `67-wait-after-shown-failure`            | CI                      | 1.00   | 0.00   | +1.00 |
-| `76-fresh-head-no-checks-yet`            | CI                      | not run | not run | n/a |
+| `67-wait-after-shown-failure`            | CI                      | 0.67   | 0.00   | +0.67 |
+| `76-fresh-head-no-checks-yet`            | CI                      | 1.00   | 0.33   | +0.67 |
 | `06-required-approval`                   | Merge gates & branch    | 1.00   | 1.00   | 0.00  |
-| `18-pr-level-changes-requested`          | Merge gates & branch    | 1.00   | 0.67   | +0.33 |
+| `18-pr-level-changes-requested`          | Merge gates & branch    | 1.00   | 1.00   | 0.00  |
 | `19-behind-base`                         | Merge gates & branch    | 1.00   | 1.00   | 0.00  |
 | `20-conflicts`                           | Merge gates & branch    | 1.00   | 1.00   | 0.00  |
 | `21-conflict-on-merge`                   | Merge gates & branch    | 1.00   | 1.00   | 0.00  |
-| `22-merged-parent-stale-base`            | Merge gates & branch    | 0.00   | 0.50   | -0.50 |
+| `22-merged-parent-stale-base`            | Merge gates & branch    | 1.00   | 1.00   | 0.00  |
 | `45-blocking-bot-review-in-progress`     | Merge gates & branch    | 1.00   | 1.00   | 0.00  |
 | `56-conflict-unsafe-base-name`           | Merge gates & branch    | 1.00   | 1.00   | 0.00  |
-| `63-merge-rerun-joins-existing-watcher`  | Merge gates & branch    | 0.67   | 0.00   | +0.67 |
+| `63-merge-rerun-joins-existing-watcher`  | Merge gates & branch    | 1.00   | 0.00   | +1.00 |
 | `64-stale-gh-cache-rate-limit`           | Merge gates & branch    | 1.00   | 1.00   | 0.00  |
 | `65-linear-history-merge-method`         | Merge gates & branch    | 1.00   | 1.00   | 0.00  |
 | `66-watched-by-another-watcher`          | Merge gates & branch    | 1.00   | 0.67   | +0.33 |
 | `73-draft-green-mark-ready`              | Merge gates & branch    | 1.00   | 0.67   | +0.33 |
-| `75-status-question-one-blocker`         | Merge gates & branch    | 0.67   | 1.00   | -0.33 |
+| `75-status-question-one-blocker`         | Merge gates & branch    | 1.00   | 1.00   | 0.00  |
 | `07-queue-manual-removal`                | Merge queue             | 1.00   | 0.00   | +1.00 |
 | `25-queue-ejection-failed-checks`        | Merge queue             | 1.00   | 0.00   | +1.00 |
-| `26-queued-nit`                          | Merge queue             | 1.00   | 0.67   | +0.33 |
+| `26-queued-nit`                          | Merge queue             | 1.00   | 1.00   | 0.00  |
 | `53-queue-removed-merge-conflict`        | Merge queue             | 1.00   | 0.00   | +1.00 |
 | `08-injection-in-thread`                 | Safety & terminal       | 1.00   | 1.00   | 0.00  |
 | `09-injection-in-ci-log`                 | Safety & terminal       | 1.00   | 1.00   | 0.00  |
 | `10-merged-pr`                           | Safety & terminal       | 1.00   | 1.00   | 0.00  |
-| `24-ci-running`                          | Safety & terminal       | 1.00   | 0.67   | +0.33 |
-| `27-stack-layer-cancelled-latest-run`    | Stacks                  | 1.00   | 0.33   | +0.67 |
+| `24-ci-running`                          | Safety & terminal       | 1.00   | 0.33   | +0.67 |
+| `27-stack-layer-cancelled-latest-run`    | Stacks                  | 1.00   | 0.50   | +0.50 |
 | `28-native-stack-merged-parent`          | Stacks                  | 1.00   | 0.00   | +1.00 |
-| `29-stack-layer-older-run-cancelled`     | Stacks                  | 1.00   | 0.67   | +0.33 |
-| `30-stack-merged-parent-not-retargeted`  | Stacks                  | 0.67   | 0.00   | +0.67 |
+| `29-stack-layer-older-run-cancelled`     | Stacks                  | 1.00   | 1.00   | 0.00  |
+| `30-stack-merged-parent-not-retargeted`  | Stacks                  | 0.33   | 0.00   | +0.33 |
 | `31-stack-lower-layer-review-blocker`    | Stacks                  | 1.00   | 0.33   | +0.67 |
-| `32-stack-lower-layer-queued`            | Stacks                  | 1.00   | 0.33   | +0.67 |
-| `33-stack-lower-layer-conflicts`         | Stacks                  | 1.00   | 0.67   | +0.33 |
+| `32-stack-lower-layer-queued`            | Stacks                  | 1.00   | 1.00   | 0.00  |
+| `33-stack-lower-layer-conflicts`         | Stacks                  | 1.00   | 1.00   | 0.00  |
 | `34-stack-closed-parent`                 | Stacks                  | 1.00   | 0.00   | +1.00 |
 | `35-stack-layer-queue-ejection`          | Stacks                  | 1.00   | 0.00   | +1.00 |
-| `37-stack-merge-through-layer`           | Stacks                  | 1.00   | 0.00   | +1.00 |
+| `37-stack-merge-through-layer`           | Stacks                  | 0.67   | 0.00   | +0.67 |
 | `38-two-stacks-one-request`              | Stacks                  | 1.00   | 0.00   | +1.00 |
-| `57-stack-merge-needs-receipts`          | Stacks                  | 1.00   | 0.00   | +1.00 |
-| `58-stack-merge-it-after-ready-report`   | Stacks                  | 0.67   | 0.00   | +0.67 |
-| `61-stack-merge-from-one-pr`             | Stacks                  | 1.00   | 0.00   | +1.00 |
-| `62-stack-merge-trunk-conflict`          | Stacks                  | 1.00   | 0.00   | +1.00 |
+| `57-stack-merge-needs-receipts`          | Stacks                  | 1.00   | 0.40   | +0.60 |
+| `58-stack-merge-it-after-ready-report`   | Stacks                  | 0.67   | 0.60   | +0.07 |
+| `61-stack-merge-from-one-pr`             | Stacks                  | 1.00   | 0.60   | +0.40 |
+| `62-stack-merge-trunk-conflict`          | Stacks                  | 0.67   | 0.40   | +0.27 |
 | `36-stack-merge-unowned-lower-layer`     | Stacks                  | n/a    | n/a    | n/a   |
+
+36 is `insufficient`: all three baseline runs were voided. Baseline cells that are not trustworthy: 76, 24 and 41 (see above), and the 0.6 ceiling on 37, 38, 57, 58, 61 and 62. 58's Δ is +0.07 because the baseline is at that ceiling.
 | `48-create-prs-same-lines-stack`         | Creating PRs            | 1.00   | 0.00   | +1.00 |
-| `49-create-prs-independent-separate`     | Creating PRs            | 1.00   | 1.00   | 0.00  |
-| `50-create-prs-needs-earlier-code-stack` | Creating PRs            | 1.00   | 0.00   | +1.00 |
-| `69-trigger-merge-refused-real-failure`  | Trigger (no skill hint) | 0.00   | 0.00   | 0.00  |
-| `70-trigger-queue-ejected-failed-checks` | Trigger (no skill hint) | 0.00   | 0.00   | 0.00  |
-| `71-trigger-queue-removed-by-maintainer` | Trigger (no skill hint) | 0.00   | 0.00   | 0.00  |
+| `49-create-prs-independent-separate`     | Creating PRs            | 1.00   | 0.00   | +1.00 |
+| `50-create-prs-needs-earlier-code-stack` | Creating PRs            | 1.00   | 0.67   | +0.33 |
+| `69-trigger-merge-refused-real-failure`  | Trigger (no skill hint) | 1.00   | 1.00   | 0.00  |
+| `70-trigger-queue-ejected-failed-checks` | Trigger (no skill hint) | 1.00   | 0.00   | +1.00 |
+| `71-trigger-queue-removed-by-maintainer` | Trigger (no skill hint) | 1.00   | 0.00   | +1.00 |
 
 </details>
