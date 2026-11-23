@@ -3,7 +3,7 @@
 **Does an agent with the pr-shepherd plugin get pull requests ready to merge
 better than an agent with only GitHub's own tools?**
 
-The outcome suite answers that. Each of its 71 scenarios is one PR state: review
+The outcome suite answers that. Each of its 72 scenarios is one PR state: review
 feedback, CI failures, merge gates and branch updates, the merge queue, safety
 and terminal states, stacked PRs, and a few where the user only says "merge". Both arms get the `gh` CLI and the GitHub MCP
 server, answered from that state. Only the plugin arm also gets the plugin's
@@ -12,32 +12,31 @@ agent did and committed to. The headline is **Δ = plugin − gh/MCP**.
 
 ## Latest results
 
-> **Sonnet 5.5, opus judge, 70 of 71 scenarios scored, 3 runs per arm
-> (2026-11-21):** mean score 0.90 with the plugin and 0.49 with `gh` and the
-> GitHub MCP server. Δ **+0.41** [+0.30, +0.52]. A full run of all 71 scenarios
-> plus a follow-up that reran 75 and added runs to 12, 22 and 72. The tables
-> come from one harness version except 75's grader, merged by `add-runs.mjs` and
-> produced by `analyze.mjs` from kept traces. The intervals resample scenarios
-> and runs.
+> **Sonnet 5.5, opus judge, 71 of 72 scenarios scored, 3 runs per arm
+> (2026-11-23):** mean score 0.95 with the plugin and 0.57 with `gh` and the
+> GitHub MCP server. Δ **+0.38** [+0.28, +0.49]. One full run of all 72
+> scenarios at deaa0744, from one harness version, produced by `analyze.mjs`
+> from the kept traces. The intervals resample scenarios and runs.
 
 | Category                | Plugin | gh/MCP | Δ     | 95% CI         |
 | ----------------------- | ------ | ------ | ----- | -------------- |
-| Review feedback         | 0.92   | 0.67   | +0.26 | [+0.06, +0.47] |
-| CI                      | 0.96   | 0.50   | +0.46 | [+0.25, +0.69] |
-| Merge gates & branch    | 0.88   | 0.82   | +0.06 | [-0.11, +0.24] |
-| Merge queue             | 1.00   | 0.17   | +0.83 | [+0.50, +1.00] |
-| Safety & terminal       | 1.00   | 0.92   | +0.08 | [+0.00, +0.33] |
-| Stacks                  | 0.96   | 0.16   | +0.80 | [+0.64, +0.93] |
-| Creating PRs            | 1.00   | 0.33   | +0.67 | [+0.00, +1.00] |
-| Trigger (no skill hint) | 0.00   | 0.00   | +0.00 | [+0.00, +0.00] |
-| **All**                 | 0.90   | 0.49   | +0.41 | [+0.30, +0.52] |
+| Review feedback         | 0.97   | 0.67   | +0.30 | [+0.06, +0.58] |
+| CI                      | 0.92   | 0.53   | +0.39 | [+0.20, +0.59] |
+| Merge gates & branch    | 1.00   | 0.88   | +0.12 | [+0.00, +0.29] |
+| Merge queue             | 1.00   | 0.25   | +0.75 | [+0.25, +1.00] |
+| Safety & terminal       | 1.00   | 0.83   | +0.17 | [+0.00, +0.50] |
+| Stacks                  | 0.89   | 0.39   | +0.50 | [+0.28, +0.72] |
+| Creating PRs            | 1.00   | 0.22   | +0.78 | [+0.33, +1.00] |
+| Trigger (no skill hint) | 1.00   | 0.33   | +0.67 | [+0.00, +1.00] |
+| **All**                 | 0.95   | 0.57   | +0.38 | [+0.28, +0.49] |
 
 The Trigger rows measure whether the agent uses the plugin when the user only says
-"Merge <PR>", not the plugin's effect: the skill loaded in 0 of 9 plugin runs.
-22 is the first scenario the plugin loses (0.00 vs 0.50). A targeted run after the
-fixes superseded the 22 and 69 to 71 rows (22 and 69 1.00 / 1.00, 70 0.33 / 0.00,
-71 0.00 / 0.00, the skill loaded in 9 of 9; see [EVALS.md](EVALS.md)). A later targeted run of the 23 third-audit scenarios (plugin 0.95, gh/MCP 0.26 over 22) superseded the 70 and 71 rows again, with both at 1.00 / 0.00; the tables stay as the full run (see [HISTORY.md](HISTORY.md#2026-11-22-targeted-run-of-the-third-audit-cases)). Scenario 36 is not scored:
-its gh/MCP runs errored in the eval runner. Every scenario is in
+"Merge <PR>", not the plugin's effect: the skill loaded in 3 of 3 kept plugin runs
+for each of the three scenarios. Scenario 76 (a head pushed seconds ago, no checks
+registered yet) scored 1.00 / 0.33 at n=3, and the baseline number is not stable.
+Scenario 36 is not scored: all three of its gh/MCP runs were voided by the eval
+runner (a deferred tool called before it was loaded). Several gh/MCP numbers are
+not trustworthy (24, 41, 76, and the 0.6 ceiling on the stack-merge rows). Every scenario is in
 [EVALS.md](EVALS.md); read its "Known problems with these numbers" first.
 
 ## Run it

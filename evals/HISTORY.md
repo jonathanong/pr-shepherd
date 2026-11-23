@@ -6,6 +6,70 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-23: full run of all 72 scenarios at deaa0744 (#817, on #812)
+
+The full suite at deaa0744, the head of #817 (branch `evals/just-pushed-no-checks`, stacked on #812). All 72 scenarios, 3 runs per arm, Sonnet 5.5 (`claude-sonnet-5-5`) at low effort, opus judge, `-j 8`, `--ablation with-without`. Cost $636.08, wall time 1511 s. The runner exited 1 because six baseline runs errored. Isolation passed (210 runs without the plugin, 216 with). Mock tool errors: 34 without the plugin, 6 with. The results and analysis are in `/tmp/pr-shepherd-eval-817` (not kept in the repository). This is the first full run since 2026-11-21 and the first with the checks rule from #812 and the third-audit fixes. The previous full run's raw traces no longer exist, so every comparison with it below uses the scores recorded in the 2026-11-21 entries and in [EVALS.md](EVALS.md) before this change.
+
+Topline: 72 scenarios, 71 scored. Plugin 0.95, gh/MCP 0.57, Δ +0.38, 95% CI [+0.28, +0.49]. The previous full run was 0.90, 0.49, +0.41 [+0.30, +0.52] over 70 scored scenarios. The harness differs, so the change is not an effect of the plugin.
+
+| Category | Scenarios | Plugin | gh/MCP | Δ | 95% CI |
+| --- | --- | --- | --- | --- | --- |
+| Review feedback | 11 | 0.97 | 0.67 | +0.30 | [+0.06, +0.58] |
+| CI | 17 | 0.92 | 0.53 | +0.39 | [+0.20, +0.59] |
+| Merge gates & branch | 14 | 1.00 | 0.88 | +0.12 | [+0.00, +0.29] |
+| Merge queue | 4 | 1.00 | 0.25 | +0.75 | [+0.25, +1.00] |
+| Safety & terminal | 4 | 1.00 | 0.83 | +0.17 | [+0.00, +0.50] |
+| Stacks | 15 | 0.89 | 0.39 | +0.50 | [+0.28, +0.72] |
+| Creating PRs | 3 | 1.00 | 0.22 | +0.78 | [+0.33, +1.00] |
+| Trigger (no skill hint) | 3 | 1.00 | 0.33 | +0.67 | [+0.00, +1.00] |
+| **All** | 71 | 0.95 | 0.57 | +0.38 | [+0.28, +0.49] |
+
+The per-scenario table is in [EVALS.md](EVALS.md). Trigger scenarios 69 to 71: the skill loaded and the CLI was called in 3 of 3 kept plugin runs for each; 69 is 1.00 / 1.00, 70 and 71 are 1.00 / 0.00. 36 is `insufficient` (all three baseline runs voided). The arms tie on 32 of 71 scored scenarios, and no scenario has the baseline above the plugin.
+
+Voided runs (6, all baseline, one cause): 11 run 2, 27 run 3, 36 runs 1 to 3, 61 run 1. The agent called a deferred MCP tool it had not loaded, with `{}`; the mock answered "missing required parameter"; the Claude Code runtime appended its own hint to the result; the runner rejected the run with "a result in the trace is not one the harness gave". It was not a timeout or a limit. This answers the open "cause not found" for 36 in the earlier entries. A fix lives in `claude plugin eval` or in not deferring the mock tool schemas; that an option exists is not verified, and nothing is fixed.
+
+Trace findings. The judge's rationale is not stored. Each "why" is read from the raw trace against the grader text, from two trace audits, and the ones marked inferred are not confirmed.
+
+- Plugin arm: all 10 failed runs have no mock error and no runner error.
+- 12 (1 run): model variance. The agent tried a local read of `src/auth.ts`, never read it through GitHub, planned to fix an already-fixed bot finding and asked for human re-approval.
+- 30 (2 runs): both waited for the retarget and did not merge #42, and failed on the grader clause about committing to later layers. The passing run's wording is nearly the same. SKILL.md's "continue later layers you own" pushes toward the failing wording. The pass/fail line is thin.
+- 37 (1 run): model variance. It merged correctly with `gh stack merge`, then planned no re-check; the mock CLI replays a fixed snapshot after the merge, which the agent called stale.
+- 58 (1 run): model variance. It used the MCP merge tool on #42 alone instead of the printed `gh stack merge`.
+- 59 (1 run): the agent used only the printed excerpt; the grader requires reading the log or provider status. `ci-failure-triage.md` ("use the excerpts already printed") conflicts with `check-follow-up.md` ("investigate first").
+- 60 (1 run): it investigated correctly, then advised the human to push an empty commit; the grader's failing list names an empty commit.
+- 54, 62 and 67 (1 run each, judges 1 and 2, inferred). 54: the grader requires a re-check and also treats a re-check after the human handoff as polling. 62: the plan matches the passing runs, and the grader's "found the conflict / plans to resolve it" cannot be met in a pass with no shell. 67: the agent called the failure transient from the excerpt and planned an immediate rerun, the CLI prints "Rerun Shepherd now", and the grader wants a wait until the run completes.
+- 37 and 62: the runner stores 0.4 (weighted mean) in one run each where `score.mjs` gives 0, because `score.mjs` zeroes a run whose outcome grader fails. The tables use the computed score.
+- Plugin mock tool errors: 6, all the scripted merge-queue 405 in 70 and 71; all six runs scored 1.0.
+- Baseline mock tool errors: 34. 26 are 405s the worlds intend (merge queue, rules, linear history, the 62 conflict). 8 are 404s in 48 when reading PRs the agent had just created (the mock keeps no state); they did not change 48's score.
+- 62: the mock now rejects the conflicting merge. The earlier 0.00 baseline came from the old mock bug (it merged despite the conflict). It is now 0.67 / 0.40, with baseline runs (0.6, 0, 0.6); run 2 ignored the conflict (a genuine fail).
+- The checks rule from #812 has a side effect in stack worlds. 57, 58, 61 and 62 say "checks passed" without naming a check, and the rule tells the mock to report empty lists when no check is named, so `get_status` returns pending with `total_count` 0 on every layer, against the world. 30 to 38 share the wording; they were not audited for it. Baseline agents reported "no CI checks" and merged anyway, and no score change was seen in 57, 58, 61 or 62.
+- Baseline ceiling of 0.6 on 36, 37, 38, 57, 58, 61 and 62: the atomic grader (weight 2 of 5) requires one `gh stack merge`, and the baseline is never told `gh stack` exists. 57 is (0.6, 0, 0.6), 58 is 0.6 x3, 61 is 0.6 x2, 62 is (0.6, 0, 0.6). Genuine outcome failures: 57 run 2 merged layers onto parent branches, and 62 run 2 ignored the conflict.
+- 41 (0.67): run 3 is a harness artifact. The MCP mock invented check-run id 1001 and the gh mock then answered 404 for that id. The world pins no check-run id.
+- 24 (0.33): the world does not state `mergeStateStatus`. The mock said "unstable" in the passing run and "blocked" in the two failing runs, where the agents then invented work.
+- 50 (0.67) and 39 (0.67): genuine. 17 (0.67): judge variance on near-identical plans.
+- 76 (new, plugin 1.00, gh/MCP 0.33): the mock was consistent with the world in every baseline run. Run 2 merged the PR (a genuine fail). Runs 1 and 3 did not merge and said nearly the same thing; run 1 ("most likely means no CI") failed 3 votes to 0 and run 3 passed 3 to 0. The direction is trustworthy; the 0.33 is not stable at n=3. The plugin arm obeys a recorded WAIT tick, so this scenario does not exercise the CLI fix in #816.
+
+Open items before these numbers are relied on:
+
+1. The checks rule contradicts worlds that say "checks passed" without naming a check (fix belongs in #812).
+2. Pin the check-run id (41) and `mergeStateStatus` (24) in the worlds.
+3. Grader text: 54 (re-check vs polling), 62 (unreachable "found the conflict"), 67 (wait vs the CLI's "rerun now"), 30 (later-layers wording), 60 (empty commit recommended to a human).
+4. Playbook conflict: `ci-failure-triage.md` against `check-follow-up.md` (59, 67).
+5. Deferred-tool voids: 36 is unscored; 11, 27 and 61 lose a baseline run each.
+6. The 0.6 baseline ceiling on the atomic `gh stack merge` graders (owner decision, already noted).
+7. 48: the mock answers 404 after `gh pr create`.
+8. 76: more runs before a point score is quoted.
+
+## 2026-11-22: scenario 76 added without a run
+
+Added `76-fresh-head-no-checks-yet` (a CI scenario) for issue #815, which PR #816 fixes. Seconds after a push, GitHub reports a PR `CLEAN` with an empty check rollup because Actions and apps have not registered their checks yet, and Shepherd used to report that as READY. The suite had no scenario for the trap. In 76 the user asks whether the PR is ready and to merge it if so; the head is 6 seconds old, has no check runs or statuses, and its only check suites are queued third-party app suites. The repository's `pull_request` CI workflow is stated, and so are the earlier runs that show it normally registers within seconds. With no required checks the world says a merge is accepted at once (including `gh pr merge --auto`), so a premature merge is observable. The grader passes a plan that merges nothing, does not call the PR ready or CI passed, and says it will check again; it fails an accepted merge, a ready or green report, or reading the empty list as "no CI".
+
+The plugin arm's recorded tick is fixture 09's WAIT with status `PENDING`, no summary or activity line, and the wait log for a PR with no checks (`WAIT: no checks reported`), which is what `buildWaitLog` prints for that state. #816 adds no printed field for the hold, so none is invented. The `nextCheck` line is fixture 09's, `safety-net` in 3000 s, which is what `nextCheckCandidates` returns for any wait.
+
+No paid run was made: this change only adds the case, on top of the checks-rule PR (#812), and a run belongs with the full re-run that PR is waiting for. The scenario count goes from 71 to 72. No score is recorded for 76.
+
+Update, 2026-11-23: 76 has since been run, in the full run recorded in the entry above (plugin 1.00, gh/MCP 0.33 at n=3, with the baseline number not stable). The paragraph above is kept as written on 2026-11-22.
+
 ## 2026-11-22: targeted run of the third-audit cases
 
 A targeted run at 432436f1 of the 23 scenarios whose generated case differs from `origin/main` (07, 25, 28, 35, 36, 37, 38, 41, 48, 49, 50, 53, 54, 57, 58, 61, 62, 63, 67, 70, 71, 72, 75), 3 runs per arm, 138 runs, $238.49, 502 s. Results are in `/tmp/pr-shepherd-eval-811` (not kept in the repository). The main tables in [EVALS.md](EVALS.md) stay as the full run; this table is the before and after.

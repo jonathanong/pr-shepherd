@@ -4,6 +4,7 @@ import { CI_MORE_SCENARIOS } from "./scenarios-ci-more.mjs";
 import { CI_SCENARIOS } from "./scenarios-ci.mjs";
 import { GATE_CASE_SCENARIOS, REVIEW_CASE_SCENARIOS } from "./scenarios-cases.mjs";
 import { CREATE_SCENARIOS } from "./scenarios-create.mjs";
+import { FRESH_HEAD_SCENARIOS } from "./scenarios-fresh-head.mjs";
 import { GATE_MORE_SCENARIOS } from "./scenarios-gates-more.mjs";
 import { GATE_SCENARIOS } from "./scenarios-gates.mjs";
 import { RECENT_GATE_SCENARIOS } from "./scenarios-recent.mjs";
@@ -24,7 +25,7 @@ import { TRIGGER_SCENARIOS } from "./scenarios-trigger.mjs";
 
 const CATEGORIES = [
   ["Review feedback", [...REVIEW_SCENARIOS, ...REVIEW_MORE_SCENARIOS, ...REVIEW_NEW_SCENARIOS, ...RECENT_REVIEW_SCENARIOS, ...REVIEW_CASE_SCENARIOS]],
-  ["CI", [...CI_SCENARIOS, ...CI_MORE_SCENARIOS, ...RECENT_CI_SCENARIOS]],
+  ["CI", [...CI_SCENARIOS, ...CI_MORE_SCENARIOS, ...RECENT_CI_SCENARIOS, ...FRESH_HEAD_SCENARIOS]],
   ["Merge gates & branch", [...GATE_SCENARIOS, ...GATE_MORE_SCENARIOS, ...RECENT_GATE_SCENARIOS, ...GATE_CASE_SCENARIOS]],
   ["Merge queue", QUEUE_SCENARIOS],
   [
