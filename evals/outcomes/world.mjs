@@ -65,6 +65,21 @@ reports a merge conflict, and its diff shows layer K's changes.
 those commits; the rebased branch is pushed with \`--force-with-lease\`.`;
 
 /**
+ * The `gh stack` subcommands the create scenarios (48-50, 77) share, per
+ * `gh stack --help` and `gh stack link --help`, so every arm meets the same tool.
+ */
+export const GH_STACK_COMMANDS = `The \`gh stack\` subcommands are \`init\` (\`--adopt\` stacks existing branches),
+\`add\`, \`submit --auto\`, \`link\`, \`view\`, \`checkout\`, \`push\`, \`sync\`, \`rebase\`, \`merge\` and
+\`unstack\`; any other name is an unknown command. \`gh stack link <branch | PR number |
+PR URL>...\` takes its arguments bottom to top and needs no local stack state. It
+pushes each branch argument, uses the open PR of a branch that has one, creates a
+PR for each branch that has none with chained bases (the bottom one on \`main\`, or
+on \`--base\`; each other on the branch below it), and creates the stack, or adds
+the new PRs to the stack that an argument's PR is already in. \`--open\` marks the
+PRs ready for review. A first argument that is an existing stack number appends
+the remaining arguments to the top of that stack. It does not rebase any branch.`;
+
+/**
  * The one rule every stack-merge grader applies. A native stack lands either in
  * one atomic merge, or bottom-up with a rebase after each squash merge.
  */

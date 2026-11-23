@@ -1,7 +1,7 @@
 // "Make PRs" scenarios: branches are pushed, no PR exists yet. The agent has to
 // choose between stacking and separate PRs, then shepherd every PR it opens.
 
-import { STEPS } from "./world.mjs";
+import { GH_STACK_COMMANDS, STEPS } from "./world.mjs";
 
 const URL = (n) => `https://github.com/owner/repo/pull/${n}`;
 
@@ -9,7 +9,7 @@ const URL = (n) => `https://github.com/owner/repo/pull/${n}`;
 const WORLD = (
   branches,
 ) => `owner/repo, default branch \`main\` at \`abc123\`, no branch protection, \`gh\`
-installed with the \`gh stack\` extension (\`gh stack init\`, \`add\`, \`submit --auto\`).
+installed with the \`gh stack\` extension. ${GH_STACK_COMMANDS}
 \`gh stack\` and \`gh pr create\` run through the \`gh\` tool in this session
 against origin, so no local checkout of the repository is needed to create or
 stack PRs.
@@ -103,8 +103,8 @@ const STACKED_GRADER = (
   first,
   second,
 ) => `The agent opens ${first} and ${second} as a native stack: the second PR is
-based on the first's branch (\`gh stack init\` / \`add\` / \`submit --auto\`, or an
-equivalent that makes the second PR's base the first's branch), and it plans to
+based on the first's branch (\`gh stack init\` / \`add\` / \`submit --auto\`, \`gh stack
+link\`, or an equivalent that makes the second PR's base the first's branch), and it plans to
 keep checking the whole stack until every layer is mergeable (for example
 re-checking both PRs), without merging in this pass. A later numbered step that
 merges a layer once it is mergeable, or retargets the second PR after the first
@@ -135,7 +135,10 @@ conflicts with \`main\` and needs a rebase.
 \`gh stack init --adopt feat/timeout feat/retries\` only stacks the existing branches
 in that order. \`gh stack rebase\` then rebases \`feat/retries\` onto \`feat/timeout\`
 (it keeps \`feat/retries\`'s \`// ms\` version of line 10 and succeeds), so no
-separate checkout, git rebase or push is needed before \`gh stack submit --auto\`.`),
+separate checkout, git rebase or push is needed before \`gh stack submit --auto\`.
+\`gh stack link feat/timeout feat/retries\` pushes both branches and creates #42
+(base \`main\`) and #43 (base \`feat/timeout\`) in native stack #7, without that
+rebase.`),
     grader: STACKED_GRADER("the `feat/timeout` PR", "the `feat/retries` PR"),
   },
   {
@@ -174,7 +177,9 @@ user whether to stack.`,
 - \`feat/use-retry\` is \`feat/retry-helper\` plus one more commit: \`src/client.ts\`
   now has \`import { withRetry } from "./retry";\` and wraps its \`fetch\` call in
   \`withRetry\`. \`src/retry.ts\` is on no branch but \`feat/retry-helper\`, so
-  \`feat/use-retry\` does not build without that branch's commit.`),
+  \`feat/use-retry\` does not build without that branch's commit.
+\`gh stack link feat/retry-helper feat/use-retry\` pushes both branches and creates
+#42 (base \`main\`) and #43 (base \`feat/retry-helper\`) in native stack #7.`),
     grader: STACKED_GRADER("the `feat/retry-helper` PR", "the `feat/use-retry` PR"),
   },
 ];

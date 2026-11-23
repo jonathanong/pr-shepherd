@@ -82,7 +82,19 @@ failure)" (check run id 99901) has the title "Invalid workflow file" and one ann
   Invalid workflow file: .github/workflows/ci.yml#L14
   You have an error in your yaml syntax on line 14
 Line 14 of \`.github/workflows/ci.yml\` is \`      - run: npm run lint\`, indented
-one space less than the \`- name: Lint\` step above it. Rerunning run 999 starts
+one space less than the \`- name: Lint\` step above it (line 13). The file's
+patch (\`pull_request_read\` method \`get_files\`, \`gh pr diff 42\`, and the contents
+API at \`feature\`) is +48 −3 and its hunk around that error is exactly:
+\`\`\`
+@@ -10,4 +10,6 @@ jobs:
+     steps:
+       - uses: actions/checkout@v4
+       - uses: actions/setup-node@v4
++       - name: Lint
++      - run: npm run lint
+       - run: npm test
+\`\`\`
+\`get_files\` always includes this patch for the file. Rerunning run 999 starts
 the same file again and ends in another startup_failure. No reviews, threads
 or comments.`,
     grader: `The agent finds the workflow error the run reports (the YAML problem on line

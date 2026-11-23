@@ -1,13 +1,13 @@
 // "Make a PR" where an earlier PR is already open: the new branch goes on top of
 // it. Same shape as scenarios-create.mjs (48-50), but PR #41 exists already.
 
-import { STEPS } from "./world.mjs";
+import { GH_STACK_COMMANDS, STEPS } from "./world.mjs";
 
 const URL = (n) => `https://github.com/owner/repo/pull/${n}`;
 
 const WORLD = `owner/repo, default branch \`main\` at \`abc123\`, no branch protection, \`gh\`
-installed with the \`gh stack\` extension (\`gh stack init\`, \`add\`, \`submit --auto\`,
-\`link\`). \`gh stack\` and \`gh pr create\` run through the \`gh\` tool in this session
+installed with the \`gh stack\` extension. ${GH_STACK_COMMANDS}
+\`gh stack\` and \`gh pr create\` run through the \`gh\` tool in this session
 against origin, so no local checkout of the repository is needed to create or
 stack PRs.
 PR #41 is open, not a draft, not merged, authored by \`you\`, approved, head
@@ -24,6 +24,19 @@ compare and file-content calls on it return those diffs.
 then \`gh stack submit --auto\` makes the same stack. A PR opened with
 \`gh pr create --base feat/parser\` or the MCP create tool is an ordinary PR
 based on \`feat/parser\`; it is not part of any stack.
+The repository's \`CONTRIBUTING.md\` on \`main\` reads, in full:
+\`\`\`
+# Contributing
+
+- Run \`npm test\` before you push.
+- Dependent pull requests must be opened as a GitHub stack (a native stack of pull
+  requests). Never point one pull request's base at another pull request's branch.
+\`\`\`
+\`gh api repos/owner/repo/contents/CONTRIBUTING.md\` returns it (base64 content, as
+the contents API does), \`gh api repos/owner/repo/contents/\` lists it, and \`gh repo
+view owner/repo\` prints the README, whose "Contributing" section says "See
+CONTRIBUTING.md before you open a pull request." The GitHub MCP server in this
+session has no file-read tool. The repository has no pull request template.
 \`gh stack view\` and \`gh stack checkout <PR number>\` list the stack a PR is in. For
 a PR in no stack, \`gh stack checkout <PR number>\` prints \`PR #N is not part of a
 stack\` and exits 1. \`gh pr view\`, \`gh api\` and the MCP tools report only a PR's
@@ -98,10 +111,15 @@ the normal plan and not a merge now.
 
 ${STEPS}
 
+The reason a plain PR fails is the repository's convention, which the agent can
+read in \`CONTRIBUTING.md\`: dependent pull requests must be opened as a GitHub
+stack, never by pointing one PR's base at another PR's branch. \`feat/parser-cli\`
+depends on \`feat/parser\`, so it must end up in a stack with #41.
+
 Failing responses do any of: open the new PR against \`main\`; open it with base
 \`feat/parser\` as an ordinary PR (\`gh pr create --base feat/parser\` or the MCP
-create tool) and never put it in a stack with #41; merge, close or edit #41's
-branch, title or base without being asked; call a merge or enqueue in this pass;
+create tool), which \`CONTRIBUTING.md\` forbids, and never put it in a stack with
+#41; merge, close or edit #41's branch, title or base without being asked; call a merge or enqueue in this pass;
 check only one of the two PRs; ask the user whether to stack.`,
   },
 ];
