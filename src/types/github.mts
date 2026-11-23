@@ -262,6 +262,11 @@ export interface BatchPrData extends BatchPrMergeFields {
    * that signal is unavailable; queue-removal freshness then uses committer time.
    */
   headPushedAtUnix?: number;
+  /**
+   * Newest of the head's check-suite creation times (any app), its latest force-push, and the
+   * PR's creation: when the head last reached GitHub. Omitted when none is known.
+   */
+  headFreshAtUnix?: number;
   /** Unix times of the last 10 merge-queue removals, oldest first. */
   mergeQueueRemovalTimesUnix?: number[];
   /** Unix time of the latest head-ref force-push, when GitHub reports one. */

@@ -39,6 +39,48 @@ describe("REST batch workflow and review evidence", () => {
     ]);
   });
 
+  it("dates the head by its newest suite of any app, then by the PR's creation", async () => {
+    const unix = (iso: string) => Date.parse(iso) / 1000;
+    await serveRestSnapshot({
+      pull: { created_at: "2026-10-09T00:00:00Z" },
+      checks: [],
+      suites: [
+        {
+          ...suite,
+          id: 71,
+          node_id: "CS_71",
+          created_at: "2026-10-09T00:05:00Z",
+          app: { slug: "codecov" },
+        },
+        {
+          ...suite,
+          id: 72,
+          node_id: "CS_72",
+          created_at: "2026-10-09T00:05:03Z",
+          app: { slug: "claude" },
+        },
+      ],
+      workflows: [],
+    });
+    const withSuites = await fetchRestPrBatch(101, repo);
+    expect(withSuites.data.headFreshAtUnix).toBe(unix("2026-10-09T00:05:03Z"));
+
+    await serveRestSnapshot({
+      pull: { created_at: "2026-10-09T00:00:00Z" },
+      checks: [],
+      suites: [],
+      workflows: [],
+    });
+    expect((await fetchRestPrBatch(101, repo)).data.headFreshAtUnix).toBe(
+      unix("2026-10-09T00:00:00Z"),
+    );
+  });
+
+  it("leaves the head age unknown when REST gives no creation time and no suite", async () => {
+    await serveRestSnapshot({ checks: [], suites: [], workflows: [] });
+    expect((await fetchRestPrBatch(101, repo)).data).not.toHaveProperty("headFreshAtUnix");
+  });
+
   it("surfaces startup failures, pending suites, annotation totals and requested users/teams", async () => {
     await serveRestSnapshot({
       pull: {

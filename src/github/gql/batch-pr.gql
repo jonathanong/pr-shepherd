@@ -21,6 +21,7 @@ query BatchPr($owner: String!, $repo: String!, $pr: Int!) {
     pullRequest(number: $pr) {
       id
       number
+      createdAt
       updatedAt
       state
       isDraft

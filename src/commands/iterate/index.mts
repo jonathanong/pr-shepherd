@@ -24,6 +24,7 @@ import { summarizePollSummaryPr } from "../../github/poll-summary-projector.mts"
 import { annotationProbeUnavailable } from "../../github/poll-summary-annotation-probe.mts";
 import { fingerprintRawSummaryPr } from "../../github/poll-summary-fingerprint.mts";
 import { currentQueueRemovalEvent } from "../../github/poll-summary-queue-removal.mts";
+import { freshSummaryRegression } from "./fresh-summary-regression.mts";
 import { isCurrentSummaryReady } from "../../github/poll-summary-readiness.mts";
 import {
   clearReadyReceipt,
@@ -425,14 +426,15 @@ async function runIterateCore(
     // single PR's instead of waiting for a stall-timeout.
     const stackLayer = report.mergeStatus.mergeRequirements?.stack !== undefined;
     if (
-      stackLayer &&
-      (outcome.status === "failed" || (outcome.status === "blocked" && opts.merge))
+      (stackLayer &&
+        (outcome.status === "failed" || (outcome.status === "blocked" && opts.merge))) ||
+      (outcome.status === "failed" && outcome.regressed)
     ) {
       const receiptWait: IterateResult = {
         ...base,
         action: "wait",
         shouldCancel: false,
-        log: receiptWaitLog(base.pr, outcome),
+        log: receiptWaitLog(base.pr, outcome, stackLayer),
       };
       return annotateBlockedWait(
         await applyStallGuard(
@@ -517,7 +519,7 @@ async function runIterateCore(
 type ReceiptOutcome =
   | { status: "written" }
   | { status: "blocked" }
-  | { status: "failed"; reason: string; persistFailure?: boolean };
+  | { status: "failed"; reason: string; persistFailure?: boolean; regressed?: true };
 
 const short = (oid: string): string => oid.slice(0, 7);
 const failed = (reason: string): ReceiptOutcome => ({ status: "failed", reason });
@@ -526,10 +528,14 @@ const errMessage = (e: unknown): string => (e instanceof Error ? e.message : Str
 function receiptWaitLog(
   pr: number,
   outcome: Exclude<ReceiptOutcome, { status: "written" }>,
+  stackLayer: boolean,
 ): string {
   const head = `WAIT: PR #${pr} reached ready-delay but`;
   if (outcome.status === "blocked")
     return `${head} GitHub reports BLOCKED, so its stack readiness receipt was not certified`;
+  if (outcome.regressed && !stackLayer) {
+    return `WAIT: PR #${pr} looked ready but a fresh read shows ${outcome.reason}`;
+  }
   if (outcome.persistFailure)
     return `${head} its stack readiness receipt could not be persisted: ${outcome.reason}`;
   return `${head} its stack readiness receipt was not certified: ${outcome.reason}`;
@@ -557,11 +563,11 @@ async function recordReadyReceipt(
     if (raw.state !== "OPEN") return failed(`fresh summary shows PR ${raw.state}, not OPEN`);
     if (raw.isDraft) return failed("fresh summary shows PR as a draft");
     if (raw.headRefOid !== report.headSha)
-      return failed(`head moved (report ${short(report.headSha)}, fresh ${short(raw.headRefOid)})`);
-    if (raw.baseRefOid !== report.baseRefOid)
-      return failed(
-        `base moved (report ${short(report.baseRefOid)}, fresh ${short(raw.baseRefOid)})`,
-      );
+      return {
+        status: "failed",
+        reason: `the head moved (report ${short(report.headSha)}, fresh ${short(raw.headRefOid)})`,
+        regressed: true,
+      };
     // Summarize hydrates annotation totals onto the snapshot; hash only after,
     // so the stored hash matches the stack side's (which hashes hydrated evidence).
     summary = await summarizePollSummaryPr(
@@ -580,6 +586,13 @@ async function recordReadyReceipt(
   if (annotationProbeUnavailable(raw)) return failed("annotation probe unavailable");
   const checks = summary.checks ?? {};
   const review = summary.review ?? {};
+  const regression = freshSummaryRegression(raw, checks, report.mergeStatus.mergeStateStatus);
+  if (regression) return { status: "failed", reason: regression, regressed: true };
+  // After the regression check: a base move alongside queued CI must still wait.
+  if (raw.baseRefOid !== report.baseRefOid)
+    return failed(
+      `base moved (report ${short(report.baseRefOid)}, fresh ${short(raw.baseRefOid)})`,
+    );
   if (!isCurrentSummaryReady(raw, checks, review)) {
     const onlyBlocked =
       raw.mergeStateStatus === "BLOCKED" &&

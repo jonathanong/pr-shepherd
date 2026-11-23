@@ -22,6 +22,7 @@ import {
   isReviewStale,
 } from "./batch-parser-helpers.mts";
 import { parseCheckNodes } from "./batch-parse-checks.mts";
+import { headFreshAtUnix } from "./head-freshness.mts";
 import { headPushUnixFromCheckNodes } from "./queue-removal-freshness.mts";
 import { requireContextNodes } from "./batch-response.mts";
 import { buildPrActivitySummary } from "./activity.mts";
@@ -169,6 +170,15 @@ export function parseRawPr(
     queueHead?.oid,
   );
   const headPushedAtUnix = headPushUnixFromCheckNodes(rawCheckNodes);
+  const headForcePushedAt = raw.headRefForcePushes?.nodes[0]?.createdAt;
+  const freshAtUnix = headFreshAtUnix({
+    suiteCreatedAts: (raw.commits.nodes[0]?.commit.checkSuites?.nodes ?? []).map(
+      (suite) => suite.createdAt,
+    ),
+    ...(headForcePushedAt && { forcePushedAtUnix: parseCreatedAt(headForcePushedAt) }),
+    prCreatedAt: raw.createdAt,
+    committedAt: raw.commits.nodes[0]?.commit.committedDate,
+  });
   const removedMergeQueueChecks = parseCheckNodes(
     removedQueueHead?.statusCheckRollup
       ? requireContextNodes(removedQueueHead.statusCheckRollup.contexts.nodes)
@@ -187,6 +197,7 @@ export function parseRawPr(
     reviewDecision: (raw.reviewDecision ?? null) as BatchPrData["reviewDecision"],
     headRefOid: raw.headRefOid,
     ...(headPushedAtUnix !== undefined && { headPushedAtUnix }),
+    ...(freshAtUnix !== undefined && { headFreshAtUnix: freshAtUnix }),
     ...(raw.headRefForcePushes?.nodes[0] && {
       headForcePushedAtUnix: Math.floor(
         Date.parse(raw.headRefForcePushes.nodes[0].createdAt) / 1000,

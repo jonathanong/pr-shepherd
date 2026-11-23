@@ -158,6 +158,11 @@ export interface ShepherdReport {
   baseBehindBy?: number;
   /** A relevant Actions workflow suite on the head has not completed. */
   actionsWorkflowInProgress?: true;
+  /**
+   * The head reached GitHub under a minute ago with no relevant check yet, so READY is held
+   * while checks register. Omitted otherwise.
+   */
+  awaitingCheckRegistration?: true;
   /** Bottom open layer of this PR's native stack. Starts a trunk rebase. */
   stackBottomPr?: number;
 }

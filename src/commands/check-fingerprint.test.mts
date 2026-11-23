@@ -282,6 +282,12 @@ describe("fingerprintReuser", () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
+  it("does not skip a report still waiting for checks to register, as the clock ends that wait", async () => {
+    mockLoad.mockResolvedValue(stored(waitReport({ awaitingCheckRegistration: true })));
+    await expect(tryReuseFingerprintReport(42, REPO, KEY, CONFIG)).resolves.toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
   it("tags a reused WAIT report as fingerprintReused", async () => {
     const report = waitReport();
     mockLoad.mockResolvedValue(stored(report));

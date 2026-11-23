@@ -77,6 +77,8 @@ Limits:
 
 When every check is filtered or skipped (for example a docs-only PR that triggers only push checks), `getCiVerdict` returns `allPassed: true`, so READY is not blocked by CI that does not apply. `hasChecks` stays false; see [merge-status.md](merge-status.md#computestatus--shepherdstatus) for how that gates READY on a `BLOCKED` PR.
 
+A head that reached GitHub under a minute ago is held out of READY first; see [Fresh head settle window](#fresh-head-settle-window).
+
 ### Unreported required checks
 
 A required status context with no check run and no status context is a different gap: the other checks can be green (`allPassed` stays true) and the missing names are not rollup rows. Shepherd loads the required contexts from the merge target; for a native stack that is the stack trunk (`stack.baseRefName`), whose rules GitHub applies to every layer, not the upper layer's parent branch. The newest check or status of a name counts: a later success supersedes an older cancelled run.
@@ -101,6 +103,13 @@ Output, each field omitted when empty:
 | `baseBehindBy`              | The PR base compare is behind; text also prints `**behind**` |
 | `trunkBehindBy`             | The trunk compare is behind                                  |
 | `actionsWorkflowInProgress` | A relevant Actions suite has not completed                   |
+| `awaitingCheckRegistration` | The head is under 60 seconds old and has no relevant check   |
+
+### Fresh head settle window
+
+GitHub reports a new head as `CLEAN` with an empty check rollup until apps and Actions register their checks, a few seconds after the push. A head with no relevant check and no running Actions suite is therefore `PENDING` (`wait`), with `awaitingCheckRegistration` set, until it is 60 seconds old. After that it can be `READY` as before, so a repository with no CI still finishes. The window is a fixed constant, not a config key.
+
+The head's age is when it last reached GitHub: the newest of its check suites' creation times (any app, since apps create their suites at push time), its latest force-push, the head commit's committer date (GraphQL only), and the PR's creation. An old committer date adds nothing, so a rebased or long-local commit cannot shorten the window; a fresh one dates an ordinary push to an old PR that has no suite yet. When none of these is known, the head is treated as settled. REST reads suite times and the pull's `created_at` (it has no committer date, so an ordinary push to an old PR that has no suite yet is not held there); when REST omits them the age stays unknown and no window applies. A report waiting in the window is never replayed from a cached idle report, because only the clock ends the wait.
 
 A `stack` summary routes the layer as `triage` with reason `unreported-required-checks` instead of an idle wait and prints the names on that layer.
 
