@@ -17,7 +17,14 @@ agent did and committed to. The headline is **Δ = plugin − gh/MCP**.
 > GitHub MCP server. Δ **+0.38** [+0.28, +0.49]. One full run of all 72
 > scenarios at deaa0744, from one harness version, produced by `analyze.mjs`
 > from the kept traces. The intervals resample scenarios and runs. Scenario 77
-> was added after that run and has no score yet.
+> was added after that run, and 76 was in it.
+>
+> Four partial reruns followed the same day (A to D, 3 runs per arm, 35, 6, 2
+> and 4 scenarios). Each scenario's latest figure is in [EVALS.md](EVALS.md).
+> Taking those, the 72 scored scenarios average plugin 0.98, gh/MCP 0.55, Δ
+> +0.42. That is a **composite of several runs, not a single run**, so it has no
+> interval. 36 is the unscored one. The category table below is the full run's.
+> 77 is a playbook-following check: its baseline cannot realistically pass.
 
 | Category                | Plugin | gh/MCP | Δ     | 95% CI         |
 | ----------------------- | ------ | ------ | ----- | -------------- |
@@ -34,10 +41,10 @@ agent did and committed to. The headline is **Δ = plugin − gh/MCP**.
 The Trigger rows measure whether the agent uses the plugin when the user only says
 "Merge <PR>", not the plugin's effect: the skill loaded in 3 of 3 kept plugin runs
 for each of the three scenarios. Scenario 76 (a head pushed seconds ago, no checks
-registered yet) scored 1.00 / 0.33 at n=3, and the baseline number is not stable.
+registered yet) scored 1.00 / 0.33 in the full run and 1.00 / 0.00 in rerun A, and the baseline number is not stable.
 Scenario 36 is not scored: all three of its gh/MCP runs were voided by the eval
 runner (a deferred tool called before it was loaded). Several gh/MCP numbers are
-not trustworthy (24, 41, 76, and the 0.6 ceiling on the stack-merge rows). Every scenario is in
+not trustworthy (24, 49, 76, and the 0.6 ceiling on the stack-merge rows; 77, 48 and 50 measure playbook-following). Every scenario is in
 [EVALS.md](EVALS.md); read its "Known problems with these numbers" first.
 
 ## Run it

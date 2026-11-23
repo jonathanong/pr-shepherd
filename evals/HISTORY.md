@@ -6,6 +6,30 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-23: four targeted reruns after the full run (A to D)
+
+Four partial reruns on the same day as the full run below, all Sonnet 5.5 at low effort, opus judge, 3 runs per arm, `--ablation with-without`. They are partial: scenarios outside each rerun keep their full-run figures, and no new all-scenario headline was computed from them by the harness. Total $467.24; with the morning run ($636.08) the day cost $1,103.32. Directories are under `/private/tmp` and are not kept in the repository.
+
+| Rerun | Head | Scenarios | Cost | Wall | Exit | Plugin | gh/MCP | Δ | 95% CI |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A (`pr-shepherd-eval-819`) | 5768e103 | 35 (34 scored) | $348.46 | 780 s | 1, four baseline runs voided (11 run 1, 36 runs 1 to 3) | 0.94 | 0.35 | +0.59 | [+0.42, +0.75] |
+| B (`-819b`) | 3caaea36 | 6: 40, 48, 49, 50, 62, 77 | $63.39 | 137 s | 1, the pass threshold of 1.0 on 62 | 0.94 | 0.34 | +0.60 | [+0.22, +0.94] |
+| C (`-819c`) | 80b8bf20 | 2: 48, 62 | $20.42 | 77 s | 0 | 1.00 | 0.00 | +1.00 | [+1.00, +1.00] |
+| D (`-819d`) | 42e6908f | 4: 48, 49, 50, 77 | $34.97 | 88 s | 0 | 1.00 | 0.08 | +0.92 | [+0.67, +1.00] |
+
+What each was for:
+
+- **A** confirmed the fixes made after the morning run on every scenario they touch: the checks rule (stack worlds now report named checks), pinned check-run ids and merge state (40, 41, 51, 59, 24), and the edited graders for 30, 52, 54, 59, 60, 62 and 67. It also scored 76 and 77 for the first time (77 plugin 1.00, baseline 0.00). Plugin failures, one run each: 32 and 37 (variance on thin grader lines), 40 (the MCP `get_files` mock invented or omitted a patch), 50 (world lacked `gh stack link` and one agent misapplied the "stacks are unavailable" fallback), 54 (variance), 61 (the CLI mock replays the pre-merge snapshot). Baseline 62 fell from 0.40 to 0.00 because the rewritten grader had dropped the allowance for merging layer 1 first.
+- **B** checked the 3caaea36 fixes: 40's pinned diff (3 of 3 both arms), the shared `gh stack` list with `link` (50 plugin 3 of 3, no "unknown command" answers), and the playbook's tighter fallback. 62's plugin was 0.67: one run wrote "The stack is ready to merge" because that grader had lost the "without a plan" qualifier. 50's baseline went from 1.00 to 0.00 with no change in behaviour, which exposed an ambiguity in its grader.
+- **C** checked 80b8bf20 on 48 and 62: the qualifier restored on 62, and 48's DIRTY exception plus a grader that fails a link-only plan. 48 and 62 are 1.00 / 0.00. Mock tool errors: none.
+- **D** checked 42e6908f after the owner decision that 48, 50 and 77 must end in a native stack: 48 1.00 / 0.00, 49 1.00 / 0.33, 50 1.00 / 0.00, 77 1.00 / 0.00. Mock tool errors: 4 in the baseline arm, none in the plugin arm.
+
+Isolation passed in every rerun. Mock tool errors in A: baseline 22, plugin 6 (the intended 405s of the merge-queue and stack worlds, plus 4 unintended 404s in 48 and 4 deferred-tool errors in 11 and 36). The runner's score for 37 and 61 (A) and 62 (B) differs from the computed one in one run each; the tables use the computed score.
+
+Not audited: the traces of reruns C and D were not read, and 62's baseline has not been audited since the last grader change. Reruns A and B were read against the grader text. The judge's rationale is not stored, so each "why" is inferred from traces.
+
+Composite, not a single run: taking each scenario's latest figure (the morning full run plus A to D), the 72 scored scenarios average plugin 0.98, gh/MCP 0.55, Δ +0.42, with no confidence interval because it mixes runs. 36 is unscored (all baseline runs voided in the full run and again in A). The last single full-suite run is the morning one at 0.95 / 0.57 / +0.38 [+0.28, +0.49]. 77 measures whether the playbook's native-stack line is followed: no baseline run read `CONTRIBUTING.md`, so its baseline cannot realistically pass (owner decision); the baselines of 48 and 50 now carry the same caveat.
+
 ## 2026-11-23: scenario 77 added without a run
 
 Added `77-create-pr-on-open-pr-native-stack` (Creating PRs). PRs #812 and #817 were pointed at each other by hand instead of being stacked natively, because the "Create a PR" playbook covers branches created together (`gh stack init`, `add`, `submit --auto`) but not the common case: an earlier PR is already open and a new branch goes on top of it. The playbook now says to use `gh stack link <earlier PR> <new branch>` (or the stack number first) there. In 77, PR 41 in the scenario is open on `main`, not in a stack; the user's branch `feat/parser-cli` is `feat/parser`'s head plus one commit that uses code only on that branch, and has no PR. The world states that `gh stack link 41 feat/parser-cli` creates PR 42 with base `feat/parser` and a native stack of the two, that `gh stack init --adopt` with `submit` does the same, that `gh pr create --base feat/parser` or the MCP create tool makes an ordinary PR in no stack, and that `gh stack view` and `gh stack checkout <PR number>` are the commands that report stack membership. The grader passes any tool that ends with the new PR in a native stack on top of PR 41 and a plan to keep checking; it fails a PR on `main`, a PR only based on `feat/parser`, or PR 41 merged or changed unasked. The plugin arm's recorded ticks are the 2-layer stack output that 48 and 50 use, with PRs 41 and 42.

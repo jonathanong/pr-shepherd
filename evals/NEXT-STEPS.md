@@ -3,9 +3,18 @@
 Open work for the eval suite, most recent findings first. Current results are in
 [EVALS.md](EVALS.md).
 
+## From the 2026-11-23 reruns
+
+1. Run the full suite once on the final heads of the stack (#812, #817, #819). Today's reruns A to D were partial and the composite in [EVALS.md](EVALS.md) mixes runs, so there is no single-run figure that includes 76, 77 and the fixes made after the morning run.
+2. Trace-audit reruns C and D, and the baseline of 62 after the last grader change.
+3. Make the `gh` mock and the GitHub MCP mock share one call history (or state the limit in every affected world). It causes the 404s in 48 and 49 and let a baseline merge in 62 succeed against the world.
+4. Fix the deferred-tool voids that leave 36 unscored (a fix lives in `claude plugin eval`, or in not deferring the mock schemas).
+5. Resolve the playbook conflict between `ci-failure-triage.md` and `check-follow-up.md` (59, 67), and 60's empty-commit clause.
+6. Run more than 3 runs on the judge-noisy baselines (24, 49, 76) before quoting a point score.
+
 ## From the 2026-11-22 third audit
 
-1. The 23 scenarios whose generated case differs from main were run once (targeted, see [HISTORY.md](HISTORY.md#2026-11-22-targeted-run-of-the-third-audit-cases)); fix the harness-made results it left (mock answers that ignore the world's 405 and "cannot be rerun" rules in 62 and 67, check runs missing from the github mock's `get_status` in 41 and 54, 404s for just-created PRs in 48 to 50, the runner's void on a missing-`owner` call in 36), then run the full suite and update the tables. The original list is in [HISTORY.md](HISTORY.md#2026-11-22-third-harness-audit-no-runs). The stacked checks-rule PR changes every case's mock and lands with a full re-run.
+1. Done by the 2026-11-23 full run and reruns: the 23 changed scenarios, the harness-made results (405 and "cannot be rerun" rules in 62 and 67, check runs in 41 and 54, the checks-rule contradiction), and the full-suite update of the tables. The 404s in 48 to 49 and the void in 36 remain (above). The original list is in [HISTORY.md](HISTORY.md#2026-11-22-third-harness-audit-no-runs).
 2. Decide the two open questions in [EVALS.md](EVALS.md): the facts the tick volunteers but a baseline must ask for (07, 25, 53, 35, 28), and the house rules in 02, 46 and 48.
 3. The runner's judge evidence is sampled by line and can omit a real tool call (70 run 1). Ask for the reasoning to be stored and the evidence kept whole by tool call; until then no grader may fail a run for a call the judge does not see.
 
