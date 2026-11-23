@@ -22,7 +22,7 @@ This is the first full run with the checks rule from #812 and the third-audit fi
 
 Four targeted reruns followed the same day (details in [HISTORY.md](HISTORY.md)): A (35 scenarios), B (6), C (2) and D (4), 3 runs per arm each, $467.24 in all. They are partial reruns, not a new full run. The full run's table below is still the full-suite figure, and the category rows and All row were not recomputed from the reruns. The per-scenario table at the bottom takes each rerun scenario's figure from the latest rerun that included it and marks it in its Run column. Scenarios outside the reruns keep their full-run figures. The traces of reruns A and B were audited; those of C and D were not.
 
-**Composite, not a single run:** taking each scenario's latest figure across the day's runs (the full run plus reruns A to D), the 72 scored scenarios average plugin 0.98, gh/MCP 0.55, Δ +0.42. It mixes runs and harness versions, so it has no confidence interval. 36 is the one unscored scenario, and 74 scenarios exist (76, 77 and 78 included; 78 has not been run yet). The last single full-suite run is the one below: 0.95 / 0.57 / +0.38, CI [+0.28, +0.49].
+**Composite, not a single run:** taking each scenario's latest figure across the day's runs (the full run plus reruns A to D), the 72 scored scenarios average plugin 0.98, gh/MCP 0.55, Δ +0.42. It mixes runs and harness versions, so it has no confidence interval. 36 is the one unscored scenario, and 74 scenarios exist (76, 77 and 78 included). 78 was run twice after the composite was taken (rerun E, plugin 1.00, gh/MCP 1.00) and is not in the composite or the headline, which are unchanged. The last single full-suite run is the one below: 0.95 / 0.57 / +0.38, CI [+0.28, +0.49].
 
 | Category                | Scenarios | Plugin | gh/MCP | Δ     | 95% CI         |
 | ----------------------- | --------- | ------ | ------ | ----- | -------------- |
@@ -193,7 +193,7 @@ The 2026-11-21 audits found rows that the harness, not the agent, produced. Thes
 | `61-stack-merge-from-one-pr` | Stacks | 0.67 | 0.60 | +0.07 | A |
 | `62-stack-merge-trunk-conflict` | Stacks | 1.00 | 0.00 | +1.00 | C |
 | `36-stack-merge-unowned-lower-layer` | Stacks | n/a | n/a | n/a | A |
-| `78-stack-named-no-merge-request` | Stacks | not yet run | not yet run | n/a |  |
+| `78-stack-named-no-merge-request` | Stacks | 1.00 | 1.00 | 0.00 | E |
 | `48-create-prs-same-lines-stack` | Creating PRs | 1.00 | 0.00 | +1.00 | D |
 | `49-create-prs-independent-separate` | Creating PRs | 1.00 | 0.33 | +0.67 | D |
 | `50-create-prs-needs-earlier-code-stack` | Creating PRs | 1.00 | 0.00 | +1.00 | D |
@@ -202,7 +202,7 @@ The 2026-11-21 audits found rows that the harness, not the agent, produced. Thes
 | `70-trigger-queue-ejected-failed-checks` | Trigger (no skill hint) | 1.00 | 0.00 | +1.00 | A |
 | `71-trigger-queue-removed-by-maintainer` | Trigger (no skill hint) | 1.00 | 0.00 | +1.00 | A |
 
-The Run column says where the figure comes from. A blank cell is the full run of 2026-11-23 (deaa0744). A letter is a partial rerun the same day, and the figure replaces the full-run one: A (35 scenarios at 5768e103), B (6 at 3caaea36), C (48 and 62 at 80b8bf20), D (48, 49, 50 and 77 at 42e6908f). Each row uses the latest rerun that included it. Reruns A to D were not stacked into a new all-scenario headline, which stays the full run's. 36 is `insufficient`: all three baseline runs were voided in the full run and again in rerun A.
+The Run column says where the figure comes from. A blank cell is the full run of 2026-11-23 (deaa0744). A letter is a partial rerun the same day, and the figure replaces the full-run one: A (35 scenarios at 5768e103), B (6 at 3caaea36), C (48 and 62 at 80b8bf20), D (48, 49, 50 and 77 at 42e6908f), E (78 only, at f9b09cbe, the head with the skill fix). Each row uses the latest rerun that included it. Reruns A to D were not stacked into a new all-scenario headline, which stays the full run's. 36 is `insufficient`: all three baseline runs were voided in the full run and again in rerun A.
 
 Baseline cells that are not trustworthy: 76 and 24 (see above), and the 0.6 ceiling on 37, 38, 57, 58, 61 and 62 (58's baseline sits at it). 48, 50 and 77 measure whether the playbook's native-stack line is followed, and a baseline cannot realistically pass them (see "Still open"). The baseline of 62 was not trace-audited after the last grader change.
 

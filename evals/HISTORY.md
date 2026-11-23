@@ -6,6 +6,17 @@ invalidate cross-run comparison, and `analyze.mjs` refuses such pairs. For the
 current results see [README.md](README.md). For the suite design see
 [RUNNING.md](RUNNING.md) and [CASES.md](CASES.md).
 
+## 2026-11-23: scenario 78 before and after the skill fix (rerun E)
+
+Two runs of `78-stack-named-no-merge-request` only, Sonnet 5.5 at low effort, opus judge, 3 runs per arm, `--ablation with-without`. Isolation passed, 0 mock tool errors, exit 0. Directories are under `/private/tmp` and are not kept in the repository.
+
+| Run | Head | Plugin | gh/MCP | Δ | Cost | Wall |
+| --- | --- | --- | --- | --- | --- | --- |
+| before the skill fix (`pr-shepherd-eval-822a`) | a91b9df3 | 1.00 | 1.00 | 0.00 | $5.77 | 44 s |
+| after the skill fix (`pr-shepherd-eval-822b`) | f9b09cbe | 1.00 | 1.00 | 0.00 | $5.86 | 45 s |
+
+The scenario guards the mistake in issue 821: an agent adds a merge flag, and so merges a stack, when the user only named it. The run shows no difference between the two heads, so 78 is a regression guard, and the fix is not shown to improve a score. The incident was Claude Opus 5.5 with skill v2.2.9 and the literal `/pr-shepherd:pr-shepherd the stack`. The suite runs Sonnet with a plain-text prompt ("Look after the stack ..."), so it did not reproduce the misread, and the pass before the fix does not show the old wording was safe. Both arms pass, so 78 adds nothing to the plugin-versus-baseline headline. The traces were not audited.
+
 ## 2026-11-23: four targeted reruns after the full run (A to D)
 
 Four partial reruns on the same day as the full run below, all Sonnet 5.5 at low effort, opus judge, 3 runs per arm, `--ablation with-without`. They are partial: scenarios outside each rerun keep their full-run figures, and no new all-scenario headline was computed from them by the harness. Total $467.24; with the morning run ($636.08) the day cost $1,103.32. Directories are under `/private/tmp` and are not kept in the repository.
