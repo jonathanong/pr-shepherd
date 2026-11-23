@@ -240,7 +240,9 @@ same state, `pr-shepherd stack` with that tick on stack scenarios and the CLI's
 not-a-stack error elsewhere, and `apply` and `suggest` with a success. A
 scenario can override any of these answers with `shepherd` (for example an
 `iterate` that answers per PR). Agent mocks see their own
-call history, so an `iterate` can answer the first call with the tick and later calls
+call history, and the `gh` mock and the GitHub MCP mock do not share one: state changed
+through one (a created PR, a retarget, a merge) is invisible to the other. The CLI mock
+replays one recorded tick per scenario unless the scenario scripts more, so an `iterate` can answer the first call with the tick and later calls
 with the escalation the real CLI prints on an unchanged head (`escalation-ticks.mjs`). The baseline arm has nothing named pr-shepherd,
 and the `with` arm has no pr-shepherd MCP tools. Neither arm has a shell, so code
 changes appear as plan steps. The `with` minus `without` delta is the plugin's
