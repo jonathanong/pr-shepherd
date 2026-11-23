@@ -110,6 +110,43 @@ describe("runIterate candidate-READY fresh read", () => {
     expect(result.action).toBe("wait");
   });
 
+  it("still cancels when the summary is not ready for a reason the next check owns", async () => {
+    for (const summary of [
+      { checks: { failing: 1 }, review: {} },
+      { checks: { incomplete: true }, review: {} },
+      { checks: {}, review: { actionable: 1 } },
+    ]) {
+      mockSummarizePollSummaryPr.mockResolvedValue(summary);
+      expect(await runIterate(makeOpts())).toMatchObject({
+        action: "cancel",
+        reason: "ready-delay-elapsed",
+      });
+    }
+  });
+
+  it("keeps the stack receipt wording for a stack layer", async () => {
+    mockRunCheck.mockResolvedValue(
+      makeReport({
+        status: "READY",
+        headSha: "head-1",
+        baseRefOid: "base-1",
+        mergeStatus: {
+          ...makeReport().mergeStatus,
+          mergeRequirements: {
+            approvals: { current: 1, requiredCount: 1 },
+            conversationsResolved: { resolved: true, unresolvedCount: 0, required: true },
+            stack: { number: 7, size: 2, position: 1, baseRefName: "main" },
+          } as never,
+        },
+      }),
+    );
+    mockSummarizePollSummaryPr.mockResolvedValue({ checks: { inProgress: 1 }, review: {} });
+    expect(await runIterate(makeOpts())).toMatchObject({
+      action: "wait",
+      log: expect.stringContaining("its stack readiness receipt was not certified: a relevant"),
+    });
+  });
+
   it("still cancels when the fresh read cannot be fetched", async () => {
     mockFetchRawSummaryPr.mockRejectedValue(new Error("boom"));
     expect(await runIterate(makeOpts())).toMatchObject({

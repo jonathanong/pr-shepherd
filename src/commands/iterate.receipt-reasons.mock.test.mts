@@ -136,7 +136,7 @@ describe("stack receipt reasons", () => {
 
   it("names a fresh summary that is not ready", async () => {
     layer();
-    mockSummarizePollSummaryPr.mockResolvedValue({ checks: {}, review: { actionable: 1 } });
+    mockSummarizePollSummaryPr.mockResolvedValue({ checks: { failing: 1 }, review: {} });
     expect(await logFor()).toContain("fresh summary is not ready");
   });
 

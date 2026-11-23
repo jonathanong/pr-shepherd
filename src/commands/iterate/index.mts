@@ -434,7 +434,7 @@ async function runIterateCore(
         ...base,
         action: "wait",
         shouldCancel: false,
-        log: receiptWaitLog(base.pr, outcome),
+        log: receiptWaitLog(base.pr, outcome, stackLayer),
       };
       return annotateBlockedWait(
         await applyStallGuard(
@@ -528,11 +528,12 @@ const errMessage = (e: unknown): string => (e instanceof Error ? e.message : Str
 function receiptWaitLog(
   pr: number,
   outcome: Exclude<ReceiptOutcome, { status: "written" }>,
+  stackLayer: boolean,
 ): string {
   const head = `WAIT: PR #${pr} reached ready-delay but`;
   if (outcome.status === "blocked")
     return `${head} GitHub reports BLOCKED, so its stack readiness receipt was not certified`;
-  if (outcome.regressed) {
+  if (outcome.regressed && !stackLayer) {
     return `WAIT: PR #${pr} looked ready but a fresh read shows ${outcome.reason}`;
   }
   if (outcome.persistFailure)
