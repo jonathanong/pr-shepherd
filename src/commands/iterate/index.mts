@@ -568,10 +568,6 @@ async function recordReadyReceipt(
         reason: `the head moved (report ${short(report.headSha)}, fresh ${short(raw.headRefOid)})`,
         regressed: true,
       };
-    if (raw.baseRefOid !== report.baseRefOid)
-      return failed(
-        `base moved (report ${short(report.baseRefOid)}, fresh ${short(raw.baseRefOid)})`,
-      );
     // Summarize hydrates annotation totals onto the snapshot; hash only after,
     // so the stored hash matches the stack side's (which hashes hydrated evidence).
     summary = await summarizePollSummaryPr(
@@ -592,6 +588,11 @@ async function recordReadyReceipt(
   const review = summary.review ?? {};
   const regression = freshSummaryRegression(raw, checks, report.mergeStatus.mergeStateStatus);
   if (regression) return { status: "failed", reason: regression, regressed: true };
+  // After the regression check: a base move alongside queued CI must still wait.
+  if (raw.baseRefOid !== report.baseRefOid)
+    return failed(
+      `base moved (report ${short(report.baseRefOid)}, fresh ${short(raw.baseRefOid)})`,
+    );
   if (!isCurrentSummaryReady(raw, checks, review)) {
     const onlyBlocked =
       raw.mergeStateStatus === "BLOCKED" &&

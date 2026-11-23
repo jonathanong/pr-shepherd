@@ -104,6 +104,12 @@ describe("runIterate candidate-READY fresh read", () => {
     });
   });
 
+  it("waits on queued CI even when the base also moved", async () => {
+    mockFetchRawSummaryPr.mockResolvedValue({ ...raw, baseRefOid: "base-2" });
+    mockSummarizePollSummaryPr.mockResolvedValue({ checks: { inProgress: 1 }, review: {} });
+    expect(await runIterate(makeOpts())).toMatchObject({ action: "wait", shouldCancel: false });
+  });
+
   it("does not merge while the fresh read regresses", async () => {
     mockSummarizePollSummaryPr.mockResolvedValue({ checks: { inProgress: 1 }, review: {} });
     const result = await runIterate(makeOpts({ merge: true }));

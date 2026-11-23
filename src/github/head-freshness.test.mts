@@ -28,6 +28,16 @@ describe("headFreshAtUnix", () => {
     );
   });
 
+  it("lets a fresh committer date date a push to an old PR, and an old one adds nothing", () => {
+    const input = { suiteCreatedAts: [], prCreatedAt: "2026-11-01T00:00:00Z" };
+    expect(headFreshAtUnix({ ...input, committedAt: "2026-11-22T05:09:00Z" })).toBe(
+      unix("2026-11-22T05:09:00Z"),
+    );
+    expect(headFreshAtUnix({ ...input, committedAt: "2026-10-01T00:00:00Z" })).toBe(
+      unix("2026-11-01T00:00:00Z"),
+    );
+  });
+
   it("ignores unparseable times and is undefined when nothing is known", () => {
     expect(headFreshAtUnix({ suiteCreatedAts: ["not-a-date", ""], forcePushedAtUnix: 0 })).toBe(
       undefined,

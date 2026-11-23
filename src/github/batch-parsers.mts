@@ -177,6 +177,7 @@ export function parseRawPr(
     ),
     ...(headForcePushedAt && { forcePushedAtUnix: parseCreatedAt(headForcePushedAt) }),
     prCreatedAt: raw.createdAt,
+    committedAt: raw.commits.nodes[0]?.commit.committedDate,
   });
   const removedMergeQueueChecks = parseCheckNodes(
     removedQueueHead?.statusCheckRollup
