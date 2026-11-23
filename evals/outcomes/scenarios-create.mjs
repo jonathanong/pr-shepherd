@@ -138,8 +138,12 @@ in that order. \`gh stack rebase\` then rebases \`feat/retries\` onto \`feat/tim
 separate checkout, git rebase or push is needed before \`gh stack submit --auto\`.
 \`gh stack link feat/timeout feat/retries\` pushes both branches and creates #42
 (base \`main\`) and #43 (base \`feat/timeout\`) in native stack #7, without that
-rebase.`),
-    grader: STACKED_GRADER("the `feat/timeout` PR", "the `feat/retries` PR"),
+rebase, so #43 shows mergeStateStatus DIRTY (line 10 conflicts with
+\`feat/timeout\`) until \`feat/retries\` is rebased onto \`feat/timeout\` and pushed.`),
+    grader: `${STACKED_GRADER("the `feat/timeout` PR", "the `feat/retries` PR")}
+A plan that only links the branches (\`gh stack link\` does not rebase) and treats
+the stack as mergeable fails: it must also plan to rebase \`feat/retries\` onto
+\`feat/timeout\` and push before the stack is mergeable.`,
   },
   {
     // Different files, nothing shared: stacking would only couple two PRs.
