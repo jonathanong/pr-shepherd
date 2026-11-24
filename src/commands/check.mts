@@ -478,6 +478,8 @@ async function runScopedCheck(
     awaitingChecks,
   );
   status = enforceTransportReadiness(status, batchData);
+  // A null annotation entry means CI is not fully known: wait a tick instead of READY.
+  if (merged.annotationsUnread && status === "READY") status = "PENDING";
 
   // Resolve any pending mergeability refresh (and the resulting MERGED/CLOSED short-circuit)
   // before deciding what to persist below — deferWhileQueued must see the same final,

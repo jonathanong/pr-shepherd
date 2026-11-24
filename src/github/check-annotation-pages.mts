@@ -18,26 +18,38 @@ interface RawCheckRunAnnotationsResponse {
   } | null;
 }
 
+/**
+ * A fetched page held a null annotation entry. `readable` is every annotation that was read, so a
+ * caller can still surface them while treating the run as unread (never cached, READY held).
+ */
+export class NullAnnotationNodeError extends Error {
+  readonly checkRunId: string;
+  readonly readable: CheckAnnotation[];
+  constructor(checkRunId: string, readable: CheckAnnotation[]) {
+    super(`check run ${checkRunId} annotation page contains a null node`);
+    this.checkRunId = checkRunId;
+    this.readable = readable;
+  }
+}
+
 /** Pages a single check run. `firstPage` skips the initial `node(id:)` request. */
 export async function collectAnnotations(
   checkRunId: string,
   firstPage?: AnnotationPage,
 ): Promise<CheckAnnotation[]> {
   const nodes: RawCheckAnnotation[] = [];
+  let sawNull = false;
   let cursor: string | null = null;
   let seeded: AnnotationPage | undefined = firstPage;
   for (let pageNumber = 1; pageNumber <= MAX_ANNOTATION_PAGES; pageNumber++) {
     // eslint-disable-next-line no-await-in-loop
     const current: AnnotationPage = seeded ?? (await fetchAnnotationPage(checkRunId, cursor));
     seeded = undefined;
-    // A null entry is an annotation GitHub has not served yet. Failing this read makes the
-    // batch record the check as unread (never cached, held out of READY) so the next tick
-    // rereads it; skipping it would let a failing annotation look absent.
+    // A null entry is an annotation GitHub has not served yet. Keep reading, then fail with the
+    // readable entries so the caller holds READY and rereads next tick (never caches the run).
     for (const node of current.nodes) {
-      if (node == null) {
-        throw new Error(`check run ${checkRunId} annotation page contains a null node`);
-      }
-      nodes.push(node);
+      if (node == null) sawNull = true;
+      else nodes.push(node);
     }
     if (!current.pageInfo.hasNextPage || !current.pageInfo.endCursor) break;
     if (pageNumber === MAX_ANNOTATION_PAGES) {
@@ -48,7 +60,9 @@ export async function collectAnnotations(
     }
     cursor = current.pageInfo.endCursor;
   }
-  return nodes.map((node) => toCheckAnnotation(checkRunId, node));
+  const annotations = nodes.map((node) => toCheckAnnotation(checkRunId, node));
+  if (sawNull) throw new NullAnnotationNodeError(checkRunId, annotations);
+  return annotations;
 }
 
 async function fetchAnnotationPage(
