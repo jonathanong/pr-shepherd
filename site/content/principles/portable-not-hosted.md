@@ -31,8 +31,8 @@ gives you the identical result from a shell or a CI job.
 ## Agent-neutral is a checkable claim, not a slogan
 
 `docs/comparison.md` compares pr-shepherd with three groups of alternatives: cloud and
-vendor-bound agents, Code Mode-style tools, and skills. The cloud group trades a local
-session for one vendor's model, plan, and GitHub integration. pr-shepherd sits in the
+vendor-bound agents, Code Mode-style tools, and skills. The first group binds the loop
+to one vendor: a hosted agent such as PR Steward, or a command built into one vendor's CLI. pr-shepherd sits in the
 second group, as the local counterpart to a hosted agent such as PR Steward:
 
 > A program reads GitHub and returns compact state; the agent decides and acts. The
