@@ -39,6 +39,8 @@ export function isCurrentSummaryReady(
     isKnownMergeStateStatus(raw.mergeStateStatus) &&
     transportReadinessGaps(raw, raw.mergeStateStatus, requiresConversationResolution).length ===
       0 &&
+    // A null review node is unknown, never settled by CLEAN or branch rules: reread next tick.
+    raw.unreadNodes?.feedback !== true &&
     checks.incomplete !== true &&
     sourceChecks.incomplete !== true &&
     (review.incomplete !== true ||

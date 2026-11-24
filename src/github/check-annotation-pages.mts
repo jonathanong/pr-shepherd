@@ -22,7 +22,6 @@ interface RawCheckRunAnnotationsResponse {
 export async function collectAnnotations(
   checkRunId: string,
   firstPage?: AnnotationPage,
-  onSkippedNull?: () => void,
 ): Promise<CheckAnnotation[]> {
   const nodes: RawCheckAnnotation[] = [];
   let cursor: string | null = null;
@@ -31,10 +30,14 @@ export async function collectAnnotations(
     // eslint-disable-next-line no-await-in-loop
     const current: AnnotationPage = seeded ?? (await fetchAnnotationPage(checkRunId, cursor));
     seeded = undefined;
-    // A null entry carries nothing to report; skip it rather than invent an annotation.
+    // A null entry is an annotation GitHub has not served yet. Failing this read makes the
+    // batch record the check as unread (never cached, held out of READY) so the next tick
+    // rereads it; skipping it would let a failing annotation look absent.
     for (const node of current.nodes) {
-      if (node == null) onSkippedNull?.();
-      else nodes.push(node);
+      if (node == null) {
+        throw new Error(`check run ${checkRunId} annotation page contains a null node`);
+      }
+      nodes.push(node);
     }
     if (!current.pageInfo.hasNextPage || !current.pageInfo.endCursor) break;
     if (pageNumber === MAX_ANNOTATION_PAGES) {
