@@ -88,6 +88,12 @@ describe("fetchCheckRunAnnotations — cross-tick cache", () => {
     expect(mockGraphql).toHaveBeenCalledTimes(2);
   });
 
+  it("skips a null annotation node instead of crashing", async () => {
+    mockPage([null, rawAnnotation]);
+    const result = await fetchCheckRunAnnotations("CR_1");
+    expect(result.map((a) => a.id)).toEqual(["check_annotation_1"]);
+  });
+
   it("does not cache when cacheOpts is omitted", async () => {
     mockPage([rawAnnotation]);
     await fetchCheckRunAnnotations("CR_1");
