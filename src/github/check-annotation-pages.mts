@@ -8,7 +8,7 @@ const MAX_ANNOTATION_PAGES = 10;
 
 export interface AnnotationPage {
   pageInfo: { hasNextPage: boolean; endCursor: string | null };
-  nodes: RawCheckAnnotation[];
+  nodes: Array<RawCheckAnnotation | null>;
 }
 
 interface RawCheckRunAnnotationsResponse {
@@ -22,6 +22,7 @@ interface RawCheckRunAnnotationsResponse {
 export async function collectAnnotations(
   checkRunId: string,
   firstPage?: AnnotationPage,
+  onSkippedNull?: () => void,
 ): Promise<CheckAnnotation[]> {
   const nodes: RawCheckAnnotation[] = [];
   let cursor: string | null = null;
@@ -30,7 +31,11 @@ export async function collectAnnotations(
     // eslint-disable-next-line no-await-in-loop
     const current: AnnotationPage = seeded ?? (await fetchAnnotationPage(checkRunId, cursor));
     seeded = undefined;
-    nodes.push(...current.nodes);
+    // A null entry carries nothing to report; skip it rather than invent an annotation.
+    for (const node of current.nodes) {
+      if (node == null) onSkippedNull?.();
+      else nodes.push(node);
+    }
     if (!current.pageInfo.hasNextPage || !current.pageInfo.endCursor) break;
     if (pageNumber === MAX_ANNOTATION_PAGES) {
       process.stderr.write(

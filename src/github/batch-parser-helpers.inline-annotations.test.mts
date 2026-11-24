@@ -67,10 +67,23 @@ describe("mapCheckRunNode inline annotations", () => {
     ["a partial page", { totalCount: 2, nodes: [full] }],
     ["a message-only node", { totalCount: 1, nodes: [{ message: "boom" }] }],
     ["a node without location", { totalCount: 1, nodes: [{ ...full, location: undefined }] }],
+    ["a lone null node", { totalCount: 1, nodes: [null] }],
+    ["a valid node plus a null node", { totalCount: 2, nodes: [full, null] }],
     ["a node without an id", { totalCount: 1, nodes: [{ ...full, fullDatabaseId: undefined }] }],
   ])("omits inline annotations for %s", (_label, annotations) => {
     const run = mapCheckRunNode(node(annotations as CheckRunNode["annotations"]));
 
+    expect(run).not.toHaveProperty("inlineAnnotations");
+  });
+
+  it.each([
+    ["a lone null node", [null], 1],
+    ["a valid node plus a null node", [full, null], 2],
+  ])("keeps the annotation count for %s", (_label, nodes, totalCount) => {
+    const run = mapCheckRunNode(node({ totalCount, nodes }));
+
+    expect(run.hasAnnotations).toBe(true);
+    expect(run.annotationCount).toBe(totalCount);
     expect(run).not.toHaveProperty("inlineAnnotations");
   });
 });

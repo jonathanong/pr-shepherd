@@ -104,8 +104,9 @@ function inlineAnnotationsField(
 }
 
 function fullRawAnnotation(
-  node: Partial<RawCheckAnnotation> & { message: string },
+  node: (Partial<RawCheckAnnotation> & { message: string }) | null | undefined,
 ): RawCheckAnnotation | null {
+  if (node == null) return null;
   if (typeof node.path !== "string" || typeof node.annotationLevel !== "string") return null;
   if (node.location === undefined || node.fullDatabaseId === undefined) return null;
   return {

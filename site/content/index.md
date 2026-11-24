@@ -58,7 +58,7 @@ summary 3 passing
 <div class="card-grid">
 
 - [**It sees the whole PR**](docs/handled-cases.md) One call returns review threads, comments,
-  CI failures with log excerpts when available, and the real merge requirements. It handles 76 GitHub edge
+  CI failures with log excerpts when available, and the real merge requirements. It handles 77 GitHub edge
   cases, like a cancelled run that needs a rerun rather than a code fix.
 - [**It costs less to run**](https://github.com/jonathanong/pr-shepherd/blob/main/evals/tokens/README.md)
   A modeled 34% lower cost per PR session than `gh` (30–38% across realistic context sizes), and

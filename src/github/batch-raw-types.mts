@@ -205,7 +205,8 @@ export type RawContextNode =
       summary: string | null;
       annotations?: {
         totalCount?: number;
-        nodes: Array<Partial<RawCheckAnnotation> & { message: string }>;
+        // GitHub can return a null entry (seen right after a push on a fresh check suite).
+        nodes: Array<(Partial<RawCheckAnnotation> & { message: string }) | null>;
       };
       checkSuite: {
         status?: string | null;

@@ -38,7 +38,7 @@ interface RawBatchNode {
   __typename?: string;
   annotations?: {
     pageInfo: { hasNextPage: boolean; endCursor: string | null };
-    nodes: RawCheckAnnotation[];
+    nodes: Array<RawCheckAnnotation | null>;
   };
 }
 
