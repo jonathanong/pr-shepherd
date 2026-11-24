@@ -1,5 +1,6 @@
 import type { AnnotationCacheOptions } from "../github/check-annotation-cache.mts";
 import { fetchCheckRunAnnotationsBatch } from "../github/check-annotations-batch.mts";
+import { NullAnnotationNodeError } from "../github/check-annotation-pages.mts";
 import { pollRateLimitRetryAfterMs } from "./poll-quota.mts";
 import type { CheckAnnotation, ClassifiedCheck, ShepherdReport, TriagedCheck } from "../types.mts";
 
@@ -72,6 +73,8 @@ export async function attachAndMergeCheckAnnotations(
   failing: TriagedCheck[];
   skipped: ClassifiedCheck[];
   filtered: ClassifiedCheck[];
+  /** A fetched annotation page held a null entry: CI is not fully known this tick. */
+  annotationsUnread?: true;
 }> {
   const candidates = [
     ...buckets.failing,
@@ -84,7 +87,7 @@ export async function attachAndMergeCheckAnnotations(
       c.id != null && c.annotationCount ? [[c.id, c.annotationCount] as const] : [],
     ),
   );
-  const annotated = await attachUnseenCheckAnnotations(
+  const { checks: annotated, unread } = await attachUnseenCheckAnnotations(
     candidates,
     seenMap,
     prNumber,
@@ -103,6 +106,7 @@ export async function attachAndMergeCheckAnnotations(
     failing: apply(buckets.failing),
     skipped: apply(buckets.skipped),
     filtered: apply(buckets.filtered),
+    ...(unread && { annotationsUnread: true as const }),
   };
 }
 
@@ -111,9 +115,10 @@ async function attachUnseenCheckAnnotations(
   seenMap: Map<string, { seenAt: number }>,
   prNumber: number,
   cacheOpts?: AnnotationCacheOptions,
-): Promise<TriagedCheck[]> {
-  if (checks.length === 0) return checks;
+): Promise<{ checks: TriagedCheck[]; unread: boolean }> {
+  if (checks.length === 0) return { checks, unread: false };
   const annotations = new Map<string, CheckAnnotation[]>();
+  let unread = false;
   for (const check of checks) {
     if (check.id != null && check.inlineAnnotations)
       annotations.set(check.id, check.inlineAnnotations);
@@ -128,15 +133,27 @@ async function attachUnseenCheckAnnotations(
     } catch (err) {
       if (pollRateLimitRetryAfterMs(err) !== null) throw err;
       writeAnnotationFailureSummary(prNumber, ids.length, err);
-      return checks.map((check) => withUnseenAnnotations(check, annotations, seenMap));
+      return {
+        checks: checks.map((check) => withUnseenAnnotations(check, annotations, seenMap)),
+        unread: false,
+      };
     }
-    const firstFailure = batch.failures[0];
-    if (firstFailure !== undefined) {
-      writeAnnotationFailureSummary(prNumber, batch.failures.length, firstFailure.error);
+    const nullFailures = batch.failures.filter((f) => f.error instanceof NullAnnotationNodeError);
+    unread = nullFailures.length > 0;
+    // Entries read from a page that also held a null still surface; the run is held unread.
+    for (const failure of nullFailures) {
+      annotations.set(failure.checkRunId, (failure.error as NullAnnotationNodeError).readable);
+    }
+    const otherFailures = batch.failures.filter((f) => !nullFailures.includes(f));
+    if (otherFailures[0] !== undefined) {
+      writeAnnotationFailureSummary(prNumber, otherFailures.length, otherFailures[0].error);
     }
     for (const [id, list] of batch.annotations) annotations.set(id, list);
   }
-  return checks.map((check) => withUnseenAnnotations(check, annotations, seenMap));
+  return {
+    checks: checks.map((check) => withUnseenAnnotations(check, annotations, seenMap)),
+    unread,
+  };
 }
 
 function withUnseenAnnotations(

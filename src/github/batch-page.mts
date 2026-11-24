@@ -1,7 +1,7 @@
 import { graphqlWithRateLimit, type RateLimitInfo, type RepoInfo } from "./client.mts";
 import { GitHubRequestError } from "./errors.mts";
 import { BATCH_PR_PAGE_DATA_QUERY, BATCH_PR_PAGE_QUERY } from "./queries.mts";
-import { requireContextNodes } from "./batch-response.mts";
+import { contextNodes } from "./batch-response.mts";
 import {
   applyIncludedPage,
   backwardCursor,
@@ -39,9 +39,7 @@ export async function paginateBatchConnections(
     changesRequested: [...raw.changesRequestedReviews.nodes],
     reviewSummaries: [...raw.reviewSummaries.nodes],
     approvedReviews: [...raw.approvedReviews.nodes],
-    checks: [
-      ...requireContextNodes(raw.commits.nodes[0]?.commit.statusCheckRollup?.contexts.nodes ?? []),
-    ],
+    checks: [...contextNodes(raw.commits.nodes[0]?.commit.statusCheckRollup?.contexts.nodes ?? [])],
   };
   const firstOid = raw.commits.nodes[0]?.commit.oid;
   let cursors: PageCursors = {

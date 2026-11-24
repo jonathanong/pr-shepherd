@@ -26,6 +26,7 @@ import { loadConfig } from "../config/load.mts";
 import { classifyVisibleComments } from "../comments/visible-comments.mts";
 import { withHeadOid } from "./review-commit.mts";
 import { computeStatus } from "./check-status.mts";
+import { holdUnreadReadiness } from "./check-unread-readiness.mts";
 import {
   annotationMarkerBody,
   attachAndMergeCheckAnnotations,
@@ -80,6 +81,7 @@ import type {
 } from "../types.mts";
 
 function enforceTransportReadiness(status: ShepherdStatus, data: BatchPrData): ShepherdStatus {
+  status = holdUnreadReadiness(status, data);
   if (status !== "READY" || data.transport !== "rest") return status;
   const conversationsGated = data.branchRules?.requiresConversationResolution;
   const statusProven = conversationResolutionProven(data.mergeStateStatus, conversationsGated);
@@ -476,6 +478,8 @@ async function runScopedCheck(
     awaitingChecks,
   );
   status = enforceTransportReadiness(status, batchData);
+  // A null annotation entry means CI is not fully known: wait a tick instead of READY.
+  if (merged.annotationsUnread && status === "READY") status = "PENDING";
 
   // Resolve any pending mergeability refresh (and the resulting MERGED/CLOSED short-circuit)
   // before deciding what to persist below — deferWhileQueued must see the same final,

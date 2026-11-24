@@ -17,6 +17,8 @@ export interface RawBatchResponse {
 }
 
 export interface RawPr extends RawPrMergeFields {
+  /** Set when GitHub returned null connection nodes (dropped); see `null-nodes.mts`. */
+  unreadNodes?: import("./null-nodes.mts").UnreadNodes;
   id: string;
   number: number;
   createdAt?: string;

@@ -111,7 +111,7 @@ export async function readStack<Pr extends StackMemberRefs>(
     stackNumber = stack.number;
     stackSize = stack.size;
     for (const entry of stack.entries.nodes) {
-      if (!entry.pullRequest) {
+      if (!entry?.pullRequest) {
         throw new ShepherdError(
           "GitHub returned an incomplete pull-request stack entry",
           EXIT.TEMPFAIL,

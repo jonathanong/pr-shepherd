@@ -48,6 +48,18 @@ describe("GitHub conversation-resolution readiness", () => {
     );
   });
 
+  it("does not certify a CLEAN PR whose review nodes were not fully read", () => {
+    const pr = snapshot({ unreadNodes: { feedback: true } });
+    expect(isCurrentSummaryReady(pr, summarizePollSummaryChecks(pr), { incomplete: true })).toBe(
+      false,
+    );
+  });
+
+  it("does not certify a CLEAN PR whose check contexts were not fully read", () => {
+    const pr = snapshot({ unreadNodes: { checks: true } });
+    expect(isCurrentSummaryReady(pr, summarizePollSummaryChecks(pr), {})).toBe(false);
+  });
+
   it("accepts the classic branch-protection conversation-resolution requirement", () => {
     const pr = snapshot({
       baseRef: {

@@ -13,6 +13,7 @@ export async function prepareBatchReceiptEvidence(
 ): Promise<RawSummaryPr | null> {
   if (
     !summary ||
+    summary.unreadNodes ||
     summary.number !== batch.number ||
     summary.headRefOid !== batch.headRefOid ||
     summary.baseRefOid !== batch.baseRefOid

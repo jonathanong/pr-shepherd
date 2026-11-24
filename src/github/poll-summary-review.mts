@@ -44,6 +44,7 @@ export async function evaluatePollSummaryReview(
   const rules = await loadClassifyRules(getEffectiveCwd(), config.standardRules);
   let actionable = 0;
   let incomplete =
+    raw.unreadNodes?.feedback === true ||
     raw.comments.pageInfo.hasPreviousPage ||
     raw.reviews.pageInfo.hasPreviousPage ||
     raw.reviewThreads.pageInfo.hasPreviousPage;

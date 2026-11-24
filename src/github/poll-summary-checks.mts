@@ -24,6 +24,7 @@ export function summarizePollSummaryChecks(
     counts[key] = (counts[key] ?? 0) + 1;
   }
   const summary = counts as PollSummaryChecks;
+  if (raw.unreadNodes?.checks) summary.incomplete = true;
   if (rollups.some(({ rollup }) => rollup.contexts.pageInfo.hasPreviousPage)) {
     summary.incomplete = true;
   }
