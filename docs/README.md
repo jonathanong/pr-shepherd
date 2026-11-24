@@ -4,10 +4,10 @@ Canonical spec for Shepherd, grouped by outcome. The [README](../README.md) and 
 
 ## Overview
 
-| Document                       | What it covers                                                         |
-| ------------------------------ | ---------------------------------------------------------------------- |
-| [features.md](features.md)     | Features, workflow assumptions, and what is not supported              |
-| [comparison.md](comparison.md) | Alternatives (Cursor `/autopilot`, Copilot `/pr auto`, review bots, …) |
+| Document                       | What it covers                                                            |
+| ------------------------------ | ------------------------------------------------------------------------- |
+| [features.md](features.md)     | Features, workflow assumptions, and what is not supported                 |
+| [comparison.md](comparison.md) | Alternatives in three groups: cloud agents, Code Mode-style tools, skills |
 
 ## Context and correctness
 
