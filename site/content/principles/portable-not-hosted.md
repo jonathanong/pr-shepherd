@@ -28,7 +28,7 @@ That's why the Claude Code, Codex, and Grok skills are thin dispatchers rather t
 model-specific logic: any MCP client can speak to the same tool contract, and the CLI
 gives you the identical result from a shell or a CI job.
 
-## Agent-neutral is a checkable claim, not a slogan
+## Where it sits among the alternatives
 
 `docs/comparison.md` compares pr-shepherd with three groups of alternatives: cloud and
 vendor-bound agents, Code Mode-style tools, and skills. The first group binds the loop
