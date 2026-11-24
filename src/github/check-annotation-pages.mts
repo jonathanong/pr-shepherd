@@ -22,6 +22,7 @@ interface RawCheckRunAnnotationsResponse {
 export async function collectAnnotations(
   checkRunId: string,
   firstPage?: AnnotationPage,
+  onSkippedNull?: () => void,
 ): Promise<CheckAnnotation[]> {
   const nodes: RawCheckAnnotation[] = [];
   let cursor: string | null = null;
@@ -31,7 +32,10 @@ export async function collectAnnotations(
     const current: AnnotationPage = seeded ?? (await fetchAnnotationPage(checkRunId, cursor));
     seeded = undefined;
     // A null entry carries nothing to report; skip it rather than invent an annotation.
-    for (const node of current.nodes) if (node != null) nodes.push(node);
+    for (const node of current.nodes) {
+      if (node == null) onSkippedNull?.();
+      else nodes.push(node);
+    }
     if (!current.pageInfo.hasNextPage || !current.pageInfo.endCursor) break;
     if (pageNumber === MAX_ANNOTATION_PAGES) {
       process.stderr.write(

@@ -94,6 +94,15 @@ describe("fetchCheckRunAnnotations — cross-tick cache", () => {
     expect(result.map((a) => a.id)).toEqual(["check_annotation_1"]);
   });
 
+  it("does not cache a page that held a null node, so the next tick refetches", async () => {
+    mockPage([null, rawAnnotation]);
+    await fetchCheckRunAnnotations("CR_1", { stateKey, headSha: "sha1" });
+    mockPage([rawAnnotation, { ...rawAnnotation, fullDatabaseId: "2" }]);
+    const again = await fetchCheckRunAnnotations("CR_1", { stateKey, headSha: "sha1" });
+    expect(again).toHaveLength(2);
+    expect(mockGraphql).toHaveBeenCalledTimes(2);
+  });
+
   it("does not cache when cacheOpts is omitted", async () => {
     mockPage([rawAnnotation]);
     await fetchCheckRunAnnotations("CR_1");

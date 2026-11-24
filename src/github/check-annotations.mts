@@ -25,11 +25,16 @@ export async function fetchCheckRunAnnotations(
     const cached = await readFreshCheckAnnotations(checkRunId, cacheOpts);
     if (cached) return cached;
   }
+  let skippedNull = false;
   const annotations = await githubOperation(
     "CheckRunAnnotations",
-    () => collectAnnotations(checkRunId, initialPage),
+    () =>
+      collectAnnotations(checkRunId, initialPage, () => {
+        skippedNull = true;
+      }),
     () => readRestCheckAnnotations(checkRunId, cacheOpts),
   );
-  await storeCheckAnnotations(checkRunId, annotations, cacheOpts);
+  // A page that held a null entry is incomplete; caching it would hide the entry once it fills in.
+  if (!skippedNull) await storeCheckAnnotations(checkRunId, annotations, cacheOpts);
   return annotations;
 }
