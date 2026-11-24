@@ -8,7 +8,7 @@ docs:
   - path: "docs/escalations.md"
     label: "escalations.md — the finite escalation trigger list"
   - path: "docs/comparison.md"
-    label: "comparison.md — where pr-shepherd sits next to review bots and hosted agents"
+    label: "comparison.md — where pr-shepherd sits next to hosted agents, other CLI and MCP tools, and skills"
 ---
 
 # Deterministic orchestration, agentic judgment

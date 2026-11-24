@@ -2,6 +2,8 @@
 
 Take pull requests from scratch to merge-ready with a coding agent, as a [Code Mode-style](https://code.claude.com/docs/en/code-mode) plugin. It works with Claude Code, Codex, and Grok.
 
+A local CLI, harness-agnostic version of [PR Steward](https://code.claude.com/docs/en/pr-steward). See [comparisons](docs/comparison.md).
+
 ## Benefits
 
 - **Better decisions:** across 71 PR states, it scores 0.95 with the plugin vs. 0.57 with `gh` + the GitHub MCP server ([outcome evals](evals/README.md), 2026-11-23).

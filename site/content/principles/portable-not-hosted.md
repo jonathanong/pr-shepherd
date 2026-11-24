@@ -6,7 +6,7 @@ docs:
   - path: "docs/architecture.md"
     label: "architecture.md — one local MCP surface, module map, dependency rules"
   - path: "docs/comparison.md"
-    label: "comparison.md — the agent-neutral comparison table"
+    label: "comparison.md — cloud agents, Code Mode-style tools, and skills compared"
 ---
 
 # A portable state machine, not a hosted agent
@@ -28,16 +28,15 @@ That's why the Claude Code, Codex, and Grok skills are thin dispatchers rather t
 model-specific logic: any MCP client can speak to the same tool contract, and the CLI
 gives you the identical result from a shell or a CI job.
 
-## Agent-neutral is a checkable claim, not a slogan
+## Where it sits among the alternatives
 
-`docs/comparison.md` runs an explicit comparison table against review bots, hosted GitHub
-Actions, and custom `gh`/GraphQL scripts. Only three rows answer "Agent-neutral: Yes" —
-pr-shepherd, a hand-rolled GitHub MCP Server loop, and manual scripts — and pr-shepherd is
-the only one of those three with the completion loop already built in:
+`docs/comparison.md` compares pr-shepherd with three groups of alternatives: cloud and
+vendor-bound agents, Code Mode-style tools, and skills. The first group binds the loop
+to one vendor: a hosted agent such as PR Steward, or a command built into one vendor's CLI. pr-shepherd sits in the
+second group, as the local counterpart to a hosted agent such as PR Steward:
 
-> When you already have a coding agent and want a repeatable loop over existing review
-> feedback, CI, mergeability, and GitHub review mutations without coupling the loop to one
-> model vendor.
+> A program reads GitHub and returns compact state; the agent decides and acts. The
+> program is the same on every run, and it costs no model tokens to compute.
 
 ## Safe to interrupt
 
