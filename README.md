@@ -107,6 +107,7 @@ Requirements:
 
 - Node.js >= 22.19.0, Bun, or Deno, and `git`
 - A GitHub token or authenticated `gh` CLI with [the required access](docs/authentication.md)
+- A repository where every check is expected to pass. Shepherd treats each failing check as work, required or not; list checks that may fail in [`checks.ignore`](docs/configuration.md#checksignore--default-) ([workflow assumptions](docs/features.md#workflow-assumptions))
 
 ## Documentation
 

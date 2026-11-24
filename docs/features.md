@@ -23,6 +23,7 @@ Interfaces: the MCP tools `iterate`, `stack`, `apply`, `suggest`, `extract_journ
 
 Shepherd works best on PRs that use required status checks and conversation resolution.
 
+- Every relevant check must pass, required or not. A failing check stays `TRIAGE` work until it passes, on every tick and in the merge queue too; a journaled rejection does not clear it. Shepherd does not trace workflow dependencies (`needs:`, gate jobs, `workflow_run`) to work out which jobs feed a required check, so it cannot tell that a non-required failure is harmless. List checks that are expected to fail, such as a failure already on the base branch or a report-only job, in [`checks.ignore`](configuration.md#checksignore--default-).
 - Push access to the PR head branch is a usage precondition. GitHub viewer fields do not create a separate push handoff.
 - The CLI never mutates git. It prints commit and push steps for the agent, and never merges or updates branches itself.
 - Every thread, comment, and review summary is surfaced at least once, even when it is already outdated, resolved, or minimized. Edited items re-surface. The exception is a `COMMENTED` review minimized before the first tick, which is not fetched.
