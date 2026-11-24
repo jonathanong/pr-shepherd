@@ -248,6 +248,8 @@ Case-insensitive globs over Shepherd's normalized check name. That name is `Chec
 
 Ignored checks do not affect readiness, check summaries, triage, or stall detection. Their names stay in the `ignoredNames` JSON field and the `**ignored**` text rollup.
 
+Use it for any check that is not required to pass. Shepherd treats every relevant check as blocking, whether or not branch protection requires it, and does not read workflow dependencies to decide which jobs feed a required check. Examples: a failure already on the base branch, a report-only job, a flaky check you accept. Otherwise each run returns `TRIAGE` for it.
+
 ```yaml
 checks:
   ignore:
