@@ -1,5 +1,5 @@
 import { githubOperation } from "./transport.mts";
-import { dropUnreadableSuites } from "./check-suite-nodes.mts";
+import { dropNullNodes, mergeUnread } from "./null-nodes.mts";
 import { readRestCommitChecks } from "./rest-check-read.mts";
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
 import type { RawCheckRollup, RawSummaryCommit, RawSummaryPr } from "./poll-summary-raw.mts";
@@ -29,13 +29,21 @@ interface CheckPageResponse {
  */
 export async function hydratePollSummaryChecks(raw: RawSummaryPr, repo: RepoInfo): Promise<void> {
   const headCommit = raw.commits.nodes[0]?.commit;
-  dropUnreadableSuites(headCommit);
-  if (headCommit) await hydrateCommitContexts(headCommit, repo);
+  raw.unreadNodes = mergeUnread(raw.unreadNodes, dropNullNodes(raw));
+  const pages: Unread = {};
+  if (headCommit) await hydrateCommitContexts(headCommit, repo, pages);
   const queueCommit = raw.mergeQueueEntry?.headCommit;
-  if (queueCommit) await hydrateCommitContexts(queueCommit, repo);
+  if (queueCommit) await hydrateCommitContexts(queueCommit, repo, pages);
+  raw.unreadNodes = mergeUnread(raw.unreadNodes, pages.unreadNodes);
 }
 
-async function hydrateCommitContexts(commit: RawSummaryCommit, repo: RepoInfo): Promise<void> {
+type Unread = { unreadNodes?: import("./null-nodes.mts").UnreadNodes };
+
+async function hydrateCommitContexts(
+  commit: RawSummaryCommit,
+  repo: RepoInfo,
+  pages: Unread,
+): Promise<void> {
   const contexts = commit.statusCheckRollup?.contexts;
   if (!contexts) return;
   const nodes = [...contexts.nodes];
@@ -43,6 +51,7 @@ async function hydrateCommitContexts(commit: RawSummaryCommit, repo: RepoInfo): 
   while (pageInfo.hasPreviousPage && pageInfo.startCursor) {
     const older = await fetchOlderContexts(commit.oid, pageInfo.startCursor, repo);
     if (!older) break;
+    pages.unreadNodes = mergeUnread(pages.unreadNodes, dropNullNodes({ contexts: older }));
     if (older.fullSnapshot) nodes.splice(0, nodes.length, ...older.nodes);
     else nodes.unshift(...older.nodes);
     pageInfo = older.pageInfo;

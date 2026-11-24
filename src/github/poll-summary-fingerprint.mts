@@ -16,6 +16,7 @@ import type { RawSummaryPr } from "./poll-summary-raw.mts";
  * to post-rule state unless the one-PR check hashes the same projection.
  */
 export function fingerprintRawSummaryPr(summary: RawSummaryPr): string | null {
+  if (summary.unreadNodes) return null;
   const raw = withoutHandoffFields(summary);
   if (!raw.updatedAt || !raw.headRefOid || !raw.baseRefOid) return null;
   const reviewTruncated =

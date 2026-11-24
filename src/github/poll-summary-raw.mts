@@ -100,6 +100,8 @@ export interface RawSummaryCommit {
 }
 
 export interface RawSummaryPr {
+  /** Set when GitHub returned null connection nodes (dropped); see `null-nodes.mts`. */
+  unreadNodes?: import("./null-nodes.mts").UnreadNodes;
   transport?: "rest";
   transportUnavailable?: Array<{ field: string; reason: string }>;
   /** GraphQL handoff fields (see `stack-handoff.mts`); absent on REST summaries. */

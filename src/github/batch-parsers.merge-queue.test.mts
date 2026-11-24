@@ -127,7 +127,7 @@ describe("parseRawPr — merge queue", () => {
     expect(parse(raw).headForcePushedAtUnix).toBe(1_787_828_400);
   });
 
-  it("rejects a null context on an active queue commit", () => {
+  it("skips a null context on an active queue commit (already reported unread upstream)", () => {
     const raw = makeRawPr({
       mergeQueueEntry: {
         position: 1,
@@ -145,7 +145,7 @@ describe("parseRawPr — merge queue", () => {
       },
     });
 
-    expect(() => parse(raw)).toThrow("null check context");
+    expect(parse(raw).mergeQueueChecks).toBeUndefined();
   });
 
   it("keeps the removed queue commit parents for head freshness", () => {

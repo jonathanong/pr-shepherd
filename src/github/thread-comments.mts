@@ -5,6 +5,7 @@ import { GitHubRequestError } from "./errors.mts";
 import { paginateForward } from "./pagination.mts";
 import { REVIEW_THREAD_COMMENTS_DATA_QUERY, REVIEW_THREAD_COMMENTS_QUERY } from "./queries.mts";
 import { mapPool } from "../util/pool.mts";
+import { dropNullNodes, type UnreadNodes } from "./null-nodes.mts";
 import type {
   RawReviewThreadCommentsResponse,
   RawThread,
@@ -13,12 +14,25 @@ import type {
 
 const THREAD_COMMENT_PAGE_CONCURRENCY = 4;
 
+export interface ThreadPages {
+  threads: RawThread[];
+  rateLimit?: RateLimitInfo;
+  /** Set when a thread was withheld because one of its comments came back null. */
+  unreadNodes?: UnreadNodes;
+}
+
+interface ThreadGate {
+  rateLimit?: RateLimitInfo;
+  exhausted: boolean;
+  error?: unknown;
+}
+
 async function hydrateGraphqlThreadCommentPages(
   threads: RawThread[],
   initialRateLimit?: RateLimitInfo,
   viewerFree = false,
-): Promise<{ threads: RawThread[]; rateLimit?: RateLimitInfo }> {
-  const gate: { rateLimit?: RateLimitInfo; exhausted: boolean; error?: unknown } = {
+): Promise<ThreadPages> {
+  const gate: ThreadGate = {
     rateLimit: initialRateLimit,
     exhausted: initialRateLimit?.remaining === 0,
   };
@@ -32,14 +46,21 @@ async function hydrateGraphqlThreadCommentPages(
     }
   });
   if (gate.error !== undefined) throw gate.error;
-  return { threads: hydrated, rateLimit: gate.rateLimit };
+  // A thread with an unreadable comment is withheld whole: a partial transcript is not its own.
+  const threadsRead = hydrated.filter((thread) => thread !== null);
+  return {
+    threads: threadsRead,
+    rateLimit: gate.rateLimit,
+    ...(threadsRead.length < hydrated.length && { unreadNodes: { feedback: true as const } }),
+  };
 }
 
 async function hydrateThreadCommentPage(
   thread: RawThread,
-  gate: { rateLimit?: RateLimitInfo; exhausted: boolean; error?: unknown },
+  gate: ThreadGate,
   viewerFree: boolean,
-): Promise<RawThread> {
+): Promise<RawThread | null> {
+  let unread = false;
   const pageInfo = thread.comments.pageInfo;
   if (!pageInfo?.hasNextPage || !pageInfo.endCursor) return thread;
 
@@ -71,8 +92,10 @@ async function hydrateThreadCommentPage(
         `Review thread ${thread.id} did not resolve to PullRequestReviewThread while paginating comments (node type: ${nodeType})`,
       );
     }
+    unread ||= dropNullNodes(node) !== undefined;
     return node.comments;
   }, pageInfo.endCursor);
+  if (unread) return null;
 
   return {
     ...thread,
@@ -87,7 +110,7 @@ export function hydrateThreadCommentPages(
   threads: RawThread[],
   initialRateLimit?: RateLimitInfo,
   viewerFree = false,
-): Promise<{ threads: RawThread[]; rateLimit?: RateLimitInfo }> {
+): Promise<ThreadPages> {
   return githubOperation(
     "ReviewThreadComments",
     () => hydrateGraphqlThreadCommentPages(threads, initialRateLimit, viewerFree),

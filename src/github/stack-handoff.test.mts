@@ -199,10 +199,7 @@ describe("batchResponseFromSummary", () => {
       "no suite page info",
       (_, layer) => delete layer.commits.nodes[0]!.commit.checkSuites!.pageInfo,
     ],
-    [
-      "an unreadable (null) check suite",
-      (_, layer) => layer.commits.nodes[0]!.commit.checkSuites!.nodes.push(null as never),
-    ],
+    ["an unreadable (null) node", (_, layer) => (layer.unreadNodes = { checks: true })],
     [
       "older contexts",
       (_, layer) =>

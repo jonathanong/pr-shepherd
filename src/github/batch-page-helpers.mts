@@ -1,4 +1,5 @@
-import { requireContextNodes } from "./batch-response.mts";
+import { contextNodes } from "./batch-response.mts";
+import { dropNullNodes, mergeUnread, type UnreadNodes } from "./null-nodes.mts";
 import type {
   RawContextNode,
   RawComment,
@@ -69,7 +70,7 @@ function takeCheckPage(
   if (!ctxs) {
     return { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [] };
   }
-  return { ...ctxs, nodes: requireContextNodes(ctxs.nodes) };
+  return { ...ctxs, nodes: contextNodes(ctxs.nodes) };
 }
 
 export interface PageCursors {
@@ -88,6 +89,8 @@ export interface PageAccumulator {
   reviewSummaries: RawReviewSummary[];
   approvedReviews: RawReviewSummary[];
   checks: RawContextNode[];
+  /** What a page returned as null, dropped before it joined the lists above. */
+  unreadNodes?: UnreadNodes;
 }
 
 export function applyIncludedPage(
@@ -98,6 +101,8 @@ export function applyIncludedPage(
   pageCount: number,
   pr: number,
 ): { cursors: PageCursors; pageCount: number } {
+  // A null in a page is dropped, never skipped silently: the caller learns the lists are partial.
+  dest.unreadNodes = mergeUnread(dest.unreadNodes, dropNullNodes(pr2));
   const next: PageCursors = {};
   let nextPageCount = pageCount;
   if (cursors.threads !== undefined) {

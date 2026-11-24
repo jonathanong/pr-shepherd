@@ -249,6 +249,8 @@ export interface BatchPrData extends BatchPrMergeFields {
   transport?: "rest";
   /** Fields unavailable from the selected transport; absence is never fabricated as false. */
   transportUnavailable?: Array<{ field: string; reason: string }>;
+  /** Internal: GitHub returned null nodes, so this snapshot is partial. Never printed. */
+  unreadNodes?: import("../github/null-nodes.mts").UnreadNodes;
   nodeId: string;
   number: number;
   state: "OPEN" | "CLOSED" | "MERGED";

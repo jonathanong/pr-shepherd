@@ -26,6 +26,7 @@ import { loadConfig } from "../config/load.mts";
 import { classifyVisibleComments } from "../comments/visible-comments.mts";
 import { withHeadOid } from "./review-commit.mts";
 import { computeStatus } from "./check-status.mts";
+import { holdUnreadReadiness } from "./check-unread-readiness.mts";
 import {
   annotationMarkerBody,
   attachAndMergeCheckAnnotations,
@@ -80,6 +81,7 @@ import type {
 } from "../types.mts";
 
 function enforceTransportReadiness(status: ShepherdStatus, data: BatchPrData): ShepherdStatus {
+  status = holdUnreadReadiness(status, data);
   if (status !== "READY" || data.transport !== "rest") return status;
   const conversationsGated = data.branchRules?.requiresConversationResolution;
   const statusProven = conversationResolutionProven(data.mergeStateStatus, conversationsGated);

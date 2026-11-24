@@ -42,6 +42,7 @@ function reviewsIn(layer: RawSummaryPr, state: string) {
 /** True when every window `BatchPr`'s first page reads is complete in this summary. */
 export function summaryComplete(layer: RawSummaryPr, source: StackHandoffSource): boolean {
   const { read } = source;
+  if (layer.unreadNodes) return false;
   if (!read.stack || read.viewerPermission === undefined || !read.mergeSettings) return false;
   if (source.layers.length > MAX_STACK_ENTRIES || !layer.stack || !layer.stackEntry) return false;
   if (layer.state !== "OPEN" || layer.id === undefined || layer.viewerDidAuthor === undefined)
@@ -69,7 +70,6 @@ export function summaryComplete(layer: RawSummaryPr, source: StackHandoffSource)
   if (!layer.reviewRequests || layer.commits.totalCount === undefined) return false;
   const commit = headCommit(layer);
   if (!commit || commit.oid !== layer.headRefOid || !commit.checkSuites?.pageInfo) return false;
-  if (commit.checkSuites.nodes.includes(null as never)) return false;
   const contexts = commit.statusCheckRollup?.contexts;
   if (
     contexts &&

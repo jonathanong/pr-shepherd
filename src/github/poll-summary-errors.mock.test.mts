@@ -61,6 +61,14 @@ describe("poll summary fail-closed reads", () => {
     [
       response(
         stack({
+          entries: { pageInfo: { hasNextPage: false, endCursor: null }, nodes: [null] },
+        }),
+      ),
+      "incomplete pull-request stack entry",
+    ],
+    [
+      response(
+        stack({
           entries: {
             pageInfo: { hasNextPage: true, endCursor: null },
             nodes: [{ position: 1, pullRequest: { number: 42 } }],

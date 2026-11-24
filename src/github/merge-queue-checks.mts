@@ -6,7 +6,8 @@ import {
   headPushUnixFromCheckNodes,
   queueRemovalAppliesToHead,
 } from "./queue-removal-freshness.mts";
-import { requireContextNodes } from "./batch-response.mts";
+import { contextNodes } from "./batch-response.mts";
+import { dropNullNodes, mergeUnread, type UnreadNodes } from "./null-nodes.mts";
 import { COMMIT_CHECK_CONTEXTS_QUERY } from "./queries.mts";
 import type { RepoInfo } from "./client.mts";
 import type { RawContextNode, RawPr } from "./batch-raw-types.mts";
@@ -36,6 +37,12 @@ type QueueCommit = {
   } | null;
 };
 
+/** Shared by the queue page reads: the quota seen so far and what a page returned as null. */
+interface QueueGate {
+  rateLimit?: RateLimitInfo;
+  unreadNodes?: UnreadNodes;
+}
+
 type QueueContexts = NonNullable<NonNullable<QueueCommit["statusCheckRollup"]>["contexts"]>;
 
 function omittedCursorError(oid: string): Error {
@@ -62,7 +69,7 @@ async function fetchQueuePage(
   oid: string,
   repo: RepoInfo,
   cursor: string | null,
-  gate: { rateLimit?: RateLimitInfo },
+  gate: QueueGate,
 ): Promise<QueueContexts | null> {
   if (gate.rateLimit?.remaining === 0) {
     throw new GitHubRequestError(
@@ -87,16 +94,18 @@ async function fetchQueuePage(
       `Merge queue check pagination interrupted: commit ${oid} disappeared or changed. Retry.`,
     );
   }
-  return object.statusCheckRollup?.contexts ?? null;
+  const contexts = object.statusCheckRollup?.contexts;
+  gate.unreadNodes = mergeUnread(gate.unreadNodes, dropNullNodes({ contexts }));
+  return contexts ?? null;
 }
 
 async function hydrateCommitContexts(
   commit: QueueCommit,
   repo: RepoInfo,
-  gate: { rateLimit?: RateLimitInfo },
+  gate: QueueGate,
 ): Promise<void> {
   const existing = commit.statusCheckRollup?.contexts;
-  const nodes: RawContextNode[] = existing ? [...requireContextNodes(existing.nodes)] : [];
+  const nodes: RawContextNode[] = existing ? [...contextNodes(existing.nodes)] : [];
   let cursor = initialQueueCursor(existing, commit.oid);
 
   while (cursor !== undefined) {
@@ -111,7 +120,7 @@ async function hydrateCommitContexts(
         `Merge queue check pagination interrupted: statusCheckRollup disappeared for ${commit.oid}. Retry.`,
       );
     }
-    nodes.push(...requireContextNodes(next.nodes));
+    nodes.push(...contextNodes(next.nodes));
     cursor = nextPageCursor(next, commit.oid);
   }
 
@@ -153,10 +162,11 @@ export async function hydrateMergeQueueChecks(
   repo: RepoInfo,
   initialRateLimit?: RateLimitInfo,
 ): Promise<RateLimitInfo | undefined> {
-  const gate = { rateLimit: initialRateLimit };
+  const gate: QueueGate = { rateLimit: initialRateLimit };
   const active = raw.mergeQueueEntry?.headCommit;
   const removed = currentRemovalCommit(raw);
   if (active) await hydrateCommitContexts(active, repo, gate);
   if (removed && removed.oid !== active?.oid) await hydrateCommitContexts(removed, repo, gate);
+  raw.unreadNodes = mergeUnread(raw.unreadNodes, gate.unreadNodes);
   return gate.rateLimit;
 }

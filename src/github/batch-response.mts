@@ -1,7 +1,7 @@
 import { EXIT, ShepherdError } from "../exit-codes.mts";
 import type { RepoInfo } from "./client.mts";
 import { GitHubRequestError } from "./errors.mts";
-import { dropUnreadableSuites } from "./check-suite-nodes.mts";
+import { dropNullNodes } from "./null-nodes.mts";
 import type { RawBatchResponse, RawContextNode, RawPr } from "./batch-raw-types.mts";
 
 export function requireRawPr(
@@ -19,20 +19,13 @@ export function requireRawPr(
     throw new ShepherdError(`PR #${pr} not found`, EXIT.UNAVAILABLE);
   }
   const raw = response.repository.pullRequest;
-  dropUnreadableSuites(raw.commits?.nodes[0]?.commit);
+  raw.unreadNodes = dropNullNodes(raw);
+  const receipt = response.repository.receiptSummary;
+  if (receipt) receipt.unreadNodes = dropNullNodes(receipt);
   return raw;
 }
 
-export function requireContextNodes(nodes: Array<RawContextNode | null>): RawContextNode[] {
-  const nullIndex = nodes.findIndex((node) => node === null);
-  if (nullIndex !== -1) {
-    // A null context node is an unexpected/malformed shape, not a precondition or
-    // permission problem — force EX_SOFTWARE rather than falling through to the
-    // (200-status-derived) EX_UNAVAILABLE default.
-    throw new GitHubRequestError(
-      `Malformed GitHub GraphQL response: null check context at repository.pullRequest.commits.nodes.0.commit.statusCheckRollup.contexts.nodes.${nullIndex}`,
-      { status: 200, exitCodeOverride: EXIT.SOFTWARE },
-    );
-  }
-  return nodes as RawContextNode[];
+/** The context nodes of a page that `dropNullNodes` already cleaned. */
+export function contextNodes(nodes: Array<RawContextNode | null>): RawContextNode[] {
+  return nodes.filter((node): node is RawContextNode => node !== null);
 }

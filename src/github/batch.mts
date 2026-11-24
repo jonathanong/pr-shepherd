@@ -24,6 +24,7 @@ import type { BatchPrData } from "../types.mts";
 import { fingerprintFromRaw, type PrFingerprint } from "./fingerprint.mts";
 import { stackEvidenceFromRaw, type BatchStackEvidence } from "./batch-stack-evidence.mts";
 import { takeStackHandoff } from "./stack-handoff.mts";
+import { mergeUnread } from "./null-nodes.mts";
 
 export interface BatchResult {
   data: BatchPrData;
@@ -81,7 +82,8 @@ async function fetchGraphqlPrBatch<T>(
     result.data.viewer?.login ?? (split ? `token:${(await makeAuthHeaders()).fingerprint}` : null),
   );
   // Decide reuse from the first page alone, before any supplement is paid for.
-  const reused = reuse && (await reuse(fingerprint));
+  // A page with an unreadable node cannot vouch for a stored report.
+  const reused = reuse && !raw.unreadNodes && (await reuse(fingerprint));
   const baseTipOid = raw.baseRef?.target?.oid;
   // A split read has no viewer fields yet, so a reused tick carries only the trunk rules.
   let stackEvidence = stackEvidenceFromRaw(raw, result.data, split);
@@ -108,7 +110,7 @@ async function fetchGraphqlPrBatch<T>(
     stackEvidence = stackEvidenceFromRaw(raw, { viewer, repository: viewer.repository });
   }
   let receiptSummary: RawSummaryPr | null = null;
-  if (opts.includeReceiptSummary) {
+  if (opts.includeReceiptSummary && !raw.unreadNodes) {
     try {
       receiptSummary = await prepareBatchReceiptEvidence(
         result.data.repository?.receiptSummary,
@@ -126,6 +128,7 @@ async function fetchGraphqlPrBatch<T>(
     const numericId = root?.url?.match(/discussion_r([0-9]+)/)?.[1];
     if (numericId) await recordThreadIdentity(repo, pr, thread.id, numericId);
   }
+  const unreadNodes = mergeUnread(raw.unreadNodes, paged.unreadNodes, threadPages.unreadNodes);
   const data = parseRawPr(
     raw,
     threadPages.threads,
@@ -138,10 +141,11 @@ async function fetchGraphqlPrBatch<T>(
   );
   const viewerLogin = viewer ? viewer.login : result.data.viewer?.login;
   if (viewerLogin) data.viewerLogin = viewerLogin;
+  if (unreadNodes) data.unreadNodes = unreadNodes;
   data.checks = mergeStartupFailureChecks(data.checks, parseSuiteStartupFailures(raw));
   return {
     data,
-    fingerprint,
+    ...(!unreadNodes && { fingerprint }),
     // A split read's other samples are the app's buckets; only the viewer read is the user's.
     rateLimit: viewer
       ? viewer.rateLimit

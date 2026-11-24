@@ -1,3 +1,4 @@
+import { dropNullNodes } from "./null-nodes.mts";
 import { githubOperation } from "./transport.mts";
 import { readRestAnnotationCounts } from "./rest-check-read.mts";
 import { graphqlWithRateLimit, type RepoInfo } from "./client.mts";
@@ -97,7 +98,8 @@ async function collectProbePages(oid: string, repo: RepoInfo): Promise<ProbeNode
   const seen = new Set<string>();
   for (;;) {
     const contexts = await fetchProbePage(oid, repo, before);
-    if (!contexts) return null;
+    // An unreadable context leaves its annotation total unknown: no total is trustworthy.
+    if (!contexts || dropNullNodes({ contexts })) return null;
     pages.push(...contexts.nodes);
     const pageInfo = contexts.pageInfo;
     if (!pageInfo?.hasPreviousPage) return pages;

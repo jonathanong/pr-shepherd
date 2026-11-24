@@ -24,7 +24,7 @@ import {
 import { parseCheckNodes } from "./batch-parse-checks.mts";
 import { headFreshAtUnix } from "./head-freshness.mts";
 import { headPushUnixFromCheckNodes } from "./queue-removal-freshness.mts";
-import { requireContextNodes } from "./batch-response.mts";
+import { contextNodes } from "./batch-response.mts";
 import { buildPrActivitySummary } from "./activity.mts";
 import { parseBranchProtection } from "./branch-protection.mts";
 import { readAllowedMergeMethods } from "../config/merge-method.mts";
@@ -165,7 +165,7 @@ export function parseRawPr(
   const removedQueueHead = raw.mergeQueueRemovals?.nodes[0]?.beforeCommit;
   const mergeQueueChecks = parseCheckNodes(
     queueHead?.statusCheckRollup
-      ? requireContextNodes(queueHead.statusCheckRollup.contexts.nodes)
+      ? contextNodes(queueHead.statusCheckRollup.contexts.nodes)
       : undefined,
     queueHead?.oid,
   );
@@ -181,7 +181,7 @@ export function parseRawPr(
   });
   const removedMergeQueueChecks = parseCheckNodes(
     removedQueueHead?.statusCheckRollup
-      ? requireContextNodes(removedQueueHead.statusCheckRollup.contexts.nodes)
+      ? contextNodes(removedQueueHead.statusCheckRollup.contexts.nodes)
       : undefined,
     removedQueueHead?.oid,
   );

@@ -105,6 +105,30 @@ describe("fetchPrBatch — merge queue check pagination", () => {
     });
   });
 
+  it("reports checks unread when a later queue page holds a null context", async () => {
+    setBatchResponse(makeResponse(queuedPr({ hasNextPage: true, endCursor: "queue-cursor-1" })));
+    mockGraphql.mockResolvedValue({
+      data: {
+        repository: {
+          object: {
+            __typename: "Commit",
+            oid: "queue123",
+            statusCheckRollup: {
+              contexts: {
+                pageInfo: { hasNextPage: false, endCursor: null },
+                nodes: [null, check("later", "SUCCESS")],
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const { data } = await fetchPrBatch(42, REPO);
+    expect(data.mergeQueueChecks?.map((item) => item.name)).toEqual(["first", "later"]);
+    expect(data.unreadNodes).toEqual({ checks: true });
+  });
+
   it("fetches failures after the first 100 queue contexts before classifying them", async () => {
     const pr = queuedPr({ hasNextPage: true, endCursor: "queue-cursor-1" });
     setBatchResponse(makeResponse(pr));
