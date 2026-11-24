@@ -20,7 +20,7 @@ Only a skill's name and description are always in context. The `SKILL.md` body l
 | Text                                   | Tokens |
 | -------------------------------------- | -----: |
 | `SKILL.md` description (always loaded) |     75 |
-| `SKILL.md` body (loaded on invoke)     |  1,008 |
+| `SKILL.md` body (loaded on invoke)     |  1,011 |
 | Draft handoff                          |  1,342 |
 | Event loop                             |    654 |
 | CI failure triage                      |    620 |
@@ -33,7 +33,7 @@ Only a skill's name and description are always in context. The `SKILL.md` body l
 | Create a PR                            |    193 |
 | Every reference as well                |  4,564 |
 
-A `TRIAGE` tick that names CI triage loads about 1,628 skill tokens (1,008 + 620); a merge-queue ejection tick adds 561. Review mutations and the stack merge command are printed instructions and load no playbook.
+A `TRIAGE` tick that names CI triage loads about 1,631 skill tokens (1,011 + 620); a merge-queue ejection tick adds 561. Review mutations and the stack merge command are printed instructions and load no playbook.
 
 ## One iterate result
 
@@ -59,8 +59,8 @@ Measured against the parent of `ad9bf2cd`, when every playbook lived in `SKILL.m
 
 | Measure                                   | Before | Current |
 | ----------------------------------------- | -----: | ------: |
-| Skill body loaded on invoke               |  2,712 |   1,008 |
-| Skill body plus every playbook            |  2,712 |   5,572 |
+| Skill body loaded on invoke               |  2,712 |   1,011 |
+| Skill body plus every playbook            |  2,712 |   5,575 |
 | Median full output                        |    304 |     211 |
 | Median `## Instructions`                  |    134 |      94 |
 | Mean `## Instructions`                    |    159 |     113 |
