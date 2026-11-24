@@ -16,9 +16,9 @@ Latest numbers: [REPORT.md](REPORT.md). Estimated cost per session
 | session | cost vs. gh | cost vs. MCP | turns vs. gh / MCP | tool tokens vs. gh / MCP |
 | --- | --- | --- | --- | --- |
 | single PR | **−39%** | **−77%** | −18% / −69% | −74% / −90% |
-| PR stack | **−43%** | **−62%** | −38% / −58% | −11% / −52% |
+| PR stack | **−43%** | **−61%** | −38% / −58% | −10% / −51% |
 
-Realism sweep (REPORT.md; central at a 60k context, conservative at 100k, both with Claude Code's 1-hour cache write and measured output per turn), cost central / conservative: single PR **−34%** / −30% vs. gh and **−75%** / −73% vs. MCP; stack **−40%** / −39% and **−60%** / −59%. Every figure assumes a warm cache.
+Realism sweep (REPORT.md; central at a 60k context, conservative at 100k, both with Claude Code's 1-hour cache write and measured output per turn), cost central / conservative: single PR **−34%** / −30% vs. gh and **−75%** / −73% vs. MCP; stack **−40%** / −39% and **−59%** / −59%. Every figure assumes a warm cache.
 
 GitHub rate limit per session (deterministic, assumed; see the Method section):
 
