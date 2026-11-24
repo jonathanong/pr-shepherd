@@ -111,6 +111,8 @@ GitHub reports a new head as `CLEAN` with an empty check rollup until apps and A
 
 The head's age is when it last reached GitHub: the newest of its check suites' creation times (any app, since apps create their suites at push time), its latest force-push, the head commit's committer date (GraphQL only), and the PR's creation. An old committer date adds nothing, so a rebased or long-local commit cannot shorten the window; a fresh one dates an ordinary push to an old PR that has no suite yet. When none of these is known, the head is treated as settled. REST reads suite times and the pull's `created_at` (it has no committer date, so an ordinary push to an old PR that has no suite yet is not held there); when REST omits them the age stays unknown and no window applies. A report waiting in the window is never replayed from a cached idle report, because only the clock ends the wait.
 
+A READY report also gets a fresh compact read before it cancels or merges. That read routes `wait` instead when it shows a relevant check queued or in progress, a running Actions suite with no relevant check, a moved head, or a merge state that turned `UNSTABLE`, `DIRTY`, or `BEHIND`. Failing checks, unreported required checks, a transient `UNKNOWN` and an unavailable read are left to the next full check.
+
 A `stack` summary routes the layer as `triage` with reason `unreported-required-checks` instead of an idle wait and prints the names on that layer.
 
 ### `getCiVerdict`
