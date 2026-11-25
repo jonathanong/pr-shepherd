@@ -1,7 +1,9 @@
 import { graphql, type RepoInfo } from "./client.mts";
+import { GitHubRequestError } from "./errors.mts";
 import { rest } from "./http.mts";
 import { DEFAULT_BRANCH_WORKFLOW_RUNS_QUERY } from "./queries.mts";
 import { githubOperation } from "./transport.mts";
+import { pollRateLimitRetryAfterMs } from "../commands/poll-quota.mts";
 import { loadDerived, storeDerived, type StateKey } from "../state/rest-cache.mts";
 import type { ElsewhereRun } from "../types/workflow-elsewhere.mts";
 import {
@@ -23,6 +25,8 @@ import type {
   RawQueueCommitsResponse,
 } from "../types/workflow-elsewhere-raw.mts";
 
+const MAX_ERROR_CHARS = 120;
+
 export interface ReadWorkflowElsewhereInput {
   repo: RepoInfo;
   prNumber: number;
@@ -39,6 +43,19 @@ export type WorkflowElsewhereReadResult =
 
 const repoPrefix = (repo: RepoInfo): string =>
   `/repos/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
+
+/** Format an optional workflow-elsewhere read failure into a single-line `unread` reason. */
+export function summarizeElsewhereError(error: unknown): string {
+  const retry = pollRateLimitRetryAfterMs(error);
+  if (retry !== null) {
+    return `rate limited, retry after ${Math.max(1, Math.ceil(retry.ms / 1000))}s`;
+  }
+  if (error instanceof GitHubRequestError) return `HTTP ${error.status}`;
+  const raw = error instanceof Error ? error.message : String(error);
+  const compact = raw.replace(/\s+/g, " ").trim();
+  if (!compact) return "request failed";
+  return compact.length <= MAX_ERROR_CHARS ? compact : `${compact.slice(0, MAX_ERROR_CHARS - 1)}…`;
+}
 
 /** Resolve numeric workflow ID from `GET /actions/runs/{id}` when GraphQL did not include it. */
 export async function resolveWorkflowId(
@@ -62,31 +79,52 @@ export async function resolveWorkflowId(
   return resolved;
 }
 
-async function readWorkflowElsewhereGraphql(
+/** Read same-workflow runs on the default branch and other merge-queue entries. */
+export async function readWorkflowElsewhere(
   input: ReadWorkflowElsewhereInput,
 ): Promise<WorkflowElsewhereReadResult> {
   const { repo, workflowId, windowStartMs, since } = input;
-  const { data: defaultData } = await graphql<RawDefaultBranchRunsResponse>(
-    DEFAULT_BRANCH_WORKFLOW_RUNS_QUERY,
-    { owner: repo.owner, repo: repo.name },
+  const defaultOutcome = await githubOperation<
+    | { kind: "graphql"; data: RawDefaultBranchRunsResponse }
+    | { kind: "rest"; result: WorkflowElsewhereReadResult }
+  >(
+    "WorkflowElsewhereDefault",
+    async () => ({
+      kind: "graphql",
+      data: (
+        await graphql<RawDefaultBranchRunsResponse>(DEFAULT_BRANCH_WORKFLOW_RUNS_QUERY, {
+          owner: repo.owner,
+          repo: repo.name,
+        })
+      ).data,
+    }),
+    async () => ({ kind: "rest", result: await readWorkflowElsewhereRest(input) }),
   );
-  const defaultParsed = parseDefaultBranchRuns(defaultData, workflowId, windowStartMs);
+  if (defaultOutcome.kind === "rest") return defaultOutcome.result;
+  const defaultParsed = parseDefaultBranchRuns(defaultOutcome.data, workflowId, windowStartMs);
   if (defaultParsed.incomplete) return { unread: "GitHub returned incomplete (null) nodes" };
   if (defaultParsed.unavailable) return { unread: defaultParsed.unavailable };
 
+  // Keep the REST queue listing outside `githubOperation` so a REST error never flips the
+  // session transport from GraphQL to REST.
   const wfPath = `${repoPrefix(repo)}/actions/workflows/${encodeURIComponent(workflowId)}/runs`;
-  const queueRead = await fetchRestWorkflowRunsPaged(
-    `${wfPath}?event=merge_group&status=completed`,
-    windowStartMs,
-    (items) =>
-      selectOtherQueueRestRuns(items, {
-        prNumber: input.prNumber,
-        currentRunId: input.currentRunId,
-        currentCommitOid: input.currentCommitOid,
-        windowStartMs,
-      }),
-    MAX_ELSEWHERE_RUNS_PER_SOURCE,
-  );
+  let queueRead: Awaited<ReturnType<typeof fetchRestWorkflowRunsPaged>>;
+  try {
+    queueRead = await fetchRestWorkflowRunsPaged(
+      `${wfPath}?event=merge_group&status=completed`,
+      windowStartMs,
+      (items) =>
+        selectOtherQueueRestRuns(items, {
+          prNumber: input.prNumber,
+          currentRunId: input.currentRunId,
+          currentCommitOid: input.currentCommitOid,
+          windowStartMs,
+        }),
+      MAX_ELSEWHERE_RUNS_PER_SOURCE,
+    );
+  } catch (error) {
+    return { unread: summarizeElsewhereError(error) };
+  }
   if ("unread" in queueRead) return queueRead;
   const queueCandidates = queueRead.candidates;
   const oids = [
@@ -97,21 +135,22 @@ async function readWorkflowElsewhereGraphql(
   if (oids.length > 0) {
     oids.forEach((oid, i) => oidToAlias.set(oid, `c${i}`));
     const { query, variables } = buildQueueCommitsQuery(repo.owner, repo.name, oids);
-    queueData = (await graphql<RawQueueCommitsResponse>(query, variables)).data;
+    const queueOutcome = await githubOperation<
+      | { kind: "graphql"; data: RawQueueCommitsResponse }
+      | { kind: "rest"; result: WorkflowElsewhereReadResult }
+    >(
+      "WorkflowElsewhereQueue",
+      async () => ({
+        kind: "graphql",
+        data: (await graphql<RawQueueCommitsResponse>(query, variables)).data,
+      }),
+      async () => ({ kind: "rest", result: await readWorkflowElsewhereRest(input) }),
+    );
+    if (queueOutcome.kind === "rest") return queueOutcome.result;
+    queueData = queueOutcome.data;
   }
   const queueParsed = mergeQueueCommitDetails(queueCandidates, oidToAlias, queueData);
   if (queueParsed.incomplete) return { unread: "GitHub returned incomplete (null) nodes" };
   if (queueParsed.unavailable) return { unread: queueParsed.unavailable };
   return { runs: sortNewestFirst([...defaultParsed.runs, ...queueParsed.runs]), since };
-}
-
-/** Read same-workflow runs on the default branch and other merge-queue entries. */
-export function readWorkflowElsewhere(
-  input: ReadWorkflowElsewhereInput,
-): Promise<WorkflowElsewhereReadResult> {
-  return githubOperation(
-    "WorkflowElsewhere",
-    () => readWorkflowElsewhereGraphql(input),
-    () => readWorkflowElsewhereRest(input),
-  );
 }

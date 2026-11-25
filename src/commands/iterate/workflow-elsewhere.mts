@@ -1,21 +1,22 @@
 import type { RepoInfo } from "../../github/client.mts";
-import { GitHubRequestError } from "../../github/errors.mts";
 import {
   readWorkflowElsewhere,
   resolveWorkflowId,
+  summarizeElsewhereError,
   type WorkflowElsewhereReadResult,
 } from "../../github/workflow-elsewhere-read.mts";
 import { stampSameJob } from "../../github/workflow-elsewhere-parse.mts";
 import { queueRemovalSignature } from "../../state/queue-removal-follow-up.mts";
 import { loadDerived, storeDerived, type StateKey } from "../../state/rest-cache.mts";
-import { pollRateLimitRetryAfterMs } from "../poll-quota.mts";
 import type { AgentCheck, ElsewhereRun, ShepherdReport, TriagedCheck } from "../../types.mts";
 
-const MAX_ERROR_CHARS = 120;
+/** Cache TTL so later default-branch failures/recoveries appear on subsequent ticks. */
+const ELSEWHERE_CACHE_TTL_MS = 5 * 60 * 1000;
 
 interface CachedElsewhere {
   runs: ElsewhereRun[];
   since: string;
+  cachedAtMs: number;
 }
 
 export interface AttachWorkflowElsewhereInput {
@@ -26,14 +27,7 @@ export interface AttachWorkflowElsewhereInput {
   stateKey: StateKey;
   ejectionCommit: string;
   compareWindowHours: number;
-}
-
-function summarizeReadError(error: unknown): string {
-  if (error instanceof GitHubRequestError) return `HTTP ${error.status}`;
-  const raw = error instanceof Error ? error.message : String(error);
-  const compact = raw.replace(/\s+/g, " ").trim();
-  if (!compact) return "request failed";
-  return compact.length <= MAX_ERROR_CHARS ? compact : `${compact.slice(0, MAX_ERROR_CHARS - 1)}…`;
+  nowMs?: number;
 }
 
 function isActionsProvenance(raw: TriagedCheck | undefined): boolean {
@@ -45,24 +39,28 @@ function isActionsProvenance(raw: TriagedCheck | undefined): boolean {
   );
 }
 
-function isValidCached(value: unknown): value is CachedElsewhere {
+function isFreshCached(value: unknown, nowMs: number): value is CachedElsewhere {
+  if (typeof value !== "object" || value === null) return false;
+  const entry = value as CachedElsewhere;
   return (
-    typeof value === "object" &&
-    value !== null &&
-    Array.isArray((value as CachedElsewhere).runs) &&
-    typeof (value as CachedElsewhere).since === "string"
+    Array.isArray(entry.runs) &&
+    typeof entry.since === "string" &&
+    typeof entry.cachedAtMs === "number" &&
+    nowMs - entry.cachedAtMs >= 0 &&
+    nowMs - entry.cachedAtMs < ELSEWHERE_CACHE_TTL_MS
   );
 }
 
 /**
  * Enrich failing `merge_group` Actions checks belonging to the current queue removal with recent
- * runs of the same workflow on the default branch and other queue entries. Cached per removal;
- * incomplete or failed reads are never cached and surface `elsewhereUnread`.
+ * runs of the same workflow on the default branch and other queue entries. Cached briefly per
+ * removal; incomplete or failed reads are never cached and surface `elsewhereUnread`.
  */
 export async function attachWorkflowElsewhere(
   input: AttachWorkflowElsewhereInput,
 ): Promise<AgentCheck[]> {
   const { checks, rawFailing, report, repo, stateKey, ejectionCommit, compareWindowHours } = input;
+  const nowMs = input.nowMs ?? Date.now();
   const removal = report.mergeQueue?.latestRemoval;
   if (compareWindowHours <= 0 || !removal) return checks;
 
@@ -103,8 +101,7 @@ export async function attachWorkflowElsewhere(
       workflowIdByRunId.set(runId, outcome);
       return outcome;
     } catch (error) {
-      if (pollRateLimitRetryAfterMs(error) !== null) throw error;
-      const outcome = { unread: summarizeReadError(error) };
+      const outcome = { unread: summarizeElsewhereError(error) };
       workflowIdByRunId.set(runId, outcome);
       return outcome;
     }
@@ -118,7 +115,7 @@ export async function attachWorkflowElsewhere(
     if (memoized) return memoized;
     const cacheName = `workflow-elsewhere:${signature}:wf:${workflowId}:h=${compareWindowHours}`;
     const stored = await loadDerived<CachedElsewhere>(stateKey, cacheName);
-    if (stored && isValidCached(stored.value)) {
+    if (stored && isFreshCached(stored.value, nowMs)) {
       const hit: WorkflowElsewhereReadResult = {
         runs: stored.value.runs,
         since: stored.value.since,
@@ -138,15 +135,14 @@ export async function attachWorkflowElsewhere(
         since,
       });
     } catch (error) {
-      if (pollRateLimitRetryAfterMs(error) !== null) throw error;
-      outcome = { unread: summarizeReadError(error) };
+      outcome = { unread: summarizeElsewhereError(error) };
     }
     outcomeByWorkflowId.set(workflowId, outcome);
     if ("runs" in outcome) {
       await storeDerived<CachedElsewhere>(
         stateKey,
         cacheName,
-        { runs: outcome.runs, since: outcome.since },
+        { runs: outcome.runs, since: outcome.since, cachedAtMs: nowMs },
         report.headSha,
       );
     }

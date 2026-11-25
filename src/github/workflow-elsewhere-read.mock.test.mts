@@ -4,8 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const { mockGraphql, mockRest } = vi.hoisted(() => ({ mockGraphql: vi.fn(), mockRest: vi.fn() }));
-vi.mock("./client.mts", () => ({ graphql: mockGraphql }));
-vi.mock("./http.mts", () => ({ rest: mockRest }));
+vi.mock("./client.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./client.mts")>()),
+  graphql: mockGraphql,
+}));
+vi.mock("./http.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./http.mts")>()),
+  rest: mockRest,
+}));
 
 import { readWorkflowElsewhere, resolveWorkflowId } from "./workflow-elsewhere-read.mts";
 import { runWithGithubTransport } from "./transport.mts";
@@ -32,9 +38,12 @@ describe("workflow-elsewhere-read (GraphQL & resolveWorkflowId)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     stateDir = mkdtempSync(join(tmpdir(), "wf-elsewhere-read-"));
-    process.env["PR_SHEPHERD_STATE_DIR"] = stateDir;
+    vi.stubEnv("PR_SHEPHERD_STATE_DIR", stateDir);
     stateKey = { owner: "owner", repo: "repo", pr: 42 };
-    return () => rmSync(stateDir, { recursive: true, force: true });
+    return () => {
+      vi.unstubAllEnvs();
+      rmSync(stateDir, { recursive: true, force: true });
+    };
   });
 
   it("resolves workflow_id via REST and caches it per runId", async () => {
@@ -132,19 +141,20 @@ describe("workflow-elsewhere-read (GraphQL & resolveWorkflowId)", () => {
   });
 
   it("skips second GraphQL query for all-SUCCESS queue runs and reports unread on null or malformed payloads", async () => {
-    mockGraphql.mockResolvedValueOnce(defaultHistory([]));
-    mockRest.mockResolvedValueOnce({
+    const qRun = (id: number, sha: string, pr: number, conclusion: string) => ({
       workflow_runs: [
         {
-          id: 602,
-          head_sha: "bbb1234",
-          head_branch: "gh-readonly-queue/main/pr-813-bbb1234",
+          id,
+          head_sha: sha,
+          head_branch: `gh-readonly-queue/main/pr-${pr}-${sha}`,
           status: "completed",
-          conclusion: "success",
+          conclusion,
           created_at: "2024-05-15T14:00:00Z",
         },
       ],
     });
+    mockGraphql.mockResolvedValueOnce(defaultHistory([]));
+    mockRest.mockResolvedValueOnce(qRun(602, "bbb1234", 813, "success"));
     const ok = await runGql();
     expect("runs" in ok && ok.runs).toHaveLength(1);
     expect(mockGraphql).toHaveBeenCalledTimes(1);
@@ -162,35 +172,13 @@ describe("workflow-elsewhere-read (GraphQL & resolveWorkflowId)", () => {
     mockGraphql
       .mockResolvedValueOnce(defaultHistory([]))
       .mockResolvedValueOnce({ data: { repository: { c0: null } } });
-    mockRest.mockResolvedValueOnce({
-      workflow_runs: [
-        {
-          id: 604,
-          head_sha: "ddd",
-          head_branch: "gh-readonly-queue/main/pr-815-ddd",
-          status: "completed",
-          conclusion: "failure",
-          created_at: "2024-05-15T14:00:00Z",
-        },
-      ],
-    });
+    mockRest.mockResolvedValueOnce(qRun(604, "ddd", 815, "failure"));
     expect(await runGql()).toEqual({ unread: "merge-queue commit check suite unavailable" });
 
     mockGraphql.mockResolvedValueOnce(defaultHistory([])).mockResolvedValueOnce({
       data: { repository: { c0: { oid: "aaa", checkSuites: { nodes: [null] } } } },
     });
-    mockRest.mockResolvedValueOnce({
-      workflow_runs: [
-        {
-          id: 603,
-          head_sha: "aaa",
-          head_branch: "gh-readonly-queue/main/pr-814-aaa",
-          status: "completed",
-          conclusion: "failure",
-          created_at: "2024-05-15T14:00:00Z",
-        },
-      ],
-    });
+    mockRest.mockResolvedValueOnce(qRun(603, "aaa", 814, "failure"));
     expect(await runGql()).toEqual({ unread: "GitHub returned incomplete (null) nodes" });
   });
 });

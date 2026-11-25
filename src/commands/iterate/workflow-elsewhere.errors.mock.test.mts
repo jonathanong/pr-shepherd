@@ -7,7 +7,8 @@ const { mockReadWorkflowElsewhere, mockResolveWorkflowId } = vi.hoisted(() => ({
   mockReadWorkflowElsewhere: vi.fn(),
   mockResolveWorkflowId: vi.fn(),
 }));
-vi.mock("../../github/workflow-elsewhere-read.mts", () => ({
+vi.mock("../../github/workflow-elsewhere-read.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../github/workflow-elsewhere-read.mts")>()),
   readWorkflowElsewhere: mockReadWorkflowElsewhere,
   resolveWorkflowId: mockResolveWorkflowId,
 }));
@@ -50,9 +51,12 @@ describe("attachWorkflowElsewhere errors and rate limits", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     stateDir = mkdtempSync(join(tmpdir(), "wf-elsewhere-err-"));
-    process.env["PR_SHEPHERD_STATE_DIR"] = stateDir;
+    vi.stubEnv("PR_SHEPHERD_STATE_DIR", stateDir);
     stateKey = { owner: "owner", repo: "repo", pr: 42 };
-    return () => rmSync(stateDir, { recursive: true, force: true });
+    return () => {
+      vi.unstubAllEnvs();
+      rmSync(stateDir, { recursive: true, force: true });
+    };
   });
 
   const run = (check: TriagedCheck) =>
@@ -91,15 +95,19 @@ describe("attachWorkflowElsewhere errors and rate limits", () => {
     expect((await run(noWf))[0]!.elsewhereUnread).toBe("network down");
   });
 
-  it("rethrows primary rate-limit errors from read or workflow-ID resolution", async () => {
+  it("renders rate-limit errors as elsewhereUnread instead of aborting the triage tick", async () => {
     const rateErr = new GitHubRequestError("rate limit", {
       status: 403,
       rateLimit: { limit: 5000, remaining: 0, resetAt: Math.floor(Date.now() / 1000) + 60 },
     });
     mockReadWorkflowElsewhere.mockRejectedValueOnce(rateErr);
-    await expect(run(makeCheck())).rejects.toBe(rateErr);
+    expect((await run(makeCheck()))[0]!.elsewhereUnread).toMatch(
+      /^rate limited, retry after \d+s$/,
+    );
 
     mockResolveWorkflowId.mockRejectedValueOnce(rateErr);
-    await expect(run(makeCheck({ workflowId: undefined }))).rejects.toBe(rateErr);
+    expect((await run(makeCheck({ workflowId: undefined })))[0]!.elsewhereUnread).toMatch(
+      /^rate limited, retry after \d+s$/,
+    );
   });
 });

@@ -71,8 +71,8 @@ export async function fetchRestWorkflowRunsPaged(
     if (items.length < REST_RUNS_PER_PAGE || candidates.length >= targetCount)
       return { candidates };
     const oldest = items[items.length - 1]!;
-    const oldestMs = Date.parse(oldest.updated_at ?? oldest.created_at);
-    if (Number.isFinite(oldestMs) && oldestMs < windowStartMs) return { candidates };
+    const oldestCreatedMs = Date.parse(oldest.created_at);
+    if (Number.isFinite(oldestCreatedMs) && oldestCreatedMs < windowStartMs) return { candidates };
   }
   return { unread: "workflow runs pagination truncated" };
 }
@@ -83,12 +83,12 @@ async function hydrateRestFailedJobs(
 ): Promise<{ jobs: ElsewhereFailedJob[] } | { unread: string }> {
   if (candidate.conclusion === "SUCCESS") return { jobs: [] };
   const failed: Array<{ id: number; name: string; conclusion: string }> = [];
+  const jobsBase = candidate.runAttempt
+    ? `${repoPrefix(repo)}/actions/runs/${encodeURIComponent(candidate.runId)}/attempts/${candidate.runAttempt}/jobs?per_page=${REST_JOBS_PER_PAGE}`
+    : `${repoPrefix(repo)}/actions/runs/${encodeURIComponent(candidate.runId)}/jobs?filter=latest&per_page=${REST_JOBS_PER_PAGE}`;
   for (let page = 1; page <= MAX_JOB_PAGES; page++) {
     // eslint-disable-next-line no-await-in-loop
-    const jobsPayload = await rest<RestJobsPayload>(
-      "GET",
-      `${repoPrefix(repo)}/actions/runs/${encodeURIComponent(candidate.runId)}/jobs?filter=latest&per_page=${REST_JOBS_PER_PAGE}&page=${page}`,
-    );
+    const jobsPayload = await rest<RestJobsPayload>("GET", `${jobsBase}&page=${page}`);
     if (!Array.isArray(jobsPayload?.jobs)) return { unread: "malformed workflow jobs response" };
     for (const job of jobsPayload.jobs) {
       const c = job.conclusion?.toUpperCase();

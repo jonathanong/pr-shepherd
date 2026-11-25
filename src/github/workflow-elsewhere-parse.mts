@@ -126,7 +126,11 @@ export function parseDefaultBranchRuns(
         failedJobs: mapFailedJobs(suite!),
       });
     }
-    if (commit!.checkSuites?.pageInfo?.hasNextPage && !matchedOnCommit) truncatedSuites = true;
+    const commitMs = Date.parse(commit!.committedDate);
+    const commitInWindow = !Number.isFinite(commitMs) || commitMs >= windowStartMs;
+    if (commitInWindow && commit!.checkSuites?.pageInfo?.hasNextPage && !matchedOnCommit) {
+      truncatedSuites = true;
+    }
   }
   const oldestCommit = commits[commits.length - 1];
   const truncatedHistory =

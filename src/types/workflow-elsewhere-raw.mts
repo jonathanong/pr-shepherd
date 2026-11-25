@@ -71,6 +71,7 @@ export interface RestWorkflowRunItem {
   event?: string | null;
   status: string | null;
   conclusion: string | null;
+  run_attempt?: number | null;
   created_at: string;
   updated_at?: string | null;
 }
@@ -80,6 +81,7 @@ export interface RestRunCandidate {
   headSha: string;
   pr?: number;
   branch?: string;
+  runAttempt?: number;
   conclusion: string;
   completedAt: string;
 }

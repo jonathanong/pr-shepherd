@@ -24,6 +24,12 @@ function parseQueueHeadBranchPr(headBranch: string | null | undefined): number |
   return Number.isSafeInteger(num) && num > 0 ? num : undefined;
 }
 
+function validRunAttempt(attempt: number | null | undefined): number | undefined {
+  return typeof attempt === "number" && Number.isSafeInteger(attempt) && attempt > 0
+    ? attempt
+    : undefined;
+}
+
 /** Filter and cap REST `merge_group` workflow runs to up to 3 completed entries from other PRs. */
 export function selectOtherQueueRestRuns(
   runs: readonly RestWorkflowRunItem[],
@@ -39,10 +45,12 @@ export function selectOtherQueueRestRuns(
     const completedAt = run.updated_at ?? run.created_at;
     const completedMs = Date.parse(completedAt);
     if (!Number.isFinite(completedMs) || completedMs < opts.windowStartMs) continue;
+    const runAttempt = validRunAttempt(run.run_attempt);
     candidates.push({
       runId,
       headSha: run.head_sha,
       ...(pr !== undefined && { pr }),
+      ...(runAttempt !== undefined && { runAttempt }),
       conclusion: run.conclusion.toUpperCase(),
       completedAt,
     });
@@ -63,10 +71,12 @@ export function selectDefaultBranchRestRuns(
     const completedAt = run.updated_at ?? run.created_at;
     const completedMs = Date.parse(completedAt);
     if (!Number.isFinite(completedMs) || completedMs < windowStartMs) continue;
+    const runAttempt = validRunAttempt(run.run_attempt);
     candidates.push({
       runId: String(run.id),
       headSha: run.head_sha,
       branch,
+      ...(runAttempt !== undefined && { runAttempt }),
       conclusion: run.conclusion.toUpperCase(),
       completedAt,
     });

@@ -338,7 +338,8 @@
         "compare-window-hours": {
           "default": 6,
           "type": "number",
-          "minimum": 0
+          "minimum": 0,
+          "maximum": 720
         }
       },
       "additionalProperties": false

@@ -1,8 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { mockGraphql, mockRest } = vi.hoisted(() => ({ mockGraphql: vi.fn(), mockRest: vi.fn() }));
-vi.mock("./client.mts", () => ({ graphql: mockGraphql }));
-vi.mock("./http.mts", () => ({ rest: mockRest }));
+vi.mock("./client.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./client.mts")>()),
+  graphql: mockGraphql,
+}));
+vi.mock("./http.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./http.mts")>()),
+  rest: mockRest,
+}));
 
 import { readWorkflowElsewhere } from "./workflow-elsewhere-read.mts";
 import { runWithGithubTransport } from "./transport.mts";

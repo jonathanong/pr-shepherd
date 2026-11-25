@@ -175,13 +175,22 @@ describe("parseDefaultBranchRuns", () => {
       parseDefaultBranchRuns(
         historyResp(
           [{ oid: "abc1234", committedDate: "2024-05-15T13:00:00Z", checkSuites: { nodes: [] } }],
-          {
-            hasNextPage: true,
-          },
+          { hasNextPage: true },
         ) as never,
         "7001",
         WINDOW_START,
       ).unavailable,
     ).toBe("default branch workflow history truncated");
+    const preWindow = historyResp([
+      {
+        oid: "old1234",
+        committedDate: "2024-05-14T00:00:00Z",
+        checkSuites: { pageInfo: { hasNextPage: true }, nodes: [] },
+      },
+    ]);
+    expect(parseDefaultBranchRuns(preWindow as never, "7001", WINDOW_START)).toEqual({
+      runs: [],
+      incomplete: false,
+    });
   });
 });

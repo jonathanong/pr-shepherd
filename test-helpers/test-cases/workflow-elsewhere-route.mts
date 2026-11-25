@@ -134,7 +134,9 @@ export function restWorkflowElsewhere(
       }));
     return json({ workflow_runs });
   }
-  const jobsMatch = new RegExp(`^${prefix}/actions/runs/(\\d+)/jobs$`).exec(path);
+  const jobsMatch = new RegExp(`^${prefix}/actions/runs/(\\d+)(?:/attempts/\\d+)?/jobs$`).exec(
+    path,
+  );
   if (jobsMatch) {
     const runId = Number(jobsMatch[1]);
     const run = allRuns(cfg).find((candidate) => candidate.runId === runId);

@@ -7,7 +7,8 @@ const { mockReadWorkflowElsewhere, mockResolveWorkflowId } = vi.hoisted(() => ({
   mockReadWorkflowElsewhere: vi.fn(),
   mockResolveWorkflowId: vi.fn(),
 }));
-vi.mock("../../github/workflow-elsewhere-read.mts", () => ({
+vi.mock("../../github/workflow-elsewhere-read.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../github/workflow-elsewhere-read.mts")>()),
   readWorkflowElsewhere: mockReadWorkflowElsewhere,
   resolveWorkflowId: mockResolveWorkflowId,
 }));
@@ -51,9 +52,12 @@ describe("attachWorkflowElsewhere", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     stateDir = mkdtempSync(join(tmpdir(), "wf-elsewhere-orch-"));
-    process.env["PR_SHEPHERD_STATE_DIR"] = stateDir;
+    vi.stubEnv("PR_SHEPHERD_STATE_DIR", stateDir);
     stateKey = { owner: "owner", repo: "repo", pr: 42 };
-    return () => rmSync(stateDir, { recursive: true, force: true });
+    return () => {
+      vi.unstubAllEnvs();
+      rmSync(stateDir, { recursive: true, force: true });
+    };
   });
 
   it("skips when compareWindowHours is 0, removal is missing, or check is external/non-queue", async () => {
@@ -117,6 +121,7 @@ describe("attachWorkflowElsewhere", () => {
       stateKey,
       ejectionCommit: "q1",
       compareWindowHours: 6,
+      nowMs: 1_000_000,
     });
     expect(mockReadWorkflowElsewhere).toHaveBeenCalledTimes(1);
     expect(first[0]!.elsewhere?.[0]?.failedJobs[0]?.sameJob).toBeUndefined();
@@ -130,9 +135,25 @@ describe("attachWorkflowElsewhere", () => {
       stateKey,
       ejectionCommit: "q1",
       compareWindowHours: 6,
+      nowMs: 1_060_000,
     });
     expect(mockReadWorkflowElsewhere).toHaveBeenCalledTimes(1);
     expect(second[0]!.elsewhere?.[0]?.failedJobs[0]?.sameJob).toBe(true);
+
+    // After 5-minute TTL expires, re-reads so later default-branch failures/recoveries appear.
+    mockReadWorkflowElsewhere.mockResolvedValueOnce({ runs: [], since: "2024-05-15T12:50:00Z" });
+    const expired = await attachWorkflowElsewhere({
+      checks: [shard3] as unknown as AgentCheck[],
+      rawFailing: [shard3],
+      report: REPORT,
+      repo: REPO,
+      stateKey,
+      ejectionCommit: "q1",
+      compareWindowHours: 6,
+      nowMs: 1_000_000 + 6 * 60 * 1000,
+    });
+    expect(mockReadWorkflowElsewhere).toHaveBeenCalledTimes(2);
+    expect(expired[0]!.elsewhere).toEqual([]);
   });
 
   it("never caches unread/incomplete reads and resolves missing workflowId via REST", async () => {

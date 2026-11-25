@@ -1,8 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { mockGraphql, mockRest } = vi.hoisted(() => ({ mockGraphql: vi.fn(), mockRest: vi.fn() }));
-vi.mock("./client.mts", () => ({ graphql: mockGraphql }));
-vi.mock("./http.mts", () => ({ rest: mockRest }));
+vi.mock("./client.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./client.mts")>()),
+  graphql: mockGraphql,
+}));
+vi.mock("./http.mts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./http.mts")>()),
+  rest: mockRest,
+}));
 
 import { readWorkflowElsewhere } from "./workflow-elsewhere-read.mts";
 import { runWithGithubTransport } from "./transport.mts";
@@ -33,6 +39,7 @@ describe("workflow-elsewhere-rest", () => {
               event: "push",
               status: "completed",
               conclusion: "failure",
+              run_attempt: 2,
               created_at: "2024-05-15T11:20:00Z",
               updated_at: "2024-05-15T14:01:00Z",
             },
@@ -63,7 +70,7 @@ describe("workflow-elsewhere-rest", () => {
           ],
         });
       }
-      if (path.includes("/actions/runs/701/jobs")) {
+      if (path.includes("/actions/runs/701/attempts/2/jobs")) {
         return Promise.resolve({
           jobs: [
             { id: 91, name: "test (2/4)", conclusion: "failure" },

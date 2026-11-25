@@ -23,6 +23,7 @@ describe("merge-queue.compare-window-hours config", () => {
   it("rejects negative numbers, wrong types, and unknown keys under merge-queue", () => {
     for (const bad of [
       { "merge-queue": { "compare-window-hours": -1 } },
+      { "merge-queue": { "compare-window-hours": 721 } },
       { "merge-queue": { "compare-window-hours": "6" } },
       { "merge-queue": { compareWindowHours: 6 } },
     ]) {
