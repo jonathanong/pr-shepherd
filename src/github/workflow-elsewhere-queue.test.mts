@@ -190,5 +190,10 @@ describe("buildQueueCommitsQuery & mergeQueueCommitDetails", () => {
       },
     });
     expect(withNullAnn.incomplete).toBe(true);
+
+    const missingSuite = mergeQueueCommitDetails(candidates, new Map([["aaaaaaa11", "c0"]]), {
+      repository: { c0: null },
+    });
+    expect(missingSuite.unavailable).toBe("merge-queue commit check suite unavailable");
   });
 });

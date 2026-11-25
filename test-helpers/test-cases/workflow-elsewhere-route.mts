@@ -12,11 +12,12 @@ function allRuns(cfg) {
   return [...(cfg?.defaultBranchRuns ?? []), ...(cfg?.queueRuns ?? [])];
 }
 
-function toGqlSuite(run) {
+function toGqlSuite(run, branchName?: string) {
   return {
     status: "COMPLETED",
     conclusion: run.conclusion,
     updatedAt: run.updatedAt,
+    branch: branchName ? { name: branchName } : null,
     workflowRun: {
       databaseId: run.runId,
       event: run.event ?? (run.headBranch ? "merge_group" : "push"),
@@ -54,9 +55,9 @@ export function graphqlWorkflowElsewhere(
       const existing = byOid.get(run.oid) ?? {
         oid: run.oid,
         committedDate: run.committedDate ?? run.updatedAt,
-        checkSuites: { nodes: [] },
+        checkSuites: { pageInfo: { hasNextPage: false }, nodes: [] },
       };
-      existing.checkSuites.nodes.push(toGqlSuite(run));
+      existing.checkSuites.nodes.push(toGqlSuite(run, branch));
       byOid.set(run.oid, existing);
     }
     return {
@@ -64,7 +65,7 @@ export function graphqlWorkflowElsewhere(
         repository: {
           defaultBranchRef: {
             name: branch,
-            target: { history: { nodes: [...byOid.values()] } },
+            target: { history: { pageInfo: { hasNextPage: false }, nodes: [...byOid.values()] } },
           },
         },
       },
@@ -79,7 +80,15 @@ export function graphqlWorkflowElsewhere(
       const oid = String(value);
       const matching = queueRuns.filter((run) => run.oid === oid);
       repository[`c${match[1]}`] =
-        matching.length > 0 ? { oid, checkSuites: { nodes: matching.map(toGqlSuite) } } : null;
+        matching.length > 0
+          ? {
+              oid,
+              checkSuites: {
+                pageInfo: { hasNextPage: false },
+                nodes: matching.map((r) => toGqlSuite(r)),
+              },
+            }
+          : null;
     }
     return { data: { repository } };
   }

@@ -365,10 +365,11 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
       ? { ...c, rerunCommand: `gh run rerun ${c.runId} -R ${report.repo}` }
       : c;
   });
-  const checks = [
-    ...failingAgentChecks,
-    ...toAgentChecks(annotatedExtra).map((c) => ({ ...c, annotationOnly: true as const })),
-  ];
+  const annotatedAgentChecks = toAgentChecks(annotatedExtra).map((c) => ({
+    ...c,
+    annotationOnly: true as const,
+  }));
+  const checks = [...failingAgentChecks, ...annotatedAgentChecks];
   const { changesRequestedReviews } = report;
   const hasConflicts = report.mergeStatus.status === "CONFLICTS";
   const queuedConflict = isQueuedConflict(report.mergeQueue?.inQueue, report.mergeStatus.status);
@@ -571,7 +572,7 @@ async function handleTriageTick(ctx: HandleTriageContext): Promise<IterateResult
           ejectionCommit,
           compareWindowHours: loadConfig()["merge-queue"]["compare-window-hours"],
         })),
-        ...toAgentChecks(annotatedExtra).map((c) => ({ ...c, annotationOnly: true as const })),
+        ...annotatedAgentChecks,
       ]
     : checks;
   // Conflicts, a behind branch whose rerun already failed, and a queue ejection that may be

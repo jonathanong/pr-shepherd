@@ -16,6 +16,7 @@ const BASE_INPUT = {
   windowStartMs: Date.parse("2024-05-15T11:30:00Z"),
   since: "2024-05-15T11:30:00Z",
 };
+const runRest = () => runWithGithubTransport("rest", () => readWorkflowElsewhere(BASE_INPUT));
 
 describe("workflow-elsewhere-rest", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -32,7 +33,7 @@ describe("workflow-elsewhere-rest", () => {
               event: "push",
               status: "completed",
               conclusion: "failure",
-              created_at: "2024-05-15T14:00:00Z",
+              created_at: "2024-05-15T11:20:00Z",
               updated_at: "2024-05-15T14:01:00Z",
             },
             {
@@ -75,14 +76,23 @@ describe("workflow-elsewhere-rest", () => {
       if (path.includes("/check-runs/91/annotations")) {
         return Promise.resolve([{ path: "src/x.ts", start_line: 12, message: "bad" }]);
       }
-      if (path.includes("/check-runs/93/annotations")) return Promise.resolve(null);
+      if (path.includes("/check-runs/93/annotations")) return Promise.resolve([]);
       throw new Error(`unexpected ${path}`);
     });
-    const res = await runWithGithubTransport("rest", () => readWorkflowElsewhere(BASE_INPUT));
+    const res = await runRest();
     expect(mockGraphql).not.toHaveBeenCalled();
     expect(res).toEqual({
       since: "2024-05-15T11:30:00Z",
       runs: [
+        {
+          source: "merge-queue",
+          pr: 812,
+          headSha: "7778889",
+          runId: "703",
+          conclusion: "TIMED_OUT",
+          completedAt: "2024-05-15T14:05:00Z",
+          failedJobs: [{ name: "test (1/4)", conclusion: "TIMED_OUT", annotations: [] }],
+        },
         {
           source: "default-branch",
           branch: "main",
@@ -107,31 +117,7 @@ describe("workflow-elsewhere-rest", () => {
           completedAt: "2024-05-15T13:01:00Z",
           failedJobs: [],
         },
-        {
-          source: "merge-queue",
-          pr: 812,
-          headSha: "7778889",
-          runId: "703",
-          conclusion: "TIMED_OUT",
-          completedAt: "2024-05-15T14:05:00Z",
-          failedJobs: [{ name: "test (1/4)", conclusion: "TIMED_OUT", annotations: [] }],
-        },
       ],
-    });
-  });
-
-  it("reports unread when default branch or workflow runs payloads are malformed", async () => {
-    mockRest.mockResolvedValueOnce({});
-    expect(await runWithGithubTransport("rest", () => readWorkflowElsewhere(BASE_INPUT))).toEqual({
-      unread: "default branch unavailable",
-    });
-
-    mockRest
-      .mockResolvedValueOnce({ default_branch: "main" })
-      .mockResolvedValueOnce({})
-      .mockResolvedValueOnce({});
-    expect(await runWithGithubTransport("rest", () => readWorkflowElsewhere(BASE_INPUT))).toEqual({
-      unread: "malformed workflow runs response",
     });
   });
 });

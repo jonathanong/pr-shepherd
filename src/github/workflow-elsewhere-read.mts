@@ -4,20 +4,24 @@ import { DEFAULT_BRANCH_WORKFLOW_RUNS_QUERY } from "./queries.mts";
 import { githubOperation } from "./transport.mts";
 import { loadDerived, storeDerived, type StateKey } from "../state/rest-cache.mts";
 import type { ElsewhereRun } from "../types/workflow-elsewhere.mts";
-import { parseDefaultBranchRuns } from "./workflow-elsewhere-parse.mts";
+import {
+  MAX_ELSEWHERE_RUNS_PER_SOURCE,
+  parseDefaultBranchRuns,
+  sortNewestFirst,
+} from "./workflow-elsewhere-parse.mts";
 import {
   buildQueueCommitsQuery,
   mergeQueueCommitDetails,
   selectOtherQueueRestRuns,
 } from "./workflow-elsewhere-queue.mts";
-import { readWorkflowElsewhereRest } from "./workflow-elsewhere-rest.mts";
+import {
+  fetchRestWorkflowRunsPaged,
+  readWorkflowElsewhereRest,
+} from "./workflow-elsewhere-rest.mts";
 import type {
   RawDefaultBranchRunsResponse,
   RawQueueCommitsResponse,
-  RestWorkflowRunItem,
 } from "../types/workflow-elsewhere-raw.mts";
-
-const REST_RUNS_PER_PAGE = 20;
 
 export interface ReadWorkflowElsewhereInput {
   repo: RepoInfo;
@@ -32,10 +36,6 @@ export interface ReadWorkflowElsewhereInput {
 export type WorkflowElsewhereReadResult =
   | { runs: ElsewhereRun[]; since: string }
   | { unread: string };
-
-interface RestRunsPayload {
-  workflow_runs?: RestWorkflowRunItem[];
-}
 
 const repoPrefix = (repo: RepoInfo): string =>
   `/repos/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
@@ -68,25 +68,27 @@ async function readWorkflowElsewhereGraphql(
   const { repo, workflowId, windowStartMs, since } = input;
   const { data: defaultData } = await graphql<RawDefaultBranchRunsResponse>(
     DEFAULT_BRANCH_WORKFLOW_RUNS_QUERY,
-    { owner: repo.owner, repo: repo.name, since },
+    { owner: repo.owner, repo: repo.name },
   );
   const defaultParsed = parseDefaultBranchRuns(defaultData, workflowId, windowStartMs);
   if (defaultParsed.incomplete) return { unread: "GitHub returned incomplete (null) nodes" };
   if (defaultParsed.unavailable) return { unread: defaultParsed.unavailable };
 
-  const queuePayload = await rest<RestRunsPayload>(
-    "GET",
-    `${repoPrefix(repo)}/actions/workflows/${encodeURIComponent(workflowId)}/runs?event=merge_group&status=completed&created=${encodeURIComponent(`>=${since}`)}&per_page=${REST_RUNS_PER_PAGE}`,
-  );
-  if (!Array.isArray(queuePayload?.workflow_runs)) {
-    return { unread: "malformed merge-queue workflow runs response" };
-  }
-  const queueCandidates = selectOtherQueueRestRuns(queuePayload.workflow_runs, {
-    prNumber: input.prNumber,
-    currentRunId: input.currentRunId,
-    currentCommitOid: input.currentCommitOid,
+  const wfPath = `${repoPrefix(repo)}/actions/workflows/${encodeURIComponent(workflowId)}/runs`;
+  const queueRead = await fetchRestWorkflowRunsPaged(
+    `${wfPath}?event=merge_group&status=completed`,
     windowStartMs,
-  });
+    (items) =>
+      selectOtherQueueRestRuns(items, {
+        prNumber: input.prNumber,
+        currentRunId: input.currentRunId,
+        currentCommitOid: input.currentCommitOid,
+        windowStartMs,
+      }),
+    MAX_ELSEWHERE_RUNS_PER_SOURCE,
+  );
+  if ("unread" in queueRead) return queueRead;
+  const queueCandidates = queueRead.candidates;
   const oids = [
     ...new Set(queueCandidates.filter((c) => c.conclusion !== "SUCCESS").map((c) => c.headSha)),
   ];
@@ -99,7 +101,8 @@ async function readWorkflowElsewhereGraphql(
   }
   const queueParsed = mergeQueueCommitDetails(queueCandidates, oidToAlias, queueData);
   if (queueParsed.incomplete) return { unread: "GitHub returned incomplete (null) nodes" };
-  return { runs: [...defaultParsed.runs, ...queueParsed.runs], since };
+  if (queueParsed.unavailable) return { unread: queueParsed.unavailable };
+  return { runs: sortNewestFirst([...defaultParsed.runs, ...queueParsed.runs]), since };
 }
 
 /** Read same-workflow runs on the default branch and other merge-queue entries. */

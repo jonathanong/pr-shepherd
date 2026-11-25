@@ -77,8 +77,8 @@ export function sortNewestFirst<T extends { completedAt: string; runId: string }
 
 /**
  * Parse default-branch workflow runs from GraphQL history. Returns `incomplete: true` when any
- * connection contained a `null` node (including annotations), or `unavailable` when the default
- * branch ref itself was absent.
+ * connection contained a `null` node, or `unavailable` when default-branch history was absent or
+ * truncated before establishing the window's top runs.
  */
 export function parseDefaultBranchRuns(
   data: RawDefaultBranchRunsResponse,
@@ -87,7 +87,8 @@ export function parseDefaultBranchRuns(
 ): { runs: ElsewhereRun[]; incomplete: boolean; unavailable?: string } {
   const unread = dropNullNodes(data);
   const defaultRef = data.repository?.defaultBranchRef;
-  const commits = defaultRef?.target?.history?.nodes;
+  const history = defaultRef?.target?.history;
+  const commits = history?.nodes;
   if (!defaultRef?.name || !Array.isArray(commits)) {
     return { runs: [], incomplete: false, unavailable: "default branch history unavailable" };
   }
@@ -99,16 +100,20 @@ export function parseDefaultBranchRuns(
 
   const targetId = Number(workflowId);
   const byRunId = new Map<string, ElsewhereRun>();
+  let truncatedSuites = false;
   for (const commit of commits) {
+    let matchedOnCommit = false;
     for (const suite of commit!.checkSuites?.nodes ?? []) {
       const wfRun = suite!.workflowRun;
       if (!wfRun || wfRun.workflow?.databaseId !== targetId) continue;
       if (wfRun.databaseId == null || !Number.isSafeInteger(wfRun.databaseId)) continue;
+      if (suite!.branch?.name && suite!.branch.name !== defaultRef.name) continue;
       if (wfRun.event && NON_DEFAULT_BRANCH_EVENTS.has(wfRun.event)) continue;
       if (!suite!.conclusion || (suite!.status && suite!.status !== "COMPLETED")) continue;
       const completedAt = wfRun.updatedAt ?? suite!.updatedAt ?? commit!.committedDate;
       const completedMs = Date.parse(completedAt);
       if (!Number.isFinite(completedMs) || completedMs < windowStartMs) continue;
+      matchedOnCommit = true;
       const runId = String(wfRun.databaseId);
       if (byRunId.has(runId)) continue;
       byRunId.set(runId, {
@@ -121,6 +126,19 @@ export function parseDefaultBranchRuns(
         failedJobs: mapFailedJobs(suite!),
       });
     }
+    if (commit!.checkSuites?.pageInfo?.hasNextPage && !matchedOnCommit) truncatedSuites = true;
+  }
+  const oldestCommit = commits[commits.length - 1];
+  const truncatedHistory =
+    Boolean(history?.pageInfo?.hasNextPage) &&
+    oldestCommit !== undefined &&
+    Date.parse(oldestCommit!.committedDate) >= windowStartMs;
+  if ((truncatedSuites || truncatedHistory) && byRunId.size < MAX_ELSEWHERE_RUNS_PER_SOURCE) {
+    return {
+      runs: [],
+      incomplete: false,
+      unavailable: "default branch workflow history truncated",
+    };
   }
   return {
     runs: sortNewestFirst([...byRunId.values()]).slice(0, MAX_ELSEWHERE_RUNS_PER_SOURCE),

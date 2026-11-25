@@ -104,15 +104,6 @@ describe("workflow-elsewhere-read (GraphQL & resolveWorkflowId)", () => {
       since: "2024-05-15T11:30:00Z",
       runs: [
         {
-          source: "default-branch",
-          branch: "main",
-          headSha: "a1b2c3d",
-          runId: "501",
-          conclusion: "SUCCESS",
-          completedAt: "2024-05-15T14:05:00Z",
-          failedJobs: [],
-        },
-        {
           source: "merge-queue",
           pr: 812,
           headSha: "f00ba12",
@@ -126,6 +117,15 @@ describe("workflow-elsewhere-read (GraphQL & resolveWorkflowId)", () => {
               annotations: [{ path: "a.ts", line: 9, message: "err" }],
             },
           ],
+        },
+        {
+          source: "default-branch",
+          branch: "main",
+          headSha: "a1b2c3d",
+          runId: "501",
+          conclusion: "SUCCESS",
+          completedAt: "2024-05-15T14:05:00Z",
+          failedJobs: [],
         },
       ],
     });
@@ -157,7 +157,24 @@ describe("workflow-elsewhere-read (GraphQL & resolveWorkflowId)", () => {
 
     mockGraphql.mockResolvedValueOnce(defaultHistory([]));
     mockRest.mockResolvedValueOnce({});
-    expect(await runGql()).toEqual({ unread: "malformed merge-queue workflow runs response" });
+    expect(await runGql()).toEqual({ unread: "malformed workflow runs response" });
+
+    mockGraphql
+      .mockResolvedValueOnce(defaultHistory([]))
+      .mockResolvedValueOnce({ data: { repository: { c0: null } } });
+    mockRest.mockResolvedValueOnce({
+      workflow_runs: [
+        {
+          id: 604,
+          head_sha: "ddd",
+          head_branch: "gh-readonly-queue/main/pr-815-ddd",
+          status: "completed",
+          conclusion: "failure",
+          created_at: "2024-05-15T14:00:00Z",
+        },
+      ],
+    });
+    expect(await runGql()).toEqual({ unread: "merge-queue commit check suite unavailable" });
 
     mockGraphql.mockResolvedValueOnce(defaultHistory([])).mockResolvedValueOnce({
       data: { repository: { c0: { oid: "aaa", checkSuites: { nodes: [null] } } } },

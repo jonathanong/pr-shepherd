@@ -9,7 +9,9 @@ import type {
 import {
   MAX_ELSEWHERE_ANNOTATIONS,
   MAX_ELSEWHERE_FAILED_JOBS,
+  MAX_ELSEWHERE_RUNS_PER_SOURCE,
   normalizeAnnotationMessage,
+  sortNewestFirst,
 } from "./workflow-elsewhere-parse.mts";
 import {
   selectDefaultBranchRestRuns,
@@ -21,7 +23,10 @@ import type {
   WorkflowElsewhereReadResult,
 } from "./workflow-elsewhere-read.mts";
 
-const REST_RUNS_PER_PAGE = 20;
+const REST_RUNS_PER_PAGE = 30;
+const MAX_RUN_PAGES = 3;
+const REST_JOBS_PER_PAGE = 100;
+const MAX_JOB_PAGES = 3;
 
 interface RestRunsPayload {
   workflow_runs?: RestWorkflowRunItem[];
@@ -40,35 +45,87 @@ interface RestAnnotationItem {
 const repoPrefix = (repo: RepoInfo): string =>
   `/repos/${encodeURIComponent(repo.owner)}/${encodeURIComponent(repo.name)}`;
 
+/**
+ * Page REST workflow runs up to `MAX_RUN_PAGES` until `targetCount` candidates are found, a page
+ * is partial, or the page reaches runs older than `windowStartMs`. Returns `unread` if the budget
+ * exhausts while unread pages could still hold matching runs.
+ */
+export async function fetchRestWorkflowRunsPaged(
+  baseQuery: string,
+  windowStartMs: number,
+  select: (items: readonly RestWorkflowRunItem[]) => RestRunCandidate[],
+  targetCount: number,
+): Promise<{ candidates: RestRunCandidate[] } | { unread: string }> {
+  const all: RestWorkflowRunItem[] = [];
+  for (let page = 1; page <= MAX_RUN_PAGES; page++) {
+    // eslint-disable-next-line no-await-in-loop
+    const payload = await rest<RestRunsPayload>(
+      "GET",
+      `${baseQuery}&per_page=${REST_RUNS_PER_PAGE}&page=${page}`,
+    );
+    if (!Array.isArray(payload?.workflow_runs))
+      return { unread: "malformed workflow runs response" };
+    const items = payload.workflow_runs;
+    all.push(...items);
+    const candidates = select(all);
+    if (items.length < REST_RUNS_PER_PAGE || candidates.length >= targetCount)
+      return { candidates };
+    const oldest = items[items.length - 1]!;
+    const oldestMs = Date.parse(oldest.updated_at ?? oldest.created_at);
+    if (Number.isFinite(oldestMs) && oldestMs < windowStartMs) return { candidates };
+  }
+  return { unread: "workflow runs pagination truncated" };
+}
+
 async function hydrateRestFailedJobs(
   repo: RepoInfo,
   candidate: RestRunCandidate,
-): Promise<ElsewhereFailedJob[]> {
-  if (candidate.conclusion === "SUCCESS") return [];
-  const jobsPayload = await rest<RestJobsPayload>(
-    "GET",
-    `${repoPrefix(repo)}/actions/runs/${encodeURIComponent(candidate.runId)}/jobs?filter=latest&per_page=100`,
-  );
-  const failed = (jobsPayload?.jobs ?? [])
-    .filter((job) => {
-      const c = job.conclusion?.toUpperCase();
-      return c === "FAILURE" || c === "TIMED_OUT";
-    })
-    .slice(0, MAX_ELSEWHERE_FAILED_JOBS);
-  return mapPool(failed, 4, async (job): Promise<ElsewhereFailedJob> => {
-    const rawAnnotations = await rest<RestAnnotationItem[]>(
+): Promise<{ jobs: ElsewhereFailedJob[] } | { unread: string }> {
+  if (candidate.conclusion === "SUCCESS") return { jobs: [] };
+  const failed: Array<{ id: number; name: string; conclusion: string }> = [];
+  for (let page = 1; page <= MAX_JOB_PAGES; page++) {
+    // eslint-disable-next-line no-await-in-loop
+    const jobsPayload = await rest<RestJobsPayload>(
       "GET",
-      `${repoPrefix(repo)}/check-runs/${job.id}/annotations?per_page=${MAX_ELSEWHERE_ANNOTATIONS}`,
+      `${repoPrefix(repo)}/actions/runs/${encodeURIComponent(candidate.runId)}/jobs?filter=latest&per_page=${REST_JOBS_PER_PAGE}&page=${page}`,
     );
-    const annotations: ElsewhereAnnotation[] = (Array.isArray(rawAnnotations) ? rawAnnotations : [])
-      .slice(0, MAX_ELSEWHERE_ANNOTATIONS)
-      .map((ann) => ({
-        path: (ann.path ?? "").trim(),
-        line: typeof ann.start_line === "number" && ann.start_line > 0 ? ann.start_line : null,
-        message: normalizeAnnotationMessage(ann.message),
-      }));
-    return { name: job.name, conclusion: job.conclusion!.toUpperCase(), annotations };
-  });
+    if (!Array.isArray(jobsPayload?.jobs)) return { unread: "malformed workflow jobs response" };
+    for (const job of jobsPayload.jobs) {
+      const c = job.conclusion?.toUpperCase();
+      if (c === "FAILURE" || c === "TIMED_OUT") {
+        failed.push({ id: job.id, name: job.name, conclusion: c });
+        if (failed.length >= MAX_ELSEWHERE_FAILED_JOBS) break;
+      }
+    }
+    if (failed.length >= MAX_ELSEWHERE_FAILED_JOBS || jobsPayload.jobs.length < REST_JOBS_PER_PAGE)
+      break;
+    if (page === MAX_JOB_PAGES && failed.length === 0)
+      return { unread: "workflow jobs pagination truncated" };
+  }
+  const hydrated = await mapPool(
+    failed,
+    4,
+    async (job): Promise<ElsewhereFailedJob | { unread: string }> => {
+      const rawAnnotations = await rest<unknown>(
+        "GET",
+        `${repoPrefix(repo)}/check-runs/${job.id}/annotations?per_page=${MAX_ELSEWHERE_ANNOTATIONS}`,
+      );
+      if (!Array.isArray(rawAnnotations)) {
+        return { unread: "malformed check-run annotations response" };
+      }
+      const annotations: ElsewhereAnnotation[] = (rawAnnotations as RestAnnotationItem[])
+        .slice(0, MAX_ELSEWHERE_ANNOTATIONS)
+        .map((ann) => ({
+          path: (ann.path ?? "").trim(),
+          line: typeof ann.start_line === "number" && ann.start_line > 0 ? ann.start_line : null,
+          message: normalizeAnnotationMessage(ann.message),
+        }));
+      return { name: job.name, conclusion: job.conclusion, annotations };
+    },
+  );
+  const bad = hydrated.find((item): item is { unread: string } => "unread" in item);
+  if (bad) return bad;
+  return { jobs: hydrated as ElsewhereFailedJob[] };
 }
 
 /** REST transport reader for same-workflow runs on the default branch and other queue entries. */
@@ -82,47 +139,50 @@ export async function readWorkflowElsewhereRest(
   }
   const branch = repoPayload.default_branch;
   const wfPath = `${repoPrefix(repo)}/actions/workflows/${encodeURIComponent(workflowId)}/runs`;
-  const [defaultPayload, queuePayload] = await Promise.all([
-    rest<RestRunsPayload>(
-      "GET",
-      `${wfPath}?branch=${encodeURIComponent(branch)}&status=completed&created=${encodeURIComponent(`>=${since}`)}&per_page=${REST_RUNS_PER_PAGE}`,
+  const [defaultRead, queueRead] = await Promise.all([
+    fetchRestWorkflowRunsPaged(
+      `${wfPath}?branch=${encodeURIComponent(branch)}&status=completed`,
+      windowStartMs,
+      (items) => selectDefaultBranchRestRuns(items, branch, windowStartMs),
+      MAX_ELSEWHERE_RUNS_PER_SOURCE,
     ),
-    rest<RestRunsPayload>(
-      "GET",
-      `${wfPath}?event=merge_group&status=completed&created=${encodeURIComponent(`>=${since}`)}&per_page=${REST_RUNS_PER_PAGE}`,
+    fetchRestWorkflowRunsPaged(
+      `${wfPath}?event=merge_group&status=completed`,
+      windowStartMs,
+      (items) =>
+        selectOtherQueueRestRuns(items, {
+          prNumber: input.prNumber,
+          currentRunId: input.currentRunId,
+          currentCommitOid: input.currentCommitOid,
+          windowStartMs,
+        }),
+      MAX_ELSEWHERE_RUNS_PER_SOURCE,
     ),
   ]);
-  if (
-    !Array.isArray(defaultPayload?.workflow_runs) ||
-    !Array.isArray(queuePayload?.workflow_runs)
-  ) {
-    return { unread: "malformed workflow runs response" };
-  }
-  const defaultCandidates = selectDefaultBranchRestRuns(
-    defaultPayload.workflow_runs,
-    branch,
-    windowStartMs,
-  );
-  const queueCandidates = selectOtherQueueRestRuns(queuePayload.workflow_runs, {
-    prNumber: input.prNumber,
-    currentRunId: input.currentRunId,
-    currentCommitOid: input.currentCommitOid,
-    windowStartMs,
-  });
+  if ("unread" in defaultRead) return defaultRead;
+  if ("unread" in queueRead) return queueRead;
   const toRun = async (
     candidate: RestRunCandidate,
     source: "default-branch" | "merge-queue",
-  ): Promise<ElsewhereRun> => ({
-    source,
-    ...(candidate.branch !== undefined && { branch: candidate.branch }),
-    ...(candidate.pr !== undefined && { pr: candidate.pr }),
-    headSha: candidate.headSha.slice(0, 7),
-    runId: candidate.runId,
-    conclusion: candidate.conclusion,
-    completedAt: candidate.completedAt,
-    failedJobs: await hydrateRestFailedJobs(repo, candidate),
-  });
-  const defaultRuns = await mapPool(defaultCandidates, 3, (c) => toRun(c, "default-branch"));
-  const queueRuns = await mapPool(queueCandidates, 3, (c) => toRun(c, "merge-queue"));
-  return { runs: [...defaultRuns, ...queueRuns], since };
+  ): Promise<ElsewhereRun | { unread: string }> => {
+    const jobsRes = await hydrateRestFailedJobs(repo, candidate);
+    if ("unread" in jobsRes) return jobsRes;
+    return {
+      source,
+      ...(candidate.branch !== undefined && { branch: candidate.branch }),
+      ...(candidate.pr !== undefined && { pr: candidate.pr }),
+      headSha: candidate.headSha.slice(0, 7),
+      runId: candidate.runId,
+      conclusion: candidate.conclusion,
+      completedAt: candidate.completedAt,
+      failedJobs: jobsRes.jobs,
+    };
+  };
+  const results = [
+    ...(await mapPool(defaultRead.candidates, 3, (c) => toRun(c, "default-branch"))),
+    ...(await mapPool(queueRead.candidates, 3, (c) => toRun(c, "merge-queue"))),
+  ];
+  const bad = results.find((item): item is { unread: string } => "unread" in item);
+  if (bad) return bad;
+  return { runs: sortNewestFirst(results as ElsewhereRun[]), since };
 }

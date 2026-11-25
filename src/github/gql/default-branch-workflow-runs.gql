@@ -1,4 +1,4 @@
-query DefaultBranchWorkflowRuns($owner: String!, $repo: String!, $since: GitTimestamp!) {
+query DefaultBranchWorkflowRuns($owner: String!, $repo: String!) {
   _shepherdRateLimit: rateLimit {
     cost
     limit
@@ -12,15 +12,24 @@ query DefaultBranchWorkflowRuns($owner: String!, $repo: String!, $since: GitTime
       name
       target {
         ... on Commit {
-          history(first: 20, since: $since) {
+          history(first: 20) {
+            pageInfo {
+              hasNextPage
+            }
             nodes {
               oid
               committedDate
               checkSuites(first: 20) {
+                pageInfo {
+                  hasNextPage
+                }
                 nodes {
                   status
                   conclusion
                   updatedAt
+                  branch {
+                    name
+                  }
                   workflowRun {
                     databaseId
                     event

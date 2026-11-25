@@ -12,10 +12,15 @@ interface RawElsewhereCheckRun {
   annotations?: { nodes?: Array<RawElsewhereAnnotation | null> } | null;
 }
 
+interface RawPageInfo {
+  hasNextPage?: boolean;
+}
+
 export interface RawElsewhereSuite {
   status?: string | null;
   conclusion?: string | null;
   updatedAt?: string | null;
+  branch?: { name?: string | null } | null;
   workflowRun?: {
     databaseId?: number | null;
     event?: string | null;
@@ -31,10 +36,14 @@ export interface RawDefaultBranchRunsResponse {
       name?: string | null;
       target?: {
         history?: {
+          pageInfo?: RawPageInfo | null;
           nodes?: Array<{
             oid: string;
             committedDate: string;
-            checkSuites?: { nodes?: Array<RawElsewhereSuite | null> } | null;
+            checkSuites?: {
+              pageInfo?: RawPageInfo | null;
+              nodes?: Array<RawElsewhereSuite | null>;
+            } | null;
           } | null>;
         } | null;
       } | null;
@@ -45,7 +54,13 @@ export interface RawDefaultBranchRunsResponse {
 export interface RawQueueCommitsResponse {
   repository?: Record<
     string,
-    { oid?: string; checkSuites?: { nodes?: Array<RawElsewhereSuite | null> } | null } | null
+    {
+      oid?: string;
+      checkSuites?: {
+        pageInfo?: RawPageInfo | null;
+        nodes?: Array<RawElsewhereSuite | null>;
+      } | null;
+    } | null
   > | null;
 }
 

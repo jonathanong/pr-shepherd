@@ -11,12 +11,12 @@ Merge queue: No [Required]
   > Run tests
   > Error: expected 3 retries, got 2
   Same workflow elsewhere (since 12:50Z, newest first):
+  - merge queue #812 `f00ba12` run `45390098877` [conclusion: FAILURE]
+    - test (1/4): `src/db/pool.test.mts:12` — connect ETIMEDOUT
   - `main` `a1b2c3d` run `45390004411` [conclusion: FAILURE]
     - test (2/4): `src/queue/retry.test.mts:88` — expected 3 retries, got 2
     - test (3/4) [conclusion: TIMED_OUT] ← same job
   - `main` `9f8e7d6` run `45389870021` [conclusion: SUCCESS]
-  - merge queue #812 `f00ba12` run `45390098877` [conclusion: FAILURE]
-    - test (1/4): `src/db/pool.test.mts:12` — connect ETIMEDOUT
 
 ## Post-fix actions
 

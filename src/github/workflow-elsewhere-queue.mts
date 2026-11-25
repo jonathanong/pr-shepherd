@@ -1,4 +1,9 @@
 import type { ElsewhereRun } from "../types/workflow-elsewhere.mts";
+import type {
+  RawQueueCommitsResponse,
+  RestRunCandidate,
+  RestWorkflowRunItem,
+} from "../types/workflow-elsewhere-raw.mts";
 import { dropNullNodes } from "./null-nodes.mts";
 import {
   MAX_ELSEWHERE_RUNS_PER_SOURCE,
@@ -7,11 +12,6 @@ import {
   sortNewestFirst,
   stripNullAnnotations,
 } from "./workflow-elsewhere-parse.mts";
-import type {
-  RawQueueCommitsResponse,
-  RestRunCandidate,
-  RestWorkflowRunItem,
-} from "../types/workflow-elsewhere-raw.mts";
 
 const QUEUE_BRANCH_PR_RE = /^gh-readonly-queue\/.+\/pr-(\d+)-[0-9a-f]+$/i;
 
@@ -84,7 +84,7 @@ export function buildQueueCommitsQuery(
   const fields = oids
     .map(
       (_, i) =>
-        `c${i}: object(expression: $oid${i}) { ... on Commit { oid checkSuites(first: 20) { nodes { workflowRun { databaseId } checkRuns(first: 15, filterBy: { conclusions: [FAILURE, TIMED_OUT] }) { nodes { name conclusion annotations(first: 3) { nodes { path location { start { line } } message } } } } } } } }`,
+        `c${i}: object(expression: $oid${i}) { ... on Commit { oid checkSuites(first: 20) { pageInfo { hasNextPage } nodes { workflowRun { databaseId } checkRuns(first: 15, filterBy: { conclusions: [FAILURE, TIMED_OUT] }) { nodes { name conclusion annotations(first: 3) { nodes { path location { start { line } } message } } } } } } } }`,
     )
     .join(" ");
   const query = `query QueueCommitCheckSuites($owner: String!, $repo: String!${decls}) { _shepherdRateLimit: rateLimit { cost limit nodeCount remaining resetAt used } repository(owner: $owner, name: $repo) { ${fields} } }`;
@@ -95,12 +95,12 @@ export function buildQueueCommitsQuery(
   return { query, variables };
 }
 
-/** Combine REST queue-run candidates with GraphQL commit check suites; null nodes mark incomplete. */
+/** Combine REST queue-run candidates with GraphQL commit check suites; missing suites mark unavailable. */
 export function mergeQueueCommitDetails(
   candidates: readonly RestRunCandidate[],
   oidToAlias: ReadonlyMap<string, string>,
   data: RawQueueCommitsResponse | undefined,
-): { runs: ElsewhereRun[]; incomplete: boolean } {
+): { runs: ElsewhereRun[]; incomplete: boolean; unavailable?: string } {
   if (data) {
     const unread = dropNullNodes(data);
     let nullAnnotations = false;
@@ -109,22 +109,35 @@ export function mergeQueueCommitDetails(
     }
     if (unread || nullAnnotations) return { runs: [], incomplete: true };
   }
-  const runs = candidates.map((candidate): ElsewhereRun => {
-    const alias = oidToAlias.get(candidate.headSha);
-    const commit = alias ? data?.repository?.[alias] : undefined;
-    const suite = (commit?.checkSuites?.nodes ?? []).find(
-      (s) =>
-        s?.workflowRun?.databaseId != null && String(s.workflowRun.databaseId) === candidate.runId,
-    );
-    return {
+  const runs: ElsewhereRun[] = [];
+  for (const candidate of candidates) {
+    let failedJobs = [] as ElsewhereRun["failedJobs"];
+    if (candidate.conclusion !== "SUCCESS") {
+      const alias = oidToAlias.get(candidate.headSha);
+      const commit = alias ? data?.repository?.[alias] : undefined;
+      const suite = (commit?.checkSuites?.nodes ?? []).find(
+        (s) =>
+          s?.workflowRun?.databaseId != null &&
+          String(s.workflowRun.databaseId) === candidate.runId,
+      );
+      if (!suite) {
+        return {
+          runs: [],
+          incomplete: false,
+          unavailable: "merge-queue commit check suite unavailable",
+        };
+      }
+      failedJobs = mapFailedJobs(suite);
+    }
+    runs.push({
       source: "merge-queue",
       ...(candidate.pr !== undefined && { pr: candidate.pr }),
       headSha: candidate.headSha.slice(0, 7),
       runId: candidate.runId,
       conclusion: candidate.conclusion,
       completedAt: candidate.completedAt,
-      failedJobs: candidate.conclusion === "SUCCESS" ? [] : mapFailedJobs(suite ?? undefined),
-    };
-  });
+      failedJobs,
+    });
+  }
   return { runs, incomplete: false };
 }
