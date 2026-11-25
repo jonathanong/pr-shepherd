@@ -38,6 +38,15 @@ describe("queueEjectionSteps", () => {
     expect(queueEjectionSteps(undefined, "route", false)).toEqual([]);
   });
 
+  it("includes the Same workflow elsewhere pointer only when elsewhere context is present", () => {
+    const [withElsewhere] = queueEjectionSteps("requeue", undefined, false, true);
+    expect(withElsewhere).toContain(
+      "Check `Same workflow elsewhere` under `## Failing checks` for recent runs of this workflow on the default branch and other merge-queue entries.",
+    );
+    const [withoutElsewhere] = queueEjectionSteps("requeue", undefined, false, false);
+    expect(withoutElsewhere).not.toContain("Same workflow elsewhere");
+  });
+
   it("points at a stack route already printed for a conflict", () => {
     const [step] = queueEjectionSteps("acknowledge", "run `gh stack rebase`.", true);
     expect(step).toContain(

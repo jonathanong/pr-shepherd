@@ -2,7 +2,7 @@
 
 Apply when a step says `Playbook: "Merge queue ejection"`. The `**queue removal**` header names the queue commit. That commit combined the PR head with the base and any entries queued ahead of it, so a failure there may come from this PR, the base, another entry, or a flake. Do not requeue without triage. After triage, continue with the remaining numbered steps; iterate only at the final step.
 
-1. If the step names a failed queue-commit check, update the PR head from the latest base following the repository's branch-update convention. On a native stack, use the printed stack update route instead. Reproduce the failing step on the updated head.
+1. If the step names a failed queue-commit check, inspect any `Same workflow elsewhere` runs under `## Failing checks` first; if the failure is already failing on the base branch itself, follow step 4 instead of updating the head. Otherwise, update the PR head from the latest base following the repository's branch-update convention (on a native stack, use the printed stack update route instead) and reproduce the failing step on the updated head.
 2. If the failure belongs to this PR, fix it. The printed push step commits and pushes the fix.
 3. If the failure does not reproduce and the update changed the head, the printed push step pushes it (`gh stack push` on a native stack). Never run a printed `requeue:` or `acknowledge queue removal:` command after a push. Shepherd prints a fresh queue command once the new head is READY.
 4. If the failure comes from the base itself, do not requeue or acknowledge it. Make no change. The unchanged failure escalates through the stall timeout.

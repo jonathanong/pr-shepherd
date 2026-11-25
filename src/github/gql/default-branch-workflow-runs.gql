@@ -1,0 +1,71 @@
+query DefaultBranchWorkflowRuns($owner: String!, $repo: String!) {
+  _shepherdRateLimit: rateLimit {
+    cost
+    limit
+    nodeCount
+    remaining
+    resetAt
+    used
+  }
+  repository(owner: $owner, name: $repo) {
+    defaultBranchRef {
+      name
+      target {
+        ... on Commit {
+          history(first: 20) {
+            pageInfo {
+              hasNextPage
+            }
+            nodes {
+              oid
+              committedDate
+              checkSuites(first: 20) {
+                pageInfo {
+                  hasNextPage
+                }
+                nodes {
+                  status
+                  conclusion
+                  updatedAt
+                  branch {
+                    name
+                  }
+                  workflowRun {
+                    databaseId
+                    event
+                    updatedAt
+                    file {
+                      path
+                    }
+                    workflow {
+                      databaseId
+                      name
+                    }
+                  }
+                  checkRuns(first: 15, filterBy: { conclusions: [FAILURE, TIMED_OUT] }) {
+                    nodes {
+                      name
+                      conclusion
+                      annotations(first: 3) {
+                        totalCount
+                        nodes {
+                          path
+                          location {
+                            start {
+                              line
+                            }
+                          }
+                          message
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

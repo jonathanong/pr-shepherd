@@ -175,6 +175,9 @@ export const configSchema = z.strictObject({
       "command-args": mergeCommandArgs.default(() => []),
     })
     .prefault({}),
+  "merge-queue": z
+    .strictObject({ "compare-window-hours": nonNegative().max(720).default(6) })
+    .prefault({}),
   actions: z
     .strictObject({
       "auto-minimize-suppressed": z.boolean().default(true),

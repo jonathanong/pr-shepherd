@@ -126,3 +126,6 @@ export const UPDATE_PR_BODY_MUTATION = gql("update-pr-body.gql");
 
 /** CheckRun titles, summaries, and first annotations for routed stack-layer handoffs. */
 export const STACK_HANDOFF_CHECK_RUNS_QUERY = gql("stack-handoff-check-runs.gql");
+
+/** Recent default-branch commits and workflow check suites for merge-queue ejection comparison. */
+export const DEFAULT_BRANCH_WORKFLOW_RUNS_QUERY = gql("default-branch-workflow-runs.gql");

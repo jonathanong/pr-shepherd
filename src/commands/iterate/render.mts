@@ -136,10 +136,13 @@ export function buildFixInstructions(
       "Review the threads under `## Review threads to resolve` before running the generated mutations.",
     );
 
+  const hasElsewhere = failingChecks.some(
+    (c) => c.elsewhere !== undefined || c.elsewhereUnread !== undefined,
+  );
   instructions.push(
     ...buildFailingCheckInstructions(failingChecks),
     ...repeatedWorkflowBranchRecoveryInstructions.map(pathA),
-    ...queueEjectionSteps(queueEjection, stackRebase, branchRecovery),
+    ...queueEjectionSteps(queueEjection, stackRebase, branchRecovery, hasElsewhere),
   );
 
   if (hasAnnotations)

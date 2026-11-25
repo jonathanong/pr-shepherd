@@ -1,0 +1,129 @@
+{
+  "restDivergence": {
+    "action": "wait",
+    "exitCode": 10,
+    "why": "REST cannot read merge-queue removal history, so the removed merge-group failure is invisible and the head looks READY; REST workflow-elsewhere is covered by unit tests and REST carry-over fixtures."
+  },
+  "description": "A failing merge-group Actions check on a current queue ejection shows recent completed runs of the same workflow on the default branch and other merge-queue entries, with failed jobs, exact same-job marking, and up to 3 annotations per failed job.",
+  "args": ["--merge"],
+  "batchData": {
+    "latestMergeQueueRemoval": {
+      "reason": "failed_checks",
+      "actor": "github-actions",
+      "createdAtUnix": 1715799000,
+      "beforeCommitOid": "queue-commit-1",
+      "beforeCommitParentOids": ["abc123"]
+    },
+    "removedMergeQueueChecks": [
+      {
+        "name": "test (3/4)",
+        "status": "COMPLETED",
+        "conclusion": "FAILURE",
+        "source": "check_run",
+        "event": "merge_group",
+        "detailsUrl": "https://github.com/owner/repo/actions/runs/45390112233",
+        "runId": "45390112233",
+        "runAttempt": 1,
+        "workflowId": "7001",
+        "workflowName": "CI",
+        "jobName": "test (3/4)",
+        "failedStep": "Run tests",
+        "logExcerpt": "Error: expected 3 retries, got 2",
+        "scope": "merge_group",
+        "commitOid": "queue-commit-1"
+      }
+    ],
+    "isMergeQueueEnabled": true
+  },
+  "workflowElsewhere": {
+    "defaultBranch": "main",
+    "workflowName": "CI",
+    "workflowPath": ".github/workflows/ci.yml",
+    "defaultBranchRuns": [
+      {
+        "oid": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2",
+        "committedDate": "2024-05-15T16:40:00Z",
+        "runId": 45390004411,
+        "workflowId": 7001,
+        "conclusion": "FAILURE",
+        "updatedAt": "2024-05-15T16:50:00Z",
+        "failedJobs": [
+          {
+            "name": "test (2/4)",
+            "conclusion": "FAILURE",
+            "annotationsTotal": 5,
+            "annotations": [
+              {
+                "path": "src/queue/retry.test.mts",
+                "line": 88,
+                "message": "expected 3 retries, got 2"
+              },
+              {
+                "path": "src/queue/retry.test.mts",
+                "line": 104,
+                "message": "timed out waiting for retry"
+              },
+              {
+                "path": "src/queue/retry.test.mts",
+                "line": 120,
+                "message": "unexpected exit code 1"
+              }
+            ]
+          },
+          {
+            "name": "test (3/4)",
+            "conclusion": "TIMED_OUT",
+            "annotations": []
+          }
+        ]
+      },
+      {
+        "oid": "9f8e7d6c5b4a9f8e7d6c5b4a9f8e7d6c5b4a9f8e",
+        "committedDate": "2024-05-15T15:10:00Z",
+        "runId": 45389870021,
+        "workflowId": 7001,
+        "conclusion": "SUCCESS",
+        "updatedAt": "2024-05-15T15:25:00Z",
+        "failedJobs": []
+      }
+    ],
+    "queueRuns": [
+      {
+        "oid": "f00ba1234567890abcdef1234567890abcdef123",
+        "headBranch": "gh-readonly-queue/main/pr-812-f00ba12",
+        "runId": 45390098877,
+        "workflowId": 7001,
+        "conclusion": "FAILURE",
+        "updatedAt": "2024-05-15T17:10:00Z",
+        "failedJobs": [
+          {
+            "name": "test (1/4)",
+            "conclusion": "FAILURE",
+            "annotations": [
+              {
+                "path": "src/db/pool.test.mts",
+                "line": 12,
+                "message": "connect ETIMEDOUT"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "oid": "1111111111111111111111111111111111111111",
+        "headBranch": "gh-readonly-queue/main/pr-42-1111111",
+        "runId": 45390099999,
+        "workflowId": 7001,
+        "conclusion": "FAILURE",
+        "updatedAt": "2024-05-15T17:15:00Z",
+        "failedJobs": []
+      }
+    ]
+  },
+  "readyDelayState": {
+    "isReady": false,
+    "shouldCancel": false,
+    "remainingSeconds": 600
+  },
+  "expectedExitCode": 12
+}

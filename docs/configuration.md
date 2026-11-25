@@ -143,6 +143,7 @@ classify:
 | `mark-ready.blocking-reviewer-logins` | `[]`                                      | Reviewer login prefixes whose pending review or review request blocks `mark_ready`.                                                                                |
 | `merge.method`                        | unset                                     | Preferred method: `merge`, `squash`, or `rebase`, used only when the repository allows it. A strategy flag in `command-args` must name the same method.            |
 | `merge.command-args`                  | `[]`                                      | Extra options for ordinary `gh pr merge` commands, not for queue commands. Its strategy flag is the preferred method when `merge.method` is unset.                 |
+| `merge-queue.compare-window-hours`    | `6`                                       | Hours before a merge-queue removal to compare same-workflow runs on the default branch and other queue entries; `0` disables the lookup, at most `720`.            |
 | `actions.auto-minimize-suppressed`    | `true`                                    | Resolve and minimize classification matches that set both flags, then print and report the result.                                                                 |
 | `actions.cancel-runs-before-push`     | `true`                                    | On `triage`, print `gh run cancel` for in-progress runs a fix push would cancel anyway. `false` prints nothing and reads no workflow files.                        |
 | `actions.work-while-queued`           | `false`                                   | Act on non-CI work immediately while the PR is in the merge queue, instead of deferring it.                                                                        |
@@ -502,6 +503,19 @@ There is no key to opt out of stack detection. When GitHub reports that the PR i
 - `stack --merge`, `--merge-ready`, and `--merge-through` return `MERGE` for the highest ready in-scope prefix, then `CANCEL` once every layer in scope has merged.
 
 For stack routing (`SHEPHERD`, `WAIT`, `MERGE`, `CANCEL`, `ESCALATE`), see [actions.md](actions.md), [merge-status.md](merge-status.md#merge-requirements), and [`native-stack-merge-routing`](escalations.md#native-stack-merge-routing).
+
+## `merge-queue`
+
+### `merge-queue.compare-window-hours` — default `6`
+
+How many hours before a merge-queue removal Shepherd looks back for completed runs of the same GitHub Actions workflow on the default branch (up to 3) and other merge-queue entries (up to 3). Must be a non-negative number; `0` disables the lookup and omits `Same workflow elsewhere` from ejection output.
+
+```yaml
+merge-queue:
+  compare-window-hours: 12
+```
+
+See [Merge-queue ejection](actions.md#merge-queue-ejection).
 
 ## `classify.standard` — default `{}`
 

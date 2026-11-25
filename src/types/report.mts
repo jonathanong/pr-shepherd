@@ -14,6 +14,7 @@ import type {
 import type { ClassifiedCheck, RelatedFailedJob, TriagedCheck } from "./check-classification.mts";
 import type { AgentThreadComment } from "./agent-thread.mts";
 import type { CheckAnnotation } from "./check-annotations.mts";
+import type { ElsewhereRun } from "./workflow-elsewhere.mts";
 import type { PrActivitySummary } from "./activity.mts";
 import type { MergeQueueReport } from "./merge-queue.mts";
 
@@ -252,6 +253,12 @@ export interface AgentCheck {
   annotationOnly?: true; // annotation carrier from a non-failing check bucket
   scope?: "merge_group";
   commitOid?: string;
+  /** Recent completed runs of the same workflow on the default branch and other merge-queue entries. */
+  elsewhere?: ElsewhereRun[];
+  /** Bounded-read scope metadata (workflow, window start, items checked, matched vs shown), present alongside `elsewhere`. */
+  elsewhereScope?: import("./workflow-elsewhere.mts").ElsewhereScope;
+  /** Why `elsewhere` could not be read or was incomplete; omitted when `elsewhere` is present. */
+  elsewhereUnread?: string;
 }
 
 /**

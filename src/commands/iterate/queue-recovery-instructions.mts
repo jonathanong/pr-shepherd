@@ -24,10 +24,11 @@ export function queueEjectionSteps(
   recovery: QueueEjectionRecovery | undefined,
   stackRebase: string | undefined,
   routePrinted: boolean,
+  hasElsewhere = false,
 ): string[] {
   if (!recovery) return [];
   const route = stackRebase && routePrinted ? "use the stack route printed above." : stackRebase;
-  return [buildQueueEjectionInstruction(recovery, route)];
+  return [buildQueueEjectionInstruction(recovery, route, hasElsewhere)];
 }
 
 /**
@@ -38,9 +39,13 @@ export function queueEjectionSteps(
 function buildQueueEjectionInstruction(
   recovery: QueueEjectionRecovery,
   stackRoute?: string,
+  hasElsewhere = false,
 ): string {
   const target = stackRoute ? "the stack" : "the PR head";
   const route = stackRoute ? `: ${stackRoute}` : ".";
+  const elsewhere = hasElsewhere
+    ? " Check `Same workflow elsewhere` under `## Failing checks` for recent runs of this workflow on the default branch and other merge-queue entries."
+    : "";
   const update =
     recovery === "none"
       ? `If the \`**queue removal**\` reason shows GitHub removed the entry itself, update ${target} from the latest base first${route} If a person may have dequeued the PR, skip that update unless a conflict step above requires it.`
@@ -53,5 +58,5 @@ function buildQueueEjectionInstruction(
       : recovery === "acknowledge"
         ? `Run \`acknowledge queue removal:\` ${reproduce}`
         : "Shepherd printed no queue command for this session, so do not enqueue the PR.";
-  return `Triage the merge-queue ejection before any requeue. ${update} ${guard} ${playbookPointer("Merge queue ejection")}`;
+  return `Triage the merge-queue ejection before any requeue.${elsewhere} ${update} ${guard} ${playbookPointer("Merge queue ejection")}`;
 }

@@ -16,6 +16,7 @@ import { numberInstructions } from "./iterate-instructions.mts";
 import { renderCheckAnnotation } from "./triage-formatter-extra.mts";
 import { renderRelatedJobLines } from "./related-jobs-format.mts";
 import { renderPendingDeploymentLines } from "./pending-deployments-format.mts";
+import { renderWorkflowElsewhereLines } from "./workflow-elsewhere-format.mts";
 import { renderStalledCheckLines } from "./stalled-check-format.mts";
 import { renderInProgressRun } from "./in-progress-run-format.mts";
 import { isFailingAgentCheck } from "../checks/conclusions.mts";
@@ -148,6 +149,7 @@ export function formatTriageResult(
         lines.push(...renderRelatedJobLines(ch.relatedJobs));
       }
       lines.push(...renderPendingDeploymentLines(ch.pendingDeployments));
+      lines.push(...renderWorkflowElsewhereLines(ch));
       if (ch.rerunCommand && ch.runId && !seenRerunRunIds.has(ch.runId)) {
         seenRerunRunIds.add(ch.runId);
         lines.push(`  rerun: \`${ch.rerunCommand}\``);
