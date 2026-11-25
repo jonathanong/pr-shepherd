@@ -38,6 +38,7 @@ Stack: 7 (layer 1/1, base main)
 
 - `37106358227` — `CI › tests` [conclusion: FAILURE] [scope: merge_group, commit: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb]
   > OpenRouter HTTP 529: provider temporarily unavailable
+  Same workflow elsewhere: no other runs since 12:50Z
 
 ## Post-fix actions
 
@@ -48,6 +49,6 @@ Stack: 7 (layer 1/1, base main)
 1. Fix each warranted item.
 2. Triage `## Failing checks`. Playbook: "CI failure triage".
 3. Some checks under `## Failing checks` have no rerun Shepherd can offer. Playbook: "Check follow-up".
-4. Triage the merge-queue ejection before any requeue. Update the stack from the latest base first: From a clean checkout of `owner/repo`, if `gh stack` does not track stack #7 locally, import it with `gh stack checkout 7`. Then check out the head branch of PR #42 and run `gh stack rebase`. Playbook: "Branch update". Run `acknowledge queue removal:` only if the failure does not reproduce on the updated head, neither the update nor a code change altered the head, and no other blocker remains. Playbook: "Merge queue ejection".
+4. Triage the merge-queue ejection before any requeue. Check `Same workflow elsewhere` under `## Failing checks` for recent runs of this workflow on the default branch and other merge-queue entries. Update the stack from the latest base first: From a clean checkout of `owner/repo`, if `gh stack` does not track stack #7 locally, import it with `gh stack checkout 7`. Then check out the head branch of PR #42 and run `gh stack rebase`. Playbook: "Branch update". Run `acknowledge queue removal:` only if the failure does not reproduce on the updated head, neither the update nor a code change altered the head, and no other blocker remains. Playbook: "Merge queue ejection".
 5. If the base update or a fix changed the head, commit any remaining changes on the PR head branch and push the rewritten stack with `gh stack push`. If neither did, do not push.
 6. Rerun Shepherd now.
